@@ -446,43 +446,44 @@ export const ClassRowSettingsPopover = ({
             {groupedRows.map((group) => {
               const sourceStableId = group.source?.stableId;
               const groupByActive =
-                !!sourceStableId &&
-                !!currentGroupByBySource[sourceStableId];
+                !!sourceStableId && !!currentGroupByBySource[sourceStableId];
               return (
-              <div key={group.title}>
-                <div className="px-3 py-2 font-semibold text-gray-600 bg-blue-50/20 border-b flex items-center justify-between gap-2">
-                  <span className="text-sm truncate font-medium text-gray-700 min-w-0">
-                    {group.title}
-                  </span>
-                  <Popover.Root>
-                    <Popover.Trigger asChild>
-                      <button
-                        type="button"
-                        className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-blue-100/50 border border-transparent hover:border-blue-200 transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-400 focus-visible:border-blue-300"
-                        aria-label={t("Source options")}
-                      >
-                        <MixerHorizontalIcon className="w-3.5 h-3.5" />
-                        <span>{t("Source options")}</span>
-                      </button>
-                    </Popover.Trigger>
-                    <Popover.Portal>
-                      <Popover.Content
-                        side="bottom"
-                        align="end"
-                        sideOffset={6}
-                        collisionPadding={8}
-                        data-source-options-popover
-                        onInteractOutside={(e) => {
-                          const target = e.target as HTMLElement;
-                          if (
-                            target?.closest?.("[data-group-by-picker-content]")
-                          ) {
-                            e.preventDefault();
-                          }
-                        }}
-                        className="bg-white text-gray-900 border border-gray-200 rounded-lg shadow-xl z-[60] w-80 p-0 overflow-hidden"
-                      >
-                        {/* <div className="px-3 py-2.5 border-b border-gray-100 bg-gray-50/80">
+                <div key={group.title}>
+                  <div className="px-3 py-2 font-semibold text-gray-600 bg-blue-50/20 border-b flex items-center justify-between gap-2">
+                    <span className="text-sm truncate font-medium text-gray-700 min-w-0">
+                      {group.title}
+                    </span>
+                    <Popover.Root>
+                      <Popover.Trigger asChild>
+                        <button
+                          type="button"
+                          className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-blue-100/50 border border-transparent hover:border-blue-200 transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-400 focus-visible:border-blue-300"
+                          aria-label={t("Source options")}
+                        >
+                          <MixerHorizontalIcon className="w-3.5 h-3.5" />
+                          <span>{t("Source options")}</span>
+                        </button>
+                      </Popover.Trigger>
+                      <Popover.Portal>
+                        <Popover.Content
+                          side="bottom"
+                          align="end"
+                          sideOffset={6}
+                          collisionPadding={8}
+                          data-source-options-popover
+                          onInteractOutside={(e) => {
+                            const target = e.target as HTMLElement;
+                            if (
+                              target?.closest?.(
+                                "[data-group-by-picker-content]"
+                              )
+                            ) {
+                              e.preventDefault();
+                            }
+                          }}
+                          className="bg-white text-gray-900 border border-gray-200 rounded-lg shadow-xl z-[60] w-80 p-0 overflow-hidden"
+                        >
+                          {/* <div className="px-3 py-2.5 border-b border-gray-100 bg-gray-50/80">
                           <h3 className="text-sm font-semibold text-gray-800">
                             {group.title}
                           </h3>
@@ -492,425 +493,439 @@ export const ClassRowSettingsPopover = ({
                             )}
                           </p>
                         </div> */}
-                        <div className="divide-y divide-gray-100">
-                          {!hideGroupBy && (
-                          <div className="px-3 py-3">
-                            <h4 className="text-xs font-semibold text-gray-700 mb-1">
-                              {t("Group by")}
-                            </h4>
-                            <p className="text-xs text-gray-500 mb-2">
-                              {t(
-                                "Split this source into multiple rows based on column values."
-                              )}
-                            </p>
-                            <GroupByPicker
-                              value={
-                                currentGroupByBySource[group.source?.stableId!]
-                              }
-                              options={
-                                groupByOptionsBySource[
-                                  group.source?.stableId!
-                                ] || [{ value: "__none__", label: t("None") }]
-                              }
-                              placeholder={t("None")}
-                              onChange={(groupByValue) => {
-                                const targetId = group.source?.stableId;
-                                if (!targetId) return;
-                                if (!groupByValue) {
-                                  onUpdateSettings({
-                                    includeAllFeaturesRowForGroupedSources: (
-                                      settings.includeAllFeaturesRowForGroupedSources ||
-                                      []
-                                    ).filter((id) => id !== targetId),
-                                  });
-                                }
-                                onUpdateDependencyParameters((dependency) => {
-                                  const nextParams = {
-                                    ...(dependency.parameters || {}),
-                                  };
-                                  if (dependency.stableId === targetId) {
-                                    nextParams.groupBy = groupByValue;
-                                  }
-                                  return nextParams;
-                                });
-                              }}
-                            />
-                            <label
-                              className={`mt-3 flex items-start gap-2 select-none ${
-                                groupByActive
-                                  ? "cursor-pointer"
-                                  : "cursor-not-allowed opacity-50"
-                              }`}
-                            >
-                              <input
-                                type="checkbox"
-                                disabled={!groupByActive}
-                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5 mt-0.5 flex-shrink-0 disabled:cursor-not-allowed"
-                                checked={
-                                  sourceStableId
-                                    ? settings.includeAllFeaturesRowForGroupedSources?.includes(
-                                        sourceStableId
-                                      ) ?? false
-                                    : false
-                                }
-                                onChange={(e) => {
-                                  if (!sourceStableId) return;
-                                  const next = new Set(
-                                    settings.includeAllFeaturesRowForGroupedSources ||
-                                      []
-                                  );
-                                  if (e.target.checked) {
-                                    next.add(sourceStableId);
-                                  } else {
-                                    next.delete(sourceStableId);
-                                  }
-                                  const patch: Partial<ClassTableRowComponentSettings> =
-                                    {
-                                      includeAllFeaturesRowForGroupedSources:
-                                        Array.from(next),
-                                    };
-                                  if (e.target.checked) {
-                                    const totalKey = classTableRowKey(
-                                      sourceStableId,
-                                      "*"
-                                    );
-                                    const rowLinked = {
-                                      ...(settings.rowLinkedStableIds || {}),
-                                    };
-                                    if (!(totalKey in rowLinked)) {
-                                      const related = group.source;
-                                      rowLinked[totalKey] =
-                                        related?.tableOfContentsItem
-                                          ?.stableId || sourceStableId;
-                                    }
-                                    patch.rowLinkedStableIds = rowLinked;
-                                  }
-                                  onUpdateSettings(patch);
-                                }}
-                              />
-                              <span className="text-xs text-gray-800 leading-snug">
-                                {t("Include total row for this layer")}
-                              </span>
-                            </label>
-                          </div>
-                          )}
-                          {metricType === "overlay_area" &&
-                            group.source?.stableId && (
+                          <div className="divide-y divide-gray-100">
+                            {!hideGroupBy && (
                               <div className="px-3 py-3">
                                 <h4 className="text-xs font-semibold text-gray-700 mb-1">
-                                  {t("Calculation method")}
+                                  {t("Group by")}
                                 </h4>
                                 <p className="text-xs text-gray-500 mb-2">
                                   {t(
-                                    "SeaSketch can calculate area much faster if it can assumes polygons in this source do not overlap each other. If they do, a slower, more precise method must be used."
+                                    "Split this source into multiple rows based on column values."
                                   )}
                                 </p>
-                                <div className="space-y-1">
-                                  {([false, true] as const).map(
-                                    (overlapValue) => {
-                                      const isSelected =
-                                        !!overlappingFeaturesBySource[
-                                          group.source!.stableId!
-                                        ] === overlapValue;
-                                      const sourceRecommends =
-                                        !!group.source!
-                                          .containsOverlappingFeatures ===
-                                        overlapValue;
-                                      return (
-                                        <button
-                                          key={String(overlapValue)}
-                                          type="button"
-                                          onClick={() => {
-                                            const targetId =
-                                              group.source!.stableId;
-                                            if (!targetId) return;
-                                            onUpdateDependencyParameters(
-                                              (dependency) => {
-                                                if (
-                                                  dependency.stableId ===
-                                                  targetId
-                                                ) {
-                                                  return {
-                                                    ...(dependency.parameters ||
-                                                      {}),
-                                                    sourceHasOverlappingFeatures:
-                                                      overlapValue || undefined,
-                                                  };
-                                                }
-                                                return (
-                                                  dependency.parameters || {}
-                                                );
-                                              }
-                                            );
-                                          }}
-                                          className={`w-full text-left px-2.5 py-2 rounded-md border transition-colors flex items-start gap-2 ${
-                                            isSelected
-                                              ? "border-gray-300 bg-gray-50"
-                                              : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-                                          }`}
-                                        >
-                                          <span className="mt-0 flex-shrink-0">
-                                            {isSelected ? (
-                                              <CheckCircledIcon className="w-4 h-4 text-gray-700" />
-                                            ) : (
-                                              <CircleIcon className="w-4 h-4 text-gray-400" />
-                                            )}
-                                          </span>
-                                          <span className="flex-1 min-w-0">
-                                            <span
-                                              className={`text-xs block ${
-                                                isSelected
-                                                  ? "font-medium text-gray-900"
-                                                  : "text-gray-700"
-                                              }`}
-                                            >
-                                              {overlapValue
-                                                ? t(
-                                                    "Polygons are known to overlap"
-                                                  )
-                                                : t(
-                                                    "Assume no overlap (faster)"
-                                                  )}
-                                            </span>
-                                            {sourceRecommends && (
-                                              <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500 bg-blue-100 rounded">
-                                                {t(
-                                                  "Recommended for this layer"
-                                                )}
-                                                <Tooltip.Root>
-                                                  <Tooltip.Trigger asChild>
-                                                    <button
-                                                      type="button"
-                                                      className="inline-flex text-gray-400 hover:text-gray-600"
-                                                      onClick={(e) =>
-                                                        e.stopPropagation()
-                                                      }
-                                                      onMouseDown={(e) =>
-                                                        e.stopPropagation()
-                                                      }
-                                                    >
-                                                      <QuestionMarkCircledIcon className="w-3 h-3" />
-                                                    </button>
-                                                  </Tooltip.Trigger>
-                                                  <Tooltip.Portal>
-                                                    <Tooltip.Content
-                                                      side="top"
-                                                      sideOffset={4}
-                                                      className="bg-gray-900 text-white text-xs px-2 py-1.5 rounded shadow-lg z-[80] max-w-[240px] leading-snug"
-                                                    >
-                                                      {t(
-                                                        "SeaSketch analyzes a sample of polygons during data preparation in order to make this recommendation. It does not analyze all polygons, so there may be undetected instances of overlap."
-                                                      )}
-                                                      <Tooltip.Arrow className="fill-gray-900" />
-                                                    </Tooltip.Content>
-                                                  </Tooltip.Portal>
-                                                </Tooltip.Root>
-                                              </span>
-                                            )}
-                                          </span>
-                                        </button>
-                                      );
+                                <GroupByPicker
+                                  value={
+                                    currentGroupByBySource[
+                                      group.source?.stableId!
+                                    ]
+                                  }
+                                  options={
+                                    groupByOptionsBySource[
+                                      group.source?.stableId!
+                                    ] || [
+                                      { value: "__none__", label: t("None") },
+                                    ]
+                                  }
+                                  placeholder={t("None")}
+                                  onChange={(groupByValue) => {
+                                    const targetId = group.source?.stableId;
+                                    if (!targetId) return;
+                                    if (!groupByValue) {
+                                      onUpdateSettings({
+                                        includeAllFeaturesRowForGroupedSources:
+                                          (
+                                            settings.includeAllFeaturesRowForGroupedSources ||
+                                            []
+                                          ).filter((id) => id !== targetId),
+                                      });
                                     }
-                                  )}
-                                </div>
+                                    onUpdateDependencyParameters(
+                                      (dependency) => {
+                                        const nextParams = {
+                                          ...(dependency.parameters || {}),
+                                        };
+                                        if (dependency.stableId === targetId) {
+                                          nextParams.groupBy = groupByValue;
+                                        }
+                                        return nextParams;
+                                      }
+                                    );
+                                  }}
+                                />
+                                <label
+                                  className={`mt-3 flex items-start gap-2 select-none ${
+                                    groupByActive
+                                      ? "cursor-pointer"
+                                      : "cursor-not-allowed opacity-50"
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    disabled={!groupByActive}
+                                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5 mt-0.5 flex-shrink-0 disabled:cursor-not-allowed"
+                                    checked={
+                                      sourceStableId
+                                        ? settings.includeAllFeaturesRowForGroupedSources?.includes(
+                                            sourceStableId
+                                          ) ?? false
+                                        : false
+                                    }
+                                    onChange={(e) => {
+                                      if (!sourceStableId) return;
+                                      const next = new Set(
+                                        settings.includeAllFeaturesRowForGroupedSources ||
+                                          []
+                                      );
+                                      if (e.target.checked) {
+                                        next.add(sourceStableId);
+                                      } else {
+                                        next.delete(sourceStableId);
+                                      }
+                                      const patch: Partial<ClassTableRowComponentSettings> =
+                                        {
+                                          includeAllFeaturesRowForGroupedSources:
+                                            Array.from(next),
+                                        };
+                                      if (e.target.checked) {
+                                        const totalKey = classTableRowKey(
+                                          sourceStableId,
+                                          "*"
+                                        );
+                                        const rowLinked = {
+                                          ...(settings.rowLinkedStableIds ||
+                                            {}),
+                                        };
+                                        if (!(totalKey in rowLinked)) {
+                                          const related = group.source;
+                                          rowLinked[totalKey] =
+                                            related?.tableOfContentsItem
+                                              ?.stableId || sourceStableId;
+                                        }
+                                        patch.rowLinkedStableIds = rowLinked;
+                                      }
+                                      onUpdateSettings(patch);
+                                    }}
+                                  />
+                                  <span className="text-xs text-gray-800 leading-snug">
+                                    {t("Include total row for this layer")}
+                                  </span>
+                                </label>
                               </div>
                             )}
-                          {groupedRows.length > 1 && group.source?.stableId && (
-                            <div className="px-3 py-3">
-                              <h4 className="text-xs font-semibold text-gray-700 mb-1">
-                                {t("Remove source")}
-                              </h4>
-                              <p className="text-xs text-gray-500 mb-2">
-                                {t(
-                                  "Remove this data source from the table. Rows and metrics for this source will no longer appear."
-                                )}
-                              </p>
+                            {metricType === "overlay_area" &&
+                              group.source?.stableId && (
+                                <div className="px-3 py-3">
+                                  <h4 className="text-xs font-semibold text-gray-700 mb-1">
+                                    {t("Calculation method")}
+                                  </h4>
+                                  <p className="text-xs text-gray-500 mb-2">
+                                    {t(
+                                      "SeaSketch can calculate area much faster if it can assumes polygons in this source do not overlap each other. If they do, a slower, more precise method must be used."
+                                    )}
+                                  </p>
+                                  <div className="space-y-1">
+                                    {([false, true] as const).map(
+                                      (overlapValue) => {
+                                        const isSelected =
+                                          !!overlappingFeaturesBySource[
+                                            group.source!.stableId!
+                                          ] === overlapValue;
+                                        const sourceRecommends =
+                                          !!group.source!
+                                            .containsOverlappingFeatures ===
+                                          overlapValue;
+                                        return (
+                                          <button
+                                            key={String(overlapValue)}
+                                            type="button"
+                                            onClick={() => {
+                                              const targetId =
+                                                group.source!.stableId;
+                                              if (!targetId) return;
+                                              onUpdateDependencyParameters(
+                                                (dependency) => {
+                                                  if (
+                                                    dependency.stableId ===
+                                                    targetId
+                                                  ) {
+                                                    return {
+                                                      ...(dependency.parameters ||
+                                                        {}),
+                                                      sourceHasOverlappingFeatures:
+                                                        overlapValue ||
+                                                        undefined,
+                                                    };
+                                                  }
+                                                  return (
+                                                    dependency.parameters || {}
+                                                  );
+                                                }
+                                              );
+                                            }}
+                                            className={`w-full text-left px-2.5 py-2 rounded-md border transition-colors flex items-start gap-2 ${
+                                              isSelected
+                                                ? "border-gray-300 bg-gray-50"
+                                                : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                                            }`}
+                                          >
+                                            <span className="mt-0 flex-shrink-0">
+                                              {isSelected ? (
+                                                <CheckCircledIcon className="w-4 h-4 text-gray-700" />
+                                              ) : (
+                                                <CircleIcon className="w-4 h-4 text-gray-400" />
+                                              )}
+                                            </span>
+                                            <span className="flex-1 min-w-0">
+                                              <span
+                                                className={`text-xs block ${
+                                                  isSelected
+                                                    ? "font-medium text-gray-900"
+                                                    : "text-gray-700"
+                                                }`}
+                                              >
+                                                {overlapValue
+                                                  ? t(
+                                                      "Polygons are known to overlap"
+                                                    )
+                                                  : t(
+                                                      "Assume no overlap (faster)"
+                                                    )}
+                                              </span>
+                                              {sourceRecommends && (
+                                                <span className="inline-flex items-center gap-1 mt-1 px-1.5 py-0.5 text-[10px] font-semibold text-gray-500 bg-blue-100 rounded">
+                                                  {t(
+                                                    "Recommended for this layer"
+                                                  )}
+                                                  <Tooltip.Root>
+                                                    <Tooltip.Trigger asChild>
+                                                      <button
+                                                        type="button"
+                                                        className="inline-flex text-gray-400 hover:text-gray-600"
+                                                        onClick={(e) =>
+                                                          e.stopPropagation()
+                                                        }
+                                                        onMouseDown={(e) =>
+                                                          e.stopPropagation()
+                                                        }
+                                                      >
+                                                        <QuestionMarkCircledIcon className="w-3 h-3" />
+                                                      </button>
+                                                    </Tooltip.Trigger>
+                                                    <Tooltip.Portal>
+                                                      <Tooltip.Content
+                                                        side="top"
+                                                        sideOffset={4}
+                                                        className="bg-gray-900 text-white text-xs px-2 py-1.5 rounded shadow-lg z-[80] max-w-[240px] leading-snug"
+                                                      >
+                                                        {t(
+                                                          "SeaSketch analyzes a sample of polygons during data preparation in order to make this recommendation. It does not analyze all polygons, so there may be undetected instances of overlap."
+                                                        )}
+                                                        <Tooltip.Arrow className="fill-gray-900" />
+                                                      </Tooltip.Content>
+                                                    </Tooltip.Portal>
+                                                  </Tooltip.Root>
+                                                </span>
+                                              )}
+                                            </span>
+                                          </button>
+                                        );
+                                      }
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            {groupedRows.length > 1 &&
+                              group.source?.stableId && (
+                                <div className="px-3 py-3">
+                                  <h4 className="text-xs font-semibold text-gray-700 mb-1">
+                                    {t("Remove source")}
+                                  </h4>
+                                  <p className="text-xs text-gray-500 mb-2">
+                                    {t(
+                                      "Remove this data source from the table. Rows and metrics for this source will no longer appear."
+                                    )}
+                                  </p>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      handleRemoveSource(
+                                        group.source!.stableId!
+                                      );
+                                    }}
+                                    className="flex items-center gap-2 px-2 py-1.5 text-xs font-medium text-red-700 hover:text-red-800 hover:bg-red-50 rounded-md border border-red-200 transition-colors"
+                                  >
+                                    <TrashIcon className="w-3.5 h-3.5" />
+                                    {t("Remove this source")}
+                                  </button>
+                                </div>
+                              )}
+                          </div>
+                        </Popover.Content>
+                      </Popover.Portal>
+                    </Popover.Root>
+                  </div>
+
+                  {group.rows.map((row) => {
+                    const checked = !excludedSet.has(row.key);
+                    const linkedStableId =
+                      settings.rowLinkedStableIds?.[row.key];
+                    const customLabel =
+                      settings.customRowLabels?.[row.key] || "";
+                    const stableId = row.sourceId ? row.sourceId : undefined;
+                    const defaultLabel =
+                      row.groupByKey === "*" ? group.title : row.groupByKey;
+                    const chipLabel =
+                      row.groupByKey === "*" ? group.title : row.groupByKey;
+                    return (
+                      <div
+                        key={row.key}
+                        className={`flex gap-2 px-3 py-2 items-center transition-opacity ${
+                          !checked ? "opacity-50 cursor-not-allowed" : ""
+                        }`}
+                      >
+                        <div
+                          className={`flex-[2] min-w-0 relative ${
+                            !checked ? "pointer-events-none" : ""
+                          }`}
+                        >
+                          <input
+                            type="text"
+                            className={`w-full rounded border border-gray-300 bg-transparent px-2 py-1 text-sm font-medium text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-0 focus:border-gray-300 ${
+                              customLabel ? "pr-28" : ""
+                            }`}
+                            placeholder={defaultLabel}
+                            value={customLabel}
+                            aria-label={t("Row label")}
+                            onChange={(e) => {
+                              onUpdateSettings({
+                                customRowLabels: {
+                                  ...(settings.customRowLabels || {}),
+                                  [row.key]: e.target.value,
+                                },
+                              });
+                            }}
+                          />
+                          {customLabel && (
+                            <span className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none px-1.5 text-[11px] text-gray-800/50 font-medium truncate max-w-[120px] bg-blue-50 rounded-sm ">
+                              {chipLabel}
+                            </span>
+                          )}
+                        </div>
+                        <div
+                          className={`flex-1 min-w-0 ${
+                            !checked ? "pointer-events-none" : ""
+                          }`}
+                          aria-hidden={!checked}
+                        >
+                          <LayerPickerDropdown
+                            suggested={stableId ? [stableId] : undefined}
+                            value={linkedStableId}
+                            title={t("Choose a layer")}
+                            onChange={(layerValue) => {
+                              const next = {
+                                ...(settings.rowLinkedStableIds || {}),
+                              };
+                              if (!layerValue?.stableId) {
+                                delete next[row.key];
+                              } else {
+                                next[row.key] = layerValue.stableId;
+                              }
+                              onUpdateSettings({ rowLinkedStableIds: next });
+                            }}
+                            required={false}
+                            onlyReportingLayers={false}
+                            hideSearch={false}
+                            description={t(
+                              "If specified, an input will be shown in the table to toggle the associated layer on the map."
+                            )}
+                          >
+                            <button
+                              type="button"
+                              className="h-8 w-full rounded border border-gray-300 px-2 pr-1.5 text-sm text-left flex items-center gap-2 hover:bg-gray-50 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-blue-500"
+                            >
+                              <LayersIcon className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
+                              <span className="truncate flex-1 min-w-0">
+                                {linkedStableId
+                                  ? overlayOptions.find(
+                                      (o) => o.value === linkedStableId
+                                    )?.label || linkedStableId
+                                  : t("No layer toggle")}
+                              </span>
+                              <CaretDownIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                            </button>
+                          </LayerPickerDropdown>
+                        </div>
+                        {group.rows.length > 1 ? (
+                          <Tooltip.Root>
+                            <Tooltip.Trigger asChild>
                               <button
                                 type="button"
                                 onClick={() => {
-                                  handleRemoveSource(group.source!.stableId!);
+                                  const nextExcluded = new Set(
+                                    settings.excludedRowKeys || []
+                                  );
+                                  if (checked) {
+                                    nextExcluded.add(row.key);
+                                  } else {
+                                    nextExcluded.delete(row.key);
+                                  }
+                                  onUpdateSettings({
+                                    excludedRowKeys: Array.from(nextExcluded),
+                                  });
                                 }}
-                                className="flex items-center gap-2 px-2 py-1.5 text-xs font-medium text-red-700 hover:text-red-800 hover:bg-red-50 rounded-md border border-red-200 transition-colors"
+                                className={`flex items-center justify-center w-8 h-8 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 flex-shrink-0 ${
+                                  checked
+                                    ? "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                                    : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+                                }`}
+                                aria-label={
+                                  checked
+                                    ? t("Hide row from table")
+                                    : t("Show row in table")
+                                }
                               >
-                                <TrashIcon className="w-3.5 h-3.5" />
-                                {t("Remove this source")}
+                                {checked ? (
+                                  <EyeOpenIcon className="w-4 h-4" />
+                                ) : (
+                                  <EyeClosedIcon className="w-4 h-4" />
+                                )}
                               </button>
-                            </div>
-                          )}
-                        </div>
-                      </Popover.Content>
-                    </Popover.Portal>
-                  </Popover.Root>
-                </div>
-
-                {group.rows.map((row) => {
-                  const checked = !excludedSet.has(row.key);
-                  const linkedStableId = settings.rowLinkedStableIds?.[row.key];
-                  const customLabel = settings.customRowLabels?.[row.key] || "";
-                  const stableId = row.sourceId ? row.sourceId : undefined;
-                  const defaultLabel =
-                    row.groupByKey === "*" ? group.title : row.groupByKey;
-                  const chipLabel =
-                    row.groupByKey === "*" ? group.title : row.groupByKey;
-                  return (
-                    <div
-                      key={row.key}
-                      className={`flex gap-2 px-3 py-2 items-center transition-opacity ${
-                        !checked ? "opacity-50 cursor-not-allowed" : ""
-                      }`}
-                    >
-                      <div
-                        className={`flex-[2] min-w-0 relative ${
-                          !checked ? "pointer-events-none" : ""
-                        }`}
-                      >
-                        <input
-                          type="text"
-                          className={`w-full rounded border border-gray-300 bg-transparent px-2 py-1 text-sm font-medium text-gray-900 placeholder:text-gray-500 focus:outline-none focus:ring-0 focus:border-gray-300 ${
-                            customLabel ? "pr-28" : ""
-                          }`}
-                          placeholder={defaultLabel}
-                          value={customLabel}
-                          aria-label={t("Row label")}
-                          onChange={(e) => {
-                            onUpdateSettings({
-                              customRowLabels: {
-                                ...(settings.customRowLabels || {}),
-                                [row.key]: e.target.value,
-                              },
-                            });
-                          }}
-                        />
-                        {customLabel && (
-                          <span className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none px-1.5 text-[11px] text-gray-800/50 font-medium truncate max-w-[120px] bg-blue-50 rounded-sm ">
-                            {chipLabel}
-                          </span>
+                            </Tooltip.Trigger>
+                            <Tooltip.Portal>
+                              <Tooltip.Content
+                                side="right"
+                                sideOffset={4}
+                                className="bg-gray-900 text-white text-xs px-2 py-1.5 rounded shadow-lg z-[70] max-w-[200px]"
+                              >
+                                {checked
+                                  ? t("Click to hide this row from the table")
+                                  : t("Click to show this row in the table")}
+                                <Tooltip.Arrow className="fill-gray-900" />
+                              </Tooltip.Content>
+                            </Tooltip.Portal>
+                          </Tooltip.Root>
+                        ) : (
+                          <Tooltip.Root>
+                            <Tooltip.Trigger asChild>
+                              <span
+                                className="flex items-center justify-center w-8 h-8 rounded-md flex-shrink-0 text-gray-300 cursor-not-allowed"
+                                role="button"
+                                aria-disabled="true"
+                                aria-label={t("Row visibility (disabled)")}
+                              >
+                                <EyeOpenIcon className="w-4 h-4" />
+                              </span>
+                            </Tooltip.Trigger>
+                            <Tooltip.Portal>
+                              <Tooltip.Content
+                                side="right"
+                                sideOffset={4}
+                                className="bg-gray-900 text-white text-xs px-2 py-1.5 rounded shadow-lg z-[70] max-w-[220px]"
+                              >
+                                {t(
+                                  "Row visibility can only be changed when this source has multiple rows. If you wish to remove this source entirely, click 'Source options'."
+                                )}
+                                <Tooltip.Arrow className="fill-gray-900" />
+                              </Tooltip.Content>
+                            </Tooltip.Portal>
+                          </Tooltip.Root>
                         )}
                       </div>
-                      <div
-                        className={`flex-1 min-w-0 ${
-                          !checked ? "pointer-events-none" : ""
-                        }`}
-                        aria-hidden={!checked}
-                      >
-                        <LayerPickerDropdown
-                          suggested={stableId ? [stableId] : undefined}
-                          value={linkedStableId}
-                          title={t("Choose a layer")}
-                          onChange={(layerValue) => {
-                            const next = {
-                              ...(settings.rowLinkedStableIds || {}),
-                            };
-                            if (!layerValue?.stableId) {
-                              delete next[row.key];
-                            } else {
-                              next[row.key] = layerValue.stableId;
-                            }
-                            onUpdateSettings({ rowLinkedStableIds: next });
-                          }}
-                          required={false}
-                          onlyReportingLayers={false}
-                          hideSearch={false}
-                          description={t(
-                            "If specified, an input will be shown in the table to toggle the associated layer on the map."
-                          )}
-                        >
-                          <button
-                            type="button"
-                            className="h-8 w-full rounded border border-gray-300 px-2 pr-1.5 text-sm text-left flex items-center gap-2 hover:bg-gray-50 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500 focus-visible:border-blue-500"
-                          >
-                            <LayersIcon className="w-3.5 h-3.5 text-gray-500 flex-shrink-0" />
-                            <span className="truncate flex-1 min-w-0">
-                              {linkedStableId
-                                ? overlayOptions.find(
-                                    (o) => o.value === linkedStableId
-                                  )?.label || linkedStableId
-                                : t("No layer toggle")}
-                            </span>
-                            <CaretDownIcon className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                          </button>
-                        </LayerPickerDropdown>
-                      </div>
-                      {group.rows.length > 1 ? (
-                        <Tooltip.Root>
-                          <Tooltip.Trigger asChild>
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const nextExcluded = new Set(
-                                  settings.excludedRowKeys || []
-                                );
-                                if (checked) {
-                                  nextExcluded.add(row.key);
-                                } else {
-                                  nextExcluded.delete(row.key);
-                                }
-                                onUpdateSettings({
-                                  excludedRowKeys: Array.from(nextExcluded),
-                                });
-                              }}
-                              className={`flex items-center justify-center w-8 h-8 rounded-md transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1 flex-shrink-0 ${
-                                checked
-                                  ? "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-                                  : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
-                              }`}
-                              aria-label={
-                                checked
-                                  ? t("Hide row from table")
-                                  : t("Show row in table")
-                              }
-                            >
-                              {checked ? (
-                                <EyeOpenIcon className="w-4 h-4" />
-                              ) : (
-                                <EyeClosedIcon className="w-4 h-4" />
-                              )}
-                            </button>
-                          </Tooltip.Trigger>
-                          <Tooltip.Portal>
-                            <Tooltip.Content
-                              side="right"
-                              sideOffset={4}
-                              className="bg-gray-900 text-white text-xs px-2 py-1.5 rounded shadow-lg z-[70] max-w-[200px]"
-                            >
-                              {checked
-                                ? t("Click to hide this row from the table")
-                                : t("Click to show this row in the table")}
-                              <Tooltip.Arrow className="fill-gray-900" />
-                            </Tooltip.Content>
-                          </Tooltip.Portal>
-                        </Tooltip.Root>
-                      ) : (
-                        <Tooltip.Root>
-                          <Tooltip.Trigger asChild>
-                            <span
-                              className="flex items-center justify-center w-8 h-8 rounded-md flex-shrink-0 text-gray-300 cursor-not-allowed"
-                              role="button"
-                              aria-disabled="true"
-                              aria-label={t("Row visibility (disabled)")}
-                            >
-                              <EyeOpenIcon className="w-4 h-4" />
-                            </span>
-                          </Tooltip.Trigger>
-                          <Tooltip.Portal>
-                            <Tooltip.Content
-                              side="right"
-                              sideOffset={4}
-                              className="bg-gray-900 text-white text-xs px-2 py-1.5 rounded shadow-lg z-[70] max-w-[220px]"
-                            >
-                              {t(
-                                "Row visibility can only be changed when this source has multiple rows. If you wish to remove this source entirely, click 'Source options'."
-                              )}
-                              <Tooltip.Arrow className="fill-gray-900" />
-                            </Tooltip.Content>
-                          </Tooltip.Portal>
-                        </Tooltip.Root>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            );
+                    );
+                  })}
+                </div>
+              );
             })}
             {!groupedRows.length && (
               <div className="text-xs text-gray-500 px-3 py-2">

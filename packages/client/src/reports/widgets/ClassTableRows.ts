@@ -9,6 +9,8 @@ import {
 import {
   extractColorForLayers,
   extractColorsForCategories,
+  extractPaletteColorsFromVectorStyle,
+  isTransparentColor,
 } from "../utils/colors";
 
 export type ClassTableRow = {
@@ -20,8 +22,8 @@ export type ClassTableRow = {
   /** For vector or single-color raster; use with a single swatch. */
   stableId?: string;
   /**
-   * For rasters: color stops from the mapbox-gl-style raster-color expression
-   * (interpolate, step, match, etc.). Used to render a multi-color swatch.
+   * For rasters: color stops from raster-color. For vectors: distinct colors
+   * from data-driven fill/circle/line-color when a single row color cannot be resolved.
    */
   colors?: string[];
 };
@@ -40,26 +42,6 @@ function isRasterSource(
     Array.isArray((g as { bands: unknown[] }).bands) &&
     (g as { bands: unknown[] }).bands.length >= 1
   );
-}
-
-/**
- * True if the color string is considered transparent (keyword, rgba(,,,0), or hex with alpha 0).
- */
-function isTransparentColor(c: string): boolean {
-  const s = c.trim().toLowerCase();
-  if (s === "transparent") return true;
-  if (s.startsWith("rgba(") && s.endsWith(")")) {
-    const lastComma = s.lastIndexOf(",");
-    if (lastComma !== -1) {
-      const alpha = s.slice(lastComma + 1, s.length - 1).trim();
-      if (alpha === "0" || alpha === "0.0" || /^0\.0+$/.test(alpha)) return true;
-    }
-  }
-  if (/^#[0-9a-f]{8}$/i.test(s) && s.slice(-2).toLowerCase() === "00")
-    return true;
-  if (/^#[0-9a-f]{4}$/i.test(s) && s.slice(-1).toLowerCase() === "0")
-    return true;
-  return false;
 }
 
 /**
@@ -92,17 +74,53 @@ function getRasterColorsFromStyle(layers: AnyLayer[]): string[] | undefined {
         pushIfOpaque(rasterColor[i] as string);
       }
     } else if (fn === "match") {
-      // [ "match", input, c1, v1, c2, v2, ..., default ] — values at odd indices and last
-      for (let i = 3; i < rasterColor.length - 1; i += 2) {
-        pushIfOpaque(rasterColor[i] as string);
+      // [ "match", input, label1, output1, label2, output2, ..., defaultOutput ]
+      let i = 2;
+      while (i < rasterColor.length) {
+        if (i === rasterColor.length - 1) {
+          pushIfOpaque(rasterColor[i] as string);
+          break;
+        }
+        pushIfOpaque(rasterColor[i + 1] as string);
+        i += 2;
       }
-      const defaultVal = rasterColor[rasterColor.length - 1];
-      if (typeof defaultVal === "string") pushIfOpaque(defaultVal);
     }
 
     if (colorStops.length > 0) return colorStops;
   }
   return undefined;
+}
+
+/**
+ * Resolves a solid paint color when possible; otherwise distinct colors from
+ * data-driven vector paint (match / step / interpolate) for a multi-stop swatch.
+ */
+function vectorSwatchFromSource(
+  source: OverlaySourceDetailsFragment,
+  singleColor: string | undefined
+): { color?: string; colors?: string[] } {
+  const styles = source.mapboxGlStyles as AnyLayer[] | undefined;
+  if (!styles?.length) {
+    if (singleColor !== undefined && !isTransparentColor(singleColor)) {
+      return { color: singleColor };
+    }
+    return {};
+  }
+  let color = singleColor;
+  if (color !== undefined && isTransparentColor(color)) {
+    color = undefined;
+  }
+  if (color !== undefined) {
+    return { color };
+  }
+  const palette = extractPaletteColorsFromVectorStyle(styles);
+  if (!palette?.length) {
+    return {};
+  }
+  if (palette.length === 1) {
+    return { color: palette[0] };
+  }
+  return { colors: palette };
 }
 
 export type ClassTableRowComponentSettings = {
@@ -189,22 +207,17 @@ export function getClassTableRows(options: {
       } else {
         const key = classTableRowKey(dependency.stableId!, "*");
         const styles = source?.mapboxGlStyles as AnyLayer[] | undefined;
-        let color: string | undefined;
-        let colors: string[] | undefined;
+        let swatch: { color?: string; colors?: string[] } = {};
 
         if (source && isRasterSource(source) && styles?.length) {
           const rasterColors = getRasterColorsFromStyle(styles);
           if (rasterColors?.length) {
-            colors = rasterColors;
+            swatch = { colors: rasterColors };
           } else {
-            color = extractColorForLayers(styles);
+            swatch = vectorSwatchFromSource(source, extractColorForLayers(styles));
           }
-        } else if (styles?.length) {
-          color = extractColorForLayers(styles);
-        }
-
-        if (color !== undefined && isTransparentColor(color)) {
-          color = undefined;
+        } else if (source && styles?.length) {
+          swatch = vectorSwatchFromSource(source, extractColorForLayers(styles));
         }
 
         rows.push({
@@ -217,8 +230,7 @@ export function getClassTableRows(options: {
           groupByKey: "*",
           sourceId: dependency.stableId!.toString(),
           stableId: options.stableIds?.[key],
-          ...(color !== undefined && { color }),
-          ...(colors !== undefined && { colors }),
+          ...swatch,
         });
       }
     } else {
@@ -243,12 +255,10 @@ export function getClassTableRows(options: {
           );
         if (includeAllFeaturesRow) {
           const totalKey = classTableRowKey(dependency.stableId!, "*");
-          let totalColor: string | undefined = extractColorForLayers(
-            source.mapboxGlStyles as AnyLayer[]
+          const totalSwatch = vectorSwatchFromSource(
+            source,
+            extractColorForLayers(source.mapboxGlStyles as AnyLayer[])
           );
-          if (totalColor !== undefined && isTransparentColor(totalColor)) {
-            totalColor = undefined;
-          }
           rows.push({
             key: totalKey,
             label:
@@ -258,34 +268,30 @@ export function getClassTableRows(options: {
             groupByKey: "*",
             sourceId: dependency.stableId!.toString(),
             stableId: options.stableIds?.[totalKey],
-            color: totalColor,
+            ...totalSwatch,
           });
         }
         for (const value of values) {
           const key = classTableRowKey(dependency.stableId!, value);
-          let color: string | undefined =
+          const resolved: string | undefined =
             colors[value] ||
             extractColorForLayers(source.mapboxGlStyles as AnyLayer[]);
-          if (color !== undefined && isTransparentColor(color)) {
-            color = undefined;
-          }
+          const rowSwatch = vectorSwatchFromSource(source, resolved);
           rows.push({
             key,
             label: options.customLabels?.[key] || value,
             groupByKey: value,
             sourceId: dependency.stableId!.toString(),
             stableId: options.stableIds?.[key],
-            color,
+            ...rowSwatch,
           });
         }
       } else {
         const key = classTableRowKey(dependency.stableId!, "*");
-        let color: string | undefined = extractColorForLayers(
-          source.mapboxGlStyles as AnyLayer[]
+        const swatch = vectorSwatchFromSource(
+          source,
+          extractColorForLayers(source.mapboxGlStyles as AnyLayer[])
         );
-        if (color !== undefined && isTransparentColor(color)) {
-          color = undefined;
-        }
         rows.push({
           key,
           label:
@@ -296,7 +302,7 @@ export function getClassTableRows(options: {
           groupByKey: "*",
           sourceId: dependency.stableId!.toString(),
           stableId: options.stableIds?.[key],
-          color,
+          ...swatch,
         });
       }
     }
