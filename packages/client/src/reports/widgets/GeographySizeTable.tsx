@@ -62,6 +62,18 @@ export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
     return geographies
       .filter((geography) => !excludeSet.has(geography.id))
       .map((geography) => {
+        const geoKey = String(geography.id);
+        const geoOverrides = componentSettings?.geographyStableIds;
+        const hasOverride = geoOverrides && geoKey in geoOverrides;
+        const ids = geography.stableIds as (string | null)[] | null | undefined;
+        const defaultStableId = ids?.[0] ?? undefined;
+        const resolvedLayerStableId = hasOverride
+          ? geoOverrides[geoKey] ?? undefined
+          : defaultStableId;
+        const stableId = enableLayerToggles
+          ? resolvedLayerStableId
+          : undefined;
+
         const sketchMetrics = metrics.filter(
           (m) =>
             subjectIsFragment(m.subject) &&
@@ -73,7 +85,7 @@ export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
             geographyName: geography.name,
             areaSqKm: 0,
             fractionOfTotal: 0,
-            stableId: undefined,
+            stableId,
           };
         }
 
@@ -93,21 +105,12 @@ export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
         const fractionOfTotal =
           geographyArea > 0 ? areaSqKm / geographyArea : 0;
 
-        const geoKey = String(geography.id);
-        const geoOverrides = componentSettings?.geographyStableIds;
-        const hasOverride = geoOverrides && geoKey in geoOverrides;
-        const ids = geography.stableIds as (string | null)[] | null | undefined;
-        const defaultStableId = ids?.[0] ?? undefined;
-        const stableId = hasOverride
-          ? geoOverrides[geoKey] ?? undefined
-          : defaultStableId;
-
         return {
           geographyId: geography.id,
           geographyName: geography.name,
           areaSqKm,
           fractionOfTotal,
-          stableId: enableLayerToggles ? stableId : undefined,
+          stableId,
         };
       });
   }, [
