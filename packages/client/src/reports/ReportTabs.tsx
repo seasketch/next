@@ -204,10 +204,7 @@ export function ReportTabs() {
         isDisabled ? "pointer-events-none" : ""
       }`}
     >
-      <Tabs.List
-        ref={containerRef}
-        className="flex border-b border-gray-200 bg-white rounded-t-lg"
-      >
+      <Tabs.List ref={containerRef} className="flex bg-white">
         {visibleTabs.map((tab) => renderTab(tab))}
 
         {overflowTabs.length > 0 && (
