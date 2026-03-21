@@ -69,3 +69,7 @@ export const MyComponent: React.FC<MyComponentProps> = ({ title }) => {
 ## React Client -- verifying your work
 
 - Whenever making changes to the client, run `npm run lint` from `packages/client` to ensure there are no linter errors that will break the build.
+
+## Report Widgets
+
+When implementing Report Widgets (and spatial analysis features generally), refer to packages/client/reports/widgets/README.md file for details on the architecture, user interface, and implementation conventions.
