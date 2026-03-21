@@ -7,12 +7,14 @@ import {
 } from "../generated/graphql";
 import { BaseReportContext } from "./context/BaseReportContext";
 import {
+  memo,
   useCallback,
   useContext,
   useLayoutEffect,
   useMemo,
   useRef,
   useState,
+  type ComponentProps,
 } from "react";
 import { ReportTabs } from "./ReportTabs";
 import { ReportUIStateContext } from "./context/ReportUIStateContext";
@@ -313,10 +315,7 @@ export default function ReportEditor({
                     isActive ? "relative left-0" : "-left-[10000px]"
                   }`}
                 >
-                  <SortableReportContent
-                    key={`sortable-tab-${tab.id}-n${tab.cards.length}-e${
-                      editing ?? "none"
-                    }`}
+                  <MemoizedSortableReportContent
                     selectedTab={tab}
                     disabled={isActive && Boolean(editing)}
                     onMoveCardToTab={moveCardModalState.openModal}
@@ -346,3 +345,37 @@ export default function ReportEditor({
     </ReportUIStateContext.Provider>
   );
 }
+
+/**
+ * Default memo() only shallow-compares props. Apollo often keeps the same
+ * `selectedTab` object reference when only `cards` order changes after a
+ * reorder mutation, so the list would skip re-rendering and react-beautiful-dnd
+ * would snap back even though the cache had the new order.
+ *
+ * Do not key this subtree on `editing`: remounting resets scroll and skips the
+ * exit-edit transition.
+ */
+function sortableReportContentPropsEqual(
+  prev: ComponentProps<typeof SortableReportContent>,
+  next: ComponentProps<typeof SortableReportContent>
+): boolean {
+  if (prev.disabled !== next.disabled) return false;
+  if (prev.selectedTab.id !== next.selectedTab.id) return false;
+  const pc = prev.selectedTab.cards;
+  const nc = next.selectedTab.cards;
+  if (pc.length !== nc.length) return false;
+  for (let i = 0; i < pc.length; i++) {
+    if (pc[i].id !== nc[i].id) return false;
+  }
+  if (prev.onMoveCardToTab !== next.onMoveCardToTab) return false;
+  if (prev.onShowCalculationDetails !== next.onShowCalculationDetails) {
+    return false;
+  }
+  if (prev.setEditing !== next.setEditing) return false;
+  return true;
+}
+
+const MemoizedSortableReportContent = memo(
+  SortableReportContent,
+  sortableReportContentPropsEqual
+);
