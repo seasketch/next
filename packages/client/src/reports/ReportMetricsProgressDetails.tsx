@@ -414,8 +414,8 @@ export default function ReportMetricsProgressDetails({
               {isAuthenticated && (
                 <>
                   {" "}
-                  <button
-                    type="button"
+                  <div
+                    role="button"
                     className="underline bg-transparent border-0 p-0 cursor-pointer font-inherit text-inherit"
                     onClick={async () => {
                       try {
@@ -437,7 +437,7 @@ export default function ReportMetricsProgressDetails({
                     }}
                   >
                     {t("Download fragments as GeoJSON")}
-                  </button>
+                  </div>
                 </>
               )}
             </p>
