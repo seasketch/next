@@ -11,7 +11,8 @@ export default function MiniSwitch(props: MiniSwitchProps) {
   return (
     <button
       type="button"
-      aria-pressed="false"
+      role="switch"
+      aria-checked={!!props.isToggled}
       className={`flex-shrink-0 group relative rounded-full inline-flex items-center justify-center h-5 w-10 cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-300 ${props.className}`}
       onClick={props.onClick}
       onKeyDown={(e) => {

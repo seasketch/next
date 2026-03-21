@@ -1812,13 +1812,11 @@ export function TooltipBooleanConfigurationOption({
   onChange: (next: boolean) => void;
 }) {
   return (
-    <label className="flex items-center text-gray-700 text-sm space-x-1">
-      <span className="flex-1 font-light text-gray-400 whitespace-nowrap">
-        {label}
-      </span>
+    <label className="flex items-center gap-2 text-sm text-gray-800">
+      <span className="font-light text-gray-400 whitespace-nowrap">{label}</span>
       <input
         type="checkbox"
-        className="h-4 w-4 text-blue-600 rounded border-gray-300"
+        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
       />
@@ -1856,13 +1854,20 @@ export function TableHeadingsEditor({
   const { t } = useTranslation("admin:reports");
   const [isPopoverOpen, setIsPopoverOpen] = useState(false);
 
+  // Stable signature so we don't treat new componentSettings object refs as changes
+  // when values are unchanged (avoids update loops when labelKeys change).
+  const headingsSettingsSignature =
+    labelKeys.join("\0") +
+    "\n" +
+    labelKeys.map((k) => `${k}=${componentSettings[k] ?? ""}`).join("\n");
+
   const initialLabels = useMemo(() => {
     const labels: Record<string, string> = {};
     labelKeys.forEach((key) => {
       labels[key] = componentSettings[key] || "";
     });
     return labels;
-  }, [labelKeys, componentSettings]);
+  }, [headingsSettingsSignature]);
 
   const [localState, setLocalState] = useState(initialLabels);
   const debouncedLocalState = useDebounce(localState, 100);
@@ -1888,7 +1893,7 @@ export function TableHeadingsEditor({
       });
       onUpdate({ componentSettings: updatedSettings });
     }
-  }, [debouncedLocalState, labelKeys, onUpdate]);
+  }, [debouncedLocalState, initialLabels, labelKeys, onUpdate]);
 
   // Explicit save when popover closes
   const handlePopoverOpenChange = (open: boolean) => {
@@ -1925,7 +1930,7 @@ export function TableHeadingsEditor({
               </label>
               <input
                 type="text"
-                value={localState[key]}
+                value={localState[key] ?? ""}
                 onChange={(e) =>
                   setLocalState((prev) => ({
                     ...prev,

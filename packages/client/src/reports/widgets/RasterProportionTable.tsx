@@ -1,7 +1,11 @@
 import { useMemo } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { MetricDependency, RasterStats } from "overlay-engine";
-import { ReportWidget, TableHeadingsEditor } from "./widgets";
+import {
+  ReportWidget,
+  TableHeadingsEditor,
+  TooltipBooleanConfigurationOption,
+} from "./widgets";
 import {
   ReportWidgetTooltipControls,
   TooltipMorePopover,
@@ -41,6 +45,8 @@ type RasterProportionTableSettings = {
   rowsPerPage?: number;
   nameLabel?: string;
   valueLabel?: string;
+  sumLabel?: string;
+  showSumColumn?: boolean;
   showZeroRows?: boolean;
   hideColorSwatches?: boolean;
 } & ClassTableRowComponentSettings;
@@ -74,8 +80,10 @@ export const RasterProportionTable: ReportWidget<
   const rowsPerPage = componentSettings.rowsPerPage ?? 10;
   const showZeroRows = componentSettings.showZeroRows ?? true;
   const showColorSwatches = !componentSettings.hideColorSwatches;
+  const showSumColumn = componentSettings.showSumColumn ?? false;
   const nameLabel = componentSettings.nameLabel || t("Name");
   const valueLabel = componentSettings.valueLabel || t("% Captured");
+  const sumLabel = componentSettings.sumLabel || t("Sum");
 
   const formatters = useNumberFormatters({
     minimumFractionDigits: componentSettings.minimumFractionDigits,
@@ -183,6 +191,11 @@ export const RasterProportionTable: ReportWidget<
           <div className="flex-1 min-w-0 text-gray-600 text-xs font-semibold uppercase tracking-wide">
             {nameLabel}
           </div>
+          {showSumColumn && (
+            <div className="flex-none text-center text-gray-600 text-xs font-semibold uppercase tracking-wide min-w-[80px]">
+              {sumLabel}
+            </div>
+          )}
           <div className="flex-none text-right text-gray-600 text-xs font-semibold uppercase tracking-wide min-w-[80px]">
             {valueLabel}
           </div>
@@ -212,6 +225,15 @@ export const RasterProportionTable: ReportWidget<
                   {row.label}
                 </span>
               </div>
+              {showSumColumn && (
+                <div className="flex-none text-center text-gray-900 tabular-nums text-sm min-w-[80px]">
+                  {loading ? (
+                    <MetricLoadingDots />
+                  ) : (
+                    formatters.decimal(row.sketchSum)
+                  )}
+                </div>
+              )}
               <div className="flex-none text-right text-gray-900 tabular-nums text-sm min-w-[80px]">
                 {loading ? <MetricLoadingDots /> : formatters.percent(percent)}
               </div>
@@ -224,6 +246,8 @@ export const RasterProportionTable: ReportWidget<
           includeColorColumn={
             showColorSwatches && rows.some(classTableRowHasSwatch)
           }
+          showPercentColumn={showSumColumn}
+          numericAlign={showSumColumn ? "center" : "right"}
         />
       </div>
       {!loading && rows.length === 0 && (
@@ -263,7 +287,23 @@ export const RasterProportionTableTooltipControls: ReportWidgetTooltipControls =
 
     const sortBy = settings.sortBy || "name";
     const showZeroRows = settings.showZeroRows ?? true;
+    const showSumColumn = settings.showSumColumn ?? false;
     const rowsPerPage = settings.rowsPerPage ?? 10;
+
+    const headingsLabelKeys = useMemo(
+      (): string[] =>
+        showSumColumn
+          ? ["nameLabel", "valueLabel", "sumLabel"]
+          : ["nameLabel", "valueLabel"],
+      [showSumColumn]
+    );
+    const headingsLabelDisplayNames = useMemo(
+      (): string[] =>
+        showSumColumn
+          ? ["Name", "% Captured", "Sum"]
+          : ["Name", "% Captured"],
+      [showSumColumn]
+    );
 
     const { filteredSources: sources } = useOverlaySources(dependencies);
 
@@ -323,10 +363,15 @@ export const RasterProportionTableTooltipControls: ReportWidgetTooltipControls =
           }
         />
         <TableHeadingsEditor
-          labelKeys={["nameLabel", "valueLabel"]}
-          labelDisplayNames={["Name", "% Captured"]}
+          labelKeys={headingsLabelKeys}
+          labelDisplayNames={headingsLabelDisplayNames}
           componentSettings={settings}
           onUpdate={onUpdate}
+        />
+        <TooltipBooleanConfigurationOption
+          label={t("show sum")}
+          checked={showSumColumn}
+          onChange={(next) => handleUpdate({ showSumColumn: next })}
         />
         <TooltipMorePopover>
           <PaginationSetting
