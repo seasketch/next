@@ -6,6 +6,7 @@ import {
   useAddReportCardMutation,
 } from "../generated/graphql";
 import { BaseReportContext } from "./context/BaseReportContext";
+import type { ComponentProps } from "react";
 import {
   memo,
   useCallback,
@@ -14,7 +15,6 @@ import {
   useMemo,
   useRef,
   useState,
-  type ComponentProps,
 } from "react";
 import { ReportTabs } from "./ReportTabs";
 import { ReportUIStateContext } from "./context/ReportUIStateContext";
