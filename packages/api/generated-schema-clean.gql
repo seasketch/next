@@ -16193,6 +16193,7 @@ type Survey implements Node {
   isDisabled: Boolean!
   isSpatial: Boolean
   isTemplate: Boolean
+  limitResponseAccessToListedUsers: [String]!
 
   """
   If set, there can only be one response with matching contact information. The
@@ -16533,6 +16534,7 @@ input SurveyPatch {
   
   """
   isDisabled: Boolean
+  limitResponseAccessToListedUsers: [String]
 
   """
   If set, there can only be one response with matching contact information. The

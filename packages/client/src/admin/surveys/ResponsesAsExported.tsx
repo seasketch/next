@@ -22,6 +22,7 @@ import { ChevronDownIcon, UploadIcon } from "@heroicons/react/outline";
 import DownloadIcon from "../../components/DownloadIcon";
 import Papa from "papaparse";
 import ExportResponsesModal from "./ExportResponsesModal";
+import ResponseGridCellBlur from "./ResponseGridCellBlur";
 
 function valueFormatter(accessor: string) {
   return (row: any): string => {
@@ -44,6 +45,8 @@ interface Props {
   responses: SurveyResponseFragment[];
   formElements: FormElementDetailsFragment[];
   rules: SurveyAppRuleFragment[];
+  /** When true, obscures all cells except id and created/updated timestamps. */
+  responseAccessIsLimited?: boolean;
 }
 
 export default function ResponsesAsExported(props: Props) {
@@ -57,6 +60,7 @@ export default function ResponsesAsExported(props: Props) {
       {
         Header: "id",
         accessor: "id",
+        meta: { exportAsVisibleWhenLimited: true },
       },
       {
         Header: "created_at_utc",
@@ -65,6 +69,7 @@ export default function ResponsesAsExported(props: Props) {
         sortType: (a: Row, b: Row) =>
           new Date(a.values.created_at_utc).getTime() -
           new Date(b.values.created_at_utc).getTime(),
+        meta: { exportAsVisibleWhenLimited: true },
       },
       {
         Header: "updated_at_utc",
@@ -73,12 +78,20 @@ export default function ResponsesAsExported(props: Props) {
         sortType: (a: Row, b: Row) =>
           new Date(a.values.updated_at_utc).getTime() -
           new Date(b.values.updated_at_utc).getTime(),
+        meta: { exportAsVisibleWhenLimited: true },
       },
       ...exportColumnNames
         .filter(
           (c) => c !== "created_at_utc" && c !== "updated_at_utc" && c !== "id"
         )
-        .map((h) => ({ Header: h, accessor: valueFormatter(h) })),
+        .map((h) => ({
+          id: h,
+          Header: h,
+          accessor: valueFormatter(h),
+          meta: {
+            exportAsVisibleWhenLimited: h === "facilitator_name",
+          },
+        })),
     ];
   }, [exportColumnNames]);
 
@@ -183,16 +196,24 @@ export default function ResponsesAsExported(props: Props) {
                 {
                   // Loop over the rows cells
                   row.cells.map((cell) => {
-                    // Apply the cell props
+                    const cellDisabled =
+                      Boolean(props.responseAccessIsLimited) &&
+                      (
+                        cell.column as {
+                          meta?: { exportAsVisibleWhenLimited?: boolean };
+                        }
+                      ).meta?.exportAsVisibleWhenLimited !== true;
                     return (
                       <div
                         className="inline-block whitespace-nowrap px-2 py-1 border border-gray-200 truncate"
                         {...cell.getCellProps()}
                       >
-                        {
-                          // Render the cell contents
-                          cell.render("Cell")
-                        }
+                        <ResponseGridCellBlur disabled={cellDisabled}>
+                          {
+                            // Render the cell contents
+                            cell.render("Cell")
+                          }
+                        </ResponseGridCellBlur>
                       </div>
                     );
                   })

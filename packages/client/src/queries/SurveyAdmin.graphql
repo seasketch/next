@@ -15,6 +15,7 @@ fragment SurveyListDetails on Survey {
   isTemplate
   showFacilitationOption
   supportedLanguages
+  limitResponseAccessToListedUsers
 }
 
 query Surveys($projectId: Int!) {
@@ -674,6 +675,7 @@ query SurveyResponses($surveyId: Int!) {
     practiceResponseCount
     archivedResponseCount
     submittedResponseCount
+    limitResponseAccessToListedUsers
     surveyResponsesConnection {
       nodes {
         ...SurveyResponse

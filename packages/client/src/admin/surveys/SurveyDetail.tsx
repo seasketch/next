@@ -61,21 +61,22 @@ export default function SurveyDetail({ surveyId }: { surveyId: number }) {
           </>
         )}
       </div>
-      {data?.survey?.isSpatial &&
+      <div className="h-12"></div>
+      {/* {data?.survey?.isSpatial &&
         Boolean(data?.survey?.submittedResponseCount) && (
           <div className="h-72 flex-shrink-0 relative flex items-center justify-center">
             <span className="p-5 border-4 border-dashed">
               <Trans ns="admin:surveys">Map temporarily disabled</Trans>
             </span>
-            {/* <ResponsesMap
+            <ResponsesMap
               mapTileCacheBuster={mapTileCacheBuster}
               selection={selection}
               onClickResponses={setHighlightedRows}
               surveyId={surveyId}
               filter={tab}
-            /> */}
+            />
           </div>
-        )}
+        )} */}
       <ErrorBoundary
         fallback={
           <ErrorBoundaryFallback title={t("Failed to render responses grid")} />

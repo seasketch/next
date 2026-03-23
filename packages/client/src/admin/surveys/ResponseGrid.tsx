@@ -22,6 +22,7 @@ import DownloadIcon from "../../components/DownloadIcon";
 import Papa from "papaparse";
 import ExportResponsesModal from "./ExportResponsesModal";
 import ResponsesAsExported from "./ResponsesAsExported";
+import ResponseGridCellBlur from "./ResponseGridCellBlur";
 import { ConsentValue } from "../../formElements/Consent";
 import sortBy from "lodash.sortby";
 import { components } from "../../formElements";
@@ -39,6 +40,10 @@ import EditableResponseCell, {
 import { areEqual, FixedSizeList } from "react-window";
 import AutoSizer from "react-virtualized-auto-sizer";
 import Badge from "../../components/Badge";
+import { useAuth0 } from "@auth0/auth0-react";
+import useIsSuperuser from "../../useIsSuperuser";
+import Warning from "../../components/Warning";
+import Button from "../../components/Button";
 
 const ITEM_SIZE = 35;
 interface Props {
@@ -244,6 +249,32 @@ export default function ResponseGrid(props: Props) {
       surveyId: props.surveyId,
     },
   });
+  const { user } = useAuth0();
+  const isSuperuser = useIsSuperuser();
+
+  const [superuserIgnoreAcl, setSuperuserIgnoreAcl] = useState(false);
+
+  const responseAccessIsLimited = useMemo(() => {
+    if (isSuperuser && superuserIgnoreAcl) {
+      return false;
+    }
+    if (
+      data?.survey?.limitResponseAccessToListedUsers &&
+      Array.isArray(data?.survey?.limitResponseAccessToListedUsers) &&
+      (data?.survey?.limitResponseAccessToListedUsers?.length ?? 0) > 0
+    ) {
+      return !data?.survey?.limitResponseAccessToListedUsers.includes(
+        user?.email || ""
+      );
+    }
+    return false;
+  }, [
+    data?.survey?.limitResponseAccessToListedUsers,
+    isSuperuser,
+    user?.email,
+    superuserIgnoreAcl,
+  ]);
+
   const survey = data?.survey;
   const [tab, setTab] = useState("responses");
   const onError = useGlobalErrorHandler();
@@ -330,9 +361,11 @@ export default function ResponseGrid(props: Props) {
         Header: "id",
         accessor: "id",
         width: 50,
+        meta: { responseGridAlwaysVisible: true },
       },
       {
         Header: "created",
+        id: "created",
         accessor: (row: any) => new Date(row.createdAt).toLocaleString(),
         sortDescFirst: true,
         sortType: (a: Row<any>, b: Row<any>) => {
@@ -342,9 +375,11 @@ export default function ResponseGrid(props: Props) {
           );
         },
         width: 180,
+        meta: { responseGridAlwaysVisible: true },
       },
       {
         Header: "last updated",
+        id: "lastUpdated",
         accessor: (row: any) =>
           row.updatedAt ? new Date(row.updatedAt).toLocaleString() : "Never",
         sortDescFirst: true,
@@ -377,6 +412,7 @@ export default function ResponseGrid(props: Props) {
             new Date(b.original.updatedAt).getTime()
           );
         },
+        meta: { responseGridAlwaysVisible: true },
       },
       ...(NameElement
         ? [
@@ -481,6 +517,7 @@ export default function ResponseGrid(props: Props) {
                   </EditableResponseCell>
                 );
               },
+              meta: { responseGridAlwaysVisible: true },
             },
           ]
         : []),
@@ -710,7 +747,15 @@ export default function ResponseGrid(props: Props) {
   }, [tab]);
 
   const RenderCellContents = React.memo(
-    ({ cell, isSelected }: { cell: Cell<any, any>; isSelected: boolean }) => {
+    ({
+      cell,
+      isSelected,
+      cellDisabled,
+    }: {
+      cell: Cell<any, any>;
+      isSelected: boolean;
+      cellDisabled?: boolean;
+    }) => {
       return (
         <div
           className={`whitespace-nowrap px-2 py-1 inline-flex align-middle border truncate ${
@@ -720,10 +765,12 @@ export default function ResponseGrid(props: Props) {
           }`}
           {...cell.getCellProps()}
         >
-          {
-            // Render the cell contents
-            cell.render("Cell")
-          }
+          <ResponseGridCellBlur disabled={Boolean(cellDisabled)}>
+            {
+              // Render the cell contents
+              cell.render("Cell")
+            }
+          </ResponseGridCellBlur>
         </div>
       );
     },
@@ -750,12 +797,19 @@ export default function ResponseGrid(props: Props) {
           {
             // Loop over the rows cells
             row.cells.map((cell) => {
-              // Apply the cell props
+              const cellDisabled =
+                responseAccessIsLimited &&
+                (
+                  cell.column as {
+                    meta?: { responseGridAlwaysVisible?: boolean };
+                  }
+                ).meta?.responseGridAlwaysVisible !== true;
               return (
                 <RenderCellContents
-                  {...cell.getCellProps()}
+                  key={cell.column.id + String(row.id)}
                   cell={cell}
                   isSelected={row.isSelected}
+                  cellDisabled={cellDisabled}
                 />
               );
             })
@@ -763,7 +817,7 @@ export default function ResponseGrid(props: Props) {
         </div>
       );
     },
-    [prepareRow, rows, selectedRowIds]
+    [prepareRow, rows, responseAccessIsLimited]
   );
 
   if (!data) {
@@ -771,183 +825,207 @@ export default function ResponseGrid(props: Props) {
   }
 
   return (
-    <div
-      className={`${props.className} px-0 pt-0 overflow-hidden flex flex-col`}
-    >
-      <FakeTabs
-        selectionCount={selectedFlatRows.length}
-        mutating={togglePracticeState.loading || archiveResponsesState.loading}
-        disableDropdownButton={selectedFlatRows.length === 0}
-        dropdownOptions={[
-          ...(tab !== "export" && tab !== "archived"
-            ? [
-                {
-                  label: tab === "practice" ? "Responses" : "Practice",
-                  onClick: () => {
-                    togglePractice({
-                      variables: {
-                        ids: selectedFlatRows.map((r) => parseInt(r.id)),
-                        isPractice: tab !== "practice",
-                      },
-                    });
+    <>
+      {responseAccessIsLimited && (
+        <Warning>
+          <Trans ns="admin:surveys">
+            Access to survey responses and export is limited to authorized
+            users. Please contact your project administrator to request access.
+          </Trans>
+          {isSuperuser && (
+            <Button
+              className="ml-2"
+              small
+              label={<Trans ns="admin:surveys">Superuser Bypass</Trans>}
+              onClick={() => {
+                setSuperuserIgnoreAcl(true);
+              }}
+            />
+          )}
+        </Warning>
+      )}
+      <div
+        className={`${props.className} px-0 pt-0 overflow-hidden flex flex-col`}
+      >
+        <FakeTabs
+          selectionCount={selectedFlatRows.length}
+          mutating={
+            togglePracticeState.loading || archiveResponsesState.loading
+          }
+          disableDropdownButton={selectedFlatRows.length === 0}
+          responseAccessIsLimited={Boolean(responseAccessIsLimited)}
+          dropdownOptions={[
+            ...(tab !== "export" && tab !== "archived"
+              ? [
+                  {
+                    label: tab === "practice" ? "Responses" : "Practice",
+                    onClick: () => {
+                      togglePractice({
+                        variables: {
+                          ids: selectedFlatRows.map((r) => parseInt(r.id)),
+                          isPractice: tab !== "practice",
+                        },
+                      });
+                    },
                   },
-                },
-              ]
-            : []),
-          ...(tab !== "export"
-            ? [
-                {
-                  label: tab === "archived" ? "Responses" : "Archived",
-                  onClick: () => {
-                    archiveResponses({
-                      variables: {
-                        ids: selectedFlatRows.map((r) => parseInt(r.id)),
-                        makeArchived: tab !== "archived",
-                      },
-                    });
+                ]
+              : []),
+            ...(tab !== "export"
+              ? [
+                  {
+                    label: tab === "archived" ? "Responses" : "Archived",
+                    onClick: () => {
+                      archiveResponses({
+                        variables: {
+                          ids: selectedFlatRows.map((r) => parseInt(r.id)),
+                          makeArchived: tab !== "archived",
+                        },
+                      });
+                    },
                   },
-                },
-              ]
-            : []),
-        ]}
-        onClickExport={() => setShowExportModal(true)}
-        onChange={(value) => setTab(value)}
-        tabs={[
-          {
-            id: "responses",
-            name: "Survey Responses",
-            count: survey?.submittedResponseCount || 0,
-            href: "#",
-            current: tab === "responses",
-          },
-          {
-            id: "practice",
-            name: "Practice Responses",
-            count: survey?.practiceResponseCount || 0,
-            href: "#",
-            current: tab === "practice",
-          },
-          {
-            id: "archived",
-            name: "Archived",
-            count: data.survey?.archivedResponseCount || 0,
-            href: "#",
-            current: tab === "archived",
-          },
-          {
-            id: "export",
-            name: "As Exported",
-            count: 0,
-            href: "#",
-            current: tab === "export",
-          },
-        ]}
-      />
-      <div className="overflow-x-auto text-sm flex-1">
-        {tab === "export" ? (
-          <ResponsesAsExported
-            rules={data.survey?.form?.logicRules || []}
-            formElements={data.survey?.form?.formElements || []}
-            responses={data.survey?.surveyResponsesConnection.nodes || []}
-          />
-        ) : (
-          <CellEditorContext.Provider value={{ editing: editingCell }}>
-            <AutoSizer disableWidth={true}>
-              {(props: any) => (
-                <div
-                  {...getTableProps()}
-                  className="border-collapse border-2 border-t-0 inline-block"
-                  style={{ height: props.height }}
-                >
-                  <div className="bg-gray-50">
-                    {
-                      // Loop over the header rows
-                      headerGroups.map((headerGroup) => (
-                        // Apply the header row props
-                        <div {...headerGroup.getHeaderGroupProps()}>
-                          {
-                            // Loop over the headers in each row
-                            headerGroup.headers.map((column) => (
-                              // Apply the header cell props
-                              <div
-                                {...column.getHeaderProps()}
-                                {...column.getHeaderProps()}
-                                className="select-none group font-semibold inline-block truncate overflow-hidden text-gray-500 text-left border border-gray-200 whitespace-nowrap cursor-pointer hover:border-gray-300 relative"
-                              >
-                                <div
-                                  className="py-2 px-2 truncate"
-                                  {...column.getSortByToggleProps()}
-                                >
-                                  <span className="text-gray-400 text-xs mr-1">
-                                    {column.isSorted
-                                      ? column.isSortedDesc
-                                        ? " ▼"
-                                        : " ▲"
-                                      : ""}
-                                  </span>
-                                  {
-                                    // Render the header
-                                    column.render("Header")
-                                  }
-                                </div>
-                                <div
-                                  {...column.getResizerProps()}
-                                  className={`w-1 bg-gray-50 inline-block h-full absolute right-0 top-0 ${
-                                    column.isResizing ? "isResizing" : ""
-                                  }`}
-                                />
-                              </div>
-                            ))
-                          }
-                        </div>
-                      ))
-                    }
-                  </div>
-                  <div
-                    {...getTableBodyProps()}
-                    className="block"
-                    ref={scrollContainer}
-                  >
-                    <FixedSizeList
-                      height={props.height - 38}
-                      itemCount={rows.length}
-                      itemSize={ITEM_SIZE}
-                      width={totalColumnsWidth}
-                      itemKey={getItemKey}
-                    >
-                      {RenderRow}
-                    </FixedSizeList>
-                  </div>
-                </div>
-              )}
-            </AutoSizer>
-          </CellEditorContext.Provider>
-        )}
-      </div>
-      <ExportResponsesModal
-        onRequestData={(includePractice) => {
-          const { rows, columns } = getDataForExport(
-            survey?.surveyResponsesConnection.nodes || [],
-            survey?.form?.formElements || [],
-            data?.survey?.form?.logicRules || []
-          );
-          return Papa.unparse(
-            rows.filter(
-              (r) => (!r.is_practice || includePractice) && !r.archived
-            ),
+                ]
+              : []),
+          ]}
+          onClickExport={() => setShowExportModal(true)}
+          onChange={(value) => setTab(value)}
+          tabs={[
             {
-              columns,
-            }
-          );
-        }}
-        open={showExportModal}
-        onRequestClose={() => setShowExportModal(false)}
-        spatialFormElements={(data.survey?.form?.formElements || [])?.filter(
-          (el) => el.type?.isSpatial
-        )}
-        surveyId={props.surveyId}
-      />
-    </div>
+              id: "responses",
+              name: "Survey Responses",
+              count: survey?.submittedResponseCount || 0,
+              href: "#",
+              current: tab === "responses",
+            },
+            {
+              id: "practice",
+              name: "Practice Responses",
+              count: survey?.practiceResponseCount || 0,
+              href: "#",
+              current: tab === "practice",
+            },
+            {
+              id: "archived",
+              name: "Archived",
+              count: data.survey?.archivedResponseCount || 0,
+              href: "#",
+              current: tab === "archived",
+            },
+            {
+              id: "export",
+              name: "As Exported",
+              count: 0,
+              href: "#",
+              current: tab === "export",
+            },
+          ]}
+        />
+        <div className="overflow-x-auto text-sm flex-1">
+          {tab === "export" ? (
+            <ResponsesAsExported
+              rules={data.survey?.form?.logicRules || []}
+              formElements={data.survey?.form?.formElements || []}
+              responses={data.survey?.surveyResponsesConnection.nodes || []}
+              responseAccessIsLimited={responseAccessIsLimited}
+            />
+          ) : (
+            <CellEditorContext.Provider value={{ editing: editingCell }}>
+              <AutoSizer disableWidth={true}>
+                {(props: any) => (
+                  <div
+                    {...getTableProps()}
+                    className="border-collapse border-2 border-t-0 inline-block"
+                    style={{ height: props.height }}
+                  >
+                    <div className="bg-gray-50">
+                      {
+                        // Loop over the header rows
+                        headerGroups.map((headerGroup) => (
+                          // Apply the header row props
+                          <div {...headerGroup.getHeaderGroupProps()}>
+                            {
+                              // Loop over the headers in each row
+                              headerGroup.headers.map((column) => (
+                                // Apply the header cell props
+                                <div
+                                  {...column.getHeaderProps()}
+                                  {...column.getHeaderProps()}
+                                  className="select-none group font-semibold inline-block truncate overflow-hidden text-gray-500 text-left border border-gray-200 whitespace-nowrap cursor-pointer hover:border-gray-300 relative"
+                                >
+                                  <div
+                                    className="py-2 px-2 truncate"
+                                    {...column.getSortByToggleProps()}
+                                  >
+                                    <span className="text-gray-400 text-xs mr-1">
+                                      {column.isSorted
+                                        ? column.isSortedDesc
+                                          ? " ▼"
+                                          : " ▲"
+                                        : ""}
+                                    </span>
+                                    {
+                                      // Render the header
+                                      column.render("Header")
+                                    }
+                                  </div>
+                                  <div
+                                    {...column.getResizerProps()}
+                                    className={`w-1 bg-gray-50 inline-block h-full absolute right-0 top-0 ${
+                                      column.isResizing ? "isResizing" : ""
+                                    }`}
+                                  />
+                                </div>
+                              ))
+                            }
+                          </div>
+                        ))
+                      }
+                    </div>
+                    <div
+                      {...getTableBodyProps()}
+                      className="block"
+                      ref={scrollContainer}
+                    >
+                      <FixedSizeList
+                        height={props.height - 38}
+                        itemCount={rows.length}
+                        itemSize={ITEM_SIZE}
+                        width={totalColumnsWidth}
+                        itemKey={getItemKey}
+                      >
+                        {RenderRow}
+                      </FixedSizeList>
+                    </div>
+                  </div>
+                )}
+              </AutoSizer>
+            </CellEditorContext.Provider>
+          )}
+        </div>
+        <ExportResponsesModal
+          onRequestData={(includePractice) => {
+            const { rows, columns } = getDataForExport(
+              survey?.surveyResponsesConnection.nodes || [],
+              survey?.form?.formElements || [],
+              data?.survey?.form?.logicRules || []
+            );
+            return Papa.unparse(
+              rows.filter(
+                (r) => (!r.is_practice || includePractice) && !r.archived
+              ),
+              {
+                columns,
+              }
+            );
+          }}
+          open={showExportModal}
+          onRequestClose={() => setShowExportModal(false)}
+          spatialFormElements={(data.survey?.form?.formElements || [])?.filter(
+            (el) => el.type?.isSpatial
+          )}
+          surveyId={props.surveyId}
+        />
+      </div>
+    </>
   );
 }
 function FakeTabs({
@@ -958,6 +1036,7 @@ function FakeTabs({
   dropdownOptions,
   mutating,
   selectionCount,
+  responseAccessIsLimited,
 }: {
   tabs: {
     current: boolean;
@@ -972,6 +1051,7 @@ function FakeTabs({
   dropdownOptions: DropdownOption[];
   mutating: boolean;
   selectionCount: number;
+  responseAccessIsLimited: boolean;
 }) {
   const { t } = useTranslation("admin:surveys");
   return (
@@ -1032,8 +1112,11 @@ function FakeTabs({
               </a>
             ))}
             <button
-              className="text-gray-500 px-1 py-4 text-sm font-medium border-b-2 border-transparent"
+              className={`text-gray-500 px-1 py-4 text-sm font-medium border-b-2 border-transparent ${
+                responseAccessIsLimited ? "opacity-50 cursor-not-allowed" : ""
+              }`}
               onClick={onClickExport}
+              disabled={responseAccessIsLimited}
             >
               <Trans ns="admin:surveys">Export</Trans>
               <DownloadIcon className="w-4 h-4 mx-2 -mt-0.5" />
