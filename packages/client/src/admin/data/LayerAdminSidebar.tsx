@@ -12,7 +12,7 @@ export default memo(function LayerAdminSidebar() {
     storageKey: "data-admin-tabs",
   });
   // const [selectedTab, setSelectedTab] = useState<Segment>("Basemaps");
-  const containerClassName = "flex flex-col h-full overflow-hidden";
+  const containerClassName = "flex flex-col h-full min-w-0 overflow-hidden";
   return (
     <div className="flex flex-col h-full bg-white">
       <header className="flex-shrink-0">

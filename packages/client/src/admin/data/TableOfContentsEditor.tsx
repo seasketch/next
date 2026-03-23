@@ -1,4 +1,12 @@
-import { Suspense, useCallback, useContext, useEffect, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { Route, useHistory, useParams } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import Spinner from "../../components/Spinner";
@@ -38,6 +46,7 @@ import { ProjectBackgroundJobContext } from "../uploads/ProjectBackgroundJobCont
 import { Feature } from "geojson";
 import { Map } from "mapbox-gl";
 import * as Tooltip from "@radix-ui/react-tooltip";
+import * as Popover from "@radix-ui/react-popover";
 import React from "react";
 import { ZIndexEditableList } from "./ZIndexEditableList";
 import { LayerEditingContext } from "./LayerEditingContext";
@@ -62,6 +71,7 @@ import withScrolling, {
   createHorizontalStrength,
 } from "@nosferatu500/react-dnd-scrollzone";
 import { useApolloClient } from "@apollo/client";
+import { ChatAlt2Icon, CheckIcon } from "@heroicons/react/outline";
 
 const ScrollingComponent = withScrolling("div");
 
@@ -82,6 +92,255 @@ const LazyINaturalistModal = React.lazy(
       /* webpackChunkName: "INaturalistLayer" */ "./AddINaturalistLayerModal"
     )
 );
+
+/** Mock: four layers show unresolved-comment badges; spread is deterministic by stableId sort. */
+function buildMockCommentReplyCountByStableId(
+  items: OverlayFragment[] | undefined | null
+): Record<string, number> {
+  const out: Record<string, number> = {};
+  if (!items?.length) return out;
+  const leaves = items.filter((i) => !i.isFolder);
+  const sorted = [...leaves].sort((a, b) =>
+    a.stableId.localeCompare(b.stableId)
+  );
+  const n = sorted.length;
+  const replyCounts = [2, 1, 4, 3];
+  const pickCount = Math.min(4, n);
+  for (let i = 0; i < pickCount; i++) {
+    const idx =
+      pickCount === 1
+        ? 0
+        : Math.floor((i * (n - 1)) / Math.max(pickCount - 1, 1));
+    out[sorted[idx].stableId] = replyCounts[i];
+  }
+  return out;
+}
+
+function attachCommentBadgesToTreeItems(
+  nodes: TreeItem[],
+  replyCountByStableId: Record<string, number>
+): TreeItem[] {
+  return nodes.map((node) => {
+    const replies = replyCountByStableId[node.id];
+    if (replies === undefined || !node.isLeaf) {
+      return node;
+    }
+    return {
+      ...node,
+      trailingAccessory: (
+        <span
+          className="inline-flex items-center gap-0.5 flex-none shrink-0 ml-1 rounded-full border border-blue-200 bg-blue-50 px-1.5 py-0.5 text-blue-700"
+          title={`${replies} ${replies === 1 ? "reply" : "replies"}`}
+        >
+          <ChatAlt2Icon className="h-3.5 w-3.5 opacity-90" aria-hidden />
+          <span className="text-[11px] font-semibold tabular-nums leading-none">
+            {replies}
+          </span>
+        </span>
+      ),
+    };
+  });
+}
+
+/* eslint-disable i18next/no-literal-string */
+const MOCK_COMMENT_SUMMARIES_ROTATING = [
+  "Needs work on the cartography",
+  "Following up with Will on source so I can complete the metadata",
+  "Needs sign off by @NickAlcaraz",
+];
+/* eslint-enable i18next/no-literal-string */
+
+function buildMockUnresolvedCommentsSummary(
+  items: OverlayFragment[] | undefined | null
+): {
+  total: number;
+  layers: {
+    id: number;
+    title: string;
+    replyCount: number;
+    summary: string;
+  }[];
+} {
+  const counts = buildMockCommentReplyCountByStableId(items);
+  const entries = Object.entries(counts).sort((a, b) =>
+    a[0].localeCompare(b[0])
+  );
+  const layers: {
+    id: number;
+    title: string;
+    replyCount: number;
+    summary: string;
+  }[] = [];
+  for (let i = 0; i < entries.length; i++) {
+    const [stableId, replyCount] = entries[i];
+    const fragment = items?.find((it) => it.stableId === stableId);
+    if (!fragment) continue;
+    const summaryIndex = i % 4;
+    /* eslint-disable i18next/no-literal-string -- mock per-layer comment summary */
+    const summary =
+      summaryIndex === 0
+        ? `@NickAlcaraz — review replacement for ${fragment.title} original?`
+        : MOCK_COMMENT_SUMMARIES_ROTATING[summaryIndex - 1] ?? "";
+    /* eslint-enable i18next/no-literal-string */
+    layers.push({
+      id: fragment.id,
+      title: fragment.title,
+      replyCount,
+      summary,
+    });
+  }
+  const total = layers.reduce((sum, l) => sum + l.replyCount, 0);
+  return { total, layers };
+}
+
+function UnresolvedCommentsHeaderButton({
+  total,
+  layers,
+  onOpenLayer,
+}: {
+  total: number;
+  layers: {
+    id: number;
+    title: string;
+    replyCount: number;
+    summary: string;
+  }[];
+  onOpenLayer: (id: number, title: string) => void;
+}) {
+  const { t } = useTranslation("admin:data");
+  const [open, setOpen] = useState(false);
+  const [resolvedLayerIds, setResolvedLayerIds] = useState<Set<number>>(
+    () => new Set()
+  );
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearCloseTimer = useCallback(() => {
+    if (closeTimerRef.current) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  }, []);
+
+  const scheduleClose = useCallback(() => {
+    clearCloseTimer();
+    closeTimerRef.current = setTimeout(() => setOpen(false), 220);
+  }, [clearCloseTimer]);
+
+  const openPopover = useCallback(() => {
+    clearCloseTimer();
+    setOpen(true);
+  }, [clearCloseTimer]);
+
+  const displayedLayers = useMemo(
+    () => layers.filter((l) => !resolvedLayerIds.has(l.id)),
+    [layers, resolvedLayerIds]
+  );
+
+  const displayedTotal = useMemo(
+    () => displayedLayers.reduce((sum, l) => sum + l.replyCount, 0),
+    [displayedLayers]
+  );
+
+  const markResolved = useCallback((layerId: number) => {
+    setResolvedLayerIds((prev) => {
+      const next = new Set(prev);
+      next.add(layerId);
+      return next;
+    });
+  }, []);
+
+  if (total < 1 || layers.length === 0) {
+    return null;
+  }
+
+  if (displayedLayers.length === 0) {
+    return null;
+  }
+
+  return (
+    <Popover.Root open={open} onOpenChange={setOpen} modal={false}>
+      <Popover.Trigger asChild>
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 rounded px-1.5 py-0.5 border border-blue-200 bg-blue-50 text-blue-800 shadow-sm hover:bg-blue-100"
+          aria-label={t("Unresolved comments")}
+          onMouseEnter={openPopover}
+          onMouseLeave={scheduleClose}
+        >
+          <ChatAlt2Icon className="h-4 w-4 flex-none" aria-hidden />
+          <span className="text-xs font-semibold tabular-nums min-w-[1rem] text-center">
+            {displayedTotal}
+          </span>
+        </button>
+      </Popover.Trigger>
+      <Popover.Portal>
+        <Popover.Content
+          align="end"
+          side="bottom"
+          sideOffset={6}
+          className="z-[100] w-[min(22rem,calc(100vw-2rem))] rounded-md border border-gray-200 bg-white p-2 shadow-lg outline-none"
+          onMouseEnter={openPopover}
+          onMouseLeave={scheduleClose}
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide px-1.5 pt-0.5 pb-2">
+            {t("Unresolved comments")}
+          </p>
+          <ul className="max-h-72 overflow-y-auto space-y-0.5">
+            {displayedLayers.map((layer) => (
+              <li key={layer.id} className="flex gap-1 items-start rounded px-1 py-1 hover:bg-gray-50">
+                <button
+                  type="button"
+                  className="min-w-0 flex-1 text-left rounded px-1.5 py-1.5 border border-transparent hover:border-gray-100"
+                  onClick={() => {
+                    clearCloseTimer();
+                    setOpen(false);
+                    onOpenLayer(layer.id, layer.title);
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="text-sm font-medium text-gray-900 truncate flex-1 min-w-0">
+                      {layer.title}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1 leading-snug line-clamp-3">
+                    {layer.summary}
+                  </p>
+                </button>
+                <div className="flex flex-none items-center gap-1.5 pt-0.5 shrink-0">
+                  <span className="text-[11px] font-semibold tabular-nums text-blue-700 bg-blue-50 rounded-full px-1.5 py-0.5">
+                    {layer.replyCount}
+                  </span>
+                  <button
+                    type="button"
+                    title={t("Mark as resolved")}
+                    aria-label={t("Mark as resolved")}
+                    className="inline-flex h-5 w-5 flex-none items-center justify-center rounded-full border border-blue-200 bg-white text-blue-600 shadow-sm hover:bg-blue-50 hover:border-blue-300 active:bg-blue-100 focus:outline-none focus:ring-1 focus:ring-blue-400 focus:ring-offset-0"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      markResolved(layer.id);
+                    }}
+                  >
+                    <CheckIcon className="h-3 w-3" strokeWidth={2.25} aria-hidden />
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+          <div className="mt-2 border-t border-gray-100 pt-2 px-1.5 pb-0.5">
+            <button
+              type="button"
+              className="text-xs font-medium text-gray-600 hover:text-gray-900 hover:underline"
+            >
+              {t("View full comment history")}
+            </button>
+          </div>
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}
 
 export default function TableOfContentsEditor() {
   const history = useHistory();
@@ -340,6 +599,19 @@ export default function TableOfContentsEditor() {
     setExpandedIds,
   });
 
+  const draftTocItems =
+    tocQuery.data?.projectBySlug?.draftTableOfContentsItems;
+
+  const treeItemsWithCommentBadges = useMemo(() => {
+    const counts = buildMockCommentReplyCountByStableId(draftTocItems);
+    return attachCommentBadgesToTreeItems(filteredTreeNodes, counts);
+  }, [filteredTreeNodes, draftTocItems]);
+
+  const unresolvedCommentsSummary = useMemo(
+    () => buildMockUnresolvedCommentsSummary(draftTocItems),
+    [draftTocItems]
+  );
+
   const client = useApolloClient();
 
   return (
@@ -413,6 +685,14 @@ export default function TableOfContentsEditor() {
                 )
               : undefined
           }
+          unresolvedCommentsSummary={unresolvedCommentsSummary}
+          onOpenLayerFromCommentSummary={(id, title) =>
+            layerEditingContext.setOpenEditor({
+              id,
+              isFolder: false,
+              title,
+            })
+          }
         />
       )}
       {tocQuery.error && (
@@ -457,7 +737,7 @@ export default function TableOfContentsEditor() {
               <TreeView
                 highlights={searchState.highlights}
                 disableEditing={isFiltered}
-                items={filteredTreeNodes}
+                items={treeItemsWithCommentBadges}
                 loadingItems={loadingItems}
                 errors={overlayErrors}
                 expanded={expandedIds}
@@ -597,6 +877,8 @@ function Header({
   searchLoading,
   sharedLayersCount,
   eligibleLayersCount: eligableLayersCount,
+  unresolvedCommentsSummary,
+  onOpenLayerFromCommentSummary,
 }: {
   selectedView: string;
   setSelectedView: (view: string) => void;
@@ -614,6 +896,16 @@ function Header({
   searchLoading?: boolean;
   sharedLayersCount: number;
   eligibleLayersCount: number;
+  unresolvedCommentsSummary: {
+    total: number;
+    layers: {
+      id: number;
+      title: string;
+      replyCount: number;
+      summary: string;
+    }[];
+  };
+  onOpenLayerFromCommentSummary: (id: number, title: string) => void;
 }) {
   const uploadContext = useContext(ProjectBackgroundJobContext);
   const { t } = useTranslation("admin:data");
@@ -641,8 +933,8 @@ function Header({
 
   const { confirm } = useDialog();
   return (
-    <header className="w-128 z-20 flex-none border-b shadow-sm bg-gray-100 mt-2 text-sm border-t px-1">
-      <Menubar.Root className="flex p-1 py-0.5 rounded-md z-50 items-center">
+    <header className="w-full min-w-0 max-w-full z-20 flex-none border-b shadow-sm bg-gray-100 mt-2 text-sm border-t px-1 overflow-x-clip">
+      <Menubar.Root className="flex w-full min-w-0 max-w-full flex-nowrap p-1 py-0.5 rounded-md z-50 items-center overflow-x-clip">
         <Menubar.Menu>
           <MenubarTrigger>{t("View")}</MenubarTrigger>
           <Menubar.Portal>
@@ -820,16 +1112,22 @@ function Header({
             </MenuBarContent>
           </Menubar.Portal>
         </Menubar.Menu>
-        {selectedView !== "changelog" && (
-          <div className="ml-2">
-            <OverlaySearchInput
-              search={search}
-              onChange={onSearchChange}
-              loading={searchLoading}
-            />
-          </div>
-        )}
-        <div className="flex-1 text-right">
+        <div className="flex min-w-0 flex-1 basis-0 items-center gap-1.5 ml-1">
+          {selectedView !== "changelog" && (
+            <div className="min-w-0 flex-1">
+              <OverlaySearchInput
+                search={search}
+                onChange={onSearchChange}
+                loading={searchLoading}
+              />
+            </div>
+          )}
+          <div className="flex flex-none items-center justify-end gap-0.5 shrink-0">
+          <UnresolvedCommentsHeaderButton
+            total={unresolvedCommentsSummary.total}
+            layers={unresolvedCommentsSummary.layers}
+            onOpenLayer={onOpenLayerFromCommentSummary}
+          />
           <Tooltip.Provider>
             <Tooltip.Root delayDuration={200}>
               <Tooltip.Trigger asChild>
@@ -839,7 +1137,7 @@ function Header({
                     publishDisabled
                       ? "bg-white text-black opacity-80"
                       : "bg-primary-500 text-white"
-                  } rounded px-2 py-0.5 mx-1 shadow-sm`}
+                  } rounded px-2 py-0.5 shadow-sm`}
                   onClick={onRequestPublish}
                 >
                   <Trans ns="admin:data">Publish</Trans>
@@ -867,6 +1165,7 @@ function Header({
               </Tooltip.Portal>
             </Tooltip.Root>
           </Tooltip.Provider>
+          </div>
         </div>
       </Menubar.Root>
       {dataDownloadSettingOpen && (

@@ -1,15 +1,15 @@
 /* eslint-disable i18next/no-literal-string */
 import React, { useCallback, useContext, useMemo, useState } from "react";
 import {
-  type AuditEvent,
-  type AuditEventType,
-  type ActorProfile,
   MOCK_PROFILES,
   EVENT_ICONS,
   daysAgo,
   formatRelativeDate,
   EventTimeline,
   CompareButton,
+  ActorProfile,
+  AuditEvent,
+  AuditEventType,
 } from "./AuditEventTimeline";
 import ProfilePhoto from "../users/ProfilePhoto";
 import {
@@ -48,6 +48,8 @@ const EVENT_TYPE_LABELS: Record<AuditEventType, string> = {
   layer_removed: "Layer removed",
   acl_change: "Access control",
   cartography_update: "Cartography",
+  comment_added: "Comment",
+  comment_resolved: "Comment resolved",
 };
 
 function buildAllTimeEvents(): AuditEvent[] {

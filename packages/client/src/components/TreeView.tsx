@@ -47,6 +47,8 @@ export interface TreeItem {
   /** References TreeItem.type */
   dropAcceptsTypes?: string[];
   bbox?: number[];
+  /** Shown after the title (e.g. badges). Use flex-shrink-0 in children. */
+  trailingAccessory?: ReactNode;
 }
 
 interface TreeViewProps {

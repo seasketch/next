@@ -22,14 +22,18 @@ import {
 import { copyTextToClipboard } from "../../../projects/Forums/InlineAuthorDetails";
 import INaturalistLayerSettingsForm from "../INaturalistLayerSettingsForm";
 import {
-  type AuditEvent,
-  type AuditEventType,
   MOCK_PROFILES,
   daysAgo,
+  hoursAgo,
   EventTimeline,
   CompareButton,
+  AuditEvent,
+  AuditEventType,
 } from "../AuditEventTimeline";
 import Warning from "../../../components/Warning";
+import LayerCommentThreadMock, {
+  getMockLayerCommentBody,
+} from "./LayerCommentThreadMock";
 
 export default function LayerSettings({
   item,
@@ -219,6 +223,8 @@ export default function LayerSettings({
         />
       )}
 
+      <LayerCommentThreadMock layerTitle={item.title || "Untitled Layer"} />
+
       {source?.type === DataSourceTypes.Inaturalist && (
         <INaturalistLayerSettingsForm item={item} />
       )}
@@ -250,6 +256,29 @@ function LayerHistory({ title }: { title: string }) {
 
   const events: AuditEvent[] = useMemo(
     () => [
+      {
+        id: "comment-1",
+        type: "comment_added" as AuditEventType,
+        actor: MOCK_PROFILES.chad,
+        date: hoursAgo(2),
+        description: (
+          <span>
+            added a{" "}
+            <Tooltip>
+              <TooltipTrigger>
+                <span className="font-medium text-gray-900 underline decoration-dotted cursor-help">
+                  comment
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs max-w-sm text-left whitespace-pre-wrap leading-snug">
+                  {getMockLayerCommentBody(title)}
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </span>
+        ),
+      },
       {
         id: "1",
         type: "title_change" as AuditEventType,
@@ -359,8 +388,8 @@ function LayerHistory({ title }: { title: string }) {
   );
 
   return (
-    <div className="mt-8 mb-4">
-      <div className="border-t border-gray-200 pt-5 mb-5">
+    <div className="mt-10 mb-4">
+      <div className="mb-5">
         <h3 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
           History
         </h3>

@@ -1,5 +1,12 @@
 /* eslint-disable i18next/no-literal-string */
-import React, { useCallback, useContext, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Modal from "../../components/Modal";
 import {
   LayersAndSourcesForItemsDocument,
@@ -21,18 +28,169 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "../../components/Tooltip";
+import * as Popover from "@radix-ui/react-popover";
 import {
-  type AuditEvent,
-  type AuditEventType,
-  type ActorProfile,
   MOCK_PROFILES,
   daysAgo,
   formatRelativeDate,
   EventTimeline,
   CompareButton,
+  ActorProfile,
+  AuditEvent,
+  AuditEventType,
 } from "./AuditEventTimeline";
 import { LayerEditingContext } from "./LayerEditingContext";
+import PublishReviewUnresolvedCommentsMock from "./PublishReviewUnresolvedCommentsMock";
 import { useParams } from "react-router-dom";
+
+function formatResolvedDate(d: Date): string {
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+function CommentThreadPopover({
+  body,
+  showResolvedFooter,
+  resolvedOn,
+}: {
+  body: React.ReactNode;
+  showResolvedFooter?: boolean;
+  /** Shown in the footer when `showResolvedFooter` is true */
+  resolvedOn?: Date;
+}) {
+  const [open, setOpen] = useState(false);
+  const closeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const cancelClose = useCallback(() => {
+    if (closeTimerRef.current !== null) {
+      clearTimeout(closeTimerRef.current);
+      closeTimerRef.current = null;
+    }
+  }, []);
+
+  const handleOpen = useCallback(() => {
+    cancelClose();
+    setOpen(true);
+  }, [cancelClose]);
+
+  const handleLeave = useCallback(() => {
+    cancelClose();
+    closeTimerRef.current = setTimeout(() => setOpen(false), 200);
+  }, [cancelClose]);
+
+  useEffect(() => () => cancelClose(), [cancelClose]);
+
+  return (
+    <Popover.Root open={open} onOpenChange={setOpen} modal={false}>
+      <Popover.Anchor asChild>
+        <button
+          type="button"
+          className="font-medium text-blue-700 underline decoration-dotted decoration-blue-400/80 underline-offset-2 hover:text-blue-900"
+          onPointerEnter={handleOpen}
+          onPointerLeave={handleLeave}
+        >
+          comment
+        </button>
+      </Popover.Anchor>
+      <Popover.Portal>
+        <Popover.Content
+          className="z-[200] w-[min(22rem,calc(100vw-2rem))] rounded-lg border border-gray-200 bg-white p-3 shadow-lg outline-none"
+          sideOffset={6}
+          collisionPadding={12}
+          onPointerEnter={handleOpen}
+          onPointerLeave={handleLeave}
+          onOpenAutoFocus={(e) => e.preventDefault()}
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-2">
+            Comment thread
+          </p>
+          <div className="max-h-56 overflow-y-auto space-y-3 text-xs leading-snug">
+            {body}
+          </div>
+          {showResolvedFooter && resolvedOn && (
+            <div className="mt-3 pt-2 border-t border-emerald-100 flex items-center gap-1.5 text-[11px] font-medium text-emerald-800 bg-emerald-50/80 -mx-3 -mb-3 px-3 py-2 rounded-b-md">
+              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-emerald-100 text-emerald-800">
+                ✓
+              </span>
+              Marked resolved on {formatResolvedDate(resolvedOn)}
+            </div>
+          )}
+          <Popover.Arrow className="fill-white" />
+        </Popover.Content>
+      </Popover.Portal>
+    </Popover.Root>
+  );
+}
+
+function ThreadAuthorBlock({
+  profile,
+  when,
+  children,
+}: {
+  profile: ActorProfile;
+  when: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="flex gap-2.5">
+      <div className="h-7 w-7 flex-shrink-0 rounded-full overflow-hidden ring-1 ring-black/5">
+        <ProfilePhoto
+          fullname={profile.fullname}
+          email={profile.email}
+          canonicalEmail={profile.email}
+          picture={profile.picture}
+        />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0">
+          <span className="font-semibold text-gray-900">{profile.fullname}</span>
+          <span className="text-gray-500">{when}</span>
+        </div>
+        <div className="text-gray-800 mt-0.5">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+/** Initial post only — used on the “added a comment” audit row. */
+const MANGROVES_COMMENT_INITIAL = (
+  <ThreadAuthorBlock profile={MOCK_PROFILES.nick} when="5 days ago">
+    <p>
+      Can you add the official FWC survey year to the layer abstract and
+      citation? We shouldn&apos;t publish until that&apos;s complete.
+    </p>
+  </ThreadAuthorBlock>
+);
+
+/** Full thread — used on the “resolved a comment” row (popover + footer). */
+const MANGROVES_METADATA_THREAD = (
+  <>
+    <ThreadAuthorBlock profile={MOCK_PROFILES.nick} when="5 days ago">
+      <p>
+        Can you add the official FWC survey year to the layer abstract and
+        citation? We shouldn&apos;t publish until that&apos;s complete.
+      </p>
+    </ThreadAuthorBlock>
+    <ThreadAuthorBlock profile={MOCK_PROFILES.sammi} when="4 days ago">
+      <p>
+        Updated the abstract and source lineage in the metadata editor — same
+        change as the metadata update in this review.
+      </p>
+    </ThreadAuthorBlock>
+  </>
+);
+
+const MPA_BOUNDARY_THREAD = (
+  <ThreadAuthorBlock profile={MOCK_PROFILES.nick} when="3 days ago">
+    <p>
+      Flagging that the MPA boundary labels clip on mobile — can we bump label
+      minzoom or simplify the stack before publish?
+    </p>
+  </ThreadAuthorBlock>
+);
 
 interface LayerSummary {
   name: string;
@@ -41,9 +199,11 @@ interface LayerSummary {
   latestDate: Date;
 }
 
-type ViewMode = "summary" | "chronological";
+type ViewMode = "summary" | "chronological" | "comments";
 
 function buildMockEvents(): AuditEvent[] {
+  const mangrovesCommentResolvedDate = daysAgo(4, 9, 50);
+
   return [
     {
       id: "e1",
@@ -109,6 +269,32 @@ function buildMockEvents(): AuditEvent[] {
       ),
     },
     {
+      id: "e3b",
+      type: "comment_added",
+      actor: MOCK_PROFILES.nick,
+      date: daysAgo(3, 12, 30),
+      layerName: "Marine Protected Areas",
+      description: (
+        <span>
+          added a <CommentThreadPopover body={MPA_BOUNDARY_THREAD} /> about
+          cartography
+        </span>
+      ),
+    },
+    {
+      id: "e4a",
+      type: "comment_added",
+      actor: MOCK_PROFILES.nick,
+      date: daysAgo(5, 11, 0),
+      layerName: "Mangroves 2016",
+      description: (
+        <span>
+          added a <CommentThreadPopover body={MANGROVES_COMMENT_INITIAL} /> about
+          the metadata abstract
+        </span>
+      ),
+    },
+    {
       id: "e4",
       type: "metadata_update",
       actor: MOCK_PROFILES.sammi,
@@ -118,6 +304,23 @@ function buildMockEvents(): AuditEvent[] {
         <span>
           updated <span className="font-medium text-gray-900">metadata</span>{" "}
           <CompareButton />
+        </span>
+      ),
+    },
+    {
+      id: "e4b",
+      type: "comment_resolved",
+      actor: MOCK_PROFILES.sammi,
+      date: mangrovesCommentResolvedDate,
+      layerName: "Mangroves 2016",
+      description: (
+        <span>
+          resolved a{" "}
+          <CommentThreadPopover
+            body={MANGROVES_METADATA_THREAD}
+            showResolvedFooter
+            resolvedOn={mangrovesCommentResolvedDate}
+          />.
         </span>
       ),
     },
@@ -329,7 +532,9 @@ export default function PublishReviewModal(props: {
       title="Review Changes Before Publishing"
       onRequestClose={props.onRequestClose}
       scrollable
-      panelClassName="sm:max-w-2xl"
+      panelClassName={
+        viewMode === "comments" ? "sm:max-w-4xl" : "sm:max-w-2xl"
+      }
       footer={[
         {
           autoFocus: true,
@@ -358,16 +563,24 @@ export default function PublishReviewModal(props: {
       ]}
     >
       <div className="text-left">
-        <p className="text-sm text-gray-500 mb-4">
-          {totalChanges} changes across{" "}
-          {added.length + removed.length + updated.length} layers since the last
-          publish. Review these changes before making them available to project
-          users.
-        </p>
+        {viewMode === "comments" ? (
+          <p className="text-sm text-gray-500 mb-4">
+            Open comment threads are listed below. You can reply or mark threads
+            resolved here as a preview — this does not persist until comments are
+            wired to the server.
+          </p>
+        ) : (
+          <p className="text-sm text-gray-500 mb-4">
+            {totalChanges} changes across{" "}
+            {added.length + removed.length + updated.length} layers since the last
+            publish. Review these changes before making them available to project
+            users.
+          </p>
+        )}
 
-        <div className="flex bg-gray-100 rounded-lg p-0.5 mb-5">
+        <div className="flex bg-gray-100 rounded-lg p-0.5 mb-5 gap-0.5">
           <button
-            className={`flex-1 text-sm font-medium py-1.5 px-3 rounded-md transition-colors ${
+            className={`flex-1 text-xs sm:text-sm font-medium py-1.5 px-2 sm:px-3 rounded-md transition-colors leading-tight ${
               viewMode === "summary"
                 ? "bg-white text-gray-900 shadow-sm"
                 : "text-gray-500 hover:text-gray-700"
@@ -377,7 +590,7 @@ export default function PublishReviewModal(props: {
             Summarized Changes
           </button>
           <button
-            className={`flex-1 text-sm font-medium py-1.5 px-3 rounded-md transition-colors ${
+            className={`flex-1 text-xs sm:text-sm font-medium py-1.5 px-2 sm:px-3 rounded-md transition-colors leading-tight ${
               viewMode === "chronological"
                 ? "bg-white text-gray-900 shadow-sm"
                 : "text-gray-500 hover:text-gray-700"
@@ -386,12 +599,24 @@ export default function PublishReviewModal(props: {
           >
             All Changes
           </button>
+          <button
+            className={`flex-1 text-xs sm:text-sm font-medium py-1.5 px-2 sm:px-3 rounded-md transition-colors leading-tight ${
+              viewMode === "comments"
+                ? "bg-white text-gray-900 shadow-sm"
+                : "text-gray-500 hover:text-gray-700"
+            }`}
+            onClick={() => setViewMode("comments")}
+          >
+            Unresolved Comments
+          </button>
         </div>
 
         {viewMode === "summary" ? (
           <SummarizedView added={added} removed={removed} updated={updated} onLayerClick={navigateToLayer} />
-        ) : (
+        ) : viewMode === "chronological" ? (
           <EventTimeline events={chronologicalEvents} maxHeight={450} onLayerClick={navigateToLayer} />
+        ) : (
+          <PublishReviewUnresolvedCommentsMock />
         )}
 
         {publishState.error && (
@@ -554,6 +779,8 @@ function ChangeChip({
     acl_change: "access",
     cartography_update: "cartography",
     metadata_update: "metadata",
+    comment_added: "comment",
+    comment_resolved: "resolved comment",
   };
 
   const label = changeLabels[type] || type;

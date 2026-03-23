@@ -39,7 +39,9 @@ export default function OverlaySearchInput({
   const { t } = useTranslation("homepage");
 
   return (
-    <div className={`flex items-center relative ${className || ""}`}>
+    <div
+      className={`flex items-center relative min-w-0 w-full max-w-full ${className || ""}`}
+    >
       <input
         ref={inputRef}
         value={search || ""}
@@ -48,7 +50,7 @@ export default function OverlaySearchInput({
         id="search"
         placeholder={t("search layers")}
         style={{ height: 26 }}
-        className="text-sm rounded bg-gray-50 outline-none border-gray-300 pr-12"
+        className="w-full min-w-0 text-sm rounded bg-gray-50 outline-none border border-gray-300 pr-12"
       />
       <div className="w-10 h-6 -ml-12 relative flex items-center">
         <div

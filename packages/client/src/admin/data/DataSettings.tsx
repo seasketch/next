@@ -98,7 +98,7 @@ export default function DataSettings() {
                           slug={slug}
                           className="flex flex-row h-screen"
                         >
-                          <div className="h-full w-128">
+                          <div className="h-full w-128 min-w-0 shrink-0 overflow-hidden">
                             <LayerAdminSidebar />
                           </div>
                           <div className="flex-1 h-full">

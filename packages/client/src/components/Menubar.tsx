@@ -9,17 +9,19 @@ import {
 export function MenubarTrigger({
   children,
   dark,
+  className,
 }: {
   children?: ReactNode;
   dark?: boolean;
+  className?: string;
 }) {
   return (
     <Menubar.Trigger
-      className={`MenubarTrigger py-2 px-3 outline-none select-none font-medium leading-none rounded ${
+      className={`MenubarTrigger shrink-0 py-2 px-3 outline-none select-none font-medium leading-none rounded ${
         dark
           ? "hover:bg-gray-700 hover:text-blue-100 text-gray-300"
           : "hover:bg-gray-200 hover:text-black text-black"
-      }`}
+      }${className ? ` ${className}` : ""}`}
     >
       {children}
     </Menubar.Trigger>

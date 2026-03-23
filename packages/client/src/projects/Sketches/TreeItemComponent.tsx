@@ -559,6 +559,7 @@ export default function TreeItemComponent({
               )}
             </label>
           </ContextMenu.Trigger>
+          {node.trailingAccessory}
           {isHidden && (
             <button
               onClick={() => {

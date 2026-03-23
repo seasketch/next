@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import {
+  BaseDraftReportContextDocument,
   ReportTabDetailsFragment,
   Sketch,
   useAddReportCardMutation,
@@ -14,6 +15,7 @@ import {
   useRef,
   useState,
 } from "react";
+import type { ComponentProps } from "react";
 import { ReportTabs } from "./ReportTabs";
 import { ReportUIStateContext } from "./context/ReportUIStateContext";
 import { DemonstrationSketchDropdown } from "./components/DemonstrationSketchDropdown";
@@ -27,6 +29,33 @@ import { ReportTabManagementModal } from "./ReportTabManagementModal";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { PlusIcon } from "@radix-ui/react-icons";
+
+/** New cards are appended at the end of the tab; scroll the list to the bottom. */
+function scrollContainerToBottom(
+  scrollContainer: HTMLElement,
+  behavior: ScrollBehavior = "smooth"
+) {
+  const top = Math.max(
+    0,
+    scrollContainer.scrollHeight - scrollContainer.clientHeight
+  );
+  scrollContainer.scrollTo({ top, behavior });
+}
+
+/**
+ * ProseMirror (and focus) can change card height after first paint; wait until
+ * after layout so scrollHeight reflects the real bottom.
+ */
+function scrollContainerToBottomAfterLayout(
+  scrollContainer: HTMLElement,
+  behavior: ScrollBehavior = "smooth"
+) {
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      scrollContainerToBottom(scrollContainer, behavior);
+    });
+  });
+}
 
 export default function ReportEditor({
   demonstrationSketches,
@@ -62,6 +91,8 @@ export default function ReportEditor({
   // Track a newly created card that needs to be scrolled into view and focused
   const [pendingNewCardId, setPendingNewCardId] = useState<number | null>(null);
   const pendingNewCardIdRef = useRef<number | null>(null);
+  pendingNewCardIdRef.current = pendingNewCardId;
+  const cardsScrollAreaRef = useRef<HTMLDivElement>(null);
 
   // Get all card IDs from the current tabs data
   const allCardIds = useMemo(() => {
@@ -72,57 +103,37 @@ export default function ReportEditor({
     );
   }, [baseContext.data?.report?.tabs]);
 
-  // When the pending card appears in the data, scroll to it and focus
+  // When a card is new in the GraphQL cache but `editing` is set before that card
+  // is in `tabs[].cards`, every existing card gets `editing && !isSelectedForEditing`
+  // and the UI blurs the whole body with no editor. Only enter edit mode once the
+  // new id appears in Apollo data; refetch BaseDraftReportContext on add to avoid
+  // cache-merge gaps in production.
   useLayoutEffect(() => {
-    if (pendingNewCardId && allCardIds.has(pendingNewCardId)) {
-      const cardId = pendingNewCardId;
-      // Clear the pending state first to avoid re-running
-      setPendingNewCardId(null);
-      pendingNewCardIdRef.current = null;
+    if (!pendingNewCardId || !allCardIds.has(pendingNewCardId)) return;
 
-      // Use requestAnimationFrame to ensure DOM has painted
-      requestAnimationFrame(() => {
-        const cardElement = document.querySelector(
-          // eslint-disable-next-line i18next/no-literal-string
-          `[data-rbd-draggable-id="${cardId}"]`
-        );
-        if (cardElement) {
-          cardElement.scrollIntoView({ behavior: "smooth", block: "center" });
-        } else {
-          console.error("No card element found for card", cardId);
-        }
+    const cardId = pendingNewCardId;
+    if (editing !== cardId) {
+      setEditing(cardId, true);
+    }
+    // eslint-disable-next-line i18next/no-literal-string
+    const cardSelector = `[data-rbd-draggable-id="${cardId}"]`;
 
-        const editor = document.querySelector(
-          // eslint-disable-next-line i18next/no-literal-string
-          `[data-rbd-draggable-id="${cardId}"] [contenteditable="true"]`
-        );
-        if (editor) {
-          (editor as HTMLElement).focus();
-        } else {
-          // Try again using a timeout
-          setTimeout(() => {
-            const editor = document.querySelector(
-              // eslint-disable-next-line i18next/no-literal-string
-              `[data-rbd-draggable-id="${cardId}"] [contenteditable="true"]`
-            );
-            if (editor) {
-              (editor as HTMLElement).focus();
-            } else {
-              console.error(
-                "No editor found for card",
-                cardId,
-                `[data-rbd-draggable-id="${cardId}"] [contenteditable="true"]`
-              );
-            }
-          }, 60);
-        }
+    const scrollArea = cardsScrollAreaRef.current;
+    if (scrollArea) {
+      scrollContainerToBottom(scrollArea, "smooth");
+    }
+
+    const cardElement = document.querySelector(cardSelector);
+    if (!scrollArea && cardElement) {
+      (cardElement as HTMLElement).scrollIntoView({
+        behavior: "smooth",
+        block: "end",
       });
     }
-  }, [pendingNewCardId, allCardIds]);
+  }, [pendingNewCardId, allCardIds, editing, setEditing]);
 
   const [addReportCard] = useAddReportCardMutation({
     awaitRefetchQueries: true,
-    // refetchQueries: [DraftReportDocument],
     onError,
   });
 
@@ -146,27 +157,10 @@ export default function ReportEditor({
             },
           ],
         },
-        {
-          type: "paragraph",
-          content: [
-            {
-              type: "text",
-              text: "Use ",
-            },
-            {
-              type: "text",
-              text: "Text Blocks",
-              marks: [{ type: "strong" }],
-            },
-            {
-              type: "text",
-              text: " to add instructions or other details to your report.",
-            },
-          ],
-        },
       ],
     };
 
+    const sketchClassId = baseContext.data?.sketchClass.id;
     try {
       const { data } = await addReportCard({
         variables: {
@@ -177,27 +171,25 @@ export default function ReportEditor({
           cardType: "TextBlock",
           body,
         },
+        refetchQueries: sketchClassId
+          ? [
+              {
+                query: BaseDraftReportContextDocument,
+                variables: { sketchClassId },
+              },
+            ]
+          : [],
       });
       const newCardId = data?.addReportCard?.reportCard?.id || null;
       if (!newCardId) {
         console.error("No new card id");
         return;
       }
-      // Set the pending card ID - the useLayoutEffect will handle scrolling
-      // and focusing once the card appears in the data
       setPendingNewCardId(newCardId);
-      pendingNewCardIdRef.current = newCardId;
-      // Put the card into edit mode
-      setEditing(newCardId, true);
     } catch (error) {
       // Error is handled by onError
     }
-  }, [
-    addReportCard,
-    selectedTabId,
-    baseContext.data?.report?.tabs,
-    setEditing,
-  ]);
+  }, [addReportCard, selectedTabId, baseContext.data]);
 
   const { t } = useTranslation("admin:sketching");
 
@@ -212,6 +204,23 @@ export default function ReportEditor({
     [calcDetailsModalState]
   );
 
+  const onEditorReadyForFocus = useCallback(
+    (cardId: number, focus: () => void) => {
+      // Ref avoids a race where context still holds a callback from before
+      // pendingNewCardId was set (same tick as ProseMirror init in production).
+      if (cardId === pendingNewCardIdRef.current) {
+        pendingNewCardIdRef.current = null;
+        setPendingNewCardId(null);
+        focus();
+        const scrollArea = cardsScrollAreaRef.current;
+        if (scrollArea) {
+          scrollContainerToBottomAfterLayout(scrollArea, "smooth");
+        }
+      }
+    },
+    []
+  );
+
   const uiStateContextValue = useMemo(() => {
     return {
       selectedTabId: selectedTabId,
@@ -222,6 +231,7 @@ export default function ReportEditor({
       preselectTitle: preselectTitle,
       showCalcDetails: calcDetailsModalState.state.cardId ?? undefined,
       setShowCalcDetails: setShowCalcDetails,
+      onEditorReadyForFocus,
     };
   }, [
     selectedTabId,
@@ -231,6 +241,7 @@ export default function ReportEditor({
     preselectTitle,
     calcDetailsModalState.state.cardId,
     setShowCalcDetails,
+    onEditorReadyForFocus,
   ]);
 
   if (baseContext.loading) {
@@ -240,7 +251,7 @@ export default function ReportEditor({
   return (
     <ReportUIStateContext.Provider value={uiStateContextValue}>
       <div className="flex-1 p-8 max-h-full overflow-hidden">
-        <div className="w-128 mx-auto bg-white rounded-lg shadow-xl border border-t-black/5 border-l-black/10 border-r-black/15 border-b-black/20 z-10 max-h-full flex flex-col">
+        <div className="w-128 mx-auto rounded-lg shadow-xl border border-t-black/5 border-l-black/10 border-r-black/15 border-b-black/20 z-10 max-h-full flex flex-col bg-gray-100">
           {/* report header */}
           <div className="px-4 py-3 border-b bg-white rounded-t-lg flex items-center space-x-2">
             <div className="flex-1">
@@ -251,9 +262,17 @@ export default function ReportEditor({
               />
             </div>
             <DropdownMenu.Root>
-              <DropdownMenu.Trigger asChild>
+              <DropdownMenu.Trigger disabled={editing != null} asChild>
                 <button
-                  className="p-1.5 rounded-full hover:bg-gray-100 text-gray-600 hover:text-gray-800 transition-colors"
+                  className={`p-1.5 rounded-full hover:bg-gray-100 text-gray-600 hover:text-gray-800 transition-colors ${
+                    editing != null ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+                  disabled={editing != null}
+                  title={
+                    editing != null
+                      ? t("Cannot add cards while editing")
+                      : undefined
+                  }
                   aria-label={t("Report actions")}
                 >
                   <PlusIcon className="w-5 h-5" />
@@ -284,7 +303,10 @@ export default function ReportEditor({
           {/* report tabs */}
           <ReportTabs />
           {/* report cards */}
-          <div className="relative max-h-full overflow-y-auto overscroll-contain">
+          <div
+            ref={cardsScrollAreaRef}
+            className="relative max-h-full overflow-y-auto overscroll-none"
+          >
             {(baseContext.data!.report?.tabs || []).map((tab) => {
               const selected =
                 selectedTabId ?? baseContext.data!.report?.tabs?.[0]?.id;
@@ -327,4 +349,36 @@ export default function ReportEditor({
   );
 }
 
-const MemoizedSortableReportContent = memo(SortableReportContent);
+/**
+ * Default memo() only shallow-compares props. Apollo often keeps the same
+ * `selectedTab` object reference when only `cards` order changes after a
+ * reorder mutation, so the list would skip re-rendering and react-beautiful-dnd
+ * would snap back even though the cache had the new order.
+ *
+ * Do not key this subtree on `editing`: remounting resets scroll and skips the
+ * exit-edit transition.
+ */
+function sortableReportContentPropsEqual(
+  prev: ComponentProps<typeof SortableReportContent>,
+  next: ComponentProps<typeof SortableReportContent>
+): boolean {
+  if (prev.disabled !== next.disabled) return false;
+  if (prev.selectedTab.id !== next.selectedTab.id) return false;
+  const pc = prev.selectedTab.cards;
+  const nc = next.selectedTab.cards;
+  if (pc.length !== nc.length) return false;
+  for (let i = 0; i < pc.length; i++) {
+    if (pc[i].id !== nc[i].id) return false;
+  }
+  if (prev.onMoveCardToTab !== next.onMoveCardToTab) return false;
+  if (prev.onShowCalculationDetails !== next.onShowCalculationDetails) {
+    return false;
+  }
+  if (prev.setEditing !== next.setEditing) return false;
+  return true;
+}
+
+const MemoizedSortableReportContent = memo(
+  SortableReportContent,
+  sortableReportContentPropsEqual
+);

@@ -7,6 +7,8 @@ import {
   ShieldCheckIcon,
   MinusIcon,
   ExternalLinkIcon,
+  ChatAlt2Icon,
+  CheckCircleIcon,
 } from "@heroicons/react/outline";
 import {
   Tooltip,
@@ -31,7 +33,9 @@ export type AuditEventType =
   | "layer_created"
   | "layer_removed"
   | "acl_change"
-  | "cartography_update";
+  | "cartography_update"
+  | "comment_added"
+  | "comment_resolved";
 
 export interface AuditEvent {
   id: string;
@@ -57,6 +61,14 @@ export const EVENT_ICONS: Record<
   cartography_update: {
     icon: PencilIcon,
     color: "text-gray-600 bg-gray-100",
+  },
+  comment_added: {
+    icon: ChatAlt2Icon,
+    color: "text-blue-600 bg-blue-50",
+  },
+  comment_resolved: {
+    icon: CheckCircleIcon,
+    color: "text-emerald-700 bg-emerald-50",
   },
 };
 
@@ -117,6 +129,12 @@ export function daysAgo(n: number, hour?: number, minute?: number): Date {
     0,
     0
   );
+  return d;
+}
+
+export function hoursAgo(hours: number): Date {
+  const d = new Date();
+  d.setTime(d.getTime() - hours * 60 * 60 * 1000);
   return d;
 }
 
