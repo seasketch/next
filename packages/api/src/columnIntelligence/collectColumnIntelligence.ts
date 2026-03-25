@@ -4,6 +4,7 @@ import { buildSystemPrompt, buildUserPrompt } from "./prompts";
 import { trimGeostatsForLlm } from "./trimGeostats";
 import { COLUMN_INTELLIGENCE_MODEL_PRESETS } from "./modelPresets";
 import {
+  derivePresentationColumnForStorage,
   filterPresentationType,
   parseColumnIntelligenceResponse,
   sanitizeColumnFields,
@@ -31,6 +32,11 @@ const defaultLogger: ColumnIntelligenceLogger = {
 export interface CollectColumnIntelligenceOptions {
   modelOverride?: string;
   logger?: Partial<ColumnIntelligenceLogger>;
+  /**
+   * Original upload filename (e.g. shapefile or GeoTIFF name). When set, used
+   * for the LLM prompt; otherwise `data_sources.uploaded_source_filename` is used.
+   */
+  uploadedSourceFilename?: string | null;
 }
 
 export type CollectColumnIntelligenceResult =
@@ -73,6 +79,18 @@ function getConfig(): {
   return { accountId, apiToken, model };
 }
 
+function resolveUploadedSourceFilename(
+  options: CollectColumnIntelligenceOptions,
+  fromDb: string | null | undefined,
+): string | null {
+  if (options.uploadedSourceFilename !== undefined) {
+    const t = options.uploadedSourceFilename?.trim();
+    return t && t.length > 0 ? t : null;
+  }
+  const t = fromDb?.trim();
+  return t && t.length > 0 ? t : null;
+}
+
 function mergeLogger(
   partial?: Partial<ColumnIntelligenceLogger>,
 ): ColumnIntelligenceLogger {
@@ -94,8 +112,10 @@ async function applyIntelligenceRow(
     best_popup_description_column: string | null;
     best_id_column: string | null;
     junk_columns: string[] | null;
-    best_presentation_type: VisualizationTypeId | null;
+    chosen_presentation_type: VisualizationTypeId | null;
+    chosen_presentation_column: string | null;
     ai_cartographer_rationale: string | null;
+    best_layer_title: string | null;
   },
 ): Promise<void> {
   await client.query(
@@ -108,8 +128,10 @@ async function applyIntelligenceRow(
       best_popup_description_column = $6,
       best_id_column = $7,
       junk_columns = $8,
-      best_presentation_type = $9::visualization_type,
-      ai_cartographer_rationale = $10,
+      chosen_presentation_type = $9::visualization_type,
+      chosen_presentation_column = $10,
+      ai_cartographer_rationale = $11,
+      best_layer_title = $12,
       column_intelligence_collected = true
     where id = $1
     `,
@@ -122,8 +144,10 @@ async function applyIntelligenceRow(
       row.best_popup_description_column,
       row.best_id_column,
       row.junk_columns,
-      row.best_presentation_type,
+      row.chosen_presentation_type,
+      row.chosen_presentation_column,
       row.ai_cartographer_rationale,
+      row.best_layer_title,
     ],
   );
 }
@@ -158,9 +182,10 @@ export async function collectColumnIntelligenceForDataSource(
     geostats: unknown;
     columns: string[] | null;
     type: string;
+    uploaded_source_filename: string | null;
   }>(
     `
-    select geostats, "columns" as columns, type
+    select geostats, "columns" as columns, type, uploaded_source_filename
     from data_sources
     where id = $1
     `,
@@ -175,7 +200,16 @@ export async function collectColumnIntelligenceForDataSource(
     };
   }
 
-  const { geostats, columns: attrColumns, type: sourceType } = q.rows[0]!;
+  const {
+    geostats,
+    columns: attrColumns,
+    type: sourceType,
+    uploaded_source_filename: uploadedSourceFilenameFromDb,
+  } = q.rows[0]!;
+  const uploadedSourceFilename = resolveUploadedSourceFilename(
+    options,
+    uploadedSourceFilenameFromDb,
+  );
   if (geostats == null) {
     log.info("columnIntelligence skipped: null geostats", { dataSourceId });
     return {
@@ -214,10 +248,11 @@ export async function collectColumnIntelligenceForDataSource(
             allowedAttributes,
             trimmedGeostats: trimmed,
             isRaster,
+            uploadedSourceFilename,
           }),
         },
       ],
-      maxTokens: 768,
+      maxTokens: 896,
       temperature: 0.15,
     });
 
@@ -244,6 +279,7 @@ export async function collectColumnIntelligenceForDataSource(
         best_popup_description_column: null,
         best_id_column: null,
         junk_columns: [],
+        chosen_presentation_column: null,
         ai_cartographer_rationale: data.ai_cartographer_rationale ?? null,
       };
     } else {
@@ -251,8 +287,14 @@ export async function collectColumnIntelligenceForDataSource(
     }
 
     const presentation = filterPresentationType(
-      data.best_presentation_type as VisualizationTypeId | null,
+      data.chosen_presentation_type as VisualizationTypeId | null,
       { isRaster, primaryGeometry },
+    );
+
+    const presentationColumn = derivePresentationColumnForStorage(
+      presentation,
+      data,
+      isRaster,
     );
 
     const rationale =
@@ -268,8 +310,10 @@ export async function collectColumnIntelligenceForDataSource(
         : data.best_popup_description_column ?? null,
       best_id_column: isRaster ? null : data.best_id_column ?? null,
       junk_columns: isRaster ? null : data.junk_columns ?? null,
-      best_presentation_type: presentation,
+      chosen_presentation_type: presentation,
+      chosen_presentation_column: presentationColumn,
       ai_cartographer_rationale: rationale,
+      best_layer_title: data.best_layer_title ?? null,
     });
 
     log.info("columnIntelligence applied", {

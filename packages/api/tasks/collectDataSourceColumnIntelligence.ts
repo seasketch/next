@@ -8,7 +8,7 @@ import { collectColumnIntelligenceForDataSource } from "../src/columnIntelligenc
  * ```sql
  * select graphile_worker.add_job(
  *   'collectDataSourceColumnIntelligence',
- *   json_build_object('dataSourceId', id)
+ *   json_build_object('dataSourceId', id, 'uploadedSourceFilename', uploaded_source_filename)
  * )
  * from data_sources
  * where column_intelligence_collected = false
@@ -17,10 +17,14 @@ import { collectColumnIntelligenceForDataSource } from "../src/columnIntelligenc
  * ```
  */
 export default async function collectDataSourceColumnIntelligence(
-  payload: { dataSourceId: number; modelOverride?: string },
+  payload: {
+    dataSourceId: number;
+    modelOverride?: string;
+    uploadedSourceFilename?: string | null;
+  },
   helpers: Helpers
 ) {
-  const { dataSourceId, modelOverride } = payload;
+  const { dataSourceId, modelOverride, uploadedSourceFilename } = payload;
   if (dataSourceId == null || Number.isNaN(Number(dataSourceId))) {
     helpers.logger.error(
       "collectDataSourceColumnIntelligence: missing dataSourceId"
@@ -34,6 +38,7 @@ export default async function collectDataSourceColumnIntelligence(
       dataSourceId,
       {
         modelOverride,
+        uploadedSourceFilename,
         logger: {
           info: (msg, meta) => {
             helpers.logger.info(meta ? `${msg} ${JSON.stringify(meta)}` : msg);

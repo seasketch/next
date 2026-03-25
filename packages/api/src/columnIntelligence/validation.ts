@@ -30,6 +30,25 @@ function optString(v: unknown): string | null | undefined {
 /** Max stored length for LLM rationale (Postgres `text` is unbounded; cap for safety). */
 export const AI_CARTOGRAPHER_RATIONALE_MAX_LEN = 8000;
 
+/** Max length for human-friendly layer title from column intelligence. */
+export const BEST_LAYER_TITLE_MAX_LEN = 200;
+
+export function clampBestLayerTitle(
+  s: string | null | undefined,
+): string | null {
+  if (s == null || typeof s !== "string") {
+    return null;
+  }
+  const t = s.trim();
+  if (t.length === 0) {
+    return null;
+  }
+  if (t.length <= BEST_LAYER_TITLE_MAX_LEN) {
+    return t;
+  }
+  return t.slice(0, BEST_LAYER_TITLE_MAX_LEN);
+}
+
 export interface ColumnIntelligenceResponse {
   best_label_column: string | null;
   best_category_column: string | null;
@@ -38,9 +57,18 @@ export interface ColumnIntelligenceResponse {
   best_popup_description_column: string | null;
   best_id_column: string | null;
   junk_columns: string[];
-  best_presentation_type: VisualizationTypeId | null;
-  /** Succinct explanation of why best_presentation_type fits the data. */
+  chosen_presentation_type: VisualizationTypeId | null;
+  /**
+   * Attribute column that drives the chosen visualization (e.g. numeric field for
+   * CONTINUOUS_POLYGON). Null when the style does not use a data attribute.
+   */
+  chosen_presentation_column: string | null;
+  /** Succinct explanation of why chosen_presentation_type fits the data. */
   ai_cartographer_rationale: string | null;
+  /**
+   * Human-friendly map layer title derived from upload filename (UI); null if unsure.
+   */
+  best_layer_title: string | null;
 }
 
 function clampRationale(s: string | null): string | null {
@@ -73,12 +101,13 @@ export function parseColumnIntelligenceResponse(
     ? junkRaw.filter((x): x is string => typeof x === "string")
     : [];
 
-  const pres = o.best_presentation_type;
-  let best_presentation_type: VisualizationTypeId | null = null;
+  const pres =
+    o.chosen_presentation_type ?? o.best_presentation_type;
+  let chosen_presentation_type: VisualizationTypeId | null = null;
   if (pres === null || pres === undefined) {
-    best_presentation_type = null;
+    chosen_presentation_type = null;
   } else if (isVisualizationType(pres)) {
-    best_presentation_type = pres;
+    chosen_presentation_type = pres;
   }
 
   return {
@@ -90,10 +119,13 @@ export function parseColumnIntelligenceResponse(
       optString(o.best_popup_description_column) ?? null,
     best_id_column: optString(o.best_id_column) ?? null,
     junk_columns,
-    best_presentation_type,
+    chosen_presentation_type,
+    chosen_presentation_column:
+      optString(o.chosen_presentation_column) ?? null,
     ai_cartographer_rationale: clampRationale(
       optString(o.ai_cartographer_rationale) ?? null,
     ),
+    best_layer_title: clampBestLayerTitle(optString(o.best_layer_title) ?? null),
   };
 }
 
@@ -114,6 +146,39 @@ function normalizeColumnName(
     }
   }
   return null;
+}
+
+/**
+ * After sanitization and geometry/raster filtering, choose the attribute column
+ * that drives the presentation style (LLM may omit; use sensible fallbacks).
+ */
+export function derivePresentationColumnForStorage(
+  presentation: VisualizationTypeId | null,
+  parsed: ColumnIntelligenceResponse,
+  isRaster: boolean,
+): string | null {
+  if (isRaster || presentation == null) {
+    return null;
+  }
+  const chosen = parsed.chosen_presentation_column;
+  if (chosen) {
+    return chosen;
+  }
+  switch (presentation) {
+    case "CONTINUOUS_POLYGON":
+    case "CONTINUOUS_POINT":
+    case "CONTINUOUS_RASTER":
+    case "PROPORTIONAL_SYMBOL":
+      return parsed.best_numeric_column ?? null;
+    case "CATEGORICAL_POLYGON":
+    case "CATEGORICAL_POINT":
+    case "CATEGORICAL_RASTER":
+      return parsed.best_category_column ?? null;
+    case "HEATMAP":
+      return parsed.best_numeric_column ?? null;
+    default:
+      return null;
+  }
 }
 
 const RASTER_TYPES = new Set<VisualizationTypeId>(
@@ -212,7 +277,10 @@ export function sanitizeColumnFields(
       best_popup_description_column: null,
       best_id_column: null,
       junk_columns: [],
+      chosen_presentation_type: null,
+      chosen_presentation_column: null,
       ai_cartographer_rationale: parsed.ai_cartographer_rationale ?? null,
+      best_layer_title: clampBestLayerTitle(parsed.best_layer_title),
     };
   }
   const junk = (parsed.junk_columns || [])
@@ -235,7 +303,12 @@ export function sanitizeColumnFields(
     ),
     best_id_column: normalizeColumnName(parsed.best_id_column, allowed),
     junk_columns: [...new Set(junk)],
-    best_presentation_type: parsed.best_presentation_type ?? null,
+    chosen_presentation_type: parsed.chosen_presentation_type ?? null,
+    chosen_presentation_column: normalizeColumnName(
+      parsed.chosen_presentation_column,
+      allowed,
+    ),
     ai_cartographer_rationale: parsed.ai_cartographer_rationale ?? null,
+    best_layer_title: clampBestLayerTitle(parsed.best_layer_title),
   };
 }

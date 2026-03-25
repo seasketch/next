@@ -124,10 +124,13 @@ export default async function processDataUpload(
             );
           },
         };
-        for (const dataSourceId of createdDataSourceIds) {
+        for (let i = 0; i < createdDataSourceIds.length; i++) {
+          const dataSourceId = createdDataSourceIds[i]!;
+          const layer = data.layers[i];
           try {
             await collectColumnIntelligenceForDataSource(client, dataSourceId, {
               logger: intelLog,
+              uploadedSourceFilename: layer?.filename,
             });
           } catch (e) {
             helpers.logger.error(

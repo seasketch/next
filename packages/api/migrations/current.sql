@@ -9,6 +9,8 @@ alter table data_sources add column if not exists junk_columns text[];
 alter table data_sources add column if not exists ai_cartographer_rationale text;
 alter table data_sources add column if not exists column_intelligence_collected boolean not null default false;
 alter table data_sources drop column if exists best_presentation_type;
+alter table data_sources drop column if exists chosen_presentation_type;
+alter table data_sources drop column if exists chosen_presentation_column;
 drop type if exists visualization_type cascade;
 create type visualization_type as enum (
   'RGB_RASTER',
@@ -24,7 +26,9 @@ create type visualization_type as enum (
   'CONTINUOUS_POINT',
   'HEATMAP'
 );
-alter table data_sources add column if not exists best_presentation_type visualization_type;
+alter table data_sources add column if not exists chosen_presentation_type visualization_type;
+alter table data_sources add column if not exists chosen_presentation_column text;
+alter table data_sources add column if not exists best_layer_title text;
 
 -- Distinct attribute/column names from vector geostats (layers[].attributes[].attribute).
 -- Empty array for raster geostats (non-empty bands[]) or non–vector-shaped payloads.
