@@ -44,9 +44,11 @@ export default function FormElementOptionsInput({
   const [state, setState] = useState(toText(initialValue));
   const [optionsState, setOptionsState] = useState(initialValue);
   const [errors, setErrors] = useState<string[]>([]);
+  const [warnings, setWarnings] = useState<string[]>([]);
 
   useEffect(() => {
     setState(toText(initialValue));
+    setWarnings([]);
   }, [context?.lang]);
 
   let valuesSpecified = true;
@@ -112,7 +114,9 @@ export default function FormElementOptionsInput({
         value={state}
         onChange={(e) => {
           setState(e.target.value);
-          const { errors, options, delimiter } = fromText(e.target.value);
+          const { errors, options, delimiter, warnings: parseWarnings } =
+            fromText(e.target.value, t);
+          setWarnings(parseWarnings);
           if (errors.length) {
             setErrors(errors);
           } else {
@@ -130,6 +134,11 @@ export default function FormElementOptionsInput({
         }}
       />
       <EditorLanguageSelector />
+      {warnings.map((w) => (
+        <p key={w.toString()} className="text-amber-900 text-sm mt-1">
+          {w}
+        </p>
+      ))}
       {errors.map((e) => (
         <p key={e.toString()} className="text-red-900">
           {e}
@@ -175,12 +184,37 @@ function toText(options: FormElementOption[]): string {
   ).replace(/\u180E/g, "");
 }
 
-function fromText(text: string) {
+/** Curly double quotes (U+201C/U+201D) from Word, Google Docs, etc. — not valid CSV delimiters for PapaParse. */
+const SMART_DOUBLE_QUOTES = /[\u201C\u201D]/;
+
+function normalizeTypographyQuotesForCsv(input: string): {
+  normalized: string;
+  hadSmartDoubleQuotes: boolean;
+} {
+  const hadSmartDoubleQuotes = SMART_DOUBLE_QUOTES.test(input);
+  if (!hadSmartDoubleQuotes) {
+    return { normalized: input, hadSmartDoubleQuotes: false };
+  }
+  const normalized = input.replace(/\u201C/g, '"').replace(/\u201D/g, '"');
+  return { normalized, hadSmartDoubleQuotes: true };
+}
+
+function fromText(text: string, t: (key: string) => string) {
   let options: FormElementOption[] = [];
   let errors: string[] = [];
+  let warnings: string[] = [];
   let delimiter: string | undefined = undefined;
+  const { normalized: textToParse, hadSmartDoubleQuotes } =
+    normalizeTypographyQuotesForCsv(text);
+  if (hadSmartDoubleQuotes && text.includes(",")) {
+    warnings.push(
+      t(
+        "Curly quotation marks were converted to straight quotes so commas inside fields parse correctly. Prefer plain ASCII quotes when pasting from Google Docs or Word."
+      )
+    );
+  }
   // eslint-disable-next-line i18next/no-literal-string
-  const result = Papa.parse(text, {
+  const result = Papa.parse(textToParse, {
     skipEmptyLines: true,
   });
   if (
@@ -210,5 +244,5 @@ function fromText(text: string) {
     }
     delimiter = result.meta.delimiter;
   }
-  return { options, errors, delimiter };
+  return { options, errors, delimiter, warnings };
 }
