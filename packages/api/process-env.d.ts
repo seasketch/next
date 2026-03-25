@@ -43,6 +43,12 @@ declare namespace NodeJS {
     CLOUDFLARE_WORKERS_AI_TOKEN?: string;
     /** e.g. @cf/meta/llama-3.1-8b-instruct */
     COLUMN_INTELLIGENCE_MODEL?: string;
+    /**
+     * Optional stable id for Workers AI prefix caching (`x-session-affinity`).
+     * Use one value per deployment (e.g. `seasketch-column-intelligence-v1`) so
+     * repeated jobs route to the same instance and reuse the shared system/schema prefix.
+     */
+    COLUMN_INTELLIGENCE_SESSION_AFFINITY?: string;
     /** May be comma seperated list. First issuer should be the primary host */
     ISSUER?: string;
     /* Used for generating email verification links */

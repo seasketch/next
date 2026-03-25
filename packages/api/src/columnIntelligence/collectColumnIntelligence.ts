@@ -1,8 +1,20 @@
 import { Client, PoolClient } from "pg";
-import { runWorkersAiJson, WorkersAiUsage } from "./cloudflareAi";
+import {
+  COLUMN_INTELLIGENCE_RESPONSE_JSON_SCHEMA,
+  validateColumnIntelligenceResponseAgainstJsonSchema,
+} from "./columnIntelligenceJsonSchema";
+import {
+  extractPromptCacheSignalsFromUsage,
+  getWorkersAiPromptCacheRequestLogFields,
+  runWorkersAiJson,
+  WorkersAiUsage,
+} from "./cloudflareAi";
 import { buildSystemPrompt, buildUserPrompt } from "./prompts";
 import { trimGeostatsForLlm } from "./trimGeostats";
-import { COLUMN_INTELLIGENCE_MODEL_PRESETS } from "./modelPresets";
+import {
+  COLUMN_INTELLIGENCE_MODEL_PRESETS,
+  isWorkersAiJsonModeModel,
+} from "./modelPresets";
 import {
   derivePresentationColumnForStorage,
   filterPresentationType,
@@ -166,7 +178,7 @@ export async function collectColumnIntelligenceForDataSource(
   if (!cfg || !model) {
     log.info(
       "columnIntelligence skipped: set CLOUDFLARE_WORKERS_AI_TOKEN and an account id (CLOUDFLARE_ACCOUNT_ID, or reuse CLOUDFLARE_IMAGES_ACCOUNT / CLOUDFLARE_ACCOUNT_TAG)",
-      { dataSourceId }
+      { dataSourceId },
     );
     return {
       status: "skipped",
@@ -177,6 +189,21 @@ export async function collectColumnIntelligenceForDataSource(
 
   const accountId = cfg.accountId;
   const apiToken = cfg.apiToken;
+
+  if (!isWorkersAiJsonModeModel(model)) {
+    log.error(
+      "columnIntelligence: model does not support Workers AI JSON mode",
+      {
+        dataSourceId,
+        model,
+      },
+    );
+    return {
+      status: "failed",
+      dataSourceId,
+      error: `model_not_json_mode_supported:${model}`,
+    };
+  }
 
   const q = await client.query<{
     geostats: unknown;
@@ -236,6 +263,12 @@ export async function collectColumnIntelligenceForDataSource(
   const allowedAttributes = (attrColumns || []).filter(Boolean);
 
   try {
+    console.log("columnIntelligence running", {
+      dataSourceId,
+      model,
+      sourceType,
+      uploadedSourceFilename,
+    });
     const { parsed, usage } = await runWorkersAiJson({
       accountId,
       apiToken,
@@ -252,13 +285,31 @@ export async function collectColumnIntelligenceForDataSource(
           }),
         },
       ],
-      maxTokens: 896,
-      temperature: 0.15,
+      // maxTokens: 896,
+      // temperature: 0.15,
+      responseJsonSchema: COLUMN_INTELLIGENCE_RESPONSE_JSON_SCHEMA as Record<
+        string,
+        unknown
+      >,
     });
+
+    const schemaCheck =
+      validateColumnIntelligenceResponseAgainstJsonSchema(parsed);
+    if (!schemaCheck.ok) {
+      log.warn("columnIntelligence: JSON Schema validation failed", {
+        dataSourceId,
+        message: schemaCheck.message,
+      });
+      return {
+        status: "failed",
+        dataSourceId,
+        error: `json_schema_validation:${schemaCheck.message}`,
+      };
+    }
 
     const raw = parseColumnIntelligenceResponse(parsed);
     if (!raw) {
-      log.warn("columnIntelligence: invalid LLM JSON shape", {
+      log.warn("columnIntelligence: invalid LLM JSON shape after schema pass", {
         dataSourceId,
       });
       return {
@@ -301,26 +352,36 @@ export async function collectColumnIntelligenceForDataSource(
       presentation == null ? null : (data.ai_cartographer_rationale ?? null);
 
     await applyIntelligenceRow(client, dataSourceId, {
-      best_label_column: isRaster ? null : data.best_label_column ?? null,
-      best_category_column: isRaster ? null : data.best_category_column ?? null,
-      best_numeric_column: isRaster ? null : data.best_numeric_column ?? null,
-      best_date_column: isRaster ? null : data.best_date_column ?? null,
+      best_label_column: isRaster ? null : (data.best_label_column ?? null),
+      best_category_column: isRaster
+        ? null
+        : (data.best_category_column ?? null),
+      best_numeric_column: isRaster ? null : (data.best_numeric_column ?? null),
+      best_date_column: isRaster ? null : (data.best_date_column ?? null),
       best_popup_description_column: isRaster
         ? null
-        : data.best_popup_description_column ?? null,
-      best_id_column: isRaster ? null : data.best_id_column ?? null,
-      junk_columns: isRaster ? null : data.junk_columns ?? null,
+        : (data.best_popup_description_column ?? null),
+      best_id_column: isRaster ? null : (data.best_id_column ?? null),
+      junk_columns: isRaster ? null : (data.junk_columns ?? null),
       chosen_presentation_type: presentation,
       chosen_presentation_column: presentationColumn,
       ai_cartographer_rationale: rationale,
       best_layer_title: data.best_layer_title ?? null,
     });
 
+    const cacheSignals = extractPromptCacheSignalsFromUsage(usage);
     log.info("columnIntelligence applied", {
       dataSourceId,
       model,
       sourceType,
       usage,
+      workersAiPromptCache: {
+        ...getWorkersAiPromptCacheRequestLogFields(),
+        usageCacheSignals: cacheSignals,
+        usageCacheSignalsPositive: Object.values(cacheSignals).some(
+          (n) => n > 0,
+        ),
+      },
     });
 
     return {

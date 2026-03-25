@@ -4,8 +4,9 @@ import { collectColumnIntelligenceForDataSource } from "../src/columnIntelligenc
 /**
  * Backfill or retry column intelligence (LLM) for a single data source.
  *
- * Queue examples:
+ * Enqueue examples:
  * ```sql
+ * -- Parallel (default): omit queue_name or pass null
  * select graphile_worker.add_job(
  *   'collectDataSourceColumnIntelligence',
  *   json_build_object('dataSourceId', id, 'uploadedSourceFilename', uploaded_source_filename)
@@ -14,6 +15,16 @@ import { collectColumnIntelligenceForDataSource } from "../src/columnIntelligenc
  * where column_intelligence_collected = false
  *   and geostats is not null
  * limit 100;
+ *
+ * -- Serial: same non-null queue_name => only one such job runs at a time (globally)
+ * select graphile_worker.add_job(
+ *   'collectDataSourceColumnIntelligence',
+ *   json_build_object('dataSourceId', id),
+ *   queue_name := 'column-intelligence',
+ *   max_attempts := 1
+ * )
+ * from data_sources
+ * where id = any(array[1, 2, 3]);
  * ```
  */
 export default async function collectDataSourceColumnIntelligence(

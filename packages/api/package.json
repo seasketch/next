@@ -86,6 +86,7 @@
     "@types/unsplash-js": "^7.0.0",
     "@types/uuid": "^8.3.0",
     "@types/xml2js": "^0.4.14",
+    "ajv": "^8.17.1",
     "auth0": "^2.27.0",
     "blurhash": "^2.0.5",
     "bottleneck": "^2.19.5",
