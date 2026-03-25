@@ -1,6 +1,13 @@
 import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import { LngLatLike, Map } from "mapbox-gl";
-import { useCallback, useContext, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useReducer,
+  useRef,
+  useState,
+} from "react";
 import { SketchGeometryType } from "../generated/graphql";
 import bbox from "@turf/bbox";
 import DrawLineString from "../draw/DrawLinestring";
@@ -19,7 +26,6 @@ import {
   DigitizingLockState,
   MapManagerContext,
 } from "../dataLayers/MapContextManager";
-import { MapUIStateContext } from "../dataLayers/MapUIContext";
 import { SpanJSONOutput } from "./preprocess";
 
 function hasKinks(feature?: Feature<any>) {
@@ -31,6 +37,12 @@ function hasKinks(feature?: Feature<any>) {
 require("@mapbox/mapbox-gl-draw/dist/mapbox-gl-draw.css");
 
 export const SketchDigitizingLockId = "Sketching";
+
+function managerHoldsSketchLock(manager: unknown): boolean {
+  if (!manager || typeof manager !== "object") return false;
+  const { hasLock } = manager as { hasLock?: (id: string) => boolean };
+  return typeof hasLock === "function" && hasLock.call(manager, SketchDigitizingLockId);
+}
 
 export enum DigitizingState {
   /** User has not yet started drawing */
@@ -119,13 +131,12 @@ export default function useMapboxGLDraw(
   }
 ) {
   const { manager: contextManager } = useContext(MapManagerContext);
-  const uiState = useContext(MapUIStateContext);
   const manager = mapContext.manager || contextManager;
-  const digitizingLockState =
-    mapContext.digitizingLockState ?? uiState.digitizingLockState;
-  const digitizingLockedBy =
-    mapContext.digitizingLockedBy ?? uiState.digitizingLockedBy;
   const [draw, setDraw] = useState<MapboxDraw | null>(null);
+  /** Re-runs digitizing-lock effect when GL Draw mode changes without updating DigitizingState. */
+  const [, bumpLockSync] = useReducer((n: number) => n + 1, 0);
+  const bumpLockSyncRef = useRef(bumpLockSync);
+  bumpLockSyncRef.current = bumpLockSync;
   const isSmall = useMediaQuery("(max-width: 767px)");
   const drawMode = glDrawMode(isSmall, geometryType);
   const [state, _setState] = useState(DigitizingState.NO_SELECTION);
@@ -140,6 +151,7 @@ export default function useMapboxGLDraw(
   const handlerState = useRef<{
     draw?: MapboxDraw;
     onChange: (value: Feature<any> | null, hasKinks: boolean) => void;
+    onCancelNewShape?: () => void;
     state: DigitizingState;
     preprocessingError: string | null;
     onPolygonProgress?: (polygon: Feature<Polygon>) => void;
@@ -151,6 +163,7 @@ export default function useMapboxGLDraw(
   }
 
   handlerState.current.onChange = onChange;
+  handlerState.current.onCancelNewShape = onCancelNewShape;
   handlerState.current.onPolygonProgress = onPolygonProgress;
   handlerState.current.preprocessingError = preprocessingError;
 
@@ -335,12 +348,19 @@ export default function useMapboxGLDraw(
               if (geometryType === SketchGeometryType.Point) {
                 newState = DigitizingState.NO_SELECTION;
               } else {
-                // Could happen when drawing then escape key is hit
-                // or when editing
-                if (handlerState.current.state !== DigitizingState.EDITING) {
-                  if (onCancelNewShape) {
-                    onCancelNewShape();
-                  }
+                // Only when leaving an in-progress new shape (e.g. escape). Do not
+                // run when state is already NO_SELECTION — setCollection() sets
+                // NO_SELECTION then changeMode(simple_select); firing
+                // onCancelNewShape here would call create(true) and re-lock.
+                const s = handlerState.current.state;
+                const leftActiveNewShape =
+                  s !== DigitizingState.EDITING &&
+                  (s === DigitizingState.CREATE ||
+                    s === DigitizingState.STARTED ||
+                    s === DigitizingState.CAN_COMPLETE ||
+                    s === DigitizingState.UNFINISHED);
+                if (leftActiveNewShape) {
+                  handlerState.current.onCancelNewShape?.();
                 }
                 newState = DigitizingState.NO_SELECTION;
               }
@@ -377,6 +397,7 @@ export default function useMapboxGLDraw(
           if (newState !== null) {
             setState(newState);
           }
+          bumpLockSyncRef.current();
         },
         selectionChange: function (e: any) {
           if (!e.features?.length) {
@@ -545,6 +566,7 @@ export default function useMapboxGLDraw(
     clearSelection: () => {
       // @ts-ignore
       handlerState.current.draw?.changeMode("simple_select", {
+        featureIds: [],
         ...commonModeOpts,
       });
       setState(DigitizingState.NO_SELECTION);
@@ -680,6 +702,7 @@ export default function useMapboxGLDraw(
           throw e;
         }
       }
+      bumpLockSyncRef.current();
     }
   }
 
@@ -716,6 +739,7 @@ export default function useMapboxGLDraw(
     } else {
       // @ts-ignore
       handlerState.current.draw?.changeMode("simple_select", {
+        featureIds: [],
         ...commonModeOpts,
       });
     }
@@ -761,36 +785,24 @@ export default function useMapboxGLDraw(
   }, [setDisabled]);
 
   useEffect(() => {
-    if (manager && draw) {
-      // disable measurement tools unless state is
-      // * CREATE
-      // * NO_SELECTION
-      // * UNFINISHED
-      // * or PAUSED_FOR_MEASUREMENT
+    if (!manager || !draw) return;
 
-      const needsLock = ![
-        DigitizingState.NO_SELECTION,
-        DigitizingState.PAUSED_FOR_MEASUREMENT,
-        DigitizingState.UNFINISHED,
-      ].includes(state);
-      const hasLock =
-        digitizingLockState !== DigitizingLockState.Free &&
-        digitizingLockedBy === SketchDigitizingLockId;
+    // Tie the digitizing lock to Mapbox GL Draw's *actual* mode, not React
+    // DigitizingState. Those often desync (e.g. simple_select on the map while
+    // state is still CREATE), which left the lock held and Measure disabled.
+    const mode = draw.getMode() as string;
+    const needsLock = mode !== "simple_select";
 
-      if (needsLock && !hasLock) {
-        manager?.requestDigitizingLock(
-          SketchDigitizingLockId,
-          DigitizingLockState.CursorActive,
-          async () => {
-            // TODO: base response on current state
-            return false;
-          }
-        );
-      } else if (!needsLock && hasLock) {
-        manager?.releaseDigitizingLock(SketchDigitizingLockId);
-      }
+    if (needsLock && !managerHoldsSketchLock(manager)) {
+      void manager.requestDigitizingLock(
+        SketchDigitizingLockId,
+        DigitizingLockState.CursorActive,
+        async () => false
+      );
+    } else if (!needsLock) {
+      manager.releaseDigitizingLock(SketchDigitizingLockId);
     }
-  }, [manager, draw, state, digitizingLockState, digitizingLockedBy]);
+  }, [manager, draw, state, bumpLockSync]);
 
   return {
     digitizingState: state,
