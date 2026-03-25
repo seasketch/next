@@ -43,7 +43,7 @@ Field meanings:
 - chosen_presentation_type: one of the allowed enum ids below (use the UPPER_SNAKE_CASE id, not the human label). Prefer types that visualize categories or numeric values where columns support it, otherwise use simple presentations. Use your judgement based on sample values to determine when numeric vs categorical visualization is most appropriate.
 - chosen_presentation_column: the attribute from allowedAttributes that should drive the map style for chosen_presentation_type. Required when the visualization uses field-based styling: e.g. for CONTINUOUS_POLYGON, CONTINUOUS_POINT, PROPORTIONAL_SYMBOL, or HEATMAP set this to the numeric field to use; for CATEGORICAL_* types set it to the categorical field. Use null for types that do not use a data-driven attribute (e.g. SIMPLE_POLYGON, SIMPLE_POINT, RGB_RASTER) or when no suitable column exists.
 - ai_cartographer_rationale: one or two short sentences (under ~400 characters) explaining your reasoning for chosen_presentation_type (and column, if applicable).
-- best_layer_title: Cleanup the uploadedSourceFilename for display in a map UI. Remove underscores, hyphens, file extensions, and any other "junk". Title-case words if appropriate. Be careful not to change 
+- best_layer_title: Cleanup the uploadedSourceFilename for display in a map UI. Remove underscores, hyphens, file extensions, and any other "junk". Title-case words if appropriate. Be careful not to change it so much that it becomes unrecognizable from the original filename.
 
 Rules:
 - For vector data, every non-null column field MUST be exactly one of the attribute names listed in allowedAttributes.
