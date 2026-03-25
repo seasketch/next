@@ -1,4 +1,5 @@
 import { Helpers } from "graphile-worker";
+import { collectColumnIntelligenceForDataSource } from "../src/columnIntelligence";
 import { createDBRecordsForProcessedLayer } from "../src/spatialUploads";
 import { ProcessedUploadResponse } from "spatial-uploads-handler/dist/src/handleUpload";
 
@@ -94,9 +95,9 @@ export default async function processDataUpload(
 
       const projectId = results.rows[0].project_id;
       if (!data.error) {
-        // Create layers
+        const createdDataSourceIds: number[] = [];
         for (const layer of data.layers) {
-          await createDBRecordsForProcessedLayer(
+          const created = await createDBRecordsForProcessedLayer(
             layer,
             projectId,
             client,
@@ -104,6 +105,35 @@ export default async function processDataUpload(
             isConversionTask ? "conversion" : "upload",
             replace
           );
+          createdDataSourceIds.push(created.dataSourceId);
+        }
+        const intelLog = {
+          info: (msg: string, meta?: Record<string, unknown>) => {
+            helpers.logger.info(
+              meta ? `${msg} ${JSON.stringify(meta)}` : msg
+            );
+          },
+          warn: (msg: string, meta?: Record<string, unknown>) => {
+            helpers.logger.info(
+              meta ? `${msg} ${JSON.stringify(meta)}` : msg
+            );
+          },
+          error: (msg: string, meta?: Record<string, unknown>) => {
+            helpers.logger.error(
+              meta ? `${msg} ${JSON.stringify(meta)}` : msg
+            );
+          },
+        };
+        for (const dataSourceId of createdDataSourceIds) {
+          try {
+            await collectColumnIntelligenceForDataSource(client, dataSourceId, {
+              logger: intelLog,
+            });
+          } catch (e) {
+            helpers.logger.error(
+              `columnIntelligence unexpected error for data_source ${dataSourceId}: ${(e as Error).message}`
+            );
+          }
         }
         await client.query(
           `update project_background_jobs set progress_message = 'complete', state = 'complete' where id = $1`,

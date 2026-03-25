@@ -277,3 +277,11 @@ export function isGeostatsLayer(
   }
   return true;
 }
+
+export {
+  VisualizationType,
+  VisualizationTypeDescriptions,
+  visualizationTypeIds,
+  isRasterPresentationTypeId,
+} from "./visualizationTypeCatalog";
+export type { VisualizationTypeId } from "./visualizationTypeCatalog";

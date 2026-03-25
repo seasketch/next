@@ -2629,6 +2629,7 @@ export enum DataLayersOrderBy {
  */
 export type DataSource = Node & {
   __typename?: 'DataSource';
+  aiCartographerRationale?: Maybe<Scalars['String']>;
   approximateFgbIndexSize?: Maybe<Scalars['Int']>;
   arcgisFetchStrategy: ArcgisFeatureLayerFetchStrategy;
   /** Reads and enables pagination through a set of `ArchivedDataSource`. */
@@ -2636,6 +2637,13 @@ export type DataSource = Node & {
   /** Contains an attribution to be displayed when the map is shown to a user. */
   attribution?: Maybe<Scalars['String']>;
   authorProfile?: Maybe<Profile>;
+  bestCategoryColumn?: Maybe<Scalars['String']>;
+  bestDateColumn?: Maybe<Scalars['String']>;
+  bestIdColumn?: Maybe<Scalars['String']>;
+  bestLabelColumn?: Maybe<Scalars['String']>;
+  bestNumericColumn?: Maybe<Scalars['String']>;
+  bestPopupDescriptionColumn?: Maybe<Scalars['String']>;
+  bestPresentationType?: Maybe<VisualizationType>;
   /**
    * An array containing the longitude and latitude of the southwest and northeast
    * corners of the source bounding box in the following order: `[sw.lng, sw.lat,
@@ -2681,6 +2689,8 @@ export type DataSource = Node & {
    * indicates a radius equal to the width of a tile.
    */
   clusterRadius?: Maybe<Scalars['Int']>;
+  columnIntelligenceCollected: Scalars['Boolean'];
+  columns?: Maybe<Array<Maybe<Scalars['String']>>>;
   /** Image sources only. Corners of image specified in longitude, latitude pairs. */
   coordinates?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   createdAt: Scalars['Datetime'];
@@ -2718,6 +2728,8 @@ export type DataSource = Node & {
   importType?: Maybe<DataSourceImportTypes>;
   isArchived?: Maybe<Scalars['Boolean']>;
   isConvertibleLegacySource?: Maybe<Scalars['Boolean']>;
+  isSingleBandRaster?: Maybe<Scalars['Boolean']>;
+  junkColumns?: Maybe<Array<Maybe<Scalars['String']>>>;
   /**
    * GeoJSON only. Whether to calculate line distance metrics. This is required for
    * line layers that specify line-gradient values.
@@ -2912,9 +2924,17 @@ export enum DataSourceImportTypes {
 
 /** An input for mutations affecting `DataSource` */
 export type DataSourceInput = {
+  aiCartographerRationale?: Maybe<Scalars['String']>;
   arcgisFetchStrategy?: Maybe<ArcgisFeatureLayerFetchStrategy>;
   /** Contains an attribution to be displayed when the map is shown to a user. */
   attribution?: Maybe<Scalars['String']>;
+  bestCategoryColumn?: Maybe<Scalars['String']>;
+  bestDateColumn?: Maybe<Scalars['String']>;
+  bestIdColumn?: Maybe<Scalars['String']>;
+  bestLabelColumn?: Maybe<Scalars['String']>;
+  bestNumericColumn?: Maybe<Scalars['String']>;
+  bestPopupDescriptionColumn?: Maybe<Scalars['String']>;
+  bestPresentationType?: Maybe<VisualizationType>;
   /**
    * An array containing the longitude and latitude of the southwest and northeast
    * corners of the source bounding box in the following order: `[sw.lng, sw.lat,
@@ -2960,6 +2980,8 @@ export type DataSourceInput = {
    * indicates a radius equal to the width of a tile.
    */
   clusterRadius?: Maybe<Scalars['Int']>;
+  columnIntelligenceCollected?: Maybe<Scalars['Boolean']>;
+  columns?: Maybe<Array<Maybe<Scalars['String']>>>;
   /** Image sources only. Corners of image specified in longitude, latitude pairs. */
   coordinates?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   createdAt?: Maybe<Scalars['Datetime']>;
@@ -2992,6 +3014,8 @@ export type DataSourceInput = {
    * a direct upload or a service location like ArcGIS server
    */
   importType?: Maybe<DataSourceImportTypes>;
+  isSingleBandRaster?: Maybe<Scalars['Boolean']>;
+  junkColumns?: Maybe<Array<Maybe<Scalars['String']>>>;
   /**
    * GeoJSON only. Whether to calculate line distance metrics. This is required for
    * line layers that specify line-gradient values.
@@ -11924,6 +11948,7 @@ export type Query = Node & {
   getDefaultDataSourcesBucket?: Maybe<Scalars['String']>;
   getFirstBandOffset?: Maybe<Scalars['Float']>;
   getFirstBandScale?: Maybe<Scalars['Float']>;
+  getGeostatsAttributeColumnNames?: Maybe<Array<Maybe<Scalars['String']>>>;
   getReferencedStableIdsForReport?: Maybe<Array<Maybe<Scalars['String']>>>;
   getRepresentativeColors?: Maybe<Scalars['JSON']>;
   getStateForSpatialMetric?: Maybe<SpatialMetricState>;
@@ -12574,6 +12599,12 @@ export type QueryGetFirstBandOffsetArgs = {
 
 /** The root query type which gives access points into the data universe. */
 export type QueryGetFirstBandScaleArgs = {
+  geostats?: Maybe<Scalars['JSON']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGetGeostatsAttributeColumnNamesArgs = {
   geostats?: Maybe<Scalars['JSON']>;
 };
 
@@ -18342,6 +18373,21 @@ export enum VisitorsOrderBy {
   Natural = 'NATURAL'
 }
 
+export enum VisualizationType {
+  CategoricalPoint = 'CATEGORICAL_POINT',
+  CategoricalPolygon = 'CATEGORICAL_POLYGON',
+  CategoricalRaster = 'CATEGORICAL_RASTER',
+  ContinuousPoint = 'CONTINUOUS_POINT',
+  ContinuousPolygon = 'CONTINUOUS_POLYGON',
+  ContinuousRaster = 'CONTINUOUS_RASTER',
+  Heatmap = 'HEATMAP',
+  MarkerImage = 'MARKER_IMAGE',
+  ProportionalSymbol = 'PROPORTIONAL_SYMBOL',
+  RgbRaster = 'RGB_RASTER',
+  SimplePoint = 'SIMPLE_POINT',
+  SimplePolygon = 'SIMPLE_POLYGON'
+}
+
 export type WorkerJob = {
   __typename?: 'WorkerJob';
   attempts?: Maybe<Scalars['Int']>;
@@ -23169,7 +23215,7 @@ export type RecalculateSpatialMetricsMutation = (
 
 export type OverlaySourceDetailsFragment = (
   { __typename?: 'ReportOverlaySource' }
-  & Pick<ReportOverlaySource, 'tableOfContentsItemId' | 'stableId' | 'containsOverlappingFeatures' | 'geostats' | 'mapboxGlStyles' | 'sourceUrl'>
+  & Pick<ReportOverlaySource, 'tableOfContentsItemId' | 'stableId' | 'containsOverlappingFeatures' | 'mapboxGlStyles' | 'sourceUrl'>
   & { tableOfContentsItem: (
     { __typename?: 'TableOfContentsItem' }
     & Pick<TableOfContentsItem, 'title' | 'stableId'>
@@ -26873,7 +26919,6 @@ export const OverlaySourceDetailsFragmentDoc = /*#__PURE__*/ gql`
     title
     stableId
   }
-  geostats
   mapboxGlStyles
   sourceProcessingJob {
     ...SourceProcessingJobDetails

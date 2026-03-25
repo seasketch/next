@@ -38,6 +38,11 @@ declare namespace NodeJS {
     CLOUDFLARE_IMAGES_ACCOUNT: string;
     CLOUDFLARE_IMAGES_TOKEN: string;
     CLOUDFLARE_IMAGES_ACCOUNT_HASH: string;
+    /** Workers AI REST (column intelligence) */
+    CLOUDFLARE_ACCOUNT_ID?: string;
+    CLOUDFLARE_WORKERS_AI_TOKEN?: string;
+    /** e.g. @cf/meta/llama-3.1-8b-instruct */
+    COLUMN_INTELLIGENCE_MODEL?: string;
     /** May be comma seperated list. First issuer should be the primary host */
     ISSUER?: string;
     /* Used for generating email verification links */

@@ -206,4 +206,6 @@ export interface RasterInfo {
 }
 export declare function isRasterInfo(info: RasterInfo | GeostatsLayer | any): info is RasterInfo;
 export declare function isGeostatsLayer(data: RasterInfo | GeostatsLayer | any): data is GeostatsLayer;
+export { VisualizationType, VisualizationTypeDescriptions, visualizationTypeIds, isRasterPresentationTypeId, } from "./visualizationTypeCatalog";
+export type { VisualizationTypeId } from "./visualizationTypeCatalog";
 //# sourceMappingURL=index.d.ts.map

@@ -2959,6 +2959,7 @@ When documentation is lacking for any of these properties, consult the [MapBox G
 
 """
 type DataSource implements Node {
+  aiCartographerRationale: String
   approximateFgbIndexSize: Int
   arcgisFetchStrategy: ArcgisFeatureLayerFetchStrategy!
 
@@ -2984,6 +2985,13 @@ type DataSource implements Node {
   """
   attribution: String
   authorProfile: Profile
+  bestCategoryColumn: String
+  bestDateColumn: String
+  bestIdColumn: String
+  bestLabelColumn: String
+  bestNumericColumn: String
+  bestPopupDescriptionColumn: String
+  bestPresentationType: VisualizationType
 
   """
   An array containing the longitude and latitude of the southwest and northeast
@@ -3042,6 +3050,8 @@ type DataSource implements Node {
   indicates a radius equal to the width of a tile.
   """
   clusterRadius: Int
+  columnIntelligenceCollected: Boolean!
+  columns: [String]
 
   """
   Image sources only. Corners of image specified in longitude, latitude pairs.
@@ -3117,6 +3127,8 @@ type DataSource implements Node {
   importType: DataSourceImportTypes
   isArchived: Boolean
   isConvertibleLegacySource: Boolean
+  isSingleBandRaster: Boolean
+  junkColumns: [String]
 
   """
   GeoJSON only. Whether to calculate line distance metrics. This is required for
@@ -3314,12 +3326,20 @@ enum DataSourceImportTypes {
 
 """An input for mutations affecting `DataSource`"""
 input DataSourceInput {
+  aiCartographerRationale: String
   arcgisFetchStrategy: ArcgisFeatureLayerFetchStrategy
 
   """
   Contains an attribution to be displayed when the map is shown to a user.
   """
   attribution: String
+  bestCategoryColumn: String
+  bestDateColumn: String
+  bestIdColumn: String
+  bestLabelColumn: String
+  bestNumericColumn: String
+  bestPopupDescriptionColumn: String
+  bestPresentationType: VisualizationType
 
   """
   An array containing the longitude and latitude of the southwest and northeast
@@ -3378,6 +3398,8 @@ input DataSourceInput {
   indicates a radius equal to the width of a tile.
   """
   clusterRadius: Int
+  columnIntelligenceCollected: Boolean
+  columns: [String]
 
   """
   Image sources only. Corners of image specified in longitude, latitude pairs.
@@ -3421,6 +3443,8 @@ input DataSourceInput {
   a direct upload or a service location like ArcGIS server
   """
   importType: DataSourceImportTypes
+  isSingleBandRaster: Boolean
+  junkColumns: [String]
 
   """
   GeoJSON only. Whether to calculate line distance metrics. This is required for
@@ -13556,6 +13580,7 @@ type Query implements Node {
   getDefaultDataSourcesBucket: String
   getFirstBandOffset(geostats: JSON): Float
   getFirstBandScale(geostats: JSON): Float
+  getGeostatsAttributeColumnNames(geostats: JSON): [String]
   getReferencedStableIdsForReport(_reportId: Int): [String]
   getRepresentativeColors(geostats: JSON): JSON
   getStateForSpatialMetric(metricId: BigInt): SpatialMetricState
@@ -20166,6 +20191,21 @@ enum VisitorsOrderBy {
   INTERVAL_ASC
   INTERVAL_DESC
   NATURAL
+}
+
+enum VisualizationType {
+  CATEGORICAL_POINT
+  CATEGORICAL_POLYGON
+  CATEGORICAL_RASTER
+  CONTINUOUS_POINT
+  CONTINUOUS_POLYGON
+  CONTINUOUS_RASTER
+  HEATMAP
+  MARKER_IMAGE
+  PROPORTIONAL_SYMBOL
+  RGB_RASTER
+  SIMPLE_POINT
+  SIMPLE_POLYGON
 }
 
 type WorkerJob {

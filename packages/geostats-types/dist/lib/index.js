@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SuggestedRasterPresentation = void 0;
+exports.isRasterPresentationTypeId = exports.visualizationTypeIds = exports.VisualizationTypeDescriptions = exports.VisualizationType = exports.SuggestedRasterPresentation = void 0;
 exports.isNumericGeostatsAttribute = isNumericGeostatsAttribute;
 exports.isLegacyGeostatsLayer = isLegacyGeostatsLayer;
 exports.isLegacyGeostatsAttribute = isLegacyGeostatsAttribute;
@@ -54,4 +54,9 @@ function isGeostatsLayer(data) {
     }
     return true;
 }
+var visualizationTypeCatalog_1 = require("./visualizationTypeCatalog");
+Object.defineProperty(exports, "VisualizationType", { enumerable: true, get: function () { return visualizationTypeCatalog_1.VisualizationType; } });
+Object.defineProperty(exports, "VisualizationTypeDescriptions", { enumerable: true, get: function () { return visualizationTypeCatalog_1.VisualizationTypeDescriptions; } });
+Object.defineProperty(exports, "visualizationTypeIds", { enumerable: true, get: function () { return visualizationTypeCatalog_1.visualizationTypeIds; } });
+Object.defineProperty(exports, "isRasterPresentationTypeId", { enumerable: true, get: function () { return visualizationTypeCatalog_1.isRasterPresentationTypeId; } });
 //# sourceMappingURL=index.js.map
