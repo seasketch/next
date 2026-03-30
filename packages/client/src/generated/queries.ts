@@ -236,6 +236,74 @@ export type AddValidChildSketchClassPayload = {
   query?: Maybe<Query>;
 };
 
+export type AiDataAnalystNote = Node & {
+  __typename?: 'AiDataAnalystNote';
+  attribution?: Maybe<Scalars['String']>;
+  bestCategoryColumn?: Maybe<Scalars['String']>;
+  bestDateColumn?: Maybe<Scalars['String']>;
+  bestIdColumn?: Maybe<Scalars['String']>;
+  bestLabelColumn?: Maybe<Scalars['String']>;
+  bestLayerTitle?: Maybe<Scalars['String']>;
+  bestNumericColumn?: Maybe<Scalars['String']>;
+  bestPopupDescriptionColumn?: Maybe<Scalars['String']>;
+  chosenPresentationColumn?: Maybe<Scalars['String']>;
+  chosenPresentationType?: Maybe<VisualizationType>;
+  createdAt: Scalars['Datetime'];
+  customPalette?: Maybe<Array<Maybe<Scalars['String']>>>;
+  dataSourceId: Scalars['Int'];
+  id: Scalars['Int'];
+  interactivityType: InteractivityType;
+  junkColumns?: Maybe<Array<Maybe<Scalars['String']>>>;
+  labelsMinZoom?: Maybe<Scalars['Int']>;
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  notes: Scalars['String'];
+  palette?: Maybe<Scalars['String']>;
+  projectId: Scalars['Int'];
+  showLabels: Scalars['Boolean'];
+  updatedAt: Scalars['Datetime'];
+};
+
+/**
+ * A condition to be used against `AiDataAnalystNote` object types. All fields are
+ * tested for equality and combined with a logical ‘and.’
+ */
+export type AiDataAnalystNoteCondition = {
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['Int']>;
+};
+
+/** A connection to a list of `AiDataAnalystNote` values. */
+export type AiDataAnalystNotesConnection = {
+  __typename?: 'AiDataAnalystNotesConnection';
+  /** A list of edges which contains the `AiDataAnalystNote` and cursor to aid in pagination. */
+  edges: Array<AiDataAnalystNotesEdge>;
+  /** A list of `AiDataAnalystNote` objects. */
+  nodes: Array<AiDataAnalystNote>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `AiDataAnalystNote` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `AiDataAnalystNote` edge in the connection. */
+export type AiDataAnalystNotesEdge = {
+  __typename?: 'AiDataAnalystNotesEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `AiDataAnalystNote` at the end of the edge. */
+  node: AiDataAnalystNote;
+};
+
+/** Methods to use when ordering `AiDataAnalystNote`. */
+export enum AiDataAnalystNotesOrderBy {
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+}
+
 /** All input for the `alternateLanguageLabelsForFormElement` mutation. */
 export type AlternateLanguageLabelsForFormElementInput = {
   alternateLanguageSettings?: Maybe<Scalars['JSON']>;
@@ -2681,6 +2749,7 @@ export type DataSource = Node & {
    * indicates a radius equal to the width of a tile.
    */
   clusterRadius?: Maybe<Scalars['Int']>;
+  columns?: Maybe<Array<Maybe<Scalars['String']>>>;
   /** Image sources only. Corners of image specified in longitude, latitude pairs. */
   coordinates?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   createdAt: Scalars['Datetime'];
@@ -2718,6 +2787,7 @@ export type DataSource = Node & {
   importType?: Maybe<DataSourceImportTypes>;
   isArchived?: Maybe<Scalars['Boolean']>;
   isConvertibleLegacySource?: Maybe<Scalars['Boolean']>;
+  isSingleBandRaster?: Maybe<Scalars['Boolean']>;
   /**
    * GeoJSON only. Whether to calculate line distance metrics. This is required for
    * line layers that specify line-gradient values.
@@ -2960,6 +3030,7 @@ export type DataSourceInput = {
    * indicates a radius equal to the width of a tile.
    */
   clusterRadius?: Maybe<Scalars['Int']>;
+  columns?: Maybe<Array<Maybe<Scalars['String']>>>;
   /** Image sources only. Corners of image specified in longitude, latitude pairs. */
   coordinates?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   createdAt?: Maybe<Scalars['Datetime']>;
@@ -2992,6 +3063,7 @@ export type DataSourceInput = {
    * a direct upload or a service location like ArcGIS server
    */
   importType?: Maybe<DataSourceImportTypes>;
+  isSingleBandRaster?: Maybe<Scalars['Boolean']>;
   /**
    * GeoJSON only. Whether to calculate line distance metrics. This is required for
    * line layers that specify line-gradient values.
@@ -11818,6 +11890,11 @@ export type Query = Node & {
   aclByTableOfContentsItemId?: Maybe<Acl>;
   /** Reads and enables pagination through a set of `Project`. */
   activeProjects?: Maybe<Array<Project>>;
+  aiDataAnalystNote?: Maybe<AiDataAnalystNote>;
+  /** Reads a single `AiDataAnalystNote` using its globally unique `ID`. */
+  aiDataAnalystNoteByNodeId?: Maybe<AiDataAnalystNote>;
+  /** Reads and enables pagination through a set of `AiDataAnalystNote`. */
+  aiDataAnalystNotesConnection?: Maybe<AiDataAnalystNotesConnection>;
   apiKey?: Maybe<ApiKey>;
   /** Reads a single `ApiKey` using its globally unique `ID`. */
   apiKeyByNodeId?: Maybe<ApiKey>;
@@ -11924,6 +12001,7 @@ export type Query = Node & {
   getDefaultDataSourcesBucket?: Maybe<Scalars['String']>;
   getFirstBandOffset?: Maybe<Scalars['Float']>;
   getFirstBandScale?: Maybe<Scalars['Float']>;
+  getGeostatsAttributeColumnNames?: Maybe<Array<Maybe<Scalars['String']>>>;
   getReferencedStableIdsForReport?: Maybe<Array<Maybe<Scalars['String']>>>;
   getRepresentativeColors?: Maybe<Scalars['JSON']>;
   getStateForSpatialMetric?: Maybe<SpatialMetricState>;
@@ -12142,6 +12220,30 @@ export type QueryActiveProjectsArgs = {
   limit?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   period?: Maybe<ActivityStatsPeriod>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryAiDataAnalystNoteArgs = {
+  id: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryAiDataAnalystNoteByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryAiDataAnalystNotesConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<AiDataAnalystNoteCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<AiDataAnalystNotesOrderBy>>;
 };
 
 
@@ -12574,6 +12676,12 @@ export type QueryGetFirstBandOffsetArgs = {
 
 /** The root query type which gives access points into the data universe. */
 export type QueryGetFirstBandScaleArgs = {
+  geostats?: Maybe<Scalars['JSON']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGetGeostatsAttributeColumnNamesArgs = {
   geostats?: Maybe<Scalars['JSON']>;
 };
 
@@ -18340,6 +18448,21 @@ export enum VisitorsOrderBy {
   IntervalAsc = 'INTERVAL_ASC',
   IntervalDesc = 'INTERVAL_DESC',
   Natural = 'NATURAL'
+}
+
+export enum VisualizationType {
+  CategoricalPoint = 'CATEGORICAL_POINT',
+  CategoricalPolygon = 'CATEGORICAL_POLYGON',
+  CategoricalRaster = 'CATEGORICAL_RASTER',
+  ContinuousPoint = 'CONTINUOUS_POINT',
+  ContinuousPolygon = 'CONTINUOUS_POLYGON',
+  ContinuousRaster = 'CONTINUOUS_RASTER',
+  Heatmap = 'HEATMAP',
+  MarkerImage = 'MARKER_IMAGE',
+  ProportionalSymbol = 'PROPORTIONAL_SYMBOL',
+  RgbRaster = 'RGB_RASTER',
+  SimplePoint = 'SIMPLE_POINT',
+  SimplePolygon = 'SIMPLE_POLYGON'
 }
 
 export type WorkerJob = {
