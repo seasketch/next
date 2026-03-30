@@ -1,7 +1,13 @@
 import { GeostatsLayer } from "@seasketch/geostats-types";
+import { type PrefetchedColumnIntelligence } from "@seasketch/column-intelligence-llm";
 import { ProgressUpdater, ResponseOutput } from "./handleUpload";
 import { Logger } from "./logger";
 export default function fromMarkdown(md: string): any;
+export interface ProcessVectorUploadResult {
+    layers: GeostatsLayer[];
+    /** LLM column intelligence when {@link ProcessVectorUploadOptions.columnIntelligenceUploadedFilename} was set. */
+    columnIntelligence: PrefetchedColumnIntelligence | undefined;
+}
 /**
  * Process a vector upload, converting it to a normalized FlatGeobuf file and
  * creating vector tiles if the file is under a certain size.
@@ -25,5 +31,9 @@ export declare function processVectorUpload(options: {
     jobId: string;
     /** Santitized original filename. Used for layer name */
     originalName: string;
-}): Promise<GeostatsLayer[]>;
+    /**
+     * Original upload filename for column intelligence. When omitted, column intelligence is not run here.
+     */
+    columnIntelligenceUploadedFilename?: string | null;
+}): Promise<ProcessVectorUploadResult>;
 //# sourceMappingURL=processVectorUpload.d.ts.map

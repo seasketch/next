@@ -16,6 +16,22 @@ const alphabet =
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
 const nanoId = customAlphabet(alphabet, 9);
 
+function tableOfContentsTitleForLayer(layer: ProcessedUploadLayer): string {
+  const ci = layer.columnIntelligence;
+  if (ci?.status === "applied" && ci.bestLayerTitle) {
+    return ci.bestLayerTitle;
+  }
+  return layer.geostats?.metadata?.title || layer.name.replace("_", " ");
+}
+
+function metadataHeadingTextForLayer(layer: ProcessedUploadLayer): string {
+  const ci = layer.columnIntelligence;
+  if (ci?.status === "applied" && ci.bestLayerTitle) {
+    return ci.bestLayerTitle;
+  }
+  return layer.name;
+}
+
 /**
  * Creates database records for a processed upload. This includes:
  *  * data_sources
@@ -416,7 +432,7 @@ export async function createDBRecordsForProcessedLayer(
                   content: [
                     {
                       type: "text",
-                      text: layer.name,
+                      text: metadataHeadingTextForLayer(layer),
                     },
                   ],
                 },

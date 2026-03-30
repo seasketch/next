@@ -1,5 +1,6 @@
 import { GeostatsLayer, RasterInfo } from "@seasketch/geostats-types";
 import { SpatialUploadsHandlerRequest } from "../handler";
+import type { PrefetchedColumnIntelligence } from "@seasketch/column-intelligence-llm";
 export { SpatialUploadsHandlerRequest };
 export type SupportedTypes = "GeoJSON" | "FlatGeobuf" | "ZippedShapefile" | "GeoTIFF" | "NetCDF";
 export interface ResponseOutput {
@@ -28,6 +29,10 @@ export interface ProcessedUploadLayer {
     bounds?: number[];
     url: string;
     isSingleBandRaster?: boolean;
+    /**
+     * Column intelligence from the upload processor (LLM), when enabled and completed there.
+     */
+    columnIntelligence?: PrefetchedColumnIntelligence;
 }
 export interface ProcessedUploadResponse {
     logfile: string;

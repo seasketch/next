@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.processRasterUpload = processRasterUpload;
 const geostats_types_1 = require("@seasketch/geostats-types");
+const column_intelligence_llm_1 = require("@seasketch/column-intelligence-llm");
 const path_1 = require("path");
 const fs_1 = require("fs");
 const rasterInfoForBands_1 = require("./rasterInfoForBands");
@@ -12,7 +13,7 @@ const gdal_async_1 = __importDefault(require("gdal-async"));
 const bbox_1 = __importDefault(require("@turf/bbox"));
 const netcdf_1 = require("./formats/netcdf");
 async function processRasterUpload(options) {
-    const { logger, outputs, updateProgress, baseKey, workingDirectory, jobId, originalName, } = options;
+    const { logger, outputs, updateProgress, baseKey, workingDirectory, jobId, originalName, columnIntelligenceUploadedFilename, } = options;
     await updateProgress("running", "validating");
     let path = options.path;
     const originalPath = options.path;
@@ -86,6 +87,13 @@ async function processRasterUpload(options) {
     for (const band of stats.bands) {
         band.bounds = bounds;
     }
+    const ciFilename = columnIntelligenceUploadedFilename === null || columnIntelligenceUploadedFilename === void 0 ? void 0 : columnIntelligenceUploadedFilename.trim();
+    const columnIntelligencePromise = ciFilename && ciFilename.length > 0
+        ? (0, column_intelligence_llm_1.runColumnIntelligenceLlm)({
+            geostats: stats,
+            uploadedSourceFilename: ciFilename,
+        })
+        : undefined;
     if (stats.presentation === geostats_types_1.SuggestedRasterPresentation.categorical ||
         stats.presentation === geostats_types_1.SuggestedRasterPresentation.continuous) {
         await updateProgress("running", "encoding");
@@ -101,7 +109,10 @@ async function processRasterUpload(options) {
         url: `${process.env.TILES_BASE_URL}/${baseKey}/${jobId}.pmtiles`,
         filename: `${jobId}.pmtiles`,
     });
-    return stats;
+    const columnIntelligence = columnIntelligencePromise
+        ? await columnIntelligencePromise
+        : undefined;
+    return { rasterInfo: stats, columnIntelligence };
 }
 async function validateInput(path, logger) {
     let { ext } = (0, path_1.parse)(path);

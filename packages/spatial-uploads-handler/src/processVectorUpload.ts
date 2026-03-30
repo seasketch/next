@@ -1,8 +1,8 @@
+import { GeostatsLayer, GeostatsMetadata } from "@seasketch/geostats-types";
 import {
-  GeostatsLayer,
-  GeostatsMetadata,
-  RasterInfo,
-} from "@seasketch/geostats-types";
+  runColumnIntelligenceLlm,
+  type PrefetchedColumnIntelligence,
+} from "@seasketch/column-intelligence-llm";
 import {
   MVT_THRESHOLD,
   ProgressUpdater,
@@ -18,6 +18,12 @@ import { metadataToProseMirror } from "@seasketch/metadata-parser";
 
 export default function fromMarkdown(md: string) {
   return defaultMarkdownParser.parse(md)?.toJSON();
+}
+
+export interface ProcessVectorUploadResult {
+  layers: GeostatsLayer[];
+  /** LLM column intelligence when {@link ProcessVectorUploadOptions.columnIntelligenceUploadedFilename} was set. */
+  columnIntelligence: PrefetchedColumnIntelligence | undefined;
 }
 
 /**
@@ -42,7 +48,11 @@ export async function processVectorUpload(options: {
   jobId: string;
   /** Santitized original filename. Used for layer name */
   originalName: string;
-}): Promise<GeostatsLayer[]> {
+  /**
+   * Original upload filename for column intelligence. When omitted, column intelligence is not run here.
+   */
+  columnIntelligenceUploadedFilename?: string | null;
+}): Promise<ProcessVectorUploadResult> {
   const {
     logger,
     path,
@@ -52,6 +62,7 @@ export async function processVectorUpload(options: {
     workingDirectory,
     jobId,
     originalName,
+    columnIntelligenceUploadedFilename,
   } = options;
   const originalFilePath = path;
   let workingFilePath = path;
@@ -71,13 +82,13 @@ export async function processVectorUpload(options: {
       await logger.exec(
         ["unzip", ["-o", workingFilePath, "-d", workingDirectory]],
         "Problem unzipping file",
-        1 / 30
+        1 / 30,
       );
     } else {
       await logger.exec(
         ["unrar", ["x", "-op" + workingDirectory, workingFilePath]],
         "Problem extracting .rar file",
-        1 / 30
+        1 / 30,
       );
     }
 
@@ -101,7 +112,7 @@ export async function processVectorUpload(options: {
         ],
       ],
       "Problem finding shapefile in zip archive",
-      1 / 30
+      1 / 30,
     );
 
     // Make sure there is also a .prj projection file
@@ -123,7 +134,7 @@ export async function processVectorUpload(options: {
         ],
       ],
       "Problem finding projection file (.prj) in zip archive",
-      1 / 30
+      1 / 30,
     );
 
     if (!projFile) {
@@ -162,7 +173,7 @@ export async function processVectorUpload(options: {
         ],
       ],
       "Problem finding metadata files in zip archive",
-      1 / 30
+      1 / 30,
     );
     try {
       if (xmlPaths) {
@@ -207,7 +218,7 @@ export async function processVectorUpload(options: {
     ext === ".shp"
       ? "Could not read file. Shapefiles should be uploaded as a zip archive with related sidecar files"
       : "Could not run ogrinfo on file",
-    1 / 30
+    1 / 30,
   );
   if (/GeoJSON/.test(ogrInfo)) {
     type = "GeoJSON";
@@ -263,7 +274,7 @@ export async function processVectorUpload(options: {
         ],
       ],
       "Problem converting to FlatGeobuf",
-      2 / 30
+      2 / 30,
     );
 
     // Save normalized vector to the list of outputs
@@ -285,6 +296,20 @@ export async function processVectorUpload(options: {
   if (metadata) {
     stats[0].metadata = metadata;
   }
+
+  const ciFilename = columnIntelligenceUploadedFilename?.trim();
+  console.log("ciFilename", ciFilename);
+  const columnIntelligencePromise =
+    ciFilename && ciFilename.length > 0 && stats[0]
+      ? runColumnIntelligenceLlm({
+          geostats: {
+            layers: [stats[0]!],
+            layerCount: 1,
+          },
+          uploadedSourceFilename: ciFilename,
+        })
+      : undefined;
+
   // Only convert to GeoJSON if the dataset is small. Otherwise we can convert
   // from the normalized fgb dynamically if someone wants to download it as
   // GeoJSON or shapefile.
@@ -311,7 +336,7 @@ export async function processVectorUpload(options: {
         ],
       ],
       "Problem converting to GeoJSON",
-      15 / 30
+      15 / 30,
     );
     // Save GeoJSON to the list of outputs
     // The calling lambda will look through the list of outputs and choose
@@ -335,7 +360,7 @@ export async function processVectorUpload(options: {
     const fioInfo = await logger.exec(
       ["fio", ["info", normalizedVectorPath]],
       "Problem detecting numeric properties using fiona.",
-      1 / 30
+      1 / 30,
     );
     const fioData = JSON.parse(fioInfo);
     const schema = fioData?.schema?.properties || {};
@@ -402,14 +427,14 @@ export async function processVectorUpload(options: {
         ],
       ],
       "Tippecanoe failed",
-      12 / 30
+      12 / 30,
     );
     // TODO: at some point a newer tippecanoe can be used to save directly to
     // pmtiles
     await logger.exec(
       [`pmtiles`, ["convert", mvtPath, pmtilesPath]],
       "PMTiles conversion failed",
-      3 / 30
+      3 / 30,
     );
     outputs.push({
       type: "PMTiles",
@@ -420,6 +445,13 @@ export async function processVectorUpload(options: {
       filename: `${jobId}.pmtiles`,
     });
   }
+  await updateProgress("running", "column intelligence");
 
-  return stats;
+  const columnIntelligence = columnIntelligencePromise
+    ? await columnIntelligencePromise
+    : undefined;
+
+  console.log("column intelligence", columnIntelligence);
+
+  return { layers: stats, columnIntelligence };
 }

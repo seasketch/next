@@ -16,22 +16,27 @@ RUN npm install -g typescript@5.5
 RUN dnf install -y jq
 COPY tsconfig.json  ./
 COPY package.json ./package.json.original
-RUN jq 'del(.scripts.postinstall) | del(.scripts.install) | del(.dependences["@seasketch/geostats-types"]) | del(.dependences["@seasketch/metadata-parser"])' package.json.original > package.json
+RUN jq 'del(.scripts.postinstall) | del(.scripts.install) | del(.dependences["@seasketch/geostats-types"]) | del(.dependences["@seasketch/metadata-parser"]) | del(.dependences["@seasketch/column-intelligence-llm"]) | del(.dependencies["@seasketch/geostats-types"]) | del(.dependencies["@seasketch/metadata-parser"]) | del(.dependencies["@seasketch/column-intelligence-llm"])' package.json.original > package.json
 # Copy the referenced TypeScript projects for project references
 COPY ./@seasketch/geostats-types ../geostats-types
 COPY ./@seasketch/metadata-parser ../metadata-parser
+COPY ./@seasketch/column-intelligence-llm ../column-intelligence-llm
 # Also copy as node_modules for runtime dependencies
 RUN mkdir -p ./node_modules/@seasketch
 COPY ./@seasketch/geostats-types ./node_modules/@seasketch/geostats-types
 COPY ./@seasketch/metadata-parser ./node_modules/@seasketch/metadata-parser
+COPY ./@seasketch/column-intelligence-llm ./node_modules/@seasketch/column-intelligence-llm
 RUN npm install
 # Ensure the projects are still available after npm install
 RUN mkdir -p ./node_modules/@seasketch
 COPY ./@seasketch/geostats-types ./node_modules/@seasketch/geostats-types
 COPY ./@seasketch/metadata-parser ./node_modules/@seasketch/metadata-parser
+COPY ./@seasketch/column-intelligence-llm ./node_modules/@seasketch/column-intelligence-llm
 COPY handler.ts ./
 COPY src ./src
 RUN npm run build
+# Project references emit to ../column-intelligence-llm/dist; runtime resolves via node_modules copy.
+RUN if [ -d ../column-intelligence-llm/dist ]; then cp -r ../column-intelligence-llm/dist ./node_modules/@seasketch/column-intelligence-llm/; fi
 
 
 # Heavily inspired by

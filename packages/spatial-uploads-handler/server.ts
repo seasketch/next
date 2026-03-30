@@ -21,23 +21,23 @@ const server = createServer(function (req, res) {
             data.objectKey,
             data.suffix,
             data.requestingUser,
-            data.skipLoggingProgress
+            data.skipLoggingProgress,
           );
           for (const layer of outputs.layers) {
             console.log(`outputted - ${layer.name} ${layer.url}`);
             for (const output of layer.outputs) {
               console.log(`output - ${output.type} ${output.url}`);
             }
-            if (layer.geostats) {
-              console.log(JSON.stringify(layer.geostats, null, 2));
-            }
+            // if (layer.geostats) {
+            //   console.log(JSON.stringify(layer.geostats, null, 2));
+            // }
           }
           res.setHeader("Content-Type", "application/json");
           res.end(
             JSON.stringify({
               ...outputs,
               log: s3LogPath,
-            })
+            }),
           );
         } catch (e) {
           res.setHeader("Content-Type", "application/json");
@@ -45,7 +45,7 @@ const server = createServer(function (req, res) {
             JSON.stringify({
               error: (e as Error).message,
               log: s3LogPath,
-            })
+            }),
           );
         }
       });

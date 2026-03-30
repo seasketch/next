@@ -41,8 +41,8 @@ declare namespace NodeJS {
     /** Workers AI REST (column intelligence) */
     CLOUDFLARE_ACCOUNT_ID?: string;
     CLOUDFLARE_WORKERS_AI_TOKEN?: string;
-    /** e.g. @cf/meta/llama-3.1-8b-instruct */
-    COLUMN_INTELLIGENCE_MODEL?: string;
+    /** OpenAI API key for column intelligence when provider is set to openai */
+    OPENAI_API_KEY?: string;
     /**
      * Optional stable id for Workers AI prefix caching (`x-session-affinity`).
      * Use one value per deployment (e.g. `seasketch-column-intelligence-v1`) so

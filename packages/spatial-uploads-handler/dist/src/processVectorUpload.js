@@ -2,6 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = fromMarkdown;
 exports.processVectorUpload = processVectorUpload;
+const column_intelligence_llm_1 = require("@seasketch/column-intelligence-llm");
 const handleUpload_1 = require("./handleUpload");
 const path_1 = require("path");
 const fs_1 = require("fs");
@@ -21,7 +22,7 @@ function fromMarkdown(md) {
  */
 async function processVectorUpload(options) {
     var _a;
-    const { logger, path, outputs, updateProgress, baseKey, workingDirectory, jobId, originalName, } = options;
+    const { logger, path, outputs, updateProgress, baseKey, workingDirectory, jobId, originalName, columnIntelligenceUploadedFilename, } = options;
     const originalFilePath = path;
     let workingFilePath = path;
     await updateProgress("running", "validating");
@@ -216,6 +217,17 @@ async function processVectorUpload(options) {
     if (metadata) {
         stats[0].metadata = metadata;
     }
+    const ciFilename = columnIntelligenceUploadedFilename === null || columnIntelligenceUploadedFilename === void 0 ? void 0 : columnIntelligenceUploadedFilename.trim();
+    console.log("ciFilename", ciFilename);
+    const columnIntelligencePromise = ciFilename && ciFilename.length > 0 && stats[0]
+        ? (0, column_intelligence_llm_1.runColumnIntelligenceLlm)({
+            geostats: {
+                layers: [stats[0]],
+                layerCount: 1,
+            },
+            uploadedSourceFilename: ciFilename,
+        })
+        : undefined;
     // Only convert to GeoJSON if the dataset is small. Otherwise we can convert
     // from the normalized fgb dynamically if someone wants to download it as
     // GeoJSON or shapefile.
@@ -329,6 +341,11 @@ async function processVectorUpload(options) {
             filename: `${jobId}.pmtiles`,
         });
     }
-    return stats;
+    const columnIntelligence = columnIntelligencePromise
+        ? await columnIntelligencePromise
+        : undefined;
+    await updateProgress("running", "column intelligence");
+    console.log("column intelligence", columnIntelligence);
+    return { layers: stats, columnIntelligence };
 }
 //# sourceMappingURL=processVectorUpload.js.map

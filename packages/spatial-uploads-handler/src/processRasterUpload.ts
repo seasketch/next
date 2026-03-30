@@ -2,6 +2,10 @@ import {
   RasterInfo,
   SuggestedRasterPresentation,
 } from "@seasketch/geostats-types";
+import {
+  runColumnIntelligenceLlm,
+  type PrefetchedColumnIntelligence,
+} from "@seasketch/column-intelligence-llm";
 import { ProgressUpdater, ResponseOutput } from "./handleUpload";
 import { parse as parsePath, join as pathJoin } from "path";
 import { statSync } from "fs";
@@ -10,6 +14,12 @@ import { Logger } from "./logger";
 import gdal from "gdal-async";
 import bbox from "@turf/bbox";
 import { convertToGeoTiff, getLayerIdentifiers } from "./formats/netcdf";
+
+export interface ProcessRasterUploadResult {
+  rasterInfo: RasterInfo;
+  /** LLM column intelligence when {@link ProcessRasterUploadOptions.columnIntelligenceUploadedFilename} was set. */
+  columnIntelligence: PrefetchedColumnIntelligence | undefined;
+}
 
 export async function processRasterUpload(options: {
   logger: Logger;
@@ -26,7 +36,12 @@ export async function processRasterUpload(options: {
   jobId: string;
   /** Santitized original filename. Used for layer name */
   originalName: string;
-}): Promise<RasterInfo> {
+  /**
+   * Original upload filename (e.g. `sanitizedName.tif`) for column intelligence.
+   * When omitted, column intelligence is not run here.
+   */
+  columnIntelligenceUploadedFilename?: string | null;
+}): Promise<ProcessRasterUploadResult> {
   const {
     logger,
     outputs,
@@ -35,6 +50,7 @@ export async function processRasterUpload(options: {
     workingDirectory,
     jobId,
     originalName,
+    columnIntelligenceUploadedFilename,
   } = options;
   await updateProgress("running", "validating");
   let path = options.path;
@@ -130,6 +146,15 @@ export async function processRasterUpload(options: {
     band.bounds = bounds;
   }
 
+  const ciFilename = columnIntelligenceUploadedFilename?.trim();
+  const columnIntelligencePromise =
+    ciFilename && ciFilename.length > 0
+      ? runColumnIntelligenceLlm({
+          geostats: stats,
+          uploadedSourceFilename: ciFilename,
+        })
+      : undefined;
+
   if (
     stats.presentation === SuggestedRasterPresentation.categorical ||
     stats.presentation === SuggestedRasterPresentation.continuous
@@ -166,7 +191,11 @@ export async function processRasterUpload(options: {
     filename: `${jobId}.pmtiles`,
   });
 
-  return stats;
+  const columnIntelligence = columnIntelligencePromise
+    ? await columnIntelligencePromise
+    : undefined;
+
+  return { rasterInfo: stats, columnIntelligence };
 }
 
 async function validateInput(path: string, logger: Logger) {

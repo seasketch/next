@@ -67,6 +67,7 @@
     "skipLibCheck": true
   },
   "references": [
+    { "path": "../column-intelligence-llm" },
     { "path": "../geostats-types" },
     { "path": "../map-tile-cache-calculator" },
     { "path": "../mapbox-gl-esri-sources" },

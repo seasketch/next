@@ -9,7 +9,7 @@ function topValuesRecord(
     return undefined;
   }
   const entries = Object.entries(values)
-    .sort((a, b) => b[1] - a[1])
+    .sort((a, b) => b[1]! - a[1]!)
     .slice(0, TOP_N_VALUES)
     .map(([k, v]) => {
       const key =

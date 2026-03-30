@@ -1,0 +1,20 @@
+{
+  "name": "@seasketch/column-intelligence-llm",
+  "version": "1.0.0",
+  "description": "Shared LLM column intelligence (OpenAI / Cloudflare) for API and spatial-uploads-handler",
+  "private": true,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -b",
+    "build:watch": "tsc -b --watch"
+  },
+  "dependencies": {
+    "@seasketch/geostats-types": "file:../geostats-types",
+    "ajv": "^8.17.1",
+    "openai": "^5.5.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}

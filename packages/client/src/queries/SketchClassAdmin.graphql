@@ -651,7 +651,7 @@ fragment OverlaySourceDetails on ReportOverlaySource {
     title
     stableId
   }
-
+  geostats
   mapboxGlStyles
   sourceProcessingJob {
     ...SourceProcessingJobDetails

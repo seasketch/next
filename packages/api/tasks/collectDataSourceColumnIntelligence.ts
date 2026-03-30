@@ -30,12 +30,11 @@ import { collectColumnIntelligenceForDataSource } from "../src/columnIntelligenc
 export default async function collectDataSourceColumnIntelligence(
   payload: {
     dataSourceId: number;
-    modelOverride?: string;
     uploadedSourceFilename?: string | null;
   },
   helpers: Helpers
 ) {
-  const { dataSourceId, modelOverride, uploadedSourceFilename } = payload;
+  const { dataSourceId, uploadedSourceFilename } = payload;
   if (dataSourceId == null || Number.isNaN(Number(dataSourceId))) {
     helpers.logger.error(
       "collectDataSourceColumnIntelligence: missing dataSourceId"
@@ -48,21 +47,7 @@ export default async function collectDataSourceColumnIntelligence(
       client,
       dataSourceId,
       {
-        modelOverride,
         uploadedSourceFilename,
-        logger: {
-          info: (msg, meta) => {
-            helpers.logger.info(meta ? `${msg} ${JSON.stringify(meta)}` : msg);
-          },
-          warn: (msg, meta) => {
-            helpers.logger.info(meta ? `${msg} ${JSON.stringify(meta)}` : msg);
-          },
-          error: (msg, meta) => {
-            helpers.logger.error(
-              meta ? `${msg} ${JSON.stringify(meta)}` : msg
-            );
-          },
-        },
       }
     );
 
@@ -72,7 +57,8 @@ export default async function collectDataSourceColumnIntelligence(
         JSON.stringify({
           task: "collectDataSourceColumnIntelligence",
           dataSourceId: result.dataSourceId,
-          model: result.model,
+          provider: result.provider,
+          workers_ai_model: result.workersAiModel ?? null,
           prompt_tokens: u?.prompt_tokens ?? null,
           completion_tokens: u?.completion_tokens ?? null,
           total_tokens: u?.total_tokens ?? null,

@@ -3,6 +3,7 @@
     "packages/metadata-parser",
     "packages/api",
     "packages/infra",
+    "packages/column-intelligence-llm",
     "packages/client",
     "packages/email-status-handler",
     "packages/lambda-db-client",

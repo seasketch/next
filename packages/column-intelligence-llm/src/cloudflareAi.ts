@@ -1,5 +1,3 @@
-import { clampMaxCompletionTokensForModel } from "./modelPresets";
-
 export interface WorkersAiUsage {
   prompt_tokens?: number;
   completion_tokens?: number;
@@ -62,11 +60,6 @@ export interface RunWorkersAiJsonResult {
   usage?: WorkersAiUsage;
 }
 
-/**
- * Build `/accounts/{id}/ai/run/{model}` like the dashboard curl: model is multiple
- * path segments (`@cf/meta/...`), not one segment with escaped slashes — otherwise
- * Cloudflare returns 400 code 7000 "No route for that URI".
- */
 /** Strip optional ```json fences and trim before JSON.parse */
 function parseJsonLoose(text: string): unknown {
   let t = text.trim();
@@ -125,16 +118,11 @@ export async function runWorkersAiJson(options: {
 }): Promise<RunWorkersAiJsonResult> {
   const url = workersAiRunModelUrl(options.accountId, options.model);
 
-  const maxTok = clampMaxCompletionTokensForModel(
-    options.model,
-    options.maxTokens ?? 512,
-  );
+  const maxTok = Math.max(1, Math.floor(options.maxTokens ?? 512));
 
   const requestBody: Record<string, unknown> = {
     messages: options.messages,
     max_tokens: maxTok,
-    // TGI (e.g. Hermes) validates `max_new_tokens` separately; without this,
-    // some hosts default to ~4k and fail with "must be <= 1024".
     max_new_tokens: maxTok,
     temperature: options.temperature ?? 0.2,
   };
@@ -149,7 +137,6 @@ export async function runWorkersAiJson(options: {
     Authorization: `Bearer ${options.apiToken}`,
     "Content-Type": "application/json",
   };
-  /** Prefix cache hits need the same GPU instance; see https://developers.cloudflare.com/workers-ai/features/prompt-caching/ */
   const affinity = process.env.COLUMN_INTELLIGENCE_SESSION_AFFINITY?.trim();
   if (affinity) {
     headers["x-session-affinity"] = affinity;

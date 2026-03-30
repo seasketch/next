@@ -58,16 +58,8 @@ export interface ColumnIntelligenceResponse {
   best_id_column: string | null;
   junk_columns: string[];
   chosen_presentation_type: VisualizationTypeId | null;
-  /**
-   * Attribute column that drives the chosen visualization (e.g. numeric field for
-   * CONTINUOUS_POLYGON). Null when the style does not use a data attribute.
-   */
   chosen_presentation_column: string | null;
-  /** Succinct explanation of why chosen_presentation_type fits the data. */
   ai_cartographer_rationale: string | null;
-  /**
-   * Human-friendly map layer title derived from upload filename (UI); null if unsure.
-   */
   best_layer_title: string | null;
 }
 

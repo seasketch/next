@@ -69,6 +69,7 @@
     "forceConsistentCasingInFileNames": true /* Disallow inconsistently-cased references to the same file. */
   },
   "references": [
+    { "path": "../column-intelligence-llm" },
     { "path": "../geostats-types" },
     { "path": "../metadata-parser" }
   ],
