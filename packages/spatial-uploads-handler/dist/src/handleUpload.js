@@ -149,7 +149,6 @@ requestingUser, skipLoggingProgress) {
             stats = vectorOut.layers;
             columnIntelligence = vectorOut.columnIntelligence;
         }
-        console.log("column intelligence", columnIntelligence);
         // Determine bounds for the layer
         let bounds;
         if (Array.isArray(stats) && stats.length > 1) {

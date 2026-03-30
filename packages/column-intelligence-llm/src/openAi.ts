@@ -91,7 +91,7 @@ export async function runOpenAiJson(options: {
       },
     },
   } as unknown as ResponseCreateParamsNonStreaming)) as Response;
-  console.time("openai json");
+  console.timeEnd("openai json");
 
   if (response.error) {
     throw new Error(response.error.message ?? "OpenAI response error");

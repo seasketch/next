@@ -76,7 +76,7 @@ async function runOpenAiJson(options) {
             },
         },
     }));
-    console.time("openai json");
+    console.timeEnd("openai json");
     if (response.error) {
         throw new Error((_a = response.error.message) !== null && _a !== void 0 ? _a : "OpenAI response error");
     }

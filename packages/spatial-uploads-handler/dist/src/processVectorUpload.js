@@ -341,10 +341,10 @@ async function processVectorUpload(options) {
             filename: `${jobId}.pmtiles`,
         });
     }
+    await updateProgress("running", "column intelligence");
     const columnIntelligence = columnIntelligencePromise
         ? await columnIntelligencePromise
         : undefined;
-    await updateProgress("running", "column intelligence");
     console.log("column intelligence", columnIntelligence);
     return { layers: stats, columnIntelligence };
 }
