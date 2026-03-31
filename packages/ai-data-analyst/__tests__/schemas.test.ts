@@ -10,11 +10,22 @@ import {
 
 function minimalColumnIntelligence(overrides: Record<string, unknown> = {}) {
   return {
+    best_label_column: null,
+    best_category_column: null,
+    best_numeric_column: null,
+    best_date_column: null,
+    best_popup_description_column: null,
+    best_id_column: null,
+    best_group_by_column: null,
     chosen_presentation_type: "SIMPLE_POLYGON",
+    chosen_presentation_column: null,
+    palette: null,
+    custom_palette: null,
     notes: "Suitable for general polygon display.",
     junk_columns: ["OBJECTID", "Shape_Length"],
     interactivity_type: "NONE",
     show_labels: false,
+    labels_min_zoom: null,
     ...overrides,
   };
 }
@@ -50,9 +61,9 @@ describe("attributionFormattingValidator", () => {
   });
 
   it("accepts a non-empty string up to 48 characters", () => {
-    expect(attributionFormattingValidator({ attribution: "IUCN Oceania" })).toBe(
-      true,
-    );
+    expect(
+      attributionFormattingValidator({ attribution: "IUCN Oceania" }),
+    ).toBe(true);
     expect(
       attributionFormattingValidator({ attribution: "x".repeat(48) }),
     ).toBe(true);

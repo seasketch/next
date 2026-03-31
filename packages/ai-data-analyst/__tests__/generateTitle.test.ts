@@ -5,13 +5,16 @@
 import { describe, expect, it } from "vitest";
 import { generateTitle } from "../lib/client";
 
-describe("generateTitle", () => {
+describe.concurrent("generateTitle", () => {
   it('formats "0-12nm_teritorial_Sea.geojson.json" -> "0-12(nm|NM) Territorial Sea"', async () => {
-    const result = await generateTitle("0-12nm_teritorial_Sea.geojson.json");
-
-    expect(result).toMatchObject({
-      title: expect.stringMatching(/^0-12\s*[nN][mM] Ter[r]*itorial Sea$/),
-    });
+    const response = await generateTitle("0-12nm_teritorial_Sea.geojson.json");
+    expect("error" in response).toBe(false);
+    expect("title" in response).toBe(true);
+    if (!("title" in response)) {
+      throw new Error("title not in response");
+    }
+    const title = response.title;
+    expect(title).toMatch(/^0[-–]12\s*[nN][mM] Ter[r]*itorial Sea$/);
   });
 
   it('formats "Mangrove-Planting.geojson (1).json" -> "Mangrove Planting"', async () => {

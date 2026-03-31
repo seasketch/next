@@ -1,17 +1,27 @@
 import type { ErrorObject, ValidateFunction } from "ajv";
+import type { JSONSchema4 } from "json-schema";
 import OpenAI from "openai";
 import type { OpenAIParameters } from "./prompts";
 import {
+  attributionFormattingSchema,
   attributionParameters,
+  attributionFormattingValidator,
   attributionPrompt,
 } from "./prompts/layers/attribution";
-import { titleParameters, titlePrompt } from "./prompts/layers/title";
 import {
-  attributionFormattingSchema,
-  attributionFormattingValidator,
+  columnIntelligenceSchema,
+  columnIntelligenceValidator,
+  columnIntelligenceParameters,
+  columnIntelligencePrompt,
+} from "./prompts/layers/columnIntelligence";
+import {
   titleFormattingSchema,
   titleFormattingValidator,
-} from "./schemas";
+  titleParameters,
+  titlePrompt,
+} from "./prompts/layers/title";
+import { pruneGeostats } from "./geostats/shrinkGeostats";
+import { deriveValueSteps } from "./geostats/valueSteps";
 
 let client: OpenAI | null = null;
 
@@ -21,10 +31,11 @@ function getClient() {
       throw new Error("CF_AIG_TOKEN and CF_AIG_URL must be set");
     }
     client = new OpenAI({
+      apiKey: process.env.CF_AIG_TOKEN,
       baseURL: process.env.CF_AIG_URL,
-      defaultHeaders: {
-        "cf-aig-authorization": `Bearer ${process.env.CF_AIG_TOKEN}`,
-      },
+      // defaultHeaders: {
+      //   "cf-aig-authorization": `Bearer ${process.env.CF_AIG_TOKEN}`,
+      // },
     });
   }
   return client;
@@ -45,9 +56,11 @@ function formatAjvErrors(
     .join("; ");
 }
 
+type JsonValidator = ValidateFunction | ((data: unknown) => boolean);
+
 function parseAssistantJson(
   message: OpenAI.Chat.Completions.ChatCompletionMessage | undefined,
-  validator: ValidateFunction,
+  validator: JsonValidator,
   responseLabel: string,
 ): { ok: true; data: unknown } | { ok: false; error: string } {
   const raw = message?.content;
@@ -69,10 +82,16 @@ function parseAssistantJson(
   }
 
   if (!validator(data)) {
+    const errors =
+      typeof validator === "function" &&
+      "errors" in validator &&
+      Array.isArray((validator as ValidateFunction).errors)
+        ? (validator as ValidateFunction).errors
+        : undefined;
     return {
       ok: false,
       error: `Invalid ${responseLabel} response: ${formatAjvErrors(
-        validator.errors,
+        errors,
         "does not match schema",
       )}`,
     };
@@ -86,7 +105,7 @@ async function chatCompletionWithJsonSchema(
   userContent: string,
   params: OpenAIParameters,
   responseName: string,
-  schema: typeof titleFormattingSchema | typeof attributionFormattingSchema,
+  schema: JSONSchema4,
 ) {
   const openai = getClient();
   return openai.chat.completions.create({
@@ -139,6 +158,65 @@ function parsedAttributionFromAssistantMessage(
   }
   const s = raw.trim();
   return { ok: true, attribution: s.length === 0 ? null : s };
+}
+
+export type ColumnIntelligence = {
+  best_label_column?: string;
+  best_category_column?: string;
+  best_numeric_column?: string;
+  best_date_column?: string;
+  best_popup_description_column?: string;
+  best_id_column?: string;
+  junk_columns: string[];
+  chosen_presentation_type:
+    | "RGB_RASTER"
+    | "CATEGORICAL_RASTER"
+    | "CONTINUOUS_RASTER"
+    | "SIMPLE_POLYGON"
+    | "CATEGORICAL_POLYGON"
+    | "CONTINUOUS_POLYGON"
+    | "SIMPLE_POINT"
+    | "MARKER_IMAGE"
+    | "CATEGORICAL_POINT"
+    | "PROPORTIONAL_SYMBOL"
+    | "CONTINUOUS_POINT"
+    | "HEATMAP"
+    | "SIMPLE_LINE"
+    | "CONTINUOUS_LINE"
+    | "CATEGORICAL_LINE";
+  chosen_presentation_column?: string;
+  best_group_by_column?: string;
+  palette?: string;
+  custom_palette?: Record<string, string> | null;
+  show_labels: boolean;
+  labels_min_zoom?: number;
+  interactivity_type:
+    | "BANNER"
+    | "TOOLTIP"
+    | "POPUP"
+    | "ALL_PROPERTIES_POPUP"
+    | "NONE";
+  notes: string;
+  value_steps?:
+    | "CONTINUOUS"
+    | "NATURAL_BREAKS"
+    | "QUANTILES"
+    | "EQUAL_INTERVALS";
+  value_steps_n?: number;
+};
+
+function parsedColumnIntelligenceFromAssistantMessage(
+  message: OpenAI.Chat.Completions.ChatCompletionMessage | undefined,
+): { ok: true; result: ColumnIntelligence } | { ok: false; error: string } {
+  const parsed = parseAssistantJson(
+    message,
+    columnIntelligenceValidator,
+    "column intelligence",
+  );
+  if (parsed.ok === false) {
+    return parsed;
+  }
+  return { ok: true, result: parsed.data as ColumnIntelligence };
 }
 
 export type GenerateTitleResult =
@@ -195,4 +273,59 @@ export async function generateAttribution(
     return { error: "No usage in response" };
   }
   return { attribution: parsed.attribution, usage };
+}
+
+export type GenerateColumnIntelligenceResult =
+  | { result: ColumnIntelligence; usage: OpenAI.Completions.CompletionUsage }
+  | { error: string; usage?: OpenAI.Completions.CompletionUsage };
+
+export async function generateColumnIntelligence(
+  filename: string,
+  geostats: unknown,
+): Promise<GenerateColumnIntelligenceResult> {
+  const prunedGeostats = pruneGeostats(geostats);
+  const response = await chatCompletionWithJsonSchema(
+    columnIntelligencePrompt,
+    JSON.stringify({ filename, geostats: prunedGeostats }),
+    columnIntelligenceParameters,
+    "column_intelligence",
+    columnIntelligenceSchema,
+  );
+
+  const usage = response.usage;
+  const parsed = parsedColumnIntelligenceFromAssistantMessage(
+    response.choices[0]?.message,
+  );
+  if (parsed.ok === false) {
+    const errMsg = parsed.error;
+    return usage === undefined ? { error: errMsg } : { error: errMsg, usage };
+  }
+  if (usage === undefined) {
+    return { error: "No usage in response" };
+  }
+
+  const continuousTypes = new Set([
+    "CONTINUOUS_RASTER",
+    "CONTINUOUS_POINT",
+    "CONTINUOUS_POLYGON",
+  ]);
+  const valueSteps = continuousTypes.has(parsed.result.chosen_presentation_type)
+    ? deriveValueSteps(
+        geostats,
+        parsed.result.chosen_presentation_column ?? undefined,
+      )
+    : undefined;
+
+  return {
+    result: {
+      ...parsed.result,
+      ...(valueSteps
+        ? {
+            value_steps: valueSteps.value_steps,
+            value_steps_n: valueSteps.value_steps_n,
+          }
+        : {}),
+    },
+    usage,
+  };
 }

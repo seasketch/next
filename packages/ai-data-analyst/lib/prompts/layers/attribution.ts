@@ -1,4 +1,8 @@
 import { OpenAIParameters } from "..";
+import { JSONSchema4 } from "json-schema";
+import AJV from "ajv";
+
+const ajv = new AJV();
 
 export const attributionPrompt = `
 Given the following metadata document, return an attribution string suitable for public consumption.
@@ -15,3 +19,21 @@ export const attributionParameters: OpenAIParameters = {
   effort: "low",
   verbosity: "low",
 };
+
+export const attributionFormattingSchema: JSONSchema4 = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    attribution: {
+      type: ["string", "null"],
+      maxLength: 48,
+      description:
+        "Public-facing attribution string (< 48 chars for mapbox-gl). If unsure, return null.",
+    },
+  },
+  required: ["attribution"],
+};
+
+export const attributionFormattingValidator = ajv.compile(
+  attributionFormattingSchema,
+);

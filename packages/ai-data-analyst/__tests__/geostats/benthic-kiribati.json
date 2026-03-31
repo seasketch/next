@@ -1,0 +1,27 @@
+{
+  "filename": "benthic-kiribati.fgb",
+  "geostats": {
+    "layer": "Benthic",
+    "count": 181464,
+    "geometry": "MultiPolygon",
+    "attributeCount": 1,
+    "attributes": [
+      {
+        "attribute": "class",
+        "type": "string",
+        "count": 181464,
+        "countDistinct": 6,
+        "values": {
+          "Coral/Algae": 50425,
+          "Rock": 36457,
+          "Rubble": 20954,
+          "Sand": 50077,
+          "Seagrass": 12146,
+          "Microalgal Mats": 11405
+        }
+      }
+    ],
+    "bounds": [-174.574460065, -11.451453747, 176.850162175, 4.703758491],
+    "hasZ": false
+  }
+}

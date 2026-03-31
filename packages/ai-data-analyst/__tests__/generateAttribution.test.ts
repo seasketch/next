@@ -26,7 +26,7 @@ const marineRegionsMetadata = readFileSync(
   "utf8",
 );
 
-describe("generateAttribution", () => {
+describe.concurrent("generateAttribution", () => {
   it("returns schema-valid attribution for reef bioregions FGDC XML", async () => {
     const result = await generateAttribution([reefMetadataXml]);
 
@@ -43,7 +43,7 @@ describe("generateAttribution", () => {
     expect(result.attribution).toEqual(
       expect.stringMatching(/^IUCN [-\s]*Oceania$/),
     );
-  });
+  }, 6000);
 
   it("returns schema-valid attribution for EEZ XML", async () => {
     const result = await generateAttribution([eezMetadataXml]);
@@ -53,7 +53,7 @@ describe("generateAttribution", () => {
     }
 
     expect(result.attribution).toEqual(expect.stringMatching(/^MFMRD$/));
-  });
+  }, 6000);
 
   it("returns schema-valid attribution for Marine Regions", async () => {
     const result = await generateAttribution([marineRegionsMetadata]);
@@ -65,5 +65,5 @@ describe("generateAttribution", () => {
     expect(result.attribution).toEqual(
       expect.stringMatching(/^Flanders Marine Institute/),
     );
-  });
+  }, 6000);
 });

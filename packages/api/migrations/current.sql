@@ -80,7 +80,19 @@ create type visualization_type as enum (
   'CATEGORICAL_POINT',
   'PROPORTIONAL_SYMBOL',
   'CONTINUOUS_POINT',
-  'HEATMAP'
+  'HEATMAP',
+  'SIMPLE_LINE',
+  'CONTINUOUS_LINE',
+  'CATEGORICAL_LINE'
+);
+
+drop type if exists value_steps cascade;
+
+create type value_steps as enum (
+  'CONTINUOUS',
+  'NATURAL_BREAKS',
+  'QUANTILES',
+  'EQUAL_INTERVALS'
 );
 
 create table ai_data_analyst_notes (
@@ -97,15 +109,19 @@ create table ai_data_analyst_notes (
   best_numeric_column text,
   best_date_column text,
   best_popup_description_column text,
+  best_group_by_column text,
   best_id_column text,
   junk_columns text[],
   chosen_presentation_type visualization_type,
   chosen_presentation_column text,
   palette text,
-  custom_palette text[],
+  custom_palette jsonb,
   show_labels boolean not null default false,
   labels_min_zoom integer,
-  interactivity_type interactivity_type not null default 'NONE'
+  interactivity_type interactivity_type not null default 'NONE',
+  value_steps value_steps,
+  value_steps_n integer,
+  constraint ai_data_analyst_notes_one_per_data_source unique (data_source_id)
 );
 
 grant select on ai_data_analyst_notes to anon;

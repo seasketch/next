@@ -26,7 +26,8 @@
     "build:container": "cp -r node_modules/@seasketch . && docker build -t spatial-uploads-handler . && rm -rf @seasketch",
     "test": "jest",
     "deploy:pre": "npm run build && cp -r node_modules/@seasketch .",
-    "deploy:post": "rm -rf @seasketch"
+    "deploy:post": "rm -rf @seasketch",
+    "geostats": "npx tsx bin/geostats.ts"
   },
   "jest": {
     "testPathIgnorePatterns": [
