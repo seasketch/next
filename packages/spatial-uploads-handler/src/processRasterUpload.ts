@@ -7,6 +7,17 @@ import { parse as parsePath, join as pathJoin } from "path";
 import { statSync } from "fs";
 import { rasterInfoForBands } from "./rasterInfoForBands";
 import { Logger } from "./logger";
+import {
+  generateColumnIntelligence,
+  generateTitle,
+  type AiDataAnalystNotes,
+  type GenerateColumnIntelligenceResult,
+} from "ai-data-analyst";
+import {
+  asNeverReject,
+  composeAiDataAnalystNotesFromPromises,
+  isAiDataAnalystEnabled,
+} from "./aiUploadNotes";
 import gdal from "gdal-async";
 import bbox from "@turf/bbox";
 import { convertToGeoTiff, getLayerIdentifiers } from "./formats/netcdf";
@@ -26,7 +37,12 @@ export async function processRasterUpload(options: {
   jobId: string;
   /** Santitized original filename. Used for layer name */
   originalName: string;
-}): Promise<RasterInfo> {
+  /** Display filename (e.g. sanitized name + extension) for LLM context */
+  uploadFilename: string;
+}): Promise<{
+  rasterInfo: RasterInfo;
+  aiDataAnalystNotes?: AiDataAnalystNotes;
+}> {
   const {
     logger,
     outputs,
@@ -35,9 +51,17 @@ export async function processRasterUpload(options: {
     workingDirectory,
     jobId,
     originalName,
+    uploadFilename,
   } = options;
   await updateProgress("running", "validating");
   let path = options.path;
+
+  const titleP = isAiDataAnalystEnabled()
+    ? asNeverReject(generateTitle(uploadFilename), "generateTitle")
+    : null;
+  let columnP: Promise<
+    GenerateColumnIntelligenceResult | { error: string }
+  > | null = null;
   const originalPath = options.path;
 
   const { ext, isCorrectProjection } = await validateInput(path, logger);
@@ -58,6 +82,13 @@ export async function processRasterUpload(options: {
   await updateProgress("running", "analyzing");
   // Get raster stats
   const stats = await rasterInfoForBands(path);
+
+  if (isAiDataAnalystEnabled()) {
+    columnP = asNeverReject(
+      generateColumnIntelligence(uploadFilename, stats),
+      "generateColumnIntelligence",
+    );
+  }
 
   const size = statSync(path).size;
 
@@ -166,7 +197,18 @@ export async function processRasterUpload(options: {
     filename: `${jobId}.pmtiles`,
   });
 
-  return stats;
+  await updateProgress("running", "ai data analyst");
+  const aiDataAnalystNotes = await composeAiDataAnalystNotesFromPromises({
+    uploadFilename,
+    titleP,
+    attributionP: null,
+    columnP,
+  });
+
+  return {
+    rasterInfo: stats,
+    ...(aiDataAnalystNotes ? { aiDataAnalystNotes } : {}),
+  };
 }
 
 async function validateInput(path: string, logger: Logger) {

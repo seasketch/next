@@ -121,6 +121,7 @@ create table ai_data_analyst_notes (
   interactivity_type interactivity_type not null default 'NONE',
   value_steps value_steps,
   value_steps_n integer,
+  errors text,
   constraint ai_data_analyst_notes_one_per_data_source unique (data_source_id)
 );
 

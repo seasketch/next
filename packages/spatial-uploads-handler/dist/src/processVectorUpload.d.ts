@@ -1,6 +1,7 @@
 import { GeostatsLayer } from "@seasketch/geostats-types";
 import { ProgressUpdater, ResponseOutput } from "./handleUpload";
 import { Logger } from "./logger";
+import { type AiDataAnalystNotes } from "ai-data-analyst";
 export default function fromMarkdown(md: string): any;
 /**
  * Process a vector upload, converting it to a normalized FlatGeobuf file and
@@ -25,5 +26,10 @@ export declare function processVectorUpload(options: {
     jobId: string;
     /** Santitized original filename. Used for layer name */
     originalName: string;
-}): Promise<GeostatsLayer[]>;
+    /** Display filename (e.g. sanitized name + extension) for LLM context */
+    uploadFilename: string;
+}): Promise<{
+    layers: GeostatsLayer[];
+    aiDataAnalystNotes?: AiDataAnalystNotes;
+}>;
 //# sourceMappingURL=processVectorUpload.d.ts.map

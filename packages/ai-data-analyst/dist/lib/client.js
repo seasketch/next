@@ -22,6 +22,9 @@ const title_1 = require("./prompts/layers/title");
 const shrinkGeostats_1 = require("./geostats/shrinkGeostats");
 const valueSteps_1 = require("./geostats/valueSteps");
 let client = null;
+const TITLE_TIMEOUT_MS = 10000;
+const ATTRIBUTION_TIMEOUT_MS = 10000;
+const COLUMN_INTELLIGENCE_TIMEOUT_MS = 30000;
 function getClient() {
     if (!client) {
         if (!process.env.CF_AIG_TOKEN || !process.env.CF_AIG_URL) {
@@ -30,6 +33,7 @@ function getClient() {
         client = new openai_1.default({
             apiKey: process.env.CF_AIG_TOKEN,
             baseURL: process.env.CF_AIG_URL,
+            maxRetries: 0,
             // defaultHeaders: {
             //   "cf-aig-authorization": `Bearer ${process.env.CF_AIG_TOKEN}`,
             // },
@@ -80,7 +84,7 @@ function parseAssistantJson(message, validator, responseLabel) {
     }
     return { ok: true, data };
 }
-function chatCompletionWithJsonSchema(systemPrompt, userContent, params, responseName, schema) {
+function chatCompletionWithJsonSchema(systemPrompt, userContent, params, responseName, schema, timeoutMs) {
     return __awaiter(this, void 0, void 0, function* () {
         const openai = getClient();
         return openai.chat.completions.create({
@@ -99,7 +103,7 @@ function chatCompletionWithJsonSchema(systemPrompt, userContent, params, respons
                     schema,
                 },
             },
-        });
+        }, { timeout: timeoutMs });
     });
 }
 function parsedTitleFromAssistantMessage(message) {
@@ -135,7 +139,7 @@ function parsedColumnIntelligenceFromAssistantMessage(message) {
 function generateTitle(filename) {
     return __awaiter(this, void 0, void 0, function* () {
         var _a;
-        const response = yield chatCompletionWithJsonSchema(title_1.titlePrompt, filename, title_1.titleParameters, "title", title_1.titleFormattingSchema);
+        const response = yield chatCompletionWithJsonSchema(title_1.titlePrompt, filename, title_1.titleParameters, "title", title_1.titleFormattingSchema, TITLE_TIMEOUT_MS);
         const usage = response.usage;
         const parsed = parsedTitleFromAssistantMessage((_a = response.choices[0]) === null || _a === void 0 ? void 0 : _a.message);
         if (parsed.ok === false) {
@@ -151,7 +155,7 @@ function generateTitle(filename) {
 function generateAttribution(metadata) {
     return __awaiter(this, void 0, void 0, function* () {
         var _a;
-        const response = yield chatCompletionWithJsonSchema(attribution_1.attributionPrompt, metadata.join("\n"), attribution_1.attributionParameters, "attribution", attribution_1.attributionFormattingSchema);
+        const response = yield chatCompletionWithJsonSchema(attribution_1.attributionPrompt, metadata.join("\n"), attribution_1.attributionParameters, "attribution", attribution_1.attributionFormattingSchema, ATTRIBUTION_TIMEOUT_MS);
         const usage = response.usage;
         const parsed = parsedAttributionFromAssistantMessage((_a = response.choices[0]) === null || _a === void 0 ? void 0 : _a.message);
         if (parsed.ok === false) {
@@ -168,7 +172,7 @@ function generateColumnIntelligence(filename, geostats) {
     return __awaiter(this, void 0, void 0, function* () {
         var _a, _b;
         const prunedGeostats = (0, shrinkGeostats_1.pruneGeostats)(geostats);
-        const response = yield chatCompletionWithJsonSchema(columnIntelligence_1.columnIntelligencePrompt, JSON.stringify({ filename, geostats: prunedGeostats }), columnIntelligence_1.columnIntelligenceParameters, "column_intelligence", columnIntelligence_1.columnIntelligenceSchema);
+        const response = yield chatCompletionWithJsonSchema(columnIntelligence_1.columnIntelligencePrompt, JSON.stringify({ filename, geostats: prunedGeostats }), columnIntelligence_1.columnIntelligenceParameters, "column_intelligence", columnIntelligence_1.columnIntelligenceSchema, COLUMN_INTELLIGENCE_TIMEOUT_MS);
         const usage = response.usage;
         const parsed = parsedColumnIntelligenceFromAssistantMessage((_a = response.choices[0]) === null || _a === void 0 ? void 0 : _a.message);
         if (parsed.ok === false) {

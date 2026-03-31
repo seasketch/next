@@ -29,6 +29,11 @@ export {
   generateTitle,
   ColumnIntelligence,
 } from "./client";
+export type {
+  GenerateTitleResult,
+  GenerateAttributionResult,
+  GenerateColumnIntelligenceResult,
+} from "./client";
 export { pruneGeostats } from "./geostats/shrinkGeostats";
 
 export type OpenAIParameters = {
@@ -38,6 +43,10 @@ export type OpenAIParameters = {
 };
 
 export type AiDataAnalystNotes = ColumnIntelligence & {
-  best_layer_title: string;
-  attribution: string;
+  /** Present when the title LLM call succeeded (may be empty string). */
+  best_layer_title?: string;
+  /** Present when the attribution LLM call succeeded; null means the model returned no attribution. */
+  attribution?: string | null;
+  /** Combined LLM / timeout / client error messages for debugging (last compose pass wins on upsert). */
+  errors?: string;
 };

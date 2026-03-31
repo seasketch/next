@@ -178,12 +178,15 @@ export default async function handleUpload(
   );
 
   let stats: GeostatsLayer[] | RasterInfo;
+  let aiDataAnalystNotes: AiDataAnalystNotes | undefined;
+
+  const uploadFilename = originalName + ext;
 
   // After the environment is set up, we can start processing the file depending
   // on its type
   try {
     if (isTif || ext === ".nc") {
-      stats = await processRasterUpload({
+      const rasterResult = await processRasterUpload({
         logger,
         path: workingFilePath,
         outputs,
@@ -191,10 +194,13 @@ export default async function handleUpload(
         baseKey,
         jobId,
         originalName,
+        uploadFilename,
         workingDirectory: dist,
       });
+      stats = rasterResult.rasterInfo;
+      aiDataAnalystNotes = rasterResult.aiDataAnalystNotes;
     } else {
-      stats = await processVectorUpload({
+      const vectorResult = await processVectorUpload({
         logger,
         path: workingFilePath,
         outputs,
@@ -202,8 +208,11 @@ export default async function handleUpload(
         baseKey,
         jobId,
         originalName,
+        uploadFilename,
         workingDirectory: dist,
       });
+      stats = vectorResult.layers;
+      aiDataAnalystNotes = vectorResult.aiDataAnalystNotes;
     }
 
     // Determine bounds for the layer
@@ -260,7 +269,7 @@ export default async function handleUpload(
     const response: { layers: ProcessedUploadLayer[]; logfile: string } = {
       layers: [
         {
-          filename: originalName + ext,
+          filename: uploadFilename,
           name: "bands" in geostats ? originalName : geostats.layer,
           geostats,
           outputs: outputs.map((o) => ({
@@ -274,6 +283,7 @@ export default async function handleUpload(
             isTif &&
             (stats as RasterInfo).presentation ===
               SuggestedRasterPresentation.continuous,
+          ...(aiDataAnalystNotes ? { aiDataAnalystNotes } : {}),
         },
       ],
       logfile: s3LogPath,

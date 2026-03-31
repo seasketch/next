@@ -231,6 +231,7 @@ type AiDataAnalystNote implements Node {
   """
   dataSource: DataSource
   dataSourceId: Int!
+  errors: String
   id: Int!
   interactivityType: InteractivityType!
   junkColumns: [String]

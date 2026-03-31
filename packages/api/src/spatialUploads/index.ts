@@ -11,6 +11,7 @@ import {
 } from "@seasketch/geostats-types";
 import * as colorScale from "d3-scale-chromatic";
 import { colord } from "colord";
+import { deriveInteractivitySettingsFromAiNotes } from "./interactivityFromAiNotes";
 
 const alphabet =
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
@@ -207,9 +208,16 @@ export async function createDBRecordsForProcessedLayer(
             layerCount: 1,
           },
       pmtiles && !isVector ? 512 : null,
-      conversionTask?.attribution ||
-        layer.geostats?.metadata?.attribution ||
-        null,
+      (() => {
+        const aiAttr = layer.aiDataAnalystNotes?.attribution;
+        if (conversionTask?.attribution) {
+          return conversionTask.attribution;
+        }
+        if (aiAttr !== undefined) {
+          return aiAttr;
+        }
+        return layer.geostats?.metadata?.attribution ?? null;
+      })(),
       conversionTask?.location || null,
       Boolean(conversionTask),
       uploadedBy,
@@ -219,6 +227,89 @@ export async function createDBRecordsForProcessedLayer(
   );
   const dataSourceId = rows[0].id;
   const dataSourceBounds = rows[0].bounds;
+
+  const aiNotes = layer.aiDataAnalystNotes;
+  if (aiNotes) {
+    await client.query(
+      `
+      insert into ai_data_analyst_notes (
+        data_source_id,
+        project_id,
+        notes,
+        best_layer_title,
+        attribution,
+        best_label_column,
+        best_category_column,
+        best_numeric_column,
+        best_date_column,
+        best_popup_description_column,
+        best_group_by_column,
+        best_id_column,
+        junk_columns,
+        chosen_presentation_type,
+        chosen_presentation_column,
+        palette,
+        custom_palette,
+        show_labels,
+        labels_min_zoom,
+        interactivity_type,
+        value_steps,
+        value_steps_n,
+        errors
+      ) values (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23
+      )
+      on conflict (data_source_id) do update set
+        notes = excluded.notes,
+        best_layer_title = excluded.best_layer_title,
+        attribution = excluded.attribution,
+        best_label_column = excluded.best_label_column,
+        best_category_column = excluded.best_category_column,
+        best_numeric_column = excluded.best_numeric_column,
+        best_date_column = excluded.best_date_column,
+        best_popup_description_column = excluded.best_popup_description_column,
+        best_group_by_column = excluded.best_group_by_column,
+        best_id_column = excluded.best_id_column,
+        junk_columns = excluded.junk_columns,
+        chosen_presentation_type = excluded.chosen_presentation_type,
+        chosen_presentation_column = excluded.chosen_presentation_column,
+        palette = excluded.palette,
+        custom_palette = excluded.custom_palette,
+        show_labels = excluded.show_labels,
+        labels_min_zoom = excluded.labels_min_zoom,
+        interactivity_type = excluded.interactivity_type,
+        value_steps = excluded.value_steps,
+        value_steps_n = excluded.value_steps_n,
+        errors = excluded.errors,
+        updated_at = now()
+    `,
+      [
+        dataSourceId,
+        projectId,
+        aiNotes.notes,
+        aiNotes.best_layer_title ?? null,
+        aiNotes.attribution === undefined ? null : aiNotes.attribution,
+        aiNotes.best_label_column ?? null,
+        aiNotes.best_category_column ?? null,
+        aiNotes.best_numeric_column ?? null,
+        aiNotes.best_date_column ?? null,
+        aiNotes.best_popup_description_column ?? null,
+        aiNotes.best_group_by_column ?? null,
+        aiNotes.best_id_column ?? null,
+        aiNotes.junk_columns,
+        aiNotes.chosen_presentation_type,
+        aiNotes.chosen_presentation_column ?? null,
+        aiNotes.palette ?? null,
+        aiNotes.custom_palette ?? null,
+        aiNotes.show_labels,
+        aiNotes.labels_min_zoom ?? null,
+        aiNotes.interactivity_type,
+        aiNotes.value_steps ?? null,
+        aiNotes.value_steps_n ?? null,
+        aiNotes.errors ?? null,
+      ],
+    );
+  }
 
   // Create data_upload_outputs for each output
   for (const output of layer.outputs) {
@@ -323,12 +414,31 @@ export async function createDBRecordsForProcessedLayer(
                   ? (layer.geostats as GeostatsLayer)?.geometry || "Polygon"
                   : "Raster",
                 uploadCount,
-                layer.geostats
+                layer.geostats,
+                layer.aiDataAnalystNotes,
               )
             ),
         tocItem.stable_id,
       ]
     );
+
+    if (layer.aiDataAnalystNotes) {
+      const derived = deriveInteractivitySettingsFromAiNotes(
+        layer.aiDataAnalystNotes,
+        layer.geostats,
+      );
+      await client.query(
+        `
+        update interactivity_settings
+        set type = $1::interactivity_type,
+            short_template = $2
+        where id = (
+          select interactivity_settings_id from data_layers where id = $3
+        )
+      `,
+        [derived.type, derived.short_template, dataLayer.id],
+      );
+    }
 
     // TODO: if it is a conversion task, update
     // metadata using the data on the conversion task
@@ -348,15 +458,33 @@ export async function createDBRecordsForProcessedLayer(
       tableOfContentsItemId: tocItem.id,
     };
   } else {
+    let interactivitySettingsId: number | null = null;
+    if (layer.aiDataAnalystNotes) {
+      const derived = deriveInteractivitySettingsFromAiNotes(
+        layer.aiDataAnalystNotes,
+        layer.geostats,
+      );
+      const { rows: interactivityRows } = await client.query(
+        `
+        insert into interactivity_settings (type, short_template)
+        values ($1::interactivity_type, $2)
+        returning id
+      `,
+        [derived.type, derived.short_template],
+      );
+      interactivitySettingsId = interactivityRows[0].id;
+    }
+
     const layerResult = await client.query(
       `
         insert into data_layers (
           project_id,
           data_source_id,
           source_layer,
-          mapbox_gl_styles
+          mapbox_gl_styles,
+          interactivity_settings_id
         ) values (
-          $1, $2, $3, $4
+          $1, $2, $3, $4, $5
         ) returning *
       `,
       [
@@ -370,9 +498,11 @@ export async function createDBRecordsForProcessedLayer(
                 ? (layer.geostats as GeostatsLayer)?.geometry || "Polygon"
                 : "Raster",
               uploadCount,
-              layer.geostats
+              layer.geostats,
+              layer.aiDataAnalystNotes,
             ))
         ),
+        interactivitySettingsId,
       ]
     );
 
@@ -397,7 +527,9 @@ export async function createDBRecordsForProcessedLayer(
       [
         projectId,
         nanoId(),
-        layer.geostats?.metadata?.title || layer.name.replace("_", " "),
+        layer.aiDataAnalystNotes?.best_layer_title?.trim() ||
+          layer.geostats?.metadata?.title ||
+          layer.name.replace("_", " "),
         false,
         layer.bounds,
         dataLayerId,
@@ -469,8 +601,14 @@ function getColor(i: number) {
 async function getStyle(
   type: GeoJsonGeometryTypes | "Raster" | "Unknown",
   colorIndex: number,
-  geostats?: GeostatsLayer | RasterInfo | null
+  geostats?: GeostatsLayer | RasterInfo | null,
+  /**
+   * Reserved for future style derivation (palette, presentation hints, etc.).
+   * Intentionally unused — current heuristics must remain unchanged.
+   */
+  _aiDataAnalystNotes?: ProcessedUploadLayer["aiDataAnalystNotes"],
 ) {
+  void _aiDataAnalystNotes;
   if (type === "Unknown") {
     return [];
   }

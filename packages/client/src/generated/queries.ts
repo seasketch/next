@@ -254,6 +254,7 @@ export type AiDataAnalystNote = Node & {
   /** Reads a single `DataSource` that is related to this `AiDataAnalystNote`. */
   dataSource?: Maybe<DataSource>;
   dataSourceId: Scalars['Int'];
+  errors?: Maybe<Scalars['String']>;
   id: Scalars['Int'];
   interactivityType: InteractivityType;
   junkColumns?: Maybe<Array<Maybe<Scalars['String']>>>;
@@ -20435,7 +20436,10 @@ export type FullAdminSourceFragment = (
   )>, outputs?: Maybe<Array<(
     { __typename?: 'DataUploadOutput' }
     & Pick<DataUploadOutput, 'id' | 'isOriginal' | 'url' | 'type' | 'size' | 'originalFilename' | 'filename' | 'createdAt' | 'isCustomUpload'>
-  )>> }
+  )>>, aiDataAnalystNote?: Maybe<(
+    { __typename?: 'AiDataAnalystNote' }
+    & Pick<AiDataAnalystNote, 'notes' | 'attribution' | 'chosenPresentationType' | 'customPalette' | 'errors' | 'interactivityType' | 'junkColumns' | 'labelsMinZoom' | 'bestCategoryColumn' | 'bestDateColumn' | 'bestGroupByColumn' | 'bestIdColumn' | 'bestLabelColumn' | 'bestNumericColumn' | 'bestPopupDescriptionColumn' | 'chosenPresentationColumn' | 'palette' | 'showLabels'>
+  )> }
 );
 
 export type ArchivedSourceFragment = (
@@ -26416,6 +26420,26 @@ export const FullAdminSourceFragmentDoc = /*#__PURE__*/ gql`
   }
   changelog
   isConvertibleLegacySource
+  aiDataAnalystNote {
+    notes
+    attribution
+    chosenPresentationType
+    customPalette
+    errors
+    interactivityType
+    junkColumns
+    labelsMinZoom
+    bestCategoryColumn
+    bestDateColumn
+    bestGroupByColumn
+    bestIdColumn
+    bestLabelColumn
+    bestNumericColumn
+    bestPopupDescriptionColumn
+    chosenPresentationColumn
+    palette
+    showLabels
+  }
 }
     `;
 export const ArchivedSourceFragmentDoc = /*#__PURE__*/ gql`

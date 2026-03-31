@@ -1,6 +1,7 @@
 import { RasterInfo } from "@seasketch/geostats-types";
 import { ProgressUpdater, ResponseOutput } from "./handleUpload";
 import { Logger } from "./logger";
+import { type AiDataAnalystNotes } from "ai-data-analyst";
 export declare function processRasterUpload(options: {
     logger: Logger;
     /** Path to original upload */
@@ -17,5 +18,10 @@ export declare function processRasterUpload(options: {
     jobId: string;
     /** Santitized original filename. Used for layer name */
     originalName: string;
-}): Promise<RasterInfo>;
+    /** Display filename (e.g. sanitized name + extension) for LLM context */
+    uploadFilename: string;
+}): Promise<{
+    rasterInfo: RasterInfo;
+    aiDataAnalystNotes?: AiDataAnalystNotes;
+}>;
 //# sourceMappingURL=processRasterUpload.d.ts.map

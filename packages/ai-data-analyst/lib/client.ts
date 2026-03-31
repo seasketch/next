@@ -25,6 +25,10 @@ import { deriveValueSteps } from "./geostats/valueSteps";
 
 let client: OpenAI | null = null;
 
+const TITLE_TIMEOUT_MS = 10_000;
+const ATTRIBUTION_TIMEOUT_MS = 10_000;
+const COLUMN_INTELLIGENCE_TIMEOUT_MS = 30_000;
+
 function getClient() {
   if (!client) {
     if (!process.env.CF_AIG_TOKEN || !process.env.CF_AIG_URL) {
@@ -33,6 +37,7 @@ function getClient() {
     client = new OpenAI({
       apiKey: process.env.CF_AIG_TOKEN,
       baseURL: process.env.CF_AIG_URL,
+      maxRetries: 0,
       // defaultHeaders: {
       //   "cf-aig-authorization": `Bearer ${process.env.CF_AIG_TOKEN}`,
       // },
@@ -106,25 +111,29 @@ async function chatCompletionWithJsonSchema(
   params: OpenAIParameters,
   responseName: string,
   schema: JSONSchema4,
+  timeoutMs: number,
 ) {
   const openai = getClient();
-  return openai.chat.completions.create({
-    model: params.model,
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userContent },
-    ],
-    reasoning_effort: params.effort,
-    verbosity: params.verbosity,
-    response_format: {
-      type: "json_schema",
-      json_schema: {
-        name: responseName,
-        strict: true,
-        schema,
+  return openai.chat.completions.create(
+    {
+      model: params.model,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userContent },
+      ],
+      reasoning_effort: params.effort,
+      verbosity: params.verbosity,
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: responseName,
+          strict: true,
+          schema,
+        },
       },
     },
-  });
+    { timeout: timeoutMs },
+  );
 }
 
 function parsedTitleFromAssistantMessage(
@@ -232,6 +241,7 @@ export async function generateTitle(
     titleParameters,
     "title",
     titleFormattingSchema,
+    TITLE_TIMEOUT_MS,
   );
 
   const usage = response.usage;
@@ -259,6 +269,7 @@ export async function generateAttribution(
     attributionParameters,
     "attribution",
     attributionFormattingSchema,
+    ATTRIBUTION_TIMEOUT_MS,
   );
 
   const usage = response.usage;
@@ -290,6 +301,7 @@ export async function generateColumnIntelligence(
     columnIntelligenceParameters,
     "column_intelligence",
     columnIntelligenceSchema,
+    COLUMN_INTELLIGENCE_TIMEOUT_MS,
   );
 
   const usage = response.usage;

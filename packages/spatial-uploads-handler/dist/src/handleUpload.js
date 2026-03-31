@@ -119,11 +119,13 @@ requestingUser, skipLoggingProgress) {
     }
     await (0, remotes_1.getObject)(workingFilePath, `s3://${path.join(process.env.BUCKET, objectKey)}`, logger, 2 / 30);
     let stats;
+    let aiDataAnalystNotes;
+    const uploadFilename = originalName + ext;
     // After the environment is set up, we can start processing the file depending
     // on its type
     try {
         if (isTif || ext === ".nc") {
-            stats = await (0, processRasterUpload_1.processRasterUpload)({
+            const rasterResult = await (0, processRasterUpload_1.processRasterUpload)({
                 logger,
                 path: workingFilePath,
                 outputs,
@@ -131,11 +133,14 @@ requestingUser, skipLoggingProgress) {
                 baseKey,
                 jobId,
                 originalName,
+                uploadFilename,
                 workingDirectory: dist,
             });
+            stats = rasterResult.rasterInfo;
+            aiDataAnalystNotes = rasterResult.aiDataAnalystNotes;
         }
         else {
-            stats = await (0, processVectorUpload_1.processVectorUpload)({
+            const vectorResult = await (0, processVectorUpload_1.processVectorUpload)({
                 logger,
                 path: workingFilePath,
                 outputs,
@@ -143,8 +148,11 @@ requestingUser, skipLoggingProgress) {
                 baseKey,
                 jobId,
                 originalName,
+                uploadFilename,
                 workingDirectory: dist,
             });
+            stats = vectorResult.layers;
+            aiDataAnalystNotes = vectorResult.aiDataAnalystNotes;
         }
         // Determine bounds for the layer
         let bounds;
@@ -190,7 +198,7 @@ requestingUser, skipLoggingProgress) {
         const response = {
             layers: [
                 {
-                    filename: originalName + ext,
+                    filename: uploadFilename,
                     name: "bands" in geostats ? originalName : geostats.layer,
                     geostats,
                     outputs: outputs.map((o) => ({
@@ -203,6 +211,7 @@ requestingUser, skipLoggingProgress) {
                     isSingleBandRaster: isTif &&
                         stats.presentation ===
                             geostats_types_1.SuggestedRasterPresentation.continuous,
+                    ...(aiDataAnalystNotes ? { aiDataAnalystNotes } : {}),
                 },
             ],
             logfile: s3LogPath,
