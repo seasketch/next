@@ -19,7 +19,8 @@ const openai_1 = __importDefault(require("openai"));
 const attribution_1 = require("./prompts/layers/attribution");
 const columnIntelligence_1 = require("./prompts/layers/columnIntelligence");
 const title_1 = require("./prompts/layers/title");
-const schemas_1 = require("./schemas");
+const shrinkGeostats_1 = require("./geostats/shrinkGeostats");
+const valueSteps_1 = require("./geostats/valueSteps");
 let client = null;
 function getClient() {
     if (!client) {
@@ -27,10 +28,11 @@ function getClient() {
             throw new Error("CF_AIG_TOKEN and CF_AIG_URL must be set");
         }
         client = new openai_1.default({
+            apiKey: process.env.CF_AIG_TOKEN,
             baseURL: process.env.CF_AIG_URL,
-            defaultHeaders: {
-                "cf-aig-authorization": `Bearer ${process.env.CF_AIG_TOKEN}`,
-            },
+            // defaultHeaders: {
+            //   "cf-aig-authorization": `Bearer ${process.env.CF_AIG_TOKEN}`,
+            // },
         });
     }
     return client;
@@ -66,9 +68,14 @@ function parseAssistantJson(message, validator, responseLabel) {
         return { ok: false, error: "Assistant response was not valid JSON" };
     }
     if (!validator(data)) {
+        const errors = typeof validator === "function" &&
+            "errors" in validator &&
+            Array.isArray(validator.errors)
+            ? validator.errors
+            : undefined;
         return {
             ok: false,
-            error: `Invalid ${responseLabel} response: ${formatAjvErrors(validator.errors, "does not match schema")}`,
+            error: `Invalid ${responseLabel} response: ${formatAjvErrors(errors, "does not match schema")}`,
         };
     }
     return { ok: true, data };
@@ -96,7 +103,7 @@ function chatCompletionWithJsonSchema(systemPrompt, userContent, params, respons
     });
 }
 function parsedTitleFromAssistantMessage(message) {
-    const parsed = parseAssistantJson(message, schemas_1.titleFormattingValidator, "title");
+    const parsed = parseAssistantJson(message, title_1.titleFormattingValidator, "title");
     if (parsed.ok === false) {
         return parsed;
     }
@@ -107,7 +114,7 @@ function parsedTitleFromAssistantMessage(message) {
     return { ok: true, title };
 }
 function parsedAttributionFromAssistantMessage(message) {
-    const parsed = parseAssistantJson(message, schemas_1.attributionFormattingValidator, "attribution");
+    const parsed = parseAssistantJson(message, attribution_1.attributionFormattingValidator, "attribution");
     if (parsed.ok === false) {
         return parsed;
     }
@@ -119,7 +126,7 @@ function parsedAttributionFromAssistantMessage(message) {
     return { ok: true, attribution: s.length === 0 ? null : s };
 }
 function parsedColumnIntelligenceFromAssistantMessage(message) {
-    const parsed = parseAssistantJson(message, schemas_1.columnIntelligenceValidator, "column intelligence");
+    const parsed = parseAssistantJson(message, columnIntelligence_1.columnIntelligenceValidator, "column intelligence");
     if (parsed.ok === false) {
         return parsed;
     }
@@ -128,7 +135,7 @@ function parsedColumnIntelligenceFromAssistantMessage(message) {
 function generateTitle(filename) {
     return __awaiter(this, void 0, void 0, function* () {
         var _a;
-        const response = yield chatCompletionWithJsonSchema(title_1.titlePrompt, filename, title_1.titleParameters, "title", schemas_1.titleFormattingSchema);
+        const response = yield chatCompletionWithJsonSchema(title_1.titlePrompt, filename, title_1.titleParameters, "title", title_1.titleFormattingSchema);
         const usage = response.usage;
         const parsed = parsedTitleFromAssistantMessage((_a = response.choices[0]) === null || _a === void 0 ? void 0 : _a.message);
         if (parsed.ok === false) {
@@ -144,7 +151,7 @@ function generateTitle(filename) {
 function generateAttribution(metadata) {
     return __awaiter(this, void 0, void 0, function* () {
         var _a;
-        const response = yield chatCompletionWithJsonSchema(attribution_1.attributionPrompt, metadata.join("\n"), attribution_1.attributionParameters, "attribution", schemas_1.attributionFormattingSchema);
+        const response = yield chatCompletionWithJsonSchema(attribution_1.attributionPrompt, metadata.join("\n"), attribution_1.attributionParameters, "attribution", attribution_1.attributionFormattingSchema);
         const usage = response.usage;
         const parsed = parsedAttributionFromAssistantMessage((_a = response.choices[0]) === null || _a === void 0 ? void 0 : _a.message);
         if (parsed.ok === false) {
@@ -159,8 +166,9 @@ function generateAttribution(metadata) {
 }
 function generateColumnIntelligence(filename, geostats) {
     return __awaiter(this, void 0, void 0, function* () {
-        var _a;
-        const response = yield chatCompletionWithJsonSchema(columnIntelligence_1.columnIntelligencePrompt, JSON.stringify({ filename, geostats }), columnIntelligence_1.columnIntelligenceParameters, "column_intelligence", schemas_1.columnIntelligenceSchema);
+        var _a, _b;
+        const prunedGeostats = (0, shrinkGeostats_1.pruneGeostats)(geostats);
+        const response = yield chatCompletionWithJsonSchema(columnIntelligence_1.columnIntelligencePrompt, JSON.stringify({ filename, geostats: prunedGeostats }), columnIntelligence_1.columnIntelligenceParameters, "column_intelligence", columnIntelligence_1.columnIntelligenceSchema);
         const usage = response.usage;
         const parsed = parsedColumnIntelligenceFromAssistantMessage((_a = response.choices[0]) === null || _a === void 0 ? void 0 : _a.message);
         if (parsed.ok === false) {
@@ -170,7 +178,23 @@ function generateColumnIntelligence(filename, geostats) {
         if (usage === undefined) {
             return { error: "No usage in response" };
         }
-        return { result: parsed.result, usage };
+        const continuousTypes = new Set([
+            "CONTINUOUS_RASTER",
+            "CONTINUOUS_POINT",
+            "CONTINUOUS_POLYGON",
+        ]);
+        const valueSteps = continuousTypes.has(parsed.result.chosen_presentation_type)
+            ? (0, valueSteps_1.deriveValueSteps)(geostats, (_b = parsed.result.chosen_presentation_column) !== null && _b !== void 0 ? _b : undefined)
+            : undefined;
+        return {
+            result: Object.assign(Object.assign({}, parsed.result), (valueSteps
+                ? {
+                    value_steps: valueSteps.value_steps,
+                    value_steps_n: valueSteps.value_steps_n,
+                }
+                : {})),
+            usage,
+        };
     });
 }
 //# sourceMappingURL=client.js.map

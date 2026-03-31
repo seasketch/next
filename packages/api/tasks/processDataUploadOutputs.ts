@@ -13,7 +13,7 @@ export default async function processDataUpload(
     jobId: string;
     data: ProcessedUploadResponse;
   },
-  helpers: Helpers
+  helpers: Helpers,
 ) {
   const { jobId, data } = payload;
   helpers.logger.info(`Handling spatial data upload: ${jobId}`);
@@ -22,24 +22,24 @@ export default async function processDataUpload(
     async function handleError(msg: string) {
       return client.query(
         `update project_background_jobs set state = 'failed', error_message = $2, progress_message = 'failed' where id = $1`,
-        [jobId, msg]
+        [jobId, msg],
       );
     }
     try {
       let replaceTableOfContentsItemId: number | undefined = undefined;
       const results = await client.query(
         `update project_background_jobs set progress_message = 'cartography' where id = $1 returning *`,
-        [jobId]
+        [jobId],
       );
       const conversionTaskQuery = await client.query(
         `
         select project_background_job_id, table_of_contents_item_id from esri_feature_layer_conversion_tasks where project_background_job_id = $1 limit 1
       `,
-        [jobId]
+        [jobId],
       );
       const uploadTaskQuery = await client.query(
         `select id, replace_table_of_contents_item_id from data_upload_tasks where project_background_job_id = $1 limit 1`,
-        [jobId]
+        [jobId],
       );
       const isConversionTask = conversionTaskQuery.rows.length > 0;
       const isUploadTask = uploadTaskQuery.rows.length > 0;
@@ -53,7 +53,7 @@ export default async function processDataUpload(
             select data_layer_id from table_of_contents_items where id = $1
           )
         `,
-          [conversionTaskQuery.rows[0].table_of_contents_item_id]
+          [conversionTaskQuery.rows[0].table_of_contents_item_id],
         );
         if (originalSource.rows.length >= 1) {
           replaceTableOfContentsItemId =
@@ -63,7 +63,7 @@ export default async function processDataUpload(
       if (!isConversionTask && !isUploadTask) {
         return handleError(
           "Could not find conversion or upload task related to background job " +
-            jobId
+            jobId,
         );
       }
       let replace: undefined | { sourceId: number; layerId: number } =
@@ -73,17 +73,17 @@ export default async function processDataUpload(
         const layerQ = await client.query(
           `
           select data_layer_id from table_of_contents_items where id = $1`,
-          [replaceTableOfContentsItemId]
+          [replaceTableOfContentsItemId],
         );
         const sourceQ = await client.query(
           `
           select data_source_id from data_layers where id = $1`,
-          [layerQ.rows[0].data_layer_id]
+          [layerQ.rows[0].data_layer_id],
         );
         if (!sourceQ.rows[0] || !layerQ.rows[0]) {
           return handleError(
             "Could not find source or layer for table of contents item " +
-              replaceTableOfContentsItemId
+              replaceTableOfContentsItemId,
           );
         }
         replace = {
@@ -102,30 +102,30 @@ export default async function processDataUpload(
             client,
             jobId,
             isConversionTask ? "conversion" : "upload",
-            replace
+            replace,
           );
         }
         await client.query(
           `update project_background_jobs set progress_message = 'complete', state = 'complete' where id = $1`,
-          [jobId]
+          [jobId],
         );
         if (isUploadTask) {
           const uploadId = uploadTaskQuery.rows[0].id;
           await client.query(
             `update data_upload_tasks set outputs = $2 where id = $1`,
-            [uploadId, JSON.stringify(data)]
+            [uploadId, JSON.stringify(data)],
           );
         }
       } else {
         await client.query(
           `update project_background_jobs set state = 'failed', error_message = $1, progress_message = 'failed' where id = $2`,
-          [data.error, jobId]
+          [data.error, jobId],
         );
       }
     } catch (e) {
       await client.query(
         `update project_background_jobs set progress_message = 'failed', state = 'failed', error_message = $1 where id = $2`,
-        [(e as Error).toString(), jobId]
+        [(e as Error).toString(), jobId],
       );
     }
   });

@@ -1,6 +1,11 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.attributionParameters = exports.attributionPrompt = void 0;
+exports.attributionFormattingValidator = exports.attributionFormattingSchema = exports.attributionParameters = exports.attributionPrompt = void 0;
+const ajv_1 = __importDefault(require("ajv"));
+const ajv = new ajv_1.default();
 exports.attributionPrompt = `
 Given the following metadata document, return an attribution string suitable for public consumption.
 
@@ -15,4 +20,17 @@ exports.attributionParameters = {
     effort: "low",
     verbosity: "low",
 };
+exports.attributionFormattingSchema = {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+        attribution: {
+            type: ["string", "null"],
+            maxLength: 48,
+            description: "Public-facing attribution string (< 48 chars for mapbox-gl). If unsure, return null.",
+        },
+    },
+    required: ["attribution"],
+};
+exports.attributionFormattingValidator = ajv.compile(exports.attributionFormattingSchema);
 //# sourceMappingURL=attribution.js.map

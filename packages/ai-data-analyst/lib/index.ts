@@ -1,3 +1,5 @@
+import { ColumnIntelligence } from "./client";
+
 export {
   attributionFormattingSchema,
   attributionFormattingValidator,
@@ -11,7 +13,10 @@ export {
   titleFormattingValidator,
 } from "./prompts/layers/title";
 
-export { attributionPrompt, attributionParameters } from "./prompts/layers/attribution";
+export {
+  attributionPrompt,
+  attributionParameters,
+} from "./prompts/layers/attribution";
 export {
   columnIntelligencePrompt,
   columnIntelligenceParameters,
@@ -22,5 +27,17 @@ export {
   generateAttribution,
   generateColumnIntelligence,
   generateTitle,
+  ColumnIntelligence,
 } from "./client";
 export { pruneGeostats } from "./geostats/shrinkGeostats";
+
+export type OpenAIParameters = {
+  model: string;
+  effort: "low" | "medium" | "high";
+  verbosity: "low" | "medium" | "high";
+};
+
+export type AiDataAnalystNotes = ColumnIntelligence & {
+  best_layer_title: string;
+  attribution: string;
+};

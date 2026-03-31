@@ -7,8 +7,6 @@ import {
   RasterInfo,
   SuggestedRasterPresentation,
 } from "@seasketch/geostats-types";
-import bytes from "bytes";
-import sanitize from "sanitize-filename";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
 import { SpatialUploadsHandlerRequest } from "../handler";
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
@@ -18,6 +16,9 @@ import { notifySlackChannel } from "./notifySlackChannel";
 import { getObject, putObject } from "./remotes";
 import { Logger } from "./logger";
 import { getLayerIdentifiers } from "./formats/netcdf";
+import type { AiDataAnalystNotes } from "ai-data-analyst";
+import bytes = require("bytes");
+import sanitize = require("sanitize-filename");
 
 export { SpatialUploadsHandlerRequest };
 
@@ -62,6 +63,7 @@ export interface ProcessedUploadLayer {
   bounds?: number[];
   url: string;
   isSingleBandRaster?: boolean;
+  aiDataAnalystNotes?: AiDataAnalystNotes;
 }
 
 export interface ProcessedUploadResponse {
@@ -78,7 +80,7 @@ export const MAX_OUTPUT_SIZE = bytes("6 GB") as number;
 export type ProgressUpdater = (
   state: "running" | "complete" | "failed",
   progressMessage: string,
-  progress?: number
+  progress?: number,
 ) => Promise<void>;
 
 export default async function handleUpload(
@@ -92,7 +94,7 @@ export default async function handleUpload(
    * For logging purposes only. In the form of "Full Name<email@example.com>"
    */
   requestingUser: string,
-  skipLoggingProgress?: boolean
+  skipLoggingProgress?: boolean,
 ): Promise<ProcessedUploadResponse> {
   if (DEBUG) {
     console.log("DEBUG MODE ENABLED");
@@ -109,7 +111,7 @@ export default async function handleUpload(
   const updateProgress: ProgressUpdater = async (
     state: "running" | "complete" | "failed",
     progressMessage: string,
-    progress?: number
+    progress?: number,
   ) => {
     if (skipLoggingProgress) {
       return;
@@ -117,12 +119,12 @@ export default async function handleUpload(
     if (progress !== undefined) {
       await pgClient.query(
         `update project_background_jobs set state = $1, progress = least($2, 1), progress_message = $3 where id = $4 returning progress`,
-        [state, progress, progressMessage, jobId]
+        [state, progress, progressMessage, jobId],
       );
     } else {
       await pgClient.query(
         `update project_background_jobs set state = $1, progress_message = $2 where id = $3 returning progress`,
-        [state, progressMessage, jobId]
+        [state, progressMessage, jobId],
       );
     }
   };
@@ -143,7 +145,7 @@ export default async function handleUpload(
     }
     const { rows } = await pgClient.query(
       `update project_background_jobs set progress = least($1, 1.0) where id = $2 returning progress`,
-      [progress, jobId]
+      [progress, jobId],
     );
   });
 
@@ -162,7 +164,7 @@ export default async function handleUpload(
   const keyParts = objectKey.split("/");
   let workingFilePath = `${path.join(
     tmpobj.name,
-    keyParts[keyParts.length - 1]
+    keyParts[keyParts.length - 1],
   )}`;
   await updateProgress("running", "fetching", 0.0);
   if (DEBUG) {
@@ -172,7 +174,7 @@ export default async function handleUpload(
     workingFilePath,
     `s3://${path.join(process.env.BUCKET!, objectKey)}`,
     logger,
-    2 / 30
+    2 / 30,
   );
 
   let stats: GeostatsLayer[] | RasterInfo;
@@ -219,10 +221,10 @@ export default async function handleUpload(
     if (outputs.find((o) => o.size > MAX_OUTPUT_SIZE)) {
       throw new Error(
         `One or more outputs exceed ${bytes(
-          MAX_OUTPUT_SIZE
+          MAX_OUTPUT_SIZE,
         )} limit. Was ${bytes(
-          outputs.find((o) => o.size > MAX_OUTPUT_SIZE)!.size
-        )}`
+          outputs.find((o) => o.size > MAX_OUTPUT_SIZE)!.size,
+        )}`,
       );
     }
     // Upload outputs to cloud storage
@@ -284,7 +286,7 @@ export default async function handleUpload(
           jobId: jobId,
           data: response,
         }),
-      ]
+      ],
     );
     return response;
   } catch (e) {
@@ -293,7 +295,7 @@ export default async function handleUpload(
     if (!skipLoggingProgress) {
       const q = await pgClient.query(
         `update project_background_jobs set state = 'failed', error_message = $1, progress_message = 'failed' where id = $2 returning *`,
-        [error.message || error.name, jobId]
+        [error.message || error.name, jobId],
       );
     }
     if (
@@ -319,7 +321,7 @@ export default async function handleUpload(
         command,
         {
           expiresIn: 172800,
-        }
+        },
       );
 
       await notifySlackChannel(
@@ -329,7 +331,7 @@ export default async function handleUpload(
         process.env.BUCKET!,
         objectKey,
         requestingUser,
-        error.message || error.name
+        error.message || error.name,
       );
     }
     throw e;

@@ -1,6 +1,11 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.titleParameters = exports.titlePrompt = void 0;
+exports.titleFormattingValidator = exports.titleFormattingSchema = exports.titleParameters = exports.titlePrompt = void 0;
+const ajv_1 = __importDefault(require("ajv"));
+const ajv = new ajv_1.default();
 exports.titlePrompt = `
 You are a GIS Analyst prepping data for publishing in a map portal. Create a layer title from the provided filename suitable for public consumption.
 
@@ -20,4 +25,18 @@ exports.titleParameters = {
     effort: "low",
     verbosity: "low",
 };
+/** Root type must be an object for OpenAI structured outputs / gateway validation. */
+exports.titleFormattingSchema = {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+        title: {
+            type: "string",
+            minLength: 1,
+            description: "Public-facing layer title derived from the source filename.",
+        },
+    },
+    required: ["title"],
+};
+exports.titleFormattingValidator = ajv.compile(exports.titleFormattingSchema);
 //# sourceMappingURL=title.js.map

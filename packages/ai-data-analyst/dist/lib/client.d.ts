@@ -7,14 +7,17 @@ export type ColumnIntelligence = {
     best_popup_description_column?: string;
     best_id_column?: string;
     junk_columns: string[];
-    chosen_presentation_type: "RGB_RASTER" | "CATEGORICAL_RASTER" | "CONTINUOUS_RASTER" | "SIMPLE_POLYGON" | "CATEGORICAL_POLYGON" | "CONTINUOUS_POLYGON" | "SIMPLE_POINT" | "MARKER_IMAGE" | "CATEGORICAL_POINT" | "PROPORTIONAL_SYMBOL" | "CONTINUOUS_POINT" | "HEATMAP";
+    chosen_presentation_type: "RGB_RASTER" | "CATEGORICAL_RASTER" | "CONTINUOUS_RASTER" | "SIMPLE_POLYGON" | "CATEGORICAL_POLYGON" | "CONTINUOUS_POLYGON" | "SIMPLE_POINT" | "MARKER_IMAGE" | "CATEGORICAL_POINT" | "PROPORTIONAL_SYMBOL" | "CONTINUOUS_POINT" | "HEATMAP" | "SIMPLE_LINE" | "CONTINUOUS_LINE" | "CATEGORICAL_LINE";
     chosen_presentation_column?: string;
+    best_group_by_column?: string;
     palette?: string;
-    custom_palette?: string[];
+    custom_palette?: Record<string, string> | null;
     show_labels: boolean;
     labels_min_zoom?: number;
     interactivity_type: "BANNER" | "TOOLTIP" | "POPUP" | "ALL_PROPERTIES_POPUP" | "NONE";
     notes: string;
+    value_steps?: "CONTINUOUS" | "NATURAL_BREAKS" | "QUANTILES" | "EQUAL_INTERVALS";
+    value_steps_n?: number;
 };
 export type GenerateTitleResult = {
     title: string;

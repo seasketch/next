@@ -70,7 +70,8 @@
   },
   "references": [
     { "path": "../geostats-types" },
-    { "path": "../metadata-parser" }
+    { "path": "../metadata-parser" },
+    { "path": "../ai-data-analyst" }
   ],
   "include": ["src/**/*.ts", "bin/**/*.ts", "handler.ts"],
   "exclude": ["node_modules", "**/*.test.ts", "**/*.spec.ts", "dist"]

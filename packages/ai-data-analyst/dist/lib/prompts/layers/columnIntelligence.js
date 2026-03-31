@@ -1,6 +1,11 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.columnIntelligenceParameters = exports.columnIntelligencePrompt = void 0;
+exports.columnIntelligenceValidator = exports.columnIntelligenceSchema = exports.columnIntelligenceParameters = exports.columnIntelligencePrompt = void 0;
+const ajv_1 = __importDefault(require("ajv"));
+const ajv = new ajv_1.default({ allowUnionTypes: true });
 exports.columnIntelligencePrompt = `
 SeaSketch is an online decision support tool for ocean conservation planning. It has a map portal that allows users to visualize and analyze data layers.
 You are a GIS analyst for SeaSketch, skilled in both data analysis and cartography. Your job is to inspect hosted data layers and prepare them for publication on SeaSketch. 
@@ -9,13 +14,156 @@ This work requires you to:
   1. Identifying which columns are suitable for different purposes (categorizing, measuring, labeling, etc).
   2. Determining the best cartographic presentation to use for a given layer, based on what the data contains and represents. This includes the style presentation type, labeling (if any), and color scheme.
   3. Make recommendations for interactivity settings (e.g. popups, tooltips, banners, etc).
+  4. Choose a best group_by column, if appropriate, for overlap analysis.
 
 To make these recommendations, you will be given the 'filename' of the data layer and the 'geostats', which is a JSON object containing the column names, types, and sample data values.
+
+Rules:
+  - Your choice of presentation type and column should be consistent with the 
+    best_*_column properties. For example, categorical presentation types should 
+    use the best_category_column, and continuous presentation types should use 
+    the best_numeric_column.
+  - Use categorical presentation types when it is clear the data represents different habitat classes, bioregions, shoretypes, etc.
+  - Prefer simple polygon, point, or line presentations when it is clear the intent of the data is to show the footprint of a single class of features. 
+  - It is just as important to be able to distinguish between different layers as it is between different features within a layer, so don't automatically categorize by named areas.
+  - Avoid using continuous presentation types for generated columns like Shape_Area, Shape_Length, area_km2, etc.
+  - Interactivity and labeling are not supported for raster layers.
+  - RGB_RASTER should only be chosen for 3-band rasters (e.g. satellite imagery).
+  - Never set a chosen_presentation_column for raster presentations.
+  - CATEGORICAL_RASTER should only be chosen for 1-band rasters with a presentation type of categorical.
+  - Usually pick CONTINUOUS_POINT over PROPORTIONAL_SYMBOL for point layers with good numeric columns. PROPORTIONAL_SYMBOL is best used for species density at monitoring sites.
+  - For categorical vectors or rasters, use 'custom_palette' when particular natural or man-made features are best associated with specific colors (e.g. mangroves are a shade of green, rock is typically grey, etc). When representing categories without natural colors (e.g. administrative boundaries), set 'palette' to a d3 categorical color scale.
+  - 'custom_palette' must be an object keyed by category value, with each value set to a hex color string.
+  - When presentation is SIMPLE_POLYGON, SIMPLE_POINT, or SIMPLE_LINE, use 'custom_palette' with a single entry keyed as "default".
 `;
 exports.columnIntelligenceParameters = {
     // Cloudflare AI Gateway compat expects `{provider}/{model}` (e.g. openai/gpt-5-mini).
     model: "openai/gpt-5.4-mini",
-    effort: "medium",
+    effort: "low",
     verbosity: "low",
 };
+exports.columnIntelligenceSchema = {
+    type: "object",
+    additionalProperties: false,
+    properties: {
+        best_label_column: {
+            type: ["string", "null"],
+            description: "Column that is most suitable for labeling features on the map. (Optional)",
+        },
+        best_category_column: {
+            type: ["string", "null"],
+            description: "Column that appears to represent a category or class of data layer features. (Optional)",
+        },
+        best_numeric_column: {
+            type: ["string", "null"],
+            description: "Column that appears to represent an important measurement or value related to data layer features. (Optional)",
+        },
+        best_date_column: {
+            type: ["string", "null"],
+            description: "Column that appears to represent a temporal attribute. (Optional)",
+        },
+        best_popup_description_column: {
+            type: ["string", "null"],
+            description: "A longer text column suitable for popups. Choose a column that describes this particular location or feature specifically. (Optional)",
+        },
+        best_id_column: {
+            type: ["string", "null"],
+            description: "Column that appears to represent a unique identifier for each feature. (Optional)",
+        },
+        best_group_by_column: {
+            type: ["string", "null"],
+            description: "Identify a column that should be used to group features for overlap analysis. Leave null if there is no good choice. If using a categorical presentation type, the group_by column should be consistent with the chosen_presentation_column. (Optional. Vector layers only)",
+        },
+        junk_columns: {
+            type: "array",
+            items: { type: "string" },
+            description: "Attributes that are useless for mapping (IDs, FID, OBJECTID, globalid, computed shape length/area e.g. Shape_Area, Shape_Length, area_km2, etc).",
+        },
+        chosen_presentation_type: {
+            type: "string",
+            enum: [
+                "RGB_RASTER",
+                "CATEGORICAL_RASTER",
+                "CONTINUOUS_RASTER",
+                "SIMPLE_POLYGON",
+                "CATEGORICAL_POLYGON",
+                "CONTINUOUS_POLYGON",
+                "SIMPLE_POINT",
+                "MARKER_IMAGE",
+                "CATEGORICAL_POINT",
+                "PROPORTIONAL_SYMBOL",
+                "CONTINUOUS_POINT",
+                "SIMPLE_LINE",
+                "CONTINUOUS_LINE",
+                "CATEGORICAL_LINE",
+                // disable for now. not sure the ai can figure out how to use heatmaps.
+                // "HEATMAP",
+            ],
+            description: "The cartographic presentation type to use for this layer. (Required)",
+        },
+        chosen_presentation_column: {
+            type: ["string", "null"],
+            description: "If the chosen_presentation_type uses a data-driven style, this is the column to reference. Leave null for raster layers.",
+        },
+        palette: {
+            type: ["string", "null"],
+            description: "A d3 color scale to use for this layer and presentation type. Be sure to select one appropriate for the presentation type (categorical, continuous, etc). Only specify one of palette or custom_palette. (Optional)",
+        },
+        custom_palette: {
+            type: ["object", "null", "string"],
+            additionalProperties: {
+                type: "string",
+                pattern: "^#(?:[0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$",
+            },
+            description: "For simple polygon, point, or line presentations, a single hex color string will do. For categorical presentations, a custom color palette keyed by category value, where each value is a hex color string. Only specify one of palette or custom_palette. Can be used when particular natural or man-made features are best associated with specific colors (e.g. mangroves are a shade of green, rock is typically grey, etc). Not suitable for continuous presentation types. (Optional)",
+        },
+        show_labels: {
+            type: "boolean",
+            description: "Whether to show labels on the layer. If true, labels will be based on the best_label_column.",
+        },
+        labels_min_zoom: {
+            type: ["number", "null"],
+            minimum: 3,
+            maximum: 14,
+            description: "The minimum zoom level at which to show labels. Labels are not shown at zoom levels less than this value. (Optional)",
+        },
+        interactivity_type: {
+            type: "string",
+            enum: ["BANNER", "TOOLTIP", "POPUP", "ALL_PROPERTIES_POPUP", "NONE"],
+            description: "The type of interactivity to use for the layer. Most layers should use ALL_PROPERTIES_POPUP (when there are significant columns users may want to inspect), BANNER (for habitat or other classifications that users may want to see at a glance), or NONE (for layers that need not be interactive). If BANNER is chosen the best_label_column will be used to generate the banner text. If in doubt, choose NONE. Don't choose POPUP or TOOLTIP, since those require a mustache template to be generated.",
+        },
+        notes: {
+            type: "string",
+            description: "A concise description of the data analysis and cartographic recommendations. Why did you choose the presentation type you did?",
+        },
+    },
+    required: [
+        "best_label_column",
+        "best_category_column",
+        "best_numeric_column",
+        "best_date_column",
+        "best_popup_description_column",
+        "best_id_column",
+        "best_group_by_column",
+        "junk_columns",
+        "chosen_presentation_type",
+        "chosen_presentation_column",
+        "palette",
+        "custom_palette",
+        "show_labels",
+        "labels_min_zoom",
+        "interactivity_type",
+        "notes",
+    ],
+};
+const validator = ajv.compile(exports.columnIntelligenceSchema);
+const columnIntelligenceValidator = (data) => {
+    const d = Object.assign({}, data);
+    delete d.value_steps;
+    delete d.value_steps_n;
+    delete d.raster_steps;
+    delete d.raster_steps_n;
+    return validator(d);
+};
+exports.columnIntelligenceValidator = columnIntelligenceValidator;
 //# sourceMappingURL=columnIntelligence.js.map

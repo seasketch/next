@@ -1,5 +1,6 @@
 import { GeostatsLayer, RasterInfo } from "@seasketch/geostats-types";
 import { SpatialUploadsHandlerRequest } from "../handler";
+import type { AiDataAnalystNotes } from "ai-data-analyst";
 export { SpatialUploadsHandlerRequest };
 export type SupportedTypes = "GeoJSON" | "FlatGeobuf" | "ZippedShapefile" | "GeoTIFF" | "NetCDF";
 export interface ResponseOutput {
@@ -28,6 +29,7 @@ export interface ProcessedUploadLayer {
     bounds?: number[];
     url: string;
     isSingleBandRaster?: boolean;
+    aiDataAnalystNotes?: AiDataAnalystNotes;
 }
 export interface ProcessedUploadResponse {
     logfile: string;
