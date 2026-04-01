@@ -72,7 +72,7 @@ export async function processRasterUpload(options: {
       path = await convertToGeoTiff(
         layerIdentifiers[0],
         pathJoin(workingDirectory, jobId + ".tif"),
-        logger
+        logger,
       );
     } else {
       throw new Error("No layers found in NetCDF file");
@@ -114,7 +114,7 @@ export async function processRasterUpload(options: {
         ],
       ],
       "Problem reprojecting raster",
-      2 / 30
+      2 / 30,
     );
     path = warpedPath;
   }
@@ -125,8 +125,8 @@ export async function processRasterUpload(options: {
       ext === ".tif" || ext === ".tiff"
         ? "GeoTIFF"
         : ext === ".nc"
-        ? "NetCDF"
-        : "PNG",
+          ? "NetCDF"
+          : "PNG",
     remote: `${process.env.RESOURCES_REMOTE}/${baseKey}/${jobId}${ext}`,
     local: path,
     size: statSync(path).size,
@@ -154,7 +154,7 @@ export async function processRasterUpload(options: {
   const info = await logger.exec(
     ["gdalinfo", ["-json", path]],
     "Problem running gdalinfo on raster",
-    2 / 30
+    2 / 30,
   );
   const bounds = bbox(JSON.parse(info)["wgs84Extent"]);
   for (const band of stats.bands) {
@@ -173,7 +173,7 @@ export async function processRasterUpload(options: {
       stats.bands[0].noDataValue,
       stats.bands[0].base,
       stats.bands[0].interval,
-      jobId
+      jobId,
     );
   }
 
@@ -185,7 +185,7 @@ export async function processRasterUpload(options: {
     workingDirectory,
     jobId,
     originalName,
-    stats.presentation
+    stats.presentation,
   );
 
   outputs.push({
@@ -197,7 +197,7 @@ export async function processRasterUpload(options: {
     filename: `${jobId}.pmtiles`,
   });
 
-  await updateProgress("running", "ai data analyst");
+  await updateProgress("running", "ai cartographer working");
   const aiDataAnalystNotes = await composeAiDataAnalystNotesFromPromises({
     uploadFilename,
     titleP,
@@ -245,7 +245,7 @@ async function createPMTiles(
   workingDirectory: string,
   jobId: string,
   layerName: string,
-  presentation: SuggestedRasterPresentation
+  presentation: SuggestedRasterPresentation,
 ) {
   const mbtilesPath = pathJoin(workingDirectory, jobId + ".mbtiles");
 
@@ -270,7 +270,7 @@ async function createPMTiles(
       ],
     ],
     "Problem converting raster to mbtiles",
-    8 / 30
+    8 / 30,
   );
 
   // TODO: how can we make this tile all the way back to z=5 at least?
@@ -313,7 +313,7 @@ async function createPMTiles(
         ],
       ],
       "Problem adding overviews to mbtiles",
-      4 / 30
+      4 / 30,
     );
   }
 
@@ -322,7 +322,7 @@ async function createPMTiles(
   await logger.exec(
     [`pmtiles`, ["convert", mbtilesPath, pmtilesPath]],
     "PMTiles conversion failed",
-    4 / 30
+    4 / 30,
   );
 
   return pmtilesPath;
@@ -335,7 +335,7 @@ async function encodeValuesToRGB(
   noDataValue: number | null,
   base: number,
   interval: number,
-  jobId?: string
+  jobId?: string,
 ) {
   const rel = (p: string) => pathJoin(workingDirectory, p);
 
@@ -393,7 +393,7 @@ async function encodeValuesToRGB(
           "COMPRESS=DEFLATE",
         ],
       ],
-      `Problem creating ${output}`
+      `Problem creating ${output}`,
     );
   }
 
@@ -405,14 +405,14 @@ async function encodeValuesToRGB(
   const vrtFname = rel(noDataValue === null ? "temp_rgb.vrt" : "temp_rgba.vrt");
   await logger.exec(
     ["gdalbuildvrt", ["-separate", vrtFname, ...vrtInputs]],
-    "Problem building VRT"
+    "Problem building VRT",
   );
   const encodedFname = rel(
-    noDataValue === null ? "output_encoded_rgb.tif" : "output_encoded_rgba.tif"
+    noDataValue === null ? "output_encoded_rgb.tif" : "output_encoded_rgba.tif",
   );
   await logger.exec(
     ["gdal_translate", ["-co", "COMPRESS=DEFLATE", vrtFname, encodedFname]],
-    "Problem converting VRT to RGB TIFF"
+    "Problem converting VRT to RGB TIFF",
   );
 
   return encodedFname;

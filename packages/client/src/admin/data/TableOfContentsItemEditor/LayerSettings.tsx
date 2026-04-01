@@ -21,6 +21,7 @@ import {
 import { copyTextToClipboard } from "../../../projects/Forums/InlineAuthorDetails";
 import INaturalistLayerSettingsForm from "../INaturalistLayerSettingsForm";
 import Warning from "../../../components/Warning";
+import AICartographerNotesSummary from "./AICartographerNotesSummary";
 
 export default function LayerSettings({
   item,
@@ -251,6 +252,14 @@ export default function LayerSettings({
               variables={{ id: item.id }}
             />
           </div>
+        </div>
+      )}
+
+      {source?.aiDataAnalystNote && (
+        <div className="mt-8 border-t border-gray-200 pt-6">
+          <AICartographerNotesSummary
+            aiDataAnalystNote={source.aiDataAnalystNote}
+          />
         </div>
       )}
     </div>

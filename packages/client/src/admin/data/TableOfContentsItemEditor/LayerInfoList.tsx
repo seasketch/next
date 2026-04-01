@@ -55,7 +55,6 @@ export default function LayerInfoList({
     | "minzoom"
     | "arcgisFetchStrategy"
     | "dataLibraryMetadata"
-    | "aiDataAnalystNote"
   >;
   layer: Pick<
     FullAdminDataLayerFragment,
@@ -341,17 +340,6 @@ export default function LayerInfoList({
           <RemoteVectorLayerInfo source={source} readonly={readonly} />
         )}
         {children}
-        {source.aiDataAnalystNote && (
-          <SettingsDLListItem
-            term={t("AI Data Analyst Notes")}
-            description={
-              <div className="w-full">
-                {source.aiDataAnalystNote.notes} -{" "}
-                {JSON.stringify(source.aiDataAnalystNote.customPalette)}
-              </div>
-            }
-          />
-        )}
       </SettingsDefinitionList>
       {showColumnModal && source.geostats && (
         <GeostatsModal

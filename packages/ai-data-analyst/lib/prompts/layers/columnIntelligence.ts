@@ -79,7 +79,7 @@ export const columnIntelligenceSchema: JSONSchema4 = {
     best_group_by_column: {
       type: ["string", "null"],
       description:
-        "Identify a column that should be used to group features for overlap analysis. Leave null if there is no good choice. If using a categorical presentation type, the group_by column should be consistent with the chosen_presentation_column. (Optional. Vector layers only)",
+        "For analytical reports. Select a group_by column if appropriate. For example, if reporting on overlap with habitats, choosing a `habClass` column would split overlapping area results into a row for each habitat class in the output table. Should usually match the chosen_presentation_column, but in some cases it should be left null if the column is only useful for presentation purposes and not analysis. Very rarely should it be a different column, in which case you should explain why.",
     },
     junk_columns: {
       type: "array",
@@ -150,7 +150,7 @@ export const columnIntelligenceSchema: JSONSchema4 = {
     notes: {
       type: "string",
       description:
-        "A concise description of the data analysis and cartographic recommendations. Why did you choose the presentation type you did?",
+        "A concise description of the data analysis and cartographic recommendations. Why did you choose the presentation type you did? When referring to column names, use backtick quotes (e.g. `habclass`), but don't use them for anything else. For example, never use backtick quotes for values or referring to presentation types.",
     },
   },
   required: [

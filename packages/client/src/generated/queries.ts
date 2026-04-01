@@ -20438,7 +20438,7 @@ export type FullAdminSourceFragment = (
     & Pick<DataUploadOutput, 'id' | 'isOriginal' | 'url' | 'type' | 'size' | 'originalFilename' | 'filename' | 'createdAt' | 'isCustomUpload'>
   )>>, aiDataAnalystNote?: Maybe<(
     { __typename?: 'AiDataAnalystNote' }
-    & Pick<AiDataAnalystNote, 'notes' | 'attribution' | 'chosenPresentationType' | 'customPalette' | 'errors' | 'interactivityType' | 'junkColumns' | 'labelsMinZoom' | 'bestCategoryColumn' | 'bestDateColumn' | 'bestGroupByColumn' | 'bestIdColumn' | 'bestLabelColumn' | 'bestNumericColumn' | 'bestPopupDescriptionColumn' | 'chosenPresentationColumn' | 'palette' | 'showLabels'>
+    & Pick<AiDataAnalystNote, 'notes' | 'attribution' | 'bestLayerTitle' | 'chosenPresentationType' | 'chosenPresentationColumn' | 'customPalette' | 'errors' | 'interactivityType' | 'junkColumns' | 'labelsMinZoom' | 'bestCategoryColumn' | 'bestDateColumn' | 'bestGroupByColumn' | 'bestIdColumn' | 'bestLabelColumn' | 'bestNumericColumn' | 'bestPopupDescriptionColumn' | 'palette' | 'showLabels' | 'valueSteps' | 'valueStepsN'>
   )> }
 );
 
@@ -26423,7 +26423,9 @@ export const FullAdminSourceFragmentDoc = /*#__PURE__*/ gql`
   aiDataAnalystNote {
     notes
     attribution
+    bestLayerTitle
     chosenPresentationType
+    chosenPresentationColumn
     customPalette
     errors
     interactivityType
@@ -26436,9 +26438,10 @@ export const FullAdminSourceFragmentDoc = /*#__PURE__*/ gql`
     bestLabelColumn
     bestNumericColumn
     bestPopupDescriptionColumn
-    chosenPresentationColumn
     palette
     showLabels
+    valueSteps
+    valueStepsN
   }
 }
     `;

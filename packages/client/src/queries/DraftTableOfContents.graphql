@@ -277,7 +277,9 @@ fragment FullAdminSource on DataSource {
   aiDataAnalystNote {
     notes
     attribution
+    bestLayerTitle
     chosenPresentationType
+    chosenPresentationColumn
     customPalette
     errors
     interactivityType
@@ -290,9 +292,10 @@ fragment FullAdminSource on DataSource {
     bestLabelColumn
     bestNumericColumn
     bestPopupDescriptionColumn
-    chosenPresentationColumn
     palette
     showLabels
+    valueSteps
+    valueStepsN
   }
 }
 
