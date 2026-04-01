@@ -527,7 +527,6 @@ export default function CreateGeographyWizard({
                   const input: CreateGeographyArgs[] = [];
                   if (config.multipleFeatureHandling === "separate") {
                     for (const eez of featurePicker.getSelectedFeatures()) {
-                      console.log("eez", eez);
                       // Add EEZ geography
                       input.push(
                         buildCreateGeographyInputForEEZ(
