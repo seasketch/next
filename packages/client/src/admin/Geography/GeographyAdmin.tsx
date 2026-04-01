@@ -24,11 +24,15 @@ import useMapboxGLDraw, {
 } from "../../draw/useMapboxGLDraw";
 import { Feature } from "geojson";
 import DigitizingTools from "../../formElements/DigitizingTools";
-import CreateGeographyWizard from "./CreateGeographyWizard";
+import CreateGeographyWizard, {
+  TERRITORIAL_SEAS_JOIN_COLUMN,
+} from "./CreateGeographyWizard";
 import VisibilityCheckbox from "../../dataLayers/tableOfContents/VisibilityCheckbox";
 import EditGeographyModal from "./EditGeographyModal";
 import SketchFragmentStatusModal from "./SketchFragmentStatusModal";
 import deepEqual from "fast-deep-equal";
+
+import { MARINE_REGIONS_JOIN_COLUMN } from "./CreateGeographyWizard";
 
 const EEZ = "MARINE_REGIONS_EEZ_LAND_JOINED";
 const COASTLINE = "DAYLIGHT_COASTLINE";
@@ -553,9 +557,15 @@ export default function GeographyAdmin() {
         (l) => l.dataSource?.dataLibraryTemplateId === EEZ
       );
       const cql = eezLayer?.cql2Query;
-      if (isOp(cql, "=") && hasArg(cql, 0, { property: "MRGID_EEZ" })) {
+      if (
+        isOp(cql, "=") &&
+        hasArg(cql, 0, { property: MARINE_REGIONS_JOIN_COLUMN })
+      ) {
         mrgidEEZs.add(getArg(cql, 1));
-      } else if (isOp(cql, "in") && hasArg(cql, 0, { property: "MRGID_EEZ" })) {
+      } else if (
+        isOp(cql, "in") &&
+        hasArg(cql, 0, { property: MARINE_REGIONS_JOIN_COLUMN })
+      ) {
         const ids = getArg(cql, 1);
         if (Array.isArray(ids)) {
           for (const id of ids) {
@@ -571,11 +581,14 @@ export default function GeographyAdmin() {
       );
       if (territorialSeaLayer) {
         const cql = territorialSeaLayer.cql2Query;
-        if (isOp(cql, "=") && hasArg(cql, 0, { property: "MRGID_EEZ" })) {
+        if (
+          isOp(cql, "=") &&
+          hasArg(cql, 0, { property: TERRITORIAL_SEAS_JOIN_COLUMN })
+        ) {
           mrgidEEZs.delete(getArg(cql, 1));
         } else if (
           isOp(cql, "in") &&
-          hasArg(cql, 0, { property: "MRGID_EEZ" })
+          hasArg(cql, 0, { property: TERRITORIAL_SEAS_JOIN_COLUMN })
         ) {
           const ids = getArg(cql, 1);
           if (Array.isArray(ids)) {

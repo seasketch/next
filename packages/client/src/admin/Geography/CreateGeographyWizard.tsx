@@ -19,7 +19,6 @@ import getSlug from "../../getSlug";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import useFeaturePicker from "./hooks/useFeaturePicker";
 import FeaturePicker from "./components/FeaturePicker";
-import { labelForEEZ } from "./useEEZChoices";
 import Spinner from "../../components/Spinner";
 import { createPortal } from "react-dom";
 import LayerChoice from "./components/LayerChoice";
@@ -51,6 +50,9 @@ type TemplateOption = {
   saving?: boolean;
   onClick: () => void;
 };
+
+export const MARINE_REGIONS_JOIN_COLUMN = "MRGID_EEZ";
+export const TERRITORIAL_SEAS_JOIN_COLUMN = "MRGID_SOV1";
 
 function GeographyTypeChoice({
   label,
@@ -252,11 +254,17 @@ export default function CreateGeographyWizard({
     sourceId: "eez",
     sourceUrl: eezLayer.dataSource!.url!,
     sourceLayer: eezLayer.sourceLayer!,
-    idProperty: "MRGID_EEZ",
+    idProperty: MARINE_REGIONS_JOIN_COLUMN,
     customLabelFn: labelForEEZ,
     initialSelection: [],
     dataset: eezLayer.vectorObjectKey!,
-    includeProperties: ["MRGID_EEZ", "UNION", "POL_TYPE", "SOVEREIGN1"],
+    includeProperties: [
+      MARINE_REGIONS_JOIN_COLUMN,
+      "UNION",
+      "POL_TYPE",
+      "SOVEREIGN1",
+      "MRGID_SOV1",
+    ],
   });
 
   const territorialSeaPicker = useFeaturePicker({
@@ -264,11 +272,17 @@ export default function CreateGeographyWizard({
     sourceId: "territorial_sea",
     sourceUrl: territorialSeaLayer.dataSource!.url!,
     sourceLayer: territorialSeaLayer.sourceLayer!,
-    idProperty: "MRGID_EEZ",
+    idProperty: TERRITORIAL_SEAS_JOIN_COLUMN,
     customLabelFn: labelForEEZ,
     initialSelection: [],
     dataset: territorialSeaLayer.vectorObjectKey!,
-    includeProperties: ["MRGID_EEZ", "UNION", "POL_TYPE", "SOVEREIGN1"],
+    includeProperties: [
+      MARINE_REGIONS_JOIN_COLUMN,
+      "UNION",
+      "POL_TYPE",
+      "SOVEREIGN1",
+      TERRITORIAL_SEAS_JOIN_COLUMN,
+    ],
   });
 
   const featurePicker =
@@ -513,6 +527,7 @@ export default function CreateGeographyWizard({
                   const input: CreateGeographyArgs[] = [];
                   if (config.multipleFeatureHandling === "separate") {
                     for (const eez of featurePicker.getSelectedFeatures()) {
+                      console.log("eez", eez);
                       // Add EEZ geography
                       input.push(
                         buildCreateGeographyInputForEEZ(
@@ -530,7 +545,7 @@ export default function CreateGeographyWizard({
                         input.push(
                           buildCreateGeographyInputForTerritorialSeas(
                             territorialSeaLayer.id,
-                            [eez.value],
+                            [eez.data[TERRITORIAL_SEAS_JOIN_COLUMN]],
                             "Territorial Sea: " + eez.label ||
                               eez.value.toString(),
                             config.eraseLand,
@@ -542,7 +557,7 @@ export default function CreateGeographyWizard({
                           buildCreateGeographyInputForOffshore(
                             territorialSeaLayer.id,
                             eezLayer.id,
-                            [eez.value],
+                            [eez],
                             "Offshore: " + eez.label || eez.value.toString()
                           )
                         );
@@ -551,7 +566,7 @@ export default function CreateGeographyWizard({
                         input.push(
                           buildCreateGeographyInputForTerritorialSeas(
                             territorialSeaLayer.id,
-                            [eez.value],
+                            [eez.data[TERRITORIAL_SEAS_JOIN_COLUMN]],
                             "Territorial Sea: " + eez.label ||
                               eez.value.toString(),
                             config.eraseLand,
@@ -585,7 +600,9 @@ export default function CreateGeographyWizard({
                       input.push(
                         buildCreateGeographyInputForTerritorialSeas(
                           territorialSeaLayer.id,
-                          featurePicker.state.selection,
+                          featurePicker
+                            .getSelectedFeatures()
+                            .map((c) => c.data[TERRITORIAL_SEAS_JOIN_COLUMN]),
                           featurePicker.state.selection.length > 1
                             ? "Territorial Sea: " +
                                 featurePicker
@@ -603,7 +620,7 @@ export default function CreateGeographyWizard({
                         buildCreateGeographyInputForOffshore(
                           territorialSeaLayer.id,
                           eezLayer.id,
-                          featurePicker.state.selection,
+                          featurePicker.getSelectedFeatures(),
                           "Offshore: " +
                             featurePicker
                               .getSelectedFeatures()
@@ -616,7 +633,9 @@ export default function CreateGeographyWizard({
                       input.push(
                         buildCreateGeographyInputForTerritorialSeas(
                           territorialSeaLayer.id,
-                          featurePicker.state.selection,
+                          featurePicker
+                            .getSelectedFeatures()
+                            .map((c) => c.data[TERRITORIAL_SEAS_JOIN_COLUMN]),
                           featurePicker.state.selection.length > 1
                             ? "Territorial Sea: " +
                                 featurePicker
@@ -838,14 +857,14 @@ function buildCreateGeographyInputForEEZ(
                 op: "=",
                 args: [
                   {
-                    property: "MRGID_EEZ",
+                    property: MARINE_REGIONS_JOIN_COLUMN,
                   },
                   choices[0],
                 ],
               }
             : {
                 op: "in",
-                args: [{ property: "MRGID_EEZ" }, choices],
+                args: [{ property: MARINE_REGIONS_JOIN_COLUMN }, choices],
               }
         ),
       },
@@ -885,14 +904,14 @@ function buildCreateGeographyInputForTerritorialSeas(
                 op: "=",
                 args: [
                   {
-                    property: "MRGID_EEZ",
+                    property: TERRITORIAL_SEAS_JOIN_COLUMN,
                   },
                   choices[0],
                 ],
               }
             : {
                 op: "in",
-                args: [{ property: "MRGID_EEZ" }, choices],
+                args: [{ property: TERRITORIAL_SEAS_JOIN_COLUMN }, choices],
               }
         ),
       },
@@ -913,7 +932,7 @@ function buildCreateGeographyInputForTerritorialSeas(
 function buildCreateGeographyInputForOffshore(
   territorialSeaDataLayerId: number,
   eezDataLayerId: number,
-  choices: number[],
+  eezChoices: { value: number; data: any }[],
   name: string
 ) {
   const payload: CreateGeographyArgs = {
@@ -926,19 +945,22 @@ function buildCreateGeographyInputForOffshore(
         templateId: "MARINE_REGIONS_EEZ_LAND_JOINED",
         operationType: GeographyLayerOperation.Intersect,
         cql2Query: JSON.stringify(
-          choices.length === 1
+          eezChoices.length === 1
             ? {
                 op: "=",
                 args: [
                   {
-                    property: "MRGID_EEZ",
+                    property: MARINE_REGIONS_JOIN_COLUMN,
                   },
-                  choices[0],
+                  eezChoices[0].value,
                 ],
               }
             : {
                 op: "in",
-                args: [{ property: "MRGID_EEZ" }, choices],
+                args: [
+                  { property: MARINE_REGIONS_JOIN_COLUMN },
+                  eezChoices.map((c) => c.value),
+                ],
               }
         ),
       },
@@ -947,19 +969,22 @@ function buildCreateGeographyInputForOffshore(
         templateId: "MARINE_REGIONS_TERRITORIAL_SEA",
         operationType: GeographyLayerOperation.Difference,
         cql2Query: JSON.stringify(
-          choices.length === 1
+          eezChoices.length === 1
             ? {
                 op: "=",
                 args: [
                   {
-                    property: "MRGID_EEZ",
+                    property: TERRITORIAL_SEAS_JOIN_COLUMN,
                   },
-                  choices[0],
+                  eezChoices[0].data[TERRITORIAL_SEAS_JOIN_COLUMN],
                 ],
               }
             : {
                 op: "in",
-                args: [{ property: "MRGID_EEZ" }, choices],
+                args: [
+                  { property: MARINE_REGIONS_JOIN_COLUMN },
+                  eezChoices.map((c) => c.data[TERRITORIAL_SEAS_JOIN_COLUMN]),
+                ],
               }
         ),
       },
@@ -1042,4 +1067,15 @@ function buildGeographyInputForCustomLayer(
       ],
     };
   });
+}
+
+export function labelForEEZ(props: {
+  UNION: string;
+  SOVEREIGN1: string;
+}): string {
+  let label = `${props.UNION || props.SOVEREIGN1}`;
+  // if (props.SOVEREIGN1 && props.UNION !== props.SOVEREIGN1) {
+  //   label += ` - ${props.UNION}`;
+  // }
+  return label;
 }
