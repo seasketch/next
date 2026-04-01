@@ -162,7 +162,7 @@ export default function AICartographerNotesSummary({
           {note.bestPopupDescriptionColumn}
         </NoteRow>
         <NoteRow label={t("ID column")}>{note.bestIdColumn}</NoteRow>
-        <NoteRow label={t("Group by column")}>{note.bestGroupByColumn}</NoteRow>
+        
         {junk.length > 0 && (
           <NoteRow label={t("Junk columns")}>
             <ul className="flex flex-wrap gap-1">
@@ -180,7 +180,7 @@ export default function AICartographerNotesSummary({
         <NoteRow label={t("Interactivity")}>
           {formatEnumForDisplay(note.interactivityType)}
         </NoteRow>
-
+        <NoteRow label={t("Group by column")}>{note.bestGroupByColumn}</NoteRow>
         <NoteRow label={t("Notes")}>
           {note.notes ? <NotesWithBacktickCode text={note.notes} /> : null}
         </NoteRow>
