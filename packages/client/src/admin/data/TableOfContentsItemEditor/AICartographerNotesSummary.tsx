@@ -109,7 +109,6 @@ export default function AICartographerNotesSummary({
   if (!note) {
     return null;
   }
-
   const junk =
     note.junkColumns?.filter(
       (c): c is string => typeof c === "string" && c.length > 0
@@ -139,6 +138,13 @@ export default function AICartographerNotesSummary({
           {note.chosenPresentationColumn}
         </NoteRow>
         <NoteRow label={t("Palette")}>{note.palette}</NoteRow>
+        <NoteRow label={t("Reverse palette")}>
+          {note.palette?.trim()
+            ? note.reversePalette
+              ? t("Yes")
+              : t("No")
+            : null}
+        </NoteRow>
         <NoteRow label={t("Custom palette")}>
           <CustomPalettePreview value={note.customPalette} />
         </NoteRow>

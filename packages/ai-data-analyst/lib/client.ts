@@ -21,7 +21,7 @@ import {
   titlePrompt,
 } from "./prompts/layers/title";
 import { pruneGeostats } from "./geostats/shrinkGeostats";
-import { deriveValueSteps } from "./geostats/valueSteps";
+import { deriveValueSteps, type RasterValueSteps } from "./geostats/valueSteps";
 
 let client: OpenAI | null = null;
 
@@ -197,6 +197,8 @@ export type ColumnIntelligence = {
   best_group_by_column?: string;
   palette?: string;
   custom_palette?: Record<string, string> | null;
+  /** Only meaningful with a named `palette`; ignored for `custom_palette`. */
+  reverse_palette: boolean;
   show_labels: boolean;
   labels_min_zoom?: number;
   interactivity_type:
@@ -206,11 +208,7 @@ export type ColumnIntelligence = {
     | "ALL_PROPERTIES_POPUP"
     | "NONE";
   notes: string;
-  value_steps?:
-    | "CONTINUOUS"
-    | "NATURAL_BREAKS"
-    | "QUANTILES"
-    | "EQUAL_INTERVALS";
+  value_steps?: RasterValueSteps;
   value_steps_n?: number;
 };
 

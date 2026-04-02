@@ -59,18 +59,37 @@ function deriveValueSteps(geostats, preferredColumn) {
         return { value_steps: "CONTINUOUS" };
     }
     if (naturalCounts.includes(TARGET_CLASS_COUNT)) {
-        return { value_steps: "NATURAL_BREAKS", value_steps_n: TARGET_CLASS_COUNT };
+        return {
+            value_steps: "NATURAL_BREAKS",
+            value_steps_n: TARGET_CLASS_COUNT,
+        };
     }
-    const preferredMethod = cv === null ? "NATURAL_BREAKS" : cv > 1.1 ? "NATURAL_BREAKS" : cv > 0.6 ? "QUANTILES" : "EQUAL_INTERVALS";
+    const preferredMethod = cv === null
+        ? "naturalBreaks"
+        : cv > 1.1
+            ? "naturalBreaks"
+            : cv > 0.6
+                ? "quantiles"
+                : "equalInterval";
     const methods = {
-        NATURAL_BREAKS: naturalCounts,
-        QUANTILES: quantileCounts,
-        EQUAL_INTERVALS: equalCounts,
+        naturalBreaks: naturalCounts,
+        quantiles: quantileCounts,
+        equalInterval: equalCounts,
     };
-    for (const method of [preferredMethod, "NATURAL_BREAKS", "QUANTILES", "EQUAL_INTERVALS"]) {
+    const toRasterValueSteps = (m) => m === "naturalBreaks"
+        ? "NATURAL_BREAKS"
+        : m === "quantiles"
+            ? "QUANTILES"
+            : "EQUAL_INTERVALS";
+    for (const method of [
+        preferredMethod,
+        "naturalBreaks",
+        "quantiles",
+        "equalInterval",
+    ]) {
         const n = closestCountToTarget(methods[method], TARGET_CLASS_COUNT);
         if (n !== undefined) {
-            return { value_steps: method, value_steps_n: n };
+            return { value_steps: toRasterValueSteps(method), value_steps_n: n };
         }
     }
     return { value_steps: "CONTINUOUS" };

@@ -1,0 +1,1 @@
+{"version":3,"file":"reverseNamedPalette.d.ts","sourceRoot":"","sources":["../../lib/reverseNamedPalette.ts"],"names":[],"mappings":"AAAA;;;GAGG;AACH,wBAAgB,4BAA4B,CAC1C,KAAK,EACD;IACE,OAAO,CAAC,EAAE,MAAM,GAAG,IAAI,CAAC;IACxB,cAAc,CAAC,EAAE,MAAM,CAAC,MAAM,EAAE,MAAM,CAAC,GAAG,MAAM,GAAG,IAAI,CAAC;IACxD,eAAe,CAAC,EAAE,OAAO,CAAC;CAC3B,GACD,IAAI,GACJ,SAAS,GACZ,OAAO,CAkBT"}

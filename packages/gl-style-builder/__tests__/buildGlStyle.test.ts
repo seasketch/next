@@ -2,11 +2,11 @@ import { describe, expect, it } from "vitest";
 import { buildGlStyle } from "../lib/buildGlStyle";
 
 describe("buildGlStyle", () => {
-  it("returns an empty array as a placeholder", () => {
-    expect(
+  it("throws for geostats that resolve to an unsupported visualization type", () => {
+    expect(() =>
       buildGlStyle({
         geostats: { layers: [], layerCount: 0 } as any,
       }),
-    ).toEqual([]);
+    ).toThrow(/Unsupported visualization type/);
   });
 });

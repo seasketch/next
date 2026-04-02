@@ -293,6 +293,7 @@ fragment FullAdminSource on DataSource {
     bestNumericColumn
     bestPopupDescriptionColumn
     palette
+    reversePalette
     showLabels
     valueSteps
     valueStepsN

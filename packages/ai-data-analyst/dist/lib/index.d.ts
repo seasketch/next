@@ -8,6 +8,9 @@ export { titlePrompt, titleParameters } from "./prompts/layers/title";
 export { generateAttribution, generateColumnIntelligence, generateTitle, ColumnIntelligence, } from "./client";
 export type { GenerateTitleResult, GenerateAttributionResult, GenerateColumnIntelligenceResult, } from "./client";
 export { pruneGeostats } from "./geostats/shrinkGeostats";
+export type { RasterValueSteps, ValueSteps } from "./geostats/valueSteps";
+export { deriveValueSteps } from "./geostats/valueSteps";
+export { effectiveReverseNamedPalette } from "./reverseNamedPalette";
 export type OpenAIParameters = {
     model: string;
     effort: "low" | "medium" | "high";

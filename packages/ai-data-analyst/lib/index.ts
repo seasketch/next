@@ -35,6 +35,9 @@ export type {
   GenerateColumnIntelligenceResult,
 } from "./client";
 export { pruneGeostats } from "./geostats/shrinkGeostats";
+export type { RasterValueSteps, ValueSteps } from "./geostats/valueSteps";
+export { deriveValueSteps } from "./geostats/valueSteps";
+export { effectiveReverseNamedPalette } from "./reverseNamedPalette";
 
 export type OpenAIParameters = {
   model: string;

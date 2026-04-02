@@ -21,6 +21,7 @@ function minimalColumnIntelligence(overrides: Record<string, unknown> = {}) {
     chosen_presentation_column: null,
     palette: null,
     custom_palette: null,
+    reverse_palette: false,
     notes: "Suitable for general polygon display.",
     junk_columns: ["OBJECTID", "Shape_Length"],
     interactivity_type: "NONE",

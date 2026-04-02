@@ -244,6 +244,7 @@ type AiDataAnalystNote implements Node {
   notes: String!
   palette: String
   projectId: Int!
+  reversePalette: Boolean!
   showLabels: Boolean!
   updatedAt: Datetime!
   valueSteps: ValueSteps

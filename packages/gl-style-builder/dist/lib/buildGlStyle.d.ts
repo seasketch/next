@@ -1,13 +1,15 @@
-import type { GeostatsLayer, RasterInfo } from "@seasketch/geostats-types";
+import { type GeostatsLayer, type RasterInfo } from "@seasketch/geostats-types";
 import type { AiDataAnalystNotes } from "ai-data-analyst";
+import { AnyLayer } from "mapbox-gl";
 export type BuildGlStyleInput = {
     geostats: GeostatsLayer | RasterInfo;
     aiDataAnalystNotes?: AiDataAnalystNotes | null;
 };
 /**
- * From {@link GeostatsLayer} or {@link RasterInfo}, plus optional
- * {@link AiDataAnalystNotes}, produce Mapbox GL style layers for SeaSketch.
- * (Implementation will grow alongside the graphical cartography tool.)
+ * Given layer geostats and optionally ai cartographer notes, produce a set of
+ * Mapbox GL style layers for this data source. These layers include
+ * SeaSketch-specific metadata where appropriate to drive GUIStyleEditor and
+ * legend functionality.
  */
-export declare function buildGlStyle(_input: BuildGlStyleInput): unknown[];
+export declare function buildGlStyle({ geostats, aiDataAnalystNotes, }: BuildGlStyleInput): Omit<AnyLayer, "source" | "id">[];
 //# sourceMappingURL=buildGlStyle.d.ts.map

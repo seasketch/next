@@ -32,8 +32,10 @@
   },
   "dependencies": {
     "@seasketch/geostats-types": "^1.0.0",
+    "@types/d3-scale-chromatic": "3.0.3",
     "@types/mapbox-gl": "3.1.0",
     "ai-data-analyst": "^1.0.0",
+    "colord": "^2.9.3",
     "d3-scale-chromatic": "2.0.0"
   },
   "devDependencies": {

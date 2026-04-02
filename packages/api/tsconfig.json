@@ -68,6 +68,7 @@
   },
   "references": [
     { "path": "../geostats-types" },
+    { "path": "../gl-style-builder" },
     { "path": "../map-tile-cache-calculator" },
     { "path": "../mapbox-gl-esri-sources" },
     { "path": "../metadata-parser" },

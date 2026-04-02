@@ -266,6 +266,7 @@ export type AiDataAnalystNote = Node & {
   notes: Scalars['String'];
   palette?: Maybe<Scalars['String']>;
   projectId: Scalars['Int'];
+  reversePalette: Scalars['Boolean'];
   showLabels: Scalars['Boolean'];
   updatedAt: Scalars['Datetime'];
   valueSteps?: Maybe<ValueSteps>;
@@ -20440,7 +20441,7 @@ export type FullAdminSourceFragment = (
     & Pick<DataUploadOutput, 'id' | 'isOriginal' | 'url' | 'type' | 'size' | 'originalFilename' | 'filename' | 'createdAt' | 'isCustomUpload'>
   )>>, aiDataAnalystNote?: Maybe<(
     { __typename?: 'AiDataAnalystNote' }
-    & Pick<AiDataAnalystNote, 'notes' | 'attribution' | 'bestLayerTitle' | 'chosenPresentationType' | 'chosenPresentationColumn' | 'customPalette' | 'errors' | 'interactivityType' | 'junkColumns' | 'labelsMinZoom' | 'bestCategoryColumn' | 'bestDateColumn' | 'bestGroupByColumn' | 'bestIdColumn' | 'bestLabelColumn' | 'bestNumericColumn' | 'bestPopupDescriptionColumn' | 'palette' | 'showLabels' | 'valueSteps' | 'valueStepsN'>
+    & Pick<AiDataAnalystNote, 'notes' | 'attribution' | 'bestLayerTitle' | 'chosenPresentationType' | 'chosenPresentationColumn' | 'customPalette' | 'errors' | 'interactivityType' | 'junkColumns' | 'labelsMinZoom' | 'bestCategoryColumn' | 'bestDateColumn' | 'bestGroupByColumn' | 'bestIdColumn' | 'bestLabelColumn' | 'bestNumericColumn' | 'bestPopupDescriptionColumn' | 'palette' | 'reversePalette' | 'showLabels' | 'valueSteps' | 'valueStepsN'>
   )> }
 );
 
@@ -26441,6 +26442,7 @@ export const FullAdminSourceFragmentDoc = gql`
     bestNumericColumn
     bestPopupDescriptionColumn
     palette
+    reversePalette
     showLabels
     valueSteps
     valueStepsN

@@ -3,6 +3,7 @@
     "src/**/*.ts",
     "tasks/**/*.ts",
     "dist/**/*.js",
+    "../gl-style-builder/dist/**/*.js",
     "../overlay-engine/dist/**/*.js",
     "../geostats-types/dist/**/*.js",
     "../map-tile-cache-calculator/dist/**/*.js",

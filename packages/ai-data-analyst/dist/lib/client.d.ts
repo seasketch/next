@@ -1,4 +1,5 @@
 import OpenAI from "openai";
+import { type RasterValueSteps } from "./geostats/valueSteps";
 export type ColumnIntelligence = {
     best_label_column?: string;
     best_category_column?: string;
@@ -12,11 +13,13 @@ export type ColumnIntelligence = {
     best_group_by_column?: string;
     palette?: string;
     custom_palette?: Record<string, string> | null;
+    /** Only meaningful with a named `palette`; ignored for `custom_palette`. */
+    reverse_palette: boolean;
     show_labels: boolean;
     labels_min_zoom?: number;
     interactivity_type: "BANNER" | "TOOLTIP" | "POPUP" | "ALL_PROPERTIES_POPUP" | "NONE";
     notes: string;
-    value_steps?: "CONTINUOUS" | "NATURAL_BREAKS" | "QUANTILES" | "EQUAL_INTERVALS";
+    value_steps?: RasterValueSteps;
     value_steps_n?: number;
 };
 export type GenerateTitleResult = {

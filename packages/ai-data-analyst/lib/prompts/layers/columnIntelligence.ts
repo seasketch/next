@@ -33,6 +33,7 @@ Rules:
   - For categorical vectors or rasters, use 'custom_palette' when particular natural or man-made features are best associated with specific colors (e.g. mangroves are a shade of green, rock is typically grey, etc). When representing categories without natural colors (e.g. administrative boundaries), set 'palette' to a d3 categorical color scale.
   - 'custom_palette' must be an object keyed by category value, with each value set to a hex color string.
   - When presentation is SIMPLE_POLYGON, SIMPLE_POINT, or SIMPLE_LINE, use 'custom_palette' with a single entry keyed as "default".
+  - Set reverse_palette to true only when recommending a named d3 scale in palette (not when using custom_palette). Use false when palette is null, when using custom_palette, or when reversal would not help interpretation.
 `;
 
 export const columnIntelligenceParameters: OpenAIParameters = {
@@ -129,6 +130,11 @@ export const columnIntelligenceSchema: JSONSchema4 = {
       description:
         "For simple polygon, point, or line presentations, a single hex color string will do. For categorical presentations, a custom color palette keyed by category value, where each value is a hex color string. Only specify one of palette or custom_palette. Can be used when particular natural or man-made features are best associated with specific colors (e.g. mangroves are a shade of green, rock is typically grey, etc). Not suitable for continuous presentation types. (Optional)",
     },
+    reverse_palette: {
+      type: "boolean",
+      description:
+        "If true, reverse the named d3 palette so high values map to the low end of the scale. Only set true when palette is a non-null named d3 scale; must be false when using custom_palette or when palette is null.",
+    },
     show_labels: {
       type: "boolean",
       description:
@@ -136,10 +142,10 @@ export const columnIntelligenceSchema: JSONSchema4 = {
     },
     labels_min_zoom: {
       type: ["number", "null"],
-      minimum: 3,
+      minimum: 5,
       maximum: 14,
       description:
-        "The minimum zoom level at which to show labels. Labels are not shown at zoom levels less than this value. (Optional)",
+        "The minimum zoom level at which to show labels. Labels are not shown at zoom levels less than this value. Relatively small areas should not show labels until zoomed in quite a bit (>= 12). (Optional)",
     },
     interactivity_type: {
       type: "string",
@@ -166,6 +172,7 @@ export const columnIntelligenceSchema: JSONSchema4 = {
     "chosen_presentation_column",
     "palette",
     "custom_palette",
+    "reverse_palette",
     "show_labels",
     "labels_min_zoom",
     "interactivity_type",
