@@ -37,6 +37,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.colorScales = void 0;
+exports.compareCategoricalKeys = compareCategoricalKeys;
 exports.buildCustomColorScale = buildCustomColorScale;
 exports.getColorScale = getColorScale;
 exports.buildContinuousColorExpression = buildContinuousColorExpression;
@@ -49,6 +50,7 @@ exports.getSingleColorFromCustomPalette = getSingleColorFromCustomPalette;
 exports.autoStrokeColorForFillColor = autoStrokeColorForFillColor;
 exports.getDefaultFillColor = getDefaultFillColor;
 exports.buildMatchExpressionForAttribute = buildMatchExpressionForAttribute;
+exports.setPaletteMetadata = setPaletteMetadata;
 const d3Chromatic = __importStar(require("d3-scale-chromatic"));
 const colord_1 = require("colord");
 const names_1 = __importDefault(require("colord/plugins/names"));
@@ -59,6 +61,25 @@ function defineScaleName(fn, resolvedName) {
         configurable: true,
     });
     return fn;
+}
+/** Deterministic ordering for category strings (matches object custom palette key sort). */
+function compareCategoricalKeys(a, b) {
+    return a.localeCompare(b, undefined, { numeric: true });
+}
+function sortCategoricalStrings(values) {
+    return [...values].sort(compareCategoricalKeys);
+}
+function defineCategoricalColorScale(fn, resolvedName, keyToColor) {
+    const out = fn;
+    defineScaleName(out, resolvedName);
+    if (keyToColor) {
+        Object.defineProperty(out, "categoricalKeyToColor", {
+            value: keyToColor,
+            configurable: true,
+            enumerable: false,
+        });
+    }
+    return out;
 }
 /** Parse and normalize a single color string; returns null if missing or invalid. */
 function parseValidCssColor(raw) {
@@ -97,8 +118,12 @@ function buildCustomColorScale(customPalette) {
             return null;
         }
         const len = colors.length;
-        const fn = ((index) => colors[index % len]);
-        return defineScaleName(fn, "");
+        const fn = (value) => {
+            const n = typeof value === "number" ? value : Number(value);
+            const idx = Number.isFinite(n) ? Math.trunc(n) : 0;
+            return colors[((idx % len) + len) % len];
+        };
+        return defineCategoricalColorScale(fn, "customPalette");
     }
     const pairs = [];
     for (const [key, value] of Object.entries(customPalette)) {
@@ -110,11 +135,22 @@ function buildCustomColorScale(customPalette) {
     if (pairs.length === 0) {
         return null;
     }
-    pairs.sort((a, b) => a.key.localeCompare(b.key, undefined, { numeric: true }));
+    pairs.sort((a, b) => compareCategoricalKeys(a.key, b.key));
     const colors = pairs.map((p) => p.color);
     const len = colors.length;
-    const fn = ((index) => colors[index % len]);
-    return defineScaleName(fn, "customPalette");
+    const keyToColor = new Map(pairs.map((p) => [p.key, p.color]));
+    const fn = (value) => {
+        if (typeof value === "string") {
+            const direct = keyToColor.get(value);
+            if (direct !== undefined) {
+                return direct;
+            }
+        }
+        const n = typeof value === "number" ? value : Number(value);
+        const idx = Number.isFinite(n) ? Math.trunc(n) : 0;
+        return colors[((idx % len) + len) % len];
+    };
+    return defineCategoricalColorScale(fn, "customPalette", keyToColor);
 }
 exports.colorScales = {
     categorical: [
@@ -221,11 +257,18 @@ function getColorScale(type, name, customPalette) {
     if (type === "categorical") {
         const colors = scale;
         const len = colors.length;
-        const fn = ((index) => colors[index % len]);
-        return defineScaleName(fn, resolvedName);
+        const fn = (value) => {
+            const n = typeof value === "number" ? value : Number(value);
+            const idx = Number.isFinite(n) ? Math.trunc(n) : 0;
+            return colors[((idx % len) + len) % len];
+        };
+        return defineCategoricalColorScale(fn, resolvedName);
     }
     const interpolate = scale;
-    const fn = ((t) => interpolate(t));
+    const fn = (t) => {
+        const x = typeof t === "number" ? t : Number(t);
+        return interpolate(Number.isFinite(x) ? Math.min(1, Math.max(0, x)) : 0);
+    };
     return defineScaleName(fn, resolvedName);
 }
 /**
@@ -423,16 +466,33 @@ function getDefaultFillColor() {
  * @param reverse
  */
 function buildMatchExpressionForAttribute(attribute, colorScale, reverse) {
-    const uniqueValues = Object.keys(attribute.values);
+    var _a;
+    const keyMap = colorScale.categoricalKeyToColor;
+    const uniqueValues = sortCategoricalStrings(Object.keys(attribute.values));
     if (reverse) {
         uniqueValues.reverse();
     }
     const expression = ["match", ["get", attribute.attribute]];
     for (let i = 0; i < uniqueValues.length; i++) {
         const value = uniqueValues[i];
-        expression.push(value, colorScale(i));
+        const color = (_a = keyMap === null || keyMap === void 0 ? void 0 : keyMap.get(value)) !== null && _a !== void 0 ? _a : colorScale(i);
+        expression.push(value, color);
     }
     expression.push("transparent");
     return expression;
+}
+function setPaletteMetadata(layer, colorScale) {
+    if (layer.metadata == null) {
+        layer.metadata = {};
+    }
+    if (colorScale.name && colorScale.name !== "customPalette") {
+        // check if the color scale is a named d3 scale
+        if (exports.colorScales.continuous.sequential.includes(colorScale.name) ||
+            exports.colorScales.continuous.diverging.includes(colorScale.name) ||
+            exports.colorScales.continuous.cyclical.includes(colorScale.name) ||
+            exports.colorScales.categorical.includes(colorScale.name)) {
+            layer.metadata["s:palette"] = colorScale.name;
+        }
+    }
 }
 //# sourceMappingURL=colorScales.js.map

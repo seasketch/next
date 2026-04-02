@@ -25,15 +25,16 @@ Rules:
   - Prefer simple polygon, point, or line presentations when it is clear the intent of the data is to show the footprint of a single class of features. 
   - It is just as important to be able to distinguish between different layers as it is between different features within a layer, so don't automatically categorize by named areas.
   - Avoid using continuous presentation types for generated columns like Shape_Area, Shape_Length, area_km2, etc.
-  - Interactivity and labeling are not supported for raster layers.
+  - Interactivity and labeling are not supported for raster layers. No need to mention them in your notes.
   - RGB_RASTER should only be chosen for 3-band rasters (e.g. satellite imagery).
   - Never set a chosen_presentation_column for raster presentations.
   - CATEGORICAL_RASTER should only be chosen for 1-band rasters with a presentation type of categorical.
-  - Usually pick CONTINUOUS_POINT over PROPORTIONAL_SYMBOL for point layers with good numeric columns. PROPORTIONAL_SYMBOL is best used for species density at monitoring sites.
+  - Usually pick CONTINUOUS_POINT over PROPORTIONAL_SYMBOL for point layers with good numeric columns. Use PROPORTIONAL_SYMBOL when you identify monitoring data (e.g. fish density at monitoring sites).
   - For categorical vectors or rasters, use 'custom_palette' when particular natural or man-made features are best associated with specific colors (e.g. mangroves are a shade of green, rock is typically grey, etc). When representing categories without natural colors (e.g. administrative boundaries), set 'palette' to a d3 categorical color scale.
-  - 'custom_palette' must be an object keyed by category value, with each value set to a hex color string.
-  - When presentation is SIMPLE_POLYGON, SIMPLE_POINT, or SIMPLE_LINE, use 'custom_palette' with a single entry keyed as "default".
+  - 'custom_palette' must be an object keyed by category value, with each value set to a hex color string. Use key "default" when styling a simple polygon, point, or line.
   - Set reverse_palette to true only when recommending a named d3 scale in palette (not when using custom_palette). Use false when palette is null, when using custom_palette, or when reversal would not help interpretation.
+  - When styling a continuous polygon or raster layer that appear to be results of a prioritization model (e.g. Marxan, Gap Analysis, etc), use a palette like interpolatePlasma or interpolateViridis. When a continuous layer looks like a map of human usage or pressure, use a warm palette like interpolateYlOrRd or interpolateOrRd.
+  - If there are recognizable colors specified in column values, try to identify the related categories and set a matching custom_palette. *Don't* categorize by color codes alone though.
 `;
 
 export const columnIntelligenceParameters: OpenAIParameters = {
@@ -106,7 +107,7 @@ export const columnIntelligenceSchema: JSONSchema4 = {
         "CONTINUOUS_LINE",
         "CATEGORICAL_LINE",
         // disable for now. not sure the ai can figure out how to use heatmaps.
-        // "HEATMAP",
+        "HEATMAP",
       ],
       description:
         "The cartographic presentation type to use for this layer. (Required)",

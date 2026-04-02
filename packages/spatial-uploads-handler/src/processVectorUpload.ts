@@ -135,7 +135,8 @@ export async function processVectorUpload(options: {
   uploadFilename: string;
 }): Promise<{
   layers: GeostatsLayer[];
-  aiDataAnalystNotes?: AiDataAnalystNotes;
+  /** Resolve after local processing; caller should await after uploads so LLMs overlap I/O. */
+  aiDataAnalystNotesPromise: Promise<AiDataAnalystNotes | undefined>;
 }> {
   const {
     logger,
@@ -176,13 +177,13 @@ export async function processVectorUpload(options: {
       await logger.exec(
         ["unzip", ["-o", workingFilePath, "-d", workingDirectory]],
         "Problem unzipping file",
-        1 / 30
+        1 / 30,
       );
     } else {
       await logger.exec(
         ["unrar", ["x", "-op" + workingDirectory, workingFilePath]],
         "Problem extracting .rar file",
-        1 / 30
+        1 / 30,
       );
     }
 
@@ -206,7 +207,7 @@ export async function processVectorUpload(options: {
         ],
       ],
       "Problem finding shapefile in zip archive",
-      1 / 30
+      1 / 30,
     );
 
     // Make sure there is also a .prj projection file
@@ -228,7 +229,7 @@ export async function processVectorUpload(options: {
         ],
       ],
       "Problem finding projection file (.prj) in zip archive",
-      1 / 30
+      1 / 30,
     );
 
     if (!projFile) {
@@ -267,7 +268,7 @@ export async function processVectorUpload(options: {
         ],
       ],
       "Problem finding metadata files in zip archive",
-      1 / 30
+      1 / 30,
     );
     try {
       if (xmlPaths) {
@@ -312,7 +313,7 @@ export async function processVectorUpload(options: {
     ext === ".shp"
       ? "Could not read file. Shapefiles should be uploaded as a zip archive with related sidecar files"
       : "Could not run ogrinfo on file",
-    1 / 30
+    1 / 30,
   );
   if (/GeoJSON/.test(ogrInfo)) {
     type = "GeoJSON";
@@ -332,8 +333,7 @@ export async function processVectorUpload(options: {
   );
   const attributionInputs: string[] = [];
   for (const s of sidecarFiles) {
-    const label =
-      s.kind === "html" ? "Sidecar HTML file" : "Sidecar text file";
+    const label = s.kind === "html" ? "Sidecar HTML file" : "Sidecar text file";
     attributionInputs.push(`${label}:\n${s.content}`);
   }
   if (metadata && Object.keys(metadata).length > 0) {
@@ -392,7 +392,7 @@ export async function processVectorUpload(options: {
         ],
       ],
       "Problem converting to FlatGeobuf",
-      2 / 30
+      2 / 30,
     );
 
     // Save normalized vector to the list of outputs
@@ -417,10 +417,7 @@ export async function processVectorUpload(options: {
 
   if (isAiDataAnalystEnabled()) {
     columnP = asNeverReject(
-      generateColumnIntelligence(uploadFilename, {
-        layers: stats,
-        layerCount: stats.length,
-      }),
+      generateColumnIntelligence(uploadFilename, stats[0]),
       "generateColumnIntelligence",
     );
   }
@@ -450,7 +447,7 @@ export async function processVectorUpload(options: {
         ],
       ],
       "Problem converting to GeoJSON",
-      15 / 30
+      15 / 30,
     );
     // Save GeoJSON to the list of outputs
     // The calling lambda will look through the list of outputs and choose
@@ -474,7 +471,7 @@ export async function processVectorUpload(options: {
     const fioInfo = await logger.exec(
       ["fio", ["info", normalizedVectorPath]],
       "Problem detecting numeric properties using fiona.",
-      1 / 30
+      1 / 30,
     );
     const fioData = JSON.parse(fioInfo);
     const schema = fioData?.schema?.properties || {};
@@ -541,14 +538,14 @@ export async function processVectorUpload(options: {
         ],
       ],
       "Tippecanoe failed",
-      12 / 30
+      12 / 30,
     );
     // TODO: at some point a newer tippecanoe can be used to save directly to
     // pmtiles
     await logger.exec(
       [`pmtiles`, ["convert", mvtPath, pmtilesPath]],
       "PMTiles conversion failed",
-      3 / 30
+      3 / 30,
     );
     outputs.push({
       type: "PMTiles",
@@ -560,16 +557,17 @@ export async function processVectorUpload(options: {
     });
   }
 
-  await updateProgress("running", "ai data analyst");
-  const aiDataAnalystNotes = await composeAiDataAnalystNotesFromPromises({
-    uploadFilename,
-    titleP,
-    attributionP,
-    columnP,
-  });
+  const aiDataAnalystNotesPromise = isAiDataAnalystEnabled()
+    ? composeAiDataAnalystNotesFromPromises({
+        uploadFilename,
+        titleP,
+        attributionP,
+        columnP,
+      })
+    : Promise.resolve(undefined);
 
   return {
     layers: stats,
-    ...(aiDataAnalystNotes ? { aiDataAnalystNotes } : {}),
+    aiDataAnalystNotesPromise,
   };
 }

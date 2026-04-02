@@ -229,10 +229,16 @@ export async function createDBRecordsForProcessedLayer(
   const dataSourceId = rows[0].id;
   const dataSourceBounds = rows[0].bounds;
 
-  const aiNotes = layer.aiDataAnalystNotes;
+  let aiNotes = layer.aiDataAnalystNotes;
+  if (aiNotes?.custom_palette && typeof aiNotes?.custom_palette === "string") {
+    aiNotes.custom_palette = {
+      default: aiNotes.custom_palette,
+    };
+  }
   if (aiNotes) {
-    await client.query(
-      `
+    try {
+      await client.query(
+        `
       insert into ai_data_analyst_notes (
         data_source_id,
         project_id,
@@ -286,33 +292,41 @@ export async function createDBRecordsForProcessedLayer(
         errors = excluded.errors,
         updated_at = now()
     `,
-      [
-        dataSourceId,
-        projectId,
-        aiNotes.notes,
-        aiNotes.best_layer_title ?? null,
-        aiNotes.attribution === undefined ? null : aiNotes.attribution,
-        aiNotes.best_label_column ?? null,
-        aiNotes.best_category_column ?? null,
-        aiNotes.best_numeric_column ?? null,
-        aiNotes.best_date_column ?? null,
-        aiNotes.best_popup_description_column ?? null,
-        aiNotes.best_group_by_column ?? null,
-        aiNotes.best_id_column ?? null,
-        aiNotes.junk_columns,
-        aiNotes.chosen_presentation_type,
-        aiNotes.chosen_presentation_column ?? null,
-        aiNotes.palette ?? null,
-        aiNotes.custom_palette ?? null,
-        aiNotes.show_labels,
-        aiNotes.labels_min_zoom ?? null,
-        aiNotes.interactivity_type,
-        aiNotes.value_steps ?? null,
-        aiNotes.value_steps_n ?? null,
-        effectiveReverseNamedPalette(aiNotes),
-        aiNotes.errors ?? null,
-      ],
-    );
+        [
+          dataSourceId,
+          projectId,
+          aiNotes.notes,
+          aiNotes.best_layer_title ?? null,
+          aiNotes.attribution === undefined ? null : aiNotes.attribution,
+          aiNotes.best_label_column ?? null,
+          aiNotes.best_category_column ?? null,
+          aiNotes.best_numeric_column ?? null,
+          aiNotes.best_date_column ?? null,
+          aiNotes.best_popup_description_column ?? null,
+          aiNotes.best_group_by_column ?? null,
+          aiNotes.best_id_column ?? null,
+          aiNotes.junk_columns,
+          aiNotes.chosen_presentation_type,
+          aiNotes.chosen_presentation_column ?? null,
+          aiNotes.palette ?? null,
+          aiNotes.custom_palette ?? null,
+          aiNotes.show_labels,
+          aiNotes.labels_min_zoom ?? null,
+          aiNotes.interactivity_type,
+          aiNotes.value_steps ?? null,
+          aiNotes.value_steps_n ?? null,
+          effectiveReverseNamedPalette(aiNotes),
+          aiNotes.errors ?? null,
+        ],
+      );
+    } catch (error) {
+      console.error(
+        "Error inserting ai_data_analyst_notes. setting to null!!!!!!!!!!",
+        error,
+      );
+      aiNotes = undefined;
+      delete layer.aiDataAnalystNotes;
+    }
   }
 
   // Create data_upload_outputs for each output
@@ -388,7 +402,6 @@ export async function createDBRecordsForProcessedLayer(
       );
     }
     const tocItem = tocResults.rows[0];
-    console.log("calling replace_data_source", dataLayer.id, tocItem.stable_id);
     // attach the new data source to the existing layer
     // Do this as a single transaction using a stored procedure to avoid any
     // inconsistency in state
@@ -612,7 +625,6 @@ async function getStyle(
    */
   aiDataAnalystNotes?: ProcessedUploadLayer["aiDataAnalystNotes"],
 ) {
-  console.log("getting style", aiDataAnalystNotes);
   if (aiDataAnalystNotes && geostats) {
     try {
       return buildGlStyle({
@@ -620,7 +632,6 @@ async function getStyle(
         aiDataAnalystNotes,
       });
     } catch (error) {
-      console.log("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
       console.error("Error building style with GL Style Builder", error);
     }
   }

@@ -32,7 +32,14 @@ export function addLabelsLayer(
             "text-offset": [0.5, 0.5],
             "symbol-placement": "point",
           }
-        : {}),
+        : geostats.geometry === "LineString" ||
+            geostats.geometry === "MultiLineString"
+          ? {
+              visibility: "visible",
+              "symbol-placement": "line",
+              "text-rotation-alignment": "map",
+            }
+          : {}),
     },
     paint: {
       "text-color": "#000000",

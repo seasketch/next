@@ -119,7 +119,7 @@ requestingUser, skipLoggingProgress) {
     }
     await (0, remotes_1.getObject)(workingFilePath, `s3://${path.join(process.env.BUCKET, objectKey)}`, logger, 2 / 30);
     let stats;
-    let aiDataAnalystNotes;
+    let aiDataAnalystNotesPromise;
     const uploadFilename = originalName + ext;
     // After the environment is set up, we can start processing the file depending
     // on its type
@@ -137,7 +137,7 @@ requestingUser, skipLoggingProgress) {
                 workingDirectory: dist,
             });
             stats = rasterResult.rasterInfo;
-            aiDataAnalystNotes = rasterResult.aiDataAnalystNotes;
+            aiDataAnalystNotesPromise = rasterResult.aiDataAnalystNotesPromise;
         }
         else {
             const vectorResult = await (0, processVectorUpload_1.processVectorUpload)({
@@ -152,7 +152,7 @@ requestingUser, skipLoggingProgress) {
                 workingDirectory: dist,
             });
             stats = vectorResult.layers;
-            aiDataAnalystNotes = vectorResult.aiDataAnalystNotes;
+            aiDataAnalystNotesPromise = vectorResult.aiDataAnalystNotesPromise;
         }
         // Determine bounds for the layer
         let bounds;
@@ -174,6 +174,8 @@ requestingUser, skipLoggingProgress) {
         for (const output of outputs) {
             await (0, remotes_1.putObject)(output.local, output.remote, logger, 1 / 30);
         }
+        await updateProgress("running", "ai cartographer");
+        const aiDataAnalystNotes = await aiDataAnalystNotesPromise;
         await updateProgress("running", "worker complete", 1);
         // Determine final url that should be assigned to mapbox-gl-style source
         let sourceUrl;

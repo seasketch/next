@@ -7,12 +7,31 @@ import type {
 import * as d3Chromatic from "d3-scale-chromatic";
 import { colord, extend } from "colord";
 import namesPlugin from "colord/plugins/names";
-import { Expression } from "mapbox-gl";
+import {
+  AnyLayer,
+  CircleLayer,
+  Expression,
+  FillLayer,
+  LineLayer,
+  RasterLayer,
+  SymbolLayer,
+} from "mapbox-gl";
 
 extend([namesPlugin]);
 
-/** Resolved d3-scale-chromatic scale as a callable; `name` is the export key (e.g. `interpolatePlasma`). */
-export type ColorScaleFn = ((value: number) => string) & { name: string };
+/**
+ * Resolved d3-scale-chromatic scale as a callable.
+ * - Continuous scales: pass a fraction in [0, 1].
+ * - Categorical scales: pass a bucket index (0, 1, …), or when
+ *   {@link ColorScaleFn.categoricalKeyToColor} is set (object custom palette),
+ *   pass the attribute value string for a direct key→color lookup.
+ * `name` is the export key (e.g. `interpolatePlasma`) or `customPalette` / `""`.
+ */
+export type ColorScaleFn = ((value: number | string) => string) & {
+  name: string;
+  /** Set for object-shaped custom palettes: exact attribute-value string → color. */
+  categoricalKeyToColor?: ReadonlyMap<string, string>;
+};
 
 function defineScaleName(fn: ColorScaleFn, resolvedName: string): ColorScaleFn {
   Object.defineProperty(fn, "name", {
@@ -20,6 +39,32 @@ function defineScaleName(fn: ColorScaleFn, resolvedName: string): ColorScaleFn {
     configurable: true,
   });
   return fn;
+}
+
+/** Deterministic ordering for category strings (matches object custom palette key sort). */
+export function compareCategoricalKeys(a: string, b: string): number {
+  return a.localeCompare(b, undefined, { numeric: true });
+}
+
+function sortCategoricalStrings(values: readonly string[]): string[] {
+  return [...values].sort(compareCategoricalKeys);
+}
+
+function defineCategoricalColorScale(
+  fn: (value: number | string) => string,
+  resolvedName: string,
+  keyToColor?: ReadonlyMap<string, string>,
+): ColorScaleFn {
+  const out = fn as ColorScaleFn;
+  defineScaleName(out, resolvedName);
+  if (keyToColor) {
+    Object.defineProperty(out, "categoricalKeyToColor", {
+      value: keyToColor,
+      configurable: true,
+      enumerable: false,
+    });
+  }
+  return out;
 }
 
 /** Parse and normalize a single color string; returns null if missing or invalid. */
@@ -58,8 +103,12 @@ export function buildCustomColorScale(
       return null;
     }
     const len = colors.length;
-    const fn = ((index: number) => colors[index % len]!) as ColorScaleFn;
-    return defineScaleName(fn, "");
+    const fn = (value: number | string) => {
+      const n = typeof value === "number" ? value : Number(value);
+      const idx = Number.isFinite(n) ? Math.trunc(n) : 0;
+      return colors[((idx % len) + len) % len]!;
+    };
+    return defineCategoricalColorScale(fn, "customPalette");
   }
 
   const pairs: { key: string; color: string }[] = [];
@@ -73,13 +122,24 @@ export function buildCustomColorScale(
     return null;
   }
 
-  pairs.sort((a, b) =>
-    a.key.localeCompare(b.key, undefined, { numeric: true }),
-  );
+  pairs.sort((a, b) => compareCategoricalKeys(a.key, b.key));
   const colors = pairs.map((p) => p.color);
   const len = colors.length;
-  const fn = ((index: number) => colors[index % len]!) as ColorScaleFn;
-  return defineScaleName(fn, "customPalette");
+  const keyToColor = new Map<string, string>(
+    pairs.map((p) => [p.key, p.color] as const),
+  );
+  const fn = (value: number | string) => {
+    if (typeof value === "string") {
+      const direct = keyToColor.get(value);
+      if (direct !== undefined) {
+        return direct;
+      }
+    }
+    const n = typeof value === "number" ? value : Number(value);
+    const idx = Number.isFinite(n) ? Math.trunc(n) : 0;
+    return colors[((idx % len) + len) % len]!;
+  };
+  return defineCategoricalColorScale(fn, "customPalette", keyToColor);
 }
 
 export const colorScales = {
@@ -195,12 +255,19 @@ export function getColorScale(
   if (type === "categorical") {
     const colors = scale as readonly string[];
     const len = colors.length;
-    const fn = ((index: number) => colors[index % len]!) as ColorScaleFn;
-    return defineScaleName(fn, resolvedName);
+    const fn = (value: number | string) => {
+      const n = typeof value === "number" ? value : Number(value);
+      const idx = Number.isFinite(n) ? Math.trunc(n) : 0;
+      return colors[((idx % len) + len) % len]!;
+    };
+    return defineCategoricalColorScale(fn, resolvedName);
   }
 
   const interpolate = scale as (t: number) => string;
-  const fn = ((t: number) => interpolate(t)) as ColorScaleFn;
+  const fn = (t: number | string) => {
+    const x = typeof t === "number" ? t : Number(t);
+    return interpolate(Number.isFinite(x) ? Math.min(1, Math.max(0, x)) : 0);
+  };
   return defineScaleName(fn, resolvedName);
 }
 
@@ -442,15 +509,42 @@ export function buildMatchExpressionForAttribute(
   colorScale: ColorScaleFn,
   reverse: boolean,
 ): Expression {
-  const uniqueValues = Object.keys(attribute.values);
+  const keyMap = colorScale.categoricalKeyToColor;
+  const uniqueValues = sortCategoricalStrings(Object.keys(attribute.values));
   if (reverse) {
     uniqueValues.reverse();
   }
   const expression: Expression = ["match", ["get", attribute.attribute]];
   for (let i = 0; i < uniqueValues.length; i++) {
-    const value = uniqueValues[i];
-    expression.push(value, colorScale(i));
+    const value = uniqueValues[i]!;
+    const color = keyMap?.get(value) ?? colorScale(i);
+    expression.push(value, color);
   }
   expression.push("transparent");
   return expression;
+}
+
+/** Layer slice used when building styles before `id` / `source` are assigned. */
+type LayerWithMetadata = {
+  metadata?: Record<string, unknown>;
+};
+
+export function setPaletteMetadata(
+  layer: LayerWithMetadata,
+  colorScale: ColorScaleFn,
+) {
+  if (layer.metadata == null) {
+    layer.metadata = {};
+  }
+  if (colorScale.name && colorScale.name !== "customPalette") {
+    // check if the color scale is a named d3 scale
+    if (
+      colorScales.continuous.sequential.includes(colorScale.name) ||
+      colorScales.continuous.diverging.includes(colorScale.name) ||
+      colorScales.continuous.cyclical.includes(colorScale.name) ||
+      colorScales.categorical.includes(colorScale.name)
+    ) {
+      layer.metadata["s:palette"] = colorScale.name;
+    }
+  }
 }

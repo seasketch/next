@@ -1,32 +1,23 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.buildSimplePolygonLayer = buildSimplePolygonLayer;
-exports.buildCategoricalPolygonLayer = buildCategoricalPolygonLayer;
-exports.buildContinuousPolygonLayer = buildContinuousPolygonLayer;
+exports.buildSimpleLineLayer = buildSimpleLineLayer;
+exports.buildCategoricalLineLayer = buildCategoricalLineLayer;
+exports.buildContinuousLineLayer = buildContinuousLineLayer;
 const geostats_types_1 = require("@seasketch/geostats-types");
 const colorScales_1 = require("../colorScales");
 const labels_1 = require("./labels");
 const columnPickers_1 = require("../columnPickers");
-function buildSimplePolygonLayer(geostats, aiDataAnalystNotes) {
+function buildSimpleLineLayer(geostats, aiDataAnalystNotes) {
     const layers = [];
     if ((0, geostats_types_1.isRasterInfo)(geostats)) {
         throw new Error("Geostats must be a GeostatsLayer");
     }
-    if (geostats.geometry !== "Polygon" && geostats.geometry !== "MultiPolygon") {
-        throw new Error("Geostats must be a Polygon or MultiPolygon");
+    if (geostats.geometry !== "LineString" &&
+        geostats.geometry !== "MultiLineString") {
+        throw new Error("Geostats must be a LineString or MultiLineString");
     }
-    const fillColor = (0, colorScales_1.getSingleColorFromCustomPalette)(aiDataAnalystNotes === null || aiDataAnalystNotes === void 0 ? void 0 : aiDataAnalystNotes.custom_palette) ||
+    const lineColor = (0, colorScales_1.getSingleColorFromCustomPalette)(aiDataAnalystNotes === null || aiDataAnalystNotes === void 0 ? void 0 : aiDataAnalystNotes.custom_palette) ||
         (0, colorScales_1.getDefaultFillColor)();
-    layers.push({
-        type: "fill",
-        paint: {
-            "fill-color": fillColor,
-            "fill-opacity": 0.8,
-        },
-        metadata: {
-            "s:type": "Simple Polygon",
-        },
-    });
     layers.push({
         type: "line",
         layout: {
@@ -35,24 +26,25 @@ function buildSimplePolygonLayer(geostats, aiDataAnalystNotes) {
             visibility: "visible",
         },
         paint: {
-            "line-color": (0, colorScales_1.autoStrokeColorForFillColor)(fillColor),
-            "line-width": 1,
+            "line-color": lineColor,
+            "line-width": 2,
             "line-opacity": 1,
         },
         metadata: {
-            "s:color-auto": true,
+            "s:type": "Simple Line",
         },
     });
     (0, labels_1.addLabelsLayer)(layers, geostats, aiDataAnalystNotes);
     return layers;
 }
-function buildCategoricalPolygonLayer(geostats, aiDataAnalystNotes) {
+function buildCategoricalLineLayer(geostats, aiDataAnalystNotes) {
     const layers = [];
     if ((0, geostats_types_1.isRasterInfo)(geostats)) {
         throw new Error("Geostats must be a GeostatsLayer");
     }
-    if (geostats.geometry !== "Polygon" && geostats.geometry !== "MultiPolygon") {
-        throw new Error("Geostats must be a Polygon or MultiPolygon");
+    if (geostats.geometry !== "LineString" &&
+        geostats.geometry !== "MultiLineString") {
+        throw new Error("Geostats must be a LineString or MultiLineString");
     }
     const presentationColumn = (aiDataAnalystNotes === null || aiDataAnalystNotes === void 0 ? void 0 : aiDataAnalystNotes.chosen_presentation_column)
         ? geostats.attributes.find((a) => a.attribute === (aiDataAnalystNotes === null || aiDataAnalystNotes === void 0 ? void 0 : aiDataAnalystNotes.chosen_presentation_column))
@@ -61,19 +53,7 @@ function buildCategoricalPolygonLayer(geostats, aiDataAnalystNotes) {
         throw new Error("No categorical attribute found");
     }
     const colorScale = (0, colorScales_1.getColorScale)("categorical", (aiDataAnalystNotes === null || aiDataAnalystNotes === void 0 ? void 0 : aiDataAnalystNotes.palette) || "schemeTableau10", aiDataAnalystNotes === null || aiDataAnalystNotes === void 0 ? void 0 : aiDataAnalystNotes.custom_palette);
-    const fillLayer = {
-        type: "fill",
-        paint: {
-            "fill-color": (0, colorScales_1.buildMatchExpressionForAttribute)(presentationColumn, colorScale, Boolean(aiDataAnalystNotes === null || aiDataAnalystNotes === void 0 ? void 0 : aiDataAnalystNotes.reverse_palette)),
-            "fill-opacity": 0.7,
-        },
-        metadata: {
-            "s:type": "Categories",
-        },
-    };
-    (0, colorScales_1.setPaletteMetadata)(fillLayer, colorScale);
-    layers.push(fillLayer);
-    layers.push({
+    const lineLayer = {
         type: "line",
         layout: {
             "line-join": "round",
@@ -82,25 +62,28 @@ function buildCategoricalPolygonLayer(geostats, aiDataAnalystNotes) {
         },
         paint: {
             "line-color": (0, colorScales_1.buildMatchExpressionForAttribute)(presentationColumn, colorScale, Boolean(aiDataAnalystNotes === null || aiDataAnalystNotes === void 0 ? void 0 : aiDataAnalystNotes.reverse_palette)),
-            "line-width": 1,
+            "line-width": 2,
             "line-opacity": 1,
         },
         metadata: {
-            "s:color-auto": true,
+            "s:type": "Categorized Lines",
         },
-    });
+    };
+    (0, colorScales_1.setPaletteMetadata)(lineLayer, colorScale);
+    layers.push(lineLayer);
     if (aiDataAnalystNotes) {
         (0, labels_1.addLabelsLayer)(layers, geostats, aiDataAnalystNotes);
     }
     return layers;
 }
-function buildContinuousPolygonLayer(geostats, aiDataAnalystNotes) {
+function buildContinuousLineLayer(geostats, aiDataAnalystNotes) {
     const layers = [];
     if ((0, geostats_types_1.isRasterInfo)(geostats)) {
         throw new Error("Geostats must be a GeostatsLayer");
     }
-    if (geostats.geometry !== "Polygon" && geostats.geometry !== "MultiPolygon") {
-        throw new Error("Geostats must be a Polygon or MultiPolygon");
+    if (geostats.geometry !== "LineString" &&
+        geostats.geometry !== "MultiLineString") {
+        throw new Error("Geostats must be a LineString or MultiLineString");
     }
     let presentationColumn;
     if (aiDataAnalystNotes === null || aiDataAnalystNotes === void 0 ? void 0 : aiDataAnalystNotes.chosen_presentation_column) {
@@ -116,21 +99,22 @@ function buildContinuousPolygonLayer(geostats, aiDataAnalystNotes) {
         throw new Error("No continuous attribute found");
     }
     const colorScale = (0, colorScales_1.getColorScale)("continuous", (aiDataAnalystNotes === null || aiDataAnalystNotes === void 0 ? void 0 : aiDataAnalystNotes.palette) || "interpolatePlasma");
-    const fillLayer = {
-        type: "fill",
+    const lineLayer = {
+        type: "line",
         paint: {
-            "fill-color": (0, colorScales_1.buildContinuousColorExpression)(colorScale, Boolean(aiDataAnalystNotes === null || aiDataAnalystNotes === void 0 ? void 0 : aiDataAnalystNotes.reverse_palette), [presentationColumn.min || 0, presentationColumn.max], ["get", presentationColumn.attribute]),
-            "fill-opacity": 0.8,
+            "line-color": (0, colorScales_1.buildContinuousColorExpression)(colorScale, Boolean(aiDataAnalystNotes === null || aiDataAnalystNotes === void 0 ? void 0 : aiDataAnalystNotes.reverse_palette), [presentationColumn.min || 0, presentationColumn.max], ["get", presentationColumn.attribute]),
+            "line-width": 2,
+            "line-opacity": 1,
         },
         layout: {
             visibility: "visible",
         },
     };
-    (0, colorScales_1.setPaletteMetadata)(fillLayer, colorScale);
-    layers.push(fillLayer);
+    (0, colorScales_1.setPaletteMetadata)(lineLayer, colorScale);
+    layers.push(lineLayer);
     if (aiDataAnalystNotes) {
         (0, labels_1.addLabelsLayer)(layers, geostats, aiDataAnalystNotes);
     }
     return layers;
 }
-//# sourceMappingURL=polygons.js.map
+//# sourceMappingURL=lines.js.map

@@ -110,16 +110,17 @@ async function processRasterUpload(options) {
         url: `${process.env.TILES_BASE_URL}/${baseKey}/${jobId}.pmtiles`,
         filename: `${jobId}.pmtiles`,
     });
-    await updateProgress("running", "ai cartographer working");
-    const aiDataAnalystNotes = await (0, aiUploadNotes_1.composeAiDataAnalystNotesFromPromises)({
-        uploadFilename,
-        titleP,
-        attributionP: null,
-        columnP,
-    });
+    const aiDataAnalystNotesPromise = (0, aiUploadNotes_1.isAiDataAnalystEnabled)()
+        ? (0, aiUploadNotes_1.composeAiDataAnalystNotesFromPromises)({
+            uploadFilename,
+            titleP,
+            attributionP: null,
+            columnP,
+        })
+        : Promise.resolve(undefined);
     return {
         rasterInfo: stats,
-        ...(aiDataAnalystNotes ? { aiDataAnalystNotes } : {}),
+        aiDataAnalystNotesPromise,
     };
 }
 async function validateInput(path, logger) {

@@ -178,7 +178,7 @@ export default async function handleUpload(
   );
 
   let stats: GeostatsLayer[] | RasterInfo;
-  let aiDataAnalystNotes: AiDataAnalystNotes | undefined;
+  let aiDataAnalystNotesPromise: Promise<AiDataAnalystNotes | undefined>;
 
   const uploadFilename = originalName + ext;
 
@@ -198,7 +198,7 @@ export default async function handleUpload(
         workingDirectory: dist,
       });
       stats = rasterResult.rasterInfo;
-      aiDataAnalystNotes = rasterResult.aiDataAnalystNotes;
+      aiDataAnalystNotesPromise = rasterResult.aiDataAnalystNotesPromise;
     } else {
       const vectorResult = await processVectorUpload({
         logger,
@@ -212,7 +212,7 @@ export default async function handleUpload(
         workingDirectory: dist,
       });
       stats = vectorResult.layers;
-      aiDataAnalystNotes = vectorResult.aiDataAnalystNotes;
+      aiDataAnalystNotesPromise = vectorResult.aiDataAnalystNotesPromise;
     }
 
     // Determine bounds for the layer
@@ -240,6 +240,9 @@ export default async function handleUpload(
     for (const output of outputs) {
       await putObject(output.local, output.remote, logger, 1 / 30);
     }
+
+    await updateProgress("running", "ai cartographer");
+    const aiDataAnalystNotes = await aiDataAnalystNotesPromise;
 
     await updateProgress("running", "worker complete", 1);
 

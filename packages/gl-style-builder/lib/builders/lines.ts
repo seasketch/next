@@ -6,9 +6,8 @@ import {
   RasterInfo,
 } from "@seasketch/geostats-types";
 import { AiDataAnalystNotes } from "ai-data-analyst";
-import { AnyLayer, FillLayer, LineLayer } from "mapbox-gl";
+import { AnyLayer, LineLayer } from "mapbox-gl";
 import {
-  autoStrokeColorForFillColor,
   buildContinuousColorExpression,
   buildMatchExpressionForAttribute,
   getColorScale,
@@ -22,7 +21,7 @@ import {
   findBestContinuousAttribute,
 } from "../columnPickers";
 
-export function buildSimplePolygonLayer(
+export function buildSimpleLineLayer(
   geostats: GeostatsLayer | RasterInfo,
   aiDataAnalystNotes?: AiDataAnalystNotes | null,
 ): Omit<AnyLayer, "source" | "id">[] {
@@ -30,24 +29,17 @@ export function buildSimplePolygonLayer(
   if (isRasterInfo(geostats)) {
     throw new Error("Geostats must be a GeostatsLayer");
   }
-  if (geostats.geometry !== "Polygon" && geostats.geometry !== "MultiPolygon") {
-    throw new Error("Geostats must be a Polygon or MultiPolygon");
+  if (
+    geostats.geometry !== "LineString" &&
+    geostats.geometry !== "MultiLineString"
+  ) {
+    throw new Error("Geostats must be a LineString or MultiLineString");
   }
 
-  const fillColor =
+  const lineColor =
     getSingleColorFromCustomPalette(aiDataAnalystNotes?.custom_palette) ||
     getDefaultFillColor();
 
-  layers.push({
-    type: "fill",
-    paint: {
-      "fill-color": fillColor,
-      "fill-opacity": 0.8,
-    },
-    metadata: {
-      "s:type": "Simple Polygon",
-    },
-  } as FillLayer);
   layers.push({
     type: "line",
     layout: {
@@ -56,19 +48,19 @@ export function buildSimplePolygonLayer(
       visibility: "visible",
     },
     paint: {
-      "line-color": autoStrokeColorForFillColor(fillColor),
-      "line-width": 1,
+      "line-color": lineColor,
+      "line-width": 2,
       "line-opacity": 1,
     },
     metadata: {
-      "s:color-auto": true,
+      "s:type": "Simple Line",
     },
   } as LineLayer);
   addLabelsLayer(layers, geostats, aiDataAnalystNotes);
   return layers;
 }
 
-export function buildCategoricalPolygonLayer(
+export function buildCategoricalLineLayer(
   geostats: GeostatsLayer | RasterInfo,
   aiDataAnalystNotes?: AiDataAnalystNotes | null,
 ): Omit<AnyLayer, "source" | "id">[] {
@@ -76,8 +68,11 @@ export function buildCategoricalPolygonLayer(
   if (isRasterInfo(geostats)) {
     throw new Error("Geostats must be a GeostatsLayer");
   }
-  if (geostats.geometry !== "Polygon" && geostats.geometry !== "MultiPolygon") {
-    throw new Error("Geostats must be a Polygon or MultiPolygon");
+  if (
+    geostats.geometry !== "LineString" &&
+    geostats.geometry !== "MultiLineString"
+  ) {
+    throw new Error("Geostats must be a LineString or MultiLineString");
   }
 
   const presentationColumn = aiDataAnalystNotes?.chosen_presentation_column
@@ -96,23 +91,7 @@ export function buildCategoricalPolygonLayer(
     aiDataAnalystNotes?.custom_palette,
   );
 
-  const fillLayer = {
-    type: "fill",
-    paint: {
-      "fill-color": buildMatchExpressionForAttribute(
-        presentationColumn,
-        colorScale,
-        Boolean(aiDataAnalystNotes?.reverse_palette),
-      ),
-      "fill-opacity": 0.7,
-    },
-    metadata: {
-      "s:type": "Categories",
-    },
-  } as FillLayer;
-  setPaletteMetadata(fillLayer, colorScale);
-  layers.push(fillLayer);
-  layers.push({
+  const lineLayer = {
     type: "line",
     layout: {
       "line-join": "round",
@@ -125,20 +104,22 @@ export function buildCategoricalPolygonLayer(
         colorScale,
         Boolean(aiDataAnalystNotes?.reverse_palette),
       ),
-      "line-width": 1,
+      "line-width": 2,
       "line-opacity": 1,
     },
     metadata: {
-      "s:color-auto": true,
+      "s:type": "Categorized Lines",
     },
-  } as LineLayer);
+  } as LineLayer;
+  setPaletteMetadata(lineLayer, colorScale);
+  layers.push(lineLayer);
   if (aiDataAnalystNotes) {
     addLabelsLayer(layers, geostats, aiDataAnalystNotes);
   }
   return layers;
 }
 
-export function buildContinuousPolygonLayer(
+export function buildContinuousLineLayer(
   geostats: GeostatsLayer | RasterInfo,
   aiDataAnalystNotes?: AiDataAnalystNotes | null,
 ): Omit<AnyLayer, "source" | "id">[] {
@@ -146,8 +127,11 @@ export function buildContinuousPolygonLayer(
   if (isRasterInfo(geostats)) {
     throw new Error("Geostats must be a GeostatsLayer");
   }
-  if (geostats.geometry !== "Polygon" && geostats.geometry !== "MultiPolygon") {
-    throw new Error("Geostats must be a Polygon or MultiPolygon");
+  if (
+    geostats.geometry !== "LineString" &&
+    geostats.geometry !== "MultiLineString"
+  ) {
+    throw new Error("Geostats must be a LineString or MultiLineString");
   }
 
   let presentationColumn: NumericGeostatsAttribute | undefined;
@@ -176,24 +160,25 @@ export function buildContinuousPolygonLayer(
     aiDataAnalystNotes?.palette || "interpolatePlasma",
   );
 
-  const fillLayer = {
-    type: "fill",
+  const lineLayer = {
+    type: "line",
     paint: {
-      "fill-color": buildContinuousColorExpression(
+      "line-color": buildContinuousColorExpression(
         colorScale,
         Boolean(aiDataAnalystNotes?.reverse_palette),
         [presentationColumn.min || 0, presentationColumn.max!],
         ["get", presentationColumn.attribute],
       ),
-      "fill-opacity": 0.8,
+      "line-width": 2,
+      "line-opacity": 1,
     },
     layout: {
       visibility: "visible",
     },
-  } as FillLayer;
+  } as LineLayer;
 
-  setPaletteMetadata(fillLayer, colorScale);
-  layers.push(fillLayer);
+  setPaletteMetadata(lineLayer, colorScale);
+  layers.push(lineLayer);
 
   if (aiDataAnalystNotes) {
     addLabelsLayer(layers, geostats, aiDataAnalystNotes);

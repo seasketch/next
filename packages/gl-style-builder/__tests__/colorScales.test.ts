@@ -1,10 +1,14 @@
 import * as d3Chromatic from "d3-scale-chromatic";
 import { colord } from "colord";
 import { describe, expect, it } from "vitest";
-import type { RasterBandInfo } from "@seasketch/geostats-types";
+import type {
+  GeostatsAttribute,
+  RasterBandInfo,
+} from "@seasketch/geostats-types";
 import type { ColorScaleFn } from "../lib/colorScales";
 import {
   buildCustomColorScale,
+  buildMatchExpressionForAttribute,
   buildRasterStepColorExpression,
   getColorScale,
   getColorStopsFromScale,
@@ -242,6 +246,55 @@ describe("getColorScale", () => {
         "interpolateViridis",
         d3Chromatic.interpolateViridis,
       );
+    });
+  });
+
+  describe("buildMatchExpressionForAttribute", () => {
+    it("maps object palette by attribute value, not values map insertion order", () => {
+      const scale = buildCustomColorScale({
+        A: "#ff0000",
+        B: "#00ff00",
+        C: "#0000ff",
+      })!;
+      const attr: GeostatsAttribute = {
+        attribute: "kind",
+        count: 3,
+        type: "string",
+        values: { C: 1, A: 1, B: 1 },
+      };
+      const expr = buildMatchExpressionForAttribute(attr, scale, false);
+      expect(expr[0]).toBe("match");
+      const colorFor = (key: string) => {
+        const i = expr.indexOf(key);
+        expect(i).toBeGreaterThan(-1);
+        return expr[i + 1];
+      };
+      expect(colorFor("A")).toBe(colord("#ff0000").toHex());
+      expect(colorFor("B")).toBe(colord("#00ff00").toHex());
+      expect(colorFor("C")).toBe(colord("#0000ff").toHex());
+    });
+
+    it("assigns array palette colors by sorted category order", () => {
+      const scale = buildCustomColorScale([
+        "#111111",
+        "#222222",
+        "#333333",
+      ])!;
+      const attr: GeostatsAttribute = {
+        attribute: "x",
+        count: 3,
+        type: "string",
+        values: { z: 1, a: 1, m: 1 },
+      };
+      const expr = buildMatchExpressionForAttribute(attr, scale, false);
+      const colorFor = (key: string) => {
+        const i = expr.indexOf(key);
+        expect(i).toBeGreaterThan(-1);
+        return expr[i + 1];
+      };
+      expect(colorFor("a")).toBe(colord("#111111").toHex());
+      expect(colorFor("m")).toBe(colord("#222222").toHex());
+      expect(colorFor("z")).toBe(colord("#333333").toHex());
     });
   });
 

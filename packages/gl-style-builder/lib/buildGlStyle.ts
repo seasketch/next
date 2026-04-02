@@ -15,9 +15,23 @@ import {
   buildRGBRasterLayer,
 } from "./builders/rasters";
 import {
+  buildCategoricalLineLayer,
+  buildContinuousLineLayer,
+  buildSimpleLineLayer,
+} from "./builders/lines";
+import {
   buildCategoricalPolygonLayer,
+  buildContinuousPolygonLayer,
   buildSimplePolygonLayer,
 } from "./builders/polygons";
+import {
+  buildCategoricalPointLayer,
+  buildContinuousPointLayer,
+  buildHeatmapLayer,
+  buildMarkerImageLayer,
+  buildProportionalSymbolLayer,
+  buildSimplePointLayer,
+} from "./builders/points";
 
 export type BuildGlStyleInput = {
   geostats: GeostatsLayer | RasterInfo;
@@ -58,6 +72,26 @@ export function buildGlStyle({
       return buildSimplePolygonLayer(geostats, aiDataAnalystNotes);
     case VisualizationType.CATEGORICAL_POLYGON:
       return buildCategoricalPolygonLayer(geostats, aiDataAnalystNotes);
+    case VisualizationType.CONTINUOUS_POLYGON:
+      return buildContinuousPolygonLayer(geostats, aiDataAnalystNotes);
+    case VisualizationType.SIMPLE_LINE:
+      return buildSimpleLineLayer(geostats, aiDataAnalystNotes);
+    case VisualizationType.CATEGORICAL_LINE:
+      return buildCategoricalLineLayer(geostats, aiDataAnalystNotes);
+    case VisualizationType.CONTINUOUS_LINE:
+      return buildContinuousLineLayer(geostats, aiDataAnalystNotes);
+    case VisualizationType.SIMPLE_POINT:
+      return buildSimplePointLayer(geostats, aiDataAnalystNotes);
+    case VisualizationType.MARKER_IMAGE:
+      return buildMarkerImageLayer(geostats, aiDataAnalystNotes);
+    case VisualizationType.CATEGORICAL_POINT:
+      return buildCategoricalPointLayer(geostats, aiDataAnalystNotes);
+    case VisualizationType.PROPORTIONAL_SYMBOL:
+      return buildProportionalSymbolLayer(geostats, aiDataAnalystNotes);
+    case VisualizationType.CONTINUOUS_POINT:
+      return buildContinuousPointLayer(geostats, aiDataAnalystNotes);
+    case VisualizationType.HEATMAP:
+      return buildHeatmapLayer(geostats, aiDataAnalystNotes);
     default:
       throw new Error(
         `Unsupported visualization type: ${targetVisualizationType}`,
@@ -91,6 +125,11 @@ function defaultVisualizationTypeForGeostats(
       return VisualizationType.SIMPLE_POINT;
     } else if (geostats.geometry === "MultiPoint") {
       return VisualizationType.SIMPLE_POINT;
+    } else if (
+      geostats.geometry === "LineString" ||
+      geostats.geometry === "MultiLineString"
+    ) {
+      return VisualizationType.SIMPLE_LINE;
     }
   }
   return VisualizationType.SIMPLE_POLYGON;
@@ -100,12 +139,10 @@ function isValidVisualizationType(
   geostats: GeostatsLayer | RasterInfo,
   visualizationType?: VisualizationType | string | undefined,
 ): { isValid: boolean; errorMessage?: string } {
-  console.log("isValidVisualizationType", geostats, visualizationType);
   if (!visualizationType) {
     return { isValid: false, errorMessage: "No visualization type specified" };
   }
   if (isRasterInfo(geostats)) {
-    console.log("isRasterInfo", geostats);
     const band1 = geostats.bands[0];
     if (visualizationType === VisualizationType.RGB_RASTER) {
       if (geostats.bands.length < 3) {
@@ -151,19 +188,11 @@ function isValidVisualizationType(
       };
     }
   } else {
-    console.log("isGeostatsLayer", geostats);
     const hasCategoricalAttribute = geostats.attributes.some(
       (attribute) => Object.keys(attribute.values).length > 0,
     );
     const hasContinuousAttribute = geostats.attributes.some(
       (attribute) => attribute.type === "number",
-    );
-    console.log("hasCategoricalAttribute", hasCategoricalAttribute);
-    console.log("hasContinuousAttribute", hasContinuousAttribute);
-    console.log(
-      "visualizationType",
-      visualizationType,
-      VisualizationType.CATEGORICAL_POLYGON,
     );
     switch (visualizationType) {
       // make sure rasters aren't styled as vectors
@@ -212,12 +241,6 @@ function isValidVisualizationType(
         return { isValid: true };
       // now, check categorical vector types
       case VisualizationType.CATEGORICAL_POLYGON:
-        console.log(
-          "checking categorical polygon",
-          geostats.geometry,
-          hasCategoricalAttribute,
-          geostats.attributes,
-        );
         if (
           geostats.geometry !== "Polygon" &&
           geostats.geometry !== "MultiPolygon"
@@ -229,10 +252,6 @@ function isValidVisualizationType(
           };
         }
         if (!hasCategoricalAttribute) {
-          console.log(
-            "source has no categorical attributes",
-            geostats.attributes,
-          );
           return {
             isValid: false,
             errorMessage: "Source has no categorical attributes",

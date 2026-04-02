@@ -30,6 +30,7 @@ export declare function processVectorUpload(options: {
     uploadFilename: string;
 }): Promise<{
     layers: GeostatsLayer[];
-    aiDataAnalystNotes?: AiDataAnalystNotes;
+    /** Resolve after local processing; caller should await after uploads so LLMs overlap I/O. */
+    aiDataAnalystNotesPromise: Promise<AiDataAnalystNotes | undefined>;
 }>;
 //# sourceMappingURL=processVectorUpload.d.ts.map

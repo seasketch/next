@@ -5,7 +5,6 @@ exports.buildContinuousRasterLayer = buildContinuousRasterLayer;
 exports.buildCategoricalRasterLayer = buildCategoricalRasterLayer;
 const geostats_types_1 = require("@seasketch/geostats-types");
 const ai_data_analyst_1 = require("ai-data-analyst");
-const visualizationTypes_1 = require("../visualizationTypes");
 const colorScales_1 = require("../colorScales");
 function buildRGBRasterLayer(geostats, aiDataAnalystNotes) {
     return [
@@ -19,7 +18,7 @@ function buildRGBRasterLayer(geostats, aiDataAnalystNotes) {
                 visibility: "visible",
             },
             metadata: {
-                "s:type": visualizationTypes_1.VisualizationType.RGB_RASTER,
+                "s:type": "Raster Image",
             },
         },
     ];
@@ -70,40 +69,44 @@ function buildContinuousRasterLayer(geostats, aiDataAnalystNotes) {
         rasterColor = (0, colorScales_1.buildContinuousColorExpression)(colorScale, reversePalette, range, ["raster-value"]);
         stepsMeta["s:steps"] = `continuous:10`;
     }
-    return [
-        {
-            type: "raster",
-            paint: {
-                "raster-opacity": 1,
-                "raster-resampling": "nearest",
-                "raster-color-mix": rasterColorMix,
-                "raster-color-range": geostats.byteEncoding
-                    ? [band.minimum, band.minimum + 255]
-                    : [geostats.bands[0].minimum, geostats.bands[0].maximum],
-                "raster-fade-duration": 0,
-                "raster-color": rasterColor,
-            },
-            layout: {
-                visibility: "visible",
-            },
-            metadata: Object.assign(Object.assign(Object.assign(Object.assign({ "s:palette": colorScale.name }, (reversePalette ? { "s:reverse-palette": true } : {})), stepsMeta), (geostats.bands[0].offset || geostats.bands[0].scale
-                ? { "s:respect-scale-and-offset": true }
-                : {})), { "s:type": visualizationTypes_1.VisualizationType.CONTINUOUS_RASTER }),
+    const layer = {
+        type: "raster",
+        paint: {
+            "raster-opacity": 1,
+            "raster-resampling": "nearest",
+            "raster-color-mix": rasterColorMix,
+            "raster-color-range": geostats.byteEncoding
+                ? [band.minimum, band.minimum + 255]
+                : [geostats.bands[0].minimum, geostats.bands[0].maximum],
+            "raster-fade-duration": 0,
+            "raster-color": rasterColor,
         },
-    ];
+        layout: {
+            visibility: "visible",
+        },
+        metadata: Object.assign(Object.assign(Object.assign({}, stepsMeta), (geostats.bands[0].offset || geostats.bands[0].scale
+            ? { "s:respect-scale-and-offset": true }
+            : {})), { "s:type": "Continuous Raster" }),
+    };
+    (0, colorScales_1.setPaletteMetadata)(layer, colorScale);
+    return [layer];
 }
 function buildCategoricalRasterLayer(geostats, aiDataAnalystNotes) {
     if (!(0, geostats_types_1.isRasterInfo)(geostats)) {
         throw new Error("Geostats must be a raster info");
     }
     let colors = [];
+    let colorScaleName;
+    let paletteReverse;
     if (geostats.bands[0].colorTable) {
         colors = geostats.bands[0].colorTable;
     }
     else if (geostats.bands[0].stats.categories) {
         const categories = geostats.bands[0].stats.categories;
         const colorScale = (0, colorScales_1.getColorScale)("categorical", (aiDataAnalystNotes === null || aiDataAnalystNotes === void 0 ? void 0 : aiDataAnalystNotes.palette) || "schemeTableau10");
+        colorScaleName = colorScale.name;
         const reversePalette = (0, ai_data_analyst_1.effectiveReverseNamedPalette)(aiDataAnalystNotes);
+        paletteReverse = reversePalette;
         if (reversePalette) {
             categories.reverse();
         }
@@ -111,33 +114,31 @@ function buildCategoricalRasterLayer(geostats, aiDataAnalystNotes) {
             colors.push([category[0], colorScale(categories.indexOf(category))]);
         }
     }
-    return [
-        {
-            type: "raster",
-            paint: {
-                "raster-color": [
-                    "step",
-                    ["round", ["raster-value"]],
-                    "transparent",
-                    ...colors.flat(),
-                ],
-                "raster-color-mix": [0, 0, 258, geostats.bands[0].base],
-                "raster-resampling": "nearest",
-                "raster-color-range": [
-                    geostats.bands[0].minimum,
-                    geostats.bands[0].minimum + 255,
-                ],
-                "raster-fade-duration": 0,
-            },
-            layout: {
-                visibility: "visible",
-            },
-            metadata: {
-                "s:palette": geostats.bands[0].colorTable
-                    ? geostats.bands[0].colorTable.map((b) => b[1])
-                    : "schemeTableau10",
-            },
+    const layer = {
+        type: "raster",
+        paint: {
+            "raster-color": [
+                "step",
+                ["round", ["raster-value"]],
+                "transparent",
+                ...colors.flat(),
+            ],
+            "raster-color-mix": [0, 0, 258, geostats.bands[0].base],
+            "raster-resampling": "nearest",
+            "raster-color-range": [
+                geostats.bands[0].minimum,
+                geostats.bands[0].minimum + 255,
+            ],
+            "raster-fade-duration": 0,
         },
-    ];
+        layout: {
+            visibility: "visible",
+        },
+        metadata: Object.assign(Object.assign({}, (colorScaleName ? { "s:palette": colorScaleName } : {})), { "s:type": "Categorical Raster" }),
+    };
+    if (colorScaleName && colorScaleName !== "customPalette") {
+        layer.metadata["s:palette"] = colorScaleName;
+    }
+    return [layer];
 }
 //# sourceMappingURL=rasters.js.map

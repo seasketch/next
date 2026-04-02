@@ -6,10 +6,11 @@ const RASTER_PRESENTATION_ENUM_MAP = {
     1: "continuous",
     2: "rgb",
 };
-const MAX_STRING_VALUES = 64;
-const MAX_STRING_VALUES_IF_LOW_CARDINALITY = 32;
-const MAX_NUMERIC_VALUES = 8;
-const MAX_NUMERIC_VALUES_WITH_HIGH_CARDINALITY = 0;
+/** Max entries kept in each non-numeric attribute's `values` map for LLM context. */
+const MAX_ATTRIBUTE_VALUE_KEYS = 64;
+/** Max entries for numeric attributes when cardinality is below {@link HIGH_CARDINALITY_NUMERIC_THRESHOLD}. */
+const MAX_NUMERIC_ATTRIBUTE_VALUE_KEYS = 8;
+/** At or above this distinct count, numeric `values` are omitted entirely (use min/max/stats). */
 const HIGH_CARDINALITY_NUMERIC_THRESHOLD = 64;
 const MAX_BREAK_SETS = 3;
 const MAX_BANDS = 4;
@@ -53,26 +54,34 @@ function trimMetadata(metadata) {
     }
     return Object.keys(out).length > 0 ? out : undefined;
 }
+/**
+ * Keeps `values` as a string→count map; limits how many keys are kept (by frequency).
+ * Numeric columns use a smaller cap (and drop `values` entirely when cardinality is very high).
+ */
 function trimValues(values, attributeType, countDistinct) {
     if (!isObject(values)) {
-        return undefined;
+        return { values: {}, valuesTruncated: false };
     }
     const entries = Object.entries(values).filter((entry) => typeof entry[1] === "number");
     entries.sort((a, b) => b[1] - a[1]);
     const distinctCount = typeof countDistinct === "number" && Number.isFinite(countDistinct)
         ? countDistinct
         : entries.length;
+    let maxKeys;
     if (attributeType === "number") {
-        const maxValues = distinctCount >= HIGH_CARDINALITY_NUMERIC_THRESHOLD
-            ? MAX_NUMERIC_VALUES_WITH_HIGH_CARDINALITY
-            : MAX_NUMERIC_VALUES;
-        return Object.fromEntries(entries.slice(0, maxValues));
+        maxKeys =
+            distinctCount >= HIGH_CARDINALITY_NUMERIC_THRESHOLD
+                ? 0
+                : MAX_NUMERIC_ATTRIBUTE_VALUE_KEYS;
     }
-    if (attributeType === "string" &&
-        distinctCount <= MAX_STRING_VALUES_IF_LOW_CARDINALITY) {
-        return Object.fromEntries(entries);
+    else {
+        maxKeys = MAX_ATTRIBUTE_VALUE_KEYS;
     }
-    return Object.fromEntries(entries.slice(0, MAX_STRING_VALUES));
+    const truncated = entries.length > maxKeys;
+    return {
+        values: Object.fromEntries(entries.slice(0, maxKeys)),
+        valuesTruncated: truncated,
+    };
 }
 function naturalBreakBucketCounts(breaks) {
     if (!isObject(breaks)) {
@@ -95,10 +104,10 @@ function naturalBreakBucketCounts(breaks) {
     return Object.keys(output).length > 0 ? output : undefined;
 }
 function pruneGeostatsAttribute(attr) {
-    var _a;
     if (!isObject(attr)) {
         return {};
     }
+    const trimmed = trimValues(attr.values, attr.type, attr.countDistinct);
     const out = {
         attribute: attr.attribute,
         type: attr.type,
@@ -107,8 +116,11 @@ function pruneGeostatsAttribute(attr) {
         min: attr.min,
         max: attr.max,
         typeArrayOf: attr.typeArrayOf,
-        values: (_a = trimValues(attr.values, attr.type, attr.countDistinct)) !== null && _a !== void 0 ? _a : {},
+        values: trimmed.values,
     };
+    if (trimmed.valuesTruncated) {
+        out.valuesTruncated = true;
+    }
     if (isObject(attr.stats)) {
         const stats = attr.stats;
         const compactStats = {
@@ -152,7 +164,9 @@ function pruneRasterBand(band) {
         noDataValue: band.noDataValue,
         scale: band.scale,
         offset: band.offset,
-        bounds: Array.isArray(band.bounds) ? sampleArray(band.bounds, 6) : undefined,
+        bounds: Array.isArray(band.bounds)
+            ? sampleArray(band.bounds, 6)
+            : undefined,
         metadata: trimMetadata(band.metadata),
         colorTable: Array.isArray(band.colorTable)
             ? sampleArray(band.colorTable, MAX_CATEGORIES)
@@ -175,7 +189,8 @@ function isRasterLike(geostats) {
     return isObject(geostats) && Array.isArray(geostats.bands);
 }
 function normalizeRasterPresentation(presentation) {
-    if (typeof presentation === "number" && presentation in RASTER_PRESENTATION_ENUM_MAP) {
+    if (typeof presentation === "number" &&
+        presentation in RASTER_PRESENTATION_ENUM_MAP) {
         return RASTER_PRESENTATION_ENUM_MAP[presentation];
     }
     return presentation;
@@ -197,9 +212,11 @@ function pruneGeostats(geostats) {
             bands: ((_a = geostats.bands) !== null && _a !== void 0 ? _a : []).slice(0, MAX_BANDS).map(pruneRasterBand),
         };
     }
-    if (isObject(geostats) && Array.isArray(geostats.attributes)) {
+    if (isObject(geostats) &&
+        Array.isArray(geostats.attributes)) {
         return pruneGeostatsLayer(geostats);
     }
-    return geostats;
+    console.error("invalid geostats layer shape", Object.keys(geostats));
+    throw new Error("Invalid geostats type");
 }
 //# sourceMappingURL=shrinkGeostats.js.map

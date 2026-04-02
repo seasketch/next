@@ -307,10 +307,7 @@ async function processVectorUpload(options) {
         stats[0].metadata = metadata;
     }
     if ((0, aiUploadNotes_1.isAiDataAnalystEnabled)()) {
-        columnP = (0, aiUploadNotes_1.asNeverReject)((0, ai_data_analyst_1.generateColumnIntelligence)(uploadFilename, {
-            layers: stats,
-            layerCount: stats.length,
-        }), "generateColumnIntelligence");
+        columnP = (0, aiUploadNotes_1.asNeverReject)((0, ai_data_analyst_1.generateColumnIntelligence)(uploadFilename, stats[0]), "generateColumnIntelligence");
     }
     // Only convert to GeoJSON if the dataset is small. Otherwise we can convert
     // from the normalized fgb dynamically if someone wants to download it as
@@ -425,16 +422,17 @@ async function processVectorUpload(options) {
             filename: `${jobId}.pmtiles`,
         });
     }
-    await updateProgress("running", "ai data analyst");
-    const aiDataAnalystNotes = await (0, aiUploadNotes_1.composeAiDataAnalystNotesFromPromises)({
-        uploadFilename,
-        titleP,
-        attributionP,
-        columnP,
-    });
+    const aiDataAnalystNotesPromise = (0, aiUploadNotes_1.isAiDataAnalystEnabled)()
+        ? (0, aiUploadNotes_1.composeAiDataAnalystNotesFromPromises)({
+            uploadFilename,
+            titleP,
+            attributionP,
+            columnP,
+        })
+        : Promise.resolve(undefined);
     return {
         layers: stats,
-        ...(aiDataAnalystNotes ? { aiDataAnalystNotes } : {}),
+        aiDataAnalystNotesPromise,
     };
 }
 //# sourceMappingURL=processVectorUpload.js.map

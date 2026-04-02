@@ -293,6 +293,7 @@ export async function generateColumnIntelligence(
   geostats: unknown,
 ): Promise<GenerateColumnIntelligenceResult> {
   const prunedGeostats = pruneGeostats(geostats);
+
   const response = await chatCompletionWithJsonSchema(
     columnIntelligencePrompt,
     JSON.stringify({ filename, geostats: prunedGeostats }),

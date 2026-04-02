@@ -117,7 +117,6 @@ export async function runLambda(event: SpatialUploadsHandlerRequest) {
     const data = JSON.parse(text) as ProcessedUploadResponse;
     return data;
   } else if (process.env.SPATIAL_UPLOADS_LAMBDA_ARN) {
-    console.log("Invoking lambda", process.env.SPATIAL_UPLOADS_LAMBDA_ARN);
     await client
       .invoke({
         InvocationType: "Event",

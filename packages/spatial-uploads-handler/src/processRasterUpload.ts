@@ -41,7 +41,8 @@ export async function processRasterUpload(options: {
   uploadFilename: string;
 }): Promise<{
   rasterInfo: RasterInfo;
-  aiDataAnalystNotes?: AiDataAnalystNotes;
+  /** Resolve after local processing; caller should await after uploads so LLMs overlap I/O. */
+  aiDataAnalystNotesPromise: Promise<AiDataAnalystNotes | undefined>;
 }> {
   const {
     logger,
@@ -197,17 +198,18 @@ export async function processRasterUpload(options: {
     filename: `${jobId}.pmtiles`,
   });
 
-  await updateProgress("running", "ai cartographer working");
-  const aiDataAnalystNotes = await composeAiDataAnalystNotesFromPromises({
-    uploadFilename,
-    titleP,
-    attributionP: null,
-    columnP,
-  });
+  const aiDataAnalystNotesPromise = isAiDataAnalystEnabled()
+    ? composeAiDataAnalystNotesFromPromises({
+        uploadFilename,
+        titleP,
+        attributionP: null,
+        columnP,
+      })
+    : Promise.resolve(undefined);
 
   return {
     rasterInfo: stats,
-    ...(aiDataAnalystNotes ? { aiDataAnalystNotes } : {}),
+    aiDataAnalystNotesPromise,
   };
 }
 

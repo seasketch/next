@@ -1,10 +1,21 @@
 import type { RasterValueSteps } from "ai-data-analyst";
 import type { GeostatsAttribute, RasterBandInfo, RasterBucket } from "@seasketch/geostats-types";
 import { Expression } from "mapbox-gl";
-/** Resolved d3-scale-chromatic scale as a callable; `name` is the export key (e.g. `interpolatePlasma`). */
-export type ColorScaleFn = ((value: number) => string) & {
+/**
+ * Resolved d3-scale-chromatic scale as a callable.
+ * - Continuous scales: pass a fraction in [0, 1].
+ * - Categorical scales: pass a bucket index (0, 1, …), or when
+ *   {@link ColorScaleFn.categoricalKeyToColor} is set (object custom palette),
+ *   pass the attribute value string for a direct key→color lookup.
+ * `name` is the export key (e.g. `interpolatePlasma`) or `customPalette` / `""`.
+ */
+export type ColorScaleFn = ((value: number | string) => string) & {
     name: string;
+    /** Set for object-shaped custom palettes: exact attribute-value string → color. */
+    categoricalKeyToColor?: ReadonlyMap<string, string>;
 };
+/** Deterministic ordering for category strings (matches object custom palette key sort). */
+export declare function compareCategoricalKeys(a: string, b: string): number;
 /**
  * Build a categorical {@link ColorScaleFn} from LLM/user palette input.
  * Invalid entries are omitted. Arrays keep valid colors in order. Objects are
@@ -95,4 +106,10 @@ export declare function getDefaultFillColor(): string;
  * @param reverse
  */
 export declare function buildMatchExpressionForAttribute(attribute: GeostatsAttribute, colorScale: ColorScaleFn, reverse: boolean): Expression;
+/** Layer slice used when building styles before `id` / `source` are assigned. */
+type LayerWithMetadata = {
+    metadata?: Record<string, unknown>;
+};
+export declare function setPaletteMetadata(layer: LayerWithMetadata, colorScale: ColorScaleFn): void;
+export {};
 //# sourceMappingURL=colorScales.d.ts.map

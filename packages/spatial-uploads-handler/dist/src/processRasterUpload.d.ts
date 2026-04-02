@@ -22,6 +22,7 @@ export declare function processRasterUpload(options: {
     uploadFilename: string;
 }): Promise<{
     rasterInfo: RasterInfo;
-    aiDataAnalystNotes?: AiDataAnalystNotes;
+    /** Resolve after local processing; caller should await after uploads so LLMs overlap I/O. */
+    aiDataAnalystNotesPromise: Promise<AiDataAnalystNotes | undefined>;
 }>;
 //# sourceMappingURL=processRasterUpload.d.ts.map

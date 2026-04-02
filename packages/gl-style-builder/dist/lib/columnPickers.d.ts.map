@@ -1,0 +1,1 @@
+{"version":3,"file":"columnPickers.d.ts","sourceRoot":"","sources":["../../lib/columnPickers.ts"],"names":[],"mappings":"AAAA,OAAO,EACL,iBAAiB,EACjB,aAAa,EAGd,MAAM,2BAA2B,CAAC;AAEnC,wBAAgB,4BAA4B,CAAC,QAAQ,EAAE,aAAa,oEA4CnE;AAED,wBAAgB,qBAAqB,CAAC,UAAU,EAAE,iBAAiB,EAAE,uBAQpE;AAED,wBAAgB,2BAA2B,CAAC,QAAQ,EAAE,aAAa,iBAyClE"}
