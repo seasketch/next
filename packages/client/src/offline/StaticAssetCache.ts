@@ -32,6 +32,8 @@ export interface StaticAssetCacheState {
 class StaticAssetCache {
   private readonly urlsToCacheKeys: Map<string, string> = new Map();
   private manifest?: PrecacheManifest;
+  /** Shared while a manifest fetch from the service worker is in progress */
+  private manifestFromSwInFlight?: Promise<void>;
   private cache = caches.open(STATIC_ASSET_CACHE_NAME);
 
   constructor(manifest?: PrecacheManifest) {
@@ -41,7 +43,10 @@ class StaticAssetCache {
       "serviceWorker" in navigator &&
       navigator.serviceWorker.controller
     ) {
-      this.setManifestFromServiceWorker();
+      this.setManifestFromServiceWorker().catch((error) => {
+        console.error("Failed to set manifest from service worker", error);
+        // will try again later if getState is called
+      });
     }
   }
 
@@ -95,13 +100,26 @@ class StaticAssetCache {
     }
   }
 
-  async setManifestFromServiceWorker() {
-    const manifest = await pTimeout(
-      ServiceWorkerWindow.getManifest(),
-      3000,
-      "Failed to contact ServiceWorker. Refresh your browser."
-    );
-    this.setManifest(manifest);
+  async setManifestFromServiceWorker(): Promise<void> {
+    if (this.manifest) {
+      return;
+    }
+    if (this.manifestFromSwInFlight) {
+      return this.manifestFromSwInFlight;
+    }
+    this.manifestFromSwInFlight = (async () => {
+      try {
+        const manifest = await pTimeout(
+          ServiceWorkerWindow.getManifest(),
+          5000,
+          "Failed to contact ServiceWorker. Refresh your browser."
+        );
+        this.setManifest(manifest);
+      } finally {
+        this.manifestFromSwInFlight = undefined;
+      }
+    })();
+    return this.manifestFromSwInFlight;
   }
 
   /**
@@ -112,7 +130,10 @@ class StaticAssetCache {
    */
   async getState() {
     if (!this.manifest) {
-      await this.setManifestFromServiceWorker();
+      await this.setManifestFromServiceWorker().catch((error) => {
+        console.error("Failed to set manifest from service worker", error);
+        // will try again later if getState is called
+      });
     }
     const entries = [];
     let bytes = 0;
@@ -248,7 +269,10 @@ class StaticAssetCache {
    */
   async purgeStaleEntries() {
     if (!this.manifest) {
-      await this.setManifestFromServiceWorker();
+      await this.setManifestFromServiceWorker().catch((error) => {
+        console.error("Failed to set manifest from service worker", error);
+        // will try again later if purgeStaleEntries is called
+      });
       if (!this.manifest) {
         throw new Error(
           "Manifest has not been set. Cannot purge cache without information about current bundles."
