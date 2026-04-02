@@ -98,7 +98,7 @@ function buildCustomColorScale(customPalette) {
         }
         const len = colors.length;
         const fn = ((index) => colors[index % len]);
-        return defineScaleName(fn, "customPalette");
+        return defineScaleName(fn, "");
     }
     const pairs = [];
     for (const [key, value] of Object.entries(customPalette)) {

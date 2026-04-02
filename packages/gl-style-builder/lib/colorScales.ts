@@ -59,7 +59,7 @@ export function buildCustomColorScale(
     }
     const len = colors.length;
     const fn = ((index: number) => colors[index % len]!) as ColorScaleFn;
-    return defineScaleName(fn, "customPalette");
+    return defineScaleName(fn, "");
   }
 
   const pairs: { key: string; color: string }[] = [];
