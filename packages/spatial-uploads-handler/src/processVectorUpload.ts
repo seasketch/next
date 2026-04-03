@@ -21,6 +21,7 @@ import {
 } from "ai-data-analyst";
 import {
   asNeverReject,
+  classifyGeostatsPii,
   composeAiDataAnalystNotesFromPromises,
   isAiDataAnalystEnabled,
 } from "./aiUploadNotes";
@@ -416,8 +417,21 @@ export async function processVectorUpload(options: {
   }
 
   if (isAiDataAnalystEnabled()) {
+    console.log("ai enabled");
     columnP = asNeverReject(
-      generateColumnIntelligence(uploadFilename, stats[0]),
+      (async () => {
+        if (process.env.GEOSTATS_PII_CLASSIFIER_ARN) {
+          console.log("pii classifier arn is set");
+          // Full layer in → annotated layer out (classifier caps work internally).
+          // Column intelligence still runs pruneGeostats internally before the LLM.
+          const classified = await classifyGeostatsPii(stats[0]);
+          if (classified) {
+            stats[0] = classified;
+          }
+        }
+        console.log("running column intelligence");
+        return generateColumnIntelligence(uploadFilename, stats[0]);
+      })(),
       "generateColumnIntelligence",
     );
   }

@@ -16,6 +16,12 @@ type RasterLike = {
     byteEncoding?: boolean;
 };
 /**
+ * Attributes with piiRisk at or above this threshold have their values
+ * stripped from the LLM payload and replaced with a piiRedacted marker.
+ * The threshold can be lowered (e.g. 0.4) for more conservative deployments.
+ */
+export declare const PII_REDACTION_THRESHOLD = 0.35;
+/**
  * Reduce geostats payload size while preserving fields needed for
  * column-intelligence decisions.
  */

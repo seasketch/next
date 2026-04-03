@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.PII_REDACTION_THRESHOLD = void 0;
 exports.pruneGeostats = pruneGeostats;
 const RASTER_PRESENTATION_ENUM_MAP = {
     0: "categorical",
@@ -103,9 +104,35 @@ function naturalBreakBucketCounts(breaks) {
     }
     return Object.keys(output).length > 0 ? output : undefined;
 }
+/**
+ * Attributes with piiRisk at or above this threshold have their values
+ * stripped from the LLM payload and replaced with a piiRedacted marker.
+ * The threshold can be lowered (e.g. 0.4) for more conservative deployments.
+ */
+exports.PII_REDACTION_THRESHOLD = 0.35;
 function pruneGeostatsAttribute(attr) {
+    var _a;
     if (!isObject(attr)) {
         return {};
+    }
+    // PII-aware: if the geostats-pii-risk-classifier has scored this column
+    // above the threshold, strip values and send a piiRedacted marker to the LLM
+    // instead.  The raw data (with piiRisk scores) is already persisted in the DB.
+    const piiRisk = typeof attr.piiRisk === "number" ? attr.piiRisk : undefined;
+    if (piiRisk !== undefined && piiRisk >= exports.PII_REDACTION_THRESHOLD) {
+        const categories = Array.isArray(attr.piiRiskCategories)
+            ? attr.piiRiskCategories
+            : [];
+        console.log("!! Redacting column due to PII risk", attr.attribute, piiRisk);
+        console.log("!! Categories", categories);
+        return {
+            attribute: attr.attribute,
+            type: attr.type,
+            count: attr.count,
+            countDistinct: attr.countDistinct,
+            piiRedacted: true,
+            redactionReason: (_a = categories[0]) !== null && _a !== void 0 ? _a : "other",
+        };
     }
     const trimmed = trimValues(attr.values, attr.type, attr.countDistinct);
     const out = {

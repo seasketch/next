@@ -1,0 +1,51 @@
+{
+  "geostats": {
+    "layer": "contacts",
+    "count": 200,
+    "geometry": "Point",
+    "attributeCount": 3,
+    "attributes": [
+      {
+        "attribute": "id",
+        "type": "number",
+        "count": 200,
+        "countDistinct": 200,
+        "values": {}
+      },
+      {
+        "attribute": "contact_email",
+        "type": "string",
+        "count": 200,
+        "countDistinct": 30,
+        "values": {
+          "alice@example.com": 7,
+          "bob@example.org": 6,
+          "carol@gmail.com": 5,
+          "dave@company.io": 4,
+          "eve@email.net": 3,
+          "frank@domain.com": 3,
+          "grace@example.com": 2,
+          "heidi@work.org": 2,
+          "ivan@test.co": 1,
+          "judy@sample.com": 1
+        }
+      },
+      {
+        "attribute": "city",
+        "type": "string",
+        "count": 200,
+        "countDistinct": 8,
+        "values": {
+          "San Francisco": 50,
+          "New York": 40,
+          "Seattle": 35,
+          "Los Angeles": 25,
+          "Chicago": 20,
+          "Boston": 15,
+          "Portland": 10,
+          "Austin": 5
+        }
+      }
+    ]
+  }
+}

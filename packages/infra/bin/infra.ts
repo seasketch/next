@@ -19,6 +19,7 @@ import { SQSStack } from "../lib/SQSStack";
 import { OverlayWorkerLambdaStack } from "../lib/OverlayWorkerLambdaStack";
 import { SubdivideWorkerLambdaStack } from "../lib/SubdivideWorkerLambdaStack";
 import { FragmentWorkerLambdaStack } from "../lib/FragmentWorkerLambdaStack";
+import { GeostatsPiiClassifierLambdaStack } from "../lib/GeostatsPiiClassifierLambdaStack";
 let env = require("./env.production");
 
 const DOMAIN_NAME = "seasketch.org";
@@ -151,6 +152,12 @@ const dataHosts = hostConfigs.map((config) => {
   return host;
 });
 
+const piiClassifier = new GeostatsPiiClassifierLambdaStack(
+  app,
+  "SeaSketchGeostatsPiiClassifier",
+  { env }
+);
+
 const uploadHandler = new UploadHandlerLambdaStack(
   app,
   "SpatialUploadHandler",
@@ -160,6 +167,7 @@ const uploadHandler = new UploadHandlerLambdaStack(
     db: db.instance,
     bucket: dataUploads.uploadsBucket,
     normalizedOutputsBucket: dataUploads.normalizedUploadsBucket,
+    piiClassifierFn: piiClassifier.fn,
   }
 );
 

@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.effectiveReverseNamedPalette = exports.deriveValueSteps = exports.pruneGeostats = exports.generateTitle = exports.generateColumnIntelligence = exports.generateAttribution = exports.titleParameters = exports.titlePrompt = exports.columnIntelligenceParameters = exports.columnIntelligencePrompt = exports.attributionParameters = exports.attributionPrompt = exports.titleFormattingValidator = exports.titleFormattingSchema = exports.columnIntelligenceValidator = exports.columnIntelligenceSchema = exports.attributionFormattingValidator = exports.attributionFormattingSchema = void 0;
+exports.effectiveReverseNamedPalette = exports.isPIIRedactedAttribute = exports.deriveValueSteps = exports.pruneGeostats = exports.generateTitle = exports.generateColumnIntelligence = exports.generateAttribution = exports.titleParameters = exports.titlePrompt = exports.columnIntelligenceParameters = exports.columnIntelligencePrompt = exports.attributionParameters = exports.attributionPrompt = exports.titleFormattingValidator = exports.titleFormattingSchema = exports.columnIntelligenceValidator = exports.columnIntelligenceSchema = exports.attributionFormattingValidator = exports.attributionFormattingSchema = void 0;
 var attribution_1 = require("./prompts/layers/attribution");
 Object.defineProperty(exports, "attributionFormattingSchema", { enumerable: true, get: function () { return attribution_1.attributionFormattingSchema; } });
 Object.defineProperty(exports, "attributionFormattingValidator", { enumerable: true, get: function () { return attribution_1.attributionFormattingValidator; } });
@@ -27,6 +27,8 @@ var shrinkGeostats_1 = require("./geostats/shrinkGeostats");
 Object.defineProperty(exports, "pruneGeostats", { enumerable: true, get: function () { return shrinkGeostats_1.pruneGeostats; } });
 var valueSteps_1 = require("./geostats/valueSteps");
 Object.defineProperty(exports, "deriveValueSteps", { enumerable: true, get: function () { return valueSteps_1.deriveValueSteps; } });
+var piiTypes_1 = require("./geostats/piiTypes");
+Object.defineProperty(exports, "isPIIRedactedAttribute", { enumerable: true, get: function () { return piiTypes_1.isPIIRedactedAttribute; } });
 var reverseNamedPalette_1 = require("./reverseNamedPalette");
 Object.defineProperty(exports, "effectiveReverseNamedPalette", { enumerable: true, get: function () { return reverseNamedPalette_1.effectiveReverseNamedPalette; } });
 //# sourceMappingURL=index.js.map

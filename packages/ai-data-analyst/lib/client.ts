@@ -292,11 +292,11 @@ export async function generateColumnIntelligence(
   filename: string,
   geostats: unknown,
 ): Promise<GenerateColumnIntelligenceResult> {
-  const prunedGeostats = pruneGeostats(geostats);
+  const layerForLlm = pruneGeostats(geostats);
 
   const response = await chatCompletionWithJsonSchema(
     columnIntelligencePrompt,
-    JSON.stringify({ filename, geostats: prunedGeostats }),
+    JSON.stringify({ filename, geostats: layerForLlm }),
     columnIntelligenceParameters,
     "column_intelligence",
     columnIntelligenceSchema,

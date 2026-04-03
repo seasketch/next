@@ -10,6 +10,8 @@ export type { GenerateTitleResult, GenerateAttributionResult, GenerateColumnInte
 export { pruneGeostats } from "./geostats/shrinkGeostats";
 export type { RasterValueSteps, ValueSteps } from "./geostats/valueSteps";
 export { deriveValueSteps } from "./geostats/valueSteps";
+export type { GeostatsRedactionReason, PIIRedactedGeostatsAttribute, PIIRedactedGeostatsLayer, PrunedGeostatsAttribute, } from "./geostats/piiTypes";
+export { isPIIRedactedAttribute } from "./geostats/piiTypes";
 export { effectiveReverseNamedPalette } from "./reverseNamedPalette";
 export type OpenAIParameters = {
     model: string;

@@ -1,11 +1,100 @@
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const AWS = require("aws-sdk") as typeof import("aws-sdk");
 import type {
   AiDataAnalystNotes,
   GenerateAttributionResult,
   GenerateColumnIntelligenceResult,
   GenerateTitleResult,
 } from "ai-data-analyst";
+import type { GeostatsLayer } from "@seasketch/geostats-types";
+
 export function isAiDataAnalystEnabled(): boolean {
   return Boolean(process.env.CF_AIG_TOKEN && process.env.CF_AIG_URL);
+}
+
+let _lambdaClient: InstanceType<typeof AWS.Lambda> | null = null;
+function getLambdaClient() {
+  if (!_lambdaClient) {
+    _lambdaClient = new AWS.Lambda({
+      region: process.env.AWS_REGION || "us-west-2",
+      httpOptions: { timeout: 30_000 },
+    });
+  }
+  return _lambdaClient;
+}
+
+/**
+ * Invoke the geostats-pii-risk-classifier Lambda synchronously.
+ *
+ * On success, returns the full annotated {@link GeostatsLayer} from the
+ * Lambda payload (`{ geostats: ... }`). That object is the input layer spread
+ * with updated `attributes` (each analysed string column has `piiRisk` and
+ * optionally `piiRiskCategories`; high-cardinality columns may have shuffled
+ * `values` key order) and `piiRiskWasAssessed: true`.
+ *
+ * Returns `null` on any failure (fail-open: caller proceeds without changes).
+ *
+ * GEOSTATS_PII_CLASSIFIER_ARN must be set before calling this function.
+ */
+export async function classifyGeostatsPii(
+  geostats: GeostatsLayer,
+): Promise<GeostatsLayer | null> {
+  const arn = process.env.GEOSTATS_PII_CLASSIFIER_ARN!;
+  let rawData: AWS.Lambda.InvocationResponse;
+  try {
+    rawData = await getLambdaClient()
+      .invoke({
+        FunctionName: arn,
+        InvocationType: "RequestResponse",
+        Payload: JSON.stringify({ geostats }),
+      })
+      .promise();
+  } catch (e) {
+    console.warn(
+      "[pii-classifier] Lambda invocation error — proceeding without annotation:",
+      e,
+    );
+    return null;
+  }
+
+  if (rawData.FunctionError) {
+    const errBody = rawData.Payload
+      ? JSON.parse(rawData.Payload.toString())
+      : null;
+    console.warn(
+      "[pii-classifier] Lambda function error — proceeding without annotation:",
+      errBody,
+    );
+    return null;
+  }
+
+  if (!rawData.Payload) {
+    console.warn(
+      "[pii-classifier] Empty payload — proceeding without annotation",
+    );
+    return null;
+  }
+
+  let parsed: { geostats?: GeostatsLayer; error?: string };
+  try {
+    parsed = JSON.parse(rawData.Payload.toString());
+  } catch (e) {
+    console.warn(
+      "[pii-classifier] Failed to parse response — proceeding without annotation:",
+      e,
+    );
+    return null;
+  }
+
+  if (parsed.error || !parsed.geostats) {
+    console.warn(
+      "[pii-classifier] Response error or missing geostats:",
+      parsed.error,
+    );
+    return null;
+  }
+
+  return parsed.geostats;
 }
 
 type TitleOutcome = GenerateTitleResult | { error: string };

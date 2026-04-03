@@ -150,9 +150,36 @@ function naturalBreakBucketCounts(
   return Object.keys(output).length > 0 ? output : undefined;
 }
 
+/**
+ * Attributes with piiRisk at or above this threshold have their values
+ * stripped from the LLM payload and replaced with a piiRedacted marker.
+ * The threshold can be lowered (e.g. 0.4) for more conservative deployments.
+ */
+export const PII_REDACTION_THRESHOLD = 0.35;
+
 function pruneGeostatsAttribute(attr: unknown): Record<string, unknown> {
   if (!isObject(attr)) {
     return {};
+  }
+
+  // PII-aware: if the geostats-pii-risk-classifier has scored this column
+  // above the threshold, strip values and send a piiRedacted marker to the LLM
+  // instead.  The raw data (with piiRisk scores) is already persisted in the DB.
+  const piiRisk = typeof attr.piiRisk === "number" ? attr.piiRisk : undefined;
+  if (piiRisk !== undefined && piiRisk >= PII_REDACTION_THRESHOLD) {
+    const categories = Array.isArray(attr.piiRiskCategories)
+      ? (attr.piiRiskCategories as string[])
+      : [];
+    console.log("!! Redacting column due to PII risk", attr.attribute, piiRisk);
+    console.log("!! Categories", categories);
+    return {
+      attribute: attr.attribute,
+      type: attr.type,
+      count: attr.count,
+      countDistinct: attr.countDistinct,
+      piiRedacted: true,
+      redactionReason: categories[0] ?? "other",
+    };
   }
 
   const trimmed = trimValues(attr.values, attr.type, attr.countDistinct);

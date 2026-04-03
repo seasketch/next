@@ -171,8 +171,8 @@ function generateAttribution(metadata) {
 function generateColumnIntelligence(filename, geostats) {
     return __awaiter(this, void 0, void 0, function* () {
         var _a, _b;
-        const prunedGeostats = (0, shrinkGeostats_1.pruneGeostats)(geostats);
-        const response = yield chatCompletionWithJsonSchema(columnIntelligence_1.columnIntelligencePrompt, JSON.stringify({ filename, geostats: prunedGeostats }), columnIntelligence_1.columnIntelligenceParameters, "column_intelligence", columnIntelligence_1.columnIntelligenceSchema, COLUMN_INTELLIGENCE_TIMEOUT_MS);
+        const layerForLlm = (0, shrinkGeostats_1.pruneGeostats)(geostats);
+        const response = yield chatCompletionWithJsonSchema(columnIntelligence_1.columnIntelligencePrompt, JSON.stringify({ filename, geostats: layerForLlm }), columnIntelligence_1.columnIntelligenceParameters, "column_intelligence", columnIntelligence_1.columnIntelligenceSchema, COLUMN_INTELLIGENCE_TIMEOUT_MS);
         const usage = response.usage;
         const parsed = parsedColumnIntelligenceFromAssistantMessage((_a = response.choices[0]) === null || _a === void 0 ? void 0 : _a.message);
         if (parsed.ok === false) {

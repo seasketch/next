@@ -23,6 +23,8 @@ export class UploadHandlerLambdaStack extends cdk.Stack {
       db: rds.DatabaseInstance;
       bucket: s3.Bucket;
       normalizedOutputsBucket: s3.Bucket;
+      /** When provided, the upload handler will invoke this Lambda for PII classification. */
+      piiClassifierFn?: lambda.IFunction;
     }
   ) {
     super(scope, id, props);
@@ -86,6 +88,9 @@ export class UploadHandlerLambdaStack extends cdk.Stack {
         DEBUGGING_AWS_SECRET_ACCESS_KEY: DEBUGGING_AWS_SECRET_ACCESS_KEY || "",
         NODE_EXTRA_CA_CERTS: "/var/runtime/ca-cert.pem",
         NODE_ENV: "production",
+        ...(props.piiClassifierFn
+          ? { GEOSTATS_PII_CLASSIFIER_ARN: props.piiClassifierFn.functionArn }
+          : {}),
       },
       memorySize: 10240,
       reservedConcurrentExecutions: 100,
@@ -120,6 +125,9 @@ export class UploadHandlerLambdaStack extends cdk.Stack {
     props.normalizedOutputsBucket.grantReadWrite(fn);
     props.bucket.grantPutAcl(fn);
     props.normalizedOutputsBucket.grantPutAcl(fn);
+    if (props.piiClassifierFn) {
+      props.piiClassifierFn.grantInvoke(fn);
+    }
     this.fn = fn;
   }
 }

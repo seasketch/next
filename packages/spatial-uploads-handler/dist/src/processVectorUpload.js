@@ -307,7 +307,20 @@ async function processVectorUpload(options) {
         stats[0].metadata = metadata;
     }
     if ((0, aiUploadNotes_1.isAiDataAnalystEnabled)()) {
-        columnP = (0, aiUploadNotes_1.asNeverReject)((0, ai_data_analyst_1.generateColumnIntelligence)(uploadFilename, stats[0]), "generateColumnIntelligence");
+        console.log("ai enabled");
+        columnP = (0, aiUploadNotes_1.asNeverReject)((async () => {
+            if (process.env.GEOSTATS_PII_CLASSIFIER_ARN) {
+                console.log("pii classifier arn is set");
+                // Full layer in → annotated layer out (classifier caps work internally).
+                // Column intelligence still runs pruneGeostats internally before the LLM.
+                const classified = await (0, aiUploadNotes_1.classifyGeostatsPii)(stats[0]);
+                if (classified) {
+                    stats[0] = classified;
+                }
+            }
+            console.log("running column intelligence");
+            return (0, ai_data_analyst_1.generateColumnIntelligence)(uploadFilename, stats[0]);
+        })(), "generateColumnIntelligence");
     }
     // Only convert to GeoJSON if the dataset is small. Otherwise we can convert
     // from the normalized fgb dynamically if someone wants to download it as
