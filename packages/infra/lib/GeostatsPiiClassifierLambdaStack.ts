@@ -1,10 +1,11 @@
 /**
  * Deploys the geostats-pii-risk-classifier Lambda — a Python container that
- * classifies pruned GeostatsLayer objects for PII risk (using Presidio and
- * spaCy) and redacts high-risk string columns before they are sent to OpenAI.
+ * scores vector GeostatsLayer columns for PII risk (Presidio + spaCy).
  *
- * Invoked synchronously (RequestResponse) by the SpatialUploadsHandler Lambda
- * when GEOSTATS_PII_CLASSIFIER_ARN is present in its environment.
+ * • Synchronous invoke from SpatialUploadsHandler when GEOSTATS_PII_CLASSIFIER_ARN
+ *   is set on that Lambda.
+ * • Async `{ warm: true }` invoke from the GraphQL API on createDataUpload
+ *   (same env var on the API task) to reduce cold starts while the user uploads.
  */
 import * as cdk from "aws-cdk-lib";
 import * as lambda from "aws-cdk-lib/aws-lambda";

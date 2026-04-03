@@ -507,3 +507,10 @@ def test_lambda_handler_sets_pii_risk_was_assessed():
     layer = make_layer([string_attr("category", {"A": 10, "B": 5}, count_distinct=2)])
     response = lambda_handler({"geostats": layer}, None)
     assert response["geostats"].get("piiRiskWasAssessed") is True
+
+
+def test_warm_invocation_no_geostats():
+    """Warm payload loads models and returns without requiring geostats."""
+    response = lambda_handler({"warm": True}, None)
+    assert response.get("warm") is True
+    assert response.get("ok") is True

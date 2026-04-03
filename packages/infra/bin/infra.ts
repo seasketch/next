@@ -219,6 +219,7 @@ new GraphQLStack(app, "SeaSketchGraphQLServer", {
   uploadHandler: uploadHandler.fn,
   subdivisionWorkerLambdaArn: subdivideWorker.fn.functionArn,
   fragmentWorkerLambdaArn: fragmentWorker.fn.functionArn,
+  geostatsPiiClassifierLambdaArn: piiClassifier.fn.functionArn,
   overlayEngineWorkerSqsQueue: sqs.productionOverlayEngineWorkerQueue,
 });
 

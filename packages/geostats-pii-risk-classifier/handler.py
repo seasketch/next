@@ -559,8 +559,12 @@ def lambda_handler(event: dict, context: Any) -> dict:
     """
     AWS Lambda entry point.
 
-    Accepts:
-      { "geostats": <GeostatsLayer dict> }
+    Accepts either:
+
+    • ``{ "warm": true }`` — load Presidio + spaCy (cold-start mitigation); returns
+      ``{ "warm": true, "ok": true }``.
+
+    • ``{ "geostats": <GeostatsLayer dict> }`` — full PII classification (see below).
 
     Returns the **full** layer document (not a patch):
 
@@ -574,6 +578,12 @@ def lambda_handler(event: dict, context: Any) -> dict:
     backfills). Scoring uses at most ``MAX_VALUES_PER_ATTRIBUTE`` distinct
     non-blank keys per column; the full ``values`` map is still returned.
     """
+    if event.get("warm") is True:
+        _get_analyzer()
+        _get_nlp_xx()
+        logger.info("Warm invocation: Presidio + spaCy initialised")
+        return {"warm": True, "ok": True}
+
     geostats = event.get("geostats")
     if geostats is None:
         logger.error("No 'geostats' key in event")

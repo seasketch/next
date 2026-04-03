@@ -48,6 +48,10 @@ If Lambda logs show **`Runtime.InvalidEntrypoint`**, the usual cause is an **arm
 
 The PII classifier is opt-in at runtime: the upload handler only calls it when `GEOSTATS_PII_CLASSIFIER_ARN` is set. Removing that env var (or not deploying the stack) disables classification entirely without affecting uploads.
 
+### Warm (`{ "warm": true }`)
+
+The API invokes this Lambda asynchronously with `{"warm": true}` when a user starts a spatial data upload (`createDataUpload`), so Presidio and spaCy load before the upload completes. Response: `{ "warm": true, "ok": true }`.
+
 ### Response shape (persisting / backfill)
 
 The Lambda returns a complete `GeostatsLayer` JSON object under `geostats`, not a delta—persist it as the layer you store. The **upload** pipeline sends the full computed geostats; the classifier limits how many distinct values it *scores* per column internally (`MAX_VALUES_PER_ATTRIBUTE` in `handler.py`).
@@ -61,7 +65,7 @@ The graphile-worker jobs that process uploads run inside the API server, so the 
 GEOSTATS_PII_CLASSIFIER_ARN=arn:aws:lambda:us-west-2:<account-id>:function:GeostatsPiiClassifier
 ```
 
-The ARN is printed by `cdk deploy SeaSketchGeostatsPiiClassifier` and is also visible in the AWS Lambda console. The API server's IAM role needs `lambda:InvokeFunction` on the classifier — this grant is already wired in `UploadHandlerLambdaStack`, but if you're running the API server locally against a deployed Lambda you'll need the credentials in your environment to have that permission (`AWS_REGION` is already set to `us-west-2` in the template).
+The ARN is printed by `cdk deploy SeaSketchGeostatsPiiClassifier` and is also visible in the AWS Lambda console. Production ECS gets `lambda:InvokeFunction` from `GraphQLStack` (warm + worker) and `UploadHandlerLambdaStack` (classify). For local API dev, your AWS credentials need the same invoke permission.
 
 ---
 
