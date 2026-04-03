@@ -24,15 +24,13 @@ export class GeostatsPiiClassifierLambdaStack extends cdk.Stack {
       code: lambda.DockerImageCode.fromImageAsset(
         path.join(__dirname, "../../geostats-pii-risk-classifier"),
       ),
-      // 30 s is ample for a warm invocation; cold start including spaCy/Presidio
+      // 90 s is ample for a warm invocation; cold start including spaCy/Presidio
       // model load should settle well under this.  Increase if needed.
-      timeout: cdk.Duration.seconds(30),
+      timeout: cdk.Duration.seconds(90),
       logGroup: new logs.LogGroup(this, "GeostatsPiiClassifierLogs", {
         retention: logs.RetentionDays.ONE_MONTH,
       }),
-      // 1 GB gives spaCy + Presidio enough headroom without over-provisioning.
-      // Raise to 2048 if cold-start initialisation becomes a bottleneck.
-      memorySize: 1024,
+      memorySize: 4096,
       retryAttempts: 0,
     });
   }
