@@ -297,6 +297,7 @@ fragment FullAdminSource on DataSource {
     showLabels
     valueSteps
     valueStepsN
+    piiRedactedColumns
   }
 }
 

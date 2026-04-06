@@ -8,8 +8,29 @@ import type {
 } from "ai-data-analyst";
 import type { GeostatsLayer } from "@seasketch/geostats-types";
 
+/**
+ * @deprecated Prefer gating on the upload request's `enableAiDataAnalyst` flag plus
+ * {@link assertAiDataAnalystEnvVarsPresent}. Kept for callers that only need to know whether
+ * Cloudflare AI Gateway env is present.
+ */
 export function isAiDataAnalystEnabled(): boolean {
   return Boolean(process.env.CF_AIG_TOKEN && process.env.CF_AIG_URL);
+}
+
+/** Throws if AI Data Analyst LLM features were requested but Cloudflare AI Gateway env is incomplete. */
+export function assertAiDataAnalystEnvVarsPresent(): void {
+  const missing: string[] = [];
+  if (!process.env.CF_AIG_TOKEN) {
+    missing.push("CF_AIG_TOKEN");
+  }
+  if (!process.env.CF_AIG_URL) {
+    missing.push("CF_AIG_URL");
+  }
+  if (missing.length > 0) {
+    throw new Error(
+      `enableAiDataAnalyst is true but required environment variables are not set: ${missing.join(", ")}`,
+    );
+  }
 }
 
 let _lambdaClient: InstanceType<typeof AWS.Lambda> | null = null;
@@ -32,14 +53,19 @@ function getLambdaClient() {
  * optionally `piiRiskCategories`; high-cardinality columns may have shuffled
  * `values` key order) and `piiRiskWasAssessed: true`.
  *
- * Returns `null` on any failure (fail-open: caller proceeds without changes).
+ * Throws on any failure (missing env, Lambda error, invalid payload).
  *
- * GEOSTATS_PII_CLASSIFIER_ARN must be set before calling this function.
+ * GEOSTATS_PII_CLASSIFIER_ARN must be set.
  */
 export async function classifyGeostatsPii(
   geostats: GeostatsLayer,
-): Promise<GeostatsLayer | null> {
-  const arn = process.env.GEOSTATS_PII_CLASSIFIER_ARN!;
+): Promise<GeostatsLayer> {
+  const arn = process.env.GEOSTATS_PII_CLASSIFIER_ARN;
+  if (!arn) {
+    throw new Error(
+      "GEOSTATS_PII_CLASSIFIER_ARN is not set; it is required for vector PII classification.",
+    );
+  }
   let rawData: AWS.Lambda.InvocationResponse;
   try {
     rawData = await getLambdaClient()
@@ -50,48 +76,46 @@ export async function classifyGeostatsPii(
       })
       .promise();
   } catch (e) {
-    console.warn(
-      "[pii-classifier] Lambda invocation error — proceeding without annotation:",
-      e,
+    throw new Error(
+      `PII classifier Lambda invocation failed: ${e instanceof Error ? e.message : String(e)}`,
     );
-    return null;
   }
 
   if (rawData.FunctionError) {
-    const errBody = rawData.Payload
-      ? JSON.parse(rawData.Payload.toString())
-      : null;
-    console.warn(
-      "[pii-classifier] Lambda function error — proceeding without annotation:",
-      errBody,
+    let errBody: unknown;
+    if (rawData.Payload) {
+      try {
+        errBody = JSON.parse(rawData.Payload.toString());
+      } catch {
+        errBody = rawData.Payload.toString();
+      }
+    } else {
+      errBody = null;
+    }
+    throw new Error(
+      `PII classifier Lambda returned an error: ${JSON.stringify(errBody)}`,
     );
-    return null;
   }
 
   if (!rawData.Payload) {
-    console.warn(
-      "[pii-classifier] Empty payload — proceeding without annotation",
-    );
-    return null;
+    throw new Error("PII classifier Lambda returned an empty payload.");
   }
 
   let parsed: { geostats?: GeostatsLayer; error?: string };
   try {
     parsed = JSON.parse(rawData.Payload.toString());
   } catch (e) {
-    console.warn(
-      "[pii-classifier] Failed to parse response — proceeding without annotation:",
-      e,
+    throw new Error(
+      `PII classifier response was not valid JSON: ${e instanceof Error ? e.message : String(e)}`,
     );
-    return null;
   }
 
   if (parsed.error || !parsed.geostats) {
-    console.warn(
-      "[pii-classifier] Response error or missing geostats:",
-      parsed.error,
+    throw new Error(
+      parsed.error
+        ? `PII classifier reported an error: ${parsed.error}`
+        : "PII classifier response did not include geostats.",
     );
-    return null;
   }
 
   return parsed.geostats;

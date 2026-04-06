@@ -64,7 +64,9 @@ slug,
 /**
  * For logging purposes only. In the form of "Full Name<email@example.com>"
  */
-requestingUser, skipLoggingProgress) {
+requestingUser, skipLoggingProgress, 
+/** When true, run column intelligence / title / attribution LLMs (requires CF_AIG_* env). */
+enableAiDataAnalyst) {
     if (DEBUG) {
         console.log("DEBUG MODE ENABLED");
     }
@@ -135,6 +137,7 @@ requestingUser, skipLoggingProgress) {
                 originalName,
                 uploadFilename,
                 workingDirectory: dist,
+                enableAiDataAnalyst,
             });
             stats = rasterResult.rasterInfo;
             aiDataAnalystNotesPromise = rasterResult.aiDataAnalystNotesPromise;
@@ -150,6 +153,7 @@ requestingUser, skipLoggingProgress) {
                 originalName,
                 uploadFilename,
                 workingDirectory: dist,
+                enableAiDataAnalyst,
             });
             stats = vectorResult.layers;
             aiDataAnalystNotesPromise = vectorResult.aiDataAnalystNotesPromise;
@@ -174,7 +178,16 @@ requestingUser, skipLoggingProgress) {
         for (const output of outputs) {
             await (0, remotes_1.putObject)(output.local, output.remote, logger, 1 / 30);
         }
-        await updateProgress("running", "ai cartographer");
+        const isVectorUpload = !isTif && ext !== ".nc";
+        if (enableAiDataAnalyst) {
+            await updateProgress("running", "ai cartographer");
+        }
+        else if (isVectorUpload) {
+            await updateProgress("running", "classifying pii");
+        }
+        else {
+            await updateProgress("running", "finalizing");
+        }
         const aiDataAnalystNotes = await aiDataAnalystNotesPromise;
         await updateProgress("running", "worker complete", 1);
         // Determine final url that should be assigned to mapbox-gl-style source

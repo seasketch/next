@@ -189,3 +189,52 @@ create or replace function declined_to_enable_ai_data_analyst()
 $$;
 
 grant execute on function declined_to_enable_ai_data_analyst() to seasketch_user;
+
+-- submit_data_upload: client supplies enable_ai_data_analyst (passed through to
+-- graphile processDataUpload payload; not read from user_profiles in the worker).
+drop function if exists public.submit_data_upload(uuid);
+
+create or replace function public.submit_data_upload(
+  id uuid,
+  enable_ai_data_analyst boolean default false
+) returns public.project_background_jobs
+    language plpgsql
+    security definer
+    as $$
+    declare
+      job project_background_jobs;
+      pid integer;
+    begin
+      select
+        project_id
+      into
+        pid
+      from
+        project_background_jobs
+      where
+        project_background_jobs.id = submit_data_upload.id;
+      if session_is_admin(pid) then
+        update
+          project_background_jobs
+        set
+          state = 'running',
+          progress_message = 'uploaded'
+        where
+          project_background_jobs.id = submit_data_upload.id
+        returning * into job;
+        perform graphile_worker.add_job(
+          'processDataUpload',
+          json_build_object(
+            'jobId', job.id,
+            'enableAiDataAnalyst', enable_ai_data_analyst
+          ),
+          max_attempts := 1
+        );
+        return job;
+      else
+        raise exception 'permission denied.';
+      end if;
+    end;
+$$;
+
+grant execute on function public.submit_data_upload(uuid, boolean) to seasketch_user;

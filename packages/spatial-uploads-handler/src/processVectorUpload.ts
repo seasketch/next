@@ -21,9 +21,9 @@ import {
 } from "ai-data-analyst";
 import {
   asNeverReject,
+  assertAiDataAnalystEnvVarsPresent,
   classifyGeostatsPii,
   composeAiDataAnalystNotesFromPromises,
-  isAiDataAnalystEnabled,
 } from "./aiUploadNotes";
 
 export default function fromMarkdown(md: string) {
@@ -134,6 +134,8 @@ export async function processVectorUpload(options: {
   originalName: string;
   /** Display filename (e.g. sanitized name + extension) for LLM context */
   uploadFilename: string;
+  /** When true, run title / attribution / column intelligence LLMs (requires CF_AIG_* env). */
+  enableAiDataAnalyst?: boolean;
 }): Promise<{
   layers: GeostatsLayer[];
   /** Resolve after local processing; caller should await after uploads so LLMs overlap I/O. */
@@ -149,12 +151,16 @@ export async function processVectorUpload(options: {
     jobId,
     originalName,
     uploadFilename,
+    enableAiDataAnalyst,
   } = options;
+  if (enableAiDataAnalyst) {
+    assertAiDataAnalystEnvVarsPresent();
+  }
   const originalFilePath = path;
   let workingFilePath = path;
   await updateProgress("running", "validating");
 
-  let titleP = isAiDataAnalystEnabled()
+  let titleP = enableAiDataAnalyst
     ? asNeverReject(generateTitle(uploadFilename), "generateTitle")
     : null;
   let attributionP: Promise<
@@ -342,7 +348,7 @@ export async function processVectorUpload(options: {
       `Structured metadata (JSON, from XML when present):\n${JSON.stringify(metadata)}`,
     );
   }
-  if (isAiDataAnalystEnabled() && attributionInputs.length > 0) {
+  if (enableAiDataAnalyst && attributionInputs.length > 0) {
     attributionP = asNeverReject(
       generateAttribution(attributionInputs),
       "generateAttribution",
@@ -416,24 +422,23 @@ export async function processVectorUpload(options: {
     stats[0].metadata = metadata;
   }
 
-  if (isAiDataAnalystEnabled()) {
-    console.log("ai enabled");
-    columnP = asNeverReject(
-      (async () => {
-        if (process.env.GEOSTATS_PII_CLASSIFIER_ARN) {
-          console.log("pii classifier arn is set");
-          // Full layer in → annotated layer out (classifier caps work internally).
-          // Column intelligence still runs pruneGeostats internally before the LLM.
-          const classified = await classifyGeostatsPii(stats[0]);
-          if (classified) {
-            stats[0] = classified;
-          }
-        }
-        console.log("running column intelligence");
-        return generateColumnIntelligence(uploadFilename, stats[0]);
-      })(),
-      "generateColumnIntelligence",
-    );
+  // PII runs in parallel with GeoJSON/tiling/uploads; handleUpload awaits the same
+  // promise after uploads. When AI is enabled, PII is chained before column intelligence.
+  let piiOnlyPromise: Promise<void> | null = null;
+  if (enableAiDataAnalyst) {
+    // PII must reject the job on failure (do not wrap in asNeverReject). Only column
+    // intelligence is best-effort; compose still runs after PII has updated stats[0].
+    columnP = (async () => {
+      stats[0] = await classifyGeostatsPii(stats[0]);
+      return asNeverReject(
+        generateColumnIntelligence(uploadFilename, stats[0]),
+        "generateColumnIntelligence",
+      );
+    })();
+  } else {
+    piiOnlyPromise = (async () => {
+      stats[0] = await classifyGeostatsPii(stats[0]);
+    })();
   }
   // Only convert to GeoJSON if the dataset is small. Otherwise we can convert
   // from the normalized fgb dynamically if someone wants to download it as
@@ -571,14 +576,14 @@ export async function processVectorUpload(options: {
     });
   }
 
-  const aiDataAnalystNotesPromise = isAiDataAnalystEnabled()
+  const aiDataAnalystNotesPromise = enableAiDataAnalyst
     ? composeAiDataAnalystNotesFromPromises({
         uploadFilename,
         titleP,
         attributionP,
         columnP,
       })
-    : Promise.resolve(undefined);
+    : piiOnlyPromise!.then(() => undefined);
 
   return {
     layers: stats,

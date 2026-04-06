@@ -49,5 +49,7 @@ slug: string,
 /**
  * For logging purposes only. In the form of "Full Name<email@example.com>"
  */
-requestingUser: string, skipLoggingProgress?: boolean): Promise<ProcessedUploadResponse>;
+requestingUser: string, skipLoggingProgress?: boolean, 
+/** When true, run column intelligence / title / attribution LLMs (requires CF_AIG_* env). */
+enableAiDataAnalyst?: boolean): Promise<ProcessedUploadResponse>;
 //# sourceMappingURL=handleUpload.d.ts.map

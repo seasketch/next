@@ -6,6 +6,7 @@ fragment UserProfileDetails on Profile {
   nickname
   picture
   enableAiDataAnalyst
+  wasPromptedToEnableAiDataAnalystAt
 }
 
 mutation UpdateProfile(

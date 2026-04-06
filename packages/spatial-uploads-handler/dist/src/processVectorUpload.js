@@ -94,11 +94,14 @@ async function collectAttributionSidecarContents(logger, workingDirectory, worki
  */
 async function processVectorUpload(options) {
     var _a;
-    const { logger, path, outputs, updateProgress, baseKey, workingDirectory, jobId, originalName, uploadFilename, } = options;
+    const { logger, path, outputs, updateProgress, baseKey, workingDirectory, jobId, originalName, uploadFilename, enableAiDataAnalyst, } = options;
+    if (enableAiDataAnalyst) {
+        (0, aiUploadNotes_1.assertAiDataAnalystEnvVarsPresent)();
+    }
     const originalFilePath = path;
     let workingFilePath = path;
     await updateProgress("running", "validating");
-    let titleP = (0, aiUploadNotes_1.isAiDataAnalystEnabled)()
+    let titleP = enableAiDataAnalyst
         ? (0, aiUploadNotes_1.asNeverReject)((0, ai_data_analyst_1.generateTitle)(uploadFilename), "generateTitle")
         : null;
     let attributionP = null;
@@ -246,7 +249,7 @@ async function processVectorUpload(options) {
     if (metadata && Object.keys(metadata).length > 0) {
         attributionInputs.push(`Structured metadata (JSON, from XML when present):\n${JSON.stringify(metadata)}`);
     }
-    if ((0, aiUploadNotes_1.isAiDataAnalystEnabled)() && attributionInputs.length > 0) {
+    if (enableAiDataAnalyst && attributionInputs.length > 0) {
         attributionP = (0, aiUploadNotes_1.asNeverReject)((0, ai_data_analyst_1.generateAttribution)(attributionInputs), "generateAttribution");
     }
     let isCorrectProjection = false;
@@ -306,21 +309,21 @@ async function processVectorUpload(options) {
     if (metadata) {
         stats[0].metadata = metadata;
     }
-    if ((0, aiUploadNotes_1.isAiDataAnalystEnabled)()) {
-        console.log("ai enabled");
-        columnP = (0, aiUploadNotes_1.asNeverReject)((async () => {
-            if (process.env.GEOSTATS_PII_CLASSIFIER_ARN) {
-                console.log("pii classifier arn is set");
-                // Full layer in → annotated layer out (classifier caps work internally).
-                // Column intelligence still runs pruneGeostats internally before the LLM.
-                const classified = await (0, aiUploadNotes_1.classifyGeostatsPii)(stats[0]);
-                if (classified) {
-                    stats[0] = classified;
-                }
-            }
-            console.log("running column intelligence");
-            return (0, ai_data_analyst_1.generateColumnIntelligence)(uploadFilename, stats[0]);
-        })(), "generateColumnIntelligence");
+    // PII runs in parallel with GeoJSON/tiling/uploads; handleUpload awaits the same
+    // promise after uploads. When AI is enabled, PII is chained before column intelligence.
+    let piiOnlyPromise = null;
+    if (enableAiDataAnalyst) {
+        // PII must reject the job on failure (do not wrap in asNeverReject). Only column
+        // intelligence is best-effort; compose still runs after PII has updated stats[0].
+        columnP = (async () => {
+            stats[0] = await (0, aiUploadNotes_1.classifyGeostatsPii)(stats[0]);
+            return (0, aiUploadNotes_1.asNeverReject)((0, ai_data_analyst_1.generateColumnIntelligence)(uploadFilename, stats[0]), "generateColumnIntelligence");
+        })();
+    }
+    else {
+        piiOnlyPromise = (async () => {
+            stats[0] = await (0, aiUploadNotes_1.classifyGeostatsPii)(stats[0]);
+        })();
     }
     // Only convert to GeoJSON if the dataset is small. Otherwise we can convert
     // from the normalized fgb dynamically if someone wants to download it as
@@ -435,14 +438,14 @@ async function processVectorUpload(options) {
             filename: `${jobId}.pmtiles`,
         });
     }
-    const aiDataAnalystNotesPromise = (0, aiUploadNotes_1.isAiDataAnalystEnabled)()
+    const aiDataAnalystNotesPromise = enableAiDataAnalyst
         ? (0, aiUploadNotes_1.composeAiDataAnalystNotesFromPromises)({
             uploadFilename,
             titleP,
             attributionP,
             columnP,
         })
-        : Promise.resolve(undefined);
+        : piiOnlyPromise.then(() => undefined);
     return {
         layers: stats,
         aiDataAnalystNotesPromise,

@@ -95,6 +95,8 @@ export default async function handleUpload(
    */
   requestingUser: string,
   skipLoggingProgress?: boolean,
+  /** When true, run column intelligence / title / attribution LLMs (requires CF_AIG_* env). */
+  enableAiDataAnalyst?: boolean,
 ): Promise<ProcessedUploadResponse> {
   if (DEBUG) {
     console.log("DEBUG MODE ENABLED");
@@ -196,6 +198,7 @@ export default async function handleUpload(
         originalName,
         uploadFilename,
         workingDirectory: dist,
+        enableAiDataAnalyst,
       });
       stats = rasterResult.rasterInfo;
       aiDataAnalystNotesPromise = rasterResult.aiDataAnalystNotesPromise;
@@ -210,6 +213,7 @@ export default async function handleUpload(
         originalName,
         uploadFilename,
         workingDirectory: dist,
+        enableAiDataAnalyst,
       });
       stats = vectorResult.layers;
       aiDataAnalystNotesPromise = vectorResult.aiDataAnalystNotesPromise;
@@ -241,7 +245,14 @@ export default async function handleUpload(
       await putObject(output.local, output.remote, logger, 1 / 30);
     }
 
-    await updateProgress("running", "ai cartographer");
+    const isVectorUpload = !isTif && ext !== ".nc";
+    if (enableAiDataAnalyst) {
+      await updateProgress("running", "ai cartographer");
+    } else if (isVectorUpload) {
+      await updateProgress("running", "classifying pii");
+    } else {
+      await updateProgress("running", "finalizing");
+    }
     const aiDataAnalystNotes = await aiDataAnalystNotesPromise;
 
     await updateProgress("running", "worker complete", 1);

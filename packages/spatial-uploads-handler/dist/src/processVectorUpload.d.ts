@@ -28,6 +28,8 @@ export declare function processVectorUpload(options: {
     originalName: string;
     /** Display filename (e.g. sanitized name + extension) for LLM context */
     uploadFilename: string;
+    /** When true, run title / attribution / column intelligence LLMs (requires CF_AIG_* env). */
+    enableAiDataAnalyst?: boolean;
 }): Promise<{
     layers: GeostatsLayer[];
     /** Resolve after local processing; caller should await after uploads so LLMs overlap I/O. */

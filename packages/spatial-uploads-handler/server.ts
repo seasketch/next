@@ -22,6 +22,7 @@ const server = createServer(function (req, res) {
             data.suffix,
             data.requestingUser,
             data.skipLoggingProgress,
+            data.enableAiDataAnalyst,
           );
           for (const layer of outputs.layers) {
             console.log(`outputted - ${layer.name} ${layer.url}`);
@@ -40,7 +41,7 @@ const server = createServer(function (req, res) {
             }),
           );
         } catch (e) {
-          res.setHeader("Content-Type", "application/json");
+          res.writeHead(500, { "Content-Type": "application/json" });
           res.end(
             JSON.stringify({
               error: (e as Error).message,

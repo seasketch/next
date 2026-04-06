@@ -39694,11 +39694,11 @@ REVOKE ALL ON FUNCTION public.subltree(public.ltree, integer, integer) FROM PUBL
 
 
 --
--- Name: FUNCTION submit_data_upload(id uuid); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION submit_data_upload(id uuid, enable_ai_data_analyst boolean); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.submit_data_upload(id uuid) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.submit_data_upload(id uuid) TO seasketch_user;
+REVOKE ALL ON FUNCTION public.submit_data_upload(uuid, boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.submit_data_upload(uuid, boolean) TO seasketch_user;
 
 
 --

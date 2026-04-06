@@ -20,6 +20,8 @@ export declare function processRasterUpload(options: {
     originalName: string;
     /** Display filename (e.g. sanitized name + extension) for LLM context */
     uploadFilename: string;
+    /** When true, run title / column intelligence LLMs (requires CF_AIG_* env). */
+    enableAiDataAnalyst?: boolean;
 }): Promise<{
     rasterInfo: RasterInfo;
     /** Resolve after local processing; caller should await after uploads so LLMs overlap I/O. */

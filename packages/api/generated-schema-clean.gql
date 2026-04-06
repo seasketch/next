@@ -16074,6 +16074,10 @@ input SubmitDataUploadInput {
   payload verbatim. May be used to track mutations by the client.
   """
   clientMutationId: String
+  """
+  When true, run AI Data Analyst LLM steps in the spatial upload handler. Sent by the client from cached profile; not inferred server-side from `user_profiles`.
+  """
+  enableAiDataAnalyst: Boolean
   id: UUID
 }
 

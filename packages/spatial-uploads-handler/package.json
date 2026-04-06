@@ -5,7 +5,7 @@
   "author": "Chad Burt <chad@underbluewaters.net>",
   "homepage": "https://github.com/seasketch/next#readme",
   "license": "BSD-3-Clause",
-  "main": "src/index.ts",
+  "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
   "directories": {
     "lib": "lib",

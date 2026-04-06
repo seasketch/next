@@ -9,6 +9,8 @@ import {
   DismissFailedJobDocument,
   DismissFailedJobInput,
   JobDetailsFragment,
+  MyProfileDocument,
+  MyProfileQuery,
   ProjectBackgroundJobDocument,
   ProjectBackgroundJobState,
   ProjectBackgroundJobSubscription,
@@ -141,6 +143,25 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
   destroy() {
     this.subscription.unsubscribe();
     this.removeAllListeners();
+  }
+
+  /**
+   * Whether AI Data Analyst should run for spatial uploads, from the client's
+   * `MyProfile` data (cache first, then network if missing). Not read on the server.
+   */
+  private async resolveEnableAiDataAnalyst(): Promise<boolean> {
+    try {
+      const data = this.client.readQuery<MyProfileQuery>({
+        query: MyProfileDocument,
+      });
+      return Boolean(data?.me?.profile?.enableAiDataAnalyst);
+    } catch {
+      const { data } = await this.client.query<MyProfileQuery>({
+        query: MyProfileDocument,
+        fetchPolicy: "network-only",
+      });
+      return Boolean(data?.me?.profile?.enableAiDataAnalyst);
+    }
   }
 
   addJobToQueryCache(task: JobDetailsFragment) {
@@ -295,6 +316,7 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
                   mutation: SubmitDataUploadDocument,
                   variables: {
                     jobId,
+                    enableAiDataAnalyst: await this.resolveEnableAiDataAnalyst(),
                   },
                 });
                 delete this.abortControllers[jobId];

@@ -215,6 +215,16 @@ export default function LayerSettings({
         <INaturalistLayerSettingsForm item={item} />
       )}
 
+      {source?.aiDataAnalystNote && (
+        <div className="mt-5">
+          <AICartographerNotesSummary
+            originalFilename={source.uploadedSourceFilename ?? undefined}
+            aiDataAnalystNote={source.aiDataAnalystNote}
+            geostats={source.geostats}
+          />
+        </div>
+      )}
+
       {item && (
         <div className="md:max-w-sm mt-5 relative">
           <div className="md:max-w-sm">
@@ -252,14 +262,6 @@ export default function LayerSettings({
               variables={{ id: item.id }}
             />
           </div>
-        </div>
-      )}
-
-      {source?.aiDataAnalystNote && (
-        <div className="mt-8 border-t border-gray-200 pt-6">
-          <AICartographerNotesSummary
-            aiDataAnalystNote={source.aiDataAnalystNote}
-          />
         </div>
       )}
     </div>

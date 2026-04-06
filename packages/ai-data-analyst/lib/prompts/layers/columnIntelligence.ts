@@ -37,6 +37,7 @@ Rules:
   - If there are recognizable colors specified in column values, try to identify the related categories and set a matching custom_palette. *Don't* categorize by color codes alone though.
   - Some attributes may have their 'values' omitted and instead carry 'piiRedacted: true' with a 'redactionReason'. This means the column contains personally identifiable information that has been withheld for privacy. Use the column name, type, count, and countDistinct for your recommendations but do not suggest these columns as label, category, or popup columns. Mark them as junk_columns.
   - Some columns will be redacted to avoid transmitting PII to 3rd party LLMs. Don't put them in junk_columns. You can use them for your recommendations if you want, but they will not include sample values.
+  - In your notes, don't call columns "junk". Be professional.
 `;
 
 export const columnIntelligenceParameters: OpenAIParameters = {

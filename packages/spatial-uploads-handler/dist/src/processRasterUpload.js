@@ -14,10 +14,13 @@ const gdal_async_1 = __importDefault(require("gdal-async"));
 const bbox_1 = __importDefault(require("@turf/bbox"));
 const netcdf_1 = require("./formats/netcdf");
 async function processRasterUpload(options) {
-    const { logger, outputs, updateProgress, baseKey, workingDirectory, jobId, originalName, uploadFilename, } = options;
+    const { logger, outputs, updateProgress, baseKey, workingDirectory, jobId, originalName, uploadFilename, enableAiDataAnalyst, } = options;
+    if (enableAiDataAnalyst) {
+        (0, aiUploadNotes_1.assertAiDataAnalystEnvVarsPresent)();
+    }
     await updateProgress("running", "validating");
     let path = options.path;
-    const titleP = (0, aiUploadNotes_1.isAiDataAnalystEnabled)()
+    const titleP = enableAiDataAnalyst
         ? (0, aiUploadNotes_1.asNeverReject)((0, ai_data_analyst_1.generateTitle)(uploadFilename), "generateTitle")
         : null;
     let columnP = null;
@@ -35,7 +38,7 @@ async function processRasterUpload(options) {
     await updateProgress("running", "analyzing");
     // Get raster stats
     const stats = await (0, rasterInfoForBands_1.rasterInfoForBands)(path);
-    if ((0, aiUploadNotes_1.isAiDataAnalystEnabled)()) {
+    if (enableAiDataAnalyst) {
         columnP = (0, aiUploadNotes_1.asNeverReject)((0, ai_data_analyst_1.generateColumnIntelligence)(uploadFilename, stats), "generateColumnIntelligence");
     }
     const size = (0, fs_1.statSync)(path).size;
@@ -110,7 +113,7 @@ async function processRasterUpload(options) {
         url: `${process.env.TILES_BASE_URL}/${baseKey}/${jobId}.pmtiles`,
         filename: `${jobId}.pmtiles`,
     });
-    const aiDataAnalystNotesPromise = (0, aiUploadNotes_1.isAiDataAnalystEnabled)()
+    const aiDataAnalystNotesPromise = enableAiDataAnalyst
         ? (0, aiUploadNotes_1.composeAiDataAnalystNotesFromPromises)({
             uploadFilename,
             titleP,

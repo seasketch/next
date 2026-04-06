@@ -4,6 +4,7 @@ export interface SpatialUploadsHandlerRequest {
     suffix: string;
     skipLoggingProgress?: boolean;
     requestingUser: string;
+    enableAiDataAnalyst?: boolean;
 }
 export declare const processUpload: (event: SpatialUploadsHandlerRequest) => Promise<{
     log: string;

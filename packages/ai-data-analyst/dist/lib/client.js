@@ -34,9 +34,6 @@ function getClient() {
             apiKey: process.env.CF_AIG_TOKEN,
             baseURL: process.env.CF_AIG_URL,
             maxRetries: 0,
-            // defaultHeaders: {
-            //   "cf-aig-authorization": `Bearer ${process.env.CF_AIG_TOKEN}`,
-            // },
         });
     }
     return client;

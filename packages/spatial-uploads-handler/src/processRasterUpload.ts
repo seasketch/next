@@ -15,8 +15,8 @@ import {
 } from "ai-data-analyst";
 import {
   asNeverReject,
+  assertAiDataAnalystEnvVarsPresent,
   composeAiDataAnalystNotesFromPromises,
-  isAiDataAnalystEnabled,
 } from "./aiUploadNotes";
 import gdal from "gdal-async";
 import bbox from "@turf/bbox";
@@ -39,6 +39,8 @@ export async function processRasterUpload(options: {
   originalName: string;
   /** Display filename (e.g. sanitized name + extension) for LLM context */
   uploadFilename: string;
+  /** When true, run title / column intelligence LLMs (requires CF_AIG_* env). */
+  enableAiDataAnalyst?: boolean;
 }): Promise<{
   rasterInfo: RasterInfo;
   /** Resolve after local processing; caller should await after uploads so LLMs overlap I/O. */
@@ -53,11 +55,15 @@ export async function processRasterUpload(options: {
     jobId,
     originalName,
     uploadFilename,
+    enableAiDataAnalyst,
   } = options;
+  if (enableAiDataAnalyst) {
+    assertAiDataAnalystEnvVarsPresent();
+  }
   await updateProgress("running", "validating");
   let path = options.path;
 
-  const titleP = isAiDataAnalystEnabled()
+  const titleP = enableAiDataAnalyst
     ? asNeverReject(generateTitle(uploadFilename), "generateTitle")
     : null;
   let columnP: Promise<
@@ -84,7 +90,7 @@ export async function processRasterUpload(options: {
   // Get raster stats
   const stats = await rasterInfoForBands(path);
 
-  if (isAiDataAnalystEnabled()) {
+  if (enableAiDataAnalyst) {
     columnP = asNeverReject(
       generateColumnIntelligence(uploadFilename, stats),
       "generateColumnIntelligence",
@@ -198,7 +204,7 @@ export async function processRasterUpload(options: {
     filename: `${jobId}.pmtiles`,
   });
 
-  const aiDataAnalystNotesPromise = isAiDataAnalystEnabled()
+  const aiDataAnalystNotesPromise = enableAiDataAnalyst
     ? composeAiDataAnalystNotesFromPromises({
         uploadFilename,
         titleP,

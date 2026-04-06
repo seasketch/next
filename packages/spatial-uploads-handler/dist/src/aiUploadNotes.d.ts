@@ -1,6 +1,13 @@
 import type { AiDataAnalystNotes, GenerateAttributionResult, GenerateColumnIntelligenceResult, GenerateTitleResult } from "ai-data-analyst";
 import type { GeostatsLayer } from "@seasketch/geostats-types";
+/**
+ * @deprecated Prefer gating on the upload request's `enableAiDataAnalyst` flag plus
+ * {@link assertAiDataAnalystEnvVarsPresent}. Kept for callers that only need to know whether
+ * Cloudflare AI Gateway env is present.
+ */
 export declare function isAiDataAnalystEnabled(): boolean;
+/** Throws if AI Data Analyst LLM features were requested but Cloudflare AI Gateway env is incomplete. */
+export declare function assertAiDataAnalystEnvVarsPresent(): void;
 /**
  * Invoke the geostats-pii-risk-classifier Lambda synchronously.
  *
@@ -10,11 +17,11 @@ export declare function isAiDataAnalystEnabled(): boolean;
  * optionally `piiRiskCategories`; high-cardinality columns may have shuffled
  * `values` key order) and `piiRiskWasAssessed: true`.
  *
- * Returns `null` on any failure (fail-open: caller proceeds without changes).
+ * Throws on any failure (missing env, Lambda error, invalid payload).
  *
- * GEOSTATS_PII_CLASSIFIER_ARN must be set before calling this function.
+ * GEOSTATS_PII_CLASSIFIER_ARN must be set.
  */
-export declare function classifyGeostatsPii(geostats: GeostatsLayer): Promise<GeostatsLayer | null>;
+export declare function classifyGeostatsPii(geostats: GeostatsLayer): Promise<GeostatsLayer>;
 type TitleOutcome = GenerateTitleResult | {
     error: string;
 };
