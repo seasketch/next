@@ -123,6 +123,7 @@ create table ai_data_analyst_notes (
   value_steps_n integer,
   reverse_palette boolean not null default false,
   errors text,
+  pii_redacted_columns text[] not null default array[]::text[],
   constraint ai_data_analyst_notes_one_per_data_source unique (data_source_id)
 );
 
@@ -142,3 +143,49 @@ create policy ai_data_analyst_notes_admin on ai_data_analyst_notes for all to po
 -- update updated_at timestamp on insert/update
 create trigger update_updated_at before update on ai_data_analyst_notes for each row execute function trigger_set_timestamp();
 
+
+alter table user_profiles add column if not exists enable_ai_data_analyst boolean not null default false;
+
+alter table user_profiles add column if not exists ai_data_analyst_enabled_at timestamptz;
+
+drop function if exists update_ai_data_analyst_settings;
+create or replace function update_ai_data_analyst_settings(enable_ai boolean)
+  returns boolean
+  language plpgsql
+  security definer
+  as $$
+  begin
+    -- if not logged in, throw an error
+    if current_setting('session.user_id', true)::int is null then
+      raise exception 'Not logged in';
+    end if;
+    -- update enabled state
+    update user_profiles set enable_ai_data_analyst = enable_ai where user_id = current_setting('session.user_id', true)::int;
+    -- update enabled_at timestamp, if enabling
+    if enable_ai then
+      update user_profiles set ai_data_analyst_enabled_at = now() where user_id = current_setting('session.user_id', true)::int;
+    end if;
+    update user_profiles set was_prompted_to_enable_ai_data_analyst_at = coalesce(was_prompted_to_enable_ai_data_analyst_at, now()) where user_id = current_setting('session.user_id', true)::int;
+    return true;
+  end;
+$$;
+
+grant execute on function update_ai_data_analyst_settings(boolean) to seasketch_user;
+
+alter table user_profiles add column if not exists was_prompted_to_enable_ai_data_analyst_at timestamptz;
+
+create or replace function declined_to_enable_ai_data_analyst()
+  returns boolean
+  language plpgsql
+  security definer
+  as $$
+  begin
+    if current_setting('session.user_id', true)::int is null then
+      raise exception 'Not logged in';
+    end if;
+    update user_profiles set was_prompted_to_enable_ai_data_analyst_at = now() where user_id = current_setting('session.user_id', true)::int;
+    return true;
+  end;
+$$;
+
+grant execute on function declined_to_enable_ai_data_analyst() to seasketch_user;

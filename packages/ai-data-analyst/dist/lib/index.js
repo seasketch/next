@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.effectiveReverseNamedPalette = exports.isPIIRedactedAttribute = exports.deriveValueSteps = exports.pruneGeostats = exports.generateTitle = exports.generateColumnIntelligence = exports.generateAttribution = exports.titleParameters = exports.titlePrompt = exports.columnIntelligenceParameters = exports.columnIntelligencePrompt = exports.attributionParameters = exports.attributionPrompt = exports.titleFormattingValidator = exports.titleFormattingSchema = exports.columnIntelligenceValidator = exports.columnIntelligenceSchema = exports.attributionFormattingValidator = exports.attributionFormattingSchema = void 0;
+exports.effectiveReverseNamedPalette = exports.isPIIRedactedAttribute = exports.deriveValueSteps = exports.getPiiRedactedColumnNames = exports.pruneGeostats = exports.generateTitle = exports.generateColumnIntelligence = exports.generateAttribution = exports.titleParameters = exports.titlePrompt = exports.columnIntelligenceParameters = exports.columnIntelligencePrompt = exports.attributionParameters = exports.attributionPrompt = exports.titleFormattingValidator = exports.titleFormattingSchema = exports.columnIntelligenceValidator = exports.columnIntelligenceSchema = exports.attributionFormattingValidator = exports.attributionFormattingSchema = void 0;
 var attribution_1 = require("./prompts/layers/attribution");
 Object.defineProperty(exports, "attributionFormattingSchema", { enumerable: true, get: function () { return attribution_1.attributionFormattingSchema; } });
 Object.defineProperty(exports, "attributionFormattingValidator", { enumerable: true, get: function () { return attribution_1.attributionFormattingValidator; } });
@@ -25,6 +25,7 @@ Object.defineProperty(exports, "generateColumnIntelligence", { enumerable: true,
 Object.defineProperty(exports, "generateTitle", { enumerable: true, get: function () { return client_1.generateTitle; } });
 var shrinkGeostats_1 = require("./geostats/shrinkGeostats");
 Object.defineProperty(exports, "pruneGeostats", { enumerable: true, get: function () { return shrinkGeostats_1.pruneGeostats; } });
+Object.defineProperty(exports, "getPiiRedactedColumnNames", { enumerable: true, get: function () { return shrinkGeostats_1.getPiiRedactedColumnNames; } });
 var valueSteps_1 = require("./geostats/valueSteps");
 Object.defineProperty(exports, "deriveValueSteps", { enumerable: true, get: function () { return valueSteps_1.deriveValueSteps; } });
 var piiTypes_1 = require("./geostats/piiTypes");

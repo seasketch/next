@@ -20,7 +20,10 @@ import {
   titleParameters,
   titlePrompt,
 } from "./prompts/layers/title";
-import { pruneGeostats } from "./geostats/shrinkGeostats";
+import {
+  getPiiRedactedColumnNames,
+  pruneGeostats,
+} from "./geostats/shrinkGeostats";
 import { deriveValueSteps, type RasterValueSteps } from "./geostats/valueSteps";
 
 let client: OpenAI | null = null;
@@ -210,6 +213,8 @@ export type ColumnIntelligence = {
   notes: string;
   value_steps?: RasterValueSteps;
   value_steps_n?: number;
+  /** Attribute names whose value histograms were not sent to the model (PII redaction). */
+  pii_redacted_columns?: string[];
 };
 
 function parsedColumnIntelligenceFromAssistantMessage(
@@ -330,6 +335,7 @@ export async function generateColumnIntelligence(
   return {
     result: {
       ...parsed.result,
+      pii_redacted_columns: getPiiRedactedColumnNames(geostats),
       ...(valueSteps
         ? {
             value_steps: valueSteps.value_steps,

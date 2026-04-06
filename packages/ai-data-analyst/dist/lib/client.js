@@ -191,7 +191,7 @@ function generateColumnIntelligence(filename, geostats) {
             ? (0, valueSteps_1.deriveValueSteps)(geostats, (_b = parsed.result.chosen_presentation_column) !== null && _b !== void 0 ? _b : undefined)
             : undefined;
         return {
-            result: Object.assign(Object.assign({}, parsed.result), (valueSteps
+            result: Object.assign(Object.assign(Object.assign({}, parsed.result), { pii_redacted_columns: (0, shrinkGeostats_1.getPiiRedactedColumnNames)(geostats) }), (valueSteps
                 ? {
                     value_steps: valueSteps.value_steps,
                     value_steps_n: valueSteps.value_steps_n,

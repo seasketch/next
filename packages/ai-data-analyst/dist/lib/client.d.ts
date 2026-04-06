@@ -21,6 +21,8 @@ export type ColumnIntelligence = {
     notes: string;
     value_steps?: RasterValueSteps;
     value_steps_n?: number;
+    /** Attribute names whose value histograms were not sent to the model (PII redaction). */
+    pii_redacted_columns?: string[];
 };
 export type GenerateTitleResult = {
     title: string;

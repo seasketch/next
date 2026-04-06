@@ -263,6 +263,7 @@ export type AiDataAnalystNote = Node & {
   nodeId: Scalars['ID'];
   notes: Scalars['String'];
   palette?: Maybe<Scalars['String']>;
+  piiRedactedColumns: Array<Maybe<Scalars['String']>>;
   projectId: Scalars['Int'];
   reversePalette: Scalars['Boolean'];
   showLabels: Scalars['Boolean'];
@@ -3577,6 +3578,28 @@ export enum DataUploadTasksOrderBy {
 }
 
 
+
+/** All input for the `declinedToEnableAiDataAnalyst` mutation. */
+export type DeclinedToEnableAiDataAnalystInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `declinedToEnableAiDataAnalyst` mutation. */
+export type DeclinedToEnableAiDataAnalystPayload = {
+  __typename?: 'DeclinedToEnableAiDataAnalystPayload';
+  boolean?: Maybe<Scalars['Boolean']>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
 
 /** All input for the `deleteArchivedSource` mutation. */
 export type DeleteArchivedSourceInput = {
@@ -7903,6 +7926,7 @@ export type Mutation = {
   createTableOfContentsItem?: Maybe<CreateTableOfContentsItemPayload>;
   createTopic: Topic;
   createVisibilityLogicRule?: Maybe<CreateVisibilityLogicRulePayload>;
+  declinedToEnableAiDataAnalyst?: Maybe<DeclinedToEnableAiDataAnalystPayload>;
   deleteArchivedSource?: Maybe<DeleteArchivedSourcePayload>;
   /** Deletes a single `Basemap` using a unique key. */
   deleteBasemap?: Maybe<DeleteBasemapPayload>;
@@ -8228,6 +8252,7 @@ export type Mutation = {
   updateAclBySketchClassId?: Maybe<UpdateAclPayload>;
   /** Updates a single `Acl` using a unique key and a patch. */
   updateAclByTableOfContentsItemId?: Maybe<UpdateAclPayload>;
+  updateAiDataAnalystSettings?: Maybe<UpdateAiDataAnalystSettingsPayload>;
   /** Updates a single `Basemap` using a unique key and a patch. */
   updateBasemap?: Maybe<UpdateBasemapPayload>;
   /** Updates a single `Basemap` using its globally unique id and a patch. */
@@ -8810,6 +8835,12 @@ export type MutationCreateTopicArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateVisibilityLogicRuleArgs = {
   input: CreateVisibilityLogicRuleInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeclinedToEnableAiDataAnalystArgs = {
+  input: DeclinedToEnableAiDataAnalystInput;
 };
 
 
@@ -9706,6 +9737,12 @@ export type MutationUpdateAclBySketchClassIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateAclByTableOfContentsItemIdArgs = {
   input: UpdateAclByTableOfContentsItemIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateAiDataAnalystSettingsArgs = {
+  input: UpdateAiDataAnalystSettingsInput;
 };
 
 
@@ -10724,23 +10761,29 @@ export type PresignedUrl = {
 export type Profile = {
   __typename?: 'Profile';
   affiliations?: Maybe<Scalars['String']>;
+  aiDataAnalystEnabledAt?: Maybe<Scalars['Datetime']>;
   email?: Maybe<Scalars['Email']>;
+  enableAiDataAnalyst: Scalars['Boolean'];
   fullname?: Maybe<Scalars['String']>;
   nickname?: Maybe<Scalars['String']>;
   picture?: Maybe<Scalars['String']>;
   /** Reads a single `User` that is related to this `Profile`. */
   user?: Maybe<User>;
   userId: Scalars['Int'];
+  wasPromptedToEnableAiDataAnalystAt?: Maybe<Scalars['Datetime']>;
 };
 
 /** Represents an update to a `Profile`. Fields that are set will be updated. */
 export type ProfilePatch = {
   affiliations?: Maybe<Scalars['String']>;
+  aiDataAnalystEnabledAt?: Maybe<Scalars['Datetime']>;
   email?: Maybe<Scalars['Email']>;
+  enableAiDataAnalyst?: Maybe<Scalars['Boolean']>;
   fullname?: Maybe<Scalars['String']>;
   nickname?: Maybe<Scalars['String']>;
   picture?: Maybe<Scalars['Upload']>;
   userId?: Maybe<Scalars['Int']>;
+  wasPromptedToEnableAiDataAnalystAt?: Maybe<Scalars['Datetime']>;
 };
 
 /** A connection to a list of `Profile` values. */
@@ -16555,6 +16598,29 @@ export type UpdateAclPayload = {
   sketchClass?: Maybe<SketchClass>;
   /** Reads a single `TableOfContentsItem` that is related to this `Acl`. */
   tableOfContentsItem?: Maybe<TableOfContentsItem>;
+};
+
+/** All input for the `updateAiDataAnalystSettings` mutation. */
+export type UpdateAiDataAnalystSettingsInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  enableAi?: Maybe<Scalars['Boolean']>;
+};
+
+/** The output of our `updateAiDataAnalystSettings` mutation. */
+export type UpdateAiDataAnalystSettingsPayload = {
+  __typename?: 'UpdateAiDataAnalystSettingsPayload';
+  boolean?: Maybe<Scalars['Boolean']>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
 };
 
 /** All input for the `updateBasemapByNodeId` mutation. */
@@ -25807,7 +25873,7 @@ export type DenyAccessRequestMutation = (
 
 export type UserProfileDetailsFragment = (
   { __typename?: 'Profile' }
-  & Pick<Profile, 'userId' | 'fullname' | 'affiliations' | 'email' | 'nickname' | 'picture'>
+  & Pick<Profile, 'userId' | 'fullname' | 'affiliations' | 'email' | 'nickname' | 'picture' | 'enableAiDataAnalyst'>
 );
 
 export type UpdateProfileMutationVariables = Exact<{
@@ -25851,6 +25917,30 @@ export type MyProfileQuery = (
       { __typename?: 'Profile' }
       & UserProfileDetailsFragment
     )> }
+  )> }
+);
+
+export type UpdateAiDataAnalystSettingsMutationVariables = Exact<{
+  enableAi: Scalars['Boolean'];
+}>;
+
+
+export type UpdateAiDataAnalystSettingsMutation = (
+  { __typename?: 'Mutation' }
+  & { updateAiDataAnalystSettings?: Maybe<(
+    { __typename?: 'UpdateAiDataAnalystSettingsPayload' }
+    & Pick<UpdateAiDataAnalystSettingsPayload, 'boolean'>
+  )> }
+);
+
+export type DeclinedToEnableAiDataAnalystMutationVariables = Exact<{ [key: string]: never; }>;
+
+
+export type DeclinedToEnableAiDataAnalystMutation = (
+  { __typename?: 'Mutation' }
+  & { declinedToEnableAiDataAnalyst?: Maybe<(
+    { __typename?: 'DeclinedToEnableAiDataAnalystPayload' }
+    & Pick<DeclinedToEnableAiDataAnalystPayload, 'boolean'>
   )> }
 );
 
@@ -27042,6 +27132,7 @@ export const UserProfileDetailsFragmentDoc = /*#__PURE__*/ gql`
   email
   nickname
   picture
+  enableAiDataAnalyst
 }
     `;
 export const ClippingDataSourceDetailsFragmentDoc = /*#__PURE__*/ gql`
@@ -32247,6 +32338,20 @@ export const MyProfileDocument = /*#__PURE__*/ gql`
   }
 }
     ${UserProfileDetailsFragmentDoc}`;
+export const UpdateAiDataAnalystSettingsDocument = /*#__PURE__*/ gql`
+    mutation UpdateAiDataAnalystSettings($enableAi: Boolean!) {
+  updateAiDataAnalystSettings(input: {enableAi: $enableAi}) {
+    boolean
+  }
+}
+    `;
+export const DeclinedToEnableAiDataAnalystDocument = /*#__PURE__*/ gql`
+    mutation DeclinedToEnableAiDataAnalyst {
+  declinedToEnableAiDataAnalyst(input: {}) {
+    boolean
+  }
+}
+    `;
 export const UserIsSuperuserDocument = /*#__PURE__*/ gql`
     query UserIsSuperuser {
   currentUserIsSuperuser
@@ -32562,7 +32667,9 @@ export const namedOperations = {
     SendInvites: 'SendInvites',
     ApproveAccessRequest: 'ApproveAccessRequest',
     DenyAccessRequest: 'DenyAccessRequest',
-    UpdateProfile: 'UpdateProfile'
+    UpdateProfile: 'UpdateProfile',
+    UpdateAiDataAnalystSettings: 'UpdateAiDataAnalystSettings',
+    DeclinedToEnableAiDataAnalyst: 'DeclinedToEnableAiDataAnalyst'
   },
   Subscription: {
     ProjectBackgroundJob: 'ProjectBackgroundJob',

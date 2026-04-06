@@ -22,6 +22,12 @@ type RasterLike = {
  */
 export declare const PII_REDACTION_THRESHOLD = 0.35;
 /**
+ * Attribute names whose `values` map was omitted from the LLM payload because
+ * `piiRisk` met {@link PII_REDACTION_THRESHOLD} (same logic as {@link pruneGeostats}).
+ * Rasters and unknown shapes yield an empty list.
+ */
+export declare function getPiiRedactedColumnNames(geostats: unknown): string[];
+/**
  * Reduce geostats payload size while preserving fields needed for
  * column-intelligence decisions.
  */

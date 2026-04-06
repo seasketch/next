@@ -243,6 +243,7 @@ type AiDataAnalystNote implements Node {
   nodeId: ID!
   notes: String!
   palette: String
+  piiRedactedColumns: [String]!
   projectId: Int!
   reversePalette: Boolean!
   showLabels: Boolean!
@@ -4187,6 +4188,31 @@ A point in time as described by the [ISO
 8601](https://en.wikipedia.org/wiki/ISO_8601) standard. May or may not include a timezone.
 """
 scalar Datetime
+
+"""All input for the `declinedToEnableAiDataAnalyst` mutation."""
+input DeclinedToEnableAiDataAnalystInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+}
+
+"""The output of our `declinedToEnableAiDataAnalyst` mutation."""
+type DeclinedToEnableAiDataAnalystPayload {
+  boolean: Boolean
+
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
 
 """All input for the `deleteArchivedSource` mutation."""
 input DeleteArchivedSourceInput {
@@ -9456,6 +9482,12 @@ type Mutation {
     """
     input: CreateVisibilityLogicRuleInput!
   ): CreateVisibilityLogicRulePayload
+  declinedToEnableAiDataAnalyst(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeclinedToEnableAiDataAnalystInput!
+  ): DeclinedToEnableAiDataAnalystPayload
   deleteArchivedSource(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -10607,6 +10639,12 @@ type Mutation {
     """
     input: UpdateAclByTableOfContentsItemIdInput!
   ): UpdateAclPayload
+  updateAiDataAnalystSettings(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateAiDataAnalystSettingsInput!
+  ): UpdateAiDataAnalystSettingsPayload
 
   """Updates a single `Basemap` using a unique key and a patch."""
   updateBasemap(
@@ -11893,7 +11931,9 @@ means of listing out all profiles in bulk.
 """
 type Profile {
   affiliations: String
+  aiDataAnalystEnabledAt: Datetime
   email: Email
+  enableAiDataAnalyst: Boolean!
   fullname: String
   nickname: String
   picture: String
@@ -11901,6 +11941,7 @@ type Profile {
   """Reads a single `User` that is related to this `Profile`."""
   user: User
   userId: Int!
+  wasPromptedToEnableAiDataAnalystAt: Datetime
 }
 
 """
@@ -11908,11 +11949,14 @@ Represents an update to a `Profile`. Fields that are set will be updated.
 """
 input ProfilePatch {
   affiliations: String
+  aiDataAnalystEnabledAt: Datetime
   email: Email
+  enableAiDataAnalyst: Boolean
   fullname: String
   nickname: String
   picture: Upload
   userId: Int
+  wasPromptedToEnableAiDataAnalystAt: Datetime
 }
 
 """A connection to a list of `Profile` values."""
@@ -18076,6 +18120,32 @@ type UpdateAclPayload {
 
   """Reads a single `TableOfContentsItem` that is related to this `Acl`."""
   tableOfContentsItem: TableOfContentsItem
+}
+
+"""All input for the `updateAiDataAnalystSettings` mutation."""
+input UpdateAiDataAnalystSettingsInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  enableAi: Boolean
+}
+
+"""The output of our `updateAiDataAnalystSettings` mutation."""
+type UpdateAiDataAnalystSettingsPayload {
+  boolean: Boolean
+
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
 }
 
 """All input for the `updateBasemapByNodeId` mutation."""

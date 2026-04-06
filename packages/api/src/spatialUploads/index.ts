@@ -263,9 +263,10 @@ export async function createDBRecordsForProcessedLayer(
         value_steps,
         value_steps_n,
         reverse_palette,
-        errors
+        errors,
+        pii_redacted_columns
       ) values (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25
       )
       on conflict (data_source_id) do update set
         notes = excluded.notes,
@@ -290,6 +291,7 @@ export async function createDBRecordsForProcessedLayer(
         value_steps_n = excluded.value_steps_n,
         reverse_palette = excluded.reverse_palette,
         errors = excluded.errors,
+        pii_redacted_columns = excluded.pii_redacted_columns,
         updated_at = now()
     `,
         [
@@ -317,6 +319,7 @@ export async function createDBRecordsForProcessedLayer(
           aiNotes.value_steps_n ?? null,
           effectiveReverseNamedPalette(aiNotes),
           aiNotes.errors ?? null,
+          aiNotes.pii_redacted_columns ?? [],
         ],
       );
     } catch (error) {

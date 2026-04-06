@@ -34,7 +34,10 @@ export type {
   GenerateAttributionResult,
   GenerateColumnIntelligenceResult,
 } from "./client";
-export { pruneGeostats } from "./geostats/shrinkGeostats";
+export {
+  pruneGeostats,
+  getPiiRedactedColumnNames,
+} from "./geostats/shrinkGeostats";
 export type { RasterValueSteps, ValueSteps } from "./geostats/valueSteps";
 export { deriveValueSteps } from "./geostats/valueSteps";
 export type {

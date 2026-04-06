@@ -193,5 +193,6 @@ export const columnIntelligenceValidator = (data: any) => {
   delete d.value_steps_n;
   delete d.raster_steps;
   delete d.raster_steps_n;
+  delete d.pii_redacted_columns;
   return validator(d);
 };

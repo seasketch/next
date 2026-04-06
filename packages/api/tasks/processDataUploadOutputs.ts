@@ -5,6 +5,10 @@ import { ProcessedUploadResponse } from "spatial-uploads-handler/dist/src/handle
 /**
  * graphile-worker task which processes outputs from the spatial-uploads-handler
  * lambda. This task is triggered by the spatial-uploads-handler lambda itself.
+ *
+ * AI notes (including `pii_redacted_columns` when column value histograms were
+ * omitted for the LLM) are persisted in `createDBRecordsForProcessedLayer`.
+ *
  * @param payload
  * @param helpers
  */

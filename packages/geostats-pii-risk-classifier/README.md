@@ -50,11 +50,11 @@ The PII classifier is opt-in at runtime: the upload handler only calls it when `
 
 ### Warm (`{ "warm": true }`)
 
-The API invokes this Lambda asynchronously with `{"warm": true}` when a user starts a spatial data upload (`createDataUpload`), so Presidio and spaCy load before the upload completes. Response: `{ "warm": true, "ok": true }`.
+To reduce the impact of relatively slow cold-starts, a payload of `{"warm": true}` can be sent from the SeaSketch API server as soon as the intent of data layer upload is detected. Users request an s3 upload token before sending the file, which gives ample time to start the lambda while the client is uploading.
 
 ### Response shape (persisting / backfill)
 
-The Lambda returns a complete `GeostatsLayer` JSON object under `geostats`, not a delta—persist it as the layer you store. The **upload** pipeline sends the full computed geostats; the classifier limits how many distinct values it *scores* per column internally (`MAX_VALUES_PER_ATTRIBUTE` in `handler.py`).
+The Lambda returns a complete `GeostatsLayer` JSON object under `geostats`, not a delta—persist it as the layer you store. The **upload** pipeline sends the full computed geostats; the classifier limits how many distinct values it _scores_ per column internally (`MAX_VALUES_PER_ATTRIBUTE` in `handler.py`).
 
 ### Enabling from the API server (`packages/api`)
 
@@ -73,10 +73,10 @@ The ARN is printed by `cdk deploy SeaSketchGeostatsPiiClassifier` and is also vi
 
 All thresholds are named constants at the top of `handler.py`. The most useful ones:
 
-| Constant | Default | Effect |
-|---|---|---|
-| `PATTERN_MIN_HITS` | `2` | Minimum number of pattern-matched values before pattern risk is non-zero |
-| `NAME_RISK_MIN_PER_RATE` | `0.30` | Minimum fraction of values containing a PERSON entity before name risk is non-zero |
-| `ANCHOR_EMAIL_MIN_RISK` | `0.40` | Minimum email `piiRisk` before a column can act as an anchor for cross-column boost |
-| `ENABLE_CROSS_COLUMN_ANCHOR_BOOST` | `True` | Toggle the two-pass email-anchor boost |
-| `MAX_VALUES_PER_ATTRIBUTE` | `100` | Maximum number of distinct non-blank values analyzed per column |
+| Constant                           | Default | Effect                                                                              |
+| ---------------------------------- | ------- | ----------------------------------------------------------------------------------- |
+| `PATTERN_MIN_HITS`                 | `2`     | Minimum number of pattern-matched values before pattern risk is non-zero            |
+| `NAME_RISK_MIN_PER_RATE`           | `0.30`  | Minimum fraction of values containing a PERSON entity before name risk is non-zero  |
+| `ANCHOR_EMAIL_MIN_RISK`            | `0.40`  | Minimum email `piiRisk` before a column can act as an anchor for cross-column boost |
+| `ENABLE_CROSS_COLUMN_ANCHOR_BOOST` | `True`  | Toggle the two-pass email-anchor boost                                              |
+| `MAX_VALUES_PER_ATTRIBUTE`         | `100`   | Maximum number of distinct non-blank values analyzed per column                     |

@@ -55,6 +55,7 @@ import AddMVTUrlModal from "../AddMVTUrlModal";
 import AddRemoteGeoJSONModal from "./AddRemoteGeoJSONModal";
 import QuotaUsageDetails from "./QuotaUsageDetails";
 import DataHostingRetentionPeriodModal from "./DataHostingRetentionPeriodModal";
+import AiDataAnalystProfileSettingsModal from "./AiDataAnalystProfileSettingsModal";
 import useProjectId from "../../useProjectId";
 import withScrolling, {
   createVerticalStrength,
@@ -613,6 +614,8 @@ function Header({
   const [dataHostingRetentionModalOpen, setDataHostingRetentionModalOpen] =
     useState(false);
   const [dataDownloadSettingOpen, setDataDownloadSettingOpen] = useState(false);
+  const [aiDataAnalystSettingsOpen, setAiDataAnalystSettingsOpen] =
+    useState(false);
   const onError = useGlobalErrorHandler();
   const [enableDownload] = useEnableDownloadForEligibleLayersMutation({
     variables: {
@@ -806,6 +809,11 @@ function Header({
                 >
                   <Trans ns="admin:data">Archived Layer Retention...</Trans>
                 </MenuBarItem>
+                <MenuBarItem
+                  onClick={() => setAiDataAnalystSettingsOpen(true)}
+                >
+                  <Trans ns="admin:data">AI-assisted data analysis...</Trans>
+                </MenuBarItem>
               </Menubar.MenubarGroup>
             </MenuBarContent>
           </Menubar.Portal>
@@ -866,6 +874,11 @@ function Header({
         <DataHostingRetentionPeriodModal
           projectId={projectId}
           onRequestClose={() => setDataHostingRetentionModalOpen(false)}
+        />
+      )}
+      {aiDataAnalystSettingsOpen && (
+        <AiDataAnalystProfileSettingsModal
+          onRequestClose={() => setAiDataAnalystSettingsOpen(false)}
         />
       )}
       {mvtUrlModalOpen && (

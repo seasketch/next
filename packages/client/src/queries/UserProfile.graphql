@@ -5,6 +5,7 @@ fragment UserProfileDetails on Profile {
   email
   nickname
   picture
+  enableAiDataAnalyst
 }
 
 mutation UpdateProfile(
@@ -45,5 +46,17 @@ query MyProfile {
     profile {
       ...UserProfileDetails
     }
+  }
+}
+
+mutation UpdateAiDataAnalystSettings($enableAi: Boolean!) {
+  updateAiDataAnalystSettings(input: { enableAi: $enableAi }) {
+    boolean
+  }
+}
+
+mutation DeclinedToEnableAiDataAnalyst {
+  declinedToEnableAiDataAnalyst(input: {}) {
+    boolean
   }
 }

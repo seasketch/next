@@ -15,7 +15,11 @@ import type {
   PrunedGeostatsAttribute,
 } from "../lib/geostats/piiTypes";
 import { isPIIRedactedAttribute } from "../lib/geostats/piiTypes";
-import { pruneGeostats, PII_REDACTION_THRESHOLD } from "../lib/geostats/shrinkGeostats";
+import {
+  pruneGeostats,
+  getPiiRedactedColumnNames,
+  PII_REDACTION_THRESHOLD,
+} from "../lib/geostats/shrinkGeostats";
 
 // ---------------------------------------------------------------------------
 // Fixtures
@@ -88,6 +92,39 @@ describe("isPIIRedactedAttribute", () => {
 // ---------------------------------------------------------------------------
 // pruneGeostats PII-aware redaction tests
 // ---------------------------------------------------------------------------
+
+describe("getPiiRedactedColumnNames", () => {
+  it("lists attributes at or above the redaction threshold", () => {
+    const layer = {
+      layer: "x",
+      count: 1,
+      geometry: "Point",
+      attributeCount: 2,
+      attributes: [
+        {
+          attribute: "safe",
+          type: "string",
+          piiRisk: 0.1,
+        },
+        {
+          attribute: "email",
+          type: "string",
+          piiRisk: PII_REDACTION_THRESHOLD,
+        },
+      ],
+    };
+    expect(getPiiRedactedColumnNames(layer)).toEqual(["email"]);
+  });
+
+  it("returns an empty list for rasters", () => {
+    expect(
+      getPiiRedactedColumnNames({
+        bands: [],
+        presentation: 0,
+      }),
+    ).toEqual([]);
+  });
+});
 
 describe("pruneGeostats — PII-aware redaction", () => {
   const emailValues = Object.fromEntries(
@@ -255,6 +292,7 @@ describe("generateColumnIntelligence — PII-redacted LLM payload", () => {
                         custom_palette: null,
                         reverse_palette: false,
                         show_labels: false,
+                        labels_min_zoom: null,
                         interactivity_type: "TOOLTIP",
                         notes: "Email column is PII-redacted.",
                       }),
@@ -303,7 +341,13 @@ describe("generateColumnIntelligence — PII-redacted LLM payload", () => {
       ],
     };
 
-    await generateColumnIntelligence("survey.fgb", rawGeostats);
+    const out = await generateColumnIntelligence("survey.fgb", rawGeostats);
+
+    expect(out).toMatchObject({
+      result: expect.objectContaining({
+        pii_redacted_columns: ["respondent_email"],
+      }),
+    });
 
     expect(capturedUserContent).not.toBeNull();
     const payload = JSON.parse(capturedUserContent!);
@@ -344,7 +388,11 @@ describe("generateColumnIntelligence — PII-redacted LLM payload", () => {
       ],
     };
 
-    await generateColumnIntelligence("habitat.fgb", rawGeostats);
+    const out = await generateColumnIntelligence("habitat.fgb", rawGeostats);
+
+    expect(out).toMatchObject({
+      result: expect.objectContaining({ pii_redacted_columns: [] }),
+    });
 
     expect(capturedUserContent).not.toBeNull();
     const payload = JSON.parse(capturedUserContent!);

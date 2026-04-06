@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.PII_REDACTION_THRESHOLD = void 0;
+exports.getPiiRedactedColumnNames = getPiiRedactedColumnNames;
 exports.pruneGeostats = pruneGeostats;
 const RASTER_PRESENTATION_ENUM_MAP = {
     0: "categorical",
@@ -123,8 +124,6 @@ function pruneGeostatsAttribute(attr) {
         const categories = Array.isArray(attr.piiRiskCategories)
             ? attr.piiRiskCategories
             : [];
-        console.log("!! Redacting column due to PII risk", attr.attribute, piiRisk);
-        console.log("!! Categories", categories);
         return {
             attribute: attr.attribute,
             type: attr.type,
@@ -221,6 +220,34 @@ function normalizeRasterPresentation(presentation) {
         return RASTER_PRESENTATION_ENUM_MAP[presentation];
     }
     return presentation;
+}
+/**
+ * Attribute names whose `values` map was omitted from the LLM payload because
+ * `piiRisk` met {@link PII_REDACTION_THRESHOLD} (same logic as {@link pruneGeostats}).
+ * Rasters and unknown shapes yield an empty list.
+ */
+function getPiiRedactedColumnNames(geostats) {
+    if (!isObject(geostats) || isRasterLike(geostats)) {
+        return [];
+    }
+    const attrs = geostats.attributes;
+    if (!Array.isArray(attrs)) {
+        return [];
+    }
+    const names = [];
+    for (const attr of attrs) {
+        if (!isObject(attr)) {
+            continue;
+        }
+        const piiRisk = typeof attr.piiRisk === "number" ? attr.piiRisk : undefined;
+        if (piiRisk !== undefined && piiRisk >= exports.PII_REDACTION_THRESHOLD) {
+            const name = attr.attribute;
+            if (typeof name === "string" && name.length > 0) {
+                names.push(name);
+            }
+        }
+    }
+    return names;
 }
 /**
  * Reduce geostats payload size while preserving fields needed for
