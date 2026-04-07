@@ -169,7 +169,9 @@ exports.columnIntelligenceSchema = {
 };
 const validator = ajv.compile(exports.columnIntelligenceSchema);
 const columnIntelligenceValidator = (data) => {
-    const d = Object.assign({}, data);
+    const d = {
+        ...data,
+    };
     delete d.value_steps;
     delete d.value_steps_n;
     delete d.raster_steps;
