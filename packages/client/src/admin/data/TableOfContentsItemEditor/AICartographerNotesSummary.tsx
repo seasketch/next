@@ -606,58 +606,61 @@ export default function AICartographerNotesSummary({
   return (
     <Tooltip.Provider delayDuration={200}>
       <section
-        className="rounded-lg border border-gray-200 p-4 shadow-sm"
+        className="relative overflow-hidden rounded-lg border border-gray-200 bg-[radial-gradient(ellipse_90%_65%_at_100%_-5%,rgba(99,102,241,0.09),transparent_55%),radial-gradient(ellipse_80%_55%_at_-8%_102%,rgba(167,139,250,0.07),transparent_52%),linear-gradient(155deg,rgb(255_255_255)_0%,rgb(246_248_255)_40%,rgb(252_252_254)_100%)] p-4 shadow-sm"
         aria-label={t("AI Cartographer Notes")}
       >
-        <h3 className="mb-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-base text-gray-900">
+        <Tooltip.Root delayDuration={10}>
+          <Tooltip.Trigger asChild>
+            <button
+              type="button"
+              className="absolute top-4 right-4 z-10 -m-0.5 inline-flex shrink-0 rounded p-0.5 text-gray-500 transition-colors hover:text-gray-800 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary-400"
+              aria-label={t("About AI Cartographer Notes")}
+            >
+              <QuestionMarkCircledIcon className="h-4 w-4" aria-hidden />
+            </button>
+          </Tooltip.Trigger>
+          <Tooltip.Portal>
+            <Tooltip.Content
+              side="right"
+              className="TooltipContent z-[60] max-w-md"
+              sideOffset={6}
+            >
+              <div className="space-y-2 text-sm">
+                <p className="font-medium text-indigo-900">
+                  {t("New Feature!")}
+                </p>
+                <p>
+                  {t(
+                    "After you upload spatial data, the AI Cartographer inspects your layer (for example attributes, geometry, or raster bands) and the filename."
+                  )}
+                </p>
+                <p>
+                  {t(
+                    "It suggests a readable map title, attribution if clear from the metadata, and cartographic recommendations such as presentation type, palette, labels, and interactivity."
+                  )}
+                </p>
+                {noteJsonPayload ? (
+                  <div className="border-t border-slate-200/80 pt-2">
+                    <button
+                      type="button"
+                      className="text-left text-sm font-medium text-primary-600 hover:text-primary-800 hover:underline focus:outline-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-1"
+                      onClick={() => setShowRawNoteJsonModal(true)}
+                    >
+                      {t("View full notes data")}
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+              <Tooltip.Arrow className="TooltipArrow" />
+            </Tooltip.Content>
+          </Tooltip.Portal>
+        </Tooltip.Root>
+        <h3 className="mb-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 pr-9 text-base text-gray-900">
           <SparklesIcon
-            className="h-4 w-4 shrink-0 text-primary-500"
+            className="h-5 w-5 shrink-0 text-indigo-900"
             aria-hidden
           />
           {t("AI Cartographer Notes")}
-          <Tooltip.Root delayDuration={10}>
-            <Tooltip.Trigger asChild>
-              <button
-                type="button"
-                className="-m-0.5 inline-flex shrink-0 rounded p-0.5 text-gray-500 transition-colors hover:text-gray-800 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary-400"
-                aria-label={t("About AI Cartographer Notes")}
-              >
-                <QuestionMarkCircledIcon className="h-4 w-4" aria-hidden />
-              </button>
-            </Tooltip.Trigger>
-            <Tooltip.Portal>
-              <Tooltip.Content
-                side="right"
-                className="TooltipContent z-[60] max-w-md"
-                sideOffset={6}
-              >
-                <div className="space-y-2 text-sm">
-                  <p>
-                    {t(
-                      "After you upload spatial data, the AI Cartographer inspects your layer (for example attributes, geometry, or raster bands) and your upload filename."
-                    )}
-                  </p>
-                  <p>
-                    {t(
-                      "It suggests a readable map title, attribution if clear from the metadata, and cartographic recommendations such as presentation type, palette, labels, and interactivity."
-                    )}
-                  </p>
-                  {noteJsonPayload ? (
-                    <div className="border-t border-slate-200/80 pt-2">
-                      <button
-                        type="button"
-                        className="text-left text-sm font-medium text-primary-600 hover:text-primary-800 hover:underline focus:outline-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-1"
-                        onClick={() => setShowRawNoteJsonModal(true)}
-                      >
-                        {t("View full notes data")}
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
-                <Tooltip.Arrow className="TooltipArrow" />
-              </Tooltip.Content>
-            </Tooltip.Portal>
-          </Tooltip.Root>
         </h3>
         {originalFilename && note.bestLayerTitle && (
           <p className="mt-2 text-sm text-gray-700">
