@@ -945,6 +945,7 @@ CREATE TYPE public.spatial_metric_type AS ENUM (
     'presence_table',
     'contextualized_mean',
     'overlay_area',
+    'column_stats',
     'column_values',
     'raster_stats',
     'distance_to_shore'
@@ -1007,6 +1008,41 @@ CREATE TYPE public.survey_validation_info_composite AS (
 CREATE TYPE public.tile_scheme AS ENUM (
     'xyz',
     'tms'
+);
+
+
+--
+-- Name: value_steps; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.value_steps AS ENUM (
+    'CONTINUOUS',
+    'NATURAL_BREAKS',
+    'QUANTILES',
+    'EQUAL_INTERVALS'
+);
+
+
+--
+-- Name: visualization_type; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.visualization_type AS ENUM (
+    'RGB_RASTER',
+    'CATEGORICAL_RASTER',
+    'CONTINUOUS_RASTER',
+    'SIMPLE_POLYGON',
+    'CATEGORICAL_POLYGON',
+    'CONTINUOUS_POLYGON',
+    'SIMPLE_POINT',
+    'MARKER_IMAGE',
+    'CATEGORICAL_POINT',
+    'PROPORTIONAL_SYMBOL',
+    'CONTINUOUS_POINT',
+    'HEATMAP',
+    'SIMPLE_LINE',
+    'CONTINUOUS_LINE',
+    'CATEGORICAL_LINE'
 );
 
 
@@ -2191,8 +2227,8 @@ CREATE TABLE public.projects (
     data_hosting_retention_period interval,
     about_page_contents jsonb DEFAULT '{}'::jsonb NOT NULL,
     about_page_enabled boolean DEFAULT false NOT NULL,
-    enable_report_builder boolean DEFAULT false,
     custom_doc_link text,
+    enable_report_builder boolean DEFAULT false,
     show_scalebar_by_default boolean DEFAULT false,
     show_legend_by_default boolean DEFAULT false,
     feature_flags jsonb DEFAULT '{}'::jsonb NOT NULL,
@@ -9090,6 +9126,47 @@ $$;
 
 
 --
+-- Name: get_geostats_attribute_column_names(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_geostats_attribute_column_names(geostats jsonb) RETURNS text[]
+    LANGUAGE sql IMMUTABLE
+    AS $$
+  select case
+    when geostats is null then array[]::text[]
+    when geostats ? 'bands'
+      and jsonb_typeof(geostats->'bands') = 'array'
+      and jsonb_array_length(geostats->'bands') > 0 then
+      array[]::text[]
+    when jsonb_typeof(geostats->'layers') <> 'array'
+      or jsonb_array_length(geostats->'layers') = 0 then
+      array[]::text[]
+    when exists (
+      select 1
+      from jsonb_array_elements(geostats->'layers') as layer
+      where jsonb_typeof(layer) <> 'object'
+        or jsonb_typeof(layer->'attributes') <> 'array'
+    ) then
+      array[]::text[]
+    else
+      coalesce(
+        (
+          select array_agg(attr order by attr)
+          from (
+            select distinct elem->>'attribute' as attr
+            from jsonb_array_elements(geostats->'layers') as layer,
+              jsonb_array_elements(layer->'attributes') as elem
+            where elem->>'attribute' is not null
+              and elem->>'attribute' <> ''
+          ) s
+        ),
+        array[]::text[]
+      )
+  end;
+$$;
+
+
+--
 -- Name: get_representative_colors(jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -9160,6 +9237,8 @@ CREATE TABLE public.data_sources (
     raster_scale real GENERATED ALWAYS AS (public.get_first_band_scale(geostats)) STORED,
     data_library_template_id text,
     data_library_metadata jsonb,
+    is_single_band_raster boolean GENERATED ALWAYS AS (((jsonb_typeof((geostats -> 'bands'::text)) = 'array'::text) AND (jsonb_array_length((geostats -> 'bands'::text)) = 1))) STORED,
+    columns text[] GENERATED ALWAYS AS (public.get_geostats_attribute_column_names(geostats)) STORED,
     CONSTRAINT data_sources_buffer_check CHECK (((buffer >= 0) AND (buffer <= 512))),
     CONSTRAINT data_sources_tile_size_check CHECK (((tile_size = 128) OR (tile_size = 256) OR (tile_size = 512)))
 );
@@ -9474,6 +9553,9 @@ CREATE TABLE public.user_profiles (
     picture text,
     email public.email,
     affiliations text,
+    enable_ai_data_analyst boolean DEFAULT false NOT NULL,
+    ai_data_analyst_enabled_at timestamp with time zone,
+    was_prompted_to_enable_ai_data_analyst_at timestamp with time zone,
     CONSTRAINT user_profiles_picture_check CHECK ((picture ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text))
 );
 
@@ -9696,6 +9778,23 @@ CREATE FUNCTION public.data_upload_tasks_table_of_contents_item_stable_ids(task 
       )
     ));
   $$;
+
+
+--
+-- Name: declined_to_enable_ai_data_analyst(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.declined_to_enable_ai_data_analyst() RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  begin
+    if current_setting('session.user_id', true)::int is null then
+      raise exception 'Not logged in';
+    end if;
+    update user_profiles set was_prompted_to_enable_ai_data_analyst_at = now() where user_id = current_setting('session.user_id', true)::int;
+    return true;
+  end;
+$$;
 
 
 --
@@ -11861,6 +11960,57 @@ CREATE FUNCTION public.get_public_jwk(id uuid) RETURNS text
 --
 
 COMMENT ON FUNCTION public.get_public_jwk(id uuid) IS '@omit';
+
+
+--
+-- Name: get_published_card_id_from_draft(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_published_card_id_from_draft(draft_report_card_id integer) RETURNS integer
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+DECLARE
+  draft_tab_id integer;
+  draft_tab_position integer;
+  draft_card_position integer;
+  sketch_class_id integer;
+  published_report_id integer;
+  published_tab_id integer;
+  published_card_id integer;
+BEGIN
+  -- Gather draft card/tab positions and sketch_class
+  SELECT rt.id, rt.position, rc.position, r.sketch_class_id
+  INTO draft_tab_id, draft_tab_position, draft_card_position, sketch_class_id
+  FROM public.report_cards rc
+  JOIN public.report_tabs rt ON rt.id = rc.report_tab_id
+  JOIN public.reports r ON r.id = rt.report_id
+  WHERE rc.id = draft_report_card_id;
+
+  -- Determine the published report id
+  SELECT sc.report_id
+  INTO published_report_id
+  FROM public.sketch_classes sc
+  WHERE sc.id = sketch_class_id;
+
+  IF published_report_id IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  -- Match the tab by position in the published report
+  SELECT id
+  INTO published_tab_id
+  FROM public.report_tabs
+  WHERE report_id = published_report_id AND position = draft_tab_position;
+
+  -- Match the card by position within the matched tab
+  SELECT id
+  INTO published_card_id
+  FROM public.report_cards
+  WHERE report_tab_id = published_tab_id AND position = draft_card_position;
+
+  RETURN published_card_id;
+END
+$$;
 
 
 --
@@ -15832,19 +15982,68 @@ CREATE TABLE public.project_visitor_metrics (
 --
 
 CREATE FUNCTION public.projects_visitor_metrics(p public.projects, period public.activity_stats_period) RETURNS SETOF public.project_visitor_metrics
-    LANGUAGE sql STABLE SECURITY DEFINER
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
     AS $$
-    select * from project_visitor_metrics where session_is_admin(p.id) and
-    project_id = p.id and
-    interval = (
-      case period
-        when '24hrs' then '24 hours'::interval
-        when '7-days' then '7 days'::interval
-        when '30-days' then '30 days'::interval
-        else '1 day'::interval
-      end
-    ) order by timestamp desc limit 1;
-  $$;
+DECLARE
+  lookback interval;
+BEGIN
+  IF NOT session_is_admin(p.id) THEN
+    RETURN;
+  END IF;
+
+  IF period IN ('6-months', '1-year') THEN
+    lookback := CASE period
+      WHEN '6-months' THEN '6 months'::interval
+      ELSE '1 year'::interval
+    END;
+
+    RETURN QUERY SELECT
+      p.id,
+      '30 days'::interval,
+      now()::timestamptz,
+      date_part('month', timezone('UTC', now()))::int,
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.project_visitor_metrics pvm, jsonb_array_elements(pvm.top_referrers) elem
+             WHERE pvm.interval = '30 days'::interval AND pvm.project_id = p.id AND pvm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.project_visitor_metrics pvm, jsonb_array_elements(pvm.top_operating_systems) elem
+             WHERE pvm.interval = '30 days'::interval AND pvm.project_id = p.id AND pvm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.project_visitor_metrics pvm, jsonb_array_elements(pvm.top_browsers) elem
+             WHERE pvm.interval = '30 days'::interval AND pvm.project_id = p.id AND pvm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.project_visitor_metrics pvm, jsonb_array_elements(pvm.top_device_types) elem
+             WHERE pvm.interval = '30 days'::interval AND pvm.project_id = p.id AND pvm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.project_visitor_metrics pvm, jsonb_array_elements(pvm.top_countries) elem
+             WHERE pvm.interval = '30 days'::interval AND pvm.project_id = p.id AND pvm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s);
+  ELSE
+    RETURN QUERY
+    SELECT * FROM project_visitor_metrics
+    WHERE session_is_admin(p.id)
+      AND project_id = p.id
+      AND interval = (
+        CASE period
+          WHEN '24hrs' THEN '24 hours'::interval
+          WHEN '7-days' THEN '7 days'::interval
+          WHEN '30-days' THEN '30 days'::interval
+          ELSE '1 day'::interval
+        END
+      )
+    ORDER BY timestamp DESC LIMIT 1;
+  END IF;
+END;
+$$;
 
 
 --
@@ -19788,36 +19987,39 @@ $$;
 
 
 --
--- Name: submit_data_upload(uuid); Type: FUNCTION; Schema: public; Owner: -
+-- Name: submit_data_upload(uuid, boolean); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.submit_data_upload(id uuid) RETURNS public.project_background_jobs
+CREATE FUNCTION public.submit_data_upload(id uuid, enable_ai_data_analyst boolean DEFAULT false) RETURNS public.project_background_jobs
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
     declare
       job project_background_jobs;
       pid integer;
     begin
-      select 
-        project_id 
+      select
+        project_id
       into
         pid
-      from 
-        project_background_jobs 
-      where 
+      from
+        project_background_jobs
+      where
         project_background_jobs.id = submit_data_upload.id;
       if session_is_admin(pid) then
-        update 
-          project_background_jobs 
-        set 
-          state = 'running', 
-          progress_message = 'uploaded' 
-        where 
-          project_background_jobs.id = submit_data_upload.id 
+        update
+          project_background_jobs
+        set
+          state = 'running',
+          progress_message = 'uploaded'
+        where
+          project_background_jobs.id = submit_data_upload.id
         returning * into job;
         perform graphile_worker.add_job(
-          'processDataUpload', 
-          json_build_object('jobId', job.id), 
+          'processDataUpload',
+          json_build_object(
+            'jobId', job.id,
+            'enableAiDataAnalyst', enable_ai_data_analyst
+          ),
           max_attempts := 1
         );
         return job;
@@ -19825,7 +20027,7 @@ CREATE FUNCTION public.submit_data_upload(id uuid) RETURNS public.project_backgr
         raise exception 'permission denied.';
       end if;
     end;
-  $$;
+$$;
 
 
 --
@@ -20757,6 +20959,23 @@ CREATE FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t public.ta
 
 
 --
+-- Name: tableofcontentsitembystableid(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.tableofcontentsitembystableid(stableid text) RETURNS public.table_of_contents_items
+    LANGUAGE sql STABLE
+    AS $$
+    -- get the table of contents item by stable id and return the first 
+    -- available of published (is_draft = false) or draft (is_draft = true)
+    select * from table_of_contents_items
+    where stable_id = stableId
+    and (is_draft = false or is_draft = true)
+    order by is_draft asc  -- false (published) comes before true (draft)
+    limit 1;
+  $$;
+
+
+--
 -- Name: template_forms(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -21340,6 +21559,30 @@ CREATE FUNCTION public.update_about_page_enabled(slug text, enabled boolean) RET
     and session_is_admin(projects.id)
     returning *;
   $$;
+
+
+--
+-- Name: update_ai_data_analyst_settings(boolean); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_ai_data_analyst_settings(enable_ai boolean) RETURNS boolean
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  begin
+    -- if not logged in, throw an error
+    if current_setting('session.user_id', true)::int is null then
+      raise exception 'Not logged in';
+    end if;
+    -- update enabled state
+    update user_profiles set enable_ai_data_analyst = enable_ai where user_id = current_setting('session.user_id', true)::int;
+    -- update enabled_at timestamp, if enabling
+    if enable_ai then
+      update user_profiles set ai_data_analyst_enabled_at = now() where user_id = current_setting('session.user_id', true)::int;
+    end if;
+    update user_profiles set was_prompted_to_enable_ai_data_analyst_at = coalesce(was_prompted_to_enable_ai_data_analyst_at, now()) where user_id = current_setting('session.user_id', true)::int;
+    return true;
+  end;
+$$;
 
 
 --
@@ -22494,18 +22737,66 @@ CREATE TABLE public.visitor_metrics (
 --
 
 CREATE FUNCTION public.visitor_metrics(period public.activity_stats_period) RETURNS SETOF public.visitor_metrics
-    LANGUAGE sql STABLE SECURITY DEFINER
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
     AS $$
-    select * from visitor_metrics where session_is_superuser() and
-    interval = (
-      case period
-        when '24hrs' then '24 hours'::interval
-        when '7-days' then '7 days'::interval
-        when '30-days' then '30 days'::interval
-        else '1 day'::interval
-      end
-    ) order by timestamp desc limit 1;
-  $$;
+DECLARE
+  lookback interval;
+BEGIN
+  IF NOT session_is_superuser() THEN
+    RETURN;
+  END IF;
+
+  IF period IN ('6-months', '1-year') THEN
+    lookback := CASE period
+      WHEN '6-months' THEN '6 months'::interval
+      ELSE '1 year'::interval
+    END;
+
+    RETURN QUERY SELECT
+      '30 days'::interval,
+      now()::timestamptz,
+      date_part('month', timezone('UTC', now()))::int,
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.visitor_metrics vm, jsonb_array_elements(vm.top_referrers) elem
+             WHERE vm.interval = '30 days'::interval AND vm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.visitor_metrics vm, jsonb_array_elements(vm.top_operating_systems) elem
+             WHERE vm.interval = '30 days'::interval AND vm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.visitor_metrics vm, jsonb_array_elements(vm.top_browsers) elem
+             WHERE vm.interval = '30 days'::interval AND vm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.visitor_metrics vm, jsonb_array_elements(vm.top_device_types) elem
+             WHERE vm.interval = '30 days'::interval AND vm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.visitor_metrics vm, jsonb_array_elements(vm.top_countries) elem
+             WHERE vm.interval = '30 days'::interval AND vm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s);
+  ELSE
+    RETURN QUERY
+    SELECT * FROM public.visitor_metrics
+    WHERE session_is_superuser()
+      AND interval = (
+        CASE period
+          WHEN '24hrs' THEN '24 hours'::interval
+          WHEN '7-days' THEN '7 days'::interval
+          WHEN '30-days' THEN '30 days'::interval
+          ELSE '1 day'::interval
+        END
+      )
+    ORDER BY timestamp DESC LIMIT 1;
+  END IF;
+END;
+$$;
 
 
 --
@@ -22672,6 +22963,56 @@ COMMENT ON TABLE public.access_control_list_groups IS '@omit';
 
 ALTER TABLE public.access_control_lists ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
     SEQUENCE NAME public.access_control_lists_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: ai_data_analyst_notes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.ai_data_analyst_notes (
+    id integer NOT NULL,
+    data_source_id integer NOT NULL,
+    project_id integer NOT NULL,
+    notes text NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    best_layer_title text,
+    attribution text,
+    best_label_column text,
+    best_category_column text,
+    best_numeric_column text,
+    best_date_column text,
+    best_popup_description_column text,
+    best_group_by_column text,
+    best_id_column text,
+    junk_columns text[],
+    chosen_presentation_type public.visualization_type,
+    chosen_presentation_column text,
+    palette text,
+    custom_palette jsonb,
+    show_labels boolean DEFAULT false NOT NULL,
+    labels_min_zoom integer,
+    interactivity_type public.interactivity_type DEFAULT 'NONE'::public.interactivity_type NOT NULL,
+    value_steps public.value_steps,
+    value_steps_n integer,
+    reverse_palette boolean DEFAULT false NOT NULL,
+    errors text,
+    pii_redacted_columns text[] DEFAULT ARRAY[]::text[] NOT NULL
+);
+
+
+--
+-- Name: ai_data_analyst_notes_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.ai_data_analyst_notes ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.ai_data_analyst_notes_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -23282,6 +23623,15 @@ ALTER TABLE public.optional_basemap_layers ALTER COLUMN id ADD GENERATED BY DEFA
 
 
 --
+-- Name: original_source_id; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.original_source_id (
+    data_source_id integer
+);
+
+
+--
 -- Name: pending_topic_notifications; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -23473,6 +23823,24 @@ ALTER TABLE public.projects ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY
 CREATE TABLE public.projects_shared_basemaps (
     basemap_id integer NOT NULL,
     project_id integer NOT NULL
+);
+
+
+--
+-- Name: published_toc_item_id; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.published_toc_item_id (
+    id integer
+);
+
+
+--
+-- Name: referenced_stable_ids; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.referenced_stable_ids (
+    extract_stable_ids_from_body text[]
 );
 
 
@@ -23960,6 +24328,22 @@ ALTER TABLE ONLY public.access_control_lists
 
 ALTER TABLE ONLY public.access_control_lists
     ADD CONSTRAINT access_control_lists_table_of_contents_item_id_key UNIQUE (table_of_contents_item_id);
+
+
+--
+-- Name: ai_data_analyst_notes ai_data_analyst_notes_one_per_data_source; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_data_analyst_notes
+    ADD CONSTRAINT ai_data_analyst_notes_one_per_data_source UNIQUE (data_source_id);
+
+
+--
+-- Name: ai_data_analyst_notes ai_data_analyst_notes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_data_analyst_notes
+    ADD CONSTRAINT ai_data_analyst_notes_pkey PRIMARY KEY (id);
 
 
 --
@@ -25917,6 +26301,13 @@ CREATE TRIGGER before_insert_or_update_table_of_contents_items BEFORE INSERT OR 
 
 
 --
+-- Name: spatial_metrics before_insert_spatial_metrics_check_dependency_error_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER before_insert_spatial_metrics_check_dependency_error_trigger BEFORE INSERT ON public.spatial_metrics FOR EACH ROW EXECUTE FUNCTION public.before_insert_spatial_metrics_check_dependency_error();
+
+
+--
 -- Name: invite_emails before_invite_emails_insert_trigger; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -26246,6 +26637,13 @@ CREATE TRIGGER update_report_tabs_updated_at_trigger BEFORE UPDATE ON public.rep
 
 
 --
+-- Name: ai_data_analyst_notes update_updated_at; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER update_updated_at BEFORE UPDATE ON public.ai_data_analyst_notes FOR EACH ROW EXECUTE FUNCTION public.trigger_set_timestamp();
+
+
+--
 -- Name: access_control_list_groups access_control_list_groups_access_control_list_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -26307,6 +26705,22 @@ ALTER TABLE ONLY public.access_control_lists
 
 ALTER TABLE ONLY public.access_control_lists
     ADD CONSTRAINT access_control_lists_table_of_contents_item_id_fkey FOREIGN KEY (table_of_contents_item_id) REFERENCES public.table_of_contents_items(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ai_data_analyst_notes ai_data_analyst_notes_data_source_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_data_analyst_notes
+    ADD CONSTRAINT ai_data_analyst_notes_data_source_id_fkey FOREIGN KEY (data_source_id) REFERENCES public.data_sources(id) ON DELETE CASCADE;
+
+
+--
+-- Name: ai_data_analyst_notes ai_data_analyst_notes_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.ai_data_analyst_notes
+    ADD CONSTRAINT ai_data_analyst_notes_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
 
 
 --
@@ -27684,6 +28098,26 @@ CREATE POLICY access_control_lists_update ON public.access_control_lists FOR UPD
 
 
 --
+-- Name: ai_data_analyst_notes; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.ai_data_analyst_notes ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: ai_data_analyst_notes ai_data_analyst_notes_admin; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY ai_data_analyst_notes_admin ON public.ai_data_analyst_notes TO postgres USING (true);
+
+
+--
+-- Name: ai_data_analyst_notes ai_data_analyst_notes_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY ai_data_analyst_notes_select ON public.ai_data_analyst_notes USING (public.session_is_admin(project_id));
+
+
+--
 -- Name: api_keys; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -28137,12 +28571,6 @@ ALTER TABLE public.project_background_jobs ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY project_background_jobs_select ON public.project_background_jobs FOR SELECT USING (public.session_is_admin(project_id));
 
-
---
--- Name: project_geography; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.project_geography ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: project_groups; Type: ROW SECURITY; Schema: public; Owner: -
@@ -29936,17 +30364,17 @@ GRANT UPDATE(data_hosting_retention_period) ON TABLE public.projects TO seasketc
 
 
 --
--- Name: COLUMN projects.enable_report_builder; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(enable_report_builder) ON TABLE public.projects TO seasketch_user;
-
-
---
 -- Name: COLUMN projects.custom_doc_link; Type: ACL; Schema: public; Owner: -
 --
 
 GRANT UPDATE(custom_doc_link) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.enable_report_builder; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(enable_report_builder) ON TABLE public.projects TO seasketch_user;
 
 
 --
@@ -32143,6 +32571,14 @@ GRANT ALL ON FUNCTION public.get_first_band_scale(geostats jsonb) TO anon;
 
 
 --
+-- Name: FUNCTION get_geostats_attribute_column_names(geostats jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_geostats_attribute_column_names(geostats jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_geostats_attribute_column_names(geostats jsonb) TO anon;
+
+
+--
 -- Name: FUNCTION get_representative_colors(geostats jsonb); Type: ACL; Schema: public; Owner: -
 --
 
@@ -32374,7 +32810,6 @@ GRANT ALL ON FUNCTION public.data_sources_is_archived(data_source public.data_so
 --
 
 REVOKE ALL ON FUNCTION public.data_sources_is_convertible_legacy_source(data_source public.data_sources) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.data_sources_is_convertible_legacy_source(data_source public.data_sources) TO seasketch_user;
 GRANT ALL ON FUNCTION public.data_sources_is_convertible_legacy_source(data_source public.data_sources) TO anon;
 
 
@@ -32448,6 +32883,14 @@ GRANT ALL ON FUNCTION public.data_upload_tasks_table_of_contents_item_stable_ids
 --
 
 REVOKE ALL ON FUNCTION public.dearmor(text) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION declined_to_enable_ai_data_analyst(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.declined_to_enable_ai_data_analyst() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.declined_to_enable_ai_data_analyst() TO seasketch_user;
 
 
 --
@@ -33024,7 +33467,6 @@ GRANT ALL ON FUNCTION public.geography(public.geometry) TO anon;
 --
 
 REVOKE ALL ON FUNCTION public.geography_clipping_layers() FROM PUBLIC;
-GRANT ALL ON FUNCTION public.geography_clipping_layers() TO seasketch_user;
 GRANT ALL ON FUNCTION public.geography_clipping_layers() TO anon;
 
 
@@ -33957,6 +34399,14 @@ REVOKE ALL ON FUNCTION public.get_projects_with_recent_activity() FROM PUBLIC;
 
 REVOKE ALL ON FUNCTION public.get_public_jwk(id uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.get_public_jwk(id uuid) TO anon;
+
+
+--
+-- Name: FUNCTION get_published_card_id_from_draft(draft_report_card_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_published_card_id_from_draft(draft_report_card_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_published_card_id_from_draft(draft_report_card_id integer) TO seasketch_user;
 
 
 --
@@ -39697,8 +40147,8 @@ REVOKE ALL ON FUNCTION public.subltree(public.ltree, integer, integer) FROM PUBL
 -- Name: FUNCTION submit_data_upload(id uuid, enable_ai_data_analyst boolean); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.submit_data_upload(uuid, boolean) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.submit_data_upload(uuid, boolean) TO seasketch_user;
+REVOKE ALL ON FUNCTION public.submit_data_upload(id uuid, enable_ai_data_analyst boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.submit_data_upload(id uuid, enable_ai_data_analyst boolean) TO seasketch_user;
 
 
 --
@@ -40017,6 +40467,13 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t pub
 
 
 --
+-- Name: FUNCTION tableofcontentsitembystableid(stableid text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.tableofcontentsitembystableid(stableid text) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION template_forms(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -40315,6 +40772,14 @@ GRANT ALL ON FUNCTION public.update_about_page_content(slug text, content jsonb,
 
 REVOKE ALL ON FUNCTION public.update_about_page_enabled(slug text, enabled boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.update_about_page_enabled(slug text, enabled boolean) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION update_ai_data_analyst_settings(enable_ai boolean); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_ai_data_analyst_settings(enable_ai boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_ai_data_analyst_settings(enable_ai boolean) TO seasketch_user;
 
 
 --
@@ -40847,6 +41312,13 @@ REVOKE ALL ON FUNCTION public.st_union(public.geometry, double precision) FROM P
 --
 
 GRANT SELECT ON TABLE public.access_control_list_groups TO seasketch_user;
+
+
+--
+-- Name: TABLE ai_data_analyst_notes; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.ai_data_analyst_notes TO anon;
 
 
 --
