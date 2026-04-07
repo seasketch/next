@@ -35,6 +35,7 @@ import ProjectBackgroundJobManager, {
 } from "./ProjectBackgroundJobManager";
 import sleep from "../../sleep";
 import ConvertFeatureLayerToHostedModal from "../data/arcgis/ConvertFeatureLayerToHostedModal";
+import AiDataAnalystUploadPromptModal from "./AiDataAnalystUploadPromptModal";
 
 export type UploadType = "create" | "replace";
 
@@ -82,6 +83,7 @@ export default function DataUploadDropzone({
     replaceTableOfContentsItemId: number | null;
     finishedWithChangelog: boolean;
     changelog?: string;
+    aiDataAnalystUploadPromptOpen: boolean;
   }>({
     droppedFiles: 0,
     uploads: [],
@@ -90,6 +92,7 @@ export default function DataUploadDropzone({
     isUploadingReplacement: false,
     replaceTableOfContentsItemId: null,
     finishedWithChangelog: true,
+    aiDataAnalystUploadPromptOpen: false,
   });
   const client = useApolloClient();
   const { manager } = useContext(MapManagerContext);
@@ -155,6 +158,12 @@ export default function DataUploadDropzone({
         setState((prev) => ({
           ...prev,
           isUploadingReplacement: false,
+        }));
+      });
+      manager.on("ai-data-analyst-upload-prompt-needed", () => {
+        setState((prev) => ({
+          ...prev,
+          aiDataAnalystUploadPromptOpen: true,
         }));
       });
       setState((prev) => ({
@@ -411,6 +420,17 @@ export default function DataUploadDropzone({
           <ConvertFeatureLayerToHostedModal
             tocId={hostOnSeaSketch}
             onRequestClose={() => setHostOnSeasketch(null)}
+          />
+        )}
+        {state.manager && state.aiDataAnalystUploadPromptOpen && (
+          <AiDataAnalystUploadPromptModal
+            manager={state.manager}
+            onFinished={() => {
+              setState((prev) => ({
+                ...prev,
+                aiDataAnalystUploadPromptOpen: false,
+              }));
+            }}
           />
         )}
         <input {...getInputProps()} className="w-1 h-1" />

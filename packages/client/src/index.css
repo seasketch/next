@@ -9636,6 +9636,11 @@ select{
   border-color:rgb(217 119 6 / var(--tw-border-opacity, 1))
 }
 
+.border-primary-600{
+  --tw-border-opacity:1;
+  border-color:rgb(36 105 172 / var(--tw-border-opacity, 1))
+}
+
 .border-b-black{
   --tw-border-opacity:1;
   border-bottom-color:rgb(0 0 0 / var(--tw-border-opacity, 1))

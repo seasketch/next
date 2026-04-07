@@ -25948,6 +25948,19 @@ export type DeclinedToEnableAiDataAnalystMutation = (
   )> }
 );
 
+export type UpdateAiDataAnalysSettingsForMeMutationVariables = Exact<{
+  enableAi: Scalars['Boolean'];
+}>;
+
+
+export type UpdateAiDataAnalysSettingsForMeMutation = (
+  { __typename?: 'Mutation' }
+  & { updateAiDataAnalystSettings?: Maybe<(
+    { __typename?: 'UpdateAiDataAnalystSettingsPayload' }
+    & Pick<UpdateAiDataAnalystSettingsPayload, 'boolean'>
+  )> }
+);
+
 export type UserIsSuperuserQueryVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -41092,6 +41105,39 @@ export function useDeclinedToEnableAiDataAnalystMutation(baseOptions?: Apollo.Mu
 export type DeclinedToEnableAiDataAnalystMutationHookResult = ReturnType<typeof useDeclinedToEnableAiDataAnalystMutation>;
 export type DeclinedToEnableAiDataAnalystMutationResult = Apollo.MutationResult<DeclinedToEnableAiDataAnalystMutation>;
 export type DeclinedToEnableAiDataAnalystMutationOptions = Apollo.BaseMutationOptions<DeclinedToEnableAiDataAnalystMutation, DeclinedToEnableAiDataAnalystMutationVariables>;
+export const UpdateAiDataAnalysSettingsForMeDocument = gql`
+    mutation updateAiDataAnalysSettingsForMe($enableAi: Boolean!) {
+  updateAiDataAnalystSettings(input: {enableAi: $enableAi}) {
+    boolean
+  }
+}
+    `;
+export type UpdateAiDataAnalysSettingsForMeMutationFn = Apollo.MutationFunction<UpdateAiDataAnalysSettingsForMeMutation, UpdateAiDataAnalysSettingsForMeMutationVariables>;
+
+/**
+ * __useUpdateAiDataAnalysSettingsForMeMutation__
+ *
+ * To run a mutation, you first call `useUpdateAiDataAnalysSettingsForMeMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateAiDataAnalysSettingsForMeMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateAiDataAnalysSettingsForMeMutation, { data, loading, error }] = useUpdateAiDataAnalysSettingsForMeMutation({
+ *   variables: {
+ *      enableAi: // value for 'enableAi'
+ *   },
+ * });
+ */
+export function useUpdateAiDataAnalysSettingsForMeMutation(baseOptions?: Apollo.MutationHookOptions<UpdateAiDataAnalysSettingsForMeMutation, UpdateAiDataAnalysSettingsForMeMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateAiDataAnalysSettingsForMeMutation, UpdateAiDataAnalysSettingsForMeMutationVariables>(UpdateAiDataAnalysSettingsForMeDocument, options);
+      }
+export type UpdateAiDataAnalysSettingsForMeMutationHookResult = ReturnType<typeof useUpdateAiDataAnalysSettingsForMeMutation>;
+export type UpdateAiDataAnalysSettingsForMeMutationResult = Apollo.MutationResult<UpdateAiDataAnalysSettingsForMeMutation>;
+export type UpdateAiDataAnalysSettingsForMeMutationOptions = Apollo.BaseMutationOptions<UpdateAiDataAnalysSettingsForMeMutation, UpdateAiDataAnalysSettingsForMeMutationVariables>;
 export const UserIsSuperuserDocument = gql`
     query UserIsSuperuser {
   currentUserIsSuperuser
@@ -41436,7 +41482,8 @@ export const namedOperations = {
     DenyAccessRequest: 'DenyAccessRequest',
     UpdateProfile: 'UpdateProfile',
     UpdateAiDataAnalystSettings: 'UpdateAiDataAnalystSettings',
-    DeclinedToEnableAiDataAnalyst: 'DeclinedToEnableAiDataAnalyst'
+    DeclinedToEnableAiDataAnalyst: 'DeclinedToEnableAiDataAnalyst',
+    updateAiDataAnalysSettingsForMe: 'updateAiDataAnalysSettingsForMe'
   },
   Subscription: {
     ProjectBackgroundJob: 'ProjectBackgroundJob',

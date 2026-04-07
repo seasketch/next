@@ -61,3 +61,9 @@ mutation DeclinedToEnableAiDataAnalyst {
     boolean
   }
 }
+
+mutation updateAiDataAnalysSettingsForMe($enableAi: Boolean!) {
+  updateAiDataAnalystSettings(input: { enableAi: $enableAi }) {
+    boolean
+  }
+}

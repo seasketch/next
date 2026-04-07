@@ -25946,6 +25946,19 @@ export type DeclinedToEnableAiDataAnalystMutation = (
   )> }
 );
 
+export type UpdateAiDataAnalysSettingsForMeMutationVariables = Exact<{
+  enableAi: Scalars['Boolean'];
+}>;
+
+
+export type UpdateAiDataAnalysSettingsForMeMutation = (
+  { __typename?: 'Mutation' }
+  & { updateAiDataAnalystSettings?: Maybe<(
+    { __typename?: 'UpdateAiDataAnalystSettingsPayload' }
+    & Pick<UpdateAiDataAnalystSettingsPayload, 'boolean'>
+  )> }
+);
+
 export type UserIsSuperuserQueryVariables = Exact<{ [key: string]: never; }>;
 
 
@@ -32356,6 +32369,13 @@ export const DeclinedToEnableAiDataAnalystDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const UpdateAiDataAnalysSettingsForMeDocument = /*#__PURE__*/ gql`
+    mutation updateAiDataAnalysSettingsForMe($enableAi: Boolean!) {
+  updateAiDataAnalystSettings(input: {enableAi: $enableAi}) {
+    boolean
+  }
+}
+    `;
 export const UserIsSuperuserDocument = /*#__PURE__*/ gql`
     query UserIsSuperuser {
   currentUserIsSuperuser
@@ -32673,7 +32693,8 @@ export const namedOperations = {
     DenyAccessRequest: 'DenyAccessRequest',
     UpdateProfile: 'UpdateProfile',
     UpdateAiDataAnalystSettings: 'UpdateAiDataAnalystSettings',
-    DeclinedToEnableAiDataAnalyst: 'DeclinedToEnableAiDataAnalyst'
+    DeclinedToEnableAiDataAnalyst: 'DeclinedToEnableAiDataAnalyst',
+    updateAiDataAnalysSettingsForMe: 'updateAiDataAnalysSettingsForMe'
   },
   Subscription: {
     ProjectBackgroundJob: 'ProjectBackgroundJob',

@@ -148,6 +148,8 @@ alter table user_profiles add column if not exists enable_ai_data_analyst boolea
 
 alter table user_profiles add column if not exists ai_data_analyst_enabled_at timestamptz;
 
+alter table user_profiles add column if not exists was_prompted_to_enable_ai_data_analyst_at timestamptz;
+
 drop function if exists update_ai_data_analyst_settings;
 create or replace function update_ai_data_analyst_settings(enable_ai boolean)
   returns boolean
@@ -171,8 +173,6 @@ create or replace function update_ai_data_analyst_settings(enable_ai boolean)
 $$;
 
 grant execute on function update_ai_data_analyst_settings(boolean) to seasketch_user;
-
-alter table user_profiles add column if not exists was_prompted_to_enable_ai_data_analyst_at timestamptz;
 
 create or replace function declined_to_enable_ai_data_analyst()
   returns boolean

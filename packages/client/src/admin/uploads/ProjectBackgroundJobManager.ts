@@ -105,6 +105,11 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
   "feature-layer-conversion-complete": FeatureLayerConversionCompleteEvent;
   "file-uploaded": { uploadTaskId: string; jobId: string };
   "upload-submitted": UploadSubmittedEvent;
+  /**
+   * Fired when at least one upload finished transferring to storage but the
+   * user must choose AI Data Analyst settings before `submitDataUpload` runs.
+   */
+  "ai-data-analyst-upload-prompt-needed": void;
 }> {
   client: ApolloClient<any>;
   slug: string;
@@ -113,6 +118,9 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
   private abortControllers: { [jobId: string]: AbortController } = {};
   private completedTasks = new Set<string>();
   private activeJobs = new Set<string>();
+  /** Jobs waiting for `submitDataUpload` until AI analyst prompt is resolved. */
+  private pendingSubmitAfterAiPromptJobIds: string[] = [];
+  private aiDataAnalystUploadPromptEmitted = false;
   projectId: number;
 
   constructor(slug: string, projectId: number, client: ApolloClient<any>) {
@@ -145,23 +153,72 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
     this.removeAllListeners();
   }
 
-  /**
-   * Whether AI Data Analyst should run for spatial uploads, from the client's
-   * `MyProfile` data (cache first, then network if missing). Not read on the server.
-   */
-  private async resolveEnableAiDataAnalyst(): Promise<boolean> {
+  private async resolveMyProfile(): Promise<
+    NonNullable<MyProfileQuery["me"]>["profile"] | undefined
+  > {
     try {
       const data = this.client.readQuery<MyProfileQuery>({
         query: MyProfileDocument,
       });
-      return Boolean(data?.me?.profile?.enableAiDataAnalyst);
+      return data?.me?.profile ?? undefined;
     } catch {
       const { data } = await this.client.query<MyProfileQuery>({
         query: MyProfileDocument,
         fetchPolicy: "network-only",
       });
-      return Boolean(data?.me?.profile?.enableAiDataAnalyst);
+      return data?.me?.profile ?? undefined;
     }
+  }
+
+  /**
+   * Whether AI Data Analyst should run for spatial uploads, from the client's
+   * `MyProfile` data (cache first, then network if missing). Not read on the server.
+   */
+  private async resolveEnableAiDataAnalyst(): Promise<boolean> {
+    const profile = await this.resolveMyProfile();
+    return Boolean(profile?.enableAiDataAnalyst);
+  }
+
+  /**
+   * True when the user still needs the one-time upload prompt (never dismissed).
+   */
+  private async resolveNeedsAiDataAnalystUploadPrompt(): Promise<boolean> {
+    const profile = await this.resolveMyProfile();
+    if (!profile) {
+      return false;
+    }
+    return profile.wasPromptedToEnableAiDataAnalystAt == null;
+  }
+
+  /**
+   * After the user saves AI analyst preferences, submit every upload that was
+   * held back. Safe to call when the queue is empty.
+   */
+  async flushPendingSubmitsAfterAiPrompt(
+    enableAiDataAnalyst: boolean
+  ): Promise<void> {
+    const maxIterations = 500;
+    let iterations = 0;
+    while (
+      this.pendingSubmitAfterAiPromptJobIds.length > 0 &&
+      iterations++ < maxIterations
+    ) {
+      const jobId = this.pendingSubmitAfterAiPromptJobIds[0];
+      await this.client.mutate<SubmitDataUploadMutation>({
+        mutation: SubmitDataUploadDocument,
+        variables: {
+          jobId,
+          enableAiDataAnalyst,
+        },
+      });
+      this.pendingSubmitAfterAiPromptJobIds.shift();
+    }
+    if (this.pendingSubmitAfterAiPromptJobIds.length > 0) {
+      throw new Error(
+        "Exceeded iteration limit while submitting uploads after AI analyst prompt."
+      );
+    }
+    this.aiDataAnalystUploadPromptEmitted = false;
   }
 
   addJobToQueryCache(task: JobDetailsFragment) {
@@ -258,10 +315,12 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
             }
             return [task, file] as [typeof task, File];
           } catch (e) {
-            if (/quota exceeded/.test(e.message)) {
+            const message = e instanceof Error ? e.message : String(e);
+            if (/quota exceeded/.test(message)) {
               this.emit("upload-error", {
-                error: e.message,
+                error: message,
                 isQuotaError: true,
+                jobId: "",
               });
             }
             throw e;
@@ -312,18 +371,31 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
                   uploadTaskId: task.id,
                   jobId,
                 });
-                await this.client.mutate<SubmitDataUploadMutation>({
-                  mutation: SubmitDataUploadDocument,
-                  variables: {
-                    jobId,
-                    enableAiDataAnalyst: await this.resolveEnableAiDataAnalyst(),
-                  },
-                });
-                delete this.abortControllers[jobId];
+                const needsPrompt =
+                  await this.resolveNeedsAiDataAnalystUploadPrompt();
+                if (needsPrompt) {
+                  this.pendingSubmitAfterAiPromptJobIds.push(jobId);
+                  delete this.abortControllers[jobId];
+                  if (!this.aiDataAnalystUploadPromptEmitted) {
+                    this.aiDataAnalystUploadPromptEmitted = true;
+                    this.emit("ai-data-analyst-upload-prompt-needed");
+                  }
+                } else {
+                  await this.client.mutate<SubmitDataUploadMutation>({
+                    mutation: SubmitDataUploadDocument,
+                    variables: {
+                      jobId,
+                      enableAiDataAnalyst: await this.resolveEnableAiDataAnalyst(),
+                    },
+                  });
+                  delete this.abortControllers[jobId];
+                }
               } catch (e) {
-                if (/quota exceeded/.test(e.message)) {
+                const message = e instanceof Error ? e.message : String(e);
+                if (/quota exceeded/.test(message)) {
                   this.emit("upload-error", {
-                    uploadTaskId: task.id,
+                    error: message,
+                    isQuotaError: true,
                     jobId,
                   });
                 } else {
