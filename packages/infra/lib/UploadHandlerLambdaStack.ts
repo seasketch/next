@@ -47,6 +47,10 @@ export class UploadHandlerLambdaStack extends cdk.Stack {
       );
     }
 
+    if (!process.env.CF_AIG_TOKEN || !process.env.CF_AIG_URL) {
+      throw new Error("CF_AIG_TOKEN and CF_AIG_URL must be set in environment");
+    }
+
     const {
       UPLOADS_BASE_URL,
       RESOURCES_REMOTE,
@@ -54,6 +58,8 @@ export class UploadHandlerLambdaStack extends cdk.Stack {
       TILES_BASE_URL,
       DEBUGGING_AWS_ACCESS_KEY_ID,
       DEBUGGING_AWS_SECRET_ACCESS_KEY,
+      CF_AIG_TOKEN,
+      CF_AIG_URL,
     } = process.env;
 
     const fn = new lambda.DockerImageFunction(this, "SpatialUploadHandler", {
@@ -96,6 +102,8 @@ export class UploadHandlerLambdaStack extends cdk.Stack {
         ...(props.piiClassifierFn
           ? { GEOSTATS_PII_CLASSIFIER_ARN: props.piiClassifierFn.functionArn }
           : {}),
+        CF_AIG_TOKEN,
+        CF_AIG_URL,
       },
       memorySize: 10240,
       reservedConcurrentExecutions: 100,

@@ -20,5 +20,7 @@ declare namespace NodeJS {
     TILES_BASE_URL: string;
     DEBUGGING_AWS_ACCESS_KEY_ID?: string;
     DEBUGGING_AWS_SECRET_ACCESS_KEY?: string;
+    CF_AIG_TOKEN?: string;
+    CF_AIG_URL?: string;
   }
 }
