@@ -17,10 +17,7 @@ This work requires you to:
 To make these recommendations, you will be given the 'filename' of the data layer and the 'geostats', which is a JSON object containing the column names, types, and sample data values.
 
 Rules:
-  - Your choice of presentation type and column should be consistent with the 
-    best_*_column properties. For example, categorical presentation types should 
-    use the best_category_column, and continuous presentation types should use 
-    the best_numeric_column.
+  - Your choice of presentation type and column should be consistent with the best_*_column properties. For example, categorical presentation types should use the best_category_column, and continuous presentation types should use the best_numeric_column.
   - Use categorical presentation types when it is clear the data represents different habitat classes, bioregions, shoretypes, etc.
   - Prefer simple polygon, point, or line presentations when it is clear the intent of the data is to show the footprint of a single class of features. 
   - It is just as important to be able to distinguish between different layers as it is between different features within a layer, so don't automatically categorize by named areas.
