@@ -211,6 +211,98 @@ type AddValidChildSketchClassPayload {
   query: Query
 }
 
+type AiDataAnalystNote implements Node {
+  attribution: String
+  bestCategoryColumn: String
+  bestDateColumn: String
+  bestGroupByColumn: String
+  bestIdColumn: String
+  bestLabelColumn: String
+  bestLayerTitle: String
+  bestNumericColumn: String
+  bestPopupDescriptionColumn: String
+  chosenPresentationColumn: String
+  chosenPresentationType: VisualizationType
+  createdAt: Datetime!
+  customPalette: JSON
+
+  """
+  Reads a single `DataSource` that is related to this `AiDataAnalystNote`.
+  """
+  dataSource: DataSource
+  dataSourceId: Int!
+  errors: String
+  id: Int!
+  interactivityType: InteractivityType!
+  junkColumns: [String]
+  labelsMinZoom: Int
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  notes: String!
+  palette: String
+  piiRedactedColumns: [String]!
+  projectId: Int!
+  reversePalette: Boolean!
+  showLabels: Boolean!
+  updatedAt: Datetime!
+  valueSteps: ValueSteps
+  valueStepsN: Int
+}
+
+"""
+A condition to be used against `AiDataAnalystNote` object types. All fields are
+tested for equality and combined with a logical ‘and.’
+"""
+input AiDataAnalystNoteCondition {
+  """Checks for equality with the object’s `dataSourceId` field."""
+  dataSourceId: Int
+
+  """Checks for equality with the object’s `id` field."""
+  id: Int
+}
+
+"""A connection to a list of `AiDataAnalystNote` values."""
+type AiDataAnalystNotesConnection {
+  """
+  A list of edges which contains the `AiDataAnalystNote` and cursor to aid in pagination.
+  """
+  edges: [AiDataAnalystNotesEdge!]!
+
+  """A list of `AiDataAnalystNote` objects."""
+  nodes: [AiDataAnalystNote!]!
+
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """
+  The count of *all* `AiDataAnalystNote` you could get from the connection.
+  """
+  totalCount: Int!
+}
+
+"""A `AiDataAnalystNote` edge in the connection."""
+type AiDataAnalystNotesEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `AiDataAnalystNote` at the end of the edge."""
+  node: AiDataAnalystNote!
+}
+
+"""Methods to use when ordering `AiDataAnalystNote`."""
+enum AiDataAnalystNotesOrderBy {
+  DATA_SOURCE_ID_ASC
+  DATA_SOURCE_ID_DESC
+  ID_ASC
+  ID_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+}
+
 """All input for the `alternateLanguageLabelsForFormElement` mutation."""
 input AlternateLanguageLabelsForFormElementInput {
   alternateLanguageSettings: JSON
@@ -2075,6 +2167,41 @@ type CreateOptionalBasemapLayerPayload {
   query: Query
 }
 
+"""All input for the create `OriginalSourceId` mutation."""
+input CreateOriginalSourceIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The `OriginalSourceId` to be created by this mutation."""
+  originalSourceId: OriginalSourceIdInput!
+}
+
+"""The output of our create `OriginalSourceId` mutation."""
+type CreateOriginalSourceIdPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `OriginalSourceId` that was created by this mutation."""
+  originalSourceId: OriginalSourceId
+
+  """An edge for our `OriginalSourceId`. May be used by Relay 1."""
+  originalSourceIdEdge(
+    """The method to use when ordering `OriginalSourceId`."""
+    orderBy: [OriginalSourceIdsOrderBy!] = [NATURAL]
+  ): OriginalSourceIdsEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """All input for the `createProject` mutation."""
 input CreateProjectInput {
   """
@@ -2215,6 +2342,41 @@ type CreateProjectsSharedBasemapPayload {
     """The method to use when ordering `ProjectsSharedBasemap`."""
     orderBy: [ProjectsSharedBasemapsOrderBy!] = [NATURAL]
   ): ProjectsSharedBasemapsEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the create `PublishedTocItemId` mutation."""
+input CreatePublishedTocItemIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """The `PublishedTocItemId` to be created by this mutation."""
+  publishedTocItemId: PublishedTocItemIdInput!
+}
+
+"""The output of our create `PublishedTocItemId` mutation."""
+type CreatePublishedTocItemIdPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """The `PublishedTocItemId` that was created by this mutation."""
+  publishedTocItemId: PublishedTocItemId
+
+  """An edge for our `PublishedTocItemId`. May be used by Relay 1."""
+  publishedTocItemIdEdge(
+    """The method to use when ordering `PublishedTocItemId`."""
+    orderBy: [PublishedTocItemIdsOrderBy!] = [NATURAL]
+  ): PublishedTocItemIdsEdge
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -2959,6 +3121,39 @@ When documentation is lacking for any of these properties, consult the [MapBox G
 
 """
 type DataSource implements Node {
+  """
+  Reads a single `AiDataAnalystNote` that is related to this `DataSource`.
+  """
+  aiDataAnalystNote: AiDataAnalystNote
+
+  """Reads and enables pagination through a set of `AiDataAnalystNote`."""
+  aiDataAnalystNotesConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: AiDataAnalystNoteCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `AiDataAnalystNote`."""
+    orderBy: [AiDataAnalystNotesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): AiDataAnalystNotesConnection! @deprecated(reason: "Please use aiDataAnalystNote instead")
   approximateFgbIndexSize: Int
   arcgisFetchStrategy: ArcgisFeatureLayerFetchStrategy!
 
@@ -3042,6 +3237,7 @@ type DataSource implements Node {
   indicates a radius equal to the width of a tile.
   """
   clusterRadius: Int
+  columns: [String]
 
   """
   Image sources only. Corners of image specified in longitude, latitude pairs.
@@ -3117,6 +3313,7 @@ type DataSource implements Node {
   importType: DataSourceImportTypes
   isArchived: Boolean
   isConvertibleLegacySource: Boolean
+  isSingleBandRaster: Boolean
 
   """
   GeoJSON only. Whether to calculate line distance metrics. This is required for
@@ -3378,6 +3575,7 @@ input DataSourceInput {
   indicates a radius equal to the width of a tile.
   """
   clusterRadius: Int
+  columns: [String]
 
   """
   Image sources only. Corners of image specified in longitude, latitude pairs.
@@ -3421,6 +3619,7 @@ input DataSourceInput {
   a direct upload or a service location like ArcGIS server
   """
   importType: DataSourceImportTypes
+  isSingleBandRaster: Boolean
 
   """
   GeoJSON only. Whether to calculate line distance metrics. This is required for
@@ -3989,6 +4188,31 @@ A point in time as described by the [ISO
 8601](https://en.wikipedia.org/wiki/ISO_8601) standard. May or may not include a timezone.
 """
 scalar Datetime
+
+"""All input for the `declinedToEnableAiDataAnalyst` mutation."""
+input DeclinedToEnableAiDataAnalystInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+}
+
+"""The output of our `declinedToEnableAiDataAnalyst` mutation."""
+type DeclinedToEnableAiDataAnalystPayload {
+  boolean: Boolean
+
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
 
 """All input for the `deleteArchivedSource` mutation."""
 input DeleteArchivedSourceInput {
@@ -7762,6 +7986,31 @@ type GetChildFoldersRecursivePayload {
   query: Query
 }
 
+"""All input for the `getPublishedCardIdFromDraft` mutation."""
+input GetPublishedCardIdFromDraftInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  draftReportCardId: Int
+}
+
+"""The output of our `getPublishedCardIdFromDraft` mutation."""
+type GetPublishedCardIdFromDraftPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  integer: Int
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 type GoogleMapsTileApiSession implements Node {
   expiresAt: Datetime!
   id: Int!
@@ -9058,6 +9307,14 @@ type Mutation {
     """
     input: CreateOptionalBasemapLayerInput!
   ): CreateOptionalBasemapLayerPayload
+
+  """Creates a single `OriginalSourceId`."""
+  createOriginalSourceId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateOriginalSourceIdInput!
+  ): CreateOriginalSourceIdPayload
   createPost(message: JSON!, topicId: Int!): Post!
 
   """
@@ -9106,6 +9363,14 @@ type Mutation {
     """
     input: CreateProjectsSharedBasemapInput!
   ): CreateProjectsSharedBasemapPayload
+
+  """Creates a single `PublishedTocItemId`."""
+  createPublishedTocItemId(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreatePublishedTocItemIdInput!
+  ): CreatePublishedTocItemIdPayload
   createRemoteGeojsonSource(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -9217,6 +9482,12 @@ type Mutation {
     """
     input: CreateVisibilityLogicRuleInput!
   ): CreateVisibilityLogicRulePayload
+  declinedToEnableAiDataAnalyst(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: DeclinedToEnableAiDataAnalystInput!
+  ): DeclinedToEnableAiDataAnalystPayload
   deleteArchivedSource(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -9850,6 +10121,12 @@ type Mutation {
     width: Int!
   ): Sprite
   getPresignedPMTilesUploadUrl(bytes: BigInt!, filename: String!): PresignedUrl!
+  getPublishedCardIdFromDraft(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: GetPublishedCardIdFromDraftInput!
+  ): GetPublishedCardIdFromDraftPayload
 
   """
   Give a user admin access to a project. User must have already joined the project and shared their user profile.
@@ -10362,6 +10639,12 @@ type Mutation {
     """
     input: UpdateAclByTableOfContentsItemIdInput!
   ): UpdateAclPayload
+  updateAiDataAnalystSettings(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateAiDataAnalystSettingsInput!
+  ): UpdateAiDataAnalystSettingsPayload
 
   """Updates a single `Basemap` using a unique key and a patch."""
   updateBasemap(
@@ -11379,6 +11662,48 @@ enum OptionalBasemapLayersOrderBy {
   PRIMARY_KEY_DESC
 }
 
+type OriginalSourceId {
+  dataSourceId: Int
+}
+
+"""An input for mutations affecting `OriginalSourceId`"""
+input OriginalSourceIdInput {
+  dataSourceId: Int
+}
+
+"""A connection to a list of `OriginalSourceId` values."""
+type OriginalSourceIdsConnection {
+  """
+  A list of edges which contains the `OriginalSourceId` and cursor to aid in pagination.
+  """
+  edges: [OriginalSourceIdsEdge!]!
+
+  """A list of `OriginalSourceId` objects."""
+  nodes: [OriginalSourceId!]!
+
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """
+  The count of *all* `OriginalSourceId` you could get from the connection.
+  """
+  totalCount: Int!
+}
+
+"""A `OriginalSourceId` edge in the connection."""
+type OriginalSourceIdsEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `OriginalSourceId` at the end of the edge."""
+  node: OriginalSourceId!
+}
+
+"""Methods to use when ordering `OriginalSourceId`."""
+enum OriginalSourceIdsOrderBy {
+  NATURAL
+}
+
 type OutstandingSurveyInvites {
   projectId: Int!
   surveyId: Int!
@@ -11606,7 +11931,9 @@ means of listing out all profiles in bulk.
 """
 type Profile {
   affiliations: String
+  aiDataAnalystEnabledAt: Datetime
   email: Email
+  enableAiDataAnalyst: Boolean!
   fullname: String
   nickname: String
   picture: String
@@ -11614,6 +11941,7 @@ type Profile {
   """Reads a single `User` that is related to this `Profile`."""
   user: User
   userId: Int!
+  wasPromptedToEnableAiDataAnalystAt: Datetime
 }
 
 """
@@ -11621,11 +11949,14 @@ Represents an update to a `Profile`. Fields that are set will be updated.
 """
 input ProfilePatch {
   affiliations: String
+  aiDataAnalystEnabledAt: Datetime
   email: Email
+  enableAiDataAnalyst: Boolean
   fullname: String
   nickname: String
   picture: Upload
   userId: Int
+  wasPromptedToEnableAiDataAnalystAt: Datetime
 }
 
 """A connection to a list of `Profile` values."""
@@ -13017,6 +13348,48 @@ type PublicProjectDetail {
   supportEmail: String
 }
 
+type PublishedTocItemId {
+  id: Int
+}
+
+"""An input for mutations affecting `PublishedTocItemId`"""
+input PublishedTocItemIdInput {
+  id: Int
+}
+
+"""A connection to a list of `PublishedTocItemId` values."""
+type PublishedTocItemIdsConnection {
+  """
+  A list of edges which contains the `PublishedTocItemId` and cursor to aid in pagination.
+  """
+  edges: [PublishedTocItemIdsEdge!]!
+
+  """A list of `PublishedTocItemId` objects."""
+  nodes: [PublishedTocItemId!]!
+
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """
+  The count of *all* `PublishedTocItemId` you could get from the connection.
+  """
+  totalCount: Int!
+}
+
+"""A `PublishedTocItemId` edge in the connection."""
+type PublishedTocItemIdsEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `PublishedTocItemId` at the end of the edge."""
+  node: PublishedTocItemId!
+}
+
+"""Methods to use when ordering `PublishedTocItemId`."""
+enum PublishedTocItemIdsOrderBy {
+  NATURAL
+}
+
 """All input for the `publishReport` mutation."""
 input PublishReportInput {
   """
@@ -13102,6 +13475,45 @@ type Query implements Node {
     offset: Int
     period: ActivityStatsPeriod
   ): [Project!]
+  aiDataAnalystNote(id: Int!): AiDataAnalystNote
+  aiDataAnalystNoteByDataSourceId(dataSourceId: Int!): AiDataAnalystNote
+
+  """Reads a single `AiDataAnalystNote` using its globally unique `ID`."""
+  aiDataAnalystNoteByNodeId(
+    """
+    The globally unique `ID` to be used in selecting a single `AiDataAnalystNote`.
+    """
+    nodeId: ID!
+  ): AiDataAnalystNote
+
+  """Reads and enables pagination through a set of `AiDataAnalystNote`."""
+  aiDataAnalystNotesConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: AiDataAnalystNoteCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `AiDataAnalystNote`."""
+    orderBy: [AiDataAnalystNotesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): AiDataAnalystNotesConnection
   apiKey(id: UUID!): ApiKey
 
   """Reads a single `ApiKey` using its globally unique `ID`."""
@@ -13556,6 +13968,7 @@ type Query implements Node {
   getDefaultDataSourcesBucket: String
   getFirstBandOffset(geostats: JSON): Float
   getFirstBandScale(geostats: JSON): Float
+  getGeostatsAttributeColumnNames(geostats: JSON): [String]
   getReferencedStableIdsForReport(_reportId: Int): [String]
   getRepresentativeColors(geostats: JSON): JSON
   getStateForSpatialMetric(metricId: BigInt): SpatialMetricState
@@ -13728,6 +14141,30 @@ type Query implements Node {
     """
     nodeId: ID!
   ): OptionalBasemapLayer
+
+  """Reads and enables pagination through a set of `OriginalSourceId`."""
+  originalSourceIdsConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `OriginalSourceId`."""
+    orderBy: [OriginalSourceIdsOrderBy!] = [NATURAL]
+  ): OriginalSourceIdsConnection
   post(id: Int!): Post
 
   """Reads a single `Post` using its globally unique `ID`."""
@@ -13912,6 +14349,30 @@ type Query implements Node {
     """Skip the first `n` values."""
     offset: Int
   ): [Sprite!]
+
+  """Reads and enables pagination through a set of `PublishedTocItemId`."""
+  publishedTocItemIdsConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `PublishedTocItemId`."""
+    orderBy: [PublishedTocItemIdsOrderBy!] = [NATURAL]
+  ): PublishedTocItemIdsConnection
 
   """
   Exposes the root query type nested one level down. This is helpful for Relay 1
@@ -16074,6 +16535,7 @@ input SubmitDataUploadInput {
   payload verbatim. May be used to track mutations by the client.
   """
   clientMutationId: String
+  enableAiDataAnalyst: Boolean
   id: UUID
 }
 
@@ -17659,6 +18121,32 @@ type UpdateAclPayload {
 
   """Reads a single `TableOfContentsItem` that is related to this `Acl`."""
   tableOfContentsItem: TableOfContentsItem
+}
+
+"""All input for the `updateAiDataAnalystSettings` mutation."""
+input UpdateAiDataAnalystSettingsInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  enableAi: Boolean
+}
+
+"""The output of our `updateAiDataAnalystSettings` mutation."""
+type UpdateAiDataAnalystSettingsPayload {
+  boolean: Boolean
+
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
 }
 
 """All input for the `updateBasemapByNodeId` mutation."""
@@ -20100,6 +20588,13 @@ A universally unique identifier as defined by [RFC 4122](https://tools.ietf.org/
 """
 scalar UUID
 
+enum ValueSteps {
+  CONTINUOUS
+  EQUAL_INTERVALS
+  NATURAL_BREAKS
+  QUANTILES
+}
+
 type Visitor {
   count: Int!
   interval: Interval!
@@ -20166,6 +20661,24 @@ enum VisitorsOrderBy {
   INTERVAL_ASC
   INTERVAL_DESC
   NATURAL
+}
+
+enum VisualizationType {
+  CATEGORICAL_LINE
+  CATEGORICAL_POINT
+  CATEGORICAL_POLYGON
+  CATEGORICAL_RASTER
+  CONTINUOUS_LINE
+  CONTINUOUS_POINT
+  CONTINUOUS_POLYGON
+  CONTINUOUS_RASTER
+  HEATMAP
+  MARKER_IMAGE
+  PROPORTIONAL_SYMBOL
+  RGB_RASTER
+  SIMPLE_LINE
+  SIMPLE_POINT
+  SIMPLE_POLYGON
 }
 
 type WorkerJob {

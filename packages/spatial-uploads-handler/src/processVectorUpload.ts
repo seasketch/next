@@ -1,8 +1,4 @@
-import {
-  GeostatsLayer,
-  GeostatsMetadata,
-  RasterInfo,
-} from "@seasketch/geostats-types";
+import { GeostatsLayer, GeostatsMetadata } from "@seasketch/geostats-types";
 import {
   MVT_THRESHOLD,
   ProgressUpdater,
@@ -10,14 +6,108 @@ import {
   SupportedTypes,
 } from "./handleUpload";
 import { parse as parsePath, join as pathJoin } from "path";
-import { readFileSync, statSync } from "fs";
+import { readFileSync, statSync, existsSync } from "fs";
 import { geostatsForVectorLayers } from "./geostatsForVectorLayer";
 import { Logger } from "./logger";
 import { defaultMarkdownParser } from "prosemirror-markdown";
 import { metadataToProseMirror } from "@seasketch/metadata-parser";
+import {
+  generateAttribution,
+  generateColumnIntelligence,
+  generateTitle,
+  type AiDataAnalystNotes,
+  type GenerateAttributionResult,
+  type GenerateColumnIntelligenceResult,
+} from "ai-data-analyst";
+import {
+  asNeverReject,
+  assertAiDataAnalystEnvVarsPresent,
+  classifyGeostatsPii,
+  composeAiDataAnalystNotesFromPromises,
+} from "./aiUploadNotes";
 
 export default function fromMarkdown(md: string) {
   return defaultMarkdownParser.parse(md)?.toJSON();
+}
+
+type SidecarKind = "txt" | "html";
+
+async function collectAttributionSidecarContents(
+  logger: Logger,
+  workingDirectory: string,
+  workingFilePath: string,
+  fromArchive: boolean,
+): Promise<{ kind: SidecarKind; content: string }[]> {
+  const bundles: { kind: SidecarKind; content: string }[] = [];
+  if (fromArchive) {
+    const sidecarPaths = await logger.exec(
+      [
+        "find",
+        [
+          workingDirectory,
+          "-type",
+          "f",
+          "-not",
+          "-path",
+          "*/.*",
+          "-not",
+          "-path",
+          "*/__",
+          "(",
+          "-name",
+          "*.txt",
+          "-o",
+          "-name",
+          "*.html",
+          ")",
+        ],
+      ],
+      "Problem finding .txt/.html metadata sidecars in archive",
+      0,
+    );
+    if (sidecarPaths?.trim()) {
+      for (const line of sidecarPaths.trim().split("\n")) {
+        const p = line.trim();
+        if (!p || !existsSync(p)) {
+          continue;
+        }
+        const ext = parsePath(p).ext.toLowerCase();
+        const kind: SidecarKind = ext === ".html" ? "html" : "txt";
+        try {
+          bundles.push({ kind, content: readFileSync(p, "utf8") });
+        } catch (e) {
+          console.error(`Problem reading .${kind} sidecar`, p, e);
+        }
+      }
+    }
+  } else {
+    const { dir, name } = parsePath(workingFilePath);
+    const stems = [
+      name,
+      ...(name.includes(".") ? [name.replace(/\.[^/.]+$/, "")] : []),
+    ];
+    const seen = new Set<string>();
+    for (const stem of stems) {
+      for (const ext of ["txt", "html"] as const) {
+        const candidate = pathJoin(dir, `${stem}.${ext}`);
+        if (seen.has(candidate)) {
+          continue;
+        }
+        seen.add(candidate);
+        if (existsSync(candidate)) {
+          try {
+            bundles.push({
+              kind: ext,
+              content: readFileSync(candidate, "utf8"),
+            });
+          } catch (e) {
+            console.error(`Problem reading .${ext} sidecar`, candidate, e);
+          }
+        }
+      }
+    }
+  }
+  return bundles;
 }
 
 /**
@@ -42,7 +132,15 @@ export async function processVectorUpload(options: {
   jobId: string;
   /** Santitized original filename. Used for layer name */
   originalName: string;
-}): Promise<GeostatsLayer[]> {
+  /** Display filename (e.g. sanitized name + extension) for LLM context */
+  uploadFilename: string;
+  /** When true, run title / attribution / column intelligence LLMs (requires CF_AIG_* env). */
+  enableAiDataAnalyst?: boolean;
+}): Promise<{
+  layers: GeostatsLayer[];
+  /** Resolve after local processing; caller should await after uploads so LLMs overlap I/O. */
+  aiDataAnalystNotesPromise: Promise<AiDataAnalystNotes | undefined>;
+}> {
   const {
     logger,
     path,
@@ -52,10 +150,25 @@ export async function processVectorUpload(options: {
     workingDirectory,
     jobId,
     originalName,
+    uploadFilename,
+    enableAiDataAnalyst,
   } = options;
+  if (enableAiDataAnalyst) {
+    assertAiDataAnalystEnvVarsPresent();
+  }
   const originalFilePath = path;
   let workingFilePath = path;
   await updateProgress("running", "validating");
+
+  let titleP = enableAiDataAnalyst
+    ? asNeverReject(generateTitle(uploadFilename), "generateTitle")
+    : null;
+  let attributionP: Promise<
+    GenerateAttributionResult | { error: string }
+  > | null = null;
+  let columnP: Promise<
+    GenerateColumnIntelligenceResult | { error: string }
+  > | null = null;
 
   let type: SupportedTypes;
   let { ext } = parsePath(path);
@@ -71,13 +184,13 @@ export async function processVectorUpload(options: {
       await logger.exec(
         ["unzip", ["-o", workingFilePath, "-d", workingDirectory]],
         "Problem unzipping file",
-        1 / 30
+        1 / 30,
       );
     } else {
       await logger.exec(
         ["unrar", ["x", "-op" + workingDirectory, workingFilePath]],
         "Problem extracting .rar file",
-        1 / 30
+        1 / 30,
       );
     }
 
@@ -101,7 +214,7 @@ export async function processVectorUpload(options: {
         ],
       ],
       "Problem finding shapefile in zip archive",
-      1 / 30
+      1 / 30,
     );
 
     // Make sure there is also a .prj projection file
@@ -123,7 +236,7 @@ export async function processVectorUpload(options: {
         ],
       ],
       "Problem finding projection file (.prj) in zip archive",
-      1 / 30
+      1 / 30,
     );
 
     if (!projFile) {
@@ -162,7 +275,7 @@ export async function processVectorUpload(options: {
         ],
       ],
       "Problem finding metadata files in zip archive",
-      1 / 30
+      1 / 30,
     );
     try {
       if (xmlPaths) {
@@ -207,7 +320,7 @@ export async function processVectorUpload(options: {
     ext === ".shp"
       ? "Could not read file. Shapefiles should be uploaded as a zip archive with related sidecar files"
       : "Could not run ogrinfo on file",
-    1 / 30
+    1 / 30,
   );
   if (/GeoJSON/.test(ogrInfo)) {
     type = "GeoJSON";
@@ -217,6 +330,29 @@ export async function processVectorUpload(options: {
     type = "ZippedShapefile";
   } else {
     throw new Error("Not a recognized file type");
+  }
+
+  const sidecarFiles = await collectAttributionSidecarContents(
+    logger,
+    workingDirectory,
+    workingFilePath,
+    isZip || isRar,
+  );
+  const attributionInputs: string[] = [];
+  for (const s of sidecarFiles) {
+    const label = s.kind === "html" ? "Sidecar HTML file" : "Sidecar text file";
+    attributionInputs.push(`${label}:\n${s.content}`);
+  }
+  if (metadata && Object.keys(metadata).length > 0) {
+    attributionInputs.push(
+      `Structured metadata (JSON, from XML when present):\n${JSON.stringify(metadata)}`,
+    );
+  }
+  if (enableAiDataAnalyst && attributionInputs.length > 0) {
+    attributionP = asNeverReject(
+      generateAttribution(attributionInputs),
+      "generateAttribution",
+    );
   }
 
   let isCorrectProjection = false;
@@ -263,7 +399,7 @@ export async function processVectorUpload(options: {
         ],
       ],
       "Problem converting to FlatGeobuf",
-      2 / 30
+      2 / 30,
     );
 
     // Save normalized vector to the list of outputs
@@ -284,6 +420,25 @@ export async function processVectorUpload(options: {
 
   if (metadata) {
     stats[0].metadata = metadata;
+  }
+
+  // PII runs in parallel with GeoJSON/tiling/uploads; handleUpload awaits the same
+  // promise after uploads. When AI is enabled, PII is chained before column intelligence.
+  let piiOnlyPromise: Promise<void> | null = null;
+  if (enableAiDataAnalyst) {
+    // PII must reject the job on failure (do not wrap in asNeverReject). Only column
+    // intelligence is best-effort; compose still runs after PII has updated stats[0].
+    columnP = (async () => {
+      stats[0] = await classifyGeostatsPii(stats[0]);
+      return asNeverReject(
+        generateColumnIntelligence(uploadFilename, stats[0]),
+        "generateColumnIntelligence",
+      );
+    })();
+  } else {
+    piiOnlyPromise = (async () => {
+      stats[0] = await classifyGeostatsPii(stats[0]);
+    })();
   }
   // Only convert to GeoJSON if the dataset is small. Otherwise we can convert
   // from the normalized fgb dynamically if someone wants to download it as
@@ -311,7 +466,7 @@ export async function processVectorUpload(options: {
         ],
       ],
       "Problem converting to GeoJSON",
-      15 / 30
+      15 / 30,
     );
     // Save GeoJSON to the list of outputs
     // The calling lambda will look through the list of outputs and choose
@@ -335,7 +490,7 @@ export async function processVectorUpload(options: {
     const fioInfo = await logger.exec(
       ["fio", ["info", normalizedVectorPath]],
       "Problem detecting numeric properties using fiona.",
-      1 / 30
+      1 / 30,
     );
     const fioData = JSON.parse(fioInfo);
     const schema = fioData?.schema?.properties || {};
@@ -402,14 +557,14 @@ export async function processVectorUpload(options: {
         ],
       ],
       "Tippecanoe failed",
-      12 / 30
+      12 / 30,
     );
     // TODO: at some point a newer tippecanoe can be used to save directly to
     // pmtiles
     await logger.exec(
       [`pmtiles`, ["convert", mvtPath, pmtilesPath]],
       "PMTiles conversion failed",
-      3 / 30
+      3 / 30,
     );
     outputs.push({
       type: "PMTiles",
@@ -421,5 +576,17 @@ export async function processVectorUpload(options: {
     });
   }
 
-  return stats;
+  const aiDataAnalystNotesPromise = enableAiDataAnalyst
+    ? composeAiDataAnalystNotesFromPromises({
+        uploadFilename,
+        titleP,
+        attributionP,
+        columnP,
+      })
+    : piiOnlyPromise!.then(() => undefined);
+
+  return {
+    layers: stats,
+    aiDataAnalystNotesPromise,
+  };
 }

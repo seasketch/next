@@ -32,6 +32,8 @@ declare namespace NodeJS {
     NORMALIZED_SPATIAL_UPLOADS_BUCKET: string;
     SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER?: string;
     SPATIAL_UPLOADS_LAMBDA_ARN?: string;
+    /** Geostats PII classifier — optional warm ping on createDataUpload */
+    GEOSTATS_PII_CLASSIFIER_ARN?: string;
     R2_ACCESS_KEY_ID: string;
     R2_SECRET_ACCESS_KEY: string;
     R2_ENDPOINT: string;

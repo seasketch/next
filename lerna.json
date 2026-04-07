@@ -17,7 +17,9 @@
     "packages/overlay-engine",
     "packages/sketch-preprocessing-worker",
     "packages/overlay-worker",
-    "packages/fragment-worker"
+    "packages/fragment-worker",
+    "packages/ai-data-analyst",
+    "packages/gl-style-builder"
   ],
   "version": "independent"
 }

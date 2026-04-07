@@ -1,0 +1,15 @@
+# Extends the production image with pytest to run unit tests locally.
+# Usage (via Makefile):  make test-python
+#
+# The production image is built first under the tag geostats-pii-classifier:local,
+# and this file layers in pytest + the tests/ directory.
+FROM geostats-pii-classifier:local
+
+RUN pip install --no-cache-dir pytest==8.3.4
+
+COPY tests/ ./tests/
+
+# The Lambda base image sets ENTRYPOINT to /lambda-entrypoint.sh which expects
+# a handler name as the first argument.  Reset it so pytest runs directly.
+ENTRYPOINT ["python", "-m", "pytest"]
+CMD ["tests/", "-v"]

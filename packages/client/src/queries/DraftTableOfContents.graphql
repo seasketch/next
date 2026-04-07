@@ -274,6 +274,31 @@ fragment FullAdminSource on DataSource {
   }
   changelog
   isConvertibleLegacySource
+  aiDataAnalystNote {
+    notes
+    attribution
+    bestLayerTitle
+    chosenPresentationType
+    chosenPresentationColumn
+    customPalette
+    errors
+    interactivityType
+    junkColumns
+    labelsMinZoom
+    bestCategoryColumn
+    bestDateColumn
+    bestGroupByColumn
+    bestIdColumn
+    bestLabelColumn
+    bestNumericColumn
+    bestPopupDescriptionColumn
+    palette
+    reversePalette
+    showLabels
+    valueSteps
+    valueStepsN
+    piiRedactedColumns
+  }
 }
 
 fragment ArchivedSource on ArchivedDataSource {

@@ -11,6 +11,9 @@ export interface SpatialUploadsHandlerRequest {
   skipLoggingProgress?: boolean;
   // Canonical email of the requesting user for logging purposes
   requestingUser: string;
+  // Whether to enable AI data analyst. If not set or false, will skip sending
+  // data to openai. *Will* still run classification of PII using local models.
+  enableAiDataAnalyst?: boolean;
 }
 
 export const processUpload = async (event: SpatialUploadsHandlerRequest) => {
@@ -21,7 +24,8 @@ export const processUpload = async (event: SpatialUploadsHandlerRequest) => {
       event.objectKey,
       event.suffix,
       event.requestingUser,
-      event.skipLoggingProgress
+      event.skipLoggingProgress,
+      event.enableAiDataAnalyst,
     );
     return {
       ...outputs,

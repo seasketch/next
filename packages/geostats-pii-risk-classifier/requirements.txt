@@ -1,0 +1,8 @@
+presidio-analyzer==2.2.354
+phonenumbers==8.13.39
+spacy==3.7.4
+# spaCy models pinned to 3.7.x to match spaCy version above
+en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.7.1/en_core_web_sm-3.7.1-py3-none-any.whl
+xx_ent_wiki_sm @ https://github.com/explosion/spacy-models/releases/download/xx_ent_wiki_sm-3.7.0/xx_ent_wiki_sm-3.7.0-py3-none-any.whl
+# Test dependencies (not installed in container; used locally)
+pytest==8.3.4

@@ -60,8 +60,10 @@ fragment JobDetails on ProjectBackgroundJob {
   }
 }
 
-mutation submitDataUpload($jobId: UUID!) {
-  submitDataUpload(input: { id: $jobId }) {
+mutation submitDataUpload($jobId: UUID!, $enableAiDataAnalyst: Boolean) {
+  submitDataUpload(
+    input: { id: $jobId, enableAiDataAnalyst: $enableAiDataAnalyst }
+  ) {
     projectBackgroundJob {
       id
       state

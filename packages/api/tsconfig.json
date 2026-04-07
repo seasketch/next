@@ -68,12 +68,14 @@
   },
   "references": [
     { "path": "../geostats-types" },
+    { "path": "../gl-style-builder" },
     { "path": "../map-tile-cache-calculator" },
     { "path": "../mapbox-gl-esri-sources" },
     { "path": "../metadata-parser" },
     { "path": "../overlay-engine" },
     { "path": "../spatial-uploads-handler" },
-    { "path": "../vector-data-source" }
+    { "path": "../vector-data-source" },
+    { "path": "../ai-data-analyst" }
   ],
   "include": ["src/**/*", "tasks/**/*", "process-env.d.ts"],
   "exclude": ["node_modules", "**/*.spec.ts", "dist"]

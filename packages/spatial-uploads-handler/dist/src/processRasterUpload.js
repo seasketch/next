@@ -8,13 +8,22 @@ const geostats_types_1 = require("@seasketch/geostats-types");
 const path_1 = require("path");
 const fs_1 = require("fs");
 const rasterInfoForBands_1 = require("./rasterInfoForBands");
+const ai_data_analyst_1 = require("ai-data-analyst");
+const aiUploadNotes_1 = require("./aiUploadNotes");
 const gdal_async_1 = __importDefault(require("gdal-async"));
 const bbox_1 = __importDefault(require("@turf/bbox"));
 const netcdf_1 = require("./formats/netcdf");
 async function processRasterUpload(options) {
-    const { logger, outputs, updateProgress, baseKey, workingDirectory, jobId, originalName, } = options;
+    const { logger, outputs, updateProgress, baseKey, workingDirectory, jobId, originalName, uploadFilename, enableAiDataAnalyst, } = options;
+    if (enableAiDataAnalyst) {
+        (0, aiUploadNotes_1.assertAiDataAnalystEnvVarsPresent)();
+    }
     await updateProgress("running", "validating");
     let path = options.path;
+    const titleP = enableAiDataAnalyst
+        ? (0, aiUploadNotes_1.asNeverReject)((0, ai_data_analyst_1.generateTitle)(uploadFilename), "generateTitle")
+        : null;
+    let columnP = null;
     const originalPath = options.path;
     const { ext, isCorrectProjection } = await validateInput(path, logger);
     if (ext === ".nc") {
@@ -29,6 +38,9 @@ async function processRasterUpload(options) {
     await updateProgress("running", "analyzing");
     // Get raster stats
     const stats = await (0, rasterInfoForBands_1.rasterInfoForBands)(path);
+    if (enableAiDataAnalyst) {
+        columnP = (0, aiUploadNotes_1.asNeverReject)((0, ai_data_analyst_1.generateColumnIntelligence)(uploadFilename, stats), "generateColumnIntelligence");
+    }
     const size = (0, fs_1.statSync)(path).size;
     // Reproject files > 2MB in case blocksize is too small
     if (!isCorrectProjection || size > 2000000) {
@@ -101,7 +113,18 @@ async function processRasterUpload(options) {
         url: `${process.env.TILES_BASE_URL}/${baseKey}/${jobId}.pmtiles`,
         filename: `${jobId}.pmtiles`,
     });
-    return stats;
+    const aiDataAnalystNotesPromise = enableAiDataAnalyst
+        ? (0, aiUploadNotes_1.composeAiDataAnalystNotesFromPromises)({
+            uploadFilename,
+            titleP,
+            attributionP: null,
+            columnP,
+        })
+        : Promise.resolve(undefined);
+    return {
+        rasterInfo: stats,
+        aiDataAnalystNotesPromise,
+    };
 }
 async function validateInput(path, logger) {
     let { ext } = (0, path_1.parse)(path);

@@ -5,7 +5,7 @@
   "author": "Chad Burt <chad@underbluewaters.net>",
   "homepage": "https://github.com/seasketch/next#readme",
   "license": "BSD-3-Clause",
-  "main": "src/index.ts",
+  "main": "dist/src/index.js",
   "types": "dist/src/index.d.ts",
   "directories": {
     "lib": "lib",
@@ -21,12 +21,13 @@
   "scripts": {
     "start": "docker run -p 9000:8080 --env-file .env spatial-uploads-handler:latest",
     "dev": "npx tsx watch server.ts",
-    "build": "tsc",
-    "watch": "tsc --watch",
+    "build": "tsc -b",
+    "watch": "tsc -b --watch",
     "build:container": "cp -r node_modules/@seasketch . && docker build -t spatial-uploads-handler . && rm -rf @seasketch",
     "test": "jest",
     "deploy:pre": "npm run build && cp -r node_modules/@seasketch .",
-    "deploy:post": "rm -rf @seasketch"
+    "deploy:post": "rm -rf @seasketch",
+    "geostats": "npx tsx bin/geostats.ts"
   },
   "jest": {
     "testPathIgnorePatterns": [
@@ -53,6 +54,7 @@
     "@types/pg": "^8.6.5",
     "@types/tmp": "^0.2.3",
     "@types/xml2js": "^0.4.14",
+    "ai-data-analyst": "^1.0.0",
     "bytes": "^3.1.2",
     "geostats": "^2.1.0",
     "lodash.debounce": "^4.0.8",

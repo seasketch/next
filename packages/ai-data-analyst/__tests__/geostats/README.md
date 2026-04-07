@@ -1,0 +1,1 @@
+Generate geostats test cases by running the geostats npm script from packages/spatial-uploads-handler. Nest it within a `{filename: ..., geostats:...}` object json file in this folder and reference it in test cases.

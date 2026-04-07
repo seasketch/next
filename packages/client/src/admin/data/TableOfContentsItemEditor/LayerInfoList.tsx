@@ -1,4 +1,4 @@
-import { Trans, useTranslation } from "react-i18next";
+import { TFunction, Trans, useTranslation } from "react-i18next";
 import {
   DataSourceTypes,
   FullAdminDataLayerFragment,
@@ -13,7 +13,7 @@ import InlineAuthor from "../../../components/InlineAuthor";
 import HostedLayerInfo from "./HostedLayerInfo";
 import ArcGISDynamicMapServiceLayerInfo from "./ArcGISDynamicMapServiceLayerInfo";
 import { ReactNode, useEffect, useMemo, useState } from "react";
-import { InfoCircledIcon, TableIcon } from "@radix-ui/react-icons";
+import { InfoCircledIcon, PersonIcon, TableIcon } from "@radix-ui/react-icons";
 import GeostatsModal from "../GLStyleEditor/GeostatsModal";
 import ArcGISTiledRasterSettings from "../ArcGISTiledRasterSettings";
 import ArcGISVectorLayerInfo from "./ArcGISVectorLayerInfo";
@@ -28,6 +28,9 @@ import {
 import RasterInfoModal, { RasterInfoHistogram } from "../RasterInfoModal";
 import Spinner from "../../../components/Spinner";
 import CustomizeTilesModal from "../CustomizeTilesModal";
+import { piiRiskToneClass } from "../piiGeostatsDisplay";
+
+export { PII_REDACTION_THRESHOLD } from "../piiGeostatsDisplay";
 
 export default function LayerInfoList({
   source,
@@ -103,6 +106,21 @@ export default function LayerInfoList({
   const [showColumnModal, setShowColumnModal] = useState(false);
   const [showRasterModal, setShowRasterModal] = useState(false);
   const [showCustomizeTilesModal, setShowCustomizeTilesModal] = useState(false);
+
+  const columnStats = useMemo(() => {
+    if (!geostatsLayer || isRasterInfo(source.geostats)) return null;
+    const total = geostatsLayer.attributes.length;
+    const piiAttrs = geostatsLayer.attributes.filter(
+      (attr) => attr.piiRisk !== undefined && attr.piiRisk > 0
+    );
+    const piiDetectedCount = piiAttrs.length;
+    const maxPiiRisk =
+      piiAttrs.length > 0
+        ? Math.max(...piiAttrs.map((a) => a.piiRisk as number))
+        : null;
+    const assessed = geostatsLayer.piiRiskWasAssessed === true;
+    return { total, piiDetectedCount, assessed, maxPiiRisk };
+  }, [geostatsLayer, source.geostats]);
 
   return (
     <>
@@ -232,20 +250,60 @@ export default function LayerInfoList({
           <SettingsDLListItem
             term={t("Geometry")}
             description={
-              <div className="w-full truncate flex">
-                <span className="flex-1 truncate">
+              <div className="w-full truncate">
+                <span>
                   {geostatsLayer.count.toLocaleString()}{" "}
                   {pluralizeGeometryType(geostatsLayer.geometry)}
                 </span>
-                <div className="text-right px-1">
+              </div>
+            }
+          />
+        )}
+        {geostatsLayer && columnStats && (
+          <SettingsDLListItem
+            term={t("Columns")}
+            description={
+              <div className="flex w-full min-w-0 flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                <p className="m-0 text-sm leading-5 text-slate-900">
+                  {columnsCountDescription(columnStats, t)}
+                </p>
+                {columnStats.assessed &&
+                columnStats.piiDetectedCount > 0 &&
+                columnStats.maxPiiRisk != null ? (
+                  <div className="inline-flex w-fit max-w-full items-stretch overflow-hidden rounded-lg border border-black/20 bg-white shadow-none">
+                    <span
+                      className={`box-border flex min-h-[1.75rem] flex-none items-center gap-1 border-r border-black/20 px-2.5 py-1.5 text-xs font-medium leading-none ${piiRiskToneClass(
+                        columnStats.maxPiiRisk
+                      )}`}
+                      title={t("Personally identifiable information detected")}
+                    >
+                      <PersonIcon
+                        className="h-3.5 w-3.5 shrink-0 opacity-90"
+                        aria-hidden
+                      />
+                      <span>
+                        {t("PII")} {columnStats.maxPiiRisk * 100}
+                      </span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowColumnModal(true)}
+                      className="box-border m-0 flex min-h-[1.75rem] flex-none cursor-pointer items-center gap-1.5 border-0 bg-primary-500 px-3 py-1.5 text-xs font-medium leading-none text-white shadow-none transition-colors hover:bg-primary-600 focus:outline-none focus-visible:z-10 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-white/80 appearance-none"
+                    >
+                      <TableIcon className="h-3.5 w-3.5 shrink-0 opacity-95" />
+                      <span>{t("column details")}</span>
+                    </button>
+                  </div>
+                ) : (
                   <button
+                    type="button"
                     onClick={() => setShowColumnModal(true)}
-                    className="hover:shadow-sm text-primary-500 items-center inline-flex border px-2 rounded-full text-xs py-0.5 "
+                    className="box-border m-0 inline-flex min-h-[1.75rem] w-fit max-w-full cursor-pointer items-center gap-1.5 self-start rounded-lg border border-black/20 bg-white px-3 py-1.5 text-xs font-medium leading-none text-primary-600 shadow-none transition-colors hover:bg-slate-50 hover:text-primary-700 focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary-400 appearance-none sm:self-center"
                   >
-                    <TableIcon className="inline mr-1" />
-                    <span>{t("column detail")}</span>
+                    <TableIcon className="h-3.5 w-3.5 shrink-0" />
+                    <span>{t("column details")}</span>
                   </button>
-                </div>
+                )}
               </div>
             }
           />
@@ -409,6 +467,25 @@ export function isRemoteSource(type: DataSourceTypes) {
     type !== DataSourceTypes.SeasketchRaster &&
     type !== DataSourceTypes.SeasketchVector
   );
+}
+
+/** Column count line only; PII is shown separately as a badge when relevant. */
+function columnsCountDescription(
+  columnStats: {
+    total: number;
+    piiDetectedCount: number;
+    assessed: boolean;
+    maxPiiRisk: number | null;
+  },
+  t: TFunction<"admin:data">
+): string {
+  const { total, assessed } = columnStats;
+  if (assessed) {
+    return total === 1 ? t("1 column") : t("{{total}} columns", { total });
+  }
+  return total === 1
+    ? t("1 column. PII not assessed.")
+    : t("{{total}} columns. PII not assessed.", { total });
 }
 
 function pluralizeGeometryType(type: GeostatsLayer["geometry"]) {

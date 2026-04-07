@@ -190,6 +190,14 @@ export function validVisualizationTypesForGeostats(
   return types;
 }
 
+/**
+ * Given a set of gl-style layers, determine the named visualization type they
+ * represent.
+ * @param geostats - The geostats data for the layer
+ * @param validTypes - The valid visualization types for the layer
+ * @param layers - The gl-style layers for the layer
+ * @returns The named visualization type or null if no type can be determined
+ */
 export function determineVisualizationType(
   geostats: GeostatsLayer | RasterInfo,
   validTypes: VisualizationType[],

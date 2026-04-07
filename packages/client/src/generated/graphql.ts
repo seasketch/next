@@ -238,6 +238,86 @@ export type AddValidChildSketchClassPayload = {
   query?: Maybe<Query>;
 };
 
+export type AiDataAnalystNote = Node & {
+  __typename?: 'AiDataAnalystNote';
+  attribution?: Maybe<Scalars['String']>;
+  bestCategoryColumn?: Maybe<Scalars['String']>;
+  bestDateColumn?: Maybe<Scalars['String']>;
+  bestGroupByColumn?: Maybe<Scalars['String']>;
+  bestIdColumn?: Maybe<Scalars['String']>;
+  bestLabelColumn?: Maybe<Scalars['String']>;
+  bestLayerTitle?: Maybe<Scalars['String']>;
+  bestNumericColumn?: Maybe<Scalars['String']>;
+  bestPopupDescriptionColumn?: Maybe<Scalars['String']>;
+  chosenPresentationColumn?: Maybe<Scalars['String']>;
+  chosenPresentationType?: Maybe<VisualizationType>;
+  createdAt: Scalars['Datetime'];
+  customPalette?: Maybe<Scalars['JSON']>;
+  /** Reads a single `DataSource` that is related to this `AiDataAnalystNote`. */
+  dataSource?: Maybe<DataSource>;
+  dataSourceId: Scalars['Int'];
+  errors?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+  interactivityType: InteractivityType;
+  junkColumns?: Maybe<Array<Maybe<Scalars['String']>>>;
+  labelsMinZoom?: Maybe<Scalars['Int']>;
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  notes: Scalars['String'];
+  palette?: Maybe<Scalars['String']>;
+  piiRedactedColumns: Array<Maybe<Scalars['String']>>;
+  projectId: Scalars['Int'];
+  reversePalette: Scalars['Boolean'];
+  showLabels: Scalars['Boolean'];
+  updatedAt: Scalars['Datetime'];
+  valueSteps?: Maybe<ValueSteps>;
+  valueStepsN?: Maybe<Scalars['Int']>;
+};
+
+/**
+ * A condition to be used against `AiDataAnalystNote` object types. All fields are
+ * tested for equality and combined with a logical ‘and.’
+ */
+export type AiDataAnalystNoteCondition = {
+  /** Checks for equality with the object’s `dataSourceId` field. */
+  dataSourceId?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['Int']>;
+};
+
+/** A connection to a list of `AiDataAnalystNote` values. */
+export type AiDataAnalystNotesConnection = {
+  __typename?: 'AiDataAnalystNotesConnection';
+  /** A list of edges which contains the `AiDataAnalystNote` and cursor to aid in pagination. */
+  edges: Array<AiDataAnalystNotesEdge>;
+  /** A list of `AiDataAnalystNote` objects. */
+  nodes: Array<AiDataAnalystNote>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `AiDataAnalystNote` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `AiDataAnalystNote` edge in the connection. */
+export type AiDataAnalystNotesEdge = {
+  __typename?: 'AiDataAnalystNotesEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `AiDataAnalystNote` at the end of the edge. */
+  node: AiDataAnalystNote;
+};
+
+/** Methods to use when ordering `AiDataAnalystNote`. */
+export enum AiDataAnalystNotesOrderBy {
+  DataSourceIdAsc = 'DATA_SOURCE_ID_ASC',
+  DataSourceIdDesc = 'DATA_SOURCE_ID_DESC',
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+}
+
 /** All input for the `alternateLanguageLabelsForFormElement` mutation. */
 export type AlternateLanguageLabelsForFormElementInput = {
   alternateLanguageSettings?: Maybe<Scalars['JSON']>;
@@ -1832,6 +1912,39 @@ export type CreateOptionalBasemapLayerPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the create `OriginalSourceId` mutation. */
+export type CreateOriginalSourceIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `OriginalSourceId` to be created by this mutation. */
+  originalSourceId: OriginalSourceIdInput;
+};
+
+/** The output of our create `OriginalSourceId` mutation. */
+export type CreateOriginalSourceIdPayload = {
+  __typename?: 'CreateOriginalSourceIdPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `OriginalSourceId` that was created by this mutation. */
+  originalSourceId?: Maybe<OriginalSourceId>;
+  /** An edge for our `OriginalSourceId`. May be used by Relay 1. */
+  originalSourceIdEdge?: Maybe<OriginalSourceIdsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our create `OriginalSourceId` mutation. */
+export type CreateOriginalSourceIdPayloadOriginalSourceIdEdgeArgs = {
+  orderBy?: Maybe<Array<OriginalSourceIdsOrderBy>>;
+};
+
 /** All input for the `createProject` mutation. */
 export type CreateProjectInput = {
   /**
@@ -1963,6 +2076,39 @@ export type CreateProjectsSharedBasemapPayload = {
 /** The output of our create `ProjectsSharedBasemap` mutation. */
 export type CreateProjectsSharedBasemapPayloadProjectsSharedBasemapEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
+};
+
+/** All input for the create `PublishedTocItemId` mutation. */
+export type CreatePublishedTocItemIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `PublishedTocItemId` to be created by this mutation. */
+  publishedTocItemId: PublishedTocItemIdInput;
+};
+
+/** The output of our create `PublishedTocItemId` mutation. */
+export type CreatePublishedTocItemIdPayload = {
+  __typename?: 'CreatePublishedTocItemIdPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `PublishedTocItemId` that was created by this mutation. */
+  publishedTocItemId?: Maybe<PublishedTocItemId>;
+  /** An edge for our `PublishedTocItemId`. May be used by Relay 1. */
+  publishedTocItemIdEdge?: Maybe<PublishedTocItemIdsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our create `PublishedTocItemId` mutation. */
+export type CreatePublishedTocItemIdPayloadPublishedTocItemIdEdgeArgs = {
+  orderBy?: Maybe<Array<PublishedTocItemIdsOrderBy>>;
 };
 
 /** All input for the `createRemoteGeojsonSource` mutation. */
@@ -2631,6 +2777,13 @@ export enum DataLayersOrderBy {
  */
 export type DataSource = Node & {
   __typename?: 'DataSource';
+  /** Reads a single `AiDataAnalystNote` that is related to this `DataSource`. */
+  aiDataAnalystNote?: Maybe<AiDataAnalystNote>;
+  /**
+   * Reads and enables pagination through a set of `AiDataAnalystNote`.
+   * @deprecated Please use aiDataAnalystNote instead
+   */
+  aiDataAnalystNotesConnection: AiDataAnalystNotesConnection;
   approximateFgbIndexSize?: Maybe<Scalars['Int']>;
   arcgisFetchStrategy: ArcgisFeatureLayerFetchStrategy;
   /** Reads and enables pagination through a set of `ArchivedDataSource`. */
@@ -2683,6 +2836,7 @@ export type DataSource = Node & {
    * indicates a radius equal to the width of a tile.
    */
   clusterRadius?: Maybe<Scalars['Int']>;
+  columns?: Maybe<Array<Maybe<Scalars['String']>>>;
   /** Image sources only. Corners of image specified in longitude, latitude pairs. */
   coordinates?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   createdAt: Scalars['Datetime'];
@@ -2720,6 +2874,7 @@ export type DataSource = Node & {
   importType?: Maybe<DataSourceImportTypes>;
   isArchived?: Maybe<Scalars['Boolean']>;
   isConvertibleLegacySource?: Maybe<Scalars['Boolean']>;
+  isSingleBandRaster?: Maybe<Scalars['Boolean']>;
   /**
    * GeoJSON only. Whether to calculate line distance metrics. This is required for
    * line layers that specify line-gradient values.
@@ -2813,6 +2968,24 @@ export type DataSource = Node & {
   /** ARCGIS_DYNAMIC_MAPSERVER only. When using a high-dpi screen, request higher resolution images. */
   useDevicePixelRatio?: Maybe<Scalars['Boolean']>;
   wasConvertedFromEsriFeatureLayer: Scalars['Boolean'];
+};
+
+
+/**
+ * SeaSketch DataSources are analogous to MapBox GL Style sources but are extended
+ * to include new types to support services such as ArcGIS MapServers and content
+ * hosted on the SeaSketch CDN.
+ *
+ * When documentation is lacking for any of these properties, consult the [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-promoteId)
+ */
+export type DataSourceAiDataAnalystNotesConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<AiDataAnalystNoteCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<AiDataAnalystNotesOrderBy>>;
 };
 
 
@@ -2962,6 +3135,7 @@ export type DataSourceInput = {
    * indicates a radius equal to the width of a tile.
    */
   clusterRadius?: Maybe<Scalars['Int']>;
+  columns?: Maybe<Array<Maybe<Scalars['String']>>>;
   /** Image sources only. Corners of image specified in longitude, latitude pairs. */
   coordinates?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   createdAt?: Maybe<Scalars['Datetime']>;
@@ -2994,6 +3168,7 @@ export type DataSourceInput = {
    * a direct upload or a service location like ArcGIS server
    */
   importType?: Maybe<DataSourceImportTypes>;
+  isSingleBandRaster?: Maybe<Scalars['Boolean']>;
   /**
    * GeoJSON only. Whether to calculate line distance metrics. This is required for
    * line layers that specify line-gradient values.
@@ -3405,6 +3580,28 @@ export enum DataUploadTasksOrderBy {
 }
 
 
+
+/** All input for the `declinedToEnableAiDataAnalyst` mutation. */
+export type DeclinedToEnableAiDataAnalystInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `declinedToEnableAiDataAnalyst` mutation. */
+export type DeclinedToEnableAiDataAnalystPayload = {
+  __typename?: 'DeclinedToEnableAiDataAnalystPayload';
+  boolean?: Maybe<Scalars['Boolean']>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
 
 /** All input for the `deleteArchivedSource` mutation. */
 export type DeleteArchivedSourceInput = {
@@ -6718,6 +6915,29 @@ export type GetChildFoldersRecursivePayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `getPublishedCardIdFromDraft` mutation. */
+export type GetPublishedCardIdFromDraftInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  draftReportCardId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `getPublishedCardIdFromDraft` mutation. */
+export type GetPublishedCardIdFromDraftPayload = {
+  __typename?: 'GetPublishedCardIdFromDraftPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  integer?: Maybe<Scalars['Int']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 export type GoogleMapsTileApiSession = Node & {
   __typename?: 'GoogleMapsTileApiSession';
   expiresAt: Scalars['Datetime'];
@@ -7654,6 +7874,8 @@ export type Mutation = {
   createOfflineTileSetting?: Maybe<CreateOfflineTileSettingPayload>;
   /** Creates a single `OptionalBasemapLayer`. */
   createOptionalBasemapLayer?: Maybe<CreateOptionalBasemapLayerPayload>;
+  /** Creates a single `OriginalSourceId`. */
+  createOriginalSourceId?: Maybe<CreateOriginalSourceIdPayload>;
   createPost: Post;
   /**
    * Users with verified emails can create new projects by choosing a unique name
@@ -7677,6 +7899,8 @@ export type Mutation = {
   createProjectInvites?: Maybe<CreateProjectInvitesPayload>;
   /** Creates a single `ProjectsSharedBasemap`. */
   createProjectsSharedBasemap?: Maybe<CreateProjectsSharedBasemapPayload>;
+  /** Creates a single `PublishedTocItemId`. */
+  createPublishedTocItemId?: Maybe<CreatePublishedTocItemIdPayload>;
   createRemoteGeojsonSource?: Maybe<CreateRemoteGeojsonSourcePayload>;
   createRemoteMvtSource?: Maybe<CreateRemoteMvtSourcePayload>;
   /** Creates a single `Report`. */
@@ -7704,6 +7928,7 @@ export type Mutation = {
   createTableOfContentsItem?: Maybe<CreateTableOfContentsItemPayload>;
   createTopic: Topic;
   createVisibilityLogicRule?: Maybe<CreateVisibilityLogicRulePayload>;
+  declinedToEnableAiDataAnalyst?: Maybe<DeclinedToEnableAiDataAnalystPayload>;
   deleteArchivedSource?: Maybe<DeleteArchivedSourcePayload>;
   /** Deletes a single `Basemap` using a unique key. */
   deleteBasemap?: Maybe<DeleteBasemapPayload>;
@@ -7872,6 +8097,7 @@ export type Mutation = {
    */
   getOrCreateSprite?: Maybe<Sprite>;
   getPresignedPMTilesUploadUrl: PresignedUrl;
+  getPublishedCardIdFromDraft?: Maybe<GetPublishedCardIdFromDraftPayload>;
   /** Give a user admin access to a project. User must have already joined the project and shared their user profile. */
   grantAdminAccess?: Maybe<GrantAdminAccessPayload>;
   importArcgisServices?: Maybe<ImportArcgisServicesPayload>;
@@ -8028,6 +8254,7 @@ export type Mutation = {
   updateAclBySketchClassId?: Maybe<UpdateAclPayload>;
   /** Updates a single `Acl` using a unique key and a patch. */
   updateAclByTableOfContentsItemId?: Maybe<UpdateAclPayload>;
+  updateAiDataAnalystSettings?: Maybe<UpdateAiDataAnalystSettingsPayload>;
   /** Updates a single `Basemap` using a unique key and a patch. */
   updateBasemap?: Maybe<UpdateBasemapPayload>;
   /** Updates a single `Basemap` using its globally unique id and a patch. */
@@ -8480,6 +8707,12 @@ export type MutationCreateOptionalBasemapLayerArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateOriginalSourceIdArgs = {
+  input: CreateOriginalSourceIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreatePostArgs = {
   message: Scalars['JSON'];
   topicId: Scalars['Int'];
@@ -8507,6 +8740,12 @@ export type MutationCreateProjectInvitesArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateProjectsSharedBasemapArgs = {
   input: CreateProjectsSharedBasemapInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreatePublishedTocItemIdArgs = {
+  input: CreatePublishedTocItemIdInput;
 };
 
 
@@ -8598,6 +8837,12 @@ export type MutationCreateTopicArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateVisibilityLogicRuleArgs = {
   input: CreateVisibilityLogicRuleInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeclinedToEnableAiDataAnalystArgs = {
+  input: DeclinedToEnableAiDataAnalystInput;
 };
 
 
@@ -9101,6 +9346,12 @@ export type MutationGetPresignedPmTilesUploadUrlArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationGetPublishedCardIdFromDraftArgs = {
+  input: GetPublishedCardIdFromDraftInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationGrantAdminAccessArgs = {
   input: GrantAdminAccessInput;
 };
@@ -9488,6 +9739,12 @@ export type MutationUpdateAclBySketchClassIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateAclByTableOfContentsItemIdArgs = {
   input: UpdateAclByTableOfContentsItemIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateAiDataAnalystSettingsArgs = {
+  input: UpdateAiDataAnalystSettingsInput;
 };
 
 
@@ -10280,6 +10537,43 @@ export enum OptionalBasemapLayersOrderBy {
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
 }
 
+export type OriginalSourceId = {
+  __typename?: 'OriginalSourceId';
+  dataSourceId?: Maybe<Scalars['Int']>;
+};
+
+/** An input for mutations affecting `OriginalSourceId` */
+export type OriginalSourceIdInput = {
+  dataSourceId?: Maybe<Scalars['Int']>;
+};
+
+/** A connection to a list of `OriginalSourceId` values. */
+export type OriginalSourceIdsConnection = {
+  __typename?: 'OriginalSourceIdsConnection';
+  /** A list of edges which contains the `OriginalSourceId` and cursor to aid in pagination. */
+  edges: Array<OriginalSourceIdsEdge>;
+  /** A list of `OriginalSourceId` objects. */
+  nodes: Array<OriginalSourceId>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `OriginalSourceId` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `OriginalSourceId` edge in the connection. */
+export type OriginalSourceIdsEdge = {
+  __typename?: 'OriginalSourceIdsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `OriginalSourceId` at the end of the edge. */
+  node: OriginalSourceId;
+};
+
+/** Methods to use when ordering `OriginalSourceId`. */
+export enum OriginalSourceIdsOrderBy {
+  Natural = 'NATURAL'
+}
+
 export type OutstandingSurveyInvites = {
   __typename?: 'OutstandingSurveyInvites';
   projectId: Scalars['Int'];
@@ -10469,23 +10763,29 @@ export type PresignedUrl = {
 export type Profile = {
   __typename?: 'Profile';
   affiliations?: Maybe<Scalars['String']>;
+  aiDataAnalystEnabledAt?: Maybe<Scalars['Datetime']>;
   email?: Maybe<Scalars['Email']>;
+  enableAiDataAnalyst: Scalars['Boolean'];
   fullname?: Maybe<Scalars['String']>;
   nickname?: Maybe<Scalars['String']>;
   picture?: Maybe<Scalars['String']>;
   /** Reads a single `User` that is related to this `Profile`. */
   user?: Maybe<User>;
   userId: Scalars['Int'];
+  wasPromptedToEnableAiDataAnalystAt?: Maybe<Scalars['Datetime']>;
 };
 
 /** Represents an update to a `Profile`. Fields that are set will be updated. */
 export type ProfilePatch = {
   affiliations?: Maybe<Scalars['String']>;
+  aiDataAnalystEnabledAt?: Maybe<Scalars['Datetime']>;
   email?: Maybe<Scalars['Email']>;
+  enableAiDataAnalyst?: Maybe<Scalars['Boolean']>;
   fullname?: Maybe<Scalars['String']>;
   nickname?: Maybe<Scalars['String']>;
   picture?: Maybe<Scalars['Upload']>;
   userId?: Maybe<Scalars['Int']>;
+  wasPromptedToEnableAiDataAnalystAt?: Maybe<Scalars['Datetime']>;
 };
 
 /** A connection to a list of `Profile` values. */
@@ -11809,6 +12109,43 @@ export type PublishTableOfContentsPayload = {
   tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
 };
 
+export type PublishedTocItemId = {
+  __typename?: 'PublishedTocItemId';
+  id?: Maybe<Scalars['Int']>;
+};
+
+/** An input for mutations affecting `PublishedTocItemId` */
+export type PublishedTocItemIdInput = {
+  id?: Maybe<Scalars['Int']>;
+};
+
+/** A connection to a list of `PublishedTocItemId` values. */
+export type PublishedTocItemIdsConnection = {
+  __typename?: 'PublishedTocItemIdsConnection';
+  /** A list of edges which contains the `PublishedTocItemId` and cursor to aid in pagination. */
+  edges: Array<PublishedTocItemIdsEdge>;
+  /** A list of `PublishedTocItemId` objects. */
+  nodes: Array<PublishedTocItemId>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `PublishedTocItemId` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `PublishedTocItemId` edge in the connection. */
+export type PublishedTocItemIdsEdge = {
+  __typename?: 'PublishedTocItemIdsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `PublishedTocItemId` at the end of the edge. */
+  node: PublishedTocItemId;
+};
+
+/** Methods to use when ordering `PublishedTocItemId`. */
+export enum PublishedTocItemIdsOrderBy {
+  Natural = 'NATURAL'
+}
+
 /** The root query type which gives access points into the data universe. */
 export type Query = Node & {
   __typename?: 'Query';
@@ -11820,6 +12157,12 @@ export type Query = Node & {
   aclByTableOfContentsItemId?: Maybe<Acl>;
   /** Reads and enables pagination through a set of `Project`. */
   activeProjects?: Maybe<Array<Project>>;
+  aiDataAnalystNote?: Maybe<AiDataAnalystNote>;
+  aiDataAnalystNoteByDataSourceId?: Maybe<AiDataAnalystNote>;
+  /** Reads a single `AiDataAnalystNote` using its globally unique `ID`. */
+  aiDataAnalystNoteByNodeId?: Maybe<AiDataAnalystNote>;
+  /** Reads and enables pagination through a set of `AiDataAnalystNote`. */
+  aiDataAnalystNotesConnection?: Maybe<AiDataAnalystNotesConnection>;
   apiKey?: Maybe<ApiKey>;
   /** Reads a single `ApiKey` using its globally unique `ID`. */
   apiKeyByNodeId?: Maybe<ApiKey>;
@@ -11926,6 +12269,7 @@ export type Query = Node & {
   getDefaultDataSourcesBucket?: Maybe<Scalars['String']>;
   getFirstBandOffset?: Maybe<Scalars['Float']>;
   getFirstBandScale?: Maybe<Scalars['Float']>;
+  getGeostatsAttributeColumnNames?: Maybe<Array<Maybe<Scalars['String']>>>;
   getReferencedStableIdsForReport?: Maybe<Array<Maybe<Scalars['String']>>>;
   getRepresentativeColors?: Maybe<Scalars['JSON']>;
   getStateForSpatialMetric?: Maybe<SpatialMetricState>;
@@ -11969,6 +12313,8 @@ export type Query = Node & {
   optionalBasemapLayer?: Maybe<OptionalBasemapLayer>;
   /** Reads a single `OptionalBasemapLayer` using its globally unique `ID`. */
   optionalBasemapLayerByNodeId?: Maybe<OptionalBasemapLayer>;
+  /** Reads and enables pagination through a set of `OriginalSourceId`. */
+  originalSourceIdsConnection?: Maybe<OriginalSourceIdsConnection>;
   post?: Maybe<Post>;
   /** Reads a single `Post` using its globally unique `ID`. */
   postByNodeId?: Maybe<Post>;
@@ -12000,6 +12346,8 @@ export type Query = Node & {
   projectsSharedBasemapsConnection?: Maybe<ProjectsSharedBasemapsConnection>;
   /** Used by project administrators to access a list of public sprites promoted by the SeaSketch development team. */
   publicSprites?: Maybe<Array<Sprite>>;
+  /** Reads and enables pagination through a set of `PublishedTocItemId`. */
+  publishedTocItemIdsConnection?: Maybe<PublishedTocItemIdsConnection>;
   /**
    * Exposes the root query type nested one level down. This is helpful for Relay 1
    * which can only query top level fields if they are in a particular form.
@@ -12144,6 +12492,36 @@ export type QueryActiveProjectsArgs = {
   limit?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   period?: Maybe<ActivityStatsPeriod>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryAiDataAnalystNoteArgs = {
+  id: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryAiDataAnalystNoteByDataSourceIdArgs = {
+  dataSourceId: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryAiDataAnalystNoteByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryAiDataAnalystNotesConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<AiDataAnalystNoteCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<AiDataAnalystNotesOrderBy>>;
 };
 
 
@@ -12581,6 +12959,12 @@ export type QueryGetFirstBandScaleArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryGetGeostatsAttributeColumnNamesArgs = {
+  geostats?: Maybe<Scalars['JSON']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QueryGetReferencedStableIdsForReportArgs = {
   _reportId?: Maybe<Scalars['Int']>;
 };
@@ -12752,6 +13136,17 @@ export type QueryOptionalBasemapLayerByNodeIdArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryOriginalSourceIdsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<OriginalSourceIdsOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QueryPostArgs = {
   id: Scalars['Int'];
 };
@@ -12905,6 +13300,17 @@ export type QueryProjectsSharedBasemapsConnectionArgs = {
 export type QueryPublicSpritesArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryPublishedTocItemIdsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<PublishedTocItemIdsOrderBy>>;
 };
 
 
@@ -14855,6 +15261,7 @@ export type SubmitDataUploadInput = {
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
+  enableAiDataAnalyst?: Maybe<Scalars['Boolean']>;
   id?: Maybe<Scalars['UUID']>;
 };
 
@@ -16194,6 +16601,29 @@ export type UpdateAclPayload = {
   sketchClass?: Maybe<SketchClass>;
   /** Reads a single `TableOfContentsItem` that is related to this `Acl`. */
   tableOfContentsItem?: Maybe<TableOfContentsItem>;
+};
+
+/** All input for the `updateAiDataAnalystSettings` mutation. */
+export type UpdateAiDataAnalystSettingsInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  enableAi?: Maybe<Scalars['Boolean']>;
+};
+
+/** The output of our `updateAiDataAnalystSettings` mutation. */
+export type UpdateAiDataAnalystSettingsPayload = {
+  __typename?: 'UpdateAiDataAnalystSettingsPayload';
+  boolean?: Maybe<Scalars['Boolean']>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
 };
 
 /** All input for the `updateBasemapByNodeId` mutation. */
@@ -18282,6 +18712,13 @@ export enum UsersOrderBy {
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
 }
 
+export enum ValueSteps {
+  Continuous = 'CONTINUOUS',
+  EqualIntervals = 'EQUAL_INTERVALS',
+  NaturalBreaks = 'NATURAL_BREAKS',
+  Quantiles = 'QUANTILES'
+}
+
 export type Visitor = {
   __typename?: 'Visitor';
   count: Scalars['Int'];
@@ -18342,6 +18779,24 @@ export enum VisitorsOrderBy {
   IntervalAsc = 'INTERVAL_ASC',
   IntervalDesc = 'INTERVAL_DESC',
   Natural = 'NATURAL'
+}
+
+export enum VisualizationType {
+  CategoricalLine = 'CATEGORICAL_LINE',
+  CategoricalPoint = 'CATEGORICAL_POINT',
+  CategoricalPolygon = 'CATEGORICAL_POLYGON',
+  CategoricalRaster = 'CATEGORICAL_RASTER',
+  ContinuousLine = 'CONTINUOUS_LINE',
+  ContinuousPoint = 'CONTINUOUS_POINT',
+  ContinuousPolygon = 'CONTINUOUS_POLYGON',
+  ContinuousRaster = 'CONTINUOUS_RASTER',
+  Heatmap = 'HEATMAP',
+  MarkerImage = 'MARKER_IMAGE',
+  ProportionalSymbol = 'PROPORTIONAL_SYMBOL',
+  RgbRaster = 'RGB_RASTER',
+  SimpleLine = 'SIMPLE_LINE',
+  SimplePoint = 'SIMPLE_POINT',
+  SimplePolygon = 'SIMPLE_POLYGON'
 }
 
 export type WorkerJob = {
@@ -19591,6 +20046,7 @@ export type JobDetailsFragment = (
 
 export type SubmitDataUploadMutationVariables = Exact<{
   jobId: Scalars['UUID'];
+  enableAiDataAnalyst?: Maybe<Scalars['Boolean']>;
 }>;
 
 
@@ -20051,7 +20507,10 @@ export type FullAdminSourceFragment = (
   )>, outputs?: Maybe<Array<(
     { __typename?: 'DataUploadOutput' }
     & Pick<DataUploadOutput, 'id' | 'isOriginal' | 'url' | 'type' | 'size' | 'originalFilename' | 'filename' | 'createdAt' | 'isCustomUpload'>
-  )>> }
+  )>>, aiDataAnalystNote?: Maybe<(
+    { __typename?: 'AiDataAnalystNote' }
+    & Pick<AiDataAnalystNote, 'notes' | 'attribution' | 'bestLayerTitle' | 'chosenPresentationType' | 'chosenPresentationColumn' | 'customPalette' | 'errors' | 'interactivityType' | 'junkColumns' | 'labelsMinZoom' | 'bestCategoryColumn' | 'bestDateColumn' | 'bestGroupByColumn' | 'bestIdColumn' | 'bestLabelColumn' | 'bestNumericColumn' | 'bestPopupDescriptionColumn' | 'palette' | 'reversePalette' | 'showLabels' | 'valueSteps' | 'valueStepsN' | 'piiRedactedColumns'>
+  )> }
 );
 
 export type ArchivedSourceFragment = (
@@ -25418,7 +25877,7 @@ export type DenyAccessRequestMutation = (
 
 export type UserProfileDetailsFragment = (
   { __typename?: 'Profile' }
-  & Pick<Profile, 'userId' | 'fullname' | 'affiliations' | 'email' | 'nickname' | 'picture'>
+  & Pick<Profile, 'userId' | 'fullname' | 'affiliations' | 'email' | 'nickname' | 'picture' | 'enableAiDataAnalyst' | 'wasPromptedToEnableAiDataAnalystAt'>
 );
 
 export type UpdateProfileMutationVariables = Exact<{
@@ -25462,6 +25921,43 @@ export type MyProfileQuery = (
       { __typename?: 'Profile' }
       & UserProfileDetailsFragment
     )> }
+  )> }
+);
+
+export type UpdateAiDataAnalystSettingsMutationVariables = Exact<{
+  enableAi: Scalars['Boolean'];
+}>;
+
+
+export type UpdateAiDataAnalystSettingsMutation = (
+  { __typename?: 'Mutation' }
+  & { updateAiDataAnalystSettings?: Maybe<(
+    { __typename?: 'UpdateAiDataAnalystSettingsPayload' }
+    & Pick<UpdateAiDataAnalystSettingsPayload, 'boolean'>
+  )> }
+);
+
+export type DeclinedToEnableAiDataAnalystMutationVariables = Exact<{ [key: string]: never; }>;
+
+
+export type DeclinedToEnableAiDataAnalystMutation = (
+  { __typename?: 'Mutation' }
+  & { declinedToEnableAiDataAnalyst?: Maybe<(
+    { __typename?: 'DeclinedToEnableAiDataAnalystPayload' }
+    & Pick<DeclinedToEnableAiDataAnalystPayload, 'boolean'>
+  )> }
+);
+
+export type UpdateAiDataAnalysSettingsForMeMutationVariables = Exact<{
+  enableAi: Scalars['Boolean'];
+}>;
+
+
+export type UpdateAiDataAnalysSettingsForMeMutation = (
+  { __typename?: 'Mutation' }
+  & { updateAiDataAnalystSettings?: Maybe<(
+    { __typename?: 'UpdateAiDataAnalystSettingsPayload' }
+    & Pick<UpdateAiDataAnalystSettingsPayload, 'boolean'>
   )> }
 );
 
@@ -26032,6 +26528,31 @@ export const FullAdminSourceFragmentDoc = gql`
   }
   changelog
   isConvertibleLegacySource
+  aiDataAnalystNote {
+    notes
+    attribution
+    bestLayerTitle
+    chosenPresentationType
+    chosenPresentationColumn
+    customPalette
+    errors
+    interactivityType
+    junkColumns
+    labelsMinZoom
+    bestCategoryColumn
+    bestDateColumn
+    bestGroupByColumn
+    bestIdColumn
+    bestLabelColumn
+    bestNumericColumn
+    bestPopupDescriptionColumn
+    palette
+    reversePalette
+    showLabels
+    valueSteps
+    valueStepsN
+    piiRedactedColumns
+  }
 }
     `;
 export const ArchivedSourceFragmentDoc = gql`
@@ -26629,6 +27150,8 @@ export const UserProfileDetailsFragmentDoc = gql`
   email
   nickname
   picture
+  enableAiDataAnalyst
+  wasPromptedToEnableAiDataAnalystAt
 }
     `;
 export const ClippingDataSourceDetailsFragmentDoc = gql`
@@ -29663,8 +30186,8 @@ export type CreateDataUploadMutationHookResult = ReturnType<typeof useCreateData
 export type CreateDataUploadMutationResult = Apollo.MutationResult<CreateDataUploadMutation>;
 export type CreateDataUploadMutationOptions = Apollo.BaseMutationOptions<CreateDataUploadMutation, CreateDataUploadMutationVariables>;
 export const SubmitDataUploadDocument = gql`
-    mutation submitDataUpload($jobId: UUID!) {
-  submitDataUpload(input: {id: $jobId}) {
+    mutation submitDataUpload($jobId: UUID!, $enableAiDataAnalyst: Boolean) {
+  submitDataUpload(input: {id: $jobId, enableAiDataAnalyst: $enableAiDataAnalyst}) {
     projectBackgroundJob {
       id
       state
@@ -29691,6 +30214,7 @@ export type SubmitDataUploadMutationFn = Apollo.MutationFunction<SubmitDataUploa
  * const [submitDataUploadMutation, { data, loading, error }] = useSubmitDataUploadMutation({
  *   variables: {
  *      jobId: // value for 'jobId'
+ *      enableAiDataAnalyst: // value for 'enableAiDataAnalyst'
  *   },
  * });
  */
@@ -40516,6 +41040,104 @@ export function useMyProfileLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<
 export type MyProfileQueryHookResult = ReturnType<typeof useMyProfileQuery>;
 export type MyProfileLazyQueryHookResult = ReturnType<typeof useMyProfileLazyQuery>;
 export type MyProfileQueryResult = Apollo.QueryResult<MyProfileQuery, MyProfileQueryVariables>;
+export const UpdateAiDataAnalystSettingsDocument = gql`
+    mutation UpdateAiDataAnalystSettings($enableAi: Boolean!) {
+  updateAiDataAnalystSettings(input: {enableAi: $enableAi}) {
+    boolean
+  }
+}
+    `;
+export type UpdateAiDataAnalystSettingsMutationFn = Apollo.MutationFunction<UpdateAiDataAnalystSettingsMutation, UpdateAiDataAnalystSettingsMutationVariables>;
+
+/**
+ * __useUpdateAiDataAnalystSettingsMutation__
+ *
+ * To run a mutation, you first call `useUpdateAiDataAnalystSettingsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateAiDataAnalystSettingsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateAiDataAnalystSettingsMutation, { data, loading, error }] = useUpdateAiDataAnalystSettingsMutation({
+ *   variables: {
+ *      enableAi: // value for 'enableAi'
+ *   },
+ * });
+ */
+export function useUpdateAiDataAnalystSettingsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateAiDataAnalystSettingsMutation, UpdateAiDataAnalystSettingsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateAiDataAnalystSettingsMutation, UpdateAiDataAnalystSettingsMutationVariables>(UpdateAiDataAnalystSettingsDocument, options);
+      }
+export type UpdateAiDataAnalystSettingsMutationHookResult = ReturnType<typeof useUpdateAiDataAnalystSettingsMutation>;
+export type UpdateAiDataAnalystSettingsMutationResult = Apollo.MutationResult<UpdateAiDataAnalystSettingsMutation>;
+export type UpdateAiDataAnalystSettingsMutationOptions = Apollo.BaseMutationOptions<UpdateAiDataAnalystSettingsMutation, UpdateAiDataAnalystSettingsMutationVariables>;
+export const DeclinedToEnableAiDataAnalystDocument = gql`
+    mutation DeclinedToEnableAiDataAnalyst {
+  declinedToEnableAiDataAnalyst(input: {}) {
+    boolean
+  }
+}
+    `;
+export type DeclinedToEnableAiDataAnalystMutationFn = Apollo.MutationFunction<DeclinedToEnableAiDataAnalystMutation, DeclinedToEnableAiDataAnalystMutationVariables>;
+
+/**
+ * __useDeclinedToEnableAiDataAnalystMutation__
+ *
+ * To run a mutation, you first call `useDeclinedToEnableAiDataAnalystMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeclinedToEnableAiDataAnalystMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [declinedToEnableAiDataAnalystMutation, { data, loading, error }] = useDeclinedToEnableAiDataAnalystMutation({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useDeclinedToEnableAiDataAnalystMutation(baseOptions?: Apollo.MutationHookOptions<DeclinedToEnableAiDataAnalystMutation, DeclinedToEnableAiDataAnalystMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeclinedToEnableAiDataAnalystMutation, DeclinedToEnableAiDataAnalystMutationVariables>(DeclinedToEnableAiDataAnalystDocument, options);
+      }
+export type DeclinedToEnableAiDataAnalystMutationHookResult = ReturnType<typeof useDeclinedToEnableAiDataAnalystMutation>;
+export type DeclinedToEnableAiDataAnalystMutationResult = Apollo.MutationResult<DeclinedToEnableAiDataAnalystMutation>;
+export type DeclinedToEnableAiDataAnalystMutationOptions = Apollo.BaseMutationOptions<DeclinedToEnableAiDataAnalystMutation, DeclinedToEnableAiDataAnalystMutationVariables>;
+export const UpdateAiDataAnalysSettingsForMeDocument = gql`
+    mutation updateAiDataAnalysSettingsForMe($enableAi: Boolean!) {
+  updateAiDataAnalystSettings(input: {enableAi: $enableAi}) {
+    boolean
+  }
+}
+    `;
+export type UpdateAiDataAnalysSettingsForMeMutationFn = Apollo.MutationFunction<UpdateAiDataAnalysSettingsForMeMutation, UpdateAiDataAnalysSettingsForMeMutationVariables>;
+
+/**
+ * __useUpdateAiDataAnalysSettingsForMeMutation__
+ *
+ * To run a mutation, you first call `useUpdateAiDataAnalysSettingsForMeMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateAiDataAnalysSettingsForMeMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateAiDataAnalysSettingsForMeMutation, { data, loading, error }] = useUpdateAiDataAnalysSettingsForMeMutation({
+ *   variables: {
+ *      enableAi: // value for 'enableAi'
+ *   },
+ * });
+ */
+export function useUpdateAiDataAnalysSettingsForMeMutation(baseOptions?: Apollo.MutationHookOptions<UpdateAiDataAnalysSettingsForMeMutation, UpdateAiDataAnalysSettingsForMeMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateAiDataAnalysSettingsForMeMutation, UpdateAiDataAnalysSettingsForMeMutationVariables>(UpdateAiDataAnalysSettingsForMeDocument, options);
+      }
+export type UpdateAiDataAnalysSettingsForMeMutationHookResult = ReturnType<typeof useUpdateAiDataAnalysSettingsForMeMutation>;
+export type UpdateAiDataAnalysSettingsForMeMutationResult = Apollo.MutationResult<UpdateAiDataAnalysSettingsForMeMutation>;
+export type UpdateAiDataAnalysSettingsForMeMutationOptions = Apollo.BaseMutationOptions<UpdateAiDataAnalysSettingsForMeMutation, UpdateAiDataAnalysSettingsForMeMutationVariables>;
 export const UserIsSuperuserDocument = gql`
     query UserIsSuperuser {
   currentUserIsSuperuser
@@ -40858,7 +41480,10 @@ export const namedOperations = {
     SendInvites: 'SendInvites',
     ApproveAccessRequest: 'ApproveAccessRequest',
     DenyAccessRequest: 'DenyAccessRequest',
-    UpdateProfile: 'UpdateProfile'
+    UpdateProfile: 'UpdateProfile',
+    UpdateAiDataAnalystSettings: 'UpdateAiDataAnalystSettings',
+    DeclinedToEnableAiDataAnalyst: 'DeclinedToEnableAiDataAnalyst',
+    updateAiDataAnalysSettingsForMe: 'updateAiDataAnalysSettingsForMe'
   },
   Subscription: {
     ProjectBackgroundJob: 'ProjectBackgroundJob',

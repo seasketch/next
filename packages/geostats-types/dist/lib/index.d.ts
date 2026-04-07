@@ -16,6 +16,7 @@ export type Bucket = [number, number | null];
 export type Buckets = {
     [numBreaks: number]: Bucket[];
 };
+export type PiiRiskCategory = "email" | "phone" | "government_id" | "financial" | "name" | "other";
 export interface BaseGeostatsAttribute {
     /** Name of the attribute */
     attribute: string;
@@ -43,6 +44,23 @@ export interface BaseGeostatsAttribute {
     values: {
         [key: string]: number;
     };
+    /**
+     * 0 - 1 score of the risk of the attribute being PII such as a
+     * name, email, phone number, government id, credit card
+     * number, etc. This is assigned by
+     * geostats-pii-risk-classifier.
+     *
+     * 1 indicates the column almost certianly contains PII.
+     * 0 indicates no PII is detected.
+     * Numbers 0 - 1 indicate a varying degree of risk. The higher
+     * the number, the more likely the column is to contain PII.
+     * Some PII types, like email addresses and phone numbers are
+     * very easy to detect and will likely be either 0 or 1. Names
+     * on the other hand are more difficult to seperate from place
+     * or organization names, and will have more varied risk scores.
+     */
+    piiRisk?: number;
+    piiRiskCategories?: PiiRiskCategory[];
 }
 /**
  * Numeric attributes have additional statistics to facilitate cartographic
@@ -123,6 +141,11 @@ export interface GeostatsLayer {
     attributes: GeostatsAttribute[];
     bounds?: number[];
     metadata?: GeostatsMetadata;
+    /**
+     * Indicates that the PII risk was assessed for the layer by
+     * the geostats-pii-risk-classifier Lambda.
+     */
+    piiRiskWasAssessed?: boolean;
 }
 export type LegacyGeostatsLayer = Omit<GeostatsLayer, "attributes" | "bounds"> & {
     attributes: LegacyGeostatsAttribute[];

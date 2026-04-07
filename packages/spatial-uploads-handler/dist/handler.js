@@ -8,7 +8,7 @@ const handleUpload_1 = __importDefault(require("./src/handleUpload"));
 const processUpload = async (event) => {
     const s3LogPath = `s3://${process.env.BUCKET}/${event.taskId}.log.txt`;
     try {
-        const outputs = await (0, handleUpload_1.default)(event.taskId, event.objectKey, event.suffix, event.requestingUser, event.skipLoggingProgress);
+        const outputs = await (0, handleUpload_1.default)(event.taskId, event.objectKey, event.suffix, event.requestingUser, event.skipLoggingProgress, event.enableAiDataAnalyst);
         return {
             ...outputs,
             log: s3LogPath,

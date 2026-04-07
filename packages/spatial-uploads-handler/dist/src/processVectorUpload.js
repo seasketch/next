@@ -8,9 +8,82 @@ const fs_1 = require("fs");
 const geostatsForVectorLayer_1 = require("./geostatsForVectorLayer");
 const prosemirror_markdown_1 = require("prosemirror-markdown");
 const metadata_parser_1 = require("@seasketch/metadata-parser");
+const ai_data_analyst_1 = require("ai-data-analyst");
+const aiUploadNotes_1 = require("./aiUploadNotes");
 function fromMarkdown(md) {
     var _a;
     return (_a = prosemirror_markdown_1.defaultMarkdownParser.parse(md)) === null || _a === void 0 ? void 0 : _a.toJSON();
+}
+async function collectAttributionSidecarContents(logger, workingDirectory, workingFilePath, fromArchive) {
+    const bundles = [];
+    if (fromArchive) {
+        const sidecarPaths = await logger.exec([
+            "find",
+            [
+                workingDirectory,
+                "-type",
+                "f",
+                "-not",
+                "-path",
+                "*/.*",
+                "-not",
+                "-path",
+                "*/__",
+                "(",
+                "-name",
+                "*.txt",
+                "-o",
+                "-name",
+                "*.html",
+                ")",
+            ],
+        ], "Problem finding .txt/.html metadata sidecars in archive", 0);
+        if (sidecarPaths === null || sidecarPaths === void 0 ? void 0 : sidecarPaths.trim()) {
+            for (const line of sidecarPaths.trim().split("\n")) {
+                const p = line.trim();
+                if (!p || !(0, fs_1.existsSync)(p)) {
+                    continue;
+                }
+                const ext = (0, path_1.parse)(p).ext.toLowerCase();
+                const kind = ext === ".html" ? "html" : "txt";
+                try {
+                    bundles.push({ kind, content: (0, fs_1.readFileSync)(p, "utf8") });
+                }
+                catch (e) {
+                    console.error(`Problem reading .${kind} sidecar`, p, e);
+                }
+            }
+        }
+    }
+    else {
+        const { dir, name } = (0, path_1.parse)(workingFilePath);
+        const stems = [
+            name,
+            ...(name.includes(".") ? [name.replace(/\.[^/.]+$/, "")] : []),
+        ];
+        const seen = new Set();
+        for (const stem of stems) {
+            for (const ext of ["txt", "html"]) {
+                const candidate = (0, path_1.join)(dir, `${stem}.${ext}`);
+                if (seen.has(candidate)) {
+                    continue;
+                }
+                seen.add(candidate);
+                if ((0, fs_1.existsSync)(candidate)) {
+                    try {
+                        bundles.push({
+                            kind: ext,
+                            content: (0, fs_1.readFileSync)(candidate, "utf8"),
+                        });
+                    }
+                    catch (e) {
+                        console.error(`Problem reading .${ext} sidecar`, candidate, e);
+                    }
+                }
+            }
+        }
+    }
+    return bundles;
 }
 /**
  * Process a vector upload, converting it to a normalized FlatGeobuf file and
@@ -21,10 +94,18 @@ function fromMarkdown(md) {
  */
 async function processVectorUpload(options) {
     var _a;
-    const { logger, path, outputs, updateProgress, baseKey, workingDirectory, jobId, originalName, } = options;
+    const { logger, path, outputs, updateProgress, baseKey, workingDirectory, jobId, originalName, uploadFilename, enableAiDataAnalyst, } = options;
+    if (enableAiDataAnalyst) {
+        (0, aiUploadNotes_1.assertAiDataAnalystEnvVarsPresent)();
+    }
     const originalFilePath = path;
     let workingFilePath = path;
     await updateProgress("running", "validating");
+    let titleP = enableAiDataAnalyst
+        ? (0, aiUploadNotes_1.asNeverReject)((0, ai_data_analyst_1.generateTitle)(uploadFilename), "generateTitle")
+        : null;
+    let attributionP = null;
+    let columnP = null;
     let type;
     let { ext } = (0, path_1.parse)(path);
     const isZip = ext === ".zip";
@@ -159,6 +240,18 @@ async function processVectorUpload(options) {
     else {
         throw new Error("Not a recognized file type");
     }
+    const sidecarFiles = await collectAttributionSidecarContents(logger, workingDirectory, workingFilePath, isZip || isRar);
+    const attributionInputs = [];
+    for (const s of sidecarFiles) {
+        const label = s.kind === "html" ? "Sidecar HTML file" : "Sidecar text file";
+        attributionInputs.push(`${label}:\n${s.content}`);
+    }
+    if (metadata && Object.keys(metadata).length > 0) {
+        attributionInputs.push(`Structured metadata (JSON, from XML when present):\n${JSON.stringify(metadata)}`);
+    }
+    if (enableAiDataAnalyst && attributionInputs.length > 0) {
+        attributionP = (0, aiUploadNotes_1.asNeverReject)((0, ai_data_analyst_1.generateAttribution)(attributionInputs), "generateAttribution");
+    }
     let isCorrectProjection = false;
     if (/World Geodetic System 1984/.test(ogrInfo)) {
         isCorrectProjection = true;
@@ -215,6 +308,22 @@ async function processVectorUpload(options) {
     const stats = await (0, geostatsForVectorLayer_1.geostatsForVectorLayers)(normalizedVectorPath);
     if (metadata) {
         stats[0].metadata = metadata;
+    }
+    // PII runs in parallel with GeoJSON/tiling/uploads; handleUpload awaits the same
+    // promise after uploads. When AI is enabled, PII is chained before column intelligence.
+    let piiOnlyPromise = null;
+    if (enableAiDataAnalyst) {
+        // PII must reject the job on failure (do not wrap in asNeverReject). Only column
+        // intelligence is best-effort; compose still runs after PII has updated stats[0].
+        columnP = (async () => {
+            stats[0] = await (0, aiUploadNotes_1.classifyGeostatsPii)(stats[0]);
+            return (0, aiUploadNotes_1.asNeverReject)((0, ai_data_analyst_1.generateColumnIntelligence)(uploadFilename, stats[0]), "generateColumnIntelligence");
+        })();
+    }
+    else {
+        piiOnlyPromise = (async () => {
+            stats[0] = await (0, aiUploadNotes_1.classifyGeostatsPii)(stats[0]);
+        })();
     }
     // Only convert to GeoJSON if the dataset is small. Otherwise we can convert
     // from the normalized fgb dynamically if someone wants to download it as
@@ -329,6 +438,17 @@ async function processVectorUpload(options) {
             filename: `${jobId}.pmtiles`,
         });
     }
-    return stats;
+    const aiDataAnalystNotesPromise = enableAiDataAnalyst
+        ? (0, aiUploadNotes_1.composeAiDataAnalystNotesFromPromises)({
+            uploadFilename,
+            titleP,
+            attributionP,
+            columnP,
+        })
+        : piiOnlyPromise.then(() => undefined);
+    return {
+        layers: stats,
+        aiDataAnalystNotesPromise,
+    };
 }
 //# sourceMappingURL=processVectorUpload.js.map

@@ -35,6 +35,8 @@ import ProjectBackgroundJobManager, {
 } from "./ProjectBackgroundJobManager";
 import sleep from "../../sleep";
 import ConvertFeatureLayerToHostedModal from "../data/arcgis/ConvertFeatureLayerToHostedModal";
+import AiDataAnalystUploadPromptModal from "./AiDataAnalystUploadPromptModal";
+import useIsSuperuser from "../../useIsSuperuser";
 
 export type UploadType = "create" | "replace";
 
@@ -82,6 +84,7 @@ export default function DataUploadDropzone({
     replaceTableOfContentsItemId: number | null;
     finishedWithChangelog: boolean;
     changelog?: string;
+    aiDataAnalystUploadPromptOpen: boolean;
   }>({
     droppedFiles: 0,
     uploads: [],
@@ -90,12 +93,14 @@ export default function DataUploadDropzone({
     isUploadingReplacement: false,
     replaceTableOfContentsItemId: null,
     finishedWithChangelog: true,
+    aiDataAnalystUploadPromptOpen: false,
   });
   const client = useApolloClient();
   const { manager } = useContext(MapManagerContext);
   const onError = useGlobalErrorHandler();
   const { alert } = useDialog();
   const { t } = useTranslation("admin:data");
+  const isSuperuser = useIsSuperuser();
   const [hostOnSeaSketch, setHostOnSeasketch] = useState<null | number>(null);
 
   const jobsQuery = useProjectBackgroundJobsQuery({
@@ -155,6 +160,12 @@ export default function DataUploadDropzone({
         setState((prev) => ({
           ...prev,
           isUploadingReplacement: false,
+        }));
+      });
+      manager.on("ai-data-analyst-upload-prompt-needed", () => {
+        setState((prev) => ({
+          ...prev,
+          aiDataAnalystUploadPromptOpen: true,
         }));
       });
       setState((prev) => ({
@@ -413,6 +424,19 @@ export default function DataUploadDropzone({
             onRequestClose={() => setHostOnSeasketch(null)}
           />
         )}
+        {state.manager &&
+          state.aiDataAnalystUploadPromptOpen &&
+          isSuperuser && (
+            <AiDataAnalystUploadPromptModal
+              manager={state.manager}
+              onFinished={() => {
+                setState((prev) => ({
+                  ...prev,
+                  aiDataAnalystUploadPromptOpen: false,
+                }));
+              }}
+            />
+          )}
         <input {...getInputProps()} className="w-1 h-1" />
         {children}
         {(isDragActive || state.droppedFiles > 0) &&

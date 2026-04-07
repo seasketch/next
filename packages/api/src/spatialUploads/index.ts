@@ -11,6 +11,8 @@ import {
 } from "@seasketch/geostats-types";
 import * as colorScale from "d3-scale-chromatic";
 import { colord } from "colord";
+import { deriveInteractivitySettingsFromAiNotes } from "./interactivityFromAiNotes";
+import { buildGlStyle, effectiveReverseNamedPalette } from "gl-style-builder";
 
 const alphabet =
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
@@ -39,7 +41,7 @@ export async function createDBRecordsForProcessedLayer(
   replace?: {
     sourceId: number;
     layerId: number;
-  }
+  },
 ) {
   let dataLibraryMetadata: any;
   if (replace) {
@@ -47,7 +49,7 @@ export async function createDBRecordsForProcessedLayer(
       `
       select data_library_metadata from data_upload_tasks where project_background_job_id = $1
     `,
-      [jobId]
+      [jobId],
     );
     dataLibraryMetadata = metadataQuery.rows[0]?.data_library_metadata;
   }
@@ -64,7 +66,7 @@ export async function createDBRecordsForProcessedLayer(
         where project_id = $1
       ) as foo 
       where id = $2`,
-    [projectId, jobId]
+    [projectId, jobId],
   );
   let uploadCount = parseInt(uploadCountResult.rows[0].row_number);
   const isVector = layer.outputs.find((o) => o.type === "FlatGeobuf");
@@ -104,7 +106,7 @@ export async function createDBRecordsForProcessedLayer(
         project_background_job_id = $1
       limit 1
     `,
-      [jobId]
+      [jobId],
     );
     if (q.rows.length === 0) {
       throw new Error("Could not find upload task related to background job");
@@ -120,7 +122,7 @@ export async function createDBRecordsForProcessedLayer(
     `
       select user_id from project_background_jobs where id = $1
     `,
-    [jobId]
+    [jobId],
   );
   if (userResults.rows.length === 0) {
     throw new Error("Could not find user_id for background job");
@@ -139,7 +141,7 @@ export async function createDBRecordsForProcessedLayer(
         esri_feature_layer_conversion_tasks 
       where project_background_job_id = $1 limit 1
     `,
-    [jobId]
+    [jobId],
   );
   const conversionTask = conversionTaskQuery.rows[0];
 
@@ -197,28 +199,138 @@ export async function createDBRecordsForProcessedLayer(
       layer.geostats === null
         ? null
         : "layers" in layer.geostats
-        ? layer.geostats
-        : isRasterInfo(layer.geostats)
-        ? layer.geostats
-        : // If geostats is just a fragment layer, put it into a complete
-          // geostats layer list
-          {
-            layers: [layer.geostats],
-            layerCount: 1,
-          },
+          ? layer.geostats
+          : isRasterInfo(layer.geostats)
+            ? layer.geostats
+            : // If geostats is just a fragment layer, put it into a complete
+              // geostats layer list
+              {
+                layers: [layer.geostats],
+                layerCount: 1,
+              },
       pmtiles && !isVector ? 512 : null,
-      conversionTask?.attribution ||
-        layer.geostats?.metadata?.attribution ||
-        null,
+      (() => {
+        const aiAttr = layer.aiDataAnalystNotes?.attribution;
+        if (conversionTask?.attribution) {
+          return conversionTask.attribution;
+        }
+        if (aiAttr !== undefined) {
+          return aiAttr;
+        }
+        return layer.geostats?.metadata?.attribution ?? null;
+      })(),
       conversionTask?.location || null,
       Boolean(conversionTask),
       uploadedBy,
       changelog,
       dataLibraryMetadata || null,
-    ]
+    ],
   );
   const dataSourceId = rows[0].id;
   const dataSourceBounds = rows[0].bounds;
+
+  let aiNotes = layer.aiDataAnalystNotes;
+  if (aiNotes?.custom_palette && typeof aiNotes?.custom_palette === "string") {
+    aiNotes.custom_palette = {
+      default: aiNotes.custom_palette,
+    };
+  }
+  if (aiNotes) {
+    try {
+      await client.query(
+        `
+      insert into ai_data_analyst_notes (
+        data_source_id,
+        project_id,
+        notes,
+        best_layer_title,
+        attribution,
+        best_label_column,
+        best_category_column,
+        best_numeric_column,
+        best_date_column,
+        best_popup_description_column,
+        best_group_by_column,
+        best_id_column,
+        junk_columns,
+        chosen_presentation_type,
+        chosen_presentation_column,
+        palette,
+        custom_palette,
+        show_labels,
+        labels_min_zoom,
+        interactivity_type,
+        value_steps,
+        value_steps_n,
+        reverse_palette,
+        errors,
+        pii_redacted_columns
+      ) values (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23, $24, $25
+      )
+      on conflict (data_source_id) do update set
+        notes = excluded.notes,
+        best_layer_title = excluded.best_layer_title,
+        attribution = excluded.attribution,
+        best_label_column = excluded.best_label_column,
+        best_category_column = excluded.best_category_column,
+        best_numeric_column = excluded.best_numeric_column,
+        best_date_column = excluded.best_date_column,
+        best_popup_description_column = excluded.best_popup_description_column,
+        best_group_by_column = excluded.best_group_by_column,
+        best_id_column = excluded.best_id_column,
+        junk_columns = excluded.junk_columns,
+        chosen_presentation_type = excluded.chosen_presentation_type,
+        chosen_presentation_column = excluded.chosen_presentation_column,
+        palette = excluded.palette,
+        custom_palette = excluded.custom_palette,
+        show_labels = excluded.show_labels,
+        labels_min_zoom = excluded.labels_min_zoom,
+        interactivity_type = excluded.interactivity_type,
+        value_steps = excluded.value_steps,
+        value_steps_n = excluded.value_steps_n,
+        reverse_palette = excluded.reverse_palette,
+        errors = excluded.errors,
+        pii_redacted_columns = excluded.pii_redacted_columns,
+        updated_at = now()
+    `,
+        [
+          dataSourceId,
+          projectId,
+          aiNotes.notes,
+          aiNotes.best_layer_title ?? null,
+          aiNotes.attribution === undefined ? null : aiNotes.attribution,
+          aiNotes.best_label_column ?? null,
+          aiNotes.best_category_column ?? null,
+          aiNotes.best_numeric_column ?? null,
+          aiNotes.best_date_column ?? null,
+          aiNotes.best_popup_description_column ?? null,
+          aiNotes.best_group_by_column ?? null,
+          aiNotes.best_id_column ?? null,
+          aiNotes.junk_columns,
+          aiNotes.chosen_presentation_type,
+          aiNotes.chosen_presentation_column ?? null,
+          aiNotes.palette ?? null,
+          aiNotes.custom_palette ?? null,
+          aiNotes.show_labels,
+          aiNotes.labels_min_zoom ?? null,
+          aiNotes.interactivity_type,
+          aiNotes.value_steps ?? null,
+          aiNotes.value_steps_n ?? null,
+          effectiveReverseNamedPalette(aiNotes),
+          aiNotes.errors ?? null,
+          aiNotes.pii_redacted_columns ?? [],
+        ],
+      );
+    } catch (error) {
+      console.error(
+        "Error inserting ai_data_analyst_notes. setting to null!!!!!!!!!!",
+        error,
+      );
+      aiNotes = undefined;
+      delete layer.aiDataAnalystNotes;
+    }
+  }
 
   // Create data_upload_outputs for each output
   for (const output of layer.outputs) {
@@ -246,7 +358,7 @@ export async function createDBRecordsForProcessedLayer(
         Boolean(output.isOriginal),
         projectId,
         layer.filename,
-      ]
+      ],
     );
   }
 
@@ -259,7 +371,7 @@ export async function createDBRecordsForProcessedLayer(
       `
           select * from data_sources where id = $1
         `,
-      [replace.sourceId]
+      [replace.sourceId],
     );
     if (!sourceResults.rows.length) {
       throw new Error("Could not find source to replace");
@@ -269,7 +381,7 @@ export async function createDBRecordsForProcessedLayer(
       `
           select * from data_layers where id = $1
         `,
-      [replace.layerId]
+      [replace.layerId],
     );
     if (!layerResults.rows.length) {
       throw new Error("Could not find layer to replace");
@@ -282,18 +394,17 @@ export async function createDBRecordsForProcessedLayer(
       `
           select * from table_of_contents_items where data_layer_id = $1
         `,
-      [dataLayer.id]
+      [dataLayer.id],
     );
     if (!tocResults.rows.length) {
       throw new Error("Could not find table of contents item to replace");
     }
     if (tocResults.rows.length > 1) {
       throw new Error(
-        "Not implemented. Found multiple table of contents items to replace"
+        "Not implemented. Found multiple table of contents items to replace",
       );
     }
     const tocItem = tocResults.rows[0];
-    console.log("calling replace_data_source", dataLayer.id, tocItem.stable_id);
     // attach the new data source to the existing layer
     // Do this as a single transaction using a stored procedure to avoid any
     // inconsistency in state
@@ -316,19 +427,38 @@ export async function createDBRecordsForProcessedLayer(
         conversionTask
           ? JSON.stringify(conversionTask.mapbox_gl_styles)
           : dataLayer.mapbox_gl_styles
-          ? null
-          : JSON.stringify(
-              await getStyle(
-                isVector
-                  ? (layer.geostats as GeostatsLayer)?.geometry || "Polygon"
-                  : "Raster",
-                uploadCount,
-                layer.geostats
-              )
-            ),
+            ? null
+            : JSON.stringify(
+                await getStyle(
+                  isVector
+                    ? (layer.geostats as GeostatsLayer)?.geometry || "Polygon"
+                    : "Raster",
+                  uploadCount,
+                  layer.geostats,
+                  layer.aiDataAnalystNotes,
+                ),
+              ),
         tocItem.stable_id,
-      ]
+      ],
     );
+
+    if (layer.aiDataAnalystNotes) {
+      const derived = deriveInteractivitySettingsFromAiNotes(
+        layer.aiDataAnalystNotes,
+        layer.geostats,
+      );
+      await client.query(
+        `
+        update interactivity_settings
+        set type = $1::interactivity_type,
+            short_template = $2
+        where id = (
+          select interactivity_settings_id from data_layers where id = $3
+        )
+      `,
+        [derived.type, derived.short_template, dataLayer.id],
+      );
+    }
 
     // TODO: if it is a conversion task, update
     // metadata using the data on the conversion task
@@ -337,7 +467,7 @@ export async function createDBRecordsForProcessedLayer(
         `
           update table_of_contents_items set metadata = $1 where id = $2
         `,
-        [conversionTask.metadata || layer.geostats?.metadata?.doc, tocItem.id]
+        [conversionTask.metadata || layer.geostats?.metadata?.doc, tocItem.id],
       );
     }
 
@@ -348,15 +478,33 @@ export async function createDBRecordsForProcessedLayer(
       tableOfContentsItemId: tocItem.id,
     };
   } else {
+    let interactivitySettingsId: number | null = null;
+    if (layer.aiDataAnalystNotes) {
+      const derived = deriveInteractivitySettingsFromAiNotes(
+        layer.aiDataAnalystNotes,
+        layer.geostats,
+      );
+      const { rows: interactivityRows } = await client.query(
+        `
+        insert into interactivity_settings (type, short_template)
+        values ($1::interactivity_type, $2)
+        returning id
+      `,
+        [derived.type, derived.short_template],
+      );
+      interactivitySettingsId = interactivityRows[0].id;
+    }
+
     const layerResult = await client.query(
       `
         insert into data_layers (
           project_id,
           data_source_id,
           source_layer,
-          mapbox_gl_styles
+          mapbox_gl_styles,
+          interactivity_settings_id
         ) values (
-          $1, $2, $3, $4
+          $1, $2, $3, $4, $5
         ) returning *
       `,
       [
@@ -370,10 +518,12 @@ export async function createDBRecordsForProcessedLayer(
                 ? (layer.geostats as GeostatsLayer)?.geometry || "Polygon"
                 : "Raster",
               uploadCount,
-              layer.geostats
-            ))
+              layer.geostats,
+              layer.aiDataAnalystNotes,
+            )),
         ),
-      ]
+        interactivitySettingsId,
+      ],
     );
 
     const dataLayerId = layerResult.rows[0].id;
@@ -397,7 +547,9 @@ export async function createDBRecordsForProcessedLayer(
       [
         projectId,
         nanoId(),
-        layer.geostats?.metadata?.title || layer.name.replace("_", " "),
+        layer.aiDataAnalystNotes?.best_layer_title?.trim() ||
+          layer.geostats?.metadata?.title ||
+          layer.name.replace("_", " "),
         false,
         layer.bounds,
         dataLayerId,
@@ -430,9 +582,9 @@ export async function createDBRecordsForProcessedLayer(
                   ],
                 },
               ],
-            }
+            },
         ),
-      ]
+      ],
     );
     const tableOfContentsItemId = tocResult.rows[0].id;
 
@@ -469,8 +621,23 @@ function getColor(i: number) {
 async function getStyle(
   type: GeoJsonGeometryTypes | "Raster" | "Unknown",
   colorIndex: number,
-  geostats?: GeostatsLayer | RasterInfo | null
+  geostats?: GeostatsLayer | RasterInfo | null,
+  /**
+   * Reserved for future style derivation (palette, presentation hints, etc.).
+   * Intentionally unused — current heuristics must remain unchanged.
+   */
+  aiDataAnalystNotes?: ProcessedUploadLayer["aiDataAnalystNotes"],
 ) {
+  if (aiDataAnalystNotes && geostats) {
+    try {
+      return buildGlStyle({
+        geostats,
+        aiDataAnalystNotes,
+      });
+    } catch (error) {
+      console.error("Error building style with GL Style Builder", error);
+    }
+  }
   if (type === "Unknown") {
     return [];
   }

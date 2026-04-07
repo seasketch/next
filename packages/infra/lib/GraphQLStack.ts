@@ -40,6 +40,8 @@ export class GraphQLStack extends cdk.Stack {
       uploadHandler: lambda.DockerImageFunction;
       subdivisionWorkerLambdaArn: string;
       fragmentWorkerLambdaArn: string;
+      /** Same function the upload handler uses for PII scoring; warmed on createDataUpload. */
+      geostatsPiiClassifierLambdaArn: string;
       overlayEngineWorkerSqsQueue: Queue;
     }
   ) {
@@ -177,6 +179,7 @@ export class GraphQLStack extends cdk.Stack {
               process.env.GOOGLE_MAPS_2D_TILE_API_KEY,
             SUBDIVISION_WORKER_LAMBDA_ARN: props.subdivisionWorkerLambdaArn,
             FRAGMENT_WORKER_LAMBDA_ARN: props.fragmentWorkerLambdaArn,
+            GEOSTATS_PII_CLASSIFIER_ARN: props.geostatsPiiClassifierLambdaArn,
             OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL:
               props.overlayEngineWorkerSqsQueue.queueUrl,
           },
@@ -263,6 +266,7 @@ export class GraphQLStack extends cdk.Stack {
           props.overlayWorkerArn,
           props.subdivisionWorkerLambdaArn,
           props.fragmentWorkerLambdaArn,
+          props.geostatsPiiClassifierLambdaArn,
         ],
       })
     );

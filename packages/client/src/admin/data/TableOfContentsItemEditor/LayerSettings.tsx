@@ -21,6 +21,7 @@ import {
 import { copyTextToClipboard } from "../../../projects/Forums/InlineAuthorDetails";
 import INaturalistLayerSettingsForm from "../INaturalistLayerSettingsForm";
 import Warning from "../../../components/Warning";
+import AICartographerNotesSummary from "./AICartographerNotesSummary";
 
 export default function LayerSettings({
   item,
@@ -212,6 +213,16 @@ export default function LayerSettings({
 
       {source?.type === DataSourceTypes.Inaturalist && (
         <INaturalistLayerSettingsForm item={item} />
+      )}
+
+      {source?.aiDataAnalystNote && (
+        <div className="mt-5">
+          <AICartographerNotesSummary
+            originalFilename={source.uploadedSourceFilename ?? undefined}
+            aiDataAnalystNote={source.aiDataAnalystNote}
+            geostats={source.geostats}
+          />
+        </div>
       )}
 
       {item && (
