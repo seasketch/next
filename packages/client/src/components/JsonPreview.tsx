@@ -1,5 +1,5 @@
 import clsx from "clsx";
-import { type ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import Spinner from "./Spinner";
 
 type JsonPreviewProps = {

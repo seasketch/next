@@ -3,8 +3,8 @@ import { QuestionMarkCircledIcon } from "@radix-ui/react-icons";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import * as d3Chromatic from "d3-scale-chromatic";
 import { ReactNode, useMemo, useState } from "react";
-import { type TFunction, Trans, useTranslation } from "react-i18next";
-import type {
+import { TFunction, Trans, useTranslation } from "react-i18next";
+import {
   FullAdminSourceFragment,
   InteractivityType as GqlInteractivityType,
   VisualizationType as GqlVisualizationType,
@@ -16,10 +16,7 @@ import {
   VisualizationType as GuiVisualizationType,
   colorScales,
 } from "../styleEditor/visualizationTypes";
-import type {
-  GeostatsAttribute,
-  GeostatsLayer,
-} from "@seasketch/geostats-types";
+import { GeostatsAttribute, GeostatsLayer } from "@seasketch/geostats-types";
 import {
   piiRiskBadgeClass,
   piiRiskCategoryLabel,
