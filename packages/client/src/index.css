@@ -10577,6 +10577,14 @@ select{
   background-image:radial-gradient(ellipse 90% 65% at 100% -5%,rgba(99,102,241,0.09),transparent 55%),radial-gradient(ellipse 80% 55% at -8% 102%,rgba(167,139,250,0.07),transparent 52%),linear-gradient(155deg,rgb(255 255 255) 0%,rgb(246 248 255) 40%,rgb(252 252 254) 100%)
 }
 
+.bg-\[radial-gradient\(ellipse_90\%_65\%_at_100\%_-5\%\2c rgba\(99\2c 102\2c 241\2c 0\.072\)\2c transparent_55\%\)\2c radial-gradient\(ellipse_80\%_55\%_at_-8\%_102\%\2c rgba\(167\2c 139\2c 250\2c 0\.056\)\2c transparent_52\%\)\2c linear-gradient\(155deg\2c rgb\(255_255_255\)_0\%\2c rgb\(248_249_255\)_40\%\2c rgb\(253_253_254\)_100\%\)\]{
+  background-image:radial-gradient(ellipse 90% 65% at 100% -5%,rgba(99,102,241,0.072),transparent 55%),radial-gradient(ellipse 80% 55% at -8% 102%,rgba(167,139,250,0.056),transparent 52%),linear-gradient(155deg,rgb(255 255 255) 0%,rgb(248 249 255) 40%,rgb(253 253 254) 100%)
+}
+
+.bg-\[radial-gradient\(ellipse_90\%_65\%_at_100\%_-5\%\2c rgba\(99\2c 102\2c 241\2c 0\.058\)\2c transparent_55\%\)\2c radial-gradient\(ellipse_80\%_55\%_at_-8\%_102\%\2c rgba\(167\2c 139\2c 250\2c 0\.045\)\2c transparent_52\%\)\2c linear-gradient\(155deg\2c rgb\(255_255_255\)_0\%\2c rgb\(249_250_255\)_40\%\2c rgb\(254_254_254\)_100\%\)\]{
+  background-image:radial-gradient(ellipse 90% 65% at 100% -5%,rgba(99,102,241,0.058),transparent 55%),radial-gradient(ellipse 80% 55% at -8% 102%,rgba(167,139,250,0.045),transparent 52%),linear-gradient(155deg,rgb(255 255 255) 0%,rgb(249 250 255) 40%,rgb(254 254 254) 100%)
+}
+
 .from-black{
   --tw-gradient-from:#000 var(--tw-gradient-from-position);
   --tw-gradient-to:rgb(0 0 0 / 0) var(--tw-gradient-to-position);

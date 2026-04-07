@@ -265,7 +265,7 @@ function NoteRow({ label, children }: { label: string; children: ReactNode }) {
     return null;
   }
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-2 py-2 border-b border-gray-100 last:border-0 text-sm">
+    <div className="grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-2 py-2  text-sm">
       <div className="font-medium text-gray-600">{label}</div>
       <div className="sm:col-span-2 text-gray-900 break-words">{children}</div>
     </div>
@@ -606,7 +606,7 @@ export default function AICartographerNotesSummary({
   return (
     <Tooltip.Provider delayDuration={200}>
       <section
-        className="relative overflow-hidden rounded-lg border border-gray-200 bg-[radial-gradient(ellipse_90%_65%_at_100%_-5%,rgba(99,102,241,0.09),transparent_55%),radial-gradient(ellipse_80%_55%_at_-8%_102%,rgba(167,139,250,0.07),transparent_52%),linear-gradient(155deg,rgb(255_255_255)_0%,rgb(246_248_255)_40%,rgb(252_252_254)_100%)] p-4 shadow-sm"
+        className="relative overflow-hidden rounded-lg border border-gray-200 bg-[radial-gradient(ellipse_90%_65%_at_100%_-5%,rgba(99,102,241,0.058),transparent_55%),radial-gradient(ellipse_80%_55%_at_-8%_102%,rgba(167,139,250,0.045),transparent_52%),linear-gradient(155deg,rgb(255_255_255)_0%,rgb(249_250_255)_40%,rgb(254_254_254)_100%)] p-4 shadow-sm"
         aria-label={t("AI Cartographer Notes")}
       >
         <Tooltip.Root delayDuration={10}>
@@ -646,7 +646,7 @@ export default function AICartographerNotesSummary({
                       className="text-left text-sm font-medium text-primary-600 hover:text-primary-800 hover:underline focus:outline-none focus-visible:rounded focus-visible:ring-2 focus-visible:ring-primary-400 focus-visible:ring-offset-1"
                       onClick={() => setShowRawNoteJsonModal(true)}
                     >
-                      {t("View full notes data")}
+                      {t("View full output data")}
                     </button>
                   </div>
                 ) : null}
