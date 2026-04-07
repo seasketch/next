@@ -10,6 +10,7 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as rds from "aws-cdk-lib/aws-rds";
 import * as s3 from "aws-cdk-lib/aws-s3";
+import { Platform } from "aws-cdk-lib/aws-ecr-assets";
 import * as path from "path";
 import { Construct } from "constructs";
 
@@ -25,7 +26,7 @@ export class UploadHandlerLambdaStack extends cdk.Stack {
       normalizedOutputsBucket: s3.Bucket;
       /** When provided, the upload handler will invoke this Lambda for PII classification. */
       piiClassifierFn?: lambda.IFunction;
-    }
+    },
   ) {
     super(scope, id, props);
     if (!process.env.UPLOADS_BASE_URL) {
@@ -42,7 +43,7 @@ export class UploadHandlerLambdaStack extends cdk.Stack {
     }
     if (!process.env.SLACK_CHANNEL || !process.env.SLACK_TOKEN) {
       throw new Error(
-        "SLACK_CHANNEL and SLACK_TOKEN must be set in environment"
+        "SLACK_CHANNEL and SLACK_TOKEN must be set in environment",
       );
     }
 
@@ -58,9 +59,13 @@ export class UploadHandlerLambdaStack extends cdk.Stack {
     const fn = new lambda.DockerImageFunction(this, "SpatialUploadHandler", {
       functionName: "SpatialUploadsHandler",
       vpc: props.vpc,
+      architecture: lambda.Architecture.X86_64,
       code: lambda.DockerImageCode.fromImageAsset(
-        path.join(__dirname, "../../spatial-uploads-handler"),
-        {}
+        path.join(__dirname, "../.."),
+        {
+          file: "spatial-uploads-handler/Dockerfile",
+          platform: Platform.LINUX_AMD64,
+        },
       ),
       timeout: cdk.Duration.minutes(15),
       logGroup: new logs.LogGroup(this, "SpatialUploadHandlerLogs", {

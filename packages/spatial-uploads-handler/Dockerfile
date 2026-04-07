@@ -14,23 +14,40 @@ RUN curl -L https://github.com/protomaps/go-pmtiles/releases/download/v1.8.0/go-
 RUN tar -zxvf ./pmtiles.tar.gz
 RUN npm install -g typescript@5.5
 RUN dnf install -y jq
-COPY tsconfig.json  ./
-COPY package.json ./package.json.original
-RUN jq 'del(.scripts.postinstall) | del(.scripts.install) | del(.dependences["@seasketch/geostats-types"]) | del(.dependences["@seasketch/metadata-parser"])' package.json.original > package.json
-# Copy the referenced TypeScript projects for project references
-COPY ./@seasketch/geostats-types ../geostats-types
-COPY ./@seasketch/metadata-parser ../metadata-parser
-# Also copy as node_modules for runtime dependencies
-RUN mkdir -p ./node_modules/@seasketch
-COPY ./@seasketch/geostats-types ./node_modules/@seasketch/geostats-types
-COPY ./@seasketch/metadata-parser ./node_modules/@seasketch/metadata-parser
+# Build context is the monorepo packages/ directory (see UploadHandlerLambdaStack).
+COPY spatial-uploads-handler/tsconfig.json ./
+COPY spatial-uploads-handler/package.json ./package.json.original
+RUN jq 'del(.scripts.postinstall) | del(.scripts.install) | del(.dependencies["@seasketch/geostats-types"]) | del(.dependencies["@seasketch/metadata-parser"]) | del(.dependencies["ai-data-analyst"])' package.json.original > package.json
+
+# Build workspace deps so `tsc -b` project references resolve (same as vendoring prebuilt node_modules/@seasketch).
+WORKDIR /usr/geostats-types
+COPY geostats-types/package.json geostats-types/package-lock.json ./
+RUN npm ci
+COPY geostats-types/ ./
+RUN npm run build
+
+WORKDIR /usr/metadata-parser
+COPY metadata-parser/package.json metadata-parser/package-lock.json ./
+RUN mkdir -p node_modules/@seasketch && cp -r /usr/geostats-types node_modules/@seasketch/geostats-types
+# npm install (not ci): lockfile omits file-linked @seasketch/geostats-types present in node_modules
 RUN npm install
-# Ensure the projects are still available after npm install
-RUN mkdir -p ./node_modules/@seasketch
-COPY ./@seasketch/geostats-types ./node_modules/@seasketch/geostats-types
-COPY ./@seasketch/metadata-parser ./node_modules/@seasketch/metadata-parser
-COPY handler.ts ./
-COPY src ./src
+COPY metadata-parser/ ./
+RUN npm run build
+
+WORKDIR /usr/ai-data-analyst
+COPY ai-data-analyst/package.json ai-data-analyst/package-lock.json ./
+RUN npm ci
+COPY ai-data-analyst/ ./
+RUN npm run build
+
+WORKDIR /usr/app
+RUN npm install
+RUN mkdir -p ./node_modules/@seasketch \
+  && cp -r /usr/geostats-types ./node_modules/@seasketch/geostats-types \
+  && cp -r /usr/metadata-parser ./node_modules/@seasketch/metadata-parser \
+  && cp -r /usr/ai-data-analyst ./node_modules/ai-data-analyst
+COPY spatial-uploads-handler/handler.ts ./
+COPY spatial-uploads-handler/src ./src
 RUN npm run build
 
 
@@ -265,7 +282,7 @@ COPY --from=builder /usr/app/node_modules ./node_modules
 COPY --from=builder /usr/bin/rclone /bin/rclone
 COPY --from=builder /usr/bin/unzip /bin/unzip
 COPY --from=builder /usr/app/pmtiles /bin/pmtiles
-COPY .rclone.conf /var/task/rclone.conf
+COPY spatial-uploads-handler/.rclone.conf /var/task/rclone.conf
 COPY --from=gdal /usr/local/bin/unrar /usr/bin/unrar
 # RUN dnf install -y openssl python-pip python3
 # LD_LIBRARY_PATH flag is necessary to avoid ssl errors

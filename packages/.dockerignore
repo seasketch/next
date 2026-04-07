@@ -1,0 +1,7 @@
+# Shrink CDK Docker asset context for spatial-uploads-handler (context = packages/)
+**/node_modules
+**/.git
+**/cdk.out
+**/dist
+**/.tsbuildinfo
+**/coverage

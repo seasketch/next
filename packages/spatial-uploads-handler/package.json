@@ -23,10 +23,9 @@
     "dev": "npx tsx watch server.ts",
     "build": "tsc -b",
     "watch": "tsc -b --watch",
-    "build:container": "cp -r node_modules/@seasketch . && docker build -t spatial-uploads-handler . && rm -rf @seasketch",
+    "build:container": "docker build -f Dockerfile .. -t spatial-uploads-handler:latest",
     "test": "jest",
-    "deploy:pre": "npm run build && cp -r node_modules/@seasketch .",
-    "deploy:post": "rm -rf @seasketch",
+    "deploy:pre": "npm run build",
     "geostats": "npx tsx bin/geostats.ts"
   },
   "jest": {
