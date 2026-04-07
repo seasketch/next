@@ -160,8 +160,8 @@ jobs:
           SLACK_TOKEN: ${{ secrets.SLACK_TOKEN }}
           S3_REGION: ${{ secrets.S3_REGION }}
           GOOGLE_MAPS_2D_TILE_API_KEY: ${{ secrets.GOOGLE_MAPS_2D_TILE_API_KEY }}
-          CF_AIG_TOKEN: ${{ secrets.CLOUDFLARE_AI_GATEWAY_TOKEN }}
-          CF_AIG_URL: ${{ secrets.CLOUDFLARE_AI_GATEWAY_URL }}
+          CF_AIG_TOKEN: ${{ secrets.CF_AIG_TOKEN }}
+          CF_AIG_URL: ${{ secrets.CF_AIG_URL }}
         run: |
           cdk deploy --require-approval never -e SeaSketchGraphQLServer
   deploy_client:
