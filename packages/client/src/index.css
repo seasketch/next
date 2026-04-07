@@ -10482,6 +10482,14 @@ select{
   background-color:rgb(199 210 254 / 0.05)
 }
 
+.bg-yellow-300\/50{
+  background-color:rgb(252 211 77 / 0.5)
+}
+
+.bg-yellow-300\/70{
+  background-color:rgb(252 211 77 / 0.7)
+}
+
 .bg-opacity-10{
   --tw-bg-opacity:0.1
 }

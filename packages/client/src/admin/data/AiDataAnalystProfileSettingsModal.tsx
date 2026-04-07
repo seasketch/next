@@ -54,7 +54,7 @@ export default function AiDataAnalystProfileSettingsModal({
 
   return (
     <Modal
-      title={t("AI-assisted data analysis")}
+      title={t("AI layer processing settings")}
       onRequestClose={onRequestClose}
       loading={loading}
       footer={[
@@ -75,28 +75,33 @@ export default function AiDataAnalystProfileSettingsModal({
       <div className="space-y-3 text-sm text-gray-700">
         <p>
           <Trans ns="admin:data">
-            When enabled, SeaSketch may use AI to help you work with hosted
-            layers—for example suggesting titles, attribution, and how layer
-            attributes are summarized or presented. These features use
-            automated analysis of layer metadata and statistics (geostats), not
-            full copies of your raw upload files.
+            When uploading new layers to SeaSketch, you have the option to
+            process layers using our AI Cartographer system. This system can
+            assign layers a well-formatted title, attribution, a cartographic
+            style, and interactivity settings (e.g. popups).
           </Trans>
         </p>
         <p>
           <Trans ns="admin:data">
-            That information is sent from SeaSketch to a third-party AI service
-            (accessed through SeaSketch&apos;s cloud infrastructure). Do not
-            rely on this feature for legally privileged, export-controlled, or
-            highly sensitive data.
+            SeaSketch creates a summary of your layer's metadata, including
+            statistics and sample column values, and sends it to a third-party
+            AI service for analysis. While SeaSketch detects and redacts
+            personally identifiable information (PII), we recommend disabling
+            this feature when uploading very sensitive data.
           </Trans>
         </p>
+
         <p>
           <Trans ns="admin:data">
-            <strong>You are responsible</strong> for layers you upload or connect
-            as a project administrator. Only enable this if you are allowed to
-            share the layer&apos;s descriptive metadata and statistical
-            summaries with an external AI provider under your policies,
-            agreements, and applicable law.
+            More information on how this system works{" "}
+            <a
+              className="text-primary-500 underline"
+              href="https://docs.seasketch.org/seasketch-documentation/administrators-guide/overlay-layers/ai-cartographer"
+              target="_blank"
+            >
+              can be found in our documentation
+            </a>
+            .
           </Trans>
         </p>
       </div>
@@ -114,10 +119,7 @@ export default function AiDataAnalystProfileSettingsModal({
             }}
           />
         }
-        title={t("Allow AI-assisted analysis for my account")}
-        description={t(
-          "Turn off to prevent SeaSketch from sending layer metadata and geostats from your sessions to an AI service. Other project admins make their own choice for their accounts."
-        )}
+        title={t("Enable AI layer processing for my account")}
       />
     </Modal>
   );

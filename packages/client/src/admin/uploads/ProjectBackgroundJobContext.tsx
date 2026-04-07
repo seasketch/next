@@ -36,6 +36,7 @@ import ProjectBackgroundJobManager, {
 import sleep from "../../sleep";
 import ConvertFeatureLayerToHostedModal from "../data/arcgis/ConvertFeatureLayerToHostedModal";
 import AiDataAnalystUploadPromptModal from "./AiDataAnalystUploadPromptModal";
+import useIsSuperuser from "../../useIsSuperuser";
 
 export type UploadType = "create" | "replace";
 
@@ -99,6 +100,7 @@ export default function DataUploadDropzone({
   const onError = useGlobalErrorHandler();
   const { alert } = useDialog();
   const { t } = useTranslation("admin:data");
+  const isSuperuser = useIsSuperuser();
   const [hostOnSeaSketch, setHostOnSeasketch] = useState<null | number>(null);
 
   const jobsQuery = useProjectBackgroundJobsQuery({
@@ -422,17 +424,19 @@ export default function DataUploadDropzone({
             onRequestClose={() => setHostOnSeasketch(null)}
           />
         )}
-        {state.manager && state.aiDataAnalystUploadPromptOpen && (
-          <AiDataAnalystUploadPromptModal
-            manager={state.manager}
-            onFinished={() => {
-              setState((prev) => ({
-                ...prev,
-                aiDataAnalystUploadPromptOpen: false,
-              }));
-            }}
-          />
-        )}
+        {state.manager &&
+          state.aiDataAnalystUploadPromptOpen &&
+          isSuperuser && (
+            <AiDataAnalystUploadPromptModal
+              manager={state.manager}
+              onFinished={() => {
+                setState((prev) => ({
+                  ...prev,
+                  aiDataAnalystUploadPromptOpen: false,
+                }));
+              }}
+            />
+          )}
         <input {...getInputProps()} className="w-1 h-1" />
         {children}
         {(isDragActive || state.droppedFiles > 0) &&

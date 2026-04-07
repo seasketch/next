@@ -19,6 +19,8 @@ import {
   ProjectBackgroundJobsQuery,
   SubmitDataUploadDocument,
   SubmitDataUploadMutation,
+  UserIsSuperuserDocument,
+  UserIsSuperuserQuery,
 } from "../../generated/graphql";
 import axios from "axios";
 
@@ -188,6 +190,21 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
       return false;
     }
     return profile.wasPromptedToEnableAiDataAnalystAt == null;
+  }
+
+  private async resolveCurrentUserIsSuperuser(): Promise<boolean> {
+    try {
+      const data = this.client.readQuery<UserIsSuperuserQuery>({
+        query: UserIsSuperuserDocument,
+      });
+      return Boolean(data?.currentUserIsSuperuser);
+    } catch {
+      const { data } = await this.client.query<UserIsSuperuserQuery>({
+        query: UserIsSuperuserDocument,
+        fetchPolicy: "network-only",
+      });
+      return Boolean(data?.currentUserIsSuperuser);
+    }
   }
 
   /**
@@ -372,7 +389,8 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
                   jobId,
                 });
                 const needsPrompt =
-                  await this.resolveNeedsAiDataAnalystUploadPrompt();
+                  (await this.resolveNeedsAiDataAnalystUploadPrompt()) &&
+                  (await this.resolveCurrentUserIsSuperuser());
                 if (needsPrompt) {
                   this.pendingSubmitAfterAiPromptJobIds.push(jobId);
                   delete this.abortControllers[jobId];

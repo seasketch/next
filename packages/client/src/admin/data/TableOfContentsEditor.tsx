@@ -57,6 +57,7 @@ import QuotaUsageDetails from "./QuotaUsageDetails";
 import DataHostingRetentionPeriodModal from "./DataHostingRetentionPeriodModal";
 import AiDataAnalystProfileSettingsModal from "./AiDataAnalystProfileSettingsModal";
 import useProjectId from "../../useProjectId";
+import useIsSuperuser from "../../useIsSuperuser";
 import withScrolling, {
   createVerticalStrength,
   createHorizontalStrength,
@@ -470,8 +471,7 @@ export default function TableOfContentsEditor() {
                     tocQuery.data?.projectBySlug?.draftTableOfContentsItems?.find(
                       (item) => item.stableId === treeItemId
                     );
-                  let sorted =
-                    manager?.getVisibleLayersByZIndex() || [];
+                  let sorted = manager?.getVisibleLayersByZIndex() || [];
                   sorted.filter(
                     (l) => !l.sketchClassLayerState && l.dataLayer?.tocId
                   );
@@ -611,6 +611,7 @@ function Header({
 }) {
   const uploadContext = useContext(ProjectBackgroundJobContext);
   const { t } = useTranslation("admin:data");
+  const isSuperuser = useIsSuperuser();
   const [dataHostingRetentionModalOpen, setDataHostingRetentionModalOpen] =
     useState(false);
   const [dataDownloadSettingOpen, setDataDownloadSettingOpen] = useState(false);
@@ -807,13 +808,15 @@ function Header({
                 <MenuBarItem
                   onClick={() => setDataHostingRetentionModalOpen(true)}
                 >
-                  <Trans ns="admin:data">Archived Layer Retention...</Trans>
+                  <Trans ns="admin:data">Archived layer retention...</Trans>
                 </MenuBarItem>
-                <MenuBarItem
-                  onClick={() => setAiDataAnalystSettingsOpen(true)}
-                >
-                  <Trans ns="admin:data">AI-assisted data analysis...</Trans>
-                </MenuBarItem>
+                {isSuperuser && (
+                  <MenuBarItem
+                    onClick={() => setAiDataAnalystSettingsOpen(true)}
+                  >
+                    <Trans ns="admin:data">AI layer processing...</Trans>
+                  </MenuBarItem>
+                )}
               </Menubar.MenubarGroup>
             </MenuBarContent>
           </Menubar.Portal>
@@ -876,7 +879,7 @@ function Header({
           onRequestClose={() => setDataHostingRetentionModalOpen(false)}
         />
       )}
-      {aiDataAnalystSettingsOpen && (
+      {isSuperuser && aiDataAnalystSettingsOpen && (
         <AiDataAnalystProfileSettingsModal
           onRequestClose={() => setAiDataAnalystSettingsOpen(false)}
         />

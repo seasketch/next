@@ -9,6 +9,7 @@ import {
 } from "../../generated/graphql";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import type ProjectBackgroundJobManager from "./ProjectBackgroundJobManager";
+import { SparklesIcon } from "@heroicons/react/outline";
 
 export default function AiDataAnalystUploadPromptModal({
   manager,
@@ -85,13 +86,24 @@ export default function AiDataAnalystUploadPromptModal({
 
   return (
     <Modal
-      title={t("AI Cartographer notes for your uploads")}
+      title={
+        <span className="flex items-center space-x-2">
+          <SparklesIcon
+            className="h-5 w-5 shrink-0 text-primary-600"
+            aria-hidden
+          />
+          <span>{t("AI Cartographer")}</span>
+          <span className="bg-yellow-300/70 px-2 rounded text-sm">
+            {t("New!")}
+          </span>
+        </span>
+      }
       onRequestClose={() => {}}
       disableBackdropClick
       scrollable
       footer={[
         {
-          label: t("Disable for my account"),
+          label: t("Disable for now"),
           variant: "secondary",
           disabled: saving,
           loading: activeAction === "disable",
@@ -114,25 +126,31 @@ export default function AiDataAnalystUploadPromptModal({
       <div className="space-y-3 text-sm text-gray-700">
         <p>
           <Trans ns="admin:data">
-            SeaSketch can use AI to produce optional &quot;Cartographer
-            notes&quot; for layers you upload—suggestions for titles,
-            attribution, and how attributes are presented. This uses automated
-            analysis of layer metadata and statistics (geostats), not full
-            copies of your raw files.
+            Our AI Cartographer can suggest titles, attribution, cartographic
+            styles, and popups for your uploads. To do this, we use an AI
+            service to analyze your layer's filename, metadata, statistics, and
+            sample column values. We scan for and redact personally identifiable
+            information (PII) where found.
           </Trans>
         </p>
         <p>
           <Trans ns="admin:data">
-            That information is sent to a third-party AI service through
-            SeaSketch&apos;s infrastructure. Do not use this for legally
-            privileged, export-controlled, or highly sensitive data.
+            For more information on how this system works, see{" "}
+            <a
+              className="text-primary-500 underline"
+              href="https://docs.seasketch.org/seasketch-documentation/administrators-guide/overlay-layers/ai-cartographer"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              our documentation
+            </a>
+            . You can also toggle this setting later under{" "}
+            <b>Settings → AI layer processing</b>.
           </Trans>
         </p>
         <p>
           <Trans ns="admin:data">
-            <strong>You are responsible</strong> for data you upload. Choose
-            whether to allow AI analysis for your account before processing
-            continues. You can change this later in your profile settings.
+            Would you like to enable the AI Cartographer for this upload?
           </Trans>
         </p>
         {flushError && (

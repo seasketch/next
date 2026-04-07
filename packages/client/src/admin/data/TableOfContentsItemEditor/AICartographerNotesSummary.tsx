@@ -626,9 +626,9 @@ export default function AICartographerNotesSummary({
               sideOffset={6}
             >
               <div className="space-y-2 text-sm">
-                <p className="font-medium text-indigo-900">
-                  {t("New Feature!")}
-                </p>
+                <span className=" bg-yellow-300/70 px-2 rounded text-sm py-1 my-1 inline-block">
+                  {t("New!")}
+                </span>
                 <p>
                   {t(
                     "After you upload spatial data, the AI Cartographer inspects your layer (for example attributes, geometry, or raster bands) and the filename."
@@ -638,6 +638,20 @@ export default function AICartographerNotesSummary({
                   {t(
                     "It suggests a readable map title, attribution if clear from the metadata, and cartographic recommendations such as presentation type, palette, labels, and interactivity."
                   )}
+                </p>
+                <p>
+                  <Trans ns="admin:data">
+                    Read{" "}
+                    <a
+                      href="https://docs.seasketch.org/seasketch-documentation/administrators-guide/overlay-layers/ai-cartographer"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary-500 underline"
+                    >
+                      the documentation
+                    </a>{" "}
+                    for more information.
+                  </Trans>
                 </p>
                 {noteJsonPayload ? (
                   <div className="border-t border-slate-200/80 pt-2">
