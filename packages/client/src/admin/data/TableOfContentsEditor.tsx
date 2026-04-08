@@ -57,7 +57,6 @@ import QuotaUsageDetails from "./QuotaUsageDetails";
 import DataHostingRetentionPeriodModal from "./DataHostingRetentionPeriodModal";
 import AiDataAnalystProfileSettingsModal from "./AiDataAnalystProfileSettingsModal";
 import useProjectId from "../../useProjectId";
-import useIsSuperuser from "../../useIsSuperuser";
 import withScrolling, {
   createVerticalStrength,
   createHorizontalStrength,
@@ -611,7 +610,6 @@ function Header({
 }) {
   const uploadContext = useContext(ProjectBackgroundJobContext);
   const { t } = useTranslation("admin:data");
-  const isSuperuser = useIsSuperuser();
   const [dataHostingRetentionModalOpen, setDataHostingRetentionModalOpen] =
     useState(false);
   const [dataDownloadSettingOpen, setDataDownloadSettingOpen] = useState(false);
@@ -810,13 +808,10 @@ function Header({
                 >
                   <Trans ns="admin:data">Archived layer retention...</Trans>
                 </MenuBarItem>
-                {isSuperuser && (
-                  <MenuBarItem
-                    onClick={() => setAiDataAnalystSettingsOpen(true)}
-                  >
-                    <Trans ns="admin:data">AI layer processing...</Trans>
-                  </MenuBarItem>
-                )}
+
+                <MenuBarItem onClick={() => setAiDataAnalystSettingsOpen(true)}>
+                  <Trans ns="admin:data">AI layer processing...</Trans>
+                </MenuBarItem>
               </Menubar.MenubarGroup>
             </MenuBarContent>
           </Menubar.Portal>
@@ -879,7 +874,7 @@ function Header({
           onRequestClose={() => setDataHostingRetentionModalOpen(false)}
         />
       )}
-      {isSuperuser && aiDataAnalystSettingsOpen && (
+      {aiDataAnalystSettingsOpen && (
         <AiDataAnalystProfileSettingsModal
           onRequestClose={() => setAiDataAnalystSettingsOpen(false)}
         />
