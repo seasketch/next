@@ -1,15 +1,15 @@
 ---
 name: Report Overlay Source Slim Refactor
-overview: Refactor all report widget usages of `source.geostats` and `source.mapboxGlStyles` (via the `OverlaySourceDetails` fragment) to use the new slim fields now live in the schema and fragment.
+overview: Refactor report widgets off `source.geostats` / `source.mapboxGlStyles` for paths that use `OverlaySourceDetails`, using `geometryType`, `columnSummaries`, `recommendedGroupBy`, server column hints (`bestLabelColumn`, `bestCategoryColumn`, `bestContinuousColumn`, `bestPopupDescriptionColumn`), and raster helpers (`bandCount`, `suggestedRasterPresentation`, `rasterOffset`, `rasterScale`) as defined in reportsPlugin SDL and SketchClassAdmin.graphql.
 todos:
   - id: migrate-ClassTableRows
     content: "Migrate ClassTableRows.ts: replace isRasterSource (use geometryType), swatch generation for non-grouped and raster rows, and grouped row category values with columnSummaries"
     status: pending
   - id: migrate-widgets-command-palette
-    content: "Migrate widgets.tsx: replace raster/vector detection, geometry-specific commands, column defaults (recommendedGroupBy, bestLabelColumn via columnSummaries, numeric columns)"
+    content: "Migrate widgets.tsx: replace raster/vector detection, geometry-specific commands; use server hints recommendedGroupBy, bestLabelColumn, bestCategoryColumn, bestContinuousColumn from OverlaySourceDetails where applicable"
     status: pending
   - id: migrate-ClassRowSettingsPopover
-    content: "Migrate ClassRowSettingsPopover.tsx: replace groupBy options and rowLinkedStableIds auto-population using columnSummaries and highCardinality"
+    content: "Migrate ClassRowSettingsPopover.tsx: groupBy options and rowLinkedStableIds from columnSummaries + highCardinality; use recommendedGroupBy / bestCategoryColumn as defaults"
     status: pending
   - id: migrate-column-pickers
     content: Migrate IntersectingFeaturesList, InlineMetric, ColumnStatisticsTable, ColumnValuesHistogram admin tooltips to use columnSummaries (ColumnType enum values)
@@ -18,7 +18,7 @@ todos:
     content: "Migrate ReportSourceLayerDropdown and ReportLayerMultiPicker: replace getGeometryTypeFromGeostats with source.geometryType for processed sources"
     status: pending
   - id: defer-histogram-widgets
-    content: Add graceful degradation to RasterValuesHistogram (bins gap) and ColumnValuesHistogram color coding (use columnSummaries.colors instead of GL expression)
+    content: Add graceful degradation to RasterValuesHistogram (bins gap; consider rasterOffset/rasterScale from OverlaySourceDetails for value rescaling) and ColumnValuesHistogram color coding (use columnSummaries.colors instead of GL expression)
     status: pending
 isProject: false
 ---
@@ -27,16 +27,32 @@ isProject: false
 
 ## Schema Changes Already Made
 
-The following fields are now live in `ReportOverlaySource` and in the `OverlaySourceDetails` fragment. Codegen has been run.
+The following fields are live in `ReportOverlaySource` (SDL in [`packages/api/src/plugins/reportsPlugin.ts`](packages/api/src/plugins/reportsPlugin.ts)) and selected by the `OverlaySourceDetails` fragment in [`packages/client/src/queries/SketchClassAdmin.graphql`](packages/client/src/queries/SketchClassAdmin.graphql). Run client codegen after SDL/fragment changes.
 
-**New on `ReportOverlaySource`:**
-- `geometryType: String!` — `"Raster"` for rasters, or a GeoJSON geometry string (`"Polygon"`, `"MultiPolygon"`, `"Point"`, `"MultiPoint"`, `"LineString"`, `"MultiLineString"`) for vectors. This replaces all `isRaster` checks and `geostatsLayer.geometry` references. **Note**: `isRaster: Boolean!` is still in the SDL but is NOT in the fragment — always use `geometryType`.
-- `recommendedGroupBy: String` — the attribute name driving the layer's data-driven map paint expression, computed server-side. Replaces `groupByForStyle(mapboxGlStyles, geostatsLayer)`.
+**Legacy fields still on the GraphQL type (not in `OverlaySourceDetails`):**
+- `geostats: JSON!` and `mapboxGlStyles: JSON!` remain on `ReportOverlaySource` for callers that still request them (e.g. lazy or debugging paths). The slim refactor keeps them **out of** `OverlaySourceDetails` so report dependencies and `reportingLayers` payloads stay small.
+- `isRaster: Boolean!` remains in the SDL but is **not** in the fragment — prefer `geometryType === "Raster"`.
 
-**New on `ColumnSummary`:**
-- `highCardinality: Boolean!` — when `false`, the server guarantees `sampleValues` contains **all** distinct values (not just a sample). This is the key to replacing `Object.keys(attr.values)` from geostats.
-- `type: String!` — plain string values `"string"`, `"number"`, `"boolean"` (lowercase, no enum). Comparisons use string literals directly.
-- `multiColorSwatchLayout: String` — plain string values `"raster-ramp-order"` or `"soft-scatter"` (kebab-case, no enum).
+**On `ReportOverlaySource` (included in `OverlaySourceDetails`):**
+- `geometryType: String!` — `"Raster"` or a GeoJSON geometry type string for vectors. Replaces `isRaster` / `geostatsLayer.geometry` for processed overlay sources.
+- `recommendedGroupBy: String` — attribute behind the layer's data-driven paint; replaces `groupByForStyle(mapboxGlStyles, geostatsLayer)`.
+- `bandCount: Int`, `suggestedRasterPresentation: String` — raster presentation hints (`"categorical" | "continuous" | "rgb"`).
+- **Server-chosen column hints** (use these before re-deriving from `columnSummaries`):
+  - `bestLabelColumn: String`
+  - `bestCategoryColumn: String`
+  - `bestContinuousColumn: String`
+  - `bestPopupDescriptionColumn: String`
+- **Raster rescaling** (when the server exposes them): `rasterOffset: Float`, `rasterScale: Float` — useful where widgets previously inferred offset/scale from geostats band stats.
+
+**On `ColumnSummary`:**
+- `highCardinality: Boolean!` — when `false`, `sampleValues` must list **all** distinct values.
+- `type: String!` — `"string"`, `"number"`, or `"boolean"`.
+- `multiColorSwatchLayout: String` — `"raster-ramp-order"` or `"soft-scatter"`.
+- `distinctValueCount: Int!`, `sampleValues`, `colors` — unchanged contract from prior slim work.
+
+**Fragment `OverlaySourceDetails` (current shape):** selects `columnSummaries { attribute, type, distinctValueCount, highCardinality, sampleValues, colors, multiColorSwatchLayout }`, then `bandCount`, `suggestedRasterPresentation`, `geometryType`, `recommendedGroupBy`, `bestCategoryColumn`, `bestContinuousColumn`, `bestPopupDescriptionColumn`, `bestLabelColumn`, `rasterOffset`, `rasterScale` — no `geostats` / `mapboxGlStyles` / `isRaster`.
+
+**Resolver / data plumbing:** `ReportOverlaySource` uses explicit resolvers for `tableOfContentsItem`, `sourceProcessingJob`, `output`, `geostats`, and `mapboxGlStyles`. Other slim fields resolve from the parent object returned by `getOrCreateReportDependencies`, `draftReportDependencies` → `createMetricsForDependencies`, and `Project.reportingLayers`. Those code paths must attach `columnSummaries`, `geometryType`, `recommendedGroupBy`, the `best*` hints, and raster fields (or add per-field resolvers) so fragment selections are actually populated for processed sources.
 
 ---
 
@@ -57,13 +73,14 @@ Every report widget that accepts `sources: OverlaySourceDetailsFragment[]` curre
 - `"bands" in source.geostats && ...bands.length === 1/> 1` → `source.geometryType === "Raster" && source.bandCount === 1/> 1`
 - `"layers" in source.geostats` (vector detection) → `source.geometryType !== "Raster"`
 - `geostatsLayer.geometry` (Polygon/Point/LineString) for geometry-specific widget suggestions → `source.geometryType`
-- `geostatsLayer.attributes` for numeric / label column discovery → `source.columnSummaries`
-- `groupByForStyle(source.mapboxGlStyles, geostatsLayer)` → `source.recommendedGroupBy`
-- `labelColumnForGeostatsLayer(geostatsLayer, source.mapboxGlStyles)` → simplified heuristic over `columnSummaries`
+- `geostatsLayer.attributes` for numeric / label column discovery → `source.columnSummaries`, with **`source.bestLabelColumn`**, **`source.bestContinuousColumn`**, and **`source.bestCategoryColumn`** as first-choice defaults where they match the widget (command defaults, metric parameters)
+- `groupByForStyle(source.mapboxGlStyles, geostatsLayer)` → `source.recommendedGroupBy` (or `bestCategoryColumn` when that better matches categorical / group-by UX)
+- `labelColumnForGeostatsLayer(geostatsLayer, source.mapboxGlStyles)` → **`source.bestLabelColumn`** if set; else fallback heuristic on `columnSummaries` (string columns, ID-name heuristics)
 
 ### `ClassRowSettingsPopover.tsx`
 
-- `source.geostats.layers[0].attributes` → groupBy dropdown options → `columnSummaries` (use `ColumnType` enum)
+- `source.geostats.layers[0].attributes` → groupBy dropdown options → `columnSummaries` (`type` is a plain string, not a client enum)
+- Default / suggested group-by: prefer `source.recommendedGroupBy` or `source.bestCategoryColumn` when present and listed in `columnSummaries`
 - `source.geostats.layers[0].attributes[groupBy].values` → all distinct values for `rowLinkedStableIds` → `sampleValues` when `!highCardinality`
 
 ### `IntersectingFeaturesList.tsx` (admin tooltip)
@@ -195,10 +212,8 @@ const groupByColumn = source.recommendedGroupBy ?? undefined;
 
 ### `labelColumnForGeostatsLayer` replacement
 
-The function currently scores attributes using both geostats metadata and style paint properties. With `columnSummaries`, simplify by:
-- Picking the `STRING` column with lowest `distinctValueCount` that is not obviously an ID (filter with the existing name patterns)
-- Falling back to first `STRING` column
-- The style-attribute boost is dropped (no `mapboxGlStyles`), but `recommendedGroupBy` may be a good proxy for the label column too
+1. Use **`source.bestLabelColumn`** when the fragment provides it.
+2. If null/undefined, mirror the old behavior without styles: pick a `type === "string"` column with low `distinctValueCount` and non-ID-like names, else first string column. Optionally treat `recommendedGroupBy` as a weak hint only if it disagrees with nothing better — server `bestLabelColumn` should make this rare.
 
 ### `ReportSourceLayerDropdown.tsx` — processed sources
 
@@ -237,6 +252,8 @@ Until confirmed, the client code can use the aligned-array approach with a fallb
 ### Gap 3 — `RasterValuesHistogram` bin definitions (high impact, unresolved)
 
 **Used by**: `RasterValuesHistogram.tsx` reads `rasterInfo.bands[0].stats.histogram` for bin boundaries — these define the chart x-axis domain and bucket widths. Without them, the histogram cannot render.
+
+**Related (now on fragment):** `rasterOffset` and `rasterScale` on `ReportOverlaySource` help rescale raster values for display or metrics; they do **not** replace histogram bin edges. Still need explicit bin boundaries or a fallback chart.
 
 **Options**:
 - Add `rasterBins: [Float!]` to `ReportOverlaySource` (server computes from `RasterInfo.bands[0].stats.histogram.map(b => b[0])`)

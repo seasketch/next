@@ -1118,7 +1118,7 @@ input ClippingLayerInput {
 
 type ColumnSummary {
   attribute: String!
-  colors: [String!]
+  colors: JSON
   distinctValueCount: Int!
 
   """When low, sampleValues must contain all distinct values."""
@@ -14901,6 +14901,10 @@ type ReportOverlayDependencies {
 
 type ReportOverlaySource {
   bandCount: Int
+  bestCategoryColumn: String
+  bestContinuousColumn: String
+  bestLabelColumn: String
+  bestPopupDescriptionColumn: String
   columnSummaries: [ColumnSummary!]
 
   """
@@ -14915,10 +14919,13 @@ type ReportOverlaySource {
   """
   geometryType: String!
   geostats: JSON!
+  glRasterColor: JSON
   isRaster: Boolean!
   mapboxGlStyles: JSON!
   output: DataUploadOutput
   outputId: Int!
+  rasterOffset: Float
+  rasterScale: Float
   recommendedGroupBy: String
   sourceProcessingJob: SourceProcessingJob!
   sourceProcessingJobId: String!

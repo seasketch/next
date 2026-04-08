@@ -972,7 +972,7 @@ export type ClippingLayerInput = {
 export type ColumnSummary = {
   __typename?: 'ColumnSummary';
   attribute: Scalars['String'];
-  colors?: Maybe<Array<Scalars['String']>>;
+  colors?: Maybe<Scalars['JSON']>;
   distinctValueCount: Scalars['Int'];
   /** When low, sampleValues must contain all distinct values. */
   highCardinality: Scalars['Boolean'];
@@ -13819,6 +13819,10 @@ export type ReportOverlayDependencies = {
 export type ReportOverlaySource = {
   __typename?: 'ReportOverlaySource';
   bandCount?: Maybe<Scalars['Int']>;
+  bestCategoryColumn?: Maybe<Scalars['String']>;
+  bestContinuousColumn?: Maybe<Scalars['String']>;
+  bestLabelColumn?: Maybe<Scalars['String']>;
+  bestPopupDescriptionColumn?: Maybe<Scalars['String']>;
   columnSummaries?: Maybe<Array<ColumnSummary>>;
   /**
    * Whether the source contains overlapping features. This is used to
@@ -13829,10 +13833,13 @@ export type ReportOverlaySource = {
   /** GeoJSONGeometryTypes or "Raster" */
   geometryType: Scalars['String'];
   geostats: Scalars['JSON'];
+  glRasterColor?: Maybe<Scalars['JSON']>;
   isRaster: Scalars['Boolean'];
   mapboxGlStyles: Scalars['JSON'];
   output?: Maybe<DataUploadOutput>;
   outputId: Scalars['Int'];
+  rasterOffset?: Maybe<Scalars['Float']>;
+  rasterScale?: Maybe<Scalars['Float']>;
   recommendedGroupBy?: Maybe<Scalars['String']>;
   sourceProcessingJob: SourceProcessingJob;
   sourceProcessingJobId: Scalars['String'];
@@ -23449,7 +23456,7 @@ export type RecalculateSpatialMetricsMutation = (
 
 export type OverlaySourceDetailsFragment = (
   { __typename?: 'ReportOverlaySource' }
-  & Pick<ReportOverlaySource, 'tableOfContentsItemId' | 'stableId' | 'containsOverlappingFeatures' | 'sourceUrl' | 'bandCount' | 'suggestedRasterPresentation' | 'geometryType' | 'recommendedGroupBy'>
+  & Pick<ReportOverlaySource, 'tableOfContentsItemId' | 'stableId' | 'containsOverlappingFeatures' | 'sourceUrl' | 'bandCount' | 'suggestedRasterPresentation' | 'geometryType' | 'recommendedGroupBy' | 'bestCategoryColumn' | 'bestContinuousColumn' | 'bestPopupDescriptionColumn' | 'bestLabelColumn' | 'rasterOffset' | 'rasterScale'>
   & { tableOfContentsItem: (
     { __typename?: 'TableOfContentsItem' }
     & Pick<TableOfContentsItem, 'title' | 'stableId'>
@@ -27246,6 +27253,12 @@ export const OverlaySourceDetailsFragmentDoc = gql`
   suggestedRasterPresentation
   geometryType
   recommendedGroupBy
+  bestCategoryColumn
+  bestContinuousColumn
+  bestPopupDescriptionColumn
+  bestLabelColumn
+  rasterOffset
+  rasterScale
 }
     ${SourceProcessingJobDetailsFragmentDoc}`;
 export const BaseReportDetailsFragmentDoc = gql`

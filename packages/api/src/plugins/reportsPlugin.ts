@@ -16,7 +16,11 @@ type ColumnSummariesPartial = {
   type: "string" | "number" | "boolean";
   sampleValues: any[];
   distinctValueCount: number;
-  colors?: string[];
+  /**
+   * Map of column values to a color.
+   * key could be boolean, in which case it's stringified
+   */
+  colors?: Record<string | number, string>;
   multiColorSwatchLayout?: "raster-ramp-order" | "soft-scatter";
   /**
    * When low, sampleValues must contain all distinct values.
@@ -38,6 +42,16 @@ type ReportOverlaySourcePartial = {
   suggestedRasterPresentation?: "categorical" | "continuous" | "rgb";
   geometryType: GeoJsonGeometryTypes | "Raster";
   recommendedGroupBy?: string;
+  bestCategoryColumn?: string;
+  bestContinuousColumn?: string;
+  bestPopupDescriptionColumn?: string;
+  bestLabelColumn?: string;
+  rasterOffset?: number;
+  rasterScale?: number;
+  /**
+   * mapbox-gl-style raster-color expression, if applicable
+   */
+  glRasterColor?: JSON;
 };
 
 const ReportsPlugin = makeExtendSchemaPlugin((build) => {
@@ -102,7 +116,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         When low, sampleValues must contain all distinct values.
         """
         highCardinality: Boolean!
-        colors: [String!]
+        colors: JSON
         """
         "raster-ramp-order", "soft-scatter"
         """
@@ -138,6 +152,13 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         """
         geometryType: String!
         recommendedGroupBy: String
+        bestCategoryColumn: String
+        bestContinuousColumn: String
+        bestPopupDescriptionColumn: String
+        bestLabelColumn: String
+        rasterOffset: Float
+        rasterScale: Float
+        glRasterColor: JSON
       }
 
       input NodeDependency {

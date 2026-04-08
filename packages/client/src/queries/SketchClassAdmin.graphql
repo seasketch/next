@@ -677,6 +677,12 @@ fragment OverlaySourceDetails on ReportOverlaySource {
   suggestedRasterPresentation
   geometryType
   recommendedGroupBy
+  bestCategoryColumn
+  bestContinuousColumn
+  bestPopupDescriptionColumn
+  bestLabelColumn
+  rasterOffset
+  rasterScale
 }
 
 query ReportContext($reportId: Int!, $sketchId: Int!) {
