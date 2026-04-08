@@ -9,16 +9,35 @@ import { hashMetricDependency, MetricDependency } from "overlay-engine";
 import { Pool, PoolClient } from "pg";
 import { extractMetricDependenciesFromReportBody } from "overlay-engine";
 import { ensureSketchFragments } from "../sketches";
+import { GeoJsonGeometryTypes } from "geojson";
+
+type ColumnSummariesPartial = {
+  attribute: string;
+  type: "string" | "number" | "boolean";
+  sampleValues: any[];
+  distinctValueCount: number;
+  colors?: string[];
+  multiColorSwatchLayout?: "raster-ramp-order" | "soft-scatter";
+  /**
+   * When low, sampleValues must contain all distinct values.
+   */
+  highCardinality: boolean;
+};
 
 type ReportOverlaySourcePartial = {
   tableOfContentsItemId: number;
   stableId: string;
-  geostats: GeostatsLayer | RasterInfo;
-  mapboxGlStyles: AnyLayer[];
+  // geostats: GeostatsLayer | RasterInfo;
+  // mapboxGlStyles: AnyLayer[];
   sourceProcessingJobId?: string;
   outputId?: number;
   sourceUrl?: string;
   containsOverlappingFeatures?: boolean;
+  columnSummaries?: ColumnSummariesPartial[];
+  bandCount?: number;
+  suggestedRasterPresentation?: "categorical" | "continuous" | "rgb";
+  geometryType: GeoJsonGeometryTypes | "Raster";
+  recommendedGroupBy?: string;
 };
 
 const ReportsPlugin = makeExtendSchemaPlugin((build) => {
@@ -68,6 +87,28 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         dependencyHash: String!
       }
 
+      type ColumnSummary {
+        attribute: String!
+        """
+        "string", "number", "boolean"
+        """
+        type: String!
+        """
+        When highCardinality is false, sampleValues must contain all distinct values.
+        """
+        sampleValues: [JSON!]!
+        distinctValueCount: Int!
+        """
+        When low, sampleValues must contain all distinct values.
+        """
+        highCardinality: Boolean!
+        colors: [String!]
+        """
+        "raster-ramp-order", "soft-scatter"
+        """
+        multiColorSwatchLayout: String
+      }
+
       type ReportOverlaySource {
         tableOfContentsItemId: Int!
         stableId: String!
@@ -79,16 +120,34 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         outputId: Int!
         output: DataUploadOutput
         sourceUrl: String
-        # Whether the source contains overlapping features. This is used to
+        """
+        Whether the source contains overlapping features. This is used to
         # determine if the source should be processed with the overlapping
-        # features flag set. Only applicable to polygon sources.
+        features flag set. Only applicable to polygon sources.
+        """
         containsOverlappingFeatures: Boolean
+        columnSummaries: [ColumnSummary!]
+        isRaster: Boolean!
+        bandCount: Int
+        """
+        "categorical", "continuous", "rgb"
+        """
+        suggestedRasterPresentation: String
+        """
+        GeoJSONGeometryTypes or "Raster"
+        """
+        geometryType: String!
+        recommendedGroupBy: String
       }
 
       input NodeDependency {
-        # e.g. "total_area", "presence", "presence_table", "column_values", "raster_stats", "distance_to_shore"
+        """
+        e.g. "total_area", "presence", "presence_table", "column_values", "raster_stats", "distance_to_shore"
+        """
         type: String!
-        # "fragments" or "geographies"
+        """
+        "fragments" or "geographies"
+        """
         subjectType: String!
         stableId: String
         geographies: [Int!]
@@ -99,7 +158,9 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
       type CardDependencyLists {
         cardId: Int!
         metrics: [BigInt!]!
-        # References the stable id of the related layer (table of contents item)
+        """
+        References the stable id of the related layer (table of contents item)
+        """
         overlaySources: [String!]!
       }
 
@@ -211,7 +272,6 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
           for (const row of result.rows) {
             stripUnnecessaryGeostatsFields(row.geostats);
           }
-          console.log("result.rows", result.rows);
           return result.rows.map((row: any) => ({
             __typename: "ReportOverlaySource",
             stableId: row.stable_id,
@@ -289,6 +349,20 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
             },
           );
           return rows[0];
+        },
+        async geostats(reportOverlaySource, args, context, resolveInfo) {
+          const data = await context.pgClient.query(
+            `select geostats from data_sources where id = $1`,
+            [reportOverlaySource.dataSourceId],
+          );
+          return data.rows[0].geostats;
+        },
+        async mapboxGlStyles(reportOverlaySource, args, context, resolveInfo) {
+          const data = await context.pgClient.query(
+            `select mapbox_gl_styles from data_layers where id = $1`,
+            [reportOverlaySource.dataLayerId],
+          );
+          return data.rows[0].mapbox_gl_styles;
         },
       },
       Query: {
@@ -624,8 +698,6 @@ async function getOverlaySourcesByStableIds(
         reporting_output.url as "sourceUrl",
         coalesce(reporting_output.source_processing_job_key, jobs.job_key) as "sourceProcessingJobId",
         reporting_output.id as "outputId",
-        sources.geostats as "geostats",
-        layers.mapbox_gl_styles as "mapboxGlStyles",
         reporting_output.contains_overlapping_features as "containsOverlappingFeatures"
       from
         table_of_contents_items items
@@ -639,7 +711,6 @@ async function getOverlaySourcesByStableIds(
         [stableIds, isDraft],
       );
     for (const row of overlaySourceRows) {
-      stripUnnecessaryGeostatsFields(row.geostats);
       results[row.stableId] = row;
     }
     for (const row of overlaySourceRows) {

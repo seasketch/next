@@ -1055,6 +1055,8 @@ type CancelBackgroundJobPayload {
 type CardDependencyLists {
   cardId: Int!
   metrics: [BigInt!]!
+
+  """References the stable id of the related layer (table of contents item)"""
   overlaySources: [String!]!
 }
 
@@ -1112,6 +1114,30 @@ input ClippingLayerInput {
   templateId or dataLayerId must be provided
   """
   templateId: String
+}
+
+type ColumnSummary {
+  attribute: String!
+  colors: [String!]
+  distinctValueCount: Int!
+
+  """When low, sampleValues must contain all distinct values."""
+  highCardinality: Boolean!
+
+  """
+  "raster-ramp-order", "soft-scatter"
+  """
+  multiColorSwatchLayout: String
+
+  """
+  When highCardinality is false, sampleValues must contain all distinct values.
+  """
+  sampleValues: [JSON!]!
+
+  """
+  "string", "number", "boolean"
+  """
+  type: String!
 }
 
 """
@@ -11237,7 +11263,15 @@ input NodeDependency {
   hash: String!
   parameters: JSON
   stableId: String
+
+  """
+  "fragments" or "geographies"
+  """
   subjectType: String!
+
+  """
+  e.g. "total_area", "presence", "presence_table", "column_values", "raster_stats", "distance_to_shore"
+  """
   type: String!
 }
 
@@ -14866,15 +14900,35 @@ type ReportOverlayDependencies {
 }
 
 type ReportOverlaySource {
+  bandCount: Int
+  columnSummaries: [ColumnSummary!]
+
+  """
+  Whether the source contains overlapping features. This is used to
+  # determine if the source should be processed with the overlapping
+  features flag set. Only applicable to polygon sources.
+  """
   containsOverlappingFeatures: Boolean
+
+  """
+  GeoJSONGeometryTypes or "Raster"
+  """
+  geometryType: String!
   geostats: JSON!
+  isRaster: Boolean!
   mapboxGlStyles: JSON!
   output: DataUploadOutput
   outputId: Int!
+  recommendedGroupBy: String
   sourceProcessingJob: SourceProcessingJob!
   sourceProcessingJobId: String!
   sourceUrl: String
   stableId: String!
+
+  """
+  "categorical", "continuous", "rgb"
+  """
+  suggestedRasterPresentation: String
   tableOfContentsItem: TableOfContentsItem!
   tableOfContentsItemId: Int!
 }

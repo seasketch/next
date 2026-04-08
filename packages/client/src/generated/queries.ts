@@ -912,6 +912,7 @@ export type CardDependencyLists = {
   __typename?: 'CardDependencyLists';
   cardId: Scalars['Int'];
   metrics: Array<Scalars['BigInt']>;
+  /** References the stable id of the related layer (table of contents item) */
   overlaySources: Array<Scalars['String']>;
 };
 
@@ -964,6 +965,21 @@ export type ClippingLayerInput = {
    * templateId or dataLayerId must be provided
    */
   templateId?: Maybe<Scalars['String']>;
+};
+
+export type ColumnSummary = {
+  __typename?: 'ColumnSummary';
+  attribute: Scalars['String'];
+  colors?: Maybe<Array<Scalars['String']>>;
+  distinctValueCount: Scalars['Int'];
+  /** When low, sampleValues must contain all distinct values. */
+  highCardinality: Scalars['Boolean'];
+  /** "raster-ramp-order", "soft-scatter" */
+  multiColorSwatchLayout?: Maybe<Scalars['String']>;
+  /** When highCardinality is false, sampleValues must contain all distinct values. */
+  sampleValues: Array<Scalars['JSON']>;
+  /** "string", "number", "boolean" */
+  type: Scalars['String'];
 };
 
 /**
@@ -10152,7 +10168,9 @@ export type NodeDependency = {
   hash: Scalars['String'];
   parameters?: Maybe<Scalars['JSON']>;
   stableId?: Maybe<Scalars['String']>;
+  /** "fragments" or "geographies" */
   subjectType: Scalars['String'];
+  /** e.g. "total_area", "presence", "presence_table", "column_values", "raster_stats", "distance_to_shore" */
   type: Scalars['String'];
 };
 
@@ -13798,15 +13816,28 @@ export type ReportOverlayDependencies = {
 
 export type ReportOverlaySource = {
   __typename?: 'ReportOverlaySource';
+  bandCount?: Maybe<Scalars['Int']>;
+  columnSummaries?: Maybe<Array<ColumnSummary>>;
+  /**
+   * Whether the source contains overlapping features. This is used to
+   * # determine if the source should be processed with the overlapping
+   * features flag set. Only applicable to polygon sources.
+   */
   containsOverlappingFeatures?: Maybe<Scalars['Boolean']>;
+  /** GeoJSONGeometryTypes or "Raster" */
+  geometryType: Scalars['String'];
   geostats: Scalars['JSON'];
+  isRaster: Scalars['Boolean'];
   mapboxGlStyles: Scalars['JSON'];
   output?: Maybe<DataUploadOutput>;
   outputId: Scalars['Int'];
+  recommendedGroupBy?: Maybe<Scalars['String']>;
   sourceProcessingJob: SourceProcessingJob;
   sourceProcessingJobId: Scalars['String'];
   sourceUrl?: Maybe<Scalars['String']>;
   stableId: Scalars['String'];
+  /** "categorical", "continuous", "rgb" */
+  suggestedRasterPresentation?: Maybe<Scalars['String']>;
   tableOfContentsItem: TableOfContentsItem;
   tableOfContentsItemId: Scalars['Int'];
 };
@@ -23416,7 +23447,7 @@ export type RecalculateSpatialMetricsMutation = (
 
 export type OverlaySourceDetailsFragment = (
   { __typename?: 'ReportOverlaySource' }
-  & Pick<ReportOverlaySource, 'tableOfContentsItemId' | 'stableId' | 'containsOverlappingFeatures' | 'geostats' | 'mapboxGlStyles' | 'sourceUrl'>
+  & Pick<ReportOverlaySource, 'tableOfContentsItemId' | 'stableId' | 'containsOverlappingFeatures' | 'sourceUrl' | 'bandCount' | 'suggestedRasterPresentation' | 'geometryType' | 'recommendedGroupBy'>
   & { tableOfContentsItem: (
     { __typename?: 'TableOfContentsItem' }
     & Pick<TableOfContentsItem, 'title' | 'stableId'>
@@ -23426,7 +23457,10 @@ export type OverlaySourceDetailsFragment = (
   ), output?: Maybe<(
     { __typename?: 'DataUploadOutput' }
     & Pick<DataUploadOutput, 'size' | 'url' | 'createdAt' | 'numInvalidFeatures' | 'numFeatures' | 'numRepairedFeatures' | 'wasRepaired'>
-  )> }
+  )>, columnSummaries?: Maybe<Array<(
+    { __typename?: 'ColumnSummary' }
+    & Pick<ColumnSummary, 'attribute' | 'type' | 'distinctValueCount' | 'highCardinality' | 'sampleValues' | 'colors' | 'multiColorSwatchLayout'>
+  )>> }
 );
 
 export type ReportContextQueryVariables = Exact<{
@@ -27184,8 +27218,6 @@ export const OverlaySourceDetailsFragmentDoc = /*#__PURE__*/ gql`
     title
     stableId
   }
-  geostats
-  mapboxGlStyles
   sourceProcessingJob {
     ...SourceProcessingJobDetails
   }
@@ -27199,6 +27231,19 @@ export const OverlaySourceDetailsFragmentDoc = /*#__PURE__*/ gql`
     numRepairedFeatures
     wasRepaired
   }
+  columnSummaries {
+    attribute
+    type
+    distinctValueCount
+    highCardinality
+    sampleValues
+    colors
+    multiColorSwatchLayout
+  }
+  bandCount
+  suggestedRasterPresentation
+  geometryType
+  recommendedGroupBy
 }
     ${SourceProcessingJobDetailsFragmentDoc}`;
 export const BaseReportDetailsFragmentDoc = /*#__PURE__*/ gql`

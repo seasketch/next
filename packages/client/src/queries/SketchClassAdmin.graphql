@@ -651,8 +651,6 @@ fragment OverlaySourceDetails on ReportOverlaySource {
     title
     stableId
   }
-  geostats
-  mapboxGlStyles
   sourceProcessingJob {
     ...SourceProcessingJobDetails
   }
@@ -666,6 +664,19 @@ fragment OverlaySourceDetails on ReportOverlaySource {
     numRepairedFeatures
     wasRepaired
   }
+  columnSummaries {
+    attribute
+    type
+    distinctValueCount
+    highCardinality
+    sampleValues
+    colors
+    multiColorSwatchLayout
+  }
+  bandCount
+  suggestedRasterPresentation
+  geometryType
+  recommendedGroupBy
 }
 
 query ReportContext($reportId: Int!, $sketchId: Int!) {
