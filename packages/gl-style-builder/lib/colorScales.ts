@@ -514,9 +514,15 @@ export function buildMatchExpressionForAttribute(
   if (reverse) {
     uniqueValues.reverse();
   }
-  const expression: Expression = ["match", ["get", attribute.attribute]];
+  const getExpr = ["get", attribute.attribute];
+  const expression: Expression = ["match", getExpr];
   for (let i = 0; i < uniqueValues.length; i++) {
-    const value = uniqueValues[i]!;
+    let value: any = uniqueValues[i]!;
+    if (attribute.type === "number") {
+      value = Number(value);
+    } else if (attribute.type === "boolean") {
+      value = value === "true" ? true : false;
+    }
     const color = keyMap?.get(value) ?? colorScale(i);
     expression.push(value, color);
   }

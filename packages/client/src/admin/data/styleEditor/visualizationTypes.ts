@@ -1377,11 +1377,12 @@ export function findBestCategoricalAttribute(geostats: GeostatsLayer) {
 
 export function categoricalAttributes(attributes: GeostatsAttribute[]) {
   return attributes.filter(
-    (a) => a.countDistinct && a.countDistinct > 1 && a.type === "string"
-    // || a.type === "boolean")
-    // CB 7/22/24 disallow strings and booleans for categorical expressions
-    //  ||
-    // (a.type === "number" && a.countDistinct && a.countDistinct < 12))
+    (a) =>
+      a.countDistinct &&
+      a.countDistinct > 1 &&
+      (a.type === "string" ||
+        (a.type === "number" && a.countDistinct < 12) ||
+        a.type === "boolean")
   );
 }
 
@@ -1409,7 +1410,13 @@ export function buildMatchExpressionForAttribute(
   }
   const expression: Expression = ["match", ["get", attribute.attribute]];
   for (let i = 0; i < uniqueValues.length; i++) {
-    const value = uniqueValues[i];
+    let value: any = uniqueValues[i];
+    if (attribute.type === "number") {
+      value = Number(value);
+    } else if (attribute.type === "boolean") {
+      value = value === "true" ? true : false;
+    }
+
     expression.push(value, colors[i % colors.length]);
   }
   expression.push("transparent");

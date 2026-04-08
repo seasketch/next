@@ -431,9 +431,11 @@ export default function GUIStyleEditor({
             </div>
           </div>
         )}
-        {styleJSON && visualizationType && (
-          <EditorForVisualizationType type={visualizationType} />
-        )}
+        {styleJSON &&
+          visualizationType &&
+          supportedTypes.includes(visualizationType) && (
+            <EditorForVisualizationType type={visualizationType} />
+          )}
       </Editors.GUIEditorContext.Provider>
     </div>
   );

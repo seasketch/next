@@ -19,10 +19,7 @@ This work requires you to:
 To make these recommendations, you will be given the 'filename' of the data layer and the 'geostats', which is a JSON object containing the column names, types, and sample data values.
 
 Rules:
-  - Your choice of presentation type and column should be consistent with the 
-    best_*_column properties. For example, categorical presentation types should 
-    use the best_category_column, and continuous presentation types should use 
-    the best_numeric_column.
+  - Your choice of presentation type and column should be consistent with the best_*_column properties. For example, categorical presentation types should use the best_category_column, and continuous presentation types should use the best_numeric_column.
   - Use categorical presentation types when it is clear the data represents different habitat classes, bioregions, shoretypes, etc.
   - Prefer simple polygon, point, or line presentations when it is clear the intent of the data is to show the footprint of a single class of features. 
   - It is just as important to be able to distinguish between different layers as it is between different features within a layer, so don't automatically categorize by named areas.
@@ -37,7 +34,6 @@ Rules:
   - Set reverse_palette to true only when recommending a named d3 scale in palette (not when using custom_palette). Use false when palette is null, when using custom_palette, or when reversal would not help interpretation.
   - When styling a continuous polygon or raster layer that appear to be results of a prioritization model (e.g. Marxan, Gap Analysis, etc), use a palette like interpolatePlasma or interpolateViridis. When a continuous layer looks like a map of human usage or pressure, use a warm palette like interpolateYlOrRd or interpolateOrRd.
   - If there are recognizable colors specified in column values, try to identify the related categories and set a matching custom_palette. *Don't* categorize by color codes alone though.
-  - Some attributes may have their 'values' omitted and instead carry 'piiRedacted: true' with a 'redactionReason'. This means the column contains personally identifiable information that has been withheld for privacy. Use the column name, type, count, and countDistinct for your recommendations but do not suggest these columns as label, category, or popup columns. Mark them as junk_columns.
   - Some columns will be redacted to avoid transmitting PII to 3rd party LLMs. Don't put them in junk_columns. You can use them for your recommendations if you want, but they will not include sample values.
   - In your notes, don't call columns "junk". Be professional.
   - If you see bathymetry data (raster or polygons), use a blue color scheme to represent water at different depths.
