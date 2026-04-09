@@ -194,7 +194,7 @@ export function ReportSourceLayerDropdown({
     for (const layer of reportingLayers) {
       const tocId = layer.tableOfContentsItemId;
       if (tocId != null) {
-        const gt = getGeometryTypeFromGeostats(layer.geostats);
+        const gt = layer.vectorGeometryType as ReportSourceGeometryType | null;
         map.set(tocId, gt);
       }
     }
