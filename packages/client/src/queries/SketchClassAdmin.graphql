@@ -643,6 +643,26 @@ mutation RecalculateSpatialMetrics(
   }
 }
 
+fragment OverlaySourceListDetails on ReportOverlaySource {
+  tableOfContentsItemId
+  stableId
+  containsOverlappingFeatures
+  tableOfContentsItem {
+    title
+    stableId
+  }
+  sourceProcessingJob {
+    ...SourceProcessingJobDetails
+  }
+  rasterBandCount
+  vectorGeometryType
+  styleGroupByColumn
+  bestCategoryColumn
+  bestContinuousColumn
+  bestLabelColumn
+  anyColumn
+}
+
 fragment OverlaySourceDetails on ReportOverlaySource {
   tableOfContentsItemId
   stableId
@@ -666,6 +686,12 @@ fragment OverlaySourceDetails on ReportOverlaySource {
     numRepairedFeatures
     wasRepaired
   }
+  anyColumn
+  bestCategoryColumn
+  bestContinuousColumn
+  bestLabelColumn
+  vectorGeometryType
+  rasterBandCount
 }
 
 query ReportContext($reportId: Int!, $sketchId: Int!) {
@@ -789,7 +815,7 @@ query ProjectReportingLayers($slug: String!) {
   projectBySlug(slug: $slug) {
     id
     reportingLayers {
-      ...OverlaySourceDetails
+      ...OverlaySourceListDetails
     }
     draftTableOfContentsItems {
       id
@@ -798,23 +824,21 @@ query ProjectReportingLayers($slug: String!) {
       isFolder
       parentStableId
       sortIndex
-      copiedFromDataLibraryTemplateId
       dataLayer {
+        id
         version
         dataSource {
           id
           type
-          geostats
-          attribution
-          createdAt
           authorProfile {
             ...AuthorProfile
           }
-          sourceProcessingJob {
-            ...SourceProcessingJobDetails
-          }
+          createdAt
+          attribution
+          vectorGeometryType
         }
       }
+      copiedFromDataLibraryTemplateId
     }
   }
 }

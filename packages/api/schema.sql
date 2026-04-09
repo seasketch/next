@@ -945,7 +945,6 @@ CREATE TYPE public.spatial_metric_type AS ENUM (
     'presence_table',
     'contextualized_mean',
     'overlay_area',
-    'column_stats',
     'column_values',
     'raster_stats',
     'distance_to_shore'
@@ -2227,8 +2226,8 @@ CREATE TABLE public.projects (
     data_hosting_retention_period interval,
     about_page_contents jsonb DEFAULT '{}'::jsonb NOT NULL,
     about_page_enabled boolean DEFAULT false NOT NULL,
-    custom_doc_link text,
     enable_report_builder boolean DEFAULT false,
+    custom_doc_link text,
     show_scalebar_by_default boolean DEFAULT false,
     show_legend_by_default boolean DEFAULT false,
     feature_flags jsonb DEFAULT '{}'::jsonb NOT NULL,
@@ -9090,6 +9089,45 @@ CREATE FUNCTION public.data_source_type(data_layer_id integer) RETURNS text
 
 
 --
+-- Name: extract_column_details_from_geostats(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.extract_column_details_from_geostats(geostats jsonb) RETURNS jsonb
+    LANGUAGE sql IMMUTABLE
+    AS $$
+  -- returns a Record<attribute, props> with the following properties:
+  -- - type: "string"
+  -- - countDistinct: number
+  select jsonb_object_agg(attr->>'attribute', jsonb_build_object(
+    'type', attr->>'type',
+    'countDistinct', attr->>'countDistinct'
+  )) from jsonb_array_elements(geostats->'layers'->0->'attributes') as attr;
+  $$;
+
+
+--
+-- Name: extract_raster_band_count_from_geostats(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.extract_raster_band_count_from_geostats(geostats jsonb) RETURNS integer
+    LANGUAGE sql IMMUTABLE
+    AS $$
+  select jsonb_array_length(geostats->'bands')::integer;
+  $$;
+
+
+--
+-- Name: extract_vector_geometry_type_from_geostats(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.extract_vector_geometry_type_from_geostats(geostats jsonb) RETURNS text
+    LANGUAGE sql IMMUTABLE
+    AS $_$
+  select (jsonb_path_query_first(geostats, '$.layers[0].geometry'))->>0
+  $_$;
+
+
+--
 -- Name: get_first_band_offset(jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -9238,6 +9276,10 @@ CREATE TABLE public.data_sources (
     data_library_template_id text,
     data_library_metadata jsonb,
     is_single_band_raster boolean GENERATED ALWAYS AS (((jsonb_typeof((geostats -> 'bands'::text)) = 'array'::text) AND (jsonb_array_length((geostats -> 'bands'::text)) = 1))) STORED,
+    raster_band_count integer GENERATED ALWAYS AS (public.extract_raster_band_count_from_geostats(geostats)) STORED,
+    vector_geometry_type text GENERATED ALWAYS AS (public.extract_vector_geometry_type_from_geostats(geostats)) STORED,
+    feature_count integer GENERATED ALWAYS AS (((((geostats -> 'layers'::text) -> 0) ->> 'count'::text))::integer) STORED,
+    column_details jsonb GENERATED ALWAYS AS (public.extract_column_details_from_geostats(geostats)) STORED,
     columns text[] GENERATED ALWAYS AS (public.get_geostats_attribute_column_names(geostats)) STORED,
     CONSTRAINT data_sources_buffer_check CHECK (((buffer >= 0) AND (buffer <= 512))),
     CONSTRAINT data_sources_tile_size_check CHECK (((tile_size = 128) OR (tile_size = 256) OR (tile_size = 512)))
@@ -11960,57 +12002,6 @@ CREATE FUNCTION public.get_public_jwk(id uuid) RETURNS text
 --
 
 COMMENT ON FUNCTION public.get_public_jwk(id uuid) IS '@omit';
-
-
---
--- Name: get_published_card_id_from_draft(integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.get_published_card_id_from_draft(draft_report_card_id integer) RETURNS integer
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-DECLARE
-  draft_tab_id integer;
-  draft_tab_position integer;
-  draft_card_position integer;
-  sketch_class_id integer;
-  published_report_id integer;
-  published_tab_id integer;
-  published_card_id integer;
-BEGIN
-  -- Gather draft card/tab positions and sketch_class
-  SELECT rt.id, rt.position, rc.position, r.sketch_class_id
-  INTO draft_tab_id, draft_tab_position, draft_card_position, sketch_class_id
-  FROM public.report_cards rc
-  JOIN public.report_tabs rt ON rt.id = rc.report_tab_id
-  JOIN public.reports r ON r.id = rt.report_id
-  WHERE rc.id = draft_report_card_id;
-
-  -- Determine the published report id
-  SELECT sc.report_id
-  INTO published_report_id
-  FROM public.sketch_classes sc
-  WHERE sc.id = sketch_class_id;
-
-  IF published_report_id IS NULL THEN
-    RETURN NULL;
-  END IF;
-
-  -- Match the tab by position in the published report
-  SELECT id
-  INTO published_tab_id
-  FROM public.report_tabs
-  WHERE report_id = published_report_id AND position = draft_tab_position;
-
-  -- Match the card by position within the matched tab
-  SELECT id
-  INTO published_card_id
-  FROM public.report_cards
-  WHERE report_tab_id = published_tab_id AND position = draft_card_position;
-
-  RETURN published_card_id;
-END
-$$;
 
 
 --
@@ -15982,68 +15973,19 @@ CREATE TABLE public.project_visitor_metrics (
 --
 
 CREATE FUNCTION public.projects_visitor_metrics(p public.projects, period public.activity_stats_period) RETURNS SETOF public.project_visitor_metrics
-    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-DECLARE
-  lookback interval;
-BEGIN
-  IF NOT session_is_admin(p.id) THEN
-    RETURN;
-  END IF;
-
-  IF period IN ('6-months', '1-year') THEN
-    lookback := CASE period
-      WHEN '6-months' THEN '6 months'::interval
-      ELSE '1 year'::interval
-    END;
-
-    RETURN QUERY SELECT
-      p.id,
-      '30 days'::interval,
-      now()::timestamptz,
-      date_part('month', timezone('UTC', now()))::int,
-      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
-       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
-             FROM public.project_visitor_metrics pvm, jsonb_array_elements(pvm.top_referrers) elem
-             WHERE pvm.interval = '30 days'::interval AND pvm.project_id = p.id AND pvm.timestamp >= now() - lookback
-             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
-      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
-       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
-             FROM public.project_visitor_metrics pvm, jsonb_array_elements(pvm.top_operating_systems) elem
-             WHERE pvm.interval = '30 days'::interval AND pvm.project_id = p.id AND pvm.timestamp >= now() - lookback
-             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
-      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
-       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
-             FROM public.project_visitor_metrics pvm, jsonb_array_elements(pvm.top_browsers) elem
-             WHERE pvm.interval = '30 days'::interval AND pvm.project_id = p.id AND pvm.timestamp >= now() - lookback
-             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
-      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
-       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
-             FROM public.project_visitor_metrics pvm, jsonb_array_elements(pvm.top_device_types) elem
-             WHERE pvm.interval = '30 days'::interval AND pvm.project_id = p.id AND pvm.timestamp >= now() - lookback
-             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
-      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
-       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
-             FROM public.project_visitor_metrics pvm, jsonb_array_elements(pvm.top_countries) elem
-             WHERE pvm.interval = '30 days'::interval AND pvm.project_id = p.id AND pvm.timestamp >= now() - lookback
-             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s);
-  ELSE
-    RETURN QUERY
-    SELECT * FROM project_visitor_metrics
-    WHERE session_is_admin(p.id)
-      AND project_id = p.id
-      AND interval = (
-        CASE period
-          WHEN '24hrs' THEN '24 hours'::interval
-          WHEN '7-days' THEN '7 days'::interval
-          WHEN '30-days' THEN '30 days'::interval
-          ELSE '1 day'::interval
-        END
-      )
-    ORDER BY timestamp DESC LIMIT 1;
-  END IF;
-END;
-$$;
+    select * from project_visitor_metrics where session_is_admin(p.id) and
+    project_id = p.id and
+    interval = (
+      case period
+        when '24hrs' then '24 hours'::interval
+        when '7-days' then '7 days'::interval
+        when '30-days' then '30 days'::interval
+        else '1 day'::interval
+      end
+    ) order by timestamp desc limit 1;
+  $$;
 
 
 --
@@ -20959,23 +20901,6 @@ CREATE FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t public.ta
 
 
 --
--- Name: tableofcontentsitembystableid(text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.tableofcontentsitembystableid(stableid text) RETURNS public.table_of_contents_items
-    LANGUAGE sql STABLE
-    AS $$
-    -- get the table of contents item by stable id and return the first 
-    -- available of published (is_draft = false) or draft (is_draft = true)
-    select * from table_of_contents_items
-    where stable_id = stableId
-    and (is_draft = false or is_draft = true)
-    order by is_draft asc  -- false (published) comes before true (draft)
-    limit 1;
-  $$;
-
-
---
 -- Name: template_forms(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -22737,66 +22662,18 @@ CREATE TABLE public.visitor_metrics (
 --
 
 CREATE FUNCTION public.visitor_metrics(period public.activity_stats_period) RETURNS SETOF public.visitor_metrics
-    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-DECLARE
-  lookback interval;
-BEGIN
-  IF NOT session_is_superuser() THEN
-    RETURN;
-  END IF;
-
-  IF period IN ('6-months', '1-year') THEN
-    lookback := CASE period
-      WHEN '6-months' THEN '6 months'::interval
-      ELSE '1 year'::interval
-    END;
-
-    RETURN QUERY SELECT
-      '30 days'::interval,
-      now()::timestamptz,
-      date_part('month', timezone('UTC', now()))::int,
-      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
-       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
-             FROM public.visitor_metrics vm, jsonb_array_elements(vm.top_referrers) elem
-             WHERE vm.interval = '30 days'::interval AND vm.timestamp >= now() - lookback
-             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
-      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
-       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
-             FROM public.visitor_metrics vm, jsonb_array_elements(vm.top_operating_systems) elem
-             WHERE vm.interval = '30 days'::interval AND vm.timestamp >= now() - lookback
-             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
-      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
-       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
-             FROM public.visitor_metrics vm, jsonb_array_elements(vm.top_browsers) elem
-             WHERE vm.interval = '30 days'::interval AND vm.timestamp >= now() - lookback
-             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
-      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
-       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
-             FROM public.visitor_metrics vm, jsonb_array_elements(vm.top_device_types) elem
-             WHERE vm.interval = '30 days'::interval AND vm.timestamp >= now() - lookback
-             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
-      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
-       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
-             FROM public.visitor_metrics vm, jsonb_array_elements(vm.top_countries) elem
-             WHERE vm.interval = '30 days'::interval AND vm.timestamp >= now() - lookback
-             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s);
-  ELSE
-    RETURN QUERY
-    SELECT * FROM public.visitor_metrics
-    WHERE session_is_superuser()
-      AND interval = (
-        CASE period
-          WHEN '24hrs' THEN '24 hours'::interval
-          WHEN '7-days' THEN '7 days'::interval
-          WHEN '30-days' THEN '30 days'::interval
-          ELSE '1 day'::interval
-        END
-      )
-    ORDER BY timestamp DESC LIMIT 1;
-  END IF;
-END;
-$$;
+    select * from visitor_metrics where session_is_superuser() and
+    interval = (
+      case period
+        when '24hrs' then '24 hours'::interval
+        when '7-days' then '7 days'::interval
+        when '30-days' then '30 days'::interval
+        else '1 day'::interval
+      end
+    ) order by timestamp desc limit 1;
+  $$;
 
 
 --
@@ -23623,15 +23500,6 @@ ALTER TABLE public.optional_basemap_layers ALTER COLUMN id ADD GENERATED BY DEFA
 
 
 --
--- Name: original_source_id; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.original_source_id (
-    data_source_id integer
-);
-
-
---
 -- Name: pending_topic_notifications; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -23823,24 +23691,6 @@ ALTER TABLE public.projects ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY
 CREATE TABLE public.projects_shared_basemaps (
     basemap_id integer NOT NULL,
     project_id integer NOT NULL
-);
-
-
---
--- Name: published_toc_item_id; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.published_toc_item_id (
-    id integer
-);
-
-
---
--- Name: referenced_stable_ids; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.referenced_stable_ids (
-    extract_stable_ids_from_body text[]
 );
 
 
@@ -26301,13 +26151,6 @@ CREATE TRIGGER before_insert_or_update_table_of_contents_items BEFORE INSERT OR 
 
 
 --
--- Name: spatial_metrics before_insert_spatial_metrics_check_dependency_error_trigger; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER before_insert_spatial_metrics_check_dependency_error_trigger BEFORE INSERT ON public.spatial_metrics FOR EACH ROW EXECUTE FUNCTION public.before_insert_spatial_metrics_check_dependency_error();
-
-
---
 -- Name: invite_emails before_invite_emails_insert_trigger; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -28573,6 +28416,12 @@ CREATE POLICY project_background_jobs_select ON public.project_background_jobs F
 
 
 --
+-- Name: project_geography; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.project_geography ENABLE ROW LEVEL SECURITY;
+
+--
 -- Name: project_groups; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -30364,17 +30213,17 @@ GRANT UPDATE(data_hosting_retention_period) ON TABLE public.projects TO seasketc
 
 
 --
--- Name: COLUMN projects.custom_doc_link; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(custom_doc_link) ON TABLE public.projects TO seasketch_user;
-
-
---
 -- Name: COLUMN projects.enable_report_builder; Type: ACL; Schema: public; Owner: -
 --
 
 GRANT UPDATE(enable_report_builder) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.custom_doc_link; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(custom_doc_link) ON TABLE public.projects TO seasketch_user;
 
 
 --
@@ -32555,6 +32404,30 @@ REVOKE ALL ON FUNCTION public.data_source_type(data_layer_id integer) FROM PUBLI
 
 
 --
+-- Name: FUNCTION extract_column_details_from_geostats(geostats jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.extract_column_details_from_geostats(geostats jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.extract_column_details_from_geostats(geostats jsonb) TO anon;
+
+
+--
+-- Name: FUNCTION extract_raster_band_count_from_geostats(geostats jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.extract_raster_band_count_from_geostats(geostats jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.extract_raster_band_count_from_geostats(geostats jsonb) TO anon;
+
+
+--
+-- Name: FUNCTION extract_vector_geometry_type_from_geostats(geostats jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.extract_vector_geometry_type_from_geostats(geostats jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.extract_vector_geometry_type_from_geostats(geostats jsonb) TO anon;
+
+
+--
 -- Name: FUNCTION get_first_band_offset(geostats jsonb); Type: ACL; Schema: public; Owner: -
 --
 
@@ -32810,6 +32683,7 @@ GRANT ALL ON FUNCTION public.data_sources_is_archived(data_source public.data_so
 --
 
 REVOKE ALL ON FUNCTION public.data_sources_is_convertible_legacy_source(data_source public.data_sources) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.data_sources_is_convertible_legacy_source(data_source public.data_sources) TO seasketch_user;
 GRANT ALL ON FUNCTION public.data_sources_is_convertible_legacy_source(data_source public.data_sources) TO anon;
 
 
@@ -33467,6 +33341,7 @@ GRANT ALL ON FUNCTION public.geography(public.geometry) TO anon;
 --
 
 REVOKE ALL ON FUNCTION public.geography_clipping_layers() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.geography_clipping_layers() TO seasketch_user;
 GRANT ALL ON FUNCTION public.geography_clipping_layers() TO anon;
 
 
@@ -34399,14 +34274,6 @@ REVOKE ALL ON FUNCTION public.get_projects_with_recent_activity() FROM PUBLIC;
 
 REVOKE ALL ON FUNCTION public.get_public_jwk(id uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.get_public_jwk(id uuid) TO anon;
-
-
---
--- Name: FUNCTION get_published_card_id_from_draft(draft_report_card_id integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.get_published_card_id_from_draft(draft_report_card_id integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_published_card_id_from_draft(draft_report_card_id integer) TO seasketch_user;
 
 
 --
@@ -40464,13 +40331,6 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_total_requests(item public.
 
 REVOKE ALL ON FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t public.table_of_contents_items) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t public.table_of_contents_items) TO anon;
-
-
---
--- Name: FUNCTION tableofcontentsitembystableid(stableid text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.tableofcontentsitembystableid(stableid text) FROM PUBLIC;
 
 
 --

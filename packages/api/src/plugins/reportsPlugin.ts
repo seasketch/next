@@ -8,17 +8,38 @@ import { AnyLayer } from "mapbox-gl";
 import { hashMetricDependency, MetricDependency } from "overlay-engine";
 import { Pool, PoolClient } from "pg";
 import { extractMetricDependenciesFromReportBody } from "overlay-engine";
+import type {
+  DirectiveNode,
+  GraphQLResolveInfo,
+  SelectionSetNode,
+  ValueNode,
+} from "graphql";
 import { ensureSketchFragments } from "../sketches";
+import { groupByFromStyle } from "gl-style-builder";
 
 type ReportOverlaySourcePartial = {
   tableOfContentsItemId: number;
   stableId: string;
-  geostats: GeostatsLayer | RasterInfo;
-  mapboxGlStyles: AnyLayer[];
   sourceProcessingJobId?: string;
   outputId?: number;
   sourceUrl?: string;
   containsOverlappingFeatures?: boolean;
+  mapboxGlStyles?: AnyLayer[];
+  columnDetails?: Record<
+    string,
+    {
+      type: string;
+      countDistinct: number;
+    }
+  >;
+  featureCount?: number;
+  rasterBandCount?: number;
+  vectorGeometryType?: string;
+  styleGroupByColumn?: string;
+  bestCategoryColumn?: string;
+  bestContinuousColumn?: string;
+  bestLabelColumn?: string;
+  anyColumn?: string;
 };
 
 const ReportsPlugin = makeExtendSchemaPlugin((build) => {
@@ -83,6 +104,48 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         # determine if the source should be processed with the overlapping
         # features flag set. Only applicable to polygon sources.
         containsOverlappingFeatures: Boolean
+        """
+        Number of bands in the source if raster. Otherwise null.
+        """
+        rasterBandCount: Int
+        """
+        GeoJSON geometry type, if the source is a vector layer.
+        """
+        vectorGeometryType: String
+        """
+        If a column is used for a categorical map presentation, this is the
+        column name. Useful for report widgets that support "groupBy" options,
+        in which case this column should be pre-selected.
+        """
+        styleGroupByColumn: String
+        """
+        The best column to use for report widgets that display a categorical
+        breakdown of the data. If AI Data Analyst Notes are available, they
+        will inform the choice. Otherwise a string column with low cardinality
+        will be picked first, followed by low cardinality numeric columns.
+        """
+        bestCategoryColumn: String
+        """
+        The best column to use for numerical report widgets. If AI Data Analyst
+        Notes are available, they will inform the choice. Otherwise a numeric
+        column with high variance will be picked first, followed by any numeric
+        column. Could be null if no numeric columns are available.
+        """
+        bestContinuousColumn: String
+        """
+        When determining what column to use for an inline metric or block
+        widget, it may be that no categorical or continuous column is available.
+        In that case, we need at least one column to use for the metric. It's
+        possible the vector layer has no columns, in which case it probably
+        shouldn't even appear in any lists for reporting.
+        """
+        anyColumn: String
+        """
+        The best column to use for label rendering. If AI Data Analyst Notes are
+        available, they will inform the choice. Otherwise a string column with
+        high cardinality will be picked.
+        """
+        bestLabelColumn: String
       }
 
       input NodeDependency {
@@ -165,22 +228,43 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
       Project: {
         async reportingLayers(project, args, context, resolveInfo) {
           const { pgClient } = context;
-          const result = await context.pgClient.query(
+          const wantGeostats = resolveInfoRequestsTopLevelField(
+            resolveInfo,
+            "geostats",
+          );
+          const wantStyleGroupByColumn = resolveInfoRequestsTopLevelField(
+            resolveInfo,
+            "styleGroupByColumn",
+          );
+          const wantMapboxGlStyles = resolveInfoRequestsTopLevelField(
+            resolveInfo,
+            "mapboxGlStyles",
+          );
+
+          const result = await pgClient.query(
             `
             select
               items.id as table_of_contents_item_id,
               items.stable_id as stable_id,
-              s.geostats as geostats,
+              ${wantGeostats ? "s.geostats as geostats," : ""}
               l.mapbox_gl_styles as mapbox_gl_styles,
               o.id as output_id,
               o.url as source_url,
               jobs.job_key as source_processing_job_id,
-              o.contains_overlapping_features as contains_overlapping_features
+              o.contains_overlapping_features as contains_overlapping_features,
+              s.column_details,
+              s.raster_band_count,
+              s.vector_geometry_type,
+              s.feature_count,
+              ai.best_label_column as ai_best_label_column,
+              ai.best_category_column as ai_best_category_column,
+              ai.best_numeric_column as ai_best_numeric_column
             from
               data_sources s
             inner join data_layers l on l.data_source_id = s.id
             inner join table_of_contents_items items on items.data_layer_id = l.id
             inner join source_processing_jobs jobs on jobs.data_source_id = s.id
+            left join ai_data_analyst_notes ai on ai.data_source_id = s.id
             left join lateral (
               select
                 o.id,
@@ -208,21 +292,47 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
           `,
             [project.id],
           );
-          for (const row of result.rows) {
-            stripUnnecessaryGeostatsFields(row.geostats);
+          if (wantGeostats) {
+            for (const row of result.rows) {
+              stripUnnecessaryGeostatsFields(row.geostats, false);
+            }
           }
-          console.log("result.rows", result.rows);
-          return result.rows.map((row: any) => ({
-            __typename: "ReportOverlaySource",
-            stableId: row.stable_id,
-            tableOfContentsItemId: row.table_of_contents_item_id,
-            geostats: row.geostats,
-            mapboxGlStyles: row.mapbox_gl_styles,
-            sourceProcessingJobId: row.source_processing_job_id,
-            outputId: row.output_id,
-            sourceUrl: row.source_url,
-            containsOverlappingFeatures: row.contains_overlapping_features,
-          }));
+          return result.rows.map((row: any) => {
+            return {
+              __typename: "ReportOverlaySource",
+              stableId: row.stable_id,
+              tableOfContentsItemId: row.table_of_contents_item_id,
+              sourceProcessingJobId: row.source_processing_job_id,
+              outputId: row.output_id,
+              sourceUrl: row.source_url,
+              containsOverlappingFeatures: row.contains_overlapping_features,
+              rasterBandCount: row.raster_band_count,
+              vectorGeometryType: row.vector_geometry_type,
+              bestCategoryColumn:
+                row.ai_best_category_column ||
+                pickBestCategoryColumn(row.column_details, row.feature_count),
+              bestContinuousColumn:
+                row.ai_best_numeric_column ||
+                pickBestContinuousColumn(row.column_details, row.feature_count),
+              bestLabelColumn:
+                row.ai_best_label_column ||
+                pickBestLabelColumn(row.column_details, row.feature_count),
+              anyColumn: Object.keys(row.column_details || {})[0],
+              ...(wantGeostats ? { geostats: row.geostats } : {}),
+              ...(wantMapboxGlStyles
+                ? { mapboxGlStyles: row.mapbox_gl_styles }
+                : {}),
+              ...(wantStyleGroupByColumn
+                ? {
+                    styleGroupByColumn: groupByFromStyle(
+                      row.mapbox_gl_styles,
+                      row.vector_geometry_type,
+                      new Set(Object.keys(row.column_details || {})),
+                    ),
+                  }
+                : {}),
+            };
+          });
         },
       },
       Report: {
@@ -608,6 +718,7 @@ async function getOverlaySourcesByStableIds(
   pool: Pool | PoolClient,
   stableIds: string[],
   isDraft: boolean,
+  keepHistogram?: { [stableId: string]: boolean },
 ): Promise<{
   [stableId: string]: ReportOverlaySourcePartial;
 }> {
@@ -615,9 +726,16 @@ async function getOverlaySourcesByStableIds(
     [stableId: string]: ReportOverlaySourcePartial;
   } = {};
   if (stableIds.length > 0) {
-    const { rows: overlaySourceRows } =
-      await pool.query<ReportOverlaySourcePartial>(
-        `
+    const { rows: overlaySourceRows } = await pool.query<
+      ReportOverlaySourcePartial & {
+        geostats?: { layers: GeostatsLayer[] } | RasterInfo;
+        mapboxGlStyles?: AnyLayer[];
+        ai_best_label_column?: string;
+        ai_best_category_column?: string;
+        ai_best_numeric_column?: string;
+      }
+    >(
+      `
       select
         items.id as "tableOfContentsItemId",
         items.stable_id as "stableId",
@@ -626,20 +744,63 @@ async function getOverlaySourcesByStableIds(
         reporting_output.id as "outputId",
         sources.geostats as "geostats",
         layers.mapbox_gl_styles as "mapboxGlStyles",
-        reporting_output.contains_overlapping_features as "containsOverlappingFeatures"
+        reporting_output.contains_overlapping_features as "containsOverlappingFeatures",
+        sources.raster_band_count as "rasterBandCount",
+        sources.vector_geometry_type as "vectorGeometryType",
+        sources.feature_count as "featureCount",
+        ai.best_label_column as "ai_best_label_column",
+        ai.best_category_column as "ai_best_category_column",
+        ai.best_numeric_column as "ai_best_numeric_column"
       from
         table_of_contents_items items
         join data_layers layers on layers.id = items.data_layer_id
         join data_sources sources on sources.id = layers.data_source_id
         left join lateral table_of_contents_items_reporting_output(items.*) as reporting_output on true
         left join source_processing_jobs jobs on jobs.data_source_id = sources.id
+        left join ai_data_analyst_notes ai on ai.data_source_id = sources.id
       where
         items.stable_id = ANY($1::text[]) and items.is_draft = $2
       `,
-        [stableIds, isDraft],
-      );
+      [stableIds, isDraft],
+    );
     for (const row of overlaySourceRows) {
-      stripUnnecessaryGeostatsFields(row.geostats);
+      if (row.geostats) {
+        stripUnnecessaryGeostatsFields(
+          row.geostats,
+          keepHistogram?.[row.stableId] ? true : false,
+        );
+      }
+      if (
+        row.vectorGeometryType &&
+        row.geostats &&
+        !isRasterInfo(row.geostats)
+      ) {
+        const layer = row.geostats.layers[0] as GeostatsLayer;
+        if (layer) {
+          const attributes = layer.attributes as unknown as Record<
+            string,
+            { type: string; countDistinct: number }
+          >;
+          row.styleGroupByColumn = groupByFromStyle(
+            row.mapboxGlStyles,
+            row.vectorGeometryType,
+            new Set(Object.keys(layer.attributes || {})),
+          );
+          row.bestCategoryColumn =
+            row.ai_best_category_column ||
+            pickBestCategoryColumn(attributes, row.featureCount || 0);
+          row.bestContinuousColumn =
+            row.ai_best_numeric_column ||
+            pickBestContinuousColumn(attributes, row.featureCount || 0);
+          row.bestLabelColumn =
+            row.ai_best_label_column ||
+            pickBestLabelColumn(attributes, row.featureCount || 0);
+          row.anyColumn = Object.keys(attributes)[0];
+          delete row.ai_best_label_column;
+          delete row.ai_best_category_column;
+          delete row.ai_best_numeric_column;
+        }
+      }
       results[row.stableId] = row;
     }
     for (const row of overlaySourceRows) {
@@ -678,10 +839,21 @@ async function createMetricsForDependencies(
     new Set(dependencies.filter((d) => d.stableId).map((d) => d.stableId!)),
   );
 
+  const keepHistogram: { [stableId: string]: boolean } = {};
+  for (const dependency of dependencies) {
+    if (
+      dependency.stableId &&
+      ["raster_stats", "column_values"].includes(dependency.type)
+    ) {
+      keepHistogram[dependency.stableId] = true;
+    }
+  }
+
   const overlaySources = await getOverlaySourcesByStableIds(
     pool,
     overlaySourceStableIds,
     isDraft,
+    keepHistogram,
   );
 
   const overlaySourceUrls = {} as { [stableId: string]: string };
@@ -745,7 +917,7 @@ async function createMetricsForDependencies(
   return { metrics, hashes, overlaySources };
 }
 
-function stripUnnecessaryGeostatsFields(geostats: any) {
+function stripUnnecessaryGeostatsFields(geostats: any, keepHistogram: boolean) {
   if (geostats && "layers" in geostats && Array.isArray(geostats.layers)) {
     const layer = geostats.layers[0];
     if (layer && "attributes" in layer && Array.isArray(layer.attributes)) {
@@ -756,13 +928,16 @@ function stripUnnecessaryGeostatsFields(geostats: any) {
           delete attribute.stats.quantiles;
           delete attribute.stats.geometricInterval;
           delete attribute.stats.standardDeviations;
+          if (!keepHistogram) {
+            delete attribute.stats.histogram;
+          }
         }
       }
-    } else {
-      console.log("layer is not an array");
     }
   } else if (isRasterInfo(geostats)) {
+    delete geostats.metadata;
     for (const band of geostats.bands) {
+      delete band.metadata;
       if (band.stats) {
         if (band.stats.equalInterval) {
           band.stats.equalInterval = undefined as any;
@@ -778,6 +953,9 @@ function stripUnnecessaryGeostatsFields(geostats: any) {
         }
         if (band.stats.standardDeviations) {
           band.stats.standardDeviations = undefined as any;
+        }
+        if (band.stats.categories) {
+          band.stats.categories = undefined as any;
         }
       }
     }
@@ -803,4 +981,266 @@ async function isDraftReport(
     [reportId, projectId],
   );
   return reportRows[0].is_draft;
+}
+
+function booleanFromIfArgument(
+  value: ValueNode,
+  variableValues: Record<string, unknown>,
+): boolean {
+  if (value.kind === "BooleanValue") {
+    return value.value;
+  }
+  if (value.kind === "Variable") {
+    return variableValues[value.name.value] === true;
+  }
+  return false;
+}
+
+/** Respects @skip / @include on a field, spread, or fragment definition. */
+function directivesAllowSelection(
+  directives: readonly DirectiveNode[] | undefined,
+  variableValues: Record<string, unknown>,
+): boolean {
+  if (!directives?.length) {
+    return true;
+  }
+  let skip: boolean | undefined;
+  let include: boolean | undefined;
+  for (const d of directives) {
+    if (d.name.value === "skip") {
+      const arg = d.arguments?.find((a) => a.name.value === "if");
+      if (arg) {
+        skip = booleanFromIfArgument(arg.value, variableValues);
+      }
+    } else if (d.name.value === "include") {
+      const arg = d.arguments?.find((a) => a.name.value === "if");
+      if (arg) {
+        include = booleanFromIfArgument(arg.value, variableValues);
+      }
+    }
+  }
+  if (skip === true) {
+    return false;
+  }
+  if (include === false) {
+    return false;
+  }
+  return true;
+}
+
+/**
+ * True if the client asked for `fieldName` on each list element of this field
+ * (e.g. ReportOverlaySource fields under reportingLayers). Does not recurse
+ * into nested fields — only the selection set that belongs to the list item type.
+ */
+function selectionSetRequestsTopLevelField(
+  selectionSet: SelectionSetNode | undefined | null,
+  fieldName: string,
+  fragments: GraphQLResolveInfo["fragments"],
+  variableValues: Record<string, unknown>,
+  visitedFragments: Set<string>,
+): boolean {
+  if (!selectionSet?.selections.length) {
+    return false;
+  }
+  for (const sel of selectionSet.selections) {
+    if (!directivesAllowSelection(sel.directives, variableValues)) {
+      continue;
+    }
+    if (sel.kind === "Field") {
+      if (sel.name.value === fieldName) {
+        return true;
+      }
+    } else if (sel.kind === "FragmentSpread") {
+      const name = sel.name.value;
+      if (visitedFragments.has(name)) {
+        continue;
+      }
+      const frag = fragments[name];
+      if (!frag || !directivesAllowSelection(frag.directives, variableValues)) {
+        continue;
+      }
+      visitedFragments.add(name);
+      if (
+        selectionSetRequestsTopLevelField(
+          frag.selectionSet,
+          fieldName,
+          fragments,
+          variableValues,
+          visitedFragments,
+        )
+      ) {
+        return true;
+      }
+    } else if (sel.kind === "InlineFragment") {
+      if (
+        selectionSetRequestsTopLevelField(
+          sel.selectionSet,
+          fieldName,
+          fragments,
+          variableValues,
+          visitedFragments,
+        )
+      ) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function resolveInfoRequestsTopLevelField(
+  info: GraphQLResolveInfo,
+  fieldName: string,
+): boolean {
+  const variableValues = info.variableValues ?? {};
+  for (const node of info.fieldNodes) {
+    if (
+      selectionSetRequestsTopLevelField(
+        node.selectionSet,
+        fieldName,
+        info.fragments,
+        variableValues,
+        new Set(),
+      )
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Column names that are never useful for user-facing categorisation,
+// continuous measurement, or labelling.
+const JUNK_COLUMN_PATTERNS = [
+  /^shape[_-]?length$/i,
+  /^shape[_-]?area$/i,
+  /^area[_-]?km2?$/i,
+  /^area$/i,
+  /^length$/i,
+  /^perimeter$/i,
+  /^fid$/i,
+  /^gid$/i,
+  /^id$/i,
+  /^objectid$/i,
+  /^oid$/i,
+  /^globalid$/i,
+  /^uuid$/i,
+  /_id$/i,
+];
+
+function isJunkColumn(name: string): boolean {
+  return JUNK_COLUMN_PATTERNS.some((p) => p.test(name));
+}
+
+/**
+ * Picks the best column to use for categorical map or report presentations.
+ * Ranks columns by:
+ *   * type - strings over booleans over numbers
+ *   * cardinality - 2–20 distinct values is ideal; penalise all-unique (better
+ *     used as a label) and very high cardinality
+ *   * name - junk names (IDs, shape-area, etc.) are penalised
+ */
+function pickBestCategoryColumn(
+  columnDetails: Record<string, { type: string; countDistinct: number }>,
+  featureCount: number,
+): string | undefined {
+  if (!columnDetails) return undefined;
+
+  const scored = Object.entries(columnDetails)
+    .map(([name, { type, countDistinct }]) => {
+      let score = 0;
+
+      // Must have at least 2 distinct values to be useful as a category
+      if (countDistinct < 2) return { name, score: -Infinity };
+
+      // Type preference
+      if (type === "string") score += 10;
+      else if (type === "boolean") score += 5;
+      else if (type === "number") score += 2;
+
+      // Ideal cardinality: 2–20 distinct values
+      if (countDistinct <= 20) score += 8;
+      else if (countDistinct <= 50) score += 4;
+      else if (countDistinct <= 100) score += 1;
+      else score -= 5;
+
+      // All-unique values are better used as labels, not categories
+      if (featureCount > 0 && countDistinct === featureCount) score -= 10;
+
+      // Penalise system/junk column names
+      if (isJunkColumn(name)) score -= 20;
+
+      return { name, score };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  if (!scored.length || scored[0].score === -Infinity) return undefined;
+  return scored[0].name;
+}
+
+/**
+ * Picks the best numeric column for continuous (gradient/proportional)
+ * presentations. Prefers numeric columns with meaningful variance.
+ */
+function pickBestContinuousColumn(
+  columnDetails: Record<string, { type: string; countDistinct: number }>,
+  featureCount: number,
+): string | undefined {
+  if (!columnDetails) return undefined;
+
+  const scored = Object.entries(columnDetails)
+    .filter(([, { type }]) => type === "number")
+    .map(([name, { countDistinct }]) => {
+      let score = 0;
+
+      // More distinct numeric values → better for continuous scale
+      const ratio = featureCount > 0 ? countDistinct / featureCount : 0;
+      score += ratio * 10;
+
+      // Penalise if too few distinct values (effectively categorical)
+      if (countDistinct <= 2) score -= 8;
+
+      // Penalise junk columns (area, length, etc.)
+      if (isJunkColumn(name)) score -= 20;
+
+      return { name, score };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  if (!scored.length) return undefined;
+  const best = scored[0];
+  // Don't return a column that has been penalised below a useful threshold
+  return best.score > -10 ? best.name : undefined;
+}
+
+/**
+ * Picks the best column to use as a human-readable label for each feature.
+ * Prefers string columns with high uniqueness (close to one value per feature).
+ */
+function pickBestLabelColumn(
+  columnDetails: Record<string, { type: string; countDistinct: number }>,
+  featureCount: number,
+): string | undefined {
+  if (!columnDetails) return undefined;
+
+  const scored = Object.entries(columnDetails)
+    .filter(([, { type }]) => type === "string")
+    .map(([name, { countDistinct }]) => {
+      let score = 0;
+
+      // Ideal: nearly unique values (one per feature)
+      const ratio = featureCount > 0 ? countDistinct / featureCount : 0;
+      score += ratio * 10;
+
+      // Penalise junk column names
+      if (isJunkColumn(name)) score -= 20;
+
+      return { name, score };
+    })
+    .sort((a, b) => b.score - a.score);
+
+  if (!scored.length) return undefined;
+  const best = scored[0];
+  return best.score > -10 ? best.name : undefined;
 }

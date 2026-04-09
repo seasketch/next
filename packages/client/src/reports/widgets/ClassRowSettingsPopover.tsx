@@ -764,9 +764,17 @@ export const ClassRowSettingsPopover = ({
                       settings.customRowLabels?.[row.key] || "";
                     const stableId = row.sourceId ? row.sourceId : undefined;
                     const defaultLabel =
-                      row.groupByKey === "*" ? group.title : row.groupByKey;
+                      row.groupByKey === "*"
+                        ? groupedRows.length === 1
+                          ? t("All features")
+                          : group.title
+                        : row.groupByKey;
                     const chipLabel =
-                      row.groupByKey === "*" ? group.title : row.groupByKey;
+                      row.groupByKey === "*"
+                        ? groupedRows.length === 1
+                          ? t("All features")
+                          : group.title
+                        : row.groupByKey;
                     return (
                       <div
                         key={row.key}

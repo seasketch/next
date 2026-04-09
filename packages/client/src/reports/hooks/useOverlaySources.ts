@@ -5,31 +5,29 @@ import {
   useProjectReportingLayersQuery,
 } from "../../generated/graphql";
 import { DraftReportContext } from "../DraftReportContext";
+import { ReportDependenciesContext } from "../context/ReportDependenciesContext";
 import getSlug from "../../getSlug";
 
-/**
- * Hook that returns overlay sources for use in tooltip controls.
- * This replaces the pattern of accessing reportContext.overlaySources and
- * reportContext.preprocessedOverlaySources.
- */
 export function useOverlaySources(dependencies?: MetricDependency[]): {
   allSources: OverlaySourceDetailsFragment[];
   filteredSources: OverlaySourceDetailsFragment[];
   loading: boolean;
 } {
   const draftContext = useContext(DraftReportContext);
-  const { data: reportingLayersData, loading } = useProjectReportingLayersQuery(
-    {
-      variables: { slug: getSlug() },
-    }
-  );
+  const reportDependenciesContext = useContext(ReportDependenciesContext);
+  // const { data: reportingLayersData, loading } = useProjectReportingLayersQuery(
+  //   {
+  //     variables: { slug: getSlug() },
+  //   }
+  // );
 
   const allSources = useMemo(() => {
-    const reportingLayers =
-      reportingLayersData?.projectBySlug?.reportingLayers || [];
-    return [...reportingLayers, ...draftContext.draftOverlaySources];
+    return [
+      ...reportDependenciesContext.overlaySources,
+      ...draftContext.draftOverlaySources,
+    ];
   }, [
-    reportingLayersData?.projectBySlug?.reportingLayers,
+    reportDependenciesContext.overlaySources,
     draftContext.draftOverlaySources,
   ]);
 
@@ -45,7 +43,7 @@ export function useOverlaySources(dependencies?: MetricDependency[]): {
   return {
     allSources,
     filteredSources,
-    loading,
+    loading: reportDependenciesContext.loading,
   };
 }
 

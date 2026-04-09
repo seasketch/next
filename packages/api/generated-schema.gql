@@ -3167,7 +3167,7 @@ type DataSource implements Node {
   indicates a radius equal to the width of a tile.
   """
   clusterRadius: Int
-  columns: [String]
+  columnDetails: JSON
 
   """
   Image sources only. Corners of image specified in longitude, latitude pairs.
@@ -3218,6 +3218,7 @@ type DataSource implements Node {
   access. Set during creation and cannot be changed.
   """
   enhancedSecurity: Boolean
+  featureCount: Int
 
   """
   GeoJSON only. Whether to generate ids for the geojson features. When enabled,
@@ -3321,6 +3322,7 @@ type DataSource implements Node {
     """Skip the first `n` values."""
     offset: Int
   ): [QuotaDetail!]
+  rasterBandCount: Int
   rasterOffset: Float
   rasterRepresentativeColors: JSON
   rasterScale: Float
@@ -3426,6 +3428,7 @@ type DataSource implements Node {
   ARCGIS_DYNAMIC_MAPSERVER only. When using a high-dpi screen, request higher resolution images.
   """
   useDevicePixelRatio: Boolean
+  vectorGeometryType: String
   wasConvertedFromEsriFeatureLayer: Boolean!
 }
 
@@ -3505,7 +3508,7 @@ input DataSourceInput {
   indicates a radius equal to the width of a tile.
   """
   clusterRadius: Int
-  columns: [String]
+  columnDetails: JSON
 
   """
   Image sources only. Corners of image specified in longitude, latitude pairs.
@@ -3527,6 +3530,7 @@ input DataSourceInput {
   access. Set during creation and cannot be changed.
   """
   enhancedSecurity: Boolean
+  featureCount: Int
 
   """
   GeoJSON only. Whether to generate ids for the geojson features. When enabled,
@@ -3601,6 +3605,7 @@ input DataSourceInput {
   querystring parameters that will be added to requests.
   """
   queryParameters: JSON
+  rasterBandCount: Int
   rasterOffset: Float
   rasterRepresentativeColors: JSON
   rasterScale: Float
@@ -3662,6 +3667,7 @@ input DataSourceInput {
   ARCGIS_DYNAMIC_MAPSERVER only. When using a high-dpi screen, request higher resolution images.
   """
   useDevicePixelRatio: Boolean
+  vectorGeometryType: String
   wasConvertedFromEsriFeatureLayer: Boolean
 }
 
@@ -13577,8 +13583,11 @@ type Query implements Node {
     orderBy: [EmailNotificationPreferencesOrderBy!] = [NATURAL]
   ): EmailNotificationPreferencesConnection
   extensionToSourceType(url: String): String
+  extractColumnDetailsFromGeostats(geostats: JSON): JSON
+  extractRasterBandCountFromGeostats(geostats: JSON): Int
   extractSpriteIds(t: String): [Int]
   extractStableIdsFromBody(body: JSON): [String]
+  extractVectorGeometryTypeFromGeostats(geostats: JSON): String
   fileUpload(id: UUID!): FileUpload
 
   """Reads a single `FileUpload` using its globally unique `ID`."""
@@ -14866,17 +14875,61 @@ type ReportOverlayDependencies {
 }
 
 type ReportOverlaySource {
+  """
+  When determining what column to use for an inline metric or block
+  widget, it may be that no categorical or continuous column is available.
+  In that case, we need at least one column to use for the metric. It's
+  possible the vector layer has no columns, in which case it probably
+  shouldn't even appear in any lists for reporting.
+  """
+  anyColumn: String
+
+  """
+  The best column to use for report widgets that display a categorical
+  breakdown of the data. If AI Data Analyst Notes are available, they
+  will inform the choice. Otherwise a string column with low cardinality
+  will be picked first, followed by low cardinality numeric columns.
+  """
+  bestCategoryColumn: String
+
+  """
+  The best column to use for numerical report widgets. If AI Data Analyst
+  Notes are available, they will inform the choice. Otherwise a numeric
+  column with high variance will be picked first, followed by any numeric
+  column. Could be null if no numeric columns are available.
+  """
+  bestContinuousColumn: String
+
+  """
+  The best column to use for label rendering. If AI Data Analyst Notes are
+  available, they will inform the choice. Otherwise a string column with
+  high cardinality will be picked.
+  """
+  bestLabelColumn: String
   containsOverlappingFeatures: Boolean
   geostats: JSON!
   mapboxGlStyles: JSON!
   output: DataUploadOutput
   outputId: Int!
+
+  """Number of bands in the source if raster. Otherwise null."""
+  rasterBandCount: Int
   sourceProcessingJob: SourceProcessingJob!
   sourceProcessingJobId: String!
   sourceUrl: String
   stableId: String!
+
+  """
+  If a column is used for a categorical map presentation, this is the
+  column name. Useful for report widgets that support "groupBy" options,
+  in which case this column should be pre-selected.
+  """
+  styleGroupByColumn: String
   tableOfContentsItem: TableOfContentsItem!
   tableOfContentsItemId: Int!
+
+  """GeoJSON geometry type, if the source is a vector layer."""
+  vectorGeometryType: String
 }
 
 """

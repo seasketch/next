@@ -2768,7 +2768,7 @@ export type DataSource = Node & {
    * indicates a radius equal to the width of a tile.
    */
   clusterRadius?: Maybe<Scalars['Int']>;
-  columns?: Maybe<Array<Maybe<Scalars['String']>>>;
+  columnDetails?: Maybe<Scalars['JSON']>;
   /** Image sources only. Corners of image specified in longitude, latitude pairs. */
   coordinates?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   createdAt: Scalars['Datetime'];
@@ -2785,6 +2785,7 @@ export type DataSource = Node & {
    * access. Set during creation and cannot be changed.
    */
   enhancedSecurity?: Maybe<Scalars['Boolean']>;
+  featureCount?: Maybe<Scalars['Int']>;
   /**
    * GeoJSON only. Whether to generate ids for the geojson features. When enabled,
    * the feature.id property will be auto assigned based on its index in the
@@ -2855,6 +2856,7 @@ export type DataSource = Node & {
   queryParameters?: Maybe<Scalars['JSON']>;
   /** Reads and enables pagination through a set of `QuotaDetail`. */
   quotaUsed?: Maybe<Array<QuotaDetail>>;
+  rasterBandCount?: Maybe<Scalars['Int']>;
   rasterOffset?: Maybe<Scalars['Float']>;
   rasterRepresentativeColors?: Maybe<Scalars['JSON']>;
   rasterScale?: Maybe<Scalars['Float']>;
@@ -2899,6 +2901,7 @@ export type DataSource = Node & {
   urls?: Maybe<Array<Maybe<Scalars['String']>>>;
   /** ARCGIS_DYNAMIC_MAPSERVER only. When using a high-dpi screen, request higher resolution images. */
   useDevicePixelRatio?: Maybe<Scalars['Boolean']>;
+  vectorGeometryType?: Maybe<Scalars['String']>;
   wasConvertedFromEsriFeatureLayer: Scalars['Boolean'];
 };
 
@@ -3067,7 +3070,7 @@ export type DataSourceInput = {
    * indicates a radius equal to the width of a tile.
    */
   clusterRadius?: Maybe<Scalars['Int']>;
-  columns?: Maybe<Array<Maybe<Scalars['String']>>>;
+  columnDetails?: Maybe<Scalars['JSON']>;
   /** Image sources only. Corners of image specified in longitude, latitude pairs. */
   coordinates?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   createdAt?: Maybe<Scalars['Datetime']>;
@@ -3082,6 +3085,7 @@ export type DataSourceInput = {
    * access. Set during creation and cannot be changed.
    */
   enhancedSecurity?: Maybe<Scalars['Boolean']>;
+  featureCount?: Maybe<Scalars['Int']>;
   /**
    * GeoJSON only. Whether to generate ids for the geojson features. When enabled,
    * the feature.id property will be auto assigned based on its index in the
@@ -3141,6 +3145,7 @@ export type DataSourceInput = {
    * querystring parameters that will be added to requests.
    */
   queryParameters?: Maybe<Scalars['JSON']>;
+  rasterBandCount?: Maybe<Scalars['Int']>;
   rasterOffset?: Maybe<Scalars['Float']>;
   rasterRepresentativeColors?: Maybe<Scalars['JSON']>;
   rasterScale?: Maybe<Scalars['Float']>;
@@ -3175,6 +3180,7 @@ export type DataSourceInput = {
   urls?: Maybe<Array<Maybe<Scalars['String']>>>;
   /** ARCGIS_DYNAMIC_MAPSERVER only. When using a high-dpi screen, request higher resolution images. */
   useDevicePixelRatio?: Maybe<Scalars['Boolean']>;
+  vectorGeometryType?: Maybe<Scalars['String']>;
   wasConvertedFromEsriFeatureLayer?: Maybe<Scalars['Boolean']>;
 };
 
@@ -12034,8 +12040,11 @@ export type Query = Node & {
   /** Reads and enables pagination through a set of `EmailNotificationPreference`. */
   emailNotificationPreferencesConnection?: Maybe<EmailNotificationPreferencesConnection>;
   extensionToSourceType?: Maybe<Scalars['String']>;
+  extractColumnDetailsFromGeostats?: Maybe<Scalars['JSON']>;
+  extractRasterBandCountFromGeostats?: Maybe<Scalars['Int']>;
   extractSpriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
   extractStableIdsFromBody?: Maybe<Array<Maybe<Scalars['String']>>>;
+  extractVectorGeometryTypeFromGeostats?: Maybe<Scalars['String']>;
   fileUpload?: Maybe<FileUpload>;
   /** Reads a single `FileUpload` using its globally unique `ID`. */
   fileUploadByNodeId?: Maybe<FileUpload>;
@@ -12553,6 +12562,18 @@ export type QueryExtensionToSourceTypeArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryExtractColumnDetailsFromGeostatsArgs = {
+  geostats?: Maybe<Scalars['JSON']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryExtractRasterBandCountFromGeostatsArgs = {
+  geostats?: Maybe<Scalars['JSON']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QueryExtractSpriteIdsArgs = {
   t?: Maybe<Scalars['String']>;
 };
@@ -12561,6 +12582,12 @@ export type QueryExtractSpriteIdsArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryExtractStableIdsFromBodyArgs = {
   body?: Maybe<Scalars['JSON']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryExtractVectorGeometryTypeFromGeostatsArgs = {
+  geostats?: Maybe<Scalars['JSON']>;
 };
 
 
@@ -13798,17 +13825,55 @@ export type ReportOverlayDependencies = {
 
 export type ReportOverlaySource = {
   __typename?: 'ReportOverlaySource';
+  /**
+   * When determining what column to use for an inline metric or block
+   * widget, it may be that no categorical or continuous column is available.
+   * In that case, we need at least one column to use for the metric. It's
+   * possible the vector layer has no columns, in which case it probably
+   * shouldn't even appear in any lists for reporting.
+   */
+  anyColumn?: Maybe<Scalars['String']>;
+  /**
+   * The best column to use for report widgets that display a categorical
+   * breakdown of the data. If AI Data Analyst Notes are available, they
+   * will inform the choice. Otherwise a string column with low cardinality
+   * will be picked first, followed by low cardinality numeric columns.
+   */
+  bestCategoryColumn?: Maybe<Scalars['String']>;
+  /**
+   * The best column to use for numerical report widgets. If AI Data Analyst
+   * Notes are available, they will inform the choice. Otherwise a numeric
+   * column with high variance will be picked first, followed by any numeric
+   * column. Could be null if no numeric columns are available.
+   */
+  bestContinuousColumn?: Maybe<Scalars['String']>;
+  /**
+   * The best column to use for label rendering. If AI Data Analyst Notes are
+   * available, they will inform the choice. Otherwise a string column with
+   * high cardinality will be picked.
+   */
+  bestLabelColumn?: Maybe<Scalars['String']>;
   containsOverlappingFeatures?: Maybe<Scalars['Boolean']>;
   geostats: Scalars['JSON'];
   mapboxGlStyles: Scalars['JSON'];
   output?: Maybe<DataUploadOutput>;
   outputId: Scalars['Int'];
+  /** Number of bands in the source if raster. Otherwise null. */
+  rasterBandCount?: Maybe<Scalars['Int']>;
   sourceProcessingJob: SourceProcessingJob;
   sourceProcessingJobId: Scalars['String'];
   sourceUrl?: Maybe<Scalars['String']>;
   stableId: Scalars['String'];
+  /**
+   * If a column is used for a categorical map presentation, this is the
+   * column name. Useful for report widgets that support "groupBy" options,
+   * in which case this column should be pre-selected.
+   */
+  styleGroupByColumn?: Maybe<Scalars['String']>;
   tableOfContentsItem: TableOfContentsItem;
   tableOfContentsItemId: Scalars['Int'];
+  /** GeoJSON geometry type, if the source is a vector layer. */
+  vectorGeometryType?: Maybe<Scalars['String']>;
 };
 
 /** Represents an update to a `Report`. Fields that are set will be updated. */
@@ -23414,9 +23479,21 @@ export type RecalculateSpatialMetricsMutation = (
   )> }
 );
 
+export type OverlaySourceListDetailsFragment = (
+  { __typename?: 'ReportOverlaySource' }
+  & Pick<ReportOverlaySource, 'tableOfContentsItemId' | 'stableId' | 'containsOverlappingFeatures' | 'rasterBandCount' | 'vectorGeometryType' | 'styleGroupByColumn' | 'bestCategoryColumn' | 'bestContinuousColumn' | 'bestLabelColumn' | 'anyColumn'>
+  & { tableOfContentsItem: (
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'title' | 'stableId'>
+  ), sourceProcessingJob: (
+    { __typename?: 'SourceProcessingJob' }
+    & SourceProcessingJobDetailsFragment
+  ) }
+);
+
 export type OverlaySourceDetailsFragment = (
   { __typename?: 'ReportOverlaySource' }
-  & Pick<ReportOverlaySource, 'tableOfContentsItemId' | 'stableId' | 'containsOverlappingFeatures' | 'geostats' | 'mapboxGlStyles' | 'sourceUrl'>
+  & Pick<ReportOverlaySource, 'tableOfContentsItemId' | 'stableId' | 'containsOverlappingFeatures' | 'geostats' | 'mapboxGlStyles' | 'sourceUrl' | 'anyColumn' | 'bestCategoryColumn' | 'bestContinuousColumn' | 'bestLabelColumn' | 'vectorGeometryType' | 'rasterBandCount'>
   & { tableOfContentsItem: (
     { __typename?: 'TableOfContentsItem' }
     & Pick<TableOfContentsItem, 'title' | 'stableId'>
@@ -23608,22 +23685,19 @@ export type ProjectReportingLayersQuery = (
     & Pick<Project, 'id'>
     & { reportingLayers: Array<(
       { __typename?: 'ReportOverlaySource' }
-      & OverlaySourceDetailsFragment
+      & OverlaySourceListDetailsFragment
     )>, draftTableOfContentsItems?: Maybe<Array<(
       { __typename?: 'TableOfContentsItem' }
       & Pick<TableOfContentsItem, 'id' | 'title' | 'stableId' | 'isFolder' | 'parentStableId' | 'sortIndex' | 'copiedFromDataLibraryTemplateId'>
       & { dataLayer?: Maybe<(
         { __typename?: 'DataLayer' }
-        & Pick<DataLayer, 'version'>
+        & Pick<DataLayer, 'id' | 'version'>
         & { dataSource?: Maybe<(
           { __typename?: 'DataSource' }
-          & Pick<DataSource, 'id' | 'type' | 'geostats' | 'attribution' | 'createdAt'>
+          & Pick<DataSource, 'id' | 'type' | 'createdAt' | 'attribution' | 'vectorGeometryType'>
           & { authorProfile?: Maybe<(
             { __typename?: 'Profile' }
             & AuthorProfileFragment
-          )>, sourceProcessingJob?: Maybe<(
-            { __typename?: 'SourceProcessingJob' }
-            & SourceProcessingJobDetailsFragment
           )> }
         )> }
       )> }
@@ -27175,6 +27249,27 @@ export const SourceProcessingJobDetailsFragmentDoc = /*#__PURE__*/ gql`
   eta
 }
     `;
+export const OverlaySourceListDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment OverlaySourceListDetails on ReportOverlaySource {
+  tableOfContentsItemId
+  stableId
+  containsOverlappingFeatures
+  tableOfContentsItem {
+    title
+    stableId
+  }
+  sourceProcessingJob {
+    ...SourceProcessingJobDetails
+  }
+  rasterBandCount
+  vectorGeometryType
+  styleGroupByColumn
+  bestCategoryColumn
+  bestContinuousColumn
+  bestLabelColumn
+  anyColumn
+}
+    ${SourceProcessingJobDetailsFragmentDoc}`;
 export const OverlaySourceDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment OverlaySourceDetails on ReportOverlaySource {
   tableOfContentsItemId
@@ -27199,6 +27294,12 @@ export const OverlaySourceDetailsFragmentDoc = /*#__PURE__*/ gql`
     numRepairedFeatures
     wasRepaired
   }
+  anyColumn
+  bestCategoryColumn
+  bestContinuousColumn
+  bestLabelColumn
+  vectorGeometryType
+  rasterBandCount
 }
     ${SourceProcessingJobDetailsFragmentDoc}`;
 export const BaseReportDetailsFragmentDoc = /*#__PURE__*/ gql`
@@ -30826,7 +30927,7 @@ export const ProjectReportingLayersDocument = /*#__PURE__*/ gql`
   projectBySlug(slug: $slug) {
     id
     reportingLayers {
-      ...OverlaySourceDetails
+      ...OverlaySourceListDetails
     }
     draftTableOfContentsItems {
       id
@@ -30835,29 +30936,26 @@ export const ProjectReportingLayersDocument = /*#__PURE__*/ gql`
       isFolder
       parentStableId
       sortIndex
-      copiedFromDataLibraryTemplateId
       dataLayer {
+        id
         version
         dataSource {
           id
           type
-          geostats
-          attribution
-          createdAt
           authorProfile {
             ...AuthorProfile
           }
-          sourceProcessingJob {
-            ...SourceProcessingJobDetails
-          }
+          createdAt
+          attribution
+          vectorGeometryType
         }
       }
+      copiedFromDataLibraryTemplateId
     }
   }
 }
-    ${OverlaySourceDetailsFragmentDoc}
-${AuthorProfileFragmentDoc}
-${SourceProcessingJobDetailsFragmentDoc}`;
+    ${OverlaySourceListDetailsFragmentDoc}
+${AuthorProfileFragmentDoc}`;
 export const OverlaySourceProcessingStatusDocument = /*#__PURE__*/ gql`
     query OverlaySourceProcessingStatus($tableOfContentsItemId: Int!) {
   tableOfContentsItem(id: $tableOfContentsItemId) {
@@ -32570,6 +32668,7 @@ export const namedOperations = {
     ReportTabDetails: 'ReportTabDetails',
     ReportDetails: 'ReportDetails',
     SourceProcessingJobDetails: 'SourceProcessingJobDetails',
+    OverlaySourceListDetails: 'OverlaySourceListDetails',
     OverlaySourceDetails: 'OverlaySourceDetails',
     BaseReportDetails: 'BaseReportDetails',
     SketchTocDetails: 'SketchTocDetails',

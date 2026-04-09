@@ -10,6 +10,7 @@ import {
   DataSourceTypes,
   Geography,
   OverlaySourceDetailsFragment,
+  OverlaySourceListDetailsFragment,
   ReportContextSketchClassDetailsFragment,
   SketchGeometryType,
   SpatialMetricState,
@@ -614,7 +615,7 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
 };
 
 export type BuildReportCommandGroupsArgs = {
-  sources?: OverlaySourceDetailsFragment[];
+  sources?: OverlaySourceListDetailsFragment[];
   draftTableOfContentsItems?: Array<{
     id: number;
     title: string;
@@ -632,7 +633,7 @@ export type BuildReportCommandGroupsArgs = {
   sketchClassGeometryType?: SketchGeometryType;
   overlayFooterItem?: CommandPaletteItem;
   overlayAugmenter?: (input: {
-    source: OverlaySourceDetailsFragment;
+    source: OverlaySourceListDetailsFragment;
     item: CommandPaletteItem;
   }) => CommandPaletteItem;
   onProcessLayer?: (tocId: number, sourceId: number) => Promise<boolean>;
@@ -775,10 +776,10 @@ function useOverlayProcessingStatus(tableOfContentsItemId: number) {
   });
 
   const cachedJob = useMemo(() => {
-    const item = bulkData?.projectBySlug?.draftTableOfContentsItems?.find(
-      (i) => i.id === tableOfContentsItemId
+    const item = bulkData?.projectBySlug?.reportingLayers?.find(
+      (r) => r.tableOfContentsItemId === tableOfContentsItemId
     );
-    return item?.dataLayer?.dataSource?.sourceProcessingJob ?? null;
+    return item?.sourceProcessingJob ?? null;
   }, [bulkData, tableOfContentsItemId]);
 
   const cachedState = cachedJob?.state as SpatialMetricState | undefined;
@@ -1012,7 +1013,7 @@ export function buildReportCommandGroups({
         const stableId = source.tableOfContentsItem?.stableId;
         let childGroups: CommandPaletteGroup[] | undefined;
         let unsupportedMessage: string | undefined;
-        if ("bands" in source.geostats && source.geostats.bands.length === 1) {
+        if (source.rasterBandCount === 1) {
           const inlineGroup: CommandPaletteGroup = {
             // eslint-disable-next-line i18next/no-literal-string
             id: `overlay-layer-${tocId}-inline-group`,
@@ -1184,30 +1185,13 @@ export function buildReportCommandGroups({
             },
           });
           childGroups = [inlineGroup, blockGroup];
-        } else if (
-          "bands" in source.geostats &&
-          source.geostats.bands.length > 1
-        ) {
+        } else if (source.rasterBandCount && source.rasterBandCount > 1) {
           unsupportedMessage =
             "Only single-band rasters are supported in the reporting tools.";
-        } else if (
-          "layers" in source.geostats &&
-          isGeostatsLayer(source.geostats.layers[0])
-        ) {
-          const geostatsLayer = source.geostats.layers[0] as GeostatsLayer;
-          const groupByColumn = groupByForStyle(
-            source.mapboxGlStyles,
-            geostatsLayer
-          );
-          const bestLabelColumn = labelColumnForGeostatsLayer(
-            geostatsLayer,
-            source.mapboxGlStyles
-          );
-          const numericColumns = geostatsLayer.attributes
-            .filter((attr) => attr.type === "number")
-            .map((attr) => attr.attribute);
-          const bestNumericColumn =
-            numericColumns.length > 0 ? numericColumns[0] : undefined;
+        } else if (source.vectorGeometryType) {
+          const groupByColumn = source.styleGroupByColumn || undefined;
+          const bestLabelColumn = source.bestLabelColumn;
+          const bestNumericColumn = source.bestContinuousColumn;
           const inlineGroup: CommandPaletteGroup = {
             // eslint-disable-next-line i18next/no-literal-string
             id: `overlay-layer-${tocId}-inline-group`,
@@ -1227,7 +1211,7 @@ export function buildReportCommandGroups({
               "Point",
               "MultiPoint",
               "LineString",
-            ].includes(geostatsLayer.geometry)
+            ].includes(source.vectorGeometryType)
           ) {
             inlineGroup.items.push({
               // eslint-disable-next-line i18next/no-literal-string
@@ -1334,10 +1318,7 @@ export function buildReportCommandGroups({
                 });
               },
             });
-            if (
-              bestNumericColumn ||
-              source.geostats.layers[0]?.attributes?.[0]?.attribute
-            ) {
+            if (bestNumericColumn || source.anyColumn) {
               inlineGroup.items.push({
                 // eslint-disable-next-line i18next/no-literal-string
                 id: `overlay-layer-${tocId}-inline-column-stats`,
@@ -1358,9 +1339,7 @@ export function buildReportCommandGroups({
                     componentSettings: {
                       presentation: "column_values",
                       stat: "mean",
-                      column:
-                        bestNumericColumn ||
-                        source.geostats.layers[0].attributes[0].attribute,
+                      column: bestNumericColumn || source.anyColumn,
                     },
                   });
                 },
@@ -1385,10 +1364,7 @@ export function buildReportCommandGroups({
                     },
                   ],
                   componentSettings: {
-                    columns: [
-                      bestNumericColumn ||
-                        source.geostats.layers[0].attributes[0].attribute,
-                    ],
+                    columns: [bestNumericColumn || source.anyColumn],
                     displayStats: bestNumericColumn
                       ? {
                           min: true,
@@ -1434,7 +1410,7 @@ export function buildReportCommandGroups({
               });
             }
           }
-          switch (geostatsLayer.geometry) {
+          switch (source.vectorGeometryType) {
             case "Polygon":
             case "MultiPolygon": {
               inlineGroup.items.push({
@@ -1813,7 +1789,9 @@ export function TooltipBooleanConfigurationOption({
 }) {
   return (
     <label className="flex items-center gap-2 text-sm text-gray-800">
-      <span className="font-light text-gray-400 whitespace-nowrap">{label}</span>
+      <span className="font-light text-gray-400 whitespace-nowrap">
+        {label}
+      </span>
       <input
         type="checkbox"
         className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"

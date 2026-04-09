@@ -14,7 +14,6 @@ This work requires you to:
   1. Identifying which columns are suitable for different purposes (categorizing, measuring, labeling, etc).
   2. Determining the best cartographic presentation to use for a given layer, based on what the data contains and represents. This includes the style presentation type, labeling (if any), and color scheme.
   3. Make recommendations for interactivity settings (e.g. popups, tooltips, banners, etc).
-  4. Choose a best group_by column, if appropriate, for overlap analysis.
 
 To make these recommendations, you will be given the 'filename' of the data layer and the 'geostats', which is a JSON object containing the column names, types, and sample data values.
 
@@ -71,10 +70,6 @@ exports.columnIntelligenceSchema = {
         best_id_column: {
             type: ["string", "null"],
             description: "Column that appears to represent a unique identifier for each feature. (Optional)",
-        },
-        best_group_by_column: {
-            type: ["string", "null"],
-            description: "For analytical reports. Select a group_by column if appropriate. For example, if reporting on overlap with habitats, choosing a `habClass` column would split overlapping area results into a row for each habitat class in the output table. Should usually match the chosen_presentation_column, but in some cases it should be left null if the column is only useful for presentation purposes and not analysis. Very rarely should it be a different column, in which case you should explain why.",
         },
         junk_columns: {
             type: "array",
@@ -150,7 +145,6 @@ exports.columnIntelligenceSchema = {
         "best_date_column",
         "best_popup_description_column",
         "best_id_column",
-        "best_group_by_column",
         "junk_columns",
         "chosen_presentation_type",
         "chosen_presentation_column",

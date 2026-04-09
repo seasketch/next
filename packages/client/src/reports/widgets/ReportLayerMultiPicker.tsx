@@ -304,7 +304,10 @@ export function ReportLayerMultiPicker({
     for (const layer of reportingLayers) {
       const tocId = layer.tableOfContentsItemId;
       if (tocId != null) {
-        map.set(tocId, getGeometryTypeFromGeostats(layer.geostats));
+        map.set(
+          tocId,
+          layer.vectorGeometryType as ReportSourceGeometryType | null
+        );
       }
     }
     const draftItems =
@@ -313,10 +316,11 @@ export function ReportLayerMultiPicker({
       ) || [];
     for (const item of draftItems) {
       if (map.has(item.id)) continue;
-      const ds = item.dataLayer?.dataSource as
-        | { id: number; type: string; geostats?: unknown }
-        | undefined;
-      map.set(item.id, getGeometryTypeFromGeostats(ds?.geostats));
+      const ds = item.dataLayer?.dataSource;
+      map.set(
+        item.id,
+        ds?.vectorGeometryType as ReportSourceGeometryType | null
+      );
     }
     return map;
   }, [
@@ -976,9 +980,12 @@ function LayerDetailTooltip({
     const item = data?.projectBySlug?.draftTableOfContentsItems?.find(
       (i) => i.id === tableOfContentsItemId
     );
+    const overlaySource = data?.projectBySlug?.reportingLayers?.find(
+      (r) => r.tableOfContentsItemId === tableOfContentsItemId
+    );
     const dataLayer = item?.dataLayer;
     const ds = dataLayer?.dataSource;
-    const job = ds?.sourceProcessingJob;
+    const job = overlaySource?.sourceProcessingJob;
     return {
       title: item?.title,
       profile: ds?.authorProfile,
