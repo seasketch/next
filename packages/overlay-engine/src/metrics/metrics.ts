@@ -334,7 +334,16 @@ export function combineRasterBandStats(
 
   for (const stats of statsArray) {
     totalCount += stats.count;
-    totalSum += stats.sum;
+    // Use mean*count rather than stats.sum to accumulate the weighted sum.
+    // Geoblaze's mean and count are both impacted consistently by VRM
+    // resampling, so mean*count is the correct area-weighted sum for each
+    // fragment. stats.sum is computed via a different path and is not
+    // consistent with mean or count, producing a combined mean far below
+    // the true value when using stats.sum directly.
+    // Guard against NaN for zero-intersection fragments (count=0, mean=NaN).
+    if (isFinite(stats.mean) && stats.count > 0) {
+      totalSum += stats.mean * stats.count;
+    }
     totalInvalid += stats.invalid;
     if (isFinite(stats.min) && stats.min !== null) {
       mins.push(stats.min);
@@ -349,12 +358,19 @@ export function combineRasterBandStats(
     }
   }
 
-  // Convert histogram map back to array and sort by value
-  const combinedHistogram: [number, number][] = Array.from(
+  // Convert histogram map back to array, sort by value, then downsample.
+  // Each per-fragment histogram is capped at 200 entries, but combining them
+  // via concatenation can produce 400+ entries. Downsample to keep the same
+  // contract as the per-fragment histograms.
+  const rawCombinedHistogram: [number, number][] = Array.from(
     histogramMap.entries(),
   )
     .map(([value, count]) => [value, count] as [number, number])
     .sort((a, b) => a[0] - b[0]);
+  const combinedHistogram = downsampleColumnHistogram(
+    rawCombinedHistogram,
+    200,
+  );
 
   // Calculate combined mean using sum/count (not average of means)
   const combinedMean = totalCount > 0 ? totalSum / totalCount : NaN;
