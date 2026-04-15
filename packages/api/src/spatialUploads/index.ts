@@ -345,8 +345,9 @@ export async function createDBRecordsForProcessedLayer(
               url,
               is_original,
               project_id,
-              original_filename
-            ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+              original_filename,
+              epsg
+            ) values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
           `,
       [
         dataSourceId,
@@ -358,6 +359,7 @@ export async function createDBRecordsForProcessedLayer(
         Boolean(output.isOriginal),
         projectId,
         layer.filename,
+        output.epsg ?? null,
       ],
     );
   }

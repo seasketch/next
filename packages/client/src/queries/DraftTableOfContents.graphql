@@ -271,6 +271,7 @@ fragment FullAdminSource on DataSource {
     filename
     createdAt
     isCustomUpload
+    epsg
   }
   changelog
   isConvertibleLegacySource

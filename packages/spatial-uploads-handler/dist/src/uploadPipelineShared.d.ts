@@ -25,6 +25,8 @@ export interface ResponseOutput {
     /** "normalized" outputs are all in a uniform projection and can be used to
      * created alternative export files in the future */
     isNormalizedOutput?: boolean;
+    /** EPSG code of the original file */
+    epsg?: number;
 }
 export interface ProcessedUploadLayer {
     name: string;

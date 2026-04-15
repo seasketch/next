@@ -25,7 +25,7 @@ async function processRasterUpload(options) {
         : null;
     let columnP = null;
     const originalPath = options.path;
-    const { ext, isCorrectProjection } = await validateInput(path, logger);
+    const { ext, isCorrectProjection, crs, epsg } = await validateInput(path);
     if (ext === ".nc") {
         const layerIdentifiers = await (0, netcdf_1.getLayerIdentifiers)(path, logger);
         if (layerIdentifiers.length > 0) {
@@ -38,6 +38,9 @@ async function processRasterUpload(options) {
     await updateProgress("running", "analyzing");
     // Get raster stats
     const stats = await (0, rasterInfoForBands_1.rasterInfoForBands)(path);
+    if (crs) {
+        stats.metadata = { ...(stats.metadata || {}), crs };
+    }
     if (enableAiDataAnalyst) {
         columnP = (0, aiUploadNotes_1.asNeverReject)((0, ai_data_analyst_1.generateColumnIntelligence)(uploadFilename, stats), "generateColumnIntelligence");
     }
@@ -78,6 +81,7 @@ async function processRasterUpload(options) {
         filename: `${originalName}${ext}`,
         isOriginal: true,
         isNormalizedOutput: path === originalPath,
+        ...(epsg != null ? { epsg } : {}),
     });
     // Add the EPSG:3857-warped file to outputs when reprojection occurred.
     if (path !== originalPath) {
@@ -126,7 +130,23 @@ async function processRasterUpload(options) {
         aiDataAnalystNotesPromise,
     };
 }
-async function validateInput(path, logger) {
+/**
+ * Numeric EPSG from GDAL only when the dataset advertises an EPSG authority ID.
+ * (Many CRSs use other authorities or lack a simple integer code.)
+ */
+function epsgFromSpatialReference(srs) {
+    const auth = srs.getAuthorityName();
+    const code = srs.getAuthorityCode();
+    if (!auth || code == null || String(code).trim() === "") {
+        return null;
+    }
+    if (auth.toUpperCase() !== "EPSG") {
+        return null;
+    }
+    const n = parseInt(String(code), 10);
+    return Number.isFinite(n) ? n : null;
+}
+async function validateInput(path) {
     let { ext } = (0, path_1.parse)(path);
     // Use rasterio to see if it is a supported file format
     const isTif = ext === ".tif" || ext === ".tiff";
@@ -145,6 +165,7 @@ async function validateInput(path, logger) {
         crs: ds.srs
             ? `${ds.srs.getAuthorityName()}:${ds.srs.getAuthorityCode()}`
             : null,
+        epsg: ds.srs ? epsgFromSpatialReference(ds.srs) : null,
         ext,
     };
 }

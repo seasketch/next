@@ -94,20 +94,26 @@ export default function HostedLayerInfo({
         <SettingsDLListItem
           term={"Uploaded File"}
           description={
-            <div className="truncate">
-              <button
-                type="button"
-                className="text-primary-500 underline bg-transparent border-none p-0 cursor-pointer font-inherit text-left"
-                onClick={() =>
-                  downloadWithFilename(
-                    original.url,
-                    original.originalFilename ||
-                      filenameFromUrl(original.url)
-                  )
-                }
-              >
-                {original.originalFilename || original.url}
-              </button>
+            <div className="min-w-0 space-x-2 flex">
+              <span className="truncate">
+                <button
+                  type="button"
+                  className="text-primary-500 underline bg-transparent border-none p-0 cursor-pointer font-inherit text-left"
+                  onClick={() =>
+                    downloadWithFilename(
+                      original.url,
+                      original.originalFilename || filenameFromUrl(original.url)
+                    )
+                  }
+                >
+                  {original.originalFilename || original.url}
+                </button>
+              </span>
+              {original?.epsg && (
+                <span className="text-sm text-gray-600 truncate">
+                  {"EPSG:" + original.epsg}
+                </span>
+              )}
             </div>
           }
         />

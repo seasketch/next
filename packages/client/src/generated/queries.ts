@@ -20570,7 +20570,7 @@ export type FullAdminSourceFragment = (
     & Pick<Profile, 'userId' | 'affiliations' | 'email' | 'fullname' | 'nickname' | 'picture'>
   )>, outputs?: Maybe<Array<(
     { __typename?: 'DataUploadOutput' }
-    & Pick<DataUploadOutput, 'id' | 'isOriginal' | 'url' | 'type' | 'size' | 'originalFilename' | 'filename' | 'createdAt' | 'isCustomUpload'>
+    & Pick<DataUploadOutput, 'id' | 'isOriginal' | 'url' | 'type' | 'size' | 'originalFilename' | 'filename' | 'createdAt' | 'isCustomUpload' | 'epsg'>
   )>>, aiDataAnalystNote?: Maybe<(
     { __typename?: 'AiDataAnalystNote' }
     & Pick<AiDataAnalystNote, 'notes' | 'attribution' | 'bestLayerTitle' | 'chosenPresentationType' | 'chosenPresentationColumn' | 'customPalette' | 'errors' | 'interactivityType' | 'junkColumns' | 'labelsMinZoom' | 'bestCategoryColumn' | 'bestDateColumn' | 'bestGroupByColumn' | 'bestIdColumn' | 'bestLabelColumn' | 'bestNumericColumn' | 'bestPopupDescriptionColumn' | 'palette' | 'reversePalette' | 'showLabels' | 'valueSteps' | 'valueStepsN' | 'piiRedactedColumns'>
@@ -26598,6 +26598,7 @@ export const FullAdminSourceFragmentDoc = /*#__PURE__*/ gql`
     filename
     createdAt
     isCustomUpload
+    epsg
   }
   changelog
   isConvertibleLegacySource

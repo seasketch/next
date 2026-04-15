@@ -71,7 +71,7 @@ export async function processRasterUpload(options: {
   > | null = null;
   const originalPath = options.path;
 
-  const { ext, isCorrectProjection } = await validateInput(path, logger);
+  const { ext, isCorrectProjection, crs, epsg } = await validateInput(path);
 
   if (ext === ".nc") {
     const layerIdentifiers = await getLayerIdentifiers(path, logger);
@@ -89,6 +89,9 @@ export async function processRasterUpload(options: {
   await updateProgress("running", "analyzing");
   // Get raster stats
   const stats = await rasterInfoForBands(path);
+  if (crs) {
+    stats.metadata = { ...(stats.metadata || {}), crs };
+  }
 
   if (enableAiDataAnalyst) {
     columnP = asNeverReject(
@@ -141,6 +144,7 @@ export async function processRasterUpload(options: {
     filename: `${originalName}${ext}`,
     isOriginal: true,
     isNormalizedOutput: path === originalPath,
+    ...(epsg != null ? { epsg } : {}),
   });
 
   // Add the EPSG:3857-warped file to outputs when reprojection occurred.
@@ -219,7 +223,26 @@ export async function processRasterUpload(options: {
   };
 }
 
-async function validateInput(path: string, logger: Logger) {
+/**
+ * Numeric EPSG from GDAL only when the dataset advertises an EPSG authority ID.
+ * (Many CRSs use other authorities or lack a simple integer code.)
+ */
+function epsgFromSpatialReference(
+  srs: gdal.SpatialReference,
+): number | null {
+  const auth = srs.getAuthorityName();
+  const code = srs.getAuthorityCode();
+  if (!auth || code == null || String(code).trim() === "") {
+    return null;
+  }
+  if (auth.toUpperCase() !== "EPSG") {
+    return null;
+  }
+  const n = parseInt(String(code), 10);
+  return Number.isFinite(n) ? n : null;
+}
+
+async function validateInput(path: string) {
   let { ext } = parsePath(path);
 
   // Use rasterio to see if it is a supported file format
@@ -243,6 +266,7 @@ async function validateInput(path: string, logger: Logger) {
     crs: ds.srs
       ? `${ds.srs.getAuthorityName()}:${ds.srs.getAuthorityCode()}`
       : null,
+    epsg: ds.srs ? epsgFromSpatialReference(ds.srs) : null,
     ext,
   };
 }
