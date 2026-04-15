@@ -20,13 +20,13 @@
   },
   "scripts": {
     "start": "docker run -p 9000:8080 --env-file .env spatial-uploads-handler:latest",
-    "dev": "npx tsx watch server.ts",
+    "dev": "npx --yes tsx@4.19.3 watch server.ts",
     "build": "tsc -b",
     "watch": "tsc -b --watch",
     "build:container": "docker build -f Dockerfile .. -t spatial-uploads-handler:latest",
     "test": "jest",
     "deploy:pre": "npm run build",
-    "geostats": "npx tsx bin/geostats.ts"
+    "geostats": "npx --yes tsx@4.19.3 bin/geostats.ts"
   },
   "jest": {
     "testPathIgnorePatterns": [

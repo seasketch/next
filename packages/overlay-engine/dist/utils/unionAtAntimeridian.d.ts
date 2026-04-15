@@ -12,6 +12,6 @@ import { MultiPolygon, Polygon } from "geojson";
  * @param feature Polygon or MultiPolygon geojson feature
  * @returns Unioned feature
  */
-export declare function unionAtAntimeridian(feature: Feature<MultiPolygon | Polygon>): Feature<Polygon, import("geojson").GeoJsonProperties> | Feature<MultiPolygon, import("geojson").GeoJsonProperties>;
+export declare function unionAtAntimeridian(feature: Feature<MultiPolygon | Polygon>): Feature<MultiPolygon, import("geojson").GeoJsonProperties> | Feature<Polygon, import("geojson").GeoJsonProperties>;
 export declare function isPolygon(feature: Feature<Polygon | MultiPolygon>): feature is Feature<Polygon>;
 //# sourceMappingURL=unionAtAntimeridian.d.ts.map

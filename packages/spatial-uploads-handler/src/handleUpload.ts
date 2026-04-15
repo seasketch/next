@@ -8,7 +8,6 @@ import {
   SuggestedRasterPresentation,
 } from "@seasketch/geostats-types";
 import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
-import { SpatialUploadsHandlerRequest } from "../handler";
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 import { processVectorUpload } from "./processVectorUpload";
 import { processRasterUpload } from "./processRasterUpload";
@@ -19,69 +18,29 @@ import { getLayerIdentifiers } from "./formats/netcdf";
 import type { AiDataAnalystNotes } from "ai-data-analyst";
 import bytes = require("bytes");
 import sanitize = require("sanitize-filename");
+import {
+  MAX_OUTPUT_SIZE,
+  type ProcessedUploadLayer,
+  type ProcessedUploadResponse,
+  type ProgressUpdater,
+  type ResponseOutput,
+} from "./uploadPipelineShared";
 
-export { SpatialUploadsHandlerRequest };
+export type { SpatialUploadsHandlerRequest } from "./spatialUploadsHandlerTypes";
+
+export {
+  MAX_OUTPUT_SIZE,
+  MVT_THRESHOLD,
+} from "./uploadPipelineShared";
+export type {
+  ProcessedUploadLayer,
+  ProcessedUploadResponse,
+  ProgressUpdater,
+  ResponseOutput,
+  SupportedTypes,
+} from "./uploadPipelineShared";
 
 const DEBUG = process.env.DEBUG === "true";
-
-export type SupportedTypes =
-  | "GeoJSON"
-  | "FlatGeobuf"
-  | "ZippedShapefile"
-  | "GeoTIFF"
-  | "NetCDF";
-
-export interface ResponseOutput {
-  /** Remote location string as used in rclone */
-  remote: string;
-  filename: string;
-  /**
-   * Note, these should be kept in sync with the postgres data_upload_output_type enum
-   */
-  type:
-    | SupportedTypes
-    | "PMTiles"
-    // geotif may be converted to normalized png when processing gray -> rgb
-    | "PNG"
-    | "XMLMetadata";
-  /** URL of the tile service (or geojson if really small) */
-  url?: string;
-  /** in bytes */
-  size: number;
-  /** Original file uploaded by the user. Kept for export */
-  isOriginal?: boolean;
-  /** "normalized" outputs are all in a uniform projection and can be used to
-   * created alternative export files in the future */
-  isNormalizedOutput?: boolean;
-}
-
-export interface ProcessedUploadLayer {
-  name: string;
-  filename: string;
-  geostats: GeostatsLayer | RasterInfo | null;
-  outputs: ResponseOutput[];
-  bounds?: number[];
-  url: string;
-  isSingleBandRaster?: boolean;
-  aiDataAnalystNotes?: AiDataAnalystNotes;
-}
-
-export interface ProcessedUploadResponse {
-  logfile: string;
-  layers: ProcessedUploadLayer[];
-  error?: string;
-}
-
-// Create a tileset if flatgeobuf is > 100kb (~1mb geojson)
-export const MVT_THRESHOLD = 100_000;
-// Outputs should not exceed 1 GB
-export const MAX_OUTPUT_SIZE = bytes("6 GB") as number;
-
-export type ProgressUpdater = (
-  state: "running" | "complete" | "failed",
-  progressMessage: string,
-  progress?: number,
-) => Promise<void>;
 
 export default async function handleUpload(
   /** project_background_jobs uuid */

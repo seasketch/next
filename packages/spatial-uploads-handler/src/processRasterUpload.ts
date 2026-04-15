@@ -2,7 +2,7 @@ import {
   RasterInfo,
   SuggestedRasterPresentation,
 } from "@seasketch/geostats-types";
-import { ProgressUpdater, ResponseOutput } from "./handleUpload";
+import type { ProgressUpdater, ResponseOutput } from "./uploadPipelineShared";
 import { parse as parsePath, join as pathJoin } from "path";
 import { statSync } from "fs";
 import { rasterInfoForBands } from "./rasterInfoForBands";

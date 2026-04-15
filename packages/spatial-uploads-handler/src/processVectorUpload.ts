@@ -1,10 +1,10 @@
 import { GeostatsLayer, GeostatsMetadata } from "@seasketch/geostats-types";
 import {
   MVT_THRESHOLD,
-  ProgressUpdater,
-  ResponseOutput,
-  SupportedTypes,
-} from "./handleUpload";
+  type ProgressUpdater,
+  type ResponseOutput,
+  type SupportedTypes,
+} from "./uploadPipelineShared";
 import { parse as parsePath, join as pathJoin } from "path";
 import { readFileSync, statSync, existsSync } from "fs";
 import { geostatsForVectorLayers } from "./geostatsForVectorLayer";

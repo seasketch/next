@@ -2,7 +2,7 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = fromMarkdown;
 exports.processVectorUpload = processVectorUpload;
-const handleUpload_1 = require("./handleUpload");
+const uploadPipelineShared_1 = require("./uploadPipelineShared");
 const path_1 = require("path");
 const fs_1 = require("fs");
 const geostatsForVectorLayer_1 = require("./geostatsForVectorLayer");
@@ -328,9 +328,9 @@ async function processVectorUpload(options) {
     // Only convert to GeoJSON if the dataset is small. Otherwise we can convert
     // from the normalized fgb dynamically if someone wants to download it as
     // GeoJSON or shapefile.
-    const underThreshold = normalizedVectorFileSize <= handleUpload_1.MVT_THRESHOLD ||
+    const underThreshold = normalizedVectorFileSize <= uploadPipelineShared_1.MVT_THRESHOLD ||
         (originalOutput.type === "GeoJSON" &&
-            originalOutput.size <= handleUpload_1.MVT_THRESHOLD * 10);
+            originalOutput.size <= uploadPipelineShared_1.MVT_THRESHOLD * 10);
     if (underThreshold) {
         const geojsonPath = (0, path_1.join)(workingDirectory, jobId + ".geojson.json");
         await logger.exec([
@@ -360,7 +360,7 @@ async function processVectorUpload(options) {
         });
     }
     // If under MVT_THRESHOLD, create vector tiles
-    if (normalizedVectorFileSize >= handleUpload_1.MVT_THRESHOLD) {
+    if (normalizedVectorFileSize >= uploadPipelineShared_1.MVT_THRESHOLD) {
         // For some reason tippecanoe often converts numeric columns from fgb
         // to mixed and stringifies the values. To avoid that, detect numeric
         // columns using fiona (fio info) and then use the -T command to

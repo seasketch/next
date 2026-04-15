@@ -1,5 +1,5 @@
 import { GeostatsLayer } from "@seasketch/geostats-types";
-import { ProgressUpdater, ResponseOutput } from "./handleUpload";
+import { type ProgressUpdater, type ResponseOutput } from "./uploadPipelineShared";
 import { Logger } from "./logger";
 import { type AiDataAnalystNotes } from "ai-data-analyst";
 export default function fromMarkdown(md: string): any;

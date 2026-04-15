@@ -1,5 +1,5 @@
 import { RasterInfo } from "@seasketch/geostats-types";
-import { ProgressUpdater, ResponseOutput } from "./handleUpload";
+import type { ProgressUpdater, ResponseOutput } from "./uploadPipelineShared";
 import { Logger } from "./logger";
 import { type AiDataAnalystNotes } from "ai-data-analyst";
 export declare function processRasterUpload(options: {
