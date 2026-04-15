@@ -11,7 +11,7 @@ const lambda = new AWS.Lambda({
 
 export default async function preprocessSource(
   payload: { jobKey: string; repairInvalid?: boolean },
-  helpers: Helpers
+  helpers: Helpers,
 ) {
   const { jobKey, repairInvalid } = payload;
 
@@ -24,7 +24,7 @@ export default async function preprocessSource(
   await helpers.withPgClient(async (client) => {
     const existingJobQ = await client.query(
       `select job_key, state, data_source_id from source_processing_jobs where job_key = $1`,
-      [jobKey]
+      [jobKey],
     );
 
     const existingJob = existingJobQ?.rows?.[0];
@@ -33,7 +33,7 @@ export default async function preprocessSource(
       throw new Error(`Source processing job not found for jobKey: ${jobKey}`);
     } else if (existingJob.state !== "queued") {
       console.log(
-        `Source processing job is already in progress for jobKey: ${jobKey}`
+        `Source processing job is already in progress for jobKey: ${jobKey}`,
       );
       return;
     }
@@ -42,54 +42,79 @@ export default async function preprocessSource(
 
     const slugResults = await client.query(
       `select slug from projects where id = (select project_id from data_sources where id = $1)`,
-      [dataSourceId]
+      [dataSourceId],
     );
     const slug: string = slugResults.rows[0].slug;
 
     const typeResult = await client.query(
       `select type from data_sources where id = $1`,
-      [dataSourceId]
+      [dataSourceId],
     );
     const type: string = typeResult.rows[0].type;
 
-    // Determine the canonical source URL for this data source (prefer FlatGeobuf)
-    const sourceResult = await client.query(
-      type === "seasketch-raster"
-        ? `
-        select url
-        from data_upload_outputs
-        where 
-          data_source_id = $1 and 
-          type = 'GeoTIFF'
-        order by
-          case when is_original then 0 else 1 end
-        limit 1
-      `
-        : `
+    let sourceUrl: string | undefined;
+
+    if (type === "seasketch-raster") {
+      // Prefer the user's original GeoTIFF (native CRS). NetCDF uploads have no
+      // GeoTIFF row with is_original; then use the earliest derivative GeoTIFF.
+      const originalGeoTiff = await client.query<{
+        url: string;
+        epsg?: number;
+      }>(
+        `select url, epsg from data_upload_outputs
+         where data_source_id = $1 and type = 'GeoTIFF' and is_original = true
+         limit 1`,
+        [dataSourceId],
+      );
+      if (originalGeoTiff.rows.length > 0) {
+        console.log(
+          `Using original GeoTIFF for source URL: ${originalGeoTiff.rows[0].url}, EPSG: ${originalGeoTiff.rows[0].epsg}`,
+        );
+        sourceUrl = originalGeoTiff.rows[0].url;
+      } else {
+        const fallbackGeoTiff = await client.query<{ url: string }>(
+          `select url from data_upload_outputs
+           where data_source_id = $1 and type = 'GeoTIFF'
+           order by created_at asc
+           limit 1`,
+          [dataSourceId],
+        );
+        if (fallbackGeoTiff.rows.length > 0) {
+          sourceUrl = fallbackGeoTiff.rows[0].url;
+        }
+      }
+    } else {
+      const sourceResult = await client.query<{ url: string }>(
+        `
         select url
         from data_upload_outputs
         where data_source_id = $1
         order by case when type = 'FlatGeobuf' then 0 else 1 end
         limit 1
       `,
-      [dataSourceId]
-    );
+        [dataSourceId],
+      );
+      if (sourceResult.rows.length > 0) {
+        sourceUrl = sourceResult.rows[0].url;
+      }
+    }
 
-    if (sourceResult.rows.length === 0) {
+    if (!sourceUrl) {
       await client.query(
-        `update source_processing_jobs set state = 'error', error_message = 'Canonical source URL not found for dataSourceId: ${dataSourceId}' where job_key = $1`,
-        [jobKey]
+        `update source_processing_jobs set state = 'error', error_message = $2 where job_key = $1`,
+        [
+          jobKey,
+          `Preprocess source URL not found for dataSourceId: ${dataSourceId}`,
+        ],
       );
       await client.query(
         `update spatial_metrics set state = 'error', error_message = 'Source preprocessing failed.' where source_processing_job_dependency = $1`,
-        [jobKey]
+        [jobKey],
       );
       throw new Error(
-        `Canonical source URL not found for dataSourceId: ${dataSourceId}`
+        `Preprocess source URL not found for dataSourceId: ${dataSourceId}`,
       );
     }
-
-    const sourceUrl: string = sourceResult.rows[0].url as string;
 
     // Use appropriate extension based on data source type
     const extension = type === "seasketch-raster" ? ".tif" : ".fgb";
@@ -115,7 +140,7 @@ export default async function preprocessSource(
 
     await client.query(
       `update source_processing_jobs set state = 'processing' where job_key = $1`,
-      [jobKey]
+      [jobKey],
     );
   });
 }

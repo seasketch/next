@@ -84,15 +84,19 @@ async function processRasterUpload(options) {
         ...(epsg != null ? { epsg } : {}),
     });
     // Add the EPSG:3857-warped file to outputs when reprojection occurred.
+    // Use a distinct object key from `${jobId}${ext}` — the warped file lives at
+    // e.g. `…/jobId.warped.tif` locally but path.parse(...).ext is still `.tif`,
+    // so reusing `${jobId}.tif` would overwrite the native original in object storage.
     if (path !== originalPath) {
         const inputExt = (0, path_1.parse)(path).ext;
+        const reprojectedKey = `${jobId}-reprojected${inputExt}`;
         outputs.push({
             type: inputExt === ".tif" || inputExt === ".tiff" ? "GeoTIFF" : "PNG",
-            remote: `${process.env.RESOURCES_REMOTE}/${baseKey}/${jobId}${inputExt}`,
+            remote: `${process.env.RESOURCES_REMOTE}/${baseKey}/${reprojectedKey}`,
             local: path,
             size: (0, fs_1.statSync)(path).size,
-            url: `${process.env.UPLOADS_BASE_URL}/${baseKey}/${jobId}${inputExt}`,
-            filename: `${jobId}${inputExt}`,
+            url: `${process.env.UPLOADS_BASE_URL}/${baseKey}/${reprojectedKey}`,
+            filename: reprojectedKey,
             isNormalizedOutput: true,
         });
     }

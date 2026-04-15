@@ -87,6 +87,8 @@ export default function HostedLayerInfo({
       new Date(metadata.createdAt).getTime() -
         new Date(original?.createdAt || 0).getTime()
     ) > 1000;
+  const isRasterLayer =
+    source.geostats != null && isRasterInfo(source.geostats);
 
   return (
     <>
@@ -201,22 +203,41 @@ export default function HostedLayerInfo({
                   >
                     <div className="text-sm">
                       <h5 className="font-medium">{t("Assets")}</h5>
-                      {(source.outputs || []).map((output) => (
-                        <div className="flex items-center" key={output.id}>
-                          <span className="w-36">
-                            {humanizeOutputType(output.type)}{" "}
-                            {output.isOriginal ? "(" + t("original") + ")" : ""}
-                            {output.isCustomUpload
-                              ? "(" + t("custom") + ")"
-                              : ""}
-                          </span>
-                          <span className="text-gray-500">
-                            {bytes(parseInt(output.size), {
-                              unitSeparator: " ",
-                            })}{" "}
-                          </span>
-                        </div>
-                      ))}
+                      {(source.outputs || []).map((output) => {
+                        const showEpsg =
+                          isRasterLayer &&
+                          output.epsg != null &&
+                          Number.isFinite(output.epsg);
+                        return (
+                          <div
+                            className="flex items-center justify-between gap-2"
+                            key={output.id}
+                          >
+                            <span className="w-36 shrink-0">
+                              {humanizeOutputType(output.type)}{" "}
+                              {output.isOriginal
+                                ? "(" + t("original") + ")"
+                                : ""}
+                              {output.isCustomUpload
+                                ? "(" + t("custom") + ")"
+                                : ""}
+                            </span>
+                            <span className="text-gray-500 text-right shrink-0">
+                              {showEpsg ? (
+                                <span className="mr-2 inline-flex items-center rounded-full border border-gray-200 bg-gray-100 px-2 py-0.5 text-[11px] font-medium tabular-nums leading-none text-gray-700">
+                                  {
+                                    // eslint-disable-next-line i18next/no-literal-string
+                                    `EPSG:${output.epsg}`
+                                  }
+                                </span>
+                              ) : null}
+                              {bytes(parseInt(output.size), {
+                                unitSeparator: " ",
+                              })}
+                            </span>
+                          </div>
+                        );
+                      })}
                     </div>
                     <Tooltip.Arrow className="TooltipArrow" />
                   </Tooltip.Content>
