@@ -83,11 +83,8 @@ function breaksToBuckets(max, breaks, values, fraction = false) {
 }
 /**
  * Combines RasterBandStats from multiple fragments into a single RasterBandStats.
- * This function correctly weights mean values by count (or equivalently, uses sum/count)
- * to produce accurate aggregate statistics when fragments have different areas.
- *
- * For example, if fragment 1 has mean=5 and count=100, and fragment 2 has mean=20 and count=25,
- * the combined mean should be (5*100 + 20*25) / (100+25) = 1000/125 = 8, not (5+20)/2 = 12.5.
+ * Sums `count`, `sum`, and `invalid` across fragments; combined mean is `sum / count`.
+ * Min/max are the extrema across fragments; histograms are merged and downsampled.
  *
  * @param statsArray - Array of RasterBandStats from different fragments
  * @returns Combined RasterBandStats, or undefined if the array is empty
@@ -109,15 +106,8 @@ function combineRasterBandStats(statsArray) {
     const histogramMap = new Map();
     for (const stats of statsArray) {
         totalCount += stats.count;
-        // Use mean*count rather than stats.sum to accumulate the weighted sum.
-        // Geoblaze's mean and count are both impacted consistently by VRM
-        // resampling, so mean*count is the correct area-weighted sum for each
-        // fragment. stats.sum is computed via a different path and is not
-        // consistent with mean or count, producing a combined mean far below
-        // the true value when using stats.sum directly.
-        // Guard against NaN for zero-intersection fragments (count=0, mean=NaN).
-        if (isFinite(stats.mean) && stats.count > 0) {
-            totalSum += stats.mean * stats.count;
+        if (isFinite(stats.sum)) {
+            totalSum += stats.sum;
         }
         totalInvalid += stats.invalid;
         if (isFinite(stats.min) && stats.min !== null) {

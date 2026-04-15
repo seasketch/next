@@ -158,11 +158,8 @@ export declare function subjectIsGeography(subject: any | MetricSubjectFragment 
 export type SourceType = "FlatGeobuf" | "GeoJSON" | "GeoTIFF";
 /**
  * Combines RasterBandStats from multiple fragments into a single RasterBandStats.
- * This function correctly weights mean values by count (or equivalently, uses sum/count)
- * to produce accurate aggregate statistics when fragments have different areas.
- *
- * For example, if fragment 1 has mean=5 and count=100, and fragment 2 has mean=20 and count=25,
- * the combined mean should be (5*100 + 20*25) / (100+25) = 1000/125 = 8, not (5+20)/2 = 12.5.
+ * Sums `count`, `sum`, and `invalid` across fragments; combined mean is `sum / count`.
+ * Min/max are the extrema across fragments; histograms are merged and downsampled.
  *
  * @param statsArray - Array of RasterBandStats from different fragments
  * @returns Combined RasterBandStats, or undefined if the array is empty
