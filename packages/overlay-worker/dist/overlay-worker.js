@@ -52,11 +52,13 @@ const OverlayEngineBatchProcessor_1 = require("overlay-engine/src/OverlayEngineB
 const simplify_1 = __importDefault(require("@turf/simplify"));
 const buffer_1 = __importDefault(require("@turf/buffer"));
 const helpers_1 = require("overlay-engine/src/utils/helpers");
-const reproject_1 = require("overlay-engine/src/utils/reproject");
 const containerIndex_1 = require("overlay-engine/src/utils/containerIndex");
 const cql2_1 = require("overlay-engine/src/cql2");
 const polygonClipping_1 = require("overlay-engine/src/utils/polygonClipping");
 const clipping = __importStar(require("polyclip-ts"));
+const reproject_1 = require("./utils/reproject");
+const bbox_1 = __importDefault(require("@turf/bbox"));
+const area_1 = __importDefault(require("@turf/area"));
 const SIMPLIFICATION_TOLERANCE = 0.000018;
 const pool = new undici_1.Pool(`https://uploads.seasketch.org`, {
     // 10 second timeout for body
@@ -203,11 +205,8 @@ async function handler(payload) {
                 if (!payload.sourceUrl) {
                     throw new Error("sourceUrl is required for raster_stats");
                 }
-                if (!payload.epsg) {
+                if (!payload.epsg || typeof payload.epsg !== "number") {
                     throw new Error("epsg is required for raster_stats");
-                }
-                if (payload.epsg !== 6933) {
-                    throw new Error(`Support for projection EPSG:${payload.epsg} not implemented in worker.`);
                 }
                 let { intersectionFeature, differenceSources } = await subjectsForAnalysis(payload.subject, helpers);
                 const originalLength = JSON.stringify(intersectionFeature, null, 2).length;
@@ -218,8 +217,26 @@ async function handler(payload) {
                     intersectionFeature = await buildCompleteGeographyMultiPolygon(intersectionFeature, differenceSources);
                     console.log("built complete geography multipolygon", originalLength, JSON.stringify(intersectionFeature, null, 2).length);
                 }
-                const f = (0, reproject_1.reprojectFeatureTo6933)(intersectionFeature);
-                const result = await (0, overlay_engine_1.calculateRasterStats)(payload.sourceUrl, f);
+                // Resolve effective VRM: use payload.vrm if explicitly set; otherwise
+                // default to false for geography subjects (to avoid array-size errors)
+                // and 'auto' for fragment subjects.
+                const resolvedVrm = payload.vrm !== undefined
+                    ? payload.vrm
+                    : subjectIsGeography(payload.subject)
+                        ? false
+                        : "auto";
+                // Capture WGS84-derived hints for VRM before reprojecting.
+                const wgs84BBox = (0, bbox_1.default)(intersectionFeature, { recompute: true });
+                const centerLonLat = [
+                    (wgs84BBox[0] + wgs84BBox[2]) / 2,
+                    (wgs84BBox[1] + wgs84BBox[3]) / 2,
+                ];
+                const fragmentAreaSqM = (0, area_1.default)(intersectionFeature);
+                // Reproject the feature into the raster's native CRS before passing
+                // to calculateRasterStats (which no longer owns reprojection, keeping
+                // epsg-index out of the overlay-engine bundle).
+                const projectedFeature = (0, reproject_1.reproject)(intersectionFeature, payload.epsg);
+                const result = await (0, overlay_engine_1.calculateRasterStats)(payload.sourceUrl, projectedFeature, { vrm: resolvedVrm, centerLonLat, fragmentAreaSqM });
                 await (0, messaging_1.flushMessages)();
                 await (0, messaging_1.sendResultMessage)(payload.jobKey, result, payload.queueUrl, Date.now() - startTime);
                 return;

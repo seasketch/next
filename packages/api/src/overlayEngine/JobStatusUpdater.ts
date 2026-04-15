@@ -9,6 +9,21 @@ import {
 import { Pool } from "pg";
 import { debounce } from "lodash";
 import colors from "yoctocolors-cjs";
+// Cache of EPSG validity checks — avoids re-requiring the same file and
+// never loads the full 6 MB all.json.  Each individual s/<code>.json is ~512 B.
+const _epsgKnownCache = new Map<number, boolean>();
+function isKnownEpsg(epsg: number): boolean {
+  if (_epsgKnownCache.has(epsg)) return _epsgKnownCache.get(epsg)!;
+  let known = false;
+  try {
+    require(`epsg-index/s/${epsg}.json`);
+    known = true;
+  } catch {
+    known = false;
+  }
+  _epsgKnownCache.set(epsg, known);
+  return known;
+}
 
 export type MessageWithReceipt = OverlayEngineWorkerMessage & {
   receiptHandle?: string;
@@ -239,6 +254,36 @@ export class JobStatusUpdater {
             const wasRepaired = result.wasRepaired ?? null;
             const containsOverlappingFeatures =
               result.containsOverlappingFeatures ?? null;
+
+            // Secondary EPSG validation for raster COGs: verify that the
+            // EPSG code reported by the subdivision worker is recognised by
+            // epsg-index (the same library used for reprojection at calculation
+            // time).  Vector FlatGeobuf outputs skip this check.
+            const isCog = !(result.object.key || "").endsWith(".fgb");
+            if (isCog && epsg != null) {
+              if (!isKnownEpsg(epsg)) {
+                await this.pgPool.query(
+                  `UPDATE source_processing_jobs
+                     SET state = 'error',
+                         error_message = $1,
+                         updated_at = now(),
+                         completed_at = now(),
+                         duration = now() - started_at
+                   WHERE job_key = $2`,
+                  [
+                    `Unsupported projection EPSG:${epsg}. Re-upload the raster in a recognised coordinate system.`,
+                    message.jobKey,
+                  ]
+                );
+                console.error(
+                  `Unrecognised EPSG code ${epsg} for job ${message.jobKey}; marking job as error.`
+                );
+                delete this.messageQueue[message.jobKey];
+                this.queueMessageForAcknowledgement(message);
+                continue;
+              }
+            }
+
             await this.pgPool.query(
               `insert into data_upload_outputs (data_source_id, type, remote, size, filename, url, is_original, project_id, original_filename, source_processing_job_key, epsg, num_invalid_features, num_features, num_repaired_features, was_repaired, contains_overlapping_features)
                values ($1, $9, $2, $3, $4, $5, false, $6, $4, $7, $8, $10, $11, $12, $13, $14)

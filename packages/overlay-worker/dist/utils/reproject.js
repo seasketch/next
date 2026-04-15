@@ -1,10 +1,12 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.reprojectFeatureTo6933 = reprojectFeatureTo6933;
-const proj4 = require("proj4");
-const WGS84 = "EPSG:4326";
-proj4.defs("EPSG:6933", "+proj=cea +lat_ts=30 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs");
-const to6933 = proj4(WGS84, "EPSG:6933");
+exports.reproject = reproject;
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const transformation = require("transform-coordinates");
+/**
+ * Reproject a single GeoJSON geometry in-place.
+ * Handles Point, LineString, Polygon, Multi* and GeometryCollection.
+ */
 function reprojectGeometry(geom, transform) {
     // @ts-ignore
     const t = ([x, y]) => transform.forward([x, y]);
@@ -37,21 +39,41 @@ function reprojectGeometry(geom, transform) {
     return geom;
 }
 /**
- * Reproject a GeoJSON Feature with Polygon geometry to EPSG:6933.
- * Used by overlay-engine tests and spatial-processing code that operates on
- * 6933-projected features.  For general reprojection in the overlay Lambda
- * worker, use `reprojectFeatureTo` from `overlay-worker/src/utils/reproject`.
+ * Reproject a WGS84 (EPSG:4326) GeoJSON Feature to any target EPSG code.
+ *
+ * Uses `transform-coordinates` (proj4 + epsg-index glue) so this function
+ * lives in overlay-worker rather than overlay-engine, keeping the 6 MB
+ * epsg-index JSON out of the client bundle.
+ *
+ * @param feature     Input feature in WGS84 (EPSG:4326).
+ * @param targetEpsg  Numeric EPSG code of the target CRS.
+ * @throws {Error}    If the EPSG code is not found in epsg-index.
  */
-function reprojectFeatureTo6933(feature) {
+function reproject(feature, targetEpsg) {
     if (feature.type !== "Feature") {
         throw new Error("Expected a GeoJSON Feature");
+    }
+    if (targetEpsg === 4326) {
+        return {
+            type: "Feature",
+            properties: feature.properties || {},
+            geometry: JSON.parse(JSON.stringify(feature.geometry)),
+        };
+    }
+    let transform;
+    try {
+        transform = transformation(`EPSG:4326`, `EPSG:${targetEpsg}`);
+    }
+    catch (_a) {
+        throw new Error(`EPSG:${targetEpsg} not found in epsg-index. ` +
+            "Re-upload the raster in a recognised coordinate system.");
     }
     const out = {
         type: "Feature",
         properties: feature.properties || {},
         geometry: JSON.parse(JSON.stringify(feature.geometry)),
     };
-    reprojectGeometry(out.geometry, to6933);
+    reprojectGeometry(out.geometry, transform);
     return out;
 }
 //# sourceMappingURL=reproject.js.map

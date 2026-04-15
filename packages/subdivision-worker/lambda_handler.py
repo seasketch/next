@@ -471,7 +471,7 @@ def handler(event, context):
             if is_raster:
                 # Route to raster processor for GeoTIFF -> COG conversion
                 print("Detected raster file, routing to raster processor")
-                process_raster(input_path, output_path, progress_callback=_overall_progress)
+                source_epsg = process_raster(input_path, output_path, progress_callback=_overall_progress)
             else:
                 # Open file to detect geometry type
                 with fiona.open(input_path, "r") as src:
@@ -530,7 +530,7 @@ def handler(event, context):
                 try:
                     notifier.notify(100, "Complete")
                     if is_raster:
-                        upload_result["epsg"] = 6933
+                        upload_result["epsg"] = source_epsg
 
                     result_payload: Dict[str, Any] = {"object": upload_result}
                     if processing_stats:

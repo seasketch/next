@@ -17,7 +17,20 @@ import {
 } from "../../src/utils/helpers";
 import { compareResults } from "./compareResults";
 import simplify from "@turf/simplify";
-import { reprojectFeatureTo6933 } from "../../src/utils/reproject";
+const _proj4 = require("proj4");
+_proj4.defs(
+  "EPSG:6933",
+  "+proj=cea +lat_ts=30 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs"
+);
+const _to6933 = _proj4("EPSG:4326", "EPSG:6933");
+function reprojectFeatureTo6933(feature: any) {
+  function rc(c: any[]): any[] {
+    return typeof c[0] === "number" ? _to6933.forward(c) : c.map(rc);
+  }
+  const geom = JSON.parse(JSON.stringify(feature.geometry));
+  geom.coordinates = rc(geom.coordinates);
+  return { ...feature, geometry: geom };
+}
 import { calculateRasterStats } from "../../src/rasterStats";
 
 // const writer = new DebuggingFgbWriter("./classified-features.fgb", [

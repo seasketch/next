@@ -4,9 +4,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.groundPixelDimensionsMeters = groundPixelDimensionsMeters;
-exports.needsVirtualResamplingForGroundResolution = needsVirtualResamplingForGroundResolution;
-exports.vrmFromGroundPixelDimensions = vrmFromGroundPixelDimensions;
-exports.vrmForTargetGroundResolution = vrmForTargetGroundResolution;
+exports.resolveVrm = resolveVrm;
 exports.downsampleHistogram = downsampleHistogram;
 exports.calculateRasterStats = calculateRasterStats;
 const distance_1 = __importDefault(require("@turf/distance"));
@@ -27,13 +25,11 @@ function logRasterStatsVerbose(message, data) {
         console.log(`[rasterStats] ${message}`);
     }
 }
-/** Target sub-cell size for virtual resampling (~10 m on the ground). */
-const TARGET_GROUND_SAMPLE_METERS = 50;
 /**
- * Upper bound per axis to avoid pathological work when rasters are extremely coarse.
- * At the cap, effective ground resolution may be coarser than TARGET_GROUND_SAMPLE_METERS.
+ * Per-axis cap for VRM to prevent geoblaze from allocating pathologically
+ * large arrays (new Array(height * yVrm)).
  */
-const MAX_VRM_PER_AXIS = 20;
+const MAX_VRM_PER_AXIS = 100;
 /**
  * Geodesic length in meters of one raster pixel in X and Y at `centerLonLat`, using
  * COG/georaster metadata (pixelWidth/Height in CRS units + EPSG from GeoKeys).
@@ -69,46 +65,32 @@ function groundPixelDimensionsMeters(raster, centerLonLat) {
     return { mX, mY };
 }
 /**
- * True when native pixels are **coarser** than {@link TARGET_GROUND_SAMPLE_METERS} on the ground
- * on either axis (so virtual resampling is needed).
+ * Resolve the VRM value to apply given user options and fragment area.
+ *
+ * - `false`   → VRM disabled; returns null.
+ * - `number`  → explicit value; expands to [n, n] (min 1).
+ * - `'auto'`  → targets ~100 m virtual grid cells. Returns [1, 1] when
+ *               native pixels are already finer than 100 m.
+ *               Hard per-axis cap: MAX_VRM_PER_AXIS.
  */
-function needsVirtualResamplingForGroundResolution(dims) {
-    if (!Number.isFinite(dims.mX) ||
-        !Number.isFinite(dims.mY) ||
-        dims.mX <= 0 ||
-        dims.mY <= 0) {
-        return false;
+function resolveVrm(vrmOpt, fragmentAreaSqM, groundDims) {
+    if (vrmOpt === false)
+        return null;
+    if (typeof vrmOpt === "number") {
+        const v = Math.max(1, Math.round(vrmOpt));
+        return [v, v];
     }
-    return (dims.mX > TARGET_GROUND_SAMPLE_METERS ||
-        dims.mY > TARGET_GROUND_SAMPLE_METERS);
-}
-/**
- * VRM so that virtually subdivided cells are about {@link TARGET_GROUND_SAMPLE_METERS}
- * on a side. See [geoblaze stats / vrm](https://docs.geoblaze.io/#stats).
- */
-function vrmFromGroundPixelDimensions(dims) {
-    if (!Number.isFinite(dims.mX) ||
-        !Number.isFinite(dims.mY) ||
-        dims.mX <= 0 ||
-        dims.mY <= 0) {
+    // 'auto': upsample until virtual pixels are ~100 m on each axis
+    const targetMeters = 100;
+    if (!Number.isFinite(groundDims.mX) ||
+        !Number.isFinite(groundDims.mY) ||
+        groundDims.mX <= 0 ||
+        groundDims.mY <= 0) {
         return [1, 1];
     }
-    const vx = Math.min(MAX_VRM_PER_AXIS, Math.max(1, Math.ceil(dims.mX / TARGET_GROUND_SAMPLE_METERS)));
-    const vy = Math.min(MAX_VRM_PER_AXIS, Math.max(1, Math.ceil(dims.mY / TARGET_GROUND_SAMPLE_METERS)));
+    const vx = Math.min(MAX_VRM_PER_AXIS, Math.max(1, Math.ceil(groundDims.mX / targetMeters)));
+    const vy = Math.min(MAX_VRM_PER_AXIS, Math.max(1, Math.ceil(groundDims.mY / targetMeters)));
     return [vx, vy];
-}
-function isSafeVrmForGeoblaze(vrm) {
-    const [a, b] = vrm;
-    return (Number.isInteger(a) &&
-        Number.isInteger(b) &&
-        a >= 1 &&
-        b >= 1 &&
-        a <= MAX_VRM_PER_AXIS &&
-        b <= MAX_VRM_PER_AXIS);
-}
-/** Convenience: ground size → VRM (use when you always pass `vrm` to geoblaze). */
-function vrmForTargetGroundResolution(raster, centerLonLat) {
-    return vrmFromGroundPixelDimensions(groundPixelDimensionsMeters(raster, centerLonLat));
 }
 function downsampleHistogram(histogram, maxEntries) {
     if (histogram.length === 0 || histogram.length <= maxEntries) {
@@ -151,7 +133,29 @@ function getGeoblaze() {
     }
     return _geoblaze;
 }
-async function calculateRasterStats(sourceUrl, feature) {
+/**
+ * Calculate raster statistics for a feature that has already been reprojected
+ * into the raster's native CRS.
+ *
+ * Reprojection is the caller's responsibility so that this function — and by
+ * extension overlay-engine — does not need to bundle epsg-index (6 MB).
+ *
+ * @param sourceUrl  URL of the COG.
+ * @param feature    Feature already projected into the raster's native CRS.
+ * @param options.vrm
+ *   - `false`  → disable VRM (recommended for large geography subjects).
+ *   - `'auto'` (default) → fragment-size-aware dynamic VRM.
+ *   - `number` → explicit VRM value, applied as [n, n].
+ * @param options.centerLonLat
+ *   WGS84 [lon, lat] of the sketch fragment centre.  Used for accurate
+ *   ground-pixel-size measurement in the auto-VRM calculation.  When omitted
+ *   the VRM defaults to [1, 1] (no upsampling).
+ * @param options.fragmentAreaSqM
+ *   Area of the original WGS84 feature in square metres.  Used by auto-VRM
+ *   to size virtual pixels relative to the fragment.  When omitted alongside
+ *   centerLonLat the VRM defaults to [1, 1].
+ */
+async function calculateRasterStats(sourceUrl, feature, options) {
     const geoblaze = getGeoblaze();
     try {
         const raster = await geoblaze.parse(sourceUrl);
@@ -164,8 +168,6 @@ async function calculateRasterStats(sourceUrl, feature) {
                 rasterBBox,
                 rasterSize: { width: raster.width, height: raster.height },
             });
-            // Without this check we just get errors like this:
-            // Cannot read properties of undefined (reading 'vrm')
             return {
                 bands: [
                     {
@@ -178,27 +180,27 @@ async function calculateRasterStats(sourceUrl, feature) {
                         histogram: [],
                         invalid: 0,
                         sum: 0,
+                        vrm: null,
                     },
                 ],
             };
         }
-        // GeoJSON bbox is WGS84; rasterBBox is in the raster CRS — do not mix them.
-        // Representative location for ground-distance → VRM: center of the sketch fragment.
-        const centerLonLat = [
-            (featureBBox[0] + featureBBox[2]) / 2,
-            (featureBBox[1] + featureBBox[3]) / 2,
-        ];
-        const groundDims = groundPixelDimensionsMeters(raster, centerLonLat);
-        const wantVrm = needsVirtualResamplingForGroundResolution(groundDims);
-        const vrmCandidate = wantVrm
-            ? vrmFromGroundPixelDimensions(groundDims)
-            : null;
-        const statsExtra = wantVrm && vrmCandidate && isSafeVrmForGeoblaze(vrmCandidate)
-            ? { vrm: vrmCandidate, rescale: true }
+        // Resolve VRM. centerLonLat and fragmentAreaSqM are optional; if not
+        // provided the auto calculation falls back to [1, 1] (no upsampling).
+        const centerLonLat = options?.centerLonLat;
+        const fragmentAreaSqM = options?.fragmentAreaSqM ?? 0;
+        const groundDims = centerLonLat != null
+            ? groundPixelDimensionsMeters(raster, centerLonLat)
+            : { mX: 0, mY: 0 };
+        const vrmOpt = options?.vrm ?? "auto";
+        const resolvedVrm = resolveVrm(vrmOpt, fragmentAreaSqM, groundDims);
+        const statsExtra = resolvedVrm != null
+            ? { vrm: resolvedVrm, rescale: true }
             : undefined;
         logRasterStatsVerbose("geoblaze.stats input summary", {
             sourceUrl,
             centerLonLat,
+            fragmentAreaSqM,
             featureBBox,
             raster: {
                 width: raster.width,
@@ -212,11 +214,8 @@ async function calculateRasterStats(sourceUrl, feature) {
                 ymax: raster.ymax,
             },
             groundDimsMeters: groundDims,
-            targetGroundSampleMeters: TARGET_GROUND_SAMPLE_METERS,
-            maxVrmPerAxis: MAX_VRM_PER_AXIS,
-            wantVrm,
-            vrmCandidate,
-            vrmPassesSafetyCheck: vrmCandidate != null && isSafeVrmForGeoblaze(vrmCandidate),
+            vrmOption: vrmOpt,
+            resolvedVrm,
             statsExtra: statsExtra ?? null,
         });
         const stats = await geoblaze.stats(raster, feature, {
@@ -259,6 +258,7 @@ async function calculateRasterStats(sourceUrl, feature) {
                     histogram,
                     invalid: stat.invalid,
                     sum: stat.sum,
+                    vrm: resolvedVrm,
                 };
             }),
         };
@@ -281,6 +281,7 @@ async function calculateRasterStats(sourceUrl, feature) {
                         histogram: [],
                         invalid: 0,
                         sum: 0,
+                        vrm: null,
                     },
                 ],
             };

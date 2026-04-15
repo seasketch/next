@@ -244,6 +244,12 @@ export default function ReportMetricsProgressDetails({
                           {attribution.sourceTypeLabel}
                         </span>
                       )}
+                      {layer.output?.epsg && (
+                        // eslint-disable-next-line i18next/no-literal-string
+                        <span className="flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
+                          EPSG:{layer.output.epsg}
+                        </span>
+                      )}
                     </span>
                     <span className="flex-shrink-0 ml-auto flex items-center">
                       <ReportTaskLineItem

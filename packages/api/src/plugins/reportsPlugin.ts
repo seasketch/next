@@ -66,6 +66,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         maxResults: Int
         maxDistanceKm: Float
         sourceHasOverlappingFeatures: Boolean
+        vrm: String
       }
 
       type CompatibleSpatialMetric {

@@ -43,11 +43,13 @@ import {
   GuaranteedOverlayWorkerHelpers,
   guaranteeHelpers,
 } from "overlay-engine/src/utils/helpers";
-import { reprojectFeatureTo6933 } from "overlay-engine/src/utils/reproject";
 import { ContainerIndex } from "overlay-engine/src/utils/containerIndex";
 import { evaluateCql2JSONQuery } from "overlay-engine/src/cql2";
 import { union } from "overlay-engine/src/utils/polygonClipping";
 import * as clipping from "polyclip-ts";
+import { reproject } from "./utils/reproject";
+import calcBBox from "@turf/bbox";
+import area from "@turf/area";
 
 const SIMPLIFICATION_TOLERANCE = 0.000018;
 
@@ -282,13 +284,8 @@ export default async function handler(payload: OverlayWorkerPayload) {
         if (!payload.sourceUrl) {
           throw new Error("sourceUrl is required for raster_stats");
         }
-        if (!payload.epsg) {
+        if (!payload.epsg || typeof payload.epsg !== "number") {
           throw new Error("epsg is required for raster_stats");
-        }
-        if (payload.epsg !== 6933) {
-          throw new Error(
-            `Support for projection EPSG:${payload.epsg} not implemented in worker.`,
-          );
         }
         let { intersectionFeature, differenceSources } =
           await subjectsForAnalysis(
@@ -314,8 +311,34 @@ export default async function handler(payload: OverlayWorkerPayload) {
             JSON.stringify(intersectionFeature, null, 2).length,
           );
         }
-        const f = reprojectFeatureTo6933(intersectionFeature);
-        const result = await calculateRasterStats(payload.sourceUrl, f);
+        // Resolve effective VRM: use payload.vrm if explicitly set; otherwise
+        // default to false for geography subjects (to avoid array-size errors)
+        // and 'auto' for fragment subjects.
+        const resolvedVrm: false | "auto" | number =
+          payload.vrm !== undefined
+            ? payload.vrm
+            : subjectIsGeography(payload.subject)
+              ? false
+              : "auto";
+
+        // Capture WGS84-derived hints for VRM before reprojecting.
+        const wgs84BBox = calcBBox(intersectionFeature, { recompute: true });
+        const centerLonLat: [number, number] = [
+          (wgs84BBox[0] + wgs84BBox[2]) / 2,
+          (wgs84BBox[1] + wgs84BBox[3]) / 2,
+        ];
+        const fragmentAreaSqM = area(intersectionFeature);
+
+        // Reproject the feature into the raster's native CRS before passing
+        // to calculateRasterStats (which no longer owns reprojection, keeping
+        // epsg-index out of the overlay-engine bundle).
+        const projectedFeature = reproject(intersectionFeature, payload.epsg);
+
+        const result = await calculateRasterStats(
+          payload.sourceUrl,
+          projectedFeature,
+          { vrm: resolvedVrm, centerLonLat, fragmentAreaSqM },
+        );
         await flushMessages();
         await sendResultMessage(
           payload.jobKey,

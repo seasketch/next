@@ -36,6 +36,7 @@ Rules:
   - Some columns will be redacted to avoid transmitting PII to 3rd party LLMs. Don't put them in junk_columns. You can use them for your recommendations if you want, but they will not include sample values.
   - In your notes, don't call columns "junk". Be professional.
   - If you see bathymetry data (raster or polygons), use a blue color scheme to represent water at different depths.
+  - A GFW acronym likely means Global Fishing Watch data. I like to use interpolatePlasma for GFW effort data.
 `;
 exports.columnIntelligenceParameters = {
     // Cloudflare AI Gateway compat expects `{provider}/{model}` (e.g. openai/gpt-5-mini).

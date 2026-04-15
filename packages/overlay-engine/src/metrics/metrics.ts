@@ -202,6 +202,9 @@ export type RasterBandStats = {
   // count of no-data and invalid values
   invalid: number;
   sum: number;
+  /** The [xVrm, yVrm] virtual-resampling factor applied during this calculation,
+   *  or null when VRM was disabled. Stored for diagnostic/audit purposes. */
+  vrm?: [number, number] | null;
 };
 
 /**
@@ -623,6 +626,15 @@ export type MetricDependencyParameters = {
    * @default false
    */
   sourceHasOverlappingFeatures?: boolean;
+  /**
+   * The vrm parameter is used to specify the virtual resampling factor to use for raster_stats metrics.
+   * If "auto", the virtual resampling factor will be determined automatically based on the ground sample distance of the raster.
+   * If false, the virtual resampling factor will be set to 1.
+   * If a number, the virtual resampling factor will be set to the number.
+   *
+   * @default "auto" for fragment stats, false for geography stats
+   */
+  vrm?: false | "auto" | number;
 };
 
 /**
