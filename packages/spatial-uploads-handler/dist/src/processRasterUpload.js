@@ -64,7 +64,7 @@ async function processRasterUpload(options) {
         ], "Problem reprojecting raster", 2 / 30);
         path = warpedPath;
     }
-    // Add original file to outputs
+    // Add original file to outputs (always the pre-warp file in its native CRS).
     outputs.push({
         type: ext === ".tif" || ext === ".tiff"
             ? "GeoTIFF"
@@ -72,14 +72,14 @@ async function processRasterUpload(options) {
                 ? "NetCDF"
                 : "PNG",
         remote: `${process.env.RESOURCES_REMOTE}/${baseKey}/${jobId}${ext}`,
-        local: path,
-        size: (0, fs_1.statSync)(path).size,
+        local: originalPath,
+        size: (0, fs_1.statSync)(originalPath).size,
         url: `${process.env.UPLOADS_BASE_URL}/${baseKey}/${jobId}${ext}`,
         filename: `${originalName}${ext}`,
         isOriginal: true,
         isNormalizedOutput: path === originalPath,
     });
-    // Add transformed file to outputs, if different from original
+    // Add the EPSG:3857-warped file to outputs when reprojection occurred.
     if (path !== originalPath) {
         const inputExt = (0, path_1.parse)(path).ext;
         outputs.push({
