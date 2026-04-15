@@ -1,6 +1,34 @@
 import { Helpers } from "graphile-worker";
+import { isRasterInfo } from "@seasketch/geostats-types";
 import { createDBRecordsForProcessedLayer } from "../src/spatialUploads";
-import { ProcessedUploadResponse } from "spatial-uploads-handler/dist/src/handleUpload";
+import type {
+  ProcessedUploadLayer,
+  ProcessedUploadResponse,
+} from "spatial-uploads-handler";
+
+/**
+ * Hosted raster layers expect an EPSG integer on the original GeoTIFF/NetCDF
+ * output so CRS is known for downloads and admin UI. Missing values usually
+ * mean the handler did not attach authority metadata.
+ */
+function assertRasterOriginalOutputsHaveEpsg(layer: ProcessedUploadLayer) {
+  if (!layer.geostats || !isRasterInfo(layer.geostats)) {
+    return;
+  }
+  for (const output of layer.outputs) {
+    if (output.type !== "GeoTIFF" && output.type !== "NetCDF") {
+      continue;
+    }
+    if (!output.isOriginal) {
+      continue;
+    }
+    if (output.epsg == null || !Number.isFinite(output.epsg)) {
+      throw new Error(
+        `Raster upload is missing an EPSG code on the original ${output.type} output (${output.filename}). The dataset must use a CRS with an EPSG identifier (for example WGS 84 or a projected CRS registered with EPSG).`,
+      );
+    }
+  }
+}
 
 /**
  * graphile-worker task which processes outputs from the spatial-uploads-handler
@@ -100,6 +128,7 @@ export default async function processDataUpload(
       if (!data.error) {
         // Create layers
         for (const layer of data.layers) {
+          assertRasterOriginalOutputsHaveEpsg(layer);
           await createDBRecordsForProcessedLayer(
             layer,
             projectId,
