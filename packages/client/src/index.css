@@ -8702,6 +8702,30 @@ select{
   row-gap:1.5rem
 }
 
+.gap-x-12{
+  column-gap:3rem
+}
+
+.gap-y-3{
+  row-gap:0.75rem
+}
+
+.gap-x-16{
+  column-gap:4rem
+}
+
+.gap-x-8{
+  column-gap:2rem
+}
+
+.gap-x-6{
+  column-gap:1.5rem
+}
+
+.gap-x-5{
+  column-gap:1.25rem
+}
+
 .-space-x-1 > :not([hidden]) ~ :not([hidden]){
   --tw-space-x-reverse:0;
   margin-right:calc(-0.25rem * var(--tw-space-x-reverse));
@@ -14247,12 +14271,20 @@ input[type="checkbox"][indeterminate="true"]:checked {
   outline-offset:1px
 }
 
+.focus-visible\:outline-offset-2:focus-visible{
+  outline-offset:2px
+}
+
 .focus-visible\:outline-primary-400:focus-visible{
   outline-color:rgb(61,153,210)
 }
 
 .focus-visible\:outline-white\/80:focus-visible{
   outline-color:rgb(255 255 255 / 0.8)
+}
+
+.focus-visible\:outline-current:focus-visible{
+  outline-color:currentColor
 }
 
 .focus-visible\:ring-1:focus-visible{
@@ -14292,6 +14324,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
   --tw-ring-color:rgb(46 115 182 / var(--tw-ring-opacity, 1))
 }
 
+.focus-visible\:ring-current:focus-visible{
+  --tw-ring-color:currentColor
+}
+
 .focus-visible\:ring-offset-1:focus-visible{
   --tw-ring-offset-width:1px
 }
@@ -14302,6 +14338,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .focus-visible\:ring-offset-gray-900:focus-visible{
   --tw-ring-offset-color:#111827
+}
+
+.focus-visible\:ring-offset-transparent:focus-visible{
+  --tw-ring-offset-color:transparent
 }
 
 .active\:scale-105:active{

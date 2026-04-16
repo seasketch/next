@@ -1,12 +1,14 @@
 import { TableIcon } from "@heroicons/react/outline";
-import React, { useContext } from "react";
-import { Trans } from "react-i18next";
+import React, { useContext, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
+import { Trans, useTranslation } from "react-i18next";
 import { SurveyStyleContext } from "../surveys/appearance";
 import {
   FormElementBody,
   FormElementComponent,
   FormElementEditorPortal,
   FormLanguageContext,
+  SurveyButtonFooterPortalContext,
   useLocalizedComponentSetting,
 } from "./FormElement";
 import FormElementOptionsInput, {
@@ -27,6 +29,8 @@ export type MatrixValue = {
 
 const Matrix: FormElementComponent<MatrixProps, MatrixValue> = (props) => {
   const context = useContext(FormLanguageContext);
+  const surveyButtonFooter = useContext(SurveyButtonFooterPortalContext);
+  const { t } = useTranslation("surveys");
   const { isSmall } = useContext(SurveyStyleContext);
   const options = useLocalizedComponentSetting(
     "options",
@@ -48,6 +52,30 @@ const Matrix: FormElementComponent<MatrixProps, MatrixValue> = (props) => {
       newValue,
       validate(newValue, props.componentSettings, props.isRequired)
     );
+  }
+
+  const hasSelections = !!props.value && Object.keys(props.value).length > 0;
+
+  const [clearChoicesVisible, setClearChoicesVisible] = useState(false);
+
+  useEffect(() => {
+    if (!hasSelections || !surveyButtonFooter) {
+      setClearChoicesVisible(false);
+      return;
+    }
+    setClearChoicesVisible(false);
+    let innerFrame = 0;
+    const outerFrame = requestAnimationFrame(() => {
+      innerFrame = requestAnimationFrame(() => setClearChoicesVisible(true));
+    });
+    return () => {
+      cancelAnimationFrame(outerFrame);
+      if (innerFrame) cancelAnimationFrame(innerFrame);
+    };
+  }, [hasSelections, surveyButtonFooter]);
+
+  function clearAllChoices() {
+    props.onChange({}, validate({}, props.componentSettings, props.isRequired));
   }
 
   // TODO: add validation when props.isRequired is true
@@ -159,6 +187,22 @@ const Matrix: FormElementComponent<MatrixProps, MatrixValue> = (props) => {
           );
         })}
       </div>
+      {surveyButtonFooter &&
+        hasSelections &&
+        createPortal(
+          <button
+            type="button"
+            onClick={clearAllChoices}
+            className={`shrink-0 whitespace-nowrap text-sm text-current underline underline-offset-2 transition-opacity duration-300 ease-out rounded-sm focus:outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-current ${
+              clearChoicesVisible
+                ? "opacity-80 hover:opacity-100"
+                : "opacity-0"
+            }`}
+          >
+            {t("Clear choices")}
+          </button>,
+          surveyButtonFooter
+        )}
       <FormElementEditorPortal
         render={(updateBaseSetting, updateComponentSetting) => {
           return (

@@ -1,11 +1,4 @@
-import {
-  useEffect,
-  useRef,
-  useState,
-  useMemo,
-  useContext,
-  useCallback,
-} from "react";
+import { useEffect, useState, useMemo, useContext, useCallback } from "react";
 import { useHistory, useParams } from "react-router";
 import Button from "../components/Button";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
@@ -253,7 +246,8 @@ function SurveyApp() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoAdvance, pagingState]);
 
-  const surveyButtonFooter = useRef<HTMLDivElement>(null);
+  const [surveyButtonFooterEl, setSurveyButtonFooterEl] =
+    useState<HTMLSpanElement | null>(null);
 
   const style = useCurrentStyle(
     elements,
@@ -608,7 +602,7 @@ function SurveyApp() {
                     exit="exit"
                   >
                     <SurveyButtonFooterPortalContext.Provider
-                      value={surveyButtonFooter.current}
+                      value={surveyButtonFooterEl}
                     >
                       <FormElementFactory
                         onRequestStageChange={(n) => setStage(n)}
@@ -793,7 +787,7 @@ function SurveyApp() {
                       ) ||
                         !formElement.current.isRequired) && (
                         <div
-                          className={`${
+                          className={`mb-10 flex flex-nowrap items-center justify-start gap-x-6 ${
                             createResponseState.loading ||
                             createResponseState.error ||
                             (!formElement.exiting &&
@@ -806,7 +800,6 @@ function SurveyApp() {
                           }`}
                         >
                           <Button
-                            className="mb-10"
                             label={
                               pagingState.isLastQuestion
                                 ? t("Complete Submission")
@@ -827,9 +820,9 @@ function SurveyApp() {
                             backgroundColor={style.secondaryColor}
                           />
                           <span
-                            ref={surveyButtonFooter}
-                            className="ml-2"
-                          ></span>
+                            ref={setSurveyButtonFooterEl}
+                            className="inline-flex shrink-0 items-center self-center"
+                          />
                         </div>
                       )}
                   </motion.div>

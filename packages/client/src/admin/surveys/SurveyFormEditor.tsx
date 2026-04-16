@@ -139,7 +139,8 @@ export default function SurveyFormEditor({
   const [selectedLogicFormElements, setSelectedLogicFormElements] = useState<
     number[]
   >([]);
-  const surveyButtonFooter = useRef<HTMLDivElement>(null);
+  const [surveyButtonFooterEl, setSurveyButtonFooterEl] =
+    useState<HTMLDivElement | null>(null);
 
   const [copyAppearance, copyAppearanceState] = useCopyAppearanceMutation();
 
@@ -559,7 +560,7 @@ export default function SurveyFormEditor({
                   }
                 >
                   <SurveyButtonFooterPortalContext.Provider
-                    value={surveyButtonFooter.current}
+                    value={surveyButtonFooterEl}
                   >
                     <FormEditorPortalContext.Provider
                       value={{
@@ -606,7 +607,7 @@ export default function SurveyFormEditor({
                             onRequestPrevious={() => null}
                             surveyParticipantCount={10}
                           />
-                          <div className="flex items-center mb-10 space-x-4">
+                          <div className="mb-10 flex flex-nowrap items-center justify-start gap-x-4">
                             {selectedFormElement.typeId !== "WelcomeMessage" &&
                               selectedFormElement.typeId !== "ThankYou" &&
                               !advancesAutomatically(
@@ -621,7 +622,10 @@ export default function SurveyFormEditor({
                                   backgroundColor={style.secondaryColor}
                                 />
                               )}
-                            <div ref={surveyButtonFooter}></div>
+                            <div
+                              ref={setSurveyButtonFooterEl}
+                              className="inline-flex shrink-0 items-center self-center"
+                            />
                           </div>
                         </>
                       )}

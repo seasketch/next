@@ -55,7 +55,7 @@ export const FormEditorPortalContext = createContext<{
 } | null>(null);
 
 export const SurveyButtonFooterPortalContext =
-  createContext<HTMLDivElement | null>(null);
+  createContext<HTMLElement | null>(null);
 
 export const SurveyMapPortalContext = createContext<HTMLDivElement | null>(
   null
