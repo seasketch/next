@@ -32,6 +32,7 @@ import {
 } from "./SwatchForClassTableRow";
 import { ClassRowSettingsPopover } from "./ClassRowSettingsPopover";
 import { LabeledDropdown } from "./LabeledDropdown";
+import { VrmSelector } from "./VrmSelector";
 import ReportLayerVisibilityCheckbox from "../components/ReportLayerVisibilityCheckbox";
 import { LayersIcon } from "@radix-ui/react-icons";
 import { useClippingGeography } from "../hooks/useClippingGeography";
@@ -319,6 +320,52 @@ export const RasterProportionTableTooltipControls: ReportWidgetTooltipControls =
       });
     };
 
+    const currentVrm = useMemo(() => {
+      const fragmentDep = dependencies.find(
+        (d) => d.subjectType === "fragments"
+      );
+      return fragmentDep?.parameters?.vrm;
+    }, [dependencies]);
+
+    const currentGeographyVrm = useMemo(() => {
+      const geographyDep = dependencies.find(
+        (d) => d.subjectType === "geographies"
+      );
+      return geographyDep?.parameters?.vrm;
+    }, [dependencies]);
+
+    const handleVrmChange = (next: false | "auto" | number | undefined) => {
+      onUpdateDependencyParameters((dependency) => {
+        const params = { ...(dependency.parameters || {}) };
+        if (dependency.subjectType !== "fragments") {
+          return params;
+        }
+        if (next === undefined) {
+          delete params.vrm;
+        } else {
+          params.vrm = next;
+        }
+        return params;
+      });
+    };
+
+    const handleGeographyVrmChange = (
+      next: false | "auto" | number | undefined
+    ) => {
+      onUpdateDependencyParameters((dependency) => {
+        const params = { ...(dependency.parameters || {}) };
+        if (dependency.subjectType !== "geographies") {
+          return params;
+        }
+        if (next === undefined) {
+          delete params.vrm;
+        } else {
+          params.vrm = next;
+        }
+        return params;
+      });
+    };
+
     const sortOptions = [
       { value: "name", label: t("Name") },
       { value: "value", label: t("% Captured") },
@@ -377,6 +424,16 @@ export const RasterProportionTableTooltipControls: ReportWidgetTooltipControls =
           <PaginationSetting
             rowsPerPage={rowsPerPage}
             onChange={(next: number) => handleUpdate({ rowsPerPage: next })}
+          />
+          <VrmSelector
+            label={t("Sketch VRM")}
+            value={currentVrm}
+            onChange={handleVrmChange}
+          />
+          <VrmSelector
+            geography
+            value={currentGeographyVrm}
+            onChange={handleGeographyVrmChange}
           />
         </TooltipMorePopover>
       </div>

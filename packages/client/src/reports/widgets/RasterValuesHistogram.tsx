@@ -24,6 +24,7 @@ import * as Tooltip from "@radix-ui/react-tooltip";
 import { Pencil2Icon } from "@radix-ui/react-icons";
 import { useRelatedOverlay } from "../hooks/useOverlaySources";
 import { UnitSelector } from "./UnitSelector";
+import { VrmSelector } from "./VrmSelector";
 import {
   getLocalizedUnitLabel,
   isAreaUnit,
@@ -630,7 +631,7 @@ export const RasterValuesHistogram: ReportWidget<
 };
 
 export const RasterValuesHistogramTooltipControls: ReportWidgetTooltipControls =
-  ({ node, onUpdate }) => {
+  ({ node, onUpdate, onUpdateDependencyParameters }) => {
     const { t } = useTranslation("admin:reports");
     const componentSettings = node.attrs?.componentSettings || {};
     const dependencies = useMemo(
@@ -639,6 +640,28 @@ export const RasterValuesHistogramTooltipControls: ReportWidgetTooltipControls =
     );
 
     const relatedOverlay = useRelatedOverlay(dependencies);
+
+    const currentVrm = useMemo(() => {
+      const fragmentDep = dependencies.find(
+        (d) => d.subjectType === "fragments"
+      );
+      return fragmentDep?.parameters?.vrm;
+    }, [dependencies]);
+
+    const handleVrmChange = (next: false | "auto" | number | undefined) => {
+      onUpdateDependencyParameters((dependency) => {
+        const params = { ...(dependency.parameters || {}) };
+        if (dependency.subjectType !== "fragments") {
+          return params;
+        }
+        if (next === undefined || next === "auto") {
+          delete params.vrm;
+        } else {
+          params.vrm = next;
+        }
+        return params;
+      });
+    };
 
     return (
       <Tooltip.Provider>
@@ -788,6 +811,7 @@ export const RasterValuesHistogramTooltipControls: ReportWidgetTooltipControls =
               })
             }
           />
+          <VrmSelector value={currentVrm} onChange={handleVrmChange} />
           <TooltipMorePopover>
             <TooltipBooleanConfigurationOption
               label={t("Color based on cartography")}

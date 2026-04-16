@@ -41,6 +41,7 @@ import { useBaseReportContext } from "../context/BaseReportContext";
 import { useClippingGeography } from "../hooks/useClippingGeography";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
 import { NumberRoundingControl } from "./NumberRoundingControl";
+import { VrmSelector } from "./VrmSelector";
 import { SketchGeometryType } from "../../generated/graphql";
 import { useTranslation } from "react-i18next";
 import {
@@ -1034,6 +1035,52 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
     });
   };
 
+  const currentVrm = useMemo(() => {
+    const fragmentDep = dependencies.find(
+      (d) => d.subjectType === "fragments"
+    );
+    return fragmentDep?.parameters?.vrm;
+  }, [dependencies]);
+
+  const currentGeographyVrm = useMemo(() => {
+    const geographyDep = dependencies.find(
+      (d) => d.subjectType === "geographies"
+    );
+    return geographyDep?.parameters?.vrm;
+  }, [dependencies]);
+
+  const handleVrmChange = (next: false | "auto" | number | undefined) => {
+    onUpdateDependencyParameters((dependency) => {
+      const params = { ...(dependency.parameters || {}) };
+      if (dependency.subjectType !== "fragments") {
+        return params;
+      }
+      if (next === undefined) {
+        delete params.vrm;
+      } else {
+        params.vrm = next;
+      }
+      return params;
+    });
+  };
+
+  const handleGeographyVrmChange = (
+    next: false | "auto" | number | undefined
+  ) => {
+    onUpdateDependencyParameters((dependency) => {
+      const params = { ...(dependency.parameters || {}) };
+      if (dependency.subjectType !== "geographies") {
+        return params;
+      }
+      if (next === undefined) {
+        delete params.vrm;
+      } else {
+        params.vrm = next;
+      }
+      return params;
+    });
+  };
+
   const [countLabelsModalOpen, setCountLabelsModalOpen] = useState(false);
   const [distinctLabelsModalOpen, setDistinctLabelsModalOpen] = useState(false);
 
@@ -1149,6 +1196,9 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
           options={rasterStatOptions}
           onChange={(val) => handleRasterStatChange(val as RasterValuesStatKey)}
         />
+      )}
+      {presentation === "raster_stats" && (
+        <VrmSelector value={currentVrm} onChange={handleVrmChange} />
       )}
       {presentation === "column_values" && selectedStat === "countDistinct" && (
         <Popover.Root
@@ -1322,6 +1372,21 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
               {t("Source has overlapping features")}
             </span>
           </label>
+        )}
+        {presentation === "geography_proportion_captured" && (
+          <VrmSelector
+            label={t("Sketch VRM")}
+            value={currentVrm}
+            onChange={handleVrmChange}
+          />
+        )}
+        {(presentation === "geography_raster_stats" ||
+          presentation === "geography_proportion_captured") && (
+          <VrmSelector
+            geography
+            value={currentGeographyVrm}
+            onChange={handleGeographyVrmChange}
+          />
         )}
       </TooltipMorePopover>
     </>

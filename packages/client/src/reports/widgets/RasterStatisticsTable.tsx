@@ -22,6 +22,7 @@ import * as Tooltip from "@radix-ui/react-tooltip";
 import { Pencil2Icon } from "@radix-ui/react-icons";
 import { TooltipBooleanConfigurationOption } from "./widgets";
 import { UnitSelector } from "./UnitSelector";
+import { VrmSelector } from "./VrmSelector";
 import {
   getLocalizedUnitLabel,
   isAreaUnit,
@@ -195,7 +196,7 @@ export const RasterStatisticsTable: ReportWidget<
 };
 
 export const RasterStatisticsTableTooltipControls: ReportWidgetTooltipControls =
-  ({ node, onUpdate }) => {
+  ({ node, onUpdate, onUpdateDependencyParameters }) => {
     const { t } = useTranslation("admin:reports");
     const componentSettings = node.attrs?.componentSettings || {};
     const [statsModalOpen, setStatsModalOpen] = useState(false);
@@ -203,6 +204,28 @@ export const RasterStatisticsTableTooltipControls: ReportWidgetTooltipControls =
       () => (node.attrs?.metrics || []) as MetricDependency[],
       [node.attrs?.metrics]
     );
+
+    const currentVrm = useMemo(() => {
+      const fragmentDep = dependencies.find(
+        (d) => d.subjectType === "fragments"
+      );
+      return fragmentDep?.parameters?.vrm;
+    }, [dependencies]);
+
+    const handleVrmChange = (next: false | "auto" | number | undefined) => {
+      onUpdateDependencyParameters((dependency) => {
+        const params = { ...(dependency.parameters || {}) };
+        if (dependency.subjectType !== "fragments") {
+          return params;
+        }
+        if (next === undefined || next === "auto") {
+          delete params.vrm;
+        } else {
+          params.vrm = next;
+        }
+        return params;
+      });
+    };
 
     const handleToggleStat = (stat: RasterStatKey, enabled: boolean) => {
       onUpdate({
@@ -263,6 +286,7 @@ export const RasterStatisticsTableTooltipControls: ReportWidgetTooltipControls =
               })
             }
           />
+          <VrmSelector value={currentVrm} onChange={handleVrmChange} />
           <TableHeadingsEditor
             labelKeys={[
               "statLabel",
