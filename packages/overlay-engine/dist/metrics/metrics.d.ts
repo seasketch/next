@@ -119,6 +119,8 @@ export type RasterBandStats = {
     /** The [xVrm, yVrm] virtual-resampling factor applied during this calculation,
      *  or null when VRM was disabled. Stored for diagnostic/audit purposes. */
     vrm?: [number, number] | null;
+    /** The EPSG code of the source raster. Stored for diagnostic/audit purposes. */
+    epsg?: number;
 };
 /**
  * It is important to note that results could be spread across multiple

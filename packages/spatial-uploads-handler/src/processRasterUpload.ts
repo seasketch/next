@@ -230,20 +230,38 @@ export async function processRasterUpload(options: {
 /**
  * Numeric EPSG from GDAL only when the dataset advertises an EPSG authority ID.
  * (Many CRSs use other authorities or lack a simple integer code.)
+ *
+ * GeoTIFFs built from GeoKeys often end up with an SRS whose AUTHORITY tag
+ * lives on the `PROJCS` or `GEOGCS` sub-node rather than the root WKT node,
+ * so `getAuthorityName()`/`getAuthorityCode()` with no target key return
+ * empty strings. We try `autoIdentifyEPSG()` first to promote the authority
+ * to the root, then fall back to the PROJCS/GEOGCS sub-nodes.
  */
 function epsgFromSpatialReference(
   srs: gdal.SpatialReference,
 ): number | null {
-  const auth = srs.getAuthorityName();
-  const code = srs.getAuthorityCode();
-  if (!auth || code == null || String(code).trim() === "") {
-    return null;
+  try {
+    srs.autoIdentifyEPSG();
+  } catch {
+    // GDAL throws when it cannot identify the CRS; fall through to the
+    // sub-node lookups below.
   }
-  if (auth.toUpperCase() !== "EPSG") {
-    return null;
+  const candidateKeys: (string | null)[] = [null, "PROJCS", "GEOGCS"];
+  for (const key of candidateKeys) {
+    const auth = srs.getAuthorityName(key);
+    const code = srs.getAuthorityCode(key);
+    if (!auth || code == null || String(code).trim() === "") {
+      continue;
+    }
+    if (auth.toUpperCase() !== "EPSG") {
+      continue;
+    }
+    const n = parseInt(String(code), 10);
+    if (Number.isFinite(n)) {
+      return n;
+    }
   }
-  const n = parseInt(String(code), 10);
-  return Number.isFinite(n) ? n : null;
+  return null;
 }
 
 async function validateInput(path: string) {
@@ -260,17 +278,14 @@ async function validateInput(path: string) {
     throw new Error(`Unrecognized raster driver "${ds.driver.description}"`);
   }
 
-  const isCorrectProjection =
-    ds.srs &&
-    ds.srs.getAuthorityName() === "EPSG" &&
-    ds.srs.getAuthorityCode() === "3857";
+  const epsg = ds.srs ? epsgFromSpatialReference(ds.srs) : null;
+  const isCorrectProjection = epsg === 3857;
+  const crs = epsg != null ? `EPSG:${epsg}` : null;
 
   return {
     isCorrectProjection,
-    crs: ds.srs
-      ? `${ds.srs.getAuthorityName()}:${ds.srs.getAuthorityCode()}`
-      : null,
-    epsg: ds.srs ? epsgFromSpatialReference(ds.srs) : null,
+    crs,
+    epsg,
     ext,
   };
 }

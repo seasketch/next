@@ -102,6 +102,9 @@ function combineRasterBandStats(statsArray) {
     let totalInvalid = 0;
     const mins = [];
     const maxs = [];
+    // All fragments of the same raster_stats metric share an epsg; pick the
+    // first non-null value we encounter so it is preserved through combination.
+    let combinedEpsg = undefined;
     // Merge histograms by value
     const histogramMap = new Map();
     for (const stats of statsArray) {
@@ -115,6 +118,9 @@ function combineRasterBandStats(statsArray) {
         }
         if (isFinite(stats.max) && stats.max !== null) {
             maxs.push(stats.max);
+        }
+        if (combinedEpsg == null && stats.epsg != null) {
+            combinedEpsg = stats.epsg;
         }
         // Merge histogram entries
         for (const [value, count] of stats.histogram) {
@@ -148,6 +154,7 @@ function combineRasterBandStats(statsArray) {
         histogram: combinedHistogram,
         invalid: totalInvalid,
         sum: totalSum,
+        ...(combinedEpsg != null ? { epsg: combinedEpsg } : {}),
     };
 }
 /**

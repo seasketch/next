@@ -205,6 +205,8 @@ export type RasterBandStats = {
   /** The [xVrm, yVrm] virtual-resampling factor applied during this calculation,
    *  or null when VRM was disabled. Stored for diagnostic/audit purposes. */
   vrm?: [number, number] | null;
+  /** The EPSG code of the source raster. Stored for diagnostic/audit purposes. */
+  epsg?: number;
 };
 
 /**
@@ -328,6 +330,9 @@ export function combineRasterBandStats(
   let totalInvalid = 0;
   const mins: number[] = [];
   const maxs: number[] = [];
+  // All fragments of the same raster_stats metric share an epsg; pick the
+  // first non-null value we encounter so it is preserved through combination.
+  let combinedEpsg: number | undefined = undefined;
 
   // Merge histograms by value
   const histogramMap = new Map<number, number>();
@@ -343,6 +348,9 @@ export function combineRasterBandStats(
     }
     if (isFinite(stats.max) && stats.max !== null) {
       maxs.push(stats.max);
+    }
+    if (combinedEpsg == null && stats.epsg != null) {
+      combinedEpsg = stats.epsg;
     }
 
     // Merge histogram entries
@@ -387,6 +395,7 @@ export function combineRasterBandStats(
     histogram: combinedHistogram,
     invalid: totalInvalid,
     sum: totalSum,
+    ...(combinedEpsg != null ? { epsg: combinedEpsg } : {}),
   };
 }
 

@@ -161,6 +161,9 @@ async function calculateRasterStats(sourceUrl, feature, options) {
         const raster = await geoblaze.parse(sourceUrl);
         const featureBBox = (0, bbox_1.default)(feature, { recompute: true });
         const rasterBBox = [raster.xmin, raster.ymin, raster.xmax, raster.ymax];
+        const rasterEpsg = typeof raster.projection === "number" && Number.isFinite(raster.projection)
+            ? raster.projection
+            : undefined;
         if (!intersects(featureBBox, rasterBBox)) {
             logRasterStatsVerbose("no intersection between feature bbox and raster extent", {
                 sourceUrl,
@@ -181,6 +184,7 @@ async function calculateRasterStats(sourceUrl, feature, options) {
                         invalid: 0,
                         sum: 0,
                         vrm: null,
+                        ...(rasterEpsg != null ? { epsg: rasterEpsg } : {}),
                     },
                 ],
             };
@@ -259,6 +263,7 @@ async function calculateRasterStats(sourceUrl, feature, options) {
                     invalid: stat.invalid,
                     sum: stat.sum,
                     vrm: resolvedVrm,
+                    ...(rasterEpsg != null ? { epsg: rasterEpsg } : {}),
                 };
             }),
         };
