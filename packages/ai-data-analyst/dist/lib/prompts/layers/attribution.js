@@ -16,7 +16,8 @@ Requirements:
 `;
 exports.attributionParameters = {
     // Cloudflare AI Gateway compat expects `{provider}/{model}` (e.g. openai/gpt-5-mini).
-    model: "openai/gpt-5.4-nano",
+    // Match columnIntelligence model so gateway provider auth applies consistently.
+    model: "openai/gpt-5.4-mini",
     effort: "low",
     verbosity: "low",
 };
