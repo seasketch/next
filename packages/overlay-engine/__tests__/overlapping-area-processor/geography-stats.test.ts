@@ -2,10 +2,18 @@ import { vi } from "vitest";
 import { makeFetchRangeFn } from "../../scripts/optimizedFetchRangeFn";
 import { SourceCache } from "fgb-source";
 import {
+  ClippingFn,
   ClippingLayerOption,
+  clipSketchToPolygons,
   initializeGeographySources,
 } from "../../src/geographies/geographies";
-import { Feature, MultiPolygon } from "geojson";
+import { createFragments, GeographySettings } from "../../src/fragments";
+import { prepareSketch } from "../../src/utils/prepareSketch";
+import {
+  combineMetricsForFragments,
+  type Metric,
+} from "../../src/metrics/metrics";
+import { Feature, MultiPolygon, Polygon } from "geojson";
 import {
   OverlayEngineBatchProcessor,
   createClippingWorkerPool,
@@ -20,7 +28,7 @@ import simplify from "@turf/simplify";
 const _proj4 = require("proj4");
 _proj4.defs(
   "EPSG:6933",
-  "+proj=cea +lat_ts=30 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs"
+  "+proj=cea +lat_ts=30 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs",
 );
 const _to6933 = _proj4("EPSG:4326", "EPSG:6933");
 function reprojectFeatureTo6933(feature: any) {
@@ -64,7 +72,7 @@ for (const metric of metrics.filter(
     m.classId.startsWith("deepwater_bioregions-") &&
     m.metricId === "area" &&
     m.geographyId === "eez" &&
-    m.classId !== "deepwater_bioregions-total"
+    m.classId !== "deepwater_bioregions-total",
 )) {
   const classKey = metric.classId.split("deepwater_bioregions-")[1];
   const value = metric.value / 1_000_000;
@@ -77,7 +85,7 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
 
   const { fetchRangeFn, cacheHits, cacheMisses } = makeFetchRangeFn(
     `https://uploads.seasketch.org`,
-    1000 * 1024 * 128
+    1000 * 1024 * 128,
   );
 
   const sourceCache = new SourceCache("1GB", {
@@ -118,10 +126,10 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
         "https://uploads.seasketch.org/testing-geomorphic-2.fgb",
         {
           pageSize: "5MB",
-        }
+        },
       );
       const pool = createClippingWorkerPool(
-        __dirname + "/../../dist/workers/clipBatch.standalone.js"
+        __dirname + "/../../dist/workers/clipBatch.standalone.js",
       );
       const processor = new OverlayEngineBatchProcessor(
         "overlay_area",
@@ -133,7 +141,7 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
         differenceSources,
         undefined,
         "class",
-        pool
+        pool,
       );
       const results = await processor.calculate();
       compareResults(
@@ -150,7 +158,7 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
           "Reef Crest": 0.03,
           "*": 0.02,
         },
-        false
+        false,
       );
     });
 
@@ -165,10 +173,10 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
         "https://uploads.seasketch.org/testing-geomorphic-2.fgb",
         {
           pageSize: "5MB",
-        }
+        },
       );
       const pool = createClippingWorkerPool(
-        __dirname + "/../../dist/workers/clipBatch.standalone.js"
+        __dirname + "/../../dist/workers/clipBatch.standalone.js",
       );
       const processor = new OverlayEngineBatchProcessor(
         "presence",
@@ -180,7 +188,7 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
         differenceSources,
         undefined,
         "class",
-        pool
+        pool,
       );
       const results = await processor.calculate();
       expect(results).toBe(true);
@@ -197,10 +205,10 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
         "https://uploads.seasketch.org/testing-deepwater-bioregions-2.fgb",
         {
           pageSize: "5MB",
-        }
+        },
       );
       const pool = createClippingWorkerPool(
-        __dirname + "/../../dist/workers/clipBatch.standalone.js"
+        __dirname + "/../../dist/workers/clipBatch.standalone.js",
       );
       const processor = new OverlayEngineBatchProcessor(
         "overlay_area",
@@ -212,7 +220,7 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
         differenceSources,
         helpers,
         "Draft_name",
-        pool
+        pool,
       );
       const results = await processor.calculate();
       compareResults(
@@ -220,7 +228,7 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
         deepwaterBioregionsResults,
         0.005,
         undefined,
-        false
+        false,
       );
     });
 
@@ -230,7 +238,7 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
           "https://uploads.seasketch.org/testing-hydrothermal-vents.fgb",
           {
             pageSize: "5MB",
-          }
+          },
         );
         const {
           intersectionFeature: intersectionFeatureGeojson,
@@ -244,7 +252,7 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
           intersectionFeatureGeojson,
           source,
           differenceSources,
-          {}
+          {},
         );
         const results = await processor.calculate();
         expect(results["*"].count).toBe(13);
@@ -252,28 +260,62 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
 
       it("EBSA - Should count features not subdivided parts", async () => {
         const source = await sourceCache.get<Feature<MultiPolygon>>(
-          "https://uploads.seasketch.org/testing-ebsa.fgb",
+          "https://uploads.seasketch.org/testing-ebsa-global.fgb",
           {
             pageSize: "5MB",
-          }
+          },
         );
         const {
           intersectionFeature: intersectionFeatureGeojson,
-          differenceSources,
         } = await initializeGeographySources(FIJI_EEZ, sourceCache, undefined, {
           pageSize: "5MB",
         });
 
-        const processor = new OverlayEngineBatchProcessor(
-          "count",
-          1024 * 1024 * 2, // 5MB
-          intersectionFeatureGeojson,
-          source,
-          differenceSources,
-          {}
+        const clippingFn: ClippingFn = async (sketch, src, op, query) => {
+          const fgbSource = await sourceCache.get<Feature<MultiPolygon | Polygon>>(
+            src,
+            {
+              fetchRangeFn,
+              pageSize: "5MB",
+            },
+          );
+          const overlappingFeatures = fgbSource.getFeaturesAsync(
+            sketch.envelopes,
+          );
+          return clipSketchToPolygons(sketch, op, query, overlappingFeatures);
+        };
+
+        const geographyForFragments: GeographySettings = {
+          id: 1,
+          clippingLayers: FIJI_EEZ,
+        };
+
+        const prepared = prepareSketch(intersectionFeatureGeojson);
+        const fragments = await createFragments(
+          prepared,
+          [geographyForFragments],
+          clippingFn,
         );
-        const results = await processor.calculate();
-        expect(results["*"].count).toBe(4);
+        expect(fragments.length).toBeGreaterThan(1);
+
+        const fragmentCountMetrics: Pick<Metric, "type" | "value">[] = [];
+        for (const fragment of fragments) {
+          const processor = new OverlayEngineBatchProcessor(
+            "count",
+            1024 * 1024 * 2, // 5MB
+            fragment,
+            source,
+            [],
+            {},
+          );
+          const result = await processor.calculate();
+          fragmentCountMetrics.push({
+            type: "count",
+            value: result,
+          });
+        }
+        const combined = combineMetricsForFragments(fragmentCountMetrics);
+        expect(combined.value["*"].count).toBe(4);
       });
     });
 
@@ -283,7 +325,7 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
           "https://uploads.seasketch.org/testing-hydrothermal-vents.fgb",
           {
             pageSize: "5MB",
-          }
+          },
         );
         const {
           intersectionFeature: intersectionFeatureGeojson,
@@ -297,7 +339,7 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
           intersectionFeatureGeojson,
           source,
           differenceSources,
-          {}
+          {},
         );
         const results = await processor.calculate();
         expect(results).toBe(true);

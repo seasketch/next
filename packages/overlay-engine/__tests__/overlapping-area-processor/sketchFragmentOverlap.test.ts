@@ -26,7 +26,7 @@ import { calculateRasterStats } from "../../src/rasterStats";
 const _proj4 = require("proj4");
 _proj4.defs(
   "EPSG:6933",
-  "+proj=cea +lat_ts=30 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs"
+  "+proj=cea +lat_ts=30 +lon_0=0 +x_0=0 +y_0=0 +datum=WGS84 +units=m +no_defs +type=crs",
 );
 const _to6933 = _proj4("EPSG:4326", "EPSG:6933");
 function reprojectFeatureTo6933(feature: any) {
@@ -40,7 +40,10 @@ function reprojectFeatureTo6933(feature: any) {
 import { calculateDistanceToShore } from "../../src/calculateDistanceToShore";
 import buffer from "@turf/buffer";
 import calcArea from "@turf/area";
-import { combineMetricsForFragments } from "../../src/metrics/metrics";
+import {
+  combineMetricsForFragments,
+  NumberColumnValueStats,
+} from "../../src/metrics/metrics";
 
 const alataua = require("./sketches/Alataua.geojson.json");
 
@@ -430,9 +433,6 @@ describe("sketchFragmentOverlap", () => {
         }
         // make sure no result is greater than 100% of the total area
         for (const classKey in totalResults) {
-          // console.log(
-          //   `${classKey} ${totalResults[classKey]} ${results[classKey]}`
-          // );
           expect(totalResults[classKey]).toBeLessThanOrEqual(
             results[classKey] * 1.002,
           );
@@ -464,9 +464,9 @@ describe("sketchFragmentOverlap", () => {
         });
       });
 
-      it("EBSA - Should count features not subdivided parts", async () => {
+      it("EBSA - Should count features not subdivided parts (sketch)", async () => {
         const source = await sourceCache.get<Feature<MultiPolygon>>(
-          "https://uploads.seasketch.org/testing-ebsa.fgb",
+          "https://uploads.seasketch.org/testing-ebsa-global.fgb",
           {
             pageSize: "5MB",
           },
@@ -474,16 +474,31 @@ describe("sketchFragmentOverlap", () => {
         const prepared = prepareSketch(
           require("./sketches/hunga-unclipped.geojson.json"),
         );
-        const processor = new OverlayEngineBatchProcessor(
-          "count",
-          1024 * 1024 * 2, // 5MB
-          prepared.feature,
-          source,
-          [],
-          {},
+        const fragments = await createFragments(
+          prepared,
+          [FIJI_EEZ],
+          clippingFn,
         );
-        const results = await processor.calculate();
-        expect(results["*"].count).toBe(2);
+        expect(fragments.length).toBeGreaterThan(1);
+        const metrics: any[] = [];
+        for (const fragment of fragments) {
+          const processor = new OverlayEngineBatchProcessor(
+            "count",
+            1024 * 1024 * 2, // 5MB
+            fragment,
+            source,
+            [],
+            {},
+          );
+          const result = await processor.calculate();
+          metrics.push({
+            type: "count",
+            value: result,
+            fragmentId: fragment.properties.__id,
+          });
+        }
+        const combined = combineMetricsForFragments(metrics);
+        expect(combined.value["*"].count).toBe(2);
       });
 
       it("Kanacea Island Expedition sites", async () => {
@@ -544,6 +559,7 @@ describe("sketchFragmentOverlap", () => {
         const prepared = prepareSketch(
           require("./sketches/Kanacea-Island.geojson.json"),
         );
+
         const processor = new OverlayEngineBatchProcessor(
           "column_values",
           1024 * 1024 * 2, // 5MB
@@ -555,14 +571,13 @@ describe("sketchFragmentOverlap", () => {
           pool,
           undefined,
           undefined,
-          "d15n",
         );
         const results = await processor.calculate();
-        // console.log(results);
-        expect(results["*"].count).toBe(3);
-        expect(results["*"].mean).toBeCloseTo(1.586);
-        expect(results["*"].max).toBeCloseTo(1.933);
-        expect(results["*"].min).toBeCloseTo(1.373);
+        const d15n = results["*"]["d15n"] as NumberColumnValueStats;
+        expect(d15n.count).toBe(3);
+        expect(d15n.mean).toBeCloseTo(1.586);
+        expect(d15n.max).toBeCloseTo(1.933);
+        expect(d15n.min).toBeCloseTo(1.373);
       });
 
       it("Should include totalAreaSqKm for polygonal sources, and weigh statistics by intersected polygon area", async () => {
@@ -586,14 +601,13 @@ describe("sketchFragmentOverlap", () => {
           pool,
           undefined,
           undefined,
-          "SSOLN",
         );
         const results = await processor.calculate();
-        // console.log(results);
-        expect(results["*"].totalAreaSqKm).toBeCloseTo(48774.93811324354);
-        expect(results["*"].mean).toBeCloseTo(9.428);
-        expect(results["*"].min).toBe(0);
-        expect(results["*"].max).toBe(10);
+        const ssoln = results["*"]["SSOLN"] as NumberColumnValueStats;
+        expect(ssoln.totalAreaSqKm).toBeCloseTo(48774.93811324354);
+        expect(ssoln.mean).toBeCloseTo(9.428);
+        expect(ssoln.min).toBe(0);
+        expect(ssoln.max).toBe(10);
       });
     });
   });
@@ -699,7 +713,6 @@ describe("sketchFragmentOverlap", () => {
       );
       const results = await processor.calculate();
       expect(results["*"]).toBeCloseTo(11.06, 1);
-      // console.log(results);
     });
 
     it("Should calculate overlap size for lines", async () => {
@@ -724,7 +737,6 @@ describe("sketchFragmentOverlap", () => {
       );
       const results = await processor.calculate();
       expect(results["*"]).toBeCloseTo(2.37853578);
-      // console.log(results);
     });
 
     it("West Anacapa shore types should be similar to @seasketch/geoprocessing results", async () => {
