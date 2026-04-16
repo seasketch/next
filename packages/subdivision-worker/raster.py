@@ -65,7 +65,21 @@ def process_raster(
         temp_output = output_file + ".tmp"
         print(f"[raster] Starting processing. input={input_file}, temp_output={temp_output}")
 
-        with rasterio.open(input_file) as src:
+        # Open the input in update mode so we can pre-compute exact band
+        # statistics and persist them as band tags on the source. rio-cogeo's
+        # default behaviour is to write approximate statistics (derived from
+        # overview levels) into the output COG, which is badly wrong for
+        # sparse rasters where rare extreme values disappear during
+        # downsampling. By writing exact stats to the source first and then
+        # asking cog_translate to forward band tags, the output COG gets the
+        # correct values without any post-write modification (which would
+        # break the output COG layout).
+        #
+        # IGNORE_COG_LAYOUT_BREAK=YES is needed in case the input is itself a
+        # COG (GDAL refuses in-place metadata updates on COGs by default).
+        # It's safe here because the input is a throwaway temp file — we're
+        # about to produce a fresh COG from it.
+        with rasterio.open(input_file, "r+", IGNORE_COG_LAYOUT_BREAK="YES") as src:
             # Validate and extract the source EPSG code.
             source_epsg = _get_source_epsg(src.crs)
 
@@ -83,6 +97,10 @@ def process_raster(
                 print(f"[raster] Source pixel size ~ {abs(src_xres):.6f} x {abs(src_yres):.6f}")
             except Exception:
                 pass
+
+            print("[raster] Computing exact band statistics on source...")
+            for bidx in range(1, num_bands + 1):
+                src.statistics(bidx, approx=False, clear_cache=True)
 
         # Report scanning complete.
         if progress_callback is not None:
@@ -141,6 +159,9 @@ def process_raster(
                 cog_profile,
                 in_memory=False,
                 quiet=True,
+                # Copy band tags (including the exact STATISTICS_* we just
+                # wrote to the source) into the output COG.
+                forward_band_tags=True,
             )
         finally:
             if cog_hb_thread is not None:
