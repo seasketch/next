@@ -1,6 +1,7 @@
 import { BBox, Feature, MultiPolygon, Polygon } from "geojson";
 import distance from "@turf/distance";
 import { point } from "@turf/helpers";
+// @ts-ignore
 import proj4 from "proj4";
 import { RasterBandStats } from "./metrics/metrics";
 import calcBBox from "@turf/bbox";
@@ -10,7 +11,7 @@ export type HistogramEntry = [number, number];
 /**
  * Verbose `console.log` for raster stats / VRM (set `RASTER_STATS_VERBOSE=0` to disable).
  */
-const RASTER_STATS_VERBOSE = true;
+const RASTER_STATS_VERBOSE = false;
 
 function logRasterStatsVerbose(
   message: string,
@@ -216,7 +217,8 @@ export async function calculateRasterStats(
     const featureBBox = calcBBox(feature, { recompute: true });
     const rasterBBox = [raster.xmin, raster.ymin, raster.xmax, raster.ymax];
     const rasterEpsg =
-      typeof raster.projection === "number" && Number.isFinite(raster.projection)
+      typeof raster.projection === "number" &&
+      Number.isFinite(raster.projection)
         ? raster.projection
         : undefined;
     if (!intersects(featureBBox as BBox, rasterBBox as BBox)) {

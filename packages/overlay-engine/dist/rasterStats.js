@@ -9,12 +9,13 @@ exports.downsampleHistogram = downsampleHistogram;
 exports.calculateRasterStats = calculateRasterStats;
 const distance_1 = __importDefault(require("@turf/distance"));
 const helpers_1 = require("@turf/helpers");
+// @ts-ignore
 const proj4_1 = __importDefault(require("proj4"));
 const bbox_1 = __importDefault(require("@turf/bbox"));
 /**
  * Verbose `console.log` for raster stats / VRM (set `RASTER_STATS_VERBOSE=0` to disable).
  */
-const RASTER_STATS_VERBOSE = true;
+const RASTER_STATS_VERBOSE = false;
 function logRasterStatsVerbose(message, data) {
     if (!RASTER_STATS_VERBOSE)
         return;
@@ -161,7 +162,8 @@ async function calculateRasterStats(sourceUrl, feature, options) {
         const raster = await geoblaze.parse(sourceUrl);
         const featureBBox = (0, bbox_1.default)(feature, { recompute: true });
         const rasterBBox = [raster.xmin, raster.ymin, raster.xmax, raster.ymax];
-        const rasterEpsg = typeof raster.projection === "number" && Number.isFinite(raster.projection)
+        const rasterEpsg = typeof raster.projection === "number" &&
+            Number.isFinite(raster.projection)
             ? raster.projection
             : undefined;
         if (!intersects(featureBBox, rasterBBox)) {
