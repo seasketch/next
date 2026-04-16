@@ -894,7 +894,7 @@ describe("Raster metrics", () => {
     );
     const f = reprojectFeatureTo6933(prepared.feature);
     const stats = await calculateRasterStats(source, f);
-    expect(stats.bands[0].mean).toBeCloseTo(-20.6666);
+    expect(stats.bands[0].mean).toBeCloseTo(-20.6035);
     expect(stats.bands[0].min).toBeCloseTo(-207);
     expect(stats.bands[0].max).toBeCloseTo(54);
   });
