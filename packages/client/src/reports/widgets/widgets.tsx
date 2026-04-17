@@ -36,6 +36,10 @@ import {
   SketchAttributesTableTooltipControls,
 } from "./SketchAttributesTable";
 import {
+  MpaGuideLevelOfProtection,
+  MpaGuideLevelOfProtectionTooltipControls,
+} from "./mpaGuide/MpaGuideLevelOfProtection";
+import {
   OverlappingAreasTable,
   OverlappingAreasTableTooltipControls,
 } from "./OverlappingAreasTable";
@@ -304,6 +308,10 @@ const memoizedWidgets: Record<string, WidgetComponent> = {
     SketchAttributesTable,
     "SketchAttributesTable"
   ),
+  MpaGuideLevelOfProtection: memoWidget(
+    MpaGuideLevelOfProtection,
+    "MpaGuideLevelOfProtection"
+  ),
   OverlappingAreasTable: memoWidget(
     OverlappingAreasTable,
     "OverlappingAreasTable"
@@ -485,6 +493,8 @@ export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
       return <GeographySizeTableTooltipControls {...props} />;
     case "SketchAttributesTable":
       return <SketchAttributesTableTooltipControls {...props} />;
+    case "MpaGuideLevelOfProtection":
+      return <MpaGuideLevelOfProtectionTooltipControls {...props} />;
     case "OverlappingAreasTable":
       return <OverlappingAreasTableTooltipControls {...props} />;
     case "FeatureCountTable":
@@ -580,6 +590,8 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
       return <memoizedWidgets.GeographySizeTable {...widgetProps} />;
     case "SketchAttributesTable":
       return <memoizedWidgets.SketchAttributesTable {...widgetProps} />;
+    case "MpaGuideLevelOfProtection":
+      return <memoizedWidgets.MpaGuideLevelOfProtection {...widgetProps} />;
     case "OverlappingAreasTable":
       return <memoizedWidgets.OverlappingAreasTable {...widgetProps} />;
     case "FeatureCountTable":
@@ -637,6 +649,7 @@ export type BuildReportCommandGroupsArgs = {
     item: CommandPaletteItem;
   }) => CommandPaletteItem;
   onProcessLayer?: (tocId: number, sourceId: number) => Promise<boolean>;
+  projectSlug?: string;
 };
 
 export function ProcessForReportingFooter({
@@ -869,6 +882,7 @@ export function buildReportCommandGroups({
   overlayFooterItem,
   overlayAugmenter,
   onProcessLayer,
+  projectSlug,
 }: BuildReportCommandGroupsArgs = {}): CommandPaletteGroup[] {
   const commandGroups: CommandPaletteGroup[] = [];
 
@@ -973,6 +987,21 @@ export function buildReportCommandGroups({
         });
       },
     });
+    if (["bbnj", "cburt"].includes(projectSlug || "")) {
+      sketchBlockWidgetsGroup.items.push({
+        id: "mpa-guide-level-of-protection",
+        label: "MPA Guide Level of Protection",
+        description:
+          "Shows the MPA Guide level of protection from sketch allowed-use attributes (BBNJ project only).",
+        run: (state, dispatch, view) => {
+          return insertBlockMetric(view, state.selection.ranges[0], {
+            type: "MpaGuideLevelOfProtection",
+            metrics: [],
+            componentSettings: {},
+          });
+        },
+      });
+    }
     if (geographies && geographies.length > 1) {
       sketchBlockWidgetsGroup.items.push({
         id: "geography-size-table",

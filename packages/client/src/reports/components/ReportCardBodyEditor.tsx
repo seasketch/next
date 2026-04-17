@@ -168,10 +168,7 @@ function ReportCardBodyEditorInner({
           id: cardId,
           body: setCollapsibleBlocksClosed(body),
         },
-        refetchQueries: [
-          ...refetchDraftReportTree,
-          ReportDependenciesDocument,
-        ],
+        refetchQueries: [...refetchDraftReportTree, ReportDependenciesDocument],
         awaitRefetchQueries: true,
       });
       setEditing(null);
@@ -394,6 +391,7 @@ function ReportCardBodyEditorInner({
   const contextualGroups = useMemo(
     () =>
       buildReportCommandGroups({
+        projectSlug: getSlug(),
         sources:
           reportingLayersQuery.data?.projectBySlug?.reportingLayers || [],
         draftTableOfContentsItems:
