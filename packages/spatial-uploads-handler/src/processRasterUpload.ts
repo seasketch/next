@@ -21,6 +21,7 @@ import {
 import gdal from "gdal-async";
 import bbox from "@turf/bbox";
 import { convertToGeoTiff, getLayerIdentifiers } from "./formats/netcdf";
+import { resolveRasterEpsg } from "./rasterEpsg";
 
 export async function processRasterUpload(options: {
   logger: Logger;
@@ -71,7 +72,7 @@ export async function processRasterUpload(options: {
   > | null = null;
   const originalPath = options.path;
 
-  const { ext, isCorrectProjection, crs, epsg } = await validateInput(path);
+  let { ext, isCorrectProjection, crs, epsg } = await validateInput(path);
 
   if (ext === ".nc") {
     const layerIdentifiers = await getLayerIdentifiers(path, logger);
@@ -81,6 +82,12 @@ export async function processRasterUpload(options: {
         pathJoin(workingDirectory, jobId + ".tif"),
         logger,
       );
+      if (epsg == null) {
+        const dsTif = await gdal.openAsync(path);
+        epsg = await resolveRasterEpsg(path, dsTif.srs ?? null);
+        isCorrectProjection = epsg === 3857;
+        crs = epsg != null ? `EPSG:${epsg}` : null;
+      }
     } else {
       throw new Error("No layers found in NetCDF file");
     }
@@ -227,43 +234,6 @@ export async function processRasterUpload(options: {
   };
 }
 
-/**
- * Numeric EPSG from GDAL only when the dataset advertises an EPSG authority ID.
- * (Many CRSs use other authorities or lack a simple integer code.)
- *
- * GeoTIFFs built from GeoKeys often end up with an SRS whose AUTHORITY tag
- * lives on the `PROJCS` or `GEOGCS` sub-node rather than the root WKT node,
- * so `getAuthorityName()`/`getAuthorityCode()` with no target key return
- * empty strings. We try `autoIdentifyEPSG()` first to promote the authority
- * to the root, then fall back to the PROJCS/GEOGCS sub-nodes.
- */
-function epsgFromSpatialReference(
-  srs: gdal.SpatialReference,
-): number | null {
-  try {
-    srs.autoIdentifyEPSG();
-  } catch {
-    // GDAL throws when it cannot identify the CRS; fall through to the
-    // sub-node lookups below.
-  }
-  const candidateKeys: (string | null)[] = [null, "PROJCS", "GEOGCS"];
-  for (const key of candidateKeys) {
-    const auth = srs.getAuthorityName(key);
-    const code = srs.getAuthorityCode(key);
-    if (!auth || code == null || String(code).trim() === "") {
-      continue;
-    }
-    if (auth.toUpperCase() !== "EPSG") {
-      continue;
-    }
-    const n = parseInt(String(code), 10);
-    if (Number.isFinite(n)) {
-      return n;
-    }
-  }
-  return null;
-}
-
 async function validateInput(path: string) {
   let { ext } = parsePath(path);
 
@@ -278,7 +248,7 @@ async function validateInput(path: string) {
     throw new Error(`Unrecognized raster driver "${ds.driver.description}"`);
   }
 
-  const epsg = ds.srs ? epsgFromSpatialReference(ds.srs) : null;
+  const epsg = await resolveRasterEpsg(path, ds.srs ?? null);
   const isCorrectProjection = epsg === 3857;
   const crs = epsg != null ? `EPSG:${epsg}` : null;
 

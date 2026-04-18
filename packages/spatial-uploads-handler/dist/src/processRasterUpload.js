@@ -13,7 +13,9 @@ const aiUploadNotes_1 = require("./aiUploadNotes");
 const gdal_async_1 = __importDefault(require("gdal-async"));
 const bbox_1 = __importDefault(require("@turf/bbox"));
 const netcdf_1 = require("./formats/netcdf");
+const rasterEpsg_1 = require("./rasterEpsg");
 async function processRasterUpload(options) {
+    var _a;
     const { logger, outputs, updateProgress, baseKey, workingDirectory, jobId, originalName, uploadFilename, enableAiDataAnalyst, } = options;
     if (enableAiDataAnalyst) {
         (0, aiUploadNotes_1.assertAiDataAnalystEnvVarsPresent)();
@@ -25,11 +27,17 @@ async function processRasterUpload(options) {
         : null;
     let columnP = null;
     const originalPath = options.path;
-    const { ext, isCorrectProjection, crs, epsg } = await validateInput(path);
+    let { ext, isCorrectProjection, crs, epsg } = await validateInput(path);
     if (ext === ".nc") {
         const layerIdentifiers = await (0, netcdf_1.getLayerIdentifiers)(path, logger);
         if (layerIdentifiers.length > 0) {
             path = await (0, netcdf_1.convertToGeoTiff)(layerIdentifiers[0], (0, path_1.join)(workingDirectory, jobId + ".tif"), logger);
+            if (epsg == null) {
+                const dsTif = await gdal_async_1.default.openAsync(path);
+                epsg = await (0, rasterEpsg_1.resolveRasterEpsg)(path, (_a = dsTif.srs) !== null && _a !== void 0 ? _a : null);
+                isCorrectProjection = epsg === 3857;
+                crs = epsg != null ? `EPSG:${epsg}` : null;
+            }
         }
         else {
             throw new Error("No layers found in NetCDF file");
@@ -134,42 +142,8 @@ async function processRasterUpload(options) {
         aiDataAnalystNotesPromise,
     };
 }
-/**
- * Numeric EPSG from GDAL only when the dataset advertises an EPSG authority ID.
- * (Many CRSs use other authorities or lack a simple integer code.)
- *
- * GeoTIFFs built from GeoKeys often end up with an SRS whose AUTHORITY tag
- * lives on the `PROJCS` or `GEOGCS` sub-node rather than the root WKT node,
- * so `getAuthorityName()`/`getAuthorityCode()` with no target key return
- * empty strings. We try `autoIdentifyEPSG()` first to promote the authority
- * to the root, then fall back to the PROJCS/GEOGCS sub-nodes.
- */
-function epsgFromSpatialReference(srs) {
-    try {
-        srs.autoIdentifyEPSG();
-    }
-    catch {
-        // GDAL throws when it cannot identify the CRS; fall through to the
-        // sub-node lookups below.
-    }
-    const candidateKeys = [null, "PROJCS", "GEOGCS"];
-    for (const key of candidateKeys) {
-        const auth = srs.getAuthorityName(key);
-        const code = srs.getAuthorityCode(key);
-        if (!auth || code == null || String(code).trim() === "") {
-            continue;
-        }
-        if (auth.toUpperCase() !== "EPSG") {
-            continue;
-        }
-        const n = parseInt(String(code), 10);
-        if (Number.isFinite(n)) {
-            return n;
-        }
-    }
-    return null;
-}
 async function validateInput(path) {
+    var _a;
     let { ext } = (0, path_1.parse)(path);
     // Use rasterio to see if it is a supported file format
     const isTif = ext === ".tif" || ext === ".tiff";
@@ -180,7 +154,7 @@ async function validateInput(path) {
     if (ds.driver.description !== "GTiff" && ds.driver.description !== "netCDF") {
         throw new Error(`Unrecognized raster driver "${ds.driver.description}"`);
     }
-    const epsg = ds.srs ? epsgFromSpatialReference(ds.srs) : null;
+    const epsg = await (0, rasterEpsg_1.resolveRasterEpsg)(path, (_a = ds.srs) !== null && _a !== void 0 ? _a : null);
     const isCorrectProjection = epsg === 3857;
     const crs = epsg != null ? `EPSG:${epsg}` : null;
     return {
