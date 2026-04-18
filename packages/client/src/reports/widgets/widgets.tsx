@@ -1811,22 +1811,46 @@ export function TooltipBooleanConfigurationOption({
   label,
   checked,
   onChange,
+  checkboxFirst = false,
 }: {
   label: string;
   checked: boolean;
   onChange: (next: boolean) => void;
+  /** When true, checkbox is shown before the label (better for stacked column toggles). */
+  checkboxFirst?: boolean;
 }) {
+  const input = (
+    <input
+      type="checkbox"
+      className="h-4 w-4 shrink-0 rounded border-gray-300 text-gray-600 focus:ring-slate-500"
+      checked={checked}
+      onChange={(e) => onChange(e.target.checked)}
+    />
+  );
+  const labelEl = (
+    <span
+      className={
+        checkboxFirst
+          ? "text-gray-800"
+          : "font-light text-gray-400 whitespace-nowrap"
+      }
+    >
+      {label}
+    </span>
+  );
   return (
     <label className="flex items-center gap-2 text-sm text-gray-800">
-      <span className="font-light text-gray-400 whitespace-nowrap">
-        {label}
-      </span>
-      <input
-        type="checkbox"
-        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-        checked={checked}
-        onChange={(e) => onChange(e.target.checked)}
-      />
+      {checkboxFirst ? (
+        <>
+          {input}
+          {labelEl}
+        </>
+      ) : (
+        <>
+          {labelEl}
+          {input}
+        </>
+      )}
     </label>
   );
 }

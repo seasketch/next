@@ -71,6 +71,7 @@ type TablePaddingRowsProps = {
   count: number;
   includeColorColumn?: boolean;
   includeVisibilityColumn?: boolean;
+  showAreaColumn?: boolean;
   showPercentColumn?: boolean;
   numericAlign?: "right" | "center";
 };
@@ -79,6 +80,7 @@ export const TablePaddingRows: React.FC<TablePaddingRowsProps> = ({
   count,
   includeVisibilityColumn = false,
   includeColorColumn = false,
+  showAreaColumn = true,
   showPercentColumn = false,
   numericAlign = "right",
 }) => {
@@ -101,13 +103,15 @@ export const TablePaddingRows: React.FC<TablePaddingRowsProps> = ({
           <div className="flex-1 min-w-0 text-gray-800 text-sm">
             <span className="truncate block invisible">.</span>
           </div>
-          <div
-            className={`flex-none text-gray-900 tabular-nums text-sm min-w-[80px] ${
-              numericAlign === "center" ? "text-center" : "text-right"
-            }`}
-          >
-            <span className="invisible">0</span>
-          </div>
+          {showAreaColumn && (
+            <div
+              className={`flex-none text-gray-900 tabular-nums text-sm min-w-[80px] ${
+                numericAlign === "center" ? "text-center" : "text-right"
+              }`}
+            >
+              <span className="invisible">0</span>
+            </div>
+          )}
           {showPercentColumn && (
             <div className="flex-none text-right text-gray-700 tabular-nums text-sm min-w-[70px]">
               <span className="invisible">&nbsp;</span>

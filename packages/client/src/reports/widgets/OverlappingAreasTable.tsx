@@ -61,6 +61,7 @@ type OverlappingAreasTableSettings = {
   nameLabel?: string;
   areaLabel?: string;
   percentWithinLabel?: string;
+  showAreaColumn?: boolean;
   showPercentColumn?: boolean;
   hideColorSwatches?: boolean;
 } & ClassTableRowComponentSettings;
@@ -249,8 +250,11 @@ export const OverlappingAreasTable: ReportWidget<
   const showZero = componentSettings.showZeroOverlapCategories ?? false;
   const sortBy = componentSettings.sortBy || "overlap";
   const rowsPerPage = componentSettings.rowsPerPage ?? 10;
+  const showAreaColumn = componentSettings.showAreaColumn ?? true;
   const showPercentColumn = componentSettings.showPercentColumn ?? true;
   const showColorSwatches = !componentSettings.hideColorSwatches;
+  const areaColumnAlignClass =
+    showAreaColumn && showPercentColumn ? "text-center" : "text-right";
   const nameLabel = componentSettings.nameLabel || t("Name");
   const areaLabel = componentSettings.areaLabel || t("Area");
   const percentWithinLabel =
@@ -380,13 +384,13 @@ export const OverlappingAreasTable: ReportWidget<
           <div className="flex-1 min-w-0 text-gray-600 text-xs font-semibold uppercase tracking-wide">
             {nameLabel}
           </div>
-          <div
-            className={`flex-none ${
-              showPercentColumn ? "text-center" : "text-right"
-            } text-gray-600 text-xs font-semibold uppercase tracking-wide min-w-[80px]`}
-          >
-            {areaLabel}
-          </div>
+          {showAreaColumn && (
+            <div
+              className={`flex-none ${areaColumnAlignClass} text-gray-600 text-xs font-semibold uppercase tracking-wide min-w-[80px]`}
+            >
+              {areaLabel}
+            </div>
+          )}
           {showPercentColumn && (
             <div className="flex-none text-right text-gray-600 text-xs font-semibold uppercase tracking-wide min-w-[70px]">
               {percentWithinLabel}
@@ -427,13 +431,17 @@ export const OverlappingAreasTable: ReportWidget<
                   {row.label}
                 </span>
               </div>
-              <div
-                className={`flex-none ${
-                  showPercentColumn ? "text-center" : "text-right"
-                } text-gray-900 tabular-nums text-sm min-w-[80px]`}
-              >
-                {loading ? <MetricLoadingDots /> : formatters.area(row.overlap)}
-              </div>
+              {showAreaColumn && (
+                <div
+                  className={`flex-none ${areaColumnAlignClass} text-gray-900 tabular-nums text-sm min-w-[80px]`}
+                >
+                  {loading ? (
+                    <MetricLoadingDots />
+                  ) : (
+                    formatters.area(row.overlap)
+                  )}
+                </div>
+              )}
               {showPercentColumn && (
                 <div className="flex-none text-right text-gray-700 tabular-nums text-sm min-w-[70px]">
                   {typeof percent === "number" &&
@@ -466,7 +474,11 @@ export const OverlappingAreasTable: ReportWidget<
           includeColorColumn={
             showColorSwatches && rows.some(classTableRowHasSwatch)
           }
+          showAreaColumn={showAreaColumn}
           showPercentColumn={showPercentColumn}
+          numericAlign={
+            showAreaColumn && showPercentColumn ? "center" : "right"
+          }
         />
       </div>
       {showPagination && (
@@ -503,7 +515,9 @@ export const OverlappingAreasTableTooltipControls: ReportWidgetTooltipControls =
     const showZero = settings.showZeroOverlapCategories ?? false;
     const sortBy = settings.sortBy || "overlap";
     const rowsPerPage = settings.rowsPerPage ?? 10;
+    const showAreaColumn = settings.showAreaColumn ?? true;
     const showPercentColumn = settings.showPercentColumn ?? true;
+    const showColorSwatches = !settings.hideColorSwatches;
 
     const { filteredSources: sources } = useOverlaySources(dependencies);
 
@@ -563,10 +577,6 @@ export const OverlappingAreasTableTooltipControls: ReportWidgetTooltipControls =
           onShowZerosChange={(next) =>
             handleUpdate({ showZeroOverlapCategories: next })
           }
-          showColorSwatches={!settings.hideColorSwatches}
-          onShowColorSwatchesChange={(next) =>
-            handleUpdate({ hideColorSwatches: next ? undefined : true })
-          }
         />
         <TableHeadingsEditor
           labelKeys={["nameLabel", "areaLabel", "percentWithinLabel"]}
@@ -575,11 +585,39 @@ export const OverlappingAreasTableTooltipControls: ReportWidgetTooltipControls =
           onUpdate={onUpdate}
         />
         <TooltipMorePopover>
-          <TooltipBooleanConfigurationOption
-            label={t("Show % column")}
-            checked={showPercentColumn}
-            onChange={(next) => handleUpdate({ showPercentColumn: next })}
-          />
+          <div className="space-y-2">
+            <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
+              {t("Show columns")}
+            </div>
+            <TooltipBooleanConfigurationOption
+              label={t("Color swatches")}
+              checked={showColorSwatches}
+              checkboxFirst
+              onChange={(next) =>
+                handleUpdate({ hideColorSwatches: next ? undefined : true })
+              }
+            />
+            <TooltipBooleanConfigurationOption
+              label={t("Area")}
+              checked={showAreaColumn}
+              checkboxFirst
+              onChange={(next) =>
+                handleUpdate({
+                  showAreaColumn: next ? undefined : false,
+                })
+              }
+            />
+            <TooltipBooleanConfigurationOption
+              label={t("% of geography")}
+              checked={showPercentColumn}
+              checkboxFirst
+              onChange={(next) =>
+                handleUpdate({
+                  showPercentColumn: next ? undefined : false,
+                })
+              }
+            />
+          </div>
           <PaginationSetting
             rowsPerPage={rowsPerPage}
             onChange={(next: number) => handleUpdate({ rowsPerPage: next })}
