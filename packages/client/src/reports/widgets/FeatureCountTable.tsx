@@ -39,7 +39,7 @@ import { usePagination } from "../hooks/usePagination";
 import { ClassRowSettingsPopover } from "./ClassRowSettingsPopover";
 import ReportLayerVisibilityCheckbox from "../components/ReportLayerVisibilityCheckbox";
 import { LayersIcon } from "@radix-ui/react-icons";
-import { useClippingGeography } from "../hooks/useClippingGeography";
+import { usePrimaryGeography } from "../hooks/usePrimaryGeography";
 
 type FeatureCountTableSettings = {
   showZeroCountCategories?: boolean;
@@ -78,7 +78,8 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
   const percentWithinLabel =
     componentSettings.percentWithinLabel || t("% Within");
 
-  const primaryGeographyId = useClippingGeography(sketchClass, geographies)?.id;
+  const { clippingGeography } = usePrimaryGeography(sketchClass, geographies);
+  const primaryGeographyId = clippingGeography?.id;
 
   const rows = useMemo<FeatureCountRow[]>(() => {
     const classRows = getClassTableRows({

@@ -65,6 +65,7 @@ export const MyComponent: React.FC<MyComponentProps> = ({ title }) => {
 
 - The capabilities of the GraphQL API are defined in `packages/api/generated-schema.gql`.
 - When a new query or mutation is necessary, create it in `packages/api/migrations/current.sql`, following the guidance of the PostGraphile documentation at https://www.graphile.org/postgraphile/introduction/. Never create a migration file in `packages/api/migrations/committed` directly. If a mutation or query is particularly complex, it can be implemented as a plugin under `packages/api/src/plugins`.
+- Never directly edit client/src/generated/\* files! If you need to modify queries and related auto-generated types, edit .graphql files and run the `graphql:codegen` npm script to regenerate these files.
 
 ## React Client -- verifying your work
 

@@ -70,16 +70,26 @@ export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
         const resolvedLayerStableId = hasOverride
           ? geoOverrides[geoKey] ?? undefined
           : defaultStableId;
-        const stableId = enableLayerToggles
-          ? resolvedLayerStableId
-          : undefined;
+        const stableId = enableLayerToggles ? resolvedLayerStableId : undefined;
 
         const sketchMetrics = metrics.filter(
           (m) =>
             subjectIsFragment(m.subject) &&
             m.subject.geographies.includes(geography.id)
         ) as Pick<Metric, "type" | "value">[];
+        const geographyMetrics = metrics.filter(
+          (m) => subjectIsGeography(m.subject) && m.subject.id === geography.id
+        ) as Pick<Metric, "type" | "value">[];
         if (sketchMetrics.length === 0) {
+          return {
+            geographyId: geography.id,
+            geographyName: geography.name,
+            areaSqKm: 0,
+            fractionOfTotal: 0,
+            stableId,
+          };
+        }
+        if (geographyMetrics.length === 0) {
           return {
             geographyId: geography.id,
             geographyName: geography.name,
@@ -94,12 +104,8 @@ export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
 
         const areaSqKm = areaSqKmMetric.value ?? 0;
 
-        const geographyAreaMetric = combineMetricsForFragments<TotalAreaMetric>(
-          metrics.filter(
-            (m) =>
-              subjectIsGeography(m.subject) && m.subject.id === geography.id
-          ) as Pick<Metric, "type" | "value">[]
-        );
+        const geographyAreaMetric =
+          combineMetricsForFragments<TotalAreaMetric>(geographyMetrics);
 
         const geographyArea = geographyAreaMetric.value ?? 0;
         const fractionOfTotal =

@@ -238,6 +238,14 @@ export type MetricDependencyParameters = {
      * @default "auto" for fragment stats, false for geography stats
      */
     vrm?: false | "auto" | number;
+    /**
+     * If provided, and metrics are being calculated for a Collection, limit
+     * metrics to fragments that belong to the specified sketch classes. If not
+     * provided, all fragments will be included.
+     *
+     * @default undefined
+     */
+    sketchClasses?: number[];
 };
 /**
  * Creates a unique id for a given metric dependency. Any difference in

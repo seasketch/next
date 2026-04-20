@@ -137,13 +137,18 @@ export default function SketchClassForm({
                   },
                 ]
               : []),
-            ...(reportingMode !== "legacy"
+            ...(reportingMode !== "legacy" &&
+            sketchClass.geometryType !== SketchGeometryType.Collection
               ? [
                   {
                     name: "Geography Clipping",
                     id: "geography-clipping",
                     current: selectedTab === "geography-clipping",
                   },
+                ]
+              : []),
+            ...(reportingMode !== "legacy"
+              ? [
                   {
                     name: "Reports",
                     id: "reports",
@@ -343,7 +348,8 @@ export default function SketchClassForm({
               <AccessControlListEditor nodeId={sketchClass.acl?.nodeId} />
             )}
             {isReportBuilderEnabled &&
-              sketchClass.geometryType === SketchGeometryType.Polygon && (
+              (sketchClass.geometryType === SketchGeometryType.Polygon ||
+                sketchClass.geometryType === SketchGeometryType.Collection) && (
                 <RadioGroup<"new" | "legacy" | "transition">
                   legend={t("Analytical Reports")}
                   value={reportingMode}

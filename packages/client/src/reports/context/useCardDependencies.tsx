@@ -22,8 +22,11 @@ export function useCardDependencies(cardId: number): CardDependenciesResult {
         )
         .filter((s) => s !== undefined);
 
-      // Compute loading state
+      // Include ReportDependencies query loading (initial load + refetch after
+      // cache eviction). Metric/source states alone miss Apollo refetches where
+      // stale Complete metrics remain until the network responds.
       const loading =
+        context.loading ||
         metrics.some(
           (metric) =>
             metric.state !== SpatialMetricState.Complete &&

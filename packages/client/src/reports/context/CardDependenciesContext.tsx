@@ -13,7 +13,13 @@ export type CardDependenciesValue = {
   geographies: Pick<Geography, "id" | "name" | "translatedProps" | "stableIds">[];
   sketchClass: Pick<
     ReportContextSketchClassDetailsFragment,
-    "id" | "projectId" | "geometryType" | "form" | "clippingGeographies"
+    | "id"
+    | "projectId"
+    | "geometryType"
+    | "form"
+    | "clippingGeographies"
+    | "project"
+    | "validChildren"
   > | null;
   errors: { [errorMessage: string]: number };
 };

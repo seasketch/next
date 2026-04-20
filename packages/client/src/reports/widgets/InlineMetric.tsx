@@ -38,7 +38,7 @@ import {
   TooltipBooleanConfigurationOption,
 } from "./widgets";
 import { useBaseReportContext } from "../context/BaseReportContext";
-import { useClippingGeography } from "../hooks/useClippingGeography";
+import { usePrimaryGeography } from "../hooks/usePrimaryGeography";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
 import { NumberRoundingControl } from "./NumberRoundingControl";
 import { VrmSelector } from "./VrmSelector";
@@ -335,7 +335,8 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
   sketchClass,
   lang,
 }) => {
-  const clippingGeography = useClippingGeography(sketchClass, geographies);
+  const { clippingGeography, primaryClippingGeographies } =
+    usePrimaryGeography(sketchClass, geographies);
   const {
     pluralRules,
     countDefaultMessages,
@@ -365,9 +366,12 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
     componentSettings?.pluralizedCountLabels,
     componentSettings?.pluralizedDistinctValueLabels,
   ]);
-  if (sketchClass.geometryType !== SketchGeometryType.Polygon) {
+  if (
+    sketchClass.geometryType !== SketchGeometryType.Polygon &&
+    sketchClass.geometryType !== SketchGeometryType.Collection
+  ) {
     throw new Error(
-      "Inline metric only supports polygon geometry types currently."
+      "Inline metric only supports polygon and collection geometry types currently."
     );
   }
   const formatters = useNumberFormatters({
@@ -410,7 +414,7 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
           throw new Error("Primary geography not found in metrics.");
         }
         if (
-          !(sketchClass.clippingGeographies || []).some(
+          !(primaryClippingGeographies || []).some(
             (g) => g!.id === primaryGeographyId
           )
         ) {
@@ -633,7 +637,7 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
     componentSettings?.rasterStat,
     formatters,
     rasterUnitLabel,
-    sketchClass.clippingGeographies,
+    primaryClippingGeographies,
     errors,
     pluralRules,
     componentSettings?.hideLabelForCount,
@@ -864,7 +868,7 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
 
   const { geographies, sketchClass: tooltipSketchClass } =
     useBaseReportContext();
-  const clippingGeography = useClippingGeography(
+  const { clippingGeography } = usePrimaryGeography(
     tooltipSketchClass,
     geographies
   );
@@ -1036,9 +1040,7 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
   };
 
   const currentVrm = useMemo(() => {
-    const fragmentDep = dependencies.find(
-      (d) => d.subjectType === "fragments"
-    );
+    const fragmentDep = dependencies.find((d) => d.subjectType === "fragments");
     return fragmentDep?.parameters?.vrm;
   }, [dependencies]);
 

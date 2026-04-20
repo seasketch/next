@@ -650,6 +650,7 @@ export type BuildReportCommandGroupsArgs = {
   }) => CommandPaletteItem;
   onProcessLayer?: (tocId: number, sourceId: number) => Promise<boolean>;
   projectSlug?: string;
+  childSketchClassGeometryTypes?: SketchGeometryType[];
 };
 
 export function ProcessForReportingFooter({
@@ -879,6 +880,7 @@ export function buildReportCommandGroups({
   geographies,
   clippingGeography,
   sketchClassGeometryType,
+  childSketchClassGeometryTypes,
   overlayFooterItem,
   overlayAugmenter,
   onProcessLayer,
@@ -886,12 +888,21 @@ export function buildReportCommandGroups({
 }: BuildReportCommandGroupsArgs = {}): CommandPaletteGroup[] {
   const commandGroups: CommandPaletteGroup[] = [];
 
+  const showPolygonOptions =
+    sketchClassGeometryType === SketchGeometryType.Polygon ||
+    (sketchClassGeometryType === SketchGeometryType.Collection &&
+      childSketchClassGeometryTypes &&
+      childSketchClassGeometryTypes.includes(SketchGeometryType.Polygon));
+
   const inlineSketchMetricsGroup: CommandPaletteGroup = {
     id: "inline-sketch-metrics",
-    label: "Inline Sketch Metrics",
+    label:
+      sketchClassGeometryType === SketchGeometryType.Collection
+        ? "Inline Collection Metrics"
+        : "Inline Sketch Metrics",
     items: [],
   };
-  if (sketchClassGeometryType === SketchGeometryType.Polygon) {
+  if (showPolygonOptions) {
     inlineSketchMetricsGroup.items.push({
       id: "sketch-size",
       label: "Area",
@@ -972,7 +983,7 @@ export function buildReportCommandGroups({
     label: "Sketch Block Widgets",
     items: [],
   };
-  if (sketchClassGeometryType === SketchGeometryType.Polygon) {
+  if (showPolygonOptions) {
     sketchBlockWidgetsGroup.items.push({
       id: "sketch-attributes-table",
       label: "Sketch Attributes Table",
@@ -1794,7 +1805,13 @@ export interface ReportWidgetProps<T extends Record<string, any>> {
   node?: Node;
   sketchClass: Pick<
     ReportContextSketchClassDetailsFragment,
-    "id" | "projectId" | "geometryType" | "form" | "clippingGeographies"
+    | "id"
+    | "projectId"
+    | "geometryType"
+    | "form"
+    | "clippingGeographies"
+    | "project"
+    | "validChildren"
   >;
   alternateLanguageSettings?: { [langCode: string]: any };
   lang: string;

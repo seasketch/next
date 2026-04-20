@@ -36,7 +36,7 @@ import {
   SwatchForClassTableRow,
 } from "./SwatchForClassTableRow";
 import { useOverlaySources } from "../hooks/useOverlaySources";
-import { useClippingGeography } from "../hooks/useClippingGeography";
+import { usePrimaryGeography } from "../hooks/usePrimaryGeography";
 
 export type FeaturePresenceTableSettings = {
   rowsPerPage?: number;
@@ -68,7 +68,8 @@ export const FeaturePresenceTable: ReportWidget<
   const nameLabel = componentSettings.nameLabel || t("Name");
   const presenceLabel = componentSettings.presenceLabel || t("Presence");
 
-  const primaryGeographyId = useClippingGeography(sketchClass, geographies)?.id ?? 0;
+  const { clippingGeography } = usePrimaryGeography(sketchClass, geographies);
+  const primaryGeographyId = clippingGeography?.id ?? 0;
 
   const rows = useMemo<FeaturePresenceRow[]>(() => {
     const classRows = getClassTableRows({

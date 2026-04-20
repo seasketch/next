@@ -19,6 +19,7 @@ type BaseReportContextValue = {
     | "form"
     | "clippingGeographies"
     | "project"
+    | "validChildren"
   >;
   report: ReportConfiguration;
   geographies: Pick<Geography, "id" | "name" | "translatedProps" | "stableIds">[];

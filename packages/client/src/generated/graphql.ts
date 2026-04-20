@@ -22465,7 +22465,7 @@ export type ProjectMetadataFragment = (
   & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays' | 'aboutPageContents' | 'aboutPageEnabled' | 'enableReportBuilder' | 'customDocLink' | 'showScalebarByDefault' | 'showLegendByDefault'>
   & { sketchClasses: Array<(
     { __typename?: 'SketchClass' }
-    & Pick<SketchClass, 'id' | 'name' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps' | 'reportId' | 'isGeographyClippingEnabled' | 'useGeographyClipping' | 'previewNewReports'>
+    & Pick<SketchClass, 'id' | 'name' | 'geometryType' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps' | 'reportId' | 'isGeographyClippingEnabled' | 'useGeographyClipping' | 'previewNewReports'>
   )>, aboutPageRenderedContent?: Maybe<Array<Maybe<(
     { __typename?: 'RenderedAboutPageContent' }
     & Pick<RenderedAboutPageContent, 'lang' | 'html'>
@@ -23812,7 +23812,7 @@ export type SketchTocDetailsFragment = (
   & Pick<Sketch, 'id' | 'bbox' | 'name' | 'numVertices' | 'sketchClassId' | 'collectionId' | 'folderId' | 'timestamp' | 'updatedAt' | 'createdAt' | 'isCollection' | 'filterMvtUrl'>
   & { sketchClass?: Maybe<(
     { __typename?: 'SketchClass' }
-    & Pick<SketchClass, 'id' | 'geometryType'>
+    & Pick<SketchClass, 'id' | 'geometryType' | 'reportId'>
   )> }
 );
 
@@ -23893,6 +23893,10 @@ export type SketchCrudResponseFragment = (
   )>, parentCollection?: Maybe<(
     { __typename?: 'Sketch' }
     & Pick<Sketch, 'id' | 'updatedAt' | 'timestamp'>
+    & { sketchClass?: Maybe<(
+      { __typename?: 'SketchClass' }
+      & Pick<SketchClass, 'reportId'>
+    )> }
   )>, relatedFragments?: Maybe<Array<Maybe<(
     { __typename?: 'SketchesRelatedFragmentsRecord' }
     & Pick<SketchesRelatedFragmentsRecord, 'hash' | 'sketches' | 'geographies'>
@@ -23948,6 +23952,10 @@ export type DeleteSketchTocItemsMutation = (
     & { updatedCollections: Array<Maybe<(
       { __typename?: 'Sketch' }
       & Pick<Sketch, 'id' | 'updatedAt'>
+      & { sketchClass?: Maybe<(
+        { __typename?: 'SketchClass' }
+        & Pick<SketchClass, 'reportId'>
+      )> }
     )>> }
   )> }
 );
@@ -24033,6 +24041,10 @@ export type UpdateTocItemsParentMutation = (
     )>>, updatedCollections: Array<Maybe<(
       { __typename?: 'Sketch' }
       & Pick<Sketch, 'id' | 'updatedAt'>
+      & { sketchClass?: Maybe<(
+        { __typename?: 'SketchClass' }
+        & Pick<SketchClass, 'reportId'>
+      )> }
     )>> }
   )> }
 );
@@ -24065,12 +24077,26 @@ export type ReportContextSketchClassDetailsFragment = (
       { __typename?: 'FormLogicRule' }
       & LogicRuleDetailsFragment
     )>> }
-  )>, project?: Maybe<(
+  )>, validChildren?: Maybe<Array<(
+    { __typename?: 'SketchClass' }
+    & Pick<SketchClass, 'id' | 'geometryType' | 'isArchived'>
+    & { clippingGeographies: Array<Maybe<(
+      { __typename?: 'Geography' }
+      & Pick<Geography, 'id'>
+    )>> }
+  )>>, project?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id' | 'sessionIsAdmin' | 'supportedLanguages'>
     & { geographies: Array<(
       { __typename?: 'Geography' }
       & Pick<Geography, 'id' | 'name' | 'translatedProps' | 'stableIds'>
+    )>, sketchClasses: Array<(
+      { __typename?: 'SketchClass' }
+      & Pick<SketchClass, 'id' | 'geometryType' | 'isArchived'>
+      & { clippingGeographies: Array<Maybe<(
+        { __typename?: 'Geography' }
+        & Pick<Geography, 'id'>
+      )>> }
     )> }
   )>, clippingGeographies: Array<Maybe<(
     { __typename?: 'Geography' }
@@ -26858,6 +26884,7 @@ export const ProjectMetadataFragmentDoc = gql`
   sketchClasses {
     id
     name
+    geometryType
     canDigitize
     formElementId
     isArchived
@@ -27341,6 +27368,7 @@ export const SketchTocDetailsFragmentDoc = gql`
   sketchClass {
     id
     geometryType
+    reportId
   }
 }
     `;
@@ -27374,6 +27402,9 @@ export const SketchCrudResponseFragmentDoc = gql`
     id
     updatedAt
     timestamp
+    sketchClass {
+      reportId
+    }
   }
   relatedFragments {
     hash
@@ -27435,6 +27466,14 @@ export const ReportContextSketchClassDetailsFragmentDoc = gql`
       ...LogicRuleDetails
     }
   }
+  validChildren {
+    id
+    geometryType
+    isArchived
+    clippingGeographies {
+      id
+    }
+  }
   project {
     id
     sessionIsAdmin
@@ -27444,6 +27483,14 @@ export const ReportContextSketchClassDetailsFragmentDoc = gql`
       name
       translatedProps
       stableIds
+    }
+    sketchClasses {
+      id
+      geometryType
+      isArchived
+      clippingGeographies {
+        id
+      }
     }
   }
   clippingGeographies {
@@ -37555,6 +37602,9 @@ export const DeleteSketchTocItemsDocument = gql`
     updatedCollections {
       id
       updatedAt
+      sketchClass {
+        reportId
+      }
     }
   }
 }
@@ -37679,6 +37729,9 @@ export const UpdateTocItemsParentDocument = gql`
     updatedCollections {
       id
       updatedAt
+      sketchClass {
+        reportId
+      }
     }
   }
 }

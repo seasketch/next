@@ -35,7 +35,7 @@ import { LabeledDropdown } from "./LabeledDropdown";
 import { VrmSelector } from "./VrmSelector";
 import ReportLayerVisibilityCheckbox from "../components/ReportLayerVisibilityCheckbox";
 import { LayersIcon } from "@radix-ui/react-icons";
-import { useClippingGeography } from "../hooks/useClippingGeography";
+import { usePrimaryGeography } from "../hooks/usePrimaryGeography";
 import { GeographySelector } from "./InlineMetric";
 import { useBaseReportContext } from "../context/BaseReportContext";
 
@@ -68,7 +68,7 @@ export const RasterProportionTable: ReportWidget<
   sketchClass,
   geographies,
 }) => {
-  const clippingGeography = useClippingGeography(sketchClass, geographies);
+  const { clippingGeography } = usePrimaryGeography(sketchClass, geographies);
   const { t } = useTranslation("reports");
 
   const geographyId: number | undefined =
@@ -309,7 +309,7 @@ export const RasterProportionTableTooltipControls: ReportWidgetTooltipControls =
     const { filteredSources: sources } = useOverlaySources(dependencies);
 
     const { geographies, sketchClass } = useBaseReportContext();
-    const clippingGeography = useClippingGeography(sketchClass, geographies);
+    const { clippingGeography } = usePrimaryGeography(sketchClass, geographies);
 
     const handleUpdate = (patch: Partial<RasterProportionTableSettings>) => {
       onUpdate({

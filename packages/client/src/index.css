@@ -8065,6 +8065,10 @@ select{
   max-width:20rem
 }
 
+.max-w-\[38\%\]{
+  max-width:38%
+}
+
 .flex-1{
   flex:1 1 0%
 }
@@ -14869,6 +14873,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
   .sm\:max-w-xs{
     max-width:20rem
+  }
+
+  .sm\:max-w-\[42\%\]{
+    max-width:42%
   }
 
   .sm\:flex-1{

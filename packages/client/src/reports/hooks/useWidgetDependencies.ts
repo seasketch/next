@@ -13,7 +13,13 @@ import { useCardDependenciesContext } from "../context/CardDependenciesContext";
 
 type SketchClassForWidgets = Pick<
   ReportContextSketchClassDetailsFragment,
-  "id" | "projectId" | "geometryType" | "form" | "clippingGeographies"
+  | "id"
+  | "projectId"
+  | "geometryType"
+  | "form"
+  | "clippingGeographies"
+  | "project"
+  | "validChildren"
 >;
 
 export type WidgetDependenciesResult = {

@@ -70,6 +70,7 @@ import ReportCardLoadingIndicator from "./ReportCardLoadingIndicator";
 import { ReportUIStateContext } from "../context/ReportUIStateContext";
 import { useBaseReportContext } from "../context/BaseReportContext";
 import { useSubjectReportContext } from "../context/SubjectReportContext";
+import { usePrimaryGeography } from "../hooks/usePrimaryGeography";
 import { CalculationDetailsModal } from "./CalculationDetailsModal";
 
 interface ReportCardBodyEditorProps {
@@ -112,9 +113,14 @@ function ReportCardBodyEditorInner({
     showCalcDetails,
     onEditorReadyForFocus,
   } = useContext(ReportUIStateContext);
+
   const onEditorReadyForFocusRef = useRef(onEditorReadyForFocus);
   onEditorReadyForFocusRef.current = onEditorReadyForFocus;
   const { geographies, sketchClass, report } = useBaseReportContext();
+  const { clippingGeography: primaryClippingGeography } = usePrimaryGeography(
+    sketchClass,
+    geographies
+  );
   const subjectReportContext = useSubjectReportContext();
   const sketch = subjectReportContext.data?.sketch;
 
@@ -398,17 +404,24 @@ function ReportCardBodyEditorInner({
           reportingLayersQuery.data?.projectBySlug?.draftTableOfContentsItems ||
           [],
         geographies: geographies,
-        clippingGeography: sketchClass?.clippingGeographies?.[0]?.id,
+        clippingGeography: primaryClippingGeography?.id,
         sketchClassGeometryType: sketchClass?.geometryType,
+        childSketchClassGeometryTypes: Array.from(
+          new Set(
+            sketchClass?.project?.sketchClasses?.map((c) => c.geometryType)
+          ) || []
+        ),
         onProcessLayer: handleOverlaySelection,
       }),
     [
       geographies,
-      sketchClass?.clippingGeographies,
       sketchClass?.geometryType,
+      primaryClippingGeography?.id,
       reportingLayersQuery.data?.projectBySlug?.reportingLayers,
       reportingLayersQuery.data?.projectBySlug?.draftTableOfContentsItems,
       handleOverlaySelection,
+      sketchClass?.project?.sketchClasses,
+      sketchClass?.validChildren,
     ]
   );
 

@@ -1,11 +1,17 @@
 import { Trans, useTranslation } from "react-i18next";
-import { useCallback, useContext, useMemo } from "react";
+import {
+  useCallback,
+  useContext,
+  useMemo,
+} from "react";
+import type { ReactNode } from "react";
 import {
   CompatibleSpatialMetricDetailsFragment,
   DataSourceTypes,
   DraftReportDependenciesDocument,
   Geography,
   ReportDependenciesDocument,
+  SketchGeometryType,
   SpatialMetricState,
   useRecalculateSpatialMetricsMutation,
   useProjectReportingLayersQuery,
@@ -17,6 +23,7 @@ import { ReportCardConfiguration } from "./cards/cards";
 import { DraftReportContext } from "./DraftReportContext";
 import { useCardDependenciesContext } from "./context/CardDependenciesContext";
 import { useBaseReportContext } from "./context/BaseReportContext";
+import { useSubjectReportContext } from "./context/SubjectReportContext";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import { useAuth0 } from "@auth0/auth0-react";
 import getSlug from "../getSlug";
@@ -36,7 +43,30 @@ export default function ReportMetricsProgressDetails({
   const context = useCardDependenciesContext();
   const draftReportContext = useContext(DraftReportContext);
   const baseReportContext = useBaseReportContext();
+  const subjectReportContext = useSubjectReportContext();
   const onError = useGlobalErrorHandler();
+
+  const isCollectionSketchClass =
+    baseReportContext.sketchClass.geometryType ===
+    SketchGeometryType.Collection;
+
+  const sketchNameById = useMemo(() => {
+    const m = new Map<number, string>();
+    const data = subjectReportContext.data;
+    if (!data) return m;
+    if (data.sketch?.id != null && data.sketch.name) {
+      m.set(data.sketch.id, data.sketch.name);
+    }
+    for (const ch of data.childSketches ?? []) {
+      m.set(ch.id, ch.name);
+    }
+    for (const sb of data.siblingSketches ?? []) {
+      if (!m.has(sb.id)) {
+        m.set(sb.id, sb.name);
+      }
+    }
+    return m;
+  }, [subjectReportContext.data]);
 
   const [recalculate, recalculateState] = useRecalculateSpatialMetricsMutation({
     onError,
@@ -482,16 +512,11 @@ export default function ReportMetricsProgressDetails({
                         key={"rmtli-" + metric.id}
                         metricType={metric.type}
                         parameters={metric.parameters}
-                        title={
-                          <span className="font-mono truncate">
-                            {t("Polygon ")}
-                            <span className="text-slate-500">
-                              {(
-                                metric.subject as { hash: string }
-                              ).hash.substring(0, 36)}
-                            </span>
-                          </span>
-                        }
+                        title={fragmentMetricLineTitle(metric, {
+                          isCollection: isCollectionSketchClass,
+                          sketchNameById,
+                          t,
+                        })}
                         state={metric.state}
                         progress={metric.progress || null}
                         startedAt={metric.startedAt}
@@ -518,6 +543,67 @@ export default function ReportMetricsProgressDetails({
         )}
       </div>
     </Tooltip.Provider>
+  );
+}
+
+function fragmentMetricLineTitle(
+  metric: CompatibleSpatialMetricDetailsFragment,
+  options: {
+    isCollection: boolean;
+    sketchNameById: Map<number, string>;
+    t: (key: string) => string;
+  }
+): ReactNode {
+  const { isCollection, sketchNameById, t } = options;
+  if (!subjectIsFragment(metric.subject)) {
+    // eslint-disable-next-line i18next/no-literal-string
+    return <span className="text-sm text-slate-500">—</span>;
+  }
+  const hash = metric.subject.hash;
+  const sketchIds = metric.subject.sketches ?? [];
+  const showSketchNames = isCollection && sketchIds.length > 0;
+  const resolvedNames = showSketchNames
+    ? sketchIds.map(
+        (id) =>
+          sketchNameById.get(id) ??
+          // eslint-disable-next-line i18next/no-literal-string
+          `#${id}`
+      )
+    : [];
+  const middleDot = String.fromCharCode(0x00b7);
+  const namesTitle = resolvedNames.join(` ${middleDot} `);
+
+  return (
+    <div className="flex items-center gap-2 min-w-0 w-full">
+      <span className="flex-shrink-0 whitespace-nowrap text-sm">
+        {t("Polygon")}
+      </span>
+      {showSketchNames && (
+        <>
+          <span
+            className="text-slate-300 flex-shrink-0 select-none"
+            aria-hidden
+          >
+            {middleDot}
+          </span>
+          <span
+            className="min-w-0 flex-1 truncate text-sm font-medium text-slate-700"
+            title={namesTitle}
+          >
+            {resolvedNames.join(` ${middleDot} `)}
+          </span>
+        </>
+      )}
+      <span className="text-slate-300 flex-shrink-0 select-none" aria-hidden>
+        {middleDot}
+      </span>
+      <span
+        className="min-w-0 max-w-[38%] shrink font-mono text-xs text-slate-500 truncate sm:max-w-[42%]"
+        title={hash}
+      >
+        {hash.substring(0, 36)}
+      </span>
+    </div>
   );
 }
 

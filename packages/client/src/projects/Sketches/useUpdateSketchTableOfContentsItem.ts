@@ -5,11 +5,27 @@ import {
   UpdateTocItemParentInput,
   useUpdateTocItemsParentMutation,
 } from "../../generated/graphql";
+import {
+  evictReportDependenciesForSketchId,
+  evictReportDependenciesForUpdatedCollectionSketch,
+} from "../../reports/utils/evictReportDependenciesCache";
 
 export default function useUpdateSketchTableOfContentsDraggable() {
   const onError = useGlobalErrorHandler();
   const [mutate] = useUpdateTocItemsParentMutation({
     onError,
+    update: (cache, { data }) => {
+      const result = data?.updateSketchTocItemParent;
+      if (!result) {
+        return;
+      }
+      for (const collection of result.updatedCollections ?? []) {
+        evictReportDependenciesForUpdatedCollectionSketch(cache, collection);
+      }
+      for (const sketch of result.sketches ?? []) {
+        evictReportDependenciesForSketchId(cache, sketch.id);
+      }
+    },
     optimisticResponse: (data) => {
       return {
         __typename: "Mutation",

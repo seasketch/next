@@ -41,7 +41,7 @@ import { ClassRowSettingsPopover } from "./ClassRowSettingsPopover";
 import { LabeledDropdown } from "./LabeledDropdown";
 import ReportLayerVisibilityCheckbox from "../components/ReportLayerVisibilityCheckbox";
 import { ExclamationTriangleIcon, LayersIcon } from "@radix-ui/react-icons";
-import { useClippingGeography } from "../hooks/useClippingGeography";
+import { usePrimaryGeography } from "../hooks/usePrimaryGeography";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import {
   CompatibleSpatialMetricDetailsFragment,
@@ -242,7 +242,7 @@ export const OverlappingAreasTable: ReportWidget<
   sketchClass,
   geographies,
 }) => {
-  const clippingGeography = useClippingGeography(sketchClass, geographies);
+  const { clippingGeography } = usePrimaryGeography(sketchClass, geographies);
   const primaryGeographyId = clippingGeography?.id;
   const { t } = useTranslation("reports");
 

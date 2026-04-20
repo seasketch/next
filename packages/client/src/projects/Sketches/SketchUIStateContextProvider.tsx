@@ -49,6 +49,7 @@ import {
   PopupShareDetailsFragment,
   useDeleteSketchTocItemsMutation,
   SketchClassDetailsFragment,
+  SketchGeometryType,
   SketchPopupDetailsFragment,
 } from "../../generated/graphql";
 import { SketchFolderDetailsFragment } from "../../generated/queries";
@@ -74,6 +75,10 @@ import { LegendItem } from "../../dataLayers/Legend";
 import { compileLegendFromGLStyleLayers } from "../../dataLayers/legends/compileLegend";
 import { LegendForGLLayers } from "../../dataLayers/legends/LegendDataModel";
 import SketchReportWindow from "./SketchReportWindow";
+import {
+  evictReportDependenciesForSketchId,
+  evictReportDependenciesForUpdatedCollectionSketch,
+} from "../../reports/utils/evictReportDependenciesCache";
 
 type ReportState = {
   sketchId: number;
@@ -1146,7 +1151,16 @@ export default function SketchUIStateContextProvider({
   });
   const [deleteSketchTocItem] = useDeleteSketchTocItemsMutation({
     onError,
-    update: async (cache, { data }) => {
+    update: async (cache, { data, variables }) => {
+      for (const item of variables?.items ?? []) {
+        if (item.type === SketchChildType.Sketch) {
+          evictReportDependenciesForSketchId(cache, item.id);
+        }
+      }
+      for (const collection of data?.deleteSketchTocItems?.updatedCollections ??
+        []) {
+        evictReportDependenciesForUpdatedCollectionSketch(cache, collection);
+      }
       const items = data?.deleteSketchTocItems?.deletedItems || [];
       hideSketches(items.filter((id) => /Sketch:/.test(id)));
 
@@ -1839,8 +1853,10 @@ export default function SketchUIStateContextProvider({
                   projectMetadata.data?.project?.sketchClasses?.find(
                     (sc) => sc.id === sketchClassId
                   );
+                /** Collection classes rarely set useGeographyClipping; they still use in-app reports when reportId is set. */
                 const canUseNewReporting =
                   sketchClass?.useGeographyClipping ||
+                  sketchClass?.geometryType === SketchGeometryType.Collection ||
                   (Boolean(previewNewReporting) &&
                     Boolean(projectMetadata.data?.project?.sessionIsAdmin) &&
                     Boolean(sketchClass?.previewNewReports));
