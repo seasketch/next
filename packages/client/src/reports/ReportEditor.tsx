@@ -129,6 +129,13 @@ export default function ReportEditor({
     }
   }, [pendingNewCardId, allCardIds, editing, setEditing]);
 
+  useLayoutEffect(() => {
+    const el = cardsScrollAreaRef.current;
+    if (el) {
+      el.scrollTop = 0;
+    }
+  }, [selectedTabId]);
+
   const [addReportCard] = useAddReportCardMutation({
     awaitRefetchQueries: true,
     onError,

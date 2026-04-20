@@ -7331,10 +7331,6 @@ select{
   height:100vh
 }
 
-.h-\[22px\]{
-  height:22px
-}
-
 .max-h-128{
   max-height:32rem
 }
@@ -7767,10 +7763,6 @@ select{
 
 .w-screen{
   width:100vw
-}
-
-.w-\[22px\]{
-  width:22px
 }
 
 .min-w-0{
@@ -8718,24 +8710,24 @@ select{
   column-gap:3rem
 }
 
-.gap-y-3{
-  row-gap:0.75rem
-}
-
 .gap-x-16{
   column-gap:4rem
 }
 
-.gap-x-8{
-  column-gap:2rem
+.gap-x-5{
+  column-gap:1.25rem
 }
 
 .gap-x-6{
   column-gap:1.5rem
 }
 
-.gap-x-5{
-  column-gap:1.25rem
+.gap-x-8{
+  column-gap:2rem
+}
+
+.gap-y-3{
+  row-gap:0.75rem
 }
 
 .-space-x-1 > :not([hidden]) ~ :not([hidden]){
@@ -10498,10 +10490,6 @@ select{
   background-color:rgb(255 251 235 / 0.9)
 }
 
-.bg-slate-50\/95{
-  background-color:rgb(248 250 252 / 0.95)
-}
-
 .bg-opacity-10{
   --tw-bg-opacity:0.1
 }
@@ -11612,10 +11600,6 @@ select{
 .text-xs{
   font-size:0.75rem;
   line-height:1rem
-}
-
-.text-\[1\.0625rem\]{
-  font-size:1.0625rem
 }
 
 .font-bold{
@@ -13897,16 +13881,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
   color:rgb(255 255 255 / var(--tw-text-opacity, 1))
 }
 
-.hover\:text-blue-800:hover{
-  --tw-text-opacity:1;
-  color:rgb(30 64 175 / var(--tw-text-opacity, 1))
-}
-
-.hover\:text-blue-700:hover{
-  --tw-text-opacity:1;
-  color:rgb(29 78 216 / var(--tw-text-opacity, 1))
-}
-
 .hover\:underline:hover{
   -webkit-text-decoration-line:underline;
           text-decoration-line:underline
@@ -14368,10 +14342,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
   --tw-ring-color:rgb(46 115 182 / var(--tw-ring-opacity, 1))
 }
 
-.focus-visible\:ring-current:focus-visible{
-  --tw-ring-color:currentColor
-}
-
 .focus-visible\:ring-offset-1:focus-visible{
   --tw-ring-offset-width:1px
 }
@@ -14382,10 +14352,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .focus-visible\:ring-offset-gray-900:focus-visible{
   --tw-ring-offset-color:#111827
-}
-
-.focus-visible\:ring-offset-transparent:focus-visible{
-  --tw-ring-offset-color:transparent
 }
 
 .active\:scale-105:active{
@@ -14550,11 +14516,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .disabled\:opacity-50:disabled{
   opacity:0.5
-}
-
-.group[open] .group-open\:rotate-90{
-  --tw-rotate:90deg;
-  transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))
 }
 
 .group:hover .group-hover\:block{
@@ -16205,10 +16166,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
   .dark\:hover\:bg-opacity-50:hover{
     --tw-bg-opacity:0.5
   }
-}
-
-.\[\&\:\:-webkit-details-marker\]\:hidden::-webkit-details-marker{
-  display:none
 }
 
 .\[\&\>span\]\:min-h-0>span{

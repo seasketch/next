@@ -4,7 +4,9 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import Skeleton from "../../components/Skeleton";
@@ -117,6 +119,15 @@ function SketchReportWindowInner({
     }
   }, [baseReportContext.data?.report?.tabs, setSelectedTabId, selectedTabId]);
 
+  const reportBodyScrollRef = useRef<HTMLDivElement>(null);
+
+  useLayoutEffect(() => {
+    const el = reportBodyScrollRef.current;
+    if (el) {
+      el.scrollTop = 0;
+    }
+  }, [selectedTabId]);
+
   const setShowCalcDetails = useCallback(
     (cardId: number | undefined) => {
       if (!cardId) {
@@ -189,7 +200,10 @@ function SketchReportWindowInner({
               </button>
             </div>
             <ReportTabs />
-            <div className="flex-1 overflow-x-hidden overflow-y-auto overscroll-contain bg-gray-100">
+            <div
+              ref={reportBodyScrollRef}
+              className="flex-1 overflow-x-hidden overflow-y-auto overscroll-contain bg-gray-100"
+            >
               <ReportBody />
             </div>
           </div>
