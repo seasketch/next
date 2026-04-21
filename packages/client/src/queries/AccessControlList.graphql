@@ -17,6 +17,10 @@ mutation UpdateAclType($nodeId: ID!, $type: AccessControlListType!) {
       id
       nodeId
       type
+      groups {
+        id
+        name
+      }
     }
   }
 }
@@ -24,6 +28,9 @@ mutation UpdateAclType($nodeId: ID!, $type: AccessControlListType!) {
 mutation AddGroupToAcl($id: Int!, $groupId: Int!) {
   addGroupToAcl(input: { aclId: $id, groupId: $groupId }) {
     acl {
+      id
+      nodeId
+      type
       groups {
         id
         name
@@ -35,6 +42,9 @@ mutation AddGroupToAcl($id: Int!, $groupId: Int!) {
 mutation RemoveGroupFromAcl($id: Int!, $groupId: Int!) {
   removeGroupFromAcl(input: { aclId: $id, groupId: $groupId }) {
     acl {
+      id
+      nodeId
+      type
       groups {
         id
         name

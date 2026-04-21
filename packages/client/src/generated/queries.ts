@@ -19241,6 +19241,10 @@ export type UpdateAclTypeMutation = (
     & { acl?: Maybe<(
       { __typename?: 'Acl' }
       & Pick<Acl, 'id' | 'nodeId' | 'type'>
+      & { groups?: Maybe<Array<(
+        { __typename?: 'Group' }
+        & Pick<Group, 'id' | 'name'>
+      )>> }
     )> }
   )> }
 );
@@ -19257,6 +19261,7 @@ export type AddGroupToAclMutation = (
     { __typename?: 'AddGroupToAclPayload' }
     & { acl?: Maybe<(
       { __typename?: 'Acl' }
+      & Pick<Acl, 'id' | 'nodeId' | 'type'>
       & { groups?: Maybe<Array<(
         { __typename?: 'Group' }
         & Pick<Group, 'id' | 'name'>
@@ -19277,6 +19282,7 @@ export type RemoveGroupFromAclMutation = (
     { __typename?: 'RemoveGroupFromAclPayload' }
     & { acl?: Maybe<(
       { __typename?: 'Acl' }
+      & Pick<Acl, 'id' | 'nodeId' | 'type'>
       & { groups?: Maybe<Array<(
         { __typename?: 'Group' }
         & Pick<Group, 'id' | 'name'>
@@ -20445,6 +20451,36 @@ export type DownloadSettingsTableOfContentsQuery = (
     & { draftTableOfContentsItems?: Maybe<Array<(
       { __typename?: 'TableOfContentsItem' }
       & DownloadSettingsTocItemFragment
+    )>> }
+  )> }
+);
+
+export type SharingSettingsTocItemFragment = (
+  { __typename?: 'TableOfContentsItem' }
+  & Pick<TableOfContentsItem, 'id' | 'stableId' | 'title' | 'isFolder' | 'parentStableId' | 'sortIndex' | 'dataLayerId'>
+  & { acl?: Maybe<(
+    { __typename?: 'Acl' }
+    & Pick<Acl, 'id' | 'nodeId' | 'type'>
+    & { groups?: Maybe<Array<(
+      { __typename?: 'Group' }
+      & Pick<Group, 'id' | 'name'>
+    )>> }
+  )> }
+);
+
+export type SharingSettingsTableOfContentsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type SharingSettingsTableOfContentsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { draftTableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & SharingSettingsTocItemFragment
     )>> }
   )> }
 );
@@ -26576,6 +26612,26 @@ export const DownloadSettingsTocItemFragmentDoc = /*#__PURE__*/ gql`
   hasOriginalSourceUpload
 }
     `;
+export const SharingSettingsTocItemFragmentDoc = /*#__PURE__*/ gql`
+    fragment SharingSettingsTocItem on TableOfContentsItem {
+  id
+  stableId
+  title
+  isFolder
+  parentStableId
+  sortIndex
+  dataLayerId
+  acl {
+    id
+    nodeId
+    type
+    groups {
+      id
+      name
+    }
+  }
+}
+    `;
 export const FullAdminSourceFragmentDoc = /*#__PURE__*/ gql`
     fragment FullAdminSource on DataSource {
   id
@@ -28181,6 +28237,10 @@ export const UpdateAclTypeDocument = /*#__PURE__*/ gql`
       id
       nodeId
       type
+      groups {
+        id
+        name
+      }
     }
   }
 }
@@ -28189,6 +28249,9 @@ export const AddGroupToAclDocument = /*#__PURE__*/ gql`
     mutation AddGroupToAcl($id: Int!, $groupId: Int!) {
   addGroupToAcl(input: {aclId: $id, groupId: $groupId}) {
     acl {
+      id
+      nodeId
+      type
       groups {
         id
         name
@@ -28201,6 +28264,9 @@ export const RemoveGroupFromAclDocument = /*#__PURE__*/ gql`
     mutation RemoveGroupFromAcl($id: Int!, $groupId: Int!) {
   removeGroupFromAcl(input: {aclId: $id, groupId: $groupId}) {
     acl {
+      id
+      nodeId
+      type
       groups {
         id
         name
@@ -28976,6 +29042,16 @@ export const DownloadSettingsTableOfContentsDocument = /*#__PURE__*/ gql`
   }
 }
     ${DownloadSettingsTocItemFragmentDoc}`;
+export const SharingSettingsTableOfContentsDocument = /*#__PURE__*/ gql`
+    query SharingSettingsTableOfContents($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    draftTableOfContentsItems {
+      ...SharingSettingsTocItem
+    }
+  }
+}
+    ${SharingSettingsTocItemFragmentDoc}`;
 export const ExtraTocEditingInfoDocument = /*#__PURE__*/ gql`
     query ExtraTocEditingInfo($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -32555,6 +32631,7 @@ export const namedOperations = {
     ImportBasemapDetails: 'ImportBasemapDetails',
     DraftTableOfContents: 'DraftTableOfContents',
     DownloadSettingsTableOfContents: 'DownloadSettingsTableOfContents',
+    SharingSettingsTableOfContents: 'SharingSettingsTableOfContents',
     ExtraTocEditingInfo: 'ExtraTocEditingInfo',
     layersAndSourcesForItems: 'layersAndSourcesForItems',
     GetFolder: 'GetFolder',
@@ -32887,6 +32964,7 @@ export const namedOperations = {
     BackgroundJobSubscriptionEvent: 'BackgroundJobSubscriptionEvent',
     AdminOverlay: 'AdminOverlay',
     DownloadSettingsTocItem: 'DownloadSettingsTocItem',
+    SharingSettingsTocItem: 'SharingSettingsTocItem',
     FullAdminSource: 'FullAdminSource',
     ArchivedSource: 'ArchivedSource',
     FullAdminDataLayer: 'FullAdminDataLayer',

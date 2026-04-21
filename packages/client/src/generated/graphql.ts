@@ -19243,6 +19243,10 @@ export type UpdateAclTypeMutation = (
     & { acl?: Maybe<(
       { __typename?: 'Acl' }
       & Pick<Acl, 'id' | 'nodeId' | 'type'>
+      & { groups?: Maybe<Array<(
+        { __typename?: 'Group' }
+        & Pick<Group, 'id' | 'name'>
+      )>> }
     )> }
   )> }
 );
@@ -19259,6 +19263,7 @@ export type AddGroupToAclMutation = (
     { __typename?: 'AddGroupToAclPayload' }
     & { acl?: Maybe<(
       { __typename?: 'Acl' }
+      & Pick<Acl, 'id' | 'nodeId' | 'type'>
       & { groups?: Maybe<Array<(
         { __typename?: 'Group' }
         & Pick<Group, 'id' | 'name'>
@@ -19279,6 +19284,7 @@ export type RemoveGroupFromAclMutation = (
     { __typename?: 'RemoveGroupFromAclPayload' }
     & { acl?: Maybe<(
       { __typename?: 'Acl' }
+      & Pick<Acl, 'id' | 'nodeId' | 'type'>
       & { groups?: Maybe<Array<(
         { __typename?: 'Group' }
         & Pick<Group, 'id' | 'name'>
@@ -20447,6 +20453,36 @@ export type DownloadSettingsTableOfContentsQuery = (
     & { draftTableOfContentsItems?: Maybe<Array<(
       { __typename?: 'TableOfContentsItem' }
       & DownloadSettingsTocItemFragment
+    )>> }
+  )> }
+);
+
+export type SharingSettingsTocItemFragment = (
+  { __typename?: 'TableOfContentsItem' }
+  & Pick<TableOfContentsItem, 'id' | 'stableId' | 'title' | 'isFolder' | 'parentStableId' | 'sortIndex' | 'dataLayerId'>
+  & { acl?: Maybe<(
+    { __typename?: 'Acl' }
+    & Pick<Acl, 'id' | 'nodeId' | 'type'>
+    & { groups?: Maybe<Array<(
+      { __typename?: 'Group' }
+      & Pick<Group, 'id' | 'name'>
+    )>> }
+  )> }
+);
+
+export type SharingSettingsTableOfContentsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type SharingSettingsTableOfContentsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { draftTableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & SharingSettingsTocItemFragment
     )>> }
   )> }
 );
@@ -26578,6 +26614,26 @@ export const DownloadSettingsTocItemFragmentDoc = gql`
   hasOriginalSourceUpload
 }
     `;
+export const SharingSettingsTocItemFragmentDoc = gql`
+    fragment SharingSettingsTocItem on TableOfContentsItem {
+  id
+  stableId
+  title
+  isFolder
+  parentStableId
+  sortIndex
+  dataLayerId
+  acl {
+    id
+    nodeId
+    type
+    groups {
+      id
+      name
+    }
+  }
+}
+    `;
 export const FullAdminSourceFragmentDoc = gql`
     fragment FullAdminSource on DataSource {
   id
@@ -28458,6 +28514,10 @@ export const UpdateAclTypeDocument = gql`
       id
       nodeId
       type
+      groups {
+        id
+        name
+      }
     }
   }
 }
@@ -28493,6 +28553,9 @@ export const AddGroupToAclDocument = gql`
     mutation AddGroupToAcl($id: Int!, $groupId: Int!) {
   addGroupToAcl(input: {aclId: $id, groupId: $groupId}) {
     acl {
+      id
+      nodeId
+      type
       groups {
         id
         name
@@ -28532,6 +28595,9 @@ export const RemoveGroupFromAclDocument = gql`
     mutation RemoveGroupFromAcl($id: Int!, $groupId: Int!) {
   removeGroupFromAcl(input: {aclId: $id, groupId: $groupId}) {
     acl {
+      id
+      nodeId
+      type
       groups {
         id
         name
@@ -31006,6 +31072,44 @@ export function useDownloadSettingsTableOfContentsLazyQuery(baseOptions?: Apollo
 export type DownloadSettingsTableOfContentsQueryHookResult = ReturnType<typeof useDownloadSettingsTableOfContentsQuery>;
 export type DownloadSettingsTableOfContentsLazyQueryHookResult = ReturnType<typeof useDownloadSettingsTableOfContentsLazyQuery>;
 export type DownloadSettingsTableOfContentsQueryResult = Apollo.QueryResult<DownloadSettingsTableOfContentsQuery, DownloadSettingsTableOfContentsQueryVariables>;
+export const SharingSettingsTableOfContentsDocument = gql`
+    query SharingSettingsTableOfContents($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    draftTableOfContentsItems {
+      ...SharingSettingsTocItem
+    }
+  }
+}
+    ${SharingSettingsTocItemFragmentDoc}`;
+
+/**
+ * __useSharingSettingsTableOfContentsQuery__
+ *
+ * To run a query within a React component, call `useSharingSettingsTableOfContentsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useSharingSettingsTableOfContentsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useSharingSettingsTableOfContentsQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useSharingSettingsTableOfContentsQuery(baseOptions: Apollo.QueryHookOptions<SharingSettingsTableOfContentsQuery, SharingSettingsTableOfContentsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<SharingSettingsTableOfContentsQuery, SharingSettingsTableOfContentsQueryVariables>(SharingSettingsTableOfContentsDocument, options);
+      }
+export function useSharingSettingsTableOfContentsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<SharingSettingsTableOfContentsQuery, SharingSettingsTableOfContentsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<SharingSettingsTableOfContentsQuery, SharingSettingsTableOfContentsQueryVariables>(SharingSettingsTableOfContentsDocument, options);
+        }
+export type SharingSettingsTableOfContentsQueryHookResult = ReturnType<typeof useSharingSettingsTableOfContentsQuery>;
+export type SharingSettingsTableOfContentsLazyQueryHookResult = ReturnType<typeof useSharingSettingsTableOfContentsLazyQuery>;
+export type SharingSettingsTableOfContentsQueryResult = Apollo.QueryResult<SharingSettingsTableOfContentsQuery, SharingSettingsTableOfContentsQueryVariables>;
 export const ExtraTocEditingInfoDocument = gql`
     query ExtraTocEditingInfo($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -41372,6 +41476,7 @@ export const namedOperations = {
     ImportBasemapDetails: 'ImportBasemapDetails',
     DraftTableOfContents: 'DraftTableOfContents',
     DownloadSettingsTableOfContents: 'DownloadSettingsTableOfContents',
+    SharingSettingsTableOfContents: 'SharingSettingsTableOfContents',
     ExtraTocEditingInfo: 'ExtraTocEditingInfo',
     layersAndSourcesForItems: 'layersAndSourcesForItems',
     GetFolder: 'GetFolder',
@@ -41704,6 +41809,7 @@ export const namedOperations = {
     BackgroundJobSubscriptionEvent: 'BackgroundJobSubscriptionEvent',
     AdminOverlay: 'AdminOverlay',
     DownloadSettingsTocItem: 'DownloadSettingsTocItem',
+    SharingSettingsTocItem: 'SharingSettingsTocItem',
     FullAdminSource: 'FullAdminSource',
     ArchivedSource: 'ArchivedSource',
     FullAdminDataLayer: 'FullAdminDataLayer',

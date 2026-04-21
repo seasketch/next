@@ -47,6 +47,34 @@ query DownloadSettingsTableOfContents($slug: String!) {
   }
 }
 
+fragment SharingSettingsTocItem on TableOfContentsItem {
+  id
+  stableId
+  title
+  isFolder
+  parentStableId
+  sortIndex
+  dataLayerId
+  acl {
+    id
+    nodeId
+    type
+    groups {
+      id
+      name
+    }
+  }
+}
+
+query SharingSettingsTableOfContents($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    draftTableOfContentsItems {
+      ...SharingSettingsTocItem
+    }
+  }
+}
+
 query ExtraTocEditingInfo($slug: String!) {
   projectBySlug(slug: $slug) {
     id

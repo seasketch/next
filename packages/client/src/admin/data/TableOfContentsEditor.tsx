@@ -55,6 +55,7 @@ import AddMVTUrlModal from "../AddMVTUrlModal";
 import AddRemoteGeoJSONModal from "./AddRemoteGeoJSONModal";
 import QuotaUsageDetails from "./QuotaUsageDetails";
 import DataDownloadSettingsPanel from "./DataDownloadSettingsPanel";
+import SharingSettingsPanel from "./SharingSettingsPanel";
 import AdminDataViewScreenHeading from "./AdminDataViewScreenHeading";
 import DataHostingRetentionPeriodModal from "./DataHostingRetentionPeriodModal";
 import AiDataAnalystProfileSettingsModal from "./AiDataAnalystProfileSettingsModal";
@@ -100,6 +101,9 @@ export default function TableOfContentsEditor() {
       } else if (view === "downloads") {
         // eslint-disable-next-line i18next/no-literal-string
         history.push(`/${slug}/admin/data/download-settings`);
+      } else if (view === "sharing") {
+        // eslint-disable-next-line i18next/no-literal-string
+        history.push(`/${slug}/admin/data/sharing-settings`);
       } else {
         // eslint-disable-next-line i18next/no-literal-string
         history.push(`/${slug}/admin/data`);
@@ -112,6 +116,8 @@ export default function TableOfContentsEditor() {
     ? "order"
     : /quota/.test(history.location.pathname)
     ? "quota"
+    : /sharing-settings/.test(history.location.pathname)
+    ? "sharing"
     : /download-settings/.test(history.location.pathname)
     ? "downloads"
     : "tree";
@@ -594,6 +600,17 @@ export default function TableOfContentsEditor() {
           />
         )}
       </Route>
+      <Route path={`/${slug}/admin/data/sharing-settings`}>
+        {tocQuery.data?.projectBySlug?.id != null && (
+          <SharingSettingsPanel
+            slug={slug}
+            filteredTreeNodes={filteredTreeNodes}
+            search={search}
+            searchState={searchState}
+            searchResults={searchResults}
+          />
+        )}
+      </Route>
 
       {layerEditingContext.openEditor &&
         !layerEditingContext.openEditor.isFolder && (
@@ -717,7 +734,10 @@ function Header({
                   <Trans ns="admin:data">Data Hosting Quota</Trans>
                 </MenubarRadioItem>
                 <MenubarRadioItem value="downloads">
-                  <Trans ns="admin:data">Data Download Settings</Trans>
+                  <Trans ns="admin:data">Download Settings</Trans>
+                </MenubarRadioItem>
+                <MenubarRadioItem value="sharing">
+                  <Trans ns="admin:data">Sharing Settings</Trans>
                 </MenubarRadioItem>
               </Menubar.RadioGroup>
               <MenuBarSeparator />
@@ -880,7 +900,9 @@ function Header({
             </MenuBarContent>
           </Menubar.Portal>
         </Menubar.Menu>
-        {(selectedView === "tree" || selectedView === "downloads") && (
+        {(selectedView === "tree" ||
+          selectedView === "downloads" ||
+          selectedView === "sharing") && (
           <div className="ml-2">
             <OverlaySearchInput
               search={search}
