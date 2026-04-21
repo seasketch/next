@@ -18,7 +18,7 @@ const makeArgs = (componentSettings: ShortTextProps) => {
 };
 
 test("Component renders with custom body", async () => {
-  render(<ShortText {...makeArgs({})} />);
+  render(<ShortText {...(makeArgs({}) as any)} />);
   await waitFor(() => {
     expect(screen.getByRole("textbox")).toBeInTheDocument();
   });
@@ -28,7 +28,7 @@ test("Component renders with custom body", async () => {
 test("Entering text updates the value", async () => {
   const args = makeArgs({});
   const { onSubmit, onChange } = args;
-  render(<ShortText {...args} />);
+  render(<ShortText {...(args as any)} />);
   await waitFor(() => {
     expect(screen.getByRole("textbox")).toBeInTheDocument();
   });
@@ -40,14 +40,16 @@ test("Entering text updates the value", async () => {
 test("Required fields validate input after submission attempt", async () => {
   const args = makeArgs({});
   const { onSubmit, onChange } = args;
-  const { rerender } = render(<ShortText {...args} isRequired={false} />);
+  const { rerender } = render(
+    <ShortText {...(args as any)} isRequired={false} />
+  );
   await waitFor(() => {
     expect(screen.getByRole("textbox")).toBeInTheDocument();
   });
   expect(screen.queryByText("Required field")).not.toBeInTheDocument();
   rerender(
     <ShortText
-      {...args}
+      {...(args as any)}
       value=""
       isRequired={true}
       submissionAttempted={true}
@@ -62,7 +64,7 @@ test("minLength", async () => {
   const args = makeArgs({ minLength: 8 });
   const { rerender } = render(
     <ShortText
-      {...args}
+      {...(args as any)}
       isRequired={true}
       value="Hi"
       submissionAttempted={true}
@@ -73,7 +75,11 @@ test("minLength", async () => {
   });
   expect(screen.getByText(/must be/)).toBeInTheDocument();
   rerender(
-    <ShortText {...makeArgs({ minLength: 1 })} isRequired={true} value="Hi" />
+    <ShortText
+      {...(makeArgs({ minLength: 1 }) as any)}
+      isRequired={true}
+      value="Hi"
+    />
   );
   await waitFor(() => {
     expect(screen.queryByText(/must be/)).toBeNull();
@@ -84,7 +90,7 @@ test("maxLength", async () => {
   const args = makeArgs({ maxLength: 2 });
   const { rerender } = render(
     <ShortText
-      {...args}
+      {...(args as any)}
       value="Bababhbabhabhabababbdab"
       submissionAttempted={true}
     />
@@ -98,7 +104,7 @@ test("maxLength", async () => {
 test("Pressing return key advances to next field", async () => {
   const args = makeArgs({});
   const { onSubmit } = args;
-  render(<ShortText {...args} isRequired={false} value="foo" />);
+  render(<ShortText {...(args as any)} isRequired={false} value="foo" />);
   await waitFor(() => {
     expect(screen.getByRole("textbox")).toBeInTheDocument();
   });

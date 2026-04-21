@@ -24,7 +24,7 @@ const makeArgs = (componentSettings: YesNoProps) => ({
 
 test("Component renders with custom body", async () => {
   const args = makeArgs({});
-  render(<YesNo {...args} />);
+  render(<YesNo {...(args as any)} />);
   await waitFor(() => {
     expect(screen.getByRole("heading")).toHaveTextContent(
       "Would you like fries with that"
@@ -34,7 +34,7 @@ test("Component renders with custom body", async () => {
 
 test("Clicking yes", async () => {
   const args = makeArgs({});
-  render(<YesNo {...args} />);
+  render(<YesNo {...(args as any)} />);
   await waitFor(() => {
     expect(screen.getByRole("heading")).toHaveTextContent(
       "Would you like fries with that"
@@ -48,7 +48,7 @@ test("Clicking yes", async () => {
 
 test("Clicking no", async () => {
   const args = makeArgs({});
-  render(<YesNo {...args} />);
+  render(<YesNo {...(args as any)} />);
   await waitFor(() => {
     expect(screen.getByRole("heading")).toHaveTextContent(
       "Would you like fries with that"

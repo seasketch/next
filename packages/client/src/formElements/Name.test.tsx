@@ -22,7 +22,7 @@ const makeArgs = (componentSettings: NameProps) => ({
 test("Component renders with custom body", async () => {
   render(
     <SurveyContext.Provider value={{ ...TestSurveyContextValue }}>
-      <Name {...makeArgs({})} />
+      <Name {...(makeArgs({}) as any)} />
     </SurveyContext.Provider>
   );
   await waitFor(() => {
@@ -36,7 +36,7 @@ test("Name should be populated with name from context, if available", async () =
     <SurveyContext.Provider
       value={{ ...TestSurveyContextValue, bestName: "Chad Burt" }}
     >
-      <Name {...makeArgs({})} value={undefined} />
+      <Name {...(makeArgs({}) as any)} value={undefined} />
     </SurveyContext.Provider>
   );
   await waitFor(() => {
@@ -50,7 +50,7 @@ test("Facilitated surveys should have a place for facilitator name", async () =>
     <SurveyContext.Provider
       value={{ ...TestSurveyContextValue, isFacilitatedResponse: true }}
     >
-      <Name {...makeArgs({})} />
+      <Name {...(makeArgs({}) as any)} />
     </SurveyContext.Provider>
   );
   await waitFor(() => {

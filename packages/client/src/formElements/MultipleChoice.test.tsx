@@ -28,7 +28,7 @@ const makeArgs = (componentSettings: MultipleChoiceProps) => ({
 });
 
 test("Component renders with custom body", async () => {
-  render(<MultipleChoice {...makeArgs({})} />);
+  render(<MultipleChoice {...(makeArgs({}) as any)} />);
   await waitFor(() => {
     expect(screen.getByRole("heading")).toHaveTextContent(
       "Which option do you prefer?"
@@ -39,7 +39,7 @@ test("Component renders with custom body", async () => {
 
 test("selecting an option", async () => {
   const args = makeArgs({});
-  render(<MultipleChoice {...args} />);
+  render(<MultipleChoice {...(args as any)} />);
   await waitFor(() => {
     expect(screen.getByRole("heading")).toHaveTextContent(
       "Which option do you prefer?"
@@ -51,7 +51,7 @@ test("selecting an option", async () => {
 
 test("multipleSelect: selecting multiple options", async () => {
   const args = makeArgs({ multipleSelect: true });
-  render(<MultipleChoice {...args} value={["B"]} />);
+  render(<MultipleChoice {...(args as any)} value={["B"]} />);
   await waitFor(() => {
     expect(screen.getByRole("heading")).toHaveTextContent(
       "Which option do you prefer?"

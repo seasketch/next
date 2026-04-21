@@ -21,7 +21,7 @@ const makeArgs = (componentSettings: RatingProps) => ({
 });
 
 test("Component renders with custom body", async () => {
-  render(<Rating {...makeArgs({})} />);
+  render(<Rating {...(makeArgs({}) as any)} />);
   await waitFor(() => {
     expect(screen.getByRole("heading")).toHaveTextContent(
       "How do you like SeaSketch?"
@@ -32,7 +32,7 @@ test("Component renders with custom body", async () => {
 
 test("Clicking a star sets the value", async () => {
   const args = makeArgs({});
-  render(<Rating {...args} />);
+  render(<Rating {...(args as any)} />);
   await waitFor(() => {
     expect(screen.getByRole("heading")).toHaveTextContent(
       "How do you like SeaSketch?"
@@ -46,7 +46,7 @@ test("Clicking a star sets the value", async () => {
 
 test("Can increase number of stars", async () => {
   const args = makeArgs({ max: 10 });
-  render(<Rating {...args} />);
+  render(<Rating {...(args as any)} />);
   await waitFor(() => {
     expect(screen.getByRole("heading")).toHaveTextContent(
       "How do you like SeaSketch?"
