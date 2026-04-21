@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo } from "react";
 import {
   AccessControlListType,
   useAddGroupToAclMutation,
@@ -13,6 +13,12 @@ import { useParams } from "react-router-dom";
 import MiniSwitch from "./MiniSwitch";
 
 type SimpleGroup = { id: number; name: string };
+type InitialAcl = {
+  id: number;
+  nodeId: string;
+  type: AccessControlListType;
+  groups?: SimpleGroup[] | null;
+};
 
 export default function AccessControlListEditor(props: {
   nodeId: string;
@@ -20,6 +26,7 @@ export default function AccessControlListEditor(props: {
   compact?: boolean;
   projectSlug?: string;
   onMutate?: () => void;
+  initialAcl?: InitialAcl | null;
 }) {
   const { t } = useTranslation("admin");
   const { slug } = useParams<{ slug: string }>();
@@ -44,12 +51,12 @@ export default function AccessControlListEditor(props: {
       nodeId: props.nodeId,
     },
   });
-  const [state, setState] = useState(data?.aclByNodeId?.type);
   const [updateType, updateTypeStatus] = useUpdateAclTypeMutation();
 
-  const acl = data?.aclByNodeId;
-  const activeType =
-    state || data?.aclByNodeId?.type || AccessControlListType.Public;
+  const fetchedAcl =
+    data?.aclByNodeId?.nodeId === props.nodeId ? data.aclByNodeId : undefined;
+  const acl = fetchedAcl || props.initialAcl;
+  const activeType = acl?.type || AccessControlListType.Public;
   const selectedGroupIds = useMemo(
     () => new Set((acl?.groups || []).map((group) => group.id)),
     [acl?.groups]
@@ -103,7 +110,6 @@ export default function AccessControlListEditor(props: {
 
   const handleTypeChange = useCallback(
     (value: AccessControlListType) => {
-      setState(value);
       if (!acl) return;
       props.onMutate?.();
       updateType({
@@ -302,8 +308,7 @@ export default function AccessControlListEditor(props: {
           children: (
             <ul
               className={`rounded  mt-2 ${
-                (state || data?.aclByNodeId?.type) ===
-                AccessControlListType.Group
+                activeType === AccessControlListType.Group
                   ? "block"
                   : "hidden"
               }`}

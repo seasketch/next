@@ -301,6 +301,7 @@ function SharingAccessChip({
             <AccessControlListEditor
               compact
               legend={null}
+              initialAcl={acl}
               nodeId={acl.nodeId}
               onMutate={onMutate}
               projectSlug={slug}
