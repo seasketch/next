@@ -117,7 +117,8 @@ export const RasterProportionTable: ReportWidget<
     const combinedMetrics = combineMetricsBySource<RasterStats>(
       metrics,
       sources,
-      geographyId
+      geographyId,
+      "raster_stats"
     );
 
     let rows = classRows.map((r) => {
@@ -300,9 +301,7 @@ export const RasterProportionTableTooltipControls: ReportWidgetTooltipControls =
     );
     const headingsLabelDisplayNames = useMemo(
       (): string[] =>
-        showSumColumn
-          ? ["Name", "% Captured", "Sum"]
-          : ["Name", "% Captured"],
+        showSumColumn ? ["Name", "% Captured", "Sum"] : ["Name", "% Captured"],
       [showSumColumn]
     );
 

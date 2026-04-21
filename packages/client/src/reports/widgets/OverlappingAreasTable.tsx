@@ -300,7 +300,8 @@ export const OverlappingAreasTable: ReportWidget<
     const combinedMetrics = combineMetricsBySource<OverlayAreaMetric>(
       metrics,
       sources,
-      primaryGeographyId
+      primaryGeographyId,
+      "overlay_area"
     );
 
     let rows = classRows.map((r) => {

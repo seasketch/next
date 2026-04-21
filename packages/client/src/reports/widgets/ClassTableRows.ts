@@ -1,4 +1,10 @@
-import { MetricDependency, Metric, subjectIsFragment, subjectIsGeography, combineMetricsForFragments } from "overlay-engine";
+import {
+  MetricDependency,
+  Metric,
+  subjectIsFragment,
+  subjectIsGeography,
+  combineMetricsForFragments,
+} from "overlay-engine";
 import { AnyLayer } from "mapbox-gl";
 import { GeostatsLayer } from "@seasketch/geostats-types";
 import {
@@ -63,7 +69,9 @@ function getRasterColorsFromStyle(
 ): RasterColorsFromStyle | undefined {
   for (const layer of layers) {
     if (layer.type !== "raster" || !layer.paint) continue;
-    const rasterColor = (layer.paint as Record<string, unknown>)["raster-color"];
+    const rasterColor = (layer.paint as Record<string, unknown>)[
+      "raster-color"
+    ];
     if (!Array.isArray(rasterColor) || rasterColor.length < 3) continue;
     const fn = rasterColor[0];
     if (typeof fn !== "string") continue;
@@ -228,7 +236,11 @@ export function getClassTableRows(options: {
       } else {
         const key = classTableRowKey(dependency.stableId!, "*");
         const styles = source?.mapboxGlStyles as AnyLayer[] | undefined;
-        let swatch: { color?: string; colors?: string[]; multiColorSwatchLayout?: "raster-ramp-order" | "soft-scatter" } = {};
+        let swatch: {
+          color?: string;
+          colors?: string[];
+          multiColorSwatchLayout?: "raster-ramp-order" | "soft-scatter";
+        } = {};
 
         if (source && isRasterSource(source) && styles?.length) {
           const raster = getRasterColorsFromStyle(styles);
@@ -238,10 +250,16 @@ export function getClassTableRows(options: {
               multiColorSwatchLayout: raster.multiColorSwatchLayout,
             };
           } else {
-            swatch = vectorSwatchFromSource(source, extractColorForLayers(styles));
+            swatch = vectorSwatchFromSource(
+              source,
+              extractColorForLayers(styles)
+            );
           }
         } else if (source && styles?.length) {
-          swatch = vectorSwatchFromSource(source, extractColorForLayers(styles));
+          swatch = vectorSwatchFromSource(
+            source,
+            extractColorForLayers(styles)
+          );
         }
 
         rows.push({
@@ -337,7 +355,8 @@ export function getClassTableRows(options: {
 export function combineMetricsBySource<T extends Metric>(
   metrics: CompatibleSpatialMetricDetailsFragment[],
   sources: OverlaySourceDetailsFragment[],
-  geographyId: number
+  geographyId: number,
+  expectedMetricType?: Metric["type"]
 ): {
   [sourceId: string]: {
     fragments: T;
@@ -377,7 +396,8 @@ export function combineMetricsBySource<T extends Metric>(
               m.sourceUrl === source.sourceUrl &&
               subjectIsFragment(m.subject) &&
               m.subject.geographies.includes(geographyId)
-          ) as Pick<Metric, "type" | "value">[]
+          ) as Pick<Metric, "type" | "value">[],
+          expectedMetricType
         ) as T,
         geographies: metrics.find(
           (m) =>

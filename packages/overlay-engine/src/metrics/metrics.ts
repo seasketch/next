@@ -663,8 +663,6 @@ export function hashMetricDependency(
 ): string {
   if (dependency.stableId && overlaySourceUrls[dependency.stableId]) {
     if (!overlaySourceUrls[dependency.stableId]) {
-      console.log("overlaySourceUrls", overlaySourceUrls);
-      console.log("dependency", dependency);
       throw new Error(
         `Hashing Error. Overlay source URL not found for stable id: ${dependency.stableId}`,
       );
@@ -729,9 +727,79 @@ function fnv1a(input: string): string {
  */
 export function combineMetricsForFragments<T extends Metric>(
   metrics: Pick<Metric, "type" | "value">[],
+  expectedMetricType?: Metric["type"],
 ): Pick<T, "type" | "value"> {
   if (metrics.length === 0) {
-    throw new Error("Cannot combine empty array of metrics");
+    if (expectedMetricType) {
+      switch (expectedMetricType) {
+        case "overlay_area":
+          return {
+            type: "overlay_area",
+            value: {
+              "*": 0,
+            },
+          };
+        case "count":
+          return {
+            type: "count",
+            value: {
+              "*": { count: 0, uniqueIdIndex: { ranges: [], individuals: [] } },
+            },
+          };
+        case "raster_stats":
+          return {
+            type: "raster_stats",
+            value: {
+              bands: [
+                {
+                  count: 0,
+                  min: 0,
+                  max: 0,
+                  mean: 0,
+                  median: 0,
+                  range: 0,
+                  histogram: [],
+                  invalid: 0,
+                  sum: 0,
+                  vrm: null,
+                  epsg: undefined,
+                },
+              ],
+            },
+          };
+        case "column_values":
+          return {
+            type: "column_values",
+            value: {},
+          };
+        case "total_area":
+          return {
+            type: "total_area",
+            value: 0,
+          };
+        case "distance_to_shore":
+          return {
+            type: "distance_to_shore",
+            value: {
+              meters: 0,
+            },
+          };
+        case "presence":
+          return {
+            type: "presence",
+            value: false,
+          };
+        case "presence_table":
+          return {
+            type: "presence_table",
+            value: { values: [], exceededLimit: false },
+          };
+        default:
+          throw new Error(`Unsupported metric type: ${expectedMetricType}`);
+      }
+    } else {
+      throw new Error("Cannot combine empty array of metrics");
+    }
   }
   // first, ensure that all metrics have the same type
   const types = new Set(metrics.map((m) => m.type));

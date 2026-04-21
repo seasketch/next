@@ -10,6 +10,7 @@ import {
 import { DraftReportContext } from "../DraftReportContext";
 import { filterMetricsByDependencies } from "../utils/metricSatisfiesDependency";
 import { useCardDependenciesContext } from "../context/CardDependenciesContext";
+import { useSubjectReportContext } from "../context/SubjectReportContext";
 
 type SketchClassForWidgets = Pick<
   ReportContextSketchClassDetailsFragment,
@@ -107,6 +108,13 @@ export function useWidgetDependencies(
 
   // Also get draft metrics/sources for editor scenarios
   const draftReportContext = useContext(DraftReportContext);
+  const subjectReportContext = useSubjectReportContext();
+
+  /** Fragment-backed metrics are never produced when a collection has no sketches / fragments. */
+  const fragmentMetricsWillNeverExist =
+    !subjectReportContext.loading &&
+    subjectReportContext.data?.isCollection === true &&
+    (subjectReportContext.data.relatedFragments?.length ?? 0) === 0;
 
   // Combine card sources with draft sources
   const allSources = useMemo(() => {
@@ -184,6 +192,12 @@ export function useWidgetDependencies(
     // Check if we're still waiting for metrics
     if (!loading) {
       for (const dependency of dependencies || []) {
+        if (
+          fragmentMetricsWillNeverExist &&
+          dependency.subjectType === "fragments"
+        ) {
+          continue;
+        }
         const hash = hashMetricDependency(dependency, sourceUrlMap);
         const relatedMetric = filteredMetrics.find(
           (m) => m.dependencyHash === hash
@@ -211,6 +225,7 @@ export function useWidgetDependencies(
     dependencies,
     sourceUrlMap,
     cardErrors,
+    fragmentMetricsWillNeverExist,
   ]);
 
   // Use stable references - only change when content actually changes

@@ -172,7 +172,9 @@ export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
           {rows.map((row) => (
             <tr
               key={row.geographyId}
-              className="odd:bg-white even:bg-gray-50 hover:bg-gray-100"
+              className={`odd:bg-white even:bg-gray-50 hover:bg-gray-100 ${
+                row.areaSqKm === 0 ? "opacity-50" : ""
+              }`}
             >
               {hasVisibilityColumn && (
                 <td className="w-8 px-2 py-2 text-center">
