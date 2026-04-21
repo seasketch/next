@@ -518,23 +518,26 @@ export default function TableOfContentsEditor() {
         </ScrollingComponent>
       </Route>
       <Route path={`/${slug}/admin/data/zindex`}>
-        <ScrollingComponent
-          className={`flex-1 overflow-y-auto ${
-            selectedView === "quota" || selectedView === "downloads"
-              ? "pt-5 px-4 pb-6 sm:px-6 sm:pb-8"
-              : "p-2 px-8"
-          }`}
-          onContextMenu={(e: any) => e.preventDefault()}
+        <div
+          className="flex min-h-0 flex-1 flex-col overflow-hidden pt-5 px-4 pb-6 sm:px-6 sm:pb-8"
+          onContextMenu={(e) => e.preventDefault()}
         >
           {tocQuery.loading && !tocQuery.data?.projectBySlug && <Spinner />}
 
-          <div className="flex flex-col h-full min-h-0 max-w-4xl">
-            <div className="flex-none shrink-0 border-b border-gray-100 pb-4 mb-1">
+          <div className="flex min-h-0 w-full flex-1 flex-col max-w-4xl">
+            <header className="flex-none pb-3">
               <AdminDataViewScreenHeading>
                 <Trans ns="admin:data">Z-Order Settings</Trans>
               </AdminDataViewScreenHeading>
-            </div>
-            <div className="flex-1 min-h-0 pt-4">
+              <p className="mt-2 text-sm text-gray-600 leading-snug">
+                <Trans ns="admin:data">
+                  Drag layers to change their stacking order on the map. Layers
+                  above the <strong>Basemap Labels</strong> divider render on
+                  top of labels; layers below render beneath labels.
+                </Trans>
+              </p>
+            </header>
+            <div className="relative mt-3 min-h-0 flex-1 overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm">
               <ZIndexEditableList // @ts-ignore
                 tableOfContentsItems={
                   tocQuery.data?.projectBySlug?.draftTableOfContentsItems
@@ -550,7 +553,7 @@ export default function TableOfContentsEditor() {
               />
             </div>
           </div>
-        </ScrollingComponent>
+        </div>
       </Route>
       <Route path={`/${slug}/admin/data/quota`}>
         {tocQuery.loading && !tocQuery.data?.projectBySlug && <Spinner />}

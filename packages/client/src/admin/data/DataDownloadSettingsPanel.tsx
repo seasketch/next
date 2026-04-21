@@ -520,10 +520,7 @@ export default function DataDownloadSettingsPanel({
                       "Downloads not supported for this source type."
                     )}
                   >
-                    <InfoCircledIcon
-                      className="h-4 w-4 shrink-0"
-                      aria-hidden
-                    />
+                    <InfoCircledIcon className="h-4 w-4 shrink-0" aria-hidden />
                   </button>
                 </Tooltip.Trigger>
                 <Tooltip.Portal>
@@ -616,7 +613,7 @@ export default function DataDownloadSettingsPanel({
             <Trans ns="admin:data">Download Settings</Trans>
           </AdminDataViewScreenHeading>
           {viewMode === "folders" && folderTreeDisplay.length > 0 && (
-            <div className="flex shrink-0 items-center gap-0.5">
+            <div className="flex shrink-0 items-center gap-0.5 mr-2">
               <Tooltip.Provider>
                 <Tooltip.Root delayDuration={200}>
                   <Tooltip.Trigger asChild>

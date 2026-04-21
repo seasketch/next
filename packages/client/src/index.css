@@ -9281,6 +9281,11 @@ select{
   border-width:8px
 }
 
+.border-y{
+  border-top-width:1px;
+  border-bottom-width:1px
+}
+
 .border-b{
   border-bottom-width:1px
 }
