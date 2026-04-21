@@ -11548,6 +11548,10 @@ select{
   padding-top:1px
 }
 
+.pl-0\.5{
+  padding-left:0.125rem
+}
+
 .text-left{
   text-align:left
 }

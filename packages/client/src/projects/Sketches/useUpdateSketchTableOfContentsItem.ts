@@ -20,10 +20,31 @@ export default function useUpdateSketchTableOfContentsDraggable() {
         return;
       }
       for (const collection of result.updatedCollections ?? []) {
-        evictReportDependenciesForUpdatedCollectionSketch(cache, collection);
+        if (
+          collection !== null &&
+          typeof collection === "object" &&
+          collection.id !== undefined &&
+          collection.id !== null
+        ) {
+          // Defensive typing to match evictReportDependenciesForUpdatedCollectionSketch expectations
+          evictReportDependenciesForUpdatedCollectionSketch(cache, {
+            id: collection.id,
+            sketchClass: collection.sketchClass
+              ? { reportId: collection.sketchClass.reportId }
+              : undefined,
+            // Add other required fields if evictReportDependenciesForUpdatedCollectionSketch signature changes
+          });
+        }
       }
       for (const sketch of result.sketches ?? []) {
-        evictReportDependenciesForSketchId(cache, sketch.id);
+        if (
+          sketch !== null &&
+          typeof sketch === "object" &&
+          sketch.id !== undefined &&
+          sketch.id !== null
+        ) {
+          evictReportDependenciesForSketchId(cache, sketch.id);
+        }
       }
     },
     optimisticResponse: (data) => {
