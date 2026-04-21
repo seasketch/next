@@ -553,26 +553,17 @@ export default function TableOfContentsEditor() {
         </ScrollingComponent>
       </Route>
       <Route path={`/${slug}/admin/data/quota`}>
-        <ScrollingComponent
-          className={`flex-1 overflow-y-auto ${
-            selectedView === "quota" || selectedView === "downloads"
-              ? "pt-5 px-4 pb-6 sm:px-6 sm:pb-8"
-              : "p-2 px-8"
-          }`}
-          onContextMenu={(e: any) => e.preventDefault()}
-        >
-          {tocQuery.loading && !tocQuery.data?.projectBySlug && <Spinner />}
+        {tocQuery.loading && !tocQuery.data?.projectBySlug && <Spinner />}
 
-          <QuotaUsageDetails // @ts-ignore
-            tableOfContentsItems={
-              tocQuery.data?.projectBySlug?.draftTableOfContentsItems
-            }
-            layers={
-              layersAndSources.data?.projectBySlug?.dataLayersForItems || []
-            }
-            slug={slug}
-          />
-        </ScrollingComponent>
+        <QuotaUsageDetails
+          tableOfContentsItems={
+            tocQuery.data?.projectBySlug?.draftTableOfContentsItems || []
+          }
+          layers={
+            layersAndSources.data?.projectBySlug?.dataLayersForItems || []
+          }
+          slug={slug}
+        />
       </Route>
       <Route path={`/${slug}/admin/data/download-settings`}>
         {tocQuery.data?.projectBySlug?.id != null && (

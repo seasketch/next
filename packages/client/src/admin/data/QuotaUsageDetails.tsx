@@ -77,9 +77,9 @@ export default function QuotaUsageDetails({
     );
   }
   return (
-    <div className="flex flex-col h-full">
-      <div className="flex-none">
-        <div className="max-w-4xl space-y-5">
+    <div className="flex flex-col h-full overflow-hidden">
+      <div className="flex-none p-4">
+        <div className="max-w-4xl space-y-4">
           <AdminDataViewScreenHeading className="pb-1">
             <Trans ns="admin:data">Data Hosting Quota</Trans>
           </AdminDataViewScreenHeading>
@@ -132,7 +132,7 @@ export default function QuotaUsageDetails({
             </Trans>
           </p>
           {data && (
-            <h4 className="flex space-x-2 pt-2">
+            <h4 className="flex space-x-2">
               <span className="flex-1">
                 <Trans ns="admin:data">Usage by Source</Trans>
               </span>
@@ -161,7 +161,7 @@ export default function QuotaUsageDetails({
           />
         )}
       </div>
-      <div id="icx" className="flex-1" ref={treeMapContainer}>
+      <div id="icx" className="flex-1 p-4 pt-0" ref={treeMapContainer}>
         {/* eslint-disable-next-line i18next/no-literal-string */}
         {totalQuotaUsage.used > 0 ? (
           <QuotaUsageTreemap
