@@ -1302,12 +1302,15 @@ export default function SketchUIStateContextProvider({
       const contextMenu: (DropdownOption | DropdownDividerProps)[] = [];
       const sketchClasses = projectMetadata.data?.project?.sketchClasses || [];
 
+      /** Sketches are TOC items with id Sketch:* — including collections. Hide create only for a non-collection sketch. */
+      const allowToolbarCreate =
+        !selectionIsSharedContent &&
+        (!selectionType ||
+          !selectionType.sketch ||
+          selectionType.collection);
+
       const create: DropdownOption[] = [
-        ...(!selectionIsSharedContent &&
-        (!selectionType || !selectionType.sketch)
-          ? sketchClasses || []
-          : []
-        )
+        ...(allowToolbarCreate ? sketchClasses || [] : [])
           .filter((sc) => !sc.formElementId && !sc.isArchived && sc.canDigitize)
           .sort((a, b) => {
             const aName = getTranslatedProp("name", a);
@@ -1343,8 +1346,7 @@ export default function SketchUIStateContextProvider({
               }
             },
           })),
-        ...(!selectionIsSharedContent &&
-        (!selectionType || !selectionType.sketch)
+        ...(allowToolbarCreate
           ? [
               {
                 // eslint-disable-next-line i18next/no-literal-string
@@ -1363,7 +1365,9 @@ export default function SketchUIStateContextProvider({
                           slug: getSlug(),
                           ...(selectionType?.folder
                             ? { folderId: selectedId }
-                            : {}),
+                            : selectionType?.collection
+                              ? { collectionId: selectedId }
+                              : {}),
                         },
                         update: async (cache, { data }) => {
                           if (data?.createSketchFolder?.sketchFolder) {
