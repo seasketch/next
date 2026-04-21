@@ -778,7 +778,7 @@ function getSortState(
   return SortingState.NONE;
 }
 
-function SearchResultHighlights({ data }: { data: string }) {
+export function SearchResultHighlights({ data }: { data: string }) {
   const parts = data.split(/<<<|>>>/);
   return (
     <div>

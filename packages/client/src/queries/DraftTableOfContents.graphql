@@ -25,6 +25,56 @@ query DraftTableOfContents($slug: String!) {
   }
 }
 
+fragment DownloadSettingsTocItem on TableOfContentsItem {
+  id
+  stableId
+  title
+  isFolder
+  parentStableId
+  sortIndex
+  dataLayerId
+  enableDownload
+  primaryDownloadUrl
+  hasOriginalSourceUpload
+}
+
+query DownloadSettingsTableOfContents($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    draftTableOfContentsItems {
+      ...DownloadSettingsTocItem
+    }
+  }
+}
+
+fragment SharingSettingsTocItem on TableOfContentsItem {
+  id
+  stableId
+  title
+  isFolder
+  parentStableId
+  sortIndex
+  dataLayerId
+  acl {
+    id
+    nodeId
+    type
+    groups {
+      id
+      name
+    }
+  }
+}
+
+query SharingSettingsTableOfContents($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    draftTableOfContentsItems {
+      ...SharingSettingsTocItem
+    }
+  }
+}
+
 query ExtraTocEditingInfo($slug: String!) {
   projectBySlug(slug: $slug) {
     id
@@ -104,6 +154,7 @@ query layersAndSourcesForItems(
       renderUnder
       sourceLayer
       sublayer
+      sublayerType
     }
   }
 }

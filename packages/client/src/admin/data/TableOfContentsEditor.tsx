@@ -54,6 +54,9 @@ import Warning from "../../components/Warning";
 import AddMVTUrlModal from "../AddMVTUrlModal";
 import AddRemoteGeoJSONModal from "./AddRemoteGeoJSONModal";
 import QuotaUsageDetails from "./QuotaUsageDetails";
+import DataDownloadSettingsPanel from "./DataDownloadSettingsPanel";
+import SharingSettingsPanel from "./SharingSettingsPanel";
+import AdminDataViewScreenHeading from "./AdminDataViewScreenHeading";
 import DataHostingRetentionPeriodModal from "./DataHostingRetentionPeriodModal";
 import AiDataAnalystProfileSettingsModal from "./AiDataAnalystProfileSettingsModal";
 import useProjectId from "../../useProjectId";
@@ -95,6 +98,12 @@ export default function TableOfContentsEditor() {
       } else if (view === "quota") {
         // eslint-disable-next-line i18next/no-literal-string
         history.push(`/${slug}/admin/data/quota`);
+      } else if (view === "downloads") {
+        // eslint-disable-next-line i18next/no-literal-string
+        history.push(`/${slug}/admin/data/download-settings`);
+      } else if (view === "sharing") {
+        // eslint-disable-next-line i18next/no-literal-string
+        history.push(`/${slug}/admin/data/sharing-settings`);
       } else {
         // eslint-disable-next-line i18next/no-literal-string
         history.push(`/${slug}/admin/data`);
@@ -107,6 +116,10 @@ export default function TableOfContentsEditor() {
     ? "order"
     : /quota/.test(history.location.pathname)
     ? "quota"
+    : /sharing-settings/.test(history.location.pathname)
+    ? "sharing"
+    : /download-settings/.test(history.location.pathname)
+    ? "downloads"
     : "tree";
   const { manager } = useContext(MapManagerContext);
 
@@ -416,15 +429,17 @@ export default function TableOfContentsEditor() {
           {tocQuery.error.message || "An error occurred"}
         </Warning>
       )}
-      <ScrollingComponent
-        className={`flex-1 overflow-y-auto p-2 ${
-          selectedView === "quota" ? "px-4" : "px-8"
-        }`}
-        onContextMenu={(e: any) => e.preventDefault()}
-      >
-        {tocQuery.loading && !tocQuery.data?.projectBySlug && <Spinner />}
 
-        <Route exact path={`/${slug}/admin/data`}>
+      <Route exact path={`/${slug}/admin/data`}>
+        <ScrollingComponent
+          className={`flex-1 overflow-y-auto ${
+            selectedView === "quota" || selectedView === "downloads"
+              ? "pt-5 px-4 pb-6 sm:px-6 sm:pb-8"
+              : "p-2 px-8"
+          }`}
+          onContextMenu={(e: any) => e.preventDefault()}
+        >
+          {tocQuery.loading && !tocQuery.data?.projectBySlug && <Spinner />}
           <>
             <SearchResultsMessages
               filteredTreeNodes={filteredTreeNodes}
@@ -506,34 +521,97 @@ export default function TableOfContentsEditor() {
               />
             </div>
           </>
-        </Route>
-        <Route path={`/${slug}/admin/data/zindex`}>
-          <ZIndexEditableList // @ts-ignore
-            tableOfContentsItems={
-              tocQuery.data?.projectBySlug?.draftTableOfContentsItems
-            }
-            // @ts-ignore
+        </ScrollingComponent>
+      </Route>
+      <Route path={`/${slug}/admin/data/zindex`}>
+        <div
+          className="flex min-h-0 flex-1 flex-col overflow-hidden pt-5 px-4 pb-6 sm:px-6 sm:pb-8"
+          onContextMenu={(e) => e.preventDefault()}
+        >
+          {tocQuery.loading && !tocQuery.data?.projectBySlug && <Spinner />}
+
+          <div className="flex min-h-0 w-full flex-1 flex-col max-w-4xl">
+            <header className="flex-none pb-3">
+              <AdminDataViewScreenHeading>
+                <Trans ns="admin:data">Z-Order Settings</Trans>
+              </AdminDataViewScreenHeading>
+              <p className="mt-2 text-sm text-gray-600 leading-snug">
+                <Trans ns="admin:data">
+                  Drag layers to change their stacking order on the map. Layers
+                  above the <strong>Basemap Labels</strong> divider render on
+                  top of labels; layers below render beneath labels.
+                </Trans>
+              </p>
+            </header>
+            <div className="relative mt-3 min-h-0 flex-1 overflow-hidden rounded-md border border-gray-200 bg-white shadow-sm">
+              <ZIndexEditableList // @ts-ignore
+                tableOfContentsItems={
+                  tocQuery.data?.projectBySlug?.draftTableOfContentsItems
+                }
+                // @ts-ignore
+                dataLayers={
+                  layersAndSources.data?.projectBySlug?.dataLayersForItems
+                }
+                // @ts-ignore
+                dataSources={
+                  layersAndSources.data?.projectBySlug?.dataSourcesForItems
+                }
+              />
+            </div>
+          </div>
+        </div>
+      </Route>
+      <Route path={`/${slug}/admin/data/quota`}>
+        {tocQuery.loading && !tocQuery.data?.projectBySlug && <Spinner />}
+
+        <QuotaUsageDetails
+          tableOfContentsItems={
+            tocQuery.data?.projectBySlug?.draftTableOfContentsItems || []
+          }
+          layers={
+            layersAndSources.data?.projectBySlug?.dataLayersForItems || []
+          }
+          slug={slug}
+        />
+      </Route>
+      <Route path={`/${slug}/admin/data/download-settings`}>
+        {tocQuery.data?.projectBySlug?.id != null && (
+          <DataDownloadSettingsPanel
+            slug={slug}
+            projectId={tocQuery.data.projectBySlug.id}
             dataLayers={
               layersAndSources.data?.projectBySlug?.dataLayersForItems
             }
-            // @ts-ignore
             dataSources={
               layersAndSources.data?.projectBySlug?.dataSourcesForItems
             }
+            layersLoading={layersAndSources.loading}
+            downloadableLayersCount={
+              extraQuery.data?.projectBySlug?.downloadableLayersCount ?? 0
+            }
+            eligibleLayersCount={
+              extraQuery.data?.projectBySlug?.eligableDownloadableLayersCount ??
+              0
+            }
+            filteredTreeNodes={filteredTreeNodes}
+            search={search}
+            searchState={searchState}
+            searchResults={searchResults}
           />
-        </Route>
-        <Route path={`/${slug}/admin/data/quota`}>
-          <QuotaUsageDetails // @ts-ignore
-            tableOfContentsItems={
-              tocQuery.data?.projectBySlug?.draftTableOfContentsItems
-            }
-            layers={
-              layersAndSources.data?.projectBySlug?.dataLayersForItems || []
-            }
+        )}
+      </Route>
+      <Route path={`/${slug}/admin/data/sharing-settings`}>
+        {tocQuery.data?.projectBySlug?.id != null && (
+          <SharingSettingsPanel
             slug={slug}
+            filteredTreeNodes={filteredTreeNodes}
+            search={search}
+            searchState={searchState}
+            searchResults={searchResults}
           />
-        </Route>
-      </ScrollingComponent>
+        )}
+      </Route>
+
       {layerEditingContext.openEditor &&
         !layerEditingContext.openEditor.isFolder && (
           <LayerTableOfContentsItemEditor
@@ -654,6 +732,12 @@ function Header({
                 </MenubarRadioItem>
                 <MenubarRadioItem value="quota">
                   <Trans ns="admin:data">Data Hosting Quota</Trans>
+                </MenubarRadioItem>
+                <MenubarRadioItem value="downloads">
+                  <Trans ns="admin:data">Download Settings</Trans>
+                </MenubarRadioItem>
+                <MenubarRadioItem value="sharing">
+                  <Trans ns="admin:data">Sharing Settings</Trans>
                 </MenubarRadioItem>
               </Menubar.RadioGroup>
               <MenuBarSeparator />
@@ -816,13 +900,17 @@ function Header({
             </MenuBarContent>
           </Menubar.Portal>
         </Menubar.Menu>
-        <div className="ml-2">
-          <OverlaySearchInput
-            search={search}
-            onChange={onSearchChange}
-            loading={searchLoading}
-          />
-        </div>
+        {(selectedView === "tree" ||
+          selectedView === "downloads" ||
+          selectedView === "sharing") && (
+          <div className="ml-2">
+            <OverlaySearchInput
+              search={search}
+              onChange={onSearchChange}
+              loading={searchLoading}
+            />
+          </div>
+        )}
         <div className="flex-1 text-right">
           <Tooltip.Provider>
             <Tooltip.Root delayDuration={200}>

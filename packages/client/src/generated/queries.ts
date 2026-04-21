@@ -1910,6 +1910,39 @@ export type CreateOptionalBasemapLayerPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the create `OriginalSourceId` mutation. */
+export type CreateOriginalSourceIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `OriginalSourceId` to be created by this mutation. */
+  originalSourceId: OriginalSourceIdInput;
+};
+
+/** The output of our create `OriginalSourceId` mutation. */
+export type CreateOriginalSourceIdPayload = {
+  __typename?: 'CreateOriginalSourceIdPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `OriginalSourceId` that was created by this mutation. */
+  originalSourceId?: Maybe<OriginalSourceId>;
+  /** An edge for our `OriginalSourceId`. May be used by Relay 1. */
+  originalSourceIdEdge?: Maybe<OriginalSourceIdsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our create `OriginalSourceId` mutation. */
+export type CreateOriginalSourceIdPayloadOriginalSourceIdEdgeArgs = {
+  orderBy?: Maybe<Array<OriginalSourceIdsOrderBy>>;
+};
+
 /** All input for the `createProject` mutation. */
 export type CreateProjectInput = {
   /**
@@ -2041,6 +2074,39 @@ export type CreateProjectsSharedBasemapPayload = {
 /** The output of our create `ProjectsSharedBasemap` mutation. */
 export type CreateProjectsSharedBasemapPayloadProjectsSharedBasemapEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
+};
+
+/** All input for the create `PublishedTocItemId` mutation. */
+export type CreatePublishedTocItemIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `PublishedTocItemId` to be created by this mutation. */
+  publishedTocItemId: PublishedTocItemIdInput;
+};
+
+/** The output of our create `PublishedTocItemId` mutation. */
+export type CreatePublishedTocItemIdPayload = {
+  __typename?: 'CreatePublishedTocItemIdPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `PublishedTocItemId` that was created by this mutation. */
+  publishedTocItemId?: Maybe<PublishedTocItemId>;
+  /** An edge for our `PublishedTocItemId`. May be used by Relay 1. */
+  publishedTocItemIdEdge?: Maybe<PublishedTocItemIdsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our create `PublishedTocItemId` mutation. */
+export type CreatePublishedTocItemIdPayloadPublishedTocItemIdEdgeArgs = {
+  orderBy?: Maybe<Array<PublishedTocItemIdsOrderBy>>;
 };
 
 /** All input for the `createRemoteGeojsonSource` mutation. */
@@ -6853,6 +6919,29 @@ export type GetChildFoldersRecursivePayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `getPublishedCardIdFromDraft` mutation. */
+export type GetPublishedCardIdFromDraftInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  draftReportCardId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `getPublishedCardIdFromDraft` mutation. */
+export type GetPublishedCardIdFromDraftPayload = {
+  __typename?: 'GetPublishedCardIdFromDraftPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  integer?: Maybe<Scalars['Int']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 export type GoogleMapsTileApiSession = Node & {
   __typename?: 'GoogleMapsTileApiSession';
   expiresAt: Scalars['Datetime'];
@@ -7790,6 +7879,8 @@ export type Mutation = {
   createOfflineTileSetting?: Maybe<CreateOfflineTileSettingPayload>;
   /** Creates a single `OptionalBasemapLayer`. */
   createOptionalBasemapLayer?: Maybe<CreateOptionalBasemapLayerPayload>;
+  /** Creates a single `OriginalSourceId`. */
+  createOriginalSourceId?: Maybe<CreateOriginalSourceIdPayload>;
   createPost: Post;
   /**
    * Users with verified emails can create new projects by choosing a unique name
@@ -7813,6 +7904,8 @@ export type Mutation = {
   createProjectInvites?: Maybe<CreateProjectInvitesPayload>;
   /** Creates a single `ProjectsSharedBasemap`. */
   createProjectsSharedBasemap?: Maybe<CreateProjectsSharedBasemapPayload>;
+  /** Creates a single `PublishedTocItemId`. */
+  createPublishedTocItemId?: Maybe<CreatePublishedTocItemIdPayload>;
   createRemoteGeojsonSource?: Maybe<CreateRemoteGeojsonSourcePayload>;
   createRemoteMvtSource?: Maybe<CreateRemoteMvtSourcePayload>;
   /** Creates a single `Report`. */
@@ -8009,6 +8102,7 @@ export type Mutation = {
    */
   getOrCreateSprite?: Maybe<Sprite>;
   getPresignedPMTilesUploadUrl: PresignedUrl;
+  getPublishedCardIdFromDraft?: Maybe<GetPublishedCardIdFromDraftPayload>;
   /** Give a user admin access to a project. User must have already joined the project and shared their user profile. */
   grantAdminAccess?: Maybe<GrantAdminAccessPayload>;
   importArcgisServices?: Maybe<ImportArcgisServicesPayload>;
@@ -8618,6 +8712,12 @@ export type MutationCreateOptionalBasemapLayerArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateOriginalSourceIdArgs = {
+  input: CreateOriginalSourceIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreatePostArgs = {
   message: Scalars['JSON'];
   topicId: Scalars['Int'];
@@ -8645,6 +8745,12 @@ export type MutationCreateProjectInvitesArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateProjectsSharedBasemapArgs = {
   input: CreateProjectsSharedBasemapInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreatePublishedTocItemIdArgs = {
+  input: CreatePublishedTocItemIdInput;
 };
 
 
@@ -9241,6 +9347,12 @@ export type MutationGetOrCreateSpriteArgs = {
 export type MutationGetPresignedPmTilesUploadUrlArgs = {
   bytes: Scalars['BigInt'];
   filename: Scalars['String'];
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationGetPublishedCardIdFromDraftArgs = {
+  input: GetPublishedCardIdFromDraftInput;
 };
 
 
@@ -10428,6 +10540,43 @@ export enum OptionalBasemapLayersOrderBy {
   Natural = 'NATURAL',
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+}
+
+export type OriginalSourceId = {
+  __typename?: 'OriginalSourceId';
+  dataSourceId?: Maybe<Scalars['Int']>;
+};
+
+/** An input for mutations affecting `OriginalSourceId` */
+export type OriginalSourceIdInput = {
+  dataSourceId?: Maybe<Scalars['Int']>;
+};
+
+/** A connection to a list of `OriginalSourceId` values. */
+export type OriginalSourceIdsConnection = {
+  __typename?: 'OriginalSourceIdsConnection';
+  /** A list of edges which contains the `OriginalSourceId` and cursor to aid in pagination. */
+  edges: Array<OriginalSourceIdsEdge>;
+  /** A list of `OriginalSourceId` objects. */
+  nodes: Array<OriginalSourceId>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `OriginalSourceId` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `OriginalSourceId` edge in the connection. */
+export type OriginalSourceIdsEdge = {
+  __typename?: 'OriginalSourceIdsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `OriginalSourceId` at the end of the edge. */
+  node: OriginalSourceId;
+};
+
+/** Methods to use when ordering `OriginalSourceId`. */
+export enum OriginalSourceIdsOrderBy {
+  Natural = 'NATURAL'
 }
 
 export type OutstandingSurveyInvites = {
@@ -11965,6 +12114,43 @@ export type PublishTableOfContentsPayload = {
   tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
 };
 
+export type PublishedTocItemId = {
+  __typename?: 'PublishedTocItemId';
+  id?: Maybe<Scalars['Int']>;
+};
+
+/** An input for mutations affecting `PublishedTocItemId` */
+export type PublishedTocItemIdInput = {
+  id?: Maybe<Scalars['Int']>;
+};
+
+/** A connection to a list of `PublishedTocItemId` values. */
+export type PublishedTocItemIdsConnection = {
+  __typename?: 'PublishedTocItemIdsConnection';
+  /** A list of edges which contains the `PublishedTocItemId` and cursor to aid in pagination. */
+  edges: Array<PublishedTocItemIdsEdge>;
+  /** A list of `PublishedTocItemId` objects. */
+  nodes: Array<PublishedTocItemId>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `PublishedTocItemId` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `PublishedTocItemId` edge in the connection. */
+export type PublishedTocItemIdsEdge = {
+  __typename?: 'PublishedTocItemIdsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `PublishedTocItemId` at the end of the edge. */
+  node: PublishedTocItemId;
+};
+
+/** Methods to use when ordering `PublishedTocItemId`. */
+export enum PublishedTocItemIdsOrderBy {
+  Natural = 'NATURAL'
+}
+
 /** The root query type which gives access points into the data universe. */
 export type Query = Node & {
   __typename?: 'Query';
@@ -12135,6 +12321,8 @@ export type Query = Node & {
   optionalBasemapLayer?: Maybe<OptionalBasemapLayer>;
   /** Reads a single `OptionalBasemapLayer` using its globally unique `ID`. */
   optionalBasemapLayerByNodeId?: Maybe<OptionalBasemapLayer>;
+  /** Reads and enables pagination through a set of `OriginalSourceId`. */
+  originalSourceIdsConnection?: Maybe<OriginalSourceIdsConnection>;
   post?: Maybe<Post>;
   /** Reads a single `Post` using its globally unique `ID`. */
   postByNodeId?: Maybe<Post>;
@@ -12166,6 +12354,8 @@ export type Query = Node & {
   projectsSharedBasemapsConnection?: Maybe<ProjectsSharedBasemapsConnection>;
   /** Used by project administrators to access a list of public sprites promoted by the SeaSketch development team. */
   publicSprites?: Maybe<Array<Sprite>>;
+  /** Reads and enables pagination through a set of `PublishedTocItemId`. */
+  publishedTocItemIdsConnection?: Maybe<PublishedTocItemIdsConnection>;
   /**
    * Exposes the root query type nested one level down. This is helpful for Relay 1
    * which can only query top level fields if they are in a particular form.
@@ -12972,6 +13162,17 @@ export type QueryOptionalBasemapLayerByNodeIdArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryOriginalSourceIdsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<OriginalSourceIdsOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QueryPostArgs = {
   id: Scalars['Int'];
 };
@@ -13125,6 +13326,17 @@ export type QueryProjectsSharedBasemapsConnectionArgs = {
 export type QueryPublicSpritesArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryPublishedTocItemIdsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<PublishedTocItemIdsOrderBy>>;
 };
 
 
@@ -19029,6 +19241,10 @@ export type UpdateAclTypeMutation = (
     & { acl?: Maybe<(
       { __typename?: 'Acl' }
       & Pick<Acl, 'id' | 'nodeId' | 'type'>
+      & { groups?: Maybe<Array<(
+        { __typename?: 'Group' }
+        & Pick<Group, 'id' | 'name'>
+      )>> }
     )> }
   )> }
 );
@@ -19045,6 +19261,7 @@ export type AddGroupToAclMutation = (
     { __typename?: 'AddGroupToAclPayload' }
     & { acl?: Maybe<(
       { __typename?: 'Acl' }
+      & Pick<Acl, 'id' | 'nodeId' | 'type'>
       & { groups?: Maybe<Array<(
         { __typename?: 'Group' }
         & Pick<Group, 'id' | 'name'>
@@ -19065,6 +19282,7 @@ export type RemoveGroupFromAclMutation = (
     { __typename?: 'RemoveGroupFromAclPayload' }
     & { acl?: Maybe<(
       { __typename?: 'Acl' }
+      & Pick<Acl, 'id' | 'nodeId' | 'type'>
       & { groups?: Maybe<Array<(
         { __typename?: 'Group' }
         & Pick<Group, 'id' | 'name'>
@@ -20215,6 +20433,58 @@ export type DraftTableOfContentsQuery = (
   )> }
 );
 
+export type DownloadSettingsTocItemFragment = (
+  { __typename?: 'TableOfContentsItem' }
+  & Pick<TableOfContentsItem, 'id' | 'stableId' | 'title' | 'isFolder' | 'parentStableId' | 'sortIndex' | 'dataLayerId' | 'enableDownload' | 'primaryDownloadUrl' | 'hasOriginalSourceUpload'>
+);
+
+export type DownloadSettingsTableOfContentsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type DownloadSettingsTableOfContentsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { draftTableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & DownloadSettingsTocItemFragment
+    )>> }
+  )> }
+);
+
+export type SharingSettingsTocItemFragment = (
+  { __typename?: 'TableOfContentsItem' }
+  & Pick<TableOfContentsItem, 'id' | 'stableId' | 'title' | 'isFolder' | 'parentStableId' | 'sortIndex' | 'dataLayerId'>
+  & { acl?: Maybe<(
+    { __typename?: 'Acl' }
+    & Pick<Acl, 'id' | 'nodeId' | 'type'>
+    & { groups?: Maybe<Array<(
+      { __typename?: 'Group' }
+      & Pick<Group, 'id' | 'name'>
+    )>> }
+  )> }
+);
+
+export type SharingSettingsTableOfContentsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type SharingSettingsTableOfContentsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { draftTableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & SharingSettingsTocItemFragment
+    )>> }
+  )> }
+);
+
 export type ExtraTocEditingInfoQueryVariables = Exact<{
   slug: Scalars['String'];
 }>;
@@ -20244,7 +20514,7 @@ export type LayersAndSourcesForItemsQuery = (
       & Pick<DataSource, 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'translatedProps' | 'arcgisFetchStrategy' | 'rasterRepresentativeColors' | 'rasterOffset' | 'rasterScale'>
     )>>, dataLayersForItems?: Maybe<Array<(
       { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'staticId' | 'zIndex' | 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer'>
+      & Pick<DataLayer, 'staticId' | 'zIndex' | 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer' | 'sublayerType'>
       & { interactivitySettings?: Maybe<(
         { __typename?: 'InteractivitySetting' }
         & Pick<InteractivitySetting, 'id' | 'cursor' | 'longTemplate' | 'shortTemplate' | 'type' | 'title'>
@@ -26354,6 +26624,40 @@ export const AdminOverlayFragmentDoc = /*#__PURE__*/ gql`
   }
 }
     ${OverlayFragmentDoc}`;
+export const DownloadSettingsTocItemFragmentDoc = /*#__PURE__*/ gql`
+    fragment DownloadSettingsTocItem on TableOfContentsItem {
+  id
+  stableId
+  title
+  isFolder
+  parentStableId
+  sortIndex
+  dataLayerId
+  enableDownload
+  primaryDownloadUrl
+  hasOriginalSourceUpload
+}
+    `;
+export const SharingSettingsTocItemFragmentDoc = /*#__PURE__*/ gql`
+    fragment SharingSettingsTocItem on TableOfContentsItem {
+  id
+  stableId
+  title
+  isFolder
+  parentStableId
+  sortIndex
+  dataLayerId
+  acl {
+    id
+    nodeId
+    type
+    groups {
+      id
+      name
+    }
+  }
+}
+    `;
 export const FullAdminSourceFragmentDoc = /*#__PURE__*/ gql`
     fragment FullAdminSource on DataSource {
   id
@@ -27980,6 +28284,10 @@ export const UpdateAclTypeDocument = /*#__PURE__*/ gql`
       id
       nodeId
       type
+      groups {
+        id
+        name
+      }
     }
   }
 }
@@ -27988,6 +28296,9 @@ export const AddGroupToAclDocument = /*#__PURE__*/ gql`
     mutation AddGroupToAcl($id: Int!, $groupId: Int!) {
   addGroupToAcl(input: {aclId: $id, groupId: $groupId}) {
     acl {
+      id
+      nodeId
+      type
       groups {
         id
         name
@@ -28000,6 +28311,9 @@ export const RemoveGroupFromAclDocument = /*#__PURE__*/ gql`
     mutation RemoveGroupFromAcl($id: Int!, $groupId: Int!) {
   removeGroupFromAcl(input: {aclId: $id, groupId: $groupId}) {
     acl {
+      id
+      nodeId
+      type
       groups {
         id
         name
@@ -28765,6 +29079,26 @@ export const DraftTableOfContentsDocument = /*#__PURE__*/ gql`
   }
 }
     ${AdminOverlayFragmentDoc}`;
+export const DownloadSettingsTableOfContentsDocument = /*#__PURE__*/ gql`
+    query DownloadSettingsTableOfContents($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    draftTableOfContentsItems {
+      ...DownloadSettingsTocItem
+    }
+  }
+}
+    ${DownloadSettingsTocItemFragmentDoc}`;
+export const SharingSettingsTableOfContentsDocument = /*#__PURE__*/ gql`
+    query SharingSettingsTableOfContents($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    draftTableOfContentsItems {
+      ...SharingSettingsTocItem
+    }
+  }
+}
+    ${SharingSettingsTocItemFragmentDoc}`;
 export const ExtraTocEditingInfoDocument = /*#__PURE__*/ gql`
     query ExtraTocEditingInfo($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -28843,6 +29177,7 @@ export const LayersAndSourcesForItemsDocument = /*#__PURE__*/ gql`
       renderUnder
       sourceLayer
       sublayer
+      sublayerType
     }
   }
 }
@@ -32348,6 +32683,8 @@ export const namedOperations = {
     DownloadBasemapDetails: 'DownloadBasemapDetails',
     ImportBasemapDetails: 'ImportBasemapDetails',
     DraftTableOfContents: 'DraftTableOfContents',
+    DownloadSettingsTableOfContents: 'DownloadSettingsTableOfContents',
+    SharingSettingsTableOfContents: 'SharingSettingsTableOfContents',
     ExtraTocEditingInfo: 'ExtraTocEditingInfo',
     layersAndSourcesForItems: 'layersAndSourcesForItems',
     GetFolder: 'GetFolder',
@@ -32679,6 +33016,8 @@ export const namedOperations = {
     JobDetails: 'JobDetails',
     BackgroundJobSubscriptionEvent: 'BackgroundJobSubscriptionEvent',
     AdminOverlay: 'AdminOverlay',
+    DownloadSettingsTocItem: 'DownloadSettingsTocItem',
+    SharingSettingsTocItem: 'SharingSettingsTocItem',
     FullAdminSource: 'FullAdminSource',
     ArchivedSource: 'ArchivedSource',
     FullAdminDataLayer: 'FullAdminDataLayer',
