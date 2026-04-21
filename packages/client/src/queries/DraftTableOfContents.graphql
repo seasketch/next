@@ -25,6 +25,28 @@ query DraftTableOfContents($slug: String!) {
   }
 }
 
+fragment DownloadSettingsTocItem on TableOfContentsItem {
+  id
+  stableId
+  title
+  isFolder
+  parentStableId
+  sortIndex
+  dataLayerId
+  enableDownload
+  primaryDownloadUrl
+  hasOriginalSourceUpload
+}
+
+query DownloadSettingsTableOfContents($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    draftTableOfContentsItems {
+      ...DownloadSettingsTocItem
+    }
+  }
+}
+
 query ExtraTocEditingInfo($slug: String!) {
   projectBySlug(slug: $slug) {
     id
@@ -104,6 +126,7 @@ query layersAndSourcesForItems(
       renderUnder
       sourceLayer
       sublayer
+      sublayerType
     }
   }
 }

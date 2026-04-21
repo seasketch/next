@@ -14,6 +14,7 @@ import {
   ExclamationTriangleIcon,
 } from "@radix-ui/react-icons";
 import QuotaUsageModal from "./QuotaUsageModal";
+import AdminDataViewScreenHeading from "./AdminDataViewScreenHeading";
 
 const WIDTH = 488;
 
@@ -78,11 +79,11 @@ export default function QuotaUsageDetails({
   return (
     <div className="flex flex-col h-full">
       <div className="flex-none">
-        <div className="space-y-2 pt-2">
-          <h3>
-            <Trans ns="admin:data">Data Hosting Quota Usage</Trans>
-          </h3>
-          <div className="text-sm">
+        <div className="max-w-4xl space-y-5">
+          <AdminDataViewScreenHeading className="pb-1">
+            <Trans ns="admin:data">Data Hosting Quota</Trans>
+          </AdminDataViewScreenHeading>
+          <div className="text-sm space-y-2">
             {loading && !data ? (
               <>
                 <Trans ns="admin:data">Loading usage info...</Trans>

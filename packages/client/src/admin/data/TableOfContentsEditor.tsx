@@ -54,6 +54,8 @@ import Warning from "../../components/Warning";
 import AddMVTUrlModal from "../AddMVTUrlModal";
 import AddRemoteGeoJSONModal from "./AddRemoteGeoJSONModal";
 import QuotaUsageDetails from "./QuotaUsageDetails";
+import DataDownloadSettingsPanel from "./DataDownloadSettingsPanel";
+import AdminDataViewScreenHeading from "./AdminDataViewScreenHeading";
 import DataHostingRetentionPeriodModal from "./DataHostingRetentionPeriodModal";
 import AiDataAnalystProfileSettingsModal from "./AiDataAnalystProfileSettingsModal";
 import useProjectId from "../../useProjectId";
@@ -95,6 +97,9 @@ export default function TableOfContentsEditor() {
       } else if (view === "quota") {
         // eslint-disable-next-line i18next/no-literal-string
         history.push(`/${slug}/admin/data/quota`);
+      } else if (view === "downloads") {
+        // eslint-disable-next-line i18next/no-literal-string
+        history.push(`/${slug}/admin/data/download-settings`);
       } else {
         // eslint-disable-next-line i18next/no-literal-string
         history.push(`/${slug}/admin/data`);
@@ -107,6 +112,8 @@ export default function TableOfContentsEditor() {
     ? "order"
     : /quota/.test(history.location.pathname)
     ? "quota"
+    : /download-settings/.test(history.location.pathname)
+    ? "downloads"
     : "tree";
   const { manager } = useContext(MapManagerContext);
 
@@ -416,15 +423,17 @@ export default function TableOfContentsEditor() {
           {tocQuery.error.message || "An error occurred"}
         </Warning>
       )}
-      <ScrollingComponent
-        className={`flex-1 overflow-y-auto p-2 ${
-          selectedView === "quota" ? "px-4" : "px-8"
-        }`}
-        onContextMenu={(e: any) => e.preventDefault()}
-      >
-        {tocQuery.loading && !tocQuery.data?.projectBySlug && <Spinner />}
 
-        <Route exact path={`/${slug}/admin/data`}>
+      <Route exact path={`/${slug}/admin/data`}>
+        <ScrollingComponent
+          className={`flex-1 overflow-y-auto ${
+            selectedView === "quota" || selectedView === "downloads"
+              ? "pt-5 px-4 pb-6 sm:px-6 sm:pb-8"
+              : "p-2 px-8"
+          }`}
+          onContextMenu={(e: any) => e.preventDefault()}
+        >
+          {tocQuery.loading && !tocQuery.data?.projectBySlug && <Spinner />}
           <>
             <SearchResultsMessages
               filteredTreeNodes={filteredTreeNodes}
@@ -506,23 +515,54 @@ export default function TableOfContentsEditor() {
               />
             </div>
           </>
-        </Route>
-        <Route path={`/${slug}/admin/data/zindex`}>
-          <ZIndexEditableList // @ts-ignore
-            tableOfContentsItems={
-              tocQuery.data?.projectBySlug?.draftTableOfContentsItems
-            }
-            // @ts-ignore
-            dataLayers={
-              layersAndSources.data?.projectBySlug?.dataLayersForItems
-            }
-            // @ts-ignore
-            dataSources={
-              layersAndSources.data?.projectBySlug?.dataSourcesForItems
-            }
-          />
-        </Route>
-        <Route path={`/${slug}/admin/data/quota`}>
+        </ScrollingComponent>
+      </Route>
+      <Route path={`/${slug}/admin/data/zindex`}>
+        <ScrollingComponent
+          className={`flex-1 overflow-y-auto ${
+            selectedView === "quota" || selectedView === "downloads"
+              ? "pt-5 px-4 pb-6 sm:px-6 sm:pb-8"
+              : "p-2 px-8"
+          }`}
+          onContextMenu={(e: any) => e.preventDefault()}
+        >
+          {tocQuery.loading && !tocQuery.data?.projectBySlug && <Spinner />}
+
+          <div className="flex flex-col h-full min-h-0 max-w-4xl">
+            <div className="flex-none shrink-0 border-b border-gray-100 pb-4 mb-1">
+              <AdminDataViewScreenHeading>
+                <Trans ns="admin:data">Z-Order Settings</Trans>
+              </AdminDataViewScreenHeading>
+            </div>
+            <div className="flex-1 min-h-0 pt-4">
+              <ZIndexEditableList // @ts-ignore
+                tableOfContentsItems={
+                  tocQuery.data?.projectBySlug?.draftTableOfContentsItems
+                }
+                // @ts-ignore
+                dataLayers={
+                  layersAndSources.data?.projectBySlug?.dataLayersForItems
+                }
+                // @ts-ignore
+                dataSources={
+                  layersAndSources.data?.projectBySlug?.dataSourcesForItems
+                }
+              />
+            </div>
+          </div>
+        </ScrollingComponent>
+      </Route>
+      <Route path={`/${slug}/admin/data/quota`}>
+        <ScrollingComponent
+          className={`flex-1 overflow-y-auto ${
+            selectedView === "quota" || selectedView === "downloads"
+              ? "pt-5 px-4 pb-6 sm:px-6 sm:pb-8"
+              : "p-2 px-8"
+          }`}
+          onContextMenu={(e: any) => e.preventDefault()}
+        >
+          {tocQuery.loading && !tocQuery.data?.projectBySlug && <Spinner />}
+
           <QuotaUsageDetails // @ts-ignore
             tableOfContentsItems={
               tocQuery.data?.projectBySlug?.draftTableOfContentsItems
@@ -532,8 +572,35 @@ export default function TableOfContentsEditor() {
             }
             slug={slug}
           />
-        </Route>
-      </ScrollingComponent>
+        </ScrollingComponent>
+      </Route>
+      <Route path={`/${slug}/admin/data/download-settings`}>
+        {tocQuery.data?.projectBySlug?.id != null && (
+          <DataDownloadSettingsPanel
+            slug={slug}
+            projectId={tocQuery.data.projectBySlug.id}
+            dataLayers={
+              layersAndSources.data?.projectBySlug?.dataLayersForItems
+            }
+            dataSources={
+              layersAndSources.data?.projectBySlug?.dataSourcesForItems
+            }
+            layersLoading={layersAndSources.loading}
+            downloadableLayersCount={
+              extraQuery.data?.projectBySlug?.downloadableLayersCount ?? 0
+            }
+            eligibleLayersCount={
+              extraQuery.data?.projectBySlug?.eligableDownloadableLayersCount ??
+              0
+            }
+            filteredTreeNodes={filteredTreeNodes}
+            search={search}
+            searchState={searchState}
+            searchResults={searchResults}
+          />
+        )}
+      </Route>
+
       {layerEditingContext.openEditor &&
         !layerEditingContext.openEditor.isFolder && (
           <LayerTableOfContentsItemEditor
@@ -654,6 +721,9 @@ function Header({
                 </MenubarRadioItem>
                 <MenubarRadioItem value="quota">
                   <Trans ns="admin:data">Data Hosting Quota</Trans>
+                </MenubarRadioItem>
+                <MenubarRadioItem value="downloads">
+                  <Trans ns="admin:data">Data Download Settings</Trans>
                 </MenubarRadioItem>
               </Menubar.RadioGroup>
               <MenuBarSeparator />
@@ -816,13 +886,15 @@ function Header({
             </MenuBarContent>
           </Menubar.Portal>
         </Menubar.Menu>
-        <div className="ml-2">
-          <OverlaySearchInput
-            search={search}
-            onChange={onSearchChange}
-            loading={searchLoading}
-          />
-        </div>
+        {(selectedView === "tree" || selectedView === "downloads") && (
+          <div className="ml-2">
+            <OverlaySearchInput
+              search={search}
+              onChange={onSearchChange}
+              loading={searchLoading}
+            />
+          </div>
+        )}
         <div className="flex-1 text-right">
           <Tooltip.Provider>
             <Tooltip.Root delayDuration={200}>
