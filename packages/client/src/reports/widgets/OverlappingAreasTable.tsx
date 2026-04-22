@@ -32,6 +32,7 @@ import {
   ClassTableRowComponentSettings,
   combineMetricsBySource,
   getClassTableRows,
+  shouldTruncateClassTableRowLabels,
 } from "./ClassTableRows";
 import {
   classTableRowHasSwatch,
@@ -255,6 +256,7 @@ export const OverlappingAreasTable: ReportWidget<
   const showColorSwatches = !componentSettings.hideColorSwatches;
   const areaColumnAlignClass =
     showAreaColumn && showPercentColumn ? "text-center" : "text-right";
+  const truncateRowLabels = shouldTruncateClassTableRowLabels(componentSettings);
   const nameLabel = componentSettings.nameLabel || t("Name");
   const areaLabel = componentSettings.areaLabel || t("Area");
   const percentWithinLabel =
@@ -428,7 +430,12 @@ export const OverlappingAreasTable: ReportWidget<
               )}
               {showColorSwatches && <SwatchForClassTableRow row={row} />}
               <div className="flex-1 min-w-0 text-gray-800 text-sm">
-                <span className="truncate block" title={row.label}>
+                <span
+                  className={
+                    truncateRowLabels ? "truncate block" : "block break-words"
+                  }
+                  title={truncateRowLabels ? row.label : undefined}
+                >
                   {row.label}
                 </span>
               </div>
@@ -622,6 +629,16 @@ export const OverlappingAreasTableTooltipControls: ReportWidgetTooltipControls =
           <PaginationSetting
             rowsPerPage={rowsPerPage}
             onChange={(next: number) => handleUpdate({ rowsPerPage: next })}
+          />
+          <TooltipBooleanConfigurationOption
+            label={t("Truncate row labels")}
+            checked={shouldTruncateClassTableRowLabels(settings)}
+            checkboxFirst
+            onChange={(next) =>
+              handleUpdate({
+                disableRowLabelTruncation: next ? undefined : true,
+              })
+            }
           />
         </TooltipMorePopover>
       </div>

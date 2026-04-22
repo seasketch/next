@@ -24,9 +24,9 @@ export const PaginationFooter: React.FC<PaginationFooterProps> = ({
   const { t } = useTranslation("reports");
 
   return (
-    <div className="border-t border-gray-200 bg-gray-50 px-3 py-2 flex items-center justify-between">
+    <div className="border-t border-gray-200 bg-gray-50 px-3 py-2 flex items-center justify-end space-x-2">
       <div className="text-sm text-gray-700">
-        {t("Showing {{start}}–{{end}} of {{total}}", {
+        {t("{{start}}–{{end}} of {{total}}", {
           start: pageBounds.start,
           end: pageBounds.end,
           total: totalRows,
@@ -44,10 +44,10 @@ export const PaginationFooter: React.FC<PaginationFooterProps> = ({
             currentPage === 1
               ? "pointer-events-none opacity-25"
               : "hover:bg-gray-50"
-          } relative inline-flex items-center rounded-l-md border border-gray-300 bg-white px-2 py-2 text-sm font-medium text-gray-500 focus:z-20 focus:outline-none`}
+          } relative inline-flex items-center rounded-l-md border border-gray-300 bg-white px-2 py-1 text-sm font-medium text-gray-500 focus:z-20 focus:outline-none`}
         >
           <span className="sr-only">{t("Previous")}</span>
-          <ChevronLeftIcon className="h-5 w-5" aria-hidden="true" />
+          <ChevronLeftIcon className="h-4 w-4" aria-hidden="true" />
         </button>
         <button
           type="button"
@@ -57,10 +57,10 @@ export const PaginationFooter: React.FC<PaginationFooterProps> = ({
             currentPage === totalPages
               ? "pointer-events-none opacity-25"
               : "hover:bg-gray-50"
-          } relative inline-flex items-center rounded-r-md border border-gray-300 bg-white px-2 py-2 text-sm font-medium text-gray-500 focus:z-20 focus:outline-none`}
+          } relative inline-flex items-center rounded-r-md border border-gray-300 bg-white px-2 py-1 text-sm font-medium text-gray-500 focus:z-20 focus:outline-none`}
         >
           <span className="sr-only">{t("Next")}</span>
-          <ChevronRightIcon className="h-5 w-5" aria-hidden="true" />
+          <ChevronRightIcon className="h-4 w-4" aria-hidden="true" />
         </button>
       </nav>
     </div>

@@ -25,6 +25,7 @@ import {
   ClassTableRowComponentSettings,
   combineMetricsBySource,
   getClassTableRows,
+  shouldTruncateClassTableRowLabels,
 } from "./ClassTableRows";
 import {
   classTableRowHasSwatch,
@@ -85,6 +86,7 @@ export const RasterProportionTable: ReportWidget<
   const nameLabel = componentSettings.nameLabel || t("Name");
   const valueLabel = componentSettings.valueLabel || t("% Captured");
   const sumLabel = componentSettings.sumLabel || t("Sum");
+  const truncateRowLabels = shouldTruncateClassTableRowLabels(componentSettings);
 
   const formatters = useNumberFormatters({
     minimumFractionDigits: componentSettings.minimumFractionDigits,
@@ -223,7 +225,12 @@ export const RasterProportionTable: ReportWidget<
               )}
               {showColorSwatches && <SwatchForClassTableRow row={row} />}
               <div className="flex-1 min-w-0 text-gray-800 text-sm">
-                <span className="truncate block" title={row.label}>
+                <span
+                  className={
+                    truncateRowLabels ? "truncate block" : "block break-words"
+                  }
+                  title={truncateRowLabels ? row.label : undefined}
+                >
                   {row.label}
                 </span>
               </div>
@@ -433,6 +440,16 @@ export const RasterProportionTableTooltipControls: ReportWidgetTooltipControls =
             geography
             value={currentGeographyVrm}
             onChange={handleGeographyVrmChange}
+          />
+          <TooltipBooleanConfigurationOption
+            label={t("Truncate row labels")}
+            checked={shouldTruncateClassTableRowLabels(settings)}
+            checkboxFirst
+            onChange={(next) =>
+              handleUpdate({
+                disableRowLabelTruncation: next ? undefined : true,
+              })
+            }
           />
         </TooltipMorePopover>
       </div>

@@ -25,6 +25,7 @@ import {
   ClassTableRowComponentSettings,
   combineMetricsBySource,
   getClassTableRows,
+  shouldTruncateClassTableRowLabels,
 } from "./ClassTableRows";
 import {
   classTableRowHasSwatch,
@@ -77,6 +78,7 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
   const countLabel = componentSettings.countLabel || t("Count");
   const percentWithinLabel =
     componentSettings.percentWithinLabel || t("% Within");
+  const truncateRowLabels = shouldTruncateClassTableRowLabels(componentSettings);
 
   const { clippingGeography } = usePrimaryGeography(sketchClass, geographies);
   const primaryGeographyId = clippingGeography?.id;
@@ -256,8 +258,16 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
               {showColorSwatches && <SwatchForClassTableRow row={row} />}
               <div className="flex-1 min-w-0 text-gray-800 text-sm">
                 <span
-                  className="truncate block"
-                  title={row.key === "*" ? t("All features") : row.key}
+                  className={
+                    truncateRowLabels ? "truncate block" : "block break-words"
+                  }
+                  title={
+                    truncateRowLabels
+                      ? row.key === "*"
+                        ? t("All features")
+                        : row.label
+                      : undefined
+                  }
                 >
                   {row.key === "*" ? t("All features") : row.label}
                 </span>
@@ -426,6 +436,16 @@ export const FeatureCountTableTooltipControls: ReportWidgetTooltipControls = ({
         <PaginationSetting
           rowsPerPage={rowsPerPage}
           onChange={(next: number) => handleUpdate({ rowsPerPage: next })}
+        />
+        <TooltipBooleanConfigurationOption
+          label={t("Truncate row labels")}
+          checked={shouldTruncateClassTableRowLabels(settings)}
+          checkboxFirst
+          onChange={(next) =>
+            handleUpdate({
+              disableRowLabelTruncation: next ? undefined : true,
+            })
+          }
         />
         <div className="flex">
           <span className="text-sm font-light text-gray-400 whitespace-nowrap pr-1">

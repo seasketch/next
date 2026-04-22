@@ -154,6 +154,10 @@ function vectorSwatchFromSource(
 
 export type ClassTableRowComponentSettings = {
   /**
+   * When true, row labels wrap instead of truncating with an ellipsis (default is truncated).
+   */
+  disableRowLabelTruncation?: boolean;
+  /**
    * A list of row keys to exclude from the table. The key must match the ClassTableRow.key value.
    */
   excludedRowKeys?: string[];
@@ -173,6 +177,13 @@ export type ClassTableRowComponentSettings = {
    */
   includeAllFeaturesRowForGroupedSources?: string[];
 };
+
+/** Default: row labels are truncated to a single line unless `disableRowLabelTruncation` is set. */
+export function shouldTruncateClassTableRowLabels(
+  settings: Pick<ClassTableRowComponentSettings, "disableRowLabelTruncation">
+): boolean {
+  return !settings.disableRowLabelTruncation;
+}
 
 export function classTableRowKey(stableId: string, groupByKey?: string) {
   return `${stableId}-${groupByKey || "*"}`;

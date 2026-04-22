@@ -1,7 +1,11 @@
 import { useMemo } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { MetricDependency, CountMetric } from "overlay-engine";
-import { ReportWidget, TableHeadingsEditor } from "./widgets";
+import {
+  ReportWidget,
+  TableHeadingsEditor,
+  TooltipBooleanConfigurationOption,
+} from "./widgets";
 import {
   ReportWidgetTooltipControls,
   TooltipMorePopover,
@@ -30,6 +34,7 @@ import {
   ClassTableRowComponentSettings,
   combineMetricsBySource,
   getClassTableRows,
+  shouldTruncateClassTableRowLabels,
 } from "./ClassTableRows";
 import {
   classTableRowHasSwatch,
@@ -67,6 +72,7 @@ export const FeaturePresenceTable: ReportWidget<
   const showColorSwatches = !componentSettings.hideColorSwatches;
   const nameLabel = componentSettings.nameLabel || t("Name");
   const presenceLabel = componentSettings.presenceLabel || t("Presence");
+  const truncateRowLabels = shouldTruncateClassTableRowLabels(componentSettings);
 
   const { clippingGeography } = usePrimaryGeography(sketchClass, geographies);
   const primaryGeographyId = clippingGeography?.id ?? 0;
@@ -208,8 +214,16 @@ export const FeaturePresenceTable: ReportWidget<
                 {showColorSwatches && <SwatchForClassTableRow row={row} />}
                 <div className="flex-1 min-w-0 text-gray-800 text-sm">
                   <span
-                    className="truncate block"
-                    title={row.key === "*" ? t("All features") : row.key}
+                    className={
+                      truncateRowLabels ? "truncate block" : "block break-words"
+                    }
+                    title={
+                      truncateRowLabels
+                        ? row.key === "*"
+                          ? t("All features")
+                          : row.label
+                        : undefined
+                    }
                   >
                     {row.key === "*" ? t("All features") : row.label}
                   </span>
@@ -367,6 +381,16 @@ export const FeaturePresenceTableTooltipControls: ReportWidgetTooltipControls =
           <PaginationSetting
             rowsPerPage={rowsPerPage}
             onChange={(next: number) => handleUpdate({ rowsPerPage: next })}
+          />
+          <TooltipBooleanConfigurationOption
+            label={t("Truncate row labels")}
+            checked={shouldTruncateClassTableRowLabels(settings)}
+            checkboxFirst
+            onChange={(next) =>
+              handleUpdate({
+                disableRowLabelTruncation: next ? undefined : true,
+              })
+            }
           />
           <div className="flex">
             <span className="text-sm font-light text-gray-400 whitespace-nowrap pr-1">
