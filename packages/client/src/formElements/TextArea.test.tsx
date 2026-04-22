@@ -20,6 +20,12 @@ const makeArgs = (componentSettings: TextAreaProps) => ({
   surveySupportsFacilitation: true,
   isFacilitatedResponse: false,
   alternateLanguageSettings: {},
+  isSpatial: false,
+  featureNumber: 0,
+  onRequestStageChange: jest.fn(),
+  stage: 0,
+  onRequestNext: jest.fn(),
+  onRequestPrevious: jest.fn(),
 });
 
 test("Component renders with custom body", async () => {
