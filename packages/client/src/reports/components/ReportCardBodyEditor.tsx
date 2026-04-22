@@ -126,10 +126,10 @@ function ReportCardBodyEditorInner({
 
   const refetchDraftReportTree = useMemo(
     () => [
-      {
-        query: DraftReportDocument,
-        variables: { sketchClassId: sketchClass.id },
-      },
+      // {
+      //   query: DraftReportDocument,
+      //   variables: { sketchClassId: sketchClass.id },
+      // },
       {
         query: BaseDraftReportContextDocument,
         variables: { sketchClassId: sketchClass.id },

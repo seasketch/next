@@ -141,7 +141,9 @@ export type AddGroupToAclPayload = {
 
 /** All input for the `addReportCard` mutation. */
 export type AddReportCardInput = {
+  alternateLanguageSettings?: Maybe<Scalars['JSON']>;
   body?: Maybe<Scalars['JSON']>;
+  cardPosition?: Maybe<Scalars['Int']>;
   cardType?: Maybe<Scalars['String']>;
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
@@ -14001,8 +14003,6 @@ export type ReportCard = Node & {
   alternateLanguageSettings: Scalars['JSON'];
   body: Scalars['JSON'];
   componentSettings: Scalars['JSON'];
-  displayMapLayerVisibilityControls: Scalars['Boolean'];
-  icon?: Maybe<Scalars['String']>;
   id: Scalars['Int'];
   isDraft: Scalars['Boolean'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
@@ -14010,8 +14010,7 @@ export type ReportCard = Node & {
   position: Scalars['Int'];
   reportTabId: Scalars['Int'];
   tab?: Maybe<ReportTab>;
-  tint?: Maybe<Scalars['String']>;
-  type: Scalars['String'];
+  title?: Maybe<Scalars['String']>;
   updatedAt: Scalars['Datetime'];
 };
 
@@ -17911,16 +17910,12 @@ export type UpdateReportCardInput = {
   alternateLanguageSettings?: Maybe<Scalars['JSON']>;
   body?: Maybe<Scalars['JSON']>;
   cardId?: Maybe<Scalars['Int']>;
-  cardType?: Maybe<Scalars['String']>;
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
   componentSettings?: Maybe<Scalars['JSON']>;
-  displayMapLayerVisibilityControls?: Maybe<Scalars['Boolean']>;
-  icon?: Maybe<Scalars['String']>;
-  tint?: Maybe<Scalars['String']>;
 };
 
 /** The output of our `updateReportCard` mutation. */
@@ -23419,7 +23414,7 @@ export type SketchClassGeographyEditorDetailsQuery = (
 
 export type ReportCardDetailsFragment = (
   { __typename?: 'ReportCard' }
-  & Pick<ReportCard, 'id' | 'position' | 'type' | 'componentSettings' | 'alternateLanguageSettings' | 'tint' | 'icon' | 'body' | 'displayMapLayerVisibilityControls'>
+  & Pick<ReportCard, 'id' | 'position' | 'componentSettings' | 'alternateLanguageSettings' | 'body'>
 );
 
 export type ReportTabDetailsFragment = (
@@ -23568,8 +23563,9 @@ export type ReorderReportTabsMutation = (
 export type AddReportCardMutationVariables = Exact<{
   reportTabId: Scalars['Int'];
   componentSettings: Scalars['JSON'];
-  cardType: Scalars['String'];
   body: Scalars['JSON'];
+  cardPosition?: Maybe<Scalars['Int']>;
+  alternateLanguageSettings?: Maybe<Scalars['JSON']>;
 }>;
 
 
@@ -23580,10 +23576,6 @@ export type AddReportCardMutation = (
     & { reportCard?: Maybe<(
       { __typename?: 'ReportCard' }
       & Pick<ReportCard, 'id'>
-      & { tab?: Maybe<(
-        { __typename?: 'ReportTab' }
-        & ReportTabDetailsFragment
-      )> }
     )> }
   )> }
 );
@@ -23610,10 +23602,6 @@ export type UpdateReportCardMutationVariables = Exact<{
   componentSettings?: Maybe<Scalars['JSON']>;
   alternateLanguageSettings?: Maybe<Scalars['JSON']>;
   body?: Maybe<Scalars['JSON']>;
-  tint?: Maybe<Scalars['String']>;
-  icon?: Maybe<Scalars['String']>;
-  cardType?: Maybe<Scalars['String']>;
-  displayMapLayerVisibilityControls?: Maybe<Scalars['Boolean']>;
 }>;
 
 
@@ -23623,7 +23611,7 @@ export type UpdateReportCardMutation = (
     { __typename?: 'UpdateReportCardPayload' }
     & { reportCard?: Maybe<(
       { __typename?: 'ReportCard' }
-      & ReportCardDetailsFragment
+      & Pick<ReportCard, 'id'>
     )> }
   )> }
 );
@@ -23887,6 +23875,35 @@ export type BaseDraftReportContextQuery = (
       & BaseReportDetailsFragment
     )> }
     & ReportContextSketchClassDetailsFragment
+  )> }
+);
+
+export type CopyableReportCardsQueryVariables = Exact<{
+  projectId: Scalars['Int'];
+}>;
+
+
+export type CopyableReportCardsQuery = (
+  { __typename?: 'Query' }
+  & { project?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { sketchClasses: Array<(
+      { __typename?: 'SketchClass' }
+      & Pick<SketchClass, 'id' | 'name' | 'previewNewReports' | 'isGeographyClippingEnabled'>
+      & { draftReport?: Maybe<(
+        { __typename?: 'Report' }
+        & Pick<Report, 'id'>
+        & { tabs?: Maybe<Array<(
+          { __typename?: 'ReportTab' }
+          & Pick<ReportTab, 'id' | 'position' | 'title'>
+          & { cards?: Maybe<Array<(
+            { __typename?: 'ReportCard' }
+            & Pick<ReportCard, 'id' | 'position' | 'title' | 'body' | 'componentSettings' | 'alternateLanguageSettings'>
+          )>> }
+        )>> }
+      )> }
+    )> }
   )> }
 );
 
@@ -27541,13 +27558,9 @@ export const ReportCardDetailsFragmentDoc = gql`
     fragment ReportCardDetails on ReportCard {
   id
   position
-  type
   componentSettings
   alternateLanguageSettings
-  tint
-  icon
   body
-  displayMapLayerVisibilityControls
 }
     `;
 export const ReportTabDetailsFragmentDoc = gql`
@@ -36861,19 +36874,16 @@ export type ReorderReportTabsMutationHookResult = ReturnType<typeof useReorderRe
 export type ReorderReportTabsMutationResult = Apollo.MutationResult<ReorderReportTabsMutation>;
 export type ReorderReportTabsMutationOptions = Apollo.BaseMutationOptions<ReorderReportTabsMutation, ReorderReportTabsMutationVariables>;
 export const AddReportCardDocument = gql`
-    mutation AddReportCard($reportTabId: Int!, $componentSettings: JSON!, $cardType: String!, $body: JSON!) {
+    mutation AddReportCard($reportTabId: Int!, $componentSettings: JSON!, $body: JSON!, $cardPosition: Int, $alternateLanguageSettings: JSON) {
   addReportCard(
-    input: {reportTabId: $reportTabId, componentSettings: $componentSettings, cardType: $cardType, body: $body}
+    input: {reportTabId: $reportTabId, componentSettings: $componentSettings, body: $body, cardPosition: $cardPosition, alternateLanguageSettings: $alternateLanguageSettings}
   ) {
     reportCard {
       id
-      tab {
-        ...ReportTabDetails
-      }
     }
   }
 }
-    ${ReportTabDetailsFragmentDoc}`;
+    `;
 export type AddReportCardMutationFn = Apollo.MutationFunction<AddReportCardMutation, AddReportCardMutationVariables>;
 
 /**
@@ -36891,8 +36901,9 @@ export type AddReportCardMutationFn = Apollo.MutationFunction<AddReportCardMutat
  *   variables: {
  *      reportTabId: // value for 'reportTabId'
  *      componentSettings: // value for 'componentSettings'
- *      cardType: // value for 'cardType'
  *      body: // value for 'body'
+ *      cardPosition: // value for 'cardPosition'
+ *      alternateLanguageSettings: // value for 'alternateLanguageSettings'
  *   },
  * });
  */
@@ -36941,16 +36952,16 @@ export type ReorderReportTabCardsMutationHookResult = ReturnType<typeof useReord
 export type ReorderReportTabCardsMutationResult = Apollo.MutationResult<ReorderReportTabCardsMutation>;
 export type ReorderReportTabCardsMutationOptions = Apollo.BaseMutationOptions<ReorderReportTabCardsMutation, ReorderReportTabCardsMutationVariables>;
 export const UpdateReportCardDocument = gql`
-    mutation UpdateReportCard($id: Int!, $componentSettings: JSON, $alternateLanguageSettings: JSON, $body: JSON, $tint: String, $icon: String, $cardType: String, $displayMapLayerVisibilityControls: Boolean) {
+    mutation UpdateReportCard($id: Int!, $componentSettings: JSON, $alternateLanguageSettings: JSON, $body: JSON) {
   updateReportCard(
-    input: {cardId: $id, componentSettings: $componentSettings, alternateLanguageSettings: $alternateLanguageSettings, body: $body, tint: $tint, icon: $icon, cardType: $cardType, displayMapLayerVisibilityControls: $displayMapLayerVisibilityControls}
+    input: {cardId: $id, componentSettings: $componentSettings, alternateLanguageSettings: $alternateLanguageSettings, body: $body}
   ) {
     reportCard {
-      ...ReportCardDetails
+      id
     }
   }
 }
-    ${ReportCardDetailsFragmentDoc}`;
+    `;
 export type UpdateReportCardMutationFn = Apollo.MutationFunction<UpdateReportCardMutation, UpdateReportCardMutationVariables>;
 
 /**
@@ -36970,10 +36981,6 @@ export type UpdateReportCardMutationFn = Apollo.MutationFunction<UpdateReportCar
  *      componentSettings: // value for 'componentSettings'
  *      alternateLanguageSettings: // value for 'alternateLanguageSettings'
  *      body: // value for 'body'
- *      tint: // value for 'tint'
- *      icon: // value for 'icon'
- *      cardType: // value for 'cardType'
- *      displayMapLayerVisibilityControls: // value for 'displayMapLayerVisibilityControls'
  *   },
  * });
  */
@@ -37447,6 +37454,63 @@ export function useBaseDraftReportContextLazyQuery(baseOptions?: Apollo.LazyQuer
 export type BaseDraftReportContextQueryHookResult = ReturnType<typeof useBaseDraftReportContextQuery>;
 export type BaseDraftReportContextLazyQueryHookResult = ReturnType<typeof useBaseDraftReportContextLazyQuery>;
 export type BaseDraftReportContextQueryResult = Apollo.QueryResult<BaseDraftReportContextQuery, BaseDraftReportContextQueryVariables>;
+export const CopyableReportCardsDocument = gql`
+    query CopyableReportCards($projectId: Int!) {
+  project(id: $projectId) {
+    id
+    sketchClasses {
+      id
+      name
+      previewNewReports
+      isGeographyClippingEnabled
+      draftReport {
+        id
+        tabs {
+          id
+          position
+          title
+          cards {
+            id
+            position
+            title
+            body
+            componentSettings
+            alternateLanguageSettings
+          }
+        }
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useCopyableReportCardsQuery__
+ *
+ * To run a query within a React component, call `useCopyableReportCardsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useCopyableReportCardsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useCopyableReportCardsQuery({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *   },
+ * });
+ */
+export function useCopyableReportCardsQuery(baseOptions: Apollo.QueryHookOptions<CopyableReportCardsQuery, CopyableReportCardsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<CopyableReportCardsQuery, CopyableReportCardsQueryVariables>(CopyableReportCardsDocument, options);
+      }
+export function useCopyableReportCardsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<CopyableReportCardsQuery, CopyableReportCardsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<CopyableReportCardsQuery, CopyableReportCardsQueryVariables>(CopyableReportCardsDocument, options);
+        }
+export type CopyableReportCardsQueryHookResult = ReturnType<typeof useCopyableReportCardsQuery>;
+export type CopyableReportCardsLazyQueryHookResult = ReturnType<typeof useCopyableReportCardsLazyQuery>;
+export type CopyableReportCardsQueryResult = Apollo.QueryResult<CopyableReportCardsQuery, CopyableReportCardsQueryVariables>;
 export const SubjectReportContextDocument = gql`
     query SubjectReportContext($sketchId: Int!) {
   sketch(id: $sketchId) {
@@ -41590,6 +41654,7 @@ export const namedOperations = {
     ReportDependencies: 'ReportDependencies',
     BaseReportContext: 'BaseReportContext',
     BaseDraftReportContext: 'BaseDraftReportContext',
+    CopyableReportCards: 'CopyableReportCards',
     SubjectReportContext: 'SubjectReportContext',
     LegacyReportContext: 'LegacyReportContext',
     DraftReportDependencies: 'DraftReportDependencies',

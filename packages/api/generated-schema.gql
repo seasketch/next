@@ -103,7 +103,9 @@ type AddGroupToAclPayload {
 
 """All input for the `addReportCard` mutation."""
 input AddReportCardInput {
+  alternateLanguageSettings: JSON
   body: JSON
+  cardPosition: Int
   cardType: String
 
   """
@@ -15082,8 +15084,6 @@ type ReportCard implements Node {
   alternateLanguageSettings: JSON!
   body: JSON!
   componentSettings: JSON!
-  displayMapLayerVisibilityControls: Boolean!
-  icon: String
   id: Int!
   isDraft: Boolean!
 
@@ -15094,8 +15094,7 @@ type ReportCard implements Node {
   position: Int!
   reportTabId: Int!
   tab: ReportTab
-  tint: String
-  type: String!
+  title: String
   updatedAt: Datetime!
 }
 
@@ -19702,7 +19701,6 @@ input UpdateReportCardInput {
   alternateLanguageSettings: JSON
   body: JSON
   cardId: Int
-  cardType: String
 
   """
   An arbitrary string value with no semantic meaning. Will be included in the
@@ -19710,9 +19708,6 @@ input UpdateReportCardInput {
   """
   clientMutationId: String
   componentSettings: JSON
-  displayMapLayerVisibilityControls: Boolean
-  icon: String
-  tint: String
 }
 
 """The output of our `updateReportCard` mutation."""

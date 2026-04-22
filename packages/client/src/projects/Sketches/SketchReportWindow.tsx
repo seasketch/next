@@ -28,6 +28,7 @@ import {
   SubjectReportContext,
   SubjectReportContextProvider,
 } from "../../reports/context/SubjectReportContext";
+import { useSubjectReportContextQuery } from "../../generated/graphql";
 // import { registerCards } from "../../reports/cards/cards";
 
 // registerCards();
@@ -109,6 +110,26 @@ function SketchReportWindowInner({
   const calcDetailsModalState = useCalculationDetailsModalState();
   const { closeModal, openModal } = calcDetailsModalState;
   const baseReportContext = useContext(BaseReportContext);
+  const baseReady =
+    !baseReportContext.loading && Boolean(baseReportContext.data);
+
+  const { data: subjectQueryData, loading: subjectQueryLoading } =
+    useSubjectReportContextQuery({
+      variables: { sketchId },
+      skip: !baseReady,
+    });
+
+  useEffect(() => {
+    if (
+      subjectQueryLoading ||
+      !subjectQueryData ||
+      subjectQueryData.sketch != null
+    ) {
+      return;
+    }
+    onRequestClose(sketchId);
+  }, [subjectQueryLoading, subjectQueryData, sketchId, onRequestClose]);
+
   const [selectedTabId, setSelectedTabId] = useState<number | undefined>(
     baseReportContext.data?.report?.tabs?.[0]?.id ?? undefined
   );

@@ -139,7 +139,9 @@ export type AddGroupToAclPayload = {
 
 /** All input for the `addReportCard` mutation. */
 export type AddReportCardInput = {
+  alternateLanguageSettings?: Maybe<Scalars['JSON']>;
   body?: Maybe<Scalars['JSON']>;
+  cardPosition?: Maybe<Scalars['Int']>;
   cardType?: Maybe<Scalars['String']>;
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
@@ -13999,8 +14001,6 @@ export type ReportCard = Node & {
   alternateLanguageSettings: Scalars['JSON'];
   body: Scalars['JSON'];
   componentSettings: Scalars['JSON'];
-  displayMapLayerVisibilityControls: Scalars['Boolean'];
-  icon?: Maybe<Scalars['String']>;
   id: Scalars['Int'];
   isDraft: Scalars['Boolean'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
@@ -14008,8 +14008,7 @@ export type ReportCard = Node & {
   position: Scalars['Int'];
   reportTabId: Scalars['Int'];
   tab?: Maybe<ReportTab>;
-  tint?: Maybe<Scalars['String']>;
-  type: Scalars['String'];
+  title?: Maybe<Scalars['String']>;
   updatedAt: Scalars['Datetime'];
 };
 
@@ -17909,16 +17908,12 @@ export type UpdateReportCardInput = {
   alternateLanguageSettings?: Maybe<Scalars['JSON']>;
   body?: Maybe<Scalars['JSON']>;
   cardId?: Maybe<Scalars['Int']>;
-  cardType?: Maybe<Scalars['String']>;
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
   componentSettings?: Maybe<Scalars['JSON']>;
-  displayMapLayerVisibilityControls?: Maybe<Scalars['Boolean']>;
-  icon?: Maybe<Scalars['String']>;
-  tint?: Maybe<Scalars['String']>;
 };
 
 /** The output of our `updateReportCard` mutation. */
@@ -23417,7 +23412,7 @@ export type SketchClassGeographyEditorDetailsQuery = (
 
 export type ReportCardDetailsFragment = (
   { __typename?: 'ReportCard' }
-  & Pick<ReportCard, 'id' | 'position' | 'type' | 'componentSettings' | 'alternateLanguageSettings' | 'tint' | 'icon' | 'body' | 'displayMapLayerVisibilityControls'>
+  & Pick<ReportCard, 'id' | 'position' | 'componentSettings' | 'alternateLanguageSettings' | 'body'>
 );
 
 export type ReportTabDetailsFragment = (
@@ -23566,8 +23561,9 @@ export type ReorderReportTabsMutation = (
 export type AddReportCardMutationVariables = Exact<{
   reportTabId: Scalars['Int'];
   componentSettings: Scalars['JSON'];
-  cardType: Scalars['String'];
   body: Scalars['JSON'];
+  cardPosition?: Maybe<Scalars['Int']>;
+  alternateLanguageSettings?: Maybe<Scalars['JSON']>;
 }>;
 
 
@@ -23578,10 +23574,6 @@ export type AddReportCardMutation = (
     & { reportCard?: Maybe<(
       { __typename?: 'ReportCard' }
       & Pick<ReportCard, 'id'>
-      & { tab?: Maybe<(
-        { __typename?: 'ReportTab' }
-        & ReportTabDetailsFragment
-      )> }
     )> }
   )> }
 );
@@ -23608,10 +23600,6 @@ export type UpdateReportCardMutationVariables = Exact<{
   componentSettings?: Maybe<Scalars['JSON']>;
   alternateLanguageSettings?: Maybe<Scalars['JSON']>;
   body?: Maybe<Scalars['JSON']>;
-  tint?: Maybe<Scalars['String']>;
-  icon?: Maybe<Scalars['String']>;
-  cardType?: Maybe<Scalars['String']>;
-  displayMapLayerVisibilityControls?: Maybe<Scalars['Boolean']>;
 }>;
 
 
@@ -23621,7 +23609,7 @@ export type UpdateReportCardMutation = (
     { __typename?: 'UpdateReportCardPayload' }
     & { reportCard?: Maybe<(
       { __typename?: 'ReportCard' }
-      & ReportCardDetailsFragment
+      & Pick<ReportCard, 'id'>
     )> }
   )> }
 );
@@ -23885,6 +23873,35 @@ export type BaseDraftReportContextQuery = (
       & BaseReportDetailsFragment
     )> }
     & ReportContextSketchClassDetailsFragment
+  )> }
+);
+
+export type CopyableReportCardsQueryVariables = Exact<{
+  projectId: Scalars['Int'];
+}>;
+
+
+export type CopyableReportCardsQuery = (
+  { __typename?: 'Query' }
+  & { project?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { sketchClasses: Array<(
+      { __typename?: 'SketchClass' }
+      & Pick<SketchClass, 'id' | 'name' | 'previewNewReports' | 'isGeographyClippingEnabled'>
+      & { draftReport?: Maybe<(
+        { __typename?: 'Report' }
+        & Pick<Report, 'id'>
+        & { tabs?: Maybe<Array<(
+          { __typename?: 'ReportTab' }
+          & Pick<ReportTab, 'id' | 'position' | 'title'>
+          & { cards?: Maybe<Array<(
+            { __typename?: 'ReportCard' }
+            & Pick<ReportCard, 'id' | 'position' | 'title' | 'body' | 'componentSettings' | 'alternateLanguageSettings'>
+          )>> }
+        )>> }
+      )> }
+    )> }
   )> }
 );
 
@@ -27539,13 +27556,9 @@ export const ReportCardDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment ReportCardDetails on ReportCard {
   id
   position
-  type
   componentSettings
   alternateLanguageSettings
-  tint
-  icon
   body
-  displayMapLayerVisibilityControls
 }
     `;
 export const ReportTabDetailsFragmentDoc = /*#__PURE__*/ gql`
@@ -31073,19 +31086,16 @@ export const ReorderReportTabsDocument = /*#__PURE__*/ gql`
 }
     ${ReportTabDetailsFragmentDoc}`;
 export const AddReportCardDocument = /*#__PURE__*/ gql`
-    mutation AddReportCard($reportTabId: Int!, $componentSettings: JSON!, $cardType: String!, $body: JSON!) {
+    mutation AddReportCard($reportTabId: Int!, $componentSettings: JSON!, $body: JSON!, $cardPosition: Int, $alternateLanguageSettings: JSON) {
   addReportCard(
-    input: {reportTabId: $reportTabId, componentSettings: $componentSettings, cardType: $cardType, body: $body}
+    input: {reportTabId: $reportTabId, componentSettings: $componentSettings, body: $body, cardPosition: $cardPosition, alternateLanguageSettings: $alternateLanguageSettings}
   ) {
     reportCard {
       id
-      tab {
-        ...ReportTabDetails
-      }
     }
   }
 }
-    ${ReportTabDetailsFragmentDoc}`;
+    `;
 export const ReorderReportTabCardsDocument = /*#__PURE__*/ gql`
     mutation ReorderReportTabCards($reportTabId: Int!, $cardIds: [Int!]!) {
   reorderReportTabCards(input: {reportTabId: $reportTabId, cardIds: $cardIds}) {
@@ -31097,16 +31107,16 @@ export const ReorderReportTabCardsDocument = /*#__PURE__*/ gql`
 }
     `;
 export const UpdateReportCardDocument = /*#__PURE__*/ gql`
-    mutation UpdateReportCard($id: Int!, $componentSettings: JSON, $alternateLanguageSettings: JSON, $body: JSON, $tint: String, $icon: String, $cardType: String, $displayMapLayerVisibilityControls: Boolean) {
+    mutation UpdateReportCard($id: Int!, $componentSettings: JSON, $alternateLanguageSettings: JSON, $body: JSON) {
   updateReportCard(
-    input: {cardId: $id, componentSettings: $componentSettings, alternateLanguageSettings: $alternateLanguageSettings, body: $body, tint: $tint, icon: $icon, cardType: $cardType, displayMapLayerVisibilityControls: $displayMapLayerVisibilityControls}
+    input: {cardId: $id, componentSettings: $componentSettings, alternateLanguageSettings: $alternateLanguageSettings, body: $body}
   ) {
     reportCard {
-      ...ReportCardDetails
+      id
     }
   }
 }
-    ${ReportCardDetailsFragmentDoc}`;
+    `;
 export const UpdateReportCardBodyDocument = /*#__PURE__*/ gql`
     mutation UpdateReportCardBody($id: Int!, $body: JSON!) {
   updateReportCardBody(input: {cardId: $id, body: $body}) {
@@ -31266,6 +31276,35 @@ export const BaseDraftReportContextDocument = /*#__PURE__*/ gql`
 }
     ${ReportContextSketchClassDetailsFragmentDoc}
 ${BaseReportDetailsFragmentDoc}`;
+export const CopyableReportCardsDocument = /*#__PURE__*/ gql`
+    query CopyableReportCards($projectId: Int!) {
+  project(id: $projectId) {
+    id
+    sketchClasses {
+      id
+      name
+      previewNewReports
+      isGeographyClippingEnabled
+      draftReport {
+        id
+        tabs {
+          id
+          position
+          title
+          cards {
+            id
+            position
+            title
+            body
+            componentSettings
+            alternateLanguageSettings
+          }
+        }
+      }
+    }
+  }
+}
+    `;
 export const SubjectReportContextDocument = /*#__PURE__*/ gql`
     query SubjectReportContext($sketchId: Int!) {
   sketch(id: $sketchId) {
@@ -32745,6 +32784,7 @@ export const namedOperations = {
     ReportDependencies: 'ReportDependencies',
     BaseReportContext: 'BaseReportContext',
     BaseDraftReportContext: 'BaseDraftReportContext',
+    CopyableReportCards: 'CopyableReportCards',
     SubjectReportContext: 'SubjectReportContext',
     LegacyReportContext: 'LegacyReportContext',
     DraftReportDependencies: 'DraftReportDependencies',
