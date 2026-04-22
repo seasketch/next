@@ -1,17 +1,11 @@
 import { useTranslation } from "react-i18next";
 import type { TFunction } from "i18next";
 import { Fragment, useMemo, useState } from "react";
-import type { ReactElement, ReactNode } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import * as Tooltip from "@radix-ui/react-tooltip";
-import {
-  CaretDownIcon,
-  CaretRightIcon,
-  LayersIcon,
-} from "@radix-ui/react-icons";
+import { CaretDownIcon, LayersIcon } from "@radix-ui/react-icons";
 import {
   Metric,
-  MetricSubjectFragment,
   combineMetricsForFragments,
   subjectIsGeography,
   subjectIsFragment,
@@ -25,14 +19,15 @@ import { UnitSelector } from "./UnitSelector";
 import { AreaUnit } from "../utils/units";
 import { NumberRoundingControl } from "./NumberRoundingControl";
 import { useBaseReportContext } from "../context/BaseReportContext";
-import { useSubjectReportContext } from "../context/SubjectReportContext";
 import ReportLayerVisibilityCheckbox from "../components/ReportLayerVisibilityCheckbox";
 import { useOverlayOptionsForLayerToggle } from "./LayerToggleControls";
 import { LayerPickerDropdown, LayerPickerValue } from "./LayerPickerDropdown";
-import {
-  CompatibleSpatialMetricDetailsFragment,
-  SketchGeometryType,
-} from "../../generated/graphql";
+import { CompatibleSpatialMetricDetailsFragment } from "../../generated/graphql";
+import CollectionExpandableName from "./collection/CollectionExpandableName";
+import SketchOverlapHint from "./collection/SketchOverlapHint";
+import { sketchContributionsGeographyTotalArea } from "./collection/sketchContributions";
+import type { GeographySketchContribution } from "./collection/sketchContributions";
+import { useCollectionSketchExpand } from "./collection/useCollectionSketchExpand";
 
 type GeographySizeTableSettings = {
   unit?: "hectare" | "acre" | "mile" | "kilometer";
@@ -46,117 +41,6 @@ type GeographySizeTableSettings = {
   /** Per-geography stableId overrides. Keys are geography IDs (as strings). */
   geographyStableIds?: Record<string, string | null>;
 };
-
-type SketchContributionRow = {
-  sketchId: number;
-  sketchName: string;
-  areaSqKm: number;
-  fractionOfTotal: number;
-};
-
-/**
- * Per-sketch areas for a geography. Fragment metrics linked to multiple sketches
- * (merged fragments) split area evenly for display among those sketches.
- */
-function sketchContributionRowsForGeography(
-  metrics: CompatibleSpatialMetricDetailsFragment[],
-  geographyId: number,
-  geographyTotalSqKm: number,
-  sketchNameById: Map<number, string>,
-  t: TFunction
-): SketchContributionRow[] {
-  const fragmentAreaMetrics = metrics.filter(
-    (m) =>
-      m.type === "total_area" &&
-      subjectIsFragment(m.subject) &&
-      m.subject.geographies.includes(geographyId)
-  );
-
-  const buckets = new Map<number, Pick<Metric, "type" | "value">[]>();
-
-  for (const m of fragmentAreaMetrics) {
-    const subject = m.subject as MetricSubjectFragment;
-    const sketches = subject.sketches;
-    if (!sketches?.length) {
-      continue;
-    }
-    const rawVal =
-      typeof m.value === "number"
-        ? m.value
-        : typeof m.value === "string"
-        ? parseFloat(m.value)
-        : 0;
-    const share = rawVal / sketches.length;
-    for (const sketchId of sketches) {
-      let list = buckets.get(sketchId);
-      if (!list) {
-        list = [];
-        buckets.set(sketchId, list);
-      }
-      list.push({
-        type: "total_area",
-        value: share,
-      });
-    }
-  }
-
-  const rows: SketchContributionRow[] = [];
-  for (const [sketchId, bucketMetrics] of buckets) {
-    const combined = combineMetricsForFragments<TotalAreaMetric>(bucketMetrics);
-    const areaSqKm = combined.value ?? 0;
-    rows.push({
-      sketchId,
-      sketchName:
-        sketchNameById.get(sketchId) ?? t("Sketch #{{id}}", { id: sketchId }),
-      areaSqKm,
-      fractionOfTotal:
-        geographyTotalSqKm > 0 ? areaSqKm / geographyTotalSqKm : 0,
-    });
-  }
-
-  rows.sort((a, b) =>
-    b.areaSqKm !== a.areaSqKm
-      ? b.areaSqKm - a.areaSqKm
-      : a.sketchName.localeCompare(b.sketchName)
-  );
-
-  return rows;
-}
-
-/**
- * Wraps trigger content in a Radix tooltip when `tooltipEnabled` is true.
- * Avoids duplicating markup when hints are turned off after first use.
- */
-function OptionalCaretTooltip({
-  tooltipEnabled,
-  tooltipLabel,
-  delayDuration = 700,
-  children,
-}: {
-  tooltipEnabled: boolean;
-  tooltipLabel: ReactNode;
-  delayDuration?: number;
-  children: ReactNode;
-}): ReactElement {
-  if (!tooltipEnabled) {
-    return <>{children}</>;
-  }
-  return (
-    <Tooltip.Root delayDuration={delayDuration}>
-      <Tooltip.Trigger asChild>{children}</Tooltip.Trigger>
-      <Tooltip.Portal>
-        <Tooltip.Content
-          className="z-[60] max-w-xs rounded-md bg-gray-900 px-3 py-2 text-xs leading-snug text-white shadow-lg"
-          side="left"
-          sideOffset={6}
-        >
-          {tooltipLabel}
-          <Tooltip.Arrow className="fill-gray-900" />
-        </Tooltip.Content>
-      </Tooltip.Portal>
-    </Tooltip.Root>
-  );
-}
 
 export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
   metrics,
@@ -183,40 +67,14 @@ export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
   );
 
   const baseReportContext = useBaseReportContext();
-  const subjectReportContext = useSubjectReportContext();
-  const isCollection = useMemo(() => {
-    return (
-      baseReportContext.sketchClass.geometryType ===
-      SketchGeometryType.Collection
-    );
-  }, [baseReportContext.sketchClass.geometryType]);
-
-  const sketchNameById = useMemo(() => {
-    const map = new Map<number, string>();
-    const children = subjectReportContext.data?.childSketches;
-    if (children) {
-      for (const s of children) {
-        map.set(s.id, s.name);
-      }
-    }
-    return map;
-  }, [subjectReportContext.data?.childSketches]);
-
-  const [expandedGeographyIds, setExpandedGeographyIds] = useState<Set<number>>(
-    () => new Set()
-  );
-
-  const toggleGeographyExpanded = (geographyId: number) => {
-    setExpandedGeographyIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(geographyId)) {
-        next.delete(geographyId);
-      } else {
-        next.add(geographyId);
-      }
-      return next;
-    });
-  };
+  const {
+    isCollection,
+    sketchNameById,
+    childSketchIds,
+    expandedRowKeys,
+    toggleRow,
+    hideCaretExpandTooltip,
+  } = useCollectionSketchExpand(baseReportContext.sketchClass);
 
   const rows: GeographySizeTableRow[] = useMemo(() => {
     return geographies
@@ -248,10 +106,11 @@ export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
             : 0;
 
         const sketchContributions = isCollection
-          ? sketchContributionRowsForGeography(
+          ? sketchContributionsGeographyTotalArea(
               metrics,
               geography.id,
               geographyTotalSqKm,
+              childSketchIds,
               sketchNameById,
               t
             )
@@ -293,6 +152,7 @@ export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
     componentSettings?.geographyStableIds,
     isCollection,
     sketchNameById,
+    childSketchIds,
     t,
   ]);
 
@@ -300,9 +160,6 @@ export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
     () => enableLayerToggles && rows.some((r) => r.stableId),
     [rows, enableLayerToggles]
   );
-
-  /** After any row is expanded, skip caret tooltips — user has learned the control. */
-  const hideCaretExpandTooltip = expandedGeographyIds.size > 0;
 
   return (
     <div className="mt-3.5 overflow-hidden rounded-md border border-gray-200">
@@ -349,8 +206,9 @@ export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
           </thead>
           <tbody className="divide-y divide-gray-100 bg-white">
             {rows.map((row) => {
+              const rowKey = String(row.geographyId);
               const expanded =
-                isCollection && expandedGeographyIds.has(row.geographyId);
+                isCollection && expandedRowKeys.has(rowKey);
               const contrib = row.sketchContributions ?? [];
               return (
                 <Fragment key={row.geographyId}>
@@ -377,59 +235,24 @@ export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
                           : ""
                       }`}
                     >
-                      {isCollection ? (
-                        <div className="-mx-1 flex min-w-0 items-center gap-1 px-1">
-                          <OptionalCaretTooltip
-                            tooltipEnabled={!hideCaretExpandTooltip}
-                            tooltipLabel={t("Expand sketch details")}
-                          >
-                            <button
-                              type="button"
-                              disabled={loading}
-                              aria-hidden
-                              tabIndex={-1}
-                              className="inline-flex shrink-0 items-center justify-center rounded border border-transparent p-0.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
-                              onClick={() =>
-                                toggleGeographyExpanded(row.geographyId)
-                              }
-                            >
-                              {expanded ? (
-                                <CaretDownIcon
-                                  className="h-4 w-4"
-                                  aria-hidden
-                                />
-                              ) : (
-                                <CaretRightIcon
-                                  className="h-4 w-4"
-                                  aria-hidden
-                                />
-                              )}
-                            </button>
-                          </OptionalCaretTooltip>
-                          <button
-                            type="button"
-                            disabled={loading}
-                            aria-expanded={expanded}
-                            aria-label={
-                              expanded
-                                ? t("Collapse sketch breakdown for {{name}}", {
-                                    name: row.geographyName,
-                                  })
-                                : t("Expand sketch breakdown for {{name}}", {
-                                    name: row.geographyName,
-                                  })
-                            }
-                            className="min-w-0 flex-1 rounded border border-transparent py-0 text-left leading-normal text-gray-800 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
-                            onClick={() =>
-                              toggleGeographyExpanded(row.geographyId)
-                            }
-                          >
-                            {row.geographyName}
-                          </button>
-                        </div>
-                      ) : (
-                        row.geographyName
-                      )}
+                      <CollectionExpandableName
+                        displayLabel={row.geographyName}
+                        truncateRowLabels={false}
+                        expanded={expanded}
+                        onToggle={() => toggleRow(rowKey)}
+                        loading={loading}
+                        isCollection={isCollection}
+                        caretTooltipEnabled={!hideCaretExpandTooltip}
+                        caretTooltipLabel={t("Expand sketch details")}
+                        expandAriaLabelExpanded={t(
+                          "Collapse sketch breakdown for {{name}}",
+                          { name: row.geographyName },
+                        )}
+                        expandAriaLabelCollapsed={t(
+                          "Expand sketch breakdown for {{name}}",
+                          { name: row.geographyName },
+                        )}
+                      />
                     </td>
                     <td className="px-3 py-2 text-sm text-gray-800 text-right tabular-nums">
                       {loading ? (
@@ -453,7 +276,7 @@ export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
                       }`}
                     >
                       <td
-                        colSpan={hasVisibilityColumn ? 3 : 2}
+                        colSpan={hasVisibilityColumn ? 4 : 3}
                         className="px-3 py-2.5 text-sm italic text-gray-600"
                       >
                         {t(
@@ -471,11 +294,20 @@ export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
                           row.areaSqKm === 0 ? "opacity-50" : ""
                         }`}
                       >
-                        <td
-                          colSpan={hasVisibilityColumn ? 2 : 1}
-                          className="px-3 py-2.5 text-sm "
-                        >
-                          {c.sketchName}
+                        {hasVisibilityColumn && (
+                          <td className="w-8 px-2 py-2" aria-hidden />
+                        )}
+                        <td className="px-3 py-2.5 text-sm">
+                          <div className="flex min-w-0 items-center gap-1">
+                            <span className="min-w-0">{c.sketchName}</span>
+                            <SketchOverlapHint
+                              hasOverlap={c.hasOverlap}
+                              sketchDisplayName={c.sketchName}
+                              overlapPartnerSketchNames={
+                                c.overlapPartnerSketchNames
+                              }
+                            />
+                          </div>
                         </td>
                         <td className="px-3 py-2 text-sm  text-right tabular-nums">
                           {loading ? (
@@ -509,7 +341,7 @@ type GeographySizeTableRow = {
   areaSqKm: number;
   fractionOfTotal: number;
   stableId?: string;
-  sketchContributions?: SketchContributionRow[];
+  sketchContributions?: GeographySketchContribution[];
 };
 
 function GeographiesPopover({

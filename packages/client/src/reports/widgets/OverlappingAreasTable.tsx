@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { Fragment, useMemo } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import {
   MetricDependency,
@@ -48,6 +48,10 @@ import {
   CompatibleSpatialMetricDetailsFragment,
   OverlaySourceDetailsFragment,
 } from "../../generated/graphql";
+import CollectionExpandableName from "./collection/CollectionExpandableName";
+import SketchOverlapHint from "./collection/SketchOverlapHint";
+import { sketchContributionsForClassTableRow } from "./collection/sketchContributions";
+import { useCollectionSketchExpand } from "./collection/useCollectionSketchExpand";
 
 // Accept both area and length style units; default to km (area).
 type OverlapUnit = "km" | "mi" | "acres" | "ha";
@@ -344,6 +348,61 @@ export const OverlappingAreasTable: ReportWidget<
     loading,
   ]);
 
+  const {
+    isCollection,
+    sketchNameById,
+    childSketchIds,
+    expandedRowKeys,
+    toggleRow,
+    hideCaretExpandTooltip,
+  } = useCollectionSketchExpand(sketchClass);
+
+  const sketchLinesByRowKey = useMemo(() => {
+    if (!isCollection || !primaryGeographyId || loading) {
+      return new Map<
+        string,
+        ReturnType<typeof sketchContributionsForClassTableRow>
+      >();
+    }
+    const map = new Map<
+      string,
+      ReturnType<typeof sketchContributionsForClassTableRow>
+    >();
+    for (const row of rows) {
+      const source = sources.find((s) => s.stableId === row.sourceId);
+      if (!source) continue;
+      map.set(
+        row.key,
+        sketchContributionsForClassTableRow({
+          metrics,
+          source,
+          geographyId: primaryGeographyId,
+          metricType: "overlay_area",
+          groupByKey: row.groupByKey,
+          childSketchIds,
+          geographyDenominator:
+            typeof row.geographyTotal === "number" &&
+            Number.isFinite(row.geographyTotal)
+              ? row.geographyTotal
+              : 0,
+          sketchNameById,
+          t,
+        }),
+      );
+    }
+    return map;
+  }, [
+    isCollection,
+    primaryGeographyId,
+    loading,
+    rows,
+    metrics,
+    sources,
+    childSketchIds,
+    sketchNameById,
+    t,
+  ]);
+
   const hasVisibilityColumn = useMemo(
     () => rows.some((r) => r.stableId),
     [rows]
@@ -374,8 +433,12 @@ export const OverlappingAreasTable: ReportWidget<
     );
   }
 
+  const hasSwatchColumn =
+    showColorSwatches && rows.some(classTableRowHasSwatch);
+
   return (
-    <div className="mt-3 rounded-md border border-gray-200 shadow-sm w-full max-w-full bg-white overflow-hidden">
+    <Tooltip.Provider delayDuration={400}>
+      <div className="mt-3 rounded-md border border-gray-200 shadow-sm w-full max-w-full bg-white overflow-hidden">
       <div className="divide-y divide-gray-100">
         {/* Header row */}
         <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200">
@@ -414,9 +477,12 @@ export const OverlappingAreasTable: ReportWidget<
               )
             );
           }
+          const expanded =
+            isCollection && expandedRowKeys.has(row.key);
+          const sketchLines = sketchLinesByRowKey.get(row.key) ?? [];
           return (
+            <Fragment key={row.key}>
             <div
-              key={row.key}
               className={`flex items-center gap-3 px-3 py-2 hover:bg-gray-50 ${
                 row.overlap === 0 ? "opacity-50" : ""
               }`}
@@ -430,14 +496,24 @@ export const OverlappingAreasTable: ReportWidget<
               )}
               {showColorSwatches && <SwatchForClassTableRow row={row} />}
               <div className="flex-1 min-w-0 text-gray-800 text-sm">
-                <span
-                  className={
-                    truncateRowLabels ? "truncate block" : "block break-words"
-                  }
-                  title={truncateRowLabels ? row.label : undefined}
-                >
-                  {row.label}
-                </span>
+                <CollectionExpandableName
+                  displayLabel={row.label}
+                  truncateRowLabels={truncateRowLabels}
+                  expanded={expanded}
+                  onToggle={() => toggleRow(row.key)}
+                  loading={loading}
+                  isCollection={isCollection}
+                  caretTooltipEnabled={!hideCaretExpandTooltip}
+                  caretTooltipLabel={t("Expand sketch details")}
+                  expandAriaLabelExpanded={t(
+                    "Collapse sketch breakdown for {{name}}",
+                    { name: row.label },
+                  )}
+                  expandAriaLabelCollapsed={t(
+                    "Expand sketch breakdown for {{name}}",
+                    { name: row.label },
+                  )}
+                />
               </div>
               {showAreaColumn && (
                 <div
@@ -474,6 +550,67 @@ export const OverlappingAreasTable: ReportWidget<
                 </div>
               )}
             </div>
+            {isCollection && expanded && sketchLines.length === 0 && (
+              <div className="flex flex-wrap items-center gap-3 border-t border-slate-200/80 bg-slate-100 px-3 py-2.5 text-sm italic text-gray-600">
+                <div className="flex-none w-6" aria-hidden />
+                {hasSwatchColumn && (
+                  <div className="flex-none w-4" aria-hidden />
+                )}
+                <div className="min-w-0 flex-1">
+                  {t(
+                    "No individual sketches contributed to this category.",
+                  )}
+                </div>
+              </div>
+            )}
+            {isCollection &&
+              expanded &&
+              sketchLines.map((sk) => (
+                <div
+                  key={`${row.key}-sketch-${sk.sketchId}`}
+                  className={`flex flex-wrap items-center gap-3 border-t border-slate-200/80 bg-slate-100 px-3 py-2 hover:bg-slate-200/30 ${
+                    row.overlap === 0 ? "opacity-50" : ""
+                  }`}
+                >
+                  {hasVisibilityColumn && (
+                    <div className="flex-none w-6" aria-hidden />
+                  )}
+                  {hasSwatchColumn && (
+                    <div className="flex-none w-4 flex justify-center" aria-hidden />
+                  )}
+                  <div className="flex min-w-0 flex-1 items-center gap-1 text-sm text-gray-800">
+                    <span className="min-w-0">{sk.sketchName}</span>
+                    <SketchOverlapHint
+                      hasOverlap={sk.hasOverlap}
+                      sketchDisplayName={sk.sketchName}
+                      overlapPartnerSketchNames={
+                        sk.overlapPartnerSketchNames
+                      }
+                    />
+                  </div>
+                  {showAreaColumn && (
+                    <div
+                      className={`flex-none ${areaColumnAlignClass} tabular-nums text-sm text-gray-900 min-w-[80px]`}
+                    >
+                      {loading ? (
+                        <MetricLoadingDots />
+                      ) : (
+                        formatters.area(sk.primaryValue)
+                      )}
+                    </div>
+                  )}
+                  {showPercentColumn && (
+                    <div className="flex-none min-w-[70px] text-right tabular-nums text-sm text-gray-700">
+                      {loading ? (
+                        <MetricLoadingDots />
+                      ) : (
+                        formatters.percent(sk.fractionOfGeography)
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </Fragment>
           );
         })}
         <TablePaddingRows
@@ -498,7 +635,8 @@ export const OverlappingAreasTable: ReportWidget<
           onPageChange={setCurrentPage}
         />
       )}
-    </div>
+      </div>
+    </Tooltip.Provider>
   );
 };
 

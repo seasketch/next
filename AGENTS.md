@@ -33,6 +33,8 @@
   - Client code eslint rules disallow untranslated strings. Readable content should be wrapped in a Trans component with an appropriate namespace, or use
     a component-level translate function. Trans tags are better for string content mixed with html tags. For quoted strings that don't need to be translated, use a special comment to disable the rule for that line (// eslint-disable-next-line i18next/no-literal-string)
   - Don't ever modify json files in packages/client/src/lang/ -- Those are automatically generated!
+- **Typescript features**
+  - Our graphql codegen process uses an older babel system to parse code and extract gql strings. Don't use `import type` syntax anywhere in the client, or in code that is imported by it or there will be trouble. Check the `GraphQL:codegen` terminal task for errors caused by usage of this syntax.
 
 ## 📄 Example: Creating a New React Component (including i18n)
 

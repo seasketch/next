@@ -9787,6 +9787,15 @@ select{
   border-color:rgb(226 232 240 / 0.2)
 }
 
+.border-emerald-500\/40{
+  border-color:rgb(16 185 129 / 0.4)
+}
+
+.border-emerald-500{
+  --tw-border-opacity:1;
+  border-color:rgb(16 185 129 / var(--tw-border-opacity, 1))
+}
+
 .border-b-black{
   --tw-border-opacity:1;
   border-bottom-color:rgb(0 0 0 / var(--tw-border-opacity, 1))
@@ -12479,6 +12488,16 @@ select{
   color:rgb(61 153 210 / var(--tw-text-opacity, 1))
 }
 
+.text-emerald-200{
+  --tw-text-opacity:1;
+  color:rgb(167 243 208 / var(--tw-text-opacity, 1))
+}
+
+.text-emerald-300{
+  --tw-text-opacity:1;
+  color:rgb(110 231 183 / var(--tw-text-opacity, 1))
+}
+
 .text-opacity-50{
   --tw-text-opacity:0.5
 }
@@ -13007,6 +13026,19 @@ select{
   --tw-ring-color:rgb(110 231 183 / 0.7)
 }
 
+.ring-emerald-400\/35{
+  --tw-ring-color:rgb(52 211 153 / 0.35)
+}
+
+.ring-white\/25{
+  --tw-ring-color:rgb(255 255 255 / 0.25)
+}
+
+.ring-emerald-400{
+  --tw-ring-opacity:1;
+  --tw-ring-color:rgb(52 211 153 / var(--tw-ring-opacity, 1))
+}
+
 .ring-opacity-10{
   --tw-ring-opacity:0.1
 }
@@ -13029,6 +13061,14 @@ select{
 
 .ring-offset-0{
   --tw-ring-offset-width:0px
+}
+
+.ring-offset-1{
+  --tw-ring-offset-width:1px
+}
+
+.ring-offset-gray-900{
+  --tw-ring-offset-color:#111827
 }
 
 .blur{
@@ -13936,6 +13976,14 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .hover\:bg-slate-200\/20:hover{
   background-color:rgb(226 232 240 / 0.2)
+}
+
+.hover\:bg-gray-200\/80:hover{
+  background-color:rgb(229 231 235 / 0.8)
+}
+
+.hover\:bg-slate-200\/30:hover{
+  background-color:rgb(226 232 240 / 0.3)
 }
 
 .hover\:bg-opacity-10:hover{
