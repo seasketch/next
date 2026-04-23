@@ -25,7 +25,7 @@ const makeArgs = (componentSettings: ComboBoxProps) => ({
 });
 
 test("Component renders with custom body", async () => {
-  render(<ComboBox {...makeArgs({})} />);
+  render(<ComboBox {...(makeArgs({}) as any)} />);
   await waitFor(() => {
     expect(screen.getByRole("heading")).toHaveTextContent(
       "Which option do you prefer?"
@@ -37,7 +37,7 @@ test("Component renders with custom body", async () => {
 
 test("selecting an option", async () => {
   const args = makeArgs({});
-  render(<ComboBox {...args} />);
+  render(<ComboBox {...(args as any)} />);
   await waitFor(() => {
     expect(screen.getByRole("heading")).toHaveTextContent(
       "Which option do you prefer?"
@@ -52,7 +52,7 @@ test("searching", async () => {
   const args = makeArgs({
     options: ["Apple", "Banana", "Pear"].map((label) => ({ label })),
   });
-  render(<ComboBox {...args} />);
+  render(<ComboBox {...(args as any)} />);
   await waitFor(() => {
     expect(screen.getByRole("heading")).toHaveTextContent(
       "Which option do you prefer?"

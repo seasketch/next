@@ -107,6 +107,18 @@ test("Component renders with custom body and button text", async () => {
                 disablePracticeMode: false,
               }}
               alternateLanguageSettings={{}}
+              isSpatial={false}
+              featureNumber={0}
+              onRequestStageChange={function (stage: number): void {
+                throw new Error("Function not implemented.");
+              }}
+              stage={0}
+              onRequestNext={function (): void {
+                throw new Error("Function not implemented.");
+              }}
+              onRequestPrevious={function (): void {
+                throw new Error("Function not implemented.");
+              }}
             />
           </SurveyContext.Provider>
         </MockedProvider>
@@ -158,6 +170,18 @@ test("Clicking button proceeds to next page of survey", async () => {
                 disablePracticeMode: false,
               }}
               alternateLanguageSettings={{}}
+              isSpatial={false}
+              featureNumber={0}
+              onRequestStageChange={function (stage: number): void {
+                throw new Error("Function not implemented.");
+              }}
+              stage={0}
+              onRequestNext={function (): void {
+                throw new Error("Function not implemented.");
+              }}
+              onRequestPrevious={function (): void {
+                throw new Error("Function not implemented.");
+              }}
             />
           </MockedProvider>
         </Route>

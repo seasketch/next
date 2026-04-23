@@ -15,6 +15,7 @@ fragment ProjectMetadata on Project {
   sketchClasses {
     id
     name
+    geometryType
     canDigitize
     formElementId
     isArchived
@@ -36,8 +37,8 @@ fragment ProjectMetadata on Project {
     html
   }
   enableReportBuilder
+  enableCollectionNewReports
   customDocLink
-  enableReportBuilder
   showScalebarByDefault
   showLegendByDefault
   featureFlags {

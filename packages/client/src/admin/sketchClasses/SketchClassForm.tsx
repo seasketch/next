@@ -14,7 +14,7 @@ import InputBlock from "../../components/InputBlock";
 import Switch from "../../components/Switch";
 import AccessControlListEditor from "../../components/AccessControlListEditor";
 import RadioGroup from "../../components/RadioGroup";
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Button from "../../components/Button";
 import useDialog from "../../components/useDialog";
 import getSlug from "../../getSlug";
@@ -80,12 +80,26 @@ export default function SketchClassForm({
   >();
   const isReportBuilderEnabled =
     projectMetadata.data?.project?.enableReportBuilder;
+  const enableCollectionNewReports = Boolean(
+    projectMetadata.data?.project?.enableCollectionNewReports
+  );
+  const isCollectionSketchClass =
+    sketchClass.geometryType === SketchGeometryType.Collection;
+  const hideCollectionNewReportsAdminUi =
+    isReportBuilderEnabled &&
+    isCollectionSketchClass &&
+    !enableCollectionNewReports;
   const reportingMode: "new" | "legacy" | "transition" =
     sketchClass.isGeographyClippingEnabled
       ? "new"
       : sketchClass.previewNewReports
       ? "transition"
       : "legacy";
+
+  /** When collection-level new reports are disabled at the project, admin UI behaves like legacy for tabs only. */
+  const reportingModeForAdminUi = hideCollectionNewReportsAdminUi
+    ? "legacy"
+    : reportingMode;
 
   const handleReportingModeChange = useCallback(
     (mode: "legacy" | "new" | "transition") => {
@@ -114,6 +128,19 @@ export default function SketchClassForm({
     [mutate, sketchClass]
   );
 
+  useEffect(() => {
+    if (
+      selectedTab === "reports" &&
+      hideCollectionNewReportsAdminUi
+    ) {
+      updateTabInUrl("geoprocessing");
+    }
+  }, [
+    selectedTab,
+    hideCollectionNewReportsAdminUi,
+    updateTabInUrl,
+  ]);
+
   const tabs: NonLinkTabItem[] = useMemo(() => {
     return [
       {
@@ -128,7 +155,7 @@ export default function SketchClassForm({
       },
       ...(isReportBuilderEnabled
         ? [
-            ...(reportingMode !== "new"
+            ...(reportingModeForAdminUi !== "new"
               ? [
                   {
                     name: "Geoprocessing Services",
@@ -137,13 +164,18 @@ export default function SketchClassForm({
                   },
                 ]
               : []),
-            ...(reportingMode !== "legacy"
+            ...(reportingModeForAdminUi !== "legacy" &&
+            sketchClass.geometryType !== SketchGeometryType.Collection
               ? [
                   {
                     name: "Geography Clipping",
                     id: "geography-clipping",
                     current: selectedTab === "geography-clipping",
                   },
+                ]
+              : []),
+            ...(reportingModeForAdminUi !== "legacy"
+              ? [
                   {
                     name: "Reports",
                     id: "reports",
@@ -175,7 +207,7 @@ export default function SketchClassForm({
     selectedTab,
     sketchClass.geometryType,
     isReportBuilderEnabled,
-    reportingMode,
+    reportingModeForAdminUi,
   ]);
 
   const { confirmDelete } = useDialog();
@@ -343,7 +375,9 @@ export default function SketchClassForm({
               <AccessControlListEditor nodeId={sketchClass.acl?.nodeId} />
             )}
             {isReportBuilderEnabled &&
-              sketchClass.geometryType === SketchGeometryType.Polygon && (
+              (sketchClass.geometryType === SketchGeometryType.Polygon ||
+                (sketchClass.geometryType === SketchGeometryType.Collection &&
+                  enableCollectionNewReports)) && (
                 <RadioGroup<"new" | "legacy" | "transition">
                   legend={t("Analytical Reports")}
                   value={reportingMode}
@@ -477,7 +511,7 @@ export default function SketchClassForm({
         {selectedTab === "geography-clipping" && (
           <GeographyClippingTab sketchClass={sketchClass} />
         )}
-        {selectedTab === "reports" && (
+        {selectedTab === "reports" && !hideCollectionNewReportsAdminUi && (
           <SketchClassReportsAdmin sketchClass={sketchClass} />
         )}
       </div>

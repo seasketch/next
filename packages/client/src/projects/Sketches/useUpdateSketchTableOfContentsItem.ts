@@ -5,11 +5,48 @@ import {
   UpdateTocItemParentInput,
   useUpdateTocItemsParentMutation,
 } from "../../generated/graphql";
+import {
+  evictReportDependenciesForSketchId,
+  evictReportDependenciesForUpdatedCollectionSketch,
+} from "../../reports/utils/evictReportDependenciesCache";
 
 export default function useUpdateSketchTableOfContentsDraggable() {
   const onError = useGlobalErrorHandler();
   const [mutate] = useUpdateTocItemsParentMutation({
     onError,
+    update: (cache, { data }) => {
+      const result = data?.updateSketchTocItemParent;
+      if (!result) {
+        return;
+      }
+      for (const collection of result.updatedCollections ?? []) {
+        if (
+          collection !== null &&
+          typeof collection === "object" &&
+          collection.id !== undefined &&
+          collection.id !== null
+        ) {
+          // Defensive typing to match evictReportDependenciesForUpdatedCollectionSketch expectations
+          evictReportDependenciesForUpdatedCollectionSketch(cache, {
+            id: collection.id,
+            sketchClass: collection.sketchClass
+              ? { reportId: collection.sketchClass.reportId }
+              : undefined,
+            // Add other required fields if evictReportDependenciesForUpdatedCollectionSketch signature changes
+          });
+        }
+      }
+      for (const sketch of result.sketches ?? []) {
+        if (
+          sketch !== null &&
+          typeof sketch === "object" &&
+          sketch.id !== undefined &&
+          sketch.id !== null
+        ) {
+          evictReportDependenciesForSketchId(cache, sketch.id);
+        }
+      }
+    },
     optimisticResponse: (data) => {
       return {
         __typename: "Mutation",

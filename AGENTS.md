@@ -32,7 +32,9 @@
 - **i18n**
   - Client code eslint rules disallow untranslated strings. Readable content should be wrapped in a Trans component with an appropriate namespace, or use
     a component-level translate function. Trans tags are better for string content mixed with html tags. For quoted strings that don't need to be translated, use a special comment to disable the rule for that line (// eslint-disable-next-line i18next/no-literal-string)
-  - Don't ever modify json files in packages/client/src/lang/{langcode}. Those are automatically generated.
+  - Don't ever modify json files in packages/client/src/lang/ -- Those are automatically generated!
+- **Typescript features**
+  - Our graphql codegen process uses an older babel system to parse code and extract gql strings. Don't use `import type` syntax anywhere in the client, or in code that is imported by it or there will be trouble. Check the `GraphQL:codegen` terminal task for errors caused by usage of this syntax.
 
 ## 📄 Example: Creating a New React Component (including i18n)
 
@@ -65,6 +67,7 @@ export const MyComponent: React.FC<MyComponentProps> = ({ title }) => {
 
 - The capabilities of the GraphQL API are defined in `packages/api/generated-schema.gql`.
 - When a new query or mutation is necessary, create it in `packages/api/migrations/current.sql`, following the guidance of the PostGraphile documentation at https://www.graphile.org/postgraphile/introduction/. Never create a migration file in `packages/api/migrations/committed` directly. If a mutation or query is particularly complex, it can be implemented as a plugin under `packages/api/src/plugins`.
+- Never directly edit client/src/generated/\* files! If you need to modify queries and related auto-generated types, edit .graphql files and run the `graphql:codegen` npm script to regenerate these files.
 
 ## React Client -- verifying your work
 

@@ -23,6 +23,7 @@ import {
   useUpdateHideForumsMutation,
   useUpdateHideOverlaysMutation,
   useUpdateEnableReportBuilderMutation,
+  useUpdateEnableCollectionNewReportsMutation,
   useUpdateShowScalebarByDefaultMutation,
   useUpdateShowLegendByDefaultMutation,
   useUpdateFeatureFlagsMutation,
@@ -1030,6 +1031,9 @@ function SuperUserSettings() {
   const [updateEnableReportBuilder, updateEnableReportBuilderState] =
     useUpdateEnableReportBuilderMutation();
 
+  const [updateEnableCollectionNewReports] =
+    useUpdateEnableCollectionNewReportsMutation();
+
   const [reprocessAllLegacy, reprocessAllLegacyState] =
     useReprocessAllLegacyDataSourcesMutation({ onError });
   const [reprocessCount, setReprocessCount] = useState<number | null>(null);
@@ -1142,7 +1146,37 @@ function SuperUserSettings() {
                   />
                 }
                 title={t("Enable New Report Builder")}
-                description={t("Pre-Alpha Preview for SeaSketch Team Only")}
+                description={t("Beta Preview for SeaSketch Team Only")}
+              />
+              <InputBlock
+                input={
+                  <Switch
+                    isToggled={Boolean(
+                      data?.project?.enableCollectionNewReports
+                    )}
+                    onClick={(enabled) => {
+                      updateEnableCollectionNewReports({
+                        variables: {
+                          enabled,
+                          slug,
+                        },
+                        optimisticResponse: {
+                          __typename: "Mutation",
+                          updateProjectBySlug: {
+                            __typename: "UpdateProjectPayload",
+                            project: {
+                              __typename: "Project",
+                              id: data!.project!.id,
+                              enableCollectionNewReports: enabled,
+                            },
+                          },
+                        },
+                      });
+                    }}
+                  />
+                }
+                title={t("Enable Collection-Level New Reports")}
+                description={t("**Preview for Chad only for now**")}
               />
               <InputBlock
                 input={

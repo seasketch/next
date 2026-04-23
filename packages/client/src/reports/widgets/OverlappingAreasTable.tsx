@@ -1,10 +1,8 @@
-import { useMemo } from "react";
+import { Fragment, useMemo } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import {
   MetricDependency,
   OverlayAreaMetric,
-  subjectIsFragment,
-  subjectIsGeography,
 } from "overlay-engine";
 import {
   ReportWidget,
@@ -28,10 +26,12 @@ import {
 } from "./Pagination";
 import { usePagination } from "../hooks/usePagination";
 import {
-  ClassTableRow,
   ClassTableRowComponentSettings,
   combineMetricsBySource,
   getClassTableRows,
+  hasClassTableRowVisibilityToggle,
+  resolveClassTableRowStableId,
+  shouldTruncateClassTableRowLabels,
 } from "./ClassTableRows";
 import {
   classTableRowHasSwatch,
@@ -40,13 +40,17 @@ import {
 import { ClassRowSettingsPopover } from "./ClassRowSettingsPopover";
 import { LabeledDropdown } from "./LabeledDropdown";
 import ReportLayerVisibilityCheckbox from "../components/ReportLayerVisibilityCheckbox";
-import { ExclamationTriangleIcon, LayersIcon } from "@radix-ui/react-icons";
-import { useClippingGeography } from "../hooks/useClippingGeography";
+import { LayersIcon } from "@radix-ui/react-icons";
+import { usePrimaryGeography } from "../hooks/usePrimaryGeography";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import {
-  CompatibleSpatialMetricDetailsFragment,
-  OverlaySourceDetailsFragment,
-} from "../../generated/graphql";
+  OverlapDebugTooltip,
+  OverlapDebugTooltipRow,
+} from "./OverlapDebugTooltip";
+import CollectionExpandableName from "./collection/CollectionExpandableName";
+import SketchOverlapHint from "./collection/SketchOverlapHint";
+import { sketchContributionsForClassTableRow } from "./collection/sketchContributions";
+import { useCollectionSketchExpand } from "./collection/useCollectionSketchExpand";
 
 // Accept both area and length style units; default to km (area).
 type OverlapUnit = "km" | "mi" | "acres" | "ha";
@@ -80,156 +84,7 @@ const areaUnitToOverlapUnit: Record<AreaUnit, OverlapUnit> = {
   hectare: "ha",
 };
 
-type OverlapRow = ClassTableRow & {
-  overlap: number;
-  geographyTotal?: number;
-};
-
-function OverlapDebugTooltip({
-  row,
-  percent,
-  metrics,
-  sources,
-  primaryGeographyId,
-  formatters,
-}: {
-  row: OverlapRow;
-  percent: number;
-  metrics: CompatibleSpatialMetricDetailsFragment[];
-  sources: OverlaySourceDetailsFragment[];
-  primaryGeographyId: number;
-  formatters: ReturnType<typeof useNumberFormatters>;
-}) {
-  const { t } = useTranslation("reports");
-  const source = sources.find((s) => s.stableId === row.sourceId);
-
-  const fragmentMetrics = useMemo(
-    () =>
-      !source
-        ? []
-        : metrics.filter(
-            (m) =>
-              m.sourceUrl === source.sourceUrl &&
-              subjectIsFragment(m.subject) &&
-              (m.subject as { geographies: number[] }).geographies.includes(
-                primaryGeographyId
-              )
-          ),
-    [metrics, source, primaryGeographyId]
-  );
-
-  const geographyMetric = useMemo(
-    () =>
-      !source
-        ? undefined
-        : metrics.find(
-            (m) =>
-              m.sourceUrl === source.sourceUrl &&
-              subjectIsGeography(m.subject) &&
-              (m.subject as { id: number }).id === primaryGeographyId
-          ),
-    [metrics, source, primaryGeographyId]
-  );
-
-  return (
-    <Tooltip.Provider>
-      <Tooltip.Root>
-        <Tooltip.Trigger asChild>
-          <button
-            type="button"
-            className="inline-flex items-center text-gray-400 hover:text-gray-600 focus:outline-none"
-          >
-            <ExclamationTriangleIcon className="w-4 h-4" />
-          </button>
-        </Tooltip.Trigger>
-        <Tooltip.Content side="top" sideOffset={4}>
-          <div className="text-xs bg-white border border-gray-200 shadow-lg rounded-md px-3 py-2 max-w-sm space-y-2">
-            <p className="text-gray-700 leading-snug">
-              {t(
-                "The percent within exceeds 100% because the overlap area is larger than the geography total. This can happen when sketch geometries extend beyond the geography boundary."
-              )}
-            </p>
-            <table className="w-full border-t border-gray-200">
-              <tbody>
-                <tr>
-                  <td className="pr-4 py-0.5 text-gray-500">{t("Overlap")}</td>
-                  <td className="text-right font-mono text-gray-900">
-                    {formatters.area(row.overlap)}
-                  </td>
-                </tr>
-                <tr>
-                  <td className="pr-4 py-0.5 text-gray-500">
-                    {t("Geography total")}
-                  </td>
-                  <td className="text-right font-mono text-gray-900">
-                    {formatters.area(row.geographyTotal!)}
-                  </td>
-                </tr>
-                <tr className="border-t border-gray-200">
-                  <td className="pr-4 py-0.5 text-gray-500">
-                    {t("Percent within")}
-                  </td>
-                  <td className="text-right font-mono text-gray-900">
-                    {formatters.percent(percent)}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-            {geographyMetric && (
-              <div className="border-t border-gray-200 pt-2">
-                <p className="text-gray-500 font-semibold mb-1">
-                  {t("Geography metric (id={{id}})", {
-                    id: geographyMetric.id,
-                  })}
-                </p>
-                <pre className="text-[10px] whitespace-pre-wrap break-all text-gray-900 font-mono">
-                  {JSON.stringify(
-                    (geographyMetric.value as Record<string, unknown>)?.[
-                      row.groupByKey
-                    ] ?? geographyMetric.value,
-                    null,
-                    2
-                  )}
-                </pre>
-              </div>
-            )}
-            {fragmentMetrics.length > 0 && (
-              <div className="border-t border-gray-200 pt-2">
-                <p className="text-gray-500 font-semibold mb-1">
-                  {t("Fragment metrics ({{count}})", {
-                    count: fragmentMetrics.length,
-                  })}
-                </p>
-                {fragmentMetrics.map((m) => (
-                  <div key={m.id} className="mb-2">
-                    <p className="text-gray-400 text-[10px] mb-0.5">
-                      {t("id={{id}} hash={{hash}}…", {
-                        id: m.id,
-                        hash: subjectIsFragment(m.subject)
-                          ? (m.subject as { hash: string }).hash.slice(0, 8)
-                          : "",
-                      })}
-                    </p>
-                    <pre className="text-[10px] whitespace-pre-wrap break-all text-gray-900 font-mono">
-                      {JSON.stringify(
-                        (m.value as Record<string, unknown>)?.[
-                          row.groupByKey
-                        ] ?? m.value,
-                        null,
-                        2
-                      )}
-                    </pre>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-          <Tooltip.Arrow className="fill-white" />
-        </Tooltip.Content>
-      </Tooltip.Root>
-    </Tooltip.Provider>
-  );
-}
+type OverlapRow = OverlapDebugTooltipRow;
 
 export const OverlappingAreasTable: ReportWidget<
   OverlappingAreasTableSettings
@@ -242,7 +97,7 @@ export const OverlappingAreasTable: ReportWidget<
   sketchClass,
   geographies,
 }) => {
-  const clippingGeography = useClippingGeography(sketchClass, geographies);
+  const { clippingGeography } = usePrimaryGeography(sketchClass, geographies);
   const primaryGeographyId = clippingGeography?.id;
   const { t } = useTranslation("reports");
 
@@ -255,6 +110,7 @@ export const OverlappingAreasTable: ReportWidget<
   const showColorSwatches = !componentSettings.hideColorSwatches;
   const areaColumnAlignClass =
     showAreaColumn && showPercentColumn ? "text-center" : "text-right";
+  const truncateRowLabels = shouldTruncateClassTableRowLabels(componentSettings);
   const nameLabel = componentSettings.nameLabel || t("Name");
   const areaLabel = componentSettings.areaLabel || t("Area");
   const percentWithinLabel =
@@ -300,7 +156,8 @@ export const OverlappingAreasTable: ReportWidget<
     const combinedMetrics = combineMetricsBySource<OverlayAreaMetric>(
       metrics,
       sources,
-      primaryGeographyId
+      primaryGeographyId,
+      "overlay_area"
     );
 
     let rows = classRows.map((r) => {
@@ -341,9 +198,68 @@ export const OverlappingAreasTable: ReportWidget<
     loading,
   ]);
 
+  const {
+    isCollection,
+    sketchNameById,
+    childSketchIds,
+    expandedRowKeys,
+    toggleRow,
+    hideCaretExpandTooltip,
+  } = useCollectionSketchExpand(sketchClass);
+
+  const sketchLinesByRowKey = useMemo(() => {
+    if (!isCollection || !primaryGeographyId || loading) {
+      return new Map<
+        string,
+        ReturnType<typeof sketchContributionsForClassTableRow>
+      >();
+    }
+    const map = new Map<
+      string,
+      ReturnType<typeof sketchContributionsForClassTableRow>
+    >();
+    for (const row of rows) {
+      const source = sources.find((s) => s.stableId === row.sourceId);
+      if (!source) continue;
+      map.set(
+        row.key,
+        sketchContributionsForClassTableRow({
+          metrics,
+          source,
+          geographyId: primaryGeographyId,
+          metricType: "overlay_area",
+          groupByKey: row.groupByKey,
+          childSketchIds,
+          geographyDenominator:
+            typeof row.geographyTotal === "number" &&
+            Number.isFinite(row.geographyTotal)
+              ? row.geographyTotal
+              : 0,
+          sketchNameById,
+          t,
+        }),
+      );
+    }
+    return map;
+  }, [
+    isCollection,
+    primaryGeographyId,
+    loading,
+    rows,
+    metrics,
+    sources,
+    childSketchIds,
+    sketchNameById,
+    t,
+  ]);
+
   const hasVisibilityColumn = useMemo(
-    () => rows.some((r) => r.stableId),
-    [rows]
+    () =>
+      hasClassTableRowVisibilityToggle(
+        rows,
+        componentSettings.rowLinkedStableIds
+      ),
+    [rows, componentSettings.rowLinkedStableIds]
   );
 
   const {
@@ -371,8 +287,12 @@ export const OverlappingAreasTable: ReportWidget<
     );
   }
 
+  const hasSwatchColumn =
+    showColorSwatches && rows.some(classTableRowHasSwatch);
+
   return (
-    <div className="mt-3 rounded-md border border-gray-200 shadow-sm w-full max-w-full bg-white overflow-hidden">
+    <Tooltip.Provider delayDuration={400}>
+      <div className="mt-3 rounded-md border border-gray-200 shadow-sm w-full max-w-full bg-white overflow-hidden">
       <div className="divide-y divide-gray-100">
         {/* Header row */}
         <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200">
@@ -404,32 +324,47 @@ export const OverlappingAreasTable: ReportWidget<
             row.geographyTotal > 0
               ? row.overlap / row.geographyTotal
               : undefined;
-          if (percent && percent > 1.05) {
-            console.error(
-              new Error(
-                `Percent is greater than 100%. Value: ${percent * 100}%`
-              )
-            );
-          }
+          const stableId = resolveClassTableRowStableId(
+            row,
+            componentSettings.rowLinkedStableIds
+          );
+          const expanded =
+            isCollection && expandedRowKeys.has(row.key);
+          const sketchLines = sketchLinesByRowKey.get(row.key) ?? [];
           return (
+            <Fragment key={row.key}>
             <div
-              key={row.key}
               className={`flex items-center gap-3 px-3 py-2 hover:bg-gray-50 ${
                 row.overlap === 0 ? "opacity-50" : ""
               }`}
             >
               {hasVisibilityColumn && (
                 <div className="flex-none w-6 flex justify-center">
-                  {row.stableId ? (
-                    <ReportLayerVisibilityCheckbox stableId={row.stableId} />
+                  {stableId ? (
+                    <ReportLayerVisibilityCheckbox stableId={stableId} />
                   ) : null}
                 </div>
               )}
               {showColorSwatches && <SwatchForClassTableRow row={row} />}
               <div className="flex-1 min-w-0 text-gray-800 text-sm">
-                <span className="truncate block" title={row.label}>
-                  {row.label}
-                </span>
+                <CollectionExpandableName
+                  displayLabel={row.label}
+                  truncateRowLabels={truncateRowLabels}
+                  expanded={expanded}
+                  onToggle={() => toggleRow(row.key)}
+                  loading={loading}
+                  isCollection={isCollection}
+                  caretTooltipEnabled={!hideCaretExpandTooltip}
+                  caretTooltipLabel={t("Expand sketch details")}
+                  expandAriaLabelExpanded={t(
+                    "Collapse sketch breakdown for {{name}}",
+                    { name: row.label },
+                  )}
+                  expandAriaLabelCollapsed={t(
+                    "Expand sketch breakdown for {{name}}",
+                    { name: row.label },
+                  )}
+                />
               </div>
               {showAreaColumn && (
                 <div
@@ -466,6 +401,67 @@ export const OverlappingAreasTable: ReportWidget<
                 </div>
               )}
             </div>
+            {isCollection && expanded && sketchLines.length === 0 && (
+              <div className="flex flex-wrap items-center gap-3 border-t border-slate-200/80 bg-slate-100 px-3 py-2.5 text-sm italic text-gray-600">
+                <div className="flex-none w-6" aria-hidden />
+                {hasSwatchColumn && (
+                  <div className="flex-none w-4" aria-hidden />
+                )}
+                <div className="min-w-0 flex-1">
+                  {t(
+                    "No individual sketches contributed to this category.",
+                  )}
+                </div>
+              </div>
+            )}
+            {isCollection &&
+              expanded &&
+              sketchLines.map((sk) => (
+                <div
+                  key={`${row.key}-sketch-${sk.sketchId}`}
+                  className={`flex flex-wrap items-center gap-3 border-t border-slate-200/80 bg-slate-100 px-3 py-2 hover:bg-slate-200/30 ${
+                    row.overlap === 0 ? "opacity-50" : ""
+                  }`}
+                >
+                  {hasVisibilityColumn && (
+                    <div className="flex-none w-6" aria-hidden />
+                  )}
+                  {hasSwatchColumn && (
+                    <div className="flex-none w-4 flex justify-center" aria-hidden />
+                  )}
+                  <div className="flex min-w-0 flex-1 items-center gap-1 text-sm text-gray-800">
+                    <span className="min-w-0">{sk.sketchName}</span>
+                    <SketchOverlapHint
+                      hasOverlap={sk.hasOverlap}
+                      sketchDisplayName={sk.sketchName}
+                      overlapPartnerSketchNames={
+                        sk.overlapPartnerSketchNames
+                      }
+                    />
+                  </div>
+                  {showAreaColumn && (
+                    <div
+                      className={`flex-none ${areaColumnAlignClass} tabular-nums text-sm text-gray-900 min-w-[80px]`}
+                    >
+                      {loading ? (
+                        <MetricLoadingDots />
+                      ) : (
+                        formatters.area(sk.primaryValue)
+                      )}
+                    </div>
+                  )}
+                  {showPercentColumn && (
+                    <div className="flex-none min-w-[70px] text-right tabular-nums text-sm text-gray-700">
+                      {loading ? (
+                        <MetricLoadingDots />
+                      ) : (
+                        formatters.percent(sk.fractionOfGeography)
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </Fragment>
           );
         })}
         <TablePaddingRows
@@ -490,7 +486,8 @@ export const OverlappingAreasTable: ReportWidget<
           onPageChange={setCurrentPage}
         />
       )}
-    </div>
+      </div>
+    </Tooltip.Provider>
   );
 };
 
@@ -621,6 +618,16 @@ export const OverlappingAreasTableTooltipControls: ReportWidgetTooltipControls =
           <PaginationSetting
             rowsPerPage={rowsPerPage}
             onChange={(next: number) => handleUpdate({ rowsPerPage: next })}
+          />
+          <TooltipBooleanConfigurationOption
+            label={t("Truncate row labels")}
+            checked={shouldTruncateClassTableRowLabels(settings)}
+            checkboxFirst
+            onChange={(next) =>
+              handleUpdate({
+                disableRowLabelTruncation: next ? undefined : true,
+              })
+            }
           />
         </TooltipMorePopover>
       </div>

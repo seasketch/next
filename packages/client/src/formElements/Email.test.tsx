@@ -16,7 +16,7 @@ const makeArgs = (componentSettings: EmailProps) => ({
 });
 
 test("Component renders with custom body", async () => {
-  render(<Email {...makeArgs({})} />);
+  render(<Email {...(makeArgs({}) as any)} />);
   await waitFor(() => {
     expect(screen.getByRole("textbox")).toBeInTheDocument();
   });
@@ -25,7 +25,7 @@ test("Component renders with custom body", async () => {
 
 test("Entering text updates the value", async () => {
   const args = makeArgs({});
-  render(<Email {...args} />);
+  render(<Email {...(args as any)} />);
   await waitFor(() => {
     expect(screen.getByRole("textbox")).toBeInTheDocument();
   });
@@ -36,7 +36,7 @@ test("Entering text updates the value", async () => {
 
 test("validates entry", async () => {
   const args = makeArgs({});
-  render(<Email {...args} submissionAttempted={true} />);
+  render(<Email {...(args as any)} submissionAttempted={true} />);
   await waitFor(() => {
     expect(screen.getByRole("textbox")).toBeInTheDocument();
   });

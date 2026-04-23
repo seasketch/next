@@ -139,7 +139,9 @@ export type AddGroupToAclPayload = {
 
 /** All input for the `addReportCard` mutation. */
 export type AddReportCardInput = {
+  alternateLanguageSettings?: Maybe<Scalars['JSON']>;
   body?: Maybe<Scalars['JSON']>;
+  cardPosition?: Maybe<Scalars['Int']>;
   cardType?: Maybe<Scalars['String']>;
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
@@ -10888,6 +10890,8 @@ export type Project = Node & {
    */
   draftTableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
   eligableDownloadableLayersCount?: Maybe<Scalars['Int']>;
+  /** When true, administrators may configure collection sketch classes to use the new reporting tools in project admin. */
+  enableCollectionNewReports?: Maybe<Scalars['Boolean']>;
   /**
    * When true, overlay layers will be available for download by end-users if they
    * have access to the layer and the data source supports it. This can be
@@ -11896,6 +11900,8 @@ export type ProjectPatch = {
   dataSourcesBucketId?: Maybe<Scalars['String']>;
   /** Should be a short length in order to fit in the project header. */
   description?: Maybe<Scalars['String']>;
+  /** When true, administrators may configure collection sketch classes to use the new reporting tools in project admin. */
+  enableCollectionNewReports?: Maybe<Scalars['Boolean']>;
   /**
    * When true, overlay layers will be available for download by end-users if they
    * have access to the layer and the data source supports it. This can be
@@ -13999,8 +14005,6 @@ export type ReportCard = Node & {
   alternateLanguageSettings: Scalars['JSON'];
   body: Scalars['JSON'];
   componentSettings: Scalars['JSON'];
-  displayMapLayerVisibilityControls: Scalars['Boolean'];
-  icon?: Maybe<Scalars['String']>;
   id: Scalars['Int'];
   isDraft: Scalars['Boolean'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
@@ -14008,8 +14012,7 @@ export type ReportCard = Node & {
   position: Scalars['Int'];
   reportTabId: Scalars['Int'];
   tab?: Maybe<ReportTab>;
-  tint?: Maybe<Scalars['String']>;
-  type: Scalars['String'];
+  title?: Maybe<Scalars['String']>;
   updatedAt: Scalars['Datetime'];
 };
 
@@ -17909,16 +17912,12 @@ export type UpdateReportCardInput = {
   alternateLanguageSettings?: Maybe<Scalars['JSON']>;
   body?: Maybe<Scalars['JSON']>;
   cardId?: Maybe<Scalars['Int']>;
-  cardType?: Maybe<Scalars['String']>;
   /**
    * An arbitrary string value with no semantic meaning. Will be included in the
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
   componentSettings?: Maybe<Scalars['JSON']>;
-  displayMapLayerVisibilityControls?: Maybe<Scalars['Boolean']>;
-  icon?: Maybe<Scalars['String']>;
-  tint?: Maybe<Scalars['String']>;
 };
 
 /** The output of our `updateReportCard` mutation. */
@@ -22660,6 +22659,23 @@ export type UpdateEnableReportBuilderMutation = (
   )> }
 );
 
+export type UpdateEnableCollectionNewReportsMutationVariables = Exact<{
+  slug: Scalars['String'];
+  enabled: Scalars['Boolean'];
+}>;
+
+
+export type UpdateEnableCollectionNewReportsMutation = (
+  { __typename?: 'Mutation' }
+  & { updateProjectBySlug?: Maybe<(
+    { __typename?: 'UpdateProjectPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'enableCollectionNewReports'>
+    )> }
+  )> }
+);
+
 export type ProjectDashboardQueryVariables = Exact<{
   slug: Scalars['String'];
   period?: Maybe<ActivityStatsPeriod>;
@@ -22730,10 +22746,10 @@ export type ProjectDashboardBannerStatsQuery = (
 
 export type ProjectMetadataFragment = (
   { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays' | 'aboutPageContents' | 'aboutPageEnabled' | 'enableReportBuilder' | 'customDocLink' | 'showScalebarByDefault' | 'showLegendByDefault'>
+  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays' | 'aboutPageContents' | 'aboutPageEnabled' | 'enableReportBuilder' | 'enableCollectionNewReports' | 'customDocLink' | 'showScalebarByDefault' | 'showLegendByDefault'>
   & { sketchClasses: Array<(
     { __typename?: 'SketchClass' }
-    & Pick<SketchClass, 'id' | 'name' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps' | 'reportId' | 'isGeographyClippingEnabled' | 'useGeographyClipping' | 'previewNewReports'>
+    & Pick<SketchClass, 'id' | 'name' | 'geometryType' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps' | 'reportId' | 'isGeographyClippingEnabled' | 'useGeographyClipping' | 'previewNewReports'>
   )>, aboutPageRenderedContent?: Maybe<Array<Maybe<(
     { __typename?: 'RenderedAboutPageContent' }
     & Pick<RenderedAboutPageContent, 'lang' | 'html'>
@@ -23417,7 +23433,7 @@ export type SketchClassGeographyEditorDetailsQuery = (
 
 export type ReportCardDetailsFragment = (
   { __typename?: 'ReportCard' }
-  & Pick<ReportCard, 'id' | 'position' | 'type' | 'componentSettings' | 'alternateLanguageSettings' | 'tint' | 'icon' | 'body' | 'displayMapLayerVisibilityControls'>
+  & Pick<ReportCard, 'id' | 'position' | 'componentSettings' | 'alternateLanguageSettings' | 'body'>
 );
 
 export type ReportTabDetailsFragment = (
@@ -23566,8 +23582,9 @@ export type ReorderReportTabsMutation = (
 export type AddReportCardMutationVariables = Exact<{
   reportTabId: Scalars['Int'];
   componentSettings: Scalars['JSON'];
-  cardType: Scalars['String'];
   body: Scalars['JSON'];
+  cardPosition?: Maybe<Scalars['Int']>;
+  alternateLanguageSettings?: Maybe<Scalars['JSON']>;
 }>;
 
 
@@ -23578,10 +23595,6 @@ export type AddReportCardMutation = (
     & { reportCard?: Maybe<(
       { __typename?: 'ReportCard' }
       & Pick<ReportCard, 'id'>
-      & { tab?: Maybe<(
-        { __typename?: 'ReportTab' }
-        & ReportTabDetailsFragment
-      )> }
     )> }
   )> }
 );
@@ -23608,10 +23621,6 @@ export type UpdateReportCardMutationVariables = Exact<{
   componentSettings?: Maybe<Scalars['JSON']>;
   alternateLanguageSettings?: Maybe<Scalars['JSON']>;
   body?: Maybe<Scalars['JSON']>;
-  tint?: Maybe<Scalars['String']>;
-  icon?: Maybe<Scalars['String']>;
-  cardType?: Maybe<Scalars['String']>;
-  displayMapLayerVisibilityControls?: Maybe<Scalars['Boolean']>;
 }>;
 
 
@@ -23621,7 +23630,7 @@ export type UpdateReportCardMutation = (
     { __typename?: 'UpdateReportCardPayload' }
     & { reportCard?: Maybe<(
       { __typename?: 'ReportCard' }
-      & ReportCardDetailsFragment
+      & Pick<ReportCard, 'id'>
     )> }
   )> }
 );
@@ -23888,6 +23897,35 @@ export type BaseDraftReportContextQuery = (
   )> }
 );
 
+export type CopyableReportCardsQueryVariables = Exact<{
+  projectId: Scalars['Int'];
+}>;
+
+
+export type CopyableReportCardsQuery = (
+  { __typename?: 'Query' }
+  & { project?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { sketchClasses: Array<(
+      { __typename?: 'SketchClass' }
+      & Pick<SketchClass, 'id' | 'name' | 'previewNewReports' | 'isGeographyClippingEnabled'>
+      & { draftReport?: Maybe<(
+        { __typename?: 'Report' }
+        & Pick<Report, 'id'>
+        & { tabs?: Maybe<Array<(
+          { __typename?: 'ReportTab' }
+          & Pick<ReportTab, 'id' | 'position' | 'title'>
+          & { cards?: Maybe<Array<(
+            { __typename?: 'ReportCard' }
+            & Pick<ReportCard, 'id' | 'position' | 'title' | 'body' | 'componentSettings' | 'alternateLanguageSettings'>
+          )>> }
+        )>> }
+      )> }
+    )> }
+  )> }
+);
+
 export type SubjectReportContextQueryVariables = Exact<{
   sketchId: Scalars['Int'];
 }>;
@@ -24080,7 +24118,7 @@ export type SketchTocDetailsFragment = (
   & Pick<Sketch, 'id' | 'bbox' | 'name' | 'numVertices' | 'sketchClassId' | 'collectionId' | 'folderId' | 'timestamp' | 'updatedAt' | 'createdAt' | 'isCollection' | 'filterMvtUrl'>
   & { sketchClass?: Maybe<(
     { __typename?: 'SketchClass' }
-    & Pick<SketchClass, 'id' | 'geometryType'>
+    & Pick<SketchClass, 'id' | 'geometryType' | 'reportId'>
   )> }
 );
 
@@ -24161,6 +24199,10 @@ export type SketchCrudResponseFragment = (
   )>, parentCollection?: Maybe<(
     { __typename?: 'Sketch' }
     & Pick<Sketch, 'id' | 'updatedAt' | 'timestamp'>
+    & { sketchClass?: Maybe<(
+      { __typename?: 'SketchClass' }
+      & Pick<SketchClass, 'reportId'>
+    )> }
   )>, relatedFragments?: Maybe<Array<Maybe<(
     { __typename?: 'SketchesRelatedFragmentsRecord' }
     & Pick<SketchesRelatedFragmentsRecord, 'hash' | 'sketches' | 'geographies'>
@@ -24216,6 +24258,10 @@ export type DeleteSketchTocItemsMutation = (
     & { updatedCollections: Array<Maybe<(
       { __typename?: 'Sketch' }
       & Pick<Sketch, 'id' | 'updatedAt'>
+      & { sketchClass?: Maybe<(
+        { __typename?: 'SketchClass' }
+        & Pick<SketchClass, 'reportId'>
+      )> }
     )>> }
   )> }
 );
@@ -24301,6 +24347,10 @@ export type UpdateTocItemsParentMutation = (
     )>>, updatedCollections: Array<Maybe<(
       { __typename?: 'Sketch' }
       & Pick<Sketch, 'id' | 'updatedAt'>
+      & { sketchClass?: Maybe<(
+        { __typename?: 'SketchClass' }
+        & Pick<SketchClass, 'reportId'>
+      )> }
     )>> }
   )> }
 );
@@ -24333,12 +24383,26 @@ export type ReportContextSketchClassDetailsFragment = (
       { __typename?: 'FormLogicRule' }
       & LogicRuleDetailsFragment
     )>> }
-  )>, project?: Maybe<(
+  )>, validChildren?: Maybe<Array<(
+    { __typename?: 'SketchClass' }
+    & Pick<SketchClass, 'id' | 'geometryType' | 'isArchived'>
+    & { clippingGeographies: Array<Maybe<(
+      { __typename?: 'Geography' }
+      & Pick<Geography, 'id'>
+    )>> }
+  )>>, project?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id' | 'sessionIsAdmin' | 'supportedLanguages'>
     & { geographies: Array<(
       { __typename?: 'Geography' }
       & Pick<Geography, 'id' | 'name' | 'translatedProps' | 'stableIds'>
+    )>, sketchClasses: Array<(
+      { __typename?: 'SketchClass' }
+      & Pick<SketchClass, 'id' | 'geometryType' | 'isArchived'>
+      & { clippingGeographies: Array<Maybe<(
+        { __typename?: 'Geography' }
+        & Pick<Geography, 'id'>
+      )>> }
     )> }
   )>, clippingGeographies: Array<Maybe<(
     { __typename?: 'Geography' }
@@ -27160,6 +27224,7 @@ export const ProjectMetadataFragmentDoc = /*#__PURE__*/ gql`
   sketchClasses {
     id
     name
+    geometryType
     canDigitize
     formElementId
     isArchived
@@ -27181,8 +27246,8 @@ export const ProjectMetadataFragmentDoc = /*#__PURE__*/ gql`
     html
   }
   enableReportBuilder
+  enableCollectionNewReports
   customDocLink
-  enableReportBuilder
   showScalebarByDefault
   showLegendByDefault
   featureFlags {
@@ -27512,13 +27577,9 @@ export const ReportCardDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment ReportCardDetails on ReportCard {
   id
   position
-  type
   componentSettings
   alternateLanguageSettings
-  tint
-  icon
   body
-  displayMapLayerVisibilityControls
 }
     `;
 export const ReportTabDetailsFragmentDoc = /*#__PURE__*/ gql`
@@ -27643,6 +27704,7 @@ export const SketchTocDetailsFragmentDoc = /*#__PURE__*/ gql`
   sketchClass {
     id
     geometryType
+    reportId
   }
 }
     `;
@@ -27676,6 +27738,9 @@ export const SketchCrudResponseFragmentDoc = /*#__PURE__*/ gql`
     id
     updatedAt
     timestamp
+    sketchClass {
+      reportId
+    }
   }
   relatedFragments {
     hash
@@ -27737,6 +27802,14 @@ export const ReportContextSketchClassDetailsFragmentDoc = /*#__PURE__*/ gql`
       ...LogicRuleDetails
     }
   }
+  validChildren {
+    id
+    geometryType
+    isArchived
+    clippingGeographies {
+      id
+    }
+  }
   project {
     id
     sessionIsAdmin
@@ -27746,6 +27819,14 @@ export const ReportContextSketchClassDetailsFragmentDoc = /*#__PURE__*/ gql`
       name
       translatedProps
       stableIds
+    }
+    sketchClasses {
+      id
+      geometryType
+      isArchived
+      clippingGeographies {
+        id
+      }
     }
   }
   clippingGeographies {
@@ -30500,6 +30581,18 @@ export const UpdateEnableReportBuilderDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const UpdateEnableCollectionNewReportsDocument = /*#__PURE__*/ gql`
+    mutation updateEnableCollectionNewReports($slug: String!, $enabled: Boolean!) {
+  updateProjectBySlug(
+    input: {slug: $slug, patch: {enableCollectionNewReports: $enabled}}
+  ) {
+    project {
+      id
+      enableCollectionNewReports
+    }
+  }
+}
+    `;
 export const ProjectDashboardDocument = /*#__PURE__*/ gql`
     query ProjectDashboard($slug: String!, $period: ActivityStatsPeriod = _7_DAYS, $activityPeriod: UserActivityPeriod = D7) {
   projectBySlug(slug: $slug) {
@@ -31026,19 +31119,16 @@ export const ReorderReportTabsDocument = /*#__PURE__*/ gql`
 }
     ${ReportTabDetailsFragmentDoc}`;
 export const AddReportCardDocument = /*#__PURE__*/ gql`
-    mutation AddReportCard($reportTabId: Int!, $componentSettings: JSON!, $cardType: String!, $body: JSON!) {
+    mutation AddReportCard($reportTabId: Int!, $componentSettings: JSON!, $body: JSON!, $cardPosition: Int, $alternateLanguageSettings: JSON) {
   addReportCard(
-    input: {reportTabId: $reportTabId, componentSettings: $componentSettings, cardType: $cardType, body: $body}
+    input: {reportTabId: $reportTabId, componentSettings: $componentSettings, body: $body, cardPosition: $cardPosition, alternateLanguageSettings: $alternateLanguageSettings}
   ) {
     reportCard {
       id
-      tab {
-        ...ReportTabDetails
-      }
     }
   }
 }
-    ${ReportTabDetailsFragmentDoc}`;
+    `;
 export const ReorderReportTabCardsDocument = /*#__PURE__*/ gql`
     mutation ReorderReportTabCards($reportTabId: Int!, $cardIds: [Int!]!) {
   reorderReportTabCards(input: {reportTabId: $reportTabId, cardIds: $cardIds}) {
@@ -31050,16 +31140,16 @@ export const ReorderReportTabCardsDocument = /*#__PURE__*/ gql`
 }
     `;
 export const UpdateReportCardDocument = /*#__PURE__*/ gql`
-    mutation UpdateReportCard($id: Int!, $componentSettings: JSON, $alternateLanguageSettings: JSON, $body: JSON, $tint: String, $icon: String, $cardType: String, $displayMapLayerVisibilityControls: Boolean) {
+    mutation UpdateReportCard($id: Int!, $componentSettings: JSON, $alternateLanguageSettings: JSON, $body: JSON) {
   updateReportCard(
-    input: {cardId: $id, componentSettings: $componentSettings, alternateLanguageSettings: $alternateLanguageSettings, body: $body, tint: $tint, icon: $icon, cardType: $cardType, displayMapLayerVisibilityControls: $displayMapLayerVisibilityControls}
+    input: {cardId: $id, componentSettings: $componentSettings, alternateLanguageSettings: $alternateLanguageSettings, body: $body}
   ) {
     reportCard {
-      ...ReportCardDetails
+      id
     }
   }
 }
-    ${ReportCardDetailsFragmentDoc}`;
+    `;
 export const UpdateReportCardBodyDocument = /*#__PURE__*/ gql`
     mutation UpdateReportCardBody($id: Int!, $body: JSON!) {
   updateReportCardBody(input: {cardId: $id, body: $body}) {
@@ -31219,6 +31309,35 @@ export const BaseDraftReportContextDocument = /*#__PURE__*/ gql`
 }
     ${ReportContextSketchClassDetailsFragmentDoc}
 ${BaseReportDetailsFragmentDoc}`;
+export const CopyableReportCardsDocument = /*#__PURE__*/ gql`
+    query CopyableReportCards($projectId: Int!) {
+  project(id: $projectId) {
+    id
+    sketchClasses {
+      id
+      name
+      previewNewReports
+      isGeographyClippingEnabled
+      draftReport {
+        id
+        tabs {
+          id
+          position
+          title
+          cards {
+            id
+            position
+            title
+            body
+            componentSettings
+            alternateLanguageSettings
+          }
+        }
+      }
+    }
+  }
+}
+    `;
 export const SubjectReportContextDocument = /*#__PURE__*/ gql`
     query SubjectReportContext($sketchId: Int!) {
   sketch(id: $sketchId) {
@@ -31425,6 +31544,9 @@ export const DeleteSketchTocItemsDocument = /*#__PURE__*/ gql`
     updatedCollections {
       id
       updatedAt
+      sketchClass {
+        reportId
+      }
     }
   }
 }
@@ -31468,6 +31590,9 @@ export const UpdateTocItemsParentDocument = /*#__PURE__*/ gql`
     updatedCollections {
       id
       updatedAt
+      sketchClass {
+        reportId
+      }
     }
   }
 }
@@ -32692,6 +32817,7 @@ export const namedOperations = {
     ReportDependencies: 'ReportDependencies',
     BaseReportContext: 'BaseReportContext',
     BaseDraftReportContext: 'BaseDraftReportContext',
+    CopyableReportCards: 'CopyableReportCards',
     SubjectReportContext: 'SubjectReportContext',
     LegacyReportContext: 'LegacyReportContext',
     DraftReportDependencies: 'DraftReportDependencies',
@@ -32829,6 +32955,7 @@ export const namedOperations = {
     updateAboutPageEnabled: 'updateAboutPageEnabled',
     createFileUploadForAboutPage: 'createFileUploadForAboutPage',
     updateEnableReportBuilder: 'updateEnableReportBuilder',
+    updateEnableCollectionNewReports: 'updateEnableCollectionNewReports',
     UpdateProjectRegion: 'UpdateProjectRegion',
     UpdateSketchClassGeographies: 'UpdateSketchClassGeographies',
     CreateSketchClass: 'CreateSketchClass',

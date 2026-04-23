@@ -10,10 +10,17 @@ import {
 import { DraftReportContext } from "../DraftReportContext";
 import { filterMetricsByDependencies } from "../utils/metricSatisfiesDependency";
 import { useCardDependenciesContext } from "../context/CardDependenciesContext";
+import { useSubjectReportContext } from "../context/SubjectReportContext";
 
 type SketchClassForWidgets = Pick<
   ReportContextSketchClassDetailsFragment,
-  "id" | "projectId" | "geometryType" | "form" | "clippingGeographies"
+  | "id"
+  | "projectId"
+  | "geometryType"
+  | "form"
+  | "clippingGeographies"
+  | "project"
+  | "validChildren"
 >;
 
 export type WidgetDependenciesResult = {
@@ -25,7 +32,7 @@ export type WidgetDependenciesResult = {
     Geography,
     "id" | "name" | "translatedProps" | "stableIds"
   >[];
-  sketchClass: SketchClassForWidgets;
+  sketchClass: SketchClassForWidgets | null;
 };
 
 /**
@@ -101,6 +108,13 @@ export function useWidgetDependencies(
 
   // Also get draft metrics/sources for editor scenarios
   const draftReportContext = useContext(DraftReportContext);
+  const subjectReportContext = useSubjectReportContext();
+
+  /** Fragment-backed metrics are never produced when a collection has no sketches / fragments. */
+  const fragmentMetricsWillNeverExist =
+    !subjectReportContext.loading &&
+    subjectReportContext.data?.isCollection === true &&
+    (subjectReportContext.data.relatedFragments?.length ?? 0) === 0;
 
   // Combine card sources with draft sources
   const allSources = useMemo(() => {
@@ -178,6 +192,12 @@ export function useWidgetDependencies(
     // Check if we're still waiting for metrics
     if (!loading) {
       for (const dependency of dependencies || []) {
+        if (
+          fragmentMetricsWillNeverExist &&
+          dependency.subjectType === "fragments"
+        ) {
+          continue;
+        }
         const hash = hashMetricDependency(dependency, sourceUrlMap);
         const relatedMetric = filteredMetrics.find(
           (m) => m.dependencyHash === hash
@@ -205,6 +225,7 @@ export function useWidgetDependencies(
     dependencies,
     sourceUrlMap,
     cardErrors,
+    fragmentMetricsWillNeverExist,
   ]);
 
   // Use stable references - only change when content actually changes
@@ -247,7 +268,7 @@ function useStableArray(arr: string[]): string[] {
   const ref = useRef<string[]>(arr);
   const prevKey = useRef<string>("");
 
-  const key = arr.sort().join("|");
+  const key = [...arr].sort().join("|");
   if (key !== prevKey.current) {
     prevKey.current = key;
     ref.current = arr;
@@ -282,24 +303,17 @@ function useStableGeographies(
  */
 function useStableSketchClass(
   sketchClass: SketchClassForWidgets | null
-): SketchClassForWidgets {
+): SketchClassForWidgets | null {
   const ref = useRef<SketchClassForWidgets | null>(sketchClass);
   const prevKey = useRef<string>("");
 
-  if (!sketchClass) {
-    // Return existing value if available, otherwise throw
-    if (ref.current) {
-      return ref.current;
-    }
-    throw new Error("sketchClass is required but not available in context");
-  }
-
-  // Key based on id and geometry type - these rarely change
-  const key = `${sketchClass.id}:${sketchClass.geometryType}`;
+  const key = sketchClass
+    ? `${sketchClass.id}:${sketchClass.geometryType}`
+    : "null";
   if (key !== prevKey.current) {
     prevKey.current = key;
     ref.current = sketchClass;
   }
 
-  return ref.current!;
+  return ref.current;
 }

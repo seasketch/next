@@ -6,7 +6,6 @@ import {
   useSubjectReportContextQuery,
 } from "../../generated/graphql";
 import { MetricSubjectFragment } from "overlay-engine";
-import { BaseReportContext } from "./BaseReportContext";
 
 type SubjectReportContextData = {
   /**
@@ -37,13 +36,7 @@ export function SubjectReportContextProvider({
     },
   });
   const value = useMemo<SubjectReportContextData | undefined>(() => {
-    if (data) {
-      if (!data.sketch) {
-        throw new Error("Sketch not found");
-      }
-      if (!data.sketch.sketchClass) {
-        throw new Error("Sketch class not found");
-      }
+    if (data?.sketch?.sketchClass) {
       return {
         sketch: data.sketch,
         childSketches: data.sketch.children || [],
@@ -51,8 +44,7 @@ export function SubjectReportContextProvider({
         relatedFragments:
           (data.sketch.relatedFragments as MetricSubjectFragment[]) || [],
         isCollection:
-          data.sketch.sketchClass?.geometryType ===
-          SketchGeometryType.Collection,
+          data.sketch.sketchClass.geometryType === SketchGeometryType.Collection,
       };
     }
     return undefined;

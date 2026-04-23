@@ -49,6 +49,7 @@ import {
   PopupShareDetailsFragment,
   useDeleteSketchTocItemsMutation,
   SketchClassDetailsFragment,
+  SketchGeometryType,
   SketchPopupDetailsFragment,
 } from "../../generated/graphql";
 import { SketchFolderDetailsFragment } from "../../generated/queries";
@@ -74,6 +75,10 @@ import { LegendItem } from "../../dataLayers/Legend";
 import { compileLegendFromGLStyleLayers } from "../../dataLayers/legends/compileLegend";
 import { LegendForGLLayers } from "../../dataLayers/legends/LegendDataModel";
 import SketchReportWindow from "./SketchReportWindow";
+import {
+  evictReportDependenciesForSketchId,
+  evictReportDependenciesForUpdatedCollectionSketch,
+} from "../../reports/utils/evictReportDependenciesCache";
 
 type ReportState = {
   sketchId: number;
@@ -1146,15 +1151,42 @@ export default function SketchUIStateContextProvider({
   });
   const [deleteSketchTocItem] = useDeleteSketchTocItemsMutation({
     onError,
-    update: async (cache, { data }) => {
-      const items = data?.deleteSketchTocItems?.deletedItems || [];
-      hideSketches(items.filter((id) => /Sketch:/.test(id)));
+    update: async (cache, result) => {
+      // 'result' does not guarantee variables as part of its type, but they
+      // are available on the client mutation function's options object, not here.
+      // So we can't type-safely access variables?.items here—only work with data.
+      // The cache update is designed to work off returned/deleted items.
+      const deletedItems =
+        result.data?.deleteSketchTocItems?.deletedItems || [];
+      hideSketches(deletedItems.filter((id) => /Sketch:/.test(id)));
 
-      for (const id of items) {
-        cache.evict({
-          id: id,
-        });
+      for (const id of deletedItems) {
+        cache.evict({ id });
       }
+
+      // updatedCollections can be null, so filter it.
+      const updatedCols =
+        result.data?.deleteSketchTocItems?.updatedCollections ?? [];
+      for (const collection of updatedCols) {
+        if (collection) {
+          // type error occurs if collection is null
+          // We expect collection: { id: number, sketchClass?: { reportId?: number } | null }
+          evictReportDependenciesForUpdatedCollectionSketch(
+            cache,
+            collection as {
+              id: number;
+              sketchClass?:
+                | { reportId?: number | null | undefined }
+                | null
+                | undefined;
+            }
+          );
+        }
+      }
+      // There is no reliable way to evict individually deleted sketches if we
+      // don't get their ids and types from mutation variables at this layer,
+      // so we cannot generally call evictReportDependenciesForSketchId here.
+      // If needed, server should return this info in deletedItems or similar.
     },
   });
 
@@ -1270,12 +1302,15 @@ export default function SketchUIStateContextProvider({
       const contextMenu: (DropdownOption | DropdownDividerProps)[] = [];
       const sketchClasses = projectMetadata.data?.project?.sketchClasses || [];
 
+      /** Sketches are TOC items with id Sketch:* — including collections. Hide create only for a non-collection sketch. */
+      const allowToolbarCreate =
+        !selectionIsSharedContent &&
+        (!selectionType ||
+          !selectionType.sketch ||
+          selectionType.collection);
+
       const create: DropdownOption[] = [
-        ...(!selectionIsSharedContent &&
-        (!selectionType || !selectionType.sketch)
-          ? sketchClasses || []
-          : []
-        )
+        ...(allowToolbarCreate ? sketchClasses || [] : [])
           .filter((sc) => !sc.formElementId && !sc.isArchived && sc.canDigitize)
           .sort((a, b) => {
             const aName = getTranslatedProp("name", a);
@@ -1311,8 +1346,7 @@ export default function SketchUIStateContextProvider({
               }
             },
           })),
-        ...(!selectionIsSharedContent &&
-        (!selectionType || !selectionType.sketch)
+        ...(allowToolbarCreate
           ? [
               {
                 // eslint-disable-next-line i18next/no-literal-string
@@ -1331,7 +1365,9 @@ export default function SketchUIStateContextProvider({
                           slug: getSlug(),
                           ...(selectionType?.folder
                             ? { folderId: selectedId }
-                            : {}),
+                            : selectionType?.collection
+                              ? { collectionId: selectedId }
+                              : {}),
                         },
                         update: async (cache, { data }) => {
                           if (data?.createSketchFolder?.sketchFolder) {
@@ -1384,10 +1420,16 @@ export default function SketchUIStateContextProvider({
       const selectedSketchClass = selectedSketchClassId
         ? sketchClasses.find((s) => s.id === selectedSketchClassId)
         : undefined;
+      const enableCollectionNewReports = Boolean(
+        projectMetadata.data?.project?.enableCollectionNewReports
+      );
+      const selectedIsCollection =
+        selectedSketchClass?.geometryType === SketchGeometryType.Collection;
       const canPreviewNewReports =
         Boolean(projectMetadata.data?.project?.sessionIsAdmin) &&
         Boolean(selectedSketchClass?.previewNewReports) &&
-        !selectedSketchClass?.useGeographyClipping;
+        !selectedSketchClass?.useGeographyClipping &&
+        (!selectedIsCollection || enableCollectionNewReports);
       const viewReports: DropdownOption | undefined =
         selectionType?.collection || selectionType?.sketch
           ? {
@@ -1629,6 +1671,7 @@ export default function SketchUIStateContextProvider({
     [
       projectMetadata.data?.project?.sketchClasses,
       projectMetadata.data?.project?.sessionIsAdmin,
+      projectMetadata.data?.project?.enableCollectionNewReports,
       t,
       client.cache,
       history,
@@ -1835,59 +1878,75 @@ export default function SketchUIStateContextProvider({
             >
               {openReports.map(
                 ({ sketchId, uiState, sketchClassId, previewNewReporting }) => {
-                const sketchClass =
-                  projectMetadata.data?.project?.sketchClasses?.find(
-                    (sc) => sc.id === sketchClassId
+                  const sketchClass =
+                    projectMetadata.data?.project?.sketchClasses?.find(
+                      (sc) => sc.id === sketchClassId
+                    );
+                  /** Collection sketch classes use the new report UI only when enableCollectionNewReports is set on the project. */
+                  const isCollectionSketchClass =
+                    sketchClass?.geometryType ===
+                    SketchGeometryType.Collection;
+                  const enableCollectionNewReports = Boolean(
+                    projectMetadata.data?.project?.enableCollectionNewReports
                   );
-                const canUseNewReporting =
-                  sketchClass?.useGeographyClipping ||
-                  (Boolean(previewNewReporting) &&
-                    Boolean(projectMetadata.data?.project?.sessionIsAdmin) &&
-                    Boolean(sketchClass?.previewNewReports));
-                // Unique key so legacy and preview reports for same sketch can coexist
-                const reportKey = `${sketchId}-${previewNewReporting ? "preview" : "legacy"}`;
-                const handleClose = () =>
-                  onRequestReportClose(sketchId, previewNewReporting ?? false);
-                if (
-                  canUseNewReporting &&
-                  sketchClass?.reportId
-                ) {
-                  return (
-                    <SketchReportWindow
-                      key={reportKey}
-                      sketchId={sketchId}
-                      sketchClassId={sketchClassId}
-                      reportId={sketchClass.reportId}
-                      onRequestClose={handleClose}
-                      uiState={uiState}
-                      selected={
-                        selectedIds.indexOf(`Sketch:${sketchId}`) !== -1
-                      }
-                      reportingAccessToken={
-                        projectMetadata?.data?.project?.sketchGeometryToken
-                      }
-                      onClick={onReportClick}
-                    />
-                  );
-                } else {
-                  return (
-                    <LegacySketchReportWindow
-                      key={reportKey}
-                      sketchId={sketchId}
-                      sketchClassId={sketchClassId}
-                      onRequestClose={handleClose}
-                      uiState={uiState}
-                      selected={
-                        selectedIds.indexOf(`Sketch:${sketchId}`) !== -1
-                      }
-                      reportingAccessToken={
-                        projectMetadata?.data?.project?.sketchGeometryToken
-                      }
-                      onClick={onReportClick}
-                    />
-                  );
+                  const canUseNewReporting =
+                    (Boolean(sketchClass?.useGeographyClipping) &&
+                      !isCollectionSketchClass) ||
+                    (isCollectionSketchClass &&
+                      enableCollectionNewReports) ||
+                    (Boolean(previewNewReporting) &&
+                      Boolean(
+                        projectMetadata.data?.project?.sessionIsAdmin
+                      ) &&
+                      Boolean(sketchClass?.previewNewReports) &&
+                      (!isCollectionSketchClass ||
+                        enableCollectionNewReports));
+                  // Unique key so legacy and preview reports for same sketch can coexist
+                  const reportKey = `${sketchId}-${
+                    previewNewReporting ? "preview" : "legacy"
+                  }`;
+                  const handleClose = () =>
+                    onRequestReportClose(
+                      sketchId,
+                      previewNewReporting ?? false
+                    );
+                  if (canUseNewReporting && sketchClass?.reportId) {
+                    return (
+                      <SketchReportWindow
+                        key={reportKey}
+                        sketchId={sketchId}
+                        sketchClassId={sketchClassId}
+                        reportId={sketchClass.reportId}
+                        onRequestClose={handleClose}
+                        uiState={uiState}
+                        selected={
+                          selectedIds.indexOf(`Sketch:${sketchId}`) !== -1
+                        }
+                        reportingAccessToken={
+                          projectMetadata?.data?.project?.sketchGeometryToken
+                        }
+                        onClick={onReportClick}
+                      />
+                    );
+                  } else {
+                    return (
+                      <LegacySketchReportWindow
+                        key={reportKey}
+                        sketchId={sketchId}
+                        sketchClassId={sketchClassId}
+                        onRequestClose={handleClose}
+                        uiState={uiState}
+                        selected={
+                          selectedIds.indexOf(`Sketch:${sketchId}`) !== -1
+                        }
+                        reportingAccessToken={
+                          projectMetadata?.data?.project?.sketchGeometryToken
+                        }
+                        onClick={onReportClick}
+                      />
+                    );
+                  }
                 }
-              },
               )}
             </div>,
             document.body

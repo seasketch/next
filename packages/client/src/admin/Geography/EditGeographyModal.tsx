@@ -1,5 +1,6 @@
 import { Trans, useTranslation } from "react-i18next";
 import Modal from "../../components/Modal";
+import IntersectionIcon from "../../components/icons/IntersectionIcon";
 import {
   GeographyClippingSettingsDocument,
   useDeleteGeographyMutation,
@@ -416,7 +417,10 @@ export default function EditGeographyModal({
                                   >
                                     {layer.operationType ===
                                     GeographyLayerOperation.Intersect ? (
-                                      <IntersectionIcon size={40} />
+                                      <IntersectionIcon
+                                        size={40}
+                                        className="text-blue-500"
+                                      />
                                     ) : (
                                       <DifferenceIcon size={40} />
                                     )}
@@ -460,7 +464,10 @@ export default function EditGeographyModal({
                                             : "hover:bg-gray-50"
                                         }`}
                                       >
-                                        <IntersectionIcon size={48} />
+                                        <IntersectionIcon
+                                          size={48}
+                                          className="text-blue-500"
+                                        />
                                         <div>
                                           <div className="font-medium text-base mb-1">
                                             {t("Intersection")}
@@ -752,48 +759,6 @@ export default function EditGeographyModal({
         )
       )}
     </>
-  );
-}
-
-// Intersection Venn diagram icon
-export function IntersectionIcon({ size = 24 }: { size?: number }) {
-  return (
-    <svg
-      width={size}
-      height={size}
-      viewBox="0 0 32 32"
-      aria-label="Intersection"
-    >
-      <circle cx="12" cy="16" r="8" fill="#3B82F6" fillOpacity="0.2" />
-      <circle cx="20" cy="16" r="8" fill="#3B82F6" fillOpacity="0.2" />
-      <clipPath id="intersectClip">
-        <circle cx="12" cy="16" r="8" />
-      </clipPath>
-      <circle
-        cx="20"
-        cy="16"
-        r="8"
-        fill="#3B82F6"
-        fillOpacity="0.7"
-        clipPath="url(#intersectClip)"
-      />
-      <circle
-        cx="12"
-        cy="16"
-        r="8"
-        stroke="#3B82F6"
-        strokeWidth="1.5"
-        fill="none"
-      />
-      <circle
-        cx="20"
-        cy="16"
-        r="8"
-        stroke="#3B82F6"
-        strokeWidth="1.5"
-        fill="none"
-      />
-    </svg>
   );
 }
 

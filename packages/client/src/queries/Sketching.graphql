@@ -15,6 +15,7 @@ fragment SketchTocDetails on Sketch {
   sketchClass {
     id
     geometryType
+    reportId
   }
 }
 
@@ -83,6 +84,9 @@ fragment SketchCRUDResponse on Sketch {
     id
     updatedAt
     timestamp
+    sketchClass {
+      reportId
+    }
   }
   relatedFragments {
     hash
@@ -133,6 +137,9 @@ mutation DeleteSketchTocItems($items: [UpdateTocItemParentInput]!) {
     updatedCollections {
       id
       updatedAt
+      sketchClass {
+        reportId
+      }
     }
   }
 }
@@ -189,6 +196,9 @@ mutation UpdateTocItemsParent(
     updatedCollections {
       id
       updatedAt
+      sketchClass {
+        reportId
+      }
     }
   }
 }
@@ -243,6 +253,14 @@ fragment ReportContextSketchClassDetails on SketchClass {
       ...LogicRuleDetails
     }
   }
+  validChildren {
+    id
+    geometryType
+    isArchived
+    clippingGeographies {
+      id
+    }
+  }
   project {
     id
     sessionIsAdmin
@@ -252,6 +270,14 @@ fragment ReportContextSketchClassDetails on SketchClass {
       name
       translatedProps
       stableIds
+    }
+    sketchClasses {
+      id
+      geometryType
+      isArchived
+      clippingGeographies {
+        id
+      }
     }
   }
   clippingGeographies {

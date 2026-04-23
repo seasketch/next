@@ -31,7 +31,7 @@ export function getBestSpriteImage(sprite: SpriteDetailsFragment): {
   url: string;
   pixelRatio: number;
 } {
-  const images = [...sprite.spriteImages] || [];
+  const images = [...(sprite.spriteImages ?? [])];
   if (images.length > 0) {
     images.sort((a, b) => b.pixelRatio - a.pixelRatio);
     return images[0];

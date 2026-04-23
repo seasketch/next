@@ -385,13 +385,9 @@ query SketchClassGeographyEditorDetails($slug: String!) {
 fragment ReportCardDetails on ReportCard {
   id
   position
-  type
   componentSettings
   alternateLanguageSettings
-  tint
-  icon
   body
-  displayMapLayerVisibilityControls
 }
 
 fragment ReportTabDetails on ReportTab {
@@ -498,22 +494,21 @@ mutation ReorderReportTabs($reportId: Int!, $tabIds: [Int!]!) {
 mutation AddReportCard(
   $reportTabId: Int!
   $componentSettings: JSON!
-  $cardType: String!
   $body: JSON!
+  $cardPosition: Int
+  $alternateLanguageSettings: JSON
 ) {
   addReportCard(
     input: {
       reportTabId: $reportTabId
       componentSettings: $componentSettings
-      cardType: $cardType
       body: $body
+      cardPosition: $cardPosition
+      alternateLanguageSettings: $alternateLanguageSettings
     }
   ) {
     reportCard {
       id
-      tab {
-        ...ReportTabDetails
-      }
     }
   }
 }
@@ -534,10 +529,6 @@ mutation UpdateReportCard(
   $componentSettings: JSON
   $alternateLanguageSettings: JSON
   $body: JSON
-  $tint: String
-  $icon: String
-  $cardType: String
-  $displayMapLayerVisibilityControls: Boolean
 ) {
   updateReportCard(
     input: {
@@ -545,14 +536,10 @@ mutation UpdateReportCard(
       componentSettings: $componentSettings
       alternateLanguageSettings: $alternateLanguageSettings
       body: $body
-      tint: $tint
-      icon: $icon
-      cardType: $cardType
-      displayMapLayerVisibilityControls: $displayMapLayerVisibilityControls
     }
   ) {
     reportCard {
-      ...ReportCardDetails
+      id
     }
   }
 }
@@ -773,6 +760,34 @@ query BaseDraftReportContext($sketchClassId: Int!) {
     ...ReportContextSketchClassDetails
     report: draftReport {
       ...BaseReportDetails
+    }
+  }
+}
+
+query CopyableReportCards($projectId: Int!) {
+  project(id: $projectId) {
+    id
+    sketchClasses {
+      id
+      name
+      previewNewReports
+      isGeographyClippingEnabled
+      draftReport {
+        id
+        tabs {
+          id
+          position
+          title
+          cards {
+            id
+            position
+            title
+            body
+            componentSettings
+            alternateLanguageSettings
+          }
+        }
+      }
     }
   }
 }

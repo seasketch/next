@@ -504,14 +504,13 @@ async function getOrCreateReportDependencies(
     `
       select 
         rc.id, 
-        rc.type, 
         rc.component_settings,
         rc.body
       from 
         report_cards rc
       where 
         rc.id in (select report_card_ids_for_report($1))
-      group by rc.id, rc.type, rc.component_settings`,
+      group by rc.id, rc.component_settings`,
     [reportId],
   );
 

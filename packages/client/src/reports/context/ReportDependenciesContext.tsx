@@ -7,7 +7,7 @@ import {
   useReportDependenciesQuery,
 } from "../../generated/graphql";
 import { subjectIsFragment } from "overlay-engine";
-import { ApolloError } from "@apollo/client";
+import { ApolloError, NetworkStatus } from "@apollo/client";
 
 export const ReportDependenciesContext = createContext<{
   metrics: CompatibleSpatialMetricDetailsFragment[];
@@ -39,13 +39,23 @@ export default function ReportDependenciesContextProvider({
   sketchId?: number;
   reportId?: number;
 }) {
-  const { data, loading, refetch, error } = useReportDependenciesQuery({
-    variables: {
-      reportId: reportId!,
-      sketchId: sketchId!,
-    },
-    skip: !reportId || !sketchId,
-  });
+  const { data, loading, refetch, error, networkStatus } =
+    useReportDependenciesQuery({
+      variables: {
+        reportId: reportId!,
+        sketchId: sketchId!,
+      },
+      skip: !reportId || !sketchId,
+      // notifyOnNetworkStatusChange: true,
+    });
+
+  // Apollo's `loading` is false during refetches; after cache eviction the
+  // query refetches while still returning stale dependency data unless we treat
+  // refetch / variable changes as loading for the report shell.
+  const dependenciesQueryLoading =
+    loading ||
+    networkStatus === NetworkStatus.refetch ||
+    networkStatus === NetworkStatus.setVariables;
 
   const contextValue = useMemo(() => {
     let fragmentCalculationsRuntime: number | undefined = undefined;
@@ -66,7 +76,7 @@ export default function ReportDependenciesContextProvider({
       overlaySources: data?.report?.dependencies?.overlaySources || [],
       cardDependencyLists:
         data?.report?.dependencies?.cardDependencyLists || [],
-      loading: loading,
+      loading,
       fragmentCalculationsRuntime,
       error,
     };

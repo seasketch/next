@@ -22,6 +22,10 @@ import {
 } from "react";
 import { motion } from "framer-motion";
 import { useRouteMatch } from "react-router-dom";
+import {
+  evictReportDependenciesForReportAndSketch,
+  evictReportDependenciesForSketchId,
+} from "../../reports/utils/evictReportDependenciesCache";
 import getSlug from "../../getSlug";
 import { ArrowLeftIcon, ArrowRightIcon } from "@heroicons/react/outline";
 import Button from "../../components/Button";
@@ -185,17 +189,19 @@ function SketchEditorModal({
 
   const [updateSketch, updateSketchState] = useUpdateSketchMutation({
     update: (cache, { data }) => {
-      const reportId = sketchClass?.reportId;
-      if (data?.updateSketch && reportId) {
-        const reportEntityId = cache.identify({
-          __typename: "Report",
-          id: reportId,
-        });
-        cache.evict({
-          id: reportEntityId,
-          fieldName: "dependencies",
-          args: { sketchId: data.updateSketch.id },
-        });
+      if (!data?.updateSketch) {
+        return;
+      }
+      const sketch = data.updateSketch;
+      evictReportDependenciesForSketchId(cache, sketch.id);
+      const parent = sketch.parentCollection;
+      const parentReportId = parent?.sketchClass?.reportId;
+      if (parent?.id != null && parentReportId != null) {
+        evictReportDependenciesForReportAndSketch(
+          cache,
+          parentReportId,
+          parent.id
+        );
       }
     },
   });

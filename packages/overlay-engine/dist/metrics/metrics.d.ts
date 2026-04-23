@@ -238,6 +238,14 @@ export type MetricDependencyParameters = {
      * @default "auto" for fragment stats, false for geography stats
      */
     vrm?: false | "auto" | number;
+    /**
+     * If provided, and metrics are being calculated for a Collection, limit
+     * metrics to fragments that belong to the specified sketch classes. If not
+     * provided, all fragments will be included.
+     *
+     * @default undefined
+     */
+    sketchClasses?: number[];
 };
 /**
  * Creates a unique id for a given metric dependency. Any difference in
@@ -261,7 +269,7 @@ export declare function hashMetricDependency(dependency: MetricDependency, overl
  * @param metrics - The metrics to combine.
  * @returns The combined metric.
  */
-export declare function combineMetricsForFragments<T extends Metric>(metrics: Pick<Metric, "type" | "value">[]): Pick<T, "type" | "value">;
+export declare function combineMetricsForFragments<T extends Metric>(metrics: Pick<Metric, "type" | "value">[], expectedMetricType?: Metric["type"]): Pick<T, "type" | "value">;
 /**
  * Finds the primary geography id from a list of metrics. The primary
  * geography is the one that is in all fragments.

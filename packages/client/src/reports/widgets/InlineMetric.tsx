@@ -38,7 +38,8 @@ import {
   TooltipBooleanConfigurationOption,
 } from "./widgets";
 import { useBaseReportContext } from "../context/BaseReportContext";
-import { useClippingGeography } from "../hooks/useClippingGeography";
+import { useSubjectReportContext } from "../context/SubjectReportContext";
+import { usePrimaryGeography } from "../hooks/usePrimaryGeography";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
 import { NumberRoundingControl } from "./NumberRoundingControl";
 import { VrmSelector } from "./VrmSelector";
@@ -335,7 +336,15 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
   sketchClass,
   lang,
 }) => {
-  const clippingGeography = useClippingGeography(sketchClass, geographies);
+  const { clippingGeography, primaryClippingGeographies } = usePrimaryGeography(
+    sketchClass,
+    geographies
+  );
+  const subjectReportContext = useSubjectReportContext();
+  const emptyCollectionWithoutFragments =
+    !subjectReportContext.loading &&
+    subjectReportContext.data?.isCollection === true &&
+    (subjectReportContext.data.relatedFragments?.length ?? 0) === 0;
   const {
     pluralRules,
     countDefaultMessages,
@@ -365,9 +374,12 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
     componentSettings?.pluralizedCountLabels,
     componentSettings?.pluralizedDistinctValueLabels,
   ]);
-  if (sketchClass.geometryType !== SketchGeometryType.Polygon) {
+  if (
+    sketchClass.geometryType !== SketchGeometryType.Polygon &&
+    sketchClass.geometryType !== SketchGeometryType.Collection
+  ) {
     throw new Error(
-      "Inline metric only supports polygon geometry types currently."
+      "Inline metric only supports polygon and collection geometry types currently."
     );
   }
   const formatters = useNumberFormatters({
@@ -393,13 +405,81 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
       throw new Error("No metric dependencies configured");
     }
     const presentation = componentSettings?.presentation || "total_area";
-    if (errors.length > 0 || loading || metrics.length === 0) {
+    if (errors.length > 0 || loading) {
       return null;
+    }
+    if (metrics.length === 0) {
+      if (!emptyCollectionWithoutFragments) {
+        return null;
+      }
+      switch (presentation) {
+        case "total_area":
+          return formatters.area(0);
+        case "percent_area":
+          return formatters.percent(0);
+        case "distance_to_shore":
+          return formatters.distance(0);
+        case "overlay_area":
+          return formatters.area(0);
+        case "geography_overlay_area":
+          return formatters.area(0);
+        case "count": {
+          const count = 0;
+          if (componentSettings?.hideLabelForCount) {
+            return formatters.count(count);
+          }
+          const pluralKey = pluralRules.select(count) as string;
+          const label =
+            countCustomMessages?.[pluralKey] || countDefaultMessages[pluralKey];
+          return `${formatters.count(count)} ${label}`;
+        }
+        case "column_values": {
+          const statKey = (componentSettings?.stat || "mean") as
+            | "mean"
+            | "min"
+            | "max"
+            | "stdDev"
+            | "sum"
+            | "count"
+            | "countDistinct";
+          if (componentSettings?.stat === "countDistinct") {
+            const countDistinct = 0;
+            const pluralKey = pluralRules.select(countDistinct) as string;
+            const label =
+              distinctCustomMessages?.[pluralKey] ||
+              distinctDefaultMessages[pluralKey];
+            return `${formatters.count(countDistinct)} ${label}`;
+          }
+          if (statKey === "count") {
+            return formatters.count(0);
+          }
+          return formatters.decimal(0);
+        }
+        case "raster_stats": {
+          const formatted = formatters.decimal(0);
+          return rasterUnitLabel
+            ? `${formatted} ${rasterUnitLabel}`
+            : formatted;
+        }
+        case "geography_raster_stats": {
+          const formatted = formatters.decimal(0);
+          return rasterUnitLabel
+            ? `${formatted} ${rasterUnitLabel}`
+            : formatted;
+        }
+        case "geography_proportion_captured":
+          return formatters.percent(0);
+        default:
+          // eslint-disable-next-line i18next/no-literal-string
+          errors.push(`Unsupported presentation: ${presentation}`);
+          return null;
+      }
     }
     switch (presentation) {
       case "total_area":
         const combined = combineMetricsForFragments(
-          metrics as Pick<Metric, "type" | "value">[]
+          metrics as Pick<Metric, "type" | "value">[],
+          "total_area"
         ) as TotalAreaMetric;
         return formatters.area(combined.value);
       case "percent_area":
@@ -410,7 +490,7 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
           throw new Error("Primary geography not found in metrics.");
         }
         if (
-          !(sketchClass.clippingGeographies || []).some(
+          !(primaryClippingGeographies || []).some(
             (g) => g!.id === primaryGeographyId
           )
         ) {
@@ -423,7 +503,8 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
           metrics.filter((m) => subjectIsFragment(m.subject)) as Pick<
             Metric,
             "type" | "value"
-          >[]
+          >[],
+          "total_area"
         ) as TotalAreaMetric;
         const geographyAreaMetric = metrics.find(
           (m) =>
@@ -438,7 +519,8 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
           (m) => m.type === "distance_to_shore"
         );
         const combined = combineMetricsForFragments(
-          metrics as Pick<Metric, "type" | "value">[]
+          metrics as Pick<Metric, "type" | "value">[],
+          "distance_to_shore"
         ) as DistanceToShoreMetric;
         if (!distanceToShore) {
           console.error("Distance to shore not found in metrics.", metrics);
@@ -452,7 +534,8 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
           throw new Error("Overlay area not found in metrics.");
         }
         const combined = combineMetricsForFragments(
-          metrics as Pick<Metric, "type" | "value">[]
+          metrics as Pick<Metric, "type" | "value">[],
+          "overlay_area"
         ) as OverlayAreaMetric;
 
         return formatters.area(combined.value["*"]);
@@ -485,7 +568,8 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
       }
       case "count": {
         const combined = combineMetricsForFragments(
-          metrics as Pick<Metric, "type" | "value">[]
+          metrics as Pick<Metric, "type" | "value">[],
+          "count"
         ) as CountMetric;
         const count = combined.value["*"].count;
         if (componentSettings?.hideLabelForCount) {
@@ -506,7 +590,8 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
           throw new Error("Column values not found in metrics.");
         }
         const combined = combineMetricsForFragments(
-          columnValues as Pick<Metric, "type" | "value">[]
+          columnValues as Pick<Metric, "type" | "value">[],
+          "column_values"
         ) as ColumnValuesMetric;
         const prop = componentSettings?.column || "";
         const statKey = (componentSettings?.stat || "mean") as
@@ -543,7 +628,8 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
           throw new Error("Raster stats not found in metrics.");
         }
         const combined = combineMetricsForFragments(
-          metrics as Pick<Metric, "type" | "value">[]
+          metrics as Pick<Metric, "type" | "value">[],
+          "raster_stats"
         ) as RasterStats;
         const value =
           combined.value.bands[0][componentSettings?.rasterStat || "mean"];
@@ -589,11 +675,9 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
         const fragmentRasterMetrics = metrics.filter(
           (m) => m.type === "raster_stats" && subjectIsFragment(m.subject)
         );
-        if (fragmentRasterMetrics.length === 0) {
-          throw new Error("Sketch raster stats not found in metrics.");
-        }
         const combinedSketch = combineMetricsForFragments(
-          fragmentRasterMetrics as Pick<Metric, "type" | "value">[]
+          fragmentRasterMetrics as Pick<Metric, "type" | "value">[],
+          "raster_stats"
         ) as RasterStats;
         const sketchBands = combinedSketch.value.bands;
         if (!sketchBands || sketchBands.length === 0) {
@@ -627,13 +711,14 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
   }, [
     dependencies.length,
     loading,
+    emptyCollectionWithoutFragments,
     metrics,
     componentSettings?.presentation,
     componentSettings?.stat,
     componentSettings?.rasterStat,
     formatters,
     rasterUnitLabel,
-    sketchClass.clippingGeographies,
+    primaryClippingGeographies,
     errors,
     pluralRules,
     componentSettings?.hideLabelForCount,
@@ -864,7 +949,7 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
 
   const { geographies, sketchClass: tooltipSketchClass } =
     useBaseReportContext();
-  const clippingGeography = useClippingGeography(
+  const { clippingGeography } = usePrimaryGeography(
     tooltipSketchClass,
     geographies
   );
@@ -1036,9 +1121,7 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
   };
 
   const currentVrm = useMemo(() => {
-    const fragmentDep = dependencies.find(
-      (d) => d.subjectType === "fragments"
-    );
+    const fragmentDep = dependencies.find((d) => d.subjectType === "fragments");
     return fragmentDep?.parameters?.vrm;
   }, [dependencies]);
 

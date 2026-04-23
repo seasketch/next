@@ -32,7 +32,7 @@ test("Component renders with custom body", async () => {
   render(
     <Router history={createMemoryHistory()}>
       <SurveyContext.Provider value={{ ...TestSurveyContextValue }}>
-        <ThankYou {...makeArgs({})} />
+        <ThankYou {...(makeArgs({}) as any)} />
       </SurveyContext.Provider>
     </Router>
   );
@@ -47,7 +47,7 @@ test("Has a button linking to the project url if linkToProject=true", async () =
   render(
     <Router history={createMemoryHistory()}>
       <SurveyContext.Provider value={{ ...TestSurveyContextValue }}>
-        <ThankYou {...makeArgs({ linkToProject: true })} />
+        <ThankYou {...(makeArgs({ linkToProject: true }) as any)} />
       </SurveyContext.Provider>
     </Router>
   );
@@ -60,7 +60,7 @@ test("Has a button to take survey again if promptToRespondAgain=true", async () 
   render(
     <Router history={createMemoryHistory()}>
       <SurveyContext.Provider value={{ ...TestSurveyContextValue }}>
-        <ThankYou {...makeArgs({ promptToRespondAgain: true })} />
+        <ThankYou {...(makeArgs({ promptToRespondAgain: true }) as any)} />
       </SurveyContext.Provider>
     </Router>
   );
@@ -74,10 +74,10 @@ test("Respond Again link text can be customized", async () => {
     <Router history={createMemoryHistory()}>
       <SurveyContext.Provider value={{ ...TestSurveyContextValue }}>
         <ThankYou
-          {...makeArgs({
+          {...(makeArgs({
             promptToRespondAgain: true,
             respondAgainMessage: "Do it again",
-          })}
+          }) as any)}
         />
       </SurveyContext.Provider>
     </Router>
@@ -92,9 +92,9 @@ test("Optional social sharing buttons", async () => {
     <Router history={createMemoryHistory()}>
       <SurveyContext.Provider value={{ ...TestSurveyContextValue }}>
         <ThankYou
-          {...makeArgs({
+          {...(makeArgs({
             shareButtons: true,
-          })}
+          }) as any)}
         />
       </SurveyContext.Provider>
     </Router>

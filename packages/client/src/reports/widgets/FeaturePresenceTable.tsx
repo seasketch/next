@@ -1,7 +1,11 @@
-import { useMemo } from "react";
+import { Fragment, useMemo } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { MetricDependency, CountMetric } from "overlay-engine";
-import { ReportWidget, TableHeadingsEditor } from "./widgets";
+import {
+  ReportWidget,
+  TableHeadingsEditor,
+  TooltipBooleanConfigurationOption,
+} from "./widgets";
 import {
   ReportWidgetTooltipControls,
   TooltipMorePopover,
@@ -30,13 +34,19 @@ import {
   ClassTableRowComponentSettings,
   combineMetricsBySource,
   getClassTableRows,
+  hasClassTableRowVisibilityToggle,
+  resolveClassTableRowStableId,
+  shouldTruncateClassTableRowLabels,
 } from "./ClassTableRows";
 import {
   classTableRowHasSwatch,
   SwatchForClassTableRow,
 } from "./SwatchForClassTableRow";
 import { useOverlaySources } from "../hooks/useOverlaySources";
-import { useClippingGeography } from "../hooks/useClippingGeography";
+import { usePrimaryGeography } from "../hooks/usePrimaryGeography";
+import CollectionExpandableName from "./collection/CollectionExpandableName";
+import { sketchContributionsForClassTableRow } from "./collection/sketchContributions";
+import { useCollectionSketchExpand } from "./collection/useCollectionSketchExpand";
 
 export type FeaturePresenceTableSettings = {
   rowsPerPage?: number;
@@ -49,6 +59,7 @@ export type FeaturePresenceTableSettings = {
 
 type FeaturePresenceRow = ClassTableRow & {
   count: number;
+  geographyTotal?: number;
 };
 
 export const FeaturePresenceTable: ReportWidget<
@@ -67,8 +78,10 @@ export const FeaturePresenceTable: ReportWidget<
   const showColorSwatches = !componentSettings.hideColorSwatches;
   const nameLabel = componentSettings.nameLabel || t("Name");
   const presenceLabel = componentSettings.presenceLabel || t("Presence");
+  const truncateRowLabels = shouldTruncateClassTableRowLabels(componentSettings);
 
-  const primaryGeographyId = useClippingGeography(sketchClass, geographies)?.id ?? 0;
+  const { clippingGeography } = usePrimaryGeography(sketchClass, geographies);
+  const primaryGeographyId = clippingGeography?.id;
 
   const rows = useMemo<FeaturePresenceRow[]>(() => {
     const classRows = getClassTableRows({
@@ -86,28 +99,30 @@ export const FeaturePresenceTable: ReportWidget<
       return classRows.map((r) => ({
         ...r,
         count: NaN,
+        geographyTotal: NaN,
       }));
     }
 
+    if (!primaryGeographyId) {
+      throw new Error("Primary geography not found.");
+    }
+
     const combinedMetrics = combineMetricsBySource<CountMetric>(
-      metrics as any,
-      sources as any,
+      metrics,
+      sources,
       primaryGeographyId
-    ) as Record<
-      string,
-      {
-        fragments: CountMetric;
-        geographies: CountMetric;
-      }
-    >;
+    );
 
     let rows: FeaturePresenceRow[] = classRows.map((r) => {
       const combinedForSource = combinedMetrics[r.sourceId];
       const count =
         combinedForSource?.fragments?.value?.[r.groupByKey]?.count || 0;
+      const geographyTotal =
+        combinedForSource?.geographies?.value?.[r.groupByKey]?.count || 0;
       return {
         ...r,
         count,
+        geographyTotal,
       };
     });
 
@@ -140,22 +155,76 @@ export const FeaturePresenceTable: ReportWidget<
     pageBounds,
   } = usePagination(rows, rowsPerPage);
 
+  const {
+    isCollection,
+    sketchNameById,
+    childSketchIds,
+    expandedRowKeys,
+    toggleRow,
+    hideCaretExpandTooltip,
+  } = useCollectionSketchExpand(sketchClass);
+
+  const sketchLinesByRowKey = useMemo(() => {
+    if (!isCollection || !primaryGeographyId || loading) {
+      return new Map<
+        string,
+        ReturnType<typeof sketchContributionsForClassTableRow>
+      >();
+    }
+    const map = new Map<
+      string,
+      ReturnType<typeof sketchContributionsForClassTableRow>
+    >();
+    for (const row of rows) {
+      const source = sources.find((s) => s.stableId === row.sourceId);
+      if (!source) continue;
+      map.set(
+        row.key,
+        sketchContributionsForClassTableRow({
+          metrics,
+          source,
+          geographyId: primaryGeographyId,
+          metricType: "count",
+          groupByKey: row.groupByKey,
+          childSketchIds,
+          geographyDenominator:
+            typeof row.geographyTotal === "number" &&
+            Number.isFinite(row.geographyTotal)
+              ? row.geographyTotal
+              : 0,
+          sketchNameById,
+          t,
+        }),
+      );
+    }
+    return map;
+  }, [
+    isCollection,
+    primaryGeographyId,
+    loading,
+    rows,
+    metrics,
+    sources,
+    childSketchIds,
+    sketchNameById,
+    t,
+  ]);
+
   const hasAnyColor = useMemo(
     () => showColorSwatches && rows.some(classTableRowHasSwatch),
     [rows, showColorSwatches]
   );
   const hasVisibilityColumn = useMemo(
     () =>
-      rows.some(
-        (row) =>
-          row.stableId ||
-          componentSettings.rowLinkedStableIds?.[row.key] ||
-          (row.groupByKey
-            ? componentSettings.rowLinkedStableIds?.[row.groupByKey]
-            : undefined)
+      hasClassTableRowVisibilityToggle(
+        rows,
+        componentSettings.rowLinkedStableIds
       ),
     [rows, componentSettings.rowLinkedStableIds]
   );
+
+  const hasSwatchColumn =
+    showColorSwatches && rows.some(classTableRowHasSwatch);
 
   if (!loading && !rows.length) {
     return (
@@ -183,16 +252,19 @@ export const FeaturePresenceTable: ReportWidget<
             </div>
           </div>
           {paginatedRows.map((row) => {
-            const stableId =
-              row.stableId ||
-              componentSettings.rowLinkedStableIds?.[row.key] ||
-              (row.groupByKey
-                ? componentSettings.rowLinkedStableIds?.[row.groupByKey]
-                : undefined);
+            const stableId = resolveClassTableRowStableId(
+              row,
+              componentSettings.rowLinkedStableIds
+            );
             const isPresent = row.count > 0;
+            const displayLabel =
+              row.key === "*" ? t("All features") : row.label;
+            const expanded =
+              isCollection && expandedRowKeys.has(row.key);
+            const sketchLines = sketchLinesByRowKey.get(row.key) ?? [];
             return (
+              <Fragment key={row.key}>
               <div
-                key={row.key}
                 className={`flex items-center gap-3 px-3 py-2 hover:bg-gray-50`}
               >
                 {hasVisibilityColumn && (
@@ -206,12 +278,24 @@ export const FeaturePresenceTable: ReportWidget<
                 )}
                 {showColorSwatches && <SwatchForClassTableRow row={row} />}
                 <div className="flex-1 min-w-0 text-gray-800 text-sm">
-                  <span
-                    className="truncate block"
-                    title={row.key === "*" ? t("All features") : row.key}
-                  >
-                    {row.key === "*" ? t("All features") : row.label}
-                  </span>
+                  <CollectionExpandableName
+                    displayLabel={displayLabel}
+                    truncateRowLabels={truncateRowLabels}
+                    expanded={expanded}
+                    onToggle={() => toggleRow(row.key)}
+                    loading={loading}
+                    isCollection={isCollection}
+                    caretTooltipEnabled={!hideCaretExpandTooltip}
+                    caretTooltipLabel={t("Expand sketch details")}
+                    expandAriaLabelExpanded={t(
+                      "Collapse sketch breakdown for {{name}}",
+                      { name: displayLabel },
+                    )}
+                    expandAriaLabelCollapsed={t(
+                      "Expand sketch breakdown for {{name}}",
+                      { name: displayLabel },
+                    )}
+                  />
                 </div>
                 <div className="flex-none text-gray-900 tabular-nums text-sm min-w-[80px] text-center items-center flex">
                   {loading ? (
@@ -231,6 +315,55 @@ export const FeaturePresenceTable: ReportWidget<
                   )}
                 </div>
               </div>
+              {isCollection && expanded && sketchLines.length === 0 && (
+                <div className="flex flex-wrap items-center gap-3 border-t border-slate-200/80 bg-slate-100 px-3 py-2.5 text-sm italic text-gray-600">
+                  <div className="flex-none w-6" aria-hidden />
+                  {hasSwatchColumn && (
+                    <div className="flex-none w-4" aria-hidden />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    {t(
+                      "No individual sketches contributed to this category.",
+                    )}
+                  </div>
+                </div>
+              )}
+              {isCollection &&
+                expanded &&
+                sketchLines.map((sk) => (
+                  <div
+                    key={`${row.key}-sketch-${sk.sketchId}`}
+                    className="flex flex-wrap items-center gap-3 border-t border-slate-200/80 bg-slate-100 px-3 py-2 hover:bg-slate-200/30"
+                  >
+                    {hasVisibilityColumn && (
+                      <div className="flex-none w-6" aria-hidden />
+                    )}
+                    {hasSwatchColumn && (
+                      <div className="flex-none w-4 flex justify-center" aria-hidden />
+                    )}
+                    <div className="min-w-0 flex-1 text-sm text-gray-800">
+                      <span className="min-w-0">{sk.sketchName}</span>
+                    </div>
+                    <div className="flex-none text-gray-900 tabular-nums text-sm min-w-[80px] text-center items-center flex">
+                      {loading ? (
+                        <MetricLoadingDots />
+                      ) : (
+                        renderPresenceSymbol({
+                          isPresent: sk.primaryValue > 0,
+                          presentation:
+                            componentSettings.presenceColumnPresentation ||
+                            DEFAULT_PRESENCE_PRESENTATION,
+                          presentLabel: t("Present"),
+                          absentLabel: t("Absent"),
+                          withTooltip: true,
+                          wrapperClassName:
+                            "inline-flex items-center justify-center w-full cursor-help",
+                        })
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </Fragment>
             );
           })}
           <TablePaddingRows
@@ -366,6 +499,16 @@ export const FeaturePresenceTableTooltipControls: ReportWidgetTooltipControls =
           <PaginationSetting
             rowsPerPage={rowsPerPage}
             onChange={(next: number) => handleUpdate({ rowsPerPage: next })}
+          />
+          <TooltipBooleanConfigurationOption
+            label={t("Truncate row labels")}
+            checked={shouldTruncateClassTableRowLabels(settings)}
+            checkboxFirst
+            onChange={(next) =>
+              handleUpdate({
+                disableRowLabelTruncation: next ? undefined : true,
+              })
+            }
           />
           <div className="flex">
             <span className="text-sm font-light text-gray-400 whitespace-nowrap pr-1">

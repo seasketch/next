@@ -122,3 +122,14 @@ mutation updateEnableReportBuilder($slug: String!, $enabled: Boolean!) {
     }
   }
 }
+
+mutation updateEnableCollectionNewReports($slug: String!, $enabled: Boolean!) {
+  updateProjectBySlug(
+    input: { slug: $slug, patch: { enableCollectionNewReports: $enabled } }
+  ) {
+    project {
+      id
+      enableCollectionNewReports
+    }
+  }
+}

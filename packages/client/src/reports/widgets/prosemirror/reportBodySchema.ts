@@ -5,6 +5,18 @@ import { baseSchema } from "../../../editor/config";
 
 export type ImageLayout = "center" | "left" | "right" | "full";
 
+function parseJsonAttribute<T>(value: string | null, fallback: T): T {
+  if (!value) {
+    return fallback;
+  }
+
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
+}
+
 // Base marks: ensure links open in a new tab
 const baseMarks = baseSchema.spec.marks.update("link", {
   ...baseSchema.spec.marks.get("link"),
@@ -43,11 +55,9 @@ const metricSpec: NodeSpec = {
           "data-component-settings"
         );
         return {
-          metrics: metricsAttr ? JSON.parse(metricsAttr) : [],
+          metrics: parseJsonAttribute(metricsAttr, []),
           type: componentType,
-          componentSettings: componentSettingsAttr
-            ? JSON.parse(componentSettingsAttr)
-            : {},
+          componentSettings: parseJsonAttribute(componentSettingsAttr, {}),
         };
       },
     },
@@ -91,11 +101,9 @@ const blockMetricSpec: NodeSpec = {
           "data-component-settings"
         );
         return {
-          metrics: metricsAttr ? JSON.parse(metricsAttr) : [],
+          metrics: parseJsonAttribute(metricsAttr, []),
           type: componentType,
-          componentSettings: componentSettingsAttr
-            ? JSON.parse(componentSettingsAttr)
-            : {},
+          componentSettings: parseJsonAttribute(componentSettingsAttr, {}),
         };
       },
     },

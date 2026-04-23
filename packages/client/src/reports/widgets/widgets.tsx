@@ -543,21 +543,24 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
     useWidgetDependencies(dependencies);
 
   // Memoize widgetProps to maintain stable reference
-  const widgetProps = useMemo<ReportWidgetProps<any>>(
-    () => ({
-      dependencies,
-      componentSettings,
-      metrics,
-      sources,
-      loading,
-      errors,
-      geographies,
-      marks: node.marks as Mark[] | undefined,
-      node,
-      sketchClass,
-      alternateLanguageSettings,
-      lang,
-    }),
+  const widgetProps = useMemo<ReportWidgetProps<any> | null>(
+    () =>
+      sketchClass
+        ? {
+            dependencies,
+            componentSettings,
+            metrics,
+            sources,
+            loading,
+            errors,
+            geographies,
+            marks: node.marks as Mark[] | undefined,
+            node,
+            sketchClass,
+            alternateLanguageSettings,
+            lang,
+          }
+        : null,
     [
       dependencies,
       componentSettings,
@@ -572,6 +575,26 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
       lang,
     ]
   );
+
+  if (!sketchClass) {
+    if (loading) {
+      return node.isInline ? (
+        <span className="inline-flex align-middle">
+          <Spinner mini />
+        </span>
+      ) : (
+        <div className="my-2 w-full rounded border border-gray-200 bg-white p-2">
+          <Spinner mini />
+        </div>
+      );
+    }
+
+    const missingSketchClassErrors = ["Sketch class not available"];
+    if (node.isInline) {
+      return <WidgetErrorInline errors={missingSketchClassErrors} cardId={cardId} />;
+    }
+    return <WidgetErrorBlock errors={missingSketchClassErrors} cardId={cardId} />;
+  }
 
   // Error components access ReportContext themselves, so we only subscribe
   // to context when there are actual errors (exceptional case)
@@ -650,6 +673,7 @@ export type BuildReportCommandGroupsArgs = {
   }) => CommandPaletteItem;
   onProcessLayer?: (tocId: number, sourceId: number) => Promise<boolean>;
   projectSlug?: string;
+  childSketchClassGeometryTypes?: SketchGeometryType[];
 };
 
 export function ProcessForReportingFooter({
@@ -879,6 +903,7 @@ export function buildReportCommandGroups({
   geographies,
   clippingGeography,
   sketchClassGeometryType,
+  childSketchClassGeometryTypes,
   overlayFooterItem,
   overlayAugmenter,
   onProcessLayer,
@@ -886,12 +911,21 @@ export function buildReportCommandGroups({
 }: BuildReportCommandGroupsArgs = {}): CommandPaletteGroup[] {
   const commandGroups: CommandPaletteGroup[] = [];
 
+  const showPolygonOptions =
+    sketchClassGeometryType === SketchGeometryType.Polygon ||
+    (sketchClassGeometryType === SketchGeometryType.Collection &&
+      childSketchClassGeometryTypes &&
+      childSketchClassGeometryTypes.includes(SketchGeometryType.Polygon));
+
   const inlineSketchMetricsGroup: CommandPaletteGroup = {
     id: "inline-sketch-metrics",
-    label: "Inline Sketch Metrics",
+    label:
+      sketchClassGeometryType === SketchGeometryType.Collection
+        ? "Inline Collection Metrics"
+        : "Inline Sketch Metrics",
     items: [],
   };
-  if (sketchClassGeometryType === SketchGeometryType.Polygon) {
+  if (showPolygonOptions) {
     inlineSketchMetricsGroup.items.push({
       id: "sketch-size",
       label: "Area",
@@ -972,7 +1006,7 @@ export function buildReportCommandGroups({
     label: "Sketch Block Widgets",
     items: [],
   };
-  if (sketchClassGeometryType === SketchGeometryType.Polygon) {
+  if (showPolygonOptions) {
     sketchBlockWidgetsGroup.items.push({
       id: "sketch-attributes-table",
       label: "Sketch Attributes Table",
@@ -1794,7 +1828,13 @@ export interface ReportWidgetProps<T extends Record<string, any>> {
   node?: Node;
   sketchClass: Pick<
     ReportContextSketchClassDetailsFragment,
-    "id" | "projectId" | "geometryType" | "form" | "clippingGeographies"
+    | "id"
+    | "projectId"
+    | "geometryType"
+    | "form"
+    | "clippingGeographies"
+    | "project"
+    | "validChildren"
   >;
   alternateLanguageSettings?: { [langCode: string]: any };
   lang: string;

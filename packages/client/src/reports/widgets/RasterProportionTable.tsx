@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { Fragment, useMemo } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { MetricDependency, RasterStats } from "overlay-engine";
 import {
@@ -25,6 +25,9 @@ import {
   ClassTableRowComponentSettings,
   combineMetricsBySource,
   getClassTableRows,
+  hasClassTableRowVisibilityToggle,
+  resolveClassTableRowStableId,
+  shouldTruncateClassTableRowLabels,
 } from "./ClassTableRows";
 import {
   classTableRowHasSwatch,
@@ -35,9 +38,14 @@ import { LabeledDropdown } from "./LabeledDropdown";
 import { VrmSelector } from "./VrmSelector";
 import ReportLayerVisibilityCheckbox from "../components/ReportLayerVisibilityCheckbox";
 import { LayersIcon } from "@radix-ui/react-icons";
-import { useClippingGeography } from "../hooks/useClippingGeography";
-import { GeographySelector } from "./InlineMetric";
+import { usePrimaryGeography } from "../hooks/usePrimaryGeography";
 import { useBaseReportContext } from "../context/BaseReportContext";
+import { GeographySelector } from "./InlineMetric";
+import * as Tooltip from "@radix-ui/react-tooltip";
+import CollectionExpandableName from "./collection/CollectionExpandableName";
+import SketchOverlapHint from "./collection/SketchOverlapHint";
+import { sketchContributionsForClassTableRow } from "./collection/sketchContributions";
+import { useCollectionSketchExpand } from "./collection/useCollectionSketchExpand";
 
 type RasterProportionTableSettings = {
   geographyId?: number | "auto";
@@ -68,7 +76,7 @@ export const RasterProportionTable: ReportWidget<
   sketchClass,
   geographies,
 }) => {
-  const clippingGeography = useClippingGeography(sketchClass, geographies);
+  const { clippingGeography } = usePrimaryGeography(sketchClass, geographies);
   const { t } = useTranslation("reports");
 
   const geographyId: number | undefined =
@@ -85,6 +93,7 @@ export const RasterProportionTable: ReportWidget<
   const nameLabel = componentSettings.nameLabel || t("Name");
   const valueLabel = componentSettings.valueLabel || t("% Captured");
   const sumLabel = componentSettings.sumLabel || t("Sum");
+  const truncateRowLabels = shouldTruncateClassTableRowLabels(componentSettings);
 
   const formatters = useNumberFormatters({
     minimumFractionDigits: componentSettings.minimumFractionDigits,
@@ -117,7 +126,8 @@ export const RasterProportionTable: ReportWidget<
     const combinedMetrics = combineMetricsBySource<RasterStats>(
       metrics,
       sources,
-      geographyId
+      geographyId,
+      "raster_stats"
     );
 
     let rows = classRows.map((r) => {
@@ -163,9 +173,68 @@ export const RasterProportionTable: ReportWidget<
     loading,
   ]);
 
+  const {
+    isCollection,
+    sketchNameById,
+    childSketchIds,
+    expandedRowKeys,
+    toggleRow,
+    hideCaretExpandTooltip,
+  } = useCollectionSketchExpand(sketchClass);
+
+  const sketchLinesByRowKey = useMemo(() => {
+    if (!isCollection || !geographyId || loading) {
+      return new Map<
+        string,
+        ReturnType<typeof sketchContributionsForClassTableRow>
+      >();
+    }
+    const map = new Map<
+      string,
+      ReturnType<typeof sketchContributionsForClassTableRow>
+    >();
+    for (const row of rows) {
+      const source = sources.find((s) => s.stableId === row.sourceId);
+      if (!source) continue;
+      map.set(
+        row.key,
+        sketchContributionsForClassTableRow({
+          metrics,
+          source,
+          geographyId,
+          metricType: "raster_stats",
+          groupByKey: row.groupByKey,
+          childSketchIds,
+          geographyDenominator:
+            typeof row.geographySum === "number" &&
+            Number.isFinite(row.geographySum)
+              ? row.geographySum
+              : 0,
+          sketchNameById,
+          t,
+        }),
+      );
+    }
+    return map;
+  }, [
+    isCollection,
+    geographyId,
+    loading,
+    rows,
+    metrics,
+    sources,
+    childSketchIds,
+    sketchNameById,
+    t,
+  ]);
+
   const hasVisibilityColumn = useMemo(
-    () => rows.some((r) => r.stableId),
-    [rows]
+    () =>
+      hasClassTableRowVisibilityToggle(
+        rows,
+        componentSettings.rowLinkedStableIds
+      ),
+    [rows, componentSettings.rowLinkedStableIds]
   );
 
   const {
@@ -179,8 +248,12 @@ export const RasterProportionTable: ReportWidget<
     pageBounds,
   } = usePagination(rows, rowsPerPage);
 
+  const hasSwatchColumn =
+    showColorSwatches && rows.some(classTableRowHasSwatch);
+
   return (
-    <div className="mt-3 rounded-md border border-gray-200 shadow-sm w-full max-w-full bg-white overflow-hidden">
+    <Tooltip.Provider delayDuration={400}>
+      <div className="mt-3 rounded-md border border-gray-200 shadow-sm w-full max-w-full bg-white overflow-hidden">
       <div className="divide-y divide-gray-100">
         {/* Header row */}
         <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200">
@@ -206,25 +279,47 @@ export const RasterProportionTable: ReportWidget<
             !loading && row.geographySum > 0
               ? row.sketchSum / row.geographySum
               : 0;
+          const stableId = resolveClassTableRowStableId(
+            row,
+            componentSettings.rowLinkedStableIds
+          );
+          const expanded =
+            isCollection && expandedRowKeys.has(row.key);
+          const sketchLines = sketchLinesByRowKey.get(row.key) ?? [];
           return (
+            <Fragment key={row.key}>
             <div
-              key={row.key}
               className={`flex items-center gap-3 px-3 py-2 hover:bg-gray-50 ${
                 row.sketchSum === 0 ? "opacity-50" : ""
               }`}
             >
               {hasVisibilityColumn && (
                 <div className="flex-none w-6 flex justify-center">
-                  {row.stableId ? (
-                    <ReportLayerVisibilityCheckbox stableId={row.stableId} />
+                  {stableId ? (
+                    <ReportLayerVisibilityCheckbox stableId={stableId} />
                   ) : null}
                 </div>
               )}
               {showColorSwatches && <SwatchForClassTableRow row={row} />}
               <div className="flex-1 min-w-0 text-gray-800 text-sm">
-                <span className="truncate block" title={row.label}>
-                  {row.label}
-                </span>
+                <CollectionExpandableName
+                  displayLabel={row.label}
+                  truncateRowLabels={truncateRowLabels}
+                  expanded={expanded}
+                  onToggle={() => toggleRow(row.key)}
+                  loading={loading}
+                  isCollection={isCollection}
+                  caretTooltipEnabled={!hideCaretExpandTooltip}
+                  caretTooltipLabel={t("Expand sketch details")}
+                  expandAriaLabelExpanded={t(
+                    "Collapse sketch breakdown for {{name}}",
+                    { name: row.label },
+                  )}
+                  expandAriaLabelCollapsed={t(
+                    "Expand sketch breakdown for {{name}}",
+                    { name: row.label },
+                  )}
+                />
               </div>
               {showSumColumn && (
                 <div className="flex-none text-center text-gray-900 tabular-nums text-sm min-w-[80px]">
@@ -239,6 +334,63 @@ export const RasterProportionTable: ReportWidget<
                 {loading ? <MetricLoadingDots /> : formatters.percent(percent)}
               </div>
             </div>
+            {isCollection && expanded && sketchLines.length === 0 && (
+              <div className="flex flex-wrap items-center gap-3 border-t border-slate-200/80 bg-slate-100 px-3 py-2.5 text-sm italic text-gray-600">
+                <div className="flex-none w-6" aria-hidden />
+                {hasSwatchColumn && (
+                  <div className="flex-none w-4" aria-hidden />
+                )}
+                <div className="min-w-0 flex-1">
+                  {t(
+                    "No individual sketches contributed to this category.",
+                  )}
+                </div>
+              </div>
+            )}
+            {isCollection &&
+              expanded &&
+              sketchLines.map((sk) => (
+                <div
+                  key={`${row.key}-sketch-${sk.sketchId}`}
+                  className={`flex flex-wrap items-center gap-3 border-t border-slate-200/80 bg-slate-100 px-3 py-2 hover:bg-slate-200/30 ${
+                    row.sketchSum === 0 ? "opacity-50" : ""
+                  }`}
+                >
+                  {hasVisibilityColumn && (
+                    <div className="flex-none w-6" aria-hidden />
+                  )}
+                  {hasSwatchColumn && (
+                    <div className="flex-none w-4 flex justify-center" aria-hidden />
+                  )}
+                  <div className="flex min-w-0 flex-1 items-center gap-1 text-sm text-gray-800">
+                    <span className="min-w-0">{sk.sketchName}</span>
+                    <SketchOverlapHint
+                      hasOverlap={sk.hasOverlap}
+                      sketchDisplayName={sk.sketchName}
+                      overlapPartnerSketchNames={
+                        sk.overlapPartnerSketchNames
+                      }
+                    />
+                  </div>
+                  {showSumColumn && (
+                    <div className="flex-none text-center text-gray-900 tabular-nums text-sm min-w-[80px]">
+                      {loading ? (
+                        <MetricLoadingDots />
+                      ) : (
+                        formatters.decimal(sk.primaryValue)
+                      )}
+                    </div>
+                  )}
+                  <div className="flex-none text-right text-gray-900 tabular-nums text-sm min-w-[80px]">
+                    {loading ? (
+                      <MetricLoadingDots />
+                    ) : (
+                      formatters.percent(sk.fractionOfGeography)
+                    )}
+                  </div>
+                </div>
+              ))}
+            </Fragment>
           );
         })}
         <TablePaddingRows
@@ -265,7 +417,8 @@ export const RasterProportionTable: ReportWidget<
           onPageChange={setCurrentPage}
         />
       )}
-    </div>
+      </div>
+    </Tooltip.Provider>
   );
 };
 
@@ -300,16 +453,14 @@ export const RasterProportionTableTooltipControls: ReportWidgetTooltipControls =
     );
     const headingsLabelDisplayNames = useMemo(
       (): string[] =>
-        showSumColumn
-          ? ["Name", "% Captured", "Sum"]
-          : ["Name", "% Captured"],
+        showSumColumn ? ["Name", "% Captured", "Sum"] : ["Name", "% Captured"],
       [showSumColumn]
     );
 
     const { filteredSources: sources } = useOverlaySources(dependencies);
 
     const { geographies, sketchClass } = useBaseReportContext();
-    const clippingGeography = useClippingGeography(sketchClass, geographies);
+    const { clippingGeography } = usePrimaryGeography(sketchClass, geographies);
 
     const handleUpdate = (patch: Partial<RasterProportionTableSettings>) => {
       onUpdate({
@@ -434,6 +585,16 @@ export const RasterProportionTableTooltipControls: ReportWidgetTooltipControls =
             geography
             value={currentGeographyVrm}
             onChange={handleGeographyVrmChange}
+          />
+          <TooltipBooleanConfigurationOption
+            label={t("Truncate row labels")}
+            checked={shouldTruncateClassTableRowLabels(settings)}
+            checkboxFirst
+            onChange={(next) =>
+              handleUpdate({
+                disableRowLabelTruncation: next ? undefined : true,
+              })
+            }
           />
         </TooltipMorePopover>
       </div>

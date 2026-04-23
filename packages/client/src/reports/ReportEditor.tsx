@@ -1,11 +1,5 @@
-import { useTranslation } from "react-i18next";
-import {
-  BaseDraftReportContextDocument,
-  ReportTabDetailsFragment,
-  Sketch,
-  useAddReportCardMutation,
-} from "../generated/graphql";
-import { BaseReportContext } from "./context/BaseReportContext";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { ChevronRightIcon, PlusIcon } from "@radix-ui/react-icons";
 import type { ComponentProps } from "react";
 import {
   memo,
@@ -16,26 +10,45 @@ import {
   useRef,
   useState,
 } from "react";
-import { ReportTabs } from "./ReportTabs";
-import { ReportUIStateContext } from "./context/ReportUIStateContext";
+import { useTranslation } from "react-i18next";
+import type { CopyableReportCardsQuery } from "../generated/graphql";
+import {
+  BaseDraftReportContextDocument,
+  ReportTabDetailsFragment,
+  Sketch,
+  useAddReportCardMutation,
+  useCopyableReportCardsQuery,
+} from "../generated/graphql";
+import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
+import {
+  CopyCardsFromReportPopover,
+  getCopiedFromCardId,
+} from "./components/CopyCardsFromReportPopover";
 import { DemonstrationSketchDropdown } from "./components/DemonstrationSketchDropdown";
-import { SortableReportContent } from "./SortableReportContent";
 import {
   MoveCardToTabModal,
   useMoveCardToTabState,
 } from "./components/MoveCardToTabModal";
 import { useCalculationDetailsModalState } from "./components/CalculationDetailsModal";
+import { BaseReportContext } from "./context/BaseReportContext";
+import { ReportUIStateContext } from "./context/ReportUIStateContext";
 import { ReportTabManagementModal } from "./ReportTabManagementModal";
-import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { PlusIcon } from "@radix-ui/react-icons";
+import { ReportTabs } from "./ReportTabs";
+import { SortableReportContent } from "./SortableReportContent";
+
+type CopyableSketchClassRow = NonNullable<
+  NonNullable<CopyableReportCardsQuery["project"]>["sketchClasses"]
+>[number];
 
 /** New cards are appended at the end of the tab; scroll the list to the bottom. */
 function scrollContainerToBottom(
   scrollContainer: HTMLElement,
   behavior: ScrollBehavior = "smooth"
 ) {
-  const top = Math.max(0, scrollContainer.scrollHeight - scrollContainer.clientHeight);
+  const top = Math.max(
+    0,
+    scrollContainer.scrollHeight - scrollContainer.clientHeight
+  );
   scrollContainer.scrollTo({ top, behavior });
 }
 
@@ -84,6 +97,48 @@ export default function ReportEditor({
   const openManageTabs = useCallback(() => setManageTabsOpen(true), []);
   const closeManageTabs = useCallback(() => setManageTabsOpen(false), []);
   const onError = useGlobalErrorHandler();
+
+  const projectId = baseContext.data?.sketchClass.projectId;
+  const copyCardsQuery = useCopyableReportCardsQuery({
+    variables: { projectId: projectId! },
+    skip: !projectId,
+    fetchPolicy: "cache-and-network",
+  });
+
+  const eligibleSketchClassCount = useMemo(() => {
+    const classes = copyCardsQuery.data?.project?.sketchClasses ?? [];
+    return classes.filter(
+      (sc: CopyableSketchClassRow) =>
+        sc.previewNewReports || sc.isGeographyClippingEnabled
+    ).length;
+  }, [copyCardsQuery.data?.project?.sketchClasses]);
+
+  const existingCopies = useMemo(() => {
+    const map = new Map<
+      number,
+      { cardId: number; tabTitle: string; position: number }
+    >();
+    const tabs = baseContext.data?.report?.tabs ?? [];
+    for (const tab of tabs) {
+      for (const card of tab.cards) {
+        const sourceId = getCopiedFromCardId(card.componentSettings);
+        if (sourceId != null) {
+          map.set(sourceId, {
+            cardId: card.id,
+            tabTitle: tab.title,
+            position: card.position,
+          });
+        }
+      }
+    }
+    return map;
+  }, [baseContext.data?.report?.tabs]);
+
+  const [reportActionsMenuOpen, setReportActionsMenuOpen] = useState(false);
+
+  const closeReportActionsMenu = useCallback(() => {
+    setReportActionsMenuOpen(false);
+  }, []);
 
   // Track a newly created card that needs to be scrolled into view and focused
   const [pendingNewCardId, setPendingNewCardId] = useState<number | null>(null);
@@ -172,7 +227,6 @@ export default function ReportEditor({
           componentSettings: {
             type: "textBlock",
           },
-          cardType: "TextBlock",
           body,
         },
         refetchQueries: sketchClassId
@@ -265,7 +319,10 @@ export default function ReportEditor({
                 setSelectedSketchId={setSelectedSketchId}
               />
             </div>
-            <DropdownMenu.Root>
+            <DropdownMenu.Root
+              open={reportActionsMenuOpen}
+              onOpenChange={setReportActionsMenuOpen}
+            >
               <DropdownMenu.Trigger disabled={editing != null} asChild>
                 <button
                   className={`p-1.5 rounded-full hover:bg-gray-100 text-gray-600 hover:text-gray-800 transition-colors ${
@@ -287,6 +344,7 @@ export default function ReportEditor({
                   className="bg-white rounded-md shadow-lg border border-gray-200 py-1 min-w-[160px] z-50"
                   sideOffset={5}
                   align="end"
+                  onCloseAutoFocus={(e: Event) => e.preventDefault()}
                 >
                   <DropdownMenu.Item
                     className="px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer outline-none"
@@ -294,6 +352,39 @@ export default function ReportEditor({
                   >
                     {t("Add Card")}
                   </DropdownMenu.Item>
+                  {eligibleSketchClassCount > 1 && projectId && (
+                    <DropdownMenu.Sub>
+                      <DropdownMenu.SubTrigger className="flex cursor-pointer items-center justify-between gap-6 rounded-sm px-3 py-2 text-sm text-gray-700 outline-none hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[state=open]:bg-gray-50">
+                        <span>{t("Copy From Another Report")}</span>
+                        <ChevronRightIcon className="w-4 h-4 shrink-0 text-gray-400" />
+                      </DropdownMenu.SubTrigger>
+                      <DropdownMenu.Portal>
+                        <DropdownMenu.SubContent
+                          className="z-[60] overflow-hidden rounded-lg border border-gray-200/90 bg-white p-0 shadow-xl outline-none ring-1 ring-black/[0.04] min-w-[min(26rem,var(--radix-dropdown-menu-content-available-width))] max-w-[92vw]"
+                          sideOffset={8}
+                          alignOffset={0}
+                          collisionPadding={16}
+                        >
+                          <CopyCardsFromReportPopover
+                            targetTabId={
+                              selectedTabId ??
+                              baseContext.data!.report?.tabs?.[0]?.id ??
+                              0
+                            }
+                            currentSketchClassId={
+                              baseContext.data!.sketchClass.id
+                            }
+                            draftReportId={baseContext.data!.report?.id ?? null}
+                            demonstrationSketchId={selectedSketchId}
+                            existingCopies={existingCopies}
+                            onDone={closeReportActionsMenu}
+                            copyQueryData={copyCardsQuery.data}
+                            copyQueryLoading={copyCardsQuery.loading}
+                          />
+                        </DropdownMenu.SubContent>
+                      </DropdownMenu.Portal>
+                    </DropdownMenu.Sub>
+                  )}
                   <DropdownMenu.Item
                     className="px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer outline-none"
                     onSelect={openManageTabs}

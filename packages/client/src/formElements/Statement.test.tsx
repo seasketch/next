@@ -21,6 +21,19 @@ test("Component renders with custom body", async () => {
       editable={false}
       isRequired={false}
       componentSettings={{}}
+      alternateLanguageSettings={{}}
+      isSpatial={false}
+      featureNumber={0}
+      onRequestStageChange={function (stage: number): void {
+        throw new Error("Function not implemented.");
+      }}
+      stage={0}
+      onRequestNext={function (): void {
+        throw new Error("Function not implemented.");
+      }}
+      onRequestPrevious={function (): void {
+        throw new Error("Function not implemented.");
+      }}
     />
   );
   await waitFor(() => {

@@ -20,7 +20,7 @@ const makeArgs = (componentSettings: NumberProps) => ({
 });
 
 test("Component renders with custom body", async () => {
-  render(<Number {...makeArgs({ defaultValue: 0 })} />);
+  render(<Number {...(makeArgs({ defaultValue: 0 }) as any)} />);
   await waitFor(() => {
     expect(screen.getByDisplayValue("0")).toBeInTheDocument();
   });
@@ -29,7 +29,7 @@ test("Component renders with custom body", async () => {
 
 test("Entering text updates the value", async () => {
   const args = makeArgs({ defaultValue: 0 });
-  render(<Number {...args} />);
+  render(<Number {...(args as any)} />);
   await waitFor(() => {
     expect(screen.getByDisplayValue("0")).toBeInTheDocument();
   });
@@ -40,7 +40,7 @@ test("Entering text updates the value", async () => {
 
 test("validates entry", async () => {
   const args = makeArgs({ min: 0, max: 10, defaultValue: 0 });
-  render(<Number {...args} submissionAttempted={true} />);
+  render(<Number {...(args as any)} submissionAttempted={true} />);
   await waitFor(() => {
     expect(screen.getByDisplayValue("0")).toBeInTheDocument();
   });

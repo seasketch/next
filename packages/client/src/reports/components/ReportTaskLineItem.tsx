@@ -490,8 +490,8 @@ export default function ReportTaskLineItem({
   }
 
   return (
-    <li className="flex items-center">
-      <span className="flex-1 truncate text-sm">{title}</span>
+    <li className="flex items-center gap-2 min-w-0">
+      <span className="flex-1 min-w-0 text-sm">{title}</span>
       {statusBlock}
     </li>
   );

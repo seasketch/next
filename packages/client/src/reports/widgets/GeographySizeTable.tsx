@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
-import { useMemo, useState } from "react";
+import { Fragment, useMemo, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
+import * as Tooltip from "@radix-ui/react-tooltip";
 import { CaretDownIcon, LayersIcon } from "@radix-ui/react-icons";
 import {
   Metric,
@@ -20,6 +21,11 @@ import { useBaseReportContext } from "../context/BaseReportContext";
 import ReportLayerVisibilityCheckbox from "../components/ReportLayerVisibilityCheckbox";
 import { useOverlayOptionsForLayerToggle } from "./LayerToggleControls";
 import { LayerPickerDropdown, LayerPickerValue } from "./LayerPickerDropdown";
+import CollectionExpandableName from "./collection/CollectionExpandableName";
+import SketchOverlapHint from "./collection/SketchOverlapHint";
+import { sketchContributionsGeographyTotalArea } from "./collection/sketchContributions";
+import type { GeographySketchContribution } from "./collection/sketchContributions";
+import { useCollectionSketchExpand } from "./collection/useCollectionSketchExpand";
 
 type GeographySizeTableSettings = {
   unit?: "hectare" | "acre" | "mile" | "kilometer";
@@ -58,6 +64,16 @@ export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
     [componentSettings?.excludeGeographies]
   );
 
+  const baseReportContext = useBaseReportContext();
+  const {
+    isCollection,
+    sketchNameById,
+    childSketchIds,
+    expandedRowKeys,
+    toggleRow,
+    hideCaretExpandTooltip,
+  } = useCollectionSketchExpand(baseReportContext.sketchClass);
+
   const rows: GeographySizeTableRow[] = useMemo(() => {
     return geographies
       .filter((geography) => !excludeSet.has(geography.id))
@@ -70,22 +86,42 @@ export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
         const resolvedLayerStableId = hasOverride
           ? geoOverrides[geoKey] ?? undefined
           : defaultStableId;
-        const stableId = enableLayerToggles
-          ? resolvedLayerStableId
-          : undefined;
+        const stableId = enableLayerToggles ? resolvedLayerStableId : undefined;
 
         const sketchMetrics = metrics.filter(
           (m) =>
             subjectIsFragment(m.subject) &&
             m.subject.geographies.includes(geography.id)
         ) as Pick<Metric, "type" | "value">[];
-        if (sketchMetrics.length === 0) {
+        const geographyMetrics = metrics.filter(
+          (m) => subjectIsGeography(m.subject) && m.subject.id === geography.id
+        ) as Pick<Metric, "type" | "value">[];
+
+        const geographyTotalSqKm =
+          geographyMetrics.length > 0
+            ? combineMetricsForFragments<TotalAreaMetric>(geographyMetrics)
+                .value ?? 0
+            : 0;
+
+        const sketchContributions = isCollection
+          ? sketchContributionsGeographyTotalArea(
+              metrics,
+              geography.id,
+              geographyTotalSqKm,
+              childSketchIds,
+              sketchNameById,
+              t
+            )
+          : undefined;
+
+        if (sketchMetrics.length === 0 || geographyMetrics.length === 0) {
           return {
             geographyId: geography.id,
             geographyName: geography.name,
             areaSqKm: 0,
             fractionOfTotal: 0,
             stableId,
+            sketchContributions,
           };
         }
 
@@ -94,16 +130,8 @@ export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
 
         const areaSqKm = areaSqKmMetric.value ?? 0;
 
-        const geographyAreaMetric = combineMetricsForFragments<TotalAreaMetric>(
-          metrics.filter(
-            (m) =>
-              subjectIsGeography(m.subject) && m.subject.id === geography.id
-          ) as Pick<Metric, "type" | "value">[]
-        );
-
-        const geographyArea = geographyAreaMetric.value ?? 0;
         const fractionOfTotal =
-          geographyArea > 0 ? areaSqKm / geographyArea : 0;
+          geographyTotalSqKm > 0 ? areaSqKm / geographyTotalSqKm : 0;
 
         return {
           geographyId: geography.id,
@@ -111,6 +139,7 @@ export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
           areaSqKm,
           fractionOfTotal,
           stableId,
+          sketchContributions,
         };
       });
   }, [
@@ -119,6 +148,10 @@ export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
     excludeSet,
     enableLayerToggles,
     componentSettings?.geographyStableIds,
+    isCollection,
+    sketchNameById,
+    childSketchIds,
+    t,
   ]);
 
   const hasVisibilityColumn = useMemo(
@@ -126,76 +159,150 @@ export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
     [rows, enableLayerToggles]
   );
 
+  const areaColumnAlignClass = "text-center";
+
   return (
-    <div className="mt-3.5 overflow-hidden rounded-md border border-gray-200">
-      <table className="min-w-full divide-y divide-gray-200">
-        <thead className="bg-gray-50">
-          <tr>
+    <div className="mt-3.5 rounded-md border border-gray-200 shadow-sm w-full max-w-full bg-white overflow-hidden">
+      <Tooltip.Provider delayDuration={400}>
+        <div className="divide-y divide-gray-100">
+          {/* Header row — matches OverlappingAreasTable / FeatureCountTable */}
+          <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200">
             {hasVisibilityColumn && (
-              <th
-                scope="col"
-                className="w-8 px-2 py-2 text-center text-xs font-semibold uppercase tracking-wide text-gray-600"
-              >
-                <LayersIcon
-                  className="w-4 h-4 text-gray-500 inline-block"
-                  aria-hidden
-                />
-              </th>
+              <div className="flex-none w-6 flex justify-center text-xs text-gray-600 font-semibold uppercase tracking-wide">
+                <LayersIcon className="w-4 h-4 text-gray-500" aria-hidden />
+              </div>
             )}
-            <th
-              scope="col"
-              className="px-3 py-2 text-left text-xs font-semibold uppercase tracking-wide text-gray-600"
-            >
+            <div className="flex-1 min-w-0 text-gray-600 text-xs font-semibold uppercase tracking-wide">
               {componentSettings.geographyNameLabel || t("Geography")}
-            </th>
-            <th
-              scope="col"
-              className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-600"
+            </div>
+            <div
+              className={`flex-none ${areaColumnAlignClass} text-gray-600 text-xs font-semibold uppercase tracking-wide min-w-[80px]`}
             >
               {componentSettings.areaLabel || t("Area")}
-            </th>
-            <th
-              scope="col"
-              className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-600"
-            >
+            </div>
+            <div className="flex-none text-right text-gray-600 text-xs font-semibold uppercase tracking-wide min-w-[70px]">
               {componentSettings.percentLabel || t("Percent")}
-            </th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-gray-100 bg-white">
-          {rows.map((row) => (
-            <tr
-              key={row.geographyId}
-              className="odd:bg-white even:bg-gray-50 hover:bg-gray-100"
-            >
-              {hasVisibilityColumn && (
-                <td className="w-8 px-2 py-2 text-center">
-                  {row.stableId ? (
-                    <ReportLayerVisibilityCheckbox stableId={row.stableId} />
-                  ) : null}
-                </td>
-              )}
-              <td className="px-3 py-2 text-sm text-gray-800">
-                {row.geographyName}
-              </td>
-              <td className="px-3 py-2 text-sm text-gray-800 text-right tabular-nums">
-                {loading ? (
-                  <MetricLoadingDots className="mr-1" />
-                ) : (
-                  formatters.area(row.areaSqKm)
+            </div>
+          </div>
+          {rows.map((row) => {
+            const rowKey = String(row.geographyId);
+            const expanded =
+              isCollection && expandedRowKeys.has(rowKey);
+            const contrib = row.sketchContributions ?? [];
+            return (
+              <Fragment key={row.geographyId}>
+                <div
+                  className={`flex items-center gap-3 px-3 py-2 hover:bg-gray-50 ${
+                    row.areaSqKm === 0 ? "opacity-50" : ""
+                  }`}
+                >
+                  {hasVisibilityColumn && (
+                    <div className="flex-none w-6 flex justify-center">
+                      {row.stableId ? (
+                        <ReportLayerVisibilityCheckbox
+                          stableId={row.stableId}
+                        />
+                      ) : null}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0 text-gray-800 text-sm">
+                    <CollectionExpandableName
+                      displayLabel={row.geographyName}
+                      truncateRowLabels={false}
+                      expanded={expanded}
+                      onToggle={() => toggleRow(rowKey)}
+                      loading={loading}
+                      isCollection={isCollection}
+                      caretTooltipEnabled={!hideCaretExpandTooltip}
+                      caretTooltipLabel={t("Expand sketch details")}
+                      expandAriaLabelExpanded={t(
+                        "Collapse sketch breakdown for {{name}}",
+                        { name: row.geographyName },
+                      )}
+                      expandAriaLabelCollapsed={t(
+                        "Expand sketch breakdown for {{name}}",
+                        { name: row.geographyName },
+                      )}
+                    />
+                  </div>
+                  <div
+                    className={`flex-none ${areaColumnAlignClass} text-gray-900 tabular-nums text-sm min-w-[80px]`}
+                  >
+                    {loading ? (
+                      <MetricLoadingDots />
+                    ) : (
+                      formatters.area(row.areaSqKm)
+                    )}
+                  </div>
+                  <div className="flex-none text-right text-gray-700 tabular-nums text-sm min-w-[70px]">
+                    {loading ? (
+                      <MetricLoadingDots />
+                    ) : (
+                      formatters.percent(row.fractionOfTotal)
+                    )}
+                  </div>
+                </div>
+                {isCollection && expanded && contrib.length === 0 && (
+                  <div
+                    className={`flex flex-wrap items-center gap-3 border-t border-slate-200/80 bg-slate-100 px-3 py-2.5 text-sm italic text-gray-600 ${
+                      row.areaSqKm === 0 ? "opacity-50" : ""
+                    }`}
+                  >
+                    {hasVisibilityColumn && (
+                      <div className="flex-none w-6" aria-hidden />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      {t(
+                        "No individual sketches contributed area in this geography.",
+                      )}
+                    </div>
+                  </div>
                 )}
-              </td>
-              <td className="px-3 py-2 text-sm text-gray-800 text-right tabular-nums">
-                {loading ? (
-                  <MetricLoadingDots className="mr-1" />
-                ) : (
-                  formatters.percent(row.fractionOfTotal)
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                {isCollection &&
+                  expanded &&
+                  contrib.map((c) => (
+                    <div
+                      key={`${row.geographyId}-sketch-${c.sketchId}`}
+                      className={`flex flex-wrap items-center gap-3 border-t border-slate-200/80 bg-slate-100 px-3 py-2 hover:bg-slate-200/30 ${
+                        row.areaSqKm === 0 ? "opacity-50" : ""
+                      }`}
+                    >
+                      {hasVisibilityColumn && (
+                        <div className="flex-none w-6" aria-hidden />
+                      )}
+                      <div className="flex min-w-0 flex-1 items-center gap-1 text-sm text-gray-800">
+                        <span className="min-w-0">{c.sketchName}</span>
+                        <SketchOverlapHint
+                          hasOverlap={c.hasOverlap}
+                          sketchDisplayName={c.sketchName}
+                          overlapPartnerSketchNames={
+                            c.overlapPartnerSketchNames
+                          }
+                        />
+                      </div>
+                      <div
+                        className={`flex-none ${areaColumnAlignClass} tabular-nums text-sm text-gray-900 min-w-[80px]`}
+                      >
+                        {loading ? (
+                          <MetricLoadingDots />
+                        ) : (
+                          formatters.area(c.areaSqKm)
+                        )}
+                      </div>
+                      <div className="flex-none min-w-[70px] text-right tabular-nums text-sm text-gray-700">
+                        {loading ? (
+                          <MetricLoadingDots />
+                        ) : (
+                          formatters.percent(c.fractionOfTotal)
+                        )}
+                      </div>
+                    </div>
+                  ))}
+              </Fragment>
+            );
+          })}
+        </div>
+      </Tooltip.Provider>
     </div>
   );
 };
@@ -206,6 +313,7 @@ type GeographySizeTableRow = {
   areaSqKm: number;
   fractionOfTotal: number;
   stableId?: string;
+  sketchContributions?: GeographySketchContribution[];
 };
 
 function GeographiesPopover({
