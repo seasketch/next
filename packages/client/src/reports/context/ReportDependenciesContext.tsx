@@ -46,7 +46,7 @@ export default function ReportDependenciesContextProvider({
         sketchId: sketchId!,
       },
       skip: !reportId || !sketchId,
-      notifyOnNetworkStatusChange: true,
+      // notifyOnNetworkStatusChange: true,
     });
 
   // Apollo's `loading` is false during refetches; after cache eviction the
@@ -59,7 +59,7 @@ export default function ReportDependenciesContextProvider({
 
   const contextValue = useMemo(() => {
     let fragmentCalculationsRuntime: number | undefined = undefined;
-    if (!dependenciesQueryLoading) {
+    if (!loading) {
       fragmentCalculationsRuntime = 0;
       for (const metric of data?.report?.dependencies?.metrics || []) {
         if (
@@ -76,14 +76,14 @@ export default function ReportDependenciesContextProvider({
       overlaySources: data?.report?.dependencies?.overlaySources || [],
       cardDependencyLists:
         data?.report?.dependencies?.cardDependencyLists || [],
-      loading: dependenciesQueryLoading,
+      loading,
       fragmentCalculationsRuntime,
       error,
     };
-  }, [data, dependenciesQueryLoading, error]);
+  }, [data, loading, error]);
 
   useEffect(() => {
-    if (dependenciesQueryLoading) {
+    if (loading) {
       return;
     }
     const anyMetricsLoading = contextValue.metrics.some(
@@ -110,7 +110,7 @@ export default function ReportDependenciesContextProvider({
     };
   }, [
     data,
-    dependenciesQueryLoading,
+    loading,
     refetch,
     contextValue.metrics,
     contextValue.overlaySources,
