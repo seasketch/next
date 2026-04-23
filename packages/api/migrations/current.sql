@@ -446,3 +446,92 @@ CREATE OR REPLACE FUNCTION public.update_report_card(card_id integer, component_
   $$;
 
   grant execute on function update_report_card to seasketch_user;
+
+-- Make get_or_create_spatial_metric concurrency-safe. The previous
+-- SELECT-then-INSERT implementation could race between concurrent transactions
+-- (e.g. the parallel refetches of ReportDependencies and
+-- DraftReportDependencies that fire right after recalculate_spatial_metrics
+-- deletes rows), producing a duplicate key violation on
+-- spatial_metrics_unique_metric. Use INSERT ... ON CONFLICT DO NOTHING and
+-- fall back to a SELECT to read the row inserted by the winning transaction.
+CREATE OR REPLACE FUNCTION public.get_or_create_spatial_metric(
+    p_subject_fragment_id text,
+    p_subject_geography_id integer,
+    p_type public.spatial_metric_type,
+    p_overlay_source_url text,
+    p_parameters jsonb,
+    p_source_processing_job_dependency text,
+    p_project_id integer,
+    p_dependency_hash text
+  ) RETURNS jsonb
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  declare
+    metric_id bigint;
+  begin
+    -- Validation
+    if p_subject_fragment_id is not null and p_subject_geography_id is not null then
+      raise exception 'Exactly one of subject_fragment_id or subject_geography_id must be provided';
+    end if;
+    if p_subject_fragment_id is null and p_subject_geography_id is null then
+      raise exception 'Exactly one of subject_fragment_id or subject_geography_id must be provided';
+    end if;
+    if p_type is null then
+      raise exception 'type parameter is required';
+    end if;
+    if (p_overlay_source_url is null and p_source_processing_job_dependency is null) and p_type != 'total_area' then
+      raise exception 'overlay_source_url or source_processing_job_dependency parameter is required for non-total_area metrics';
+    end if;
+
+    -- Atomic upsert: if another transaction inserted the same row first, this
+    -- no-ops and returns no id via RETURNING. We then fall back to a SELECT
+    -- to fetch the winner's row.
+    insert into spatial_metrics (
+      subject_fragment_id,
+      subject_geography_id,
+      type,
+      overlay_source_url,
+      source_processing_job_dependency,
+      project_id,
+      parameters,
+      dependency_hash
+    ) values (
+      p_subject_fragment_id,
+      p_subject_geography_id,
+      p_type,
+      p_overlay_source_url,
+      p_source_processing_job_dependency,
+      p_project_id,
+      p_parameters,
+      p_dependency_hash
+    )
+    on conflict (
+      coalesce(overlay_source_url, ''),
+      coalesce(source_processing_job_dependency, ''),
+      coalesce(subject_fragment_id, ''),
+      coalesce(subject_geography_id, -999999),
+      type,
+      parameters,
+      dependency_hash
+    ) do nothing
+    returning id into metric_id;
+
+    if metric_id is null then
+      select id into metric_id
+      from spatial_metrics
+      where coalesce(overlay_source_url, '') = coalesce(p_overlay_source_url, '')
+        and coalesce(source_processing_job_dependency, '') = coalesce(p_source_processing_job_dependency, '')
+        and coalesce(subject_fragment_id, '') = coalesce(p_subject_fragment_id, '')
+        and coalesce(subject_geography_id, -999999) = coalesce(p_subject_geography_id, -999999)
+        and type = p_type
+        and parameters = p_parameters
+        and dependency_hash = p_dependency_hash;
+    end if;
+
+    return get_spatial_metric(metric_id);
+  end;
+$$;
+
+comment on function get_or_create_spatial_metric is '@omit';
+
+grant execute on function get_or_create_spatial_metric to anon;
