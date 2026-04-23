@@ -277,7 +277,7 @@
     "build": "npm run css:build && NODE_OPTIONS=--openssl-legacy-provider craco build",
     "analyze": "source-map-explorer 'build/static/js/*.js'",
     "analyze:serviceWorker": "source-map-explorer 'build/service-worker.js'",
-    "test": "NODE_OPTIONS=--openssl-legacy-provider craco test",
+    "test": "NODE_OPTIONS=--openssl-legacy-provider craco test --watchAll=false",
     "eject": "react-scripts eject",
     "translation:publish": "bin/publishLocalizationTerms.js",
     "translation:import": "bin/importTranslations.js",

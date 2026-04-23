@@ -543,21 +543,24 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
     useWidgetDependencies(dependencies);
 
   // Memoize widgetProps to maintain stable reference
-  const widgetProps = useMemo<ReportWidgetProps<any>>(
-    () => ({
-      dependencies,
-      componentSettings,
-      metrics,
-      sources,
-      loading,
-      errors,
-      geographies,
-      marks: node.marks as Mark[] | undefined,
-      node,
-      sketchClass,
-      alternateLanguageSettings,
-      lang,
-    }),
+  const widgetProps = useMemo<ReportWidgetProps<any> | null>(
+    () =>
+      sketchClass
+        ? {
+            dependencies,
+            componentSettings,
+            metrics,
+            sources,
+            loading,
+            errors,
+            geographies,
+            marks: node.marks as Mark[] | undefined,
+            node,
+            sketchClass,
+            alternateLanguageSettings,
+            lang,
+          }
+        : null,
     [
       dependencies,
       componentSettings,
@@ -572,6 +575,26 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
       lang,
     ]
   );
+
+  if (!sketchClass) {
+    if (loading) {
+      return node.isInline ? (
+        <span className="inline-flex align-middle">
+          <Spinner mini />
+        </span>
+      ) : (
+        <div className="my-2 w-full rounded border border-gray-200 bg-white p-2">
+          <Spinner mini />
+        </div>
+      );
+    }
+
+    const missingSketchClassErrors = ["Sketch class not available"];
+    if (node.isInline) {
+      return <WidgetErrorInline errors={missingSketchClassErrors} cardId={cardId} />;
+    }
+    return <WidgetErrorBlock errors={missingSketchClassErrors} cardId={cardId} />;
+  }
 
   // Error components access ReportContext themselves, so we only subscribe
   // to context when there are actual errors (exceptional case)

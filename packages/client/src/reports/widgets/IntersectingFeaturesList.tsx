@@ -1,12 +1,6 @@
 import { useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import {
-  MetricDependency,
-  subjectIsFragment,
-  combineMetricsForFragments,
-  PresenceTableMetric,
-  Metric,
-} from "overlay-engine";
+import { MetricDependency } from "overlay-engine";
 import { ReportWidget } from "./widgets";
 import {
   ReportWidgetTooltipControls,
@@ -23,11 +17,10 @@ import { useNumberFormatters } from "../hooks/useNumberFormatters";
 import { GeostatsLayer, isGeostatsLayer } from "@seasketch/geostats-types";
 import { CaretDownIcon, Pencil2Icon } from "@radix-ui/react-icons";
 import * as Popover from "@radix-ui/react-popover";
-
-type PresenceTableValue = {
-  __id: number;
-  [attribute: string]: any;
-};
+import {
+  combinePresenceTableMetrics,
+  PresenceTableValue,
+} from "./IntersectingFeaturesList.utils";
 type IntersectingFeaturesListSettings = {
   labelColumn?: string;
   maxDisplayItems?: number;
@@ -49,59 +42,8 @@ export const IntersectingFeaturesList: ReportWidget<
   const maxDisplayItems =
     maxDisplayItemsSetting === 0 ? Infinity : maxDisplayItemsSetting;
 
-  // Combine fragment metrics using combineMetricsForFragments
   const tableData = useMemo(() => {
-    if (loading) {
-      return { values: [], exceededLimit: false, maxResults: 25 };
-    }
-
-    const fragmentMetrics = metrics.filter(
-      (m) => subjectIsFragment(m.subject) && m.type === "presence_table"
-    );
-
-    if (fragmentMetrics.length === 0) {
-      return { values: [], exceededLimit: false, maxResults: 25 };
-    }
-
-    // Filter valid metrics
-    const validMetrics = fragmentMetrics
-      .filter((m) => {
-        const value = m.value;
-        return (
-          value !== null &&
-          value !== undefined &&
-          typeof value === "object" &&
-          !Array.isArray(value) &&
-          "values" in value
-        );
-      })
-      .map((m) => ({
-        type: m.type,
-        value: m.value,
-      })) as Pick<Metric, "type" | "value">[];
-
-    if (validMetrics.length === 0) {
-      return { values: [], exceededLimit: false, maxResults: 25 };
-    }
-
-    try {
-      const combined = combineMetricsForFragments(
-        validMetrics
-      ) as PresenceTableMetric;
-
-      // Get maxResults from the first metric's parameters
-      const maxResults =
-        (fragmentMetrics[0]?.parameters as any)?.maxResults ?? 25;
-
-      return {
-        values: combined.value.values,
-        exceededLimit: combined.value.exceededLimit,
-        maxResults,
-      };
-    } catch (error) {
-      console.error("Failed to combine presence_table metrics:", error);
-      return { values: [], exceededLimit: false, maxResults: 25 };
-    }
+    return combinePresenceTableMetrics(metrics, loading);
   }, [metrics, loading]);
 
   // Get available label columns from geostats
@@ -185,6 +127,18 @@ export const IntersectingFeaturesList: ReportWidget<
     maxDisplayItems !== Infinity && tableData.values.length > maxDisplayItems;
 
   if (!loading && tableData.values.length === 0) {
+    if (tableData.combineError) {
+      return (
+        <div className="mt-3 rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+          <div>
+            <Trans ns="reports">Unable to display intersecting features.</Trans>
+          </div>
+          <div className="mt-1 text-xs text-amber-700">
+            {tableData.combineError}
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="mt-3 border border-black/10 rounded bg-gray-50 px-3 py-2 text-gray-600 text-sm">
         <Trans ns="reports">No overlapping features found.</Trans>

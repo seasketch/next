@@ -25,6 +25,8 @@ import {
   ClassTableRowComponentSettings,
   combineMetricsBySource,
   getClassTableRows,
+  hasClassTableRowVisibilityToggle,
+  resolveClassTableRowStableId,
   shouldTruncateClassTableRowLabels,
 } from "./ClassTableRows";
 import {
@@ -227,8 +229,12 @@ export const RasterProportionTable: ReportWidget<
   ]);
 
   const hasVisibilityColumn = useMemo(
-    () => rows.some((r) => r.stableId),
-    [rows]
+    () =>
+      hasClassTableRowVisibilityToggle(
+        rows,
+        componentSettings.rowLinkedStableIds
+      ),
+    [rows, componentSettings.rowLinkedStableIds]
   );
 
   const {
@@ -273,6 +279,10 @@ export const RasterProportionTable: ReportWidget<
             !loading && row.geographySum > 0
               ? row.sketchSum / row.geographySum
               : 0;
+          const stableId = resolveClassTableRowStableId(
+            row,
+            componentSettings.rowLinkedStableIds
+          );
           const expanded =
             isCollection && expandedRowKeys.has(row.key);
           const sketchLines = sketchLinesByRowKey.get(row.key) ?? [];
@@ -285,8 +295,8 @@ export const RasterProportionTable: ReportWidget<
             >
               {hasVisibilityColumn && (
                 <div className="flex-none w-6 flex justify-center">
-                  {row.stableId ? (
-                    <ReportLayerVisibilityCheckbox stableId={row.stableId} />
+                  {stableId ? (
+                    <ReportLayerVisibilityCheckbox stableId={stableId} />
                   ) : null}
                 </div>
               )}

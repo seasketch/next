@@ -32,7 +32,7 @@ export type WidgetDependenciesResult = {
     Geography,
     "id" | "name" | "translatedProps" | "stableIds"
   >[];
-  sketchClass: SketchClassForWidgets;
+  sketchClass: SketchClassForWidgets | null;
 };
 
 /**
@@ -268,7 +268,7 @@ function useStableArray(arr: string[]): string[] {
   const ref = useRef<string[]>(arr);
   const prevKey = useRef<string>("");
 
-  const key = arr.sort().join("|");
+  const key = [...arr].sort().join("|");
   if (key !== prevKey.current) {
     prevKey.current = key;
     ref.current = arr;
@@ -303,24 +303,17 @@ function useStableGeographies(
  */
 function useStableSketchClass(
   sketchClass: SketchClassForWidgets | null
-): SketchClassForWidgets {
+): SketchClassForWidgets | null {
   const ref = useRef<SketchClassForWidgets | null>(sketchClass);
   const prevKey = useRef<string>("");
 
-  if (!sketchClass) {
-    // Return existing value if available, otherwise throw
-    if (ref.current) {
-      return ref.current;
-    }
-    throw new Error("sketchClass is required but not available in context");
-  }
-
-  // Key based on id and geometry type - these rarely change
-  const key = `${sketchClass.id}:${sketchClass.geometryType}`;
+  const key = sketchClass
+    ? `${sketchClass.id}:${sketchClass.geometryType}`
+    : "null";
   if (key !== prevKey.current) {
     prevKey.current = key;
     ref.current = sketchClass;
   }
 
-  return ref.current!;
+  return ref.current;
 }

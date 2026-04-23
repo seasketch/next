@@ -34,6 +34,8 @@ import {
   ClassTableRowComponentSettings,
   combineMetricsBySource,
   getClassTableRows,
+  hasClassTableRowVisibilityToggle,
+  resolveClassTableRowStableId,
   shouldTruncateClassTableRowLabels,
 } from "./ClassTableRows";
 import {
@@ -79,7 +81,7 @@ export const FeaturePresenceTable: ReportWidget<
   const truncateRowLabels = shouldTruncateClassTableRowLabels(componentSettings);
 
   const { clippingGeography } = usePrimaryGeography(sketchClass, geographies);
-  const primaryGeographyId = clippingGeography?.id ?? 0;
+  const primaryGeographyId = clippingGeography?.id;
 
   const rows = useMemo<FeaturePresenceRow[]>(() => {
     const classRows = getClassTableRows({
@@ -101,17 +103,15 @@ export const FeaturePresenceTable: ReportWidget<
       }));
     }
 
+    if (!primaryGeographyId) {
+      throw new Error("Primary geography not found.");
+    }
+
     const combinedMetrics = combineMetricsBySource<CountMetric>(
-      metrics as any,
-      sources as any,
+      metrics,
+      sources,
       primaryGeographyId
-    ) as Record<
-      string,
-      {
-        fragments: CountMetric;
-        geographies: CountMetric;
-      }
-    >;
+    );
 
     let rows: FeaturePresenceRow[] = classRows.map((r) => {
       const combinedForSource = combinedMetrics[r.sourceId];
@@ -216,13 +216,9 @@ export const FeaturePresenceTable: ReportWidget<
   );
   const hasVisibilityColumn = useMemo(
     () =>
-      rows.some(
-        (row) =>
-          row.stableId ||
-          componentSettings.rowLinkedStableIds?.[row.key] ||
-          (row.groupByKey
-            ? componentSettings.rowLinkedStableIds?.[row.groupByKey]
-            : undefined)
+      hasClassTableRowVisibilityToggle(
+        rows,
+        componentSettings.rowLinkedStableIds
       ),
     [rows, componentSettings.rowLinkedStableIds]
   );
@@ -256,12 +252,10 @@ export const FeaturePresenceTable: ReportWidget<
             </div>
           </div>
           {paginatedRows.map((row) => {
-            const stableId =
-              row.stableId ||
-              componentSettings.rowLinkedStableIds?.[row.key] ||
-              (row.groupByKey
-                ? componentSettings.rowLinkedStableIds?.[row.groupByKey]
-                : undefined);
+            const stableId = resolveClassTableRowStableId(
+              row,
+              componentSettings.rowLinkedStableIds
+            );
             const isPresent = row.count > 0;
             const displayLabel =
               row.key === "*" ? t("All features") : row.label;

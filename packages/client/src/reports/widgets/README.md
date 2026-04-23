@@ -28,3 +28,13 @@ Widgets are primarily configured using a tooltip menu. It is important to mainta
 - Use common input controls defined in src/reports/widgets such as UnitSelector.tsx when you can. Don't reimplement the wheel all the time.
 - Inputs should be organized into a set of inline controls on the tooltip when possible, but when there are too many and inputs form distinct groups, they may be broken out into popovers. Again, use reusable components such as those in src/editor/TooltipMenu.tsx rather than inventing your own.
 - Each component's tooltip should have a TooltipMorePopover. These may contain extra settings that aren't often used, but most importantly each should indicate the component type (see FeaturePresenceTable for an example).
+
+## Shared Table Widget Conventions
+
+Several widgets render the same underlying "class table" pattern. To keep behavior consistent and avoid regressions:
+
+- Build rows with `getClassTableRows()` and keep widget-specific metric decoration separate from row construction.
+- Resolve layer visibility from both `row.stableId` and `componentSettings.rowLinkedStableIds` using the shared helpers in `ClassTableRows.ts`. Do not hand-roll this logic per widget.
+- Prefer shared collection helpers like `useCollectionSketchExpand()` and `sketchContributionsForClassTableRow()` over widget-specific breakdown implementations.
+- When primary geography context is required for metric combination, fail fast rather than silently substituting a sentinel id.
+- Add focused tests around shared helpers and edge cases before copying table behavior into a new widget.

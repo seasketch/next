@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import { subjectIsFragment, subjectIsGeography } from "overlay-engine";
-import type { ClassTableRow } from "./ClassTableRows";
+import { ClassTableRow } from "./ClassTableRows";
 import { useNumberFormatters } from "../hooks/useNumberFormatters";
 import {
   CompatibleSpatialMetricDetailsFragment,

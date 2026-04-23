@@ -25,6 +25,8 @@ import {
   ClassTableRowComponentSettings,
   combineMetricsBySource,
   getClassTableRows,
+  hasClassTableRowVisibilityToggle,
+  resolveClassTableRowStableId,
   shouldTruncateClassTableRowLabels,
 } from "./ClassTableRows";
 import {
@@ -223,7 +225,6 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
     t,
   ]);
 
-  const displayRows = loading ? rows : rows;
   const {
     currentPage,
     setCurrentPage,
@@ -233,7 +234,7 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
     totalPages,
     totalRows,
     pageBounds,
-  } = usePagination(displayRows, rowsPerPage);
+  } = usePagination(rows, rowsPerPage);
 
   const hasAnyColor = useMemo(
     () => showColorSwatches && rows.some(classTableRowHasSwatch),
@@ -244,13 +245,9 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
 
   const hasVisibilityColumn = useMemo(
     () =>
-      rows.some(
-        (row) =>
-          row.stableId ||
-          componentSettings.rowLinkedStableIds?.[row.key] ||
-          (row.groupByKey
-            ? componentSettings.rowLinkedStableIds?.[row.groupByKey]
-            : undefined)
+      hasClassTableRowVisibilityToggle(
+        rows,
+        componentSettings.rowLinkedStableIds
       ),
     [rows, componentSettings.rowLinkedStableIds]
   );
@@ -297,12 +294,10 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
             row.geographyTotal > 0
               ? row.count / row.geographyTotal
               : undefined;
-          const stableId =
-            row.stableId ||
-            componentSettings.rowLinkedStableIds?.[row.key] ||
-            (row.groupByKey
-              ? componentSettings.rowLinkedStableIds?.[row.groupByKey]
-              : undefined);
+          const stableId = resolveClassTableRowStableId(
+            row,
+            componentSettings.rowLinkedStableIds
+          );
           const displayLabel =
             row.key === "*" ? t("All features") : row.label;
           const expanded =

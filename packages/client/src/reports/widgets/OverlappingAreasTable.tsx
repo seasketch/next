@@ -29,6 +29,8 @@ import {
   ClassTableRowComponentSettings,
   combineMetricsBySource,
   getClassTableRows,
+  hasClassTableRowVisibilityToggle,
+  resolveClassTableRowStableId,
   shouldTruncateClassTableRowLabels,
 } from "./ClassTableRows";
 import {
@@ -43,7 +45,7 @@ import { usePrimaryGeography } from "../hooks/usePrimaryGeography";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import {
   OverlapDebugTooltip,
-  type OverlapDebugTooltipRow,
+  OverlapDebugTooltipRow,
 } from "./OverlapDebugTooltip";
 import CollectionExpandableName from "./collection/CollectionExpandableName";
 import SketchOverlapHint from "./collection/SketchOverlapHint";
@@ -252,8 +254,12 @@ export const OverlappingAreasTable: ReportWidget<
   ]);
 
   const hasVisibilityColumn = useMemo(
-    () => rows.some((r) => r.stableId),
-    [rows]
+    () =>
+      hasClassTableRowVisibilityToggle(
+        rows,
+        componentSettings.rowLinkedStableIds
+      ),
+    [rows, componentSettings.rowLinkedStableIds]
   );
 
   const {
@@ -318,13 +324,10 @@ export const OverlappingAreasTable: ReportWidget<
             row.geographyTotal > 0
               ? row.overlap / row.geographyTotal
               : undefined;
-          if (percent && percent > 1.05) {
-            console.error(
-              new Error(
-                `Percent is greater than 100%. Value: ${percent * 100}%`
-              )
-            );
-          }
+          const stableId = resolveClassTableRowStableId(
+            row,
+            componentSettings.rowLinkedStableIds
+          );
           const expanded =
             isCollection && expandedRowKeys.has(row.key);
           const sketchLines = sketchLinesByRowKey.get(row.key) ?? [];
@@ -337,8 +340,8 @@ export const OverlappingAreasTable: ReportWidget<
             >
               {hasVisibilityColumn && (
                 <div className="flex-none w-6 flex justify-center">
-                  {row.stableId ? (
-                    <ReportLayerVisibilityCheckbox stableId={row.stableId} />
+                  {stableId ? (
+                    <ReportLayerVisibilityCheckbox stableId={stableId} />
                   ) : null}
                 </div>
               )}

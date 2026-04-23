@@ -189,6 +189,26 @@ export function classTableRowKey(stableId: string, groupByKey?: string) {
   return `${stableId}-${groupByKey || "*"}`;
 }
 
+export function resolveClassTableRowStableId(
+  row: Pick<ClassTableRow, "stableId" | "key" | "groupByKey">,
+  linkedStableIds?: { [key: string]: string }
+) {
+  return (
+    row.stableId ||
+    linkedStableIds?.[row.key] ||
+    (row.groupByKey ? linkedStableIds?.[row.groupByKey] : undefined)
+  );
+}
+
+export function hasClassTableRowVisibilityToggle(
+  rows: Pick<ClassTableRow, "stableId" | "key" | "groupByKey">[],
+  linkedStableIds?: { [key: string]: string }
+) {
+  return rows.some((row) =>
+    Boolean(resolveClassTableRowStableId(row, linkedStableIds))
+  );
+}
+
 /**
  * Returns a list of ClassTableRows for the given dependencies and sources. In
  * report widgets like FeatureCountTable and OverlappingAreasTable, the widget
@@ -374,12 +394,24 @@ export function combineMetricsBySource<T extends Metric>(
     geographies: T;
   };
 } {
-  // handle duplicates
-  const metricIds = new Set<string>(metrics.map((m) => m.id));
-  metrics = metrics.filter((m) => m.state === SpatialMetricState.Complete);
-  metrics = Array.from(metricIds)
-    .map((id) => metrics.find((m) => m.id === id))
-    .filter(Boolean) as CompatibleSpatialMetricDetailsFragment[];
+  // Keep a single complete metric per id while preserving metrics without ids.
+  const dedupedMetrics: CompatibleSpatialMetricDetailsFragment[] = [];
+  const seenMetricIds = new Set<string | number>();
+  for (const metric of metrics) {
+    if (metric.state !== SpatialMetricState.Complete) {
+      continue;
+    }
+    if (metric.id === null || metric.id === undefined) {
+      dedupedMetrics.push(metric);
+      continue;
+    }
+    if (seenMetricIds.has(metric.id)) {
+      continue;
+    }
+    seenMetricIds.add(metric.id);
+    dedupedMetrics.push(metric);
+  }
+
   const result: {
     [sourceId: string]: {
       fragments: T;
@@ -388,7 +420,7 @@ export function combineMetricsBySource<T extends Metric>(
   } = {};
   // first, gather up source ids
   const sourceIds = new Set<string>();
-  for (const metric of metrics) {
+  for (const metric of dedupedMetrics) {
     if (metric.sourceUrl) {
       const source = sources.find((s) => s.sourceUrl === metric.sourceUrl);
       if (source) {
@@ -400,22 +432,31 @@ export function combineMetricsBySource<T extends Metric>(
   for (const sourceId of sourceIds) {
     const source = sources.find((s) => s.stableId === sourceId);
     if (source) {
+      const sourceMetrics = dedupedMetrics.filter(
+        (m) =>
+          m.sourceUrl === source.sourceUrl &&
+          (!expectedMetricType || m.type === expectedMetricType)
+      );
+      const geographyMetrics = sourceMetrics.filter(
+        (m) =>
+          subjectIsGeography(m.subject) && m.subject.id === geographyId
+      );
+      const geographyMetric =
+        geographyMetrics.length > 1
+          ? geographyMetrics
+              .slice()
+              .sort((a, b) => Number(b.id) - Number(a.id))[0]
+          : geographyMetrics[0];
       result[source.stableId] = {
         fragments: combineMetricsForFragments(
-          metrics.filter(
+          sourceMetrics.filter(
             (m) =>
-              m.sourceUrl === source.sourceUrl &&
               subjectIsFragment(m.subject) &&
               m.subject.geographies.includes(geographyId)
           ) as Pick<Metric, "type" | "value">[],
           expectedMetricType
         ) as T,
-        geographies: metrics.find(
-          (m) =>
-            m.sourceUrl === source.sourceUrl &&
-            subjectIsGeography(m.subject) &&
-            m.subject.id === geographyId
-        ) as unknown as T,
+        geographies: geographyMetric as unknown as T,
       };
     }
   }
