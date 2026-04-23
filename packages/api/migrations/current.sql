@@ -535,3 +535,11 @@ $$;
 comment on function get_or_create_spatial_metric is '@omit';
 
 grant execute on function get_or_create_spatial_metric to anon;
+
+-- Superuser feature flag: sketch class admins can enable new reporting tools on
+-- collection sketch classes (client-side gating in admin UI only).
+alter table projects add column if not exists enable_collection_new_reports boolean default false;
+
+comment on column projects.enable_collection_new_reports is 'When true, administrators may configure collection sketch classes to use the new reporting tools in project admin.';
+
+grant update(enable_collection_new_reports) on projects to seasketch_user;

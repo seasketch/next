@@ -12205,6 +12205,11 @@ type Project implements Node {
   eligableDownloadableLayersCount: Int
 
   """
+  When true, administrators may configure collection sketch classes to use the new reporting tools in project admin.
+  """
+  enableCollectionNewReports: Boolean
+
+  """
   When true, overlay layers will be available for download by end-users if they
   have access to the layer and the data source supports it. This can be
   controlled on a per-layer basis.
@@ -13171,6 +13176,11 @@ input ProjectPatch {
 
   """Should be a short length in order to fit in the project header."""
   description: String
+
+  """
+  When true, administrators may configure collection sketch classes to use the new reporting tools in project admin.
+  """
+  enableCollectionNewReports: Boolean
 
   """
   When true, overlay layers will be available for download by end-users if they

@@ -37,8 +37,8 @@ fragment ProjectMetadata on Project {
     html
   }
   enableReportBuilder
+  enableCollectionNewReports
   customDocLink
-  enableReportBuilder
   showScalebarByDefault
   showLegendByDefault
   featureFlags {

@@ -10890,6 +10890,8 @@ export type Project = Node & {
    */
   draftTableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
   eligableDownloadableLayersCount?: Maybe<Scalars['Int']>;
+  /** When true, administrators may configure collection sketch classes to use the new reporting tools in project admin. */
+  enableCollectionNewReports?: Maybe<Scalars['Boolean']>;
   /**
    * When true, overlay layers will be available for download by end-users if they
    * have access to the layer and the data source supports it. This can be
@@ -11898,6 +11900,8 @@ export type ProjectPatch = {
   dataSourcesBucketId?: Maybe<Scalars['String']>;
   /** Should be a short length in order to fit in the project header. */
   description?: Maybe<Scalars['String']>;
+  /** When true, administrators may configure collection sketch classes to use the new reporting tools in project admin. */
+  enableCollectionNewReports?: Maybe<Scalars['Boolean']>;
   /**
    * When true, overlay layers will be available for download by end-users if they
    * have access to the layer and the data source supports it. This can be
@@ -22655,6 +22659,23 @@ export type UpdateEnableReportBuilderMutation = (
   )> }
 );
 
+export type UpdateEnableCollectionNewReportsMutationVariables = Exact<{
+  slug: Scalars['String'];
+  enabled: Scalars['Boolean'];
+}>;
+
+
+export type UpdateEnableCollectionNewReportsMutation = (
+  { __typename?: 'Mutation' }
+  & { updateProjectBySlug?: Maybe<(
+    { __typename?: 'UpdateProjectPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'enableCollectionNewReports'>
+    )> }
+  )> }
+);
+
 export type ProjectDashboardQueryVariables = Exact<{
   slug: Scalars['String'];
   period?: Maybe<ActivityStatsPeriod>;
@@ -22725,7 +22746,7 @@ export type ProjectDashboardBannerStatsQuery = (
 
 export type ProjectMetadataFragment = (
   { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays' | 'aboutPageContents' | 'aboutPageEnabled' | 'enableReportBuilder' | 'customDocLink' | 'showScalebarByDefault' | 'showLegendByDefault'>
+  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays' | 'aboutPageContents' | 'aboutPageEnabled' | 'enableReportBuilder' | 'enableCollectionNewReports' | 'customDocLink' | 'showScalebarByDefault' | 'showLegendByDefault'>
   & { sketchClasses: Array<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name' | 'geometryType' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps' | 'reportId' | 'isGeographyClippingEnabled' | 'useGeographyClipping' | 'previewNewReports'>
@@ -27225,8 +27246,8 @@ export const ProjectMetadataFragmentDoc = /*#__PURE__*/ gql`
     html
   }
   enableReportBuilder
+  enableCollectionNewReports
   customDocLink
-  enableReportBuilder
   showScalebarByDefault
   showLegendByDefault
   featureFlags {
@@ -30560,6 +30581,18 @@ export const UpdateEnableReportBuilderDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const UpdateEnableCollectionNewReportsDocument = /*#__PURE__*/ gql`
+    mutation updateEnableCollectionNewReports($slug: String!, $enabled: Boolean!) {
+  updateProjectBySlug(
+    input: {slug: $slug, patch: {enableCollectionNewReports: $enabled}}
+  ) {
+    project {
+      id
+      enableCollectionNewReports
+    }
+  }
+}
+    `;
 export const ProjectDashboardDocument = /*#__PURE__*/ gql`
     query ProjectDashboard($slug: String!, $period: ActivityStatsPeriod = _7_DAYS, $activityPeriod: UserActivityPeriod = D7) {
   projectBySlug(slug: $slug) {
@@ -32922,6 +32955,7 @@ export const namedOperations = {
     updateAboutPageEnabled: 'updateAboutPageEnabled',
     createFileUploadForAboutPage: 'createFileUploadForAboutPage',
     updateEnableReportBuilder: 'updateEnableReportBuilder',
+    updateEnableCollectionNewReports: 'updateEnableCollectionNewReports',
     UpdateProjectRegion: 'UpdateProjectRegion',
     UpdateSketchClassGeographies: 'UpdateSketchClassGeographies',
     CreateSketchClass: 'CreateSketchClass',

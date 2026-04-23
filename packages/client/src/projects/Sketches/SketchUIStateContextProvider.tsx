@@ -1420,10 +1420,16 @@ export default function SketchUIStateContextProvider({
       const selectedSketchClass = selectedSketchClassId
         ? sketchClasses.find((s) => s.id === selectedSketchClassId)
         : undefined;
+      const enableCollectionNewReports = Boolean(
+        projectMetadata.data?.project?.enableCollectionNewReports
+      );
+      const selectedIsCollection =
+        selectedSketchClass?.geometryType === SketchGeometryType.Collection;
       const canPreviewNewReports =
         Boolean(projectMetadata.data?.project?.sessionIsAdmin) &&
         Boolean(selectedSketchClass?.previewNewReports) &&
-        !selectedSketchClass?.useGeographyClipping;
+        !selectedSketchClass?.useGeographyClipping &&
+        (!selectedIsCollection || enableCollectionNewReports);
       const viewReports: DropdownOption | undefined =
         selectionType?.collection || selectionType?.sketch
           ? {
@@ -1665,6 +1671,7 @@ export default function SketchUIStateContextProvider({
     [
       projectMetadata.data?.project?.sketchClasses,
       projectMetadata.data?.project?.sessionIsAdmin,
+      projectMetadata.data?.project?.enableCollectionNewReports,
       t,
       client.cache,
       history,
@@ -1875,14 +1882,25 @@ export default function SketchUIStateContextProvider({
                     projectMetadata.data?.project?.sketchClasses?.find(
                       (sc) => sc.id === sketchClassId
                     );
-                  /** Collection classes rarely set useGeographyClipping; they still use in-app reports when reportId is set. */
-                  const canUseNewReporting =
-                    sketchClass?.useGeographyClipping ||
+                  /** Collection sketch classes use the new report UI only when enableCollectionNewReports is set on the project. */
+                  const isCollectionSketchClass =
                     sketchClass?.geometryType ===
-                      SketchGeometryType.Collection ||
+                    SketchGeometryType.Collection;
+                  const enableCollectionNewReports = Boolean(
+                    projectMetadata.data?.project?.enableCollectionNewReports
+                  );
+                  const canUseNewReporting =
+                    (Boolean(sketchClass?.useGeographyClipping) &&
+                      !isCollectionSketchClass) ||
+                    (isCollectionSketchClass &&
+                      enableCollectionNewReports) ||
                     (Boolean(previewNewReporting) &&
-                      Boolean(projectMetadata.data?.project?.sessionIsAdmin) &&
-                      Boolean(sketchClass?.previewNewReports));
+                      Boolean(
+                        projectMetadata.data?.project?.sessionIsAdmin
+                      ) &&
+                      Boolean(sketchClass?.previewNewReports) &&
+                      (!isCollectionSketchClass ||
+                        enableCollectionNewReports));
                   // Unique key so legacy and preview reports for same sketch can coexist
                   const reportKey = `${sketchId}-${
                     previewNewReporting ? "preview" : "legacy"

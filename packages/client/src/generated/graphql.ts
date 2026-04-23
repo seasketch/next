@@ -10892,6 +10892,8 @@ export type Project = Node & {
    */
   draftTableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
   eligableDownloadableLayersCount?: Maybe<Scalars['Int']>;
+  /** When true, administrators may configure collection sketch classes to use the new reporting tools in project admin. */
+  enableCollectionNewReports?: Maybe<Scalars['Boolean']>;
   /**
    * When true, overlay layers will be available for download by end-users if they
    * have access to the layer and the data source supports it. This can be
@@ -11900,6 +11902,8 @@ export type ProjectPatch = {
   dataSourcesBucketId?: Maybe<Scalars['String']>;
   /** Should be a short length in order to fit in the project header. */
   description?: Maybe<Scalars['String']>;
+  /** When true, administrators may configure collection sketch classes to use the new reporting tools in project admin. */
+  enableCollectionNewReports?: Maybe<Scalars['Boolean']>;
   /**
    * When true, overlay layers will be available for download by end-users if they
    * have access to the layer and the data source supports it. This can be
@@ -22657,6 +22661,23 @@ export type UpdateEnableReportBuilderMutation = (
   )> }
 );
 
+export type UpdateEnableCollectionNewReportsMutationVariables = Exact<{
+  slug: Scalars['String'];
+  enabled: Scalars['Boolean'];
+}>;
+
+
+export type UpdateEnableCollectionNewReportsMutation = (
+  { __typename?: 'Mutation' }
+  & { updateProjectBySlug?: Maybe<(
+    { __typename?: 'UpdateProjectPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'enableCollectionNewReports'>
+    )> }
+  )> }
+);
+
 export type ProjectDashboardQueryVariables = Exact<{
   slug: Scalars['String'];
   period?: Maybe<ActivityStatsPeriod>;
@@ -22727,7 +22748,7 @@ export type ProjectDashboardBannerStatsQuery = (
 
 export type ProjectMetadataFragment = (
   { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays' | 'aboutPageContents' | 'aboutPageEnabled' | 'enableReportBuilder' | 'customDocLink' | 'showScalebarByDefault' | 'showLegendByDefault'>
+  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays' | 'aboutPageContents' | 'aboutPageEnabled' | 'enableReportBuilder' | 'enableCollectionNewReports' | 'customDocLink' | 'showScalebarByDefault' | 'showLegendByDefault'>
   & { sketchClasses: Array<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name' | 'geometryType' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps' | 'reportId' | 'isGeographyClippingEnabled' | 'useGeographyClipping' | 'previewNewReports'>
@@ -27227,8 +27248,8 @@ export const ProjectMetadataFragmentDoc = gql`
     html
   }
   enableReportBuilder
+  enableCollectionNewReports
   customDocLink
-  enableReportBuilder
   showScalebarByDefault
   showLegendByDefault
   featureFlags {
@@ -35259,6 +35280,45 @@ export function useUpdateEnableReportBuilderMutation(baseOptions?: Apollo.Mutati
 export type UpdateEnableReportBuilderMutationHookResult = ReturnType<typeof useUpdateEnableReportBuilderMutation>;
 export type UpdateEnableReportBuilderMutationResult = Apollo.MutationResult<UpdateEnableReportBuilderMutation>;
 export type UpdateEnableReportBuilderMutationOptions = Apollo.BaseMutationOptions<UpdateEnableReportBuilderMutation, UpdateEnableReportBuilderMutationVariables>;
+export const UpdateEnableCollectionNewReportsDocument = gql`
+    mutation updateEnableCollectionNewReports($slug: String!, $enabled: Boolean!) {
+  updateProjectBySlug(
+    input: {slug: $slug, patch: {enableCollectionNewReports: $enabled}}
+  ) {
+    project {
+      id
+      enableCollectionNewReports
+    }
+  }
+}
+    `;
+export type UpdateEnableCollectionNewReportsMutationFn = Apollo.MutationFunction<UpdateEnableCollectionNewReportsMutation, UpdateEnableCollectionNewReportsMutationVariables>;
+
+/**
+ * __useUpdateEnableCollectionNewReportsMutation__
+ *
+ * To run a mutation, you first call `useUpdateEnableCollectionNewReportsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateEnableCollectionNewReportsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateEnableCollectionNewReportsMutation, { data, loading, error }] = useUpdateEnableCollectionNewReportsMutation({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *      enabled: // value for 'enabled'
+ *   },
+ * });
+ */
+export function useUpdateEnableCollectionNewReportsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateEnableCollectionNewReportsMutation, UpdateEnableCollectionNewReportsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateEnableCollectionNewReportsMutation, UpdateEnableCollectionNewReportsMutationVariables>(UpdateEnableCollectionNewReportsDocument, options);
+      }
+export type UpdateEnableCollectionNewReportsMutationHookResult = ReturnType<typeof useUpdateEnableCollectionNewReportsMutation>;
+export type UpdateEnableCollectionNewReportsMutationResult = Apollo.MutationResult<UpdateEnableCollectionNewReportsMutation>;
+export type UpdateEnableCollectionNewReportsMutationOptions = Apollo.BaseMutationOptions<UpdateEnableCollectionNewReportsMutation, UpdateEnableCollectionNewReportsMutationVariables>;
 export const ProjectDashboardDocument = gql`
     query ProjectDashboard($slug: String!, $period: ActivityStatsPeriod = _7_DAYS, $activityPeriod: UserActivityPeriod = D7) {
   projectBySlug(slug: $slug) {
@@ -41792,6 +41852,7 @@ export const namedOperations = {
     updateAboutPageEnabled: 'updateAboutPageEnabled',
     createFileUploadForAboutPage: 'createFileUploadForAboutPage',
     updateEnableReportBuilder: 'updateEnableReportBuilder',
+    updateEnableCollectionNewReports: 'updateEnableCollectionNewReports',
     UpdateProjectRegion: 'UpdateProjectRegion',
     UpdateSketchClassGeographies: 'UpdateSketchClassGeographies',
     CreateSketchClass: 'CreateSketchClass',
