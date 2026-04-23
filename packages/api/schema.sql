@@ -945,6 +945,7 @@ CREATE TYPE public.spatial_metric_type AS ENUM (
     'presence_table',
     'contextualized_mean',
     'overlay_area',
+    'column_stats',
     'column_values',
     'raster_stats',
     'distance_to_shore'
@@ -2226,11 +2227,12 @@ CREATE TABLE public.projects (
     data_hosting_retention_period interval,
     about_page_contents jsonb DEFAULT '{}'::jsonb NOT NULL,
     about_page_enabled boolean DEFAULT false NOT NULL,
-    enable_report_builder boolean DEFAULT false,
     custom_doc_link text,
+    enable_report_builder boolean DEFAULT false,
     show_scalebar_by_default boolean DEFAULT false,
     show_legend_by_default boolean DEFAULT false,
     feature_flags jsonb DEFAULT '{}'::jsonb NOT NULL,
+    enable_collection_new_reports boolean DEFAULT false,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
     CONSTRAINT is_public_key CHECK (((mapbox_public_key IS NULL) OR (mapbox_public_key ~* '^pk\..+'::text))),
     CONSTRAINT is_secret CHECK (((mapbox_secret_key IS NULL) OR (mapbox_secret_key ~* '^sk\..+'::text))),
@@ -2347,6 +2349,13 @@ COMMENT ON COLUMN public.projects.enable_download_by_default IS 'When true, over
 --
 
 COMMENT ON COLUMN public.projects.feature_flags IS '@omit';
+
+
+--
+-- Name: COLUMN projects.enable_collection_new_reports; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.projects.enable_collection_new_reports IS 'When true, administrators may configure collection sketch classes to use the new reporting tools in project admin.';
 
 
 --
@@ -2574,12 +2583,8 @@ CREATE TABLE public.report_cards (
     "position" integer NOT NULL,
     alternate_language_settings jsonb DEFAULT '{}'::jsonb NOT NULL,
     component_settings jsonb DEFAULT '{}'::jsonb NOT NULL,
-    type text NOT NULL,
-    tint text,
-    icon text,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
-    is_draft boolean DEFAULT true NOT NULL,
-    display_map_layer_visibility_controls boolean DEFAULT true NOT NULL
+    is_draft boolean DEFAULT true NOT NULL
 );
 
 
@@ -2591,19 +2596,20 @@ COMMENT ON TABLE public.report_cards IS '@omit';
 
 
 --
--- Name: add_report_card(integer, jsonb, text, jsonb); Type: FUNCTION; Schema: public; Owner: -
+-- Name: add_report_card(integer, jsonb, text, jsonb, integer, jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.add_report_card(report_tab_id integer, component_settings jsonb, card_type text, body jsonb) RETURNS public.report_cards
+CREATE FUNCTION public.add_report_card(report_tab_id integer, component_settings jsonb, card_type text, body jsonb, card_position integer DEFAULT NULL::integer, alternate_language_settings jsonb DEFAULT NULL::jsonb) RETURNS public.report_cards
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
     declare
       new_card report_cards;
       tab_report_id int;
       is_published_target boolean;
+      merged_settings jsonb;
+      insert_position int;
     begin
       if session_is_admin((select project_id from reports where id = (select report_id from report_tabs where id = add_report_card.report_tab_id))) then
-        -- Determine if the target tab belongs to the published or draft report
         select report_id from report_tabs where id = add_report_card.report_tab_id into tab_report_id;
         is_published_target := exists (
           select 1
@@ -2617,18 +2623,40 @@ CREATE FUNCTION public.add_report_card(report_tab_id integer, component_settings
           raise exception 'You cannot add a card to a published report';
         end if;
 
+        merged_settings := coalesce(add_report_card.component_settings, '{}'::jsonb)
+          || case
+               when add_report_card.card_type is not null then jsonb_build_object('type', add_report_card.card_type)
+               else '{}'::jsonb
+             end;
+
+        if add_report_card.card_position is null then
+          insert_position := coalesce((select max(position) from report_cards where report_cards.report_tab_id = add_report_card.report_tab_id), 0) + 1;
+        else
+          insert_position := add_report_card.card_position;
+          if exists (
+            select 1 from report_cards rc
+            where rc.report_tab_id = add_report_card.report_tab_id
+              and rc.position = insert_position
+          ) then
+            update report_cards rc
+            set position = rc.position + 1
+            where rc.report_tab_id = add_report_card.report_tab_id
+              and rc.position >= insert_position;
+          end if;
+        end if;
+
         insert into report_cards (
           report_tab_id,
           position,
           component_settings,
-          type,
-          body
+          body,
+          alternate_language_settings
         ) values (
           add_report_card.report_tab_id,
-          coalesce((select max(position) from report_cards where report_cards.report_tab_id = add_report_card.report_tab_id), 0) + 1,
-          add_report_card.component_settings,
-          add_report_card.card_type,
-          add_report_card.body
+          insert_position,
+          merged_settings,
+          add_report_card.body,
+          coalesce(add_report_card.alternate_language_settings, '{}'::jsonb)
         ) returning * into new_card;
 
         return new_card;
@@ -7139,13 +7167,13 @@ CREATE FUNCTION public.create_draft_report(sketch_class_id integer) RETURNS publ
       pid int;
       report reports;
     begin
-      select (select project_id into pid from sketch_classes where sketch_classes.id = sketch_class_id limit 1);
+      select project_id into pid from sketch_classes where sketch_classes.id = sketch_class_id limit 1;
       if session_is_admin(pid) then
         if ((select draft_report_id from sketch_classes where id = sketch_class_id)) is not null then
           raise exception 'A draft report already exists for this sketch class';
         end if;
         insert into reports (
-          project_id, 
+          project_id,
           sketch_class_id
         ) values (
           pid,
@@ -7165,17 +7193,14 @@ CREATE FUNCTION public.create_draft_report(sketch_class_id integer) RETURNS publ
           body,
           position,
           alternate_language_settings,
-          component_settings,
-          type
+          component_settings
         ) values (
           dr_report_tab_id,
           '{"type": "doc", "content": [{"type": "reportTitle", "content": [{"type": "text", "text": "Attributes"}]}]}'::jsonb,
           0,
           '{}',
-          '{}',
-          'Attributes'
+          jsonb_build_object('type', 'Attributes')
         );
-        -- raise exception 'report id: %, sketch class id: %, report %', report.id, sketch_class_id, report;
         update sketch_classes set draft_report_id = report.id where sketch_classes.id = create_draft_report.sketch_class_id;
         return report;
       else
@@ -9164,47 +9189,6 @@ $$;
 
 
 --
--- Name: get_geostats_attribute_column_names(jsonb); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.get_geostats_attribute_column_names(geostats jsonb) RETURNS text[]
-    LANGUAGE sql IMMUTABLE
-    AS $$
-  select case
-    when geostats is null then array[]::text[]
-    when geostats ? 'bands'
-      and jsonb_typeof(geostats->'bands') = 'array'
-      and jsonb_array_length(geostats->'bands') > 0 then
-      array[]::text[]
-    when jsonb_typeof(geostats->'layers') <> 'array'
-      or jsonb_array_length(geostats->'layers') = 0 then
-      array[]::text[]
-    when exists (
-      select 1
-      from jsonb_array_elements(geostats->'layers') as layer
-      where jsonb_typeof(layer) <> 'object'
-        or jsonb_typeof(layer->'attributes') <> 'array'
-    ) then
-      array[]::text[]
-    else
-      coalesce(
-        (
-          select array_agg(attr order by attr)
-          from (
-            select distinct elem->>'attribute' as attr
-            from jsonb_array_elements(geostats->'layers') as layer,
-              jsonb_array_elements(layer->'attributes') as elem
-            where elem->>'attribute' is not null
-              and elem->>'attribute' <> ''
-          ) s
-        ),
-        array[]::text[]
-      )
-  end;
-$$;
-
-
---
 -- Name: get_representative_colors(jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -9280,7 +9264,6 @@ CREATE TABLE public.data_sources (
     vector_geometry_type text GENERATED ALWAYS AS (public.extract_vector_geometry_type_from_geostats(geostats)) STORED,
     feature_count integer GENERATED ALWAYS AS (((((geostats -> 'layers'::text) -> 0) ->> 'count'::text))::integer) STORED,
     column_details jsonb GENERATED ALWAYS AS (public.extract_column_details_from_geostats(geostats)) STORED,
-    columns text[] GENERATED ALWAYS AS (public.get_geostats_attribute_column_names(geostats)) STORED,
     CONSTRAINT data_sources_buffer_check CHECK (((buffer >= 0) AND (buffer <= 512))),
     CONSTRAINT data_sources_tile_size_check CHECK (((tile_size = 128) OR (tile_size = 256) OR (tile_size = 512)))
 );
@@ -10546,39 +10529,35 @@ COMMENT ON FUNCTION public.extract_all_titles(doc jsonb) IS '@omit';
 CREATE FUNCTION public.extract_report_title_from_prosemirror_body(body jsonb) RETURNS text
     LANGUAGE plpgsql IMMUTABLE
     AS $$
-    declare
-      node jsonb;
-      title_node jsonb;
-      output text := '';
-    begin
-      -- Handle null input
-      if body is null or jsonb_typeof(body) = 'null' then
-        return null;
-      end if;
-      
-      -- Check if this is a doc with content array
-      if body->>'type' = 'doc' and body->'content' is not null then
-        -- Look for reportTitle node in content
-        for node in select * from jsonb_array_elements(body->'content')
-        loop
-          if node->>'type' = 'reportTitle' then
-            title_node := node;
-            exit;
-          end if;
-        end loop;
-      -- Or if this is directly a reportTitle node
-      elsif body->>'type' = 'reportTitle' then
-        title_node := body;
-      end if;
-      
-      -- Extract text from the title node
-      if title_node is not null then
-        output := collect_text_from_prosemirror_body(title_node);
-      end if;
-      
-      return nullif(trim(output), '');
-    end;
-  $$;
+DECLARE
+  node jsonb;
+  title_node jsonb;
+  output text := '';
+BEGIN
+  IF body IS NULL OR jsonb_typeof(body) = 'null' THEN
+    RETURN NULL;
+  END IF;
+
+  IF body->>'type' = 'doc' AND body ? 'content' THEN
+    FOR node IN SELECT * FROM jsonb_array_elements(body->'content')
+    LOOP
+      IF node->>'type' = 'reportTitle' THEN
+        title_node := node;
+        EXIT;
+      END IF;
+    END LOOP;
+  ELSIF body->>'type' = 'reportTitle' THEN
+    title_node := body;
+  END IF;
+
+  IF title_node IS NOT NULL THEN
+    -- Large limit: full title text (single-arg collect_text stops at 32 chars).
+    output := collect_text_from_prosemirror_body(title_node, 10000);
+  END IF;
+
+  RETURN NULLIF(TRIM(output), '');
+END;
+$$;
 
 
 --
@@ -11652,6 +11631,47 @@ COMMENT ON FUNCTION public.get_fragments_for_sketch(sketch_id integer) IS '@omit
 
 
 --
+-- Name: get_geostats_attribute_column_names(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_geostats_attribute_column_names(geostats jsonb) RETURNS text[]
+    LANGUAGE sql IMMUTABLE
+    AS $$
+  select case
+    when geostats is null then array[]::text[]
+    when geostats ? 'bands'
+      and jsonb_typeof(geostats->'bands') = 'array'
+      and jsonb_array_length(geostats->'bands') > 0 then
+      array[]::text[]
+    when jsonb_typeof(geostats->'layers') <> 'array'
+      or jsonb_array_length(geostats->'layers') = 0 then
+      array[]::text[]
+    when exists (
+      select 1
+      from jsonb_array_elements(geostats->'layers') as layer
+      where jsonb_typeof(layer) <> 'object'
+        or jsonb_typeof(layer->'attributes') <> 'array'
+    ) then
+      array[]::text[]
+    else
+      coalesce(
+        (
+          select array_agg(attr order by attr)
+          from (
+            select distinct elem->>'attribute' as attr
+            from jsonb_array_elements(geostats->'layers') as layer,
+              jsonb_array_elements(layer->'attributes') as elem
+            where elem->>'attribute' is not null
+              and elem->>'attribute' <> ''
+          ) s
+        ),
+        array[]::text[]
+      )
+  end;
+$$;
+
+
+--
 -- Name: get_job_details(text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -11765,41 +11785,52 @@ CREATE FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, 
     if (p_overlay_source_url is null and p_source_processing_job_dependency is null) and p_type != 'total_area' then
       raise exception 'overlay_source_url or source_processing_job_dependency parameter is required for non-total_area metrics';
     end if;
-        
-    -- Try to get existing metric first (matching the unique index logic)
-    select id into metric_id
-    from spatial_metrics
-    where coalesce(overlay_source_url, '') = coalesce(p_overlay_source_url, '')
-      and coalesce(source_processing_job_dependency, '') = coalesce(p_source_processing_job_dependency, '')
-      and coalesce(subject_fragment_id, '') = coalesce(p_subject_fragment_id, '')
-      and coalesce(subject_geography_id, -999999) = coalesce(p_subject_geography_id, -999999)
-      and type = p_type
-      and parameters = p_parameters and dependency_hash = p_dependency_hash;
-    
-    -- If not found, insert new metric
+
+    -- Atomic upsert: if another transaction inserted the same row first, this
+    -- no-ops and returns no id via RETURNING. We then fall back to a SELECT
+    -- to fetch the winner's row.
+    insert into spatial_metrics (
+      subject_fragment_id,
+      subject_geography_id,
+      type,
+      overlay_source_url,
+      source_processing_job_dependency,
+      project_id,
+      parameters,
+      dependency_hash
+    ) values (
+      p_subject_fragment_id,
+      p_subject_geography_id,
+      p_type,
+      p_overlay_source_url,
+      p_source_processing_job_dependency,
+      p_project_id,
+      p_parameters,
+      p_dependency_hash
+    )
+    on conflict (
+      coalesce(overlay_source_url, ''),
+      coalesce(source_processing_job_dependency, ''),
+      coalesce(subject_fragment_id, ''),
+      coalesce(subject_geography_id, -999999),
+      type,
+      parameters,
+      dependency_hash
+    ) do nothing
+    returning id into metric_id;
+
     if metric_id is null then
-      insert into spatial_metrics (
-        subject_fragment_id,
-        subject_geography_id,
-        type,
-        overlay_source_url,
-        source_processing_job_dependency,
-        project_id,
-        parameters,
-        dependency_hash
-      ) values (
-        p_subject_fragment_id,
-        p_subject_geography_id,
-        p_type,
-        p_overlay_source_url,
-        p_source_processing_job_dependency,
-        p_project_id,
-        p_parameters,
-        p_dependency_hash
-      )
-      returning id into metric_id;
+      select id into metric_id
+      from spatial_metrics
+      where coalesce(overlay_source_url, '') = coalesce(p_overlay_source_url, '')
+        and coalesce(source_processing_job_dependency, '') = coalesce(p_source_processing_job_dependency, '')
+        and coalesce(subject_fragment_id, '') = coalesce(p_subject_fragment_id, '')
+        and coalesce(subject_geography_id, -999999) = coalesce(p_subject_geography_id, -999999)
+        and type = p_type
+        and parameters = p_parameters
+        and dependency_hash = p_dependency_hash;
     end if;
-    
+
     return get_spatial_metric(metric_id);
   end;
 $$;
@@ -12002,6 +12033,57 @@ CREATE FUNCTION public.get_public_jwk(id uuid) RETURNS text
 --
 
 COMMENT ON FUNCTION public.get_public_jwk(id uuid) IS '@omit';
+
+
+--
+-- Name: get_published_card_id_from_draft(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_published_card_id_from_draft(draft_report_card_id integer) RETURNS integer
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+DECLARE
+  draft_tab_id integer;
+  draft_tab_position integer;
+  draft_card_position integer;
+  sketch_class_id integer;
+  published_report_id integer;
+  published_tab_id integer;
+  published_card_id integer;
+BEGIN
+  -- Gather draft card/tab positions and sketch_class
+  SELECT rt.id, rt.position, rc.position, r.sketch_class_id
+  INTO draft_tab_id, draft_tab_position, draft_card_position, sketch_class_id
+  FROM public.report_cards rc
+  JOIN public.report_tabs rt ON rt.id = rc.report_tab_id
+  JOIN public.reports r ON r.id = rt.report_id
+  WHERE rc.id = draft_report_card_id;
+
+  -- Determine the published report id
+  SELECT sc.report_id
+  INTO published_report_id
+  FROM public.sketch_classes sc
+  WHERE sc.id = sketch_class_id;
+
+  IF published_report_id IS NULL THEN
+    RETURN NULL;
+  END IF;
+
+  -- Match the tab by position in the published report
+  SELECT id
+  INTO published_tab_id
+  FROM public.report_tabs
+  WHERE report_id = published_report_id AND position = draft_tab_position;
+
+  -- Match the card by position within the matched tab
+  SELECT id
+  INTO published_card_id
+  FROM public.report_cards
+  WHERE report_tab_id = published_tab_id AND position = draft_card_position;
+
+  RETURN published_card_id;
+END
+$$;
 
 
 --
@@ -15973,19 +16055,68 @@ CREATE TABLE public.project_visitor_metrics (
 --
 
 CREATE FUNCTION public.projects_visitor_metrics(p public.projects, period public.activity_stats_period) RETURNS SETOF public.project_visitor_metrics
-    LANGUAGE sql STABLE SECURITY DEFINER
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
     AS $$
-    select * from project_visitor_metrics where session_is_admin(p.id) and
-    project_id = p.id and
-    interval = (
-      case period
-        when '24hrs' then '24 hours'::interval
-        when '7-days' then '7 days'::interval
-        when '30-days' then '30 days'::interval
-        else '1 day'::interval
-      end
-    ) order by timestamp desc limit 1;
-  $$;
+DECLARE
+  lookback interval;
+BEGIN
+  IF NOT session_is_admin(p.id) THEN
+    RETURN;
+  END IF;
+
+  IF period IN ('6-months', '1-year') THEN
+    lookback := CASE period
+      WHEN '6-months' THEN '6 months'::interval
+      ELSE '1 year'::interval
+    END;
+
+    RETURN QUERY SELECT
+      p.id,
+      '30 days'::interval,
+      now()::timestamptz,
+      date_part('month', timezone('UTC', now()))::int,
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.project_visitor_metrics pvm, jsonb_array_elements(pvm.top_referrers) elem
+             WHERE pvm.interval = '30 days'::interval AND pvm.project_id = p.id AND pvm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.project_visitor_metrics pvm, jsonb_array_elements(pvm.top_operating_systems) elem
+             WHERE pvm.interval = '30 days'::interval AND pvm.project_id = p.id AND pvm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.project_visitor_metrics pvm, jsonb_array_elements(pvm.top_browsers) elem
+             WHERE pvm.interval = '30 days'::interval AND pvm.project_id = p.id AND pvm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.project_visitor_metrics pvm, jsonb_array_elements(pvm.top_device_types) elem
+             WHERE pvm.interval = '30 days'::interval AND pvm.project_id = p.id AND pvm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.project_visitor_metrics pvm, jsonb_array_elements(pvm.top_countries) elem
+             WHERE pvm.interval = '30 days'::interval AND pvm.project_id = p.id AND pvm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s);
+  ELSE
+    RETURN QUERY
+    SELECT * FROM project_visitor_metrics
+    WHERE session_is_admin(p.id)
+      AND project_id = p.id
+      AND interval = (
+        CASE period
+          WHEN '24hrs' THEN '24 hours'::interval
+          WHEN '7-days' THEN '7 days'::interval
+          WHEN '30-days' THEN '30 days'::interval
+          ELSE '1 day'::interval
+        END
+      )
+    ORDER BY timestamp DESC LIMIT 1;
+  END IF;
+END;
+$$;
 
 
 --
@@ -16318,16 +16449,13 @@ CREATE FUNCTION public.publish_report(sketch_class_id integer) RETURNS public.sk
             where report_tab_id = old_tab_id
             order by position
           loop
-            insert into report_cards (report_tab_id, body, position, alternate_language_settings, component_settings, type, tint, icon, updated_at, is_draft)
+            insert into report_cards (report_tab_id, body, position, alternate_language_settings, component_settings, updated_at, is_draft)
             values (
               new_tab_id_copy,
               source_card.body, 
               source_card.position, 
               source_card.alternate_language_settings, 
               source_card.component_settings, 
-              source_card.type, 
-              source_card.tint, 
-              source_card.icon,
               source_card.updated_at,
               false
             ) returning id into new_report_card_id;
@@ -17420,6 +17548,17 @@ CREATE FUNCTION public.report_cards_tab(card public.report_cards) RETURNS public
     AS $$
     select * from report_tabs where id = (card.report_tab_id);
   $$;
+
+
+--
+-- Name: report_cards_title(public.report_cards); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.report_cards_title(card public.report_cards) RETURNS text
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+select extract_report_title_from_prosemirror_body(card.body);
+$$;
 
 
 --
@@ -20901,6 +21040,23 @@ CREATE FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t public.ta
 
 
 --
+-- Name: tableofcontentsitembystableid(text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.tableofcontentsitembystableid(stableid text) RETURNS public.table_of_contents_items
+    LANGUAGE sql STABLE
+    AS $$
+    -- get the table of contents item by stable id and return the first 
+    -- available of published (is_draft = false) or draft (is_draft = true)
+    select * from table_of_contents_items
+    where stable_id = stableId
+    and (is_draft = false or is_draft = true)
+    order by is_draft asc  -- false (published) comes before true (draft)
+    limit 1;
+  $$;
+
+
+--
 -- Name: template_forms(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -21808,10 +21964,10 @@ CREATE FUNCTION public.update_project_invite("inviteId" integer, make_admin bool
 
 
 --
--- Name: update_report_card(integer, jsonb, jsonb, jsonb, text, text, text, boolean); Type: FUNCTION; Schema: public; Owner: -
+-- Name: update_report_card(integer, jsonb, jsonb, jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.update_report_card(card_id integer, component_settings jsonb, body jsonb, alternate_language_settings jsonb, tint text, icon text, card_type text, display_map_layer_visibility_controls boolean) RETURNS public.report_cards
+CREATE FUNCTION public.update_report_card(card_id integer, component_settings jsonb, body jsonb, alternate_language_settings jsonb) RETURNS public.report_cards
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
     declare
@@ -21820,7 +21976,7 @@ CREATE FUNCTION public.update_report_card(card_id integer, component_settings js
     begin
       select report_tab_id from report_cards where id = card_id into tab_id;
       if session_is_admin((select project_id from reports where id = (select report_id from report_tabs where id = tab_id))) then
-        update report_cards set component_settings = update_report_card.component_settings, body = update_report_card.body, alternate_language_settings = update_report_card.alternate_language_settings, tint = update_report_card.tint, icon = update_report_card.icon, type = update_report_card.card_type, display_map_layer_visibility_controls = update_report_card.display_map_layer_visibility_controls where id = update_report_card.card_id returning * into updated_card;
+        update report_cards set component_settings = update_report_card.component_settings, body = update_report_card.body, alternate_language_settings = update_report_card.alternate_language_settings where id = update_report_card.card_id returning * into updated_card;
         return updated_card;
       else
         raise exception 'You are not authorized to update this card';
@@ -22662,18 +22818,66 @@ CREATE TABLE public.visitor_metrics (
 --
 
 CREATE FUNCTION public.visitor_metrics(period public.activity_stats_period) RETURNS SETOF public.visitor_metrics
-    LANGUAGE sql STABLE SECURITY DEFINER
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
     AS $$
-    select * from visitor_metrics where session_is_superuser() and
-    interval = (
-      case period
-        when '24hrs' then '24 hours'::interval
-        when '7-days' then '7 days'::interval
-        when '30-days' then '30 days'::interval
-        else '1 day'::interval
-      end
-    ) order by timestamp desc limit 1;
-  $$;
+DECLARE
+  lookback interval;
+BEGIN
+  IF NOT session_is_superuser() THEN
+    RETURN;
+  END IF;
+
+  IF period IN ('6-months', '1-year') THEN
+    lookback := CASE period
+      WHEN '6-months' THEN '6 months'::interval
+      ELSE '1 year'::interval
+    END;
+
+    RETURN QUERY SELECT
+      '30 days'::interval,
+      now()::timestamptz,
+      date_part('month', timezone('UTC', now()))::int,
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.visitor_metrics vm, jsonb_array_elements(vm.top_referrers) elem
+             WHERE vm.interval = '30 days'::interval AND vm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.visitor_metrics vm, jsonb_array_elements(vm.top_operating_systems) elem
+             WHERE vm.interval = '30 days'::interval AND vm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.visitor_metrics vm, jsonb_array_elements(vm.top_browsers) elem
+             WHERE vm.interval = '30 days'::interval AND vm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.visitor_metrics vm, jsonb_array_elements(vm.top_device_types) elem
+             WHERE vm.interval = '30 days'::interval AND vm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
+      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
+       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
+             FROM public.visitor_metrics vm, jsonb_array_elements(vm.top_countries) elem
+             WHERE vm.interval = '30 days'::interval AND vm.timestamp >= now() - lookback
+             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s);
+  ELSE
+    RETURN QUERY
+    SELECT * FROM public.visitor_metrics
+    WHERE session_is_superuser()
+      AND interval = (
+        CASE period
+          WHEN '24hrs' THEN '24 hours'::interval
+          WHEN '7-days' THEN '7 days'::interval
+          WHEN '30-days' THEN '30 days'::interval
+          ELSE '1 day'::interval
+        END
+      )
+    ORDER BY timestamp DESC LIMIT 1;
+  END IF;
+END;
+$$;
 
 
 --
@@ -23500,6 +23704,15 @@ ALTER TABLE public.optional_basemap_layers ALTER COLUMN id ADD GENERATED BY DEFA
 
 
 --
+-- Name: original_source_id; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.original_source_id (
+    data_source_id integer
+);
+
+
+--
 -- Name: pending_topic_notifications; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -23691,6 +23904,24 @@ ALTER TABLE public.projects ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY
 CREATE TABLE public.projects_shared_basemaps (
     basemap_id integer NOT NULL,
     project_id integer NOT NULL
+);
+
+
+--
+-- Name: published_toc_item_id; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.published_toc_item_id (
+    id integer
+);
+
+
+--
+-- Name: referenced_stable_ids; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.referenced_stable_ids (
+    extract_stable_ids_from_body text[]
 );
 
 
@@ -26151,6 +26382,13 @@ CREATE TRIGGER before_insert_or_update_table_of_contents_items BEFORE INSERT OR 
 
 
 --
+-- Name: spatial_metrics before_insert_spatial_metrics_check_dependency_error_trigger; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER before_insert_spatial_metrics_check_dependency_error_trigger BEFORE INSERT ON public.spatial_metrics FOR EACH ROW EXECUTE FUNCTION public.before_insert_spatial_metrics_check_dependency_error();
+
+
+--
 -- Name: invite_emails before_invite_emails_insert_trigger; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -28416,12 +28654,6 @@ CREATE POLICY project_background_jobs_select ON public.project_background_jobs F
 
 
 --
--- Name: project_geography; Type: ROW SECURITY; Schema: public; Owner: -
---
-
-ALTER TABLE public.project_geography ENABLE ROW LEVEL SECURITY;
-
---
 -- Name: project_groups; Type: ROW SECURITY; Schema: public; Owner: -
 --
 
@@ -30213,17 +30445,17 @@ GRANT UPDATE(data_hosting_retention_period) ON TABLE public.projects TO seasketc
 
 
 --
--- Name: COLUMN projects.enable_report_builder; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(enable_report_builder) ON TABLE public.projects TO seasketch_user;
-
-
---
 -- Name: COLUMN projects.custom_doc_link; Type: ACL; Schema: public; Owner: -
 --
 
 GRANT UPDATE(custom_doc_link) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.enable_report_builder; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(enable_report_builder) ON TABLE public.projects TO seasketch_user;
 
 
 --
@@ -30245,6 +30477,13 @@ GRANT UPDATE(show_legend_by_default) ON TABLE public.projects TO seasketch_user;
 --
 
 GRANT SELECT(feature_flags) ON TABLE public.projects TO anon;
+
+
+--
+-- Name: COLUMN projects.enable_collection_new_reports; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT UPDATE(enable_collection_new_reports) ON TABLE public.projects TO seasketch_user;
 
 
 --
@@ -30293,11 +30532,11 @@ GRANT SELECT ON TABLE public.report_cards TO anon;
 
 
 --
--- Name: FUNCTION add_report_card(report_tab_id integer, component_settings jsonb, card_type text, body jsonb); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION add_report_card(report_tab_id integer, component_settings jsonb, card_type text, body jsonb, card_position integer, alternate_language_settings jsonb); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.add_report_card(report_tab_id integer, component_settings jsonb, card_type text, body jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.add_report_card(report_tab_id integer, component_settings jsonb, card_type text, body jsonb) TO seasketch_user;
+REVOKE ALL ON FUNCTION public.add_report_card(report_tab_id integer, component_settings jsonb, card_type text, body jsonb, card_position integer, alternate_language_settings jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.add_report_card(report_tab_id integer, component_settings jsonb, card_type text, body jsonb, card_position integer, alternate_language_settings jsonb) TO seasketch_user;
 
 
 --
@@ -32444,14 +32683,6 @@ GRANT ALL ON FUNCTION public.get_first_band_scale(geostats jsonb) TO anon;
 
 
 --
--- Name: FUNCTION get_geostats_attribute_column_names(geostats jsonb); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.get_geostats_attribute_column_names(geostats jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_geostats_attribute_column_names(geostats jsonb) TO anon;
-
-
---
 -- Name: FUNCTION get_representative_colors(geostats jsonb); Type: ACL; Schema: public; Owner: -
 --
 
@@ -32683,7 +32914,6 @@ GRANT ALL ON FUNCTION public.data_sources_is_archived(data_source public.data_so
 --
 
 REVOKE ALL ON FUNCTION public.data_sources_is_convertible_legacy_source(data_source public.data_sources) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.data_sources_is_convertible_legacy_source(data_source public.data_sources) TO seasketch_user;
 GRANT ALL ON FUNCTION public.data_sources_is_convertible_legacy_source(data_source public.data_sources) TO anon;
 
 
@@ -33341,7 +33571,6 @@ GRANT ALL ON FUNCTION public.geography(public.geometry) TO anon;
 --
 
 REVOKE ALL ON FUNCTION public.geography_clipping_layers() FROM PUBLIC;
-GRANT ALL ON FUNCTION public.geography_clipping_layers() TO seasketch_user;
 GRANT ALL ON FUNCTION public.geography_clipping_layers() TO anon;
 
 
@@ -34184,6 +34413,14 @@ GRANT ALL ON FUNCTION public.get_fragments_for_sketch(sketch_id integer) TO anon
 
 
 --
+-- Name: FUNCTION get_geostats_attribute_column_names(geostats jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_geostats_attribute_column_names(geostats jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_geostats_attribute_column_names(geostats jsonb) TO anon;
+
+
+--
 -- Name: FUNCTION get_job_details(key text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -34274,6 +34511,14 @@ REVOKE ALL ON FUNCTION public.get_projects_with_recent_activity() FROM PUBLIC;
 
 REVOKE ALL ON FUNCTION public.get_public_jwk(id uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.get_public_jwk(id uuid) TO anon;
+
+
+--
+-- Name: FUNCTION get_published_card_id_from_draft(draft_report_card_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_published_card_id_from_draft(draft_report_card_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_published_card_id_from_draft(draft_report_card_id integer) TO seasketch_user;
 
 
 --
@@ -36554,6 +36799,14 @@ GRANT ALL ON FUNCTION public.report_card_ids_for_report(rid integer) TO anon;
 
 REVOKE ALL ON FUNCTION public.report_cards_tab(card public.report_cards) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.report_cards_tab(card public.report_cards) TO anon;
+
+
+--
+-- Name: FUNCTION report_cards_title(card public.report_cards); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.report_cards_title(card public.report_cards) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.report_cards_title(card public.report_cards) TO anon;
 
 
 --
@@ -40334,6 +40587,13 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t pub
 
 
 --
+-- Name: FUNCTION tableofcontentsitembystableid(stableid text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.tableofcontentsitembystableid(stableid text) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION template_forms(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -40712,11 +40972,11 @@ GRANT ALL ON FUNCTION public.update_project_invite("inviteId" integer, make_admi
 
 
 --
--- Name: FUNCTION update_report_card(card_id integer, component_settings jsonb, body jsonb, alternate_language_settings jsonb, tint text, icon text, card_type text, display_map_layer_visibility_controls boolean); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION update_report_card(card_id integer, component_settings jsonb, body jsonb, alternate_language_settings jsonb); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.update_report_card(card_id integer, component_settings jsonb, body jsonb, alternate_language_settings jsonb, tint text, icon text, card_type text, display_map_layer_visibility_controls boolean) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.update_report_card(card_id integer, component_settings jsonb, body jsonb, alternate_language_settings jsonb, tint text, icon text, card_type text, display_map_layer_visibility_controls boolean) TO seasketch_user;
+REVOKE ALL ON FUNCTION public.update_report_card(card_id integer, component_settings jsonb, body jsonb, alternate_language_settings jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_report_card(card_id integer, component_settings jsonb, body jsonb, alternate_language_settings jsonb) TO seasketch_user;
 
 
 --

@@ -101,35 +101,6 @@ type AddGroupToAclPayload {
   tableOfContentsItem: TableOfContentsItem
 }
 
-"""All input for the `addReportCard` mutation."""
-input AddReportCardInput {
-  body: JSON
-  cardType: String
-
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  componentSettings: JSON
-  reportTabId: Int
-}
-
-"""The output of our `addReportCard` mutation."""
-type AddReportCardPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-  reportCard: ReportCard
-}
-
 """All input for the `addReportTab` mutation."""
 input AddReportTabInput {
   """
@@ -8838,6 +8809,7 @@ type MetricParameters {
   maxResults: Int
   sourceHasOverlappingFeatures: Boolean
   valueColumn: String
+  vrm: String
 }
 
 union MetricSubject = FragmentSubject | GeographySubject
@@ -8908,12 +8880,6 @@ type Mutation {
     input: AddGroupToAclInput!
   ): AddGroupToAclPayload
   addImageToSprite(height: Int!, image: Upload!, pixelRatio: Int!, spriteId: Int!, width: Int!): Sprite
-  addReportCard(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: AddReportCardInput!
-  ): AddReportCardPayload
   addReportTab(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -12043,6 +12009,11 @@ type Project implements Node {
   eligableDownloadableLayersCount: Int
 
   """
+  When true, administrators may configure collection sketch classes to use the new reporting tools in project admin.
+  """
+  enableCollectionNewReports: Boolean
+
+  """
   When true, overlay layers will be available for download by end-users if they
   have access to the layer and the data source supports it. This can be
   controlled on a per-layer basis.
@@ -13009,6 +12980,11 @@ input ProjectPatch {
 
   """Should be a short length in order to fit in the project header."""
   description: String
+
+  """
+  When true, administrators may configure collection sketch classes to use the new reporting tools in project admin.
+  """
+  enableCollectionNewReports: Boolean
 
   """
   When true, overlay layers will be available for download by end-users if they
@@ -14832,8 +14808,6 @@ type ReportCard implements Node {
   alternateLanguageSettings: JSON!
   body: JSON!
   componentSettings: JSON!
-  displayMapLayerVisibilityControls: Boolean!
-  icon: String
   id: Int!
   isDraft: Boolean!
 
@@ -14844,8 +14818,7 @@ type ReportCard implements Node {
   position: Int!
   reportTabId: Int!
   tab: ReportTab
-  tint: String
-  type: String!
+  title: String
   updatedAt: Datetime!
 }
 
@@ -19452,7 +19425,6 @@ input UpdateReportCardInput {
   alternateLanguageSettings: JSON
   body: JSON
   cardId: Int
-  cardType: String
 
   """
   An arbitrary string value with no semantic meaning. Will be included in the
@@ -19460,9 +19432,6 @@ input UpdateReportCardInput {
   """
   clientMutationId: String
   componentSettings: JSON
-  displayMapLayerVisibilityControls: Boolean
-  icon: String
-  tint: String
 }
 
 """The output of our `updateReportCard` mutation."""
