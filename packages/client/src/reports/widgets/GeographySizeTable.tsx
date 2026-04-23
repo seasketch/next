@@ -1,5 +1,4 @@
 import { useTranslation } from "react-i18next";
-import type { TFunction } from "i18next";
 import { Fragment, useMemo, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import * as Tooltip from "@radix-ui/react-tooltip";
@@ -22,7 +21,6 @@ import { useBaseReportContext } from "../context/BaseReportContext";
 import ReportLayerVisibilityCheckbox from "../components/ReportLayerVisibilityCheckbox";
 import { useOverlayOptionsForLayerToggle } from "./LayerToggleControls";
 import { LayerPickerDropdown, LayerPickerValue } from "./LayerPickerDropdown";
-import { CompatibleSpatialMetricDetailsFragment } from "../../generated/graphql";
 import CollectionExpandableName from "./collection/CollectionExpandableName";
 import SketchOverlapHint from "./collection/SketchOverlapHint";
 import { sketchContributionsGeographyTotalArea } from "./collection/sketchContributions";
@@ -161,175 +159,149 @@ export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
     [rows, enableLayerToggles]
   );
 
+  const areaColumnAlignClass = "text-center";
+
   return (
-    <div className="mt-3.5 overflow-hidden rounded-md border border-gray-200">
+    <div className="mt-3.5 rounded-md border border-gray-200 shadow-sm w-full max-w-full bg-white overflow-hidden">
       <Tooltip.Provider delayDuration={400}>
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              {hasVisibilityColumn && (
-                <th
-                  scope="col"
-                  className="w-8 px-2 py-2 text-center text-xs font-semibold uppercase tracking-wide text-gray-600"
+        <div className="divide-y divide-gray-100">
+          {/* Header row — matches OverlappingAreasTable / FeatureCountTable */}
+          <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200">
+            {hasVisibilityColumn && (
+              <div className="flex-none w-6 flex justify-center text-xs text-gray-600 font-semibold uppercase tracking-wide">
+                <LayersIcon className="w-4 h-4 text-gray-500" aria-hidden />
+              </div>
+            )}
+            <div className="flex-1 min-w-0 text-gray-600 text-xs font-semibold uppercase tracking-wide">
+              {componentSettings.geographyNameLabel || t("Geography")}
+            </div>
+            <div
+              className={`flex-none ${areaColumnAlignClass} text-gray-600 text-xs font-semibold uppercase tracking-wide min-w-[80px]`}
+            >
+              {componentSettings.areaLabel || t("Area")}
+            </div>
+            <div className="flex-none text-right text-gray-600 text-xs font-semibold uppercase tracking-wide min-w-[70px]">
+              {componentSettings.percentLabel || t("Percent")}
+            </div>
+          </div>
+          {rows.map((row) => {
+            const rowKey = String(row.geographyId);
+            const expanded =
+              isCollection && expandedRowKeys.has(rowKey);
+            const contrib = row.sketchContributions ?? [];
+            return (
+              <Fragment key={row.geographyId}>
+                <div
+                  className={`flex items-center gap-3 px-3 py-2 hover:bg-gray-50 ${
+                    row.areaSqKm === 0 ? "opacity-50" : ""
+                  }`}
                 >
-                  <LayersIcon
-                    className="w-4 h-4 text-gray-500 inline-block"
-                    aria-hidden
-                  />
-                </th>
-              )}
-              <th
-                scope="col"
-                className={`px-3 py-2.5 text-left text-xs font-semibold uppercase tracking-wide text-gray-600 ${
-                  isCollection
-                    ? hasVisibilityColumn
-                      ? "pl-[8px]"
-                      : "pl-3"
-                    : ""
-                }`}
-              >
-                {componentSettings.geographyNameLabel || t("Geography")}
-              </th>
-              <th
-                scope="col"
-                className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-600"
-              >
-                {componentSettings.areaLabel || t("Area")}
-              </th>
-              <th
-                scope="col"
-                className="px-3 py-2 text-right text-xs font-semibold uppercase tracking-wide text-gray-600"
-              >
-                {componentSettings.percentLabel || t("Percent")}
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-100 bg-white">
-            {rows.map((row) => {
-              const rowKey = String(row.geographyId);
-              const expanded =
-                isCollection && expandedRowKeys.has(rowKey);
-              const contrib = row.sketchContributions ?? [];
-              return (
-                <Fragment key={row.geographyId}>
-                  <tr
-                    className={`odd:bg-white even:bg-gray-50 hover:bg-gray-100 ${
+                  {hasVisibilityColumn && (
+                    <div className="flex-none w-6 flex justify-center">
+                      {row.stableId ? (
+                        <ReportLayerVisibilityCheckbox
+                          stableId={row.stableId}
+                        />
+                      ) : null}
+                    </div>
+                  )}
+                  <div className="flex-1 min-w-0 text-gray-800 text-sm">
+                    <CollectionExpandableName
+                      displayLabel={row.geographyName}
+                      truncateRowLabels={false}
+                      expanded={expanded}
+                      onToggle={() => toggleRow(rowKey)}
+                      loading={loading}
+                      isCollection={isCollection}
+                      caretTooltipEnabled={!hideCaretExpandTooltip}
+                      caretTooltipLabel={t("Expand sketch details")}
+                      expandAriaLabelExpanded={t(
+                        "Collapse sketch breakdown for {{name}}",
+                        { name: row.geographyName },
+                      )}
+                      expandAriaLabelCollapsed={t(
+                        "Expand sketch breakdown for {{name}}",
+                        { name: row.geographyName },
+                      )}
+                    />
+                  </div>
+                  <div
+                    className={`flex-none ${areaColumnAlignClass} text-gray-900 tabular-nums text-sm min-w-[80px]`}
+                  >
+                    {loading ? (
+                      <MetricLoadingDots />
+                    ) : (
+                      formatters.area(row.areaSqKm)
+                    )}
+                  </div>
+                  <div className="flex-none text-right text-gray-700 tabular-nums text-sm min-w-[70px]">
+                    {loading ? (
+                      <MetricLoadingDots />
+                    ) : (
+                      formatters.percent(row.fractionOfTotal)
+                    )}
+                  </div>
+                </div>
+                {isCollection && expanded && contrib.length === 0 && (
+                  <div
+                    className={`flex flex-wrap items-center gap-3 border-t border-slate-200/80 bg-slate-100 px-3 py-2.5 text-sm italic text-gray-600 ${
                       row.areaSqKm === 0 ? "opacity-50" : ""
-                    }${isCollection && expanded ? "" : ""}`}
+                    }`}
                   >
                     {hasVisibilityColumn && (
-                      <td className="w-8 px-2 py-2 text-center">
-                        {row.stableId ? (
-                          <ReportLayerVisibilityCheckbox
-                            stableId={row.stableId}
-                          />
-                        ) : null}
-                      </td>
+                      <div className="flex-none w-6" aria-hidden />
                     )}
-                    <td
-                      className={`px-3 py-2 text-sm text-gray-800 ${
-                        isCollection
-                          ? hasVisibilityColumn
-                            ? "pl-0"
-                            : "pl-1"
-                          : ""
-                      }`}
-                    >
-                      <CollectionExpandableName
-                        displayLabel={row.geographyName}
-                        truncateRowLabels={false}
-                        expanded={expanded}
-                        onToggle={() => toggleRow(rowKey)}
-                        loading={loading}
-                        isCollection={isCollection}
-                        caretTooltipEnabled={!hideCaretExpandTooltip}
-                        caretTooltipLabel={t("Expand sketch details")}
-                        expandAriaLabelExpanded={t(
-                          "Collapse sketch breakdown for {{name}}",
-                          { name: row.geographyName },
-                        )}
-                        expandAriaLabelCollapsed={t(
-                          "Expand sketch breakdown for {{name}}",
-                          { name: row.geographyName },
-                        )}
-                      />
-                    </td>
-                    <td className="px-3 py-2 text-sm text-gray-800 text-right tabular-nums">
-                      {loading ? (
-                        <MetricLoadingDots className="mr-1" />
-                      ) : (
-                        formatters.area(row.areaSqKm)
+                    <div className="min-w-0 flex-1">
+                      {t(
+                        "No individual sketches contributed area in this geography.",
                       )}
-                    </td>
-                    <td className="px-3 py-2 text-sm text-gray-800 text-right tabular-nums">
-                      {loading ? (
-                        <MetricLoadingDots className="mr-1" />
-                      ) : (
-                        formatters.percent(row.fractionOfTotal)
-                      )}
-                    </td>
-                  </tr>
-                  {isCollection && expanded && contrib.length === 0 && (
-                    <tr
-                      className={`border-t border-slate-200/80 bg-slate-100 ${
+                    </div>
+                  </div>
+                )}
+                {isCollection &&
+                  expanded &&
+                  contrib.map((c) => (
+                    <div
+                      key={`${row.geographyId}-sketch-${c.sketchId}`}
+                      className={`flex flex-wrap items-center gap-3 border-t border-slate-200/80 bg-slate-100 px-3 py-2 hover:bg-slate-200/30 ${
                         row.areaSqKm === 0 ? "opacity-50" : ""
                       }`}
                     >
-                      <td
-                        colSpan={hasVisibilityColumn ? 4 : 3}
-                        className="px-3 py-2.5 text-sm italic text-gray-600"
+                      {hasVisibilityColumn && (
+                        <div className="flex-none w-6" aria-hidden />
+                      )}
+                      <div className="flex min-w-0 flex-1 items-center gap-1 text-sm text-gray-800">
+                        <span className="min-w-0">{c.sketchName}</span>
+                        <SketchOverlapHint
+                          hasOverlap={c.hasOverlap}
+                          sketchDisplayName={c.sketchName}
+                          overlapPartnerSketchNames={
+                            c.overlapPartnerSketchNames
+                          }
+                        />
+                      </div>
+                      <div
+                        className={`flex-none ${areaColumnAlignClass} tabular-nums text-sm text-gray-900 min-w-[80px]`}
                       >
-                        {t(
-                          "No individual sketches contributed area in this geography."
+                        {loading ? (
+                          <MetricLoadingDots />
+                        ) : (
+                          formatters.area(c.areaSqKm)
                         )}
-                      </td>
-                    </tr>
-                  )}
-                  {isCollection &&
-                    expanded &&
-                    contrib.map((c) => (
-                      <tr
-                        key={`${row.geographyId}-sketch-${c.sketchId}`}
-                        className={`border-t border-slate-200/80 bg-slate-100/10 hover:bg-slate-200/20 text-gray-800 ${
-                          row.areaSqKm === 0 ? "opacity-50" : ""
-                        }`}
-                      >
-                        {hasVisibilityColumn && (
-                          <td className="w-8 px-2 py-2" aria-hidden />
+                      </div>
+                      <div className="flex-none min-w-[70px] text-right tabular-nums text-sm text-gray-700">
+                        {loading ? (
+                          <MetricLoadingDots />
+                        ) : (
+                          formatters.percent(c.fractionOfTotal)
                         )}
-                        <td className="px-3 py-2.5 text-sm">
-                          <div className="flex min-w-0 items-center gap-1">
-                            <span className="min-w-0">{c.sketchName}</span>
-                            <SketchOverlapHint
-                              hasOverlap={c.hasOverlap}
-                              sketchDisplayName={c.sketchName}
-                              overlapPartnerSketchNames={
-                                c.overlapPartnerSketchNames
-                              }
-                            />
-                          </div>
-                        </td>
-                        <td className="px-3 py-2 text-sm  text-right tabular-nums">
-                          {loading ? (
-                            <MetricLoadingDots className="mr-1" />
-                          ) : (
-                            formatters.area(c.areaSqKm)
-                          )}
-                        </td>
-                        <td className="px-3 py-2 text-sm  text-right tabular-nums">
-                          {loading ? (
-                            <MetricLoadingDots className="mr-1" />
-                          ) : (
-                            formatters.percent(c.fractionOfTotal)
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                </Fragment>
-              );
-            })}
-          </tbody>
-        </table>
+                      </div>
+                    </div>
+                  ))}
+              </Fragment>
+            );
+          })}
+        </div>
       </Tooltip.Provider>
     </div>
   );

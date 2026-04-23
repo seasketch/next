@@ -24,7 +24,7 @@ export default function SketchOverlapHint({
 
   const partners = overlapPartnerSketchNames;
   const footer = t(
-    "Collection stats take this overlap into account to avoid double-counting. When looking at individual sketch values for overlapping areas they will not add up to the Collection totals in such cases."
+    "Collection stats take this overlap into account to avoid double-counting. Collection totals will be less than the sum of individual sketch values when there is overlap."
   );
 
   return (
@@ -61,10 +61,11 @@ export default function SketchOverlapHint({
             <>
               <p className="leading-relaxed">
                 <span className="font-semibold tracking-tight text-indigo-300">
-                  {sketchDisplayName}
+                  {sketchDisplayName}{" "}
                 </span>
-                <span className="mt-1 block font-normal leading-snug text-gray-400">
-                  {t("Overlaps the following sketches:")}
+                <span className="mt-1 font-normal leading-snug text-gray-400">
+                  {t("overlaps the following")}
+                  {":"}
                 </span>
               </p>
               <ul className="mt-2 space-y-1 border-l border-emerald-500/40 pl-3">

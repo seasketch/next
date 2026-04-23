@@ -1,7 +1,4 @@
-import {
-  CaretDownIcon,
-  CaretRightIcon,
-} from "@radix-ui/react-icons";
+import { CaretDownIcon, CaretRightIcon } from "@radix-ui/react-icons";
 import OptionalCaretTooltip from "./OptionalCaretTooltip";
 
 type CollectionExpandableNameProps = {
@@ -35,9 +32,7 @@ export default function CollectionExpandableName({
   if (!isCollection) {
     return (
       <span
-        className={
-          truncateRowLabels ? "truncate block" : "block break-words"
-        }
+        className={truncateRowLabels ? "truncate block" : "block break-words"}
         title={truncateRowLabels ? displayLabel : undefined}
       >
         {displayLabel}
@@ -46,7 +41,7 @@ export default function CollectionExpandableName({
   }
 
   return (
-    <div className="-mx-1 flex min-w-0 items-center gap-1 px-1">
+    <div className="group -mx-1 flex min-w-0 items-center gap-1 px-1">
       <OptionalCaretTooltip
         tooltipEnabled={caretTooltipEnabled}
         tooltipLabel={caretTooltipLabel}
@@ -56,7 +51,7 @@ export default function CollectionExpandableName({
           disabled={loading}
           aria-hidden
           tabIndex={-1}
-          className="inline-flex shrink-0 items-center justify-center rounded border border-transparent p-0.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex shrink-0 items-center justify-center rounded border border-transparent p-0.5 text-gray-500 transition-colors group-hover:bg-gray-200/80 group-hover:border-gray-300 group-hover:text-gray-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-40 duration-300"
           onClick={onToggle}
         >
           {expanded ? (
@@ -70,14 +65,14 @@ export default function CollectionExpandableName({
         type="button"
         disabled={loading}
         aria-expanded={expanded}
-        aria-label={expanded ? expandAriaLabelExpanded : expandAriaLabelCollapsed}
-        className="min-w-0 flex-1 rounded border border-transparent py-0 text-left leading-normal text-gray-800 hover:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
+        aria-label={
+          expanded ? expandAriaLabelExpanded : expandAriaLabelCollapsed
+        }
+        className="min-w-0 flex-1 rounded border border-transparent py-0 text-left leading-normal text-gray-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
         onClick={onToggle}
       >
         <span
-          className={
-            truncateRowLabels ? "truncate block" : "block break-words"
-          }
+          className={truncateRowLabels ? "truncate block" : "block break-words"}
           title={truncateRowLabels ? displayLabel : undefined}
         >
           {displayLabel}

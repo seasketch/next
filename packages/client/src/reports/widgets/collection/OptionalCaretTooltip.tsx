@@ -9,7 +9,7 @@ import type { ReactElement, ReactNode } from "react";
 export default function OptionalCaretTooltip({
   tooltipEnabled,
   tooltipLabel,
-  delayDuration = 700,
+  delayDuration = 400,
   children,
 }: {
   tooltipEnabled: boolean;
@@ -27,7 +27,7 @@ export default function OptionalCaretTooltip({
         <Tooltip.Content
           className="z-[60] max-w-xs rounded-md bg-gray-900 px-3 py-2 text-xs leading-snug text-white shadow-lg"
           side="left"
-          sideOffset={6}
+          sideOffset={4}
         >
           {tooltipLabel}
           <Tooltip.Arrow className="fill-gray-900" />
