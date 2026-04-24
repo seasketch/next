@@ -227,6 +227,41 @@ COMMENT ON TYPE public.basemap_type IS 'SeaSketch supports multiple different ba
 
 
 --
+-- Name: change_log_field_group; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.change_log_field_group AS ENUM (
+    'layer:title',
+    'layer:attribution',
+    'layer:metadata',
+    'layer:cartography',
+    'layer:downloadable',
+    'layer:acl',
+    'layer:interactivity',
+    'layer:deleted',
+    'layers:z-order-change',
+    'folder:type',
+    'folder:title',
+    'folder:acl',
+    'folder:deleted',
+    'layers:published',
+    'layer:uploaded',
+    'folder:created',
+    'layer:parent-changed'
+);
+
+
+--
+-- Name: change_log_status; Type: TYPE; Schema: public; Owner: -
+--
+
+CREATE TYPE public.change_log_status AS ENUM (
+    'open',
+    'closed'
+);
+
+
+--
 -- Name: cursor_type; Type: TYPE; Schema: public; Owner: -
 --
 
@@ -2150,6 +2185,158 @@ CREATE FUNCTION public.account_exists(email text) RETURNS boolean
 --
 
 COMMENT ON FUNCTION public.account_exists(email text) IS '@omit';
+
+
+--
+-- Name: acl_changelog_blob_jsonb(integer, text, integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.acl_changelog_blob_jsonb(p_acl_id integer, p_type text, p_exclude_group_id integer DEFAULT NULL::integer, p_union_group_id integer DEFAULT NULL::integer) RETURNS jsonb
+    LANGUAGE sql STABLE
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+  select jsonb_build_object(
+    'type', p_type,
+    'groups', coalesce(
+      (
+        with gids as (
+          select aclg.group_id as gid
+          from access_control_list_groups aclg
+          where aclg.access_control_list_id = p_acl_id
+            and (
+              p_exclude_group_id is null
+              or aclg.group_id is distinct from p_exclude_group_id
+            )
+          union
+          select p_union_group_id
+          where p_union_group_id is not null
+        )
+        select jsonb_agg(
+          jsonb_build_object('id', pg.id, 'name', pg.name)
+          order by pg.id
+        )
+        from gids
+        join project_groups pg on pg.id = gids.gid
+        where pg.project_id = (select a.project_id from access_control_lists a where a.id = p_acl_id)
+      ),
+      '[]'::jsonb
+    )
+  );
+$$;
+
+
+--
+-- Name: FUNCTION acl_changelog_blob_jsonb(p_acl_id integer, p_type text, p_exclude_group_id integer, p_union_group_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.acl_changelog_blob_jsonb(p_acl_id integer, p_type text, p_exclude_group_id integer, p_union_group_id integer) IS 'Builds { type, groups: [ { id, name }, ... ] } for ACL changelog blobs; optional exclude or union group id.';
+
+
+--
+-- Name: acl_changelog_summary_jsonb(integer, text, integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.acl_changelog_summary_jsonb(p_acl_id integer, p_type text, p_exclude_group_id integer DEFAULT NULL::integer, p_union_group_id integer DEFAULT NULL::integer) RETURNS jsonb
+    LANGUAGE sql STABLE
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+  select jsonb_build_object(
+    'type', p_type,
+    'groups', coalesce(
+      (
+        with gids as (
+          select aclg.group_id as gid
+          from access_control_list_groups aclg
+          where aclg.access_control_list_id = p_acl_id
+            and (
+              p_exclude_group_id is null
+              or aclg.group_id is distinct from p_exclude_group_id
+            )
+          union
+          select p_union_group_id
+          where p_union_group_id is not null
+        )
+        select jsonb_agg(pg.name order by pg.id)
+        from gids
+        join project_groups pg on pg.id = gids.gid
+        where pg.project_id = (select a.project_id from access_control_lists a where a.id = p_acl_id)
+      ),
+      '[]'::jsonb
+    )
+  );
+$$;
+
+
+--
+-- Name: FUNCTION acl_changelog_summary_jsonb(p_acl_id integer, p_type text, p_exclude_group_id integer, p_union_group_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.acl_changelog_summary_jsonb(p_acl_id integer, p_type text, p_exclude_group_id integer, p_union_group_id integer) IS 'Builds AclSummary-shaped jsonb { type, groups: string[] } for an ACL; optional exclude or union group id.';
+
+
+--
+-- Name: acl_changelog_try_record(integer, jsonb, jsonb, jsonb, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.acl_changelog_try_record(p_acl_id integer, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_editor       int;
+  v_field_group  change_log_field_group;
+  v_toc_id       int;
+  v_project_id   int;
+begin
+  v_editor := nullif(current_setting('session.user_id', true), '')::int;
+  if v_editor is null then
+    return;
+  end if;
+
+  select
+    toc.id,
+    toc.project_id,
+    case
+      when toc.is_folder then 'folder:acl'::change_log_field_group
+      else 'layer:acl'::change_log_field_group
+    end
+  into v_toc_id, v_project_id, v_field_group
+  from access_control_lists acl
+  join table_of_contents_items toc on toc.id = acl.table_of_contents_item_id
+  where acl.id = p_acl_id
+    and acl.table_of_contents_item_id is not null
+    and toc.is_draft = true;
+
+  if v_toc_id is null then
+    return;
+  end if;
+
+  if p_from_summary is not distinct from p_to_summary
+     and coalesce(p_from_blob, '{}'::jsonb) is not distinct from coalesce(p_to_blob, '{}'::jsonb) then
+    return;
+  end if;
+
+  perform record_changelog(
+    v_project_id,
+    v_editor,
+    'table_of_contents_items',
+    v_toc_id,
+    v_field_group,
+    p_from_summary,
+    p_to_summary,
+    p_from_blob,
+    p_to_blob,
+    null
+  );
+end;
+$$;
+
+
+--
+-- Name: FUNCTION acl_changelog_try_record(p_acl_id integer, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.acl_changelog_try_record(p_acl_id integer, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb) IS 'Resolves draft table_of_contents_items for an ACL and writes layer:acl or folder:acl change_logs.';
 
 
 --
@@ -4839,6 +5026,83 @@ CREATE FUNCTION public.bookmark_data(id text) RETURNS jsonb
 --
 
 COMMENT ON FUNCTION public.bookmark_data(id text) IS '@omit';
+
+
+--
+-- Name: build_layer_interactivity_acl_payload(integer, integer, integer, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.build_layer_interactivity_acl_payload(p_acl_id integer, p_exclude_group_id integer DEFAULT NULL::integer, p_include_group_id integer DEFAULT NULL::integer, p_type_override text DEFAULT NULL::text, OUT acl_summary jsonb, OUT acl_blob jsonb) RETURNS record
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_acl_type access_control_list_type;
+  v_project_id int;
+  v_eff text;
+begin
+  select acl.type, acl.project_id
+  into v_acl_type, v_project_id
+  from access_control_lists acl
+  where acl.id = p_acl_id;
+
+  if not found then
+    acl_summary := null;
+    acl_blob := null;
+    return;
+  end if;
+
+  v_eff := coalesce(p_type_override, v_acl_type::text);
+
+  if v_eff in ('public', 'admins_only') then
+    acl_summary := jsonb_build_object('type', v_eff, 'groups', '[]'::jsonb);
+    acl_blob := jsonb_build_object('type', v_eff, 'groups', '[]'::jsonb);
+    return;
+  end if;
+
+  with members as (
+    select distinct s.id, s.name
+    from (
+      select pg.id, pg.name
+      from access_control_list_groups aclg
+      join project_groups pg on pg.id = aclg.group_id and pg.project_id = v_project_id
+      where aclg.access_control_list_id = p_acl_id
+        and (p_exclude_group_id is null or aclg.group_id is distinct from p_exclude_group_id)
+      union
+      select pg.id, pg.name
+      from project_groups pg
+      where p_include_group_id is not null
+        and pg.id = p_include_group_id
+        and pg.project_id = v_project_id
+    ) s
+  )
+  select
+    jsonb_build_object(
+      'type', 'group',
+      'groups', coalesce(
+        (select to_jsonb(array_agg(m.name order by m.name)) from members m),
+        '[]'::jsonb
+      )
+    ),
+    jsonb_build_object(
+      'type', 'group',
+      'groups', coalesce(
+        (select jsonb_agg(jsonb_build_object('id', m.id, 'name', m.name) order by m.id) from members m),
+        '[]'::jsonb
+      )
+    )
+  into acl_summary, acl_blob;
+
+  return;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION build_layer_interactivity_acl_payload(p_acl_id integer, p_exclude_group_id integer, p_include_group_id integer, p_type_override text, OUT acl_summary jsonb, OUT acl_blob jsonb); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.build_layer_interactivity_acl_payload(p_acl_id integer, p_exclude_group_id integer, p_include_group_id integer, p_type_override text, OUT acl_summary jsonb, OUT acl_blob jsonb) IS 'Builds AclSummary JSON (type + group names) and blob JSON (type + {id,name}[]) for one ACL; exclude/include group ids simulate membership before INSERT/DELETE.';
 
 
 --
@@ -10108,25 +10372,42 @@ CREATE FUNCTION public.deny_participant("projectId" integer, "userId" integer) R
 CREATE FUNCTION public.disable_download_for_shared_layers(slug text) RETURNS public.projects
     LANGUAGE plpgsql
     AS $$
-    DECLARE
-      project projects;
-    begin
-    update table_of_contents_items set enable_download = false
-    where table_of_contents_items.project_id = (select id from projects where projects.slug = disable_download_for_shared_layers.slug)
+declare
+  project projects;
+begin
+  perform set_config('seasketch.bulk_layer_download', 'true', true);
+
+  update
+    table_of_contents_items
+  set
+    enable_download = false
+  where
+    table_of_contents_items.project_id = (
+      select
+        id
+      from
+        projects
+      where
+        projects.slug = disable_download_for_shared_layers.slug
+    )
     and table_of_contents_items.is_draft = true
     and table_of_contents_items.is_folder = false;
-    select 
-        * 
-      from 
-        projects 
-      into 
-        project
-      where 
-        projects.slug = disable_download_for_shared_layers.slug 
-      limit 1;
-      return project;
-    end;
-  $$;
+
+  perform set_config('seasketch.bulk_layer_download', 'false', true);
+
+  select
+    *
+  from
+    projects
+  into
+    project
+  where
+    projects.slug = disable_download_for_shared_layers.slug
+  limit 1;
+
+  return project;
+end;
+$$;
 
 
 --
@@ -10279,35 +10560,42 @@ COMMENT ON FUNCTION public.email_unsubscribed(email text) IS '@omit';
 CREATE FUNCTION public.enable_download_for_eligible_layers(slug text) RETURNS public.projects
     LANGUAGE plpgsql
     AS $$
-    DECLARE
-      project projects;
-    begin    
-      update 
-        table_of_contents_items 
-      set enable_download = true
-      where 
-        table_of_contents_items.project_id = (
-          select 
-            id 
-          from 
-            projects 
-          where 
-            projects.slug = enable_download_for_eligible_layers.slug
-        ) and 
-        table_of_contents_items.is_draft = true and
-        table_of_contents_items_is_downloadable_source_type(table_of_contents_items.*);
-      select 
-        * 
-      from 
-        projects 
-      into 
-        project
-      where 
-        projects.slug = enable_download_for_eligible_layers.slug 
-      limit 1;
-      return project;
-    end;
-  $$;
+declare
+  project projects;
+begin
+  perform set_config('seasketch.bulk_layer_download', 'true', true);
+
+  update
+    table_of_contents_items
+  set
+    enable_download = true
+  where
+    table_of_contents_items.project_id = (
+      select
+        id
+      from
+        projects
+      where
+        projects.slug = enable_download_for_eligible_layers.slug
+    )
+    and table_of_contents_items.is_draft = true
+    and table_of_contents_items_is_downloadable_source_type(table_of_contents_items.*);
+
+  perform set_config('seasketch.bulk_layer_download', 'false', true);
+
+  select
+    *
+  from
+    projects
+  into
+    project
+  where
+    projects.slug = enable_download_for_eligible_layers.slug
+  limit 1;
+
+  return project;
+end;
+$$;
 
 
 --
@@ -16489,6 +16777,8 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
     declare
+      v_editor int;
+      v_layer_count int;
       lid int;
       item table_of_contents_items;
       source_id int;
@@ -16800,11 +17090,7 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
           filename,
           original_filename,
           source_processing_job_key,
-          epsg,
-          num_features,
-          num_invalid_features,
-          num_repaired_features,
-          was_repaired
+          epsg
         ) select 
             copied_source_id,
             project_id,
@@ -16817,11 +17103,7 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
             filename,
             original_filename,
             source_processing_job_key,
-            epsg,
-            num_features,
-            num_invalid_features,
-            num_repaired_features,
-            was_repaired
+            epsg
           from 
             data_upload_outputs 
           where 
@@ -16846,6 +17128,27 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
       where 
         id = "projectId";
 
+      v_editor := nullif(current_setting('session.user_id', true), '')::int;
+      if v_editor is not null then
+        select count(*)::int into v_layer_count
+        from table_of_contents_items
+        where project_id = "projectId"
+          and is_draft = true
+          and is_folder = false;
+
+        perform record_changelog(
+          "projectId",
+          v_editor,
+          'projects',
+          "projectId",
+          'layers:published'::change_log_field_group,
+          '{}'::jsonb,
+          jsonb_build_object('layer_count', v_layer_count),
+          null,
+          null,
+          null
+        );
+      end if;
       -- return items
       return query select * from table_of_contents_items 
         where project_id = "projectId" and is_draft = false;
@@ -16857,7 +17160,7 @@ CREATE FUNCTION public.publish_table_of_contents("projectId" integer) RETURNS SE
 -- Name: FUNCTION publish_table_of_contents("projectId" integer); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.publish_table_of_contents("projectId" integer) IS 'Copies all table of contents items, related layers, sources, and access control lists to create a new table of contents that will be displayed to project users.';
+COMMENT ON FUNCTION public.publish_table_of_contents("projectId" integer) IS 'Copies draft TOC to published; sets project flags. Records change_logs (layers:published) with draft layer_count when session.user_id is set.';
 
 
 --
@@ -16920,6 +17223,129 @@ CREATE FUNCTION public.recalculate_spatial_metrics(metric_ids bigint[], preproce
     end if;
     return true;
   end;
+$$;
+
+
+--
+-- Name: record_changelog(integer, integer, text, integer, public.change_log_field_group, jsonb, jsonb, jsonb, jsonb, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.record_changelog(p_project_id integer, p_editor_id integer, p_entity_type text, p_entity_id integer, p_field_group public.change_log_field_group, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb DEFAULT NULL::jsonb, p_to_blob jsonb DEFAULT NULL::jsonb, p_meta jsonb DEFAULT NULL::jsonb) RETURNS bigint
+    LANGUAGE plpgsql
+    AS $$
+declare
+  v_now          timestamptz := clock_timestamp();
+  v_window       interval;
+  v_existing_id  bigint;
+  v_existing_last timestamptz;
+begin
+  -- Choose your coalescing window per field_group.
+  -- These only need to be changed for settings which users might really 
+  -- deliberate on, such as cartography, or changes that should be immediately
+  -- recorded (e.g. layer:deleted).
+  v_window :=
+    case p_field_group
+      when 'layer:metadata'::change_log_field_group then interval '5 minutes'
+      when 'layer:cartography'::change_log_field_group then interval '5 minutes'
+      when 'layer:interactivity'::change_log_field_group then interval '2 minutes'
+      when 'layers:published'::change_log_field_group then interval '5 seconds'
+      when 'layers:z-order-change'::change_log_field_group then interval '5 minutes'
+      when 'layer:uploaded'::change_log_field_group then interval '0 seconds'
+      when 'layer:downloadable'::change_log_field_group then interval '10 seconds'
+      when 'layer:deleted'::change_log_field_group then interval '0 seconds'
+      when 'folder:deleted'::change_log_field_group then interval '0 seconds'
+      else interval '1 minute'
+    end;
+
+  /*
+    Find the current open row for this key (if any) and lock it.
+    Because of the partial unique index, there can be at most one open row.
+  */
+  select id, last_at
+    into v_existing_id, v_existing_last
+  from change_logs
+  where project_id = p_project_id
+    and editor_id = p_editor_id
+    and entity_type = p_entity_type
+    and entity_id = p_entity_id
+    and field_group = p_field_group
+    and status = 'open'
+  limit 1
+  for update;
+
+  if v_existing_id is not null then
+    -- Decide whether to merge into the existing open row, or close+start a new one.
+    if (v_now - v_existing_last) <= v_window then
+      -- Merge: preserve from_* and meta; update to_* and counters.
+      update change_logs
+      set
+        last_at    = v_now,
+        save_count = save_count + 1,
+        to_summary = coalesce(p_to_summary, to_summary),
+        to_blob    = case
+                       when p_to_blob is null then to_blob
+                       else p_to_blob
+                     end
+      where id = v_existing_id;
+
+      return v_existing_id;
+    else
+      -- Outside the window: close the old row and create a new open row.
+      update change_logs
+      set status = 'closed'
+      where id = v_existing_id;
+
+      insert into change_logs (
+        project_id, editor_id,
+        started_at, last_at,
+        status, save_count,
+        from_summary, to_summary,
+        from_blob, to_blob,
+        entity_type, entity_id,
+        field_group, meta
+      ) values (
+        p_project_id, p_editor_id,
+        v_now, v_now,
+        'open', 1,
+        coalesce(p_from_summary, '{}'::jsonb),
+        coalesce(p_to_summary, '{}'::jsonb),
+        p_from_blob,
+        p_to_blob,
+        p_entity_type, p_entity_id,
+        p_field_group,
+        p_meta
+      )
+      returning id into v_existing_id;
+
+      return v_existing_id;
+    end if;
+  else
+    -- No open row exists: create one.
+    insert into change_logs (
+      project_id, editor_id,
+      started_at, last_at,
+      status, save_count,
+      from_summary, to_summary,
+      from_blob, to_blob,
+      entity_type, entity_id,
+      field_group, meta
+    ) values (
+      p_project_id, p_editor_id,
+      v_now, v_now,
+      'open', 1,
+      coalesce(p_from_summary, '{}'::jsonb),
+      coalesce(p_to_summary, '{}'::jsonb),
+      p_from_blob,
+      p_to_blob,
+      p_entity_type, p_entity_id,
+      p_field_group,
+      p_meta
+    )
+    returning id into v_existing_id;
+
+    return v_existing_id;
+  end if;
+end;
 $$;
 
 
@@ -21372,6 +21798,1076 @@ COMMENT ON FUNCTION public.traverse_prosemirror_nodes(node jsonb) IS '@omit';
 
 
 --
+-- Name: trg_changelog_access_control_list_groups_for_toc(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trg_changelog_access_control_list_groups_for_toc() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_acl_id int;
+  v_type   text;
+  v_gid    int;
+begin
+  if tg_op = 'INSERT' then
+    v_acl_id := new.access_control_list_id;
+    v_gid := new.group_id;
+  else
+    v_acl_id := old.access_control_list_id;
+    v_gid := old.group_id;
+  end if;
+
+  if not exists (
+    select 1
+    from access_control_lists acl
+    join table_of_contents_items toc on toc.id = acl.table_of_contents_item_id
+    where acl.id = v_acl_id
+      and acl.table_of_contents_item_id is not null
+      and toc.is_draft = true
+  ) then
+    if tg_op = 'INSERT' then
+      return new;
+    else
+      return old;
+    end if;
+  end if;
+
+  select type::text into v_type from access_control_lists where id = v_acl_id;
+  if v_type is null then
+    if tg_op = 'INSERT' then
+      return new;
+    else
+      return old;
+    end if;
+  end if;
+
+  if tg_op = 'INSERT' then
+    perform acl_changelog_try_record(
+      v_acl_id,
+      acl_changelog_summary_jsonb(v_acl_id, v_type, v_gid, null),
+      acl_changelog_summary_jsonb(v_acl_id, v_type, null, null),
+      acl_changelog_blob_jsonb(v_acl_id, v_type, v_gid, null),
+      acl_changelog_blob_jsonb(v_acl_id, v_type, null, null)
+    );
+    return new;
+  else
+    perform acl_changelog_try_record(
+      v_acl_id,
+      acl_changelog_summary_jsonb(v_acl_id, v_type, null, v_gid),
+      acl_changelog_summary_jsonb(v_acl_id, v_type, null, null),
+      acl_changelog_blob_jsonb(v_acl_id, v_type, null, v_gid),
+      acl_changelog_blob_jsonb(v_acl_id, v_type, null, null)
+    );
+    return old;
+  end if;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION trg_changelog_access_control_list_groups_for_toc(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.trg_changelog_access_control_list_groups_for_toc() IS 'Draft TOC ACL group membership → layer:acl or folder:acl (session.user_id). INSERT/DELETE on access_control_list_groups.';
+
+
+--
+-- Name: trg_changelog_access_control_list_groups_layer_interactivity_ad(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trg_changelog_access_control_list_groups_layer_interactivity_ad() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_from_sum jsonb;
+  v_from_blob jsonb;
+  v_to_sum jsonb;
+  v_to_blob jsonb;
+begin
+  select p.acl_summary, p.acl_blob
+  into v_from_sum, v_from_blob
+  from build_layer_interactivity_acl_payload(
+    old.access_control_list_id,
+    null,
+    old.group_id,
+    null
+  ) p;
+
+  select p.acl_summary, p.acl_blob
+  into v_to_sum, v_to_blob
+  from build_layer_interactivity_acl_payload(old.access_control_list_id, null, null, null) p;
+
+  perform try_record_layer_interactivity_changelog(
+    old.access_control_list_id, v_from_sum, v_to_sum, v_from_blob, v_to_blob
+  );
+
+  return old;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION trg_changelog_access_control_list_groups_layer_interactivity_ad(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.trg_changelog_access_control_list_groups_layer_interactivity_ad() IS 'layer:interactivity when a group is removed from an ACL (draft layer TOC only).';
+
+
+--
+-- Name: trg_changelog_access_control_list_groups_layer_interactivity_ai(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trg_changelog_access_control_list_groups_layer_interactivity_ai() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_from_sum jsonb;
+  v_from_blob jsonb;
+  v_to_sum jsonb;
+  v_to_blob jsonb;
+begin
+  select p.acl_summary, p.acl_blob
+  into v_from_sum, v_from_blob
+  from build_layer_interactivity_acl_payload(
+    new.access_control_list_id,
+    new.group_id,
+    null,
+    null
+  ) p;
+
+  select p.acl_summary, p.acl_blob
+  into v_to_sum, v_to_blob
+  from build_layer_interactivity_acl_payload(new.access_control_list_id, null, null, null) p;
+
+  perform try_record_layer_interactivity_changelog(
+    new.access_control_list_id, v_from_sum, v_to_sum, v_from_blob, v_to_blob
+  );
+
+  return new;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION trg_changelog_access_control_list_groups_layer_interactivity_ai(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.trg_changelog_access_control_list_groups_layer_interactivity_ai() IS 'layer:interactivity when a group is added to an ACL (draft layer TOC only).';
+
+
+--
+-- Name: trg_changelog_access_control_lists_type_for_toc(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trg_changelog_access_control_lists_type_for_toc() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+begin
+  -- WHEN cannot contain subqueries; draft check lives here.
+  if new.table_of_contents_item_id is null then
+    return new;
+  end if;
+  if not exists (
+    select 1
+    from table_of_contents_items toc
+    where toc.id = new.table_of_contents_item_id
+      and toc.is_draft = true
+  ) then
+    return new;
+  end if;
+
+  perform acl_changelog_try_record(
+    new.id,
+    acl_changelog_summary_jsonb(new.id, old.type::text, null, null),
+    acl_changelog_summary_jsonb(new.id, new.type::text, null, null),
+    acl_changelog_blob_jsonb(new.id, old.type::text, null, null),
+    acl_changelog_blob_jsonb(new.id, new.type::text, null, null)
+  );
+  return new;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION trg_changelog_access_control_lists_type_for_toc(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.trg_changelog_access_control_lists_type_for_toc() IS 'Draft TOC ACL type change → layer:acl or folder:acl on linked table_of_contents_items (session.user_id).';
+
+
+--
+-- Name: trg_changelog_data_layers_attribution(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trg_changelog_data_layers_attribution() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_editor int;
+begin
+  if old.attribution is not distinct from new.attribution then
+    return new;
+  end if;
+
+  v_editor := nullif(current_setting('session.user_id', true), '')::int;
+  if v_editor is null then
+    return new;
+  end if;
+
+  perform record_changelog(
+    new.project_id,
+    v_editor,
+    'data_layers',
+    new.id,
+    'layer:attribution'::change_log_field_group,
+    jsonb_build_object('attribution', old.attribution),
+    jsonb_build_object('attribution', new.attribution),
+    null,
+    null,
+    null
+  );
+
+  return new;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION trg_changelog_data_layers_attribution(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.trg_changelog_data_layers_attribution() IS 'Records admin changelog entries when a data_layers.attribution value is updated (session.user_id).';
+
+
+--
+-- Name: trg_changelog_data_layers_data_source_layer_uploaded(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trg_changelog_data_layers_data_source_layer_uploaded() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_uploaded_by     int;
+  v_filename        text;
+  v_changelog       text;
+  v_summary         jsonb;
+  v_url             text;
+  v_toc             record;
+begin
+  if old.data_source_id is not distinct from new.data_source_id then
+    return new;
+  end if;
+
+  select ds.uploaded_by, ds.uploaded_source_filename, ds.changelog, ds.url
+  into v_uploaded_by, v_filename, v_changelog, v_url
+  from data_sources ds
+  where ds.id = new.data_source_id;
+
+  if v_uploaded_by is null or v_filename is null or btrim(v_filename) = '' then
+    return new;
+  end if;
+
+  v_summary := jsonb_build_object('filename', v_filename, 'replacement', true);
+  if v_changelog is not null then
+    v_summary := v_summary || jsonb_build_object('changelog', v_changelog);
+  end if;
+
+  for v_toc in
+    select toc.id, toc.project_id
+    from table_of_contents_items toc
+    where toc.data_layer_id = new.id
+      and toc.is_draft = true
+      and toc.is_folder = false
+  loop
+    perform record_changelog(
+      v_toc.project_id,
+      v_uploaded_by,
+      'table_of_contents_items',
+      v_toc.id,
+      'layer:uploaded'::change_log_field_group,
+      '{}'::jsonb,
+      v_summary,
+      null,
+      null,
+      jsonb_build_object('data_source_id', new.data_source_id, 'url', v_url)
+    );
+  end loop;
+
+  return new;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION trg_changelog_data_layers_data_source_layer_uploaded(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.trg_changelog_data_layers_data_source_layer_uploaded() IS 'Records layer:uploaded (replacement) when a data_layer data_source_id changes to an upload-backed source; to_summary may include data_sources.changelog (e.g. replace_data_source).';
+
+
+--
+-- Name: trg_changelog_data_layers_mapbox_styles_for_toc(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trg_changelog_data_layers_mapbox_styles_for_toc() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_editor int;
+  v_toc    record;
+begin
+  if old.mapbox_gl_styles is not distinct from new.mapbox_gl_styles then
+    return new;
+  end if;
+
+  v_editor := nullif(current_setting('session.user_id', true), '')::int;
+  if v_editor is null then
+    return new;
+  end if;
+
+  for v_toc in
+    select toc.id, toc.project_id
+    from table_of_contents_items toc
+    where toc.data_layer_id = new.id
+      and toc.is_draft = true
+      and toc.is_folder = false
+  loop
+    perform record_changelog(
+      v_toc.project_id,
+      v_editor,
+      'table_of_contents_items',
+      v_toc.id,
+      'layer:cartography'::change_log_field_group,
+      '{}'::jsonb,
+      '{}'::jsonb,
+      old.mapbox_gl_styles,
+      new.mapbox_gl_styles,
+      null
+    );
+  end loop;
+
+  return new;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION trg_changelog_data_layers_mapbox_styles_for_toc(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.trg_changelog_data_layers_mapbox_styles_for_toc() IS 'Draft layer TOC cartography (mapbox_gl_styles on related data_layer); full styles in blobs.';
+
+
+--
+-- Name: trg_changelog_data_sources_attribution_for_toc(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trg_changelog_data_sources_attribution_for_toc() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_editor int;
+  v_toc     record;
+begin
+  if old.attribution is not distinct from new.attribution then
+    return new;
+  end if;
+
+  v_editor := nullif(current_setting('session.user_id', true), '')::int;
+  if v_editor is null then
+    return new;
+  end if;
+
+  for v_toc in
+    select toc.id, toc.project_id
+    from table_of_contents_items toc
+    join data_layers dl on dl.id = toc.data_layer_id
+    where dl.data_source_id = new.id
+      and toc.is_draft = true
+      and toc.is_folder = false
+  loop
+    perform record_changelog(
+      v_toc.project_id,
+      v_editor,
+      'table_of_contents_items',
+      v_toc.id,
+      'layer:attribution'::change_log_field_group,
+      jsonb_build_object('attribution', old.attribution),
+      jsonb_build_object('attribution', new.attribution),
+      null,
+      null,
+      null
+    );
+  end loop;
+
+  return new;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION trg_changelog_data_sources_attribution_for_toc(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.trg_changelog_data_sources_attribution_for_toc() IS 'Records admin change_logs (layer:attribution) for draft table_of_contents_items that use this data source (session.user_id).';
+
+
+--
+-- Name: trg_changelog_interactivity_settings_for_toc(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trg_changelog_interactivity_settings_for_toc() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_editor        int;
+  v_toc           record;
+  v_text_changes  boolean;
+  v_from_summary  jsonb;
+  v_to_summary    jsonb;
+  v_from_blob     jsonb;
+  v_to_blob       jsonb;
+begin
+  if
+    old.type is not distinct from new.type
+    and old.short_template is not distinct from new.short_template
+    and old.long_template is not distinct from new.long_template
+    and old.title is not distinct from new.title
+  then
+    return new;
+  end if;
+
+  v_text_changes :=
+    old.short_template is distinct from new.short_template
+    or old.long_template is distinct from new.long_template
+    or old.title is distinct from new.title;
+
+  v_from_summary := jsonb_build_object(
+    'type', old.type::text,
+    'text_changes', v_text_changes
+  );
+  v_to_summary := jsonb_build_object(
+    'type', new.type::text,
+    'text_changes', v_text_changes
+  );
+
+  v_from_blob := jsonb_build_object(
+    'short_template', old.short_template,
+    'long_template', old.long_template,
+    'cursor', old.cursor::text,
+    'title', old.title,
+    'layers', to_jsonb(coalesce(old.layers, array[]::text[]))
+  );
+  v_to_blob := jsonb_build_object(
+    'short_template', new.short_template,
+    'long_template', new.long_template,
+    'cursor', new.cursor::text,
+    'title', new.title,
+    'layers', to_jsonb(coalesce(new.layers, array[]::text[]))
+  );
+
+  v_editor := nullif(current_setting('session.user_id', true), '')::int;
+  if v_editor is null then
+    return new;
+  end if;
+
+  for v_toc in
+    select toc.id, toc.project_id
+    from table_of_contents_items toc
+    where toc.data_layer_id in (
+      select dl.id from data_layers dl where dl.interactivity_settings_id = new.id
+    )
+      and toc.is_draft = true
+      and toc.is_folder = false
+  loop
+    perform record_changelog(
+      v_toc.project_id,
+      v_editor,
+      'table_of_contents_items',
+      v_toc.id,
+      'layer:interactivity'::change_log_field_group,
+      v_from_summary,
+      v_to_summary,
+      v_from_blob,
+      v_to_blob,
+      null
+    );
+  end loop;
+
+  return new;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION trg_changelog_interactivity_settings_for_toc(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.trg_changelog_interactivity_settings_for_toc() IS 'Draft layer interactivity_settings edits → layer:interactivity on related draft TOC (session.user_id). Summaries {type,text_changes}; blobs include cursor/layers. No row for cursor/layers-only updates (UPDATE OF).';
+
+
+--
+-- Name: trg_changelog_table_of_contents_items_data_layer_uploaded(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trg_changelog_table_of_contents_items_data_layer_uploaded() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_uploaded_by     int;
+  v_filename        text;
+  v_changelog       text;
+  v_summary         jsonb;
+  v_data_source_id  int;
+  v_url             text;
+begin
+  if not new.is_draft or new.is_folder then
+    return new;
+  end if;
+  if old.data_layer_id is not distinct from new.data_layer_id then
+    return new;
+  end if;
+  if new.data_layer_id is null then
+    return new;
+  end if;
+
+  select ds.id, ds.uploaded_by, ds.uploaded_source_filename, ds.changelog, ds.url
+  into v_data_source_id, v_uploaded_by, v_filename, v_changelog, v_url
+  from data_layers dl
+  join data_sources ds on ds.id = dl.data_source_id
+  where dl.id = new.data_layer_id;
+
+  if v_uploaded_by is null or v_filename is null or btrim(v_filename) = '' then
+    return new;
+  end if;
+
+  v_summary := jsonb_build_object('filename', v_filename, 'replacement', true);
+  if v_changelog is not null then
+    v_summary := v_summary || jsonb_build_object('changelog', v_changelog);
+  end if;
+
+  perform record_changelog(
+    new.project_id,
+    v_uploaded_by,
+    'table_of_contents_items',
+    new.id,
+    'layer:uploaded'::change_log_field_group,
+    '{}'::jsonb,
+    v_summary,
+    null,
+    null,
+    jsonb_build_object('data_source_id', v_data_source_id, 'url', v_url)
+  );
+
+  return new;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION trg_changelog_table_of_contents_items_data_layer_uploaded(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.trg_changelog_table_of_contents_items_data_layer_uploaded() IS 'Records layer:uploaded when draft layer TOC data_layer_id changes to an upload-backed data_source (replacement + optional data_sources.changelog in to_summary).';
+
+
+--
+-- Name: trg_changelog_table_of_contents_items_deleted(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trg_changelog_table_of_contents_items_deleted() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_editor     int;
+  v_field_group change_log_field_group;
+  v_from_blob  jsonb;
+  v_ds_id      int;
+  v_ds_url     text;
+begin
+  if not old.is_draft then
+    return old;
+  end if;
+
+  v_editor := nullif(current_setting('session.user_id', true), '')::int;
+  if v_editor is null then
+    return old;
+  end if;
+
+  v_field_group :=
+    case when old.is_folder then 'folder:deleted'::change_log_field_group
+         else 'layer:deleted'::change_log_field_group end;
+
+  v_ds_id := null;
+  v_ds_url := null;
+  if not old.is_folder and old.data_layer_id is not null then
+    select dl.data_source_id, ds.url
+    into v_ds_id, v_ds_url
+    from data_layers dl
+    left join data_sources ds on ds.id = dl.data_source_id
+    where dl.id = old.data_layer_id;
+  end if;
+
+  v_from_blob := jsonb_build_object(
+    'data_source_type', old.data_source_type,
+    'data_layer_id', old.data_layer_id,
+    'data_source_id', v_ds_id
+  );
+  if v_ds_url is not null then
+    v_from_blob := v_from_blob || jsonb_build_object('url', v_ds_url);
+  end if;
+
+  perform record_changelog(
+    old.project_id,
+    v_editor,
+    'table_of_contents_items',
+    old.id,
+    v_field_group,
+    jsonb_build_object('title', old.title, 'is_folder', old.is_folder),
+    '{}'::jsonb,
+    v_from_blob,
+    null,
+    null
+  );
+
+  return old;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION trg_changelog_table_of_contents_items_deleted(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.trg_changelog_table_of_contents_items_deleted() IS 'Draft TOC item delete; layer:deleted vs folder:deleted; summary title+is_folder; from_blob has source refs and data_sources.url when set.';
+
+
+--
+-- Name: trg_changelog_table_of_contents_items_enable_download(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trg_changelog_table_of_contents_items_enable_download() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_editor      int;
+  v_bulk        boolean;
+  v_from_summary jsonb;
+  v_to_summary   jsonb;
+  v_from_blob    jsonb;
+  v_to_blob      jsonb;
+begin
+  if not new.is_draft or new.is_folder then
+    return new;
+  end if;
+  if old.enable_download is not distinct from new.enable_download then
+    return new;
+  end if;
+
+  v_editor := nullif(current_setting('session.user_id', true), '')::int;
+  if v_editor is null then
+    return new;
+  end if;
+
+  v_bulk := coalesce(current_setting('seasketch.bulk_layer_download', true), '') = 'true';
+
+  v_from_summary := jsonb_build_object('enable_download', old.enable_download);
+  v_to_summary := jsonb_build_object('enable_download', new.enable_download);
+  v_from_blob := null;
+  v_to_blob := null;
+
+  if v_bulk then
+    v_from_summary := v_from_summary || jsonb_build_object('bulk', true);
+    v_to_summary := v_to_summary || jsonb_build_object('bulk', true);
+    v_from_blob := jsonb_build_object('enable_download', old.enable_download, 'bulk', true);
+    v_to_blob := jsonb_build_object('enable_download', new.enable_download, 'bulk', true);
+  end if;
+
+  perform record_changelog(
+    new.project_id,
+    v_editor,
+    'table_of_contents_items',
+    new.id,
+    'layer:downloadable'::change_log_field_group,
+    v_from_summary,
+    v_to_summary,
+    v_from_blob,
+    v_to_blob,
+    null
+  );
+
+  return new;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION trg_changelog_table_of_contents_items_enable_download(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.trg_changelog_table_of_contents_items_enable_download() IS 'Records layer:downloadable when a draft layer TOC enable_download changes (session.user_id). When seasketch.bulk_layer_download is true (set by bulk RPCs), summaries and blobs include bulk: true.';
+
+
+--
+-- Name: trg_changelog_table_of_contents_items_folder_type(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trg_changelog_table_of_contents_items_folder_type() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_editor       int;
+  v_from_blob    jsonb;
+  v_to_blob      jsonb;
+  v_from_type    text;
+  v_to_type      text;
+begin
+  if not new.is_draft or not new.is_folder then
+    return new;
+  end if;
+  if old.hide_children is not distinct from new.hide_children
+     and old.show_radio_children is not distinct from new.show_radio_children
+     and old.is_click_off_only is not distinct from new.is_click_off_only then
+    return new;
+  end if;
+
+  v_editor := nullif(current_setting('session.user_id', true), '')::int;
+  if v_editor is null then
+    return new;
+  end if;
+
+  v_from_blob := jsonb_build_object(
+    'hide_children', old.hide_children,
+    'show_radio_children', old.show_radio_children,
+    'is_click_off_only', old.is_click_off_only
+  );
+  v_to_blob := jsonb_build_object(
+    'hide_children', new.hide_children,
+    'show_radio_children', new.show_radio_children,
+    'is_click_off_only', new.is_click_off_only
+  );
+
+  v_from_type :=
+    case
+      when old.hide_children then 'HIDDEN_CHILDREN'
+      when old.is_click_off_only then 'CHECK_OFF_ONLY'
+      when old.show_radio_children then 'RADIO_CHILDREN'
+      else 'DEFAULT'
+    end;
+  v_to_type :=
+    case
+      when new.hide_children then 'HIDDEN_CHILDREN'
+      when new.is_click_off_only then 'CHECK_OFF_ONLY'
+      when new.show_radio_children then 'RADIO_CHILDREN'
+      else 'DEFAULT'
+    end;
+
+  perform record_changelog(
+    new.project_id,
+    v_editor,
+    'table_of_contents_items',
+    new.id,
+    'folder:type'::change_log_field_group,
+    jsonb_build_object('type', v_from_type),
+    jsonb_build_object('type', v_to_type),
+    v_from_blob,
+    v_to_blob,
+    null
+  );
+
+  return new;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION trg_changelog_table_of_contents_items_folder_type(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.trg_changelog_table_of_contents_items_folder_type() IS 'Records folder:type when draft folder flags change; summary type matches EditFolderModal folderToType.';
+
+
+--
+-- Name: trg_changelog_table_of_contents_items_insert_created(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trg_changelog_table_of_contents_items_insert_created() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_editor int;
+begin
+  if not new.is_draft or not new.is_folder then
+    return new;
+  end if;
+
+  v_editor := nullif(current_setting('session.user_id', true), '')::int;
+  if v_editor is null then
+    return new;
+  end if;
+
+  perform record_changelog(
+    new.project_id,
+    v_editor,
+    'table_of_contents_items',
+    new.id,
+    'folder:created'::change_log_field_group,
+    '{}'::jsonb,
+    jsonb_build_object('title', new.title),
+    null,
+    null,
+    null
+  );
+
+  return new;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION trg_changelog_table_of_contents_items_insert_created(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.trg_changelog_table_of_contents_items_insert_created() IS 'Records folder:created when a draft folder table_of_contents_items row is inserted (session.user_id).';
+
+
+--
+-- Name: trg_changelog_table_of_contents_items_insert_layer_uploaded(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trg_changelog_table_of_contents_items_insert_layer_uploaded() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_uploaded_by     int;
+  v_filename        text;
+  v_data_source_id  int;
+  v_url             text;
+begin
+  if not new.is_draft or new.is_folder or new.data_layer_id is null then
+    return new;
+  end if;
+
+  select ds.id, ds.uploaded_by, ds.uploaded_source_filename, ds.url
+  into v_data_source_id, v_uploaded_by, v_filename, v_url
+  from data_layers dl
+  join data_sources ds on ds.id = dl.data_source_id
+  where dl.id = new.data_layer_id;
+
+  if v_uploaded_by is null or v_filename is null or btrim(v_filename) = '' then
+    return new;
+  end if;
+
+  perform record_changelog(
+    new.project_id,
+    v_uploaded_by,
+    'table_of_contents_items',
+    new.id,
+    'layer:uploaded'::change_log_field_group,
+    '{}'::jsonb,
+    jsonb_build_object('filename', v_filename),
+    null,
+    null,
+    jsonb_build_object('data_source_id', v_data_source_id, 'url', v_url)
+  );
+
+  return new;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION trg_changelog_table_of_contents_items_insert_layer_uploaded(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.trg_changelog_table_of_contents_items_insert_layer_uploaded() IS 'Records layer:uploaded when a draft layer TOC row is inserted with an upload-backed data_source; meta has data_source_id and url.';
+
+
+--
+-- Name: trg_changelog_table_of_contents_items_metadata(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trg_changelog_table_of_contents_items_metadata() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_editor int;
+begin
+  if not new.is_draft or new.is_folder then
+    return new;
+  end if;
+  if old.metadata is not distinct from new.metadata then
+    return new;
+  end if;
+
+  v_editor := nullif(current_setting('session.user_id', true), '')::int;
+  if v_editor is null then
+    return new;
+  end if;
+
+  perform record_changelog(
+    new.project_id,
+    v_editor,
+    'table_of_contents_items',
+    new.id,
+    'layer:metadata'::change_log_field_group,
+    '{}'::jsonb,
+    '{}'::jsonb,
+    old.metadata,
+    new.metadata,
+    null
+  );
+
+  return new;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION trg_changelog_table_of_contents_items_metadata(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.trg_changelog_table_of_contents_items_metadata() IS 'Draft layer TOC metadata edits; full metadata json in from_blob/to_blob.';
+
+
+--
+-- Name: trg_changelog_table_of_contents_items_parent_changed(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trg_changelog_table_of_contents_items_parent_changed() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_editor           int;
+  v_old_parent_title text;
+  v_new_parent_title text;
+begin
+  if not new.is_draft or new.is_folder then
+    return new;
+  end if;
+  if old.parent_stable_id is not distinct from new.parent_stable_id then
+    return new;
+  end if;
+
+  v_editor := nullif(current_setting('session.user_id', true), '')::int;
+  if v_editor is null then
+    return new;
+  end if;
+
+  if old.parent_stable_id is not null then
+    select p.title into v_old_parent_title
+    from table_of_contents_items p
+    where p.project_id = new.project_id
+      and p.stable_id = old.parent_stable_id
+      and p.is_draft = true
+    limit 1;
+  end if;
+
+  if new.parent_stable_id is not null then
+    select p.title into v_new_parent_title
+    from table_of_contents_items p
+    where p.project_id = new.project_id
+      and p.stable_id = new.parent_stable_id
+      and p.is_draft = true
+    limit 1;
+  end if;
+
+  perform record_changelog(
+    new.project_id,
+    v_editor,
+    'table_of_contents_items',
+    new.id,
+    'layer:parent-changed'::change_log_field_group,
+    jsonb_build_object('folder', v_old_parent_title),
+    jsonb_build_object('folder', v_new_parent_title),
+    jsonb_build_object('parent_stable_id', old.parent_stable_id),
+    jsonb_build_object('parent_stable_id', new.parent_stable_id),
+    null
+  );
+
+  return new;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION trg_changelog_table_of_contents_items_parent_changed(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.trg_changelog_table_of_contents_items_parent_changed() IS 'Draft layer parent change (parent_stable_id). Trigger WHEN + update_table_of_contents_item_position no-op skip avoid layer:parent-changed spam when folder child order is rewritten without changing each child''s parent.';
+
+
+--
+-- Name: trg_changelog_table_of_contents_items_title(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trg_changelog_table_of_contents_items_title() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_editor int;
+  v_field_group change_log_field_group;
+begin
+  if not new.is_draft then
+    return new;
+  end if;
+  if old.title is not distinct from new.title then
+    return new;
+  end if;
+
+  v_editor := nullif(current_setting('session.user_id', true), '')::int;
+  if v_editor is null then
+    return new;
+  end if;
+
+  v_field_group :=
+    case when new.is_folder then 'folder:title'::change_log_field_group
+         else 'layer:title'::change_log_field_group end;
+
+  perform record_changelog(
+    new.project_id,
+    v_editor,
+    'table_of_contents_items',
+    new.id,
+    v_field_group,
+    jsonb_build_object('title', old.title),
+    jsonb_build_object('title', new.title),
+    null,
+    null,
+    null
+  );
+
+  return new;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION trg_changelog_table_of_contents_items_title(); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.trg_changelog_table_of_contents_items_title() IS 'Records admin changelog entries when a draft table_of_contents_items title is updated (session.user_id).';
+
+
+--
 -- Name: trigger_geography_metric_subscription(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -21592,6 +23088,65 @@ CREATE FUNCTION public.trigger_update_collection_updated_at_for_sketch_folder() 
     end if;
   END;
 $$;
+
+
+--
+-- Name: try_record_layer_interactivity_changelog(integer, jsonb, jsonb, jsonb, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.try_record_layer_interactivity_changelog(p_acl_id integer, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_editor int;
+  v_toc_id int;
+  v_project_id int;
+begin
+  select toc.id, toc.project_id
+  into v_toc_id, v_project_id
+  from access_control_lists acl
+  join table_of_contents_items toc on toc.id = acl.table_of_contents_item_id
+  where acl.id = p_acl_id
+    and acl.table_of_contents_item_id is not null
+    and toc.is_draft = true
+    and toc.is_folder = false;
+
+  if v_toc_id is null then
+    return;
+  end if;
+
+  if p_from_summary is not distinct from p_to_summary
+     and p_from_blob is not distinct from p_to_blob then
+    return;
+  end if;
+
+  v_editor := nullif(current_setting('session.user_id', true), '')::int;
+  if v_editor is null then
+    return;
+  end if;
+
+  perform record_changelog(
+    v_project_id,
+    v_editor,
+    'table_of_contents_items',
+    v_toc_id,
+    'layer:interactivity'::change_log_field_group,
+    p_from_summary,
+    p_to_summary,
+    p_from_blob,
+    p_to_blob,
+    null
+  );
+end;
+$$;
+
+
+--
+-- Name: FUNCTION try_record_layer_interactivity_changelog(p_acl_id integer, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.try_record_layer_interactivity_changelog(p_acl_id integer, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb) IS 'Writes layer:interactivity change_logs for draft layer TOC rows linked to the ACL (session.user_id); no-op if summaries and blobs match.';
 
 
 --
@@ -22329,38 +23884,54 @@ The list of invited groups can be accessed via `Survey.invitedGroups`.
 CREATE FUNCTION public.update_table_of_contents_item_children("parentId" integer, "childIds" integer[]) RETURNS SETOF public.table_of_contents_items
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
-    declare
-      "parentStableId" text;
-      "maxRootSortIndex" int;
-      "projectId" int;
-      item table_of_contents_items;
-    begin
-      select project_id into "projectId" from table_of_contents_items where id = "parentId" or id = "childIds"[1] limit 1;
-      if "projectId" is null then
-        raise 'Could not find draft item with id = %', "parentId";
-      end if;
-      if session_is_admin("projectId") = false then
-        raise 'Permission denied';
-      end if;
-      if (select count(id) from table_of_contents_items where project_id != "projectId" and id = any("childIds")) > 0 then
-        raise 'Permission denied. Not all items in project';
-      end if;
-      select stable_id into "parentStableId" from table_of_contents_items where id = "parentId";
-      -- clear any parent id associations for children that are no longer in the list (unrooted)
-      select max(sort_index) into "maxRootSortIndex" from table_of_contents_items where is_draft = true and project_id = "projectId" and parent_stable_id = null;
-      -- update paths, sort index of "unrooted" items
-      for item in select * from table_of_contents_items where parent_stable_id = "parentStableId" and is_draft = true and id != any("childIds") loop
-        "maxRootSortIndex" = "maxRootSortIndex" + 1;
-        perform update_table_of_contents_item_position(item.id, null, "maxRootSortIndex");
-      end loop;
-      -- Update position (parent & sort_index) of listed children
-      for i in array_lower("childIds", 1)..array_upper("childIds", 1) loop
-        perform update_table_of_contents_item_position("childIds"[i], "parentStableId", i - 1);
-      end loop;
-      -- select * into children from table_of_contents_items where id = any("childIds");
-      -- return children;
-      return query select * from table_of_contents_items where id = any("childIds");
-    end;
+declare
+  "parentStableId" text;
+  "maxRootSortIndex" int;
+  "projectId" int;
+  item table_of_contents_items;
+begin
+  select project_id into "projectId"
+  from table_of_contents_items
+  where id = "parentId" or id = "childIds"[1]
+  limit 1;
+  if "projectId" is null then
+    raise 'Could not find draft item with id = %', "parentId";
+  end if;
+  if session_is_admin("projectId") = false then
+    raise 'Permission denied';
+  end if;
+  if (
+    select count(id)
+    from table_of_contents_items
+    where project_id != "projectId" and id = any("childIds")
+  ) > 0 then
+    raise 'Permission denied. Not all items in project';
+  end if;
+  select stable_id into "parentStableId" from table_of_contents_items where id = "parentId";
+  select max(sort_index) into "maxRootSortIndex"
+  from table_of_contents_items
+  where is_draft = true and project_id = "projectId" and parent_stable_id is null;
+
+  for item in
+    select *
+    from table_of_contents_items
+    where parent_stable_id = "parentStableId"
+      and is_draft = true
+      and not (id = any("childIds"))
+  loop
+    "maxRootSortIndex" = "maxRootSortIndex" + 1;
+    perform update_table_of_contents_item_position(item.id, null, "maxRootSortIndex");
+  end loop;
+
+  for i in array_lower("childIds", 1)..array_upper("childIds", 1) loop
+    perform update_table_of_contents_item_position("childIds"[i], "parentStableId", i - 1);
+  end loop;
+
+  return query
+  select *
+  from table_of_contents_items
+  where id = any("childIds");
+end;
 $$;
 
 
@@ -22391,47 +23962,50 @@ COMMENT ON FUNCTION public.update_table_of_contents_item_parent("itemId" integer
 CREATE FUNCTION public.update_table_of_contents_item_position("itemId" integer, "parentStableId" text, "sortIndex" integer) RETURNS public.table_of_contents_items
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
-    declare
-      pid int;
-      parent_path ltree;
-      current_path ltree;
-      item table_of_contents_items;
-    begin
-      select project_id into pid from table_of_contents_items where id = "itemId" and is_draft = true;
-      if pid is null then
-        raise 'Could not find draft item with id = %', "itemId";
-      end if;
-      if session_is_admin(pid) = false then
-        raise 'Permission denied';
-      end if;
-      select path into current_path from table_of_contents_items where id = "itemId" and is_draft = true;
+declare
+  pid int;
+  parent_path ltree;
+  current_path ltree;
+  item table_of_contents_items;
+begin
+  select project_id into pid from table_of_contents_items where id = "itemId" and is_draft = true;
+  if pid is null then
+    raise 'Could not find draft item with id = %', "itemId";
+  end if;
+  if session_is_admin(pid) = false then
+    raise 'Permission denied';
+  end if;
+  select path into current_path from table_of_contents_items where id = "itemId" and is_draft = true;
 
-      update table_of_contents_items set parent_stable_id = "parentStableId", sort_index = "sortIndex" where id = "itemId";
-      -- TODO: handle movement of item into the root
-      if "parentStableId" is not null then
-        select path into parent_path from table_of_contents_items where is_draft = true and project_id = pid and stable_id = "parentStableId";
-        if parent_path is null then
-          raise 'Could not find valid parent with stable_id=%', "parentStableId";
-        else
-          update 
-            table_of_contents_items 
-          set path = parent_path || subpath(path, nlevel(current_path)-1) 
-          where 
-            is_draft = true and
-            path <@ current_path;
-        end if;
-      else
-        update 
-          table_of_contents_items 
-        set path = subpath(path, nlevel(current_path)-1) 
-        where 
-          is_draft = true and
-          path <@ current_path;
-      end if;
-      select * into item from table_of_contents_items where id = "itemId";
-      return item;
-    end;
-  $$;
+  update table_of_contents_items
+  set parent_stable_id = "parentStableId", sort_index = "sortIndex"
+  where id = "itemId"
+    and (
+      parent_stable_id is distinct from "parentStableId"
+      or sort_index is distinct from "sortIndex"
+    );
+
+  if "parentStableId" is not null then
+    select path into parent_path
+    from table_of_contents_items
+    where is_draft = true and project_id = pid and stable_id = "parentStableId";
+    if parent_path is null then
+      raise 'Could not find valid parent with stable_id=%', "parentStableId";
+    else
+      update table_of_contents_items
+      set path = parent_path || subpath(path, nlevel(current_path) - 1)
+      where is_draft = true and path <@ current_path;
+    end if;
+  else
+    update table_of_contents_items
+    set path = subpath(path, nlevel(current_path) - 1)
+    where is_draft = true and path <@ current_path;
+  end if;
+
+  select * into item from table_of_contents_items where id = "itemId";
+  return item;
+end;
+$$;
 
 
 --
@@ -22447,29 +24021,58 @@ COMMENT ON FUNCTION public.update_table_of_contents_item_position("itemId" integ
 
 CREATE FUNCTION public.update_z_indexes("dataLayerIds" integer[]) RETURNS SETOF public.data_layers
     LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
     AS $$
-  declare
-    z int;
-    pid int;
-  begin
-    if (select count(distinct(project_id)) from data_layers where id = any("dataLayerIds")) > 1 then
-      raise 'Denied. Attempting to modify more than one project.';
-    end if;
-    if (session_is_admin((select project_id from data_layers where id = any("dataLayerIds") limit 1))) != true then
-      raise 'Unauthorized';
-    end if;
-    -- Disable triggers to prevent unnecessary checks which could cause
-    -- deadlocks if rapidly updating z-indexes on a large number of layers.
-    SET session_replication_role = replica;
-    z = 0;
-    for i in array_lower("dataLayerIds", 1)..array_upper("dataLayerIds", 1) loop
-      z = z + 1;
-      update data_layers set z_index = z where id = "dataLayerIds"[i];
-    end loop;
-    SET session_replication_role = DEFAULT;
-    return query (select * from data_layers where id = any("dataLayerIds"));
-  end
+declare
+  z int;
+  pid int;
+  v_editor int;
+begin
+  if (select count(distinct(project_id)) from data_layers where id = any("dataLayerIds")) > 1 then
+    raise 'Denied. Attempting to modify more than one project.';
+  end if;
+  if (session_is_admin((select project_id from data_layers where id = any("dataLayerIds") limit 1))) != true then
+    raise 'Unauthorized';
+  end if;
+
+  pid := (select project_id from data_layers where id = any("dataLayerIds") limit 1);
+
+  -- Disable triggers to prevent unnecessary checks which could cause
+  -- deadlocks if rapidly updating z-indexes on a large number of layers.
+  set session_replication_role = replica;
+  z = 0;
+  for i in array_lower("dataLayerIds", 1)..array_upper("dataLayerIds", 1) loop
+    z = z + 1;
+    update data_layers set z_index = z where id = "dataLayerIds"[i];
+  end loop;
+  set session_replication_role = default;
+
+  v_editor := nullif(current_setting('session.user_id', true), '')::int;
+  if v_editor is not null then
+    perform record_changelog(
+      pid,
+      v_editor,
+      'projects',
+      pid,
+      'layers:z-order-change'::change_log_field_group,
+      '{}'::jsonb,
+      '{}'::jsonb,
+      null,
+      null,
+      null
+    );
+  end if;
+
+  return query (select * from data_layers where id = any("dataLayerIds"));
+end;
 $$;
+
+
+--
+-- Name: FUNCTION update_z_indexes("dataLayerIds" integer[]); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.update_z_indexes("dataLayerIds" integer[]) IS 'Batch reassigns z_index for one project. Records change_logs (layers:z-order-change) on projects when session.user_id is set; summaries/blobs empty.';
 
 
 --
@@ -23108,6 +24711,48 @@ ALTER TABLE public.ai_data_analyst_notes ALTER COLUMN id ADD GENERATED ALWAYS AS
 
 ALTER TABLE public.basemaps ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY (
     SEQUENCE NAME public.basemaps_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
+-- Name: change_logs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.change_logs (
+    id bigint NOT NULL,
+    project_id integer NOT NULL,
+    editor_id integer NOT NULL,
+    started_at timestamp with time zone DEFAULT now() NOT NULL,
+    last_at timestamp with time zone DEFAULT now() NOT NULL,
+    status public.change_log_status DEFAULT 'open'::public.change_log_status NOT NULL,
+    save_count integer DEFAULT 1 NOT NULL,
+    from_summary jsonb DEFAULT '{}'::jsonb NOT NULL,
+    to_summary jsonb DEFAULT '{}'::jsonb NOT NULL,
+    from_blob jsonb,
+    to_blob jsonb,
+    entity_id integer NOT NULL,
+    entity_type text NOT NULL,
+    field_group public.change_log_field_group NOT NULL,
+    meta jsonb,
+    net_zero_changes boolean GENERATED ALWAYS AS (
+CASE
+    WHEN ((from_blob IS NOT NULL) OR (to_blob IS NOT NULL)) THEN (NOT (from_blob IS DISTINCT FROM to_blob))
+    ELSE (NOT (from_summary IS DISTINCT FROM to_summary))
+END) STORED
+);
+
+
+--
+-- Name: change_logs_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.change_logs ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.change_logs_id_seq
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
@@ -24452,6 +26097,14 @@ ALTER TABLE ONLY public.basemaps
 
 
 --
+-- Name: change_logs change_logs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.change_logs
+    ADD CONSTRAINT change_logs_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: community_guidelines community_guidelines_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -25329,6 +26982,34 @@ CREATE INDEX basemaps_interactivity_settings_id_idx ON public.basemaps USING btr
 --
 
 CREATE INDEX basemaps_project_id_idx ON public.basemaps USING btree (project_id);
+
+
+--
+-- Name: change_logs_open_uniq; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX change_logs_open_uniq ON public.change_logs USING btree (project_id, editor_id, entity_type, entity_id, field_group) WHERE (status = 'open'::public.change_log_status);
+
+
+--
+-- Name: change_logs_project_entity_lastat_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX change_logs_project_entity_lastat_idx ON public.change_logs USING btree (project_id, entity_type, entity_id, net_zero_changes, last_at DESC);
+
+
+--
+-- Name: change_logs_project_lastat_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX change_logs_project_lastat_idx ON public.change_logs USING btree (project_id, net_zero_changes, last_at DESC);
+
+
+--
+-- Name: change_logs_project_type_lastat_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX change_logs_project_type_lastat_idx ON public.change_logs USING btree (project_id, entity_type, net_zero_changes, last_at DESC);
 
 
 --
@@ -26634,6 +28315,132 @@ CREATE TRIGGER table_of_contents_items_project_update AFTER INSERT OR DELETE OR 
 
 
 --
+-- Name: access_control_list_groups trg_changelog_access_control_list_groups_del_for_toc; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_changelog_access_control_list_groups_del_for_toc AFTER DELETE ON public.access_control_list_groups FOR EACH ROW EXECUTE FUNCTION public.trg_changelog_access_control_list_groups_for_toc();
+
+
+--
+-- Name: access_control_list_groups trg_changelog_access_control_list_groups_ins_for_toc; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_changelog_access_control_list_groups_ins_for_toc AFTER INSERT ON public.access_control_list_groups FOR EACH ROW EXECUTE FUNCTION public.trg_changelog_access_control_list_groups_for_toc();
+
+
+--
+-- Name: access_control_lists trg_changelog_access_control_lists_type_for_toc; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_changelog_access_control_lists_type_for_toc AFTER UPDATE OF type ON public.access_control_lists FOR EACH ROW WHEN (((new.table_of_contents_item_id IS NOT NULL) AND (old.type IS DISTINCT FROM new.type))) EXECUTE FUNCTION public.trg_changelog_access_control_lists_type_for_toc();
+
+
+--
+-- Name: access_control_list_groups trg_changelog_acl_groups_layer_interactivity_ad; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_changelog_acl_groups_layer_interactivity_ad AFTER DELETE ON public.access_control_list_groups FOR EACH ROW EXECUTE FUNCTION public.trg_changelog_access_control_list_groups_layer_interactivity_ad();
+
+
+--
+-- Name: access_control_list_groups trg_changelog_acl_groups_layer_interactivity_ai; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_changelog_acl_groups_layer_interactivity_ai AFTER INSERT ON public.access_control_list_groups FOR EACH ROW EXECUTE FUNCTION public.trg_changelog_access_control_list_groups_layer_interactivity_ai();
+
+
+--
+-- Name: data_layers trg_changelog_data_layers_data_source_layer_uploaded; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_changelog_data_layers_data_source_layer_uploaded AFTER UPDATE OF data_source_id ON public.data_layers FOR EACH ROW EXECUTE FUNCTION public.trg_changelog_data_layers_data_source_layer_uploaded();
+
+
+--
+-- Name: data_layers trg_changelog_data_layers_mapbox_styles_for_toc; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_changelog_data_layers_mapbox_styles_for_toc AFTER UPDATE OF mapbox_gl_styles ON public.data_layers FOR EACH ROW EXECUTE FUNCTION public.trg_changelog_data_layers_mapbox_styles_for_toc();
+
+
+--
+-- Name: data_sources trg_changelog_data_sources_attribution; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_changelog_data_sources_attribution AFTER UPDATE OF attribution ON public.data_sources FOR EACH ROW EXECUTE FUNCTION public.trg_changelog_data_sources_attribution_for_toc();
+
+
+--
+-- Name: interactivity_settings trg_changelog_interactivity_settings_for_toc; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_changelog_interactivity_settings_for_toc AFTER UPDATE OF type, short_template, long_template, title ON public.interactivity_settings FOR EACH ROW WHEN (((old.type IS DISTINCT FROM new.type) OR (old.short_template IS DISTINCT FROM new.short_template) OR (old.long_template IS DISTINCT FROM new.long_template) OR (old.title IS DISTINCT FROM new.title))) EXECUTE FUNCTION public.trg_changelog_interactivity_settings_for_toc();
+
+
+--
+-- Name: table_of_contents_items trg_changelog_table_of_contents_items_data_layer_uploaded; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_changelog_table_of_contents_items_data_layer_uploaded AFTER UPDATE OF data_layer_id ON public.table_of_contents_items FOR EACH ROW EXECUTE FUNCTION public.trg_changelog_table_of_contents_items_data_layer_uploaded();
+
+
+--
+-- Name: table_of_contents_items trg_changelog_table_of_contents_items_deleted; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_changelog_table_of_contents_items_deleted BEFORE DELETE ON public.table_of_contents_items FOR EACH ROW EXECUTE FUNCTION public.trg_changelog_table_of_contents_items_deleted();
+
+
+--
+-- Name: table_of_contents_items trg_changelog_table_of_contents_items_enable_download; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_changelog_table_of_contents_items_enable_download AFTER UPDATE OF enable_download ON public.table_of_contents_items FOR EACH ROW EXECUTE FUNCTION public.trg_changelog_table_of_contents_items_enable_download();
+
+
+--
+-- Name: table_of_contents_items trg_changelog_table_of_contents_items_folder_type; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_changelog_table_of_contents_items_folder_type AFTER UPDATE OF hide_children, show_radio_children, is_click_off_only ON public.table_of_contents_items FOR EACH ROW EXECUTE FUNCTION public.trg_changelog_table_of_contents_items_folder_type();
+
+
+--
+-- Name: table_of_contents_items trg_changelog_table_of_contents_items_insert_created; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_changelog_table_of_contents_items_insert_created AFTER INSERT ON public.table_of_contents_items FOR EACH ROW EXECUTE FUNCTION public.trg_changelog_table_of_contents_items_insert_created();
+
+
+--
+-- Name: table_of_contents_items trg_changelog_table_of_contents_items_insert_layer_uploaded; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_changelog_table_of_contents_items_insert_layer_uploaded AFTER INSERT ON public.table_of_contents_items FOR EACH ROW EXECUTE FUNCTION public.trg_changelog_table_of_contents_items_insert_layer_uploaded();
+
+
+--
+-- Name: table_of_contents_items trg_changelog_table_of_contents_items_metadata; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_changelog_table_of_contents_items_metadata AFTER UPDATE OF metadata ON public.table_of_contents_items FOR EACH ROW EXECUTE FUNCTION public.trg_changelog_table_of_contents_items_metadata();
+
+
+--
+-- Name: table_of_contents_items trg_changelog_table_of_contents_items_parent_changed; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_changelog_table_of_contents_items_parent_changed AFTER UPDATE OF parent_stable_id ON public.table_of_contents_items FOR EACH ROW WHEN ((old.parent_stable_id IS DISTINCT FROM new.parent_stable_id)) EXECUTE FUNCTION public.trg_changelog_table_of_contents_items_parent_changed();
+
+
+--
+-- Name: table_of_contents_items trg_changelog_table_of_contents_items_title; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_changelog_table_of_contents_items_title AFTER UPDATE OF title ON public.table_of_contents_items FOR EACH ROW EXECUTE FUNCTION public.trg_changelog_table_of_contents_items_title();
+
+
+--
 -- Name: geography_clipping_layers trg_update_geog_hash_delete; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -26867,6 +28674,22 @@ ALTER TABLE ONLY public.basemaps
 
 ALTER TABLE ONLY public.basemaps
     ADD CONSTRAINT basemaps_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+
+--
+-- Name: change_logs change_logs_editor_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.change_logs
+    ADD CONSTRAINT change_logs_editor_id_fkey FOREIGN KEY (editor_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: change_logs change_logs_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.change_logs
+    ADD CONSTRAINT change_logs_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
 
 
 --
@@ -28230,6 +30053,19 @@ CREATE POLICY basemaps_admin ON public.basemaps USING (public.session_is_admin(p
 CREATE POLICY basemaps_select ON public.basemaps FOR SELECT USING (((project_id IS NULL) OR (public.session_has_project_access(project_id) AND public.session_on_acl(( SELECT access_control_lists.id
    FROM public.access_control_lists
   WHERE (access_control_lists.basemap_id = basemaps.id))))));
+
+
+--
+-- Name: change_logs; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.change_logs ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: change_logs change_logs_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY change_logs_select ON public.change_logs USING (public.session_is_admin(project_id));
 
 
 --
@@ -30236,6 +32072,27 @@ GRANT ALL ON FUNCTION public.account_exists(email text) TO anon;
 
 
 --
+-- Name: FUNCTION acl_changelog_blob_jsonb(p_acl_id integer, p_type text, p_exclude_group_id integer, p_union_group_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.acl_changelog_blob_jsonb(p_acl_id integer, p_type text, p_exclude_group_id integer, p_union_group_id integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION acl_changelog_summary_jsonb(p_acl_id integer, p_type text, p_exclude_group_id integer, p_union_group_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.acl_changelog_summary_jsonb(p_acl_id integer, p_type text, p_exclude_group_id integer, p_union_group_id integer) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION acl_changelog_try_record(p_acl_id integer, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.acl_changelog_try_record(p_acl_id integer, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION acl_update_draft_toc_has_changes(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -31343,6 +33200,13 @@ REVOKE ALL ON FUNCTION public.box3d(public.geometry) FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.box3dtobox(public.box3d) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION build_layer_interactivity_acl_payload(p_acl_id integer, p_exclude_group_id integer, p_include_group_id integer, p_type_override text, OUT acl_summary jsonb, OUT acl_blob jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.build_layer_interactivity_acl_payload(p_acl_id integer, p_exclude_group_id integer, p_include_group_id integer, p_type_override text, OUT acl_summary jsonb, OUT acl_blob jsonb) FROM PUBLIC;
 
 
 --
@@ -36619,6 +38483,13 @@ GRANT ALL ON FUNCTION public.recalculate_spatial_metrics(metric_ids bigint[], pr
 
 
 --
+-- Name: FUNCTION record_changelog(p_project_id integer, p_editor_id integer, p_entity_type text, p_entity_id integer, p_field_group public.change_log_field_group, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb, p_meta jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.record_changelog(p_project_id integer, p_editor_id integer, p_entity_type text, p_entity_id integer, p_field_group public.change_log_field_group, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb, p_meta jsonb) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION record_global_activity(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -40785,6 +42656,132 @@ GRANT ALL ON FUNCTION public.traverse_prosemirror_nodes(node jsonb) TO anon;
 
 
 --
+-- Name: FUNCTION trg_changelog_access_control_list_groups_for_toc(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.trg_changelog_access_control_list_groups_for_toc() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION trg_changelog_access_control_list_groups_layer_interactivity_ad(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.trg_changelog_access_control_list_groups_layer_interactivity_ad() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION trg_changelog_access_control_list_groups_layer_interactivity_ai(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.trg_changelog_access_control_list_groups_layer_interactivity_ai() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION trg_changelog_access_control_lists_type_for_toc(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.trg_changelog_access_control_lists_type_for_toc() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION trg_changelog_data_layers_attribution(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.trg_changelog_data_layers_attribution() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION trg_changelog_data_layers_data_source_layer_uploaded(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.trg_changelog_data_layers_data_source_layer_uploaded() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION trg_changelog_data_layers_mapbox_styles_for_toc(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.trg_changelog_data_layers_mapbox_styles_for_toc() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION trg_changelog_data_sources_attribution_for_toc(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.trg_changelog_data_sources_attribution_for_toc() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION trg_changelog_interactivity_settings_for_toc(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.trg_changelog_interactivity_settings_for_toc() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION trg_changelog_table_of_contents_items_data_layer_uploaded(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.trg_changelog_table_of_contents_items_data_layer_uploaded() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION trg_changelog_table_of_contents_items_deleted(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.trg_changelog_table_of_contents_items_deleted() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION trg_changelog_table_of_contents_items_enable_download(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.trg_changelog_table_of_contents_items_enable_download() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION trg_changelog_table_of_contents_items_folder_type(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.trg_changelog_table_of_contents_items_folder_type() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION trg_changelog_table_of_contents_items_insert_created(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.trg_changelog_table_of_contents_items_insert_created() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION trg_changelog_table_of_contents_items_insert_layer_uploaded(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.trg_changelog_table_of_contents_items_insert_layer_uploaded() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION trg_changelog_table_of_contents_items_metadata(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.trg_changelog_table_of_contents_items_metadata() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION trg_changelog_table_of_contents_items_parent_changed(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.trg_changelog_table_of_contents_items_parent_changed() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION trg_changelog_table_of_contents_items_title(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.trg_changelog_table_of_contents_items_title() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION trigger_geography_metric_subscription(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -40831,6 +42828,13 @@ REVOKE ALL ON FUNCTION public.trigger_update_collection_updated_at() FROM PUBLIC
 --
 
 REVOKE ALL ON FUNCTION public.trigger_update_collection_updated_at_for_sketch_folder() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION try_record_layer_interactivity_changelog(p_acl_id integer, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.try_record_layer_interactivity_changelog(p_acl_id integer, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb) FROM PUBLIC;
 
 
 --
@@ -41439,6 +43443,13 @@ GRANT SELECT ON TABLE public.access_control_list_groups TO seasketch_user;
 --
 
 GRANT SELECT ON TABLE public.ai_data_analyst_notes TO anon;
+
+
+--
+-- Name: TABLE change_logs; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.change_logs TO seasketch_user;
 
 
 --

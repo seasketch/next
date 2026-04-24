@@ -919,6 +919,99 @@ export type CardDependencyLists = {
   overlaySources: Array<Scalars['String']>;
 };
 
+export type ChangeLog = Node & {
+  __typename?: 'ChangeLog';
+  editorId: Scalars['Int'];
+  entityId: Scalars['Int'];
+  entityType: Scalars['String'];
+  fieldGroup: ChangeLogFieldGroup;
+  fromBlob?: Maybe<Scalars['JSON']>;
+  fromSummary: Scalars['JSON'];
+  id: Scalars['BigInt'];
+  lastAt: Scalars['Datetime'];
+  meta?: Maybe<Scalars['JSON']>;
+  netZeroChanges?: Maybe<Scalars['Boolean']>;
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  /** Reads a single `Project` that is related to this `ChangeLog`. */
+  project?: Maybe<Project>;
+  projectId: Scalars['Int'];
+  saveCount: Scalars['Int'];
+  startedAt: Scalars['Datetime'];
+  status: ChangeLogStatus;
+  toBlob?: Maybe<Scalars['JSON']>;
+  toSummary: Scalars['JSON'];
+};
+
+/**
+ * A condition to be used against `ChangeLog` object types. All fields are tested
+ * for equality and combined with a logical ‘and.’
+ */
+export type ChangeLogCondition = {
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['BigInt']>;
+  /** Checks for equality with the object’s `projectId` field. */
+  projectId?: Maybe<Scalars['Int']>;
+};
+
+export enum ChangeLogFieldGroup {
+  FolderAcl = 'FOLDER_ACL',
+  FolderCreated = 'FOLDER_CREATED',
+  FolderDeleted = 'FOLDER_DELETED',
+  FolderTitle = 'FOLDER_TITLE',
+  FolderType = 'FOLDER_TYPE',
+  LayerAcl = 'LAYER_ACL',
+  LayerAttribution = 'LAYER_ATTRIBUTION',
+  LayerCartography = 'LAYER_CARTOGRAPHY',
+  LayerDeleted = 'LAYER_DELETED',
+  LayerDownloadable = 'LAYER_DOWNLOADABLE',
+  LayerInteractivity = 'LAYER_INTERACTIVITY',
+  LayerMetadata = 'LAYER_METADATA',
+  LayerParentChanged = 'LAYER_PARENT_CHANGED',
+  LayerTitle = 'LAYER_TITLE',
+  LayerUploaded = 'LAYER_UPLOADED',
+  LayersPublished = 'LAYERS_PUBLISHED',
+  LayersZOrderChange = 'LAYERS_Z_ORDER_CHANGE'
+}
+
+export enum ChangeLogStatus {
+  Closed = 'CLOSED',
+  Open = 'OPEN'
+}
+
+/** A connection to a list of `ChangeLog` values. */
+export type ChangeLogsConnection = {
+  __typename?: 'ChangeLogsConnection';
+  /** A list of edges which contains the `ChangeLog` and cursor to aid in pagination. */
+  edges: Array<ChangeLogsEdge>;
+  /** A list of `ChangeLog` objects. */
+  nodes: Array<ChangeLog>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `ChangeLog` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `ChangeLog` edge in the connection. */
+export type ChangeLogsEdge = {
+  __typename?: 'ChangeLogsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `ChangeLog` at the end of the edge. */
+  node: ChangeLog;
+};
+
+/** Methods to use when ordering `ChangeLog`. */
+export enum ChangeLogsOrderBy {
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  ProjectIdAsc = 'PROJECT_ID_ASC',
+  ProjectIdDesc = 'PROJECT_ID_DESC'
+}
+
 /** All input for the `clearFormElementStyle` mutation. */
 export type ClearFormElementStyleInput = {
   /**
@@ -8154,8 +8247,8 @@ export type Mutation = {
   preprocessSource?: Maybe<PreprocessSourcePayload>;
   publishReport?: Maybe<PublishReportPayload>;
   /**
-   * Copies all table of contents items, related layers, sources, and access
-   * control lists to create a new table of contents that will be displayed to project users.
+   * Copies draft TOC to published; sets project flags. Records change_logs
+   * (layers:published) with draft layer_count when session.user_id is set.
    */
   publishTableOfContents?: Maybe<PublishTableOfContentsPayload>;
   recalculateSpatialMetrics?: Maybe<RecalculateSpatialMetricsPayload>;
@@ -8437,6 +8530,11 @@ export type Mutation = {
   updateTopic?: Maybe<UpdateTopicPayload>;
   /** Updates a single `Topic` using its globally unique id and a patch. */
   updateTopicByNodeId?: Maybe<UpdateTopicPayload>;
+  /**
+   * Batch reassigns z_index for one project. Records change_logs
+   * (layers:z-order-change) on projects when session.user_id is set;
+   * summaries/blobs empty.
+   */
   updateZIndexes?: Maybe<UpdateZIndexesPayload>;
   /** Use to upload pdf documents for use with the Consent FormElement */
   uploadConsentDocument: FormElement;
@@ -10859,6 +10957,8 @@ export type Project = Node & {
   /** Reads and enables pagination through a set of `Basemap`. */
   basemapsConnection: BasemapsConnection;
   centerGeojson?: Maybe<Scalars['JSON']>;
+  /** Reads and enables pagination through a set of `ChangeLog`. */
+  changeLogsConnection: ChangeLogsConnection;
   /** Reads a single `CommunityGuideline` that is related to this `Project`. */
   communityGuidelines?: Maybe<CommunityGuideline>;
   createdAt?: Maybe<Scalars['Datetime']>;
@@ -11160,6 +11260,21 @@ export type ProjectBasemapsConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<BasemapsOrderBy>>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectChangeLogsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<ChangeLogCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<ChangeLogsOrderBy>>;
 };
 
 
@@ -12201,6 +12316,11 @@ export type Query = Node & {
    */
   build: Scalars['String'];
   camelCase?: Maybe<Scalars['String']>;
+  changeLog?: Maybe<ChangeLog>;
+  /** Reads a single `ChangeLog` using its globally unique `ID`. */
+  changeLogByNodeId?: Maybe<ChangeLog>;
+  /** Reads and enables pagination through a set of `ChangeLog`. */
+  changeLogsConnection?: Maybe<ChangeLogsConnection>;
   collectAttachmentIdsFromProsemirrorBody?: Maybe<Array<Maybe<Scalars['String']>>>;
   collectTextFromProsemirrorBodyForLabel?: Maybe<Scalars['String']>;
   communityGuideline?: Maybe<CommunityGuideline>;
@@ -12624,6 +12744,30 @@ export type QueryBookmarkByIdArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryCamelCaseArgs = {
   snakeCase?: Maybe<Scalars['String']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryChangeLogArgs = {
+  id: Scalars['BigInt'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryChangeLogByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryChangeLogsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<ChangeLogCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<ChangeLogsOrderBy>>;
 };
 
 
