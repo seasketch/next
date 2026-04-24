@@ -1062,6 +1062,7 @@ type CardDependencyLists {
 
 type ChangeLog implements Node {
   editorId: Int!
+  editorProfile: Profile
   entityId: Int!
   entityType: String!
   fieldGroup: ChangeLogFieldGroup!
@@ -17452,6 +17453,15 @@ type TableOfContentsItem implements Node {
     """Skip the first `n` values."""
     offset: Int
   ): [FolderBreadcrumb!]
+
+  """Reads and enables pagination through a set of `ChangeLog`."""
+  changeLogs(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [ChangeLog!]
 
   """
   Metadata will be returned as directly stored in the SeaSketch

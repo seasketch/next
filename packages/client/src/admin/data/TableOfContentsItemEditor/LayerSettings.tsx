@@ -22,6 +22,8 @@ import { copyTextToClipboard } from "../../../projects/Forums/InlineAuthorDetail
 import INaturalistLayerSettingsForm from "../INaturalistLayerSettingsForm";
 import Warning from "../../../components/Warning";
 import AICartographerNotesSummary from "./AICartographerNotesSummary";
+import ChangeLogListItem from "../../changelogs/ChangeLogListItem";
+import LayerSettingsChangeLogList from "../../changelogs/LayerSettingsChangeLogList";
 
 export default function LayerSettings({
   item,
@@ -264,6 +266,15 @@ export default function LayerSettings({
           </div>
         </div>
       )}
+      <LayerSettingsChangeLogList
+        changeLogs={item.changeLogs ? [...item.changeLogs] : []}
+        authorProfile={item.dataLayer?.dataSource?.authorProfile ?? undefined}
+        createdAt={
+          item.dataLayer?.dataSource?.createdAt
+            ? new Date(item.dataLayer?.dataSource?.createdAt)
+            : undefined
+        }
+      />
     </div>
   );
 }

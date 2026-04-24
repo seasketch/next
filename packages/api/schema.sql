@@ -5202,6 +5202,79 @@ CREATE FUNCTION public.cancel_background_job(project_id integer, job_id uuid) RE
 
 
 --
+-- Name: change_logs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.change_logs (
+    id bigint NOT NULL,
+    project_id integer NOT NULL,
+    editor_id integer NOT NULL,
+    started_at timestamp with time zone DEFAULT now() NOT NULL,
+    last_at timestamp with time zone DEFAULT now() NOT NULL,
+    status public.change_log_status DEFAULT 'open'::public.change_log_status NOT NULL,
+    save_count integer DEFAULT 1 NOT NULL,
+    from_summary jsonb DEFAULT '{}'::jsonb NOT NULL,
+    to_summary jsonb DEFAULT '{}'::jsonb NOT NULL,
+    from_blob jsonb,
+    to_blob jsonb,
+    entity_id integer NOT NULL,
+    entity_type text NOT NULL,
+    field_group public.change_log_field_group NOT NULL,
+    meta jsonb,
+    net_zero_changes boolean GENERATED ALWAYS AS (
+CASE
+    WHEN ((from_blob IS NOT NULL) OR (to_blob IS NOT NULL)) THEN (NOT (from_blob IS DISTINCT FROM to_blob))
+    ELSE (NOT (from_summary IS DISTINCT FROM to_summary))
+END) STORED
+);
+
+
+--
+-- Name: user_profiles; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.user_profiles (
+    user_id integer NOT NULL,
+    fullname text,
+    nickname text,
+    picture text,
+    email public.email,
+    affiliations text,
+    enable_ai_data_analyst boolean DEFAULT false NOT NULL,
+    ai_data_analyst_enabled_at timestamp with time zone,
+    was_prompted_to_enable_ai_data_analyst_at timestamp with time zone,
+    CONSTRAINT user_profiles_picture_check CHECK ((picture ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text))
+);
+
+
+--
+-- Name: TABLE user_profiles; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.user_profiles IS '@omit all
+@name profile
+Personal information that users have contributed. This information is only 
+accessible directly to admins on projects where the user has chosen to share the
+information (via the `joinProject()` mutation).
+
+Regular SeaSketch users can access user profiles thru accessor fields on shared
+content like forum posts if they have been shared, but regular users have no 
+means of listing out all profiles in bulk.
+';
+
+
+--
+-- Name: change_logs_editor_profile(public.change_logs); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.change_logs_editor_profile(changelog public.change_logs) RETURNS public.user_profiles
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from user_profiles where user_id = changelog.editor_id;
+  $$;
+
+
+--
 -- Name: check_allowed_layouts(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -9829,40 +9902,6 @@ CREATE FUNCTION public.data_sources_approximate_fgb_index_size(ds public.data_so
       ELSE 0
     END
 $$;
-
-
---
--- Name: user_profiles; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.user_profiles (
-    user_id integer NOT NULL,
-    fullname text,
-    nickname text,
-    picture text,
-    email public.email,
-    affiliations text,
-    enable_ai_data_analyst boolean DEFAULT false NOT NULL,
-    ai_data_analyst_enabled_at timestamp with time zone,
-    was_prompted_to_enable_ai_data_analyst_at timestamp with time zone,
-    CONSTRAINT user_profiles_picture_check CHECK ((picture ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text))
-);
-
-
---
--- Name: TABLE user_profiles; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON TABLE public.user_profiles IS '@omit all
-@name profile
-Personal information that users have contributed. This information is only 
-accessible directly to admins on projects where the user has chosen to share the
-information (via the `joinProject()` mutation).
-
-Regular SeaSketch users can access user profiles thru accessor fields on shared
-content like forum posts if they have been shared, but regular users have no 
-means of listing out all profiles in bulk.
-';
 
 
 --
@@ -20945,6 +20984,24 @@ COMMENT ON FUNCTION public.table_of_contents_items_breadcrumbs(item public.table
 
 
 --
+-- Name: table_of_contents_items_change_logs(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_change_logs(item public.table_of_contents_items) RETURNS SETOF public.change_logs
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from change_logs where entity_id = item.id and entity_type = 'table_of_contents_items' and net_zero_changes = false order by last_at desc;
+  $$;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_change_logs(item public.table_of_contents_items); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.table_of_contents_items_change_logs(item public.table_of_contents_items) IS '@simpleCollections only';
+
+
+--
 -- Name: table_of_contents_items_contained_by(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -21870,92 +21927,6 @@ $$;
 --
 
 COMMENT ON FUNCTION public.trg_changelog_access_control_list_groups_for_toc() IS 'Draft TOC ACL group membership → layer:acl or folder:acl (session.user_id). INSERT/DELETE on access_control_list_groups.';
-
-
---
--- Name: trg_changelog_access_control_list_groups_layer_interactivity_ad(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.trg_changelog_access_control_list_groups_layer_interactivity_ad() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public', 'pg_temp'
-    AS $$
-declare
-  v_from_sum jsonb;
-  v_from_blob jsonb;
-  v_to_sum jsonb;
-  v_to_blob jsonb;
-begin
-  select p.acl_summary, p.acl_blob
-  into v_from_sum, v_from_blob
-  from build_layer_interactivity_acl_payload(
-    old.access_control_list_id,
-    null,
-    old.group_id,
-    null
-  ) p;
-
-  select p.acl_summary, p.acl_blob
-  into v_to_sum, v_to_blob
-  from build_layer_interactivity_acl_payload(old.access_control_list_id, null, null, null) p;
-
-  perform try_record_layer_interactivity_changelog(
-    old.access_control_list_id, v_from_sum, v_to_sum, v_from_blob, v_to_blob
-  );
-
-  return old;
-end;
-$$;
-
-
---
--- Name: FUNCTION trg_changelog_access_control_list_groups_layer_interactivity_ad(); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.trg_changelog_access_control_list_groups_layer_interactivity_ad() IS 'layer:interactivity when a group is removed from an ACL (draft layer TOC only).';
-
-
---
--- Name: trg_changelog_access_control_list_groups_layer_interactivity_ai(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.trg_changelog_access_control_list_groups_layer_interactivity_ai() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public', 'pg_temp'
-    AS $$
-declare
-  v_from_sum jsonb;
-  v_from_blob jsonb;
-  v_to_sum jsonb;
-  v_to_blob jsonb;
-begin
-  select p.acl_summary, p.acl_blob
-  into v_from_sum, v_from_blob
-  from build_layer_interactivity_acl_payload(
-    new.access_control_list_id,
-    new.group_id,
-    null,
-    null
-  ) p;
-
-  select p.acl_summary, p.acl_blob
-  into v_to_sum, v_to_blob
-  from build_layer_interactivity_acl_payload(new.access_control_list_id, null, null, null) p;
-
-  perform try_record_layer_interactivity_changelog(
-    new.access_control_list_id, v_from_sum, v_to_sum, v_from_blob, v_to_blob
-  );
-
-  return new;
-end;
-$$;
-
-
---
--- Name: FUNCTION trg_changelog_access_control_list_groups_layer_interactivity_ai(); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.trg_changelog_access_control_list_groups_layer_interactivity_ai() IS 'layer:interactivity when a group is added to an ACL (draft layer TOC only).';
 
 
 --
@@ -24716,34 +24687,6 @@ ALTER TABLE public.basemaps ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY
     NO MINVALUE
     NO MAXVALUE
     CACHE 1
-);
-
-
---
--- Name: change_logs; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.change_logs (
-    id bigint NOT NULL,
-    project_id integer NOT NULL,
-    editor_id integer NOT NULL,
-    started_at timestamp with time zone DEFAULT now() NOT NULL,
-    last_at timestamp with time zone DEFAULT now() NOT NULL,
-    status public.change_log_status DEFAULT 'open'::public.change_log_status NOT NULL,
-    save_count integer DEFAULT 1 NOT NULL,
-    from_summary jsonb DEFAULT '{}'::jsonb NOT NULL,
-    to_summary jsonb DEFAULT '{}'::jsonb NOT NULL,
-    from_blob jsonb,
-    to_blob jsonb,
-    entity_id integer NOT NULL,
-    entity_type text NOT NULL,
-    field_group public.change_log_field_group NOT NULL,
-    meta jsonb,
-    net_zero_changes boolean GENERATED ALWAYS AS (
-CASE
-    WHEN ((from_blob IS NOT NULL) OR (to_blob IS NOT NULL)) THEN (NOT (from_blob IS DISTINCT FROM to_blob))
-    ELSE (NOT (from_summary IS DISTINCT FROM to_summary))
-END) STORED
 );
 
 
@@ -28333,20 +28276,6 @@ CREATE TRIGGER trg_changelog_access_control_list_groups_ins_for_toc AFTER INSERT
 --
 
 CREATE TRIGGER trg_changelog_access_control_lists_type_for_toc AFTER UPDATE OF type ON public.access_control_lists FOR EACH ROW WHEN (((new.table_of_contents_item_id IS NOT NULL) AND (old.type IS DISTINCT FROM new.type))) EXECUTE FUNCTION public.trg_changelog_access_control_lists_type_for_toc();
-
-
---
--- Name: access_control_list_groups trg_changelog_acl_groups_layer_interactivity_ad; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER trg_changelog_acl_groups_layer_interactivity_ad AFTER DELETE ON public.access_control_list_groups FOR EACH ROW EXECUTE FUNCTION public.trg_changelog_access_control_list_groups_layer_interactivity_ad();
-
-
---
--- Name: access_control_list_groups trg_changelog_acl_groups_layer_interactivity_ai; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER trg_changelog_acl_groups_layer_interactivity_ai AFTER INSERT ON public.access_control_list_groups FOR EACH ROW EXECUTE FUNCTION public.trg_changelog_access_control_list_groups_layer_interactivity_ai();
 
 
 --
@@ -33255,6 +33184,29 @@ GRANT ALL ON FUNCTION public.cancel_background_job(project_id integer, job_id uu
 
 
 --
+-- Name: TABLE change_logs; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.change_logs TO seasketch_user;
+
+
+--
+-- Name: TABLE user_profiles; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.user_profiles TO anon;
+GRANT UPDATE ON TABLE public.user_profiles TO seasketch_user;
+
+
+--
+-- Name: FUNCTION change_logs_editor_profile(changelog public.change_logs); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.change_logs_editor_profile(changelog public.change_logs) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.change_logs_editor_profile(changelog public.change_logs) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION check_allowed_layouts(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -34738,14 +34690,6 @@ GRANT UPDATE(arcgis_fetch_strategy) ON TABLE public.data_sources TO seasketch_us
 
 REVOKE ALL ON FUNCTION public.data_sources_approximate_fgb_index_size(ds public.data_sources) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.data_sources_approximate_fgb_index_size(ds public.data_sources) TO anon;
-
-
---
--- Name: TABLE user_profiles; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.user_profiles TO anon;
-GRANT UPDATE ON TABLE public.user_profiles TO seasketch_user;
 
 
 --
@@ -42315,6 +42259,14 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_breadcrumbs(item public.tab
 
 
 --
+-- Name: FUNCTION table_of_contents_items_change_logs(item public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_change_logs(item public.table_of_contents_items) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_items_change_logs(item public.table_of_contents_items) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION table_of_contents_items_contained_by(t public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
 --
 
@@ -42660,20 +42612,6 @@ GRANT ALL ON FUNCTION public.traverse_prosemirror_nodes(node jsonb) TO anon;
 --
 
 REVOKE ALL ON FUNCTION public.trg_changelog_access_control_list_groups_for_toc() FROM PUBLIC;
-
-
---
--- Name: FUNCTION trg_changelog_access_control_list_groups_layer_interactivity_ad(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.trg_changelog_access_control_list_groups_layer_interactivity_ad() FROM PUBLIC;
-
-
---
--- Name: FUNCTION trg_changelog_access_control_list_groups_layer_interactivity_ai(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.trg_changelog_access_control_list_groups_layer_interactivity_ai() FROM PUBLIC;
 
 
 --
@@ -43443,13 +43381,6 @@ GRANT SELECT ON TABLE public.access_control_list_groups TO seasketch_user;
 --
 
 GRANT SELECT ON TABLE public.ai_data_analyst_notes TO anon;
-
-
---
--- Name: TABLE change_logs; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT ON TABLE public.change_logs TO seasketch_user;
 
 
 --

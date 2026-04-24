@@ -920,6 +920,7 @@ export type CardDependencyLists = {
 export type ChangeLog = Node & {
   __typename?: 'ChangeLog';
   editorId: Scalars['Int'];
+  editorProfile?: Maybe<Profile>;
   entityId: Scalars['Int'];
   entityType: Scalars['String'];
   fieldGroup: ChangeLogFieldGroup;
@@ -16021,6 +16022,8 @@ export type TableOfContentsItem = Node & {
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   /** Reads and enables pagination through a set of `FolderBreadcrumb`. */
   breadcrumbs?: Maybe<Array<FolderBreadcrumb>>;
+  /** Reads and enables pagination through a set of `ChangeLog`. */
+  changeLogs?: Maybe<Array<ChangeLog>>;
   /**
    * Metadata will be returned as directly stored in the SeaSketch
    * database or computed by fetching from a 3rd party service,
@@ -16128,6 +16131,22 @@ export type TableOfContentsItem = Node & {
  * `dataLayersAndSourcesByLayerId` query.
  */
 export type TableOfContentsItemBreadcrumbsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * TableOfContentsItems represent a tree-view of folders and operational layers
+ * that can be added to the map. Both layers and folders may be nested into other
+ * folders for organization, and each folder has its own access control list.
+ *
+ * Items that represent data layers have a `DataLayer` relation, which in turn has
+ * a reference to a `DataSource`. Usually these relations should be fetched in
+ * batch only once the layer is turned on, using the
+ * `dataLayersAndSourcesByLayerId` query.
+ */
+export type TableOfContentsItemChangeLogsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
 };
@@ -20813,6 +20832,15 @@ export type FullAdminDataLayerFragment = (
   )>> }
 );
 
+export type ChangeLogDetailsFragment = (
+  { __typename?: 'ChangeLog' }
+  & Pick<ChangeLog, 'id' | 'entityId' | 'entityType' | 'fieldGroup' | 'startedAt' | 'lastAt' | 'saveCount' | 'fromSummary' | 'toSummary'>
+  & { editorProfile?: Maybe<(
+    { __typename?: 'Profile' }
+    & Pick<Profile, 'userId' | 'fullname' | 'affiliations' | 'email' | 'nickname' | 'picture'>
+  )> }
+);
+
 export type FullAdminOverlayFragment = (
   { __typename?: 'TableOfContentsItem' }
   & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'dataSourceType' | 'metadata' | 'parentStableId' | 'projectId' | 'stableId' | 'title' | 'enableDownload' | 'geoprocessingReferenceId' | 'copiedFromDataLibraryTemplateId' | 'primaryDownloadUrl' | 'hasOriginalSourceUpload'>
@@ -20839,7 +20867,10 @@ export type FullAdminOverlayFragment = (
       { __typename?: 'SketchClass' }
       & Pick<SketchClass, 'name'>
     ) }
-  )>>> }
+  )>>>, changeLogs?: Maybe<Array<(
+    { __typename?: 'ChangeLog' }
+    & ChangeLogDetailsFragment
+  )>> }
 );
 
 export type GetLayerItemQueryVariables = Exact<{
@@ -26989,6 +27020,27 @@ export const FullAdminDataLayerFragmentDoc = /*#__PURE__*/ gql`
 }
     ${FullAdminSourceFragmentDoc}
 ${ArchivedSourceFragmentDoc}`;
+export const ChangeLogDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment ChangeLogDetails on ChangeLog {
+  id
+  entityId
+  entityType
+  fieldGroup
+  startedAt
+  lastAt
+  saveCount
+  fromSummary
+  toSummary
+  editorProfile {
+    userId
+    fullname
+    affiliations
+    email
+    nickname
+    picture
+  }
+}
+    `;
 export const FullAdminOverlayFragmentDoc = /*#__PURE__*/ gql`
     fragment FullAdminOverlay on TableOfContentsItem {
   id
@@ -27039,8 +27091,12 @@ export const FullAdminOverlayFragmentDoc = /*#__PURE__*/ gql`
       name
     }
   }
+  changeLogs(first: 10) {
+    ...ChangeLogDetails
+  }
 }
-    ${FullAdminDataLayerFragmentDoc}`;
+    ${FullAdminDataLayerFragmentDoc}
+${ChangeLogDetailsFragmentDoc}`;
 export const MetadataXmlFileFragmentDoc = /*#__PURE__*/ gql`
     fragment MetadataXmlFile on DataUploadOutput {
   url
@@ -33239,6 +33295,7 @@ export const namedOperations = {
     FullAdminSource: 'FullAdminSource',
     ArchivedSource: 'ArchivedSource',
     FullAdminDataLayer: 'FullAdminDataLayer',
+    ChangeLogDetails: 'ChangeLogDetails',
     FullAdminOverlay: 'FullAdminOverlay',
     MetadataXmlFile: 'MetadataXmlFile',
     ForumListDetails: 'ForumListDetails',

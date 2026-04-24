@@ -410,6 +410,26 @@ fragment FullAdminDataLayer on DataLayer {
   }
 }
 
+fragment ChangeLogDetails on ChangeLog {
+  id
+  entityId
+  entityType
+  fieldGroup
+  startedAt
+  lastAt
+  saveCount
+  fromSummary
+  toSummary
+  editorProfile {
+    userId
+    fullname
+    affiliations
+    email
+    nickname
+    picture
+  }
+}
+
 fragment FullAdminOverlay on TableOfContentsItem {
   id
   acl {
@@ -458,6 +478,9 @@ fragment FullAdminOverlay on TableOfContentsItem {
     sketchClass {
       name
     }
+  }
+  changeLogs(first: 10) {
+    ...ChangeLogDetails
   }
 }
 
