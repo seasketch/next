@@ -57,6 +57,7 @@ import {
 } from "@seasketch/geostats-types";
 import { Trans, useTranslation } from "react-i18next";
 import GUIStyleEditor from "../styleEditor/GUIStyleEditor";
+import LayerCartographyRevisionModal from "../LayerCartographyRevisionModal";
 import CodeVsGuiSwitch from "./CodeVsGuiSwitch";
 require("./RadixDropdown.css");
 
@@ -71,6 +72,7 @@ interface GLStyleEditorProps {
   dataSource?: FullAdminSourceFragment;
   onRequestShowBounds?: (bounds: [number, number, number, number]) => void;
   layerId?: number;
+  tableOfContentsItemId?: number;
   sourceLayer?: string;
   hideNewCartographyTools?: boolean;
 }
@@ -137,6 +139,8 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
   const [geostatsModal, setGeostatsModal] = useState<
     null | Geostats | RasterInfo
   >(null);
+  const [cartographyRevisionModalOpen, setCartographyRevisionModalOpen] =
+    useState(false);
 
   useEffect(() => {
     const view = editorRef.current?.view;
@@ -330,6 +334,13 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
                         }}
                       >
                         {t("Open layer property details")}
+                      </MenuBarItem>
+                    )}
+                    {props.tableOfContentsItemId != null && (
+                      <MenuBarItem
+                        onClick={() => setCartographyRevisionModalOpen(true)}
+                      >
+                        {t("View history")}
                       </MenuBarItem>
                     )}
                   </MenuBarContent>
@@ -568,6 +579,13 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
           }}
         />
       )}
+      {cartographyRevisionModalOpen &&
+        props.tableOfContentsItemId != null && (
+          <LayerCartographyRevisionModal
+            tableOfContentsItemId={props.tableOfContentsItemId}
+            onRequestClose={() => setCartographyRevisionModalOpen(false)}
+          />
+        )}
       {editor === "style" && props.dataSource?.geostats && (
         <GUIStyleEditor
           style={layers}

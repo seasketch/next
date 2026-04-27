@@ -21711,10 +21711,14 @@ export type LayerCartographyChangesQuery = (
   { __typename?: 'Query' }
   & { tableOfContentsItem?: Maybe<(
     { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id'>
+    & Pick<TableOfContentsItem, 'id' | 'title' | 'bounds'>
     & { dataLayer?: Maybe<(
       { __typename?: 'DataLayer' }
-      & Pick<DataLayer, 'id' | 'mapboxGlStyles'>
+      & Pick<DataLayer, 'id' | 'dataSourceId' | 'sourceLayer' | 'sublayer' | 'mapboxGlStyles'>
+      & { dataSource?: Maybe<(
+        { __typename?: 'DataSource' }
+        & FullAdminSourceFragment
+      )> }
     )>, cartographyChangeLogs?: Maybe<Array<(
       { __typename?: 'ChangeLog' }
       & Pick<ChangeLog, 'fromBlob' | 'toBlob'>
@@ -30198,9 +30202,17 @@ export const LayerCartographyChangesDocument = /*#__PURE__*/ gql`
     query LayerCartographyChanges($id: Int!) {
   tableOfContentsItem(id: $id) {
     id
+    title
+    bounds
     dataLayer {
       id
+      dataSourceId
+      sourceLayer
+      sublayer
       mapboxGlStyles
+      dataSource {
+        ...FullAdminSource
+      }
     }
     cartographyChangeLogs(first: 100000) {
       ...ChangeLogDetails
@@ -30209,7 +30221,8 @@ export const LayerCartographyChangesDocument = /*#__PURE__*/ gql`
     }
   }
 }
-    ${ChangeLogDetailsFragmentDoc}`;
+    ${FullAdminSourceFragmentDoc}
+${ChangeLogDetailsFragmentDoc}`;
 export const ForumAdminListDocument = /*#__PURE__*/ gql`
     query ForumAdminList($slug: String!) {
   projectBySlug(slug: $slug) {

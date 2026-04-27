@@ -1153,9 +1153,17 @@ query LayerMetadataChanges($id: Int!) {
 query LayerCartographyChanges($id: Int!) {
   tableOfContentsItem(id: $id) {
     id
+    title
+    bounds
     dataLayer {
       id
+      dataSourceId
+      sourceLayer
+      sublayer
       mapboxGlStyles
+      dataSource {
+        ...FullAdminSource
+      }
     }
     cartographyChangeLogs(first: 100000) {
       ...ChangeLogDetails

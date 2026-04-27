@@ -329,6 +329,7 @@ export default function LayerTableOfContentsItemEditor(
                   sourceLayer={layer.sourceLayer as string | undefined}
                   layerId={layer.id}
                   tocItemId={item.stableId}
+                  tableOfContentsItemId={item.id}
                   geostats={geostats}
                   dataSource={source}
                   type={

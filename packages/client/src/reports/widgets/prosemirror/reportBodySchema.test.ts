@@ -5,6 +5,7 @@ jest.mock("../../../editor/config", () => {
   };
 });
 
+// eslint-disable-next-line import/first -- jest.mock above must precede imports that use the mocked module path
 import { reportBodySchema } from "./reportBodySchema";
 
 describe("reportBodySchema widget parsing", () => {
