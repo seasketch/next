@@ -6,6 +6,7 @@ import BaseFieldGroupListItem, {
   summary,
   valueText,
 } from "./FieldGroupListItemBase";
+import { PlusCircledIcon } from "@radix-ui/react-icons";
 
 export default function LayerUploadedFieldGroupListItem(
   props: FieldGroupListItemProps
@@ -16,7 +17,13 @@ export default function LayerUploadedFieldGroupListItem(
   return (
     <BaseFieldGroupListItem
       {...props}
-      icon={<UploadIcon className="h-5 w-5" />}
+      icon={
+        to.replacement ? (
+          <UploadIcon className="h-5 w-5" />
+        ) : (
+          <PlusCircledIcon className="h-5 w-5" />
+        )
+      }
       iconClassName="bg-green-50 text-green-500"
     >
       {to.replacement ? (

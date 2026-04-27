@@ -17455,6 +17455,15 @@ type TableOfContentsItem implements Node {
   ): [FolderBreadcrumb!]
 
   """Reads and enables pagination through a set of `ChangeLog`."""
+  cartographyChangeLogs(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [ChangeLog!]
+
+  """Reads and enables pagination through a set of `ChangeLog`."""
   changeLogs(
     """Only read the first `n` values of the set."""
     first: Int
@@ -17540,6 +17549,15 @@ type TableOfContentsItem implements Node {
   DraftJS compatible representation of text content to display when a user requests layer metadata. Not valid for Folders
   """
   metadata: JSON
+
+  """Reads and enables pagination through a set of `ChangeLog`."""
+  metadataChangeLogs(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [ChangeLog!]
   metadataFormat: String
   metadataXml: DataUploadOutput
 

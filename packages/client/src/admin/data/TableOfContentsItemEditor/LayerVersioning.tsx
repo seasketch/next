@@ -41,6 +41,7 @@ import useDialog from "../../../components/useDialog";
 import { useGlobalErrorHandler } from "../../../components/GlobalErrorHandler";
 import ConvertFeatureLayerToHostedModal from "../arcgis/ConvertFeatureLayerToHostedModal";
 import useIsSuperuser from "../../../useIsSuperuser";
+import { layerSettingsChangeLogRefetchQueries } from "../../changelogs/layerSettingsChangeLogRefetch";
 
 export default function LayerVersioning({
   item,
@@ -57,6 +58,11 @@ export default function LayerVersioning({
   const isInaturalist =
     item.dataLayer?.dataSource?.type === DataSourceTypes.Inaturalist;
 
+  const changeLogRefetchQueries = useMemo(
+    () => [...layerSettingsChangeLogRefetchQueries(item.id)],
+    [item.id]
+  );
+
   const [changelogState, setChangelogState] = useState({
     content: "",
     submitted: true,
@@ -64,7 +70,9 @@ export default function LayerVersioning({
   });
 
   const [setChangelogMutation, changelogMutationState] =
-    useSetChangelogMutation();
+    useSetChangelogMutation({
+      refetchQueries: changeLogRefetchQueries,
+    });
 
   const jobContext = useContext(ProjectBackgroundJobContext);
 
@@ -473,12 +481,20 @@ function VersionDetails({
   layerName: string;
 }) {
   const onError = useGlobalErrorHandler();
+  const changeLogRefetchQueries = useMemo(
+    () => [...layerSettingsChangeLogRefetchQueries(itemId)],
+    [itemId]
+  );
   const [deleteArchive, deleteArchiveState] =
     useDeleteArchivedDataSourceMutation({
       onError,
+      refetchQueries: changeLogRefetchQueries,
     });
   const [reprocessLegacySource, reprocessLegacySourceState] =
-    useReprocessLegacyDataSourceMutation({ onError });
+    useReprocessLegacyDataSourceMutation({
+      onError,
+      refetchQueries: changeLogRefetchQueries,
+    });
   const [rollbackGLStyle, setRollbackGLStyle] = useState(false);
   const [rollback, rollbackState] = useRollbackArchivedDataSourceMutation({
     onError,
@@ -487,6 +503,7 @@ function VersionDetails({
       LayersAndSourcesForItemsDocument,
       GetLayerItemDocument,
       GetMetadataDocument,
+      ...layerSettingsChangeLogRefetchQueries(itemId),
     ],
     variables: {
       id: source.id,

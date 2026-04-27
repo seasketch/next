@@ -479,9 +479,6 @@ fragment FullAdminOverlay on TableOfContentsItem {
       name
     }
   }
-  changeLogs(first: 10) {
-    ...ChangeLogDetails
-  }
 }
 
 query GetLayerItem($id: Int!) {
@@ -1136,6 +1133,34 @@ mutation createINaturalistTableOfContentsItem(
   ) {
     tableOfContentsItem {
       ...FullAdminOverlay
+    }
+  }
+}
+
+query LayerMetadataChanges($id: Int!) {
+  tableOfContentsItem(id: $id) {
+    id
+    metadata
+    computedMetadata
+    changeLogs(first: 100000) {
+      ...ChangeLogDetails
+      fromBlob
+      toBlob
+    }
+  }
+}
+
+query LayerCartographyChanges($id: Int!) {
+  tableOfContentsItem(id: $id) {
+    id
+    dataLayer {
+      id
+      mapboxGlStyles
+    }
+    cartographyChangeLogs(first: 100000) {
+      ...ChangeLogDetails
+      fromBlob
+      toBlob
     }
   }
 }

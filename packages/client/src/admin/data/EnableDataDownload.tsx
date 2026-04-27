@@ -8,6 +8,7 @@ import {
   TableOfContentsItem,
   useUpdateEnableDownloadMutation,
 } from "../../generated/graphql";
+import { layerSettingsChangeLogRefetchQueries } from "../changelogs/layerSettingsChangeLogRefetch";
 import Switch from "../../components/Switch";
 
 export default function EnableDataDownload({
@@ -16,8 +17,11 @@ export default function EnableDataDownload({
   layer,
   source,
   projectId,
+  changeLogRefetchTableOfContentsItemId,
 }: {
   className?: string;
+  /** When set, refreshes layer settings changelog after toggling download. */
+  changeLogRefetchTableOfContentsItemId?: number;
   item: Pick<
     TableOfContentsItem,
     | "id"
@@ -144,6 +148,15 @@ export default function EnableDataDownload({
                   id: item.id,
                   enableDownload: !item.enableDownload,
                 },
+                ...(changeLogRefetchTableOfContentsItemId !== undefined
+                  ? {
+                      refetchQueries: [
+                        ...layerSettingsChangeLogRefetchQueries(
+                          changeLogRefetchTableOfContentsItemId
+                        ),
+                      ],
+                    }
+                  : {}),
               })
             }
           />

@@ -7,6 +7,7 @@ import BaseFieldGroupListItem, {
   valueText,
 } from "./FieldGroupListItemBase";
 import { accessTypeLabel } from "./labels";
+import { ShieldCheckIcon } from "@heroicons/react/solid";
 
 const SIMPLE_GROUP_LIST_MAX_GROUPS = 3;
 const SIMPLE_GROUP_LIST_MAX_CHARACTERS = 40;
@@ -127,7 +128,9 @@ export default function LayerAclFieldGroupListItem(
   const fromGroups = groupNames(from.groups);
   const toGroups = groupNames(to.groups);
   const beforeDetails =
-    from.type === "group" ? <GroupListDetails groups={fromGroups} /> : undefined;
+    from.type === "group" ? (
+      <GroupListDetails groups={fromGroups} />
+    ) : undefined;
   const afterDetails =
     to.type === "group" ? <GroupListDetails groups={toGroups} /> : undefined;
   const listDetails = (
@@ -142,8 +145,8 @@ export default function LayerAclFieldGroupListItem(
   return (
     <BaseFieldGroupListItem
       {...props}
-      icon={<LockClosedIcon className="h-5 w-5" />}
-      iconClassName="bg-red-50 text-red-500"
+      icon={<ShieldCheckIcon className="h-5 w-5" />}
+      iconClassName="bg-blue-50 text-blue-500"
     >
       {typeChanged ? (
         <Trans ns="admin:data">
@@ -151,7 +154,7 @@ export default function LayerAclFieldGroupListItem(
           <ChangeValue deleted details={beforeDetails}>
             {fromType}
           </ChangeValue>{" "}
-          to <ChangeValue details={afterDetails}>{toType}</ChangeValue>
+          {" -> "} <ChangeValue details={afterDetails}>{toType}</ChangeValue>
         </Trans>
       ) : simpleAddition && canListGroupsInline(added) ? (
         <>
@@ -166,7 +169,9 @@ export default function LayerAclFieldGroupListItem(
       ) : (
         <>
           {t("Updated the")}{" "}
-          <ChangeValue details={listDetails}>{t("access control list")}</ChangeValue>
+          <ChangeValue details={listDetails}>
+            {t("access control list")}
+          </ChangeValue>
           .
         </>
       )}

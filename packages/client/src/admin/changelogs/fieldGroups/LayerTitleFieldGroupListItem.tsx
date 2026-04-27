@@ -21,8 +21,10 @@ export default function LayerTitleFieldGroupListItem(
     >
       <Trans ns="admin:data">
         changed title from{" "}
-        <ChangeValue deleted>{valueText(from.title, t("Untitled"))}</ChangeValue>{" "}
-        to <ChangeValue>{valueText(to.title, t("Untitled"))}</ChangeValue>
+        <ChangeValue deleted>
+          {valueText(from.title, t("Untitled"))}
+        </ChangeValue>{" "}
+        {" -> "} <ChangeValue>{valueText(to.title, t("Untitled"))}</ChangeValue>
       </Trans>
     </BaseFieldGroupListItem>
   );

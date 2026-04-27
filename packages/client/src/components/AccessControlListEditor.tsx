@@ -1,3 +1,4 @@
+import type { RefetchQueriesInclude } from "@apollo/client";
 import { useCallback, useMemo } from "react";
 import {
   AccessControlListType,
@@ -27,6 +28,7 @@ export default function AccessControlListEditor(props: {
   projectSlug?: string;
   onMutate?: () => void;
   initialAcl?: InitialAcl | null;
+  refetchQueries?: RefetchQueriesInclude;
 }) {
   const { t } = useTranslation("admin");
   const { slug } = useParams<{ slug: string }>();
@@ -124,6 +126,9 @@ export default function AccessControlListEditor(props: {
             acl: buildOptimisticAcl(value, currentGroups)!,
           },
         },
+        ...(props.refetchQueries
+          ? { refetchQueries: props.refetchQueries }
+          : {}),
       });
     },
     [acl, buildOptimisticAcl, currentGroups, props, updateType]
@@ -161,6 +166,9 @@ export default function AccessControlListEditor(props: {
               acl: buildOptimisticAcl(activeType, nextGroups)!,
             },
           },
+          ...(props.refetchQueries
+            ? { refetchQueries: props.refetchQueries }
+            : {}),
         });
       } else {
         addGroup({
@@ -175,6 +183,9 @@ export default function AccessControlListEditor(props: {
               acl: buildOptimisticAcl(activeType, nextGroups)!,
             },
           },
+          ...(props.refetchQueries
+            ? { refetchQueries: props.refetchQueries }
+            : {}),
         });
       }
     },

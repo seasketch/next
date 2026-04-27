@@ -22,6 +22,7 @@ import useDialog from "../../components/useDialog";
 import LayerSettings from "./TableOfContentsItemEditor/LayerSettings";
 import { XIcon } from "@heroicons/react/outline";
 import LayerVersioning from "./TableOfContentsItemEditor/LayerVersioning";
+import { layerSettingsChangeLogRefetchQueries } from "../changelogs/layerSettingsChangeLogRefetch";
 
 interface LayerTableOfContentsItemEditorProps {
   itemId: number;
@@ -87,9 +88,18 @@ export default function LayerTableOfContentsItemEditor(
 
   const { manager } = useContext(MapManagerContext);
 
-  const [mutateLayer, mutateLayerState] = useUpdateLayerMutation();
+  const layerChangeLogRefetchQueries = useMemo(
+    () => [...layerSettingsChangeLogRefetchQueries(props.itemId)],
+    [props.itemId]
+  );
+
+  const [mutateLayer, mutateLayerState] = useUpdateLayerMutation({
+    refetchQueries: layerChangeLogRefetchQueries,
+  });
   const [updateGLStyleMutation, updateGLStyleMutationState] =
-    useUpdateLayerMutation();
+    useUpdateLayerMutation({
+      refetchQueries: layerChangeLogRefetchQueries,
+    });
 
   const item = data?.tableOfContentsItem;
 
@@ -243,6 +253,7 @@ export default function LayerTableOfContentsItemEditor(
                     dataSourceId={layer.dataSourceId}
                     sublayer={layer.sublayer}
                     geostats={geostats}
+                    changeLogRefetchTableOfContentsItemId={item.id}
                   />
                 )}
               {source &&

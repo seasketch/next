@@ -6,6 +6,7 @@ import BaseFieldGroupListItem, {
   summary,
 } from "./FieldGroupListItemBase";
 import { downloadLabel } from "./labels";
+import { Share1Icon } from "@radix-ui/react-icons";
 
 export default function LayerDownloadableFieldGroupListItem(
   props: FieldGroupListItemProps
@@ -15,8 +16,8 @@ export default function LayerDownloadableFieldGroupListItem(
   return (
     <BaseFieldGroupListItem
       {...props}
-      icon={<DownloadIcon className="h-5 w-5" />}
-      iconClassName="bg-green-50 text-green-500"
+      icon={<Share1Icon className="h-5 w-5" />}
+      iconClassName="bg-blue-50 text-blue-500"
     >
       <Trans ns="admin:data">
         <ChangeValue>{downloadLabel(t, to.enable_download)}</ChangeValue> data

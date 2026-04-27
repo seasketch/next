@@ -1,4 +1,4 @@
-import { useCallback, useContext, useState } from "react";
+import { useCallback, useContext, useMemo, useState } from "react";
 import {
   DataSourceTypes,
   FullAdminOverlayFragment,
@@ -22,8 +22,8 @@ import { copyTextToClipboard } from "../../../projects/Forums/InlineAuthorDetail
 import INaturalistLayerSettingsForm from "../INaturalistLayerSettingsForm";
 import Warning from "../../../components/Warning";
 import AICartographerNotesSummary from "./AICartographerNotesSummary";
-import ChangeLogListItem from "../../changelogs/ChangeLogListItem";
 import LayerSettingsChangeLogList from "../../changelogs/LayerSettingsChangeLogList";
+import { layerSettingsChangeLogRefetchQueries } from "../../changelogs/layerSettingsChangeLogRefetch";
 
 export default function LayerSettings({
   item,
@@ -41,7 +41,13 @@ export default function LayerSettings({
     source?.type === DataSourceTypes.ArcgisRasterTiles ||
     source?.type === DataSourceTypes.ArcgisVector;
 
+  const changeLogRefetchQueries = useMemo(
+    () => [...layerSettingsChangeLogRefetchQueries(item.id)],
+    [item.id]
+  );
+
   const [mutateItem, mutateItemState] = useUpdateTableOfContentsItemMutation({
+    refetchQueries: changeLogRefetchQueries,
     onCompleted: (data) => {
       const item = data.updateTableOfContentsItem?.tableOfContentsItem;
       if (item?.geoprocessingReferenceId && manager) {
@@ -65,6 +71,7 @@ export default function LayerSettings({
 
   const onError = useGlobalErrorHandler();
   const [mutateSource, mutateSourceState] = useUpdateDataSourceMutation({
+    refetchQueries: changeLogRefetchQueries,
     onError,
     // @ts-ignore
     optimisticResponse: (data) => {
@@ -199,7 +206,10 @@ export default function LayerSettings({
         )}
       <div className="mt-5">
         {item.acl?.nodeId && (
-          <AccessControlListEditor nodeId={item.acl?.nodeId} />
+          <AccessControlListEditor
+            nodeId={item.acl?.nodeId}
+            refetchQueries={changeLogRefetchQueries}
+          />
         )}
       </div>
 
@@ -210,11 +220,15 @@ export default function LayerSettings({
           source={source}
           layer={layer}
           className="mt-5"
+          changeLogRefetchTableOfContentsItemId={item.id}
         />
       )}
 
       {source?.type === DataSourceTypes.Inaturalist && (
-        <INaturalistLayerSettingsForm item={item} />
+        <INaturalistLayerSettingsForm
+          item={item}
+          changeLogRefetchTableOfContentsItemId={item.id}
+        />
       )}
 
       {source?.aiDataAnalystNote && (
@@ -266,15 +280,7 @@ export default function LayerSettings({
           </div>
         </div>
       )}
-      <LayerSettingsChangeLogList
-        changeLogs={item.changeLogs ? [...item.changeLogs] : []}
-        authorProfile={item.dataLayer?.dataSource?.authorProfile ?? undefined}
-        createdAt={
-          item.dataLayer?.dataSource?.createdAt
-            ? new Date(item.dataLayer?.dataSource?.createdAt)
-            : undefined
-        }
-      />
+      <LayerSettingsChangeLogList tableOfContentsItemId={item.id} />
     </div>
   );
 }

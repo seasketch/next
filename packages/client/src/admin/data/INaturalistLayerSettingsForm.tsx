@@ -7,6 +7,7 @@ import {
   useUpdateQueryParametersMutation,
   UpdateQueryParametersMutation,
 } from "../../generated/graphql";
+import { layerSettingsChangeLogRefetchQueries } from "../changelogs/layerSettingsChangeLogRefetch";
 import {
   normalizeInaturalistParams,
   InaturalistQueryParams,
@@ -18,8 +19,10 @@ import { MapManagerContext } from "../../dataLayers/MapContextManager";
 
 export default function INaturalistLayerSettingsForm({
   item,
+  changeLogRefetchTableOfContentsItemId,
 }: {
   item: FullAdminOverlayFragment;
+  changeLogRefetchTableOfContentsItemId?: number;
 }) {
   useTranslation("admin:data");
   const { manager } = useContext(MapManagerContext);
@@ -100,6 +103,15 @@ export default function INaturalistLayerSettingsForm({
           },
         },
       } as UpdateQueryParametersMutation,
+      ...(changeLogRefetchTableOfContentsItemId !== undefined
+        ? {
+            refetchQueries: [
+              ...layerSettingsChangeLogRefetchQueries(
+                changeLogRefetchTableOfContentsItemId
+              ),
+            ],
+          }
+        : {}),
     });
     manager?.setDataSourceQueryParameters(Number(source?.id), {
       ...(source?.queryParameters as Record<string, any>),

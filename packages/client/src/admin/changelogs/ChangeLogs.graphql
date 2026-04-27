@@ -1,0 +1,22 @@
+query LayerSettingsChangeLog($id: Int!, $first: Int!) {
+  tableOfContentsItem(id: $id) {
+    id
+    isFolder
+    changeLogs(first: $first) {
+      ...ChangeLogDetails
+    }
+    dataLayer {
+      dataSource {
+        createdAt
+        authorProfile {
+          userId
+          affiliations
+          email
+          fullname
+          nickname
+          picture
+        }
+      }
+    }
+  }
+}

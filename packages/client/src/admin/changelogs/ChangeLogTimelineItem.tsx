@@ -52,6 +52,7 @@ export default function ChangeLogTimelineItem({
   iconClassName,
   last,
   summary,
+  footer,
 }: {
   profile?: ChangeLogAuthorProfile | null;
   date: Date;
@@ -59,6 +60,7 @@ export default function ChangeLogTimelineItem({
   iconClassName?: string;
   last?: boolean;
   summary: ReactNode;
+  footer?: ReactNode;
 }) {
   const { t } = useTranslation("admin:data");
   const rowRef = useRef<HTMLDivElement | null>(null);
@@ -86,7 +88,7 @@ export default function ChangeLogTimelineItem({
     const observer = new ResizeObserver(updateWrappedState);
     observer.observe(row);
     return () => observer.disconnect();
-  }, [profile, summary]);
+  }, [profile, summary, footer]);
 
   return (
     <li className={clsx("relative flex gap-4 pb-6", last && "pb-0")}>
@@ -135,6 +137,7 @@ export default function ChangeLogTimelineItem({
         >
           {formatTimeAgo(date)}
         </time>
+        {footer != null ? <div className="mt-3 max-w-xl">{footer}</div> : null}
       </div>
     </li>
   );

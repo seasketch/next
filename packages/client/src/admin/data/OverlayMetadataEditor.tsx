@@ -4,6 +4,7 @@ import {
   useUpdateMetadataFromXmlMutation,
   useUpdateMetadataMutation,
 } from "../../generated/graphql";
+import { ClockIcon } from "@heroicons/react/outline";
 import Skeleton from "../../components/Skeleton";
 import "prosemirror-menu/style/menu.css";
 import "prosemirror-view/style/prosemirror.css";
@@ -12,9 +13,18 @@ import useMetadataEditor from "./useMetadataEditor";
 import Warning from "../../components/Warning";
 import EditorMenuBar from "../../editor/EditorMenuBar";
 import useDialog from "../../components/useDialog";
-import { Dispatch, SetStateAction, useCallback, useEffect } from "react";
+import {
+  Dispatch,
+  SetStateAction,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import Button from "../../components/Button";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
+import { layerSettingsChangeLogRefetchQueries } from "../changelogs/layerSettingsChangeLogRefetch";
+import LayerMetadataRevisionModal from "./LayerMetadataRevisionModal";
 
 export default function OverlayMetataEditor({
   id,
@@ -29,7 +39,14 @@ export default function OverlayMetataEditor({
     },
   });
   const { t } = useTranslation("admin:data");
-  const [mutation, mutationState] = useUpdateMetadataMutation();
+  const [showHistory, setShowHistory] = useState(false);
+  const changeLogRefetchQueries = useMemo(
+    () => [...layerSettingsChangeLogRefetchQueries(id)],
+    [id]
+  );
+  const [mutation, mutationState] = useUpdateMetadataMutation({
+    refetchQueries: changeLogRefetchQueries,
+  });
 
   const usingDynamicMetadata = Boolean(
     data?.tableOfContentsItemByIdentifier?.usesDynamicMetadata
@@ -73,7 +90,9 @@ export default function OverlayMetataEditor({
   const onError = useGlobalErrorHandler();
 
   const [uploadXMLMutation, uploadXMLMutationState] =
-    useUpdateMetadataFromXmlMutation();
+    useUpdateMetadataFromXmlMutation({
+      refetchQueries: changeLogRefetchQueries,
+    });
 
   const onUploadMetadataClick = useCallback(() => {
     // create an input element to trigger the file upload dialog
@@ -197,6 +216,15 @@ export default function OverlayMetataEditor({
               onUploadMetadataClick={onUploadMetadataClick}
               dynamicMetadataAvailable={dynamicMetadataAvailable}
             >
+              <button
+                type="button"
+                onClick={() => setShowHistory(true)}
+                title={t("View metadata history")}
+                aria-label={t("View metadata history")}
+                className="overflow-hidden m-0 py-0 h-9 px-2 inline-flex items-center justify-center text-gray-800 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
+              >
+                <ClockIcon className="h-5 w-5" />
+              </button>
               <div className="flex-1 justify-end flex">
                 <Button
                   disabled={!hasChanges}
@@ -281,6 +309,12 @@ export default function OverlayMetataEditor({
               )}
             </div>
           </div>
+          {showHistory && (
+            <LayerMetadataRevisionModal
+              tableOfContentsItemId={id}
+              onRequestClose={() => setShowHistory(false)}
+            />
+          )}
         </>
       )}
     </>

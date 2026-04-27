@@ -6319,6 +6319,22 @@ select{
   left:1.25rem
 }
 
+.-bottom-0\.5{
+  bottom:-0.125rem
+}
+
+.-bottom-0{
+  bottom:-0px
+}
+
+.-bottom-px{
+  bottom:-1px
+}
+
+.-right-px{
+  right:-1px
+}
+
 .isolate{
   isolation:isolate
 }
@@ -9813,6 +9829,10 @@ select{
   border-color:rgb(217 119 6 / var(--tw-border-opacity, 1))
 }
 
+.border-amber-200\/90{
+  border-color:rgb(253 230 138 / 0.9)
+}
+
 .border-b-black{
   --tw-border-opacity:1;
   border-bottom-color:rgb(0 0 0 / var(--tw-border-opacity, 1))
@@ -10657,6 +10677,11 @@ select{
   background-color:rgb(217 119 6 / var(--tw-bg-opacity, 1))
 }
 
+.bg-pink-50{
+  --tw-bg-opacity:1;
+  background-color:rgb(253 242 248 / var(--tw-bg-opacity, 1))
+}
+
 .bg-opacity-10{
   --tw-bg-opacity:0.1
 }
@@ -10949,6 +10974,12 @@ select{
   --tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)
 }
 
+.from-amber-50{
+  --tw-gradient-from:#fffbeb var(--tw-gradient-from-position);
+  --tw-gradient-to:rgb(255 251 235 / 0) var(--tw-gradient-to-position);
+  --tw-gradient-stops:var(--tw-gradient-from), var(--tw-gradient-to)
+}
+
 .via-cool-gray-800{
   --tw-gradient-to:rgb(31 41 55 / 0)  var(--tw-gradient-to-position);
   --tw-gradient-stops:var(--tw-gradient-from), #1F2937 var(--tw-gradient-via-position), var(--tw-gradient-to)
@@ -11100,6 +11131,14 @@ select{
 
 .to-yellow-300\/30{
   --tw-gradient-to:rgb(252 211 77 / 0.3) var(--tw-gradient-to-position)
+}
+
+.to-amber-50\/80{
+  --tw-gradient-to:rgb(255 251 235 / 0.8) var(--tw-gradient-to-position)
+}
+
+.to-amber-50{
+  --tw-gradient-to:#fffbeb var(--tw-gradient-to-position)
 }
 
 .bg-contain{
@@ -12479,6 +12518,15 @@ select{
   color:rgb(168 85 247 / var(--tw-text-opacity, 1))
 }
 
+.text-amber-900\/95{
+  color:rgb(120 53 15 / 0.95)
+}
+
+.text-pink-500{
+  --tw-text-opacity:1;
+  color:rgb(236 72 153 / var(--tw-text-opacity, 1))
+}
+
 .text-opacity-50{
   --tw-text-opacity:0.5
 }
@@ -13010,6 +13058,20 @@ select{
 .ring-yellow-200{
   --tw-ring-opacity:1;
   --tw-ring-color:rgb(253 230 138 / var(--tw-ring-opacity, 1))
+}
+
+.ring-amber-100{
+  --tw-ring-opacity:1;
+  --tw-ring-color:rgb(254 243 199 / var(--tw-ring-opacity, 1))
+}
+
+.ring-amber-100\/80{
+  --tw-ring-color:rgb(254 243 199 / 0.8)
+}
+
+.ring-emerald-100{
+  --tw-ring-opacity:1;
+  --tw-ring-color:rgb(209 250 229 / var(--tw-ring-opacity, 1))
 }
 
 .ring-opacity-10{
@@ -14780,6 +14842,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
   opacity:0.5
 }
 
+.disabled\:opacity-60:disabled{
+  opacity:0.6
+}
+
 .group:hover .group-hover\:block{
   display:block
 }
@@ -15149,6 +15215,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
   .sm\:max-w-xs{
     max-width:20rem
+  }
+
+  .sm\:max-w-6xl{
+    max-width:72rem
   }
 
   .sm\:flex-1{
@@ -16005,6 +16075,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
     max-width:36rem
   }
 
+  .lg\:max-w-6xl{
+    max-width:72rem
+  }
+
   .lg\:flex-none{
     flex:none
   }
@@ -16458,4 +16532,13 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .\[\&\>span\]\:min-w-0>span{
   min-width:0px
+}
+
+.\[\&_button\]\:text-xs button{
+  font-size:0.75rem;
+  line-height:1rem
+}
+
+.\[\&_button\]\:font-normal button{
+  font-weight:400
 }

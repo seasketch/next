@@ -97,10 +97,12 @@ export default function BaseFieldGroupListItem({
   icon,
   iconClassName,
   children,
+  footer,
 }: FieldGroupListItemProps & {
   icon: ReactNode;
   iconClassName: string;
   children: ReactNode;
+  footer?: ReactNode;
 }) {
   return (
     <ChangeLogTimelineItem
@@ -110,6 +112,7 @@ export default function BaseFieldGroupListItem({
       iconClassName={iconClassName}
       last={last}
       summary={children}
+      footer={footer}
     />
   );
 }

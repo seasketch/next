@@ -5202,6 +5202,35 @@ CREATE FUNCTION public.cancel_background_job(project_id integer, job_id uuid) RE
 
 
 --
+-- Name: changelog_row_net_zero_changes(public.change_log_field_group, jsonb, jsonb, jsonb, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.changelog_row_net_zero_changes(p_field_group public.change_log_field_group, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb) RETURNS boolean
+    LANGUAGE sql IMMUTABLE PARALLEL SAFE
+    AS $$
+  select case
+    when (p_from_blob is not null) or (p_to_blob is not null) then
+      not (p_from_blob is distinct from p_to_blob)
+    when p_field_group = 'layer:attribution'::change_log_field_group then
+      not (
+        changelog_normalize_layer_attribution_summary(p_from_summary)
+        is distinct from
+        changelog_normalize_layer_attribution_summary(p_to_summary)
+      )
+    else
+      not (p_from_summary is distinct from p_to_summary)
+  end;
+$$;
+
+
+--
+-- Name: FUNCTION changelog_row_net_zero_changes(p_field_group public.change_log_field_group, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.changelog_row_net_zero_changes(p_field_group public.change_log_field_group, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb) IS 'Stored generated expression for change_logs.net_zero_changes (blob compare; layer:attribution normalized summary compare; else raw summaries).';
+
+
+--
 -- Name: change_logs; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -5221,11 +5250,7 @@ CREATE TABLE public.change_logs (
     entity_type text NOT NULL,
     field_group public.change_log_field_group NOT NULL,
     meta jsonb,
-    net_zero_changes boolean GENERATED ALWAYS AS (
-CASE
-    WHEN ((from_blob IS NOT NULL) OR (to_blob IS NOT NULL)) THEN (NOT (from_blob IS DISTINCT FROM to_blob))
-    ELSE (NOT (from_summary IS DISTINCT FROM to_summary))
-END) STORED
+    net_zero_changes boolean GENERATED ALWAYS AS (public.changelog_row_net_zero_changes(field_group, from_summary, to_summary, from_blob, to_blob)) STORED
 );
 
 
@@ -5272,6 +5297,31 @@ CREATE FUNCTION public.change_logs_editor_profile(changelog public.change_logs) 
     AS $$
     select * from user_profiles where user_id = changelog.editor_id;
   $$;
+
+
+--
+-- Name: changelog_normalize_layer_attribution_summary(jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.changelog_normalize_layer_attribution_summary(p jsonb) RETURNS jsonb
+    LANGUAGE sql IMMUTABLE PARALLEL SAFE
+    AS $$
+  select case
+    when p is null then '{"attribution": null}'::jsonb
+    when p = '{}'::jsonb then '{"attribution": null}'::jsonb
+    when not (p ? 'attribution') then '{"attribution": null}'::jsonb
+    when jsonb_typeof(p->'attribution') = 'null' then '{"attribution": null}'::jsonb
+    when trim(coalesce(p->>'attribution', '')) = '' then '{"attribution": null}'::jsonb
+    else jsonb_build_object('attribution', btrim(p->>'attribution'))
+  end;
+$$;
+
+
+--
+-- Name: FUNCTION changelog_normalize_layer_attribution_summary(p jsonb); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.changelog_normalize_layer_attribution_summary(p jsonb) IS 'Projection of layer:attribution changelog summaries for equivalence (empty object, omitted key, "", JSON null treated as no attribution). Used only by net_zero_changes.';
 
 
 --
@@ -17284,7 +17334,7 @@ begin
   -- recorded (e.g. layer:deleted).
   v_window :=
     case p_field_group
-      when 'layer:metadata'::change_log_field_group then interval '5 minutes'
+      when 'layer:metadata'::change_log_field_group then interval '10 seconds'
       when 'layer:cartography'::change_log_field_group then interval '5 minutes'
       when 'layer:interactivity'::change_log_field_group then interval '2 minutes'
       when 'layers:published'::change_log_field_group then interval '5 seconds'
@@ -20984,6 +21034,24 @@ COMMENT ON FUNCTION public.table_of_contents_items_breadcrumbs(item public.table
 
 
 --
+-- Name: table_of_contents_items_cartography_change_logs(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_cartography_change_logs(item public.table_of_contents_items) RETURNS SETOF public.change_logs
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from change_logs where entity_id = item.id and entity_type = 'table_of_contents_items' and field_group = 'layer:cartography' and net_zero_changes = false and session_is_admin(change_logs.project_id) order by last_at desc;
+  $$;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_cartography_change_logs(item public.table_of_contents_items); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.table_of_contents_items_cartography_change_logs(item public.table_of_contents_items) IS '@simpleCollections only';
+
+
+--
 -- Name: table_of_contents_items_change_logs(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -21209,6 +21277,24 @@ CREATE FUNCTION public.table_of_contents_items_is_downloadable_source_type(item 
         item.original_source_upload_available = true
       );
   $$;
+
+
+--
+-- Name: table_of_contents_items_metadata_change_logs(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_metadata_change_logs(item public.table_of_contents_items) RETURNS SETOF public.change_logs
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from change_logs where entity_id = item.id and entity_type = 'table_of_contents_items' and net_zero_changes = false and session_is_admin(change_logs.project_id) order by last_at desc;
+  $$;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_metadata_change_logs(item public.table_of_contents_items); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.table_of_contents_items_metadata_change_logs(item public.table_of_contents_items) IS '@simpleCollections only';
 
 
 --
@@ -33184,6 +33270,13 @@ GRANT ALL ON FUNCTION public.cancel_background_job(project_id integer, job_id uu
 
 
 --
+-- Name: FUNCTION changelog_row_net_zero_changes(p_field_group public.change_log_field_group, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.changelog_row_net_zero_changes(p_field_group public.change_log_field_group, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb) FROM PUBLIC;
+
+
+--
 -- Name: TABLE change_logs; Type: ACL; Schema: public; Owner: -
 --
 
@@ -33204,6 +33297,13 @@ GRANT UPDATE ON TABLE public.user_profiles TO seasketch_user;
 
 REVOKE ALL ON FUNCTION public.change_logs_editor_profile(changelog public.change_logs) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.change_logs_editor_profile(changelog public.change_logs) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION changelog_normalize_layer_attribution_summary(p jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.changelog_normalize_layer_attribution_summary(p jsonb) FROM PUBLIC;
 
 
 --
@@ -42259,6 +42359,14 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_breadcrumbs(item public.tab
 
 
 --
+-- Name: FUNCTION table_of_contents_items_cartography_change_logs(item public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_cartography_change_logs(item public.table_of_contents_items) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_items_cartography_change_logs(item public.table_of_contents_items) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION table_of_contents_items_change_logs(item public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
 --
 
@@ -42320,6 +42428,14 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_is_custom_gl_source(t publi
 
 REVOKE ALL ON FUNCTION public.table_of_contents_items_is_downloadable_source_type(item public.table_of_contents_items) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.table_of_contents_items_is_downloadable_source_type(item public.table_of_contents_items) TO anon;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_metadata_change_logs(item public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_metadata_change_logs(item public.table_of_contents_items) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_items_metadata_change_logs(item public.table_of_contents_items) TO seasketch_user;
 
 
 --
