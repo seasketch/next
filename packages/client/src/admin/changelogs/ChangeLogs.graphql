@@ -5,6 +5,9 @@ query LayerSettingsChangeLog($id: Int!, $first: Int!) {
     changeLogs(first: $first) {
       ...ChangeLogDetails
     }
+    relatedPublishChangeLogs(first: $first) {
+      ...ChangeLogDetails
+    }
     dataLayer {
       dataSource {
         createdAt

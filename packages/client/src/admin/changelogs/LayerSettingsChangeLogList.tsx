@@ -75,20 +75,30 @@ export default function LayerSettingsChangeLogList({
     (showAllHistory && loading ? lastTocRef.current : undefined) ??
     lastTocRef.current;
 
-  const changeLogs = toc?.changeLogs ? [...toc.changeLogs] : [];
+  const directChangeLogs = toc?.changeLogs ? [...toc.changeLogs] : [];
+  const relatedPublishChangeLogs = toc?.relatedPublishChangeLogs
+    ? [...toc.relatedPublishChangeLogs]
+    : [];
+  const changeLogs = [...directChangeLogs, ...relatedPublishChangeLogs]
+    .sort(
+      (a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime()
+    )
+    .slice(0, variables.first);
   const rawCreatedAt = toc?.dataLayer?.dataSource?.createdAt;
   const authorProfile = toc?.dataLayer?.dataSource?.authorProfile ?? undefined;
   const createdAt = rawCreatedAt ? new Date(rawCreatedAt) : undefined;
   const isFolder = toc?.isFolder ?? false;
 
   const hasFullHistory = hasLoadedFullHistory(
-    changeLogs.length,
+    directChangeLogs.length,
     LAYER_SETTINGS_CHANGE_LOG_PAGE_SIZE,
     showAllHistory
   );
 
   const oldestLog =
-    changeLogs.length > 0 ? changeLogs[changeLogs.length - 1] : undefined;
+    directChangeLogs.length > 0
+      ? directChangeLogs[directChangeLogs.length - 1]
+      : undefined;
 
   const uploadDocumentsCreation =
     createdAt != null &&
@@ -105,7 +115,8 @@ export default function LayerSettingsChangeLogList({
 
   const canShowMore =
     !showAllHistory &&
-    changeLogs.length >= LAYER_SETTINGS_CHANGE_LOG_PAGE_SIZE &&
+    (directChangeLogs.length >= LAYER_SETTINGS_CHANGE_LOG_PAGE_SIZE ||
+      relatedPublishChangeLogs.length >= LAYER_SETTINGS_CHANGE_LOG_PAGE_SIZE) &&
     itemCount > 0;
 
   const initialLoading = loading && !tocQuery && !showAllHistory;

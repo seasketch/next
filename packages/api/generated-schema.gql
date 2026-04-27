@@ -17594,6 +17594,15 @@ type TableOfContentsItem implements Node {
     """Skip the first `n` values."""
     offset: Int
   ): [QuotaDetail!]
+
+  """Reads and enables pagination through a set of `ChangeLog`."""
+  relatedPublishChangeLogs(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [ChangeLog!]
   relatedReportCardDetails: [RelatedReportCard]
   reportingOutput: DataUploadOutput
 

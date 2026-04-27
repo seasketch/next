@@ -1,6 +1,6 @@
 import clsx from "clsx";
-import { QuestionMarkCircledIcon } from "@radix-ui/react-icons";
 import { ReactNode } from "react";
+import { ExternalLinkIcon } from "@heroicons/react/outline";
 import { ChangeLogDetailsFragment } from "../../../generated/graphql";
 import {
   Tooltip,
@@ -59,14 +59,17 @@ export function ChangeValue({
   deleted?: boolean;
   details?: ReactNode;
 }) {
-  const className = clsx(
-    "inline-flex max-w-full align-baseline rounded px-1.5 py-0.5 font-mono text-sm leading-5",
-    deleted
-      ? "bg-gray-50 text-gray-500 line-through decoration-gray-500"
-      : "bg-gray-100 text-gray-800",
-    details &&
-      "items-center gap-1 cursor-help hover:bg-gray-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-  );
+  const className = details
+    ? clsx(
+        "inline-flex max-w-full cursor-help items-center gap-1 align-baseline text-sm font-medium leading-5 text-blue-600 underline decoration-blue-400 decoration-dotted underline-offset-4 hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500",
+        deleted && "line-through decoration-blue-400"
+      )
+    : clsx(
+        "inline-flex max-w-full align-baseline rounded px-1.5 py-0.5 font-mono text-sm leading-5",
+        deleted
+          ? "bg-gray-50 text-gray-500 line-through decoration-gray-500"
+          : "bg-gray-100 text-gray-800"
+      );
 
   if (details) {
     return (
@@ -74,7 +77,6 @@ export function ChangeValue({
         <TooltipTrigger asChild>
           <button type="button" className={className}>
             <span className="min-w-0">{children}</span>
-            <QuestionMarkCircledIcon className="h-3.5 w-3.5 flex-none text-gray-500" />
           </button>
         </TooltipTrigger>
         <TooltipContent className=" change-log-details-tooltip">
@@ -88,6 +90,28 @@ export function ChangeValue({
     <span className={className}>
       {children}
     </span>
+  );
+}
+
+export function ModalDetailPill({
+  children,
+  onClick,
+  ariaLabel,
+}: {
+  children: ReactNode;
+  onClick: () => void;
+  ariaLabel: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex max-w-full items-center gap-1 rounded-full bg-blue-50 px-2 py-0.5 align-baseline text-sm font-medium leading-5 text-blue-600 hover:bg-blue-100 hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+      aria-label={ariaLabel}
+    >
+      <span className="min-w-0 truncate">{children}</span>
+      <ExternalLinkIcon className="h-3.5 w-3.5 flex-none" aria-hidden />
+    </button>
   );
 }
 

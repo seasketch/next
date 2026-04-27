@@ -16101,6 +16101,8 @@ export type TableOfContentsItem = Node & {
   projectId: Scalars['Int'];
   /** Reads and enables pagination through a set of `QuotaDetail`. */
   quotaUsed?: Maybe<Array<QuotaDetail>>;
+  /** Reads and enables pagination through a set of `ChangeLog`. */
+  relatedPublishChangeLogs?: Maybe<Array<ChangeLog>>;
   relatedReportCardDetails?: Maybe<Array<Maybe<RelatedReportCard>>>;
   reportingOutput?: Maybe<DataUploadOutput>;
   /** If set, children of this folder will appear as radio options so that only one may be toggle at a time */
@@ -16231,6 +16233,22 @@ export type TableOfContentsItemProjectBackgroundJobsArgs = {
  * `dataLayersAndSourcesByLayerId` query.
  */
 export type TableOfContentsItemQuotaUsedArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * TableOfContentsItems represent a tree-view of folders and operational layers
+ * that can be added to the map. Both layers and folders may be nested into other
+ * folders for organization, and each folder has its own access control list.
+ *
+ * Items that represent data layers have a `DataLayer` relation, which in turn has
+ * a reference to a `DataSource`. Usually these relations should be fetched in
+ * batch only once the layer is turned on, using the
+ * `dataLayersAndSourcesByLayerId` query.
+ */
+export type TableOfContentsItemRelatedPublishChangeLogsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
 };
@@ -19102,6 +19120,9 @@ export type LayerSettingsChangeLogQuery = (
     & { changeLogs?: Maybe<Array<(
       { __typename?: 'ChangeLog' }
       & ChangeLogDetailsFragment
+    )>>, relatedPublishChangeLogs?: Maybe<Array<(
+      { __typename?: 'ChangeLog' }
+      & ChangeLogDetailsFragment
     )>>, dataLayer?: Maybe<(
       { __typename?: 'DataLayer' }
       & { dataSource?: Maybe<(
@@ -20898,7 +20919,7 @@ export type FullAdminDataLayerFragment = (
 
 export type ChangeLogDetailsFragment = (
   { __typename?: 'ChangeLog' }
-  & Pick<ChangeLog, 'id' | 'entityId' | 'entityType' | 'fieldGroup' | 'startedAt' | 'lastAt' | 'saveCount' | 'fromSummary' | 'toSummary'>
+  & Pick<ChangeLog, 'id' | 'entityId' | 'entityType' | 'fieldGroup' | 'meta' | 'startedAt' | 'lastAt' | 'saveCount' | 'fromSummary' | 'toSummary'>
   & { editorProfile?: Maybe<(
     { __typename?: 'Profile' }
     & Pick<Profile, 'userId' | 'fullname' | 'affiliations' | 'email' | 'nickname' | 'picture'>
@@ -21081,6 +21102,23 @@ export type DataSourceUrlPropertiesQuery = (
   & { dataSource?: Maybe<(
     { __typename?: 'DataSource' }
     & Pick<DataSource, 'id' | 'type' | 'url' | 'originalSourceUrl' | 'queryParameters'>
+  )> }
+);
+
+export type UploadChangelogSourceDetailsQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type UploadChangelogSourceDetailsQuery = (
+  { __typename?: 'Query' }
+  & { dataSource?: Maybe<(
+    { __typename?: 'DataSource' }
+    & Pick<DataSource, 'id'>
+    & { outputs?: Maybe<Array<(
+      { __typename?: 'DataUploadOutput' }
+      & Pick<DataUploadOutput, 'id' | 'isOriginal' | 'url' | 'type' | 'size' | 'originalFilename' | 'filename'>
+    )>> }
   )> }
 );
 
@@ -26981,6 +27019,7 @@ export const ChangeLogDetailsFragmentDoc = /*#__PURE__*/ gql`
   entityId
   entityType
   fieldGroup
+  meta
   startedAt
   lastAt
   saveCount
@@ -28497,6 +28536,9 @@ export const LayerSettingsChangeLogDocument = /*#__PURE__*/ gql`
     changeLogs(first: $first) {
       ...ChangeLogDetails
     }
+    relatedPublishChangeLogs(first: $first) {
+      ...ChangeLogDetails
+    }
     dataLayer {
       dataSource {
         createdAt
@@ -29760,6 +29802,22 @@ export const DataSourceUrlPropertiesDocument = /*#__PURE__*/ gql`
     url
     originalSourceUrl
     queryParameters
+  }
+}
+    `;
+export const UploadChangelogSourceDetailsDocument = /*#__PURE__*/ gql`
+    query UploadChangelogSourceDetails($id: Int!) {
+  dataSource(id: $id) {
+    id
+    outputs {
+      id
+      isOriginal
+      url
+      type
+      size
+      originalFilename
+      filename
+    }
   }
 }
     `;
@@ -33127,6 +33185,7 @@ export const namedOperations = {
     GetLayerItem: 'GetLayerItem',
     InteractivitySettingsForLayer: 'InteractivitySettingsForLayer',
     DataSourceUrlProperties: 'DataSourceUrlProperties',
+    UploadChangelogSourceDetails: 'UploadChangelogSourceDetails',
     GetMetadata: 'GetMetadata',
     ProjectHostingQuota: 'ProjectHostingQuota',
     InteractivitySettingsById: 'InteractivitySettingsById',

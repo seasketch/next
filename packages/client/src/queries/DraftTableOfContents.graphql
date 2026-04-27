@@ -415,6 +415,7 @@ fragment ChangeLogDetails on ChangeLog {
   entityId
   entityType
   fieldGroup
+  meta
   startedAt
   lastAt
   saveCount
@@ -663,6 +664,21 @@ query DataSourceUrlProperties($id: Int!) {
     url
     originalSourceUrl
     queryParameters
+  }
+}
+
+query UploadChangelogSourceDetails($id: Int!) {
+  dataSource(id: $id) {
+    id
+    outputs {
+      id
+      isOriginal
+      url
+      type
+      size
+      originalFilename
+      filename
+    }
   }
 }
 
