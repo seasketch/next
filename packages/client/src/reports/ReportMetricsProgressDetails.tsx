@@ -1,9 +1,5 @@
 import { Trans, useTranslation } from "react-i18next";
-import {
-  useCallback,
-  useContext,
-  useMemo,
-} from "react";
+import { useCallback, useContext, useMemo } from "react";
 import type { ReactNode } from "react";
 import {
   CompatibleSpatialMetricDetailsFragment,
@@ -11,6 +7,7 @@ import {
   DraftReportDependenciesDocument,
   Geography,
   ReportDependenciesDocument,
+  ReportOverlaySourcesDocument,
   SketchGeometryType,
   SpatialMetricState,
   useRecalculateSpatialMetricsMutation,
@@ -25,6 +22,10 @@ import { useCardDependenciesContext } from "./context/CardDependenciesContext";
 import { useBaseReportContext } from "./context/BaseReportContext";
 import { useSubjectReportContext } from "./context/SubjectReportContext";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
+import {
+  evictReportDependenciesForReportAndSketch,
+  evictReportOverlaySourcesForReport,
+} from "./utils/evictReportDependenciesCache";
 import { useAuth0 } from "@auth0/auth0-react";
 import getSlug from "../getSlug";
 import ProfilePhoto from "../admin/users/ProfilePhoto";
@@ -70,6 +71,17 @@ export default function ReportMetricsProgressDetails({
 
   const [recalculate, recalculateState] = useRecalculateSpatialMetricsMutation({
     onError,
+    update(cache) {
+      const sketchId = subjectReportContext.data?.sketch?.id;
+      if (sketchId != null) {
+        evictReportDependenciesForReportAndSketch(
+          cache,
+          baseReportContext.report.id,
+          sketchId
+        );
+        evictReportOverlaySourcesForReport(cache, baseReportContext.report.id);
+      }
+    },
   });
   const allMetrics = useMemo(() => {
     const seenIds = new Set<number>();
@@ -99,6 +111,7 @@ export default function ReportMetricsProgressDetails({
         },
         refetchQueries: [
           ReportDependenciesDocument,
+          ReportOverlaySourcesDocument,
           DraftReportDependenciesDocument,
         ],
         awaitRefetchQueries: true,

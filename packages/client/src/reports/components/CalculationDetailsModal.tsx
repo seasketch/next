@@ -17,6 +17,12 @@ import { collectReportCardTitle } from "../../admin/sketchClasses/SketchClassRep
 import { ReportCardConfiguration } from "../cards/cards";
 import { subjectIsFragment } from "overlay-engine";
 import { useCardDependenciesContext } from "../context/CardDependenciesContext";
+import { useBaseReportContext } from "../context/BaseReportContext";
+import { useSubjectReportContext } from "../context/SubjectReportContext";
+import {
+  evictReportDependenciesForReportAndSketch,
+  evictReportOverlaySourcesForReport,
+} from "../utils/evictReportDependenciesCache";
 import { DraftReportContext } from "../DraftReportContext";
 
 export interface CalculationDetailsModalState {
@@ -82,6 +88,10 @@ export function CalculationDetailsModal({
   const onError = useGlobalErrorHandler();
   const context = useCardDependenciesContext();
   const draftReportContext = useContext(DraftReportContext);
+  const baseReport = useBaseReportContext();
+  const subjectReport = useSubjectReportContext();
+  const reportIdForCache = baseReport.report.id;
+  const sketchIdForCache = subjectReport.data?.sketch?.id;
 
   // Recalculate modal state (nested modal)
   const [recalcOpen, setRecalcOpen] = useState(false);
@@ -90,11 +100,31 @@ export function CalculationDetailsModal({
 
   const [recalculate, recalculateState] = useRecalculateSpatialMetricsMutation({
     onError,
+    update(cache) {
+      if (sketchIdForCache != null) {
+        evictReportDependenciesForReportAndSketch(
+          cache,
+          reportIdForCache,
+          sketchIdForCache
+        );
+        evictReportOverlaySourcesForReport(cache, reportIdForCache);
+      }
+    },
   });
 
   const [retryFailedMetrics, retryState] = useRetryFailedSpatialMetricsMutation(
     {
       onError,
+      update(cache) {
+        if (sketchIdForCache != null) {
+          evictReportDependenciesForReportAndSketch(
+            cache,
+            reportIdForCache,
+            sketchIdForCache
+          );
+          evictReportOverlaySourcesForReport(cache, reportIdForCache);
+        }
+      },
       refetchQueries: [ReportDependenciesDocument],
       awaitRefetchQueries: true,
     }

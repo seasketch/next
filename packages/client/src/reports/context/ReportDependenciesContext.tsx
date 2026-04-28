@@ -46,15 +46,14 @@ export default function ReportDependenciesContextProvider({
     refetch: refetchDeps,
     error: depsError,
     networkStatus: depsNetworkStatus,
-  } =
-    useReportDependenciesQuery({
-      variables: {
-        reportId: reportId!,
-        sketchId: sketchId!,
-      },
-      skip: !reportId || !sketchId,
-      // notifyOnNetworkStatusChange: true,
-    });
+  } = useReportDependenciesQuery({
+    variables: {
+      reportId: reportId!,
+      sketchId: sketchId!,
+    },
+    skip: !reportId || !sketchId,
+    notifyOnNetworkStatusChange: true,
+  });
 
   // Apollo's `loading` is false during refetches; after cache eviction the
   // query refetches while still returning stale dependency data unless we treat
@@ -75,6 +74,7 @@ export default function ReportDependenciesContextProvider({
       reportId: reportId!,
     },
     skip: !reportId,
+    notifyOnNetworkStatusChange: true,
   });
 
   const overlaySourcesQueryLoading =
@@ -115,9 +115,10 @@ export default function ReportDependenciesContextProvider({
   ]);
 
   useEffect(() => {
-    if (contextValue.loading) {
-      return;
-    }
+    // Do not gate polling on `contextValue.loading`: it is true whenever *either*
+    // dependencies or overlay sources are refetching. Overlay jobs refetch often
+    // while preprocessing; if we bail here, metric polling never runs and
+    // recalculated metrics appear stuck until a full reload.
     const anyMetricsLoading = contextValue.metrics.some(
       (metric) =>
         metric.state !== SpatialMetricState.Complete &&
@@ -156,7 +157,6 @@ export default function ReportDependenciesContextProvider({
     refetchOverlaySources,
     contextValue.metrics,
     contextValue.overlaySources,
-    contextValue.loading,
   ]);
 
   return (

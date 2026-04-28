@@ -13,20 +13,29 @@ export function useCardDependencies(cardId: number): CardDependenciesResult {
     );
     if (list) {
       const metrics = list.metrics
-        .map((metric) => context.metrics.find((m) => m.id === metric)!)
-        .filter((m) => m !== undefined);
+        .map((metricId) => context.metrics.find((m) => m.id === metricId))
+        .filter((m): m is NonNullable<typeof m> => m != null);
+      // After recalculate, DB rows are recreated with new ids; Apollo can briefly
+      // keep stale normalized metrics while cardDependencyLists already references
+      // new ids — treat unresolved ids as still loading so we don't show an empty card.
+      const metricIdsPendingResolution =
+        list.metrics.length > 0 && metrics.length < list.metrics.length;
       const overlaySources = list.overlaySources
         .map(
           (overlay) =>
             context.overlaySources.find((s) => s.stableId === overlay)!
         )
         .filter((s) => s !== undefined);
+      const overlaySourceIdsPendingResolution =
+        list.overlaySources.length > 0 &&
+        overlaySources.length < list.overlaySources.length;
 
-      // Include ReportDependencies query loading (initial load + refetch after
-      // cache eviction). Metric/source states alone miss Apollo refetches where
-      // stale Complete metrics remain until the network responds.
+      // Once a card has dependency ids, keep loading scoped to that card.
+      // Global query loading also includes background refetches, which should
+      // not make unrelated cards show a loading state.
       const loading =
-        context.loading ||
+        metricIdsPendingResolution ||
+        overlaySourceIdsPendingResolution ||
         metrics.some(
           (metric) =>
             metric.state !== SpatialMetricState.Complete &&
