@@ -17,6 +17,7 @@ import {
   valueText,
 } from "../changelogs/fieldGroups/FieldGroupListItemBase";
 import useProjectId from "../../useProjectId";
+import { CHANGE_LOG_INTRODUCTION_DATE } from "../changelogs/constants";
 
 export default function PublishTableOfContentsModal(props: {
   onRequestClose: () => void;
@@ -137,10 +138,24 @@ function AllChangesPanel({
     );
   }
 
+  const daysSinceIntroduction = Math.floor(
+    (Date.now() - CHANGE_LOG_INTRODUCTION_DATE.getTime()) /
+      (1000 * 60 * 60 * 24)
+  );
+
   if (!changeLogs.length) {
     return (
       <div className="rounded-lg border border-gray-200 bg-gray-50 px-4 py-6 text-center text-sm text-gray-500">
-        {t("No unpublished changes were found.")}
+        {daysSinceIntroduction < 90
+          ? t(
+              "No unpublished changes were found. Change logging was introduced on {{date}}, so any changes made before that date were not logged. In the future, you can look forward to seeing detailed change history for layer list updates.",
+              {
+                date: CHANGE_LOG_INTRODUCTION_DATE.toLocaleDateString(),
+              }
+            )
+          : t(
+              "No unpublished changes were found in the changelog. There may still be changes not recorded by the changelog system that need publishing."
+            )}
       </div>
     );
   }
