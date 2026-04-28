@@ -90,7 +90,7 @@ export default function ChangeLogTimelineItem({
     const observer = new ResizeObserver(updateWrappedState);
     observer.observe(row);
     return () => observer.disconnect();
-  }, [profile, summary, footer]);
+  }, [profile, summary, itemTitle, footer]);
 
   return (
     <li className={clsx("relative flex gap-4 pb-6", last && "pb-0")}>
@@ -126,23 +126,31 @@ export default function ChangeLogTimelineItem({
             )}
           </span>
           {itemTitle && (
-            <span className="flex min-w-0 items-center gap-x-1.5 text-gray-500">
-              <span className="truncate font-semibold text-gray-700">
+            <span className="flex h-6 min-w-0 items-center text-gray-500">
+              <span className="min-w-0 truncate font-semibold text-gray-700">
                 {itemTitle}
-              </span>
-              <span className="text-gray-300" aria-hidden>
-                {String.fromCharCode(8212)}
               </span>
             </span>
           )}
+          {!itemTitle && (
+            <span
+              ref={summaryRef}
+              className="change-log-summary block w-max max-w-full min-w-0"
+              data-wrapped={summaryWrapped}
+            >
+              <span>{summary}</span>
+            </span>
+          )}
+        </div>
+        {itemTitle && (
           <span
             ref={summaryRef}
-            className="change-log-summary block w-max max-w-full min-w-0"
+            className="change-log-summary mt-1 block w-max max-w-full min-w-0 text-sm leading-5 text-gray-500"
             data-wrapped={summaryWrapped}
           >
             <span>{summary}</span>
           </span>
-        </div>
+        )}
         <time
           className="mt-1 block text-sm text-gray-400"
           dateTime={date.toISOString()}

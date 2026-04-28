@@ -191,9 +191,9 @@ function titleForChangeLog(
   }
 
   return (
-    <span className="inline-flex min-w-0 items-center gap-1">
-      <FolderIcon className="h-4 w-4 flex-none text-gray-400" aria-hidden />
-      <span className="min-w-0 truncate">{title}</span>
+    <span className="inline-flex h-6 min-w-0 items-center gap-1 align-middle leading-6">
+      <FolderIcon className="h-3.5 w-3.5 flex-none text-gray-400" aria-hidden />
+      <span className="min-w-0 truncate leading-6">{title}</span>
     </span>
   );
 }

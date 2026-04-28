@@ -66,7 +66,7 @@ export function ChangeValue({
         deleted && "line-through decoration-blue-400"
       )
     : clsx(
-        "inline-flex max-w-full align-baseline rounded px-1.5 py-0.5 font-mono text-sm leading-5",
+        "inline-flex min-h-[1.625rem] max-w-full items-center align-baseline rounded px-1.5 py-0.5 font-mono text-sm leading-5",
         deleted
           ? "bg-gray-50 text-gray-500 line-through decoration-gray-500"
           : "bg-gray-100 text-gray-800"

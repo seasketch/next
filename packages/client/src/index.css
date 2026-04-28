@@ -6459,8 +6459,28 @@ select{
   grid-column:span 8 / span 8
 }
 
+.col-start-1{
+  grid-column-start:1
+}
+
+.col-start-2{
+  grid-column-start:2
+}
+
 .row-span-2{
   grid-row:span 2 / span 2
+}
+
+.row-start-1{
+  grid-row-start:1
+}
+
+.row-start-2{
+  grid-row-start:2
+}
+
+.row-start-3{
+  grid-row-start:3
 }
 
 .float-right{
@@ -7613,6 +7633,10 @@ select{
   min-height:min(420px,55vh)
 }
 
+.min-h-\[1\.625rem\]{
+  min-height:1.625rem
+}
+
 .\!w-\[340px\]{
   width:340px !important
 }
@@ -8749,6 +8773,10 @@ select{
 
 .grid-cols-\[auto_minmax\(0\2c 1fr\)\]{
   grid-template-columns:auto minmax(0,1fr)
+}
+
+.grid-cols-\[2\.5rem_minmax\(0\2c 1fr\)\]{
+  grid-template-columns:2.5rem minmax(0,1fr)
 }
 
 .grid-rows-6{
