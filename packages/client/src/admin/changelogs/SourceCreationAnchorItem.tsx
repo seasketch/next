@@ -6,10 +6,6 @@ import ChangeLogTimelineItem, {
 import { CHANGE_LOG_INTRODUCTION_DATE } from "./constants";
 import { PlusCircledIcon } from "@radix-ui/react-icons";
 
-const introDateFormatter = new Intl.DateTimeFormat(undefined, {
-  dateStyle: "long",
-});
-
 export default function SourceCreationAnchorItem({
   isFolder,
   createdAt,
@@ -21,9 +17,6 @@ export default function SourceCreationAnchorItem({
 }) {
   const { t } = useTranslation("admin:data");
   const isLegacy = createdAt < CHANGE_LOG_INTRODUCTION_DATE;
-  const introDateLabel = introDateFormatter.format(
-    CHANGE_LOG_INTRODUCTION_DATE
-  );
 
   const summary = isFolder ? (
     <Trans ns="admin:data">created this folder.</Trans>
