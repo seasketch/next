@@ -24190,6 +24190,7 @@ declare
   z int;
   pid int;
   v_editor int;
+  v_reordered_count int;
 begin
   if (select count(distinct(project_id)) from data_layers where id = any("dataLayerIds")) > 1 then
     raise 'Denied. Attempting to modify more than one project.';
@@ -24199,6 +24200,8 @@ begin
   end if;
 
   pid := (select project_id from data_layers where id = any("dataLayerIds") limit 1);
+
+  v_reordered_count := coalesce(array_length("dataLayerIds", 1), 0);
 
   -- Disable triggers to prevent unnecessary checks which could cause
   -- deadlocks if rapidly updating z-indexes on a large number of layers.
@@ -24219,7 +24222,7 @@ begin
       pid,
       'layers:z-order-change'::change_log_field_group,
       '{}'::jsonb,
-      '{}'::jsonb,
+      jsonb_build_object('reordered_count', v_reordered_count),
       null,
       null,
       null
@@ -24235,7 +24238,7 @@ $$;
 -- Name: FUNCTION update_z_indexes("dataLayerIds" integer[]); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.update_z_indexes("dataLayerIds" integer[]) IS 'Batch reassigns z_index for one project. Records change_logs (layers:z-order-change) on projects when session.user_id is set; summaries/blobs empty.';
+COMMENT ON FUNCTION public.update_z_indexes("dataLayerIds" integer[]) IS 'Batch reassigns z_index for one project. Records change_logs (layers:z-order-change) on projects when session.user_id is set; to_summary includes reordered_count.';
 
 
 --

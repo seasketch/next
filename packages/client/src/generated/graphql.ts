@@ -8533,8 +8533,8 @@ export type Mutation = {
   updateTopicByNodeId?: Maybe<UpdateTopicPayload>;
   /**
    * Batch reassigns z_index for one project. Records change_logs
-   * (layers:z-order-change) on projects when session.user_id is set;
-   * summaries/blobs empty.
+   * (layers:z-order-change) on projects when session.user_id is set; to_summary
+   * includes reordered_count.
    */
   updateZIndexes?: Maybe<UpdateZIndexesPayload>;
   /** Use to upload pdf documents for use with the Consent FormElement */
