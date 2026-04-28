@@ -88,9 +88,8 @@ export default function PublishTableOfContentsModal(props: {
         <p className="text-sm leading-5 text-gray-600">
           <Trans ns={["admin"]}>
             Published layer lists include all authorization settings, data layer
-            and source changes, and z-ordering specifications. Once published,
-            project users will have access to the new list upon reloading the
-            page.
+            changes, and cartography. Once published, project users will have
+            access to the new list upon reloading the page.
           </Trans>
         </p>
         <div className="rounded-lg bg-gray-100 p-1 text-sm font-medium text-gray-600">
