@@ -80,9 +80,7 @@ export default function LayerSettingsChangeLogList({
     ? [...toc.relatedPublishChangeLogs]
     : [];
   const changeLogs = [...directChangeLogs, ...relatedPublishChangeLogs]
-    .sort(
-      (a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime()
-    )
+    .sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime())
     .slice(0, variables.first);
   const rawCreatedAt = toc?.dataLayer?.dataSource?.createdAt;
   const authorProfile = toc?.dataLayer?.dataSource?.authorProfile ?? undefined;

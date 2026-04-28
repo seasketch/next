@@ -86,11 +86,7 @@ export function ChangeValue({
     );
   }
 
-  return (
-    <span className={className}>
-      {children}
-    </span>
-  );
+  return <span className={className}>{children}</span>;
 }
 
 export function ModalDetailPill({

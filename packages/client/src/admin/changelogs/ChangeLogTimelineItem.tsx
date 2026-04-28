@@ -134,6 +134,7 @@ export default function ChangeLogTimelineItem({
         <time
           className="mt-1 block text-sm text-gray-400"
           dateTime={date.toISOString()}
+          title={date.toLocaleString()}
         >
           {formatTimeAgo(date)}
         </time>
