@@ -554,35 +554,107 @@ async function getOrCreateReportDependencies(
     [reportId],
   );
 
-  for (const card of cards.rows) {
+  const perCard = cards.rows.map((card: { id: number; body: unknown }) => ({
+    cardId: card.id,
+    dependencies: extractMetricDependenciesFromReportBody(
+      card.body as Parameters<typeof extractMetricDependenciesFromReportBody>[0],
+    ),
+  }));
+
+  const allStableIds = new Set<string>();
+  for (const pc of perCard) {
+    for (const dep of pc.dependencies) {
+      if (dep.stableId) {
+        allStableIds.add(dep.stableId);
+      }
+    }
+  }
+
+  const overlayRefs = await getOverlaySourceRefsByStableIds(
+    pool,
+    Array.from(allStableIds),
+    isDraft,
+  );
+
+  const overlaySourceUrls: { [stableId: string]: string } = {};
+  for (const stableId in overlayRefs) {
+    if (overlayRefs[stableId]?.sourceUrl) {
+      overlaySourceUrls[stableId] = overlayRefs[stableId].sourceUrl!;
+    }
+  }
+
+  const globalHashSeen = new Set<string>();
+  const uniqueDepsForReport: MetricDependency[] = [];
+  for (const pc of perCard) {
+    for (const dep of pc.dependencies) {
+      const h = hashMetricDependency(dep, overlaySourceUrls);
+      if (globalHashSeen.has(h)) {
+        continue;
+      }
+      globalHashSeen.add(h);
+      uniqueDepsForReport.push(dep);
+    }
+  }
+
+  const { metrics: batchMetrics } = await createMetricsForDependencies(
+    pool,
+    uniqueDepsForReport,
+    isDraft,
+    projectId,
+    fragments,
+    geogs,
+    overlayRefs,
+  );
+
+  const metricsByHash = new Map<string, any[]>();
+  const seenMetricIds = new Set<number>();
+  for (const metric of batchMetrics) {
+    if (!metric || metric.id == null) {
+      continue;
+    }
+    const h = metric.dependencyHash as string;
+    if (!metricsByHash.has(h)) {
+      metricsByHash.set(h, []);
+    }
+    metricsByHash.get(h)!.push(metric);
+    if (!seenMetricIds.has(metric.id)) {
+      seenMetricIds.add(metric.id);
+      results.metrics.push(metric);
+    }
+  }
+
+  for (const pc of perCard) {
     const cardDependencyList = {
-      cardId: card.id,
+      cardId: pc.cardId,
       metrics: [] as number[],
       overlaySources: [] as string[],
     };
-    const dependencies = extractMetricDependenciesFromReportBody(card.body);
-
-    const { metrics } = await createMetricsForDependencies(
-      pool,
-      dependencies,
-      isDraft,
-      projectId,
-      fragments,
-      geogs,
-    );
 
     const cardOverlaySources = new Set<string>();
-    for (const dep of dependencies) {
+    for (const dep of pc.dependencies) {
       if (dep.stableId) {
         cardOverlaySources.add(dep.stableId);
       }
     }
     cardDependencyList.overlaySources = Array.from(cardOverlaySources);
 
-    for (const metric of metrics) {
-      cardDependencyList.metrics.push(metric.id);
-      if (!results.metrics.find((m) => m.id === metric.id)) {
-        results.metrics.push(metric);
+    const orderedHashesForCard: string[] = [];
+    const processedHash = new Set<string>();
+    for (const dep of pc.dependencies) {
+      const h = hashMetricDependency(dep, overlaySourceUrls);
+      if (processedHash.has(h)) {
+        continue;
+      }
+      processedHash.add(h);
+      orderedHashesForCard.push(h);
+    }
+
+    for (const h of orderedHashesForCard) {
+      const forHash = metricsByHash.get(h);
+      if (forHash) {
+        for (const m of forHash) {
+          cardDependencyList.metrics.push(m.id);
+        }
       }
     }
 
@@ -1009,9 +1081,12 @@ async function createMetricsForDependencies(
   projectId: number,
   fragments: string[],
   geogs: { id: number }[],
+  preloadedOverlayRefs?: {
+    [stableId: string]: ReportOverlaySourcePartial;
+  },
 ) {
   const metrics: any[] = [];
-  const hashes: string[] = [];
+  const hashSeen = new Set<string>();
   const batchInputs: Array<{
     subjectFragmentId?: string;
     subjectGeographyId?: number;
@@ -1023,15 +1098,15 @@ async function createMetricsForDependencies(
     dependencyHash: string;
   }> = [];
 
-  const overlaySourceStableIds = Array.from(
-    new Set(dependencies.filter((d) => d.stableId).map((d) => d.stableId!)),
-  );
-
-  const overlaySources = await getOverlaySourceRefsByStableIds(
-    pool,
-    overlaySourceStableIds,
-    isDraft,
-  );
+  const overlaySources =
+    preloadedOverlayRefs ??
+    (await getOverlaySourceRefsByStableIds(
+      pool,
+      Array.from(
+        new Set(dependencies.filter((d) => d.stableId).map((d) => d.stableId!)),
+      ),
+      isDraft,
+    ));
 
   const overlaySourceUrls = {} as { [stableId: string]: string };
   for (const stableId in overlaySources) {
@@ -1042,10 +1117,10 @@ async function createMetricsForDependencies(
 
   for (const dependency of dependencies) {
     const dependencyHash = hashMetricDependency(dependency, overlaySourceUrls);
-    if (hashes.includes(dependencyHash)) {
+    if (hashSeen.has(dependencyHash)) {
       continue;
     }
-    hashes.push(dependencyHash);
+    hashSeen.add(dependencyHash);
 
     if (dependency.subjectType === "fragments") {
       for (const fragment of fragments) {
@@ -1091,7 +1166,7 @@ async function createMetricsForDependencies(
     );
     metrics.push(...batchMetrics);
   }
-  return { metrics, hashes };
+  return { metrics, hashes: Array.from(hashSeen) };
 }
 
 function stripUnnecessaryGeostatsFields(geostats: any, keepHistogram: boolean) {
