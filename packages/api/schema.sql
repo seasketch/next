@@ -5210,7 +5210,8 @@ CREATE FUNCTION public.changelog_row_net_zero_changes(p_field_group public.chang
     AS $$
   select case
     when (p_from_blob is not null) or (p_to_blob is not null) then
-      not (p_from_blob is distinct from p_to_blob)
+      not (p_from_summary is distinct from p_to_summary)
+      and not (p_from_blob is distinct from p_to_blob)
     when p_field_group = 'layer:attribution'::change_log_field_group then
       not (
         changelog_normalize_layer_attribution_summary(p_from_summary)
@@ -5227,7 +5228,7 @@ $$;
 -- Name: FUNCTION changelog_row_net_zero_changes(p_field_group public.change_log_field_group, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.changelog_row_net_zero_changes(p_field_group public.change_log_field_group, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb) IS 'Stored generated expression for change_logs.net_zero_changes (blob compare; layer:attribution normalized summary compare; else raw summaries).';
+COMMENT ON FUNCTION public.changelog_row_net_zero_changes(p_field_group public.change_log_field_group, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb) IS 'Stored generated expression for change_logs.net_zero_changes (blob-backed rows compare summaries and blobs; layer:attribution normalized summary compare; else raw summaries).';
 
 
 --
@@ -15174,6 +15175,49 @@ CREATE FUNCTION public.projects_center_geojson(project public.projects) RETURNS 
 
 
 --
+-- Name: projects_change_logs_since_last_publish(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_change_logs_since_last_publish(project public.projects) RETURNS SETOF public.change_logs
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+  declare
+    v_last_publish timestamp;
+  begin
+    if session_is_admin(project.id) = false then
+      raise 'Permission denied. Must be a project admin';
+    end if;
+    select table_of_contents_last_published into v_last_publish from projects where id = project.id;
+    if v_last_publish is null then
+      return query
+        select *
+        from change_logs
+        where project_id = project.id
+          and net_zero_changes = false
+          and field_group != 'layers:published'
+          and session_is_admin(project_id)
+        order by last_at desc;
+    end if;
+    return query
+      select *
+      from change_logs
+      where project_id = project.id
+        and last_at > v_last_publish
+        and net_zero_changes = false
+        and field_group != 'layers:published'
+      order by last_at desc;
+  end;
+$$;
+
+
+--
+-- Name: FUNCTION projects_change_logs_since_last_publish(project public.projects); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_change_logs_since_last_publish(project public.projects) IS '@simpleCollections only';
+
+
+--
 -- Name: projects_data_hosting_quota(public.projects); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -22378,6 +22422,7 @@ begin
   );
 
   v_from_blob := jsonb_build_object(
+    'type', old.type::text,
     'short_template', old.short_template,
     'long_template', old.long_template,
     'cursor', old.cursor::text,
@@ -22385,6 +22430,7 @@ begin
     'layers', to_jsonb(coalesce(old.layers, array[]::text[]))
   );
   v_to_blob := jsonb_build_object(
+    'type', new.type::text,
     'short_template', new.short_template,
     'long_template', new.long_template,
     'cursor', new.cursor::text,
@@ -22429,7 +22475,7 @@ $$;
 -- Name: FUNCTION trg_changelog_interactivity_settings_for_toc(); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.trg_changelog_interactivity_settings_for_toc() IS 'Draft layer interactivity_settings edits → layer:interactivity on related draft TOC (session.user_id). Summaries {type,text_changes}; blobs include cursor/layers. No row for cursor/layers-only updates (UPDATE OF).';
+COMMENT ON FUNCTION public.trg_changelog_interactivity_settings_for_toc() IS 'Draft layer interactivity_settings edits -> layer:interactivity on related draft TOC (session.user_id). Summaries {type,text_changes}; blobs include type/cursor/layers/text fields. No row for cursor/layers-only updates (UPDATE OF).';
 
 
 --
@@ -38221,6 +38267,14 @@ GRANT ALL ON FUNCTION public.projects_basemaps(project public.projects) TO anon;
 
 REVOKE ALL ON FUNCTION public.projects_center_geojson(project public.projects) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_center_geojson(project public.projects) TO anon;
+
+
+--
+-- Name: FUNCTION projects_change_logs_since_last_publish(project public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_change_logs_since_last_publish(project public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_change_logs_since_last_publish(project public.projects) TO seasketch_user;
 
 
 --

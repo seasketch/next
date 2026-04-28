@@ -12083,6 +12083,15 @@ type Project implements Node {
     orderBy: [ChangeLogsOrderBy!] = [PRIMARY_KEY_ASC]
   ): ChangeLogsConnection!
 
+  """Reads and enables pagination through a set of `ChangeLog`."""
+  changeLogsSinceLastPublish(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [ChangeLog!]
+
   """Reads a single `CommunityGuideline` that is related to this `Project`."""
   communityGuidelines: CommunityGuideline
   createdAt: Datetime

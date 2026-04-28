@@ -10958,6 +10958,8 @@ export type Project = Node & {
   centerGeojson?: Maybe<Scalars['JSON']>;
   /** Reads and enables pagination through a set of `ChangeLog`. */
   changeLogsConnection: ChangeLogsConnection;
+  /** Reads and enables pagination through a set of `ChangeLog`. */
+  changeLogsSinceLastPublish?: Maybe<Array<ChangeLog>>;
   /** Reads a single `CommunityGuideline` that is related to this `Project`. */
   communityGuidelines?: Maybe<CommunityGuideline>;
   createdAt?: Maybe<Scalars['Datetime']>;
@@ -11274,6 +11276,16 @@ export type ProjectChangeLogsConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<ChangeLogsOrderBy>>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectChangeLogsSinceLastPublishArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -21765,6 +21777,26 @@ export type LayerCartographyChangesQuery = (
   )> }
 );
 
+export type ChangeLogsSinceLastPublishQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ChangeLogsSinceLastPublishQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { draftTableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'title' | 'isFolder'>
+    )>>, changeLogsSinceLastPublish?: Maybe<Array<(
+      { __typename?: 'ChangeLog' }
+      & ChangeLogDetailsFragment
+    )>> }
+  )> }
+);
+
 export type ForumListDetailsFragment = (
   { __typename?: 'Forum' }
   & Pick<Forum, 'id' | 'name' | 'description' | 'archived' | 'position' | 'topicCount' | 'postCount' | 'lastPostDate' | 'translatedProps'>
@@ -30281,6 +30313,21 @@ export const LayerCartographyChangesDocument = /*#__PURE__*/ gql`
 }
     ${FullAdminSourceFragmentDoc}
 ${ChangeLogDetailsFragmentDoc}`;
+export const ChangeLogsSinceLastPublishDocument = /*#__PURE__*/ gql`
+    query ChangeLogsSinceLastPublish($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    draftTableOfContentsItems {
+      id
+      title
+      isFolder
+    }
+    changeLogsSinceLastPublish {
+      ...ChangeLogDetails
+    }
+  }
+}
+    ${ChangeLogDetailsFragmentDoc}`;
 export const ForumAdminListDocument = /*#__PURE__*/ gql`
     query ForumAdminList($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -33197,6 +33244,7 @@ export const namedOperations = {
     DraftTableOfContentsItemsForPicker: 'DraftTableOfContentsItemsForPicker',
     LayerMetadataChanges: 'LayerMetadataChanges',
     LayerCartographyChanges: 'LayerCartographyChanges',
+    ChangeLogsSinceLastPublish: 'ChangeLogsSinceLastPublish',
     ForumAdminList: 'ForumAdminList',
     Forums: 'Forums',
     TopicList: 'TopicList',

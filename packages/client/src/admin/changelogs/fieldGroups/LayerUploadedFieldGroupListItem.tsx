@@ -2,8 +2,8 @@ import { UploadIcon } from "@heroicons/react/outline";
 import { useQuery } from "@apollo/client";
 import bytes from "bytes";
 import { Trans, useTranslation } from "react-i18next";
-import { UploadChangelogSourceDetailsDocument } from "../../../generated/queries";
-import type {
+import {
+  UploadChangelogSourceDetailsDocument,
   UploadChangelogSourceDetailsQuery,
   UploadChangelogSourceDetailsQueryVariables,
 } from "../../../generated/queries";

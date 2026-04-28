@@ -509,10 +509,31 @@ describe("change_logs", () => {
           text_changes: true,
         });
         expect(log.to_blob).toMatchObject({
+          type: "BANNER",
           title: "Feature title",
           short_template: "Short",
           long_template: "Long",
         });
+        expect(log.net_zero_changes).toBe(false);
+
+        await clearLogs(conn);
+        await conn.any(sql`
+          update interactivity_settings
+          set type = 'ALL_PROPERTIES_POPUP'
+          where id = ${layer.interactivitySettingsId}
+        `);
+        log = await onlyLogFor(conn, projectId, "layer:interactivity");
+        expect(log.from_summary).toEqual({
+          type: "BANNER",
+          text_changes: false,
+        });
+        expect(log.to_summary).toEqual({
+          type: "ALL_PROPERTIES_POPUP",
+          text_changes: false,
+        });
+        expect(log.from_blob).toMatchObject({ type: "BANNER" });
+        expect(log.to_blob).toMatchObject({ type: "ALL_PROPERTIES_POPUP" });
+        expect(log.net_zero_changes).toBe(false);
 
         await clearLogs(conn);
         await conn.any(sql`

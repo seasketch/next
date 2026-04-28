@@ -7529,6 +7529,18 @@ select{
   max-height:88vh
 }
 
+.max-h-\[55vh\]{
+  max-height:55vh
+}
+
+.max-h-\[min\(48vh\2c 28rem\)\]{
+  max-height:min(48vh,28rem)
+}
+
+.max-h-\[min\(90vh\2c 52rem\)\]{
+  max-height:min(90vh,52rem)
+}
+
 .min-h-0{
   min-height:0px
 }
@@ -15203,6 +15215,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
     top:7rem
   }
 
+  .sm\:order-none{
+    order:0
+  }
+
   .sm\:col-span-2{
     grid-column:span 2 / span 2
   }
@@ -15393,6 +15409,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
   .sm\:max-w-6xl{
     max-width:72rem
+  }
+
+  .sm\:max-w-3xl{
+    max-width:48rem
   }
 
   .sm\:flex-1{

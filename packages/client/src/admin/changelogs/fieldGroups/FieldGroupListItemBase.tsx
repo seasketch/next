@@ -13,6 +13,7 @@ import "./FieldGroupListItemBase.css";
 export interface FieldGroupListItemProps {
   changeLog: ChangeLogDetailsFragment;
   last?: boolean;
+  itemTitle?: ReactNode;
 }
 
 export type Summary = Record<string, unknown>;
@@ -116,6 +117,7 @@ export default function BaseFieldGroupListItem({
   last,
   icon,
   iconClassName,
+  itemTitle,
   children,
   footer,
 }: FieldGroupListItemProps & {
@@ -131,6 +133,7 @@ export default function BaseFieldGroupListItem({
       icon={icon}
       iconClassName={iconClassName}
       last={last}
+      itemTitle={itemTitle}
       summary={children}
       footer={footer}
     />

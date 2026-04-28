@@ -1188,3 +1188,17 @@ query LayerCartographyChanges($id: Int!) {
     }
   }
 }
+
+query ChangeLogsSinceLastPublish($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    draftTableOfContentsItems {
+      id
+      title
+      isFolder
+    }
+    changeLogsSinceLastPublish {
+      ...ChangeLogDetails
+    }
+  }
+}

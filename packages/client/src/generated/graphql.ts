@@ -10960,6 +10960,8 @@ export type Project = Node & {
   centerGeojson?: Maybe<Scalars['JSON']>;
   /** Reads and enables pagination through a set of `ChangeLog`. */
   changeLogsConnection: ChangeLogsConnection;
+  /** Reads and enables pagination through a set of `ChangeLog`. */
+  changeLogsSinceLastPublish?: Maybe<Array<ChangeLog>>;
   /** Reads a single `CommunityGuideline` that is related to this `Project`. */
   communityGuidelines?: Maybe<CommunityGuideline>;
   createdAt?: Maybe<Scalars['Datetime']>;
@@ -11276,6 +11278,16 @@ export type ProjectChangeLogsConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<ChangeLogsOrderBy>>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectChangeLogsSinceLastPublishArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -21762,6 +21774,26 @@ export type LayerCartographyChangesQuery = (
     )>, cartographyChangeLogs?: Maybe<Array<(
       { __typename?: 'ChangeLog' }
       & Pick<ChangeLog, 'fromBlob' | 'toBlob'>
+      & ChangeLogDetailsFragment
+    )>> }
+  )> }
+);
+
+export type ChangeLogsSinceLastPublishQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ChangeLogsSinceLastPublishQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { draftTableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'title' | 'isFolder'>
+    )>>, changeLogsSinceLastPublish?: Maybe<Array<(
+      { __typename?: 'ChangeLog' }
       & ChangeLogDetailsFragment
     )>> }
   )> }
@@ -33786,6 +33818,49 @@ export function useLayerCartographyChangesLazyQuery(baseOptions?: Apollo.LazyQue
 export type LayerCartographyChangesQueryHookResult = ReturnType<typeof useLayerCartographyChangesQuery>;
 export type LayerCartographyChangesLazyQueryHookResult = ReturnType<typeof useLayerCartographyChangesLazyQuery>;
 export type LayerCartographyChangesQueryResult = Apollo.QueryResult<LayerCartographyChangesQuery, LayerCartographyChangesQueryVariables>;
+export const ChangeLogsSinceLastPublishDocument = gql`
+    query ChangeLogsSinceLastPublish($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    draftTableOfContentsItems {
+      id
+      title
+      isFolder
+    }
+    changeLogsSinceLastPublish {
+      ...ChangeLogDetails
+    }
+  }
+}
+    ${ChangeLogDetailsFragmentDoc}`;
+
+/**
+ * __useChangeLogsSinceLastPublishQuery__
+ *
+ * To run a query within a React component, call `useChangeLogsSinceLastPublishQuery` and pass it any options that fit your needs.
+ * When your component renders, `useChangeLogsSinceLastPublishQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useChangeLogsSinceLastPublishQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useChangeLogsSinceLastPublishQuery(baseOptions: Apollo.QueryHookOptions<ChangeLogsSinceLastPublishQuery, ChangeLogsSinceLastPublishQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ChangeLogsSinceLastPublishQuery, ChangeLogsSinceLastPublishQueryVariables>(ChangeLogsSinceLastPublishDocument, options);
+      }
+export function useChangeLogsSinceLastPublishLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ChangeLogsSinceLastPublishQuery, ChangeLogsSinceLastPublishQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ChangeLogsSinceLastPublishQuery, ChangeLogsSinceLastPublishQueryVariables>(ChangeLogsSinceLastPublishDocument, options);
+        }
+export type ChangeLogsSinceLastPublishQueryHookResult = ReturnType<typeof useChangeLogsSinceLastPublishQuery>;
+export type ChangeLogsSinceLastPublishLazyQueryHookResult = ReturnType<typeof useChangeLogsSinceLastPublishLazyQuery>;
+export type ChangeLogsSinceLastPublishQueryResult = Apollo.QueryResult<ChangeLogsSinceLastPublishQuery, ChangeLogsSinceLastPublishQueryVariables>;
 export const ForumAdminListDocument = gql`
     query ForumAdminList($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -42207,6 +42282,7 @@ export const namedOperations = {
     DraftTableOfContentsItemsForPicker: 'DraftTableOfContentsItemsForPicker',
     LayerMetadataChanges: 'LayerMetadataChanges',
     LayerCartographyChanges: 'LayerCartographyChanges',
+    ChangeLogsSinceLastPublish: 'ChangeLogsSinceLastPublish',
     ForumAdminList: 'ForumAdminList',
     Forums: 'Forums',
     TopicList: 'TopicList',

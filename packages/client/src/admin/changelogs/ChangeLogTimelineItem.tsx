@@ -52,6 +52,7 @@ export default function ChangeLogTimelineItem({
   iconClassName,
   last,
   summary,
+  itemTitle,
   footer,
 }: {
   profile?: ChangeLogAuthorProfile | null;
@@ -60,6 +61,7 @@ export default function ChangeLogTimelineItem({
   iconClassName?: string;
   last?: boolean;
   summary: ReactNode;
+  itemTitle?: ReactNode;
   footer?: ReactNode;
 }) {
   const { t } = useTranslation("admin:data");
@@ -123,6 +125,16 @@ export default function ChangeLogTimelineItem({
               </span>
             )}
           </span>
+          {itemTitle && (
+            <span className="flex min-w-0 items-center gap-x-1.5 text-gray-500">
+              <span className="truncate font-semibold text-gray-700">
+                {itemTitle}
+              </span>
+              <span className="text-gray-300" aria-hidden>
+                {String.fromCharCode(8212)}
+              </span>
+            </span>
+          )}
           <span
             ref={summaryRef}
             className="change-log-summary block w-max max-w-full min-w-0"
