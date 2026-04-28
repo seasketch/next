@@ -6081,6 +6081,11 @@ input DraftDependenciesInput {
 
 type DraftReportDependenciesResults {
   metrics: [CompatibleSpatialMetric!]!
+  ready: Boolean!
+  sketchId: Int!
+}
+
+type DraftReportOverlaySourcesResults {
   overlaySources: [ReportOverlaySource!]!
   ready: Boolean!
   sketchId: Int!
@@ -13945,6 +13950,7 @@ type Query implements Node {
     orderBy: [DataUploadTasksOrderBy!] = [PRIMARY_KEY_ASC]
   ): DataUploadTasksConnection
   draftReportDependencies(input: DraftDependenciesInput): DraftReportDependenciesResults!
+  draftReportOverlaySources(input: DraftDependenciesInput): DraftReportOverlaySourcesResults!
   eezlayer: TableOfContentsItem
   emailNotificationPreferenceByUserId(userId: Int!): EmailNotificationPreference
 
@@ -15255,6 +15261,7 @@ type Report implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+  overlaySources: [ReportOverlaySource!]!
   projectId: Int!
 
   """Reads a single `SketchClass` that is related to this `Report`."""
@@ -15311,7 +15318,6 @@ input ReportInput {
 type ReportOverlayDependencies {
   cardDependencyLists: [CardDependencyLists!]!
   metrics: [CompatibleSpatialMetric!]!
-  overlaySources: [ReportOverlaySource!]!
   ready: Boolean!
 }
 

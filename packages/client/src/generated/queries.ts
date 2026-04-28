@@ -5258,6 +5258,12 @@ export type DraftDependenciesInput = {
 export type DraftReportDependenciesResults = {
   __typename?: 'DraftReportDependenciesResults';
   metrics: Array<CompatibleSpatialMetric>;
+  ready: Scalars['Boolean'];
+  sketchId: Scalars['Int'];
+};
+
+export type DraftReportOverlaySourcesResults = {
+  __typename?: 'DraftReportOverlaySourcesResults';
   overlaySources: Array<ReportOverlaySource>;
   ready: Scalars['Boolean'];
   sketchId: Scalars['Int'];
@@ -12361,6 +12367,7 @@ export type Query = Node & {
   /** Reads and enables pagination through a set of `DataUploadTask`. */
   dataUploadTasksConnection?: Maybe<DataUploadTasksConnection>;
   draftReportDependencies: DraftReportDependenciesResults;
+  draftReportOverlaySources: DraftReportOverlaySourcesResults;
   eezlayer?: Maybe<TableOfContentsItem>;
   emailNotificationPreferenceByUserId?: Maybe<EmailNotificationPreference>;
   /** Reads and enables pagination through a set of `EmailNotificationPreference`. */
@@ -12887,6 +12894,12 @@ export type QueryDataUploadTasksConnectionArgs = {
 
 /** The root query type which gives access points into the data universe. */
 export type QueryDraftReportDependenciesArgs = {
+  input?: Maybe<DraftDependenciesInput>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryDraftReportOverlaySourcesArgs = {
   input?: Maybe<DraftDependenciesInput>;
 };
 
@@ -14131,6 +14144,7 @@ export type Report = Node & {
   id: Scalars['Int'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  overlaySources: Array<ReportOverlaySource>;
   projectId: Scalars['Int'];
   /** Reads a single `SketchClass` that is related to this `Report`. */
   sketchClass?: Maybe<SketchClass>;
@@ -14192,7 +14206,6 @@ export type ReportOverlayDependencies = {
   __typename?: 'ReportOverlayDependencies';
   cardDependencyLists: Array<CardDependencyLists>;
   metrics: Array<CompatibleSpatialMetric>;
-  overlaySources: Array<ReportOverlaySource>;
   ready: Scalars['Boolean'];
 };
 
@@ -24160,12 +24173,13 @@ export type ReportContextQuery = (
     )>>, geographies?: Maybe<Array<(
       { __typename?: 'Geography' }
       & Pick<Geography, 'id' | 'name' | 'translatedProps'>
-    )>>, dependencies: (
+    )>>, overlaySources: Array<(
+      { __typename?: 'ReportOverlaySource' }
+      & OverlaySourceDetailsFragment
+    )>, dependencies: (
       { __typename?: 'ReportOverlayDependencies' }
-      & { overlaySources: Array<(
-        { __typename?: 'ReportOverlaySource' }
-        & OverlaySourceDetailsFragment
-      )>, metrics: Array<(
+      & Pick<ReportOverlayDependencies, 'ready'>
+      & { metrics: Array<(
         { __typename?: 'CompatibleSpatialMetric' }
         & CompatibleSpatialMetricDetailsFragment
       )>, cardDependencyLists: Array<(
@@ -24189,10 +24203,8 @@ export type ReportDependenciesQuery = (
     & Pick<Report, 'id'>
     & { dependencies: (
       { __typename?: 'ReportOverlayDependencies' }
-      & { overlaySources: Array<(
-        { __typename?: 'ReportOverlaySource' }
-        & OverlaySourceDetailsFragment
-      )>, metrics: Array<(
+      & Pick<ReportOverlayDependencies, 'ready'>
+      & { metrics: Array<(
         { __typename?: 'CompatibleSpatialMetric' }
         & CompatibleSpatialMetricDetailsFragment
       )>, cardDependencyLists: Array<(
@@ -24200,6 +24212,23 @@ export type ReportDependenciesQuery = (
         & Pick<CardDependencyLists, 'cardId' | 'metrics' | 'overlaySources'>
       )> }
     ) }
+  )> }
+);
+
+export type ReportOverlaySourcesQueryVariables = Exact<{
+  reportId: Scalars['Int'];
+}>;
+
+
+export type ReportOverlaySourcesQuery = (
+  { __typename?: 'Query' }
+  & { report?: Maybe<(
+    { __typename?: 'Report' }
+    & Pick<Report, 'id'>
+    & { overlaySources: Array<(
+      { __typename?: 'ReportOverlaySource' }
+      & OverlaySourceDetailsFragment
+    )> }
   )> }
 );
 
@@ -24321,12 +24350,26 @@ export type DraftReportDependenciesQuery = (
   & { draftReportDependencies: (
     { __typename?: 'DraftReportDependenciesResults' }
     & Pick<DraftReportDependenciesResults, 'ready' | 'sketchId'>
+    & { metrics: Array<(
+      { __typename?: 'CompatibleSpatialMetric' }
+      & CompatibleSpatialMetricDetailsFragment
+    )> }
+  ) }
+);
+
+export type DraftReportOverlaySourcesQueryVariables = Exact<{
+  input?: Maybe<DraftDependenciesInput>;
+}>;
+
+
+export type DraftReportOverlaySourcesQuery = (
+  { __typename?: 'Query' }
+  & { draftReportOverlaySources: (
+    { __typename?: 'DraftReportOverlaySourcesResults' }
+    & Pick<DraftReportOverlaySourcesResults, 'ready' | 'sketchId'>
     & { overlaySources: Array<(
       { __typename?: 'ReportOverlaySource' }
       & OverlaySourceDetailsFragment
-    )>, metrics: Array<(
-      { __typename?: 'CompatibleSpatialMetric' }
-      & CompatibleSpatialMetricDetailsFragment
     )> }
   ) }
 );
@@ -31714,10 +31757,11 @@ export const ReportContextDocument = /*#__PURE__*/ gql`
       name
       translatedProps
     }
+    overlaySources {
+      ...OverlaySourceDetails
+    }
     dependencies(sketchId: $sketchId) {
-      overlaySources {
-        ...OverlaySourceDetails
-      }
+      ready
       metrics {
         ...CompatibleSpatialMetricDetails
       }
@@ -31739,9 +31783,7 @@ export const ReportDependenciesDocument = /*#__PURE__*/ gql`
   report(id: $reportId) {
     id
     dependencies(sketchId: $sketchId) {
-      overlaySources {
-        ...OverlaySourceDetails
-      }
+      ready
       metrics {
         ...CompatibleSpatialMetricDetails
       }
@@ -31753,8 +31795,17 @@ export const ReportDependenciesDocument = /*#__PURE__*/ gql`
     }
   }
 }
-    ${OverlaySourceDetailsFragmentDoc}
-${CompatibleSpatialMetricDetailsFragmentDoc}`;
+    ${CompatibleSpatialMetricDetailsFragmentDoc}`;
+export const ReportOverlaySourcesDocument = /*#__PURE__*/ gql`
+    query ReportOverlaySources($reportId: Int!) {
+  report(id: $reportId) {
+    id
+    overlaySources {
+      ...OverlaySourceDetails
+    }
+  }
+}
+    ${OverlaySourceDetailsFragmentDoc}`;
 export const BaseReportContextDocument = /*#__PURE__*/ gql`
     query BaseReportContext($sketchClassId: Int!) {
   sketchClass(id: $sketchClassId) {
@@ -31836,17 +31887,24 @@ export const DraftReportDependenciesDocument = /*#__PURE__*/ gql`
     query DraftReportDependencies($input: DraftDependenciesInput) {
   draftReportDependencies(input: $input) {
     ready
-    overlaySources {
-      ...OverlaySourceDetails
-    }
     metrics {
       ...CompatibleSpatialMetricDetails
     }
     sketchId
   }
 }
-    ${OverlaySourceDetailsFragmentDoc}
-${CompatibleSpatialMetricDetailsFragmentDoc}`;
+    ${CompatibleSpatialMetricDetailsFragmentDoc}`;
+export const DraftReportOverlaySourcesDocument = /*#__PURE__*/ gql`
+    query DraftReportOverlaySources($input: DraftDependenciesInput) {
+  draftReportOverlaySources(input: $input) {
+    ready
+    overlaySources {
+      ...OverlaySourceDetails
+    }
+    sketchId
+  }
+}
+    ${OverlaySourceDetailsFragmentDoc}`;
 export const ProjectReportingLayersDocument = /*#__PURE__*/ gql`
     query ProjectReportingLayers($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -33288,12 +33346,14 @@ export const namedOperations = {
     SourceProcessingJobs: 'SourceProcessingJobs',
     ReportContext: 'ReportContext',
     ReportDependencies: 'ReportDependencies',
+    ReportOverlaySources: 'ReportOverlaySources',
     BaseReportContext: 'BaseReportContext',
     BaseDraftReportContext: 'BaseDraftReportContext',
     CopyableReportCards: 'CopyableReportCards',
     SubjectReportContext: 'SubjectReportContext',
     LegacyReportContext: 'LegacyReportContext',
     DraftReportDependencies: 'DraftReportDependencies',
+    DraftReportOverlaySources: 'DraftReportOverlaySources',
     ProjectReportingLayers: 'ProjectReportingLayers',
     OverlaySourceProcessingStatus: 'OverlaySourceProcessingStatus',
     OverlayLayerAuthorInfo: 'OverlayLayerAuthorInfo',

@@ -48,9 +48,11 @@ import {
   DraftReportDocument,
   useUpdateReportCardBodyMutation,
   useDraftReportDependenciesQuery,
+  useDraftReportOverlaySourcesQuery,
   SourceProcessingJobDetailsFragment,
   useDeleteReportCardMutation,
   ReportDependenciesDocument,
+  ReportOverlaySourcesDocument,
   DataSourceTypes,
 } from "../../generated/graphql";
 import { useTranslation } from "react-i18next";
@@ -174,7 +176,11 @@ function ReportCardBodyEditorInner({
           id: cardId,
           body: setCollapsibleBlocksClosed(body),
         },
-        refetchQueries: [...refetchDraftReportTree, ReportDependenciesDocument],
+        refetchQueries: [
+          ...refetchDraftReportTree,
+          ReportDependenciesDocument,
+          ReportOverlaySourcesDocument,
+        ],
         awaitRefetchQueries: true,
       });
       setEditing(null);
@@ -209,6 +215,21 @@ function ReportCardBodyEditorInner({
     fetchPolicy: "cache-and-network",
   });
 
+  const draftOverlaySourcesQuery = useDraftReportOverlaySourcesQuery({
+    variables: {
+      input: {
+        nodeDependencies: additionalDependencies.map((d) => ({
+          ...d,
+          hash: hashMetricDependency(d, sourceUrlMap),
+        })),
+        sketchId: sketch?.id,
+      },
+    },
+    skip: additionalDependencies.length === 0 || !editing || !sketch?.id,
+    onError,
+    fetchPolicy: "cache-and-network",
+  });
+
   useEffect(() => {
     if (
       !draftDependenciesQuery.loading &&
@@ -228,6 +249,25 @@ function ReportCardBodyEditorInner({
     editing,
   ]);
 
+  useEffect(() => {
+    if (
+      !draftOverlaySourcesQuery.loading &&
+      !draftOverlaySourcesQuery.data?.draftReportOverlaySources?.ready &&
+      !(additionalDependencies.length === 0 || !editing)
+    ) {
+      const ref = setInterval(() => {
+        draftOverlaySourcesQuery.refetch();
+      }, 1000);
+      return () => clearInterval(ref);
+    }
+  }, [
+    draftOverlaySourcesQuery.loading,
+    draftOverlaySourcesQuery.data?.draftReportOverlaySources?.ready,
+    draftOverlaySourcesQuery,
+    additionalDependencies,
+    editing,
+  ]);
+
   const allDependencies = useMemo(() => {
     const allMetrics = [...metrics] as CompatibleSpatialMetricDetailsFragment[];
     const allSourceProcessingJobs = [
@@ -235,7 +275,8 @@ function ReportCardBodyEditorInner({
         .filter((s) => s.sourceProcessingJob)
         .map((s) => s.sourceProcessingJob),
     ] as SourceProcessingJobDetailsFragment[];
-    for (const source of draftDependenciesQuery.data?.draftReportDependencies
+
+    for (const source of draftOverlaySourcesQuery.data?.draftReportOverlaySources
       ?.overlaySources || []) {
       if (
         source.sourceProcessingJob &&
@@ -256,7 +297,12 @@ function ReportCardBodyEditorInner({
       metrics: allMetrics,
       sourceProcessingJobs: allSourceProcessingJobs,
     };
-  }, [metrics, sources, draftDependenciesQuery.data]);
+  }, [
+    metrics,
+    sources,
+    draftDependenciesQuery.data,
+    draftOverlaySourcesQuery.data,
+  ]);
 
   // Handle navigation blocking when editing
   useEffect(() => {
@@ -356,13 +402,13 @@ function ReportCardBodyEditorInner({
       metrics:
         draftDependenciesQuery.data?.draftReportDependencies?.metrics || [],
       overlaySources:
-        draftDependenciesQuery.data?.draftReportDependencies?.overlaySources ||
+        draftOverlaySourcesQuery.data?.draftReportOverlaySources?.overlaySources ||
         [],
       dependencies: additionalDependencies,
     });
   }, [
     draftDependenciesQuery.data?.draftReportDependencies?.metrics,
-    draftDependenciesQuery.data?.draftReportDependencies?.overlaySources,
+    draftOverlaySourcesQuery.data?.draftReportOverlaySources?.overlaySources,
     additionalDependencies,
     setDraftDependencies,
   ]);

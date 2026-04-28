@@ -5260,6 +5260,12 @@ export type DraftDependenciesInput = {
 export type DraftReportDependenciesResults = {
   __typename?: 'DraftReportDependenciesResults';
   metrics: Array<CompatibleSpatialMetric>;
+  ready: Scalars['Boolean'];
+  sketchId: Scalars['Int'];
+};
+
+export type DraftReportOverlaySourcesResults = {
+  __typename?: 'DraftReportOverlaySourcesResults';
   overlaySources: Array<ReportOverlaySource>;
   ready: Scalars['Boolean'];
   sketchId: Scalars['Int'];
@@ -12363,6 +12369,7 @@ export type Query = Node & {
   /** Reads and enables pagination through a set of `DataUploadTask`. */
   dataUploadTasksConnection?: Maybe<DataUploadTasksConnection>;
   draftReportDependencies: DraftReportDependenciesResults;
+  draftReportOverlaySources: DraftReportOverlaySourcesResults;
   eezlayer?: Maybe<TableOfContentsItem>;
   emailNotificationPreferenceByUserId?: Maybe<EmailNotificationPreference>;
   /** Reads and enables pagination through a set of `EmailNotificationPreference`. */
@@ -12889,6 +12896,12 @@ export type QueryDataUploadTasksConnectionArgs = {
 
 /** The root query type which gives access points into the data universe. */
 export type QueryDraftReportDependenciesArgs = {
+  input?: Maybe<DraftDependenciesInput>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryDraftReportOverlaySourcesArgs = {
   input?: Maybe<DraftDependenciesInput>;
 };
 
@@ -14133,6 +14146,7 @@ export type Report = Node & {
   id: Scalars['Int'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  overlaySources: Array<ReportOverlaySource>;
   projectId: Scalars['Int'];
   /** Reads a single `SketchClass` that is related to this `Report`. */
   sketchClass?: Maybe<SketchClass>;
@@ -14194,7 +14208,6 @@ export type ReportOverlayDependencies = {
   __typename?: 'ReportOverlayDependencies';
   cardDependencyLists: Array<CardDependencyLists>;
   metrics: Array<CompatibleSpatialMetric>;
-  overlaySources: Array<ReportOverlaySource>;
   ready: Scalars['Boolean'];
 };
 
@@ -24162,12 +24175,13 @@ export type ReportContextQuery = (
     )>>, geographies?: Maybe<Array<(
       { __typename?: 'Geography' }
       & Pick<Geography, 'id' | 'name' | 'translatedProps'>
-    )>>, dependencies: (
+    )>>, overlaySources: Array<(
+      { __typename?: 'ReportOverlaySource' }
+      & OverlaySourceDetailsFragment
+    )>, dependencies: (
       { __typename?: 'ReportOverlayDependencies' }
-      & { overlaySources: Array<(
-        { __typename?: 'ReportOverlaySource' }
-        & OverlaySourceDetailsFragment
-      )>, metrics: Array<(
+      & Pick<ReportOverlayDependencies, 'ready'>
+      & { metrics: Array<(
         { __typename?: 'CompatibleSpatialMetric' }
         & CompatibleSpatialMetricDetailsFragment
       )>, cardDependencyLists: Array<(
@@ -24191,10 +24205,8 @@ export type ReportDependenciesQuery = (
     & Pick<Report, 'id'>
     & { dependencies: (
       { __typename?: 'ReportOverlayDependencies' }
-      & { overlaySources: Array<(
-        { __typename?: 'ReportOverlaySource' }
-        & OverlaySourceDetailsFragment
-      )>, metrics: Array<(
+      & Pick<ReportOverlayDependencies, 'ready'>
+      & { metrics: Array<(
         { __typename?: 'CompatibleSpatialMetric' }
         & CompatibleSpatialMetricDetailsFragment
       )>, cardDependencyLists: Array<(
@@ -24202,6 +24214,23 @@ export type ReportDependenciesQuery = (
         & Pick<CardDependencyLists, 'cardId' | 'metrics' | 'overlaySources'>
       )> }
     ) }
+  )> }
+);
+
+export type ReportOverlaySourcesQueryVariables = Exact<{
+  reportId: Scalars['Int'];
+}>;
+
+
+export type ReportOverlaySourcesQuery = (
+  { __typename?: 'Query' }
+  & { report?: Maybe<(
+    { __typename?: 'Report' }
+    & Pick<Report, 'id'>
+    & { overlaySources: Array<(
+      { __typename?: 'ReportOverlaySource' }
+      & OverlaySourceDetailsFragment
+    )> }
   )> }
 );
 
@@ -24323,12 +24352,26 @@ export type DraftReportDependenciesQuery = (
   & { draftReportDependencies: (
     { __typename?: 'DraftReportDependenciesResults' }
     & Pick<DraftReportDependenciesResults, 'ready' | 'sketchId'>
+    & { metrics: Array<(
+      { __typename?: 'CompatibleSpatialMetric' }
+      & CompatibleSpatialMetricDetailsFragment
+    )> }
+  ) }
+);
+
+export type DraftReportOverlaySourcesQueryVariables = Exact<{
+  input?: Maybe<DraftDependenciesInput>;
+}>;
+
+
+export type DraftReportOverlaySourcesQuery = (
+  { __typename?: 'Query' }
+  & { draftReportOverlaySources: (
+    { __typename?: 'DraftReportOverlaySourcesResults' }
+    & Pick<DraftReportOverlaySourcesResults, 'ready' | 'sketchId'>
     & { overlaySources: Array<(
       { __typename?: 'ReportOverlaySource' }
       & OverlaySourceDetailsFragment
-    )>, metrics: Array<(
-      { __typename?: 'CompatibleSpatialMetric' }
-      & CompatibleSpatialMetricDetailsFragment
     )> }
   ) }
 );
@@ -37946,10 +37989,11 @@ export const ReportContextDocument = gql`
       name
       translatedProps
     }
+    overlaySources {
+      ...OverlaySourceDetails
+    }
     dependencies(sketchId: $sketchId) {
-      overlaySources {
-        ...OverlaySourceDetails
-      }
+      ready
       metrics {
         ...CompatibleSpatialMetricDetails
       }
@@ -38000,9 +38044,7 @@ export const ReportDependenciesDocument = gql`
   report(id: $reportId) {
     id
     dependencies(sketchId: $sketchId) {
-      overlaySources {
-        ...OverlaySourceDetails
-      }
+      ready
       metrics {
         ...CompatibleSpatialMetricDetails
       }
@@ -38014,8 +38056,7 @@ export const ReportDependenciesDocument = gql`
     }
   }
 }
-    ${OverlaySourceDetailsFragmentDoc}
-${CompatibleSpatialMetricDetailsFragmentDoc}`;
+    ${CompatibleSpatialMetricDetailsFragmentDoc}`;
 
 /**
  * __useReportDependenciesQuery__
@@ -38045,6 +38086,44 @@ export function useReportDependenciesLazyQuery(baseOptions?: Apollo.LazyQueryHoo
 export type ReportDependenciesQueryHookResult = ReturnType<typeof useReportDependenciesQuery>;
 export type ReportDependenciesLazyQueryHookResult = ReturnType<typeof useReportDependenciesLazyQuery>;
 export type ReportDependenciesQueryResult = Apollo.QueryResult<ReportDependenciesQuery, ReportDependenciesQueryVariables>;
+export const ReportOverlaySourcesDocument = gql`
+    query ReportOverlaySources($reportId: Int!) {
+  report(id: $reportId) {
+    id
+    overlaySources {
+      ...OverlaySourceDetails
+    }
+  }
+}
+    ${OverlaySourceDetailsFragmentDoc}`;
+
+/**
+ * __useReportOverlaySourcesQuery__
+ *
+ * To run a query within a React component, call `useReportOverlaySourcesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useReportOverlaySourcesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useReportOverlaySourcesQuery({
+ *   variables: {
+ *      reportId: // value for 'reportId'
+ *   },
+ * });
+ */
+export function useReportOverlaySourcesQuery(baseOptions: Apollo.QueryHookOptions<ReportOverlaySourcesQuery, ReportOverlaySourcesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ReportOverlaySourcesQuery, ReportOverlaySourcesQueryVariables>(ReportOverlaySourcesDocument, options);
+      }
+export function useReportOverlaySourcesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ReportOverlaySourcesQuery, ReportOverlaySourcesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ReportOverlaySourcesQuery, ReportOverlaySourcesQueryVariables>(ReportOverlaySourcesDocument, options);
+        }
+export type ReportOverlaySourcesQueryHookResult = ReturnType<typeof useReportOverlaySourcesQuery>;
+export type ReportOverlaySourcesLazyQueryHookResult = ReturnType<typeof useReportOverlaySourcesLazyQuery>;
+export type ReportOverlaySourcesQueryResult = Apollo.QueryResult<ReportOverlaySourcesQuery, ReportOverlaySourcesQueryVariables>;
 export const BaseReportContextDocument = gql`
     query BaseReportContext($sketchClassId: Int!) {
   sketchClass(id: $sketchClassId) {
@@ -38266,17 +38345,13 @@ export const DraftReportDependenciesDocument = gql`
     query DraftReportDependencies($input: DraftDependenciesInput) {
   draftReportDependencies(input: $input) {
     ready
-    overlaySources {
-      ...OverlaySourceDetails
-    }
     metrics {
       ...CompatibleSpatialMetricDetails
     }
     sketchId
   }
 }
-    ${OverlaySourceDetailsFragmentDoc}
-${CompatibleSpatialMetricDetailsFragmentDoc}`;
+    ${CompatibleSpatialMetricDetailsFragmentDoc}`;
 
 /**
  * __useDraftReportDependenciesQuery__
@@ -38305,6 +38380,45 @@ export function useDraftReportDependenciesLazyQuery(baseOptions?: Apollo.LazyQue
 export type DraftReportDependenciesQueryHookResult = ReturnType<typeof useDraftReportDependenciesQuery>;
 export type DraftReportDependenciesLazyQueryHookResult = ReturnType<typeof useDraftReportDependenciesLazyQuery>;
 export type DraftReportDependenciesQueryResult = Apollo.QueryResult<DraftReportDependenciesQuery, DraftReportDependenciesQueryVariables>;
+export const DraftReportOverlaySourcesDocument = gql`
+    query DraftReportOverlaySources($input: DraftDependenciesInput) {
+  draftReportOverlaySources(input: $input) {
+    ready
+    overlaySources {
+      ...OverlaySourceDetails
+    }
+    sketchId
+  }
+}
+    ${OverlaySourceDetailsFragmentDoc}`;
+
+/**
+ * __useDraftReportOverlaySourcesQuery__
+ *
+ * To run a query within a React component, call `useDraftReportOverlaySourcesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useDraftReportOverlaySourcesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDraftReportOverlaySourcesQuery({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useDraftReportOverlaySourcesQuery(baseOptions?: Apollo.QueryHookOptions<DraftReportOverlaySourcesQuery, DraftReportOverlaySourcesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<DraftReportOverlaySourcesQuery, DraftReportOverlaySourcesQueryVariables>(DraftReportOverlaySourcesDocument, options);
+      }
+export function useDraftReportOverlaySourcesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DraftReportOverlaySourcesQuery, DraftReportOverlaySourcesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<DraftReportOverlaySourcesQuery, DraftReportOverlaySourcesQueryVariables>(DraftReportOverlaySourcesDocument, options);
+        }
+export type DraftReportOverlaySourcesQueryHookResult = ReturnType<typeof useDraftReportOverlaySourcesQuery>;
+export type DraftReportOverlaySourcesLazyQueryHookResult = ReturnType<typeof useDraftReportOverlaySourcesLazyQuery>;
+export type DraftReportOverlaySourcesQueryResult = Apollo.QueryResult<DraftReportOverlaySourcesQuery, DraftReportOverlaySourcesQueryVariables>;
 export const ProjectReportingLayersDocument = gql`
     query ProjectReportingLayers($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -42326,12 +42440,14 @@ export const namedOperations = {
     SourceProcessingJobs: 'SourceProcessingJobs',
     ReportContext: 'ReportContext',
     ReportDependencies: 'ReportDependencies',
+    ReportOverlaySources: 'ReportOverlaySources',
     BaseReportContext: 'BaseReportContext',
     BaseDraftReportContext: 'BaseDraftReportContext',
     CopyableReportCards: 'CopyableReportCards',
     SubjectReportContext: 'SubjectReportContext',
     LegacyReportContext: 'LegacyReportContext',
     DraftReportDependencies: 'DraftReportDependencies',
+    DraftReportOverlaySources: 'DraftReportOverlaySources',
     ProjectReportingLayers: 'ProjectReportingLayers',
     OverlaySourceProcessingStatus: 'OverlaySourceProcessingStatus',
     OverlayLayerAuthorInfo: 'OverlayLayerAuthorInfo',

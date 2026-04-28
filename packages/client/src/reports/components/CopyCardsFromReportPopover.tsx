@@ -8,10 +8,14 @@ import {
   BaseDraftReportContextDocument,
   CopyableReportCardsQuery,
   ReportDependenciesDocument,
+  ReportOverlaySourcesDocument,
   useAddReportCardMutation,
   useDeleteReportCardMutation,
 } from "../../generated/graphql";
-import { evictReportDependenciesForReportAndSketch } from "../utils/evictReportDependenciesCache";
+import {
+  evictReportDependenciesForReportAndSketch,
+  evictReportOverlaySourcesForReport,
+} from "../utils/evictReportDependenciesCache";
 
 export type ExistingCopyEntry = {
   cardId: number;
@@ -241,12 +245,22 @@ export function CopyCardsFromReportPopover({
           draftReportId,
           demonstrationSketchId
         );
+        evictReportOverlaySourcesForReport(client.cache, draftReportId);
         refetches.push(
           client.query({
             query: ReportDependenciesDocument,
             variables: {
               reportId: draftReportId,
               sketchId: demonstrationSketchId,
+            },
+            fetchPolicy: "network-only",
+          })
+        );
+        refetches.push(
+          client.query({
+            query: ReportOverlaySourcesDocument,
+            variables: {
+              reportId: draftReportId,
             },
             fetchPolicy: "network-only",
           })

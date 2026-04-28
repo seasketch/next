@@ -35,6 +35,27 @@ export function evictReportDependenciesForReportAndSketch(
 }
 
 /**
+ * Evicts cached `Report.overlaySources` for the given report. Use when report
+ * cards (and thus layer dependencies) may have changed.
+ */
+export function evictReportOverlaySourcesForReport(
+  cache: ApolloCache<object>,
+  reportId: number
+): void {
+  const reportEntityId = cache.identify({
+    __typename: "Report",
+    id: reportId,
+  });
+  if (!reportEntityId) {
+    return;
+  }
+  cache.evict({
+    id: reportEntityId,
+    fieldName: "overlaySources",
+  });
+}
+
+/**
  * Reads `sketchClass.reportId` from the Apollo cache for this sketch and evicts
  * that report's dependencies field for this sketch id. No-op if the sketch is
  * missing or has no report.

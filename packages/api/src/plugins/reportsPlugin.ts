@@ -169,7 +169,6 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
 
       type ReportOverlayDependencies {
         ready: Boolean!
-        overlaySources: [ReportOverlaySource!]!
         metrics: [CompatibleSpatialMetric!]!
         cardDependencyLists: [CardDependencyLists!]!
       }
@@ -177,6 +176,8 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
       extend type Report {
         dependencies(sketchId: Int): ReportOverlayDependencies!
           @requires(columns: ["id", "project_id", "sketch_class_id"])
+        overlaySources: [ReportOverlaySource!]!
+          @requires(columns: ["id", "project_id"])
       }
 
       input DraftDependenciesInput {
@@ -187,14 +188,22 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
       type DraftReportDependenciesResults {
         ready: Boolean!
         sketchId: Int!
-        overlaySources: [ReportOverlaySource!]!
         metrics: [CompatibleSpatialMetric!]!
+      }
+
+      type DraftReportOverlaySourcesResults {
+        ready: Boolean!
+        sketchId: Int!
+        overlaySources: [ReportOverlaySource!]!
       }
 
       extend type Query {
         draftReportDependencies(
           input: DraftDependenciesInput
         ): DraftReportDependenciesResults!
+        draftReportOverlaySources(
+          input: DraftDependenciesInput
+        ): DraftReportOverlaySourcesResults!
       }
 
       extend type Project {
@@ -345,6 +354,13 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
             args.sketchId,
           );
         },
+        async overlaySources(report, args, context) {
+          return await getReportOverlaySources(
+            report.id,
+            context.pgClient,
+            report.projectId,
+          );
+        },
       },
       ReportOverlaySource: {
         async tableOfContentsItem(
@@ -439,8 +455,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
             throw new Error("No geographies found");
           }
 
-          const { metrics, overlaySources } =
-            await createMetricsForDependencies(
+          const { metrics } = await createMetricsForDependencies(
               pgClient,
               args.input.nodeDependencies,
               true,
@@ -450,11 +465,42 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
             );
 
           return {
-            overlaySources: Object.values(overlaySources),
             metrics,
             ready: !metrics.find((m) => m.state !== "complete"),
             sketchId,
           };
+        },
+        async draftReportOverlaySources(root, args, context, resolveInfo) {
+          const { pgClient } = context;
+          const sketchId = args.input.sketchId;
+          // First, make sure the sketch exists
+          const { rows: sketchRows } = await pgClient.query(
+            `select sketches.id, sketch_classes.project_id as project_id, session_is_admin(sketch_classes.project_id) as is_admin from sketches inner join sketch_classes on sketches.sketch_class_id = sketch_classes.id where sketches.id = $1`,
+            [sketchId],
+          );
+          if (sketchRows.length === 0) {
+            throw new Error("Sketch not found");
+          }
+          if (!sketchRows[0].is_admin) {
+            throw new Error(
+              "You are not authorized to access draft overlay source dependencies for this sketch.",
+            );
+          }
+          // Build overlay source list directly from nodeDependencies.
+          const overlaySourcesMap = await getOverlaySourcesForDependencies(
+            pgClient,
+            args.input.nodeDependencies,
+            true,
+          );
+          const overlaySources = Object.values(overlaySourcesMap);
+
+          // Determine readiness based on related source processing jobs.
+          const jobKeys = overlaySources
+            .map((s) => s.sourceProcessingJobId)
+            .filter((k): k is string => !!k);
+          const ready = await areSourceProcessingJobsReady(pgClient, jobKeys);
+
+          return { ready, overlaySources, sketchId };
         },
       },
     },
@@ -467,12 +513,10 @@ async function getOrCreateReportDependencies(
   projectId: number,
   sketchId?: number,
 ) {
+  const t0 = Date.now();
   const isDraft = await isDraftReport(reportId, projectId, pool);
-  // Retrieve all overlay sources related to the report
-  // const overlaySources = await getOverlaySources(reportId, pool);
 
   const results = {
-    overlaySources: [] as ReportOverlaySourcePartial[],
     ready: true,
     metrics: [] as any[],
     cardDependencyLists: [] as {
@@ -496,10 +540,6 @@ async function getOrCreateReportDependencies(
     throw new Error("No geographies found");
   }
 
-  const allOverlaySources = {} as {
-    [stableId: string]: ReportOverlaySourcePartial;
-  };
-
   const cards = await pool.query(
     `
       select 
@@ -522,7 +562,7 @@ async function getOrCreateReportDependencies(
     };
     const dependencies = extractMetricDependenciesFromReportBody(card.body);
 
-    const { metrics, overlaySources } = await createMetricsForDependencies(
+    const { metrics } = await createMetricsForDependencies(
       pool,
       dependencies,
       isDraft,
@@ -547,15 +587,84 @@ async function getOrCreateReportDependencies(
     }
 
     results.cardDependencyLists.push(cardDependencyList);
-    for (const stableId in overlaySources) {
-      allOverlaySources[stableId] = overlaySources[stableId];
-    }
   }
 
-  results.overlaySources = Object.values(allOverlaySources);
+  results.ready = !results.metrics.find((m) => m.state !== "complete");
 
-  // add all metrics to the results
+  if (process.env.REPORT_DEPS_TIMING) {
+    const elapsedMs = Date.now() - t0;
+    const approxBytes = Buffer.byteLength(JSON.stringify(results), "utf8");
+    // eslint-disable-next-line no-console
+    console.log(
+      `[report.dependencies] reportId=${reportId} sketchId=${sketchId ?? "none"} isDraft=${isDraft} metrics=${results.metrics.length} cards=${results.cardDependencyLists.length} approxBytes=${approxBytes} elapsedMs=${elapsedMs}`,
+    );
+  }
   return results;
+}
+
+async function getReportOverlaySources(
+  reportId: number,
+  pool: Pool | PoolClient,
+  projectId: number,
+): Promise<ReportOverlaySourcePartial[]> {
+  const t0 = Date.now();
+  const isDraft = await isDraftReport(reportId, projectId, pool);
+
+  const cards = await pool.query(
+    `
+      select 
+        rc.id, 
+        rc.body
+      from 
+        report_cards rc
+      where 
+        rc.id in (select report_card_ids_for_report($1))
+      group by rc.id, rc.body`,
+    [reportId],
+  );
+
+  const allDependencies: MetricDependency[] = [];
+  for (const card of cards.rows) {
+    const deps = extractMetricDependenciesFromReportBody(card.body);
+    allDependencies.push(...deps);
+  }
+
+  const overlaySourcesMap = await getOverlaySourcesForDependencies(
+    pool,
+    allDependencies,
+    isDraft,
+  );
+  const overlaySources = Object.values(overlaySourcesMap);
+
+  if (process.env.REPORT_DEPS_TIMING) {
+    const elapsedMs = Date.now() - t0;
+    const approxBytes = Buffer.byteLength(JSON.stringify(overlaySources), "utf8");
+    // eslint-disable-next-line no-console
+    console.log(
+      `[report.overlaySources] reportId=${reportId} isDraft=${isDraft} overlaySources=${overlaySources.length} approxBytes=${approxBytes} elapsedMs=${elapsedMs}`,
+    );
+  }
+
+  return overlaySources;
+}
+
+async function areSourceProcessingJobsReady(
+  pool: Pool | PoolClient,
+  jobKeys: string[],
+): Promise<boolean> {
+  if (jobKeys.length === 0) {
+    return true;
+  }
+  const { rows } = await pool.query<{ count: string }>(
+    `
+      select count(*)::text as count
+      from source_processing_jobs
+      where job_key = ANY($1::text[])
+        and state not in ('complete', 'error')
+    `,
+    [jobKeys],
+  );
+  return (rows[0]?.count || "0") === "0";
 }
 
 async function getOrCreateSpatialMetricsBatch(
@@ -814,6 +923,85 @@ async function getOverlaySourcesByStableIds(
   return results;
 }
 
+async function getOverlaySourceRefsByStableIds(
+  pool: Pool | PoolClient,
+  stableIds: string[],
+  isDraft: boolean,
+): Promise<{
+  [stableId: string]: ReportOverlaySourcePartial;
+}> {
+  const results: {
+    [stableId: string]: ReportOverlaySourcePartial;
+  } = {};
+
+  if (stableIds.length === 0) {
+    return results;
+  }
+
+  const { rows } = await pool.query<ReportOverlaySourcePartial>(
+    `
+      select
+        items.id as "tableOfContentsItemId",
+        items.stable_id as "stableId",
+        reporting_output.url as "sourceUrl",
+        coalesce(reporting_output.source_processing_job_key, jobs.job_key) as "sourceProcessingJobId",
+        reporting_output.id as "outputId",
+        reporting_output.contains_overlapping_features as "containsOverlappingFeatures",
+        sources.raster_band_count as "rasterBandCount",
+        sources.vector_geometry_type as "vectorGeometryType"
+      from
+        table_of_contents_items items
+        join data_layers layers on layers.id = items.data_layer_id
+        join data_sources sources on sources.id = layers.data_source_id
+        left join lateral table_of_contents_items_reporting_output(items.*) as reporting_output on true
+        left join source_processing_jobs jobs on jobs.data_source_id = sources.id
+      where
+        items.stable_id = ANY($1::text[]) and items.is_draft = $2
+    `,
+    [stableIds, isDraft],
+  );
+
+  for (const row of rows) {
+    results[row.stableId] = row;
+  }
+
+  for (const stableId of stableIds) {
+    const row = results[stableId];
+    if (row && !row.sourceProcessingJobId) {
+      throw new Error(`No source processing job id for overlay source: ${stableId}`);
+    }
+  }
+
+  return results;
+}
+
+async function getOverlaySourcesForDependencies(
+  pool: Pool | PoolClient,
+  dependencies: MetricDependency[],
+  isDraft: boolean,
+): Promise<{ [stableId: string]: ReportOverlaySourcePartial }> {
+  const overlaySourceStableIds = Array.from(
+    new Set(dependencies.filter((d) => d.stableId).map((d) => d.stableId!)),
+  );
+
+  const keepHistogram: { [stableId: string]: boolean } = {};
+  for (const dependency of dependencies) {
+    if (
+      dependency.stableId &&
+      ["raster_stats", "column_values"].includes(dependency.type)
+    ) {
+      keepHistogram[dependency.stableId] = true;
+    }
+  }
+
+  return await getOverlaySourcesByStableIds(
+    pool,
+    overlaySourceStableIds,
+    isDraft,
+    keepHistogram,
+  );
+}
+
 async function createMetricsForDependencies(
   pool: Pool | PoolClient,
   dependencies: MetricDependency[],
@@ -839,21 +1027,10 @@ async function createMetricsForDependencies(
     new Set(dependencies.filter((d) => d.stableId).map((d) => d.stableId!)),
   );
 
-  const keepHistogram: { [stableId: string]: boolean } = {};
-  for (const dependency of dependencies) {
-    if (
-      dependency.stableId &&
-      ["raster_stats", "column_values"].includes(dependency.type)
-    ) {
-      keepHistogram[dependency.stableId] = true;
-    }
-  }
-
-  const overlaySources = await getOverlaySourcesByStableIds(
+  const overlaySources = await getOverlaySourceRefsByStableIds(
     pool,
     overlaySourceStableIds,
     isDraft,
-    keepHistogram,
   );
 
   const overlaySourceUrls = {} as { [stableId: string]: string };
@@ -914,7 +1091,7 @@ async function createMetricsForDependencies(
     );
     metrics.push(...batchMetrics);
   }
-  return { metrics, hashes, overlaySources };
+  return { metrics, hashes };
 }
 
 function stripUnnecessaryGeostatsFields(geostats: any, keepHistogram: boolean) {

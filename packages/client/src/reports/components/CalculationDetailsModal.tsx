@@ -4,7 +4,9 @@ import Modal from "../../components/Modal";
 import {
   CompatibleSpatialMetricDetailsFragment,
   DraftReportDependenciesDocument,
+  DraftReportOverlaySourcesDocument,
   ReportDependenciesDocument,
+  ReportOverlaySourcesDocument,
   SpatialMetricState,
   useRecalculateSpatialMetricsMutation,
   useRetryFailedSpatialMetricsMutation,
@@ -135,7 +137,9 @@ export function CalculationDetailsModal({
       },
       refetchQueries: [
         ReportDependenciesDocument,
+        ReportOverlaySourcesDocument,
         DraftReportDependenciesDocument,
+        DraftReportOverlaySourcesDocument,
       ],
       awaitRefetchQueries: true,
     });

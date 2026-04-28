@@ -704,10 +704,11 @@ query ReportContext($reportId: Int!, $sketchId: Int!) {
       name
       translatedProps
     }
+    overlaySources {
+      ...OverlaySourceDetails
+    }
     dependencies(sketchId: $sketchId) {
-      overlaySources {
-        ...OverlaySourceDetails
-      }
+      ready
       metrics {
         ...CompatibleSpatialMetricDetails
       }
@@ -724,9 +725,7 @@ query ReportDependencies($reportId: Int!, $sketchId: Int!) {
   report(id: $reportId) {
     id
     dependencies(sketchId: $sketchId) {
-      overlaySources {
-        ...OverlaySourceDetails
-      }
+      ready
       metrics {
         ...CompatibleSpatialMetricDetails
       }
@@ -735,6 +734,15 @@ query ReportDependencies($reportId: Int!, $sketchId: Int!) {
         metrics
         overlaySources
       }
+    }
+  }
+}
+
+query ReportOverlaySources($reportId: Int!) {
+  report(id: $reportId) {
+    id
+    overlaySources {
+      ...OverlaySourceDetails
     }
   }
 }
@@ -817,11 +825,18 @@ query LegacyReportContext($sketchId: Int!) {
 query DraftReportDependencies($input: DraftDependenciesInput) {
   draftReportDependencies(input: $input) {
     ready
-    overlaySources {
-      ...OverlaySourceDetails
-    }
     metrics {
       ...CompatibleSpatialMetricDetails
+    }
+    sketchId
+  }
+}
+
+query DraftReportOverlaySources($input: DraftDependenciesInput) {
+  draftReportOverlaySources(input: $input) {
+    ready
+    overlaySources {
+      ...OverlaySourceDetails
     }
     sketchId
   }

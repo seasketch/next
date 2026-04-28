@@ -5,6 +5,7 @@ import {
   OverlaySourceDetailsFragment,
   SpatialMetricState,
   useReportDependenciesQuery,
+  useReportOverlaySourcesQuery,
 } from "../../generated/graphql";
 import { subjectIsFragment } from "overlay-engine";
 import { ApolloError, NetworkStatus } from "@apollo/client";
@@ -39,7 +40,13 @@ export default function ReportDependenciesContextProvider({
   sketchId?: number;
   reportId?: number;
 }) {
-  const { data, loading, refetch, error, networkStatus } =
+  const {
+    data: depsData,
+    loading: depsLoading,
+    refetch: refetchDeps,
+    error: depsError,
+    networkStatus: depsNetworkStatus,
+  } =
     useReportDependenciesQuery({
       variables: {
         reportId: reportId!,
@@ -53,15 +60,33 @@ export default function ReportDependenciesContextProvider({
   // query refetches while still returning stale dependency data unless we treat
   // refetch / variable changes as loading for the report shell.
   const dependenciesQueryLoading =
-    loading ||
-    networkStatus === NetworkStatus.refetch ||
-    networkStatus === NetworkStatus.setVariables;
+    depsLoading ||
+    depsNetworkStatus === NetworkStatus.refetch ||
+    depsNetworkStatus === NetworkStatus.setVariables;
+
+  const {
+    data: overlayData,
+    loading: overlayLoading,
+    refetch: refetchOverlaySources,
+    error: overlayError,
+    networkStatus: overlayNetworkStatus,
+  } = useReportOverlaySourcesQuery({
+    variables: {
+      reportId: reportId!,
+    },
+    skip: !reportId,
+  });
+
+  const overlaySourcesQueryLoading =
+    overlayLoading ||
+    overlayNetworkStatus === NetworkStatus.refetch ||
+    overlayNetworkStatus === NetworkStatus.setVariables;
 
   const contextValue = useMemo(() => {
     let fragmentCalculationsRuntime: number | undefined = undefined;
-    if (!loading) {
+    if (!dependenciesQueryLoading) {
       fragmentCalculationsRuntime = 0;
-      for (const metric of data?.report?.dependencies?.metrics || []) {
+      for (const metric of depsData?.report?.dependencies?.metrics || []) {
         if (
           metric.state === SpatialMetricState.Complete &&
           subjectIsFragment(metric.subject) &&
@@ -72,18 +97,25 @@ export default function ReportDependenciesContextProvider({
       }
     }
     return {
-      metrics: data?.report?.dependencies?.metrics || [],
-      overlaySources: data?.report?.dependencies?.overlaySources || [],
+      metrics: depsData?.report?.dependencies?.metrics || [],
+      overlaySources: overlayData?.report?.overlaySources || [],
       cardDependencyLists:
-        data?.report?.dependencies?.cardDependencyLists || [],
-      loading,
+        depsData?.report?.dependencies?.cardDependencyLists || [],
+      loading: dependenciesQueryLoading || overlaySourcesQueryLoading,
       fragmentCalculationsRuntime,
-      error,
+      error: depsError || overlayError,
     };
-  }, [data, loading, error]);
+  }, [
+    depsData,
+    overlayData,
+    dependenciesQueryLoading,
+    overlaySourcesQueryLoading,
+    depsError,
+    overlayError,
+  ]);
 
   useEffect(() => {
-    if (loading) {
+    if (contextValue.loading) {
       return;
     }
     const anyMetricsLoading = contextValue.metrics.some(
@@ -98,22 +130,33 @@ export default function ReportDependenciesContextProvider({
         source.sourceProcessingJob.state !== SpatialMetricState.Error
     );
 
-    let interval: ReturnType<typeof setInterval> | null = null;
-    if (anyMetricsLoading || anyOverlaySourcesLoading) {
-      interval = setInterval(() => {
-        refetch();
+    let metricInterval: ReturnType<typeof setInterval> | null = null;
+    let overlayInterval: ReturnType<typeof setInterval> | null = null;
+
+    if (anyMetricsLoading) {
+      metricInterval = setInterval(() => {
+        refetchDeps();
+      }, 1000);
+    }
+
+    if (anyOverlaySourcesLoading) {
+      overlayInterval = setInterval(() => {
+        refetchOverlaySources();
       }, 1000);
     }
 
     return () => {
-      if (interval) clearInterval(interval);
+      if (metricInterval) clearInterval(metricInterval);
+      if (overlayInterval) clearInterval(overlayInterval);
     };
   }, [
-    data,
-    loading,
-    refetch,
+    depsData,
+    overlayData,
+    refetchDeps,
+    refetchOverlaySources,
     contextValue.metrics,
     contextValue.overlaySources,
+    contextValue.loading,
   ]);
 
   return (
