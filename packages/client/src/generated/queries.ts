@@ -920,6 +920,7 @@ export type CardDependencyLists = {
 export type ChangeLog = Node & {
   __typename?: 'ChangeLog';
   editorId: Scalars['Int'];
+  editorProfile?: Maybe<Profile>;
   entityId: Scalars['Int'];
   entityType: Scalars['String'];
   fieldGroup: ChangeLogFieldGroup;
@@ -8530,8 +8531,8 @@ export type Mutation = {
   updateTopicByNodeId?: Maybe<UpdateTopicPayload>;
   /**
    * Batch reassigns z_index for one project. Records change_logs
-   * (layers:z-order-change) on projects when session.user_id is set;
-   * summaries/blobs empty.
+   * (layers:z-order-change) on projects when session.user_id is set; to_summary
+   * includes reordered_count.
    */
   updateZIndexes?: Maybe<UpdateZIndexesPayload>;
   /** Use to upload pdf documents for use with the Consent FormElement */
@@ -10957,6 +10958,8 @@ export type Project = Node & {
   centerGeojson?: Maybe<Scalars['JSON']>;
   /** Reads and enables pagination through a set of `ChangeLog`. */
   changeLogsConnection: ChangeLogsConnection;
+  /** Reads and enables pagination through a set of `ChangeLog`. */
+  changeLogsSinceLastPublish?: Maybe<Array<ChangeLog>>;
   /** Reads a single `CommunityGuideline` that is related to this `Project`. */
   communityGuidelines?: Maybe<CommunityGuideline>;
   createdAt?: Maybe<Scalars['Datetime']>;
@@ -11273,6 +11276,16 @@ export type ProjectChangeLogsConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<ChangeLogsOrderBy>>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectChangeLogsSinceLastPublishArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -16021,6 +16034,10 @@ export type TableOfContentsItem = Node & {
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   /** Reads and enables pagination through a set of `FolderBreadcrumb`. */
   breadcrumbs?: Maybe<Array<FolderBreadcrumb>>;
+  /** Reads and enables pagination through a set of `ChangeLog`. */
+  cartographyChangeLogs?: Maybe<Array<ChangeLog>>;
+  /** Reads and enables pagination through a set of `ChangeLog`. */
+  changeLogs?: Maybe<Array<ChangeLog>>;
   /**
    * Metadata will be returned as directly stored in the SeaSketch
    * database or computed by fetching from a 3rd party service,
@@ -16077,6 +16094,8 @@ export type TableOfContentsItem = Node & {
   isFolder: Scalars['Boolean'];
   /** DraftJS compatible representation of text content to display when a user requests layer metadata. Not valid for Folders */
   metadata?: Maybe<Scalars['JSON']>;
+  /** Reads and enables pagination through a set of `ChangeLog`. */
+  metadataChangeLogs?: Maybe<Array<ChangeLog>>;
   metadataFormat?: Maybe<Scalars['String']>;
   metadataXml?: Maybe<DataUploadOutput>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
@@ -16094,6 +16113,8 @@ export type TableOfContentsItem = Node & {
   projectId: Scalars['Int'];
   /** Reads and enables pagination through a set of `QuotaDetail`. */
   quotaUsed?: Maybe<Array<QuotaDetail>>;
+  /** Reads and enables pagination through a set of `ChangeLog`. */
+  relatedPublishChangeLogs?: Maybe<Array<ChangeLog>>;
   relatedReportCardDetails?: Maybe<Array<Maybe<RelatedReportCard>>>;
   reportingOutput?: Maybe<DataUploadOutput>;
   /** If set, children of this folder will appear as radio options so that only one may be toggle at a time */
@@ -16143,7 +16164,55 @@ export type TableOfContentsItemBreadcrumbsArgs = {
  * batch only once the layer is turned on, using the
  * `dataLayersAndSourcesByLayerId` query.
  */
+export type TableOfContentsItemCartographyChangeLogsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * TableOfContentsItems represent a tree-view of folders and operational layers
+ * that can be added to the map. Both layers and folders may be nested into other
+ * folders for organization, and each folder has its own access control list.
+ *
+ * Items that represent data layers have a `DataLayer` relation, which in turn has
+ * a reference to a `DataSource`. Usually these relations should be fetched in
+ * batch only once the layer is turned on, using the
+ * `dataLayersAndSourcesByLayerId` query.
+ */
+export type TableOfContentsItemChangeLogsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * TableOfContentsItems represent a tree-view of folders and operational layers
+ * that can be added to the map. Both layers and folders may be nested into other
+ * folders for organization, and each folder has its own access control list.
+ *
+ * Items that represent data layers have a `DataLayer` relation, which in turn has
+ * a reference to a `DataSource`. Usually these relations should be fetched in
+ * batch only once the layer is turned on, using the
+ * `dataLayersAndSourcesByLayerId` query.
+ */
 export type TableOfContentsItemDownloadOptionsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * TableOfContentsItems represent a tree-view of folders and operational layers
+ * that can be added to the map. Both layers and folders may be nested into other
+ * folders for organization, and each folder has its own access control list.
+ *
+ * Items that represent data layers have a `DataLayer` relation, which in turn has
+ * a reference to a `DataSource`. Usually these relations should be fetched in
+ * batch only once the layer is turned on, using the
+ * `dataLayersAndSourcesByLayerId` query.
+ */
+export type TableOfContentsItemMetadataChangeLogsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
 };
@@ -16176,6 +16245,22 @@ export type TableOfContentsItemProjectBackgroundJobsArgs = {
  * `dataLayersAndSourcesByLayerId` query.
  */
 export type TableOfContentsItemQuotaUsedArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * TableOfContentsItems represent a tree-view of folders and operational layers
+ * that can be added to the map. Both layers and folders may be nested into other
+ * folders for organization, and each folder has its own access control list.
+ *
+ * Items that represent data layers have a `DataLayer` relation, which in turn has
+ * a reference to a `DataSource`. Usually these relations should be fetched in
+ * batch only once the layer is turned on, using the
+ * `dataLayersAndSourcesByLayerId` query.
+ */
+export type TableOfContentsItemRelatedPublishChangeLogsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
 };
@@ -19033,6 +19118,37 @@ export type SetTranslatedPropResult = {
   typeName: Scalars['String'];
 };
 
+export type LayerSettingsChangeLogQueryVariables = Exact<{
+  id: Scalars['Int'];
+  first: Scalars['Int'];
+}>;
+
+
+export type LayerSettingsChangeLogQuery = (
+  { __typename?: 'Query' }
+  & { tableOfContentsItem?: Maybe<(
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id' | 'isFolder'>
+    & { changeLogs?: Maybe<Array<(
+      { __typename?: 'ChangeLog' }
+      & ChangeLogDetailsFragment
+    )>>, relatedPublishChangeLogs?: Maybe<Array<(
+      { __typename?: 'ChangeLog' }
+      & ChangeLogDetailsFragment
+    )>>, dataLayer?: Maybe<(
+      { __typename?: 'DataLayer' }
+      & { dataSource?: Maybe<(
+        { __typename?: 'DataSource' }
+        & Pick<DataSource, 'createdAt'>
+        & { authorProfile?: Maybe<(
+          { __typename?: 'Profile' }
+          & Pick<Profile, 'userId' | 'affiliations' | 'email' | 'fullname' | 'nickname' | 'picture'>
+        )> }
+      )> }
+    )> }
+  )> }
+);
+
 export type UpdateTerrainExaggerationFragment = (
   { __typename?: 'Basemap' }
   & Pick<Basemap, 'terrainExaggeration'>
@@ -20813,6 +20929,15 @@ export type FullAdminDataLayerFragment = (
   )>> }
 );
 
+export type ChangeLogDetailsFragment = (
+  { __typename?: 'ChangeLog' }
+  & Pick<ChangeLog, 'id' | 'entityId' | 'entityType' | 'fieldGroup' | 'meta' | 'startedAt' | 'lastAt' | 'saveCount' | 'fromSummary' | 'toSummary'>
+  & { editorProfile?: Maybe<(
+    { __typename?: 'Profile' }
+    & Pick<Profile, 'userId' | 'fullname' | 'affiliations' | 'email' | 'nickname' | 'picture'>
+  )> }
+);
+
 export type FullAdminOverlayFragment = (
   { __typename?: 'TableOfContentsItem' }
   & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'dataSourceType' | 'metadata' | 'parentStableId' | 'projectId' | 'stableId' | 'title' | 'enableDownload' | 'geoprocessingReferenceId' | 'copiedFromDataLibraryTemplateId' | 'primaryDownloadUrl' | 'hasOriginalSourceUpload'>
@@ -20989,6 +21114,23 @@ export type DataSourceUrlPropertiesQuery = (
   & { dataSource?: Maybe<(
     { __typename?: 'DataSource' }
     & Pick<DataSource, 'id' | 'type' | 'url' | 'originalSourceUrl' | 'queryParameters'>
+  )> }
+);
+
+export type UploadChangelogSourceDetailsQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type UploadChangelogSourceDetailsQuery = (
+  { __typename?: 'Query' }
+  & { dataSource?: Maybe<(
+    { __typename?: 'DataSource' }
+    & Pick<DataSource, 'id'>
+    & { outputs?: Maybe<Array<(
+      { __typename?: 'DataUploadOutput' }
+      & Pick<DataUploadOutput, 'id' | 'isOriginal' | 'url' | 'type' | 'size' | 'originalFilename' | 'filename'>
+    )>> }
   )> }
 );
 
@@ -21589,6 +21731,69 @@ export type CreateINaturalistTableOfContentsItemMutation = (
       { __typename?: 'TableOfContentsItem' }
       & FullAdminOverlayFragment
     )> }
+  )> }
+);
+
+export type LayerMetadataChangesQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type LayerMetadataChangesQuery = (
+  { __typename?: 'Query' }
+  & { tableOfContentsItem?: Maybe<(
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id' | 'metadata' | 'computedMetadata'>
+    & { changeLogs?: Maybe<Array<(
+      { __typename?: 'ChangeLog' }
+      & Pick<ChangeLog, 'fromBlob' | 'toBlob'>
+      & ChangeLogDetailsFragment
+    )>> }
+  )> }
+);
+
+export type LayerCartographyChangesQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type LayerCartographyChangesQuery = (
+  { __typename?: 'Query' }
+  & { tableOfContentsItem?: Maybe<(
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id' | 'title' | 'bounds'>
+    & { dataLayer?: Maybe<(
+      { __typename?: 'DataLayer' }
+      & Pick<DataLayer, 'id' | 'dataSourceId' | 'sourceLayer' | 'sublayer' | 'mapboxGlStyles'>
+      & { dataSource?: Maybe<(
+        { __typename?: 'DataSource' }
+        & FullAdminSourceFragment
+      )> }
+    )>, cartographyChangeLogs?: Maybe<Array<(
+      { __typename?: 'ChangeLog' }
+      & Pick<ChangeLog, 'fromBlob' | 'toBlob'>
+      & ChangeLogDetailsFragment
+    )>> }
+  )> }
+);
+
+export type ChangeLogsSinceLastPublishQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ChangeLogsSinceLastPublishQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { draftTableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'title' | 'isFolder'>
+    )>>, changeLogsSinceLastPublish?: Maybe<Array<(
+      { __typename?: 'ChangeLog' }
+      & ChangeLogDetailsFragment
+    )>> }
   )> }
 );
 
@@ -26840,6 +27045,28 @@ export const SharingSettingsTocItemFragmentDoc = /*#__PURE__*/ gql`
   }
 }
     `;
+export const ChangeLogDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment ChangeLogDetails on ChangeLog {
+  id
+  entityId
+  entityType
+  fieldGroup
+  meta
+  startedAt
+  lastAt
+  saveCount
+  fromSummary
+  toSummary
+  editorProfile {
+    userId
+    fullname
+    affiliations
+    email
+    nickname
+    picture
+  }
+}
+    `;
 export const FullAdminSourceFragmentDoc = /*#__PURE__*/ gql`
     fragment FullAdminSource on DataSource {
   id
@@ -28333,6 +28560,33 @@ export const InviteEmailDetailsFragmentDoc = /*#__PURE__*/ gql`
   updatedAt
 }
     `;
+export const LayerSettingsChangeLogDocument = /*#__PURE__*/ gql`
+    query LayerSettingsChangeLog($id: Int!, $first: Int!) {
+  tableOfContentsItem(id: $id) {
+    id
+    isFolder
+    changeLogs(first: $first) {
+      ...ChangeLogDetails
+    }
+    relatedPublishChangeLogs(first: $first) {
+      ...ChangeLogDetails
+    }
+    dataLayer {
+      dataSource {
+        createdAt
+        authorProfile {
+          userId
+          affiliations
+          email
+          fullname
+          nickname
+          picture
+        }
+      }
+    }
+  }
+}
+    ${ChangeLogDetailsFragmentDoc}`;
 export const ProjectBucketSettingDocument = /*#__PURE__*/ gql`
     query ProjectBucketSetting($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -29583,6 +29837,22 @@ export const DataSourceUrlPropertiesDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const UploadChangelogSourceDetailsDocument = /*#__PURE__*/ gql`
+    query UploadChangelogSourceDetails($id: Int!) {
+  dataSource(id: $id) {
+    id
+    outputs {
+      id
+      isOriginal
+      url
+      type
+      size
+      originalFilename
+      filename
+    }
+  }
+}
+    `;
 export const UpdateZIndexesDocument = /*#__PURE__*/ gql`
     mutation UpdateZIndexes($dataLayerIds: [Int]!) {
   updateZIndexes(input: {dataLayerIds: $dataLayerIds}) {
@@ -30004,6 +30274,60 @@ export const CreateINaturalistTableOfContentsItemDocument = /*#__PURE__*/ gql`
   }
 }
     ${FullAdminOverlayFragmentDoc}`;
+export const LayerMetadataChangesDocument = /*#__PURE__*/ gql`
+    query LayerMetadataChanges($id: Int!) {
+  tableOfContentsItem(id: $id) {
+    id
+    metadata
+    computedMetadata
+    changeLogs(first: 100000) {
+      ...ChangeLogDetails
+      fromBlob
+      toBlob
+    }
+  }
+}
+    ${ChangeLogDetailsFragmentDoc}`;
+export const LayerCartographyChangesDocument = /*#__PURE__*/ gql`
+    query LayerCartographyChanges($id: Int!) {
+  tableOfContentsItem(id: $id) {
+    id
+    title
+    bounds
+    dataLayer {
+      id
+      dataSourceId
+      sourceLayer
+      sublayer
+      mapboxGlStyles
+      dataSource {
+        ...FullAdminSource
+      }
+    }
+    cartographyChangeLogs(first: 100000) {
+      ...ChangeLogDetails
+      fromBlob
+      toBlob
+    }
+  }
+}
+    ${FullAdminSourceFragmentDoc}
+${ChangeLogDetailsFragmentDoc}`;
+export const ChangeLogsSinceLastPublishDocument = /*#__PURE__*/ gql`
+    query ChangeLogsSinceLastPublish($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    draftTableOfContentsItems {
+      id
+      title
+      isFolder
+    }
+    changeLogsSinceLastPublish {
+      ...ChangeLogDetails
+    }
+  }
+}
+    ${ChangeLogDetailsFragmentDoc}`;
 export const ForumAdminListDocument = /*#__PURE__*/ gql`
     query ForumAdminList($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -32876,6 +33200,7 @@ export const UserIsSuperuserDocument = /*#__PURE__*/ gql`
     `;
 export const namedOperations = {
   Query: {
+    LayerSettingsChangeLog: 'LayerSettingsChangeLog',
     ProjectBucketSetting: 'ProjectBucketSetting',
     ProjectSearch: 'ProjectSearch',
     MapboxAPIKeys: 'MapboxAPIKeys',
@@ -32907,6 +33232,7 @@ export const namedOperations = {
     GetLayerItem: 'GetLayerItem',
     InteractivitySettingsForLayer: 'InteractivitySettingsForLayer',
     DataSourceUrlProperties: 'DataSourceUrlProperties',
+    UploadChangelogSourceDetails: 'UploadChangelogSourceDetails',
     GetMetadata: 'GetMetadata',
     ProjectHostingQuota: 'ProjectHostingQuota',
     InteractivitySettingsById: 'InteractivitySettingsById',
@@ -32916,6 +33242,9 @@ export const namedOperations = {
     ProjectHostingRetentionPeriod: 'ProjectHostingRetentionPeriod',
     EstimatedDataHostingQuotaUsage: 'EstimatedDataHostingQuotaUsage',
     DraftTableOfContentsItemsForPicker: 'DraftTableOfContentsItemsForPicker',
+    LayerMetadataChanges: 'LayerMetadataChanges',
+    LayerCartographyChanges: 'LayerCartographyChanges',
+    ChangeLogsSinceLastPublish: 'ChangeLogsSinceLastPublish',
     ForumAdminList: 'ForumAdminList',
     Forums: 'Forums',
     TopicList: 'TopicList',
@@ -33239,6 +33568,7 @@ export const namedOperations = {
     FullAdminSource: 'FullAdminSource',
     ArchivedSource: 'ArchivedSource',
     FullAdminDataLayer: 'FullAdminDataLayer',
+    ChangeLogDetails: 'ChangeLogDetails',
     FullAdminOverlay: 'FullAdminOverlay',
     MetadataXmlFile: 'MetadataXmlFile',
     ForumListDetails: 'ForumListDetails',

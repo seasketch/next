@@ -1,4 +1,5 @@
 import { useContext, useEffect, useMemo, useState } from "react";
+import { layerSettingsChangeLogRefetchQueries } from "../changelogs/layerSettingsChangeLogRefetch";
 import { useTranslation } from "react-i18next";
 import RadioGroup from "../../components/RadioGroup";
 import Spinner from "../../components/Spinner";
@@ -33,12 +34,14 @@ export default function InteractivitySettings({
   sublayer,
   basemap,
   geostats,
+  changeLogRefetchTableOfContentsItemId,
 }: {
   id: number;
   dataSourceId?: number;
   sublayer?: string | null;
   basemap?: BasemapDetailsFragment;
   geostats?: GeostatsLayer;
+  changeLogRefetchTableOfContentsItemId?: number;
 }) {
   const { t } = useTranslation("admin");
   const { data, loading } = useInteractivitySettingsByIdQuery({
@@ -48,8 +51,21 @@ export default function InteractivitySettings({
   });
   const [type, setType] = useState<InteractivityType>();
 
+  const interactivityRefetchQueries = useMemo(
+    () =>
+      changeLogRefetchTableOfContentsItemId !== undefined
+        ? [
+            LayersAndSourcesForItemsDocument,
+            ...layerSettingsChangeLogRefetchQueries(
+              changeLogRefetchTableOfContentsItemId
+            ),
+          ]
+        : [LayersAndSourcesForItemsDocument],
+    [changeLogRefetchTableOfContentsItemId]
+  );
+
   const [mutate, mutationState] = useUpdateInteractivitySettingsMutation({
-    refetchQueries: [LayersAndSourcesForItemsDocument],
+    refetchQueries: interactivityRefetchQueries,
   });
 
   const settings = data?.interactivitySetting;

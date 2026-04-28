@@ -1,12 +1,9 @@
-import { DOMSerializer, Node } from "prosemirror-model";
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import Modal from "../components/Modal";
 import Spinner from "../components/Spinner";
-import { metadata as editorConfig } from "../editor/config";
 import { MetadataXmlFileFragment } from "../generated/graphql";
 import { Trans } from "react-i18next";
-
-const { schema } = editorConfig;
+import MetadataDocumentView from "./MetadataDocumentView";
 
 export default function MetadataModal({
   document,
@@ -25,9 +22,6 @@ export default function MetadataModal({
   xml?: (MetadataXmlFileFragment & { format?: string }) | null;
   hostedSourceLastUpdated?: string;
 }) {
-  const target = useRef<HTMLDivElement>(null);
-  const serializer = useRef(DOMSerializer.fromSchema(schema));
-
   const showTitle = useMemo(() => {
     return (
       !loading &&
@@ -36,17 +30,6 @@ export default function MetadataModal({
       )
     );
   }, [document, loading]);
-
-  useEffect(() => {
-    if (target.current && document) {
-      target.current.innerHTML = "";
-      target.current.appendChild(
-        serializer.current.serializeFragment(
-          Node.fromJSON(schema, document).content
-        )
-      );
-    }
-  }, [document]);
 
   return (
     <Modal loading={loading} title="" onRequestClose={onRequestClose}>
@@ -82,7 +65,7 @@ export default function MetadataModal({
           {showTitle && title && (
             <h1 className="text-2xl font-medium">{title}</h1>
           )}
-          <div className="ProseMirror" ref={target}></div>
+          <MetadataDocumentView document={document} className="ProseMirror" />
           {xml && (
             <div className="mt-5 bg-blue-50 p-2 border rounded text-sm">
               <Trans ns="homepage">

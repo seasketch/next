@@ -1,0 +1,13 @@
+.Tooltip.change-log-details-tooltip {
+  width: auto;
+  max-width: min(22rem, calc(100vw - 1rem));
+  padding: 0;
+  overflow: hidden;
+  background: white;
+  color: #374151;
+  border: 1px solid rgba(17, 24, 39, 0.12);
+  border-radius: 0.5rem;
+  box-shadow:
+    0 10px 15px -3px rgba(17, 24, 39, 0.1),
+    0 4px 6px -4px rgba(17, 24, 39, 0.1);
+}

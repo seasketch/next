@@ -922,6 +922,7 @@ export type CardDependencyLists = {
 export type ChangeLog = Node & {
   __typename?: 'ChangeLog';
   editorId: Scalars['Int'];
+  editorProfile?: Maybe<Profile>;
   entityId: Scalars['Int'];
   entityType: Scalars['String'];
   fieldGroup: ChangeLogFieldGroup;
@@ -8532,8 +8533,8 @@ export type Mutation = {
   updateTopicByNodeId?: Maybe<UpdateTopicPayload>;
   /**
    * Batch reassigns z_index for one project. Records change_logs
-   * (layers:z-order-change) on projects when session.user_id is set;
-   * summaries/blobs empty.
+   * (layers:z-order-change) on projects when session.user_id is set; to_summary
+   * includes reordered_count.
    */
   updateZIndexes?: Maybe<UpdateZIndexesPayload>;
   /** Use to upload pdf documents for use with the Consent FormElement */
@@ -10959,6 +10960,8 @@ export type Project = Node & {
   centerGeojson?: Maybe<Scalars['JSON']>;
   /** Reads and enables pagination through a set of `ChangeLog`. */
   changeLogsConnection: ChangeLogsConnection;
+  /** Reads and enables pagination through a set of `ChangeLog`. */
+  changeLogsSinceLastPublish?: Maybe<Array<ChangeLog>>;
   /** Reads a single `CommunityGuideline` that is related to this `Project`. */
   communityGuidelines?: Maybe<CommunityGuideline>;
   createdAt?: Maybe<Scalars['Datetime']>;
@@ -11275,6 +11278,16 @@ export type ProjectChangeLogsConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<ChangeLogsOrderBy>>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectChangeLogsSinceLastPublishArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -16023,6 +16036,10 @@ export type TableOfContentsItem = Node & {
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   /** Reads and enables pagination through a set of `FolderBreadcrumb`. */
   breadcrumbs?: Maybe<Array<FolderBreadcrumb>>;
+  /** Reads and enables pagination through a set of `ChangeLog`. */
+  cartographyChangeLogs?: Maybe<Array<ChangeLog>>;
+  /** Reads and enables pagination through a set of `ChangeLog`. */
+  changeLogs?: Maybe<Array<ChangeLog>>;
   /**
    * Metadata will be returned as directly stored in the SeaSketch
    * database or computed by fetching from a 3rd party service,
@@ -16079,6 +16096,8 @@ export type TableOfContentsItem = Node & {
   isFolder: Scalars['Boolean'];
   /** DraftJS compatible representation of text content to display when a user requests layer metadata. Not valid for Folders */
   metadata?: Maybe<Scalars['JSON']>;
+  /** Reads and enables pagination through a set of `ChangeLog`. */
+  metadataChangeLogs?: Maybe<Array<ChangeLog>>;
   metadataFormat?: Maybe<Scalars['String']>;
   metadataXml?: Maybe<DataUploadOutput>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
@@ -16096,6 +16115,8 @@ export type TableOfContentsItem = Node & {
   projectId: Scalars['Int'];
   /** Reads and enables pagination through a set of `QuotaDetail`. */
   quotaUsed?: Maybe<Array<QuotaDetail>>;
+  /** Reads and enables pagination through a set of `ChangeLog`. */
+  relatedPublishChangeLogs?: Maybe<Array<ChangeLog>>;
   relatedReportCardDetails?: Maybe<Array<Maybe<RelatedReportCard>>>;
   reportingOutput?: Maybe<DataUploadOutput>;
   /** If set, children of this folder will appear as radio options so that only one may be toggle at a time */
@@ -16145,7 +16166,55 @@ export type TableOfContentsItemBreadcrumbsArgs = {
  * batch only once the layer is turned on, using the
  * `dataLayersAndSourcesByLayerId` query.
  */
+export type TableOfContentsItemCartographyChangeLogsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * TableOfContentsItems represent a tree-view of folders and operational layers
+ * that can be added to the map. Both layers and folders may be nested into other
+ * folders for organization, and each folder has its own access control list.
+ *
+ * Items that represent data layers have a `DataLayer` relation, which in turn has
+ * a reference to a `DataSource`. Usually these relations should be fetched in
+ * batch only once the layer is turned on, using the
+ * `dataLayersAndSourcesByLayerId` query.
+ */
+export type TableOfContentsItemChangeLogsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * TableOfContentsItems represent a tree-view of folders and operational layers
+ * that can be added to the map. Both layers and folders may be nested into other
+ * folders for organization, and each folder has its own access control list.
+ *
+ * Items that represent data layers have a `DataLayer` relation, which in turn has
+ * a reference to a `DataSource`. Usually these relations should be fetched in
+ * batch only once the layer is turned on, using the
+ * `dataLayersAndSourcesByLayerId` query.
+ */
 export type TableOfContentsItemDownloadOptionsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * TableOfContentsItems represent a tree-view of folders and operational layers
+ * that can be added to the map. Both layers and folders may be nested into other
+ * folders for organization, and each folder has its own access control list.
+ *
+ * Items that represent data layers have a `DataLayer` relation, which in turn has
+ * a reference to a `DataSource`. Usually these relations should be fetched in
+ * batch only once the layer is turned on, using the
+ * `dataLayersAndSourcesByLayerId` query.
+ */
+export type TableOfContentsItemMetadataChangeLogsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
 };
@@ -16178,6 +16247,22 @@ export type TableOfContentsItemProjectBackgroundJobsArgs = {
  * `dataLayersAndSourcesByLayerId` query.
  */
 export type TableOfContentsItemQuotaUsedArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * TableOfContentsItems represent a tree-view of folders and operational layers
+ * that can be added to the map. Both layers and folders may be nested into other
+ * folders for organization, and each folder has its own access control list.
+ *
+ * Items that represent data layers have a `DataLayer` relation, which in turn has
+ * a reference to a `DataSource`. Usually these relations should be fetched in
+ * batch only once the layer is turned on, using the
+ * `dataLayersAndSourcesByLayerId` query.
+ */
+export type TableOfContentsItemRelatedPublishChangeLogsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
 };
@@ -19035,6 +19120,37 @@ export type SetTranslatedPropResult = {
   typeName: Scalars['String'];
 };
 
+export type LayerSettingsChangeLogQueryVariables = Exact<{
+  id: Scalars['Int'];
+  first: Scalars['Int'];
+}>;
+
+
+export type LayerSettingsChangeLogQuery = (
+  { __typename?: 'Query' }
+  & { tableOfContentsItem?: Maybe<(
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id' | 'isFolder'>
+    & { changeLogs?: Maybe<Array<(
+      { __typename?: 'ChangeLog' }
+      & ChangeLogDetailsFragment
+    )>>, relatedPublishChangeLogs?: Maybe<Array<(
+      { __typename?: 'ChangeLog' }
+      & ChangeLogDetailsFragment
+    )>>, dataLayer?: Maybe<(
+      { __typename?: 'DataLayer' }
+      & { dataSource?: Maybe<(
+        { __typename?: 'DataSource' }
+        & Pick<DataSource, 'createdAt'>
+        & { authorProfile?: Maybe<(
+          { __typename?: 'Profile' }
+          & Pick<Profile, 'userId' | 'affiliations' | 'email' | 'fullname' | 'nickname' | 'picture'>
+        )> }
+      )> }
+    )> }
+  )> }
+);
+
 export type UpdateTerrainExaggerationFragment = (
   { __typename?: 'Basemap' }
   & Pick<Basemap, 'terrainExaggeration'>
@@ -20815,6 +20931,15 @@ export type FullAdminDataLayerFragment = (
   )>> }
 );
 
+export type ChangeLogDetailsFragment = (
+  { __typename?: 'ChangeLog' }
+  & Pick<ChangeLog, 'id' | 'entityId' | 'entityType' | 'fieldGroup' | 'meta' | 'startedAt' | 'lastAt' | 'saveCount' | 'fromSummary' | 'toSummary'>
+  & { editorProfile?: Maybe<(
+    { __typename?: 'Profile' }
+    & Pick<Profile, 'userId' | 'fullname' | 'affiliations' | 'email' | 'nickname' | 'picture'>
+  )> }
+);
+
 export type FullAdminOverlayFragment = (
   { __typename?: 'TableOfContentsItem' }
   & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'dataSourceType' | 'metadata' | 'parentStableId' | 'projectId' | 'stableId' | 'title' | 'enableDownload' | 'geoprocessingReferenceId' | 'copiedFromDataLibraryTemplateId' | 'primaryDownloadUrl' | 'hasOriginalSourceUpload'>
@@ -20991,6 +21116,23 @@ export type DataSourceUrlPropertiesQuery = (
   & { dataSource?: Maybe<(
     { __typename?: 'DataSource' }
     & Pick<DataSource, 'id' | 'type' | 'url' | 'originalSourceUrl' | 'queryParameters'>
+  )> }
+);
+
+export type UploadChangelogSourceDetailsQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type UploadChangelogSourceDetailsQuery = (
+  { __typename?: 'Query' }
+  & { dataSource?: Maybe<(
+    { __typename?: 'DataSource' }
+    & Pick<DataSource, 'id'>
+    & { outputs?: Maybe<Array<(
+      { __typename?: 'DataUploadOutput' }
+      & Pick<DataUploadOutput, 'id' | 'isOriginal' | 'url' | 'type' | 'size' | 'originalFilename' | 'filename'>
+    )>> }
   )> }
 );
 
@@ -21591,6 +21733,69 @@ export type CreateINaturalistTableOfContentsItemMutation = (
       { __typename?: 'TableOfContentsItem' }
       & FullAdminOverlayFragment
     )> }
+  )> }
+);
+
+export type LayerMetadataChangesQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type LayerMetadataChangesQuery = (
+  { __typename?: 'Query' }
+  & { tableOfContentsItem?: Maybe<(
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id' | 'metadata' | 'computedMetadata'>
+    & { changeLogs?: Maybe<Array<(
+      { __typename?: 'ChangeLog' }
+      & Pick<ChangeLog, 'fromBlob' | 'toBlob'>
+      & ChangeLogDetailsFragment
+    )>> }
+  )> }
+);
+
+export type LayerCartographyChangesQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type LayerCartographyChangesQuery = (
+  { __typename?: 'Query' }
+  & { tableOfContentsItem?: Maybe<(
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id' | 'title' | 'bounds'>
+    & { dataLayer?: Maybe<(
+      { __typename?: 'DataLayer' }
+      & Pick<DataLayer, 'id' | 'dataSourceId' | 'sourceLayer' | 'sublayer' | 'mapboxGlStyles'>
+      & { dataSource?: Maybe<(
+        { __typename?: 'DataSource' }
+        & FullAdminSourceFragment
+      )> }
+    )>, cartographyChangeLogs?: Maybe<Array<(
+      { __typename?: 'ChangeLog' }
+      & Pick<ChangeLog, 'fromBlob' | 'toBlob'>
+      & ChangeLogDetailsFragment
+    )>> }
+  )> }
+);
+
+export type ChangeLogsSinceLastPublishQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ChangeLogsSinceLastPublishQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { draftTableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'title' | 'isFolder'>
+    )>>, changeLogsSinceLastPublish?: Maybe<Array<(
+      { __typename?: 'ChangeLog' }
+      & ChangeLogDetailsFragment
+    )>> }
   )> }
 );
 
@@ -26842,6 +27047,28 @@ export const SharingSettingsTocItemFragmentDoc = gql`
   }
 }
     `;
+export const ChangeLogDetailsFragmentDoc = gql`
+    fragment ChangeLogDetails on ChangeLog {
+  id
+  entityId
+  entityType
+  fieldGroup
+  meta
+  startedAt
+  lastAt
+  saveCount
+  fromSummary
+  toSummary
+  editorProfile {
+    userId
+    fullname
+    affiliations
+    email
+    nickname
+    picture
+  }
+}
+    `;
 export const FullAdminSourceFragmentDoc = gql`
     fragment FullAdminSource on DataSource {
   id
@@ -28335,6 +28562,62 @@ export const InviteEmailDetailsFragmentDoc = gql`
   updatedAt
 }
     `;
+export const LayerSettingsChangeLogDocument = gql`
+    query LayerSettingsChangeLog($id: Int!, $first: Int!) {
+  tableOfContentsItem(id: $id) {
+    id
+    isFolder
+    changeLogs(first: $first) {
+      ...ChangeLogDetails
+    }
+    relatedPublishChangeLogs(first: $first) {
+      ...ChangeLogDetails
+    }
+    dataLayer {
+      dataSource {
+        createdAt
+        authorProfile {
+          userId
+          affiliations
+          email
+          fullname
+          nickname
+          picture
+        }
+      }
+    }
+  }
+}
+    ${ChangeLogDetailsFragmentDoc}`;
+
+/**
+ * __useLayerSettingsChangeLogQuery__
+ *
+ * To run a query within a React component, call `useLayerSettingsChangeLogQuery` and pass it any options that fit your needs.
+ * When your component renders, `useLayerSettingsChangeLogQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useLayerSettingsChangeLogQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *      first: // value for 'first'
+ *   },
+ * });
+ */
+export function useLayerSettingsChangeLogQuery(baseOptions: Apollo.QueryHookOptions<LayerSettingsChangeLogQuery, LayerSettingsChangeLogQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<LayerSettingsChangeLogQuery, LayerSettingsChangeLogQueryVariables>(LayerSettingsChangeLogDocument, options);
+      }
+export function useLayerSettingsChangeLogLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<LayerSettingsChangeLogQuery, LayerSettingsChangeLogQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<LayerSettingsChangeLogQuery, LayerSettingsChangeLogQueryVariables>(LayerSettingsChangeLogDocument, options);
+        }
+export type LayerSettingsChangeLogQueryHookResult = ReturnType<typeof useLayerSettingsChangeLogQuery>;
+export type LayerSettingsChangeLogLazyQueryHookResult = ReturnType<typeof useLayerSettingsChangeLogLazyQuery>;
+export type LayerSettingsChangeLogQueryResult = Apollo.QueryResult<LayerSettingsChangeLogQuery, LayerSettingsChangeLogQueryVariables>;
 export const ProjectBucketSettingDocument = gql`
     query ProjectBucketSetting($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -32071,6 +32354,50 @@ export function useDataSourceUrlPropertiesLazyQuery(baseOptions?: Apollo.LazyQue
 export type DataSourceUrlPropertiesQueryHookResult = ReturnType<typeof useDataSourceUrlPropertiesQuery>;
 export type DataSourceUrlPropertiesLazyQueryHookResult = ReturnType<typeof useDataSourceUrlPropertiesLazyQuery>;
 export type DataSourceUrlPropertiesQueryResult = Apollo.QueryResult<DataSourceUrlPropertiesQuery, DataSourceUrlPropertiesQueryVariables>;
+export const UploadChangelogSourceDetailsDocument = gql`
+    query UploadChangelogSourceDetails($id: Int!) {
+  dataSource(id: $id) {
+    id
+    outputs {
+      id
+      isOriginal
+      url
+      type
+      size
+      originalFilename
+      filename
+    }
+  }
+}
+    `;
+
+/**
+ * __useUploadChangelogSourceDetailsQuery__
+ *
+ * To run a query within a React component, call `useUploadChangelogSourceDetailsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useUploadChangelogSourceDetailsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useUploadChangelogSourceDetailsQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useUploadChangelogSourceDetailsQuery(baseOptions: Apollo.QueryHookOptions<UploadChangelogSourceDetailsQuery, UploadChangelogSourceDetailsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<UploadChangelogSourceDetailsQuery, UploadChangelogSourceDetailsQueryVariables>(UploadChangelogSourceDetailsDocument, options);
+      }
+export function useUploadChangelogSourceDetailsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<UploadChangelogSourceDetailsQuery, UploadChangelogSourceDetailsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<UploadChangelogSourceDetailsQuery, UploadChangelogSourceDetailsQueryVariables>(UploadChangelogSourceDetailsDocument, options);
+        }
+export type UploadChangelogSourceDetailsQueryHookResult = ReturnType<typeof useUploadChangelogSourceDetailsQuery>;
+export type UploadChangelogSourceDetailsLazyQueryHookResult = ReturnType<typeof useUploadChangelogSourceDetailsLazyQuery>;
+export type UploadChangelogSourceDetailsQueryResult = Apollo.QueryResult<UploadChangelogSourceDetailsQuery, UploadChangelogSourceDetailsQueryVariables>;
 export const UpdateZIndexesDocument = gql`
     mutation UpdateZIndexes($dataLayerIds: [Int]!) {
   updateZIndexes(input: {dataLayerIds: $dataLayerIds}) {
@@ -33396,6 +33723,144 @@ export function useCreateINaturalistTableOfContentsItemMutation(baseOptions?: Ap
 export type CreateINaturalistTableOfContentsItemMutationHookResult = ReturnType<typeof useCreateINaturalistTableOfContentsItemMutation>;
 export type CreateINaturalistTableOfContentsItemMutationResult = Apollo.MutationResult<CreateINaturalistTableOfContentsItemMutation>;
 export type CreateINaturalistTableOfContentsItemMutationOptions = Apollo.BaseMutationOptions<CreateINaturalistTableOfContentsItemMutation, CreateINaturalistTableOfContentsItemMutationVariables>;
+export const LayerMetadataChangesDocument = gql`
+    query LayerMetadataChanges($id: Int!) {
+  tableOfContentsItem(id: $id) {
+    id
+    metadata
+    computedMetadata
+    changeLogs(first: 100000) {
+      ...ChangeLogDetails
+      fromBlob
+      toBlob
+    }
+  }
+}
+    ${ChangeLogDetailsFragmentDoc}`;
+
+/**
+ * __useLayerMetadataChangesQuery__
+ *
+ * To run a query within a React component, call `useLayerMetadataChangesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useLayerMetadataChangesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useLayerMetadataChangesQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useLayerMetadataChangesQuery(baseOptions: Apollo.QueryHookOptions<LayerMetadataChangesQuery, LayerMetadataChangesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<LayerMetadataChangesQuery, LayerMetadataChangesQueryVariables>(LayerMetadataChangesDocument, options);
+      }
+export function useLayerMetadataChangesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<LayerMetadataChangesQuery, LayerMetadataChangesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<LayerMetadataChangesQuery, LayerMetadataChangesQueryVariables>(LayerMetadataChangesDocument, options);
+        }
+export type LayerMetadataChangesQueryHookResult = ReturnType<typeof useLayerMetadataChangesQuery>;
+export type LayerMetadataChangesLazyQueryHookResult = ReturnType<typeof useLayerMetadataChangesLazyQuery>;
+export type LayerMetadataChangesQueryResult = Apollo.QueryResult<LayerMetadataChangesQuery, LayerMetadataChangesQueryVariables>;
+export const LayerCartographyChangesDocument = gql`
+    query LayerCartographyChanges($id: Int!) {
+  tableOfContentsItem(id: $id) {
+    id
+    title
+    bounds
+    dataLayer {
+      id
+      dataSourceId
+      sourceLayer
+      sublayer
+      mapboxGlStyles
+      dataSource {
+        ...FullAdminSource
+      }
+    }
+    cartographyChangeLogs(first: 100000) {
+      ...ChangeLogDetails
+      fromBlob
+      toBlob
+    }
+  }
+}
+    ${FullAdminSourceFragmentDoc}
+${ChangeLogDetailsFragmentDoc}`;
+
+/**
+ * __useLayerCartographyChangesQuery__
+ *
+ * To run a query within a React component, call `useLayerCartographyChangesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useLayerCartographyChangesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useLayerCartographyChangesQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useLayerCartographyChangesQuery(baseOptions: Apollo.QueryHookOptions<LayerCartographyChangesQuery, LayerCartographyChangesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<LayerCartographyChangesQuery, LayerCartographyChangesQueryVariables>(LayerCartographyChangesDocument, options);
+      }
+export function useLayerCartographyChangesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<LayerCartographyChangesQuery, LayerCartographyChangesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<LayerCartographyChangesQuery, LayerCartographyChangesQueryVariables>(LayerCartographyChangesDocument, options);
+        }
+export type LayerCartographyChangesQueryHookResult = ReturnType<typeof useLayerCartographyChangesQuery>;
+export type LayerCartographyChangesLazyQueryHookResult = ReturnType<typeof useLayerCartographyChangesLazyQuery>;
+export type LayerCartographyChangesQueryResult = Apollo.QueryResult<LayerCartographyChangesQuery, LayerCartographyChangesQueryVariables>;
+export const ChangeLogsSinceLastPublishDocument = gql`
+    query ChangeLogsSinceLastPublish($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    draftTableOfContentsItems {
+      id
+      title
+      isFolder
+    }
+    changeLogsSinceLastPublish {
+      ...ChangeLogDetails
+    }
+  }
+}
+    ${ChangeLogDetailsFragmentDoc}`;
+
+/**
+ * __useChangeLogsSinceLastPublishQuery__
+ *
+ * To run a query within a React component, call `useChangeLogsSinceLastPublishQuery` and pass it any options that fit your needs.
+ * When your component renders, `useChangeLogsSinceLastPublishQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useChangeLogsSinceLastPublishQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useChangeLogsSinceLastPublishQuery(baseOptions: Apollo.QueryHookOptions<ChangeLogsSinceLastPublishQuery, ChangeLogsSinceLastPublishQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ChangeLogsSinceLastPublishQuery, ChangeLogsSinceLastPublishQueryVariables>(ChangeLogsSinceLastPublishDocument, options);
+      }
+export function useChangeLogsSinceLastPublishLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ChangeLogsSinceLastPublishQuery, ChangeLogsSinceLastPublishQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ChangeLogsSinceLastPublishQuery, ChangeLogsSinceLastPublishQueryVariables>(ChangeLogsSinceLastPublishDocument, options);
+        }
+export type ChangeLogsSinceLastPublishQueryHookResult = ReturnType<typeof useChangeLogsSinceLastPublishQuery>;
+export type ChangeLogsSinceLastPublishLazyQueryHookResult = ReturnType<typeof useChangeLogsSinceLastPublishLazyQuery>;
+export type ChangeLogsSinceLastPublishQueryResult = Apollo.QueryResult<ChangeLogsSinceLastPublishQuery, ChangeLogsSinceLastPublishQueryVariables>;
 export const ForumAdminListDocument = gql`
     query ForumAdminList($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -41773,6 +42238,7 @@ export type UserIsSuperuserLazyQueryHookResult = ReturnType<typeof useUserIsSupe
 export type UserIsSuperuserQueryResult = Apollo.QueryResult<UserIsSuperuserQuery, UserIsSuperuserQueryVariables>;
 export const namedOperations = {
   Query: {
+    LayerSettingsChangeLog: 'LayerSettingsChangeLog',
     ProjectBucketSetting: 'ProjectBucketSetting',
     ProjectSearch: 'ProjectSearch',
     MapboxAPIKeys: 'MapboxAPIKeys',
@@ -41804,6 +42270,7 @@ export const namedOperations = {
     GetLayerItem: 'GetLayerItem',
     InteractivitySettingsForLayer: 'InteractivitySettingsForLayer',
     DataSourceUrlProperties: 'DataSourceUrlProperties',
+    UploadChangelogSourceDetails: 'UploadChangelogSourceDetails',
     GetMetadata: 'GetMetadata',
     ProjectHostingQuota: 'ProjectHostingQuota',
     InteractivitySettingsById: 'InteractivitySettingsById',
@@ -41813,6 +42280,9 @@ export const namedOperations = {
     ProjectHostingRetentionPeriod: 'ProjectHostingRetentionPeriod',
     EstimatedDataHostingQuotaUsage: 'EstimatedDataHostingQuotaUsage',
     DraftTableOfContentsItemsForPicker: 'DraftTableOfContentsItemsForPicker',
+    LayerMetadataChanges: 'LayerMetadataChanges',
+    LayerCartographyChanges: 'LayerCartographyChanges',
+    ChangeLogsSinceLastPublish: 'ChangeLogsSinceLastPublish',
     ForumAdminList: 'ForumAdminList',
     Forums: 'Forums',
     TopicList: 'TopicList',
@@ -42136,6 +42606,7 @@ export const namedOperations = {
     FullAdminSource: 'FullAdminSource',
     ArchivedSource: 'ArchivedSource',
     FullAdminDataLayer: 'FullAdminDataLayer',
+    ChangeLogDetails: 'ChangeLogDetails',
     FullAdminOverlay: 'FullAdminOverlay',
     MetadataXmlFile: 'MetadataXmlFile',
     ForumListDetails: 'ForumListDetails',

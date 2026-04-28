@@ -410,6 +410,53 @@ fragment FullAdminDataLayer on DataLayer {
   }
 }
 
+fragment ChangeLogDetails on ChangeLog {
+  id
+  entityId
+  entityType
+  fieldGroup
+  meta
+  startedAt
+  lastAt
+  saveCount
+  fromSummary
+  toSummary
+  editorProfile {
+    userId
+    fullname
+    affiliations
+    email
+    nickname
+    picture
+  }
+}
+
+query LayerSettingsChangeLog($id: Int!, $first: Int!) {
+  tableOfContentsItem(id: $id) {
+    id
+    isFolder
+    changeLogs(first: $first) {
+      ...ChangeLogDetails
+    }
+    relatedPublishChangeLogs(first: $first) {
+      ...ChangeLogDetails
+    }
+    dataLayer {
+      dataSource {
+        createdAt
+        authorProfile {
+          userId
+          affiliations
+          email
+          fullname
+          nickname
+          picture
+        }
+      }
+    }
+  }
+}
+
 fragment FullAdminOverlay on TableOfContentsItem {
   id
   acl {
@@ -643,6 +690,21 @@ query DataSourceUrlProperties($id: Int!) {
     url
     originalSourceUrl
     queryParameters
+  }
+}
+
+query UploadChangelogSourceDetails($id: Int!) {
+  dataSource(id: $id) {
+    id
+    outputs {
+      id
+      isOriginal
+      url
+      type
+      size
+      originalFilename
+      filename
+    }
   }
 }
 
@@ -1113,6 +1175,56 @@ mutation createINaturalistTableOfContentsItem(
   ) {
     tableOfContentsItem {
       ...FullAdminOverlay
+    }
+  }
+}
+
+query LayerMetadataChanges($id: Int!) {
+  tableOfContentsItem(id: $id) {
+    id
+    metadata
+    computedMetadata
+    changeLogs(first: 100000) {
+      ...ChangeLogDetails
+      fromBlob
+      toBlob
+    }
+  }
+}
+
+query LayerCartographyChanges($id: Int!) {
+  tableOfContentsItem(id: $id) {
+    id
+    title
+    bounds
+    dataLayer {
+      id
+      dataSourceId
+      sourceLayer
+      sublayer
+      mapboxGlStyles
+      dataSource {
+        ...FullAdminSource
+      }
+    }
+    cartographyChangeLogs(first: 100000) {
+      ...ChangeLogDetails
+      fromBlob
+      toBlob
+    }
+  }
+}
+
+query ChangeLogsSinceLastPublish($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    draftTableOfContentsItems {
+      id
+      title
+      isFolder
+    }
+    changeLogsSinceLastPublish {
+      ...ChangeLogDetails
     }
   }
 }

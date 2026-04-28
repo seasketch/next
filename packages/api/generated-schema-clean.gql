@@ -1031,6 +1031,7 @@ type CardDependencyLists {
 
 type ChangeLog implements Node {
   editorId: Int!
+  editorProfile: Profile
   entityId: Int!
   entityType: String!
   fieldGroup: ChangeLogFieldGroup!
@@ -11274,8 +11275,8 @@ type Mutation {
 
   """
   Batch reassigns z_index for one project. Records change_logs
-  (layers:z-order-change) on projects when session.user_id is set;
-  summaries/blobs empty.
+  (layers:z-order-change) on projects when session.user_id is set; to_summary
+  includes reordered_count.
   """
   updateZIndexes(
     """
@@ -12081,6 +12082,15 @@ type Project implements Node {
     """The method to use when ordering `ChangeLog`."""
     orderBy: [ChangeLogsOrderBy!] = [PRIMARY_KEY_ASC]
   ): ChangeLogsConnection!
+
+  """Reads and enables pagination through a set of `ChangeLog`."""
+  changeLogsSinceLastPublish(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [ChangeLog!]
 
   """Reads a single `CommunityGuideline` that is related to this `Project`."""
   communityGuidelines: CommunityGuideline
@@ -17167,6 +17177,24 @@ type TableOfContentsItem implements Node {
     offset: Int
   ): [FolderBreadcrumb!]
 
+  """Reads and enables pagination through a set of `ChangeLog`."""
+  cartographyChangeLogs(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [ChangeLog!]
+
+  """Reads and enables pagination through a set of `ChangeLog`."""
+  changeLogs(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [ChangeLog!]
+
   """
   Metadata will be returned as directly stored in the SeaSketch
   database or computed by fetching from a 3rd party service,
@@ -17244,6 +17272,15 @@ type TableOfContentsItem implements Node {
   DraftJS compatible representation of text content to display when a user requests layer metadata. Not valid for Folders
   """
   metadata: JSON
+
+  """Reads and enables pagination through a set of `ChangeLog`."""
+  metadataChangeLogs(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [ChangeLog!]
   metadataFormat: String
   metadataXml: DataUploadOutput
 
@@ -17280,6 +17317,15 @@ type TableOfContentsItem implements Node {
     """Skip the first `n` values."""
     offset: Int
   ): [QuotaDetail!]
+
+  """Reads and enables pagination through a set of `ChangeLog`."""
+  relatedPublishChangeLogs(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [ChangeLog!]
   relatedReportCardDetails: [RelatedReportCard]
   reportingOutput: DataUploadOutput
 

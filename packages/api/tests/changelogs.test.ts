@@ -91,6 +91,37 @@ async function logsFor(
   );
 }
 
+async function latestLogFor(
+  conn: DatabaseTransactionConnectionType,
+  projectId: number,
+  fieldGroup: string,
+) {
+  return withPg(conn, () =>
+    conn.one(sql`
+      select
+        id,
+        project_id,
+        editor_id,
+        entity_type,
+        entity_id,
+        field_group::text as field_group,
+        status::text as status,
+        save_count,
+        from_summary,
+        to_summary,
+        from_blob,
+        to_blob,
+        meta,
+        net_zero_changes
+      from change_logs
+      where project_id = ${projectId}
+        and field_group::text = ${fieldGroup}
+      order by id desc
+      limit 1
+    `),
+  );
+}
+
 async function closeLogs(
   conn: DatabaseTransactionConnectionType,
   projectId: number,
@@ -111,6 +142,42 @@ async function ageLog(
       update change_logs
       set last_at = clock_timestamp() - interval '2 minutes'
       where id = ${id}
+    `),
+  );
+}
+
+async function setLogTime(
+  conn: DatabaseTransactionConnectionType,
+  id: number | string,
+  timestamp: string,
+) {
+  await withPg(conn, () =>
+    conn.any(sql`
+      update change_logs
+      set started_at = ${timestamp}::timestamptz,
+          last_at = ${timestamp}::timestamptz
+      where id = ${id}
+    `),
+  );
+}
+
+async function relatedPublishChangeLogsFor(
+  conn: DatabaseTransactionConnectionType,
+  itemId: number,
+) {
+  return withPg(conn, () =>
+    conn.any(sql`
+      select
+        cl.id,
+        cl.field_group::text as field_group,
+        cl.entity_type,
+        cl.entity_id,
+        cl.last_at,
+        cl.to_summary
+      from table_of_contents_items t
+      cross join lateral table_of_contents_items_related_publish_change_logs(t) cl
+      where t.id = ${itemId}
+      order by cl.last_at desc
     `),
   );
 }
@@ -442,10 +509,31 @@ describe("change_logs", () => {
           text_changes: true,
         });
         expect(log.to_blob).toMatchObject({
+          type: "BANNER",
           title: "Feature title",
           short_template: "Short",
           long_template: "Long",
         });
+        expect(log.net_zero_changes).toBe(false);
+
+        await clearLogs(conn);
+        await conn.any(sql`
+          update interactivity_settings
+          set type = 'ALL_PROPERTIES_POPUP'
+          where id = ${layer.interactivitySettingsId}
+        `);
+        log = await onlyLogFor(conn, projectId, "layer:interactivity");
+        expect(log.from_summary).toEqual({
+          type: "BANNER",
+          text_changes: false,
+        });
+        expect(log.to_summary).toEqual({
+          type: "ALL_PROPERTIES_POPUP",
+          text_changes: false,
+        });
+        expect(log.from_blob).toMatchObject({ type: "BANNER" });
+        expect(log.to_blob).toMatchObject({ type: "ALL_PROPERTIES_POPUP" });
+        expect(log.net_zero_changes).toBe(false);
 
         await clearLogs(conn);
         await conn.any(sql`
@@ -796,6 +884,225 @@ describe("change_logs", () => {
           layerB.layerId,
           layerA.layerId,
         ]);
+      },
+    );
+  });
+
+  test("related publish changelogs include only publishes that follow direct layer changes", async () => {
+    await projectTransaction(
+      pool,
+      "public",
+      async (conn, projectId, adminId) => {
+        await createSession(conn, adminId, true, false, projectId);
+        const target = await createTocLayer(conn, projectId, "Target Layer");
+        const other = await createTocLayer(conn, projectId, "Other Layer");
+
+        await withPg(conn, () =>
+          conn.any(sql`
+            update data_sources
+            set created_at = '2026-01-01T00:00:00Z'::timestamptz
+            where id in (${target.sourceId}, ${other.sourceId})
+          `),
+        );
+        await clearLogs(conn);
+
+        await conn.any(sql`select publish_table_of_contents(${projectId})`);
+        const beforeCreationPublish = await latestLogFor(
+          conn,
+          projectId,
+          "layers:published",
+        );
+        await setLogTime(
+          conn,
+          beforeCreationPublish.id as string,
+          "2025-12-31T00:00:00Z",
+        );
+        await closeLogs(conn, projectId);
+
+        const targetFirstChangeId = await withPg(conn, () =>
+          conn.oneFirst(sql`
+            select record_changelog(
+              ${projectId},
+              ${adminId},
+              'table_of_contents_items',
+              ${target.itemId},
+              'layer:title'::change_log_field_group,
+              ${sql.json({ title: "Target Layer" })},
+              ${sql.json({ title: "Target Layer edited" })},
+              null,
+              null,
+              null
+            )
+          `),
+        );
+        await setLogTime(
+          conn,
+          targetFirstChangeId as string,
+          "2026-01-02T00:00:00Z",
+        );
+        await closeLogs(conn, projectId);
+
+        await conn.any(sql`select publish_table_of_contents(${projectId})`);
+        const targetFirstPublish = await latestLogFor(
+          conn,
+          projectId,
+          "layers:published",
+        );
+        await setLogTime(
+          conn,
+          targetFirstPublish.id as string,
+          "2026-01-03T00:00:00Z",
+        );
+        await closeLogs(conn, projectId);
+
+        await conn.any(sql`select publish_table_of_contents(${projectId})`);
+        const noChangePublish = await latestLogFor(
+          conn,
+          projectId,
+          "layers:published",
+        );
+        await setLogTime(
+          conn,
+          noChangePublish.id as string,
+          "2026-01-04T00:00:00Z",
+        );
+        await closeLogs(conn, projectId);
+
+        const otherChangeId = await withPg(conn, () =>
+          conn.oneFirst(sql`
+            select record_changelog(
+              ${projectId},
+              ${adminId},
+              'table_of_contents_items',
+              ${other.itemId},
+              'layer:title'::change_log_field_group,
+              ${sql.json({ title: "Other Layer" })},
+              ${sql.json({ title: "Other Layer edited" })},
+              null,
+              null,
+              null
+            )
+          `),
+        );
+        await setLogTime(conn, otherChangeId as string, "2026-01-05T00:00:00Z");
+        await closeLogs(conn, projectId);
+
+        await conn.any(sql`select publish_table_of_contents(${projectId})`);
+        const otherOnlyPublish = await latestLogFor(
+          conn,
+          projectId,
+          "layers:published",
+        );
+        await setLogTime(
+          conn,
+          otherOnlyPublish.id as string,
+          "2026-01-06T00:00:00Z",
+        );
+        await closeLogs(conn, projectId);
+
+        const targetSecondChangeId = await withPg(conn, () =>
+          conn.oneFirst(sql`
+            select record_changelog(
+              ${projectId},
+              ${adminId},
+              'table_of_contents_items',
+              ${target.itemId},
+              'layer:metadata'::change_log_field_group,
+              '{}'::jsonb,
+              '{}'::jsonb,
+              ${sql.json({ description: "before" })},
+              ${sql.json({ description: "after" })},
+              null
+            )
+          `),
+        );
+        await setLogTime(
+          conn,
+          targetSecondChangeId as string,
+          "2026-01-07T00:00:00Z",
+        );
+        await closeLogs(conn, projectId);
+
+        await conn.any(sql`select publish_table_of_contents(${projectId})`);
+        const targetSecondPublish = await latestLogFor(
+          conn,
+          projectId,
+          "layers:published",
+        );
+        await setLogTime(
+          conn,
+          targetSecondPublish.id as string,
+          "2026-01-08T00:00:00Z",
+        );
+
+        const targetRelated = await relatedPublishChangeLogsFor(
+          conn,
+          target.itemId,
+        );
+        expect(targetRelated.map((row: any) => Number(row.id))).toEqual([
+          Number(targetSecondPublish.id),
+          Number(targetFirstPublish.id),
+        ]);
+        expect(
+          targetRelated.map((row: any) => row.field_group),
+        ).toEqual(["layers:published", "layers:published"]);
+
+        const otherRelated = await relatedPublishChangeLogsFor(
+          conn,
+          other.itemId,
+        );
+        expect(otherRelated.map((row: any) => Number(row.id))).toEqual([
+          Number(otherOnlyPublish.id),
+        ]);
+      },
+    );
+  });
+
+  test("related publish changelogs ignore net-zero layer changes", async () => {
+    await projectTransaction(
+      pool,
+      "public",
+      async (conn, projectId, adminId) => {
+        await createSession(conn, adminId, true, false, projectId);
+        const layer = await createTocLayer(conn, projectId, "Net Zero Layer");
+        await withPg(conn, () =>
+          conn.any(sql`
+            update data_sources
+            set created_at = '2026-01-01T00:00:00Z'::timestamptz
+            where id = ${layer.sourceId}
+          `),
+        );
+        await clearLogs(conn);
+
+        const netZeroChangeId = await withPg(conn, () =>
+          conn.oneFirst(sql`
+            select record_changelog(
+              ${projectId},
+              ${adminId},
+              'table_of_contents_items',
+              ${layer.itemId},
+              'layer:title'::change_log_field_group,
+              ${sql.json({ title: "Same title" })},
+              ${sql.json({ title: "Same title" })},
+              null,
+              null,
+              null
+            )
+          `),
+        );
+        await setLogTime(
+          conn,
+          netZeroChangeId as string,
+          "2026-01-02T00:00:00Z",
+        );
+        await closeLogs(conn, projectId);
+
+        await conn.any(sql`select publish_table_of_contents(${projectId})`);
+        const publish = await latestLogFor(conn, projectId, "layers:published");
+        await setLogTime(conn, publish.id as string, "2026-01-03T00:00:00Z");
+
+        const related = await relatedPublishChangeLogsFor(conn, layer.itemId);
+        expect(related).toHaveLength(0);
       },
     );
   });

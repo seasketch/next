@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   useUpdateTableOfContentsItemMutation,
   useGetFolderQuery,
@@ -14,6 +14,8 @@ import TranslatedPropControl from "../../components/TranslatedPropControl";
 import useIsSuperuser from "../../useIsSuperuser";
 import { CopyIcon } from "@radix-ui/react-icons";
 import * as Tooltip from "@radix-ui/react-tooltip";
+import LayerSettingsChangeLogList from "../changelogs/LayerSettingsChangeLogList";
+import { layerSettingsChangeLogRefetchQueries } from "../changelogs/layerSettingsChangeLogRefetch";
 
 export default function FolderEditor({
   id,
@@ -28,8 +30,16 @@ export default function FolderEditor({
       id,
     },
   });
-  const [mutateItem, mutateItemState] = useUpdateTableOfContentsItemMutation();
-  const [mutateFolder, mutateFolderState] = useUpdateFolderMutation();
+  const changeLogRefetchQueries = useMemo(
+    () => layerSettingsChangeLogRefetchQueries(id),
+    [id]
+  );
+  const [mutateItem, mutateItemState] = useUpdateTableOfContentsItemMutation({
+    refetchQueries: changeLogRefetchQueries,
+  });
+  const [mutateFolder, mutateFolderState] = useUpdateFolderMutation({
+    refetchQueries: changeLogRefetchQueries,
+  });
 
   const isSuperuser = useIsSuperuser();
   const folder = data?.tableOfContentsItem;
@@ -243,7 +253,10 @@ export default function FolderEditor({
           </div>
           <div className="mt-5">
             {folder.acl?.nodeId && (
-              <AccessControlListEditor nodeId={folder.acl?.nodeId} />
+              <AccessControlListEditor
+                nodeId={folder.acl?.nodeId}
+                refetchQueries={changeLogRefetchQueries}
+              />
             )}
           </div>
           {isSuperuser && (
@@ -288,6 +301,7 @@ export default function FolderEditor({
               </div>
             </div>
           )}
+          <LayerSettingsChangeLogList tableOfContentsItemId={folder.id} />
         </div>
       )}
     </div>
