@@ -870,7 +870,7 @@ describe("change_logs", () => {
         expect(log.entity_type).toBe("projects");
         expect(log.entity_id).toBe(projectId);
         expect(log.from_summary).toEqual({});
-        expect(log.to_summary).toEqual({});
+        expect(log.to_summary).toEqual({ reordered_count: 2 });
         expect(log.from_blob).toBeNull();
         expect(log.to_blob).toBeNull();
 
