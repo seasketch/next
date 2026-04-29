@@ -23,10 +23,7 @@ import { useCardDependenciesContext } from "./context/CardDependenciesContext";
 import { useBaseReportContext } from "./context/BaseReportContext";
 import { useSubjectReportContext } from "./context/SubjectReportContext";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
-import {
-  evictReportDependenciesForReportAndSketch,
-  evictReportOverlaySourcesForReport,
-} from "./utils/evictReportDependenciesCache";
+import { evictSubjectReportCachesForSketchId } from "./utils/evictReportDependenciesCache";
 import { useAuth0 } from "@auth0/auth0-react";
 import getSlug from "../getSlug";
 import ProfilePhoto from "../admin/users/ProfilePhoto";
@@ -135,12 +132,9 @@ export default function ReportMetricsProgressDetails({
     update(cache) {
       const sketchId = subjectReportContext.data?.sketch?.id;
       if (sketchId != null) {
-        evictReportDependenciesForReportAndSketch(
-          cache,
-          baseReportContext.report.id,
-          sketchId
-        );
-        evictReportOverlaySourcesForReport(cache, baseReportContext.report.id);
+        evictSubjectReportCachesForSketchId(cache, sketchId, {
+          reportId: baseReportContext.report.id,
+        });
       }
     },
   });

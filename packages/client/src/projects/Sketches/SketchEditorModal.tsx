@@ -22,10 +22,7 @@ import {
 } from "react";
 import { motion } from "framer-motion";
 import { useRouteMatch } from "react-router-dom";
-import {
-  evictReportDependenciesForReportAndSketch,
-  evictReportDependenciesForSketchId,
-} from "../../reports/utils/evictReportDependenciesCache";
+import { evictSubjectReportCachesForSketchId } from "../../reports/utils/evictReportDependenciesCache";
 import getSlug from "../../getSlug";
 import { ArrowLeftIcon, ArrowRightIcon } from "@heroicons/react/outline";
 import Button from "../../components/Button";
@@ -161,7 +158,7 @@ function SketchEditorModal({
   }, [onCancel, manager]);
 
   const [createSketch, createSketchState] = useCreateSketchMutation({
-    update: (cache, { data }) => {
+    update: (cache, { data }, { variables }) => {
       if (data?.createSketch) {
         const sketch = data.createSketch;
         const results = cache.readQuery<SketchingQuery>({
@@ -183,6 +180,11 @@ function SketchEditorModal({
             },
           });
         }
+        evictSubjectReportCachesForSketchId(cache, sketch.id);
+        const collectionId = variables?.collectionId;
+        if (collectionId != null) {
+          evictSubjectReportCachesForSketchId(cache, collectionId);
+        }
       }
     },
   });
@@ -193,15 +195,12 @@ function SketchEditorModal({
         return;
       }
       const sketch = data.updateSketch;
-      evictReportDependenciesForSketchId(cache, sketch.id);
+      evictSubjectReportCachesForSketchId(cache, sketch.id);
       const parent = sketch.parentCollection;
-      const parentReportId = parent?.sketchClass?.reportId;
-      if (parent?.id != null && parentReportId != null) {
-        evictReportDependenciesForReportAndSketch(
-          cache,
-          parentReportId,
-          parent.id
-        );
+      if (parent?.id != null) {
+        evictSubjectReportCachesForSketchId(cache, parent.id, {
+          reportId: parent.sketchClass?.reportId,
+        });
       }
     },
   });

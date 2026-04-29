@@ -19,10 +19,7 @@ import { subjectIsFragment } from "overlay-engine";
 import { useCardDependenciesContext } from "../context/CardDependenciesContext";
 import { useBaseReportContext } from "../context/BaseReportContext";
 import { useSubjectReportContext } from "../context/SubjectReportContext";
-import {
-  evictReportDependenciesForReportAndSketch,
-  evictReportOverlaySourcesForReport,
-} from "../utils/evictReportDependenciesCache";
+import { evictSubjectReportCachesForSketchId } from "../utils/evictReportDependenciesCache";
 import { DraftReportContext } from "../DraftReportContext";
 
 export interface CalculationDetailsModalState {
@@ -102,12 +99,9 @@ export function CalculationDetailsModal({
     onError,
     update(cache) {
       if (sketchIdForCache != null) {
-        evictReportDependenciesForReportAndSketch(
-          cache,
-          reportIdForCache,
-          sketchIdForCache
-        );
-        evictReportOverlaySourcesForReport(cache, reportIdForCache);
+        evictSubjectReportCachesForSketchId(cache, sketchIdForCache, {
+          reportId: reportIdForCache,
+        });
       }
     },
   });
@@ -117,12 +111,9 @@ export function CalculationDetailsModal({
       onError,
       update(cache) {
         if (sketchIdForCache != null) {
-          evictReportDependenciesForReportAndSketch(
-            cache,
-            reportIdForCache,
-            sketchIdForCache
-          );
-          evictReportOverlaySourcesForReport(cache, reportIdForCache);
+          evictSubjectReportCachesForSketchId(cache, sketchIdForCache, {
+            reportId: reportIdForCache,
+          });
         }
       },
       refetchQueries: [ReportDependenciesDocument],

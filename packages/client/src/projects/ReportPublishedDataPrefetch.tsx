@@ -1,8 +1,8 @@
 import { useApolloClient } from "@apollo/client";
 import { useEffect, useRef } from "react";
+import type { ProjectMetadataFragment } from "../generated/graphql";
 import {
   BaseReportContextDocument,
-  type ProjectMetadataFragment,
   ReportOverlaySourcesDocument,
 } from "../generated/graphql";
 

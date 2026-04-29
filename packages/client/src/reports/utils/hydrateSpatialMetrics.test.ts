@@ -151,6 +151,40 @@ describe("hydrateSpatialMetrics", () => {
       geographies: [4],
     });
   });
+
+  test("drops metrics when catalog index f is out of range after hydrate", () => {
+    const dep: MetricDependency = {
+      type: "overlay_area",
+      subjectType: "fragments",
+      stableId: "layerA",
+      parameters: {},
+    };
+    const h = hashMetricDependency(dep, urlMap);
+    const slim = [
+      {
+        __typename: "CompatibleSpatialMetric" as const,
+        type: "overlay_area",
+        id: 5 as any,
+        dependencyHash: h,
+        f: 99,
+        value: {},
+        state: "complete" as any,
+        errorMessage: null,
+        progress: 100,
+        eta: null,
+        startedAt: null,
+        durationSeconds: 1,
+      } as CompatibleSpatialMetricSlimFragment,
+    ];
+
+    const out = hydrateSpatialMetrics({
+      slimMetrics: slim,
+      dependencies: [dep],
+      overlaySourceUrlByStableId: urlMap,
+      fragmentSubjectCatalog: [],
+    });
+    expect(out).toHaveLength(0);
+  });
 });
 
 describe("hydrateMetricSubjectRefs", () => {

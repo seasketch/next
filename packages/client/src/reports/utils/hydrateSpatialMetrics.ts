@@ -131,5 +131,8 @@ export function hydrateSpatialMetrics({
     hydrateMetricSubjectRefs(row, fragmentSubjectCatalog);
   }
 
-  return rows as CompatibleSpatialMetricDetailsFragment[];
+  return rows.filter((row) => {
+    const m = row as CompatibleSpatialMetricDetailsFragment;
+    return m.subject != null;
+  }) as CompatibleSpatialMetricDetailsFragment[];
 }

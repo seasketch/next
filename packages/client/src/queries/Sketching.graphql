@@ -85,6 +85,7 @@ fragment SketchCRUDResponse on Sketch {
     updatedAt
     timestamp
     sketchClass {
+      id
       reportId
     }
   }
@@ -138,6 +139,7 @@ mutation DeleteSketchTocItems($items: [UpdateTocItemParentInput]!) {
       id
       updatedAt
       sketchClass {
+        id
         reportId
       }
     }
@@ -197,6 +199,7 @@ mutation UpdateTocItemsParent(
       id
       updatedAt
       sketchClass {
+        id
         reportId
       }
     }
@@ -312,6 +315,10 @@ mutation CopyTocItem($id: Int!, $type: SketchChildType!) {
     updatedCollection {
       id
       updatedAt
+      sketchClass {
+        id
+        reportId
+      }
     }
   }
 }

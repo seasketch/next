@@ -13,8 +13,8 @@ import {
   useDeleteReportCardMutation,
 } from "../../generated/graphql";
 import {
-  evictReportDependenciesForReportAndSketch,
   evictReportOverlaySourcesForReport,
+  evictSubjectReportCachesForSketchId,
 } from "../utils/evictReportDependenciesCache";
 
 export type ExistingCopyEntry = {
@@ -240,11 +240,9 @@ export function CopyCardsFromReportPopover({
       ];
 
       if (draftReportId != null && demonstrationSketchId != null) {
-        evictReportDependenciesForReportAndSketch(
-          client.cache,
-          draftReportId,
-          demonstrationSketchId
-        );
+        evictSubjectReportCachesForSketchId(client.cache, demonstrationSketchId, {
+          reportId: draftReportId,
+        });
         evictReportOverlaySourcesForReport(client.cache, draftReportId);
         refetches.push(
           client.query({

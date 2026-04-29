@@ -24635,7 +24635,7 @@ export type SketchCrudResponseFragment = (
     & Pick<Sketch, 'id' | 'updatedAt' | 'timestamp'>
     & { sketchClass?: Maybe<(
       { __typename?: 'SketchClass' }
-      & Pick<SketchClass, 'reportId'>
+      & Pick<SketchClass, 'id' | 'reportId'>
     )> }
   )>, relatedFragments?: Maybe<Array<Maybe<(
     { __typename?: 'SketchesRelatedFragmentsRecord' }
@@ -24694,7 +24694,7 @@ export type DeleteSketchTocItemsMutation = (
       & Pick<Sketch, 'id' | 'updatedAt'>
       & { sketchClass?: Maybe<(
         { __typename?: 'SketchClass' }
-        & Pick<SketchClass, 'reportId'>
+        & Pick<SketchClass, 'id' | 'reportId'>
       )> }
     )>> }
   )> }
@@ -24783,7 +24783,7 @@ export type UpdateTocItemsParentMutation = (
       & Pick<Sketch, 'id' | 'updatedAt'>
       & { sketchClass?: Maybe<(
         { __typename?: 'SketchClass' }
-        & Pick<SketchClass, 'reportId'>
+        & Pick<SketchClass, 'id' | 'reportId'>
       )> }
     )>> }
   )> }
@@ -24886,6 +24886,10 @@ export type CopyTocItemMutation = (
     )>>, updatedCollection?: Maybe<(
       { __typename?: 'Sketch' }
       & Pick<Sketch, 'id' | 'updatedAt'>
+      & { sketchClass?: Maybe<(
+        { __typename?: 'SketchClass' }
+        & Pick<SketchClass, 'id' | 'reportId'>
+      )> }
     )> }
   )> }
 );
@@ -28205,6 +28209,7 @@ export const SketchCrudResponseFragmentDoc = gql`
     updatedAt
     timestamp
     sketchClass {
+      id
       reportId
     }
   }
@@ -38969,6 +38974,7 @@ export const DeleteSketchTocItemsDocument = gql`
       id
       updatedAt
       sketchClass {
+        id
         reportId
       }
     }
@@ -39096,6 +39102,7 @@ export const UpdateTocItemsParentDocument = gql`
       id
       updatedAt
       sketchClass {
+        id
         reportId
       }
     }
@@ -39190,6 +39197,10 @@ export const CopyTocItemDocument = gql`
     updatedCollection {
       id
       updatedAt
+      sketchClass {
+        id
+        reportId
+      }
     }
   }
 }

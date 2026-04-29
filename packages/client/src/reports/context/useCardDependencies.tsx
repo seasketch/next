@@ -40,8 +40,10 @@ export function useCardDependencies(cardId: number): CardDependenciesResult {
 
       // Once a card has dependency ids, keep loading scoped to that card.
       // Global query loading also includes background refetches, which should
-      // not make unrelated cards show a loading state.
+      // not make unrelated cards show a loading state — except when dependency
+      // cache was evicted and we're awaiting a fresh dependencies payload.
       const loading =
+        context.dependenciesAwaitingRefresh ||
         metricIdsPendingResolution ||
         overlaySourceIdsPendingResolution ||
         metrics.some(
@@ -95,6 +97,7 @@ export function useCardDependencies(cardId: number): CardDependenciesResult {
     }
   }, [
     context.cardDependencyLists,
+    context.dependenciesAwaitingRefresh,
     context.loading,
     context.metrics,
     context.overlaySources,
