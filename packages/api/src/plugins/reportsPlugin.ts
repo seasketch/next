@@ -16,43 +16,11 @@ import type {
 } from "graphql";
 import { ensureSketchFragments } from "../sketches";
 import { groupByFromStyle } from "gl-style-builder";
-
-/** Set `REPORT_DEPS_PROFILE=1` for per-phase server timings on report dependency resolution. */
-function isReportDepsProfileEnabled(): boolean {
-  const v = process.env.REPORT_DEPS_PROFILE;
-  return v === "1" || v === "true" || v === "yes";
-}
-
-function reportDepsProfileNowNs(): bigint {
-  return process.hrtime.bigint();
-}
-
-function msSinceNs(startNs: bigint): number {
-  return Number(process.hrtime.bigint() - startNs) / 1e6;
-}
-
-function reportDepsProfileLog(
-  scope: string,
-  phase: string,
-  startNs: bigint,
-  ctx: Record<string, string | number | boolean | undefined>,
-  extra?: Record<string, string | number | boolean | undefined>,
-): void {
-  if (!isReportDepsProfileEnabled()) {
-    return;
-  }
-  const elapsedMs = msSinceNs(startNs);
-  const base = {
-    ...ctx,
-    scope,
-    phase,
-    elapsedMs: Number(elapsedMs.toFixed(3)),
-  };
-  const merged = extra ? { ...base, ...extra } : base;
-  const parts = Object.entries(merged).map(([k, v]) => `${k}=${v}`);
-  // eslint-disable-next-line no-console
-  console.log(`[report.deps.profile] ${parts.join(" ")}`);
-}
+import {
+  isReportDepsProfileEnabled,
+  reportDepsProfileLog,
+  reportDepsProfileNowNs,
+} from "../reportDepsProfiling";
 
 /**
  * Confirms the session may load report dependency metrics: sketch viewers via
@@ -82,10 +50,10 @@ async function assertSessionCanLoadReportDependencies(
 }
 
 /**
- * Bulk metric JSON is implemented in PostgreSQL as `public.bulk_upsert_spatial_metrics_and_json`
+ * Bulk metric JSON is implemented in PostgreSQL as `public.resolve_spatial_metrics_batch`
  * (see packages/api/migrations — graphile-migrate `current.sql` until committed).
- * Keep insert-path rows from `_ins` through `metric_rows`; do not re-resolve inserted ids only from
- * `spatial_metrics` or clients lose fresh metrics after recalculate (see migration comment).
+ * Reads cached metrics first, inserts missing rows with ON CONFLICT DO NOTHING, then queues
+ * calculateSpatialMetric jobs explicitly for newly inserted queued metrics.
  */
 
 type ReportOverlaySourcePartial = {
@@ -422,19 +390,46 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
           args,
           context: { pgClient: PoolClient; adminPool?: Pool },
         ) {
+          const profileCtx = {
+            reportId: report.id,
+            sketchId: args.sketchId ?? "none",
+            projectId: report.projectId,
+          };
+          const nsResolverFull = reportDepsProfileNowNs();
+          let ns = reportDepsProfileNowNs();
           await assertSessionCanLoadReportDependencies(
             context.pgClient,
             report.projectId,
             args.sketchId ?? null,
           );
+          reportDepsProfileLog(
+            "Report.dependencies",
+            "assertSessionCanLoadReportDependencies",
+            ns,
+            profileCtx,
+          );
           const metricsPool = context.adminPool ?? context.pgClient;
-          return getOrCreateReportDependencies(
+          ns = reportDepsProfileNowNs();
+          const out = await getOrCreateReportDependencies(
             report.id,
             context.pgClient,
             report.projectId,
             args.sketchId,
             { metricsPool },
           );
+          reportDepsProfileLog(
+            "Report.dependencies",
+            "getOrCreateReportDependencies_total",
+            ns,
+            profileCtx,
+          );
+          reportDepsProfileLog(
+            "Report.dependencies",
+            "dependencies_resolver_total",
+            nsResolverFull,
+            profileCtx,
+          );
+          return out;
         },
         async overlaySources(report, args, context) {
           return await getReportOverlaySources(
@@ -1007,7 +1002,7 @@ async function areSourceProcessingJobsReady(
   return (rows[0]?.count || "0") === "0";
 }
 
-/** Exported for integration tests; core upsert is `bulk_upsert_spatial_metrics_and_json` in SQL. */
+/** Exported for integration tests; core resolver is `resolve_spatial_metrics_batch` in SQL. */
 export async function getOrCreateSpatialMetricsBatch(
   pool: Pool | PoolClient,
   inputs: Array<{
@@ -1080,11 +1075,21 @@ export async function getOrCreateSpatialMetricsBatch(
     },
   );
 
+  const queryParams = [
+    subjectFragmentIds,
+    subjectGeographyIds,
+    types,
+    overlaySourceUrls,
+    parameters,
+    sourceProcessingJobDependencies,
+    projectIds,
+    dependencyHashes,
+  ];
   const sqlNs = reportDepsProfileNowNs();
   const result = await pool.query<{ ord: number; metric: unknown }>(
     `
       SELECT ord, metric
-      FROM bulk_upsert_spatial_metrics_and_json(
+      FROM resolve_spatial_metrics_batch(
         $1::text[],
         $2::int[],
         $3::text[],
@@ -1095,21 +1100,12 @@ export async function getOrCreateSpatialMetricsBatch(
         $8::text[]
       )
     `,
-    [
-      subjectFragmentIds,
-      subjectGeographyIds,
-      types,
-      overlaySourceUrls,
-      parameters,
-      sourceProcessingJobDependencies,
-      projectIds,
-      dependencyHashes,
-    ],
+    queryParams,
   );
 
   reportDepsProfileLog(
     "getOrCreateSpatialMetricsBatch",
-    "pgQuery_bulkUpsertSpatialMetrics_and_json",
+    "pgQuery_resolveSpatialMetricsBatch",
     sqlNs,
     {},
     {

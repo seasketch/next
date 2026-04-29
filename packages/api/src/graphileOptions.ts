@@ -48,6 +48,7 @@ import AboutPagePlugin from "./plugins/aboutPagePlugin";
 import ReplacePMTilesPlugin from "./plugins/replacePMTilesPlugin";
 import GeographyPlugin from "./plugins/GeographyPlugin";
 import ReportsPlugin from "./plugins/reportsPlugin";
+import ReportGraphqlTimingPlugin from "./plugins/reportGraphqlTimingPlugin";
 import FeatureFlagsPlugin from "./plugins/featureFlagsPlugin";
 import UserActivityPlugin from "./plugins/userActivityPlugin";
 import DataUploadPiiClassifierWarmPlugin from "./plugins/dataUploadPiiClassifierWarmPlugin";
@@ -113,6 +114,7 @@ export default function graphileOptions(): PostGraphileOptions {
       ReplacePMTilesPlugin,
       GeographyPlugin,
       ReportsPlugin,
+      ReportGraphqlTimingPlugin,
       FeatureFlagsPlugin,
       UserActivityPlugin,
       // reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
