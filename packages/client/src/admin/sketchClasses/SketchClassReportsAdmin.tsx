@@ -28,6 +28,7 @@ import ReportEditor from "../../reports/ReportEditor";
 import ReportDependenciesContextProvider, {
   ReportDependenciesContext,
 } from "../../reports/context/ReportDependenciesContext";
+import ReportPublishedMetricDependenciesRegistrar from "../../reports/context/ReportPublishedMetricDependenciesRegistrar";
 import useIsSuperuser from "../../useIsSuperuser";
 import { BaseReportContextDocument } from "../../generated/queries";
 
@@ -272,6 +273,7 @@ export default function SketchClassReportsAdmin({
         sketchId={selectedSketchId}
         reportId={draftReport?.id}
       >
+        <ReportPublishedMetricDependenciesRegistrar />
         <SubjectReportContextProvider sketchId={selectedSketchId}>
           <FormLanguageContext.Provider value={formLanguageContextValue}>
             <div className="flex flex-col w-full h-full overflow-y-hidden">

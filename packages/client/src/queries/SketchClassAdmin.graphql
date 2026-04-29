@@ -709,6 +709,9 @@ query ReportContext($reportId: Int!, $sketchId: Int!) {
     }
     dependencies(sketchId: $sketchId) {
       ready
+      fragmentSubjectCatalog {
+        ...FragmentSubjectDetails
+      }
       metrics {
         ...CompatibleSpatialMetricDetails
       }
@@ -726,13 +729,27 @@ query ReportDependencies($reportId: Int!, $sketchId: Int!) {
     id
     dependencies(sketchId: $sketchId) {
       ready
+      fragmentSubjectCatalog {
+        ...FragmentSubjectDetails
+      }
       metrics {
-        ...CompatibleSpatialMetricDetails
+        ...CompatibleSpatialMetricSlim
       }
       cardDependencyLists {
         cardId
         metrics
         overlaySources
+      }
+    }
+  }
+}
+
+query ReportMetricProgressFields($reportId: Int!, $sketchId: Int!) {
+  report(id: $reportId) {
+    id
+    dependencies(sketchId: $sketchId) {
+      metrics {
+        ...CompatibleSpatialMetricProgressFields
       }
     }
   }
@@ -825,8 +842,11 @@ query LegacyReportContext($sketchId: Int!) {
 query DraftReportDependencies($input: DraftDependenciesInput) {
   draftReportDependencies(input: $input) {
     ready
+    fragmentSubjectCatalog {
+      ...FragmentSubjectDetails
+    }
     metrics {
-      ...CompatibleSpatialMetricDetails
+      ...CompatibleSpatialMetricSlim
     }
     sketchId
   }

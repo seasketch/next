@@ -1,5 +1,5 @@
 import { Trans, useTranslation } from "react-i18next";
-import { useCallback, useContext, useMemo } from "react";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
   CompatibleSpatialMetricDetailsFragment,
@@ -12,6 +12,7 @@ import {
   SpatialMetricState,
   useRecalculateSpatialMetricsMutation,
   useProjectReportingLayersQuery,
+  useReportMetricProgressFieldsLazyQuery,
 } from "../generated/graphql";
 import { subjectIsFragment } from "overlay-engine";
 import ReportTaskLineItem from "./components/ReportTaskLineItem";
@@ -29,7 +30,10 @@ import {
 import { useAuth0 } from "@auth0/auth0-react";
 import getSlug from "../getSlug";
 import ProfilePhoto from "../admin/users/ProfilePhoto";
-import type { AuthorProfileFragment } from "../generated/graphql";
+import type {
+  AuthorProfileFragment,
+  CompatibleSpatialMetricProgressFieldsFragment,
+} from "../generated/graphql";
 import { nameForProfile } from "../projects/Forums/TopicListItem";
 
 export default function ReportMetricsProgressDetails({
@@ -69,6 +73,63 @@ export default function ReportMetricsProgressDetails({
     return m;
   }, [subjectReportContext.data]);
 
+  const [fetchProgressFields, { data: progressFieldsData }] =
+    useReportMetricProgressFieldsLazyQuery();
+
+  const [progressFieldsByMetricId, setProgressFieldsByMetricId] = useState<
+    Map<
+      string,
+      {
+        updatedAt?: CompatibleSpatialMetricDetailsFragment["updatedAt"];
+        sourceProcessingJobDependency?: CompatibleSpatialMetricDetailsFragment["sourceProcessingJobDependency"];
+      }
+    >
+  >(new Map());
+
+  useEffect(() => {
+    const sketchId = subjectReportContext.data?.sketch?.id;
+    const reportId = baseReportContext.report.id;
+    if (sketchId == null || !reportId) return;
+    void fetchProgressFields({
+      variables: { reportId, sketchId },
+    });
+  }, [
+    fetchProgressFields,
+    subjectReportContext.data?.sketch?.id,
+    baseReportContext.report.id,
+  ]);
+
+  useEffect(() => {
+    const rows = progressFieldsData?.report?.dependencies?.metrics;
+    if (!rows?.length) return;
+    const next = new Map(
+      rows.map((m: CompatibleSpatialMetricProgressFieldsFragment) => [
+        String(m.id),
+        {
+          updatedAt: m.updatedAt ?? undefined,
+          sourceProcessingJobDependency:
+            m.sourceProcessingJobDependency ?? undefined,
+        },
+      ]),
+    );
+    setProgressFieldsByMetricId((prev) => {
+      if (prev.size !== next.size) {
+        return next;
+      }
+      for (const [id, v] of next) {
+        const p = prev.get(id);
+        if (
+          !p ||
+          p.updatedAt !== v.updatedAt ||
+          p.sourceProcessingJobDependency !== v.sourceProcessingJobDependency
+        ) {
+          return next;
+        }
+      }
+      return prev;
+    });
+  }, [progressFieldsData?.report?.dependencies?.metrics]);
+
   const [recalculate, recalculateState] = useRecalculateSpatialMetricsMutation({
     onError,
     update(cache) {
@@ -92,10 +153,24 @@ export default function ReportMetricsProgressDetails({
     ]) {
       if (metric.id && seenIds.has(metric.id)) continue;
       if (metric.id) seenIds.add(metric.id);
-      all.push(metric);
+      const extra = metric.id
+        ? progressFieldsByMetricId.get(String(metric.id))
+        : undefined;
+      all.push(
+        extra
+          ? ({
+              ...metric,
+              ...extra,
+            } as CompatibleSpatialMetricDetailsFragment)
+          : metric,
+      );
     }
     return all;
-  }, [draftReportContext.draftMetrics, context.metrics]);
+  }, [
+    draftReportContext.draftMetrics,
+    context.metrics,
+    progressFieldsByMetricId,
+  ]);
 
   const handleReprocessSource = useCallback(
     async (jobKey: string, repairInvalid: boolean) => {

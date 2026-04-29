@@ -1270,6 +1270,16 @@ type CompatibleSpatialMetric {
   durationSeconds: Float
   errorMessage: String
   eta: Datetime
+
+  """
+  When present with a null subject, index into
+  ReportOverlayDependencies.fragmentSubjectCatalog /
+  DraftReportDependenciesResults.fragmentSubjectCatalog.
+  """
+  f: Int
+
+  """When present with a null subject, geography id (project_geography.id)."""
+  g: Int
   id: BigInt!
   jobKey: String
   parameters: MetricParameters!
@@ -1278,7 +1288,7 @@ type CompatibleSpatialMetric {
   sourceUrl: String
   startedAt: Datetime
   state: SpatialMetricState!
-  subject: MetricSubject!
+  subject: MetricSubject
   type: String!
   updatedAt: Datetime
   value: JSON
@@ -6080,6 +6090,7 @@ input DraftDependenciesInput {
 }
 
 type DraftReportDependenciesResults {
+  fragmentSubjectCatalog: [FragmentSubject!]!
   metrics: [CompatibleSpatialMetric!]!
   ready: Boolean!
   sketchId: Int!
@@ -15317,6 +15328,7 @@ input ReportInput {
 
 type ReportOverlayDependencies {
   cardDependencyLists: [CardDependencyLists!]!
+  fragmentSubjectCatalog: [FragmentSubject!]!
   metrics: [CompatibleSpatialMetric!]!
   ready: Boolean!
 }

@@ -337,6 +337,8 @@ fragment FragmentSubjectDetails on FragmentSubject {
 fragment CompatibleSpatialMetricDetails on CompatibleSpatialMetric {
   id
   type
+  g
+  f
   subject {
     ...GeographySubjectDetails
     ...FragmentSubjectDetails
@@ -363,6 +365,29 @@ fragment CompatibleSpatialMetricDetails on CompatibleSpatialMetric {
   startedAt
   durationSeconds
   dependencyHash
+}
+
+# Slim metric for Report.dependencies / draft deps (hydrate parameters + sourceUrl from report doc).
+fragment CompatibleSpatialMetricSlim on CompatibleSpatialMetric {
+  id
+  type
+  g
+  f
+  value
+  state
+  errorMessage
+  progress
+  eta
+  startedAt
+  durationSeconds
+  dependencyHash
+}
+
+# Lazy-fetch fields for ReportMetricsProgressDetails / admin repair.
+fragment CompatibleSpatialMetricProgressFields on CompatibleSpatialMetric {
+  id
+  updatedAt
+  sourceProcessingJobDependency
 }
 
 fragment MinimalSpatialMetricDetails on CompatibleSpatialMetric {

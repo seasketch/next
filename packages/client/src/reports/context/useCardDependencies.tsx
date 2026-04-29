@@ -18,8 +18,16 @@ export function useCardDependencies(cardId: number): CardDependenciesResult {
       // After recalculate, DB rows are recreated with new ids; Apollo can briefly
       // keep stale normalized metrics while cardDependencyLists already references
       // new ids — treat unresolved ids as still loading so we don't show an empty card.
-      const metricIdsPendingResolution =
-        list.metrics.length > 0 && metrics.length < list.metrics.length;
+      // Ignore ids that are not in the latest slim server payload (stale card list
+      // entries) or that were filtered out as unused by the current report doc.
+      const pendingMetricIds = list.metrics.filter((metricId) => {
+        const idStr = String(metricId);
+        if (!context.slimMetricIdsFromServer.has(idStr)) {
+          return false;
+        }
+        return !context.metrics.some((m) => String(m.id) === idStr);
+      });
+      const metricIdsPendingResolution = pendingMetricIds.length > 0;
       const overlaySources = list.overlaySources
         .map(
           (overlay) =>
@@ -90,6 +98,7 @@ export function useCardDependencies(cardId: number): CardDependenciesResult {
     context.loading,
     context.metrics,
     context.overlaySources,
+    context.slimMetricIdsFromServer,
     cardId,
     context.error,
   ]);

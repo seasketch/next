@@ -1,7 +1,16 @@
-import { createContext, useEffect, useMemo } from "react";
+import {
+  createContext,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   CardDependencyLists,
   CompatibleSpatialMetricDetailsFragment,
+  CompatibleSpatialMetricSlimFragment,
+  FragmentSubjectDetailsFragment,
   OverlaySourceDetailsFragment,
   SpatialMetricState,
   useReportDependenciesQuery,
@@ -9,11 +18,22 @@ import {
 } from "../../generated/graphql";
 import { subjectIsFragment } from "overlay-engine";
 import { ApolloError, NetworkStatus } from "@apollo/client";
+import type { MetricDependency } from "overlay-engine";
+import { ReportMetricDependencyRegistrarContext } from "./ReportMetricDependencyRegistrarContext";
+import {
+  buildOverlayStableIdToSourceUrlMap,
+  EMPTY_FRAGMENT_SUBJECT_CATALOG,
+  EMPTY_OVERLAY_SOURCES,
+  EMPTY_SLIM_METRICS,
+  hydrateSpatialMetrics,
+} from "../utils/hydrateSpatialMetrics";
 
 export const ReportDependenciesContext = createContext<{
   metrics: CompatibleSpatialMetricDetailsFragment[];
   overlaySources: OverlaySourceDetailsFragment[];
   cardDependencyLists: CardDependencyLists[];
+  /** Metric ids present in the last successful slim `Report.dependencies` payload (before doc-based filtering). */
+  slimMetricIdsFromServer: Set<string>;
   fragmentCalculationsRuntime?: number;
   loading: boolean;
   error?: ApolloError;
@@ -21,6 +41,7 @@ export const ReportDependenciesContext = createContext<{
   metrics: [],
   overlaySources: [],
   cardDependencyLists: [],
+  slimMetricIdsFromServer: new Set(),
   loading: true,
 });
 
@@ -30,6 +51,8 @@ export type CardDependenciesResult = {
   loading: boolean;
   errors: { [errorMessage: string]: number };
 };
+
+const EMPTY_CARD_DEPENDENCY_LISTS: CardDependencyLists[] = [];
 
 export default function ReportDependenciesContextProvider({
   children,
@@ -55,9 +78,6 @@ export default function ReportDependenciesContextProvider({
     notifyOnNetworkStatusChange: true,
   });
 
-  // Apollo's `loading` is false during refetches; after cache eviction the
-  // query refetches while still returning stale dependency data unless we treat
-  // refetch / variable changes as loading for the report shell.
   const dependenciesQueryLoading =
     depsLoading ||
     depsNetworkStatus === NetworkStatus.refetch ||
@@ -82,11 +102,67 @@ export default function ReportDependenciesContextProvider({
     overlayNetworkStatus === NetworkStatus.refetch ||
     overlayNetworkStatus === NetworkStatus.setVariables;
 
+  const rawSlimMetrics: CompatibleSpatialMetricSlimFragment[] =
+    (depsData?.report?.dependencies?.metrics ??
+      EMPTY_SLIM_METRICS) as CompatibleSpatialMetricSlimFragment[];
+
+  const fragmentSubjectCatalog: Pick<
+    FragmentSubjectDetailsFragment,
+    "__typename" | "hash" | "sketches" | "geographies"
+  >[] =
+    depsData?.report?.dependencies?.fragmentSubjectCatalog ??
+    EMPTY_FRAGMENT_SUBJECT_CATALOG;
+
+  const slimMetricIdsFromServer = useMemo(
+    () => new Set(rawSlimMetrics.map((m) => String(m.id))),
+    [rawSlimMetrics],
+  );
+
+  const registrationRef = useRef<{
+    deps: MetricDependency[];
+    fingerprint: string;
+  } | null>(null);
+  const [registrationEpoch, setRegistrationEpoch] = useState(0);
+
+  const registerReportMetricDependencies = useCallback(
+    (dependencies: MetricDependency[], fingerprint: string) => {
+      const prev = registrationRef.current;
+      if (prev?.fingerprint === fingerprint) {
+        return;
+      }
+      registrationRef.current = { deps: dependencies, fingerprint };
+      setRegistrationEpoch((e) => e + 1);
+    },
+    [],
+  );
+
+  const overlaySources =
+    overlayData?.report?.overlaySources ?? EMPTY_OVERLAY_SOURCES;
+
+  const hydratedMetrics = useMemo(() => {
+    const waitingForDocRegistration =
+      rawSlimMetrics.length > 0 && registrationRef.current === null;
+    if (waitingForDocRegistration) {
+      return [];
+    }
+    const deps = registrationRef.current?.deps ?? [];
+    const urlMap = buildOverlayStableIdToSourceUrlMap(overlaySources);
+    return hydrateSpatialMetrics({
+      slimMetrics: rawSlimMetrics,
+      dependencies: deps,
+      overlaySourceUrlByStableId: urlMap,
+      fragmentSubjectCatalog,
+    });
+  }, [rawSlimMetrics, overlaySources, registrationEpoch, fragmentSubjectCatalog]);
+
+  const waitingForDocRegistration =
+    rawSlimMetrics.length > 0 && registrationRef.current === null;
+
   const contextValue = useMemo(() => {
     let fragmentCalculationsRuntime: number | undefined = undefined;
-    if (!dependenciesQueryLoading) {
+    if (!dependenciesQueryLoading && !waitingForDocRegistration) {
       fragmentCalculationsRuntime = 0;
-      for (const metric of depsData?.report?.dependencies?.metrics || []) {
+      for (const metric of hydratedMetrics) {
         if (
           metric.state === SpatialMetricState.Complete &&
           subjectIsFragment(metric.subject) &&
@@ -97,38 +173,42 @@ export default function ReportDependenciesContextProvider({
       }
     }
     return {
-      metrics: depsData?.report?.dependencies?.metrics || [],
-      overlaySources: overlayData?.report?.overlaySources || [],
+      metrics: hydratedMetrics,
+      overlaySources,
       cardDependencyLists:
-        depsData?.report?.dependencies?.cardDependencyLists || [],
-      loading: dependenciesQueryLoading || overlaySourcesQueryLoading,
+        depsData?.report?.dependencies?.cardDependencyLists ??
+        EMPTY_CARD_DEPENDENCY_LISTS,
+      slimMetricIdsFromServer,
+      loading:
+        dependenciesQueryLoading ||
+        overlaySourcesQueryLoading ||
+        waitingForDocRegistration,
       fragmentCalculationsRuntime,
       error: depsError || overlayError,
     };
   }, [
-    depsData,
-    overlayData,
+    hydratedMetrics,
+    overlaySources,
+    depsData?.report?.dependencies?.cardDependencyLists,
+    slimMetricIdsFromServer,
     dependenciesQueryLoading,
     overlaySourcesQueryLoading,
+    waitingForDocRegistration,
     depsError,
     overlayError,
   ]);
 
   useEffect(() => {
-    // Do not gate polling on `contextValue.loading`: it is true whenever *either*
-    // dependencies or overlay sources are refetching. Overlay jobs refetch often
-    // while preprocessing; if we bail here, metric polling never runs and
-    // recalculated metrics appear stuck until a full reload.
     const anyMetricsLoading = contextValue.metrics.some(
       (metric) =>
         metric.state !== SpatialMetricState.Complete &&
-        metric.state !== SpatialMetricState.Error
+        metric.state !== SpatialMetricState.Error,
     );
     const anyOverlaySourcesLoading = contextValue.overlaySources.some(
       (source) =>
         source.sourceProcessingJob &&
         source.sourceProcessingJob.state !== SpatialMetricState.Complete &&
-        source.sourceProcessingJob.state !== SpatialMetricState.Error
+        source.sourceProcessingJob.state !== SpatialMetricState.Error,
     );
 
     let metricInterval: ReturnType<typeof setInterval> | null = null;
@@ -160,8 +240,12 @@ export default function ReportDependenciesContextProvider({
   ]);
 
   return (
-    <ReportDependenciesContext.Provider value={contextValue}>
-      {children}
-    </ReportDependenciesContext.Provider>
+    <ReportMetricDependencyRegistrarContext.Provider
+      value={registerReportMetricDependencies}
+    >
+      <ReportDependenciesContext.Provider value={contextValue}>
+        {children}
+      </ReportDependenciesContext.Provider>
+    </ReportMetricDependencyRegistrarContext.Provider>
   );
 }

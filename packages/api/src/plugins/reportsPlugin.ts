@@ -21,6 +21,10 @@ import {
   reportDepsProfileLog,
   reportDepsProfileNowNs,
 } from "../reportDepsProfiling";
+import {
+  compressSpatialMetricSubjectsForWire,
+  type FragmentSubjectCatalogEntry,
+} from "../reports/compressSpatialMetricSubjects";
 
 /**
  * Confirms the session may load report dependency metrics: sketch viewers via
@@ -116,7 +120,15 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         value: JSON
         state: SpatialMetricState!
         parameters: MetricParameters!
-        subject: MetricSubject!
+        subject: MetricSubject
+        """
+        When present with a null subject, geography id (project_geography.id).
+        """
+        g: Int
+        """
+        When present with a null subject, index into ReportOverlayDependencies.fragmentSubjectCatalog / DraftReportDependenciesResults.fragmentSubjectCatalog.
+        """
+        f: Int
         errorMessage: String
         progress: Int
         jobKey: String
@@ -210,6 +222,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         ready: Boolean!
         metrics: [CompatibleSpatialMetric!]!
         cardDependencyLists: [CardDependencyLists!]!
+        fragmentSubjectCatalog: [FragmentSubject!]!
       }
 
       extend type Report {
@@ -228,6 +241,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         ready: Boolean!
         sketchId: Int!
         metrics: [CompatibleSpatialMetric!]!
+        fragmentSubjectCatalog: [FragmentSubject!]!
       }
 
       type DraftReportOverlaySourcesResults {
@@ -254,6 +268,19 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
       }
     `,
     resolvers: {
+      MetricSubject: {
+        __resolveType(obj: { hash?: string; id?: number }) {
+          if (obj && typeof obj === "object") {
+            if (obj.hash != null) {
+              return "FragmentSubject";
+            }
+            if (obj.id != null) {
+              return "GeographySubject";
+            }
+          }
+          return "GeographySubject";
+        },
+      },
       RelatedReportCard: {
         async sketchClass(
           relatedReportCard,
@@ -547,8 +574,12 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
             { metricsPool },
           );
 
+          const { metrics: wireMetrics, fragmentSubjectCatalog } =
+            compressSpatialMetricSubjectsForWire(metrics);
+
           return {
-            metrics,
+            metrics: wireMetrics as typeof metrics,
+            fragmentSubjectCatalog,
             ready: !metrics.find((m) => m.state !== "complete"),
             sketchId,
           };
@@ -613,7 +644,16 @@ async function getOrCreateReportDependencies(
     { isDraft },
   );
 
-  const results = {
+  const results: {
+    ready: boolean;
+    metrics: any[];
+    cardDependencyLists: {
+      cardId: number;
+      metrics: number[];
+      overlaySources: string[];
+    }[];
+    fragmentSubjectCatalog: FragmentSubjectCatalogEntry[];
+  } = {
     ready: true,
     metrics: [] as any[],
     cardDependencyLists: [] as {
@@ -621,6 +661,7 @@ async function getOrCreateReportDependencies(
       metrics: number[];
       overlaySources: string[];
     }[],
+    fragmentSubjectCatalog: [],
   };
 
   // Retrieve all fragments related to the sketch (if any)
@@ -846,6 +887,11 @@ async function getOrCreateReportDependencies(
     profileCtx,
     { cardLists: results.cardDependencyLists.length },
   );
+
+  const { metrics: wireMetrics, fragmentSubjectCatalog } =
+    compressSpatialMetricSubjectsForWire(results.metrics);
+  results.metrics = wireMetrics as typeof results.metrics;
+  results.fragmentSubjectCatalog = fragmentSubjectCatalog;
 
   ns = reportDepsProfileNowNs();
   results.ready = !results.metrics.find((m) => m.state !== "complete");
