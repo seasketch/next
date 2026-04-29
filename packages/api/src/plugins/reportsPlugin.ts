@@ -82,229 +82,11 @@ async function assertSessionCanLoadReportDependencies(
 }
 
 /**
- * Single round-trip bulk upsert + JSON shaped like spatial_metric_to_json, with fragment sketch/geography
- * arrays aggregated once per distinct fragment hash (see spatial_metric_to_json in schema.sql).
- *
- * Kept as SQL in this plugin so report dependency behavior can iterate with resolver changes; promote to a
- * migration-defined function if another caller needs the same batching.
+ * Bulk metric JSON is implemented in PostgreSQL as `public.bulk_upsert_spatial_metrics_and_json`
+ * (see packages/api/migrations — graphile-migrate `current.sql` until committed).
+ * Keep insert-path rows from `_ins` through `metric_rows`; do not re-resolve inserted ids only from
+ * `spatial_metrics` or clients lose fresh metrics after recalculate (see migration comment).
  */
-const SPATIAL_METRICS_BULK_UPSERT_AND_JSON_SQL = `
-WITH input AS (
-  SELECT *
-  FROM unnest(
-    $1::text[],
-    $2::int[],
-    $3::text[],
-    $4::text[],
-    $5::jsonb[],
-    $6::text[],
-    $7::int[],
-    $8::text[]
-  ) WITH ORDINALITY AS u(
-    subject_fragment_id,
-    subject_geography_id,
-    type,
-    overlay_source_url,
-    parameters,
-    source_processing_job_dependency,
-    project_id,
-    dependency_hash,
-    ord
-  )
-),
-_ins AS (
-  INSERT INTO spatial_metrics (
-    subject_fragment_id,
-    subject_geography_id,
-    type,
-    overlay_source_url,
-    source_processing_job_dependency,
-    project_id,
-    parameters,
-    dependency_hash
-  )
-  SELECT
-    i.subject_fragment_id,
-    i.subject_geography_id,
-    i.type::spatial_metric_type,
-    i.overlay_source_url,
-    i.source_processing_job_dependency,
-    i.project_id,
-    i.parameters,
-    i.dependency_hash
-  FROM input i
-  ON CONFLICT (
-    COALESCE(overlay_source_url, ''::text),
-    COALESCE(source_processing_job_dependency, ''::text),
-    COALESCE(subject_fragment_id, ''::text),
-    COALESCE(subject_geography_id, '-999999'::integer),
-    type,
-    parameters,
-    dependency_hash
-  ) DO NOTHING
-  RETURNING
-    id,
-    type,
-    updated_at,
-    created_at,
-    value,
-    state,
-    error_message,
-    progress_percentage,
-    overlay_source_url,
-    parameters,
-    job_key,
-    subject_fragment_id,
-    subject_geography_id,
-    source_processing_job_dependency,
-    eta,
-    started_at,
-    duration,
-    dependency_hash
-),
-inserted AS (
-  SELECT
-    i.ord,
-    ins.id
-  FROM input i
-  INNER JOIN _ins ins ON
-    coalesce(ins.overlay_source_url, '') = coalesce(i.overlay_source_url, '')
-    AND coalesce(ins.source_processing_job_dependency, '') = coalesce(i.source_processing_job_dependency, '')
-    AND coalesce(ins.subject_fragment_id, '') = coalesce(i.subject_fragment_id, '')
-    AND coalesce(ins.subject_geography_id, -999999) = coalesce(i.subject_geography_id, -999999)
-    AND ins.type = i.type::spatial_metric_type
-    AND ins.parameters = i.parameters
-    AND ins.dependency_hash = i.dependency_hash
-),
-existing AS (
-  SELECT
-    i.ord,
-    sm.id
-  FROM input i
-  INNER JOIN spatial_metrics sm ON
-    coalesce(sm.overlay_source_url, '') = coalesce(i.overlay_source_url, '')
-    AND coalesce(sm.source_processing_job_dependency, '') = coalesce(i.source_processing_job_dependency, '')
-    AND coalesce(sm.subject_fragment_id, '') = coalesce(i.subject_fragment_id, '')
-    AND coalesce(sm.subject_geography_id, -999999) = coalesce(i.subject_geography_id, -999999)
-    AND sm.type = i.type::spatial_metric_type
-    AND sm.parameters = i.parameters
-    AND sm.dependency_hash = i.dependency_hash
-  WHERE NOT EXISTS (
-    SELECT 1
-    FROM inserted
-    WHERE inserted.ord = i.ord
-  )
-),
-resolved AS (
-  SELECT ord, id FROM inserted
-  UNION ALL
-  SELECT ord, id FROM existing
-),
-all_spatial_metrics AS (
-  SELECT
-    sm.id,
-    sm.type,
-    sm.updated_at,
-    sm.created_at,
-    sm.value,
-    sm.state,
-    sm.error_message,
-    sm.progress_percentage,
-    sm.overlay_source_url,
-    sm.parameters,
-    sm.job_key,
-    sm.subject_fragment_id,
-    sm.subject_geography_id,
-    sm.source_processing_job_dependency,
-    sm.eta,
-    sm.started_at,
-    sm.duration,
-    sm.dependency_hash
-  FROM spatial_metrics sm
-  INNER JOIN (
-    SELECT DISTINCT id FROM existing
-  ) existing_ids ON existing_ids.id = sm.id
-  UNION ALL
-  SELECT
-    id,
-    type,
-    updated_at,
-    created_at,
-    value,
-    state,
-    error_message,
-    progress_percentage,
-    overlay_source_url,
-    parameters,
-    job_key,
-    subject_fragment_id,
-    subject_geography_id,
-    source_processing_job_dependency,
-    eta,
-    started_at,
-    duration,
-    dependency_hash
-  FROM _ins
-),
-fragment_meta AS (
-  SELECT DISTINCT sm.subject_fragment_id AS h
-  FROM all_spatial_metrics sm
-  WHERE sm.subject_fragment_id IS NOT NULL
-),
-frag_agg AS (
-  SELECT
-    sf.fragment_hash AS h,
-    array_agg(sf.sketch_id ORDER BY sf.sketch_id) AS sketches
-  FROM sketch_fragments sf
-  WHERE sf.fragment_hash IN (SELECT h FROM fragment_meta)
-  GROUP BY sf.fragment_hash
-),
-geo_agg AS (
-  SELECT
-    fg.fragment_hash AS h,
-    array_agg(fg.geography_id ORDER BY fg.geography_id) AS geographies
-  FROM fragment_geographies fg
-  WHERE fg.fragment_hash IN (SELECT h FROM fragment_meta)
-  GROUP BY fg.fragment_hash
-)
-SELECT
-  r.ord,
-  jsonb_build_object(
-    'id', sm.id,
-    'type', sm.type,
-    'updatedAt', sm.updated_at,
-    'createdAt', sm.created_at,
-    'value', sm.value,
-    'state', sm.state,
-    'sourceUrl', sm.overlay_source_url,
-    'sourceType', extension_to_source_type(sm.overlay_source_url),
-    'parameters', coalesce(sm.parameters, '{}'::jsonb),
-    'jobKey', sm.job_key,
-    'subject',
-      CASE WHEN sm.subject_geography_id IS NOT NULL THEN
-        jsonb_build_object('id', sm.subject_geography_id, '__typename', 'GeographySubject')
-      ELSE
-        jsonb_build_object(
-          'hash', sm.subject_fragment_id,
-          'sketches', to_jsonb(coalesce(fa.sketches, ARRAY[]::integer[])),
-          'geographies', to_jsonb(coalesce(ga.geographies, ARRAY[]::integer[])),
-          '__typename', 'FragmentSubject'
-        )
-      END,
-    'errorMessage', sm.error_message,
-    'progress', sm.progress_percentage,
-    'sourceProcessingJobDependency', sm.source_processing_job_dependency,
-    'eta', sm.eta,
-    'startedAt', sm.started_at,
-    'durationSeconds', extract(epoch FROM sm.duration)::float,
-    'dependencyHash', sm.dependency_hash
-  ) AS metric
-FROM resolved r
-INNER JOIN all_spatial_metrics sm ON sm.id = r.id
-LEFT JOIN frag_agg fa ON fa.h = sm.subject_fragment_id
-LEFT JOIN geo_agg ga ON ga.h = sm.subject_fragment_id
-ORDER BY r.ord
-`;
 
 type ReportOverlaySourcePartial = {
   tableOfContentsItemId: number;
@@ -635,7 +417,11 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         },
       },
       Report: {
-        async dependencies(report, args, context: { pgClient: PoolClient; adminPool?: Pool }) {
+        async dependencies(
+          report,
+          args,
+          context: { pgClient: PoolClient; adminPool?: Pool },
+        ) {
           await assertSessionCanLoadReportDependencies(
             context.pgClient,
             report.projectId,
@@ -756,15 +542,15 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
 
           const metricsPool = adminPool ?? pgClient;
           const { metrics } = await createMetricsForDependencies(
-              pgClient,
-              args.input.nodeDependencies,
-              true,
-              projectId,
-              fragments,
-              geogs,
-              undefined,
-              { metricsPool },
-            );
+            pgClient,
+            args.input.nodeDependencies,
+            true,
+            projectId,
+            fragments,
+            geogs,
+            undefined,
+            { metricsPool },
+          );
 
           return {
             metrics,
@@ -898,7 +684,9 @@ async function getOrCreateReportDependencies(
   const perCard = cards.rows.map((card: { id: number; body: unknown }) => ({
     cardId: card.id,
     dependencies: extractMetricDependenciesFromReportBody(
-      card.body as Parameters<typeof extractMetricDependenciesFromReportBody>[0],
+      card.body as Parameters<
+        typeof extractMetricDependenciesFromReportBody
+      >[0],
     ),
   }));
   reportDepsProfileLog(
@@ -1140,7 +928,9 @@ async function getReportOverlaySources(
   const allDependencies: MetricDependency[] = [];
   for (const card of cards.rows) {
     const deps = extractMetricDependenciesFromReportBody(
-      card.body as Parameters<typeof extractMetricDependenciesFromReportBody>[0],
+      card.body as Parameters<
+        typeof extractMetricDependenciesFromReportBody
+      >[0],
     );
     allDependencies.push(...deps);
   }
@@ -1170,7 +960,10 @@ async function getReportOverlaySources(
 
   if (isReportDepsProfileEnabled()) {
     ns = reportDepsProfileNowNs();
-    const approxBytes = Buffer.byteLength(JSON.stringify(overlaySources), "utf8");
+    const approxBytes = Buffer.byteLength(
+      JSON.stringify(overlaySources),
+      "utf8",
+    );
     reportDepsProfileLog(
       "getReportOverlaySources",
       "jsonSerialize_overlaySources",
@@ -1182,7 +975,10 @@ async function getReportOverlaySources(
 
   if (process.env.REPORT_DEPS_TIMING) {
     const elapsedMs = Date.now() - t0;
-    const approxBytes = Buffer.byteLength(JSON.stringify(overlaySources), "utf8");
+    const approxBytes = Buffer.byteLength(
+      JSON.stringify(overlaySources),
+      "utf8",
+    );
     // eslint-disable-next-line no-console
     console.log(
       `[report.overlaySources] reportId=${reportId} isDraft=${isDraft} overlaySources=${overlaySources.length} approxBytes=${approxBytes} elapsedMs=${elapsedMs}`,
@@ -1285,7 +1081,19 @@ async function getOrCreateSpatialMetricsBatch(
 
   const sqlNs = reportDepsProfileNowNs();
   const result = await pool.query<{ ord: number; metric: unknown }>(
-    SPATIAL_METRICS_BULK_UPSERT_AND_JSON_SQL,
+    `
+      SELECT ord, metric
+      FROM bulk_upsert_spatial_metrics_and_json(
+        $1::text[],
+        $2::int[],
+        $3::text[],
+        $4::text[],
+        $5::jsonb[],
+        $6::text[],
+        $7::int[],
+        $8::text[]
+      )
+    `,
     [
       subjectFragmentIds,
       subjectGeographyIds,
@@ -1505,7 +1313,9 @@ async function getOverlaySourceRefsByStableIds(
   for (const stableId of stableIds) {
     const row = results[stableId];
     if (row && !row.sourceProcessingJobId) {
-      throw new Error(`No source processing job id for overlay source: ${stableId}`);
+      throw new Error(
+        `No source processing job id for overlay source: ${stableId}`,
+      );
     }
   }
 
