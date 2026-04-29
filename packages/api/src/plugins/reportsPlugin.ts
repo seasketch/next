@@ -1007,7 +1007,8 @@ async function areSourceProcessingJobsReady(
   return (rows[0]?.count || "0") === "0";
 }
 
-async function getOrCreateSpatialMetricsBatch(
+/** Exported for integration tests; core upsert is `bulk_upsert_spatial_metrics_and_json` in SQL. */
+export async function getOrCreateSpatialMetricsBatch(
   pool: Pool | PoolClient,
   inputs: Array<{
     subjectFragmentId?: string;
