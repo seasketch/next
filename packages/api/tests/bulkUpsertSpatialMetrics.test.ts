@@ -129,9 +129,9 @@ describe("getOrCreateSpatialMetricsBatch", () => {
   });
 
   test("distance_to_shore passes default land-big-2.fgb URL to Postgres", async () => {
-    const query = jest
-      .fn()
-      .mockResolvedValue({ rows: [{ ord: 1, metric: { type: "distance_to_shore" } }] });
+    const query = jest.fn().mockResolvedValue({
+      rows: [{ ord: 1, metric: { type: "distance_to_shore" } }],
+    });
     await getOrCreateSpatialMetricsBatch({ query } as never, [
       {
         subjectGeographyId: 42,
