@@ -1,4 +1,4 @@
-/** Set `REPORT_DEPS_PROFILE=1` for per-phase server timings on report dependency resolution and HTTP GraphQL wall clock. */
+/** Set `REPORT_DEPS_PROFILE=1` for per-phase server timings on report dependency resolution, SubjectReportContext field resolvers, and HTTP GraphQL wall clock. */
 
 export function isReportDepsProfileEnabled(): boolean {
   const v = process.env.REPORT_DEPS_PROFILE;

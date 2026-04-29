@@ -1,5 +1,6 @@
 -- Report overlay resolution: getOverlaySourceRefsByStableIds filters
---   items.stable_id = ANY($1) AND items.is_draft = $2
+--   items.stable_id = ANY($1) AND items.is_draft = $2 (and project_id when provided).
+-- Trusted path uses report_overlay_source_refs_by_stable_ids (SECURITY DEFINER).
 -- Btree (stable_id, is_draft) helps bitmap/merge plans more than stable_id alone.
 CREATE INDEX IF NOT EXISTS table_of_contents_items_stable_id_is_draft_idx
   ON public.table_of_contents_items (stable_id, is_draft);
@@ -458,4 +459,108 @@ GRANT EXECUTE ON FUNCTION public.get_or_create_spatial_metric(
   text,
   integer,
   text
+) TO anon;
+
+-- Fragment hash lookup without per-sketch RLS probe (caller must enforce access, e.g.
+-- assertSessionCanLoadReportDependencies + session_can_access_sketch).
+CREATE OR REPLACE FUNCTION public.get_fragment_hashes_for_sketch_trusted(p_sketch_id integer)
+RETURNS text[]
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path TO 'public', 'pg_temp'
+AS $function$
+DECLARE
+  fragment_hashes text[];
+  sketch_ids integer[];
+BEGIN
+  sketch_ids := ARRAY[]::integer[];
+  sketch_ids := array_append(sketch_ids, p_sketch_id);
+  sketch_ids := array_cat(
+    sketch_ids,
+    coalesce((
+      SELECT security_definer_get_child_sketches_recursive(p_sketch_id, 'sketch')
+    ), ARRAY[]::integer[])
+  );
+  SELECT array_agg(sf.fragment_hash) INTO fragment_hashes
+  FROM sketch_fragments sf
+  INNER JOIN fragments f ON sf.fragment_hash = f.hash
+  WHERE sf.sketch_id = ANY(sketch_ids);
+  RETURN coalesce(fragment_hashes, ARRAY[]::text[]);
+END;
+$function$;
+
+COMMENT ON FUNCTION public.get_fragment_hashes_for_sketch_trusted(integer) IS '@omit';
+
+REVOKE ALL ON FUNCTION public.get_fragment_hashes_for_sketch_trusted(integer) FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION public.get_fragment_hashes_for_sketch_trusted(integer) TO anon;
+
+-- Overlay refs for report dependency resolution: bypasses TOC/layer/source RLS.
+-- Scoped by project_id; caller must enforce session access to that project/sketch.
+CREATE OR REPLACE FUNCTION public.report_overlay_source_refs_by_stable_ids(
+  p_project_id integer,
+  p_stable_ids text[],
+  p_is_draft boolean
+)
+RETURNS TABLE (
+  table_of_contents_item_id integer,
+  stable_id text,
+  source_url text,
+  source_processing_job_id text,
+  output_id integer,
+  contains_overlapping_features boolean,
+  raster_band_count integer,
+  vector_geometry_type text
+)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path TO 'public', 'pg_temp'
+AS $function$
+  SELECT DISTINCT ON (items.stable_id)
+    items.id,
+    items.stable_id,
+    reporting_output.url,
+    coalesce(reporting_output.source_processing_job_key, jobs.job_key),
+    reporting_output.id,
+    reporting_output.contains_overlapping_features,
+    sources.raster_band_count,
+    sources.vector_geometry_type
+  FROM table_of_contents_items items
+  JOIN data_layers layers ON layers.id = items.data_layer_id
+  JOIN data_sources sources ON sources.id = layers.data_source_id
+  LEFT JOIN LATERAL table_of_contents_items_reporting_output(items.*) AS reporting_output ON true
+  LEFT JOIN LATERAL (
+    SELECT spj.job_key
+    FROM source_processing_jobs spj
+    WHERE spj.data_source_id = sources.id
+    ORDER BY spj.created_at DESC
+    LIMIT 1
+  ) jobs ON true
+  WHERE
+    items.stable_id = ANY(p_stable_ids)
+    AND items.is_draft = p_is_draft
+    AND items.project_id = p_project_id
+  ORDER BY
+    items.stable_id,
+    coalesce(reporting_output.id, 0) DESC;
+$function$;
+
+COMMENT ON FUNCTION public.report_overlay_source_refs_by_stable_ids(
+  integer,
+  text[],
+  boolean
+) IS '@omit';
+
+REVOKE ALL ON FUNCTION public.report_overlay_source_refs_by_stable_ids(
+  integer,
+  text[],
+  boolean
+) FROM PUBLIC;
+
+GRANT EXECUTE ON FUNCTION public.report_overlay_source_refs_by_stable_ids(
+  integer,
+  text[],
+  boolean
 ) TO anon;
