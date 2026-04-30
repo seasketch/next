@@ -447,42 +447,49 @@ export const ClassRowSettingsPopover = ({
               const sourceStableId = group.source?.stableId;
               const groupByActive =
                 !!sourceStableId && !!currentGroupByBySource[sourceStableId];
+              const showSourceOptionsPopover =
+                !hideGroupBy ||
+                (metricType === "overlay_area" && !!sourceStableId) ||
+                (groupedRows.length > 1 && !!sourceStableId);
+              const canRemoveThisSource =
+                groupedRows.length > 1 && !!sourceStableId;
               return (
                 <div key={group.title}>
                   <div className="px-3 py-2 font-semibold text-gray-600 bg-blue-50/20 border-b flex items-center justify-between gap-2">
                     <span className="text-sm truncate font-medium text-gray-700 min-w-0">
                       {group.title}
                     </span>
-                    <Popover.Root>
-                      <Popover.Trigger asChild>
-                        <button
-                          type="button"
-                          className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-blue-100/50 border border-transparent hover:border-blue-200 transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-400 focus-visible:border-blue-300"
-                          aria-label={t("Source options")}
-                        >
-                          <MixerHorizontalIcon className="w-3.5 h-3.5" />
-                          <span>{t("Source options")}</span>
-                        </button>
-                      </Popover.Trigger>
-                      <Popover.Portal>
-                        <Popover.Content
-                          side="bottom"
-                          align="end"
-                          sideOffset={6}
-                          collisionPadding={8}
-                          data-source-options-popover
-                          onInteractOutside={(e) => {
-                            const target = e.target as HTMLElement;
-                            if (
-                              target?.closest?.(
-                                "[data-group-by-picker-content]"
-                              )
-                            ) {
-                              e.preventDefault();
-                            }
-                          }}
-                          className="bg-white text-gray-900 border border-gray-200 rounded-lg shadow-xl z-[60] w-80 p-0 overflow-hidden"
-                        >
+                    {showSourceOptionsPopover ? (
+                      <Popover.Root>
+                        <Popover.Trigger asChild>
+                          <button
+                            type="button"
+                            className="flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium text-gray-600 hover:text-gray-900 hover:bg-blue-100/50 border border-transparent hover:border-blue-200 transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-400 focus-visible:border-blue-300"
+                            aria-label={t("Source options")}
+                          >
+                            <MixerHorizontalIcon className="w-3.5 h-3.5" />
+                            <span>{t("Source options")}</span>
+                          </button>
+                        </Popover.Trigger>
+                        <Popover.Portal>
+                          <Popover.Content
+                            side="bottom"
+                            align="end"
+                            sideOffset={6}
+                            collisionPadding={8}
+                            data-source-options-popover
+                            onInteractOutside={(e) => {
+                              const target = e.target as HTMLElement;
+                              if (
+                                target?.closest?.(
+                                  "[data-group-by-picker-content]"
+                                )
+                              ) {
+                                e.preventDefault();
+                              }
+                            }}
+                            className="bg-white text-gray-900 border border-gray-200 rounded-lg shadow-xl z-[60] w-80 p-0 overflow-hidden"
+                          >
                           {/* <div className="px-3 py-2.5 border-b border-gray-100 bg-gray-50/80">
                           <h3 className="text-sm font-semibold text-gray-800">
                             {group.title}
@@ -751,9 +758,10 @@ export const ClassRowSettingsPopover = ({
                                 </div>
                               )}
                           </div>
-                        </Popover.Content>
-                      </Popover.Portal>
-                    </Popover.Root>
+                          </Popover.Content>
+                        </Popover.Portal>
+                      </Popover.Root>
+                    ) : null}
                   </div>
 
                   {group.rows.map((row) => {
@@ -921,9 +929,13 @@ export const ClassRowSettingsPopover = ({
                                 sideOffset={4}
                                 className="bg-gray-900 text-white text-xs px-2 py-1.5 rounded shadow-lg z-[70] max-w-[220px]"
                               >
-                                {t(
-                                  "Row visibility can only be changed when this source has multiple rows. If you wish to remove this source entirely, click 'Source options'."
-                                )}
+                                {canRemoveThisSource
+                                  ? t(
+                                      "Row visibility can only be changed when this source has multiple rows. If you wish to remove this source entirely, click 'Source options'."
+                                    )
+                                  : t(
+                                      "Row visibility can only be changed when this source has multiple rows."
+                                    )}
                                 <Tooltip.Arrow className="fill-gray-900" />
                               </Tooltip.Content>
                             </Tooltip.Portal>
