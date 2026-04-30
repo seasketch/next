@@ -330,7 +330,9 @@ export default function SketchClassReportsAdmin({
             <span className="text-sm text-gray-500">
               {data?.sketchClass?.report &&
                 t("Last Published ") +
-                  new Date(data.sketchClass.report.createdAt).toLocaleDateString()}
+                  new Date(
+                    data.sketchClass.report.createdAt
+                  ).toLocaleDateString()}
             </span>
           </div>
         </div>
@@ -340,9 +342,9 @@ export default function SketchClassReportsAdmin({
         >
           <ReportPublishedMetricDependenciesRegistrar />
           <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
-            <div className="flex-none flex justify-end px-4 py-1 bg-gray-50 border-b text-xs">
+            {/* <div className="flex-none flex justify-end px-4 py-1 bg-gray-50 border-b text-xs">
               <FragmentCalculationsRuntimeIndicator />
-            </div>
+            </div> */}
             <SubjectReportContextProvider sketchId={selectedSketchId}>
               <FormLanguageContext.Provider value={formLanguageContextValue}>
                 <div className="flex-1 flex relative min-h-0 overflow-hidden">
