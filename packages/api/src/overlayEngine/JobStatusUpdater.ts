@@ -12,16 +12,36 @@ import colors from "yoctocolors-cjs";
 // Cache of EPSG validity checks — avoids re-requiring the same file and
 // never loads the full 6 MB all.json.  Each individual s/<code>.json is ~512 B.
 const _epsgKnownCache = new Map<number, boolean>();
+
+/**
+ * CRS codes we always accept without probing `epsg-index/s/<code>.json`.
+ * Dynamic `require("epsg-index/s/…")` can fail in some deployments (pruned
+ * `node_modules`, bundlers that omit non-static requires) even when the CRS
+ * is standard — e.g. EPSG:3857 is ubiquitous for web maps and is valid for
+ * the reporting pipeline; the error was a lookup failure, not “3857 is
+ * unsupported for analysis”.
+ */
+const EPSG_ALWAYS_KNOWN = new Set<number>([
+  4326, // WGS 84 — geographic input for sketches
+  3857, // WGS 84 / Pseudo-Mercator — common for rasters and map tiles
+  3785, // legacy alias used in the wild for the same projection as 3857
+  900913, // historical Google code for Web Mercator
+  102100, // Esri WKID equivalent to 3857
+]);
+
 function isKnownEpsg(epsg: number): boolean {
-  if (_epsgKnownCache.has(epsg)) return _epsgKnownCache.get(epsg)!;
+  const code = Math.trunc(Number(epsg));
+  if (Number.isNaN(code)) return false;
+  if (EPSG_ALWAYS_KNOWN.has(code)) return true;
+  if (_epsgKnownCache.has(code)) return _epsgKnownCache.get(code)!;
   let known = false;
   try {
-    require(`epsg-index/s/${epsg}.json`);
+    require(`epsg-index/s/${code}.json`);
     known = true;
   } catch {
     known = false;
   }
-  _epsgKnownCache.set(epsg, known);
+  _epsgKnownCache.set(code, known);
   return known;
 }
 
