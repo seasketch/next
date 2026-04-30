@@ -1,18 +1,20 @@
 import { useState, useEffect, useMemo, useCallback, useContext } from "react";
 import { useTranslation } from "react-i18next";
 import {
+  BaseDraftReportContextDocument,
   DraftReportDocument,
+  DraftReportDebuggingMaterialsDocument,
+  DraftReportDebuggingMaterialsQuery,
   SketchingDetailsFragment,
   useCreateDraftReportMutation,
   useDraftReportQuery,
   useProjectMetadataQuery,
   usePublishReportMutation,
-  useDraftReportDebuggingMaterialsQuery,
   usePublishTableOfContentsMutation,
   PublishedTableOfContentsDocument,
   LayersAndSourcesForItemsDocument,
-  BaseDraftReportContextDocument,
 } from "../../generated/graphql";
+import { useApolloClient } from "@apollo/client";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import Warning from "../../components/Warning";
 import Button from "../../components/Button";
@@ -43,6 +45,7 @@ export default function SketchClassReportsAdmin({
   const projectId = useProjectId();
 
   const onError = useGlobalErrorHandler();
+  const client = useApolloClient();
   const { data, loading } = useDraftReportQuery({
     variables: {
       sketchClassId: sketchClass.id,
@@ -50,13 +53,41 @@ export default function SketchClassReportsAdmin({
     onError,
   });
 
-  const { data: debuggingMaterialsData } =
-    useDraftReportDebuggingMaterialsQuery({
-      variables: {
-        sketchClassId: sketchClass.id,
-      },
-      onError,
-    });
+  /**
+   * Demonstration sketch list (`mySketches`) is stable during report authoring.
+   * A watched `useQuery` here re-ran on every draft-report/card cache write because
+   * it shares normalized `SketchClass` — use a one-shot read instead (no broadcast subscription).
+   */
+  const [debuggingMaterialsData, setDebuggingMaterialsData] =
+    useState<DraftReportDebuggingMaterialsQuery | null>(null);
+  const [debuggingMaterialsLoading, setDebuggingMaterialsLoading] =
+    useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setDebuggingMaterialsLoading(true);
+    void client
+      .query<DraftReportDebuggingMaterialsQuery>({
+        query: DraftReportDebuggingMaterialsDocument,
+        variables: { sketchClassId: sketchClass.id },
+        fetchPolicy: "cache-first",
+      })
+      .then((result) => {
+        if (!cancelled) {
+          setDebuggingMaterialsData(result.data);
+          setDebuggingMaterialsLoading(false);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setDebuggingMaterialsLoading(false);
+          onError(err as Error);
+        }
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [sketchClass.id, client, onError]);
 
   const sketchesForDemonstration = useMemo(() => {
     const sketches =
@@ -231,10 +262,14 @@ export default function SketchClassReportsAdmin({
 
   const hasUnpublishedChanges =
     (data?.sketchClass && !data?.sketchClass?.report) ||
-    new Date(data?.sketchClass?.draftReport?.updatedAt) >=
-      new Date(data?.sketchClass?.report?.createdAt);
+    new Date(data?.sketchClass?.draftReport?.updatedAt ?? 0) >=
+      new Date(data?.sketchClass?.report?.createdAt ?? 0);
 
-  if (sketchesForDemonstration.length === 0 && !loading) {
+  if (
+    sketchesForDemonstration.length === 0 &&
+    !loading &&
+    !debuggingMaterialsLoading
+  ) {
     return (
       <div className="flex-1 p-8 pt-16">
         <div className="max-w-md text-center mx-auto">
@@ -269,100 +304,59 @@ export default function SketchClassReportsAdmin({
 
   return (
     <BaseReportContextProvider sketchClassId={sketchClass.id} draft={true}>
-      <ReportDependenciesContextProvider
-        sketchId={selectedSketchId}
-        reportId={draftReport?.id}
-      >
-        <ReportPublishedMetricDependenciesRegistrar />
-        <SubjectReportContextProvider sketchId={selectedSketchId}>
-          <FormLanguageContext.Provider value={formLanguageContextValue}>
-            <div className="flex flex-col w-full h-full overflow-y-hidden">
-              {/* Header */}
-              <div className="bg-gray-100 p-4 flex-none border-b shadow z-10 flex items-center justify-between">
-                <div className="flex w-full space-x-2 items-center">
-                  <Button
-                    small
-                    disabled={
-                      publishReportState.loading || !hasUnpublishedChanges
-                    }
-                    title={
-                      hasUnpublishedChanges
-                        ? t(
-                            "There are unpublished changes. Publish to save them."
-                          )
-                        : t("No unpublished changes")
-                    }
-                    loading={publishReportState.loading}
-                    label={t("Publish Report")}
-                    onClick={() => {
-                      publishReport({
-                        variables: {
-                          sketchClassId: sketchClass.id,
-                        },
-                      });
-                    }}
-                    primary={hasUnpublishedChanges}
-                  />
-                  <span className="text-sm text-gray-500">
-                    {data?.sketchClass?.report &&
-                      t("Last Published ") +
-                        new Date(
-                          data.sketchClass.report.createdAt
-                        ).toLocaleDateString()}
-                  </span>
-                  <FragmentCalculationsRuntimeIndicator />
-                </div>
-                {/* <EditorLanguageSelector /> */}
-              </div>
-              {/* Main */}
-              <div className="flex-1 flex relative max-h-full overflow-hidden">
-                {/* main content */}
-                {/* {sketchesForDemonstration.length === 0 && !loading ? (
-                <div className="flex-1 p-8 pt-16">
-                  <div className="max-w-md text-center mx-auto">
-                    <div className="mb-6">
-                      <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100">
-                        <div className="w-6 h-6 text-blue-600">
-                          {SketchingIcon}
-                        </div>
-                      </div>
-                    </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">
-                      {t("No sketches available for demonstration")}
-                    </h3>
-                    <p className="text-gray-600 mb-6">
-                      {t(
-                        "To author reports based on real data, you need to create sketches in your account first. Consider creating multiple sketches that represent different scenarios to test your reports thoroughly."
-                      )}
-                    </p>
-                    <Button
-                      label={t("Go to Sketching")}
-                      onClick={() => {
-                        window.location.href = `/${slug}/app/sketches`;
-                      }}
-                      primary
-                    />
-                  </div>
-                </div>
-              ) : ( */}
-                <ReportEditor
-                  demonstrationSketches={sketchesForDemonstration}
-                  selectedSketchId={selectedSketchId}
-                  setSelectedSketchId={setSelectedSketchId}
-                />
-                {/* )} */}
-
-                {/* right sidebar */}
-                {/* <div className="w-0 bg-white flex-none border-l shadow"></div> */}
-                {/* bottom right geography metrics indicator */}
-              </div>
-
-              {/* Footer */}
-              {/* <div className="bg-gray-100 p-4 flex-none border-t shadow"></div> */}
+      <div className="flex flex-col w-full h-full overflow-y-hidden">
+        {/* Admin chrome only: publish + last published (no card/report deps or form language) */}
+        <div className="bg-gray-100 p-4 flex-none border-b shadow z-10 flex items-center justify-between">
+          <div className="flex w-full space-x-2 items-center">
+            <Button
+              small
+              disabled={publishReportState.loading || !hasUnpublishedChanges}
+              title={
+                hasUnpublishedChanges
+                  ? t("There are unpublished changes. Publish to save them.")
+                  : t("No unpublished changes")
+              }
+              loading={publishReportState.loading}
+              label={t("Publish Report")}
+              onClick={() => {
+                publishReport({
+                  variables: {
+                    sketchClassId: sketchClass.id,
+                  },
+                });
+              }}
+              primary={hasUnpublishedChanges}
+            />
+            <span className="text-sm text-gray-500">
+              {data?.sketchClass?.report &&
+                t("Last Published ") +
+                  new Date(data.sketchClass.report.createdAt).toLocaleDateString()}
+            </span>
+          </div>
+        </div>
+        <ReportDependenciesContextProvider
+          sketchId={selectedSketchId}
+          reportId={draftReport?.id}
+        >
+          <ReportPublishedMetricDependenciesRegistrar />
+          <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
+            <div className="flex-none flex justify-end px-4 py-1 bg-gray-50 border-b text-xs">
+              <FragmentCalculationsRuntimeIndicator />
             </div>
-          </FormLanguageContext.Provider>
-        </SubjectReportContextProvider>
-      </ReportDependenciesContextProvider>
+            <SubjectReportContextProvider sketchId={selectedSketchId}>
+              <FormLanguageContext.Provider value={formLanguageContextValue}>
+                <div className="flex-1 flex relative min-h-0 overflow-hidden">
+                  <ReportEditor
+                    demonstrationSketches={sketchesForDemonstration}
+                    selectedSketchId={selectedSketchId}
+                    setSelectedSketchId={setSelectedSketchId}
+                  />
+                </div>
+              </FormLanguageContext.Provider>
+            </SubjectReportContextProvider>
+          </div>
+        </ReportDependenciesContextProvider>
+      </div>
     </BaseReportContextProvider>
   );
 }

@@ -783,7 +783,7 @@ query BaseReportContext($sketchClassId: Int!) {
 query BaseDraftReportContext($sketchClassId: Int!) {
   sketchClass(id: $sketchClassId) {
     ...ReportContextSketchClassDetails
-    report: draftReport {
+    draftReport {
       ...BaseReportDetails
     }
   }

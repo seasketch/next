@@ -102,7 +102,8 @@ export default function ReportEditor({
   const copyCardsQuery = useCopyableReportCardsQuery({
     variables: { projectId: projectId! },
     skip: !projectId,
-    fetchPolicy: "cache-and-network",
+    fetchPolicy: "cache-first",
+    nextFetchPolicy: "cache-first",
   });
 
   const eligibleSketchClassCount = useMemo(() => {

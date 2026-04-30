@@ -45,7 +45,6 @@ import {
   useProjectReportingLayersQuery,
   usePreprocessSourceMutation,
   BaseDraftReportContextDocument,
-  DraftReportDocument,
   useUpdateReportCardBodyMutation,
   useDraftReportDependenciesQuery,
   useDraftReportOverlaySourcesQuery,
@@ -53,7 +52,6 @@ import {
   useDeleteReportCardMutation,
   ReportDependenciesDocument,
   ReportOverlaySourcesDocument,
-  DataSourceTypes,
 } from "../../generated/graphql";
 import { useTranslation } from "react-i18next";
 import { useSlashCommandPalette } from "../hooks/useSlashCommandPalette";
@@ -104,6 +102,34 @@ interface ReportCardBodyEditorProps {
   cardId: number;
   preselectTitle?: boolean;
   footerContainerRef: React.RefObject<HTMLDivElement>;
+}
+
+function cloneBodyForSave(body: ProsemirrorBodyJSON): ProsemirrorBodyJSON {
+  return JSON.parse(JSON.stringify(body));
+}
+
+function normalizedBodyForSave(body: ProsemirrorBodyJSON): ProsemirrorBodyJSON {
+  return setCollapsibleBlocksClosed(cloneBodyForSave(body));
+}
+
+function bodiesAreEqual(
+  a: ProsemirrorBodyJSON,
+  b: ProsemirrorBodyJSON
+): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+/** Skip URL substitution so fingerprints compare dependency shape only (stable ids etc.). */
+const EMPTY_OVERLAY_SOURCE_URLS: { [stableId: string]: string } = {};
+
+function metricDependenciesFingerprint(body: ProsemirrorBodyJSON): string {
+  const dependencies: MetricDependency[] = [];
+  extractMetricDependenciesFromReportBody(body, dependencies);
+  const hashes = dependencies.map((d) =>
+    hashMetricDependency(d, EMPTY_OVERLAY_SOURCE_URLS)
+  );
+  hashes.sort();
+  return hashes.join("\n");
 }
 
 function ReportCardBodyEditorInner({
@@ -173,27 +199,32 @@ function ReportCardBodyEditorInner({
   const [updateReportCard, updateReportCardState] =
     useUpdateReportCardBodyMutation({
       onError,
-      awaitRefetchQueries: true,
-      refetchQueries: refetchDraftReportTree,
     });
 
   const saveWithBody = useCallback(
-    async (body: ProsemirrorBodyJSON) => {
+    async (nextBody: ProsemirrorBodyJSON) => {
+      const savedBody = normalizedBodyForSave(nextBody);
+      const currentSavedBody = normalizedBodyForSave(body);
+      if (bodiesAreEqual(savedBody, currentSavedBody)) {
+        setEditing(null);
+        return;
+      }
+      const dependenciesChanged =
+        metricDependenciesFingerprint(savedBody) !==
+        metricDependenciesFingerprint(currentSavedBody);
       await updateReportCard({
         variables: {
           id: cardId,
-          body: setCollapsibleBlocksClosed(body),
+          body: savedBody,
         },
-        refetchQueries: [
-          ...refetchDraftReportTree,
-          ReportDependenciesDocument,
-          ReportOverlaySourcesDocument,
-        ],
-        awaitRefetchQueries: true,
+        refetchQueries: dependenciesChanged
+          ? [ReportDependenciesDocument, ReportOverlaySourcesDocument]
+          : undefined,
+        awaitRefetchQueries: dependenciesChanged,
       });
       setEditing(null);
     },
-    [updateReportCard, cardId, setEditing, refetchDraftReportTree]
+    [updateReportCard, body, cardId, setEditing]
   );
 
   const handleCardSave = useCallback(

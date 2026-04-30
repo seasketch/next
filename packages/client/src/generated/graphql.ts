@@ -24306,7 +24306,7 @@ export type BaseDraftReportContextQuery = (
   { __typename?: 'Query' }
   & { sketchClass?: Maybe<(
     { __typename?: 'SketchClass' }
-    & { report?: Maybe<(
+    & { draftReport?: Maybe<(
       { __typename?: 'Report' }
       & BaseReportDetailsFragment
     )> }
@@ -38296,7 +38296,7 @@ export const BaseDraftReportContextDocument = gql`
     query BaseDraftReportContext($sketchClassId: Int!) {
   sketchClass(id: $sketchClassId) {
     ...ReportContextSketchClassDetails
-    report: draftReport {
+    draftReport {
       ...BaseReportDetails
     }
   }
