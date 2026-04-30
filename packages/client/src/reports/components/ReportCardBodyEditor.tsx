@@ -316,7 +316,7 @@ function ReportCardBodyEditorInner({
       ...extractMetricDependenciesFromReportBody(draftBody),
       ...additionalDependencies,
     ],
-    [draftBody, additionalDependencies],
+    [draftBody, additionalDependencies]
   );
 
   const hydratedDraftMetrics = useMemo(() => {
@@ -335,7 +335,8 @@ function ReportCardBodyEditorInner({
     });
   }, [
     draftDependenciesQuery.data?.draftReportDependencies?.metrics,
-    draftDependenciesQuery.data?.draftReportDependencies?.fragmentSubjectCatalog,
+    draftDependenciesQuery.data?.draftReportDependencies
+      ?.fragmentSubjectCatalog,
     draftDependencyListForHydration,
     draftOverlaySources,
   ]);

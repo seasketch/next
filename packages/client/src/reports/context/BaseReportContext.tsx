@@ -23,7 +23,10 @@ type BaseReportContextValue = {
     | "validChildren"
   >;
   report: ReportConfiguration;
-  geographies: Pick<Geography, "id" | "name" | "translatedProps" | "stableIds">[];
+  geographies: Pick<
+    Geography,
+    "id" | "name" | "translatedProps" | "stableIds"
+  >[];
 };
 
 export const BaseReportContext = createContext<{
@@ -40,14 +43,17 @@ export function BaseReportContextProvider({
   sketchClassId: number;
   draft: boolean;
 }) {
-  const publishedQuery = useQuery<BaseReportContextQuery, BaseReportContextQueryVariables>(
-    BaseReportContextDocument,
-    { variables: { sketchClassId }, skip: draft }
-  );
-  const draftQuery = useQuery<BaseDraftReportContextQuery, BaseReportContextQueryVariables>(
-    BaseDraftReportContextDocument,
-    { variables: { sketchClassId }, skip: !draft }
-  );
+  const publishedQuery = useQuery<
+    BaseReportContextQuery,
+    BaseReportContextQueryVariables
+  >(BaseReportContextDocument, { variables: { sketchClassId }, skip: draft });
+  const draftQuery = useQuery<
+    BaseDraftReportContextQuery,
+    BaseReportContextQueryVariables
+  >(BaseDraftReportContextDocument, {
+    variables: { sketchClassId },
+    skip: !draft,
+  });
 
   const data = draft ? draftQuery.data : publishedQuery.data;
   const loading = draft ? draftQuery.loading : publishedQuery.loading;
