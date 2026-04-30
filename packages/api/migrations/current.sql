@@ -572,3 +572,35 @@ GRANT EXECUTE ON FUNCTION public.report_overlay_source_refs_by_stable_ids(
   text[],
   boolean
 ) TO anon;
+
+-- ---------------------------------------------------------------------------
+-- spatial_metrics vs failed overlay preprocessing jobs
+--
+-- `trigger_queue_spatial_metrics_on_source_complete` (AFTER UPDATE on
+-- source_processing_jobs) only marks dependents when the job *transitions*
+-- into `error`. Metrics created *after* the job is already errored never see
+-- that transition, so they must be marked on INSERT via
+-- `before_insert_spatial_metrics_check_dependency_error`.
+--
+-- If that BEFORE INSERT trigger is missing, rows stay `queued` forever while
+-- the overlay row shows error (see ReportMetricsProgressDetails).
+-- ---------------------------------------------------------------------------
+DROP TRIGGER IF EXISTS before_insert_spatial_metrics_check_dependency_error_trigger
+  ON public.spatial_metrics;
+
+CREATE TRIGGER before_insert_spatial_metrics_check_dependency_error_trigger
+  BEFORE INSERT ON public.spatial_metrics
+  FOR EACH ROW
+  EXECUTE FUNCTION public.before_insert_spatial_metrics_check_dependency_error();
+
+-- Heal rows created while the trigger was missing (or any other drift).
+UPDATE spatial_metrics sm
+SET
+  state = 'error',
+  error_message = 'Error processing source dependency.'
+FROM source_processing_jobs j
+WHERE
+  sm.source_processing_job_dependency = j.job_key
+  AND j.state = 'error'
+  AND sm.state IS DISTINCT FROM 'error'
+  AND sm.state IS DISTINCT FROM 'complete';

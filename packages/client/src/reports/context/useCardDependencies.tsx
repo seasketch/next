@@ -51,11 +51,19 @@ export function useCardDependencies(cardId: number): CardDependenciesResult {
             metric.state !== SpatialMetricState.Complete &&
             metric.state !== SpatialMetricState.Error
         ) ||
-        overlaySources.some(
-          (source) =>
-            source.sourceProcessingJob?.state !== SpatialMetricState.Complete &&
-            source.sourceProcessingJob?.state !== SpatialMetricState.Error
-        );
+        overlaySources.some((source) => {
+          const jobState = source.sourceProcessingJob?.state;
+          if (jobState === SpatialMetricState.Complete) return false;
+          if (jobState === SpatialMetricState.Error) return false;
+          if (
+            jobState === SpatialMetricState.Queued ||
+            jobState === SpatialMetricState.Processing
+          ) {
+            return true;
+          }
+          // No job / unknown state: settled only when output exists (same idea as ReportTaskLineItem).
+          return !source.output?.url;
+        });
 
       // Compute errors
       const errors: { [errorMessage: string]: number } = {};

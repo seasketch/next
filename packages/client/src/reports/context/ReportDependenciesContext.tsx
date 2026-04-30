@@ -18,7 +18,7 @@ import {
   useReportDependenciesQuery,
   useReportOverlaySourcesQuery,
 } from "../../generated/graphql";
-import { subjectIsFragment } from "overlay-engine";
+import { hashMetricDependency, subjectIsFragment } from "overlay-engine";
 import { ApolloError, NetworkStatus, useApolloClient } from "@apollo/client";
 import type { MetricDependency } from "overlay-engine";
 import { ReportMetricDependencyRegistrarContext } from "./ReportMetricDependencyRegistrarContext";
@@ -246,6 +246,28 @@ export default function ReportDependenciesContextProvider({
   const waitingForDocRegistration =
     rawSlimMetrics.length > 0 && registrationRef.current === null;
 
+  /**
+   * Use slim server metrics (filtered like hydration) for polling decisions.
+   * Hydrated metrics omit rows without a resolvable `subject` even when `state`
+   * is terminal — those omissions previously kept `refetchDeps` polling alive.
+   */
+  const pollingRelevantSlimMetrics = useMemo(() => {
+    if (waitingForDocRegistration) {
+      return EMPTY_SLIM_METRICS;
+    }
+    const deps = registrationRef.current?.deps ?? [];
+    const urlMap = buildOverlayStableIdToSourceUrlMap(overlaySources);
+    const knownHashes = new Set(
+      deps.map((d) => hashMetricDependency(d, urlMap)),
+    );
+    return rawSlimMetrics.filter((m) => knownHashes.has(m.dependencyHash));
+  }, [
+    rawSlimMetrics,
+    overlaySources,
+    registrationEpoch,
+    waitingForDocRegistration,
+  ]);
+
   const contextValue = useMemo(() => {
     let fragmentCalculationsRuntime: number | undefined = undefined;
     if (!dependenciesQueryLoading && !waitingForDocRegistration) {
@@ -291,7 +313,7 @@ export default function ReportDependenciesContextProvider({
   ]);
 
   useEffect(() => {
-    const anyMetricsLoading = contextValue.metrics.some(
+    const anyMetricsLoading = pollingRelevantSlimMetrics.some(
       (metric) =>
         metric.state !== SpatialMetricState.Complete &&
         metric.state !== SpatialMetricState.Error,
@@ -323,11 +345,10 @@ export default function ReportDependenciesContextProvider({
       if (overlayInterval) clearInterval(overlayInterval);
     };
   }, [
-    depsData,
     overlayData,
     refetchDeps,
     refetchOverlaySources,
-    contextValue.metrics,
+    pollingRelevantSlimMetrics,
     contextValue.overlaySources,
   ]);
 
