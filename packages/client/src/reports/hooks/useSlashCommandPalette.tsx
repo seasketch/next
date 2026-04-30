@@ -28,10 +28,10 @@ import {
   SlashCommandPaletteVirtualList,
   SlashCommandPaletteSimpleList,
   VIRTUAL_LIST_COMMAND_THRESHOLD,
-  type CommandPalettePreviewItem,
-  type SubmenuNav,
-  type PaletteRowSharedProps,
-  type SlashCommandPaletteVirtualItemData,
+  CommandPalettePreviewItem,
+  SubmenuNav,
+  PaletteRowSharedProps,
+  SlashCommandPaletteVirtualItemData,
 } from "./SlashCommandPaletteList";
 
 type TriggerSource = "slash" | "manual";
