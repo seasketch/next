@@ -2,6 +2,14 @@
 --   items.stable_id = ANY($1) AND items.is_draft = $2 (and project_id when provided).
 -- Trusted path uses report_overlay_source_refs_by_stable_ids (SECURITY DEFINER).
 -- Btree (stable_id, is_draft) helps bitmap/merge plans more than stable_id alone.
+--
+-- Cleanup legacy overloaded functions that break PostGraphile field generation.
+-- PostGraphile cannot expose overloaded functions that would map to the same
+-- GraphQL field name (e.g. `addReportCard`), so we must keep a single overload.
+DROP FUNCTION IF EXISTS public.add_report_card(integer, jsonb, text, jsonb);
+
+-- (touch) ensure graphile-migrate watch reruns current.sql
+
 CREATE INDEX IF NOT EXISTS table_of_contents_items_stable_id_is_draft_idx
   ON public.table_of_contents_items (stable_id, is_draft);
 
