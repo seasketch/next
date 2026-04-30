@@ -24225,7 +24225,7 @@ export type ProjectReportingLayersQuery = (
         & Pick<DataLayer, 'id' | 'version'>
         & { dataSource?: Maybe<(
           { __typename?: 'DataSource' }
-          & Pick<DataSource, 'id' | 'type' | 'createdAt' | 'attribution' | 'vectorGeometryType'>
+          & Pick<DataSource, 'id' | 'type' | 'createdAt' | 'attribution' | 'vectorGeometryType' | 'isSingleBandRaster'>
           & { authorProfile?: Maybe<(
             { __typename?: 'Profile' }
             & AuthorProfileFragment
@@ -38366,6 +38366,7 @@ export const ProjectReportingLayersDocument = gql`
           createdAt
           attribution
           vectorGeometryType
+          isSingleBandRaster
         }
       }
       copiedFromDataLibraryTemplateId
