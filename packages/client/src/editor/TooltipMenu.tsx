@@ -758,6 +758,7 @@ export default function TooltipMenu({
           ds?.tooltipDropdown === "true" ||
           ds?.tooltipPortal === "true" ||
           ds?.reportCommandPalette === "true" ||
+          ds?.reportCommandPaletteFlyout === "true" ||
           ds?.reportBlockHandle === "true" ||
           ds?.reportSourceLayerDropdown === "true" ||
           ds?.sourceOptionsPopover !== undefined ||
