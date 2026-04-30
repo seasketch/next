@@ -223,9 +223,20 @@ export async function verifyProjectInvite(
   if (!claims.inviteId) {
     throw new Error("inviteId not present in claims");
   }
-  const wasUsed = (
-    await client.query(`select project_invite_was_used($1)`, [claims.inviteId])
-  ).rows[0].project_invite_was_used as boolean;
+  const row = (
+    await client.query(`select project_invite_was_used($1) as was_used`, [
+      claims.inviteId,
+    ])
+  ).rows[0];
+  const raw = row?.was_used;
+  // project_invite_was_used() is `select was_used from project_invites where id = $1`
+  // and returns NULL when no row exists (e.g. invite deleted after the JWT was sent).
+  if (raw === null || raw === undefined) {
+    throw new Error(
+      "This invitation is no longer valid. It may have been replaced or removed. Please use the link from the most recent invitation email, or ask a project administrator to resend your invitation."
+    );
+  }
+  const wasUsed = raw as boolean;
   return {
     ...claims,
     wasUsed,
