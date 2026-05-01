@@ -57,7 +57,7 @@ async function assertSessionCanLoadReportDependencies(
  * Bulk metric JSON is implemented in PostgreSQL as `public.resolve_spatial_metrics_batch`
  * (see packages/api/migrations — graphile-migrate `current.sql` until committed).
  * Reads cached metrics first, inserts missing rows with ON CONFLICT DO NOTHING, then queues
- * calculateSpatialMetric jobs explicitly for newly inserted queued metrics.
+ * a single `calculateSpatialMetricsBatch` graphile-worker job for newly inserted metrics.
  */
 
 type ReportOverlaySourcePartial = {

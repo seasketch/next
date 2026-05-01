@@ -20,7 +20,7 @@ let jobStatusUpdater: JobStatusUpdater | null = null;
  * Priority: result/error > begin > progress (highest progress value only)
  */
 function consolidateMessagesByJobKey(
-  messages: MessageWithReceipt[]
+  messages: MessageWithReceipt[],
 ): Map<string, MessageWithReceipt> {
   const consolidated = new Map<string, MessageWithReceipt>();
 
@@ -61,7 +61,7 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
 
   if (!queueUrl) {
     console.error(
-      "OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL environment variable is not set"
+      "OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL environment variable is not set",
     );
     return;
   }
@@ -77,7 +77,6 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
 
     if (response.Messages && response.Messages.length > 0) {
       let queryCount = 0;
-      console.time("processing sqs messages");
       // Parse all messages first
       const parsedMessages: MessageWithReceipt[] = [];
       const receiptHandlesToDelete: string[] = []; // Store all receipt handles for deletion
@@ -88,7 +87,6 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
             const parsedMessage: OverlayEngineWorkerMessage & {
               origin?: string;
             } = JSON.parse(message.Body);
-            
 
             if (parsedMessage.jobKey) {
               parsedMessages.push({
@@ -102,8 +100,8 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
             } else {
               console.error(
                 colors.red(
-                  "Job key is required for overlay engine worker messages"
-                )
+                  "Job key is required for overlay engine worker messages",
+                ),
               );
             }
           } catch (parseError) {
@@ -112,7 +110,7 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
             }
             console.error(
               colors.red("Failed to parse message body:"),
-              parseError
+              parseError,
             );
             console.log("Raw message body:", message.Body);
           }
@@ -121,7 +119,7 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
             receiptHandlesToDelete.push(message.ReceiptHandle);
             console.error(
               colors.red("Failed to parse message body:"),
-              "No body"
+              "No body",
             );
           }
         }
@@ -133,30 +131,30 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
           message.type === "begin"
             ? colors.green
             : message.type === "error"
-            ? colors.red
-            : message.type === "progress"
-            ? colors.blue
-            : colors.yellow;
+              ? colors.red
+              : message.type === "progress"
+                ? colors.blue
+                : colors.yellow;
         console.log(
           color(
             `[${message.jobKey}] ${message.type} ${
               message.type === "progress"
                 ? message.progress
                 : message.type === "error"
-                ? message.error
-                : message.type === "result"
-                ? message.result
-                : ""
+                  ? message.error
+                  : message.type === "result"
+                    ? message.type
+                    : ""
             } ${message.type === "progress" ? message.message : ""} ${
               message.type === "progress" && message.eta ? message.eta : ""
-            }`
-          )
+            }`,
+          ),
         );
       }
 
       // Consolidate messages by jobKey
       const consolidatedMessages = consolidateMessagesByJobKey(
-        parsedMessages as any
+        parsedMessages as any,
       );
 
       // Process consolidated messages
@@ -166,7 +164,7 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
         } catch (processError) {
           console.error(
             `Error processing consolidated message for job ${jobKey}:`,
-            processError
+            processError,
           );
         }
       }
@@ -183,7 +181,6 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
           console.error("Failed to delete message:", deleteError);
         }
       }
-      console.timeEnd("processing sqs messages");
     } else {
       // console.log("No messages received from queue");
     }
@@ -197,7 +194,7 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
  */
 export async function startOverlayEngineWorkerMessageConsumer(pgPool: Pool) {
   console.log(
-    `Starting overlay engine worker message consumer on ${process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL}`
+    `Starting overlay engine worker message consumer on ${process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL}`,
   );
 
   jobStatusUpdater = new JobStatusUpdater(pgPool, sqsClient);

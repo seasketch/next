@@ -277,7 +277,7 @@ describe("resolve_spatial_metrics_batch", () => {
     });
   });
 
-  test("queues calculateSpatialMetric job for newly inserted queued metric", async () => {
+  test("queues calculateSpatialMetricsBatch job for newly inserted queued metric", async () => {
     await projectTransaction(pool, "public", async (conn, projectId) => {
       const geoId = await createProjectGeography(conn, projectId);
       const dep = uniq("dep-job");
@@ -293,13 +293,13 @@ describe("resolve_spatial_metrics_batch", () => {
         depHashes: [dep],
       });
 
-      const metricId = String(rows[0].metric.id);
+      const metricId = Number(rows[0].metric.id);
       const jobCount = await conn.oneFirst<number>(
         sql`
           select count(*)::int
           from graphile_worker.jobs
-          where task_identifier = 'calculateSpatialMetric'
-            and key = ${`calculateSpatialMetric:${metricId}`}
+          where task_identifier = 'calculateSpatialMetricsBatch'
+            and payload::jsonb @> ${sql.json({ metricIds: [metricId] })}
         `,
       );
       expect(jobCount).toBe(1);
@@ -322,15 +322,15 @@ describe("resolve_spatial_metrics_batch", () => {
       };
 
       const first = await resolveBatchFromConn(conn, args);
-      const metricId = String(first[0].metric.id);
+      const metricId = Number(first[0].metric.id);
       await resolveBatchFromConn(conn, args);
 
       const jobCount = await conn.oneFirst<number>(
         sql`
           select count(*)::int
           from graphile_worker.jobs
-          where task_identifier = 'calculateSpatialMetric'
-            and key = ${`calculateSpatialMetric:${metricId}`}
+          where task_identifier = 'calculateSpatialMetricsBatch'
+            and payload::jsonb @> ${sql.json({ metricIds: [metricId] })}
         `,
       );
       expect(jobCount).toBe(1);

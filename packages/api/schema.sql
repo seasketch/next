@@ -5106,232 +5106,6 @@ COMMENT ON FUNCTION public.build_layer_interactivity_acl_payload(p_acl_id intege
 
 
 --
--- Name: bulk_upsert_spatial_metrics_and_json(text[], integer[], text[], text[], jsonb[], text[], integer[], text[]); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.bulk_upsert_spatial_metrics_and_json(p_subject_fragment_ids text[], p_subject_geography_ids integer[], p_types text[], p_overlay_source_urls text[], p_parameters jsonb[], p_source_processing_job_dependencies text[], p_project_ids integer[], p_dependency_hashes text[]) RETURNS TABLE(ord integer, metric jsonb)
-    LANGUAGE sql SECURITY DEFINER
-    SET search_path TO 'public', 'pg_temp'
-    AS $$
-  WITH input AS (
-    SELECT *
-    FROM unnest(
-      p_subject_fragment_ids,
-      p_subject_geography_ids,
-      p_types,
-      p_overlay_source_urls,
-      p_parameters,
-      p_source_processing_job_dependencies,
-      p_project_ids,
-      p_dependency_hashes
-    ) WITH ORDINALITY AS u(
-      subject_fragment_id,
-      subject_geography_id,
-      type,
-      overlay_source_url,
-      parameters,
-      source_processing_job_dependency,
-      project_id,
-      dependency_hash,
-      ord
-    )
-  ),
-  _ins AS (
-    INSERT INTO spatial_metrics (
-      subject_fragment_id,
-      subject_geography_id,
-      type,
-      overlay_source_url,
-      source_processing_job_dependency,
-      project_id,
-      parameters,
-      dependency_hash
-    )
-    SELECT
-      i.subject_fragment_id,
-      i.subject_geography_id,
-      i.type::spatial_metric_type,
-      i.overlay_source_url,
-      i.source_processing_job_dependency,
-      i.project_id,
-      i.parameters,
-      i.dependency_hash
-    FROM input i
-    LEFT JOIN spatial_metrics sm0 ON
-      coalesce(sm0.overlay_source_url, '') = coalesce(i.overlay_source_url, '')
-      AND coalesce(sm0.source_processing_job_dependency, '') = coalesce(i.source_processing_job_dependency, '')
-      AND coalesce(sm0.subject_fragment_id, '') = coalesce(i.subject_fragment_id, '')
-      AND coalesce(sm0.subject_geography_id, -999999) = coalesce(i.subject_geography_id, -999999)
-      AND sm0.type = i.type::spatial_metric_type
-      AND sm0.parameters = i.parameters
-      AND sm0.dependency_hash = i.dependency_hash
-    WHERE sm0.id IS NULL
-    ON CONFLICT (
-      COALESCE(overlay_source_url, ''::text),
-      COALESCE(source_processing_job_dependency, ''::text),
-      COALESCE(subject_fragment_id, ''::text),
-      COALESCE(subject_geography_id, '-999999'::integer),
-      type,
-      parameters,
-      dependency_hash
-    ) DO NOTHING
-    RETURNING
-      id,
-      type,
-      updated_at,
-      created_at,
-      value,
-      state,
-      error_message,
-      progress_percentage,
-      overlay_source_url,
-      parameters,
-      job_key,
-      subject_fragment_id,
-      subject_geography_id,
-      source_processing_job_dependency,
-      eta,
-      started_at,
-      duration,
-      dependency_hash
-  ),
-  inserted AS (
-    SELECT
-      i.ord,
-      ins.id,
-      ins.type,
-      ins.updated_at,
-      ins.created_at,
-      ins.value,
-      ins.state,
-      ins.error_message,
-      ins.progress_percentage,
-      ins.overlay_source_url,
-      ins.parameters,
-      ins.job_key,
-      ins.subject_fragment_id,
-      ins.subject_geography_id,
-      ins.source_processing_job_dependency,
-      ins.eta,
-      ins.started_at,
-      ins.duration,
-      ins.dependency_hash
-    FROM input i
-    INNER JOIN _ins ins ON
-      coalesce(ins.overlay_source_url, '') = coalesce(i.overlay_source_url, '')
-      AND coalesce(ins.source_processing_job_dependency, '') = coalesce(i.source_processing_job_dependency, '')
-      AND coalesce(ins.subject_fragment_id, '') = coalesce(i.subject_fragment_id, '')
-      AND coalesce(ins.subject_geography_id, -999999) = coalesce(i.subject_geography_id, -999999)
-      AND ins.type = i.type::spatial_metric_type
-      AND ins.parameters = i.parameters
-      AND ins.dependency_hash = i.dependency_hash
-  ),
-  existing AS (
-    SELECT
-      i.ord,
-      sm.id,
-      sm.type,
-      sm.updated_at,
-      sm.created_at,
-      sm.value,
-      sm.state,
-      sm.error_message,
-      sm.progress_percentage,
-      sm.overlay_source_url,
-      sm.parameters,
-      sm.job_key,
-      sm.subject_fragment_id,
-      sm.subject_geography_id,
-      sm.source_processing_job_dependency,
-      sm.eta,
-      sm.started_at,
-      sm.duration,
-      sm.dependency_hash
-    FROM input i
-    INNER JOIN spatial_metrics sm ON
-      coalesce(sm.overlay_source_url, '') = coalesce(i.overlay_source_url, '')
-      AND coalesce(sm.source_processing_job_dependency, '') = coalesce(i.source_processing_job_dependency, '')
-      AND coalesce(sm.subject_fragment_id, '') = coalesce(i.subject_fragment_id, '')
-      AND coalesce(sm.subject_geography_id, -999999) = coalesce(i.subject_geography_id, -999999)
-      AND sm.type = i.type::spatial_metric_type
-      AND sm.parameters = i.parameters
-      AND sm.dependency_hash = i.dependency_hash
-    LEFT JOIN inserted ins ON ins.ord = i.ord
-    WHERE ins.ord IS NULL
-  ),
-  metric_rows AS (
-    SELECT * FROM inserted
-    UNION ALL
-    SELECT * FROM existing
-  ),
-  fragment_meta AS (
-    SELECT DISTINCT subject_fragment_id AS h
-    FROM metric_rows
-    WHERE subject_fragment_id IS NOT NULL
-  ),
-  frag_agg AS (
-    SELECT
-      sf.fragment_hash AS h,
-      array_agg(sf.sketch_id ORDER BY sf.sketch_id) AS sketches
-    FROM sketch_fragments sf
-    WHERE sf.fragment_hash IN (SELECT h FROM fragment_meta)
-    GROUP BY sf.fragment_hash
-  ),
-  geo_agg AS (
-    SELECT
-      fg.fragment_hash AS h,
-      array_agg(fg.geography_id ORDER BY fg.geography_id) AS geographies
-    FROM fragment_geographies fg
-    WHERE fg.fragment_hash IN (SELECT h FROM fragment_meta)
-    GROUP BY fg.fragment_hash
-  )
-  SELECT
-    mr.ord,
-    jsonb_build_object(
-      'id', mr.id,
-      'type', mr.type,
-      'updatedAt', mr.updated_at,
-      'createdAt', mr.created_at,
-      'value', mr.value,
-      'state', mr.state,
-      'sourceUrl', mr.overlay_source_url,
-      'sourceType', extension_to_source_type(mr.overlay_source_url),
-      'parameters', coalesce(mr.parameters, '{}'::jsonb),
-      'jobKey', mr.job_key,
-      'subject',
-        CASE WHEN mr.subject_geography_id IS NOT NULL THEN
-          jsonb_build_object('id', mr.subject_geography_id, '__typename', 'GeographySubject')
-        ELSE
-          jsonb_build_object(
-            'hash', mr.subject_fragment_id,
-            'sketches', to_jsonb(coalesce(fa.sketches, ARRAY[]::integer[])),
-            'geographies', to_jsonb(coalesce(ga.geographies, ARRAY[]::integer[])),
-            '__typename', 'FragmentSubject'
-          )
-        END,
-      'errorMessage', mr.error_message,
-      'progress', mr.progress_percentage,
-      'sourceProcessingJobDependency', mr.source_processing_job_dependency,
-      'eta', mr.eta,
-      'startedAt', mr.started_at,
-      'durationSeconds', extract(epoch FROM mr.duration)::float,
-      'dependencyHash', mr.dependency_hash
-    ) AS metric
-  FROM metric_rows mr
-  LEFT JOIN frag_agg fa ON fa.h = mr.subject_fragment_id
-  LEFT JOIN geo_agg ga ON ga.h = mr.subject_fragment_id
-  ORDER BY mr.ord
-$$;
-
-
---
--- Name: FUNCTION bulk_upsert_spatial_metrics_and_json(p_subject_fragment_ids text[], p_subject_geography_ids integer[], p_types text[], p_overlay_source_urls text[], p_parameters jsonb[], p_source_processing_job_dependencies text[], p_project_ids integer[], p_dependency_hashes text[]); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.bulk_upsert_spatial_metrics_and_json(p_subject_fragment_ids text[], p_subject_geography_ids integer[], p_types text[], p_overlay_source_urls text[], p_parameters jsonb[], p_source_processing_job_dependencies text[], p_project_ids integer[], p_dependency_hashes text[]) IS '@omit';
-
-
---
 -- Name: bump_parent_collection_updated_at(integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -12098,6 +11872,42 @@ COMMENT ON FUNCTION public.get_fragment_hashes_for_sketch(sketch_id integer) IS 
 
 
 --
+-- Name: get_fragment_hashes_for_sketch_trusted(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_fragment_hashes_for_sketch_trusted(p_sketch_id integer) RETURNS text[]
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+DECLARE
+  fragment_hashes text[];
+  sketch_ids integer[];
+BEGIN
+  sketch_ids := ARRAY[]::integer[];
+  sketch_ids := array_append(sketch_ids, p_sketch_id);
+  sketch_ids := array_cat(
+    sketch_ids,
+    coalesce((
+      SELECT security_definer_get_child_sketches_recursive(p_sketch_id, 'sketch')
+    ), ARRAY[]::integer[])
+  );
+  SELECT array_agg(sf.fragment_hash) INTO fragment_hashes
+  FROM sketch_fragments sf
+  INNER JOIN fragments f ON sf.fragment_hash = f.hash
+  WHERE sf.sketch_id = ANY(sketch_ids);
+  RETURN coalesce(fragment_hashes, ARRAY[]::text[]);
+END;
+$$;
+
+
+--
+-- Name: FUNCTION get_fragment_hashes_for_sketch_trusted(p_sketch_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.get_fragment_hashes_for_sketch_trusted(p_sketch_id integer) IS '@omit';
+
+
+--
 -- Name: get_fragment_hashes_for_sketches(integer[]); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -12372,71 +12182,72 @@ COMMENT ON FUNCTION public.get_metrics_for_sketch(skid integer) IS '@omit';
 
 CREATE FUNCTION public.get_or_create_spatial_metric(p_subject_fragment_id text, p_subject_geography_id integer, p_type public.spatial_metric_type, p_overlay_source_url text, p_parameters jsonb, p_source_processing_job_dependency text, p_project_id integer, p_dependency_hash text) RETURNS jsonb
     LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
     AS $$
-  declare
-    metric_id bigint;
-  begin
-    -- Validation
-    if p_subject_fragment_id is not null and p_subject_geography_id is not null then
-      raise exception 'Exactly one of subject_fragment_id or subject_geography_id must be provided';
-    end if;
-    if p_subject_fragment_id is null and p_subject_geography_id is null then
-      raise exception 'Exactly one of subject_fragment_id or subject_geography_id must be provided';
-    end if;
-    if p_type is null then
-      raise exception 'type parameter is required';
-    end if;
-    if (p_overlay_source_url is null and p_source_processing_job_dependency is null) and p_type != 'total_area' then
-      raise exception 'overlay_source_url or source_processing_job_dependency parameter is required for non-total_area metrics';
-    end if;
+DECLARE
+  metric_id bigint;
+BEGIN
+  IF p_subject_fragment_id IS NOT NULL AND p_subject_geography_id IS NOT NULL THEN
+    RAISE EXCEPTION 'Exactly one of subject_fragment_id or subject_geography_id must be provided';
+  END IF;
+  IF p_subject_fragment_id IS NULL AND p_subject_geography_id IS NULL THEN
+    RAISE EXCEPTION 'Exactly one of subject_fragment_id or subject_geography_id must be provided';
+  END IF;
+  IF p_type IS NULL THEN
+    RAISE EXCEPTION 'type parameter is required';
+  END IF;
+  IF (p_overlay_source_url IS NULL AND p_source_processing_job_dependency IS NULL) AND p_type != 'total_area' THEN
+    RAISE EXCEPTION 'overlay_source_url or source_processing_job_dependency parameter is required for non-total_area metrics';
+  END IF;
 
-    -- Atomic upsert: if another transaction inserted the same row first, this
-    -- no-ops and returns no id via RETURNING. We then fall back to a SELECT
-    -- to fetch the winner's row.
-    insert into spatial_metrics (
-      subject_fragment_id,
-      subject_geography_id,
-      type,
-      overlay_source_url,
-      source_processing_job_dependency,
-      project_id,
-      parameters,
-      dependency_hash
-    ) values (
-      p_subject_fragment_id,
-      p_subject_geography_id,
-      p_type,
-      p_overlay_source_url,
-      p_source_processing_job_dependency,
-      p_project_id,
-      p_parameters,
-      p_dependency_hash
-    )
-    on conflict (
-      coalesce(overlay_source_url, ''),
-      coalesce(source_processing_job_dependency, ''),
-      coalesce(subject_fragment_id, ''),
-      coalesce(subject_geography_id, -999999),
-      type,
-      parameters,
-      dependency_hash
-    ) do nothing
-    returning id into metric_id;
+  INSERT INTO spatial_metrics (
+    subject_fragment_id,
+    subject_geography_id,
+    type,
+    overlay_source_url,
+    source_processing_job_dependency,
+    project_id,
+    parameters,
+    dependency_hash
+  ) VALUES (
+    p_subject_fragment_id,
+    p_subject_geography_id,
+    p_type,
+    p_overlay_source_url,
+    p_source_processing_job_dependency,
+    p_project_id,
+    p_parameters,
+    p_dependency_hash
+  )
+  ON CONFLICT (
+    COALESCE(overlay_source_url, ''),
+    COALESCE(source_processing_job_dependency, ''),
+    COALESCE(subject_fragment_id, ''),
+    COALESCE(subject_geography_id, -999999),
+    type,
+    parameters,
+    dependency_hash
+  ) DO NOTHING
+  RETURNING id INTO metric_id;
 
-    if metric_id is null then
-      select id into metric_id
-      from spatial_metrics
-      where coalesce(overlay_source_url, '') = coalesce(p_overlay_source_url, '')
-        and coalesce(source_processing_job_dependency, '') = coalesce(p_source_processing_job_dependency, '')
-        and coalesce(subject_fragment_id, '') = coalesce(p_subject_fragment_id, '')
-        and coalesce(subject_geography_id, -999999) = coalesce(p_subject_geography_id, -999999)
-        and type = p_type
-        and parameters = p_parameters
-        and dependency_hash = p_dependency_hash;
-    end if;
+  IF metric_id IS NOT NULL THEN
+    PERFORM queue_spatial_metrics_calculation(ARRAY[metric_id]);
+  END IF;
 
-    return get_spatial_metric(metric_id);
-  end;
+  IF metric_id IS NULL THEN
+    SELECT id INTO metric_id
+    FROM spatial_metrics
+    WHERE COALESCE(overlay_source_url, '') = COALESCE(p_overlay_source_url, '')
+      AND COALESCE(source_processing_job_dependency, '') = COALESCE(p_source_processing_job_dependency, '')
+      AND COALESCE(subject_fragment_id, '') = COALESCE(p_subject_fragment_id, '')
+      AND COALESCE(subject_geography_id, -999999) = COALESCE(p_subject_geography_id, -999999)
+      AND type = p_type
+      AND parameters = p_parameters
+      AND dependency_hash = p_dependency_hash;
+  END IF;
+
+  RETURN get_spatial_metric(metric_id);
+END;
 $$;
 
 
@@ -17523,25 +17334,54 @@ COMMENT ON FUNCTION public.publish_table_of_contents("projectId" integer) IS 'Co
 
 
 --
--- Name: queue_calculate_spatial_metric_task(); Type: FUNCTION; Schema: public; Owner: -
+-- Name: queue_spatial_metrics_calculation(bigint[]); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.queue_calculate_spatial_metric_task() RETURNS trigger
-    LANGUAGE plpgsql STABLE SECURITY DEFINER
+CREATE FUNCTION public.queue_spatial_metrics_calculation(p_metric_ids bigint[]) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
     AS $$
-  begin
-    if NEW.state = 'queued' then
-      perform graphile_worker.add_job(
-        'calculateSpatialMetric',
-        json_build_object('metricId', NEW.id),
-        max_attempts := 1,
-        job_key := 'calculateSpatialMetric:' || NEW.id,
-        job_key_mode := 'replace'
-      );
-    end if;
-    return NEW;
-  end;
-  $$;
+DECLARE
+  v_eligible bigint[];
+BEGIN
+  IF p_metric_ids IS NULL OR cardinality(p_metric_ids) = 0 THEN
+    RETURN;
+  END IF;
+
+  SELECT coalesce(array_agg(sm.id ORDER BY sm.id), ARRAY[]::bigint[])
+  INTO v_eligible
+  FROM (
+    SELECT DISTINCT unnest(p_metric_ids) AS id
+  ) u
+  INNER JOIN spatial_metrics sm ON sm.id = u.id
+  WHERE sm.state IN (
+    'queued'::spatial_metric_state,
+    'dependency_not_ready'::spatial_metric_state
+  );
+
+  IF v_eligible IS NULL OR cardinality(v_eligible) = 0 THEN
+    RETURN;
+  END IF;
+
+  PERFORM graphile_worker.add_job(
+    'calculateSpatialMetricsBatch',
+    json_build_object(
+      'metricIds',
+      (SELECT to_jsonb(array_agg(x ORDER BY x)) FROM unnest(v_eligible) AS t(x))
+    ),
+    max_attempts := 1,
+    job_key := 'calculateSpatialMetricsBatch:' || md5(array_to_string(v_eligible, ',')),
+    job_key_mode := 'replace'
+  );
+END;
+$$;
+
+
+--
+-- Name: FUNCTION queue_spatial_metrics_calculation(p_metric_ids bigint[]); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.queue_spatial_metrics_calculation(p_metric_ids bigint[]) IS '@omit';
 
 
 --
@@ -18347,6 +18187,51 @@ $$;
 
 
 --
+-- Name: report_overlay_source_refs_by_stable_ids(integer, text[], boolean); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.report_overlay_source_refs_by_stable_ids(p_project_id integer, p_stable_ids text[], p_is_draft boolean) RETURNS TABLE(table_of_contents_item_id integer, stable_id text, source_url text, source_processing_job_id text, output_id integer, contains_overlapping_features boolean, raster_band_count integer, vector_geometry_type text)
+    LANGUAGE sql STABLE SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+  SELECT DISTINCT ON (items.stable_id)
+    items.id,
+    items.stable_id,
+    reporting_output.url,
+    coalesce(reporting_output.source_processing_job_key, jobs.job_key),
+    reporting_output.id,
+    reporting_output.contains_overlapping_features,
+    sources.raster_band_count,
+    sources.vector_geometry_type
+  FROM table_of_contents_items items
+  JOIN data_layers layers ON layers.id = items.data_layer_id
+  JOIN data_sources sources ON sources.id = layers.data_source_id
+  LEFT JOIN LATERAL table_of_contents_items_reporting_output(items.*) AS reporting_output ON true
+  LEFT JOIN LATERAL (
+    SELECT spj.job_key
+    FROM source_processing_jobs spj
+    WHERE spj.data_source_id = sources.id
+    ORDER BY spj.created_at DESC
+    LIMIT 1
+  ) jobs ON true
+  WHERE
+    items.stable_id = ANY(p_stable_ids)
+    AND items.is_draft = p_is_draft
+    AND items.project_id = p_project_id
+  ORDER BY
+    items.stable_id,
+    coalesce(reporting_output.id, 0) DESC;
+$$;
+
+
+--
+-- Name: FUNCTION report_overlay_source_refs_by_stable_ids(p_project_id integer, p_stable_ids text[], p_is_draft boolean); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.report_overlay_source_refs_by_stable_ids(p_project_id integer, p_stable_ids text[], p_is_draft boolean) IS '@omit';
+
+
+--
 -- Name: report_tabs_cards(public.report_tabs); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -18554,6 +18439,268 @@ CREATE FUNCTION public.reprocess_legacy_data_source(table_of_contents_item_id in
 
 
 --
+-- Name: resolve_spatial_metrics_batch(text[], integer[], text[], text[], jsonb[], text[], integer[], text[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.resolve_spatial_metrics_batch(p_subject_fragment_ids text[], p_subject_geography_ids integer[], p_types text[], p_overlay_source_urls text[], p_parameters jsonb[], p_source_processing_job_dependencies text[], p_project_ids integer[], p_dependency_hashes text[]) RETURNS TABLE(ord integer, metric jsonb)
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+DECLARE
+  new_metric_ids bigint[];
+BEGIN
+  -- Insert missing metrics only; queue one batch job for all newly inserted rows.
+  WITH input AS (
+    SELECT *
+    FROM unnest(
+      p_subject_fragment_ids,
+      p_subject_geography_ids,
+      p_types,
+      p_overlay_source_urls,
+      p_parameters,
+      p_source_processing_job_dependencies,
+      p_project_ids,
+      p_dependency_hashes
+    ) WITH ORDINALITY AS u(
+      subject_fragment_id,
+      subject_geography_id,
+      type,
+      overlay_source_url,
+      parameters,
+      source_processing_job_dependency,
+      project_id,
+      dependency_hash,
+      ord
+    )
+  ),
+  existing AS (
+    SELECT
+      i.ord,
+      sm.id
+    FROM input i
+    INNER JOIN spatial_metrics sm ON
+      coalesce(sm.overlay_source_url, '') = coalesce(i.overlay_source_url, '')
+      AND coalesce(sm.source_processing_job_dependency, '') = coalesce(i.source_processing_job_dependency, '')
+      AND coalesce(sm.subject_fragment_id, '') = coalesce(i.subject_fragment_id, '')
+      AND coalesce(sm.subject_geography_id, -999999) = coalesce(i.subject_geography_id, -999999)
+      AND sm.type = i.type::spatial_metric_type
+      AND sm.parameters = i.parameters
+      AND sm.dependency_hash = i.dependency_hash
+  ),
+  missing_input AS (
+    SELECT i.*
+    FROM input i
+    LEFT JOIN existing e ON e.ord = i.ord
+    WHERE e.ord IS NULL
+  ),
+  _ins AS (
+    INSERT INTO spatial_metrics (
+      subject_fragment_id,
+      subject_geography_id,
+      type,
+      overlay_source_url,
+      source_processing_job_dependency,
+      project_id,
+      parameters,
+      dependency_hash
+    )
+    SELECT
+      i.subject_fragment_id,
+      i.subject_geography_id,
+      i.type::spatial_metric_type,
+      i.overlay_source_url,
+      i.source_processing_job_dependency,
+      i.project_id,
+      i.parameters,
+      i.dependency_hash
+    FROM missing_input i
+    ON CONFLICT (
+      COALESCE(overlay_source_url, ''::text),
+      COALESCE(source_processing_job_dependency, ''::text),
+      COALESCE(subject_fragment_id, ''::text),
+      COALESCE(subject_geography_id, '-999999'::integer),
+      type,
+      parameters,
+      dependency_hash
+    ) DO NOTHING
+    RETURNING
+      id,
+      type,
+      updated_at,
+      created_at,
+      value,
+      state,
+      error_message,
+      progress_percentage,
+      overlay_source_url,
+      parameters,
+      job_key,
+      subject_fragment_id,
+      subject_geography_id,
+      source_processing_job_dependency,
+      eta,
+      started_at,
+      duration,
+      dependency_hash
+  ),
+  inserted_pairs AS (
+    SELECT
+      i.ord,
+      ins.id
+    FROM missing_input i
+    INNER JOIN _ins ins ON
+      coalesce(ins.overlay_source_url, '') = coalesce(i.overlay_source_url, '')
+      AND coalesce(ins.source_processing_job_dependency, '') = coalesce(i.source_processing_job_dependency, '')
+      AND coalesce(ins.subject_fragment_id, '') = coalesce(i.subject_fragment_id, '')
+      AND coalesce(ins.subject_geography_id, -999999) = coalesce(i.subject_geography_id, -999999)
+      AND ins.type = i.type::spatial_metric_type
+      AND ins.parameters = i.parameters
+      AND ins.dependency_hash = i.dependency_hash
+  )
+  SELECT coalesce(array_agg(inserted_pairs.id ORDER BY inserted_pairs.id), ARRAY[]::bigint[])
+  INTO new_metric_ids
+  FROM inserted_pairs;
+
+  IF new_metric_ids IS NOT NULL AND cardinality(new_metric_ids) > 0 THEN
+    PERFORM queue_spatial_metrics_calculation(new_metric_ids);
+  END IF;
+
+  RETURN QUERY
+  WITH input AS (
+    SELECT *
+    FROM unnest(
+      p_subject_fragment_ids,
+      p_subject_geography_ids,
+      p_types,
+      p_overlay_source_urls,
+      p_parameters,
+      p_source_processing_job_dependencies,
+      p_project_ids,
+      p_dependency_hashes
+    ) WITH ORDINALITY AS u(
+      subject_fragment_id,
+      subject_geography_id,
+      type,
+      overlay_source_url,
+      parameters,
+      source_processing_job_dependency,
+      project_id,
+      dependency_hash,
+      ord
+    )
+  ),
+  metric_rows AS (
+    SELECT
+      i.ord::integer AS ord,
+      sm.id,
+      sm.type,
+      sm.updated_at,
+      sm.created_at,
+      sm.value,
+      sm.state,
+      sm.error_message,
+      sm.progress_percentage,
+      sm.overlay_source_url,
+      sm.parameters,
+      sm.job_key,
+      sm.subject_fragment_id,
+      sm.subject_geography_id,
+      sm.source_processing_job_dependency,
+      sm.eta,
+      sm.started_at,
+      sm.duration,
+      sm.dependency_hash
+    FROM input i
+    INNER JOIN spatial_metrics sm ON
+      coalesce(sm.overlay_source_url, '') = coalesce(i.overlay_source_url, '')
+      AND coalesce(sm.source_processing_job_dependency, '') = coalesce(i.source_processing_job_dependency, '')
+      AND coalesce(sm.subject_fragment_id, '') = coalesce(i.subject_fragment_id, '')
+      AND coalesce(sm.subject_geography_id, -999999) = coalesce(i.subject_geography_id, -999999)
+      AND sm.type = i.type::spatial_metric_type
+      AND sm.parameters = i.parameters
+      AND sm.dependency_hash = i.dependency_hash
+  ),
+  fragment_meta AS MATERIALIZED (
+    SELECT DISTINCT subject_fragment_id AS h
+    FROM metric_rows
+    WHERE subject_fragment_id IS NOT NULL
+  ),
+  frag_agg AS MATERIALIZED (
+    SELECT
+      sf.fragment_hash AS h,
+      array_agg(sf.sketch_id ORDER BY sf.sketch_id) AS sketches
+    FROM sketch_fragments sf
+    WHERE sf.fragment_hash IN (SELECT h FROM fragment_meta)
+    GROUP BY sf.fragment_hash
+  ),
+  geo_agg AS MATERIALIZED (
+    SELECT
+      fg.fragment_hash AS h,
+      array_agg(fg.geography_id ORDER BY fg.geography_id) AS geographies
+    FROM fragment_geographies fg
+    WHERE fg.fragment_hash IN (SELECT h FROM fragment_meta)
+    GROUP BY fg.fragment_hash
+  ),
+  fragment_subject_map AS MATERIALIZED (
+    SELECT
+      coalesce(
+        jsonb_object_agg(
+          fm.h,
+          jsonb_build_object(
+            'hash', fm.h,
+            'sketches', to_jsonb(coalesce(fa.sketches, ARRAY[]::integer[])),
+            'geographies', to_jsonb(coalesce(ga.geographies, ARRAY[]::integer[])),
+            '__typename', 'FragmentSubject'
+          )
+        ),
+        '{}'::jsonb
+      ) AS subjects
+    FROM fragment_meta fm
+    LEFT JOIN frag_agg fa ON fa.h = fm.h
+    LEFT JOIN geo_agg ga ON ga.h = fm.h
+  )
+  SELECT
+    mr.ord,
+    jsonb_build_object(
+      'id', mr.id,
+      'type', mr.type,
+      'updatedAt', mr.updated_at,
+      'createdAt', mr.created_at,
+      'value', mr.value,
+      'state', mr.state,
+      'sourceUrl', mr.overlay_source_url,
+      'sourceType', extension_to_source_type(mr.overlay_source_url),
+      'parameters', coalesce(mr.parameters, '{}'::jsonb),
+      'jobKey', mr.job_key,
+      'subject',
+        CASE WHEN mr.subject_geography_id IS NOT NULL THEN
+          jsonb_build_object('id', mr.subject_geography_id, '__typename', 'GeographySubject')
+        ELSE
+          fsm.subjects -> mr.subject_fragment_id
+        END,
+      'errorMessage', mr.error_message,
+      'progress', mr.progress_percentage,
+      'sourceProcessingJobDependency', mr.source_processing_job_dependency,
+      'eta', mr.eta,
+      'startedAt', mr.started_at,
+      'durationSeconds', extract(epoch FROM mr.duration)::float,
+      'dependencyHash', mr.dependency_hash
+    ) AS metric
+  FROM metric_rows mr
+  CROSS JOIN fragment_subject_map fsm
+  ORDER BY 1;
+END;
+$$;
+
+
+--
+-- Name: FUNCTION resolve_spatial_metrics_batch(p_subject_fragment_ids text[], p_subject_geography_ids integer[], p_types text[], p_overlay_source_urls text[], p_parameters jsonb[], p_source_processing_job_dependencies text[], p_project_ids integer[], p_dependency_hashes text[]); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.resolve_spatial_metrics_batch(p_subject_fragment_ids text[], p_subject_geography_ids integer[], p_types text[], p_overlay_source_urls text[], p_parameters jsonb[], p_source_processing_job_dependencies text[], p_project_ids integer[], p_dependency_hashes text[]) IS '@omit';
+
+
+--
 -- Name: retry_failed_source_processing_job(text, boolean); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -18590,50 +18737,48 @@ CREATE FUNCTION public.retry_failed_source_processing_job(jobkey text, repair_in
 
 CREATE FUNCTION public.retry_failed_spatial_metrics(metric_ids bigint[]) RETURNS boolean
     LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
     AS $$
-  declare
-    metric spatial_metrics;
-    updated_metric_id bigint;
-    metric_id bigint;
-    job_dep text;
-    existing_job_state spatial_metric_state;
-  begin
-    -- loop through the metric ids, and update the state to queued
-    foreach metric_id in array metric_ids loop
-      update 
-        spatial_metrics 
-      set 
-        state = 'queued', 
-        error_message = null, 
-        updated_at = now(), 
-        created_at = now(), 
-        progress_percentage = 0, 
-        job_key = gen_random_uuid()::text 
-      where 
-        id = metric_id 
-      returning 
-        id into updated_metric_id;
-      if updated_metric_id is not null then
-        -- if this metric depends on a source_processing_job, restart it first
-        select source_processing_job_dependency into job_dep from spatial_metrics where id = updated_metric_id;
-        if job_dep is not null then
-          select state into existing_job_state from source_processing_jobs where job_key = job_dep;
-          if existing_job_state = 'error' then
-            perform retry_failed_source_processing_job(job_dep);
-          end if;
-        end if;
-        perform graphile_worker.add_job(
-          'calculateSpatialMetric',
-          json_build_object('metricId', updated_metric_id),
-          max_attempts := 1,
-          job_key := 'calculateSpatialMetric:' || updated_metric_id,
-          job_key_mode := 'replace'
-        );
-      end if;
-    end loop;
-    return true;
-  end;
-  $$;
+DECLARE
+  metric_id bigint;
+  updated_metric_id bigint;
+  job_dep text;
+  existing_job_state spatial_metric_state;
+  queued_ids bigint[] := ARRAY[]::bigint[];
+BEGIN
+  IF metric_ids IS NULL OR cardinality(metric_ids) = 0 THEN
+    RETURN true;
+  END IF;
+  FOREACH metric_id IN ARRAY metric_ids LOOP
+    UPDATE spatial_metrics
+    SET
+      state = 'queued'::spatial_metric_state,
+      error_message = NULL,
+      updated_at = now(),
+      created_at = now(),
+      progress_percentage = 0,
+      job_key = gen_random_uuid()::text
+    WHERE id = metric_id
+    RETURNING id INTO updated_metric_id;
+    IF updated_metric_id IS NOT NULL THEN
+      queued_ids := array_append(queued_ids, updated_metric_id);
+      SELECT source_processing_job_dependency INTO job_dep FROM spatial_metrics WHERE id = updated_metric_id;
+      IF job_dep IS NOT NULL THEN
+        SELECT state INTO existing_job_state FROM source_processing_jobs WHERE job_key = job_dep;
+        IF existing_job_state = 'error' THEN
+          PERFORM retry_failed_source_processing_job(job_dep);
+        END IF;
+      END IF;
+    END IF;
+  END LOOP;
+
+  IF queued_ids IS NOT NULL AND cardinality(queued_ids) > 0 THEN
+    PERFORM queue_spatial_metrics_calculation(queued_ids);
+  END IF;
+
+  RETURN true;
+END;
+$$;
 
 
 --
@@ -23347,43 +23492,47 @@ CREATE FUNCTION public.trigger_queue_preprocess_source_on_rcl() RETURNS trigger
 
 CREATE FUNCTION public.trigger_queue_spatial_metrics_on_source_complete() RETURNS trigger
     LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
     AS $$
-  DECLARE
-    metric_record RECORD;
-    completed_source_url text;
-  BEGIN
-    IF NEW.state = 'complete' AND (OLD.state IS NULL OR OLD.state != 'complete') THEN
-      -- get the completed source url
-      select url into completed_source_url from data_upload_outputs where is_reporting_type(type) and data_source_id = NEW.data_source_id limit 1;
-      if completed_source_url is null then
-        raise exception 'Completed source url not found';
-      end if;
-      -- Find all spatial_metrics that depend on this source processing job
-      FOR metric_record IN 
-        SELECT id 
-        FROM spatial_metrics 
-        WHERE source_processing_job_dependency = NEW.job_key
-      LOOP
-        -- update the spatial_metrics with the completed source url
-        update spatial_metrics set overlay_source_url = completed_source_url, state = 'queued' where id = metric_record.id;
-        -- Queue a calculateSpatialMetric job for each dependent metric
-        PERFORM graphile_worker.add_job(
-          'calculateSpatialMetric',
-          json_build_object('metricId', metric_record.id),
-          max_attempts := 1,
-          job_key := 'calculateSpatialMetric:' || metric_record.id,
-          job_key_mode := 'replace'
-        );
-      END LOOP;
+DECLARE
+  completed_source_url text;
+  dependent_ids bigint[];
+BEGIN
+  IF NEW.state = 'complete' AND (OLD.state IS NULL OR OLD.state != 'complete') THEN
+    SELECT url INTO completed_source_url
+    FROM data_upload_outputs
+    WHERE is_reporting_type(type) AND data_source_id = NEW.data_source_id
+    LIMIT 1;
+    IF completed_source_url IS NULL THEN
+      RAISE EXCEPTION 'Completed source url not found';
     END IF;
-    IF NEW.state = 'error' AND (OLD.state IS NULL OR OLD.state != 'error') THEN
-      -- update the spatial_metrics with the error message
-      update spatial_metrics set state = 'error', error_message = 'Error processing source dependency.' where source_processing_job_dependency = NEW.job_key;
+    WITH updated AS (
+      UPDATE spatial_metrics
+      SET
+        overlay_source_url = completed_source_url,
+        state = 'queued'::spatial_metric_state
+      WHERE source_processing_job_dependency = NEW.job_key
+      RETURNING id
+    )
+    SELECT coalesce(array_agg(id ORDER BY id), ARRAY[]::bigint[])
+    INTO dependent_ids
+    FROM updated;
+
+    IF dependent_ids IS NOT NULL AND cardinality(dependent_ids) > 0 THEN
+      PERFORM queue_spatial_metrics_calculation(dependent_ids);
     END IF;
-    
-    RETURN NEW;
-  END;
-  $$;
+  END IF;
+  IF NEW.state = 'error' AND (OLD.state IS NULL OR OLD.state != 'error') THEN
+    UPDATE spatial_metrics
+    SET
+      state = 'error',
+      error_message = 'Error processing source dependency.'
+    WHERE source_processing_job_dependency = NEW.job_key;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
 
 
 --
@@ -28595,13 +28744,6 @@ CREATE TRIGGER project_background_job_notify_subscriptions AFTER INSERT OR UPDAT
 
 
 --
--- Name: spatial_metrics queue_calculate_spatial_metric_task_trigger; Type: TRIGGER; Schema: public; Owner: -
---
-
-CREATE TRIGGER queue_calculate_spatial_metric_task_trigger AFTER INSERT ON public.spatial_metrics FOR EACH ROW EXECUTE FUNCTION public.queue_calculate_spatial_metric_task();
-
-
---
 -- Name: data_upload_outputs record_project_activity_on_delete; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -33567,14 +33709,6 @@ REVOKE ALL ON FUNCTION public.build_layer_interactivity_acl_payload(p_acl_id int
 
 
 --
--- Name: FUNCTION bulk_upsert_spatial_metrics_and_json(p_subject_fragment_ids text[], p_subject_geography_ids integer[], p_types text[], p_overlay_source_urls text[], p_parameters jsonb[], p_source_processing_job_dependencies text[], p_project_ids integer[], p_dependency_hashes text[]); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.bulk_upsert_spatial_metrics_and_json(p_subject_fragment_ids text[], p_subject_geography_ids integer[], p_types text[], p_overlay_source_urls text[], p_parameters jsonb[], p_source_processing_job_dependencies text[], p_project_ids integer[], p_dependency_hashes text[]) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.bulk_upsert_spatial_metrics_and_json(p_subject_fragment_ids text[], p_subject_geography_ids integer[], p_types text[], p_overlay_source_urls text[], p_parameters jsonb[], p_source_processing_job_dependencies text[], p_project_ids integer[], p_dependency_hashes text[]) TO anon;
-
-
---
 -- Name: FUNCTION bump_parent_collection_updated_at(folderid integer, collectionid integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -36647,6 +36781,14 @@ GRANT ALL ON FUNCTION public.get_fragment_hashes_for_sketch(sketch_id integer) T
 
 
 --
+-- Name: FUNCTION get_fragment_hashes_for_sketch_trusted(p_sketch_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_fragment_hashes_for_sketch_trusted(p_sketch_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_fragment_hashes_for_sketch_trusted(p_sketch_id integer) TO anon;
+
+
+--
 -- Name: FUNCTION get_fragment_hashes_for_sketches(sketch_ids integer[]); Type: ACL; Schema: public; Owner: -
 --
 
@@ -38870,10 +39012,11 @@ GRANT ALL ON FUNCTION public.publish_table_of_contents("projectId" integer) TO s
 
 
 --
--- Name: FUNCTION queue_calculate_spatial_metric_task(); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION queue_spatial_metrics_calculation(p_metric_ids bigint[]); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.queue_calculate_spatial_metric_task() FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.queue_spatial_metrics_calculation(p_metric_ids bigint[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.queue_spatial_metrics_calculation(p_metric_ids bigint[]) TO anon;
 
 
 --
@@ -39083,6 +39226,14 @@ GRANT ALL ON FUNCTION public.report_cards_title(card public.report_cards) TO ano
 
 
 --
+-- Name: FUNCTION report_overlay_source_refs_by_stable_ids(p_project_id integer, p_stable_ids text[], p_is_draft boolean); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.report_overlay_source_refs_by_stable_ids(p_project_id integer, p_stable_ids text[], p_is_draft boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.report_overlay_source_refs_by_stable_ids(p_project_id integer, p_stable_ids text[], p_is_draft boolean) TO anon;
+
+
+--
 -- Name: FUNCTION report_tabs_cards(report_tab public.report_tabs); Type: ACL; Schema: public; Owner: -
 --
 
@@ -39136,6 +39287,14 @@ GRANT ALL ON FUNCTION public.reprocess_all_legacy_data_sources(project_id intege
 
 REVOKE ALL ON FUNCTION public.reprocess_legacy_data_source(table_of_contents_item_id integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.reprocess_legacy_data_source(table_of_contents_item_id integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION resolve_spatial_metrics_batch(p_subject_fragment_ids text[], p_subject_geography_ids integer[], p_types text[], p_overlay_source_urls text[], p_parameters jsonb[], p_source_processing_job_dependencies text[], p_project_ids integer[], p_dependency_hashes text[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.resolve_spatial_metrics_batch(p_subject_fragment_ids text[], p_subject_geography_ids integer[], p_types text[], p_overlay_source_urls text[], p_parameters jsonb[], p_source_processing_job_dependencies text[], p_project_ids integer[], p_dependency_hashes text[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.resolve_spatial_metrics_batch(p_subject_fragment_ids text[], p_subject_geography_ids integer[], p_types text[], p_overlay_source_urls text[], p_parameters jsonb[], p_source_processing_job_dependencies text[], p_project_ids integer[], p_dependency_hashes text[]) TO anon;
 
 
 --

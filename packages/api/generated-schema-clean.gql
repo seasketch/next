@@ -101,6 +101,37 @@ type AddGroupToAclPayload {
   tableOfContentsItem: TableOfContentsItem
 }
 
+"""All input for the `addReportCard` mutation."""
+input AddReportCardInput {
+  alternateLanguageSettings: JSON
+  body: JSON
+  cardPosition: Int
+  cardType: String
+
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  componentSettings: JSON
+  reportTabId: Int
+}
+
+"""The output of our `addReportCard` mutation."""
+type AddReportCardPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  reportCard: ReportCard
+}
+
 """All input for the `addReportTab` mutation."""
 input AddReportTabInput {
   """
@@ -1239,6 +1270,16 @@ type CompatibleSpatialMetric {
   durationSeconds: Float
   errorMessage: String
   eta: Datetime
+
+  """
+  When present with a null subject, index into
+  ReportOverlayDependencies.fragmentSubjectCatalog /
+  DraftReportDependenciesResults.fragmentSubjectCatalog.
+  """
+  f: Int
+
+  """When present with a null subject, geography id (project_geography.id)."""
+  g: Int
   id: BigInt!
   jobKey: String
   parameters: MetricParameters!
@@ -1247,7 +1288,7 @@ type CompatibleSpatialMetric {
   sourceUrl: String
   startedAt: Datetime
   state: SpatialMetricState!
-  subject: MetricSubject!
+  subject: MetricSubject
   type: String!
   updatedAt: Datetime
   value: JSON
@@ -5979,7 +6020,13 @@ input DraftDependenciesInput {
 }
 
 type DraftReportDependenciesResults {
+  fragmentSubjectCatalog: [FragmentSubject!]!
   metrics: [CompatibleSpatialMetric!]!
+  ready: Boolean!
+  sketchId: Int!
+}
+
+type DraftReportOverlaySourcesResults {
   overlaySources: [ReportOverlaySource!]!
   ready: Boolean!
   sketchId: Int!
@@ -8982,6 +9029,12 @@ type Mutation {
     input: AddGroupToAclInput!
   ): AddGroupToAclPayload
   addImageToSprite(height: Int!, image: Upload!, pixelRatio: Int!, spriteId: Int!, width: Int!): Sprite
+  addReportCard(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: AddReportCardInput!
+  ): AddReportCardPayload
   addReportTab(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -13707,6 +13760,7 @@ type Query implements Node {
     orderBy: [DataUploadTasksOrderBy!] = [PRIMARY_KEY_ASC]
   ): DataUploadTasksConnection
   draftReportDependencies(input: DraftDependenciesInput): DraftReportDependenciesResults!
+  draftReportOverlaySources(input: DraftDependenciesInput): DraftReportOverlaySourcesResults!
   eezlayer: TableOfContentsItem
   emailNotificationPreferenceByUserId(userId: Int!): EmailNotificationPreference
 
@@ -14969,6 +15023,7 @@ type Report implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+  overlaySources: [ReportOverlaySource!]!
   projectId: Int!
 
   """Reads a single `SketchClass` that is related to this `Report`."""
@@ -15024,8 +15079,8 @@ input ReportInput {
 
 type ReportOverlayDependencies {
   cardDependencyLists: [CardDependencyLists!]!
+  fragmentSubjectCatalog: [FragmentSubject!]!
   metrics: [CompatibleSpatialMetric!]!
-  overlaySources: [ReportOverlaySource!]!
   ready: Boolean!
 }
 

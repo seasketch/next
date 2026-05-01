@@ -32,10 +32,10 @@ class ProgressNotifier {
             timeSinceLastSent > this.maxWaitMs * 5) {
             sendNotification = true;
         }
-        // 2. The progress has increased by 10% or more since the last notification
-        if (progress > this.lastNotifiedProgress + 5) {
-            sendNotification = true;
-        }
+        // // 2. The progress has increased by 10% or more since the last notification
+        // if (progress > this.lastNotifiedProgress + 5) {
+        //   sendNotification = true;
+        // }
         if (progress > this.progress) {
             if (this.etaEstimator) {
                 const state = this.etaEstimator.update(progress);
