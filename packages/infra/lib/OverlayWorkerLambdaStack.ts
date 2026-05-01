@@ -20,7 +20,7 @@ export class OverlayWorkerLambdaStack extends cdk.Stack {
     props: cdk.StackProps & {
       devQueues?: sqs.IQueue[];
       productionQueue: sqs.IQueue;
-    }
+    },
   ) {
     super(scope, id, props);
 
@@ -29,7 +29,7 @@ export class OverlayWorkerLambdaStack extends cdk.Stack {
       projectRoot: path.join(__dirname, "../../overlay-worker"),
       depsLockFilePath: path.join(
         __dirname,
-        "../../overlay-worker/package-lock.json"
+        "../../overlay-worker/package-lock.json",
       ),
       bundling: {
         minify: false,
@@ -51,7 +51,7 @@ export class OverlayWorkerLambdaStack extends cdk.Stack {
             // Copy the prebuilt self-contained worker from overlay-engine package
             const standaloneSrc = path.join(
               __dirname,
-              "../../overlay-engine/dist/workers/clipBatch.standalone.js"
+              "../../overlay-engine/dist/workers/clipBatch.standalone.js",
             );
             return [`cp ${standaloneSrc} ${outputDir}/worker.js`];
           },
@@ -66,7 +66,7 @@ export class OverlayWorkerLambdaStack extends cdk.Stack {
       }),
       retryAttempts: 0,
       memorySize: 10240, // 10GB
-      reservedConcurrentExecutions: 100,
+      reservedConcurrentExecutions: 300,
       architecture: lambda.Architecture.ARM_64,
       environment: {
         OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL: props.productionQueue.queueUrl,

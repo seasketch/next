@@ -45,7 +45,6 @@ import {
   useProjectReportingLayersQuery,
   usePreprocessSourceMutation,
   BaseDraftReportContextDocument,
-  DraftReportDocument,
   useUpdateReportCardBodyMutation,
   useDraftReportDependenciesQuery,
   useDraftReportOverlaySourcesQuery,
@@ -53,7 +52,6 @@ import {
   useDeleteReportCardMutation,
   ReportDependenciesDocument,
   ReportOverlaySourcesDocument,
-  DataSourceTypes,
 } from "../../generated/graphql";
 import { useTranslation } from "react-i18next";
 import { useSlashCommandPalette } from "../hooks/useSlashCommandPalette";
@@ -68,6 +66,14 @@ import {
   hashMetricDependency,
   MetricDependency,
 } from "overlay-engine";
+import {
+  buildOverlayStableIdToSourceUrlMap,
+  EMPTY_FRAGMENT_SUBJECT_CATALOG,
+  EMPTY_HYDRATED_METRICS_DETAILS,
+  EMPTY_OVERLAY_SOURCES,
+  EMPTY_SLIM_METRICS,
+  hydrateSpatialMetrics,
+} from "../utils/hydrateSpatialMetrics";
 import ReportCardLoadingIndicator from "./ReportCardLoadingIndicator";
 import { ReportUIStateContext } from "../context/ReportUIStateContext";
 import { useBaseReportContext } from "../context/BaseReportContext";
@@ -96,6 +102,34 @@ interface ReportCardBodyEditorProps {
   cardId: number;
   preselectTitle?: boolean;
   footerContainerRef: React.RefObject<HTMLDivElement>;
+}
+
+function cloneBodyForSave(body: ProsemirrorBodyJSON): ProsemirrorBodyJSON {
+  return JSON.parse(JSON.stringify(body));
+}
+
+function normalizedBodyForSave(body: ProsemirrorBodyJSON): ProsemirrorBodyJSON {
+  return setCollapsibleBlocksClosed(cloneBodyForSave(body));
+}
+
+function bodiesAreEqual(
+  a: ProsemirrorBodyJSON,
+  b: ProsemirrorBodyJSON
+): boolean {
+  return JSON.stringify(a) === JSON.stringify(b);
+}
+
+/** Skip URL substitution so fingerprints compare dependency shape only (stable ids etc.). */
+const EMPTY_OVERLAY_SOURCE_URLS: { [stableId: string]: string } = {};
+
+function metricDependenciesFingerprint(body: ProsemirrorBodyJSON): string {
+  const dependencies: MetricDependency[] = [];
+  extractMetricDependenciesFromReportBody(body, dependencies);
+  const hashes = dependencies.map((d) =>
+    hashMetricDependency(d, EMPTY_OVERLAY_SOURCE_URLS)
+  );
+  hashes.sort();
+  return hashes.join("\n");
 }
 
 function ReportCardBodyEditorInner({
@@ -165,27 +199,32 @@ function ReportCardBodyEditorInner({
   const [updateReportCard, updateReportCardState] =
     useUpdateReportCardBodyMutation({
       onError,
-      awaitRefetchQueries: true,
-      refetchQueries: refetchDraftReportTree,
     });
 
   const saveWithBody = useCallback(
-    async (body: ProsemirrorBodyJSON) => {
+    async (nextBody: ProsemirrorBodyJSON) => {
+      const savedBody = normalizedBodyForSave(nextBody);
+      const currentSavedBody = normalizedBodyForSave(body);
+      if (bodiesAreEqual(savedBody, currentSavedBody)) {
+        setEditing(null);
+        return;
+      }
+      const dependenciesChanged =
+        metricDependenciesFingerprint(savedBody) !==
+        metricDependenciesFingerprint(currentSavedBody);
       await updateReportCard({
         variables: {
           id: cardId,
-          body: setCollapsibleBlocksClosed(body),
+          body: savedBody,
         },
-        refetchQueries: [
-          ...refetchDraftReportTree,
-          ReportDependenciesDocument,
-          ReportOverlaySourcesDocument,
-        ],
-        awaitRefetchQueries: true,
+        refetchQueries: dependenciesChanged
+          ? [ReportDependenciesDocument, ReportOverlaySourcesDocument]
+          : undefined,
+        awaitRefetchQueries: dependenciesChanged,
       });
       setEditing(null);
     },
-    [updateReportCard, cardId, setEditing, refetchDraftReportTree]
+    [updateReportCard, body, cardId, setEditing]
   );
 
   const handleCardSave = useCallback(
@@ -268,6 +307,40 @@ function ReportCardBodyEditorInner({
     editing,
   ]);
 
+  const draftOverlaySources =
+    draftOverlaySourcesQuery.data?.draftReportOverlaySources?.overlaySources ??
+    EMPTY_OVERLAY_SOURCES;
+
+  const draftDependencyListForHydration = useMemo(
+    () => [
+      ...extractMetricDependenciesFromReportBody(draftBody),
+      ...additionalDependencies,
+    ],
+    [draftBody, additionalDependencies]
+  );
+
+  const hydratedDraftMetrics = useMemo(() => {
+    const draftDeps = draftDependenciesQuery.data?.draftReportDependencies;
+    const slim = draftDeps?.metrics ?? EMPTY_SLIM_METRICS;
+    if (slim.length === 0) {
+      return EMPTY_HYDRATED_METRICS_DETAILS;
+    }
+    const urlMap = buildOverlayStableIdToSourceUrlMap(draftOverlaySources);
+    return hydrateSpatialMetrics({
+      slimMetrics: slim,
+      dependencies: draftDependencyListForHydration,
+      overlaySourceUrlByStableId: urlMap,
+      fragmentSubjectCatalog:
+        draftDeps?.fragmentSubjectCatalog ?? EMPTY_FRAGMENT_SUBJECT_CATALOG,
+    });
+  }, [
+    draftDependenciesQuery.data?.draftReportDependencies?.metrics,
+    draftDependenciesQuery.data?.draftReportDependencies
+      ?.fragmentSubjectCatalog,
+    draftDependencyListForHydration,
+    draftOverlaySources,
+  ]);
+
   const allDependencies = useMemo(() => {
     const allMetrics = [...metrics] as CompatibleSpatialMetricDetailsFragment[];
     const allSourceProcessingJobs = [
@@ -276,8 +349,7 @@ function ReportCardBodyEditorInner({
         .map((s) => s.sourceProcessingJob),
     ] as SourceProcessingJobDetailsFragment[];
 
-    for (const source of draftOverlaySourcesQuery.data?.draftReportOverlaySources
-      ?.overlaySources || []) {
+    for (const source of draftOverlaySources) {
       if (
         source.sourceProcessingJob &&
         !allSourceProcessingJobs.find(
@@ -287,8 +359,7 @@ function ReportCardBodyEditorInner({
         allSourceProcessingJobs.push(source.sourceProcessingJob);
       }
     }
-    for (const metric of draftDependenciesQuery.data?.draftReportDependencies
-      ?.metrics || []) {
+    for (const metric of hydratedDraftMetrics) {
       if (metric.id && !allMetrics.find((m) => m.id === metric.id)) {
         allMetrics.push(metric);
       }
@@ -297,12 +368,7 @@ function ReportCardBodyEditorInner({
       metrics: allMetrics,
       sourceProcessingJobs: allSourceProcessingJobs,
     };
-  }, [
-    metrics,
-    sources,
-    draftDependenciesQuery.data,
-    draftOverlaySourcesQuery.data,
-  ]);
+  }, [metrics, sources, draftOverlaySources, hydratedDraftMetrics]);
 
   // Handle navigation blocking when editing
   useEffect(() => {
@@ -399,17 +465,14 @@ function ReportCardBodyEditorInner({
 
   useEffect(() => {
     setDraftDependencies({
-      metrics:
-        draftDependenciesQuery.data?.draftReportDependencies?.metrics || [],
-      overlaySources:
-        draftOverlaySourcesQuery.data?.draftReportOverlaySources?.overlaySources ||
-        [],
-      dependencies: additionalDependencies,
+      metrics: hydratedDraftMetrics,
+      overlaySources: draftOverlaySources,
+      dependencies: draftDependencyListForHydration,
     });
   }, [
-    draftDependenciesQuery.data?.draftReportDependencies?.metrics,
-    draftOverlaySourcesQuery.data?.draftReportOverlaySources?.overlaySources,
-    additionalDependencies,
+    hydratedDraftMetrics,
+    draftOverlaySources,
+    draftDependencyListForHydration,
     setDraftDependencies,
   ]);
 

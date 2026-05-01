@@ -13,7 +13,7 @@ export default async function cleanupTimedOutSpatialMetricTasks(
           error_message = 'Timeout. > 30 seconds since creation.' 
         where 
           state = 'queued' and 
-          source_processing_job_dependency is null and 
+          (source_processing_job_dependency is null or (select state from source_processing_jobs where job_key = source_processing_job_dependency) = 'complete') and 
           created_at < now() - interval '30 seconds'
       `,
     );

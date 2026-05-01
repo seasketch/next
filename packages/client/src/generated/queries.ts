@@ -1100,6 +1100,14 @@ export type CompatibleSpatialMetric = {
   durationSeconds?: Maybe<Scalars['Float']>;
   errorMessage?: Maybe<Scalars['String']>;
   eta?: Maybe<Scalars['Datetime']>;
+  /**
+   * When present with a null subject, index into
+   * ReportOverlayDependencies.fragmentSubjectCatalog /
+   * DraftReportDependenciesResults.fragmentSubjectCatalog.
+   */
+  f?: Maybe<Scalars['Int']>;
+  /** When present with a null subject, geography id (project_geography.id). */
+  g?: Maybe<Scalars['Int']>;
   id: Scalars['BigInt'];
   jobKey?: Maybe<Scalars['String']>;
   parameters: MetricParameters;
@@ -1108,7 +1116,7 @@ export type CompatibleSpatialMetric = {
   sourceUrl?: Maybe<Scalars['String']>;
   startedAt?: Maybe<Scalars['Datetime']>;
   state: SpatialMetricState;
-  subject: MetricSubject;
+  subject?: Maybe<MetricSubject>;
   type: Scalars['String'];
   updatedAt?: Maybe<Scalars['Datetime']>;
   value?: Maybe<Scalars['JSON']>;
@@ -5257,6 +5265,7 @@ export type DraftDependenciesInput = {
 
 export type DraftReportDependenciesResults = {
   __typename?: 'DraftReportDependenciesResults';
+  fragmentSubjectCatalog: Array<FragmentSubject>;
   metrics: Array<CompatibleSpatialMetric>;
   ready: Scalars['Boolean'];
   sketchId: Scalars['Int'];
@@ -14205,6 +14214,7 @@ export type ReportInput = {
 export type ReportOverlayDependencies = {
   __typename?: 'ReportOverlayDependencies';
   cardDependencyLists: Array<CardDependencyLists>;
+  fragmentSubjectCatalog: Array<FragmentSubject>;
   metrics: Array<CompatibleSpatialMetric>;
   ready: Scalars['Boolean'];
 };
@@ -24179,7 +24189,10 @@ export type ReportContextQuery = (
     )>, dependencies: (
       { __typename?: 'ReportOverlayDependencies' }
       & Pick<ReportOverlayDependencies, 'ready'>
-      & { metrics: Array<(
+      & { fragmentSubjectCatalog: Array<(
+        { __typename?: 'FragmentSubject' }
+        & FragmentSubjectDetailsFragment
+      )>, metrics: Array<(
         { __typename?: 'CompatibleSpatialMetric' }
         & CompatibleSpatialMetricDetailsFragment
       )>, cardDependencyLists: Array<(
@@ -24204,12 +24217,36 @@ export type ReportDependenciesQuery = (
     & { dependencies: (
       { __typename?: 'ReportOverlayDependencies' }
       & Pick<ReportOverlayDependencies, 'ready'>
-      & { metrics: Array<(
+      & { fragmentSubjectCatalog: Array<(
+        { __typename?: 'FragmentSubject' }
+        & FragmentSubjectDetailsFragment
+      )>, metrics: Array<(
         { __typename?: 'CompatibleSpatialMetric' }
-        & CompatibleSpatialMetricDetailsFragment
+        & CompatibleSpatialMetricSlimFragment
       )>, cardDependencyLists: Array<(
         { __typename?: 'CardDependencyLists' }
         & Pick<CardDependencyLists, 'cardId' | 'metrics' | 'overlaySources'>
+      )> }
+    ) }
+  )> }
+);
+
+export type ReportMetricProgressFieldsQueryVariables = Exact<{
+  reportId: Scalars['Int'];
+  sketchId: Scalars['Int'];
+}>;
+
+
+export type ReportMetricProgressFieldsQuery = (
+  { __typename?: 'Query' }
+  & { report?: Maybe<(
+    { __typename?: 'Report' }
+    & Pick<Report, 'id'>
+    & { dependencies: (
+      { __typename?: 'ReportOverlayDependencies' }
+      & { metrics: Array<(
+        { __typename?: 'CompatibleSpatialMetric' }
+        & CompatibleSpatialMetricProgressFieldsFragment
       )> }
     ) }
   )> }
@@ -24267,7 +24304,7 @@ export type BaseDraftReportContextQuery = (
   { __typename?: 'Query' }
   & { sketchClass?: Maybe<(
     { __typename?: 'SketchClass' }
-    & { report?: Maybe<(
+    & { draftReport?: Maybe<(
       { __typename?: 'Report' }
       & BaseReportDetailsFragment
     )> }
@@ -24350,9 +24387,12 @@ export type DraftReportDependenciesQuery = (
   & { draftReportDependencies: (
     { __typename?: 'DraftReportDependenciesResults' }
     & Pick<DraftReportDependenciesResults, 'ready' | 'sketchId'>
-    & { metrics: Array<(
+    & { fragmentSubjectCatalog: Array<(
+      { __typename?: 'FragmentSubject' }
+      & FragmentSubjectDetailsFragment
+    )>, metrics: Array<(
       { __typename?: 'CompatibleSpatialMetric' }
-      & CompatibleSpatialMetricDetailsFragment
+      & CompatibleSpatialMetricSlimFragment
     )> }
   ) }
 );
@@ -24395,7 +24435,7 @@ export type ProjectReportingLayersQuery = (
         & Pick<DataLayer, 'id' | 'version'>
         & { dataSource?: Maybe<(
           { __typename?: 'DataSource' }
-          & Pick<DataSource, 'id' | 'type' | 'createdAt' | 'attribution' | 'vectorGeometryType'>
+          & Pick<DataSource, 'id' | 'type' | 'createdAt' | 'attribution' | 'vectorGeometryType' | 'isSingleBandRaster'>
           & { authorProfile?: Maybe<(
             { __typename?: 'Profile' }
             & AuthorProfileFragment
@@ -24593,7 +24633,7 @@ export type SketchCrudResponseFragment = (
     & Pick<Sketch, 'id' | 'updatedAt' | 'timestamp'>
     & { sketchClass?: Maybe<(
       { __typename?: 'SketchClass' }
-      & Pick<SketchClass, 'reportId'>
+      & Pick<SketchClass, 'id' | 'reportId'>
     )> }
   )>, relatedFragments?: Maybe<Array<Maybe<(
     { __typename?: 'SketchesRelatedFragmentsRecord' }
@@ -24652,7 +24692,7 @@ export type DeleteSketchTocItemsMutation = (
       & Pick<Sketch, 'id' | 'updatedAt'>
       & { sketchClass?: Maybe<(
         { __typename?: 'SketchClass' }
-        & Pick<SketchClass, 'reportId'>
+        & Pick<SketchClass, 'id' | 'reportId'>
       )> }
     )>> }
   )> }
@@ -24741,7 +24781,7 @@ export type UpdateTocItemsParentMutation = (
       & Pick<Sketch, 'id' | 'updatedAt'>
       & { sketchClass?: Maybe<(
         { __typename?: 'SketchClass' }
-        & Pick<SketchClass, 'reportId'>
+        & Pick<SketchClass, 'id' | 'reportId'>
       )> }
     )>> }
   )> }
@@ -24844,6 +24884,10 @@ export type CopyTocItemMutation = (
     )>>, updatedCollection?: Maybe<(
       { __typename?: 'Sketch' }
       & Pick<Sketch, 'id' | 'updatedAt'>
+      & { sketchClass?: Maybe<(
+        { __typename?: 'SketchClass' }
+        & Pick<SketchClass, 'id' | 'reportId'>
+      )> }
     )> }
   )> }
 );
@@ -24868,17 +24912,27 @@ export type FragmentSubjectDetailsFragment = (
 
 export type CompatibleSpatialMetricDetailsFragment = (
   { __typename?: 'CompatibleSpatialMetric' }
-  & Pick<CompatibleSpatialMetric, 'id' | 'type' | 'createdAt' | 'updatedAt' | 'value' | 'state' | 'errorMessage' | 'progress' | 'jobKey' | 'sourceUrl' | 'sourceProcessingJobDependency' | 'eta' | 'startedAt' | 'durationSeconds' | 'dependencyHash'>
-  & { subject: (
+  & Pick<CompatibleSpatialMetric, 'id' | 'type' | 'g' | 'f' | 'createdAt' | 'updatedAt' | 'value' | 'state' | 'errorMessage' | 'progress' | 'jobKey' | 'sourceUrl' | 'sourceProcessingJobDependency' | 'eta' | 'startedAt' | 'durationSeconds' | 'dependencyHash'>
+  & { subject?: Maybe<(
     { __typename?: 'FragmentSubject' }
     & FragmentSubjectDetailsFragment
   ) | (
     { __typename?: 'GeographySubject' }
     & GeographySubjectDetailsFragment
-  ), parameters: (
+  )>, parameters: (
     { __typename?: 'MetricParameters' }
     & Pick<MetricParameters, 'groupBy' | 'includedColumns' | 'valueColumn' | 'bufferDistanceKm' | 'maxResults' | 'maxDistanceKm' | 'sourceHasOverlappingFeatures'>
   ) }
+);
+
+export type CompatibleSpatialMetricSlimFragment = (
+  { __typename?: 'CompatibleSpatialMetric' }
+  & Pick<CompatibleSpatialMetric, 'id' | 'type' | 'g' | 'f' | 'value' | 'state' | 'errorMessage' | 'progress' | 'eta' | 'startedAt' | 'durationSeconds' | 'dependencyHash'>
+);
+
+export type CompatibleSpatialMetricProgressFieldsFragment = (
+  { __typename?: 'CompatibleSpatialMetric' }
+  & Pick<CompatibleSpatialMetric, 'id' | 'updatedAt' | 'sourceProcessingJobDependency'>
 );
 
 export type MinimalSpatialMetricDetailsFragment = (
@@ -28153,6 +28207,7 @@ export const SketchCrudResponseFragmentDoc = /*#__PURE__*/ gql`
     updatedAt
     timestamp
     sketchClass {
+      id
       reportId
     }
   }
@@ -28273,6 +28328,8 @@ export const CompatibleSpatialMetricDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment CompatibleSpatialMetricDetails on CompatibleSpatialMetric {
   id
   type
+  g
+  f
   subject {
     ...GeographySubjectDetails
     ...FragmentSubjectDetails
@@ -28302,6 +28359,29 @@ export const CompatibleSpatialMetricDetailsFragmentDoc = /*#__PURE__*/ gql`
 }
     ${GeographySubjectDetailsFragmentDoc}
 ${FragmentSubjectDetailsFragmentDoc}`;
+export const CompatibleSpatialMetricSlimFragmentDoc = /*#__PURE__*/ gql`
+    fragment CompatibleSpatialMetricSlim on CompatibleSpatialMetric {
+  id
+  type
+  g
+  f
+  value
+  state
+  errorMessage
+  progress
+  eta
+  startedAt
+  durationSeconds
+  dependencyHash
+}
+    `;
+export const CompatibleSpatialMetricProgressFieldsFragmentDoc = /*#__PURE__*/ gql`
+    fragment CompatibleSpatialMetricProgressFields on CompatibleSpatialMetric {
+  id
+  updatedAt
+  sourceProcessingJobDependency
+}
+    `;
 export const MinimalSpatialMetricDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment MinimalSpatialMetricDetails on CompatibleSpatialMetric {
   id
@@ -31762,6 +31842,9 @@ export const ReportContextDocument = /*#__PURE__*/ gql`
     }
     dependencies(sketchId: $sketchId) {
       ready
+      fragmentSubjectCatalog {
+        ...FragmentSubjectDetails
+      }
       metrics {
         ...CompatibleSpatialMetricDetails
       }
@@ -31777,6 +31860,7 @@ export const ReportContextDocument = /*#__PURE__*/ gql`
 ${ReportContextSketchClassDetailsFragmentDoc}
 ${ReportTabDetailsFragmentDoc}
 ${OverlaySourceDetailsFragmentDoc}
+${FragmentSubjectDetailsFragmentDoc}
 ${CompatibleSpatialMetricDetailsFragmentDoc}`;
 export const ReportDependenciesDocument = /*#__PURE__*/ gql`
     query ReportDependencies($reportId: Int!, $sketchId: Int!) {
@@ -31784,8 +31868,11 @@ export const ReportDependenciesDocument = /*#__PURE__*/ gql`
     id
     dependencies(sketchId: $sketchId) {
       ready
+      fragmentSubjectCatalog {
+        ...FragmentSubjectDetails
+      }
       metrics {
-        ...CompatibleSpatialMetricDetails
+        ...CompatibleSpatialMetricSlim
       }
       cardDependencyLists {
         cardId
@@ -31795,7 +31882,20 @@ export const ReportDependenciesDocument = /*#__PURE__*/ gql`
     }
   }
 }
-    ${CompatibleSpatialMetricDetailsFragmentDoc}`;
+    ${FragmentSubjectDetailsFragmentDoc}
+${CompatibleSpatialMetricSlimFragmentDoc}`;
+export const ReportMetricProgressFieldsDocument = /*#__PURE__*/ gql`
+    query ReportMetricProgressFields($reportId: Int!, $sketchId: Int!) {
+  report(id: $reportId) {
+    id
+    dependencies(sketchId: $sketchId) {
+      metrics {
+        ...CompatibleSpatialMetricProgressFields
+      }
+    }
+  }
+}
+    ${CompatibleSpatialMetricProgressFieldsFragmentDoc}`;
 export const ReportOverlaySourcesDocument = /*#__PURE__*/ gql`
     query ReportOverlaySources($reportId: Int!) {
   report(id: $reportId) {
@@ -31821,7 +31921,7 @@ export const BaseDraftReportContextDocument = /*#__PURE__*/ gql`
     query BaseDraftReportContext($sketchClassId: Int!) {
   sketchClass(id: $sketchClassId) {
     ...ReportContextSketchClassDetails
-    report: draftReport {
+    draftReport {
       ...BaseReportDetails
     }
   }
@@ -31887,13 +31987,17 @@ export const DraftReportDependenciesDocument = /*#__PURE__*/ gql`
     query DraftReportDependencies($input: DraftDependenciesInput) {
   draftReportDependencies(input: $input) {
     ready
+    fragmentSubjectCatalog {
+      ...FragmentSubjectDetails
+    }
     metrics {
-      ...CompatibleSpatialMetricDetails
+      ...CompatibleSpatialMetricSlim
     }
     sketchId
   }
 }
-    ${CompatibleSpatialMetricDetailsFragmentDoc}`;
+    ${FragmentSubjectDetailsFragmentDoc}
+${CompatibleSpatialMetricSlimFragmentDoc}`;
 export const DraftReportOverlaySourcesDocument = /*#__PURE__*/ gql`
     query DraftReportOverlaySources($input: DraftDependenciesInput) {
   draftReportOverlaySources(input: $input) {
@@ -31931,6 +32035,7 @@ export const ProjectReportingLayersDocument = /*#__PURE__*/ gql`
           createdAt
           attribution
           vectorGeometryType
+          isSingleBandRaster
         }
       }
       copiedFromDataLibraryTemplateId
@@ -32071,6 +32176,7 @@ export const DeleteSketchTocItemsDocument = /*#__PURE__*/ gql`
       id
       updatedAt
       sketchClass {
+        id
         reportId
       }
     }
@@ -32117,6 +32223,7 @@ export const UpdateTocItemsParentDocument = /*#__PURE__*/ gql`
       id
       updatedAt
       sketchClass {
+        id
         reportId
       }
     }
@@ -32154,6 +32261,10 @@ export const CopyTocItemDocument = /*#__PURE__*/ gql`
     updatedCollection {
       id
       updatedAt
+      sketchClass {
+        id
+        reportId
+      }
     }
   }
 }
@@ -33346,6 +33457,7 @@ export const namedOperations = {
     SourceProcessingJobs: 'SourceProcessingJobs',
     ReportContext: 'ReportContext',
     ReportDependencies: 'ReportDependencies',
+    ReportMetricProgressFields: 'ReportMetricProgressFields',
     ReportOverlaySources: 'ReportOverlaySources',
     BaseReportContext: 'BaseReportContext',
     BaseDraftReportContext: 'BaseDraftReportContext',
@@ -33684,6 +33796,8 @@ export const namedOperations = {
     GeographySubjectDetails: 'GeographySubjectDetails',
     FragmentSubjectDetails: 'FragmentSubjectDetails',
     CompatibleSpatialMetricDetails: 'CompatibleSpatialMetricDetails',
+    CompatibleSpatialMetricSlim: 'CompatibleSpatialMetricSlim',
+    CompatibleSpatialMetricProgressFields: 'CompatibleSpatialMetricProgressFields',
     MinimalSpatialMetricDetails: 'MinimalSpatialMetricDetails',
     SurveyListDetails: 'SurveyListDetails',
     AddFormElementTypeDetails: 'AddFormElementTypeDetails',

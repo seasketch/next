@@ -206,10 +206,25 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
             ) as collection_id from json_to_recordset($1) as (type sketch_child_type, id int)`,
             [JSON.stringify(tocItems)],
           );
+          const postMoveIds = rows
+            .map((r: any) => r.collection_id)
+            .filter((id: unknown) => id != null);
           const updatedCollectionIds = [
-            ...(previousCollectionIds || []),
-            ...rows.map((r: any) => r.collection_id),
+            ...new Set<number>([
+              ...(previousCollectionIds || []).filter(
+                (id: unknown): id is number =>
+                  typeof id === "number" && Number.isFinite(id),
+              ),
+              ...postMoveIds.filter(
+                (id: unknown): id is number =>
+                  typeof id === "number" && Number.isFinite(id),
+              ),
+            ]),
           ];
+
+          if (updatedCollectionIds.length === 0) {
+            return [];
+          }
 
           return resolveInfo.graphile.selectGraphQLResultFromTable(
             sql.fragment`sketches`,

@@ -258,13 +258,19 @@ export type MetricTypeMap = {
 export function subjectIsFragment(
   subject: any | MetricSubjectFragment | MetricSubjectGeography,
 ): subject is MetricSubjectFragment {
-  return "hash" in subject;
+  return (
+    subject != null &&
+    typeof subject === "object" &&
+    "hash" in subject
+  );
 }
 
 export function subjectIsGeography(
   subject: any | MetricSubjectFragment | MetricSubjectGeography,
 ): subject is MetricSubjectGeography {
-  return "id" in subject;
+  return (
+    subject != null && typeof subject === "object" && "id" in subject
+  );
 }
 
 export type SourceType = "FlatGeobuf" | "GeoJSON" | "GeoTIFF";

@@ -14,6 +14,8 @@ export interface DropdownOption {
   disabled?: boolean;
   id?: string;
   keycode?: string;
+  /** Applied by sketch TOC context menu only (e.g. indent under Create) */
+  contextMenuItemClassName?: string;
 }
 
 interface DropdownButtonProps {

@@ -90,7 +90,7 @@ export default function CircularProgressIndicator({
         cx={center}
         cy={center}
         r={radius}
-        stroke={"rgba(25,0,255,0.15)"} //progressColor}
+        stroke={progressColor}
         strokeWidth={strokeWidth}
         fill="none"
         strokeLinecap={isIndeterminate ? "round" : "butt"}

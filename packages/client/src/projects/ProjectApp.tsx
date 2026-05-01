@@ -45,6 +45,7 @@ import { TableOfContentsMetadataModalProvider } from "../dataLayers/TableOfConte
 import { DataDownloadModalProvider } from "../dataLayers/DataDownloadModal";
 import AboutPage from "./AboutPage";
 import getSlug from "../getSlug";
+import ReportPublishedDataPrefetch from "./ReportPublishedDataPrefetch";
 
 const LazyOverlays = React.lazy(
   () => import(/* webpackChunkName: "Overlays" */ "./OverlayLayers")
@@ -129,6 +130,9 @@ export default function ProjectApp() {
       className="h-screen overflow-hidden flex flex-col ml-14"
       style={{ width: "calc(100vw - 3.5rem)" }}
     >
+      <ReportPublishedDataPrefetch
+        sketchClasses={data?.project?.sketchClasses}
+      />
       <DndProvider backend={HTML5Backend}>
         <BasemapContextProvider
           basemaps={basemaps}

@@ -7,7 +7,14 @@ import {
 import { Trans } from "react-i18next";
 import getSlug from "../../getSlug";
 import { useSketchingQuery } from "../../generated/graphql";
-import { useContext, useMemo, useState, useEffect, useCallback } from "react";
+import {
+  useContext,
+  useMemo,
+  useState,
+  useEffect,
+  useCallback,
+  Fragment,
+} from "react";
 import { memo } from "react";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import { useAuth0 } from "@auth0/auth0-react";
@@ -20,10 +27,18 @@ import LoginPrompt from "./LoginPrompt";
 import decode from "jwt-decode";
 import { SketchUIStateContext } from "./SketchUIStateContextProvider";
 import * as ContextMenu from "@radix-ui/react-context-menu";
+import { DropdownDividerProps } from "../../components/ContextMenuDropdown";
+import { DropdownOption } from "../../components/DropdownButton";
 import {
   MenuBarContentClasses,
   MenuBarItemClasses,
 } from "../../components/Menubar";
+
+function isSketchContextMenuAction(
+  item: DropdownOption | DropdownDividerProps
+): item is DropdownOption {
+  return "onClick" in item && typeof item.onClick === "function";
+}
 
 const SHOW_VISIBILITY_CONTROLS = false;
 
@@ -231,16 +246,29 @@ export default memo(function SketchingTools({ hidden }: { hidden?: boolean }) {
             }}
             className={MenuBarContentClasses}
           >
-            {items.map((item) => (
-              <ContextMenu.Item
-                key={item.id}
-                className={MenuBarItemClasses}
-                // @ts-ignore
-                onSelect={item.onClick}
-              >
-                {item.label}
-              </ContextMenu.Item>
-            ))}
+            {items.map((entry, i) =>
+              isSketchContextMenuAction(entry) ? (
+                <ContextMenu.Item
+                  key={entry.id ?? i}
+                  className={`${MenuBarItemClasses}${
+                    entry.contextMenuItemClassName
+                      ? ` ${entry.contextMenuItemClassName}`
+                      : ""
+                  }`}
+                  disabled={entry.disabled}
+                  onSelect={entry.disabled ? undefined : entry.onClick}
+                >
+                  {entry.label}
+                </ContextMenu.Item>
+              ) : (
+                <Fragment key={entry.id ?? `section-${i}`}>
+                  <ContextMenu.Separator className="h-px my-1 bg-gray-200" />
+                  <ContextMenu.Label className="px-2 py-1.5 text-xs font-semibold text-gray-500 select-none cursor-default">
+                    {entry.label}
+                  </ContextMenu.Label>
+                </Fragment>
+              )
+            )}
           </ContextMenu.Content>
         );
       }

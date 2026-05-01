@@ -12,16 +12,36 @@ import colors from "yoctocolors-cjs";
 // Cache of EPSG validity checks — avoids re-requiring the same file and
 // never loads the full 6 MB all.json.  Each individual s/<code>.json is ~512 B.
 const _epsgKnownCache = new Map<number, boolean>();
+
+/**
+ * CRS codes we always accept without probing `epsg-index/s/<code>.json`.
+ * Dynamic `require("epsg-index/s/…")` can fail in some deployments (pruned
+ * `node_modules`, bundlers that omit non-static requires) even when the CRS
+ * is standard — e.g. EPSG:3857 is ubiquitous for web maps and is valid for
+ * the reporting pipeline; the error was a lookup failure, not “3857 is
+ * unsupported for analysis”.
+ */
+const EPSG_ALWAYS_KNOWN = new Set<number>([
+  4326, // WGS 84 — geographic input for sketches
+  3857, // WGS 84 / Pseudo-Mercator — common for rasters and map tiles
+  3785, // legacy alias used in the wild for the same projection as 3857
+  900913, // historical Google code for Web Mercator
+  102100, // Esri WKID equivalent to 3857
+]);
+
 function isKnownEpsg(epsg: number): boolean {
-  if (_epsgKnownCache.has(epsg)) return _epsgKnownCache.get(epsg)!;
+  const code = Math.trunc(Number(epsg));
+  if (Number.isNaN(code)) return false;
+  if (EPSG_ALWAYS_KNOWN.has(code)) return true;
+  if (_epsgKnownCache.has(code)) return _epsgKnownCache.get(code)!;
   let known = false;
   try {
-    require(`epsg-index/s/${epsg}.json`);
+    require(`epsg-index/s/${code}.json`);
     known = true;
   } catch {
     known = false;
   }
-  _epsgKnownCache.set(epsg, known);
+  _epsgKnownCache.set(code, known);
   return known;
 }
 
@@ -113,7 +133,7 @@ export class JobStatusUpdater {
             Id: `ack_${index}`,
             ReceiptHandle: receiptHandle,
           })),
-        })
+        }),
       );
       this.receiptHandlesToAcknowledge.splice(0, batch.length);
     }
@@ -126,7 +146,7 @@ export class JobStatusUpdater {
     10,
     {
       maxWait: 300,
-    }
+    },
   );
 
   validateMessage(message: MessageWithReceipt) {
@@ -162,7 +182,7 @@ export class JobStatusUpdater {
     await this.processBeginMessages();
     await this.processProgressMessages();
     console.log(
-      colors.bgGreen(`processMessages duration: ${Date.now() - start}ms`)
+      colors.bgGreen(`processMessages duration: ${Date.now() - start}ms`),
     );
   }
 
@@ -176,10 +196,10 @@ export class JobStatusUpdater {
         }
       }
       const overlayResults = results.filter(
-        (message) => message.origin === "overlay"
+        (message) => message.origin === "overlay",
       );
       const subdivisionResults = results.filter(
-        (message) => message.origin === "subdivision"
+        (message) => message.origin === "subdivision",
       );
       if (overlayResults.length > 0) {
         const values: Array<string | number | null | object> = [];
@@ -189,14 +209,14 @@ export class JobStatusUpdater {
             values.push(
               JSON.stringify(message.result),
               message.jobKey,
-              message.duration ?? null
+              message.duration ?? null,
             );
             return `($${base + 1}, $${base + 2}, $${base + 3})`;
           })
           .join(", ");
         await this.pgPool.query(
           `update spatial_metrics as sm set value = v.result::jsonb, state = 'complete', updated_at = now(), completed_at = now(), duration = coalesce(v.duration::double precision * interval '1 millisecond', now() - sm.started_at), progress_percentage = 100, error_message = null from (values ${placeholders}) as v(result, job_key, duration) where sm.job_key = v.job_key`,
-          values
+          values,
         );
       }
       if (subdivisionResults.length > 0) {
@@ -218,7 +238,7 @@ export class JobStatusUpdater {
           };
           const jobQ = await this.pgPool.query(
             `select data_source_id, project_id from source_processing_jobs where job_key = $1`,
-            [message.jobKey]
+            [message.jobKey],
           );
           if (
             !result.object.publicUrl ||
@@ -227,10 +247,10 @@ export class JobStatusUpdater {
           ) {
             await this.pgPool.query(
               `update source_processing_jobs set state = 'error', error_message = 'Invalid result. Missing publicUrl, key, or bucket from result.object.', updated_at = now(), duration = now() - started_at where job_key = $1`,
-              [message.jobKey]
+              [message.jobKey],
             );
             console.error(
-              new Error(`Invalid result: ${JSON.stringify(message.result)}`)
+              new Error(`Invalid result: ${JSON.stringify(message.result)}`),
             );
             delete this.messageQueue[message.jobKey];
             this.queueMessageForAcknowledgement(message);
@@ -246,11 +266,9 @@ export class JobStatusUpdater {
             const filename =
               result.object.filename || result.object.key || "output.fgb";
             const epsg = result.object.epsg || null;
-            const numInvalidFeatures =
-              result.numInvalidFeatures ?? null;
+            const numInvalidFeatures = result.numInvalidFeatures ?? null;
             const numFeatures = result.numFeatures ?? null;
-            const numRepairedFeatures =
-              result.numRepairedFeatures ?? null;
+            const numRepairedFeatures = result.numRepairedFeatures ?? null;
             const wasRepaired = result.wasRepaired ?? null;
             const containsOverlappingFeatures =
               result.containsOverlappingFeatures ?? null;
@@ -273,10 +291,10 @@ export class JobStatusUpdater {
                   [
                     `Unsupported projection EPSG:${epsg}. Re-upload the raster in a recognised coordinate system.`,
                     message.jobKey,
-                  ]
+                  ],
                 );
                 console.error(
-                  `Unrecognised EPSG code ${epsg} for job ${message.jobKey}; marking job as error.`
+                  `Unrecognised EPSG code ${epsg} for job ${message.jobKey}; marking job as error.`,
                 );
                 delete this.messageQueue[message.jobKey];
                 this.queueMessageForAcknowledgement(message);
@@ -305,11 +323,11 @@ export class JobStatusUpdater {
                 numRepairedFeatures,
                 wasRepaired,
                 containsOverlappingFeatures,
-              ]
+              ],
             );
             await this.pgPool.query(
               `update source_processing_jobs set state = 'complete', updated_at = now(), completed_at = now(), duration = now() - started_at, progress_percentage = 100, error_message = null where job_key = $1`,
-              [message.jobKey]
+              [message.jobKey],
             );
           }
         }
@@ -333,10 +351,10 @@ export class JobStatusUpdater {
         }
       }
       const overlayErrors = errors.filter(
-        (message) => message.origin === "overlay"
+        (message) => message.origin === "overlay",
       );
       const subdivisionErrors = errors.filter(
-        (message) => message.origin === "subdivision"
+        (message) => message.origin === "subdivision",
       );
       if (overlayErrors.length > 0) {
         const values: Array<string | number | null | object> = [];
@@ -349,7 +367,7 @@ export class JobStatusUpdater {
           .join(", ");
         await this.pgPool.query(
           `update spatial_metrics as sm set state = 'error', error_message = v.error, updated_at = now(), duration = now() - sm.started_at from (values ${placeholders}) as v(error, job_key) where sm.job_key = v.job_key and state != 'complete'`,
-          values
+          values,
         );
       }
       if (subdivisionErrors.length > 0) {
@@ -363,7 +381,7 @@ export class JobStatusUpdater {
           .join(", ");
         await this.pgPool.query(
           `update source_processing_jobs as spj set state = 'error', error_message = v.error, updated_at = now(), duration = now() - spj.started_at from (values ${placeholders}) as v(error, job_key) where spj.job_key = v.job_key`,
-          values
+          values,
         );
       }
       for (const message of errors) {
@@ -388,10 +406,10 @@ export class JobStatusUpdater {
         }
       }
       const overlayBeginMessages = begins.filter(
-        (message) => message.origin === "overlay"
+        (message) => message.origin === "overlay",
       );
       const subdivisionBeginMessages = begins.filter(
-        (message) => message.origin === "subdivision"
+        (message) => message.origin === "subdivision",
       );
       if (overlayBeginMessages.length > 0) {
         const values: Array<string | number | null | object> = [];
@@ -404,7 +422,7 @@ export class JobStatusUpdater {
           .join(", ");
         await this.pgPool.query(
           `update spatial_metrics as sm set state = 'processing', updated_at = now(), started_at = now() from (values ${placeholders}) as v(job_key) where sm.job_key = v.job_key and state != 'complete' and state != 'error'`,
-          values
+          values,
         );
       }
       if (subdivisionBeginMessages.length > 0) {
@@ -418,7 +436,7 @@ export class JobStatusUpdater {
           .join(", ");
         await this.pgPool.query(
           `update source_processing_jobs as spj set state = 'processing', updated_at = now(), started_at = now() from (values ${placeholders}) as v(job_key) where spj.job_key = v.job_key and spj.state != 'complete' and spj.state != 'error'`,
-          values
+          values,
         );
       }
       for (const message of begins) {
@@ -447,17 +465,17 @@ export class JobStatusUpdater {
             (max, message) => {
               return message.progress > max.progress ? message : max;
             },
-            jobMessages.progress[0]
+            jobMessages.progress[0],
           );
           progressMessages.push(progressMessage);
           this.messageQueue[jobKey].progress = [];
         }
       }
       const overlayProgressMessages = progressMessages.filter(
-        (message) => message.origin === "overlay"
+        (message) => message.origin === "overlay",
       );
       const subdivisionProgressMessages = progressMessages.filter(
-        (message) => message.origin === "subdivision"
+        (message) => message.origin === "subdivision",
       );
 
       if (overlayProgressMessages.length > 0) {
@@ -471,7 +489,7 @@ export class JobStatusUpdater {
           .join(", ");
         await this.pgPool.query(
           `update spatial_metrics as sm set state = 'processing', updated_at = now(), progress_percentage = greatest(progress_percentage::double precision, v.progress::double precision), eta = v.eta::timestamptz from (values ${placeholders}) as v(progress, job_key, eta) where sm.job_key = v.job_key and state != 'complete' and state != 'error'`,
-          values
+          values,
         );
       }
       if (subdivisionProgressMessages.length > 0) {
@@ -485,7 +503,7 @@ export class JobStatusUpdater {
           .join(", ");
         await this.pgPool.query(
           `update source_processing_jobs as spj set state = 'processing', updated_at = now(), progress_percentage = greatest(spj.progress_percentage::double precision, v.progress::double precision), eta = v.eta::timestamptz from (values ${placeholders}) as v(progress, job_key, eta) where spj.job_key = v.job_key and spj.state != 'complete' and spj.state != 'error'`,
-          values
+          values,
         );
       }
       for (const message of progressMessages) {
@@ -508,6 +526,6 @@ export class JobStatusUpdater {
   }
 
   debouncedUpdateJobs = debounce(this.processMessages, 100, {
-    maxWait: 1000,
+    maxWait: 500,
   });
 }

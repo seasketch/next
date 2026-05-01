@@ -24,6 +24,7 @@ import {
   BaseReportContextProvider,
 } from "../../reports/context/BaseReportContext";
 import ReportDependenciesContextProvider from "../../reports/context/ReportDependenciesContext";
+import ReportPublishedMetricDependenciesRegistrar from "../../reports/context/ReportPublishedMetricDependenciesRegistrar";
 import {
   SubjectReportContext,
   SubjectReportContextProvider,
@@ -185,6 +186,7 @@ function SketchReportWindowInner({
 
   return (
     <ReportDependenciesContextProvider sketchId={sketchId} reportId={reportId}>
+      <ReportPublishedMetricDependenciesRegistrar />
       <SubjectReportContextProvider sketchId={sketchId}>
         <ReportUIStateContext.Provider value={uiStateContextValue}>
           <div

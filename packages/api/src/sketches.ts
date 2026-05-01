@@ -712,6 +712,28 @@ export async function getFragmentHashesForSketch(
 }
 
 /**
+ * Same as {@link getFragmentHashesForSketch} but skips sketch RLS permission SQL.
+ * Only call after an application-level access check (e.g. session_can_access_sketch).
+ */
+export async function getFragmentHashesForSketchTrusted(
+  sketchId: number,
+  pgClient: Pool | PoolClient,
+): Promise<string[]> {
+  const { rows } = await pgClient.query(
+    `select get_fragment_hashes_for_sketch_trusted($1::integer) as fragment_hashes`,
+    [sketchId],
+  );
+  if (
+    rows.length > 0 &&
+    rows[0].fragment_hashes &&
+    Array.isArray(rows[0].fragment_hashes)
+  ) {
+    return rows[0].fragment_hashes;
+  }
+  return [];
+}
+
+/**
  * Batch lookup of fragment hashes for multiple sketches (single query).
  * Sketches with no fragments or that fail RLS are omitted; caller should
  * initialize missing entries to [] as needed.
@@ -997,9 +1019,11 @@ export async function ensureSketchFragments(
   sketchId: number,
   projectId: number,
   pgClient: PoolClient,
-  options?: { resetClippedGeometry?: boolean },
+  options?: { resetClippedGeometry?: boolean; skipSketchRlsCheck?: boolean },
 ): Promise<string[]> {
-  const existingHashes = await getFragmentHashesForSketch(sketchId, pgClient);
+  const existingHashes = options?.skipSketchRlsCheck
+    ? await getFragmentHashesForSketchTrusted(sketchId, pgClient)
+    : await getFragmentHashesForSketch(sketchId, pgClient);
   if (existingHashes.length > 0) {
     return existingHashes;
   }
@@ -1103,7 +1127,9 @@ export async function ensureSketchFragments(
     );
   }
 
-  return getFragmentHashesForSketch(sketchId, pgClient);
+  return options?.skipSketchRlsCheck
+    ? getFragmentHashesForSketchTrusted(sketchId, pgClient)
+    : getFragmentHashesForSketch(sketchId, pgClient);
 }
 
 /**

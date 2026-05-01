@@ -15,12 +15,29 @@ const sqsClient = new SQSClient({
 
 let jobStatusUpdater: JobStatusUpdater | null = null;
 
+const DEFAULT_SQS_CONSUMER_COUNT = 4;
+
+function getOverlayEngineSqsConsumerCount(): number {
+  const raw = process.env.OVERLAY_ENGINE_WORKER_SQS_CONSUMER_COUNT;
+  if (raw === undefined || raw === "") {
+    return DEFAULT_SQS_CONSUMER_COUNT;
+  }
+  const n = parseInt(raw, 10);
+  if (!Number.isFinite(n) || n < 1) {
+    console.warn(
+      `OVERLAY_ENGINE_WORKER_SQS_CONSUMER_COUNT="${raw}" is invalid; using ${DEFAULT_SQS_CONSUMER_COUNT}`,
+    );
+    return DEFAULT_SQS_CONSUMER_COUNT;
+  }
+  return n;
+}
+
 /**
  * Consolidates messages by jobKey to avoid multiple database updates
  * Priority: result/error > begin > progress (highest progress value only)
  */
 function consolidateMessagesByJobKey(
-  messages: MessageWithReceipt[]
+  messages: MessageWithReceipt[],
 ): Map<string, MessageWithReceipt> {
   const consolidated = new Map<string, MessageWithReceipt>();
 
@@ -56,15 +73,21 @@ function consolidateMessagesByJobKey(
  * Consumes messages from the overlay engine worker SQS queue
  * Parses and logs the message content, then deletes processed messages
  */
-export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
+export async function consumeOverlayEngineWorkerMessages(
+  pgPool: Pool,
+  consumerIndex?: number,
+) {
   const queueUrl = process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL;
 
   if (!queueUrl) {
     console.error(
-      "OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL environment variable is not set"
+      "OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL environment variable is not set",
     );
     return;
   }
+
+  const logPrefix =
+    consumerIndex !== undefined ? `[sqs ${consumerIndex + 1}] ` : "";
 
   try {
     const command = new ReceiveMessageCommand({
@@ -77,7 +100,6 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
 
     if (response.Messages && response.Messages.length > 0) {
       let queryCount = 0;
-      console.time("processing sqs messages");
       // Parse all messages first
       const parsedMessages: MessageWithReceipt[] = [];
       const receiptHandlesToDelete: string[] = []; // Store all receipt handles for deletion
@@ -88,7 +110,6 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
             const parsedMessage: OverlayEngineWorkerMessage & {
               origin?: string;
             } = JSON.parse(message.Body);
-            
 
             if (parsedMessage.jobKey) {
               parsedMessages.push({
@@ -102,8 +123,8 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
             } else {
               console.error(
                 colors.red(
-                  "Job key is required for overlay engine worker messages"
-                )
+                  "Job key is required for overlay engine worker messages",
+                ),
               );
             }
           } catch (parseError) {
@@ -112,7 +133,7 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
             }
             console.error(
               colors.red("Failed to parse message body:"),
-              parseError
+              parseError,
             );
             console.log("Raw message body:", message.Body);
           }
@@ -121,7 +142,7 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
             receiptHandlesToDelete.push(message.ReceiptHandle);
             console.error(
               colors.red("Failed to parse message body:"),
-              "No body"
+              "No body",
             );
           }
         }
@@ -133,30 +154,30 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
           message.type === "begin"
             ? colors.green
             : message.type === "error"
-            ? colors.red
-            : message.type === "progress"
-            ? colors.blue
-            : colors.yellow;
+              ? colors.red
+              : message.type === "progress"
+                ? colors.blue
+                : colors.yellow;
         console.log(
           color(
             `[${message.jobKey}] ${message.type} ${
               message.type === "progress"
                 ? message.progress
                 : message.type === "error"
-                ? message.error
-                : message.type === "result"
-                ? message.result
-                : ""
+                  ? message.error
+                  : message.type === "result"
+                    ? message.type
+                    : ""
             } ${message.type === "progress" ? message.message : ""} ${
               message.type === "progress" && message.eta ? message.eta : ""
-            }`
-          )
+            }`,
+          ),
         );
       }
 
       // Consolidate messages by jobKey
       const consolidatedMessages = consolidateMessagesByJobKey(
-        parsedMessages as any
+        parsedMessages as any,
       );
 
       // Process consolidated messages
@@ -166,7 +187,7 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
         } catch (processError) {
           console.error(
             `Error processing consolidated message for job ${jobKey}:`,
-            processError
+            processError,
           );
         }
       }
@@ -183,32 +204,50 @@ export async function consumeOverlayEngineWorkerMessages(pgPool: Pool) {
           console.error("Failed to delete message:", deleteError);
         }
       }
-      console.timeEnd("processing sqs messages");
     } else {
       // console.log("No messages received from queue");
     }
   } catch (error) {
-    console.error("Error consuming messages from SQS queue:", error);
+    console.error(
+      `${logPrefix}Error consuming messages from SQS queue:`,
+      error,
+    );
+  }
+}
+
+async function runOneSqsConsumerLoop(
+  pgPool: Pool,
+  consumerIndex: number,
+  consumerCount: number,
+): Promise<never> {
+  while (true) {
+    try {
+      await consumeOverlayEngineWorkerMessages(pgPool, consumerIndex);
+    } catch (error) {
+      console.error(
+        `[sqs ${consumerIndex + 1}/${consumerCount}] Error in continuous polling:`,
+        error,
+      );
+      await new Promise((resolve) => setTimeout(resolve, 5000));
+    }
   }
 }
 
 /**
- * Starts a continuous message consumer that polls the queue
+ * Starts continuous message consumers that poll the queue in parallel.
+ * Each loop performs long-poll ReceiveMessage (max 10 messages); multiple
+ * loops multiply theoretical throughput. All share one {@link JobStatusUpdater}.
  */
-export async function startOverlayEngineWorkerMessageConsumer(pgPool: Pool) {
+export function startOverlayEngineWorkerMessageConsumer(pgPool: Pool) {
+  const consumerCount = getOverlayEngineSqsConsumerCount();
+
   console.log(
-    `Starting overlay engine worker message consumer on ${process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL}`
+    `Starting overlay engine worker message consumer (${consumerCount} parallel pollers) on ${process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL}`,
   );
 
   jobStatusUpdater = new JobStatusUpdater(pgPool, sqsClient);
-  // Start continuous polling
-  while (true) {
-    try {
-      await consumeOverlayEngineWorkerMessages(pgPool);
-    } catch (error) {
-      console.error("Error in continuous polling:", error);
-      // Wait a bit longer on error before retrying
-      await new Promise((resolve) => setTimeout(resolve, 5000));
-    }
+
+  for (let i = 0; i < consumerCount; i++) {
+    void runOneSqsConsumerLoop(pgPool, i, consumerCount);
   }
 }

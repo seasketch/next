@@ -28,8 +28,6 @@ import {
   InfoCircledIcon,
   CheckCircledIcon,
 } from "@radix-ui/react-icons";
-import { isGeostatsLayer, isRasterInfo } from "@seasketch/geostats-types";
-
 export type ReportSourceGeometryType =
   | "Polygon"
   | "MultiPolygon"
@@ -70,34 +68,18 @@ const VECTOR_GEOMETRIES: ReportSourceGeometryType[] = [
   "MultiPoint",
 ];
 
-function getGeometryTypeFromGeostats(
-  geostats: unknown
-): ReportSourceGeometryType | null {
-  if (!geostats || typeof geostats !== "object") return null;
-  const g = geostats as Record<string, unknown>;
-  if (isRasterInfo(g)) {
-    const bands = (g as { bands?: unknown[] }).bands;
-    return bands?.length === 1 ? "SingleBandRaster" : null;
+/** Geometry type for reporting source pickers (vectors + single-band rasters). */
+function resolveEligibleGeometryType(args: {
+  vectorGeometryType?: string | null;
+  rasterBandCount?: number | null;
+  isSingleBandRaster?: boolean | null;
+}): ReportSourceGeometryType | null {
+  if (args.rasterBandCount === 1 || args.isSingleBandRaster === true) {
+    return "SingleBandRaster";
   }
-  const layers = g.layers as Array<{ geometry?: string }> | undefined;
-  const first = layers?.[0];
-  if (!first) {
-    if (isGeostatsLayer(g)) {
-      const geom = (g as { geometry?: string }).geometry;
-      if (
-        geom &&
-        VECTOR_GEOMETRIES.includes(geom as ReportSourceGeometryType)
-      ) {
-        return geom as ReportSourceGeometryType;
-      }
-    }
-    return null;
-  }
-  if (isGeostatsLayer(first)) {
-    const geom = (first as { geometry?: string }).geometry;
-    if (geom && VECTOR_GEOMETRIES.includes(geom as ReportSourceGeometryType)) {
-      return geom as ReportSourceGeometryType;
-    }
+  const v = args.vectorGeometryType;
+  if (v && VECTOR_GEOMETRIES.includes(v as ReportSourceGeometryType)) {
+    return v as ReportSourceGeometryType;
   }
   return null;
 }
@@ -147,7 +129,6 @@ function buildLayerItems(
       dataSource?: {
         id: number;
         type: string;
-        geostats?: unknown;
       } | null;
     } | null;
   }>,
@@ -306,7 +287,10 @@ export function ReportLayerMultiPicker({
       if (tocId != null) {
         map.set(
           tocId,
-          layer.vectorGeometryType as ReportSourceGeometryType | null
+          resolveEligibleGeometryType({
+            vectorGeometryType: layer.vectorGeometryType,
+            rasterBandCount: layer.rasterBandCount,
+          })
         );
       }
     }
@@ -319,7 +303,10 @@ export function ReportLayerMultiPicker({
       const ds = item.dataLayer?.dataSource;
       map.set(
         item.id,
-        ds?.vectorGeometryType as ReportSourceGeometryType | null
+        resolveEligibleGeometryType({
+          vectorGeometryType: ds?.vectorGeometryType,
+          isSingleBandRaster: ds?.isSingleBandRaster,
+        })
       );
     }
     return map;
@@ -346,7 +333,6 @@ export function ReportLayerMultiPicker({
         dataSource?: {
           id: number;
           type: string;
-          geostats?: unknown;
         } | null;
       } | null;
     }>;

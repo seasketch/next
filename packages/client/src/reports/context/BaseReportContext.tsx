@@ -1,6 +1,7 @@
 import { createContext, useContext, useMemo } from "react";
 import {
   BaseDraftReportContextDocument,
+  BaseDraftReportContextQuery,
   BaseReportContextDocument,
   BaseReportContextQuery,
   BaseReportContextQueryVariables,
@@ -22,7 +23,10 @@ type BaseReportContextValue = {
     | "validChildren"
   >;
   report: ReportConfiguration;
-  geographies: Pick<Geography, "id" | "name" | "translatedProps" | "stableIds">[];
+  geographies: Pick<
+    Geography,
+    "id" | "name" | "translatedProps" | "stableIds"
+  >[];
 };
 
 export const BaseReportContext = createContext<{
@@ -39,14 +43,20 @@ export function BaseReportContextProvider({
   sketchClassId: number;
   draft: boolean;
 }) {
-  const { data, loading } = useQuery<
+  const publishedQuery = useQuery<
     BaseReportContextQuery,
     BaseReportContextQueryVariables
-  >(draft ? BaseDraftReportContextDocument : BaseReportContextDocument, {
-    variables: {
-      sketchClassId: sketchClassId,
-    },
+  >(BaseReportContextDocument, { variables: { sketchClassId }, skip: draft });
+  const draftQuery = useQuery<
+    BaseDraftReportContextQuery,
+    BaseReportContextQueryVariables
+  >(BaseDraftReportContextDocument, {
+    variables: { sketchClassId },
+    skip: !draft,
   });
+
+  const data = draft ? draftQuery.data : publishedQuery.data;
+  const loading = draft ? draftQuery.loading : publishedQuery.loading;
 
   const value = useMemo<BaseReportContextValue | undefined>(() => {
     if (data) {
@@ -56,15 +66,18 @@ export function BaseReportContextProvider({
       if (!data.sketchClass.project) {
         throw new Error("Project not found");
       }
+      const report = draft
+        ? (data as BaseDraftReportContextQuery).sketchClass?.draftReport
+        : (data as BaseReportContextQuery).sketchClass?.report;
       return {
         sketchClass: data.sketchClass,
-        report: data.sketchClass.report as unknown as ReportConfiguration,
+        report: report as unknown as ReportConfiguration,
         geographies: data.sketchClass?.project?.geographies || [],
       };
     } else {
       return undefined;
     }
-  }, [data]);
+  }, [data, draft]);
 
   return (
     <BaseReportContext.Provider value={{ data: value, loading }}>

@@ -5,10 +5,7 @@ import {
   UpdateTocItemParentInput,
   useUpdateTocItemsParentMutation,
 } from "../../generated/graphql";
-import {
-  evictReportDependenciesForSketchId,
-  evictReportDependenciesForUpdatedCollectionSketch,
-} from "../../reports/utils/evictReportDependenciesCache";
+import { evictSubjectReportCachesForSketchId } from "../../reports/utils/evictReportDependenciesCache";
 
 export default function useUpdateSketchTableOfContentsDraggable() {
   const onError = useGlobalErrorHandler();
@@ -26,13 +23,9 @@ export default function useUpdateSketchTableOfContentsDraggable() {
           collection.id !== undefined &&
           collection.id !== null
         ) {
-          // Defensive typing to match evictReportDependenciesForUpdatedCollectionSketch expectations
-          evictReportDependenciesForUpdatedCollectionSketch(cache, {
-            id: collection.id,
-            sketchClass: collection.sketchClass
-              ? { reportId: collection.sketchClass.reportId }
-              : undefined,
-            // Add other required fields if evictReportDependenciesForUpdatedCollectionSketch signature changes
+          evictSubjectReportCachesForSketchId(cache, collection.id, {
+            reportId: collection.sketchClass?.reportId,
+            skipGarbageCollection: true,
           });
         }
       }
@@ -43,9 +36,12 @@ export default function useUpdateSketchTableOfContentsDraggable() {
           sketch.id !== undefined &&
           sketch.id !== null
         ) {
-          evictReportDependenciesForSketchId(cache, sketch.id);
+          evictSubjectReportCachesForSketchId(cache, sketch.id, {
+            skipGarbageCollection: true,
+          });
         }
       }
+      cache.gc();
     },
     optimisticResponse: (data) => {
       return {

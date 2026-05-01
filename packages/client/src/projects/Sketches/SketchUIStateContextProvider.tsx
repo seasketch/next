@@ -76,8 +76,8 @@ import { compileLegendFromGLStyleLayers } from "../../dataLayers/legends/compile
 import { LegendForGLLayers } from "../../dataLayers/legends/LegendDataModel";
 import SketchReportWindow from "./SketchReportWindow";
 import {
-  evictReportDependenciesForSketchId,
-  evictReportDependenciesForUpdatedCollectionSketch,
+  evictSubjectReportCachesForSketchId,
+  parseSketchIdFromTocDeletedItemRef,
 } from "../../reports/utils/evictReportDependenciesCache";
 
 type ReportState = {
@@ -1152,41 +1152,35 @@ export default function SketchUIStateContextProvider({
   const [deleteSketchTocItem] = useDeleteSketchTocItemsMutation({
     onError,
     update: async (cache, result) => {
-      // 'result' does not guarantee variables as part of its type, but they
-      // are available on the client mutation function's options object, not here.
-      // So we can't type-safely access variables?.items here—only work with data.
-      // The cache update is designed to work off returned/deleted items.
       const deletedItems =
         result.data?.deleteSketchTocItems?.deletedItems || [];
+
+      for (const itemRef of deletedItems) {
+        const sketchId = parseSketchIdFromTocDeletedItemRef(itemRef);
+        if (sketchId != null) {
+          evictSubjectReportCachesForSketchId(cache, sketchId, {
+            skipGarbageCollection: true,
+          });
+        }
+      }
+
       hideSketches(deletedItems.filter((id) => /Sketch:/.test(id)));
 
       for (const id of deletedItems) {
         cache.evict({ id });
       }
 
-      // updatedCollections can be null, so filter it.
       const updatedCols =
         result.data?.deleteSketchTocItems?.updatedCollections ?? [];
       for (const collection of updatedCols) {
         if (collection) {
-          // type error occurs if collection is null
-          // We expect collection: { id: number, sketchClass?: { reportId?: number } | null }
-          evictReportDependenciesForUpdatedCollectionSketch(
-            cache,
-            collection as {
-              id: number;
-              sketchClass?:
-                | { reportId?: number | null | undefined }
-                | null
-                | undefined;
-            }
-          );
+          evictSubjectReportCachesForSketchId(cache, collection.id, {
+            reportId: collection.sketchClass?.reportId,
+            skipGarbageCollection: true,
+          });
         }
       }
-      // There is no reliable way to evict individually deleted sketches if we
-      // don't get their ids and types from mutation variables at this layer,
-      // so we cannot generally call evictReportDependenciesForSketchId here.
-      // If needed, server should return this info in deletedItems or similar.
+      cache.gc();
     },
   });
 
@@ -1217,6 +1211,19 @@ export default function SketchUIStateContextProvider({
             },
           },
         });
+      }
+      for (const s of sketches) {
+        if (s?.id != null) {
+          evictSubjectReportCachesForSketchId(cache, s.id);
+        }
+      }
+      const updatedCollection =
+        response.data?.copySketchTocItem?.updatedCollection;
+      if (updatedCollection?.id != null) {
+        evictSubjectReportCachesForSketchId(
+          cache,
+          updatedCollection.id
+        );
       }
     },
   });
@@ -1408,6 +1415,41 @@ export default function SketchUIStateContextProvider({
             ]
           : []),
       ];
+
+      const selectionAnchoredInsideCollection =
+        selectedIds.length === 1 &&
+        (Boolean(selectionType?.collection) ||
+          Boolean(
+            // @ts-ignore private cache api
+            client.cache.data.get(selectedIds[0], "collectionId") as
+              | number
+              | null
+              | undefined
+          ));
+
+      const contextMenuCreate: DropdownOption[] = create
+        .filter((opt) => {
+          if (!selectionAnchoredInsideCollection) {
+            return true;
+          }
+          const match = /^create-(\d+)$/.exec(opt.id || "");
+          if (!match) {
+            return true;
+          }
+          const scId = parseInt(match[1], 10);
+          const sc = sketchClasses.find((s) => s.id === scId);
+          return sc?.geometryType !== SketchGeometryType.Collection;
+        })
+        .map((opt) => ({
+          ...opt,
+          contextMenuItemClassName: [
+            "pl-6",
+            opt.contextMenuItemClassName,
+          ]
+            .filter(Boolean)
+            .join(" "),
+        }));
+
       const update: DropdownOption[] = [];
       const read: DropdownOption[] = [];
       const selectedSketchClassId =
@@ -1653,11 +1695,12 @@ export default function SketchUIStateContextProvider({
 
       contextMenu.push(...update);
       contextMenu.push(...read);
-      if (create.length) {
+      if (contextMenuCreate.length) {
         contextMenu.push({
+          id: "create-section-label",
           label: t("Create"),
-        } as DropdownDividerProps);
-        contextMenu.push(...create);
+        });
+        contextMenu.push(...contextMenuCreate);
       }
 
       return {

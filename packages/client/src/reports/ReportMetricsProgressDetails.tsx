@@ -1,9 +1,5 @@
 import { Trans, useTranslation } from "react-i18next";
-import {
-  useCallback,
-  useContext,
-  useMemo,
-} from "react";
+import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
   CompatibleSpatialMetricDetailsFragment,
@@ -11,25 +7,434 @@ import {
   DraftReportDependenciesDocument,
   Geography,
   ReportDependenciesDocument,
+  ReportOverlaySourcesDocument,
   SketchGeometryType,
   SpatialMetricState,
   useRecalculateSpatialMetricsMutation,
   useProjectReportingLayersQuery,
+  useReportMetricProgressFieldsLazyQuery,
 } from "../generated/graphql";
 import { subjectIsFragment } from "overlay-engine";
 import ReportTaskLineItem from "./components/ReportTaskLineItem";
+import CircularProgressIndicator from "./components/CircularProgressIndicator";
 import * as Tooltip from "@radix-ui/react-tooltip";
+import { ChevronDownIcon, ClockIcon } from "@radix-ui/react-icons";
+import {
+  CheckCircleIcon,
+  PauseIcon,
+  XCircleIcon,
+} from "@heroicons/react/solid";
 import { ReportCardConfiguration } from "./cards/cards";
 import { DraftReportContext } from "./DraftReportContext";
 import { useCardDependenciesContext } from "./context/CardDependenciesContext";
 import { useBaseReportContext } from "./context/BaseReportContext";
 import { useSubjectReportContext } from "./context/SubjectReportContext";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
+import { evictSubjectReportCachesForSketchId } from "./utils/evictReportDependenciesCache";
 import { useAuth0 } from "@auth0/auth0-react";
 import getSlug from "../getSlug";
 import ProfilePhoto from "../admin/users/ProfilePhoto";
-import type { AuthorProfileFragment } from "../generated/graphql";
+import type {
+  AuthorProfileFragment,
+  CompatibleSpatialMetricProgressFieldsFragment,
+} from "../generated/graphql";
 import { nameForProfile } from "../projects/Forums/TopicListItem";
+
+const METRIC_GROUP_COLLAPSE_THRESHOLD = 5;
+
+type SpatialMetricStateSummary = {
+  complete: number;
+  error: number;
+  queued: number;
+  processing: number;
+  dependencyNotReady: number;
+  /** 0–100 when any processing metric reports progress; null if none */
+  avgProcessingProgressPercent: number | null;
+};
+
+type GroupTriage =
+  | { kind: "all_complete" }
+  | { kind: "progress_with_errors"; progressFraction: number | null }
+  | { kind: "error_only" }
+  | { kind: "progress_only"; progressFraction: number | null }
+  | { kind: "waiting_dependencies" }
+  | { kind: "queued" }
+  | { kind: "unknown" };
+
+function triageMetricGroup(
+  summary: SpatialMetricStateSummary,
+  totalCount: number
+): GroupTriage {
+  if (totalCount === 0) {
+    return { kind: "unknown" };
+  }
+  if (summary.complete === totalCount) {
+    return { kind: "all_complete" };
+  }
+  const hasProcessing = summary.processing > 0;
+  const hasError = summary.error > 0;
+  const pf =
+    summary.avgProcessingProgressPercent != null
+      ? summary.avgProcessingProgressPercent / 100
+      : null;
+
+  if (hasProcessing && hasError) {
+    return { kind: "progress_with_errors", progressFraction: pf };
+  }
+  if (hasError && !hasProcessing) {
+    return { kind: "error_only" };
+  }
+  if (hasProcessing && !hasError) {
+    return { kind: "progress_only", progressFraction: pf };
+  }
+  if (summary.dependencyNotReady > 0) {
+    return { kind: "waiting_dependencies" };
+  }
+  if (summary.queued > 0) {
+    return { kind: "queued" };
+  }
+  return { kind: "unknown" };
+}
+
+function summarizeSpatialMetricStates(
+  metrics: CompatibleSpatialMetricDetailsFragment[]
+): SpatialMetricStateSummary {
+  let complete = 0;
+  let error = 0;
+  let queued = 0;
+  let processing = 0;
+  let dependencyNotReady = 0;
+  let progressSum = 0;
+  let progressCount = 0;
+  for (const m of metrics) {
+    switch (m.state) {
+      case SpatialMetricState.Complete:
+        complete++;
+        break;
+      case SpatialMetricState.Error:
+        error++;
+        break;
+      case SpatialMetricState.Queued:
+        queued++;
+        break;
+      case SpatialMetricState.Processing:
+        processing++;
+        if (m.progress != null && typeof m.progress === "number") {
+          progressSum += m.progress;
+          progressCount++;
+        }
+        break;
+      case SpatialMetricState.DependencyNotReady:
+        dependencyNotReady++;
+        break;
+      default:
+        break;
+    }
+  }
+  return {
+    complete,
+    error,
+    queued,
+    processing,
+    dependencyNotReady,
+    avgProcessingProgressPercent:
+      progressCount > 0 ? progressSum / progressCount : null,
+  };
+}
+
+function GroupTriageSummary({
+  summary,
+  totalCount,
+}: {
+  summary: SpatialMetricStateSummary;
+  totalCount: number;
+}) {
+  const { t } = useTranslation("sketching");
+
+  const triage = useMemo(
+    () => triageMetricGroup(summary, totalCount),
+    [summary, totalCount]
+  );
+
+  const tooltipLines = useMemo(() => {
+    const parts: string[] = [];
+    if (summary.complete > 0) {
+      parts.push(
+        t("summaryMetricsComplete", {
+          count: summary.complete,
+          defaultValue: "{{count}} complete",
+        })
+      );
+    }
+    if (summary.processing > 0) {
+      parts.push(
+        t("summaryMetricsProcessing", {
+          count: summary.processing,
+          defaultValue: "{{count}} processing",
+        })
+      );
+    }
+    if (summary.queued > 0) {
+      parts.push(
+        t("summaryMetricsQueued", {
+          count: summary.queued,
+          defaultValue: "{{count}} queued",
+        })
+      );
+    }
+    if (summary.error > 0) {
+      parts.push(
+        t("summaryMetricsFailed", {
+          count: summary.error,
+          defaultValue: "{{count}} failed",
+        })
+      );
+    }
+    if (summary.dependencyNotReady > 0) {
+      parts.push(
+        t("summaryMetricsWaitingOnDependencies", {
+          count: summary.dependencyNotReady,
+          defaultValue: "{{count}} waiting on dependencies",
+        })
+      );
+    }
+    return parts.length > 0 ? parts.join(" · ") : null;
+  }, [summary, t]);
+
+  const statusPhrase = useMemo(() => {
+    switch (triage.kind) {
+      case "all_complete":
+        return t("metricGroupStatusAllComplete", {
+          defaultValue: "All metrics complete",
+        });
+      case "progress_with_errors":
+        return t("metricGroupStatusProgressWithErrors", {
+          defaultValue: "Processing with some failures",
+        });
+      case "error_only":
+        return t("metricGroupStatusHasErrors", {
+          defaultValue: "One or more metrics failed",
+        });
+      case "progress_only":
+        return t("metricGroupStatusInProgress", {
+          defaultValue: "Metrics in progress",
+        });
+      case "waiting_dependencies":
+        return t("metricGroupStatusWaitingDependencies", {
+          defaultValue: "Waiting on dependencies",
+        });
+      case "queued":
+        return t("metricGroupStatusQueued", {
+          defaultValue: "Queued",
+        });
+      default:
+        return t("metricGroupStatusMixed", {
+          defaultValue: "Mixed states",
+        });
+    }
+  }, [triage.kind, t]);
+
+  const ariaLabel = `${t("metricCountLabel", {
+    count: totalCount,
+    defaultValue: "{{count}} metrics",
+  })}. ${statusPhrase}`;
+
+  const indicator = (() => {
+    switch (triage.kind) {
+      case "all_complete":
+        return (
+          <CheckCircleIcon
+            className="h-5 w-5 flex-shrink-0 text-green-700"
+            aria-hidden
+          />
+        );
+      case "error_only":
+        return (
+          <XCircleIcon
+            className="h-5 w-5 flex-shrink-0 text-red-700"
+            aria-hidden
+          />
+        );
+      case "progress_only":
+        return (
+          <CircularProgressIndicator
+            progress={triage.progressFraction}
+            size={20}
+            strokeWidth={2.5}
+            trackColor="rgba(15, 23, 42, 0.08)"
+            progressColor="rgba(37, 99, 235, 0.55)"
+            pulseColor="rgba(37, 99, 235, 0.18)"
+            className="h-5 w-5 flex-shrink-0"
+          />
+        );
+      case "progress_with_errors":
+        return (
+          <CircularProgressIndicator
+            progress={triage.progressFraction}
+            size={20}
+            strokeWidth={2.5}
+            trackColor="rgba(254, 202, 202, 0.85)"
+            progressColor="rgba(185, 28, 28, 0.9)"
+            pulseColor="rgba(220, 38, 38, 0.35)"
+            className="h-5 w-5 flex-shrink-0"
+          />
+        );
+      case "waiting_dependencies":
+        return (
+          <ClockIcon
+            className="h-5 w-5 flex-shrink-0 text-green-700"
+            aria-hidden
+          />
+        );
+      case "queued":
+        return (
+          <PauseIcon
+            className="h-5 w-5 flex-shrink-0 text-slate-400"
+            aria-hidden
+          />
+        );
+      default:
+        return (
+          <span
+            className="flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-slate-200 text-[10px] font-semibold text-slate-600"
+            aria-hidden
+          >
+            ?
+          </span>
+        );
+    }
+  })();
+
+  return (
+    <Tooltip.Root delayDuration={200}>
+      <Tooltip.Trigger asChild>
+        <span
+          className="inline-flex items-center gap-2 text-gray-600"
+          aria-label={ariaLabel}
+        >
+          <span className="text-xs font-medium text-slate-600 tabular-nums whitespace-nowrap">
+            {t("metricCountLabel", {
+              count: totalCount,
+              defaultValue: "{{count}} metrics",
+            })}
+          </span>
+          <span className="inline-flex items-center">{indicator}</span>
+        </span>
+      </Tooltip.Trigger>
+      <Tooltip.Portal>
+        <Tooltip.Content
+          className="bg-gray-900 text-white text-xs rounded px-2 py-1.5 z-50 max-w-sm"
+          sideOffset={4}
+          side="top"
+        >
+          <div className="font-medium">{statusPhrase}</div>
+          {tooltipLines && (
+            <div className="mt-1 text-gray-300">{tooltipLines}</div>
+          )}
+          <Tooltip.Arrow className="fill-gray-900" />
+        </Tooltip.Content>
+      </Tooltip.Portal>
+    </Tooltip.Root>
+  );
+}
+
+function CollapsibleMetricTaskGroup({
+  group,
+  renderItems,
+}: {
+  group: {
+    key: string;
+    overlayName: string;
+    operationLabel: string;
+    metrics: CompatibleSpatialMetricDetailsFragment[];
+  };
+  renderItems: () => ReactNode;
+}) {
+  const { t } = useTranslation("sketching");
+  const listId = useMemo(() => {
+    // eslint-disable-next-line i18next/no-literal-string -- DOM id prefix
+    const prefix = "metric-task-list-";
+    return `${prefix}${encodeURIComponent(group.key).replace(/%/g, "")}`;
+  }, [group.key]);
+  const needsCollapse = group.metrics.length > METRIC_GROUP_COLLAPSE_THRESHOLD;
+  const [expanded, setExpanded] = useState(() => !needsCollapse);
+
+  useEffect(() => {
+    if (!needsCollapse) {
+      setExpanded(true);
+    }
+  }, [needsCollapse]);
+
+  const summary = useMemo(
+    () => summarizeSpatialMetricStates(group.metrics),
+    [group.metrics]
+  );
+
+  const headerBadges = (
+    <div className="min-w-0 inline-flex flex-wrap items-center gap-1.5">
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-medium">
+        {group.overlayName}
+      </span>
+      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-500 text-xs font-medium">
+        {group.operationLabel}
+      </span>
+    </div>
+  );
+
+  const collapseLabel = expanded
+    ? t("Collapse metric list")
+    : t("Expand metric list");
+
+  const isCollapsedLargeGroup = needsCollapse && !expanded;
+
+  return (
+    <div
+      className={`rounded-md border border-gray-100 bg-gray-50/50 ${
+        isCollapsedLargeGroup ? "px-2 py-1" : "p-2 py-1"
+      }`}
+    >
+      {needsCollapse ? (
+        <button
+          type="button"
+          className={`flex w-full items-center rounded-md border border-transparent px-0.5 text-left transition focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-1 ${
+            isCollapsedLargeGroup ? "gap-1.5 py-0.5" : "gap-1.5 py-0.5"
+          }`}
+          aria-expanded={expanded}
+          aria-controls={listId}
+          aria-label={collapseLabel}
+          onClick={() => setExpanded((e) => !e)}
+        >
+          <ChevronDownIcon
+            className={`h-4 w-4 flex-shrink-0 text-slate-500 transition-transform ${
+              expanded ? "rotate-180" : ""
+            }`}
+            aria-hidden
+          />
+          <div className="min-w-0 flex-1">{headerBadges}</div>
+          <span
+            className="inline-flex flex-shrink-0 items-center"
+            onClick={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
+            <GroupTriageSummary
+              summary={summary}
+              totalCount={group.metrics.length}
+            />
+          </span>
+        </button>
+      ) : (
+        <div className="mb-1 flex items-center justify-between gap-2">
+          {headerBadges}
+        </div>
+      )}
+      {(!needsCollapse || expanded) && (
+        <ul className="mt-1 space-y-1 pl-2 pr-1" id={listId}>
+          {renderItems()}
+        </ul>
+      )}
+    </div>
+  );
+}
 
 export default function ReportMetricsProgressDetails({
   config,
@@ -68,8 +473,73 @@ export default function ReportMetricsProgressDetails({
     return m;
   }, [subjectReportContext.data]);
 
+  const [fetchProgressFields, { data: progressFieldsData }] =
+    useReportMetricProgressFieldsLazyQuery();
+
+  const [progressFieldsByMetricId, setProgressFieldsByMetricId] = useState<
+    Map<
+      string,
+      {
+        updatedAt?: CompatibleSpatialMetricDetailsFragment["updatedAt"];
+        sourceProcessingJobDependency?: CompatibleSpatialMetricDetailsFragment["sourceProcessingJobDependency"];
+      }
+    >
+  >(new Map());
+
+  useEffect(() => {
+    const sketchId = subjectReportContext.data?.sketch?.id;
+    const reportId = baseReportContext.report.id;
+    if (sketchId == null || !reportId) return;
+    void fetchProgressFields({
+      variables: { reportId, sketchId },
+    });
+  }, [
+    fetchProgressFields,
+    subjectReportContext.data?.sketch?.id,
+    baseReportContext.report.id,
+  ]);
+
+  useEffect(() => {
+    const rows = progressFieldsData?.report?.dependencies?.metrics;
+    if (!rows?.length) return;
+    const next = new Map(
+      rows.map((m: CompatibleSpatialMetricProgressFieldsFragment) => [
+        String(m.id),
+        {
+          updatedAt: m.updatedAt ?? undefined,
+          sourceProcessingJobDependency:
+            m.sourceProcessingJobDependency ?? undefined,
+        },
+      ])
+    );
+    setProgressFieldsByMetricId((prev) => {
+      if (prev.size !== next.size) {
+        return next;
+      }
+      for (const [id, v] of next) {
+        const p = prev.get(id);
+        if (
+          !p ||
+          p.updatedAt !== v.updatedAt ||
+          p.sourceProcessingJobDependency !== v.sourceProcessingJobDependency
+        ) {
+          return next;
+        }
+      }
+      return prev;
+    });
+  }, [progressFieldsData?.report?.dependencies?.metrics]);
+
   const [recalculate, recalculateState] = useRecalculateSpatialMetricsMutation({
     onError,
+    update(cache) {
+      const sketchId = subjectReportContext.data?.sketch?.id;
+      if (sketchId != null) {
+        evictSubjectReportCachesForSketchId(cache, sketchId, {
+          reportId: baseReportContext.report.id,
+        });
+      }
+    },
   });
   const allMetrics = useMemo(() => {
     const seenIds = new Set<number>();
@@ -80,10 +550,24 @@ export default function ReportMetricsProgressDetails({
     ]) {
       if (metric.id && seenIds.has(metric.id)) continue;
       if (metric.id) seenIds.add(metric.id);
-      all.push(metric);
+      const extra = metric.id
+        ? progressFieldsByMetricId.get(String(metric.id))
+        : undefined;
+      all.push(
+        extra
+          ? ({
+              ...metric,
+              ...extra,
+            } as CompatibleSpatialMetricDetailsFragment)
+          : metric
+      );
     }
     return all;
-  }, [draftReportContext.draftMetrics, context.metrics]);
+  }, [
+    draftReportContext.draftMetrics,
+    context.metrics,
+    progressFieldsByMetricId,
+  ]);
 
   const handleReprocessSource = useCallback(
     async (jobKey: string, repairInvalid: boolean) => {
@@ -99,6 +583,7 @@ export default function ReportMetricsProgressDetails({
         },
         refetchQueries: [
           ReportDependenciesDocument,
+          ReportOverlaySourcesDocument,
           DraftReportDependenciesDocument,
         ],
         awaitRefetchQueries: true,
@@ -384,25 +869,11 @@ export default function ReportMetricsProgressDetails({
             )}
             <div className="space-y-3 py-2">
               {groupedGeographyMetrics.map((group) => (
-                <div
+                <CollapsibleMetricTaskGroup
                   key={group.key}
-                  className="rounded-md border border-gray-100 bg-gray-50/50 p-2"
-                >
-                  <div className="flex items-center justify-between gap-2 mb-1.5">
-                    <div className="min-w-0 inline-flex items-center gap-1.5">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-medium">
-                        {group.overlayName}
-                      </span>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-500 text-xs font-medium">
-                        {group.operationLabel}
-                      </span>
-                    </div>
-                    {/* <span className="text-xs text-gray-500">
-                      {group.metrics.length} {t("metrics")}
-                    </span> */}
-                  </div>
-                  <ul className="space-y-1">
-                    {group.metrics.map((metric) => (
+                  group={group}
+                  renderItems={() =>
+                    group.metrics.map((metric) => (
                       <ReportTaskLineItem
                         key={"rtli-" + metric.id}
                         title={nameForGeography(
@@ -431,9 +902,9 @@ export default function ReportMetricsProgressDetails({
                               SpatialMetricState.Complete
                         )}
                       />
-                    ))}
-                  </ul>
-                </div>
+                    ))
+                  }
+                />
               ))}
             </div>
           </div>
@@ -489,25 +960,11 @@ export default function ReportMetricsProgressDetails({
             )}
             <div className="space-y-3 py-2">
               {groupedFragmentMetrics.map((group) => (
-                <div
+                <CollapsibleMetricTaskGroup
                   key={group.key}
-                  className="rounded-md border border-gray-100 bg-gray-50/50 p-2"
-                >
-                  <div className="flex items-center justify-between gap-2 mb-1.5">
-                    <div className="min-w-0 inline-flex items-center gap-1.5">
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-medium">
-                        {group.overlayName}
-                      </span>
-                      <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-500 text-xs font-medium">
-                        {group.operationLabel}
-                      </span>
-                    </div>
-                    {/* <span className="text-xs text-gray-500">
-                      {group.metrics.length} {t("metrics")}
-                    </span> */}
-                  </div>
-                  <ul className="space-y-1">
-                    {group.metrics.map((metric) => (
+                  group={group}
+                  renderItems={() =>
+                    group.metrics.map((metric) => (
                       <ReportTaskLineItem
                         key={"rmtli-" + metric.id}
                         metricType={metric.type}
@@ -534,9 +991,9 @@ export default function ReportMetricsProgressDetails({
                               SpatialMetricState.Complete
                         )}
                       />
-                    ))}
-                  </ul>
-                </div>
+                    ))
+                  }
+                />
               ))}
             </div>
           </div>

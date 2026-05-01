@@ -16,6 +16,49 @@ import type {
 } from "graphql";
 import { ensureSketchFragments } from "../sketches";
 import { groupByFromStyle } from "gl-style-builder";
+import {
+  isReportDepsProfileEnabled,
+  reportDepsProfileLog,
+  reportDepsProfileNowNs,
+} from "../reportDepsProfiling";
+import {
+  compressSpatialMetricSubjectsForWire,
+  type FragmentSubjectCatalogEntry,
+} from "../reports/compressSpatialMetricSubjects";
+
+/**
+ * Confirms the session may load report dependency metrics: sketch viewers via
+ * session_can_access_sketch, or project participants via session_has_project_access when no sketch is given.
+ */
+async function assertSessionCanLoadReportDependencies(
+  pgClient: Pool | PoolClient,
+  projectId: number,
+  sketchId: number | null | undefined,
+): Promise<void> {
+  const { rows } = await pgClient.query<{ ok: boolean }>(
+    `
+      select case
+        when $2::integer is null then session_has_project_access($1::integer)
+        else session_can_access_sketch($2::integer)
+      end as ok
+    `,
+    [projectId, sketchId],
+  );
+  if (!rows[0]?.ok) {
+    throw new Error(
+      sketchId != null
+        ? "You do not have access to this sketch's report dependencies."
+        : "You do not have access to this project's report dependencies.",
+    );
+  }
+}
+
+/**
+ * Bulk metric JSON is implemented in PostgreSQL as `public.resolve_spatial_metrics_batch`
+ * (see packages/api/migrations — graphile-migrate `current.sql` until committed).
+ * Reads cached metrics first, inserts missing rows with ON CONFLICT DO NOTHING, then queues
+ * a single `calculateSpatialMetricsBatch` graphile-worker job for newly inserted metrics.
+ */
 
 type ReportOverlaySourcePartial = {
   tableOfContentsItemId: number;
@@ -77,7 +120,15 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         value: JSON
         state: SpatialMetricState!
         parameters: MetricParameters!
-        subject: MetricSubject!
+        subject: MetricSubject
+        """
+        When present with a null subject, geography id (project_geography.id).
+        """
+        g: Int
+        """
+        When present with a null subject, index into ReportOverlayDependencies.fragmentSubjectCatalog / DraftReportDependenciesResults.fragmentSubjectCatalog.
+        """
+        f: Int
         errorMessage: String
         progress: Int
         jobKey: String
@@ -171,6 +222,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         ready: Boolean!
         metrics: [CompatibleSpatialMetric!]!
         cardDependencyLists: [CardDependencyLists!]!
+        fragmentSubjectCatalog: [FragmentSubject!]!
       }
 
       extend type Report {
@@ -189,6 +241,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         ready: Boolean!
         sketchId: Int!
         metrics: [CompatibleSpatialMetric!]!
+        fragmentSubjectCatalog: [FragmentSubject!]!
       }
 
       type DraftReportOverlaySourcesResults {
@@ -215,6 +268,19 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
       }
     `,
     resolvers: {
+      MetricSubject: {
+        __resolveType(obj: { hash?: string; id?: number }) {
+          if (obj && typeof obj === "object") {
+            if (obj.hash != null) {
+              return "FragmentSubject";
+            }
+            if (obj.id != null) {
+              return "GeographySubject";
+            }
+          }
+          return "GeographySubject";
+        },
+      },
       RelatedReportCard: {
         async sketchClass(
           relatedReportCard,
@@ -346,13 +412,54 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         },
       },
       Report: {
-        async dependencies(report, args, context) {
-          return getOrCreateReportDependencies(
+        async dependencies(
+          report,
+          args,
+          context: { pgClient: PoolClient; adminPool?: Pool },
+        ) {
+          const profileCtx = {
+            reportId: report.id,
+            sketchId: args.sketchId ?? "none",
+            projectId: report.projectId,
+          };
+          const nsResolverFull = reportDepsProfileNowNs();
+          let ns = reportDepsProfileNowNs();
+          await assertSessionCanLoadReportDependencies(
+            context.pgClient,
+            report.projectId,
+            args.sketchId ?? null,
+          );
+          reportDepsProfileLog(
+            "Report.dependencies",
+            "assertSessionCanLoadReportDependencies",
+            ns,
+            profileCtx,
+          );
+          const metricsPool = context.adminPool ?? context.pgClient;
+          ns = reportDepsProfileNowNs();
+          const out = await getOrCreateReportDependencies(
             report.id,
             context.pgClient,
             report.projectId,
             args.sketchId,
+            {
+              metricsPool,
+              trustedReportDependencyReads: true,
+            },
           );
+          reportDepsProfileLog(
+            "Report.dependencies",
+            "getOrCreateReportDependencies_total",
+            ns,
+            profileCtx,
+          );
+          reportDepsProfileLog(
+            "Report.dependencies",
+            "dependencies_resolver_total",
+            nsResolverFull,
+            profileCtx,
+          );
+          return out;
         },
         async overlaySources(report, args, context) {
           return await getReportOverlaySources(
@@ -420,7 +527,10 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
       },
       Query: {
         async draftReportDependencies(root, args, context, resolveInfo) {
-          const { pgClient } = context;
+          const { pgClient, adminPool } = context as {
+            pgClient: PoolClient;
+            adminPool?: Pool;
+          };
           const pool = pgClient;
           const sketchId = args.input.sketchId;
           // First, make sure the sketch exists
@@ -455,17 +565,24 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
             throw new Error("No geographies found");
           }
 
+          const metricsPool = adminPool ?? pgClient;
           const { metrics } = await createMetricsForDependencies(
-              pgClient,
-              args.input.nodeDependencies,
-              true,
-              projectId,
-              fragments,
-              geogs,
-            );
+            pgClient,
+            args.input.nodeDependencies,
+            true,
+            projectId,
+            fragments,
+            geogs,
+            undefined,
+            { metricsPool },
+          );
+
+          const { metrics: wireMetrics, fragmentSubjectCatalog } =
+            compressSpatialMetricSubjectsForWire(metrics);
 
           return {
-            metrics,
+            metrics: wireMetrics as typeof metrics,
+            fragmentSubjectCatalog,
             ready: !metrics.find((m) => m.state !== "complete"),
             sketchId,
           };
@@ -512,36 +629,73 @@ async function getOrCreateReportDependencies(
   pool: Pool | PoolClient,
   projectId: number,
   sketchId?: number,
+  options?: {
+    metricsPool?: Pool | PoolClient;
+    /** Set only after assertSessionCanLoadReportDependencies (Report.dependencies resolver). */
+    trustedReportDependencyReads?: boolean;
+  },
 ) {
   const t0 = Date.now();
-  const isDraft = await isDraftReport(reportId, projectId, pool);
-
-  const results = {
-    ready: true,
-    metrics: [] as any[],
-    cardDependencyLists: [] as {
-      cardId: number;
-      metrics: number[];
-      overlaySources: string[];
-    }[],
+  const profileCtx = {
+    reportId,
+    sketchId: sketchId ?? "none",
   };
 
-  // Retrieve all fragments related to the sketch (if any)
-  const fragments = sketchId
-    ? await ensureSketchFragments(sketchId, projectId, pool as PoolClient)
-    : [];
+  const trustedReads = options?.trustedReportDependencyReads === true;
 
-  // Retrieve all geographies related to the project
-  const { rows: geogs } = await pool.query(
-    `select name, id from project_geography where project_id = $1`,
-    [projectId],
+  let ns = reportDepsProfileNowNs();
+  const isDraftPromise = isDraftReport(reportId, projectId, pool).then(
+    (isDraft) => {
+      reportDepsProfileLog(
+        "getOrCreateReportDependencies",
+        "isDraftReport",
+        ns,
+        profileCtx,
+        { isDraft },
+      );
+      return isDraft;
+    },
   );
-  if (geogs.length === 0) {
-    throw new Error("No geographies found");
-  }
 
-  const cards = await pool.query(
-    `
+  const nsFrag = reportDepsProfileNowNs();
+  const fragmentsPromise = (
+    sketchId
+      ? ensureSketchFragments(sketchId, projectId, pool as PoolClient, {
+          skipSketchRlsCheck: trustedReads,
+        })
+      : Promise.resolve([] as string[])
+  ).then((fragments) => {
+    reportDepsProfileLog(
+      "getOrCreateReportDependencies",
+      "ensureSketchFragments",
+      nsFrag,
+      profileCtx,
+      { fragmentCount: fragments.length },
+    );
+    return fragments;
+  });
+
+  const nsGeog = reportDepsProfileNowNs();
+  const geogsPromise = pool
+    .query<{
+      name: string;
+      id: number;
+    }>(`select name, id from project_geography where project_id = $1`, [projectId])
+    .then(({ rows: geogs }) => {
+      reportDepsProfileLog(
+        "getOrCreateReportDependencies",
+        "geogsQuery",
+        nsGeog,
+        profileCtx,
+        { geographyCount: geogs.length },
+      );
+      return geogs;
+    });
+
+  const nsCards = reportDepsProfileNowNs();
+  const cardsPromise = pool
+    .query(
+      `
       select 
         rc.id, 
         rc.component_settings,
@@ -551,15 +705,66 @@ async function getOrCreateReportDependencies(
       where 
         rc.id in (select report_card_ids_for_report($1))
       group by rc.id, rc.component_settings`,
-    [reportId],
-  );
+      [reportId],
+    )
+    .then((cards) => {
+      reportDepsProfileLog(
+        "getOrCreateReportDependencies",
+        "cardsQuery",
+        nsCards,
+        profileCtx,
+        { cardRows: cards.rows.length },
+      );
+      return cards;
+    });
 
+  const [isDraft, fragments, geogs, cards] = await Promise.all([
+    isDraftPromise,
+    fragmentsPromise,
+    geogsPromise,
+    cardsPromise,
+  ]);
+
+  if (geogs.length === 0) {
+    throw new Error("No geographies found");
+  }
+
+  const results: {
+    ready: boolean;
+    metrics: any[];
+    cardDependencyLists: {
+      cardId: number;
+      metrics: number[];
+      overlaySources: string[];
+    }[];
+    fragmentSubjectCatalog: FragmentSubjectCatalogEntry[];
+  } = {
+    ready: true,
+    metrics: [] as any[],
+    cardDependencyLists: [] as {
+      cardId: number;
+      metrics: number[];
+      overlaySources: string[];
+    }[],
+    fragmentSubjectCatalog: [],
+  };
+
+  ns = reportDepsProfileNowNs();
   const perCard = cards.rows.map((card: { id: number; body: unknown }) => ({
     cardId: card.id,
     dependencies: extractMetricDependenciesFromReportBody(
-      card.body as Parameters<typeof extractMetricDependenciesFromReportBody>[0],
+      card.body as Parameters<
+        typeof extractMetricDependenciesFromReportBody
+      >[0],
     ),
   }));
+  reportDepsProfileLog(
+    "getOrCreateReportDependencies",
+    "extractDepsPerCard",
+    ns,
+    profileCtx,
+    { cards: perCard.length },
+  );
 
   const allStableIds = new Set<string>();
   for (const pc of perCard) {
@@ -570,19 +775,40 @@ async function getOrCreateReportDependencies(
     }
   }
 
+  ns = reportDepsProfileNowNs();
   const overlayRefs = await getOverlaySourceRefsByStableIds(
     pool,
     Array.from(allStableIds),
     isDraft,
+    {
+      projectId,
+      trustedTocRlsBypass: trustedReads,
+    },
+  );
+  reportDepsProfileLog(
+    "getOrCreateReportDependencies",
+    "getOverlaySourceRefsByStableIds",
+    ns,
+    profileCtx,
+    { stableIdCount: allStableIds.size },
   );
 
+  ns = reportDepsProfileNowNs();
   const overlaySourceUrls: { [stableId: string]: string } = {};
   for (const stableId in overlayRefs) {
     if (overlayRefs[stableId]?.sourceUrl) {
       overlaySourceUrls[stableId] = overlayRefs[stableId].sourceUrl!;
     }
   }
+  reportDepsProfileLog(
+    "getOrCreateReportDependencies",
+    "buildOverlaySourceUrlsMap",
+    ns,
+    profileCtx,
+    { urlMapKeys: Object.keys(overlaySourceUrls).length },
+  );
 
+  ns = reportDepsProfileNowNs();
   const globalHashSeen = new Set<string>();
   const uniqueDepsForReport: MetricDependency[] = [];
   for (const pc of perCard) {
@@ -595,7 +821,18 @@ async function getOrCreateReportDependencies(
       uniqueDepsForReport.push(dep);
     }
   }
+  reportDepsProfileLog(
+    "getOrCreateReportDependencies",
+    "dedupeUniqueDeps",
+    ns,
+    profileCtx,
+    {
+      uniqueDependencyCount: uniqueDepsForReport.length,
+      distinctHashes: globalHashSeen.size,
+    },
+  );
 
+  ns = reportDepsProfileNowNs();
   const { metrics: batchMetrics } = await createMetricsForDependencies(
     pool,
     uniqueDepsForReport,
@@ -604,8 +841,20 @@ async function getOrCreateReportDependencies(
     fragments,
     geogs,
     overlayRefs,
+    {
+      metricsPool: options?.metricsPool,
+      trustedTocRlsBypass: trustedReads,
+    },
+  );
+  reportDepsProfileLog(
+    "getOrCreateReportDependencies",
+    "createMetricsForDependencies_total",
+    ns,
+    profileCtx,
+    { batchMetricRows: batchMetrics.length },
   );
 
+  ns = reportDepsProfileNowNs();
   const metricsByHash = new Map<string, any[]>();
   const seenMetricIds = new Set<number>();
   for (const metric of batchMetrics) {
@@ -622,7 +871,18 @@ async function getOrCreateReportDependencies(
       results.metrics.push(metric);
     }
   }
+  reportDepsProfileLog(
+    "getOrCreateReportDependencies",
+    "postprocess_indexMetricsByHash",
+    ns,
+    profileCtx,
+    {
+      metricsDistinct: results.metrics.length,
+      hashBuckets: metricsByHash.size,
+    },
+  );
 
+  ns = reportDepsProfileNowNs();
   for (const pc of perCard) {
     const cardDependencyList = {
       cardId: pc.cardId,
@@ -660,8 +920,40 @@ async function getOrCreateReportDependencies(
 
     results.cardDependencyLists.push(cardDependencyList);
   }
+  reportDepsProfileLog(
+    "getOrCreateReportDependencies",
+    "postprocess_buildCardDependencyLists",
+    ns,
+    profileCtx,
+    { cardLists: results.cardDependencyLists.length },
+  );
 
+  const { metrics: wireMetrics, fragmentSubjectCatalog } =
+    compressSpatialMetricSubjectsForWire(results.metrics);
+  results.metrics = wireMetrics as typeof results.metrics;
+  results.fragmentSubjectCatalog = fragmentSubjectCatalog;
+
+  ns = reportDepsProfileNowNs();
   results.ready = !results.metrics.find((m) => m.state !== "complete");
+  reportDepsProfileLog(
+    "getOrCreateReportDependencies",
+    "computeReady",
+    ns,
+    profileCtx,
+    { ready: results.ready },
+  );
+
+  if (isReportDepsProfileEnabled()) {
+    ns = reportDepsProfileNowNs();
+    const approxBytes = Buffer.byteLength(JSON.stringify(results), "utf8");
+    reportDepsProfileLog(
+      "getOrCreateReportDependencies",
+      "jsonSerialize_results",
+      ns,
+      profileCtx,
+      { approxBytes },
+    );
+  }
 
   if (process.env.REPORT_DEPS_TIMING) {
     const elapsedMs = Date.now() - t0;
@@ -680,8 +972,19 @@ async function getReportOverlaySources(
   projectId: number,
 ): Promise<ReportOverlaySourcePartial[]> {
   const t0 = Date.now();
-  const isDraft = await isDraftReport(reportId, projectId, pool);
+  const profileCtx = { reportId, sketchId: "n/a" };
 
+  let ns = reportDepsProfileNowNs();
+  const isDraft = await isDraftReport(reportId, projectId, pool);
+  reportDepsProfileLog(
+    "getReportOverlaySources",
+    "isDraftReport",
+    ns,
+    profileCtx,
+    { isDraft },
+  );
+
+  ns = reportDepsProfileNowNs();
   const cards = await pool.query(
     `
       select 
@@ -694,23 +997,69 @@ async function getReportOverlaySources(
       group by rc.id, rc.body`,
     [reportId],
   );
+  reportDepsProfileLog(
+    "getReportOverlaySources",
+    "cardsQuery",
+    ns,
+    profileCtx,
+    { cardRows: cards.rows.length },
+  );
 
+  ns = reportDepsProfileNowNs();
   const allDependencies: MetricDependency[] = [];
   for (const card of cards.rows) {
-    const deps = extractMetricDependenciesFromReportBody(card.body);
+    const deps = extractMetricDependenciesFromReportBody(
+      card.body as Parameters<
+        typeof extractMetricDependenciesFromReportBody
+      >[0],
+    );
     allDependencies.push(...deps);
   }
+  reportDepsProfileLog(
+    "getReportOverlaySources",
+    "extractDepsAllCards",
+    ns,
+    profileCtx,
+    { rawDependencyCount: allDependencies.length },
+  );
 
+  ns = reportDepsProfileNowNs();
   const overlaySourcesMap = await getOverlaySourcesForDependencies(
     pool,
     allDependencies,
     isDraft,
   );
+  reportDepsProfileLog(
+    "getReportOverlaySources",
+    "getOverlaySourcesForDependencies",
+    ns,
+    profileCtx,
+    { distinctStableIds: Object.keys(overlaySourcesMap).length },
+  );
+
   const overlaySources = Object.values(overlaySourcesMap);
+
+  if (isReportDepsProfileEnabled()) {
+    ns = reportDepsProfileNowNs();
+    const approxBytes = Buffer.byteLength(
+      JSON.stringify(overlaySources),
+      "utf8",
+    );
+    reportDepsProfileLog(
+      "getReportOverlaySources",
+      "jsonSerialize_overlaySources",
+      ns,
+      profileCtx,
+      { overlayCount: overlaySources.length, approxBytes },
+    );
+  }
 
   if (process.env.REPORT_DEPS_TIMING) {
     const elapsedMs = Date.now() - t0;
-    const approxBytes = Buffer.byteLength(JSON.stringify(overlaySources), "utf8");
+    const approxBytes = Buffer.byteLength(
+      JSON.stringify(overlaySources),
+      "utf8",
+    );
     // eslint-disable-next-line no-console
     console.log(
       `[report.overlaySources] reportId=${reportId} isDraft=${isDraft} overlaySources=${overlaySources.length} approxBytes=${approxBytes} elapsedMs=${elapsedMs}`,
@@ -739,7 +1088,8 @@ async function areSourceProcessingJobsReady(
   return (rows[0]?.count || "0") === "0";
 }
 
-async function getOrCreateSpatialMetricsBatch(
+/** Exported for integration tests; core resolver is `resolve_spatial_metrics_batch` in SQL. */
+export async function getOrCreateSpatialMetricsBatch(
   pool: Pool | PoolClient,
   inputs: Array<{
     subjectFragmentId?: string;
@@ -752,6 +1102,7 @@ async function getOrCreateSpatialMetricsBatch(
     dependencyHash: string;
   }>,
 ): Promise<any[]> {
+  const prepareNs = reportDepsProfileNowNs();
   const subjectFragmentIds: (string | null)[] = [];
   const subjectGeographyIds: (number | null)[] = [];
   const types: string[] = [];
@@ -799,20 +1150,32 @@ async function getOrCreateSpatialMetricsBatch(
     dependencyHashes.push(input.dependencyHash);
   }
 
-  const result = await pool.query(
+  reportDepsProfileLog(
+    "getOrCreateSpatialMetricsBatch",
+    "prepareUnnestArrays",
+    prepareNs,
+    {},
+    {
+      inputCount: inputs.length,
+      keptRows: subjectFragmentIds.length,
+    },
+  );
+
+  const queryParams = [
+    subjectFragmentIds,
+    subjectGeographyIds,
+    types,
+    overlaySourceUrls,
+    parameters,
+    sourceProcessingJobDependencies,
+    projectIds,
+    dependencyHashes,
+  ];
+  const sqlNs = reportDepsProfileNowNs();
+  const result = await pool.query<{ ord: number; metric: unknown }>(
     `
-      select
-        get_or_create_spatial_metric(
-          t.subject_fragment_id::text,
-          t.subject_geography_id::int,
-          t.type::spatial_metric_type,
-          t.overlay_source_url::text,
-          t.parameters::jsonb,
-          t.source_processing_job_dependency::text,
-          t.project_id::int,
-          t.dependency_hash::text
-        ) as metric
-      from unnest(
+      SELECT ord, metric
+      FROM resolve_spatial_metrics_batch(
         $1::text[],
         $2::int[],
         $3::text[],
@@ -821,30 +1184,23 @@ async function getOrCreateSpatialMetricsBatch(
         $6::text[],
         $7::int[],
         $8::text[]
-      ) as t(
-        subject_fragment_id,
-        subject_geography_id,
-        type,
-        overlay_source_url,
-        parameters,
-        source_processing_job_dependency,
-        project_id,
-        dependency_hash
       )
     `,
-    [
-      subjectFragmentIds,
-      subjectGeographyIds,
-      types,
-      overlaySourceUrls,
-      parameters,
-      sourceProcessingJobDependencies,
-      projectIds,
-      dependencyHashes,
-    ],
+    queryParams,
   );
 
-  return result.rows.map((row: { metric: any }) => row.metric);
+  reportDepsProfileLog(
+    "getOrCreateSpatialMetricsBatch",
+    "pgQuery_resolveSpatialMetricsBatch",
+    sqlNs,
+    {},
+    {
+      rowCount: result.rows.length,
+      keptRows: subjectFragmentIds.length,
+    },
+  );
+
+  return result.rows.map((row) => row.metric);
 }
 
 /**
@@ -853,6 +1209,11 @@ async function getOrCreateSpatialMetricsBatch(
  * user to open the report. To avoid permission issues, and to keep work off the
  * main thread, this is designed to be run by the
  * tasks/startMetricCalculationsForSketch.ts graphile-worker task.
+ *
+ * If the sketch belongs to a parent collection, metrics are started using that
+ * collection sketch id. {@link ensureSketchFragments} resolves fragments via
+ * `get_fragment_hashes_for_sketch`, which includes all child sketches under a
+ * collection, so one dependency pass covers the whole collection.
  */
 export async function startMetricCalculationsForSketch(
   pool: Pool | PoolClient,
@@ -873,11 +1234,20 @@ export async function startMetricCalculationsForSketch(
     return;
   }
 
+  const { rows: parentRows } = await pool.query<{
+    get_parent_collection_id: number | null;
+  }>(
+    `select get_parent_collection_id('sketch', $1) as get_parent_collection_id`,
+    [sketchId],
+  );
+  const parentCollectionId = parentRows[0]?.get_parent_collection_id ?? null;
+  const targetSketchId = parentCollectionId ?? sketchId;
+
   return await getOrCreateReportDependencies(
     reportId,
     pool,
     sketchClass.project_id,
-    sketchId,
+    targetSketchId,
   );
 }
 
@@ -995,10 +1365,40 @@ async function getOverlaySourcesByStableIds(
   return results;
 }
 
+type OverlayRefTrustedRow = {
+  table_of_contents_item_id: number;
+  stable_id: string;
+  source_url: string | null;
+  source_processing_job_id: string | null;
+  output_id: number | null;
+  contains_overlapping_features: boolean | null;
+  raster_band_count: number | null;
+  vector_geometry_type: string | null;
+};
+
+function mapOverlayTrustedRowToPartial(
+  r: OverlayRefTrustedRow,
+): ReportOverlaySourcePartial {
+  return {
+    tableOfContentsItemId: r.table_of_contents_item_id,
+    stableId: r.stable_id,
+    sourceUrl: r.source_url ?? undefined,
+    sourceProcessingJobId: r.source_processing_job_id ?? undefined,
+    outputId: r.output_id ?? undefined,
+    containsOverlappingFeatures: r.contains_overlapping_features ?? undefined,
+    rasterBandCount: r.raster_band_count ?? undefined,
+    vectorGeometryType: r.vector_geometry_type ?? undefined,
+  };
+}
+
 async function getOverlaySourceRefsByStableIds(
   pool: Pool | PoolClient,
   stableIds: string[],
   isDraft: boolean,
+  overlayOpts?: {
+    projectId?: number;
+    trustedTocRlsBypass?: boolean;
+  },
 ): Promise<{
   [stableId: string]: ReportOverlaySourcePartial;
 }> {
@@ -1010,9 +1410,30 @@ async function getOverlaySourceRefsByStableIds(
     return results;
   }
 
-  const { rows } = await pool.query<ReportOverlaySourcePartial>(
-    `
-      select
+  const projectId = overlayOpts?.projectId;
+  const trustedBypass =
+    overlayOpts?.trustedTocRlsBypass === true && projectId != null;
+
+  let rows: ReportOverlaySourcePartial[];
+
+  if (trustedBypass) {
+    const { rows: trustedRows } = await pool.query<OverlayRefTrustedRow>(
+      `
+        select *
+        from report_overlay_source_refs_by_stable_ids($1::integer, $2::text[], $3::boolean)
+      `,
+      [projectId, stableIds, isDraft],
+    );
+    rows = trustedRows.map(mapOverlayTrustedRowToPartial);
+  } else {
+    const projectFilter = projectId != null ? `and items.project_id = $3` : "";
+    const params: unknown[] =
+      projectId != null
+        ? [stableIds, isDraft, projectId]
+        : [stableIds, isDraft];
+    const { rows: qrows } = await pool.query<ReportOverlaySourcePartial>(
+      `
+      select distinct on (items.stable_id)
         items.id as "tableOfContentsItemId",
         items.stable_id as "stableId",
         reporting_output.url as "sourceUrl",
@@ -1026,12 +1447,24 @@ async function getOverlaySourceRefsByStableIds(
         join data_layers layers on layers.id = items.data_layer_id
         join data_sources sources on sources.id = layers.data_source_id
         left join lateral table_of_contents_items_reporting_output(items.*) as reporting_output on true
-        left join source_processing_jobs jobs on jobs.data_source_id = sources.id
+        left join lateral (
+          select spj.job_key
+          from source_processing_jobs spj
+          where spj.data_source_id = sources.id
+          order by spj.created_at desc
+          limit 1
+        ) jobs on true
       where
         items.stable_id = ANY($1::text[]) and items.is_draft = $2
+        ${projectFilter}
+      order by
+        items.stable_id,
+        coalesce(reporting_output.id, 0) desc
     `,
-    [stableIds, isDraft],
-  );
+      params,
+    );
+    rows = qrows;
+  }
 
   for (const row of rows) {
     results[row.stableId] = row;
@@ -1040,7 +1473,9 @@ async function getOverlaySourceRefsByStableIds(
   for (const stableId of stableIds) {
     const row = results[stableId];
     if (row && !row.sourceProcessingJobId) {
-      throw new Error(`No source processing job id for overlay source: ${stableId}`);
+      throw new Error(
+        `No source processing job id for overlay source: ${stableId}`,
+      );
     }
   }
 
@@ -1084,7 +1519,12 @@ async function createMetricsForDependencies(
   preloadedOverlayRefs?: {
     [stableId: string]: ReportOverlaySourcePartial;
   },
+  options?: {
+    metricsPool?: Pool | PoolClient;
+    trustedTocRlsBypass?: boolean;
+  },
 ) {
+  const cmCtx = { projectId };
   const metrics: any[] = [];
   const hashSeen = new Set<string>();
   const batchInputs: Array<{
@@ -1098,6 +1538,7 @@ async function createMetricsForDependencies(
     dependencyHash: string;
   }> = [];
 
+  let ns = reportDepsProfileNowNs();
   const overlaySources =
     preloadedOverlayRefs ??
     (await getOverlaySourceRefsByStableIds(
@@ -1106,8 +1547,29 @@ async function createMetricsForDependencies(
         new Set(dependencies.filter((d) => d.stableId).map((d) => d.stableId!)),
       ),
       isDraft,
+      {
+        projectId,
+        trustedTocRlsBypass: options?.trustedTocRlsBypass === true,
+      },
     ));
+  reportDepsProfileLog(
+    "createMetricsForDependencies",
+    preloadedOverlayRefs ? "overlayRefs_preloaded" : "overlayRefs_fetch",
+    ns,
+    cmCtx,
+    {
+      dependencyCount: dependencies.length,
+      stableIdCount: preloadedOverlayRefs
+        ? Object.keys(preloadedOverlayRefs).length
+        : Array.from(
+            new Set(
+              dependencies.filter((d) => d.stableId).map((d) => d.stableId!),
+            ),
+          ).length,
+    },
+  );
 
+  ns = reportDepsProfileNowNs();
   const overlaySourceUrls = {} as { [stableId: string]: string };
   for (const stableId in overlaySources) {
     if (overlaySources[stableId]?.sourceUrl) {
@@ -1159,10 +1621,32 @@ async function createMetricsForDependencies(
       throw new Error(`Unknown subject type: ${dependency.subjectType}`);
     }
   }
+  reportDepsProfileLog(
+    "createMetricsForDependencies",
+    "buildBatchInputs",
+    ns,
+    cmCtx,
+    {
+      batchInputCount: batchInputs.length,
+      distinctHashes: hashSeen.size,
+      fragmentCount: fragments.length,
+      geographyCount: geogs.length,
+    },
+  );
+
   if (batchInputs.length > 0) {
+    ns = reportDepsProfileNowNs();
+    const metricsPool = options?.metricsPool ?? pool;
     const batchMetrics = await getOrCreateSpatialMetricsBatch(
-      pool,
+      metricsPool,
       batchInputs,
+    );
+    reportDepsProfileLog(
+      "createMetricsForDependencies",
+      "awaitSpatialMetricsBatch_total",
+      ns,
+      cmCtx,
+      { returnedRows: batchMetrics.length },
     );
     metrics.push(...batchMetrics);
   }

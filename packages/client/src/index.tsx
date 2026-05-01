@@ -210,6 +210,23 @@ function ApolloProviderWithToken(props: any) {
     async function init() {
       const cache = new InMemoryCache({
         typePolicies: {
+          /**
+           * Spatial metrics are always loaded in the context of a specific report +
+           * sketch subject (`Report.dependencies(sketchId)`). Normalizing metrics
+           * only by global `id` caused cross-talk when multiple collection reports are
+           * open: the last query to complete could overwrite shared cache entities and
+           * change numbers in another panel without any editing.
+           */
+          CompatibleSpatialMetric: {
+            keyFields: false,
+          },
+          Report: {
+            fields: {
+              dependencies: {
+                keyArgs: ["sketchId"],
+              },
+            },
+          },
           Profile: {
             keyFields: ["userId"],
           },

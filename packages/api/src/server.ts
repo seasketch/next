@@ -17,6 +17,11 @@ import cors from "cors";
 import https from "https";
 import fs from "fs";
 import graphileOptions from "./graphileOptions";
+import {
+  isReportDepsProfileEnabled,
+  reportDepsProfileLog,
+  reportDepsProfileNowNs,
+} from "./reportDepsProfiling";
 import { getFeatureCollection, getMVT } from "./exportSurvey";
 import { warmFragmentWorkerCache } from "./sketches";
 import { GeographySettings } from "overlay-engine";
@@ -72,6 +77,27 @@ if (process.env.SENTRY_DSN) {
 }
 
 app.use(compression());
+
+app.use((req, res, next) => {
+  if (req.method !== "POST" || !req.path.includes("graphql")) {
+    next();
+    return;
+  }
+  const t0 = reportDepsProfileNowNs();
+  res.on("finish", () => {
+    if (!isReportDepsProfileEnabled()) {
+      return;
+    }
+    reportDepsProfileLog(
+      "httpGraphql",
+      "fullExpressPipelineWallClock",
+      t0,
+      { path: req.path },
+      { status: res.statusCode },
+    );
+  });
+  next();
+});
 
 app.use(
   cors({
