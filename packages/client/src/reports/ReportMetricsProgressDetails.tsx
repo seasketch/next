@@ -1,4 +1,4 @@
-import { Trans, useTranslation } from "react-i18next";
+import { Trans, useTranslation, type TFunction } from "react-i18next";
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
@@ -8,7 +8,6 @@ import {
   Geography,
   ReportDependenciesDocument,
   ReportOverlaySourcesDocument,
-  SketchGeometryType,
   SpatialMetricState,
   useRecalculateSpatialMetricsMutation,
   useProjectReportingLayersQuery,
@@ -450,10 +449,6 @@ export default function ReportMetricsProgressDetails({
   const baseReportContext = useBaseReportContext();
   const subjectReportContext = useSubjectReportContext();
   const onError = useGlobalErrorHandler();
-
-  const isCollectionSketchClass =
-    baseReportContext.sketchClass.geometryType ===
-    SketchGeometryType.Collection;
 
   const sketchNameById = useMemo(() => {
     const m = new Map<number, string>();
@@ -970,7 +965,6 @@ export default function ReportMetricsProgressDetails({
                         metricType={metric.type}
                         parameters={metric.parameters}
                         title={fragmentMetricLineTitle(metric, {
-                          isCollection: isCollectionSketchClass,
                           sketchNameById,
                           t,
                         })}
@@ -1006,59 +1000,51 @@ export default function ReportMetricsProgressDetails({
 function fragmentMetricLineTitle(
   metric: CompatibleSpatialMetricDetailsFragment,
   options: {
-    isCollection: boolean;
     sketchNameById: Map<number, string>;
-    t: (key: string) => string;
+    t: TFunction<"sketching">;
   }
 ): ReactNode {
-  const { isCollection, sketchNameById, t } = options;
+  const { sketchNameById, t } = options;
   if (!subjectIsFragment(metric.subject)) {
     // eslint-disable-next-line i18next/no-literal-string
     return <span className="text-sm text-slate-500">—</span>;
   }
   const hash = metric.subject.hash;
   const sketchIds = metric.subject.sketches ?? [];
-  const showSketchNames = isCollection && sketchIds.length > 0;
-  const resolvedNames = showSketchNames
-    ? sketchIds.map(
-        (id) =>
-          sketchNameById.get(id) ??
-          // eslint-disable-next-line i18next/no-literal-string
-          `#${id}`
-      )
-    : [];
   const middleDot = String.fromCharCode(0x00b7);
-  const namesTitle = resolvedNames.join(` ${middleDot} `);
+  const resolvedLabels = sketchIds.map(
+    (id) =>
+      sketchNameById.get(id) ??
+      // eslint-disable-next-line i18next/no-literal-string
+      `#${id}`
+  );
+  const namesLine = resolvedLabels.join(` ${middleDot} `);
+
+  const hasSketchAssociation = sketchIds.length > 0;
+  const primaryLabel = hasSketchAssociation
+    ? namesLine
+    : t("fragmentMetricNoSketchIds", {
+        defaultValue: "Fragment {{fragmentHint}}",
+        fragmentHint: hash,
+      });
+
+  const titleAttr = hasSketchAssociation
+    ? `${namesLine} ${middleDot} ${hash}`
+    : hash;
 
   return (
-    <div className="flex items-center gap-2 min-w-0 w-full">
-      <span className="flex-shrink-0 whitespace-nowrap text-sm">
-        {t("Polygon")}
-      </span>
-      {showSketchNames && (
-        <>
-          <span
-            className="text-slate-300 flex-shrink-0 select-none"
-            aria-hidden
-          >
-            {middleDot}
-          </span>
-          <span
-            className="min-w-0 flex-1 truncate text-sm font-medium text-slate-700"
-            title={namesTitle}
-          >
-            {resolvedNames.join(` ${middleDot} `)}
-          </span>
-        </>
-      )}
-      <span className="text-slate-300 flex-shrink-0 select-none" aria-hidden>
-        {middleDot}
+    <div className="flex w-full min-w-0 flex-wrap items-start gap-x-3 gap-y-1">
+      <span
+        className="min-w-0 flex-1 truncate text-sm font-medium text-slate-800"
+        title={titleAttr}
+      >
+        {primaryLabel}
       </span>
       <span
-        className="min-w-0 max-w-[38%] shrink font-mono text-xs text-slate-500 truncate sm:max-w-[42%]"
+        className="min-w-0 max-w-full shrink font-mono text-[11px] leading-snug text-slate-400 select-text break-all sm:max-w-[min(100%,28rem)] sm:text-right"
         title={hash}
       >
-        {hash.substring(0, 36)}
+        {hash}
       </span>
     </div>
   );

@@ -8227,6 +8227,10 @@ select{
   max-width:20rem
 }
 
+.max-w-\[6\.5rem\]{
+  max-width:6.5rem
+}
+
 .flex-1{
   flex:1 1 0%
 }
@@ -15639,6 +15643,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
   .sm\:text-center{
     text-align:center
+  }
+
+  .sm\:text-right{
+    text-align:right
   }
 
   .sm\:align-middle{
