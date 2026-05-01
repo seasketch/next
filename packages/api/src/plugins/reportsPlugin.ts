@@ -435,7 +435,13 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
             ns,
             profileCtx,
           );
-          const metricsPool = context.adminPool ?? context.pgClient;
+          // Use the same client as `ensureSketchFragments` / PostGraphile (not
+          // `adminPool`). Otherwise `resolve_spatial_metrics_batch` runs on
+          // another connection while fragment inserts are still uncommitted in
+          // the GraphQL transaction, and inserts into `spatial_metrics` fail
+          // the FK to `fragments` until the request finishes (symptom: first
+          // report open errors, reload works).
+          const metricsPool = context.pgClient;
           ns = reportDepsProfileNowNs();
           const out = await getOrCreateReportDependencies(
             report.id,
@@ -527,9 +533,8 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
       },
       Query: {
         async draftReportDependencies(root, args, context, resolveInfo) {
-          const { pgClient, adminPool } = context as {
+          const { pgClient } = context as {
             pgClient: PoolClient;
-            adminPool?: Pool;
           };
           const pool = pgClient;
           const sketchId = args.input.sketchId;
@@ -565,7 +570,9 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
             throw new Error("No geographies found");
           }
 
-          const metricsPool = adminPool ?? pgClient;
+          // Same as Report.dependencies: batch metric SQL must use `pgClient`
+          // so rows see fragment inserts in the same PostGraphile transaction.
+          const metricsPool = pgClient;
           const { metrics } = await createMetricsForDependencies(
             pgClient,
             args.input.nodeDependencies,

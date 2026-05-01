@@ -987,9 +987,15 @@ export async function ensureCollectionFragments(
       pgClient,
     );
     const fragments = fragmentsBySketchId[sketch.id] || [];
-    await updateSketchFragments(sketch.id, fragments, pgClient, existingHashes, {
-      runAsSketchOwner: true,
-    });
+    await updateSketchFragments(
+      sketch.id,
+      fragments,
+      pgClient,
+      existingHashes,
+      {
+        runAsSketchOwner: true,
+      },
+    );
     await pgClient.query(
       `
       update sketches s
