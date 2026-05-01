@@ -1415,6 +1415,41 @@ export default function SketchUIStateContextProvider({
             ]
           : []),
       ];
+
+      const selectionAnchoredInsideCollection =
+        selectedIds.length === 1 &&
+        (Boolean(selectionType?.collection) ||
+          Boolean(
+            // @ts-ignore private cache api
+            client.cache.data.get(selectedIds[0], "collectionId") as
+              | number
+              | null
+              | undefined
+          ));
+
+      const contextMenuCreate: DropdownOption[] = create
+        .filter((opt) => {
+          if (!selectionAnchoredInsideCollection) {
+            return true;
+          }
+          const match = /^create-(\d+)$/.exec(opt.id || "");
+          if (!match) {
+            return true;
+          }
+          const scId = parseInt(match[1], 10);
+          const sc = sketchClasses.find((s) => s.id === scId);
+          return sc?.geometryType !== SketchGeometryType.Collection;
+        })
+        .map((opt) => ({
+          ...opt,
+          contextMenuItemClassName: [
+            "pl-6",
+            opt.contextMenuItemClassName,
+          ]
+            .filter(Boolean)
+            .join(" "),
+        }));
+
       const update: DropdownOption[] = [];
       const read: DropdownOption[] = [];
       const selectedSketchClassId =
@@ -1660,11 +1695,12 @@ export default function SketchUIStateContextProvider({
 
       contextMenu.push(...update);
       contextMenu.push(...read);
-      if (create.length) {
+      if (contextMenuCreate.length) {
         contextMenu.push({
+          id: "create-section-label",
           label: t("Create"),
-        } as DropdownDividerProps);
-        contextMenu.push(...create);
+        });
+        contextMenu.push(...contextMenuCreate);
       }
 
       return {
