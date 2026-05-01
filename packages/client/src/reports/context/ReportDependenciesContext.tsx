@@ -190,9 +190,9 @@ export default function ReportDependenciesContextProvider({
     overlayNetworkStatus === NetworkStatus.refetch ||
     overlayNetworkStatus === NetworkStatus.setVariables;
 
-  const rawSlimMetrics: CompatibleSpatialMetricSlimFragment[] =
-    (depsData?.report?.dependencies?.metrics ??
-      EMPTY_SLIM_METRICS) as CompatibleSpatialMetricSlimFragment[];
+  const rawSlimMetrics: CompatibleSpatialMetricSlimFragment[] = (depsData
+    ?.report?.dependencies?.metrics ??
+    EMPTY_SLIM_METRICS) as CompatibleSpatialMetricSlimFragment[];
 
   const fragmentSubjectCatalog: Pick<
     FragmentSubjectDetailsFragment,
@@ -216,7 +216,7 @@ export default function ReportDependenciesContextProvider({
       registrationRef.current = { deps: dependencies, fingerprint };
       setRegistrationEpoch((e) => e + 1);
     },
-    [],
+    []
   );
 
   const overlaySources =
@@ -236,11 +236,16 @@ export default function ReportDependenciesContextProvider({
       overlaySourceUrlByStableId: urlMap,
       fragmentSubjectCatalog,
     });
-  }, [rawSlimMetrics, overlaySources, registrationEpoch, fragmentSubjectCatalog]);
+  }, [
+    rawSlimMetrics,
+    overlaySources,
+    registrationEpoch,
+    fragmentSubjectCatalog,
+  ]);
 
   const slimMetricIdsFromServer = useMemo(
     () => new Set(hydratedMetrics.map((m) => String(m.id))),
-    [hydratedMetrics],
+    [hydratedMetrics]
   );
 
   const waitingForDocRegistration =
@@ -258,7 +263,7 @@ export default function ReportDependenciesContextProvider({
     const deps = registrationRef.current?.deps ?? [];
     const urlMap = buildOverlayStableIdToSourceUrlMap(overlaySources);
     const knownHashes = new Set(
-      deps.map((d) => hashMetricDependency(d, urlMap)),
+      deps.map((d) => hashMetricDependency(d, urlMap))
     );
     return rawSlimMetrics.filter((m) => knownHashes.has(m.dependencyHash));
   }, [
@@ -316,13 +321,13 @@ export default function ReportDependenciesContextProvider({
     const anyMetricsLoading = pollingRelevantSlimMetrics.some(
       (metric) =>
         metric.state !== SpatialMetricState.Complete &&
-        metric.state !== SpatialMetricState.Error,
+        metric.state !== SpatialMetricState.Error
     );
     const anyOverlaySourcesLoading = contextValue.overlaySources.some(
       (source) =>
         source.sourceProcessingJob &&
         source.sourceProcessingJob.state !== SpatialMetricState.Complete &&
-        source.sourceProcessingJob.state !== SpatialMetricState.Error,
+        source.sourceProcessingJob.state !== SpatialMetricState.Error
     );
 
     let metricInterval: ReturnType<typeof setInterval> | null = null;
@@ -331,7 +336,7 @@ export default function ReportDependenciesContextProvider({
     if (anyMetricsLoading) {
       metricInterval = setInterval(() => {
         refetchDeps();
-      }, 1000);
+      }, 700);
     }
 
     if (anyOverlaySourcesLoading) {

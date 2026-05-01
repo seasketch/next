@@ -54,6 +54,8 @@ declare namespace NodeJS {
     R2_TILES_BUCKET: string;
     GOOGLE_MAPS_2D_TILE_API_KEY: string;
     OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL: string;
+    /** Parallel long-poll loops per API process (default 4). Each receives up to 10 messages per poll. */
+    OVERLAY_ENGINE_WORKER_SQS_CONSUMER_COUNT?: string;
     OVERLAY_WORKER_DEV_HANDLER?: string;
     OVERLAY_WORKER_LAMBDA_ARN?: string;
     SUBDIVISION_WORKER_LAMBDA_ARN?: string;

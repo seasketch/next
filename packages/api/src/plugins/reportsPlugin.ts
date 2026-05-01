@@ -658,11 +658,12 @@ async function getOrCreateReportDependencies(
   );
 
   const nsFrag = reportDepsProfileNowNs();
-  const fragmentsPromise = (sketchId
-    ? ensureSketchFragments(sketchId, projectId, pool as PoolClient, {
-        skipSketchRlsCheck: trustedReads,
-      })
-    : Promise.resolve([] as string[])
+  const fragmentsPromise = (
+    sketchId
+      ? ensureSketchFragments(sketchId, projectId, pool as PoolClient, {
+          skipSketchRlsCheck: trustedReads,
+        })
+      : Promise.resolve([] as string[])
   ).then((fragments) => {
     reportDepsProfileLog(
       "getOrCreateReportDependencies",
@@ -676,10 +677,10 @@ async function getOrCreateReportDependencies(
 
   const nsGeog = reportDepsProfileNowNs();
   const geogsPromise = pool
-    .query<{ name: string; id: number }>(
-      `select name, id from project_geography where project_id = $1`,
-      [projectId],
-    )
+    .query<{
+      name: string;
+      id: number;
+    }>(`select name, id from project_geography where project_id = $1`, [projectId])
     .then(({ rows: geogs }) => {
       reportDepsProfileLog(
         "getOrCreateReportDependencies",
@@ -1208,6 +1209,11 @@ export async function getOrCreateSpatialMetricsBatch(
  * user to open the report. To avoid permission issues, and to keep work off the
  * main thread, this is designed to be run by the
  * tasks/startMetricCalculationsForSketch.ts graphile-worker task.
+ *
+ * If the sketch belongs to a parent collection, metrics are started using that
+ * collection sketch id. {@link ensureSketchFragments} resolves fragments via
+ * `get_fragment_hashes_for_sketch`, which includes all child sketches under a
+ * collection, so one dependency pass covers the whole collection.
  */
 export async function startMetricCalculationsForSketch(
   pool: Pool | PoolClient,
@@ -1228,11 +1234,20 @@ export async function startMetricCalculationsForSketch(
     return;
   }
 
+  const { rows: parentRows } = await pool.query<{
+    get_parent_collection_id: number | null;
+  }>(
+    `select get_parent_collection_id('sketch', $1) as get_parent_collection_id`,
+    [sketchId],
+  );
+  const parentCollectionId = parentRows[0]?.get_parent_collection_id ?? null;
+  const targetSketchId = parentCollectionId ?? sketchId;
+
   return await getOrCreateReportDependencies(
     reportId,
     pool,
     sketchClass.project_id,
-    sketchId,
+    targetSketchId,
   );
 }
 
@@ -1370,8 +1385,7 @@ function mapOverlayTrustedRowToPartial(
     sourceUrl: r.source_url ?? undefined,
     sourceProcessingJobId: r.source_processing_job_id ?? undefined,
     outputId: r.output_id ?? undefined,
-    containsOverlappingFeatures:
-      r.contains_overlapping_features ?? undefined,
+    containsOverlappingFeatures: r.contains_overlapping_features ?? undefined,
     rasterBandCount: r.raster_band_count ?? undefined,
     vectorGeometryType: r.vector_geometry_type ?? undefined,
   };
@@ -1412,10 +1426,11 @@ async function getOverlaySourceRefsByStableIds(
     );
     rows = trustedRows.map(mapOverlayTrustedRowToPartial);
   } else {
-    const projectFilter =
-      projectId != null ? `and items.project_id = $3` : "";
+    const projectFilter = projectId != null ? `and items.project_id = $3` : "";
     const params: unknown[] =
-      projectId != null ? [stableIds, isDraft, projectId] : [stableIds, isDraft];
+      projectId != null
+        ? [stableIds, isDraft, projectId]
+        : [stableIds, isDraft];
     const { rows: qrows } = await pool.query<ReportOverlaySourcePartial>(
       `
       select distinct on (items.stable_id)
