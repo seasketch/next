@@ -41,6 +41,8 @@ interface ModalProps {
   open?: boolean;
   dark?: boolean;
   footerClassName?: string;
+  /** When set, replaces default body padding/overflow (use for full-bleed scroll areas). */
+  bodyClassName?: string;
 }
 
 export default function Modal(props: ModalProps) {
@@ -121,9 +123,12 @@ export default function Modal(props: ModalProps) {
                 className={props.panelClassName}
               >
                 <div
-                  className={`w-full justify-center ${
-                    props.icon && "sm:pl-4 sm:flex sm:items-start"
-                  }`}
+                  className={clsx(
+                    "w-full justify-center",
+                    props.icon && "sm:flex sm:items-start sm:pl-4",
+                    props.bodyClassName !== undefined &&
+                      "flex min-h-0 flex-1 flex-col justify-start"
+                  )}
                 >
                   {props.icon && props.icon === "delete" && (
                     <div className="mt-5 mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
@@ -142,9 +147,11 @@ export default function Modal(props: ModalProps) {
                     </div>
                   )}
                   <div
-                    className={`sm:flex sm:flex-col mt-3 text-center sm:mt-0 ${
-                      props.icon && "sm:ml-4"
-                    } sm:text-left sm:max-h-almost-full`}
+                    className={clsx(
+                      "sm:flex sm:flex-col min-h-0 mt-3 text-center sm:mt-0 sm:text-left sm:max-h-almost-full",
+                      props.icon && "sm:ml-4",
+                      props.bodyClassName !== undefined && "sm:flex-1"
+                    )}
                   >
                     {hasTitle && (
                       <Dialog.Title
@@ -172,11 +179,17 @@ export default function Modal(props: ModalProps) {
                     )}
 
                     <div
-                      className={`sm:flex-1 mt-0 ${
-                        props.zeroPadding ? "" : "p-6"
-                      } ${
-                        props.scrollable ? "py-4" : "py-0"
-                      } sm:overflow-y-auto ${props.icon && "pl-0"}`}
+                      className={clsx(
+                        "sm:flex-1 mt-0",
+                        props.bodyClassName !== undefined
+                          ? props.bodyClassName
+                          : clsx(
+                              !props.zeroPadding && "p-6",
+                              props.scrollable && !props.zeroPadding && "py-4",
+                              props.scrollable && "sm:overflow-y-auto"
+                            ),
+                        props.icon && "pl-0"
+                      )}
                     >
                       {props.children}
                     </div>

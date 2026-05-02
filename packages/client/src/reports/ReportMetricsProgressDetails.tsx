@@ -1,6 +1,6 @@
-import { Trans, useTranslation, type TFunction } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { useCallback, useContext, useEffect, useMemo, useState } from "react";
-import type { ReactNode } from "react";
+import * as React from "react";
 import {
   CompatibleSpatialMetricDetailsFragment,
   DataSourceTypes,
@@ -37,7 +37,6 @@ import type {
   AuthorProfileFragment,
   CompatibleSpatialMetricProgressFieldsFragment,
 } from "../generated/graphql";
-import { nameForProfile } from "../projects/Forums/TopicListItem";
 
 const METRIC_GROUP_COLLAPSE_THRESHOLD = 5;
 
@@ -347,7 +346,7 @@ function CollapsibleMetricTaskGroup({
     operationLabel: string;
     metrics: CompatibleSpatialMetricDetailsFragment[];
   };
-  renderItems: () => ReactNode;
+  renderItems: () => React.ReactNode;
 }) {
   const { t } = useTranslation("sketching");
   const listId = useMemo(() => {
@@ -726,8 +725,6 @@ export default function ReportMetricsProgressDetails({
                   tocId != null
                     ? overlayAttributionByTocId.get(tocId)
                     : undefined;
-                const displayDate =
-                  layer.output?.createdAt ?? attribution?.createdAt ?? null;
                 const layerTitle =
                   layer.tableOfContentsItem?.title || t("Untitled");
                 return (
@@ -1001,9 +998,9 @@ function fragmentMetricLineTitle(
   metric: CompatibleSpatialMetricDetailsFragment,
   options: {
     sketchNameById: Map<number, string>;
-    t: TFunction<"sketching">;
+    t: (key: string, options?: Record<string, unknown>) => string;
   }
-): ReactNode {
+): React.ReactNode {
   const { sketchNameById, t } = options;
   if (!subjectIsFragment(metric.subject)) {
     // eslint-disable-next-line i18next/no-literal-string
@@ -1086,7 +1083,6 @@ function AuthorAvatarWithTooltip({
   profile: AuthorProfileFragment;
 }) {
   const { t } = useTranslation("sketching");
-  const name = nameForProfile(profile);
   return (
     <Tooltip.Root delayDuration={200}>
       <Tooltip.Trigger asChild>

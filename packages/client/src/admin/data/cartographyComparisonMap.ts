@@ -258,11 +258,9 @@ export function replaceOverlayOnMap(
   }
 }
 
-export function tocOrSourceBounds(
-  tocBounds?: (number | null)[] | null,
-  sourceBounds?: (number | null)[] | null
+function normalizeBoundsArray(
+  raw?: (number | null)[] | null
 ): [number, number, number, number] | null {
-  const raw = tocBounds?.length === 4 ? tocBounds : sourceBounds;
   if (!raw || raw.length < 4) {
     return null;
   }
@@ -275,4 +273,34 @@ export function tocOrSourceBounds(
     return null;
   }
   return [minx, miny, maxx, maxy];
+}
+
+function bboxAreaDegreesSquared(
+  bounds: [number, number, number, number]
+): number {
+  const [minx, miny, maxx, maxy] = bounds;
+  return Math.abs(maxx - minx) * Math.abs(maxy - miny);
+}
+
+/**
+ * Resolves bounds for fitting the cartography map. When both TOC and source
+ * bounds exist, uses the **tighter** extent so previews zoom to the data layer
+ * instead of a broad TOC/project frame (which previously forced a world-scale view).
+ */
+export function tocOrSourceBounds(
+  tocBounds?: (number | null)[] | null,
+  sourceBounds?: (number | null)[] | null
+): [number, number, number, number] | null {
+  const toc = normalizeBoundsArray(tocBounds);
+  const src = normalizeBoundsArray(sourceBounds);
+  if (!toc && !src) {
+    return null;
+  }
+  if (!toc) {
+    return src;
+  }
+  if (!src) {
+    return toc;
+  }
+  return bboxAreaDegreesSquared(toc) <= bboxAreaDegreesSquared(src) ? toc : src;
 }

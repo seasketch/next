@@ -21811,10 +21811,18 @@ export type ChangeLogsSinceLastPublishQuery = (
   { __typename?: 'Query' }
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id'>
+    & Pick<Project, 'id' | 'tableOfContentsLastPublished'>
     & { draftTableOfContentsItems?: Maybe<Array<(
       { __typename?: 'TableOfContentsItem' }
       & Pick<TableOfContentsItem, 'id' | 'title' | 'isFolder'>
+      & { dataLayer?: Maybe<(
+        { __typename?: 'DataLayer' }
+        & Pick<DataLayer, 'id'>
+        & { dataSource?: Maybe<(
+          { __typename?: 'DataSource' }
+          & Pick<DataSource, 'createdAt'>
+        )> }
+      )> }
     )>>, changeLogsSinceLastPublish?: Maybe<Array<(
       { __typename?: 'ChangeLog' }
       & ChangeLogDetailsFragment
@@ -33945,10 +33953,17 @@ export const ChangeLogsSinceLastPublishDocument = gql`
     query ChangeLogsSinceLastPublish($slug: String!) {
   projectBySlug(slug: $slug) {
     id
+    tableOfContentsLastPublished
     draftTableOfContentsItems {
       id
       title
       isFolder
+      dataLayer {
+        id
+        dataSource {
+          createdAt
+        }
+      }
     }
     changeLogsSinceLastPublish {
       ...ChangeLogDetails

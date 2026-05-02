@@ -1218,10 +1218,17 @@ query LayerCartographyChanges($id: Int!) {
 query ChangeLogsSinceLastPublish($slug: String!) {
   projectBySlug(slug: $slug) {
     id
+    tableOfContentsLastPublished
     draftTableOfContentsItems {
       id
       title
       isFolder
+      dataLayer {
+        id
+        dataSource {
+          createdAt
+        }
+      }
     }
     changeLogsSinceLastPublish {
       ...ChangeLogDetails

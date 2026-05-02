@@ -41,7 +41,8 @@ function fitMapsToBounds(
   primary: MapboxMap,
   secondary: MapboxMap | null,
   tocBounds: (number | null)[] | null | undefined,
-  dataSourceBounds: FullAdminSourceFragment["bounds"]
+  dataSourceBounds: FullAdminSourceFragment["bounds"],
+  paddingPx: number
 ) {
   const pair = tocOrSourceBounds(tocBounds ?? null, dataSourceBounds ?? null);
   const bounds: LngLatBoundsLike | null = pair
@@ -54,7 +55,7 @@ function fitMapsToBounds(
     return;
   }
   try {
-    primary.fitBounds(bounds, { animate: false, padding: 48 });
+    primary.fitBounds(bounds, { animate: false, padding: paddingPx });
     if (secondary) {
       secondary.jumpTo({
         center: primary.getCenter(),
@@ -70,7 +71,8 @@ function fitMapsToBounds(
 
 function initialBoundsOptions(
   tocBounds: (number | null)[] | null | undefined,
-  dataSourceBounds: FullAdminSourceFragment["bounds"]
+  dataSourceBounds: FullAdminSourceFragment["bounds"],
+  paddingPx: number
 ) {
   const pair = tocOrSourceBounds(tocBounds ?? null, dataSourceBounds ?? null);
   if (!pair) {
@@ -82,7 +84,7 @@ function initialBoundsOptions(
   ];
   return {
     bounds,
-    fitBoundsOptions: { padding: 48 },
+    fitBoundsOptions: { padding: paddingPx },
   };
 }
 
@@ -101,6 +103,8 @@ export default function CartographyRevisionSplitMap({
   leftActionDisabled,
   onLeftAction,
   edgePaddingPx = { left: 50, right: 50 },
+  splitInteractive = true,
+  compactChrome = false,
 }: {
   variant?: "compare" | "single";
   basemap?: BasemapDetailsFragment | null;
@@ -116,8 +120,17 @@ export default function CartographyRevisionSplitMap({
   leftActionDisabled?: boolean;
   onLeftAction?: () => void;
   edgePaddingPx?: { left: number; right: number };
+  /** When false, split stays centered and the divider cannot be dragged */
+  splitInteractive?: boolean;
+  /** Smaller labels and spacing for tight previews (e.g. publish badge tooltip) */
+  compactChrome?: boolean;
 }) {
   const { t } = useTranslation("admin:data");
+  /** Large padding makes tiny previews (e.g. h-28) zoom out to ~world scale */
+  const fitBoundsPaddingPx = compactChrome ? 8 : 48;
+  const fitBoundsPaddingRef = useRef(fitBoundsPaddingPx);
+  fitBoundsPaddingRef.current = fitBoundsPaddingPx;
+
   const wrapRef = useRef<HTMLDivElement>(null);
   const leftEl = useRef<HTMLDivElement>(null);
   const rightEl = useRef<HTMLDivElement>(null);
@@ -224,7 +237,8 @@ export default function CartographyRevisionSplitMap({
       }
       const initialView = initialBoundsOptions(
         tocBoundsRef.current,
-        sourceBoundsRef.current ?? null
+        sourceBoundsRef.current ?? null,
+        fitBoundsPaddingRef.current
       );
       const map = new mapboxgl.Map({
         container: singleEl.current,
@@ -238,7 +252,8 @@ export default function CartographyRevisionSplitMap({
           map,
           null,
           tocBoundsRef.current,
-          sourceBoundsRef.current ?? null
+          sourceBoundsRef.current ?? null,
+          fitBoundsPaddingRef.current
         );
         replaceOverlayOnMap(
           map,
@@ -261,7 +276,8 @@ export default function CartographyRevisionSplitMap({
 
     const initialView = initialBoundsOptions(
       tocBoundsRef.current,
-      sourceBoundsRef.current ?? null
+      sourceBoundsRef.current ?? null,
+      fitBoundsPaddingRef.current
     );
     const lm = new mapboxgl.Map({
       container: leftEl.current,
@@ -305,7 +321,8 @@ export default function CartographyRevisionSplitMap({
         lm,
         rm,
         tocBoundsRef.current,
-        sourceBoundsRef.current ?? null
+        sourceBoundsRef.current ?? null,
+        fitBoundsPaddingRef.current
       );
       const pull = (from: MapboxMap, to: MapboxMap) => {
         if (syncing.current) {
@@ -509,8 +526,20 @@ export default function CartographyRevisionSplitMap({
         </div>
       )}
       {leftLabel && (
-        <div className="absolute left-3 top-3 z-[6] flex items-center gap-1.5">
-          <div className="pointer-events-none rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-gray-700 shadow-sm ring-1 ring-black/5">
+        <div
+          className={
+            compactChrome
+              ? "absolute left-1 top-1 z-[6] flex items-center gap-1"
+              : "absolute left-3 top-3 z-[6] flex items-center gap-1.5"
+          }
+        >
+          <div
+            className={
+              compactChrome
+                ? "pointer-events-none rounded bg-white/90 px-1.5 py-0.5 text-[9px] font-medium text-gray-800 ring-1 ring-black/10"
+                : "pointer-events-none rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-gray-700 shadow-sm ring-1 ring-black/5"
+            }
+          >
             {leftLabel}
           </div>
           {onLeftAction && leftActionLabel && (
@@ -527,7 +556,13 @@ export default function CartographyRevisionSplitMap({
         </div>
       )}
       {rightLabel && (
-        <div className="pointer-events-none absolute right-3 top-3 z-[6] rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-gray-700 shadow-sm ring-1 ring-black/5">
+        <div
+          className={
+            compactChrome
+              ? "pointer-events-none absolute right-1 top-1 z-[6] rounded bg-white/90 px-1.5 py-0.5 text-[9px] font-medium text-gray-800 ring-1 ring-black/10"
+              : "pointer-events-none absolute right-3 top-3 z-[6] rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wider text-gray-700 shadow-sm ring-1 ring-black/5"
+          }
+        >
           {rightLabel}
         </div>
       )}
@@ -547,29 +582,37 @@ export default function CartographyRevisionSplitMap({
         }}
         aria-hidden
       />
-      <button
-        type="button"
-        className="group absolute top-0 bottom-0 z-10 flex w-12 -translate-x-1/2 cursor-ew-resize items-center justify-center border-0 bg-transparent p-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
-        style={{ left: `${splitPct}%` }}
-        onPointerDown={(e) => {
-          e.preventDefault();
-          dragRef.current = true;
-        }}
-        aria-label={t("Adjust comparison divider")}
-      >
-        <span
-          className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-white/90 shadow group-hover:bg-primary-200"
+      {splitInteractive ? (
+        <button
+          type="button"
+          className="group absolute top-0 bottom-0 z-10 flex w-12 -translate-x-1/2 cursor-ew-resize items-center justify-center border-0 bg-transparent p-0 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+          style={{ left: `${splitPct}%` }}
+          onPointerDown={(e) => {
+            e.preventDefault();
+            dragRef.current = true;
+          }}
+          aria-label={t("Adjust comparison divider")}
+        >
+          <span
+            className="absolute left-1/2 top-0 bottom-0 w-px -translate-x-1/2 bg-white/90 shadow group-hover:bg-primary-200"
+            aria-hidden
+          />
+          <span
+            className="relative inline-flex flex-row items-center gap-0.5 rounded-full border border-gray-200 bg-white/95 px-1.5 py-2 shadow-lg ring-1 ring-black/5 backdrop-blur group-hover:border-primary-200"
+            aria-hidden
+          >
+            <span className="h-8 w-0.5 rounded-full bg-gray-400 group-hover:bg-primary-500/80" />
+            <span className="h-8 w-0.5 rounded-full bg-gray-400 group-hover:bg-primary-500/80" />
+            <span className="h-8 w-0.5 rounded-full bg-gray-400 group-hover:bg-primary-500/80" />
+          </span>
+        </button>
+      ) : (
+        <div
+          className="pointer-events-none absolute top-0 bottom-0 z-[5] w-px -translate-x-1/2 bg-white/70 shadow"
+          style={{ left: `${splitPct}%` }}
           aria-hidden
         />
-        <span
-          className="relative inline-flex flex-row items-center gap-0.5 rounded-full border border-gray-200 bg-white/95 px-1.5 py-2 shadow-lg ring-1 ring-black/5 backdrop-blur group-hover:border-primary-200"
-          aria-hidden
-        >
-          <span className="h-8 w-0.5 rounded-full bg-gray-400 group-hover:bg-primary-500/80" />
-          <span className="h-8 w-0.5 rounded-full bg-gray-400 group-hover:bg-primary-500/80" />
-          <span className="h-8 w-0.5 rounded-full bg-gray-400 group-hover:bg-primary-500/80" />
-        </span>
-      </button>
+      )}
     </div>
   );
 }
