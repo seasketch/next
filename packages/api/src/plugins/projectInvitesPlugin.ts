@@ -4,6 +4,7 @@ import {
   verifyProjectInvite,
   confirmProjectInvite,
 } from "../invites/projectInvites";
+import { mapInviteConfirmationError } from "../invites/inviteFlowErrors";
 
 const ISSUER = (process.env.ISSUER || "seasketch.org")
   .split(",")
@@ -73,14 +74,18 @@ const ProjectInvitesPlugin = makeExtendSchemaPlugin((build) => {
       Mutation: {
         confirmProjectInvite: async (_query, args, context, resolveInfo) => {
           const { pgClient } = context;
-          const claims = await confirmProjectInvite(
-            pgClient,
-            args.token,
-            ISSUER
-          );
-          return {
-            ...claims,
-          };
+          try {
+            const claims = await confirmProjectInvite(
+              pgClient,
+              args.token,
+              ISSUER
+            );
+            return {
+              ...claims,
+            };
+          } catch (e) {
+            throw mapInviteConfirmationError(e);
+          }
         },
       },
       Query: {

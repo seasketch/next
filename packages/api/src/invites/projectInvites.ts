@@ -9,6 +9,12 @@ import sendEmail from "./sendEmail";
 import * as cache from "../cache";
 import htmlTemplate from "./projectInviteTemplate";
 import textTemplate from "./projectInviteTemplateText";
+import {
+  logInviteFlowBackendError,
+  mapInviteConfirmationError,
+  mapJwtVerificationError,
+  publicInviteError,
+} from "./inviteFlowErrors";
 
 const ISSUER = (process.env.ISSUER || "seasketch.org")
   .split(",")
@@ -215,7 +221,7 @@ export async function verifyProjectInvite(
   try {
     claims = await verify<ProjectInviteTokenClaims>(client, token, issuer);
   } catch (e) {
-    throw e;
+    throw mapJwtVerificationError(e);
   }
   if (!claims.projectId) {
     throw new Error("projectId not present in claims");
@@ -232,8 +238,16 @@ export async function verifyProjectInvite(
   // project_invite_was_used() is `select was_used from project_invites where id = $1`
   // and returns NULL when no row exists (e.g. invite deleted after the JWT was sent).
   if (raw === null || raw === undefined) {
-    throw new Error(
-      "This invitation is no longer valid. It may have been replaced or removed. Please use the link from the most recent invitation email, or ask a project administrator to resend your invitation."
+    const technical = new Error(
+      `project_invites row missing for inviteId=${claims.inviteId} (token still valid)`
+    );
+    logInviteFlowBackendError("verifyProjectInvite.inviteRowMissing", technical, {
+      inviteId: claims.inviteId,
+      projectId: claims.projectId,
+    });
+    throw publicInviteError(
+      "This invitation is no longer valid. It may have been replaced or removed. Please use the link from the most recent invitation email, or ask a project administrator to resend your invitation.",
+      technical
     );
   }
   const wasUsed = raw as boolean;
@@ -261,24 +275,75 @@ export async function confirmProjectInvite(
   const claims = await verifyProjectInvite(client, token, issuer);
   // ensure it hasn't been used before
   if (claims.wasUsed === true) {
-    throw new Error("Project invite has already been accepted");
+    const technical = new Error(
+      `invite already used: inviteId=${claims.inviteId}`
+    );
+    logInviteFlowBackendError("confirmProjectInvite.alreadyUsed", technical, {
+      inviteId: claims.inviteId,
+      projectId: claims.projectId,
+    });
+    throw publicInviteError(
+      "Project invite has already been accepted",
+      technical
+    );
   }
   // set escalated privileges bit
   await client.query(
     `SELECT set_config('session.escalate_privileges', 'on', true)`
   );
-  const userId = (
+  const userIdRow = (
     await client.query(
       `select current_setting('session.user_id', true) as user_id`
     )
-  ).rows[0].user_id;
-  // verify email using the auth0 api (if necessary)
-  const { emailVerified, sub } = (
-    await client.query(
-      `select users.sub, current_setting('session.email_verified')::boolean from users where id = $1`,
-      [userId]
-    )
   ).rows[0];
+  const userId = userIdRow?.user_id;
+  if (
+    userId === null ||
+    userId === undefined ||
+    userId === "" ||
+    String(userId).trim() === ""
+  ) {
+    const technical = new Error(
+      "session.user_id missing or empty while confirming project invite"
+    );
+    logInviteFlowBackendError("confirmProjectInvite.missingSessionUserId", technical, {
+      inviteId: claims.inviteId,
+    });
+    throw publicInviteError(
+      "You must be signed in to accept this invitation. Try signing out and signing back in, then open the invitation link from your email again.",
+      technical
+    );
+  }
+
+  let emailVerified: boolean;
+  let sub: string | null;
+  try {
+    const userResult = await client.query(
+      `select users.sub as sub,
+              current_setting('session.email_verified')::boolean as email_verified
+       from users where id = $1`,
+      [userId]
+    );
+    const row = userResult.rows[0];
+    if (!row) {
+      const technical = new Error(
+        `no users row for session user_id=${userId} (RLS or stale session)`
+      );
+      logInviteFlowBackendError(
+        "confirmProjectInvite.usersLookupEmpty",
+        technical,
+        { sessionUserId: userId, inviteId: claims.inviteId }
+      );
+      throw publicInviteError(
+        "Your active account could not be loaded. Try signing out and signing back in, then open the invitation link again.",
+        technical
+      );
+    }
+    emailVerified = row.email_verified;
+    sub = row.sub as string | null;
+  } catch (e) {
+    throw mapInviteConfirmationError(e);
+  }
 
   const auth0 = await getManagementClient();
   if (!emailVerified) {
@@ -290,7 +355,11 @@ export async function confirmProjectInvite(
     }
     await cache.set(`user:${sub}:emailVerified`, "true");
   }
-  await client.query(`select confirm_project_invite($1)`, [claims.inviteId]);
+  try {
+    await client.query(`select confirm_project_invite($1)`, [claims.inviteId]);
+  } catch (e) {
+    throw mapInviteConfirmationError(e);
+  }
   await client.query(
     `SELECT set_config('session.escalate_privileges', null, true)`
   );
