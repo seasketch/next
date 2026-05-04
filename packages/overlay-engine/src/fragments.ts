@@ -97,7 +97,7 @@ export async function createFragments(
 function buildFragments(fragments: PendingFragmentResult[]) {
   // find any fragments that overlap with other fragments, and split them into
   // new fragments that will later be merged.
-  fragments = decomposeFragments(fragments, ["__geographyIds"]);
+  fragments = decomposeFragments(fragments, ["__geographyIds"], () => idCounter++);
 
   // merge any fragments that have the exact same geometry, associating them
   // with all applicable geographies.
@@ -163,6 +163,7 @@ function mergeFragmentsWithMatchingGeometry(
 function decomposeFragments(
   fragments: PendingFragmentResult[],
   numericPropertiesToMerge: string[],
+  allocFragmentId: () => number,
   loopCount = 0
 ): PendingFragmentResult[] {
   const startingLength = fragments.length;
@@ -193,7 +194,8 @@ function decomposeFragments(
         const newFragments = splitFragments(
           fragment,
           f,
-          numericPropertiesToMerge
+          numericPropertiesToMerge,
+          allocFragmentId
         );
         if (newFragments) {
           anyOverlap = true;
@@ -228,6 +230,7 @@ function decomposeFragments(
     return decomposeFragments(
       outputFragments,
       numericPropertiesToMerge,
+      allocFragmentId,
       loopCount + 1
     );
   } else {
@@ -238,7 +241,8 @@ function decomposeFragments(
 function splitFragments(
   a: PendingFragmentResult,
   b: PendingFragmentResult,
-  numericPropertiesToMerge: string[]
+  numericPropertiesToMerge: string[],
+  allocFragmentId: () => number
 ) {
   // calculates the intersection and difference of the two fragments, and returns
   // the new fragments.
@@ -268,7 +272,7 @@ function splitFragments(
             b.properties,
             numericPropertiesToMerge
           ),
-          __id: idCounter++,
+          __id: allocFragmentId(),
         },
         geometry,
       });
@@ -280,7 +284,7 @@ function splitFragments(
           ...a,
           properties: {
             ...a.properties,
-            __id: idCounter++,
+            __id: allocFragmentId(),
           },
           geometry,
         });
@@ -292,7 +296,7 @@ function splitFragments(
           ...b,
           properties: {
             ...b.properties,
-            __id: idCounter++,
+            __id: allocFragmentId(),
           },
           geometry,
         });
@@ -386,13 +390,13 @@ export function eliminateOverlap(
   newFragments: SketchFragment[],
   existingFragments: SketchFragment[]
 ): SketchFragment[] {
-  let idCounter = 0;
+  let nextId = 0;
   const pendingFragments: PendingSketchFragmentResult[] = [
     ...newFragments.map((f) => ({
       ...f,
       properties: {
         ...f.properties,
-        __id: idCounter++,
+        __id: nextId++,
       },
       bbox: calcBBox(f),
     })),
@@ -400,11 +404,13 @@ export function eliminateOverlap(
       ...f,
       properties: {
         ...f.properties,
-        __id: idCounter++,
+        __id: nextId++,
       },
       bbox: calcBBox(f),
     })),
   ];
+
+  const allocFragmentId = () => nextId++;
 
   // compute bounding box for each fragment
   for (const fragment of pendingFragments) {
@@ -412,10 +418,11 @@ export function eliminateOverlap(
   }
 
   // decompose fragments until there is no overlap
-  const decomposedFragments = decomposeFragments(pendingFragments, [
-    "__sketchIds",
-    "__geographyIds",
-  ]);
+  const decomposedFragments = decomposeFragments(
+    pendingFragments,
+    ["__sketchIds", "__geographyIds"],
+    allocFragmentId
+  );
 
   // merge fragments with matching geometry
   let mergedFragments = mergeFragmentsWithMatchingGeometry(
@@ -424,10 +431,11 @@ export function eliminateOverlap(
   ).filter((f) => calcArea(f) > 1);
 
   // merge touching fragments with the same key properties
-  mergedFragments = mergeTouchingFragments(mergedFragments, [
-    "__sketchIds",
-    "__geographyIds",
-  ]);
+  mergedFragments = mergeTouchingFragments(
+    mergedFragments,
+    ["__sketchIds", "__geographyIds"],
+    allocFragmentId
+  );
 
   // convert back to SketchFragment type
   return mergedFragments.map((f) => ({
@@ -450,7 +458,8 @@ export function eliminateOverlap(
  */
 export function mergeTouchingFragments(
   fragments: PendingFragmentResult[],
-  keyNumericProperties: string[]
+  keyNumericProperties: string[],
+  allocFragmentId: () => number = () => idCounter++
 ) {
   if (fragments.length < 2) {
     return fragments;
@@ -498,7 +507,8 @@ export function mergeTouchingFragments(
           // Try to merge the connected component
           const mergedFragment = mergeTouchingFragmentGroup(
             component,
-            keyNumericProperties
+            keyNumericProperties,
+            allocFragmentId
           );
           if (mergedFragment) {
             mergedFragments.push(mergedFragment);
@@ -663,7 +673,8 @@ function propertiesMatch(
  */
 export function mergeTouchingFragmentGroup(
   fragments: PendingFragmentResult[],
-  keyNumericProperties: string[]
+  keyNumericProperties: string[],
+  allocFragmentId: () => number = () => idCounter++
 ): PendingFragmentResult | null {
   if (fragments.length < 2) {
     return null;
@@ -708,7 +719,7 @@ export function mergeTouchingFragmentGroup(
         geometry: mergedGeometry,
         properties: {
           ...mergedProperties,
-          __id: idCounter++,
+          __id: allocFragmentId(),
         },
         bbox: calcBBox(
           {

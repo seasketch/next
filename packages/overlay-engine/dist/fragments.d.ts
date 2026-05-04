@@ -49,9 +49,9 @@ export declare function eliminateOverlap(newFragments: SketchFragment[], existin
  * merged through chains of touching fragments, not just direct neighbors.
  * Makes multiple passes until no more merges are possible.
  */
-export declare function mergeTouchingFragments(fragments: PendingFragmentResult[], keyNumericProperties: string[]): PendingFragmentResult[];
+export declare function mergeTouchingFragments(fragments: PendingFragmentResult[], keyNumericProperties: string[], allocFragmentId?: () => number): PendingFragmentResult[];
 /**
  * Attempts to merge a group of touching fragments into a single fragment
  */
-export declare function mergeTouchingFragmentGroup(fragments: PendingFragmentResult[], keyNumericProperties: string[]): PendingFragmentResult | null;
+export declare function mergeTouchingFragmentGroup(fragments: PendingFragmentResult[], keyNumericProperties: string[], allocFragmentId?: () => number): PendingFragmentResult | null;
 //# sourceMappingURL=fragments.d.ts.map
