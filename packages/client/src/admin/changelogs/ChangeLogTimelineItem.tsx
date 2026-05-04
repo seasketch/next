@@ -6,39 +6,11 @@ import {
   UserProfileDetailsFragment,
 } from "../../generated/graphql";
 import InlineAuthor from "../../components/InlineAuthor";
+import {
+  formatExactTimestampTooltip,
+  formatRelativeTimeSince,
+} from "./relativeTimeFormat";
 import "./ChangeLogTimelineItem.css";
-
-const formatter = new Intl.RelativeTimeFormat(undefined, {
-  numeric: "auto",
-});
-
-const DIVISIONS: {
-  amount: number;
-  name: "seconds" | "minutes" | "hours" | "days" | "weeks" | "months" | "years";
-}[] = [
-  { amount: 60, name: "seconds" },
-  { amount: 60, name: "minutes" },
-  { amount: 24, name: "hours" },
-  { amount: 7, name: "days" },
-  { amount: 4.34524, name: "weeks" },
-  { amount: 12, name: "months" },
-  { amount: Number.POSITIVE_INFINITY, name: "years" },
-];
-
-function formatTimeAgo(date: Date) {
-  let duration = (date.getTime() - new Date().getTime()) / 1000;
-  if (Math.abs(duration) < 60) {
-    return formatter.format(0, "seconds");
-  }
-  for (let i = 0; i < DIVISIONS.length; i++) {
-    const division = DIVISIONS[i];
-    if (Math.abs(duration) < division.amount) {
-      return formatter.format(Math.round(duration), division.name);
-    }
-    duration /= division.amount;
-  }
-  return formatter.format(0, "seconds");
-}
 
 export type ChangeLogAuthorProfile = Pick<
   UserProfileDetailsFragment,
@@ -154,9 +126,9 @@ export default function ChangeLogTimelineItem({
         <time
           className="mt-1 block text-sm text-gray-400"
           dateTime={date.toISOString()}
-          title={date.toLocaleString()}
+          title={formatExactTimestampTooltip(date)}
         >
-          {formatTimeAgo(date)}
+          {formatRelativeTimeSince(date)}
         </time>
         {footer != null ? <div className="mt-3 max-w-xl">{footer}</div> : null}
       </div>

@@ -1,4 +1,10 @@
 import { ChangeLogFieldGroup } from "../../../generated/graphql";
+import {
+  ResolvableLayerCommentsCreatedFieldGroupListItem,
+  ResolvableLayerCommentsReopenedFieldGroupListItem,
+  ResolvableLayerCommentsResolvedFieldGroupListItem,
+  ResolvableLayerCommentsRespondedFieldGroupListItem,
+} from "./ResolvableLayerCommentsSharedFieldGroupListItem";
 import FolderAclFieldGroupListItem from "./FolderAclFieldGroupListItem";
 import FolderCreatedFieldGroupListItem from "./FolderCreatedFieldGroupListItem";
 import FolderDeletedFieldGroupListItem from "./FolderDeletedFieldGroupListItem";
@@ -31,7 +37,8 @@ export const FIELD_GROUP_LIST_ITEM_COMPONENTS: Partial<
   [ChangeLogFieldGroup.LayerMetadata]: LayerMetadataFieldGroupListItem,
   [ChangeLogFieldGroup.LayerAttribution]: LayerAttributionFieldGroupListItem,
   [ChangeLogFieldGroup.LayerDownloadable]: LayerDownloadableFieldGroupListItem,
-  [ChangeLogFieldGroup.LayerInteractivity]: LayerInteractivityFieldGroupListItem,
+  [ChangeLogFieldGroup.LayerInteractivity]:
+    LayerInteractivityFieldGroupListItem,
   [ChangeLogFieldGroup.LayerParentChanged]:
     LayerParentChangedFieldGroupListItem,
   [ChangeLogFieldGroup.LayerDeleted]: LayerDeletedFieldGroupListItem,
@@ -40,5 +47,14 @@ export const FIELD_GROUP_LIST_ITEM_COMPONENTS: Partial<
   [ChangeLogFieldGroup.FolderCreated]: FolderCreatedFieldGroupListItem,
   [ChangeLogFieldGroup.FolderType]: FolderTypeFieldGroupListItem,
   [ChangeLogFieldGroup.LayersPublished]: LayersPublishedFieldGroupListItem,
-  [ChangeLogFieldGroup.LayersZOrderChange]: LayersZOrderChangeFieldGroupListItem,
+  [ChangeLogFieldGroup.LayersZOrderChange]:
+    LayersZOrderChangeFieldGroupListItem,
+  [ChangeLogFieldGroup.ResolvableLayerCommentsCreated]:
+    ResolvableLayerCommentsCreatedFieldGroupListItem,
+  [ChangeLogFieldGroup.ResolvableLayerCommentsResponded]:
+    ResolvableLayerCommentsRespondedFieldGroupListItem,
+  [ChangeLogFieldGroup.ResolvableLayerCommentsResolved]:
+    ResolvableLayerCommentsResolvedFieldGroupListItem,
+  [ChangeLogFieldGroup.ResolvableLayerCommentsReopened]:
+    ResolvableLayerCommentsReopenedFieldGroupListItem,
 };

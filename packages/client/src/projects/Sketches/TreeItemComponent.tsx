@@ -23,6 +23,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "../../components/Tooltip";
+import { useTranslation } from "react-i18next";
 import * as ContextMenu from "@radix-ui/react-context-menu";
 import { DotsHorizontalIcon, EyeClosedIcon } from "@radix-ui/react-icons";
 
@@ -114,6 +115,7 @@ export default function TreeItemComponent({
   highlights,
   showContextMenuButtons,
 }: TreeNodeComponentProps) {
+  const { t } = useTranslation("admin:data");
   const isChecked = checked !== CheckState.UNCHECKED;
   const hasCheckedChildren = checked !== CheckState.UNCHECKED;
 
@@ -543,26 +545,45 @@ export default function TreeItemComponent({
             </ContextMenu.Trigger>
           )}
           <ContextMenu.Trigger asChild={true}>
-            <label
-              id={`${node.id}-label`}
+            <span
+              className="flex min-w-0 flex-1 items-center overflow-hidden"
               ref={isContextMenuTarget ? setLabelRef : undefined}
-              className={`px-1 cursor-pointer select-none truncate ${
-                error ? "text-red-600" : ""
-              } ${isHidden ? "opacity-50" : ""}`}
-              onClick={updateSelectionOnClick}
-              onContextMenu={contextMenuHandler}
-              onMouseEnter={(e) => {
-                const el = e.currentTarget;
-                el.title =
-                  el.scrollWidth > el.clientWidth ? el.textContent || "" : "";
-              }}
             >
-              {highlights?.[node.id]?.title ? (
-                <SearchResultHighlights data={highlights[node.id].title!} />
-              ) : (
-                node.title
-              )}
-            </label>
+              <label
+                id={`${node.id}-label`}
+                className={`min-w-0 flex-1 cursor-pointer select-none truncate px-1 ${
+                  error ? "text-red-600" : ""
+                } ${isHidden ? "opacity-50" : ""}`}
+                onClick={updateSelectionOnClick}
+                onContextMenu={contextMenuHandler}
+                onMouseEnter={(e) => {
+                  const el = e.currentTarget;
+                  el.title =
+                    el.scrollWidth > el.clientWidth
+                      ? el.textContent || ""
+                      : "";
+                }}
+              >
+                {highlights?.[node.id]?.title ? (
+                  <SearchResultHighlights data={highlights[node.id].title!} />
+                ) : (
+                  node.title
+                )}
+              </label>
+              {typeof node.unresolvedCommentCount === "number" &&
+              node.unresolvedCommentCount > 0 ? (
+                <span
+                  className="ml-1 inline-flex h-4 min-w-[1rem] shrink-0 items-center justify-center rounded-full bg-primary-100 px-1 text-[10px] font-semibold leading-none text-primary-800 ring-1 ring-primary-300"
+                  title={t("Open comment threads: {{count}}", {
+                    count: node.unresolvedCommentCount,
+                  })}
+                >
+                  {node.unresolvedCommentCount > 99
+                    ? "99+"
+                    : node.unresolvedCommentCount}
+                </span>
+              ) : null}
+            </span>
           </ContextMenu.Trigger>
           {isHidden && (
             <button

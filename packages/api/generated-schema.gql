@@ -1118,6 +1118,10 @@ enum ChangeLogFieldGroup {
   LAYER_UPLOADED
   LAYERS_PUBLISHED
   LAYERS_Z_ORDER_CHANGE
+  RESOLVABLE_LAYER_COMMENTS_CREATED
+  RESOLVABLE_LAYER_COMMENTS_REOPENED
+  RESOLVABLE_LAYER_COMMENTS_RESOLVED
+  RESOLVABLE_LAYER_COMMENTS_RESPONDED
 }
 
 """A connection to a list of `ChangeLog` values."""
@@ -2607,6 +2611,54 @@ type CreateReportPayload {
 
   """Reads a single `SketchClass` that is related to this `Report`."""
   sketchClass: SketchClass
+}
+
+"""All input for the `createResolvableLayerComment` mutation."""
+input CreateResolvableLayerCommentInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  comment: JSON
+  parentCommentId: Int
+  tableOfContentsItemId: Int
+}
+
+"""The output of our `createResolvableLayerComment` mutation."""
+type CreateResolvableLayerCommentPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Reads a single `ResolvableLayerComment` that is related to this `ResolvableLayerComment`.
+  """
+  parentComment: ResolvableLayerComment
+
+  """
+  Reads a single `Project` that is related to this `ResolvableLayerComment`.
+  """
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  resolvableLayerComment: ResolvableLayerComment
+
+  """An edge for our `ResolvableLayerComment`. May be used by Relay 1."""
+  resolvableLayerCommentEdge(
+    """The method to use when ordering `ResolvableLayerComment`."""
+    orderBy: [ResolvableLayerCommentsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ResolvableLayerCommentsEdge
+
+  """
+  Reads a single `TableOfContentsItem` that is related to this `ResolvableLayerComment`.
+  """
+  tableOfContentsItem: TableOfContentsItem
 }
 
 """All input for the `createSketchClassFromTemplate` mutation."""
@@ -9518,6 +9570,12 @@ type Mutation {
     """
     input: CreateReportInput!
   ): CreateReportPayload
+  createResolvableLayerComment(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateResolvableLayerCommentInput!
+  ): CreateResolvableLayerCommentPayload
 
   """
   Create a new sketch in the user's account. If preprocessing is enabled,
@@ -10455,6 +10513,12 @@ type Mutation {
     """
     input: RenameReportTabInput!
   ): RenameReportTabPayload
+  reopenResolvableLayerComment(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: ReopenResolvableLayerCommentInput!
+  ): ReopenResolvableLayerCommentPayload
   reorderReportTabCards(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -10488,6 +10552,12 @@ type Mutation {
   current user session
   """
   resendVerificationEmail: SendVerificationEmailResults!
+  resolveResolvableLayerComment(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: ResolveResolvableLayerCommentInput!
+  ): ResolveResolvableLayerCommentPayload
   retryFailedSourceProcessingJob(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -12676,6 +12746,37 @@ type Project implements Node {
   reportingLayers: [ReportOverlaySource!]!
 
   """
+  Reads and enables pagination through a set of `ResolvableLayerComment`.
+  """
+  resolvableLayerCommentsConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: ResolvableLayerCommentCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `ResolvableLayerComment`."""
+    orderBy: [ResolvableLayerCommentsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ResolvableLayerCommentsConnection!
+
+  """
   Whether the current user has any discussion forum posts in this project. Use
   this to determine whether `project.communityGuidelines` should be shown to the
   user before their first post.
@@ -12866,6 +12967,17 @@ type Project implements Node {
     offset: Int
     orderBy: ParticipantSortBy
   ): [User!]
+
+  """
+  Reads and enables pagination through a set of `ResolvableLayerComment`.
+  """
+  unresolvedLayerComments(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [ResolvableLayerComment!]
 
   """Reads and enables pagination through a set of `DataSource`."""
   uploadedDraftDataSources(
@@ -14636,6 +14748,48 @@ type Query implements Node {
     """The method to use when ordering `Report`."""
     orderBy: [ReportsOrderBy!] = [PRIMARY_KEY_ASC]
   ): ReportsConnection
+  resolvableLayerComment(id: Int!): ResolvableLayerComment
+
+  """
+  Reads a single `ResolvableLayerComment` using its globally unique `ID`.
+  """
+  resolvableLayerCommentByNodeId(
+    """
+    The globally unique `ID` to be used in selecting a single `ResolvableLayerComment`.
+    """
+    nodeId: ID!
+  ): ResolvableLayerComment
+
+  """
+  Reads and enables pagination through a set of `ResolvableLayerComment`.
+  """
+  resolvableLayerCommentsConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: ResolvableLayerCommentCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `ResolvableLayerComment`."""
+    orderBy: [ResolvableLayerCommentsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ResolvableLayerCommentsConnection
 
   """Reads and enables pagination through a set of `SearchResult`."""
   searchOverlays(
@@ -15201,6 +15355,52 @@ enum RenderUnderType {
   NONE
 }
 
+"""All input for the `reopenResolvableLayerComment` mutation."""
+input ReopenResolvableLayerCommentInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  commentId: Int
+}
+
+"""The output of our `reopenResolvableLayerComment` mutation."""
+type ReopenResolvableLayerCommentPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Reads a single `ResolvableLayerComment` that is related to this `ResolvableLayerComment`.
+  """
+  parentComment: ResolvableLayerComment
+
+  """
+  Reads a single `Project` that is related to this `ResolvableLayerComment`.
+  """
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  resolvableLayerComment: ResolvableLayerComment
+
+  """An edge for our `ResolvableLayerComment`. May be used by Relay 1."""
+  resolvableLayerCommentEdge(
+    """The method to use when ordering `ResolvableLayerComment`."""
+    orderBy: [ResolvableLayerCommentsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ResolvableLayerCommentsEdge
+
+  """
+  Reads a single `TableOfContentsItem` that is related to this `ResolvableLayerComment`.
+  """
+  tableOfContentsItem: TableOfContentsItem
+}
+
 """All input for the `reorderReportTabCards` mutation."""
 input ReorderReportTabCardsInput {
   cardIds: [Int]
@@ -15516,6 +15716,179 @@ type ReprocessLegacyDataSourcePayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
+}
+
+type ResolvableLayerComment implements Node {
+  authorId: Int!
+  authorProfile: Profile
+  comment: JSON!
+  createdAt: Datetime!
+  id: Int!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+
+  """
+  Reads a single `ResolvableLayerComment` that is related to this `ResolvableLayerComment`.
+  """
+  parentComment: ResolvableLayerComment
+  parentCommentId: Int
+
+  """
+  Reads a single `Project` that is related to this `ResolvableLayerComment`.
+  """
+  project: Project
+  projectId: Int!
+
+  """
+  Reads and enables pagination through a set of `ResolvableLayerComment`.
+  """
+  resolvableLayerCommentsByParentCommentIdConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: ResolvableLayerCommentCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `ResolvableLayerComment`."""
+    orderBy: [ResolvableLayerCommentsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ResolvableLayerCommentsConnection!
+  resolvedAt: Datetime
+  resolvedById: Int
+  resolvedByProfile: Profile
+
+  """
+  Reads a single `TableOfContentsItem` that is related to this `ResolvableLayerComment`.
+  """
+  tableOfContentsItem: TableOfContentsItem
+  tableOfContentsItemId: Int!
+  updatedAt: Datetime!
+}
+
+"""
+A condition to be used against `ResolvableLayerComment` object types. All fields
+are tested for equality and combined with a logical ‘and.’
+"""
+input ResolvableLayerCommentCondition {
+  """Checks for equality with the object’s `id` field."""
+  id: Int
+
+  """Checks for equality with the object’s `parentCommentId` field."""
+  parentCommentId: Int
+
+  """Checks for equality with the object’s `projectId` field."""
+  projectId: Int
+
+  """Checks for equality with the object’s `tableOfContentsItemId` field."""
+  tableOfContentsItemId: Int
+}
+
+"""A connection to a list of `ResolvableLayerComment` values."""
+type ResolvableLayerCommentsConnection {
+  """
+  A list of edges which contains the `ResolvableLayerComment` and cursor to aid in pagination.
+  """
+  edges: [ResolvableLayerCommentsEdge!]!
+
+  """A list of `ResolvableLayerComment` objects."""
+  nodes: [ResolvableLayerComment!]!
+
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """
+  The count of *all* `ResolvableLayerComment` you could get from the connection.
+  """
+  totalCount: Int!
+}
+
+"""A `ResolvableLayerComment` edge in the connection."""
+type ResolvableLayerCommentsEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `ResolvableLayerComment` at the end of the edge."""
+  node: ResolvableLayerComment!
+}
+
+"""Methods to use when ordering `ResolvableLayerComment`."""
+enum ResolvableLayerCommentsOrderBy {
+  ID_ASC
+  ID_DESC
+  NATURAL
+  PARENT_COMMENT_ID_ASC
+  PARENT_COMMENT_ID_DESC
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+  PROJECT_ID_ASC
+  PROJECT_ID_DESC
+  TABLE_OF_CONTENTS_ITEM_ID_ASC
+  TABLE_OF_CONTENTS_ITEM_ID_DESC
+}
+
+"""All input for the `resolveResolvableLayerComment` mutation."""
+input ResolveResolvableLayerCommentInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  commentId: Int
+}
+
+"""The output of our `resolveResolvableLayerComment` mutation."""
+type ResolveResolvableLayerCommentPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Reads a single `ResolvableLayerComment` that is related to this `ResolvableLayerComment`.
+  """
+  parentComment: ResolvableLayerComment
+
+  """
+  Reads a single `Project` that is related to this `ResolvableLayerComment`.
+  """
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  resolvableLayerComment: ResolvableLayerComment
+
+  """An edge for our `ResolvableLayerComment`. May be used by Relay 1."""
+  resolvableLayerCommentEdge(
+    """The method to use when ordering `ResolvableLayerComment`."""
+    orderBy: [ResolvableLayerCommentsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ResolvableLayerCommentsEdge
+
+  """
+  Reads a single `TableOfContentsItem` that is related to this `ResolvableLayerComment`.
+  """
+  tableOfContentsItem: TableOfContentsItem
 }
 
 type RetentionChangeEstimate {
@@ -17634,6 +18007,48 @@ type TableOfContentsItem implements Node {
   reportingOutput: DataUploadOutput
 
   """
+  Reads and enables pagination through a set of `ResolvableLayerComment`.
+  """
+  resolvableLayerCommentsConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: ResolvableLayerCommentCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `ResolvableLayerComment`."""
+    orderBy: [ResolvableLayerCommentsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ResolvableLayerCommentsConnection!
+
+  """
+  Reads and enables pagination through a set of `ResolvableLayerComment`.
+  """
+  resolvedLayerComments(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [ResolvableLayerComment!]
+
+  """
   If set, children of this folder will appear as radio options so that only one may be toggle at a time
   """
   showRadioChildren: Boolean!
@@ -17656,6 +18071,17 @@ type TableOfContentsItem implements Node {
   title: String!
   totalRequests(period: ActivityStatsPeriod): Int
   translatedProps: JSON!
+
+  """
+  Reads and enables pagination through a set of `ResolvableLayerComment`.
+  """
+  unresolvedLayerComments(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [ResolvableLayerComment!]
   usesDynamicMetadata: Boolean
 }
 

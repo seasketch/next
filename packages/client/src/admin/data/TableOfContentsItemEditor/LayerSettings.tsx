@@ -24,6 +24,7 @@ import Warning from "../../../components/Warning";
 import AICartographerNotesSummary from "./AICartographerNotesSummary";
 import LayerSettingsChangeLogList from "../../changelogs/LayerSettingsChangeLogList";
 import { layerSettingsChangeLogRefetchQueries } from "../../changelogs/layerSettingsChangeLogRefetch";
+import ResolvableLayerCommentsPanel from "../resolvableLayerComments/ResolvableLayerCommentsPanel";
 
 export default function LayerSettings({
   item,
@@ -280,6 +281,10 @@ export default function LayerSettings({
           </div>
         </div>
       )}
+      {layer ? (
+        <ResolvableLayerCommentsPanel item={item} />
+      ) : null}
+
       <LayerSettingsChangeLogList tableOfContentsItemId={item.id} />
     </div>
   );

@@ -6,12 +6,18 @@ import {
   useState,
 } from "react";
 
+export type LayerEditorTarget = {
+  id: number;
+  isFolder: boolean;
+  title: string;
+  /** When true, layer editor scrolls to Comments after opening (consumed once). */
+  focusLayerComments?: boolean;
+};
+
 export const LayerEditingContext = createContext<{
-  openEditor?: { id: number; isFolder: boolean; title: string };
+  openEditor?: LayerEditorTarget;
   isFolder?: boolean;
-  setOpenEditor: (
-    item: { id: number; isFolder: boolean; title: string } | undefined
-  ) => void;
+  setOpenEditor: Dispatch<SetStateAction<LayerEditorTarget | undefined>>;
   openMetadataEditor?: number;
   setOpenMetadataEditor: (id: number | undefined) => void;
   /**
@@ -27,9 +33,7 @@ export const LayerEditingContext = createContext<{
     parentStableId?: string;
   }) => void;
 }>({
-  setOpenEditor: (
-    item: { id: number; isFolder: boolean; title: string } | undefined
-  ) => {},
+  setOpenEditor: () => {},
   setOpenMetadataEditor: (id: number | undefined) => {},
   recentlyDeletedStableIds: [],
   // set state action
@@ -44,7 +48,7 @@ export const LayerEditingContextProvider = ({
   children: ReactNode;
 }) => {
   const [openEditor, setOpenEditor] = useState<
-    { id: number; isFolder: boolean; title: string } | undefined
+    LayerEditorTarget | undefined
   >(undefined);
   const [openMetadataEditor, setOpenMetadataEditor] = useState<
     number | undefined

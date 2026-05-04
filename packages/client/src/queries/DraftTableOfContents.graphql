@@ -1,3 +1,29 @@
+fragment CommentAuthorProfile on Profile {
+  userId
+  fullname
+  nickname
+  picture
+  email
+  affiliations
+}
+
+fragment ResolvableLayerCommentCard on ResolvableLayerComment {
+  id
+  authorId
+  parentCommentId
+  comment
+  createdAt
+  updatedAt
+  resolvedAt
+  resolvedById
+  authorProfile {
+    ...CommentAuthorProfile
+  }
+  resolvedByProfile {
+    ...CommentAuthorProfile
+  }
+}
+
 fragment AdminOverlay on TableOfContentsItem {
   ...Overlay
   projectBackgroundJobs {
@@ -9,6 +35,9 @@ fragment AdminOverlay on TableOfContentsItem {
     progressMessage
     errorMessage
   }
+  unresolvedLayerComments {
+    id
+  }
 }
 
 query DraftTableOfContents($slug: String!) {
@@ -18,6 +47,15 @@ query DraftTableOfContents($slug: String!) {
     tableOfContentsLastPublished
     region {
       geojson
+    }
+    unresolvedLayerComments(first: 500) {
+      id
+      tableOfContentsItem {
+        id
+        title
+        stableId
+        isFolder
+      }
     }
     draftTableOfContentsItems {
       ...AdminOverlay
@@ -504,6 +542,20 @@ fragment FullAdminOverlay on TableOfContentsItem {
     sketchClassId
     sketchClass {
       name
+    }
+  }
+  unresolvedLayerComments {
+    ...ResolvableLayerCommentCard
+  }
+  resolvedLayerComments {
+    ...ResolvableLayerCommentCard
+  }
+  resolvableLayerCommentsConnection(
+    first: 500
+    orderBy: [PRIMARY_KEY_ASC]
+  ) {
+    nodes {
+      ...ResolvableLayerCommentCard
     }
   }
 }
@@ -1219,6 +1271,15 @@ query ChangeLogsSinceLastPublish($slug: String!) {
   projectBySlug(slug: $slug) {
     id
     tableOfContentsLastPublished
+    unresolvedLayerComments(first: 500) {
+      ...ResolvableLayerCommentCard
+      tableOfContentsItem {
+        id
+        title
+        stableId
+        isFolder
+      }
+    }
     draftTableOfContentsItems {
       id
       title
@@ -1229,9 +1290,67 @@ query ChangeLogsSinceLastPublish($slug: String!) {
           createdAt
         }
       }
+      unresolvedLayerComments {
+        id
+      }
+      resolvableLayerCommentsConnection(first: 500, orderBy: [PRIMARY_KEY_ASC]) {
+        nodes {
+          ...ResolvableLayerCommentCard
+        }
+      }
     }
     changeLogsSinceLastPublish {
       ...ChangeLogDetails
+    }
+  }
+}
+
+mutation CreateResolvableLayerCommentMutation(
+  $input: CreateResolvableLayerCommentInput!
+) {
+  createResolvableLayerComment(input: $input) {
+    resolvableLayerComment {
+      ...ResolvableLayerCommentCard
+    }
+  }
+}
+
+mutation ResolveResolvableLayerCommentMutation(
+  $input: ResolveResolvableLayerCommentInput!
+) {
+  resolveResolvableLayerComment(input: $input) {
+    resolvableLayerComment {
+      ...ResolvableLayerCommentCard
+    }
+  }
+}
+
+mutation ReopenResolvableLayerCommentMutation(
+  $input: ReopenResolvableLayerCommentInput!
+) {
+  reopenResolvableLayerComment(input: $input) {
+    resolvableLayerComment {
+      ...ResolvableLayerCommentCard
+    }
+  }
+}
+
+query ProjectUnresolvedLayerComments($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    unresolvedLayerComments(first: 500) {
+      id
+      comment
+      createdAt
+      authorProfile {
+        ...CommentAuthorProfile
+      }
+      tableOfContentsItem {
+        id
+        title
+        stableId
+        isFolder
+      }
     }
   }
 }

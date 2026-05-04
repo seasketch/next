@@ -972,7 +972,11 @@ export enum ChangeLogFieldGroup {
   LayerTitle = 'LAYER_TITLE',
   LayerUploaded = 'LAYER_UPLOADED',
   LayersPublished = 'LAYERS_PUBLISHED',
-  LayersZOrderChange = 'LAYERS_Z_ORDER_CHANGE'
+  LayersZOrderChange = 'LAYERS_Z_ORDER_CHANGE',
+  ResolvableLayerCommentsCreated = 'RESOLVABLE_LAYER_COMMENTS_CREATED',
+  ResolvableLayerCommentsReopened = 'RESOLVABLE_LAYER_COMMENTS_REOPENED',
+  ResolvableLayerCommentsResolved = 'RESOLVABLE_LAYER_COMMENTS_RESOLVED',
+  ResolvableLayerCommentsResponded = 'RESOLVABLE_LAYER_COMMENTS_RESPONDED'
 }
 
 export enum ChangeLogStatus {
@@ -2314,6 +2318,45 @@ export type CreateReportPayload = {
 /** The output of our create `Report` mutation. */
 export type CreateReportPayloadReportEdgeArgs = {
   orderBy?: Maybe<Array<ReportsOrderBy>>;
+};
+
+/** All input for the `createResolvableLayerComment` mutation. */
+export type CreateResolvableLayerCommentInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  comment?: Maybe<Scalars['JSON']>;
+  parentCommentId?: Maybe<Scalars['Int']>;
+  tableOfContentsItemId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `createResolvableLayerComment` mutation. */
+export type CreateResolvableLayerCommentPayload = {
+  __typename?: 'CreateResolvableLayerCommentPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `ResolvableLayerComment` that is related to this `ResolvableLayerComment`. */
+  parentComment?: Maybe<ResolvableLayerComment>;
+  /** Reads a single `Project` that is related to this `ResolvableLayerComment`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  resolvableLayerComment?: Maybe<ResolvableLayerComment>;
+  /** An edge for our `ResolvableLayerComment`. May be used by Relay 1. */
+  resolvableLayerCommentEdge?: Maybe<ResolvableLayerCommentsEdge>;
+  /** Reads a single `TableOfContentsItem` that is related to this `ResolvableLayerComment`. */
+  tableOfContentsItem?: Maybe<TableOfContentsItem>;
+};
+
+
+/** The output of our `createResolvableLayerComment` mutation. */
+export type CreateResolvableLayerCommentPayloadResolvableLayerCommentEdgeArgs = {
+  orderBy?: Maybe<Array<ResolvableLayerCommentsOrderBy>>;
 };
 
 /** All input for the `createSketchClassFromTemplate` mutation. */
@@ -8023,6 +8066,7 @@ export type Mutation = {
   createRemoteMvtSource?: Maybe<CreateRemoteMvtSourcePayload>;
   /** Creates a single `Report`. */
   createReport?: Maybe<CreateReportPayload>;
+  createResolvableLayerComment?: Maybe<CreateResolvableLayerCommentPayload>;
   /**
    * Create a new sketch in the user's account. If preprocessing is enabled,
    * the sketch's final geometry will be set by running the proprocessing
@@ -8275,6 +8319,7 @@ export type Mutation = {
   /** Remove a SketchClass from the list of valid children for a Collection. */
   removeValidChildSketchClass?: Maybe<RemoveValidChildSketchClassPayload>;
   renameReportTab?: Maybe<RenameReportTabPayload>;
+  reopenResolvableLayerComment?: Maybe<ReopenResolvableLayerCommentPayload>;
   reorderReportTabCards?: Maybe<ReorderReportTabCardsPayload>;
   reorderReportTabs?: Maybe<ReorderReportTabsPayload>;
   /** Replace the tileset for an existing data source */
@@ -8286,6 +8331,7 @@ export type Mutation = {
    * current user session
    */
   resendVerificationEmail: SendVerificationEmailResults;
+  resolveResolvableLayerComment?: Maybe<ResolveResolvableLayerCommentPayload>;
   retryFailedSourceProcessingJob?: Maybe<RetryFailedSourceProcessingJobPayload>;
   retryFailedSpatialMetrics?: Maybe<RetryFailedSpatialMetricsPayload>;
   /** Remove participant admin privileges. */
@@ -8887,6 +8933,12 @@ export type MutationCreateRemoteMvtSourceArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateReportArgs = {
   input: CreateReportInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateResolvableLayerCommentArgs = {
+  input: CreateResolvableLayerCommentInput;
 };
 
 
@@ -9619,6 +9671,12 @@ export type MutationRenameReportTabArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationReopenResolvableLayerCommentArgs = {
+  input: ReopenResolvableLayerCommentInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationReorderReportTabCardsArgs = {
   input: ReorderReportTabCardsInput;
 };
@@ -9646,6 +9704,12 @@ export type MutationReprocessAllLegacyDataSourcesArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationReprocessLegacyDataSourceArgs = {
   input: ReprocessLegacyDataSourceInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationResolveResolvableLayerCommentArgs = {
+  input: ResolveResolvableLayerCommentInput;
 };
 
 
@@ -11104,6 +11168,8 @@ export type Project = Node & {
   projectBackgroundJobs: Array<ProjectBackgroundJob>;
   region: GeometryPolygon;
   reportingLayers: Array<ReportOverlaySource>;
+  /** Reads and enables pagination through a set of `ResolvableLayerComment`. */
+  resolvableLayerCommentsConnection: ResolvableLayerCommentsConnection;
   /**
    * Whether the current user has any discussion forum posts in this project. Use
    * this to determine whether `project.communityGuidelines` should be shown to the
@@ -11174,6 +11240,8 @@ export type Project = Node & {
    * Users can be approved using the `approveParticipant()` mutation.
    */
   unapprovedParticipants?: Maybe<Array<User>>;
+  /** Reads and enables pagination through a set of `ResolvableLayerComment`. */
+  unresolvedLayerComments?: Maybe<Array<ResolvableLayerComment>>;
   /** Reads and enables pagination through a set of `DataSource`. */
   uploadedDraftDataSources?: Maybe<Array<DataSource>>;
   /** Project url will resolve to `https://seasketch.org/{slug}/` */
@@ -11527,6 +11595,21 @@ export type ProjectProjectBackgroundJobsArgs = {
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
+export type ProjectResolvableLayerCommentsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<ResolvableLayerCommentCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<ResolvableLayerCommentsOrderBy>>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
 export type ProjectSessionOutstandingSurveyInvitesArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
@@ -11621,6 +11704,16 @@ export type ProjectUnapprovedParticipantsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<ParticipantSortBy>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectUnresolvedLayerCommentsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -12523,6 +12616,11 @@ export type Query = Node & {
   reportByNodeId?: Maybe<Report>;
   /** Reads and enables pagination through a set of `Report`. */
   reportsConnection?: Maybe<ReportsConnection>;
+  resolvableLayerComment?: Maybe<ResolvableLayerComment>;
+  /** Reads a single `ResolvableLayerComment` using its globally unique `ID`. */
+  resolvableLayerCommentByNodeId?: Maybe<ResolvableLayerComment>;
+  /** Reads and enables pagination through a set of `ResolvableLayerComment`. */
+  resolvableLayerCommentsConnection?: Maybe<ResolvableLayerCommentsConnection>;
   /** Reads and enables pagination through a set of `SearchResult`. */
   searchOverlays?: Maybe<Array<SearchResult>>;
   /** Reads and enables pagination through a set of `Project`. */
@@ -13552,6 +13650,30 @@ export type QueryReportsConnectionArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryResolvableLayerCommentArgs = {
+  id: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryResolvableLayerCommentByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryResolvableLayerCommentsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<ResolvableLayerCommentCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<ResolvableLayerCommentsOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QuerySearchOverlaysArgs = {
   draft?: Maybe<Scalars['Boolean']>;
   first?: Maybe<Scalars['Int']>;
@@ -14098,6 +14220,43 @@ export type RenderedAboutPageContent = {
   lang?: Maybe<Scalars['String']>;
 };
 
+/** All input for the `reopenResolvableLayerComment` mutation. */
+export type ReopenResolvableLayerCommentInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  commentId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `reopenResolvableLayerComment` mutation. */
+export type ReopenResolvableLayerCommentPayload = {
+  __typename?: 'ReopenResolvableLayerCommentPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `ResolvableLayerComment` that is related to this `ResolvableLayerComment`. */
+  parentComment?: Maybe<ResolvableLayerComment>;
+  /** Reads a single `Project` that is related to this `ResolvableLayerComment`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  resolvableLayerComment?: Maybe<ResolvableLayerComment>;
+  /** An edge for our `ResolvableLayerComment`. May be used by Relay 1. */
+  resolvableLayerCommentEdge?: Maybe<ResolvableLayerCommentsEdge>;
+  /** Reads a single `TableOfContentsItem` that is related to this `ResolvableLayerComment`. */
+  tableOfContentsItem?: Maybe<TableOfContentsItem>;
+};
+
+
+/** The output of our `reopenResolvableLayerComment` mutation. */
+export type ReopenResolvableLayerCommentPayloadResolvableLayerCommentEdgeArgs = {
+  orderBy?: Maybe<Array<ResolvableLayerCommentsOrderBy>>;
+};
+
 /** All input for the `reorderReportTabCards` mutation. */
 export type ReorderReportTabCardsInput = {
   cardIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
@@ -14382,6 +14541,132 @@ export type ReprocessLegacyDataSourcePayload = {
   projectBackgroundJob?: Maybe<ProjectBackgroundJob>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
+};
+
+export type ResolvableLayerComment = Node & {
+  __typename?: 'ResolvableLayerComment';
+  authorId: Scalars['Int'];
+  authorProfile?: Maybe<Profile>;
+  comment: Scalars['JSON'];
+  createdAt: Scalars['Datetime'];
+  id: Scalars['Int'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  /** Reads a single `ResolvableLayerComment` that is related to this `ResolvableLayerComment`. */
+  parentComment?: Maybe<ResolvableLayerComment>;
+  parentCommentId?: Maybe<Scalars['Int']>;
+  /** Reads a single `Project` that is related to this `ResolvableLayerComment`. */
+  project?: Maybe<Project>;
+  projectId: Scalars['Int'];
+  /** Reads and enables pagination through a set of `ResolvableLayerComment`. */
+  resolvableLayerCommentsByParentCommentIdConnection: ResolvableLayerCommentsConnection;
+  resolvedAt?: Maybe<Scalars['Datetime']>;
+  resolvedById?: Maybe<Scalars['Int']>;
+  resolvedByProfile?: Maybe<Profile>;
+  /** Reads a single `TableOfContentsItem` that is related to this `ResolvableLayerComment`. */
+  tableOfContentsItem?: Maybe<TableOfContentsItem>;
+  tableOfContentsItemId: Scalars['Int'];
+  updatedAt: Scalars['Datetime'];
+};
+
+
+export type ResolvableLayerCommentResolvableLayerCommentsByParentCommentIdConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<ResolvableLayerCommentCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<ResolvableLayerCommentsOrderBy>>;
+};
+
+/**
+ * A condition to be used against `ResolvableLayerComment` object types. All fields
+ * are tested for equality and combined with a logical ‘and.’
+ */
+export type ResolvableLayerCommentCondition = {
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `parentCommentId` field. */
+  parentCommentId?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `projectId` field. */
+  projectId?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `tableOfContentsItemId` field. */
+  tableOfContentsItemId?: Maybe<Scalars['Int']>;
+};
+
+/** A connection to a list of `ResolvableLayerComment` values. */
+export type ResolvableLayerCommentsConnection = {
+  __typename?: 'ResolvableLayerCommentsConnection';
+  /** A list of edges which contains the `ResolvableLayerComment` and cursor to aid in pagination. */
+  edges: Array<ResolvableLayerCommentsEdge>;
+  /** A list of `ResolvableLayerComment` objects. */
+  nodes: Array<ResolvableLayerComment>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `ResolvableLayerComment` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `ResolvableLayerComment` edge in the connection. */
+export type ResolvableLayerCommentsEdge = {
+  __typename?: 'ResolvableLayerCommentsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `ResolvableLayerComment` at the end of the edge. */
+  node: ResolvableLayerComment;
+};
+
+/** Methods to use when ordering `ResolvableLayerComment`. */
+export enum ResolvableLayerCommentsOrderBy {
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  ParentCommentIdAsc = 'PARENT_COMMENT_ID_ASC',
+  ParentCommentIdDesc = 'PARENT_COMMENT_ID_DESC',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  ProjectIdAsc = 'PROJECT_ID_ASC',
+  ProjectIdDesc = 'PROJECT_ID_DESC',
+  TableOfContentsItemIdAsc = 'TABLE_OF_CONTENTS_ITEM_ID_ASC',
+  TableOfContentsItemIdDesc = 'TABLE_OF_CONTENTS_ITEM_ID_DESC'
+}
+
+/** All input for the `resolveResolvableLayerComment` mutation. */
+export type ResolveResolvableLayerCommentInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  commentId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `resolveResolvableLayerComment` mutation. */
+export type ResolveResolvableLayerCommentPayload = {
+  __typename?: 'ResolveResolvableLayerCommentPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `ResolvableLayerComment` that is related to this `ResolvableLayerComment`. */
+  parentComment?: Maybe<ResolvableLayerComment>;
+  /** Reads a single `Project` that is related to this `ResolvableLayerComment`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  resolvableLayerComment?: Maybe<ResolvableLayerComment>;
+  /** An edge for our `ResolvableLayerComment`. May be used by Relay 1. */
+  resolvableLayerCommentEdge?: Maybe<ResolvableLayerCommentsEdge>;
+  /** Reads a single `TableOfContentsItem` that is related to this `ResolvableLayerComment`. */
+  tableOfContentsItem?: Maybe<TableOfContentsItem>;
+};
+
+
+/** The output of our `resolveResolvableLayerComment` mutation. */
+export type ResolveResolvableLayerCommentPayloadResolvableLayerCommentEdgeArgs = {
+  orderBy?: Maybe<Array<ResolvableLayerCommentsOrderBy>>;
 };
 
 export type RetentionChangeEstimate = {
@@ -16142,6 +16427,10 @@ export type TableOfContentsItem = Node & {
   relatedPublishChangeLogs?: Maybe<Array<ChangeLog>>;
   relatedReportCardDetails?: Maybe<Array<Maybe<RelatedReportCard>>>;
   reportingOutput?: Maybe<DataUploadOutput>;
+  /** Reads and enables pagination through a set of `ResolvableLayerComment`. */
+  resolvableLayerCommentsConnection: ResolvableLayerCommentsConnection;
+  /** Reads and enables pagination through a set of `ResolvableLayerComment`. */
+  resolvedLayerComments?: Maybe<Array<ResolvableLayerComment>>;
   /** If set, children of this folder will appear as radio options so that only one may be toggle at a time */
   showRadioChildren: Scalars['Boolean'];
   /** Position in the layer list */
@@ -16159,6 +16448,8 @@ export type TableOfContentsItem = Node & {
   title: Scalars['String'];
   totalRequests?: Maybe<Scalars['Int']>;
   translatedProps: Scalars['JSON'];
+  /** Reads and enables pagination through a set of `ResolvableLayerComment`. */
+  unresolvedLayerComments?: Maybe<Array<ResolvableLayerComment>>;
   usesDynamicMetadata?: Maybe<Scalars['Boolean']>;
 };
 
@@ -16301,8 +16592,61 @@ export type TableOfContentsItemRelatedPublishChangeLogsArgs = {
  * batch only once the layer is turned on, using the
  * `dataLayersAndSourcesByLayerId` query.
  */
+export type TableOfContentsItemResolvableLayerCommentsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<ResolvableLayerCommentCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<ResolvableLayerCommentsOrderBy>>;
+};
+
+
+/**
+ * TableOfContentsItems represent a tree-view of folders and operational layers
+ * that can be added to the map. Both layers and folders may be nested into other
+ * folders for organization, and each folder has its own access control list.
+ *
+ * Items that represent data layers have a `DataLayer` relation, which in turn has
+ * a reference to a `DataSource`. Usually these relations should be fetched in
+ * batch only once the layer is turned on, using the
+ * `dataLayersAndSourcesByLayerId` query.
+ */
+export type TableOfContentsItemResolvedLayerCommentsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * TableOfContentsItems represent a tree-view of folders and operational layers
+ * that can be added to the map. Both layers and folders may be nested into other
+ * folders for organization, and each folder has its own access control list.
+ *
+ * Items that represent data layers have a `DataLayer` relation, which in turn has
+ * a reference to a `DataSource`. Usually these relations should be fetched in
+ * batch only once the layer is turned on, using the
+ * `dataLayersAndSourcesByLayerId` query.
+ */
 export type TableOfContentsItemTotalRequestsArgs = {
   period?: Maybe<ActivityStatsPeriod>;
+};
+
+
+/**
+ * TableOfContentsItems represent a tree-view of folders and operational layers
+ * that can be added to the map. Both layers and folders may be nested into other
+ * folders for organization, and each folder has its own access control list.
+ *
+ * Items that represent data layers have a `DataLayer` relation, which in turn has
+ * a reference to a `DataSource`. Usually these relations should be fetched in
+ * batch only once the layer is turned on, using the
+ * `dataLayersAndSourcesByLayerId` query.
+ */
+export type TableOfContentsItemUnresolvedLayerCommentsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 /**
@@ -20688,11 +21032,31 @@ export type ImportBasemapDetailsQuery = (
   )> }
 );
 
+export type CommentAuthorProfileFragment = (
+  { __typename?: 'Profile' }
+  & Pick<Profile, 'userId' | 'fullname' | 'nickname' | 'picture' | 'email' | 'affiliations'>
+);
+
+export type ResolvableLayerCommentCardFragment = (
+  { __typename?: 'ResolvableLayerComment' }
+  & Pick<ResolvableLayerComment, 'id' | 'authorId' | 'parentCommentId' | 'comment' | 'createdAt' | 'updatedAt' | 'resolvedAt' | 'resolvedById'>
+  & { authorProfile?: Maybe<(
+    { __typename?: 'Profile' }
+    & CommentAuthorProfileFragment
+  )>, resolvedByProfile?: Maybe<(
+    { __typename?: 'Profile' }
+    & CommentAuthorProfileFragment
+  )> }
+);
+
 export type AdminOverlayFragment = (
   { __typename?: 'TableOfContentsItem' }
   & { projectBackgroundJobs?: Maybe<Array<(
     { __typename?: 'ProjectBackgroundJob' }
     & Pick<ProjectBackgroundJob, 'id' | 'type' | 'title' | 'state' | 'progress' | 'progressMessage' | 'errorMessage'>
+  )>>, unresolvedLayerComments?: Maybe<Array<(
+    { __typename?: 'ResolvableLayerComment' }
+    & Pick<ResolvableLayerComment, 'id'>
   )>> }
   & OverlayFragment
 );
@@ -20710,7 +21074,14 @@ export type DraftTableOfContentsQuery = (
     & { region: (
       { __typename?: 'GeometryPolygon' }
       & Pick<GeometryPolygon, 'geojson'>
-    ), draftTableOfContentsItems?: Maybe<Array<(
+    ), unresolvedLayerComments?: Maybe<Array<(
+      { __typename?: 'ResolvableLayerComment' }
+      & Pick<ResolvableLayerComment, 'id'>
+      & { tableOfContentsItem?: Maybe<(
+        { __typename?: 'TableOfContentsItem' }
+        & Pick<TableOfContentsItem, 'id' | 'title' | 'stableId' | 'isFolder'>
+      )> }
+    )>>, draftTableOfContentsItems?: Maybe<Array<(
       { __typename?: 'TableOfContentsItem' }
       & AdminOverlayFragment
     )>> }
@@ -20989,7 +21360,19 @@ export type FullAdminOverlayFragment = (
       { __typename?: 'SketchClass' }
       & Pick<SketchClass, 'name'>
     ) }
-  )>>> }
+  )>>>, unresolvedLayerComments?: Maybe<Array<(
+    { __typename?: 'ResolvableLayerComment' }
+    & ResolvableLayerCommentCardFragment
+  )>>, resolvedLayerComments?: Maybe<Array<(
+    { __typename?: 'ResolvableLayerComment' }
+    & ResolvableLayerCommentCardFragment
+  )>>, resolvableLayerCommentsConnection: (
+    { __typename?: 'ResolvableLayerCommentsConnection' }
+    & { nodes: Array<(
+      { __typename?: 'ResolvableLayerComment' }
+      & ResolvableLayerCommentCardFragment
+    )> }
+  ) }
 );
 
 export type GetLayerItemQueryVariables = Exact<{
@@ -21812,7 +22195,14 @@ export type ChangeLogsSinceLastPublishQuery = (
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id' | 'tableOfContentsLastPublished'>
-    & { draftTableOfContentsItems?: Maybe<Array<(
+    & { unresolvedLayerComments?: Maybe<Array<(
+      { __typename?: 'ResolvableLayerComment' }
+      & { tableOfContentsItem?: Maybe<(
+        { __typename?: 'TableOfContentsItem' }
+        & Pick<TableOfContentsItem, 'id' | 'title' | 'stableId' | 'isFolder'>
+      )> }
+      & ResolvableLayerCommentCardFragment
+    )>>, draftTableOfContentsItems?: Maybe<Array<(
       { __typename?: 'TableOfContentsItem' }
       & Pick<TableOfContentsItem, 'id' | 'title' | 'isFolder'>
       & { dataLayer?: Maybe<(
@@ -21822,10 +22212,91 @@ export type ChangeLogsSinceLastPublishQuery = (
           { __typename?: 'DataSource' }
           & Pick<DataSource, 'createdAt'>
         )> }
-      )> }
+      )>, unresolvedLayerComments?: Maybe<Array<(
+        { __typename?: 'ResolvableLayerComment' }
+        & Pick<ResolvableLayerComment, 'id'>
+      )>>, resolvableLayerCommentsConnection: (
+        { __typename?: 'ResolvableLayerCommentsConnection' }
+        & { nodes: Array<(
+          { __typename?: 'ResolvableLayerComment' }
+          & ResolvableLayerCommentCardFragment
+        )> }
+      ) }
     )>>, changeLogsSinceLastPublish?: Maybe<Array<(
       { __typename?: 'ChangeLog' }
       & ChangeLogDetailsFragment
+    )>> }
+  )> }
+);
+
+export type CreateResolvableLayerCommentMutationMutationVariables = Exact<{
+  input: CreateResolvableLayerCommentInput;
+}>;
+
+
+export type CreateResolvableLayerCommentMutationMutation = (
+  { __typename?: 'Mutation' }
+  & { createResolvableLayerComment?: Maybe<(
+    { __typename?: 'CreateResolvableLayerCommentPayload' }
+    & { resolvableLayerComment?: Maybe<(
+      { __typename?: 'ResolvableLayerComment' }
+      & ResolvableLayerCommentCardFragment
+    )> }
+  )> }
+);
+
+export type ResolveResolvableLayerCommentMutationMutationVariables = Exact<{
+  input: ResolveResolvableLayerCommentInput;
+}>;
+
+
+export type ResolveResolvableLayerCommentMutationMutation = (
+  { __typename?: 'Mutation' }
+  & { resolveResolvableLayerComment?: Maybe<(
+    { __typename?: 'ResolveResolvableLayerCommentPayload' }
+    & { resolvableLayerComment?: Maybe<(
+      { __typename?: 'ResolvableLayerComment' }
+      & ResolvableLayerCommentCardFragment
+    )> }
+  )> }
+);
+
+export type ReopenResolvableLayerCommentMutationMutationVariables = Exact<{
+  input: ReopenResolvableLayerCommentInput;
+}>;
+
+
+export type ReopenResolvableLayerCommentMutationMutation = (
+  { __typename?: 'Mutation' }
+  & { reopenResolvableLayerComment?: Maybe<(
+    { __typename?: 'ReopenResolvableLayerCommentPayload' }
+    & { resolvableLayerComment?: Maybe<(
+      { __typename?: 'ResolvableLayerComment' }
+      & ResolvableLayerCommentCardFragment
+    )> }
+  )> }
+);
+
+export type ProjectUnresolvedLayerCommentsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ProjectUnresolvedLayerCommentsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { unresolvedLayerComments?: Maybe<Array<(
+      { __typename?: 'ResolvableLayerComment' }
+      & Pick<ResolvableLayerComment, 'id' | 'comment' | 'createdAt'>
+      & { authorProfile?: Maybe<(
+        { __typename?: 'Profile' }
+        & CommentAuthorProfileFragment
+      )>, tableOfContentsItem?: Maybe<(
+        { __typename?: 'TableOfContentsItem' }
+        & Pick<TableOfContentsItem, 'id' | 'title' | 'stableId' | 'isFolder'>
+      )> }
     )>> }
   )> }
 );
@@ -27116,6 +27587,9 @@ export const AdminOverlayFragmentDoc = gql`
     progressMessage
     errorMessage
   }
+  unresolvedLayerComments {
+    id
+  }
 }
     ${OverlayFragmentDoc}`;
 export const DownloadSettingsTocItemFragmentDoc = gql`
@@ -27323,6 +27797,34 @@ export const FullAdminDataLayerFragmentDoc = gql`
 }
     ${FullAdminSourceFragmentDoc}
 ${ArchivedSourceFragmentDoc}`;
+export const CommentAuthorProfileFragmentDoc = gql`
+    fragment CommentAuthorProfile on Profile {
+  userId
+  fullname
+  nickname
+  picture
+  email
+  affiliations
+}
+    `;
+export const ResolvableLayerCommentCardFragmentDoc = gql`
+    fragment ResolvableLayerCommentCard on ResolvableLayerComment {
+  id
+  authorId
+  parentCommentId
+  comment
+  createdAt
+  updatedAt
+  resolvedAt
+  resolvedById
+  authorProfile {
+    ...CommentAuthorProfile
+  }
+  resolvedByProfile {
+    ...CommentAuthorProfile
+  }
+}
+    ${CommentAuthorProfileFragmentDoc}`;
 export const FullAdminOverlayFragmentDoc = gql`
     fragment FullAdminOverlay on TableOfContentsItem {
   id
@@ -27373,8 +27875,20 @@ export const FullAdminOverlayFragmentDoc = gql`
       name
     }
   }
+  unresolvedLayerComments {
+    ...ResolvableLayerCommentCard
+  }
+  resolvedLayerComments {
+    ...ResolvableLayerCommentCard
+  }
+  resolvableLayerCommentsConnection(first: 500, orderBy: [PRIMARY_KEY_ASC]) {
+    nodes {
+      ...ResolvableLayerCommentCard
+    }
+  }
 }
-    ${FullAdminDataLayerFragmentDoc}`;
+    ${FullAdminDataLayerFragmentDoc}
+${ResolvableLayerCommentCardFragmentDoc}`;
 export const MetadataXmlFileFragmentDoc = gql`
     fragment MetadataXmlFile on DataUploadOutput {
   url
@@ -31639,6 +32153,15 @@ export const DraftTableOfContentsDocument = gql`
     region {
       geojson
     }
+    unresolvedLayerComments(first: 500) {
+      id
+      tableOfContentsItem {
+        id
+        title
+        stableId
+        isFolder
+      }
+    }
     draftTableOfContentsItems {
       ...AdminOverlay
     }
@@ -33954,6 +34477,15 @@ export const ChangeLogsSinceLastPublishDocument = gql`
   projectBySlug(slug: $slug) {
     id
     tableOfContentsLastPublished
+    unresolvedLayerComments(first: 500) {
+      ...ResolvableLayerCommentCard
+      tableOfContentsItem {
+        id
+        title
+        stableId
+        isFolder
+      }
+    }
     draftTableOfContentsItems {
       id
       title
@@ -33964,13 +34496,22 @@ export const ChangeLogsSinceLastPublishDocument = gql`
           createdAt
         }
       }
+      unresolvedLayerComments {
+        id
+      }
+      resolvableLayerCommentsConnection(first: 500, orderBy: [PRIMARY_KEY_ASC]) {
+        nodes {
+          ...ResolvableLayerCommentCard
+        }
+      }
     }
     changeLogsSinceLastPublish {
       ...ChangeLogDetails
     }
   }
 }
-    ${ChangeLogDetailsFragmentDoc}`;
+    ${ResolvableLayerCommentCardFragmentDoc}
+${ChangeLogDetailsFragmentDoc}`;
 
 /**
  * __useChangeLogsSinceLastPublishQuery__
@@ -33999,6 +34540,160 @@ export function useChangeLogsSinceLastPublishLazyQuery(baseOptions?: Apollo.Lazy
 export type ChangeLogsSinceLastPublishQueryHookResult = ReturnType<typeof useChangeLogsSinceLastPublishQuery>;
 export type ChangeLogsSinceLastPublishLazyQueryHookResult = ReturnType<typeof useChangeLogsSinceLastPublishLazyQuery>;
 export type ChangeLogsSinceLastPublishQueryResult = Apollo.QueryResult<ChangeLogsSinceLastPublishQuery, ChangeLogsSinceLastPublishQueryVariables>;
+export const CreateResolvableLayerCommentMutationDocument = gql`
+    mutation CreateResolvableLayerCommentMutation($input: CreateResolvableLayerCommentInput!) {
+  createResolvableLayerComment(input: $input) {
+    resolvableLayerComment {
+      ...ResolvableLayerCommentCard
+    }
+  }
+}
+    ${ResolvableLayerCommentCardFragmentDoc}`;
+export type CreateResolvableLayerCommentMutationMutationFn = Apollo.MutationFunction<CreateResolvableLayerCommentMutationMutation, CreateResolvableLayerCommentMutationMutationVariables>;
+
+/**
+ * __useCreateResolvableLayerCommentMutationMutation__
+ *
+ * To run a mutation, you first call `useCreateResolvableLayerCommentMutationMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateResolvableLayerCommentMutationMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createResolvableLayerCommentMutationMutation, { data, loading, error }] = useCreateResolvableLayerCommentMutationMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useCreateResolvableLayerCommentMutationMutation(baseOptions?: Apollo.MutationHookOptions<CreateResolvableLayerCommentMutationMutation, CreateResolvableLayerCommentMutationMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateResolvableLayerCommentMutationMutation, CreateResolvableLayerCommentMutationMutationVariables>(CreateResolvableLayerCommentMutationDocument, options);
+      }
+export type CreateResolvableLayerCommentMutationMutationHookResult = ReturnType<typeof useCreateResolvableLayerCommentMutationMutation>;
+export type CreateResolvableLayerCommentMutationMutationResult = Apollo.MutationResult<CreateResolvableLayerCommentMutationMutation>;
+export type CreateResolvableLayerCommentMutationMutationOptions = Apollo.BaseMutationOptions<CreateResolvableLayerCommentMutationMutation, CreateResolvableLayerCommentMutationMutationVariables>;
+export const ResolveResolvableLayerCommentMutationDocument = gql`
+    mutation ResolveResolvableLayerCommentMutation($input: ResolveResolvableLayerCommentInput!) {
+  resolveResolvableLayerComment(input: $input) {
+    resolvableLayerComment {
+      ...ResolvableLayerCommentCard
+    }
+  }
+}
+    ${ResolvableLayerCommentCardFragmentDoc}`;
+export type ResolveResolvableLayerCommentMutationMutationFn = Apollo.MutationFunction<ResolveResolvableLayerCommentMutationMutation, ResolveResolvableLayerCommentMutationMutationVariables>;
+
+/**
+ * __useResolveResolvableLayerCommentMutationMutation__
+ *
+ * To run a mutation, you first call `useResolveResolvableLayerCommentMutationMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useResolveResolvableLayerCommentMutationMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [resolveResolvableLayerCommentMutationMutation, { data, loading, error }] = useResolveResolvableLayerCommentMutationMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useResolveResolvableLayerCommentMutationMutation(baseOptions?: Apollo.MutationHookOptions<ResolveResolvableLayerCommentMutationMutation, ResolveResolvableLayerCommentMutationMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ResolveResolvableLayerCommentMutationMutation, ResolveResolvableLayerCommentMutationMutationVariables>(ResolveResolvableLayerCommentMutationDocument, options);
+      }
+export type ResolveResolvableLayerCommentMutationMutationHookResult = ReturnType<typeof useResolveResolvableLayerCommentMutationMutation>;
+export type ResolveResolvableLayerCommentMutationMutationResult = Apollo.MutationResult<ResolveResolvableLayerCommentMutationMutation>;
+export type ResolveResolvableLayerCommentMutationMutationOptions = Apollo.BaseMutationOptions<ResolveResolvableLayerCommentMutationMutation, ResolveResolvableLayerCommentMutationMutationVariables>;
+export const ReopenResolvableLayerCommentMutationDocument = gql`
+    mutation ReopenResolvableLayerCommentMutation($input: ReopenResolvableLayerCommentInput!) {
+  reopenResolvableLayerComment(input: $input) {
+    resolvableLayerComment {
+      ...ResolvableLayerCommentCard
+    }
+  }
+}
+    ${ResolvableLayerCommentCardFragmentDoc}`;
+export type ReopenResolvableLayerCommentMutationMutationFn = Apollo.MutationFunction<ReopenResolvableLayerCommentMutationMutation, ReopenResolvableLayerCommentMutationMutationVariables>;
+
+/**
+ * __useReopenResolvableLayerCommentMutationMutation__
+ *
+ * To run a mutation, you first call `useReopenResolvableLayerCommentMutationMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useReopenResolvableLayerCommentMutationMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [reopenResolvableLayerCommentMutationMutation, { data, loading, error }] = useReopenResolvableLayerCommentMutationMutation({
+ *   variables: {
+ *      input: // value for 'input'
+ *   },
+ * });
+ */
+export function useReopenResolvableLayerCommentMutationMutation(baseOptions?: Apollo.MutationHookOptions<ReopenResolvableLayerCommentMutationMutation, ReopenResolvableLayerCommentMutationMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ReopenResolvableLayerCommentMutationMutation, ReopenResolvableLayerCommentMutationMutationVariables>(ReopenResolvableLayerCommentMutationDocument, options);
+      }
+export type ReopenResolvableLayerCommentMutationMutationHookResult = ReturnType<typeof useReopenResolvableLayerCommentMutationMutation>;
+export type ReopenResolvableLayerCommentMutationMutationResult = Apollo.MutationResult<ReopenResolvableLayerCommentMutationMutation>;
+export type ReopenResolvableLayerCommentMutationMutationOptions = Apollo.BaseMutationOptions<ReopenResolvableLayerCommentMutationMutation, ReopenResolvableLayerCommentMutationMutationVariables>;
+export const ProjectUnresolvedLayerCommentsDocument = gql`
+    query ProjectUnresolvedLayerComments($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    unresolvedLayerComments(first: 500) {
+      id
+      comment
+      createdAt
+      authorProfile {
+        ...CommentAuthorProfile
+      }
+      tableOfContentsItem {
+        id
+        title
+        stableId
+        isFolder
+      }
+    }
+  }
+}
+    ${CommentAuthorProfileFragmentDoc}`;
+
+/**
+ * __useProjectUnresolvedLayerCommentsQuery__
+ *
+ * To run a query within a React component, call `useProjectUnresolvedLayerCommentsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useProjectUnresolvedLayerCommentsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useProjectUnresolvedLayerCommentsQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useProjectUnresolvedLayerCommentsQuery(baseOptions: Apollo.QueryHookOptions<ProjectUnresolvedLayerCommentsQuery, ProjectUnresolvedLayerCommentsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ProjectUnresolvedLayerCommentsQuery, ProjectUnresolvedLayerCommentsQueryVariables>(ProjectUnresolvedLayerCommentsDocument, options);
+      }
+export function useProjectUnresolvedLayerCommentsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ProjectUnresolvedLayerCommentsQuery, ProjectUnresolvedLayerCommentsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ProjectUnresolvedLayerCommentsQuery, ProjectUnresolvedLayerCommentsQueryVariables>(ProjectUnresolvedLayerCommentsDocument, options);
+        }
+export type ProjectUnresolvedLayerCommentsQueryHookResult = ReturnType<typeof useProjectUnresolvedLayerCommentsQuery>;
+export type ProjectUnresolvedLayerCommentsLazyQueryHookResult = ReturnType<typeof useProjectUnresolvedLayerCommentsLazyQuery>;
+export type ProjectUnresolvedLayerCommentsQueryResult = Apollo.QueryResult<ProjectUnresolvedLayerCommentsQuery, ProjectUnresolvedLayerCommentsQueryVariables>;
 export const ForumAdminListDocument = gql`
     query ForumAdminList($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -42552,6 +43247,7 @@ export const namedOperations = {
     LayerMetadataChanges: 'LayerMetadataChanges',
     LayerCartographyChanges: 'LayerCartographyChanges',
     ChangeLogsSinceLastPublish: 'ChangeLogsSinceLastPublish',
+    ProjectUnresolvedLayerComments: 'ProjectUnresolvedLayerComments',
     ForumAdminList: 'ForumAdminList',
     Forums: 'Forums',
     TopicList: 'TopicList',
@@ -42713,6 +43409,9 @@ export const namedOperations = {
     CopyDataLibraryTemplate: 'CopyDataLibraryTemplate',
     DuplicateTableOfContentsItem: 'DuplicateTableOfContentsItem',
     createINaturalistTableOfContentsItem: 'createINaturalistTableOfContentsItem',
+    CreateResolvableLayerCommentMutation: 'CreateResolvableLayerCommentMutation',
+    ResolveResolvableLayerCommentMutation: 'ResolveResolvableLayerCommentMutation',
+    ReopenResolvableLayerCommentMutation: 'ReopenResolvableLayerCommentMutation',
     CreateForum: 'CreateForum',
     UpdateForum: 'UpdateForum',
     DeleteForum: 'DeleteForum',
@@ -42872,6 +43571,8 @@ export const namedOperations = {
     DataUploadExtendedDetails: 'DataUploadExtendedDetails',
     JobDetails: 'JobDetails',
     BackgroundJobSubscriptionEvent: 'BackgroundJobSubscriptionEvent',
+    CommentAuthorProfile: 'CommentAuthorProfile',
+    ResolvableLayerCommentCard: 'ResolvableLayerCommentCard',
     AdminOverlay: 'AdminOverlay',
     DownloadSettingsTocItem: 'DownloadSettingsTocItem',
     SharingSettingsTocItem: 'SharingSettingsTocItem',

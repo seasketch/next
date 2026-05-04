@@ -36,6 +36,11 @@ export interface TreeItem {
   parentId?: string | null;
   /** If false, will be treated as a folder or collection */
   isLeaf: boolean;
+  /**
+   * Optional UI badge (e.g. count of open resolvable comment threads on a
+   * draft data layer item).
+   */
+  unresolvedCommentCount?: number;
   /** If enabled, cannot be used to turn on checkbox for children */
   checkOffOnly?: boolean;
   /** Only allow one child to be selected at a time */
@@ -576,8 +581,12 @@ export function parseTreeItemId(id: string) {
   }
 }
 
+type OverlayWithCommentBadge = OverlayFragment & {
+  unresolvedLayerComments?: { id: number }[] | null;
+};
+
 export function useOverlayState(
-  items?: OverlayFragment[] | null,
+  items?: OverlayWithCommentBadge[] | null,
   editable?: boolean,
   localStoragePrefix?: string
 ) {
@@ -704,12 +713,16 @@ export function useOverlayState(
 }
 
 export function overlayLayerFragmentsToTreeItems(
-  fragments: OverlayFragment[],
+  fragments: OverlayWithCommentBadge[],
   editable?: boolean,
-  getTranslatedProp?: (propName: string, fragment: OverlayFragment) => string
+  getTranslatedProp?: (
+    propName: string,
+    fragment: OverlayWithCommentBadge
+  ) => string
 ) {
   const items: TreeItem[] = [];
   for (const fragment of fragments) {
+    const n = fragment.unresolvedLayerComments?.length ?? 0;
     items.push({
       id: fragment.stableId,
       isLeaf: !fragment.isFolder,
@@ -722,6 +735,8 @@ export function overlayLayerFragmentsToTreeItems(
         : fragment.title,
       type: fragment.__typename!,
       dropAcceptsTypes: editable ? ["TableOfContentsItem"] : [],
+      unresolvedCommentCount:
+        !fragment.isFolder && fragment.dataLayerId && n > 0 ? n : undefined,
     });
   }
   return items;

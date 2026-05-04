@@ -28,6 +28,8 @@ interface LayerTableOfContentsItemEditorProps {
   itemId: number;
   onRequestClose?: () => void;
   title: string;
+  focusLayerComments?: boolean;
+  onConsumedFocusComments?: () => void;
 }
 
 export default function LayerTableOfContentsItemEditor(
@@ -128,6 +130,26 @@ export default function LayerTableOfContentsItemEditor(
   }, [debouncedStyle]);
 
   const [selectedTab, setSelectedTab] = useState("settings");
+
+  useEffect(() => {
+    if (props.focusLayerComments) {
+      setSelectedTab("settings");
+    }
+  }, [props.focusLayerComments]);
+
+  useEffect(() => {
+    if (!props.focusLayerComments || !item) {
+      return;
+    }
+    const timer = window.setTimeout(() => {
+      document.getElementById("layer-comments")?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+      props.onConsumedFocusComments?.();
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [props.focusLayerComments, item?.id, props.onConsumedFocusComments]);
 
   const geostats = (source?.geostats?.layers || []).find(
     (l: { layer: string }) => {

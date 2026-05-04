@@ -20,6 +20,7 @@ import {
 import useProjectId from "../../useProjectId";
 import { CHANGE_LOG_INTRODUCTION_DATE } from "../changelogs/constants";
 import PublishSummarizedChangesPanel from "./PublishSummarizedChangesPanel";
+import PublishUnresolvedCommentsPanel from "./PublishUnresolvedCommentsPanel";
 import clsx from "clsx";
 
 export default function PublishTableOfContentsModal(props: {
@@ -39,10 +40,9 @@ export default function PublishTableOfContentsModal(props: {
     ],
   });
   const projectId = useProjectId();
-  const publishProject =
-    changeLogsQuery.data?.projectBySlug as
-      | ChangeLogsSinceLastPublishQuery["projectBySlug"]
-      | undefined;
+  const publishProject = changeLogsQuery.data?.projectBySlug as
+    | ChangeLogsSinceLastPublishQuery["projectBySlug"]
+    | undefined;
   const changeLogs = publishProject?.changeLogsSinceLastPublish || [];
   const draftTableOfContentsItems =
     publishProject?.draftTableOfContentsItems || [];
@@ -102,7 +102,7 @@ export default function PublishTableOfContentsModal(props: {
         className="flex min-h-0 flex-1 flex-col outline-none"
       >
         <div className="w-full shrink-0 px-6 pb-3 pt-4">
-          <Tabs.List className="grid w-full grid-cols-2 gap-1 rounded-lg bg-gray-100 p-1 text-sm font-medium text-gray-600">
+          <Tabs.List className="grid w-full grid-cols-3 gap-1 rounded-lg bg-gray-100 p-1 text-sm font-medium text-gray-600">
             <Tabs.Trigger
               value="summarized"
               className={clsx(
@@ -112,6 +112,16 @@ export default function PublishTableOfContentsModal(props: {
               )}
             >
               {dataT("Summarized Changes")}
+            </Tabs.Trigger>
+            <Tabs.Trigger
+              value="unresolved"
+              className={clsx(
+                "rounded-md px-3 py-2 outline-none transition-colors",
+                "data-[state=active]:bg-white data-[state=active]:text-gray-900 data-[state=active]:shadow-sm",
+                "data-[state=inactive]:text-gray-600"
+              )}
+            >
+              {dataT("Unresolved Comments")}
             </Tabs.Trigger>
             <Tabs.Trigger
               value="all"
@@ -140,6 +150,20 @@ export default function PublishTableOfContentsModal(props: {
                 draftItems={draftTableOfContentsItems}
                 tableOfContentsLastPublished={tableOfContentsLastPublished}
               />
+            )}
+          </div>
+        </Tabs.Content>
+        <Tabs.Content
+          value="unresolved"
+          className="min-h-0 flex-1 overflow-y-auto outline-none data-[state=inactive]:hidden"
+        >
+          <div className="px-6 pb-6">
+            {loading ? (
+              <div className="flex justify-center py-10">
+                <Spinner />
+              </div>
+            ) : (
+              <PublishUnresolvedCommentsPanel project={publishProject} />
             )}
           </div>
         </Tabs.Content>
@@ -229,15 +253,15 @@ function AllChangesPanel({
         </Trans>
       </p>
       <ul>
-      {changeLogs.map((changeLog, index) => (
-        <ChangeLogListItem
-          key={changeLog.id}
-          changeLog={changeLog}
-          itemTitle={titleForChangeLog(changeLog, itemTitleById, t)}
-          last={index === changeLogs.length - 1}
-        />
-      ))}
-    </ul>
+        {changeLogs.map((changeLog, index) => (
+          <ChangeLogListItem
+            key={changeLog.id}
+            changeLog={changeLog}
+            itemTitle={titleForChangeLog(changeLog, itemTitleById, t)}
+            last={index === changeLogs.length - 1}
+          />
+        ))}
+      </ul>
     </div>
   );
 }

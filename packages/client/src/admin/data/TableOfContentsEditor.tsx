@@ -146,6 +146,12 @@ export default function TableOfContentsEditor() {
 
   const layerEditingContext = useContext(LayerEditingContext);
 
+  const onConsumedLayerCommentFocus = useCallback(() => {
+    layerEditingContext.setOpenEditor((prev) =>
+      prev?.focusLayerComments ? { ...prev, focusLayerComments: false } : prev
+    );
+  }, [layerEditingContext.setOpenEditor]);
+
   const layersAndSources = useLayersAndSourcesForItemsQuery({
     variables: {
       slug,
@@ -618,6 +624,10 @@ export default function TableOfContentsEditor() {
             onRequestClose={() => layerEditingContext.setOpenEditor(undefined)}
             itemId={layerEditingContext.openEditor.id}
             title={layerEditingContext.openEditor.title}
+            focusLayerComments={
+              layerEditingContext.openEditor.focusLayerComments === true
+            }
+            onConsumedFocusComments={onConsumedLayerCommentFocus}
           />
         )}
       {layerEditingContext.openEditor?.isFolder && (
@@ -715,7 +725,7 @@ function Header({
   const { confirm } = useDialog();
   return (
     <header className="w-128 z-20 flex-none border-b shadow-sm bg-gray-100 mt-2 text-sm border-t px-1">
-      <Menubar.Root className="flex p-1 py-0.5 rounded-md z-50 items-center">
+      <Menubar.Root className="flex min-w-0 flex-wrap items-center gap-y-1 rounded-md p-1 py-0.5 z-50">
         <Menubar.Menu>
           <MenubarTrigger>{t("View")}</MenubarTrigger>
           <Menubar.Portal>
@@ -903,7 +913,7 @@ function Header({
         {(selectedView === "tree" ||
           selectedView === "downloads" ||
           selectedView === "sharing") && (
-          <div className="ml-2">
+          <div className="ml-2 min-w-0 flex-1 basis-[8rem]">
             <OverlaySearchInput
               search={search}
               onChange={onSearchChange}
@@ -911,7 +921,7 @@ function Header({
             />
           </div>
         )}
-        <div className="flex-1 text-right">
+        <div className="flex min-w-0 shrink-0 items-center justify-end gap-1">
           <Tooltip.Provider>
             <Tooltip.Root delayDuration={200}>
               <Tooltip.Trigger asChild>
@@ -921,7 +931,7 @@ function Header({
                     publishDisabled
                       ? "bg-white text-black opacity-80"
                       : "bg-primary-500 text-white"
-                  } rounded px-2 py-0.5 mx-1 shadow-sm`}
+                  } shrink-0 rounded px-2 py-0.5 shadow-sm`}
                   onClick={onRequestPublish}
                 >
                   <Trans ns="admin:data">Publish</Trans>
