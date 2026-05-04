@@ -16,10 +16,12 @@
   },
   "scripts": {
     "build": "tsc",
-    "watch": "tsc --watch"
+    "watch": "tsc --watch",
+    "test": "cd ../.. && npx vitest run packages/fragment-worker/__tests__"
   },
   "dependencies": {
     "fgb-source": "^1.0.0",
+    "geobuf": "^4.0.0",
     "lru-cache": "^11.2.2",
     "overlay-engine": "^1.0.0",
     "undici": "^7.16.0"

@@ -10,6 +10,9 @@ const lambdaHandler = async (event, context) => {
         if (event.operation === "create-collection-fragments") {
             return await (0, handler_1.handleCreateCollectionFragments)(event);
         }
+        if (event.operation === "reconcile-overlap") {
+            return await (0, handler_1.handleReconcileOverlap)(event);
+        }
         return await (0, handler_1.handleCreateFragments)(event);
     }
     catch (e) {

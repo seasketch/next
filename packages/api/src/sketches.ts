@@ -48,6 +48,12 @@ type CreateCollectionFragmentsResult = {
   error?: string;
 };
 
+type ReconcileOverlapResult = {
+  success: boolean;
+  fragments?: SketchFragment[];
+  error?: string;
+};
+
 /**
  * Delegates clipToGeographies work to the fragment-worker AWS Lambda.
  */
@@ -157,6 +163,72 @@ async function callFragmentWorkerCollectionLambda(
     );
   }
   return result.fragmentsBySketchId ?? {};
+}
+
+/**
+ * Runs eliminateOverlap on the fragment-worker Lambda (same overlay-engine as
+ * in-process). Payload is JSON (large sketches may approach Lambda sync limits).
+ */
+async function callFragmentWorkerReconcileOverlap(
+  newFragments: SketchFragment[],
+  existingFragments: SketchFragment[],
+): Promise<SketchFragment[]> {
+  if (!process.env.FRAGMENT_WORKER_LAMBDA_ARN) {
+    throw new Error("FRAGMENT_WORKER_LAMBDA_ARN is not configured");
+  }
+
+  const payload = {
+    operation: "reconcile-overlap" as const,
+    newFragments,
+    existingFragments,
+  };
+
+  const payloadJson = JSON.stringify(payload);
+  const payloadBytes = Buffer.byteLength(payloadJson, "utf8");
+  const fragmentCount = newFragments.length + existingFragments.length;
+  if (fragmentCount > 2000 || payloadBytes > 5 * 1024 * 1024) {
+    console.warn(
+      `reconcile-overlap Lambda payload is large: ${fragmentCount} fragments, ${(
+        payloadBytes /
+        (1024 * 1024)
+      ).toFixed(2)} MB (Lambda sync invoke limit is 6 MB)`,
+    );
+  }
+
+  const client = getLambdaClient();
+  const command = new InvokeCommand({
+    FunctionName: process.env.FRAGMENT_WORKER_LAMBDA_ARN,
+    InvocationType: "RequestResponse",
+    Payload: Buffer.from(payloadJson),
+  });
+  const response = await client.send(command);
+
+  if (response.FunctionError) {
+    const errorPayload = response.Payload
+      ? JSON.parse(Buffer.from(response.Payload).toString())
+      : null;
+    throw new Error(
+      `Fragment worker Lambda error: ${
+        errorPayload?.errorMessage || response.FunctionError
+      }`,
+    );
+  }
+
+  if (!response.Payload) {
+    throw new Error("Fragment worker Lambda returned no payload");
+  }
+
+  const result: ReconcileOverlapResult = JSON.parse(
+    Buffer.from(response.Payload).toString(),
+  );
+
+  if (!result.success) {
+    throw new Error(
+      `Fragment worker Lambda error: ${result.error || "Unknown error"}`,
+    );
+  }
+
+  return result.fragments ?? [];
 }
 
 /**
@@ -457,7 +529,13 @@ export async function updateSketchTocItemParent(
           );
           // Need to run the whole fragment reconciliation process with
           // overlapping sketches in the collection
-          fragments = eliminateOverlap(fragments, overlappingFragments);
+          fragments =
+            process.env.NODE_ENV === "test"
+              ? eliminateOverlap(fragments, overlappingFragments)
+              : await callFragmentWorkerReconcileOverlap(
+                  fragments,
+                  overlappingFragments,
+                );
 
           await reconcileFragments(
             siblingSketchIds,

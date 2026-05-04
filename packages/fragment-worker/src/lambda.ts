@@ -2,6 +2,7 @@ import { Context } from "aws-lambda";
 import {
   handleCreateCollectionFragments,
   handleCreateFragments,
+  handleReconcileOverlap,
   handleWarmCache,
 } from "./handler";
 
@@ -15,6 +16,9 @@ export const lambdaHandler = async (
     }
     if (event.operation === "create-collection-fragments") {
       return await handleCreateCollectionFragments(event);
+    }
+    if (event.operation === "reconcile-overlap") {
+      return await handleReconcileOverlap(event);
     }
     return await handleCreateFragments(event);
   } catch (e: any) {

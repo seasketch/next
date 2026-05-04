@@ -32,6 +32,21 @@ export interface CreateCollectionFragmentsResult {
     fragmentsBySketchId?: Record<number, FragmentResult[]>;
     error?: string;
 }
+export interface ReconcileOverlapPayload {
+    operation: "reconcile-overlap";
+    newFragments: SketchFragment[];
+    existingFragments: SketchFragment[];
+}
+export interface ReconcileOverlapResult {
+    success: boolean;
+    fragments?: SketchFragment[];
+    error?: string;
+}
+/**
+ * Run {@link eliminateOverlap} for sketch fragments when a sketch is moved
+ * into a collection (offloaded from the API server).
+ */
+export declare function handleReconcileOverlap(payload: ReconcileOverlapPayload): Promise<ReconcileOverlapResult>;
 export declare function handleWarmCache(payload: WarmCachePayload): Promise<{
     success: boolean;
 }>;

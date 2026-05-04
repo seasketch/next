@@ -1,5 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.handleReconcileOverlap = handleReconcileOverlap;
 exports.handleWarmCache = handleWarmCache;
 exports.handleCreateFragments = handleCreateFragments;
 exports.handleCreateCollectionFragments = handleCreateCollectionFragments;
@@ -56,6 +57,14 @@ const sourceCache = new fgb_source_1.SourceCache("1GB", {
     },
     maxCacheSize: "256MB",
 });
+/**
+ * Run {@link eliminateOverlap} for sketch fragments when a sketch is moved
+ * into a collection (offloaded from the API server).
+ */
+async function handleReconcileOverlap(payload) {
+    const fragments = (0, overlay_engine_1.eliminateOverlap)(payload.newFragments, payload.existingFragments);
+    return { success: true, fragments };
+}
 async function handleWarmCache(payload) {
     const preparedSketch = (0, overlay_engine_1.prepareSketch)(payload.feature);
     const uniqueSources = new Set();
