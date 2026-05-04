@@ -13,7 +13,6 @@ import {
 import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphqlQueryCache";
 import { strategies } from "../offline/GraphqlQueryCache/strategies";
 import getSlug from "../getSlug";
-import { inviteFlowErrorMessage } from "./inviteFlowErrorMessage";
 
 export enum IngressState {
   /** There was an error either decoding the token or verifying its signature */
@@ -114,7 +113,7 @@ export function useProjectInviteIngressFlow(): IngressFlowData {
         .catch((e) => {
           setState((prev) => ({
             ...prev,
-            error: new Error(inviteFlowErrorMessage(e)),
+            error: e,
             state: IngressState.Error,
           }));
         });
@@ -244,7 +243,7 @@ export function useProjectInviteIngressFlow(): IngressFlowData {
           .catch((e) => {
             setState((prev) => ({
               ...prev,
-              error: new Error(inviteFlowErrorMessage(e)),
+              error: e,
               state: IngressState.Error,
             }));
           });
