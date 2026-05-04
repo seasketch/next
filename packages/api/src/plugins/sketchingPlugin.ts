@@ -361,7 +361,26 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           const { pgClient } = context;
           // Get the related sketch class
           const { rows } = await pgClient.query(
-            `select geometry_type, sketch_classes_use_geography_clipping(sketch_classes.*) as use_geography_clipping, coalesce(preview_new_reports, false) as preview_new_reports, preprocessing_endpoint, id, project_id from public.sketch_classes where id = $1`,
+            `
+              select 
+                sketch_classes.geometry_type, 
+                sketch_classes_use_geography_clipping(sketch_classes.*) as use_geography_clipping,
+                coalesce(sketch_classes.preview_new_reports, false) as preview_new_reports,
+                sketch_classes.preprocessing_endpoint, 
+                sketch_classes.id, 
+                sketch_classes.project_id,
+                coalesce(
+                  (
+                    select array_agg(scg.geography_id)
+                    from sketch_class_geographies scg
+                    where scg.sketch_class_id = sketch_classes.id
+                  ),
+                  '{}'::int[]
+                ) as geography_ids
+              from 
+                public.sketch_classes
+              where 
+                sketch_classes.id = $1`,
             [sketchClassId],
           );
           const sketchClass = rows[0] as {
@@ -371,6 +390,7 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
             preprocessing_endpoint: string;
             id: number;
             project_id: number;
+            geography_ids: number[];
           };
           delete userGeom?.id;
           if (
@@ -401,7 +421,11 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
                 },
               )) as any;
             return row;
-          } else if (sketchClass.use_geography_clipping) {
+          } else if (
+            sketchClass.use_geography_clipping ||
+            (sketchClass.preview_new_reports &&
+              sketchClass.geography_ids.length > 0)
+          ) {
             const sketchId = await createOrUpdateSketch({
               pgClient,
               userGeom,
@@ -508,7 +532,23 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
 
           // Get the related sketch class
           const { rows } = await pgClient.query(
-            `select *, sketch_classes_use_geography_clipping(sketch_classes.*) as use_geography_clipping, coalesce(preview_new_reports, false) as preview_new_reports from public.sketch_classes where id = ((select sketch_class_id from sketches where id = $1))`,
+            `
+              select 
+                sketch_classes.*,
+                sketch_classes_use_geography_clipping(sketch_classes.*) as use_geography_clipping,
+                coalesce(sketch_classes.preview_new_reports, false) as preview_new_reports,
+                coalesce(
+                  (
+                    select array_agg(scg.geography_id)
+                    from sketch_class_geographies scg
+                    where scg.sketch_class_id = sketch_classes.id
+                  ),
+                  '{}'::int[]
+                ) as geography_ids
+              from 
+                public.sketch_classes
+              where 
+                sketch_classes.id = ((select sketch_class_id from sketches where id = $1))`,
             [id],
           );
           if (rows.length === 0) {
@@ -518,7 +558,11 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           // Check to see if preprocessing is required. If so, do it
           let geometry: Feature;
 
-          if (sketchClass.use_geography_clipping) {
+          if (
+            sketchClass.use_geography_clipping ||
+            (sketchClass.preview_new_reports &&
+              sketchClass.geography_ids.length > 0)
+          ) {
             const sketchId = await createOrUpdateSketch({
               pgClient,
               userGeom,

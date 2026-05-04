@@ -129,17 +129,10 @@ export default function SketchClassForm({
   );
 
   useEffect(() => {
-    if (
-      selectedTab === "reports" &&
-      hideCollectionNewReportsAdminUi
-    ) {
+    if (selectedTab === "reports" && hideCollectionNewReportsAdminUi) {
       updateTabInUrl("geoprocessing");
     }
-  }, [
-    selectedTab,
-    hideCollectionNewReportsAdminUi,
-    updateTabInUrl,
-  ]);
+  }, [selectedTab, hideCollectionNewReportsAdminUi, updateTabInUrl]);
 
   const tabs: NonLinkTabItem[] = useMemo(() => {
     return [
@@ -424,10 +417,11 @@ export default function SketchClassForm({
                           >
                             Geoprocessing framework services
                           </a>{" "}
-                          will be used for clipping and reporting on sketches.
-                          The report builder will be available to admins for
-                          authoring reports, intended to eventually replace
-                          geoprocessing services.
+                          will be used for reporting on sketches. The report
+                          builder will be available to admins for authoring
+                          reports, intended to eventually replace geoprocessing
+                          services. Geography clipping will be used over
+                          preprocessing services if properly configured.
                         </Trans>
                       ),
                     },
