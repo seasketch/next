@@ -104,7 +104,7 @@ function exportClassTableWidget(
             count: null,
             geographyTotalCount: null,
             fractionOfGeography: null,
-            present: mode === "presence" ? null : undefined,
+            present: null,
           }
         : {
             rasterSketchSum: null,
@@ -217,7 +217,7 @@ function exportClassTableWidget(
         count,
         geographyTotalCount: geographyTotal,
         fractionOfGeography: fraction,
-        present: mode === "presence" ? count > 0 : undefined,
+        present: mode === "presence" ? count > 0 : null,
         hasOverlap: null,
         overlapPartnerSketchNames: null,
       });
@@ -253,7 +253,7 @@ function exportClassTableWidget(
             fractionOfGeography: sk.fractionOfGeography,
             hasOverlap: sk.hasOverlap,
             overlapPartnerSketchNames: sk.overlapPartnerSketchNames.join("; "),
-            present: mode === "presence" ? sk.primaryValue > 0 : undefined,
+            present: mode === "presence" ? sk.primaryValue > 0 : null,
           });
         }
       }
