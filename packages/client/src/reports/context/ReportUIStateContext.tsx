@@ -14,6 +14,11 @@ export const ReportUIStateContext = createContext<{
     cardId: number,
     focus: () => void
   ) => void;
+  /** True while the browser print dialog / print preview is active (also set briefly before programmatic print). */
+  printing: boolean;
+  setPrinting: (value: boolean) => void;
+  /** Renders every tab and card into a hidden subtree and opens print via react-to-print (single compiled document). */
+  requestFullReportPrint: () => void;
 }>({
   setSelectedTabId: () => {},
   editing: null,
@@ -22,4 +27,7 @@ export const ReportUIStateContext = createContext<{
   preselectTitle: false,
   showCalcDetails: undefined,
   setShowCalcDetails: () => {},
+  printing: false,
+  setPrinting: () => {},
+  requestFullReportPrint: () => {},
 });

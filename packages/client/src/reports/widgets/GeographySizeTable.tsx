@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { Fragment, useMemo, useState } from "react";
+import { Fragment, useContext, useMemo, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { CaretDownIcon, LayersIcon } from "@radix-ui/react-icons";
@@ -26,6 +26,7 @@ import SketchOverlapHint from "./collection/SketchOverlapHint";
 import { sketchContributionsGeographyTotalArea } from "./collection/sketchContributions";
 import type { GeographySketchContribution } from "./collection/sketchContributions";
 import { useCollectionSketchExpand } from "./collection/useCollectionSketchExpand";
+import { ReportUIStateContext } from "../context/ReportUIStateContext";
 
 type GeographySizeTableSettings = {
   unit?: "hectare" | "acre" | "mile" | "kilometer";
@@ -65,14 +66,17 @@ export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
   );
 
   const baseReportContext = useBaseReportContext();
+  const { printing } = useContext(ReportUIStateContext);
   const {
     isCollection,
     sketchNameById,
     childSketchIds,
-    expandedRowKeys,
     toggleRow,
     hideCaretExpandTooltip,
-  } = useCollectionSketchExpand(baseReportContext.sketchClass);
+    isSketchBreakdownExpanded,
+  } = useCollectionSketchExpand(baseReportContext.sketchClass, {
+    forceAllExpanded: printing,
+  });
 
   const rows: GeographySizeTableRow[] = useMemo(() => {
     return geographies
@@ -187,7 +191,7 @@ export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
           {rows.map((row) => {
             const rowKey = String(row.geographyId);
             const expanded =
-              isCollection && expandedRowKeys.has(rowKey);
+              isSketchBreakdownExpanded(rowKey);
             const contrib = row.sketchContributions ?? [];
             return (
               <Fragment key={row.geographyId}>

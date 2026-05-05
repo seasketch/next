@@ -1,4 +1,4 @@
-import { Fragment, useMemo } from "react";
+import { Fragment, useContext, useMemo } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { MetricDependency, CountMetric } from "overlay-engine";
 import {
@@ -47,6 +47,7 @@ import { usePrimaryGeography } from "../hooks/usePrimaryGeography";
 import CollectionExpandableName from "./collection/CollectionExpandableName";
 import { sketchContributionsForClassTableRow } from "./collection/sketchContributions";
 import { useCollectionSketchExpand } from "./collection/useCollectionSketchExpand";
+import { ReportUIStateContext } from "../context/ReportUIStateContext";
 
 export type FeaturePresenceTableSettings = {
   rowsPerPage?: number;
@@ -82,6 +83,7 @@ export const FeaturePresenceTable: ReportWidget<
 
   const { clippingGeography } = usePrimaryGeography(sketchClass, geographies);
   const primaryGeographyId = clippingGeography?.id;
+  const { printing } = useContext(ReportUIStateContext);
 
   const rows = useMemo<FeaturePresenceRow[]>(() => {
     const classRows = getClassTableRows({
@@ -159,10 +161,12 @@ export const FeaturePresenceTable: ReportWidget<
     isCollection,
     sketchNameById,
     childSketchIds,
-    expandedRowKeys,
     toggleRow,
     hideCaretExpandTooltip,
-  } = useCollectionSketchExpand(sketchClass);
+    isSketchBreakdownExpanded,
+  } = useCollectionSketchExpand(sketchClass, {
+    forceAllExpanded: printing,
+  });
 
   const sketchLinesByRowKey = useMemo(() => {
     if (!isCollection || !primaryGeographyId || loading) {
@@ -260,7 +264,7 @@ export const FeaturePresenceTable: ReportWidget<
             const displayLabel =
               row.key === "*" ? t("All features") : row.label;
             const expanded =
-              isCollection && expandedRowKeys.has(row.key);
+              isSketchBreakdownExpanded(row.key);
             const sketchLines = sketchLinesByRowKey.get(row.key) ?? [];
             return (
               <Fragment key={row.key}>

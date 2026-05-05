@@ -1,6 +1,15 @@
 import { useTranslation } from "react-i18next";
 import { ReportCardConfiguration } from "./cards/cards";
-import { useContext, useMemo, useRef, memo, useCallback } from "react";
+import {
+  useContext,
+  useMemo,
+  useRef,
+  memo,
+  useCallback,
+  useState,
+} from "react";
+// react-scripts@4 / webpack 4 — see ReportFullPrintBridge
+import { useReactToPrint } from "react-to-print/dist/react-to-print.js";
 import ReportCardBodyEditor from "./components/ReportCardBodyEditor";
 import ReportCardBodyViewer from "./components/ReportCardBodyViewer";
 import {
@@ -20,6 +29,8 @@ import { useSubjectReportContext } from "./context/SubjectReportContext";
 import { ReportCardTitleToolbarContext } from "./widgets/ReportCardTitleToolbar";
 import { exportReportCard } from "./widgets/exports";
 import { download } from "../download";
+import { collectReportCardTitle } from "../admin/sketchClasses/SketchClassReportsAdmin";
+import { REACT_PRINT_PAGE_STYLE } from "./reactPrintPageStyle";
 require("../formElements/prosemirror-body.css");
 
 export type ReportCardIcon = "info" | "warning" | "error";
@@ -206,13 +217,26 @@ export default function ReportCard(
     config: ReportCardConfiguration<any>;
   }
 ) {
+  const reportUiState = useContext(ReportUIStateContext);
   const {
     editing,
     preselectTitle,
     adminMode,
     showCalcDetails,
     setShowCalcDetails,
-  } = useContext(ReportUIStateContext);
+  } = reportUiState;
+
+  const { t } = useTranslation("admin:sketching");
+  const [cardPrintPrep, setCardPrintPrep] = useState(false);
+  const cardPrintSurfaceRef = useRef<HTMLDivElement>(null);
+
+  const reportUiForCardPrintSubtree = useMemo(
+    () => ({
+      ...reportUiState,
+      printing: true,
+    }),
+    [reportUiState]
+  );
 
   const baseReportContext = useBaseReportContext();
   const toolbarContext = useContext(ReportCardTitleToolbarContext);
@@ -221,6 +245,45 @@ export default function ReportCard(
     baseReportContext.sketchClass.project?.sessionIsAdmin || false;
   const showAdminCalculationDetails = adminMode || sessionIsAdmin;
   const cardDependencies = useCardDependencies(props.config.id);
+
+  const cardDocumentTitle = useMemo(() => {
+    const sketchName = subjectReportContext.data?.sketch?.name;
+    const title = collectReportCardTitle(props.config.body);
+    if (sketchName && title) {
+      // documentTitle / save-as-PDF filename, not in-app UI copy
+      // eslint-disable-next-line i18next/no-literal-string
+      return `${sketchName} — ${title}`;
+    }
+    if (sketchName) {
+      return sketchName;
+    }
+    if (title) {
+      return title;
+    }
+    return t("Report card");
+  }, [subjectReportContext.data?.sketch?.name, props.config.body, t]);
+
+  const reactToPrintCard = useReactToPrint({
+    contentRef: cardPrintSurfaceRef,
+    documentTitle: cardDocumentTitle,
+    pageStyle: REACT_PRINT_PAGE_STYLE,
+    onBeforePrint: async () => {
+      setCardPrintPrep(true);
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+      );
+    },
+    onAfterPrint: () => {
+      setCardPrintPrep(false);
+    },
+    onPrintError: () => {
+      setCardPrintPrep(false);
+    },
+  });
+
+  const onPrint = useCallback(() => {
+    void reactToPrintCard();
+  }, [reactToPrintCard]);
 
   const onDownloadResults = useCallback(
     async (format: "csv" | "json") => {
@@ -298,8 +361,9 @@ export default function ReportCard(
       ...toolbarContext,
       loading: toolbarContext.loading || cardDependencies.loading,
       onDownloadResults,
+      onPrint,
     };
-  }, [toolbarContext, cardDependencies.loading, onDownloadResults]);
+  }, [toolbarContext, cardDependencies.loading, onDownloadResults, onPrint]);
 
   return (
     <CardDependenciesContext.Provider
@@ -323,6 +387,27 @@ export default function ReportCard(
           loading={cardDependencies.loading}
           errors={cardDependencies.errors}
         />
+        {cardPrintPrep && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute left-0 top-0 z-[-1] box-border w-full bg-white text-black"
+          >
+            <ReportUIStateContext.Provider value={reportUiForCardPrintSubtree}>
+              <div ref={cardPrintSurfaceRef} className="w-full bg-white">
+                <InnerReportCard
+                  {...props}
+                  editing={editing}
+                  preselectTitle={preselectTitle}
+                  adminMode={adminMode}
+                  metrics={cardDependencies.metrics}
+                  sources={cardDependencies.overlaySources}
+                  loading={cardDependencies.loading}
+                  errors={cardDependencies.errors}
+                />
+              </div>
+            </ReportUIStateContext.Provider>
+          </div>
+        )}
       </ReportCardTitleToolbarContext.Provider>
       {showCalcDetails && !editing && showCalcDetails === props.config.id && (
         <CalculationDetailsModal

@@ -5,6 +5,7 @@ import {
   memo,
   useCallback,
   useContext,
+  useEffect,
   useLayoutEffect,
   useMemo,
   useRef,
@@ -32,6 +33,7 @@ import {
 import { useCalculationDetailsModalState } from "./components/CalculationDetailsModal";
 import { BaseReportContext } from "./context/BaseReportContext";
 import { ReportUIStateContext } from "./context/ReportUIStateContext";
+import ReportFullPrintBridge from "./ReportFullPrintBridge";
 import { ReportTabManagementModal } from "./ReportTabManagementModal";
 import { ReportTabs } from "./ReportTabs";
 import { SortableReportContent } from "./SortableReportContent";
@@ -93,6 +95,17 @@ export default function ReportEditor({
 
   const moveCardModalState = useMoveCardToTabState();
   const calcDetailsModalState = useCalculationDetailsModalState();
+  const [printing, setPrinting] = useState(false);
+  useEffect(() => {
+    const onBeforePrint = () => setPrinting(true);
+    const onAfterPrint = () => setPrinting(false);
+    window.addEventListener("beforeprint", onBeforePrint);
+    window.addEventListener("afterprint", onAfterPrint);
+    return () => {
+      window.removeEventListener("beforeprint", onBeforePrint);
+      window.removeEventListener("afterprint", onAfterPrint);
+    };
+  }, []);
   const [manageTabsOpen, setManageTabsOpen] = useState(false);
   const openManageTabs = useCallback(() => setManageTabsOpen(true), []);
   const closeManageTabs = useCallback(() => setManageTabsOpen(false), []);
@@ -146,6 +159,7 @@ export default function ReportEditor({
   const pendingNewCardIdRef = useRef<number | null>(null);
   pendingNewCardIdRef.current = pendingNewCardId;
   const cardsScrollAreaRef = useRef<HTMLDivElement>(null);
+  const reportPrintControlsRef = useRef<{ runPrint: () => void } | null>(null);
 
   // Get all card IDs from the current tabs data
   const allCardIds = useMemo(() => {
@@ -280,6 +294,10 @@ export default function ReportEditor({
     []
   );
 
+  const requestFullReportPrint = useCallback(() => {
+    reportPrintControlsRef.current?.runPrint();
+  }, []);
+
   const uiStateContextValue = useMemo(() => {
     return {
       selectedTabId: selectedTabId,
@@ -291,6 +309,9 @@ export default function ReportEditor({
       showCalcDetails: calcDetailsModalState.state.cardId ?? undefined,
       setShowCalcDetails: setShowCalcDetails,
       onEditorReadyForFocus,
+      printing,
+      setPrinting,
+      requestFullReportPrint,
     };
   }, [
     selectedTabId,
@@ -301,6 +322,8 @@ export default function ReportEditor({
     calcDetailsModalState.state.cardId,
     setShowCalcDetails,
     onEditorReadyForFocus,
+    printing,
+    requestFullReportPrint,
   ]);
 
   if (baseContext.loading) {
@@ -309,6 +332,10 @@ export default function ReportEditor({
 
   return (
     <ReportUIStateContext.Provider value={uiStateContextValue}>
+      <ReportFullPrintBridge
+        controlsRef={reportPrintControlsRef}
+        adminModeForCards
+      />
       <div className="flex-1 p-8 max-h-full overflow-hidden">
         <div className="w-128 mx-auto rounded-lg shadow-xl border border-t-black/5 border-l-black/10 border-r-black/15 border-b-black/20 z-10 max-h-full flex flex-col bg-gray-100">
           {/* report header */}
@@ -386,6 +413,16 @@ export default function ReportEditor({
                       </DropdownMenu.Portal>
                     </DropdownMenu.Sub>
                   )}
+                  <DropdownMenu.Item
+                    className="px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer outline-none"
+                    disabled={editing != null}
+                    onSelect={() => {
+                      closeReportActionsMenu();
+                      requestFullReportPrint();
+                    }}
+                  >
+                    {t("Print report")}
+                  </DropdownMenu.Item>
                   <DropdownMenu.Item
                     className="px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer outline-none"
                     onSelect={openManageTabs}

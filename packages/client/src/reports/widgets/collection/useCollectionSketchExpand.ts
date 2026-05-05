@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { SketchGeometryType } from "../../../generated/graphql";
 import { useSubjectReportContext } from "../../context/SubjectReportContext";
 
@@ -6,10 +6,19 @@ type SketchClassLike = {
   geometryType: SketchGeometryType;
 };
 
+export type UseCollectionSketchExpandOptions = {
+  /** When true (e.g. browser print preview), every collection row shows sketch breakdown expanded. */
+  forceAllExpanded?: boolean;
+};
+
 /**
  * Collection reports: expandable rows keyed by {@link rowKey} (class row key or geography id string).
  */
-export function useCollectionSketchExpand(sketchClass: SketchClassLike) {
+export function useCollectionSketchExpand(
+  sketchClass: SketchClassLike,
+  options?: UseCollectionSketchExpandOptions
+) {
+  const forceAllExpanded = options?.forceAllExpanded ?? false;
   const isCollection =
     sketchClass.geometryType === SketchGeometryType.Collection;
 
@@ -49,7 +58,14 @@ export function useCollectionSketchExpand(sketchClass: SketchClassLike) {
   };
 
   /** After any row is expanded, skip caret tooltips — user has learned the control. */
-  const hideCaretExpandTooltip = expandedRowKeys.size > 0;
+  const hideCaretExpandTooltip =
+    expandedRowKeys.size > 0 || forceAllExpanded;
+
+  const isSketchBreakdownExpanded = useCallback(
+    (rowKey: string) =>
+      isCollection && (forceAllExpanded || expandedRowKeys.has(rowKey)),
+    [isCollection, forceAllExpanded, expandedRowKeys]
+  );
 
   return {
     isCollection,
@@ -58,5 +74,6 @@ export function useCollectionSketchExpand(sketchClass: SketchClassLike) {
     expandedRowKeys,
     toggleRow,
     hideCaretExpandTooltip,
+    isSketchBreakdownExpanded,
   };
 }

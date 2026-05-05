@@ -73,11 +73,21 @@ export default function ReportCardTitleToolbar({ node }: { node: Node }) {
                 onSelect={(e) => {
                   e.preventDefault();
                   setDownloadOpen(false);
+                  context.onPrint?.();
+                }}
+                className="flex cursor-pointer select-none items-center rounded px-2 py-1.5 text-sm outline-none text-gray-700 data-[highlighted]:bg-gray-100"
+              >
+                {t("Print card")}
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                onSelect={(e) => {
+                  e.preventDefault();
+                  setDownloadOpen(false);
                   context.onDownloadResults?.("csv");
                 }}
                 className="flex cursor-pointer select-none items-center rounded px-2 py-1.5 text-sm outline-none text-gray-700 data-[highlighted]:bg-gray-100"
               >
-                {t("Download CSV")}
+                {t("Export results (CSV)")}
               </DropdownMenu.Item>
               <DropdownMenu.Item
                 onSelect={(e) => {
@@ -87,7 +97,7 @@ export default function ReportCardTitleToolbar({ node }: { node: Node }) {
                 }}
                 className="flex cursor-pointer select-none items-center rounded px-2 py-1.5 text-sm outline-none text-gray-700 data-[highlighted]:bg-gray-100"
               >
-                {t("Download JSON")}
+                {t("Export results (JSON)")}
               </DropdownMenu.Item>
             </DropdownMenu.Content>
           </DropdownMenu.Portal>
@@ -145,6 +155,7 @@ export const ReportCardTitleToolbarContext = createContext<{
   loading: boolean;
   setEditing?: (editing: number | null, preselectTitle?: boolean) => void;
   onDownloadResults?: (format: "csv" | "json") => void;
+  onPrint?: () => void;
 }>({
   adminMode: false,
   cardId: 0,
@@ -155,4 +166,5 @@ export const ReportCardTitleToolbarContext = createContext<{
   loading: false,
   setEditing: () => {},
   onDownloadResults: undefined,
+  onPrint: undefined,
 });

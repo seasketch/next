@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, memo } from "react";
+import { useContext, useEffect, useMemo, useRef, memo } from "react";
 import { EditorState } from "prosemirror-state";
 import { Node } from "prosemirror-model";
 import { EditorView } from "prosemirror-view";
@@ -15,6 +15,7 @@ import "prosemirror-view/style/prosemirror.css";
 import { ReportWidgetNodeViewRouter } from "../widgets/widgets";
 import { DetailsView } from "../widgets/prosemirror/details";
 import ReportCardTitleToolbar from "../widgets/ReportCardTitleToolbar";
+import { ReportUIStateContext } from "../context/ReportUIStateContext";
 
 type ReportCardBodyViewerProps = {
   body: any;
@@ -27,6 +28,7 @@ function ReportCardBodyViewerInner({
   className = "",
   cardId,
 }: ReportCardBodyViewerProps) {
+  const { printing } = useContext(ReportUIStateContext);
   const rootRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView>();
   const { createPortal, removePortal, setSelection } =
@@ -68,7 +70,9 @@ function ReportCardBodyViewerInner({
       },
       // @ts-ignore
       details(node, view, getPos) {
-        return new DetailsView(node, view, getPos as () => number);
+        return new DetailsView(node, view, getPos as () => number, {
+          forceOpen: printing,
+        });
       },
       // @ts-ignore
       reportTitle(node, view, getPos, decorations) {
@@ -86,7 +90,7 @@ function ReportCardBodyViewerInner({
         });
       },
     }),
-    [createPortal, removePortal, cardId]
+    [createPortal, removePortal, cardId, printing]
   );
 
   // Create/destroy the view when core configuration changes

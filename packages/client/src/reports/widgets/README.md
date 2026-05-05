@@ -35,9 +35,23 @@ Several widgets render the same underlying "class table" pattern. To keep behavi
 
 - Build rows with `getClassTableRows()` and keep widget-specific metric decoration separate from row construction.
 - Resolve layer visibility from both `row.stableId` and `componentSettings.rowLinkedStableIds` using the shared helpers in `ClassTableRows.ts`. Do not hand-roll this logic per widget.
-- Prefer shared collection helpers like `useCollectionSketchExpand()` and `sketchContributionsForClassTableRow()` over widget-specific breakdown implementations.
+- Prefer shared collection helpers like `useCollectionSketchExpand()` and `sketchContributionsForClassTableRow()` over widget-specific breakdown implementations. Pass `{ forceAllExpanded: printing }` from `ReportUIStateContext` when collection rows should expand for print (see **Print mode** below).
 - When primary geography context is required for metric combination, fail fast rather than silently substituting a sentinel id.
 - Add focused tests around shared helpers and edge cases before copying table behavior into a new widget.
+
+## Print mode
+
+The report UI exposes a global **`printing`** flag on `ReportUIStateContext` (plus `setPrinting` for programmatic flows). It is set to `true` on the browser `beforeprint` event and reset on `afterprint`, so it is active during the print dialog / print preview—including when the user invokes print from the browser chrome (e.g. ⌘P), not only from the card export menu.
+
+**Compiled report print (`react-to-print`)**: `requestFullReportPrint` renders **every tab and card** in a dedicated subtree (with `printing: true` only there so the on-screen report does not expand) and prints via [`react-to-print`](https://github.com/MatthewHerbst/react-to-print). Use **Print report** in the draft editor (+ menu) or the sketch report window header.
+
+**Single-card print**: Each card title menu **Print** uses `react-to-print` on **that card only** (the visible card root). A short-lived nested `ReportUIStateContext` override sets `printing` true under that subtree so collection/details expansion applies without flashing sibling cards.
+
+**Widget expectations**
+
+- Any widget that hides important content behind expand/collapse, tabs, or similar should **expand or reveal that content while `printing` is true**, so paper/PDF output matches what authors expect.
+- **Collection “class” tables** use `useCollectionSketchExpand(sketchClass, { forceAllExpanded: printing })` and `isSketchBreakdownExpanded(rowKey)` so per-sketch breakdown rows open for print.
+- **ProseMirror `details` blocks** (`DetailsView`) listen for `beforeprint` / `afterprint` locally so `<details>` stay open for print even though the ProseMirror document attrs may still say “closed” after preview closes.
 
 ## Export Support (CSV/JSON)
 
