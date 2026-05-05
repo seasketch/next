@@ -14,7 +14,7 @@ import {
   type RasterStats,
   type TotalAreaMetric,
 } from "overlay-engine";
-import type { CompatibleSpatialMetricDetailsFragment } from "../../../generated/graphql";
+import type { CompatibleSpatialMetricDetailsFragment } from "../../../../generated/graphql";
 import { filterMetricsByDependencies } from "../../../utils/metricSatisfiesDependency";
 import type { CardExportInput, WidgetExportSection } from "../types";
 import { resolveClippingGeographyForExport } from "../exportContextHelpers";
