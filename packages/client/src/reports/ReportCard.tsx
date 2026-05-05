@@ -16,6 +16,10 @@ import { useCardDependencies } from "./context/useCardDependencies";
 import { CardDependenciesContext } from "./context/CardDependenciesContext";
 import { useBaseReportContext } from "./context/BaseReportContext";
 import { CalculationDetailsModal } from "./components/CalculationDetailsModal";
+import { useSubjectReportContext } from "./context/SubjectReportContext";
+import { ReportCardTitleToolbarContext } from "./widgets/ReportCardTitleToolbar";
+import { exportReportCard } from "./widgets/exports";
+import { download } from "../download";
 require("../formElements/prosemirror-body.css");
 
 export type ReportCardIcon = "info" | "warning" | "error";
@@ -211,10 +215,92 @@ export default function ReportCard(
   } = useContext(ReportUIStateContext);
 
   const baseReportContext = useBaseReportContext();
+  const toolbarContext = useContext(ReportCardTitleToolbarContext);
+  const subjectReportContext = useSubjectReportContext();
   const sessionIsAdmin =
     baseReportContext.sketchClass.project?.sessionIsAdmin || false;
   const showAdminCalculationDetails = adminMode || sessionIsAdmin;
   const cardDependencies = useCardDependencies(props.config.id);
+
+  const onDownloadResults = useCallback(
+    async (format: "csv" | "json") => {
+      if (cardDependencies.loading) return;
+      if (!subjectReportContext.data) return;
+
+      const subject = subjectReportContext.data;
+      const input = {
+        reportId: baseReportContext.report.id,
+        cardId: props.config.id,
+        cardTitle: undefined,
+        body: props.config.body as any,
+        metrics: cardDependencies.metrics,
+        sources: cardDependencies.overlaySources,
+        geographies: baseReportContext.geographies,
+        sketchClass: baseReportContext.sketchClass,
+        subject: {
+          sketchId: subject.sketch.id,
+          sketchName: subject.sketch.name,
+          isCollection: subject.isCollection,
+          childSketches: (subject.childSketches || []).map((c) => ({
+            id: c.id,
+            name: c.name,
+          })),
+        },
+        relatedFragments: (subject.relatedFragments || []).map((f) => ({
+          hash: f.hash,
+          geographies: f.geographies,
+          sketches: f.sketches,
+        })),
+        primaryGeographyId: undefined,
+        // Exporters sometimes pass interpolation args through t(); we don't need
+        // translated strings for filenames/CSV headers, but we do need a stable
+        // function with a compatible signature.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        t: ((k: string) => k) as any,
+      };
+
+      try {
+        const result = await exportReportCard(input, format);
+        if (result.format === "json") {
+          const blob = new Blob([JSON.stringify(result.body, null, 2)], {
+            // eslint-disable-next-line i18next/no-literal-string
+            type: result.mimeType,
+          });
+          const url = URL.createObjectURL(blob);
+          download(url, result.filename);
+          URL.revokeObjectURL(url);
+        } else {
+          const url = URL.createObjectURL(result.blob);
+          download(url, result.filename);
+          URL.revokeObjectURL(url);
+        }
+      } catch (e) {
+        // Export failures shouldn't break card rendering
+        // eslint-disable-next-line no-console
+        console.error(e);
+      }
+    },
+    [
+      baseReportContext.geographies,
+      baseReportContext.report.id,
+      baseReportContext.sketchClass,
+      cardDependencies.loading,
+      cardDependencies.metrics,
+      cardDependencies.overlaySources,
+      props.config.body,
+      props.config.id,
+      subjectReportContext.data,
+    ],
+  );
+
+  const toolbarContextValue = useMemo(() => {
+    return {
+      ...toolbarContext,
+      loading: toolbarContext.loading || cardDependencies.loading,
+      onDownloadResults,
+    };
+  }, [toolbarContext, cardDependencies.loading, onDownloadResults]);
+
   return (
     <CardDependenciesContext.Provider
       value={{
@@ -226,16 +312,18 @@ export default function ReportCard(
         errors: cardDependencies.errors,
       }}
     >
-      <InnerReportCard
-        {...props}
-        editing={editing}
-        preselectTitle={preselectTitle}
-        adminMode={adminMode}
-        metrics={cardDependencies.metrics}
-        sources={cardDependencies.overlaySources}
-        loading={cardDependencies.loading}
-        errors={cardDependencies.errors}
-      />
+      <ReportCardTitleToolbarContext.Provider value={toolbarContextValue}>
+        <InnerReportCard
+          {...props}
+          editing={editing}
+          preselectTitle={preselectTitle}
+          adminMode={adminMode}
+          metrics={cardDependencies.metrics}
+          sources={cardDependencies.overlaySources}
+          loading={cardDependencies.loading}
+          errors={cardDependencies.errors}
+        />
+      </ReportCardTitleToolbarContext.Provider>
       {showCalcDetails && !editing && showCalcDetails === props.config.id && (
         <CalculationDetailsModal
           state={{ open: true, cardId: props.config.id }}

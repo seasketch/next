@@ -4,11 +4,13 @@ import { DownloadIcon, DragHandleDots2Icon } from "@radix-ui/react-icons";
 import { useTranslation } from "react-i18next";
 import { createContext, useContext, useState, useEffect } from "react";
 import ReportCardTitleActionMenu from "./ReportCardTitleActionMenu";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 
 export default function ReportCardTitleToolbar({ node }: { node: Node }) {
   const context = useContext(ReportCardTitleToolbarContext);
   const { t } = useTranslation("admin:sketching");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [downloadOpen, setDownloadOpen] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const title = collectText(node.content);
   // Clean up dragging state when mouse/touch is released anywhere
@@ -42,14 +44,54 @@ export default function ReportCardTitleToolbar({ node }: { node: Node }) {
           }`}
         style={{ marginTop: "-5px", marginBottom: "-5px" }}
       >
-        <button
-          title={t("Download results")}
-          className={`opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-600 ${
-            isActive ? "opacity-100" : ""
-          }`}
-        >
-          <DownloadIcon className="w-4 h-4" />
-        </button>
+        <DropdownMenu.Root open={downloadOpen} onOpenChange={setDownloadOpen}>
+          <DropdownMenu.Trigger asChild>
+            <button
+              title={t("Download results")}
+              aria-label={t("Download results")}
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+              disabled={!context.hasMetrics || context.loading}
+              className={`opacity-0 group-hover:opacity-100 transition-opacity duration-200 text-gray-600 ${
+                isActive ? "opacity-100" : ""
+              } disabled:cursor-not-allowed`}
+            >
+              <DownloadIcon className="w-4 h-4" />
+            </button>
+          </DropdownMenu.Trigger>
+          <DropdownMenu.Portal>
+            <DropdownMenu.Content
+              side="bottom"
+              align="end"
+              sideOffset={8}
+              alignOffset={-10}
+              className="z-50 min-w-[160px] rounded-md border border-black/5 bg-white p-1 shadow-lg"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <DropdownMenu.Item
+                onSelect={(e) => {
+                  e.preventDefault();
+                  setDownloadOpen(false);
+                  context.onDownloadResults?.("csv");
+                }}
+                className="flex cursor-pointer select-none items-center rounded px-2 py-1.5 text-sm outline-none text-gray-700 data-[highlighted]:bg-gray-100"
+              >
+                {t("Download CSV")}
+              </DropdownMenu.Item>
+              <DropdownMenu.Item
+                onSelect={(e) => {
+                  e.preventDefault();
+                  setDownloadOpen(false);
+                  context.onDownloadResults?.("json");
+                }}
+                className="flex cursor-pointer select-none items-center rounded px-2 py-1.5 text-sm outline-none text-gray-700 data-[highlighted]:bg-gray-100"
+              >
+                {t("Download JSON")}
+              </DropdownMenu.Item>
+            </DropdownMenu.Content>
+          </DropdownMenu.Portal>
+        </DropdownMenu.Root>
         {context.dragHandleProps && (
           <button
             className={`text-gray-600 opacity-0 group-hover:opacity-100 transition-opacity duration-200 ${
@@ -102,6 +144,7 @@ export const ReportCardTitleToolbarContext = createContext<{
   openCalculationDetailsModal?: (cardId: number) => void;
   loading: boolean;
   setEditing?: (editing: number | null, preselectTitle?: boolean) => void;
+  onDownloadResults?: (format: "csv" | "json") => void;
 }>({
   adminMode: false,
   cardId: 0,
@@ -111,4 +154,5 @@ export const ReportCardTitleToolbarContext = createContext<{
   openCalculationDetailsModal: undefined,
   loading: false,
   setEditing: () => {},
+  onDownloadResults: undefined,
 });

@@ -68,6 +68,7 @@ export function ReportCardWithToolbarContext({
         : undefined,
       loading: false,
       setEditing,
+      onDownloadResults: undefined,
     };
   }, [
     cardId,

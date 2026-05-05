@@ -54,12 +54,10 @@ function isNumberColumnValueStats(stats) {
     return stats.type === "number";
 }
 function subjectIsFragment(subject) {
-    return (subject != null &&
-        typeof subject === "object" &&
-        "hash" in subject);
+    return subject != null && typeof subject === "object" && "hash" in subject;
 }
 function subjectIsGeography(subject) {
-    return (subject != null && typeof subject === "object" && "id" in subject);
+    return subject != null && typeof subject === "object" && "id" in subject;
 }
 function equalIntervalBuckets(data, numBuckets, max, fraction = false) {
     const breaks = (0, simple_statistics_1.equalIntervalBreaks)(data, numBuckets);

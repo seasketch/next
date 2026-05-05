@@ -38,3 +38,73 @@ Several widgets render the same underlying "class table" pattern. To keep behavi
 - Prefer shared collection helpers like `useCollectionSketchExpand()` and `sketchContributionsForClassTableRow()` over widget-specific breakdown implementations.
 - When primary geography context is required for metric combination, fail fast rather than silently substituting a sentinel id.
 - Add focused tests around shared helpers and edge cases before copying table behavior into a new widget.
+
+## Export Support (CSV/JSON)
+
+Report widgets can participate in **client-side exports**. Export logic lives alongside widgets (client-side) so it stays consistent with the row/business logic already used for rendering.
+
+### How exports work
+
+- A report card’s ProseMirror body is walked for `metric` and `blockMetric` nodes.
+- Each widget node has a `type` (the same `type` used by `ReportWidgetNodeViewRouter`).
+- If a widget type has an exporter registered, the exporter produces one or more flat `WidgetExportSection`s:
+  - `columns`: explicit column definitions
+  - `rows`: plain records containing string/number/boolean/null values
+  - optional `extras`: non-tabular payloads (e.g. histogram arrays) that are useful in JSON exports
+- Inline metrics are exported via a **dedicated aggregator**: all `InlineMetric` nodes in a card are combined into a single “Inline metrics” section.
+
+### Where export code lives
+
+- Export framework: `src/reports/widgets/exports/`
+  - `types.ts`: shared export contracts
+  - `exportCard.ts`: orchestration / walking / packaging entry point
+  - `registry.ts`: widget exporter registry keyed by widget `type`
+  - `csv.ts`: CSV serialization (PapaParse)
+  - `package.ts`: CSV packaging (always zipped)
+  - `json.ts` + `raw.ts`: JSON envelope + normalized raw context/metrics
+- Widget exporters: `src/reports/widgets/exports/exporters/`
+
+### Adding export support for a new widget
+
+1) **Write an exporter**
+
+- Create a new exporter file under `src/reports/widgets/exports/exporters/`.
+- Export a `WidgetExporter` function that returns `WidgetExportSection[]`.
+- Prefer reusing existing helpers used by the widget UI (e.g. `combineMetricsForFragments`, `getClassTableRows`, collection helpers) rather than re-deriving logic.
+- For reference, see:
+  - `src/reports/widgets/exports/exporters/geographySizeTable.export.ts` (simple table + collection sketch breakdown)
+  - `src/reports/widgets/exports/exporters/classTableWidgets.export.ts` (class-table pattern: overlap/count/presence/raster proportion)
+  - `src/reports/widgets/exports/exporters/inlineMetrics.export.ts` (inline metric aggregation into a single wide section)
+
+2) **Register the exporter**
+
+- Add the widget exporter to `src/reports/widgets/exports/registry.ts` using the widget’s `type` string as the key (must match the ProseMirror node attrs `type` / router type).
+
+3) **Conform to export conventions**
+
+- **Scope rows (collections)**: When exporting collection-aware widgets, include a `scope` column with at least:
+  - `collection`: aggregate rows
+  - `sketch`: per-child-sketch rows (when the report subject is a collection)
+- **Full-stats policy**: Export should include the full metric payload fields available (even if the widget UI hides some fields via settings).
+- **Stable / readable CSV columns**:
+  - CSV headers come from column `key`s, so keep keys concise and readable.
+  - Avoid leaking internal identifiers unless they are required for downstream joins.
+- **InlineMetric**:
+  - Do not implement per-inline-metric CSV sections.
+  - Add new InlineMetric presentations by updating the inline aggregator exporter.
+
+### Export filenames & packaging
+
+- **CSV** exports are always returned as a **zip**, even for a single section, to keep naming consistent and include an optional manifest.
+- **Single-card exports** use a base filename like:
+  - `{sketchId}-{slugified(sketchName)}-{slugified(cardTitle)}-{cardId}`
+- **Whole-report exports** (when implemented) use a base filename like:
+  - `{sketchId}-{slugified(sketchName)}-report-{reportId}`
+
+### JSON exports and raw payload
+
+JSON exports include:
+- `sections[]`: the primary flattened, consumable data
+- `raw`: normalized context and exact metric payloads (for debugging / advanced downstream usage)
+
+The `raw` payload intentionally strips GraphQL-only noise such as `__typename`, and uses friendly fields (e.g. `sourceTitle`) rather than leaking URLs where possible.
