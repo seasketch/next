@@ -218,6 +218,7 @@ export function CalculationDetailsModal({
     <>
       <Modal
         open
+        scrollable
         onRequestClose={handleClose}
         title={
           <div>
