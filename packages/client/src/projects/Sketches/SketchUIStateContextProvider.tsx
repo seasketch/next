@@ -48,6 +48,7 @@ import {
   SketchChildType,
   PopupShareDetailsFragment,
   useDeleteSketchTocItemsMutation,
+  SketchClass,
   SketchClassDetailsFragment,
   SketchGeometryType,
   SketchPopupDetailsFragment,
@@ -86,6 +87,53 @@ type ReportState = {
   sketchClassId: number;
   previewNewReporting?: boolean;
 };
+
+type SketchClassFieldsForReportWindow = Pick<
+  SketchClass,
+  "geometryType" | "useGeographyClipping" | "previewNewReports"
+>;
+
+/**
+ * Whether an open report window should use the authored ("new") report stack vs legacy geoprocessing.
+ * Keep in sync with `canPreviewNewReports` / `getMenuOptions` in this module.
+ */
+function shouldUseAuthoredReportWindowForSketch(args: {
+  sketchClass: SketchClassFieldsForReportWindow | undefined;
+  previewNewReporting: boolean | undefined;
+  sessionIsAdmin: boolean;
+  enableCollectionNewReports: boolean;
+}): boolean {
+  const {
+    sketchClass,
+    previewNewReporting,
+    sessionIsAdmin,
+    enableCollectionNewReports,
+  } = args;
+
+  if (!sketchClass) {
+    return false;
+  }
+
+  const isCollection =
+    sketchClass.geometryType === SketchGeometryType.Collection;
+  const usesGeographyClipping = Boolean(sketchClass.useGeographyClipping);
+  const isTransitionalClass = Boolean(sketchClass.previewNewReports);
+
+  const newUiForClippedPolygon = usesGeographyClipping && !isCollection;
+
+  if (isTransitionalClass) {
+    const adminChosePreviewNewReports =
+      Boolean(previewNewReporting) &&
+      sessionIsAdmin &&
+      !usesGeographyClipping &&
+      (!isCollection || enableCollectionNewReports);
+    return newUiForClippedPolygon || adminChosePreviewNewReports;
+  }
+
+  const newUiForMigratedCollection = isCollection && enableCollectionNewReports;
+
+  return newUiForClippedPolygon || newUiForMigratedCollection;
+}
 
 /**
  * Manages selection, expansion, and visibility state of sketches (including folders),
@@ -1220,10 +1268,7 @@ export default function SketchUIStateContextProvider({
       const updatedCollection =
         response.data?.copySketchTocItem?.updatedCollection;
       if (updatedCollection?.id != null) {
-        evictSubjectReportCachesForSketchId(
-          cache,
-          updatedCollection.id
-        );
+        evictSubjectReportCachesForSketchId(cache, updatedCollection.id);
       }
     },
   });
@@ -1312,9 +1357,7 @@ export default function SketchUIStateContextProvider({
       /** Sketches are TOC items with id Sketch:* — including collections. Hide create only for a non-collection sketch. */
       const allowToolbarCreate =
         !selectionIsSharedContent &&
-        (!selectionType ||
-          !selectionType.sketch ||
-          selectionType.collection);
+        (!selectionType || !selectionType.sketch || selectionType.collection);
 
       const create: DropdownOption[] = [
         ...(allowToolbarCreate ? sketchClasses || [] : [])
@@ -1373,8 +1416,8 @@ export default function SketchUIStateContextProvider({
                           ...(selectionType?.folder
                             ? { folderId: selectedId }
                             : selectionType?.collection
-                              ? { collectionId: selectedId }
-                              : {}),
+                            ? { collectionId: selectedId }
+                            : {}),
                         },
                         update: async (cache, { data }) => {
                           if (data?.createSketchFolder?.sketchFolder) {
@@ -1442,10 +1485,7 @@ export default function SketchUIStateContextProvider({
         })
         .map((opt) => ({
           ...opt,
-          contextMenuItemClassName: [
-            "pl-6",
-            opt.contextMenuItemClassName,
-          ]
+          contextMenuItemClassName: ["pl-6", opt.contextMenuItemClassName]
             .filter(Boolean)
             .join(" "),
         }));
@@ -1925,25 +1965,18 @@ export default function SketchUIStateContextProvider({
                     projectMetadata.data?.project?.sketchClasses?.find(
                       (sc) => sc.id === sketchClassId
                     );
-                  /** Collection sketch classes use the new report UI only when enableCollectionNewReports is set on the project. */
-                  const isCollectionSketchClass =
-                    sketchClass?.geometryType ===
-                    SketchGeometryType.Collection;
-                  const enableCollectionNewReports = Boolean(
-                    projectMetadata.data?.project?.enableCollectionNewReports
-                  );
                   const canUseNewReporting =
-                    (Boolean(sketchClass?.useGeographyClipping) &&
-                      !isCollectionSketchClass) ||
-                    (isCollectionSketchClass &&
-                      enableCollectionNewReports) ||
-                    (Boolean(previewNewReporting) &&
-                      Boolean(
+                    shouldUseAuthoredReportWindowForSketch({
+                      sketchClass,
+                      previewNewReporting,
+                      sessionIsAdmin: Boolean(
                         projectMetadata.data?.project?.sessionIsAdmin
-                      ) &&
-                      Boolean(sketchClass?.previewNewReports) &&
-                      (!isCollectionSketchClass ||
-                        enableCollectionNewReports));
+                      ),
+                      enableCollectionNewReports: Boolean(
+                        projectMetadata.data?.project
+                          ?.enableCollectionNewReports
+                      ),
+                    });
                   // Unique key so legacy and preview reports for same sketch can coexist
                   const reportKey = `${sketchId}-${
                     previewNewReporting ? "preview" : "legacy"
