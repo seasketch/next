@@ -53,6 +53,8 @@ create unique index if not exists reports_draft_id_version_unique
   on public.reports (draft_id, version)
   where draft_id is not null;
 
+alter type public.spatial_metric_type add value if not exists 'raster_stats';
+
 create table if not exists public.sketch_class_reports (
   sketch_class_id integer not null references public.sketch_classes(id) on delete cascade,
   draft_report_id integer not null references public.reports(id) on delete cascade,
