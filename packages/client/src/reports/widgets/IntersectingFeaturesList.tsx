@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useContext, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { MetricDependency } from "overlay-engine";
 import { ReportWidget } from "./widgets";
@@ -21,6 +21,7 @@ import {
   combinePresenceTableMetrics,
   PresenceTableValue,
 } from "./IntersectingFeaturesList.utils";
+import { ReportUIStateContext } from "../context/ReportUIStateContext";
 type IntersectingFeaturesListSettings = {
   labelColumn?: string;
   maxDisplayItems?: number;
@@ -33,6 +34,7 @@ export const IntersectingFeaturesList: ReportWidget<
   IntersectingFeaturesListSettings
 > = ({ metrics, componentSettings, sources, loading }) => {
   const { t } = useTranslation("reports");
+  const { printing } = useContext(ReportUIStateContext);
   const [showAll, setShowAll] = useState(false);
 
   const labelColumn = componentSettings.labelColumn;
@@ -120,7 +122,7 @@ export const IntersectingFeaturesList: ReportWidget<
       .sort();
   }, [tableData.values, componentSettings.hiddenColumns]);
 
-  const displayedValues = showAll
+  const displayedValues = showAll || printing
     ? tableData.values
     : tableData.values.slice(0, maxDisplayItems);
   const hasMore =
@@ -167,11 +169,12 @@ export const IntersectingFeaturesList: ReportWidget<
                 title={label}
                 value={value}
                 propertyKeys={allPropertyKeys}
+                forceOpen={printing}
               />
             );
           })
         )}
-        {hasMore && !showAll && (
+        {hasMore && !showAll && !printing && (
           <div className="w-full text-center pt-2">
             <button
               onClick={() => setShowAll(true)}
@@ -183,7 +186,7 @@ export const IntersectingFeaturesList: ReportWidget<
             </button>
           </div>
         )}
-        {hasMore && showAll && (
+        {hasMore && showAll && !printing && (
           <div className="w-full text-center pt-2">
             <button
               onClick={() => setShowAll(false)}
@@ -209,29 +212,32 @@ function FeatureAccordionItem({
   title,
   value,
   propertyKeys,
+  forceOpen = false,
 }: {
   title: string;
   value: PresenceTableValue;
   propertyKeys: string[];
+  forceOpen?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const isOpen = forceOpen || open;
 
   return (
     <div className="border rounded text-sm border-gray-300 bg-slate-50 overflow-clip">
       <button
         onClick={() => setOpen((prev) => !prev)}
         className={`px-2 py-1 text-left w-full flex items-center space-x-1 ${
-          open ? "border-b border-gray-300" : ""
+          isOpen ? "border-b border-gray-300" : ""
         }`}
       >
         <div className="flex-1 truncate">{title}</div>
         <CaretDownIcon
           className={`w-4 h-4 transition-transform ${
-            open ? "transform rotate-180" : ""
+            isOpen ? "transform rotate-180" : ""
           }`}
         />
       </button>
-      {open && (
+      {isOpen && (
         <div className="max-h-64 overflow-y-auto bg-white">
           <table className="w-full">
             <tbody>
