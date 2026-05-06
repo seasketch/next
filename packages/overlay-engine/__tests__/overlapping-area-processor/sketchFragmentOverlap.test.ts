@@ -950,6 +950,9 @@ describe("Distance to shore metrics", () => {
 });
 
 describe("Samoa test cases", () => {
+  const ntz6Fragments = require("./fragments/ntz-6.fragments.geojson.json") as {
+    features: Feature<Polygon | MultiPolygon>[];
+  };
   let sourceCache: SourceCache;
   let clippingFn: ClippingFn;
   let pool: WorkerPool<any, any>;
@@ -999,5 +1002,37 @@ describe("Samoa test cases", () => {
     // Two overlapping polygons in the source contain the fragment, so the
     // total overlap area should exceed the fragment area.
     expect(f2Results["*"]).toBeGreaterThan(sqKm);
+  });
+
+  it("Known test case from Samoa - NTZ-6 fragments should produce expected Unknown benthic overlap area", async () => {
+    const sourceUrl =
+      "https://uploads.seasketch.org/testing-samoa-geomorphology.fgb";
+    const source = await createSource<Feature<MultiPolygon>>(sourceUrl);
+    const metrics: {
+      type: "overlay_area";
+      value: { [key: string]: number };
+    }[] = [];
+    for (const fragment of ntz6Fragments.features) {
+      const processor = new OverlayEngineBatchProcessor(
+        "overlay_area",
+        1024 * 1024 * 2,
+        fragment,
+        source,
+        [],
+        {},
+        "benthic",
+        pool,
+      );
+      const result = await processor.calculate();
+      metrics.push({
+        type: "overlay_area",
+        value: result,
+      });
+    }
+    const combined = combineMetricsForFragments(metrics, "overlay_area");
+    expect((combined.value as { [key: string]: number }).Unknown).toBeCloseTo(
+      14.79,
+      2,
+    );
   });
 });
