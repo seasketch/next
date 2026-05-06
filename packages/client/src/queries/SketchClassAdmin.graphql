@@ -962,3 +962,66 @@ query OverlaysForReportLayerToggles($slug: String!) {
     }
   }
 }
+
+query ProjectReportsContext($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    enableReportBuilder
+    sketchClasses {
+      ...SketchingDetails
+      draftReport {
+        id
+      }
+    }
+  }
+  reportsConnection {
+    nodes {
+      id
+      title
+      updatedAt
+      projectId
+      draftId
+    }
+  }
+}
+
+query SketchClassReportAssignment($slug: String!, $sketchClassId: Int!) {
+  projectBySlug(slug: $slug) {
+    id
+  }
+  reportsConnection {
+    nodes {
+      id
+      title
+      projectId
+      draftId
+    }
+  }
+  sketchClass(id: $sketchClassId) {
+    id
+    draftReport {
+      id
+    }
+  }
+}
+
+mutation CreateProjectDraftReport($projectId: Int!, $title: String) {
+  createProjectDraftReport(input: { projectId: $projectId, title: $title }) {
+    report {
+      id
+    }
+  }
+}
+
+mutation SetPrimaryReportForSketchClass(
+  $sketchClassId: Int!
+  $draftReportId: Int!
+) {
+  setPrimaryReportForSketchClass(
+    input: { sketchClassId: $sketchClassId, draftReportId: $draftReportId }
+  ) {
+    sketchClass {
+      id
+    }
+  }
+}

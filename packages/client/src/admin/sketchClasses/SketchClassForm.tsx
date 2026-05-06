@@ -27,8 +27,8 @@ import EvaluateFilterServiceModal from "./EvaluateFilterServiceModal";
 import GeoprocessingTab from "./GeoprocessingTab";
 import GeographyClippingTab from "./GeographyClippingTab";
 import useCurrentProjectMetadata from "../../useCurrentProjectMetadata";
-import SketchClassReportsAdmin from "./SketchClassReportsAdmin";
 import { useHistory, useParams } from "react-router-dom";
+import SketchClassReportAssignment from "./SketchClassReportAssignment";
 
 export default function SketchClassForm({
   sketchClass,
@@ -506,7 +506,7 @@ export default function SketchClassForm({
           <GeographyClippingTab sketchClass={sketchClass} />
         )}
         {selectedTab === "reports" && !hideCollectionNewReportsAdminUi && (
-          <SketchClassReportsAdmin sketchClass={sketchClass} />
+          <SketchClassReportAssignment sketchClassId={sketchClass.id} />
         )}
       </div>
     </div>

@@ -163,6 +163,26 @@ export default function AdminApp() {
     ...(data?.project?.enableReportBuilder === true
       ? [
           {
+            breadcrumb: "Reports",
+            icon: (
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                className={iconClassName}
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586A1 1 0 0113.293 3.293l4.414 4.414A1 1 0 0118 8.414V19a2 2 0 01-2 2z"
+                />
+              </svg>
+            ),
+            path: "/admin/reports",
+          },
+          {
             breadcrumb: "Geography",
             icon: (
               <svg
