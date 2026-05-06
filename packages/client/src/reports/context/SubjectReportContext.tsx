@@ -1,6 +1,6 @@
 import { createContext, useContext, useMemo } from "react";
 import {
-  ReportContextSketchDetailsFragment,
+  SubjectReportContextQuery,
   Sketch,
   SketchGeometryType,
   useSubjectReportContextQuery,
@@ -12,7 +12,7 @@ type SubjectReportContextData = {
    * Whether the sketch is a collection
    */
   isCollection: boolean;
-  sketch: ReportContextSketchDetailsFragment;
+  sketch: NonNullable<SubjectReportContextQuery["sketch"]>;
   childSketches: Pick<Sketch, "id" | "name" | "sketchClassId">[];
   siblingSketches: Pick<Sketch, "id" | "name" | "sketchClassId">[];
   relatedFragments: MetricSubjectFragment[];

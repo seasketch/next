@@ -94,7 +94,7 @@ export function SortableReportContent(props: SortableReportContentProps) {
   const onError = useGlobalErrorHandler();
 
   // Context values for toolbar context
-  const { report, sketchClass } = useBaseReportContext();
+  const { report } = useBaseReportContext();
 
   const hasMultipleTabs = useMemo(
     () => (report.tabs || []).length > 1,
@@ -107,7 +107,7 @@ export function SortableReportContent(props: SortableReportContentProps) {
     refetchQueries: [
       {
         query: BaseDraftReportContextDocument,
-        variables: { sketchClassId: sketchClass.id },
+        variables: { reportId: report.id },
       },
     ],
     optimisticResponse: (

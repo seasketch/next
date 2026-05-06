@@ -32,7 +32,6 @@ import ReportDependenciesContextProvider, {
 } from "../../reports/context/ReportDependenciesContext";
 import ReportPublishedMetricDependenciesRegistrar from "../../reports/context/ReportPublishedMetricDependenciesRegistrar";
 import useIsSuperuser from "../../useIsSuperuser";
-import { BaseReportContextDocument } from "../../generated/queries";
 
 export default function SketchClassReportsAdmin({
   sketchClass,
@@ -213,7 +212,6 @@ export default function SketchClassReportsAdmin({
     refetchQueries: [
       DraftReportDocument,
       BaseDraftReportContextDocument,
-      BaseReportContextDocument,
     ],
     awaitRefetchQueries: true,
   });
@@ -297,13 +295,18 @@ export default function SketchClassReportsAdmin({
       </div>
     );
   }
+  // While draft report query is still resolving, avoid mounting report-id-rooted
+  // context with an undefined report id.
+  if (!draftReport) {
+    return null;
+  }
   if (!selectedSketchId) {
     // console.error("No selected sketch id");
     return null;
   }
 
   return (
-    <BaseReportContextProvider sketchClassId={sketchClass.id} draft={true}>
+    <BaseReportContextProvider reportId={draftReport.id}>
       <div className="flex flex-col w-full h-full overflow-y-hidden">
         {/* Admin chrome only: publish + last published (no card/report deps or form language) */}
         <div className="bg-gray-100 p-4 flex-none border-b shadow z-10 flex items-center justify-between">

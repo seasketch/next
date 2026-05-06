@@ -47,7 +47,6 @@ import { download } from "../../download";
 const noop = () => {};
 function SketchReportWindow({
   sketchId,
-  sketchClassId,
   reportId,
   uiState,
   selected,
@@ -55,7 +54,6 @@ function SketchReportWindow({
   reportingAccessToken,
   onClick,
 }: {
-  sketchClassId: number;
   sketchId: number;
   reportId: number;
   uiState: ReportWindowUIState;
@@ -93,7 +91,7 @@ function SketchReportWindow({
 
   return (
     <FormLanguageContext.Provider value={formLanguageContextValue}>
-      <BaseReportContextProvider sketchClassId={sketchClassId} draft={false}>
+      <BaseReportContextProvider reportId={reportId}>
         <SketchReportWindowInner
           sketchId={sketchId}
           reportId={reportId}
@@ -308,6 +306,10 @@ function ReportWindowActionsMenu({ onPrint }: { onPrint: () => void }) {
       if (!base.data || !subject.data) {
         return;
       }
+      const sketchClassForExport = subject.data.sketch.sketchClass;
+      if (!sketchClassForExport) {
+        return;
+      }
 
       const metricById = new Map(deps.metrics.map((m) => [m.id, m]));
       const sourceByStableId = new Map(
@@ -353,7 +355,7 @@ function ReportWindowActionsMenu({ onPrint }: { onPrint: () => void }) {
             metrics: cardMetrics,
             sources: cardSources,
             geographies: base.data.geographies,
-            sketchClass: base.data.sketchClass,
+            sketchClass: sketchClassForExport,
             subject: {
               sketchId: subject.data.sketch.id,
               sketchName: subject.data.sketch.name,

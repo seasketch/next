@@ -8,7 +8,6 @@ import {
   ReportWidgetTooltipControls,
   TooltipPopoverContent,
 } from "../../editor/TooltipMenu";
-import { useBaseReportContext } from "../context/BaseReportContext";
 import { useSubjectReportContext } from "../context/SubjectReportContext";
 
 type SketchAttributesTableSettings = {
@@ -31,9 +30,9 @@ export const SketchAttributesTable: ReportWidget<
   SketchAttributesTableSettings
 > = ({ componentSettings }) => {
   const { t } = useTranslation("reports");
-  const { sketchClass } = useBaseReportContext();
   const subjectReportContext = useSubjectReportContext();
   const sketch = subjectReportContext.data?.sketch;
+  const sketchClass = sketch?.sketchClass;
   const langContext = useContext(FormLanguageContext);
 
   const allFormElements = useMemo(() => {
@@ -122,7 +121,8 @@ export const SketchAttributesTable: ReportWidget<
 export const SketchAttributesTableTooltipControls: ReportWidgetTooltipControls =
   ({ node, onUpdate }) => {
     const { t } = useTranslation("admin:sketching");
-    const { sketchClass } = useBaseReportContext();
+    const subjectReportContext = useSubjectReportContext();
+    const sketchClass = subjectReportContext.data?.sketch?.sketchClass;
     const langContext = useContext(FormLanguageContext);
 
     const componentSettings: SketchAttributesTableSettings =

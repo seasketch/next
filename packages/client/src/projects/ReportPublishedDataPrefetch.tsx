@@ -19,9 +19,9 @@ function scheduleIdle(callback: () => void): () => void {
 
 /**
  * After the map app has loaded project metadata, warms the Apollo cache with
- * BaseReportContext and ReportOverlaySources for each published (non-archived)
- * sketch class. Scheduled only when the browser is idle so map and critical
- * queries stay prioritized.
+ * BaseReportContext (keyed by report id) and ReportOverlaySources for each
+ * published (non-archived) sketch class target. Scheduled only when the browser
+ * is idle so map and critical queries stay prioritized.
  */
 export default function ReportPublishedDataPrefetch({
   sketchClasses,
@@ -33,8 +33,12 @@ export default function ReportPublishedDataPrefetch({
 
   useEffect(() => {
     const targets =
-      sketchClasses?.filter(
-        (sc) => !sc.isArchived && sc.reportId != null,
+      Array.from(
+        new Set(
+          sketchClasses?.filter(
+            (sc) => !sc.isArchived && sc.reportId != null
+          ) ?? []
+        )
       ) ?? [];
     const fingerprint = targets
       .map((t) => `${t.id}:${t.reportId}`)
@@ -55,7 +59,7 @@ export default function ReportPublishedDataPrefetch({
           try {
             await client.query({
               query: BaseReportContextDocument,
-              variables: { sketchClassId: sc.id },
+              variables: { reportId: sc.reportId! },
               fetchPolicy: "cache-first",
             });
             if (cancelled) {

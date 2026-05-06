@@ -40,6 +40,7 @@ import {
 import { useBaseReportContext } from "../context/BaseReportContext";
 import { useSubjectReportContext } from "../context/SubjectReportContext";
 import { usePrimaryGeography } from "../hooks/usePrimaryGeography";
+import type { SketchClassPrimaryGeoFields } from "../hooks/usePrimaryGeography";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
 import { NumberRoundingControl } from "./NumberRoundingControl";
 import { VrmSelector } from "./VrmSelector";
@@ -947,10 +948,18 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
   const { filteredSources: sources } = useOverlaySources(dependencies);
   const relatedOverlay = useRelatedOverlay(dependencies);
 
-  const { geographies, sketchClass: tooltipSketchClass } =
-    useBaseReportContext();
+  const { geographies } = useBaseReportContext();
+  const subjectReportContext = useSubjectReportContext();
+  const tooltipSketchClass = subjectReportContext.data?.sketch?.sketchClass;
+  const sketchClassForPrimaryGeography: SketchClassPrimaryGeoFields =
+    tooltipSketchClass ?? {
+      geometryType: SketchGeometryType.Polygon,
+      clippingGeographies: [],
+      validChildren: [],
+      project: { sketchClasses: [] },
+    };
   const { clippingGeography } = usePrimaryGeography(
-    tooltipSketchClass,
+    sketchClassForPrimaryGeography,
     geographies
   );
 

@@ -32,6 +32,7 @@ import {
 } from "./components/MoveCardToTabModal";
 import { useCalculationDetailsModalState } from "./components/CalculationDetailsModal";
 import { BaseReportContext } from "./context/BaseReportContext";
+import { useSubjectReportContext } from "./context/SubjectReportContext";
 import { ReportUIStateContext } from "./context/ReportUIStateContext";
 import ReportFullPrintBridge from "./ReportFullPrintBridge";
 import { ReportTabManagementModal } from "./ReportTabManagementModal";
@@ -79,6 +80,7 @@ export default function ReportEditor({
   setSelectedSketchId: (sketchId: number | null) => void;
 }) {
   const baseContext = useContext(BaseReportContext);
+  const subjectContext = useSubjectReportContext();
   const [selectedTabId, setSelectedTabId] = useState<number | undefined>(
     baseContext.data?.report?.tabs?.[0]?.id || undefined
   );
@@ -111,7 +113,7 @@ export default function ReportEditor({
   const closeManageTabs = useCallback(() => setManageTabsOpen(false), []);
   const onError = useGlobalErrorHandler();
 
-  const projectId = baseContext.data?.sketchClass.projectId;
+  const projectId = subjectContext.data?.sketch?.sketchClass?.projectId;
   const copyCardsQuery = useCopyableReportCardsQuery({
     variables: { projectId: projectId! },
     skip: !projectId,
@@ -234,7 +236,7 @@ export default function ReportEditor({
       ],
     };
 
-    const sketchClassId = baseContext.data?.sketchClass.id;
+    const reportId = baseContext.data?.report?.id;
     try {
       const { data } = await addReportCard({
         variables: {
@@ -244,11 +246,11 @@ export default function ReportEditor({
           },
           body,
         },
-        refetchQueries: sketchClassId
+        refetchQueries: reportId
           ? [
               {
                 query: BaseDraftReportContextDocument,
-                variables: { sketchClassId },
+                variables: { reportId },
               },
             ]
           : [],
@@ -400,7 +402,7 @@ export default function ReportEditor({
                               0
                             }
                             currentSketchClassId={
-                              baseContext.data!.sketchClass.id
+                              subjectContext.data?.sketch?.sketchClass?.id ?? -1
                             }
                             draftReportId={baseContext.data!.report?.id ?? null}
                             demonstrationSketchId={selectedSketchId}
@@ -419,7 +421,7 @@ export default function ReportEditor({
                     onSelect={() => {
                       closeReportActionsMenu();
                       requestFullReportPrint();
-                    }}
+                          }}
                   >
                     {t("Print report")}
                   </DropdownMenu.Item>

@@ -39,7 +39,9 @@ import { VrmSelector } from "./VrmSelector";
 import ReportLayerVisibilityCheckbox from "../components/ReportLayerVisibilityCheckbox";
 import { LayersIcon } from "@radix-ui/react-icons";
 import { usePrimaryGeography } from "../hooks/usePrimaryGeography";
+import type { SketchClassPrimaryGeoFields } from "../hooks/usePrimaryGeography";
 import { useBaseReportContext } from "../context/BaseReportContext";
+import { useSubjectReportContext } from "../context/SubjectReportContext";
 import { GeographySelector } from "./InlineMetric";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import CollectionExpandableName from "./collection/CollectionExpandableName";
@@ -47,6 +49,7 @@ import SketchOverlapHint from "./collection/SketchOverlapHint";
 import { sketchContributionsForClassTableRow } from "./collection/sketchContributions";
 import { useCollectionSketchExpand } from "./collection/useCollectionSketchExpand";
 import { ReportUIStateContext } from "../context/ReportUIStateContext";
+import { SketchGeometryType } from "../../generated/graphql";
 
 type RasterProportionTableSettings = {
   geographyId?: number | "auto";
@@ -463,8 +466,20 @@ export const RasterProportionTableTooltipControls: ReportWidgetTooltipControls =
 
     const { filteredSources: sources } = useOverlaySources(dependencies);
 
-    const { geographies, sketchClass } = useBaseReportContext();
-    const { clippingGeography } = usePrimaryGeography(sketchClass, geographies);
+    const { geographies } = useBaseReportContext();
+    const subjectReportContext = useSubjectReportContext();
+    const sketchClass = subjectReportContext.data?.sketch?.sketchClass;
+    const sketchClassForPrimaryGeography: SketchClassPrimaryGeoFields =
+      sketchClass ?? {
+        geometryType: SketchGeometryType.Polygon,
+        clippingGeographies: [],
+        validChildren: [],
+        project: { sketchClasses: [] },
+      };
+    const { clippingGeography } = usePrimaryGeography(
+      sketchClassForPrimaryGeography,
+      geographies
+    );
 
     const handleUpdate = (patch: Partial<RasterProportionTableSettings>) => {
       onUpdate({

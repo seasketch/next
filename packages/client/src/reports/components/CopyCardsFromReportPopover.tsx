@@ -231,13 +231,16 @@ export function CopyCardsFromReportPopover({
         }
       }
 
-      const refetches: Promise<unknown>[] = [
-        client.query({
-          query: BaseDraftReportContextDocument,
-          variables: { sketchClassId: currentSketchClassId },
-          fetchPolicy: "network-only",
-        }),
-      ];
+      const refetches: Promise<unknown>[] = [];
+      if (draftReportId != null) {
+        refetches.push(
+          client.query({
+            query: BaseDraftReportContextDocument,
+            variables: { reportId: draftReportId },
+            fetchPolicy: "network-only",
+          })
+        );
+      }
 
       if (draftReportId != null && demonstrationSketchId != null) {
         evictSubjectReportCachesForSketchId(client.cache, demonstrationSketchId, {

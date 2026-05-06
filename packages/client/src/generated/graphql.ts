@@ -972,7 +972,11 @@ export enum ChangeLogFieldGroup {
   LayerTitle = 'LAYER_TITLE',
   LayerUploaded = 'LAYER_UPLOADED',
   LayersPublished = 'LAYERS_PUBLISHED',
-  LayersZOrderChange = 'LAYERS_Z_ORDER_CHANGE'
+  LayersZOrderChange = 'LAYERS_Z_ORDER_CHANGE',
+  ResolvableLayerCommentsCreated = 'RESOLVABLE_LAYER_COMMENTS_CREATED',
+  ResolvableLayerCommentsReopened = 'RESOLVABLE_LAYER_COMMENTS_REOPENED',
+  ResolvableLayerCommentsResolved = 'RESOLVABLE_LAYER_COMMENTS_RESOLVED',
+  ResolvableLayerCommentsResponded = 'RESOLVABLE_LAYER_COMMENTS_RESPONDED'
 }
 
 export enum ChangeLogStatus {
@@ -24289,36 +24293,36 @@ export type BaseReportDetailsFragment = (
 );
 
 export type BaseReportContextQueryVariables = Exact<{
-  sketchClassId: Scalars['Int'];
+  reportId: Scalars['Int'];
 }>;
 
 
 export type BaseReportContextQuery = (
   { __typename?: 'Query' }
-  & { sketchClass?: Maybe<(
-    { __typename?: 'SketchClass' }
-    & { report?: Maybe<(
-      { __typename?: 'Report' }
-      & BaseReportDetailsFragment
-    )> }
-    & ReportContextSketchClassDetailsFragment
+  & { report?: Maybe<(
+    { __typename?: 'Report' }
+    & { geographies?: Maybe<Array<(
+      { __typename?: 'Geography' }
+      & Pick<Geography, 'id' | 'name' | 'translatedProps' | 'stableIds'>
+    )>> }
+    & BaseReportDetailsFragment
   )> }
 );
 
 export type BaseDraftReportContextQueryVariables = Exact<{
-  sketchClassId: Scalars['Int'];
+  reportId: Scalars['Int'];
 }>;
 
 
 export type BaseDraftReportContextQuery = (
   { __typename?: 'Query' }
-  & { sketchClass?: Maybe<(
-    { __typename?: 'SketchClass' }
-    & { draftReport?: Maybe<(
-      { __typename?: 'Report' }
-      & BaseReportDetailsFragment
-    )> }
-    & ReportContextSketchClassDetailsFragment
+  & { report?: Maybe<(
+    { __typename?: 'Report' }
+    & { geographies?: Maybe<Array<(
+      { __typename?: 'Geography' }
+      & Pick<Geography, 'id' | 'name' | 'translatedProps' | 'stableIds'>
+    )>> }
+    & BaseReportDetailsFragment
   )> }
 );
 
@@ -38269,16 +38273,18 @@ export type ReportOverlaySourcesQueryHookResult = ReturnType<typeof useReportOve
 export type ReportOverlaySourcesLazyQueryHookResult = ReturnType<typeof useReportOverlaySourcesLazyQuery>;
 export type ReportOverlaySourcesQueryResult = Apollo.QueryResult<ReportOverlaySourcesQuery, ReportOverlaySourcesQueryVariables>;
 export const BaseReportContextDocument = gql`
-    query BaseReportContext($sketchClassId: Int!) {
-  sketchClass(id: $sketchClassId) {
-    ...ReportContextSketchClassDetails
-    report {
-      ...BaseReportDetails
+    query BaseReportContext($reportId: Int!) {
+  report(id: $reportId) {
+    ...BaseReportDetails
+    geographies {
+      id
+      name
+      translatedProps
+      stableIds
     }
   }
 }
-    ${ReportContextSketchClassDetailsFragmentDoc}
-${BaseReportDetailsFragmentDoc}`;
+    ${BaseReportDetailsFragmentDoc}`;
 
 /**
  * __useBaseReportContextQuery__
@@ -38292,7 +38298,7 @@ ${BaseReportDetailsFragmentDoc}`;
  * @example
  * const { data, loading, error } = useBaseReportContextQuery({
  *   variables: {
- *      sketchClassId: // value for 'sketchClassId'
+ *      reportId: // value for 'reportId'
  *   },
  * });
  */
@@ -38308,16 +38314,18 @@ export type BaseReportContextQueryHookResult = ReturnType<typeof useBaseReportCo
 export type BaseReportContextLazyQueryHookResult = ReturnType<typeof useBaseReportContextLazyQuery>;
 export type BaseReportContextQueryResult = Apollo.QueryResult<BaseReportContextQuery, BaseReportContextQueryVariables>;
 export const BaseDraftReportContextDocument = gql`
-    query BaseDraftReportContext($sketchClassId: Int!) {
-  sketchClass(id: $sketchClassId) {
-    ...ReportContextSketchClassDetails
-    draftReport {
-      ...BaseReportDetails
+    query BaseDraftReportContext($reportId: Int!) {
+  report(id: $reportId) {
+    ...BaseReportDetails
+    geographies {
+      id
+      name
+      translatedProps
+      stableIds
     }
   }
 }
-    ${ReportContextSketchClassDetailsFragmentDoc}
-${BaseReportDetailsFragmentDoc}`;
+    ${BaseReportDetailsFragmentDoc}`;
 
 /**
  * __useBaseDraftReportContextQuery__
@@ -38331,7 +38339,7 @@ ${BaseReportDetailsFragmentDoc}`;
  * @example
  * const { data, loading, error } = useBaseDraftReportContextQuery({
  *   variables: {
- *      sketchClassId: // value for 'sketchClassId'
+ *      reportId: // value for 'reportId'
  *   },
  * });
  */

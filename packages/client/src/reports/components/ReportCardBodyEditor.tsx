@@ -79,7 +79,9 @@ import { ReportUIStateContext } from "../context/ReportUIStateContext";
 import { useBaseReportContext } from "../context/BaseReportContext";
 import { useSubjectReportContext } from "../context/SubjectReportContext";
 import { usePrimaryGeography } from "../hooks/usePrimaryGeography";
+import type { SketchClassPrimaryGeoFields } from "../hooks/usePrimaryGeography";
 import { CalculationDetailsModal } from "./CalculationDetailsModal";
+import { SketchGeometryType } from "../../generated/graphql";
 
 interface ReportCardBodyEditorProps {
   /**
@@ -152,13 +154,21 @@ function ReportCardBodyEditorInner({
 
   const onEditorReadyForFocusRef = useRef(onEditorReadyForFocus);
   onEditorReadyForFocusRef.current = onEditorReadyForFocus;
-  const { geographies, sketchClass, report } = useBaseReportContext();
-  const { clippingGeography: primaryClippingGeography } = usePrimaryGeography(
-    sketchClass,
-    geographies
-  );
+  const { geographies, report } = useBaseReportContext();
   const subjectReportContext = useSubjectReportContext();
   const sketch = subjectReportContext.data?.sketch;
+  const sketchClass = sketch?.sketchClass;
+  const sketchClassForPrimaryGeography: SketchClassPrimaryGeoFields =
+    sketchClass ?? {
+      geometryType: SketchGeometryType.Polygon,
+      clippingGeographies: [],
+      validChildren: [],
+      project: { sketchClasses: [] },
+    };
+  const { clippingGeography: primaryClippingGeography } = usePrimaryGeography(
+    sketchClassForPrimaryGeography,
+    geographies
+  );
 
   const refetchDraftReportTree = useMemo(
     () => [
@@ -168,10 +178,10 @@ function ReportCardBodyEditorInner({
       // },
       {
         query: BaseDraftReportContextDocument,
-        variables: { sketchClassId: sketchClass.id },
+        variables: { reportId: report.id },
       },
     ],
-    [sketchClass.id]
+    [report.id]
   );
 
   const [reportBodyHasChanges, setReportBodyHasChanges] = useState(false);
@@ -180,10 +190,10 @@ function ReportCardBodyEditorInner({
   );
   const onError = useGlobalErrorHandler();
   const apolloClient = useApolloClient();
-  const projectId = sketchClass.projectId;
+  const projectId = sketchClass?.projectId;
 
   const uploadFile = useMemo(
-    () => createReportImageUploader(apolloClient, projectId, onError),
+    () => createReportImageUploader(apolloClient, projectId || 0, onError),
     [apolloClient, projectId, onError]
   );
 

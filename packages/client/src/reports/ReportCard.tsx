@@ -241,8 +241,9 @@ export default function ReportCard(
   const baseReportContext = useBaseReportContext();
   const toolbarContext = useContext(ReportCardTitleToolbarContext);
   const subjectReportContext = useSubjectReportContext();
+  const subjectSketchClass = subjectReportContext.data?.sketch?.sketchClass;
   const sessionIsAdmin =
-    baseReportContext.sketchClass.project?.sessionIsAdmin || false;
+    subjectSketchClass?.project?.sessionIsAdmin || false;
   const showAdminCalculationDetails = adminMode || sessionIsAdmin;
   const cardDependencies = useCardDependencies(props.config.id);
 
@@ -291,6 +292,10 @@ export default function ReportCard(
       if (!subjectReportContext.data) return;
 
       const subject = subjectReportContext.data;
+      const sketchClassForExport = subject.sketch.sketchClass;
+      if (!sketchClassForExport) {
+        return;
+      }
       const input = {
         reportId: baseReportContext.report.id,
         cardId: props.config.id,
@@ -299,7 +304,7 @@ export default function ReportCard(
         metrics: cardDependencies.metrics,
         sources: cardDependencies.overlaySources,
         geographies: baseReportContext.geographies,
-        sketchClass: baseReportContext.sketchClass,
+        sketchClass: sketchClassForExport,
         subject: {
           sketchId: subject.sketch.id,
           sketchName: subject.sketch.name,
@@ -346,7 +351,6 @@ export default function ReportCard(
     [
       baseReportContext.geographies,
       baseReportContext.report.id,
-      baseReportContext.sketchClass,
       cardDependencies.loading,
       cardDependencies.metrics,
       cardDependencies.overlaySources,
@@ -372,7 +376,7 @@ export default function ReportCard(
         sources: cardDependencies.overlaySources,
         loading: cardDependencies.loading,
         geographies: baseReportContext.geographies,
-        sketchClass: baseReportContext.sketchClass,
+        sketchClass: subjectSketchClass ?? null,
         errors: cardDependencies.errors,
       }}
     >

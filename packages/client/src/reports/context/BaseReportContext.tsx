@@ -1,27 +1,14 @@
 import { createContext, useContext, useMemo } from "react";
 import {
-  BaseDraftReportContextDocument,
-  BaseDraftReportContextQuery,
   BaseReportContextDocument,
   BaseReportContextQuery,
   BaseReportContextQueryVariables,
   Geography,
-  ReportContextSketchClassDetailsFragment,
 } from "../../generated/graphql";
 import { ReportConfiguration } from "../cards/cards";
 import { useQuery } from "@apollo/client";
 
 type BaseReportContextValue = {
-  sketchClass: Pick<
-    ReportContextSketchClassDetailsFragment,
-    | "id"
-    | "projectId"
-    | "geometryType"
-    | "form"
-    | "clippingGeographies"
-    | "project"
-    | "validChildren"
-  >;
   report: ReportConfiguration;
   geographies: Pick<
     Geography,
@@ -36,51 +23,29 @@ export const BaseReportContext = createContext<{
 
 export function BaseReportContextProvider({
   children,
-  sketchClassId,
-  draft,
+  reportId,
 }: {
   children: React.ReactNode;
-  sketchClassId: number;
-  draft: boolean;
+  reportId: number;
 }) {
-  const publishedQuery = useQuery<
-    BaseReportContextQuery,
-    BaseReportContextQueryVariables
-  >(BaseReportContextDocument, { variables: { sketchClassId }, skip: draft });
-  const draftQuery = useQuery<
-    BaseDraftReportContextQuery,
-    BaseReportContextQueryVariables
-  >(BaseDraftReportContextDocument, {
-    variables: { sketchClassId },
-    skip: !draft,
-  });
-
-  const data = draft ? draftQuery.data : publishedQuery.data;
-  const loading = draft ? draftQuery.loading : publishedQuery.loading;
+  const query = useQuery<BaseReportContextQuery, BaseReportContextQueryVariables>(
+    BaseReportContextDocument,
+    { variables: { reportId } }
+  );
 
   const value = useMemo<BaseReportContextValue | undefined>(() => {
-    if (data) {
-      if (!data.sketchClass) {
-        throw new Error("Sketch class not found");
-      }
-      if (!data.sketchClass.project) {
-        throw new Error("Project not found");
-      }
-      const report = draft
-        ? (data as BaseDraftReportContextQuery).sketchClass?.draftReport
-        : (data as BaseReportContextQuery).sketchClass?.report;
+    if (query.data?.report) {
       return {
-        sketchClass: data.sketchClass,
-        report: report as unknown as ReportConfiguration,
-        geographies: data.sketchClass?.project?.geographies || [],
+        report: query.data.report as unknown as ReportConfiguration,
+        geographies: query.data.report.geographies || [],
       };
     } else {
       return undefined;
     }
-  }, [data, draft]);
+  }, [query.data]);
 
   return (
-    <BaseReportContext.Provider value={{ data: value, loading }}>
+    <BaseReportContext.Provider value={{ data: value, loading: query.loading }}>
       {children}
     </BaseReportContext.Provider>
   );

@@ -1991,7 +1991,6 @@ export default function SketchUIStateContextProvider({
                       <SketchReportWindow
                         key={reportKey}
                         sketchId={sketchId}
-                        sketchClassId={sketchClassId}
                         reportId={sketchClass.reportId}
                         onRequestClose={handleClose}
                         uiState={uiState}

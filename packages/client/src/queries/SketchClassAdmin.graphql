@@ -771,20 +771,26 @@ fragment BaseReportDetails on Report {
   }
 }
 
-query BaseReportContext($sketchClassId: Int!) {
-  sketchClass(id: $sketchClassId) {
-    ...ReportContextSketchClassDetails
-    report {
-      ...BaseReportDetails
+query BaseReportContext($reportId: Int!) {
+  report(id: $reportId) {
+    ...BaseReportDetails
+    geographies {
+      id
+      name
+      translatedProps
+      stableIds
     }
   }
 }
 
-query BaseDraftReportContext($sketchClassId: Int!) {
-  sketchClass(id: $sketchClassId) {
-    ...ReportContextSketchClassDetails
-    draftReport {
-      ...BaseReportDetails
+query BaseDraftReportContext($reportId: Int!) {
+  report(id: $reportId) {
+    ...BaseReportDetails
+    geographies {
+      id
+      name
+      translatedProps
+      stableIds
     }
   }
 }

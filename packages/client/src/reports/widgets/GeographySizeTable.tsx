@@ -45,6 +45,7 @@ export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
   metrics,
   componentSettings,
   geographies,
+  sketchClass,
   loading,
   alternateLanguageSettings,
 }) => {
@@ -65,7 +66,6 @@ export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
     [componentSettings?.excludeGeographies]
   );
 
-  const baseReportContext = useBaseReportContext();
   const { printing } = useContext(ReportUIStateContext);
   const {
     isCollection,
@@ -74,7 +74,7 @@ export const GeographySizeTable: ReportWidget<GeographySizeTableSettings> = ({
     toggleRow,
     hideCaretExpandTooltip,
     isSketchBreakdownExpanded,
-  } = useCollectionSketchExpand(baseReportContext.sketchClass, {
+  } = useCollectionSketchExpand(sketchClass, {
     forceAllExpanded: printing,
   });
 
