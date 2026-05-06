@@ -69,6 +69,17 @@ export const MyComponent: React.FC<MyComponentProps> = ({ title }) => {
 - When a new query or mutation is necessary, create it in `packages/api/migrations/current.sql`, following the guidance of the PostGraphile documentation at https://www.graphile.org/postgraphile/introduction/. Never create a migration file in `packages/api/migrations/committed` directly. If a mutation or query is particularly complex, it can be implemented as a plugin under `packages/api/src/plugins`.
 - Never directly edit client/src/generated/\* files! If you need to modify queries and related auto-generated types, edit .graphql files and run the `graphql:codegen` npm script to regenerate these files.
 
+## Database Migration Workflow (Mandatory)
+
+- `packages/api/migrations/current.sql` is the only place for in-progress migration work. Do not create/edit files in `packages/api/migrations/committed` directly.
+- Every substantial change in `current.sql` MUST follow an explicit **undo-then-redo** pattern so the file can be re-run safely during local iteration and branch switching.
+- Write `current.sql` in this structure:
+  - `-- undo`: drop/revert prior local objects first (`drop ... if exists ... cascade`, `drop function if exists ...`, etc.).
+  - `-- redo`: recreate the intended final schema objects, functions, policies, indexes, and triggers.
+- Treat the undo section as required for destructive or shape-changing work (table/function/view/type/policy/index/trigger changes). Generated code should never omit undo statements for these edits.
+- Keep migrations idempotent and branch-switch safe; assume `graphile-migrate watch` may run repeatedly against a drifted local dev database.
+- Before finishing migration work, verify dependent objects dropped via `cascade` are recreated in the redo section.
+
 ## React Client -- verifying your work
 
 - Whenever making changes to the client, run `npm run lint` from `packages/client` to ensure there are no linter errors that will break the build.
