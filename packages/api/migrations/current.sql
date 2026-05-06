@@ -3,6 +3,8 @@
 drop function if exists public.get_latest_published_report_for_draft(integer);
 drop function if exists public.get_primary_draft_report_id_for_sketch_class(integer);
 drop function if exists public.get_effective_report_for_sketch_class(integer, boolean);
+drop function if exists public.create_report(integer, text, integer[]);
+drop function if exists public.create_custom_report(integer, text, integer[]);
 drop function if exists public.create_project_draft_report(integer, text);
 drop function if exists public.set_primary_report_for_sketch_class(integer, integer);
 drop function if exists public.sketch_classes_draft_report(public.sketch_classes);
@@ -71,6 +73,16 @@ create index if not exists sketch_class_reports_draft_report_id_idx
 update public.reports r
 set title = coalesce(
     (
+      select concat(sc.name, ' Report')
+      from public.sketch_classes sc
+      where sc.draft_report_id = r.id
+         or sc.report_id = r.id
+      order by
+        case when sc.draft_report_id = r.id then 0 else 1 end,
+        sc.id asc
+      limit 1
+    ),
+    (
       select rt.title
       from public.report_tabs rt
       where rt.report_id = r.id
@@ -125,6 +137,23 @@ set
   is_primary = excluded.is_primary,
   updated_at = now();
 
+-- Remove legacy reports that are not part of any assigned lineage.
+with assigned_lineages as (
+  select distinct scr.draft_report_id
+  from public.sketch_class_reports scr
+)
+delete from public.reports r
+where not exists (
+  select 1
+  from assigned_lineages al
+  where al.draft_report_id = r.id
+)
+and not exists (
+  select 1
+  from assigned_lineages al
+  where al.draft_report_id = r.draft_id
+);
+
 create or replace function public.get_primary_draft_report_id_for_sketch_class(
   sketch_class_id integer
 ) returns integer
@@ -132,27 +161,18 @@ language sql
 stable
 security definer
 as $$
-  select coalesce(
-    (
-      select scr.draft_report_id
-      from public.sketch_class_reports scr
-      where scr.sketch_class_id = get_primary_draft_report_id_for_sketch_class.sketch_class_id
-        and scr.is_primary = true
-      order by scr.updated_at desc, scr.created_at desc
-      limit 1
-    ),
-    (
-      select coalesce(sc.draft_report_id, sc.report_id)
-      from public.sketch_classes sc
-      where sc.id = get_primary_draft_report_id_for_sketch_class.sketch_class_id
-      limit 1
-    )
-  );
+  select scr.draft_report_id
+  from public.sketch_class_reports scr
+  where scr.sketch_class_id = get_primary_draft_report_id_for_sketch_class.sketch_class_id
+    and scr.is_primary = true
+  order by scr.updated_at desc, scr.created_at desc
+  limit 1;
 $$;
 
-create or replace function public.create_project_draft_report(
+create or replace function public.create_custom_report(
   project_id integer,
-  title text default 'Untitled Report'
+  title text,
+  sketch_class_ids integer[] default null
 ) returns public.reports
 language plpgsql
 security definer
@@ -160,9 +180,31 @@ as $$
 declare
   new_report public.reports;
   dr_report_tab_id int;
+  class_ids integer[];
+  invalid_count int;
 begin
   if not session_is_admin(project_id) then
     raise exception 'You are not authorized to create reports for this project';
+  end if;
+
+  if nullif(title, '') is null then
+    raise exception 'Title is required';
+  end if;
+
+  class_ids := coalesce(sketch_class_ids, '{}');
+
+  if array_length(class_ids, 1) > 0 then
+    select count(*)
+    into invalid_count
+    from unnest(class_ids) class_id
+    left join public.sketch_classes sc
+      on sc.id = class_id
+     and sc.project_id = create_custom_report.project_id
+    where sc.id is null;
+
+    if invalid_count > 0 then
+      raise exception 'All sketch classes must belong to the same project';
+    end if;
   end if;
 
   insert into public.reports (
@@ -173,7 +215,7 @@ begin
     published_at
   ) values (
     project_id,
-    coalesce(nullif(title, ''), 'Untitled Report'),
+    title,
     0,
     null,
     null
@@ -203,6 +245,23 @@ begin
     jsonb_build_object('type', 'Attributes')
   );
 
+  if array_length(class_ids, 1) > 0 then
+    -- Clear existing relations for provided classes before assigning this report as primary.
+    delete from public.sketch_class_reports scr
+    where scr.sketch_class_id = any(class_ids);
+
+    insert into public.sketch_class_reports (
+      sketch_class_id,
+      draft_report_id,
+      is_primary
+    )
+    select
+      class_id,
+      new_report.id,
+      true
+    from unnest(class_ids) class_id;
+  end if;
+
   return new_report;
 end;
 $$;
@@ -219,7 +278,6 @@ declare
   report_project_id int;
   report_version int;
   selected public.sketch_classes;
-  effective_report_id int;
 begin
   select sc.project_id
   into project_id
@@ -248,13 +306,11 @@ begin
   end if;
 
   if report_version != 0 then
-    raise exception 'Only draft report lineage roots can be assigned';
+    raise exception 'Assertion failed: Only draft reports can be assigned to a sketch class.';
   end if;
 
-  update public.sketch_class_reports
-  set
-    is_primary = false,
-    updated_at = now()
+  -- clear any existing primary assignment
+  delete from public.sketch_class_reports
   where sketch_class_id = set_primary_report_for_sketch_class.sketch_class_id
     and is_primary = true;
 
@@ -266,23 +322,7 @@ begin
     sketch_class_id,
     draft_report_id,
     true
-  )
-  on conflict (sketch_class_id, draft_report_id)
-  do update set
-    is_primary = true,
-    updated_at = now();
-
-  effective_report_id := public.get_effective_report_for_sketch_class(
-    sketch_class_id,
-    false
   );
-
-  -- Legacy compatibility while old fields still exist.
-  update public.sketch_classes
-  set
-    draft_report_id = set_primary_report_for_sketch_class.draft_report_id,
-    report_id = effective_report_id
-  where id = sketch_class_id;
 
   select *
   into selected
@@ -307,32 +347,6 @@ as $$
   limit 1;
 $$;
 
-create or replace function public.get_effective_report_for_sketch_class(
-  sketch_class_id integer,
-  draft boolean default false
-) returns integer
-language plpgsql
-stable
-security definer
-as $$
-declare
-  draft_report_id integer;
-  published_report_id integer;
-begin
-  draft_report_id := public.get_primary_draft_report_id_for_sketch_class(sketch_class_id);
-  if draft then
-    return draft_report_id;
-  end if;
-
-  if draft_report_id is null then
-    return null;
-  end if;
-
-  published_report_id := public.get_latest_published_report_for_draft(draft_report_id);
-  return coalesce(published_report_id, draft_report_id);
-end;
-$$;
-
 create or replace function public.sketch_classes_draft_report(
   sc public.sketch_classes
 ) returns public.reports
@@ -341,7 +355,7 @@ stable
 as $$
   select *
   from public.reports r
-  where r.id = public.get_effective_report_for_sketch_class(sc.id, true)
+  where r.id = public.get_primary_draft_report_id_for_sketch_class(sc.id)
   limit 1;
 $$;
 
@@ -353,11 +367,13 @@ stable
 as $$
   select *
   from public.reports r
-  where r.id = public.get_effective_report_for_sketch_class(sc.id, false)
+  where r.id = public.get_latest_published_report_for_draft(
+    public.get_primary_draft_report_id_for_sketch_class(sc.id)
+  )
   limit 1;
 $$;
 
-create or replace function public.publish_report(sketch_class_id integer)
+create or replace function public.publish_report(report_id integer)
 returns public.sketch_classes
 language plpgsql
 security definer
@@ -367,6 +383,9 @@ declare
   new_report public.reports;
   draft_report_id int;
   project_id int;
+  draft_report_version int;
+  draft_lineage_parent_id int;
+  draft_sketch_class_id int;
   new_report_id int;
   old_tab_id int;
   new_tab_id int;
@@ -378,23 +397,31 @@ declare
   sid text;
   max_lineage_version int;
 begin
-  select sc.project_id into project_id
-  from public.sketch_classes sc
-  where sc.id = sketch_class_id;
+  draft_report_id := report_id;
+
+  select
+    r.project_id,
+    r.version,
+    r.draft_id,
+    r.sketch_class_id
+  into
+    project_id,
+    draft_report_version,
+    draft_lineage_parent_id,
+    draft_sketch_class_id
+  from public.reports r
+  where r.id = draft_report_id;
 
   if project_id is null then
-    raise exception 'Sketch class not found';
+    raise exception 'Report not found';
   end if;
 
   if not session_is_admin(project_id) then
     raise exception 'You are not authorized to publish this report';
   end if;
 
-  select public.get_primary_draft_report_id_for_sketch_class(sketch_class_id)
-  into draft_report_id;
-
-  if draft_report_id is null then
-    raise exception 'No draft report exists for this sketch class';
+  if draft_report_version != 0 or draft_lineage_parent_id is not null then
+    raise exception 'Only draft reports can be published';
   end if;
 
   select coalesce(max(version), 0)
@@ -540,7 +567,7 @@ begin
   )
   select
     r.project_id,
-    sketch_class_id,
+    coalesce(r.sketch_class_id, draft_sketch_class_id),
     coalesce(r.title, 'Untitled Report'),
     max_lineage_version + 1,
     draft_report_id,
@@ -597,127 +624,25 @@ begin
     order by rc.position;
   end loop;
 
-  -- Legacy compatibility while old fields still exist.
-  update public.sketch_classes sc
-  set report_id = new_report_id
-  where sc.id in (
-    select scr.sketch_class_id
-    from public.sketch_class_reports scr
-    where scr.draft_report_id = publish_report.draft_report_id
-      and scr.is_primary = true
-  );
-
   select * into published_sketch_class
   from public.sketch_classes
-  where id = sketch_class_id;
+  where id = draft_sketch_class_id;
   return published_sketch_class;
 end;
 $$;
 
--- Backward-compatible helper preserved as the sketch-class entrypoint.
-create or replace function public.create_draft_report(sketch_class_id integer)
-returns public.reports
-language plpgsql
-security definer
-as $$
-declare
-  pid int;
-  existing_draft_id int;
-  new_report public.reports;
-  dr_report_tab_id int;
-begin
-  select project_id into pid from public.sketch_classes where id = sketch_class_id limit 1;
-  if pid is null then
-    raise exception 'Sketch class not found';
-  end if;
-
-  if not session_is_admin(pid) then
-    raise exception 'You are not authorized to create a draft report for this sketch class';
-  end if;
-
-  select public.get_primary_draft_report_id_for_sketch_class(sketch_class_id)
-  into existing_draft_id;
-  if existing_draft_id is not null then
-    select * into new_report from public.reports where id = existing_draft_id;
-    return new_report;
-  end if;
-
-  insert into public.reports (
-    project_id,
-    sketch_class_id,
-    title,
-    version,
-    draft_id,
-    published_at
-  ) values (
-    pid,
-    sketch_class_id,
-    'Untitled Report',
-    0,
-    null,
-    null
-  ) returning * into new_report;
-
-  insert into public.report_tabs (
-    report_id,
-    title,
-    position
-  ) values (
-    new_report.id,
-    'Attributes',
-    0
-  ) returning id into dr_report_tab_id;
-
-  insert into public.report_cards (
-    report_tab_id,
-    body,
-    position,
-    alternate_language_settings,
-    component_settings
-  ) values (
-    dr_report_tab_id,
-    '{"type": "doc", "content": [{"type": "reportTitle", "content": [{"type": "text", "text": "Attributes"}]}]}'::jsonb,
-    0,
-    '{}',
-    jsonb_build_object('type', 'Attributes')
-  );
-
-  insert into public.sketch_class_reports (
-    sketch_class_id,
-    draft_report_id,
-    is_primary
-  ) values (
-    sketch_class_id,
-    new_report.id,
-    true
-  )
-  on conflict (sketch_class_id, draft_report_id)
-  do update set
-    is_primary = true,
-    updated_at = now();
-
-  -- Legacy compatibility while old fields still exist.
-  update public.sketch_classes
-  set draft_report_id = new_report.id
-  where id = sketch_class_id;
-
-  return new_report;
-end;
-$$;
-
-grant all on function public.create_draft_report(integer) to seasketch_user;
+grant all on function public.create_custom_report(integer, text, integer[]) to seasketch_user;
 grant all on function public.publish_report(integer) to seasketch_user;
-grant all on function public.create_project_draft_report(integer, text) to seasketch_user;
 grant all on function public.set_primary_report_for_sketch_class(integer, integer) to seasketch_user;
 grant all on function public.get_primary_draft_report_id_for_sketch_class(integer) to seasketch_user;
 grant all on function public.get_latest_published_report_for_draft(integer) to seasketch_user;
-grant all on function public.get_effective_report_for_sketch_class(integer, boolean) to seasketch_user;
 grant all on function public.sketch_classes_draft_report(public.sketch_classes) to anon;
 grant all on function public.sketch_classes_draft_report(public.sketch_classes) to seasketch_user;
 grant all on function public.sketch_classes_report(public.sketch_classes) to anon;
 grant all on function public.sketch_classes_report(public.sketch_classes) to seasketch_user;
 grant all on function public.get_primary_draft_report_id_for_sketch_class(integer) to seasketch_superuser;
 grant all on function public.get_latest_published_report_for_draft(integer) to seasketch_superuser;
-grant all on function public.get_effective_report_for_sketch_class(integer, boolean) to seasketch_superuser;
+grant all on function public.create_custom_report(integer, text, integer[]) to seasketch_superuser;
+grant all on function public.publish_report(integer) to seasketch_superuser;
 grant all on function public.sketch_classes_draft_report(public.sketch_classes) to seasketch_superuser;
 grant all on function public.sketch_classes_report(public.sketch_classes) to seasketch_superuser;

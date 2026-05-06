@@ -439,14 +439,6 @@ query DraftReportDebuggingMaterials($sketchClassId: Int!) {
   }
 }
 
-mutation CreateDraftReport($sketchClassId: Int!) {
-  createDraftReport(input: { sketchClassId: $sketchClassId }) {
-    report {
-      ...ReportDetails
-    }
-  }
-}
-
 mutation AddReportTab($reportId: Int!, $position: Int!, $title: String!) {
   addReportTab(
     input: { reportId: $reportId, tabPosition: $position, title: $title }
@@ -567,8 +559,8 @@ mutation MoveCardToTab($cardId: Int!, $tabId: Int!) {
   }
 }
 
-mutation PublishReport($sketchClassId: Int!) {
-  publishReport(input: { sketchClassId: $sketchClassId }) {
+mutation PublishReport($reportId: Int!) {
+  publishReport(input: { reportId: $reportId }) {
     sketchClass {
       ...AdminSketchingDetails
     }
@@ -1005,8 +997,18 @@ query SketchClassReportAssignment($slug: String!, $sketchClassId: Int!) {
   }
 }
 
-mutation CreateProjectDraftReport($projectId: Int!, $title: String) {
-  createProjectDraftReport(input: { projectId: $projectId, title: $title }) {
+mutation CreateCustomReport(
+  $projectId: Int!
+  $title: String!
+  $sketchClassIds: [Int!]
+) {
+  createCustomReport(
+    input: {
+      projectId: $projectId
+      title: $title
+      sketchClassIds: $sketchClassIds
+    }
+  ) {
     report {
       id
     }

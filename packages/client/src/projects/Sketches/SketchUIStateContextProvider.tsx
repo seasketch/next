@@ -1223,7 +1223,7 @@ export default function SketchUIStateContextProvider({
       for (const collection of updatedCols) {
         if (collection) {
           evictSubjectReportCachesForSketchId(cache, collection.id, {
-            reportId: collection.sketchClass?.reportId,
+            reportId: collection.sketchClass?.report?.id,
             skipGarbageCollection: true,
           });
         }
@@ -1986,12 +1986,12 @@ export default function SketchUIStateContextProvider({
                       sketchId,
                       previewNewReporting ?? false
                     );
-                  if (canUseNewReporting && sketchClass?.reportId) {
+                  if (canUseNewReporting && sketchClass?.report?.id) {
                     return (
                       <SketchReportWindow
                         key={reportKey}
                         sketchId={sketchId}
-                        reportId={sketchClass.reportId}
+                        reportId={sketchClass.report.id}
                         onRequestClose={handleClose}
                         uiState={uiState}
                         selected={

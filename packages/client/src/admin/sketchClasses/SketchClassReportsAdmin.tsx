@@ -6,7 +6,6 @@ import {
   DraftReportDebuggingMaterialsDocument,
   DraftReportDebuggingMaterialsQuery,
   SketchingDetailsFragment,
-  useCreateDraftReportMutation,
   useDraftReportQuery,
   useProjectMetadataQuery,
   usePublishReportMutation,
@@ -145,12 +144,6 @@ export default function SketchClassReportsAdmin({
     [language, setFormLanguage, projectData?.project?.supportedLanguages]
   );
 
-  const [createDraftReport, createDraftReportState] =
-    useCreateDraftReportMutation({
-      awaitRefetchQueries: true,
-      refetchQueries: [DraftReportDocument],
-    });
-
   const [publishTableOfContents] = usePublishTableOfContentsMutation({
     refetchQueries: [
       PublishedTableOfContentsDocument,
@@ -191,13 +184,19 @@ export default function SketchClassReportsAdmin({
             const { hideLoadingMessage } = loadingMessage(
               t("Publishing overlays...")
             );
+            const draftReportId = draftReport?.id;
+            if (!draftReportId) {
+              hideLoadingMessage();
+              onError(new Error("No draft report is available to publish"));
+              return;
+            }
             try {
               await publishTableOfContents({
                 variables: { projectId: projectId! },
               });
               hideLoadingMessage();
               await publishReport({
-                variables: { sketchClassId: sketchClass.id },
+                variables: { reportId: draftReportId },
               });
             } catch (e) {
               hideLoadingMessage();
@@ -220,40 +219,11 @@ export default function SketchClassReportsAdmin({
   // Use the custom hook to manage report state
 
   if (!loading && !draftReport) {
-    if (
-      !createDraftReportState.called &&
-      !createDraftReportState.loading &&
-      !createDraftReportState.error
-    ) {
-      createDraftReport({
-        variables: {
-          sketchClassId: sketchClass.id,
-        },
-      }).catch(() => {
-        // do nothing. component will show error
-      });
-    }
     return (
       <div className="flex flex-col w-full h-full items-center p-8">
-        {createDraftReportState.called &&
-          !createDraftReportState.loading &&
-          !createDraftReportState.error && (
-            <Warning level="warning">{t("No draft report found")}</Warning>
-          )}
-        {createDraftReportState.error && (
-          <Warning level="error">
-            {t("Error creating draft report. ")}
-            {createDraftReportState.error.message}
-          </Warning>
-        )}
-        {createDraftReportState.loading && (
-          <div className="flex flex-col w-full h-full items-center p-8">
-            <div className="flex flex-col items-center space-y-4">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
-              <p className="text-gray-500">{t("Creating draft report...")}</p>
-            </div>
-          </div>
-        )}
+        <Warning level="info">
+          {t("No report is currently assigned to this sketch class.")}
+        </Warning>
       </div>
     );
   }
@@ -324,7 +294,7 @@ export default function SketchClassReportsAdmin({
               onClick={() => {
                 publishReport({
                   variables: {
-                    sketchClassId: sketchClass.id,
+                    reportId: draftReport.id,
                   },
                 });
               }}

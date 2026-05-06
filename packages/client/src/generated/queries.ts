@@ -1394,6 +1394,43 @@ export type CreateCommunityGuidelinePayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `createCustomReport` mutation. */
+export type CreateCustomReportInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  projectId?: Maybe<Scalars['Int']>;
+  sketchClassIds?: Maybe<Array<Scalars['Int']>>;
+  title?: Maybe<Scalars['String']>;
+};
+
+/** The output of our `createCustomReport` mutation. */
+export type CreateCustomReportPayload = {
+  __typename?: 'CreateCustomReportPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `Report` that is related to this `Report`. */
+  draft?: Maybe<Report>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  report?: Maybe<Report>;
+  /** An edge for our `Report`. May be used by Relay 1. */
+  reportEdge?: Maybe<ReportsEdge>;
+  /** Reads a single `SketchClass` that is related to this `Report`. */
+  sketchClass?: Maybe<SketchClass>;
+};
+
+
+/** The output of our `createCustomReport` mutation. */
+export type CreateCustomReportPayloadReportEdgeArgs = {
+  orderBy?: Maybe<Array<ReportsOrderBy>>;
+};
+
 /** All input for the create `DataLayer` mutation. */
 export type CreateDataLayerInput = {
   /**
@@ -2051,42 +2088,6 @@ export type CreateOriginalSourceIdPayload = {
 /** The output of our create `OriginalSourceId` mutation. */
 export type CreateOriginalSourceIdPayloadOriginalSourceIdEdgeArgs = {
   orderBy?: Maybe<Array<OriginalSourceIdsOrderBy>>;
-};
-
-/** All input for the `createProjectDraftReport` mutation. */
-export type CreateProjectDraftReportInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
-  title?: Maybe<Scalars['String']>;
-};
-
-/** The output of our `createProjectDraftReport` mutation. */
-export type CreateProjectDraftReportPayload = {
-  __typename?: 'CreateProjectDraftReportPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** Reads a single `Report` that is related to this `Report`. */
-  draft?: Maybe<Report>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-  report?: Maybe<Report>;
-  /** An edge for our `Report`. May be used by Relay 1. */
-  reportEdge?: Maybe<ReportsEdge>;
-  /** Reads a single `SketchClass` that is related to this `Report`. */
-  sketchClass?: Maybe<SketchClass>;
-};
-
-
-/** The output of our `createProjectDraftReport` mutation. */
-export type CreateProjectDraftReportPayloadReportEdgeArgs = {
-  orderBy?: Maybe<Array<ReportsOrderBy>>;
 };
 
 /** All input for the `createProject` mutation. */
@@ -8045,7 +8046,7 @@ export type Mutation = {
    * user will be automatically added to the list of admins.
    */
   createProject?: Maybe<CreateProjectPayload>;
-  createProjectDraftReport?: Maybe<CreateProjectDraftReportPayload>;
+  createCustomReport?: Maybe<CreateCustomReportPayload>;
   /** Creates a single `ProjectInviteGroup`. */
   createProjectInviteGroup?: Maybe<CreateProjectInviteGroupPayload>;
   /**
@@ -8895,8 +8896,8 @@ export type MutationCreateProjectArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationCreateProjectDraftReportArgs = {
-  input: CreateProjectDraftReportInput;
+export type MutationCreateCustomReportArgs = {
+  input: CreateCustomReportInput;
 };
 
 
@@ -12272,7 +12273,7 @@ export type PublishReportInput = {
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  sketchClassId?: Maybe<Scalars['Int']>;
+  reportId?: Maybe<Scalars['Int']>;
 };
 
 /** The output of our `publishReport` mutation. */
@@ -23280,7 +23281,11 @@ export type ProjectMetadataFragment = (
   & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays' | 'aboutPageContents' | 'aboutPageEnabled' | 'enableReportBuilder' | 'enableCollectionNewReports' | 'customDocLink' | 'showScalebarByDefault' | 'showLegendByDefault'>
   & { sketchClasses: Array<(
     { __typename?: 'SketchClass' }
-    & Pick<SketchClass, 'id' | 'name' | 'geometryType' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps' | 'reportId' | 'isGeographyClippingEnabled' | 'useGeographyClipping' | 'previewNewReports'>
+    & Pick<SketchClass, 'id' | 'name' | 'geometryType' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps' | 'isGeographyClippingEnabled' | 'useGeographyClipping' | 'previewNewReports'>
+    & { report?: Maybe<(
+      { __typename?: 'Report' }
+      & Pick<Report, 'id'>
+    )> }
   )>, aboutPageRenderedContent?: Maybe<Array<Maybe<(
     { __typename?: 'RenderedAboutPageContent' }
     & Pick<RenderedAboutPageContent, 'lang' | 'html'>
@@ -24027,22 +24032,6 @@ export type DraftReportDebuggingMaterialsQuery = (
   )> }
 );
 
-export type CreateDraftReportMutationVariables = Exact<{
-  sketchClassId: Scalars['Int'];
-}>;
-
-
-export type CreateDraftReportMutation = (
-  { __typename?: 'Mutation' }
-  & { createDraftReport?: Maybe<(
-    { __typename?: 'CreateDraftReportPayload' }
-    & { report?: Maybe<(
-      { __typename?: 'Report' }
-      & ReportDetailsFragment
-    )> }
-  )> }
-);
-
 export type AddReportTabMutationVariables = Exact<{
   reportId: Scalars['Int'];
   position: Scalars['Int'];
@@ -24214,7 +24203,7 @@ export type MoveCardToTabMutation = (
 );
 
 export type PublishReportMutationVariables = Exact<{
-  sketchClassId: Scalars['Int'];
+  reportId: Scalars['Int'];
 }>;
 
 
@@ -24758,16 +24747,17 @@ export type SketchClassReportAssignmentQuery = (
   )> }
 );
 
-export type CreateProjectDraftReportMutationVariables = Exact<{
+export type CreateCustomReportMutationVariables = Exact<{
   projectId: Scalars['Int'];
-  title?: Maybe<Scalars['String']>;
+  title: Scalars['String'];
+  sketchClassIds?: Maybe<Array<Scalars['Int']> | Scalars['Int']>;
 }>;
 
 
-export type CreateProjectDraftReportMutation = (
+export type CreateCustomReportMutation = (
   { __typename?: 'Mutation' }
-  & { createProjectDraftReport?: Maybe<(
-    { __typename?: 'CreateProjectDraftReportPayload' }
+  & { createCustomReport?: Maybe<(
+    { __typename?: 'CreateCustomReportPayload' }
     & { report?: Maybe<(
       { __typename?: 'Report' }
       & Pick<Report, 'id'>
@@ -24797,7 +24787,11 @@ export type SketchTocDetailsFragment = (
   & Pick<Sketch, 'id' | 'bbox' | 'name' | 'numVertices' | 'sketchClassId' | 'collectionId' | 'folderId' | 'timestamp' | 'updatedAt' | 'createdAt' | 'isCollection' | 'filterMvtUrl'>
   & { sketchClass?: Maybe<(
     { __typename?: 'SketchClass' }
-    & Pick<SketchClass, 'id' | 'geometryType' | 'reportId'>
+    & Pick<SketchClass, 'id' | 'geometryType'>
+    & { report?: Maybe<(
+      { __typename?: 'Report' }
+      & Pick<Report, 'id'>
+    )> }
   )> }
 );
 
@@ -24880,7 +24874,11 @@ export type SketchCrudResponseFragment = (
     & Pick<Sketch, 'id' | 'updatedAt' | 'timestamp'>
     & { sketchClass?: Maybe<(
       { __typename?: 'SketchClass' }
-      & Pick<SketchClass, 'id' | 'reportId'>
+      & Pick<SketchClass, 'id'>
+      & { report?: Maybe<(
+        { __typename?: 'Report' }
+        & Pick<Report, 'id'>
+      )> }
     )> }
   )>, relatedFragments?: Maybe<Array<Maybe<(
     { __typename?: 'SketchesRelatedFragmentsRecord' }
@@ -24939,7 +24937,11 @@ export type DeleteSketchTocItemsMutation = (
       & Pick<Sketch, 'id' | 'updatedAt'>
       & { sketchClass?: Maybe<(
         { __typename?: 'SketchClass' }
-        & Pick<SketchClass, 'id' | 'reportId'>
+        & Pick<SketchClass, 'id'>
+        & { report?: Maybe<(
+          { __typename?: 'Report' }
+          & Pick<Report, 'id'>
+        )> }
       )> }
     )>> }
   )> }
@@ -25051,8 +25053,11 @@ export type ReportContextSketchDetailsFragment = (
 
 export type ReportContextSketchClassDetailsFragment = (
   { __typename?: 'SketchClass' }
-  & Pick<SketchClass, 'id' | 'projectId' | 'geometryType' | 'useGeographyClipping' | 'previewNewReports' | 'reportId'>
-  & { form?: Maybe<(
+  & Pick<SketchClass, 'id' | 'projectId' | 'geometryType' | 'useGeographyClipping' | 'previewNewReports'>
+  & { report?: Maybe<(
+    { __typename?: 'Report' }
+    & Pick<Report, 'id'>
+  )>, form?: Maybe<(
     { __typename?: 'Form' }
     & Pick<Form, 'id'>
     & { formElements?: Maybe<Array<(
@@ -25133,7 +25138,11 @@ export type CopyTocItemMutation = (
       & Pick<Sketch, 'id' | 'updatedAt'>
       & { sketchClass?: Maybe<(
         { __typename?: 'SketchClass' }
-        & Pick<SketchClass, 'id' | 'reportId'>
+        & Pick<SketchClass, 'id'>
+        & { report?: Maybe<(
+          { __typename?: 'Report' }
+          & Pick<Report, 'id'>
+        )> }
       )> }
     )> }
   )> }
@@ -27944,7 +27953,9 @@ export const ProjectMetadataFragmentDoc = /*#__PURE__*/ gql`
     formElementId
     isArchived
     translatedProps
-    reportId
+    report {
+      id
+    }
     isGeographyClippingEnabled
     useGeographyClipping
     previewNewReports
@@ -28419,7 +28430,9 @@ export const SketchTocDetailsFragmentDoc = /*#__PURE__*/ gql`
   sketchClass {
     id
     geometryType
-    reportId
+    report {
+      id
+    }
   }
 }
     `;
@@ -28455,7 +28468,9 @@ export const SketchCrudResponseFragmentDoc = /*#__PURE__*/ gql`
     timestamp
     sketchClass {
       id
-      reportId
+      report {
+        id
+      }
     }
   }
   relatedFragments {
@@ -28500,7 +28515,9 @@ export const ReportContextSketchClassDetailsFragmentDoc = /*#__PURE__*/ gql`
   geometryType
   useGeographyClipping
   previewNewReports
-  reportId
+  report {
+    id
+  }
   form {
     id
     formElements {
@@ -31916,15 +31933,6 @@ export const DraftReportDebuggingMaterialsDocument = /*#__PURE__*/ gql`
   }
 }
     `;
-export const CreateDraftReportDocument = /*#__PURE__*/ gql`
-    mutation CreateDraftReport($sketchClassId: Int!) {
-  createDraftReport(input: {sketchClassId: $sketchClassId}) {
-    report {
-      ...ReportDetails
-    }
-  }
-}
-    ${ReportDetailsFragmentDoc}`;
 export const AddReportTabDocument = /*#__PURE__*/ gql`
     mutation AddReportTab($reportId: Int!, $position: Int!, $title: String!) {
   addReportTab(
@@ -32022,8 +32030,8 @@ export const MoveCardToTabDocument = /*#__PURE__*/ gql`
 }
     `;
 export const PublishReportDocument = /*#__PURE__*/ gql`
-    mutation PublishReport($sketchClassId: Int!) {
-  publishReport(input: {sketchClassId: $sketchClassId}) {
+    mutation PublishReport($reportId: Int!) {
+  publishReport(input: {reportId: $reportId}) {
     sketchClass {
       ...AdminSketchingDetails
     }
@@ -32412,9 +32420,11 @@ export const SketchClassReportAssignmentDocument = /*#__PURE__*/ gql`
   }
 }
     `;
-export const CreateProjectDraftReportDocument = /*#__PURE__*/ gql`
-    mutation CreateProjectDraftReport($projectId: Int!, $title: String) {
-  createProjectDraftReport(input: {projectId: $projectId, title: $title}) {
+export const CreateCustomReportDocument = /*#__PURE__*/ gql`
+    mutation CreateCustomReport($projectId: Int!, $title: String!, $sketchClassIds: [Int!]) {
+  createCustomReport(
+    input: {projectId: $projectId, title: $title, sketchClassIds: $sketchClassIds}
+  ) {
     report {
       id
     }
@@ -32499,7 +32509,9 @@ export const DeleteSketchTocItemsDocument = /*#__PURE__*/ gql`
       updatedAt
       sketchClass {
         id
-        reportId
+        report {
+          id
+        }
       }
     }
   }
@@ -32585,7 +32597,9 @@ export const CopyTocItemDocument = /*#__PURE__*/ gql`
       updatedAt
       sketchClass {
         id
-        reportId
+        report {
+          id
+        }
       }
     }
   }
@@ -33940,7 +33954,6 @@ export const namedOperations = {
     DeleteVisibilityRuleCondition: 'DeleteVisibilityRuleCondition',
     UpdateSketchClassStyle: 'UpdateSketchClassStyle',
     ToggleSketchClassGeographyClipping: 'ToggleSketchClassGeographyClipping',
-    CreateDraftReport: 'CreateDraftReport',
     AddReportTab: 'AddReportTab',
     DeleteReportTab: 'DeleteReportTab',
     RenameReportTab: 'RenameReportTab',
@@ -33954,7 +33967,7 @@ export const namedOperations = {
     PublishReport: 'PublishReport',
     RecalculateSpatialMetrics: 'RecalculateSpatialMetrics',
     PreprocessSource: 'PreprocessSource',
-    CreateProjectDraftReport: 'CreateProjectDraftReport',
+    CreateCustomReport: 'CreateCustomReport',
     SetPrimaryReportForSketchClass: 'SetPrimaryReportForSketchClass',
     CreateSketchFolder: 'CreateSketchFolder',
     CreateSketch: 'CreateSketch',

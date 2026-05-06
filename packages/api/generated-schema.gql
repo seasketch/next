@@ -1118,10 +1118,6 @@ enum ChangeLogFieldGroup {
   LAYER_UPLOADED
   LAYERS_PUBLISHED
   LAYERS_Z_ORDER_CHANGE
-  RESOLVABLE_LAYER_COMMENTS_CREATED
-  RESOLVABLE_LAYER_COMMENTS_REOPENED
-  RESOLVABLE_LAYER_COMMENTS_RESOLVED
-  RESOLVABLE_LAYER_COMMENTS_RESPONDED
 }
 
 """A connection to a list of `ChangeLog` values."""
@@ -1727,9 +1723,6 @@ type CreateDraftReportPayload {
   """
   clientMutationId: String
 
-  """Reads a single `Report` that is related to this `Report`."""
-  draft: Report
-
   """
   Our root query field type. Allows us to run any query from our mutation payload.
   """
@@ -2288,79 +2281,6 @@ type CreateOptionalBasemapLayerPayload {
   query: Query
 }
 
-"""All input for the create `OriginalSourceId` mutation."""
-input CreateOriginalSourceIdInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-
-  """The `OriginalSourceId` to be created by this mutation."""
-  originalSourceId: OriginalSourceIdInput!
-}
-
-"""The output of our create `OriginalSourceId` mutation."""
-type CreateOriginalSourceIdPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-
-  """The `OriginalSourceId` that was created by this mutation."""
-  originalSourceId: OriginalSourceId
-
-  """An edge for our `OriginalSourceId`. May be used by Relay 1."""
-  originalSourceIdEdge(
-    """The method to use when ordering `OriginalSourceId`."""
-    orderBy: [OriginalSourceIdsOrderBy!] = [NATURAL]
-  ): OriginalSourceIdsEdge
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-}
-
-"""All input for the `createProjectDraftReport` mutation."""
-input CreateProjectDraftReportInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  projectId: Int
-  title: String
-}
-
-"""The output of our `createProjectDraftReport` mutation."""
-type CreateProjectDraftReportPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-
-  """Reads a single `Report` that is related to this `Report`."""
-  draft: Report
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-  report: Report
-
-  """An edge for our `Report`. May be used by Relay 1."""
-  reportEdge(
-    """The method to use when ordering `Report`."""
-    orderBy: [ReportsOrderBy!] = [PRIMARY_KEY_ASC]
-  ): ReportsEdge
-
-  """Reads a single `SketchClass` that is related to this `Report`."""
-  sketchClass: SketchClass
-}
-
 """All input for the `createProject` mutation."""
 input CreateProjectInput {
   """
@@ -2508,41 +2428,6 @@ type CreateProjectsSharedBasemapPayload {
   query: Query
 }
 
-"""All input for the create `PublishedTocItemId` mutation."""
-input CreatePublishedTocItemIdInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-
-  """The `PublishedTocItemId` to be created by this mutation."""
-  publishedTocItemId: PublishedTocItemIdInput!
-}
-
-"""The output of our create `PublishedTocItemId` mutation."""
-type CreatePublishedTocItemIdPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-
-  """The `PublishedTocItemId` that was created by this mutation."""
-  publishedTocItemId: PublishedTocItemId
-
-  """An edge for our `PublishedTocItemId`. May be used by Relay 1."""
-  publishedTocItemIdEdge(
-    """The method to use when ordering `PublishedTocItemId`."""
-    orderBy: [PublishedTocItemIdsOrderBy!] = [NATURAL]
-  ): PublishedTocItemIdsEdge
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-}
-
 """All input for the `createRemoteGeojsonSource` mutation."""
 input CreateRemoteGeojsonSourceInput {
   bounds: [BigFloat]
@@ -2635,9 +2520,6 @@ type CreateReportPayload {
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
-
-  """Reads a single `Report` that is related to this `Report`."""
-  draft: Report
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -5069,8 +4951,8 @@ type DeleteGroupPayload {
   query: Query
 }
 
-"""All input for the `deleteOfflineTilePackage` mutation."""
-input DeleteOfflineTilePackageInput {
+"""All input for the `deleteOfflineTilePackageFn` mutation."""
+input DeleteOfflineTilePackageFnInput {
   """
   An arbitrary string value with no semantic meaning. Will be included in the
   payload verbatim. May be used to track mutations by the client.
@@ -5079,8 +4961,8 @@ input DeleteOfflineTilePackageInput {
   id: UUID
 }
 
-"""The output of our `deleteOfflineTilePackage` mutation."""
-type DeleteOfflineTilePackagePayload {
+"""The output of our `deleteOfflineTilePackageFn` mutation."""
+type DeleteOfflineTilePackageFnPayload {
   """
   The exact same `clientMutationId` that was provided in the mutation input,
   unchanged and unused. May be used by a client to track mutations.
@@ -5500,9 +5382,6 @@ type DeleteReportPayload {
   clientMutationId: String
   deletedReportNodeId: ID
 
-  """Reads a single `Report` that is related to this `Report`."""
-  draft: Report
-
   """
   Our root query field type. Allows us to run any query from our mutation payload.
   """
@@ -5521,8 +5400,8 @@ type DeleteReportPayload {
   sketchClass: SketchClass
 }
 
-"""All input for the `deleteReportTab` mutation."""
-input DeleteReportTabInput {
+"""All input for the `deleteReportTabFn` mutation."""
+input DeleteReportTabFnInput {
   """
   An arbitrary string value with no semantic meaning. Will be included in the
   payload verbatim. May be used to track mutations by the client.
@@ -5532,8 +5411,8 @@ input DeleteReportTabInput {
   tabId: Int
 }
 
-"""The output of our `deleteReportTab` mutation."""
-type DeleteReportTabPayload {
+"""The output of our `deleteReportTabFn` mutation."""
+type DeleteReportTabFnPayload {
   boolean: Boolean
 
   """
@@ -8163,31 +8042,6 @@ type GetChildFoldersRecursivePayload {
   query: Query
 }
 
-"""All input for the `getPublishedCardIdFromDraft` mutation."""
-input GetPublishedCardIdFromDraftInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  draftReportCardId: Int
-}
-
-"""The output of our `getPublishedCardIdFromDraft` mutation."""
-type GetPublishedCardIdFromDraftPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-  integer: Int
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-}
-
 type GoogleMapsTileApiSession implements Node {
   expiresAt: Datetime!
   id: Int!
@@ -9485,14 +9339,6 @@ type Mutation {
     """
     input: CreateOptionalBasemapLayerInput!
   ): CreateOptionalBasemapLayerPayload
-
-  """Creates a single `OriginalSourceId`."""
-  createOriginalSourceId(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: CreateOriginalSourceIdInput!
-  ): CreateOriginalSourceIdPayload
   createPost(message: JSON!, topicId: Int!): Post!
 
   """
@@ -9506,12 +9352,6 @@ type Mutation {
     """
     input: CreateProjectInput!
   ): CreateProjectPayload
-  createProjectDraftReport(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: CreateProjectDraftReportInput!
-  ): CreateProjectDraftReportPayload
 
   """Creates a single `ProjectInviteGroup`."""
   createProjectInviteGroup(
@@ -9547,14 +9387,6 @@ type Mutation {
     """
     input: CreateProjectsSharedBasemapInput!
   ): CreateProjectsSharedBasemapPayload
-
-  """Creates a single `PublishedTocItemId`."""
-  createPublishedTocItemId(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: CreatePublishedTocItemIdInput!
-  ): CreatePublishedTocItemIdPayload
   createRemoteGeojsonSource(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -9905,12 +9737,12 @@ type Mutation {
     """
     input: DeleteGroupByProjectIdAndNameInput!
   ): DeleteGroupPayload
-  deleteOfflineTilePackage(
+  deleteOfflineTilePackageFn(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
     """
-    input: DeleteOfflineTilePackageInput!
-  ): DeleteOfflineTilePackagePayload
+    input: DeleteOfflineTilePackageFnInput!
+  ): DeleteOfflineTilePackageFnPayload
 
   """Deletes a single `OfflineTileSetting` using a unique key."""
   deleteOfflineTileSetting(
@@ -10040,12 +9872,12 @@ type Mutation {
     """
     input: DeleteReportCardInput!
   ): DeleteReportCardPayload
-  deleteReportTab(
+  deleteReportTabFn(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
     """
-    input: DeleteReportTabInput!
-  ): DeleteReportTabPayload
+    input: DeleteReportTabFnInput!
+  ): DeleteReportTabFnPayload
 
   """Deletes a single `Sketch` using a unique key."""
   deleteSketch(
@@ -10305,12 +10137,6 @@ type Mutation {
     width: Int!
   ): Sprite
   getPresignedPMTilesUploadUrl(bytes: BigInt!, filename: String!): PresignedUrl!
-  getPublishedCardIdFromDraft(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: GetPublishedCardIdFromDraftInput!
-  ): GetPublishedCardIdFromDraftPayload
 
   """
   Give a user admin access to a project. User must have already joined the project and shared their user profile.
@@ -10681,12 +10507,6 @@ type Mutation {
     """
     input: SetPostHiddenByModeratorInput!
   ): SetPostHiddenByModeratorPayload
-  setPrimaryReportForSketchClass(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: SetPrimaryReportForSketchClassInput!
-  ): SetPrimaryReportForSketchClassPayload
 
   """
   Lock a topic so that it can no longer be responded to. Past discussion will
@@ -11858,48 +11678,6 @@ enum OptionalBasemapLayersOrderBy {
   PRIMARY_KEY_DESC
 }
 
-type OriginalSourceId {
-  dataSourceId: Int
-}
-
-"""An input for mutations affecting `OriginalSourceId`"""
-input OriginalSourceIdInput {
-  dataSourceId: Int
-}
-
-"""A connection to a list of `OriginalSourceId` values."""
-type OriginalSourceIdsConnection {
-  """
-  A list of edges which contains the `OriginalSourceId` and cursor to aid in pagination.
-  """
-  edges: [OriginalSourceIdsEdge!]!
-
-  """A list of `OriginalSourceId` objects."""
-  nodes: [OriginalSourceId!]!
-
-  """Information to aid in pagination."""
-  pageInfo: PageInfo!
-
-  """
-  The count of *all* `OriginalSourceId` you could get from the connection.
-  """
-  totalCount: Int!
-}
-
-"""A `OriginalSourceId` edge in the connection."""
-type OriginalSourceIdsEdge {
-  """A cursor for use in pagination."""
-  cursor: Cursor
-
-  """The `OriginalSourceId` at the end of the edge."""
-  node: OriginalSourceId!
-}
-
-"""Methods to use when ordering `OriginalSourceId`."""
-enum OriginalSourceIdsOrderBy {
-  NATURAL
-}
-
 type OutstandingSurveyInvites {
   projectId: Int!
   surveyId: Int!
@@ -13041,7 +12819,7 @@ type ProjectBackgroundJob implements Node {
     orderBy: [DataUploadTasksOrderBy!] = [PRIMARY_KEY_ASC]
   ): DataUploadTasksConnection!
   errorMessage: String
-  esriFeatureLayerConversionTask: EsriFeatureLayerConversionTask
+  esriFeatureLayerConversionTaskComputed: EsriFeatureLayerConversionTask
   id: UUID!
 
   """
@@ -13590,48 +13368,6 @@ type PublicProjectDetail {
   name: String
   slug: String
   supportEmail: String
-}
-
-type PublishedTocItemId {
-  id: Int
-}
-
-"""An input for mutations affecting `PublishedTocItemId`"""
-input PublishedTocItemIdInput {
-  id: Int
-}
-
-"""A connection to a list of `PublishedTocItemId` values."""
-type PublishedTocItemIdsConnection {
-  """
-  A list of edges which contains the `PublishedTocItemId` and cursor to aid in pagination.
-  """
-  edges: [PublishedTocItemIdsEdge!]!
-
-  """A list of `PublishedTocItemId` objects."""
-  nodes: [PublishedTocItemId!]!
-
-  """Information to aid in pagination."""
-  pageInfo: PageInfo!
-
-  """
-  The count of *all* `PublishedTocItemId` you could get from the connection.
-  """
-  totalCount: Int!
-}
-
-"""A `PublishedTocItemId` edge in the connection."""
-type PublishedTocItemIdsEdge {
-  """A cursor for use in pagination."""
-  cursor: Cursor
-
-  """The `PublishedTocItemId` at the end of the edge."""
-  node: PublishedTocItemId!
-}
-
-"""Methods to use when ordering `PublishedTocItemId`."""
-enum PublishedTocItemIdsOrderBy {
-  NATURAL
 }
 
 """All input for the `publishReport` mutation."""
@@ -14250,12 +13986,9 @@ type Query implements Node {
     orderBy: [GeographyClippingLayersOrderBy!] = [PRIMARY_KEY_ASC]
   ): GeographyClippingLayersConnection
   getDefaultDataSourcesBucket: String
-  getEffectiveReportForSketchClass(draft: Boolean, sketchClassId: Int): Int
   getFirstBandOffset(geostats: JSON): Float
   getFirstBandScale(geostats: JSON): Float
   getGeostatsAttributeColumnNames(geostats: JSON): [String]
-  getLatestPublishedReportForDraft(draftReportId: Int): Int
-  getPrimaryDraftReportIdForSketchClass(sketchClassId: Int): Int
   getReferencedStableIdsForReport(_reportId: Int): [String]
   getRepresentativeColors(geostats: JSON): JSON
   getStateForSpatialMetric(metricId: BigInt): SpatialMetricState
@@ -14428,30 +14161,6 @@ type Query implements Node {
     """
     nodeId: ID!
   ): OptionalBasemapLayer
-
-  """Reads and enables pagination through a set of `OriginalSourceId`."""
-  originalSourceIdsConnection(
-    """Read all values in the set after (below) this cursor."""
-    after: Cursor
-
-    """Read all values in the set before (above) this cursor."""
-    before: Cursor
-
-    """Only read the first `n` values of the set."""
-    first: Int
-
-    """Only read the last `n` values of the set."""
-    last: Int
-
-    """
-    Skip the first `n` values from our `after` cursor, an alternative to cursor
-    based pagination. May not be used with `last`.
-    """
-    offset: Int
-
-    """The method to use when ordering `OriginalSourceId`."""
-    orderBy: [OriginalSourceIdsOrderBy!] = [NATURAL]
-  ): OriginalSourceIdsConnection
   post(id: Int!): Post
 
   """Reads a single `Post` using its globally unique `ID`."""
@@ -14636,30 +14345,6 @@ type Query implements Node {
     """Skip the first `n` values."""
     offset: Int
   ): [Sprite!]
-
-  """Reads and enables pagination through a set of `PublishedTocItemId`."""
-  publishedTocItemIdsConnection(
-    """Read all values in the set after (below) this cursor."""
-    after: Cursor
-
-    """Read all values in the set before (above) this cursor."""
-    before: Cursor
-
-    """Only read the first `n` values of the set."""
-    first: Int
-
-    """Only read the last `n` values of the set."""
-    last: Int
-
-    """
-    Skip the first `n` values from our `after` cursor, an alternative to cursor
-    based pagination. May not be used with `last`.
-    """
-    offset: Int
-
-    """The method to use when ordering `PublishedTocItemId`."""
-    orderBy: [PublishedTocItemIdsOrderBy!] = [NATURAL]
-  ): PublishedTocItemIdsConnection
 
   """
   Exposes the root query type nested one level down. This is helpful for Relay 1
@@ -15324,10 +15009,6 @@ type Report implements Node {
   createdAt: Datetime!
   dependencies(sketchId: Int): ReportOverlayDependencies!
 
-  """Reads a single `Report` that is related to this `Report`."""
-  draft: Report
-  draftId: Int
-
   """Reads and enables pagination through a set of `Geography`."""
   geographies(
     """Only read the first `n` values of the set."""
@@ -15344,36 +15025,6 @@ type Report implements Node {
   nodeId: ID!
   overlaySources: [ReportOverlaySource!]!
   projectId: Int!
-  publishedAt: Datetime
-
-  """Reads and enables pagination through a set of `Report`."""
-  reportsByDraftIdConnection(
-    """Read all values in the set after (below) this cursor."""
-    after: Cursor
-
-    """Read all values in the set before (above) this cursor."""
-    before: Cursor
-
-    """
-    A condition to be used in determining which values should be returned by the collection.
-    """
-    condition: ReportCondition
-
-    """Only read the first `n` values of the set."""
-    first: Int
-
-    """Only read the last `n` values of the set."""
-    last: Int
-
-    """
-    Skip the first `n` values from our `after` cursor, an alternative to cursor
-    based pagination. May not be used with `last`.
-    """
-    offset: Int
-
-    """The method to use when ordering `Report`."""
-    orderBy: [ReportsOrderBy!] = [PRIMARY_KEY_ASC]
-  ): ReportsConnection!
 
   """Reads a single `SketchClass` that is related to this `Report`."""
   sketchClass: SketchClass
@@ -15387,9 +15038,7 @@ type Report implements Node {
     """Skip the first `n` values."""
     offset: Int
   ): [ReportTab!]
-  title: String!
   updatedAt: Datetime
-  version: Int!
 }
 
 type ReportCard implements Node {
@@ -15414,9 +15063,6 @@ type ReportCard implements Node {
 A condition to be used against `Report` object types. All fields are tested for equality and combined with a logical ‘and.’
 """
 input ReportCondition {
-  """Checks for equality with the object’s `draftId` field."""
-  draftId: Int
-
   """Checks for equality with the object’s `id` field."""
   id: Int
 
@@ -15427,12 +15073,8 @@ input ReportCondition {
 """An input for mutations affecting `Report`"""
 input ReportInput {
   createdAt: Datetime
-  draftId: Int
   projectId: Int!
-  publishedAt: Datetime
   sketchClassId: Int!
-  title: String!
-  version: Int
 }
 
 type ReportOverlayDependencies {
@@ -15505,12 +15147,8 @@ Represents an update to a `Report`. Fields that are set will be updated.
 """
 input ReportPatch {
   createdAt: Datetime
-  draftId: Int
   projectId: Int
-  publishedAt: Datetime
   sketchClassId: Int
-  title: String
-  version: Int
 }
 
 """A connection to a list of `Report` values."""
@@ -15541,8 +15179,6 @@ type ReportsEdge {
 
 """Methods to use when ordering `Report`."""
 enum ReportsOrderBy {
-  DRAFT_ID_ASC
-  DRAFT_ID_DESC
   ID_ASC
   ID_DESC
   NATURAL
@@ -16012,44 +15648,6 @@ type SetPostHiddenByModeratorPayload {
 
   """Reads a single `Topic` that is related to this `Post`."""
   topic: Topic
-}
-
-"""All input for the `setPrimaryReportForSketchClass` mutation."""
-input SetPrimaryReportForSketchClassInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  draftReportId: Int
-  sketchClassId: Int
-}
-
-"""The output of our `setPrimaryReportForSketchClass` mutation."""
-type SetPrimaryReportForSketchClassPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-
-  """Reads a single `FormElement` that is related to this `SketchClass`."""
-  formElement: FormElement
-
-  """Reads a single `Project` that is related to this `SketchClass`."""
-  project: Project
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-  sketchClass: SketchClass
-
-  """An edge for our `SketchClass`. May be used by Relay 1."""
-  sketchClassEdge(
-    """The method to use when ordering `SketchClass`."""
-    orderBy: [SketchClassesOrderBy!] = [PRIMARY_KEY_ASC]
-  ): SketchClassesEdge
 }
 
 """All input for the `setTopicLocked` mutation."""
@@ -20146,9 +19744,6 @@ type UpdateReportPayload {
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
-
-  """Reads a single `Report` that is related to this `Report`."""
-  draft: Report
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.

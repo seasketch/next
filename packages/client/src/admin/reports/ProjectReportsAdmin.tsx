@@ -2,9 +2,10 @@ import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import Spinner from "../../components/Spinner";
 import Warning from "../../components/Warning";
+import useDialog from "../../components/useDialog";
 import getSlug from "../../getSlug";
 import {
-  useCreateProjectDraftReportMutation,
+  useCreateCustomReportMutation,
   useProjectReportsContextQuery,
   useSetPrimaryReportForSketchClassMutation,
 } from "../../generated/graphql";
@@ -13,30 +14,33 @@ import SketchClassReportsAdmin from "../sketchClasses/SketchClassReportsAdmin";
 export default function ProjectReportsAdmin() {
   const slug = getSlug();
   const { t } = useTranslation("admin:sketching");
+  const { confirm } = useDialog();
   const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
   const [selectedSketchClassId, setSelectedSketchClassId] = useState<
     number | null
   >(null);
+  const [newReportTitle, setNewReportTitle] = useState("");
+  const [selectedCreateSketchClassIds, setSelectedCreateSketchClassIds] =
+    useState<number[]>([]);
 
   const contextQuery = useProjectReportsContextQuery({
     variables: { slug },
   });
-  const [createDraftReport, createDraftReportState] =
-    useCreateProjectDraftReportMutation();
+  const [createReport, createReportState] = useCreateCustomReportMutation();
   const [setPrimaryReport, setPrimaryReportState] =
     useSetPrimaryReportForSketchClassMutation();
 
   const sketchClasses = useMemo(
     () =>
       (contextQuery.data?.projectBySlug?.sketchClasses || []).filter(
-        (sc): sc is NonNullable<typeof sc> => Boolean(sc)
+        (sc: any): sc is NonNullable<typeof sc> => Boolean(sc)
       ),
     [contextQuery.data?.projectBySlug?.sketchClasses]
   );
   const draftReports = useMemo(
     () =>
       (contextQuery.data?.reportsConnection?.nodes || [])
-        .filter((r): r is NonNullable<typeof r> => Boolean(r))
+        .filter((r: any): r is NonNullable<typeof r> => Boolean(r))
         .filter(
         (r: any) =>
           r.projectId === contextQuery.data?.projectBySlug?.id && r.draftId == null
@@ -78,6 +82,65 @@ export default function ProjectReportsAdmin() {
     return sketchClasses.find((sc: any) => sc.id === effectiveSketchClassId);
   }, [effectiveSketchClassId, sketchClasses]);
 
+  const selectedCreateSketchClasses = useMemo(
+    () =>
+      sketchClasses.filter((sc: any) =>
+        selectedCreateSketchClassIds.includes(sc.id)
+      ),
+    [sketchClasses, selectedCreateSketchClassIds]
+  );
+
+  const conflictingCreateAssignments = useMemo(
+    () =>
+      selectedCreateSketchClasses.filter((sc: any) => sc.draftReport?.id != null),
+    [selectedCreateSketchClasses]
+  );
+
+  async function runCreateReport() {
+    const projectId = contextQuery.data?.projectBySlug?.id;
+    if (!projectId) {
+      return;
+    }
+    const title = newReportTitle.trim();
+    if (!title) {
+      return;
+    }
+
+    const doCreate = async () => {
+      const result = await createReport({
+        variables: {
+          projectId,
+          title,
+          sketchClassIds:
+            selectedCreateSketchClassIds.length > 0
+              ? selectedCreateSketchClassIds
+              : undefined,
+        },
+      });
+      await contextQuery.refetch();
+      const newId = result.data?.createCustomReport?.report?.id;
+      if (newId) {
+        setSelectedReportId(newId);
+      }
+      setNewReportTitle("");
+      setSelectedCreateSketchClassIds([]);
+    };
+
+    if (conflictingCreateAssignments.length > 0) {
+      confirm(t("Reassign sketch classes?"), {
+        description: t(
+          "One or more selected sketch classes already have primary reports. Creating this report will replace those assignments."
+        ),
+        primaryButtonText: t("Create and reassign"),
+        secondaryButtonText: t("Cancel"),
+        onSubmit: doCreate,
+      });
+      return;
+    }
+
+    await doCreate();
+  }
+
   if (contextQuery.loading) {
     return (
       <div className="w-full h-full flex items-center justify-center p-8">
@@ -111,29 +174,64 @@ export default function ProjectReportsAdmin() {
       <div className="w-96 border-r bg-white p-4 space-y-4 overflow-y-auto">
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">{t("Reports")}</h2>
+          <span className="text-xs text-gray-500">{t("Create Report")}</span>
+        </div>
+        <div className="space-y-2 border rounded border-gray-200 p-3">
+          <input
+            className="w-full border rounded px-2 py-1.5 text-sm"
+            placeholder={t("Report title")}
+            value={newReportTitle}
+            onChange={(e) => setNewReportTitle(e.target.value)}
+          />
+          <label className="text-xs font-medium text-gray-700 block">
+            {t("Assign as primary for sketch classes (optional)")}
+          </label>
+          <div className="max-h-40 overflow-y-auto border rounded p-2 space-y-1">
+            {sketchClasses.map((sc: any) => {
+              const isChecked = selectedCreateSketchClassIds.includes(sc.id);
+              return (
+                <label
+                  key={sc.id}
+                  className="flex items-center justify-between text-xs text-gray-700"
+                >
+                  <span className="truncate pr-2">{sc.name}</span>
+                  <input
+                    type="checkbox"
+                    checked={isChecked}
+                    onChange={() => {
+                      setSelectedCreateSketchClassIds((ids) =>
+                        isChecked
+                          ? ids.filter((id) => id !== sc.id)
+                          : [...ids, sc.id]
+                      );
+                    }}
+                  />
+                </label>
+              );
+            })}
+          </div>
+          {conflictingCreateAssignments.length > 0 && (
+            <Warning level="warning">
+              {t(
+                "Some selected sketch classes already have assigned reports. Creating this report will replace those assignments."
+              )}{" "}
+              {conflictingCreateAssignments
+                .map((sc: any) => `${sc.name} (#${sc.draftReport?.id})`)
+                .join(", ")}
+            </Warning>
+          )}
           <button
-            className="text-sm bg-primary-600 hover:bg-primary-500 text-white px-3 py-1.5 rounded"
-            disabled={createDraftReportState.loading || !contextQuery.data?.projectBySlug?.id}
-            onClick={async () => {
-              const projectId = contextQuery.data?.projectBySlug?.id;
-              if (!projectId) {
-                return;
-              }
-              const result = await createDraftReport({
-                variables: {
-                  projectId,
-                  // eslint-disable-next-line i18next/no-literal-string
-                  title: "Untitled Report",
-                },
-              });
-              await contextQuery.refetch();
-              const newId = result.data?.createProjectDraftReport?.report?.id;
-              if (newId) {
-                setSelectedReportId(newId);
-              }
+            className="w-full text-sm bg-primary-600 hover:bg-primary-500 text-white px-3 py-1.5 rounded disabled:bg-gray-400"
+            disabled={
+              createReportState.loading ||
+              !contextQuery.data?.projectBySlug?.id ||
+              !newReportTitle.trim()
+            }
+            onClick={() => {
+              void runCreateReport();
             }}
           >
-            {t("Create Draft For Selected Class")}
+            {createReportState.loading ? t("Creating...") : t("Create Report")}
           </button>
         </div>
         <div className="space-y-2">

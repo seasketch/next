@@ -199,7 +199,7 @@ function SketchEditorModal({
       const parent = sketch.parentCollection;
       if (parent?.id != null) {
         evictSubjectReportCachesForSketchId(cache, parent.id, {
-          reportId: parent.sketchClass?.reportId,
+          reportId: parent.sketchClass?.report?.id,
         });
       }
     },

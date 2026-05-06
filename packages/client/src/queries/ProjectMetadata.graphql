@@ -20,7 +20,9 @@ fragment ProjectMetadata on Project {
     formElementId
     isArchived
     translatedProps
-    reportId
+    report {
+      id
+    }
     isGeographyClippingEnabled
     useGeographyClipping
     previewNewReports
