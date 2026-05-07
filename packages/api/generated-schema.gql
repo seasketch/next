@@ -15334,7 +15334,7 @@ type Report implements Node {
 
   """Reads a single `SketchClass` that is related to this `Report`."""
   sketchClass: SketchClass
-  sketchClassId: Int!
+  sketchClassId: Int
 
   """Reads and enables pagination through a set of `ReportTab`."""
   tabs(
@@ -15387,7 +15387,7 @@ input ReportInput {
   draftId: Int
   projectId: Int!
   publishedAt: Datetime
-  sketchClassId: Int!
+  sketchClassId: Int
   title: String!
   version: Int
 }

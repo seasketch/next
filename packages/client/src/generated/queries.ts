@@ -14196,7 +14196,7 @@ export type Report = Node & {
   reportsByDraftIdConnection: ReportsConnection;
   /** Reads a single `SketchClass` that is related to this `Report`. */
   sketchClass?: Maybe<SketchClass>;
-  sketchClassId: Scalars['Int'];
+  sketchClassId?: Maybe<Scalars['Int']>;
   /** Reads and enables pagination through a set of `ReportTab`. */
   tabs?: Maybe<Array<ReportTab>>;
   title: Scalars['String'];
@@ -14264,7 +14264,7 @@ export type ReportInput = {
   draftId?: Maybe<Scalars['Int']>;
   projectId: Scalars['Int'];
   publishedAt?: Maybe<Scalars['Datetime']>;
-  sketchClassId: Scalars['Int'];
+  sketchClassId?: Maybe<Scalars['Int']>;
   title: Scalars['String'];
   version?: Maybe<Scalars['Int']>;
 };
@@ -23933,7 +23933,7 @@ export type ReportTabDetailsFragment = (
 
 export type ReportDetailsFragment = (
   { __typename?: 'Report' }
-  & Pick<Report, 'id' | 'createdAt' | 'updatedAt'>
+  & Pick<Report, 'id' | 'title' | 'createdAt' | 'updatedAt'>
   & { tabs?: Maybe<Array<(
     { __typename?: 'ReportTab' }
     & ReportTabDetailsFragment
@@ -24123,6 +24123,13 @@ export type UpdateReportCardBodyMutation = (
     { __typename?: 'UpdateReportCardBodyPayload' }
     & { reportCard?: Maybe<(
       { __typename?: 'ReportCard' }
+      & { tab?: Maybe<(
+        { __typename?: 'ReportTab' }
+        & { report?: Maybe<(
+          { __typename?: 'Report' }
+          & Pick<Report, 'id' | 'updatedAt'>
+        )> }
+      )> }
       & ReportCardDetailsFragment
     )> }
   )> }
@@ -24171,6 +24178,36 @@ export type PublishReportMutation = (
       { __typename?: 'SketchClass' }
       & AdminSketchingDetailsFragment
     )> }
+  )> }
+);
+
+export type UpdateReportTitleMutationVariables = Exact<{
+  reportId: Scalars['Int'];
+  title: Scalars['String'];
+}>;
+
+
+export type UpdateReportTitleMutation = (
+  { __typename?: 'Mutation' }
+  & { updateReport?: Maybe<(
+    { __typename?: 'UpdateReportPayload' }
+    & { report?: Maybe<(
+      { __typename?: 'Report' }
+      & Pick<Report, 'id' | 'title' | 'updatedAt'>
+    )> }
+  )> }
+);
+
+export type DeleteDraftReportMutationVariables = Exact<{
+  reportId: Scalars['Int'];
+}>;
+
+
+export type DeleteDraftReportMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteReport?: Maybe<(
+    { __typename?: 'DeleteReportPayload' }
+    & Pick<DeleteReportPayload, 'deletedReportNodeId'>
   )> }
 );
 
@@ -24375,7 +24412,7 @@ export type ReportOverlaySourcesQuery = (
 
 export type BaseReportDetailsFragment = (
   { __typename?: 'Report' }
-  & Pick<Report, 'id'>
+  & Pick<Report, 'id' | 'title'>
   & { tabs?: Maybe<Array<(
     { __typename?: 'ReportTab' }
     & ReportTabDetailsFragment
@@ -28278,6 +28315,7 @@ export const ReportTabDetailsFragmentDoc = /*#__PURE__*/ gql`
 export const ReportDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment ReportDetails on Report {
   id
+  title
   createdAt
   updatedAt
   tabs {
@@ -28355,6 +28393,7 @@ export const OverlaySourceDetailsFragmentDoc = /*#__PURE__*/ gql`
 export const BaseReportDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment BaseReportDetails on Report {
   id
+  title
   tabs {
     ...ReportTabDetails
   }
@@ -31974,6 +32013,12 @@ export const UpdateReportCardBodyDocument = /*#__PURE__*/ gql`
   updateReportCardBody(input: {cardId: $id, body: $body}) {
     reportCard {
       ...ReportCardDetails
+      tab {
+        report {
+          id
+          updatedAt
+        }
+      }
     }
   }
 }
@@ -32004,6 +32049,24 @@ export const PublishReportDocument = /*#__PURE__*/ gql`
   }
 }
     ${AdminSketchingDetailsFragmentDoc}`;
+export const UpdateReportTitleDocument = /*#__PURE__*/ gql`
+    mutation UpdateReportTitle($reportId: Int!, $title: String!) {
+  updateReport(input: {id: $reportId, patch: {title: $title}}) {
+    report {
+      id
+      title
+      updatedAt
+    }
+  }
+}
+    `;
+export const DeleteDraftReportDocument = /*#__PURE__*/ gql`
+    mutation DeleteDraftReport($reportId: Int!) {
+  deleteReport(input: {id: $reportId}) {
+    deletedReportNodeId
+  }
+}
+    `;
 export const AvailableReportLayersDocument = /*#__PURE__*/ gql`
     query AvailableReportLayers($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -33931,6 +33994,8 @@ export const namedOperations = {
     DeleteReportCard: 'DeleteReportCard',
     MoveCardToTab: 'MoveCardToTab',
     PublishReport: 'PublishReport',
+    UpdateReportTitle: 'UpdateReportTitle',
+    DeleteDraftReport: 'DeleteDraftReport',
     RecalculateSpatialMetrics: 'RecalculateSpatialMetrics',
     PreprocessSource: 'PreprocessSource',
     CreateCustomReport: 'CreateCustomReport',

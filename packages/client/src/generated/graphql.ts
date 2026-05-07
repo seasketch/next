@@ -14198,7 +14198,7 @@ export type Report = Node & {
   reportsByDraftIdConnection: ReportsConnection;
   /** Reads a single `SketchClass` that is related to this `Report`. */
   sketchClass?: Maybe<SketchClass>;
-  sketchClassId: Scalars['Int'];
+  sketchClassId?: Maybe<Scalars['Int']>;
   /** Reads and enables pagination through a set of `ReportTab`. */
   tabs?: Maybe<Array<ReportTab>>;
   title: Scalars['String'];
@@ -14266,7 +14266,7 @@ export type ReportInput = {
   draftId?: Maybe<Scalars['Int']>;
   projectId: Scalars['Int'];
   publishedAt?: Maybe<Scalars['Datetime']>;
-  sketchClassId: Scalars['Int'];
+  sketchClassId?: Maybe<Scalars['Int']>;
   title: Scalars['String'];
   version?: Maybe<Scalars['Int']>;
 };
@@ -23935,7 +23935,7 @@ export type ReportTabDetailsFragment = (
 
 export type ReportDetailsFragment = (
   { __typename?: 'Report' }
-  & Pick<Report, 'id' | 'createdAt' | 'updatedAt'>
+  & Pick<Report, 'id' | 'title' | 'createdAt' | 'updatedAt'>
   & { tabs?: Maybe<Array<(
     { __typename?: 'ReportTab' }
     & ReportTabDetailsFragment
@@ -24125,6 +24125,13 @@ export type UpdateReportCardBodyMutation = (
     { __typename?: 'UpdateReportCardBodyPayload' }
     & { reportCard?: Maybe<(
       { __typename?: 'ReportCard' }
+      & { tab?: Maybe<(
+        { __typename?: 'ReportTab' }
+        & { report?: Maybe<(
+          { __typename?: 'Report' }
+          & Pick<Report, 'id' | 'updatedAt'>
+        )> }
+      )> }
       & ReportCardDetailsFragment
     )> }
   )> }
@@ -24173,6 +24180,36 @@ export type PublishReportMutation = (
       { __typename?: 'SketchClass' }
       & AdminSketchingDetailsFragment
     )> }
+  )> }
+);
+
+export type UpdateReportTitleMutationVariables = Exact<{
+  reportId: Scalars['Int'];
+  title: Scalars['String'];
+}>;
+
+
+export type UpdateReportTitleMutation = (
+  { __typename?: 'Mutation' }
+  & { updateReport?: Maybe<(
+    { __typename?: 'UpdateReportPayload' }
+    & { report?: Maybe<(
+      { __typename?: 'Report' }
+      & Pick<Report, 'id' | 'title' | 'updatedAt'>
+    )> }
+  )> }
+);
+
+export type DeleteDraftReportMutationVariables = Exact<{
+  reportId: Scalars['Int'];
+}>;
+
+
+export type DeleteDraftReportMutation = (
+  { __typename?: 'Mutation' }
+  & { deleteReport?: Maybe<(
+    { __typename?: 'DeleteReportPayload' }
+    & Pick<DeleteReportPayload, 'deletedReportNodeId'>
   )> }
 );
 
@@ -24377,7 +24414,7 @@ export type ReportOverlaySourcesQuery = (
 
 export type BaseReportDetailsFragment = (
   { __typename?: 'Report' }
-  & Pick<Report, 'id'>
+  & Pick<Report, 'id' | 'title'>
   & { tabs?: Maybe<Array<(
     { __typename?: 'ReportTab' }
     & ReportTabDetailsFragment
@@ -28280,6 +28317,7 @@ export const ReportTabDetailsFragmentDoc = gql`
 export const ReportDetailsFragmentDoc = gql`
     fragment ReportDetails on Report {
   id
+  title
   createdAt
   updatedAt
   tabs {
@@ -28357,6 +28395,7 @@ export const OverlaySourceDetailsFragmentDoc = gql`
 export const BaseReportDetailsFragmentDoc = gql`
     fragment BaseReportDetails on Report {
   id
+  title
   tabs {
     ...ReportTabDetails
   }
@@ -37990,6 +38029,12 @@ export const UpdateReportCardBodyDocument = gql`
   updateReportCardBody(input: {cardId: $id, body: $body}) {
     reportCard {
       ...ReportCardDetails
+      tab {
+        report {
+          id
+          updatedAt
+        }
+      }
     }
   }
 }
@@ -38126,6 +38171,77 @@ export function usePublishReportMutation(baseOptions?: Apollo.MutationHookOption
 export type PublishReportMutationHookResult = ReturnType<typeof usePublishReportMutation>;
 export type PublishReportMutationResult = Apollo.MutationResult<PublishReportMutation>;
 export type PublishReportMutationOptions = Apollo.BaseMutationOptions<PublishReportMutation, PublishReportMutationVariables>;
+export const UpdateReportTitleDocument = gql`
+    mutation UpdateReportTitle($reportId: Int!, $title: String!) {
+  updateReport(input: {id: $reportId, patch: {title: $title}}) {
+    report {
+      id
+      title
+      updatedAt
+    }
+  }
+}
+    `;
+export type UpdateReportTitleMutationFn = Apollo.MutationFunction<UpdateReportTitleMutation, UpdateReportTitleMutationVariables>;
+
+/**
+ * __useUpdateReportTitleMutation__
+ *
+ * To run a mutation, you first call `useUpdateReportTitleMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateReportTitleMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateReportTitleMutation, { data, loading, error }] = useUpdateReportTitleMutation({
+ *   variables: {
+ *      reportId: // value for 'reportId'
+ *      title: // value for 'title'
+ *   },
+ * });
+ */
+export function useUpdateReportTitleMutation(baseOptions?: Apollo.MutationHookOptions<UpdateReportTitleMutation, UpdateReportTitleMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateReportTitleMutation, UpdateReportTitleMutationVariables>(UpdateReportTitleDocument, options);
+      }
+export type UpdateReportTitleMutationHookResult = ReturnType<typeof useUpdateReportTitleMutation>;
+export type UpdateReportTitleMutationResult = Apollo.MutationResult<UpdateReportTitleMutation>;
+export type UpdateReportTitleMutationOptions = Apollo.BaseMutationOptions<UpdateReportTitleMutation, UpdateReportTitleMutationVariables>;
+export const DeleteDraftReportDocument = gql`
+    mutation DeleteDraftReport($reportId: Int!) {
+  deleteReport(input: {id: $reportId}) {
+    deletedReportNodeId
+  }
+}
+    `;
+export type DeleteDraftReportMutationFn = Apollo.MutationFunction<DeleteDraftReportMutation, DeleteDraftReportMutationVariables>;
+
+/**
+ * __useDeleteDraftReportMutation__
+ *
+ * To run a mutation, you first call `useDeleteDraftReportMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useDeleteDraftReportMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [deleteDraftReportMutation, { data, loading, error }] = useDeleteDraftReportMutation({
+ *   variables: {
+ *      reportId: // value for 'reportId'
+ *   },
+ * });
+ */
+export function useDeleteDraftReportMutation(baseOptions?: Apollo.MutationHookOptions<DeleteDraftReportMutation, DeleteDraftReportMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<DeleteDraftReportMutation, DeleteDraftReportMutationVariables>(DeleteDraftReportDocument, options);
+      }
+export type DeleteDraftReportMutationHookResult = ReturnType<typeof useDeleteDraftReportMutation>;
+export type DeleteDraftReportMutationResult = Apollo.MutationResult<DeleteDraftReportMutation>;
+export type DeleteDraftReportMutationOptions = Apollo.BaseMutationOptions<DeleteDraftReportMutation, DeleteDraftReportMutationVariables>;
 export const AvailableReportLayersDocument = gql`
     query AvailableReportLayers($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -43140,6 +43256,8 @@ export const namedOperations = {
     DeleteReportCard: 'DeleteReportCard',
     MoveCardToTab: 'MoveCardToTab',
     PublishReport: 'PublishReport',
+    UpdateReportTitle: 'UpdateReportTitle',
+    DeleteDraftReport: 'DeleteDraftReport',
     RecalculateSpatialMetrics: 'RecalculateSpatialMetrics',
     PreprocessSource: 'PreprocessSource',
     CreateCustomReport: 'CreateCustomReport',

@@ -1,5 +1,19 @@
 -- undo
 
+-- Restore NOT NULL on sketch_class_id (best-effort backfill for project-scoped drafts).
+update public.reports r
+set sketch_class_id = (
+  select min(sc.id)
+  from public.sketch_classes sc
+  where sc.project_id = r.project_id
+)
+where r.sketch_class_id is null;
+
+delete from public.reports where sketch_class_id is null;
+
+alter table if exists public.reports
+  alter column sketch_class_id set not null;
+
 drop function if exists public.get_latest_published_report_for_draft(integer);
 drop function if exists public.get_primary_draft_report_id_for_sketch_class(integer);
 drop function if exists public.get_effective_report_for_sketch_class(integer, boolean);
@@ -53,6 +67,10 @@ create unique index if not exists reports_draft_id_version_unique
   on public.reports (draft_id, version)
   where draft_id is not null;
 
+-- Project-scoped drafts from create_custom_report have no legacy owning sketch_class row.
+alter table public.reports
+  alter column sketch_class_id drop not null;
+
 alter type public.spatial_metric_type add value if not exists 'raster_stats';
 
 create table if not exists public.sketch_class_reports (
@@ -70,6 +88,12 @@ create unique index if not exists sketch_class_reports_one_primary_per_class
 
 create index if not exists sketch_class_reports_draft_report_id_idx
   on public.sketch_class_reports (draft_report_id);
+
+-- Deleting a draft report row removes sketch_class_reports assignments automatically because
+-- sketch_class_reports.draft_report_id references reports(id) ON DELETE CASCADE.
+-- Legacy sketch_classes.draft_report_id / sketch_classes.report_id FKs (committed migrations)
+-- use ON DELETE SET NULL so sketch classes are not left pointing at deleted reports.
+-- Published snapshots in the same lineage reference the draft via reports.draft_id with ON DELETE CASCADE.
 
 -- Basic backfill for legacy reports.
 update public.reports r
@@ -130,10 +154,15 @@ where sc.report_id is not null
 insert into public.sketch_class_reports (sketch_class_id, draft_report_id, is_primary)
 select
   sc.id as sketch_class_id,
-  coalesce(sc.draft_report_id, sc.report_id) as draft_report_id,
+  candidate.draft_report_id,
   true as is_primary
 from public.sketch_classes sc
-where coalesce(sc.draft_report_id, sc.report_id) is not null
+join lateral (
+  select coalesce(sc.draft_report_id, sc.report_id) as draft_report_id
+) candidate on true
+join public.reports r on r.id = candidate.draft_report_id
+where candidate.draft_report_id is not null
+  and r.project_id = sc.project_id
 on conflict (sketch_class_id, draft_report_id) do update
 set
   is_primary = excluded.is_primary,
@@ -184,6 +213,7 @@ declare
   dr_report_tab_id int;
   class_ids integer[];
   invalid_count int;
+  owning_sketch_class_id integer;
 begin
   if not session_is_admin(project_id) then
     raise exception 'You are not authorized to create reports for this project';
@@ -209,14 +239,24 @@ begin
     end if;
   end if;
 
+  -- Legacy reports.sketch_class_id NOT NULL: use first selected class when provided.
+  -- Project-only drafts (no selection) rely on sketch_class_id being nullable (see redo DDL above).
+  owning_sketch_class_id :=
+    case
+      when array_length(class_ids, 1) > 0 then class_ids[1]
+      else null
+    end;
+
   insert into public.reports (
     project_id,
+    sketch_class_id,
     title,
     version,
     draft_id,
     published_at
   ) values (
     project_id,
+    owning_sketch_class_id,
     title,
     0,
     null,

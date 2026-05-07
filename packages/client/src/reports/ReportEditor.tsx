@@ -1,6 +1,6 @@
 import * as Menubar from "@radix-ui/react-menubar";
 import { ChevronRightIcon } from "@radix-ui/react-icons";
-import type { ComponentProps, ReactNode } from "react";
+import type { ComponentProps } from "react";
 import {
   memo,
   useCallback,
@@ -19,8 +19,13 @@ import {
   Sketch,
   useAddReportCardMutation,
   useCopyableReportCardsQuery,
+  useDeleteDraftReportMutation,
+  useUpdateReportTitleMutation,
 } from "../generated/graphql";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
+import useDialog from "../components/useDialog";
+import Modal from "../components/Modal";
+import TextInput from "../components/TextInput";
 import {
   MenuBarContent,
   MenuBarItem,
@@ -32,7 +37,11 @@ import {
   CopyCardsFromReportPopover,
   getCopiedFromCardId,
 } from "./components/CopyCardsFromReportPopover";
-import { DemonstrationSketchDropdown } from "./components/DemonstrationSketchDropdown";
+import { ExampleSketchSelector } from "./components/DemonstrationSketchDropdown";
+import {
+  ReportWindowActionsMenu,
+  useReportWindowExports,
+} from "./components/ReportWindowActionsMenu";
 import {
   MoveCardToTabModal,
   useMoveCardToTabState,
@@ -41,29 +50,13 @@ import { useCalculationDetailsModalState } from "./components/CalculationDetails
 import { BaseReportContext } from "./context/BaseReportContext";
 import { useSubjectReportContext } from "./context/SubjectReportContext";
 import { ReportUIStateContext } from "./context/ReportUIStateContext";
-import { ReportDependenciesContext } from "./context/ReportDependenciesContext";
 import ReportFullPrintBridge from "./ReportFullPrintBridge";
 import { ReportTabManagementModal } from "./ReportTabManagementModal";
 import { ReportTabs } from "./ReportTabs";
 import { SortableReportContent } from "./SortableReportContent";
-import {
-  collectCardExportSections,
-  packageSectionsAsCsvBlob,
-} from "./widgets/exports";
-import { download } from "../download";
-import { collectReportCardTitle } from "../admin/sketchClasses/SketchClassReportsAdmin";
-
 type CopyableSketchClassRow = NonNullable<
   NonNullable<CopyableReportCardsQuery["project"]>["sketchClasses"]
 >[number];
-
-function slugifyFilenamePart(value: string): string {
-  return String(value || "")
-    .trim()
-    .replace(/[^a-zA-Z0-9_-]+/g, "_")
-    .replace(/^_+|_+$/g, "")
-    .slice(0, 60);
-}
 
 /** New cards are appended at the end of the tab; scroll the list to the bottom. */
 function scrollContainerToBottom(
@@ -92,6 +85,18 @@ function scrollContainerToBottomAfterLayout(
   });
 }
 
+export type ReportEditorPublishMenuProps = {
+  hasUnpublishedChanges: boolean;
+  publishing: boolean;
+  lastPublishedSummary: string | null;
+  onPublish: () => void;
+};
+
+export type ReportEditorDeletionProps = {
+  assignedSketchClasses: { id: number; name: string }[];
+  onDeleted: () => void | Promise<void>;
+};
+
 export default function ReportEditor({
   demonstrationSketches,
   selectedSketchId,
@@ -99,7 +104,8 @@ export default function ReportEditor({
   sketchClassLabelsById,
   recentSketchIdsStorageKey,
   reportAssociatedSketchClassIds,
-  adminPublishChrome,
+  publishMenu,
+  reportDeletion,
 }: {
   demonstrationSketches: Pick<
     Sketch,
@@ -110,12 +116,11 @@ export default function ReportEditor({
   sketchClassLabelsById?: Record<number, string>;
   recentSketchIdsStorageKey?: string;
   reportAssociatedSketchClassIds?: number[];
-  /** Publish button + last-published text (project reports admin). */
-  adminPublishChrome?: ReactNode;
+  publishMenu?: ReportEditorPublishMenuProps;
+  reportDeletion?: ReportEditorDeletionProps;
 }) {
   const baseContext = useContext(BaseReportContext);
   const subjectContext = useSubjectReportContext();
-  const deps = useContext(ReportDependenciesContext);
   const [selectedTabId, setSelectedTabId] = useState<number | undefined>(
     baseContext.data?.report?.tabs?.[0]?.id || undefined
   );
@@ -146,6 +151,9 @@ export default function ReportEditor({
   const [manageTabsOpen, setManageTabsOpen] = useState(false);
   const openManageTabs = useCallback(() => setManageTabsOpen(true), []);
   const closeManageTabs = useCallback(() => setManageTabsOpen(false), []);
+  const { confirmDelete } = useDialog();
+  const [changeReportTitleOpen, setChangeReportTitleOpen] = useState(false);
+  const [reportTitleDraft, setReportTitleDraft] = useState("");
   const onError = useGlobalErrorHandler();
 
   const projectId = subjectContext.data?.sketch?.sketchClass?.projectId;
@@ -242,6 +250,15 @@ export default function ReportEditor({
     onError,
   });
 
+  const [updateReportTitle, updateReportTitleState] =
+    useUpdateReportTitleMutation({
+      onError,
+    });
+
+  const [deleteDraftReport] = useDeleteDraftReportMutation({
+    onError,
+  });
+
   const addACard = useCallback(async () => {
     const currentTabId =
       selectedTabId ?? baseContext.data?.report?.tabs?.[0]?.id;
@@ -297,6 +314,93 @@ export default function ReportEditor({
 
   const { t } = useTranslation("admin:sketching");
 
+  const openChangeReportTitleModal = useCallback(() => {
+    const r = baseContext.data?.report;
+    if (!r) return;
+    setReportTitleDraft((r.title ?? "").trim());
+    setChangeReportTitleOpen(true);
+  }, [baseContext.data?.report]);
+
+  const closeChangeReportTitleModal = useCallback(() => {
+    setChangeReportTitleOpen(false);
+  }, []);
+
+  const handleSaveReportTitle = useCallback(async () => {
+    const reportId = baseContext.data?.report?.id;
+    const trimmed = reportTitleDraft.trim();
+    const currentSaved = (baseContext.data?.report?.title ?? "").trim();
+    if (!reportId || !trimmed) return;
+    if (trimmed === currentSaved) {
+      setChangeReportTitleOpen(false);
+      return;
+    }
+    try {
+      await updateReportTitle({
+        variables: { reportId, title: trimmed },
+      });
+      setChangeReportTitleOpen(false);
+    } catch {
+      // Handled by mutation onError
+    }
+  }, [
+    baseContext.data?.report?.id,
+    baseContext.data?.report?.title,
+    reportTitleDraft,
+    updateReportTitle,
+  ]);
+
+  const handleDeleteReportRequest = useCallback(() => {
+    if (!reportDeletion) return;
+    const rid = baseContext.data?.report?.id;
+    if (rid == null) return;
+
+    const sketchClassesDescription =
+      reportDeletion.assignedSketchClasses.length === 0
+        ? t(
+            "No sketch classes currently use this report as their primary report."
+          )
+        : t(
+            "Sketch classes that use this report as their primary report include: {{list}}.",
+            {
+              list: reportDeletion.assignedSketchClasses
+                .map((sc) => sc.name)
+                .join(", "),
+            }
+          );
+
+    const descriptionParagraphGap =
+      String.fromCharCode(10) + String.fromCharCode(10);
+    confirmDelete({
+      message: t("Delete this report permanently?"),
+      description: [
+        t(
+          "This removes the draft report and every published snapshot in its history from the project. This cannot be undone."
+        ),
+        sketchClassesDescription,
+      ].join(descriptionParagraphGap),
+      primaryButtonText: t("Delete"),
+      onDelete: async () => {
+        await deleteDraftReport({
+          variables: { reportId: rid },
+          update(cache) {
+            cache.evict({
+              // eslint-disable-next-line i18next/no-literal-string -- Apollo typename
+              id: cache.identify({ __typename: "Report", id: rid }),
+            });
+            cache.gc();
+          },
+        });
+        await reportDeletion.onDeleted();
+      },
+    });
+  }, [
+    reportDeletion,
+    baseContext.data?.report?.id,
+    t,
+    confirmDelete,
+    deleteDraftReport,
+  ]);
+
   const setShowCalcDetails = useCallback(
     (cardId: number | undefined) => {
       if (!cardId) {
@@ -329,163 +433,7 @@ export default function ReportEditor({
     reportPrintControlsRef.current?.runPrint();
   }, []);
 
-  const reportDataReady =
-    !!baseContext.data &&
-    !!subjectContext.data &&
-    !deps.loading &&
-    !deps.dependenciesAwaitingRefresh;
-
-  const exportReport = useCallback(
-    async (format: "csv" | "json") => {
-      if (!baseContext.data || !subjectContext.data) {
-        return;
-      }
-      const sketchClassForExport = subjectContext.data.sketch.sketchClass;
-      if (!sketchClassForExport) {
-        return;
-      }
-
-      const metricById = new Map(deps.metrics.map((m) => [m.id, m]));
-      const sourceByStableId = new Map(
-        deps.overlaySources
-          .filter((s) => !!s.stableId)
-          .map((s) => [s.stableId as string, s])
-      );
-
-      const sections: ReturnType<typeof collectCardExportSections> = [];
-      const cards: Array<{
-        tabId: number;
-        tabTitle: string;
-        cardId: number;
-        cardTitle: string;
-        sections: ReturnType<typeof collectCardExportSections>;
-      }> = [];
-
-      const sortedTabs = [...(baseContext.data.report.tabs || [])].sort(
-        (a, b) => a.position - b.position
-      );
-      for (const tab of sortedTabs) {
-        const sortedCards = [...(tab.cards || [])].sort(
-          (a, b) => a.position - b.position
-        );
-        for (const card of sortedCards) {
-          const list = deps.cardDependencyLists.find((l) => l.cardId === card.id);
-          const cardMetrics = (list?.metrics || [])
-            .map((metricId) => metricById.get(metricId))
-            .filter((m): m is NonNullable<typeof m> => m != null);
-          const cardSources = (list?.overlaySources || [])
-            .map((stableId) => sourceByStableId.get(stableId))
-            .filter((s): s is NonNullable<typeof s> => s != null);
-          const cardTitle =
-            collectReportCardTitle(card.body) || `${t("Card")} ${card.id}`;
-          const cardSections = collectCardExportSections({
-            reportId: baseContext.data.report.id,
-            cardId: card.id,
-            cardTitle,
-            body: card.body as any,
-            metrics: cardMetrics,
-            sources: cardSources,
-            geographies: baseContext.data.geographies,
-            sketchClass: sketchClassForExport,
-            subject: {
-              sketchId: subjectContext.data.sketch.id,
-              sketchName: subjectContext.data.sketch.name,
-              isCollection: subjectContext.data.isCollection,
-              childSketches: (subjectContext.data.childSketches || []).map((c) => ({
-                id: c.id,
-                name: c.name,
-              })),
-            },
-            relatedFragments: (subjectContext.data.relatedFragments || []).map(
-              (f) => ({
-                hash: f.hash,
-                geographies: f.geographies,
-                sketches: f.sketches,
-              })
-            ),
-            primaryGeographyId: undefined,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            t: ((k: string) => k) as any,
-          });
-
-          sections.push(
-            ...cardSections.map((section, index) => ({
-              ...section,
-              /* eslint-disable i18next/no-literal-string */
-              id:
-                `${slugifyFilenamePart(cardTitle) || "card"}-` +
-                `${slugifyFilenamePart(section.title) || "section"}-` +
-                `t${tab.id}-c${card.id}-s${index + 1}`,
-              /* eslint-enable i18next/no-literal-string */
-              // eslint-disable-next-line i18next/no-literal-string
-              title:
-                `${cardTitle} / ${section.title}` +
-                ` (${t("Tab")} ${tab.id}, ${t("Card")} ${card.id}, ${t(
-                  "Section"
-                )} ${index + 1})`,
-            }))
-          );
-          cards.push({
-            tabId: tab.id,
-            tabTitle: tab.title,
-            cardId: card.id,
-            cardTitle,
-            sections: cardSections,
-          });
-        }
-      }
-
-      const filenameBase =
-        // eslint-disable-next-line i18next/no-literal-string
-        `${subjectContext.data.sketch.id}-` +
-        `${
-          slugifyFilenamePart(subjectContext.data.sketch.name) ||
-          subjectContext.data.sketch.id
-        }` +
-        // eslint-disable-next-line i18next/no-literal-string
-        `-report-${baseContext.data.report.id}`;
-
-      if (format === "json") {
-        const body = {
-          schemaVersion: 1,
-          exportedAt: new Date().toISOString(),
-          format: "seasketch-report-export",
-          meta: {
-            reportId: baseContext.data.report.id,
-            subjectSketchId: subjectContext.data.sketch.id,
-            subjectSketchName: subjectContext.data.sketch.name,
-            isCollection: subjectContext.data.isCollection,
-          },
-          cards,
-        };
-        const blob = new Blob([JSON.stringify(body, null, 2)], {
-          // eslint-disable-next-line i18next/no-literal-string
-          type: "application/json",
-        });
-        const url = URL.createObjectURL(blob);
-        // eslint-disable-next-line i18next/no-literal-string
-        download(url, `${filenameBase}.json`);
-        URL.revokeObjectURL(url);
-        return;
-      }
-
-      const { blob } = await packageSectionsAsCsvBlob(sections);
-      const url = URL.createObjectURL(blob);
-      // eslint-disable-next-line i18next/no-literal-string
-      download(url, `${filenameBase}.zip`);
-      URL.revokeObjectURL(url);
-    },
-    [
-      baseContext.data,
-      subjectContext.data,
-      deps.metrics,
-      deps.overlaySources,
-      deps.cardDependencyLists,
-      deps.loading,
-      deps.dependenciesAwaitingRefresh,
-      t,
-    ]
-  );
+  const { reportDataReady, exportReport } = useReportWindowExports();
 
   const uiStateContextValue = useMemo(() => {
     return {
@@ -518,6 +466,14 @@ export default function ReportEditor({
   if (baseContext.loading) {
     return <div>{t("Loading report data...")}</div>;
   }
+
+  // After delete we evict the report from the Apollo cache before navigation finishes;
+  // the query can briefly complete with no report while loading is false.
+  if (!baseContext.data?.report) {
+    return null;
+  }
+
+  const report = baseContext.data.report;
 
   const editMenuDisabled = editing != null;
 
@@ -555,6 +511,17 @@ export default function ReportEditor({
                     >
                       {t("Manage Tabs")}
                     </MenuBarItem>
+                    <MenuBarItem onClick={openChangeReportTitleModal}>
+                      {t("Change report title")}
+                    </MenuBarItem>
+                    {reportDeletion ? (
+                      <>
+                        <MenuBarSeparator />
+                        <MenuBarItem onClick={handleDeleteReportRequest}>
+                          {t("Delete report")}
+                        </MenuBarItem>
+                      </>
+                    ) : null}
                     {eligibleSketchClassCount > 1 && projectId ? (
                       <>
                         <MenuBarSeparator />
@@ -580,14 +547,14 @@ export default function ReportEditor({
                               <CopyCardsFromReportPopover
                                 targetTabId={
                                   selectedTabId ??
-                                  baseContext.data!.report?.tabs?.[0]?.id ??
+                                  report.tabs?.[0]?.id ??
                                   0
                                 }
                                 currentSketchClassId={
-                                  subjectContext.data?.sketch?.sketchClass?.id ??
-                                  -1
+                                  subjectContext.data?.sketch?.sketchClass
+                                    ?.id ?? -1
                                 }
-                                draftReportId={baseContext.data!.report?.id ?? null}
+                                draftReportId={report.id ?? null}
                                 demonstrationSketchId={selectedSketchId}
                                 existingCopies={existingCopies}
                                 onDone={() => {}}
@@ -632,13 +599,66 @@ export default function ReportEditor({
                   </MenuBarContent>
                 </Menubar.Portal>
               </Menubar.Menu>
+              {publishMenu ? (
+                <Menubar.Menu>
+                  <MenubarTrigger
+                    title={
+                      publishMenu.hasUnpublishedChanges
+                        ? t(
+                            "There are unpublished changes. Publish to save them."
+                          )
+                        : t("No unpublished changes")
+                    }
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      <span>{t("Publish")}</span>
+                      {publishMenu.hasUnpublishedChanges ? (
+                        <span
+                          className="inline-block h-2 w-2 shrink-0 rounded-full bg-blue-500"
+                          aria-hidden
+                        />
+                      ) : null}
+                    </span>
+                  </MenubarTrigger>
+                  <Menubar.Portal>
+                    <MenuBarContent>
+                      <MenuBarLabel>
+                        {publishMenu.lastPublishedSummary ??
+                          t("No published version yet.")}
+                      </MenuBarLabel>
+                      {publishMenu.hasUnpublishedChanges ? (
+                        <Menubar.Label className="RadixDropdownItem block max-w-[16rem] rounded px-2 pb-1.5 pl-2 pt-0 text-xs leading-snug text-blue-700 outline-none">
+                          {t(
+                            "This draft has changes that are not in the published report yet."
+                          )}
+                        </Menubar.Label>
+                      ) : null}
+                      <MenuBarSeparator />
+                      <MenuBarItem
+                        disabled={
+                          publishMenu.publishing ||
+                          !publishMenu.hasUnpublishedChanges
+                        }
+                        onClick={() => {
+                          if (
+                            !publishMenu.publishing &&
+                            publishMenu.hasUnpublishedChanges
+                          ) {
+                            publishMenu.onPublish();
+                          }
+                        }}
+                      >
+                        {publishMenu.publishing
+                          ? t("Publishing...")
+                          : publishMenu.hasUnpublishedChanges
+                          ? t("Publish Report")
+                          : `${t("Publish Report")} (${t("No changes")})`}
+                      </MenuBarItem>
+                    </MenuBarContent>
+                  </Menubar.Portal>
+                </Menubar.Menu>
+              ) : null}
             </Menubar.Root>
-            <div className="flex-1 min-w-0" />
-            {adminPublishChrome ? (
-              <div className="flex items-center gap-3 shrink-0 pr-2">
-                {adminPublishChrome}
-              </div>
-            ) : null}
           </div>
         </header>
         <div className="flex flex-col flex-1 min-h-0 overflow-hidden p-8">
@@ -646,64 +666,120 @@ export default function ReportEditor({
             {/* report header */}
             <div className="p-4 border-b flex items-center bg-white gap-2 rounded-t-lg">
               <h1 className="flex-1 truncate text-lg">
-                <DemonstrationSketchDropdown
+                <ExampleSketchSelector
                   demonstrationSketches={demonstrationSketches}
                   selectedSketchId={selectedSketchId}
                   setSelectedSketchId={setSelectedSketchId}
                   sketchClassLabelsById={sketchClassLabelsById}
                   recentSketchIdsStorageKey={recentSketchIdsStorageKey}
-                  reportAssociatedSketchClassIds={reportAssociatedSketchClassIds}
+                  reportAssociatedSketchClassIds={
+                    reportAssociatedSketchClassIds
+                  }
                 />
               </h1>
+              <ReportWindowActionsMenu onPrint={requestFullReportPrint} />
             </div>
             {/* report tabs */}
             <div className="shrink-0 overflow-hidden bg-white">
               <ReportTabs />
             </div>
-          {/* report cards */}
-          <div
-            ref={cardsScrollAreaRef}
-            className="relative flex-1 min-h-0 overflow-y-auto overscroll-none"
-          >
-            {(baseContext.data!.report?.tabs || []).map((tab) => {
-              const selected =
-                selectedTabId ?? baseContext.data!.report?.tabs?.[0]?.id;
-              const isActive = selected === tab.id;
-              return (
-                <div
-                  key={"report-tab-" + tab.id}
-                  className={`absolute top-0 w-full ${
-                    isActive ? "relative left-0" : "-left-[10000px]"
-                  }`}
-                >
-                  <MemoizedSortableReportContent
-                    selectedTab={tab}
-                    disabled={isActive && Boolean(editing)}
-                    onMoveCardToTab={moveCardModalState.openModal}
-                    onShowCalculationDetails={calcDetailsModalState.openModal}
-                    setEditing={setEditing}
-                  />
-                </div>
-              );
-            })}
+            {/* report cards */}
+            <div
+              ref={cardsScrollAreaRef}
+              className="relative flex-1 min-h-0 overflow-y-auto overscroll-none"
+            >
+              {(report.tabs || []).map((tab) => {
+                const selected =
+                  selectedTabId ?? report.tabs?.[0]?.id;
+                const isActive = selected === tab.id;
+                return (
+                  <div
+                    key={"report-tab-" + tab.id}
+                    className={`absolute top-0 w-full ${
+                      isActive ? "relative left-0" : "-left-[10000px]"
+                    }`}
+                  >
+                    <MemoizedSortableReportContent
+                      selectedTab={tab}
+                      disabled={isActive && Boolean(editing)}
+                      onMoveCardToTab={moveCardModalState.openModal}
+                      onShowCalculationDetails={calcDetailsModalState.openModal}
+                      setEditing={setEditing}
+                    />
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        </div>
         </div>
       </div>
       <MoveCardToTabModal
         state={moveCardModalState.state}
         onClose={moveCardModalState.closeModal}
       />
-      {baseContext.data?.report && manageTabsOpen && (
+      {manageTabsOpen && (
         <ReportTabManagementModal
           isOpen={manageTabsOpen}
           onClose={closeManageTabs}
           tabs={
-            (baseContext.data.report.tabs as ReportTabDetailsFragment[]) || []
+            (report.tabs as ReportTabDetailsFragment[]) || []
           }
-          reportId={baseContext.data.report.id}
+          reportId={report.id}
         />
       )}
+      <Modal
+        open={changeReportTitleOpen}
+        onRequestClose={closeChangeReportTitleModal}
+        title={t("Change report title")}
+        scrollable
+        footer={[
+          {
+            label: t("Cancel"),
+            variant: "secondary",
+            onClick: closeChangeReportTitleModal,
+          },
+          {
+            label: updateReportTitleState.loading
+              ? t("Saving...")
+              : t("Save"),
+            variant: "primary",
+            loading: updateReportTitleState.loading,
+            disabled:
+              updateReportTitleState.loading ||
+              !reportTitleDraft.trim() ||
+              reportTitleDraft.trim() === (report.title ?? "").trim(),
+            onClick: () => {
+              void handleSaveReportTitle();
+            },
+          },
+        ]}
+      >
+        <div className="space-y-4 text-left">
+          <p className="text-sm text-gray-600">
+            {t(
+              "Titles are only visible in the admin interface to help distinguish them while authoring."
+            )}
+          </p>
+          <TextInput
+            name="draftReportTitle"
+            label={t("Report title")}
+            value={reportTitleDraft}
+            onChange={setReportTitleDraft}
+            autoFocus
+            onKeyDown={(e) => {
+              if (
+                e.key === "Enter" &&
+                reportTitleDraft.trim() &&
+                reportTitleDraft.trim() !== (report.title ?? "").trim() &&
+                !updateReportTitleState.loading
+              ) {
+                e.preventDefault();
+                void handleSaveReportTitle();
+              }
+            }}
+          />
+        </div>
+      </Modal>
     </ReportUIStateContext.Provider>
   );
 }

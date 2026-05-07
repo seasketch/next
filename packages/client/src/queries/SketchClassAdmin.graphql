@@ -402,6 +402,7 @@ fragment ReportTabDetails on ReportTab {
 
 fragment ReportDetails on Report {
   id
+  title
   createdAt
   updatedAt
   tabs {
@@ -550,6 +551,12 @@ mutation UpdateReportCardBody($id: Int!, $body: JSON!) {
   updateReportCardBody(input: { cardId: $id, body: $body }) {
     reportCard {
       ...ReportCardDetails
+      tab {
+        report {
+          id
+          updatedAt
+        }
+      }
     }
   }
 }
@@ -574,6 +581,22 @@ mutation PublishReport($reportId: Int!) {
     sketchClass {
       ...AdminSketchingDetails
     }
+  }
+}
+
+mutation UpdateReportTitle($reportId: Int!, $title: String!) {
+  updateReport(input: { id: $reportId, patch: { title: $title } }) {
+    report {
+      id
+      title
+      updatedAt
+    }
+  }
+}
+
+mutation DeleteDraftReport($reportId: Int!) {
+  deleteReport(input: { id: $reportId }) {
+    deletedReportNodeId
   }
 }
 
@@ -768,6 +791,7 @@ query ReportOverlaySources($reportId: Int!) {
 
 fragment BaseReportDetails on Report {
   id
+  title
   tabs {
     ...ReportTabDetails
   }

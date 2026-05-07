@@ -65,7 +65,7 @@ function sortSketchesNewestFirst(sketches: DemoSketch[]) {
   });
 }
 
-export function DemonstrationSketchDropdown({
+export function ExampleSketchSelector({
   demonstrationSketches,
   selectedSketchId,
   setSelectedSketchId,
@@ -350,6 +350,15 @@ export function DemonstrationSketchDropdown({
                 <DropdownMenu.Separator className="h-px bg-gray-100 my-1" />
               </>
             )}
+            {enhanced &&
+              partitionedGroups &&
+              partitionedGroups.otherGroups.length > 0 &&
+              reportAssociatedSketchClassIds &&
+              reportAssociatedSketchClassIds.length > 0 && (
+                <div className="px-3 py-2 text-[11px] font-semibold uppercase tracking-wide text-gray-500 border-t border-gray-100 mt-1 pt-2">
+                  {t("Linked sketch classes")}
+                </div>
+              )}
             {enhanced &&
               partitionedGroups &&
               partitionedGroups.associatedGroups.map((group, i) => (

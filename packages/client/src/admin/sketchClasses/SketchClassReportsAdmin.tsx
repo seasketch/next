@@ -36,10 +36,19 @@ import useIsSuperuser from "../../useIsSuperuser";
 export default function SketchClassReportsAdmin({
   sketchClass,
   associatedSketchClassIds,
+  assignedSketchClassesForReport,
+  onReportDeleted,
+  draftReportIdOverride,
 }: {
   sketchClass: SketchingDetailsFragment;
   /** Sketch classes that have this report as primary; drives sketch picker ordering. */
   associatedSketchClassIds?: number[];
+  /** Sketch classes whose primary draft is this report (for delete confirmation). */
+  assignedSketchClassesForReport?: { id: number; name: string }[];
+  /** Called after the draft report is deleted from the server (e.g. refetch + navigate). */
+  onReportDeleted?: () => void | Promise<void>;
+  /** Force editor to open this draft report id (used for unassigned project reports). */
+  draftReportIdOverride?: number;
 }) {
   const { t, i18n } = useTranslation("admin:sketching");
   const { confirm, loadingMessage } = useDialog();
@@ -55,7 +64,8 @@ export default function SketchClassReportsAdmin({
     onError,
   });
 
-  const draftReport = data?.sketchClass?.draftReport;
+  const draftReportFromSketchClass = data?.sketchClass?.draftReport;
+  const draftReportId = draftReportIdOverride ?? draftReportFromSketchClass?.id;
 
   /**
    * Demonstration sketch list (`mySketches`) is stable during report authoring.
@@ -118,11 +128,11 @@ export default function SketchClassReportsAdmin({
   }, [debuggingMaterialsData]);
 
   const demonstrationSketchStorageKey = useMemo(() => {
-    if (projectId == null || draftReport?.id == null) {
+    if (projectId == null || draftReportId == null) {
       return undefined;
     }
-    return reportDemonstrationSketchStorageKey(projectId, draftReport.id);
-  }, [projectId, draftReport?.id]);
+    return reportDemonstrationSketchStorageKey(projectId, draftReportId);
+  }, [projectId, draftReportId]);
 
   const [selectedSketchId, setSelectedSketchId] = useState<number | null>(null);
 
@@ -230,8 +240,8 @@ export default function SketchClassReportsAdmin({
             const { hideLoadingMessage } = loadingMessage(
               t("Publishing overlays...")
             );
-            const draftReportId = draftReport?.id;
-            if (!draftReportId) {
+            const reportIdToPublish = draftReportId;
+            if (!reportIdToPublish) {
               hideLoadingMessage();
               onError(new Error("No draft report is available to publish"));
               return;
@@ -242,7 +252,7 @@ export default function SketchClassReportsAdmin({
               });
               hideLoadingMessage();
               await publishReport({
-                variables: { reportId: draftReportId },
+                variables: { reportId: reportIdToPublish },
               });
             } catch (e) {
               hideLoadingMessage();
@@ -263,7 +273,7 @@ export default function SketchClassReportsAdmin({
 
   // Use the custom hook to manage report state
 
-  if (!loading && !draftReport) {
+  if (!loading && !draftReportId) {
     return (
       <div className="flex flex-col w-full h-full items-center p-8">
         <Warning level="info">
@@ -274,9 +284,10 @@ export default function SketchClassReportsAdmin({
   }
 
   const hasUnpublishedChanges =
-    (data?.sketchClass && !data?.sketchClass?.report) ||
-    new Date(data?.sketchClass?.draftReport?.updatedAt ?? 0) >=
-      new Date(data?.sketchClass?.report?.createdAt ?? 0);
+    draftReportIdOverride == null &&
+    ((data?.sketchClass && !data?.sketchClass?.report) ||
+      new Date(data?.sketchClass?.draftReport?.updatedAt ?? 0) >=
+        new Date(data?.sketchClass?.report?.createdAt ?? 0));
 
   if (
     sketchesForDemonstration.length === 0 &&
@@ -312,7 +323,7 @@ export default function SketchClassReportsAdmin({
   }
   // While draft report query is still resolving, avoid mounting report-id-rooted
   // context with an undefined report id.
-  if (!draftReport) {
+  if (!draftReportId) {
     return null;
   }
   if (!selectedSketchId) {
@@ -321,11 +332,11 @@ export default function SketchClassReportsAdmin({
   }
 
   return (
-    <BaseReportContextProvider reportId={draftReport.id}>
+    <BaseReportContextProvider reportId={draftReportId}>
       <div className="flex flex-col w-full flex-1 min-h-0 overflow-hidden">
         <ReportDependenciesContextProvider
           sketchId={selectedSketchId}
-          reportId={draftReport?.id}
+          reportId={draftReportId}
         >
           <ReportPublishedMetricDependenciesRegistrar />
           <div className="flex flex-1 flex-col min-h-0 overflow-hidden">
@@ -342,40 +353,36 @@ export default function SketchClassReportsAdmin({
                     sketchClassLabelsById={sketchClassLabelsById}
                     recentSketchIdsStorageKey={demonstrationSketchStorageKey}
                     reportAssociatedSketchClassIds={associatedSketchClassIds}
-                    adminPublishChrome={
-                      <>
-                        <span className="text-sm text-gray-600 whitespace-nowrap">
-                          {data?.sketchClass?.report &&
-                            t("Last Published ") +
-                              new Date(
-                                data.sketchClass.report.createdAt
-                              ).toLocaleDateString()}
-                        </span>
-                        <Button
-                          small
-                          disabled={
-                            publishReportState.loading ||
-                            !hasUnpublishedChanges
+                    publishMenu={
+                      draftReportIdOverride == null
+                        ? {
+                            hasUnpublishedChanges,
+                            publishing: publishReportState.loading,
+                            lastPublishedSummary:
+                              data?.sketchClass?.report != null
+                                ? t("Last Published ") +
+                                  new Date(
+                                    data.sketchClass.report.createdAt
+                                  ).toLocaleDateString()
+                                : null,
+                            onPublish: () => {
+                              publishReport({
+                                variables: {
+                                  reportId: draftReportId,
+                                },
+                              });
+                            },
                           }
-                          title={
-                            hasUnpublishedChanges
-                              ? t(
-                                  "There are unpublished changes. Publish to save them."
-                                )
-                              : t("No unpublished changes")
+                        : undefined
+                    }
+                    reportDeletion={
+                      onReportDeleted
+                        ? {
+                            assignedSketchClasses:
+                              assignedSketchClassesForReport ?? [],
+                            onDeleted: onReportDeleted,
                           }
-                          loading={publishReportState.loading}
-                          label={t("Publish Report")}
-                          onClick={() => {
-                            publishReport({
-                              variables: {
-                                reportId: draftReport.id,
-                              },
-                            });
-                          }}
-                          primary={hasUnpublishedChanges}
-                        />
-                      </>
+                        : undefined
                     }
                   />
                 </div>

@@ -9,8 +9,10 @@ import getSlug from "../../getSlug";
 import NavSidebar, { NavSidebarItem } from "../../components/NavSidebar";
 import Button from "../../components/Button";
 import Modal from "../../components/Modal";
+import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import {
   useCreateCustomReportMutation,
+  useDeleteDraftReportMutation,
   useProjectReportsContextQuery,
 } from "../../generated/graphql";
 import SketchClassReportsAdmin from "../sketchClasses/SketchClassReportsAdmin";
@@ -31,7 +33,8 @@ const sketchClassAdminReportWorkspaceBackground: { background: string } = {
 export default function ProjectReportsAdmin() {
   const slug = getSlug();
   const { t } = useTranslation("admin:sketching");
-  const { confirm } = useDialog();
+  const { confirm, confirmDelete } = useDialog();
+  const onError = useGlobalErrorHandler();
   const history = useHistory();
   const location = useLocation();
   const { id: routeReportIdParam } = useParams<{ id?: string }>();
@@ -45,6 +48,7 @@ export default function ProjectReportsAdmin() {
     variables: { slug },
   });
   const [createReport, createReportState] = useCreateCustomReportMutation();
+  const [deleteDraftReport] = useDeleteDraftReportMutation({ onError });
 
   const sketchClasses = useMemo(
     () =>
@@ -81,6 +85,70 @@ export default function ProjectReportsAdmin() {
     });
   }, [draftReports, sketchClasses]);
 
+  const handleReportDeleted = useCallback(async () => {
+    const { data } = await contextQuery.refetch();
+    const projectId = data?.projectBySlug?.id;
+    const remaining = (data?.reportsConnection?.nodes || [])
+      .filter(Boolean)
+      .filter(
+        (r: any) =>
+          r.projectId === projectId &&
+          r.draftId == null
+      );
+    if (remaining.length > 0) {
+      // eslint-disable-next-line i18next/no-literal-string -- admin route
+      history.replace(`/${slug}/admin/reports/${remaining[0].id}`);
+    } else {
+      // eslint-disable-next-line i18next/no-literal-string -- admin route
+      history.replace(`/${slug}/admin/reports`);
+    }
+  }, [contextQuery, history, slug]);
+
+  const promptDeleteReport = useCallback(
+    (
+      reportId: number,
+      assigned: { id: number; name: string }[]
+    ) => {
+      const sketchClassesDescription =
+        assigned.length === 0
+          ? t(
+              "No sketch classes currently use this report as their primary report."
+            )
+          : t(
+              "Sketch classes that use this report as their primary report include: {{list}}.",
+              {
+                list: assigned.map((sc) => sc.name).join(", "),
+              }
+            );
+      const descriptionParagraphGap =
+        String.fromCharCode(10) + String.fromCharCode(10);
+      confirmDelete({
+        message: t("Delete this report permanently?"),
+        description: [
+          t(
+            "This removes the draft report and every published snapshot in its history from the project. This cannot be undone."
+          ),
+          sketchClassesDescription,
+        ].join(descriptionParagraphGap),
+        primaryButtonText: t("Delete"),
+        onDelete: async () => {
+          await deleteDraftReport({
+            variables: { reportId },
+            update(cache) {
+              cache.evict({
+                // eslint-disable-next-line i18next/no-literal-string -- Apollo typename
+                id: cache.identify({ __typename: "Report", id: reportId }),
+              });
+              cache.gc();
+            },
+          });
+          await handleReportDeleted();
+        },
+      });
+    },
+    [confirmDelete, deleteDraftReport, handleReportDeleted, t]
+  );
+
   const routeReportId = useMemo(() => {
     if (!routeReportIdParam) {
       return null;
@@ -98,9 +166,29 @@ export default function ProjectReportsAdmin() {
     );
   }, [reportsWithAssignments, routeReportId]);
 
+  const fallbackContextSketchClass = useMemo(() => {
+    return (
+      sketchClasses.find(
+        (sc: any) =>
+          sc.geometryType === "POLYGON" || sc.geometryType === "COLLECTION"
+      ) ??
+      sketchClasses[0] ??
+      null
+    );
+  }, [sketchClasses]);
+
   const contextSketchClass = useMemo(() => {
-    return selectedReport?.assignedSketchClasses?.[0] ?? null;
-  }, [selectedReport]);
+    return (
+      selectedReport?.assignedSketchClasses?.[0] ??
+      fallbackContextSketchClass ??
+      null
+    );
+  }, [selectedReport, fallbackContextSketchClass]);
+
+  const selectedReportHasPrimaryAssignment = useMemo(
+    () => (selectedReport?.assignedSketchClasses?.length ?? 0) > 0,
+    [selectedReport]
+  );
 
   /**
    * Keep URL in sync: optional ?sketchClassId=… deep link, otherwise default to the
@@ -318,15 +406,37 @@ export default function ProjectReportsAdmin() {
             associatedSketchClassIds={selectedReport.assignedSketchClasses.map(
               (sc: any) => sc.id
             )}
+            assignedSketchClassesForReport={selectedReport.assignedSketchClasses.map(
+              (sc: any) => ({
+                id: sc.id,
+                name: sc.name,
+              })
+            )}
+            onReportDeleted={handleReportDeleted}
+            draftReportIdOverride={
+              selectedReportHasPrimaryAssignment ? undefined : selectedReport.id
+            }
           />
         )}
         {selectedReport && !contextSketchClass && (
-          <div className="flex-1 min-h-0 overflow-y-auto p-6">
+          <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4">
             <Warning level="info">
               {t(
-                "This report is not assigned as a primary report for any sketch class. Assign it from a sketch class’s Reports settings before editing."
+                "No sketch classes are available yet for report demonstration. Create a polygon or collection sketch class, or delete this report."
               )}
             </Warning>
+            <Button
+              label={t("Delete report")}
+              onClick={() =>
+                promptDeleteReport(
+                  selectedReport.id,
+                  selectedReport.assignedSketchClasses.map((sc: any) => ({
+                    id: sc.id,
+                    name: sc.name,
+                  }))
+                )
+              }
+            />
           </div>
         )}
         {!selectedReport && reportsWithAssignments.length > 0 && (
