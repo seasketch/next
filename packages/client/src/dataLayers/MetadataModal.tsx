@@ -32,7 +32,7 @@ export default function MetadataModal({
   }, [document, loading]);
 
   return (
-    <Modal loading={loading} title="" onRequestClose={onRequestClose}>
+    <Modal loading={loading} title="" scrollable onRequestClose={onRequestClose}>
       <>
         <div className="relative metadata mt-3">
           <button
