@@ -148,7 +148,7 @@ export default function AdminRouter() {
           <LazyGeographyAdmin />
         </React.Suspense>
       </Route>
-      <Route path={`${path}/reports`}>
+      <Route exact path={`${path}/reports/:id?`}>
         <React.Suspense fallback={<Spinner />}>
           <LazyProjectReportsAdmin />
         </React.Suspense>

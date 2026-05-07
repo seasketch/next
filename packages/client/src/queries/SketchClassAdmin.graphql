@@ -429,6 +429,16 @@ query DraftReportDebuggingMaterials($sketchClassId: Int!) {
         name
         translatedProps
       }
+      mySketches {
+        id
+        name
+        sketchClassId
+        createdAt
+      }
+      sketchClasses {
+        id
+        name
+      }
     }
     mySketches {
       id

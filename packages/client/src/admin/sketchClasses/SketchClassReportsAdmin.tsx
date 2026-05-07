@@ -26,6 +26,7 @@ import { SketchingIcon } from "../../projects/ToolbarButtons";
 import { BaseReportContextProvider } from "../../reports/context/BaseReportContext";
 import { SubjectReportContextProvider } from "../../reports/context/SubjectReportContext";
 import ReportEditor from "../../reports/ReportEditor";
+import { reportDemonstrationSketchStorageKey } from "../../reports/components/DemonstrationSketchDropdown";
 import ReportDependenciesContextProvider, {
   ReportDependenciesContext,
 } from "../../reports/context/ReportDependenciesContext";
@@ -34,8 +35,11 @@ import useIsSuperuser from "../../useIsSuperuser";
 
 export default function SketchClassReportsAdmin({
   sketchClass,
+  associatedSketchClassIds,
 }: {
   sketchClass: SketchingDetailsFragment;
+  /** Sketch classes that have this report as primary; drives sketch picker ordering. */
+  associatedSketchClassIds?: number[];
 }) {
   const { t, i18n } = useTranslation("admin:sketching");
   const { confirm, loadingMessage } = useDialog();
@@ -50,6 +54,8 @@ export default function SketchClassReportsAdmin({
     },
     onError,
   });
+
+  const draftReport = data?.sketchClass?.draftReport;
 
   /**
    * Demonstration sketch list (`mySketches`) is stable during report authoring.
@@ -89,26 +95,66 @@ export default function SketchClassReportsAdmin({
 
   const sketchesForDemonstration = useMemo(() => {
     const sketches =
-      debuggingMaterialsData?.sketchClass?.mySketches?.filter(
-        (sketch) => sketch.sketchClassId === sketchClass.id
-      ) || [];
+      debuggingMaterialsData?.sketchClass?.project?.mySketches?.filter(Boolean) ||
+      [];
 
-    // Sort by createdAt (most recent first)
-    return sketches.sort((a, b) => {
+    return [...sketches].sort((a, b) => {
       const dateA = new Date(a.createdAt).getTime();
       const dateB = new Date(b.createdAt).getTime();
-      return dateB - dateA; // Most recent first
+      return dateB - dateA;
     });
-  }, [debuggingMaterialsData, sketchClass.id]);
+  }, [debuggingMaterialsData]);
+
+  const sketchClassLabelsById = useMemo(() => {
+    const rows =
+      debuggingMaterialsData?.sketchClass?.project?.sketchClasses?.filter(
+        Boolean
+      ) || [];
+    const m: Record<number, string> = {};
+    for (const sc of rows) {
+      m[sc.id] = sc.name;
+    }
+    return m;
+  }, [debuggingMaterialsData]);
+
+  const demonstrationSketchStorageKey = useMemo(() => {
+    if (projectId == null || draftReport?.id == null) {
+      return undefined;
+    }
+    return reportDemonstrationSketchStorageKey(projectId, draftReport.id);
+  }, [projectId, draftReport?.id]);
 
   const [selectedSketchId, setSelectedSketchId] = useState<number | null>(null);
 
-  // Auto-select the first sketch when sketches become available
+  // Auto-select a sketch when available — prefer a recently used one from localStorage
   useEffect(() => {
-    if (sketchesForDemonstration.length > 0 && !selectedSketchId) {
+    if (sketchesForDemonstration.length === 0 || selectedSketchId != null) {
+      return;
+    }
+    if (!demonstrationSketchStorageKey) {
+      setSelectedSketchId(sketchesForDemonstration[0].id);
+      return;
+    }
+    try {
+      const raw = localStorage.getItem(demonstrationSketchStorageKey);
+      const parsed = raw ? JSON.parse(raw) : [];
+      const recentIds: number[] = Array.isArray(parsed)
+        ? parsed.filter((x: unknown) => typeof x === "number")
+        : [];
+      const preferred = recentIds
+        .map((id) => sketchesForDemonstration.find((s) => s.id === id))
+        .find(Boolean);
+      setSelectedSketchId(
+        preferred?.id ?? sketchesForDemonstration[0].id
+      );
+    } catch {
       setSelectedSketchId(sketchesForDemonstration[0].id);
     }
-  }, [sketchesForDemonstration, selectedSketchId]);
+  }, [
+    sketchesForDemonstration,
+    selectedSketchId,
+    demonstrationSketchStorageKey,
+  ]);
 
   const { data: projectData } = useProjectMetadataQuery({
     variables: { slug },
@@ -215,7 +261,6 @@ export default function SketchClassReportsAdmin({
     awaitRefetchQueries: true,
   });
 
-  const draftReport = data?.sketchClass?.draftReport;
   // Use the custom hook to manage report state
 
   if (!loading && !draftReport) {
@@ -277,38 +322,7 @@ export default function SketchClassReportsAdmin({
 
   return (
     <BaseReportContextProvider reportId={draftReport.id}>
-      <div className="flex flex-col w-full h-full overflow-y-hidden">
-        {/* Admin chrome only: publish + last published (no card/report deps or form language) */}
-        <div className="bg-gray-100 p-4 flex-none border-b shadow z-10 flex items-center justify-between">
-          <div className="flex w-full space-x-2 items-center">
-            <Button
-              small
-              disabled={publishReportState.loading || !hasUnpublishedChanges}
-              title={
-                hasUnpublishedChanges
-                  ? t("There are unpublished changes. Publish to save them.")
-                  : t("No unpublished changes")
-              }
-              loading={publishReportState.loading}
-              label={t("Publish Report")}
-              onClick={() => {
-                publishReport({
-                  variables: {
-                    reportId: draftReport.id,
-                  },
-                });
-              }}
-              primary={hasUnpublishedChanges}
-            />
-            <span className="text-sm text-gray-500">
-              {data?.sketchClass?.report &&
-                t("Last Published ") +
-                  new Date(
-                    data.sketchClass.report.createdAt
-                  ).toLocaleDateString()}
-            </span>
-          </div>
-        </div>
+      <div className="flex flex-col w-full flex-1 min-h-0 overflow-hidden">
         <ReportDependenciesContextProvider
           sketchId={selectedSketchId}
           reportId={draftReport?.id}
@@ -325,6 +339,44 @@ export default function SketchClassReportsAdmin({
                     demonstrationSketches={sketchesForDemonstration}
                     selectedSketchId={selectedSketchId}
                     setSelectedSketchId={setSelectedSketchId}
+                    sketchClassLabelsById={sketchClassLabelsById}
+                    recentSketchIdsStorageKey={demonstrationSketchStorageKey}
+                    reportAssociatedSketchClassIds={associatedSketchClassIds}
+                    adminPublishChrome={
+                      <>
+                        <span className="text-sm text-gray-600 whitespace-nowrap">
+                          {data?.sketchClass?.report &&
+                            t("Last Published ") +
+                              new Date(
+                                data.sketchClass.report.createdAt
+                              ).toLocaleDateString()}
+                        </span>
+                        <Button
+                          small
+                          disabled={
+                            publishReportState.loading ||
+                            !hasUnpublishedChanges
+                          }
+                          title={
+                            hasUnpublishedChanges
+                              ? t(
+                                  "There are unpublished changes. Publish to save them."
+                                )
+                              : t("No unpublished changes")
+                          }
+                          loading={publishReportState.loading}
+                          label={t("Publish Report")}
+                          onClick={() => {
+                            publishReport({
+                              variables: {
+                                reportId: draftReport.id,
+                              },
+                            });
+                          }}
+                          primary={hasUnpublishedChanges}
+                        />
+                      </>
+                    }
                   />
                 </div>
               </FormLanguageContext.Provider>

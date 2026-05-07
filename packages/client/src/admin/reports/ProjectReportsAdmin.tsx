@@ -1,24 +1,42 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useHistory, useLocation, useParams } from "react-router-dom";
+import { PlusIcon } from "@heroicons/react/outline";
 import Spinner from "../../components/Spinner";
 import Warning from "../../components/Warning";
 import useDialog from "../../components/useDialog";
 import getSlug from "../../getSlug";
+import NavSidebar, { NavSidebarItem } from "../../components/NavSidebar";
+import Button from "../../components/Button";
+import Modal from "../../components/Modal";
 import {
   useCreateCustomReportMutation,
   useProjectReportsContextQuery,
-  useSetPrimaryReportForSketchClassMutation,
 } from "../../generated/graphql";
 import SketchClassReportsAdmin from "../sketchClasses/SketchClassReportsAdmin";
+
+/** Same gradient + dot grid as {@link ../sketchClasses/SketchClassForm} tab content. */
+const sketchClassAdminReportWorkspaceBackground: { background: string } = {
+  // eslint-disable-next-line i18next/no-literal-string -- CSS only
+  background: `
+    linear-gradient(150deg,
+      rgba(238, 240, 241, 0) 0%,
+      rgba(238, 240, 241, 0.6) 60%,
+      rgba(238, 240, 241, 0.8) 100%
+    ),
+    url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAoAAAAKCAYAAACNMs+9AAAAAXNSR0IArs4c6QAAACFJREFUKFNjXL58oxQDEYARpDAy0v8ZIbWjCvGGENHBAwCZWCYkLmgNZgAAAABJRU5ErkJggg==") repeat rgba(238, 240, 241)
+  `,
+};
 
 export default function ProjectReportsAdmin() {
   const slug = getSlug();
   const { t } = useTranslation("admin:sketching");
   const { confirm } = useDialog();
-  const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
-  const [selectedSketchClassId, setSelectedSketchClassId] = useState<
-    number | null
-  >(null);
+  const history = useHistory();
+  const location = useLocation();
+  const { id: routeReportIdParam } = useParams<{ id?: string }>();
+
+  const [createModalOpen, setCreateModalOpen] = useState(false);
   const [newReportTitle, setNewReportTitle] = useState("");
   const [selectedCreateSketchClassIds, setSelectedCreateSketchClassIds] =
     useState<number[]>([]);
@@ -27,8 +45,6 @@ export default function ProjectReportsAdmin() {
     variables: { slug },
   });
   const [createReport, createReportState] = useCreateCustomReportMutation();
-  const [setPrimaryReport, setPrimaryReportState] =
-    useSetPrimaryReportForSketchClassMutation();
 
   const sketchClasses = useMemo(
     () =>
@@ -37,16 +53,22 @@ export default function ProjectReportsAdmin() {
       ),
     [contextQuery.data?.projectBySlug?.sketchClasses]
   );
+
   const draftReports = useMemo(
     () =>
       (contextQuery.data?.reportsConnection?.nodes || [])
         .filter((r: any): r is NonNullable<typeof r> => Boolean(r))
         .filter(
-        (r: any) =>
-          r.projectId === contextQuery.data?.projectBySlug?.id && r.draftId == null
-      ),
-    [contextQuery.data?.reportsConnection?.nodes, contextQuery.data?.projectBySlug?.id]
+          (r: any) =>
+            r.projectId === contextQuery.data?.projectBySlug?.id &&
+            r.draftId == null
+        ),
+    [
+      contextQuery.data?.reportsConnection?.nodes,
+      contextQuery.data?.projectBySlug?.id,
+    ]
   );
+
   const reportsWithAssignments = useMemo(() => {
     return draftReports.map((report: any) => {
       const assignedSketchClasses = sketchClasses.filter(
@@ -59,28 +81,77 @@ export default function ProjectReportsAdmin() {
     });
   }, [draftReports, sketchClasses]);
 
-  const selectedReport = useMemo(() => {
-    if (!selectedReportId && reportsWithAssignments.length > 0) {
-      return reportsWithAssignments[0];
-    }
-    return (
-      reportsWithAssignments.find((r: any) => r.id === selectedReportId) || null
-    );
-  }, [reportsWithAssignments, selectedReportId]);
-
-  const effectiveSketchClassId = useMemo(() => {
-    if (selectedSketchClassId) {
-      return selectedSketchClassId;
-    }
-    return selectedReport?.assignedSketchClasses?.[0]?.id || null;
-  }, [selectedSketchClassId, selectedReport]);
-
-  const selectedSketchClass = useMemo(() => {
-    if (!effectiveSketchClassId) {
+  const routeReportId = useMemo(() => {
+    if (!routeReportIdParam) {
       return null;
     }
-    return sketchClasses.find((sc: any) => sc.id === effectiveSketchClassId);
-  }, [effectiveSketchClassId, sketchClasses]);
+    const n = parseInt(routeReportIdParam, 10);
+    return Number.isFinite(n) ? n : null;
+  }, [routeReportIdParam]);
+
+  const selectedReport = useMemo(() => {
+    if (routeReportId == null) {
+      return null;
+    }
+    return (
+      reportsWithAssignments.find((r: any) => r.id === routeReportId) || null
+    );
+  }, [reportsWithAssignments, routeReportId]);
+
+  const contextSketchClass = useMemo(() => {
+    return selectedReport?.assignedSketchClasses?.[0] ?? null;
+  }, [selectedReport]);
+
+  /**
+   * Keep URL in sync: optional ?sketchClassId=… deep link, otherwise default to the
+   * first report whenever there is no valid :id (missing, non-numeric, or unknown).
+   */
+  useEffect(() => {
+    if (contextQuery.loading || contextQuery.error) {
+      return;
+    }
+    if (!contextQuery.data?.projectBySlug?.enableReportBuilder) {
+      return;
+    }
+    if (reportsWithAssignments.length === 0) {
+      return;
+    }
+
+    const params = new URLSearchParams(location.search || "");
+    const sketchClassIdRaw = params.get("sketchClassId");
+    if (sketchClassIdRaw && sketchClasses.length > 0) {
+      const sketchClassId = parseInt(sketchClassIdRaw, 10);
+      if (Number.isFinite(sketchClassId)) {
+        const sc = sketchClasses.find((s: any) => s.id === sketchClassId);
+        const draftReportId = sc?.draftReport?.id;
+        if (draftReportId) {
+          // eslint-disable-next-line i18next/no-literal-string -- admin route
+          history.replace(`/${slug}/admin/reports/${draftReportId}`);
+          return;
+        }
+      }
+    }
+
+    if (routeReportId != null && selectedReport != null) {
+      return;
+    }
+
+    const firstId = reportsWithAssignments[0].id;
+    // eslint-disable-next-line i18next/no-literal-string -- admin route
+    history.replace(`/${slug}/admin/reports/${firstId}`);
+  }, [
+    contextQuery.loading,
+    contextQuery.error,
+    contextQuery.data?.projectBySlug?.enableReportBuilder,
+    reportsWithAssignments,
+    routeReportIdParam,
+    routeReportId,
+    selectedReport,
+    sketchClasses,
+    location.search,
+    history,
+    slug,
+  ]);
 
   const selectedCreateSketchClasses = useMemo(
     () =>
@@ -92,11 +163,18 @@ export default function ProjectReportsAdmin() {
 
   const conflictingCreateAssignments = useMemo(
     () =>
-      selectedCreateSketchClasses.filter((sc: any) => sc.draftReport?.id != null),
+      selectedCreateSketchClasses.filter(
+        (sc: any) => sc.draftReport?.id != null
+      ),
     [selectedCreateSketchClasses]
   );
 
-  async function runCreateReport() {
+  const resetCreateForm = useCallback(() => {
+    setNewReportTitle("");
+    setSelectedCreateSketchClassIds([]);
+  }, []);
+
+  const runCreateReport = useCallback(async () => {
     const projectId = contextQuery.data?.projectBySlug?.id;
     if (!projectId) {
       return;
@@ -120,10 +198,11 @@ export default function ProjectReportsAdmin() {
       await contextQuery.refetch();
       const newId = result.data?.createCustomReport?.report?.id;
       if (newId) {
-        setSelectedReportId(newId);
+        // eslint-disable-next-line i18next/no-literal-string -- admin route
+        history.push(`/${slug}/admin/reports/${newId}`);
       }
-      setNewReportTitle("");
-      setSelectedCreateSketchClassIds([]);
+      resetCreateForm();
+      setCreateModalOpen(false);
     };
 
     if (conflictingCreateAssignments.length > 0) {
@@ -139,7 +218,32 @@ export default function ProjectReportsAdmin() {
     }
 
     await doCreate();
-  }
+  }, [
+    contextQuery.data?.projectBySlug?.id,
+    newReportTitle,
+    selectedCreateSketchClassIds,
+    createReport,
+    contextQuery,
+    history,
+    slug,
+    resetCreateForm,
+    conflictingCreateAssignments.length,
+    confirm,
+    t,
+  ]);
+
+  const navItems: NavSidebarItem[] = useMemo(() => {
+    return reportsWithAssignments.map((report: any) => ({
+      label: report.title?.trim() || t("Untitled report"),
+      href: `/${slug}/admin/reports/${report.id}`,
+      compact: true,
+    }));
+  }, [reportsWithAssignments, slug, t]);
+
+  const openCreateModal = useCallback(() => {
+    resetCreateForm();
+    setCreateModalOpen(true);
+  }, [resetCreateForm]);
 
   if (contextQuery.loading) {
     return (
@@ -170,45 +274,134 @@ export default function ProjectReportsAdmin() {
   }
 
   return (
-    <div className="flex h-full min-h-screen">
-      <div className="w-96 border-r bg-white p-4 space-y-4 overflow-y-auto">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">{t("Reports")}</h2>
-          <span className="text-xs text-gray-500">{t("Create Report")}</span>
-        </div>
-        <div className="space-y-2 border rounded border-gray-200 p-3">
-          <input
-            className="w-full border rounded px-2 py-1.5 text-sm"
-            placeholder={t("Report title")}
-            value={newReportTitle}
-            onChange={(e) => setNewReportTitle(e.target.value)}
+    <>
+    <div className="flex w-full min-h-0 flex-1 overflow-hidden h-[calc(100dvh-3rem)] max-h-[calc(100dvh-3rem)] md:h-[100dvh] md:max-h-[100dvh]">
+      <NavSidebar
+        className="z-10 !w-[340px] shrink-0"
+        loading={false}
+        items={navItems}
+        header={t("Reports")}
+        headerButton={
+          <Button
+            title={t("Create a new report")}
+            small
+            label={
+              <>
+                {t("Add")}
+                <PlusIcon className="w-4 h-4 ml-2" />
+              </>
+            }
+            onClick={openCreateModal}
           />
-          <label className="text-xs font-medium text-gray-700 block">
-            {t("Assign as primary for sketch classes (optional)")}
-          </label>
-          <div className="max-h-40 overflow-y-auto border rounded p-2 space-y-1">
-            {sketchClasses.map((sc: any) => {
-              const isChecked = selectedCreateSketchClassIds.includes(sc.id);
-              return (
-                <label
-                  key={sc.id}
-                  className="flex items-center justify-between text-xs text-gray-700"
-                >
-                  <span className="truncate pr-2">{sc.name}</span>
-                  <input
-                    type="checkbox"
-                    checked={isChecked}
-                    onChange={() => {
-                      setSelectedCreateSketchClassIds((ids) =>
-                        isChecked
-                          ? ids.filter((id) => id !== sc.id)
-                          : [...ids, sc.id]
-                      );
-                    }}
-                  />
-                </label>
-              );
-            })}
+        }
+      />
+      <div
+        className="flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden bg-white"
+        style={sketchClassAdminReportWorkspaceBackground}
+      >
+        {!contextQuery.loading && reportsWithAssignments.length === 0 && (
+          <div className="flex flex-1 min-h-0 items-start justify-center overflow-y-auto px-2 pt-10">
+            <div className="max-w-xl rounded mx-auto p-4 border-4 border-dashed bg-white/80">
+              <h2 className="text-base mb-2">
+                {t(
+                  "Your project has no reports yet. Create a report to author dashboards and printable summaries for sketches."
+                )}
+              </h2>
+              <Button label={t("Create your first report")} onClick={openCreateModal} />
+            </div>
+          </div>
+        )}
+        {selectedReport && contextSketchClass && (
+          <SketchClassReportsAdmin
+            key={selectedReport.id}
+            sketchClass={contextSketchClass}
+            associatedSketchClassIds={selectedReport.assignedSketchClasses.map(
+              (sc: any) => sc.id
+            )}
+          />
+        )}
+        {selectedReport && !contextSketchClass && (
+          <div className="flex-1 min-h-0 overflow-y-auto p-6">
+            <Warning level="info">
+              {t(
+                "This report is not assigned as a primary report for any sketch class. Assign it from a sketch class’s Reports settings before editing."
+              )}
+            </Warning>
+          </div>
+        )}
+        {!selectedReport && reportsWithAssignments.length > 0 && (
+          <div className="flex-1 min-h-0 overflow-y-auto p-6">
+            <Warning level="info">{t("Select a report to begin editing.")}</Warning>
+          </div>
+        )}
+      </div>
+    </div>
+
+      <Modal
+        open={createModalOpen}
+        onRequestClose={() => setCreateModalOpen(false)}
+        title={t("Create Report")}
+        scrollable
+        footer={[
+          {
+            label: t("Cancel"),
+            variant: "secondary",
+            onClick: () => setCreateModalOpen(false),
+          },
+          {
+            label: createReportState.loading ? t("Creating...") : t("Create Report"),
+            variant: "primary",
+            loading: createReportState.loading,
+            disabled:
+              createReportState.loading ||
+              !contextQuery.data?.projectBySlug?.id ||
+              !newReportTitle.trim(),
+            onClick: () => {
+              void runCreateReport();
+            },
+          },
+        ]}
+      >
+        <div className="space-y-4 text-left">
+          <div>
+            <label className="text-sm font-medium text-gray-700 block mb-1">
+              {t("Report title")}
+            </label>
+            <input
+              className="w-full border rounded px-2 py-1.5 text-sm border-gray-300"
+              placeholder={t("Report title")}
+              value={newReportTitle}
+              onChange={(e) => setNewReportTitle(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="text-sm font-medium text-gray-700 block mb-2">
+              {t("Assign as primary for sketch classes (optional)")}
+            </label>
+            <div className="max-h-48 overflow-y-auto border rounded border-gray-200 p-2 space-y-1">
+              {sketchClasses.map((sc: any) => {
+                const isChecked = selectedCreateSketchClassIds.includes(sc.id);
+                return (
+                  <label
+                    key={sc.id}
+                    className="flex items-center justify-between text-xs text-gray-700"
+                  >
+                    <span className="truncate pr-2">{sc.name}</span>
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => {
+                        setSelectedCreateSketchClassIds((ids) =>
+                          isChecked
+                            ? ids.filter((id) => id !== sc.id)
+                            : [...ids, sc.id]
+                        );
+                      }}
+                    />
+                  </label>
+                );
+              })}
+            </div>
           </div>
           {conflictingCreateAssignments.length > 0 && (
             <Warning level="warning">
@@ -220,121 +413,8 @@ export default function ProjectReportsAdmin() {
                 .join(", ")}
             </Warning>
           )}
-          <button
-            className="w-full text-sm bg-primary-600 hover:bg-primary-500 text-white px-3 py-1.5 rounded disabled:bg-gray-400"
-            disabled={
-              createReportState.loading ||
-              !contextQuery.data?.projectBySlug?.id ||
-              !newReportTitle.trim()
-            }
-            onClick={() => {
-              void runCreateReport();
-            }}
-          >
-            {createReportState.loading ? t("Creating...") : t("Create Report")}
-          </button>
         </div>
-        <div className="space-y-2">
-          {reportsWithAssignments.map((report: any) => {
-            const isSelected = selectedReport?.id === report.id;
-            return (
-              <button
-                key={report.id}
-                className={`w-full text-left border rounded p-3 ${
-                  isSelected
-                    ? "border-primary-500 bg-primary-50"
-                    : "border-gray-200 hover:border-gray-300"
-                }`}
-                onClick={() => {
-                  setSelectedReportId(report.id);
-                  setSelectedSketchClassId(
-                    report.assignedSketchClasses?.[0]?.id ?? null
-                  );
-                }}
-              >
-                <div className="text-sm font-medium text-gray-900">
-                  {`${t("Report")} #${report.id}`}
-                </div>
-                <div className="text-xs text-gray-500 mt-1">
-                  {report.assignedSketchClasses.length > 0
-                    ? report.assignedSketchClasses
-                        .map((sc: any) => sc?.name)
-                        .filter(Boolean)
-                        .join(", ")
-                    : t("No assignment")}
-                </div>
-              </button>
-            );
-          })}
-          {reportsWithAssignments.length === 0 && (
-            <Warning level="info">{t("No reports found yet.")}</Warning>
-          )}
-        </div>
-        {selectedReport && (
-          <div className="space-y-2 pt-2 border-t">
-            <label className="text-sm font-medium text-gray-700 block">
-              {t("Editing context sketch class")}
-            </label>
-            <select
-              className="w-full border rounded px-2 py-1.5 text-sm"
-              value={effectiveSketchClassId ?? ""}
-              onChange={(e) => {
-                const value = Number(e.target.value);
-                setSelectedSketchClassId(Number.isFinite(value) ? value : null);
-              }}
-            >
-              <option value="">{t("Select sketch class")}</option>
-              {sketchClasses.map((sc: any) => (
-                <option key={sc.id} value={sc.id}>
-                  {sc.name}
-                </option>
-              ))}
-            </select>
-            {effectiveSketchClassId &&
-              selectedReport &&
-              selectedReport.assignedSketchClasses.every(
-                (sc: any) => sc.id !== effectiveSketchClassId
-              ) && (
-                <button
-                  className="text-sm bg-gray-800 hover:bg-gray-700 text-white px-3 py-1.5 rounded"
-                  disabled={setPrimaryReportState.loading}
-                  onClick={async () => {
-                    await setPrimaryReport({
-                      variables: {
-                        sketchClassId: effectiveSketchClassId,
-                        draftReportId: selectedReport.id,
-                      },
-                    });
-                    await contextQuery.refetch();
-                  }}
-                >
-                  {t("Assign as primary report")}
-                </button>
-              )}
-            {setPrimaryReportState.error && (
-              <Warning level="error">{setPrimaryReportState.error.message}</Warning>
-            )}
-          </div>
-        )}
-      </div>
-      <div className="flex-1 min-w-0">
-        {selectedSketchClass ? (
-          <SketchClassReportsAdmin sketchClass={selectedSketchClass} />
-        ) : selectedReport ? (
-          <div className="p-6">
-            <Warning level="info">
-              {t(
-                "Choose a sketch class context to edit this report draft."
-              )}
-            </Warning>
-          </div>
-        ) : (
-          <div className="p-6">
-            <Warning level="info">{t("Select a report to begin editing.")}</Warning>
-          </div>
-        )}
-      </div>
-    </div>
+      </Modal>
+    </>
   );
 }
-

@@ -7429,6 +7429,10 @@ select{
   height:100vh
 }
 
+.h-\[calc\(100dvh-3rem\)\]{
+  height:calc(100dvh - 3rem)
+}
+
 .max-h-128{
   max-height:32rem
 }
@@ -7553,6 +7557,14 @@ select{
   max-height:100vh
 }
 
+.max-h-\[min\(480px\2c 70vh\)\]{
+  max-height:min(480px,70vh)
+}
+
+.max-h-\[calc\(100dvh-3rem\)\]{
+  max-height:calc(100dvh - 3rem)
+}
+
 .min-h-0{
   min-height:0px
 }
@@ -7623,6 +7635,14 @@ select{
 
 .min-h-screen{
   min-height:100vh
+}
+
+.min-h-9{
+  min-height:2.25rem
+}
+
+.min-h-\[2\.125rem\]{
+  min-height:2.125rem
 }
 
 .\!w-\[340px\]{
@@ -8011,6 +8031,10 @@ select{
   min-width:32rem
 }
 
+.min-w-\[min\(26rem\2c var\(--radix-menubar-content-available-width\)\)\]{
+  min-width:min(26rem,var(--radix-menubar-content-available-width))
+}
+
 .\!max-w-128{
   max-width:32rem !important
 }
@@ -8257,6 +8281,10 @@ select{
 
 .max-w-xs{
   max-width:20rem
+}
+
+.max-w-\[380px\]{
+  max-width:380px
 }
 
 .flex-1{
@@ -11884,6 +11912,10 @@ select{
   padding-top:1px
 }
 
+.pt-10{
+  padding-top:2.5rem
+}
+
 .text-left{
   text-align:left
 }
@@ -15241,6 +15273,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
   opacity:0.8
 }
 
+.data-\[disabled\]\:pointer-events-none[data-disabled]{
+  pointer-events:none
+}
+
 .data-\[state\=inactive\]\:hidden[data-state="inactive"]{
   display:none
 }
@@ -16040,6 +16076,14 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
   .md\:h-72{
     height:18rem
+  }
+
+  .md\:h-\[100dvh\]{
+    height:100dvh
+  }
+
+  .md\:max-h-\[100dvh\]{
+    max-height:100dvh
   }
 
   .md\:min-h-screen{

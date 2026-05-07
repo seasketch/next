@@ -1,6 +1,6 @@
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { ChevronRightIcon, PlusIcon } from "@radix-ui/react-icons";
-import type { ComponentProps } from "react";
+import * as Menubar from "@radix-ui/react-menubar";
+import { ChevronRightIcon } from "@radix-ui/react-icons";
+import type { ComponentProps, ReactNode } from "react";
 import {
   memo,
   useCallback,
@@ -22,6 +22,13 @@ import {
 } from "../generated/graphql";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import {
+  MenuBarContent,
+  MenuBarItem,
+  MenuBarLabel,
+  MenuBarSeparator,
+  MenubarTrigger,
+} from "../components/Menubar";
+import {
   CopyCardsFromReportPopover,
   getCopiedFromCardId,
 } from "./components/CopyCardsFromReportPopover";
@@ -34,14 +41,29 @@ import { useCalculationDetailsModalState } from "./components/CalculationDetails
 import { BaseReportContext } from "./context/BaseReportContext";
 import { useSubjectReportContext } from "./context/SubjectReportContext";
 import { ReportUIStateContext } from "./context/ReportUIStateContext";
+import { ReportDependenciesContext } from "./context/ReportDependenciesContext";
 import ReportFullPrintBridge from "./ReportFullPrintBridge";
 import { ReportTabManagementModal } from "./ReportTabManagementModal";
 import { ReportTabs } from "./ReportTabs";
 import { SortableReportContent } from "./SortableReportContent";
+import {
+  collectCardExportSections,
+  packageSectionsAsCsvBlob,
+} from "./widgets/exports";
+import { download } from "../download";
+import { collectReportCardTitle } from "../admin/sketchClasses/SketchClassReportsAdmin";
 
 type CopyableSketchClassRow = NonNullable<
   NonNullable<CopyableReportCardsQuery["project"]>["sketchClasses"]
 >[number];
+
+function slugifyFilenamePart(value: string): string {
+  return String(value || "")
+    .trim()
+    .replace(/[^a-zA-Z0-9_-]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 60);
+}
 
 /** New cards are appended at the end of the tab; scroll the list to the bottom. */
 function scrollContainerToBottom(
@@ -74,13 +96,26 @@ export default function ReportEditor({
   demonstrationSketches,
   selectedSketchId,
   setSelectedSketchId,
+  sketchClassLabelsById,
+  recentSketchIdsStorageKey,
+  reportAssociatedSketchClassIds,
+  adminPublishChrome,
 }: {
-  demonstrationSketches: Pick<Sketch, "id" | "name">[];
+  demonstrationSketches: Pick<
+    Sketch,
+    "id" | "name" | "sketchClassId" | "createdAt"
+  >[];
   selectedSketchId: number | null;
   setSelectedSketchId: (sketchId: number | null) => void;
+  sketchClassLabelsById?: Record<number, string>;
+  recentSketchIdsStorageKey?: string;
+  reportAssociatedSketchClassIds?: number[];
+  /** Publish button + last-published text (project reports admin). */
+  adminPublishChrome?: ReactNode;
 }) {
   const baseContext = useContext(BaseReportContext);
   const subjectContext = useSubjectReportContext();
+  const deps = useContext(ReportDependenciesContext);
   const [selectedTabId, setSelectedTabId] = useState<number | undefined>(
     baseContext.data?.report?.tabs?.[0]?.id || undefined
   );
@@ -149,12 +184,6 @@ export default function ReportEditor({
     }
     return map;
   }, [baseContext.data?.report?.tabs]);
-
-  const [reportActionsMenuOpen, setReportActionsMenuOpen] = useState(false);
-
-  const closeReportActionsMenu = useCallback(() => {
-    setReportActionsMenuOpen(false);
-  }, []);
 
   // Track a newly created card that needs to be scrolled into view and focused
   const [pendingNewCardId, setPendingNewCardId] = useState<number | null>(null);
@@ -300,6 +329,164 @@ export default function ReportEditor({
     reportPrintControlsRef.current?.runPrint();
   }, []);
 
+  const reportDataReady =
+    !!baseContext.data &&
+    !!subjectContext.data &&
+    !deps.loading &&
+    !deps.dependenciesAwaitingRefresh;
+
+  const exportReport = useCallback(
+    async (format: "csv" | "json") => {
+      if (!baseContext.data || !subjectContext.data) {
+        return;
+      }
+      const sketchClassForExport = subjectContext.data.sketch.sketchClass;
+      if (!sketchClassForExport) {
+        return;
+      }
+
+      const metricById = new Map(deps.metrics.map((m) => [m.id, m]));
+      const sourceByStableId = new Map(
+        deps.overlaySources
+          .filter((s) => !!s.stableId)
+          .map((s) => [s.stableId as string, s])
+      );
+
+      const sections: ReturnType<typeof collectCardExportSections> = [];
+      const cards: Array<{
+        tabId: number;
+        tabTitle: string;
+        cardId: number;
+        cardTitle: string;
+        sections: ReturnType<typeof collectCardExportSections>;
+      }> = [];
+
+      const sortedTabs = [...(baseContext.data.report.tabs || [])].sort(
+        (a, b) => a.position - b.position
+      );
+      for (const tab of sortedTabs) {
+        const sortedCards = [...(tab.cards || [])].sort(
+          (a, b) => a.position - b.position
+        );
+        for (const card of sortedCards) {
+          const list = deps.cardDependencyLists.find((l) => l.cardId === card.id);
+          const cardMetrics = (list?.metrics || [])
+            .map((metricId) => metricById.get(metricId))
+            .filter((m): m is NonNullable<typeof m> => m != null);
+          const cardSources = (list?.overlaySources || [])
+            .map((stableId) => sourceByStableId.get(stableId))
+            .filter((s): s is NonNullable<typeof s> => s != null);
+          const cardTitle =
+            collectReportCardTitle(card.body) || `${t("Card")} ${card.id}`;
+          const cardSections = collectCardExportSections({
+            reportId: baseContext.data.report.id,
+            cardId: card.id,
+            cardTitle,
+            body: card.body as any,
+            metrics: cardMetrics,
+            sources: cardSources,
+            geographies: baseContext.data.geographies,
+            sketchClass: sketchClassForExport,
+            subject: {
+              sketchId: subjectContext.data.sketch.id,
+              sketchName: subjectContext.data.sketch.name,
+              isCollection: subjectContext.data.isCollection,
+              childSketches: (subjectContext.data.childSketches || []).map((c) => ({
+                id: c.id,
+                name: c.name,
+              })),
+            },
+            relatedFragments: (subjectContext.data.relatedFragments || []).map(
+              (f) => ({
+                hash: f.hash,
+                geographies: f.geographies,
+                sketches: f.sketches,
+              })
+            ),
+            primaryGeographyId: undefined,
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            t: ((k: string) => k) as any,
+          });
+
+          sections.push(
+            ...cardSections.map((section, index) => ({
+              ...section,
+              /* eslint-disable i18next/no-literal-string */
+              id:
+                `${slugifyFilenamePart(cardTitle) || "card"}-` +
+                `${slugifyFilenamePart(section.title) || "section"}-` +
+                `t${tab.id}-c${card.id}-s${index + 1}`,
+              /* eslint-enable i18next/no-literal-string */
+              // eslint-disable-next-line i18next/no-literal-string
+              title:
+                `${cardTitle} / ${section.title}` +
+                ` (${t("Tab")} ${tab.id}, ${t("Card")} ${card.id}, ${t(
+                  "Section"
+                )} ${index + 1})`,
+            }))
+          );
+          cards.push({
+            tabId: tab.id,
+            tabTitle: tab.title,
+            cardId: card.id,
+            cardTitle,
+            sections: cardSections,
+          });
+        }
+      }
+
+      const filenameBase =
+        // eslint-disable-next-line i18next/no-literal-string
+        `${subjectContext.data.sketch.id}-` +
+        `${
+          slugifyFilenamePart(subjectContext.data.sketch.name) ||
+          subjectContext.data.sketch.id
+        }` +
+        // eslint-disable-next-line i18next/no-literal-string
+        `-report-${baseContext.data.report.id}`;
+
+      if (format === "json") {
+        const body = {
+          schemaVersion: 1,
+          exportedAt: new Date().toISOString(),
+          format: "seasketch-report-export",
+          meta: {
+            reportId: baseContext.data.report.id,
+            subjectSketchId: subjectContext.data.sketch.id,
+            subjectSketchName: subjectContext.data.sketch.name,
+            isCollection: subjectContext.data.isCollection,
+          },
+          cards,
+        };
+        const blob = new Blob([JSON.stringify(body, null, 2)], {
+          // eslint-disable-next-line i18next/no-literal-string
+          type: "application/json",
+        });
+        const url = URL.createObjectURL(blob);
+        // eslint-disable-next-line i18next/no-literal-string
+        download(url, `${filenameBase}.json`);
+        URL.revokeObjectURL(url);
+        return;
+      }
+
+      const { blob } = await packageSectionsAsCsvBlob(sections);
+      const url = URL.createObjectURL(blob);
+      // eslint-disable-next-line i18next/no-literal-string
+      download(url, `${filenameBase}.zip`);
+      URL.revokeObjectURL(url);
+    },
+    [
+      baseContext.data,
+      subjectContext.data,
+      deps.metrics,
+      deps.overlaySources,
+      deps.cardDependencyLists,
+      deps.loading,
+      deps.dependenciesAwaitingRefresh,
+      t,
+    ]
+  );
+
   const uiStateContextValue = useMemo(() => {
     return {
       selectedTabId: selectedTabId,
@@ -332,115 +519,151 @@ export default function ReportEditor({
     return <div>{t("Loading report data...")}</div>;
   }
 
+  const editMenuDisabled = editing != null;
+
   return (
     <ReportUIStateContext.Provider value={uiStateContextValue}>
       <ReportFullPrintBridge
         controlsRef={reportPrintControlsRef}
         adminModeForCards
       />
-      <div className="flex-1 p-8 max-h-full overflow-hidden">
-        <div className="w-128 mx-auto rounded-lg shadow-xl border border-t-black/5 border-l-black/10 border-r-black/15 border-b-black/20 z-10 max-h-full flex flex-col bg-gray-100">
-          {/* report header */}
-          <div className="px-4 py-3 border-b bg-white rounded-t-lg flex items-center space-x-2">
-            <div className="flex-1">
-              <DemonstrationSketchDropdown
-                demonstrationSketches={demonstrationSketches}
-                selectedSketchId={selectedSketchId}
-                setSelectedSketchId={setSelectedSketchId}
-              />
-            </div>
-            <DropdownMenu.Root
-              open={reportActionsMenuOpen}
-              onOpenChange={setReportActionsMenuOpen}
-            >
-              <DropdownMenu.Trigger disabled={editing != null} asChild>
-                <button
-                  className={`p-1.5 rounded-full hover:bg-gray-100 text-gray-600 hover:text-gray-800 transition-colors ${
-                    editing != null ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
-                  disabled={editing != null}
-                  title={
-                    editing != null
-                      ? t("Cannot add cards while editing")
-                      : undefined
-                  }
-                  aria-label={t("Report actions")}
-                >
-                  <PlusIcon className="w-5 h-5" />
-                </button>
-              </DropdownMenu.Trigger>
-              <DropdownMenu.Portal>
-                <DropdownMenu.Content
-                  className="bg-white rounded-md shadow-lg border border-gray-200 py-1 min-w-[160px] z-50"
-                  sideOffset={5}
-                  align="end"
-                  onCloseAutoFocus={(e: Event) => e.preventDefault()}
-                >
-                  <DropdownMenu.Item
-                    className="px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer outline-none"
-                    onSelect={addACard}
-                  >
-                    {t("Add Card")}
-                  </DropdownMenu.Item>
-                  {eligibleSketchClassCount > 1 && projectId && (
-                    <DropdownMenu.Sub>
-                      <DropdownMenu.SubTrigger className="flex cursor-pointer items-center justify-between gap-6 rounded-sm px-3 py-2 text-sm text-gray-700 outline-none hover:bg-gray-100 data-[highlighted]:bg-gray-100 data-[state=open]:bg-gray-50">
-                        <span>{t("Copy From Another Report")}</span>
-                        <ChevronRightIcon className="w-4 h-4 shrink-0 text-gray-400" />
-                      </DropdownMenu.SubTrigger>
-                      <DropdownMenu.Portal>
-                        <DropdownMenu.SubContent
-                          className="z-[60] overflow-hidden rounded-lg border border-gray-200/90 bg-white p-0 shadow-xl outline-none ring-1 ring-black/[0.04] min-w-[min(26rem,var(--radix-dropdown-menu-content-available-width))] max-w-[92vw]"
-                          sideOffset={8}
-                          alignOffset={0}
-                          collisionPadding={16}
-                        >
-                          <CopyCardsFromReportPopover
-                            targetTabId={
-                              selectedTabId ??
-                              baseContext.data!.report?.tabs?.[0]?.id ??
-                              0
-                            }
-                            currentSketchClassId={
-                              subjectContext.data?.sketch?.sketchClass?.id ?? -1
-                            }
-                            draftReportId={baseContext.data!.report?.id ?? null}
-                            demonstrationSketchId={selectedSketchId}
-                            existingCopies={existingCopies}
-                            onDone={closeReportActionsMenu}
-                            copyQueryData={copyCardsQuery.data}
-                            copyQueryLoading={copyCardsQuery.loading}
-                          />
-                        </DropdownMenu.SubContent>
-                      </DropdownMenu.Portal>
-                    </DropdownMenu.Sub>
-                  )}
-                  <DropdownMenu.Item
-                    className="px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer outline-none"
-                    disabled={editing != null}
-                    onSelect={() => {
-                      closeReportActionsMenu();
-                      requestFullReportPrint();
-                          }}
-                  >
-                    {t("Print report")}
-                  </DropdownMenu.Item>
-                  <DropdownMenu.Item
-                    className="px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer outline-none"
-                    onSelect={openManageTabs}
-                  >
-                    {t("Manage Tabs")}
-                  </DropdownMenu.Item>
-                </DropdownMenu.Content>
-              </DropdownMenu.Portal>
-            </DropdownMenu.Root>
+      <div className="flex flex-col flex-1 min-h-0 w-full overflow-hidden">
+        <header className="w-full z-20 flex-none border-b shadow-sm bg-gray-100 text-sm border-t border-black border-opacity-5 px-1">
+          <div className="flex items-center w-full min-h-[2.125rem] gap-1 py-0.5">
+            <Menubar.Root className="flex p-1 py-0.5 rounded-md z-50 items-center shrink-0">
+              <Menubar.Menu>
+                <MenubarTrigger>{t("Edit")}</MenubarTrigger>
+                <Menubar.Portal>
+                  <MenuBarContent>
+                    <MenuBarItem
+                      disabled={editMenuDisabled}
+                      onClick={() => {
+                        if (!editMenuDisabled) {
+                          void addACard();
+                        }
+                      }}
+                    >
+                      {t("Add Card")}
+                    </MenuBarItem>
+                    <MenuBarItem
+                      disabled={editMenuDisabled}
+                      onClick={() => {
+                        if (!editMenuDisabled) {
+                          openManageTabs();
+                        }
+                      }}
+                    >
+                      {t("Manage Tabs")}
+                    </MenuBarItem>
+                    {eligibleSketchClassCount > 1 && projectId ? (
+                      <>
+                        <MenuBarSeparator />
+                        <MenuBarLabel>{t("Copy content")}</MenuBarLabel>
+                        <Menubar.Sub>
+                          <Menubar.SubTrigger
+                            disabled={editMenuDisabled}
+                            className="RadixDropdownItem text-sm leading-none rounded flex items-center h-6 px-2 relative select-none pl-5 outline-none data-[disabled]:opacity-50 data-[disabled]:pointer-events-none"
+                          >
+                            <span>{t("Copy From Another Report")}</span>
+                            <div className="ml-auto pl-3 flex items-center">
+                              <ChevronRightIcon className="w-4 h-4 text-gray-500" />
+                            </div>
+                          </Menubar.SubTrigger>
+                          <Menubar.Portal>
+                            <Menubar.SubContent
+                              className="z-[60] overflow-hidden rounded-lg border border-black border-opacity-10 bg-white p-0 shadow-xl outline-none min-w-[min(26rem,var(--radix-menubar-content-available-width))] max-w-[92vw]"
+                              style={{ backdropFilter: "blur(6px)" }}
+                              sideOffset={6}
+                              alignOffset={-4}
+                              collisionPadding={16}
+                            >
+                              <CopyCardsFromReportPopover
+                                targetTabId={
+                                  selectedTabId ??
+                                  baseContext.data!.report?.tabs?.[0]?.id ??
+                                  0
+                                }
+                                currentSketchClassId={
+                                  subjectContext.data?.sketch?.sketchClass?.id ??
+                                  -1
+                                }
+                                draftReportId={baseContext.data!.report?.id ?? null}
+                                demonstrationSketchId={selectedSketchId}
+                                existingCopies={existingCopies}
+                                onDone={() => {}}
+                                copyQueryData={copyCardsQuery.data}
+                                copyQueryLoading={copyCardsQuery.loading}
+                              />
+                            </Menubar.SubContent>
+                          </Menubar.Portal>
+                        </Menubar.Sub>
+                      </>
+                    ) : null}
+                  </MenuBarContent>
+                </Menubar.Portal>
+              </Menubar.Menu>
+              <Menubar.Menu>
+                <MenubarTrigger>{t("Export")}</MenubarTrigger>
+                <Menubar.Portal>
+                  <MenuBarContent>
+                    <MenuBarItem
+                      disabled={editMenuDisabled}
+                      onClick={() => {
+                        if (!editMenuDisabled) {
+                          requestFullReportPrint();
+                        }
+                      }}
+                    >
+                      {t("Print report")}
+                    </MenuBarItem>
+                    <MenuBarSeparator />
+                    <MenuBarItem
+                      disabled={!reportDataReady}
+                      onClick={() => void exportReport("csv")}
+                    >
+                      {t("Export results (CSV)")}
+                    </MenuBarItem>
+                    <MenuBarItem
+                      disabled={!reportDataReady}
+                      onClick={() => void exportReport("json")}
+                    >
+                      {t("Export results (JSON)")}
+                    </MenuBarItem>
+                  </MenuBarContent>
+                </Menubar.Portal>
+              </Menubar.Menu>
+            </Menubar.Root>
+            <div className="flex-1 min-w-0" />
+            {adminPublishChrome ? (
+              <div className="flex items-center gap-3 shrink-0 pr-2">
+                {adminPublishChrome}
+              </div>
+            ) : null}
           </div>
-          {/* report tabs */}
-          <ReportTabs />
+        </header>
+        <div className="flex flex-col flex-1 min-h-0 overflow-hidden p-8">
+          <div className="w-128 mx-auto flex flex-col flex-1 min-h-0 rounded-lg shadow-xl border border-t-black/5 border-l-black/10 border-r-black/15 border-b-black/20 z-10 bg-gray-100 overflow-hidden">
+            {/* report header */}
+            <div className="p-4 border-b flex items-center bg-white gap-2 rounded-t-lg">
+              <h1 className="flex-1 truncate text-lg">
+                <DemonstrationSketchDropdown
+                  demonstrationSketches={demonstrationSketches}
+                  selectedSketchId={selectedSketchId}
+                  setSelectedSketchId={setSelectedSketchId}
+                  sketchClassLabelsById={sketchClassLabelsById}
+                  recentSketchIdsStorageKey={recentSketchIdsStorageKey}
+                  reportAssociatedSketchClassIds={reportAssociatedSketchClassIds}
+                />
+              </h1>
+            </div>
+            {/* report tabs */}
+            <div className="shrink-0 overflow-hidden bg-white">
+              <ReportTabs />
+            </div>
           {/* report cards */}
           <div
             ref={cardsScrollAreaRef}
-            className="relative max-h-full overflow-y-auto overscroll-none"
+            className="relative flex-1 min-h-0 overflow-y-auto overscroll-none"
           >
             {(baseContext.data!.report?.tabs || []).map((tab) => {
               const selected =
@@ -464,6 +687,7 @@ export default function ReportEditor({
               );
             })}
           </div>
+        </div>
         </div>
       </div>
       <MoveCardToTabModal

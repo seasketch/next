@@ -1402,7 +1402,7 @@ export type CreateCustomReportInput = {
    */
   clientMutationId?: Maybe<Scalars['String']>;
   projectId?: Maybe<Scalars['Int']>;
-  sketchClassIds?: Maybe<Array<Scalars['Int']>>;
+  sketchClassIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
   title?: Maybe<Scalars['String']>;
 };
 
@@ -1535,41 +1535,6 @@ export type CreateDataUploadPayload = {
 /** The output of our `createDataUpload` mutation. */
 export type CreateDataUploadPayloadDataUploadTaskEdgeArgs = {
   orderBy?: Maybe<Array<DataUploadTasksOrderBy>>;
-};
-
-/** All input for the `createDraftReport` mutation. */
-export type CreateDraftReportInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  sketchClassId?: Maybe<Scalars['Int']>;
-};
-
-/** The output of our `createDraftReport` mutation. */
-export type CreateDraftReportPayload = {
-  __typename?: 'CreateDraftReportPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** Reads a single `Report` that is related to this `Report`. */
-  draft?: Maybe<Report>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-  report?: Maybe<Report>;
-  /** An edge for our `Report`. May be used by Relay 1. */
-  reportEdge?: Maybe<ReportsEdge>;
-  /** Reads a single `SketchClass` that is related to this `Report`. */
-  sketchClass?: Maybe<SketchClass>;
-};
-
-
-/** The output of our `createDraftReport` mutation. */
-export type CreateDraftReportPayloadReportEdgeArgs = {
-  orderBy?: Maybe<Array<ReportsOrderBy>>;
 };
 
 /** All input for the create `FormElement` mutation. */
@@ -8004,12 +7969,12 @@ export type Mutation = {
   createBasemap?: Maybe<CreateBasemapPayload>;
   /** Creates a single `CommunityGuideline`. */
   createCommunityGuideline?: Maybe<CreateCommunityGuidelinePayload>;
+  createCustomReport?: Maybe<CreateCustomReportPayload>;
   /** Creates a single `DataLayer`. */
   createDataLayer?: Maybe<CreateDataLayerPayload>;
   /** Creates a single `DataSource`. */
   createDataSource?: Maybe<CreateDataSourcePayload>;
   createDataUpload?: Maybe<CreateDataUploadPayload>;
-  createDraftReport?: Maybe<CreateDraftReportPayload>;
   createFileUpload: UploaderResponse;
   /** Creates a single `FormElement`. */
   createFormElement?: Maybe<CreateFormElementPayload>;
@@ -8046,7 +8011,6 @@ export type Mutation = {
    * user will be automatically added to the list of admins.
    */
   createProject?: Maybe<CreateProjectPayload>;
-  createCustomReport?: Maybe<CreateCustomReportPayload>;
   /** Creates a single `ProjectInviteGroup`. */
   createProjectInviteGroup?: Maybe<CreateProjectInviteGroupPayload>;
   /**
@@ -8753,6 +8717,12 @@ export type MutationCreateCommunityGuidelineArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateCustomReportArgs = {
+  input: CreateCustomReportInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateDataLayerArgs = {
   input: CreateDataLayerInput;
 };
@@ -8767,12 +8737,6 @@ export type MutationCreateDataSourceArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateDataUploadArgs = {
   input: CreateDataUploadInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationCreateDraftReportArgs = {
-  input: CreateDraftReportInput;
 };
 
 
@@ -8892,12 +8856,6 @@ export type MutationCreatePostArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateProjectArgs = {
   input: CreateProjectInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationCreateCustomReportArgs = {
-  input: CreateCustomReportInput;
 };
 
 
@@ -12491,7 +12449,6 @@ export type Query = Node & {
   /** Reads and enables pagination through a set of `GeographyClippingLayer`. */
   geographyClippingLayersConnection?: Maybe<GeographyClippingLayersConnection>;
   getDefaultDataSourcesBucket?: Maybe<Scalars['String']>;
-  getEffectiveReportForSketchClass?: Maybe<Scalars['Int']>;
   getFirstBandOffset?: Maybe<Scalars['Float']>;
   getFirstBandScale?: Maybe<Scalars['Float']>;
   getGeostatsAttributeColumnNames?: Maybe<Array<Maybe<Scalars['String']>>>;
@@ -13218,13 +13175,6 @@ export type QueryGeographyClippingLayersConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<GeographyClippingLayersOrderBy>>;
-};
-
-
-/** The root query type which gives access points into the data universe. */
-export type QueryGetEffectiveReportForSketchClassArgs = {
-  draft?: Maybe<Scalars['Boolean']>;
-  sketchClassId?: Maybe<Scalars['Int']>;
 };
 
 
@@ -24024,6 +23974,12 @@ export type DraftReportDebuggingMaterialsQuery = (
       & { geographies: Array<(
         { __typename?: 'Geography' }
         & Pick<Geography, 'id' | 'name' | 'translatedProps'>
+      )>, mySketches?: Maybe<Array<(
+        { __typename?: 'Sketch' }
+        & Pick<Sketch, 'id' | 'name' | 'sketchClassId' | 'createdAt'>
+      )>>, sketchClasses: Array<(
+        { __typename?: 'SketchClass' }
+        & Pick<SketchClass, 'id' | 'name'>
       )> }
     )>, mySketches?: Maybe<Array<(
       { __typename?: 'Sketch' }
@@ -31922,6 +31878,16 @@ export const DraftReportDebuggingMaterialsDocument = /*#__PURE__*/ gql`
         id
         name
         translatedProps
+      }
+      mySketches {
+        id
+        name
+        sketchClassId
+        createdAt
+      }
+      sketchClasses {
+        id
+        name
       }
     }
     mySketches {
