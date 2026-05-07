@@ -729,7 +729,8 @@ export default function GeographyAdmin() {
                 </button>
               </div>
             )}
-            {(data?.projectBySlug?.sketchesMissingFragments ?? 0) > 0 &&
+            {(data?.projectBySlug?.geographies?.length ?? 0) > 0 &&
+              (data?.projectBySlug?.sketchesMissingFragments ?? 0) > 0 &&
               !loading && (
                 <div className="p-2">
                   <Warning level="info" className="py-2">

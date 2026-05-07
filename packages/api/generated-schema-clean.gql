@@ -12430,17 +12430,11 @@ type Project implements Node {
   eligableDownloadableLayersCount: Int
 
   """
-  When true, administrators may configure collection sketch classes to use the new reporting tools in project admin.
-  """
-  enableCollectionNewReports: Boolean
-
-  """
   When true, overlay layers will be available for download by end-users if they
   have access to the layer and the data source supports it. This can be
   controlled on a per-layer basis.
   """
   enableDownloadByDefault: Boolean!
-  enableReportBuilder: Boolean
   estimateDeletedDataForRetentionChange(newRetentionPeriod: IntervalInput): RetentionChangeEstimate
   featureFlags: FeatureFlags
 
@@ -13403,17 +13397,11 @@ input ProjectPatch {
   description: String
 
   """
-  When true, administrators may configure collection sketch classes to use the new reporting tools in project admin.
-  """
-  enableCollectionNewReports: Boolean
-
-  """
   When true, overlay layers will be available for download by end-users if they
   have access to the layer and the data source supports it. This can be
   controlled on a per-layer basis.
   """
   enableDownloadByDefault: Boolean
-  enableReportBuilder: Boolean
   hideForums: Boolean
   hideOverlays: Boolean
   hideSketches: Boolean

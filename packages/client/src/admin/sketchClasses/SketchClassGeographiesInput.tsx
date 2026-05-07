@@ -125,18 +125,26 @@ export default function SketchClassGeographiesInput({
     ? projectGeographies.find((g) => g.id === pendingChange.newGeographyId)
     : null;
 
+  if (!projectGeographies.length) {
+    return null;
+  }
+
+  const hasGeographySelection = selectedGeographyId != null;
+
   return (
     <>
       <select
-        value={selectedGeographyId || ""}
+        value={hasGeographySelection ? selectedGeographyId : ""}
         onChange={(e) => {
-          const selectedId = e.target.value ? Number(e.target.value) : null;
-          handleGeographyChange(selectedId);
+          const raw = e.target.value;
+          handleGeographyChange(raw === "" ? null : Number(raw));
         }}
         disabled={isUpdating}
         className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md disabled:opacity-50"
       >
-        <option value="">{t("Select a geography...")}</option>
+        {!hasGeographySelection ? (
+          <option value="">{t("Select a geography...")}</option>
+        ) : null}
         {projectGeographies.map((geography) => (
           <option key={geography.id} value={geography.id}>
             {geography.name}

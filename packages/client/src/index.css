@@ -7565,6 +7565,10 @@ select{
   max-height:min(480px,70vh)
 }
 
+.max-h-\[min\(60vh\2c 28rem\)\]{
+  max-height:min(60vh,28rem)
+}
+
 .min-h-0{
   min-height:0px
 }
@@ -8776,6 +8780,10 @@ select{
 
 .grid-cols-\[minmax\(0\2c 1fr\)_auto_minmax\(0\2c 1fr\)\]{
   grid-template-columns:minmax(0,1fr) auto minmax(0,1fr)
+}
+
+.grid-cols-\[minmax\(0\2c 1fr\)_minmax\(16rem\2c 22rem\)\]{
+  grid-template-columns:minmax(0,1fr) minmax(16rem,22rem)
 }
 
 .grid-rows-6{

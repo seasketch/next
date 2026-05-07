@@ -195,14 +195,30 @@ export function useReportWindowExports(): {
   return { reportDataReady, exportReport };
 }
 
-/** Matches sketch report popup "…" actions (print + export). */
+/** Matches sketch report popup "…" actions; optional edit actions mirror ReportEditor Edit menubar. */
 export function ReportWindowActionsMenu({
   onPrint,
+  onAddCard,
+  onManageTabs,
+  onAssignSketchClasses,
+  editActionsDisabled = false,
 }: {
   onPrint: () => void;
+  /** When set (e.g. report authoring), shows "Add Card" — same handler as Edit → Add Card. */
+  onAddCard?: () => void | Promise<void>;
+  /** When set, shows "Manage Tabs" — same handler as Edit → Manage Tabs. */
+  onManageTabs?: () => void;
+  /** When set, shows "Assign sketch classes" action for report-level assignment management. */
+  onAssignSketchClasses?: () => void;
+  /** When true, Add Card / Manage Tabs are disabled (e.g. while editing a card body). */
+  editActionsDisabled?: boolean;
 }) {
   const { t } = useTranslation("admin:sketching");
   const { reportDataReady, exportReport } = useReportWindowExports();
+
+  const showEditActions = Boolean(
+    onAddCard || onManageTabs || onAssignSketchClasses
+  );
 
   return (
     <DropdownMenu.Root>
@@ -223,9 +239,53 @@ export function ReportWindowActionsMenu({
           sideOffset={8}
           className="z-50 min-w-[180px] rounded-md border border-black/5 bg-white p-1 shadow-lg"
         >
+          {onAddCard ? (
+            <DropdownMenu.Item
+              disabled={editActionsDisabled}
+              className="flex cursor-pointer select-none items-center rounded px-2 py-1.5 text-sm outline-none text-gray-700 data-[highlighted]:bg-gray-100 data-[disabled]:opacity-50 data-[disabled]:cursor-not-allowed"
+              onSelect={() => {
+                if (!editActionsDisabled) {
+                  void onAddCard();
+                }
+              }}
+            >
+              {t("Add Card")}
+            </DropdownMenu.Item>
+          ) : null}
+          {onManageTabs ? (
+            <DropdownMenu.Item
+              disabled={editActionsDisabled}
+              className="flex cursor-pointer select-none items-center rounded px-2 py-1.5 text-sm outline-none text-gray-700 data-[highlighted]:bg-gray-100 data-[disabled]:opacity-50 data-[disabled]:cursor-not-allowed"
+              onSelect={() => {
+                if (!editActionsDisabled) {
+                  onManageTabs();
+                }
+              }}
+            >
+              {t("Manage Tabs")}
+            </DropdownMenu.Item>
+          ) : null}
+          {onAssignSketchClasses ? (
+            <DropdownMenu.Item
+              disabled={editActionsDisabled}
+              className="flex cursor-pointer select-none items-center rounded px-2 py-1.5 text-sm outline-none text-gray-700 data-[highlighted]:bg-gray-100 data-[disabled]:opacity-50 data-[disabled]:cursor-not-allowed"
+              onSelect={() => {
+                if (!editActionsDisabled) {
+                  onAssignSketchClasses();
+                }
+              }}
+            >
+              {t("Assign sketch classes")}
+            </DropdownMenu.Item>
+          ) : null}
+          {showEditActions ? (
+            <DropdownMenu.Separator className="my-1 h-px bg-black/10" />
+          ) : null}
           <DropdownMenu.Item
             className="flex cursor-pointer select-none items-center rounded px-2 py-1.5 text-sm outline-none text-gray-700 data-[highlighted]:bg-gray-100"
-            onSelect={() => onPrint()}
+            onSelect={() => {
+              onPrint();
+            }}
           >
             {t("Print report")}
           </DropdownMenu.Item>

@@ -369,7 +369,6 @@ mutation ToggleSketchClassGeographyClipping(
 query SketchClassGeographyEditorDetails($slug: String!) {
   projectBySlug(slug: $slug) {
     id
-    enableReportBuilder
     sketchClasses {
       ...SketchingDetails
       clippingGeographies {
@@ -992,7 +991,6 @@ query OverlaysForReportLayerToggles($slug: String!) {
 query ProjectReportsContext($slug: String!) {
   projectBySlug(slug: $slug) {
     id
-    enableReportBuilder
     geographies {
       id
     }

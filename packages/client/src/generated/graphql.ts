@@ -1044,6 +1044,41 @@ export type ClearFormElementStylePayloadFormElementEdgeArgs = {
   orderBy?: Maybe<Array<FormElementsOrderBy>>;
 };
 
+/** All input for the `clearPrimaryReportForSketchClass` mutation. */
+export type ClearPrimaryReportForSketchClassInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  sketchClassId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `clearPrimaryReportForSketchClass` mutation. */
+export type ClearPrimaryReportForSketchClassPayload = {
+  __typename?: 'ClearPrimaryReportForSketchClassPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `FormElement` that is related to this `SketchClass`. */
+  formElement?: Maybe<FormElement>;
+  /** Reads a single `Project` that is related to this `SketchClass`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  sketchClass?: Maybe<SketchClass>;
+  /** An edge for our `SketchClass`. May be used by Relay 1. */
+  sketchClassEdge?: Maybe<SketchClassesEdge>;
+};
+
+
+/** The output of our `clearPrimaryReportForSketchClass` mutation. */
+export type ClearPrimaryReportForSketchClassPayloadSketchClassEdgeArgs = {
+  orderBy?: Maybe<Array<SketchClassesOrderBy>>;
+};
+
 export type ClippingLayerInput = {
   /**
    * If provided, features used for clipping will be filtered based on this
@@ -7832,6 +7867,7 @@ export type Mutation = {
   archiveResponses?: Maybe<ArchiveResponsesPayload>;
   cancelBackgroundJob?: Maybe<CancelBackgroundJobPayload>;
   clearFormElementStyle?: Maybe<ClearFormElementStylePayload>;
+  clearPrimaryReportForSketchClass?: Maybe<ClearPrimaryReportForSketchClassPayload>;
   computeProjectGeographyHash?: Maybe<ComputeProjectGeographyHashPayload>;
   /** Confirm that a new user has seen any onboarding materials. Updates User.onboarded date. */
   confirmOnboarded?: Maybe<ConfirmOnboardedPayload>;
@@ -8541,6 +8577,12 @@ export type MutationCancelBackgroundJobArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationClearFormElementStyleArgs = {
   input: ClearFormElementStyleInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationClearPrimaryReportForSketchClassArgs = {
+  input: ClearPrimaryReportForSketchClassInput;
 };
 
 
@@ -10876,15 +10918,12 @@ export type Project = Node & {
    */
   draftTableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
   eligableDownloadableLayersCount?: Maybe<Scalars['Int']>;
-  /** When true, administrators may configure collection sketch classes to use the new reporting tools in project admin. */
-  enableCollectionNewReports?: Maybe<Scalars['Boolean']>;
   /**
    * When true, overlay layers will be available for download by end-users if they
    * have access to the layer and the data source supports it. This can be
    * controlled on a per-layer basis.
    */
   enableDownloadByDefault: Scalars['Boolean'];
-  enableReportBuilder?: Maybe<Scalars['Boolean']>;
   estimateDeletedDataForRetentionChange?: Maybe<RetentionChangeEstimate>;
   featureFlags?: Maybe<FeatureFlags>;
   /** Reads and enables pagination through a set of `Forum`. */
@@ -11911,15 +11950,12 @@ export type ProjectPatch = {
   dataSourcesBucketId?: Maybe<Scalars['String']>;
   /** Should be a short length in order to fit in the project header. */
   description?: Maybe<Scalars['String']>;
-  /** When true, administrators may configure collection sketch classes to use the new reporting tools in project admin. */
-  enableCollectionNewReports?: Maybe<Scalars['Boolean']>;
   /**
    * When true, overlay layers will be available for download by end-users if they
    * have access to the layer and the data source supports it. This can be
    * controlled on a per-layer basis.
    */
   enableDownloadByDefault?: Maybe<Scalars['Boolean']>;
-  enableReportBuilder?: Maybe<Scalars['Boolean']>;
   hideForums?: Maybe<Scalars['Boolean']>;
   hideOverlays?: Maybe<Scalars['Boolean']>;
   hideSketches?: Maybe<Scalars['Boolean']>;
@@ -22910,40 +22946,6 @@ export type CreateFileUploadForAboutPageMutation = (
   ) }
 );
 
-export type UpdateEnableReportBuilderMutationVariables = Exact<{
-  slug: Scalars['String'];
-  enabled: Scalars['Boolean'];
-}>;
-
-
-export type UpdateEnableReportBuilderMutation = (
-  { __typename?: 'Mutation' }
-  & { updateProjectBySlug?: Maybe<(
-    { __typename?: 'UpdateProjectPayload' }
-    & { project?: Maybe<(
-      { __typename?: 'Project' }
-      & Pick<Project, 'id' | 'enableReportBuilder'>
-    )> }
-  )> }
-);
-
-export type UpdateEnableCollectionNewReportsMutationVariables = Exact<{
-  slug: Scalars['String'];
-  enabled: Scalars['Boolean'];
-}>;
-
-
-export type UpdateEnableCollectionNewReportsMutation = (
-  { __typename?: 'Mutation' }
-  & { updateProjectBySlug?: Maybe<(
-    { __typename?: 'UpdateProjectPayload' }
-    & { project?: Maybe<(
-      { __typename?: 'Project' }
-      & Pick<Project, 'id' | 'enableCollectionNewReports'>
-    )> }
-  )> }
-);
-
 export type ProjectDashboardQueryVariables = Exact<{
   slug: Scalars['String'];
   period?: Maybe<ActivityStatsPeriod>;
@@ -23014,7 +23016,7 @@ export type ProjectDashboardBannerStatsQuery = (
 
 export type ProjectMetadataFragment = (
   { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays' | 'aboutPageContents' | 'aboutPageEnabled' | 'enableReportBuilder' | 'enableCollectionNewReports' | 'customDocLink' | 'showScalebarByDefault' | 'showLegendByDefault'>
+  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays' | 'aboutPageContents' | 'aboutPageEnabled' | 'customDocLink' | 'showScalebarByDefault' | 'showLegendByDefault'>
   & { sketchClasses: Array<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name' | 'geometryType' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps' | 'isGeographyClippingEnabled' | 'useGeographyClipping' | 'previewNewReports'>
@@ -23688,7 +23690,7 @@ export type SketchClassGeographyEditorDetailsQuery = (
   { __typename?: 'Query' }
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'enableReportBuilder'>
+    & Pick<Project, 'id'>
     & { sketchClasses: Array<(
       { __typename?: 'SketchClass' }
       & { clippingGeographies: Array<Maybe<(
@@ -24198,11 +24200,32 @@ export type ReportOverlaySourcesQuery = (
 
 export type BaseReportDetailsFragment = (
   { __typename?: 'Report' }
-  & Pick<Report, 'id' | 'title'>
+  & Pick<Report, 'id' | 'title' | 'projectId'>
   & { tabs?: Maybe<Array<(
     { __typename?: 'ReportTab' }
     & ReportTabDetailsFragment
   )>> }
+);
+
+export type ReportAssignmentSketchClassesQueryVariables = Exact<{
+  projectId: Scalars['Int'];
+}>;
+
+
+export type ReportAssignmentSketchClassesQuery = (
+  { __typename?: 'Query' }
+  & { project?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { sketchClasses: Array<(
+      { __typename?: 'SketchClass' }
+      & Pick<SketchClass, 'id' | 'name' | 'geometryType'>
+      & { draftReport?: Maybe<(
+        { __typename?: 'Report' }
+        & Pick<Report, 'id' | 'title'>
+      )> }
+    )> }
+  )> }
 );
 
 export type BaseReportContextQueryVariables = Exact<{
@@ -24481,7 +24504,7 @@ export type ProjectReportsContextQuery = (
   { __typename?: 'Query' }
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'enableReportBuilder'>
+    & Pick<Project, 'id'>
     & { geographies: Array<(
       { __typename?: 'Geography' }
       & Pick<Geography, 'id'>
@@ -24557,6 +24580,22 @@ export type SetPrimaryReportForSketchClassMutation = (
   { __typename?: 'Mutation' }
   & { setPrimaryReportForSketchClass?: Maybe<(
     { __typename?: 'SetPrimaryReportForSketchClassPayload' }
+    & { sketchClass?: Maybe<(
+      { __typename?: 'SketchClass' }
+      & Pick<SketchClass, 'id'>
+    )> }
+  )> }
+);
+
+export type ClearPrimaryReportForSketchClassMutationVariables = Exact<{
+  sketchClassId: Scalars['Int'];
+}>;
+
+
+export type ClearPrimaryReportForSketchClassMutation = (
+  { __typename?: 'Mutation' }
+  & { clearPrimaryReportForSketchClass?: Maybe<(
+    { __typename?: 'ClearPrimaryReportForSketchClassPayload' }
     & { sketchClass?: Maybe<(
       { __typename?: 'SketchClass' }
       & Pick<SketchClass, 'id'>
@@ -27753,8 +27792,6 @@ export const ProjectMetadataFragmentDoc = gql`
     lang
     html
   }
-  enableReportBuilder
-  enableCollectionNewReports
   customDocLink
   showScalebarByDefault
   showLegendByDefault
@@ -28183,6 +28220,7 @@ export const BaseReportDetailsFragmentDoc = gql`
     fragment BaseReportDetails on Report {
   id
   title
+  projectId
   tabs {
     ...ReportTabDetails
   }
@@ -36026,84 +36064,6 @@ export function useCreateFileUploadForAboutPageMutation(baseOptions?: Apollo.Mut
 export type CreateFileUploadForAboutPageMutationHookResult = ReturnType<typeof useCreateFileUploadForAboutPageMutation>;
 export type CreateFileUploadForAboutPageMutationResult = Apollo.MutationResult<CreateFileUploadForAboutPageMutation>;
 export type CreateFileUploadForAboutPageMutationOptions = Apollo.BaseMutationOptions<CreateFileUploadForAboutPageMutation, CreateFileUploadForAboutPageMutationVariables>;
-export const UpdateEnableReportBuilderDocument = gql`
-    mutation updateEnableReportBuilder($slug: String!, $enabled: Boolean!) {
-  updateProjectBySlug(
-    input: {slug: $slug, patch: {enableReportBuilder: $enabled}}
-  ) {
-    project {
-      id
-      enableReportBuilder
-    }
-  }
-}
-    `;
-export type UpdateEnableReportBuilderMutationFn = Apollo.MutationFunction<UpdateEnableReportBuilderMutation, UpdateEnableReportBuilderMutationVariables>;
-
-/**
- * __useUpdateEnableReportBuilderMutation__
- *
- * To run a mutation, you first call `useUpdateEnableReportBuilderMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateEnableReportBuilderMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateEnableReportBuilderMutation, { data, loading, error }] = useUpdateEnableReportBuilderMutation({
- *   variables: {
- *      slug: // value for 'slug'
- *      enabled: // value for 'enabled'
- *   },
- * });
- */
-export function useUpdateEnableReportBuilderMutation(baseOptions?: Apollo.MutationHookOptions<UpdateEnableReportBuilderMutation, UpdateEnableReportBuilderMutationVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useMutation<UpdateEnableReportBuilderMutation, UpdateEnableReportBuilderMutationVariables>(UpdateEnableReportBuilderDocument, options);
-      }
-export type UpdateEnableReportBuilderMutationHookResult = ReturnType<typeof useUpdateEnableReportBuilderMutation>;
-export type UpdateEnableReportBuilderMutationResult = Apollo.MutationResult<UpdateEnableReportBuilderMutation>;
-export type UpdateEnableReportBuilderMutationOptions = Apollo.BaseMutationOptions<UpdateEnableReportBuilderMutation, UpdateEnableReportBuilderMutationVariables>;
-export const UpdateEnableCollectionNewReportsDocument = gql`
-    mutation updateEnableCollectionNewReports($slug: String!, $enabled: Boolean!) {
-  updateProjectBySlug(
-    input: {slug: $slug, patch: {enableCollectionNewReports: $enabled}}
-  ) {
-    project {
-      id
-      enableCollectionNewReports
-    }
-  }
-}
-    `;
-export type UpdateEnableCollectionNewReportsMutationFn = Apollo.MutationFunction<UpdateEnableCollectionNewReportsMutation, UpdateEnableCollectionNewReportsMutationVariables>;
-
-/**
- * __useUpdateEnableCollectionNewReportsMutation__
- *
- * To run a mutation, you first call `useUpdateEnableCollectionNewReportsMutation` within a React component and pass it any options that fit your needs.
- * When your component renders, `useUpdateEnableCollectionNewReportsMutation` returns a tuple that includes:
- * - A mutate function that you can call at any time to execute the mutation
- * - An object with fields that represent the current status of the mutation's execution
- *
- * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
- *
- * @example
- * const [updateEnableCollectionNewReportsMutation, { data, loading, error }] = useUpdateEnableCollectionNewReportsMutation({
- *   variables: {
- *      slug: // value for 'slug'
- *      enabled: // value for 'enabled'
- *   },
- * });
- */
-export function useUpdateEnableCollectionNewReportsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateEnableCollectionNewReportsMutation, UpdateEnableCollectionNewReportsMutationVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useMutation<UpdateEnableCollectionNewReportsMutation, UpdateEnableCollectionNewReportsMutationVariables>(UpdateEnableCollectionNewReportsDocument, options);
-      }
-export type UpdateEnableCollectionNewReportsMutationHookResult = ReturnType<typeof useUpdateEnableCollectionNewReportsMutation>;
-export type UpdateEnableCollectionNewReportsMutationResult = Apollo.MutationResult<UpdateEnableCollectionNewReportsMutation>;
-export type UpdateEnableCollectionNewReportsMutationOptions = Apollo.BaseMutationOptions<UpdateEnableCollectionNewReportsMutation, UpdateEnableCollectionNewReportsMutationVariables>;
 export const ProjectDashboardDocument = gql`
     query ProjectDashboard($slug: String!, $period: ActivityStatsPeriod = _7_DAYS, $activityPeriod: UserActivityPeriod = D7) {
   projectBySlug(slug: $slug) {
@@ -37405,7 +37365,6 @@ export const SketchClassGeographyEditorDetailsDocument = gql`
     query SketchClassGeographyEditorDetails($slug: String!) {
   projectBySlug(slug: $slug) {
     id
-    enableReportBuilder
     sketchClasses {
       ...SketchingDetails
       clippingGeographies {
@@ -38358,6 +38317,50 @@ export function useReportOverlaySourcesLazyQuery(baseOptions?: Apollo.LazyQueryH
 export type ReportOverlaySourcesQueryHookResult = ReturnType<typeof useReportOverlaySourcesQuery>;
 export type ReportOverlaySourcesLazyQueryHookResult = ReturnType<typeof useReportOverlaySourcesLazyQuery>;
 export type ReportOverlaySourcesQueryResult = Apollo.QueryResult<ReportOverlaySourcesQuery, ReportOverlaySourcesQueryVariables>;
+export const ReportAssignmentSketchClassesDocument = gql`
+    query ReportAssignmentSketchClasses($projectId: Int!) {
+  project(id: $projectId) {
+    id
+    sketchClasses {
+      id
+      name
+      geometryType
+      draftReport {
+        id
+        title
+      }
+    }
+  }
+}
+    `;
+
+/**
+ * __useReportAssignmentSketchClassesQuery__
+ *
+ * To run a query within a React component, call `useReportAssignmentSketchClassesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useReportAssignmentSketchClassesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useReportAssignmentSketchClassesQuery({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *   },
+ * });
+ */
+export function useReportAssignmentSketchClassesQuery(baseOptions: Apollo.QueryHookOptions<ReportAssignmentSketchClassesQuery, ReportAssignmentSketchClassesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ReportAssignmentSketchClassesQuery, ReportAssignmentSketchClassesQueryVariables>(ReportAssignmentSketchClassesDocument, options);
+      }
+export function useReportAssignmentSketchClassesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ReportAssignmentSketchClassesQuery, ReportAssignmentSketchClassesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ReportAssignmentSketchClassesQuery, ReportAssignmentSketchClassesQueryVariables>(ReportAssignmentSketchClassesDocument, options);
+        }
+export type ReportAssignmentSketchClassesQueryHookResult = ReturnType<typeof useReportAssignmentSketchClassesQuery>;
+export type ReportAssignmentSketchClassesLazyQueryHookResult = ReturnType<typeof useReportAssignmentSketchClassesLazyQuery>;
+export type ReportAssignmentSketchClassesQueryResult = Apollo.QueryResult<ReportAssignmentSketchClassesQuery, ReportAssignmentSketchClassesQueryVariables>;
 export const BaseReportContextDocument = gql`
     query BaseReportContext($reportId: Int!) {
   report(id: $reportId) {
@@ -38905,7 +38908,6 @@ export const ProjectReportsContextDocument = gql`
     query ProjectReportsContext($slug: String!) {
   projectBySlug(slug: $slug) {
     id
-    enableReportBuilder
     geographies {
       id
     }
@@ -39082,6 +39084,41 @@ export function useSetPrimaryReportForSketchClassMutation(baseOptions?: Apollo.M
 export type SetPrimaryReportForSketchClassMutationHookResult = ReturnType<typeof useSetPrimaryReportForSketchClassMutation>;
 export type SetPrimaryReportForSketchClassMutationResult = Apollo.MutationResult<SetPrimaryReportForSketchClassMutation>;
 export type SetPrimaryReportForSketchClassMutationOptions = Apollo.BaseMutationOptions<SetPrimaryReportForSketchClassMutation, SetPrimaryReportForSketchClassMutationVariables>;
+export const ClearPrimaryReportForSketchClassDocument = gql`
+    mutation ClearPrimaryReportForSketchClass($sketchClassId: Int!) {
+  clearPrimaryReportForSketchClass(input: {sketchClassId: $sketchClassId}) {
+    sketchClass {
+      id
+    }
+  }
+}
+    `;
+export type ClearPrimaryReportForSketchClassMutationFn = Apollo.MutationFunction<ClearPrimaryReportForSketchClassMutation, ClearPrimaryReportForSketchClassMutationVariables>;
+
+/**
+ * __useClearPrimaryReportForSketchClassMutation__
+ *
+ * To run a mutation, you first call `useClearPrimaryReportForSketchClassMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useClearPrimaryReportForSketchClassMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [clearPrimaryReportForSketchClassMutation, { data, loading, error }] = useClearPrimaryReportForSketchClassMutation({
+ *   variables: {
+ *      sketchClassId: // value for 'sketchClassId'
+ *   },
+ * });
+ */
+export function useClearPrimaryReportForSketchClassMutation(baseOptions?: Apollo.MutationHookOptions<ClearPrimaryReportForSketchClassMutation, ClearPrimaryReportForSketchClassMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ClearPrimaryReportForSketchClassMutation, ClearPrimaryReportForSketchClassMutationVariables>(ClearPrimaryReportForSketchClassDocument, options);
+      }
+export type ClearPrimaryReportForSketchClassMutationHookResult = ReturnType<typeof useClearPrimaryReportForSketchClassMutation>;
+export type ClearPrimaryReportForSketchClassMutationResult = Apollo.MutationResult<ClearPrimaryReportForSketchClassMutation>;
+export type ClearPrimaryReportForSketchClassMutationOptions = Apollo.BaseMutationOptions<ClearPrimaryReportForSketchClassMutation, ClearPrimaryReportForSketchClassMutationVariables>;
 export const SketchingDocument = gql`
     query Sketching($slug: String!) {
   me {
@@ -42876,6 +42913,7 @@ export const namedOperations = {
     ReportDependencies: 'ReportDependencies',
     ReportMetricProgressFields: 'ReportMetricProgressFields',
     ReportOverlaySources: 'ReportOverlaySources',
+    ReportAssignmentSketchClasses: 'ReportAssignmentSketchClasses',
     BaseReportContext: 'BaseReportContext',
     BaseDraftReportContext: 'BaseDraftReportContext',
     CopyableReportCards: 'CopyableReportCards',
@@ -43018,8 +43056,6 @@ export const namedOperations = {
     updateAboutPageContents: 'updateAboutPageContents',
     updateAboutPageEnabled: 'updateAboutPageEnabled',
     createFileUploadForAboutPage: 'createFileUploadForAboutPage',
-    updateEnableReportBuilder: 'updateEnableReportBuilder',
-    updateEnableCollectionNewReports: 'updateEnableCollectionNewReports',
     UpdateProjectRegion: 'UpdateProjectRegion',
     UpdateSketchClassGeographies: 'UpdateSketchClassGeographies',
     CreateSketchClass: 'CreateSketchClass',
@@ -43052,6 +43088,7 @@ export const namedOperations = {
     PreprocessSource: 'PreprocessSource',
     CreateCustomReport: 'CreateCustomReport',
     SetPrimaryReportForSketchClass: 'SetPrimaryReportForSketchClass',
+    ClearPrimaryReportForSketchClass: 'ClearPrimaryReportForSketchClass',
     CreateSketchFolder: 'CreateSketchFolder',
     CreateSketch: 'CreateSketch',
     UpdateSketch: 'UpdateSketch',

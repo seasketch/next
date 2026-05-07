@@ -39,6 +39,7 @@ export default function SketchClassReportsAdmin({
   assignedSketchClassesForReport,
   onReportDeleted,
   draftReportIdOverride,
+  publishAvailable = true,
 }: {
   sketchClass: SketchingDetailsFragment;
   /** Sketch classes that have this report as primary; drives sketch picker ordering. */
@@ -49,6 +50,8 @@ export default function SketchClassReportsAdmin({
   onReportDeleted?: () => void | Promise<void>;
   /** Force editor to open this draft report id (used for unassigned project reports). */
   draftReportIdOverride?: number;
+  /** Whether publish actions should be available in this embedding context. */
+  publishAvailable?: boolean;
 }) {
   const { t, i18n } = useTranslation("admin:sketching");
   const { confirm, loadingMessage } = useDialog();
@@ -105,8 +108,9 @@ export default function SketchClassReportsAdmin({
 
   const sketchesForDemonstration = useMemo(() => {
     const sketches =
-      debuggingMaterialsData?.sketchClass?.project?.mySketches?.filter(Boolean) ||
-      [];
+      debuggingMaterialsData?.sketchClass?.project?.mySketches?.filter(
+        Boolean
+      ) || [];
 
     return [...sketches].sort((a, b) => {
       const dateA = new Date(a.createdAt).getTime();
@@ -154,9 +158,7 @@ export default function SketchClassReportsAdmin({
       const preferred = recentIds
         .map((id) => sketchesForDemonstration.find((s) => s.id === id))
         .find(Boolean);
-      setSelectedSketchId(
-        preferred?.id ?? sketchesForDemonstration[0].id
-      );
+      setSelectedSketchId(preferred?.id ?? sketchesForDemonstration[0].id);
     } catch {
       setSelectedSketchId(sketchesForDemonstration[0].id);
     }
@@ -264,10 +266,7 @@ export default function SketchClassReportsAdmin({
       }
       onError(err);
     },
-    refetchQueries: [
-      DraftReportDocument,
-      BaseDraftReportContextDocument,
-    ],
+    refetchQueries: [DraftReportDocument, BaseDraftReportContextDocument],
     awaitRefetchQueries: true,
   });
 
@@ -354,8 +353,9 @@ export default function SketchClassReportsAdmin({
                     recentSketchIdsStorageKey={demonstrationSketchStorageKey}
                     reportAssociatedSketchClassIds={associatedSketchClassIds}
                     publishMenu={
-                      draftReportIdOverride == null
+                      publishAvailable
                         ? {
+                            variant: "available" as const,
                             hasUnpublishedChanges,
                             publishing: publishReportState.loading,
                             lastPublishedSummary:
@@ -373,7 +373,12 @@ export default function SketchClassReportsAdmin({
                               });
                             },
                           }
-                        : undefined
+                        : {
+                            variant: "unavailable" as const,
+                            message: t(
+                              "Publishing is only available when this report is associated with at least one sketch class."
+                            ),
+                          }
                     }
                     reportDeletion={
                       onReportDeleted

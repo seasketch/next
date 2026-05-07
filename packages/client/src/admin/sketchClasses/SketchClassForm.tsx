@@ -1,9 +1,16 @@
 /* eslint-disable react/jsx-no-target-blank */
+import { useApolloClient } from "@apollo/client";
 import {
   useUpdateSketchClassMutation,
   useDeleteSketchClassMutation,
+  useSketchClassGeographyEditorDetailsQuery,
+  useUpdateSketchClassGeographiesMutation,
+  useSetPrimaryReportForSketchClassMutation,
   SketchClassesQuery,
   SketchClassesDocument,
+  SketchClassReportAssignmentDocument,
+  SketchClassGeographyEditorDetailsDocument,
+  SketchFragmentStatusDocument,
   SketchGeometryType,
   AdminSketchingDetailsFragment,
 } from "../../generated/graphql";
@@ -13,7 +20,6 @@ import MutableAutosaveInput from "../MutableAutosaveInput";
 import InputBlock from "../../components/InputBlock";
 import Switch from "../../components/Switch";
 import AccessControlListEditor from "../../components/AccessControlListEditor";
-import RadioGroup from "../../components/RadioGroup";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Button from "../../components/Button";
 import useDialog from "../../components/useDialog";
@@ -26,9 +32,9 @@ import SketchClassStyleAdmin from "./SketchClassStyleAdmin";
 import EvaluateFilterServiceModal from "./EvaluateFilterServiceModal";
 import GeoprocessingTab from "./GeoprocessingTab";
 import GeographyClippingTab from "./GeographyClippingTab";
-import useCurrentProjectMetadata from "../../useCurrentProjectMetadata";
-import { useHistory, useParams } from "react-router-dom";
+import { Link, useHistory, useParams } from "react-router-dom";
 import SketchClassReportAssignment from "./SketchClassReportAssignment";
+import SketchClassGeographiesInput from "./SketchClassGeographiesInput";
 
 export default function SketchClassForm({
   sketchClass,
@@ -40,7 +46,6 @@ export default function SketchClassForm({
   onDelete?: (id: number) => void;
 }) {
   const onError = useGlobalErrorHandler();
-  const projectMetadata = useCurrentProjectMetadata();
   const { t } = useTranslation("admin:sketching");
   const history = useHistory();
   const { tab } = useParams<{ tab?: string }>();
@@ -69,37 +74,180 @@ export default function SketchClassForm({
     [history]
   );
 
+  const slug = getSlug();
+  const isCollectionSketchClass =
+    sketchClass.geometryType === SketchGeometryType.Collection;
+  const isPolygonSketchClass =
+    sketchClass.geometryType === SketchGeometryType.Polygon;
+
+  const { data: geographyEditorData, loading: geographyEditorLoading } =
+    useSketchClassGeographyEditorDetailsQuery({
+      variables: { slug },
+      skip: !slug || isCollectionSketchClass,
+    });
+
+  const client = useApolloClient();
+
   const [mutate, mutationState] = useUpdateSketchClassMutation({
     variables: {
       id: sketchClass.id,
     },
     onError,
   });
+
+  const [updateSketchClassGeographies] =
+    useUpdateSketchClassGeographiesMutation({
+      onError,
+    });
+
+  const [setPrimaryReportForSketchClass] =
+    useSetPrimaryReportForSketchClassMutation({
+      onError,
+    });
   const [filterLocationModal, setFilterLocationModal] = useState<
     string | undefined
   >();
-  const isReportBuilderEnabled =
-    projectMetadata.data?.project?.enableReportBuilder;
-  const enableCollectionNewReports = Boolean(
-    projectMetadata.data?.project?.enableCollectionNewReports
-  );
-  const isCollectionSketchClass =
-    sketchClass.geometryType === SketchGeometryType.Collection;
-  const hideCollectionNewReportsAdminUi =
-    isReportBuilderEnabled &&
-    isCollectionSketchClass &&
-    !enableCollectionNewReports;
   const reportingMode: "new" | "legacy" | "transition" =
     sketchClass.isGeographyClippingEnabled
       ? "new"
       : sketchClass.previewNewReports
       ? "transition"
       : "legacy";
+  const geoprocessingReportsEnabled = reportingMode !== "new";
+  const canConfigureReporting =
+    sketchClass.geometryType === SketchGeometryType.Polygon ||
+    sketchClass.geometryType === SketchGeometryType.Collection;
+  const showModernGeographySettings =
+    isPolygonSketchClass && sketchClass.isGeographyClippingEnabled;
+  const showModernReportAssignment =
+    canConfigureReporting &&
+    sketchClass.isGeographyClippingEnabled &&
+    !sketchClass.previewNewReports;
 
-  /** When collection-level new reports are disabled at the project, admin UI behaves like legacy for tabs only. */
-  const reportingModeForAdminUi = hideCollectionNewReportsAdminUi
-    ? "legacy"
-    : reportingMode;
+  const hasProjectGeographies = useMemo(() => {
+    const n = geographyEditorData?.projectBySlug?.geographies?.length ?? 0;
+    return n > 0;
+  }, [geographyEditorData?.projectBySlug?.geographies?.length]);
+
+  const clippingGeographyCount = useMemo(
+    () => (sketchClass.clippingGeographies ?? []).filter(Boolean).length,
+    [sketchClass.clippingGeographies]
+  );
+
+  /** Polygon sketch classes require clipping geography before report assignment; collections do not. */
+  const geographyGateForReports = isPolygonSketchClass;
+
+  const analyticalReportsReady =
+    !geographyGateForReports ||
+    (!geographyEditorLoading &&
+      hasProjectGeographies &&
+      clippingGeographyCount > 0);
+
+  const transitionGeoReady =
+    isCollectionSketchClass ||
+    (!geographyEditorLoading &&
+      hasProjectGeographies &&
+      clippingGeographyCount > 0);
+
+  /** After switching off geoprocessing, pick first geography / report so admins are not blocked on empty selects. */
+  const applyDefaultsAfterSwitchingToModern = useCallback(async () => {
+    const geographies = geographyEditorData?.projectBySlug?.geographies ?? [];
+    const firstGeographyId = geographies[0]?.id;
+
+    if (
+      isPolygonSketchClass &&
+      clippingGeographyCount === 0 &&
+      firstGeographyId != null
+    ) {
+      await updateSketchClassGeographies({
+        variables: {
+          id: sketchClass.id,
+          geographyIds: [firstGeographyId],
+        },
+        refetchQueries: [
+          {
+            query: SketchClassGeographyEditorDetailsDocument,
+            variables: { slug },
+          },
+          {
+            query: SketchFragmentStatusDocument,
+            variables: { slug },
+          },
+          {
+            query: SketchClassesDocument,
+            variables: { slug },
+          },
+        ],
+        awaitRefetchQueries: true,
+      });
+    }
+
+    const { data } = await client.query({
+      query: SketchClassReportAssignmentDocument,
+      variables: { slug, sketchClassId: sketchClass.id },
+      fetchPolicy: "network-only",
+    });
+
+    const projectId = data?.projectBySlug?.id;
+    const existingDraftReportId = data?.sketchClass?.draftReport?.id;
+    const reportCandidates = (data?.reportsConnection?.nodes ?? []).filter(
+      (r: { projectId?: number; draftId?: number | null }) =>
+        r.projectId === projectId && r.draftId == null
+    );
+    const firstDraftReportId = reportCandidates[0]?.id;
+
+    if (!existingDraftReportId && firstDraftReportId != null) {
+      await setPrimaryReportForSketchClass({
+        variables: {
+          sketchClassId: sketchClass.id,
+          draftReportId: firstDraftReportId,
+        },
+        refetchQueries: [
+          {
+            query: SketchClassesDocument,
+            variables: { slug },
+          },
+        ],
+        awaitRefetchQueries: true,
+      });
+    }
+  }, [
+    client,
+    clippingGeographyCount,
+    geographyEditorData?.projectBySlug?.geographies,
+    isPolygonSketchClass,
+    setPrimaryReportForSketchClass,
+    sketchClass.id,
+    slug,
+    updateSketchClassGeographies,
+  ]);
+
+  const switchToModernReporting = useCallback(async () => {
+    try {
+      await mutate({
+        variables: {
+          id: sketchClass.id,
+          isGeographyClippingEnabled: true,
+          previewNewReports: false,
+        },
+        optimisticResponse: {
+          __typename: "Mutation",
+          updateSketchClass: {
+            __typename: "UpdateSketchClassPayload",
+            sketchClass: {
+              __typename: "SketchClass",
+              ...sketchClass,
+              isGeographyClippingEnabled: true,
+              previewNewReports: false,
+            },
+          },
+        },
+      });
+      await applyDefaultsAfterSwitchingToModern();
+    } catch (e) {
+      onError(e);
+    }
+  }, [applyDefaultsAfterSwitchingToModern, mutate, onError, sketchClass]);
 
   const handleReportingModeChange = useCallback(
     (mode: "legacy" | "new" | "transition") => {
@@ -127,12 +275,22 @@ export default function SketchClassForm({
     },
     [mutate, sketchClass]
   );
-
-  useEffect(() => {
-    if (selectedTab === "reports" && hideCollectionNewReportsAdminUi) {
-      updateTabInUrl("geoprocessing");
+  const handleGeoprocessingSwitchChange = useCallback(() => {
+    if (geoprocessingReportsEnabled) {
+      void switchToModernReporting();
+    } else {
+      handleReportingModeChange("legacy");
     }
-  }, [selectedTab, hideCollectionNewReportsAdminUi, updateTabInUrl]);
+  }, [
+    geoprocessingReportsEnabled,
+    handleReportingModeChange,
+    switchToModernReporting,
+  ]);
+  const handleTransitionSwitchChange = useCallback(() => {
+    handleReportingModeChange(
+      reportingMode === "transition" ? "legacy" : "transition"
+    );
+  }, [reportingMode, handleReportingModeChange]);
 
   const tabs: NonLinkTabItem[] = useMemo(() => {
     return [
@@ -146,44 +304,15 @@ export default function SketchClassForm({
         id: "attributes",
         current: selectedTab === "attributes",
       },
-      ...(isReportBuilderEnabled
+      ...(geoprocessingReportsEnabled
         ? [
-            ...(reportingModeForAdminUi !== "new"
-              ? [
-                  {
-                    name: "Geoprocessing Services",
-                    id: "geoprocessing",
-                    current: selectedTab === "geoprocessing",
-                  },
-                ]
-              : []),
-            ...(reportingModeForAdminUi !== "legacy" &&
-            sketchClass.geometryType !== SketchGeometryType.Collection
-              ? [
-                  {
-                    name: "Geography Clipping",
-                    id: "geography-clipping",
-                    current: selectedTab === "geography-clipping",
-                  },
-                ]
-              : []),
-            ...(reportingModeForAdminUi !== "legacy"
-              ? [
-                  {
-                    name: "Reports",
-                    id: "reports",
-                    current: selectedTab === "reports",
-                  },
-                ]
-              : []),
-          ]
-        : [
             {
-              name: "Geoprocessing",
+              name: "Geoprocessing Services",
               id: "geoprocessing",
               current: selectedTab === "geoprocessing",
             },
-          ]),
+          ]
+        : []),
       ...(sketchClass.geometryType !== SketchGeometryType.Collection &&
       sketchClass.geometryType !== SketchGeometryType.ChooseFeature &&
       sketchClass.geometryType !== SketchGeometryType.FilteredPlanningUnits
@@ -196,12 +325,13 @@ export default function SketchClassForm({
           ]
         : []),
     ];
-  }, [
-    selectedTab,
-    sketchClass.geometryType,
-    isReportBuilderEnabled,
-    reportingModeForAdminUi,
-  ]);
+  }, [selectedTab, sketchClass.geometryType, geoprocessingReportsEnabled]);
+
+  useEffect(() => {
+    if (selectedTab === "geography-clipping" || selectedTab === "reports") {
+      updateTabInUrl("settings");
+    }
+  }, [selectedTab, updateTabInUrl]);
 
   const { confirmDelete } = useDialog();
 
@@ -367,75 +497,58 @@ export default function SketchClassForm({
             {sketchClass.acl?.nodeId && (
               <AccessControlListEditor nodeId={sketchClass.acl?.nodeId} />
             )}
-            {isReportBuilderEnabled &&
-              (sketchClass.geometryType === SketchGeometryType.Polygon ||
-                (sketchClass.geometryType === SketchGeometryType.Collection &&
-                  enableCollectionNewReports)) && (
-                <RadioGroup<"new" | "legacy" | "transition">
-                  legend={t("Analytical Reports")}
-                  value={reportingMode}
-                  onChange={(mode) => handleReportingModeChange(mode)}
-                  items={[
-                    {
-                      label: t("Use the Report Builder"),
-                      value: "new",
-                      description: (
-                        <Trans ns="admin:sketching">
-                          Create reports using a graphical editor, referencing
-                          the overlay layers uploaded to your project.
-                        </Trans>
-                      ),
-                    },
-                    {
-                      label: t("Use Geoprocessing Services"),
-                      value: "legacy",
-                      description: (
-                        <Trans ns="admin:sketching">
-                          Use services developed using the{" "}
-                          <a
-                            className="text-primary-500 hover:underline"
-                            href="https://github.com/seasketch/geoprocessing"
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            SeaSketch Geoprocessing Framework
-                          </a>{" "}
-                          to clip sketches and show reports.
-                        </Trans>
-                      ),
-                    },
-                    {
-                      label: t("Transition from Geoprocessing Services"),
-                      value: "transition",
-                      description: (
-                        <Trans ns="admin:sketching">
-                          <a
-                            className="text-primary-500 hover:underline"
-                            href="https://github.com/seasketch/geoprocessing"
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            Geoprocessing framework services
-                          </a>{" "}
-                          will be used for reporting on sketches. The report
-                          builder will be available to admins for authoring
-                          reports, intended to eventually replace geoprocessing
-                          services. Geography clipping will be used over
-                          preprocessing services if properly configured.
-                        </Trans>
-                      ),
-                    },
-                  ]}
-                  error={mutationState.error?.message}
-                  state={
-                    mutationState.called
-                      ? mutationState.loading
-                        ? "SAVING"
-                        : "SAVED"
-                      : "NONE"
+            {showModernGeographySettings && (
+              <div className="space-y-2">
+                <h3 className="text-sm font-medium leading-5 text-gray-800">
+                  {t("Geography Clipping")}
+                </h3>
+                <GeographyClippingTab sketchClass={sketchClass} />
+              </div>
+            )}
+            {showModernReportAssignment && (
+              <div
+                className={`space-y-2 pb-2 ${
+                  !analyticalReportsReady && !geographyEditorLoading
+                    ? "pointer-events-none opacity-60"
+                    : ""
+                }`}
+              >
+                <h3 className="text-sm font-medium leading-5 text-gray-800">
+                  {t("Analytical Reports")}
+                </h3>
+                <p className="text-sm text-gray-500">
+                  <Trans ns="admin:sketching">
+                    Choose a report from the{" "}
+                    <Link
+                      to={`/${slug}/admin/reports`}
+                      className="text-primary-500 hover:underline"
+                    >
+                      report authoring section
+                    </Link>{" "}
+                    to evaluate user designs.
+                  </Trans>
+                </p>
+                <div
+                  className={
+                    !analyticalReportsReady && !geographyEditorLoading
+                      ? "pointer-events-none opacity-60"
+                      : ""
                   }
-                />
-              )}
+                >
+                  <SketchClassReportAssignment
+                    sketchClassId={sketchClass.id}
+                    embedded
+                    showIntro={false}
+                    disabled={!analyticalReportsReady}
+                    disabledText={
+                      !analyticalReportsReady && !geographyEditorLoading
+                        ? t("Select a geography first")
+                        : undefined
+                    }
+                  />
+                </div>
+              </div>
+            )}
             <div className="">
               <InputBlock
                 input={
@@ -479,6 +592,101 @@ export default function SketchClassForm({
                     )
               }
             />
+            {canConfigureReporting && (
+              <>
+                <h3 className="text-sm font-medium leading-5 text-gray-500 pt-4">
+                  {t("Advanced Settings")}
+                </h3>
+                <div className="">
+                  <InputBlock
+                    input={
+                      <Switch
+                        isToggled={geoprocessingReportsEnabled}
+                        onClick={handleGeoprocessingSwitchChange}
+                      />
+                    }
+                    title={t("Enable Geoprocessing Services")}
+                    description={
+                      <Trans ns="admin:sketching">
+                        Use{" "}
+                        <a
+                          className="text-primary-500 hover:underline"
+                          href="https://github.com/seasketch/geoprocessing"
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Geoprocessing framework services
+                        </a>{" "}
+                        for reporting instead of the graphical report builder.
+                        Configure further in the <i>Geoprocessing Services</i>{" "}
+                        tab if enabled.
+                      </Trans>
+                    }
+                  />
+                </div>
+                {geoprocessingReportsEnabled && (
+                  <>
+                    <InputBlock
+                      input={
+                        <Switch
+                          isToggled={reportingMode === "transition"}
+                          onClick={handleTransitionSwitchChange}
+                        />
+                      }
+                      title={t("Transition from Geoprocessing Services")}
+                      description={t(
+                        "If enabled, geoprocessing services reports will be used by default, but administrators will have access to a preview of reports using the new authoring system. Useful for testing the new authoring system before rolling out to all users."
+                      )}
+                    />
+                    {reportingMode === "transition" && (
+                      <div className="rounded border p-3 space-y-3">
+                        {!isCollectionSketchClass && (
+                          <>
+                            <div className="space-y-1">
+                              <div className="text-xs font-medium text-gray-600">
+                                {t("Clipping geography")}
+                              </div>
+                              {geographyEditorLoading ? (
+                                <p className="text-xs text-gray-500">
+                                  {t("Loading…")}
+                                </p>
+                              ) : !hasProjectGeographies ? (
+                                <p className="text-xs text-gray-500">
+                                  {t("No geographies in this project.")}
+                                </p>
+                              ) : (
+                                <SketchClassGeographiesInput
+                                  sketchClassId={sketchClass.id}
+                                  projectGeographies={
+                                    geographyEditorData?.projectBySlug
+                                      ?.geographies ?? []
+                                  }
+                                />
+                              )}
+                            </div>
+                            {!transitionGeoReady &&
+                            !geographyEditorLoading &&
+                            hasProjectGeographies ? (
+                              <p className="text-xs text-gray-500">
+                                {t(
+                                  "Select a geography before assigning a report."
+                                )}
+                              </p>
+                            ) : null}
+                          </>
+                        )}
+                        <SketchClassReportAssignment
+                          sketchClassId={sketchClass.id}
+                          embedded
+                          showIntro={false}
+                          disabled={!transitionGeoReady}
+                        />
+                      </div>
+                    )}
+                  </>
+                )}
+              </>
+            )}
           </div>
         )}
         {selectedTab === "geoprocessing" && (
@@ -501,12 +709,6 @@ export default function SketchClassForm({
             location={filterLocationModal}
             onRequestClose={() => setFilterLocationModal(undefined)}
           />
-        )}
-        {selectedTab === "geography-clipping" && (
-          <GeographyClippingTab sketchClass={sketchClass} />
-        )}
-        {selectedTab === "reports" && !hideCollectionNewReportsAdminUi && (
-          <SketchClassReportAssignment sketchClassId={sketchClass.id} />
         )}
       </div>
     </div>

@@ -15,17 +15,22 @@ import { useTranslation } from "react-i18next";
 import type { CopyableReportCardsQuery } from "../generated/graphql";
 import {
   BaseDraftReportContextDocument,
+  ProjectReportsContextDocument,
   ReportTabDetailsFragment,
   Sketch,
   useAddReportCardMutation,
   useCopyableReportCardsQuery,
   useDeleteDraftReportMutation,
+  useProjectReportsContextQuery,
+  useSetPrimaryReportForSketchClassMutation,
   useUpdateReportTitleMutation,
 } from "../generated/graphql";
 import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
 import useDialog from "../components/useDialog";
 import Modal from "../components/Modal";
+import Spinner from "../components/Spinner";
 import TextInput from "../components/TextInput";
+import Warning from "../components/Warning";
 import {
   MenuBarContent,
   MenuBarItem,
@@ -50,6 +55,7 @@ import { useCalculationDetailsModalState } from "./components/CalculationDetails
 import { BaseReportContext } from "./context/BaseReportContext";
 import { useSubjectReportContext } from "./context/SubjectReportContext";
 import { ReportUIStateContext } from "./context/ReportUIStateContext";
+import getSlug from "../getSlug";
 import ReportFullPrintBridge from "./ReportFullPrintBridge";
 import { ReportTabManagementModal } from "./ReportTabManagementModal";
 import { ReportTabs } from "./ReportTabs";
@@ -70,27 +76,47 @@ function scrollContainerToBottom(
   scrollContainer.scrollTo({ top, behavior });
 }
 
-/**
- * ProseMirror (and focus) can change card height after first paint; wait until
- * after layout so scrollHeight reflects the real bottom.
- */
-function scrollContainerToBottomAfterLayout(
-  scrollContainer: HTMLElement,
+/** Prefer the cards pane when it scrolls; otherwise the padded workspace (natural-height layout). */
+function scrollReportWorkspaceToBottom(
+  cardsScrollEl: HTMLElement | null,
+  workspaceScrollEl: HTMLElement | null,
+  behavior: ScrollBehavior = "smooth"
+) {
+  if (
+    cardsScrollEl &&
+    cardsScrollEl.scrollHeight > cardsScrollEl.clientHeight
+  ) {
+    scrollContainerToBottom(cardsScrollEl, behavior);
+  } else if (workspaceScrollEl) {
+    scrollContainerToBottom(workspaceScrollEl, behavior);
+  }
+}
+
+function scrollReportWorkspaceToBottomAfterLayout(
+  cardsScrollEl: HTMLElement | null,
+  workspaceScrollEl: HTMLElement | null,
   behavior: ScrollBehavior = "smooth"
 ) {
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
-      scrollContainerToBottom(scrollContainer, behavior);
+      scrollReportWorkspaceToBottom(cardsScrollEl, workspaceScrollEl, behavior);
     });
   });
 }
 
-export type ReportEditorPublishMenuProps = {
-  hasUnpublishedChanges: boolean;
-  publishing: boolean;
-  lastPublishedSummary: string | null;
-  onPublish: () => void;
-};
+export type ReportEditorPublishMenuProps =
+  | {
+      variant: "available";
+      hasUnpublishedChanges: boolean;
+      publishing: boolean;
+      lastPublishedSummary: string | null;
+      onPublish: () => void;
+    }
+  | {
+      variant: "unavailable";
+      /** Why Publish is disabled (e.g. report not primary for any sketch class in this admin context). */
+      message: string;
+    };
 
 export type ReportEditorDeletionProps = {
   assignedSketchClasses: { id: number; name: string }[];
@@ -151,12 +177,31 @@ export default function ReportEditor({
   const [manageTabsOpen, setManageTabsOpen] = useState(false);
   const openManageTabs = useCallback(() => setManageTabsOpen(true), []);
   const closeManageTabs = useCallback(() => setManageTabsOpen(false), []);
+  const [assignSketchClassesOpen, setAssignSketchClassesOpen] = useState(false);
+  const openAssignSketchClasses = useCallback(
+    () => setAssignSketchClassesOpen(true),
+    []
+  );
+  const closeAssignSketchClasses = useCallback(
+    () => setAssignSketchClassesOpen(false),
+    []
+  );
   const { confirmDelete } = useDialog();
   const [changeReportTitleOpen, setChangeReportTitleOpen] = useState(false);
   const [reportTitleDraft, setReportTitleDraft] = useState("");
+  const [savingSketchClassId, setSavingSketchClassId] = useState<number | null>(
+    null
+  );
   const onError = useGlobalErrorHandler();
+  const slug = getSlug();
 
   const projectId = subjectContext.data?.sketch?.sketchClass?.projectId;
+  const reportAssignmentsQuery = useProjectReportsContextQuery({
+    variables: { slug },
+    skip: !assignSketchClassesOpen || !slug,
+    fetchPolicy: "cache-first",
+    nextFetchPolicy: "cache-first",
+  });
   const copyCardsQuery = useCopyableReportCardsQuery({
     variables: { projectId: projectId! },
     skip: !projectId,
@@ -198,6 +243,7 @@ export default function ReportEditor({
   const pendingNewCardIdRef = useRef<number | null>(null);
   pendingNewCardIdRef.current = pendingNewCardId;
   const cardsScrollAreaRef = useRef<HTMLDivElement>(null);
+  const workspaceScrollAreaRef = useRef<HTMLDivElement>(null);
   const reportPrintControlsRef = useRef<{ runPrint: () => void } | null>(null);
 
   // Get all card IDs from the current tabs data
@@ -221,27 +267,22 @@ export default function ReportEditor({
     if (editing !== cardId) {
       setEditing(cardId, true);
     }
-    // eslint-disable-next-line i18next/no-literal-string
-    const cardSelector = `[data-rbd-draggable-id="${cardId}"]`;
 
-    const scrollArea = cardsScrollAreaRef.current;
-    if (scrollArea) {
-      scrollContainerToBottom(scrollArea, "smooth");
-    }
-
-    const cardElement = document.querySelector(cardSelector);
-    if (!scrollArea && cardElement) {
-      (cardElement as HTMLElement).scrollIntoView({
-        behavior: "smooth",
-        block: "end",
-      });
-    }
+    scrollReportWorkspaceToBottom(
+      cardsScrollAreaRef.current,
+      workspaceScrollAreaRef.current,
+      "smooth"
+    );
   }, [pendingNewCardId, allCardIds, editing, setEditing]);
 
   useLayoutEffect(() => {
     const el = cardsScrollAreaRef.current;
     if (el) {
       el.scrollTop = 0;
+    }
+    const workspace = workspaceScrollAreaRef.current;
+    if (workspace) {
+      workspace.scrollTop = 0;
     }
   }, [selectedTabId]);
 
@@ -256,6 +297,9 @@ export default function ReportEditor({
     });
 
   const [deleteDraftReport] = useDeleteDraftReportMutation({
+    onError,
+  });
+  const [setPrimaryReport] = useSetPrimaryReportForSketchClassMutation({
     onError,
   });
 
@@ -354,30 +398,25 @@ export default function ReportEditor({
     const rid = baseContext.data?.report?.id;
     if (rid == null) return;
 
-    const sketchClassesDescription =
-      reportDeletion.assignedSketchClasses.length === 0
-        ? t(
-            "No sketch classes currently use this report as their primary report."
-          )
-        : t(
-            "Sketch classes that use this report as their primary report include: {{list}}.",
-            {
-              list: reportDeletion.assignedSketchClasses
-                .map((sc) => sc.name)
-                .join(", "),
-            }
-          );
-
-    const descriptionParagraphGap =
-      String.fromCharCode(10) + String.fromCharCode(10);
     confirmDelete({
       message: t("Delete this report permanently?"),
-      description: [
-        t(
-          "This removes the draft report and every published snapshot in its history from the project. This cannot be undone."
-        ),
-        sketchClassesDescription,
-      ].join(descriptionParagraphGap),
+      description: (
+        <p className="">
+          {t("This cannot be undone.")}
+          {reportDeletion.assignedSketchClasses.length > 0 && (
+            <p>
+              {t(
+                "Sketch classes that use this report as their primary report include "
+              ) +
+                " " +
+                reportDeletion.assignedSketchClasses
+                  .map((sc) => sc.name)
+                  .join(", ") +
+                "."}
+            </p>
+          )}
+        </p>
+      ),
       primaryButtonText: t("Delete"),
       onDelete: async () => {
         await deleteDraftReport({
@@ -420,10 +459,11 @@ export default function ReportEditor({
         pendingNewCardIdRef.current = null;
         setPendingNewCardId(null);
         focus();
-        const scrollArea = cardsScrollAreaRef.current;
-        if (scrollArea) {
-          scrollContainerToBottomAfterLayout(scrollArea, "smooth");
-        }
+        scrollReportWorkspaceToBottomAfterLayout(
+          cardsScrollAreaRef.current,
+          workspaceScrollAreaRef.current,
+          "smooth"
+        );
       }
     },
     []
@@ -474,6 +514,19 @@ export default function ReportEditor({
   }
 
   const report = baseContext.data.report;
+  const assignableProjectId = reportAssignmentsQuery.data?.projectBySlug?.id;
+  const assignableReports = (
+    reportAssignmentsQuery.data?.reportsConnection?.nodes || []
+  )
+    .filter((r: any): r is NonNullable<typeof r> => Boolean(r))
+    .filter(
+      (r: any) => r.projectId === assignableProjectId && r.draftId == null
+    );
+  const assignableSketchClasses = (
+    reportAssignmentsQuery.data?.projectBySlug?.sketchClasses || []
+  )
+    .filter((sc: any): sc is NonNullable<typeof sc> => Boolean(sc))
+    .sort((a: any, b: any) => a.name.localeCompare(b.name));
 
   const editMenuDisabled = editing != null;
 
@@ -511,6 +564,16 @@ export default function ReportEditor({
                     >
                       {t("Manage Tabs")}
                     </MenuBarItem>
+                    <MenuBarItem
+                      disabled={editMenuDisabled}
+                      onClick={() => {
+                        if (!editMenuDisabled) {
+                          openAssignSketchClasses();
+                        }
+                      }}
+                    >
+                      {t("Assign sketch classes")}
+                    </MenuBarItem>
                     <MenuBarItem onClick={openChangeReportTitleModal}>
                       {t("Change report title")}
                     </MenuBarItem>
@@ -546,9 +609,7 @@ export default function ReportEditor({
                             >
                               <CopyCardsFromReportPopover
                                 targetTabId={
-                                  selectedTabId ??
-                                  report.tabs?.[0]?.id ??
-                                  0
+                                  selectedTabId ?? report.tabs?.[0]?.id ?? 0
                                 }
                                 currentSketchClassId={
                                   subjectContext.data?.sketch?.sketchClass
@@ -603,7 +664,9 @@ export default function ReportEditor({
                 <Menubar.Menu>
                   <MenubarTrigger
                     title={
-                      publishMenu.hasUnpublishedChanges
+                      publishMenu.variant === "unavailable"
+                        ? publishMenu.message
+                        : publishMenu.hasUnpublishedChanges
                         ? t(
                             "There are unpublished changes. Publish to save them."
                           )
@@ -612,7 +675,8 @@ export default function ReportEditor({
                   >
                     <span className="inline-flex items-center gap-2">
                       <span>{t("Publish")}</span>
-                      {publishMenu.hasUnpublishedChanges ? (
+                      {publishMenu.variant === "available" &&
+                      publishMenu.hasUnpublishedChanges ? (
                         <span
                           className="inline-block h-2 w-2 shrink-0 rounded-full bg-blue-500"
                           aria-hidden
@@ -622,38 +686,52 @@ export default function ReportEditor({
                   </MenubarTrigger>
                   <Menubar.Portal>
                     <MenuBarContent>
-                      <MenuBarLabel>
-                        {publishMenu.lastPublishedSummary ??
-                          t("No published version yet.")}
-                      </MenuBarLabel>
-                      {publishMenu.hasUnpublishedChanges ? (
-                        <Menubar.Label className="RadixDropdownItem block max-w-[16rem] rounded px-2 pb-1.5 pl-2 pt-0 text-xs leading-snug text-blue-700 outline-none">
-                          {t(
-                            "This draft has changes that are not in the published report yet."
-                          )}
-                        </Menubar.Label>
-                      ) : null}
-                      <MenuBarSeparator />
-                      <MenuBarItem
-                        disabled={
-                          publishMenu.publishing ||
-                          !publishMenu.hasUnpublishedChanges
-                        }
-                        onClick={() => {
-                          if (
-                            !publishMenu.publishing &&
-                            publishMenu.hasUnpublishedChanges
-                          ) {
-                            publishMenu.onPublish();
-                          }
-                        }}
-                      >
-                        {publishMenu.publishing
-                          ? t("Publishing...")
-                          : publishMenu.hasUnpublishedChanges
-                          ? t("Publish Report")
-                          : `${t("Publish Report")} (${t("No changes")})`}
-                      </MenuBarItem>
+                      {publishMenu.variant === "unavailable" ? (
+                        <>
+                          <Menubar.Label className="RadixDropdownItem block max-w-[18rem] rounded px-2 py-1.5 text-xs leading-snug text-gray-600 outline-none">
+                            {publishMenu.message}
+                          </Menubar.Label>
+                          <MenuBarSeparator />
+                          <MenuBarItem disabled onClick={() => {}}>
+                            {t("Publish Report")}
+                          </MenuBarItem>
+                        </>
+                      ) : (
+                        <>
+                          <MenuBarLabel>
+                            {publishMenu.lastPublishedSummary ??
+                              t("No published version yet.")}
+                          </MenuBarLabel>
+                          {publishMenu.hasUnpublishedChanges ? (
+                            <Menubar.Label className="RadixDropdownItem block max-w-[16rem] rounded px-2 pb-1.5 pl-2 pt-0 text-xs leading-snug text-blue-700 outline-none">
+                              {t(
+                                "This draft has changes that are not in the published report yet."
+                              )}
+                            </Menubar.Label>
+                          ) : null}
+                          <MenuBarSeparator />
+                          <MenuBarItem
+                            disabled={
+                              publishMenu.publishing ||
+                              !publishMenu.hasUnpublishedChanges
+                            }
+                            onClick={() => {
+                              if (
+                                !publishMenu.publishing &&
+                                publishMenu.hasUnpublishedChanges
+                              ) {
+                                publishMenu.onPublish();
+                              }
+                            }}
+                          >
+                            {publishMenu.publishing
+                              ? t("Publishing...")
+                              : publishMenu.hasUnpublishedChanges
+                              ? t("Publish Report")
+                              : `${t("Publish Report")} (${t("No changes")})`}
+                          </MenuBarItem>
+                        </>
+                      )}
                     </MenuBarContent>
                   </Menubar.Portal>
                 </Menubar.Menu>
@@ -661,8 +739,11 @@ export default function ReportEditor({
             </Menubar.Root>
           </div>
         </header>
-        <div className="flex flex-col flex-1 min-h-0 overflow-hidden p-8">
-          <div className="w-128 mx-auto flex flex-col flex-1 min-h-0 rounded-lg shadow-xl border border-t-black/5 border-l-black/10 border-r-black/15 border-b-black/20 z-10 bg-gray-100 overflow-hidden">
+        <div
+          ref={workspaceScrollAreaRef}
+          className="flex flex-col flex-1 min-h-0 overflow-y-auto p-8 items-start"
+        >
+          <div className="w-128 mx-auto flex flex-col shrink-0 rounded-lg shadow-xl border border-t-black/5 border-l-black/10 border-r-black/15 border-b-black/20 z-10 bg-gray-100 overflow-hidden">
             {/* report header */}
             <div className="p-4 border-b flex items-center bg-white gap-2 rounded-t-lg">
               <h1 className="flex-1 truncate text-lg">
@@ -677,7 +758,13 @@ export default function ReportEditor({
                   }
                 />
               </h1>
-              <ReportWindowActionsMenu onPrint={requestFullReportPrint} />
+              <ReportWindowActionsMenu
+                onPrint={requestFullReportPrint}
+                onAddCard={addACard}
+                onManageTabs={openManageTabs}
+                onAssignSketchClasses={openAssignSketchClasses}
+                editActionsDisabled={editMenuDisabled}
+              />
             </div>
             {/* report tabs */}
             <div className="shrink-0 overflow-hidden bg-white">
@@ -686,11 +773,10 @@ export default function ReportEditor({
             {/* report cards */}
             <div
               ref={cardsScrollAreaRef}
-              className="relative flex-1 min-h-0 overflow-y-auto overscroll-none"
+              className="relative min-h-0 overflow-y-auto overscroll-none"
             >
               {(report.tabs || []).map((tab) => {
-                const selected =
-                  selectedTabId ?? report.tabs?.[0]?.id;
+                const selected = selectedTabId ?? report.tabs?.[0]?.id;
                 const isActive = selected === tab.id;
                 return (
                   <div
@@ -721,12 +807,125 @@ export default function ReportEditor({
         <ReportTabManagementModal
           isOpen={manageTabsOpen}
           onClose={closeManageTabs}
-          tabs={
-            (report.tabs as ReportTabDetailsFragment[]) || []
-          }
+          tabs={(report.tabs as ReportTabDetailsFragment[]) || []}
           reportId={report.id}
         />
       )}
+      <Modal
+        open={assignSketchClassesOpen}
+        onRequestClose={closeAssignSketchClasses}
+        title={t("Assign sketch classes")}
+        scrollable
+        footer={[
+          {
+            label: t("Close"),
+            variant: "secondary",
+            onClick: closeAssignSketchClasses,
+          },
+        ]}
+      >
+        <div className="space-y-3">
+          <p className="text-sm text-gray-600">
+            {t(
+              "Choose which report each sketch class should present to users."
+            )}
+          </p>
+          {reportAssignmentsQuery.loading ? (
+            <div className="py-6 flex items-center justify-center">
+              <Spinner />
+            </div>
+          ) : reportAssignmentsQuery.error ? (
+            <Warning level="error">
+              {t("Could not load sketch class report assignments.")}
+            </Warning>
+          ) : assignableSketchClasses.length === 0 ? (
+            <Warning level="info">
+              {t(
+                "No sketch classes are available yet. Create one in Sketching first."
+              )}
+            </Warning>
+          ) : (
+            <div className="space-y-2">
+              {assignableSketchClasses.map((sc: any) => {
+                const currentDraftReportId = sc.draftReport?.id ?? null;
+                const rowSaving = savingSketchClassId === sc.id;
+                return (
+                  <div
+                    key={sc.id}
+                    className="grid grid-cols-[minmax(0,1fr)_minmax(16rem,22rem)] gap-3 items-center rounded border border-gray-200 bg-white p-3"
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate text-sm font-medium text-gray-900">
+                        {sc.name}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        {currentDraftReportId
+                          ? t("Currently assigned")
+                          : t("No report assigned")}
+                      </div>
+                    </div>
+                    <div className="relative">
+                      <select
+                        value={currentDraftReportId ?? ""}
+                        disabled={rowSaving}
+                        className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 sm:text-sm rounded-md disabled:opacity-50"
+                        onChange={async (e) => {
+                          const raw = e.target.value;
+                          if (!raw) {
+                            return;
+                          }
+                          const draftReportId = Number(raw);
+                          if (!Number.isFinite(draftReportId)) {
+                            return;
+                          }
+                          if (draftReportId === currentDraftReportId) {
+                            return;
+                          }
+                          setSavingSketchClassId(sc.id);
+                          try {
+                            await setPrimaryReport({
+                              variables: {
+                                sketchClassId: sc.id,
+                                draftReportId,
+                              },
+                              refetchQueries: [
+                                {
+                                  query: ProjectReportsContextDocument,
+                                  variables: { slug },
+                                },
+                              ],
+                              awaitRefetchQueries: true,
+                            });
+                            await reportAssignmentsQuery.refetch();
+                          } finally {
+                            setSavingSketchClassId(null);
+                          }
+                        }}
+                      >
+                        {!currentDraftReportId ? (
+                          <option value="">{t("Select report")}</option>
+                        ) : null}
+                        {assignableReports.map((r: any) => (
+                          <option key={r.id} value={r.id}>
+                            {r.title?.trim() ||
+                              `${t("Untitled report")} #${r.id}`}
+                            {r.id === report.id ? ` (${t("This report")})` : ""}
+                          </option>
+                        ))}
+                      </select>
+                      {rowSaving ? (
+                        <div className="absolute inset-y-0 right-2 flex items-center text-xs text-gray-500">
+                          {t("Saving...")}
+                        </div>
+                      ) : null}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </Modal>
       <Modal
         open={changeReportTitleOpen}
         onRequestClose={closeChangeReportTitleModal}
@@ -739,9 +938,7 @@ export default function ReportEditor({
             onClick: closeChangeReportTitleModal,
           },
           {
-            label: updateReportTitleState.loading
-              ? t("Saving...")
-              : t("Save"),
+            label: updateReportTitleState.loading ? t("Saving...") : t("Save"),
             variant: "primary",
             loading: updateReportTitleState.loading,
             disabled:

@@ -9,10 +9,8 @@ import getSlug from "../../getSlug";
 import NavSidebar, { NavSidebarItem } from "../../components/NavSidebar";
 import Button from "../../components/Button";
 import Modal from "../../components/Modal";
-import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import {
   useCreateCustomReportMutation,
-  useDeleteDraftReportMutation,
   useProjectReportsContextQuery,
 } from "../../generated/graphql";
 import GeographyRequiredForReportsPrompt from "../../components/GeographyRequiredForReportsPrompt";
@@ -34,8 +32,7 @@ const sketchClassAdminReportWorkspaceBackground: { background: string } = {
 export default function ProjectReportsAdmin() {
   const slug = getSlug();
   const { t } = useTranslation("admin:sketching");
-  const { confirm, confirmDelete } = useDialog();
-  const onError = useGlobalErrorHandler();
+  const { confirm } = useDialog();
   const history = useHistory();
   const location = useLocation();
   const { id: routeReportIdParam } = useParams<{ id?: string }>();
@@ -49,7 +46,6 @@ export default function ProjectReportsAdmin() {
     variables: { slug },
   });
   const [createReport, createReportState] = useCreateCustomReportMutation();
-  const [deleteDraftReport] = useDeleteDraftReportMutation({ onError });
 
   const sketchClasses = useMemo(
     () =>
@@ -106,48 +102,6 @@ export default function ProjectReportsAdmin() {
     }
   }, [contextQuery, history, slug]);
 
-  const promptDeleteReport = useCallback(
-    (reportId: number, assigned: { id: number; name: string }[]) => {
-      const sketchClassesDescription =
-        assigned.length === 0
-          ? t(
-              "No sketch classes currently use this report as their primary report."
-            )
-          : t(
-              "Sketch classes that use this report as their primary report include: {{list}}.",
-              {
-                list: assigned.map((sc) => sc.name).join(", "),
-              }
-            );
-      const descriptionParagraphGap =
-        String.fromCharCode(10) + String.fromCharCode(10);
-      confirmDelete({
-        message: t("Delete this report permanently?"),
-        description: [
-          t(
-            "This removes the draft report and every published snapshot in its history from the project. This cannot be undone."
-          ),
-          sketchClassesDescription,
-        ].join(descriptionParagraphGap),
-        primaryButtonText: t("Delete"),
-        onDelete: async () => {
-          await deleteDraftReport({
-            variables: { reportId },
-            update(cache) {
-              cache.evict({
-                // eslint-disable-next-line i18next/no-literal-string -- Apollo typename
-                id: cache.identify({ __typename: "Report", id: reportId }),
-              });
-              cache.gc();
-            },
-          });
-          await handleReportDeleted();
-        },
-      });
-    },
-    [confirmDelete, deleteDraftReport, handleReportDeleted, t]
-  );
-
   const routeReportId = useMemo(() => {
     if (!routeReportIdParam) {
       return null;
@@ -197,9 +151,6 @@ export default function ProjectReportsAdmin() {
     if (contextQuery.loading || contextQuery.error) {
       return;
     }
-    if (!contextQuery.data?.projectBySlug?.enableReportBuilder) {
-      return;
-    }
     if (reportsWithAssignments.length === 0) {
       return;
     }
@@ -229,7 +180,6 @@ export default function ProjectReportsAdmin() {
   }, [
     contextQuery.loading,
     contextQuery.error,
-    contextQuery.data?.projectBySlug?.enableReportBuilder,
     reportsWithAssignments,
     routeReportIdParam,
     routeReportId,
@@ -293,9 +243,9 @@ export default function ProjectReportsAdmin() {
     };
 
     if (conflictingCreateAssignments.length > 0) {
-      confirm(t("Reassign sketch classes?"), {
+      confirm(t("Reassign Sketch Classes?"), {
         description: t(
-          "One or more selected sketch classes already have primary reports. Creating this report will replace those assignments."
+          "One or more selected Sketch Classes already have primary reports. Creating this report will replace those assignments."
         ),
         primaryButtonText: t("Create and reassign"),
         secondaryButtonText: t("Cancel"),
@@ -345,16 +295,6 @@ export default function ProjectReportsAdmin() {
       <div className="p-6">
         <Warning level="error">
           {t("Unable to load report administration data")}
-        </Warning>
-      </div>
-    );
-  }
-
-  if (!contextQuery.data?.projectBySlug?.enableReportBuilder) {
-    return (
-      <div className="p-6">
-        <Warning level="warning">
-          {t("Enable Report Builder in project settings first.")}
         </Warning>
       </div>
     );
@@ -426,32 +366,30 @@ export default function ProjectReportsAdmin() {
                     })
                   )}
                   onReportDeleted={handleReportDeleted}
-                  draftReportIdOverride={
-                    selectedReportHasPrimaryAssignment
-                      ? undefined
-                      : selectedReport.id
-                  }
+                  publishAvailable={selectedReportHasPrimaryAssignment}
+                  draftReportIdOverride={selectedReport.id}
                 />
               )}
               {selectedReport && !contextSketchClass && (
-                <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4">
-                  <Warning level="info">
-                    {t(
-                      "No sketch classes are available yet for report demonstration. Create a polygon or collection sketch class, or delete this report."
-                    )}
-                  </Warning>
-                  <Button
-                    label={t("Delete report")}
-                    onClick={() =>
-                      promptDeleteReport(
-                        selectedReport.id,
-                        selectedReport.assignedSketchClasses.map((sc: any) => ({
-                          id: sc.id,
-                          name: sc.name,
-                        }))
-                      )
-                    }
-                  />
+                <div className="flex flex-1 min-h-0 items-start justify-center overflow-y-auto px-2 pt-10">
+                  <div className="max-w-xl rounded mx-auto p-6 border-4 border-dashed bg-white/80 space-y-4">
+                    <h2 className="text-base font-medium text-gray-900">
+                      {t("Create a Sketch Class first")}
+                    </h2>
+                    <p className="text-sm text-gray-600 leading-relaxed">
+                      {t(
+                        "You need at least one polygon Sketch Class before you can author reports."
+                      )}
+                    </p>
+                    <Button
+                      primary
+                      label={t("Create a Sketch Class")}
+                      onClick={() => {
+                        // eslint-disable-next-line i18next/no-literal-string -- admin route
+                        history.push(`/${slug}/admin/sketching/new`);
+                      }}
+                    />
+                  </div>
                 </div>
               )}
               {!selectedReport && reportsWithAssignments.length > 0 && (
@@ -507,7 +445,7 @@ export default function ProjectReportsAdmin() {
           </div>
           <div>
             <label className="text-sm font-medium text-gray-700 block mb-2">
-              {t("Assign as primary for sketch classes (optional)")}
+              {t("Assign to Sketch Classes (optional)")}
             </label>
             <div className="max-h-48 overflow-y-auto border rounded border-gray-200 p-2 space-y-1">
               {sketchClasses.map((sc: any) => {
@@ -536,12 +474,7 @@ export default function ProjectReportsAdmin() {
           </div>
           {conflictingCreateAssignments.length > 0 && (
             <Warning level="warning">
-              {t(
-                "Some selected sketch classes already have assigned reports. Creating this report will replace those assignments."
-              )}{" "}
-              {conflictingCreateAssignments
-                .map((sc: any) => `${sc.name} (#${sc.draftReport?.id})`)
-                .join(", ")}
+              {t("Some selected Sketch Classes already have assigned reports")}
             </Warning>
           )}
         </div>

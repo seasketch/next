@@ -24,7 +24,9 @@ drop function if exists public.set_primary_report_for_sketch_class(integer, inte
 drop function if exists public.sketch_classes_draft_report(public.sketch_classes);
 drop function if exists public.sketch_classes_report(public.sketch_classes);
 drop function if exists public.publish_report(integer);
+drop function if exists public.publish_report_snapshot(integer);
 drop function if exists public.create_draft_report(integer);
+drop function if exists public.create_default_report(integer);
 
 drop table if exists public.sketch_class_reports cascade;
 
@@ -273,20 +275,6 @@ begin
     0
   ) returning id into dr_report_tab_id;
 
-  insert into public.report_cards (
-    report_tab_id,
-    body,
-    position,
-    alternate_language_settings,
-    component_settings
-  ) values (
-    dr_report_tab_id,
-    '{"type": "doc", "content": [{"type": "reportTitle", "content": [{"type": "text", "text": "Attributes"}]}]}'::jsonb,
-    0,
-    '{}',
-    jsonb_build_object('type', 'Attributes')
-  );
-
   if array_length(class_ids, 1) > 0 then
     -- Clear existing relations for provided classes before assigning this report as primary.
     delete from public.sketch_class_reports scr
@@ -324,7 +312,7 @@ begin
   select sc.project_id
   into project_id
   from public.sketch_classes sc
-  where sc.id = sketch_class_id;
+  where sc.id = set_primary_report_for_sketch_class.sketch_class_id;
 
   if project_id is null then
     raise exception 'Sketch class not found';
@@ -337,7 +325,7 @@ begin
   select r.project_id, r.version
   into report_project_id, report_version
   from public.reports r
-  where r.id = draft_report_id;
+  where r.id = set_primary_report_for_sketch_class.draft_report_id;
 
   if report_project_id is null then
     raise exception 'Report not found';
@@ -351,25 +339,25 @@ begin
     raise exception 'Assertion failed: Only draft reports can be assigned to a sketch class.';
   end if;
 
-  -- clear any existing primary assignment
-  delete from public.sketch_class_reports
-  where sketch_class_id = set_primary_report_for_sketch_class.sketch_class_id
-    and is_primary = true;
+  -- clear any existing primary assignment (qualify columns — params share names with columns)
+  delete from public.sketch_class_reports scr
+  where scr.sketch_class_id = set_primary_report_for_sketch_class.sketch_class_id
+    and scr.is_primary = true;
 
   insert into public.sketch_class_reports (
     sketch_class_id,
     draft_report_id,
     is_primary
   ) values (
-    sketch_class_id,
-    draft_report_id,
+    set_primary_report_for_sketch_class.sketch_class_id,
+    set_primary_report_for_sketch_class.draft_report_id,
     true
   );
 
   select *
   into selected
-  from public.sketch_classes
-  where id = sketch_class_id;
+  from public.sketch_classes sc
+  where sc.id = set_primary_report_for_sketch_class.sketch_class_id;
   return selected;
 end;
 $$;
@@ -415,7 +403,8 @@ as $$
   limit 1;
 $$;
 
-create or replace function public.publish_report(report_id integer)
+-- Trusted snapshot publish (no session check). Used by backend jobs and create_default_report.
+create or replace function public.publish_report_snapshot(p_draft_report_id integer)
 returns public.sketch_classes
 language plpgsql
 security definer
@@ -439,7 +428,7 @@ declare
   sid text;
   max_lineage_version int;
 begin
-  draft_report_id := report_id;
+  draft_report_id := p_draft_report_id;
 
   select
     r.project_id,
@@ -456,10 +445,6 @@ begin
 
   if project_id is null then
     raise exception 'Report not found';
-  end if;
-
-  if not session_is_admin(project_id) then
-    raise exception 'You are not authorized to publish this report';
   end if;
 
   if draft_report_version != 0 or draft_lineage_parent_id is not null then
@@ -673,6 +658,34 @@ begin
 end;
 $$;
 
+create or replace function public.publish_report(report_id integer)
+returns public.sketch_classes
+language plpgsql
+security definer
+as $$
+declare
+  draft_report_id int;
+  project_id int;
+begin
+  draft_report_id := report_id;
+
+  select r.project_id
+  into project_id
+  from public.reports r
+  where r.id = draft_report_id;
+
+  if project_id is null then
+    raise exception 'Report not found';
+  end if;
+
+  if not session_is_admin(project_id) then
+    raise exception 'You are not authorized to publish this report';
+  end if;
+
+  return public.publish_report_snapshot(draft_report_id);
+end;
+$$;
+
 grant all on function public.create_custom_report(integer, text, integer[]) to seasketch_user;
 grant all on function public.publish_report(integer) to seasketch_user;
 grant all on function public.set_primary_report_for_sketch_class(integer, integer) to seasketch_user;
@@ -688,3 +701,360 @@ grant all on function public.create_custom_report(integer, text, integer[]) to s
 grant all on function public.publish_report(integer) to seasketch_superuser;
 grant all on function public.sketch_classes_draft_report(public.sketch_classes) to seasketch_superuser;
 grant all on function public.sketch_classes_report(public.sketch_classes) to seasketch_superuser;
+
+-- undo
+
+alter table public.projects add column if not exists enable_report_builder boolean default false;
+alter table public.projects add column if not exists enable_collection_new_reports boolean default false;
+
+comment on column public.projects.enable_collection_new_reports is 'When true, administrators may configure collection sketch classes to use the new reporting tools in project admin.';
+
+grant update(enable_report_builder) on table public.projects to seasketch_user;
+grant update(enable_collection_new_reports) on table public.projects to seasketch_user;
+
+create or replace function public.get_sketch_class_fragment_status(p_project_id integer)
+returns table(sketch_class_id integer, sketch_class_name text, missing_count integer)
+language plpgsql
+stable
+security definer
+as $$
+begin
+  if not session_is_admin(p_project_id) then
+    return;
+  end if;
+
+  if not exists (
+    select 1
+    from projects
+    where id = p_project_id
+      and enable_report_builder = true
+  ) then
+    return;
+  end if;
+
+  return query
+  select
+    sc.id as sketch_class_id,
+    sc.name::text as sketch_class_name,
+    count(s.id)::int as missing_count
+  from sketch_classes sc
+  join sketches s on s.sketch_class_id = sc.id
+  where sc.project_id = p_project_id
+    and sc.geometry_type = 'POLYGON'
+    and (
+      sc.is_geography_clipping_enabled = true
+      or coalesce(sc.preview_new_reports, false) = true
+    )
+    and not exists (
+      select 1
+      from sketch_fragments sf
+      where sf.sketch_id = s.id
+    )
+  group by sc.id, sc.name
+  order by count(s.id) desc, sc.name asc;
+end;
+$$;
+
+create or replace function public.projects_sketches_missing_fragments(project public.projects)
+returns integer
+language plpgsql
+stable
+security definer
+as $$
+declare
+  num_missing_fragments integer;
+begin
+  if session_is_admin(project.id) then
+    if project.enable_report_builder then
+      with sketch_class_ids as (
+        select id
+        from sketch_classes
+        where project_id = project.id
+          and geometry_type = 'POLYGON'
+          and (
+            is_geography_clipping_enabled = true
+            or preview_new_reports = true
+          )
+      )
+      select count(*) into num_missing_fragments
+      from sketches
+      where sketch_class_id = any (select id from sketch_class_ids)
+        and not exists (
+          select 1 from sketch_fragments where sketch_fragments.sketch_id = sketches.id
+        );
+      return num_missing_fragments;
+    else
+      return 0;
+    end if;
+  else
+    raise exception 'Must be a project admin to view missing fragments';
+  end if;
+end;
+$$;
+
+create or replace function public.sketch_classes_use_geography_clipping(sketch_class public.sketch_classes)
+returns boolean
+language sql
+stable
+security definer
+as $$
+  select sketch_class.is_geography_clipping_enabled and (
+    select enable_report_builder from projects where id = sketch_class.project_id
+  ) and (
+    select count(*) > 0 from sketch_class_geographies where sketch_class_id = sketch_class.id
+  );
+$$;
+
+-- redo
+
+alter table public.projects drop column if exists enable_report_builder;
+alter table public.projects drop column if exists enable_collection_new_reports;
+
+create or replace function public.get_sketch_class_fragment_status(p_project_id integer)
+returns table(sketch_class_id integer, sketch_class_name text, missing_count integer)
+language plpgsql
+stable
+security definer
+as $$
+begin
+  if not session_is_admin(p_project_id) then
+    return;
+  end if;
+
+  return query
+  select
+    sc.id as sketch_class_id,
+    sc.name::text as sketch_class_name,
+    count(s.id)::int as missing_count
+  from sketch_classes sc
+  join sketches s on s.sketch_class_id = sc.id
+  where sc.project_id = p_project_id
+    and sc.geometry_type = 'POLYGON'
+    and (
+      sc.is_geography_clipping_enabled = true
+      or coalesce(sc.preview_new_reports, false) = true
+    )
+    and not exists (
+      select 1
+      from sketch_fragments sf
+      where sf.sketch_id = s.id
+    )
+  group by sc.id, sc.name
+  order by count(s.id) desc, sc.name asc;
+end;
+$$;
+
+create or replace function public.projects_sketches_missing_fragments(project public.projects)
+returns integer
+language plpgsql
+stable
+security definer
+as $$
+declare
+  num_missing_fragments integer;
+begin
+  if session_is_admin(project.id) then
+    with sketch_class_ids as (
+      select id
+      from sketch_classes
+      where project_id = project.id
+        and geometry_type = 'POLYGON'
+        and (
+          is_geography_clipping_enabled = true
+          or preview_new_reports = true
+        )
+    )
+    select count(*) into num_missing_fragments
+    from sketches
+    where sketch_class_id = any (select id from sketch_class_ids)
+      and not exists (
+        select 1 from sketch_fragments where sketch_fragments.sketch_id = sketches.id
+      );
+    return num_missing_fragments;
+  else
+    raise exception 'Must be a project admin to view missing fragments';
+  end if;
+end;
+$$;
+
+create or replace function public.sketch_classes_use_geography_clipping(sketch_class public.sketch_classes)
+returns boolean
+language sql
+stable
+security definer
+as $$
+  select sketch_class.is_geography_clipping_enabled and (
+    select count(*) > 0 from sketch_class_geographies where sketch_class_id = sketch_class.id
+  );
+$$;
+
+create or replace function public.create_default_report(p_project_id integer)
+returns public.reports
+language plpgsql
+security definer
+as $$
+declare
+  new_report public.reports;
+  tab_id integer;
+begin
+  if exists (
+    select 1
+    from public.reports r
+    where r.project_id = p_project_id
+  ) then
+    return null;
+  end if;
+
+  insert into public.reports (
+    project_id,
+    sketch_class_id,
+    title,
+    version,
+    draft_id,
+    published_at
+  ) values (
+    p_project_id,
+    null,
+    'Default report',
+    0,
+    null,
+    null
+  )
+  returning * into new_report;
+
+  insert into public.report_tabs (
+    report_id,
+    title,
+    position
+  ) values (
+    new_report.id,
+    'Attributes',
+    0
+  )
+  returning id into tab_id;
+
+  insert into public.report_cards (
+    report_tab_id,
+    body,
+    position,
+    alternate_language_settings,
+    component_settings,
+    updated_at,
+    is_draft
+  ) values (
+    tab_id,
+    $report_default_size_card${"type":"doc","content":[{"type":"reportTitle","content":[{"text":"Size","type":"text"}]},{"type":"paragraph","content":[{"text":"This plan is ","type":"text"},{"type":"metric","attrs":{"type":"InlineMetric","metrics":[{"type":"total_area","subjectType":"fragments"}],"componentSettings":{"presentation":"total_area"}}},{"text":", which is ","type":"text"},{"type":"metric","attrs":{"type":"InlineMetric","metrics":[{"type":"total_area","subjectType":"fragments"},{"type":"total_area","subjectType":"geographies"}],"componentSettings":{"presentation":"percent_area"}}},{"text":" of the planning region.","type":"text"}]},{"type":"blockMetric","attrs":{"type":"GeographySizeTable","metrics":[{"type":"total_area","subjectType":"geographies"},{"type":"total_area","subjectType":"fragments"}],"componentSettings":{"presentation":"total_area","enableLayerToggles":true}}}]}$report_default_size_card$::jsonb,
+    1,
+    '{}'::jsonb,
+    '{"type": "textBlock"}'::jsonb,
+    now(),
+    true
+  ),
+  (
+    tab_id,
+    $report_default_attributes_card${"type":"doc","content":[{"type":"reportTitle","content":[{"text":"Attributes","type":"text"}]},{"type":"blockMetric","attrs":{"type":"SketchAttributesTable","metrics":[],"componentSettings":{}}}]}$report_default_attributes_card$::jsonb,
+    2,
+    '{}'::jsonb,
+    '{"type": "textBlock"}'::jsonb,
+    now(),
+    true
+  );
+
+  -- Same validation and snapshot copy as Publish (TOC layers, outputs, etc.); no session check —
+  -- invoke only from trusted backend code (see publish_report_snapshot).
+  perform public.publish_report_snapshot(new_report.id);
+
+  return new_report;
+end;
+$$;
+
+
+CREATE OR REPLACE FUNCTION public.create_project(name text, slug text, OUT project public.projects) RETURNS public.projects
+    LANGUAGE plpgsql STRICT SECURITY DEFINER
+    AS $$
+  begin
+    if current_setting('session.email_verified', true) = 'true' then
+      insert into projects (name, slug, is_listed, creator_id, support_email) 
+        values (name, slug, false, current_setting('session.user_id', true)::int, current_setting('session.canonical_email', true)) returning * into project;
+      insert into project_participants (
+        user_id, 
+        project_id, 
+        is_admin, 
+        approved, 
+        share_profile
+      ) values (
+        current_setting('session.user_id', true)::int, 
+        project.id, 
+        true, 
+        true, 
+        true
+      );
+      perform add_default_basemaps(project.id);
+      perform create_default_report(project.id);
+    else
+      raise exception 'Email must be verified to create a project';
+    end if;
+  end
+$$;
+
+CREATE OR REPLACE FUNCTION public.create_sketch_class_from_template("projectId" integer, template_sketch_class_id integer) RETURNS public.sketch_classes
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+    declare 
+      base sketch_classes;
+      created sketch_classes;
+      num_similarly_named int;
+      new_name text;
+      default_report_id integer;
+      default_clipping_geography_id integer;
+      enable_geography_clipping boolean;
+    begin
+      if session_is_admin("projectId") then
+        select id into default_report_id from reports where project_id = "projectId";
+        if default_report_id is null then
+          select id into default_report_id from create_default_report("projectId"::integer);
+        end if;
+        select id into default_clipping_geography_id from project_geography where project_id = "projectId" order by (
+          case when client_template = 'eez' then 1 else 2 end
+        ) limit 1;
+
+        enable_geography_clipping = default_report_id is not null and default_clipping_geography_id is not null;
+   
+        select * into base from sketch_classes where id = template_sketch_class_id;
+        if base is null then
+          raise exception 'Sketch Class with id=% does not exist', template_sketch_class_id;
+        end if;
+        if base.is_template = false then
+          raise exception 'Sketch Class with id=% is not a template', template_sketch_class_id;
+        end if;
+        -- TODO: add suffix to name if there are duplicates
+        select count(*) into num_similarly_named from sketch_classes where project_id = "projectId" and form_element_id is null and name ~ (base.name || '( \(\d+\))?');
+        new_name = base.name;
+        if num_similarly_named > 0 then
+          new_name = new_name || ' (' || num_similarly_named::text || ')';
+        end if;
+        insert into sketch_classes (project_id, name, geometry_type, allow_multi, geoprocessing_project_url, geoprocessing_client_name, geoprocessing_client_url, mapbox_gl_style, preprocessing_endpoint, preprocessing_project_url, is_geography_clipping_enabled) values ("projectId", new_name, base.geometry_type, base.allow_multi, base.geoprocessing_project_url, base.geoprocessing_client_name, base.geoprocessing_client_url, base.mapbox_gl_style, base.preprocessing_endpoint, base.preprocessing_project_url, enable_geography_clipping) returning * into created;
+        perform initialize_sketch_class_form_from_template(created.id, (select id from forms where sketch_class_id = base.id));
+        if default_report_id is not null then
+          perform set_primary_report_for_sketch_class(created.id, default_report_id);
+        end if;
+        if default_clipping_geography_id is not null then
+          insert into sketch_class_geographies (sketch_class_id, geography_id) values (created.id, default_clipping_geography_id);
+        end if;
+        return created;
+      else
+        raise exception 'Permission denied';
+      end if;
+    end;
+  $$;
+
+-- use create_default_report() to backfill default reports into all projects
+do $$
+declare
+  project projects;
+begin
+  for project in select id from projects loop
+    perform create_default_report(project.id);
+  end loop;
+end;
+$$;
