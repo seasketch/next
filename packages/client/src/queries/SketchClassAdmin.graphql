@@ -993,6 +993,9 @@ query ProjectReportsContext($slug: String!) {
   projectBySlug(slug: $slug) {
     id
     enableReportBuilder
+    geographies {
+      id
+    }
     sketchClasses {
       ...SketchingDetails
       draftReport {

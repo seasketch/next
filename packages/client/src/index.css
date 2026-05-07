@@ -7557,12 +7557,12 @@ select{
   max-height:100vh
 }
 
-.max-h-\[min\(480px\2c 70vh\)\]{
-  max-height:min(480px,70vh)
-}
-
 .max-h-\[calc\(100dvh-3rem\)\]{
   max-height:calc(100dvh - 3rem)
+}
+
+.max-h-\[min\(480px\2c 70vh\)\]{
+  max-height:min(480px,70vh)
 }
 
 .min-h-0{
@@ -13545,6 +13545,12 @@ select{
   transition-duration:150ms
 }
 
+.transition-shadow{
+  transition-property:box-shadow;
+  transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration:150ms
+}
+
 .delay-100{
   transition-delay:100ms
 }
@@ -14562,6 +14568,12 @@ input[type="checkbox"][indeterminate="true"]:checked {
   box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)
 }
 
+.hover\:shadow-2xl:hover{
+  --tw-shadow:0 25px 50px -12px rgb(0 0 0 / 0.25);
+  --tw-shadow-colored:0 25px 50px -12px var(--tw-shadow-color);
+  box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)
+}
+
 .hover\:outline:hover{
   outline-style:solid
 }
@@ -14947,6 +14959,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .focus-visible\:outline-white\/80:focus-visible{
   outline-color:rgb(255 255 255 / 0.8)
+}
+
+.focus-visible\:outline-primary-500:focus-visible{
+  outline-color:rgb(46, 115, 182)
 }
 
 .focus-visible\:ring-1:focus-visible{

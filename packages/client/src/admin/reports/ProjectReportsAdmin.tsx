@@ -15,6 +15,7 @@ import {
   useDeleteDraftReportMutation,
   useProjectReportsContextQuery,
 } from "../../generated/graphql";
+import GeographyRequiredForReportsPrompt from "../../components/GeographyRequiredForReportsPrompt";
 import SketchClassReportsAdmin from "../sketchClasses/SketchClassReportsAdmin";
 
 /** Same gradient + dot grid as {@link ../sketchClasses/SketchClassForm} tab content. */
@@ -58,6 +59,11 @@ export default function ProjectReportsAdmin() {
     [contextQuery.data?.projectBySlug?.sketchClasses]
   );
 
+  const hasProjectGeographies = useMemo(() => {
+    const geographies = contextQuery.data?.projectBySlug?.geographies;
+    return Array.isArray(geographies) && geographies.length > 0;
+  }, [contextQuery.data?.projectBySlug?.geographies]);
+
   const draftReports = useMemo(
     () =>
       (contextQuery.data?.reportsConnection?.nodes || [])
@@ -90,11 +96,7 @@ export default function ProjectReportsAdmin() {
     const projectId = data?.projectBySlug?.id;
     const remaining = (data?.reportsConnection?.nodes || [])
       .filter(Boolean)
-      .filter(
-        (r: any) =>
-          r.projectId === projectId &&
-          r.draftId == null
-      );
+      .filter((r: any) => r.projectId === projectId && r.draftId == null);
     if (remaining.length > 0) {
       // eslint-disable-next-line i18next/no-literal-string -- admin route
       history.replace(`/${slug}/admin/reports/${remaining[0].id}`);
@@ -105,10 +107,7 @@ export default function ProjectReportsAdmin() {
   }, [contextQuery, history, slug]);
 
   const promptDeleteReport = useCallback(
-    (
-      reportId: number,
-      assigned: { id: number; name: string }[]
-    ) => {
+    (reportId: number, assigned: { id: number; name: string }[]) => {
       const sketchClassesDescription =
         assigned.length === 0
           ? t(
@@ -363,89 +362,109 @@ export default function ProjectReportsAdmin() {
 
   return (
     <>
-    <div className="flex w-full min-h-0 flex-1 overflow-hidden h-[calc(100dvh-3rem)] max-h-[calc(100dvh-3rem)] md:h-[100dvh] md:max-h-[100dvh]">
-      <NavSidebar
-        className="z-10 !w-[340px] shrink-0"
-        loading={false}
-        items={navItems}
-        header={t("Reports")}
-        headerButton={
-          <Button
-            title={t("Create a new report")}
-            small
-            label={
-              <>
-                {t("Add")}
-                <PlusIcon className="w-4 h-4 ml-2" />
-              </>
-            }
-            onClick={openCreateModal}
-          />
-        }
-      />
-      <div
-        className="flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden bg-white"
-        style={sketchClassAdminReportWorkspaceBackground}
-      >
-        {!contextQuery.loading && reportsWithAssignments.length === 0 && (
-          <div className="flex flex-1 min-h-0 items-start justify-center overflow-y-auto px-2 pt-10">
-            <div className="max-w-xl rounded mx-auto p-4 border-4 border-dashed bg-white/80">
-              <h2 className="text-base mb-2">
-                {t(
-                  "Your project has no reports yet. Create a report to author dashboards and printable summaries for sketches."
-                )}
-              </h2>
-              <Button label={t("Create your first report")} onClick={openCreateModal} />
-            </div>
-          </div>
-        )}
-        {selectedReport && contextSketchClass && (
-          <SketchClassReportsAdmin
-            key={selectedReport.id}
-            sketchClass={contextSketchClass}
-            associatedSketchClassIds={selectedReport.assignedSketchClasses.map(
-              (sc: any) => sc.id
-            )}
-            assignedSketchClassesForReport={selectedReport.assignedSketchClasses.map(
-              (sc: any) => ({
-                id: sc.id,
-                name: sc.name,
-              })
-            )}
-            onReportDeleted={handleReportDeleted}
-            draftReportIdOverride={
-              selectedReportHasPrimaryAssignment ? undefined : selectedReport.id
-            }
-          />
-        )}
-        {selectedReport && !contextSketchClass && (
-          <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4">
-            <Warning level="info">
-              {t(
-                "No sketch classes are available yet for report demonstration. Create a polygon or collection sketch class, or delete this report."
-              )}
-            </Warning>
+      <div className="flex w-full min-h-0 flex-1 overflow-hidden h-[calc(100dvh-3rem)] max-h-[calc(100dvh-3rem)] md:h-[100dvh] md:max-h-[100dvh]">
+        <NavSidebar
+          className="z-10 !w-[340px] shrink-0"
+          loading={false}
+          items={navItems}
+          header={t("Reports")}
+          headerButton={
             <Button
-              label={t("Delete report")}
-              onClick={() =>
-                promptDeleteReport(
-                  selectedReport.id,
-                  selectedReport.assignedSketchClasses.map((sc: any) => ({
-                    id: sc.id,
-                    name: sc.name,
-                  }))
-                )
+              title={t("Create a new report")}
+              small
+              label={
+                <>
+                  {t("Add")}
+                  <PlusIcon className="w-4 h-4 ml-2" />
+                </>
               }
+              onClick={openCreateModal}
             />
-          </div>
-        )}
-        {!selectedReport && reportsWithAssignments.length > 0 && (
-          <div className="flex-1 min-h-0 overflow-y-auto p-6">
-            <Warning level="info">{t("Select a report to begin editing.")}</Warning>
-          </div>
-        )}
+          }
+        />
+        <div
+          className="flex flex-1 min-h-0 min-w-0 flex-col overflow-hidden bg-white"
+          style={sketchClassAdminReportWorkspaceBackground}
+        >
+          {!hasProjectGeographies ? (
+            <div className="flex flex-1 min-h-0 items-start justify-center overflow-y-auto p-6">
+              <div className="max-w-xl w-full">
+                <GeographyRequiredForReportsPrompt
+                  // eslint-disable-next-line i18next/no-literal-string -- admin route
+                  to={`/${slug}/admin/geography`}
+                />
+              </div>
+            </div>
+          ) : (
+            <>
+              {!contextQuery.loading && reportsWithAssignments.length === 0 && (
+                <div className="flex flex-1 min-h-0 items-start justify-center overflow-y-auto px-2 pt-10">
+                  <div className="max-w-xl rounded mx-auto p-4 border-4 border-dashed bg-white/80">
+                    <h2 className="text-base mb-2">
+                      {t(
+                        "Your project has no reports yet. Create a report to author dashboards and printable summaries for sketches."
+                      )}
+                    </h2>
+                    <Button
+                      label={t("Create your first report")}
+                      onClick={openCreateModal}
+                    />
+                  </div>
+                </div>
+              )}
+              {selectedReport && contextSketchClass && (
+                <SketchClassReportsAdmin
+                  key={selectedReport.id}
+                  sketchClass={contextSketchClass}
+                  associatedSketchClassIds={selectedReport.assignedSketchClasses.map(
+                    (sc: any) => sc.id
+                  )}
+                  assignedSketchClassesForReport={selectedReport.assignedSketchClasses.map(
+                    (sc: any) => ({
+                      id: sc.id,
+                      name: sc.name,
+                    })
+                  )}
+                  onReportDeleted={handleReportDeleted}
+                  draftReportIdOverride={
+                    selectedReportHasPrimaryAssignment
+                      ? undefined
+                      : selectedReport.id
+                  }
+                />
+              )}
+              {selectedReport && !contextSketchClass && (
+                <div className="flex-1 min-h-0 overflow-y-auto p-6 space-y-4">
+                  <Warning level="info">
+                    {t(
+                      "No sketch classes are available yet for report demonstration. Create a polygon or collection sketch class, or delete this report."
+                    )}
+                  </Warning>
+                  <Button
+                    label={t("Delete report")}
+                    onClick={() =>
+                      promptDeleteReport(
+                        selectedReport.id,
+                        selectedReport.assignedSketchClasses.map((sc: any) => ({
+                          id: sc.id,
+                          name: sc.name,
+                        }))
+                      )
+                    }
+                  />
+                </div>
+              )}
+              {!selectedReport && reportsWithAssignments.length > 0 && (
+                <div className="flex-1 min-h-0 overflow-y-auto p-6">
+                  <Warning level="info">
+                    {t("Select a report to begin editing.")}
+                  </Warning>
+                </div>
+              )}
+            </>
+          )}
+        </div>
       </div>
-    </div>
 
       <Modal
         open={createModalOpen}
@@ -459,7 +478,9 @@ export default function ProjectReportsAdmin() {
             onClick: () => setCreateModalOpen(false),
           },
           {
-            label: createReportState.loading ? t("Creating...") : t("Create Report"),
+            label: createReportState.loading
+              ? t("Creating...")
+              : t("Create Report"),
             variant: "primary",
             loading: createReportState.loading,
             disabled:
