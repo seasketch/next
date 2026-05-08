@@ -178,13 +178,8 @@ export default function NewProjectForm() {
       setMutationError(t("Could not determine the new project's URL."));
       return false;
     }
-    if (usedGeographiesMutation && !slugFromPayload) {
-      setMutationError(
-        t(
-          "Your project was created, but the server response did not include project details. If the admin page does not open, use your chosen project URL."
-        )
-      );
-    }
+    // Do not set mutationError here: redirect uses slugToUse (payload or debounced slug).
+    // Showing a warning would flash red text-red-800 briefly before history.push.
     setTimeout(() => {
       // eslint-disable-next-line i18next/no-literal-string -- route path
       history.push(`/${slugToUse}/admin`);
@@ -192,7 +187,8 @@ export default function NewProjectForm() {
     return true;
   };
 
-  if (error) {
+  // Skip can abort the slug query when isCreating becomes true; ignore transient errors then.
+  if (error && !isCreating) {
     return <span>{error.message}</span>;
   }
 
@@ -312,7 +308,9 @@ export default function NewProjectForm() {
           >
             {mutationError
               ? mutationError
-              : !!data?.projectBySlug && !isCreating
+              : isCreating
+              ? t("Creating your project…")
+              : !!data?.projectBySlug
               ? "This URL is already in use"
               : "Please choose wisely. URLs cannot be changed"}
           </p>

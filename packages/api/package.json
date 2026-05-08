@@ -17,6 +17,7 @@
     "debug": "nodemon --inspect dist/src/server.js",
     "watch": "nodemon",
     "build": "tsc -b",
+    "build:clean": "rm -f .tsbuildinfo && tsc -b",
     "build:watch": "tsc -b --watch",
     "db:migrate": "graphile-migrate migrate",
     "db:watch": "graphile-migrate watch",
