@@ -152,6 +152,10 @@ div[attachments="forumAttachments"] {
   @apply border p-1;
 }
 
+.metadata .ProseMirror a {
+  @apply text-primary-500 underline;
+}
+
 .about-editor .ProseMirror {
   height: 100%;
 }
