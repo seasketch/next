@@ -966,15 +966,27 @@ export async function startMetricCalculationsForSketch(
   draft?: boolean,
 ) {
   // get sketch_class data first
-  const { rows: sketchClassRows } = await pool.query(
-    `select id, report_id, draft_report_id, project_id from sketch_classes where id = (select sketch_class_id from sketches where id = $1)`,
-    [sketchId],
+  const { rows: sketchClassRows } = await pool.query<{
+    id: number;
+    project_id: number;
+    effective_report_id: number | null;
+  }>(
+    `
+      select
+        sc.id,
+        sc.project_id,
+        get_effective_report_for_sketch_class(sc.id, $2::boolean) as effective_report_id
+      from sketch_classes sc
+      where sc.id = (select sketch_class_id from sketches where id = $1)
+    `,
+    [sketchId, draft === true],
   );
   const sketchClass = sketchClassRows[0];
   if (!sketchClass) {
     throw new Error("Sketch class not found");
   }
-  const reportId = draft ? sketchClass.draft_report_id : sketchClass.report_id;
+  const reportId =
+    sketchClass.effective_report_id;
   if (!reportId) {
     return;
   }
@@ -1412,17 +1424,19 @@ async function isDraftReport(
   projectId: number,
   pool: Pool | PoolClient,
 ) {
-  const { rows: reportRows } = await pool.query(
+  const { rows: reportRows } = await pool.query<{ is_draft: boolean }>(
     `
-      SELECT EXISTS(
-        SELECT 1 FROM sketch_classes 
-        WHERE draft_report_id = $1
-        and project_id = $2
+      select exists(
+        select 1
+        from reports r
+        where r.id = $1
+          and r.project_id = $2
+          and r.version = 0
       ) as is_draft
     `,
     [reportId, projectId],
   );
-  return reportRows[0].is_draft;
+  return reportRows[0]?.is_draft === true;
 }
 
 function booleanFromIfArgument(

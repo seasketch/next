@@ -66,7 +66,11 @@ export default function NavSidebar(props: NavSidebarProps) {
         </div>
       )}
       {props.items.map((item) => (
-        <NavSidebarItem key={item.label} item={item} animate={props.animate} />
+        <NavSidebarItem
+          key={item.href || item.label}
+          item={item}
+          animate={props.animate}
+        />
       ))}
 
       <div className="flex-1 min-h-0">
@@ -104,7 +108,7 @@ function NavSidebarItem({
     // const container = item.href ? Link : ;
     return (
       <NavLink
-        key={item.label}
+        key={item.href || item.label}
         to={item.href || ""}
         activeClassName="bg-blue-100 bg-opacity-50"
         className={classNames(
@@ -123,7 +127,9 @@ function NavSidebarItem({
         )}
         <div className="ml-3 text-sm flex-1">
           <p className="font-medium ">{item.label}</p>
-          <p className="mt-1 opacity-70">{item.description}</p>
+          {item.description ? (
+            <p className="mt-1 opacity-70">{item.description}</p>
+          ) : null}
         </div>
         {item.badge !== undefined && (
           <div className="flex flex-col justify-center ml-1">

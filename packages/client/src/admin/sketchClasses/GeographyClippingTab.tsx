@@ -3,27 +3,27 @@ import {
   useSketchFragmentStatusQuery,
   useSketchClassGeographyEditorDetailsQuery,
 } from "../../generated/graphql";
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { useMemo, useState } from "react";
 import SketchClassGeographiesInput from "./SketchClassGeographiesInput";
 import getSlug from "../../getSlug";
 import Warning from "../../components/Warning";
+import GeographyRequiredForReportsPrompt from "../../components/GeographyRequiredForReportsPrompt";
 import SketchFragmentStatusModal from "../Geography/SketchFragmentStatusModal";
-
-interface GeographyClippingTabProps {
-  sketchClass: SketchingDetailsFragment;
-}
 
 export default function GeographyClippingTab({
   sketchClass,
-}: GeographyClippingTabProps) {
+}: {
+  sketchClass: SketchingDetailsFragment;
+}) {
   const { t } = useTranslation("admin:sketching");
   const slug = getSlug();
   const [showFragmentStatusModal, setShowFragmentStatusModal] = useState(false);
 
-  const { data: geographyData } = useSketchClassGeographyEditorDetailsQuery({
-    variables: { slug },
-  });
+  const { data: geographyData, loading: geographyLoading } =
+    useSketchClassGeographyEditorDetailsQuery({
+      variables: { slug },
+    });
 
   const { data: fragmentStatusData, loading: fragmentStatusLoading } =
     useSketchFragmentStatusQuery({
@@ -43,8 +43,14 @@ export default function GeographyClippingTab({
     sketchClass.id,
   ]);
 
+  const projectGeographyCount =
+    geographyData?.projectBySlug?.geographies?.length ?? 0;
+  const hasProjectGeographies = projectGeographyCount > 0;
+
   const showMissingFragmentsWarning =
-    !fragmentStatusLoading && missingSketchCountForClass > 0;
+    !fragmentStatusLoading &&
+    missingSketchCountForClass > 0 &&
+    hasProjectGeographies;
 
   const warningText =
     missingSketchCountForClass === 1
@@ -55,73 +61,59 @@ export default function GeographyClippingTab({
           n: missingSketchCountForClass,
         });
 
-  const onCloseFragmentModal = () => {
-    setShowFragmentStatusModal(false);
-  };
-
-  const onOpenFragmentModal = () => {
-    setShowFragmentStatusModal(true);
-  };
-
-  const hasGeographies = Boolean(geographyData?.projectBySlug?.geographies);
-
   const shouldShowStatusModal = showFragmentStatusModal && Boolean(slug);
 
-  const renderFragmentWarning = showMissingFragmentsWarning ? (
-    <Warning level="info" className="py-2">
-      {warningText}
-      <button
-        type="button"
-        className="ml-1 underline decoration-dotted underline-offset-2"
-        onClick={onOpenFragmentModal}
-      >
-        {t("View details")}
-      </button>
-    </Warning>
-  ) : null;
-
-  const renderFragmentModal = shouldShowStatusModal ? (
-    <SketchFragmentStatusModal slug={slug} onRequestClose={onCloseFragmentModal} />
-  ) : null;
-
-  const renderGeographiesInput = hasGeographies ? (
-    <SketchClassGeographiesInput
-      sketchClassId={sketchClass.id}
-      projectGeographies={geographyData?.projectBySlug?.geographies ?? []}
-    />
-  ) : null;
-
-  const renderExplanatoryText = (
-    <p className="text-sm text-gray-500">
-      {t(
-        "Once submitted, sketches will also be unioned with all Geography boundaries in this project so that metrics displayed in Reports can be summed and grouped by Geography."
-      )}
-    </p>
-  );
-
-  const renderDescription = (
-    <p className="mt-1 text-sm text-gray-500">
-      {t(
-        "Choose a geography to associate with this sketch class. Sketches will be clipped to the inside of the geography bounds, while those drawn completely outside the bounds will be rejected. This can be used to remove land from ocean polygons, or aid users in digitizing a plan that follows an administrative boundary, such as the EEZ."
-      )}
-    </p>
-  );
-
-  const renderContent = (
+  return (
     <div className="space-y-4">
-      <div>{renderDescription}</div>
-      <div className="relative">{renderGeographiesInput}</div>
-      {renderExplanatoryText}
-      {renderFragmentWarning}
+      <p className="mt-1 text-sm text-gray-500">
+        {t(
+          "Sketches will be clipped to the geography you choose. For example, you can clip polygons to an EEZ, removing land."
+        )}
+      </p>
+      <div className="relative">
+        {!geographyLoading && !hasProjectGeographies && slug ? (
+          <div className="max-w-xl w-full">
+            <GeographyRequiredForReportsPrompt
+              // eslint-disable-next-line i18next/no-literal-string -- admin route
+              to={`/${slug}/admin/geography`}
+            >
+              <Trans ns="admin:sketching">
+                At least one geography is required to assign clipping rules and
+                configure analytical reports.
+                <br />
+                <span className="font-medium text-primary-700">
+                  View Geography administration
+                </span>
+                .
+              </Trans>
+            </GeographyRequiredForReportsPrompt>
+          </div>
+        ) : null}
+        {!geographyLoading && hasProjectGeographies ? (
+          <SketchClassGeographiesInput
+            sketchClassId={sketchClass.id}
+            projectGeographies={geographyData?.projectBySlug?.geographies ?? []}
+          />
+        ) : null}
+      </div>
+      {showMissingFragmentsWarning ? (
+        <Warning level="info" className="py-2">
+          {warningText}
+          <button
+            type="button"
+            className="ml-1 underline decoration-dotted underline-offset-2"
+            onClick={() => setShowFragmentStatusModal(true)}
+          >
+            {t("View details")}
+          </button>
+        </Warning>
+      ) : null}
+      {shouldShowStatusModal ? (
+        <SketchFragmentStatusModal
+          slug={slug}
+          onRequestClose={() => setShowFragmentStatusModal(false)}
+        />
+      ) : null}
     </div>
   );
-
-  const renderPanel = (
-    <div className="p-4 space-y-6 bg-white max-w-144 shadow border-r min-h-full">
-      {renderContent}
-      {renderFragmentModal}
-    </div>
-  );
-
-  return renderPanel;
 }

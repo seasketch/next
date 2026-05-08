@@ -1588,6 +1588,45 @@ type CreateCommunityGuidelinePayload {
   query: Query
 }
 
+"""All input for the `createCustomReport` mutation."""
+input CreateCustomReportInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  projectId: Int
+  sketchClassIds: [Int]
+  title: String
+}
+
+"""The output of our `createCustomReport` mutation."""
+type CreateCustomReportPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """Reads a single `Report` that is related to this `Report`."""
+  draft: Report
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  report: Report
+
+  """An edge for our `Report`. May be used by Relay 1."""
+  reportEdge(
+    """The method to use when ordering `Report`."""
+    orderBy: [ReportsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ReportsEdge
+
+  """Reads a single `SketchClass` that is related to this `Report`."""
+  sketchClass: SketchClass
+}
+
 """All input for the create `DataLayer` mutation."""
 input CreateDataLayerInput {
   """
@@ -1703,40 +1742,6 @@ type CreateDataUploadPayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
-}
-
-"""All input for the `createDraftReport` mutation."""
-input CreateDraftReportInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  sketchClassId: Int
-}
-
-"""The output of our `createDraftReport` mutation."""
-type CreateDraftReportPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-  report: Report
-
-  """An edge for our `Report`. May be used by Relay 1."""
-  reportEdge(
-    """The method to use when ordering `Report`."""
-    orderBy: [ReportsOrderBy!] = [PRIMARY_KEY_ASC]
-  ): ReportsEdge
-
-  """Reads a single `SketchClass` that is related to this `Report`."""
-  sketchClass: SketchClass
 }
 
 """All input for the create `FormElement` mutation."""
@@ -2281,6 +2286,39 @@ type CreateOptionalBasemapLayerPayload {
   query: Query
 }
 
+input CreateProjectGeographyClippingLayerInput {
+  """
+  If provided, features used for clipping will be filtered based on this
+  JSON-encoded OGC Common Query Language (CQL2) query
+  """
+  cql2Query: JSON
+
+  """
+  Type of operation to perform on the clipping layer (e.g. intersect, difference).
+  """
+  operationType: GeographyLayerOperation!
+
+  """Template layer to clone and associate with this geography."""
+  templateId: String!
+}
+
+input CreateProjectGeographyInput {
+  """
+  Used to identify Geographies that are created using a particular wizard
+  flow like "Pick an EEZ" or "Terrestrial Areas".
+  """
+  clientTemplate: String
+
+  """Clipping layers to associate with this geography"""
+  clippingLayers: [CreateProjectGeographyClippingLayerInput!]!
+
+  """Name of the geography"""
+  name: String!
+
+  """Translated strings"""
+  translatedProps: JSON
+}
+
 """All input for the `createProject` mutation."""
 input CreateProjectInput {
   """
@@ -2428,6 +2466,19 @@ type CreateProjectsSharedBasemapPayload {
   query: Query
 }
 
+input CreateProjectWithGeographiesInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """Optional geographies to create immediately for the project."""
+  geographies: [CreateProjectGeographyInput!]
+  name: String!
+  slug: String!
+}
+
 """All input for the `createRemoteGeojsonSource` mutation."""
 input CreateRemoteGeojsonSourceInput {
   bounds: [BigFloat]
@@ -2520,6 +2571,9 @@ type CreateReportPayload {
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
+
+  """Reads a single `Report` that is related to this `Report`."""
+  draft: Report
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -5381,6 +5435,9 @@ type DeleteReportPayload {
   """
   clientMutationId: String
   deletedReportNodeId: ID
+
+  """Reads a single `Report` that is related to this `Report`."""
+  draft: Report
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -9198,6 +9255,12 @@ type Mutation {
     """
     input: CreateCommunityGuidelineInput!
   ): CreateCommunityGuidelinePayload
+  createCustomReport(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateCustomReportInput!
+  ): CreateCustomReportPayload
 
   """Creates a single `DataLayer`."""
   createDataLayer(
@@ -9220,12 +9283,6 @@ type Mutation {
     """
     input: CreateDataUploadInput!
   ): CreateDataUploadPayload
-  createDraftReport(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: CreateDraftReportInput!
-  ): CreateDraftReportPayload
   createFileUpload(contentType: String!, filename: String!, fileSizeBytes: Int!, projectId: Int!, usage: FileUploadUsageInput!): UploaderResponse!
 
   """Creates a single `FormElement`."""
@@ -9387,6 +9444,18 @@ type Mutation {
     """
     input: CreateProjectsSharedBasemapInput!
   ): CreateProjectsSharedBasemapPayload
+
+  """
+  Create a new project and optionally create initial geographies for it.
+  Geography clipping layers must reference template IDs because project
+  layers have not yet been created.
+  """
+  createProjectWithGeographies(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateProjectWithGeographiesInput!
+  ): CreateProjectPayload
   createRemoteGeojsonSource(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -10507,6 +10576,18 @@ type Mutation {
     """
     input: SetPostHiddenByModeratorInput!
   ): SetPostHiddenByModeratorPayload
+  setPrimaryReportForSketchClass(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: SetPrimaryReportForSketchClassInput!
+  ): SetPrimaryReportForSketchClassPayload
+  setProjectRegionBounds(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: SetProjectRegionBoundsInput!
+  ): SetProjectRegionBoundsPayload
 
   """
   Lock a topic so that it can no longer be responded to. Past discussion will
@@ -12208,17 +12289,11 @@ type Project implements Node {
   eligableDownloadableLayersCount: Int
 
   """
-  When true, administrators may configure collection sketch classes to use the new reporting tools in project admin.
-  """
-  enableCollectionNewReports: Boolean
-
-  """
   When true, overlay layers will be available for download by end-users if they
   have access to the layer and the data source supports it. This can be
   controlled on a per-layer basis.
   """
   enableDownloadByDefault: Boolean!
-  enableReportBuilder: Boolean
   estimateDeletedDataForRetentionChange(newRetentionPeriod: IntervalInput): RetentionChangeEstimate
   featureFlags: FeatureFlags
 
@@ -13181,17 +13256,11 @@ input ProjectPatch {
   description: String
 
   """
-  When true, administrators may configure collection sketch classes to use the new reporting tools in project admin.
-  """
-  enableCollectionNewReports: Boolean
-
-  """
   When true, overlay layers will be available for download by end-users if they
   have access to the layer and the data source supports it. This can be
   controlled on a per-layer basis.
   """
   enableDownloadByDefault: Boolean
-  enableReportBuilder: Boolean
   hideForums: Boolean
   hideOverlays: Boolean
   hideSketches: Boolean
@@ -13377,7 +13446,7 @@ input PublishReportInput {
   payload verbatim. May be used to track mutations by the client.
   """
   clientMutationId: String
-  sketchClassId: Int
+  reportId: Int
 }
 
 """The output of our `publishReport` mutation."""
@@ -13989,6 +14058,8 @@ type Query implements Node {
   getFirstBandOffset(geostats: JSON): Float
   getFirstBandScale(geostats: JSON): Float
   getGeostatsAttributeColumnNames(geostats: JSON): [String]
+  getLatestPublishedReportForDraft(draftReportId: Int): Int
+  getPrimaryDraftReportIdForSketchClass(sketchClassId: Int): Int
   getReferencedStableIdsForReport(_reportId: Int): [String]
   getRepresentativeColors(geostats: JSON): JSON
   getStateForSpatialMetric(metricId: BigInt): SpatialMetricState
@@ -15009,6 +15080,10 @@ type Report implements Node {
   createdAt: Datetime!
   dependencies(sketchId: Int): ReportOverlayDependencies!
 
+  """Reads a single `Report` that is related to this `Report`."""
+  draft: Report
+  draftId: Int
+
   """Reads and enables pagination through a set of `Geography`."""
   geographies(
     """Only read the first `n` values of the set."""
@@ -15025,10 +15100,40 @@ type Report implements Node {
   nodeId: ID!
   overlaySources: [ReportOverlaySource!]!
   projectId: Int!
+  publishedAt: Datetime
+
+  """Reads and enables pagination through a set of `Report`."""
+  reportsByDraftIdConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: ReportCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `Report`."""
+    orderBy: [ReportsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): ReportsConnection!
 
   """Reads a single `SketchClass` that is related to this `Report`."""
   sketchClass: SketchClass
-  sketchClassId: Int!
+  sketchClassId: Int
 
   """Reads and enables pagination through a set of `ReportTab`."""
   tabs(
@@ -15038,7 +15143,9 @@ type Report implements Node {
     """Skip the first `n` values."""
     offset: Int
   ): [ReportTab!]
+  title: String!
   updatedAt: Datetime
+  version: Int!
 }
 
 type ReportCard implements Node {
@@ -15063,6 +15170,9 @@ type ReportCard implements Node {
 A condition to be used against `Report` object types. All fields are tested for equality and combined with a logical ‘and.’
 """
 input ReportCondition {
+  """Checks for equality with the object’s `draftId` field."""
+  draftId: Int
+
   """Checks for equality with the object’s `id` field."""
   id: Int
 
@@ -15073,8 +15183,12 @@ input ReportCondition {
 """An input for mutations affecting `Report`"""
 input ReportInput {
   createdAt: Datetime
+  draftId: Int
   projectId: Int!
-  sketchClassId: Int!
+  publishedAt: Datetime
+  sketchClassId: Int
+  title: String!
+  version: Int
 }
 
 type ReportOverlayDependencies {
@@ -15147,8 +15261,12 @@ Represents an update to a `Report`. Fields that are set will be updated.
 """
 input ReportPatch {
   createdAt: Datetime
+  draftId: Int
   projectId: Int
+  publishedAt: Datetime
   sketchClassId: Int
+  title: String
+  version: Int
 }
 
 """A connection to a list of `Report` values."""
@@ -15179,6 +15297,8 @@ type ReportsEdge {
 
 """Methods to use when ordering `Report`."""
 enum ReportsOrderBy {
+  DRAFT_ID_ASC
+  DRAFT_ID_DESC
   ID_ASC
   ID_DESC
   NATURAL
@@ -15648,6 +15768,72 @@ type SetPostHiddenByModeratorPayload {
 
   """Reads a single `Topic` that is related to this `Post`."""
   topic: Topic
+}
+
+"""All input for the `setPrimaryReportForSketchClass` mutation."""
+input SetPrimaryReportForSketchClassInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  draftReportId: Int
+  sketchClassId: Int
+}
+
+"""The output of our `setPrimaryReportForSketchClass` mutation."""
+type SetPrimaryReportForSketchClassPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """Reads a single `FormElement` that is related to this `SketchClass`."""
+  formElement: FormElement
+
+  """Reads a single `Project` that is related to this `SketchClass`."""
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  sketchClass: SketchClass
+
+  """An edge for our `SketchClass`. May be used by Relay 1."""
+  sketchClassEdge(
+    """The method to use when ordering `SketchClass`."""
+    orderBy: [SketchClassesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): SketchClassesEdge
+}
+
+"""All input for the `setProjectRegionBounds` mutation."""
+input SetProjectRegionBoundsInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  pMaxx: Float
+  pMaxy: Float
+  pMinx: Float
+  pMiny: Float
+  pProjectId: Int
+}
+
+"""The output of our `setProjectRegionBounds` mutation."""
+type SetProjectRegionBoundsPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
 }
 
 """All input for the `setTopicLocked` mutation."""
@@ -19744,6 +19930,9 @@ type UpdateReportPayload {
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
+
+  """Reads a single `Report` that is related to this `Report`."""
+  draft: Report
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.

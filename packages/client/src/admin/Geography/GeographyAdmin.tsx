@@ -33,6 +33,9 @@ import SketchFragmentStatusModal from "./SketchFragmentStatusModal";
 import deepEqual from "fast-deep-equal";
 
 import { MARINE_REGIONS_JOIN_COLUMN } from "./CreateGeographyWizard";
+import GoogleMapsAttribution, {
+  useGoogleMapsViewportCopyright,
+} from "../../components/GoogleMapsAttribution";
 
 const EEZ = "MARINE_REGIONS_EEZ_LAND_JOINED";
 const COASTLINE = "DAYLIGHT_COASTLINE";
@@ -137,6 +140,10 @@ export default function GeographyAdmin() {
 
   const mapRef = useRef<HTMLDivElement>(null);
   const [map, setMap] = useState<mapboxgl.Map | null>(null);
+  const googleMapsCopyright = useGoogleMapsViewportCopyright(
+    map,
+    data?.gmapssatellitesession?.session
+  );
 
   // Handle visibility checkbox toggle
   const handleGeographyVisibilityToggle = (geogId: number) => {
@@ -220,7 +227,7 @@ export default function GeographyAdmin() {
                 `${GOOGLE_MAPS_TILE_URL}?session=${session}&key=${process.env.REACT_APP_GOOGLE_MAPS_2D_TILE_API_KEY}`,
               ],
               format: "jpeg",
-              attribution: "Google",
+              attribution: "Map data © Google Maps",
               tileSize: 512,
             },
           },
@@ -243,6 +250,7 @@ export default function GeographyAdmin() {
               fitBoundsOptions: { padding: 80 },
             }
           : { center: [-119.7145, 34.4208], zoom: 3 }),
+        attributionControl: false,
         // @ts-ignore
         projection: "globe",
       });
@@ -729,7 +737,8 @@ export default function GeographyAdmin() {
                 </button>
               </div>
             )}
-            {(data?.projectBySlug?.sketchesMissingFragments ?? 0) > 0 &&
+            {(data?.projectBySlug?.geographies?.length ?? 0) > 0 &&
+              (data?.projectBySlug?.sketchesMissingFragments ?? 0) > 0 &&
               !loading && (
                 <div className="p-2">
                   <Warning level="info" className="py-2">
@@ -756,6 +765,7 @@ export default function GeographyAdmin() {
         ref={mapRef}
         className={`flex-1 relative ${!state.sidebarVisible ? "w-full" : ""}`}
       >
+        <GoogleMapsAttribution copyright={googleMapsCopyright} />
         {map &&
           !state.wizardActive &&
           data?.projectBySlug?.geographies?.length && (

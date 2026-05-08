@@ -66,6 +66,20 @@ query GeographyClippingSettings($slug: String!) {
   }
 }
 
+query GeographyPickerData {
+  gmapssatellitesession {
+    expiresAt
+    mapType
+    session
+  }
+  geographyClippingLayers {
+    ...ClippingLayerDetails
+    dataSource {
+      ...ClippingDataSourceDetails
+    }
+  }
+}
+
 query SketchFragmentStatus($slug: String!) {
   projectBySlug(slug: $slug) {
     id

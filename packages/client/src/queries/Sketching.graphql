@@ -15,7 +15,9 @@ fragment SketchTocDetails on Sketch {
   sketchClass {
     id
     geometryType
-    reportId
+    report {
+      id
+    }
   }
 }
 
@@ -86,7 +88,9 @@ fragment SketchCRUDResponse on Sketch {
     timestamp
     sketchClass {
       id
-      reportId
+      report {
+        id
+      }
     }
   }
   relatedFragments {
@@ -140,7 +144,9 @@ mutation DeleteSketchTocItems($items: [UpdateTocItemParentInput]!) {
       updatedAt
       sketchClass {
         id
-        reportId
+        report {
+          id
+        }
       }
     }
   }
@@ -238,7 +244,9 @@ fragment ReportContextSketchClassDetails on SketchClass {
   geometryType
   useGeographyClipping
   previewNewReports
-  reportId
+  report {
+    id
+  }
   form {
     id
     formElements {
@@ -317,7 +325,9 @@ mutation CopyTocItem($id: Int!, $type: SketchChildType!) {
       updatedAt
       sketchClass {
         id
-        reportId
+        report {
+          id
+        }
       }
     }
   }

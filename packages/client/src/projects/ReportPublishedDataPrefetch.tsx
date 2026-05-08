@@ -36,12 +36,12 @@ export default function ReportPublishedDataPrefetch({
       Array.from(
         new Set(
           sketchClasses?.filter(
-            (sc) => !sc.isArchived && sc.reportId != null
+            (sc) => !sc.isArchived && sc.report?.id != null
           ) ?? []
         )
       ) ?? [];
     const fingerprint = targets
-      .map((t) => `${t.id}:${t.reportId}`)
+      .map((t) => `${t.id}:${t.report?.id}`)
       .sort()
       .join("|");
     if (!fingerprint || fingerprint === lastFingerprintRef.current) {
@@ -59,7 +59,7 @@ export default function ReportPublishedDataPrefetch({
           try {
             await client.query({
               query: BaseReportContextDocument,
-              variables: { reportId: sc.reportId! },
+              variables: { reportId: sc.report!.id },
               fetchPolicy: "cache-first",
             });
             if (cancelled) {
@@ -67,7 +67,7 @@ export default function ReportPublishedDataPrefetch({
             }
             await client.query({
               query: ReportOverlaySourcesDocument,
-              variables: { reportId: sc.reportId! },
+              variables: { reportId: sc.report!.id },
               fetchPolicy: "cache-first",
             });
           } catch {

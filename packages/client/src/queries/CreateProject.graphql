@@ -8,6 +8,18 @@ mutation CreateProject($name: String!, $slug: String!) {
   }
 }
 
+mutation CreateProjectWithGeographies(
+  $input: CreateProjectWithGeographiesInput!
+) {
+  createProjectWithGeographies(input: $input) {
+    project {
+      id
+      url
+      slug
+    }
+  }
+}
+
 mutation VerifyEmail($redirectUrl: String) {
   sendEmailVerification(redirectUrl: $redirectUrl)
 }

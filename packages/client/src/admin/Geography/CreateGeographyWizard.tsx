@@ -52,7 +52,7 @@ type TemplateOption = {
 };
 
 export const MARINE_REGIONS_JOIN_COLUMN = "MRGID_EEZ";
-export const TERRITORIAL_SEAS_JOIN_COLUMN = "MRGID_SOV1";
+export const TERRITORIAL_SEAS_JOIN_COLUMN = "MRGID_EEZ";
 
 function GeographyTypeChoice({
   label,

@@ -369,7 +369,6 @@ mutation ToggleSketchClassGeographyClipping(
 query SketchClassGeographyEditorDetails($slug: String!) {
   projectBySlug(slug: $slug) {
     id
-    enableReportBuilder
     sketchClasses {
       ...SketchingDetails
       clippingGeographies {
@@ -402,6 +401,7 @@ fragment ReportTabDetails on ReportTab {
 
 fragment ReportDetails on Report {
   id
+  title
   createdAt
   updatedAt
   tabs {
@@ -429,20 +429,22 @@ query DraftReportDebuggingMaterials($sketchClassId: Int!) {
         name
         translatedProps
       }
+      mySketches {
+        id
+        name
+        sketchClassId
+        createdAt
+      }
+      sketchClasses {
+        id
+        name
+      }
     }
     mySketches {
       id
       name
       sketchClassId
       createdAt
-    }
-  }
-}
-
-mutation CreateDraftReport($sketchClassId: Int!) {
-  createDraftReport(input: { sketchClassId: $sketchClassId }) {
-    report {
-      ...ReportDetails
     }
   }
 }
@@ -548,6 +550,12 @@ mutation UpdateReportCardBody($id: Int!, $body: JSON!) {
   updateReportCardBody(input: { cardId: $id, body: $body }) {
     reportCard {
       ...ReportCardDetails
+      tab {
+        report {
+          id
+          updatedAt
+        }
+      }
     }
   }
 }
@@ -567,11 +575,27 @@ mutation MoveCardToTab($cardId: Int!, $tabId: Int!) {
   }
 }
 
-mutation PublishReport($sketchClassId: Int!) {
-  publishReport(input: { sketchClassId: $sketchClassId }) {
+mutation PublishReport($reportId: Int!) {
+  publishReport(input: { reportId: $reportId }) {
     sketchClass {
       ...AdminSketchingDetails
     }
+  }
+}
+
+mutation UpdateReportTitle($reportId: Int!, $title: String!) {
+  updateReport(input: { id: $reportId, patch: { title: $title } }) {
+    report {
+      id
+      title
+      updatedAt
+    }
+  }
+}
+
+mutation DeleteDraftReport($reportId: Int!) {
+  deleteReport(input: { id: $reportId }) {
+    deletedReportNodeId
   }
 }
 
@@ -766,6 +790,7 @@ query ReportOverlaySources($reportId: Int!) {
 
 fragment BaseReportDetails on Report {
   id
+  title
   tabs {
     ...ReportTabDetails
   }
@@ -959,6 +984,81 @@ query OverlaysForReportLayerToggles($slug: String!) {
       reportingOutput {
         id
       }
+    }
+  }
+}
+
+query ProjectReportsContext($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    geographies {
+      id
+    }
+    sketchClasses {
+      ...SketchingDetails
+      draftReport {
+        id
+      }
+    }
+  }
+  reportsConnection {
+    nodes {
+      id
+      title
+      updatedAt
+      projectId
+      draftId
+    }
+  }
+}
+
+query SketchClassReportAssignment($slug: String!, $sketchClassId: Int!) {
+  projectBySlug(slug: $slug) {
+    id
+  }
+  reportsConnection {
+    nodes {
+      id
+      title
+      projectId
+      draftId
+    }
+  }
+  sketchClass(id: $sketchClassId) {
+    id
+    draftReport {
+      id
+    }
+  }
+}
+
+mutation CreateCustomReport(
+  $projectId: Int!
+  $title: String!
+  $sketchClassIds: [Int!]
+) {
+  createCustomReport(
+    input: {
+      projectId: $projectId
+      title: $title
+      sketchClassIds: $sketchClassIds
+    }
+  ) {
+    report {
+      id
+    }
+  }
+}
+
+mutation SetPrimaryReportForSketchClass(
+  $sketchClassId: Int!
+  $draftReportId: Int!
+) {
+  setPrimaryReportForSketchClass(
+    input: { sketchClassId: $sketchClassId, draftReportId: $draftReportId }
+  ) {
+    sketchClass {
+      id
     }
   }
 }

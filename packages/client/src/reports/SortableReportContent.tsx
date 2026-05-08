@@ -196,7 +196,8 @@ export function SortableReportContent(props: SortableReportContentProps) {
           <div>
             <p className="text-sm text-gray-500">
               <Trans ns="admin:sketching">
-                No cards found. Click the + button to customize.
+                No cards found. Use the <b className="font-medium">Edit</b> menu
+                to customize.
               </Trans>
             </p>
           </div>

@@ -20,7 +20,9 @@ fragment ProjectMetadata on Project {
     formElementId
     isArchived
     translatedProps
-    reportId
+    report {
+      id
+    }
     isGeographyClippingEnabled
     useGeographyClipping
     previewNewReports
@@ -36,8 +38,6 @@ fragment ProjectMetadata on Project {
     lang
     html
   }
-  enableReportBuilder
-  enableCollectionNewReports
   customDocLink
   showScalebarByDefault
   showLegendByDefault

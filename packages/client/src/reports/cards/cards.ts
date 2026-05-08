@@ -117,6 +117,10 @@ export type ReportConfiguration = {
    */
   id: number;
   /**
+   * Draft report title (admin-only; used to distinguish reports while authoring).
+   */
+  title?: string;
+  /**
    * The tabs that are shown in the report. A single tab would indicate a
    * "no tabs" display without a tab bar.
    */

@@ -3,6 +3,60 @@ import { PoolClient } from "pg";
 import * as cache from "../cache";
 import { createSource } from "fgb-source";
 
+type ClippingLayerArgs = {
+  templateId?: string | null;
+  dataLayerId?: number | null;
+  operationType: "intersect" | "difference";
+  cql2Query?: any;
+};
+
+type GeographyArgs = {
+  slug: string;
+  name: string;
+  clippingLayers: ClippingLayerArgs[];
+  translatedProps?: Record<string, unknown> | null;
+  clientTemplate?: string | null;
+};
+
+function projectRowHasNumericId(row: unknown): boolean {
+  if (!row || typeof row !== "object") {
+    return false;
+  }
+  const id = (row as Record<string, unknown>).id;
+  if (id === null || id === undefined) {
+    return false;
+  }
+  if (typeof id === "number") {
+    return Number.isFinite(id) && id > 0;
+  }
+  if (typeof id === "string") {
+    const n = parseInt(id, 10);
+    return Number.isFinite(n) && n > 0;
+  }
+  if (typeof id === "bigint") {
+    return id > BigInt(0);
+  }
+  return false;
+}
+
+/** `select * from create_project()` may return a composite `project` column or flat columns. */
+function unwrapCreateProjectRow(
+  raw: unknown,
+): Record<string, unknown> | null {
+  if (!raw || typeof raw !== "object") {
+    return null;
+  }
+  const r = raw as Record<string, unknown>;
+  const nested = r.project;
+  if (nested && typeof nested === "object" && projectRowHasNumericId(nested)) {
+    return nested as Record<string, unknown>;
+  }
+  if (projectRowHasNumericId(r)) {
+    return r as Record<string, unknown>;
+  }
+  return null;
+}
+
 /**
  * Plugin that implements the CreateGeography mutation
  *
@@ -67,6 +121,62 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
         clientTemplate: String
       }
 
+      input CreateProjectGeographyClippingLayerInput {
+        """
+        Template layer to clone and associate with this geography.
+        """
+        templateId: String!
+
+        """
+        Type of operation to perform on the clipping layer (e.g. intersect, difference).
+        """
+        operationType: GeographyLayerOperation!
+
+        """
+        If provided, features used for clipping will be filtered based on this
+        JSON-encoded OGC Common Query Language (CQL2) query
+        """
+        cql2Query: JSON
+      }
+
+      input CreateProjectGeographyInput {
+        """
+        Name of the geography
+        """
+        name: String!
+
+        """
+        Clipping layers to associate with this geography
+        """
+        clippingLayers: [CreateProjectGeographyClippingLayerInput!]!
+
+        """
+        Translated strings
+        """
+        translatedProps: JSON
+
+        """
+        Used to identify Geographies that are created using a particular wizard
+        flow like "Pick an EEZ" or "Terrestrial Areas".
+        """
+        clientTemplate: String
+      }
+
+      input CreateProjectWithGeographiesInput {
+        """
+        An arbitrary string value with no semantic meaning. Will be included in the
+        payload verbatim. May be used to track mutations by the client.
+        """
+        clientMutationId: String
+        name: String!
+        slug: String!
+
+        """
+        Optional geographies to create immediately for the project.
+        """
+        geographies: [CreateProjectGeographyInput!]
+      }
+
       type CreateGeographiesPayload {
         """
         The newly created geography
@@ -96,6 +206,15 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
         createGeographies(
           input: [CreateGeographyArgs!]!
         ): CreateGeographiesPayload
+
+        """
+        Create a new project and optionally create initial geographies for it.
+        Geography clipping layers must reference template IDs because project
+        layers have not yet been created.
+        """
+        createProjectWithGeographies(
+          input: CreateProjectWithGeographiesInput!
+        ): CreateProjectPayload
 
         deleteGeographyAndTableOfContentsItems(
           id: Int!
@@ -623,93 +742,10 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
             throw new Error("All inputs must have the same slug");
           }
 
-          const createdGeographyIds = [] as number[];
-          for (const input of inputs) {
-            const { slug, name, clippingLayers, clientTemplate } = input;
-            if (!slug || !name || clippingLayers.length === 0) {
-              throw new Error(
-                "slug, name, and at least one clipping layer are required",
-              );
-            }
-            // Check if user has admin access to the project
-            const isAdmin = await sessionIsAdmin(slug, pgClient);
-            if (!isAdmin) {
-              throw new Error(
-                "You do not have permission to create a geography",
-              );
-            }
-
-            const projectId = await idForSlug(slug, pgClient);
-
-            // First, create the geography
-            const { rows: geographyRows } = await pgClient.query(
-              "insert into project_geography (project_id, name, translated_props, client_template) values ((select id from projects where slug = $1), $2, $3, $4) returning *",
-              [
-                slug,
-                name,
-                input.translatedProps
-                  ? JSON.stringify(input.translatedProps)
-                  : null,
-                clientTemplate || null,
-              ],
-            );
-            const geography = geographyRows[0];
-            if (!geography) {
-              throw new Error("Failed to create geography");
-            }
-            createdGeographyIds.push(geography.id);
-
-            // Then create the geography_clipping_layers
-            const clippingLayerIds = [] as number[];
-            for (const layerInput of clippingLayers) {
-              const { templateId, dataLayerId, operationType, cql2Query } =
-                layerInput;
-
-              if (!templateId && !dataLayerId) {
-                throw new Error(
-                  "Either templateId or dataLayerId must be provided for each clipping layer",
-                );
-              }
-
-              let layerId: number | null = null;
-              if (templateId) {
-                // Clone the template layer into the project
-                layerId = await getOrCloneTemplateLayer(
-                  pgClient,
-                  templateId,
-                  slug,
-                  cql2Query,
-                  templateId !== "DAYLIGHT_COASTLINE" ? name : "Land",
-                );
-              } else {
-                // ensure layer exists in project
-                const { rows: dataLayerRows } = await pgClient.query(
-                  "select id from data_layers where id = $1 and project_id = $2",
-                  [dataLayerId, projectId],
-                );
-                if (dataLayerRows.length === 0) {
-                  throw new Error(
-                    `Data layer with ID ${dataLayerId} does not exist in project ${slug}`,
-                  );
-                }
-                // Use the provided dataLayerId directly
-                layerId = dataLayerId;
-              }
-
-              // Insert the clipping layer
-              const { rows: layerRows } = await pgClient.query(
-                "insert into geography_clipping_layers (project_geography_id, data_layer_id, operation_type, cql2_query, template_id) values ($1, $2, $3, $4, $5) returning *",
-                [
-                  geography.id,
-                  layerId,
-                  operationType,
-                  cql2Query ? cql2Query : null,
-                  templateId || null,
-                ],
-              );
-              clippingLayerIds.push(layerRows[0].id);
-            }
-          }
+          const createdGeographyIds = await createGeographiesForProject(
+            pgClient,
+            inputs as GeographyArgs[],
+          );
           if (inputs.length > 0) {
             const projectId = await idForSlug(inputs[0].slug, pgClient);
             await deleteProjectFragments(projectId, pgClient);
@@ -717,6 +753,134 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
           }
           context.createdGeographyIds = createdGeographyIds;
           return {};
+        },
+        createProjectWithGeographies: async (
+          _query,
+          args,
+          context,
+          resolveInfo,
+        ) => {
+          const { pgClient, adminPool } = context;
+          const { input } = args;
+          const geographies = (input.geographies || []) as {
+            name: string;
+            clippingLayers: ClippingLayerArgs[];
+            translatedProps?: Record<string, unknown> | null;
+            clientTemplate?: string | null;
+          }[];
+
+          const { rows: projectRows } = await pgClient.query(
+            "select * from create_project($1, $2)",
+            [input.name, input.slug],
+          );
+          const project =
+            unwrapCreateProjectRow(projectRows[0]) ??
+            (projectRows[0] as Record<string, unknown>);
+          if (!projectRowHasNumericId(project)) {
+            throw new Error("Failed to create project");
+          }
+
+          if (geographies.length > 0) {
+            const projectSlug = String(
+              project.slug ?? input.slug ?? "",
+            ).trim();
+            if (!projectSlug) {
+              throw new Error("Created project is missing a slug");
+            }
+            const geographyInputs: GeographyArgs[] = geographies.map(
+              (geography) => ({
+                slug: projectSlug,
+                name: geography.name,
+                clippingLayers: geography.clippingLayers.map((layer) => {
+                  if (!layer.templateId) {
+                    throw new Error(
+                      "templateId is required for clipping layers in createProjectWithGeographies",
+                    );
+                  }
+                  return {
+                    templateId: layer.templateId,
+                    operationType: layer.operationType,
+                    cql2Query: layer.cql2Query,
+                  };
+                }),
+                translatedProps: geography.translatedProps || null,
+                clientTemplate: geography.clientTemplate || null,
+              }),
+            );
+
+            await createGeographiesForProject(pgClient, geographyInputs);
+
+            await pgClient.query(
+              `select public.nest_new_project_geography_draft_toc_under_folder($1::int)`,
+              [Number(project.id)],
+            );
+
+            /* Geography cloning adds draft TOC entries only; publish copies them to
+             * published overlays so the project map/homepage can load layers. */
+            await pgClient.query(
+              `select * from publish_table_of_contents($1::int)`,
+              [Number(project.id)],
+            );
+
+            const shouldSetRegionFromEezBounds = geographies.some(
+              (g) => g.clientTemplate === "eez",
+            );
+            if (shouldSetRegionFromEezBounds) {
+              await updateProjectRegionFromEezGeographies(
+                Number(project.id),
+                pgClient,
+              );
+            }
+          }
+
+          const graphqlRows =
+            await resolveInfo.graphile.selectGraphQLResultFromTable(
+              sql.fragment`public.projects`,
+              (tableAlias, queryBuilder) => {
+                queryBuilder.where(
+                  sql.fragment`${tableAlias}.id = ${sql.value(project.id)}`,
+                );
+              },
+            );
+
+          let payloadProject: unknown = Array.isArray(graphqlRows)
+            ? graphqlRows[0]
+            : graphqlRows;
+
+          /* Graphile may return a truthy stub without `id`. Treat missing id like
+           * a failed lookup so we always fall back to adminPool / create_project row. */
+          /* RLS/user SELECT policies sometimes hide the new row from Graphile's
+           * table lookup even though create_project + participant insert succeeded.
+           * Owner pool bypasses RLS so the mutation payload always includes Project. */
+          if (!projectRowHasNumericId(payloadProject) && adminPool) {
+            const { rows } = await adminPool.query(
+              `select * from public.projects where id = $1`,
+              [project.id],
+            );
+            payloadProject = rows[0];
+          }
+
+          if (!projectRowHasNumericId(payloadProject)) {
+            payloadProject = project;
+          }
+
+          if (!projectRowHasNumericId(payloadProject)) {
+            const again = unwrapCreateProjectRow(projectRows[0]);
+            if (again && projectRowHasNumericId(again)) {
+              payloadProject = again;
+            }
+          }
+
+          if (!projectRowHasNumericId(payloadProject)) {
+            throw new Error(
+              "Created project could not be loaded for the mutation response.",
+            );
+          }
+
+          return {
+            clientMutationId: input.clientMutationId || null,
+            project: payloadProject,
+          };
         },
         generateMissingFragmentsForProject: async (
           _query,
@@ -882,6 +1046,96 @@ async function getOrCloneTemplateLayer(
   }
 
   return data_layer_id;
+}
+
+async function createGeographiesForProject(
+  pgClient: PoolClient,
+  inputs: GeographyArgs[],
+): Promise<number[]> {
+  const createdGeographyIds = [] as number[];
+
+  for (const input of inputs) {
+    const { slug, name, clippingLayers, clientTemplate } = input;
+    if (!slug || !name || clippingLayers.length === 0) {
+      throw new Error(
+        "slug, name, and at least one clipping layer are required",
+      );
+    }
+
+    // Check if user has admin access to the project
+    const isAdmin = await sessionIsAdmin(slug, pgClient);
+    if (!isAdmin) {
+      throw new Error("You do not have permission to create a geography");
+    }
+
+    const projectId = await idForSlug(slug, pgClient);
+
+    // First, create the geography
+    const { rows: geographyRows } = await pgClient.query(
+      "insert into project_geography (project_id, name, translated_props, client_template) values ((select id from projects where slug = $1), $2, $3, $4) returning *",
+      [
+        slug,
+        name,
+        input.translatedProps ? JSON.stringify(input.translatedProps) : null,
+        clientTemplate || null,
+      ],
+    );
+    const geography = geographyRows[0];
+    if (!geography) {
+      throw new Error("Failed to create geography");
+    }
+    createdGeographyIds.push(geography.id);
+
+    // Then create the geography_clipping_layers
+    for (const layerInput of clippingLayers) {
+      const { templateId, dataLayerId, operationType, cql2Query } = layerInput;
+
+      if (!templateId && !dataLayerId) {
+        throw new Error(
+          "Either templateId or dataLayerId must be provided for each clipping layer",
+        );
+      }
+
+      let layerId: number | null = null;
+      if (templateId) {
+        // Clone the template layer into the project
+        layerId = await getOrCloneTemplateLayer(
+          pgClient,
+          templateId,
+          slug,
+          cql2Query,
+          templateId !== "DAYLIGHT_COASTLINE" ? name : "Land",
+        );
+      } else {
+        // ensure layer exists in project
+        const { rows: dataLayerRows } = await pgClient.query(
+          "select id from data_layers where id = $1 and project_id = $2",
+          [dataLayerId, projectId],
+        );
+        if (dataLayerRows.length === 0) {
+          throw new Error(
+            `Data layer with ID ${dataLayerId} does not exist in project ${slug}`,
+          );
+        }
+        // Use the provided dataLayerId directly
+        layerId = dataLayerId!;
+      }
+
+      // Insert the clipping layer
+      await pgClient.query(
+        "insert into geography_clipping_layers (project_geography_id, data_layer_id, operation_type, cql2_query, template_id) values ($1, $2, $3, $4, $5)",
+        [
+          geography.id,
+          layerId,
+          operationType,
+          cql2Query ? cql2Query : null,
+          templateId || null,
+        ],
+      );
+    }
+  }
+
+  return createdGeographyIds;
 }
 
 export async function sessionIsAdmin(
@@ -1275,4 +1529,129 @@ async function getBoundsForClippingLayerUrl(
     bounds = source.bounds;
     return [bounds.minX, bounds.minY, bounds.maxX, bounds.maxY];
   }
+}
+
+/** Same layer rules as Geography.bounds: skip global coastline & high-seas templates. */
+async function getBoundsForGeographyLayers(
+  geographyId: number,
+  pgClient: PoolClient,
+): Promise<number[] | null> {
+  const bounds: number[][] = [];
+  const { rows: clippingLayerRows } = await pgClient.query(
+    `
+    select id, cql2_query, template_id, object_key, url, operation_type from clipping_layers_for_geography($1);
+    `,
+    [geographyId],
+  );
+  await Promise.all(
+    (
+      (clippingLayerRows || []) as {
+        id: number;
+        cql2_query?: string;
+        template_id?: string;
+        url: string;
+        object_key: string;
+      }[]
+    ).map(async ({ cql2_query, template_id, url, object_key }) => {
+      if (
+        template_id === "DAYLIGHT_COASTLINE" ||
+        template_id === "MARINE_REGIONS_HIGH_SEAS"
+      ) {
+        return;
+      }
+      const bbox = await getBoundsForClippingLayerUrl(
+        url,
+        object_key,
+        cql2_query,
+        template_id,
+      );
+      if (bbox) {
+        bounds.push(bbox);
+      }
+    }),
+  );
+  if (bounds.length === 0) {
+    return null;
+  }
+  return combineBBoxes(bounds) ?? null;
+}
+
+/** Matches template ids from geography onboarding / CreateGeographyWizard. */
+const MARINE_REGIONS_EEZ_TEMPLATE_ID = "MARINE_REGIONS_EEZ_LAND_JOINED";
+const MARINE_REGIONS_TERRITORIAL_SEA_TEMPLATE_ID =
+  "MARINE_REGIONS_TERRITORIAL_SEA";
+
+/**
+ * EEZ workflow: project region uses core EEZ polygon bounds only (not offshore envelopes).
+ * Core EEZ uses client_template `eez` with an EEZ intersect layer and no territorial-sea
+ * clipping layer (offshore/nearshore composites also use `eez` but subtract territorial seas).
+ */
+async function updateProjectRegionFromEezGeographies(
+  projectId: number,
+  pgClient: PoolClient,
+): Promise<void> {
+  const { rows: geoRows } = await pgClient.query(
+    `
+    select pg.id
+    from project_geography pg
+    where pg.project_id = $1
+      and pg.client_template = 'eez'
+      and exists (
+        select 1
+        from geography_clipping_layers gcl
+        where gcl.project_geography_id = pg.id
+          and gcl.template_id = $2
+      )
+      and not exists (
+        select 1
+        from geography_clipping_layers gcl
+        where gcl.project_geography_id = pg.id
+          and gcl.template_id = $3
+      )
+    `,
+    [projectId, MARINE_REGIONS_EEZ_TEMPLATE_ID, MARINE_REGIONS_TERRITORIAL_SEA_TEMPLATE_ID],
+  );
+  const ids = (geoRows as { id: number }[]).map((r) => r.id);
+  if (ids.length === 0) {
+    throw new Error(
+      "Expected at least one core EEZ geography after createProjectWithGeographies",
+    );
+  }
+  const boxes: number[][] = [];
+  for (const id of ids) {
+    const box = await getBoundsForGeographyLayers(id, pgClient);
+    if (box) {
+      boxes.push(box);
+    }
+  }
+  if (boxes.length === 0) {
+    throw new Error(
+      "Could not compute EEZ bounding boxes for project region (check overlay service and clipping layers).",
+    );
+  }
+  const combined = combineBBoxes(boxes);
+  if (!combined || combined.length !== 4) {
+    throw new Error("Could not combine EEZ bounding boxes for project region.");
+  }
+  const [minX, minY, maxX, maxY] = combined;
+  if (
+    !Number.isFinite(minX) ||
+    !Number.isFinite(minY) ||
+    !Number.isFinite(maxX) ||
+    !Number.isFinite(maxY) ||
+    minY >= maxY
+  ) {
+    throw new Error(
+      `Invalid combined EEZ bounds for project region: ${JSON.stringify(combined)}`,
+    );
+  }
+  if (minX >= maxX) {
+    throw new Error(
+      "EEZ bounds cross the antimeridian in a way that is not yet supported for projects.region (please report this project).",
+    );
+  }
+  await pgClient.query(
+    `select set_project_region_bounds($1::int, $2::float8, $3::float8, $4::float8, $5::float8)`,
+    [projectId, minX, minY, maxX, maxY],
+  );
 }
