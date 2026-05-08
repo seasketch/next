@@ -1612,9 +1612,6 @@ type CreateCustomReportPayload {
   """
   clientMutationId: String
 
-  """Reads a single `Report` that is related to this `Report`."""
-  draft: Report
-
   """
   Our root query field type. Allows us to run any query from our mutation payload.
   """
@@ -2645,9 +2642,6 @@ type CreateReportPayload {
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
-
-  """Reads a single `Report` that is related to this `Report`."""
-  draft: Report
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -5509,9 +5503,6 @@ type DeleteReportPayload {
   """
   clientMutationId: String
   deletedReportNodeId: ID
-
-  """Reads a single `Report` that is related to this `Report`."""
-  draft: Report
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -10703,6 +10694,12 @@ type Mutation {
     """
     input: SetPrimaryReportForSketchClassInput!
   ): SetPrimaryReportForSketchClassPayload
+  setProjectRegionBounds(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: SetProjectRegionBoundsInput!
+  ): SetProjectRegionBoundsPayload
 
   """
   Lock a topic so that it can no longer be responded to. Past discussion will
@@ -15326,9 +15323,6 @@ type ReorderReportTabsPayload {
 type Report implements Node {
   createdAt: Datetime!
   dependencies(sketchId: Int): ReportOverlayDependencies!
-
-  """Reads a single `Report` that is related to this `Report`."""
-  draft: Report
   draftId: Int
 
   """Reads and enables pagination through a set of `Geography`."""
@@ -15348,35 +15342,6 @@ type Report implements Node {
   overlaySources: [ReportOverlaySource!]!
   projectId: Int!
   publishedAt: Datetime
-
-  """Reads and enables pagination through a set of `Report`."""
-  reportsByDraftIdConnection(
-    """Read all values in the set after (below) this cursor."""
-    after: Cursor
-
-    """Read all values in the set before (above) this cursor."""
-    before: Cursor
-
-    """
-    A condition to be used in determining which values should be returned by the collection.
-    """
-    condition: ReportCondition
-
-    """Only read the first `n` values of the set."""
-    first: Int
-
-    """Only read the last `n` values of the set."""
-    last: Int
-
-    """
-    Skip the first `n` values from our `after` cursor, an alternative to cursor
-    based pagination. May not be used with `last`.
-    """
-    offset: Int
-
-    """The method to use when ordering `Report`."""
-    orderBy: [ReportsOrderBy!] = [PRIMARY_KEY_ASC]
-  ): ReportsConnection!
 
   """Reads a single `SketchClass` that is related to this `Report`."""
   sketchClass: SketchClass
@@ -15417,9 +15382,6 @@ type ReportCard implements Node {
 A condition to be used against `Report` object types. All fields are tested for equality and combined with a logical ‘and.’
 """
 input ReportCondition {
-  """Checks for equality with the object’s `draftId` field."""
-  draftId: Int
-
   """Checks for equality with the object’s `id` field."""
   id: Int
 
@@ -15544,8 +15506,6 @@ type ReportsEdge {
 
 """Methods to use when ordering `Report`."""
 enum ReportsOrderBy {
-  DRAFT_ID_ASC
-  DRAFT_ID_DESC
   ID_ASC
   ID_DESC
   NATURAL
@@ -16053,6 +16013,34 @@ type SetPrimaryReportForSketchClassPayload {
     """The method to use when ordering `SketchClass`."""
     orderBy: [SketchClassesOrderBy!] = [PRIMARY_KEY_ASC]
   ): SketchClassesEdge
+}
+
+"""All input for the `setProjectRegionBounds` mutation."""
+input SetProjectRegionBoundsInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  pMaxx: Float
+  pMaxy: Float
+  pMinx: Float
+  pMiny: Float
+  pProjectId: Int
+}
+
+"""The output of our `setProjectRegionBounds` mutation."""
+type SetProjectRegionBoundsPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
 }
 
 """All input for the `setTopicLocked` mutation."""
@@ -20149,9 +20137,6 @@ type UpdateReportPayload {
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
-
-  """Reads a single `Report` that is related to this `Report`."""
-  draft: Report
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.

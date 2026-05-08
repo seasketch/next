@@ -1,5 +1,12 @@
 -- undo
 
+drop function if exists public.nest_new_project_geography_draft_toc_under_folder(integer);
+
+drop trigger if exists trg_prevent_delete_data_layer_geography_clipping on public.data_layers;
+drop function if exists public.prevent_delete_data_layer_if_referenced_by_geography_clipping();
+
+drop function if exists public.set_project_region_bounds(integer, double precision, double precision, double precision, double precision);
+
 -- Restore NOT NULL on sketch_class_id (best-effort backfill for project-scoped drafts).
 update public.reports r
 set sketch_class_id = (
@@ -1015,7 +1022,12 @@ CREATE OR REPLACE FUNCTION public.create_sketch_class_from_template("projectId" 
           select id into default_report_id from create_default_report("projectId"::integer);
         end if;
         select id into default_clipping_geography_id from project_geography where project_id = "projectId" order by (
-          case when client_template = 'eez' then 1 else 2 end
+          case
+            when name like 'EEZ%' then 0
+            when name like 'Exclusive Economic Zone%' then 0
+            when client_template = 'eez' then 1
+            else 2
+          end
         ) limit 1;
 
         enable_geography_clipping = default_report_id is not null and default_clipping_geography_id is not null;
@@ -1058,3 +1070,137 @@ begin
   end loop;
 end;
 $$;
+
+-- Sets projects.region during createProjectWithGeographies (same txn as inserts).
+-- SECURITY DEFINER so RLS/column grants cannot block the creator's region update.
+create or replace function public.set_project_region_bounds(
+  p_project_id integer,
+  p_minx double precision,
+  p_miny double precision,
+  p_maxx double precision,
+  p_maxy double precision
+) returns void
+  language sql
+  security definer
+  set search_path to public
+as $$
+  update public.projects
+  set region = st_setsrid(st_makeenvelope(p_minx, p_miny, p_maxx, p_maxy), 4326)
+  where id = p_project_id;
+$$;
+
+revoke all on function public.set_project_region_bounds(integer, double precision, double precision, double precision, double precision) from public;
+grant execute on function public.set_project_region_bounds(integer, double precision, double precision, double precision, double precision) to seasketch_user;
+
+-- Block deleting a data layer while project geography clipping still references it (including
+-- draft TOC deletes via _delete_table_of_contents_item, which removes the TOC row before the layer).
+create or replace function public.prevent_delete_data_layer_if_referenced_by_geography_clipping()
+  returns trigger
+  language plpgsql
+  set search_path to public
+as $$
+begin
+  if exists (
+    select 1
+    from public.geography_clipping_layers g
+    where g.data_layer_id = old.id
+  ) then
+    raise exception
+      'This layer is used by geography clipping. Remove it from project geography settings before deleting this layer.';
+  end if;
+  return old;
+end;
+$$;
+
+drop trigger if exists trg_prevent_delete_data_layer_geography_clipping on public.data_layers;
+create trigger trg_prevent_delete_data_layer_geography_clipping
+  before delete on public.data_layers
+  for each row
+  execute procedure public.prevent_delete_data_layer_if_referenced_by_geography_clipping();
+
+revoke all on function public.prevent_delete_data_layer_if_referenced_by_geography_clipping() from public;
+
+-- New-project flow: after geography template layers are cloned into the draft TOC, group them
+-- under a single folder before publish. Invoked from createProjectWithGeographies only.
+create or replace function public.nest_new_project_geography_draft_toc_under_folder(
+  p_project_id integer
+)
+returns void
+  language plpgsql
+  security definer
+  set search_path to public
+as $$
+declare
+  folder_stable text;
+  layer_rec record;
+  i integer := 0;
+begin
+  if session_is_admin(p_project_id) is not true then
+    raise exception 'Permission denied';
+  end if;
+
+  -- Draft overlay layers still at tree root (typical right after geography cloning).
+  if not exists (
+    select 1
+    from table_of_contents_items
+    where project_id = p_project_id
+      and is_draft = true
+      and is_folder = false
+      and parent_stable_id is null
+  ) then
+    return;
+  end if;
+
+  folder_stable := create_stable_id();
+
+  update table_of_contents_items
+  set sort_index = sort_index + 1
+  where project_id = p_project_id
+    and is_draft = true
+    and parent_stable_id is null;
+
+  insert into table_of_contents_items (
+    project_id,
+    stable_id,
+    parent_stable_id,
+    title,
+    is_folder,
+    is_draft,
+    show_radio_children,
+    is_click_off_only,
+    hide_children,
+    translated_props,
+    sort_index
+  ) values (
+    p_project_id,
+    folder_stable,
+    null,
+    'Geography layers',
+    true,
+    true,
+    false,
+    false,
+    false,
+    '{}'::jsonb,
+    0
+  );
+
+  for layer_rec in
+    select id
+    from table_of_contents_items
+    where project_id = p_project_id
+      and is_draft = true
+      and is_folder = false
+      and parent_stable_id is null
+    order by sort_index asc, id asc
+  loop
+    perform update_table_of_contents_item_position(layer_rec.id, folder_stable, i);
+    i := i + 1;
+  end loop;
+end;
+$$;
+
+comment on function public.nest_new_project_geography_draft_toc_under_folder(integer) is '@omit';
+
+revoke all on function public.nest_new_project_geography_draft_toc_under_folder(integer) from public;
+grant execute on function public.nest_new_project_geography_draft_toc_under_folder(integer) to seasketch_user;

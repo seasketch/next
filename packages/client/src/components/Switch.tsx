@@ -7,10 +7,13 @@ export interface SwitchProps {
   className?: string;
   toggleColor?: string;
   tabIndex?: number;
+  /** Compact track and thumb for dense layouts */
+  mini?: boolean;
 }
 
 export default function Switch(props: SwitchProps) {
   const toggleColor = props.toggleColor || "rgb(46, 115, 182)";
+  const mini = !!props.mini;
   return (
     <div
       className={`inline-flex items-center ${props.disabled && "opacity-75"}`}
@@ -44,7 +47,9 @@ export default function Switch(props: SwitchProps) {
         style={{
           backgroundColor: !!props.isToggled ? toggleColor : "rgba(0,0,0,0.18)",
         }}
-        className={`inline-flex flex-shrink-0 h-6 w-11 border-2 border-transparent rounded-full ${
+        className={`inline-flex flex-shrink-0 border-2 border-transparent rounded-full ${
+          mini ? "h-[18px] w-[30px]" : "h-6 w-11"
+        } ${
           !props.disabled && "cursor-pointer"
         } transition-colors ease-in-out duration-200 focus:outline-none ${
           !props.disabled && "focus:ring"
@@ -54,9 +59,13 @@ export default function Switch(props: SwitchProps) {
           aria-hidden="true"
           className={`${
             !!props.isToggled
-              ? "translate-x-5 rtl:-translate-x-5"
+              ? mini
+                ? "translate-x-[14px] rtl:-translate-x-[14px]"
+                : "translate-x-5 rtl:-translate-x-5"
               : "translate-x-0"
-          } inline-block h-5 w-5 rounded-full bg-white shadow transform transition ease-in-out duration-200`}
+          } inline-block rounded-full bg-white shadow transform transition ease-in-out duration-200 ${
+            mini ? "h-[14px] w-[14px]" : "h-5 w-5"
+          }`}
         ></span>
       </span>
     </div>

@@ -1416,8 +1416,6 @@ export type CreateCustomReportPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  /** Reads a single `Report` that is related to this `Report`. */
-  draft?: Maybe<Report>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   report?: Maybe<Report>;
@@ -2346,8 +2344,6 @@ export type CreateReportPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  /** Reads a single `Report` that is related to this `Report`. */
-  draft?: Maybe<Report>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   /** The `Report` that was created by this mutation. */
@@ -4743,8 +4739,6 @@ export type DeleteReportPayload = {
    */
   clientMutationId?: Maybe<Scalars['String']>;
   deletedReportNodeId?: Maybe<Scalars['ID']>;
-  /** Reads a single `Report` that is related to this `Report`. */
-  draft?: Maybe<Report>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   /** The `Report` that was deleted by this mutation. */
@@ -8390,6 +8384,7 @@ export type Mutation = {
    */
   setPostHiddenByModerator?: Maybe<SetPostHiddenByModeratorPayload>;
   setPrimaryReportForSketchClass?: Maybe<SetPrimaryReportForSketchClassPayload>;
+  setProjectRegionBounds?: Maybe<SetProjectRegionBoundsPayload>;
   /**
    * Lock a topic so that it can no longer be responded to. Past discussion will
    * still be visible. This mutation is only available to project admins.
@@ -9820,6 +9815,12 @@ export type MutationSetPostHiddenByModeratorArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationSetPrimaryReportForSketchClassArgs = {
   input: SetPrimaryReportForSketchClassInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationSetProjectRegionBoundsArgs = {
+  input: SetProjectRegionBoundsInput;
 };
 
 
@@ -14227,8 +14228,6 @@ export type Report = Node & {
   __typename?: 'Report';
   createdAt: Scalars['Datetime'];
   dependencies: ReportOverlayDependencies;
-  /** Reads a single `Report` that is related to this `Report`. */
-  draft?: Maybe<Report>;
   draftId?: Maybe<Scalars['Int']>;
   /** Reads and enables pagination through a set of `Geography`. */
   geographies?: Maybe<Array<Geography>>;
@@ -14238,8 +14237,6 @@ export type Report = Node & {
   overlaySources: Array<ReportOverlaySource>;
   projectId: Scalars['Int'];
   publishedAt?: Maybe<Scalars['Datetime']>;
-  /** Reads and enables pagination through a set of `Report`. */
-  reportsByDraftIdConnection: ReportsConnection;
   /** Reads a single `SketchClass` that is related to this `Report`. */
   sketchClass?: Maybe<SketchClass>;
   sketchClassId?: Maybe<Scalars['Int']>;
@@ -14259,17 +14256,6 @@ export type ReportDependenciesArgs = {
 export type ReportGeographiesArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
-};
-
-
-export type ReportReportsByDraftIdConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<ReportCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<ReportsOrderBy>>;
 };
 
 
@@ -14296,8 +14282,6 @@ export type ReportCard = Node & {
 
 /** A condition to be used against `Report` object types. All fields are tested for equality and combined with a logical ‘and.’ */
 export type ReportCondition = {
-  /** Checks for equality with the object’s `draftId` field. */
-  draftId?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `id` field. */
   id?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `sketchClassId` field. */
@@ -14433,8 +14417,6 @@ export type ReportsEdge = {
 
 /** Methods to use when ordering `Report`. */
 export enum ReportsOrderBy {
-  DraftIdAsc = 'DRAFT_ID_ASC',
-  DraftIdDesc = 'DRAFT_ID_DESC',
   IdAsc = 'ID_ASC',
   IdDesc = 'ID_DESC',
   Natural = 'NATURAL',
@@ -14880,6 +14862,32 @@ export type SetPrimaryReportForSketchClassPayload = {
 /** The output of our `setPrimaryReportForSketchClass` mutation. */
 export type SetPrimaryReportForSketchClassPayloadSketchClassEdgeArgs = {
   orderBy?: Maybe<Array<SketchClassesOrderBy>>;
+};
+
+/** All input for the `setProjectRegionBounds` mutation. */
+export type SetProjectRegionBoundsInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  pMaxx?: Maybe<Scalars['Float']>;
+  pMaxy?: Maybe<Scalars['Float']>;
+  pMinx?: Maybe<Scalars['Float']>;
+  pMiny?: Maybe<Scalars['Float']>;
+  pProjectId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `setProjectRegionBounds` mutation. */
+export type SetProjectRegionBoundsPayload = {
+  __typename?: 'SetProjectRegionBoundsPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
 };
 
 /** All input for the `setTopicLocked` mutation. */
@@ -18351,8 +18359,6 @@ export type UpdateReportPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
-  /** Reads a single `Report` that is related to this `Report`. */
-  draft?: Maybe<Report>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   /** The `Report` that was updated by this mutation. */
@@ -22556,6 +22562,24 @@ export type GeographyClippingSettingsQuery = (
       & GeographyDetailsFragment
     )> }
   )> }
+);
+
+export type GeographyPickerDataQueryVariables = Exact<{ [key: string]: never; }>;
+
+
+export type GeographyPickerDataQuery = (
+  { __typename?: 'Query' }
+  & { gmapssatellitesession?: Maybe<(
+    { __typename?: 'GoogleMapsTileApiSession' }
+    & Pick<GoogleMapsTileApiSession, 'expiresAt' | 'mapType' | 'session'>
+  )>, geographyClippingLayers?: Maybe<Array<(
+    { __typename?: 'DataLayer' }
+    & { dataSource?: Maybe<(
+      { __typename?: 'DataSource' }
+      & ClippingDataSourceDetailsFragment
+    )> }
+    & ClippingLayerDetailsFragment
+  )>> }
 );
 
 export type SketchFragmentStatusQueryVariables = Exact<{
@@ -35194,6 +35218,49 @@ export function useGeographyClippingSettingsLazyQuery(baseOptions?: Apollo.LazyQ
 export type GeographyClippingSettingsQueryHookResult = ReturnType<typeof useGeographyClippingSettingsQuery>;
 export type GeographyClippingSettingsLazyQueryHookResult = ReturnType<typeof useGeographyClippingSettingsLazyQuery>;
 export type GeographyClippingSettingsQueryResult = Apollo.QueryResult<GeographyClippingSettingsQuery, GeographyClippingSettingsQueryVariables>;
+export const GeographyPickerDataDocument = gql`
+    query GeographyPickerData {
+  gmapssatellitesession {
+    expiresAt
+    mapType
+    session
+  }
+  geographyClippingLayers {
+    ...ClippingLayerDetails
+    dataSource {
+      ...ClippingDataSourceDetails
+    }
+  }
+}
+    ${ClippingLayerDetailsFragmentDoc}
+${ClippingDataSourceDetailsFragmentDoc}`;
+
+/**
+ * __useGeographyPickerDataQuery__
+ *
+ * To run a query within a React component, call `useGeographyPickerDataQuery` and pass it any options that fit your needs.
+ * When your component renders, `useGeographyPickerDataQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useGeographyPickerDataQuery({
+ *   variables: {
+ *   },
+ * });
+ */
+export function useGeographyPickerDataQuery(baseOptions?: Apollo.QueryHookOptions<GeographyPickerDataQuery, GeographyPickerDataQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<GeographyPickerDataQuery, GeographyPickerDataQueryVariables>(GeographyPickerDataDocument, options);
+      }
+export function useGeographyPickerDataLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<GeographyPickerDataQuery, GeographyPickerDataQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<GeographyPickerDataQuery, GeographyPickerDataQueryVariables>(GeographyPickerDataDocument, options);
+        }
+export type GeographyPickerDataQueryHookResult = ReturnType<typeof useGeographyPickerDataQuery>;
+export type GeographyPickerDataLazyQueryHookResult = ReturnType<typeof useGeographyPickerDataLazyQuery>;
+export type GeographyPickerDataQueryResult = Apollo.QueryResult<GeographyPickerDataQuery, GeographyPickerDataQueryVariables>;
 export const SketchFragmentStatusDocument = gql`
     query SketchFragmentStatus($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -43037,6 +43104,7 @@ export const namedOperations = {
     Sprites: 'Sprites',
     GetSprite: 'GetSprite',
     GeographyClippingSettings: 'GeographyClippingSettings',
+    GeographyPickerData: 'GeographyPickerData',
     SketchFragmentStatus: 'SketchFragmentStatus',
     EEZLayer: 'EEZLayer',
     GeographyById: 'GeographyById',
