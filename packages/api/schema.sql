@@ -247,7 +247,11 @@ CREATE TYPE public.change_log_field_group AS ENUM (
     'layers:published',
     'layer:uploaded',
     'folder:created',
-    'layer:parent-changed'
+    'layer:parent-changed',
+    'resolvable_layer_comments:created',
+    'resolvable_layer_comments:responded',
+    'resolvable_layer_comments:resolved',
+    'resolvable_layer_comments:reopened'
 );
 
 
@@ -2415,11 +2419,9 @@ CREATE TABLE public.projects (
     about_page_contents jsonb DEFAULT '{}'::jsonb NOT NULL,
     about_page_enabled boolean DEFAULT false NOT NULL,
     custom_doc_link text,
-    enable_report_builder boolean DEFAULT false,
     show_scalebar_by_default boolean DEFAULT false,
     show_legend_by_default boolean DEFAULT false,
     feature_flags jsonb DEFAULT '{}'::jsonb NOT NULL,
-    enable_collection_new_reports boolean DEFAULT false,
     CONSTRAINT disallow_unlisted_public_projects CHECK (((access_control <> 'public'::public.project_access_control_setting) OR (is_listed = true))),
     CONSTRAINT is_public_key CHECK (((mapbox_public_key IS NULL) OR (mapbox_public_key ~* '^pk\..+'::text))),
     CONSTRAINT is_secret CHECK (((mapbox_secret_key IS NULL) OR (mapbox_secret_key ~* '^sk\..+'::text))),
@@ -2536,13 +2538,6 @@ COMMENT ON COLUMN public.projects.enable_download_by_default IS 'When true, over
 --
 
 COMMENT ON COLUMN public.projects.feature_flags IS '@omit';
-
-
---
--- Name: COLUMN projects.enable_collection_new_reports; Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON COLUMN public.projects.enable_collection_new_reports IS 'When true, administrators may configure collection sketch classes to use the new reporting tools in project admin.';
 
 
 --
@@ -5209,9 +5204,14 @@ CREATE FUNCTION public.changelog_row_net_zero_changes(p_field_group public.chang
     LANGUAGE sql IMMUTABLE PARALLEL SAFE
     AS $$
   select case
+    when p_field_group::text in (
+      'resolvable_layer_comments:created',
+      'resolvable_layer_comments:responded',
+      'resolvable_layer_comments:resolved',
+      'resolvable_layer_comments:reopened'
+    ) then false
     when (p_from_blob is not null) or (p_to_blob is not null) then
-      not (p_from_summary is distinct from p_to_summary)
-      and not (p_from_blob is distinct from p_to_blob)
+      not (p_from_blob is distinct from p_to_blob)
     when p_field_group = 'layer:attribution'::change_log_field_group then
       not (
         changelog_normalize_layer_attribution_summary(p_from_summary)
@@ -7430,6 +7430,117 @@ COMMENT ON FUNCTION public.create_consent_document(fid integer, version integer,
 
 
 --
+-- Name: reports; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.reports (
+    id integer NOT NULL,
+    project_id integer NOT NULL,
+    sketch_class_id integer,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    title text NOT NULL,
+    version integer DEFAULT 0 NOT NULL,
+    draft_id integer,
+    published_at timestamp with time zone,
+    CONSTRAINT reports_draft_id_version_check CHECK ((((draft_id IS NULL) AND (version = 0)) OR ((draft_id IS NOT NULL) AND (version > 0))))
+);
+
+
+--
+-- Name: create_custom_report(integer, text, integer[]); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_custom_report(project_id integer, title text, sketch_class_ids integer[] DEFAULT NULL::integer[]) RETURNS public.reports
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+declare
+  new_report public.reports;
+  dr_report_tab_id int;
+  class_ids integer[];
+  invalid_count int;
+  owning_sketch_class_id integer;
+begin
+  if not session_is_admin(project_id) then
+    raise exception 'You are not authorized to create reports for this project';
+  end if;
+
+  if nullif(title, '') is null then
+    raise exception 'Title is required';
+  end if;
+
+  class_ids := coalesce(sketch_class_ids, '{}');
+
+  if array_length(class_ids, 1) > 0 then
+    select count(*)
+    into invalid_count
+    from unnest(class_ids) class_id
+    left join public.sketch_classes sc
+      on sc.id = class_id
+     and sc.project_id = create_custom_report.project_id
+    where sc.id is null;
+
+    if invalid_count > 0 then
+      raise exception 'All sketch classes must belong to the same project';
+    end if;
+  end if;
+
+  -- Legacy reports.sketch_class_id NOT NULL: use first selected class when provided.
+  -- Project-only drafts (no selection) rely on sketch_class_id being nullable (see redo DDL above).
+  owning_sketch_class_id :=
+    case
+      when array_length(class_ids, 1) > 0 then class_ids[1]
+      else null
+    end;
+
+  insert into public.reports (
+    project_id,
+    sketch_class_id,
+    title,
+    version,
+    draft_id,
+    published_at
+  ) values (
+    project_id,
+    owning_sketch_class_id,
+    title,
+    0,
+    null,
+    null
+  ) returning * into new_report;
+
+  insert into public.report_tabs (
+    report_id,
+    title,
+    position
+  ) values (
+    new_report.id,
+    'Attributes',
+    0
+  ) returning id into dr_report_tab_id;
+
+  if array_length(class_ids, 1) > 0 then
+    -- Clear existing relations for provided classes before assigning this report as primary.
+    delete from public.sketch_class_reports scr
+    where scr.sketch_class_id = any(class_ids);
+
+    insert into public.sketch_class_reports (
+      sketch_class_id,
+      draft_report_id,
+      is_primary
+    )
+    select
+      class_id,
+      new_report.id,
+      true
+    from unnest(class_ids) class_id;
+  end if;
+
+  return new_report;
+end;
+$$;
+
+
+--
 -- Name: data_upload_tasks; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -7531,71 +7642,86 @@ CREATE FUNCTION public.create_data_upload(filename text, project_id integer, con
 
 
 --
--- Name: reports; Type: TABLE; Schema: public; Owner: -
+-- Name: create_default_report(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE TABLE public.reports (
-    id integer NOT NULL,
-    project_id integer NOT NULL,
-    sketch_class_id integer NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
-);
-
-
---
--- Name: create_draft_report(integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.create_draft_report(sketch_class_id integer) RETURNS public.reports
+CREATE FUNCTION public.create_default_report(p_project_id integer) RETURNS public.reports
     LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-    declare
-      dr_report_id int;
-      dr_report_tab_id int;
-      pid int;
-      report reports;
-    begin
-      select project_id into pid from sketch_classes where sketch_classes.id = sketch_class_id limit 1;
-      if session_is_admin(pid) then
-        if ((select draft_report_id from sketch_classes where id = sketch_class_id)) is not null then
-          raise exception 'A draft report already exists for this sketch class';
-        end if;
-        insert into reports (
-          project_id,
-          sketch_class_id
-        ) values (
-          pid,
-          create_draft_report.sketch_class_id
-        ) returning * into report;
-        insert into report_tabs (
-          report_id,
-          title,
-          position
-        ) values (
-          report.id,
-          'Attributes',
-          0
-        ) returning id into dr_report_tab_id;
-        insert into report_cards (
-          report_tab_id,
-          body,
-          position,
-          alternate_language_settings,
-          component_settings
-        ) values (
-          dr_report_tab_id,
-          '{"type": "doc", "content": [{"type": "reportTitle", "content": [{"type": "text", "text": "Attributes"}]}]}'::jsonb,
-          0,
-          '{}',
-          jsonb_build_object('type', 'Attributes')
-        );
-        update sketch_classes set draft_report_id = report.id where sketch_classes.id = create_draft_report.sketch_class_id;
-        return report;
-      else
-        raise exception 'You are not authorized to create a draft report for this sketch class';
-      end if;
-    end;
-  $$;
+    AS $_$
+declare
+  new_report public.reports;
+  tab_id integer;
+begin
+  if exists (
+    select 1
+    from public.reports r
+    where r.project_id = p_project_id
+  ) then
+    return null;
+  end if;
+
+  insert into public.reports (
+    project_id,
+    sketch_class_id,
+    title,
+    version,
+    draft_id,
+    published_at
+  ) values (
+    p_project_id,
+    null,
+    'Default report',
+    0,
+    null,
+    null
+  )
+  returning * into new_report;
+
+  insert into public.report_tabs (
+    report_id,
+    title,
+    position
+  ) values (
+    new_report.id,
+    'Attributes',
+    0
+  )
+  returning id into tab_id;
+
+  insert into public.report_cards (
+    report_tab_id,
+    body,
+    position,
+    alternate_language_settings,
+    component_settings,
+    updated_at,
+    is_draft
+  ) values (
+    tab_id,
+    $report_default_size_card${"type":"doc","content":[{"type":"reportTitle","content":[{"text":"Size","type":"text"}]},{"type":"paragraph","content":[{"text":"This plan is ","type":"text"},{"type":"metric","attrs":{"type":"InlineMetric","metrics":[{"type":"total_area","subjectType":"fragments"}],"componentSettings":{"presentation":"total_area"}}},{"text":", which is ","type":"text"},{"type":"metric","attrs":{"type":"InlineMetric","metrics":[{"type":"total_area","subjectType":"fragments"},{"type":"total_area","subjectType":"geographies"}],"componentSettings":{"presentation":"percent_area"}}},{"text":" of the planning region.","type":"text"}]},{"type":"blockMetric","attrs":{"type":"GeographySizeTable","metrics":[{"type":"total_area","subjectType":"geographies"},{"type":"total_area","subjectType":"fragments"}],"componentSettings":{"presentation":"total_area","enableLayerToggles":true}}}]}$report_default_size_card$::jsonb,
+    1,
+    '{}'::jsonb,
+    '{"type": "textBlock"}'::jsonb,
+    now(),
+    true
+  ),
+  (
+    tab_id,
+    $report_default_attributes_card${"type":"doc","content":[{"type":"reportTitle","content":[{"text":"Attributes","type":"text"}]},{"type":"blockMetric","attrs":{"type":"SketchAttributesTable","metrics":[],"componentSettings":{}}}]}$report_default_attributes_card$::jsonb,
+    2,
+    '{}'::jsonb,
+    '{"type": "textBlock"}'::jsonb,
+    now(),
+    true
+  );
+
+  -- Same validation and snapshot copy as Publish (TOC layers, outputs, etc.); no session check —
+  -- invoke only from trusted backend code (see publish_report_snapshot).
+  perform public.publish_report_snapshot(new_report.id);
+
+  return new_report;
+end;
+$_$;
 
 
 --
@@ -8241,6 +8367,7 @@ CREATE FUNCTION public.create_project(name text, slug text, OUT project public.p
         true
       );
       perform add_default_basemaps(project.id);
+      perform create_default_report(project.id);
     else
       raise exception 'Email must be verified to create a project';
     end if;
@@ -8608,8 +8735,26 @@ CREATE FUNCTION public.create_sketch_class_from_template("projectId" integer, te
       created sketch_classes;
       num_similarly_named int;
       new_name text;
+      default_report_id integer;
+      default_clipping_geography_id integer;
+      enable_geography_clipping boolean;
     begin
       if session_is_admin("projectId") then
+        select id into default_report_id from reports where project_id = "projectId";
+        if default_report_id is null then
+          select id into default_report_id from create_default_report("projectId"::integer);
+        end if;
+        select id into default_clipping_geography_id from project_geography where project_id = "projectId" order by (
+          case
+            when name like 'EEZ%' then 0
+            when name like 'Exclusive Economic Zone%' then 0
+            when client_template = 'eez' then 1
+            else 2
+          end
+        ) limit 1;
+
+        enable_geography_clipping = default_report_id is not null and default_clipping_geography_id is not null;
+   
         select * into base from sketch_classes where id = template_sketch_class_id;
         if base is null then
           raise exception 'Sketch Class with id=% does not exist', template_sketch_class_id;
@@ -8623,8 +8768,14 @@ CREATE FUNCTION public.create_sketch_class_from_template("projectId" integer, te
         if num_similarly_named > 0 then
           new_name = new_name || ' (' || num_similarly_named::text || ')';
         end if;
-        insert into sketch_classes (project_id, name, geometry_type, allow_multi, geoprocessing_project_url, geoprocessing_client_name, geoprocessing_client_url, mapbox_gl_style, preprocessing_endpoint, preprocessing_project_url) values ("projectId", new_name, base.geometry_type, base.allow_multi, base.geoprocessing_project_url, base.geoprocessing_client_name, base.geoprocessing_client_url, base.mapbox_gl_style, base.preprocessing_endpoint, base.preprocessing_project_url) returning * into created;
+        insert into sketch_classes (project_id, name, geometry_type, allow_multi, geoprocessing_project_url, geoprocessing_client_name, geoprocessing_client_url, mapbox_gl_style, preprocessing_endpoint, preprocessing_project_url, is_geography_clipping_enabled) values ("projectId", new_name, base.geometry_type, base.allow_multi, base.geoprocessing_project_url, base.geoprocessing_client_name, base.geoprocessing_client_url, base.mapbox_gl_style, base.preprocessing_endpoint, base.preprocessing_project_url, enable_geography_clipping) returning * into created;
         perform initialize_sketch_class_form_from_template(created.id, (select id from forms where sketch_class_id = base.id));
+        if default_report_id is not null then
+          perform set_primary_report_for_sketch_class(created.id, default_report_id);
+        end if;
+        if default_clipping_geography_id is not null then
+          insert into sketch_class_geographies (sketch_class_id, geography_id) values (created.id, default_clipping_geography_id);
+        end if;
         return created;
       else
         raise exception 'Permission denied';
@@ -10765,6 +10916,39 @@ $$;
 
 
 --
+-- Name: enforce_resolvable_layer_comment_parent(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.enforce_resolvable_layer_comment_parent() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+declare
+  v_parent record;
+begin
+  if new.parent_comment_id is null then
+    return new;
+  end if;
+
+  select id, table_of_contents_item_id, project_id
+    into v_parent
+  from resolvable_layer_comment
+  where id = new.parent_comment_id;
+
+  if v_parent.id is null then
+    raise exception 'Parent comment not found';
+  end if;
+
+  if v_parent.table_of_contents_item_id is distinct from new.table_of_contents_item_id
+     or v_parent.project_id is distinct from new.project_id then
+    raise exception 'Parent comment must belong to the same layer';
+  end if;
+
+  return new;
+end;
+$$;
+
+
+--
 -- Name: enqueue_metric_calculations_for_sketch(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -12116,6 +12300,22 @@ CREATE FUNCTION public.get_job_details(key text) RETURNS public.worker_job
 
 
 --
+-- Name: get_latest_published_report_for_draft(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_latest_published_report_for_draft(draft_report_id integer) RETURNS integer
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+  select r.id
+  from public.reports r
+  where r.draft_id = get_latest_published_report_for_draft.draft_report_id
+    and r.version > 0
+  order by r.version desc, r.created_at desc
+  limit 1;
+$$;
+
+
+--
 -- Name: get_metrics_for_geography(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -12390,6 +12590,22 @@ COMMENT ON FUNCTION public.get_parent_collection_id(type public.sketch_child_typ
 
 
 --
+-- Name: get_primary_draft_report_id_for_sketch_class(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_primary_draft_report_id_for_sketch_class(sketch_class_id integer) RETURNS integer
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+  select scr.draft_report_id
+  from public.sketch_class_reports scr
+  where scr.sketch_class_id = get_primary_draft_report_id_for_sketch_class.sketch_class_id
+    and scr.is_primary = true
+  order by scr.updated_at desc, scr.created_at desc
+  limit 1;
+$$;
+
+
+--
 -- Name: get_project_id(text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -12528,42 +12744,33 @@ CREATE FUNCTION public.get_referenced_stable_ids_for_report(_report_id integer) 
 CREATE FUNCTION public.get_sketch_class_fragment_status(p_project_id integer) RETURNS TABLE(sketch_class_id integer, sketch_class_name text, missing_count integer)
     LANGUAGE plpgsql STABLE SECURITY DEFINER
     AS $$
-    begin
-      if not session_is_admin(p_project_id) then
-        return;
-      end if;
+begin
+  if not session_is_admin(p_project_id) then
+    return;
+  end if;
 
-      if not exists (
-        select 1
-        from projects
-        where id = p_project_id
-          and enable_report_builder = true
-      ) then
-        return;
-      end if;
-
-      return query
-      select
-        sc.id as sketch_class_id,
-        sc.name::text as sketch_class_name,
-        count(s.id)::int as missing_count
-      from sketch_classes sc
-      join sketches s on s.sketch_class_id = sc.id
-      where sc.project_id = p_project_id
-        and sc.geometry_type = 'POLYGON'
-        and (
-          sc.is_geography_clipping_enabled = true
-          or coalesce(sc.preview_new_reports, false) = true
-        )
-        and not exists (
-          select 1
-          from sketch_fragments sf
-          where sf.sketch_id = s.id
-        )
-      group by sc.id, sc.name
-      order by count(s.id) desc, sc.name asc;
-    end;
-  $$;
+  return query
+  select
+    sc.id as sketch_class_id,
+    sc.name::text as sketch_class_name,
+    count(s.id)::int as missing_count
+  from sketch_classes sc
+  join sketches s on s.sketch_class_id = sc.id
+  where sc.project_id = p_project_id
+    and sc.geometry_type = 'POLYGON'
+    and (
+      sc.is_geography_clipping_enabled = true
+      or coalesce(sc.preview_new_reports, false) = true
+    )
+    and not exists (
+      select 1
+      from sketch_fragments sf
+      where sf.sketch_id = s.id
+    )
+  group by sc.id, sc.name
+  order by count(s.id) desc, sc.name asc;
+end;
+$$;
 
 
 --
@@ -14119,6 +14326,92 @@ $$;
 
 
 --
+-- Name: nest_new_project_geography_draft_toc_under_folder(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.nest_new_project_geography_draft_toc_under_folder(p_project_id integer) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+declare
+  folder_stable text;
+  layer_rec record;
+  i integer := 0;
+begin
+  if session_is_admin(p_project_id) is not true then
+    raise exception 'Permission denied';
+  end if;
+
+  -- Draft overlay layers still at tree root (typical right after geography cloning).
+  if not exists (
+    select 1
+    from table_of_contents_items
+    where project_id = p_project_id
+      and is_draft = true
+      and is_folder = false
+      and parent_stable_id is null
+  ) then
+    return;
+  end if;
+
+  folder_stable := create_stable_id();
+
+  update table_of_contents_items
+  set sort_index = sort_index + 1
+  where project_id = p_project_id
+    and is_draft = true
+    and parent_stable_id is null;
+
+  insert into table_of_contents_items (
+    project_id,
+    stable_id,
+    parent_stable_id,
+    title,
+    is_folder,
+    is_draft,
+    show_radio_children,
+    is_click_off_only,
+    hide_children,
+    translated_props,
+    sort_index
+  ) values (
+    p_project_id,
+    folder_stable,
+    null,
+    'Geography layers',
+    true,
+    true,
+    false,
+    false,
+    false,
+    '{}'::jsonb,
+    0
+  );
+
+  for layer_rec in
+    select id
+    from table_of_contents_items
+    where project_id = p_project_id
+      and is_draft = true
+      and is_folder = false
+      and parent_stable_id is null
+    order by sort_index asc, id asc
+  loop
+    perform update_table_of_contents_item_position(layer_rec.id, folder_stable, i);
+    i := i + 1;
+  end loop;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION nest_new_project_geography_draft_toc_under_folder(p_project_id integer); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.nest_new_project_geography_draft_toc_under_folder(p_project_id integer) IS '@omit';
+
+
+--
 -- Name: offline_tile_packages_insert_trigger(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -14505,6 +14798,28 @@ CREATE FUNCTION public.preprocess_source(slug text, source_id integer) RETURNS p
       raise exception 'You are not authorized to preprocess this source';
     end if;
   end;
+$$;
+
+
+--
+-- Name: prevent_delete_data_layer_if_referenced_by_geography_clipping(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.prevent_delete_data_layer_if_referenced_by_geography_clipping() RETURNS trigger
+    LANGUAGE plpgsql
+    SET search_path TO 'public'
+    AS $$
+begin
+  if exists (
+    select 1
+    from public.geography_clipping_layers g
+    where g.data_layer_id = old.id
+  ) then
+    raise exception
+      'This layer is used by geography clipping. Remove it from project geography settings before deleting this layer.';
+  end if;
+  return old;
+end;
 $$;
 
 
@@ -15113,21 +15428,21 @@ CREATE FUNCTION public.projects_admin_count(p public.projects) RETURNS integer
 CREATE FUNCTION public.projects_admins(p public.projects) RETURNS SETOF public.users
     LANGUAGE sql STABLE
     AS $$
-    select 
-      users.* 
-    from 
-      project_participants
-    inner join
-      users
-    on
-      project_participants.user_id = users.id
-    where
-      project_participants.is_admin = true and
-      (
-        project_participants.approved = true or
-        exists(select 1 from projects where id = project_participants.project_id and projects.access_control = 'public')
-      )
-    ;
+  select
+    users.*
+  from
+    project_participants
+  inner join
+    users
+  on
+    project_participants.user_id = users.id
+  where
+    project_participants.is_admin = true and
+    (
+      project_participants.approved = true or
+      exists(select 1 from projects where id = project_participants.project_id and projects.access_control = 'public')
+    )
+  ;
   $$;
 
 
@@ -16182,36 +16497,32 @@ $$;
 CREATE FUNCTION public.projects_sketches_missing_fragments(project public.projects) RETURNS integer
     LANGUAGE plpgsql STABLE SECURITY DEFINER
     AS $$
-    declare
-      num_missing_fragments integer;
-    begin
-    if session_is_admin(project.id) then
-      if project.enable_report_builder then
-        with sketch_class_ids as (
-          select 
-            id 
-          from 
-            sketch_classes 
-          where 
-            project_id = project.id
-            and geometry_type = 'POLYGON'
-            and (
-              is_geography_clipping_enabled = true
-              or preview_new_reports = true
-            )
+declare
+  num_missing_fragments integer;
+begin
+  if session_is_admin(project.id) then
+    with sketch_class_ids as (
+      select id
+      from sketch_classes
+      where project_id = project.id
+        and geometry_type = 'POLYGON'
+        and (
+          is_geography_clipping_enabled = true
+          or preview_new_reports = true
         )
-        select count(*) into num_missing_fragments from sketches where sketch_class_id = any(select id from sketch_class_ids) and not exists (
-          select 1 from sketch_fragments where sketch_fragments.sketch_id = sketches.id
-        );
-        return num_missing_fragments;
-      else
-        return 0;
-      end if;
-    else
-      raise exception 'Must be a project admin to view missing fragments';
-    end if;
-    end;
-  $$;
+    )
+    select count(*) into num_missing_fragments
+    from sketches
+    where sketch_class_id = any (select id from sketch_class_ids)
+      and not exists (
+        select 1 from sketch_fragments where sketch_fragments.sketch_id = sketches.id
+      );
+    return num_missing_fragments;
+  else
+    raise exception 'Must be a project admin to view missing fragments';
+  end if;
+end;
+$$;
 
 
 --
@@ -16726,217 +17037,288 @@ Used by project administrators to access a list of public sprites promoted by th
 -- Name: publish_report(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.publish_report(sketch_class_id integer) RETURNS public.sketch_classes
+CREATE FUNCTION public.publish_report(report_id integer) RETURNS public.sketch_classes
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
-    declare
-      published_sketch_class sketch_classes;
-      new_report reports;
-      draft_report_id int;
-      project_id int;
-      new_report_id int;
-      new_tab_id int;
-      old_report_id int;
-      new_report_card_id int;
-      source_card report_cards;
-      published_toc_item_id int;
-      source_url text;
-      published_source_id int;
-      original_source_id int;
-      published_data_upload_output_id int;
-      original_card_ids integer[];
-      original_tab_ids integer[];
-      referenced_stable_ids text[];
-      missing_outputs integer[];
-      stable_ids_missing_outputs text[];
-      draft_data_source_urls text[];
-      published_data_source_urls text[];
-      sid text;
-    begin
-      -- Note that this function copies many columns by name, much like the 
-      -- data layers table of contents publishing function. Like it, we will
-      -- need to update this function regularly as columns are added or removed.
-      
-      -- Get the draft report id and project id
-      select sc.draft_report_id, sc.project_id 
-      from sketch_classes sc 
-      where sc.id = sketch_class_id 
-      into draft_report_id, project_id;
-      
-      -- Check authorization
-      -- if not session_is_admin(project_id) then
-      --   raise exception 'You are not authorized to publish this report';
-      -- end if;
-      
-      -- Check that there is an existing draft report
-      if draft_report_id is null then
-        raise exception 'No draft report exists for this sketch class';
-      end if;
-      
-      -- Get the current published report id (if any)
-      select sc.report_id from sketch_classes sc where sc.id = sketch_class_id into old_report_id;
-      
-      -- Create a new report by copying the draft report
-      insert into reports (project_id, sketch_class_id)
-      select reports.project_id, reports.sketch_class_id
-      from reports 
-      where id = draft_report_id
-      returning * into new_report;
-      
-      new_report_id := new_report.id;
+declare
+  draft_report_id int;
+  project_id int;
+begin
+  draft_report_id := report_id;
 
-      original_tab_ids := array(select id from report_tabs where report_id = draft_report_id);
-      original_card_ids := array(select id from report_cards where report_tab_id in (select id from report_tabs where report_id = draft_report_id));
+  select r.project_id
+  into project_id
+  from public.reports r
+  where r.id = draft_report_id;
 
-      referenced_stable_ids := get_referenced_stable_ids_for_report(draft_report_id);
+  if project_id is null then
+    raise exception 'Report not found';
+  end if;
+
+  if not session_is_admin(project_id) then
+    raise exception 'You are not authorized to publish this report';
+  end if;
+
+  return public.publish_report_snapshot(draft_report_id);
+end;
+$$;
 
 
-      -- make sure there's at least one referenced stable id
-      if array_length(referenced_stable_ids, 1) = 0 then
-        raise exception 'No stable ids found in the draft report';
-      end if;
+--
+-- Name: publish_report_snapshot(integer); Type: FUNCTION; Schema: public; Owner: -
+--
 
-      -- verify that all referenced stable ids have a published counterpart
-      if (select count(*) from table_of_contents_items where stable_id = any(referenced_stable_ids) and is_draft = false) < array_length(referenced_stable_ids, 1) then
-        raise exception 'This report references data layers that have not yet been published. Please publish the layer list first.';
-      end if;
+CREATE FUNCTION public.publish_report_snapshot(p_draft_report_id integer) RETURNS public.sketch_classes
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+declare
+  published_sketch_class public.sketch_classes;
+  new_report public.reports;
+  draft_report_id int;
+  project_id int;
+  draft_report_version int;
+  draft_lineage_parent_id int;
+  draft_sketch_class_id int;
+  new_report_id int;
+  old_tab_id int;
+  new_tab_id int;
+  referenced_stable_ids text[];
+  missing_outputs integer[];
+  stable_ids_missing_outputs text[];
+  draft_data_source_urls text[];
+  published_data_source_urls text[];
+  sid text;
+  max_lineage_version int;
+begin
+  draft_report_id := p_draft_report_id;
 
-      -- verify that all referenced data sources have matching urls
-      draft_data_source_urls := (select array_agg(url) from data_sources where id = any(select data_source_id from data_layers where id = any(select data_layer_id from table_of_contents_items where stable_id = any(referenced_stable_ids) and is_draft = true)));
-      published_data_source_urls := (select array_agg(url) from data_sources where url = any(draft_data_source_urls) and id = any(select data_source_id from data_layers where id = any(select data_layer_id from table_of_contents_items where stable_id = any(referenced_stable_ids) and is_draft = false)));
+  select
+    r.project_id,
+    r.version,
+    r.draft_id,
+    r.sketch_class_id
+  into
+    project_id,
+    draft_report_version,
+    draft_lineage_parent_id,
+    draft_sketch_class_id
+  from public.reports r
+  where r.id = draft_report_id;
 
-      if array_length(draft_data_source_urls, 1) != array_length(published_data_source_urls, 1) then
-        raise exception 'This report references updated versions of data sources which have not yet been published. Please publish the data sources first.';
-      end if;
+  if project_id is null then
+    raise exception 'Report not found';
+  end if;
 
-      -- verify all referenced table of contents items have been preprocessed
-      missing_outputs := verify_table_of_contents_items_have_report_outputs((select array_agg(id) from table_of_contents_items where stable_id = any(referenced_stable_ids) and is_draft = true));
-      if array_length(missing_outputs, 1) > 0 then
-        raise exception 'This report references table of contents items that have not yet been processed for reporting. Please review your report for errors and ensure all cards render correctly before publishing.';
-      end if;
+  if draft_report_version != 0 or draft_lineage_parent_id is not null then
+    raise exception 'Only draft reports can be published';
+  end if;
 
+  select coalesce(max(version), 0)
+  into max_lineage_version
+  from public.reports r
+  where r.id = draft_report_id or r.draft_id = draft_report_id;
 
-      -- copy missing report-ready data_upload_outputs, if necessary
-      stable_ids_missing_outputs := (
-        select 
-          array_agg(stable_id) 
-        from 
-          table_of_contents_items 
-        where 
-          stable_id = any(referenced_stable_ids) and 
-          is_draft = false and 
-          table_of_contents_items_reporting_output(table_of_contents_items.*) is null
-        );
-      if array_length(stable_ids_missing_outputs, 1) > 0 then
-        -- We already know these layers reference the same "version" based on the data_source_url checks above, so it's safe to just copy the appropriate data_upload_outputs to the published table of contents item counterparts.
-        foreach sid in array stable_ids_missing_outputs loop
-          insert into data_upload_outputs (
-            data_source_id,
-            project_id,
-            type,
-            url,
-            remote,
-            is_original,
-            size,
-            filename,
-            original_filename,
-            is_custom_upload,
-            fgb_header_size,
-            source_processing_job_key,
-            epsg,
-            num_features,
-            num_invalid_features,
-            num_repaired_features,
-            was_repaired,
-            contains_overlapping_features
-          ) select
-            (select data_source_id from data_layers where id = (select data_layer_id from table_of_contents_items where stable_id = sid and is_draft = false)),
-            data_upload_outputs.project_id,
-            type,
-            url,
-            remote,
-            is_original,
-            size,
-            filename,
-            original_filename,
-            is_custom_upload,
-            fgb_header_size,
-            source_processing_job_key,
-            epsg,
-            num_features,
-            num_invalid_features,
-            num_repaired_features,
-            was_repaired,
-            contains_overlapping_features
-          from data_upload_outputs where data_source_id = (select data_source_id from data_layers where id = (select data_layer_id from table_of_contents_items where stable_id = sid and is_draft = true)) and is_reporting_type(type) order by created_at desc limit 1;
-          raise notice 'Copied data_upload_output for stable id: %', sid;
-        end loop;
-      end if;
+  referenced_stable_ids := public.get_referenced_stable_ids_for_report(draft_report_id);
+  if array_length(referenced_stable_ids, 1) > 0 then
+    if (
+      select count(*) from public.table_of_contents_items
+      where stable_id = any(referenced_stable_ids) and is_draft = false
+    ) < array_length(referenced_stable_ids, 1) then
+      raise exception 'This report references data layers that have not yet been published. Please publish the layer list first.';
+    end if;
 
-      -- -- copy references to source_processing_job and data_upload_outputs to these published table of content item counterparts
-      -- for published_toc_counterpart_record in select * from jsonb_each(published_toc_counterparts) loop
-      --   perform copy_report_output_to_published_table_of_contents_item(published_toc_counterpart_record.key::integer, published_toc_counterpart_record.value::integer);
-      -- end loop;
-      
-      -- Copy all report tabs from draft to new report
-      for new_tab_id in 
-        select rt.id 
-        from report_tabs rt 
-        where rt.report_id = draft_report_id 
-        order by rt.position
-      loop
-        declare
-          new_tab_id_copy int;
-          old_tab_id int;
-        begin
-          old_tab_id := new_tab_id;
-          
-          -- Insert the tab and get the new tab id
-          insert into report_tabs (report_id, title, position, alternate_language_settings, updated_at)
-          select new_report_id, title, position, alternate_language_settings, updated_at
-          from report_tabs 
-          where id = old_tab_id
-          returning id into new_tab_id_copy;
-          
+    draft_data_source_urls := (
+      select array_agg(url)
+      from public.data_sources
+      where id = any(
+        select data_source_id
+        from public.data_layers
+        where id = any(
+          select data_layer_id
+          from public.table_of_contents_items
+          where stable_id = any(referenced_stable_ids)
+            and is_draft = true
+        )
+      )
+    );
 
-          -- Copy all cards for this tab
-          -- loop through all existing report_cards in the old tab, creating new
-          -- non-draft report_cards in the new tab
-          for source_card in
-            select * from report_cards 
-            where report_tab_id = old_tab_id
-            order by position
-          loop
-            insert into report_cards (report_tab_id, body, position, alternate_language_settings, component_settings, updated_at, is_draft)
-            values (
-              new_tab_id_copy,
-              source_card.body, 
-              source_card.position, 
-              source_card.alternate_language_settings, 
-              source_card.component_settings, 
-              source_card.updated_at,
-              false
-            ) returning id into new_report_card_id;
+    published_data_source_urls := (
+      select array_agg(url)
+      from public.data_sources
+      where url = any(draft_data_source_urls)
+        and id = any(
+          select data_source_id
+          from public.data_layers
+          where id = any(
+            select data_layer_id
+            from public.table_of_contents_items
+            where stable_id = any(referenced_stable_ids)
+              and is_draft = false
+          )
+        )
+    );
 
-          end loop;
-        end;
+    if array_length(draft_data_source_urls, 1) != array_length(published_data_source_urls, 1) then
+      raise exception 'This report references updated versions of data sources which have not yet been published. Please publish the data sources first.';
+    end if;
+
+    missing_outputs := public.verify_table_of_contents_items_have_report_outputs(
+      (
+        select array_agg(id)
+        from public.table_of_contents_items
+        where stable_id = any(referenced_stable_ids) and is_draft = true
+      )
+    );
+    if array_length(missing_outputs, 1) > 0 then
+      raise exception 'This report references table of contents items that have not yet been processed for reporting. Please review your report for errors and ensure all cards render correctly before publishing.';
+    end if;
+
+    stable_ids_missing_outputs := (
+      select array_agg(stable_id)
+      from public.table_of_contents_items
+      where stable_id = any(referenced_stable_ids)
+        and is_draft = false
+        and public.table_of_contents_items_reporting_output(public.table_of_contents_items.*) is null
+    );
+
+    if array_length(stable_ids_missing_outputs, 1) > 0 then
+      foreach sid in array stable_ids_missing_outputs loop
+        insert into public.data_upload_outputs (
+          data_source_id,
+          project_id,
+          type,
+          url,
+          remote,
+          is_original,
+          size,
+          filename,
+          original_filename,
+          is_custom_upload,
+          fgb_header_size,
+          source_processing_job_key,
+          epsg,
+          num_features,
+          num_invalid_features,
+          num_repaired_features,
+          was_repaired,
+          contains_overlapping_features
+        ) select
+          (
+            select data_source_id
+            from public.data_layers
+            where id = (
+              select data_layer_id
+              from public.table_of_contents_items
+              where stable_id = sid and is_draft = false
+            )
+          ),
+          d.project_id,
+          d.type,
+          d.url,
+          d.remote,
+          d.is_original,
+          d.size,
+          d.filename,
+          d.original_filename,
+          d.is_custom_upload,
+          d.fgb_header_size,
+          d.source_processing_job_key,
+          d.epsg,
+          d.num_features,
+          d.num_invalid_features,
+          d.num_repaired_features,
+          d.was_repaired,
+          d.contains_overlapping_features
+        from public.data_upload_outputs d
+        where d.data_source_id = (
+            select data_source_id
+            from public.data_layers
+            where id = (
+              select data_layer_id
+              from public.table_of_contents_items
+              where stable_id = sid and is_draft = true
+            )
+          )
+          and public.is_reporting_type(d.type)
+        order by d.created_at desc
+        limit 1;
       end loop;
-      
-      -- Delete the current published report if it exists
-      if old_report_id is not null then
-        delete from reports where id = old_report_id;
-      end if;
-      
-      -- Update sketch_class to point to the new published report
-      update sketch_classes 
-      set report_id = new_report_id 
-      where id = sketch_class_id;
-      
-      -- Return the updated sketch class
-      select * from sketch_classes where id = sketch_class_id into published_sketch_class;
-      return published_sketch_class;
-    end;
-  $$;
+    end if;
+  end if;
+
+  insert into public.reports (
+    project_id,
+    sketch_class_id,
+    title,
+    version,
+    draft_id,
+    published_at
+  )
+  select
+    r.project_id,
+    coalesce(r.sketch_class_id, draft_sketch_class_id),
+    coalesce(r.title, 'Untitled Report'),
+    max_lineage_version + 1,
+    draft_report_id,
+    now()
+  from public.reports r
+  where r.id = draft_report_id
+  returning * into new_report;
+
+  new_report_id := new_report.id;
+
+  -- Copy report tabs + cards preserving positions and language settings.
+  for old_tab_id in
+    select rt.id
+    from public.report_tabs rt
+    where rt.report_id = draft_report_id
+    order by rt.position
+  loop
+    insert into public.report_tabs (
+      report_id,
+      title,
+      position,
+      alternate_language_settings,
+      updated_at
+    )
+    select
+      new_report_id,
+      rt.title,
+      rt.position,
+      rt.alternate_language_settings,
+      rt.updated_at
+    from public.report_tabs rt
+    where rt.id = old_tab_id
+    returning id into new_tab_id;
+
+    insert into public.report_cards (
+      report_tab_id,
+      body,
+      position,
+      alternate_language_settings,
+      component_settings,
+      updated_at,
+      is_draft
+    )
+    select
+      new_tab_id,
+      rc.body,
+      rc.position,
+      rc.alternate_language_settings,
+      rc.component_settings,
+      rc.updated_at,
+      false
+    from public.report_cards rc
+    where rc.report_tab_id = old_tab_id
+    order by rc.position;
+  end loop;
+
+  select * into published_sketch_class
+  from public.sketch_classes
+  where id = draft_sketch_class_id;
+  return published_sketch_class;
+end;
+$$;
 
 
 --
@@ -18436,6 +18818,54 @@ CREATE FUNCTION public.reprocess_legacy_data_source(table_of_contents_item_id in
     return job;
   end;
   $$;
+
+
+--
+-- Name: resolvable_layer_comment_set_audit_fields(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.resolvable_layer_comment_set_audit_fields() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_uid int;
+begin
+  v_uid := nullif(current_setting('session.user_id', true), '')::int;
+  if v_uid is null then
+    raise exception 'Authentication required';
+  end if;
+
+  if tg_op = 'INSERT' then
+    if not session_is_admin(new.project_id) then
+      raise exception 'Admin privileges required';
+    end if;
+    new.author_id := v_uid;
+  elsif tg_op = 'UPDATE' then
+    if not session_is_admin(new.project_id) then
+      raise exception 'Admin privileges required';
+    end if;
+    if new.project_id is distinct from old.project_id
+       or new.table_of_contents_item_id is distinct from old.table_of_contents_item_id
+       or new.parent_comment_id is distinct from old.parent_comment_id
+       or new.author_id is distinct from old.author_id
+    then
+      raise exception 'Cannot reassign comment metadata';
+    end if;
+    if new.comment is distinct from old.comment and v_uid is distinct from old.author_id then
+      raise exception 'Only the author may edit comment text';
+    end if;
+    if old.resolved_at is null and new.resolved_at is not null then
+      new.resolved_by_id := v_uid;
+    elsif new.resolved_at is null then
+      new.resolved_by_id := null;
+    end if;
+  end if;
+
+  new.updated_at := now();
+  return new;
+end;
+$$;
 
 
 --
@@ -20197,6 +20627,87 @@ Admins can use this function to hide the contents of a message. Message will sti
 
 
 --
+-- Name: set_primary_report_for_sketch_class(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.set_primary_report_for_sketch_class(sketch_class_id integer, draft_report_id integer) RETURNS public.sketch_classes
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+declare
+  project_id int;
+  report_project_id int;
+  report_version int;
+  selected public.sketch_classes;
+begin
+  select sc.project_id
+  into project_id
+  from public.sketch_classes sc
+  where sc.id = set_primary_report_for_sketch_class.sketch_class_id;
+
+  if project_id is null then
+    raise exception 'Sketch class not found';
+  end if;
+
+  if not session_is_admin(project_id) then
+    raise exception 'You are not authorized to change report assignments for this sketch class';
+  end if;
+
+  select r.project_id, r.version
+  into report_project_id, report_version
+  from public.reports r
+  where r.id = set_primary_report_for_sketch_class.draft_report_id;
+
+  if report_project_id is null then
+    raise exception 'Report not found';
+  end if;
+
+  if report_project_id != project_id then
+    raise exception 'Report must belong to the same project as the sketch class';
+  end if;
+
+  if report_version != 0 then
+    raise exception 'Assertion failed: Only draft reports can be assigned to a sketch class.';
+  end if;
+
+  -- clear any existing primary assignment (qualify columns — params share names with columns)
+  delete from public.sketch_class_reports scr
+  where scr.sketch_class_id = set_primary_report_for_sketch_class.sketch_class_id
+    and scr.is_primary = true;
+
+  insert into public.sketch_class_reports (
+    sketch_class_id,
+    draft_report_id,
+    is_primary
+  ) values (
+    set_primary_report_for_sketch_class.sketch_class_id,
+    set_primary_report_for_sketch_class.draft_report_id,
+    true
+  );
+
+  select *
+  into selected
+  from public.sketch_classes sc
+  where sc.id = set_primary_report_for_sketch_class.sketch_class_id;
+  return selected;
+end;
+$$;
+
+
+--
+-- Name: set_project_region_bounds(integer, double precision, double precision, double precision, double precision); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.set_project_region_bounds(p_project_id integer, p_minx double precision, p_miny double precision, p_maxx double precision, p_maxy double precision) RETURNS void
+    LANGUAGE sql SECURITY DEFINER
+    SET search_path TO 'public'
+    AS $$
+  update public.projects
+  set region = st_setsrid(st_makeenvelope(p_minx, p_miny, p_maxx, p_maxy), 4326)
+  where id = p_project_id;
+$$;
+
+
+--
 -- Name: set_survey_response_last_updated_by(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -20407,10 +20918,13 @@ COMMENT ON FUNCTION public.sketch_classes_can_digitize(sketch_class public.sketc
 --
 
 CREATE FUNCTION public.sketch_classes_draft_report(sc public.sketch_classes) RETURNS public.reports
-    LANGUAGE sql STABLE SECURITY DEFINER
+    LANGUAGE sql STABLE
     AS $$
-    select * from reports where id = sc.draft_report_id limit 1;
-  $$;
+  select *
+  from public.reports r
+  where r.id = public.get_primary_draft_report_id_for_sketch_class(sc.id)
+  limit 1;
+$$;
 
 
 --
@@ -20461,10 +20975,15 @@ CREATE FUNCTION public.sketch_classes_prohibit_delete() RETURNS trigger
 --
 
 CREATE FUNCTION public.sketch_classes_report(sc public.sketch_classes) RETURNS public.reports
-    LANGUAGE sql STABLE SECURITY DEFINER
+    LANGUAGE sql STABLE
     AS $$
-    select * from reports where id = sc.report_id limit 1;
-  $$;
+  select *
+  from public.reports r
+  where r.id = public.get_latest_published_report_for_draft(
+    public.get_primary_draft_report_id_for_sketch_class(sc.id)
+  )
+  limit 1;
+$$;
 
 
 --
@@ -20492,12 +21011,10 @@ COMMENT ON FUNCTION public.sketch_classes_sketch_count(sketch_class public.sketc
 CREATE FUNCTION public.sketch_classes_use_geography_clipping(sketch_class public.sketch_classes) RETURNS boolean
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-    select sketch_class.is_geography_clipping_enabled and (
-      select enable_report_builder from projects where id = sketch_class.project_id
-    ) and (
-      select count(*) > 0 from sketch_class_geographies where sketch_class_id = sketch_class.id
-    );
-  $$;
+  select sketch_class.is_geography_clipping_enabled and (
+    select count(*) > 0 from sketch_class_geographies where sketch_class_id = sketch_class.id
+  );
+$$;
 
 
 --
@@ -23402,6 +23919,85 @@ COMMENT ON FUNCTION public.trg_changelog_table_of_contents_items_title() IS 'Rec
 
 
 --
+-- Name: trg_resolvable_layer_comment_changelog(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trg_resolvable_layer_comment_changelog() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_editor int;
+  v_fg     text;
+begin
+  v_editor := nullif(current_setting('session.user_id', true), '')::int;
+  if v_editor is null then
+    if tg_op = 'DELETE' then
+      return old;
+    end if;
+    return new;
+  end if;
+
+  if tg_op = 'INSERT' then
+    if new.parent_comment_id is null then
+      v_fg := 'resolvable_layer_comments:created';
+    else
+      v_fg := 'resolvable_layer_comments:responded';
+    end if;
+
+    perform record_changelog(
+      new.project_id,
+      v_editor,
+      'table_of_contents_items',
+      new.table_of_contents_item_id,
+      v_fg::change_log_field_group,
+      '{}'::jsonb,
+      '{}'::jsonb,
+      null,
+      null,
+      jsonb_build_object('comment_id', new.id)
+    );
+    return new;
+
+  elsif tg_op = 'UPDATE' then
+    if old.resolved_at is null and new.resolved_at is not null then
+      v_fg := 'resolvable_layer_comments:resolved';
+      perform record_changelog(
+        new.project_id,
+        v_editor,
+        'table_of_contents_items',
+        new.table_of_contents_item_id,
+        v_fg::change_log_field_group,
+        '{}'::jsonb,
+        '{}'::jsonb,
+        null,
+        null,
+        jsonb_build_object('comment_id', new.id)
+      );
+    elsif old.resolved_at is not null and new.resolved_at is null then
+      v_fg := 'resolvable_layer_comments:reopened';
+      perform record_changelog(
+        new.project_id,
+        v_editor,
+        'table_of_contents_items',
+        new.table_of_contents_item_id,
+        v_fg::change_log_field_group,
+        '{}'::jsonb,
+        '{}'::jsonb,
+        null,
+        null,
+        jsonb_build_object('comment_id', new.id)
+      );
+    end if;
+    return new;
+  end if;
+
+  return null;
+end;
+$$;
+
+
+--
 -- Name: trigger_geography_metric_subscription(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -26143,6 +26739,19 @@ COMMENT ON TABLE public.sketch_class_geographies IS '@omit';
 
 
 --
+-- Name: sketch_class_reports; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.sketch_class_reports (
+    sketch_class_id integer NOT NULL,
+    draft_report_id integer NOT NULL,
+    is_primary boolean DEFAULT true NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL
+);
+
+
+--
 -- Name: sketch_classes_id_seq; Type: SEQUENCE; Schema: public; Owner: -
 --
 
@@ -27130,6 +27739,14 @@ ALTER TABLE ONLY public.sketch_class_geographies
 
 
 --
+-- Name: sketch_class_reports sketch_class_reports_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sketch_class_reports
+    ADD CONSTRAINT sketch_class_reports_pkey PRIMARY KEY (sketch_class_id, draft_report_id);
+
+
+--
 -- Name: sketch_classes sketch_classes_form_element_id_key; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -28030,6 +28647,20 @@ CREATE INDEX report_tabs_report_id_idx ON public.report_tabs USING btree (report
 
 
 --
+-- Name: reports_draft_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX reports_draft_id_idx ON public.reports USING btree (draft_id);
+
+
+--
+-- Name: reports_draft_id_version_unique; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX reports_draft_id_version_unique ON public.reports USING btree (draft_id, version) WHERE (draft_id IS NOT NULL);
+
+
+--
 -- Name: reports_sketch_class_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -28048,6 +28679,20 @@ CREATE INDEX sketch_class_geographies_geography_id_idx ON public.sketch_class_ge
 --
 
 CREATE INDEX sketch_class_geographies_sketch_class_id_idx ON public.sketch_class_geographies USING btree (sketch_class_id);
+
+
+--
+-- Name: sketch_class_reports_draft_report_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX sketch_class_reports_draft_report_id_idx ON public.sketch_class_reports USING btree (draft_report_id);
+
+
+--
+-- Name: sketch_class_reports_one_primary_per_class; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX sketch_class_reports_one_primary_per_class ON public.sketch_class_reports USING btree (sketch_class_id) WHERE (is_primary = true);
 
 
 --
@@ -28937,6 +29582,13 @@ CREATE TRIGGER trg_changelog_table_of_contents_items_parent_changed AFTER UPDATE
 --
 
 CREATE TRIGGER trg_changelog_table_of_contents_items_title AFTER UPDATE OF title ON public.table_of_contents_items FOR EACH ROW EXECUTE FUNCTION public.trg_changelog_table_of_contents_items_title();
+
+
+--
+-- Name: data_layers trg_prevent_delete_data_layer_geography_clipping; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER trg_prevent_delete_data_layer_geography_clipping BEFORE DELETE ON public.data_layers FOR EACH ROW EXECUTE FUNCTION public.prevent_delete_data_layer_if_referenced_by_geography_clipping();
 
 
 --
@@ -29900,6 +30552,14 @@ ALTER TABLE ONLY public.report_tabs
 
 
 --
+-- Name: reports reports_draft_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.reports
+    ADD CONSTRAINT reports_draft_id_fkey FOREIGN KEY (draft_id) REFERENCES public.reports(id) ON DELETE CASCADE;
+
+
+--
 -- Name: reports reports_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -29929,6 +30589,22 @@ ALTER TABLE ONLY public.sketch_class_geographies
 
 ALTER TABLE ONLY public.sketch_class_geographies
     ADD CONSTRAINT sketch_class_geographies_sketch_class_id_fkey FOREIGN KEY (sketch_class_id) REFERENCES public.sketch_classes(id) ON DELETE CASCADE;
+
+
+--
+-- Name: sketch_class_reports sketch_class_reports_draft_report_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sketch_class_reports
+    ADD CONSTRAINT sketch_class_reports_draft_report_id_fkey FOREIGN KEY (draft_report_id) REFERENCES public.reports(id) ON DELETE CASCADE;
+
+
+--
+-- Name: sketch_class_reports sketch_class_reports_sketch_class_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sketch_class_reports
+    ADD CONSTRAINT sketch_class_reports_sketch_class_id_fkey FOREIGN KEY (sketch_class_id) REFERENCES public.sketch_classes(id) ON DELETE CASCADE;
 
 
 --
@@ -32808,13 +33484,6 @@ GRANT UPDATE(custom_doc_link) ON TABLE public.projects TO seasketch_user;
 
 
 --
--- Name: COLUMN projects.enable_report_builder; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(enable_report_builder) ON TABLE public.projects TO seasketch_user;
-
-
---
 -- Name: COLUMN projects.show_scalebar_by_default; Type: ACL; Schema: public; Owner: -
 --
 
@@ -32833,13 +33502,6 @@ GRANT UPDATE(show_legend_by_default) ON TABLE public.projects TO seasketch_user;
 --
 
 GRANT SELECT(feature_flags) ON TABLE public.projects TO anon;
-
-
---
--- Name: COLUMN projects.enable_collection_new_reports; Type: ACL; Schema: public; Owner: -
---
-
-GRANT UPDATE(enable_collection_new_reports) ON TABLE public.projects TO seasketch_user;
 
 
 --
@@ -34555,6 +35217,23 @@ GRANT ALL ON FUNCTION public.create_consent_document(fid integer, version intege
 
 
 --
+-- Name: TABLE reports; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.reports TO anon;
+GRANT ALL ON TABLE public.reports TO seasketch_user;
+
+
+--
+-- Name: FUNCTION create_custom_report(project_id integer, title text, sketch_class_ids integer[]); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_custom_report(project_id integer, title text, sketch_class_ids integer[]) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_custom_report(project_id integer, title text, sketch_class_ids integer[]) TO seasketch_user;
+GRANT ALL ON FUNCTION public.create_custom_report(project_id integer, title text, sketch_class_ids integer[]) TO seasketch_superuser;
+
+
+--
 -- Name: TABLE data_upload_tasks; Type: ACL; Schema: public; Owner: -
 --
 
@@ -34598,19 +35277,10 @@ GRANT ALL ON FUNCTION public.create_data_upload(filename text, project_id intege
 
 
 --
--- Name: TABLE reports; Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION create_default_report(p_project_id integer); Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT ON TABLE public.reports TO anon;
-GRANT ALL ON TABLE public.reports TO seasketch_user;
-
-
---
--- Name: FUNCTION create_draft_report(sketch_class_id integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.create_draft_report(sketch_class_id integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_draft_report(sketch_class_id integer) TO seasketch_user;
+REVOKE ALL ON FUNCTION public.create_default_report(p_project_id integer) FROM PUBLIC;
 
 
 --
@@ -35657,6 +36327,14 @@ REVOKE ALL ON FUNCTION public.enforce_api_key_limit() FROM PUBLIC;
 --
 
 REVOKE ALL ON FUNCTION public.enforce_api_keys_admin_required() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION enforce_resolvable_layer_comment_parent(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.enforce_resolvable_layer_comment_parent() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.enforce_resolvable_layer_comment_parent() TO seasketch_user;
 
 
 --
@@ -36828,6 +37506,15 @@ REVOKE ALL ON FUNCTION public.get_job_details(key text) FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION get_latest_published_report_for_draft(draft_report_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_latest_published_report_for_draft(draft_report_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_latest_published_report_for_draft(draft_report_id integer) TO seasketch_user;
+GRANT ALL ON FUNCTION public.get_latest_published_report_for_draft(draft_report_id integer) TO seasketch_superuser;
+
+
+--
 -- Name: FUNCTION get_metrics_for_geography(geography_id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -36881,6 +37568,15 @@ GRANT ALL ON FUNCTION public.get_parent_collection_id(sketch public.sketches) TO
 
 REVOKE ALL ON FUNCTION public.get_parent_collection_id(type public.sketch_child_type, parent_id integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.get_parent_collection_id(type public.sketch_child_type, parent_id integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION get_primary_draft_report_id_for_sketch_class(sketch_class_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_primary_draft_report_id_for_sketch_class(sketch_class_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_primary_draft_report_id_for_sketch_class(sketch_class_id integer) TO seasketch_user;
+GRANT ALL ON FUNCTION public.get_primary_draft_report_id_for_sketch_class(sketch_class_id integer) TO seasketch_superuser;
 
 
 --
@@ -37715,6 +38411,14 @@ REVOKE ALL ON FUNCTION public.nanoid_optimized(size integer, alphabet text, mask
 
 
 --
+-- Name: FUNCTION nest_new_project_geography_draft_toc_under_folder(p_project_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.nest_new_project_geography_draft_toc_under_folder(p_project_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.nest_new_project_geography_draft_toc_under_folder(p_project_id integer) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION nlevel(public.ltree); Type: ACL; Schema: public; Owner: -
 --
 
@@ -38457,6 +39161,13 @@ GRANT ALL ON FUNCTION public.preprocess_source(slug text, source_id integer) TO 
 
 
 --
+-- Name: FUNCTION prevent_delete_data_layer_if_referenced_by_geography_clipping(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.prevent_delete_data_layer_if_referenced_by_geography_clipping() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION prevent_eez_clipping_without_selections(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -38996,11 +39707,19 @@ GRANT ALL ON FUNCTION public.public_sprites() TO seasketch_user;
 
 
 --
--- Name: FUNCTION publish_report(sketch_class_id integer); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION publish_report(report_id integer); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.publish_report(sketch_class_id integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.publish_report(sketch_class_id integer) TO seasketch_user;
+REVOKE ALL ON FUNCTION public.publish_report(report_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.publish_report(report_id integer) TO seasketch_user;
+GRANT ALL ON FUNCTION public.publish_report(report_id integer) TO seasketch_superuser;
+
+
+--
+-- Name: FUNCTION publish_report_snapshot(p_draft_report_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.publish_report_snapshot(p_draft_report_id integer) FROM PUBLIC;
 
 
 --
@@ -39287,6 +40006,14 @@ GRANT ALL ON FUNCTION public.reprocess_all_legacy_data_sources(project_id intege
 
 REVOKE ALL ON FUNCTION public.reprocess_legacy_data_source(table_of_contents_item_id integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.reprocess_legacy_data_source(table_of_contents_item_id integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION resolvable_layer_comment_set_audit_fields(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.resolvable_layer_comment_set_audit_fields() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.resolvable_layer_comment_set_audit_fields() TO seasketch_user;
 
 
 --
@@ -39614,6 +40341,22 @@ GRANT ALL ON FUNCTION public.set_post_hidden_by_moderator("postId" integer, valu
 
 
 --
+-- Name: FUNCTION set_primary_report_for_sketch_class(sketch_class_id integer, draft_report_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.set_primary_report_for_sketch_class(sketch_class_id integer, draft_report_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.set_primary_report_for_sketch_class(sketch_class_id integer, draft_report_id integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION set_project_region_bounds(p_project_id integer, p_minx double precision, p_miny double precision, p_maxx double precision, p_maxy double precision); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.set_project_region_bounds(p_project_id integer, p_minx double precision, p_miny double precision, p_maxx double precision, p_maxy double precision) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.set_project_region_bounds(p_project_id integer, p_minx double precision, p_miny double precision, p_maxx double precision, p_maxy double precision) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION set_survey_response_last_updated_by(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -39682,6 +40425,8 @@ GRANT ALL ON FUNCTION public.sketch_classes_can_digitize(sketch_class public.ske
 
 REVOKE ALL ON FUNCTION public.sketch_classes_draft_report(sc public.sketch_classes) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.sketch_classes_draft_report(sc public.sketch_classes) TO anon;
+GRANT ALL ON FUNCTION public.sketch_classes_draft_report(sc public.sketch_classes) TO seasketch_user;
+GRANT ALL ON FUNCTION public.sketch_classes_draft_report(sc public.sketch_classes) TO seasketch_superuser;
 
 
 --
@@ -39705,6 +40450,8 @@ REVOKE ALL ON FUNCTION public.sketch_classes_prohibit_delete() FROM PUBLIC;
 
 REVOKE ALL ON FUNCTION public.sketch_classes_report(sc public.sketch_classes) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.sketch_classes_report(sc public.sketch_classes) TO anon;
+GRANT ALL ON FUNCTION public.sketch_classes_report(sc public.sketch_classes) TO seasketch_user;
+GRANT ALL ON FUNCTION public.sketch_classes_report(sc public.sketch_classes) TO seasketch_superuser;
 
 
 --
@@ -43358,6 +44105,14 @@ REVOKE ALL ON FUNCTION public.trg_changelog_table_of_contents_items_parent_chang
 --
 
 REVOKE ALL ON FUNCTION public.trg_changelog_table_of_contents_items_title() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION trg_resolvable_layer_comment_changelog(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.trg_resolvable_layer_comment_changelog() FROM PUBLIC;
+GRANT ALL ON FUNCTION public.trg_resolvable_layer_comment_changelog() TO seasketch_user;
 
 
 --
