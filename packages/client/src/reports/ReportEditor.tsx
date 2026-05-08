@@ -76,7 +76,7 @@ function scrollContainerToBottom(
   scrollContainer.scrollTo({ top, behavior });
 }
 
-/** Prefer the cards pane when it scrolls; otherwise the padded workspace (natural-height layout). */
+/** Prefer the cards pane when it scrolls; otherwise the padded workspace (short-content fallback). */
 function scrollReportWorkspaceToBottom(
   cardsScrollEl: HTMLElement | null,
   workspaceScrollEl: HTMLElement | null,
@@ -526,6 +526,11 @@ export default function ReportEditor({
     reportAssignmentsQuery.data?.projectBySlug?.sketchClasses || []
   )
     .filter((sc: any): sc is NonNullable<typeof sc> => Boolean(sc))
+    .filter(
+      (sc) =>
+        !sc.isArchived &&
+        sc.formElementId == null
+    )
     .sort((a: any, b: any) => a.name.localeCompare(b.name));
 
   const editMenuDisabled = editing != null;
@@ -741,9 +746,9 @@ export default function ReportEditor({
         </header>
         <div
           ref={workspaceScrollAreaRef}
-          className="flex flex-col flex-1 min-h-0 overflow-y-auto p-8 items-start"
+          className="flex flex-col flex-1 min-h-0 min-w-0 overflow-hidden p-8 items-center"
         >
-          <div className="w-128 mx-auto flex flex-col shrink-0 rounded-lg shadow-xl border border-t-black/5 border-l-black/10 border-r-black/15 border-b-black/20 z-10 bg-gray-100 overflow-hidden">
+          <div className="w-128 max-w-full flex flex-col flex-1 min-h-0 rounded-lg shadow-xl border border-t-black/5 border-l-black/10 border-r-black/15 border-b-black/20 z-10 bg-gray-100 overflow-hidden">
             {/* report header */}
             <div className="p-4 border-b flex items-center bg-white gap-2 rounded-t-lg">
               <h1 className="flex-1 truncate text-lg">
@@ -773,7 +778,7 @@ export default function ReportEditor({
             {/* report cards */}
             <div
               ref={cardsScrollAreaRef}
-              className="relative min-h-0 overflow-y-auto overscroll-none"
+              className="relative flex-1 min-h-0 overflow-x-hidden overflow-y-auto overscroll-contain bg-gray-100"
             >
               {(report.tabs || []).map((tab) => {
                 const selected = selectedTabId ?? report.tabs?.[0]?.id;
