@@ -20,7 +20,7 @@ const ComputedMetadataPlugin = makeExtendSchemaPlugin((build) => {
       TableOfContentsItem: {
         computedMetadata: async ({ id }, args, context, info) => {
           const r = await context.pgClient.query(
-            `select id, metadata, data_layer_id from table_of_contents_items where id = $1`,
+            `select id, metadata, data_layer_id, stable_id, is_draft from table_of_contents_items where id = $1`,
             [id]
           );
           if (r.rows.length === 0) {
@@ -30,7 +30,29 @@ const ComputedMetadataPlugin = makeExtendSchemaPlugin((build) => {
           item.dataLayerId = item.data_layer_id;
           if (item.metadata) {
             return item.metadata;
-          } else if (item.dataLayerId) {
+          }
+          // When a published item has no metadata, fall back to the draft
+          // counterpart's metadata. Admins add metadata to draft items, and
+          // public users query published items (due to RLS). Without this
+          // fallback, metadata added after the last TOC publish is invisible
+          // on the public side even though it's visible in the admin.
+          // adminPool is used here (as it already is for the arcgis source
+          // lookup below) because metadata is non-sensitive editorial content
+          // that admins intend to expose publicly.
+          if (!item.is_draft && item.stable_id) {
+            const draftResult = await context.adminPool.query(
+              `select metadata from table_of_contents_items
+               where stable_id = $1 and is_draft = true limit 1`,
+              [item.stable_id]
+            );
+            if (
+              draftResult.rows.length > 0 &&
+              draftResult.rows[0].metadata
+            ) {
+              return draftResult.rows[0].metadata;
+            }
+          }
+          if (item.dataLayerId) {
             const q = await context.pgClient.query(
               `select data_source_id, sublayer from data_layers where id = $1`,
               [item.dataLayerId]
