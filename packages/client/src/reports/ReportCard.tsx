@@ -246,6 +246,9 @@ export default function ReportCard(
     subjectSketchClass?.project?.sessionIsAdmin || false;
   const showAdminCalculationDetails = adminMode || sessionIsAdmin;
   const cardDependencies = useCardDependencies(props.config.id);
+  /** Subject sketch/class query is separate from dependency metrics; gate loading until both settle. */
+  const cardDependenciesLoading =
+    cardDependencies.loading || subjectReportContext.loading;
 
   const cardDocumentTitle = useMemo(() => {
     const sketchName = subjectReportContext.data?.sketch?.name;
@@ -288,7 +291,7 @@ export default function ReportCard(
 
   const onDownloadResults = useCallback(
     async (format: "csv" | "json") => {
-      if (cardDependencies.loading) return;
+      if (cardDependenciesLoading) return;
       if (!subjectReportContext.data) return;
 
       const subject = subjectReportContext.data;
@@ -351,7 +354,7 @@ export default function ReportCard(
     [
       baseReportContext.geographies,
       baseReportContext.report.id,
-      cardDependencies.loading,
+      cardDependenciesLoading,
       cardDependencies.metrics,
       cardDependencies.overlaySources,
       props.config.body,
@@ -363,18 +366,18 @@ export default function ReportCard(
   const toolbarContextValue = useMemo(() => {
     return {
       ...toolbarContext,
-      loading: toolbarContext.loading || cardDependencies.loading,
+      loading: toolbarContext.loading || cardDependenciesLoading,
       onDownloadResults,
       onPrint,
     };
-  }, [toolbarContext, cardDependencies.loading, onDownloadResults, onPrint]);
+  }, [toolbarContext, cardDependenciesLoading, onDownloadResults, onPrint]);
 
   return (
     <CardDependenciesContext.Provider
       value={{
         metrics: cardDependencies.metrics,
         sources: cardDependencies.overlaySources,
-        loading: cardDependencies.loading,
+        loading: cardDependenciesLoading,
         geographies: baseReportContext.geographies,
         sketchClass: subjectSketchClass ?? null,
         errors: cardDependencies.errors,
@@ -388,7 +391,7 @@ export default function ReportCard(
           adminMode={adminMode}
           metrics={cardDependencies.metrics}
           sources={cardDependencies.overlaySources}
-          loading={cardDependencies.loading}
+          loading={cardDependenciesLoading}
           errors={cardDependencies.errors}
         />
         {cardPrintPrep && (
@@ -405,7 +408,7 @@ export default function ReportCard(
                   adminMode={adminMode}
                   metrics={cardDependencies.metrics}
                   sources={cardDependencies.overlaySources}
-                  loading={cardDependencies.loading}
+                  loading={cardDependenciesLoading}
                   errors={cardDependencies.errors}
                 />
               </div>
