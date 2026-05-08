@@ -970,7 +970,11 @@ export enum ChangeLogFieldGroup {
   LayerTitle = 'LAYER_TITLE',
   LayerUploaded = 'LAYER_UPLOADED',
   LayersPublished = 'LAYERS_PUBLISHED',
-  LayersZOrderChange = 'LAYERS_Z_ORDER_CHANGE'
+  LayersZOrderChange = 'LAYERS_Z_ORDER_CHANGE',
+  ResolvableLayerCommentsCreated = 'RESOLVABLE_LAYER_COMMENTS_CREATED',
+  ResolvableLayerCommentsReopened = 'RESOLVABLE_LAYER_COMMENTS_REOPENED',
+  ResolvableLayerCommentsResolved = 'RESOLVABLE_LAYER_COMMENTS_RESOLVED',
+  ResolvableLayerCommentsResponded = 'RESOLVABLE_LAYER_COMMENTS_RESPONDED'
 }
 
 export enum ChangeLogStatus {
@@ -1040,41 +1044,6 @@ export type ClearFormElementStylePayload = {
 /** The output of our `clearFormElementStyle` mutation. */
 export type ClearFormElementStylePayloadFormElementEdgeArgs = {
   orderBy?: Maybe<Array<FormElementsOrderBy>>;
-};
-
-/** All input for the `clearPrimaryReportForSketchClass` mutation. */
-export type ClearPrimaryReportForSketchClassInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  sketchClassId?: Maybe<Scalars['Int']>;
-};
-
-/** The output of our `clearPrimaryReportForSketchClass` mutation. */
-export type ClearPrimaryReportForSketchClassPayload = {
-  __typename?: 'ClearPrimaryReportForSketchClassPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** Reads a single `FormElement` that is related to this `SketchClass`. */
-  formElement?: Maybe<FormElement>;
-  /** Reads a single `Project` that is related to this `SketchClass`. */
-  project?: Maybe<Project>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-  sketchClass?: Maybe<SketchClass>;
-  /** An edge for our `SketchClass`. May be used by Relay 1. */
-  sketchClassEdge?: Maybe<SketchClassesEdge>;
-};
-
-
-/** The output of our `clearPrimaryReportForSketchClass` mutation. */
-export type ClearPrimaryReportForSketchClassPayloadSketchClassEdgeArgs = {
-  orderBy?: Maybe<Array<SketchClassesOrderBy>>;
 };
 
 export type ClippingLayerInput = {
@@ -2053,6 +2022,65 @@ export type CreateOptionalBasemapLayerPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the create `OriginalSourceId` mutation. */
+export type CreateOriginalSourceIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `OriginalSourceId` to be created by this mutation. */
+  originalSourceId: OriginalSourceIdInput;
+};
+
+/** The output of our create `OriginalSourceId` mutation. */
+export type CreateOriginalSourceIdPayload = {
+  __typename?: 'CreateOriginalSourceIdPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `OriginalSourceId` that was created by this mutation. */
+  originalSourceId?: Maybe<OriginalSourceId>;
+  /** An edge for our `OriginalSourceId`. May be used by Relay 1. */
+  originalSourceIdEdge?: Maybe<OriginalSourceIdsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our create `OriginalSourceId` mutation. */
+export type CreateOriginalSourceIdPayloadOriginalSourceIdEdgeArgs = {
+  orderBy?: Maybe<Array<OriginalSourceIdsOrderBy>>;
+};
+
+export type CreateProjectGeographyClippingLayerInput = {
+  /**
+   * If provided, features used for clipping will be filtered based on this
+   * JSON-encoded OGC Common Query Language (CQL2) query
+   */
+  cql2Query?: Maybe<Scalars['JSON']>;
+  /** Type of operation to perform on the clipping layer (e.g. intersect, difference). */
+  operationType: GeographyLayerOperation;
+  /** Template layer to clone and associate with this geography. */
+  templateId: Scalars['String'];
+};
+
+export type CreateProjectGeographyInput = {
+  /**
+   * Used to identify Geographies that are created using a particular wizard
+   * flow like "Pick an EEZ" or "Terrestrial Areas".
+   */
+  clientTemplate?: Maybe<Scalars['String']>;
+  /** Clipping layers to associate with this geography */
+  clippingLayers: Array<CreateProjectGeographyClippingLayerInput>;
+  /** Name of the geography */
+  name: Scalars['String'];
+  /** Translated strings */
+  translatedProps?: Maybe<Scalars['JSON']>;
+};
+
 /** All input for the `createProject` mutation. */
 export type CreateProjectInput = {
   /**
@@ -2151,6 +2179,18 @@ export type CreateProjectPayloadProjectEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsOrderBy>>;
 };
 
+export type CreateProjectWithGeographiesInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Optional geographies to create immediately for the project. */
+  geographies?: Maybe<Array<CreateProjectGeographyInput>>;
+  name: Scalars['String'];
+  slug: Scalars['String'];
+};
+
 /** All input for the create `ProjectsSharedBasemap` mutation. */
 export type CreateProjectsSharedBasemapInput = {
   /**
@@ -2184,6 +2224,39 @@ export type CreateProjectsSharedBasemapPayload = {
 /** The output of our create `ProjectsSharedBasemap` mutation. */
 export type CreateProjectsSharedBasemapPayloadProjectsSharedBasemapEdgeArgs = {
   orderBy?: Maybe<Array<ProjectsSharedBasemapsOrderBy>>;
+};
+
+/** All input for the create `PublishedTocItemId` mutation. */
+export type CreatePublishedTocItemIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `PublishedTocItemId` to be created by this mutation. */
+  publishedTocItemId: PublishedTocItemIdInput;
+};
+
+/** The output of our create `PublishedTocItemId` mutation. */
+export type CreatePublishedTocItemIdPayload = {
+  __typename?: 'CreatePublishedTocItemIdPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The `PublishedTocItemId` that was created by this mutation. */
+  publishedTocItemId?: Maybe<PublishedTocItemId>;
+  /** An edge for our `PublishedTocItemId`. May be used by Relay 1. */
+  publishedTocItemIdEdge?: Maybe<PublishedTocItemIdsEdge>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our create `PublishedTocItemId` mutation. */
+export type CreatePublishedTocItemIdPayloadPublishedTocItemIdEdgeArgs = {
+  orderBy?: Maybe<Array<PublishedTocItemIdsOrderBy>>;
 };
 
 /** All input for the `createRemoteGeojsonSource` mutation. */
@@ -7007,6 +7080,29 @@ export type GetChildFoldersRecursivePayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `getPublishedCardIdFromDraft` mutation. */
+export type GetPublishedCardIdFromDraftInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  draftReportCardId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `getPublishedCardIdFromDraft` mutation. */
+export type GetPublishedCardIdFromDraftPayload = {
+  __typename?: 'GetPublishedCardIdFromDraftPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  integer?: Maybe<Scalars['Int']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 export type GoogleMapsTileApiSession = Node & {
   __typename?: 'GoogleMapsTileApiSession';
   expiresAt: Scalars['Datetime'];
@@ -7865,7 +7961,6 @@ export type Mutation = {
   archiveResponses?: Maybe<ArchiveResponsesPayload>;
   cancelBackgroundJob?: Maybe<CancelBackgroundJobPayload>;
   clearFormElementStyle?: Maybe<ClearFormElementStylePayload>;
-  clearPrimaryReportForSketchClass?: Maybe<ClearPrimaryReportForSketchClassPayload>;
   computeProjectGeographyHash?: Maybe<ComputeProjectGeographyHashPayload>;
   /** Confirm that a new user has seen any onboarding materials. Updates User.onboarded date. */
   confirmOnboarded?: Maybe<ConfirmOnboardedPayload>;
@@ -7945,6 +8040,8 @@ export type Mutation = {
   createOfflineTileSetting?: Maybe<CreateOfflineTileSettingPayload>;
   /** Creates a single `OptionalBasemapLayer`. */
   createOptionalBasemapLayer?: Maybe<CreateOptionalBasemapLayerPayload>;
+  /** Creates a single `OriginalSourceId`. */
+  createOriginalSourceId?: Maybe<CreateOriginalSourceIdPayload>;
   createPost: Post;
   /**
    * Users with verified emails can create new projects by choosing a unique name
@@ -7968,6 +8065,14 @@ export type Mutation = {
   createProjectInvites?: Maybe<CreateProjectInvitesPayload>;
   /** Creates a single `ProjectsSharedBasemap`. */
   createProjectsSharedBasemap?: Maybe<CreateProjectsSharedBasemapPayload>;
+  /**
+   * Create a new project and optionally create initial geographies for it.
+   * Geography clipping layers must reference template IDs because project
+   * layers have not yet been created.
+   */
+  createProjectWithGeographies?: Maybe<CreateProjectPayload>;
+  /** Creates a single `PublishedTocItemId`. */
+  createPublishedTocItemId?: Maybe<CreatePublishedTocItemIdPayload>;
   createRemoteGeojsonSource?: Maybe<CreateRemoteGeojsonSourcePayload>;
   createRemoteMvtSource?: Maybe<CreateRemoteMvtSourcePayload>;
   /** Creates a single `Report`. */
@@ -8164,6 +8269,7 @@ export type Mutation = {
    */
   getOrCreateSprite?: Maybe<Sprite>;
   getPresignedPMTilesUploadUrl: PresignedUrl;
+  getPublishedCardIdFromDraft?: Maybe<GetPublishedCardIdFromDraftPayload>;
   /** Give a user admin access to a project. User must have already joined the project and shared their user profile. */
   grantAdminAccess?: Maybe<GrantAdminAccessPayload>;
   importArcgisServices?: Maybe<ImportArcgisServicesPayload>;
@@ -8579,12 +8685,6 @@ export type MutationClearFormElementStyleArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationClearPrimaryReportForSketchClassArgs = {
-  input: ClearPrimaryReportForSketchClassInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
 export type MutationComputeProjectGeographyHashArgs = {
   input: ComputeProjectGeographyHashInput;
 };
@@ -8785,6 +8885,12 @@ export type MutationCreateOptionalBasemapLayerArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateOriginalSourceIdArgs = {
+  input: CreateOriginalSourceIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreatePostArgs = {
   message: Scalars['JSON'];
   topicId: Scalars['Int'];
@@ -8812,6 +8918,18 @@ export type MutationCreateProjectInvitesArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateProjectsSharedBasemapArgs = {
   input: CreateProjectsSharedBasemapInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateProjectWithGeographiesArgs = {
+  input: CreateProjectWithGeographiesInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreatePublishedTocItemIdArgs = {
+  input: CreatePublishedTocItemIdInput;
 };
 
 
@@ -9408,6 +9526,12 @@ export type MutationGetOrCreateSpriteArgs = {
 export type MutationGetPresignedPmTilesUploadUrlArgs = {
   bytes: Scalars['BigInt'];
   filename: Scalars['String'];
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationGetPublishedCardIdFromDraftArgs = {
+  input: GetPublishedCardIdFromDraftInput;
 };
 
 
@@ -10601,6 +10725,43 @@ export enum OptionalBasemapLayersOrderBy {
   Natural = 'NATURAL',
   PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
   PrimaryKeyDesc = 'PRIMARY_KEY_DESC'
+}
+
+export type OriginalSourceId = {
+  __typename?: 'OriginalSourceId';
+  dataSourceId?: Maybe<Scalars['Int']>;
+};
+
+/** An input for mutations affecting `OriginalSourceId` */
+export type OriginalSourceIdInput = {
+  dataSourceId?: Maybe<Scalars['Int']>;
+};
+
+/** A connection to a list of `OriginalSourceId` values. */
+export type OriginalSourceIdsConnection = {
+  __typename?: 'OriginalSourceIdsConnection';
+  /** A list of edges which contains the `OriginalSourceId` and cursor to aid in pagination. */
+  edges: Array<OriginalSourceIdsEdge>;
+  /** A list of `OriginalSourceId` objects. */
+  nodes: Array<OriginalSourceId>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `OriginalSourceId` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `OriginalSourceId` edge in the connection. */
+export type OriginalSourceIdsEdge = {
+  __typename?: 'OriginalSourceIdsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `OriginalSourceId` at the end of the edge. */
+  node: OriginalSourceId;
+};
+
+/** Methods to use when ordering `OriginalSourceId`. */
+export enum OriginalSourceIdsOrderBy {
+  Natural = 'NATURAL'
 }
 
 export type OutstandingSurveyInvites = {
@@ -12165,6 +12326,43 @@ export type PublishTableOfContentsPayload = {
   tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
 };
 
+export type PublishedTocItemId = {
+  __typename?: 'PublishedTocItemId';
+  id?: Maybe<Scalars['Int']>;
+};
+
+/** An input for mutations affecting `PublishedTocItemId` */
+export type PublishedTocItemIdInput = {
+  id?: Maybe<Scalars['Int']>;
+};
+
+/** A connection to a list of `PublishedTocItemId` values. */
+export type PublishedTocItemIdsConnection = {
+  __typename?: 'PublishedTocItemIdsConnection';
+  /** A list of edges which contains the `PublishedTocItemId` and cursor to aid in pagination. */
+  edges: Array<PublishedTocItemIdsEdge>;
+  /** A list of `PublishedTocItemId` objects. */
+  nodes: Array<PublishedTocItemId>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `PublishedTocItemId` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `PublishedTocItemId` edge in the connection. */
+export type PublishedTocItemIdsEdge = {
+  __typename?: 'PublishedTocItemIdsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `PublishedTocItemId` at the end of the edge. */
+  node: PublishedTocItemId;
+};
+
+/** Methods to use when ordering `PublishedTocItemId`. */
+export enum PublishedTocItemIdsOrderBy {
+  Natural = 'NATURAL'
+}
+
 /** The root query type which gives access points into the data universe. */
 export type Query = Node & {
   __typename?: 'Query';
@@ -12343,6 +12541,8 @@ export type Query = Node & {
   optionalBasemapLayer?: Maybe<OptionalBasemapLayer>;
   /** Reads a single `OptionalBasemapLayer` using its globally unique `ID`. */
   optionalBasemapLayerByNodeId?: Maybe<OptionalBasemapLayer>;
+  /** Reads and enables pagination through a set of `OriginalSourceId`. */
+  originalSourceIdsConnection?: Maybe<OriginalSourceIdsConnection>;
   post?: Maybe<Post>;
   /** Reads a single `Post` using its globally unique `ID`. */
   postByNodeId?: Maybe<Post>;
@@ -12374,6 +12574,8 @@ export type Query = Node & {
   projectsSharedBasemapsConnection?: Maybe<ProjectsSharedBasemapsConnection>;
   /** Used by project administrators to access a list of public sprites promoted by the SeaSketch development team. */
   publicSprites?: Maybe<Array<Sprite>>;
+  /** Reads and enables pagination through a set of `PublishedTocItemId`. */
+  publishedTocItemIdsConnection?: Maybe<PublishedTocItemIdsConnection>;
   /**
    * Exposes the root query type nested one level down. This is helpful for Relay 1
    * which can only query top level fields if they are in a particular form.
@@ -13222,6 +13424,17 @@ export type QueryOptionalBasemapLayerByNodeIdArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryOriginalSourceIdsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<OriginalSourceIdsOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QueryPostArgs = {
   id: Scalars['Int'];
 };
@@ -13375,6 +13588,17 @@ export type QueryProjectsSharedBasemapsConnectionArgs = {
 export type QueryPublicSpritesArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryPublishedTocItemIdsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<PublishedTocItemIdsOrderBy>>;
 };
 
 
@@ -20201,6 +20425,22 @@ export type CreateProjectMutation = (
   )> }
 );
 
+export type CreateProjectWithGeographiesMutationVariables = Exact<{
+  input: CreateProjectWithGeographiesInput;
+}>;
+
+
+export type CreateProjectWithGeographiesMutation = (
+  { __typename?: 'Mutation' }
+  & { createProjectWithGeographies?: Maybe<(
+    { __typename?: 'CreateProjectPayload' }
+    & { project?: Maybe<(
+      { __typename?: 'Project' }
+      & Pick<Project, 'id' | 'url' | 'slug'>
+    )> }
+  )> }
+);
+
 export type VerifyEmailMutationVariables = Exact<{
   redirectUrl?: Maybe<Scalars['String']>;
 }>;
@@ -24198,32 +24438,11 @@ export type ReportOverlaySourcesQuery = (
 
 export type BaseReportDetailsFragment = (
   { __typename?: 'Report' }
-  & Pick<Report, 'id' | 'title' | 'projectId'>
+  & Pick<Report, 'id' | 'title'>
   & { tabs?: Maybe<Array<(
     { __typename?: 'ReportTab' }
     & ReportTabDetailsFragment
   )>> }
-);
-
-export type ReportAssignmentSketchClassesQueryVariables = Exact<{
-  projectId: Scalars['Int'];
-}>;
-
-
-export type ReportAssignmentSketchClassesQuery = (
-  { __typename?: 'Query' }
-  & { project?: Maybe<(
-    { __typename?: 'Project' }
-    & Pick<Project, 'id'>
-    & { sketchClasses: Array<(
-      { __typename?: 'SketchClass' }
-      & Pick<SketchClass, 'id' | 'name' | 'geometryType'>
-      & { draftReport?: Maybe<(
-        { __typename?: 'Report' }
-        & Pick<Report, 'id' | 'title'>
-      )> }
-    )> }
-  )> }
 );
 
 export type BaseReportContextQueryVariables = Exact<{
@@ -24578,22 +24797,6 @@ export type SetPrimaryReportForSketchClassMutation = (
   { __typename?: 'Mutation' }
   & { setPrimaryReportForSketchClass?: Maybe<(
     { __typename?: 'SetPrimaryReportForSketchClassPayload' }
-    & { sketchClass?: Maybe<(
-      { __typename?: 'SketchClass' }
-      & Pick<SketchClass, 'id'>
-    )> }
-  )> }
-);
-
-export type ClearPrimaryReportForSketchClassMutationVariables = Exact<{
-  sketchClassId: Scalars['Int'];
-}>;
-
-
-export type ClearPrimaryReportForSketchClassMutation = (
-  { __typename?: 'Mutation' }
-  & { clearPrimaryReportForSketchClass?: Maybe<(
-    { __typename?: 'ClearPrimaryReportForSketchClassPayload' }
     & { sketchClass?: Maybe<(
       { __typename?: 'SketchClass' }
       & Pick<SketchClass, 'id'>
@@ -28218,7 +28421,6 @@ export const BaseReportDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment BaseReportDetails on Report {
   id
   title
-  projectId
   tabs {
     ...ReportTabDetails
   }
@@ -29434,6 +29636,17 @@ export const SetBasemapMaxZoomDocument = /*#__PURE__*/ gql`
 export const CreateProjectDocument = /*#__PURE__*/ gql`
     mutation CreateProject($name: String!, $slug: String!) {
   createProject(input: {name: $name, slug: $slug}) {
+    project {
+      id
+      url
+      slug
+    }
+  }
+}
+    `;
+export const CreateProjectWithGeographiesDocument = /*#__PURE__*/ gql`
+    mutation CreateProjectWithGeographies($input: CreateProjectWithGeographiesInput!) {
+  createProjectWithGeographies(input: $input) {
     project {
       id
       url
@@ -31997,22 +32210,6 @@ export const ReportOverlaySourcesDocument = /*#__PURE__*/ gql`
   }
 }
     ${OverlaySourceDetailsFragmentDoc}`;
-export const ReportAssignmentSketchClassesDocument = /*#__PURE__*/ gql`
-    query ReportAssignmentSketchClasses($projectId: Int!) {
-  project(id: $projectId) {
-    id
-    sketchClasses {
-      id
-      name
-      geometryType
-      draftReport {
-        id
-        title
-      }
-    }
-  }
-}
-    `;
 export const BaseReportContextDocument = /*#__PURE__*/ gql`
     query BaseReportContext($reportId: Int!) {
   report(id: $reportId) {
@@ -32283,15 +32480,6 @@ export const SetPrimaryReportForSketchClassDocument = /*#__PURE__*/ gql`
   setPrimaryReportForSketchClass(
     input: {sketchClassId: $sketchClassId, draftReportId: $draftReportId}
   ) {
-    sketchClass {
-      id
-    }
-  }
-}
-    `;
-export const ClearPrimaryReportForSketchClassDocument = /*#__PURE__*/ gql`
-    mutation ClearPrimaryReportForSketchClass($sketchClassId: Int!) {
-  clearPrimaryReportForSketchClass(input: {sketchClassId: $sketchClassId}) {
     sketchClass {
       id
     }
@@ -33651,7 +33839,6 @@ export const namedOperations = {
     ReportDependencies: 'ReportDependencies',
     ReportMetricProgressFields: 'ReportMetricProgressFields',
     ReportOverlaySources: 'ReportOverlaySources',
-    ReportAssignmentSketchClasses: 'ReportAssignmentSketchClasses',
     BaseReportContext: 'BaseReportContext',
     BaseDraftReportContext: 'BaseDraftReportContext',
     CopyableReportCards: 'CopyableReportCards',
@@ -33727,6 +33914,7 @@ export const namedOperations = {
     UpdateInteractivitySettingsLayers: 'UpdateInteractivitySettingsLayers',
     SetBasemapMaxZoom: 'SetBasemapMaxZoom',
     CreateProject: 'CreateProject',
+    CreateProjectWithGeographies: 'CreateProjectWithGeographies',
     VerifyEmail: 'VerifyEmail',
     createDataUpload: 'createDataUpload',
     submitDataUpload: 'submitDataUpload',
@@ -33826,7 +34014,6 @@ export const namedOperations = {
     PreprocessSource: 'PreprocessSource',
     CreateCustomReport: 'CreateCustomReport',
     SetPrimaryReportForSketchClass: 'SetPrimaryReportForSketchClass',
-    ClearPrimaryReportForSketchClass: 'ClearPrimaryReportForSketchClass',
     CreateSketchFolder: 'CreateSketchFolder',
     CreateSketch: 'CreateSketch',
     UpdateSketch: 'UpdateSketch',
