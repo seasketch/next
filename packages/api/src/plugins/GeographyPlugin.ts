@@ -1193,18 +1193,9 @@ async function deleteProjectFragments(projectId: number, pgClient: PoolClient) {
     [projectId],
   );
   if (deletedRefs.length > 0) {
-    await pgClient.query(
-      `
-      delete from fragments
-      where hash = any($1::text[])
-        and not exists (
-          select 1
-          from sketch_fragments
-          where sketch_fragments.fragment_hash = fragments.hash
-        )
-      `,
-      [deletedRefs.map((row: any) => row.fragment_hash)],
-    );
+    await pgClient.query(`select cleanup_orphaned_fragments($1::text[])`, [
+      deletedRefs.map((row: { fragment_hash: string }) => row.fragment_hash),
+    ]);
   }
 }
 
