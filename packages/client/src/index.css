@@ -7115,6 +7115,10 @@ select{
   margin-top:2px
 }
 
+.mr-\[10px\]{
+  margin-right:10px
+}
+
 .box-border{
   box-sizing:border-box
 }
@@ -7433,6 +7437,14 @@ select{
   height:calc(100dvh - 3rem)
 }
 
+.h-\[90vh\]{
+  height:90vh
+}
+
+.h-\[38px\]{
+  height:38px
+}
+
 .max-h-128{
   max-height:32rem
 }
@@ -7557,16 +7569,16 @@ select{
   max-height:100vh
 }
 
-.max-h-\[calc\(100dvh-3rem\)\]{
-  max-height:calc(100dvh - 3rem)
-}
-
 .max-h-\[min\(480px\2c 70vh\)\]{
   max-height:min(480px,70vh)
 }
 
-.max-h-\[min\(60vh\2c 28rem\)\]{
-  max-height:min(60vh,28rem)
+.max-h-\[calc\(100dvh-3rem\)\]{
+  max-height:calc(100dvh - 3rem)
+}
+
+.max-h-\[72vh\]{
+  max-height:72vh
 }
 
 .min-h-0{
@@ -7939,6 +7951,14 @@ select{
   width:100vw
 }
 
+.w-\[90vw\]{
+  width:90vw
+}
+
+.w-\[92vw\]{
+  width:92vw
+}
+
 .min-w-0{
   min-width:0px
 }
@@ -8289,6 +8309,10 @@ select{
 
 .max-w-\[380px\]{
   max-width:380px
+}
+
+.\!max-w-6xl{
+  max-width:72rem !important
 }
 
 .flex-1{
@@ -9992,6 +10016,10 @@ select{
   border-color:rgb(63 63 70 / var(--tw-border-opacity, 1))
 }
 
+.border-white\/70{
+  border-color:rgb(255 255 255 / 0.7)
+}
+
 .border-b-black{
   --tw-border-opacity:1;
   border-bottom-color:rgb(0 0 0 / var(--tw-border-opacity, 1))
@@ -10891,6 +10919,10 @@ select{
   background-color:rgb(39 39 42 / var(--tw-bg-opacity, 1))
 }
 
+.bg-black\/50{
+  background-color:rgb(0 0 0 / 0.5)
+}
+
 .bg-opacity-10{
   --tw-bg-opacity:0.1
 }
@@ -11346,6 +11378,10 @@ select{
   --tw-gradient-to:rgb(252 211 77 / 0.3) var(--tw-gradient-to-position)
 }
 
+.to-gray-200{
+  --tw-gradient-to:#e5e7eb var(--tw-gradient-to-position)
+}
+
 .bg-contain{
   background-size:contain
 }
@@ -11656,6 +11692,11 @@ select{
   padding-bottom:1px
 }
 
+.px-\[10px\]{
+  padding-left:10px;
+  padding-right:10px
+}
+
 .\!pl-0{
   padding-left:0px !important
 }
@@ -11922,6 +11963,18 @@ select{
 
 .pt-10{
   padding-top:2.5rem
+}
+
+.pt-7{
+  padding-top:1.75rem
+}
+
+.pb-\[5px\]{
+  padding-bottom:5px
+}
+
+.pt-\[10px\]{
+  padding-top:10px
 }
 
 .text-left{
@@ -14090,6 +14143,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
   border-color:transparent
 }
 
+.hover\:border-primary-500:hover{
+  --tw-border-opacity:1;
+  border-color:rgb(46 115 182 / var(--tw-border-opacity, 1))
+}
+
 .hover\:border-opacity-100:hover{
   --tw-border-opacity:1
 }
@@ -14573,12 +14631,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .hover\:shadow-sm:hover{
   --tw-shadow:0 1px 2px 0 rgb(0 0 0 / 0.05);
   --tw-shadow-colored:0 1px 2px 0 var(--tw-shadow-color);
-  box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)
-}
-
-.hover\:shadow-2xl:hover{
-  --tw-shadow:0 25px 50px -12px rgb(0 0 0 / 0.25);
-  --tw-shadow-colored:0 25px 50px -12px var(--tw-shadow-color);
   box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)
 }
 
