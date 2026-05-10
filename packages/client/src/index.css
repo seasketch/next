@@ -7127,6 +7127,10 @@ select{
   margin-top:-2rem
 }
 
+.mb-px{
+  margin-bottom:1px
+}
+
 .box-border{
   box-sizing:border-box
 }
@@ -8081,6 +8085,10 @@ select{
 
 .min-w-\[min\(26rem\2c var\(--radix-menubar-content-available-width\)\)\]{
   min-width:min(26rem,var(--radix-menubar-content-available-width))
+}
+
+.min-w-\[10rem\]{
+  min-width:10rem
 }
 
 .\!max-w-128{
@@ -12006,6 +12014,14 @@ select{
   padding-top:10px
 }
 
+.\!pr-\[4\.25rem\]{
+  padding-right:4.25rem !important
+}
+
+.\!pr-\[4rem\]{
+  padding-right:4rem !important
+}
+
 .text-left{
   text-align:left
 }
@@ -15044,6 +15060,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .focus-visible\:px-1:focus-visible{
   padding-left:0.25rem;
   padding-right:0.25rem
+}
+
+.focus-visible\:text-gray-700:focus-visible{
+  --tw-text-opacity:1;
+  color:rgb(55 65 81 / var(--tw-text-opacity, 1))
 }
 
 .focus-visible\:opacity-100:focus-visible{

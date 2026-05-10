@@ -35,6 +35,8 @@ export interface TextInputOptions {
   autocomplete?: string;
   ref?: any;
   hideErrorMessage?: boolean;
+  /** Appended to the input/textarea `className` (e.g. extra horizontal padding). */
+  inputClassName?: string;
 }
 
 const TextArea = forwardRef((props: any, ref: any) => (
@@ -139,7 +141,7 @@ export default forwardRef(function TextInput(
           } ${
             error &&
             "border-red-300 text-red-900 placeholder-red-300 focus:border-red-300 focus:shadow-outline-red"
-          } ${disabled && "text-gray-500 bg-gray-100"}`}
+          } ${disabled && "text-gray-500 bg-gray-100"} ${props.inputClassName || ""}`}
           placeholder={placeholder}
           value={localValue}
           aria-invalid={error ? "true" : "false"}

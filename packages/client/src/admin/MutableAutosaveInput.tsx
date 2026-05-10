@@ -16,6 +16,10 @@ export default function MutableAutosaveInput(props: {
   autofocus?: boolean;
   textArea?: boolean;
   onChange?: (value: string) => void;
+  /** Placed beside the autosave spinner/check inside the input row (see TextInput). */
+  inputChildNode?: ReactNode;
+  /** Merged onto the underlying input element (Tailwind overrides like `!pr-*`). */
+  inputClassName?: string;
 }) {
   const [value, setValue] = useState(props.value);
   const debouncedValue = useDebounce(value, 500);
@@ -75,6 +79,8 @@ export default function MutableAutosaveInput(props: {
           : "NONE"
       }
       placeholder={props.placeholder}
+      inputChildNode={props.inputChildNode}
+      inputClassName={props.inputClassName}
     />
   );
 }

@@ -457,6 +457,26 @@ query LayerSettingsChangeLog($id: Int!, $first: Int!) {
   }
 }
 
+fragment ResolvableLayerCommentDetails on ResolvableLayerComment {
+  id
+  comment
+  createdAt
+  authorProfile {
+    ...UserProfileDetails
+  }
+  resolvedById
+  resolvedByProfile {
+    ...UserProfileDetails
+  }
+}
+
+fragment ResolvableLayerCommentThread on ResolvableLayerComment {
+  ...ResolvableLayerCommentDetails
+  replies {
+    ...ResolvableLayerCommentDetails
+  }
+}
+
 fragment FullAdminOverlay on TableOfContentsItem {
   id
   acl {
@@ -506,6 +526,10 @@ fragment FullAdminOverlay on TableOfContentsItem {
       name
     }
   }
+  unresolvedComment {
+    ...ResolvableLayerCommentThread
+  }
+  resolvedCommentCount
 }
 
 query GetLayerItem($id: Int!) {
@@ -1232,6 +1256,30 @@ query ChangeLogsSinceLastPublish($slug: String!) {
     }
     changeLogsSinceLastPublish {
       ...ChangeLogDetails
+    }
+  }
+}
+
+mutation CreateResolvableComment(
+  $projectId: Int!
+  $tableOfContentsItemId: Int!
+  $comment: JSON!
+) {
+  createResolvableLayerComment(
+    input: {
+      projectId: $projectId
+      tableOfContentsItemId: $tableOfContentsItemId
+      comment: $comment
+    }
+  ) {
+    resolvableLayerComment {
+      ...ResolvableLayerCommentDetails
+      tableOfContentsItem {
+        unresolvedComment {
+          ...ResolvableLayerCommentThread
+        }
+        resolvedCommentCount
+      }
     }
   }
 }
