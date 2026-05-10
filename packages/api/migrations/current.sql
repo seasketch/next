@@ -8,6 +8,9 @@ drop function if exists public.resolvable_layer_comments_resolved_by_profile(res
 drop function if exists public.resolvable_layer_comments_author_profile(resolvable_layer_comments);
 drop function if exists public.table_of_contents_items_resolved_comment_count(table_of_contents_items);
 drop function if exists public.table_of_contents_items_unresolved_comment(table_of_contents_items);
+drop function if exists public.create_resolvable_layer_comment(int, int, jsonb, int);
+drop function if exists public.resolve_resolvable_layer_comment(int);
+drop function if exists public.reopen_resolvable_layer_comment(int);
 drop index if exists resolvable_layer_comments_one_unresolved_root_per_toc_item;
 drop index if exists resolvable_layer_comments_parent_idx;
 drop index if exists resolvable_layer_comments_project_idx;
@@ -74,7 +77,12 @@ create or replace function table_of_contents_items_unresolved_comment(item table
   security definer
   stable
   as $$
-    select * from resolvable_layer_comments where table_of_contents_item_id = item.id and resolved_at is null order by created_at desc limit 1;
+    select * from resolvable_layer_comments
+      where table_of_contents_item_id = item.id
+        and resolved_at is null
+        and parent_comment_id is null
+      order by created_at desc
+      limit 1;
 $$;
 
 grant execute on function table_of_contents_items_unresolved_comment(item table_of_contents_items) to seasketch_user;
@@ -143,19 +151,30 @@ create or replace function create_resolvable_layer_comment(project_id int, table
   language plpgsql
   security definer
   as $$
+  declare
+    new_comment resolvable_layer_comments;
   begin
-    if session_is_admin(project_id) = false then
-      raise exception 'Access denied to project %', project_id;
+    if session_is_admin(create_resolvable_layer_comment.project_id) = false then
+      raise exception 'Access denied to project %', create_resolvable_layer_comment.project_id;
     end if;
     if not exists (
       select 1
       from public.table_of_contents_items t
-      where t.id = table_of_contents_item_id
+      where t.id = create_resolvable_layer_comment.table_of_contents_item_id
         and t.is_draft = true
     ) then
       raise exception 'Resolvable layer comments may only reference draft layers';
     end if;
-    insert into resolvable_layer_comments (project_id, table_of_contents_item_id, comment, parent_comment_id, author_id) values (project_id, table_of_contents_item_id, comment, parent_comment_id, current_setting('session.user_id', true)::int) returning *;
+    insert into resolvable_layer_comments (project_id, table_of_contents_item_id, comment, parent_comment_id, author_id)
+      values (
+        create_resolvable_layer_comment.project_id,
+        create_resolvable_layer_comment.table_of_contents_item_id,
+        create_resolvable_layer_comment.comment,
+        create_resolvable_layer_comment.parent_comment_id,
+        current_setting('session.user_id', true)::int
+      )
+      returning * into new_comment;
+    return new_comment;
   end;
 $$;
 
@@ -166,11 +185,21 @@ create or replace function resolve_resolvable_layer_comment(comment_id int)
   language plpgsql
   security definer
   as $$
+  declare
+    updated_comment resolvable_layer_comments;
+    comment_project_id int;
   begin
-    if session_is_admin((select project_id from resolvable_layer_comments where id = comment_id)) = false then
-      raise exception 'Access denied to project %', comment.project_id;
+    select project_id into comment_project_id
+      from resolvable_layer_comments
+      where id = resolve_resolvable_layer_comment.comment_id;
+    if session_is_admin(comment_project_id) = false then
+      raise exception 'Access denied to project %', comment_project_id;
     end if;
-    update resolvable_layer_comments set resolved_at = now(), resolved_by_id = current_setting('session.user_id', true)::int where id = comment_id returning *;
+    update resolvable_layer_comments
+      set resolved_at = now(), resolved_by_id = current_setting('session.user_id', true)::int
+      where id = resolve_resolvable_layer_comment.comment_id
+      returning * into updated_comment;
+    return updated_comment;
   end;
 $$;
 
@@ -181,10 +210,21 @@ create or replace function reopen_resolvable_layer_comment(comment_id int)
   language plpgsql
   security definer
   as $$
+  declare
+    updated_comment resolvable_layer_comments;
+    comment_project_id int;
   begin
-    if session_is_admin((select project_id from resolvable_layer_comments where id = comment_id)) = false then
-      raise exception 'Access denied to project %', comment.project_id;
+    select project_id into comment_project_id
+      from resolvable_layer_comments
+      where id = reopen_resolvable_layer_comment.comment_id;
+    if session_is_admin(comment_project_id) = false then
+      raise exception 'Access denied to project %', comment_project_id;
     end if;
+    update resolvable_layer_comments
+      set resolved_at = null, resolved_by_id = null
+      where id = reopen_resolvable_layer_comment.comment_id
+      returning * into updated_comment;
+    return updated_comment;
   end;
 $$;
 

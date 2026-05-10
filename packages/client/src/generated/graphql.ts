@@ -21288,7 +21288,7 @@ export type ChangeLogDetailsFragment = (
 
 export type ResolvableLayerCommentDetailsFragment = (
   { __typename?: 'ResolvableLayerComment' }
-  & Pick<ResolvableLayerComment, 'id' | 'comment' | 'createdAt' | 'resolvedById'>
+  & Pick<ResolvableLayerComment, 'id' | 'projectId' | 'tableOfContentsItemId' | 'comment' | 'createdAt' | 'resolvedAt' | 'resolvedById'>
   & { authorProfile?: Maybe<(
     { __typename?: 'Profile' }
     & UserProfileDetailsFragment
@@ -21336,7 +21336,10 @@ export type FullAdminOverlayFragment = (
   )>>>, unresolvedComment?: Maybe<(
     { __typename?: 'ResolvableLayerComment' }
     & ResolvableLayerCommentThreadFragment
-  )> }
+  )>, resolvedCommentThreads?: Maybe<Array<(
+    { __typename?: 'ResolvableLayerComment' }
+    & ResolvableLayerCommentThreadFragment
+  )>> }
 );
 
 export type GetLayerItemQueryVariables = Exact<{
@@ -22181,6 +22184,7 @@ export type CreateResolvableCommentMutationVariables = Exact<{
   projectId: Scalars['Int'];
   tableOfContentsItemId: Scalars['Int'];
   comment: Scalars['JSON'];
+  parentCommentId?: Maybe<Scalars['Int']>;
 }>;
 
 
@@ -22190,15 +22194,69 @@ export type CreateResolvableCommentMutation = (
     { __typename?: 'CreateResolvableLayerCommentPayload' }
     & { resolvableLayerComment?: Maybe<(
       { __typename?: 'ResolvableLayerComment' }
-      & { tableOfContentsItem?: Maybe<(
-        { __typename?: 'TableOfContentsItem' }
-        & Pick<TableOfContentsItem, 'resolvedCommentCount'>
-        & { unresolvedComment?: Maybe<(
-          { __typename?: 'ResolvableLayerComment' }
-          & ResolvableLayerCommentThreadFragment
-        )> }
-      )> }
       & ResolvableLayerCommentDetailsFragment
+    )>, tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'resolvedCommentCount'>
+      & { unresolvedComment?: Maybe<(
+        { __typename?: 'ResolvableLayerComment' }
+        & ResolvableLayerCommentThreadFragment
+      )>, resolvedCommentThreads?: Maybe<Array<(
+        { __typename?: 'ResolvableLayerComment' }
+        & ResolvableLayerCommentThreadFragment
+      )>> }
+    )> }
+  )> }
+);
+
+export type ResolveResolvableCommentMutationVariables = Exact<{
+  commentId: Scalars['Int'];
+}>;
+
+
+export type ResolveResolvableCommentMutation = (
+  { __typename?: 'Mutation' }
+  & { resolveResolvableLayerComment?: Maybe<(
+    { __typename?: 'ResolveResolvableLayerCommentPayload' }
+    & { resolvableLayerComment?: Maybe<(
+      { __typename?: 'ResolvableLayerComment' }
+      & ResolvableLayerCommentThreadFragment
+    )>, tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'resolvedCommentCount'>
+      & { unresolvedComment?: Maybe<(
+        { __typename?: 'ResolvableLayerComment' }
+        & ResolvableLayerCommentThreadFragment
+      )>, resolvedCommentThreads?: Maybe<Array<(
+        { __typename?: 'ResolvableLayerComment' }
+        & ResolvableLayerCommentThreadFragment
+      )>> }
+    )> }
+  )> }
+);
+
+export type ReopenResolvableCommentMutationVariables = Exact<{
+  commentId: Scalars['Int'];
+}>;
+
+
+export type ReopenResolvableCommentMutation = (
+  { __typename?: 'Mutation' }
+  & { reopenResolvableLayerComment?: Maybe<(
+    { __typename?: 'ReopenResolvableLayerCommentPayload' }
+    & { resolvableLayerComment?: Maybe<(
+      { __typename?: 'ResolvableLayerComment' }
+      & ResolvableLayerCommentThreadFragment
+    )>, tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'resolvedCommentCount'>
+      & { unresolvedComment?: Maybe<(
+        { __typename?: 'ResolvableLayerComment' }
+        & ResolvableLayerCommentThreadFragment
+      )>, resolvedCommentThreads?: Maybe<Array<(
+        { __typename?: 'ResolvableLayerComment' }
+        & ResolvableLayerCommentThreadFragment
+      )>> }
     )> }
   )> }
 );
@@ -27837,8 +27895,11 @@ export const UserProfileDetailsFragmentDoc = gql`
 export const ResolvableLayerCommentDetailsFragmentDoc = gql`
     fragment ResolvableLayerCommentDetails on ResolvableLayerComment {
   id
+  projectId
+  tableOfContentsItemId
   comment
   createdAt
+  resolvedAt
   authorProfile {
     ...UserProfileDetails
   }
@@ -27910,6 +27971,9 @@ export const FullAdminOverlayFragmentDoc = gql`
     ...ResolvableLayerCommentThread
   }
   resolvedCommentCount
+  resolvedCommentThreads {
+    ...ResolvableLayerCommentThread
+  }
 }
     ${FullAdminDataLayerFragmentDoc}
 ${ResolvableLayerCommentThreadFragmentDoc}`;
@@ -34571,17 +34635,21 @@ export type ChangeLogsSinceLastPublishQueryHookResult = ReturnType<typeof useCha
 export type ChangeLogsSinceLastPublishLazyQueryHookResult = ReturnType<typeof useChangeLogsSinceLastPublishLazyQuery>;
 export type ChangeLogsSinceLastPublishQueryResult = Apollo.QueryResult<ChangeLogsSinceLastPublishQuery, ChangeLogsSinceLastPublishQueryVariables>;
 export const CreateResolvableCommentDocument = gql`
-    mutation CreateResolvableComment($projectId: Int!, $tableOfContentsItemId: Int!, $comment: JSON!) {
+    mutation CreateResolvableComment($projectId: Int!, $tableOfContentsItemId: Int!, $comment: JSON!, $parentCommentId: Int) {
   createResolvableLayerComment(
-    input: {projectId: $projectId, tableOfContentsItemId: $tableOfContentsItemId, comment: $comment}
+    input: {projectId: $projectId, tableOfContentsItemId: $tableOfContentsItemId, comment: $comment, parentCommentId: $parentCommentId}
   ) {
     resolvableLayerComment {
       ...ResolvableLayerCommentDetails
-      tableOfContentsItem {
-        unresolvedComment {
-          ...ResolvableLayerCommentThread
-        }
-        resolvedCommentCount
+    }
+    tableOfContentsItem {
+      id
+      unresolvedComment {
+        ...ResolvableLayerCommentThread
+      }
+      resolvedCommentCount
+      resolvedCommentThreads {
+        ...ResolvableLayerCommentThread
       }
     }
   }
@@ -34606,6 +34674,7 @@ export type CreateResolvableCommentMutationFn = Apollo.MutationFunction<CreateRe
  *      projectId: // value for 'projectId'
  *      tableOfContentsItemId: // value for 'tableOfContentsItemId'
  *      comment: // value for 'comment'
+ *      parentCommentId: // value for 'parentCommentId'
  *   },
  * });
  */
@@ -34616,6 +34685,96 @@ export function useCreateResolvableCommentMutation(baseOptions?: Apollo.Mutation
 export type CreateResolvableCommentMutationHookResult = ReturnType<typeof useCreateResolvableCommentMutation>;
 export type CreateResolvableCommentMutationResult = Apollo.MutationResult<CreateResolvableCommentMutation>;
 export type CreateResolvableCommentMutationOptions = Apollo.BaseMutationOptions<CreateResolvableCommentMutation, CreateResolvableCommentMutationVariables>;
+export const ResolveResolvableCommentDocument = gql`
+    mutation ResolveResolvableComment($commentId: Int!) {
+  resolveResolvableLayerComment(input: {commentId: $commentId}) {
+    resolvableLayerComment {
+      ...ResolvableLayerCommentThread
+    }
+    tableOfContentsItem {
+      id
+      unresolvedComment {
+        ...ResolvableLayerCommentThread
+      }
+      resolvedCommentCount
+      resolvedCommentThreads {
+        ...ResolvableLayerCommentThread
+      }
+    }
+  }
+}
+    ${ResolvableLayerCommentThreadFragmentDoc}`;
+export type ResolveResolvableCommentMutationFn = Apollo.MutationFunction<ResolveResolvableCommentMutation, ResolveResolvableCommentMutationVariables>;
+
+/**
+ * __useResolveResolvableCommentMutation__
+ *
+ * To run a mutation, you first call `useResolveResolvableCommentMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useResolveResolvableCommentMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [resolveResolvableCommentMutation, { data, loading, error }] = useResolveResolvableCommentMutation({
+ *   variables: {
+ *      commentId: // value for 'commentId'
+ *   },
+ * });
+ */
+export function useResolveResolvableCommentMutation(baseOptions?: Apollo.MutationHookOptions<ResolveResolvableCommentMutation, ResolveResolvableCommentMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ResolveResolvableCommentMutation, ResolveResolvableCommentMutationVariables>(ResolveResolvableCommentDocument, options);
+      }
+export type ResolveResolvableCommentMutationHookResult = ReturnType<typeof useResolveResolvableCommentMutation>;
+export type ResolveResolvableCommentMutationResult = Apollo.MutationResult<ResolveResolvableCommentMutation>;
+export type ResolveResolvableCommentMutationOptions = Apollo.BaseMutationOptions<ResolveResolvableCommentMutation, ResolveResolvableCommentMutationVariables>;
+export const ReopenResolvableCommentDocument = gql`
+    mutation ReopenResolvableComment($commentId: Int!) {
+  reopenResolvableLayerComment(input: {commentId: $commentId}) {
+    resolvableLayerComment {
+      ...ResolvableLayerCommentThread
+    }
+    tableOfContentsItem {
+      id
+      unresolvedComment {
+        ...ResolvableLayerCommentThread
+      }
+      resolvedCommentCount
+      resolvedCommentThreads {
+        ...ResolvableLayerCommentThread
+      }
+    }
+  }
+}
+    ${ResolvableLayerCommentThreadFragmentDoc}`;
+export type ReopenResolvableCommentMutationFn = Apollo.MutationFunction<ReopenResolvableCommentMutation, ReopenResolvableCommentMutationVariables>;
+
+/**
+ * __useReopenResolvableCommentMutation__
+ *
+ * To run a mutation, you first call `useReopenResolvableCommentMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useReopenResolvableCommentMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [reopenResolvableCommentMutation, { data, loading, error }] = useReopenResolvableCommentMutation({
+ *   variables: {
+ *      commentId: // value for 'commentId'
+ *   },
+ * });
+ */
+export function useReopenResolvableCommentMutation(baseOptions?: Apollo.MutationHookOptions<ReopenResolvableCommentMutation, ReopenResolvableCommentMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ReopenResolvableCommentMutation, ReopenResolvableCommentMutationVariables>(ReopenResolvableCommentDocument, options);
+      }
+export type ReopenResolvableCommentMutationHookResult = ReturnType<typeof useReopenResolvableCommentMutation>;
+export type ReopenResolvableCommentMutationResult = Apollo.MutationResult<ReopenResolvableCommentMutation>;
+export type ReopenResolvableCommentMutationOptions = Apollo.BaseMutationOptions<ReopenResolvableCommentMutation, ReopenResolvableCommentMutationVariables>;
 export const ForumAdminListDocument = gql`
     query ForumAdminList($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -43539,6 +43698,8 @@ export const namedOperations = {
     DuplicateTableOfContentsItem: 'DuplicateTableOfContentsItem',
     createINaturalistTableOfContentsItem: 'createINaturalistTableOfContentsItem',
     CreateResolvableComment: 'CreateResolvableComment',
+    ResolveResolvableComment: 'ResolveResolvableComment',
+    ReopenResolvableComment: 'ReopenResolvableComment',
     CreateForum: 'CreateForum',
     UpdateForum: 'UpdateForum',
     DeleteForum: 'DeleteForum',

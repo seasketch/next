@@ -21286,7 +21286,7 @@ export type ChangeLogDetailsFragment = (
 
 export type ResolvableLayerCommentDetailsFragment = (
   { __typename?: 'ResolvableLayerComment' }
-  & Pick<ResolvableLayerComment, 'id' | 'comment' | 'createdAt' | 'resolvedById'>
+  & Pick<ResolvableLayerComment, 'id' | 'projectId' | 'tableOfContentsItemId' | 'comment' | 'createdAt' | 'resolvedAt' | 'resolvedById'>
   & { authorProfile?: Maybe<(
     { __typename?: 'Profile' }
     & UserProfileDetailsFragment
@@ -21334,7 +21334,10 @@ export type FullAdminOverlayFragment = (
   )>>>, unresolvedComment?: Maybe<(
     { __typename?: 'ResolvableLayerComment' }
     & ResolvableLayerCommentThreadFragment
-  )> }
+  )>, resolvedCommentThreads?: Maybe<Array<(
+    { __typename?: 'ResolvableLayerComment' }
+    & ResolvableLayerCommentThreadFragment
+  )>> }
 );
 
 export type GetLayerItemQueryVariables = Exact<{
@@ -22179,6 +22182,7 @@ export type CreateResolvableCommentMutationVariables = Exact<{
   projectId: Scalars['Int'];
   tableOfContentsItemId: Scalars['Int'];
   comment: Scalars['JSON'];
+  parentCommentId?: Maybe<Scalars['Int']>;
 }>;
 
 
@@ -22188,15 +22192,69 @@ export type CreateResolvableCommentMutation = (
     { __typename?: 'CreateResolvableLayerCommentPayload' }
     & { resolvableLayerComment?: Maybe<(
       { __typename?: 'ResolvableLayerComment' }
-      & { tableOfContentsItem?: Maybe<(
-        { __typename?: 'TableOfContentsItem' }
-        & Pick<TableOfContentsItem, 'resolvedCommentCount'>
-        & { unresolvedComment?: Maybe<(
-          { __typename?: 'ResolvableLayerComment' }
-          & ResolvableLayerCommentThreadFragment
-        )> }
-      )> }
       & ResolvableLayerCommentDetailsFragment
+    )>, tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'resolvedCommentCount'>
+      & { unresolvedComment?: Maybe<(
+        { __typename?: 'ResolvableLayerComment' }
+        & ResolvableLayerCommentThreadFragment
+      )>, resolvedCommentThreads?: Maybe<Array<(
+        { __typename?: 'ResolvableLayerComment' }
+        & ResolvableLayerCommentThreadFragment
+      )>> }
+    )> }
+  )> }
+);
+
+export type ResolveResolvableCommentMutationVariables = Exact<{
+  commentId: Scalars['Int'];
+}>;
+
+
+export type ResolveResolvableCommentMutation = (
+  { __typename?: 'Mutation' }
+  & { resolveResolvableLayerComment?: Maybe<(
+    { __typename?: 'ResolveResolvableLayerCommentPayload' }
+    & { resolvableLayerComment?: Maybe<(
+      { __typename?: 'ResolvableLayerComment' }
+      & ResolvableLayerCommentThreadFragment
+    )>, tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'resolvedCommentCount'>
+      & { unresolvedComment?: Maybe<(
+        { __typename?: 'ResolvableLayerComment' }
+        & ResolvableLayerCommentThreadFragment
+      )>, resolvedCommentThreads?: Maybe<Array<(
+        { __typename?: 'ResolvableLayerComment' }
+        & ResolvableLayerCommentThreadFragment
+      )>> }
+    )> }
+  )> }
+);
+
+export type ReopenResolvableCommentMutationVariables = Exact<{
+  commentId: Scalars['Int'];
+}>;
+
+
+export type ReopenResolvableCommentMutation = (
+  { __typename?: 'Mutation' }
+  & { reopenResolvableLayerComment?: Maybe<(
+    { __typename?: 'ReopenResolvableLayerCommentPayload' }
+    & { resolvableLayerComment?: Maybe<(
+      { __typename?: 'ResolvableLayerComment' }
+      & ResolvableLayerCommentThreadFragment
+    )>, tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'resolvedCommentCount'>
+      & { unresolvedComment?: Maybe<(
+        { __typename?: 'ResolvableLayerComment' }
+        & ResolvableLayerCommentThreadFragment
+      )>, resolvedCommentThreads?: Maybe<Array<(
+        { __typename?: 'ResolvableLayerComment' }
+        & ResolvableLayerCommentThreadFragment
+      )>> }
     )> }
   )> }
 );
@@ -27835,8 +27893,11 @@ export const UserProfileDetailsFragmentDoc = /*#__PURE__*/ gql`
 export const ResolvableLayerCommentDetailsFragmentDoc = /*#__PURE__*/ gql`
     fragment ResolvableLayerCommentDetails on ResolvableLayerComment {
   id
+  projectId
+  tableOfContentsItemId
   comment
   createdAt
+  resolvedAt
   authorProfile {
     ...UserProfileDetails
   }
@@ -27908,6 +27969,9 @@ export const FullAdminOverlayFragmentDoc = /*#__PURE__*/ gql`
     ...ResolvableLayerCommentThread
   }
   resolvedCommentCount
+  resolvedCommentThreads {
+    ...ResolvableLayerCommentThread
+  }
 }
     ${FullAdminDataLayerFragmentDoc}
 ${ResolvableLayerCommentThreadFragmentDoc}`;
@@ -31012,23 +31076,65 @@ export const ChangeLogsSinceLastPublishDocument = /*#__PURE__*/ gql`
 }
     ${ChangeLogDetailsFragmentDoc}`;
 export const CreateResolvableCommentDocument = /*#__PURE__*/ gql`
-    mutation CreateResolvableComment($projectId: Int!, $tableOfContentsItemId: Int!, $comment: JSON!) {
+    mutation CreateResolvableComment($projectId: Int!, $tableOfContentsItemId: Int!, $comment: JSON!, $parentCommentId: Int) {
   createResolvableLayerComment(
-    input: {projectId: $projectId, tableOfContentsItemId: $tableOfContentsItemId, comment: $comment}
+    input: {projectId: $projectId, tableOfContentsItemId: $tableOfContentsItemId, comment: $comment, parentCommentId: $parentCommentId}
   ) {
     resolvableLayerComment {
       ...ResolvableLayerCommentDetails
-      tableOfContentsItem {
-        unresolvedComment {
-          ...ResolvableLayerCommentThread
-        }
-        resolvedCommentCount
+    }
+    tableOfContentsItem {
+      id
+      unresolvedComment {
+        ...ResolvableLayerCommentThread
+      }
+      resolvedCommentCount
+      resolvedCommentThreads {
+        ...ResolvableLayerCommentThread
       }
     }
   }
 }
     ${ResolvableLayerCommentDetailsFragmentDoc}
 ${ResolvableLayerCommentThreadFragmentDoc}`;
+export const ResolveResolvableCommentDocument = /*#__PURE__*/ gql`
+    mutation ResolveResolvableComment($commentId: Int!) {
+  resolveResolvableLayerComment(input: {commentId: $commentId}) {
+    resolvableLayerComment {
+      ...ResolvableLayerCommentThread
+    }
+    tableOfContentsItem {
+      id
+      unresolvedComment {
+        ...ResolvableLayerCommentThread
+      }
+      resolvedCommentCount
+      resolvedCommentThreads {
+        ...ResolvableLayerCommentThread
+      }
+    }
+  }
+}
+    ${ResolvableLayerCommentThreadFragmentDoc}`;
+export const ReopenResolvableCommentDocument = /*#__PURE__*/ gql`
+    mutation ReopenResolvableComment($commentId: Int!) {
+  reopenResolvableLayerComment(input: {commentId: $commentId}) {
+    resolvableLayerComment {
+      ...ResolvableLayerCommentThread
+    }
+    tableOfContentsItem {
+      id
+      unresolvedComment {
+        ...ResolvableLayerCommentThread
+      }
+      resolvedCommentCount
+      resolvedCommentThreads {
+        ...ResolvableLayerCommentThread
+      }
+    }
+  }
+}
+    ${ResolvableLayerCommentThreadFragmentDoc}`;
 export const ForumAdminListDocument = /*#__PURE__*/ gql`
     query ForumAdminList($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -34250,6 +34356,8 @@ export const namedOperations = {
     DuplicateTableOfContentsItem: 'DuplicateTableOfContentsItem',
     createINaturalistTableOfContentsItem: 'createINaturalistTableOfContentsItem',
     CreateResolvableComment: 'CreateResolvableComment',
+    ResolveResolvableComment: 'ResolveResolvableComment',
+    ReopenResolvableComment: 'ReopenResolvableComment',
     CreateForum: 'CreateForum',
     UpdateForum: 'UpdateForum',
     DeleteForum: 'DeleteForum',

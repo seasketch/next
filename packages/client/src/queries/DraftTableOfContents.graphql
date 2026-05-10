@@ -459,8 +459,11 @@ query LayerSettingsChangeLog($id: Int!, $first: Int!) {
 
 fragment ResolvableLayerCommentDetails on ResolvableLayerComment {
   id
+  projectId
+  tableOfContentsItemId
   comment
   createdAt
+  resolvedAt
   authorProfile {
     ...UserProfileDetails
   }
@@ -530,6 +533,9 @@ fragment FullAdminOverlay on TableOfContentsItem {
     ...ResolvableLayerCommentThread
   }
   resolvedCommentCount
+  resolvedCommentThreads {
+    ...ResolvableLayerCommentThread
+  }
 }
 
 query GetLayerItem($id: Int!) {
@@ -1264,21 +1270,63 @@ mutation CreateResolvableComment(
   $projectId: Int!
   $tableOfContentsItemId: Int!
   $comment: JSON!
+  $parentCommentId: Int
 ) {
   createResolvableLayerComment(
     input: {
       projectId: $projectId
       tableOfContentsItemId: $tableOfContentsItemId
       comment: $comment
+      parentCommentId: $parentCommentId
     }
   ) {
     resolvableLayerComment {
       ...ResolvableLayerCommentDetails
-      tableOfContentsItem {
-        unresolvedComment {
-          ...ResolvableLayerCommentThread
-        }
-        resolvedCommentCount
+    }
+    tableOfContentsItem {
+      id
+      unresolvedComment {
+        ...ResolvableLayerCommentThread
+      }
+      resolvedCommentCount
+      resolvedCommentThreads {
+        ...ResolvableLayerCommentThread
+      }
+    }
+  }
+}
+
+mutation ResolveResolvableComment($commentId: Int!) {
+  resolveResolvableLayerComment(input: { commentId: $commentId }) {
+    resolvableLayerComment {
+      ...ResolvableLayerCommentThread
+    }
+    tableOfContentsItem {
+      id
+      unresolvedComment {
+        ...ResolvableLayerCommentThread
+      }
+      resolvedCommentCount
+      resolvedCommentThreads {
+        ...ResolvableLayerCommentThread
+      }
+    }
+  }
+}
+
+mutation ReopenResolvableComment($commentId: Int!) {
+  reopenResolvableLayerComment(input: { commentId: $commentId }) {
+    resolvableLayerComment {
+      ...ResolvableLayerCommentThread
+    }
+    tableOfContentsItem {
+      id
+      unresolvedComment {
+        ...ResolvableLayerCommentThread
+      }
+      resolvedCommentCount
+      resolvedCommentThreads {
+        ...ResolvableLayerCommentThread
       }
     }
   }

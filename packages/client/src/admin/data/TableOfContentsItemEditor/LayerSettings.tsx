@@ -2,6 +2,7 @@ import { useCallback, useContext, useMemo, useState } from "react";
 import {
   DataSourceTypes,
   FullAdminOverlayFragment,
+  ResolvableLayerCommentThreadFragment,
   useUpdateDataSourceMutation,
   useUpdateTableOfContentsItemMutation,
 } from "../../../generated/graphql";
@@ -26,6 +27,8 @@ import Warning from "../../../components/Warning";
 import AICartographerNotesSummary from "./AICartographerNotesSummary";
 import LayerSettingsChangeLogList from "../../changelogs/LayerSettingsChangeLogList";
 import { layerSettingsChangeLogRefetchQueries } from "../../changelogs/layerSettingsChangeLogRefetch";
+import NewResolvableComment from "./NewResolvableComment";
+import ResolvableComment from "./ResolvableComment";
 
 export default function LayerSettings({
   item,
@@ -37,6 +40,19 @@ export default function LayerSettings({
   const layer = item.dataLayer;
   const source = layer!.dataSource;
   const [referenceCopied, setReferenceCopied] = useState(false);
+  const [showNewComment, setShowNewComment] = useState(false);
+  const [showResolvedComments, setShowResolvedComments] = useState(false);
+  const [recentlyResolvedComment, setRecentlyResolvedComment] =
+    useState<ResolvableLayerCommentThreadFragment | null>(null);
+
+  const historicalResolvedComments = useMemo(
+    () =>
+      (item.resolvedCommentThreads || []).filter(
+        (comment) => comment.id !== recentlyResolvedComment?.id
+      ),
+    [item.resolvedCommentThreads, recentlyResolvedComment?.id]
+  );
+  const historicalResolvedCommentCount = historicalResolvedComments.length;
 
   const isArcGISCustomSource =
     source?.type === DataSourceTypes.ArcgisDynamicMapserver ||
@@ -287,14 +303,87 @@ export default function LayerSettings({
             metadata record. These comments are only visible to admins.
           </Trans>
         </p>
-        <div className="flex space-x-4 text-sm mt-2 font-medium">
-          <button className="text-primary-500 hover:text-primary-600">
-            <Trans ns="admin:data">New Comment</Trans>
-          </button>
-          <button disabled className="text-gray-500">
-            <Trans ns="admin:data">View history (none)</Trans>
-          </button>
-        </div>
+        {!item.unresolvedComment && !showNewComment && (
+          <div className="flex space-x-4 text-sm mt-2 font-medium">
+            <button
+              type="button"
+              className="text-primary-500 hover:text-primary-600"
+              onClick={() => {
+                setRecentlyResolvedComment(null);
+                setShowNewComment(true);
+              }}
+            >
+              <Trans ns="admin:data">New Comment</Trans>
+            </button>
+            {historicalResolvedCommentCount > 0 ? (
+              <button
+                type="button"
+                className="text-primary-500 hover:text-primary-600"
+                onClick={() => setShowResolvedComments((prev) => !prev)}
+              >
+                {showResolvedComments ? (
+                  <Trans ns="admin:data">Hide comment history</Trans>
+                ) : (
+                  t("View comment history ({{count}})", {
+                    count: historicalResolvedCommentCount,
+                  })
+                )}
+              </button>
+            ) : null}
+          </div>
+        )}
+        {item.unresolvedComment && (
+          <ResolvableComment
+            comment={item.unresolvedComment}
+            onResolved={(comment) => {
+              setRecentlyResolvedComment(comment);
+              setShowResolvedComments(false);
+            }}
+            onReopened={() => setRecentlyResolvedComment(null)}
+          />
+        )}
+        {!item.unresolvedComment && recentlyResolvedComment && (
+          <ResolvableComment
+            comment={recentlyResolvedComment}
+            onReopened={() => setRecentlyResolvedComment(null)}
+          />
+        )}
+        {showNewComment && !item.unresolvedComment && (
+          <NewResolvableComment
+            projectId={item.projectId}
+            tableOfContentsItemId={item.id}
+            onCancel={() => setShowNewComment(false)}
+            onCreated={() => {
+              setRecentlyResolvedComment(null);
+              setShowNewComment(false);
+            }}
+          />
+        )}
+        {(item.unresolvedComment || showNewComment || recentlyResolvedComment) &&
+        historicalResolvedCommentCount > 0 ? (
+          <div className="mt-4 flex justify-center">
+            <button
+              type="button"
+              className="text-sm font-medium text-primary-500 hover:text-primary-600"
+              onClick={() => setShowResolvedComments((prev) => !prev)}
+            >
+              {showResolvedComments ? (
+                <Trans ns="admin:data">Hide comment history</Trans>
+              ) : (
+                t("View comment history ({{count}})", {
+                  count: historicalResolvedCommentCount,
+                })
+              )}
+            </button>
+          </div>
+        ) : null}
+        {showResolvedComments && historicalResolvedCommentCount > 0 && (
+          <div className="mt-4 space-y-4">
+            {historicalResolvedComments.map((comment) => (
+              <ResolvableComment key={comment.id} comment={comment} />
+            ))}
+          </div>
+        )}
       </div>
       <LayerSettingsChangeLogList tableOfContentsItemId={item.id} />
       {item && item.geoprocessingReferenceId && (

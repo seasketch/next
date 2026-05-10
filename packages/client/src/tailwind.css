@@ -157,6 +157,35 @@ code {
   height: 1em;
 }
 
+.resolvable-comment-body .ProseMirror,
+.resolvable-comment-body {
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: rgb(31, 41, 55);
+}
+
+.resolvable-comment-body .ProseMirror:focus {
+  outline: 0px solid transparent;
+}
+
+.resolvable-comment-body p {
+  margin-top: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+
+.resolvable-comment-body p:first-child {
+  margin-top: 0;
+}
+
+.resolvable-comment-body p:last-child {
+  margin-bottom: 0;
+}
+
+.resolvable-comment-body a {
+  color: rgb(37, 99, 235);
+  text-decoration: underline;
+}
+
 .mapboxgl-ctrl-attrib-button {
   position: absolute !important;
 }
