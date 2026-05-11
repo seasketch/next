@@ -72,14 +72,7 @@ export const MyComponent: React.FC<MyComponentProps> = ({ title }) => {
 
 ## Database Migration Workflow (Mandatory)
 
-- `packages/api/migrations/current.sql` is the only place for in-progress migration work. Do not create/edit files in `packages/api/migrations/committed` directly.
-- Every substantial change in `current.sql` MUST follow an explicit **undo-then-redo** pattern so the file can be re-run safely during local iteration and branch switching.
-- Write `current.sql` in this structure:
-  - `-- undo`: drop/revert prior local objects first (`drop ... if exists ... cascade`, `drop function if exists ...`, etc.).
-  - `-- redo`: recreate the intended final schema objects, functions, policies, indexes, and triggers.
-- Treat the undo section as required for destructive or shape-changing work (table/function/view/type/policy/index/trigger changes). Generated code should never omit undo statements for these edits.
-- Keep migrations idempotent and branch-switch safe; assume `graphile-migrate watch` may run repeatedly against a drifted local dev database.
-- Before finishing migration work, verify dependent objects dropped via `cascade` are recreated in the redo section.
+- `packages/api/migrations/current.sql` is the only place for in-progress migration work. Do not create/edit files in `packages/api/migrations/committed` directly. Do not edit schema.sql directly.
 
 ## React Client -- verifying your work
 
