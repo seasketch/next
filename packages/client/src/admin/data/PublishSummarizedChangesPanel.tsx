@@ -565,7 +565,7 @@ function SummarizedRow({
   );
 }
 
-function PublishBadge({
+export function PublishBadge({
   badgeKey,
   logs,
   t,

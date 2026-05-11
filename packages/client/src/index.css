@@ -12976,6 +12976,11 @@ select{
           text-decoration-color:#94a3b8
 }
 
+.decoration-primary-300{
+  -webkit-text-decoration-color:rgb(71,163,220);
+          text-decoration-color:rgb(71,163,220)
+}
+
 .decoration-dotted{
   -webkit-text-decoration-style:dotted;
           text-decoration-style:dotted
@@ -14718,6 +14723,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .hover\:text-blue-800:hover{
   --tw-text-opacity:1;
   color:rgb(30 64 175 / var(--tw-text-opacity, 1))
+}
+
+.hover\:text-primary-900:hover{
+  --tw-text-opacity:1;
+  color:rgb(0 91 179 / var(--tw-text-opacity, 1))
 }
 
 .hover\:underline:hover{

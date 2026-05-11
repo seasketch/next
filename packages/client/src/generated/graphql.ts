@@ -22169,7 +22169,10 @@ export type ChangeLogsSinceLastPublishQuery = (
     & { draftTableOfContentsItems?: Maybe<Array<(
       { __typename?: 'TableOfContentsItem' }
       & Pick<TableOfContentsItem, 'id' | 'title' | 'isFolder'>
-      & { dataLayer?: Maybe<(
+      & { unresolvedComment?: Maybe<(
+        { __typename?: 'ResolvableLayerComment' }
+        & ResolvableLayerCommentThreadFragment
+      )>, dataLayer?: Maybe<(
         { __typename?: 'DataLayer' }
         & Pick<DataLayer, 'id'>
         & { dataSource?: Maybe<(
@@ -34607,6 +34610,9 @@ export const ChangeLogsSinceLastPublishDocument = gql`
       id
       title
       isFolder
+      unresolvedComment {
+        ...ResolvableLayerCommentThread
+      }
       dataLayer {
         id
         dataSource {
@@ -34619,7 +34625,8 @@ export const ChangeLogsSinceLastPublishDocument = gql`
     }
   }
 }
-    ${ChangeLogDetailsFragmentDoc}`;
+    ${ResolvableLayerCommentThreadFragmentDoc}
+${ChangeLogDetailsFragmentDoc}`;
 
 /**
  * __useChangeLogsSinceLastPublishQuery__

@@ -22167,7 +22167,10 @@ export type ChangeLogsSinceLastPublishQuery = (
     & { draftTableOfContentsItems?: Maybe<Array<(
       { __typename?: 'TableOfContentsItem' }
       & Pick<TableOfContentsItem, 'id' | 'title' | 'isFolder'>
-      & { dataLayer?: Maybe<(
+      & { unresolvedComment?: Maybe<(
+        { __typename?: 'ResolvableLayerComment' }
+        & ResolvableLayerCommentThreadFragment
+      )>, dataLayer?: Maybe<(
         { __typename?: 'DataLayer' }
         & Pick<DataLayer, 'id'>
         & { dataSource?: Maybe<(
@@ -31076,6 +31079,9 @@ export const ChangeLogsSinceLastPublishDocument = /*#__PURE__*/ gql`
       id
       title
       isFolder
+      unresolvedComment {
+        ...ResolvableLayerCommentThread
+      }
       dataLayer {
         id
         dataSource {
@@ -31088,7 +31094,8 @@ export const ChangeLogsSinceLastPublishDocument = /*#__PURE__*/ gql`
     }
   }
 }
-    ${ChangeLogDetailsFragmentDoc}`;
+    ${ResolvableLayerCommentThreadFragmentDoc}
+${ChangeLogDetailsFragmentDoc}`;
 export const CreateResolvableCommentDocument = /*#__PURE__*/ gql`
     mutation CreateResolvableComment($projectId: Int!, $tableOfContentsItemId: Int!, $comment: JSON!, $parentCommentId: Int, $setResolved: Boolean) {
   createResolvableLayerComment(
