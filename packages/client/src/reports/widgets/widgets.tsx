@@ -88,6 +88,7 @@ import { useWidgetDependencies } from "../hooks/useWidgetDependencies";
 import { ReportUIStateContext } from "../context/ReportUIStateContext";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import { ExclamationTriangleIcon, Pencil2Icon } from "@radix-ui/react-icons";
+import { FolderIcon } from "@heroicons/react/outline";
 import Badge from "../../components/Badge";
 import ProfilePhoto from "../../admin/users/ProfilePhoto";
 import Spinner from "../../components/Spinner";
@@ -738,12 +739,31 @@ function useOverlayAuthorInfo(tableOfContentsItemId: number) {
     const item = data.projectBySlug?.draftTableOfContentsItems?.find(
       (i) => i.id === tableOfContentsItemId
     );
-    const dataLayer = item?.dataLayer;
+    if (!item) return { loading: false, data: null };
+
+    const parentFolderTitle = item.containedBy?.[0]?.title ?? null;
+
+    const dataLayer = item.dataLayer;
     const ds = dataLayer?.dataSource;
-    if (!ds) return { loading: false, data: null };
+    if (!ds) {
+      if (!parentFolderTitle) return { loading: false, data: null };
+      return {
+        loading: false,
+        data: {
+          parentFolderTitle,
+          showAuthorRow: false,
+          profile: null,
+          createdAt: null,
+          version: null,
+          attribution: null,
+        },
+      };
+    }
     return {
       loading: false,
       data: {
+        parentFolderTitle: parentFolderTitle ?? null,
+        showAuthorRow: true,
         profile: ds.authorProfile,
         createdAt: ds.createdAt ? new Date(ds.createdAt) : null,
         version: dataLayer?.version,
@@ -765,38 +785,61 @@ export function OverlayLayerInfo({
 
   if (loading || !data) return null;
 
-  const { profile, createdAt, version, attribution } = data;
+  const {
+    parentFolderTitle,
+    showAuthorRow,
+    profile,
+    createdAt,
+    version,
+    attribution,
+  } = data;
 
   return (
     // eslint-disable-next-line i18next/no-literal-string
-    <div className="mt-1.5 space-y-1">
+    <div className="mt-2 space-y-2.5">
+      {parentFolderTitle ? (
+        <div
+          className="flex items-center gap-2 rounded-md border border-slate-200/90 bg-slate-50 px-2.5 py-2 max-w-full"
+          title={parentFolderTitle}
+        >
+          <FolderIcon
+            className="h-4 w-4 flex-shrink-0 text-slate-400"
+            aria-hidden
+          />
+          <span className="min-w-0 truncate text-[11px] font-semibold leading-snug text-slate-600">
+            {parentFolderTitle}
+          </span>
+        </div>
+      ) : null}
       {attribution && (
         <div className="text-xs text-gray-500 italic max-w-full truncate">
           {attribution}
         </div>
       )}
-      <div className="flex items-center gap-1.5 text-xs text-gray-500">
-        <div className="w-5 h-5 flex-shrink-0">
-          <ProfilePhoto
-            fullname={profile?.fullname || undefined}
-            email={profile?.email || undefined}
-            canonicalEmail={profile?.email || ""}
-            picture={profile?.picture || undefined}
-          />
-        </div>
-        <span className="truncate">
-          {profile?.fullname || profile?.email || "Unknown"}
-          {createdAt ? `, ${createdAt.toLocaleDateString()}` : ""}
-        </span>
-        {version != null && version > 1 && (
-          <span className="text-xs font-medium text-blue-600 bg-blue-50 border border-blue-400 px-1 py-0 rounded-md">
-            {
-              // eslint-disable-next-line i18next/no-literal-string
-              `v${version}`
-            }
+      {showAuthorRow ? (
+        <div className="flex items-center gap-1.5 text-xs text-gray-500">
+          <div className="w-5 h-5 flex-shrink-0">
+            <ProfilePhoto
+              fullname={profile?.fullname || undefined}
+              email={profile?.email || undefined}
+              canonicalEmail={profile?.email || ""}
+              picture={profile?.picture || undefined}
+            />
+          </div>
+          <span className="truncate">
+            {profile?.fullname || profile?.email || "Unknown"}
+            {createdAt ? `, ${createdAt.toLocaleDateString()}` : ""}
           </span>
-        )}
-      </div>
+          {version != null && version > 1 && (
+            <span className="text-xs font-medium text-blue-600 bg-blue-50 border border-blue-400 px-1 py-0 rounded-md">
+              {
+                // eslint-disable-next-line i18next/no-literal-string
+                `v${version}`
+              }
+            </span>
+          )}
+        </div>
+      ) : null}
     </div>
   );
 }
