@@ -2370,6 +2370,7 @@ export type CreateResolvableLayerCommentInput = {
   comment?: Maybe<Scalars['JSON']>;
   parentCommentId?: Maybe<Scalars['Int']>;
   projectId?: Maybe<Scalars['Int']>;
+  setResolved?: Maybe<Scalars['Boolean']>;
   tableOfContentsItemId?: Maybe<Scalars['Int']>;
 };
 
@@ -14561,6 +14562,7 @@ export type ResolvableLayerComment = Node & {
   id: Scalars['Int'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  parentComment?: Maybe<ResolvableLayerComment>;
   parentCommentId?: Maybe<Scalars['Int']>;
   /** Reads a single `Project` that is related to this `ResolvableLayerComment`. */
   project?: Maybe<Project>;
@@ -22185,6 +22187,7 @@ export type CreateResolvableCommentMutationVariables = Exact<{
   tableOfContentsItemId: Scalars['Int'];
   comment: Scalars['JSON'];
   parentCommentId?: Maybe<Scalars['Int']>;
+  setResolved?: Maybe<Scalars['Boolean']>;
 }>;
 
 
@@ -22194,6 +22197,14 @@ export type CreateResolvableCommentMutation = (
     { __typename?: 'CreateResolvableLayerCommentPayload' }
     & { resolvableLayerComment?: Maybe<(
       { __typename?: 'ResolvableLayerComment' }
+      & { parentComment?: Maybe<(
+        { __typename?: 'ResolvableLayerComment' }
+        & Pick<ResolvableLayerComment, 'id' | 'resolvedAt' | 'resolvedById'>
+        & { resolvedByProfile?: Maybe<(
+          { __typename?: 'Profile' }
+          & UserProfileDetailsFragment
+        )> }
+      )> }
       & ResolvableLayerCommentDetailsFragment
     )>, tableOfContentsItem?: Maybe<(
       { __typename?: 'TableOfContentsItem' }
@@ -34635,12 +34646,20 @@ export type ChangeLogsSinceLastPublishQueryHookResult = ReturnType<typeof useCha
 export type ChangeLogsSinceLastPublishLazyQueryHookResult = ReturnType<typeof useChangeLogsSinceLastPublishLazyQuery>;
 export type ChangeLogsSinceLastPublishQueryResult = Apollo.QueryResult<ChangeLogsSinceLastPublishQuery, ChangeLogsSinceLastPublishQueryVariables>;
 export const CreateResolvableCommentDocument = gql`
-    mutation CreateResolvableComment($projectId: Int!, $tableOfContentsItemId: Int!, $comment: JSON!, $parentCommentId: Int) {
+    mutation CreateResolvableComment($projectId: Int!, $tableOfContentsItemId: Int!, $comment: JSON!, $parentCommentId: Int, $setResolved: Boolean) {
   createResolvableLayerComment(
-    input: {projectId: $projectId, tableOfContentsItemId: $tableOfContentsItemId, comment: $comment, parentCommentId: $parentCommentId}
+    input: {projectId: $projectId, tableOfContentsItemId: $tableOfContentsItemId, comment: $comment, parentCommentId: $parentCommentId, setResolved: $setResolved}
   ) {
     resolvableLayerComment {
       ...ResolvableLayerCommentDetails
+      parentComment {
+        id
+        resolvedAt
+        resolvedById
+        resolvedByProfile {
+          ...UserProfileDetails
+        }
+      }
     }
     tableOfContentsItem {
       id
@@ -34655,6 +34674,7 @@ export const CreateResolvableCommentDocument = gql`
   }
 }
     ${ResolvableLayerCommentDetailsFragmentDoc}
+${UserProfileDetailsFragmentDoc}
 ${ResolvableLayerCommentThreadFragmentDoc}`;
 export type CreateResolvableCommentMutationFn = Apollo.MutationFunction<CreateResolvableCommentMutation, CreateResolvableCommentMutationVariables>;
 
@@ -34675,6 +34695,7 @@ export type CreateResolvableCommentMutationFn = Apollo.MutationFunction<CreateRe
  *      tableOfContentsItemId: // value for 'tableOfContentsItemId'
  *      comment: // value for 'comment'
  *      parentCommentId: // value for 'parentCommentId'
+ *      setResolved: // value for 'setResolved'
  *   },
  * });
  */

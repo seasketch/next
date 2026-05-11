@@ -146,7 +146,9 @@ grant execute on function table_of_contents_items_resolved_comment_threads(item 
 
 comment on function table_of_contents_items_resolved_comment_threads(item table_of_contents_items) is '@simpleCollections only';
 
-create or replace function create_resolvable_layer_comment(project_id int, table_of_contents_item_id int, comment jsonb, parent_comment_id int)
+drop function if exists create_resolvable_layer_comment;
+
+create or replace function create_resolvable_layer_comment(project_id int, table_of_contents_item_id int, comment jsonb, parent_comment_id int, set_resolved boolean)
   returns resolvable_layer_comments
   language plpgsql
   security definer
@@ -157,6 +159,9 @@ create or replace function create_resolvable_layer_comment(project_id int, table
     if session_is_admin(create_resolvable_layer_comment.project_id) = false then
       raise exception 'Access denied to project %', create_resolvable_layer_comment.project_id;
     end if;
+    if set_resolved and parent_comment_id is null then
+      raise exception 'Resolved comments must be replies to other comments';
+    end if;
     if not exists (
       select 1
       from public.table_of_contents_items t
@@ -164,6 +169,11 @@ create or replace function create_resolvable_layer_comment(project_id int, table
         and t.is_draft = true
     ) then
       raise exception 'Resolvable layer comments may only reference draft layers';
+    end if;
+    if set_resolved then
+      update resolvable_layer_comments
+        set resolved_at = now(), resolved_by_id = current_setting('session.user_id', true)::int
+        where id = create_resolvable_layer_comment.parent_comment_id;
     end if;
     insert into resolvable_layer_comments (project_id, table_of_contents_item_id, comment, parent_comment_id, author_id)
       values (
@@ -229,3 +239,14 @@ create or replace function reopen_resolvable_layer_comment(comment_id int)
 $$;
 
 grant execute on function reopen_resolvable_layer_comment to seasketch_user;
+
+create or replace function resolvable_layer_comments_parent_comment(comment resolvable_layer_comments)
+  returns resolvable_layer_comments
+  language sql
+  security definer
+  stable
+  as $$
+    select * from resolvable_layer_comments where id = comment.parent_comment_id;
+$$;
+
+grant execute on function resolvable_layer_comments_parent_comment to seasketch_user;

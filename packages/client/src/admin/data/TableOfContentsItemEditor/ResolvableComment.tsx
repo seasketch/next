@@ -185,14 +185,31 @@ export default function ResolvableComment({
             tableOfContentsItemId={comment.tableOfContentsItemId}
             parentCommentId={comment.id}
             onCancel={() => setShowReplyForm(false)}
-            onCreated={() => setShowReplyForm(false)}
+            onCreated={(result) => {
+              setShowReplyForm(false);
+              if (result?.resolvedWithReply) {
+                const parentComment = result.createdComment?.parentComment;
+                onResolved?.(
+                  result.resolvedThread || {
+                    ...comment,
+                    resolvedAt:
+                      parentComment?.resolvedAt || new Date().toISOString(),
+                    resolvedById: parentComment?.resolvedById,
+                    resolvedByProfile: parentComment?.resolvedByProfile,
+                    replies: result.createdComment
+                      ? [...(comment.replies || []), result.createdComment]
+                      : comment.replies,
+                  }
+                );
+              }
+            }}
           />
         </div>
       ) : !resolved ? (
         <button
           type="button"
           onClick={() => setShowReplyForm(true)}
-          className="ml-8 mt-4 flex w-[calc(100%-2rem)] cursor-text items-center rounded-full border border-gray-200 bg-white px-4 py-2 text-left text-sm text-gray-500 hover:border-gray-300 hover:text-gray-700 focus:outline-none focus:ring-2 focus:ring-primary-500"
+          className="ml-8 mt-4 flex w-[calc(100%-2rem)] cursor-text items-center rounded-full border border-gray-200 bg-white px-4 py-2 text-left text-sm text-gray-500  focus:outline-none focus:ring-2 focus:ring-primary-500"
         >
           <Trans ns="admin:data">
             Reply or click <CheckIcon className="mx-0.5 inline h-4 w-4" /> to

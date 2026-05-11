@@ -1271,6 +1271,7 @@ mutation CreateResolvableComment(
   $tableOfContentsItemId: Int!
   $comment: JSON!
   $parentCommentId: Int
+  $setResolved: Boolean
 ) {
   createResolvableLayerComment(
     input: {
@@ -1278,10 +1279,19 @@ mutation CreateResolvableComment(
       tableOfContentsItemId: $tableOfContentsItemId
       comment: $comment
       parentCommentId: $parentCommentId
+      setResolved: $setResolved
     }
   ) {
     resolvableLayerComment {
       ...ResolvableLayerCommentDetails
+      parentComment {
+        id
+        resolvedAt
+        resolvedById
+        resolvedByProfile {
+          ...UserProfileDetails
+        }
+      }
     }
     tableOfContentsItem {
       id

@@ -132,7 +132,7 @@ export default function LayerSettingsChangeLogList({
 
   return (
     <div className="mt-6">
-      <h3 className="py-1 text-xs font-semibold uppercase tracking-wide text-gray-500">
+      <h3 className="py-1 text-sm font-medium  text-gray-700">
         <Trans ns="admin:data">History</Trans>
       </h3>
       <ul className="mt-4">

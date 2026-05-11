@@ -2671,6 +2671,7 @@ input CreateResolvableLayerCommentInput {
   comment: JSON
   parentCommentId: Int
   projectId: Int
+  setResolved: Boolean
   tableOfContentsItemId: Int
 }
 
@@ -15698,6 +15699,7 @@ type ResolvableLayerComment implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+  parentComment: ResolvableLayerComment
   parentCommentId: Int
 
   """

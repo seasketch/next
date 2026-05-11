@@ -7,6 +7,7 @@ import InlineAuthor from "../../../components/InlineAuthor";
 import ProfilePhoto from "../../users/ProfilePhoto";
 import {
   AuthorProfileFragment,
+  ResolvableLayerCommentThreadFragment,
   useCreateResolvableCommentMutation,
   useMeQuery,
 } from "../../../generated/graphql";
@@ -16,6 +17,12 @@ import {
 } from "./ResolvableCommentEditor";
 import ResolvableCommentEditor from "./ResolvableCommentEditor";
 import { formatTimeAgo } from "../../changelogs/ChangeLogTimelineItem";
+
+export interface NewResolvableCommentCreatedResult {
+  createdComment?: any;
+  resolvedThread?: ResolvableLayerCommentThreadFragment;
+  resolvedWithReply: boolean;
+}
 
 export default function NewResolvableComment({
   projectId,
@@ -29,7 +36,7 @@ export default function NewResolvableComment({
   tableOfContentsItemId: number;
   parentCommentId?: number;
   onCancel: () => void;
-  onCreated: () => void;
+  onCreated: (result?: NewResolvableCommentCreatedResult) => void;
   variant?: "thread" | "reply";
 }) {
   const { t } = useTranslation("admin:data");
@@ -46,6 +53,33 @@ export default function NewResolvableComment({
   const createdAt = useMemo(() => new Date(), []);
   const profile = data?.me?.profile;
   const isReply = variant === "reply";
+  const submit = async (resolveWithReply: boolean) => {
+    const result = await mutate({
+      variables: {
+        projectId,
+        tableOfContentsItemId,
+        comment,
+        parentCommentId,
+        setResolved: isReply ? resolveWithReply : undefined,
+      },
+    });
+    if (result.data?.createResolvableLayerComment?.resolvableLayerComment) {
+      const createdComment =
+        result.data.createResolvableLayerComment.resolvableLayerComment;
+      const resolvedThread = resolveWithReply
+        ? result.data.createResolvableLayerComment.tableOfContentsItem?.resolvedCommentThreads?.find(
+            (thread) => thread.id === parentCommentId
+          )
+        : undefined;
+      onCreated({
+        createdComment,
+        resolvedThread: resolvedThread || undefined,
+        resolvedWithReply: Boolean(resolveWithReply),
+      });
+    }
+  };
+  const submitDisabled =
+    mutationState.loading || empty || isResolvableCommentJsonEmpty(comment);
 
   return (
     <div
@@ -99,7 +133,7 @@ export default function NewResolvableComment({
         />
       </div>
       <div
-        className="ml-8 mt-4 flex justify-end gap-2"
+        className="ml-8 mt-4 flex items-center justify-end gap-3"
         data-prosemirror-ignore-clear-selection="true"
       >
         <Button
@@ -111,27 +145,9 @@ export default function NewResolvableComment({
         <Button
           small
           primary
-          disabled={
-            mutationState.loading ||
-            empty ||
-            isResolvableCommentJsonEmpty(comment)
-          }
+          disabled={submitDisabled}
           loading={mutationState.loading}
-          onClick={async () => {
-            const result = await mutate({
-              variables: {
-                projectId,
-                tableOfContentsItemId,
-                comment,
-                parentCommentId,
-              },
-            });
-            if (
-              result.data?.createResolvableLayerComment?.resolvableLayerComment
-            ) {
-              onCreated();
-            }
-          }}
+          onClick={() => submit(false)}
           label={
             isReply ? (
               <Trans ns="admin:data">Reply</Trans>
