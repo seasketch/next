@@ -905,6 +905,9 @@ query ProjectReportingLayers($slug: String!) {
       stableId
       isFolder
       parentStableId
+      containedBy {
+        title
+      }
       sortIndex
       dataLayer {
         id

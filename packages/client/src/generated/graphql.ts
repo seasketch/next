@@ -24922,7 +24922,10 @@ export type ProjectReportingLayersQuery = (
     )>, draftTableOfContentsItems?: Maybe<Array<(
       { __typename?: 'TableOfContentsItem' }
       & Pick<TableOfContentsItem, 'id' | 'title' | 'stableId' | 'isFolder' | 'parentStableId' | 'sortIndex' | 'copiedFromDataLibraryTemplateId'>
-      & { dataLayer?: Maybe<(
+      & { containedBy?: Maybe<Array<Maybe<(
+        { __typename?: 'TableOfContentsItem' }
+        & Pick<TableOfContentsItem, 'title'>
+      )>>>, dataLayer?: Maybe<(
         { __typename?: 'DataLayer' }
         & Pick<DataLayer, 'id' | 'version'>
         & { dataSource?: Maybe<(
@@ -39465,6 +39468,9 @@ export const ProjectReportingLayersDocument = gql`
       stableId
       isFolder
       parentStableId
+      containedBy {
+        title
+      }
       sortIndex
       dataLayer {
         id
