@@ -7,6 +7,7 @@ drop function if exists public.resolvable_layer_comments_replies(resolvable_laye
 drop function if exists public.resolvable_layer_comments_resolved_by_profile(resolvable_layer_comments);
 drop function if exists public.resolvable_layer_comments_author_profile(resolvable_layer_comments);
 drop function if exists public.table_of_contents_items_resolved_comment_count(table_of_contents_items);
+drop function if exists public.table_of_contents_items_has_unresolved_comment(table_of_contents_items);
 drop function if exists public.table_of_contents_items_unresolved_comment(table_of_contents_items);
 drop function if exists public.create_resolvable_layer_comment(int, int, jsonb, int);
 drop function if exists public.resolve_resolvable_layer_comment(int);
@@ -86,6 +87,23 @@ create or replace function table_of_contents_items_unresolved_comment(item table
 $$;
 
 grant execute on function table_of_contents_items_unresolved_comment(item table_of_contents_items) to seasketch_user;
+
+create or replace function table_of_contents_items_has_unresolved_comment(item table_of_contents_items)
+  returns boolean
+  language sql
+  security definer
+  stable
+  as $$
+    select exists (
+      select 1
+      from resolvable_layer_comments
+      where table_of_contents_item_id = item.id
+        and resolved_at is null
+        and parent_comment_id is null
+    );
+$$;
+
+grant execute on function table_of_contents_items_has_unresolved_comment(item table_of_contents_items) to seasketch_user;
 
 create or replace function table_of_contents_items_resolved_comment_count(item table_of_contents_items)
   returns int
@@ -250,3 +268,6 @@ create or replace function resolvable_layer_comments_parent_comment(comment reso
 $$;
 
 grant execute on function resolvable_layer_comments_parent_comment to seasketch_user;
+
+grant execute on function get_latest_published_report_for_draft to anon;
+grant execute on function get_primary_draft_report_id_for_sketch_class to anon;

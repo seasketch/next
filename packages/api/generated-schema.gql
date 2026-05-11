@@ -17861,6 +17861,7 @@ type TableOfContentsItem implements Node {
   hasArcgisVectorLayer: Boolean
   hasMetadata: Boolean
   hasOriginalSourceUpload: Boolean!
+  hasUnresolvedComment: Boolean
   hideChildren: Boolean!
   hostedSourceLastUpdated: Datetime
   id: Int!

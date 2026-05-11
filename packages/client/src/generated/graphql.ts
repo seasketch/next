@@ -16388,6 +16388,7 @@ export type TableOfContentsItem = Node & {
   hasArcgisVectorLayer?: Maybe<Scalars['Boolean']>;
   hasMetadata?: Maybe<Scalars['Boolean']>;
   hasOriginalSourceUpload: Scalars['Boolean'];
+  hasUnresolvedComment?: Maybe<Scalars['Boolean']>;
   hideChildren: Scalars['Boolean'];
   hostedSourceLastUpdated?: Maybe<Scalars['Datetime']>;
   id: Scalars['Int'];
@@ -21015,6 +21016,7 @@ export type ImportBasemapDetailsQuery = (
 
 export type AdminOverlayFragment = (
   { __typename?: 'TableOfContentsItem' }
+  & Pick<TableOfContentsItem, 'hasUnresolvedComment'>
   & { projectBackgroundJobs?: Maybe<Array<(
     { __typename?: 'ProjectBackgroundJob' }
     & Pick<ProjectBackgroundJob, 'id' | 'type' | 'title' | 'state' | 'progress' | 'progressMessage' | 'errorMessage'>
@@ -22208,7 +22210,7 @@ export type CreateResolvableCommentMutation = (
       & ResolvableLayerCommentDetailsFragment
     )>, tableOfContentsItem?: Maybe<(
       { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'resolvedCommentCount'>
+      & Pick<TableOfContentsItem, 'id' | 'hasUnresolvedComment' | 'resolvedCommentCount'>
       & { unresolvedComment?: Maybe<(
         { __typename?: 'ResolvableLayerComment' }
         & ResolvableLayerCommentThreadFragment
@@ -22234,7 +22236,7 @@ export type ResolveResolvableCommentMutation = (
       & ResolvableLayerCommentThreadFragment
     )>, tableOfContentsItem?: Maybe<(
       { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'resolvedCommentCount'>
+      & Pick<TableOfContentsItem, 'id' | 'hasUnresolvedComment' | 'resolvedCommentCount'>
       & { unresolvedComment?: Maybe<(
         { __typename?: 'ResolvableLayerComment' }
         & ResolvableLayerCommentThreadFragment
@@ -22260,7 +22262,7 @@ export type ReopenResolvableCommentMutation = (
       & ResolvableLayerCommentThreadFragment
     )>, tableOfContentsItem?: Maybe<(
       { __typename?: 'TableOfContentsItem' }
-      & Pick<TableOfContentsItem, 'id' | 'resolvedCommentCount'>
+      & Pick<TableOfContentsItem, 'id' | 'hasUnresolvedComment' | 'resolvedCommentCount'>
       & { unresolvedComment?: Maybe<(
         { __typename?: 'ResolvableLayerComment' }
         & ResolvableLayerCommentThreadFragment
@@ -27675,6 +27677,7 @@ export const OverlayFragmentDoc = gql`
 export const AdminOverlayFragmentDoc = gql`
     fragment AdminOverlay on TableOfContentsItem {
   ...Overlay
+  hasUnresolvedComment
   projectBackgroundJobs {
     id
     type
@@ -34663,6 +34666,7 @@ export const CreateResolvableCommentDocument = gql`
     }
     tableOfContentsItem {
       id
+      hasUnresolvedComment
       unresolvedComment {
         ...ResolvableLayerCommentThread
       }
@@ -34714,6 +34718,7 @@ export const ResolveResolvableCommentDocument = gql`
     }
     tableOfContentsItem {
       id
+      hasUnresolvedComment
       unresolvedComment {
         ...ResolvableLayerCommentThread
       }
@@ -34759,6 +34764,7 @@ export const ReopenResolvableCommentDocument = gql`
     }
     tableOfContentsItem {
       id
+      hasUnresolvedComment
       unresolvedComment {
         ...ResolvableLayerCommentThread
       }

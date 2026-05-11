@@ -1,5 +1,6 @@
 fragment AdminOverlay on TableOfContentsItem {
   ...Overlay
+  hasUnresolvedComment
   projectBackgroundJobs {
     id
     type
@@ -1295,6 +1296,7 @@ mutation CreateResolvableComment(
     }
     tableOfContentsItem {
       id
+      hasUnresolvedComment
       unresolvedComment {
         ...ResolvableLayerCommentThread
       }
@@ -1313,6 +1315,7 @@ mutation ResolveResolvableComment($commentId: Int!) {
     }
     tableOfContentsItem {
       id
+      hasUnresolvedComment
       unresolvedComment {
         ...ResolvableLayerCommentThread
       }
@@ -1331,6 +1334,7 @@ mutation ReopenResolvableComment($commentId: Int!) {
     }
     tableOfContentsItem {
       id
+      hasUnresolvedComment
       unresolvedComment {
         ...ResolvableLayerCommentThread
       }

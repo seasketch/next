@@ -146,6 +146,26 @@ export default function TableOfContentsEditor() {
 
   const layerEditingContext = useContext(LayerEditingContext);
 
+  const openUnresolvedCommentLayer = useCallback(
+    (node: TreeItem) => {
+      const item =
+        tocQuery.data?.projectBySlug?.draftTableOfContentsItems?.find(
+          (item) => item.stableId === node.id
+        );
+      if (item && !item.isFolder) {
+        layerEditingContext.setOpenEditor({
+          id: item.id,
+          isFolder: item.isFolder,
+          title: item.title,
+        });
+      }
+    },
+    [
+      layerEditingContext,
+      tocQuery.data?.projectBySlug?.draftTableOfContentsItems,
+    ]
+  );
+
   const layersAndSources = useLayersAndSourcesForItemsQuery({
     variables: {
       slug,
@@ -480,6 +500,7 @@ export default function TableOfContentsEditor() {
                 ariaLabel="Draft overlays"
                 sortable={!isFiltered}
                 onSortEnd={onSortEnd}
+                onUnresolvedCommentClick={openUnresolvedCommentLayer}
                 getContextMenuContent={(treeItemId, clickEvent) => {
                   const item =
                     tocQuery.data?.projectBySlug?.draftTableOfContentsItems?.find(
