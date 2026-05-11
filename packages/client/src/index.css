@@ -7593,6 +7593,14 @@ select{
   max-height:100vh
 }
 
+.max-h-\[min\(70vh\2c 30rem\)\]{
+  max-height:min(70vh,30rem)
+}
+
+.max-h-\[min\(80vh\2c 36rem\)\]{
+  max-height:min(80vh,36rem)
+}
+
 .min-h-0{
   min-height:0px
 }
@@ -7987,6 +7995,14 @@ select{
   width:calc(100% - 2rem)
 }
 
+.w-\[24rem\]{
+  width:24rem
+}
+
+.w-\[30rem\]{
+  width:30rem
+}
+
 .min-w-0{
   min-width:0px
 }
@@ -8345,6 +8361,18 @@ select{
 
 .max-w-xs{
   max-width:20rem
+}
+
+.max-w-\[calc\(100vw-2rem\)\]{
+  max-width:calc(100vw - 2rem)
+}
+
+.max-w-\[min\(100vw\2c 24rem\)\]{
+  max-width:min(100vw,24rem)
+}
+
+.max-w-\[min\(calc\(100vw-1rem\)\2c 30rem\)\]{
+  max-width:min(calc(100vw - 1rem),30rem)
 }
 
 .flex-1{
@@ -10983,6 +11011,15 @@ select{
   background-color:rgb(236 253 245 / 0.7)
 }
 
+.bg-zinc-900\/60{
+  background-color:rgb(24 24 27 / 0.6)
+}
+
+.bg-zinc-900{
+  --tw-bg-opacity:1;
+  background-color:rgb(24 24 27 / var(--tw-bg-opacity, 1))
+}
+
 .bg-opacity-10{
   --tw-bg-opacity:0.1
 }
@@ -11565,6 +11602,10 @@ select{
 
 .p-px{
   padding:1px
+}
+
+.p-2\.5{
+  padding:0.625rem
 }
 
 .px-0{

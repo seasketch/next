@@ -7,10 +7,13 @@ import InlineAuthor from "../../../components/InlineAuthor";
 import ProfilePhoto from "../../users/ProfilePhoto";
 import {
   AuthorProfileFragment,
+  ChangeLogsSinceLastPublishDocument,
   ResolvableLayerCommentThreadFragment,
   useCreateResolvableCommentMutation,
   useMeQuery,
 } from "../../../generated/graphql";
+import getSlug from "../../../getSlug";
+import { layerSettingsChangeLogRefetchQueries } from "../../changelogs/layerSettingsChangeLogRefetch";
 import {
   emptyResolvableCommentDoc,
   isResolvableCommentJsonEmpty,
@@ -47,8 +50,19 @@ export default function NewResolvableComment({
     emptyResolvableCommentDoc()
   );
   const [empty, setEmpty] = useState(true);
+  const refetchQueries = useMemo(
+    () => [
+      {
+        query: ChangeLogsSinceLastPublishDocument,
+        variables: { slug: getSlug() },
+      },
+      ...layerSettingsChangeLogRefetchQueries(tableOfContentsItemId),
+    ],
+    [tableOfContentsItemId]
+  );
   const [mutate, mutationState] = useCreateResolvableCommentMutation({
     onError,
+    refetchQueries,
   });
   const createdAt = useMemo(() => new Date(), []);
   const profile = data?.me?.profile;

@@ -12555,6 +12555,7 @@ export type Query = Node & {
   getPrimaryDraftReportIdForSketchClass?: Maybe<Scalars['Int']>;
   getReferencedStableIdsForReport?: Maybe<Array<Maybe<Scalars['String']>>>;
   getRepresentativeColors?: Maybe<Scalars['JSON']>;
+  getResolvableLayerComment?: Maybe<ResolvableLayerComment>;
   getStateForSpatialMetric?: Maybe<SpatialMetricState>;
   /** Reads and enables pagination through a set of `Survey`. */
   getSurveys?: Maybe<Array<Survey>>;
@@ -13316,6 +13317,12 @@ export type QueryGetReferencedStableIdsForReportArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryGetRepresentativeColorsArgs = {
   geostats?: Maybe<Scalars['JSON']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGetResolvableLayerCommentArgs = {
+  commentId?: Maybe<Scalars['Int']>;
 };
 
 
@@ -21309,6 +21316,19 @@ export type ResolvableLayerCommentThreadFragment = (
     & ResolvableLayerCommentDetailsFragment
   )>> }
   & ResolvableLayerCommentDetailsFragment
+);
+
+export type ResolvableLayerCommentThreadForChangelogQueryVariables = Exact<{
+  commentId: Scalars['Int'];
+}>;
+
+
+export type ResolvableLayerCommentThreadForChangelogQuery = (
+  { __typename?: 'Query' }
+  & { getResolvableLayerComment?: Maybe<(
+    { __typename?: 'ResolvableLayerComment' }
+    & ResolvableLayerCommentThreadFragment
+  )> }
 );
 
 export type FullAdminOverlayFragment = (
@@ -32759,6 +32779,41 @@ export function useUpdateFolderMutation(baseOptions?: Apollo.MutationHookOptions
 export type UpdateFolderMutationHookResult = ReturnType<typeof useUpdateFolderMutation>;
 export type UpdateFolderMutationResult = Apollo.MutationResult<UpdateFolderMutation>;
 export type UpdateFolderMutationOptions = Apollo.BaseMutationOptions<UpdateFolderMutation, UpdateFolderMutationVariables>;
+export const ResolvableLayerCommentThreadForChangelogDocument = gql`
+    query ResolvableLayerCommentThreadForChangelog($commentId: Int!) {
+  getResolvableLayerComment(commentId: $commentId) {
+    ...ResolvableLayerCommentThread
+  }
+}
+    ${ResolvableLayerCommentThreadFragmentDoc}`;
+
+/**
+ * __useResolvableLayerCommentThreadForChangelogQuery__
+ *
+ * To run a query within a React component, call `useResolvableLayerCommentThreadForChangelogQuery` and pass it any options that fit your needs.
+ * When your component renders, `useResolvableLayerCommentThreadForChangelogQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useResolvableLayerCommentThreadForChangelogQuery({
+ *   variables: {
+ *      commentId: // value for 'commentId'
+ *   },
+ * });
+ */
+export function useResolvableLayerCommentThreadForChangelogQuery(baseOptions: Apollo.QueryHookOptions<ResolvableLayerCommentThreadForChangelogQuery, ResolvableLayerCommentThreadForChangelogQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ResolvableLayerCommentThreadForChangelogQuery, ResolvableLayerCommentThreadForChangelogQueryVariables>(ResolvableLayerCommentThreadForChangelogDocument, options);
+      }
+export function useResolvableLayerCommentThreadForChangelogLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ResolvableLayerCommentThreadForChangelogQuery, ResolvableLayerCommentThreadForChangelogQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ResolvableLayerCommentThreadForChangelogQuery, ResolvableLayerCommentThreadForChangelogQueryVariables>(ResolvableLayerCommentThreadForChangelogDocument, options);
+        }
+export type ResolvableLayerCommentThreadForChangelogQueryHookResult = ReturnType<typeof useResolvableLayerCommentThreadForChangelogQuery>;
+export type ResolvableLayerCommentThreadForChangelogLazyQueryHookResult = ReturnType<typeof useResolvableLayerCommentThreadForChangelogLazyQuery>;
+export type ResolvableLayerCommentThreadForChangelogQueryResult = Apollo.QueryResult<ResolvableLayerCommentThreadForChangelogQuery, ResolvableLayerCommentThreadForChangelogQueryVariables>;
 export const GetLayerItemDocument = gql`
     query GetLayerItem($id: Int!) {
   tableOfContentsItem(id: $id) {
@@ -43550,6 +43605,7 @@ export const namedOperations = {
     ExtraTocEditingInfo: 'ExtraTocEditingInfo',
     layersAndSourcesForItems: 'layersAndSourcesForItems',
     GetFolder: 'GetFolder',
+    ResolvableLayerCommentThreadForChangelog: 'ResolvableLayerCommentThreadForChangelog',
     GetLayerItem: 'GetLayerItem',
     InteractivitySettingsForLayer: 'InteractivitySettingsForLayer',
     DataSourceUrlProperties: 'DataSourceUrlProperties',

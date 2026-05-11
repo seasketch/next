@@ -481,6 +481,12 @@ fragment ResolvableLayerCommentThread on ResolvableLayerComment {
   }
 }
 
+query ResolvableLayerCommentThreadForChangelog($commentId: Int!) {
+  getResolvableLayerComment(commentId: $commentId) {
+    ...ResolvableLayerCommentThread
+  }
+}
+
 fragment FullAdminOverlay on TableOfContentsItem {
   id
   acl {

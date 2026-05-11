@@ -12553,6 +12553,7 @@ export type Query = Node & {
   getPrimaryDraftReportIdForSketchClass?: Maybe<Scalars['Int']>;
   getReferencedStableIdsForReport?: Maybe<Array<Maybe<Scalars['String']>>>;
   getRepresentativeColors?: Maybe<Scalars['JSON']>;
+  getResolvableLayerComment?: Maybe<ResolvableLayerComment>;
   getStateForSpatialMetric?: Maybe<SpatialMetricState>;
   /** Reads and enables pagination through a set of `Survey`. */
   getSurveys?: Maybe<Array<Survey>>;
@@ -13314,6 +13315,12 @@ export type QueryGetReferencedStableIdsForReportArgs = {
 /** The root query type which gives access points into the data universe. */
 export type QueryGetRepresentativeColorsArgs = {
   geostats?: Maybe<Scalars['JSON']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryGetResolvableLayerCommentArgs = {
+  commentId?: Maybe<Scalars['Int']>;
 };
 
 
@@ -21307,6 +21314,19 @@ export type ResolvableLayerCommentThreadFragment = (
     & ResolvableLayerCommentDetailsFragment
   )>> }
   & ResolvableLayerCommentDetailsFragment
+);
+
+export type ResolvableLayerCommentThreadForChangelogQueryVariables = Exact<{
+  commentId: Scalars['Int'];
+}>;
+
+
+export type ResolvableLayerCommentThreadForChangelogQuery = (
+  { __typename?: 'Query' }
+  & { getResolvableLayerComment?: Maybe<(
+    { __typename?: 'ResolvableLayerComment' }
+    & ResolvableLayerCommentThreadFragment
+  )> }
 );
 
 export type FullAdminOverlayFragment = (
@@ -30445,6 +30465,13 @@ export const UpdateFolderDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const ResolvableLayerCommentThreadForChangelogDocument = /*#__PURE__*/ gql`
+    query ResolvableLayerCommentThreadForChangelog($commentId: Int!) {
+  getResolvableLayerComment(commentId: $commentId) {
+    ...ResolvableLayerCommentThread
+  }
+}
+    ${ResolvableLayerCommentThreadFragmentDoc}`;
 export const GetLayerItemDocument = /*#__PURE__*/ gql`
     query GetLayerItem($id: Int!) {
   tableOfContentsItem(id: $id) {
@@ -34207,6 +34234,7 @@ export const namedOperations = {
     ExtraTocEditingInfo: 'ExtraTocEditingInfo',
     layersAndSourcesForItems: 'layersAndSourcesForItems',
     GetFolder: 'GetFolder',
+    ResolvableLayerCommentThreadForChangelog: 'ResolvableLayerCommentThreadForChangelog',
     GetLayerItem: 'GetLayerItem',
     InteractivitySettingsForLayer: 'InteractivitySettingsForLayer',
     DataSourceUrlProperties: 'DataSourceUrlProperties',

@@ -3,6 +3,7 @@
 -- undo
 drop table if exists resolvable_layer_comment cascade;
 drop function if exists public.table_of_contents_items_resolved_comment_threads(table_of_contents_items);
+drop function if exists public.get_resolvable_layer_comment(int);
 drop function if exists public.resolvable_layer_comments_replies(resolvable_layer_comments);
 drop function if exists public.resolvable_layer_comments_resolved_by_profile(resolvable_layer_comments);
 drop function if exists public.resolvable_layer_comments_author_profile(resolvable_layer_comments);
@@ -17,9 +18,78 @@ drop index if exists resolvable_layer_comments_parent_idx;
 drop index if exists resolvable_layer_comments_project_idx;
 drop index if exists resolvable_layer_comments_toc_idx;
 drop table if exists resolvable_layer_comments cascade;
+drop function if exists public.trg_resolvable_layer_comment_changelog() cascade;
 drop function if exists public.resolvable_layer_comments_enforce_draft_toc() cascade;
 
 -- redo
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_enum
+    join pg_type on pg_enum.enumtypid = pg_type.oid
+    where pg_type.typname = 'change_log_field_group'
+      and pg_enum.enumlabel = 'resolvable_layer_comments:created'
+  ) then
+    alter type change_log_field_group add value 'resolvable_layer_comments:created';
+  end if;
+  if not exists (
+    select 1 from pg_enum
+    join pg_type on pg_enum.enumtypid = pg_type.oid
+    where pg_type.typname = 'change_log_field_group'
+      and pg_enum.enumlabel = 'resolvable_layer_comments:responded'
+  ) then
+    alter type change_log_field_group add value 'resolvable_layer_comments:responded';
+  end if;
+  if not exists (
+    select 1 from pg_enum
+    join pg_type on pg_enum.enumtypid = pg_type.oid
+    where pg_type.typname = 'change_log_field_group'
+      and pg_enum.enumlabel = 'resolvable_layer_comments:resolved'
+  ) then
+    alter type change_log_field_group add value 'resolvable_layer_comments:resolved';
+  end if;
+  if not exists (
+    select 1 from pg_enum
+    join pg_type on pg_enum.enumtypid = pg_type.oid
+    where pg_type.typname = 'change_log_field_group'
+      and pg_enum.enumlabel = 'resolvable_layer_comments:reopened'
+  ) then
+    alter type change_log_field_group add value 'resolvable_layer_comments:reopened';
+  end if;
+end
+$$;
+
+create or replace function changelog_row_net_zero_changes(
+  p_field_group change_log_field_group,
+  p_from_summary jsonb,
+  p_to_summary jsonb,
+  p_from_blob jsonb,
+  p_to_blob jsonb
+) returns boolean
+language sql
+immutable
+parallel safe
+as $$
+  select case
+    when p_field_group::text in (
+      'resolvable_layer_comments:created',
+      'resolvable_layer_comments:responded',
+      'resolvable_layer_comments:resolved',
+      'resolvable_layer_comments:reopened'
+    ) then false
+    when (p_from_blob is not null) or (p_to_blob is not null) then
+      not (p_from_blob is distinct from p_to_blob)
+    when p_field_group = 'layer:attribution'::change_log_field_group then
+      not (
+        changelog_normalize_layer_attribution_summary(p_from_summary)
+        is distinct from
+        changelog_normalize_layer_attribution_summary(p_to_summary)
+      )
+    else
+      not (p_from_summary is distinct from p_to_summary)
+  end;
+$$;
 
 create table if not exists resolvable_layer_comments(
   id int generated always as identity primary key,
@@ -69,6 +139,83 @@ create trigger before_insert_or_update_resolvable_layer_comments_enforce_draft_t
   before insert or update of table_of_contents_item_id on public.resolvable_layer_comments
   for each row
   execute function public.resolvable_layer_comments_enforce_draft_toc();
+
+create or replace function public.trg_resolvable_layer_comment_changelog()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, pg_temp
+as $$
+declare
+  v_editor int;
+  v_field_group text;
+  v_change_log_id bigint;
+begin
+  v_editor := nullif(current_setting('session.user_id', true), '')::int;
+  if v_editor is null then
+    if tg_op = 'DELETE' then
+      return old;
+    end if;
+    return new;
+  end if;
+
+  if tg_op = 'INSERT' then
+    if new.parent_comment_id is null then
+      v_field_group := 'resolvable_layer_comments:created';
+    else
+      v_field_group := 'resolvable_layer_comments:responded';
+    end if;
+
+    select record_changelog(
+      new.project_id,
+      v_editor,
+      'table_of_contents_items',
+      new.table_of_contents_item_id,
+      v_field_group::change_log_field_group,
+      '{}'::jsonb,
+      '{}'::jsonb,
+      null,
+      null,
+      jsonb_build_object(
+        'comment_id', new.id,
+        'parent_comment_id', new.parent_comment_id
+      )
+    ) into v_change_log_id;
+    update change_logs set status = 'closed' where id = v_change_log_id;
+    return new;
+  elsif tg_op = 'UPDATE' then
+    if old.resolved_at is null and new.resolved_at is not null then
+      v_field_group := 'resolvable_layer_comments:resolved';
+    elsif old.resolved_at is not null and new.resolved_at is null then
+      v_field_group := 'resolvable_layer_comments:reopened';
+    else
+      return new;
+    end if;
+
+    select record_changelog(
+      new.project_id,
+      v_editor,
+      'table_of_contents_items',
+      new.table_of_contents_item_id,
+      v_field_group::change_log_field_group,
+      '{}'::jsonb,
+      '{}'::jsonb,
+      null,
+      null,
+      jsonb_build_object('comment_id', new.id)
+    ) into v_change_log_id;
+    update change_logs set status = 'closed' where id = v_change_log_id;
+    return new;
+  end if;
+
+  return null;
+end;
+$$;
+
+create trigger changelog_resolvable_layer_comments
+  after insert or update of resolved_at on public.resolvable_layer_comments
+  for each row
+  execute function public.trg_resolvable_layer_comment_changelog();
 
 drop function if exists table_of_contents_items_resolvable_comments(item table_of_contents_items);
 
@@ -163,6 +310,20 @@ $$;
 grant execute on function table_of_contents_items_resolved_comment_threads(item table_of_contents_items) to seasketch_user;
 
 comment on function table_of_contents_items_resolved_comment_threads(item table_of_contents_items) is '@simpleCollections only';
+
+create or replace function get_resolvable_layer_comment(comment_id int)
+  returns resolvable_layer_comments
+  language sql
+  security definer
+  stable
+  as $$
+    select c.*
+    from resolvable_layer_comments c
+    where c.id = get_resolvable_layer_comment.comment_id
+      and session_is_admin(c.project_id);
+$$;
+
+grant execute on function get_resolvable_layer_comment to seasketch_user;
 
 drop function if exists create_resolvable_layer_comment;
 

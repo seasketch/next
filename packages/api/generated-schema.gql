@@ -14315,6 +14315,7 @@ type Query implements Node {
   getPrimaryDraftReportIdForSketchClass(sketchClassId: Int): Int
   getReferencedStableIdsForReport(_reportId: Int): [String]
   getRepresentativeColors(geostats: JSON): JSON
+  getResolvableLayerComment(commentId: Int): ResolvableLayerComment
   getStateForSpatialMetric(metricId: BigInt): SpatialMetricState
 
   """Reads and enables pagination through a set of `Survey`."""

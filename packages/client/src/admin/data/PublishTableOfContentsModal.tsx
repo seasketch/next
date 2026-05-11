@@ -301,6 +301,42 @@ function UnresolvedCommentsPanel({
           const row = summaryRows.get(item.id);
           const comment =
             item.unresolvedComment || recentlyResolvedThreads.get(item.id);
+          const nonCommentBadges = row
+            ? row.badges.filter((badge) => badge.key !== "comments")
+            : [];
+          const badges =
+            row && nonCommentBadges.length ? (
+              <div className="flex shrink-0 flex-wrap gap-1.5 sm:justify-end">
+                {nonCommentBadges.map((badge) => (
+                  <PublishBadge
+                    key={badge.key}
+                    badgeKey={badge.key}
+                    logs={badge.logs}
+                    t={t}
+                    isFolder={row.isFolder}
+                    tableOfContentsItemId={row.entityId}
+                    onOpenMetadata={() =>
+                      setMetadataModal({
+                        tocId: row.entityId,
+                        initialId: oldestChangeLogId(
+                          badge.logs,
+                          ChangeLogFieldGroup.LayerMetadata
+                        ),
+                      })
+                    }
+                    onOpenCartography={() =>
+                      setCartographyModal({
+                        tocId: row.entityId,
+                        initialId: oldestChangeLogId(
+                          badge.logs,
+                          ChangeLogFieldGroup.LayerCartography
+                        ),
+                      })
+                    }
+                  />
+                ))}
+              </div>
+            ) : null;
           return (
             <section
               key={item.id}
@@ -314,42 +350,7 @@ function UnresolvedCommentsPanel({
                 >
                   <span className="block truncate">{item.title}</span>
                 </button>
-                {row?.badges.length ? (
-                  <div className="flex shrink-0 flex-wrap gap-1.5 sm:justify-end">
-                    {row.badges.map((badge) => (
-                      <PublishBadge
-                        key={badge.key}
-                        badgeKey={badge.key}
-                        logs={badge.logs}
-                        t={t}
-                        isFolder={row.isFolder}
-                        tableOfContentsItemId={row.entityId}
-                        onOpenMetadata={() =>
-                          setMetadataModal({
-                            tocId: row.entityId,
-                            initialId: oldestChangeLogId(
-                              badge.logs,
-                              ChangeLogFieldGroup.LayerMetadata
-                            ),
-                          })
-                        }
-                        onOpenCartography={() =>
-                          setCartographyModal({
-                            tocId: row.entityId,
-                            initialId: oldestChangeLogId(
-                              badge.logs,
-                              ChangeLogFieldGroup.LayerCartography
-                            ),
-                          })
-                        }
-                      />
-                    ))}
-                  </div>
-                ) : (
-                  <span className="text-xs text-slate-400">
-                    {t("No unpublished changes logged")}
-                  </span>
-                )}
+                {badges}
               </header>
               <div className="px-4 pb-4">
                 {comment && (

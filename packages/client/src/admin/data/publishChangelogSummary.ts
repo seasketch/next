@@ -17,7 +17,8 @@ export type PublishBadgeKey =
   | "interactivity"
   | "moved"
   | "source"
-  | "folderBehavior";
+  | "folderBehavior"
+  | "comments";
 
 /** Display order for badges in summarized rows */
 export const PUBLISH_BADGE_ORDER: PublishBadgeKey[] = [
@@ -29,6 +30,7 @@ export const PUBLISH_BADGE_ORDER: PublishBadgeKey[] = [
   "cartography",
   "downloads",
   "interactivity",
+  "comments",
   "moved",
   "folderBehavior",
 ];
@@ -48,6 +50,10 @@ const FIELD_GROUP_TO_BADGE: Partial<
   [ChangeLogFieldGroup.LayerParentChanged]: "moved",
   [ChangeLogFieldGroup.LayerUploaded]: "source",
   [ChangeLogFieldGroup.FolderType]: "folderBehavior",
+  [ChangeLogFieldGroup.ResolvableLayerCommentsCreated]: "comments",
+  [ChangeLogFieldGroup.ResolvableLayerCommentsResponded]: "comments",
+  [ChangeLogFieldGroup.ResolvableLayerCommentsResolved]: "comments",
+  [ChangeLogFieldGroup.ResolvableLayerCommentsReopened]: "comments",
 };
 
 export type DraftTocItemForPublishSummary = {

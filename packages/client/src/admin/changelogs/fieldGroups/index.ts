@@ -17,6 +17,7 @@ import LayerTitleFieldGroupListItem from "./LayerTitleFieldGroupListItem";
 import LayerUploadedFieldGroupListItem from "./LayerUploadedFieldGroupListItem";
 import LayersPublishedFieldGroupListItem from "./LayersPublishedFieldGroupListItem";
 import LayersZOrderChangeFieldGroupListItem from "./LayersZOrderChangeFieldGroupListItem";
+import ResolvableLayerCommentFieldGroupListItem from "./ResolvableLayerCommentFieldGroupListItem";
 
 export { GenericFieldGroupListItem };
 
@@ -41,4 +42,12 @@ export const FIELD_GROUP_LIST_ITEM_COMPONENTS: Partial<
   [ChangeLogFieldGroup.FolderType]: FolderTypeFieldGroupListItem,
   [ChangeLogFieldGroup.LayersPublished]: LayersPublishedFieldGroupListItem,
   [ChangeLogFieldGroup.LayersZOrderChange]: LayersZOrderChangeFieldGroupListItem,
+  [ChangeLogFieldGroup.ResolvableLayerCommentsCreated]:
+    ResolvableLayerCommentFieldGroupListItem,
+  [ChangeLogFieldGroup.ResolvableLayerCommentsResponded]:
+    ResolvableLayerCommentFieldGroupListItem,
+  [ChangeLogFieldGroup.ResolvableLayerCommentsResolved]:
+    ResolvableLayerCommentFieldGroupListItem,
+  [ChangeLogFieldGroup.ResolvableLayerCommentsReopened]:
+    ResolvableLayerCommentFieldGroupListItem,
 };

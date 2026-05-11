@@ -1,17 +1,20 @@
 import { CheckIcon } from "@radix-ui/react-icons";
 import * as RadixTooltip from "@radix-ui/react-tooltip";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import clsx from "clsx";
 import { useGlobalErrorHandler } from "../../../components/GlobalErrorHandler";
 import InlineAuthor from "../../../components/InlineAuthor";
 import {
   AuthorProfileFragment,
+  ChangeLogsSinceLastPublishDocument,
   ResolvableLayerCommentThreadFragment,
   useReopenResolvableCommentMutation,
   useResolveResolvableCommentMutation,
 } from "../../../generated/graphql";
+import getSlug from "../../../getSlug";
 import { formatTimeAgo } from "../../changelogs/ChangeLogTimelineItem";
+import { layerSettingsChangeLogRefetchQueries } from "../../changelogs/layerSettingsChangeLogRefetch";
 import NewResolvableComment from "./NewResolvableComment";
 import { ResolvableCommentBody } from "./ResolvableCommentEditor";
 
@@ -106,11 +109,23 @@ export default function ResolvableComment({
 }) {
   const [showReplyForm, setShowReplyForm] = useState(false);
   const onError = useGlobalErrorHandler();
+  const refetchQueries = useMemo(
+    () => [
+      {
+        query: ChangeLogsSinceLastPublishDocument,
+        variables: { slug: getSlug() },
+      },
+      ...layerSettingsChangeLogRefetchQueries(comment.tableOfContentsItemId),
+    ],
+    [comment.tableOfContentsItemId]
+  );
   const [resolveComment, resolveState] = useResolveResolvableCommentMutation({
     onError,
+    refetchQueries,
   });
   const [reopenComment, reopenState] = useReopenResolvableCommentMutation({
     onError,
+    refetchQueries,
   });
   const resolved = Boolean(comment.resolvedAt);
   const actionLoading = resolveState.loading || reopenState.loading;

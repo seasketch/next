@@ -101,6 +101,8 @@ function badgeLabel(key: PublishBadgeKey, t: (s: string) => string): string {
       return t("source");
     case "folderBehavior":
       return t("folder behavior");
+    case "comments":
+      return t("comments");
     default:
       return key;
   }
@@ -604,6 +606,8 @@ export function PublishBadge({
   const leadGlyph =
     badgeKey === "moved" ? (
       <FolderIcon className="h-3 w-3 flex-none text-gray-500" aria-hidden />
+    ) : badgeKey === "comments" ? (
+      <CommentBadgeIcon />
     ) : showViewerEscalation ? (
       <ExternalLinkIcon
         className="h-3 w-3 flex-none text-gray-500"
@@ -650,17 +654,43 @@ export function PublishBadge({
           sideOffset={6}
           collisionPadding={12}
           className={clsx(
-            "z-[100] max-h-[min(80vh,28rem)] overflow-y-auto rounded-md border border-zinc-700 bg-neutral-950 text-sm text-zinc-100 shadow-xl outline-none",
-            badgeKey === "metadata" || badgeKey === "cartography"
-              ? "p-2"
-              : "p-3",
+            "z-[100] max-h-[min(80vh,36rem)] overflow-y-auto rounded-md text-sm shadow-xl outline-none",
+            badgeKey === "comments"
+              ? "border border-gray-200 bg-white p-0 text-gray-800"
+              : clsx(
+                  "border border-zinc-700 bg-neutral-950 text-zinc-100",
+                  badgeKey === "metadata" || badgeKey === "cartography"
+                    ? "p-2"
+                    : "p-3"
+                ),
             badgePopoverContentClassName(badgeKey)
           )}
         >
           {detail}
-          <Tooltip.Arrow className="fill-neutral-950" />
+          <Tooltip.Arrow
+            className={badgeKey === "comments" ? "fill-white" : "fill-neutral-950"}
+          />
         </Tooltip.Content>
       </Tooltip.Portal>
     </Tooltip.Root>
+  );
+}
+
+function CommentBadgeIcon() {
+  return (
+    <svg
+      className="h-3 w-3 flex-none text-gray-500"
+      viewBox="0 0 20 20"
+      fill="none"
+      aria-hidden
+    >
+      <path
+        d="M5 6.5A2.5 2.5 0 0 1 7.5 4h5A2.5 2.5 0 0 1 15 6.5v3A2.5 2.5 0 0 1 12.5 12H10l-3.25 3v-3.1A2.5 2.5 0 0 1 5 9.5v-3Z"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
