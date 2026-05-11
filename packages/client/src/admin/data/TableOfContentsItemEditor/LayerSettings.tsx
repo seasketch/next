@@ -2,6 +2,7 @@ import { useCallback, useContext, useMemo, useState } from "react";
 import {
   DataSourceTypes,
   FullAdminOverlayFragment,
+  ResolvableLayerCommentThreadFragment,
   useUpdateDataSourceMutation,
   useUpdateTableOfContentsItemMutation,
 } from "../../../generated/graphql";
@@ -12,6 +13,8 @@ import { Trans, useTranslation } from "react-i18next";
 import { useGlobalErrorHandler } from "../../../components/GlobalErrorHandler";
 import AccessControlListEditor from "../../../components/AccessControlListEditor";
 import EnableDataDownload from "../EnableDataDownload";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { DotsHorizontalIcon } from "@radix-ui/react-icons";
 import { ClipboardCopyIcon } from "@heroicons/react/outline";
 import {
   Tooltip,
@@ -24,6 +27,8 @@ import Warning from "../../../components/Warning";
 import AICartographerNotesSummary from "./AICartographerNotesSummary";
 import LayerSettingsChangeLogList from "../../changelogs/LayerSettingsChangeLogList";
 import { layerSettingsChangeLogRefetchQueries } from "../../changelogs/layerSettingsChangeLogRefetch";
+import NewResolvableComment from "./NewResolvableComment";
+import ResolvableComment from "./ResolvableComment";
 
 export default function LayerSettings({
   item,
@@ -35,6 +40,19 @@ export default function LayerSettings({
   const layer = item.dataLayer;
   const source = layer!.dataSource;
   const [referenceCopied, setReferenceCopied] = useState(false);
+  const [showNewComment, setShowNewComment] = useState(false);
+  const [showResolvedComments, setShowResolvedComments] = useState(false);
+  const [recentlyResolvedComment, setRecentlyResolvedComment] =
+    useState<ResolvableLayerCommentThreadFragment | null>(null);
+
+  const historicalResolvedComments = useMemo(
+    () =>
+      (item.resolvedCommentThreads || []).filter(
+        (comment) => comment.id !== recentlyResolvedComment?.id
+      ),
+    [item.resolvedCommentThreads, recentlyResolvedComment?.id]
+  );
+  const historicalResolvedCommentCount = historicalResolvedComments.length;
 
   const isArcGISCustomSource =
     source?.type === DataSourceTypes.ArcgisDynamicMapserver ||
@@ -100,6 +118,39 @@ export default function LayerSettings({
           value={item?.title || ""}
           label={t("Title")}
           variables={{ id: item.id }}
+          inputClassName="!pr-[4.25rem]"
+          inputChildNode={
+            <div className="pointer-events-none absolute inset-y-0 right-2 z-10 flex items-center">
+              <DropdownMenu.Root>
+                <DropdownMenu.Trigger asChild>
+                  <button
+                    type="button"
+                    className="pointer-events-auto flex h-8 w-8 items-center justify-center rounded text-gray-400 hover:text-gray-600 focus:outline-none focus-visible:text-gray-700"
+                    aria-label={t("Title options")}
+                  >
+                    <DotsHorizontalIcon className="h-4 w-4" />
+                  </button>
+                </DropdownMenu.Trigger>
+                <DropdownMenu.Portal>
+                  <DropdownMenu.Content
+                    align="end"
+                    sideOffset={4}
+                    className="z-50 min-w-[10rem] rounded-md border border-black/5 bg-white p-1 text-sm shadow-lg"
+                  >
+                    <DropdownMenu.Item
+                      className="flex cursor-pointer select-none items-center rounded px-2 py-1.5 text-gray-700 outline-none data-[highlighted]:bg-gray-100"
+                      onSelect={() => {
+                        copyReference();
+                      }}
+                    >
+                      <ClipboardCopyIcon className="mr-2 h-4 w-4 shrink-0 opacity-70" />
+                      {t("Copy stable id")}
+                    </DropdownMenu.Item>
+                  </DropdownMenu.Content>
+                </DropdownMenu.Portal>
+              </DropdownMenu.Root>
+            </div>
+          }
         />
         <TranslatedPropControl
           id={item.id}
@@ -241,8 +292,102 @@ export default function LayerSettings({
         </div>
       )}
 
-      {item && (
-        <div className="md:max-w-sm mt-5 relative">
+      <div className="mt-6">
+        <h3 className="py-1 text-sm font-medium  text-gray-700">
+          <Trans ns="admin:data">Unresolved Comments</Trans>
+        </h3>
+        <p className="text-sm text-gray-500">
+          <Trans ns="admin:data">
+            Comment on layers to flag issues that need to be resolved. For
+            example, you can ask another project maintainer to complete a
+            metadata record. These comments are only visible to admins.
+          </Trans>
+        </p>
+        {!item.unresolvedComment && !showNewComment && (
+          <div className="flex space-x-4 text-sm mt-2 font-medium">
+            <button
+              type="button"
+              className="text-primary-500 hover:text-primary-600"
+              onClick={() => {
+                setRecentlyResolvedComment(null);
+                setShowNewComment(true);
+              }}
+            >
+              <Trans ns="admin:data">New Comment</Trans>
+            </button>
+            {historicalResolvedCommentCount > 0 ? (
+              <button
+                type="button"
+                className="text-primary-500 hover:text-primary-600"
+                onClick={() => setShowResolvedComments((prev) => !prev)}
+              >
+                {showResolvedComments ? (
+                  <Trans ns="admin:data">Hide comment history</Trans>
+                ) : (
+                  t("View comment history ({{count}})", {
+                    count: historicalResolvedCommentCount,
+                  })
+                )}
+              </button>
+            ) : null}
+          </div>
+        )}
+        {item.unresolvedComment && (
+          <ResolvableComment
+            comment={item.unresolvedComment}
+            onResolved={(comment) => {
+              setRecentlyResolvedComment(comment);
+              setShowResolvedComments(false);
+            }}
+            onReopened={() => setRecentlyResolvedComment(null)}
+          />
+        )}
+        {!item.unresolvedComment && recentlyResolvedComment && (
+          <ResolvableComment
+            comment={recentlyResolvedComment}
+            onReopened={() => setRecentlyResolvedComment(null)}
+          />
+        )}
+        {showNewComment && !item.unresolvedComment && (
+          <NewResolvableComment
+            projectId={item.projectId}
+            tableOfContentsItemId={item.id}
+            onCancel={() => setShowNewComment(false)}
+            onCreated={() => {
+              setRecentlyResolvedComment(null);
+              setShowNewComment(false);
+            }}
+          />
+        )}
+        {(item.unresolvedComment || showNewComment || recentlyResolvedComment) &&
+        historicalResolvedCommentCount > 0 ? (
+          <div className="mt-4 flex justify-center">
+            <button
+              type="button"
+              className="text-sm font-medium text-primary-500 hover:text-primary-600"
+              onClick={() => setShowResolvedComments((prev) => !prev)}
+            >
+              {showResolvedComments ? (
+                <Trans ns="admin:data">Hide comment history</Trans>
+              ) : (
+                t("View comment history ({{count}})", {
+                  count: historicalResolvedCommentCount,
+                })
+              )}
+            </button>
+          </div>
+        ) : null}
+        {showResolvedComments && historicalResolvedCommentCount > 0 && (
+          <div className="mt-4 space-y-4">
+            {historicalResolvedComments.map((comment) => (
+              <ResolvableComment key={comment.id} comment={comment} />
+            ))}
+          </div>
+        )}
+      </div>
+      <LayerSettingsChangeLogList tableOfContentsItemId={item.id} />
+      {item && item.geoprocessingReferenceId && (
+        <div className="md:max-w-sm mt-5 relative ">
           <div className="md:max-w-sm">
             <MutableAutosaveInput
               propName="geoprocessingReferenceId"
@@ -280,7 +425,6 @@ export default function LayerSettings({
           </div>
         </div>
       )}
-      <LayerSettingsChangeLogList tableOfContentsItemId={item.id} />
     </div>
   );
 }

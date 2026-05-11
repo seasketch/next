@@ -287,6 +287,10 @@ describe("change_logs", () => {
         "layer:uploaded",
         "layers:published",
         "layers:z-order-change",
+        "resolvable_layer_comments:created",
+        "resolvable_layer_comments:reopened",
+        "resolvable_layer_comments:resolved",
+        "resolvable_layer_comments:responded",
       ].sort(),
     );
   });

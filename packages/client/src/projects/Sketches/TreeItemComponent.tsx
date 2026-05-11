@@ -17,6 +17,7 @@ import CollectionIcon from "@heroicons/react/outline/CollectionIcon";
 import ArrowIcon from "./ArrowIcon";
 import { motion } from "framer-motion";
 import { FolderIcon, FolderOpenIcon } from "@heroicons/react/outline";
+import { Trans } from "react-i18next";
 import VisibilityCheckboxAnimated from "../../dataLayers/tableOfContents/VisibilityCheckboxAnimated";
 import {
   Tooltip,
@@ -24,6 +25,7 @@ import {
   TooltipTrigger,
 } from "../../components/Tooltip";
 import * as ContextMenu from "@radix-ui/react-context-menu";
+import * as RadixTooltip from "@radix-ui/react-tooltip";
 import { DotsHorizontalIcon, EyeClosedIcon } from "@radix-ui/react-icons";
 
 export interface TreeNodeDataProps {
@@ -110,6 +112,7 @@ export default function TreeItemComponent({
   onSortEnd,
   allowContextMenuDefault,
   onUnhide,
+  onUnresolvedCommentClick,
   isHidden,
   highlights,
   showContextMenuButtons,
@@ -546,7 +549,7 @@ export default function TreeItemComponent({
             <label
               id={`${node.id}-label`}
               ref={isContextMenuTarget ? setLabelRef : undefined}
-              className={`px-1 cursor-pointer select-none truncate ${
+              className={`px-1 cursor-pointer select-none truncate min-w-0 ${
                 error ? "text-red-600" : ""
               } ${isHidden ? "opacity-50" : ""}`}
               onClick={updateSelectionOnClick}
@@ -564,6 +567,35 @@ export default function TreeItemComponent({
               )}
             </label>
           </ContextMenu.Trigger>
+          {node.hasUnresolvedComment && (
+            <RadixTooltip.Provider delayDuration={100}>
+              <RadixTooltip.Root>
+                <RadixTooltip.Trigger asChild>
+                  <button
+                    type="button"
+                    className="ml-1 inline-flex h-5 min-w-[1.6rem] flex-none items-center justify-center rounded-full border border-blue-300 bg-blue-50 px-1 text-blue-700 shadow-sm hover:border-blue-400 hover:bg-blue-100 hover:text-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-1"
+                    aria-label="View unresolved comments"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onUnresolvedCommentClick?.(node);
+                    }}
+                  >
+                    <CommentIndicatorIcon />
+                  </button>
+                </RadixTooltip.Trigger>
+                <RadixTooltip.Portal>
+                  <RadixTooltip.Content
+                    sideOffset={6}
+                    className="z-50 rounded bg-gray-900 px-2 py-1 text-xs text-white shadow"
+                  >
+                    <Trans ns="admin:data">View unresolved comments</Trans>
+                    <RadixTooltip.Arrow className="fill-gray-900" />
+                  </RadixTooltip.Content>
+                </RadixTooltip.Portal>
+              </RadixTooltip.Root>
+            </RadixTooltip.Provider>
+          )}
           {isHidden && (
             <button
               onClick={() => {
@@ -680,6 +712,7 @@ export default function TreeItemComponent({
                   allowContextMenuDefault={allowContextMenuDefault}
                   isHidden={item.hidden}
                   onUnhide={onUnhide}
+                  onUnresolvedCommentClick={onUnresolvedCommentClick}
                   showContextMenuButtons={showContextMenuButtons}
                 />
               ))}
@@ -705,6 +738,26 @@ export default function TreeItemComponent({
         ></motion.div>
       </div>
     </>
+  );
+}
+
+function CommentIndicatorIcon() {
+  return (
+    <svg
+      className="h-4 w-4"
+      viewBox="0 0 20 20"
+      aria-hidden="true"
+    >
+      <path
+        d="M5 6.5A2.5 2.5 0 0 1 7.5 4h5A2.5 2.5 0 0 1 15 6.5v3A2.5 2.5 0 0 1 12.5 12H10l-3.25 3v-3.1A2.5 2.5 0 0 1 5 9.5v-3Z"
+        fill="currentColor"
+        fillOpacity="0.16"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   );
 }
 

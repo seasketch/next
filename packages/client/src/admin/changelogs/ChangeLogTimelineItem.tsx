@@ -25,7 +25,7 @@ const DIVISIONS: {
   { amount: Number.POSITIVE_INFINITY, name: "years" },
 ];
 
-function formatTimeAgo(date: Date) {
+export function formatTimeAgo(date: Date) {
   let duration = (date.getTime() - new Date().getTime()) / 1000;
   if (Math.abs(duration) < 60) {
     return formatter.format(0, "seconds");

@@ -111,6 +111,17 @@ const contentSchema = new Schema({
   marks: baseMarks,
 });
 
+const resolvableCommentSchema = new Schema({
+  nodes: baseSchema.spec.nodes
+    .remove("blockquote")
+    .remove("horizontal_rule")
+    .remove("heading")
+    .remove("code_block")
+    .remove("image"),
+  // @ts-ignore
+  marks: baseMarks.remove("code"),
+});
+
 const forumPostSchema = new Schema({
   // @ts-ignore
   nodes: addListNodes(baseSchema.spec.nodes, "paragraph block*", "block")
@@ -377,6 +388,14 @@ export const formElements = {
       ReportTitlePlaceholderPlugin(),
     ],
   },
+};
+
+export const resolvableComments = {
+  schema: resolvableCommentSchema,
+  plugins: exampleSetup({
+    schema: resolvableCommentSchema,
+    menuBar: false,
+  }),
 };
 
 export const sketchType = forumPostSchema.nodes.sketch;

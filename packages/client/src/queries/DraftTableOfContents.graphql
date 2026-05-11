@@ -1,5 +1,6 @@
 fragment AdminOverlay on TableOfContentsItem {
   ...Overlay
+  hasUnresolvedComment
   projectBackgroundJobs {
     id
     type
@@ -457,6 +458,35 @@ query LayerSettingsChangeLog($id: Int!, $first: Int!) {
   }
 }
 
+fragment ResolvableLayerCommentDetails on ResolvableLayerComment {
+  id
+  projectId
+  tableOfContentsItemId
+  comment
+  createdAt
+  resolvedAt
+  authorProfile {
+    ...UserProfileDetails
+  }
+  resolvedById
+  resolvedByProfile {
+    ...UserProfileDetails
+  }
+}
+
+fragment ResolvableLayerCommentThread on ResolvableLayerComment {
+  ...ResolvableLayerCommentDetails
+  replies {
+    ...ResolvableLayerCommentDetails
+  }
+}
+
+query ResolvableLayerCommentThreadForChangelog($commentId: Int!) {
+  getResolvableLayerComment(commentId: $commentId) {
+    ...ResolvableLayerCommentThread
+  }
+}
+
 fragment FullAdminOverlay on TableOfContentsItem {
   id
   acl {
@@ -505,6 +535,13 @@ fragment FullAdminOverlay on TableOfContentsItem {
     sketchClass {
       name
     }
+  }
+  unresolvedComment {
+    ...ResolvableLayerCommentThread
+  }
+  resolvedCommentCount
+  resolvedCommentThreads {
+    ...ResolvableLayerCommentThread
   }
 }
 
@@ -1219,10 +1256,16 @@ query ChangeLogsSinceLastPublish($slug: String!) {
   projectBySlug(slug: $slug) {
     id
     tableOfContentsLastPublished
+    commentsSinceLastPublish {
+      ...ResolvableLayerCommentThread
+    }
     draftTableOfContentsItems {
       id
       title
       isFolder
+      unresolvedComment {
+        ...ResolvableLayerCommentThread
+      }
       dataLayer {
         id
         dataSource {
@@ -1232,6 +1275,97 @@ query ChangeLogsSinceLastPublish($slug: String!) {
     }
     changeLogsSinceLastPublish {
       ...ChangeLogDetails
+    }
+  }
+}
+
+mutation CreateResolvableComment(
+  $projectId: Int!
+  $tableOfContentsItemId: Int!
+  $comment: JSON!
+  $parentCommentId: Int
+  $setResolved: Boolean
+) {
+  createResolvableLayerComment(
+    input: {
+      projectId: $projectId
+      tableOfContentsItemId: $tableOfContentsItemId
+      comment: $comment
+      parentCommentId: $parentCommentId
+      setResolved: $setResolved
+    }
+  ) {
+    resolvableLayerComment {
+      ...ResolvableLayerCommentDetails
+      parentComment {
+        id
+        resolvedAt
+        resolvedById
+        resolvedByProfile {
+          ...UserProfileDetails
+        }
+      }
+    }
+    tableOfContentsItem {
+      id
+      hasUnresolvedComment
+      unresolvedComment {
+        ...ResolvableLayerCommentThread
+      }
+      resolvedCommentCount
+      resolvedCommentThreads {
+        ...ResolvableLayerCommentThread
+      }
+    }
+  }
+}
+
+mutation ResolveResolvableComment($commentId: Int!) {
+  resolveResolvableLayerComment(input: { commentId: $commentId }) {
+    resolvableLayerComment {
+      ...ResolvableLayerCommentThread
+    }
+    tableOfContentsItem {
+      id
+      hasUnresolvedComment
+      unresolvedComment {
+        ...ResolvableLayerCommentThread
+      }
+      resolvedCommentCount
+      resolvedCommentThreads {
+        ...ResolvableLayerCommentThread
+      }
+    }
+  }
+}
+
+mutation ReopenResolvableComment($commentId: Int!) {
+  reopenResolvableLayerComment(input: { commentId: $commentId }) {
+    resolvableLayerComment {
+      ...ResolvableLayerCommentThread
+    }
+    tableOfContentsItem {
+      id
+      hasUnresolvedComment
+      unresolvedComment {
+        ...ResolvableLayerCommentThread
+      }
+      resolvedCommentCount
+      resolvedCommentThreads {
+        ...ResolvableLayerCommentThread
+      }
+    }
+  }
+}
+
+query ProjectAdmins($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    admins {
+      id
+      profile {
+        ...UserProfileDetails
+      }
     }
   }
 }

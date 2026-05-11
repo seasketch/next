@@ -33,6 +33,7 @@ export interface TreeItem {
   id: string;
   /** label shown in tree */
   title: string;
+  hasUnresolvedComment?: boolean;
   parentId?: string | null;
   /** If false, will be treated as a folder or collection */
   isLeaf: boolean;
@@ -91,6 +92,7 @@ interface TreeViewProps {
   getContextMenuContent?: (id: string, event: React.MouseEvent) => ReactNode;
   hiddenItems?: string[];
   onUnhide?: (stableId: string) => void;
+  onUnresolvedCommentClick?: (node: TreeItem) => void;
   highlights?: { [id: string]: TreeItemHighlights };
   showContextMenuButtons?: (node: TreeItem) => boolean;
 }
@@ -143,6 +145,7 @@ export interface TreeNodeComponentProps {
   allowContextMenuDefault?: boolean;
   isHidden: boolean;
   onUnhide?: (stableId: string) => void;
+  onUnresolvedCommentClick?: (node: TreeItem) => void;
   showContextMenuButtons?: (node: TreeItem) => boolean;
 }
 export enum CheckState {
@@ -540,6 +543,7 @@ const TreeView = memo(function TreeView({
             allowContextMenuDefault={Boolean(props.getContextMenuContent)}
             isHidden={item.hidden}
             onUnhide={props.onUnhide}
+            onUnresolvedCommentClick={props.onUnresolvedCommentClick}
             showContextMenuButtons={showContextMenuButtons}
           />
         ))}
@@ -704,9 +708,12 @@ export function useOverlayState(
 }
 
 export function overlayLayerFragmentsToTreeItems(
-  fragments: OverlayFragment[],
+  fragments: (OverlayFragment & { hasUnresolvedComment?: boolean | null })[],
   editable?: boolean,
-  getTranslatedProp?: (propName: string, fragment: OverlayFragment) => string
+  getTranslatedProp?: (
+    propName: string,
+    fragment: OverlayFragment & { hasUnresolvedComment?: boolean | null }
+  ) => string
 ) {
   const items: TreeItem[] = [];
   for (const fragment of fragments) {
@@ -720,6 +727,7 @@ export function overlayLayerFragmentsToTreeItems(
       title: getTranslatedProp
         ? getTranslatedProp("title", fragment)
         : fragment.title,
+      hasUnresolvedComment: Boolean(fragment.hasUnresolvedComment),
       type: fragment.__typename!,
       dropAcceptsTypes: editable ? ["TableOfContentsItem"] : [],
     });

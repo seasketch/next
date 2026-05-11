@@ -396,6 +396,9 @@ export default function TooltipMenu({
     };
 
     const filteredCommands = Commands.filter((command) => {
+      if (command.group === "node-type" && !nodeTypeSupported(schema, command.id)) {
+        return false;
+      }
       // Disable mark commands if selection is exclusively a metric node
       if (
         isOnlyMetricNode &&
@@ -767,6 +770,12 @@ export default function TooltipMenu({
         );
       });
       if (inTooltip) return;
+
+      const ignoreClearSelection = path.some((node) => {
+        if (!(node instanceof HTMLElement)) return false;
+        return node.dataset?.prosemirrorIgnoreClearSelection === "true";
+      });
+      if (ignoreClearSelection) return;
 
       const inFooter = path.some((node) => {
         if (!(node instanceof HTMLElement)) return false;
@@ -1151,7 +1160,7 @@ export default function TooltipMenu({
             {(commands.length > 0 || (isOnlyMetricNode && selectedMetric)) && (
               <div className="flex overflow-hidden items-center space-x-1">
                 {!isQuestionsSchema &&
-                  nodeTypeOptions.length > 0 &&
+                  nodeTypeOptions.length > 1 &&
                   !selectionIsReportTitle(state, schema) &&
                   !(
                     isSurveyQuestionSchema &&
