@@ -2,7 +2,7 @@
 import clsx from "clsx";
 import { useEffect, useMemo, useRef } from "react";
 import { DOMSerializer, Node as ProseMirrorNode } from "prosemirror-model";
-import { EditorState } from "prosemirror-state";
+import { EditorState, Plugin } from "prosemirror-state";
 import { EditorView } from "prosemirror-view";
 import { ProseMirror, useProseMirror } from "use-prosemirror";
 import { resolvableComments } from "../../../editor/config";
@@ -31,20 +31,48 @@ export function isResolvableCommentJsonEmpty(document: any) {
 export default function ResolvableCommentEditor({
   value,
   onChange,
+  onSubmitShortcut,
   autoFocus,
   placeholder,
   className,
 }: {
   value?: any;
   onChange: (value: any, empty: boolean) => void;
+  onSubmitShortcut?: () => void;
   autoFocus?: boolean;
   placeholder?: string;
   className?: string;
 }) {
   const [state, setState] = useProseMirror({ schema });
   const viewRef = useRef<{ view: EditorView }>();
+  const onSubmitShortcutRef = useRef(onSubmitShortcut);
+  onSubmitShortcutRef.current = onSubmitShortcut;
+
   const editorPlugins = useMemo(
-    () => [...plugins, createBlurSelectionPlugin()],
+    () => [
+      ...plugins,
+      createBlurSelectionPlugin(),
+      new Plugin({
+        props: {
+          handleDOMEvents: {
+            keydown(_view, event) {
+              if (
+                event.key === "Enter" &&
+                (event.metaKey || event.ctrlKey)
+              ) {
+                const submit = onSubmitShortcutRef.current;
+                if (submit) {
+                  event.preventDefault();
+                  submit();
+                  return true;
+                }
+              }
+              return false;
+            },
+          },
+        },
+      }),
+    ],
     []
   );
 

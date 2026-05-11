@@ -8708,6 +8708,67 @@ CREATE FUNCTION public.create_remote_mvt_source(project_id integer, url text, so
 
 
 --
+-- Name: resolvable_layer_comments; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.resolvable_layer_comments (
+    id integer NOT NULL,
+    project_id integer NOT NULL,
+    table_of_contents_item_id integer NOT NULL,
+    comment jsonb NOT NULL,
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    author_id integer NOT NULL,
+    resolved_at timestamp with time zone,
+    resolved_by_id integer,
+    parent_comment_id integer
+);
+
+
+--
+-- Name: create_resolvable_layer_comment(integer, integer, jsonb, integer, boolean); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_resolvable_layer_comment(project_id integer, table_of_contents_item_id integer, comment jsonb, parent_comment_id integer, set_resolved boolean) RETURNS public.resolvable_layer_comments
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  declare
+    new_comment resolvable_layer_comments;
+  begin
+    if session_is_admin(create_resolvable_layer_comment.project_id) = false then
+      raise exception 'Access denied to project %', create_resolvable_layer_comment.project_id;
+    end if;
+    if set_resolved and parent_comment_id is null then
+      raise exception 'Resolved comments must be replies to other comments';
+    end if;
+    if not exists (
+      select 1
+      from public.table_of_contents_items t
+      where t.id = create_resolvable_layer_comment.table_of_contents_item_id
+        and t.is_draft = true
+    ) then
+      raise exception 'Resolvable layer comments may only reference draft layers';
+    end if;
+    if set_resolved then
+      update resolvable_layer_comments
+        set resolved_at = now(), resolved_by_id = current_setting('session.user_id', true)::int
+        where id = create_resolvable_layer_comment.parent_comment_id;
+    end if;
+    insert into resolvable_layer_comments (project_id, table_of_contents_item_id, comment, parent_comment_id, author_id)
+      values (
+        create_resolvable_layer_comment.project_id,
+        create_resolvable_layer_comment.table_of_contents_item_id,
+        create_resolvable_layer_comment.comment,
+        create_resolvable_layer_comment.parent_comment_id,
+        current_setting('session.user_id', true)::int
+      )
+      returning * into new_comment;
+    return new_comment;
+  end;
+$$;
+
+
+--
 -- Name: create_sketch_class_acl(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -9565,10 +9626,20 @@ COMMENT ON FUNCTION public.data_layers_sprites(l public.data_layers) IS '@simple
 CREATE FUNCTION public.data_layers_total_quota_used(layer public.data_layers) RETURNS bigint
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-    select coalesce(sum(size), 0)::bigint from data_upload_outputs where data_source_id in (
-      select data_source_id from data_layers where id = layer.id
+    select coalesce(sum(duo.size), 0)::bigint
+    from data_upload_outputs duo
+    where duo.data_source_id in (
+      select dl.data_source_id
+      from data_layers dl
+      inner join data_sources ds on ds.id = dl.data_source_id
+      where dl.id = layer.id
+        and ds.project_id = layer.project_id
       union all
-      select data_source_id from archived_data_sources where data_layer_id = layer.id
+      select ads.data_source_id
+      from archived_data_sources ads
+      inner join data_sources ds on ds.id = ads.data_source_id
+      where ads.data_layer_id = layer.id
+        and ds.project_id = layer.project_id
     )
   $$;
 
@@ -12738,6 +12809,20 @@ CREATE FUNCTION public.get_referenced_stable_ids_for_report(_report_id integer) 
 
 
 --
+-- Name: get_resolvable_layer_comment(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.get_resolvable_layer_comment(comment_id integer) RETURNS public.resolvable_layer_comments
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select c.*
+    from resolvable_layer_comments c
+    where c.id = get_resolvable_layer_comment.comment_id
+      and session_is_admin(c.project_id);
+$$;
+
+
+--
 -- Name: get_sketch_class_fragment_status(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -15570,6 +15655,33 @@ COMMENT ON FUNCTION public.projects_change_logs_since_last_publish(project publi
 
 
 --
+-- Name: projects_comments_since_last_publish(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_comments_since_last_publish(project public.projects) RETURNS SETOF public.resolvable_layer_comments
+    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    AS $$
+  declare
+    v_last_publish timestamp;
+  begin
+    if session_is_admin(project.id) = false then
+      raise exception 'Access denied to project %', project.id;
+    end if;
+    select table_of_contents_last_published into v_last_publish from projects where id = project.id;
+    return query
+    select * from resolvable_layer_comments where project_id = project.id and (resolved_at > v_last_publish or created_at > v_last_publish) and parent_comment_id is null;
+  end;
+$$;
+
+
+--
+-- Name: FUNCTION projects_comments_since_last_publish(project public.projects); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_comments_since_last_publish(project public.projects) IS '@simpleCollections only';
+
+
+--
 -- Name: projects_data_hosting_quota(public.projects); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -15608,9 +15720,18 @@ CREATE FUNCTION public.projects_data_hosting_quota_used(p public.projects) RETUR
     where
       data_source_id = any (
         select id from data_sources where id = any (
-          select data_source_id from data_layers where id = any (
-            select data_layer_id from table_of_contents_items where project_id = p.id and data_layer_id is not null and is_draft = true and data_library_template_id is null and copied_from_data_library_template_id is null
-          ) union
+          select dl.data_source_id
+          from data_layers dl
+          inner join data_sources ds on ds.id = dl.data_source_id
+          where dl.id = any (
+            select data_layer_id
+            from table_of_contents_items
+            where project_id = p.id
+              and data_layer_id is not null
+              and is_draft = true
+          )
+          and ds.project_id = p.id
+          union
           select data_source_id from archived_data_sources where data_source_id = any (
             select id from data_sources where project_id = p.id
           )
@@ -18276,6 +18397,32 @@ CREATE FUNCTION public.rename_report_tab(tab_id integer, title text, alternate_l
 
 
 --
+-- Name: reopen_resolvable_layer_comment(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.reopen_resolvable_layer_comment(comment_id integer) RETURNS public.resolvable_layer_comments
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  declare
+    updated_comment resolvable_layer_comments;
+    comment_project_id int;
+  begin
+    select project_id into comment_project_id
+      from resolvable_layer_comments
+      where id = reopen_resolvable_layer_comment.comment_id;
+    if session_is_admin(comment_project_id) = false then
+      raise exception 'Access denied to project %', comment_project_id;
+    end if;
+    update resolvable_layer_comments
+      set resolved_at = null, resolved_by_id = null
+      where id = reopen_resolvable_layer_comment.comment_id
+      returning * into updated_comment;
+    return updated_comment;
+  end;
+$$;
+
+
+--
 -- Name: reorder_report_tab_cards(integer, integer[]); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -18821,6 +18968,28 @@ CREATE FUNCTION public.reprocess_legacy_data_source(table_of_contents_item_id in
 
 
 --
+-- Name: resolvable_layer_comment_enforce_draft_toc(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.resolvable_layer_comment_enforce_draft_toc() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+begin
+  if not exists (
+    select 1
+    from public.table_of_contents_items t
+    where t.id = new.table_of_contents_item_id
+      and t.is_draft = true
+  ) then
+    raise exception
+      'Resolvable layer comments may only reference draft table_of_contents_items rows';
+  end if;
+  return new;
+end;
+$$;
+
+
+--
 -- Name: resolvable_layer_comment_set_audit_fields(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -18865,6 +19034,105 @@ begin
   new.updated_at := now();
   return new;
 end;
+$$;
+
+
+--
+-- Name: resolvable_layer_comments_author_profile(public.resolvable_layer_comments); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.resolvable_layer_comments_author_profile(comment public.resolvable_layer_comments) RETURNS public.user_profiles
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from user_profiles where user_id = comment.author_id;
+$$;
+
+
+--
+-- Name: resolvable_layer_comments_enforce_draft_toc(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.resolvable_layer_comments_enforce_draft_toc() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+begin
+  if not exists (
+    select 1
+    from public.table_of_contents_items t
+    where t.id = new.table_of_contents_item_id
+      and t.is_draft = true
+  ) then
+    raise exception
+      'Resolvable layer comments may only reference draft table_of_contents_items rows';
+  end if;
+  return new;
+end;
+$$;
+
+
+--
+-- Name: resolvable_layer_comments_parent_comment(public.resolvable_layer_comments); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.resolvable_layer_comments_parent_comment(comment public.resolvable_layer_comments) RETURNS public.resolvable_layer_comments
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from resolvable_layer_comments where id = comment.parent_comment_id;
+$$;
+
+
+--
+-- Name: resolvable_layer_comments_replies(public.resolvable_layer_comments); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.resolvable_layer_comments_replies(comment public.resolvable_layer_comments) RETURNS SETOF public.resolvable_layer_comments
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from resolvable_layer_comments where parent_comment_id = comment.id order by created_at asc;
+$$;
+
+
+--
+-- Name: FUNCTION resolvable_layer_comments_replies(comment public.resolvable_layer_comments); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.resolvable_layer_comments_replies(comment public.resolvable_layer_comments) IS '@simpleCollections only';
+
+
+--
+-- Name: resolvable_layer_comments_resolved_by_profile(public.resolvable_layer_comments); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.resolvable_layer_comments_resolved_by_profile(comment public.resolvable_layer_comments) RETURNS public.user_profiles
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from user_profiles where user_id = comment.resolved_by_id;
+$$;
+
+
+--
+-- Name: resolve_resolvable_layer_comment(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.resolve_resolvable_layer_comment(comment_id integer) RETURNS public.resolvable_layer_comments
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+  declare
+    updated_comment resolvable_layer_comments;
+    comment_project_id int;
+  begin
+    select project_id into comment_project_id
+      from resolvable_layer_comments
+      where id = resolve_resolvable_layer_comment.comment_id;
+    if session_is_admin(comment_project_id) = false then
+      raise exception 'Access denied to project %', comment_project_id;
+    end if;
+    update resolvable_layer_comments
+      set resolved_at = now(), resolved_by_id = current_setting('session.user_id', true)::int
+      where id = resolve_resolvable_layer_comment.comment_id
+      returning * into updated_comment;
+    return updated_comment;
+  end;
 $$;
 
 
@@ -22146,6 +22414,23 @@ COMMENT ON FUNCTION public.table_of_contents_items_has_original_source_upload(it
 
 
 --
+-- Name: table_of_contents_items_has_unresolved_comment(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_has_unresolved_comment(item public.table_of_contents_items) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select exists (
+      select 1
+      from resolvable_layer_comments
+      where table_of_contents_item_id = item.id
+        and resolved_at is null
+        and parent_comment_id is null
+    );
+$$;
+
+
+--
 -- Name: table_of_contents_items_hosted_source_last_updated(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -22403,7 +22688,11 @@ CREATE FUNCTION public.table_of_contents_items_quota_used(item public.table_of_c
       data_upload_outputs
     where
       data_source_id = (
-        select data_source_id from data_layers where id = item.data_layer_id and item.copied_from_data_library_template_id is null and item.data_library_template_id is null
+        select dl.data_source_id
+        from data_layers dl
+        inner join data_sources ds on ds.id = dl.data_source_id
+        where dl.id = item.data_layer_id
+          and ds.project_id = item.project_id
       )
     union all
     select
@@ -22416,7 +22705,11 @@ CREATE FUNCTION public.table_of_contents_items_quota_used(item public.table_of_c
       data_upload_outputs
     where
       data_source_id in (
-        select data_source_id from archived_data_sources where data_layer_id = item.data_layer_id and item.copied_from_data_library_template_id is null and item.data_library_template_id is null
+        select ads.data_source_id
+        from archived_data_sources ads
+        inner join data_sources ds on ds.id = ads.data_source_id
+        where ads.data_layer_id = item.data_layer_id
+          and ds.project_id = item.project_id
       )
   $$;
 
@@ -22541,6 +22834,35 @@ CREATE FUNCTION public.table_of_contents_items_reporting_output(item public.tabl
 
 
 --
+-- Name: table_of_contents_items_resolved_comment_count(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_resolved_comment_count(item public.table_of_contents_items) RETURNS integer
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select count(*) from resolvable_layer_comments where table_of_contents_item_id = item.id and resolved_at is not null and parent_comment_id is null;
+$$;
+
+
+--
+-- Name: table_of_contents_items_resolved_comment_threads(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_resolved_comment_threads(item public.table_of_contents_items) RETURNS SETOF public.resolvable_layer_comments
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from resolvable_layer_comments where table_of_contents_item_id = item.id and resolved_at is not null and parent_comment_id is null order by created_at desc;
+$$;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_resolved_comment_threads(item public.table_of_contents_items); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.table_of_contents_items_resolved_comment_threads(item public.table_of_contents_items) IS '@simpleCollections only';
+
+
+--
 -- Name: table_of_contents_items_total_requests(public.table_of_contents_items, public.activity_stats_period); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -22576,6 +22898,22 @@ CREATE FUNCTION public.table_of_contents_items_total_requests(item public.table_
       where id = item.data_layer_id
     )
   $$;
+
+
+--
+-- Name: table_of_contents_items_unresolved_comment(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_unresolved_comment(item public.table_of_contents_items) RETURNS public.resolvable_layer_comments
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+    select * from resolvable_layer_comments
+      where table_of_contents_item_id = item.id
+        and resolved_at is null
+        and parent_comment_id is null
+      order by created_at desc
+      limit 1;
+$$;
 
 
 --
@@ -23928,7 +24266,8 @@ CREATE FUNCTION public.trg_resolvable_layer_comment_changelog() RETURNS trigger
     AS $$
 declare
   v_editor int;
-  v_fg     text;
+  v_field_group text;
+  v_change_log_id bigint;
 begin
   v_editor := nullif(current_setting('session.user_id', true), '')::int;
   if v_editor is null then
@@ -23940,55 +24279,50 @@ begin
 
   if tg_op = 'INSERT' then
     if new.parent_comment_id is null then
-      v_fg := 'resolvable_layer_comments:created';
+      v_field_group := 'resolvable_layer_comments:created';
     else
-      v_fg := 'resolvable_layer_comments:responded';
+      v_field_group := 'resolvable_layer_comments:responded';
     end if;
 
-    perform record_changelog(
+    select record_changelog(
       new.project_id,
       v_editor,
       'table_of_contents_items',
       new.table_of_contents_item_id,
-      v_fg::change_log_field_group,
+      v_field_group::change_log_field_group,
+      '{}'::jsonb,
+      '{}'::jsonb,
+      null,
+      null,
+      jsonb_build_object(
+        'comment_id', new.id,
+        'parent_comment_id', new.parent_comment_id
+      )
+    ) into v_change_log_id;
+    update change_logs set status = 'closed' where id = v_change_log_id;
+    return new;
+  elsif tg_op = 'UPDATE' then
+    if old.resolved_at is null and new.resolved_at is not null then
+      v_field_group := 'resolvable_layer_comments:resolved';
+    elsif old.resolved_at is not null and new.resolved_at is null then
+      v_field_group := 'resolvable_layer_comments:reopened';
+    else
+      return new;
+    end if;
+
+    select record_changelog(
+      new.project_id,
+      v_editor,
+      'table_of_contents_items',
+      new.table_of_contents_item_id,
+      v_field_group::change_log_field_group,
       '{}'::jsonb,
       '{}'::jsonb,
       null,
       null,
       jsonb_build_object('comment_id', new.id)
-    );
-    return new;
-
-  elsif tg_op = 'UPDATE' then
-    if old.resolved_at is null and new.resolved_at is not null then
-      v_fg := 'resolvable_layer_comments:resolved';
-      perform record_changelog(
-        new.project_id,
-        v_editor,
-        'table_of_contents_items',
-        new.table_of_contents_item_id,
-        v_fg::change_log_field_group,
-        '{}'::jsonb,
-        '{}'::jsonb,
-        null,
-        null,
-        jsonb_build_object('comment_id', new.id)
-      );
-    elsif old.resolved_at is not null and new.resolved_at is null then
-      v_fg := 'resolvable_layer_comments:reopened';
-      perform record_changelog(
-        new.project_id,
-        v_editor,
-        'table_of_contents_items',
-        new.table_of_contents_item_id,
-        v_fg::change_log_field_group,
-        '{}'::jsonb,
-        '{}'::jsonb,
-        null,
-        null,
-        jsonb_build_object('comment_id', new.id)
-      );
-    end if;
+    ) into v_change_log_id;
+    update change_logs set status = 'closed' where id = v_change_log_id;
     return new;
   end if;
 
@@ -26722,6 +27056,20 @@ ALTER TABLE public.reports ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
 
 
 --
+-- Name: resolvable_layer_comments_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.resolvable_layer_comments ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.resolvable_layer_comments_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: sketch_class_geographies; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -27731,6 +28079,14 @@ ALTER TABLE ONLY public.reports
 
 
 --
+-- Name: resolvable_layer_comments resolvable_layer_comments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.resolvable_layer_comments
+    ADD CONSTRAINT resolvable_layer_comments_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: sketch_class_geographies sketch_class_geographies_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -28668,6 +29024,34 @@ CREATE INDEX reports_sketch_class_id_idx ON public.reports USING btree (sketch_c
 
 
 --
+-- Name: resolvable_layer_comments_one_unresolved_root_per_toc_item; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX resolvable_layer_comments_one_unresolved_root_per_toc_item ON public.resolvable_layer_comments USING btree (table_of_contents_item_id) WHERE ((resolved_at IS NULL) AND (parent_comment_id IS NULL));
+
+
+--
+-- Name: resolvable_layer_comments_parent_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX resolvable_layer_comments_parent_idx ON public.resolvable_layer_comments USING btree (parent_comment_id);
+
+
+--
+-- Name: resolvable_layer_comments_project_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX resolvable_layer_comments_project_idx ON public.resolvable_layer_comments USING btree (project_id);
+
+
+--
+-- Name: resolvable_layer_comments_toc_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX resolvable_layer_comments_toc_idx ON public.resolvable_layer_comments USING btree (table_of_contents_item_id);
+
+
+--
 -- Name: sketch_class_geographies_geography_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -29221,6 +29605,13 @@ CREATE TRIGGER before_insert_or_update_form_logic_rules_100_trigger BEFORE INSER
 
 
 --
+-- Name: resolvable_layer_comments before_insert_or_update_resolvable_layer_comments_enforce_draft; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER before_insert_or_update_resolvable_layer_comments_enforce_draft BEFORE INSERT OR UPDATE OF table_of_contents_item_id ON public.resolvable_layer_comments FOR EACH ROW EXECUTE FUNCTION public.resolvable_layer_comments_enforce_draft_toc();
+
+
+--
 -- Name: table_of_contents_items before_insert_or_update_table_of_contents_items; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -29309,6 +29700,13 @@ CREATE TRIGGER before_survey_update_trigger BEFORE INSERT OR UPDATE ON public.su
 --
 
 CREATE TRIGGER before_valid_children_insert_or_update_trigger BEFORE INSERT OR UPDATE ON public.sketch_classes_valid_children FOR EACH ROW EXECUTE FUNCTION public.before_valid_children_insert_or_update();
+
+
+--
+-- Name: resolvable_layer_comments changelog_resolvable_layer_comments; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER changelog_resolvable_layer_comments AFTER INSERT OR UPDATE OF resolved_at ON public.resolvable_layer_comments FOR EACH ROW EXECUTE FUNCTION public.trg_resolvable_layer_comment_changelog();
 
 
 --
@@ -30573,6 +30971,46 @@ ALTER TABLE ONLY public.reports
 
 ALTER TABLE ONLY public.reports
     ADD CONSTRAINT reports_sketch_class_id_fkey FOREIGN KEY (sketch_class_id) REFERENCES public.sketch_classes(id) ON DELETE CASCADE;
+
+
+--
+-- Name: resolvable_layer_comments resolvable_layer_comments_author_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.resolvable_layer_comments
+    ADD CONSTRAINT resolvable_layer_comments_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.users(id) ON DELETE CASCADE;
+
+
+--
+-- Name: resolvable_layer_comments resolvable_layer_comments_parent_comment_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.resolvable_layer_comments
+    ADD CONSTRAINT resolvable_layer_comments_parent_comment_id_fkey FOREIGN KEY (parent_comment_id) REFERENCES public.resolvable_layer_comments(id) ON DELETE CASCADE;
+
+
+--
+-- Name: resolvable_layer_comments resolvable_layer_comments_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.resolvable_layer_comments
+    ADD CONSTRAINT resolvable_layer_comments_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+
+--
+-- Name: resolvable_layer_comments resolvable_layer_comments_resolved_by_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.resolvable_layer_comments
+    ADD CONSTRAINT resolvable_layer_comments_resolved_by_id_fkey FOREIGN KEY (resolved_by_id) REFERENCES public.users(id) ON DELETE SET NULL;
+
+
+--
+-- Name: resolvable_layer_comments resolvable_layer_comments_table_of_contents_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.resolvable_layer_comments
+    ADD CONSTRAINT resolvable_layer_comments_table_of_contents_item_id_fkey FOREIGN KEY (table_of_contents_item_id) REFERENCES public.table_of_contents_items(id) ON DELETE CASCADE;
 
 
 --
@@ -35444,6 +35882,14 @@ GRANT ALL ON FUNCTION public.create_remote_mvt_source(project_id integer, url te
 
 
 --
+-- Name: FUNCTION create_resolvable_layer_comment(project_id integer, table_of_contents_item_id integer, comment jsonb, parent_comment_id integer, set_resolved boolean); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_resolvable_layer_comment(project_id integer, table_of_contents_item_id integer, comment jsonb, parent_comment_id integer, set_resolved boolean) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_resolvable_layer_comment(project_id integer, table_of_contents_item_id integer, comment jsonb, parent_comment_id integer, set_resolved boolean) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION create_sketch_class_acl(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -37512,6 +37958,7 @@ REVOKE ALL ON FUNCTION public.get_job_details(key text) FROM PUBLIC;
 REVOKE ALL ON FUNCTION public.get_latest_published_report_for_draft(draft_report_id integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.get_latest_published_report_for_draft(draft_report_id integer) TO seasketch_user;
 GRANT ALL ON FUNCTION public.get_latest_published_report_for_draft(draft_report_id integer) TO seasketch_superuser;
+GRANT ALL ON FUNCTION public.get_latest_published_report_for_draft(draft_report_id integer) TO anon;
 
 
 --
@@ -37577,6 +38024,7 @@ GRANT ALL ON FUNCTION public.get_parent_collection_id(type public.sketch_child_t
 REVOKE ALL ON FUNCTION public.get_primary_draft_report_id_for_sketch_class(sketch_class_id integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.get_primary_draft_report_id_for_sketch_class(sketch_class_id integer) TO seasketch_user;
 GRANT ALL ON FUNCTION public.get_primary_draft_report_id_for_sketch_class(sketch_class_id integer) TO seasketch_superuser;
+GRANT ALL ON FUNCTION public.get_primary_draft_report_id_for_sketch_class(sketch_class_id integer) TO anon;
 
 
 --
@@ -37623,6 +38071,14 @@ GRANT ALL ON FUNCTION public.get_published_card_id_from_draft(draft_report_card_
 
 REVOKE ALL ON FUNCTION public.get_referenced_stable_ids_for_report(_report_id integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.get_referenced_stable_ids_for_report(_report_id integer) TO anon;
+
+
+--
+-- Name: FUNCTION get_resolvable_layer_comment(comment_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.get_resolvable_layer_comment(comment_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.get_resolvable_layer_comment(comment_id integer) TO seasketch_user;
 
 
 --
@@ -39375,6 +39831,14 @@ GRANT ALL ON FUNCTION public.projects_change_logs_since_last_publish(project pub
 
 
 --
+-- Name: FUNCTION projects_comments_since_last_publish(project public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_comments_since_last_publish(project public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_comments_since_last_publish(project public.projects) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION projects_data_hosting_quota(p public.projects); Type: ACL; Schema: public; Owner: -
 --
 
@@ -39884,6 +40348,14 @@ GRANT ALL ON FUNCTION public.rename_report_tab(tab_id integer, title text, alter
 
 
 --
+-- Name: FUNCTION reopen_resolvable_layer_comment(comment_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.reopen_resolvable_layer_comment(comment_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.reopen_resolvable_layer_comment(comment_id integer) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION reorder_report_tab_cards(report_tab_id integer, card_ids integer[]); Type: ACL; Schema: public; Owner: -
 --
 
@@ -40009,11 +40481,65 @@ GRANT ALL ON FUNCTION public.reprocess_legacy_data_source(table_of_contents_item
 
 
 --
+-- Name: FUNCTION resolvable_layer_comment_enforce_draft_toc(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.resolvable_layer_comment_enforce_draft_toc() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION resolvable_layer_comment_set_audit_fields(); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.resolvable_layer_comment_set_audit_fields() FROM PUBLIC;
 GRANT ALL ON FUNCTION public.resolvable_layer_comment_set_audit_fields() TO seasketch_user;
+
+
+--
+-- Name: FUNCTION resolvable_layer_comments_author_profile(comment public.resolvable_layer_comments); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.resolvable_layer_comments_author_profile(comment public.resolvable_layer_comments) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.resolvable_layer_comments_author_profile(comment public.resolvable_layer_comments) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION resolvable_layer_comments_enforce_draft_toc(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.resolvable_layer_comments_enforce_draft_toc() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION resolvable_layer_comments_parent_comment(comment public.resolvable_layer_comments); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.resolvable_layer_comments_parent_comment(comment public.resolvable_layer_comments) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.resolvable_layer_comments_parent_comment(comment public.resolvable_layer_comments) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION resolvable_layer_comments_replies(comment public.resolvable_layer_comments); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.resolvable_layer_comments_replies(comment public.resolvable_layer_comments) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.resolvable_layer_comments_replies(comment public.resolvable_layer_comments) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION resolvable_layer_comments_resolved_by_profile(comment public.resolvable_layer_comments); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.resolvable_layer_comments_resolved_by_profile(comment public.resolvable_layer_comments) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.resolvable_layer_comments_resolved_by_profile(comment public.resolvable_layer_comments) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION resolve_resolvable_layer_comment(comment_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.resolve_resolvable_layer_comment(comment_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.resolve_resolvable_layer_comment(comment_id integer) TO seasketch_user;
 
 
 --
@@ -43671,6 +44197,14 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_has_original_source_upload(
 
 
 --
+-- Name: FUNCTION table_of_contents_items_has_unresolved_comment(item public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_has_unresolved_comment(item public.table_of_contents_items) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_items_has_unresolved_comment(item public.table_of_contents_items) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION table_of_contents_items_hosted_source_last_updated(t public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
 --
 
@@ -43782,11 +44316,35 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_reporting_output(item publi
 
 
 --
+-- Name: FUNCTION table_of_contents_items_resolved_comment_count(item public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_resolved_comment_count(item public.table_of_contents_items) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_items_resolved_comment_count(item public.table_of_contents_items) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_resolved_comment_threads(item public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_resolved_comment_threads(item public.table_of_contents_items) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_items_resolved_comment_threads(item public.table_of_contents_items) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION table_of_contents_items_total_requests(item public.table_of_contents_items, period public.activity_stats_period); Type: ACL; Schema: public; Owner: -
 --
 
 REVOKE ALL ON FUNCTION public.table_of_contents_items_total_requests(item public.table_of_contents_items, period public.activity_stats_period) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.table_of_contents_items_total_requests(item public.table_of_contents_items, period public.activity_stats_period) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_unresolved_comment(item public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_unresolved_comment(item public.table_of_contents_items) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_items_unresolved_comment(item public.table_of_contents_items) TO seasketch_user;
 
 
 --
@@ -44112,7 +44670,6 @@ REVOKE ALL ON FUNCTION public.trg_changelog_table_of_contents_items_title() FROM
 --
 
 REVOKE ALL ON FUNCTION public.trg_resolvable_layer_comment_changelog() FROM PUBLIC;
-GRANT ALL ON FUNCTION public.trg_resolvable_layer_comment_changelog() TO seasketch_user;
 
 
 --

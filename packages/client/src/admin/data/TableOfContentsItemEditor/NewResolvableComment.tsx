@@ -140,6 +140,11 @@ export default function NewResolvableComment({
           value={comment}
           autoFocus
           placeholder={isReply ? t("Write a reply") : t("Write a comment")}
+          onSubmitShortcut={() => {
+            if (!submitDisabled) {
+              submit(false);
+            }
+          }}
           onChange={(value, isEmpty) => {
             setComment(value);
             setEmpty(isEmpty);

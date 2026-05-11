@@ -11097,6 +11097,8 @@ export type Project = Node & {
   changeLogsConnection: ChangeLogsConnection;
   /** Reads and enables pagination through a set of `ChangeLog`. */
   changeLogsSinceLastPublish?: Maybe<Array<ChangeLog>>;
+  /** Reads and enables pagination through a set of `ResolvableLayerComment`. */
+  commentsSinceLastPublish?: Maybe<Array<ResolvableLayerComment>>;
   /** Reads a single `CommunityGuideline` that is related to this `Project`. */
   communityGuidelines?: Maybe<CommunityGuideline>;
   createdAt?: Maybe<Scalars['Datetime']>;
@@ -11418,6 +11420,16 @@ export type ProjectChangeLogsConnectionArgs = {
  * needed to drive the application.
  */
 export type ProjectChangeLogsSinceLastPublishArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectCommentsSinceLastPublishArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
 };
@@ -22184,7 +22196,10 @@ export type ChangeLogsSinceLastPublishQuery = (
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id' | 'tableOfContentsLastPublished'>
-    & { draftTableOfContentsItems?: Maybe<Array<(
+    & { commentsSinceLastPublish?: Maybe<Array<(
+      { __typename?: 'ResolvableLayerComment' }
+      & ResolvableLayerCommentThreadFragment
+    )>>, draftTableOfContentsItems?: Maybe<Array<(
       { __typename?: 'TableOfContentsItem' }
       & Pick<TableOfContentsItem, 'id' | 'title' | 'isFolder'>
       & { unresolvedComment?: Maybe<(
@@ -22292,6 +22307,27 @@ export type ReopenResolvableCommentMutation = (
         & ResolvableLayerCommentThreadFragment
       )>> }
     )> }
+  )> }
+);
+
+export type ProjectAdminsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ProjectAdminsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { admins?: Maybe<Array<(
+      { __typename?: 'User' }
+      & Pick<User, 'id'>
+      & { profile?: Maybe<(
+        { __typename?: 'Profile' }
+        & UserProfileDetailsFragment
+      )> }
+    )>> }
   )> }
 );
 
@@ -31105,6 +31141,9 @@ export const ChangeLogsSinceLastPublishDocument = /*#__PURE__*/ gql`
   projectBySlug(slug: $slug) {
     id
     tableOfContentsLastPublished
+    commentsSinceLastPublish {
+      ...ResolvableLayerCommentThread
+    }
     draftTableOfContentsItems {
       id
       title
@@ -31198,6 +31237,19 @@ export const ReopenResolvableCommentDocument = /*#__PURE__*/ gql`
   }
 }
     ${ResolvableLayerCommentThreadFragmentDoc}`;
+export const ProjectAdminsDocument = /*#__PURE__*/ gql`
+    query ProjectAdmins($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    admins {
+      id
+      profile {
+        ...UserProfileDetails
+      }
+    }
+  }
+}
+    ${UserProfileDetailsFragmentDoc}`;
 export const ForumAdminListDocument = /*#__PURE__*/ gql`
     query ForumAdminList($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -34257,6 +34309,7 @@ export const namedOperations = {
     LayerMetadataChanges: 'LayerMetadataChanges',
     LayerCartographyChanges: 'LayerCartographyChanges',
     ChangeLogsSinceLastPublish: 'ChangeLogsSinceLastPublish',
+    ProjectAdmins: 'ProjectAdmins',
     ForumAdminList: 'ForumAdminList',
     Forums: 'Forums',
     TopicList: 'TopicList',

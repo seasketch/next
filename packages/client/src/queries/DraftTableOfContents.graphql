@@ -1256,6 +1256,9 @@ query ChangeLogsSinceLastPublish($slug: String!) {
   projectBySlug(slug: $slug) {
     id
     tableOfContentsLastPublished
+    commentsSinceLastPublish {
+      ...ResolvableLayerCommentThread
+    }
     draftTableOfContentsItems {
       id
       title
@@ -1350,6 +1353,18 @@ mutation ReopenResolvableComment($commentId: Int!) {
       resolvedCommentCount
       resolvedCommentThreads {
         ...ResolvableLayerCommentThread
+      }
+    }
+  }
+}
+
+query ProjectAdmins($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    admins {
+      id
+      profile {
+        ...UserProfileDetails
       }
     }
   }

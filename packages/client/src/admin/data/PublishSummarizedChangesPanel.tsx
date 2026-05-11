@@ -181,16 +181,17 @@ export default function PublishSummarizedChangesPanel({
   return (
     <Tooltip.Provider delayDuration={120} skipDelayDuration={300}>
       <>
-      <div className="flex flex-col gap-3">
-        <p className="text-sm leading-relaxed text-slate-600 pb-2">
-          {adminT(
-            "{{total}} changes across {{n}} layers and folders since the last publish. Review these changes before making them available to project users.",
-            { total: totalChangeEvents, n: affectedEntityCount }
-          )}
-        </p>
-      </div>
+        <div className="flex flex-col gap-3">
+          <p className="text-sm leading-relaxed text-slate-600 pb-2">
+            <Trans ns="admin:data">
+              This list includes all changes to the layers list since the last
+              publication. Review them before publishing to your project's
+              users.
+            </Trans>
+          </p>
+        </div>
 
-      <div className="flex flex-col gap-8 pb-1">
+        <div className="flex flex-col gap-8 pb-1">
           <SummarizedSection
             tone="removed"
             title={adminT("Removed")}
@@ -263,20 +264,20 @@ export default function PublishSummarizedChangesPanel({
           </SummarizedSection>
         </div>
 
-      {metadataModal && (
-        <LayerMetadataRevisionModal
-          tableOfContentsItemId={metadataModal.tocId}
-          initialChangeLogId={metadataModal.initialId}
-          onRequestClose={() => setMetadataModal(null)}
-        />
-      )}
-      {cartographyModal && (
-        <LayerCartographyRevisionModal
-          tableOfContentsItemId={cartographyModal.tocId}
-          initialChangeLogId={cartographyModal.initialId}
-          onRequestClose={() => setCartographyModal(null)}
-        />
-      )}
+        {metadataModal && (
+          <LayerMetadataRevisionModal
+            tableOfContentsItemId={metadataModal.tocId}
+            initialChangeLogId={metadataModal.initialId}
+            onRequestClose={() => setMetadataModal(null)}
+          />
+        )}
+        {cartographyModal && (
+          <LayerCartographyRevisionModal
+            tableOfContentsItemId={cartographyModal.tocId}
+            initialChangeLogId={cartographyModal.initialId}
+            onRequestClose={() => setCartographyModal(null)}
+          />
+        )}
       </>
     </Tooltip.Provider>
   );
@@ -668,7 +669,9 @@ export function PublishBadge({
         >
           {detail}
           <Tooltip.Arrow
-            className={badgeKey === "comments" ? "fill-white" : "fill-neutral-950"}
+            className={
+              badgeKey === "comments" ? "fill-white" : "fill-neutral-950"
+            }
           />
         </Tooltip.Content>
       </Tooltip.Portal>

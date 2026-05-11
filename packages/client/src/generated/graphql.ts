@@ -11099,6 +11099,8 @@ export type Project = Node & {
   changeLogsConnection: ChangeLogsConnection;
   /** Reads and enables pagination through a set of `ChangeLog`. */
   changeLogsSinceLastPublish?: Maybe<Array<ChangeLog>>;
+  /** Reads and enables pagination through a set of `ResolvableLayerComment`. */
+  commentsSinceLastPublish?: Maybe<Array<ResolvableLayerComment>>;
   /** Reads a single `CommunityGuideline` that is related to this `Project`. */
   communityGuidelines?: Maybe<CommunityGuideline>;
   createdAt?: Maybe<Scalars['Datetime']>;
@@ -11420,6 +11422,16 @@ export type ProjectChangeLogsConnectionArgs = {
  * needed to drive the application.
  */
 export type ProjectChangeLogsSinceLastPublishArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectCommentsSinceLastPublishArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
 };
@@ -22186,7 +22198,10 @@ export type ChangeLogsSinceLastPublishQuery = (
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id' | 'tableOfContentsLastPublished'>
-    & { draftTableOfContentsItems?: Maybe<Array<(
+    & { commentsSinceLastPublish?: Maybe<Array<(
+      { __typename?: 'ResolvableLayerComment' }
+      & ResolvableLayerCommentThreadFragment
+    )>>, draftTableOfContentsItems?: Maybe<Array<(
       { __typename?: 'TableOfContentsItem' }
       & Pick<TableOfContentsItem, 'id' | 'title' | 'isFolder'>
       & { unresolvedComment?: Maybe<(
@@ -22294,6 +22309,27 @@ export type ReopenResolvableCommentMutation = (
         & ResolvableLayerCommentThreadFragment
       )>> }
     )> }
+  )> }
+);
+
+export type ProjectAdminsQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ProjectAdminsQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id'>
+    & { admins?: Maybe<Array<(
+      { __typename?: 'User' }
+      & Pick<User, 'id'>
+      & { profile?: Maybe<(
+        { __typename?: 'Profile' }
+        & UserProfileDetailsFragment
+      )> }
+    )>> }
   )> }
 );
 
@@ -34664,6 +34700,9 @@ export const ChangeLogsSinceLastPublishDocument = gql`
   projectBySlug(slug: $slug) {
     id
     tableOfContentsLastPublished
+    commentsSinceLastPublish {
+      ...ResolvableLayerCommentThread
+    }
     draftTableOfContentsItems {
       id
       title
@@ -34867,6 +34906,47 @@ export function useReopenResolvableCommentMutation(baseOptions?: Apollo.Mutation
 export type ReopenResolvableCommentMutationHookResult = ReturnType<typeof useReopenResolvableCommentMutation>;
 export type ReopenResolvableCommentMutationResult = Apollo.MutationResult<ReopenResolvableCommentMutation>;
 export type ReopenResolvableCommentMutationOptions = Apollo.BaseMutationOptions<ReopenResolvableCommentMutation, ReopenResolvableCommentMutationVariables>;
+export const ProjectAdminsDocument = gql`
+    query ProjectAdmins($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    admins {
+      id
+      profile {
+        ...UserProfileDetails
+      }
+    }
+  }
+}
+    ${UserProfileDetailsFragmentDoc}`;
+
+/**
+ * __useProjectAdminsQuery__
+ *
+ * To run a query within a React component, call `useProjectAdminsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useProjectAdminsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useProjectAdminsQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useProjectAdminsQuery(baseOptions: Apollo.QueryHookOptions<ProjectAdminsQuery, ProjectAdminsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ProjectAdminsQuery, ProjectAdminsQueryVariables>(ProjectAdminsDocument, options);
+      }
+export function useProjectAdminsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ProjectAdminsQuery, ProjectAdminsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ProjectAdminsQuery, ProjectAdminsQueryVariables>(ProjectAdminsDocument, options);
+        }
+export type ProjectAdminsQueryHookResult = ReturnType<typeof useProjectAdminsQuery>;
+export type ProjectAdminsLazyQueryHookResult = ReturnType<typeof useProjectAdminsLazyQuery>;
+export type ProjectAdminsQueryResult = Apollo.QueryResult<ProjectAdminsQuery, ProjectAdminsQueryVariables>;
 export const ForumAdminListDocument = gql`
     query ForumAdminList($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -43628,6 +43708,7 @@ export const namedOperations = {
     LayerMetadataChanges: 'LayerMetadataChanges',
     LayerCartographyChanges: 'LayerCartographyChanges',
     ChangeLogsSinceLastPublish: 'ChangeLogsSinceLastPublish',
+    ProjectAdmins: 'ProjectAdmins',
     ForumAdminList: 'ForumAdminList',
     Forums: 'Forums',
     TopicList: 'TopicList',

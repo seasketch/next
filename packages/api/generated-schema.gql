@@ -12437,6 +12437,17 @@ type Project implements Node {
     offset: Int
   ): [ChangeLog!]
 
+  """
+  Reads and enables pagination through a set of `ResolvableLayerComment`.
+  """
+  commentsSinceLastPublish(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [ResolvableLayerComment!]
+
   """Reads a single `CommunityGuideline` that is related to this `Project`."""
   communityGuidelines: CommunityGuideline
   createdAt: Datetime
