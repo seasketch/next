@@ -282,11 +282,14 @@ export default function SketchClassReportsAdmin({
     );
   }
 
+  // Compare this sketch class's primary draft to its published snapshot. When opened
+  // from Project Reports we pass draftReportIdOverride, but that id still matches
+  // this sketch class's draft_report_id for assigned reports — do not gate on override
+  // or Publish is always disabled there.
   const hasUnpublishedChanges =
-    draftReportIdOverride == null &&
-    ((data?.sketchClass && !data?.sketchClass?.report) ||
-      new Date(data?.sketchClass?.draftReport?.updatedAt ?? 0) >=
-        new Date(data?.sketchClass?.report?.createdAt ?? 0));
+    (data?.sketchClass && !data?.sketchClass?.report) ||
+    new Date(data?.sketchClass?.draftReport?.updatedAt ?? 0) >=
+      new Date(data?.sketchClass?.report?.createdAt ?? 0);
 
   if (
     sketchesForDemonstration.length === 0 &&
