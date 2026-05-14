@@ -213,11 +213,26 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         overlaySources: [String!]!
       }
 
+      """
+      A metric dependency could not be resolved to an overlay source in this project
+      (e.g. stable id from another project after copy/paste). Metrics for this hash are omitted;
+      affectedCardIds lists report cards that reference the dependency.
+      """
+      type ReportDependencyResolutionError {
+        dependencyHash: String!
+        stableId: String
+        metricType: String!
+        subjectType: String!
+        message: String!
+        affectedCardIds: [Int!]!
+      }
+
       type ReportOverlayDependencies {
         ready: Boolean!
         metrics: [CompatibleSpatialMetric!]!
         cardDependencyLists: [CardDependencyLists!]!
         fragmentSubjectCatalog: [FragmentSubject!]!
+        dependencyResolutionErrors: [ReportDependencyResolutionError!]!
       }
 
       extend type Report {
@@ -237,6 +252,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         sketchId: Int!
         metrics: [CompatibleSpatialMetric!]!
         fragmentSubjectCatalog: [FragmentSubject!]!
+        dependencyResolutionErrors: [ReportDependencyResolutionError!]!
       }
 
       type DraftReportOverlaySourcesResults {
@@ -541,16 +557,17 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
           // Same as Report.dependencies: batch metric SQL must use `pgClient`
           // so rows see fragment inserts in the same PostGraphile transaction.
           const metricsPool = pgClient;
-          const { metrics } = await createMetricsForDependencies(
-            pgClient,
-            args.input.nodeDependencies,
-            true,
-            projectId,
-            fragments,
-            geogs,
-            undefined,
-            { metricsPool },
-          );
+          const { metrics, resolutionErrors } =
+            await createMetricsForDependencies(
+              pgClient,
+              args.input.nodeDependencies as MetricDependency[],
+              true,
+              projectId,
+              fragments,
+              geogs,
+              undefined,
+              { metricsPool },
+            );
 
           const { metrics: wireMetrics, fragmentSubjectCatalog } =
             compressSpatialMetricSubjectsForWire(metrics);
@@ -558,7 +575,13 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
           return {
             metrics: wireMetrics as typeof metrics,
             fragmentSubjectCatalog,
-            ready: !metrics.find((m) => m.state !== "complete"),
+            dependencyResolutionErrors: resolutionErrors.map((e) => ({
+              ...e,
+              affectedCardIds: [],
+            })),
+            ready:
+              resolutionErrors.length === 0 &&
+              !metrics.find((m) => m.state !== "complete"),
             sketchId,
           };
         },
@@ -624,7 +647,9 @@ async function getOrCreateReportDependencies(
     .query<{
       name: string;
       id: number;
-    }>(`select name, id from project_geography where project_id = $1`, [projectId])
+    }>(`select name, id from project_geography where project_id = $1`, [
+      projectId,
+    ])
     .then(({ rows: geogs }) => geogs);
 
   const cardsPromise = pool.query(
@@ -661,6 +686,14 @@ async function getOrCreateReportDependencies(
       overlaySources: string[];
     }[];
     fragmentSubjectCatalog: FragmentSubjectCatalogEntry[];
+    dependencyResolutionErrors: {
+      dependencyHash: string;
+      stableId?: string;
+      metricType: string;
+      subjectType: string;
+      message: string;
+      affectedCardIds: number[];
+    }[];
   } = {
     ready: true,
     metrics: [] as any[],
@@ -670,6 +703,7 @@ async function getOrCreateReportDependencies(
       overlaySources: string[];
     }[],
     fragmentSubjectCatalog: [],
+    dependencyResolutionErrors: [],
   };
 
   const perCard = cards.rows.map((card: { id: number; body: unknown }) => ({
@@ -720,19 +754,27 @@ async function getOrCreateReportDependencies(
     }
   }
 
-  const { metrics: batchMetrics } = await createMetricsForDependencies(
-    pool,
-    uniqueDepsForReport,
-    isDraft,
-    projectId,
-    fragments,
-    geogs,
-    overlayRefs,
-    {
-      metricsPool: options?.metricsPool,
-      trustedTocRlsBypass: trustedReads,
-    },
-  );
+  const { metrics: batchMetrics, resolutionErrors: rawResolutionErrors } =
+    await createMetricsForDependencies(
+      pool,
+      uniqueDepsForReport,
+      isDraft,
+      projectId,
+      fragments,
+      geogs,
+      overlayRefs,
+      {
+        metricsPool: options?.metricsPool,
+        trustedTocRlsBypass: trustedReads,
+      },
+    );
+
+  results.dependencyResolutionErrors =
+    enrichReportDependencyResolutionErrorsWithCardIds(
+      rawResolutionErrors,
+      perCard,
+      overlaySourceUrls,
+    );
 
   const metricsByHash = new Map<string, any[]>();
   const seenMetricIds = new Set<number>();
@@ -794,7 +836,9 @@ async function getOrCreateReportDependencies(
   results.metrics = wireMetrics as typeof results.metrics;
   results.fragmentSubjectCatalog = fragmentSubjectCatalog;
 
-  results.ready = !results.metrics.find((m) => m.state !== "complete");
+  results.ready =
+    results.dependencyResolutionErrors.length === 0 &&
+    !results.metrics.find((m) => m.state !== "complete");
 
   return results;
 }
@@ -901,7 +945,7 @@ export async function getOrCreateSpatialMetricsBatch(
         continue;
       } else {
         throw new Error(
-          "overlaySourceUrl or sourceProcessingJobDependency must be provided for non-total_area metrics",
+          `overlaySourceUrl or sourceProcessingJobDependency must be provided for metric type "${input.type}" (subject fragment ${input.subjectFragmentId ?? "n/a"}, geography ${input.subjectGeographyId ?? "n/a"})`,
         );
       }
     }
@@ -985,8 +1029,7 @@ export async function startMetricCalculationsForSketch(
   if (!sketchClass) {
     throw new Error("Sketch class not found");
   }
-  const reportId =
-    sketchClass.effective_report_id;
+  const reportId = sketchClass.effective_report_id;
   if (!reportId) {
     return;
   }
@@ -1266,6 +1309,67 @@ async function getOverlaySourcesForDependencies(
   );
 }
 
+type DependencyResolutionErrorWire = {
+  dependencyHash: string;
+  stableId?: string;
+  metricType: string;
+  subjectType: string;
+  message: string;
+};
+
+function metricDependencyRequiresProjectOverlaySource(
+  dep: MetricDependency,
+): boolean {
+  return dep.type !== "total_area" && dep.type !== "distance_to_shore";
+}
+
+function buildOverlayResolutionFailureMessage(
+  dependency: MetricDependency,
+  isDraft: boolean,
+  ref: ReportOverlaySourcePartial | undefined,
+): string {
+  const draftPart = isDraft ? "draft " : "published ";
+  if (!dependency.stableId) {
+    return `Metric type "${dependency.type}" requires a layer reference (stable id) in this project.`;
+  }
+  if (!ref) {
+    return (
+      `No ${draftPart}map layer in this project has stable id "${dependency.stableId}". ` +
+      `This usually means report content was copied from another project or the layer was removed.`
+    );
+  }
+  return `Layer "${dependency.stableId}" is in the ${draftPart}table of contents but has no reporting output URL or processing job.`;
+}
+
+function enrichReportDependencyResolutionErrorsWithCardIds(
+  errors: DependencyResolutionErrorWire[],
+  perCard: { cardId: number; dependencies: MetricDependency[] }[],
+  overlaySourceUrls: { [stableId: string]: string },
+): {
+  dependencyHash: string;
+  stableId?: string;
+  metricType: string;
+  subjectType: string;
+  message: string;
+  affectedCardIds: number[];
+}[] {
+  return errors.map((err) => {
+    const affectedCardIds: number[] = [];
+    for (const pc of perCard) {
+      for (const dep of pc.dependencies) {
+        if (
+          hashMetricDependency(dep, overlaySourceUrls) === err.dependencyHash
+        ) {
+          if (!affectedCardIds.includes(pc.cardId)) {
+            affectedCardIds.push(pc.cardId);
+          }
+        }
+      }
+    }
+    return { ...err, affectedCardIds };
+  });
+}
+
 async function createMetricsForDependencies(
   pool: Pool | PoolClient,
   dependencies: MetricDependency[],
@@ -1280,9 +1384,14 @@ async function createMetricsForDependencies(
     metricsPool?: Pool | PoolClient;
     trustedTocRlsBypass?: boolean;
   },
-) {
+): Promise<{
+  metrics: any[];
+  hashes: string[];
+  resolutionErrors: DependencyResolutionErrorWire[];
+}> {
   const metrics: any[] = [];
   const hashSeen = new Set<string>();
+  const resolutionErrors: DependencyResolutionErrorWire[] = [];
   const batchInputs: Array<{
     subjectFragmentId?: string;
     subjectGeographyId?: number;
@@ -1321,6 +1430,28 @@ async function createMetricsForDependencies(
       continue;
     }
     hashSeen.add(dependencyHash);
+
+    if (metricDependencyRequiresProjectOverlaySource(dependency)) {
+      const ref = dependency.stableId
+        ? overlaySources[dependency.stableId]
+        : undefined;
+      const overlayUrl = ref?.sourceUrl;
+      const jobDep = ref?.sourceProcessingJobId;
+      if (!dependency.stableId || !ref || (!overlayUrl && !jobDep)) {
+        resolutionErrors.push({
+          dependencyHash,
+          stableId: dependency.stableId,
+          metricType: dependency.type,
+          subjectType: dependency.subjectType,
+          message: buildOverlayResolutionFailureMessage(
+            dependency,
+            isDraft,
+            ref,
+          ),
+        });
+        continue;
+      }
+    }
 
     if (dependency.subjectType === "fragments") {
       for (const fragment of fragments) {
@@ -1368,7 +1499,11 @@ async function createMetricsForDependencies(
     );
     metrics.push(...batchMetrics);
   }
-  return { metrics, hashes: Array.from(hashSeen) };
+  return {
+    metrics,
+    hashes: Array.from(hashSeen),
+    resolutionErrors,
+  };
 }
 
 function stripUnnecessaryGeostatsFields(geostats: any, keepHistogram: boolean) {

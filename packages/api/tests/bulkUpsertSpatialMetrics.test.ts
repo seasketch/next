@@ -366,7 +366,7 @@ describe("getOrCreateSpatialMetricsBatch", () => {
         },
       ]),
     ).rejects.toThrow(
-      "overlaySourceUrl or sourceProcessingJobDependency must be provided",
+      /overlaySourceUrl or sourceProcessingJobDependency must be provided/,
     );
   });
 
