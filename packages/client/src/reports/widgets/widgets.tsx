@@ -592,9 +592,13 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
 
     const missingSketchClassErrors = ["Sketch class not available"];
     if (node.isInline) {
-      return <WidgetErrorInline errors={missingSketchClassErrors} cardId={cardId} />;
+      return (
+        <WidgetErrorInline errors={missingSketchClassErrors} cardId={cardId} />
+      );
     }
-    return <WidgetErrorBlock errors={missingSketchClassErrors} cardId={cardId} />;
+    return (
+      <WidgetErrorBlock errors={missingSketchClassErrors} cardId={cardId} />
+    );
   }
 
   // Error components access ReportContext themselves, so we only subscribe
@@ -1643,19 +1647,19 @@ export function buildReportCommandGroups({
                 componentSettings: { stableId, label: title },
               }),
           },
-          {
-            // eslint-disable-next-line i18next/no-literal-string
-            id: `overlay-layer-${tocId}-inline-toggle`,
-            label: "Inline layer toggle",
-            description: "Place layer toggles inline with any text.",
-            screenshotSrc: "/slashCommands/layer-toggle-inline.png",
-            run: (state, dispatch, view) =>
-              insertInlineMetric(view, state.selection.ranges[0], {
-                type: "InlineLayerToggle",
-                metrics: [],
-                componentSettings: { stableId, label: title },
-              }),
-          },
+          // {
+          //   // eslint-disable-next-line i18next/no-literal-string
+          //   id: `overlay-layer-${tocId}-inline-toggle`,
+          //   label: "Inline layer toggle",
+          //   description: "Place layer toggles inline with any text.",
+          //   screenshotSrc: "/slashCommands/layer-toggle-inline.png",
+          //   run: (state, dispatch, view) =>
+          //     insertInlineMetric(view, state.selection.ranges[0], {
+          //       type: "InlineLayerToggle",
+          //       metrics: [],
+          //       componentSettings: { stableId, label: title },
+          //     }),
+          // },
         ];
 
         let item: CommandPaletteItem = {
@@ -1726,22 +1730,22 @@ export function buildReportCommandGroups({
                   },
                 }),
             },
-            {
-              // eslint-disable-next-line i18next/no-literal-string
-              id: `overlay-layer-${tocItem.id}-inline-toggle`,
-              label: "Inline layer toggle",
-              description: "Place layer toggles inline with any text.",
-              screenshotSrc: "/slashCommands/layer-toggle-inline.png",
-              run: (state, dispatch, view) =>
-                insertInlineMetric(view, state.selection.ranges[0], {
-                  type: "InlineLayerToggle",
-                  metrics: [],
-                  componentSettings: {
-                    stableId: tocItem.stableId,
-                    label: tocItem.title,
-                  },
-                }),
-            },
+            // {
+            //   // eslint-disable-next-line i18next/no-literal-string
+            //   id: `overlay-layer-${tocItem.id}-inline-toggle`,
+            //   label: "Inline layer toggle",
+            //   description: "Place layer toggles inline with any text.",
+            //   screenshotSrc: "/slashCommands/layer-toggle-inline.png",
+            //   run: (state, dispatch, view) =>
+            //     insertInlineMetric(view, state.selection.ranges[0], {
+            //       type: "InlineLayerToggle",
+            //       metrics: [],
+            //       componentSettings: {
+            //         stableId: tocItem.stableId,
+            //         label: tocItem.title,
+            //       },
+            //     }),
+            // },
           ];
           overlayItems.push({
             // eslint-disable-next-line i18next/no-literal-string
