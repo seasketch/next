@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useState, MouseEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { useHistory } from "react-router-dom";
 import { CogIcon, TranslateIcon } from "@heroicons/react/solid";
@@ -45,16 +45,28 @@ const curry =
   ) =>
     <SidebarButton {...props} icon={icon} />;
 
+function openHrefInNewBrowserTab(href: string) {
+  const url = new URL(href, window.location.origin).href;
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
 export default function SidebarButton(props: SidebarButtonProps) {
   const history = useHistory();
-  let onClick = props.onClick;
 
-  if (props.href) {
-    const href = props.href;
-    onClick = () => {
-      history.push(href);
-    };
-  }
+  const handleClick = (e: MouseEvent<HTMLButtonElement>) => {
+    if (props.href && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault();
+      openHrefInNewBrowserTab(props.href);
+      return;
+    }
+    if (props.href) {
+      history.push(props.href);
+      return;
+    }
+    if (props.onClick) {
+      props.onClick();
+    }
+  };
 
   if (props.hidden) {
     return null;
@@ -81,11 +93,7 @@ export default function SidebarButton(props: SidebarButtonProps) {
                 "bg-cool-gray-600/50 py-3 mt-4 justify-center text-center rounded",
               props.sidebarOpen && "bg-blue-500/15 ring-1"
             )}
-            onClick={() => {
-              if (onClick) {
-                onClick();
-              }
-            }}
+            onClick={handleClick}
             style={
               props.variant === "primary" && props.expanded
                 ? { minWidth: 356 }
