@@ -103,7 +103,7 @@ function buildCategoricalRasterLayer(geostats, aiDataAnalystNotes) {
     }
     else if (geostats.bands[0].stats.categories) {
         const categories = geostats.bands[0].stats.categories;
-        const colorScale = (0, colorScales_1.getColorScale)("categorical", (aiDataAnalystNotes === null || aiDataAnalystNotes === void 0 ? void 0 : aiDataAnalystNotes.palette) || "schemeTableau10");
+        const colorScale = (0, colorScales_1.getColorScale)("categorical", (aiDataAnalystNotes === null || aiDataAnalystNotes === void 0 ? void 0 : aiDataAnalystNotes.palette) || "schemeTableau10", aiDataAnalystNotes === null || aiDataAnalystNotes === void 0 ? void 0 : aiDataAnalystNotes.custom_palette);
         colorScaleName = colorScale.name;
         const reversePalette = (0, ai_data_analyst_1.effectiveReverseNamedPalette)(aiDataAnalystNotes);
         paletteReverse = reversePalette;

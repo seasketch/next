@@ -151,6 +151,7 @@ export function buildCategoricalRasterLayer(
     const colorScale = getColorScale(
       "categorical",
       aiDataAnalystNotes?.palette || "schemeTableau10",
+      aiDataAnalystNotes?.custom_palette,
     );
     colorScaleName = colorScale.name;
     const reversePalette = effectiveReverseNamedPalette(aiDataAnalystNotes);
