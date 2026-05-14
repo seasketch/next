@@ -52,7 +52,7 @@ export type PublishBadgeDetailContentProps = {
   isFolder: boolean;
   t: TFunction<"admin:data">;
   tableOfContentsItemId: number;
-  dataLibraryTemplateId?: number | null;
+  dataLibraryTemplateId?: string | null;
   onOpenMetadata: () => void;
   onOpenCartography: () => void;
   /**
@@ -167,7 +167,7 @@ function commentThreadIdFromMeta(meta: unknown) {
 function editorName(
   log: ChangeLogDetailsFragment,
   t: TFunction<"admin:data">,
-  dataLibraryTemplateId?: number | null
+  dataLibraryTemplateId?: string | null
 ) {
   const fromProfile =
     log.editorProfile?.fullname ||
@@ -207,7 +207,7 @@ function CommentActivityDetails({
 }: {
   logs: ChangeLogDetailsFragment[];
   t: TFunction<"admin:data">;
-  dataLibraryTemplateId?: number | null;
+  dataLibraryTemplateId?: string | null;
 }) {
   const client = useApolloClient();
   const [threadsById, setThreadsById] = useState<
@@ -329,7 +329,7 @@ function CommentActivityFallback({
 }: {
   logs: ChangeLogDetailsFragment[];
   t: TFunction<"admin:data">;
-  dataLibraryTemplateId?: number | null;
+  dataLibraryTemplateId?: string | null;
 }) {
   return (
     <ul className="space-y-1.5 p-3">

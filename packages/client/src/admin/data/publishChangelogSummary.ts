@@ -2,6 +2,7 @@ import {
   AuthorProfileFragment,
   ChangeLogDetailsFragment,
   ChangeLogFieldGroup,
+  ChangeLogsSinceLastPublishQuery,
 } from "../../generated/graphql";
 import { summary } from "../changelogs/fieldGroups/FieldGroupListItemBase";
 
@@ -56,18 +57,12 @@ const FIELD_GROUP_TO_BADGE: Partial<
   [ChangeLogFieldGroup.ResolvableLayerCommentsReopened]: "comments",
 };
 
-export type DraftTocItemForPublishSummary = {
-  id: number;
-  title: string;
-  isFolder: boolean;
-  dataLayer?: {
-    id: number;
-    dataSource?: {
-      createdAt?: string | null;
-      dataLibraryTemplateId?: number | null;
-    } | null;
-  } | null;
-};
+/** Draft TOC rows from {@link ChangeLogsSinceLastPublishQuery} (shape must match that query). */
+export type DraftTocItemForPublishSummary = NonNullable<
+  NonNullable<
+    NonNullable<ChangeLogsSinceLastPublishQuery["projectBySlug"]>["draftTableOfContentsItems"]
+  >[number]
+>;
 
 export type PublishSummaryRow = {
   entityId: number;
@@ -81,7 +76,7 @@ export type PublishSummaryRow = {
   editors: AuthorProfileFragment[];
   primaryEditor: AuthorProfileFragment | null;
   /** When set, missing editor names in summaries use "Data Library" instead of "Unknown editor". */
-  dataLibraryTemplateId?: number | null;
+  dataLibraryTemplateId?: string | null;
   badges: {
     key: PublishBadgeKey;
     logs: ChangeLogDetailsFragment[];

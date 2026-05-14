@@ -81,7 +81,7 @@ function formatExactTimestampTitle(iso: string): string {
 
 function summarizedEditorAttributionName(
   profile: AuthorProfileFragment | null | undefined,
-  dataLibraryTemplateId: number | null | undefined,
+  dataLibraryTemplateId: string | null | undefined,
   t: (key: string) => string
 ) {
   const n = nameForProfile(profile ?? null);
@@ -345,7 +345,7 @@ function SummaryMetaRow({
   primaryEditor: AuthorProfileFragment | null;
   changeCount: number;
   lastChangeAt: string;
-  dataLibraryTemplateId?: number | null;
+  dataLibraryTemplateId?: string | null;
   t: (key: string) => string;
 }) {
   const { t: adminT } = useTranslation("admin");
@@ -610,7 +610,7 @@ export function PublishBadge({
   t: (key: string) => string;
   isFolder: boolean;
   tableOfContentsItemId: number;
-  dataLibraryTemplateId?: number | null;
+  dataLibraryTemplateId?: string | null;
   onOpenMetadata: () => void;
   onOpenCartography: () => void;
 }) {
