@@ -30,6 +30,7 @@ import {
   buildPublishChangeSummary,
   oldestChangeLogId,
   PublishSummaryRow,
+  TOC_ENTITY_TYPE,
 } from "./publishChangelogSummary";
 import { ChangeLogFieldGroup } from "../../generated/graphql";
 import LayerMetadataRevisionModal from "./LayerMetadataRevisionModal";
@@ -108,6 +109,17 @@ export default function PublishTableOfContentsModal(props: {
       ])
     );
   }, [publishProject?.draftTableOfContentsItems]);
+  /** TOC item ids whose current draft data source is tied to the Data Library (for changelog attribution). */
+  const tocItemIdsWithDataLibrarySource = useMemo(() => {
+    const ids = new Set<number>();
+    for (const item of draftTableOfContentsItems) {
+      const templateId = item.dataLayer?.dataSource?.dataLibraryTemplateId;
+      if (templateId != null && templateId !== "") {
+        ids.add(item.id);
+      }
+    }
+    return ids;
+  }, [draftTableOfContentsItems]);
   const openLayerEditor = (item: {
     id: number;
     isFolder: boolean;
@@ -290,6 +302,7 @@ export default function PublishTableOfContentsModal(props: {
               loading={loading}
               changeLogs={changeLogs}
               itemTitleById={itemTitleById}
+              tocItemIdsWithDataLibrarySource={tocItemIdsWithDataLibrarySource}
             />
           </div>
         </Tabs.Content>
@@ -664,6 +677,7 @@ function AllChangesPanel({
   loading,
   changeLogs,
   itemTitleById,
+  tocItemIdsWithDataLibrarySource,
 }: {
   loading: boolean;
   changeLogs: NonNullable<
@@ -672,6 +686,7 @@ function AllChangesPanel({
     >["changeLogsSinceLastPublish"]
   >;
   itemTitleById: Map<number, { title: string; isFolder: boolean }>;
+  tocItemIdsWithDataLibrarySource: ReadonlySet<number>;
 }) {
   const { t } = useTranslation("admin:data");
 
@@ -729,6 +744,12 @@ function AllChangesPanel({
             changeLog={changeLog}
             itemTitle={titleForChangeLog(changeLog, itemTitleById, t)}
             last={index === changeLogs.length - 1}
+            missingProfileLabel={
+              changeLog.entityType === TOC_ENTITY_TYPE &&
+              tocItemIdsWithDataLibrarySource.has(changeLog.entityId)
+                ? t("Data Library")
+                : undefined
+            }
           />
         ))}
       </ul>
