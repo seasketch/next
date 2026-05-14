@@ -22,6 +22,7 @@ export const ReactNodeViewPortalsContext = React.createContext<{
     metrics: CompatibleSpatialMetricDetailsFragment[];
     overlaySources: OverlaySourceDetailsFragment[];
     dependencies: MetricDependency[];
+    dependencyFailuresByHash: { [dependencyHash: string]: string };
   }) => void;
 }>({
   createPortal: () => { },
@@ -38,10 +39,12 @@ function ReactNodeViewPortalsProvider({ children }: { children?: ReactNode }) {
     metrics: CompatibleSpatialMetricDetailsFragment[];
     overlaySources: OverlaySourceDetailsFragment[];
     dependencies: MetricDependency[];
+    dependencyFailuresByHash: { [dependencyHash: string]: string };
   }>({
     metrics: [],
     overlaySources: [],
     dependencies: [],
+    dependencyFailuresByHash: {},
   });
   const [selection, _setSelection] = useState<{
     anchorPos: number;
@@ -81,8 +84,14 @@ function ReactNodeViewPortalsProvider({ children }: { children?: ReactNode }) {
       draftMetrics: draftDependencies.metrics,
       draftOverlaySources: draftDependencies.overlaySources,
       draftDependencies: draftDependencies.dependencies,
+      draftDependencyFailuresByHash: draftDependencies.dependencyFailuresByHash,
     };
-  }, [draftDependencies.metrics, draftDependencies.overlaySources, draftDependencies.dependencies]);
+  }, [
+    draftDependencies.metrics,
+    draftDependencies.overlaySources,
+    draftDependencies.dependencies,
+    draftDependencies.dependencyFailuresByHash,
+  ]);
 
   return (
     <DraftReportContext.Provider value={draftReportContextValue}><ReactNodeViewPortalsContext.Provider

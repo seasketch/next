@@ -706,6 +706,15 @@ fragment OverlaySourceDetails on ReportOverlaySource {
   rasterBandCount
 }
 
+fragment ReportDependencyResolutionErrorFields on ReportDependencyResolutionError {
+  dependencyHash
+  stableId
+  metricType
+  subjectType
+  message
+  affectedCardIds
+}
+
 query ReportContext($reportId: Int!, $sketchId: Int!) {
   sketch(id: $sketchId) {
     ...ReportContextSketchDetails
@@ -744,6 +753,9 @@ query ReportContext($reportId: Int!, $sketchId: Int!) {
         metrics
         overlaySources
       }
+      dependencyResolutionErrors {
+        ...ReportDependencyResolutionErrorFields
+      }
     }
   }
 }
@@ -764,6 +776,9 @@ query ReportDependencies($reportId: Int!, $sketchId: Int!) {
         metrics
         overlaySources
       }
+      dependencyResolutionErrors {
+        ...ReportDependencyResolutionErrorFields
+      }
     }
   }
 }
@@ -774,6 +789,9 @@ query ReportMetricProgressFields($reportId: Int!, $sketchId: Int!) {
     dependencies(sketchId: $sketchId) {
       metrics {
         ...CompatibleSpatialMetricProgressFields
+      }
+      dependencyResolutionErrors {
+        ...ReportDependencyResolutionErrorFields
       }
     }
   }
@@ -880,6 +898,9 @@ query DraftReportDependencies($input: DraftDependenciesInput) {
       ...CompatibleSpatialMetricSlim
     }
     sketchId
+    dependencyResolutionErrors {
+      ...ReportDependencyResolutionErrorFields
+    }
   }
 }
 

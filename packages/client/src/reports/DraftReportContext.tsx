@@ -6,8 +6,10 @@ export const DraftReportContext = createContext<{
   draftMetrics: CompatibleSpatialMetricDetailsFragment[];
   draftOverlaySources: OverlaySourceDetailsFragment[];
   draftDependencies: MetricDependency[];
+  draftDependencyFailuresByHash: { [dependencyHash: string]: string };
 }>({
   draftMetrics: [],
   draftOverlaySources: [],
   draftDependencies: [],
+  draftDependencyFailuresByHash: {},
 });

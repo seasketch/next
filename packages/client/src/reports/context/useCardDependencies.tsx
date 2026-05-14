@@ -9,7 +9,7 @@ export function useCardDependencies(cardId: number): CardDependenciesResult {
   const context = useContext(ReportDependenciesContext);
   const dependencies = useMemo(() => {
     const list = context.cardDependencyLists.find(
-      (list) => list.cardId === cardId
+      (list) => list.cardId === cardId,
     );
     if (list) {
       const metrics = list.metrics
@@ -31,12 +31,30 @@ export function useCardDependencies(cardId: number): CardDependenciesResult {
       const overlaySources = list.overlaySources
         .map(
           (overlay) =>
-            context.overlaySources.find((s) => s.stableId === overlay)!
+            context.overlaySources.find((s) => s.stableId === overlay)!,
         )
         .filter((s) => s !== undefined);
-      const overlaySourceIdsPendingResolution =
-        list.overlaySources.length > 0 &&
-        overlaySources.length < list.overlaySources.length;
+
+      const resolutionForThisCard = context.dependencyResolutionErrors.filter(
+        (e) => e.affectedCardIds.includes(cardId),
+      );
+
+      const missingStableOverlayIds = list.overlaySources.filter(
+        (sid) => !context.overlaySources.some((s) => s.stableId === sid),
+      );
+      const explainedMissingOverlayIds = missingStableOverlayIds.filter((sid) =>
+        resolutionForThisCard.some((e) => e.stableId === sid),
+      );
+      const unresolvedMissingOverlays =
+        missingStableOverlayIds.length - explainedMissingOverlayIds.length;
+      const overlaySourceIdsPendingResolution = unresolvedMissingOverlays > 0;
+
+      const dependencyResolutionFailuresByHash: {
+        [dependencyHash: string]: string;
+      } = {};
+      for (const e of resolutionForThisCard) {
+        dependencyResolutionFailuresByHash[e.dependencyHash] = e.message;
+      }
 
       // Once a card has dependency ids, keep loading scoped to that card.
       // Global query loading also includes background refetches, which should
@@ -49,7 +67,7 @@ export function useCardDependencies(cardId: number): CardDependenciesResult {
         metrics.some(
           (metric) =>
             metric.state !== SpatialMetricState.Complete &&
-            metric.state !== SpatialMetricState.Error
+            metric.state !== SpatialMetricState.Error,
         ) ||
         overlaySources.some((source) => {
           const jobState = source.sourceProcessingJob?.state;
@@ -80,6 +98,9 @@ export function useCardDependencies(cardId: number): CardDependenciesResult {
           errors[errorMessage] = (errors[errorMessage] || 0) + 1;
         }
       }
+      for (const msg of Object.values(dependencyResolutionFailuresByHash)) {
+        errors[msg] = (errors[msg] || 0) + 1;
+      }
       if (context.error) {
         errors["Dependency retrieval error: " + context.error.message] = 1;
       }
@@ -89,6 +110,7 @@ export function useCardDependencies(cardId: number): CardDependenciesResult {
         overlaySources,
         loading,
         errors,
+        dependencyResolutionFailuresByHash,
       };
     } else {
       const errors: { [errorMessage: string]: number } = {};
@@ -101,6 +123,7 @@ export function useCardDependencies(cardId: number): CardDependenciesResult {
         overlaySources: [],
         loading: context.loading,
         errors: errors,
+        dependencyResolutionFailuresByHash: {},
       };
     }
   }, [
@@ -112,6 +135,7 @@ export function useCardDependencies(cardId: number): CardDependenciesResult {
     context.slimMetricIdsFromServer,
     cardId,
     context.error,
+    context.dependencyResolutionErrors,
   ]);
 
   return dependencies;

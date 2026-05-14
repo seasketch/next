@@ -5342,6 +5342,7 @@ export type DraftDependenciesInput = {
 
 export type DraftReportDependenciesResults = {
   __typename?: 'DraftReportDependenciesResults';
+  dependencyResolutionErrors: Array<ReportDependencyResolutionError>;
   fragmentSubjectCatalog: Array<FragmentSubject>;
   metrics: Array<CompatibleSpatialMetric>;
   ready: Scalars['Boolean'];
@@ -14386,6 +14387,21 @@ export type ReportCondition = {
   sketchClassId?: Maybe<Scalars['Int']>;
 };
 
+/**
+ * A metric dependency could not be resolved to an overlay source in this project
+ * (e.g. stable id from another project after copy/paste). Metrics for this hash are omitted;
+ * affectedCardIds lists report cards that reference the dependency.
+ */
+export type ReportDependencyResolutionError = {
+  __typename?: 'ReportDependencyResolutionError';
+  affectedCardIds: Array<Scalars['Int']>;
+  dependencyHash: Scalars['String'];
+  message: Scalars['String'];
+  metricType: Scalars['String'];
+  stableId?: Maybe<Scalars['String']>;
+  subjectType: Scalars['String'];
+};
+
 /** An input for mutations affecting `Report` */
 export type ReportInput = {
   createdAt?: Maybe<Scalars['Datetime']>;
@@ -14400,6 +14416,7 @@ export type ReportInput = {
 export type ReportOverlayDependencies = {
   __typename?: 'ReportOverlayDependencies';
   cardDependencyLists: Array<CardDependencyLists>;
+  dependencyResolutionErrors: Array<ReportDependencyResolutionError>;
   fragmentSubjectCatalog: Array<FragmentSubject>;
   metrics: Array<CompatibleSpatialMetric>;
   ready: Scalars['Boolean'];
@@ -24686,6 +24703,11 @@ export type OverlaySourceDetailsFragment = (
   )> }
 );
 
+export type ReportDependencyResolutionErrorFieldsFragment = (
+  { __typename?: 'ReportDependencyResolutionError' }
+  & Pick<ReportDependencyResolutionError, 'dependencyHash' | 'stableId' | 'metricType' | 'subjectType' | 'message' | 'affectedCardIds'>
+);
+
 export type ReportContextQueryVariables = Exact<{
   reportId: Scalars['Int'];
   sketchId: Scalars['Int'];
@@ -24726,6 +24748,9 @@ export type ReportContextQuery = (
       )>, cardDependencyLists: Array<(
         { __typename?: 'CardDependencyLists' }
         & Pick<CardDependencyLists, 'cardId' | 'metrics' | 'overlaySources'>
+      )>, dependencyResolutionErrors: Array<(
+        { __typename?: 'ReportDependencyResolutionError' }
+        & ReportDependencyResolutionErrorFieldsFragment
       )> }
     ) }
   )> }
@@ -24754,6 +24779,9 @@ export type ReportDependenciesQuery = (
       )>, cardDependencyLists: Array<(
         { __typename?: 'CardDependencyLists' }
         & Pick<CardDependencyLists, 'cardId' | 'metrics' | 'overlaySources'>
+      )>, dependencyResolutionErrors: Array<(
+        { __typename?: 'ReportDependencyResolutionError' }
+        & ReportDependencyResolutionErrorFieldsFragment
       )> }
     ) }
   )> }
@@ -24775,6 +24803,9 @@ export type ReportMetricProgressFieldsQuery = (
       & { metrics: Array<(
         { __typename?: 'CompatibleSpatialMetric' }
         & CompatibleSpatialMetricProgressFieldsFragment
+      )>, dependencyResolutionErrors: Array<(
+        { __typename?: 'ReportDependencyResolutionError' }
+        & ReportDependencyResolutionErrorFieldsFragment
       )> }
     ) }
   )> }
@@ -24921,6 +24952,9 @@ export type DraftReportDependenciesQuery = (
     )>, metrics: Array<(
       { __typename?: 'CompatibleSpatialMetric' }
       & CompatibleSpatialMetricSlimFragment
+    )>, dependencyResolutionErrors: Array<(
+      { __typename?: 'ReportDependencyResolutionError' }
+      & ReportDependencyResolutionErrorFieldsFragment
     )> }
   ) }
 );
@@ -28815,6 +28849,16 @@ export const OverlaySourceDetailsFragmentDoc = gql`
   rasterBandCount
 }
     ${SourceProcessingJobDetailsFragmentDoc}`;
+export const ReportDependencyResolutionErrorFieldsFragmentDoc = gql`
+    fragment ReportDependencyResolutionErrorFields on ReportDependencyResolutionError {
+  dependencyHash
+  stableId
+  metricType
+  subjectType
+  message
+  affectedCardIds
+}
+    `;
 export const BaseReportDetailsFragmentDoc = gql`
     fragment BaseReportDetails on Report {
   id
@@ -39067,6 +39111,9 @@ export const ReportContextDocument = gql`
         metrics
         overlaySources
       }
+      dependencyResolutionErrors {
+        ...ReportDependencyResolutionErrorFields
+      }
     }
   }
 }
@@ -39075,7 +39122,8 @@ ${ReportContextSketchClassDetailsFragmentDoc}
 ${ReportTabDetailsFragmentDoc}
 ${OverlaySourceDetailsFragmentDoc}
 ${FragmentSubjectDetailsFragmentDoc}
-${CompatibleSpatialMetricDetailsFragmentDoc}`;
+${CompatibleSpatialMetricDetailsFragmentDoc}
+${ReportDependencyResolutionErrorFieldsFragmentDoc}`;
 
 /**
  * __useReportContextQuery__
@@ -39122,11 +39170,15 @@ export const ReportDependenciesDocument = gql`
         metrics
         overlaySources
       }
+      dependencyResolutionErrors {
+        ...ReportDependencyResolutionErrorFields
+      }
     }
   }
 }
     ${FragmentSubjectDetailsFragmentDoc}
-${CompatibleSpatialMetricSlimFragmentDoc}`;
+${CompatibleSpatialMetricSlimFragmentDoc}
+${ReportDependencyResolutionErrorFieldsFragmentDoc}`;
 
 /**
  * __useReportDependenciesQuery__
@@ -39164,10 +39216,14 @@ export const ReportMetricProgressFieldsDocument = gql`
       metrics {
         ...CompatibleSpatialMetricProgressFields
       }
+      dependencyResolutionErrors {
+        ...ReportDependencyResolutionErrorFields
+      }
     }
   }
 }
-    ${CompatibleSpatialMetricProgressFieldsFragmentDoc}`;
+    ${CompatibleSpatialMetricProgressFieldsFragmentDoc}
+${ReportDependencyResolutionErrorFieldsFragmentDoc}`;
 
 /**
  * __useReportMetricProgressFieldsQuery__
@@ -39467,10 +39523,14 @@ export const DraftReportDependenciesDocument = gql`
       ...CompatibleSpatialMetricSlim
     }
     sketchId
+    dependencyResolutionErrors {
+      ...ReportDependencyResolutionErrorFields
+    }
   }
 }
     ${FragmentSubjectDetailsFragmentDoc}
-${CompatibleSpatialMetricSlimFragmentDoc}`;
+${CompatibleSpatialMetricSlimFragmentDoc}
+${ReportDependencyResolutionErrorFieldsFragmentDoc}`;
 
 /**
  * __useDraftReportDependenciesQuery__
@@ -44093,6 +44153,7 @@ export const namedOperations = {
     SourceProcessingJobDetails: 'SourceProcessingJobDetails',
     OverlaySourceListDetails: 'OverlaySourceListDetails',
     OverlaySourceDetails: 'OverlaySourceDetails',
+    ReportDependencyResolutionErrorFields: 'ReportDependencyResolutionErrorFields',
     BaseReportDetails: 'BaseReportDetails',
     SketchTocDetails: 'SketchTocDetails',
     SketchFolderDetails: 'SketchFolderDetails',

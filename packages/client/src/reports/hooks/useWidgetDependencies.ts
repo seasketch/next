@@ -104,6 +104,7 @@ export function useWidgetDependencies(
     geographies: contextGeographies,
     sketchClass: contextSketchClass,
     errors: cardErrors,
+    dependencyResolutionFailuresByHash,
   } = useCardDependenciesContext();
 
   // Also get draft metrics/sources for editor scenarios
@@ -115,6 +116,17 @@ export function useWidgetDependencies(
     !subjectReportContext.loading &&
     subjectReportContext.data?.isCollection === true &&
     (subjectReportContext.data.relatedFragments?.length ?? 0) === 0;
+
+  const resolutionFailuresByHash = useMemo(
+    () => ({
+      ...dependencyResolutionFailuresByHash,
+      ...draftReportContext.draftDependencyFailuresByHash,
+    }),
+    [
+      dependencyResolutionFailuresByHash,
+      draftReportContext.draftDependencyFailuresByHash,
+    ],
+  );
 
   // Combine card sources with draft sources
   const allSources = useMemo(() => {
@@ -203,7 +215,12 @@ export function useWidgetDependencies(
           (m) => m.dependencyHash === hash
         );
         if (!relatedMetric) {
-          loading = true;
+          const resolutionErr = resolutionFailuresByHash[hash];
+          if (resolutionErr) {
+            errors.push(resolutionErr);
+          } else {
+            loading = true;
+          }
         }
       }
     }
@@ -226,6 +243,7 @@ export function useWidgetDependencies(
     sourceUrlMap,
     cardErrors,
     fragmentMetricsWillNeverExist,
+    resolutionFailuresByHash,
   ]);
 
   // Use stable references - only change when content actually changes

@@ -52,6 +52,7 @@ import {
   useDeleteReportCardMutation,
   ReportDependenciesDocument,
   ReportOverlaySourcesDocument,
+  SpatialMetricState,
 } from "../../generated/graphql";
 import { useTranslation } from "react-i18next";
 import { useSlashCommandPalette } from "../hooks/useSlashCommandPalette";
@@ -280,9 +281,16 @@ function ReportCardBodyEditorInner({
   });
 
   useEffect(() => {
+    const draftDeps = draftDependenciesQuery.data?.draftReportDependencies;
+    const slim = draftDeps?.metrics ?? EMPTY_SLIM_METRICS;
+    const anySpatialMetricPending = slim.some(
+      (m) =>
+        m.state !== SpatialMetricState.Complete &&
+        m.state !== SpatialMetricState.Error,
+    );
     if (
       !draftDependenciesQuery.loading &&
-      !draftDependenciesQuery.data?.draftReportDependencies?.ready &&
+      anySpatialMetricPending &&
       !(additionalDependencies.length === 0 || !editing)
     ) {
       const ref = setInterval(() => {
@@ -292,7 +300,7 @@ function ReportCardBodyEditorInner({
     }
   }, [
     draftDependenciesQuery.loading,
-    draftDependenciesQuery.data?.draftReportDependencies?.ready,
+    draftDependenciesQuery.data?.draftReportDependencies?.metrics,
     draftDependenciesQuery,
     additionalDependencies,
     editing,
@@ -349,6 +357,21 @@ function ReportCardBodyEditorInner({
       ?.fragmentSubjectCatalog,
     draftDependencyListForHydration,
     draftOverlaySources,
+  ]);
+
+  const draftDependencyFailuresByHash = useMemo(() => {
+    const errs =
+      draftDependenciesQuery.data?.draftReportDependencies
+        ?.dependencyResolutionErrors;
+    if (!errs?.length) {
+      return {} as { [dependencyHash: string]: string };
+    }
+    return Object.fromEntries(
+      errs.map((e) => [e.dependencyHash, e.message] as const),
+    );
+  }, [
+    draftDependenciesQuery.data?.draftReportDependencies
+      ?.dependencyResolutionErrors,
   ]);
 
   const allDependencies = useMemo(() => {
@@ -478,11 +501,13 @@ function ReportCardBodyEditorInner({
       metrics: hydratedDraftMetrics,
       overlaySources: draftOverlaySources,
       dependencies: draftDependencyListForHydration,
+      dependencyFailuresByHash: draftDependencyFailuresByHash,
     });
   }, [
     hydratedDraftMetrics,
     draftOverlaySources,
     draftDependencyListForHydration,
+    draftDependencyFailuresByHash,
     setDraftDependencies,
   ]);
 

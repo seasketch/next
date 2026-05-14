@@ -22,6 +22,11 @@ export type CardDependenciesValue = {
     | "validChildren"
   > | null;
   errors: { [errorMessage: string]: number };
+  /**
+   * When the server could not resolve a metric dependency (e.g. stable id from
+   * another project), maps dependencyHash → message so widgets stop waiting for a metric that will never exist.
+   */
+  dependencyResolutionFailuresByHash: { [dependencyHash: string]: string };
 };
 
 export const CardDependenciesContext = createContext<CardDependenciesValue>({
@@ -31,6 +36,7 @@ export const CardDependenciesContext = createContext<CardDependenciesValue>({
   geographies: [],
   sketchClass: null,
   errors: {},
+  dependencyResolutionFailuresByHash: {},
 });
 
 /**

@@ -35,6 +35,17 @@ import {
   subscribeReportDependenciesInvalidation,
 } from "../utils/reportDependenciesInvalidation";
 
+/** Mirrors GraphQL `ReportDependencyResolutionError` (avoid `import type` in client per project rules). */
+export type ReportDependencyResolutionErrorRow = {
+  __typename?: string;
+  dependencyHash: string;
+  stableId?: string | null;
+  metricType: string;
+  subjectType: string;
+  message: string;
+  affectedCardIds: number[];
+};
+
 export const ReportDependenciesContext = createContext<{
   metrics: CompatibleSpatialMetricDetailsFragment[];
   overlaySources: OverlaySourceDetailsFragment[];
@@ -53,6 +64,7 @@ export const ReportDependenciesContext = createContext<{
    */
   dependenciesAwaitingRefresh: boolean;
   error?: ApolloError;
+  dependencyResolutionErrors: ReportDependencyResolutionErrorRow[];
 }>({
   metrics: [],
   overlaySources: [],
@@ -60,6 +72,7 @@ export const ReportDependenciesContext = createContext<{
   slimMetricIdsFromServer: new Set(),
   loading: true,
   dependenciesAwaitingRefresh: false,
+  dependencyResolutionErrors: [],
 });
 
 export type CardDependenciesResult = {
@@ -67,9 +80,12 @@ export type CardDependenciesResult = {
   overlaySources: OverlaySourceDetailsFragment[];
   loading: boolean;
   errors: { [errorMessage: string]: number };
+  dependencyResolutionFailuresByHash: { [dependencyHash: string]: string };
 };
 
 const EMPTY_CARD_DEPENDENCY_LISTS: CardDependencyLists[] = [];
+const EMPTY_DEPENDENCY_RESOLUTION_ERRORS: ReportDependencyResolutionErrorRow[] =
+  [];
 
 export default function ReportDependenciesContextProvider({
   children,
@@ -303,6 +319,12 @@ export default function ReportDependenciesContextProvider({
       dependenciesAwaitingRefresh: awaitingDependencyInvalidation,
       fragmentCalculationsRuntime,
       error: depsError || overlayError,
+      dependencyResolutionErrors:
+        (
+          depsData?.report?.dependencies as
+            | { dependencyResolutionErrors?: ReportDependencyResolutionErrorRow[] }
+            | undefined
+        )?.dependencyResolutionErrors ?? EMPTY_DEPENDENCY_RESOLUTION_ERRORS,
     };
   }, [
     hydratedMetrics,
@@ -315,6 +337,7 @@ export default function ReportDependenciesContextProvider({
     waitingForDocRegistration,
     depsError,
     overlayError,
+    depsData?.report?.dependencies?.dependencyResolutionErrors,
   ]);
 
   useEffect(() => {

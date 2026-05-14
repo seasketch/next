@@ -381,6 +381,8 @@ export default function ReportCard(
         geographies: baseReportContext.geographies,
         sketchClass: subjectSketchClass ?? null,
         errors: cardDependencies.errors,
+        dependencyResolutionFailuresByHash:
+          cardDependencies.dependencyResolutionFailuresByHash,
       }}
     >
       <ReportCardTitleToolbarContext.Provider value={toolbarContextValue}>
