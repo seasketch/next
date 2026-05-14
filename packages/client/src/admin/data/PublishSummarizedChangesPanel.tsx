@@ -79,6 +79,21 @@ function formatExactTimestampTitle(iso: string): string {
   });
 }
 
+function summarizedEditorAttributionName(
+  profile: AuthorProfileFragment | null | undefined,
+  dataLibraryTemplateId: number | null | undefined,
+  t: (key: string) => string
+) {
+  const n = nameForProfile(profile ?? null);
+  if (n) {
+    return n;
+  }
+  if (dataLibraryTemplateId != null) {
+    return t("Data Library");
+  }
+  return t("Unknown editor");
+}
+
 function badgeLabel(key: PublishBadgeKey, t: (s: string) => string): string {
   switch (key) {
     case "title":
@@ -323,16 +338,22 @@ function SummaryMetaRow({
   primaryEditor,
   changeCount,
   lastChangeAt,
+  dataLibraryTemplateId,
   t,
 }: {
   editors: AuthorProfileFragment[];
   primaryEditor: AuthorProfileFragment | null;
   changeCount: number;
   lastChangeAt: string;
+  dataLibraryTemplateId?: number | null;
   t: (key: string) => string;
 }) {
   const { t: adminT } = useTranslation("admin");
-  const primaryName = nameForProfile(primaryEditor) || t("Unknown editor");
+  const primaryName = summarizedEditorAttributionName(
+    primaryEditor,
+    dataLibraryTemplateId,
+    t
+  );
   const otherEditors = editors.filter(
     (p) => p.userId !== primaryEditor?.userId
   );
@@ -378,7 +399,11 @@ function SummaryMetaRow({
                     <ProfilePhoto {...p} canonicalEmail="" />
                   </span>
                   <span className="min-w-0 truncate">
-                    {nameForProfile(p) || t("Unknown editor")}
+                    {summarizedEditorAttributionName(
+                      p,
+                      dataLibraryTemplateId,
+                      t
+                    )}
                   </span>
                 </li>
               ))}
@@ -488,6 +513,7 @@ function SummarizedRow({
       primaryEditor={row.primaryEditor}
       changeCount={row.changeCount}
       lastChangeAt={row.lastChangeAt}
+      dataLibraryTemplateId={row.dataLibraryTemplateId}
       t={t}
     />
   );
@@ -544,6 +570,7 @@ function SummarizedRow({
                 t={t}
                 isFolder={row.isFolder}
                 tableOfContentsItemId={row.entityId}
+                dataLibraryTemplateId={row.dataLibraryTemplateId}
                 onOpenMetadata={() =>
                   onOpenMetadata(
                     row.entityId,
@@ -574,6 +601,7 @@ export function PublishBadge({
   t,
   isFolder,
   tableOfContentsItemId,
+  dataLibraryTemplateId,
   onOpenMetadata,
   onOpenCartography,
 }: {
@@ -582,6 +610,7 @@ export function PublishBadge({
   t: (key: string) => string;
   isFolder: boolean;
   tableOfContentsItemId: number;
+  dataLibraryTemplateId?: number | null;
   onOpenMetadata: () => void;
   onOpenCartography: () => void;
 }) {
@@ -598,6 +627,7 @@ export function PublishBadge({
       isFolder={isFolder}
       t={t}
       tableOfContentsItemId={tableOfContentsItemId}
+      dataLibraryTemplateId={dataLibraryTemplateId}
       onOpenMetadata={onOpenMetadata}
       onOpenCartography={onOpenCartography}
       omitInlineModalActions

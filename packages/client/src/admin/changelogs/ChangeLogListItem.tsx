@@ -9,10 +9,12 @@ export default function ChangeLogListItem({
   changeLog,
   last,
   itemTitle,
+  missingProfileLabel,
 }: {
   changeLog: ChangeLogDetailsFragment;
   last?: boolean;
   itemTitle?: ReactNode;
+  missingProfileLabel?: string;
 }) {
   const FieldGroupListItem =
     FIELD_GROUP_LIST_ITEM_COMPONENTS[changeLog.fieldGroup] ||
@@ -22,6 +24,7 @@ export default function ChangeLogListItem({
       changeLog={changeLog}
       last={last}
       itemTitle={itemTitle}
+      missingProfileLabel={missingProfileLabel}
     />
   );
 }

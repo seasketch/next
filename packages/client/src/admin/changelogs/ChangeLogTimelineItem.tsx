@@ -47,6 +47,7 @@ export type ChangeLogAuthorProfile = Pick<
 
 export default function ChangeLogTimelineItem({
   profile,
+  missingProfileLabel,
   date,
   icon,
   iconClassName,
@@ -56,6 +57,8 @@ export default function ChangeLogTimelineItem({
   footer,
 }: {
   profile?: ChangeLogAuthorProfile | null;
+  /** Shown when `profile` is missing (e.g. Data Library–originated edits with no editor profile). */
+  missingProfileLabel?: string;
   date: Date;
   icon: ReactNode;
   iconClassName?: string;
@@ -90,7 +93,7 @@ export default function ChangeLogTimelineItem({
     const observer = new ResizeObserver(updateWrappedState);
     observer.observe(row);
     return () => observer.disconnect();
-  }, [profile, summary, itemTitle, footer]);
+  }, [profile, missingProfileLabel, summary, itemTitle, footer]);
 
   return (
     <li className={clsx("relative flex gap-4 pb-6", last && "pb-0")}>
@@ -121,7 +124,7 @@ export default function ChangeLogTimelineItem({
               />
             ) : (
               <span className="font-semibold text-gray-900">
-                {t("Unknown user")}
+                {missingProfileLabel ?? t("Unknown user")}
               </span>
             )}
           </span>

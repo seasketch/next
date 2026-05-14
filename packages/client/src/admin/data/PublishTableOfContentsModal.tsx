@@ -472,6 +472,7 @@ function UnresolvedCommentsPanel({
                       t={t}
                       isFolder={row.isFolder}
                       tableOfContentsItemId={row.entityId}
+                      dataLibraryTemplateId={row.dataLibraryTemplateId}
                       onOpenMetadata={() =>
                         setMetadataModal({
                           tocId: row.entityId,
@@ -560,6 +561,7 @@ function UnresolvedCommentsPanel({
                           t={t}
                           isFolder={row.isFolder}
                           tableOfContentsItemId={row.entityId}
+                          dataLibraryTemplateId={row.dataLibraryTemplateId}
                           onOpenMetadata={() =>
                             setMetadataModal({
                               tocId: row.entityId,

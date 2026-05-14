@@ -1,5 +1,5 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Trans } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import { ChevronDownIcon } from "@heroicons/react/outline";
 import {
   LayerSettingsChangeLogQuery,
@@ -40,6 +40,7 @@ export default function LayerSettingsChangeLogList({
 }: {
   tableOfContentsItemId: number;
 }) {
+  const { t } = useTranslation("admin:data");
   const [showAllHistory, setShowAllHistory] = useState(false);
   const scrollRestoreRef = useRef<{ el: HTMLElement; top: number } | null>(
     null
@@ -84,6 +85,9 @@ export default function LayerSettingsChangeLogList({
     .slice(0, variables.first);
   const rawCreatedAt = toc?.dataLayer?.dataSource?.createdAt;
   const authorProfile = toc?.dataLayer?.dataSource?.authorProfile ?? undefined;
+  const dataLibraryTemplateId = toc?.dataLayer?.dataSource?.dataLibraryTemplateId;
+  const missingProfileLabel =
+    dataLibraryTemplateId != null ? t("Data Library") : undefined;
   const createdAt = rawCreatedAt ? new Date(rawCreatedAt) : undefined;
   const isFolder = toc?.isFolder ?? false;
 
@@ -141,6 +145,7 @@ export default function LayerSettingsChangeLogList({
             key={changeLog.id}
             changeLog={changeLog}
             last={index === changeLogs.length - 1 && !showCreationAnchor}
+            missingProfileLabel={missingProfileLabel}
           />
         ))}
         {showCreationAnchor && createdAt && (
@@ -148,6 +153,7 @@ export default function LayerSettingsChangeLogList({
             isFolder={isFolder}
             createdAt={createdAt}
             profile={authorProfile}
+            missingProfileLabel={missingProfileLabel}
           />
         )}
       </ul>

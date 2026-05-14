@@ -19470,37 +19470,6 @@ export type SetTranslatedPropResult = {
   typeName: Scalars['String'];
 };
 
-export type LayerSettingsChangeLogQueryVariables = Exact<{
-  id: Scalars['Int'];
-  first: Scalars['Int'];
-}>;
-
-
-export type LayerSettingsChangeLogQuery = (
-  { __typename?: 'Query' }
-  & { tableOfContentsItem?: Maybe<(
-    { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'isFolder'>
-    & { changeLogs?: Maybe<Array<(
-      { __typename?: 'ChangeLog' }
-      & ChangeLogDetailsFragment
-    )>>, relatedPublishChangeLogs?: Maybe<Array<(
-      { __typename?: 'ChangeLog' }
-      & ChangeLogDetailsFragment
-    )>>, dataLayer?: Maybe<(
-      { __typename?: 'DataLayer' }
-      & { dataSource?: Maybe<(
-        { __typename?: 'DataSource' }
-        & Pick<DataSource, 'createdAt'>
-        & { authorProfile?: Maybe<(
-          { __typename?: 'Profile' }
-          & Pick<Profile, 'userId' | 'affiliations' | 'email' | 'fullname' | 'nickname' | 'picture'>
-        )> }
-      )> }
-    )> }
-  )> }
-);
-
 export type UpdateTerrainExaggerationFragment = (
   { __typename?: 'Basemap' }
   & Pick<Basemap, 'terrainExaggeration'>
@@ -21307,6 +21276,37 @@ export type ChangeLogDetailsFragment = (
   )> }
 );
 
+export type LayerSettingsChangeLogQueryVariables = Exact<{
+  id: Scalars['Int'];
+  first: Scalars['Int'];
+}>;
+
+
+export type LayerSettingsChangeLogQuery = (
+  { __typename?: 'Query' }
+  & { tableOfContentsItem?: Maybe<(
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id' | 'isFolder' | 'copiedFromDataLibraryTemplateId'>
+    & { changeLogs?: Maybe<Array<(
+      { __typename?: 'ChangeLog' }
+      & ChangeLogDetailsFragment
+    )>>, relatedPublishChangeLogs?: Maybe<Array<(
+      { __typename?: 'ChangeLog' }
+      & ChangeLogDetailsFragment
+    )>>, dataLayer?: Maybe<(
+      { __typename?: 'DataLayer' }
+      & { dataSource?: Maybe<(
+        { __typename?: 'DataSource' }
+        & Pick<DataSource, 'dataLibraryTemplateId' | 'createdAt'>
+        & { authorProfile?: Maybe<(
+          { __typename?: 'Profile' }
+          & Pick<Profile, 'userId' | 'affiliations' | 'email' | 'fullname' | 'nickname' | 'picture'>
+        )> }
+      )> }
+    )> }
+  )> }
+);
+
 export type ResolvableLayerCommentDetailsFragment = (
   { __typename?: 'ResolvableLayerComment' }
   & Pick<ResolvableLayerComment, 'id' | 'projectId' | 'tableOfContentsItemId' | 'comment' | 'createdAt' | 'resolvedAt' | 'resolvedById'>
@@ -22210,7 +22210,7 @@ export type ChangeLogsSinceLastPublishQuery = (
         & Pick<DataLayer, 'id'>
         & { dataSource?: Maybe<(
           { __typename?: 'DataSource' }
-          & Pick<DataSource, 'createdAt'>
+          & Pick<DataSource, 'createdAt' | 'dataLibraryTemplateId'>
         )> }
       )> }
     )>>, changeLogsSinceLastPublish?: Maybe<Array<(
@@ -29365,33 +29365,6 @@ export const InviteEmailDetailsFragmentDoc = /*#__PURE__*/ gql`
   updatedAt
 }
     `;
-export const LayerSettingsChangeLogDocument = /*#__PURE__*/ gql`
-    query LayerSettingsChangeLog($id: Int!, $first: Int!) {
-  tableOfContentsItem(id: $id) {
-    id
-    isFolder
-    changeLogs(first: $first) {
-      ...ChangeLogDetails
-    }
-    relatedPublishChangeLogs(first: $first) {
-      ...ChangeLogDetails
-    }
-    dataLayer {
-      dataSource {
-        createdAt
-        authorProfile {
-          userId
-          affiliations
-          email
-          fullname
-          nickname
-          picture
-        }
-      }
-    }
-  }
-}
-    ${ChangeLogDetailsFragmentDoc}`;
 export const ProjectBucketSettingDocument = /*#__PURE__*/ gql`
     query ProjectBucketSetting($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -30504,6 +30477,35 @@ export const UpdateFolderDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const LayerSettingsChangeLogDocument = /*#__PURE__*/ gql`
+    query LayerSettingsChangeLog($id: Int!, $first: Int!) {
+  tableOfContentsItem(id: $id) {
+    id
+    isFolder
+    changeLogs(first: $first) {
+      ...ChangeLogDetails
+    }
+    relatedPublishChangeLogs(first: $first) {
+      ...ChangeLogDetails
+    }
+    copiedFromDataLibraryTemplateId
+    dataLayer {
+      dataSource {
+        dataLibraryTemplateId
+        createdAt
+        authorProfile {
+          userId
+          affiliations
+          email
+          fullname
+          nickname
+          picture
+        }
+      }
+    }
+  }
+}
+    ${ChangeLogDetailsFragmentDoc}`;
 export const ResolvableLayerCommentThreadForChangelogDocument = /*#__PURE__*/ gql`
     query ResolvableLayerCommentThreadForChangelog($commentId: Int!) {
   getResolvableLayerComment(commentId: $commentId) {
@@ -31155,6 +31157,7 @@ export const ChangeLogsSinceLastPublishDocument = /*#__PURE__*/ gql`
         id
         dataSource {
           createdAt
+          dataLibraryTemplateId
         }
       }
     }
@@ -34263,7 +34266,6 @@ export const UserIsSuperuserDocument = /*#__PURE__*/ gql`
     `;
 export const namedOperations = {
   Query: {
-    LayerSettingsChangeLog: 'LayerSettingsChangeLog',
     ProjectBucketSetting: 'ProjectBucketSetting',
     ProjectSearch: 'ProjectSearch',
     MapboxAPIKeys: 'MapboxAPIKeys',
@@ -34292,6 +34294,7 @@ export const namedOperations = {
     ExtraTocEditingInfo: 'ExtraTocEditingInfo',
     layersAndSourcesForItems: 'layersAndSourcesForItems',
     GetFolder: 'GetFolder',
+    LayerSettingsChangeLog: 'LayerSettingsChangeLog',
     ResolvableLayerCommentThreadForChangelog: 'ResolvableLayerCommentThreadForChangelog',
     GetLayerItem: 'GetLayerItem',
     InteractivitySettingsForLayer: 'InteractivitySettingsForLayer',

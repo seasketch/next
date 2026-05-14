@@ -52,6 +52,7 @@ export type PublishBadgeDetailContentProps = {
   isFolder: boolean;
   t: TFunction<"admin:data">;
   tableOfContentsItemId: number;
+  dataLibraryTemplateId?: number | null;
   onOpenMetadata: () => void;
   onOpenCartography: () => void;
   /**
@@ -163,13 +164,22 @@ function commentThreadIdFromMeta(meta: unknown) {
   return typeof value === "number" ? value : undefined;
 }
 
-function editorName(log: ChangeLogDetailsFragment, t: TFunction<"admin:data">) {
-  return (
+function editorName(
+  log: ChangeLogDetailsFragment,
+  t: TFunction<"admin:data">,
+  dataLibraryTemplateId?: number | null
+) {
+  const fromProfile =
     log.editorProfile?.fullname ||
     log.editorProfile?.nickname ||
-    log.editorProfile?.email ||
-    t("Unknown editor")
-  );
+    log.editorProfile?.email;
+  if (fromProfile) {
+    return fromProfile;
+  }
+  if (dataLibraryTemplateId != null) {
+    return t("Data Library");
+  }
+  return t("Unknown editor");
 }
 
 function commentActionLabel(
@@ -193,9 +203,11 @@ function commentActionLabel(
 function CommentActivityDetails({
   logs,
   t,
+  dataLibraryTemplateId,
 }: {
   logs: ChangeLogDetailsFragment[];
   t: TFunction<"admin:data">;
+  dataLibraryTemplateId?: number | null;
 }) {
   const client = useApolloClient();
   const [threadsById, setThreadsById] = useState<
@@ -285,7 +297,11 @@ function CommentActivityDetails({
             ) : thread.threadId && threadsById.get(thread.threadId) ? (
               <CommentThreadCard comment={threadsById.get(thread.threadId)!} />
             ) : (
-              <CommentActivityFallback logs={thread.logs} t={t} />
+              <CommentActivityFallback
+                logs={thread.logs}
+                t={t}
+                dataLibraryTemplateId={dataLibraryTemplateId}
+              />
             )}
           </div>
         ))}
@@ -309,15 +325,19 @@ async function fetchCommentThread(
 function CommentActivityFallback({
   logs,
   t,
+  dataLibraryTemplateId,
 }: {
   logs: ChangeLogDetailsFragment[];
   t: TFunction<"admin:data">;
+  dataLibraryTemplateId?: number | null;
 }) {
   return (
     <ul className="space-y-1.5 p-3">
       {logs.map((log) => (
         <li key={log.id} className="text-sm leading-snug text-gray-700">
-          <span className="font-medium">{editorName(log, t)}</span>{" "}
+          <span className="font-medium">
+            {editorName(log, t, dataLibraryTemplateId)}
+          </span>{" "}
           <span>{commentActionLabel(log.fieldGroup, t)}</span>
         </li>
       ))}
@@ -407,6 +427,7 @@ export default function PublishBadgeDetailContent(
     isFolder,
     t,
     tableOfContentsItemId,
+    dataLibraryTemplateId,
     omitInlineModalActions = false,
   } = props;
   if (!logs.length) {
@@ -532,7 +553,13 @@ export default function PublishBadgeDetailContent(
       break;
     }
     case "comments": {
-      main = <CommentActivityDetails logs={logs} t={t} />;
+      main = (
+        <CommentActivityDetails
+          logs={logs}
+          t={t}
+          dataLibraryTemplateId={dataLibraryTemplateId}
+        />
+      );
       break;
     }
     default:

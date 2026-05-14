@@ -62,7 +62,10 @@ export type DraftTocItemForPublishSummary = {
   isFolder: boolean;
   dataLayer?: {
     id: number;
-    dataSource?: { createdAt?: string | null } | null;
+    dataSource?: {
+      createdAt?: string | null;
+      dataLibraryTemplateId?: number | null;
+    } | null;
   } | null;
 };
 
@@ -77,6 +80,8 @@ export type PublishSummaryRow = {
   lastChangeAt: string;
   editors: AuthorProfileFragment[];
   primaryEditor: AuthorProfileFragment | null;
+  /** When set, missing editor names in summaries use "Data Library" instead of "Unknown editor". */
+  dataLibraryTemplateId?: number | null;
   badges: {
     key: PublishBadgeKey;
     logs: ChangeLogDetailsFragment[];
@@ -329,13 +334,19 @@ export function buildPublishChangeSummary({
       ? "added"
       : "updated";
 
-    const row = rowFromLogs(
+    const baseRow = rowFromLogs(
       entityId,
       draft.title,
       draft.isFolder,
       category,
       logs
     );
+    const dataLibraryTemplateId =
+      draft.dataLayer?.dataSource?.dataLibraryTemplateId;
+    const row =
+      dataLibraryTemplateId != null
+        ? { ...baseRow, dataLibraryTemplateId }
+        : baseRow;
     if (category === "added") {
       added.push(row);
     } else {

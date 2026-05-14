@@ -10,10 +10,12 @@ export default function SourceCreationAnchorItem({
   isFolder,
   createdAt,
   profile,
+  missingProfileLabel,
 }: {
   isFolder: boolean;
   createdAt: Date;
   profile?: ChangeLogAuthorProfile | null;
+  missingProfileLabel?: string;
 }) {
   const { t } = useTranslation("admin:data");
   const isLegacy = createdAt < CHANGE_LOG_INTRODUCTION_DATE;
@@ -48,6 +50,7 @@ export default function SourceCreationAnchorItem({
   return (
     <ChangeLogTimelineItem
       profile={profile}
+      missingProfileLabel={missingProfileLabel}
       date={createdAt}
       icon={<PlusCircledIcon className="h-5 w-5" />}
       iconClassName={"bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"}

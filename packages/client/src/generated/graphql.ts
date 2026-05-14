@@ -19472,37 +19472,6 @@ export type SetTranslatedPropResult = {
   typeName: Scalars['String'];
 };
 
-export type LayerSettingsChangeLogQueryVariables = Exact<{
-  id: Scalars['Int'];
-  first: Scalars['Int'];
-}>;
-
-
-export type LayerSettingsChangeLogQuery = (
-  { __typename?: 'Query' }
-  & { tableOfContentsItem?: Maybe<(
-    { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'isFolder'>
-    & { changeLogs?: Maybe<Array<(
-      { __typename?: 'ChangeLog' }
-      & ChangeLogDetailsFragment
-    )>>, relatedPublishChangeLogs?: Maybe<Array<(
-      { __typename?: 'ChangeLog' }
-      & ChangeLogDetailsFragment
-    )>>, dataLayer?: Maybe<(
-      { __typename?: 'DataLayer' }
-      & { dataSource?: Maybe<(
-        { __typename?: 'DataSource' }
-        & Pick<DataSource, 'createdAt'>
-        & { authorProfile?: Maybe<(
-          { __typename?: 'Profile' }
-          & Pick<Profile, 'userId' | 'affiliations' | 'email' | 'fullname' | 'nickname' | 'picture'>
-        )> }
-      )> }
-    )> }
-  )> }
-);
-
 export type UpdateTerrainExaggerationFragment = (
   { __typename?: 'Basemap' }
   & Pick<Basemap, 'terrainExaggeration'>
@@ -21309,6 +21278,37 @@ export type ChangeLogDetailsFragment = (
   )> }
 );
 
+export type LayerSettingsChangeLogQueryVariables = Exact<{
+  id: Scalars['Int'];
+  first: Scalars['Int'];
+}>;
+
+
+export type LayerSettingsChangeLogQuery = (
+  { __typename?: 'Query' }
+  & { tableOfContentsItem?: Maybe<(
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id' | 'isFolder' | 'copiedFromDataLibraryTemplateId'>
+    & { changeLogs?: Maybe<Array<(
+      { __typename?: 'ChangeLog' }
+      & ChangeLogDetailsFragment
+    )>>, relatedPublishChangeLogs?: Maybe<Array<(
+      { __typename?: 'ChangeLog' }
+      & ChangeLogDetailsFragment
+    )>>, dataLayer?: Maybe<(
+      { __typename?: 'DataLayer' }
+      & { dataSource?: Maybe<(
+        { __typename?: 'DataSource' }
+        & Pick<DataSource, 'dataLibraryTemplateId' | 'createdAt'>
+        & { authorProfile?: Maybe<(
+          { __typename?: 'Profile' }
+          & Pick<Profile, 'userId' | 'affiliations' | 'email' | 'fullname' | 'nickname' | 'picture'>
+        )> }
+      )> }
+    )> }
+  )> }
+);
+
 export type ResolvableLayerCommentDetailsFragment = (
   { __typename?: 'ResolvableLayerComment' }
   & Pick<ResolvableLayerComment, 'id' | 'projectId' | 'tableOfContentsItemId' | 'comment' | 'createdAt' | 'resolvedAt' | 'resolvedById'>
@@ -22212,7 +22212,7 @@ export type ChangeLogsSinceLastPublishQuery = (
         & Pick<DataLayer, 'id'>
         & { dataSource?: Maybe<(
           { __typename?: 'DataSource' }
-          & Pick<DataSource, 'createdAt'>
+          & Pick<DataSource, 'createdAt' | 'dataLibraryTemplateId'>
         )> }
       )> }
     )>>, changeLogsSinceLastPublish?: Maybe<Array<(
@@ -29367,62 +29367,6 @@ export const InviteEmailDetailsFragmentDoc = gql`
   updatedAt
 }
     `;
-export const LayerSettingsChangeLogDocument = gql`
-    query LayerSettingsChangeLog($id: Int!, $first: Int!) {
-  tableOfContentsItem(id: $id) {
-    id
-    isFolder
-    changeLogs(first: $first) {
-      ...ChangeLogDetails
-    }
-    relatedPublishChangeLogs(first: $first) {
-      ...ChangeLogDetails
-    }
-    dataLayer {
-      dataSource {
-        createdAt
-        authorProfile {
-          userId
-          affiliations
-          email
-          fullname
-          nickname
-          picture
-        }
-      }
-    }
-  }
-}
-    ${ChangeLogDetailsFragmentDoc}`;
-
-/**
- * __useLayerSettingsChangeLogQuery__
- *
- * To run a query within a React component, call `useLayerSettingsChangeLogQuery` and pass it any options that fit your needs.
- * When your component renders, `useLayerSettingsChangeLogQuery` returns an object from Apollo Client that contains loading, error, and data properties
- * you can use to render your UI.
- *
- * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
- *
- * @example
- * const { data, loading, error } = useLayerSettingsChangeLogQuery({
- *   variables: {
- *      id: // value for 'id'
- *      first: // value for 'first'
- *   },
- * });
- */
-export function useLayerSettingsChangeLogQuery(baseOptions: Apollo.QueryHookOptions<LayerSettingsChangeLogQuery, LayerSettingsChangeLogQueryVariables>) {
-        const options = {...defaultOptions, ...baseOptions}
-        return Apollo.useQuery<LayerSettingsChangeLogQuery, LayerSettingsChangeLogQueryVariables>(LayerSettingsChangeLogDocument, options);
-      }
-export function useLayerSettingsChangeLogLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<LayerSettingsChangeLogQuery, LayerSettingsChangeLogQueryVariables>) {
-          const options = {...defaultOptions, ...baseOptions}
-          return Apollo.useLazyQuery<LayerSettingsChangeLogQuery, LayerSettingsChangeLogQueryVariables>(LayerSettingsChangeLogDocument, options);
-        }
-export type LayerSettingsChangeLogQueryHookResult = ReturnType<typeof useLayerSettingsChangeLogQuery>;
-export type LayerSettingsChangeLogLazyQueryHookResult = ReturnType<typeof useLayerSettingsChangeLogLazyQuery>;
-export type LayerSettingsChangeLogQueryResult = Apollo.QueryResult<LayerSettingsChangeLogQuery, LayerSettingsChangeLogQueryVariables>;
 export const ProjectBucketSettingDocument = gql`
     query ProjectBucketSetting($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -32818,6 +32762,64 @@ export function useUpdateFolderMutation(baseOptions?: Apollo.MutationHookOptions
 export type UpdateFolderMutationHookResult = ReturnType<typeof useUpdateFolderMutation>;
 export type UpdateFolderMutationResult = Apollo.MutationResult<UpdateFolderMutation>;
 export type UpdateFolderMutationOptions = Apollo.BaseMutationOptions<UpdateFolderMutation, UpdateFolderMutationVariables>;
+export const LayerSettingsChangeLogDocument = gql`
+    query LayerSettingsChangeLog($id: Int!, $first: Int!) {
+  tableOfContentsItem(id: $id) {
+    id
+    isFolder
+    changeLogs(first: $first) {
+      ...ChangeLogDetails
+    }
+    relatedPublishChangeLogs(first: $first) {
+      ...ChangeLogDetails
+    }
+    copiedFromDataLibraryTemplateId
+    dataLayer {
+      dataSource {
+        dataLibraryTemplateId
+        createdAt
+        authorProfile {
+          userId
+          affiliations
+          email
+          fullname
+          nickname
+          picture
+        }
+      }
+    }
+  }
+}
+    ${ChangeLogDetailsFragmentDoc}`;
+
+/**
+ * __useLayerSettingsChangeLogQuery__
+ *
+ * To run a query within a React component, call `useLayerSettingsChangeLogQuery` and pass it any options that fit your needs.
+ * When your component renders, `useLayerSettingsChangeLogQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useLayerSettingsChangeLogQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *      first: // value for 'first'
+ *   },
+ * });
+ */
+export function useLayerSettingsChangeLogQuery(baseOptions: Apollo.QueryHookOptions<LayerSettingsChangeLogQuery, LayerSettingsChangeLogQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<LayerSettingsChangeLogQuery, LayerSettingsChangeLogQueryVariables>(LayerSettingsChangeLogDocument, options);
+      }
+export function useLayerSettingsChangeLogLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<LayerSettingsChangeLogQuery, LayerSettingsChangeLogQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<LayerSettingsChangeLogQuery, LayerSettingsChangeLogQueryVariables>(LayerSettingsChangeLogDocument, options);
+        }
+export type LayerSettingsChangeLogQueryHookResult = ReturnType<typeof useLayerSettingsChangeLogQuery>;
+export type LayerSettingsChangeLogLazyQueryHookResult = ReturnType<typeof useLayerSettingsChangeLogLazyQuery>;
+export type LayerSettingsChangeLogQueryResult = Apollo.QueryResult<LayerSettingsChangeLogQuery, LayerSettingsChangeLogQueryVariables>;
 export const ResolvableLayerCommentThreadForChangelogDocument = gql`
     query ResolvableLayerCommentThreadForChangelog($commentId: Int!) {
   getResolvableLayerComment(commentId: $commentId) {
@@ -34714,6 +34716,7 @@ export const ChangeLogsSinceLastPublishDocument = gql`
         id
         dataSource {
           createdAt
+          dataLibraryTemplateId
         }
       }
     }
@@ -43662,7 +43665,6 @@ export type UserIsSuperuserLazyQueryHookResult = ReturnType<typeof useUserIsSupe
 export type UserIsSuperuserQueryResult = Apollo.QueryResult<UserIsSuperuserQuery, UserIsSuperuserQueryVariables>;
 export const namedOperations = {
   Query: {
-    LayerSettingsChangeLog: 'LayerSettingsChangeLog',
     ProjectBucketSetting: 'ProjectBucketSetting',
     ProjectSearch: 'ProjectSearch',
     MapboxAPIKeys: 'MapboxAPIKeys',
@@ -43691,6 +43693,7 @@ export const namedOperations = {
     ExtraTocEditingInfo: 'ExtraTocEditingInfo',
     layersAndSourcesForItems: 'layersAndSourcesForItems',
     GetFolder: 'GetFolder',
+    LayerSettingsChangeLog: 'LayerSettingsChangeLog',
     ResolvableLayerCommentThreadForChangelog: 'ResolvableLayerCommentThreadForChangelog',
     GetLayerItem: 'GetLayerItem',
     InteractivitySettingsForLayer: 'InteractivitySettingsForLayer',

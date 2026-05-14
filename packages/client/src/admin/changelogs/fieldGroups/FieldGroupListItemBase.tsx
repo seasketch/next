@@ -14,6 +14,8 @@ export interface FieldGroupListItemProps {
   changeLog: ChangeLogDetailsFragment;
   last?: boolean;
   itemTitle?: ReactNode;
+  /** When the change log has no editor profile, show this instead of "Unknown user". */
+  missingProfileLabel?: string;
 }
 
 export type Summary = Record<string, unknown>;
@@ -118,6 +120,7 @@ export default function BaseFieldGroupListItem({
   icon,
   iconClassName,
   itemTitle,
+  missingProfileLabel,
   children,
   footer,
 }: FieldGroupListItemProps & {
@@ -129,6 +132,7 @@ export default function BaseFieldGroupListItem({
   return (
     <ChangeLogTimelineItem
       profile={changeLog.editorProfile}
+      missingProfileLabel={missingProfileLabel}
       date={new Date((changeLog as ChangeLogWithTimestamp).lastAt)}
       icon={icon}
       iconClassName={iconClassName}

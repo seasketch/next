@@ -442,8 +442,10 @@ query LayerSettingsChangeLog($id: Int!, $first: Int!) {
     relatedPublishChangeLogs(first: $first) {
       ...ChangeLogDetails
     }
+    copiedFromDataLibraryTemplateId
     dataLayer {
       dataSource {
+        dataLibraryTemplateId
         createdAt
         authorProfile {
           userId
@@ -1270,6 +1272,7 @@ query ChangeLogsSinceLastPublish($slug: String!) {
         id
         dataSource {
           createdAt
+          dataLibraryTemplateId
         }
       }
     }
