@@ -23,7 +23,7 @@ import {
  * @returns A promise that resolves to a RasterInfo object
  */
 export async function rasterInfoForBands(
-  filepath: string
+  filepath: string,
 ): Promise<RasterInfo> {
   const dataset = await gdal.openAsync(filepath);
   const info = {
@@ -37,9 +37,10 @@ export async function rasterInfoForBands(
   let categoryCount = 0;
   let isByteEncoding = false;
   const colorInterpretations = dataset.bands.map(
-    (band) => band.colorInterpretation
+    (band) => band.colorInterpretation,
   );
   if (process.env.DEBUG) {
+    console.log("color interpretations:");
     console.log(colorInterpretations);
   }
   const isRGB =
@@ -189,7 +190,7 @@ export async function rasterInfoForBands(
         if (process.env.DEBUG) {
           console.log(
             "Stretching values to fit full encoding scheme. Scale:",
-            scale
+            scale,
           );
         }
       } else if (range > 16_777_216) {
@@ -201,7 +202,7 @@ export async function rasterInfoForBands(
         if (process.env.DEBUG) {
           console.log(
             "Compressing values to fit full encoding scheme. Scale:",
-            scale
+            scale,
           );
         }
       }
@@ -229,7 +230,7 @@ export async function rasterInfoForBands(
           sampledPixelValues.sort((a, b) => a - b),
           49,
           stats.max,
-          true
+          true,
         ),
         categories: categoryBuckets,
       },
@@ -249,7 +250,7 @@ export async function rasterInfoForBands(
       addBuckets(
         b.stats.equalInterval,
         n,
-        equalIntervalBuckets(sampledPixelValues, n, b.maximum, true)
+        equalIntervalBuckets(sampledPixelValues, n, b.maximum, true),
       );
       addBuckets(
         b.stats.geometricInterval,
@@ -259,13 +260,20 @@ export async function rasterInfoForBands(
           n,
           b.minimum,
           b.maximum,
-          true
-        )
+          true,
+        ),
       );
       addBuckets(
         b.stats.quantiles,
         n,
-        quantileBuckets(sampledPixelValues, n, b.minimum, b.maximum, true, true)
+        quantileBuckets(
+          sampledPixelValues,
+          n,
+          b.minimum,
+          b.maximum,
+          true,
+          true,
+        ),
       );
       if (sampledPixelValues.length > n) {
         addBuckets(
@@ -278,8 +286,8 @@ export async function rasterInfoForBands(
             b.minimum,
             b.maximum,
             10000,
-            true
-          )
+            true,
+          ),
         );
       }
       // Seems to be a quirk in the library where it returns -9999 for stdev when it can't be calculated
@@ -294,8 +302,8 @@ export async function rasterInfoForBands(
             b.stats.stdev,
             b.minimum,
             b.maximum,
-            true
-          )
+            true,
+          ),
         );
       }
       samples[n] = sampledPixelValues;
@@ -360,7 +368,7 @@ export async function rasterInfoForBands(
       info.representativeColorsForRGB = getRepresentativeColors(
         pixels,
         9,
-        10000
+        10000,
       );
     }
   }
@@ -371,11 +379,12 @@ export async function rasterInfoForBands(
     info.bands[0].stats.categories.length > 0 &&
     !isRGB
   ) {
-    if (info.bands[0].stats.categories.length <= 128) {
-      info.presentation = SuggestedRasterPresentation.categorical;
-    } else {
-      info.presentation = SuggestedRasterPresentation.continuous;
-    }
+    // This caused a lot of issues with continuous rasters being treated as categorical.
+    // if (info.bands[0].stats.categories.length <= 128) {
+    //   info.presentation = SuggestedRasterPresentation.categorical;
+    // } else {
+    info.presentation = SuggestedRasterPresentation.continuous;
+    // }
   }
   return info;
 }
@@ -383,7 +392,7 @@ export async function rasterInfoForBands(
 function addBuckets(
   subject: RasterBuckets,
   numBuckets: number,
-  value?: Bucket[] | null
+  value?: Bucket[] | null,
 ) {
   if (value) {
     subject[numBuckets] = value;

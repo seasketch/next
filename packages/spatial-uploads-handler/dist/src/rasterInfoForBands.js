@@ -28,6 +28,7 @@ async function rasterInfoForBands(filepath) {
     let isByteEncoding = false;
     const colorInterpretations = dataset.bands.map((band) => band.colorInterpretation);
     if (process.env.DEBUG) {
+        console.log("color interpretations:");
         console.log(colorInterpretations);
     }
     const isRGB = colorInterpretations.includes("Red") &&
@@ -280,12 +281,12 @@ async function rasterInfoForBands(filepath) {
     if (info.byteEncoding &&
         info.bands[0].stats.categories.length > 0 &&
         !isRGB) {
-        if (info.bands[0].stats.categories.length <= 128) {
-            info.presentation = geostats_types_1.SuggestedRasterPresentation.categorical;
-        }
-        else {
-            info.presentation = geostats_types_1.SuggestedRasterPresentation.continuous;
-        }
+        // This caused a lot of issues with continuous rasters being treated as categorical.
+        // if (info.bands[0].stats.categories.length <= 128) {
+        //   info.presentation = SuggestedRasterPresentation.categorical;
+        // } else {
+        info.presentation = geostats_types_1.SuggestedRasterPresentation.continuous;
+        // }
     }
     return info;
 }
