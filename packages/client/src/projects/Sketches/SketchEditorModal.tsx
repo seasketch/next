@@ -50,6 +50,21 @@ import { defaultStyle } from "../../surveys/appearance";
 import { FilterInputServiceContextProvider } from "../../formElements/FilterInputContext";
 import FilteredPlanningUnitCountHeader from "./FilteredPlanningUnitCountHeader";
 
+function clippingLayerDataset(layer: {
+  objectKey?: string | null;
+  dataLayer?: { vectorObjectKey?: string | null } | null;
+}): string | null {
+  if (layer.dataLayer?.vectorObjectKey) {
+    return layer.dataLayer.vectorObjectKey;
+  }
+  if (layer.objectKey) {
+    return layer.objectKey
+      .replace(/^[^:]+:\/\/[^/]+\//, "")
+      .replace(/^\//, "");
+  }
+  return null;
+}
+
 function SketchEditorModal({
   sketch,
   sketchClass,
@@ -218,18 +233,17 @@ function SketchEditorModal({
         const clippingLayers = [];
         if (geography.clippingLayers) {
           for (const layer of geography.clippingLayers) {
-            if (!layer.dataLayer?.vectorObjectKey) {
-              throw new Error("Vector object key is required");
+            const dataset = clippingLayerDataset(layer);
+            if (!dataset) {
+              continue;
             }
-            if (layer.objectKey) {
-              clippingLayers.push({
-                id: layer.id,
-                cql2Query: layer.cql2Query,
-                op: layer.operationType,
-                dataset: layer.dataLayer.vectorObjectKey,
-                templateId: layer.templateId,
-              });
-            }
+            clippingLayers.push({
+              id: layer.id,
+              cql2Query: layer.cql2Query,
+              op: layer.operationType,
+              dataset,
+              templateId: layer.templateId,
+            });
           }
         }
         geographies.push({

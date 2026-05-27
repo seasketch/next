@@ -499,18 +499,23 @@ export default function GeographyAdmin() {
       const clippingLayers = [];
       if (selectedGeography.clippingLayers) {
         for (const layer of selectedGeography.clippingLayers) {
-          if (!layer.dataLayer?.vectorObjectKey) {
-            throw new Error("Vector object key is required");
+          const dataset =
+            layer.dataLayer?.vectorObjectKey ??
+            (layer.objectKey
+              ? layer.objectKey
+                  .replace(/^[^:]+:\/\/[^/]+\//, "")
+                  .replace(/^\//, "")
+              : null);
+          if (!dataset) {
+            continue;
           }
-          if (layer.objectKey) {
-            clippingLayers.push({
-              id: layer.id,
-              cql2Query: layer.cql2Query,
-              op: layer.operationType,
-              dataset: layer.dataLayer.vectorObjectKey,
-              templateId: layer.templateId,
-            });
-          }
+          clippingLayers.push({
+            id: layer.id,
+            cql2Query: layer.cql2Query,
+            op: layer.operationType,
+            dataset,
+            templateId: layer.templateId,
+          });
         }
       }
       geographies.push({
