@@ -103,6 +103,12 @@ export default function LayerTableOfContentsItemEditor(
 
   const item = data?.tableOfContentsItem;
 
+  useEffect(() => {
+    if (item?.stableId && item.dataLayer && manager) {
+      manager.showTocItems([item.stableId]);
+    }
+  }, [item?.stableId, item?.dataLayer, manager]);
+
   const [style, setStyle] = useState<string>();
   const debouncedStyle = useDebounce(style, 250);
 
