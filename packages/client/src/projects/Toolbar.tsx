@@ -12,13 +12,10 @@ import {
   CacheButton,
   MyProfileButton,
   SignInButton,
-  SignOutButton,
-  EditProfileButton,
   HelpButton,
 } from "./ToolbarButtons";
 import { Link, useHistory, useParams, useRouteMatch } from "react-router-dom";
 import { MenuToggle } from "./MenuToggle";
-import { ProfileStatusButton } from "../header/ProfileStatusButton";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 import { getLastFormUrl } from "./Forums/Forums";
 import LanguageSelector from "../surveys/LanguageSelector";
@@ -27,7 +24,7 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { useSketchUIState } from "./Sketches/SketchUIStateContextProvider";
 import { useTranslatedProps } from "../components/TranslatedPropControl";
 import { HAS_SKIPPED_JOIN_PROJECT_PROMPT_LOCALSTORAGE_KEY } from "../auth/JoinProject";
-import SignedInAs from "../components/SignedInAs";
+import UserSessionCard from "./UserSessionCard";
 import { useContext, useState } from "react";
 import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphqlQueryCache";
 import * as Tooltip from "@radix-ui/react-tooltip";
@@ -265,6 +262,34 @@ export default function Toolbar({
         tabIndex={6}
         anySidebarOpen={!!sidebar}
       /> */}
+          <HelpButton
+            tooltip={t("User Guide")}
+            onClick={() =>
+              window.open(
+                data?.project?.customDocLink &&
+                  data.project.customDocLink.length > 1
+                  ? data.project.customDocLink
+                  : "https://docs.seasketch.org/seasketch-documentation/users-guide/getting-started",
+                "_blank"
+              )
+            }
+            expanded={expanded}
+          />
+
+          <LanguageSelector
+            button={(onClick, lang) => (
+              <LanguageButton
+                tooltip={lang.localName || lang.name}
+                // tabIndex={6}
+                onClick={onClick}
+                expanded={expanded}
+                title={t("Change language")}
+                details={lang.localName || lang.name}
+              />
+            )}
+            options={data?.project?.supportedLanguages as string[]}
+          />
+
           {!expanded && data?.me && (
             <MyProfileButton
               tooltip={t(`Signed in as ${userId}`)}
@@ -300,74 +325,33 @@ export default function Toolbar({
           )}
 
           {expanded && (data?.me || user) && (
-            <>
-              <div
-                className="w-full"
-                style={{ padding: "0px 19px", paddingTop: 2, paddingLeft: 20 }}
-              >
-                <SignedInAs animateText className="pb-1" tabIndex={-1} />
-              </div>
-
-              <EditProfileButton
-                tooltip={t("My Profile")}
-                onClick={() => {
-                  if (
-                    data?.project?.sessionParticipationStatus !==
-                    ParticipationStatus.ParticipantSharedProfile
-                  ) {
-                    history.push(`/${slug}/join`);
-                  } else {
-                    history.push(`/${slug}/profile`);
-                  }
-                }}
-                expanded={expanded}
-              />
-              <SignOutButton
-                tooltip={t("Sign Out")}
-                onClick={() => {
-                  cache?.logout();
-                  logout({
-                    logoutParams: {
-                      returnTo:
-                        window.location.protocol +
-                        "//" +
-                        window.location.host +
-                        "/",
-                    },
-                  });
-                }}
-                expanded={expanded}
-              />
-            </>
+            <UserSessionCard
+              animateText
+              userId={userId as string}
+              onEditProfile={() => {
+                if (
+                  data?.project?.sessionParticipationStatus !==
+                  ParticipationStatus.ParticipantSharedProfile
+                ) {
+                  history.push(`/${slug}/join`);
+                } else {
+                  history.push(`/${slug}/profile`);
+                }
+              }}
+              onSignOut={() => {
+                cache?.logout();
+                logout({
+                  logoutParams: {
+                    returnTo:
+                      window.location.protocol +
+                      "//" +
+                      window.location.host +
+                      "/",
+                  },
+                });
+              }}
+            />
           )}
-
-          <HelpButton
-            tooltip={t("User Guide")}
-            onClick={() =>
-              window.open(
-                data?.project?.customDocLink &&
-                  data.project.customDocLink.length > 1
-                  ? data.project.customDocLink
-                  : "https://docs.seasketch.org/seasketch-documentation/users-guide/getting-started",
-                "_blank"
-              )
-            }
-            expanded={expanded}
-          />
-
-          <LanguageSelector
-            button={(onClick, lang) => (
-              <LanguageButton
-                tooltip={lang.localName || lang.name}
-                // tabIndex={6}
-                onClick={onClick}
-                expanded={expanded}
-                title={t("Change language")}
-                details={lang.localName || lang.name}
-              />
-            )}
-            options={data?.project?.supportedLanguages as string[]}
-          />
 
           {data?.project?.sessionIsAdmin && (
             <AdminButton
@@ -391,7 +375,9 @@ export default function Toolbar({
             </a>
           )}
           {expanded && (
-            <div className="flex justify-start w-full overflow-hidden whitespace-nowrap pb-3 pl-1">
+            <div
+              className={`flex items-center tall:items-stretch justify-start w-full overflow-hidden whitespace-nowrap pb-3 tall:pb-0 pl-1`}
+            >
               <div className="flex items-center flex-none">
                 <a
                   href="/"
@@ -400,8 +386,7 @@ export default function Toolbar({
                   <img
                     alt="SeaSketch Logo"
                     src={logo}
-                    className="mr-4"
-                    style={{ width: 64 }}
+                    className="w-10 tall:w-16 mr-3 tall:mr-4"
                   />
                 </a>
               </div>
@@ -412,14 +397,12 @@ export default function Toolbar({
                 <div className="text-xs hidden tall:block">
                   {t("Powered by")}
                 </div>
-                <h2 className="text-xl">SeaSketch</h2>
-                <nav className="text-xs underline mt-1 flex space-x-2">
-                  {/* <a className="mr-1" href="/about">
-                {t("About")}
-              </a> */}
+                <h2 className="text-base font-semibold tall:text-xl tall:font-normal">
+                  SeaSketch
+                </h2>
+                <nav className="text-xs underline flex space-x-2 tall:mt-1">
                   <a
                     className="focus:outline-0 focus-visible:ring-2 ring-blue-500"
-                    // className="mx-1"
                     href="/terms-of-use"
                   >
                     {t("Terms of Use")}
@@ -439,7 +422,7 @@ export default function Toolbar({
                 </nav>
                 <a
                   aria-label="View source code on GitHub (opens in new tab)"
-                  className="text-xs text-gray-500 focus:outline-0 focus-visible:ring-2 ring-blue-500"
+                  className="text-xs text-gray-500 focus:outline-0 focus-visible:ring-2 ring-blue-500 hidden tall:inline"
                   target="_blank"
                   rel="noreferrer"
                   href="https://github.com/seasketch/next"
