@@ -291,24 +291,27 @@ export default function GeographyAdmin() {
 
       // Reset all layers except basemap
       const resetLayers = () => {
-        const styleLayers = map.getStyle().layers || [];
-        const sources = new Set<string>();
+        const style = map.getStyle();
+        const styleLayers = style.layers || [];
 
         // Remove all layers except satellite layer
         for (const layer of styleLayers) {
           if (layer.id !== "satellite-layer") {
             map.removeLayer(layer.id);
-            // Track sources to potentially remove
-            const sourceId = (layer as any).source;
-            if (sourceId) {
-              sources.add(sourceId);
-            }
           }
         }
 
-        // Remove unused sources
-        for (const sourceId of sources) {
-          if (map.getSource(sourceId)) {
+        // Remove all geography sources. These are matched by prefix rather
+        // than by walking the layers above, since a source can be added to
+        // the map without any layer referencing it (e.g. a clipping layer
+        // whose dataLayer has no mapboxGlStyles). Those orphaned sources
+        // would otherwise survive the reset and collide on the next
+        // addSource call ("There is already a source with ID ...").
+        for (const sourceId of Object.keys(style.sources || {})) {
+          if (
+            sourceId.startsWith(SOURCE_ID_PREFIX) &&
+            map.getSource(sourceId)
+          ) {
             map.removeSource(sourceId);
           }
         }
@@ -391,7 +394,9 @@ export default function GeographyAdmin() {
 
       // Add all sources
       for (const [id, source] of Object.entries(sources)) {
-        map.addSource(id, source);
+        if (!map.getSource(id)) {
+          map.addSource(id, source);
+        }
       }
 
       // Add all non-custom layers

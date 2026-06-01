@@ -40,9 +40,7 @@ function projectRowHasNumericId(row: unknown): boolean {
 }
 
 /** `select * from create_project()` may return a composite `project` column or flat columns. */
-function unwrapCreateProjectRow(
-  raw: unknown,
-): Record<string, unknown> | null {
+function unwrapCreateProjectRow(raw: unknown): Record<string, unknown> | null {
   if (!raw || typeof raw !== "object") {
     return null;
   }
@@ -498,7 +496,12 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
           const { id, input } = args;
           const { name, translatedProps, clippingLayers } = input;
           // ensure user is an admin and the geography exists
-          const isAdmin = await sessionIsAdmin(id, pgClient);
+          const { rows: projectIdRows } = await pgClient.query(
+            "SELECT project_id FROM project_geography WHERE id = $1",
+            [id],
+          );
+          const projectId = projectIdRows[0].project_id;
+          const isAdmin = await sessionIsAdmin(projectId, pgClient);
           if (!isAdmin) {
             throw new Error(
               "You do not have permission to update this geography",
@@ -689,8 +692,13 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
           const { pgClient } = context;
           const { id, deleteRelatedTableOfContentsItems } = args;
 
+          const { rows: projectIdRows } = await pgClient.query(
+            "SELECT project_id FROM project_geography WHERE id = $1",
+            [id],
+          );
+          const projectId = projectIdRows[0].project_id;
           // Check if user has admin access to the project
-          const isAdmin = await sessionIsAdmin(id, pgClient);
+          const isAdmin = await sessionIsAdmin(projectId, pgClient);
           if (!isAdmin) {
             throw new Error(
               "You do not have permission to delete this geography",
@@ -781,9 +789,7 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
           }
 
           if (geographies.length > 0) {
-            const projectSlug = String(
-              project.slug ?? input.slug ?? "",
-            ).trim();
+            const projectSlug = String(project.slug ?? input.slug ?? "").trim();
             if (!projectSlug) {
               throw new Error("Created project is missing a slug");
             }
@@ -1609,7 +1615,11 @@ async function updateProjectRegionFromEezGeographies(
           and gcl.template_id = $3
       )
     `,
-    [projectId, MARINE_REGIONS_EEZ_TEMPLATE_ID, MARINE_REGIONS_TERRITORIAL_SEA_TEMPLATE_ID],
+    [
+      projectId,
+      MARINE_REGIONS_EEZ_TEMPLATE_ID,
+      MARINE_REGIONS_TERRITORIAL_SEA_TEMPLATE_ID,
+    ],
   );
   const ids = (geoRows as { id: number }[]).map((r) => r.id);
   if (ids.length === 0) {
