@@ -226,6 +226,7 @@ export default function EditGeographyModal({
     <>
       {!showLayerChoice ? (
         <Modal
+          scrollable={true}
           loading={loading}
           disableBackdropClick={true}
           title={t("Edit Geography")}
