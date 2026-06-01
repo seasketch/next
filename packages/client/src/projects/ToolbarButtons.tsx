@@ -74,10 +74,10 @@ export default function SidebarButton(props: SidebarButtonProps) {
 
   return (
     <div
-      style={{ padding: props.expanded ? "0px 14px" : "0px 2px" }}
+      // style={{ padding: props.expanded ? "0px 14px" : "0px 2px" }}
       className={`w-full flex items-center ${
-        props.expanded ? "min-w-[354px]" : "min-w-[40px]"
-      }`}
+        props.expanded ? "px-[14px]" : "px-[2px]"
+      } ${props.expanded ? "min-w-[354px]" : "min-w-[40px]"}`}
     >
       <Tooltip.Root>
         <Tooltip.Trigger asChild>
@@ -87,7 +87,7 @@ export default function SidebarButton(props: SidebarButtonProps) {
             key={props.tooltip}
             className={clsx(
               `flex items-center space-x-2 focus:outline-0 focus-visible:ring-2 focus-visible:ring-blue-500 focus:bg-gray-700/60 hover:bg-blue-500/15 rounded`,
-              props.expanded ? "w-full p-2" : "w-9 p-1",
+              props.expanded ? "w-full px-2 py-1 tall:py-2" : "w-9 p-1",
               props.variant === "primary" &&
                 props.expanded &&
                 "bg-cool-gray-600/50 py-3 mt-4 justify-center text-center rounded",

@@ -380,7 +380,11 @@ export default function Toolbar({
             />
           )}
         </div>
-        <div className="flex flex-col items-center w-full p-4 flex-none overflow-hidden">
+        <div
+          className={`flex flex-col items-center w-full p-2 ${
+            expanded ? "pb-0" : ""
+          } tall:p-4 flex-none overflow-hidden `}
+        >
           {!expanded && (
             <a className={`w-8`} href="/">
               <motion.img src={logo} alt="SeaSketch Logo" />
@@ -405,7 +409,9 @@ export default function Toolbar({
                 className="flex-col items-center"
                 aria-label="Footer links to information about the SeaSketch platform"
               >
-                <div className="text-xs">{t("Powered by")}</div>
+                <div className="text-xs hidden tall:block">
+                  {t("Powered by")}
+                </div>
                 <h2 className="text-xl">SeaSketch</h2>
                 <nav className="text-xs underline mt-1 flex space-x-2">
                   {/* <a className="mr-1" href="/about">
