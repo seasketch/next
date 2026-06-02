@@ -388,6 +388,7 @@ function SidebarContents(props: {
 
   return (
     <div
+      className="flex flex-col h-full overflow-x-hidden"
       onClick={(e) => {
         // @ts-ignore
         if (e.target.tagName === "A") {
@@ -398,13 +399,13 @@ function SidebarContents(props: {
         }
       }}
     >
-      <div className="flex-row items-center flex-shrink-0 px-4 text-white">
+      <div className="flex-none flex-row items-center flex-shrink-0 px-4 text-white">
         <span className="text-xl font-semibold">{props.projectName}</span>{" "}
         <span className="block text-sm">
           <Trans ns={["admin"]}>Admin Dashboard</Trans>
         </span>
       </div>
-      <div className="mt-5 flex-1 flex flex-col">
+      <div className="mt-5 flex-1 flex flex-col overflow-y-auto overscroll-none overflow-x-hidden">
         <nav className="flex-1 px-2 bg-gray-800">
           {props.sections.map((section) => (
             <NavLink
@@ -511,7 +512,7 @@ function StaticSidebar({
   supportedLanguages: string[];
 }) {
   return (
-    <div className="hidden md:flex md:flex-shrink-0 min-h-screen">
+    <div className="hidden md:flex md:flex-shrink-0 h-screen">
       <div className="flex flex-col w-56">
         <div className="flex flex-col flex-grow bg-gray-800 pt-5 pb-4 overflow-y-auto overscroll-none text-white">
           <SidebarContents
