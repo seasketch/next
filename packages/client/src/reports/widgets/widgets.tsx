@@ -26,6 +26,7 @@ import {
   SelectionRange,
   TextSelection,
 } from "prosemirror-state";
+import { ErrorBoundary } from "@sentry/react";
 import { Trans, useTranslation } from "react-i18next";
 import {
   GeographySizeTable,
@@ -100,6 +101,7 @@ import {
 import * as Popover from "@radix-ui/react-popover";
 import { TooltipPopoverContent } from "../../editor/TooltipMenu";
 import useDebounce from "../../useDebounce";
+import * as Tooltip from "@radix-ui/react-tooltip";
 
 type WidgetComponent = React.FC<any>;
 
@@ -242,18 +244,44 @@ const WidgetErrorInline: FC<{ errors: string[]; cardId: number }> = ({
 }) => {
   const { setShowCalcDetails } = useContext(ReportUIStateContext);
   const { t } = useTranslation("reports");
+  const errorDetails = errors.join(". \n");
   return (
-    <button
-      onClick={() => setShowCalcDetails(cardId)}
-      className="bg-red-700 text-white px-2 py-0.5 rounded shadow-sm inline-flex items-center space-x-1"
-      title={errors.join(". \n")}
-    >
-      <ExclamationTriangleIcon className="w-3 h-3 inline-block" />
-      <span className="font-semibold">{t("Error")}</span>
-      <span className="max-w-24 truncate text-red-200">
-        {errors.join(". \n")}
-      </span>
-    </button>
+    <Tooltip.Provider delayDuration={150}>
+      <Tooltip.Root>
+        <Tooltip.Trigger asChild>
+          <button
+            onClick={() => setShowCalcDetails(cardId)}
+            className="bg-red-700 text-white px-2 py-0.5 rounded shadow-sm inline-flex items-center space-x-1"
+          >
+            <ExclamationTriangleIcon className="w-3 h-3 inline-block" />
+            <span className="font-semibold">{t("Error")}</span>
+            <span className="max-w-24 truncate text-red-200">{errorDetails}</span>
+          </button>
+        </Tooltip.Trigger>
+        <Tooltip.Content
+          side="top"
+          sideOffset={6}
+          className="z-50 max-w-sm rounded-md border border-red-300 bg-red-700 px-2.5 py-2 text-xs text-red-50 shadow-lg whitespace-pre-wrap break-words"
+        >
+          <div className="flex items-start gap-2">
+            <ExclamationTriangleIcon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-100" />
+            <div className="space-y-1">
+              <div className="font-semibold text-white">{t("Error")}</div>
+              {errors.length > 1 ? (
+                <ul className="list-disc pl-4 space-y-0.5">
+                  {errors.map((error) => (
+                    <li key={error}>{error}</li>
+                  ))}
+                </ul>
+              ) : (
+                <div>{errorDetails}</div>
+              )}
+            </div>
+          </div>
+          <Tooltip.Arrow className="fill-red-700" />
+        </Tooltip.Content>
+      </Tooltip.Root>
+    </Tooltip.Provider>
   );
 };
 
@@ -611,37 +639,53 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
     }
   }
 
+  let widget: React.ReactNode;
   switch (node.attrs.type) {
     case "InlineMetric":
-      return <memoizedWidgets.InlineMetric {...widgetProps} />;
+      widget = <memoizedWidgets.InlineMetric {...widgetProps} />;
+      break;
     case "GeographySizeTable":
-      return <memoizedWidgets.GeographySizeTable {...widgetProps} />;
+      widget = <memoizedWidgets.GeographySizeTable {...widgetProps} />;
+      break;
     case "SketchAttributesTable":
-      return <memoizedWidgets.SketchAttributesTable {...widgetProps} />;
+      widget = <memoizedWidgets.SketchAttributesTable {...widgetProps} />;
+      break;
     case "MpaGuideLevelOfProtection":
-      return <memoizedWidgets.MpaGuideLevelOfProtection {...widgetProps} />;
+      widget = <memoizedWidgets.MpaGuideLevelOfProtection {...widgetProps} />;
+      break;
     case "OverlappingAreasTable":
-      return <memoizedWidgets.OverlappingAreasTable {...widgetProps} />;
+      widget = <memoizedWidgets.OverlappingAreasTable {...widgetProps} />;
+      break;
     case "FeatureCountTable":
-      return <memoizedWidgets.FeatureCountTable {...widgetProps} />;
+      widget = <memoizedWidgets.FeatureCountTable {...widgetProps} />;
+      break;
     case "FeaturePresenceTable":
-      return <memoizedWidgets.FeaturePresenceTable {...widgetProps} />;
+      widget = <memoizedWidgets.FeaturePresenceTable {...widgetProps} />;
+      break;
     case "IntersectingFeaturesList":
-      return <memoizedWidgets.IntersectingFeaturesList {...widgetProps} />;
+      widget = <memoizedWidgets.IntersectingFeaturesList {...widgetProps} />;
+      break;
     case "ColumnStatisticsTable":
-      return <memoizedWidgets.ColumnStatisticsTable {...widgetProps} />;
+      widget = <memoizedWidgets.ColumnStatisticsTable {...widgetProps} />;
+      break;
     case "ColumnValuesHistogram":
-      return <memoizedWidgets.ColumnValuesHistogram {...widgetProps} />;
+      widget = <memoizedWidgets.ColumnValuesHistogram {...widgetProps} />;
+      break;
     case "RasterValuesHistogram":
-      return <memoizedWidgets.RasterValuesHistogram {...widgetProps} />;
+      widget = <memoizedWidgets.RasterValuesHistogram {...widgetProps} />;
+      break;
     case "RasterStatisticsTable":
-      return <memoizedWidgets.RasterStatisticsTable {...widgetProps} />;
+      widget = <memoizedWidgets.RasterStatisticsTable {...widgetProps} />;
+      break;
     case "RasterProportionTable":
-      return <memoizedWidgets.RasterProportionTable {...widgetProps} />;
+      widget = <memoizedWidgets.RasterProportionTable {...widgetProps} />;
+      break;
     case "InlineLayerToggle":
-      return <memoizedWidgets.InlineLayerToggle {...widgetProps} />;
+      widget = <memoizedWidgets.InlineLayerToggle {...widgetProps} />;
+      break;
     case "BlockLayerToggle":
-      return <memoizedWidgets.BlockLayerToggle {...widgetProps} />;
+      widget = <memoizedWidgets.BlockLayerToggle {...widgetProps} />;
+      break;
     default:
       // eslint-disable-next-line i18next/no-literal-string
       return (
@@ -652,6 +696,22 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
         </span>
       );
   }
+
+  return (
+    <ErrorBoundary
+      fallback={({ error }) => {
+        const message =
+          error instanceof Error ? error.message : "Widget failed to render";
+        return node.isInline ? (
+          <WidgetErrorInline errors={[message]} cardId={cardId} />
+        ) : (
+          <WidgetErrorBlock errors={[message]} cardId={cardId} />
+        );
+      }}
+    >
+      {widget}
+    </ErrorBoundary>
+  );
 };
 
 export type BuildReportCommandGroupsArgs = {

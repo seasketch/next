@@ -270,13 +270,6 @@ export declare function hashMetricDependency(dependency: MetricDependency, overl
  * @returns The combined metric.
  */
 export declare function combineMetricsForFragments<T extends Metric>(metrics: Pick<Metric, "type" | "value">[], expectedMetricType?: Metric["type"]): Pick<T, "type" | "value">;
-/**
- * Finds the primary geography id from a list of metrics. The primary
- * geography is the one that is in all fragments.
- * @param metrics - The metrics to find the primary geography id from
- * @returns The primary geography id
- */
-export declare function findPrimaryGeographyId(metrics: Pick<Metric, "type" | "value" | "subject">[]): number;
 type ProsemirrorNode = {
     type: string;
     attrs?: Record<string, any>;

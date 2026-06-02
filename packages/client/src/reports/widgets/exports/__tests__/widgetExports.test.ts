@@ -264,4 +264,69 @@ describe("widget export helpers", () => {
     expect(section!.rows[0][dataCol!]).toBe(130);
     expect(section!.rows[1][dataCol!]).toBe(30);
   });
+
+  test("buildInlineMetricsSection percent_area requires clipping geography context", () => {
+    const dep: MetricDependency = {
+      type: "total_area",
+      subjectType: "fragments",
+      stableId: "layerA",
+      parameters: {},
+    };
+    const h = hashMetricDependency(dep, urlMap);
+
+    const fragmentArea = {
+      id: 1,
+      type: "total_area",
+      state: SpatialMetricState.Complete,
+      value: 10,
+      dependencyHash: h,
+      sourceUrl: "https://example.com/a.geojson",
+      subject: {
+        __typename: "FragmentSubject",
+        geographies: [2],
+        sketches: [10],
+        hash: "frag1",
+      },
+    } as CardExportInput["metrics"][0];
+
+    const geographyArea = {
+      id: 2,
+      type: "total_area",
+      state: SpatialMetricState.Complete,
+      value: 100,
+      dependencyHash: h,
+      sourceUrl: "https://example.com/a.geojson",
+      subject: {
+        __typename: "GeographySubject",
+        id: 2,
+      },
+    } as CardExportInput["metrics"][0];
+
+    const section = buildInlineMetricsSection({
+      ...minimalCardInput({
+        metrics: [fragmentArea, geographyArea],
+      }),
+      // Simulate export context where clipping geography cannot be resolved.
+      primaryGeographyId: undefined,
+      sketchClass: {
+        ...minimalCardInput().sketchClass,
+        clippingGeographies: [],
+      },
+      inlineNodes: [
+        {
+          walkIndex: 0,
+          dependencies: [dep],
+          componentSettings: { presentation: "percent_area" },
+        },
+      ],
+      sourceUrlMap: urlMap,
+    });
+
+    expect(section).not.toBeNull();
+    const dataCol = section!.columns
+      .map((c) => c.key)
+      .find((k) => !["scope", "sketchId", "sketchName"].includes(k));
+    expect(dataCol).toBeTruthy();
+    expect(section!.rows[0][dataCol!]).toBeNull();
+  });
 });

@@ -11544,6 +11544,10 @@ select{
   fill:#fff
 }
 
+.fill-red-700{
+  fill:#b91c1c
+}
+
 .stroke-gray-600{
   stroke:#4b5563
 }

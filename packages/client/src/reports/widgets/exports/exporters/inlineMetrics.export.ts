@@ -1,7 +1,6 @@
 import type { MetricDependency } from "overlay-engine";
 import {
   combineMetricsForFragments,
-  findPrimaryGeographyId,
   isNumberColumnValueStats,
   subjectIsFragment,
   subjectIsGeography,
@@ -236,11 +235,7 @@ function extractInlineRawValue(
         return combined.value ?? 0;
       }
       case "percent_area": {
-        const primary =
-          opts.clippingGeographyId ??
-          findPrimaryGeographyId(
-            metrics as Pick<Metric, "type" | "value" | "subject">[],
-          );
+        const primary = opts.clippingGeographyId;
         if (!primary) return null;
         const totalArea = combineMetricsForFragments(
           metrics.filter((m) => subjectIsFragment(m.subject)) as Pick<

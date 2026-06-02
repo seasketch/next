@@ -9,7 +9,6 @@ import {
   OverlayAreaMetric,
   TotalAreaMetric,
   combineMetricsForFragments,
-  findPrimaryGeographyId,
   subjectIsFragment,
   subjectIsGeography,
   isNumberColumnValueStats,
@@ -484,21 +483,12 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
         ) as TotalAreaMetric;
         return formatters.area(combined.value);
       case "percent_area":
-        const primaryGeographyId = findPrimaryGeographyId(
-          metrics as Pick<Metric, "type" | "value" | "subject">[]
-        );
-        if (!primaryGeographyId) {
-          throw new Error("Primary geography not found in metrics.");
-        }
-        if (
-          !(primaryClippingGeographies || []).some(
-            (g) => g!.id === primaryGeographyId
-          )
-        ) {
+        if (!clippingGeography) {
           throw new Error(
-            "Primary geography not found in sketch class clipping geographies."
+            "Primary geography for displaying percent area not found."
           );
         }
+
         // Should be percent of sketch class' clipping geography
         const totalArea = combineMetricsForFragments(
           metrics.filter((m) => subjectIsFragment(m.subject)) as Pick<
@@ -509,7 +499,8 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
         ) as TotalAreaMetric;
         const geographyAreaMetric = metrics.find(
           (m) =>
-            subjectIsGeography(m.subject) && m.subject.id === primaryGeographyId
+            subjectIsGeography(m.subject) &&
+            m.subject.id === clippingGeography?.id
         );
         if (!geographyAreaMetric) {
           throw new Error("Primary geography not found in metrics.");

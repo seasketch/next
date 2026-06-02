@@ -404,6 +404,9 @@ export default function SketchClassReportsAdmin({
 }
 
 export function collectReportCardTitle(body: any) {
+  if (!body || typeof body !== "object") {
+    return null;
+  }
   if (
     body.type === "doc" &&
     "content" in body &&
