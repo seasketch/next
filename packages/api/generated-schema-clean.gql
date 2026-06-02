@@ -6120,6 +6120,7 @@ input DraftDependenciesInput {
 }
 
 type DraftReportDependenciesResults {
+  dependencyResolutionErrors: [ReportDependencyResolutionError!]!
   fragmentSubjectCatalog: [FragmentSubject!]!
   metrics: [CompatibleSpatialMetric!]!
   ready: Boolean!
@@ -15288,6 +15289,20 @@ input ReportCondition {
   sketchClassId: Int
 }
 
+"""
+A metric dependency could not be resolved to an overlay source in this project
+(e.g. stable id from another project after copy/paste). Metrics for this hash are omitted;
+affectedCardIds lists report cards that reference the dependency.
+"""
+type ReportDependencyResolutionError {
+  affectedCardIds: [Int!]!
+  dependencyHash: String!
+  message: String!
+  metricType: String!
+  stableId: String
+  subjectType: String!
+}
+
 """An input for mutations affecting `Report`"""
 input ReportInput {
   createdAt: Datetime
@@ -15301,6 +15316,7 @@ input ReportInput {
 
 type ReportOverlayDependencies {
   cardDependencyLists: [CardDependencyLists!]!
+  dependencyResolutionErrors: [ReportDependencyResolutionError!]!
   fragmentSubjectCatalog: [FragmentSubject!]!
   metrics: [CompatibleSpatialMetric!]!
   ready: Boolean!
