@@ -411,8 +411,19 @@ export function collectReportCardTitle(body: any) {
     body.content.length > 0
   ) {
     for (const node of body.content) {
-      if (node.type === "reportTitle") {
-        return node.content[0].text;
+      if (
+        node.type === "reportTitle" &&
+        "content" in node &&
+        Array.isArray(node.content) &&
+        node.content.length > 0
+      ) {
+        // Some users have reportTitle nodes with an empty content array, and other
+        // forms of document corruption are possible. Prefer the first text child
+        // if present, otherwise treat title as missing.
+        const firstTextChild = node.content.find(
+          (child: any) => child && typeof child.text === "string"
+        );
+        return firstTextChild?.text ?? null;
       }
     }
   }
