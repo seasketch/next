@@ -522,6 +522,13 @@ mutation ReorderReportTabCards($reportTabId: Int!, $cardIds: [Int!]!) {
     reportCards {
       id
       position
+      tab {
+        id
+        report {
+          id
+          updatedAt
+        }
+      }
     }
   }
 }

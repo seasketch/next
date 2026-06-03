@@ -116,6 +116,7 @@ export function SortableReportContent(props: SortableReportContentProps) {
       const cardIds = Array.isArray(vars.cardIds)
         ? vars.cardIds
         : [vars.cardIds];
+      const optimisticUpdatedAt = new Date().toISOString();
       return {
         __typename: "Mutation" as const,
         reorderReportTabCards: {
@@ -124,6 +125,15 @@ export function SortableReportContent(props: SortableReportContentProps) {
             __typename: "ReportCard" as const,
             id,
             position: index + 1,
+            tab: {
+              __typename: "ReportTab" as const,
+              id: vars.reportTabId,
+              report: {
+                __typename: "Report" as const,
+                id: report.id,
+                updatedAt: optimisticUpdatedAt,
+              },
+            },
           })),
         },
       };

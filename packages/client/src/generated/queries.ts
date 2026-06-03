@@ -24490,6 +24490,14 @@ export type ReorderReportTabCardsMutation = (
     & { reportCards?: Maybe<Array<(
       { __typename?: 'ReportCard' }
       & Pick<ReportCard, 'id' | 'position'>
+      & { tab?: Maybe<(
+        { __typename?: 'ReportTab' }
+        & Pick<ReportTab, 'id'>
+        & { report?: Maybe<(
+          { __typename?: 'Report' }
+          & Pick<Report, 'id' | 'updatedAt'>
+        )> }
+      )> }
     )>> }
   )> }
 );
@@ -32564,6 +32572,13 @@ export const ReorderReportTabCardsDocument = /*#__PURE__*/ gql`
     reportCards {
       id
       position
+      tab {
+        id
+        report {
+          id
+          updatedAt
+        }
+      }
     }
   }
 }
