@@ -141,6 +141,7 @@ export function SortableReportContent(props: SortableReportContentProps) {
     update: (cache, { data }) => {
       const reportCards = data?.reorderReportTabCards?.reportCards;
       if (!reportCards?.length) return;
+      const reorderedAt = new Date().toISOString();
 
       cache.modify({
         id: cache.identify({ __typename: "ReportTab", id: selectedTab.id }),
@@ -160,6 +161,18 @@ export function SortableReportContent(props: SortableReportContentProps) {
               (ref) => !used.has(readField("id", ref) as number)
             );
             return [...ordered, ...rest];
+          },
+        },
+      });
+
+      // Publish-state in SketchClassReportsAdmin depends on DraftReport.updatedAt.
+      // Explicitly touch the parent report timestamp so cache watchers update
+      // immediately after drag/drop even if nested normalization misses.
+      cache.modify({
+        id: cache.identify({ __typename: "Report", id: report.id }),
+        fields: {
+          updatedAt() {
+            return reorderedAt;
           },
         },
       });
