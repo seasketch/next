@@ -154,6 +154,7 @@ export default async function handler(payload: OverlayWorkerPayload) {
     },
   });
   try {
+    helpers.log("starting processing");
     // Example of how to use the discriminated union with switch statements
     switch (payload.type) {
       case "total_area": {
@@ -518,6 +519,7 @@ async function subjectsForAnalysis(
   }[];
 }> {
   if (subjectIsGeography(subject)) {
+    helpers.log("initializing geography sources");
     const { intersectionFeature, differenceLayers, differenceSources } =
       await initializeGeographySources(
         subject.clippingLayers,
@@ -527,6 +529,7 @@ async function subjectsForAnalysis(
           pageSize: "5MB",
         },
       );
+    helpers.log("did initialize geography sources");
     return {
       intersectionFeature,
       differenceSources,

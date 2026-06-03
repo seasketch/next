@@ -51,7 +51,7 @@ export type ClippingFn = (
   preparedSketch: PreparedSketch,
   source: string,
   op: ClippingOperation,
-  cql2Query?: Cql2Query
+  cql2Query?: Cql2Query,
 ) => Promise<PolygonClipResult>;
 
 /**
@@ -158,31 +158,31 @@ export interface ClippingLayerOption {
 export async function clipToGeography(
   preparedSketch: PreparedSketch,
   clippingLayers: ClippingLayerOption[],
-  clippingFn: ClippingFn
+  clippingFn: ClippingFn,
 ): Promise<PreparedSketch["feature"] | null> {
   clippingLayers = consolidateClippingLayers(clippingLayers);
   // ensure there's at least one INTERSECT layer
   const intersectLayers = clippingLayers.filter(
-    (layer) => layer.op === "INTERSECT"
+    (layer) => layer.op === "INTERSECT",
   );
   if (intersectLayers.length === 0) {
     throw new Error("At least one INTERSECT layer is required");
   }
   const differenceLayers = clippingLayers.filter(
-    (layer) => layer.op === "DIFFERENCE"
+    (layer) => layer.op === "DIFFERENCE",
   );
 
   // Kick off the clipping operations in parallel, starting with the INTERSECT
   // layers.
   const intersectResultsPromise = Promise.all(
     intersectLayers.map((layer) =>
-      clippingFn(preparedSketch, layer.source, "INTERSECT", layer.cql2Query)
-    )
+      clippingFn(preparedSketch, layer.source, "INTERSECT", layer.cql2Query),
+    ),
   );
   const differenceResultsPromise = Promise.all(
     differenceLayers.map((layer) =>
-      clippingFn(preparedSketch, layer.source, "DIFFERENCE", layer.cql2Query)
-    )
+      clippingFn(preparedSketch, layer.source, "DIFFERENCE", layer.cql2Query),
+    ),
   );
 
   const intersectResults = await intersectResultsPromise;
@@ -200,7 +200,7 @@ export async function clipToGeography(
   // should produce no output.
   if (
     differenceResults.some(
-      (r) => r.op === "DIFFERENCE" && r.changed && r.output === null
+      (r) => r.op === "DIFFERENCE" && r.changed && r.output === null,
     )
   ) {
     return null;
@@ -236,7 +236,7 @@ export async function clipToGeography(
       features[0].geometry.coordinates as polygonClipping.Geom,
       ...filteredFeatures
         .slice(1)
-        .map((f) => f.geometry.coordinates as polygonClipping.Geom)
+        .map((f) => f.geometry.coordinates as polygonClipping.Geom),
     );
     return {
       ...preparedSketch.feature,
@@ -278,7 +278,7 @@ export async function clipToGeography(
  * ]
  */
 function consolidateClippingLayers(
-  clippingLayers: ClippingLayerOption[]
+  clippingLayers: ClippingLayerOption[],
 ): ClippingLayerOption[] {
   let unconsolidated = [...clippingLayers];
   let consolidated: ClippingLayerOption[] = [];
@@ -290,12 +290,12 @@ function consolidateClippingLayers(
       // combine the cql2Query's and remove the layer from unconsolidated.
       // If there is no match, add the layer to consolidated.
       const match = consolidated.find(
-        (l) => l.source === layer.source && l.op === layer.op
+        (l) => l.source === layer.source && l.op === layer.op,
       );
       if (match) {
         match.cql2Query = consolidateCql2Queries(
           match.cql2Query,
-          layer.cql2Query
+          layer.cql2Query,
         );
       } else {
         consolidated.push(layer);
@@ -356,7 +356,7 @@ export async function clipSketchToPolygons(
   preparedSketch: PreparedSketch,
   op: ClippingOperation,
   cql2Query: Cql2Query | undefined,
-  polygonSource: AsyncIterable<Feature<MultiPolygon | Polygon>>
+  polygonSource: AsyncIterable<Feature<MultiPolygon | Polygon>>,
 ): Promise<PolygonClipResult> {
   const polygons = [] as polygonClipping.Polygon[];
   for await (const feature of polygonSource) {
@@ -369,7 +369,9 @@ export async function clipSketchToPolygons(
       polygons.push(feature.geometry.coordinates as polygonClipping.Polygon);
     } else if (feature.geometry.type === "MultiPolygon") {
       polygons.push(
-        ...feature.geometry.coordinates.map((p) => p as polygonClipping.Polygon)
+        ...feature.geometry.coordinates.map(
+          (p) => p as polygonClipping.Polygon,
+        ),
       );
     }
   }
@@ -384,12 +386,12 @@ export async function clipSketchToPolygons(
   if (op === "INTERSECT") {
     output = polygonClipping.intersection(
       preparedSketch.feature.geometry.coordinates as polygonClipping.Geom,
-      polygons
+      polygons,
     );
   } else if (op === "DIFFERENCE") {
     output = polygonClipping.difference(
       preparedSketch.feature.geometry.coordinates as polygonClipping.Geom,
-      polygons
+      polygons,
     );
   } else {
     throw new Error(`Unknown operation: ${op}`);
@@ -439,7 +441,7 @@ export async function clipToGeographies(
   geographiesForClipping: number[],
   existingSketchFragments: SketchFragment[],
   existingSketchId: number | null,
-  clippingFn: ClippingFn
+  clippingFn: ClippingFn,
 ): Promise<{
   clipped: PreparedSketch["feature"] | null;
   fragments: FragmentResult[];
@@ -516,18 +518,18 @@ export async function clipToGeographies(
     }
     primaryGeographyId = biggestGeographyId;
     clippedFragments = fragmentsInClippingGeographies.filter((f) =>
-      f.properties.__geographyIds.includes(biggestGeographyId)
+      f.properties.__geographyIds.includes(biggestGeographyId),
     );
   }
 
   // filter the fragments to only include the primary geography
   fragments = fragments.filter((f) =>
-    f.properties.__geographyIds.includes(primaryGeographyId)
+    f.properties.__geographyIds.includes(primaryGeographyId),
   );
 
   // union the fragments to get the final clipped geometry using polygon-clipping
   const geometry = union(
-    clippedFragments.map((f) => f.geometry.coordinates as polygonClipping.Geom)
+    clippedFragments.map((f) => f.geometry.coordinates as polygonClipping.Geom),
   );
 
   const clipped = {
@@ -580,8 +582,8 @@ export async function clipToGeographies(
               f.properties.__geographyIds.length ===
                 fragment.properties.__geographyIds.length &&
               f.properties.__geographyIds.every((id) =>
-                fragment.properties.__geographyIds.includes(id)
-              )
+                fragment.properties.__geographyIds.includes(id),
+              ),
           );
           if (consolidatedFragment) {
             // add the fragment to the consolidated fragment
@@ -597,7 +599,7 @@ export async function clipToGeographies(
                 ...fragment.properties,
                 __sketchIds: [sketchId],
                 __geographyIds: fragment.properties.__geographyIds.filter(
-                  (id) => id !== existingSketchId
+                  (id) => id !== existingSketchId,
                 ),
               },
               geometry: {
@@ -642,7 +644,7 @@ export async function initializeGeographySources(
   geography: ClippingLayerOption[],
   sourceCache: SourceCache,
   helpers: GuaranteedOverlayWorkerHelpers,
-  sourceOptions?: CreateSourceOptions
+  sourceOptions?: CreateSourceOptions,
 ): Promise<{
   intersectionFeature: Feature<MultiPolygon>;
   intersectionLayers: ClippingLayerOption[];
@@ -665,10 +667,10 @@ export async function initializeGeographySources(
       .catch((error) => {
         console.error(
           "console.error - error initializing geography source",
-          clippingLayer.source
+          clippingLayer.source,
         );
         return { ok: false as const, error };
-      })
+      }),
   );
 
   const intersectionLayers = geography.filter((l) => l.op === "INTERSECT");
@@ -679,7 +681,7 @@ export async function initializeGeographySources(
     intersectionLayers.map(async (l) => {
       const source = await sourceCache.get<Feature<Polygon | MultiPolygon>>(
         l.source,
-        sourceOptions
+        sourceOptions,
       );
       helpers.log("Processing intersection layer");
       for await (const {
@@ -693,7 +695,7 @@ export async function initializeGeographySources(
       }
       helpers.log("Completed intersection layer");
       helpers.log(`Got intersection features: ${intersectionFeatures.length}`);
-    })
+    }),
   );
 
   // If any prefetch failed, propagate the first error now via awaited control flow
@@ -707,38 +709,47 @@ export async function initializeGeographySources(
     }
   }
 
+  helpers.log("initializing difference sources");
+
   const differenceSources = await Promise.all(
     differenceLayers.map(async (layer) => {
       const diffSource = await sourceCache.get<Feature<Polygon | MultiPolygon>>(
         layer.source,
         {
           pageSize: "10MB",
-        }
+        },
       );
       return {
         cql2Query: layer.cql2Query,
         source: diffSource,
         layerId: layer.source,
       };
-    })
+    }),
   );
 
+  helpers.log("did initialize difference sources");
+  helpers.log("initializing intersection feature");
+  const intersectionCoordinates =
+    intersectionFeatures.length === 1
+      ? (intersectionFeatures[0].geometry.coordinates as polygonClipping.Geom)
+      : union(
+          intersectionFeatures.map(
+            (f) => f.geometry.coordinates as polygonClipping.Geom,
+          ),
+        );
+  const intersectionCoordinatesAsMultiPolygon: MultiPolygon["coordinates"] =
+    Array.isArray(intersectionCoordinates[0]?.[0]?.[0])
+      ? (intersectionCoordinates as MultiPolygon["coordinates"])
+      : [intersectionCoordinates as Polygon["coordinates"]];
   const intersectionFeatureGeojson = {
     type: "Feature",
     geometry: {
       type: "MultiPolygon",
-      coordinates:
-        intersectionFeatures.length === 1
-          ? (intersectionFeatures[0].geometry
-              .coordinates as polygonClipping.Geom)
-          : union(
-              intersectionFeatures.map(
-                (f) => f.geometry.coordinates as polygonClipping.Geom
-              )
-            ),
+      coordinates: intersectionCoordinatesAsMultiPolygon,
     },
     properties: {},
   } as Feature<MultiPolygon>;
+  helpers.log("did initialize intersection feature");
 
   return {
     intersectionFeature: intersectionFeatureGeojson,

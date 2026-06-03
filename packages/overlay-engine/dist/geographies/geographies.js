@@ -546,6 +546,7 @@ async function initializeGeographySources(geography, sourceCache, helpers, sourc
             }
         }
     }
+    helpers.log("initializing difference sources");
     const differenceSources = await Promise.all(differenceLayers.map(async (layer) => {
         const diffSource = await sourceCache.get(layer.source, {
             pageSize: "10MB",
@@ -556,17 +557,23 @@ async function initializeGeographySources(geography, sourceCache, helpers, sourc
             layerId: layer.source,
         };
     }));
+    helpers.log("did initialize difference sources");
+    helpers.log("initializing intersection feature");
+    const intersectionCoordinates = intersectionFeatures.length === 1
+        ? intersectionFeatures[0].geometry.coordinates
+        : (0, polygonClipping_1.union)(intersectionFeatures.map((f) => f.geometry.coordinates));
+    const intersectionCoordinatesAsMultiPolygon = Array.isArray(intersectionCoordinates[0]?.[0]?.[0])
+        ? intersectionCoordinates
+        : [intersectionCoordinates];
     const intersectionFeatureGeojson = {
         type: "Feature",
         geometry: {
             type: "MultiPolygon",
-            coordinates: intersectionFeatures.length === 1
-                ? intersectionFeatures[0].geometry
-                    .coordinates
-                : (0, polygonClipping_1.union)(intersectionFeatures.map((f) => f.geometry.coordinates)),
+            coordinates: intersectionCoordinatesAsMultiPolygon,
         },
         properties: {},
     };
+    helpers.log("did initialize intersection feature");
     return {
         intersectionFeature: intersectionFeatureGeojson,
         intersectionLayers,
