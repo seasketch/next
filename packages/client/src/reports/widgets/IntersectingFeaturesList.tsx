@@ -41,8 +41,8 @@ export const IntersectingFeaturesList: ReportWidget<
   const maxDisplayItemsSetting =
     componentSettings.maxDisplayItems ?? DEFAULT_MAX_DISPLAY_ITEMS;
   // Use 0 to represent "all" - show all items
-  const maxDisplayItems =
-    maxDisplayItemsSetting === 0 ? Infinity : maxDisplayItemsSetting;
+  const maxDisplayItems = 1;
+  // maxDisplayItemsSetting === 0 ? Infinity : maxDisplayItemsSetting;
 
   const tableData = useMemo(() => {
     return combinePresenceTableMetrics(metrics, loading);
@@ -122,9 +122,10 @@ export const IntersectingFeaturesList: ReportWidget<
       .sort();
   }, [tableData.values, componentSettings.hiddenColumns]);
 
-  const displayedValues = showAll || printing
-    ? tableData.values
-    : tableData.values.slice(0, maxDisplayItems);
+  const displayedValues =
+    showAll || printing
+      ? tableData.values
+      : tableData.values.slice(0, maxDisplayItems);
   const hasMore =
     maxDisplayItems !== Infinity && tableData.values.length > maxDisplayItems;
 
@@ -178,11 +179,14 @@ export const IntersectingFeaturesList: ReportWidget<
           <div className="w-full text-center pt-2">
             <button
               onClick={() => setShowAll(true)}
-              className="px-3 py-1 rounded-full border border-gray-300 text-sm hover:bg-gray-50"
+              className="px-3 py-1 rounded-full border border-gray-300 text-sm hover:bg-gray-50 inline-flex items-center space-x-2"
             >
-              {t("Show all ({{count}})", {
-                count: tableData.values.length,
-              })}
+              <span>
+                <Trans ns="reports">Show all</Trans>
+              </span>
+              <span className="bg-slate-100 rounded px-1 py-0.5 text-xs text-gray-700">
+                {tableData.values.length}
+              </span>
             </button>
           </div>
         )}
