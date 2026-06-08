@@ -41,8 +41,8 @@ export const IntersectingFeaturesList: ReportWidget<
   const maxDisplayItemsSetting =
     componentSettings.maxDisplayItems ?? DEFAULT_MAX_DISPLAY_ITEMS;
   // Use 0 to represent "all" - show all items
-  const maxDisplayItems = 1;
-  // maxDisplayItemsSetting === 0 ? Infinity : maxDisplayItemsSetting;
+  const maxDisplayItems =
+    maxDisplayItemsSetting === 0 ? Infinity : maxDisplayItemsSetting;
 
   const tableData = useMemo(() => {
     return combinePresenceTableMetrics(metrics, loading);
