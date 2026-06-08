@@ -40,7 +40,7 @@ function isEmptyRasterTileDecodeError(message: string | undefined): boolean {
   return (
     /source image could not be decoded/i.test(message) ||
     // Firefox InvalidStateError raised by createImageBitmap() on empty tiles
-    /no longer usable/i.test(message)
+    /attempt was made to use an object/i.test(message)
   );
 }
 
@@ -330,9 +330,7 @@ export class LayerStateManager<TState extends LayerState> extends EventEmitter {
       if (!raw?.loading) continue;
       const sourceIds = this.getSourceIdsForKey(key);
       if (sourceIds.length === 0) continue;
-      const existingSources = sourceIds.filter((id) =>
-        this.map!.getSource(id)
-      );
+      const existingSources = sourceIds.filter((id) => this.map!.getSource(id));
       if (existingSources.length === 0) continue;
       const allLoaded = existingSources.every((id) =>
         this.map!.isSourceLoaded(id)
