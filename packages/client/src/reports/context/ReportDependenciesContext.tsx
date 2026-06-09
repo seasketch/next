@@ -152,6 +152,7 @@ export default function ReportDependenciesContextProvider({
       sketchId: sketchId!,
     },
     skip: !reportId || !sketchId,
+    fetchPolicy: "cache-and-network",
     notifyOnNetworkStatusChange: true,
   });
 

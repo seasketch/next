@@ -13,12 +13,15 @@ const SketchReportIdFragment = gql`
     id
     sketchClass {
       reportId
+      report {
+        id
+      }
     }
   }
 `;
 
 export type EvictSubjectReportCachesOpts = {
-  /** When the sketch is not in the cache or lacks `sketchClass.reportId` on the stored shape */
+  /** When the sketch is not in cache or lacks report identity on the stored shape */
   reportId?: number | null;
   /**
    * When evicting many subjects in a loop, pass true and call `cache.gc()` once
@@ -110,12 +113,17 @@ export function evictSubjectReportCachesForSketchId(
     if (sketchRef) {
       try {
         const data = cache.readFragment<{
-          sketchClass?: { reportId?: number | null } | null;
+          sketchClass?:
+            | {
+                reportId?: number | null;
+                report?: { id?: number | null } | null;
+              }
+            | null;
         }>({
           id: sketchRef,
           fragment: SketchReportIdFragment,
         });
-        reportId = data?.sketchClass?.reportId ?? null;
+        reportId = data?.sketchClass?.reportId ?? data?.sketchClass?.report?.id ?? null;
       } catch {
         // Sketch not in cache or fragment fields missing
       }
