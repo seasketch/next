@@ -1480,7 +1480,7 @@ async function getBoundsForClippingLayer(
     const features = await response.json();
     if (!features.length) {
       throw new Error(
-        `No features found for CQL2 query ${JSON.stringify(cql2_query)}`,
+        `No features found for CQL2 query ${JSON.stringify(cql2_query)}. ${overlayUrl}`,
       );
     }
     if (features.length > 1) {
