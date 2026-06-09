@@ -7,6 +7,7 @@ interface RadioItem<T> {
   label: string;
   description?: ReactNode;
   children?: React.ReactNode;
+  disabled?: boolean;
 }
 
 interface RadioGroupProps<T> {
@@ -46,17 +47,20 @@ export default function RadioGroup<T>(props: RadioGroupProps<T>) {
               props.value === item.value
                 ? "bg-cool-gray-50 border-cool-gray-300 z-10"
                 : "border-gray-200"
-            }`}
+            } ${item.disabled ? "opacity-60" : ""}`}
           >
             <div className="flex items-center h-5">
               <input
                 id={`${props.legend || ""}-item-${item.value}`}
                 name={`${props.legend || ""}-item-${item.value}`}
                 type="radio"
-                className="focus:ring-blue-300 h-4 w-4 text-primary-500 cursor-pointer border-gray-300"
+                className={`focus:ring-blue-300 h-4 w-4 text-primary-500 border-gray-300 ${
+                  item.disabled ? "cursor-not-allowed" : "cursor-pointer"
+                }`}
                 checked={props.value === item.value}
+                disabled={item.disabled}
                 onChange={() => {
-                  if (props.onChange) {
+                  if (props.onChange && !item.disabled) {
                     props.onChange(item.value);
                   }
                 }}
@@ -64,7 +68,9 @@ export default function RadioGroup<T>(props: RadioGroupProps<T>) {
             </div>
             <label
               htmlFor={`${props.legend || ""}-item-${item.value}`}
-              className="ml-3 flex flex-col cursor-pointer"
+              className={`ml-3 flex flex-col ${
+                item.disabled ? "cursor-not-allowed" : "cursor-pointer"
+              }`}
             >
               {/* <!-- On: "text-indigo-900", Off: "text-gray-900" --> */}
               <span className="block text-sm font-medium">{item.label}</span>

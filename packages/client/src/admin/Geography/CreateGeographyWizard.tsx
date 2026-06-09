@@ -54,6 +54,11 @@ type TemplateOption = {
 export const MARINE_REGIONS_JOIN_COLUMN = "MRGID_EEZ";
 export const TERRITORIAL_SEAS_JOIN_COLUMN = "MRGID_EEZ";
 
+type TerritorialSeaAvailabilityState = {
+  loading: boolean;
+  missingSelectionIds: number[];
+};
+
 function GeographyTypeChoice({
   label,
   description,
@@ -287,6 +292,83 @@ export default function CreateGeographyWizard({
 
   const featurePicker =
     state.picker === "territorial_sea" ? territorialSeaPicker : eezPicker;
+  const [territorialSeaAvailability, setTerritorialSeaAvailability] =
+    useState<TerritorialSeaAvailabilityState>({
+      loading: false,
+      missingSelectionIds: [],
+    });
+
+  const fetchMissingTerritorialSeaSelectionIds = async (
+    selectedEezIds: number[]
+  ) => {
+    if (!selectedEezIds.length || !territorialSeaLayer.vectorObjectKey) {
+      return [];
+    }
+
+    const cql2Query =
+      selectedEezIds.length === 1
+        ? {
+            op: "=",
+            args: [
+              { property: TERRITORIAL_SEAS_JOIN_COLUMN },
+              selectedEezIds[0],
+            ],
+          }
+        : {
+            op: "in",
+            args: [{ property: TERRITORIAL_SEAS_JOIN_COLUMN }, selectedEezIds],
+          };
+    const queryParams = new URLSearchParams();
+    queryParams.append("dataset", territorialSeaLayer.vectorObjectKey);
+    queryParams.append("include", TERRITORIAL_SEAS_JOIN_COLUMN);
+    queryParams.append("cql2JSONQuery", JSON.stringify(cql2Query));
+    const response = await fetch(
+      `https://overlay.seasketch.org/properties?${queryParams.toString()}`
+    );
+    if (!response.ok) {
+      throw new Error(
+        `Failed to verify territorial seas: ${response.statusText}`
+      );
+    }
+    const features = await response.json();
+    const idsWithTerritorialSeas = new Set(
+      features
+        .map((feature: any) => Number(feature[TERRITORIAL_SEAS_JOIN_COLUMN]))
+        .filter(Number.isFinite)
+    );
+    return selectedEezIds.filter((eezId) => !idsWithTerritorialSeas.has(eezId));
+  };
+
+  const handleFeaturePickerSubmit = async () => {
+    if (state.template === "MARINE_REGIONS_EEZ_LAND_JOINED") {
+      setTerritorialSeaAvailability({
+        loading: true,
+        missingSelectionIds: [],
+      });
+      try {
+        const missingSelectionIds =
+          await fetchMissingTerritorialSeaSelectionIds(
+            eezPicker.state.selection
+          );
+        setTerritorialSeaAvailability({
+          loading: false,
+          missingSelectionIds,
+        });
+      } catch (error: any) {
+        console.error("Error checking territorial sea availability:", error);
+        setTerritorialSeaAvailability({
+          loading: false,
+          // Fail-safe: if the availability check fails, do not block options.
+          missingSelectionIds: [],
+        });
+      }
+    }
+
+    setState((prev) => ({
+      ...prev,
+      step: "config",
+    }));
+  };
 
   useEffect(() => {
     if (state.step === "featurePicker") {
@@ -468,15 +550,12 @@ export default function CreateGeographyWizard({
               }
             }}
             onRequestClose={onRequestClose}
-            onRequestSubmit={() => {
-              setState((prev) => ({
-                ...prev,
-                step: "config",
-              }));
-            }}
+            onRequestSubmit={handleFeaturePickerSubmit}
             loading={featurePicker.state.loading}
             error={featurePicker.state.error}
-            saving={featurePicker.state.saving}
+            saving={
+              featurePicker.state.saving || territorialSeaAvailability.loading
+            }
             onRequestToggleSidebar={onRequestToggleSidebar}
           />
         </>
@@ -518,15 +597,32 @@ export default function CreateGeographyWizard({
                 title={t("Marine Regions Boundaries")}
                 subtitle={t("EEZ")}
                 featurePicker={featurePicker}
+                territorialSeaAvailability={territorialSeaAvailability}
                 onCreateClick={(config) => {
                   if (featurePicker.state.selection.length === 0) {
                     throw new Error(
                       "No EEZs selected. Please select at least one EEZ."
                     );
                   }
+                  const selectedFeatures = featurePicker.getSelectedFeatures();
+                  const supportedTerritorialSeaFeatures =
+                    selectedFeatures.filter(
+                      (feature) =>
+                        !territorialSeaAvailability.missingSelectionIds.includes(
+                          feature.value
+                        )
+                    );
+                  const normalizedTerritorialSeaHandling =
+                    supportedTerritorialSeaFeatures.length === 0
+                      ? "none"
+                      : config.territorialSeaHandling;
                   const input: CreateGeographyArgs[] = [];
                   if (config.multipleFeatureHandling === "separate") {
-                    for (const eez of featurePicker.getSelectedFeatures()) {
+                    for (const eez of selectedFeatures) {
+                      const hasTerritorialSea =
+                        !territorialSeaAvailability.missingSelectionIds.includes(
+                          eez.value
+                        );
                       // Add EEZ geography
                       input.push(
                         buildCreateGeographyInputForEEZ(
@@ -539,7 +635,10 @@ export default function CreateGeographyWizard({
                       );
 
                       // Add Territorial Sea geographies based on selection
-                      if (config.territorialSeaHandling === "split") {
+                      if (
+                        normalizedTerritorialSeaHandling === "split" &&
+                        hasTerritorialSea
+                      ) {
                         // Add Territorial Sea
                         input.push(
                           buildCreateGeographyInputForTerritorialSeas(
@@ -560,7 +659,10 @@ export default function CreateGeographyWizard({
                             "Offshore: " + eez.label || eez.value.toString()
                           )
                         );
-                      } else if (config.territorialSeaHandling === "single") {
+                      } else if (
+                        normalizedTerritorialSeaHandling === "single" &&
+                        hasTerritorialSea
+                      ) {
                         // Add only Territorial Sea
                         input.push(
                           buildCreateGeographyInputForTerritorialSeas(
@@ -582,34 +684,29 @@ export default function CreateGeographyWizard({
                         featurePicker.state.selection,
                         featurePicker.state.selection.length > 1
                           ? "EEZ: " +
-                              featurePicker
-                                .getSelectedFeatures()
-                                .map((c) => c.label)
-                                .join(", ")
-                          : "EEZ: " +
-                              featurePicker.getSelectedFeatures()[0].label!,
+                              selectedFeatures.map((c) => c.label).join(", ")
+                          : "EEZ: " + selectedFeatures[0].label!,
                         config.eraseLand,
                         landLayerId
                       )
                     );
 
                     // Add Territorial Sea geographies based on selection
-                    if (config.territorialSeaHandling === "split") {
+                    if (normalizedTerritorialSeaHandling === "split") {
                       // Add Territorial Sea
                       input.push(
                         buildCreateGeographyInputForTerritorialSeas(
                           territorialSeaLayer.id,
-                          featurePicker
-                            .getSelectedFeatures()
-                            .map((c) => c.data[TERRITORIAL_SEAS_JOIN_COLUMN]),
+                          supportedTerritorialSeaFeatures.map(
+                            (c) => c.data[TERRITORIAL_SEAS_JOIN_COLUMN]
+                          ),
                           featurePicker.state.selection.length > 1
                             ? "Territorial Sea: " +
-                                featurePicker
-                                  .getSelectedFeatures()
+                                supportedTerritorialSeaFeatures
                                   .map((c) => c.label)
                                   .join(", ")
                             : "Territorial Sea: " +
-                                featurePicker.getSelectedFeatures()[0].label!,
+                                supportedTerritorialSeaFeatures[0].label!,
                           config.eraseLand,
                           landLayerId
                         )
@@ -619,30 +716,28 @@ export default function CreateGeographyWizard({
                         buildCreateGeographyInputForOffshore(
                           territorialSeaLayer.id,
                           eezLayer.id,
-                          featurePicker.getSelectedFeatures(),
+                          supportedTerritorialSeaFeatures,
                           "Offshore: " +
-                            featurePicker
-                              .getSelectedFeatures()
+                            supportedTerritorialSeaFeatures
                               .map((c) => c.label)
                               .join(", ")
                         )
                       );
-                    } else if (config.territorialSeaHandling === "single") {
+                    } else if (normalizedTerritorialSeaHandling === "single") {
                       // Add only Territorial Sea
                       input.push(
                         buildCreateGeographyInputForTerritorialSeas(
                           territorialSeaLayer.id,
-                          featurePicker
-                            .getSelectedFeatures()
-                            .map((c) => c.data[TERRITORIAL_SEAS_JOIN_COLUMN]),
+                          supportedTerritorialSeaFeatures.map(
+                            (c) => c.data[TERRITORIAL_SEAS_JOIN_COLUMN]
+                          ),
                           featurePicker.state.selection.length > 1
                             ? "Territorial Sea: " +
-                                featurePicker
-                                  .getSelectedFeatures()
+                                supportedTerritorialSeaFeatures
                                   .map((c) => c.label)
                                   .join(", ")
                             : "Territorial Sea: " +
-                                featurePicker.getSelectedFeatures()[0].label!,
+                                supportedTerritorialSeaFeatures[0].label!,
                           config.eraseLand,
                           landLayerId
                         )
@@ -670,6 +765,7 @@ type FeatureConfigProps = {
   title: string;
   subtitle: string;
   featurePicker: ReturnType<typeof useFeaturePicker>;
+  territorialSeaAvailability: TerritorialSeaAvailabilityState;
   onCreateClick: (config: {
     eraseLand: boolean;
     multipleFeatureHandling: "separate" | "combine";
@@ -692,6 +788,7 @@ function FeatureConfig({
   title,
   subtitle,
   featurePicker,
+  territorialSeaAvailability,
   onCreateClick,
   loading,
   onCancel,
@@ -710,6 +807,23 @@ function FeatureConfig({
   const updateConfig = (updates: Partial<FeatureConfigState>) => {
     setConfig((prev) => ({ ...prev, ...updates }));
   };
+  const hasMissingTerritorialSea =
+    territorialSeaAvailability.missingSelectionIds.length > 0;
+  const supportedTerritorialSeaCount = Math.max(
+    0,
+    featurePicker.state.selection.length -
+      territorialSeaAvailability.missingSelectionIds.length
+  );
+  const hasAnyTerritorialSeaSupport = supportedTerritorialSeaCount > 0;
+
+  useEffect(() => {
+    if (
+      !hasAnyTerritorialSeaSupport &&
+      config.territorialSeaHandling !== "none"
+    ) {
+      setConfig((prev) => ({ ...prev, territorialSeaHandling: "none" }));
+    }
+  }, [hasAnyTerritorialSeaSupport, config.territorialSeaHandling]);
 
   return (
     <div className="w-144 bg-white">
@@ -775,18 +889,36 @@ function FeatureConfig({
           />
           <div className="space-y-2">
             <h5 className="font-medium">{t("Territorial Seas")}</h5>
+            {territorialSeaAvailability.loading && (
+              <p className="text-sm text-gray-500">
+                {t("Checking territorial sea coverage for selected EEZs...")}
+              </p>
+            )}
+            {hasMissingTerritorialSea && (
+              <p className="text-sm text-gray-600">
+                {featurePicker.state.selection.length > 1
+                  ? t(
+                      "The selected EEZs do not include territorial seas, so related options are disabled."
+                    )
+                  : t(
+                      "The selected EEZ does not include territorial seas, so related options are disabled."
+                    )}
+              </p>
+            )}
             <RadioGroup
               items={[
                 {
                   label: t("Create Nearshore and Offshore Geographies"),
-                  value: "split",
+                  value: "split" as const,
+                  disabled: !hasAnyTerritorialSeaSupport,
                   description: t(
                     "Geographies will be created to represent the 0-12nm and 12-200nm areas."
                   ),
                 },
                 {
                   label: t("Create a Nearshore Territorial Sea Geography"),
-                  value: "single",
+                  value: "single" as const,
+                  disabled: !hasAnyTerritorialSeaSupport,
                   description: t(
                     "Create a single Geography representing the 12nm Territorial Sea boundary."
                   ),
