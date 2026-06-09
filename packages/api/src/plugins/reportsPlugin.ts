@@ -1019,8 +1019,30 @@ export async function startMetricCalculationsForSketch(
       select
         sc.id,
         sc.project_id,
-        get_effective_report_for_sketch_class(sc.id, $2::boolean) as effective_report_id
+        case
+          when $2::boolean then coalesce(primary_assignment.draft_report_id, sc.draft_report_id)
+          else coalesce(
+            (
+              select r.id
+              from reports r
+              where r.draft_id = coalesce(primary_assignment.draft_report_id, sc.draft_report_id)
+                and r.version > 0
+              order by r.version desc, r.created_at desc
+              limit 1
+            ),
+            sc.report_id,
+            coalesce(primary_assignment.draft_report_id, sc.draft_report_id)
+          )
+        end as effective_report_id
       from sketch_classes sc
+      left join lateral (
+        select scr.draft_report_id
+        from sketch_class_reports scr
+        where scr.sketch_class_id = sc.id
+          and scr.is_primary = true
+        order by scr.updated_at desc, scr.created_at desc
+        limit 1
+      ) as primary_assignment on true
       where sc.id = (select sketch_class_id from sketches where id = $1)
     `,
     [sketchId, draft === true],
