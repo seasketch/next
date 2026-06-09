@@ -12,6 +12,7 @@ import {
   mergeTouchingFragments,
   clipSketchToPolygons,
   clipToGeographies,
+  unionAtAntimeridian,
 } from "overlay-engine";
 import { Pool, PoolClient } from "pg";
 import bbox from "@turf/bbox";
@@ -1428,7 +1429,7 @@ export async function createOrUpdateSketch({
       [
         name,
         JSON.stringify(userGeom.geometry),
-        JSON.stringify(clipped.geometry),
+        JSON.stringify(unionAtAntimeridian(clipped).geometry),
         properties,
         sketchId,
       ],

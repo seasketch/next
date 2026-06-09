@@ -32,16 +32,22 @@ var __importStar = (this && this.__importStar) || (function () {
         return result;
     };
 })();
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.unionAtAntimeridian = unionAtAntimeridian;
 exports.isPolygon = isPolygon;
 const polygonClipping = __importStar(require("polygon-clipping"));
+const truncate_1 = __importDefault(require("@turf/truncate"));
 /**
  * Accepts a Polygon or MultiPolygon geojson feature and returns a unioned
  * feature where components meet at the antimeridian. Not a general-purpose
  * union, as it only works for polygons that meet at the antimeridian. In
  * order to render properly on a webmap, coordinates crossing the
- * antimeridian may end up greater or less than 180 or -180.
+ * antimeridian may end up greater or less than 180 or -180. Truncates
+ * coordinates to 6 decimal places so that antimeridian seams can be accurately
+ * detected.
  *
  * If provided a Polygon, this will be a no-op.
  *
@@ -52,6 +58,11 @@ function unionAtAntimeridian(feature) {
     if (isPolygon(feature)) {
         return feature;
     }
+    feature = (0, truncate_1.default)(feature, {
+        precision: 6,
+        coordinates: 2,
+        mutate: true,
+    });
     const multiPolygon = feature.geometry;
     // Normalize coordinates to 0-360 space
     const normalizedCoordinates = multiPolygon.coordinates.map((polygon) => polygon.map((ring) => 

@@ -5,7 +5,9 @@ import { MultiPolygon, Polygon } from "geojson";
  * feature where components meet at the antimeridian. Not a general-purpose
  * union, as it only works for polygons that meet at the antimeridian. In
  * order to render properly on a webmap, coordinates crossing the
- * antimeridian may end up greater or less than 180 or -180.
+ * antimeridian may end up greater or less than 180 or -180. Truncates
+ * coordinates to 6 decimal places so that antimeridian seams can be accurately
+ * detected.
  *
  * If provided a Polygon, this will be a no-op.
  *
