@@ -307,21 +307,21 @@ function Panel({
       } sm:p-0 ${className}`}
       onAnimationComplete={() => {
         if (initialFocus && initialFocus.current) {
-          initialFocus.current.focus();
+          initialFocus.current.focus({ preventScroll: true });
         } else if (myRef.current && "querySelectorAll" in myRef.current) {
           const dom = myRef.current as HTMLElement;
           const inputs = dom.querySelectorAll("input");
           if (inputs && inputs.length) {
             for (const input of inputs) {
               if (input.tabIndex !== -1) {
-                input.focus();
+                input.focus({ preventScroll: true });
                 return;
               }
             }
           }
           const buttons = dom.querySelectorAll("button");
           if (buttons && buttons.length) {
-            buttons[0].focus();
+            buttons[0].focus({ preventScroll: true });
             return;
           }
         }
