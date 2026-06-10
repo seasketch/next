@@ -2,6 +2,7 @@ import { gql, makeExtendSchemaPlugin } from "graphile-utils";
 import { PoolClient } from "pg";
 import * as cache from "../cache";
 import { createSource } from "fgb-source";
+import { startGeographySizeMetricCalculations } from "./reportsPlugin";
 
 type ClippingLayerArgs = {
   templateId?: string | null;
@@ -758,6 +759,11 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
             const projectId = await idForSlug(inputs[0].slug, pgClient);
             await deleteProjectFragments(projectId, pgClient);
             await enqueueProjectFragmentRegeneration(projectId, pgClient);
+            await startGeographySizeMetricCalculations(
+              pgClient,
+              projectId,
+              createdGeographyIds,
+            );
           }
           context.createdGeographyIds = createdGeographyIds;
           return {};
@@ -814,7 +820,16 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
               }),
             );
 
-            await createGeographiesForProject(pgClient, geographyInputs);
+            const createdGeographyIds = await createGeographiesForProject(
+              pgClient,
+              geographyInputs,
+            );
+
+            await startGeographySizeMetricCalculations(
+              pgClient,
+              Number(project.id),
+              createdGeographyIds,
+            );
 
             await pgClient.query(
               `select public.nest_new_project_geography_draft_toc_under_folder($1::int)`,

@@ -1073,6 +1073,43 @@ export async function startMetricCalculationsForSketch(
   );
 }
 
+/**
+ * Pre-warms geography "size" (total_area) metrics for newly created
+ * geographies so they are already calculated (or at least in progress) by the
+ * time a user first opens a report. Geography size is the slowest metric in
+ * the default report, since it requires clipping & measuring the geography's
+ * layers in the overlay worker.
+ *
+ * The dependency hash must match what report resolvers compute for the
+ * `{ type: "total_area", subjectType: "geographies" }` dependency extracted
+ * from report card bodies (e.g. the default Size card). Since that dependency
+ * has no stableId or parameters, the hash is a constant and the
+ * resolve_spatial_metrics_batch cache lookup will hit these pre-created rows.
+ */
+export async function startGeographySizeMetricCalculations(
+  pool: Pool | PoolClient,
+  projectId: number,
+  geographyIds: number[],
+) {
+  if (geographyIds.length === 0) {
+    return;
+  }
+  const dependencyHash = hashMetricDependency(
+    { type: "total_area", subjectType: "geographies" },
+    {},
+  );
+  await getOrCreateSpatialMetricsBatch(
+    pool,
+    geographyIds.map((geographyId) => ({
+      subjectGeographyId: geographyId,
+      type: "total_area",
+      parameters: {},
+      projectId,
+      dependencyHash,
+    })),
+  );
+}
+
 export default ReportsPlugin;
 
 /**
