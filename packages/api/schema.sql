@@ -984,10 +984,9 @@ CREATE TYPE public.spatial_metric_type AS ENUM (
     'presence_table',
     'contextualized_mean',
     'overlay_area',
-    'column_stats',
     'column_values',
-    'raster_stats',
-    'distance_to_shore'
+    'distance_to_shore',
+    'raster_stats'
 );
 
 
@@ -1672,8 +1671,8 @@ CREATE TABLE public.sketch_classes (
     filter_api_version integer DEFAULT 1 NOT NULL,
     filter_api_server_location text,
     is_geography_clipping_enabled boolean DEFAULT false NOT NULL,
-    report_id integer,
     draft_report_id integer,
+    report_id integer,
     preview_new_reports boolean DEFAULT false NOT NULL,
     CONSTRAINT sketch_classes_geoprocessing_client_url_check CHECK ((geoprocessing_client_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
     CONSTRAINT sketch_classes_geoprocessing_project_url_check CHECK ((geoprocessing_project_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
@@ -3738,6 +3737,7 @@ $$;
 
 CREATE FUNCTION public.generate_export_id(id integer, export_id text, body jsonb) RETURNS text
     LANGUAGE plpgsql IMMUTABLE
+    SET search_path TO 'public', 'pg_catalog'
     AS $$
     declare
       collected_text text;
@@ -3760,6 +3760,7 @@ CREATE FUNCTION public.generate_export_id(id integer, export_id text, body jsonb
 
 CREATE FUNCTION public.generate_label(id integer, body jsonb) RETURNS text
     LANGUAGE plpgsql IMMUTABLE
+    SET search_path TO 'public', 'pg_catalog'
     AS $$
     declare
       collected_text text;
@@ -4238,9 +4239,9 @@ CREATE FUNCTION public.before_insert_or_update_data_layers_trigger() RETURNS tri
       if new.source_layer is null then
         raise 'Layers with "vector" data sources must specify a source_layer';
       end if;
-    elsif source_type != 'seasketch-mvt' and source_type != 'seasketch-raster' then
+    elsif source_type != 'seasketch-mvt' and source_type != 'seasketch-raster' and source_type != 'seasketch-vector' then
       if new.source_layer is not null then
-        raise 'Only Layers with data_sources of type "vector", "seasketch-mvt", or "seasketch-raster" should specify a source_layer';
+        raise 'Only Layers with data_sources of type "vector", "seasketch-mvt", or "seasketch-raster" should specify a source_layer. Type was %', (source_type);
       end if;
     end if;
     if (source_type = 'vector' or source_type = 'geojson' or source_type = 'seasketch-vector' or source_type = 'seasketch-mvt') then
@@ -5024,83 +5025,6 @@ COMMENT ON FUNCTION public.bookmark_data(id text) IS '@omit';
 
 
 --
--- Name: build_layer_interactivity_acl_payload(integer, integer, integer, text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.build_layer_interactivity_acl_payload(p_acl_id integer, p_exclude_group_id integer DEFAULT NULL::integer, p_include_group_id integer DEFAULT NULL::integer, p_type_override text DEFAULT NULL::text, OUT acl_summary jsonb, OUT acl_blob jsonb) RETURNS record
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public', 'pg_temp'
-    AS $$
-declare
-  v_acl_type access_control_list_type;
-  v_project_id int;
-  v_eff text;
-begin
-  select acl.type, acl.project_id
-  into v_acl_type, v_project_id
-  from access_control_lists acl
-  where acl.id = p_acl_id;
-
-  if not found then
-    acl_summary := null;
-    acl_blob := null;
-    return;
-  end if;
-
-  v_eff := coalesce(p_type_override, v_acl_type::text);
-
-  if v_eff in ('public', 'admins_only') then
-    acl_summary := jsonb_build_object('type', v_eff, 'groups', '[]'::jsonb);
-    acl_blob := jsonb_build_object('type', v_eff, 'groups', '[]'::jsonb);
-    return;
-  end if;
-
-  with members as (
-    select distinct s.id, s.name
-    from (
-      select pg.id, pg.name
-      from access_control_list_groups aclg
-      join project_groups pg on pg.id = aclg.group_id and pg.project_id = v_project_id
-      where aclg.access_control_list_id = p_acl_id
-        and (p_exclude_group_id is null or aclg.group_id is distinct from p_exclude_group_id)
-      union
-      select pg.id, pg.name
-      from project_groups pg
-      where p_include_group_id is not null
-        and pg.id = p_include_group_id
-        and pg.project_id = v_project_id
-    ) s
-  )
-  select
-    jsonb_build_object(
-      'type', 'group',
-      'groups', coalesce(
-        (select to_jsonb(array_agg(m.name order by m.name)) from members m),
-        '[]'::jsonb
-      )
-    ),
-    jsonb_build_object(
-      'type', 'group',
-      'groups', coalesce(
-        (select jsonb_agg(jsonb_build_object('id', m.id, 'name', m.name) order by m.id) from members m),
-        '[]'::jsonb
-      )
-    )
-  into acl_summary, acl_blob;
-
-  return;
-end;
-$$;
-
-
---
--- Name: FUNCTION build_layer_interactivity_acl_payload(p_acl_id integer, p_exclude_group_id integer, p_include_group_id integer, p_type_override text, OUT acl_summary jsonb, OUT acl_blob jsonb); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.build_layer_interactivity_acl_payload(p_acl_id integer, p_exclude_group_id integer, p_include_group_id integer, p_type_override text, OUT acl_summary jsonb, OUT acl_blob jsonb) IS 'Builds AclSummary JSON (type + group names) and blob JSON (type + {id,name}[]) for one ACL; exclude/include group ids simulate membership before INSERT/DELETE.';
-
-
---
 -- Name: bump_parent_collection_updated_at(integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -5228,7 +5152,7 @@ $$;
 -- Name: FUNCTION changelog_row_net_zero_changes(p_field_group public.change_log_field_group, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.changelog_row_net_zero_changes(p_field_group public.change_log_field_group, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb) IS 'Stored generated expression for change_logs.net_zero_changes (blob-backed rows compare summaries and blobs; layer:attribution normalized summary compare; else raw summaries).';
+COMMENT ON FUNCTION public.changelog_row_net_zero_changes(p_field_group public.change_log_field_group, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb) IS 'Stored generated expression for change_logs.net_zero_changes (blob compare; layer:attribution normalized summary compare; else raw summaries).';
 
 
 --
@@ -6276,6 +6200,7 @@ COMMENT ON FUNCTION public.copy_appearance(form_element_id integer, copy_from_id
 
 CREATE FUNCTION public.toc_to_tsvector(lang text, title text, metadata jsonb, translated_props jsonb) RETURNS tsvector
     LANGUAGE plpgsql IMMUTABLE
+    SET search_path TO 'public', 'pg_catalog'
     AS $$
     DECLARE
       title_translated_prop_is_filled_in boolean;
@@ -6547,6 +6472,7 @@ CREATE FUNCTION public.copy_data_library_template_item(template_id text, project
 
 CREATE FUNCTION public.create_bbox(geom public.geometry, sketch_id integer) RETURNS real[]
     LANGUAGE plpgsql IMMUTABLE SECURITY DEFINER
+    SET search_path TO 'public', 'pg_catalog'
     AS $$
     declare
       child_ids int[];
@@ -7386,6 +7312,7 @@ $$;
 
 CREATE FUNCTION public.create_bbox(geom public.geometry) RETURNS real[]
     LANGUAGE sql IMMUTABLE SECURITY DEFINER
+    SET search_path TO 'public', 'pg_catalog'
     AS $$
     select array[st_xmin(geom)::real, st_ymin(geom)::real, st_xmax(geom)::real, st_ymax(geom)::real];
   $$;
@@ -11029,39 +10956,6 @@ $$;
 
 
 --
--- Name: enforce_resolvable_layer_comment_parent(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.enforce_resolvable_layer_comment_parent() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-declare
-  v_parent record;
-begin
-  if new.parent_comment_id is null then
-    return new;
-  end if;
-
-  select id, table_of_contents_item_id, project_id
-    into v_parent
-  from resolvable_layer_comment
-  where id = new.parent_comment_id;
-
-  if v_parent.id is null then
-    raise exception 'Parent comment not found';
-  end if;
-
-  if v_parent.table_of_contents_item_id is distinct from new.table_of_contents_item_id
-     or v_parent.project_id is distinct from new.project_id then
-    raise exception 'Parent comment must belong to the same layer';
-  end if;
-
-  return new;
-end;
-$$;
-
-
---
 -- Name: enqueue_metric_calculations_for_sketch(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -11851,15 +11745,8 @@ $$;
 CREATE FUNCTION public.geography_clipping_layers_object_key(g public.geography_clipping_layers) RETURNS text
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-  select
-    regexp_replace(
-    regexp_replace(remote, '^[^:]+://[^/]+/', ''), -- Remove protocol and host
-    '^/', '' -- Remove leading slash if present
-    )
-  from data_upload_outputs
-  where type = 'FlatGeobuf'
-    and data_source_id = (
-    select data_source_id from data_layers where id = g.data_layer_id
+    select remote from data_upload_outputs where type = 'FlatGeobuf' and data_source_id = (
+      select data_source_id from data_layers where id = g.data_layer_id
     );
   $$;
 
@@ -12784,57 +12671,6 @@ CREATE FUNCTION public.get_public_jwk(id uuid) RETURNS text
 --
 
 COMMENT ON FUNCTION public.get_public_jwk(id uuid) IS '@omit';
-
-
---
--- Name: get_published_card_id_from_draft(integer); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.get_published_card_id_from_draft(draft_report_card_id integer) RETURNS integer
-    LANGUAGE plpgsql SECURITY DEFINER
-    AS $$
-DECLARE
-  draft_tab_id integer;
-  draft_tab_position integer;
-  draft_card_position integer;
-  sketch_class_id integer;
-  published_report_id integer;
-  published_tab_id integer;
-  published_card_id integer;
-BEGIN
-  -- Gather draft card/tab positions and sketch_class
-  SELECT rt.id, rt.position, rc.position, r.sketch_class_id
-  INTO draft_tab_id, draft_tab_position, draft_card_position, sketch_class_id
-  FROM public.report_cards rc
-  JOIN public.report_tabs rt ON rt.id = rc.report_tab_id
-  JOIN public.reports r ON r.id = rt.report_id
-  WHERE rc.id = draft_report_card_id;
-
-  -- Determine the published report id
-  SELECT sc.report_id
-  INTO published_report_id
-  FROM public.sketch_classes sc
-  WHERE sc.id = sketch_class_id;
-
-  IF published_report_id IS NULL THEN
-    RETURN NULL;
-  END IF;
-
-  -- Match the tab by position in the published report
-  SELECT id
-  INTO published_tab_id
-  FROM public.report_tabs
-  WHERE report_id = published_report_id AND position = draft_tab_position;
-
-  -- Match the card by position within the matched tab
-  SELECT id
-  INTO published_card_id
-  FROM public.report_cards
-  WHERE report_tab_id = published_tab_id AND position = draft_card_position;
-
-  RETURN published_card_id;
-END
-$$;
 
 
 --
@@ -15562,21 +15398,21 @@ CREATE FUNCTION public.projects_admin_count(p public.projects) RETURNS integer
 CREATE FUNCTION public.projects_admins(p public.projects) RETURNS SETOF public.users
     LANGUAGE sql STABLE
     AS $$
-  select
-    users.*
-  from
-    project_participants
-  inner join
-    users
-  on
-    project_participants.user_id = users.id
-  where
-    project_participants.is_admin = true and
-    (
-      project_participants.approved = true or
-      exists(select 1 from projects where id = project_participants.project_id and projects.access_control = 'public')
-    )
-  ;
+    select 
+      users.* 
+    from 
+      project_participants
+    inner join
+      users
+    on
+      project_participants.user_id = users.id
+    where
+      project_participants.is_admin = true and
+      (
+        project_participants.approved = true or
+        exists(select 1 from projects where id = project_participants.project_id and projects.access_control = 'public')
+      )
+    ;
   $$;
 
 
@@ -16994,68 +16830,19 @@ CREATE TABLE public.project_visitor_metrics (
 --
 
 CREATE FUNCTION public.projects_visitor_metrics(p public.projects, period public.activity_stats_period) RETURNS SETOF public.project_visitor_metrics
-    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-DECLARE
-  lookback interval;
-BEGIN
-  IF NOT session_is_admin(p.id) THEN
-    RETURN;
-  END IF;
-
-  IF period IN ('6-months', '1-year') THEN
-    lookback := CASE period
-      WHEN '6-months' THEN '6 months'::interval
-      ELSE '1 year'::interval
-    END;
-
-    RETURN QUERY SELECT
-      p.id,
-      '30 days'::interval,
-      now()::timestamptz,
-      date_part('month', timezone('UTC', now()))::int,
-      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
-       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
-             FROM public.project_visitor_metrics pvm, jsonb_array_elements(pvm.top_referrers) elem
-             WHERE pvm.interval = '30 days'::interval AND pvm.project_id = p.id AND pvm.timestamp >= now() - lookback
-             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
-      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
-       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
-             FROM public.project_visitor_metrics pvm, jsonb_array_elements(pvm.top_operating_systems) elem
-             WHERE pvm.interval = '30 days'::interval AND pvm.project_id = p.id AND pvm.timestamp >= now() - lookback
-             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
-      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
-       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
-             FROM public.project_visitor_metrics pvm, jsonb_array_elements(pvm.top_browsers) elem
-             WHERE pvm.interval = '30 days'::interval AND pvm.project_id = p.id AND pvm.timestamp >= now() - lookback
-             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
-      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
-       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
-             FROM public.project_visitor_metrics pvm, jsonb_array_elements(pvm.top_device_types) elem
-             WHERE pvm.interval = '30 days'::interval AND pvm.project_id = p.id AND pvm.timestamp >= now() - lookback
-             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
-      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
-       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
-             FROM public.project_visitor_metrics pvm, jsonb_array_elements(pvm.top_countries) elem
-             WHERE pvm.interval = '30 days'::interval AND pvm.project_id = p.id AND pvm.timestamp >= now() - lookback
-             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s);
-  ELSE
-    RETURN QUERY
-    SELECT * FROM project_visitor_metrics
-    WHERE session_is_admin(p.id)
-      AND project_id = p.id
-      AND interval = (
-        CASE period
-          WHEN '24hrs' THEN '24 hours'::interval
-          WHEN '7-days' THEN '7 days'::interval
-          WHEN '30-days' THEN '30 days'::interval
-          ELSE '1 day'::interval
-        END
-      )
-    ORDER BY timestamp DESC LIMIT 1;
-  END IF;
-END;
-$$;
+    select * from project_visitor_metrics where session_is_admin(p.id) and
+    project_id = p.id and
+    interval = (
+      case period
+        when '24hrs' then '24 hours'::interval
+        when '7-days' then '7 days'::interval
+        when '30-days' then '30 days'::interval
+        else '1 day'::interval
+      end
+    ) order by timestamp desc limit 1;
+  $$;
 
 
 --
@@ -18697,34 +18484,6 @@ CREATE FUNCTION public.replace_data_source(data_layer_id integer, data_source_id
 
 
 --
--- Name: replace_toc_references_in_body(jsonb, jsonb); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.replace_toc_references_in_body(body jsonb, published_toc_counterparts jsonb) RETURNS jsonb
-    LANGUAGE plpgsql
-    AS $$
-    declare
-      published_toc_counterpart_record record;
-    begin
-      -- first, check that published_toc_counterparts is a valid jsonb object with the correct keys and values
-      if jsonb_typeof(published_toc_counterparts) != 'object' then
-        raise exception 'published_toc_counterparts is not a valid jsonb object';
-      end if;
-      if jsonb_typeof(published_toc_counterparts) = 'object' then
-        for published_toc_counterpart_record in select * from jsonb_each(published_toc_counterparts) loop
-          if published_toc_counterpart_record.value is null or jsonb_typeof(published_toc_counterpart_record.value) = 'null' then
-            raise exception 'This report references data layers that have not yet been published. Please publish the layer list first.';
-          end if;
-        end loop;
-      end if;
-      -- now, replace the references to draft table of contents item ids with published table of contents item ids, referencing the published_toc_counterparts map. This will require walking through all nodes in the prosemirror document.
-      body := replace_toc_references_in_body_recursive(body, published_toc_counterparts);
-      return body;
-    end;
-  $$;
-
-
---
 -- Name: report_card_ids_for_report(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -19014,76 +18773,6 @@ CREATE FUNCTION public.reprocess_legacy_data_source(table_of_contents_item_id in
     return job;
   end;
   $$;
-
-
---
--- Name: resolvable_layer_comment_enforce_draft_toc(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.resolvable_layer_comment_enforce_draft_toc() RETURNS trigger
-    LANGUAGE plpgsql
-    AS $$
-begin
-  if not exists (
-    select 1
-    from public.table_of_contents_items t
-    where t.id = new.table_of_contents_item_id
-      and t.is_draft = true
-  ) then
-    raise exception
-      'Resolvable layer comments may only reference draft table_of_contents_items rows';
-  end if;
-  return new;
-end;
-$$;
-
-
---
--- Name: resolvable_layer_comment_set_audit_fields(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.resolvable_layer_comment_set_audit_fields() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public', 'pg_temp'
-    AS $$
-declare
-  v_uid int;
-begin
-  v_uid := nullif(current_setting('session.user_id', true), '')::int;
-  if v_uid is null then
-    raise exception 'Authentication required';
-  end if;
-
-  if tg_op = 'INSERT' then
-    if not session_is_admin(new.project_id) then
-      raise exception 'Admin privileges required';
-    end if;
-    new.author_id := v_uid;
-  elsif tg_op = 'UPDATE' then
-    if not session_is_admin(new.project_id) then
-      raise exception 'Admin privileges required';
-    end if;
-    if new.project_id is distinct from old.project_id
-       or new.table_of_contents_item_id is distinct from old.table_of_contents_item_id
-       or new.parent_comment_id is distinct from old.parent_comment_id
-       or new.author_id is distinct from old.author_id
-    then
-      raise exception 'Cannot reassign comment metadata';
-    end if;
-    if new.comment is distinct from old.comment and v_uid is distinct from old.author_id then
-      raise exception 'Only the author may edit comment text';
-    end if;
-    if old.resolved_at is null and new.resolved_at is not null then
-      new.resolved_by_id := v_uid;
-    elsif new.resolved_at is null then
-      new.resolved_by_id := null;
-    end if;
-  end if;
-
-  new.updated_at := now();
-  return new;
-end;
-$$;
 
 
 --
@@ -22988,23 +22677,6 @@ CREATE FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t public.ta
 
 
 --
--- Name: tableofcontentsitembystableid(text); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.tableofcontentsitembystableid(stableid text) RETURNS public.table_of_contents_items
-    LANGUAGE sql STABLE
-    AS $$
-    -- get the table of contents item by stable id and return the first 
-    -- available of published (is_draft = false) or draft (is_draft = true)
-    select * from table_of_contents_items
-    where stable_id = stableId
-    and (is_draft = false or is_draft = true)
-    order by is_draft asc  -- false (published) comes before true (draft)
-    limit 1;
-  $$;
-
-
---
 -- Name: template_forms(); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -23433,51 +23105,6 @@ $$;
 --
 
 COMMENT ON FUNCTION public.trg_changelog_access_control_lists_type_for_toc() IS 'Draft TOC ACL type change → layer:acl or folder:acl on linked table_of_contents_items (session.user_id).';
-
-
---
--- Name: trg_changelog_data_layers_attribution(); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.trg_changelog_data_layers_attribution() RETURNS trigger
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public', 'pg_temp'
-    AS $$
-declare
-  v_editor int;
-begin
-  if old.attribution is not distinct from new.attribution then
-    return new;
-  end if;
-
-  v_editor := nullif(current_setting('session.user_id', true), '')::int;
-  if v_editor is null then
-    return new;
-  end if;
-
-  perform record_changelog(
-    new.project_id,
-    v_editor,
-    'data_layers',
-    new.id,
-    'layer:attribution'::change_log_field_group,
-    jsonb_build_object('attribution', old.attribution),
-    jsonb_build_object('attribution', new.attribution),
-    null,
-    null,
-    null
-  );
-
-  return new;
-end;
-$$;
-
-
---
--- Name: FUNCTION trg_changelog_data_layers_attribution(); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.trg_changelog_data_layers_attribution() IS 'Records admin changelog entries when a data_layers.attribution value is updated (session.user_id).';
 
 
 --
@@ -24605,65 +24232,6 @@ CREATE FUNCTION public.trigger_update_collection_updated_at_for_sketch_folder() 
     end if;
   END;
 $$;
-
-
---
--- Name: try_record_layer_interactivity_changelog(integer, jsonb, jsonb, jsonb, jsonb); Type: FUNCTION; Schema: public; Owner: -
---
-
-CREATE FUNCTION public.try_record_layer_interactivity_changelog(p_acl_id integer, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb) RETURNS void
-    LANGUAGE plpgsql SECURITY DEFINER
-    SET search_path TO 'public', 'pg_temp'
-    AS $$
-declare
-  v_editor int;
-  v_toc_id int;
-  v_project_id int;
-begin
-  select toc.id, toc.project_id
-  into v_toc_id, v_project_id
-  from access_control_lists acl
-  join table_of_contents_items toc on toc.id = acl.table_of_contents_item_id
-  where acl.id = p_acl_id
-    and acl.table_of_contents_item_id is not null
-    and toc.is_draft = true
-    and toc.is_folder = false;
-
-  if v_toc_id is null then
-    return;
-  end if;
-
-  if p_from_summary is not distinct from p_to_summary
-     and p_from_blob is not distinct from p_to_blob then
-    return;
-  end if;
-
-  v_editor := nullif(current_setting('session.user_id', true), '')::int;
-  if v_editor is null then
-    return;
-  end if;
-
-  perform record_changelog(
-    v_project_id,
-    v_editor,
-    'table_of_contents_items',
-    v_toc_id,
-    'layer:interactivity'::change_log_field_group,
-    p_from_summary,
-    p_to_summary,
-    p_from_blob,
-    p_to_blob,
-    null
-  );
-end;
-$$;
-
-
---
--- Name: FUNCTION try_record_layer_interactivity_changelog(p_acl_id integer, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb); Type: COMMENT; Schema: public; Owner: -
---
-
-COMMENT ON FUNCTION public.try_record_layer_interactivity_changelog(p_acl_id integer, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb) IS 'Writes layer:interactivity change_logs for draft layer TOC rows linked to the ACL (session.user_id); no-op if summaries and blobs match.';
 
 
 --
@@ -25941,66 +25509,18 @@ CREATE TABLE public.visitor_metrics (
 --
 
 CREATE FUNCTION public.visitor_metrics(period public.activity_stats_period) RETURNS SETOF public.visitor_metrics
-    LANGUAGE plpgsql STABLE SECURITY DEFINER
+    LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-DECLARE
-  lookback interval;
-BEGIN
-  IF NOT session_is_superuser() THEN
-    RETURN;
-  END IF;
-
-  IF period IN ('6-months', '1-year') THEN
-    lookback := CASE period
-      WHEN '6-months' THEN '6 months'::interval
-      ELSE '1 year'::interval
-    END;
-
-    RETURN QUERY SELECT
-      '30 days'::interval,
-      now()::timestamptz,
-      date_part('month', timezone('UTC', now()))::int,
-      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
-       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
-             FROM public.visitor_metrics vm, jsonb_array_elements(vm.top_referrers) elem
-             WHERE vm.interval = '30 days'::interval AND vm.timestamp >= now() - lookback
-             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
-      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
-       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
-             FROM public.visitor_metrics vm, jsonb_array_elements(vm.top_operating_systems) elem
-             WHERE vm.interval = '30 days'::interval AND vm.timestamp >= now() - lookback
-             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
-      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
-       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
-             FROM public.visitor_metrics vm, jsonb_array_elements(vm.top_browsers) elem
-             WHERE vm.interval = '30 days'::interval AND vm.timestamp >= now() - lookback
-             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
-      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
-       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
-             FROM public.visitor_metrics vm, jsonb_array_elements(vm.top_device_types) elem
-             WHERE vm.interval = '30 days'::interval AND vm.timestamp >= now() - lookback
-             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s),
-      (SELECT coalesce(jsonb_agg(jsonb_build_object('label', s.label, 'count', s.total) ORDER BY s.total DESC), '[]'::jsonb)
-       FROM (SELECT elem->>'label' as label, SUM((elem->>'count')::int) as total
-             FROM public.visitor_metrics vm, jsonb_array_elements(vm.top_countries) elem
-             WHERE vm.interval = '30 days'::interval AND vm.timestamp >= now() - lookback
-             GROUP BY elem->>'label' ORDER BY total DESC LIMIT 15) s);
-  ELSE
-    RETURN QUERY
-    SELECT * FROM public.visitor_metrics
-    WHERE session_is_superuser()
-      AND interval = (
-        CASE period
-          WHEN '24hrs' THEN '24 hours'::interval
-          WHEN '7-days' THEN '7 days'::interval
-          WHEN '30-days' THEN '30 days'::interval
-          ELSE '1 day'::interval
-        END
-      )
-    ORDER BY timestamp DESC LIMIT 1;
-  END IF;
-END;
-$$;
+    select * from visitor_metrics where session_is_superuser() and
+    interval = (
+      case period
+        when '24hrs' then '24 hours'::interval
+        when '7-days' then '7 days'::interval
+        when '30-days' then '30 days'::interval
+        else '1 day'::interval
+      end
+    ) order by timestamp desc limit 1;
+  $$;
 
 
 --
@@ -26841,15 +26361,6 @@ ALTER TABLE public.optional_basemap_layers ALTER COLUMN id ADD GENERATED BY DEFA
 
 
 --
--- Name: original_source_id; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.original_source_id (
-    data_source_id integer
-);
-
-
---
 -- Name: pending_topic_notifications; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -27041,24 +26552,6 @@ ALTER TABLE public.projects ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY
 CREATE TABLE public.projects_shared_basemaps (
     basemap_id integer NOT NULL,
     project_id integer NOT NULL
-);
-
-
---
--- Name: published_toc_item_id; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.published_toc_item_id (
-    id integer
-);
-
-
---
--- Name: referenced_stable_ids; Type: TABLE; Schema: public; Owner: -
---
-
-CREATE TABLE public.referenced_stable_ids (
-    extract_stable_ids_from_body text[]
 );
 
 
@@ -31136,6 +30629,14 @@ COMMENT ON CONSTRAINT sketch_classes_project_id_fkey ON public.sketch_classes IS
 
 
 --
+-- Name: sketch_classes sketch_classes_report_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.sketch_classes
+    ADD CONSTRAINT sketch_classes_report_id_fkey FOREIGN KEY (report_id) REFERENCES public.reports(id) ON DELETE SET NULL;
+
+
+--
 -- Name: sketch_classes_valid_children sketch_classes_valid_children_child_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -32150,6 +31651,12 @@ ALTER TABLE public.project_background_jobs ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY project_background_jobs_select ON public.project_background_jobs FOR SELECT USING (public.session_is_admin(project_id));
 
+
+--
+-- Name: project_geography; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.project_geography ENABLE ROW LEVEL SECURITY;
 
 --
 -- Name: project_groups; Type: ROW SECURITY; Schema: public; Owner: -
@@ -34851,13 +34358,6 @@ REVOKE ALL ON FUNCTION public.box3dtobox(public.box3d) FROM PUBLIC;
 
 
 --
--- Name: FUNCTION build_layer_interactivity_acl_payload(p_acl_id integer, p_exclude_group_id integer, p_include_group_id integer, p_type_override text, OUT acl_summary jsonb, OUT acl_blob jsonb); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.build_layer_interactivity_acl_payload(p_acl_id integer, p_exclude_group_id integer, p_include_group_id integer, p_type_override text, OUT acl_summary jsonb, OUT acl_blob jsonb) FROM PUBLIC;
-
-
---
 -- Name: FUNCTION bump_parent_collection_updated_at(folderid integer, collectionid integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -36825,14 +36325,6 @@ REVOKE ALL ON FUNCTION public.enforce_api_keys_admin_required() FROM PUBLIC;
 
 
 --
--- Name: FUNCTION enforce_resolvable_layer_comment_parent(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.enforce_resolvable_layer_comment_parent() FROM PUBLIC;
-GRANT ALL ON FUNCTION public.enforce_resolvable_layer_comment_parent() TO seasketch_user;
-
-
---
 -- Name: FUNCTION enqueue_metric_calculations_for_sketch(sketch_id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -38104,14 +37596,6 @@ REVOKE ALL ON FUNCTION public.get_projects_with_recent_activity() FROM PUBLIC;
 
 REVOKE ALL ON FUNCTION public.get_public_jwk(id uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.get_public_jwk(id uuid) TO anon;
-
-
---
--- Name: FUNCTION get_published_card_id_from_draft(draft_report_card_id integer); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.get_published_card_id_from_draft(draft_report_card_id integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.get_published_card_id_from_draft(draft_report_card_id integer) TO seasketch_user;
 
 
 --
@@ -40435,13 +39919,6 @@ REVOKE ALL ON FUNCTION public.replace_data_source(data_layer_id integer, data_so
 
 
 --
--- Name: FUNCTION replace_toc_references_in_body(body jsonb, published_toc_counterparts jsonb); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.replace_toc_references_in_body(body jsonb, published_toc_counterparts jsonb) FROM PUBLIC;
-
-
---
 -- Name: FUNCTION report_card_ids_for_report(rid integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -40527,21 +40004,6 @@ GRANT ALL ON FUNCTION public.reprocess_all_legacy_data_sources(project_id intege
 
 REVOKE ALL ON FUNCTION public.reprocess_legacy_data_source(table_of_contents_item_id integer) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.reprocess_legacy_data_source(table_of_contents_item_id integer) TO seasketch_user;
-
-
---
--- Name: FUNCTION resolvable_layer_comment_enforce_draft_toc(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.resolvable_layer_comment_enforce_draft_toc() FROM PUBLIC;
-
-
---
--- Name: FUNCTION resolvable_layer_comment_set_audit_fields(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.resolvable_layer_comment_set_audit_fields() FROM PUBLIC;
-GRANT ALL ON FUNCTION public.resolvable_layer_comment_set_audit_fields() TO seasketch_user;
 
 
 --
@@ -44405,13 +43867,6 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_uses_dynamic_metadata(t pub
 
 
 --
--- Name: FUNCTION tableofcontentsitembystableid(stableid text); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.tableofcontentsitembystableid(stableid text) FROM PUBLIC;
-
-
---
 -- Name: FUNCTION template_forms(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -44617,13 +44072,6 @@ REVOKE ALL ON FUNCTION public.trg_changelog_access_control_lists_type_for_toc() 
 
 
 --
--- Name: FUNCTION trg_changelog_data_layers_attribution(); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.trg_changelog_data_layers_attribution() FROM PUBLIC;
-
-
---
 -- Name: FUNCTION trg_changelog_data_layers_data_source_layer_uploaded(); Type: ACL; Schema: public; Owner: -
 --
 
@@ -44768,13 +44216,6 @@ REVOKE ALL ON FUNCTION public.trigger_update_collection_updated_at() FROM PUBLIC
 --
 
 REVOKE ALL ON FUNCTION public.trigger_update_collection_updated_at_for_sketch_folder() FROM PUBLIC;
-
-
---
--- Name: FUNCTION try_record_layer_interactivity_changelog(p_acl_id integer, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb); Type: ACL; Schema: public; Owner: -
---
-
-REVOKE ALL ON FUNCTION public.try_record_layer_interactivity_changelog(p_acl_id integer, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb) FROM PUBLIC;
 
 
 --
