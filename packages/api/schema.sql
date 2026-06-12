@@ -8728,7 +8728,14 @@ declare
   enable_geography_clipping boolean;
 begin
   if session_is_admin("projectId") then
-    select id into default_report_id from reports where project_id = "projectId";
+    select id into default_report_id
+      from reports
+      where project_id = "projectId" and version = 0
+      order by
+        case
+          when title ilike '%default' then 1
+          else 0
+        end;
     if default_report_id is null then
       select id into default_report_id from create_default_report("projectId"::integer);
     end if;
