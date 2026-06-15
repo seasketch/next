@@ -15,6 +15,7 @@ from subdivide import process_file, detect_overlapping_features
 from points import process_points
 from raster import process_raster
 from lines import process_lines
+from geometry_utils import geometry_type_has_extra_dimensions, normalize_geometry_type
 import fiona
 
 # Cached AWS clients (reused across messages and invocations)
@@ -488,12 +489,16 @@ def handler(event, context):
                     
                     print(f"Schema geometry: {schema_geom}")
                     print(f"Schema geometry type: {geom_type}")
+                    strip_dimensions = geometry_type_has_extra_dimensions(schema_geom)
+                    geom_type = normalize_geometry_type(geom_type)
                     # If not found in schema, try reading first feature
                     if not geom_type or geom_type == "Unknown":
                         try:
                             first_feature = next(iter(src))
                             print(f"First feature: {first_feature}")
-                            geom_type = first_feature['geometry']['type']
+                            feature_geom_type = first_feature['geometry']['type']
+                            strip_dimensions = geometry_type_has_extra_dimensions(feature_geom_type)
+                            geom_type = normalize_geometry_type(feature_geom_type)
                         except (StopIteration, KeyError, TypeError):
                             print("No first feature found. got exception:", traceback.format_exc())
                             geom_type = None
@@ -504,10 +509,22 @@ def handler(event, context):
                 # Route to appropriate processor based on geometry type (processors will open/close file themselves)
                 if geom_type in ('Point', 'MultiPoint'):
                     print(f"Detected geometry type: {geom_type}, routing to points processor")
-                    process_points(input_path, output_path, progress_callback=_overall_progress)
+                    process_points(
+                        input_path,
+                        output_path,
+                        progress_callback=_overall_progress,
+                        strip_dimensions=strip_dimensions,
+                    )
                 elif geom_type in ('Polygon', 'MultiPolygon'):
                     print(f"Detected geometry type: {geom_type}, routing to subdivision processor")
-                    processing_stats = process_file(input_path, output_path, max_nodes, progress_callback=_overall_progress, repair_invalid=repair_invalid)
+                    processing_stats = process_file(
+                        input_path,
+                        output_path,
+                        max_nodes,
+                        progress_callback=_overall_progress,
+                        repair_invalid=repair_invalid,
+                        strip_dimensions=strip_dimensions,
+                    )
                     contains_overlapping = detect_overlapping_features(output_path)
                     print(f"Contains overlapping features: {contains_overlapping}")
                     if processing_stats is None:
@@ -515,7 +532,13 @@ def handler(event, context):
                     processing_stats["contains_overlapping_features"] = contains_overlapping
                 elif geom_type in ('LineString', 'MultiLineString'):
                     print(f"Detected geometry type: {geom_type}, routing to line subdivision processor")
-                    process_lines(input_path, output_path, max_nodes, progress_callback=_overall_progress)
+                    process_lines(
+                        input_path,
+                        output_path,
+                        max_nodes,
+                        progress_callback=_overall_progress,
+                        strip_dimensions=strip_dimensions,
+                    )
                 else:
                     raise ValueError(
                         f"Unsupported geometry type: {geom_type}. "

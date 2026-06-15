@@ -1,0 +1,16 @@
+---
+description: Subdivision worker Lambda packaging requirements
+globs: packages/subdivision-worker/**
+alwaysApply: false
+---
+
+# Subdivision Worker Packaging
+
+`packages/subdivision-worker` is deployed as a Lambda container image.
+
+The `Dockerfile` copies Python modules with an explicit `COPY` list. When adding,
+renaming, or splitting Python modules in this package, update that `COPY` list so
+the deployed Lambda image includes every imported local module.
+
+Before considering a worker change complete, verify any new local imports are
+present in `packages/subdivision-worker/Dockerfile`.

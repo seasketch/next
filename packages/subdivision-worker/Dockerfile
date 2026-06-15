@@ -8,7 +8,8 @@ WORKDIR /var/task
 COPY requirements.txt ./
 RUN python -m pip install --upgrade pip && pip install --no-cache-dir -r requirements.txt
 
-COPY subdivide.py lambda_handler.py points.py raster.py lines.py ./
+# Keep this explicit list in sync with local Python imports used by lambda_handler.py.
+COPY subdivide.py lambda_handler.py points.py raster.py lines.py geometry_utils.py ./
 
 # Lambda entrypoint (module.function)
 CMD ["lambda_handler.handler"]

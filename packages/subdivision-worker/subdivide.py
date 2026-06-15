@@ -11,6 +11,8 @@ import sys
 import time
 from pyproj import Geod
 
+from geometry_utils import geometry_type_has_extra_dimensions, strip_extra_dimensions
+
 def count_nodes(geom):
     """Count the number of nodes in a Fiona geometry (geojson-like dict)."""
     if geom['type'] == 'Polygon':
@@ -278,7 +280,14 @@ def antimeridian_split_to_non_crossing(geom_geojson):
     result_geojson = normalize_geojson_longitudes(result_geojson)
     return result_geojson
 
-def process_file(input_file, output_file, max_nodes, progress_callback=None, repair_invalid=False):
+def process_file(
+    input_file,
+    output_file,
+    max_nodes,
+    progress_callback=None,
+    repair_invalid=False,
+    strip_dimensions=None,
+):
     """Process the input file and write the subdivided output as FlatGeobuf.
     
     Args:
@@ -311,6 +320,8 @@ def process_file(input_file, output_file, max_nodes, progress_callback=None, rep
     # First pass: get schema, count nodes, and detect invalid geometries
     with fiona.open(input_file, "r") as src:
         schema = src.schema.copy()
+        if strip_dimensions is None:
+          strip_dimensions = geometry_type_has_extra_dimensions(src.schema.get('geometry'))
         schema['geometry'] = 'Polygon'
         # Ensure output schema has an __area property
         if 'properties' in schema and isinstance(schema['properties'], dict):
@@ -328,9 +339,14 @@ def process_file(input_file, output_file, max_nodes, progress_callback=None, rep
             pass
         scan_idx = 0
         for feature in src:
-          total_nodes_in_dataset += count_nodes(feature['geometry'])
+          feature_geom = (
+              strip_extra_dimensions(feature['geometry'])
+              if strip_dimensions
+              else feature['geometry']
+          )
+          total_nodes_in_dataset += count_nodes(feature_geom)
           try:
-            geom = shape(feature['geometry'])
+            geom = shape(feature_geom)
             if not is_valid(geom):
               invalid_original_indices.add(scan_idx)
           except Exception:
@@ -445,7 +461,12 @@ def process_file(input_file, output_file, max_nodes, progress_callback=None, rep
 
           # Process features (file is opened fresh in second pass)
           for feature in src:
-            adjusted_geom = antimeridian_split_to_non_crossing(feature['geometry'])
+            feature_geom = (
+                strip_extra_dimensions(feature['geometry'])
+                if strip_dimensions
+                else feature['geometry']
+            )
+            adjusted_geom = antimeridian_split_to_non_crossing(feature_geom)
 
             # Optionally repair invalid geometries
             if repair_invalid:

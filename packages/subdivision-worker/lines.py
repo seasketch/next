@@ -14,6 +14,8 @@ from shapely.geometry import (
 from shapely.ops import split, transform
 from tqdm import tqdm
 
+from geometry_utils import geometry_type_has_extra_dimensions, strip_extra_dimensions
+
 
 ProgressCallback = Optional[Callable[[str, int, Optional[int]], None]]
 
@@ -170,6 +172,7 @@ def process_lines(
     output_file: str,
     max_nodes: int,
     progress_callback: ProgressCallback = None,
+    strip_dimensions: Optional[bool] = None,
 ):
     """Process linear features, splitting/exploding as needed and writing FlatGeobuf."""
     geod = Geod(ellps="WGS84")
@@ -177,6 +180,8 @@ def process_lines(
 
     with fiona.open(input_file, "r") as src:
         schema = src.schema.copy()
+        if strip_dimensions is None:
+            strip_dimensions = geometry_type_has_extra_dimensions(src.schema.get("geometry"))
         schema["geometry"] = "LineString"
         if "properties" in schema and isinstance(schema["properties"], dict):
             schema["properties"]["__lengthKm"] = "float"
@@ -191,7 +196,12 @@ def process_lines(
             except Exception:
                 pass
         for feature in src:
-            total_nodes_in_dataset += count_line_nodes(feature.get("geometry"))
+            feature_geom = (
+                strip_extra_dimensions(feature.get("geometry"))
+                if strip_dimensions
+                else feature.get("geometry")
+            )
+            total_nodes_in_dataset += count_line_nodes(feature_geom)
             scanned_features += 1
             if progress_callback is not None:
                 try:
@@ -252,7 +262,12 @@ def process_lines(
 
             feature_index = 0
             for feature in src:
-                geom = shape(feature["geometry"])
+                feature_geom = (
+                    strip_extra_dimensions(feature["geometry"])
+                    if strip_dimensions
+                    else feature["geometry"]
+                )
+                geom = shape(feature_geom)
                 base_props = dict(feature.get("properties") or {})
                 base_props["__oidx"] = feature_index
 

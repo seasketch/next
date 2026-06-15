@@ -3,6 +3,8 @@ from tqdm import tqdm
 import os
 from typing import Optional, Callable
 
+from geometry_utils import geometry_type_has_extra_dimensions, strip_extra_dimensions
+
 
 def normalize_lon(x):
     """Normalize longitude to [-180, 180] range."""
@@ -24,18 +26,17 @@ def normalize_lat(y):
 
 
 def normalize_coords(coords):
-    """Normalize a coordinate [lon, lat, ...] to valid WGS84 bounds.
-    Preserves additional coordinate dimensions (e.g., elevation).
-    """
+    """Normalize a coordinate [lon, lat, ...] to 2D valid WGS84 bounds."""
     lon, lat = coords[0], coords[1]
-    normalized = [normalize_lon(lon), normalize_lat(lat)]
-    # Preserve any additional coordinate dimensions (e.g., elevation)
-    if len(coords) > 2:
-        normalized.extend(coords[2:])
-    return normalized
+    return [normalize_lon(lon), normalize_lat(lat)]
 
 
-def process_points(input_file: str, output_file: str, progress_callback: Optional[Callable] = None):
+def process_points(
+    input_file: str,
+    output_file: str,
+    progress_callback: Optional[Callable] = None,
+    strip_dimensions: Optional[bool] = None,
+):
     """
     Process Point and MultiPoint geometries from a fiona source.
     
@@ -59,6 +60,8 @@ def process_points(input_file: str, output_file: str, progress_callback: Optiona
     # First pass: count features and points
     with fiona.open(input_file, "r") as src:
         schema = src.schema.copy()
+        if strip_dimensions is None:
+            strip_dimensions = geometry_type_has_extra_dimensions(src.schema.get('geometry'))
         schema['geometry'] = 'Point'
         # Ensure output schema has __oidx property
         if 'properties' in schema and isinstance(schema['properties'], dict):
@@ -77,7 +80,11 @@ def process_points(input_file: str, output_file: str, progress_callback: Optiona
         # Count total points for progress tracking
         total_points = 0
         for feature in src:
-            geom = feature['geometry']
+            geom = (
+                strip_extra_dimensions(feature['geometry'])
+                if strip_dimensions
+                else feature['geometry']
+            )
             if geom['type'] == 'MultiPoint':
                 total_points += len(geom['coordinates'])
             elif geom['type'] == 'Point':
@@ -117,7 +124,11 @@ def process_points(input_file: str, output_file: str, progress_callback: Optiona
             feature_index = 0
             processed_points = 0
             for feature in src:
-                geom = feature['geometry']
+                geom = (
+                    strip_extra_dimensions(feature['geometry'])
+                    if strip_dimensions
+                    else feature['geometry']
+                )
                 props = dict(feature['properties'])
                 
                 if geom['type'] == 'MultiPoint':
