@@ -1,17 +1,6 @@
-import {
-  AnimatePresence,
-  motion,
-} from "framer-motion";
-import {
-  ArchiveIcon,
-  CollectionIcon,
-  DocumentTextIcon,
-  MapIcon,
-  UploadIcon,
-} from "@heroicons/react/outline";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   createContext,
-  DragEvent,
   ReactNode,
   useCallback,
   useContext,
@@ -35,12 +24,12 @@ import {
 import { Trans, useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import Spinner from "../../components/Spinner";
+import Button from "../../components/Button";
 import { ExclamationCircleIcon } from "@heroicons/react/outline";
 import useProjectId from "../../useProjectId";
 import { useApolloClient } from "@apollo/client";
 
 import { MapManagerContext } from "../../dataLayers/MapContextManager";
-import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import useDialog from "../../components/useDialog";
 import ProjectBackgroundJobManager, {
   DataUploadErrorEvent,
@@ -63,39 +52,93 @@ const SUPPORTED_FORMATS: {
   id: SupportedSpatialFormat;
   label: string;
   extensions: string;
-  icon: (props: { className?: string }) => JSX.Element;
+  tag: string;
 }[] = [
   {
     id: "geojson",
     label: "GeoJSON",
     extensions: ".geojson, .json",
-    icon: MapIcon,
+    tag: "JSON",
   },
   {
     id: "shapefileZip",
     label: "Shapefile (zipped)",
     extensions: ".zip",
-    icon: ArchiveIcon,
+    tag: "ZIP",
   },
   {
     id: "geotiff",
     label: "GeoTiff",
     extensions: ".tif, .tiff",
-    icon: CollectionIcon,
+    tag: "TIFF",
   },
   {
     id: "netcdf",
     label: "NetCDF",
     extensions: ".nc, .nc4",
-    icon: UploadIcon,
+    tag: "NC",
   },
   {
     id: "flatgeobuf",
     label: "FlatGeobuf",
     extensions: ".fgb",
-    icon: DocumentTextIcon,
+    tag: "FGB",
   },
 ];
+
+// A generic "document" glyph (a page with a folded corner) used to represent
+// every supported format. The format-specific text lives outside the icon (name
+// + extensions); the icon only carries a short, uppercase type tag on its label
+// band so the card reads clearly without relying on bespoke iconography.
+function DocumentFormatIcon({
+  tag,
+  active,
+  className,
+}: {
+  tag: string;
+  active?: boolean;
+  className?: string;
+}) {
+  const accent = active ? "#0891b2" : "#94a3b8";
+  const fold = active ? "#cffafe" : "#e2e8f0";
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 54 60"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-hidden="true"
+    >
+      <path
+        d="M11 4a2 2 0 0 1 2-2h18l12 12v40a2 2 0 0 1-2 2H13a2 2 0 0 1-2-2V4Z"
+        fill="#ffffff"
+        stroke={accent}
+        strokeWidth={2.5}
+        strokeLinejoin="round"
+      />
+      <path
+        d="M31 2l12 12H33a2 2 0 0 1-2-2V2Z"
+        fill={fold}
+        stroke={accent}
+        strokeWidth={2.5}
+        strokeLinejoin="round"
+      />
+      <rect x="13" y="33" width="30" height="15" rx="3" fill={accent} />
+      <text
+        x="28"
+        y="44.5"
+        textAnchor="middle"
+        fontSize="10"
+        fontWeight="700"
+        fontFamily="ui-sans-serif, system-ui, sans-serif"
+        letterSpacing="0.3"
+        fill="#ffffff"
+      >
+        {tag}
+      </text>
+    </svg>
+  );
+}
 
 function fileExtension(fileName: string): string {
   const dotIndex = fileName.lastIndexOf(".");
@@ -127,97 +170,14 @@ function detectSupportedFormat(
   }
 }
 
-function detectDraggedFileName(dataTransfer: DataTransfer | null): string | null {
-  if (!dataTransfer) return null;
-  if (dataTransfer.files && dataTransfer.files.length > 0) {
-    return dataTransfer.files[0].name || null;
-  }
-  if (dataTransfer.items && dataTransfer.items.length > 0) {
-    const firstItem = dataTransfer.items[0];
-    if (firstItem.kind === "file") {
-      const file = firstItem.getAsFile();
-      if (file?.name) {
-        return file.name;
-      }
-      const fileSystemEntry =
-        (firstItem as unknown as { webkitGetAsEntry?: () => { name?: string } })
-          .webkitGetAsEntry?.() || null;
-      if (fileSystemEntry?.name) {
-        return fileSystemEntry.name;
-      }
-    }
-  }
-  return null;
-}
-
-function detectSupportedFormatFromMime(
-  mimeType: string | null | undefined
-): SupportedSpatialFormat | null {
-  if (!mimeType) return null;
-  const normalized = mimeType.toLowerCase();
-  if (
-    normalized === "application/geo+json" ||
-    normalized === "application/vnd.geo+json" ||
-    normalized === "application/json"
-  ) {
-    return "geojson";
-  }
-  if (
-    normalized === "application/zip" ||
-    normalized === "application/x-zip-compressed" ||
-    normalized === "multipart/x-zip"
-  ) {
-    return "shapefileZip";
-  }
-  if (
-    normalized === "image/tiff" ||
-    normalized === "image/geotiff" ||
-    normalized === "application/geotiff" ||
-    normalized === "application/x-geotiff"
-  ) {
-    return "geotiff";
-  }
-  if (
-    normalized === "application/x-netcdf" ||
-    normalized === "application/netcdf"
-  ) {
-    return "netcdf";
-  }
-  if (normalized === "application/flatgeobuf") {
-    return "flatgeobuf";
-  }
-  return null;
-}
-
-function detectDraggedFilePreview(dataTransfer: DataTransfer | null): {
-  fileName: string | null;
+type DroppedFileInfo = {
+  name: string;
   format: SupportedSpatialFormat | null;
-} {
-  const fileName = detectDraggedFileName(dataTransfer);
-  if (fileName) {
-    return {
-      fileName,
-      format: detectSupportedFormat(fileName),
-    };
-  }
-  if (dataTransfer?.items) {
-    for (const item of Array.from(dataTransfer.items)) {
-      if (item.kind === "file") {
-        const format = detectSupportedFormatFromMime(item.type);
-        if (format) {
-          return {
-            fileName: null,
-            format,
-          };
-        }
-      }
-    }
-  }
-  return {
-    fileName: null,
-    format: null,
-  };
-}
+};
+
+// How long the drop confirmation lingers before fading out and handing off to
+// the background job queue UI. Errors cancel this and require manual dismissal.
+const OVERLAY_DISMISS_DELAY = 1500;
 
 export const ProjectBackgroundJobContext = createContext<{
   jobs: JobDetailsFragment[];
@@ -254,8 +214,9 @@ export default function DataUploadDropzone({
   const projectId = useProjectId();
   const [state, setState] = useState<{
     droppedFiles: number;
+    droppedFileInfos: DroppedFileInfo[];
     uploads: DataUploadDetailsFragment[];
-    error?: string;
+    error?: ReactNode;
     manager?: ProjectBackgroundJobManager;
     disabled?: boolean;
     uploadType: UploadType;
@@ -264,10 +225,9 @@ export default function DataUploadDropzone({
     finishedWithChangelog: boolean;
     changelog?: string;
     aiDataAnalystUploadPromptOpen: boolean;
-    activeFileName: string | null;
-    detectedFormat: SupportedSpatialFormat | null;
   }>({
     droppedFiles: 0,
+    droppedFileInfos: [],
     uploads: [],
     disabled: false,
     uploadType: "create",
@@ -275,13 +235,10 @@ export default function DataUploadDropzone({
     replaceTableOfContentsItemId: null,
     finishedWithChangelog: true,
     aiDataAnalystUploadPromptOpen: false,
-    activeFileName: null,
-    detectedFormat: null,
   });
   const client = useApolloClient();
-  const dragDepthRef = useRef(0);
+  const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const { manager } = useContext(MapManagerContext);
-  const onError = useGlobalErrorHandler();
   const { alert } = useDialog();
   const { t } = useTranslation("admin:data");
   const [hostOnSeaSketch, setHostOnSeasketch] = useState<null | number>(null);
@@ -332,9 +289,14 @@ export default function DataUploadDropzone({
         }
       );
       manager.on("upload-error", (event: DataUploadErrorEvent) => {
+        if (dismissTimerRef.current) {
+          clearTimeout(dismissTimerRef.current);
+          dismissTimerRef.current = null;
+        }
         setState((prev) => ({
           ...prev,
           droppedFiles: 0,
+          droppedFileInfos: [],
           error: event.error,
           isUploadingReplacement: false,
         }));
@@ -359,13 +321,54 @@ export default function DataUploadDropzone({
         manager.destroy();
       };
     }
-  }, [client, slug, projectId, manager, alert, onError, t]);
+  }, [client, slug, projectId, manager, alert, t]);
 
   const { confirm } = useDialog();
 
+  const clearDismissTimer = useCallback(() => {
+    if (dismissTimerRef.current) {
+      clearTimeout(dismissTimerRef.current);
+      dismissTimerRef.current = null;
+    }
+  }, []);
+
+  // Fade the drop confirmation away after a short delay so the persistent job
+  // queue UI can take over. Cancelled if an error needs manual dismissal.
+  const scheduleDismiss = useCallback(
+    (delay: number) => {
+      clearDismissTimer();
+      dismissTimerRef.current = setTimeout(() => {
+        dismissTimerRef.current = null;
+        setState((prev) => {
+          if (prev.error) {
+            return prev;
+          }
+          return {
+            ...prev,
+            droppedFiles: 0,
+            droppedFileInfos: [],
+          };
+        });
+      }, delay);
+    },
+    [clearDismissTimer]
+  );
+
+  const dismissOverlay = useCallback(() => {
+    clearDismissTimer();
+    setState((prev) => ({
+      ...prev,
+      droppedFiles: 0,
+      droppedFileInfos: [],
+      error: undefined,
+    }));
+  }, [clearDismissTimer]);
+
+  useEffect(() => clearDismissTimer, [clearDismissTimer]);
+
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
-      dragDepthRef.current = 0;
+      clearDismissTimer();
       function isUploadForSupported(file: File) {
         let message: string | null = null;
         let isPartOfShapefile = false;
@@ -433,20 +436,20 @@ export default function DataUploadDropzone({
       }
 
       if (state.uploadType === "replace" && acceptedFiles.length > 1) {
-        alert(t("You can only upload one file to update a layer."), {
-          description: t(
-            "To replace a layer, upload a single file that will replace the existing layer. Close the data source editor if you would like to create new layers."
+        setState((prev) => ({
+          ...prev,
+          droppedFiles: 0,
+          droppedFileInfos: [],
+          error: (
+            <Trans ns="admin:data">
+              You can only upload one file to update a layer. To replace a
+              layer, drop a single file. Close the data source editor if you
+              would like to create new layers instead.
+            </Trans>
           ),
-        });
+        }));
         return;
       }
-
-      const firstFileName = acceptedFiles[0]?.name || null;
-      setState((prev) => ({
-        ...prev,
-        activeFileName: firstFileName,
-        detectedFormat: detectSupportedFormat(firstFileName),
-      }));
 
       const filteredFiles: File[] = [];
       for (const file of acceptedFiles) {
@@ -474,12 +477,20 @@ export default function DataUploadDropzone({
         }
       }
 
+      if (filteredFiles.length === 0) {
+        return;
+      }
+
+      const droppedFileInfos: DroppedFileInfo[] = filteredFiles.map((file) => ({
+        name: file.name,
+        format: detectSupportedFormat(file.name),
+      }));
+
       setState((prev) => ({
         ...prev,
         droppedFiles: filteredFiles.length,
+        droppedFileInfos,
         error: undefined,
-        activeFileName: filteredFiles[0]?.name || null,
-        detectedFormat: detectSupportedFormat(filteredFiles[0]?.name || null),
       }));
 
       if (state.manager) {
@@ -490,6 +501,9 @@ export default function DataUploadDropzone({
             finishedWithChangelog: false,
           }));
         }
+        // Keep the confirmation visible briefly, then fade out and let the
+        // background job queue UI report on progress from here.
+        scheduleDismiss(OVERLAY_DISMISS_DELAY);
         state.manager
           .uploadFiles(
             filteredFiles,
@@ -500,99 +514,63 @@ export default function DataUploadDropzone({
                 }
               : undefined
           )
-          .then(() => {
-            setState((prev) => ({
-              ...prev,
-              droppedFiles: 0,
-              activeFileName: null,
-              detectedFormat: null,
-            }));
-          })
           .catch((e) => {
+            clearDismissTimer();
+            const error: ReactNode = /quota exceeded/.test(e.message) ? (
+              <Trans ns="admin:data">
+                This project has exceeded its data storage quota. Please delete
+                some data to make room for new uploads. You can see how much
+                space your layers are using by selecting{" "}
+                <b>View {"->"} Data Hosting Quota</b> from the toolbar.
+              </Trans>
+            ) : (
+              e.message
+            );
             setState((prev) => ({
               ...prev,
               droppedFiles: 0,
+              droppedFileInfos: [],
               isUploadingReplacement: false,
               finishedWithChangelog: true,
-              activeFileName: null,
-              detectedFormat: null,
+              error,
             }));
-            if (/quota exceeded/.test(e.message)) {
-              alert(t("Quota Exceeded"), {
-                description: (
-                  <Trans ns="admin:data">
-                    This project has exceeded its data storage quota. Please
-                    delete some data to make room for new uploads. You can see
-                    how much space your layers are using by selecting{" "}
-                    <b>View {"->"} Data Hosting Quota</b> from the toolbar.
-                  </Trans>
-                ),
-              });
-            } else {
-              onError(e);
-            }
           });
       }
     },
     [
       alert,
       confirm,
-      onError,
       state.manager,
       t,
       state.uploadType,
       state.replaceTableOfContentsItemId,
+      scheduleDismiss,
+      clearDismissTimer,
     ]
   );
 
-  const updateDragPreview = useCallback((event: DragEvent<HTMLElement>) => {
-    const preview = detectDraggedFilePreview(event.dataTransfer);
-    setState((prev) => ({
-      ...prev,
-      activeFileName: preview.fileName ?? prev.activeFileName,
-      detectedFormat: preview.format ?? prev.detectedFormat,
-      error: undefined,
-    }));
-  }, []);
-
-  const onDragEnter = useCallback(
-    (event: DragEvent<HTMLElement>) => {
-      dragDepthRef.current += 1;
-      updateDragPreview(event);
-    },
-    [updateDragPreview]
-  );
-
-  const onDragOver = useCallback(
-    (event: DragEvent<HTMLElement>) => {
-      updateDragPreview(event);
-    },
-    [updateDragPreview]
-  );
-
-  const onDragLeave = useCallback(() => {
-    setState((prev) => {
-      dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
-      if (dragDepthRef.current > 0 || prev.droppedFiles > 0) {
-        return prev;
-      }
-      return {
-        ...prev,
-        activeFileName: null,
-        detectedFormat: null,
-      };
-    });
-  }, []);
-
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    onDragEnter,
-    onDragOver,
-    onDragLeave,
     noClick: true,
   });
 
-  const showOverlay = isDragActive || state.droppedFiles > 0;
+  const showOverlay =
+    isDragActive || state.droppedFiles > 0 || Boolean(state.error);
+
+  const phase: "hover" | "processing" | "error" = state.error
+    ? "error"
+    : state.droppedFiles > 0
+    ? "processing"
+    : "hover";
+
+  const droppedFormatIds = new Set(
+    state.droppedFileInfos
+      .map((f) => f.format)
+      .filter((f): f is SupportedSpatialFormat => Boolean(f))
+  );
+
+  const singleDroppedFile =
+    state.droppedFileInfos.length === 1 ? state.droppedFileInfos[0] : null;
 
   const setDisabled = useCallback(
     (disabled: boolean) => {
@@ -696,6 +674,7 @@ export default function DataUploadDropzone({
                   transition={{ duration: 0.2 }}
                 >
                   <motion.div
+                    layout
                     className="rounded-2xl shadow-xl pointer-events-none max-w-3xl w-full mx-6 overflow-hidden"
                     style={{
                       background:
@@ -712,134 +691,137 @@ export default function DataUploadDropzone({
                     }}
                   >
                     <div className="p-7 text-center">
-                      <motion.div
-                        className="inline-flex items-center px-3 py-1.5 rounded-full mb-4 text-sm font-medium"
-                        style={{
-                          background: "rgba(14, 116, 144, 0.12)",
-                          color: "rgb(14, 116, 144)",
-                        }}
-                        animate={{
-                          scale: [1, 1.04, 1],
-                        }}
-                        transition={{
-                          duration: 2,
-                          repeat: Infinity,
-                          ease: "easeInOut",
-                        }}
-                      >
-                        <UploadIcon className="w-4 h-4 mr-2" />
-                        {t("Spatial Data Upload")}
-                      </motion.div>
-                      <h4 className="font-semibold text-2xl text-gray-900">
-                        {state.uploadType === "create"
+                      <h4 className="font-semibold text-2xl text-gray-900 px-2">
+                        {phase === "error"
+                          ? t("We couldn't process that")
+                          : phase === "processing"
+                          ? singleDroppedFile
+                            ? t("Processing {{filename}}", {
+                                filename: singleDroppedFile.name,
+                              })
+                            : t("Processing {{count}} files", {
+                                count: state.droppedFileInfos.length,
+                              })
+                          : state.uploadType === "create"
                           ? t("Drop Files Here to Upload")
                           : t("Drop a file to update this layer")}
                       </h4>
-                      <p className="text-sm text-gray-700 mt-2">
-                        {t(
-                          "SeaSketch currently supports vector data in GeoJSON, Shapefile (zipped), GeoTiff, NetCDF and FlatGeobuf formats."
-                        )}
-                      </p>
+
                       <AnimatePresence>
-                        {(state.activeFileName || state.detectedFormat) && (
+                        {phase === "processing" && (
                           <motion.div
-                            className="mt-5 mx-auto rounded-lg px-4 py-2.5 max-w-xl text-sm text-left"
-                            style={{
-                              background: "rgba(15, 23, 42, 0.06)",
-                              border: "1px solid rgba(15, 23, 42, 0.08)",
-                            }}
-                            initial={{ opacity: 0, y: 6 }}
+                            className="flex items-center justify-center gap-2 mt-3 text-sm text-gray-600"
+                            initial={{ opacity: 0, y: 4 }}
                             animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -4 }}
-                            transition={{ duration: 0.18 }}
+                            exit={{ opacity: 0 }}
+                            transition={{ duration: 0.2 }}
                           >
-                            <div className="font-medium text-gray-900 truncate">
-                              {state.activeFileName || t("File being dragged")}
-                            </div>
-                            <div className="text-xs text-gray-600 mt-1">
-                              {state.detectedFormat
-                                ? t("Detected format: {{format}}", {
-                                    format:
-                                      SUPPORTED_FORMATS.find(
-                                        (format) =>
-                                          format.id === state.detectedFormat
-                                      )?.label || t("Unknown"),
-                                  })
-                                : t(
-                                    "Format not recognized from extension yet."
-                                  )}
-                            </div>
+                            <Spinner />
+                            <span>{t("Beginning data processing...")}</span>
                           </motion.div>
                         )}
                       </AnimatePresence>
 
-                      <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mt-6 text-left">
-                        {SUPPORTED_FORMATS.map((format) => {
-                          const Icon = format.icon;
-                          const active = format.id === state.detectedFormat;
-                          return (
-                            <motion.div
-                              key={format.id}
-                              className={`rounded-xl p-3 ${
-                                active
-                                  ? "ring-2 ring-cyan-500 shadow-md"
-                                  : "ring-1 ring-gray-200"
-                              }`}
-                              style={{
-                                background: active
-                                  ? "linear-gradient(180deg, rgba(236,254,255,0.98) 0%, rgba(240,249,255,0.95) 100%)"
-                                  : "rgba(255,255,255,0.75)",
-                              }}
-                              animate={
-                                active
-                                  ? {
-                                      y: [0, -2, 0],
-                                    }
-                                  : { y: 0 }
-                              }
-                              transition={{
-                                duration: 1.4,
-                                repeat: active ? Infinity : 0,
-                                ease: "easeInOut",
-                              }}
-                            >
-                              <div
-                                className={`rounded-lg w-8 h-8 flex items-center justify-center mb-2 ${
-                                  active
-                                    ? "bg-cyan-100 text-cyan-700"
-                                    : "bg-gray-100 text-gray-600"
-                                }`}
-                              >
-                                <Icon className="w-5 h-5" />
-                              </div>
-                              <div className="font-medium text-sm text-gray-900">
-                                {t(format.label)}
-                              </div>
-                              <div className="text-xs text-gray-500 mt-0.5">
-                                {format.extensions}
-                              </div>
-                            </motion.div>
-                          );
-                        })}
-                      </div>
+                      {phase === "hover" && (
+                        <h5 className="text-xs font-semibold uppercase tracking-wide text-gray-500 mt-6">
+                          {t("Supported Formats")}
+                        </h5>
+                      )}
 
-                      {Boolean(state.droppedFiles) && !state.error && (
+                      {phase !== "error" && (
                         <motion.div
-                          className="text-sm flex items-center text-center w-full justify-center space-x-2 mt-6 text-gray-700"
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          transition={{ duration: 0.2 }}
+                          layout
+                          className="flex flex-wrap justify-center gap-3 mt-3"
                         >
-                          <span>{t("Starting upload")}</span>
-                          <Spinner />
+                          <AnimatePresence>
+                            {SUPPORTED_FORMATS.filter((format) =>
+                              phase === "processing"
+                                ? droppedFormatIds.has(format.id)
+                                : true
+                            ).map((format) => {
+                              const active = phase === "processing";
+                              return (
+                                <motion.div
+                                  layout
+                                  key={format.id}
+                                  className={`rounded-xl p-3 w-32 text-center ${
+                                    active
+                                      ? "ring-2 ring-cyan-500 shadow-md"
+                                      : "ring-1 ring-gray-200"
+                                  }`}
+                                  style={{
+                                    background: active
+                                      ? "linear-gradient(180deg, rgba(236,254,255,0.98) 0%, rgba(240,249,255,0.95) 100%)"
+                                      : "rgba(255,255,255,0.75)",
+                                  }}
+                                  initial={{ opacity: 0, scale: 0.8 }}
+                                  animate={{ opacity: 1, scale: 1 }}
+                                  exit={{ opacity: 0, scale: 0.7 }}
+                                  transition={{
+                                    type: "spring",
+                                    damping: 24,
+                                    stiffness: 320,
+                                  }}
+                                >
+                                  <motion.div
+                                    className="mb-2"
+                                    animate={
+                                      active ? { y: [0, -3, 0] } : { y: 0 }
+                                    }
+                                    transition={{
+                                      duration: 1.6,
+                                      repeat: active ? Infinity : 0,
+                                      ease: "easeInOut",
+                                    }}
+                                  >
+                                    <DocumentFormatIcon
+                                      tag={format.tag}
+                                      active={active}
+                                      className="w-12 h-14 mx-auto"
+                                    />
+                                  </motion.div>
+                                  <div className="font-medium text-sm text-gray-900">
+                                    {t(format.label)}
+                                  </div>
+                                  <div className="text-xs text-gray-500 mt-0.5">
+                                    {format.extensions}
+                                  </div>
+                                </motion.div>
+                              );
+                            })}
+                          </AnimatePresence>
                         </motion.div>
                       )}
-                      {state.error && (
-                        <div className="text-sm flex items-center text-center w-full justify-center space-x-2 mt-6 text-red-900">
-                          <ExclamationCircleIcon className="w-5 h-5 text-red-900" />
-                          <span>{state.error}</span>
-                        </div>
-                      )}
+
+                      <AnimatePresence>
+                        {phase === "error" && (
+                          <motion.div
+                            layout
+                            className="mt-5 mx-auto max-w-xl pointer-events-auto"
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -4 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <div
+                              className="rounded-lg px-4 py-3 text-sm text-left text-red-900 flex items-start gap-2"
+                              style={{
+                                background: "rgba(254, 226, 226, 0.7)",
+                                border: "1px solid rgba(220, 38, 38, 0.25)",
+                              }}
+                            >
+                              <ExclamationCircleIcon className="w-5 h-5 mt-0.5 flex-shrink-0 text-red-700" />
+                              <div>{state.error}</div>
+                            </div>
+                            <div className="mt-4 flex justify-center">
+                              <Button
+                                label={t("Dismiss")}
+                                onClick={dismissOverlay}
+                              />
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
                   </motion.div>
                 </motion.div>
