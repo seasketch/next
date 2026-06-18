@@ -1,9 +1,22 @@
 import {
+  AnimatePresence,
+  motion,
+} from "framer-motion";
+import {
+  ArchiveIcon,
+  CollectionIcon,
+  DocumentTextIcon,
+  MapIcon,
+  UploadIcon,
+} from "@heroicons/react/outline";
+import {
   createContext,
+  DragEvent,
   ReactNode,
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
 } from "react";
 import { useDropzone } from "react-dropzone";
@@ -38,6 +51,173 @@ import ConvertFeatureLayerToHostedModal from "../data/arcgis/ConvertFeatureLayer
 import AiDataAnalystUploadPromptModal from "./AiDataAnalystUploadPromptModal";
 
 export type UploadType = "create" | "replace";
+
+type SupportedSpatialFormat =
+  | "geojson"
+  | "shapefileZip"
+  | "geotiff"
+  | "netcdf"
+  | "flatgeobuf";
+
+const SUPPORTED_FORMATS: {
+  id: SupportedSpatialFormat;
+  label: string;
+  extensions: string;
+  icon: (props: { className?: string }) => JSX.Element;
+}[] = [
+  {
+    id: "geojson",
+    label: "GeoJSON",
+    extensions: ".geojson, .json",
+    icon: MapIcon,
+  },
+  {
+    id: "shapefileZip",
+    label: "Shapefile (zipped)",
+    extensions: ".zip",
+    icon: ArchiveIcon,
+  },
+  {
+    id: "geotiff",
+    label: "GeoTiff",
+    extensions: ".tif, .tiff",
+    icon: CollectionIcon,
+  },
+  {
+    id: "netcdf",
+    label: "NetCDF",
+    extensions: ".nc, .nc4",
+    icon: UploadIcon,
+  },
+  {
+    id: "flatgeobuf",
+    label: "FlatGeobuf",
+    extensions: ".fgb",
+    icon: DocumentTextIcon,
+  },
+];
+
+function fileExtension(fileName: string): string {
+  const dotIndex = fileName.lastIndexOf(".");
+  if (dotIndex < 0) return "";
+  return fileName.slice(dotIndex).toLowerCase();
+}
+
+function detectSupportedFormat(
+  fileName: string | null
+): SupportedSpatialFormat | null {
+  if (!fileName) return null;
+  const ext = fileExtension(fileName);
+  switch (ext) {
+    case ".geojson":
+    case ".json":
+      return "geojson";
+    case ".zip":
+      return "shapefileZip";
+    case ".tif":
+    case ".tiff":
+      return "geotiff";
+    case ".nc":
+    case ".nc4":
+      return "netcdf";
+    case ".fgb":
+      return "flatgeobuf";
+    default:
+      return null;
+  }
+}
+
+function detectDraggedFileName(dataTransfer: DataTransfer | null): string | null {
+  if (!dataTransfer) return null;
+  if (dataTransfer.files && dataTransfer.files.length > 0) {
+    return dataTransfer.files[0].name || null;
+  }
+  if (dataTransfer.items && dataTransfer.items.length > 0) {
+    const firstItem = dataTransfer.items[0];
+    if (firstItem.kind === "file") {
+      const file = firstItem.getAsFile();
+      if (file?.name) {
+        return file.name;
+      }
+      const fileSystemEntry =
+        (firstItem as unknown as { webkitGetAsEntry?: () => { name?: string } })
+          .webkitGetAsEntry?.() || null;
+      if (fileSystemEntry?.name) {
+        return fileSystemEntry.name;
+      }
+    }
+  }
+  return null;
+}
+
+function detectSupportedFormatFromMime(
+  mimeType: string | null | undefined
+): SupportedSpatialFormat | null {
+  if (!mimeType) return null;
+  const normalized = mimeType.toLowerCase();
+  if (
+    normalized === "application/geo+json" ||
+    normalized === "application/vnd.geo+json" ||
+    normalized === "application/json"
+  ) {
+    return "geojson";
+  }
+  if (
+    normalized === "application/zip" ||
+    normalized === "application/x-zip-compressed" ||
+    normalized === "multipart/x-zip"
+  ) {
+    return "shapefileZip";
+  }
+  if (
+    normalized === "image/tiff" ||
+    normalized === "image/geotiff" ||
+    normalized === "application/geotiff" ||
+    normalized === "application/x-geotiff"
+  ) {
+    return "geotiff";
+  }
+  if (
+    normalized === "application/x-netcdf" ||
+    normalized === "application/netcdf"
+  ) {
+    return "netcdf";
+  }
+  if (normalized === "application/flatgeobuf") {
+    return "flatgeobuf";
+  }
+  return null;
+}
+
+function detectDraggedFilePreview(dataTransfer: DataTransfer | null): {
+  fileName: string | null;
+  format: SupportedSpatialFormat | null;
+} {
+  const fileName = detectDraggedFileName(dataTransfer);
+  if (fileName) {
+    return {
+      fileName,
+      format: detectSupportedFormat(fileName),
+    };
+  }
+  if (dataTransfer?.items) {
+    for (const item of Array.from(dataTransfer.items)) {
+      if (item.kind === "file") {
+        const format = detectSupportedFormatFromMime(item.type);
+        if (format) {
+          return {
+            fileName: null,
+            format,
+          };
+        }
+      }
+    }
+  }
+  return {
+    fileName: null,
+    format: null,
+  };
+}
 
 export const ProjectBackgroundJobContext = createContext<{
   jobs: JobDetailsFragment[];
@@ -84,6 +264,8 @@ export default function DataUploadDropzone({
     finishedWithChangelog: boolean;
     changelog?: string;
     aiDataAnalystUploadPromptOpen: boolean;
+    activeFileName: string | null;
+    detectedFormat: SupportedSpatialFormat | null;
   }>({
     droppedFiles: 0,
     uploads: [],
@@ -93,8 +275,11 @@ export default function DataUploadDropzone({
     replaceTableOfContentsItemId: null,
     finishedWithChangelog: true,
     aiDataAnalystUploadPromptOpen: false,
+    activeFileName: null,
+    detectedFormat: null,
   });
   const client = useApolloClient();
+  const dragDepthRef = useRef(0);
   const { manager } = useContext(MapManagerContext);
   const onError = useGlobalErrorHandler();
   const { alert } = useDialog();
@@ -180,6 +365,7 @@ export default function DataUploadDropzone({
 
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
+      dragDepthRef.current = 0;
       function isUploadForSupported(file: File) {
         let message: string | null = null;
         let isPartOfShapefile = false;
@@ -255,6 +441,13 @@ export default function DataUploadDropzone({
         return;
       }
 
+      const firstFileName = acceptedFiles[0]?.name || null;
+      setState((prev) => ({
+        ...prev,
+        activeFileName: firstFileName,
+        detectedFormat: detectSupportedFormat(firstFileName),
+      }));
+
       const filteredFiles: File[] = [];
       for (const file of acceptedFiles) {
         const supported = isUploadForSupported(file);
@@ -284,6 +477,9 @@ export default function DataUploadDropzone({
       setState((prev) => ({
         ...prev,
         droppedFiles: filteredFiles.length,
+        error: undefined,
+        activeFileName: filteredFiles[0]?.name || null,
+        detectedFormat: detectSupportedFormat(filteredFiles[0]?.name || null),
       }));
 
       if (state.manager) {
@@ -308,6 +504,8 @@ export default function DataUploadDropzone({
             setState((prev) => ({
               ...prev,
               droppedFiles: 0,
+              activeFileName: null,
+              detectedFormat: null,
             }));
           })
           .catch((e) => {
@@ -316,6 +514,8 @@ export default function DataUploadDropzone({
               droppedFiles: 0,
               isUploadingReplacement: false,
               finishedWithChangelog: true,
+              activeFileName: null,
+              detectedFormat: null,
             }));
             if (/quota exceeded/.test(e.message)) {
               alert(t("Quota Exceeded"), {
@@ -345,10 +545,54 @@ export default function DataUploadDropzone({
     ]
   );
 
+  const updateDragPreview = useCallback((event: DragEvent<HTMLElement>) => {
+    const preview = detectDraggedFilePreview(event.dataTransfer);
+    setState((prev) => ({
+      ...prev,
+      activeFileName: preview.fileName ?? prev.activeFileName,
+      detectedFormat: preview.format ?? prev.detectedFormat,
+      error: undefined,
+    }));
+  }, []);
+
+  const onDragEnter = useCallback(
+    (event: DragEvent<HTMLElement>) => {
+      dragDepthRef.current += 1;
+      updateDragPreview(event);
+    },
+    [updateDragPreview]
+  );
+
+  const onDragOver = useCallback(
+    (event: DragEvent<HTMLElement>) => {
+      updateDragPreview(event);
+    },
+    [updateDragPreview]
+  );
+
+  const onDragLeave = useCallback(() => {
+    setState((prev) => {
+      dragDepthRef.current = Math.max(0, dragDepthRef.current - 1);
+      if (dragDepthRef.current > 0 || prev.droppedFiles > 0) {
+        return prev;
+      }
+      return {
+        ...prev,
+        activeFileName: null,
+        detectedFormat: null,
+      };
+    });
+  }, []);
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
+    onDragEnter,
+    onDragOver,
+    onDragLeave,
     noClick: true,
   });
+
+  const showOverlay = isDragActive || state.droppedFiles > 0;
 
   const setDisabled = useCallback(
     (disabled: boolean) => {
@@ -435,41 +679,172 @@ export default function DataUploadDropzone({
         )}
         <input {...getInputProps()} className="w-1 h-1" />
         {children}
-        {(isDragActive || state.droppedFiles > 0) &&
+        {showOverlay &&
           createPortal(
-            <>
-              <div
-                className="absolute top-0 left-0 w-full h-full z-50 flex items-center justify-center bg-black bg-opacity-20 pointer-events-none"
-                style={{
-                  backdropFilter: "blur(5px)",
-                }}
-              >
-                <div className="bg-white rounded p-4 shadow pointer-events-none text-center max-w-lg">
-                  <h4 className="font-semibold">
-                    {state.uploadType === "create"
-                      ? t("Drop Files Here to Upload")
-                      : t("Drop a file to update this layer")}
-                  </h4>
-                  <p className="text-sm">
-                    {t(
-                      "SeaSketch currently supports vector data in GeoJSON, Shapefile (zipped), GeoTiff, NetCDF and FlatGeobuf formats."
-                    )}
-                  </p>
-                  {Boolean(state.droppedFiles) && !state.error && (
-                    <div className="text-sm flex items-center text-center w-full justify-center space-x-2 mt-2">
-                      <span>{t("Starting upload")}</span>
-                      <Spinner />
+            <AnimatePresence>
+              {showOverlay && (
+                <motion.div
+                  className="fixed top-0 left-0 w-full h-full z-50 flex items-center justify-center pointer-events-none"
+                  style={{
+                    background:
+                      "radial-gradient(circle at center, rgba(6, 95, 70, 0.28) 0%, rgba(7, 27, 56, 0.55) 70%)",
+                    backdropFilter: "blur(6px)",
+                  }}
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <motion.div
+                    className="rounded-2xl shadow-xl pointer-events-none max-w-3xl w-full mx-6 overflow-hidden"
+                    style={{
+                      background:
+                        "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(250,252,255,0.97) 100%)",
+                      border: "1px solid rgba(255,255,255,0.4)",
+                    }}
+                    initial={{ scale: 0.95, y: 10 }}
+                    animate={{ scale: 1, y: 0 }}
+                    exit={{ scale: 0.98, y: 6 }}
+                    transition={{
+                      type: "spring",
+                      damping: 28,
+                      stiffness: 340,
+                    }}
+                  >
+                    <div className="p-7 text-center">
+                      <motion.div
+                        className="inline-flex items-center px-3 py-1.5 rounded-full mb-4 text-sm font-medium"
+                        style={{
+                          background: "rgba(14, 116, 144, 0.12)",
+                          color: "rgb(14, 116, 144)",
+                        }}
+                        animate={{
+                          scale: [1, 1.04, 1],
+                        }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                        }}
+                      >
+                        <UploadIcon className="w-4 h-4 mr-2" />
+                        {t("Spatial Data Upload")}
+                      </motion.div>
+                      <h4 className="font-semibold text-2xl text-gray-900">
+                        {state.uploadType === "create"
+                          ? t("Drop Files Here to Upload")
+                          : t("Drop a file to update this layer")}
+                      </h4>
+                      <p className="text-sm text-gray-700 mt-2">
+                        {t(
+                          "SeaSketch currently supports vector data in GeoJSON, Shapefile (zipped), GeoTiff, NetCDF and FlatGeobuf formats."
+                        )}
+                      </p>
+                      <AnimatePresence>
+                        {(state.activeFileName || state.detectedFormat) && (
+                          <motion.div
+                            className="mt-5 mx-auto rounded-lg px-4 py-2.5 max-w-xl text-sm text-left"
+                            style={{
+                              background: "rgba(15, 23, 42, 0.06)",
+                              border: "1px solid rgba(15, 23, 42, 0.08)",
+                            }}
+                            initial={{ opacity: 0, y: 6 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -4 }}
+                            transition={{ duration: 0.18 }}
+                          >
+                            <div className="font-medium text-gray-900 truncate">
+                              {state.activeFileName || t("File being dragged")}
+                            </div>
+                            <div className="text-xs text-gray-600 mt-1">
+                              {state.detectedFormat
+                                ? t("Detected format: {{format}}", {
+                                    format:
+                                      SUPPORTED_FORMATS.find(
+                                        (format) =>
+                                          format.id === state.detectedFormat
+                                      )?.label || t("Unknown"),
+                                  })
+                                : t(
+                                    "Format not recognized from extension yet."
+                                  )}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+
+                      <div className="grid grid-cols-1 md:grid-cols-5 gap-3 mt-6 text-left">
+                        {SUPPORTED_FORMATS.map((format) => {
+                          const Icon = format.icon;
+                          const active = format.id === state.detectedFormat;
+                          return (
+                            <motion.div
+                              key={format.id}
+                              className={`rounded-xl p-3 ${
+                                active
+                                  ? "ring-2 ring-cyan-500 shadow-md"
+                                  : "ring-1 ring-gray-200"
+                              }`}
+                              style={{
+                                background: active
+                                  ? "linear-gradient(180deg, rgba(236,254,255,0.98) 0%, rgba(240,249,255,0.95) 100%)"
+                                  : "rgba(255,255,255,0.75)",
+                              }}
+                              animate={
+                                active
+                                  ? {
+                                      y: [0, -2, 0],
+                                    }
+                                  : { y: 0 }
+                              }
+                              transition={{
+                                duration: 1.4,
+                                repeat: active ? Infinity : 0,
+                                ease: "easeInOut",
+                              }}
+                            >
+                              <div
+                                className={`rounded-lg w-8 h-8 flex items-center justify-center mb-2 ${
+                                  active
+                                    ? "bg-cyan-100 text-cyan-700"
+                                    : "bg-gray-100 text-gray-600"
+                                }`}
+                              >
+                                <Icon className="w-5 h-5" />
+                              </div>
+                              <div className="font-medium text-sm text-gray-900">
+                                {t(format.label)}
+                              </div>
+                              <div className="text-xs text-gray-500 mt-0.5">
+                                {format.extensions}
+                              </div>
+                            </motion.div>
+                          );
+                        })}
+                      </div>
+
+                      {Boolean(state.droppedFiles) && !state.error && (
+                        <motion.div
+                          className="text-sm flex items-center text-center w-full justify-center space-x-2 mt-6 text-gray-700"
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ duration: 0.2 }}
+                        >
+                          <span>{t("Starting upload")}</span>
+                          <Spinner />
+                        </motion.div>
+                      )}
+                      {state.error && (
+                        <div className="text-sm flex items-center text-center w-full justify-center space-x-2 mt-6 text-red-900">
+                          <ExclamationCircleIcon className="w-5 h-5 text-red-900" />
+                          <span>{state.error}</span>
+                        </div>
+                      )}
                     </div>
-                  )}
-                  {state.error && (
-                    <div className="text-sm flex items-center text-center w-full justify-center space-x-2 mt-2">
-                      <ExclamationCircleIcon className="w-5 h-5 text-red-900" />
-                      <span>{state.error}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </>,
+                  </motion.div>
+                </motion.div>
+              )}
+            </AnimatePresence>,
             document.body
           )}
       </div>

@@ -1,9 +1,11 @@
 /* eslint-disable react/jsx-no-target-blank */
+import { Link } from "react-router-dom";
 import LightRays from "./LightRays";
 import Testimonials from "./Testimonials";
 import News from "./News";
 import WhereWeWork from "./WhereWeWork";
 import ProjectSearchBar from "./ProjectSearchBar";
+import { useCaseLinks } from "./useCases";
 
 export type TrustedPartnerLogo = {
   alt: string;
@@ -361,12 +363,12 @@ export default function LandingPage() {
                 <li>Metadata and version management</li>
                 <li>Integrates with Esri and open-source services</li>
               </ul>
-              {/* <a
-                href="/uses/map-portal"
-                className="mt-4 inline-block text-sm font-medium text-sky-700 hover:underline"
+              <Link
+                to={useCaseLinks[0].to}
+                className="mt-5 inline-block text-sm font-medium text-sky-700 hover:text-sky-900 hover:underline"
               >
-                Learn more →
-              </a> */}
+                {useCaseLinks[0].readMoreLabel}
+              </Link>
             </div>
           </div>
 
@@ -416,12 +418,12 @@ export default function LandingPage() {
                 <li>Offline data collection</li>
                 <li>Understand ocean uses by sector</li>
               </ul>
-              {/* <a
-                href="/uses/surveys"
-                className="mt-4 inline-block text-sm font-medium text-sky-700 hover:underline"
+              <Link
+                to={useCaseLinks[1].to}
+                className="mt-5 inline-block text-sm font-medium text-sky-700 hover:text-sky-900 hover:underline"
               >
-                Learn more →
-              </a> */}
+                {useCaseLinks[1].readMoreLabel}
+              </Link>
             </div>
           </div>
 
@@ -469,12 +471,12 @@ export default function LandingPage() {
                 <li>Online collaboration tools and discussion forums</li>
                 <li>Export products to GIS and Excel</li>
               </ul>
-              {/* <a
-                href="/uses/planning"
-                className="mt-4 inline-block text-sm font-medium text-sky-700 hover:underline"
+              <Link
+                to={useCaseLinks[2].to}
+                className="mt-5 inline-block text-sm font-medium text-sky-700 hover:text-sky-900 hover:underline"
               >
-                Learn more →
-              </a> */}
+                {useCaseLinks[2].readMoreLabel}
+              </Link>
             </div>
           </div>
         </div>
