@@ -24,6 +24,7 @@
     "test:e2e:live:ui": "playwright test --project=live --ui",
     "test:e2e:live:debug": "PW_LIVE_PAUSE=1 playwright test --project=live --headed",
     "test:e2e:typecheck": "tsc --noEmit -p e2e/tsconfig.json",
+    "verify:ci": "bash scripts/verify-ci.sh",
     "playground": "vite --config playground/vite.config.ts",
     "capture-fixtures": "tsx scripts/capture-fixtures.ts",
     "prepublishOnly": "npm run build"

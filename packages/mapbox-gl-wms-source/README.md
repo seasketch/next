@@ -119,7 +119,21 @@ These are **not** part of the default `npm run test:e2e` run.
 Playwright as **required** steps. Live Vitest + live Playwright run in the same
 job with `continue-on-error: true` (indicative only — failures do not fail the
 workflow). This job is independent of deployment (`deploy.yml` is manual and
-does not run or wait on WMS tests).
+does not wait on WMS tests).
+
+**Verify locally before pushing** (mirrors CI without lerna bootstrap):
+
+```bash
+cd packages/mapbox-gl-wms-source
+cp .env.example .env   # once — add VITE_MAPBOX_TOKEN (pk.* from client/.env)
+npm run verify:ci      # build metadata-parser + build + unit + e2e (CI=true)
+```
+
+To reproduce the exact CI failure mode (no `.env`, token from env only):
+
+```bash
+CI=true VITE_MAPBOX_TOKEN=pk.your_token npm run test:e2e
+```
 
 **4. Live protocol smoke (Vitest, opt-in)** — lightweight fetch-only checks
 (capabilities parse + GetMap content-type) without a browser.

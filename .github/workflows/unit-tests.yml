@@ -203,7 +203,7 @@ jobs:
         working-directory: ./packages/mapbox-gl-wms-source
         env:
           CI: "true"
-          VITE_MAPBOX_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
+          VITE_MAPBOX_TOKEN: ${{ secrets.REACT_APP_MAPBOX_ACCESS_TOKEN }}
         run: npm run test:e2e
       - name: Live protocol smoke (Vitest, indicative)
         id: live_vitest
@@ -218,7 +218,7 @@ jobs:
         working-directory: ./packages/mapbox-gl-wms-source
         env:
           CI: "true"
-          VITE_MAPBOX_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
+          VITE_MAPBOX_TOKEN: ${{ secrets.REACT_APP_MAPBOX_ACCESS_TOKEN }}
         run: npm run test:e2e:live
       - name: Upload live Playwright artifacts
         if: steps.live_playwright.outcome == 'failure'
