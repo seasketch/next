@@ -22,6 +22,11 @@ import { Helmet } from "react-helmet";
 import LandingPage from "./homepage/LandingPage";
 import TeamPage from "./homepage/TeamPage";
 import {
+  MapPortalHostingPage,
+  OceanUseSurveysPage,
+  SketchingAndAnalysisPage,
+} from "./homepage/useCases";
+import {
   CaseStudiesIndex,
   AzoresCaseStudy,
   BelizeCaseStudy,
@@ -103,7 +108,9 @@ function App() {
   useTranslation("homepage");
   const [error, setError] = useState<Error | null>(null);
   const location = useLocation();
+  const isUseCaseRoute = location.pathname.startsWith("/uses/");
   const isDarkRoutes =
+    isUseCaseRoute ||
     location.pathname === "/" ||
     location.pathname === "/about" ||
     location.pathname === "/projects" ||
@@ -140,6 +147,14 @@ function App() {
     }
   }, [location.pathname, location.hash]);
 
+  // Ensure use-case detail pages always start at the top when navigating
+  // between routes in the SPA.
+  useEffect(() => {
+    if (location.pathname.startsWith("/uses/")) {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    }
+  }, [location.pathname]);
+
   const frontOfTheHouse = [
     "/signin",
     "/projects",
@@ -150,9 +165,9 @@ function App() {
     "/team",
     "/terms-of-use",
     "/privacy-policy",
-    "/uses/map-portal",
-    "/uses/surveys",
-    "/uses/planning",
+    "/uses/map-portal-hosting",
+    "/uses/ocean-use-surveys",
+    "/uses/sketching-and-analysis",
     "/case-studies",
     "/case-studies/*",
   ];
@@ -237,6 +252,24 @@ function App() {
                 </Route>
                 <Route exact path="/team">
                   <TeamPage />
+                </Route>
+                <Route exact path="/uses/map-portal-hosting">
+                  <MapPortalHostingPage />
+                </Route>
+                <Route exact path="/uses/ocean-use-surveys">
+                  <OceanUseSurveysPage />
+                </Route>
+                <Route exact path="/uses/sketching-and-analysis">
+                  <SketchingAndAnalysisPage />
+                </Route>
+                <Route exact path="/uses/map-portal">
+                  <Redirect to="/uses/map-portal-hosting" />
+                </Route>
+                <Route exact path="/uses/surveys">
+                  <Redirect to="/uses/ocean-use-surveys" />
+                </Route>
+                <Route exact path="/uses/planning">
+                  <Redirect to="/uses/sketching-and-analysis" />
                 </Route>
                 <Route exact path="/terms-of-use">
                   <LazyTermsOfUse />

@@ -3,11 +3,17 @@ import * as Popover from "@radix-ui/react-popover";
 import { ChevronDownIcon } from "@radix-ui/react-icons";
 import logo from "./seasketch-logo.png";
 import { useAuth0 } from "@auth0/auth0-react";
-import { Link, NavLink } from "react-router-dom";
+import { Link, NavLink, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import ProfileContextMenu from "./ProfileContextMenu";
 import ProfileControl from "./ProfileControl";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
+import { useCaseLinks } from "../homepage/useCases";
+
+// Temporary launch mode:
+// Keep Features as a simple anchor to `/#use-cases` for now.
+// To restore the dropdown with all use case pages, set this back to `true`.
+const enableFeaturesDropdown = false;
 
 const navigationLinks = [
   {
@@ -47,39 +53,14 @@ const navigationLinks = [
   // },
 ];
 
-const featureLinks = [
-  {
-    to: "/uses/map-portal",
-    label: "Map Portal",
-    description:
-      "Publish, explore, and share authoritative ocean data. Create a common picture of your ocean environment.",
-    id: "nav-map-portal",
-  },
-  {
-    to: "/uses/surveys",
-    label: "Ocean Use Surveys",
-    description: "Gather essential spatial data with Ocean Use Surveys",
-    id: "nav-surveys",
-  },
-  {
-    to: "/uses/planning",
-    label: "Planning Tools",
-    description:
-      "Design and evaluate scenarios, including MPAs and Ocean Uses.",
-    id: "nav-planning",
-  },
-];
-
 export default function Header() {
   const { isAuthenticated, loginWithRedirect } = useAuth0();
   const { t } = useTranslation("nav");
   const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [featuresOpen, setFeaturesOpen] = useState(false);
   const hoverCloseTimeout = useRef<number | null>(null);
-  const [openByKeyboard, setOpenByKeyboard] = useState(false);
-  const firstFeatureRef = useRef<HTMLAnchorElement | null>(null);
-  const featureItemRefs = useRef<Array<HTMLAnchorElement | null>>([]);
   const currentProjectQuery = useCurrentProjectMetadata();
+  const location = useLocation();
 
   const handleDocumentClick = useCallback(
     () => setProfileModalOpen(false),
@@ -96,11 +77,27 @@ export default function Header() {
   });
 
   useEffect(() => {
-    if (featuresOpen && openByKeyboard && firstFeatureRef.current) {
-      firstFeatureRef.current.focus();
-      setOpenByKeyboard(false);
+    if (hoverCloseTimeout.current) {
+      window.clearTimeout(hoverCloseTimeout.current);
     }
-  }, [featuresOpen, openByKeyboard]);
+    setFeaturesOpen(false);
+  }, [location.pathname, location.hash]);
+
+  const openFeaturesMenu = () => {
+    if (hoverCloseTimeout.current) {
+      window.clearTimeout(hoverCloseTimeout.current);
+    }
+    setFeaturesOpen(true);
+  };
+
+  const scheduleFeaturesMenuClose = () => {
+    if (hoverCloseTimeout.current) {
+      window.clearTimeout(hoverCloseTimeout.current);
+    }
+    hoverCloseTimeout.current = window.setTimeout(() => {
+      setFeaturesOpen(false);
+    }, 100);
+  };
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-slate-950/80 backdrop-blur supports-[backdrop-filter]:bg-slate-950/80">
@@ -137,25 +134,74 @@ export default function Header() {
               {
                 <div className="ml-10 flex items-baseline space-x-4">
                   {navigationLinks.map((link) =>
-                    link.to === "/features" ? (
-                      <>
-                        {/*
-                        <Popover.Root key={link.to} open={featuresOpen} onOpenChange={() => {}}>
-                          ... existing dropdown content preserved for future use ...
-                        </Popover.Root>
-                        */}
-                        <a
-                          key={link.to}
-                          href="/#use-cases"
-                          className={`
-                              px-3 py-2 rounded-md text-sm font-medium text-slate-200
+                    link.to === "/features" && enableFeaturesDropdown ? (
+                      <Popover.Root
+                        key={link.to}
+                        open={featuresOpen}
+                        onOpenChange={setFeaturesOpen}
+                      >
+                        <Popover.Trigger asChild>
+                          <button
+                            type="button"
+                            onMouseEnter={openFeaturesMenu}
+                            onMouseLeave={scheduleFeaturesMenuClose}
+                            className={`
+                              inline-flex items-center gap-1 px-3 py-2 rounded-md text-sm font-medium text-slate-200
                               hover:text-white focus:outline-none focus-visible:ring-1
                             `}
-                          id={link.id}
-                        >
-                          {link.label}
-                        </a>
-                      </>
+                            id={link.id}
+                          >
+                            {link.label}
+                            <ChevronDownIcon aria-hidden className="h-4 w-4" />
+                          </button>
+                        </Popover.Trigger>
+                        <Popover.Portal>
+                          <Popover.Content
+                            align="start"
+                            sideOffset={8}
+                            onCloseAutoFocus={(event) => event.preventDefault()}
+                            onMouseEnter={openFeaturesMenu}
+                            onMouseLeave={scheduleFeaturesMenuClose}
+                            className="z-30 w-80 rounded-2xl bg-slate-900 p-5 text-slate-100 shadow-xl focus:outline-none"
+                          >
+                            <h2 className="text-base font-semibold text-sky-200">
+                              What can SeaSketch do?
+                            </h2>
+                            <div className="mt-4 space-y-1">
+                              {useCaseLinks.map((feature) => (
+                                <Link
+                                  key={feature.to}
+                                  to={feature.to}
+                                  id={`nav-${feature.id}`}
+                                  onClick={() => setFeaturesOpen(false)}
+                                  className="block rounded-xl px-3 py-2 hover:bg-white/10 focus:outline-none focus-visible:ring-1 focus-visible:ring-white/50"
+                                >
+                                  <span className="block text-sm font-medium text-white">
+                                    {feature.navLabel}
+                                  </span>
+                                  <span className="mt-1 block text-xs leading-5 text-slate-300">
+                                    {feature.summary}
+                                  </span>
+                                </Link>
+                              ))}
+                            </div>
+                            <Popover.Arrow className="fill-slate-900" />
+                          </Popover.Content>
+                        </Popover.Portal>
+                      </Popover.Root>
+                    ) : link.to === "/features" ? (
+                      <a
+                        key={link.to}
+                        href="/#use-cases"
+                        className={`
+                      px-3 py-2 rounded-md text-sm font-medium text-slate-200
+                    hover:text-white  focus:outline-none focus-visible:ring-1
+                    
+                    `}
+                        id={link.id}
+                      >
+                        {link.label}
+                      </a>
                     ) : (
                       <NavLink
                         key={link.to}
@@ -233,7 +279,27 @@ export default function Header() {
           } bg-white absolute top left w-full h-content shadow-xl z-10 pt-2`}
         >
           {navigationLinks.map((link) =>
-            link.to === "/features" ? (
+            link.to === "/features" && enableFeaturesDropdown ? (
+              <div key={link.to}>
+                <a
+                  href="/#use-cases"
+                  id={`modal-` + link.id}
+                  className={`block w-full text-left px-4 py-2 text-base leading-5 text-gray-700 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:bg-gray-100 focus:text-gray-900 font-semibold`}
+                >
+                  {link.label}
+                </a>
+                {useCaseLinks.map((feature) => (
+                  <NavLink
+                    key={feature.to}
+                    to={feature.to}
+                    id={`modal-nav-${feature.id}`}
+                    className={`block w-full text-left px-8 py-2 text-sm leading-5 text-gray-600 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:bg-gray-100 focus:text-gray-900`}
+                  >
+                    {feature.navLabel}
+                  </NavLink>
+                ))}
+              </div>
+            ) : link.to === "/features" ? (
               <a
                 key={link.to}
                 href="/#use-cases"
