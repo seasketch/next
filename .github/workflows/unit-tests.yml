@@ -188,6 +188,8 @@ jobs:
       - name: Build metadata-parser
         working-directory: ./packages/metadata-parser
         run: npm run build
+      - name: Install WMS package dependencies
+        run: npx lerna@6.6.2 bootstrap --scope @seasketch/mapbox-gl-wms-source --ci
       - name: Install Playwright Chromium
         working-directory: ./packages/mapbox-gl-wms-source
         run: npx playwright install chromium

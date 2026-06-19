@@ -39,7 +39,7 @@
     "ogc"
   ],
   "dependencies": {
-    "@seasketch/metadata-parser": "file:../metadata-parser",
+    "@seasketch/metadata-parser": "^1.0.0",
     "fast-xml-parser": "^4.5.0",
     "lodash.debounce": "^4.0.8",
     "uuid": "^8.3.0"

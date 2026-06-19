@@ -6,12 +6,13 @@
   "homepage": "https://github.com/seasketch/next#readme",
   "license": "BSD-3-Clause",
   "main": "dist/metadata-parser.js",
+  "types": "dist/metadata-parser.d.ts",
   "directories": {
     "src": "src",
     "test": "__tests__"
   },
   "files": [
-    "lib"
+    "dist"
   ],
   "repository": {
     "type": "git",
