@@ -15,8 +15,18 @@ export {
   sketchingAndAnalysisUseCase,
 } from "./SketchingAndAnalysis";
 
+// Temporary launch mode:
+// Keep only the Map Portal use case linked from homepage/nav until
+// Ocean Use Surveys and Sketching pages are ready.
+// To restore full behavior, set this to `true`.
+export const enableAllUseCaseLinks = false;
+
 export const useCaseLinks = [
   mapPortalHostingUseCase,
   oceanUseSurveysUseCase,
   sketchingAndAnalysisUseCase,
 ];
+
+export const publishedUseCaseLinks = enableAllUseCaseLinks
+  ? useCaseLinks
+  : [mapPortalHostingUseCase];

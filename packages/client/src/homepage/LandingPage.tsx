@@ -5,7 +5,7 @@ import Testimonials from "./Testimonials";
 import News from "./News";
 import WhereWeWork from "./WhereWeWork";
 import ProjectSearchBar from "./ProjectSearchBar";
-import { useCaseLinks } from "./useCases";
+import { publishedUseCaseLinks, enableAllUseCaseLinks } from "./useCases";
 
 export type TrustedPartnerLogo = {
   alt: string;
@@ -364,10 +364,10 @@ export default function LandingPage() {
                 <li>Integrates with Esri and open-source services</li>
               </ul>
               <Link
-                to={useCaseLinks[0].to}
+                to={publishedUseCaseLinks[0].to}
                 className="mt-5 inline-block text-sm font-medium text-sky-700 hover:text-sky-900 hover:underline"
               >
-                {useCaseLinks[0].readMoreLabel}
+                {publishedUseCaseLinks[0].readMoreLabel}
               </Link>
             </div>
           </div>
@@ -418,12 +418,16 @@ export default function LandingPage() {
                 <li>Offline data collection</li>
                 <li>Understand ocean uses by sector</li>
               </ul>
-              <Link
-                to={useCaseLinks[1].to}
-                className="mt-5 inline-block text-sm font-medium text-sky-700 hover:text-sky-900 hover:underline"
-              >
-                {useCaseLinks[1].readMoreLabel}
-              </Link>
+              {enableAllUseCaseLinks ? (
+                // Re-enable this once Ocean Use Surveys page is complete.
+                // Make sure `enableAllUseCaseLinks` is set to true in `homepage/useCases/index.ts`.
+                <Link
+                  to="/uses/ocean-use-surveys"
+                  className="mt-5 inline-block text-sm font-medium text-sky-700 hover:text-sky-900 hover:underline"
+                >
+                  Read more about Ocean Use Surveys
+                </Link>
+              ) : null}
             </div>
           </div>
 
@@ -471,12 +475,16 @@ export default function LandingPage() {
                 <li>Online collaboration tools and discussion forums</li>
                 <li>Export products to GIS and Excel</li>
               </ul>
-              <Link
-                to={useCaseLinks[2].to}
-                className="mt-5 inline-block text-sm font-medium text-sky-700 hover:text-sky-900 hover:underline"
-              >
-                {useCaseLinks[2].readMoreLabel}
-              </Link>
+              {enableAllUseCaseLinks ? (
+                // Re-enable this once Sketching and Analysis page is complete.
+                // Make sure `enableAllUseCaseLinks` is set to true in `homepage/useCases/index.ts`.
+                <Link
+                  to="/uses/sketching-and-analysis"
+                  className="mt-5 inline-block text-sm font-medium text-sky-700 hover:text-sky-900 hover:underline"
+                >
+                  Read more about Sketching and Analysis
+                </Link>
+              ) : null}
             </div>
           </div>
         </div>

@@ -1,5 +1,6 @@
 /* eslint-disable i18next/no-literal-string */
-import { ReactNode, useCallback, useEffect, useRef, useState } from "react";
+import { BookOpenIcon } from "@heroicons/react/outline";
+import { ReactNode } from "react";
 import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import {
@@ -10,6 +11,8 @@ import {
   FileTextIcon,
   GlobeIcon,
   ArrowLeftIcon,
+  ChatBubbleIcon,
+  LayersIcon,
 } from "@radix-ui/react-icons";
 
 export const mapPortalHostingUseCase = {
@@ -47,38 +50,39 @@ type AdditionalFeatureCard = {
 
 const additionalFeatureCards: AdditionalFeatureCard[] = [
   {
-    title: "Metadata & version management",
+    title: "Metadata management",
     description:
-      "Keep authoritative metadata attached to every layer and track changes over time, so your team always works from a trusted, well-documented source of truth.",
+      "Author and maintain metadata for your layers as rich text documents managed directly in SeaSketch, or upload data with XML metadata using standard formats.",
     icon: <FileTextIcon className="h-5 w-5" />,
     iconClassName: "bg-sky-100 text-sky-700 ring-sky-200",
   },
   {
     title: "Integrates with Esri & open-source services",
     description:
-      "For data you would rather not host on SeaSketch, link directly to ArcGIS Online, ArcGIS Enterprise, or OGC services and blend those layers seamlessly into your portal.",
+      "For data already hosted elsewhere, link directly to ArcGIS Online, ArcGIS Enterprise, or OGC services and blend those layers seamlessly into your portal.",
     icon: <GlobeIcon className="h-5 w-5" />,
     iconClassName: "bg-emerald-100 text-emerald-700 ring-emerald-200",
-  },
-  {
-    title: "Customizable interactivity",
-    description:
-      "Configure layers with popups, tooltips, map banners, and expandable side panels to expose rich context about features directly in the map.",
-    icon: <MagicWandIcon className="h-5 w-5" />,
-    iconClassName: "bg-violet-100 text-violet-700 ring-violet-200",
   },
   {
     title: "Data library",
     description:
       "Browse a growing library of authoritative datasets curated for ocean planning, then add them with preconfigured cartography and metadata plus source-linked updates over time.",
-    icon: <UploadIcon className="h-5 w-5" />,
+    icon: <BookOpenIcon className="h-5 w-5" />,
     iconClassName: "bg-cyan-100 text-cyan-700 ring-cyan-200",
   },
+  {
+    title: "Customizable interactivity",
+    description:
+      "Configure layers with popups, tooltips, map banners, and expandable side panels to expose rich context about features directly in the map.",
+    icon: <ChatBubbleIcon className="h-5 w-5" />,
+    iconClassName: "bg-violet-100 text-violet-700 ring-violet-200",
+  },
+
   {
     title: "Basemaps",
     description:
       "Start each project with a curated basemap set, then tailor it by adding custom Mapbox styles or tiled ArcGIS basemap sources for your region and audience.",
-    icon: <RocketIcon className="h-5 w-5" />,
+    icon: <LayersIcon className="h-5 w-5" />,
     iconClassName: "bg-indigo-100 text-indigo-700 ring-indigo-200",
   },
 ];
@@ -110,7 +114,7 @@ function FeatureRow({
 }: FeatureRowProps) {
   return (
     <div
-      className={`overflow-x-hidden grid items-center gap-10 md:grid-cols-2 md:gap-16 ${
+      className={`grid items-center gap-8 md:grid-cols-2 md:gap-16 ${
         rowClassName ?? ""
       }`}
     >
@@ -148,64 +152,8 @@ function FeatureRow({
 }
 
 export default function MapPortalHostingPage() {
-  const featureCarouselRef = useRef<HTMLDivElement | null>(null);
-  const [activeFeatureIndex, setActiveFeatureIndex] = useState(0);
-
-  const updateActiveFeatureIndex = useCallback(() => {
-    const carousel = featureCarouselRef.current;
-    if (!carousel) return;
-
-    const firstCard = carousel.querySelector<HTMLElement>(
-      "[data-feature-card]"
-    );
-    if (!firstCard) return;
-
-    const carouselStyle = window.getComputedStyle(carousel);
-    const gap = Number.parseFloat(
-      carouselStyle.columnGap || carouselStyle.gap || "0"
-    );
-    const scrollStep = firstCard.offsetWidth + gap;
-    if (scrollStep <= 0) return;
-
-    const nextIndex = Math.round(carousel.scrollLeft / scrollStep);
-    const maxIndex = additionalFeatureCards.length - 1;
-    setActiveFeatureIndex(Math.max(0, Math.min(maxIndex, nextIndex)));
-  }, []);
-
-  const scrollToFeature = useCallback((index: number) => {
-    const carousel = featureCarouselRef.current;
-    if (!carousel) return;
-
-    const cards = carousel.querySelectorAll<HTMLElement>("[data-feature-card]");
-    const target = cards[index];
-    if (!target) return;
-
-    carousel.scrollTo({
-      left: target.offsetLeft - carousel.offsetLeft,
-      behavior: "smooth",
-    });
-  }, []);
-
-  const scrollFeatureBy = useCallback(
-    (direction: -1 | 1) => {
-      const maxIndex = additionalFeatureCards.length - 1;
-      const nextIndex = Math.max(
-        0,
-        Math.min(maxIndex, activeFeatureIndex + direction)
-      );
-      scrollToFeature(nextIndex);
-    },
-    [activeFeatureIndex, scrollToFeature]
-  );
-
-  useEffect(() => {
-    updateActiveFeatureIndex();
-    window.addEventListener("resize", updateActiveFeatureIndex);
-    return () => window.removeEventListener("resize", updateActiveFeatureIndex);
-  }, [updateActiveFeatureIndex]);
-
   return (
-    <main className="bg-slate-950 text-slate-100 overflow-x-hidden">
+    <main className="overflow-x-hidden bg-slate-950 text-slate-100">
       <Helmet>
         <title>{`SeaSketch | ${mapPortalHostingUseCase.title}`}</title>
         <link
@@ -235,7 +183,7 @@ export default function MapPortalHostingPage() {
             <span className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-300/90">
               Map Portal Hosting
             </span>
-            <h1 className="mt-4 text-4xl font-semibold leading-tight tracking-tight text-white md:text-6xl">
+            <h1 className="mt-4 text-balance text-3xl font-semibold leading-tight tracking-tight text-white sm:text-4xl md:text-6xl">
               Publish an{" "}
               <span className="bg-gradient-to-r from-sky-300 via-cyan-300 to-emerald-300 bg-clip-text text-transparent">
                 living map
@@ -271,7 +219,7 @@ export default function MapPortalHostingPage() {
             />
             <div className="overflow-hidden rounded-2xl border border-white/10 shadow-2xl ring-1 ring-white/10">
               <img
-                src="/uses/map-portal-hero-2.png"
+                src="https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/bec0ee17-3023-4c06-10da-81ab072ec600/hlarge"
                 alt="The Te Baiku Ocean Geodatabase in SeaSketch showing geomorphic reef features for Kiribati with a map legend"
                 className="w-full"
               />
@@ -281,17 +229,17 @@ export default function MapPortalHostingPage() {
       </section>
 
       {/* Feature rows */}
-      <section className="relative rounded-t-[2.5rem] bg-gradient-to-b from-white to-slate-100 pt-16 text-slate-900 lg:pt-24">
-        <div className="mx-auto max-w-6xl space-y-20 px-4 pb-20 sm:px-6 lg:space-y-28 lg:px-8 lg:pb-28">
+      <section className="relative rounded-t-[2.5rem] bg-gradient-to-b from-white to-slate-100 pt-12 text-slate-900 md:pt-16 lg:pt-24">
+        <div className="mx-auto max-w-6xl space-y-16 px-4 pb-12 sm:px-6 md:space-y-20 lg:space-y-28 lg:px-8 lg:pb-12">
           <FeatureRow
             eyebrow="Performance"
             icon={<RocketIcon className="h-5 w-5" />}
             title="Fast, beautiful maps"
-            image="/uses/outer-reef-flat-square.png"
+            image="https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/edaf4e0a-32b6-42e5-308b-c844c0254400/hthumb"
             imageAlt="A SeaSketch reef habitat map with an Outer Reef Flat tooltip appearing instantly under the cursor"
             glowClassName="bg-sky-400/25"
             rowClassName="md:grid-cols-[auto_1fr] md:gap-8 lg:gap-10"
-            imageContainerClassName="mx-auto w-64 sm:w-72"
+            imageContainerClassName="mx-auto w-full max-w-sm md:w-64 lg:w-72"
           >
             <p>
               One of the first things people notice about SeaSketch is how
@@ -300,16 +248,17 @@ export default function MapPortalHostingPage() {
               the best possible performance, anywhere in the world.
             </p>
             <p>
-              Vector tiles power instant interactivity such as popups, tooltips,
-              and hover effects respond immediately as users explore.{" "}
+              Vector tiles power instant interactivity, so features such as
+              popups, tooltips, and hover effects respond immediately as users
+              explore.{" "}
               <span className="font-semibold text-slate-900">
                 No more loading spinners.
               </span>
             </p>
           </FeatureRow>
 
-          <section className="relative grid items-center gap-12 md:grid-cols-[1fr_minmax(0,1.1fr)] md:gap-20">
-            <div className={featureCopyPanelClass}>
+          <section className="relative grid items-center gap-8 md:grid-cols-[1fr_minmax(0,1.1fr)] md:gap-20">
+            <div className={`${featureCopyPanelClass} order-2 md:order-1`}>
               <div className="inline-flex items-center gap-2 text-sky-600">
                 <span className="grid h-9 w-9 place-items-center rounded-xl bg-sky-100 text-sky-700 ring-1 ring-sky-200">
                   <UploadIcon className="h-5 w-5" />
@@ -361,15 +310,15 @@ export default function MapPortalHostingPage() {
               </div>
             </div>
 
-            <div className="relative z-10 md:pl-4 lg:pl-8">
+            <div className="relative z-10 order-1 overflow-hidden md:order-2 md:overflow-visible md:pl-4 lg:pl-8">
               <div
                 aria-hidden
-                className="pointer-events-none absolute -inset-y-24 -left-80 -right-28"
+                className="pointer-events-none absolute -inset-y-8 -left-8 -right-8 md:-inset-y-24 md:-left-80 md:-right-28"
               >
                 <img
-                  src="/uses/ca-backdrop.png"
+                  src="https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/0fbce3c0-823e-4d59-9ed2-32bf37377000/hlarge"
                   alt=""
-                  className="h-full w-full scale-[1.5] object-cover opacity-85 blur-[1px]"
+                  className="h-full w-full scale-110 object-cover opacity-85 blur-[1px] md:scale-[1.5]"
                   style={{
                     maskImage:
                       "radial-gradient(76% 62% at 74% 53%, rgba(0,0,0,1) 12%, rgba(0,0,0,0.98) 40%, rgba(0,0,0,0.78) 54%, rgba(0,0,0,0.4) 68%, rgba(0,0,0,0.14) 80%, transparent 92%)",
@@ -411,7 +360,7 @@ export default function MapPortalHostingPage() {
                           />
                         </svg>
                       </div>
-                      <div className="pointer-events-none absolute bottom-[-48px] right-[-42px] z-10 flex w-max flex-col items-center">
+                      <div className="pointer-events-none absolute bottom-2 right-2 z-10 flex w-max scale-[0.85] flex-col items-center md:bottom-[-48px] md:right-[-42px] md:scale-100">
                         <svg
                           aria-hidden
                           viewBox="0 0 44 50"
@@ -457,16 +406,22 @@ export default function MapPortalHostingPage() {
                   </div>
                 </div>
 
-                <div className="pointer-events-none mt-8 w-[290px] rounded-xl border border-slate-200/70 bg-white/95 p-3 shadow-xl ring-1 ring-slate-200/70 backdrop-blur-sm sm:w-[320px]">
-                  <div className="flex items-center justify-between gap-3">
+                <div className="pointer-events-none mt-8 w-full max-w-[320px] rounded-xl border border-slate-200/70 bg-white/95 p-3 shadow-xl ring-1 ring-slate-200/70 backdrop-blur-sm">
+                  {/* <div
+                    className="uppercase text-slate-500 mb-0.5"
+                    style={{ fontSize: 7 }}
+                  >
+                    processing
+                  </div> */}
+                  <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                     <div className="flex min-w-0 items-center gap-2">
-                      <UploadIcon className="h-4 w-4 text-slate-600" />
+                      <UploadIcon className="h-4 w-4 shrink-0 text-slate-600" />
                       <span className="truncate text-sm font-medium text-slate-900">
                         study-areas.json
                       </span>
                     </div>
-                    <span className="text-sm italic text-slate-700">
-                      AI cartgrapher...
+                    <span className="shrink-0 text-sm italic text-slate-700">
+                      AI cartographer...
                     </span>
                   </div>
                   <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-slate-200">
@@ -477,7 +432,7 @@ export default function MapPortalHostingPage() {
             </div>
           </section>
 
-          <section className="grid items-center gap-10 md:grid-cols-2 md:gap-24 lg:gap-28">
+          <section className="grid items-center gap-8 md:grid-cols-2 md:gap-24 lg:gap-28">
             <div className="relative md:pr-6">
               <div
                 aria-hidden
@@ -486,15 +441,15 @@ export default function MapPortalHostingPage() {
               <div className="relative mx-auto max-w-[620px]">
                 <div className="relative z-10 overflow-hidden rounded-2xl border border-white/70 bg-white/90 shadow-2xl ring-1 ring-slate-200/70">
                   <img
-                    src="/uses/cartography-gui.png"
+                    src="https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/27efd335-1e93-45d1-397b-74fb1dd25d00/hlarge"
                     alt="Graphical cartography panel with color palette, opacity, and AI style suggestions"
                     loading="lazy"
                     className="w-full"
                   />
                 </div>
-                <div className="absolute -right-8 top-[34%] z-20 w-[56%] max-w-[420px] overflow-hidden rounded-xl border border-white/70 bg-white/90 shadow-xl ring-1 ring-slate-200/70 backdrop-blur-sm md:-right-10 md:top-[25%] md:w-[65%] lg:-right-12 lg:top-[25%]">
+                <div className="max-md:relative max-md:top-auto max-md:right-auto max-md:mt-4 max-md:w-full max-md:max-w-none absolute -right-8 top-[34%] z-20 w-[56%] max-w-[420px] overflow-hidden rounded-xl border border-white/70 bg-white/90 shadow-xl ring-1 ring-slate-200/70 backdrop-blur-sm md:-right-10 md:top-[25%] md:w-[65%] lg:-right-12 lg:top-[25%]">
                   <img
-                    src="/uses/ai-cartographer-notes.png"
+                    src="https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/a7ee5dd9-6ebc-49ba-e143-9134515d5200/hthumb"
                     alt="AI Cartographer Notes explaining category styles and color palette recommendations"
                     loading="lazy"
                     className="w-full"
@@ -531,7 +486,7 @@ export default function MapPortalHostingPage() {
             </div>
           </section>
 
-          <section className="grid items-center gap-10 md:grid-cols-2 md:gap-20 lg:gap-24">
+          <section className="grid items-center gap-8 md:grid-cols-2 md:gap-20 lg:gap-24">
             <div className={featureCopyPanelClass}>
               <div className="inline-flex items-center gap-2 text-sky-600">
                 <span className="grid h-9 w-9 place-items-center rounded-xl bg-sky-100 text-sky-700 ring-1 ring-sky-200">
@@ -560,7 +515,7 @@ export default function MapPortalHostingPage() {
                   A complete changelog tracks every update made by project
                   administrators. In a large, collaboratively managed project,
                   you always know who changed what, and when. You can even
-                  rollback certain changes like cartographic styles or source
+                  roll back certain changes like cartographic styles or source
                   data updates.
                 </p>
               </div>
@@ -574,15 +529,15 @@ export default function MapPortalHostingPage() {
               <div className="relative mx-auto max-w-[620px]">
                 <div className="relative z-10 overflow-hidden rounded-2xl border border-white/70 bg-white/90 shadow-2xl ring-1 ring-slate-200/70">
                   <img
-                    src="/uses/roll-based-access-control.png"
+                    src="https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/357b749a-42ff-498c-8001-f6be85c16000/hlarge"
                     alt="Layer list with a role-based access control panel overlaid on a map"
                     loading="lazy"
                     className="w-full"
                   />
                 </div>
-                <div className="absolute -left-8 bottom-[-2.5rem] z-20 w-[52%] max-w-[360px] overflow-hidden rounded-xl border border-white/70 bg-white/95 shadow-xl ring-1 ring-slate-200/70 backdrop-blur-sm md:-left-10 md:bottom-[-2.75rem] lg:-left-12 lg:bottom-[-3rem]">
+                <div className="max-md:relative max-md:left-auto max-md:bottom-auto max-md:mt-4 max-md:w-full max-md:max-w-none absolute -left-8 bottom-[-2.5rem] z-20 w-[52%] max-w-[360px] overflow-hidden rounded-xl border border-white/70 bg-white/95 shadow-xl ring-1 ring-slate-200/70 backdrop-blur-sm md:-left-10 md:bottom-[-2.75rem] lg:-left-12 lg:bottom-[-3rem]">
                   <img
-                    src="/uses/changelog.png"
+                    src="https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/4709d788-0c4b-4473-df64-8d298af02700/hthumb"
                     alt="Layer history changelog with actions like updates, publishing, and folder moves"
                     loading="lazy"
                     className="w-full"
@@ -596,10 +551,10 @@ export default function MapPortalHostingPage() {
 
       {/* Vision statement + additional features */}
       <section className="bg-slate-100 text-slate-900">
-        <div className="mx-auto max-w-6xl px-4 pb-20 sm:px-6 lg:px-8 lg:pb-28">
-          <div className="rounded-3xl border border-slate-200 bg-white/85 p-8 shadow-sm ring-1 ring-white/50 backdrop-blur-sm md:p-10">
+        <div className="mx-auto max-w-6xl px-4 pb-20 sm:px-6 lg:px-8 lg:pb-28 mb-4">
+          <div className="rounded-3xl border border-slate-200 bg-white/85 p-6 shadow-sm ring-1 ring-white/50 backdrop-blur-sm md:p-10">
             <div className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">
-              The vision
+              A comprehensive solution
             </div>
             <h2 className="mt-4 max-w-4xl text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl">
               SeaSketch makes it easy to visualize, share, and manage ocean
@@ -607,8 +562,19 @@ export default function MapPortalHostingPage() {
             </h2>
             <p className="mt-4 max-w-4xl text-lg leading-8 text-slate-600">
               With a 14-year track record and a steadily expanding feature set,
-              SeaSketch supports both immediate planning decisions and adaptive
-              management for long-term ocean data stewardship.
+              SeaSketch supports near-term planning decisions, adaptive
+              management, and long-term ocean data stewardship.
+            </p>
+            <p className="mt-4">
+              <a
+                href="https://docs.seasketch.org/seasketch-documentation/administrators-guide/overlay-layers"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-sky-700 hover:text-sky-800 hover:underline"
+              >
+                <FileTextIcon className="h-4 w-4" />
+                Read the Documentation
+              </a>
             </p>
           </div>
 
@@ -618,45 +584,14 @@ export default function MapPortalHostingPage() {
                 <h3 className="text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
                   Additional Features
                 </h3>
-                <p className="mt-2 max-w-3xl text-base leading-7 text-slate-600">
-                  Explore more capabilities that help teams run durable,
-                  data-rich ocean planning portals.
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => scrollFeatureBy(-1)}
-                  aria-label="Previous feature"
-                  className="inline-flex h-10 items-center rounded-full border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
-                  disabled={activeFeatureIndex === 0}
-                >
-                  Previous
-                </button>
-                <button
-                  type="button"
-                  onClick={() => scrollFeatureBy(1)}
-                  aria-label="Next feature"
-                  className="inline-flex h-10 items-center rounded-full border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 transition hover:border-slate-400 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
-                  disabled={
-                    activeFeatureIndex === additionalFeatureCards.length - 1
-                  }
-                >
-                  Next
-                </button>
               </div>
             </div>
 
-            <div
-              ref={featureCarouselRef}
-              onScroll={updateActiveFeatureIndex}
-              className="mt-6 flex snap-x snap-mandatory gap-5 overflow-x-auto pb-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            >
-              {additionalFeatureCards.map((card, index) => (
+            <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {additionalFeatureCards.map((card) => (
                 <article
                   key={card.title}
-                  data-feature-card
-                  className="w-[min(86vw,380px)] shrink-0 snap-start rounded-3xl border border-slate-200 bg-white p-8 shadow-sm"
+                  className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm md:p-8"
                 >
                   <span
                     className={`grid h-11 w-11 place-items-center rounded-xl ring-1 ${card.iconClassName}`}
@@ -669,26 +604,7 @@ export default function MapPortalHostingPage() {
                   <p className="mt-3 leading-7 text-slate-600">
                     {card.description}
                   </p>
-                  <span className="sr-only">{`Feature card ${index + 1} of ${
-                    additionalFeatureCards.length
-                  }`}</span>
                 </article>
-              ))}
-            </div>
-
-            <div className="mt-4 flex items-center justify-center gap-2">
-              {additionalFeatureCards.map((card, index) => (
-                <button
-                  key={`${card.title}-dot`}
-                  type="button"
-                  aria-label={`Go to ${card.title}`}
-                  onClick={() => scrollToFeature(index)}
-                  className={`h-2.5 rounded-full transition ${
-                    index === activeFeatureIndex
-                      ? "w-7 bg-sky-500"
-                      : "w-2.5 bg-slate-300 hover:bg-slate-400"
-                  }`}
-                />
               ))}
             </div>
           </div>

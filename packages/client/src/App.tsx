@@ -147,6 +147,14 @@ function App() {
     }
   }, [location.pathname, location.hash]);
 
+  // Ensure use-case detail pages always start at the top when navigating
+  // between routes in the SPA.
+  useEffect(() => {
+    if (location.pathname.startsWith("/uses/")) {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    }
+  }, [location.pathname]);
+
   const frontOfTheHouse = [
     "/signin",
     "/projects",
