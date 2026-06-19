@@ -9,7 +9,7 @@ function linkNode(href) {
             {
                 type: "link",
                 attrs: {
-                    href: href,
+                    href,
                     title: "",
                 },
             },
@@ -18,15 +18,14 @@ function linkNode(href) {
 }
 function convertTextToProseMirrorLinks(text) {
     // Combined regex to match both URLs and email addresses
-    var pattern = /(https?:\/\/[^\s)]+[^\s.,)])|([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g;
-    var nodes = [];
-    var lastIndex = 0;
+    const pattern = /(https?:\/\/[^\s)]+[^\s.,)])|([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g;
+    const nodes = [];
+    let lastIndex = 0;
     // Use matchAll to find all matches of the regex pattern
-    var matches = text.matchAll(pattern);
-    for (var _i = 0, _a = Array.from(matches); _i < _a.length; _i++) {
-        var match = _a[_i];
-        var matchedText = match[0];
-        var offset = match.index || 0;
+    const matches = text.matchAll(pattern);
+    for (const match of Array.from(matches)) {
+        const matchedText = match[0];
+        const offset = match.index || 0;
         // Add any preceding text as a regular text node
         if (lastIndex < offset) {
             nodes.push({
@@ -37,7 +36,7 @@ function convertTextToProseMirrorLinks(text) {
         // Add the match (URL or email) as a link node using linkNode
         if (matchedText.includes("@")) {
             // It's an email address, create a mailto link
-            nodes.push(linkNode("mailto:".concat(matchedText)));
+            nodes.push(linkNode(`mailto:${matchedText}`));
         }
         else {
             // It's a URL, create a standard link
@@ -56,8 +55,8 @@ function convertTextToProseMirrorLinks(text) {
     return nodes;
 }
 function createParagraphNode(content) {
-    var processedContent = content
-        .map(function (node) {
+    const processedContent = content
+        .map((node) => {
         if (node.type === "text") {
             return convertTextToProseMirrorLinks(node.text);
         }

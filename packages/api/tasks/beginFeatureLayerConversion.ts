@@ -243,10 +243,8 @@ export default async function beginFeatureLayerConversion(
       let glStyle = urlQuery.rows[0].mapbox_gl_styles;
       if (!glStyle || !Array.isArray(glStyle) || glStyle.length === 0) {
         // create sprites
-        let styleInfo: {
-          imageList: ImageList;
-          layers: mapboxgl.Layer[];
-        } | null = null;
+        let styleInfo: Awaited<ReturnType<typeof styleForFeatureLayer>> | null =
+          null;
         try {
           styleInfo = await styleForFeatureLayer(
             location.replace(/\/\d+$/, ""),

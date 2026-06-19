@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
-    "target": "ES5",
-    "module": "commonjs",
+    "target": "ES2019",
+    "module": "Node16",
     "rootDir": "./src",
     "declaration": true,
     "declarationMap": true,
@@ -14,7 +14,7 @@
     "incremental": true,
     "composite": true,
     "tsBuildInfoFile": "./.tsbuildinfo",
-    "moduleResolution": "node"
+    "moduleResolution": "node16"
   },
   "include": ["./src/**/*.ts"],
   "exclude": ["node_modules", "**/*.test.ts", "**/*.spec.ts", "dist"]
