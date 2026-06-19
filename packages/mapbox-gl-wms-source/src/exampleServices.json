@@ -1,0 +1,64 @@
+[
+  {
+    "id": "emodnet-bathymetry",
+    "name": "EMODnet Bathymetry",
+    "serverType": "GeoServer",
+    "url": "https://ows.emodnet-bathymetry.eu/wms",
+    "description": "EU authoritative bathymetry (GeoServer, WMS 1.3.0)",
+    "defaultLayers": ["emodnet:mean"],
+    "mapCenter": [2.27, 51.76],
+    "mapZoom": 4
+  },
+  {
+    "id": "marine-regions",
+    "name": "Marine Regions (VLIZ)",
+    "serverType": "GeoServer",
+    "url": "https://geo.vliz.be/geoserver/MarineRegions/wms",
+    "description": "Maritime boundaries including EEZ (queryable vector-backed layers)",
+    "defaultLayers": ["eez"],
+    "mapCenter": [0, 30],
+    "mapZoom": 2,
+    "liveGetFeatureInfo": true,
+    "identifyAt": [-10, 34]
+  },
+  {
+    "id": "gebco",
+    "name": "GEBCO Bathymetry",
+    "serverType": "MapServer",
+    "url": "https://wms.gebco.net/mapserv?",
+    "description": "Global bathymetry from GEBCO/Seabed 2030 (MapServer mapserv)",
+    "defaultLayers": ["GEBCO_LATEST"],
+    "mapCenter": [0, 0],
+    "mapZoom": 1
+  },
+  {
+    "id": "usgs-imagery",
+    "name": "USGS Imagery (ArcGIS WMS)",
+    "serverType": "ArcGIS WMS",
+    "url": "https://basemap.nationalmap.gov/arcgis/services/USGSImageryOnly/MapServer/WMSServer?",
+    "description": "USGS National Map imagery via ArcGIS Server WMS",
+    "mapCenter": [-98, 39],
+    "mapZoom": 3
+  },
+  {
+    "id": "gibs-sst",
+    "name": "NASA GIBS Sea Surface Temperature",
+    "serverType": "OnEarth",
+    "url": "https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi",
+    "description": "NASA GIBS ocean SST (EPSG:3857, TIME dimension)",
+    "defaultLayers": ["GHRSST_L4_MUR_Sea_Surface_Temperature"],
+    "mapCenter": [-140, 20],
+    "mapZoom": 2
+  },
+  {
+    "id": "emodnet-human-activities",
+    "name": "EMODnet Human Activities (vessel density)",
+    "serverType": "GeoServer",
+    "url": "https://ows.emodnet-humanactivities.eu/wms",
+    "description": "EU marine human activities: vessel route density and infrastructure (GeoServer, queryable)",
+    "defaultLayers": ["routedensity_01"],
+    "mapCenter": [4, 54],
+    "mapZoom": 4,
+    "liveGetFeatureInfo": true
+  }
+]

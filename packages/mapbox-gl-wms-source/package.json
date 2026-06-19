@@ -1,0 +1,65 @@
+{
+  "name": "@seasketch/mapbox-gl-wms-source",
+  "version": "0.1.0",
+  "description": "Render OGC WMS services in Mapbox GL JS",
+  "author": "Chad Burt <chad@underbluewaters.net>",
+  "license": "BSD-3-Clause",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -b",
+    "watch": "tsc -b --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "test:live": "WMS_LIVE=1 vitest run src/__tests__/live.test.ts",
+    "test:e2e": "playwright test --project=mocked",
+    "test:e2e:ui": "playwright test --project=mocked --ui",
+    "test:e2e:live": "playwright test --project=live",
+    "test:e2e:live:headed": "playwright test --project=live --headed",
+    "test:e2e:live:ui": "playwright test --project=live --ui",
+    "test:e2e:live:debug": "PW_LIVE_PAUSE=1 playwright test --project=live --headed",
+    "test:e2e:typecheck": "tsc --noEmit -p e2e/tsconfig.json",
+    "playground": "vite --config playground/vite.config.ts",
+    "capture-fixtures": "tsx scripts/capture-fixtures.ts",
+    "prepublishOnly": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seasketch/next.git"
+  },
+  "keywords": [
+    "mapbox",
+    "mapbox-gl",
+    "wms",
+    "ogc"
+  ],
+  "dependencies": {
+    "@seasketch/metadata-parser": "file:../metadata-parser",
+    "fast-xml-parser": "^4.5.0",
+    "lodash.debounce": "^4.0.8",
+    "uuid": "^8.3.0"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.0",
+    "@types/lodash.debounce": "^4.0.8",
+    "@types/mapbox-gl": "^3.1.0",
+    "@types/node": "^20.10.4",
+    "@types/pngjs": "^6.0.5",
+    "@types/uuid": "^8.0.1",
+    "@vitest/coverage-v8": "^3.2.2",
+    "mapbox-gl": "^3.3.0",
+    "pngjs": "^7.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.8.3",
+    "vite": "^5.4.0",
+    "vitest": "^3.2.2"
+  },
+  "peerDependencies": {
+    "mapbox-gl": "^2.0.0 || ^3.0.0"
+  }
+}

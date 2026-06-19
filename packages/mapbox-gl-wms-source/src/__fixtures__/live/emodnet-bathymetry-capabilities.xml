@@ -1,0 +1,905 @@
+<?xml version="1.0" encoding="UTF-8"?><WMS_Capabilities xmlns:inspire_vs="http://inspire.ec.europa.eu/schemas/inspire_vs/1.0" xmlns:inspire_common="http://inspire.ec.europa.eu/schemas/common/1.0" version="1.3.0" updateSequence="1756" xmlns="http://www.opengis.net/wms" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.opengis.net/wms http://ows.emodnet-bathymetry.eu/schemas/wms/1.3.0/capabilities_1_3_0.xsd http://inspire.ec.europa.eu/schemas/inspire_vs/1.0 https://inspire.ec.europa.eu/schemas/inspire_vs/1.0/inspire_vs.xsd">
+  <Service>
+    <Name>WMS</Name>
+    <Title>EMODnet Bathymetry WMS</Title>
+    <Abstract/>
+    <KeywordList/>
+    <OnlineResource xlink:type="simple" xlink:href="http://n4m5.nl"/>
+    <ContactInformation>
+      <ContactPersonPrimary>
+        <ContactPerson>Niels Meijer</ContactPerson>
+        <ContactOrganization>N4M5</ContactOrganization>
+      </ContactPersonPrimary>
+      <ContactPosition/>
+      <ContactAddress>
+        <AddressType/>
+        <Address/>
+        <City>Bunnik</City>
+        <StateOrProvince/>
+        <PostCode/>
+        <Country>The Netherlands</Country>
+      </ContactAddress>
+      <ContactVoiceTelephone/>
+      <ContactFacsimileTelephone/>
+      <ContactElectronicMailAddress>niels@n4m5.nl</ContactElectronicMailAddress>
+    </ContactInformation>
+    <Fees>None</Fees>
+    <AccessConstraints>None</AccessConstraints>
+  </Service>
+  <Capability>
+    <Request>
+      <GetCapabilities>
+        <Format>text/xml</Format>
+        <DCPType>
+          <HTTP>
+            <Get>
+              <OnlineResource xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?SERVICE=WMS&amp;"/>
+            </Get>
+            <Post>
+              <OnlineResource xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?SERVICE=WMS&amp;"/>
+            </Post>
+          </HTTP>
+        </DCPType>
+      </GetCapabilities>
+      <GetMap>
+        <Format>image/png</Format>
+        <Format>application/atom+xml</Format>
+        <Format>application/json;type=utfgrid</Format>
+        <Format>application/pdf</Format>
+        <Format>application/rss+xml</Format>
+        <Format>application/vnd.google-earth.kml+xml</Format>
+        <Format>application/vnd.google-earth.kml+xml;mode=networklink</Format>
+        <Format>application/vnd.google-earth.kmz</Format>
+        <Format>image/geotiff</Format>
+        <Format>image/geotiff8</Format>
+        <Format>image/gif</Format>
+        <Format>image/jpeg</Format>
+        <Format>image/png; mode=8bit</Format>
+        <Format>image/svg+xml</Format>
+        <Format>image/tiff</Format>
+        <Format>image/tiff8</Format>
+        <Format>image/vnd.jpeg-png</Format>
+        <Format>image/vnd.jpeg-png8</Format>
+        <Format>text/html; subtype=openlayers</Format>
+        <Format>text/html; subtype=openlayers2</Format>
+        <Format>text/html; subtype=openlayers3</Format>
+        <DCPType>
+          <HTTP>
+            <Get>
+              <OnlineResource xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?SERVICE=WMS&amp;"/>
+            </Get>
+          </HTTP>
+        </DCPType>
+      </GetMap>
+      <GetFeatureInfo>
+        <Format>text/plain</Format>
+        <Format>application/vnd.ogc.gml</Format>
+        <Format>text/xml</Format>
+        <Format>application/vnd.ogc.gml/3.1.1</Format>
+        <Format>text/xml; subtype=gml/3.1.1</Format>
+        <Format>text/html</Format>
+        <Format>application/json</Format>
+        <DCPType>
+          <HTTP>
+            <Get>
+              <OnlineResource xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?SERVICE=WMS&amp;"/>
+            </Get>
+          </HTTP>
+        </DCPType>
+      </GetFeatureInfo>
+    </Request>
+    <Exception>
+      <Format>XML</Format>
+      <Format>INIMAGE</Format>
+      <Format>BLANK</Format>
+      <Format>JSON</Format>
+    </Exception>
+    <inspire_vs:ExtendedCapabilities>
+      <inspire_common:MetadataUrl>
+        <inspire_common:URL>https://sextant.ifremer.fr/geonetwork/srv/eng/csw?request=GetRecordById&amp;elementSetName=full&amp;service=CSW&amp;version=2.0.2&amp;OutputSchema=http://www.isotc211.org/2005/gmd&amp;id=f2b6c9f5a6134638b2b5f8a92bd314e434ca9be4</inspire_common:URL>
+        <inspire_common:MediaType>application/vnd.iso.19139+xml</inspire_common:MediaType>
+      </inspire_common:MetadataUrl>
+      <inspire_common:SupportedLanguages>
+        <inspire_common:DefaultLanguage>
+          <inspire_common:Language>eng</inspire_common:Language>
+        </inspire_common:DefaultLanguage>
+      </inspire_common:SupportedLanguages>
+      <inspire_common:ResponseLanguage>
+        <inspire_common:Language>eng</inspire_common:Language>
+      </inspire_common:ResponseLanguage>
+    </inspire_vs:ExtendedCapabilities>
+    <Layer>
+      <Title>EMODnet Bathymetry</Title>
+      <Abstract/>
+      <!--Limited list of EPSG projections:-->
+      <CRS>EPSG:4326</CRS>
+      <CRS>EPSG:3857</CRS>
+      <CRS>EPSG:900913</CRS>
+      <CRS>EPSG:28992</CRS>
+      <CRS>EPSG:4258</CRS>
+      <CRS>EPSG:32626</CRS>
+      <CRS>EPSG:32627</CRS>
+      <CRS>EPSG:32628</CRS>
+      <CRS>EPSG:32629</CRS>
+      <CRS>EPSG:32630</CRS>
+      <CRS>EPSG:32631</CRS>
+      <CRS>EPSG:32632</CRS>
+      <CRS>EPSG:32633</CRS>
+      <CRS>EPSG:32634</CRS>
+      <CRS>EPSG:32635</CRS>
+      <CRS>EPSG:32636</CRS>
+      <CRS>EPSG:32637</CRS>
+      <CRS>EPSG:32638</CRS>
+      <CRS>EPSG:32639</CRS>
+      <CRS>EPSG:32640</CRS>
+      <CRS>EPSG:25833</CRS>
+      <CRS>CRS:84</CRS>
+      <EX_GeographicBoundingBox>
+        <westBoundLongitude>-180.0</westBoundLongitude>
+        <eastBoundLongitude>180.0</eastBoundLongitude>
+        <southBoundLatitude>-85.22193775799991</southBoundLatitude>
+        <northBoundLatitude>90.00000028800001</northBoundLatitude>
+      </EX_GeographicBoundingBox>
+      <BoundingBox CRS="CRS:84" minx="-180.0" miny="-85.22193775799991" maxx="180.0" maxy="90.00000028800001"/>
+      <Layer queryable="1">
+        <Name>coastlines</Name>
+        <Title>Coastlines</Title>
+        <Abstract>Coastlines of Europe</Abstract>
+        <KeywordList/>
+        <CRS>EPSG:4326</CRS>
+        <EX_GeographicBoundingBox>
+          <westBoundLongitude>-180.0</westBoundLongitude>
+          <eastBoundLongitude>180.0</eastBoundLongitude>
+          <southBoundLatitude>-85.22193775799991</southBoundLatitude>
+          <northBoundLatitude>83.6664731</northBoundLatitude>
+        </EX_GeographicBoundingBox>
+        <BoundingBox CRS="CRS:84" minx="-180.0" miny="-85.22193775799991" maxx="180.0" maxy="83.6664731"/>
+        <BoundingBox CRS="EPSG:4326" minx="-85.22193775799991" miny="-180.0" maxx="83.6664731" maxy="180.0"/>
+        <MetadataURL type="19139">
+          <Format>text/xml</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://sextant.ifremer.fr/geonetwork/srv/eng/csw?request=GetRecordById&amp;elementSetName=full&amp;service=CSW&amp;version=2.0.2&amp;OutputSchema=http://www.isotc211.org/2005/gmd&amp;id=36821cff-56db-4e96-8426-ddfe68240c4b"/>
+        </MetadataURL>
+        <Style>
+          <Name>default-style-coastlines</Name>
+          <Title>coastlines style</Title>
+          <Abstract>Default style for coastlines layer</Abstract>
+          <LegendURL width="20" height="20">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=coastlines"/>
+          </LegendURL>
+        </Style>
+        <Style>
+          <Name>coastline_lat</Name>
+          <Title>Satellite derived LAT coastline</Title>
+          <Abstract/>
+          <LegendURL width="20" height="20">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=coastlines&amp;style=coastline_lat"/>
+          </LegendURL>
+        </Style>
+        <Style>
+          <Name>coastline_msl</Name>
+          <Title>Satellite derived MSL coastline</Title>
+          <Abstract/>
+          <LegendURL width="20" height="20">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=coastlines&amp;style=coastline_msl"/>
+          </LegendURL>
+        </Style>
+        <Style>
+          <Name>coastline_mhw</Name>
+          <Title>Satellite derived MHW coastline</Title>
+          <Abstract/>
+          <LegendURL width="20" height="20">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=coastlines&amp;style=coastline_mhw"/>
+          </LegendURL>
+        </Style>
+        <Style>
+          <Name>coastline_osm</Name>
+          <Title>OSM coastline</Title>
+          <Abstract/>
+          <LegendURL width="20" height="20">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=coastlines&amp;style=coastline_osm"/>
+          </LegendURL>
+        </Style>
+      </Layer>
+      <Layer queryable="1" opaque="0">
+        <Name>emodnet:contours</Name>
+        <Title>Depth contours</Title>
+        <Abstract>Generalised bathymetric contour lines.&#13;
+(50, 100, 200, 500, 1000, 2000, 5000 meter interval)</Abstract>
+        <KeywordList>
+          <Keyword>features</Keyword>
+        </KeywordList>
+        <CRS>EPSG:4326</CRS>
+        <CRS>CRS:84</CRS>
+        <EX_GeographicBoundingBox>
+          <westBoundLongitude>-70.5</westBoundLongitude>
+          <eastBoundLongitude>43.00137710571289</eastBoundLongitude>
+          <southBoundLatitude>11.001041412353516</southBoundLatitude>
+          <northBoundLatitude>86.6618881225586</northBoundLatitude>
+        </EX_GeographicBoundingBox>
+        <BoundingBox CRS="CRS:84" minx="-70.5" miny="11.001041412353516" maxx="43.00137710571289" maxy="86.6618881225586"/>
+        <BoundingBox CRS="EPSG:4326" minx="11.001041412353516" miny="-70.5" maxx="86.6618881225586" maxy="43.00137710571289"/>
+        <MetadataURL type="19139">
+          <Format>text/xml</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://sextant.ifremer.fr/geonetwork/srv/eng/csw?request=GetRecordById&amp;elementSetName=full&amp;service=CSW&amp;version=2.0.2&amp;OutputSchema=http://www.isotc211.org/2005/gmd&amp;id=4f7ab468-f4b9-4c2c-8d3b-49a375cf9964"/>
+        </MetadataURL>
+        <DataURL>
+          <Format>text/html</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://portal.emodnet-bathymetry.eu/"/>
+        </DataURL>
+        <DataURL>
+          <Format>text/xml</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://ows.emodnet-bathymetry.eu/wfs"/>
+        </DataURL>
+        <Style>
+          <Name>contours</Name>
+          <Title>Depth contours</Title>
+          <Abstract>Generalised bathymetric contour lines</Abstract>
+          <LegendURL width="54" height="40">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=emodnet%3Acontours"/>
+          </LegendURL>
+        </Style>
+      </Layer>
+      <Layer queryable="1" opaque="0">
+        <Name>emodnet:download_tiles</Name>
+        <Title>Bathymetry product tiles</Title>
+        <Abstract>Download schema for Bathymetry products tiles (most recent release)</Abstract>
+        <KeywordList>
+          <Keyword>features</Keyword>
+        </KeywordList>
+        <CRS>EPSG:4326</CRS>
+        <CRS>CRS:84</CRS>
+        <EX_GeographicBoundingBox>
+          <westBoundLongitude>-70.5</westBoundLongitude>
+          <eastBoundLongitude>43.0</eastBoundLongitude>
+          <southBoundLatitude>11.0</southBoundLatitude>
+          <northBoundLatitude>90.0</northBoundLatitude>
+        </EX_GeographicBoundingBox>
+        <BoundingBox CRS="CRS:84" minx="-70.5" miny="11.0" maxx="43.0" maxy="90.0"/>
+        <BoundingBox CRS="EPSG:4326" minx="11.0" miny="-70.5" maxx="90.0" maxy="43.0"/>
+        <MetadataURL type="19139">
+          <Format>text/xml</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://sextant.ifremer.fr/geonetwork/srv/eng/csw?request=GetRecordById&amp;elementSetName=full&amp;service=CSW&amp;version=2.0.2&amp;OutputSchema=http://www.isotc211.org/2005/gmd&amp;id=b79b28b4-182b-4f5d-9cdb-b23fd216cfee"/>
+        </MetadataURL>
+        <DataURL>
+          <Format>text/xml</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://ows.emodnet-bathymetry.eu/wfs"/>
+        </DataURL>
+        <DataURL>
+          <Format>text/html</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://portal.emodnet-bathymetry.eu/"/>
+        </DataURL>
+        <Style>
+          <Name>download_tile</Name>
+          <Title>Products tiles</Title>
+          <LegendURL width="20" height="20">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=emodnet%3Adownload_tiles"/>
+          </LegendURL>
+        </Style>
+      </Layer>
+      <Layer queryable="1" opaque="0">
+        <Name>emodnet:hr_bathymetry_area</Name>
+        <Title>High resolution bathymetric data</Title>
+        <Abstract>Layer with EMODnet bathymetry show case areas available in a higher resolution than 1/16 arc minute</Abstract>
+        <KeywordList>
+          <Keyword>features</Keyword>
+        </KeywordList>
+        <CRS>EPSG:4326</CRS>
+        <CRS>CRS:84</CRS>
+        <EX_GeographicBoundingBox>
+          <westBoundLongitude>-68.87533333</westBoundLongitude>
+          <eastBoundLongitude>30.04388638</eastBoundLongitude>
+          <southBoundLatitude>12.02933333</southBoundLatitude>
+          <northBoundLatitude>76.4664087</northBoundLatitude>
+        </EX_GeographicBoundingBox>
+        <BoundingBox CRS="CRS:84" minx="-68.87533333" miny="12.02933333" maxx="30.04388638" maxy="76.4664087"/>
+        <BoundingBox CRS="EPSG:4326" minx="12.02933333" miny="-68.87533333" maxx="76.4664087" maxy="30.04388638"/>
+        <MetadataURL type="19139">
+          <Format>text/xml</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://sextant.ifremer.fr/geonetwork/srv/eng/csw?request=GetRecordById&amp;elementSetName=full&amp;service=CSW&amp;version=2.0.2&amp;OutputSchema=http://www.isotc211.org/2005/gmd&amp;id=b86926a1-8653-471b-9954-c0bf29417342"/>
+        </MetadataURL>
+        <Style>
+          <Name>hr_bathymetry_area</Name>
+          <Title>HR Bathymetry Areas</Title>
+          <Abstract>Coverage where high resolution bathymetry is available</Abstract>
+          <LegendURL width="152" height="80">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=emodnet%3Ahr_bathymetry_area"/>
+          </LegendURL>
+        </Style>
+      </Layer>
+      <Layer queryable="1" opaque="0">
+        <Name>emodnet:mean</Name>
+        <Title>Mean depth</Title>
+        <Abstract>Mean depth based on source resolution of 1/16 arc minute (~125 meter). Ocean overlay without land cover.</Abstract>
+        <KeywordList>
+          <Keyword>WCS</Keyword>
+        </KeywordList>
+        <CRS>EPSG:4326</CRS>
+        <CRS>CRS:84</CRS>
+        <EX_GeographicBoundingBox>
+          <westBoundLongitude>-70.5</westBoundLongitude>
+          <eastBoundLongitude>43.000000000000085</eastBoundLongitude>
+          <southBoundLatitude>11.0</southBoundLatitude>
+          <northBoundLatitude>90.0</northBoundLatitude>
+        </EX_GeographicBoundingBox>
+        <BoundingBox CRS="CRS:84" minx="-70.5" miny="11.0" maxx="43.000000000000085" maxy="90.0"/>
+        <BoundingBox CRS="EPSG:4326" minx="11.0" miny="-70.5" maxx="90.0" maxy="43.000000000000085"/>
+        <MetadataURL type="19139">
+          <Format>text/xml</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://sextant.ifremer.fr/geonetwork/srv/eng/csw?request=GetRecordById&amp;elementSetName=full&amp;service=CSW&amp;version=2.0.2&amp;OutputSchema=http://www.isotc211.org/2005/gmd&amp;id=cf51df64-56f9-4a99-b1aa-36b8d7b743a1"/>
+        </MetadataURL>
+        <DataURL>
+          <Format>text/xml</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://ows.emodnet-bathymetry.eu/wcs"/>
+        </DataURL>
+        <Style>
+          <Name>atlas_land</Name>
+          <Title>Atlas colour without hill shading</Title>
+          <Abstract>Depth visualised in traditional atlas style colours.</Abstract>
+          <LegendURL width="86" height="393">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=emodnet%3Amean"/>
+          </LegendURL>
+        </Style>
+        <Style>
+          <Name>multicolour</Name>
+          <Title>Multi colour without hillshading</Title>
+          <Abstract>Depth visualised in a multi colour style</Abstract>
+          <LegendURL width="78" height="273">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=emodnet%3Amean&amp;style=multicolour"/>
+          </LegendURL>
+        </Style>
+        <Style>
+          <Name>rainbowcolour</Name>
+          <Title>Rainbow colour without hillshading</Title>
+          <Abstract>Depth visualised in a rainbow colour style</Abstract>
+          <LegendURL width="78" height="273">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=emodnet%3Amean&amp;style=rainbowcolour"/>
+          </LegendURL>
+        </Style>
+      </Layer>
+      <Layer queryable="1" opaque="0">
+        <Name>emodnet:mean_2016</Name>
+        <Title>Mean depth (DTM release 2016)</Title>
+        <Abstract>Mean depth based on source resolution of 1/8 arc minute (~250 meter). Ocean overlay without land cover.</Abstract>
+        <KeywordList>
+          <Keyword>WCS</Keyword>
+        </KeywordList>
+        <CRS>EPSG:4326</CRS>
+        <CRS>CRS:84</CRS>
+        <EX_GeographicBoundingBox>
+          <westBoundLongitude>-35.999999999424006</westBoundLongitude>
+          <eastBoundLongitude>42.99999999931197</eastBoundLongitude>
+          <southBoundLatitude>24.99999999960003</southBoundLatitude>
+          <northBoundLatitude>84.99999999864</northBoundLatitude>
+        </EX_GeographicBoundingBox>
+        <BoundingBox CRS="CRS:84" minx="-35.999999999424006" miny="24.99999999960003" maxx="42.99999999931197" maxy="84.99999999864"/>
+        <BoundingBox CRS="EPSG:4326" minx="24.99999999960003" miny="-35.999999999424006" maxx="84.99999999864" maxy="42.99999999931197"/>
+        <MetadataURL type="19139">
+          <Format>text/xml</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://sextant.ifremer.fr/geonetwork/srv/eng/csw?request=GetRecordById&amp;elementSetName=full&amp;service=CSW&amp;version=2.0.2&amp;OutputSchema=http://www.isotc211.org/2005/gmd&amp;id=c7b53704-999d-4721-b1a3-04ec60c87238"/>
+        </MetadataURL>
+        <DataURL>
+          <Format>text/xml</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://ows.emodnet-bathymetry.eu/wfs"/>
+        </DataURL>
+        <DataURL>
+          <Format>text/html</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://portal.emodnet-bathymetry.eu/"/>
+        </DataURL>
+        <Style>
+          <Name>atlas_land</Name>
+          <Title>Atlas colour without hill shading</Title>
+          <Abstract>Depth visualised in traditional atlas style colours.</Abstract>
+          <LegendURL width="86" height="393">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=emodnet%3Amean_2016"/>
+          </LegendURL>
+        </Style>
+        <Style>
+          <Name>multicolour</Name>
+          <Title>Multi colour without hillshading</Title>
+          <Abstract>Depth visualised in a multi colour style</Abstract>
+          <LegendURL width="78" height="273">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=emodnet%3Amean_2016&amp;style=multicolour"/>
+          </LegendURL>
+        </Style>
+        <Style>
+          <Name>rainbowcolour</Name>
+          <Title>Rainbow colour without hillshading</Title>
+          <Abstract>Depth visualised in a rainbow colour style</Abstract>
+          <LegendURL width="78" height="273">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=emodnet%3Amean_2016&amp;style=rainbowcolour"/>
+          </LegendURL>
+        </Style>
+      </Layer>
+      <Layer queryable="1" opaque="0">
+        <Name>emodnet:mean_2018</Name>
+        <Title>Mean depth (DTM release 2018)</Title>
+        <Abstract>Mean depth based on source resolution of 1/16 arc minute (~125 meter). Ocean overlay without land cover.</Abstract>
+        <KeywordList>
+          <Keyword>WCS</Keyword>
+        </KeywordList>
+        <CRS>EPSG:4326</CRS>
+        <CRS>CRS:84</CRS>
+        <EX_GeographicBoundingBox>
+          <westBoundLongitude>-36.0000001152</westBoundLongitude>
+          <eastBoundLongitude>43.00104180426987</eastBoundLongitude>
+          <southBoundLatitude>14.998958381330127</southBoundLatitude>
+          <northBoundLatitude>90.00000028800001</northBoundLatitude>
+        </EX_GeographicBoundingBox>
+        <BoundingBox CRS="CRS:84" minx="-36.0000001152" miny="14.998958381330127" maxx="43.00104180426987" maxy="90.00000028800001"/>
+        <BoundingBox CRS="EPSG:4326" minx="14.998958381330127" miny="-36.0000001152" maxx="90.00000028800001" maxy="43.00104180426987"/>
+        <MetadataURL type="19139">
+          <Format>text/xml</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://sextant.ifremer.fr/geonetwork/srv/eng/csw?request=GetRecordById&amp;elementSetName=full&amp;service=CSW&amp;version=2.0.2&amp;OutputSchema=http://www.isotc211.org/2005/gmd&amp;id=18ff0d48-b203-4a65-94a9-5fd8b0ec35f6"/>
+        </MetadataURL>
+        <DataURL>
+          <Format>text/html</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://portal.emodnet-bathymetry.eu/"/>
+        </DataURL>
+        <DataURL>
+          <Format>text/xml</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://ows.emodnet-bathymetry.eu/wcs"/>
+        </DataURL>
+        <Style>
+          <Name>atlas_land</Name>
+          <Title>Atlas colour without hill shading</Title>
+          <Abstract>Depth visualised in traditional atlas style colours.</Abstract>
+          <LegendURL width="86" height="393">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=emodnet%3Amean_2018"/>
+          </LegendURL>
+        </Style>
+        <Style>
+          <Name>multicolour</Name>
+          <Title>Multi colour without hillshading</Title>
+          <Abstract>Depth visualised in a multi colour style</Abstract>
+          <LegendURL width="78" height="273">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=emodnet%3Amean_2018&amp;style=multicolour"/>
+          </LegendURL>
+        </Style>
+        <Style>
+          <Name>rainbowcolour</Name>
+          <Title>Rainbow colour without hillshading</Title>
+          <Abstract>Depth visualised in a rainbow colour style</Abstract>
+          <LegendURL width="78" height="273">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=emodnet%3Amean_2018&amp;style=rainbowcolour"/>
+          </LegendURL>
+        </Style>
+      </Layer>
+      <Layer queryable="1" opaque="0">
+        <Name>emodnet:mean_2020</Name>
+        <Title>Mean depth (DTM release 2020)</Title>
+        <Abstract>Mean depth based on source resolution of 1/16 arc minute (~125 meter). Ocean overlay without land cover.</Abstract>
+        <KeywordList>
+          <Keyword>WCS</Keyword>
+        </KeywordList>
+        <CRS>EPSG:4326</CRS>
+        <CRS>CRS:84</CRS>
+        <EX_GeographicBoundingBox>
+          <westBoundLongitude>-36.0</westBoundLongitude>
+          <eastBoundLongitude>43.000000000000085</eastBoundLongitude>
+          <southBoundLatitude>14.999999999999929</southBoundLatitude>
+          <northBoundLatitude>90.0</northBoundLatitude>
+        </EX_GeographicBoundingBox>
+        <BoundingBox CRS="CRS:84" minx="-36.0" miny="14.999999999999929" maxx="43.000000000000085" maxy="90.0"/>
+        <BoundingBox CRS="EPSG:4326" minx="14.999999999999929" miny="-36.0" maxx="90.0" maxy="43.000000000000085"/>
+        <MetadataURL type="19139">
+          <Format>text/xml</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://sextant.ifremer.fr/geonetwork/srv/eng/csw?request=GetRecordById&amp;elementSetName=full&amp;service=CSW&amp;version=2.0.2&amp;OutputSchema=http://www.isotc211.org/2005/gmd&amp;id=bb6a87dd-e579-4036-abe1-e649cea9881a"/>
+        </MetadataURL>
+        <DataURL>
+          <Format>text/html</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://portal.emodnet-bathymetry.eu/"/>
+        </DataURL>
+        <DataURL>
+          <Format>text/xml</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://ows.emodnet-bathymetry.eu/wcs"/>
+        </DataURL>
+        <Style>
+          <Name>atlas_land</Name>
+          <Title>Atlas colour without hill shading</Title>
+          <Abstract>Depth visualised in traditional atlas style colours.</Abstract>
+          <LegendURL width="86" height="393">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=emodnet%3Amean_2020"/>
+          </LegendURL>
+        </Style>
+        <Style>
+          <Name>multicolour</Name>
+          <Title>Multi colour without hillshading</Title>
+          <Abstract>Depth visualised in a multi colour style</Abstract>
+          <LegendURL width="78" height="273">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=emodnet%3Amean_2020&amp;style=multicolour"/>
+          </LegendURL>
+        </Style>
+        <Style>
+          <Name>rainbowcolour</Name>
+          <Title>Rainbow colour without hillshading</Title>
+          <Abstract>Depth visualised in a rainbow colour style</Abstract>
+          <LegendURL width="78" height="273">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=emodnet%3Amean_2020&amp;style=rainbowcolour"/>
+          </LegendURL>
+        </Style>
+      </Layer>
+      <Layer queryable="1" opaque="0">
+        <Name>emodnet:mean_2022</Name>
+        <Title>Mean depth (DTM release 2022)</Title>
+        <Abstract>Mean depth based on source resolution of 1/16 arc minute (~125 meter). Ocean overlay without land cover.</Abstract>
+        <KeywordList>
+          <Keyword>WCS</Keyword>
+        </KeywordList>
+        <CRS>EPSG:4326</CRS>
+        <CRS>CRS:84</CRS>
+        <EX_GeographicBoundingBox>
+          <westBoundLongitude>-70.5</westBoundLongitude>
+          <eastBoundLongitude>43.000000000000085</eastBoundLongitude>
+          <southBoundLatitude>11.0</southBoundLatitude>
+          <northBoundLatitude>90.0</northBoundLatitude>
+        </EX_GeographicBoundingBox>
+        <BoundingBox CRS="CRS:84" minx="-70.5" miny="11.0" maxx="43.000000000000085" maxy="90.0"/>
+        <BoundingBox CRS="EPSG:4326" minx="11.0" miny="-70.5" maxx="90.0" maxy="43.000000000000085"/>
+        <MetadataURL type="19139">
+          <Format>text/xml</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://sextant.ifremer.fr/geonetwork/srv/eng/csw?request=GetRecordById&amp;elementSetName=full&amp;service=CSW&amp;version=2.0.2&amp;OutputSchema=http://www.isotc211.org/2005/gmd&amp;id=ff3aff8a-cff1-44a3-a2c8-1910bf109f85"/>
+        </MetadataURL>
+        <DataURL>
+          <Format>text/html</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://portal.emodnet-bathymetry.eu/"/>
+        </DataURL>
+        <DataURL>
+          <Format>text/xml</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://ows.emodnet-bathymetry.eu/wcs"/>
+        </DataURL>
+        <Style>
+          <Name>atlas_land</Name>
+          <Title>Atlas colour without hill shading</Title>
+          <Abstract>Depth visualised in traditional atlas style colours.</Abstract>
+          <LegendURL width="86" height="393">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=emodnet%3Amean_2022"/>
+          </LegendURL>
+        </Style>
+        <Style>
+          <Name>multicolour</Name>
+          <Title>Multi colour without hillshading</Title>
+          <Abstract>Depth visualised in a multi colour style</Abstract>
+          <LegendURL width="78" height="273">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=emodnet%3Amean_2022&amp;style=multicolour"/>
+          </LegendURL>
+        </Style>
+        <Style>
+          <Name>rainbowcolour</Name>
+          <Title>Rainbow colour without hillshading</Title>
+          <Abstract>Depth visualised in a rainbow colour style</Abstract>
+          <LegendURL width="78" height="273">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=emodnet%3Amean_2022&amp;style=rainbowcolour"/>
+          </LegendURL>
+        </Style>
+      </Layer>
+      <Layer queryable="1" opaque="0">
+        <Name>emodnet:mean_atlas_land</Name>
+        <Title>Mean depth full coverage with land coverage</Title>
+        <Abstract>Mean depth based on source resolution of 1/16 arc minute (~125 meter). &#13;
+Full coverage ocean and land DTM in traditional atlas style colours.</Abstract>
+        <KeywordList>
+          <Keyword>WCS</Keyword>
+        </KeywordList>
+        <CRS>EPSG:4326</CRS>
+        <CRS>CRS:84</CRS>
+        <EX_GeographicBoundingBox>
+          <westBoundLongitude>-73.125</westBoundLongitude>
+          <eastBoundLongitude>45.0</eastBoundLongitude>
+          <southBoundLatitude>5.625</southBoundLatitude>
+          <northBoundLatitude>90.0</northBoundLatitude>
+        </EX_GeographicBoundingBox>
+        <BoundingBox CRS="CRS:84" minx="-73.125" miny="5.625" maxx="45.0" maxy="90.0"/>
+        <BoundingBox CRS="EPSG:4326" minx="5.625" miny="-73.125" maxx="90.0" maxy="45.0"/>
+        <MetadataURL type="19139">
+          <Format>text/xml</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://sextant.ifremer.fr/geonetwork/srv/eng/csw?request=GetRecordById&amp;elementSetName=full&amp;service=CSW&amp;version=2.0.2&amp;OutputSchema=http://www.isotc211.org/2005/gmd&amp;id=cf51df64-56f9-4a99-b1aa-36b8d7b743a1"/>
+        </MetadataURL>
+        <DataURL>
+          <Format>text/xml</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://ows.emodnet-bathymetry.eu/wcs"/>
+        </DataURL>
+        <Style>
+          <Name>mean_atlas_land</Name>
+          <Title>Mean depth in atlas colour with land</Title>
+          <Abstract>Mean depth visualised in traditional atlas style colours.</Abstract>
+          <LegendURL width="198" height="275">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=198&amp;height=275&amp;layer=emodnet%3Amean_atlas_land"/>
+          </LegendURL>
+        </Style>
+      </Layer>
+      <Layer queryable="1" opaque="0">
+        <Name>emodnet:mean_multicolour</Name>
+        <Title>Mean depth in multi colour</Title>
+        <Abstract>Mean depth based on source resolution of 1/16 arc minute (~125 meter).&#13;
+Ocean overlay without land cover in multi colour style.</Abstract>
+        <KeywordList>
+          <Keyword>WCS</Keyword>
+        </KeywordList>
+        <CRS>EPSG:4326</CRS>
+        <CRS>CRS:84</CRS>
+        <EX_GeographicBoundingBox>
+          <westBoundLongitude>-73.125</westBoundLongitude>
+          <eastBoundLongitude>45.0</eastBoundLongitude>
+          <southBoundLatitude>5.625</southBoundLatitude>
+          <northBoundLatitude>90.0</northBoundLatitude>
+        </EX_GeographicBoundingBox>
+        <BoundingBox CRS="CRS:84" minx="-73.125" miny="5.625" maxx="45.0" maxy="90.0"/>
+        <BoundingBox CRS="EPSG:4326" minx="5.625" miny="-73.125" maxx="90.0" maxy="45.0"/>
+        <MetadataURL type="19139">
+          <Format>text/xml</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://sextant.ifremer.fr/geonetwork/srv/eng/csw?request=GetRecordById&amp;elementSetName=full&amp;service=CSW&amp;version=2.0.2&amp;OutputSchema=http://www.isotc211.org/2005/gmd&amp;id=cf51df64-56f9-4a99-b1aa-36b8d7b743a1"/>
+        </MetadataURL>
+        <DataURL>
+          <Format>text/html</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://portal.emodnet-bathymetry.eu/"/>
+        </DataURL>
+        <DataURL>
+          <Format>text/xml</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://ows.emodnet-bathymetry.eu/wcs"/>
+        </DataURL>
+        <Style>
+          <Name>mean_multicolour</Name>
+          <Title>Mean depth in multi colour</Title>
+          <Abstract>Mean depth visualised in a multi colour style</Abstract>
+          <LegendURL width="198" height="275">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=198&amp;height=275&amp;layer=emodnet%3Amean_multicolour"/>
+          </LegendURL>
+        </Style>
+      </Layer>
+      <Layer queryable="1" opaque="0">
+        <Name>emodnet:mean_rainbowcolour</Name>
+        <Title>Mean depth rainbow colour ramp</Title>
+        <Abstract>Mean depth based on source resolution of 1/16 arc minute (~125 meter). Ocean overlay without land cover in rainbow (multi) colour ramp style.</Abstract>
+        <KeywordList>
+          <Keyword>WCS</Keyword>
+        </KeywordList>
+        <CRS>EPSG:4326</CRS>
+        <CRS>CRS:84</CRS>
+        <EX_GeographicBoundingBox>
+          <westBoundLongitude>-73.125</westBoundLongitude>
+          <eastBoundLongitude>45.0</eastBoundLongitude>
+          <southBoundLatitude>5.625</southBoundLatitude>
+          <northBoundLatitude>90.0</northBoundLatitude>
+        </EX_GeographicBoundingBox>
+        <BoundingBox CRS="CRS:84" minx="-73.125" miny="5.625" maxx="45.0" maxy="90.0"/>
+        <BoundingBox CRS="EPSG:4326" minx="5.625" miny="-73.125" maxx="90.0" maxy="45.0"/>
+        <MetadataURL type="19139">
+          <Format>text/xml</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://sextant.ifremer.fr/geonetwork/srv/eng/csw?request=GetRecordById&amp;elementSetName=full&amp;service=CSW&amp;version=2.0.2&amp;OutputSchema=http://www.isotc211.org/2005/gmd&amp;id=cf51df64-56f9-4a99-b1aa-36b8d7b743a1"/>
+        </MetadataURL>
+        <DataURL>
+          <Format>text/xml</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://ows.emodnet-bathymetry.eu/wcs"/>
+        </DataURL>
+        <Style>
+          <Name>mean_rainbowcolour</Name>
+          <Title>Mean depth in rainbow colour</Title>
+          <Abstract>Mean depth visualised in a rainbow colour style</Abstract>
+          <LegendURL width="198" height="275">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=198&amp;height=275&amp;layer=emodnet%3Amean_rainbowcolour"/>
+          </LegendURL>
+        </Style>
+      </Layer>
+      <Layer queryable="1" opaque="0">
+        <Name>emodnet:quality_index</Name>
+        <Title>Quality index</Title>
+        <Abstract>Representation of various quality indicators for the individual bathymetric surveys and composite DTM’s that contribute to the EMODnet Bathymetry DTM</Abstract>
+        <KeywordList>
+          <Keyword>features</Keyword>
+        </KeywordList>
+        <CRS>EPSG:4326</CRS>
+        <CRS>CRS:84</CRS>
+        <EX_GeographicBoundingBox>
+          <westBoundLongitude>-70.5</westBoundLongitude>
+          <eastBoundLongitude>43.00312503</eastBoundLongitude>
+          <southBoundLatitude>11.0</southBoundLatitude>
+          <northBoundLatitude>90.00000000000011</northBoundLatitude>
+        </EX_GeographicBoundingBox>
+        <BoundingBox CRS="CRS:84" minx="-70.5" miny="11.0" maxx="43.00312503" maxy="90.00000000000011"/>
+        <BoundingBox CRS="EPSG:4326" minx="11.0" miny="-70.5" maxx="90.00000000000011" maxy="43.00312503"/>
+        <Dimension name="time" default="2024-12-31T23:00:00Z" units="ISO8601">2018-12-31T23:00:00.000Z,2020-12-31T23:00:00.000Z,2022-12-31T23:00:00.000Z,2024-12-31T23:00:00.000Z</Dimension>
+        <MetadataURL type="19139">
+          <Format>text/xml</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://sextant.ifremer.fr/geonetwork/srv/eng/csw?request=GetRecordById&amp;elementSetName=full&amp;service=CSW&amp;version=2.0.2&amp;OutputSchema=http://www.isotc211.org/2005/gmd&amp;id=6572ee07-a078-4adc-b868-fd1f7084c660"/>
+        </MetadataURL>
+        <DataURL>
+          <Format>text/html</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://portal.emodnet-bathymetry.eu/"/>
+        </DataURL>
+        <DataURL>
+          <Format>text/xml</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://ows.emodnet-bathymetry.eu/wfs"/>
+        </DataURL>
+        <Style>
+          <Name>quality_index_combined</Name>
+          <Title>Combined</Title>
+          <LegendURL width="101" height="120">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=emodnet%3Aquality_index"/>
+          </LegendURL>
+        </Style>
+        <Style>
+          <Name>quality_index_purpose</Name>
+          <Title>Purpose</Title>
+          <LegendURL width="425" height="100">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=emodnet%3Aquality_index&amp;style=quality_index_purpose"/>
+          </LegendURL>
+        </Style>
+        <Style>
+          <Name>quality_index_vertical</Name>
+          <Title>Vertical</Title>
+          <LegendURL width="414" height="120">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=emodnet%3Aquality_index&amp;style=quality_index_vertical"/>
+          </LegendURL>
+        </Style>
+        <Style>
+          <Name>quality_index_horizontal</Name>
+          <Title>Horizontal</Title>
+          <LegendURL width="177" height="100">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=emodnet%3Aquality_index&amp;style=quality_index_horizontal"/>
+          </LegendURL>
+        </Style>
+        <Style>
+          <Name>quality_index_age</Name>
+          <Title>Age</Title>
+          <LegendURL width="107" height="100">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=emodnet%3Aquality_index&amp;style=quality_index_age"/>
+          </LegendURL>
+        </Style>
+      </Layer>
+      <Layer queryable="1" opaque="0">
+        <Name>world:sea_names</Name>
+        <Title>Sea names</Title>
+        <Abstract>Maintained and provided by SeaDataNet</Abstract>
+        <KeywordList>
+          <Keyword>features</Keyword>
+        </KeywordList>
+        <CRS>EPSG:4326</CRS>
+        <CRS>CRS:84</CRS>
+        <EX_GeographicBoundingBox>
+          <westBoundLongitude>-30.082426254881305</westBoundLongitude>
+          <eastBoundLongitude>41.18426371436688</eastBoundLongitude>
+          <southBoundLatitude>16.11152928705637</southBoundLatitude>
+          <northBoundLatitude>84.34030789024699</northBoundLatitude>
+        </EX_GeographicBoundingBox>
+        <BoundingBox CRS="CRS:84" minx="-30.082426254881305" miny="16.11152928705637" maxx="41.18426371436688" maxy="84.34030789024699"/>
+        <BoundingBox CRS="EPSG:4326" minx="16.11152928705637" miny="-30.082426254881305" maxx="84.34030789024699" maxy="41.18426371436688"/>
+        <MetadataURL type="19139">
+          <Format>text/xml</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://sextant.ifremer.fr/geonetwork/srv/eng/csw?request=GetRecordById&amp;elementSetName=full&amp;service=CSW&amp;version=2.0.2&amp;OutputSchema=http://www.isotc211.org/2005/gmd&amp;id=f8683e4b-a9a8-4b4f-a506-766ffde6e2c9"/>
+        </MetadataURL>
+        <Style>
+          <Name>sea_names</Name>
+          <Title>Sea names</Title>
+          <Abstract>Sea names</Abstract>
+          <LegendURL width="117" height="100">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=world%3Asea_names"/>
+          </LegendURL>
+        </Style>
+        <MinScaleDenominator>1.0</MinScaleDenominator>
+      </Layer>
+      <Layer queryable="1" opaque="0">
+        <Name>emodnet:source_references</Name>
+        <Title>Source references</Title>
+        <Abstract>Coverage of individual bathymetric surveys and Composite DTMs that contribute to the  EMODnet Bathymetry DTM.</Abstract>
+        <KeywordList>
+          <Keyword>features</Keyword>
+        </KeywordList>
+        <CRS>EPSG:4326</CRS>
+        <CRS>CRS:84</CRS>
+        <EX_GeographicBoundingBox>
+          <westBoundLongitude>-70.5</westBoundLongitude>
+          <eastBoundLongitude>43.00312503</eastBoundLongitude>
+          <southBoundLatitude>11.0</southBoundLatitude>
+          <northBoundLatitude>90.00000000000011</northBoundLatitude>
+        </EX_GeographicBoundingBox>
+        <BoundingBox CRS="CRS:84" minx="-70.5" miny="11.0" maxx="43.00312503" maxy="90.00000000000011"/>
+        <BoundingBox CRS="EPSG:4326" minx="11.0" miny="-70.5" maxx="90.00000000000011" maxy="43.00312503"/>
+        <Dimension name="time" default="2024-12-31T23:00:00Z" units="ISO8601">2011-08-31T22:00:00.000Z,2012-08-31T22:00:00.000Z,2013-08-31T22:00:00.000Z,2014-08-31T22:00:00.000Z,2015-08-31T22:00:00.000Z,2016-08-31T22:00:00.000Z,2018-12-31T23:00:00.000Z,2020-12-31T23:00:00.000Z,2022-12-31T23:00:00.000Z,2024-12-31T23:00:00.000Z</Dimension>
+        <MetadataURL type="19139">
+          <Format>text/xml</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://sextant.ifremer.fr/geonetwork/srv/eng/csw?request=GetRecordById&amp;elementSetName=full&amp;service=CSW&amp;version=2.0.2&amp;OutputSchema=http://www.isotc211.org/2005/gmd&amp;id=6a72639d-2548-4d46-828f-16753fedbfd1"/>
+        </MetadataURL>
+        <DataURL>
+          <Format>text/xml</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://ows.emodnet-bathymetry.eu/wfs"/>
+        </DataURL>
+        <DataURL>
+          <Format>text/html</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://portal.emodnet-bathymetry.eu/"/>
+        </DataURL>
+        <Style>
+          <Name>source_reference</Name>
+          <Title>Source Reference - Colour per unique identifier</Title>
+          <Abstract>Source reference  - random colour per unique identifier</Abstract>
+          <LegendURL width="243" height="80">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=emodnet%3Asource_references"/>
+          </LegendURL>
+        </Style>
+        <Style>
+          <Name>source_reference_types</Name>
+          <Title>Source Reference - Types</Title>
+          <Abstract>Coverage grouped by source type</Abstract>
+          <LegendURL width="166" height="60">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=emodnet%3Asource_references&amp;style=source_reference_types"/>
+          </LegendURL>
+        </Style>
+        <Style>
+          <Name>organisations</Name>
+          <Title>Organisations</Title>
+          <LegendURL width="789" height="640">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=emodnet%3Asource_references&amp;style=organisations"/>
+          </LegendURL>
+        </Style>
+      </Layer>
+      <Layer queryable="1" opaque="0">
+        <Name>gebco:undersea_features</Name>
+        <Title>undersea_features</Title>
+        <Abstract/>
+        <KeywordList>
+          <Keyword>features</Keyword>
+          <Keyword>undersea_features</Keyword>
+        </KeywordList>
+        <CRS>EPSG:4326</CRS>
+        <CRS>CRS:84</CRS>
+        <EX_GeographicBoundingBox>
+          <westBoundLongitude>-180.0</westBoundLongitude>
+          <eastBoundLongitude>180.0</eastBoundLongitude>
+          <southBoundLatitude>-79.0</southBoundLatitude>
+          <northBoundLatitude>89.3333358764648</northBoundLatitude>
+        </EX_GeographicBoundingBox>
+        <BoundingBox CRS="CRS:84" minx="-180.0" miny="-79.0" maxx="180.0" maxy="89.3333358764648"/>
+        <BoundingBox CRS="EPSG:4326" minx="-79.0" miny="-180.0" maxx="89.3333358764648" maxy="180.0"/>
+        <MetadataURL type="19139">
+          <Format>text/xml</Format>
+          <OnlineResource xlink:type="simple" xlink:href="https://sextant.ifremer.fr/geonetwork/srv/eng/csw?request=GetRecordById&amp;elementSetName=full&amp;service=CSW&amp;version=2.0.2&amp;OutputSchema=http://www.isotc211.org/2005/gmd&amp;id=cf51df64-56f9-4a99-b1aa-36b8d7b743a1"/>
+        </MetadataURL>
+        <Style>
+          <Name>gebco:undersea_features</Name>
+          <Title>Under Sea features</Title>
+          <Abstract>Under sea lines</Abstract>
+          <LegendURL width="81" height="40">
+            <Format>image/png</Format>
+            <OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:type="simple" xlink:href="http://ows.emodnet-bathymetry.eu/ows?service=WMS&amp;version=1.3.0&amp;request=GetLegendGraphic&amp;format=image%2Fpng&amp;width=20&amp;height=20&amp;layer=gebco%3Aundersea_features"/>
+          </LegendURL>
+        </Style>
+        <MinScaleDenominator>1.0</MinScaleDenominator>
+        <MaxScaleDenominator>1.0E7</MaxScaleDenominator>
+      </Layer>
+    </Layer>
+  </Capability>
+</WMS_Capabilities>

@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.tsbuildinfo
+.env
+playground/node_modules/
+coverage/
+test-results/
+playwright-report/
+.playwright/

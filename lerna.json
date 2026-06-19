@@ -9,6 +9,7 @@
     "packages/map-screenshotter",
     "packages/map-tile-cache-calculator",
     "packages/mapbox-gl-esri-sources",
+    "packages/mapbox-gl-wms-source",
     "packages/spatial-uploads-handler",
     "packages/uploads-server",
     "packages/vector-data-source",

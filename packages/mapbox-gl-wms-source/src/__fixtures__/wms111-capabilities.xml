@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE WMT_MS_Capabilities SYSTEM "http://schemas.opengis.net/wms/1.1.1/WMS_MS_Capabilities.dtd">
+<WMT_MS_Capabilities version="1.1.1">
+  <Service>
+    <Name>OGC:WMS</Name>
+    <Title>Test WMS Service 1.1.1</Title>
+    <Abstract>Marine regions test</Abstract>
+  </Service>
+  <Capability>
+    <Request>
+      <GetCapabilities>
+        <Format>application/vnd.ogc.wms_xml</Format>
+        <DCPType>
+          <HTTP>
+            <Get><OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="https://example.com/wms?"/></Get>
+          </HTTP>
+        </DCPType>
+      </GetCapabilities>
+      <GetMap>
+        <Format>image/png</Format>
+        <DCPType>
+          <HTTP>
+            <Get><OnlineResource xmlns:xlink="http://www.w3.org/1999/xlink" xlink:href="https://example.com/wms?"/></Get>
+          </HTTP>
+        </DCPType>
+      </GetMap>
+    </Request>
+    <Layer>
+      <Title>Root</Title>
+      <SRS>EPSG:4326</SRS>
+      <SRS>EPSG:3857</SRS>
+      <LatLonBoundingBox minx="-180" miny="-90" maxx="180" maxy="90"/>
+      <Layer queryable="1">
+        <Name>eez</Name>
+        <Title>Exclusive Economic Zones</Title>
+        <SRS>EPSG:4326</SRS>
+        <BoundingBox SRS="EPSG:4326" minx="-180" miny="-90" maxx="180" maxy="90"/>
+      </Layer>
+    </Layer>
+  </Capability>
+</WMT_MS_Capabilities>

@@ -4,33 +4,33 @@ overview: "Add OGC WMS as a first-class overlay layer type in SeaSketch in two p
 todos:
   - id: p1-scaffold
     content: "(Phase 1) Scaffold @seasketch/mapbox-gl-wms-source: package.json (main/module/types->dist, files, build=tsc -b, test, playground, capture scripts) + tsconfig mirroring esri-sources; register in lerna.json; duplicate the small CustomGLSource contract + copy minimal projection/util helpers (do not modify esri-sources)"
-    status: pending
+    status: completed
   - id: p1-capabilities
     content: "(Phase 1) WMSCapabilities parser for 1.1.1 + 1.3.0: service info, supported formats/CRS, GetFeatureInfo formats, nested layer tree with Name/Title/Abstract/CRS/bounds/Styles+LegendURL/queryable/MetadataURL/scale+time dimensions; version/axis-order aware"
-    status: pending
+    status: completed
   - id: p1-sources
     content: "(Phase 1) Two CustomGLSource classes (like esri tiled + dynamic, no vector): WMSTiledSource (raster source via LAYERS + BBOX={bbox-epsg-3857}) and WMSDynamicSource (viewport GetMap image on moveend, updateLayers for visibility/order, HiDPI); version-correct GetMap/GetFeatureInfo/GetLegendGraphic builders; getComputedMetadata; fire map data/dataloading/error events"
-    status: pending
+    status: completed
   - id: p1-api
     content: "(Phase 1) Export framework-agnostic helper functions so WMS protocol logic lives in the tested module, not the client: catalog (normalizeWMSUrl, fetchCapabilities, parseCapabilities, flattenLayers, getSupportedWebMercatorCrs), metadata (buildLayerMetadata, fetchAndParseMetadataUrl), legends (getLegendItems, getLegendGraphicUrl), interactivity (getFeatureInfoUrl, parseFeatureInfo, identify); all pure or fetch-injectable"
-    status: pending
+    status: completed
   - id: p1-readme
     content: "(Phase 1) Author README analogous to mapbox-gl-esri-sources: intro, Examples links, 'WMS Tiled' section (incl. plain native-raster snippet), 'Dynamic WMS' section (WMSDynamicSource usage + updateLayers + devicePixelRatio); no vector section"
-    status: pending
+    status: completed
   - id: p1-fixtures
-    content: "(Phase 1) Capture real GetCapabilities + GetFeatureInfo (JSON/HTML/GML) + GetLegendGraphic fixtures from the curated ocean services (EMODnet/MarineRegions GeoServer, GEBCO MapServer, NOAA ArcGIS WMS, GIBS, ERDDAP) into __fixtures__/, plus a refreshable scripts/capture-fixtures.ts"
-    status: pending
+    content: (Phase 1) Capture real GetCapabilities + GetFeatureInfo (JSON/HTML/GML) + GetLegendGraphic fixtures from the curated ocean services (EMODnet/MarineRegions GeoServer, GEBCO MapServer, NOAA ArcGIS WMS, GIBS, ERDDAP) into __fixtures__/, plus a refreshable scripts/capture-fixtures.ts
+    status: completed
   - id: p1-tests
     content: "(Phase 1) Vitest suite: exhaustive unit tests for capabilities parsing (1.1.1 vs 1.3.0 axis order, layer trees, CRS/bounds/styles/legend/queryable/time), URL builders, and both source classes against a fake Map; DI fetch + fixtures; coverage via @vitest/coverage-v8; optional env-gated live smoke tests; package typecheck+test as its own CI job"
-    status: pending
+    status: completed
   - id: p1-playground
     content: "(Phase 1) Improved Vite playground: curated + free-form service picker, capabilities-driven layer tree, live map preview, mode/version/format/CRS/HiDPI/opacity/order controls, click GetFeatureInfo, legend panel, live request log (URL/status/timing/CORS); dev-only Vite proxy toggle"
-    status: pending
+    status: completed
   - id: p2-schema
-    content: "(Phase 2) Add wms data_source_type + wms_settings column in current.sql; update data_sources/data_layers triggers (allow sublayer for wms), data_source_type(), uses_dynamic_metadata, publish_table_of_contents column list; add import_wms_service function (grouped + per-layer flag) + composite input types + projects.imported_wms_services; regenerate generated-schema.gql and run graphql:codegen"
+    content: (Phase 2) Add wms data_source_type + wms_settings column in current.sql; update data_sources/data_layers triggers (allow sublayer for wms), data_source_type(), uses_dynamic_metadata, publish_table_of_contents column list; add import_wms_service function (grouped + per-layer flag) + composite input types + projects.imported_wms_services; regenerate generated-schema.gql and run graphql:codegen
     status: pending
   - id: p2-client-dep
-    content: "(Phase 2) Add @seasketch/mapbox-gl-wms-source as a packages/client dependency (workspace-linked); replace the unused WMSSource.ts stub; widen the customSources registry typing with a local union alias (do not edit esri-sources' CustomSourceType)"
+    content: (Phase 2) Add @seasketch/mapbox-gl-wms-source as a packages/client dependency (workspace-linked); replace the unused WMSSource.ts stub; widen the customSources registry typing with a local union alias (do not edit esri-sources' CustomSourceType)
     status: pending
   - id: p2-map-integration
     content: "(Phase 2) Wire DataSourceTypes.Wms into MapContextManager: sourceTypeIsCustomGLSource, createCustomSource (pick tiled vs dynamic class by wms_settings.requestMode), and a getComputedStyle branch reusing the arcgis-dynamic sublayer-aggregation path; apply group-level opacity to the one composite layer"
@@ -39,19 +39,19 @@ todos:
     content: "(Phase 2) Grouped UX: keep WMS sublayers contiguous in z-order and move the whole group together (move-to-front/back, admin z-index editor); link opacity sliders across a group's sublayers (set all equal, apply once as whole-image opacity); add a visual grouped indicator + explanatory copy"
     status: pending
   - id: p2-legend
-    content: "(Phase 2) Add wms branch to MapContextManager._updateLegends producing a CustomGLSourceSymbolLegend, with legend items resolved by the module's getLegendItems(); render via existing Legend.tsx image-legend UI"
+    content: (Phase 2) Add wms branch to MapContextManager._updateLegends producing a CustomGLSourceSymbolLegend, with legend items resolved by the module's getLegendItems(); render via existing Legend.tsx image-legend UI
     status: pending
   - id: p2-interactivity
-    content: "(Phase 2) Refactor identifyLayers/LayerInteractivityManager to dispatch by source type; WMS path delegates to the module's identify()/getFeatureInfoUrl()+parseFeatureInfo(), client maps normalized result to popups; gate on queryable, graceful CORS failure"
+    content: (Phase 2) Refactor identifyLayers/LayerInteractivityManager to dispatch by source type; WMS path delegates to the module's identify()/getFeatureInfoUrl()+parseFeatureInfo(), client maps normalized result to popups; gate on queryable, graceful CORS failure
     status: pending
   - id: p2-metadata
     content: "(Phase 2) Use dynamic metadata for wms: module's buildLayerMetadata() supplies ProseMirror docs (incl. MetadataURL via @seasketch/metadata-parser) surfaced through getComputedMetadata; reuse existing 'convert to editable' flow"
     status: pending
   - id: p2-import-ui
-    content: "(Phase 2) Build WMSCartModal + WMSSearchPage catalog browser using the module's catalog helpers (normalizeWMSUrl/fetchCapabilities/parseCapabilities); layer tree, multi-select, service settings, live preview, CORS validation; advanced 'add each layer as an independent overlay item' toggle (per-layer sources) + manual-entry mode with test/validate probe; add 'OGC WMS service...' menu item; add ImportWMSService .graphql"
+    content: (Phase 2) Build WMSCartModal + WMSSearchPage catalog browser using the module's catalog helpers (normalizeWMSUrl/fetchCapabilities/parseCapabilities); layer tree, multi-select, service settings, live preview, CORS validation; advanced 'add each layer as an independent overlay item' toggle (per-layer sources) + manual-entry mode with test/validate probe; add 'OGC WMS service...' menu item; add ImportWMSService .graphql
     status: pending
   - id: p2-layer-editor
-    content: "(Phase 2) Add WMSLayerInfo panel (Data Source tab) with the full service-integration settings list (service-level vs per-layer noted); gate Style/Interactivity/Metadata tabs appropriately for WMS"
+    content: (Phase 2) Add WMSLayerInfo panel (Data Source tab) with the full service-integration settings list (service-level vs per-layer noted); gate Style/Interactivity/Metadata tabs appropriately for WMS
     status: pending
   - id: p2-parity
     content: "(Phase 2) Parity polish: humanizeSourceType/isRemoteSource, disable download, bounds + fit-to-bounds, title translation, recent servers reuse, and verify opacity/z-order/loading/error indicators end-to-end"
@@ -67,7 +67,7 @@ Make OGC WMS a first-class overlay layer type that behaves like any other SeaSke
 
 ## Key architecture decisions
 
-- **Grouped, shared-source model by default (mirrors ArcGIS dynamic map server).** One `data_source` per WMS *service* (type `wms`), and one `data_layer` + TOC item per selected WMS *layer*, with the WMS layer name stored in the existing reserved `data_layers.sublayer` column (the schema comment already says this column is "For ARCGIS_MAPSERVER and eventually WMS sources"). At runtime the visible sublayers of a service are composited into a **single** `GetMap` request via the `LAYERS=` list, in z-order. This reuses the existing `ArcGISDynamicMapService` rendering path, the `customSources` registry, sublayer aggregation in `getComputedStyle()`, the image-legend pipeline, and `getComputedMetadata()` almost entirely.
+- **Grouped, shared-source model by default (mirrors ArcGIS dynamic map server).** One `data_source` per WMS _service_ (type `wms`), and one `data_layer` + TOC item per selected WMS _layer_, with the WMS layer name stored in the existing reserved `data_layers.sublayer` column (the schema comment already says this column is "For ARCGIS_MAPSERVER and eventually WMS sources"). At runtime the visible sublayers of a service are composited into a **single** `GetMap` request via the `LAYERS=` list, in z-order. This reuses the existing `ArcGISDynamicMapService` rendering path, the `customSources` registry, sublayer aggregation in `getComputedStyle()`, the image-legend pipeline, and `getComputedMetadata()` almost entirely.
 - **Group behavior for z-order and opacity.** Because standard WMS `GetMap` has no per-layer opacity or per-layer z-interleaving in a single request, all sublayers of a service render as one composite image and behave as a group: they stay contiguous in the layer stack and **move together** in z-order, and their **opacity sliders are linked** (changing one sets them all and applies a single whole-image opacity). The WMS source's `getComputedMetadata().supportsDynamicRendering` advertises `{ layerOrder: true, layerVisibility: true, layerOpacity: false }` to drive this UI.
 - **Advanced: independent per-layer import.** A clearly explained advanced option in the catalog browser imports each selected layer as its **own** `data_source` (still type `wms`, one sublayer each) instead of a shared one. Those layers then get fully independent z-order and opacity (each is its own composite-of-one). Default remains grouped.
 - **Two source classes (tiled + dynamic), like the esri module; default dynamic.** Mirror `mapbox-gl-esri-sources`' split: a **`WMSTiledSource`** (Mapbox `raster` source whose tiles template carries `LAYERS=...&BBOX={bbox-epsg-3857}`; tiles rebuilt when the visible sublayer set changes) and a **`WMSDynamicSource`** (viewport `GetMap` image updated on `moveend`, like `ArcGISDynamicMapService`). No vector/feature class. SeaSketch defaults to **dynamic** (one request per view, robust against inefficient/poorly-cached services) and offers **tiled** as an opt-in for well-behaved, properly cache-headered services; mode is an editable per-service setting that selects which class is instantiated.
@@ -226,18 +226,18 @@ Add to the "Connect to data services" submenu in [TableOfContentsEditor.tsx](pac
 
 In [LayerTableOfContentsItemEditor.tsx](packages/client/src/admin/data/LayerTableOfContentsItemEditor.tsx) add a `WMSLayerInfo` panel to the **Data Source** tab ([LayerInfoList.tsx](packages/client/src/admin/data/TableOfContentsItemEditor/LayerInfoList.tsx)) and gate the other tabs. Settings that live on the shared `data_source` (`wms_settings`) are **service-level** and apply to every sublayer of the service — surface a note that editing them affects all grouped layers. Admin-configurable service integration settings:
 
-- WMS layer Name (the `sublayer`; read-only; editable in manual mode) — *per layer*
-- Service endpoint + link to GetCapabilities — *service*
-- WMS version (1.1.1 / 1.3.0) — *service*
-- Request mode (Dynamic single-image [default] / Tiled) — *service*
-- Image format (from server-advertised list) and Transparent on/off — *service*
-- CRS/SRS (from supported list; default EPSG:3857) — *service*
-- Selected STYLE (from this layer's advertised styles) — *per layer* (parallels the `STYLES=` list)
-- High-DPI requests (`use_device_pixel_ratio`) — *service*
-- Tile size (256/512) for tiled mode — *service*
-- Min/max zoom cap (seeded from scale hints) — *service*
-- Custom vendor query params (e.g. TIME, ELEVATION, ENV, CQL_FILTER) — *service*
-- Re-validate / refresh-from-capabilities button — *service*
+- WMS layer Name (the `sublayer`; read-only; editable in manual mode) — _per layer_
+- Service endpoint + link to GetCapabilities — _service_
+- WMS version (1.1.1 / 1.3.0) — _service_
+- Request mode (Dynamic single-image [default] / Tiled) — _service_
+- Image format (from server-advertised list) and Transparent on/off — _service_
+- CRS/SRS (from supported list; default EPSG:3857) — _service_
+- Selected STYLE (from this layer's advertised styles) — _per layer_ (parallels the `STYLES=` list)
+- High-DPI requests (`use_device_pixel_ratio`) — _service_
+- Tile size (256/512) for tiled mode — _service_
+- Min/max zoom cap (seeded from scale hints) — _service_
+- Custom vendor query params (e.g. TIME, ELEVATION, ENV, CQL*FILTER) — \_service*
+- Re-validate / refresh-from-capabilities button — _service_
 - **Settings tab:** title, attribution (override vs from-capabilities), ACL, geoprocessing reference id, comments, changelog — all reused as-is.
 - **Style tab:** not editable (server-rendered); show a message like ArcGIS, with STYLE selection living in Data Source.
 - **Interactivity tab:** GetFeatureInfo popups when queryable (INFO_FORMAT choice, optional template); disabled message when not queryable.
@@ -255,12 +255,12 @@ In [LayerTableOfContentsItemEditor.tsx](packages/client/src/admin/data/LayerTabl
 
 Curated ocean services spanning multiple server implementations and capability profiles. These drive both fixtures/tests and the playground. All are public, long-lived, authoritative sources (researched + verified):
 
-- **EMODnet Bathymetry** — *GeoServer* — `https://ows.emodnet-bathymetry.eu/wms` (WMS 1.3.0). EU authoritative bathymetry, ~99.97% monitored uptime. Raster products, grouped layers, GetFeatureInfo. Generally CORS-enabled. Good "happy path" GeoServer raster case.
-- **Marine Regions / VLIZ** — *GeoServer* — `https://geo.vliz.be/geoserver/MarineRegions/wms` (1.1.1 + 1.3.0). Vector-backed maritime boundaries (`eez`, `eez_boundaries`): exercises **queryable** layers, named **Styles + LegendURL**, and GetFeatureInfo in JSON/GML/HTML.
-- **GEBCO** — *MapServer (`mapserv`)* — `https://wms.gebco.net/mapserv?` (1.3.0). Authoritative global bathymetry (Seabed 2030). Exercises MapServer dialect and a real **negative-path** case: returns HTTP 403 when the `Accept` header doesn't allow `text/xml`, and CORS varies — ideal for error-handling/validation fixtures.
-- **NOAA ENC Direct / USGS National Map** — *ArcGIS Server WMS* — e.g. `https://basemap.nationalmap.gov/arcgis/services/USGSImageryOnly/MapServer/WMSServer?` or `https://encdirect.noaa.gov/arcgis/services/.../MapServer/WMSServer?`. Exercises Esri's `WMSServer` dialect (distinct from the ArcGIS REST that esri-sources already handles).
-- **NASA GIBS** — *OnEarth (custom)* — `https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi` (native EPSG:3857) and `.../epsg4326/...`. Ocean SST/chlorophyll (e.g. `GHRSST_L4_MUR_Sea_Surface_Temperature`, `VIIRS_SNPP_L2_Sea_Surface_Temp_Day`). Exercises **TIME dimension**, a **very large** capabilities doc (flat 1000+ layer list at 3857 vs hierarchical tree at 4326), `GetLegendGraphic`, and 1.1.x quirks.
-- **NOAA ERDDAP CoastWatch** — *ERDDAP WMS* — `https://coastwatch.noaa.gov/erddap/wms/jplMURSST41/request?` (1.1.0/1.1.1/1.3.0). SST with a **TIME dimension** and composited `Land`/`Coastlines`/`Nations` layers; per-dataset service endpoints.
+- **EMODnet Bathymetry** — _GeoServer_ — `https://ows.emodnet-bathymetry.eu/wms` (WMS 1.3.0). EU authoritative bathymetry, ~99.97% monitored uptime. Raster products, grouped layers, GetFeatureInfo. Generally CORS-enabled. Good "happy path" GeoServer raster case.
+- **Marine Regions / VLIZ** — _GeoServer_ — `https://geo.vliz.be/geoserver/MarineRegions/wms` (1.1.1 + 1.3.0). Vector-backed maritime boundaries (`eez`, `eez_boundaries`): exercises **queryable** layers, named **Styles + LegendURL**, and GetFeatureInfo in JSON/GML/HTML.
+- **GEBCO** — _MapServer (`mapserv`)_ — `https://wms.gebco.net/mapserv?` (1.3.0). Authoritative global bathymetry (Seabed 2030). Exercises MapServer dialect and a real **negative-path** case: returns HTTP 403 when the `Accept` header doesn't allow `text/xml`, and CORS varies — ideal for error-handling/validation fixtures.
+- **NOAA ENC Direct / USGS National Map** — _ArcGIS Server WMS_ — e.g. `https://basemap.nationalmap.gov/arcgis/services/USGSImageryOnly/MapServer/WMSServer?` or `https://encdirect.noaa.gov/arcgis/services/.../MapServer/WMSServer?`. Exercises Esri's `WMSServer` dialect (distinct from the ArcGIS REST that esri-sources already handles).
+- **NASA GIBS** — _OnEarth (custom)_ — `https://gibs.earthdata.nasa.gov/wms/epsg3857/best/wms.cgi` (native EPSG:3857) and `.../epsg4326/...`. Ocean SST/chlorophyll (e.g. `GHRSST_L4_MUR_Sea_Surface_Temperature`, `VIIRS_SNPP_L2_Sea_Surface_Temp_Day`). Exercises **TIME dimension**, a **very large** capabilities doc (flat 1000+ layer list at 3857 vs hierarchical tree at 4326), `GetLegendGraphic`, and 1.1.x quirks.
+- **NOAA ERDDAP CoastWatch** — _ERDDAP WMS_ — `https://coastwatch.noaa.gov/erddap/wms/jplMURSST41/request?` (1.1.0/1.1.1/1.3.0). SST with a **TIME dimension** and composited `Land`/`Coastlines`/`Nations` layers; per-dataset service endpoints.
 
 Designated minimum coverage (satisfies "at least 2 different servers"): **GeoServer** (EMODnet + Marine Regions), **MapServer** (GEBCO), and **ArcGIS Server WMS** (NOAA/USGS), with **GIBS** and **ERDDAP** as bonus profiles for time dimensions and large catalogs.
 
