@@ -157,6 +157,74 @@ jobs:
           REACT_APP_BUILD: ${{ steps.short_sha.outputs.sha }}
         run: |
           NODE_OPTIONS=--openssl-legacy-provider CI=false npm run build
+  wms-changes:
+    name: Detect WMS package changes
+    runs-on: ubuntu-latest
+    outputs:
+      wms: ${{ steps.filter.outputs.wms }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            wms:
+              - "packages/mapbox-gl-wms-source/**"
+              - "packages/metadata-parser/**"
+  test-mapbox-gl-wms-source:
+    name: Test @seasketch/mapbox-gl-wms-source
+    needs: wms-changes
+    if: needs.wms-changes.outputs.wms == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "23"
+          cache: "npm"
+      - name: Install dependencies
+        run: npx lerna@6.6.2 bootstrap --ci
+      - name: Build metadata-parser
+        working-directory: ./packages/metadata-parser
+        run: npm run build
+      - name: Install Playwright Chromium
+        working-directory: ./packages/mapbox-gl-wms-source
+        run: npx playwright install chromium
+      - name: Build WMS package
+        working-directory: ./packages/mapbox-gl-wms-source
+        run: npm run build
+      - name: Unit tests (Vitest)
+        working-directory: ./packages/mapbox-gl-wms-source
+        run: npm test
+      - name: E2E tests (mocked Playwright)
+        working-directory: ./packages/mapbox-gl-wms-source
+        env:
+          CI: "true"
+          VITE_MAPBOX_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
+        run: npm run test:e2e
+      - name: Live protocol smoke (Vitest, indicative)
+        id: live_vitest
+        continue-on-error: true
+        working-directory: ./packages/mapbox-gl-wms-source
+        env:
+          WMS_LIVE: "1"
+        run: npm run test:live
+      - name: Live browser smoke (Playwright, indicative)
+        id: live_playwright
+        continue-on-error: true
+        working-directory: ./packages/mapbox-gl-wms-source
+        env:
+          CI: "true"
+          VITE_MAPBOX_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
+        run: npm run test:e2e:live
+      - name: Upload live Playwright artifacts
+        if: steps.live_playwright.outcome == 'failure'
+        uses: actions/upload-artifact@v4
+        with:
+          name: wms-live-playwright-report
+          path: packages/mapbox-gl-wms-source/test-results/
+          retention-days: 7
   # integration-tests:
   #   name: Cypress Integration Tests
   #   runs-on: ubuntu-latest

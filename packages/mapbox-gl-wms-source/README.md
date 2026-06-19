@@ -112,9 +112,14 @@ npm run test:e2e:live:ui           # Playwright UI — step through / inspect
 npm run test:e2e:live:debug         # headed + pause after each service (PW_LIVE_PAUSE=1)
 ```
 
-These are **not** part of the default `npm run test:e2e` run. A separate GitHub
-Actions workflow (`.github/workflows/wms-live-e2e.yml`) runs them on push with
-`continue-on-error: true` as an indicative, non-blocking check.
+These are **not** part of the default `npm run test:e2e` run.
+
+**CI (`unit-tests.yml`):** when `packages/mapbox-gl-wms-source/**` (or
+`metadata-parser`) changes, the Unit Tests workflow runs Vitest + mocked
+Playwright as **required** steps. Live Vitest + live Playwright run in the same
+job with `continue-on-error: true` (indicative only — failures do not fail the
+workflow). This job is independent of deployment (`deploy.yml` is manual and
+does not run or wait on WMS tests).
 
 **4. Live protocol smoke (Vitest, opt-in)** — lightweight fetch-only checks
 (capabilities parse + GetMap content-type) without a browser.
