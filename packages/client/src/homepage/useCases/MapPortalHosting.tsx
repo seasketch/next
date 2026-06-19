@@ -59,7 +59,7 @@ const additionalFeatureCards: AdditionalFeatureCard[] = [
   {
     title: "Integrates with Esri & open-source services",
     description:
-      "For data already hosted elsewhere, link directly to ArcGIS Online, ArcGIS Enterprise, or OGC services and blend those layers seamlessly into your portal.",
+      "For data already hosted elsewhere, link directly to services on ArcGIS Online or ArcGIS Enterprise. You can also add vector tiles and live GeoJSON data sources.",
     icon: <GlobeIcon className="h-5 w-5" />,
     iconClassName: "bg-emerald-100 text-emerald-700 ring-emerald-200",
   },
@@ -184,7 +184,7 @@ export default function MapPortalHostingPage() {
               Map Portal Hosting
             </span>
             <h1 className="mt-4 text-balance text-3xl font-semibold leading-tight tracking-tight text-white sm:text-4xl md:text-6xl">
-              Publish an{" "}
+              Publish a{" "}
               <span className="bg-gradient-to-r from-sky-300 via-cyan-300 to-emerald-300 bg-clip-text text-transparent">
                 living map
               </span>{" "}
@@ -218,9 +218,14 @@ export default function MapPortalHostingPage() {
               className="absolute -inset-8 -z-10 rounded-[3rem] bg-gradient-to-tr from-sky-500/20 via-cyan-400/10 to-emerald-400/20 blur-3xl"
             />
             <div className="overflow-hidden rounded-2xl border border-white/10 shadow-2xl ring-1 ring-white/10">
-              <img
+              {/* <img
                 src="https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/bec0ee17-3023-4c06-10da-81ab072ec600/hlarge"
                 alt="The Te Baiku Ocean Geodatabase in SeaSketch showing geomorphic reef features for Kiribati with a map legend"
+                className="w-full"
+              /> */}
+              <img
+                src="https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/af4df994-3ed3-4c4a-15f0-1c327eba1200/hlarge"
+                alt="A SeaSketch map portal showing a map of the ocean with a legend and a search bar"
                 className="w-full"
               />
             </div>
@@ -514,9 +519,9 @@ export default function MapPortalHostingPage() {
                 <p>
                   A complete changelog tracks every update made by project
                   administrators. In a large, collaboratively managed project,
-                  you always know who changed what, and when. You can even
-                  roll back certain changes like cartographic styles or source
-                  data updates.
+                  you always know who changed what, and when. You can even roll
+                  back certain changes like cartographic styles or source data
+                  updates.
                 </p>
               </div>
             </div>
