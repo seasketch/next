@@ -43,8 +43,7 @@ export const oceanUseSurveysUseCase = {
 const featureCopyPanelClass =
   "relative z-20 rounded-2xl border border-white/60 bg-white/65 p-5 shadow-sm backdrop-blur-sm md:p-6";
 
-const CLOUDFLARE_IMAGES =
-  "https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw";
+const CLOUDFLARE_IMAGES = "https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw";
 
 const PHONE_DIGITIZING_IMAGE = `${CLOUDFLARE_IMAGES}/902e86c5-8372-4e7c-dd14-f5978c92bd00/hlarge`;
 
@@ -226,7 +225,7 @@ function SurveyDeviceMontage({ layout }: { layout: "hero" | "feature" }) {
               spec={macbookPro14}
               screenSrc={MALDIVES_INTRO_IMAGE}
               screenAlt="Maldives Ocean Use Survey welcome screen on a MacBook Pro"
-              hideContactFooter={MALDIVES_CONTACT_MASK}
+              // hideContactFooter={MALDIVES_CONTACT_MASK}
             />
           </div>
 
@@ -242,7 +241,7 @@ function SurveyDeviceMontage({ layout }: { layout: "hero" | "feature" }) {
               screenSrc={AZORES_INTRO_LANDSCAPE_IMAGE}
               screenAlt="Blue Azores Ocean Use Survey welcome screen on an iPad Pro in landscape"
               className="drop-shadow-2xl"
-              hideContactFooter={AZORES_LANDSCAPE_CONTACT_MASK}
+              // hideContactFooter={AZORES_LANDSCAPE_CONTACT_MASK}
             />
           </div>
 
