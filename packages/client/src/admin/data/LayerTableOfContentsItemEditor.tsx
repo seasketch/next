@@ -178,7 +178,8 @@ export default function LayerTableOfContentsItemEditor(
   const isArcGISCustomSource =
     source?.type === DataSourceTypes.ArcgisDynamicMapserver ||
     source?.type === DataSourceTypes.ArcgisRasterTiles ||
-    source?.type === DataSourceTypes.ArcgisVector;
+    source?.type === DataSourceTypes.ArcgisVector ||
+    source?.type === DataSourceTypes.Wms;
 
   return (
     <div

@@ -1390,6 +1390,8 @@ export async function getOrCreateSpritesFromImageSet(
   return replacementIds;
 }
 
+import { identifyWmsLayers } from "../../../dataLayers/wms/identifyWms";
+
 export async function identifyLayers(
   position: [number, number],
   source: DataSourceDetailsFragment,
@@ -1398,10 +1400,25 @@ export async function identifyLayers(
   width: number,
   height: number,
   dpi: number,
-  abortController?: AbortController
+  abortController?: AbortController,
+  pixel?: { x: number; y: number }
 ): Promise<
   { sourceId: number; sublayer: string; attributes: { [key: string]: any } }[]
 > {
+  if (source.type === DataSourceTypes.Wms) {
+    const pt = pixel || { x: Math.round(width / 2), y: Math.round(height / 2) };
+    return identifyWmsLayers(
+      position,
+      source,
+      sublayers,
+      mapBounds,
+      width,
+      height,
+      pt.x,
+      pt.y,
+      abortController
+    );
+  }
   if (source.type === DataSourceTypes.ArcgisDynamicMapserver) {
     const response = await fetch(
       `${source.url}/identify?f=json&tolerance=${4}&mapExtent=${mapBounds.join(
@@ -1568,10 +1585,7 @@ function contentOrFalse(str?: string) {
 }
 
 const dynamicArcGISStyles: {
-  [sourceId: string]: Promise<{
-    imageList: ImageList;
-    layers: mapboxgl.Layer[];
-  }>;
+  [sourceId: string]: ReturnType<typeof styleForFeatureLayer>;
 } = {};
 /**
  * Returns a promise that resolves to gl style information from mapbox-gl-esri-sources.

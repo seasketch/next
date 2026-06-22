@@ -61,10 +61,15 @@ export class WMSDynamicSource extends WMSBaseSource {
     if (source.type !== "image") {
       return;
     }
-    this.fireDataLoading();
     const coordinates = getMapViewportCoordinates(this.map);
     const url = this.getMapUrl(this.map);
     const imageSource = source as mapboxgl.ImageSource;
+    const currentUrl = (imageSource as mapboxgl.ImageSource & { url?: string })
+      .url;
+    if (currentUrl === url) {
+      return;
+    }
+    this.fireDataLoading();
     imageSource.updateImage({ url, coordinates });
   }
 }

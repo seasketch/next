@@ -51,7 +51,7 @@ function minimalCardInput(
       projectId: 1,
       geometryType: SketchGeometryType.Polygon,
       form: {} as CardExportInput["sketchClass"]["form"],
-      clippingGeographies: [1],
+      clippingGeographies: [{ id: 1 }],
       project: {} as CardExportInput["sketchClass"]["project"],
       validChildren: [],
     },
@@ -121,13 +121,14 @@ describe("widget export helpers", () => {
     const input = minimalCardInput({
       metrics: [
         {
-          __typename: "CompatibleSpatialMetricDetails",
+          __typename: "CompatibleSpatialMetric",
           id: 1,
           type: "total_area",
           state: SpatialMetricState.Complete,
           value: 99,
           dependencyHash: "h",
           sourceUrl: "https://example.com/a.geojson",
+          parameters: { __typename: "MetricParameters" },
           subject: {
             __typename: "FragmentSubject",
             geographies: [1],

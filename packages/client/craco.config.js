@@ -39,6 +39,7 @@ module.exports = {
       config.resolve = config.resolve || {};
       config.resolve.alias = {
         ...(config.resolve.alias || {}),
+        "mapbox-gl": path.resolve(__dirname, "node_modules/mapbox-gl"),
         "polyclip-ts": path.resolve(
           __dirname,
           "../overlay-engine/node_modules/polyclip-ts/dist/cjs/index.cjs"

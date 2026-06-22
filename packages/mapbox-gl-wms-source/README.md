@@ -46,6 +46,15 @@ const { layers } = await source.getGLStyleLayers();
 map.addLayer(layers[0]);
 ```
 
+With `supportHighDpiDisplays: true`, each GetMap uses higher `WIDTH`/`HEIGHT` while
+the Mapbox tile grid stays at `tileSize` (256 by default).
+
+Tiled sources use Mapbox's **custom raster source** so in-flight GetMap requests are
+**aborted** when tiles scroll off-screen, and by default **no new GetMap requests
+are sent while panning or zooming** — parent tiles stay visible until `moveend`.
+Set `deferTilesWhileMoving: false` to request tiles continuously during movement
+(more responsive while dragging, but much heavier on the WMS server).
+
 ## Dynamic WMS
 
 Dynamic mode requests a single viewport image on `moveend` (default for SeaSketch). This is more robust for services with poor tile caching or label clipping issues.

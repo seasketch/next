@@ -3641,6 +3641,11 @@ type DataSource implements Node {
   useDevicePixelRatio: Boolean
   vectorGeometryType: String
   wasConvertedFromEsriFeatureLayer: Boolean!
+
+  """
+  Service-level WMS configuration (version, crs, imageFormat, requestMode, etc.)
+  """
+  wmsSettings: JSON
 }
 
 enum DataSourceImportTypes {
@@ -3880,6 +3885,11 @@ input DataSourceInput {
   useDevicePixelRatio: Boolean
   vectorGeometryType: String
   wasConvertedFromEsriFeatureLayer: Boolean
+
+  """
+  Service-level WMS configuration (version, crs, imageFormat, requestMode, etc.)
+  """
+  wmsSettings: JSON
 }
 
 """
@@ -4189,6 +4199,9 @@ enum DataSourceTypes {
 
   """MapBox GL Style "video" source"""
   VIDEO
+
+  """OGC Web Map Service (raster overlay)"""
+  WMS
 }
 
 type DataUploadOutput implements Node {
@@ -8310,6 +8323,61 @@ type ImportArcgisServicesPayload {
   tableOfContentsItems: [TableOfContentsItem!]
 }
 
+"""All input for the `importWmsService` mutation."""
+input ImportWmsServiceInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  items: [WmsImportItemInput]
+  projectId: Int
+  sources: [WmsImportSourceInput]
+}
+
+"""The output of our `importWmsService` mutation."""
+type ImportWmsServicePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  tableOfContentsItems: [TableOfContentsItem!]
+}
+
+"""All input for the `importWmsSubtree` mutation."""
+input ImportWmsSubtreeInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  items: [WmsImportItemInput]
+  layerIdLookup: JSON
+  path: String
+  projectId: Int
+}
+
+"""The output of our `importWmsSubtree` mutation."""
+type ImportWmsSubtreePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  integer: Int
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 type InteractivitySetting implements Node {
   """Reads and enables pagination through a set of `Basemap`."""
   basemapsByInteractivitySettingsIdConnection(
@@ -10272,6 +10340,18 @@ type Mutation {
     """
     input: ImportArcgisServicesInput!
   ): ImportArcgisServicesPayload
+  importWmsService(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: ImportWmsServiceInput!
+  ): ImportWmsServicePayload
+  importWmsSubtree(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: ImportWmsSubtreeInput!
+  ): ImportWmsSubtreePayload
   isConvertibleLegacySource(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -12420,6 +12500,7 @@ type Project implements Node {
   hideSketches: Boolean!
   id: Int!
   importedArcgisServices: [String]
+  importedWmsServices: [String]
 
   """
   Returns the project invitation for the current user session, if any. Will not
@@ -21129,6 +21210,32 @@ enum VisualizationType {
   SIMPLE_LINE
   SIMPLE_POINT
   SIMPLE_POLYGON
+}
+
+"""An input for mutations affecting `WmsImportItem`"""
+input WmsImportItemInput {
+  id: Int
+  isFolder: Boolean
+  parentId: String
+  queryable: Boolean
+  sourceId: Int
+  stableId: String
+  sublayerName: String
+  title: String
+}
+
+"""An input for mutations affecting `WmsImportSource`"""
+input WmsImportSourceInput {
+  attribution: String
+  bounds: [Float]
+  id: Int
+  maxzoom: Int
+  minzoom: Int
+  queryParameters: JSON
+  tileSize: Int
+  url: String
+  useDevicePixelRatio: Boolean
+  wmsSettings: JSON
 }
 
 type WorkerJob {

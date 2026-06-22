@@ -287,8 +287,7 @@ test.describe("Tiled (raster template) source", () => {
     await gotoHarness(page);
 
     const result = await driver(page).load({ mode: "tiled" });
-    expect(result.sourceType).toBe("raster");
-    expect(result.tileTemplate).toContain("{bbox-epsg-3857}");
+    expect(result.sourceType).toBe("custom");
 
     const getMaps = mock.byRequestType("GetMap");
     expect(getMaps.length).toBeGreaterThan(0);

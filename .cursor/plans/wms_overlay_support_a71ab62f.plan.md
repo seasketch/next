@@ -28,34 +28,34 @@ todos:
     status: completed
   - id: p2-schema
     content: (Phase 2) Add wms data_source_type + wms_settings column in current.sql; update data_sources/data_layers triggers (allow sublayer for wms), data_source_type(), uses_dynamic_metadata, publish_table_of_contents column list; add import_wms_service function (grouped + per-layer flag) + composite input types + projects.imported_wms_services; regenerate generated-schema.gql and run graphql:codegen
-    status: pending
+    status: completed
   - id: p2-client-dep
     content: (Phase 2) Add @seasketch/mapbox-gl-wms-source as a packages/client dependency (workspace-linked); replace the unused WMSSource.ts stub; widen the customSources registry typing with a local union alias (do not edit esri-sources' CustomSourceType)
-    status: pending
+    status: completed
   - id: p2-map-integration
     content: "(Phase 2) Wire DataSourceTypes.Wms into MapContextManager: sourceTypeIsCustomGLSource, createCustomSource (pick tiled vs dynamic class by wms_settings.requestMode), and a getComputedStyle branch reusing the arcgis-dynamic sublayer-aggregation path; apply group-level opacity to the one composite layer"
-    status: pending
+    status: completed
   - id: p2-grouped-ui
     content: "(Phase 2) Grouped UX: keep WMS sublayers contiguous in z-order and move the whole group together (move-to-front/back, admin z-index editor); link opacity sliders across a group's sublayers (set all equal, apply once as whole-image opacity); add a visual grouped indicator + explanatory copy"
-    status: pending
+    status: completed
   - id: p2-legend
     content: (Phase 2) Add wms branch to MapContextManager._updateLegends producing a CustomGLSourceSymbolLegend, with legend items resolved by the module's getLegendItems(); render via existing Legend.tsx image-legend UI
-    status: pending
+    status: completed
   - id: p2-interactivity
     content: (Phase 2) Refactor identifyLayers/LayerInteractivityManager to dispatch by source type; WMS path delegates to the module's identify()/getFeatureInfoUrl()+parseFeatureInfo(), client maps normalized result to popups; gate on queryable, graceful CORS failure
-    status: pending
+    status: completed
   - id: p2-metadata
     content: "(Phase 2) Use dynamic metadata for wms: module's buildLayerMetadata() supplies ProseMirror docs (incl. MetadataURL via @seasketch/metadata-parser) surfaced through getComputedMetadata; reuse existing 'convert to editable' flow"
-    status: pending
+    status: completed
   - id: p2-import-ui
     content: (Phase 2) Build WMSCartModal + WMSSearchPage catalog browser using the module's catalog helpers (normalizeWMSUrl/fetchCapabilities/parseCapabilities); layer tree, multi-select, service settings, live preview, CORS validation; advanced 'add each layer as an independent overlay item' toggle (per-layer sources) + manual-entry mode with test/validate probe; add 'OGC WMS service...' menu item; add ImportWMSService .graphql
-    status: pending
+    status: completed
   - id: p2-layer-editor
     content: (Phase 2) Add WMSLayerInfo panel (Data Source tab) with the full service-integration settings list (service-level vs per-layer noted); gate Style/Interactivity/Metadata tabs appropriately for WMS
-    status: pending
+    status: completed
   - id: p2-parity
     content: "(Phase 2) Parity polish: humanizeSourceType/isRemoteSource, disable download, bounds + fit-to-bounds, title translation, recent servers reuse, and verify opacity/z-order/loading/error indicators end-to-end"
-    status: pending
+    status: completed
 isProject: false
 ---
 

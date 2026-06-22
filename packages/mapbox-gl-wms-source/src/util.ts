@@ -1,13 +1,31 @@
 export const blankDataUri =
   "data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==";
 
+/** Semi-width of Web Mercator world in meters (EPSG:3857). */
+export const WEB_MERCATOR_HALF = 20037508.342789244;
+
 export function lon2meters(lon: number): number {
-  return (lon * 20037508.34) / 180;
+  return (lon * WEB_MERCATOR_HALF) / 180;
 }
 
 export function lat2meters(lat: number): number {
   const y = Math.log(Math.tan(((90 + lat) * Math.PI) / 360)) / (Math.PI / 180);
-  return (y * 20037508.34) / 180;
+  return (y * WEB_MERCATOR_HALF) / 180;
+}
+
+/** Web Mercator bounding box for an XYZ tile at zoom z. */
+export function xyzToWebMercatorBbox(
+  z: number,
+  x: number,
+  y: number
+): [number, number, number, number] {
+  const n = Math.pow(2, z);
+  const span = (WEB_MERCATOR_HALF * 2) / n;
+  const minx = -WEB_MERCATOR_HALF + x * span;
+  const maxx = minx + span;
+  const maxy = WEB_MERCATOR_HALF - y * span;
+  const miny = maxy - span;
+  return [minx, miny, maxx, maxy];
 }
 
 export function metersToDegrees(x: number, y: number): [number, number] {

@@ -80,6 +80,7 @@ query ExtraTocEditingInfo($slug: String!) {
   projectBySlug(slug: $slug) {
     id
     importedArcgisServices
+    importedWmsServices
     downloadableLayersCount
     eligableDownloadableLayersCount
   }
@@ -123,6 +124,7 @@ query layersAndSourcesForItems(
       uploadedSourceFilename
       translatedProps
       arcgisFetchStrategy
+      wmsSettings
       rasterRepresentativeColors
       rasterOffset
       rasterScale
@@ -302,6 +304,7 @@ fragment FullAdminSource on DataSource {
   geostats
   translatedProps
   arcgisFetchStrategy
+  wmsSettings
   dataLibraryMetadata
   rasterRepresentativeColors
   authorProfile {
@@ -917,6 +920,21 @@ mutation ImportArcGISService(
   $projectId: Int!
 ) {
   importArcgisServices(
+    input: { items: $items, sources: $sources, projectId: $projectId }
+  ) {
+    tableOfContentsItems {
+      id
+      title
+    }
+  }
+}
+
+mutation ImportWMSService(
+  $items: [WmsImportItemInput!]!
+  $sources: [WmsImportSourceInput!]!
+  $projectId: Int!
+) {
+  importWmsService(
     input: { items: $items, sources: $sources, projectId: $projectId }
   ) {
     tableOfContentsItems {

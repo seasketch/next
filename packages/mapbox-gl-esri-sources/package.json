@@ -33,9 +33,9 @@
     "@rollup/plugin-node-resolve": "^15.2.1",
     "@types/arcgis-rest-api": "^10.4.4",
     "@types/geojson": "^7946.0.7",
-    "@types/mapbox-gl": "^3.1.0",
     "@types/uuid": "^8.0.1",
     "http-server": "^0.12.3",
+    "mapbox-gl": "^3.3.0",
     "rollup": "^2.79.1",
     "rollup-plugin-cleanup": "^3.1.1",
     "typedoc": "^0.17.0-3",
@@ -56,8 +56,10 @@
     "bytes": "^3.1.2",
     "eventemitter3": "^5.0.1",
     "lodash.debounce": "^4.0.8",
-    "mapbox-gl": "^3.3.0",
     "tilebelt": "^1.0.1",
     "uuid": "^8.3.0"
+  },
+  "peerDependencies": {
+    "mapbox-gl": "^2.0.0 || ^3.0.0"
   }
 }

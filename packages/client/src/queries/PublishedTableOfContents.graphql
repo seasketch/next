@@ -61,6 +61,7 @@ fragment DataSourceDetails on DataSource {
   supportsDynamicLayers
   translatedProps
   arcgisFetchStrategy
+  wmsSettings
   rasterRepresentativeColors
   rasterOffset
   rasterScale

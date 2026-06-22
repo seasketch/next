@@ -5,6 +5,7 @@ import {
 import { useContext, useEffect } from "react";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import { MapManagerContext } from "../../dataLayers/MapContextManager";
+import { CustomGLSource } from "@seasketch/mapbox-gl-esri-sources";
 import { isArcGISTiledMapservice } from "@seasketch/mapbox-gl-esri-sources/dist/src/ArcGISTiledMapService";
 import ArcGISTiledRasterBaseSettings from "./ArcGISTiledRasterBaseSettings";
 
@@ -40,7 +41,9 @@ export default function ArcGISTiledRasterSettings({
   useEffect(() => {
     if (manager) {
       // Update the source maxzoom
-      const customSource = manager.getCustomGLSource(source.id);
+      const customSource = manager.getCustomGLSource(source.id) as
+        | CustomGLSource<any>
+        | undefined;
       if (customSource && isArcGISTiledMapservice(customSource)) {
         customSource.updateMaxZoom(source.maxzoom || undefined);
       }

@@ -52,6 +52,8 @@ import {
   ArcGISTiledMapService,
   CustomGLSource,
 } from "@seasketch/mapbox-gl-esri-sources";
+import { createWmsSource } from "./wms/wmsSources";
+import { AnyCustomGLSource } from "./customGLSourceTypes";
 import { OrderedLayerSettings } from "@seasketch/mapbox-gl-esri-sources/dist/src/CustomGLSource";
 import { isArcGISDynamicMapService } from "@seasketch/mapbox-gl-esri-sources/dist/src/ArcGISDynamicMapService";
 import { isArcgisFeatureLayerSource } from "@seasketch/mapbox-gl-esri-sources/dist/src/ArcGISFeatureLayerSource";
@@ -240,7 +242,7 @@ class MapContextManager extends EventEmitter {
   private geoprocessingReferenceIds: { [referenceId: string]: string } = {};
   private customSources: {
     [sourceId: number]: {
-      customSource: CustomGLSource<any>;
+      customSource: AnyCustomGLSource;
       visible: boolean;
       lastUsedTimestamp: number;
       listenersAdded: boolean;
@@ -910,27 +912,29 @@ class MapContextManager extends EventEmitter {
           const sourceConfig = this.clientDataSources[id];
           const { customSource, visible } = this.customSources[id];
           if (visible && sourceConfig) {
-            if (isArcGISDynamicMapService(customSource)) {
-              customSource.updateUseDevicePixelRatio(
+            if (isArcGISDynamicMapService(customSource as CustomGLSource<any>)) {
+              (customSource as ArcGISDynamicMapService).updateUseDevicePixelRatio(
                 sourceConfig.useDevicePixelRatio || false
               );
-              customSource.updateQueryParameters(
+              (customSource as ArcGISDynamicMapService).updateQueryParameters(
                 sourceConfig.queryParameters || {}
               );
-            } else if (isArcgisFeatureLayerSource(customSource)) {
-              customSource.updateFetchStrategy(
+            } else if (
+              isArcgisFeatureLayerSource(customSource as CustomGLSource<any>)
+            ) {
+              (customSource as ArcGISFeatureLayerSource).updateFetchStrategy(
                 sourceConfig.arcgisFetchStrategy ===
                   ArcgisFeatureLayerFetchStrategy.Raw
                   ? "raw"
                   : sourceConfig.arcgisFetchStrategy ===
-                    ArcgisFeatureLayerFetchStrategy.Tiled
-                  ? "tiled"
-                  : "auto"
+                      ArcgisFeatureLayerFetchStrategy.Tiled
+                    ? "tiled"
+                    : "auto"
               );
             }
           }
         }
-        const sources: { [id: string]: CustomGLSource<any> } = {};
+        const sources: { [id: string]: AnyCustomGLSource } = {};
         for (const id in this.customSources) {
           const { customSource, visible } = this.customSources[id];
           if (visible) {
@@ -976,7 +980,7 @@ class MapContextManager extends EventEmitter {
     // in a while
     let inactiveSources: {
       id: string;
-      customSource: CustomGLSource<any>;
+      customSource: AnyCustomGLSource;
       timestamp: number;
     }[] = [];
     // collect inactive sources
@@ -1629,6 +1633,7 @@ class MapContextManager extends EventEmitter {
                   case DataSourceTypes.ArcgisVector:
                   case DataSourceTypes.ArcgisRasterTiles:
                   case DataSourceTypes.ArcgisDynamicMapserver:
+                  case DataSourceTypes.Wms:
                     // Sublayers can be represented multiple times, so don't
                     // add the source if it's already there
                     if (!insertedCustomSourceIds.includes(source.id)) {
@@ -1638,15 +1643,19 @@ class MapContextManager extends EventEmitter {
                           case DataSourceTypes.ArcgisVector:
                           case DataSourceTypes.ArcgisRasterTiles:
                           case DataSourceTypes.ArcgisDynamicMapserver:
+                          case DataSourceTypes.Wms:
                             this.customSources[source.id] = {
                               listenersAdded: false,
                               visible: true,
                               lastUsedTimestamp: new Date().getTime(),
-                              customSource: createCustomSource(
-                                source,
-                                this.arcgisRequestManager,
-                                overlaySourceKey
-                              ),
+                              customSource:
+                                source.type === DataSourceTypes.Wms
+                                  ? createWmsSource(source, overlaySourceKey)
+                                  : createCustomSource(
+                                      source,
+                                      this.arcgisRequestManager,
+                                      overlaySourceKey
+                                    ),
                             };
                             break;
                           default:
@@ -1670,13 +1679,18 @@ class MapContextManager extends EventEmitter {
                       // Adding the source is skipped until later when sublayers are setup
                       if (customSource.ready) {
                         const styleData = await customSource.getGLStyleLayers();
-                        if (styleData.imageList && this.map) {
+                        if (
+                          "imageList" in styleData &&
+                          styleData.imageList &&
+                          this.map
+                        ) {
                           styleData.imageList.addToMap(this.map);
                         }
                         const layers = isUnderLabels ? underLabels : overLabels;
                         if (
                           !this.overlayStates.getRaw(layerId)?.hidden ||
-                          source.type === DataSourceTypes.ArcgisDynamicMapserver
+                          source.type === DataSourceTypes.ArcgisDynamicMapserver ||
+                          source.type === DataSourceTypes.Wms
                         ) {
                           let layersToAdd = styleData.layers;
                           const _overlayState =
@@ -1839,6 +1853,16 @@ class MapContextManager extends EventEmitter {
         const { customSource, sublayers } = this.customSources[id];
         if (customSource.ready) {
           if (sublayers) {
+            const source = this.clientDataSources[parseInt(id)];
+            if (
+              source?.type === DataSourceTypes.Wms &&
+              sublayers.length &&
+              "setGroupOpacity" in customSource
+            ) {
+              (customSource as { setGroupOpacity: (o: number) => void }).setGroupOpacity(
+                sublayers[0].opacity ?? 1
+              );
+            }
             customSource.updateLayers(sublayers);
           }
           const glSource = await customSource.getGLSource(this.map!);
@@ -2932,6 +2956,7 @@ class MapContextManager extends EventEmitter {
                 sourceType = "raster-dem";
                 break;
               case DataSourceTypes.ArcgisDynamicMapserver:
+              case DataSourceTypes.Wms:
               case DataSourceTypes.Image:
                 sourceType = "image";
                 break;
@@ -3097,6 +3122,26 @@ class MapContextManager extends EventEmitter {
     this.updateStyle();
   }
 
+  private applyGroupedWmsZOrder(stableId: string, zOrder: number) {
+    const layer = this.layers[stableId];
+    if (!layer?.sublayer) {
+      return false;
+    }
+    const source = this.clientDataSources[layer.dataSourceId];
+    if (source?.type !== DataSourceTypes.Wms) {
+      return false;
+    }
+    for (const sibling of Object.values(this.layers)) {
+      if (
+        sibling.dataSourceId === layer.dataSourceId &&
+        sibling.sublayer != null
+      ) {
+        this.overlayStates.setZOrderOverride(sibling.tocId, zOrder);
+      }
+    }
+    return true;
+  }
+
   private setZOrderOverride(
     stableId: string,
     zOrder: number,
@@ -3110,7 +3155,7 @@ class MapContextManager extends EventEmitter {
         this.pushSketchState();
         this.debouncedUpdatePreferences();
       }
-    } else {
+    } else if (!this.applyGroupedWmsZOrder(stableId, zOrder)) {
       this.overlayStates.setZOrderOverride(stableId, zOrder);
     }
     // this.resetLayersByZIndex();
@@ -3286,9 +3331,30 @@ class MapContextManager extends EventEmitter {
     if (opacity > 1 || opacity < 0) {
       throw new Error("Opacity should be between 0 and 1");
     }
-    this.overlayStates.setOpacity(stableId, opacity);
     const layer = this.layers[stableId];
-    const source = this.clientDataSources[layer.dataSourceId];
+    const source = layer
+      ? this.clientDataSources[layer.dataSourceId]
+      : undefined;
+    if (
+      source?.type === DataSourceTypes.Wms &&
+      layer?.sublayer != null &&
+      layer?.sublayer !== undefined
+    ) {
+      for (const sibling of Object.values(this.layers)) {
+        if (
+          sibling.dataSourceId === layer.dataSourceId &&
+          sibling.sublayer != null
+        ) {
+          this.overlayStates.setOpacity(sibling.tocId, opacity);
+        }
+      }
+    } else {
+      this.overlayStates.setOpacity(stableId, opacity);
+    }
+    if (!layer || !source) {
+      this.debouncedUpdateStyle();
+      return;
+    }
     const shouldHaveSourceLayer =
       source.type === DataSourceTypes.SeasketchMvt ||
       source.type === DataSourceTypes.Vector; // ||
@@ -3738,14 +3804,16 @@ export function sourceTypeIsCustomGLSource(type: DataSourceTypes) {
   return (
     type === DataSourceTypes.ArcgisVector ||
     type === DataSourceTypes.ArcgisRasterTiles ||
-    type === DataSourceTypes.ArcgisDynamicMapserver
+    type === DataSourceTypes.ArcgisDynamicMapserver ||
+    type === DataSourceTypes.Wms
   );
 }
 
 type CustomSourceType =
   | DataSourceTypes.ArcgisVector
   | DataSourceTypes.ArcgisRasterTiles
-  | DataSourceTypes.ArcgisDynamicMapserver;
+  | DataSourceTypes.ArcgisDynamicMapserver
+  | DataSourceTypes.Wms;
 
 function isCustomSourceType(type: DataSourceTypes): type is CustomSourceType {
   return sourceTypeIsCustomGLSource(type);

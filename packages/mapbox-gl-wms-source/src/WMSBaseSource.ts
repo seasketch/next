@@ -42,6 +42,11 @@ export interface WMSCommonOptions extends CustomGLSourceOptions {
   vendorParams?: Record<string, string | number | boolean>;
   fetch?: FetchFn;
   metadata?: WMSServiceMetadata;
+  /**
+   * When true (default for tiled sources), skip GetMap requests while the map is
+   * panning or zooming and refresh on moveend. Stale parent tiles stay visible.
+   */
+  deferTilesWhileMoving?: boolean;
 }
 
 export const WMS_SUPPORTS_DYNAMIC_RENDERING: DynamicRenderingSupportOptions = {
@@ -83,13 +88,16 @@ export abstract class WMSBaseSource {
   }
 
   updateLayers(layers: OrderedLayerSettings): void {
+    if (JSON.stringify(layers) === JSON.stringify(this.layers)) {
+      return;
+    }
     this.layers = layers;
     this.onLayersUpdated();
   }
 
+  /** Opacity is applied via raster paint, not GetMap URLs — never refetch tiles. */
   setGroupOpacity(opacity: number): void {
     this.groupOpacity = opacity;
-    this.onLayersUpdated();
   }
 
   protected abstract onLayersUpdated(): void;
@@ -335,7 +343,7 @@ export abstract class WMSBaseSource {
     return {
       layers: [
         {
-          id: uuid(),
+          id: `${this.sourceId}-raster`,
           type: "raster",
           source: this.sourceId,
           paint: {

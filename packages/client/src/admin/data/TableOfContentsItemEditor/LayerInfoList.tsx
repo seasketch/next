@@ -12,6 +12,7 @@ import {
 import InlineAuthor from "../../../components/InlineAuthor";
 import HostedLayerInfo from "./HostedLayerInfo";
 import ArcGISDynamicMapServiceLayerInfo from "./ArcGISDynamicMapServiceLayerInfo";
+import WMSLayerInfo from "../wms/WMSLayerInfo";
 import { ReactNode, useEffect, useMemo, useState } from "react";
 import { InfoCircledIcon, PersonIcon, TableIcon } from "@radix-ui/react-icons";
 import GeostatsModal from "../GLStyleEditor/GeostatsModal";
@@ -370,6 +371,9 @@ export default function LayerInfoList({
             layerName={layerName}
           />
         )}
+        {source.type === DataSourceTypes.Wms && (
+          <WMSLayerInfo source={source} layer={layer} readonly={readonly} />
+        )}
         {source.type === DataSourceTypes.ArcgisDynamicMapserver && (
           <ArcGISDynamicMapServiceLayerInfo
             source={source}
@@ -456,6 +460,8 @@ export function humanizeSourceType(
       return "Remote Video";
     case DataSourceTypes.Inaturalist:
       return "iNaturalist Map Service";
+    case DataSourceTypes.Wms:
+      return "OGC WMS Layer";
     default:
       return type;
   }

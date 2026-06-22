@@ -31,7 +31,7 @@ import type {
   DataSourceDetailsFragment,
   BasemapDetailsFragment,
 } from "../generated/graphql";
-import type { CustomGLSource } from "@seasketch/mapbox-gl-esri-sources";
+import { AnyCustomGLSource } from "./customGLSourceTypes";
 const FrameRateControl = require("@mapbox/mapbox-gl-framerate/dist/mapbox-gl-framerate.js");
 
 /** Tooltip, banner, popup, digitizing-lock, and display-preference state. */
@@ -366,7 +366,7 @@ export default function MapUIProvider({
       interactivityManager.setSketchLayerIds(ids);
     };
     const onCustomSources = (sources: {
-      [id: string]: CustomGLSource<any>;
+      [id: string]: AnyCustomGLSource;
     }) => {
       interactivityManager.setCustomSources(sources);
     };

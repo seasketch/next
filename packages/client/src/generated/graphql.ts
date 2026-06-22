@@ -3150,6 +3150,8 @@ export type DataSource = Node & {
   useDevicePixelRatio?: Maybe<Scalars['Boolean']>;
   vectorGeometryType?: Maybe<Scalars['String']>;
   wasConvertedFromEsriFeatureLayer: Scalars['Boolean'];
+  /** Service-level WMS configuration (version, crs, imageFormat, requestMode, etc.) */
+  wmsSettings?: Maybe<Scalars['JSON']>;
 };
 
 
@@ -3429,6 +3431,8 @@ export type DataSourceInput = {
   useDevicePixelRatio?: Maybe<Scalars['Boolean']>;
   vectorGeometryType?: Maybe<Scalars['String']>;
   wasConvertedFromEsriFeatureLayer?: Maybe<Scalars['Boolean']>;
+  /** Service-level WMS configuration (version, crs, imageFormat, requestMode, etc.) */
+  wmsSettings?: Maybe<Scalars['JSON']>;
 };
 
 /** Represents an update to a `DataSource`. Fields that are set will be updated. */
@@ -3557,7 +3561,9 @@ export enum DataSourceTypes {
   /** MapBox GL Style "vector" source */
   Vector = 'VECTOR',
   /** MapBox GL Style "video" source */
-  Video = 'VIDEO'
+  Video = 'VIDEO',
+  /** OGC Web Map Service (raster overlay) */
+  Wms = 'WMS'
 }
 
 export type DataSourcesBucket = Node & {
@@ -7281,6 +7287,57 @@ export type ImportArcgisServicesPayload = {
   tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
 };
 
+/** All input for the `importWmsService` mutation. */
+export type ImportWmsServiceInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  items?: Maybe<Array<Maybe<WmsImportItemInput>>>;
+  projectId?: Maybe<Scalars['Int']>;
+  sources?: Maybe<Array<Maybe<WmsImportSourceInput>>>;
+};
+
+/** The output of our `importWmsService` mutation. */
+export type ImportWmsServicePayload = {
+  __typename?: 'ImportWmsServicePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+  tableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
+};
+
+/** All input for the `importWmsSubtree` mutation. */
+export type ImportWmsSubtreeInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  items?: Maybe<Array<Maybe<WmsImportItemInput>>>;
+  layerIdLookup?: Maybe<Scalars['JSON']>;
+  path?: Maybe<Scalars['String']>;
+  projectId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `importWmsSubtree` mutation. */
+export type ImportWmsSubtreePayload = {
+  __typename?: 'ImportWmsSubtreePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  integer?: Maybe<Scalars['Int']>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
 export type InteractivitySetting = Node & {
   __typename?: 'InteractivitySetting';
   /** Reads and enables pagination through a set of `Basemap`. */
@@ -8302,6 +8359,8 @@ export type Mutation = {
   /** Give a user admin access to a project. User must have already joined the project and shared their user profile. */
   grantAdminAccess?: Maybe<GrantAdminAccessPayload>;
   importArcgisServices?: Maybe<ImportArcgisServicesPayload>;
+  importWmsService?: Maybe<ImportWmsServicePayload>;
+  importWmsSubtree?: Maybe<ImportWmsSubtreePayload>;
   isConvertibleLegacySource?: Maybe<IsConvertibleLegacySourcePayload>;
   isReportingType?: Maybe<IsReportingTypePayload>;
   /**
@@ -9582,6 +9641,18 @@ export type MutationGrantAdminAccessArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationImportArcgisServicesArgs = {
   input: ImportArcgisServicesInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationImportWmsServiceArgs = {
+  input: ImportWmsServiceInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationImportWmsSubtreeArgs = {
+  input: ImportWmsSubtreeInput;
 };
 
 
@@ -11154,6 +11225,7 @@ export type Project = Node & {
   hideSketches: Scalars['Boolean'];
   id: Scalars['Int'];
   importedArcgisServices?: Maybe<Array<Maybe<Scalars['String']>>>;
+  importedWmsServices?: Maybe<Array<Maybe<Scalars['String']>>>;
   /**
    * Returns the project invitation for the current user session, if any. Will not
    * appear until the invite has been sent. The system determines the relevant
@@ -19462,6 +19534,32 @@ export enum VisualizationType {
   SimplePolygon = 'SIMPLE_POLYGON'
 }
 
+/** An input for mutations affecting `WmsImportItem` */
+export type WmsImportItemInput = {
+  id?: Maybe<Scalars['Int']>;
+  isFolder?: Maybe<Scalars['Boolean']>;
+  parentId?: Maybe<Scalars['String']>;
+  queryable?: Maybe<Scalars['Boolean']>;
+  sourceId?: Maybe<Scalars['Int']>;
+  stableId?: Maybe<Scalars['String']>;
+  sublayerName?: Maybe<Scalars['String']>;
+  title?: Maybe<Scalars['String']>;
+};
+
+/** An input for mutations affecting `WmsImportSource` */
+export type WmsImportSourceInput = {
+  attribution?: Maybe<Scalars['String']>;
+  bounds?: Maybe<Array<Maybe<Scalars['Float']>>>;
+  id?: Maybe<Scalars['Int']>;
+  maxzoom?: Maybe<Scalars['Int']>;
+  minzoom?: Maybe<Scalars['Int']>;
+  queryParameters?: Maybe<Scalars['JSON']>;
+  tileSize?: Maybe<Scalars['Int']>;
+  url?: Maybe<Scalars['String']>;
+  useDevicePixelRatio?: Maybe<Scalars['Boolean']>;
+  wmsSettings?: Maybe<Scalars['JSON']>;
+};
+
 export type WorkerJob = {
   __typename?: 'WorkerJob';
   attempts?: Maybe<Scalars['Int']>;
@@ -21110,7 +21208,7 @@ export type ExtraTocEditingInfoQuery = (
   { __typename?: 'Query' }
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'importedArcgisServices' | 'downloadableLayersCount' | 'eligableDownloadableLayersCount'>
+    & Pick<Project, 'id' | 'importedArcgisServices' | 'importedWmsServices' | 'downloadableLayersCount' | 'eligableDownloadableLayersCount'>
   )> }
 );
 
@@ -21127,7 +21225,7 @@ export type LayersAndSourcesForItemsQuery = (
     & Pick<Project, 'id'>
     & { dataSourcesForItems?: Maybe<Array<(
       { __typename?: 'DataSource' }
-      & Pick<DataSource, 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'translatedProps' | 'arcgisFetchStrategy' | 'rasterRepresentativeColors' | 'rasterOffset' | 'rasterScale'>
+      & Pick<DataSource, 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'id' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'translatedProps' | 'arcgisFetchStrategy' | 'wmsSettings' | 'rasterRepresentativeColors' | 'rasterOffset' | 'rasterScale'>
     )>>, dataLayersForItems?: Maybe<Array<(
       { __typename?: 'DataLayer' }
       & Pick<DataLayer, 'staticId' | 'zIndex' | 'dataSourceId' | 'id' | 'mapboxGlStyles' | 'renderUnder' | 'sourceLayer' | 'sublayer' | 'sublayerType'>
@@ -21238,7 +21336,7 @@ export type UpdateFolderMutation = (
 
 export type FullAdminSourceFragment = (
   { __typename?: 'DataSource' }
-  & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'uploadedBy' | 'geostats' | 'translatedProps' | 'arcgisFetchStrategy' | 'dataLibraryMetadata' | 'rasterRepresentativeColors' | 'hostingQuotaUsed' | 'changelog' | 'isConvertibleLegacySource'>
+  & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'uploadedBy' | 'geostats' | 'translatedProps' | 'arcgisFetchStrategy' | 'wmsSettings' | 'dataLibraryMetadata' | 'rasterRepresentativeColors' | 'hostingQuotaUsed' | 'changelog' | 'isConvertibleLegacySource'>
   & { authorProfile?: Maybe<(
     { __typename?: 'Profile' }
     & Pick<Profile, 'userId' | 'affiliations' | 'email' | 'fullname' | 'nickname' | 'picture'>
@@ -21783,6 +21881,24 @@ export type ImportArcGisServiceMutation = (
   { __typename?: 'Mutation' }
   & { importArcgisServices?: Maybe<(
     { __typename?: 'ImportArcgisServicesPayload' }
+    & { tableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'title'>
+    )>> }
+  )> }
+);
+
+export type ImportWmsServiceMutationVariables = Exact<{
+  items: Array<WmsImportItemInput> | WmsImportItemInput;
+  sources: Array<WmsImportSourceInput> | WmsImportSourceInput;
+  projectId: Scalars['Int'];
+}>;
+
+
+export type ImportWmsServiceMutation = (
+  { __typename?: 'Mutation' }
+  & { importWmsService?: Maybe<(
+    { __typename?: 'ImportWmsServicePayload' }
     & { tableOfContentsItems?: Maybe<Array<(
       { __typename?: 'TableOfContentsItem' }
       & Pick<TableOfContentsItem, 'id' | 'title'>
@@ -23804,7 +23920,7 @@ export type PublishedTableOfContentsQuery = (
 
 export type DataSourceDetailsFragment = (
   { __typename?: 'DataSource' }
-  & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'encoding' | 'enhancedSecurity' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'translatedProps' | 'arcgisFetchStrategy' | 'rasterRepresentativeColors' | 'rasterOffset' | 'rasterScale'>
+  & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'encoding' | 'enhancedSecurity' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'translatedProps' | 'arcgisFetchStrategy' | 'wmsSettings' | 'rasterRepresentativeColors' | 'rasterOffset' | 'rasterScale'>
 );
 
 export type ClientSpriteFragment = (
@@ -27886,6 +28002,7 @@ export const FullAdminSourceFragmentDoc = gql`
   geostats
   translatedProps
   arcgisFetchStrategy
+  wmsSettings
   dataLibraryMetadata
   rasterRepresentativeColors
   authorProfile {
@@ -28508,6 +28625,7 @@ export const DataSourceDetailsFragmentDoc = gql`
   supportsDynamicLayers
   translatedProps
   arcgisFetchStrategy
+  wmsSettings
   rasterRepresentativeColors
   rasterOffset
   rasterScale
@@ -32461,6 +32579,7 @@ export const ExtraTocEditingInfoDocument = gql`
   projectBySlug(slug: $slug) {
     id
     importedArcgisServices
+    importedWmsServices
     downloadableLayersCount
     eligableDownloadableLayersCount
   }
@@ -32530,6 +32649,7 @@ export const LayersAndSourcesForItemsDocument = gql`
       uploadedSourceFilename
       translatedProps
       arcgisFetchStrategy
+      wmsSettings
       rasterRepresentativeColors
       rasterOffset
       rasterScale
@@ -33840,6 +33960,46 @@ export function useImportArcGisServiceMutation(baseOptions?: Apollo.MutationHook
 export type ImportArcGisServiceMutationHookResult = ReturnType<typeof useImportArcGisServiceMutation>;
 export type ImportArcGisServiceMutationResult = Apollo.MutationResult<ImportArcGisServiceMutation>;
 export type ImportArcGisServiceMutationOptions = Apollo.BaseMutationOptions<ImportArcGisServiceMutation, ImportArcGisServiceMutationVariables>;
+export const ImportWmsServiceDocument = gql`
+    mutation ImportWMSService($items: [WmsImportItemInput!]!, $sources: [WmsImportSourceInput!]!, $projectId: Int!) {
+  importWmsService(
+    input: {items: $items, sources: $sources, projectId: $projectId}
+  ) {
+    tableOfContentsItems {
+      id
+      title
+    }
+  }
+}
+    `;
+export type ImportWmsServiceMutationFn = Apollo.MutationFunction<ImportWmsServiceMutation, ImportWmsServiceMutationVariables>;
+
+/**
+ * __useImportWmsServiceMutation__
+ *
+ * To run a mutation, you first call `useImportWmsServiceMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useImportWmsServiceMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [importWmsServiceMutation, { data, loading, error }] = useImportWmsServiceMutation({
+ *   variables: {
+ *      items: // value for 'items'
+ *      sources: // value for 'sources'
+ *      projectId: // value for 'projectId'
+ *   },
+ * });
+ */
+export function useImportWmsServiceMutation(baseOptions?: Apollo.MutationHookOptions<ImportWmsServiceMutation, ImportWmsServiceMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<ImportWmsServiceMutation, ImportWmsServiceMutationVariables>(ImportWmsServiceDocument, options);
+      }
+export type ImportWmsServiceMutationHookResult = ReturnType<typeof useImportWmsServiceMutation>;
+export type ImportWmsServiceMutationResult = Apollo.MutationResult<ImportWmsServiceMutation>;
+export type ImportWmsServiceMutationOptions = Apollo.BaseMutationOptions<ImportWmsServiceMutation, ImportWmsServiceMutationVariables>;
 export const SetMaxZoomDocument = gql`
     mutation SetMaxZoom($sourceId: Int!, $maxzoom: Int) {
   updateDataSource(input: {id: $sourceId, patch: {maxzoom: $maxzoom}}) {
@@ -43938,6 +44098,7 @@ export const namedOperations = {
     UpdateMetadataFromXML: 'UpdateMetadataFromXML',
     PublishTableOfContents: 'PublishTableOfContents',
     ImportArcGISService: 'ImportArcGISService',
+    ImportWMSService: 'ImportWMSService',
     SetMaxZoom: 'SetMaxZoom',
     UpdateEnableDownloadByDefault: 'UpdateEnableDownloadByDefault',
     EnableDownloadForEligibleLayers: 'EnableDownloadForEligibleLayers',

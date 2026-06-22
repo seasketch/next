@@ -75,6 +75,11 @@ const LazyArcGISCartModal = React.lazy(
     )
 );
 
+const LazyWMSCartModal = React.lazy(
+  () =>
+    import(/* webpackChunkName: "AdminWMSBrowser" */ "./wms/WMSCartModal")
+);
+
 const LazyDataLibraryModal = React.lazy(
   () => import(/* webpackChunkName: "DataLibrary" */ "./DataLibraryModal")
 );
@@ -132,6 +137,7 @@ export default function TableOfContentsEditor() {
   const [folderId, setFolderId] = useState<number>();
   const [publishOpen, setPublishOpen] = useState(false);
   const [arcgisCartOpen, setArcgisCartOpen] = useState(false);
+  const [wmsCartOpen, setWmsCartOpen] = useState(false);
   useDraftStatusSubscription({
     variables: {
       slug,
@@ -423,6 +429,9 @@ export default function TableOfContentsEditor() {
           openArcGISCart={() => {
             setArcgisCartOpen(true);
           }}
+          openWmsCart={() => {
+            setWmsCartOpen(true);
+          }}
           onRequestOpenFolder={() => {
             layerEditingContext.setCreateFolderModal({ open: true });
           }}
@@ -668,6 +677,19 @@ export default function TableOfContentsEditor() {
           />
         </Suspense>
       )}
+      {wmsCartOpen && (
+        <Suspense fallback={<FullScreenLoadingSpinner />}>
+          <LazyWMSCartModal
+            projectId={tocQuery.data?.projectBySlug?.id as number}
+            region={tocQuery.data?.projectBySlug?.region.geojson}
+            onRequestClose={() => setWmsCartOpen(false)}
+            importedWmsServices={
+              (extraQuery.data?.projectBySlug?.importedWmsServices ||
+                []) as string[]
+            }
+          />
+        </Suspense>
+      )}
     </>
   );
 }
@@ -682,6 +704,7 @@ function Header({
   publishDisabled,
   lastPublished,
   openArcGISCart,
+  openWmsCart,
   hasLocalState,
   resetLocalState,
   search,
@@ -699,6 +722,7 @@ function Header({
   publishDisabled?: boolean;
   lastPublished?: Date;
   openArcGISCart: () => void;
+  openWmsCart: () => void;
   hasLocalState?: boolean;
   resetLocalState?: () => void;
   onSearchChange?: (search: string) => void;
@@ -827,6 +851,13 @@ function Header({
                   }}
                 >
                   {t("Esri ArcGIS service...")}
+                </MenuBarItem>
+                <MenuBarItem
+                  onClick={() => {
+                    openWmsCart();
+                  }}
+                >
+                  {t("OGC WMS service...")}
                 </MenuBarItem>
                 <MenuBarItem
                   onClick={() => {

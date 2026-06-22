@@ -126,7 +126,7 @@ describe("WMS source classes", () => {
     expect(url).toContain("LAYERS=bathymetry%2Ccoastline");
   });
 
-  it("WMSTiledSource returns raster source with bbox template", async () => {
+  it("WMSTiledSource returns a custom raster source with cancellable tiles", async () => {
     const map = createFakeMap();
     const source = new WMSTiledSource({
       url: "https://example.com/wms?",
@@ -135,8 +135,58 @@ describe("WMS source classes", () => {
     await source.prepare();
     source.updateLayers([{ id: "bathymetry", opacity: 1 }]);
     const glSource = await source.getGLSource(map as any);
-    expect(glSource.type).toBe("raster");
-    expect((glSource as any).tiles[0]).toContain("{bbox-epsg-3857}");
+    expect(glSource.type).toBe("custom");
+    expect((glSource as any).tileSize).toBe(256);
+    expect(typeof (glSource as any).loadTile).toBe("function");
+  });
+
+  it("WMSTiledSource defers GetMap while the map is moving", async () => {
+    const map = createFakeMap();
+    let fetchCalls = 0;
+    const source = new WMSTiledSource({
+      url: "https://example.com/wms?",
+      metadata: meta,
+      fetch: async () => {
+        fetchCalls++;
+        return new Response(new Uint8Array(8), { status: 200 });
+      },
+    });
+    await source.prepare();
+    source.updateLayers([{ id: "bathymetry", opacity: 1 }]);
+    const glSource = (await source.getGLSource(map as any)) as {
+      loadTile: (
+        tile: { z: number; x: number; y: number },
+        opts: { signal: AbortSignal }
+      ) => Promise<unknown>;
+    };
+    (source as any).mapInteracting = true;
+    await glSource.loadTile({ z: 1, x: 0, y: 0 }, {
+      signal: new AbortController().signal,
+    });
+    expect(fetchCalls).toBe(0);
+  });
+
+  it("WMSTiledSource skips tile refresh when only group opacity changes", async () => {
+    const map = createFakeMap();
+    let updateCalls = 0;
+    const source = new WMSTiledSource({
+      url: "https://example.com/wms?",
+      metadata: meta,
+      sourceId: "test-wms",
+    });
+    await source.prepare();
+    source.updateLayers([{ id: "bathymetry", opacity: 1 }]);
+    const glSource = (await source.getGLSource(map as any)) as { update?: () => void };
+    glSource.update = () => {
+      updateCalls++;
+    };
+    (source as any).customSourceSpec = glSource;
+    source.setGroupOpacity(0.5);
+    expect(updateCalls).toBe(0);
+    source.updateLayers([{ id: "bathymetry", opacity: 1 }]);
+    expect(updateCalls).toBe(0);
+    source.updateLayers([{ id: "coastline", opacity: 1 }]);
+    expect(updateCalls).toBe(1);
   });
 
   it("exposes supportsDynamicRendering without per-layer opacity", async () => {

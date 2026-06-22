@@ -22,6 +22,7 @@ import {
 } from "../generated/graphql";
 import { EventEmitter } from "eventemitter3";
 import { CustomGLSource } from "@seasketch/mapbox-gl-esri-sources";
+import { AnyCustomGLSource } from "./customGLSourceTypes";
 import { identifyLayers } from "../admin/data/arcgis/arcgis";
 import {
   fetchInaturalistUtfgrid,
@@ -74,7 +75,7 @@ export default class LayerInteractivityManager extends EventEmitter {
     layerLabel?: string;
   }[] = [];
   private inaturalistPopup?: Popup;
-  private customSources: { [sourceId: string]: CustomGLSource<any> } = {};
+  private customSources: { [sourceId: string]: AnyCustomGLSource } = {};
   private tocItemLabels: { [stableId: string]: { label?: string } } = {};
   private selectedFeature?: mapboxgl.FeatureIdentifier;
   private hoveredFeature?: mapboxgl.FeatureIdentifier;
@@ -103,7 +104,7 @@ export default class LayerInteractivityManager extends EventEmitter {
     this.registerEventListeners(map);
   }
 
-  setCustomSources(sources: { [sourceId: string]: CustomGLSource<any> }) {
+  setCustomSources(sources: { [sourceId: string]: AnyCustomGLSource }) {
     this.customSources = sources;
   }
 
@@ -642,6 +643,7 @@ export default class LayerInteractivityManager extends EventEmitter {
     const width = this.map!.getCanvas().width;
     const height = this.map!.getCanvas().height;
     const dpi = window.devicePixelRatio * 96;
+    const projected = this.map!.project(position);
     this.map!.getCanvas().style.cursor = "progress";
     const data = await Promise.all(
       requests.map((request) => {
@@ -653,7 +655,8 @@ export default class LayerInteractivityManager extends EventEmitter {
           width,
           height,
           dpi,
-          this.popupAbortController
+          this.popupAbortController,
+          { x: projected.x, y: projected.y }
         );
       })
     );

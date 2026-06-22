@@ -51,7 +51,9 @@ export {
 
 export { EXAMPLE_WMS_SERVICES, ExampleWMSService } from "./src/exampleServices";
 
-export type {
+// Types are emitted to dist/index.d.ts — avoid `export type` here so CRA/Babel
+// can parse this file if module resolution falls back to source.
+export {
   WMSVersion,
   WMSLayer,
   WMSServiceMetadata,
