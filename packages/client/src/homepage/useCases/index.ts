@@ -19,7 +19,7 @@ export {
 // Keep only the Map Portal use case linked from homepage/nav until
 // Ocean Use Surveys and Sketching pages are ready.
 // To restore full behavior, set this to `true`.
-export const enableAllUseCaseLinks = false;
+export const enableAllUseCaseLinks = true;
 
 export const useCaseLinks = [
   mapPortalHostingUseCase,
