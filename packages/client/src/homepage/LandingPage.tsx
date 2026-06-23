@@ -475,16 +475,14 @@ export default function LandingPage() {
                 <li>Online collaboration tools and discussion forums</li>
                 <li>Export products to GIS and Excel</li>
               </ul>
-              {/* {enableAllUseCaseLinks ? (
-                // Re-enable this once Sketching and Analysis page is complete.
-                // Make sure `enableAllUseCaseLinks` is set to true in `homepage/useCases/index.ts`.
+              {enableAllUseCaseLinks ? (
                 <Link
                   to="/uses/sketching-and-analysis"
                   className="mt-5 inline-block text-sm font-medium text-sky-700 hover:text-sky-900 hover:underline"
                 >
                   Read more about Sketching and Analysis
                 </Link>
-              ) : null} */}
+              ) : null}
             </div>
           </div>
         </div>
