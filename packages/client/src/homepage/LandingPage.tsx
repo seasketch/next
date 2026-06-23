@@ -475,7 +475,7 @@ export default function LandingPage() {
                 <li>Online collaboration tools and discussion forums</li>
                 <li>Export products to GIS and Excel</li>
               </ul>
-              {enableAllUseCaseLinks ? (
+              {/* {enableAllUseCaseLinks ? (
                 // Re-enable this once Sketching and Analysis page is complete.
                 // Make sure `enableAllUseCaseLinks` is set to true in `homepage/useCases/index.ts`.
                 <Link
@@ -484,7 +484,7 @@ export default function LandingPage() {
                 >
                   Read more about Sketching and Analysis
                 </Link>
-              ) : null}
+              ) : null} */}
             </div>
           </div>
         </div>
