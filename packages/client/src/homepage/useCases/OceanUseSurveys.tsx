@@ -841,18 +841,17 @@ export default function OceanUseSurveysPage() {
                 </span>
               </div>
               <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl">
-                Understand ocean uses spatially and by sector
+                Understand your community's valued places
               </h2>
               <div className="mt-4 space-y-4 text-base leading-7 text-slate-600">
                 <p>
-                  Ask participants which sectors they represent—commercial
-                  fishing, tourism, research, and more—then guide them through
-                  sector-specific spatial questions. Skip logic ensures each
-                  person only maps the activities that apply to them.
+                  Collect spatially-explicit information on cultural uses,
+                  traditional knowledge, fishing, tourism, and more.
                 </p>
                 <p>
                   Participants draw points, lines, and polygons directly on the
                   map to show where they work, research, and value the ocean.
+                  Skip logic can customize questions based on their answers.
                   Responses export as spatial data, ready for analysis in
                   desktop GIS.
                 </p>
@@ -966,7 +965,7 @@ export default function OceanUseSurveysPage() {
               </h2>
               <p className="mt-4 max-w-4xl text-lg leading-8 text-slate-600">
                 Our team has used these tools to inform participatory processes
-                around the world. A community&apos;s valued spaces are captured
+                around the world. A community&apos;s valued places are captured
                 as spatial data, prioritized, and can be transformed into
                 heatmaps for visualization and the evaluation of marine spatial
                 plans. This information can be used to see who is impacted by
