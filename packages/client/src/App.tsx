@@ -1,5 +1,11 @@
 import React, { Suspense, useEffect, useMemo, useState } from "react";
-import { Switch, Route, Redirect, useLocation } from "react-router-dom";
+import {
+  Switch,
+  Route,
+  Redirect,
+  useHistory,
+  useLocation,
+} from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import SignInPage from "./SignInPage";
 import ProjectsPage from "./homepage/ProjectsPage";
@@ -21,11 +27,7 @@ import DeveloperApiPage from "./DeveloperAPIPage";
 import { Helmet } from "react-helmet";
 import LandingPage from "./homepage/LandingPage";
 import TeamPage from "./homepage/TeamPage";
-import {
-  MapPortalHostingPage,
-  OceanUseSurveysPage,
-  SketchingAndAnalysisPage,
-} from "./homepage/useCases";
+import SiteHelmet from "./homepage/SiteHelmet";
 import {
   CaseStudiesIndex,
   AzoresCaseStudy,
@@ -72,6 +74,24 @@ const LazySubmitOfflineResponsesPage = React.lazy(
       /* webpackChunkName: "OfflineSurveys" */ "./offline/SubmitOfflineResponsesPage"
     )
 );
+const LazyMapPortalHostingPage = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "MapPortalHosting" */ "./homepage/useCases/MapPortalHosting"
+    )
+);
+const LazyOceanUseSurveysPage = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "OceanUseSurveys" */ "./homepage/useCases/OceanUseSurveys"
+    )
+);
+const LazySketchingAndAnalysisPage = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "SketchingAndAnalysis" */ "./homepage/useCases/SketchingAndAnalysis"
+    )
+);
 
 const LazyFullScreenOfflinePage = React.lazy(
   () =>
@@ -103,10 +123,33 @@ const LazySuperuserDashboard = React.lazy(
   () => import(/* webpackChunkName: "SuperuserDashboard" */ "./Dashboard")
 );
 
+/** Public marketing pages that should start at the top on forward navigation. */
+function shouldScrollMarketingPageToTop(pathname: string, hash: string) {
+  if (hash) {
+    return false;
+  }
+  if (pathname.startsWith("/uses/") || pathname.startsWith("/case-studies")) {
+    return true;
+  }
+  return [
+    "/",
+    "/projects",
+    "/api",
+    "/team",
+    "/new-project",
+    "/terms-of-use",
+    "/privacy-policy",
+    "/signin",
+    "/submit-offline-surveys",
+    "/account-settings",
+  ].includes(pathname);
+}
+
 function App() {
   const { user } = useAuth0();
   useTranslation("homepage");
   const [error, setError] = useState<Error | null>(null);
+  const history = useHistory();
   const location = useLocation();
   const isUseCaseRoute = location.pathname.startsWith("/uses/");
   const isDarkRoutes =
@@ -147,13 +190,23 @@ function App() {
     }
   }, [location.pathname, location.hash]);
 
-  // Ensure use-case detail pages always start at the top when navigating
-  // between routes in the SPA.
+  // Scroll marketing pages to top on forward navigation only. Using pathname
+  // in a mount effect also ran on HMR remounts and POP (back/forward), which
+  // fought browser scroll restoration during development and when using the
+  // back button. Hash navigations (e.g. /#use-cases) are handled separately.
   useEffect(() => {
-    if (location.pathname.startsWith("/uses/")) {
-      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-    }
-  }, [location.pathname]);
+    return history.listen((nextLocation, action) => {
+      if (
+        (action === "PUSH" || action === "REPLACE") &&
+        shouldScrollMarketingPageToTop(
+          nextLocation.pathname,
+          nextLocation.hash
+        )
+      ) {
+        window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      }
+    });
+  }, [history]);
 
   const frontOfTheHouse = [
     "/signin",
@@ -254,13 +307,13 @@ function App() {
                   <TeamPage />
                 </Route>
                 <Route exact path="/uses/map-portal-hosting">
-                  <MapPortalHostingPage />
+                  <LazyMapPortalHostingPage />
                 </Route>
                 <Route exact path="/uses/ocean-use-surveys">
-                  <OceanUseSurveysPage />
+                  <LazyOceanUseSurveysPage />
                 </Route>
                 <Route exact path="/uses/sketching-and-analysis">
-                  <SketchingAndAnalysisPage />
+                  <LazySketchingAndAnalysisPage />
                 </Route>
                 <Route exact path="/uses/map-portal">
                   <Redirect to="/uses/map-portal-hosting" />
@@ -298,10 +351,11 @@ function App() {
                   <OfflineResponsesToastNotification />
                   <LazyFullScreenOfflinePage />
                   <LandingPage />
-                  <Helmet>
-                    <title>SeaSketch</title>
-                    <link rel="canonical" href={`https://www.seasketch.org/`} />
-                  </Helmet>
+                  <SiteHelmet
+                    title="SeaSketch"
+                    description="SeaSketch is the platform for marine spatial planning. Publish maps, survey stakeholders, and design better ocean plans."
+                    path="/"
+                  />
                   {/* <h1 className="mx-auto max-w-xl mt-2 mb-8 text-3xl text-left sm:text-center leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl sm:leading-10">
                       {t(
                         "SeaSketch Supports Collaborative Planning for our Oceans"

@@ -7,7 +7,7 @@ import { Link, useLocation } from "react-router-dom";
 import Skeleton from "../components/Skeleton";
 import { useProjectListingQuery } from "../generated/graphql";
 import { useTranslatedProps } from "../components/TranslatedPropControl";
-import { Helmet } from "react-helmet";
+import SiteHelmet from "./SiteHelmet";
 import ProjectsMap from "./ProjectsMap";
 import ProjectSearchBar from "./ProjectSearchBar";
 import { caseStudies } from "./caseStudies";
@@ -180,14 +180,11 @@ export default function ProjectsPage() {
         </div>
       </section>
       <div className="w-full max-w-4xl sm:p-4 mx-auto ">
-        <Helmet>
-          <title>SeaSketch Projects</title>
-          <meta
-            name="description"
-            content="Find a SeaSketch project in your region."
-          />
-          <link rel="canonical" href={`https://www.seasketch.org/projects/`} />
-        </Helmet>
+        <SiteHelmet
+          title="Projects"
+          description="Find a SeaSketch project in your region."
+          path="/projects"
+        />
         <div className="flex-1 px-2 sm:px-4 pt-4">
           <div className="flex items-center">
             <h1 className="text-xl tracking-tight font-extrabold flex-1">

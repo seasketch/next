@@ -1,6 +1,7 @@
 /* eslint-disable i18next/no-literal-string */
 import React from "react";
 import { Link } from "react-router-dom";
+import SiteHelmet from "../../SiteHelmet";
 
 const studies = [
   {
@@ -48,6 +49,11 @@ const studies = [
 export default function CaseStudiesIndex() {
   return (
     <>
+      <SiteHelmet
+        title="Case Studies"
+        description="Explore how communities use SeaSketch for marine spatial planning around the world."
+        path="/case-studies"
+      />
       <div className="absolute top-0 left-0 w-full h-16 bg-slate-950"></div>
       <main className="bg-gradient-to-b from-slate-50 to-slate-100 text-slate-900">
         <section className="relative mx-auto max-w-6xl px-6 py-12">

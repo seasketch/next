@@ -6,7 +6,7 @@ import NewProjectForm from "./NewProjectForm";
 import { Link } from "react-router-dom";
 import { useMeQuery, useVerifyEmailMutation } from "../generated/graphql";
 import Skeleton from "../components/Skeleton";
-import { Helmet } from "react-helmet";
+import SiteHelmet from "./SiteHelmet";
 
 const logos = [
   {
@@ -55,14 +55,11 @@ export default function NewProjectPage() {
   const { data, loading, error } = useMeQuery();
   return (
     <main className="bg-gray-800 min-h-screen pt-12 text-black">
-      <Helmet>
-        <title>Create a SeaSketch Project</title>
-        <meta
-          name="description"
-          content="Create a free SeaSketch project for your marine spatial planning needs."
-        />
-        <link rel="canonical" href={`https://www.seasketch.org/new-project/`} />
-      </Helmet>
+      <SiteHelmet
+        title="Create a SeaSketch Project"
+        description="Create a free SeaSketch project for your marine spatial planning needs."
+        path="/new-project"
+      />
 
       <div className="mx-auto max-w-screen-xl">
         <div className="lg:grid lg:grid-cols-12 lg:gap-8">

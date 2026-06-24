@@ -10,11 +10,6 @@ import ProfileControl from "./ProfileControl";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 import { useCaseLinks } from "../homepage/useCases";
 
-// Temporary launch mode:
-// Keep Features as a simple anchor to `/#use-cases` for now.
-// To restore the dropdown with all use case pages, set this back to `true`.
-const enableFeaturesDropdown = false;
-
 const navigationLinks = [
   {
     to: "/projects",
@@ -134,7 +129,7 @@ export default function Header() {
               {
                 <div className="ml-10 flex items-baseline space-x-4">
                   {navigationLinks.map((link) =>
-                    link.to === "/features" && enableFeaturesDropdown ? (
+                    link.to === "/features" ? (
                       <Popover.Root
                         key={link.to}
                         open={featuresOpen}
@@ -189,19 +184,6 @@ export default function Header() {
                           </Popover.Content>
                         </Popover.Portal>
                       </Popover.Root>
-                    ) : link.to === "/features" ? (
-                      <a
-                        key={link.to}
-                        href="/#use-cases"
-                        className={`
-                      px-3 py-2 rounded-md text-sm font-medium text-slate-200
-                    hover:text-white  focus:outline-none focus-visible:ring-1
-                    
-                    `}
-                        id={link.id}
-                      >
-                        {link.label}
-                      </a>
                     ) : (
                       <NavLink
                         key={link.to}
@@ -279,35 +261,26 @@ export default function Header() {
           } bg-white absolute top left w-full h-content shadow-xl z-10 pt-2`}
         >
           {navigationLinks.map((link) =>
-            link.to === "/features" && enableFeaturesDropdown ? (
+            link.to === "/features" ? (
               <div key={link.to}>
-                <a
-                  href="/#use-cases"
+                <span
                   id={`modal-` + link.id}
-                  className={`block w-full text-left px-4 py-2 text-base leading-5 text-gray-700 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:bg-gray-100 focus:text-gray-900 font-semibold`}
+                  className="block w-full px-4 py-2 text-base font-semibold leading-5 text-gray-700"
                 >
                   {link.label}
-                </a>
+                </span>
                 {useCaseLinks.map((feature) => (
                   <NavLink
                     key={feature.to}
                     to={feature.to}
                     id={`modal-nav-${feature.id}`}
-                    className={`block w-full text-left px-8 py-2 text-sm leading-5 text-gray-600 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:bg-gray-100 focus:text-gray-900`}
+                    onClick={() => setProfileModalOpen(false)}
+                    className="block w-full text-left px-8 py-2 text-sm leading-5 text-gray-600 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:bg-gray-100 focus:text-gray-900"
                   >
                     {feature.navLabel}
                   </NavLink>
                 ))}
               </div>
-            ) : link.to === "/features" ? (
-              <a
-                key={link.to}
-                href="/#use-cases"
-                id={`modal-` + link.id}
-                className={`block w-full text-left px-4 py-2 text-base leading-5 text-gray-700 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:bg-gray-100 focus:text-gray-900 font-semibold`}
-              >
-                {link.label}
-              </a>
             ) : (
               <NavLink
                 key={link.to}

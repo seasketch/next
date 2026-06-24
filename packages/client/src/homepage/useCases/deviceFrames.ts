@@ -1,7 +1,6 @@
 /* eslint-disable i18next/no-literal-string */
 
-const CLOUDFLARE_IMAGES =
-  "https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw";
+import { CLOUDFLARE_IMAGES } from "./cloudflareImages";
 
 export type DeviceFrameSpec = {
   id: string;

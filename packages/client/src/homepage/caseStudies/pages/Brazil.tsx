@@ -13,6 +13,7 @@ export default function BrazilCaseStudy() {
         title="Case Study: Brazil"
         subtitle="Comprehensive Marine Spatial Planning in Brazil"
         imageUrl="/caseStudies/brazil-hero.jpg"
+        documentPath="/case-studies/brazil"
         projectUrl="https://seasketch.org/brazil"
         projectLabel="Open Brazil on SeaSketch"
         featureItems={[

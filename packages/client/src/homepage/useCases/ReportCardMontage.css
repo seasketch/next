@@ -1,0 +1,57 @@
+@keyframes report-card-marquee {
+  from {
+    transform: translate3d(0, 0, 0);
+  }
+  to {
+    transform: translate3d(calc(-1 * var(--marquee-shift, 50%)), 0, 0);
+  }
+}
+
+.report-card-marquee-track {
+  animation: report-card-marquee var(--marquee-duration, 100s) linear infinite;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .report-card-marquee-track {
+    animation: none;
+  }
+}
+
+.report-card-masonry {
+  display: flex;
+  margin-left: -0.625rem;
+  width: auto;
+}
+
+.report-card-masonry-column {
+  padding-left: 0.625rem;
+  background-clip: padding-box;
+  flex: none;
+  width: 192px;
+}
+
+.report-card-masonry-column > div {
+  margin-bottom: 0.625rem;
+}
+
+@media (min-width: 640px) {
+  .report-card-masonry {
+    margin-left: -0.75rem;
+  }
+
+  .report-card-masonry-column {
+    padding-left: 0.75rem;
+    width: 240px;
+  }
+
+  .report-card-masonry-column > div {
+    margin-bottom: 0.75rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .report-card-masonry-column {
+    width: 320px;
+  }
+}

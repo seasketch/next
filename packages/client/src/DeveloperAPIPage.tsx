@@ -2,6 +2,7 @@
 /* eslint-disable i18next/no-literal-string */
 
 import { Trans } from "react-i18next";
+import SiteHelmet from "./homepage/SiteHelmet";
 
 export default function DeveloperApiPage() {
   return (
@@ -9,6 +10,11 @@ export default function DeveloperApiPage() {
       className="bg-gray-800 pt-12"
       style={{ minHeight: "calc(100vh - 64px)" }}
     >
+      <SiteHelmet
+        title="Developer API"
+        description="Customize SeaSketch projects using the open-source Geoprocessing Framework."
+        path="/api"
+      />
       <div className="mx-auto max-w-screen-xl">
         <div className="lg:grid lg:grid-cols-12 lg:gap-8 overflow-x-hidden pb-4">
           <div className="px-4 sm:px-6 sm:text-center md:max-w-2xl md:mx-auto lg:pl-8 lg:col-span-6 lg:text-left lg:flex lg:items-center">

@@ -13,6 +13,7 @@ export default function BelizeCaseStudy() {
         title="Belize"
         subtitle="Sustainable Ocean Planning"
         imageUrl="/caseStudies/belize-hero.jpg"
+        documentPath="/case-studies/belize"
         projectUrl="https://www.seasketch.org/belize/app"
         projectLabel="Open Belize on SeaSketch"
         featureItems={[
