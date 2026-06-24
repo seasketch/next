@@ -8,12 +8,10 @@ import { useTranslation } from "react-i18next";
 import ProfileContextMenu from "./ProfileContextMenu";
 import ProfileControl from "./ProfileControl";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
-import { useCaseLinks } from "../homepage/useCases";
+import { publishedUseCaseLinks } from "../homepage/useCases";
 
-// Temporary launch mode:
-// Keep Features as a simple anchor to `/#use-cases` for now.
-// To restore the dropdown with all use case pages, set this back to `true`.
-const enableFeaturesDropdown = false;
+// Show the Features popover with links to each use case page.
+const enableFeaturesDropdown = true;
 
 const navigationLinks = [
   {
@@ -168,7 +166,7 @@ export default function Header() {
                               What can SeaSketch do?
                             </h2>
                             <div className="mt-4 space-y-1">
-                              {useCaseLinks.map((feature) => (
+                              {publishedUseCaseLinks.map((feature) => (
                                 <Link
                                   key={feature.to}
                                   to={feature.to}
@@ -288,7 +286,7 @@ export default function Header() {
                 >
                   {link.label}
                 </a>
-                {useCaseLinks.map((feature) => (
+                {publishedUseCaseLinks.map((feature) => (
                   <NavLink
                     key={feature.to}
                     to={feature.to}

@@ -5,7 +5,9 @@ import {
   CollectionIcon,
   ExternalLinkIcon,
   InformationCircleIcon,
+  LockClosedIcon,
   TrashIcon,
+  TranslateIcon,
 } from "@heroicons/react/outline";
 import { ReactNode } from "react";
 import { Helmet } from "react-helmet";
@@ -15,16 +17,13 @@ import {
   ArrowLeftIcon,
   BarChartIcon,
   ChatBubbleIcon,
-  ClipboardIcon,
+  CodeIcon,
   DownloadIcon,
   FileTextIcon,
-  GlobeIcon,
-  MixIcon,
   Pencil2Icon,
-  ReaderIcon,
-  Share1Icon,
 } from "@radix-ui/react-icons";
 import Testimonial from "../caseStudies/components/Testimonial";
+import ReportCardMontage from "./ReportCardMontage";
 
 export const sketchingAndAnalysisUseCase = {
   id: "sketching-and-analysis",
@@ -33,7 +32,7 @@ export const sketchingAndAnalysisUseCase = {
   navLabel: "Sketching and Analysis",
   readMoreLabel: "Read more about Sketching and Analysis",
   summary:
-    "Easy to use design and analysis tools empower stakeholders to effectively participate in a science-driven planning process.",
+    "Easy-to-use design and analysis tools empower stakeholders to effectively participate in a science-driven planning process.",
   bullets: [
     "Sketch zones and planning options",
     "Evaluate scenarios against spatial objectives",
@@ -48,9 +47,12 @@ const CLOUDFLARE_IMAGES = "https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw";
 
 const SKETCH_BACKDROP = `${CLOUDFLARE_IMAGES}/49341eb7-5ac5-4f7a-44a9-32ce5e2cab00/hlarge`;
 const REPORT_HERO = `${CLOUDFLARE_IMAGES}/c9452e46-bf89-4d66-ca1f-f21b5ad8d400/hlarge`;
-const SKETCHING_HERO_IMAGE = "/homepage/sketching-hero-2.png";
-const SKETCHING_MAP_BACKDROP = "/homepage/sketching-map-backdrop.jpg";
-const FORUM_BOOKMARK_THUMBNAIL = "/homepage/forum-bookmark-samoa.png";
+const SKETCHING_HERO_IMAGE = `${CLOUDFLARE_IMAGES}/45106a3c-a728-4e0e-6dc1-71b2228f2400/hlarge`;
+const SKETCHING_MAP_BACKDROP = `${CLOUDFLARE_IMAGES}/fe4802cc-75db-48aa-ed36-175e0a712c00/hlarge`;
+const FORUM_BOOKMARK_THUMBNAIL = `${CLOUDFLARE_IMAGES}/74561fa4-2a04-4dfd-98a0-72e2d65e5300/public`;
+const GEOGRAPHY_SELECTION_IMAGE = `${CLOUDFLARE_IMAGES}/379f8ca3-64aa-4a5b-3019-493ca9bbd900/hlarge`;
+const SKETCHING_STEP_IMAGE = `${CLOUDFLARE_IMAGES}/8f8c5920-ff3d-4aea-2e62-6d59fba4e900/hlarge`;
+const REPORT_AUTHORING_IMAGE = `${CLOUDFLARE_IMAGES}/5584eeab-e603-4922-8087-1db721eca000/hlarge`;
 const CHAD_GRAVATAR =
   "https://www.gravatar.com/avatar/b0a4285bfc440a2efad5036bb95d68a9?s=48&d=mp&r=pg";
 
@@ -63,13 +65,15 @@ const FEATHERED_MASK_STYLE = {
 
 const MAP_VIEWBOX = { width: 1024, height: 608 };
 
+type SketchVertex = { x: number; y: number; active?: boolean };
+
 /** Sketch polygon vertices in map viewBox coordinates */
-const SKETCH_VERTICES = [
+const SKETCH_VERTICES: SketchVertex[] = [
   { x: 392, y: 176 },
   { x: 628, y: 176 },
   { x: 652, y: 512, active: true },
   { x: 372, y: 492 },
-] as const;
+];
 
 function SketchCursor({ className }: { className?: string }) {
   return (
@@ -246,7 +250,7 @@ function DigitizingWorkflowDemo() {
 const ADRIANO_HEADSHOT = `${CLOUDFLARE_IMAGES}/d519a37f-22b7-40f2-e998-6f9539be8000/thumbnail`;
 
 const ADRIANO_QUOTE =
-  "SeaSketch helped empower our region to design the largest offshore MPA network in the North Atlantic - not just with scientific rigor, but with community voices guiding every boundary.";
+  "SeaSketch helped empower our region to design the largest offshore MPA network in the North Atlantic—not just with scientific rigor, but with community voices guiding every boundary.";
 
 const actionableInsightLinks: {
   label: string;
@@ -325,16 +329,12 @@ function ForumThreadDemo() {
           will be achieved with coastal &amp; inshore protected areas.
         </p>
 
-        <div className="text-sm">
+        <div className="ml-2 text-sm">
           <div
             role="treeitem"
             className="relative max-w-full rounded border border-transparent"
-            style={{ marginLeft: -17 }}
           >
-            <div
-              className="label-container group flex items-center space-x-0.5 text-sm"
-              style={{ paddingTop: 5, paddingBottom: 5 }}
-            >
+            <div className="label-container group flex items-center space-x-0.5 text-sm">
               <span className="pr-0.5">
                 <ChevronRightIcon className="h-4 w-4 rotate-0 transform text-gray-700 transition duration-100" />
               </span>
@@ -426,7 +426,7 @@ type WorkflowStepProps = {
   children: ReactNode;
 };
 
-/** Matches geography-selection.png (2512×2064) — template for card image height */
+/** Matches geography selection screenshot (2512×2064) — template for card image height */
 function WorkflowStep({
   step,
   title,
@@ -462,7 +462,7 @@ function WorkflowStep({
 
 type AdditionalFeatureCard = {
   title: string;
-  description: string;
+  description: ReactNode;
   icon: ReactNode;
   iconClassName: string;
 };
@@ -471,43 +471,56 @@ const additionalFeatureCards: AdditionalFeatureCard[] = [
   {
     title: "Collections & networks",
     description:
-      "Group individual zones into networks that can be analyzed together, supporting MPA system design and scenario comparison.",
-    icon: <MixIcon className="h-5 w-5" />,
+      "Group individual zones into networks that can be analyzed together, supporting comprehensive planning and MPA network design.",
+    icon: <CollectionIcon className="h-5 w-5" />,
     iconClassName: "bg-sky-100 text-sky-700 ring-sky-200",
   },
   {
-    title: "Automatic clipping",
+    title: "Forum moderation",
     description:
-      "Sketches can be clipped to shorelines, EEZ boundaries, or custom geographies as soon as editing finishes—keeping proposals valid by design.",
-    icon: <GlobeIcon className="h-5 w-5" />,
+      "The discussion forums include tools to moderate and manage forum content, including the ability to hide or delete posts and topics.",
+    icon: <ChatBubbleIcon className="h-5 w-5" />,
     iconClassName: "bg-emerald-100 text-emerald-700 ring-emerald-200",
   },
   {
-    title: "Export to GIS & Excel",
+    title: "Export to GIS, CSV, and JSON",
     description:
       "Download sketches as GeoJSON for desktop GIS workflows, or export report tables to CSV and JSON for further analysis.",
     icon: <DownloadIcon className="h-5 w-5" />,
     iconClassName: "bg-cyan-100 text-cyan-700 ring-cyan-200",
   },
   {
-    title: "Attribute forms",
+    title: "Localized content",
     description:
-      "Capture structured metadata with each sketch using customizable forms—multiple choice, ratings, text fields, and more.",
-    icon: <ClipboardIcon className="h-5 w-5" />,
+      "The SeaSketch UI is available in dozens of languages, with support for translated sketch attribute forms and reports.",
+    icon: <TranslateIcon className="h-5 w-5" />,
     iconClassName: "bg-violet-100 text-violet-700 ring-violet-200",
   },
   {
     title: "Personal workspace",
     description:
       "Every participant gets a private sketching workspace to draft ideas before sharing proposals in forums or collaborative sessions.",
-    icon: <ReaderIcon className="h-5 w-5" />,
+    icon: <LockClosedIcon className="h-5 w-5" />,
     iconClassName: "bg-indigo-100 text-indigo-700 ring-indigo-200",
   },
   {
     title: "Open geoprocessing framework",
-    description:
-      "Develop custom analytical reports with our open-source geoprocessing framework, then connect them to sketch classes in your project.",
-    icon: <Share1Icon className="h-5 w-5" />,
+    description: (
+      <>
+        In addition to the graphical report builder, reports can be authored
+        using our{" "}
+        <a
+          href="https://github.com/seasketch/geoprocessing"
+          target="_blank"
+          rel="noreferrer"
+          className="text-sky-700 hover:text-sky-900 hover:underline"
+        >
+          TypeScript-based geoprocessing framework
+        </a>
+        .
+      </>
+    ),
+    icon: <CodeIcon className="h-5 w-5" />,
     iconClassName: "bg-amber-100 text-amber-700 ring-amber-200",
   },
 ];
@@ -608,9 +621,9 @@ export default function SketchingAndAnalysisPage() {
               <div className="mt-4 space-y-4 text-base leading-7 text-slate-600">
                 <p>
                   Our sketching tools were built for truly participatory
-                  planning—not just GIS specialists. Users can draw polygons,
-                  lines, or points directly on the map, then refine vertices
-                  with intuitive editing controls.
+                  planning—not just GIS for specialists. Users can draw
+                  polygons, lines, or points directly on the map, then refine
+                  vertices with intuitive editing controls.
                 </p>
                 <p>
                   SeaSketch can automatically clip sketches to shorelines, EEZ
@@ -653,8 +666,8 @@ export default function SketchingAndAnalysisPage() {
                   promoting transparency and fairness throughout the process.
                 </p>
                 <p>
-                  Participatory planning is stressful enough without waiting for
-                  slow, buggy, or manual analysis. Our{" "}
+                  Participatory planning is stressful enough without waiting in
+                  a workshop for slow, buggy, or manual analysis. Our{" "}
                   <i className="italic">overlay-engine</i> starts in the
                   background and runs report calculations across hundreds of
                   workers in parallel, so results are available almost
@@ -736,9 +749,9 @@ export default function SketchingAndAnalysisPage() {
                   consultations alongside closed working groups.
                 </p>
                 <p>
-                  Forum become a living record of how plans evolve. There are
-                  SeaSketch threads detailing conversations that led to MPA
-                  network designs{" "}
+                  Forum threads become a living record of how plans evolve.
+                  There are SeaSketch threads detailing conversations that led
+                  to MPA network designs{" "}
                   <a
                     href="https://legacy.seasketch.org/#projecthomepage/50d4dda98aba40751816a698/forum/51e726f3ed455b433716ff6b/topic/524c2b56b73854a810000a26"
                     target="_blank"
@@ -761,15 +774,8 @@ export default function SketchingAndAnalysisPage() {
                 author="Adriano Quintela"
                 affiliation="Blue Azores Initiative"
                 headshotSrc={ADRIANO_HEADSHOT}
+                link={{ label: "Azores Project", to: "/case-studies/azores" }}
               />
-              <p className="mt-2 text-center">
-                <Link
-                  to="/case-studies/azores"
-                  className="text-sm font-medium text-sky-700 hover:text-sky-900 hover:underline"
-                >
-                  Read about the Azores project
-                </Link>
-              </p>
             </div>
           </div>
 
@@ -787,13 +793,24 @@ export default function SketchingAndAnalysisPage() {
                 classes, and reports—then participants sketch and analyze
                 scenarios in a structured, customizable workflow.
               </p>
+              <p className="mt-4">
+                <a
+                  href="https://docs.seasketch.org/seasketch-documentation/administrators-guide/sketch-classes"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-sky-700 hover:text-sky-800 hover:underline"
+                >
+                  <FileTextIcon className="h-4 w-4" />
+                  Read the Documentation
+                </a>
+              </p>
             </div>
 
             <div className="mt-12 grid gap-6 lg:grid-cols-3 lg:gap-8">
               <WorkflowStep
                 step="Step 1"
                 title="Geographies"
-                image="/homepage/geography-selection.png"
+                image={GEOGRAPHY_SELECTION_IMAGE}
                 imageAlt="SeaSketch geography selection interface showing planning area polygons on a map"
                 imagePosition="object-center"
               >
@@ -802,115 +819,59 @@ export default function SketchingAndAnalysisPage() {
                   an Exclusive Economic Zone.
                 </p>
                 <p>
-                  Additional geographies can be added later to represent summary
-                  areas such as territorial seas, bioregions, or administrative
-                  boundaries. These can be used to report additional summary
-                  statistics.
+                  Additional geographies can be added later to represent areas
+                  such as territorial seas, bioregions, or administrative
+                  boundaries. These can be used to summarize statistics in
+                  reports.
                 </p>
               </WorkflowStep>
 
               <WorkflowStep
                 step="Step 2"
                 title="Sketch Classes"
-                image="/caseStudies/azores-2.png"
-                imageAlt="SeaSketch map comparing ocean use survey data with draft MPA network proposals"
+                image={SKETCHING_STEP_IMAGE}
+                imageAlt="SeaSketch sketching interface showing a participant drawing an area of interest on a map with an attribute form"
               >
                 <p>
                   Sketch classes define the zone types participants can draw—
                   Marine Protected Areas, renewable energy sites, aquaculture
-                  areas, and more. Each class specifies geometry type, attribute
-                  forms, clipping rules, and the report to run.
+                  areas, and more. Each class specifies the geometry type and
+                  attribute forms.
                 </p>
                 <p>
-                  Preprocessing services can validate or transform sketches
-                  automatically, such as removing land from marine zones.
+                  SeaSketch can clip sketches to your project's geographies,
+                  including removing land from marine zones.
                 </p>
               </WorkflowStep>
 
               <WorkflowStep
                 step="Step 3"
-                title="Analytical Report Builder"
-                image="/reports-square.png"
+                title="Reports"
+                image={REPORT_AUTHORING_IMAGE}
                 imageAlt="SeaSketch report builder with metric widgets and tabbed report sections"
               >
                 <p>
-                  Reports are assembled from modular widgets—size tables,
-                  overlap charts, class breakdowns, and more—using a rich editor
-                  with slash commands and live previews.
+                  Author custom reports using a rich-text editor. Embed
+                  visualizations of metrics calculated from spatial data
+                  uploaded to your project. Set goals and objectives, report
+                  progress toward targets, and calculate levels of protection.
                 </p>
                 <p>
-                  Widgets pull metrics from the geoprocessing framework, with
-                  context-aware suggestions based on your geographies and
-                  available layers.
+                  Reports use the latest versions of referenced data and match
+                  cartographic styles.
                 </p>
               </WorkflowStep>
             </div>
           </div>
+
+          <ReportCardMontage />
         </div>
       </section>
 
       {/* Additional features + links */}
       <section className="bg-slate-100 text-slate-900">
         <div className="mx-auto mb-4 max-w-6xl px-4 pb-20 sm:px-6 lg:px-8 lg:pb-28">
-          <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white/85 shadow-sm ring-1 ring-white/50 backdrop-blur-sm">
-            <div className="p-6 md:p-10">
-              <div className="text-xs font-semibold uppercase tracking-[0.2em] text-sky-600">
-                A comprehensive solution
-              </div>
-              <h2 className="mt-4 max-w-4xl text-3xl font-semibold tracking-tight text-slate-900 md:text-4xl">
-                Turn stakeholder ideas into measurable planning scenarios
-              </h2>
-              <p className="mt-4 max-w-4xl text-lg leading-8 text-slate-600">
-                From national MSP processes in Brazil to the Blue Azores MPA
-                network, SeaSketch connects participatory sketching with
-                rigorous spatial analysis—helping teams iterate faster and build
-                consensus around evidence.
-              </p>
-              <div className="mt-6 flex flex-wrap items-center gap-2.5 md:gap-3">
-                {actionableInsightLinks.map((item) => {
-                  const pillClassName =
-                    "inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-800 shadow-sm ring-1 ring-slate-200/70 transition hover:border-sky-300 hover:bg-sky-50 hover:text-sky-900 hover:ring-sky-200";
-
-                  if (item.external) {
-                    return (
-                      <a
-                        key={item.label}
-                        href={item.href}
-                        target="_blank"
-                        rel="noreferrer"
-                        className={pillClassName}
-                      >
-                        {item.icon}
-                        {item.label}
-                      </a>
-                    );
-                  }
-
-                  return (
-                    <Link
-                      key={item.label}
-                      to={item.href}
-                      className={pillClassName}
-                    >
-                      {item.icon}
-                      {item.label}
-                    </Link>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="border-t border-slate-200/80">
-              <img
-                src="/sketching-bg3.jpg"
-                alt=""
-                aria-hidden
-                className="h-36 w-full object-cover object-center md:h-44 lg:h-48 shadow-inner"
-              />
-            </div>
-          </div>
-
-          <div className="mt-12">
+          <div className="">
             <h3 className="text-2xl font-semibold tracking-tight text-slate-900 md:text-3xl">
               Additional Features
             </h3>
@@ -947,11 +908,11 @@ export default function SketchingAndAnalysisPage() {
         </div>
         <div className="mx-auto max-w-4xl px-4 py-20 text-center sm:px-6 lg:px-8 lg:py-28">
           <h2 className="text-3xl font-semibold tracking-tight text-white md:text-4xl">
-            Ready to sketch your first scenario?
+            Ready to start planning?
           </h2>
           <p className="mx-auto mt-4 max-w-2xl text-lg text-slate-300">
             Create a free project, configure sketch classes, and start
-            evaluating ocean plans with your community.
+            iterating.
           </p>
           <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
             <a

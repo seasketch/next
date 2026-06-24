@@ -1,5 +1,7 @@
 /* eslint-disable i18next/no-literal-string */
+import { Link1Icon } from "@radix-ui/react-icons";
 import React from "react";
+import { Link } from "react-router-dom";
 
 export interface TestimonialProps {
   quote: string;
@@ -7,10 +9,14 @@ export interface TestimonialProps {
   affiliation?: string;
   headshotSrc?: string;
   compact?: boolean;
+  link?: {
+    label: string;
+    to: string;
+  };
 }
 
 export default function Testimonial(props: TestimonialProps) {
-  const { quote, author, affiliation, headshotSrc, compact } = props;
+  const { quote, author, affiliation, headshotSrc, compact, link } = props;
   return (
     <section
       className={`mx-auto max-w-4xl ${compact ? "px-0 py-0" : "px-6 py-4"}`}
@@ -38,21 +44,34 @@ export default function Testimonial(props: TestimonialProps) {
           </p>
         </blockquote>
         <figcaption
-          className={`flex items-center gap-4 ${compact ? "mt-4" : "mt-6"}`}
+          className={`flex flex-wrap items-center justify-between gap-x-4 gap-y-3 ${
+            compact ? "mt-4" : "mt-6"
+          }`}
         >
-          {headshotSrc ? (
-            <img
-              src={headshotSrc}
-              alt={author}
-              className="h-12 w-12 rounded-full object-cover ring-1 ring-slate-200"
-            />
-          ) : null}
-          <div>
-            <div className="font-medium text-slate-900">{author}</div>
-            {affiliation ? (
-              <div className="text-sm text-slate-600">{affiliation}</div>
+          <div className="flex min-w-0 items-center gap-4">
+            {headshotSrc ? (
+              <img
+                src={headshotSrc}
+                alt={author}
+                className="h-12 w-12 shrink-0 rounded-full object-cover ring-1 ring-slate-200"
+              />
             ) : null}
+            <div className="min-w-0">
+              <div className="font-medium text-slate-900">{author}</div>
+              {affiliation ? (
+                <div className="text-sm text-slate-600">{affiliation}</div>
+              ) : null}
+            </div>
           </div>
+          {link ? (
+            <Link
+              to={link.to}
+              className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-slate-200/90 bg-white px-3 py-1.5 text-xs font-semibold text-sky-700 shadow-sm ring-1 ring-slate-200/60 transition hover:border-sky-300 hover:bg-sky-50 hover:text-sky-800 hover:ring-sky-200/80"
+            >
+              <Link1Icon className="h-3.5 w-3.5" aria-hidden />
+              {link.label}
+            </Link>
+          ) : null}
         </figcaption>
       </figure>
     </section>

@@ -1,5 +1,11 @@
 import React, { Suspense, useEffect, useMemo, useState } from "react";
-import { Switch, Route, Redirect, useLocation } from "react-router-dom";
+import {
+  Switch,
+  Route,
+  Redirect,
+  useHistory,
+  useLocation,
+} from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import SignInPage from "./SignInPage";
 import ProjectsPage from "./homepage/ProjectsPage";
@@ -103,10 +109,33 @@ const LazySuperuserDashboard = React.lazy(
   () => import(/* webpackChunkName: "SuperuserDashboard" */ "./Dashboard")
 );
 
+/** Public marketing pages that should start at the top on forward navigation. */
+function shouldScrollMarketingPageToTop(pathname: string, hash: string) {
+  if (hash) {
+    return false;
+  }
+  if (pathname.startsWith("/uses/") || pathname.startsWith("/case-studies")) {
+    return true;
+  }
+  return [
+    "/",
+    "/projects",
+    "/api",
+    "/team",
+    "/new-project",
+    "/terms-of-use",
+    "/privacy-policy",
+    "/signin",
+    "/submit-offline-surveys",
+    "/account-settings",
+  ].includes(pathname);
+}
+
 function App() {
   const { user } = useAuth0();
   useTranslation("homepage");
   const [error, setError] = useState<Error | null>(null);
+  const history = useHistory();
   const location = useLocation();
   const isUseCaseRoute = location.pathname.startsWith("/uses/");
   const isDarkRoutes =
@@ -147,13 +176,23 @@ function App() {
     }
   }, [location.pathname, location.hash]);
 
-  // Ensure use-case detail pages always start at the top when navigating
-  // between routes in the SPA.
+  // Scroll marketing pages to top on forward navigation only. Using pathname
+  // in a mount effect also ran on HMR remounts and POP (back/forward), which
+  // fought browser scroll restoration during development and when using the
+  // back button. Hash navigations (e.g. /#use-cases) are handled separately.
   useEffect(() => {
-    if (location.pathname.startsWith("/uses/")) {
-      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-    }
-  }, [location.pathname]);
+    return history.listen((nextLocation, action) => {
+      if (
+        (action === "PUSH" || action === "REPLACE") &&
+        shouldScrollMarketingPageToTop(
+          nextLocation.pathname,
+          nextLocation.hash
+        )
+      ) {
+        window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      }
+    });
+  }, [history]);
 
   const frontOfTheHouse = [
     "/signin",
