@@ -13,6 +13,7 @@ export default function NavukavuCaseStudy() {
         title="Vanua Navakavu, Fiji"
         subtitle="Piloting Ocean Use Survey to Inform Community-Driven Ocean Management"
         imageUrl="https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/5841afd7-7f7d-4283-4fb9-765afa1cdd00/hlarge"
+        documentPath="/case-studies/navukavu"
         projectUrl="https://www.seasketch.org/fiji/app"
         projectLabel="Read Blue Prosperity Fiji post"
         featureTitle="Features Used"

@@ -1,6 +1,5 @@
 /* eslint-disable i18next/no-literal-string */
 import { ReactNode } from "react";
-import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import {
   BookOpenIcon,
@@ -24,26 +23,12 @@ import {
 import Testimonial from "../caseStudies/components/Testimonial";
 import AppleDeviceFrame from "./AppleDeviceFrame";
 import { ipadPro11LandscapeSpaceBlack, macbookPro14 } from "./deviceFrames";
-
-export const oceanUseSurveysUseCase = {
-  id: "ocean-use-surveys",
-  to: "/uses/ocean-use-surveys",
-  title: "Ocean Use Surveys",
-  navLabel: "Ocean Use Surveys",
-  readMoreLabel: "Read more about Ocean Use Surveys",
-  summary:
-    "Collect local knowledge directly on the map—structured, spatial, analysis-ready. Run multi-language campaigns with ease.",
-  bullets: [
-    "Build spatial surveys for desktop and mobile",
-    "Support multi-language campaigns",
-    "Prepare survey data for analysis",
-  ],
-};
+import { oceanUseSurveysUseCase } from "./useCaseDefs";
+import UseCaseHelmet from "./UseCaseHelmet";
+import { CLOUDFLARE_IMAGES } from "./cloudflareImages";
 
 const featureCopyPanelClass =
   "relative z-20 rounded-2xl border border-white/60 bg-white/65 p-5 shadow-sm backdrop-blur-sm md:p-6";
-
-const CLOUDFLARE_IMAGES = "https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw";
 
 const PHONE_DIGITIZING_IMAGE = `${CLOUDFLARE_IMAGES}/902e86c5-8372-4e7c-dd14-f5978c92bd00/hlarge`;
 
@@ -678,13 +663,7 @@ const additionalFeatureCards: AdditionalFeatureCard[] = [
 export default function OceanUseSurveysPage() {
   return (
     <main className="overflow-x-hidden bg-slate-950 text-slate-100">
-      <Helmet>
-        <title>{`SeaSketch | ${oceanUseSurveysUseCase.title}`}</title>
-        <link
-          rel="canonical"
-          href={`https://www.seasketch.org${oceanUseSurveysUseCase.to}`}
-        />
-      </Helmet>
+      <UseCaseHelmet useCase={oceanUseSurveysUseCase} />
 
       {/* Hero */}
       <section className="relative isolate overflow-hidden">

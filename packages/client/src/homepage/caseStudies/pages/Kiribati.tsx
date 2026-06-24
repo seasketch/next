@@ -13,6 +13,7 @@ export default function KiribatiCaseStudy() {
         title="Kiribati"
         subtitle="Building a national geoportal in three days"
         imageUrl="/caseStudies/kiribati-hero.jpg"
+        documentPath="/case-studies/kiribati"
         projectUrl="https://seasketch.org/kiribati"
         projectLabel="Open Kiribati on SeaSketch"
         featureTitle="Features Used"

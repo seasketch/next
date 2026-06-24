@@ -1,10 +1,9 @@
 /* eslint-disable i18next/no-literal-string */
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { CLOUDFLARE_IMAGES } from "./cloudflareImages";
 import "./ReportCardMontage.css";
 
 const COLUMN_COUNT = 5;
-
-const CLOUDFLARE_IMAGES = "https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw";
 
 type ReportCardItem = {
   src: string;

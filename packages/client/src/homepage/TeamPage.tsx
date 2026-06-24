@@ -1,5 +1,5 @@
 /* eslint-disable i18next/no-literal-string */
-import { Helmet } from "react-helmet";
+import SiteHelmet from "./SiteHelmet";
 
 type TeamMember = {
   name: string;
@@ -42,10 +42,11 @@ const teamMembers: TeamMember[] = [
 export default function TeamPage() {
   return (
     <main>
-      <Helmet>
-        <title>SeaSketch | Team</title>
-        <link rel="canonical" href={`https://www.seasketch.org/team`} />
-      </Helmet>
+      <SiteHelmet
+        title="Team"
+        description="Meet the SeaSketch team behind the platform for marine spatial planning."
+        path="/team"
+      />
       {/* Header space handled by global Header */}
       <section className="relative overflow-hidden py-12 lg:py-16 bg-gradient-to-b from-slate-50 to-slate-100 text-slate-900">
         {/* Decorative background */}

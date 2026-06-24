@@ -1,5 +1,6 @@
 /* eslint-disable i18next/no-literal-string */
 import React from "react";
+import SiteHelmet from "../../SiteHelmet";
 import { FeatureCardItem } from "./FeatureCardList";
 
 export interface TopHeroImageProps {
@@ -11,6 +12,8 @@ export interface TopHeroImageProps {
   featureTitle?: string;
   featureItems?: FeatureCardItem[];
   imageCredit?: string;
+  /** Canonical path for document title and social meta tags */
+  documentPath?: string;
 }
 
 export default function TopHeroImage(props: TopHeroImageProps) {
@@ -23,9 +26,18 @@ export default function TopHeroImage(props: TopHeroImageProps) {
     featureTitle,
     featureItems,
     imageCredit,
+    documentPath,
   } = props;
   return (
     <section className="relative w-full overflow-hidden">
+      {documentPath ? (
+        <SiteHelmet
+          title={title}
+          description={subtitle || title}
+          path={documentPath}
+          ogImage={imageUrl}
+        />
+      ) : null}
       <div className="relative h-[50vh] min-h-[540px] w-full">
         <img
           src={imageUrl}

@@ -13,6 +13,7 @@ export default function FSMCaseStudy() {
         title="Federated States of Micronesia"
         subtitle="Surveying Ocean Users on Remote Pacific Islands"
         imageUrl="/caseStudies/fsm-hero.jpg"
+        documentPath="/case-studies/fsm"
         projectUrl="https://www.seasketch.org/fsm/app"
         projectLabel="Open FSM on SeaSketch"
         featureTitle="Features Used"

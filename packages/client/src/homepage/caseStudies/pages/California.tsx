@@ -11,6 +11,7 @@ export default function CaliforniaCaseStudy() {
         title="California"
         subtitle="Supporting Adaptive Management in California"
         imageUrl="/caseStudies/california-hero.png"
+        documentPath="/case-studies/california"
         projectUrl="https://www.seasketch.org/california/app"
         projectLabel="Open California on SeaSketch"
         featureTitle="Features Used"

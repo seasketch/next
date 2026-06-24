@@ -27,11 +27,7 @@ import DeveloperApiPage from "./DeveloperAPIPage";
 import { Helmet } from "react-helmet";
 import LandingPage from "./homepage/LandingPage";
 import TeamPage from "./homepage/TeamPage";
-import {
-  MapPortalHostingPage,
-  OceanUseSurveysPage,
-  SketchingAndAnalysisPage,
-} from "./homepage/useCases";
+import SiteHelmet from "./homepage/SiteHelmet";
 import {
   CaseStudiesIndex,
   AzoresCaseStudy,
@@ -76,6 +72,24 @@ const LazySubmitOfflineResponsesPage = React.lazy(
   () =>
     import(
       /* webpackChunkName: "OfflineSurveys" */ "./offline/SubmitOfflineResponsesPage"
+    )
+);
+const LazyMapPortalHostingPage = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "MapPortalHosting" */ "./homepage/useCases/MapPortalHosting"
+    )
+);
+const LazyOceanUseSurveysPage = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "OceanUseSurveys" */ "./homepage/useCases/OceanUseSurveys"
+    )
+);
+const LazySketchingAndAnalysisPage = React.lazy(
+  () =>
+    import(
+      /* webpackChunkName: "SketchingAndAnalysis" */ "./homepage/useCases/SketchingAndAnalysis"
     )
 );
 
@@ -293,13 +307,13 @@ function App() {
                   <TeamPage />
                 </Route>
                 <Route exact path="/uses/map-portal-hosting">
-                  <MapPortalHostingPage />
+                  <LazyMapPortalHostingPage />
                 </Route>
                 <Route exact path="/uses/ocean-use-surveys">
-                  <OceanUseSurveysPage />
+                  <LazyOceanUseSurveysPage />
                 </Route>
                 <Route exact path="/uses/sketching-and-analysis">
-                  <SketchingAndAnalysisPage />
+                  <LazySketchingAndAnalysisPage />
                 </Route>
                 <Route exact path="/uses/map-portal">
                   <Redirect to="/uses/map-portal-hosting" />
@@ -337,10 +351,11 @@ function App() {
                   <OfflineResponsesToastNotification />
                   <LazyFullScreenOfflinePage />
                   <LandingPage />
-                  <Helmet>
-                    <title>SeaSketch</title>
-                    <link rel="canonical" href={`https://www.seasketch.org/`} />
-                  </Helmet>
+                  <SiteHelmet
+                    title="SeaSketch"
+                    description="SeaSketch is the platform for marine spatial planning. Publish maps, survey stakeholders, and design better ocean plans."
+                    path="/"
+                  />
                   {/* <h1 className="mx-auto max-w-xl mt-2 mb-8 text-3xl text-left sm:text-center leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl sm:leading-10">
                       {t(
                         "SeaSketch Supports Collaborative Planning for our Oceans"

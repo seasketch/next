@@ -1,7 +1,6 @@
 /* eslint-disable i18next/no-literal-string */
 import { BookOpenIcon } from "@heroicons/react/outline";
 import { ReactNode } from "react";
-import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import {
   RocketIcon,
@@ -14,21 +13,14 @@ import {
   ChatBubbleIcon,
   LayersIcon,
 } from "@radix-ui/react-icons";
+import { mapPortalHostingUseCase } from "./useCaseDefs";
+import UseCaseHelmet from "./UseCaseHelmet";
+import { cloudflareImage } from "./cloudflareImages";
 
-export const mapPortalHostingUseCase = {
-  id: "map-portal-hosting",
-  to: "/uses/map-portal-hosting",
-  title: "Map Portal Hosting",
-  navLabel: "Map Portal Hosting",
-  readMoreLabel: "Read more about Map Portal Hosting",
-  summary:
-    "Host, visualize, and share spatial data. Create a common picture of your ocean environment.",
-  bullets: [
-    "Host vector and raster data",
-    "Design approachable maps for stakeholders",
-    "Manage metadata, versions, and access",
-  ],
-};
+const MAP_PORTAL_HERO_IMAGE = cloudflareImage(
+  "af4df994-3ed3-4c4a-15f0-1c327eba1200",
+  "hlarge"
+);
 
 const featureCopyPanelClass =
   "relative z-20 rounded-2xl border border-white/60 bg-white/65 p-5 shadow-sm backdrop-blur-sm md:p-6";
@@ -154,13 +146,7 @@ function FeatureRow({
 export default function MapPortalHostingPage() {
   return (
     <main className="overflow-x-hidden bg-slate-950 text-slate-100">
-      <Helmet>
-        <title>{`SeaSketch | ${mapPortalHostingUseCase.title}`}</title>
-        <link
-          rel="canonical"
-          href={`https://www.seasketch.org${mapPortalHostingUseCase.to}`}
-        />
-      </Helmet>
+      <UseCaseHelmet useCase={mapPortalHostingUseCase} />
 
       {/* Hero */}
       <section className="relative isolate overflow-hidden">
@@ -218,14 +204,11 @@ export default function MapPortalHostingPage() {
               className="absolute -inset-8 -z-10 rounded-[3rem] bg-gradient-to-tr from-sky-500/20 via-cyan-400/10 to-emerald-400/20 blur-3xl"
             />
             <div className="overflow-hidden rounded-2xl border border-white/10 shadow-2xl ring-1 ring-white/10">
-              {/* <img
-                src="https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/bec0ee17-3023-4c06-10da-81ab072ec600/hlarge"
-                alt="The Te Baiku Ocean Geodatabase in SeaSketch showing geomorphic reef features for Kiribati with a map legend"
-                className="w-full"
-              /> */}
               <img
-                src="https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw/af4df994-3ed3-4c4a-15f0-1c327eba1200/hlarge"
+                src={MAP_PORTAL_HERO_IMAGE}
                 alt="A SeaSketch map portal showing a map of the ocean with a legend and a search bar"
+                width={1920}
+                height={1080}
                 className="w-full"
               />
             </div>

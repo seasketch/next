@@ -13,6 +13,7 @@ export default function MaldivesCaseStudy() {
         title="Maldives"
         subtitle="Noo Raajje and the Most Comprehensive Ocean Use Survey of Its Time"
         imageUrl="/caseStudies/maldives-hero.jpg"
+        documentPath="/case-studies/maldives"
         projectUrl="https://www.seasketch.org/maldives/app"
         projectLabel="Open Maldives on SeaSketch"
         featureTitle="Features Used"

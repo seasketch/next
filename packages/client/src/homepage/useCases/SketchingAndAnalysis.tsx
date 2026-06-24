@@ -1,16 +1,12 @@
 /* eslint-disable i18next/no-literal-string */
 import {
-  BookOpenIcon,
   ChevronRightIcon,
   CollectionIcon,
-  ExternalLinkIcon,
   InformationCircleIcon,
   LockClosedIcon,
-  TrashIcon,
   TranslateIcon,
 } from "@heroicons/react/outline";
 import { ReactNode } from "react";
-import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import {
@@ -24,26 +20,12 @@ import {
 } from "@radix-ui/react-icons";
 import Testimonial from "../caseStudies/components/Testimonial";
 import ReportCardMontage from "./ReportCardMontage";
-
-export const sketchingAndAnalysisUseCase = {
-  id: "sketching-and-analysis",
-  to: "/uses/sketching-and-analysis",
-  title: "Sketching and Analysis",
-  navLabel: "Sketching and Analysis",
-  readMoreLabel: "Read more about Sketching and Analysis",
-  summary:
-    "Easy-to-use design and analysis tools empower stakeholders to effectively participate in a science-driven planning process.",
-  bullets: [
-    "Sketch zones and planning options",
-    "Evaluate scenarios against spatial objectives",
-    "Export results for GIS and reporting workflows",
-  ],
-};
+import { sketchingAndAnalysisUseCase } from "./useCaseDefs";
+import UseCaseHelmet from "./UseCaseHelmet";
+import { CLOUDFLARE_IMAGES } from "./cloudflareImages";
 
 const featureCopyPanelClass =
   "relative z-20 rounded-2xl border border-white/60 bg-white/65 p-5 shadow-sm backdrop-blur-sm md:p-6";
-
-const CLOUDFLARE_IMAGES = "https://imagedelivery.net/UvAJR8nUVV-h3iWaqOVMkw";
 
 const SKETCH_BACKDROP = `${CLOUDFLARE_IMAGES}/49341eb7-5ac5-4f7a-44a9-32ce5e2cab00/hlarge`;
 const REPORT_HERO = `${CLOUDFLARE_IMAGES}/c9452e46-bf89-4d66-ca1f-f21b5ad8d400/hlarge`;
@@ -251,43 +233,6 @@ const ADRIANO_HEADSHOT = `${CLOUDFLARE_IMAGES}/d519a37f-22b7-40f2-e998-6f9539be8
 
 const ADRIANO_QUOTE =
   "SeaSketch helped empower our region to design the largest offshore MPA network in the North Atlantic—not just with scientific rigor, but with community voices guiding every boundary.";
-
-const actionableInsightLinks: {
-  label: string;
-  href: string;
-  external?: boolean;
-  icon: ReactNode;
-}[] = [
-  {
-    label: "Sketching Tools",
-    href: "https://docs.seasketch.org/seasketch-documentation/users-guide/sketching-tools",
-    external: true,
-    icon: <Pencil2Icon className="h-4 w-4 shrink-0" />,
-  },
-  {
-    label: "Sketch Classes",
-    href: "https://docs.seasketch.org/seasketch-documentation/administrators-guide/sketch-classes",
-    external: true,
-    icon: <FileTextIcon className="h-4 w-4 shrink-0" />,
-  },
-  {
-    label: "Reports",
-    href: "https://docs.seasketch.org/seasketch-documentation/users-guide/sketching-tools/reports",
-    external: true,
-    icon: <BarChartIcon className="h-4 w-4 shrink-0" />,
-  },
-  {
-    label: "Azores Case Study",
-    href: "/case-studies/azores",
-    icon: <BookOpenIcon className="h-4 w-4 shrink-0" />,
-  },
-  {
-    label: "Geoprocessing Framework",
-    href: "https://github.com/seasketch/geoprocessing",
-    external: true,
-    icon: <ExternalLinkIcon className="h-4 w-4 shrink-0" />,
-  },
-];
 
 function ForumThreadDemo() {
   const replyDate = new Date();
@@ -528,13 +473,7 @@ const additionalFeatureCards: AdditionalFeatureCard[] = [
 export default function SketchingAndAnalysisPage() {
   return (
     <main className="overflow-x-hidden bg-slate-950 text-slate-100">
-      <Helmet>
-        <title>{`SeaSketch | ${sketchingAndAnalysisUseCase.title}`}</title>
-        <link
-          rel="canonical"
-          href={`https://www.seasketch.org${sketchingAndAnalysisUseCase.to}`}
-        />
-      </Helmet>
+      <UseCaseHelmet useCase={sketchingAndAnalysisUseCase} />
 
       {/* Hero */}
       <section className="relative isolate overflow-hidden">
@@ -592,6 +531,8 @@ export default function SketchingAndAnalysisPage() {
               <img
                 src={SKETCHING_HERO_IMAGE}
                 alt="Blue Azores SeaSketch project showing an offshore MPA proposal on the map with a habitat coverage report open in the sidebar"
+                width={1920}
+                height={1080}
                 className="w-full"
               />
             </div>
