@@ -153,9 +153,16 @@ export default function ReportEditor({
 
   const [editing, _setEditing] = useState<number | null>(null);
   const [preselectTitle, setPreselectTitle] = useState<boolean>(false);
+  const [pendingWidgetSettings, setPendingWidgetSettings] = useState<{
+    cardId: number;
+    widgetPosition: number;
+  } | null>(null);
   const setEditing = useCallback(
     (editing: number | null, preselectTitle?: boolean) => {
       setPreselectTitle(preselectTitle || false);
+      if (editing === null) {
+        setPendingWidgetSettings(null);
+      }
       _setEditing(editing);
     },
     [_setEditing, setPreselectTitle]
@@ -451,6 +458,18 @@ export default function ReportEditor({
     [calcDetailsModalState]
   );
 
+  const requestWidgetSettings = useCallback(
+    (cardId: number, widgetPosition: number) => {
+      setPendingWidgetSettings({ cardId, widgetPosition });
+      setEditing(cardId);
+    },
+    [setEditing]
+  );
+
+  const clearPendingWidgetSettings = useCallback(() => {
+    setPendingWidgetSettings(null);
+  }, []);
+
   const onEditorReadyForFocus = useCallback(
     (cardId: number, focus: () => void) => {
       // Ref avoids a race where context still holds a callback from before
@@ -485,6 +504,9 @@ export default function ReportEditor({
       preselectTitle: preselectTitle,
       showCalcDetails: calcDetailsModalState.state.cardId ?? undefined,
       setShowCalcDetails: setShowCalcDetails,
+      requestWidgetSettings,
+      pendingWidgetSettings,
+      clearPendingWidgetSettings,
       onEditorReadyForFocus,
       printing,
       setPrinting,
@@ -498,6 +520,9 @@ export default function ReportEditor({
     preselectTitle,
     calcDetailsModalState.state.cardId,
     setShowCalcDetails,
+    requestWidgetSettings,
+    pendingWidgetSettings,
+    clearPendingWidgetSettings,
     onEditorReadyForFocus,
     printing,
     requestFullReportPrint,

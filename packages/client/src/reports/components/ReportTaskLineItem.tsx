@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { SpatialMetricState } from "../../generated/graphql";
 import CircularProgressIndicator from "./CircularProgressIndicator";
 import ETACountdown from "./ETACountdown";
@@ -13,6 +13,10 @@ import {
 import bytes from "bytes";
 import { Trans, useTranslation } from "react-i18next";
 import JsonPreview from "../../components/JsonPreview";
+import {
+  getSuggestedFixesForMetricError,
+  MetricSuggestedFixes,
+} from "./MetricSuggestedFixes";
 
 /**
  * Inline menu (no portal) so it stays inside the Radix tooltip hover region.
@@ -180,6 +184,7 @@ export default function ReportTaskLineItem({
   reprocessLoading,
 }: ReportTaskLineItemProps) {
   const { t } = useTranslation("sketching");
+  const [tooltipOpen, setTooltipOpen] = useState(false);
   const hasTopologyIssues =
     state === SpatialMetricState.Complete &&
     numInvalidFeatures != null &&
@@ -242,6 +247,13 @@ export default function ReportTaskLineItem({
                   {t("Error")}
                 </div>
                 <div className="text-gray-300">{errorMessage}</div>
+                {tooltipOpen && (
+                  <MetricErrorSuggestedFixes
+                    errorMessage={errorMessage}
+                    metricType={metricType}
+                    parameters={parameters}
+                  />
+                )}
               </>
             )}
             {isAdmin && onReprocessSource && (
@@ -440,7 +452,11 @@ export default function ReportTaskLineItem({
         }
       />
       {tooltipContent ? (
-        <Tooltip.Root delayDuration={100}>
+        <Tooltip.Root
+          delayDuration={100}
+          open={tooltipOpen}
+          onOpenChange={setTooltipOpen}
+        >
           <Tooltip.Trigger asChild>
             {hasTopologyIssues ? (
               <div className="ml-1 flex items-center gap-1 px-1.5 py-0.5 pl-2 rounded-full bg-yellow-50 border border-yellow-300 cursor-help focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:ring-offset-1">
@@ -494,6 +510,34 @@ export default function ReportTaskLineItem({
       <span className="flex-1 min-w-0 text-sm">{title}</span>
       {statusBlock}
     </li>
+  );
+}
+
+function MetricErrorSuggestedFixes({
+  errorMessage,
+  metricType,
+  parameters,
+}: {
+  errorMessage: string;
+  metricType?: string;
+  parameters?: Record<string, any> | null;
+}) {
+  const suggestedFixes = useMemo(
+    () =>
+      getSuggestedFixesForMetricError({
+        error: errorMessage,
+        metricType,
+        parameters,
+      }),
+    [errorMessage, metricType, parameters]
+  );
+
+  return (
+    <MetricSuggestedFixes
+      suggestedFixes={suggestedFixes}
+      compact
+      theme="dark"
+    />
   );
 }
 

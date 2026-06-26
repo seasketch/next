@@ -85,6 +85,21 @@ function useStableSources(
   return ref.current;
 }
 
+function sourceProcessingInProgress(
+  source: OverlaySourceDetailsFragment
+): boolean {
+  const jobState = source.sourceProcessingJob?.state;
+  if (jobState === SpatialMetricState.Complete) return false;
+  if (jobState === SpatialMetricState.Error) return false;
+  if (
+    jobState === SpatialMetricState.Queued ||
+    jobState === SpatialMetricState.Processing
+  ) {
+    return true;
+  }
+  return !source.output?.url;
+}
+
 /**
  * Hook that returns stable widget dependencies, only triggering re-renders
  * when the widget's specific metrics/sources actually change.
@@ -100,10 +115,10 @@ export function useWidgetDependencies(
   const {
     metrics: cardMetrics,
     sources: cardSources,
-    loading: cardLoading,
     geographies: contextGeographies,
     sketchClass: contextSketchClass,
-    errors: cardErrors,
+    globalErrors,
+    dependenciesAwaitingRefresh,
     dependencyResolutionFailuresByHash,
   } = useCardDependenciesContext();
 
@@ -171,8 +186,8 @@ export function useWidgetDependencies(
 
   // Filter metrics and sources for this widget
   const { rawMetrics, rawSources, loading, errors } = useMemo(() => {
-    let loading = cardLoading;
-    let errors: string[] = [];
+    let loading = dependenciesAwaitingRefresh;
+    const errors: string[] = [];
 
     const filteredMetrics = filterMetricsByDependencies(
       allMetrics,
@@ -180,7 +195,6 @@ export function useWidgetDependencies(
       sourceUrlMap
     ) as CompatibleSpatialMetricDetailsFragment[];
 
-    // Check loading and error states
     for (const metric of filteredMetrics) {
       if (
         metric.state === SpatialMetricState.DependencyNotReady ||
@@ -194,30 +208,53 @@ export function useWidgetDependencies(
       }
     }
 
-    // Filter sources for this widget's dependencies
     const filteredSources = allSources.filter((s) =>
       (dependencies || []).some(
         (d: MetricDependency) => d.stableId === s.stableId
       )
     );
 
-    // Check if we're still waiting for metrics
-    if (!loading) {
-      for (const dependency of dependencies || []) {
-        if (
-          fragmentMetricsWillNeverExist &&
-          dependency.subjectType === "fragments"
-        ) {
-          continue;
-        }
-        const hash = hashMetricDependency(dependency, sourceUrlMap);
-        const relatedMetric = filteredMetrics.find(
-          (m) => m.dependencyHash === hash
+    for (const source of filteredSources) {
+      if (sourceProcessingInProgress(source)) {
+        loading = true;
+      }
+      if (source.sourceProcessingJob?.state === SpatialMetricState.Error) {
+        errors.push(
+          source.sourceProcessingJob?.errorMessage || "Unknown error"
         );
-        if (!relatedMetric) {
+      }
+    }
+
+    for (const dependency of dependencies || []) {
+      if (
+        fragmentMetricsWillNeverExist &&
+        dependency.subjectType === "fragments"
+      ) {
+        continue;
+      }
+      const hash = hashMetricDependency(dependency, sourceUrlMap);
+      const relatedMetric = filteredMetrics.find(
+        (m) => m.dependencyHash === hash
+      );
+      if (!relatedMetric) {
+        const resolutionErr = resolutionFailuresByHash[hash];
+        if (resolutionErr) {
+          errors.push(resolutionErr);
+        } else {
+          loading = true;
+        }
+      }
+
+      if (dependency.stableId) {
+        const sourceKnown = allSources.some(
+          (s) => s.stableId === dependency.stableId
+        );
+        if (!sourceKnown) {
           const resolutionErr = resolutionFailuresByHash[hash];
           if (resolutionErr) {
-            errors.push(resolutionErr);
+            if (!errors.includes(resolutionErr)) {
+              errors.push(resolutionErr);
+            }
           } else {
             loading = true;
           }
@@ -225,8 +262,12 @@ export function useWidgetDependencies(
       }
     }
 
-    if (cardErrors) {
-      errors.push(...Object.keys(cardErrors));
+    if (globalErrors.length > 0) {
+      for (const msg of globalErrors) {
+        if (!errors.includes(msg)) {
+          errors.push(msg);
+        }
+      }
     }
 
     return {
@@ -238,10 +279,10 @@ export function useWidgetDependencies(
   }, [
     allMetrics,
     allSources,
-    cardLoading,
     dependencies,
     sourceUrlMap,
-    cardErrors,
+    globalErrors,
+    dependenciesAwaitingRefresh,
     fragmentMetricsWillNeverExist,
     resolutionFailuresByHash,
   ]);

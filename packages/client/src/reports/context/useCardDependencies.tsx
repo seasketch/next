@@ -101,8 +101,13 @@ export function useCardDependencies(cardId: number): CardDependenciesResult {
       for (const msg of Object.values(dependencyResolutionFailuresByHash)) {
         errors[msg] = (errors[msg] || 0) + 1;
       }
+
+      const globalErrors: string[] = [];
       if (context.error) {
-        errors["Dependency retrieval error: " + context.error.message] = 1;
+        const globalErrorMessage =
+          "Dependency retrieval error: " + context.error.message;
+        globalErrors.push(globalErrorMessage);
+        errors[globalErrorMessage] = 1;
       }
 
       return {
@@ -110,12 +115,18 @@ export function useCardDependencies(cardId: number): CardDependenciesResult {
         overlaySources,
         loading,
         errors,
+        globalErrors,
+        dependenciesAwaitingRefresh: context.dependenciesAwaitingRefresh,
         dependencyResolutionFailuresByHash,
       };
     } else {
       const errors: { [errorMessage: string]: number } = {};
+      const globalErrors: string[] = [];
       if (context.error) {
-        errors["Dependency retrieval error: " + context.error.message] = 1;
+        const globalErrorMessage =
+          "Dependency retrieval error: " + context.error.message;
+        globalErrors.push(globalErrorMessage);
+        errors[globalErrorMessage] = 1;
       }
 
       return {
@@ -123,6 +134,8 @@ export function useCardDependencies(cardId: number): CardDependenciesResult {
         overlaySources: [],
         loading: context.loading,
         errors: errors,
+        globalErrors,
+        dependenciesAwaitingRefresh: context.dependenciesAwaitingRefresh,
         dependencyResolutionFailuresByHash: {},
       };
     }

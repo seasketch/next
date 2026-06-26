@@ -14102,6 +14102,21 @@ select{
           text-decoration-color:#94a3b8
 }
 
+.decoration-white{
+  -webkit-text-decoration-color:#fff;
+          text-decoration-color:#fff
+}
+
+.decoration-amber-700{
+  -webkit-text-decoration-color:#b45309;
+          text-decoration-color:#b45309
+}
+
+.decoration-blue-800{
+  -webkit-text-decoration-color:#1e40af;
+          text-decoration-color:#1e40af
+}
+
 .decoration-dotted{
   -webkit-text-decoration-style:dotted;
           text-decoration-style:dotted

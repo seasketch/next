@@ -9,6 +9,12 @@ export const ReportUIStateContext = createContext<{
   preselectTitle?: boolean;
   showCalcDetails?: number;
   setShowCalcDetails: (cardId: number | undefined) => void;
+  requestWidgetSettings: (cardId: number, widgetPosition: number) => void;
+  pendingWidgetSettings?: {
+    cardId: number;
+    widgetPosition: number;
+  } | null;
+  clearPendingWidgetSettings: () => void;
   /** Called when a card's ProseMirror editor is ready; use the focus fn for proper keyboard focus */
   onEditorReadyForFocus?: (
     cardId: number,
@@ -27,6 +33,9 @@ export const ReportUIStateContext = createContext<{
   preselectTitle: false,
   showCalcDetails: undefined,
   setShowCalcDetails: () => {},
+  requestWidgetSettings: () => {},
+  pendingWidgetSettings: null,
+  clearPendingWidgetSettings: () => {},
   printing: false,
   setPrinting: () => {},
   requestFullReportPrint: () => {},

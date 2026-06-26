@@ -1,6 +1,14 @@
 import { InlineMetric, InlineMetricTooltipControls } from "./InlineMetric";
 import { ReportWidgetTooltipControls } from "../../editor/TooltipMenu";
-import { FC, useContext, useMemo, useState, useEffect, memo } from "react";
+import {
+  FC,
+  useCallback,
+  useContext,
+  useMemo,
+  useState,
+  useEffect,
+  memo,
+} from "react";
 import {
   CommandPaletteGroup,
   CommandPaletteItem,
@@ -87,8 +95,12 @@ import {
 import { Mark, Node } from "prosemirror-model";
 import { useWidgetDependencies } from "../hooks/useWidgetDependencies";
 import { ReportUIStateContext } from "../context/ReportUIStateContext";
+import { useReactNodeView } from "../ReactNodeView";
 import { FormLanguageContext } from "../../formElements/FormElement";
-import { ExclamationTriangleIcon, Pencil2Icon } from "@radix-ui/react-icons";
+import {
+  ExclamationTriangleIcon,
+  Pencil2Icon,
+} from "@radix-ui/react-icons";
 import { FolderIcon } from "@heroicons/react/outline";
 import Badge from "../../components/Badge";
 import ProfilePhoto from "../../admin/users/ProfilePhoto";
@@ -102,6 +114,10 @@ import * as Popover from "@radix-ui/react-popover";
 import { TooltipPopoverContent } from "../../editor/TooltipMenu";
 import useDebounce from "../../useDebounce";
 import * as Tooltip from "@radix-ui/react-tooltip";
+import {
+  getMetricErrorInfo,
+  MetricSuggestedFixes,
+} from "../components/MetricSuggestedFixes";
 
 type WidgetComponent = React.FC<any>;
 
@@ -233,18 +249,83 @@ function memoWidget(Component: WidgetComponent, name: string) {
   return memo(Component, widgetPropsAreEqual);
 }
 
+const WidgetErrorActions: FC<{
+  cardId: number;
+  compact?: boolean;
+}> = ({ cardId, compact }) => {
+  const { setShowCalcDetails, requestWidgetSettings, adminMode } =
+    useContext(ReportUIStateContext);
+  const { getPos } = useReactNodeView();
+  const { t } = useTranslation("reports");
+
+  const onAdjustSettings = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      if (typeof getPos !== "function") {
+        return;
+      }
+      try {
+        requestWidgetSettings(cardId, getPos());
+      } catch (e) {
+        // Node views can briefly outlive their ProseMirror position during
+        // edits. In that case, do nothing rather than throwing from the button.
+      }
+    },
+    [cardId, getPos, requestWidgetSettings]
+  );
+
+  const onViewDetails = useCallback(
+    (event: React.MouseEvent<HTMLButtonElement>) => {
+      event.preventDefault();
+      event.stopPropagation();
+      setShowCalcDetails(cardId);
+    },
+    [cardId, setShowCalcDetails]
+  );
+
+  return (
+    <div className={`flex flex-wrap gap-2 ${compact ? "mt-2" : "mt-3"}`}>
+      <button
+        onClick={onViewDetails}
+        className={`inline-flex items-center rounded border border-gray-300 bg-white font-medium text-gray-700 shadow-sm hover:bg-gray-50 ${
+          compact ? "px-2 py-0.5 text-xs" : "px-2.5 py-1 text-sm"
+        }`}
+      >
+        <span>{t("View details")}</span>
+      </button>
+      {adminMode && typeof getPos === "function" ? (
+        <button
+          onClick={onAdjustSettings}
+          className={`inline-flex items-center rounded border border-gray-300 bg-white font-medium text-gray-700 shadow-sm hover:bg-gray-50 ${
+            compact ? "px-2 py-0.5 text-xs" : "px-2.5 py-1 text-sm"
+          }`}
+        >
+          <span>{t("Adjust settings")}</span>
+        </button>
+      ) : null}
+    </div>
+  );
+};
+
 /**
  * Error display components that access ReportContext only when errors occur.
  * By isolating context access here, we avoid subscribing to context in the
  * normal (non-error) rendering path.
  */
-const WidgetErrorInline: FC<{ errors: string[]; cardId: number }> = ({
-  errors,
-  cardId,
-}) => {
+const WidgetErrorInline: FC<{
+  errors: string[];
+  cardId: number;
+  dependencies: MetricDependency[];
+}> = ({ errors, cardId, dependencies }) => {
   const { setShowCalcDetails } = useContext(ReportUIStateContext);
   const { t } = useTranslation("reports");
   const errorDetails = errors.join(". \n");
+  const { errorMap, suggestedFixes } = useMemo(
+    () => getMetricErrorInfo(errors, dependencies),
+    [dependencies, errors]
+  );
+
   return (
     <Tooltip.Provider delayDuration={150}>
       <Tooltip.Root>
@@ -255,77 +336,96 @@ const WidgetErrorInline: FC<{ errors: string[]; cardId: number }> = ({
           >
             <ExclamationTriangleIcon className="w-3 h-3 inline-block" />
             <span className="font-semibold">{t("Error")}</span>
-            <span className="max-w-24 truncate text-red-200">{errorDetails}</span>
+            <span className="max-w-24 truncate text-red-200">
+              {errorDetails}
+            </span>
           </button>
         </Tooltip.Trigger>
         <Tooltip.Content
           side="top"
           sideOffset={6}
-          className="z-50 max-w-sm rounded-md border border-red-300 bg-red-700 px-2.5 py-2 text-xs text-red-50 shadow-lg whitespace-pre-wrap break-words"
+          className="pointer-events-auto z-50 max-w-sm rounded-md border border-gray-200 bg-white p-3 text-xs text-gray-700 shadow-lg"
         >
-          <div className="flex items-start gap-2">
-            <ExclamationTriangleIcon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-red-100" />
-            <div className="space-y-1">
-              <div className="font-semibold text-white">{t("Error")}</div>
-              {errors.length > 1 ? (
-                <ul className="list-disc pl-4 space-y-0.5">
-                  {errors.map((error) => (
-                    <li key={error}>{error}</li>
-                  ))}
-                </ul>
-              ) : (
-                <div>{errorDetails}</div>
-              )}
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <ExclamationTriangleIcon className="h-3.5 w-3.5 shrink-0 text-red-600" />
+              <div className="font-semibold text-red-800">
+                {t("Calculation error")}
+              </div>
             </div>
+            <ul className="mt-1 space-y-1 !pl-0">
+                {Object.entries(errorMap).map(([error, count]) => (
+                  <li key={error} className="flex items-start gap-2">
+                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-red-400" />
+                    <span className="min-w-0 flex-1 whitespace-pre-wrap break-words">
+                      {error}
+                    </span>
+                    {Number(count) > 1 && (
+                      <Badge variant="error" className="ml-1 shrink-0">
+                        {Number(count)}
+                        {t("x")}
+                      </Badge>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              <MetricSuggestedFixes
+                suggestedFixes={suggestedFixes}
+                compact
+              />
+            <WidgetErrorActions cardId={cardId} compact />
           </div>
-          <Tooltip.Arrow className="fill-red-700" />
+          <Tooltip.Arrow className="fill-white" />
         </Tooltip.Content>
       </Tooltip.Root>
     </Tooltip.Provider>
   );
 };
 
-const WidgetErrorBlock: FC<{ errors: string[]; cardId: number }> = ({
-  errors,
-  cardId,
-}) => {
-  const { setShowCalcDetails } = useContext(ReportUIStateContext);
+const WidgetErrorBlock: FC<{
+  errors: string[];
+  cardId: number;
+  dependencies: MetricDependency[];
+  widgetType?: string;
+}> = ({ errors, cardId, dependencies, widgetType }) => {
   const { t } = useTranslation("reports");
 
-  const errorMap: Record<string, number> = {};
-  for (const error of errors) {
-    if (error in errorMap) {
-      errorMap[error]++;
-    } else {
-      errorMap[error] = 1;
-    }
-  }
+  const { errorMap, suggestedFixes } = useMemo(
+    () => getMetricErrorInfo(errors, dependencies),
+    [dependencies, errors]
+  );
 
   return (
-    <div className="bg-red-700 text-white p-2 rounded shadow-sm w-full text-left my-2">
-      <div className="flex items-center space-x-2 py-1 text-base">
-        <ExclamationTriangleIcon className="w-4 h-4 inline-block" />
-        <div className="font-semibold">{t("Error")}</div>
+    <div className="my-3 overflow-hidden rounded-md border border-red-200 bg-white text-left shadow-sm">
+      <div className="border-l-4 border-red-500 px-3 py-3">
+        <div className="flex items-center gap-2">
+          <ExclamationTriangleIcon className="h-4 w-4 shrink-0 text-red-600" />
+          <div className="text-base font-semibold leading-none text-red-800">
+            {t("Calculation error")}
+          </div>
+        </div>
+        {widgetType ? (
+          <div className="mt-1 pl-6 text-xs font-medium text-gray-500">
+            {widgetType}
+          </div>
+        ) : null}
+        <ul className="py-1 !pl-0 space-y-1 text-sm text-gray-700">
+            {Object.entries(errorMap).map(([msg, count]) => (
+              <li key={msg} className="flex items-start gap-2">
+                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-red-400" />
+                <span className="min-w-0 flex-1">{msg}</span>
+                {Number(count) > 1 && (
+                  <Badge variant="error" className="ml-2 shrink-0">
+                    {Number(count)}
+                    {t("x")}
+                  </Badge>
+                )}
+              </li>
+            ))}
+          </ul>
+        <MetricSuggestedFixes suggestedFixes={suggestedFixes} />
+        <WidgetErrorActions cardId={cardId} />
       </div>
-      <ul className="list-disc !pl-5 pt-1">
-        {Object.entries(errorMap).map(([msg, count]) => (
-          <li key={msg}>
-            {msg}{" "}
-            {Number(count) > 1 && (
-              <Badge variant="error">
-                {Number(count)}
-                {t("x")}
-              </Badge>
-            )}
-          </li>
-        ))}
-      </ul>
-      <button
-        onClick={() => setShowCalcDetails(cardId)}
-        className=" bg-red-50  text-black px-2 py-0.5 rounded shadow-sm inline-flex items-center space-x-1 mt-2 mb-1 text-sm "
-      >
-        <span className="">{t("View details")}</span>
-      </button>
     </div>
   );
 };
@@ -621,11 +721,20 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
     const missingSketchClassErrors = ["Sketch class not available"];
     if (node.isInline) {
       return (
-        <WidgetErrorInline errors={missingSketchClassErrors} cardId={cardId} />
+        <WidgetErrorInline
+          errors={missingSketchClassErrors}
+          cardId={cardId}
+          dependencies={widgetProps?.dependencies || []}
+        />
       );
     }
     return (
-      <WidgetErrorBlock errors={missingSketchClassErrors} cardId={cardId} />
+      <WidgetErrorBlock
+        errors={missingSketchClassErrors}
+        cardId={cardId}
+        dependencies={widgetProps?.dependencies || []}
+        widgetType={type}
+      />
     );
   }
 
@@ -633,9 +742,22 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
   // to context when there are actual errors (exceptional case)
   if (errors.length > 0) {
     if (node.isInline) {
-      return <WidgetErrorInline errors={errors} cardId={cardId} />;
+      return (
+        <WidgetErrorInline
+          errors={errors}
+          cardId={cardId}
+          dependencies={widgetProps?.dependencies || []}
+        />
+      );
     } else {
-      return <WidgetErrorBlock errors={errors} cardId={cardId} />;
+      return (
+        <WidgetErrorBlock
+          errors={errors}
+          cardId={cardId}
+          dependencies={widgetProps?.dependencies || []}
+          widgetType={type}
+        />
+      );
     }
   }
 
@@ -703,9 +825,18 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
         const message =
           error instanceof Error ? error.message : "Widget failed to render";
         return node.isInline ? (
-          <WidgetErrorInline errors={[message]} cardId={cardId} />
+          <WidgetErrorInline
+            errors={[message]}
+            cardId={cardId}
+            dependencies={widgetProps?.dependencies || []}
+          />
         ) : (
-          <WidgetErrorBlock errors={[message]} cardId={cardId} />
+          <WidgetErrorBlock
+            errors={[message]}
+            cardId={cardId}
+            dependencies={widgetProps?.dependencies || []}
+            widgetType={type}
+          />
         );
       }}
     >

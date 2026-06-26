@@ -80,6 +80,10 @@ export type CardDependenciesResult = {
   overlaySources: OverlaySourceDetailsFragment[];
   loading: boolean;
   errors: { [errorMessage: string]: number };
+  /** Errors not attributable to a single metric/source dependency (e.g. query failure). */
+  globalErrors: string[];
+  /** True while dependency cache was evicted and a fresh payload is in flight. */
+  dependenciesAwaitingRefresh: boolean;
   dependencyResolutionFailuresByHash: { [dependencyHash: string]: string };
 };
 
