@@ -84,6 +84,9 @@ export function groundPixelDimensionsMeters(
   return { mX, mY };
 }
 
+// Limit to 2 GB of pixels, which is about 1/4 of the memory available.
+const MAX_VRM_PIXELS_PER_AXIS = (2 * 1024 * 1024 * 1024) / 2 / 16;
+
 /**
  * Resolve the VRM value to apply given user options and fragment area.
  *
@@ -91,19 +94,37 @@ export function groundPixelDimensionsMeters(
  * - `number`  → explicit value; expands to [n, n] (min 1).
  * - `'auto'`  → targets ~100 m virtual grid cells. Returns [1, 1] when
  *               native pixels are already finer than 100 m.
- *               Hard per-axis cap: MAX_VRM_PER_AXIS.
+ *               Hard per-axis cap: MAX_VRM_PER_AXIS. Also, based on
+ *               intersectingPixelCount, we don't want to end up with more than
+ *               MAX_VRM_PIXELS_PER_AXIS pixels.
  */
 export function resolveVrm(
   vrmOpt: false | "auto" | number | undefined,
   fragmentAreaSqM: number,
   groundDims: { mX: number; mY: number },
+  intersectingPixelCounts: [number, number],
 ): [number, number] | null {
+  let MAX_VRM = MAX_VRM_PER_AXIS;
+  // first, adjust MAX_VRM based on intersectingPixelCounts
+  // this is to ensure that, in approaching the goal of 100 m virtual pixels,
+  // we don't blow thru available memory and get "Invalid array length" errors.
+  const intersectingPixels =
+    intersectingPixelCounts[0] * intersectingPixelCounts[1];
+  if (intersectingPixels > MAX_VRM_PIXELS_PER_AXIS) {
+    MAX_VRM = Math.floor(MAX_VRM_PIXELS_PER_AXIS / intersectingPixelCounts[0]);
+  }
+  if (intersectingPixels > MAX_VRM_PIXELS_PER_AXIS) {
+    MAX_VRM = Math.floor(MAX_VRM_PIXELS_PER_AXIS / intersectingPixelCounts[1]);
+  }
+
   if (vrmOpt === false) return null;
 
   if (typeof vrmOpt === "number") {
     const v = Math.max(1, Math.round(vrmOpt));
     return [v, v];
   }
+
+  MAX_VRM = Math.max(MAX_VRM, 1);
 
   // 'auto': upsample until virtual pixels are ~100 m on each axis
   const targetMeters = 100;
@@ -118,11 +139,11 @@ export function resolveVrm(
   }
 
   const vx = Math.min(
-    MAX_VRM_PER_AXIS,
+    MAX_VRM,
     Math.max(1, Math.ceil(groundDims.mX / targetMeters)),
   );
   const vy = Math.min(
-    MAX_VRM_PER_AXIS,
+    MAX_VRM,
     Math.max(1, Math.ceil(groundDims.mY / targetMeters)),
   );
   return [vx, vy];
@@ -258,9 +279,21 @@ export async function calculateRasterStats(
       centerLonLat != null
         ? groundPixelDimensionsMeters(raster, centerLonLat)
         : { mX: 0, mY: 0 };
+    // calculate the number of pixels on each axis of the bounding box, based
+    // on the ground dimensions and the pixel width/height of the raster
+    const intersectingPixelCounts = [
+      Math.floor(featureBBox[2] - featureBBox[0] / raster.pixelWidth),
+      Math.floor(featureBBox[3] - featureBBox[1] / raster.pixelHeight),
+    ] as [number, number];
     const vrmOpt = options?.vrm ?? "auto";
-    const resolvedVrm = resolveVrm(vrmOpt, fragmentAreaSqM, groundDims);
+    const resolvedVrm = resolveVrm(
+      vrmOpt,
+      fragmentAreaSqM,
+      groundDims,
+      intersectingPixelCounts,
+    );
 
+    console.log("resolvedVrm", resolvedVrm);
     const statsExtra =
       resolvedVrm != null
         ? { vrm: resolvedVrm, rescale: true as const }
@@ -354,7 +387,6 @@ export async function calculateRasterStats(
     console.error("Error calculating raster stats", e);
     console.log(sourceUrl);
     console.log(feature);
-    console.log(feature.geometry.coordinates);
     if (typeof e === "string" && e.includes("No Values")) {
       return {
         bands: [

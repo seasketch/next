@@ -21,12 +21,14 @@ export declare function groundPixelDimensionsMeters(raster: GeorasterLike, cente
  * - `number`  → explicit value; expands to [n, n] (min 1).
  * - `'auto'`  → targets ~100 m virtual grid cells. Returns [1, 1] when
  *               native pixels are already finer than 100 m.
- *               Hard per-axis cap: MAX_VRM_PER_AXIS.
+ *               Hard per-axis cap: MAX_VRM_PER_AXIS. Also, based on
+ *               intersectingPixelCount, we don't want to end up with more than
+ *               MAX_VRM_PIXELS_PER_AXIS pixels.
  */
 export declare function resolveVrm(vrmOpt: false | "auto" | number | undefined, fragmentAreaSqM: number, groundDims: {
     mX: number;
     mY: number;
-}): [number, number] | null;
+}, intersectingPixelCounts: [number, number]): [number, number] | null;
 export declare function downsampleHistogram(histogram: HistogramEntry[], maxEntries: number): HistogramEntry[];
 /**
  * Calculate raster statistics for a feature that has already been reprojected
