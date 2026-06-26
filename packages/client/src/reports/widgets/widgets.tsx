@@ -332,7 +332,7 @@ const WidgetErrorActions: FC<{
   cardId: number;
   compact?: boolean;
 }> = ({ cardId, compact }) => {
-  const { setShowCalcDetails, requestWidgetSettings } =
+  const { setShowCalcDetails, requestWidgetSettings, adminMode } =
     useContext(ReportUIStateContext);
   const { getPos } = useReactNodeView();
   const { t } = useTranslation("reports");
@@ -373,7 +373,7 @@ const WidgetErrorActions: FC<{
       >
         <span>{t("View details")}</span>
       </button>
-      {typeof getPos === "function" ? (
+      {adminMode && typeof getPos === "function" ? (
         <button
           onClick={onAdjustSettings}
           className={`inline-flex items-center rounded border border-gray-300 bg-white font-medium text-gray-700 shadow-sm hover:bg-gray-50 ${
