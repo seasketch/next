@@ -6,7 +6,16 @@ require("dotenv").config();
 const signer = new Signer();
 
 const pool = createPool();
-const workerPool = createPool({}, "admin");
+const workerPool = createPool(
+  {
+    max: parseInt(
+      process.env.GRAPHILE_WORKER_POOL_SIZE ||
+        process.env.GRAPHILE_WORKER_CONCURRENCY ||
+        "10"
+    ),
+  },
+  "admin"
+);
 
 export default pool;
 export { workerPool, createPool };
