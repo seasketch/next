@@ -381,6 +381,9 @@ export default function ReportCard(
         geographies: baseReportContext.geographies,
         sketchClass: subjectSketchClass ?? null,
         errors: cardDependencies.errors,
+        globalErrors: cardDependencies.globalErrors,
+        dependenciesAwaitingRefresh:
+          cardDependencies.dependenciesAwaitingRefresh,
         dependencyResolutionFailuresByHash:
           cardDependencies.dependencyResolutionFailuresByHash,
       }}
