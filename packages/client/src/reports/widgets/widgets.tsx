@@ -99,7 +99,6 @@ import { useReactNodeView } from "../ReactNodeView";
 import { FormLanguageContext } from "../../formElements/FormElement";
 import {
   ExclamationTriangleIcon,
-  ExternalLinkIcon,
   Pencil2Icon,
 } from "@radix-ui/react-icons";
 import { FolderIcon } from "@heroicons/react/outline";
@@ -115,6 +114,10 @@ import * as Popover from "@radix-ui/react-popover";
 import { TooltipPopoverContent } from "../../editor/TooltipMenu";
 import useDebounce from "../../useDebounce";
 import * as Tooltip from "@radix-ui/react-tooltip";
+import {
+  getMetricErrorInfo,
+  MetricSuggestedFixes,
+} from "../components/MetricSuggestedFixes";
 
 type WidgetComponent = React.FC<any>;
 
@@ -246,88 +249,6 @@ function memoWidget(Component: WidgetComponent, name: string) {
   return memo(Component, widgetPropsAreEqual);
 }
 
-function getWidgetErrorInfo(
-  errors: string[],
-  dependencies: MetricDependency[]
-) {
-  const errorMap: Record<string, number> = {};
-  for (const error of errors) {
-    if (error in errorMap) {
-      errorMap[error]++;
-    } else {
-      errorMap[error] = 1;
-    }
-  }
-
-  const suggestedFixes: Record<string, string> = {};
-  for (const error of Object.keys(errorMap)) {
-    if (
-      error.includes("Invalid array length") &&
-      dependencies.some((d) => d.type === "raster_stats")
-    ) {
-      suggestedFixes["Adjust VRM settings"] =
-        "https://docs.seasketch.org/seasketch-documentation/administrators-guide/reports/debugging-timeout-and-performance-issues#raster-vrm-settings";
-    } else if (/timeout/i.test(error)) {
-      const overlapDep = dependencies.find(
-        (d) =>
-          d.type === "overlay_area" ||
-          d.parameters?.sourceHasOverlappingFeatures === true
-      );
-      if (overlapDep) {
-        suggestedFixes["Adjust overlap settings"] =
-          "https://docs.seasketch.org/seasketch-documentation/administrators-guide/reports/debugging-timeout-and-performance-issues#overlapping-polygon-settings";
-      } else {
-        suggestedFixes["Review report performance documentation"] =
-          "https://docs.seasketch.org/seasketch-documentation/administrators-guide/reports/debugging-timeout-and-performance-issues";
-      }
-    }
-  }
-
-  return { errorMap, suggestedFixes };
-}
-
-const WidgetSuggestedFixes: FC<{
-  suggestedFixes: Record<string, string>;
-  compact?: boolean;
-}> = ({ suggestedFixes, compact }) => {
-  const { t } = useTranslation("reports");
-  const entries = Object.entries(suggestedFixes);
-  if (entries.length === 0) {
-    return null;
-  }
-
-  return (
-    <div
-      className={`rounded-md border border-gray-200 bg-gray-50 ${
-        compact ? "mt-2 px-2.5 py-2" : "mt-3 px-3 py-2.5"
-      }`}
-    >
-      <div
-        className={`font-semibold text-gray-700 ${
-          compact ? "" : "text-sm"
-        }`}
-      >
-        {t("Suggested fixes")}
-      </div>
-      <div className={`${compact ? "mt-1" : "mt-1.5 text-sm"} space-y-1`}>
-        {entries.map(([msg, url]) => (
-          <div key={msg}>
-            <a
-              className="inline-flex items-center gap-1 rounded text-blue-600 !underline underline-offset-2 hover:text-blue-800"
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              {msg}
-              <ExternalLinkIcon className="h-3 w-3 shrink-0" />
-            </a>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
 const WidgetErrorActions: FC<{
   cardId: number;
   compact?: boolean;
@@ -401,7 +322,7 @@ const WidgetErrorInline: FC<{
   const { t } = useTranslation("reports");
   const errorDetails = errors.join(". \n");
   const { errorMap, suggestedFixes } = useMemo(
-    () => getWidgetErrorInfo(errors, dependencies),
+    () => getMetricErrorInfo(errors, dependencies),
     [dependencies, errors]
   );
 
@@ -448,7 +369,7 @@ const WidgetErrorInline: FC<{
                   </li>
                 ))}
               </ul>
-              <WidgetSuggestedFixes
+              <MetricSuggestedFixes
                 suggestedFixes={suggestedFixes}
                 compact
               />
@@ -470,7 +391,7 @@ const WidgetErrorBlock: FC<{
   const { t } = useTranslation("reports");
 
   const { errorMap, suggestedFixes } = useMemo(
-    () => getWidgetErrorInfo(errors, dependencies),
+    () => getMetricErrorInfo(errors, dependencies),
     [dependencies, errors]
   );
 
@@ -502,7 +423,7 @@ const WidgetErrorBlock: FC<{
               </li>
             ))}
           </ul>
-        <WidgetSuggestedFixes suggestedFixes={suggestedFixes} />
+        <MetricSuggestedFixes suggestedFixes={suggestedFixes} />
         <WidgetErrorActions cardId={cardId} />
       </div>
     </div>
