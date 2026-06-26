@@ -1,4 +1,4 @@
-import { EditorState, TextSelection } from "prosemirror-state";
+import { EditorState, NodeSelection, TextSelection } from "prosemirror-state";
 import { Node } from "prosemirror-model";
 import { EditorView } from "prosemirror-view";
 import {
@@ -151,6 +151,8 @@ function ReportCardBodyEditorInner({
     setShowCalcDetails,
     showCalcDetails,
     onEditorReadyForFocus,
+    pendingWidgetSettings,
+    clearPendingWidgetSettings,
   } = useContext(ReportUIStateContext);
 
   const onEditorReadyForFocusRef = useRef(onEditorReadyForFocus);
@@ -286,7 +288,7 @@ function ReportCardBodyEditorInner({
     const anySpatialMetricPending = slim.some(
       (m) =>
         m.state !== SpatialMetricState.Complete &&
-        m.state !== SpatialMetricState.Error,
+        m.state !== SpatialMetricState.Error
     );
     if (
       !draftDependenciesQuery.loading &&
@@ -367,7 +369,7 @@ function ReportCardBodyEditorInner({
       return {} as { [dependencyHash: string]: string };
     }
     return Object.fromEntries(
-      errs.map((e) => [e.dependencyHash, e.message] as const),
+      errs.map((e) => [e.dependencyHash, e.message] as const)
     );
   }, [
     draftDependenciesQuery.data?.draftReportDependencies
@@ -694,6 +696,37 @@ function ReportCardBodyEditorInner({
     cardId,
     saveWithBody,
   ]);
+
+  useEffect(() => {
+    if (!pendingWidgetSettings || pendingWidgetSettings.cardId !== cardId) {
+      return;
+    }
+    const view = viewRef.current;
+    if (!view) {
+      return;
+    }
+    const { widgetPosition } = pendingWidgetSettings;
+    if (widgetPosition < 0 || widgetPosition > view.state.doc.content.size) {
+      clearPendingWidgetSettings();
+      return;
+    }
+    const node = view.state.doc.nodeAt(widgetPosition);
+    if (
+      !node ||
+      (node.type.name !== "metric" && node.type.name !== "blockMetric")
+    ) {
+      clearPendingWidgetSettings();
+      return;
+    }
+    const tr = view.state.tr.setSelection(
+      NodeSelection.create(view.state.doc, widgetPosition)
+    );
+    view.dispatch(tr);
+    clearPendingWidgetSettings();
+    setTimeout(() => {
+      view.dom.focus({ preventScroll: true });
+    }, 30);
+  }, [cardId, clearPendingWidgetSettings, pendingWidgetSettings, viewRef]);
 
   // Update editor state when language changes (body will be different for different languages)
   useEffect(() => {

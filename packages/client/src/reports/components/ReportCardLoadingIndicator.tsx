@@ -50,7 +50,7 @@ export function computeCombinedProgress(items: MinimalJob[]): {
   progressPercent: number | null; // null => indeterminate
   farthestEta: Date | null;
   thresholdMet: boolean;
-  allComplete: boolean;
+  allSettled: boolean;
 } {
   const N = items.length;
   if (N === 0) {
@@ -58,12 +58,15 @@ export function computeCombinedProgress(items: MinimalJob[]): {
       progressPercent: null,
       farthestEta: null,
       thresholdMet: false,
-      allComplete: true,
+      allSettled: true,
     };
   }
 
+  const isSettled = (state: SpatialMetricState) =>
+    state === SpatialMetricState.Complete || state === SpatialMetricState.Error;
+
   const withEtaOrComplete = items.filter(
-    (i) => i.eta !== null || i.state === SpatialMetricState.Complete
+    (i) => i.eta !== null || isSettled(i.state)
   ).length;
   const thresholdMet = withEtaOrComplete / N >= 0.75;
 
@@ -74,16 +77,14 @@ export function computeCombinedProgress(items: MinimalJob[]): {
     null;
 
   const started = items.filter((i) => i.progress > 0);
-  const allComplete = items.every(
-    (i) => i.state === SpatialMetricState.Complete
-  );
+  const allSettled = items.every((i) => isSettled(i.state));
 
-  if (allComplete) {
+  if (allSettled) {
     return {
       progressPercent: 100,
       farthestEta: null,
       thresholdMet,
-      allComplete,
+      allSettled,
     };
   }
 
@@ -93,7 +94,7 @@ export function computeCombinedProgress(items: MinimalJob[]): {
         progressPercent: null,
         farthestEta: null,
         thresholdMet,
-        allComplete,
+        allSettled,
       };
     }
     const minProgress = started.reduce(
@@ -109,7 +110,7 @@ export function computeCombinedProgress(items: MinimalJob[]): {
       progressPercent: scaledProgress,
       farthestEta: null,
       thresholdMet,
-      allComplete,
+      allSettled,
     };
   }
 
@@ -122,7 +123,7 @@ export function computeCombinedProgress(items: MinimalJob[]): {
       progressPercent: farthestItem.progress,
       farthestEta,
       thresholdMet,
-      allComplete,
+      allSettled,
     };
   }
 
@@ -132,7 +133,7 @@ export function computeCombinedProgress(items: MinimalJob[]): {
       progressPercent: null,
       farthestEta: null,
       thresholdMet,
-      allComplete,
+      allSettled,
     };
   }
   const minProgress = started.reduce(
@@ -143,7 +144,7 @@ export function computeCombinedProgress(items: MinimalJob[]): {
     progressPercent: minProgress,
     farthestEta: null,
     thresholdMet,
-    allComplete,
+    allSettled,
   };
 }
 
@@ -188,7 +189,7 @@ export default function ReportCardLoadingIndicator({
   }, [stage, sourceJobs, metricJobs]);
 
   const isComplete =
-    !anySourceInProgress && computeCombinedProgress(metricJobs).allComplete;
+    !anySourceInProgress && computeCombinedProgress(metricJobs).allSettled;
 
   // Enforce monotonic non-decreasing visual progress with phase-aware reset
   const prevPercentRef = useRef<number>(0);
