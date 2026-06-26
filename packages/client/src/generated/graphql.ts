@@ -1804,33 +1804,6 @@ export type CreateGeographyClippingLayerPayloadGeographyClippingLayerEdgeArgs = 
   orderBy?: Maybe<Array<GeographyClippingLayersOrderBy>>;
 };
 
-/** All input for the create `Geography` mutation. */
-export type CreateGeographyInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** The `Geography` to be created by this mutation. */
-  geography: GeographyInput;
-};
-
-/** The output of our create `Geography` mutation. */
-export type CreateGeographyPayload = {
-  __typename?: 'CreateGeographyPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** The `Geography` that was created by this mutation. */
-  geography?: Maybe<Geography>;
-  /** Reads a single `Project` that is related to this `Geography`. */
-  project?: Maybe<Project>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
-};
-
 /** All input for the create `Group` mutation. */
 export type CreateGroupInput = {
   /**
@@ -4258,17 +4231,6 @@ export type DeleteForumPayloadForumEdgeArgs = {
   orderBy?: Maybe<Array<ForumsOrderBy>>;
 };
 
-/** All input for the `deleteGeographyByNodeId` mutation. */
-export type DeleteGeographyByNodeIdInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** The globally unique `ID` which will identify a single `Geography` to be deleted. */
-  nodeId: Scalars['ID'];
-};
-
 /** All input for the `deleteGeographyClippingLayerByNodeId` mutation. */
 export type DeleteGeographyClippingLayerByNodeIdInput = {
   /**
@@ -4315,33 +4277,6 @@ export type DeleteGeographyClippingLayerPayload = {
 /** The output of our delete `GeographyClippingLayer` mutation. */
 export type DeleteGeographyClippingLayerPayloadGeographyClippingLayerEdgeArgs = {
   orderBy?: Maybe<Array<GeographyClippingLayersOrderBy>>;
-};
-
-/** All input for the `deleteGeography` mutation. */
-export type DeleteGeographyInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
-};
-
-/** The output of our delete `Geography` mutation. */
-export type DeleteGeographyPayload = {
-  __typename?: 'DeleteGeographyPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  deletedProjectGeographyNodeId?: Maybe<Scalars['ID']>;
-  /** The `Geography` that was deleted by this mutation. */
-  geography?: Maybe<Geography>;
-  /** Reads a single `Project` that is related to this `Geography`. */
-  project?: Maybe<Project>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
 };
 
 /** All input for the `deleteGroupByNodeId` mutation. */
@@ -6774,16 +6709,6 @@ export type GeographyGeometry = {
   srid: Scalars['Int'];
 };
 
-/** An input for mutations affecting `Geography` */
-export type GeographyInput = {
-  clientTemplate?: Maybe<Scalars['String']>;
-  createdAt?: Maybe<Scalars['Datetime']>;
-  hash?: Maybe<Scalars['String']>;
-  name: Scalars['String'];
-  projectId: Scalars['Int'];
-  translatedProps?: Maybe<Scalars['JSON']>;
-};
-
 /** All geography types implement this interface */
 export type GeographyInterface = {
   /** Converts the object to GeoJSON */
@@ -6802,16 +6727,6 @@ export type GeographyLineString = GeographyGeometry & GeographyInterface & {
   geojson?: Maybe<Scalars['GeoJSON']>;
   points?: Maybe<Array<Maybe<GeographyPoint>>>;
   srid: Scalars['Int'];
-};
-
-/** Represents an update to a `Geography`. Fields that are set will be updated. */
-export type GeographyPatch = {
-  clientTemplate?: Maybe<Scalars['String']>;
-  createdAt?: Maybe<Scalars['Datetime']>;
-  hash?: Maybe<Scalars['String']>;
-  name?: Maybe<Scalars['String']>;
-  projectId?: Maybe<Scalars['Int']>;
-  translatedProps?: Maybe<Scalars['JSON']>;
 };
 
 export type GeographyPoint = GeographyGeometry & GeographyInterface & {
@@ -8054,8 +7969,6 @@ export type Mutation = {
   createForum?: Maybe<CreateForumPayload>;
   /** Create a new geography with associated clipping layers */
   createGeographies?: Maybe<CreateGeographiesPayload>;
-  /** Creates a single `Geography`. */
-  createGeography?: Maybe<CreateGeographyPayload>;
   /** Creates a single `GeographyClippingLayer`. */
   createGeographyClippingLayer?: Maybe<CreateGeographyClippingLayerPayload>;
   /** Creates a single `Group`. */
@@ -8173,11 +8086,7 @@ export type Mutation = {
   deleteForum?: Maybe<DeleteForumPayload>;
   /** Deletes a single `Forum` using its globally unique id. */
   deleteForumByNodeId?: Maybe<DeleteForumPayload>;
-  /** Deletes a single `Geography` using a unique key. */
-  deleteGeography?: Maybe<DeleteGeographyPayload>;
   deleteGeographyAndTableOfContentsItems: Geography;
-  /** Deletes a single `Geography` using its globally unique id. */
-  deleteGeographyByNodeId?: Maybe<DeleteGeographyPayload>;
   /** Deletes a single `GeographyClippingLayer` using a unique key. */
   deleteGeographyClippingLayer?: Maybe<DeleteGeographyClippingLayerPayload>;
   /** Deletes a single `GeographyClippingLayer` using its globally unique id. */
@@ -8507,10 +8416,6 @@ export type Mutation = {
   updateForum?: Maybe<UpdateForumPayload>;
   /** Updates a single `Forum` using its globally unique id and a patch. */
   updateForumByNodeId?: Maybe<UpdateForumPayload>;
-  /** Updates a single `Geography` using a unique key and a patch. */
-  updateGeography?: Maybe<UpdateGeographyPayload>;
-  /** Updates a single `Geography` using its globally unique id and a patch. */
-  updateGeographyByNodeId?: Maybe<UpdateGeographyPayload>;
   /** Updates a single `GeographyClippingLayer` using a unique key and a patch. */
   updateGeographyClippingLayer?: Maybe<UpdateGeographyClippingLayerPayload>;
   /** Updates a single `GeographyClippingLayer` using its globally unique id and a patch. */
@@ -8869,12 +8774,6 @@ export type MutationCreateGeographiesArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationCreateGeographyArgs = {
-  input: CreateGeographyInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateGeographyClippingLayerArgs = {
   input: CreateGeographyClippingLayerInput;
 };
@@ -9201,21 +9100,9 @@ export type MutationDeleteForumByNodeIdArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationDeleteGeographyArgs = {
-  input: DeleteGeographyInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteGeographyAndTableOfContentsItemsArgs = {
   deleteRelatedTableOfContentsItems?: Maybe<Scalars['Boolean']>;
   id: Scalars['Int'];
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationDeleteGeographyByNodeIdArgs = {
-  input: DeleteGeographyByNodeIdInput;
 };
 
 
@@ -10141,18 +10028,6 @@ export type MutationUpdateForumArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateForumByNodeIdArgs = {
   input: UpdateForumByNodeIdInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationUpdateGeographyArgs = {
-  input: UpdateGeographyInput;
-};
-
-
-/** The root mutation type which contains root level fields which mutate data. */
-export type MutationUpdateGeographyByNodeIdArgs = {
-  input: UpdateGeographyByNodeIdInput;
 };
 
 
@@ -17912,19 +17787,6 @@ export type UpdateForumPayloadForumEdgeArgs = {
   orderBy?: Maybe<Array<ForumsOrderBy>>;
 };
 
-/** All input for the `updateGeographyByNodeId` mutation. */
-export type UpdateGeographyByNodeIdInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** The globally unique `ID` which will identify a single `Geography` to be updated. */
-  nodeId: Scalars['ID'];
-  /** An object where the defined keys will be set on the `Geography` being updated. */
-  patch: GeographyPatch;
-};
-
 /** All input for the `updateGeographyClippingLayerByNodeId` mutation. */
 export type UpdateGeographyClippingLayerByNodeIdInput = {
   /**
@@ -17974,34 +17836,6 @@ export type UpdateGeographyClippingLayerPayload = {
 /** The output of our update `GeographyClippingLayer` mutation. */
 export type UpdateGeographyClippingLayerPayloadGeographyClippingLayerEdgeArgs = {
   orderBy?: Maybe<Array<GeographyClippingLayersOrderBy>>;
-};
-
-/** All input for the `updateGeography` mutation. */
-export type UpdateGeographyInput = {
-  /**
-   * An arbitrary string value with no semantic meaning. Will be included in the
-   * payload verbatim. May be used to track mutations by the client.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  id: Scalars['Int'];
-  /** An object where the defined keys will be set on the `Geography` being updated. */
-  patch: GeographyPatch;
-};
-
-/** The output of our update `Geography` mutation. */
-export type UpdateGeographyPayload = {
-  __typename?: 'UpdateGeographyPayload';
-  /**
-   * The exact same `clientMutationId` that was provided in the mutation input,
-   * unchanged and unused. May be used by a client to track mutations.
-   */
-  clientMutationId?: Maybe<Scalars['String']>;
-  /** The `Geography` that was updated by this mutation. */
-  geography?: Maybe<Geography>;
-  /** Reads a single `Project` that is related to this `Geography`. */
-  project?: Maybe<Project>;
-  /** Our root query field type. Allows us to run any query from our mutation payload. */
-  query?: Maybe<Query>;
 };
 
 /** All input for the `updateGroupByNodeId` mutation. */

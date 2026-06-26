@@ -5203,6 +5203,25 @@ CREATE FUNCTION public.cancel_background_job(project_id integer, job_id uuid) RE
 CREATE FUNCTION public.changelog_row_net_zero_changes(p_field_group public.change_log_field_group, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb) RETURNS boolean
     LANGUAGE sql IMMUTABLE PARALLEL SAFE
     AS $$
+  with normalized_attribution as (
+    select
+      case
+        when p_from_summary is null then '{"attribution": null}'::jsonb
+        when p_from_summary = '{}'::jsonb then '{"attribution": null}'::jsonb
+        when not (p_from_summary ? 'attribution') then '{"attribution": null}'::jsonb
+        when jsonb_typeof(p_from_summary->'attribution') = 'null' then '{"attribution": null}'::jsonb
+        when trim(coalesce(p_from_summary->>'attribution', '')) = '' then '{"attribution": null}'::jsonb
+        else jsonb_build_object('attribution', btrim(p_from_summary->>'attribution'))
+      end as from_summary,
+      case
+        when p_to_summary is null then '{"attribution": null}'::jsonb
+        when p_to_summary = '{}'::jsonb then '{"attribution": null}'::jsonb
+        when not (p_to_summary ? 'attribution') then '{"attribution": null}'::jsonb
+        when jsonb_typeof(p_to_summary->'attribution') = 'null' then '{"attribution": null}'::jsonb
+        when trim(coalesce(p_to_summary->>'attribution', '')) = '' then '{"attribution": null}'::jsonb
+        else jsonb_build_object('attribution', btrim(p_to_summary->>'attribution'))
+      end as to_summary
+  )
   select case
     when p_field_group::text in (
       'resolvable_layer_comments:created',
@@ -5214,13 +5233,14 @@ CREATE FUNCTION public.changelog_row_net_zero_changes(p_field_group public.chang
       not (p_from_blob is distinct from p_to_blob)
     when p_field_group::text = 'layer:attribution' then
       not (
-        changelog_normalize_layer_attribution_summary(p_from_summary)
+        normalized_attribution.from_summary
         is distinct from
-        changelog_normalize_layer_attribution_summary(p_to_summary)
+        normalized_attribution.to_summary
       )
     else
       not (p_from_summary is distinct from p_to_summary)
-  end;
+  end
+  from normalized_attribution;
 $$;
 
 
@@ -5228,7 +5248,7 @@ $$;
 -- Name: FUNCTION changelog_row_net_zero_changes(p_field_group public.change_log_field_group, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.changelog_row_net_zero_changes(p_field_group public.change_log_field_group, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb) IS 'Stored generated expression for change_logs.net_zero_changes (blob-backed rows compare summaries and blobs; layer:attribution normalized summary compare; else raw summaries).';
+COMMENT ON FUNCTION public.changelog_row_net_zero_changes(p_field_group public.change_log_field_group, p_from_summary jsonb, p_to_summary jsonb, p_from_blob jsonb, p_to_blob jsonb) IS 'Stored generated expression for change_logs.net_zero_changes. Kept self-contained so RDS binary upgrades can inline it while restoring temporary schemas.';
 
 
 --
@@ -15105,7 +15125,9 @@ CREATE TABLE public.project_geography (
 -- Name: TABLE project_geography; Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON TABLE public.project_geography IS '@simpleCollections only';
+COMMENT ON TABLE public.project_geography IS '@name Geography
+@simpleCollections only
+@omit create,update,delete';
 
 
 --

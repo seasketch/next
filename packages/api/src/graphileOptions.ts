@@ -120,6 +120,7 @@ export default function graphileOptions(): PostGraphileOptions {
     ],
     graphileBuildOptions: {
       pgOmitListSuffix: true,
+      pgSkipInstallingWatchFixtures: process.env.NODE_ENV === "production",
       uploadFieldDefinitions,
     },
     subscriptions: true,

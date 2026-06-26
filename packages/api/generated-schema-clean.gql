@@ -2039,38 +2039,6 @@ type CreateGeographyClippingLayerPayload {
   query: Query
 }
 
-"""All input for the create `Geography` mutation."""
-input CreateGeographyInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-
-  """The `Geography` to be created by this mutation."""
-  geography: GeographyInput!
-}
-
-"""The output of our create `Geography` mutation."""
-type CreateGeographyPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-
-  """The `Geography` that was created by this mutation."""
-  geography: Geography
-
-  """Reads a single `Project` that is related to this `Geography`."""
-  project: Project
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-}
-
 """All input for the create `Group` mutation."""
 input CreateGroupInput {
   """
@@ -4887,20 +4855,6 @@ type DeleteForumPayload {
   query: Query
 }
 
-"""All input for the `deleteGeographyByNodeId` mutation."""
-input DeleteGeographyByNodeIdInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-
-  """
-  The globally unique `ID` which will identify a single `Geography` to be deleted.
-  """
-  nodeId: ID!
-}
-
 """All input for the `deleteGeographyClippingLayerByNodeId` mutation."""
 input DeleteGeographyClippingLayerByNodeIdInput {
   """
@@ -4952,37 +4906,6 @@ type DeleteGeographyClippingLayerPayload {
   Reads a single `Geography` that is related to this `GeographyClippingLayer`.
   """
   projectGeography: Geography
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-}
-
-"""All input for the `deleteGeography` mutation."""
-input DeleteGeographyInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  id: Int!
-}
-
-"""The output of our delete `Geography` mutation."""
-type DeleteGeographyPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-  deletedProjectGeographyNodeId: ID
-
-  """The `Geography` that was deleted by this mutation."""
-  geography: Geography
-
-  """Reads a single `Project` that is related to this `Geography`."""
-  project: Project
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -7826,16 +7749,6 @@ interface GeographyGeometry {
   srid: Int!
 }
 
-"""An input for mutations affecting `Geography`"""
-input GeographyInput {
-  clientTemplate: String
-  createdAt: Datetime
-  hash: String
-  name: String!
-  projectId: Int!
-  translatedProps: JSON
-}
-
 """All geography types implement this interface"""
 interface GeographyInterface {
   """Converts the object to GeoJSON"""
@@ -7854,18 +7767,6 @@ type GeographyLineString implements GeographyGeometry & GeographyInterface {
   geojson: GeoJSON
   points: [GeographyPoint]
   srid: Int!
-}
-
-"""
-Represents an update to a `Geography`. Fields that are set will be updated.
-"""
-input GeographyPatch {
-  clientTemplate: String
-  createdAt: Datetime
-  hash: String
-  name: String
-  projectId: Int
-  translatedProps: JSON
 }
 
 type GeographyPoint implements GeographyGeometry & GeographyInterface {
@@ -9381,14 +9282,6 @@ type Mutation {
     input: [CreateGeographyArgs!]!
   ): CreateGeographiesPayload
 
-  """Creates a single `Geography`."""
-  createGeography(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: CreateGeographyInput!
-  ): CreateGeographyPayload
-
   """Creates a single `GeographyClippingLayer`."""
   createGeographyClippingLayer(
     """
@@ -9797,23 +9690,7 @@ type Mutation {
     """
     input: DeleteForumByNodeIdInput!
   ): DeleteForumPayload
-
-  """Deletes a single `Geography` using a unique key."""
-  deleteGeography(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: DeleteGeographyInput!
-  ): DeleteGeographyPayload
   deleteGeographyAndTableOfContentsItems(deleteRelatedTableOfContentsItems: Boolean, id: Int!): Geography!
-
-  """Deletes a single `Geography` using its globally unique id."""
-  deleteGeographyByNodeId(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: DeleteGeographyByNodeIdInput!
-  ): DeleteGeographyPayload
 
   """Deletes a single `GeographyClippingLayer` using a unique key."""
   deleteGeographyClippingLayer(
@@ -11004,22 +10881,6 @@ type Mutation {
     """
     input: UpdateForumByNodeIdInput!
   ): UpdateForumPayload
-
-  """Updates a single `Geography` using a unique key and a patch."""
-  updateGeography(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: UpdateGeographyInput!
-  ): UpdateGeographyPayload
-
-  """Updates a single `Geography` using its globally unique id and a patch."""
-  updateGeographyByNodeId(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: UpdateGeographyByNodeIdInput!
-  ): UpdateGeographyPayload
 
   """
   Updates a single `GeographyClippingLayer` using a unique key and a patch.
@@ -19351,25 +19212,6 @@ type UpdateForumPayload {
   query: Query
 }
 
-"""All input for the `updateGeographyByNodeId` mutation."""
-input UpdateGeographyByNodeIdInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-
-  """
-  The globally unique `ID` which will identify a single `Geography` to be updated.
-  """
-  nodeId: ID!
-
-  """
-  An object where the defined keys will be set on the `Geography` being updated.
-  """
-  patch: GeographyPatch!
-}
-
 """All input for the `updateGeographyClippingLayerByNodeId` mutation."""
 input UpdateGeographyClippingLayerByNodeIdInput {
   """
@@ -19430,41 +19272,6 @@ type UpdateGeographyClippingLayerPayload {
   Reads a single `Geography` that is related to this `GeographyClippingLayer`.
   """
   projectGeography: Geography
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-}
-
-"""All input for the `updateGeography` mutation."""
-input UpdateGeographyInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  id: Int!
-
-  """
-  An object where the defined keys will be set on the `Geography` being updated.
-  """
-  patch: GeographyPatch!
-}
-
-"""The output of our update `Geography` mutation."""
-type UpdateGeographyPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-
-  """The `Geography` that was updated by this mutation."""
-  geography: Geography
-
-  """Reads a single `Project` that is related to this `Geography`."""
-  project: Project
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
