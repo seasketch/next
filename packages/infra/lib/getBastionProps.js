@@ -1,16 +1,15 @@
 const region = require("../bin/env.production").region;
 const AWS = require("aws-sdk");
-var ecs = new AWS.ECS({ region });
-var cloudformation = new AWS.CloudFormation({ region });
+const ecs = new AWS.ECS({ region });
+const cloudformation = new AWS.CloudFormation({ region });
 
-cloudformation.describeStackResources(
-  { StackName: "SeaSketchMaintenanceBastion" },
-  function (err, data) {
-    console.log(err);
-    if (err) {
-      console.log("CLUSTER=\nTASK=");
-      return;
-    }
+async function main() {
+  try {
+    const stackName =
+      process.env.MAINTENANCE_STACK_NAME || "SeaSketchMaintenanceBastion";
+    const data = await cloudformation
+      .describeStackResources({ StackName: stackName })
+      .promise();
     const cluster = data.StackResources.find(
       (r) =>
         r.ResourceType === "AWS::ECS::Cluster" &&
@@ -18,14 +17,23 @@ cloudformation.describeStackResources(
     );
     if (!cluster) {
       console.log("CLUSTER=\nTASK=");
+      return;
     }
-    ecs.listTasks({ cluster: cluster.PhysicalResourceId }, (err, data) => {
-      if (err) throw err;
-      if (data.taskArns.length === 0) {
-        console.log("CLUSTER=\nTASK=");
-      }
-      const taskId = data.taskArns[0].split("/").slice(-1)[0];
-      console.log(`CLUSTER=${cluster.PhysicalResourceId}\nTASK=${taskId}`);
-    });
+    const tasks = await ecs
+      .listTasks({
+        cluster: cluster.PhysicalResourceId,
+        desiredStatus: "RUNNING",
+      })
+      .promise();
+    if (tasks.taskArns.length === 0) {
+      console.log("CLUSTER=\nTASK=");
+      return;
+    }
+    console.log(`CLUSTER=${cluster.PhysicalResourceId}\nTASK=${tasks.taskArns[0]}`);
+  } catch (err) {
+    console.error(err);
+    console.log("CLUSTER=\nTASK=");
   }
-);
+}
+
+main();

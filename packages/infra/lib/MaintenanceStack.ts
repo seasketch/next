@@ -4,7 +4,7 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import * as rds from "aws-cdk-lib/aws-rds";
 import * as elasticache from "aws-cdk-lib/aws-elasticache";
 import * as path from "path";
-import { DockerImageAsset } from "aws-cdk-lib/aws-ecr-assets";
+import { DockerImageAsset, Platform } from "aws-cdk-lib/aws-ecr-assets";
 import { IVpc } from "aws-cdk-lib/aws-ec2";
 
 import { Construct } from "constructs";
@@ -38,6 +38,7 @@ export class MaintenanceStack extends cdk.Stack {
     // to be committed to git to trigger a republishing on ECR.
     const asset = new DockerImageAsset(this, "MaintenanceImage", {
       directory: path.join(__dirname, "../containers/maintenance"),
+      platform: Platform.LINUX_AMD64,
       buildArgs: {
         tags: "maintenance",
       },
@@ -68,7 +69,6 @@ export class MaintenanceStack extends cdk.Stack {
       },
     });
     asset.repository.grantPull(role);
-    props.db.grantConnect(role);
 
     const taskDefinition = new ecs.FargateTaskDefinition(
       this,
@@ -112,7 +112,6 @@ export class MaintenanceStack extends cdk.Stack {
       })
     );
     asset.repository.grantPull(taskDefinition.taskRole);
-    props.db.grantConnect(taskDefinition.taskRole);
     this.taskRole = taskDefinition.taskRole;
     taskDefinition.taskRole.attachInlinePolicy(
       new iam.Policy(this, "DBAccess", {

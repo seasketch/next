@@ -6,10 +6,10 @@ const { PGUSER, PGREGION, PGHOST, PGPORT, PGDATABASE } = process.env;
 
 (async () => {
   const signer = new AWS.RDS.Signer();
-  const certPath = `${__dirname}/rds-ca-2019-root.pem`;
-  var file = fs.createWriteStream(`${__dirname}/rds-ca-2019-root.pem`);
-  var request = https.get(
-    "https://s3.amazonaws.com/rds-downloads/rds-ca-2019-root.pem",
+  const certPath = `${__dirname}/rds-global-bundle.pem`;
+  const file = fs.createWriteStream(certPath);
+  https.get(
+    "https://truststore.pki.rds.amazonaws.com/global/global-bundle.pem",
     function (response) {
       response.pipe(file);
       file.on("finish", function () {
@@ -28,7 +28,7 @@ const { PGUSER, PGREGION, PGHOST, PGPORT, PGDATABASE } = process.env;
               } else {
                 const dbUrl = `postgres://${PGUSER}:${encodeURIComponent(
                   token
-                )}@${PGHOST}:${PGPORT}/${PGDATABASE}?ssl=1&sslmode=no-verify&sslrootcert=${certPath}`;
+                )}@${PGHOST}:${PGPORT}/${PGDATABASE}?ssl=1&sslmode=verify-full&sslrootcert=${certPath}`;
                 console.log(`DATABASE_URL=${dbUrl}\nPGPASSWORD=${token}`);
               }
             }

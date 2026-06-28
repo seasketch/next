@@ -1,12 +1,12 @@
 #!/bin/sh
-function authenticated() {
+authenticated() {
   # Attempt to ssh to GitHub
-  ssh -T git@github.com &>/dev/null
+  ssh -T git@github.com >/dev/null 2>&1
   RET=$?
-  if [ $RET == 1 ]; then
+  if [ "$RET" = 1 ]; then
     # user is authenticated, but fails to open a shell with GitHub 
     return 0
-  elif [ $RET == 255 ]; then
+  elif [ "$RET" = 255 ]; then
     # user is not authenticated
     return 1
   else

@@ -11,4 +11,4 @@ if [[ -z "$TASK" ]]; then
     echo "Task could not be found" 1>&2
     exit 1
 fi
-aws ecs execute-command --cluster $CLUSTER --task $TASK --container Default --command "/bin/sh -l" --interactive
+aws ecs execute-command --cluster "$CLUSTER" --task "$TASK" --container Default --command "/bin/sh -l" --interactive

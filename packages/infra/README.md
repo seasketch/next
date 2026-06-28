@@ -54,6 +54,7 @@ npm run shell
 ### Connecting to the database from the bastion
 
 The startup script in /etc/profile.d/pg.sh should make it possible to run `psql` without any arguments.
+It installs and uses the current AWS RDS global trust bundle with `sslmode=verify-full`.
 
 ### Checking out the SeaSketch codebase
 
@@ -69,7 +70,7 @@ git pull origin master
 npm run db:migrate
 ```
 
-For now these migrations are run manually rather than as part of a continuous deployment system. The Dockerfile in `api/migrations` could be used as a starting point to build such a system.
+Automated deployments use ECS exec to run `/home/migrate.sh` on the current maintenance task. The GitHub Actions workflow discovers the active ECS cluster and task at runtime, so task rollovers should not require updating repository or environment secrets.
 
 ### Other services
 

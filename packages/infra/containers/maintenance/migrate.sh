@@ -1,5 +1,9 @@
 #!/usr/bin/env bash
-git fetch --all
-git checkout --force $1
-NODE_TLS_REJECT_UNAUTHORIZED=0 npm run db:migrate
-echo "database migrations complete" 
+set -euo pipefail
+
+cd /usr/src/app/next
+git fetch --all --prune
+git checkout --force "$1"
+cd packages/api
+graphile-migrate migrate
+echo "database migrations complete"
