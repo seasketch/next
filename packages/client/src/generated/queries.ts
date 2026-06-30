@@ -1508,6 +1508,7 @@ export type CreateDataUploadInput = {
   clientMutationId?: Maybe<Scalars['String']>;
   contentType?: Maybe<Scalars['String']>;
   filename?: Maybe<Scalars['String']>;
+  processingOptions?: Maybe<Scalars['JSON']>;
   projectId?: Maybe<Scalars['Int']>;
   replaceTableOfContentsItemId?: Maybe<Scalars['Int']>;
 };
@@ -3647,6 +3648,7 @@ export type DataUploadOutput = Node & {
 };
 
 export enum DataUploadOutputType {
+  Csv = 'CSV',
   FlatGeobuf = 'FLAT_GEOBUF',
   GeoJson = 'GEO_JSON',
   GeoTiff = 'GEO_TIFF',
@@ -3678,6 +3680,12 @@ export type DataUploadTask = Node & {
   outputs?: Maybe<Scalars['JSON']>;
   /** Use to upload source data to s3. Must be an admin. */
   presignedUploadUrl?: Maybe<Scalars['String']>;
+  /**
+   * Format-specific processing instructions supplied by the client at upload time
+   * (e.g. column mapping and CRS for delimited text uploads). Consumed by the
+   * spatial-uploads-handler.
+   */
+  processingOptions?: Maybe<Scalars['JSON']>;
   /** Reads a single `ProjectBackgroundJob` that is related to this `DataUploadTask`. */
   projectBackgroundJob?: Maybe<ProjectBackgroundJob>;
   projectBackgroundJobId: Scalars['UUID'];
@@ -20530,6 +20538,7 @@ export type CreateDataUploadMutationVariables = Exact<{
   filename: Scalars['String'];
   contentType: Scalars['String'];
   replaceTableOfContentsItemId?: Maybe<Scalars['Int']>;
+  processingOptions?: Maybe<Scalars['JSON']>;
 }>;
 
 
@@ -29991,9 +30000,9 @@ export const DashboardBannerStatsDocument = /*#__PURE__*/ gql`
 }
     `;
 export const CreateDataUploadDocument = /*#__PURE__*/ gql`
-    mutation createDataUpload($projectId: Int!, $filename: String!, $contentType: String!, $replaceTableOfContentsItemId: Int) {
+    mutation createDataUpload($projectId: Int!, $filename: String!, $contentType: String!, $replaceTableOfContentsItemId: Int, $processingOptions: JSON) {
   createDataUpload(
-    input: {filename: $filename, projectId: $projectId, contentType: $contentType, replaceTableOfContentsItemId: $replaceTableOfContentsItemId}
+    input: {filename: $filename, projectId: $projectId, contentType: $contentType, replaceTableOfContentsItemId: $replaceTableOfContentsItemId, processingOptions: $processingOptions}
   ) {
     dataUploadTask {
       ...DataUploadExtendedDetails

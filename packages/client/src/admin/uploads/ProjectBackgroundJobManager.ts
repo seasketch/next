@@ -21,6 +21,7 @@ import {
   SubmitDataUploadMutation,
 } from "../../generated/graphql";
 import axios from "axios";
+import { DelimitedUploadProcessingOptions } from "./delimitedSpatial/types";
 
 export interface DataUploadProcessingCompleteEvent {
   jobId: string;
@@ -260,6 +261,8 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
     files: File[],
     options?: {
       replaceTableOfContentsItemId?: number;
+      /** Column-mapping/CRS configuration for delimited (CSV/TSV/TXT) files, keyed by the File instance being uploaded. */
+      processingOptionsByFile?: Map<File, DelimitedUploadProcessingOptions>;
     }
   ) {
     if (files.length > 1 && options?.replaceTableOfContentsItemId) {
@@ -277,6 +280,7 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
                 contentType: file.type,
                 replaceTableOfContentsItemId:
                   options?.replaceTableOfContentsItemId,
+                processingOptions: options?.processingOptionsByFile?.get(file),
               },
             });
             if (

@@ -1715,6 +1715,7 @@ input CreateDataUploadInput {
   clientMutationId: String
   contentType: String
   filename: String
+  processingOptions: JSON
   projectId: Int
   replaceTableOfContentsItemId: Int
 }
@@ -4257,6 +4258,7 @@ type DataUploadOutput implements Node {
 }
 
 enum DataUploadOutputType {
+  CSV
   FLAT_GEOBUF
   GEO_JSON
   GEO_TIFF
@@ -4300,6 +4302,13 @@ type DataUploadTask implements Node {
 
   """Use to upload source data to s3. Must be an admin."""
   presignedUploadUrl: String
+
+  """
+  Format-specific processing instructions supplied by the client at upload time
+  (e.g. column mapping and CRS for delimited text uploads). Consumed by the
+  spatial-uploads-handler.
+  """
+  processingOptions: JSON
 
   """
   Reads a single `ProjectBackgroundJob` that is related to this `DataUploadTask`.

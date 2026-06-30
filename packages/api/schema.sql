@@ -307,7 +307,8 @@ CREATE TYPE public.data_upload_output_type AS ENUM (
     'XMLMetadata',
     'NetCDF',
     'ReportingFlatgeobufV1',
-    'ReportingCOG'
+    'ReportingCOG',
+    'CSV'
 );
 
 
@@ -7573,7 +7574,8 @@ CREATE TABLE public.data_upload_tasks (
     project_background_job_id uuid NOT NULL,
     changelog text,
     replace_table_of_contents_item_id integer,
-    data_library_metadata jsonb
+    data_library_metadata jsonb,
+    processing_options jsonb
 );
 
 
@@ -7592,10 +7594,17 @@ COMMENT ON COLUMN public.data_upload_tasks.content_type IS 'Content-Type of the 
 
 
 --
--- Name: create_data_upload(text, integer, text, integer); Type: FUNCTION; Schema: public; Owner: -
+-- Name: COLUMN data_upload_tasks.processing_options; Type: COMMENT; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.create_data_upload(filename text, project_id integer, content_type text, replace_table_of_contents_item_id integer) RETURNS public.data_upload_tasks
+COMMENT ON COLUMN public.data_upload_tasks.processing_options IS 'Format-specific processing instructions supplied by the client at upload time (e.g. column mapping and CRS for delimited text uploads). Consumed by the spatial-uploads-handler.';
+
+
+--
+-- Name: create_data_upload(text, integer, text, integer, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_data_upload(filename text, project_id integer, content_type text, replace_table_of_contents_item_id integer, processing_options jsonb DEFAULT NULL::jsonb) RETURNS public.data_upload_tasks
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
     declare
@@ -7643,12 +7652,14 @@ CREATE FUNCTION public.create_data_upload(filename text, project_id integer, con
             filename, 
             content_type, 
             project_background_job_id,
-            replace_table_of_contents_item_id
+            replace_table_of_contents_item_id,
+            processing_options
           ) values (
             create_data_upload.filename, 
             create_data_upload.content_type, 
             job.id,
-            create_data_upload.replace_table_of_contents_item_id
+            create_data_upload.replace_table_of_contents_item_id,
+            create_data_upload.processing_options
           ) returning * into upload;
           return upload;
         else
@@ -35785,11 +35796,11 @@ GRANT SELECT(content_type) ON TABLE public.data_upload_tasks TO seasketch_user;
 
 
 --
--- Name: FUNCTION create_data_upload(filename text, project_id integer, content_type text, replace_table_of_contents_item_id integer); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION create_data_upload(filename text, project_id integer, content_type text, replace_table_of_contents_item_id integer, processing_options jsonb); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.create_data_upload(filename text, project_id integer, content_type text, replace_table_of_contents_item_id integer) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_data_upload(filename text, project_id integer, content_type text, replace_table_of_contents_item_id integer) TO seasketch_user;
+REVOKE ALL ON FUNCTION public.create_data_upload(filename text, project_id integer, content_type text, replace_table_of_contents_item_id integer, processing_options jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_data_upload(filename text, project_id integer, content_type text, replace_table_of_contents_item_id integer, processing_options jsonb) TO seasketch_user;
 
 
 --

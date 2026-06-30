@@ -19,6 +19,7 @@ mutation createDataUpload(
   $filename: String!
   $contentType: String!
   $replaceTableOfContentsItemId: Int
+  $processingOptions: JSON
 ) {
   createDataUpload(
     input: {
@@ -26,6 +27,7 @@ mutation createDataUpload(
       projectId: $projectId
       contentType: $contentType
       replaceTableOfContentsItemId: $replaceTableOfContentsItemId
+      processingOptions: $processingOptions
     }
   ) {
     dataUploadTask {

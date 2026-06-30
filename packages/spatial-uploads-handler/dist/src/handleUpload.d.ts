@@ -1,5 +1,6 @@
 import { type ProcessedUploadResponse } from "./uploadPipelineShared";
-export type { SpatialUploadsHandlerRequest } from "./spatialUploadsHandlerTypes";
+import type { DelimitedUploadProcessingOptions } from "./spatialUploadsHandlerTypes";
+export type { SpatialUploadsHandlerRequest, DelimitedUploadProcessingOptions, } from "./spatialUploadsHandlerTypes";
 export { MAX_OUTPUT_SIZE, MVT_THRESHOLD, } from "./uploadPipelineShared";
 export type { ProcessedUploadLayer, ProcessedUploadResponse, ProgressUpdater, ResponseOutput, SupportedTypes, } from "./uploadPipelineShared";
 export default function handleUpload(
@@ -14,5 +15,7 @@ slug: string,
  */
 requestingUser: string, skipLoggingProgress?: boolean, 
 /** When true, run column intelligence / title / attribution LLMs (requires CF_AIG_* env). */
-enableAiDataAnalyst?: boolean): Promise<ProcessedUploadResponse>;
+enableAiDataAnalyst?: boolean, 
+/** Column mapping / CRS for delimited (CSV/TSV/TXT) uploads. */
+processingOptions?: DelimitedUploadProcessingOptions): Promise<ProcessedUploadResponse>;
 //# sourceMappingURL=handleUpload.d.ts.map

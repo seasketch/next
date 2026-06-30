@@ -38,6 +38,9 @@ import ProjectBackgroundJobManager, {
 import sleep from "../../sleep";
 import ConvertFeatureLayerToHostedModal from "../data/arcgis/ConvertFeatureLayerToHostedModal";
 import AiDataAnalystUploadPromptModal from "./AiDataAnalystUploadPromptModal";
+import DelimitedUploadConfigModal from "./delimitedSpatial/DelimitedUploadConfigModal";
+import { resolveDelimitedUploads } from "./delimitedSpatial/resolveDelimitedUploads";
+import { DelimitedUploadProcessingOptions } from "./delimitedSpatial/types";
 
 export type UploadType = "create" | "replace";
 
@@ -46,7 +49,8 @@ type SupportedSpatialFormat =
   | "shapefileZip"
   | "geotiff"
   | "netcdf"
-  | "flatgeobuf";
+  | "flatgeobuf"
+  | "delimited";
 
 const SUPPORTED_FORMATS: {
   id: SupportedSpatialFormat;
@@ -83,6 +87,12 @@ const SUPPORTED_FORMATS: {
     label: "FlatGeobuf",
     extensions: ".fgb",
     tag: "FGB",
+  },
+  {
+    id: "delimited",
+    label: "CSV / Delimited Text",
+    extensions: ".csv, .tsv, .txt",
+    tag: "CSV",
   },
 ];
 
@@ -165,9 +175,19 @@ function detectSupportedFormat(
       return "netcdf";
     case ".fgb":
       return "flatgeobuf";
+    case ".csv":
+    case ".tsv":
+    case ".txt":
+      return "delimited";
     default:
       return null;
   }
+}
+
+/** CSV/TSV/TXT files require column-mapping configuration before upload. */
+function isDelimitedSpatialFile(fileName: string): boolean {
+  const ext = fileExtension(fileName);
+  return ext === ".csv" || ext === ".tsv" || ext === ".txt";
 }
 
 type DroppedFileInfo = {
@@ -225,6 +245,16 @@ export default function DataUploadDropzone({
     finishedWithChangelog: boolean;
     changelog?: string;
     aiDataAnalystUploadPromptOpen: boolean;
+    /**
+     * Set when one or more dropped files require delimited-text column
+     * mapping. Upload of the entire batch (delimited and non-delimited
+     * files dropped together) is held until the user confirms or cancels.
+     */
+    pendingDelimitedUpload: {
+      delimitedFiles: File[];
+      otherFiles: File[];
+      autoConfigsByFile: Map<File, DelimitedUploadProcessingOptions>;
+    } | null;
   }>({
     droppedFiles: 0,
     droppedFileInfos: [],
@@ -232,6 +262,7 @@ export default function DataUploadDropzone({
     disabled: false,
     uploadType: "create",
     isUploadingReplacement: false,
+    pendingDelimitedUpload: null,
     replaceTableOfContentsItemId: null,
     finishedWithChangelog: true,
     aiDataAnalystUploadPromptOpen: false,
@@ -366,6 +397,82 @@ export default function DataUploadDropzone({
 
   useEffect(() => clearDismissTimer, [clearDismissTimer]);
 
+  // Kicks off the actual upload (S3 PUT + createDataUpload/submitDataUpload)
+  // for a batch of files. Used both for the immediate-upload path (no
+  // delimited files present) and after the delimited config modal confirms.
+  const startUpload = useCallback(
+    (
+      filesToUpload: File[],
+      processingOptionsByFile?: Map<File, DelimitedUploadProcessingOptions>
+    ) => {
+      const droppedFileInfos: DroppedFileInfo[] = filesToUpload.map(
+        (file) => ({
+          name: file.name,
+          format: detectSupportedFormat(file.name),
+        })
+      );
+
+      setState((prev) => ({
+        ...prev,
+        droppedFiles: filesToUpload.length,
+        droppedFileInfos,
+        error: undefined,
+      }));
+
+      if (state.manager) {
+        if (state.uploadType === "replace") {
+          setState((prev) => ({
+            ...prev,
+            isUploadingReplacement: true,
+            finishedWithChangelog: false,
+          }));
+        }
+        // Keep the confirmation visible briefly, then fade out and let the
+        // background job queue UI report on progress from here.
+        scheduleDismiss(OVERLAY_DISMISS_DELAY);
+        state.manager
+          .uploadFiles(
+            filesToUpload,
+            state.uploadType === "replace" && state.replaceTableOfContentsItemId
+              ? {
+                  replaceTableOfContentsItemId:
+                    state.replaceTableOfContentsItemId,
+                  processingOptionsByFile,
+                }
+              : { processingOptionsByFile }
+          )
+          .catch((e) => {
+            clearDismissTimer();
+            const error: ReactNode = /quota exceeded/.test(e.message) ? (
+              <Trans ns="admin:data">
+                This project has exceeded its data storage quota. Please delete
+                some data to make room for new uploads. You can see how much
+                space your layers are using by selecting{" "}
+                <b>View {"->"} Data Hosting Quota</b> from the toolbar.
+              </Trans>
+            ) : (
+              e.message
+            );
+            setState((prev) => ({
+              ...prev,
+              droppedFiles: 0,
+              droppedFileInfos: [],
+              isUploadingReplacement: false,
+              finishedWithChangelog: true,
+              error,
+            }));
+          });
+      }
+    },
+    [
+      state.manager,
+      state.uploadType,
+      state.replaceTableOfContentsItemId,
+      scheduleDismiss,
+      clearDismissTimer,
+    ]
+  );
+
   const onDrop = useCallback(
     async (acceptedFiles: File[]) => {
       clearDismissTimer();
@@ -377,12 +484,8 @@ export default function DataUploadDropzone({
           message = t(`"${file.name}" is a Word document.`);
         } else if (file.name.endsWith(".xlsx")) {
           message = t(`"${file.name}" is an Excel spreadsheet.`);
-        } else if (file.name.endsWith(".csv")) {
-          message = t(`"${file.name}" is a CSV file.`);
         } else if (file.name.endsWith(".pdf")) {
           message = t(`"${file.name}" is a PDF file.`);
-        } else if (file.name.endsWith(".txt")) {
-          message = t(`"${file.name}" is a text file.`);
         } else if (file.name.endsWith(".dbf")) {
           message = t(`"${file.name}" is a database file.`);
           isPartOfShapefile = true;
@@ -481,78 +584,84 @@ export default function DataUploadDropzone({
         return;
       }
 
-      const droppedFileInfos: DroppedFileInfo[] = filteredFiles.map((file) => ({
-        name: file.name,
-        format: detectSupportedFormat(file.name),
-      }));
-
-      setState((prev) => ({
-        ...prev,
-        droppedFiles: filteredFiles.length,
-        droppedFileInfos,
-        error: undefined,
-      }));
-
-      if (state.manager) {
-        if (state.uploadType === "replace") {
-          setState((prev) => ({
-            ...prev,
-            isUploadingReplacement: true,
-            finishedWithChangelog: false,
-          }));
+      // CSV/TSV/TXT files need column-mapping configuration before they can
+      // be uploaded. Hold the entire batch (including any non-delimited
+      // files dropped alongside them) until the user confirms or cancels.
+      const delimitedFiles = filteredFiles.filter((f) =>
+        isDelimitedSpatialFile(f.name)
+      );
+      const otherFiles = filteredFiles.filter(
+        (f) => !isDelimitedSpatialFile(f.name)
+      );
+      if (delimitedFiles.length > 0) {
+        const resolved = await resolveDelimitedUploads(delimitedFiles);
+        const blockingErrors = resolved
+          .map((entry) => entry.blockingError)
+          .filter((message): message is string => Boolean(message));
+        if (blockingErrors.length > 0) {
+          alert(blockingErrors.join("\n\n"));
+          return;
         }
-        // Keep the confirmation visible briefly, then fade out and let the
-        // background job queue UI report on progress from here.
-        scheduleDismiss(OVERLAY_DISMISS_DELAY);
-        state.manager
-          .uploadFiles(
-            filteredFiles,
-            state.uploadType === "replace" && state.replaceTableOfContentsItemId
-              ? {
-                  replaceTableOfContentsItemId:
-                    state.replaceTableOfContentsItemId,
-                }
-              : undefined
-          )
-          .catch((e) => {
-            clearDismissTimer();
-            const error: ReactNode = /quota exceeded/.test(e.message) ? (
-              <Trans ns="admin:data">
-                This project has exceeded its data storage quota. Please delete
-                some data to make room for new uploads. You can see how much
-                space your layers are using by selecting{" "}
-                <b>View {"->"} Data Hosting Quota</b> from the toolbar.
-              </Trans>
-            ) : (
-              e.message
-            );
-            setState((prev) => ({
-              ...prev,
-              droppedFiles: 0,
-              droppedFileInfos: [],
-              isUploadingReplacement: false,
-              finishedWithChangelog: true,
-              error,
-            }));
-          });
+
+        const autoConfigsByFile = new Map<
+          File,
+          DelimitedUploadProcessingOptions
+        >();
+        const filesNeedingConfig: File[] = [];
+        for (const entry of resolved) {
+          if (entry.needsConfig) {
+            filesNeedingConfig.push(entry.file);
+          } else if (entry.processingOptions) {
+            autoConfigsByFile.set(entry.file, entry.processingOptions);
+          }
+        }
+
+        if (filesNeedingConfig.length === 0) {
+          startUpload([...otherFiles, ...delimitedFiles], autoConfigsByFile);
+          return;
+        }
+
+        setState((prev) => ({
+          ...prev,
+          pendingDelimitedUpload: {
+            delimitedFiles: filesNeedingConfig,
+            otherFiles,
+            autoConfigsByFile,
+          },
+        }));
+        return;
       }
+
+      startUpload(filteredFiles);
     },
-    [
-      alert,
-      confirm,
-      state.manager,
-      t,
-      state.uploadType,
-      state.replaceTableOfContentsItemId,
-      scheduleDismiss,
-      clearDismissTimer,
-    ]
+    [alert, confirm, t, state.uploadType, clearDismissTimer, startUpload]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
     noClick: true,
   });
+
+  const onCancelDelimitedConfig = useCallback(() => {
+    setState((prev) => ({ ...prev, pendingDelimitedUpload: null }));
+  }, []);
+
+  const onSubmitDelimitedConfig = useCallback(
+    (configsByFile: Map<File, DelimitedUploadProcessingOptions>) => {
+      const pending = state.pendingDelimitedUpload;
+      if (!pending) return;
+      setState((prev) => ({ ...prev, pendingDelimitedUpload: null }));
+      const processingOptionsByFile = new Map(pending.autoConfigsByFile);
+      configsByFile.forEach((options, file) => {
+        processingOptionsByFile.set(file, options);
+      });
+      startUpload(
+        [...pending.otherFiles, ...Array.from(processingOptionsByFile.keys())],
+        processingOptionsByFile
+      );
+    },
+    [state.pendingDelimitedUpload, startUpload]
+  );
 
   const showOverlay =
     isDragActive || state.droppedFiles > 0 || Boolean(state.error);
@@ -592,7 +701,7 @@ export default function DataUploadDropzone({
         browseForFiles: (multiple?: boolean) => {
           const fileInput = document.createElement("input");
           fileInput.type = "file";
-          fileInput.accept = ".zip,.json,.geojson,.fgb,.tif,.tiff";
+          fileInput.accept = ".zip,.json,.geojson,.fgb,.tif,.tiff,.csv,.tsv,.txt";
           fileInput.multiple = multiple || false;
           fileInput.onchange = async (e) => {
             const files = (e.target as HTMLInputElement).files;
@@ -653,6 +762,13 @@ export default function DataUploadDropzone({
                 aiDataAnalystUploadPromptOpen: false,
               }));
             }}
+          />
+        )}
+        {state.pendingDelimitedUpload && (
+          <DelimitedUploadConfigModal
+            files={state.pendingDelimitedUpload.delimitedFiles}
+            onSubmit={onSubmitDelimitedConfig}
+            onCancel={onCancelDelimitedConfig}
           />
         )}
         <input {...getInputProps()} className="w-1 h-1" />

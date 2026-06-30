@@ -327,6 +327,10 @@ function DownloadFormatDescription({ type }: { type: DataUploadOutputType }) {
                 are a compressed binary format compatible with most software.
               </Trans>
             );
+          case DataUploadOutputType.Csv:
+            return t(
+              "Delimited text file (e.g. CSV), compatible with excel and other spreadsheet software."
+            );
           default:
             return null;
         }

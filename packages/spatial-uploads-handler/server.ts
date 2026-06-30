@@ -23,6 +23,7 @@ const server = createServer(function (req, res) {
             data.requestingUser,
             data.skipLoggingProgress,
             data.enableAiDataAnalyst,
+            data.processingOptions,
           );
           for (const layer of outputs.layers) {
             console.log(`outputted - ${layer.name} ${layer.url}`);

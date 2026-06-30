@@ -7,7 +7,7 @@ import type { AiDataAnalystNotes } from "ai-data-analyst";
  * `processVectorUpload` do not import `handleUpload` (which imports them),
  * which would create a circular dependency and break Node 22+ / tsx.
  */
-export type SupportedTypes = "GeoJSON" | "FlatGeobuf" | "ZippedShapefile" | "GeoTIFF" | "NetCDF";
+export type SupportedTypes = "GeoJSON" | "FlatGeobuf" | "ZippedShapefile" | "GeoTIFF" | "NetCDF" | "CSV";
 export interface ResponseOutput {
     /** Remote location string as used in rclone */
     remote: string;

@@ -398,6 +398,8 @@ export function humanizeOutputType(type: DataUploadOutputType | "Archives") {
       return "PNG Image";
     case DataUploadOutputType.NetCdf:
       return "NetCDF";
+    case DataUploadOutputType.Csv:
+      return "CSV";
     case "Archives":
       return "Archived Versions";
     case DataUploadOutputType.Xmlmetadata:
