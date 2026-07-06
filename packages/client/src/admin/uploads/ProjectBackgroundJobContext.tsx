@@ -319,6 +319,14 @@ export default function DataUploadDropzone({
           });
         }
       );
+      manager.on(
+        "data-table-upload-complete",
+        (event: { jobId: string; tableOfContentsItemId: number }) => {
+          client.refetchQueries({
+            include: [GetLayerItemDocument, DraftTableOfContentsDocument],
+          });
+        }
+      );
       manager.on("upload-error", (event: DataUploadErrorEvent) => {
         if (dismissTimerRef.current) {
           clearTimeout(dismissTimerRef.current);

@@ -19,6 +19,7 @@ import {
   summary,
   valueText,
 } from "../changelogs/fieldGroups/FieldGroupListItemBase";
+import { tocItemIdFromMeta } from "../../changelogs/fieldGroups/dataTableSummary";
 import useProjectId from "../../useProjectId";
 import { CHANGE_LOG_INTRODUCTION_DATE } from "../changelogs/constants";
 import PublishSummarizedChangesPanel from "./PublishSummarizedChangesPanel";
@@ -766,6 +767,15 @@ function titleForChangeLog(
   itemTitleById: Map<number, { title: string; isFolder: boolean }>,
   fallback: (key: string) => string
 ) {
+  if (changeLog.entityType === "overlay_data_table") {
+    const tocItemId = tocItemIdFromMeta(changeLog.meta);
+    if (tocItemId == null) {
+      return undefined;
+    }
+    const currentItem = itemTitleById.get(tocItemId);
+    return currentItem?.title ?? fallback("Unknown layer");
+  }
+
   if (changeLog.entityType !== "table_of_contents_items") {
     return undefined;
   }

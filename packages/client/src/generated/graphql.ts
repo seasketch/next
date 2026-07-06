@@ -956,6 +956,11 @@ export type ChangeLogCondition = {
 };
 
 export enum ChangeLogFieldGroup {
+  DataTableCreated = 'DATA_TABLE_CREATED',
+  DataTableDeleted = 'DATA_TABLE_DELETED',
+  DataTableRenamed = 'DATA_TABLE_RENAMED',
+  DataTableReplaced = 'DATA_TABLE_REPLACED',
+  DataTableRollback = 'DATA_TABLE_ROLLBACK',
   FolderAcl = 'FOLDER_ACL',
   FolderCreated = 'FOLDER_CREATED',
   FolderDeleted = 'FOLDER_DELETED',
@@ -2027,6 +2032,43 @@ export type CreateOriginalSourceIdPayload = {
 /** The output of our create `OriginalSourceId` mutation. */
 export type CreateOriginalSourceIdPayloadOriginalSourceIdEdgeArgs = {
   orderBy?: Maybe<Array<OriginalSourceIdsOrderBy>>;
+};
+
+/** All input for the `createOverlayDataTableUpload` mutation. */
+export type CreateOverlayDataTableUploadInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  contentType?: Maybe<Scalars['String']>;
+  filename?: Maybe<Scalars['String']>;
+  processingOptions?: Maybe<Scalars['JSON']>;
+  replaceOverlayDataTableId?: Maybe<Scalars['Int']>;
+  tocItemId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `createOverlayDataTableUpload` mutation. */
+export type CreateOverlayDataTableUploadPayload = {
+  __typename?: 'CreateOverlayDataTableUploadPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  overlayDataTableUpload?: Maybe<OverlayDataTableUpload>;
+  /** An edge for our `OverlayDataTableUpload`. May be used by Relay 1. */
+  overlayDataTableUploadEdge?: Maybe<OverlayDataTableUploadsEdge>;
+  /** Reads a single `ProjectBackgroundJob` that is related to this `OverlayDataTableUpload`. */
+  projectBackgroundJob?: Maybe<ProjectBackgroundJob>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `createOverlayDataTableUpload` mutation. */
+export type CreateOverlayDataTableUploadPayloadOverlayDataTableUploadEdgeArgs = {
+  orderBy?: Maybe<Array<OverlayDataTableUploadsOrderBy>>;
 };
 
 export type CreateProjectGeographyClippingLayerInput = {
@@ -7991,6 +8033,7 @@ export type Mutation = {
   createOptionalBasemapLayer?: Maybe<CreateOptionalBasemapLayerPayload>;
   /** Creates a single `OriginalSourceId`. */
   createOriginalSourceId?: Maybe<CreateOriginalSourceIdPayload>;
+  createOverlayDataTableUpload?: Maybe<CreateOverlayDataTableUploadPayload>;
   createPost: Post;
   /**
    * Users with verified emails can create new projects by choosing a unique name
@@ -8274,6 +8317,7 @@ export type Mutation = {
   removeUserFromGroup?: Maybe<RemoveUserFromGroupPayload>;
   /** Remove a SketchClass from the list of valid children for a Collection. */
   removeValidChildSketchClass?: Maybe<RemoveValidChildSketchClassPayload>;
+  renameOverlayDataTable?: Maybe<RenameOverlayDataTablePayload>;
   renameReportTab?: Maybe<RenameReportTabPayload>;
   reopenResolvableLayerComment?: Maybe<ReopenResolvableLayerCommentPayload>;
   reorderReportTabCards?: Maybe<ReorderReportTabCardsPayload>;
@@ -8293,6 +8337,7 @@ export type Mutation = {
   /** Remove participant admin privileges. */
   revokeAdminAccess?: Maybe<RevokeAdminAccessPayload>;
   revokeApiKey?: Maybe<RevokeApiKeyPayload>;
+  rollbackOverlayDataTableVersion?: Maybe<RollbackOverlayDataTableVersionPayload>;
   rollbackToArchivedSource?: Maybe<RollbackToArchivedSourcePayload>;
   /** Send all UNSENT invites in the current project. */
   sendAllProjectInvites?: Maybe<SendAllProjectInvitesPayload>;
@@ -8352,9 +8397,11 @@ export type Mutation = {
   setUserGroups?: Maybe<SetUserGroupsPayload>;
   /** Superusers only. Promote a sprite to be globally available. */
   shareSprite?: Maybe<ShareSpritePayload>;
+  softDeleteOverlayDataTable?: Maybe<SoftDeleteOverlayDataTablePayload>;
   /** Superusers only. "Deletes" a sprite but keeps it in the DB in case layers are already referencing it. */
   softDeleteSprite?: Maybe<SoftDeleteSpritePayload>;
   submitDataUpload?: Maybe<SubmitDataUploadPayload>;
+  submitOverlayDataTableUpload?: Maybe<SubmitOverlayDataTableUploadPayload>;
   /**
    * Toggle admin access for the given project and user. User must have already
    * joined the project and shared their user profile.
@@ -8826,6 +8873,12 @@ export type MutationCreateOptionalBasemapLayerArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateOriginalSourceIdArgs = {
   input: CreateOriginalSourceIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateOverlayDataTableUploadArgs = {
+  input: CreateOverlayDataTableUploadInput;
 };
 
 
@@ -9607,6 +9660,12 @@ export type MutationRemoveValidChildSketchClassArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationRenameOverlayDataTableArgs = {
+  input: RenameOverlayDataTableInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationRenameReportTabArgs = {
   input: RenameReportTabInput;
 };
@@ -9676,6 +9735,12 @@ export type MutationRevokeAdminAccessArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationRevokeApiKeyArgs = {
   input: RevokeApiKeyInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationRollbackOverlayDataTableVersionArgs = {
+  input: RollbackOverlayDataTableVersionInput;
 };
 
 
@@ -9806,6 +9871,12 @@ export type MutationShareSpriteArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationSoftDeleteOverlayDataTableArgs = {
+  input: SoftDeleteOverlayDataTableInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationSoftDeleteSpriteArgs = {
   input: SoftDeleteSpriteInput;
 };
@@ -9814,6 +9885,12 @@ export type MutationSoftDeleteSpriteArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationSubmitDataUploadArgs = {
   input: SubmitDataUploadInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationSubmitOverlayDataTableUploadArgs = {
+  input: SubmitOverlayDataTableUploadInput;
 };
 
 
@@ -10710,6 +10787,140 @@ export type OutstandingSurveyInvites = {
   token: Scalars['String'];
 };
 
+export type OverlayDataTable = Node & {
+  __typename?: 'OverlayDataTable';
+  columnStatsRemote: Scalars['String'];
+  columnStatsUrl?: Maybe<Scalars['String']>;
+  createdAt?: Maybe<Scalars['Datetime']>;
+  createdBy: Scalars['Int'];
+  deletedAt?: Maybe<Scalars['Datetime']>;
+  id: Scalars['Int'];
+  joinColumn: Scalars['String'];
+  name: Scalars['String'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  overlayJoinColumn: Scalars['String'];
+  parquetRemote: Scalars['String'];
+  parquetUrl?: Maybe<Scalars['String']>;
+  /** Reads a single `Project` that is related to this `OverlayDataTable`. */
+  project?: Maybe<Project>;
+  projectId: Scalars['Int'];
+  replacedById?: Maybe<Scalars['Int']>;
+  rowCount: Scalars['Int'];
+  tableOfContentsItemId: Scalars['Int'];
+  updatedAt?: Maybe<Scalars['Datetime']>;
+  version: Scalars['Int'];
+};
+
+/**
+ * A condition to be used against `OverlayDataTable` object types. All fields are
+ * tested for equality and combined with a logical ‘and.’
+ */
+export type OverlayDataTableCondition = {
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `projectId` field. */
+  projectId?: Maybe<Scalars['Int']>;
+};
+
+export type OverlayDataTableUpload = Node & {
+  __typename?: 'OverlayDataTableUpload';
+  contentType: Scalars['String'];
+  createdAt?: Maybe<Scalars['Datetime']>;
+  errorDetails?: Maybe<Scalars['JSON']>;
+  filename: Scalars['String'];
+  id: Scalars['UUID'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  overlayGeostats: Scalars['JSON'];
+  overlayJoinColumn?: Maybe<Scalars['String']>;
+  presignedUploadUrl?: Maybe<Scalars['String']>;
+  processingOptions: Scalars['JSON'];
+  /** Reads a single `ProjectBackgroundJob` that is related to this `OverlayDataTableUpload`. */
+  projectBackgroundJob?: Maybe<ProjectBackgroundJob>;
+  projectBackgroundJobId: Scalars['UUID'];
+  replaceOverlayDataTableId?: Maybe<Scalars['Int']>;
+  tableOfContentsItemId: Scalars['Int'];
+  updatedAt?: Maybe<Scalars['Datetime']>;
+};
+
+/**
+ * A condition to be used against `OverlayDataTableUpload` object types. All fields
+ * are tested for equality and combined with a logical ‘and.’
+ */
+export type OverlayDataTableUploadCondition = {
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['UUID']>;
+  /** Checks for equality with the object’s `projectBackgroundJobId` field. */
+  projectBackgroundJobId?: Maybe<Scalars['UUID']>;
+};
+
+/** A connection to a list of `OverlayDataTableUpload` values. */
+export type OverlayDataTableUploadsConnection = {
+  __typename?: 'OverlayDataTableUploadsConnection';
+  /** A list of edges which contains the `OverlayDataTableUpload` and cursor to aid in pagination. */
+  edges: Array<OverlayDataTableUploadsEdge>;
+  /** A list of `OverlayDataTableUpload` objects. */
+  nodes: Array<OverlayDataTableUpload>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `OverlayDataTableUpload` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `OverlayDataTableUpload` edge in the connection. */
+export type OverlayDataTableUploadsEdge = {
+  __typename?: 'OverlayDataTableUploadsEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `OverlayDataTableUpload` at the end of the edge. */
+  node: OverlayDataTableUpload;
+};
+
+/** Methods to use when ordering `OverlayDataTableUpload`. */
+export enum OverlayDataTableUploadsOrderBy {
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  ProjectBackgroundJobIdAsc = 'PROJECT_BACKGROUND_JOB_ID_ASC',
+  ProjectBackgroundJobIdDesc = 'PROJECT_BACKGROUND_JOB_ID_DESC'
+}
+
+/** A connection to a list of `OverlayDataTable` values. */
+export type OverlayDataTablesConnection = {
+  __typename?: 'OverlayDataTablesConnection';
+  /** A list of edges which contains the `OverlayDataTable` and cursor to aid in pagination. */
+  edges: Array<OverlayDataTablesEdge>;
+  /** A list of `OverlayDataTable` objects. */
+  nodes: Array<OverlayDataTable>;
+  /** Information to aid in pagination. */
+  pageInfo: PageInfo;
+  /** The count of *all* `OverlayDataTable` you could get from the connection. */
+  totalCount: Scalars['Int'];
+};
+
+/** A `OverlayDataTable` edge in the connection. */
+export type OverlayDataTablesEdge = {
+  __typename?: 'OverlayDataTablesEdge';
+  /** A cursor for use in pagination. */
+  cursor?: Maybe<Scalars['Cursor']>;
+  /** The `OverlayDataTable` at the end of the edge. */
+  node: OverlayDataTable;
+};
+
+/** Methods to use when ordering `OverlayDataTable`. */
+export enum OverlayDataTablesOrderBy {
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  ProjectIdAsc = 'PROJECT_ID_ASC',
+  ProjectIdDesc = 'PROJECT_ID_DESC'
+}
+
 /** Information about pagination in a connection. */
 export type PageInfo = {
   __typename?: 'PageInfo';
@@ -11095,6 +11306,8 @@ export type Project = Node & {
   offlineTilePackagesConnection: OfflineTilePackagesConnection;
   /** Reads and enables pagination through a set of `OfflineTileSetting`. */
   offlineTileSettings: Array<OfflineTileSetting>;
+  /** Reads and enables pagination through a set of `OverlayDataTable`. */
+  overlayDataTablesConnection: OverlayDataTablesConnection;
   /** Count of all users who have opted into participating in the project, sharing their profile with project administrators. */
   participantCount?: Maybe<Scalars['Int']>;
   /**
@@ -11518,6 +11731,21 @@ export type ProjectOfflineTileSettingsArgs = {
  * SeaSketch Project type. This root type contains most of the fields and queries
  * needed to drive the application.
  */
+export type ProjectOverlayDataTablesConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<OverlayDataTableCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<OverlayDataTablesOrderBy>>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
 export type ProjectParticipantsArgs = {
   direction?: Maybe<SortByDirection>;
   first?: Maybe<Scalars['Int']>;
@@ -11725,6 +11953,13 @@ export type ProjectBackgroundJob = Node & {
   id: Scalars['UUID'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  /** Reads a single `OverlayDataTableUpload` that is related to this `ProjectBackgroundJob`. */
+  overlayDataTableUpload?: Maybe<OverlayDataTableUpload>;
+  /**
+   * Reads and enables pagination through a set of `OverlayDataTableUpload`.
+   * @deprecated Please use overlayDataTableUpload instead
+   */
+  overlayDataTableUploadsConnection: OverlayDataTableUploadsConnection;
   progress?: Maybe<Scalars['BigFloat']>;
   progressMessage: Scalars['String'];
   /** Reads a single `Project` that is related to this `ProjectBackgroundJob`. */
@@ -11747,6 +11982,17 @@ export type ProjectBackgroundJobDataUploadTasksConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<DataUploadTasksOrderBy>>;
+};
+
+
+export type ProjectBackgroundJobOverlayDataTableUploadsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<OverlayDataTableUploadCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<OverlayDataTableUploadsOrderBy>>;
 };
 
 /**
@@ -11779,6 +12025,7 @@ export type ProjectBackgroundJobSubscriptionPayload = {
 export enum ProjectBackgroundJobType {
   ArcgisImport = 'ARCGIS_IMPORT',
   ConsolidateDataSources = 'CONSOLIDATE_DATA_SOURCES',
+  DataTableUpload = 'DATA_TABLE_UPLOAD',
   DataUpload = 'DATA_UPLOAD',
   ReplacementUpload = 'REPLACEMENT_UPLOAD'
 }
@@ -12495,6 +12742,18 @@ export type Query = Node & {
   optionalBasemapLayerByNodeId?: Maybe<OptionalBasemapLayer>;
   /** Reads and enables pagination through a set of `OriginalSourceId`. */
   originalSourceIdsConnection?: Maybe<OriginalSourceIdsConnection>;
+  overlayDataTable?: Maybe<OverlayDataTable>;
+  /** Reads a single `OverlayDataTable` using its globally unique `ID`. */
+  overlayDataTableByNodeId?: Maybe<OverlayDataTable>;
+  overlayDataTableLinkedTocIsDraft?: Maybe<Scalars['Boolean']>;
+  /** Reads and enables pagination through a set of `OverlayDataTable`. */
+  overlayDataTablesConnection?: Maybe<OverlayDataTablesConnection>;
+  overlayDataTableUpload?: Maybe<OverlayDataTableUpload>;
+  /** Reads a single `OverlayDataTableUpload` using its globally unique `ID`. */
+  overlayDataTableUploadByNodeId?: Maybe<OverlayDataTableUpload>;
+  overlayDataTableUploadByProjectBackgroundJobId?: Maybe<OverlayDataTableUpload>;
+  /** Reads and enables pagination through a set of `OverlayDataTableUpload`. */
+  overlayDataTableUploadsConnection?: Maybe<OverlayDataTableUploadsConnection>;
   post?: Maybe<Post>;
   /** Reads a single `Post` using its globally unique `ID`. */
   postByNodeId?: Maybe<Post>;
@@ -13393,6 +13652,67 @@ export type QueryOriginalSourceIdsConnectionArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
+export type QueryOverlayDataTableArgs = {
+  id: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryOverlayDataTableByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryOverlayDataTableLinkedTocIsDraftArgs = {
+  pid?: Maybe<Scalars['Int']>;
+  tocItemId?: Maybe<Scalars['Int']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryOverlayDataTablesConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<OverlayDataTableCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<OverlayDataTablesOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryOverlayDataTableUploadArgs = {
+  id: Scalars['UUID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryOverlayDataTableUploadByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryOverlayDataTableUploadByProjectBackgroundJobIdArgs = {
+  projectBackgroundJobId: Scalars['UUID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryOverlayDataTableUploadsConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<OverlayDataTableUploadCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<OverlayDataTableUploadsOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
 export type QueryPostArgs = {
   id: Scalars['Int'];
 };
@@ -14092,6 +14412,40 @@ export type RemoveValidChildSketchClassPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `renameOverlayDataTable` mutation. */
+export type RenameOverlayDataTableInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  newName?: Maybe<Scalars['String']>;
+  tableId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `renameOverlayDataTable` mutation. */
+export type RenameOverlayDataTablePayload = {
+  __typename?: 'RenameOverlayDataTablePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  overlayDataTable?: Maybe<OverlayDataTable>;
+  /** An edge for our `OverlayDataTable`. May be used by Relay 1. */
+  overlayDataTableEdge?: Maybe<OverlayDataTablesEdge>;
+  /** Reads a single `Project` that is related to this `OverlayDataTable`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `renameOverlayDataTable` mutation. */
+export type RenameOverlayDataTablePayloadOverlayDataTableEdgeArgs = {
+  orderBy?: Maybe<Array<OverlayDataTablesOrderBy>>;
+};
+
 /** All input for the `renameReportTab` mutation. */
 export type RenameReportTabInput = {
   alternateLanguageSettings?: Maybe<Scalars['JSON']>;
@@ -14626,6 +14980,39 @@ export type RevokeApiKeyPayload = {
   clientMutationId?: Maybe<Scalars['String']>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
+};
+
+/** All input for the `rollbackOverlayDataTableVersion` mutation. */
+export type RollbackOverlayDataTableVersionInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  tableId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `rollbackOverlayDataTableVersion` mutation. */
+export type RollbackOverlayDataTableVersionPayload = {
+  __typename?: 'RollbackOverlayDataTableVersionPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  overlayDataTable?: Maybe<OverlayDataTable>;
+  /** An edge for our `OverlayDataTable`. May be used by Relay 1. */
+  overlayDataTableEdge?: Maybe<OverlayDataTablesEdge>;
+  /** Reads a single `Project` that is related to this `OverlayDataTable`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `rollbackOverlayDataTableVersion` mutation. */
+export type RollbackOverlayDataTableVersionPayloadOverlayDataTableEdgeArgs = {
+  orderBy?: Maybe<Array<OverlayDataTablesOrderBy>>;
 };
 
 /** All input for the `rollbackToArchivedSource` mutation. */
@@ -15514,6 +15901,39 @@ export type SketchesRelatedFragmentsRecord = {
   sketches?: Maybe<Array<Maybe<Scalars['Int']>>>;
 };
 
+/** All input for the `softDeleteOverlayDataTable` mutation. */
+export type SoftDeleteOverlayDataTableInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  tableId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `softDeleteOverlayDataTable` mutation. */
+export type SoftDeleteOverlayDataTablePayload = {
+  __typename?: 'SoftDeleteOverlayDataTablePayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  overlayDataTable?: Maybe<OverlayDataTable>;
+  /** An edge for our `OverlayDataTable`. May be used by Relay 1. */
+  overlayDataTableEdge?: Maybe<OverlayDataTablesEdge>;
+  /** Reads a single `Project` that is related to this `OverlayDataTable`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `softDeleteOverlayDataTable` mutation. */
+export type SoftDeleteOverlayDataTablePayloadOverlayDataTableEdgeArgs = {
+  orderBy?: Maybe<Array<OverlayDataTablesOrderBy>>;
+};
+
 /** All input for the `softDeleteSprite` mutation. */
 export type SoftDeleteSpriteInput = {
   /**
@@ -15725,6 +16145,31 @@ export type SubmitDataUploadInput = {
 /** The output of our `submitDataUpload` mutation. */
 export type SubmitDataUploadPayload = {
   __typename?: 'SubmitDataUploadPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `Project` that is related to this `ProjectBackgroundJob`. */
+  project?: Maybe<Project>;
+  projectBackgroundJob?: Maybe<ProjectBackgroundJob>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+/** All input for the `submitOverlayDataTableUpload` mutation. */
+export type SubmitOverlayDataTableUploadInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  jobId?: Maybe<Scalars['UUID']>;
+};
+
+/** The output of our `submitOverlayDataTableUpload` mutation. */
+export type SubmitOverlayDataTableUploadPayload = {
+  __typename?: 'SubmitOverlayDataTableUploadPayload';
   /**
    * The exact same `clientMutationId` that was provided in the mutation input,
    * unchanged and unused. May be used by a client to track mutations.
@@ -16284,8 +16729,14 @@ export type TableOfContentsItem = Node & {
   /** If is_folder=false, a DataLayers visibility will be controlled by this item */
   dataLayerId?: Maybe<Scalars['Int']>;
   dataSourceType?: Maybe<DataSourceTypes>;
+  /** Reads and enables pagination through a set of `ChangeLog`. */
+  dataTableChangeLogs?: Maybe<Array<ChangeLog>>;
+  /** Overlay attribute name used as the canonical feature ID for linked data tables. Required when enable_data_tables is true. */
+  dataTableJoinColumn?: Maybe<Scalars['String']>;
   /** Reads and enables pagination through a set of `DownloadOption`. */
   downloadOptions?: Maybe<Array<DownloadOption>>;
+  /** When true, admins can attach CSV data tables linked to this layer by a canonical join column. */
+  enableDataTables: Scalars['Boolean'];
   enableDownload: Scalars['Boolean'];
   ftsAr?: Maybe<Scalars['String']>;
   ftsDa?: Maybe<Scalars['String']>;
@@ -16334,6 +16785,8 @@ export type TableOfContentsItem = Node & {
   metadataXml?: Maybe<DataUploadOutput>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  /** Reads and enables pagination through a set of `OverlayDataTable`. */
+  overlayDataTables?: Maybe<Array<OverlayDataTable>>;
   /**
    * stable_id of the parent folder, if any. This property cannot be changed
    * directly. To rearrange items into folders, use the
@@ -16434,6 +16887,22 @@ export type TableOfContentsItemChangeLogsArgs = {
  * batch only once the layer is turned on, using the
  * `dataLayersAndSourcesByLayerId` query.
  */
+export type TableOfContentsItemDataTableChangeLogsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * TableOfContentsItems represent a tree-view of folders and operational layers
+ * that can be added to the map. Both layers and folders may be nested into other
+ * folders for organization, and each folder has its own access control list.
+ *
+ * Items that represent data layers have a `DataLayer` relation, which in turn has
+ * a reference to a `DataSource`. Usually these relations should be fetched in
+ * batch only once the layer is turned on, using the
+ * `dataLayersAndSourcesByLayerId` query.
+ */
 export type TableOfContentsItemDownloadOptionsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
@@ -16451,6 +16920,22 @@ export type TableOfContentsItemDownloadOptionsArgs = {
  * `dataLayersAndSourcesByLayerId` query.
  */
 export type TableOfContentsItemMetadataChangeLogsArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * TableOfContentsItems represent a tree-view of folders and operational layers
+ * that can be added to the map. Both layers and folders may be nested into other
+ * folders for organization, and each folder has its own access control list.
+ *
+ * Items that represent data layers have a `DataLayer` relation, which in turn has
+ * a reference to a `DataSource`. Usually these relations should be fetched in
+ * batch only once the layer is turned on, using the
+ * `dataLayersAndSourcesByLayerId` query.
+ */
+export type TableOfContentsItemOverlayDataTablesArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
 };
@@ -16628,6 +17113,10 @@ export type TableOfContentsItemPatch = {
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   /** If is_folder=false, a DataLayers visibility will be controlled by this item */
   dataLayerId?: Maybe<Scalars['Int']>;
+  /** Overlay attribute name used as the canonical feature ID for linked data tables. Required when enable_data_tables is true. */
+  dataTableJoinColumn?: Maybe<Scalars['String']>;
+  /** When true, admins can attach CSV data tables linked to this layer by a canonical join column. */
+  enableDataTables?: Maybe<Scalars['Boolean']>;
   enableDownload?: Maybe<Scalars['Boolean']>;
   geoprocessingReferenceId?: Maybe<Scalars['String']>;
   hideChildren?: Maybe<Scalars['Boolean']>;
@@ -20569,6 +21058,9 @@ export type JobDetailsFragment = (
       { __typename?: 'TableOfContentsItem' }
       & Pick<TableOfContentsItem, 'id' | 'title'>
     )> }
+  )>, overlayDataTableUpload?: Maybe<(
+    { __typename?: 'OverlayDataTableUpload' }
+    & Pick<OverlayDataTableUpload, 'id' | 'tableOfContentsItemId' | 'filename' | 'replaceOverlayDataTableId'>
   )> }
 );
 
@@ -21169,6 +21661,24 @@ export type LayerSettingsChangeLogQuery = (
   )> }
 );
 
+export type DataTableChangeLogQueryVariables = Exact<{
+  id: Scalars['Int'];
+  first: Scalars['Int'];
+}>;
+
+
+export type DataTableChangeLogQuery = (
+  { __typename?: 'Query' }
+  & { tableOfContentsItem?: Maybe<(
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id'>
+    & { dataTableChangeLogs?: Maybe<Array<(
+      { __typename?: 'ChangeLog' }
+      & ChangeLogDetailsFragment
+    )>> }
+  )> }
+);
+
 export type ResolvableLayerCommentDetailsFragment = (
   { __typename?: 'ResolvableLayerComment' }
   & Pick<ResolvableLayerComment, 'id' | 'projectId' | 'tableOfContentsItemId' | 'comment' | 'createdAt' | 'resolvedAt' | 'resolvedById'>
@@ -21205,7 +21715,7 @@ export type ResolvableLayerCommentThreadForChangelogQuery = (
 
 export type FullAdminOverlayFragment = (
   { __typename?: 'TableOfContentsItem' }
-  & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'dataSourceType' | 'metadata' | 'parentStableId' | 'projectId' | 'stableId' | 'title' | 'enableDownload' | 'geoprocessingReferenceId' | 'copiedFromDataLibraryTemplateId' | 'primaryDownloadUrl' | 'hasOriginalSourceUpload' | 'resolvedCommentCount'>
+  & Pick<TableOfContentsItem, 'id' | 'bounds' | 'dataLayerId' | 'dataSourceType' | 'metadata' | 'parentStableId' | 'projectId' | 'stableId' | 'title' | 'enableDownload' | 'enableDataTables' | 'dataTableJoinColumn' | 'geoprocessingReferenceId' | 'copiedFromDataLibraryTemplateId' | 'primaryDownloadUrl' | 'hasOriginalSourceUpload' | 'resolvedCommentCount'>
   & { acl?: Maybe<(
     { __typename?: 'Acl' }
     & Pick<Acl, 'nodeId' | 'id' | 'type'>
@@ -21218,11 +21728,14 @@ export type FullAdminOverlayFragment = (
     & Pick<TableOfContentsItem, 'id' | 'stableId' | 'title'>
   )>>>, projectBackgroundJobs?: Maybe<Array<(
     { __typename?: 'ProjectBackgroundJob' }
-    & Pick<ProjectBackgroundJob, 'id' | 'type' | 'title' | 'state' | 'progress' | 'progressMessage' | 'errorMessage'>
+    & JobDetailsFragment
   )>>, dataLayer?: Maybe<(
     { __typename?: 'DataLayer' }
     & FullAdminDataLayerFragment
-  )>, relatedReportCardDetails?: Maybe<Array<Maybe<(
+  )>, overlayDataTables?: Maybe<Array<(
+    { __typename?: 'OverlayDataTable' }
+    & OverlayDataTableDetailsFragment
+  )>>, relatedReportCardDetails?: Maybe<Array<Maybe<(
     { __typename?: 'RelatedReportCard' }
     & Pick<RelatedReportCard, 'isDraft' | 'title' | 'sketchClassId'>
     & { sketchClass: (
@@ -21288,6 +21801,24 @@ export type UpdateEnableDownloadMutation = (
         { __typename?: 'Project' }
         & Pick<Project, 'id' | 'downloadableLayersCount' | 'eligableDownloadableLayersCount'>
       )> }
+    )> }
+  )> }
+);
+
+export type UpdateDataTablesSettingsMutationVariables = Exact<{
+  id: Scalars['Int'];
+  enableDataTables?: Maybe<Scalars['Boolean']>;
+  dataTableJoinColumn?: Maybe<Scalars['String']>;
+}>;
+
+
+export type UpdateDataTablesSettingsMutation = (
+  { __typename?: 'Mutation' }
+  & { updateTableOfContentsItem?: Maybe<(
+    { __typename?: 'UpdateTableOfContentsItemPayload' }
+    & { tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'enableDataTables' | 'dataTableJoinColumn'>
     )> }
   )> }
 );
@@ -23272,6 +23803,104 @@ export type GetTilePackageQuery = (
   & { offlineTilePackage?: Maybe<(
     { __typename?: 'OfflineTilePackage' }
     & OfflineTilePackageDetailsFragment
+  )> }
+);
+
+export type OverlayDataTableDetailsFragment = (
+  { __typename?: 'OverlayDataTable' }
+  & Pick<OverlayDataTable, 'id' | 'name' | 'version' | 'joinColumn' | 'overlayJoinColumn' | 'rowCount' | 'parquetRemote' | 'columnStatsRemote' | 'parquetUrl' | 'columnStatsUrl' | 'deletedAt' | 'replacedById' | 'createdAt' | 'updatedAt'>
+);
+
+export type OverlayDataTableUploadDetailsFragment = (
+  { __typename?: 'OverlayDataTableUpload' }
+  & Pick<OverlayDataTableUpload, 'id' | 'tableOfContentsItemId' | 'filename' | 'contentType' | 'processingOptions' | 'overlayJoinColumn' | 'errorDetails' | 'presignedUploadUrl' | 'replaceOverlayDataTableId' | 'projectBackgroundJobId'>
+);
+
+export type CreateOverlayDataTableUploadMutationVariables = Exact<{
+  tableOfContentsItemId: Scalars['Int'];
+  filename: Scalars['String'];
+  contentType: Scalars['String'];
+  processingOptions?: Maybe<Scalars['JSON']>;
+  replaceOverlayDataTableId?: Maybe<Scalars['Int']>;
+}>;
+
+
+export type CreateOverlayDataTableUploadMutation = (
+  { __typename?: 'Mutation' }
+  & { createOverlayDataTableUpload?: Maybe<(
+    { __typename?: 'CreateOverlayDataTableUploadPayload' }
+    & { overlayDataTableUpload?: Maybe<(
+      { __typename?: 'OverlayDataTableUpload' }
+      & OverlayDataTableUploadDetailsFragment
+    )>, projectBackgroundJob?: Maybe<(
+      { __typename?: 'ProjectBackgroundJob' }
+      & JobDetailsFragment
+    )> }
+  )> }
+);
+
+export type SubmitOverlayDataTableUploadMutationVariables = Exact<{
+  jobId: Scalars['UUID'];
+}>;
+
+
+export type SubmitOverlayDataTableUploadMutation = (
+  { __typename?: 'Mutation' }
+  & { submitOverlayDataTableUpload?: Maybe<(
+    { __typename?: 'SubmitOverlayDataTableUploadPayload' }
+    & { projectBackgroundJob?: Maybe<(
+      { __typename?: 'ProjectBackgroundJob' }
+      & Pick<ProjectBackgroundJob, 'id' | 'state' | 'progress' | 'progressMessage'>
+    )> }
+  )> }
+);
+
+export type RenameOverlayDataTableMutationVariables = Exact<{
+  id: Scalars['Int'];
+  name: Scalars['String'];
+}>;
+
+
+export type RenameOverlayDataTableMutation = (
+  { __typename?: 'Mutation' }
+  & { renameOverlayDataTable?: Maybe<(
+    { __typename?: 'RenameOverlayDataTablePayload' }
+    & { overlayDataTable?: Maybe<(
+      { __typename?: 'OverlayDataTable' }
+      & OverlayDataTableDetailsFragment
+    )> }
+  )> }
+);
+
+export type SoftDeleteOverlayDataTableMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type SoftDeleteOverlayDataTableMutation = (
+  { __typename?: 'Mutation' }
+  & { softDeleteOverlayDataTable?: Maybe<(
+    { __typename?: 'SoftDeleteOverlayDataTablePayload' }
+    & { overlayDataTable?: Maybe<(
+      { __typename?: 'OverlayDataTable' }
+      & Pick<OverlayDataTable, 'id' | 'deletedAt'>
+    )> }
+  )> }
+);
+
+export type RollbackOverlayDataTableVersionMutationVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type RollbackOverlayDataTableVersionMutation = (
+  { __typename?: 'Mutation' }
+  & { rollbackOverlayDataTableVersion?: Maybe<(
+    { __typename?: 'RollbackOverlayDataTableVersionPayload' }
+    & { overlayDataTable?: Maybe<(
+      { __typename?: 'OverlayDataTable' }
+      & OverlayDataTableDetailsFragment
+    )> }
   )> }
 );
 
@@ -27564,6 +28193,12 @@ export const JobDetailsFragmentDoc = gql`
       title
     }
   }
+  overlayDataTableUpload {
+    id
+    tableOfContentsItemId
+    filename
+    replaceOverlayDataTableId
+  }
 }
     ${DataUploadDetailsFragmentDoc}`;
 export const DataUploadExtendedDetailsFragmentDoc = gql`
@@ -27841,6 +28476,24 @@ export const FullAdminDataLayerFragmentDoc = gql`
 }
     ${FullAdminSourceFragmentDoc}
 ${ArchivedSourceFragmentDoc}`;
+export const OverlayDataTableDetailsFragmentDoc = gql`
+    fragment OverlayDataTableDetails on OverlayDataTable {
+  id
+  name
+  version
+  joinColumn
+  overlayJoinColumn
+  rowCount
+  parquetRemote
+  columnStatsRemote
+  parquetUrl
+  columnStatsUrl
+  deletedAt
+  replacedById
+  createdAt
+  updatedAt
+}
+    `;
 export const UserProfileDetailsFragmentDoc = gql`
     fragment UserProfileDetails on Profile {
   userId
@@ -27904,21 +28557,20 @@ export const FullAdminOverlayFragmentDoc = gql`
   stableId
   title
   enableDownload
+  enableDataTables
+  dataTableJoinColumn
   geoprocessingReferenceId
   copiedFromDataLibraryTemplateId
   primaryDownloadUrl
   projectBackgroundJobs {
-    id
-    type
-    title
-    state
-    progress
-    progressMessage
-    errorMessage
+    ...JobDetails
   }
   hasOriginalSourceUpload
   dataLayer {
     ...FullAdminDataLayer
+  }
+  overlayDataTables {
+    ...OverlayDataTableDetails
   }
   relatedReportCardDetails {
     isDraft
@@ -27936,7 +28588,9 @@ export const FullAdminOverlayFragmentDoc = gql`
     ...ResolvableLayerCommentThread
   }
 }
-    ${FullAdminDataLayerFragmentDoc}
+    ${JobDetailsFragmentDoc}
+${FullAdminDataLayerFragmentDoc}
+${OverlayDataTableDetailsFragmentDoc}
 ${ResolvableLayerCommentThreadFragmentDoc}`;
 export const MetadataXmlFileFragmentDoc = gql`
     fragment MetadataXmlFile on DataUploadOutput {
@@ -28245,6 +28899,20 @@ export const OfflineTileSettingsFragmentDoc = gql`
   region {
     geojson
   }
+}
+    `;
+export const OverlayDataTableUploadDetailsFragmentDoc = gql`
+    fragment OverlayDataTableUploadDetails on OverlayDataTableUpload {
+  id
+  tableOfContentsItemId
+  filename
+  contentType
+  processingOptions
+  overlayJoinColumn
+  errorDetails
+  presignedUploadUrl
+  replaceOverlayDataTableId
+  projectBackgroundJobId
 }
     `;
 export const ProjectMetadataFragmentDoc = gql`
@@ -32716,6 +33384,45 @@ export function useLayerSettingsChangeLogLazyQuery(baseOptions?: Apollo.LazyQuer
 export type LayerSettingsChangeLogQueryHookResult = ReturnType<typeof useLayerSettingsChangeLogQuery>;
 export type LayerSettingsChangeLogLazyQueryHookResult = ReturnType<typeof useLayerSettingsChangeLogLazyQuery>;
 export type LayerSettingsChangeLogQueryResult = Apollo.QueryResult<LayerSettingsChangeLogQuery, LayerSettingsChangeLogQueryVariables>;
+export const DataTableChangeLogDocument = gql`
+    query DataTableChangeLog($id: Int!, $first: Int!) {
+  tableOfContentsItem(id: $id) {
+    id
+    dataTableChangeLogs(first: $first) {
+      ...ChangeLogDetails
+    }
+  }
+}
+    ${ChangeLogDetailsFragmentDoc}`;
+
+/**
+ * __useDataTableChangeLogQuery__
+ *
+ * To run a query within a React component, call `useDataTableChangeLogQuery` and pass it any options that fit your needs.
+ * When your component renders, `useDataTableChangeLogQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useDataTableChangeLogQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *      first: // value for 'first'
+ *   },
+ * });
+ */
+export function useDataTableChangeLogQuery(baseOptions: Apollo.QueryHookOptions<DataTableChangeLogQuery, DataTableChangeLogQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<DataTableChangeLogQuery, DataTableChangeLogQueryVariables>(DataTableChangeLogDocument, options);
+      }
+export function useDataTableChangeLogLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<DataTableChangeLogQuery, DataTableChangeLogQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<DataTableChangeLogQuery, DataTableChangeLogQueryVariables>(DataTableChangeLogDocument, options);
+        }
+export type DataTableChangeLogQueryHookResult = ReturnType<typeof useDataTableChangeLogQuery>;
+export type DataTableChangeLogLazyQueryHookResult = ReturnType<typeof useDataTableChangeLogLazyQuery>;
+export type DataTableChangeLogQueryResult = Apollo.QueryResult<DataTableChangeLogQuery, DataTableChangeLogQueryVariables>;
 export const ResolvableLayerCommentThreadForChangelogDocument = gql`
     query ResolvableLayerCommentThreadForChangelog($commentId: Int!) {
   getResolvableLayerComment(commentId: $commentId) {
@@ -32877,6 +33584,47 @@ export function useUpdateEnableDownloadMutation(baseOptions?: Apollo.MutationHoo
 export type UpdateEnableDownloadMutationHookResult = ReturnType<typeof useUpdateEnableDownloadMutation>;
 export type UpdateEnableDownloadMutationResult = Apollo.MutationResult<UpdateEnableDownloadMutation>;
 export type UpdateEnableDownloadMutationOptions = Apollo.BaseMutationOptions<UpdateEnableDownloadMutation, UpdateEnableDownloadMutationVariables>;
+export const UpdateDataTablesSettingsDocument = gql`
+    mutation UpdateDataTablesSettings($id: Int!, $enableDataTables: Boolean, $dataTableJoinColumn: String) {
+  updateTableOfContentsItem(
+    input: {id: $id, patch: {enableDataTables: $enableDataTables, dataTableJoinColumn: $dataTableJoinColumn}}
+  ) {
+    tableOfContentsItem {
+      id
+      enableDataTables
+      dataTableJoinColumn
+    }
+  }
+}
+    `;
+export type UpdateDataTablesSettingsMutationFn = Apollo.MutationFunction<UpdateDataTablesSettingsMutation, UpdateDataTablesSettingsMutationVariables>;
+
+/**
+ * __useUpdateDataTablesSettingsMutation__
+ *
+ * To run a mutation, you first call `useUpdateDataTablesSettingsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateDataTablesSettingsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateDataTablesSettingsMutation, { data, loading, error }] = useUpdateDataTablesSettingsMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      enableDataTables: // value for 'enableDataTables'
+ *      dataTableJoinColumn: // value for 'dataTableJoinColumn'
+ *   },
+ * });
+ */
+export function useUpdateDataTablesSettingsMutation(baseOptions?: Apollo.MutationHookOptions<UpdateDataTablesSettingsMutation, UpdateDataTablesSettingsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateDataTablesSettingsMutation, UpdateDataTablesSettingsMutationVariables>(UpdateDataTablesSettingsDocument, options);
+      }
+export type UpdateDataTablesSettingsMutationHookResult = ReturnType<typeof useUpdateDataTablesSettingsMutation>;
+export type UpdateDataTablesSettingsMutationResult = Apollo.MutationResult<UpdateDataTablesSettingsMutation>;
+export type UpdateDataTablesSettingsMutationOptions = Apollo.BaseMutationOptions<UpdateDataTablesSettingsMutation, UpdateDataTablesSettingsMutationVariables>;
 export const UpdateLayerDocument = gql`
     mutation UpdateLayer($id: Int!, $renderUnder: RenderUnderType, $mapboxGlStyles: JSON, $sublayer: String, $staticId: String) {
   updateDataLayer(
@@ -36587,6 +37335,196 @@ export function useGetTilePackageLazyQuery(baseOptions?: Apollo.LazyQueryHookOpt
 export type GetTilePackageQueryHookResult = ReturnType<typeof useGetTilePackageQuery>;
 export type GetTilePackageLazyQueryHookResult = ReturnType<typeof useGetTilePackageLazyQuery>;
 export type GetTilePackageQueryResult = Apollo.QueryResult<GetTilePackageQuery, GetTilePackageQueryVariables>;
+export const CreateOverlayDataTableUploadDocument = gql`
+    mutation CreateOverlayDataTableUpload($tableOfContentsItemId: Int!, $filename: String!, $contentType: String!, $processingOptions: JSON, $replaceOverlayDataTableId: Int) {
+  createOverlayDataTableUpload(
+    input: {tocItemId: $tableOfContentsItemId, filename: $filename, contentType: $contentType, processingOptions: $processingOptions, replaceOverlayDataTableId: $replaceOverlayDataTableId}
+  ) {
+    overlayDataTableUpload {
+      ...OverlayDataTableUploadDetails
+    }
+    projectBackgroundJob {
+      ...JobDetails
+    }
+  }
+}
+    ${OverlayDataTableUploadDetailsFragmentDoc}
+${JobDetailsFragmentDoc}`;
+export type CreateOverlayDataTableUploadMutationFn = Apollo.MutationFunction<CreateOverlayDataTableUploadMutation, CreateOverlayDataTableUploadMutationVariables>;
+
+/**
+ * __useCreateOverlayDataTableUploadMutation__
+ *
+ * To run a mutation, you first call `useCreateOverlayDataTableUploadMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateOverlayDataTableUploadMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createOverlayDataTableUploadMutation, { data, loading, error }] = useCreateOverlayDataTableUploadMutation({
+ *   variables: {
+ *      tableOfContentsItemId: // value for 'tableOfContentsItemId'
+ *      filename: // value for 'filename'
+ *      contentType: // value for 'contentType'
+ *      processingOptions: // value for 'processingOptions'
+ *      replaceOverlayDataTableId: // value for 'replaceOverlayDataTableId'
+ *   },
+ * });
+ */
+export function useCreateOverlayDataTableUploadMutation(baseOptions?: Apollo.MutationHookOptions<CreateOverlayDataTableUploadMutation, CreateOverlayDataTableUploadMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateOverlayDataTableUploadMutation, CreateOverlayDataTableUploadMutationVariables>(CreateOverlayDataTableUploadDocument, options);
+      }
+export type CreateOverlayDataTableUploadMutationHookResult = ReturnType<typeof useCreateOverlayDataTableUploadMutation>;
+export type CreateOverlayDataTableUploadMutationResult = Apollo.MutationResult<CreateOverlayDataTableUploadMutation>;
+export type CreateOverlayDataTableUploadMutationOptions = Apollo.BaseMutationOptions<CreateOverlayDataTableUploadMutation, CreateOverlayDataTableUploadMutationVariables>;
+export const SubmitOverlayDataTableUploadDocument = gql`
+    mutation SubmitOverlayDataTableUpload($jobId: UUID!) {
+  submitOverlayDataTableUpload(input: {jobId: $jobId}) {
+    projectBackgroundJob {
+      id
+      state
+      progress
+      progressMessage
+    }
+  }
+}
+    `;
+export type SubmitOverlayDataTableUploadMutationFn = Apollo.MutationFunction<SubmitOverlayDataTableUploadMutation, SubmitOverlayDataTableUploadMutationVariables>;
+
+/**
+ * __useSubmitOverlayDataTableUploadMutation__
+ *
+ * To run a mutation, you first call `useSubmitOverlayDataTableUploadMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSubmitOverlayDataTableUploadMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [submitOverlayDataTableUploadMutation, { data, loading, error }] = useSubmitOverlayDataTableUploadMutation({
+ *   variables: {
+ *      jobId: // value for 'jobId'
+ *   },
+ * });
+ */
+export function useSubmitOverlayDataTableUploadMutation(baseOptions?: Apollo.MutationHookOptions<SubmitOverlayDataTableUploadMutation, SubmitOverlayDataTableUploadMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<SubmitOverlayDataTableUploadMutation, SubmitOverlayDataTableUploadMutationVariables>(SubmitOverlayDataTableUploadDocument, options);
+      }
+export type SubmitOverlayDataTableUploadMutationHookResult = ReturnType<typeof useSubmitOverlayDataTableUploadMutation>;
+export type SubmitOverlayDataTableUploadMutationResult = Apollo.MutationResult<SubmitOverlayDataTableUploadMutation>;
+export type SubmitOverlayDataTableUploadMutationOptions = Apollo.BaseMutationOptions<SubmitOverlayDataTableUploadMutation, SubmitOverlayDataTableUploadMutationVariables>;
+export const RenameOverlayDataTableDocument = gql`
+    mutation RenameOverlayDataTable($id: Int!, $name: String!) {
+  renameOverlayDataTable(input: {tableId: $id, newName: $name}) {
+    overlayDataTable {
+      ...OverlayDataTableDetails
+    }
+  }
+}
+    ${OverlayDataTableDetailsFragmentDoc}`;
+export type RenameOverlayDataTableMutationFn = Apollo.MutationFunction<RenameOverlayDataTableMutation, RenameOverlayDataTableMutationVariables>;
+
+/**
+ * __useRenameOverlayDataTableMutation__
+ *
+ * To run a mutation, you first call `useRenameOverlayDataTableMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRenameOverlayDataTableMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [renameOverlayDataTableMutation, { data, loading, error }] = useRenameOverlayDataTableMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      name: // value for 'name'
+ *   },
+ * });
+ */
+export function useRenameOverlayDataTableMutation(baseOptions?: Apollo.MutationHookOptions<RenameOverlayDataTableMutation, RenameOverlayDataTableMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<RenameOverlayDataTableMutation, RenameOverlayDataTableMutationVariables>(RenameOverlayDataTableDocument, options);
+      }
+export type RenameOverlayDataTableMutationHookResult = ReturnType<typeof useRenameOverlayDataTableMutation>;
+export type RenameOverlayDataTableMutationResult = Apollo.MutationResult<RenameOverlayDataTableMutation>;
+export type RenameOverlayDataTableMutationOptions = Apollo.BaseMutationOptions<RenameOverlayDataTableMutation, RenameOverlayDataTableMutationVariables>;
+export const SoftDeleteOverlayDataTableDocument = gql`
+    mutation SoftDeleteOverlayDataTable($id: Int!) {
+  softDeleteOverlayDataTable(input: {tableId: $id}) {
+    overlayDataTable {
+      id
+      deletedAt
+    }
+  }
+}
+    `;
+export type SoftDeleteOverlayDataTableMutationFn = Apollo.MutationFunction<SoftDeleteOverlayDataTableMutation, SoftDeleteOverlayDataTableMutationVariables>;
+
+/**
+ * __useSoftDeleteOverlayDataTableMutation__
+ *
+ * To run a mutation, you first call `useSoftDeleteOverlayDataTableMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSoftDeleteOverlayDataTableMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [softDeleteOverlayDataTableMutation, { data, loading, error }] = useSoftDeleteOverlayDataTableMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useSoftDeleteOverlayDataTableMutation(baseOptions?: Apollo.MutationHookOptions<SoftDeleteOverlayDataTableMutation, SoftDeleteOverlayDataTableMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<SoftDeleteOverlayDataTableMutation, SoftDeleteOverlayDataTableMutationVariables>(SoftDeleteOverlayDataTableDocument, options);
+      }
+export type SoftDeleteOverlayDataTableMutationHookResult = ReturnType<typeof useSoftDeleteOverlayDataTableMutation>;
+export type SoftDeleteOverlayDataTableMutationResult = Apollo.MutationResult<SoftDeleteOverlayDataTableMutation>;
+export type SoftDeleteOverlayDataTableMutationOptions = Apollo.BaseMutationOptions<SoftDeleteOverlayDataTableMutation, SoftDeleteOverlayDataTableMutationVariables>;
+export const RollbackOverlayDataTableVersionDocument = gql`
+    mutation RollbackOverlayDataTableVersion($id: Int!) {
+  rollbackOverlayDataTableVersion(input: {tableId: $id}) {
+    overlayDataTable {
+      ...OverlayDataTableDetails
+    }
+  }
+}
+    ${OverlayDataTableDetailsFragmentDoc}`;
+export type RollbackOverlayDataTableVersionMutationFn = Apollo.MutationFunction<RollbackOverlayDataTableVersionMutation, RollbackOverlayDataTableVersionMutationVariables>;
+
+/**
+ * __useRollbackOverlayDataTableVersionMutation__
+ *
+ * To run a mutation, you first call `useRollbackOverlayDataTableVersionMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useRollbackOverlayDataTableVersionMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [rollbackOverlayDataTableVersionMutation, { data, loading, error }] = useRollbackOverlayDataTableVersionMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useRollbackOverlayDataTableVersionMutation(baseOptions?: Apollo.MutationHookOptions<RollbackOverlayDataTableVersionMutation, RollbackOverlayDataTableVersionMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<RollbackOverlayDataTableVersionMutation, RollbackOverlayDataTableVersionMutationVariables>(RollbackOverlayDataTableVersionDocument, options);
+      }
+export type RollbackOverlayDataTableVersionMutationHookResult = ReturnType<typeof useRollbackOverlayDataTableVersionMutation>;
+export type RollbackOverlayDataTableVersionMutationResult = Apollo.MutationResult<RollbackOverlayDataTableVersionMutation>;
+export type RollbackOverlayDataTableVersionMutationOptions = Apollo.BaseMutationOptions<RollbackOverlayDataTableVersionMutation, RollbackOverlayDataTableVersionMutationVariables>;
 export const ProjectAccessControlSettingsDocument = gql`
     query ProjectAccessControlSettings($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -43613,6 +44551,7 @@ export const namedOperations = {
     layersAndSourcesForItems: 'layersAndSourcesForItems',
     GetFolder: 'GetFolder',
     LayerSettingsChangeLog: 'LayerSettingsChangeLog',
+    DataTableChangeLog: 'DataTableChangeLog',
     ResolvableLayerCommentThreadForChangelog: 'ResolvableLayerCommentThreadForChangelog',
     GetLayerItem: 'GetLayerItem',
     InteractivitySettingsForLayer: 'InteractivitySettingsForLayer',
@@ -43770,6 +44709,7 @@ export const namedOperations = {
     UpdateFolder: 'UpdateFolder',
     UpdateTableOfContentsItem: 'UpdateTableOfContentsItem',
     UpdateEnableDownload: 'UpdateEnableDownload',
+    UpdateDataTablesSettings: 'UpdateDataTablesSettings',
     UpdateLayer: 'UpdateLayer',
     UpdateDataSource: 'UpdateDataSource',
     UpdateInteractivitySettings: 'UpdateInteractivitySettings',
@@ -43817,6 +44757,11 @@ export const namedOperations = {
     UpdateBasemapOfflineTileSettings: 'UpdateBasemapOfflineTileSettings',
     generateOfflineTilePackage: 'generateOfflineTilePackage',
     deleteTilePackage: 'deleteTilePackage',
+    CreateOverlayDataTableUpload: 'CreateOverlayDataTableUpload',
+    SubmitOverlayDataTableUpload: 'SubmitOverlayDataTableUpload',
+    RenameOverlayDataTable: 'RenameOverlayDataTable',
+    SoftDeleteOverlayDataTable: 'SoftDeleteOverlayDataTable',
+    RollbackOverlayDataTableVersion: 'RollbackOverlayDataTableVersion',
     updateProjectAccessControlSettings: 'updateProjectAccessControlSettings',
     toggleLanguageSupport: 'toggleLanguageSupport',
     setTranslatedProps: 'setTranslatedProps',
@@ -43991,6 +44936,8 @@ export const namedOperations = {
     OfflineBasemapDetails: 'OfflineBasemapDetails',
     OfflineTileSettingsForCalculation: 'OfflineTileSettingsForCalculation',
     OfflineTileSettings: 'OfflineTileSettings',
+    OverlayDataTableDetails: 'OverlayDataTableDetails',
+    OverlayDataTableUploadDetails: 'OverlayDataTableUploadDetails',
     ProjectMetadata: 'ProjectMetadata',
     ProjectPublicDetailsMetadata: 'ProjectPublicDetailsMetadata',
     ProjectMetadataMeFrag: 'ProjectMetadataMeFrag',

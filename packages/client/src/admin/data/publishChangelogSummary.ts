@@ -5,8 +5,10 @@ import {
   ChangeLogsSinceLastPublishQuery,
 } from "../../generated/graphql";
 import { summary } from "../changelogs/fieldGroups/FieldGroupListItemBase";
+import { tocItemIdFromMeta } from "../changelogs/fieldGroups/dataTableSummary";
 
 export const TOC_ENTITY_TYPE = "table_of_contents_items";
+export const DATA_TABLE_ENTITY_TYPE = "overlay_data_table";
 
 export type PublishBadgeKey =
   | "title"
@@ -18,6 +20,7 @@ export type PublishBadgeKey =
   | "interactivity"
   | "moved"
   | "source"
+  | "dataTables"
   | "folderBehavior"
   | "comments";
 
@@ -30,6 +33,7 @@ export const PUBLISH_BADGE_ORDER: PublishBadgeKey[] = [
   "metadata",
   "cartography",
   "downloads",
+  "dataTables",
   "interactivity",
   "comments",
   "moved",
@@ -50,6 +54,11 @@ const FIELD_GROUP_TO_BADGE: Partial<
   [ChangeLogFieldGroup.LayerInteractivity]: "interactivity",
   [ChangeLogFieldGroup.LayerParentChanged]: "moved",
   [ChangeLogFieldGroup.LayerUploaded]: "source",
+  [ChangeLogFieldGroup.DataTableCreated]: "dataTables",
+  [ChangeLogFieldGroup.DataTableDeleted]: "dataTables",
+  [ChangeLogFieldGroup.DataTableRenamed]: "dataTables",
+  [ChangeLogFieldGroup.DataTableReplaced]: "dataTables",
+  [ChangeLogFieldGroup.DataTableRollback]: "dataTables",
   [ChangeLogFieldGroup.FolderType]: "folderBehavior",
   [ChangeLogFieldGroup.ResolvableLayerCommentsCreated]: "comments",
   [ChangeLogFieldGroup.ResolvableLayerCommentsResponded]: "comments",
@@ -293,6 +302,19 @@ export function buildPublishChangeSummary({
     const list = byEntity.get(log.entityId) ?? [];
     list.push(log);
     byEntity.set(log.entityId, list);
+  }
+
+  const dataTableLogs = changeLogs.filter(
+    (l) => l.entityType === DATA_TABLE_ENTITY_TYPE,
+  );
+  for (const log of dataTableLogs) {
+    const tocItemId = tocItemIdFromMeta(log.meta);
+    if (tocItemId == null) {
+      continue;
+    }
+    const list = byEntity.get(tocItemId) ?? [];
+    list.push(log);
+    byEntity.set(tocItemId, list);
   }
 
   const draftById = new Map(draftItems.map((i) => [i.id, i]));

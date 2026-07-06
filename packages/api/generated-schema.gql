@@ -1101,6 +1101,11 @@ input ChangeLogCondition {
 }
 
 enum ChangeLogFieldGroup {
+  DATA_TABLE_CREATED
+  DATA_TABLE_DELETED
+  DATA_TABLE_RENAMED
+  DATA_TABLE_REPLACED
+  DATA_TABLE_ROLLBACK
   FOLDER_ACL
   FOLDER_CREATED
   FOLDER_DELETED
@@ -2284,6 +2289,46 @@ type CreateOriginalSourceIdPayload {
     """The method to use when ordering `OriginalSourceId`."""
     orderBy: [OriginalSourceIdsOrderBy!] = [NATURAL]
   ): OriginalSourceIdsEdge
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `createOverlayDataTableUpload` mutation."""
+input CreateOverlayDataTableUploadInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  contentType: String
+  filename: String
+  processingOptions: JSON
+  replaceOverlayDataTableId: Int
+  tocItemId: Int
+}
+
+"""The output of our `createOverlayDataTableUpload` mutation."""
+type CreateOverlayDataTableUploadPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  overlayDataTableUpload: OverlayDataTableUpload
+
+  """An edge for our `OverlayDataTableUpload`. May be used by Relay 1."""
+  overlayDataTableUploadEdge(
+    """The method to use when ordering `OverlayDataTableUpload`."""
+    orderBy: [OverlayDataTableUploadsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): OverlayDataTableUploadsEdge
+
+  """
+  Reads a single `ProjectBackgroundJob` that is related to this `OverlayDataTableUpload`.
+  """
+  projectBackgroundJob: ProjectBackgroundJob
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -9436,6 +9481,12 @@ type Mutation {
     """
     input: CreateOriginalSourceIdInput!
   ): CreateOriginalSourceIdPayload
+  createOverlayDataTableUpload(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateOverlayDataTableUploadInput!
+  ): CreateOverlayDataTableUploadPayload
   createPost(message: JSON!, topicId: Int!): Post!
 
   """
@@ -10445,6 +10496,12 @@ type Mutation {
     """
     input: RemoveValidChildSketchClassInput!
   ): RemoveValidChildSketchClassPayload
+  renameOverlayDataTable(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: RenameOverlayDataTableInput!
+  ): RenameOverlayDataTablePayload
   renameReportTab(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -10525,6 +10582,12 @@ type Mutation {
     """
     input: RevokeApiKeyInput!
   ): RevokeApiKeyPayload
+  rollbackOverlayDataTableVersion(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: RollbackOverlayDataTableVersionInput!
+  ): RollbackOverlayDataTableVersionPayload
   rollbackToArchivedSource(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -10687,6 +10750,12 @@ type Mutation {
     """
     input: ShareSpriteInput!
   ): ShareSpritePayload
+  softDeleteOverlayDataTable(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: SoftDeleteOverlayDataTableInput!
+  ): SoftDeleteOverlayDataTablePayload
 
   """
   Superusers only. "Deletes" a sprite but keeps it in the DB in case layers are already referencing it.
@@ -10703,6 +10772,12 @@ type Mutation {
     """
     input: SubmitDataUploadInput!
   ): SubmitDataUploadPayload
+  submitOverlayDataTableUpload(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: SubmitOverlayDataTableUploadInput!
+  ): SubmitOverlayDataTableUploadPayload
 
   """
   Toggle admin access for the given project and user. User must have already
@@ -11847,6 +11922,162 @@ type OutstandingSurveyInvites {
   token: String!
 }
 
+type OverlayDataTable implements Node {
+  columnStatsRemote: String!
+  columnStatsUrl: String
+  createdAt: Datetime
+  createdBy: Int!
+  deletedAt: Datetime
+  id: Int!
+  joinColumn: String!
+  name: String!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  overlayJoinColumn: String!
+  parquetRemote: String!
+  parquetUrl: String
+
+  """Reads a single `Project` that is related to this `OverlayDataTable`."""
+  project: Project
+  projectId: Int!
+  replacedById: Int
+  rowCount: Int!
+  tableOfContentsItemId: Int!
+  updatedAt: Datetime
+  version: Int!
+}
+
+"""
+A condition to be used against `OverlayDataTable` object types. All fields are
+tested for equality and combined with a logical ‘and.’
+"""
+input OverlayDataTableCondition {
+  """Checks for equality with the object’s `id` field."""
+  id: Int
+
+  """Checks for equality with the object’s `projectId` field."""
+  projectId: Int
+}
+
+"""A connection to a list of `OverlayDataTable` values."""
+type OverlayDataTablesConnection {
+  """
+  A list of edges which contains the `OverlayDataTable` and cursor to aid in pagination.
+  """
+  edges: [OverlayDataTablesEdge!]!
+
+  """A list of `OverlayDataTable` objects."""
+  nodes: [OverlayDataTable!]!
+
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """
+  The count of *all* `OverlayDataTable` you could get from the connection.
+  """
+  totalCount: Int!
+}
+
+"""A `OverlayDataTable` edge in the connection."""
+type OverlayDataTablesEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `OverlayDataTable` at the end of the edge."""
+  node: OverlayDataTable!
+}
+
+"""Methods to use when ordering `OverlayDataTable`."""
+enum OverlayDataTablesOrderBy {
+  ID_ASC
+  ID_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+  PROJECT_ID_ASC
+  PROJECT_ID_DESC
+}
+
+type OverlayDataTableUpload implements Node {
+  contentType: String!
+  createdAt: Datetime
+  errorDetails: JSON
+  filename: String!
+  id: UUID!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  overlayGeostats: JSON!
+  overlayJoinColumn: String
+  presignedUploadUrl: String
+  processingOptions: JSON!
+
+  """
+  Reads a single `ProjectBackgroundJob` that is related to this `OverlayDataTableUpload`.
+  """
+  projectBackgroundJob: ProjectBackgroundJob
+  projectBackgroundJobId: UUID!
+  replaceOverlayDataTableId: Int
+  tableOfContentsItemId: Int!
+  updatedAt: Datetime
+}
+
+"""
+A condition to be used against `OverlayDataTableUpload` object types. All fields
+are tested for equality and combined with a logical ‘and.’
+"""
+input OverlayDataTableUploadCondition {
+  """Checks for equality with the object’s `id` field."""
+  id: UUID
+
+  """Checks for equality with the object’s `projectBackgroundJobId` field."""
+  projectBackgroundJobId: UUID
+}
+
+"""A connection to a list of `OverlayDataTableUpload` values."""
+type OverlayDataTableUploadsConnection {
+  """
+  A list of edges which contains the `OverlayDataTableUpload` and cursor to aid in pagination.
+  """
+  edges: [OverlayDataTableUploadsEdge!]!
+
+  """A list of `OverlayDataTableUpload` objects."""
+  nodes: [OverlayDataTableUpload!]!
+
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """
+  The count of *all* `OverlayDataTableUpload` you could get from the connection.
+  """
+  totalCount: Int!
+}
+
+"""A `OverlayDataTableUpload` edge in the connection."""
+type OverlayDataTableUploadsEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `OverlayDataTableUpload` at the end of the edge."""
+  node: OverlayDataTableUpload!
+}
+
+"""Methods to use when ordering `OverlayDataTableUpload`."""
+enum OverlayDataTableUploadsOrderBy {
+  ID_ASC
+  ID_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+  PROJECT_BACKGROUND_JOB_ID_ASC
+  PROJECT_BACKGROUND_JOB_ID_DESC
+}
+
 """Information about pagination in a connection."""
 type PageInfo {
   """When paginating forwards, the cursor to continue."""
@@ -12641,6 +12872,35 @@ type Project implements Node {
     orderBy: [OfflineTileSettingsOrderBy!]
   ): [OfflineTileSetting!]!
 
+  """Reads and enables pagination through a set of `OverlayDataTable`."""
+  overlayDataTablesConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: OverlayDataTableCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `OverlayDataTable`."""
+    orderBy: [OverlayDataTablesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): OverlayDataTablesConnection!
+
   """
   Count of all users who have opted into participating in the project, sharing their profile with project administrators.
   """
@@ -12994,6 +13254,42 @@ type ProjectBackgroundJob implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+
+  """
+  Reads a single `OverlayDataTableUpload` that is related to this `ProjectBackgroundJob`.
+  """
+  overlayDataTableUpload: OverlayDataTableUpload
+
+  """
+  Reads and enables pagination through a set of `OverlayDataTableUpload`.
+  """
+  overlayDataTableUploadsConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: OverlayDataTableUploadCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `OverlayDataTableUpload`."""
+    orderBy: [OverlayDataTableUploadsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): OverlayDataTableUploadsConnection! @deprecated(reason: "Please use overlayDataTableUpload instead")
   progress: BigFloat
   progressMessage: String!
 
@@ -13051,6 +13347,7 @@ type ProjectBackgroundJobSubscriptionPayload {
 enum ProjectBackgroundJobType {
   ARCGIS_IMPORT
   CONSOLIDATE_DATA_SOURCES
+  DATA_TABLE_UPLOAD
   DATA_UPLOAD
   REPLACEMENT_UPLOAD
 }
@@ -14392,6 +14689,88 @@ type Query implements Node {
     """The method to use when ordering `OriginalSourceId`."""
     orderBy: [OriginalSourceIdsOrderBy!] = [NATURAL]
   ): OriginalSourceIdsConnection
+  overlayDataTable(id: Int!): OverlayDataTable
+
+  """Reads a single `OverlayDataTable` using its globally unique `ID`."""
+  overlayDataTableByNodeId(
+    """
+    The globally unique `ID` to be used in selecting a single `OverlayDataTable`.
+    """
+    nodeId: ID!
+  ): OverlayDataTable
+  overlayDataTableLinkedTocIsDraft(pid: Int, tocItemId: Int): Boolean
+
+  """Reads and enables pagination through a set of `OverlayDataTable`."""
+  overlayDataTablesConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: OverlayDataTableCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `OverlayDataTable`."""
+    orderBy: [OverlayDataTablesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): OverlayDataTablesConnection
+  overlayDataTableUpload(id: UUID!): OverlayDataTableUpload
+
+  """
+  Reads a single `OverlayDataTableUpload` using its globally unique `ID`.
+  """
+  overlayDataTableUploadByNodeId(
+    """
+    The globally unique `ID` to be used in selecting a single `OverlayDataTableUpload`.
+    """
+    nodeId: ID!
+  ): OverlayDataTableUpload
+  overlayDataTableUploadByProjectBackgroundJobId(projectBackgroundJobId: UUID!): OverlayDataTableUpload
+
+  """
+  Reads and enables pagination through a set of `OverlayDataTableUpload`.
+  """
+  overlayDataTableUploadsConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: OverlayDataTableUploadCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `OverlayDataTableUpload`."""
+    orderBy: [OverlayDataTableUploadsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): OverlayDataTableUploadsConnection
   post(id: Int!): Post
 
   """Reads a single `Post` using its globally unique `ID`."""
@@ -15165,6 +15544,41 @@ type RemoveValidChildSketchClassPayload {
   query: Query
 }
 
+"""All input for the `renameOverlayDataTable` mutation."""
+input RenameOverlayDataTableInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  newName: String
+  tableId: Int
+}
+
+"""The output of our `renameOverlayDataTable` mutation."""
+type RenameOverlayDataTablePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  overlayDataTable: OverlayDataTable
+
+  """An edge for our `OverlayDataTable`. May be used by Relay 1."""
+  overlayDataTableEdge(
+    """The method to use when ordering `OverlayDataTable`."""
+    orderBy: [OverlayDataTablesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): OverlayDataTablesEdge
+
+  """Reads a single `Project` that is related to this `OverlayDataTable`."""
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """All input for the `renameReportTab` mutation."""
 input RenameReportTabInput {
   alternateLanguageSettings: JSON
@@ -15763,6 +16177,40 @@ type RevokeApiKeyPayload {
   unchanged and unused. May be used by a client to track mutations.
   """
   clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `rollbackOverlayDataTableVersion` mutation."""
+input RollbackOverlayDataTableVersionInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  tableId: Int
+}
+
+"""The output of our `rollbackOverlayDataTableVersion` mutation."""
+type RollbackOverlayDataTableVersionPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  overlayDataTable: OverlayDataTable
+
+  """An edge for our `OverlayDataTable`. May be used by Relay 1."""
+  overlayDataTableEdge(
+    """The method to use when ordering `OverlayDataTable`."""
+    orderBy: [OverlayDataTablesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): OverlayDataTablesEdge
+
+  """Reads a single `Project` that is related to this `OverlayDataTable`."""
+  project: Project
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -16772,6 +17220,40 @@ enum SketchGeometryType {
   POLYGON
 }
 
+"""All input for the `softDeleteOverlayDataTable` mutation."""
+input SoftDeleteOverlayDataTableInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  tableId: Int
+}
+
+"""The output of our `softDeleteOverlayDataTable` mutation."""
+type SoftDeleteOverlayDataTablePayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  overlayDataTable: OverlayDataTable
+
+  """An edge for our `OverlayDataTable`. May be used by Relay 1."""
+  overlayDataTableEdge(
+    """The method to use when ordering `OverlayDataTable`."""
+    orderBy: [OverlayDataTablesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): OverlayDataTablesEdge
+
+  """Reads a single `Project` that is related to this `OverlayDataTable`."""
+  project: Project
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """All input for the `softDeleteSprite` mutation."""
 input SoftDeleteSpriteInput {
   """
@@ -17015,6 +17497,36 @@ input SubmitDataUploadInput {
 
 """The output of our `submitDataUpload` mutation."""
 type SubmitDataUploadPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Reads a single `Project` that is related to this `ProjectBackgroundJob`.
+  """
+  project: Project
+  projectBackgroundJob: ProjectBackgroundJob
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `submitOverlayDataTableUpload` mutation."""
+input SubmitOverlayDataTableUploadInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  jobId: UUID
+}
+
+"""The output of our `submitOverlayDataTableUpload` mutation."""
+type SubmitOverlayDataTableUploadPayload {
   """
   The exact same `clientMutationId` that was provided in the mutation input,
   unchanged and unused. May be used by a client to track mutations.
@@ -17730,6 +18242,20 @@ type TableOfContentsItem implements Node {
   dataLayerId: Int
   dataSourceType: DataSourceTypes
 
+  """Reads and enables pagination through a set of `ChangeLog`."""
+  dataTableChangeLogs(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [ChangeLog!]
+
+  """
+  Overlay attribute name used as the canonical feature ID for linked data tables. Required when enable_data_tables is true.
+  """
+  dataTableJoinColumn: String
+
   """Reads and enables pagination through a set of `DownloadOption`."""
   downloadOptions(
     """Only read the first `n` values of the set."""
@@ -17738,6 +18264,11 @@ type TableOfContentsItem implements Node {
     """Skip the first `n` values."""
     offset: Int
   ): [DownloadOption!]
+
+  """
+  When true, admins can attach CSV data tables linked to this layer by a canonical join column.
+  """
+  enableDataTables: Boolean!
   enableDownload: Boolean!
   ftsAr: String
   ftsDa: String
@@ -17804,6 +18335,15 @@ type TableOfContentsItem implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+
+  """Reads and enables pagination through a set of `OverlayDataTable`."""
+  overlayDataTables(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [OverlayDataTable!]
 
   """
   stable_id of the parent folder, if any. This property cannot be changed 
@@ -18025,6 +18565,16 @@ input TableOfContentsItemPatch {
   If is_folder=false, a DataLayers visibility will be controlled by this item
   """
   dataLayerId: Int
+
+  """
+  Overlay attribute name used as the canonical feature ID for linked data tables. Required when enable_data_tables is true.
+  """
+  dataTableJoinColumn: String
+
+  """
+  When true, admins can attach CSV data tables linked to this layer by a canonical join column.
+  """
+  enableDataTables: Boolean
   enableDownload: Boolean
   geoprocessingReferenceId: String
   hideChildren: Boolean

@@ -6,6 +6,8 @@ import {
   CancelUploadMutation,
   CreateDataUploadDocument,
   CreateDataUploadMutation,
+  CreateOverlayDataTableUploadDocument,
+  CreateOverlayDataTableUploadMutation,
   DismissFailedJobDocument,
   DismissFailedJobInput,
   JobDetailsFragment,
@@ -19,9 +21,12 @@ import {
   ProjectBackgroundJobsQuery,
   SubmitDataUploadDocument,
   SubmitDataUploadMutation,
+  SubmitOverlayDataTableUploadDocument,
+  SubmitOverlayDataTableUploadMutation,
 } from "../../generated/graphql";
 import axios from "axios";
 import { DelimitedUploadProcessingOptions } from "./delimitedSpatial/types";
+import { DataTableUploadProcessingOptions } from "../data/overlayDataTables/types";
 
 export interface DataUploadProcessingCompleteEvent {
   jobId: string;
@@ -103,6 +108,11 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
    * fired for all uploads, not just those from the current session.
    */
   "upload-processing-complete": DataUploadProcessingCompleteEvent;
+  "data-table-upload-complete": { jobId: string; tableOfContentsItemId: number };
+  "data-table-upload-started": {
+    jobId: string;
+    tableOfContentsItemId: number;
+  };
   "feature-layer-conversion-complete": FeatureLayerConversionCompleteEvent;
   "file-uploaded": { uploadTaskId: string; jobId: string };
   "upload-submitted": UploadSubmittedEvent;
@@ -415,6 +425,179 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
     }
   }
 
+  addJobToTableOfContentsItemCache(
+    tocItemId: number,
+    job: JobDetailsFragment,
+  ) {
+    try {
+      this.client.cache.updateFragment(
+        {
+          // eslint-disable-next-line i18next/no-literal-string
+          id: `TableOfContentsItem:${tocItemId}`,
+          // eslint-disable-next-line i18next/no-literal-string
+          fragment: gql`
+            fragment UpdateTocItemDataTableJobs on TableOfContentsItem {
+              id
+              projectBackgroundJobs {
+                id
+                type
+                title
+                state
+                progress
+                progressMessage
+                errorMessage
+                overlayDataTableUpload {
+                  id
+                  tableOfContentsItemId
+                  filename
+                  replaceOverlayDataTableId
+                }
+              }
+            }
+          `,
+        },
+        (data) => {
+          if (!data) {
+            return data;
+          }
+          const existing = data.projectBackgroundJobs || [];
+          return {
+            ...data,
+            projectBackgroundJobs: [
+              ...existing.filter((entry) => entry.id !== job.id),
+              job,
+            ],
+          };
+        },
+      );
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  private updateDataTableUploadProgress(jobId: string, progress: number) {
+    this.client.cache.writeFragment({
+      // eslint-disable-next-line i18next/no-literal-string
+      id: `ProjectBackgroundJob:${jobId}`,
+      fragment: gql`
+        fragment DataTableUploadProgress on ProjectBackgroundJob {
+          progress
+          progressMessage
+        }
+      `,
+      data: {
+        progress,
+        progressMessage: "uploading",
+      },
+    });
+  }
+
+  private async runDataTableFileUpload(
+    jobId: string,
+    presignedUrl: string,
+    file: File,
+  ) {
+    const signal = this.abortControllers[jobId]?.signal;
+    const response = await axios({
+      url: presignedUrl,
+      method: "PUT",
+      data: file,
+      signal,
+      headers: {
+        "Content-Type": file.type || "text/csv",
+      },
+      onUploadProgress: (progressEvent) => {
+        if (!signal?.aborted && progressEvent.total) {
+          this.updateDataTableUploadProgress(
+            jobId,
+            progressEvent.loaded / progressEvent.total,
+          );
+        }
+      },
+    });
+    if (response.status !== 200) {
+      throw new Error("Non-200 response code");
+    }
+    this.updateDataTableUploadProgress(jobId, 1);
+    await this.client.mutate<SubmitOverlayDataTableUploadMutation>({
+      mutation: SubmitOverlayDataTableUploadDocument,
+      variables: { jobId },
+    });
+    this.client.cache.writeFragment({
+      // eslint-disable-next-line i18next/no-literal-string
+      id: `ProjectBackgroundJob:${jobId}`,
+      fragment: gql`
+        fragment DataTableProcessingStart on ProjectBackgroundJob {
+          progress
+          progressMessage
+        }
+      `,
+      data: {
+        progress: 0,
+        progressMessage: "processing",
+      },
+    });
+    delete this.abortControllers[jobId];
+  }
+
+  async uploadOverlayDataTable({
+    tableOfContentsItemId,
+    file,
+    processingOptions,
+    replaceOverlayDataTableId,
+  }: {
+    tableOfContentsItemId: number;
+    file: File;
+    processingOptions: DataTableUploadProcessingOptions;
+    replaceOverlayDataTableId?: number;
+  }) {
+    const upload = await this.client.mutate<CreateOverlayDataTableUploadMutation>(
+      {
+        mutation: CreateOverlayDataTableUploadDocument,
+        variables: {
+          tableOfContentsItemId,
+          filename: file.name,
+          contentType: file.type || "text/csv",
+          replaceOverlayDataTableId,
+          processingOptions,
+        },
+      },
+    );
+    if (upload.errors || !upload.data?.createOverlayDataTableUpload) {
+      throw new Error(upload.errors?.toString() || "Upload could not be created");
+    }
+    const payload = upload.data.createOverlayDataTableUpload;
+    const overlayUpload = payload.overlayDataTableUpload;
+    const job = payload.projectBackgroundJob;
+    const presignedUrl = overlayUpload?.presignedUploadUrl;
+    const jobId = job?.id ?? overlayUpload?.projectBackgroundJobId;
+    if (!presignedUrl || !jobId || !job) {
+      throw new Error("Upload could not be created");
+    }
+
+    this.addJobToQueryCache(job);
+    this.addJobToTableOfContentsItemCache(tableOfContentsItemId, job);
+    this.sessionUploadJobIds.push(jobId);
+    this.activeJobs.add(jobId);
+    this.abortControllers[jobId] = new AbortController();
+    this.emit("data-table-upload-started", {
+      jobId,
+      tableOfContentsItemId,
+    });
+
+    void this.runDataTableFileUpload(jobId, presignedUrl, file).catch((e) => {
+      const message = e instanceof Error ? e.message : String(e);
+      delete this.abortControllers[jobId];
+      this.emit("upload-error", {
+        error: message,
+        isQuotaError: /quota exceeded/i.test(message),
+        jobId,
+      });
+    });
+
+    return { jobId };
+  }
+
   isUploadFromMySession(taskId: string) {
     return this.sessionUploadJobIds.includes(taskId);
   }
@@ -469,6 +652,21 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
             ?.stableId,
       });
     }
+    const dataTableUpload = event.job.overlayDataTableUpload;
+    if (
+      dataTableUpload &&
+      event.job.type === ProjectBackgroundJobType.DataTableUpload &&
+      !this.completedTasks.has(event.job.id) &&
+      event.previousState &&
+      event.previousState !== ProjectBackgroundJobState.Complete &&
+      event.job.state === ProjectBackgroundJobState.Complete
+    ) {
+      this.completedTasks.add(event.job.id);
+      this.emit("data-table-upload-complete", {
+        jobId: event.job.id,
+        tableOfContentsItemId: dataTableUpload.tableOfContentsItemId,
+      });
+    }
   }
 
   /**
@@ -512,13 +710,19 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
               id
             }
           }
+          overlayDataTableUpload {
+            tableOfContentsItemId
+          }
         }
       `,
     });
     const tocId =
       // @ts-ignore
-      cachedItem?.esriFeatureLayerConversionTask?.tableOfContentsItem?.id;
-    this.client.cache.updateFragment(
+      cachedItem?.esriFeatureLayerConversionTask?.tableOfContentsItem?.id ??
+      // @ts-ignore
+      cachedItem?.overlayDataTableUpload?.tableOfContentsItemId;
+    if (tocId) {
+      this.client.cache.updateFragment(
       {
         // eslint-disable-next-line i18next/no-literal-string
         id: `TableOfContentsItem:${tocId}`,
@@ -545,8 +749,9 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
         } else {
           return data;
         }
-      }
+      },
     );
+    }
     // Remove from job list query
     this.client.cache.updateQuery<ProjectBackgroundJobsQuery>(
       {

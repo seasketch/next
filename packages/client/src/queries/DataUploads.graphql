@@ -60,6 +60,12 @@ fragment JobDetails on ProjectBackgroundJob {
       title
     }
   }
+  overlayDataTableUpload {
+    id
+    tableOfContentsItemId
+    filename
+    replaceOverlayDataTableId
+  }
 }
 
 mutation submitDataUpload($jobId: UUID!, $enableAiDataAnalyst: Boolean) {

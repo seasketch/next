@@ -51,6 +51,7 @@ import ReportsPlugin from "./plugins/reportsPlugin";
 import FeatureFlagsPlugin from "./plugins/featureFlagsPlugin";
 import UserActivityPlugin from "./plugins/userActivityPlugin";
 import DataUploadPiiClassifierWarmPlugin from "./plugins/dataUploadPiiClassifierWarmPlugin";
+import OverlayDataTablePlugin from "./plugins/overlayDataTablePlugin";
 
 const pluginHook = makePluginHook([{ ...PgPubsub, ...SentryPlugin }]);
 
@@ -115,7 +116,7 @@ export default function graphileOptions(): PostGraphileOptions {
       ReportsPlugin,
       FeatureFlagsPlugin,
       UserActivityPlugin,
-      // reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
+      OverlayDataTablePlugin,
       // extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
     ],
     graphileBuildOptions: {

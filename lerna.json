@@ -10,6 +10,7 @@
     "packages/map-tile-cache-calculator",
     "packages/mapbox-gl-esri-sources",
     "packages/spatial-uploads-handler",
+    "packages/data-tables-handler",
     "packages/uploads-server",
     "packages/vector-data-source",
     "packages/geostats-types",

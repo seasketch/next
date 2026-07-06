@@ -114,6 +114,8 @@ function badgeLabel(key: PublishBadgeKey, t: (s: string) => string): string {
       return t("moved");
     case "source":
       return t("source");
+    case "dataTables":
+      return t("data tables");
     case "folderBehavior":
       return t("folder behavior");
     case "comments":

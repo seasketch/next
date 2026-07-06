@@ -229,4 +229,22 @@ export interface RasterInfo {
 }
 export declare function isRasterInfo(info: RasterInfo | GeostatsLayer | any): info is RasterInfo;
 export declare function isGeostatsLayer(data: RasterInfo | GeostatsLayer | any): data is GeostatsLayer;
+/**
+ * Column statistics for overlay-related tabular data (CSV uploads joined to
+ * vector layers). Stored as JSON on R2 alongside Parquet artifacts.
+ */
+export interface DataTablesColumnStats {
+    /** Display name of the table (typically derived from filename). */
+    table: string;
+    rowCount: number;
+    columns: GeostatsAttribute[];
+    join: {
+        column: string;
+        overlayAttribute: string;
+        matchRate: number;
+        matchedRows: number;
+        unmatchedRows: number;
+        unmatchedOverlayValues: number;
+    };
+}
 //# sourceMappingURL=index.d.ts.map

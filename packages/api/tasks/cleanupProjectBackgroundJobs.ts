@@ -11,7 +11,14 @@ import { Helpers } from "graphile-worker";
 async function cleanupProjectBackgroundJobs(payload: {}, helpers: Helpers) {
   await helpers.withPgClient(async (client) => {
     await client.query(`
-      update project_background_jobs set state = 'failed', error_message = 'Timed out', progress_message = 'timeout' where (state = 'queued' or state = 'running') and now() >= timeout_at
+      select fail_overlay_data_table_upload(pbj.id, 'Timed out')
+      from project_background_jobs pbj
+      where pbj.type = 'data_table_upload'
+        and pbj.state in ('queued', 'running')
+        and now() >= pbj.timeout_at
+    `);
+    await client.query(`
+      update project_background_jobs set state = 'failed', error_message = 'Timed out', progress_message = 'timeout' where (state = 'queued' or state = 'running') and now() >= timeout_at and type != 'data_table_upload'
     `);
     await client.query(`
       delete from project_background_jobs where state = 'queued' and created_at < now() - interval '1 day'

@@ -251,7 +251,12 @@ CREATE TYPE public.change_log_field_group AS ENUM (
     'resolvable_layer_comments:created',
     'resolvable_layer_comments:responded',
     'resolvable_layer_comments:resolved',
-    'resolvable_layer_comments:reopened'
+    'resolvable_layer_comments:reopened',
+    'data_table:created',
+    'data_table:deleted',
+    'data_table:renamed',
+    'data_table:replaced',
+    'data_table:rollback'
 );
 
 
@@ -790,7 +795,8 @@ CREATE TYPE public.project_background_job_type AS ENUM (
     'data_upload',
     'arcgis_import',
     'consolidate_data_sources',
-    'replacement_upload'
+    'replacement_upload',
+    'data_table_upload'
 );
 
 
@@ -5903,6 +5909,144 @@ COMMENT ON FUNCTION public.collection_as_geojson(id integer) IS '@omit';
 
 
 --
+-- Name: overlay_data_tables; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.overlay_data_tables (
+    id integer NOT NULL,
+    table_of_contents_item_id integer NOT NULL,
+    project_id integer NOT NULL,
+    name text NOT NULL,
+    join_column text NOT NULL,
+    overlay_join_column text NOT NULL,
+    row_count integer NOT NULL,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now(),
+    created_by integer NOT NULL,
+    deleted_at timestamp with time zone,
+    replaced_by_id integer,
+    version integer DEFAULT 1 NOT NULL,
+    parquet_remote text NOT NULL,
+    column_stats_remote text NOT NULL,
+    CONSTRAINT overlay_data_tables_version_positive CHECK ((version > 0))
+);
+
+
+--
+-- Name: TABLE overlay_data_tables; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.overlay_data_tables IS '@omit delete';
+
+
+--
+-- Name: complete_overlay_data_table_upload(uuid, text, text, text, integer, text, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.complete_overlay_data_table_upload(job_id uuid, p_name text, p_join_column text, p_overlay_join_column text, p_row_count integer, p_parquet_remote text, p_column_stats_remote text) RETURNS public.overlay_data_tables
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+declare
+  upload overlay_data_table_uploads;
+  job project_background_jobs;
+  new_row overlay_data_tables;
+  old_row overlay_data_tables;
+  editor_id int;
+  new_version int := 1;
+begin
+  select * into upload
+  from overlay_data_table_uploads
+  where project_background_job_id = job_id;
+  if upload is null then
+    raise exception 'Upload not found for job';
+  end if;
+
+  select * into job from project_background_jobs where id = job_id;
+
+  if upload.replace_overlay_data_table_id is not null then
+    select * into old_row
+    from overlay_data_tables
+    where id = upload.replace_overlay_data_table_id
+      and deleted_at is null;
+    if old_row is null then
+      raise exception 'Replace target no longer active';
+    end if;
+    new_version := old_row.version + 1;
+    update overlay_data_tables
+    set deleted_at = now(), updated_at = now()
+    where id = old_row.id;
+  end if;
+
+  insert into overlay_data_tables (
+    table_of_contents_item_id,
+    project_id,
+    name,
+    join_column,
+    overlay_join_column,
+    row_count,
+    created_by,
+    version,
+    parquet_remote,
+    column_stats_remote
+  ) values (
+    upload.table_of_contents_item_id,
+    job.project_id,
+    p_name,
+    p_join_column,
+    p_overlay_join_column,
+    p_row_count,
+    coalesce(job.user_id, nullif(current_setting('session.user_id', true), '')::integer),
+    new_version,
+    p_parquet_remote,
+    p_column_stats_remote
+  ) returning * into new_row;
+
+  if upload.replace_overlay_data_table_id is not null then
+    update overlay_data_tables
+    set replaced_by_id = new_row.id, updated_at = now()
+    where id = old_row.id;
+
+    editor_id := nullif(current_setting('session.user_id', true), '')::int;
+    if editor_id is not null then
+      perform record_changelog(
+        new_row.project_id,
+        editor_id,
+        'overlay_data_table',
+        new_row.id,
+        'data_table:replaced'::change_log_field_group,
+        jsonb_build_object('name', old_row.name, 'version', old_row.version, 'id', old_row.id),
+        jsonb_build_object('name', new_row.name, 'version', new_row.version, 'id', new_row.id),
+        null, null,
+        jsonb_build_object('table_of_contents_item_id', new_row.table_of_contents_item_id)
+      );
+    end if;
+  else
+    editor_id := coalesce(job.user_id, nullif(current_setting('session.user_id', true), '')::int);
+    if editor_id is not null then
+      perform record_changelog(
+        new_row.project_id,
+        editor_id,
+        'overlay_data_table',
+        new_row.id,
+        'data_table:created'::change_log_field_group,
+        '{}'::jsonb,
+        jsonb_build_object('name', new_row.name, 'version', new_row.version),
+        null, null,
+        jsonb_build_object('table_of_contents_item_id', new_row.table_of_contents_item_id)
+      );
+    end if;
+  end if;
+
+  update project_background_jobs
+  set state = 'complete', progress = 1, progress_message = 'complete', error_message = null
+  where id = job_id;
+
+  return new_row;
+end;
+$$;
+
+
+--
 -- Name: compute_project_geography_hash(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -8234,6 +8378,126 @@ $$;
 --
 
 COMMENT ON FUNCTION public.create_metadata_xml_output(data_source_id integer, url text, remote text, size bigint, filename text, metadata_type text) IS '@omit';
+
+
+--
+-- Name: overlay_data_table_uploads; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.overlay_data_table_uploads (
+    id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
+    project_background_job_id uuid NOT NULL,
+    table_of_contents_item_id integer NOT NULL,
+    filename text NOT NULL,
+    content_type text NOT NULL,
+    processing_options jsonb DEFAULT '{}'::jsonb NOT NULL,
+    overlay_geostats jsonb NOT NULL,
+    overlay_join_column text,
+    replace_overlay_data_table_id integer,
+    error_details jsonb,
+    created_at timestamp with time zone DEFAULT now(),
+    updated_at timestamp with time zone DEFAULT now()
+);
+
+
+--
+-- Name: TABLE overlay_data_table_uploads; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON TABLE public.overlay_data_table_uploads IS '@omit delete';
+
+
+--
+-- Name: create_overlay_data_table_upload(integer, text, text, jsonb, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_overlay_data_table_upload(toc_item_id integer, filename text, content_type text, processing_options jsonb DEFAULT '{}'::jsonb, replace_overlay_data_table_id integer DEFAULT NULL::integer) RETURNS public.overlay_data_table_uploads
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+declare
+  upload overlay_data_table_uploads;
+  job project_background_jobs;
+  pid int;
+  geostats jsonb;
+begin
+  select project_id into pid
+  from table_of_contents_items
+  where id = toc_item_id and is_draft = true and is_folder = false;
+  if pid is null then
+    raise exception 'Draft layer table of contents item not found';
+  end if;
+  if not session_is_admin(pid) then
+    raise exception 'permission denied';
+  end if;
+
+  select ds.geostats into geostats
+  from table_of_contents_items toc
+  inner join data_layers dl on dl.id = toc.data_layer_id
+  inner join data_sources ds on ds.id = dl.data_source_id
+  where toc.id = toc_item_id;
+  if geostats is null then
+    raise exception 'Overlay layer has no geostats';
+  end if;
+
+  if replace_overlay_data_table_id is not null then
+    if not exists (
+      select 1 from overlay_data_tables
+      where id = replace_overlay_data_table_id
+        and table_of_contents_item_id = toc_item_id
+        and deleted_at is null
+    ) then
+      raise exception 'Replace target data table not found or not active';
+    end if;
+  end if;
+
+  if exists (
+    select 1
+    from overlay_data_table_uploads odtu
+    inner join project_background_jobs pbj on pbj.id = odtu.project_background_job_id
+    where odtu.table_of_contents_item_id = toc_item_id
+      and odtu.filename = create_overlay_data_table_upload.filename
+      and pbj.state in ('queued', 'running')
+  ) then
+    raise exception 'There is already an active data table upload for this file';
+  end if;
+
+  insert into project_background_jobs (
+    project_id,
+    title,
+    user_id,
+    type,
+    timeout_at
+  ) values (
+    pid,
+    (case when replace_overlay_data_table_id is not null then 'Replacement data table ' else 'Data table ' end) || filename,
+    nullif(current_setting('session.user_id', true), '')::integer,
+    'data_table_upload',
+    timezone('utc', now()) + interval '15 minutes'
+  ) returning * into job;
+
+  insert into overlay_data_table_uploads (
+    project_background_job_id,
+    table_of_contents_item_id,
+    filename,
+    content_type,
+    processing_options,
+    overlay_geostats,
+    overlay_join_column,
+    replace_overlay_data_table_id
+  ) values (
+    job.id,
+    toc_item_id,
+    create_overlay_data_table_upload.filename,
+    content_type,
+    coalesce(processing_options, '{}'::jsonb),
+    geostats,
+    processing_options->>'overlayJoinColumn',
+    replace_overlay_data_table_id
+  ) returning * into upload;
+
+  return upload;
+end;
+$$;
 
 
 --
@@ -11352,6 +11616,26 @@ CREATE FUNCTION public.fail_data_upload(id uuid, msg text) RETURNS public.data_u
     AS $$
     update data_upload_tasks set state = 'failed', error_message = msg where id = fail_data_upload.id and session_is_admin(project_id) returning *;
   $$;
+
+
+--
+-- Name: fail_overlay_data_table_upload(uuid, text, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.fail_overlay_data_table_upload(job_id uuid, error_message text, error_details jsonb DEFAULT NULL::jsonb) RETURNS void
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+begin
+  update overlay_data_table_uploads
+  set error_details = coalesce(fail_overlay_data_table_upload.error_details, error_details),
+      updated_at = now()
+  where project_background_job_id = job_id;
+
+  update project_background_jobs
+  set state = 'failed', progress_message = 'failed', error_message = fail_overlay_data_table_upload.error_message
+  where id = job_id;
+end;
+$$;
 
 
 --
@@ -14759,6 +15043,52 @@ $$;
 --
 
 COMMENT ON FUNCTION public.overlapping_fragments_for_collection(input_collection_id integer, input_envelopes public.geometry[], edited_sketch_id integer) IS '@omit';
+
+
+--
+-- Name: overlay_data_table_linked_toc_is_draft(integer, integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.overlay_data_table_linked_toc_is_draft(toc_item_id integer, pid integer) RETURNS boolean
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+  select exists (
+    select 1
+    from table_of_contents_items
+    where id = toc_item_id
+      and project_id = pid
+      and is_draft = true
+  );
+$$;
+
+
+--
+-- Name: overlay_data_tables_draft_toc_has_changes(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.overlay_data_tables_draft_toc_has_changes() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+declare
+  pid int;
+  toc_is_draft boolean;
+begin
+  if tg_op = 'DELETE' then
+    select project_id, table_of_contents_items.is_draft into pid, toc_is_draft
+    from table_of_contents_items where id = old.table_of_contents_item_id;
+  else
+    select project_id, table_of_contents_items.is_draft into pid, toc_is_draft
+    from table_of_contents_items where id = new.table_of_contents_item_id;
+  end if;
+  if toc_is_draft then
+    update projects set draft_table_of_contents_has_changes = true where id = pid;
+  end if;
+  if tg_op = 'DELETE' then
+    return old;
+  end if;
+  return new;
+end;
+$$;
 
 
 --
@@ -18466,6 +18796,56 @@ Remove a SketchClass from the list of valid children for a Collection.
 
 
 --
+-- Name: rename_overlay_data_table(integer, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.rename_overlay_data_table(table_id integer, new_name text) RETURNS public.overlay_data_tables
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+declare
+  row overlay_data_tables;
+  old_name text;
+  editor_id int;
+begin
+  select * into row from overlay_data_tables where id = table_id and deleted_at is null;
+  if row is null then
+    raise exception 'Active data table not found';
+  end if;
+  if not session_is_admin(row.project_id) then
+    raise exception 'permission denied';
+  end if;
+  if not exists (
+    select 1 from table_of_contents_items
+    where id = row.table_of_contents_item_id and is_draft = true
+  ) then
+    raise exception 'Can only rename data tables on draft layers';
+  end if;
+  old_name := row.name;
+  update overlay_data_tables
+  set name = new_name, updated_at = now()
+  where id = table_id
+  returning * into row;
+
+  editor_id := nullif(current_setting('session.user_id', true), '')::int;
+  if editor_id is not null then
+    perform record_changelog(
+      row.project_id,
+      editor_id,
+      'overlay_data_table',
+      row.id,
+      'data_table:renamed'::change_log_field_group,
+      jsonb_build_object('name', old_name),
+      jsonb_build_object('name', new_name),
+      null, null,
+      jsonb_build_object('table_of_contents_item_id', row.table_of_contents_item_id, 'version', row.version)
+    );
+  end if;
+  return row;
+end;
+$$;
+
+
+--
 -- Name: rename_report_tab(integer, text, jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -19612,6 +19992,81 @@ CREATE FUNCTION public.revoke_api_key(id uuid) RETURNS void
       update api_keys set is_revoked = true where api_keys.id = revoke_api_key.id;
     end;
   $$;
+
+
+--
+-- Name: rollback_overlay_data_table_version(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.rollback_overlay_data_table_version(table_id integer) RETURNS public.overlay_data_tables
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+declare
+  target overlay_data_tables;
+  successor overlay_data_tables;
+  editor_id int;
+begin
+  select * into target from overlay_data_tables where id = table_id;
+  if target is null then
+    raise exception 'Data table not found';
+  end if;
+  if target.deleted_at is null then
+    select * into target
+    from overlay_data_tables
+    where replaced_by_id = table_id
+      and deleted_at is not null
+    order by version desc
+    limit 1;
+    if target is null then
+      raise exception 'No previous version found to rollback to';
+    end if;
+  end if;
+  if not session_is_admin(target.project_id) then
+    raise exception 'permission denied';
+  end if;
+  if not exists (
+    select 1 from table_of_contents_items
+    where id = target.table_of_contents_item_id and is_draft = true
+  ) then
+    raise exception 'Can only rollback data tables on draft layers';
+  end if;
+
+  select * into successor
+  from overlay_data_tables
+  where id = target.replaced_by_id
+    and deleted_at is null
+  limit 1;
+  if successor is null then
+    raise exception 'No successor version found to rollback from';
+  end if;
+
+  delete from overlay_data_tables where id = successor.id;
+
+  update overlay_data_tables
+  set deleted_at = null, replaced_by_id = null, updated_at = now()
+  where id = target.id
+  returning * into target;
+
+  editor_id := nullif(current_setting('session.user_id', true), '')::int;
+  if editor_id is not null then
+    perform record_changelog(
+      target.project_id,
+      editor_id,
+      'overlay_data_table',
+      target.id,
+      'data_table:rollback'::change_log_field_group,
+      jsonb_build_object('removed_version', successor.version),
+      jsonb_build_object('name', target.name, 'version', target.version),
+      null, null,
+      jsonb_build_object(
+        'table_of_contents_item_id', target.table_of_contents_item_id,
+        'removed_id', successor.id
+      )
+    );
+  end if;
+  return target;
+end;
+$$;
 
 
 --
@@ -21765,6 +22220,55 @@ $$;
 
 
 --
+-- Name: soft_delete_overlay_data_table(integer); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.soft_delete_overlay_data_table(table_id integer) RETURNS public.overlay_data_tables
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+declare
+  row overlay_data_tables;
+  editor_id int;
+begin
+  select * into row from overlay_data_tables where id = table_id and deleted_at is null;
+  if row is null then
+    raise exception 'Active data table not found';
+  end if;
+  if not session_is_admin(row.project_id) then
+    raise exception 'permission denied';
+  end if;
+  if not exists (
+    select 1 from table_of_contents_items
+    where id = row.table_of_contents_item_id and is_draft = true
+  ) then
+    raise exception 'Can only delete data tables on draft layers';
+  end if;
+
+  update overlay_data_tables
+  set deleted_at = now(), updated_at = now()
+  where id = table_id
+  returning * into row;
+
+  editor_id := nullif(current_setting('session.user_id', true), '')::int;
+  if editor_id is not null then
+    perform record_changelog(
+      row.project_id,
+      editor_id,
+      'overlay_data_table',
+      row.id,
+      'data_table:deleted'::change_log_field_group,
+      jsonb_build_object('name', row.name, 'version', row.version),
+      '{}'::jsonb,
+      null, null,
+      jsonb_build_object('table_of_contents_item_id', row.table_of_contents_item_id)
+    );
+  end if;
+  return row;
+end;
+$$;
+
+
+--
 -- Name: soft_delete_sprite(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -21912,6 +22416,42 @@ CREATE FUNCTION public.submit_data_upload(id uuid, enable_ai_data_analyst boolea
         raise exception 'permission denied.';
       end if;
     end;
+$$;
+
+
+--
+-- Name: submit_overlay_data_table_upload(uuid); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.submit_overlay_data_table_upload(job_id uuid) RETURNS public.project_background_jobs
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+declare
+  job project_background_jobs;
+  pid int;
+begin
+  select project_id into pid
+  from project_background_jobs
+  where id = submit_overlay_data_table_upload.job_id;
+  if not session_is_admin(pid) then
+    raise exception 'permission denied';
+  end if;
+  if not exists (
+    select 1 from overlay_data_table_uploads where project_background_job_id = job_id
+  ) then
+    raise exception 'Data table upload not found for job';
+  end if;
+  update project_background_jobs
+  set state = 'running', progress_message = 'uploaded', started_at = now()
+  where id = job_id
+  returning * into job;
+  perform graphile_worker.add_job(
+    'processDataTableUpload',
+    json_build_object('jobId', job.id),
+    max_attempts := 1
+  );
+  return job;
+end;
 $$;
 
 
@@ -22645,6 +23185,31 @@ $$;
 
 
 --
+-- Name: table_of_contents_items_overlay_data_tables(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.table_of_contents_items_overlay_data_tables(item public.table_of_contents_items) RETURNS SETOF public.overlay_data_tables
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+  select odt.*
+  from overlay_data_tables odt
+  where odt.table_of_contents_item_id = item.id
+    and odt.deleted_at is null
+    and (
+      session_is_admin(item.project_id)
+      or (item.is_draft = false and _session_on_toc_item_acl(item.path))
+    );
+$$;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_overlay_data_tables(item public.table_of_contents_items); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.table_of_contents_items_overlay_data_tables(item public.table_of_contents_items) IS '@simpleCollections only';
+
+
+--
 -- Name: table_of_contents_items_primary_download_url(public.table_of_contents_items); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -22721,20 +23286,23 @@ CREATE FUNCTION public.table_of_contents_items_project(t public.table_of_content
 CREATE FUNCTION public.table_of_contents_items_project_background_jobs(item public.table_of_contents_items) RETURNS SETOF public.project_background_jobs
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-    select 
-      * 
-    from 
-      project_background_jobs 
-    where 
+  select *
+  from project_background_jobs
+  where session_is_admin(item.project_id)
+    and (
       id = (
-        select 
-          project_background_job_id 
-        from 
-          esri_feature_layer_conversion_tasks 
-        where 
-          table_of_contents_item_id = item.id
-      ) and session_is_admin(item.project_id);
-  $$;
+        select project_background_job_id
+        from esri_feature_layer_conversion_tasks
+        where table_of_contents_item_id = item.id
+        limit 1
+      )
+      or id in (
+        select odtu.project_background_job_id
+        from overlay_data_table_uploads odtu
+        where odtu.table_of_contents_item_id = item.id
+      )
+    );
+$$;
 
 
 --
@@ -24343,6 +24911,57 @@ $$;
 --
 
 COMMENT ON FUNCTION public.trg_changelog_table_of_contents_items_title() IS 'Records admin changelog entries when a draft table_of_contents_items title is updated (session.user_id).';
+
+
+--
+-- Name: trg_publish_overlay_data_tables_for_toc_item(); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.trg_publish_overlay_data_tables_for_toc_item() RETURNS trigger
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+declare
+  draft_toc_id int;
+begin
+  if new.is_draft = false and new.is_folder = false then
+    select id into draft_toc_id
+    from table_of_contents_items
+    where stable_id = new.stable_id
+      and project_id = new.project_id
+      and table_of_contents_items.is_draft = true
+    limit 1;
+    if draft_toc_id is not null then
+      insert into overlay_data_tables (
+        table_of_contents_item_id,
+        project_id,
+        name,
+        join_column,
+        overlay_join_column,
+        row_count,
+        created_by,
+        version,
+        parquet_remote,
+        column_stats_remote
+      )
+      select
+        new.id,
+        odt.project_id,
+        odt.name,
+        odt.join_column,
+        odt.overlay_join_column,
+        odt.row_count,
+        odt.created_by,
+        odt.version,
+        odt.parquet_remote,
+        odt.column_stats_remote
+      from overlay_data_tables odt
+      where odt.table_of_contents_item_id = draft_toc_id
+        and odt.deleted_at is null;
+    end if;
+  end if;
+  return new;
+end;
+$$;
 
 
 --
@@ -26890,6 +27509,20 @@ CREATE TABLE public.original_source_id (
 
 
 --
+-- Name: overlay_data_tables_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+ALTER TABLE public.overlay_data_tables ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
+    SEQUENCE NAME public.overlay_data_tables_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1
+);
+
+
+--
 -- Name: pending_topic_notifications; Type: TABLE; Schema: public; Owner: -
 --
 
@@ -27984,6 +28617,30 @@ ALTER TABLE ONLY public.optional_basemap_layers
 
 
 --
+-- Name: overlay_data_table_uploads overlay_data_table_uploads_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.overlay_data_table_uploads
+    ADD CONSTRAINT overlay_data_table_uploads_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: overlay_data_table_uploads overlay_data_table_uploads_unique_project_background_job; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.overlay_data_table_uploads
+    ADD CONSTRAINT overlay_data_table_uploads_unique_project_background_job UNIQUE (project_background_job_id);
+
+
+--
+-- Name: overlay_data_tables overlay_data_tables_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.overlay_data_tables
+    ADD CONSTRAINT overlay_data_tables_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: pending_topic_notifications pending_topic_notifications_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -28938,6 +29595,27 @@ CREATE INDEX optional_basemap_layers_basemap_id_idx ON public.optional_basemap_l
 
 
 --
+-- Name: overlay_data_tables_active_name_per_toc; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE UNIQUE INDEX overlay_data_tables_active_name_per_toc ON public.overlay_data_tables USING btree (table_of_contents_item_id, name) WHERE (deleted_at IS NULL);
+
+
+--
+-- Name: overlay_data_tables_project_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX overlay_data_tables_project_idx ON public.overlay_data_tables USING btree (project_id);
+
+
+--
+-- Name: overlay_data_tables_toc_active_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX overlay_data_tables_toc_active_idx ON public.overlay_data_tables USING btree (table_of_contents_item_id) WHERE (deleted_at IS NULL);
+
+
+--
 -- Name: posts_topic_id_idx; Type: INDEX; Schema: public; Owner: -
 --
 
@@ -29862,6 +30540,13 @@ CREATE TRIGGER on_map_bookmark_update_trigger AFTER UPDATE ON public.map_bookmar
 
 
 --
+-- Name: overlay_data_tables overlay_data_tables_draft_toc_has_changes; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER overlay_data_tables_draft_toc_has_changes AFTER INSERT OR DELETE OR UPDATE ON public.overlay_data_tables FOR EACH ROW EXECUTE FUNCTION public.overlay_data_tables_draft_toc_has_changes();
+
+
+--
 -- Name: posts post_after_insert_notify_subscriptions; Type: TRIGGER; Schema: public; Owner: -
 --
 
@@ -29873,6 +30558,13 @@ CREATE TRIGGER post_after_insert_notify_subscriptions AFTER INSERT ON public.pos
 --
 
 CREATE TRIGGER project_background_job_notify_subscriptions AFTER INSERT OR UPDATE ON public.project_background_jobs FOR EACH ROW EXECUTE FUNCTION public.after_project_background_jobs_insert_or_update_notify_subscript();
+
+
+--
+-- Name: table_of_contents_items publish_overlay_data_tables_for_toc_item; Type: TRIGGER; Schema: public; Owner: -
+--
+
+CREATE TRIGGER publish_overlay_data_tables_for_toc_item AFTER INSERT ON public.table_of_contents_items FOR EACH ROW EXECUTE FUNCTION public.trg_publish_overlay_data_tables_for_toc_item();
 
 
 --
@@ -30798,6 +31490,62 @@ ALTER TABLE ONLY public.offline_tile_settings
 
 ALTER TABLE ONLY public.optional_basemap_layers
     ADD CONSTRAINT optional_basemap_layers_basemap_id_fkey FOREIGN KEY (basemap_id) REFERENCES public.basemaps(id) ON DELETE CASCADE;
+
+
+--
+-- Name: overlay_data_table_uploads overlay_data_table_uploads_project_background_job_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.overlay_data_table_uploads
+    ADD CONSTRAINT overlay_data_table_uploads_project_background_job_id_fkey FOREIGN KEY (project_background_job_id) REFERENCES public.project_background_jobs(id) ON DELETE CASCADE;
+
+
+--
+-- Name: overlay_data_table_uploads overlay_data_table_uploads_replace_overlay_data_table_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.overlay_data_table_uploads
+    ADD CONSTRAINT overlay_data_table_uploads_replace_overlay_data_table_id_fkey FOREIGN KEY (replace_overlay_data_table_id) REFERENCES public.overlay_data_tables(id);
+
+
+--
+-- Name: overlay_data_table_uploads overlay_data_table_uploads_table_of_contents_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.overlay_data_table_uploads
+    ADD CONSTRAINT overlay_data_table_uploads_table_of_contents_item_id_fkey FOREIGN KEY (table_of_contents_item_id) REFERENCES public.table_of_contents_items(id) ON DELETE CASCADE;
+
+
+--
+-- Name: overlay_data_tables overlay_data_tables_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.overlay_data_tables
+    ADD CONSTRAINT overlay_data_tables_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id);
+
+
+--
+-- Name: overlay_data_tables overlay_data_tables_project_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.overlay_data_tables
+    ADD CONSTRAINT overlay_data_tables_project_id_fkey FOREIGN KEY (project_id) REFERENCES public.projects(id) ON DELETE CASCADE;
+
+
+--
+-- Name: overlay_data_tables overlay_data_tables_replaced_by_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.overlay_data_tables
+    ADD CONSTRAINT overlay_data_tables_replaced_by_id_fkey FOREIGN KEY (replaced_by_id) REFERENCES public.overlay_data_tables(id);
+
+
+--
+-- Name: overlay_data_tables overlay_data_tables_table_of_contents_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.overlay_data_tables
+    ADD CONSTRAINT overlay_data_tables_table_of_contents_item_id_fkey FOREIGN KEY (table_of_contents_item_id) REFERENCES public.table_of_contents_items(id) ON DELETE CASCADE;
 
 
 --
@@ -32152,6 +32900,66 @@ CREATE POLICY optional_basemap_layers_admin ON public.optional_basemap_layers US
 --
 
 CREATE POLICY optional_basemap_layers_select ON public.optional_basemap_layers FOR SELECT USING (true);
+
+
+--
+-- Name: overlay_data_table_uploads; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.overlay_data_table_uploads ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: overlay_data_table_uploads overlay_data_table_uploads_insert; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY overlay_data_table_uploads_insert ON public.overlay_data_table_uploads FOR INSERT WITH CHECK (public.session_is_admin(( SELECT table_of_contents_items.project_id
+   FROM public.table_of_contents_items
+  WHERE (table_of_contents_items.id = overlay_data_table_uploads.table_of_contents_item_id))));
+
+
+--
+-- Name: overlay_data_table_uploads overlay_data_table_uploads_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY overlay_data_table_uploads_select ON public.overlay_data_table_uploads FOR SELECT USING (public.session_is_admin(( SELECT table_of_contents_items.project_id
+   FROM public.table_of_contents_items
+  WHERE (table_of_contents_items.id = overlay_data_table_uploads.table_of_contents_item_id))));
+
+
+--
+-- Name: overlay_data_tables; Type: ROW SECURITY; Schema: public; Owner: -
+--
+
+ALTER TABLE public.overlay_data_tables ENABLE ROW LEVEL SECURITY;
+
+--
+-- Name: overlay_data_tables overlay_data_tables_delete; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY overlay_data_tables_delete ON public.overlay_data_tables FOR DELETE USING ((public.session_is_admin(project_id) AND public.overlay_data_table_linked_toc_is_draft(table_of_contents_item_id, project_id)));
+
+
+--
+-- Name: overlay_data_tables overlay_data_tables_insert; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY overlay_data_tables_insert ON public.overlay_data_tables FOR INSERT WITH CHECK ((public.session_is_admin(project_id) AND public.overlay_data_table_linked_toc_is_draft(table_of_contents_item_id, project_id)));
+
+
+--
+-- Name: overlay_data_tables overlay_data_tables_select; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY overlay_data_tables_select ON public.overlay_data_tables FOR SELECT USING ((public.session_is_admin(project_id) OR (EXISTS ( SELECT 1
+   FROM public.table_of_contents_items toc
+  WHERE ((toc.id = overlay_data_tables.table_of_contents_item_id) AND (toc.is_draft = false) AND public._session_on_toc_item_acl(toc.path))))));
+
+
+--
+-- Name: overlay_data_tables overlay_data_tables_update; Type: POLICY; Schema: public; Owner: -
+--
+
+CREATE POLICY overlay_data_tables_update ON public.overlay_data_tables FOR UPDATE USING ((public.session_is_admin(project_id) AND public.overlay_data_table_linked_toc_is_draft(table_of_contents_item_id, project_id)));
 
 
 --
@@ -35302,6 +36110,21 @@ GRANT ALL ON FUNCTION public.collection_as_geojson(id integer) TO anon;
 
 
 --
+-- Name: TABLE overlay_data_tables; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.overlay_data_tables TO anon;
+GRANT SELECT ON TABLE public.overlay_data_tables TO seasketch_user;
+
+
+--
+-- Name: FUNCTION complete_overlay_data_table_upload(job_id uuid, p_name text, p_join_column text, p_overlay_join_column text, p_row_count integer, p_parquet_remote text, p_column_stats_remote text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.complete_overlay_data_table_upload(job_id uuid, p_name text, p_join_column text, p_overlay_join_column text, p_row_count integer, p_parquet_remote text, p_column_stats_remote text) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION compute_project_geography_hash(geog_id integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -35878,6 +36701,21 @@ GRANT SELECT ON TABLE public.data_upload_outputs TO anon;
 
 REVOKE ALL ON FUNCTION public.create_metadata_xml_output(data_source_id integer, url text, remote text, size bigint, filename text, metadata_type text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.create_metadata_xml_output(data_source_id integer, url text, remote text, size bigint, filename text, metadata_type text) TO seasketch_user;
+
+
+--
+-- Name: TABLE overlay_data_table_uploads; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT ON TABLE public.overlay_data_table_uploads TO seasketch_user;
+
+
+--
+-- Name: FUNCTION create_overlay_data_table_upload(toc_item_id integer, filename text, content_type text, processing_options jsonb, replace_overlay_data_table_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_overlay_data_table_upload(toc_item_id integer, filename text, content_type text, processing_options jsonb, replace_overlay_data_table_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_overlay_data_table_upload(toc_item_id integer, filename text, content_type text, processing_options jsonb, replace_overlay_data_table_id integer) TO seasketch_user;
 
 
 --
@@ -36940,6 +37778,13 @@ GRANT ALL ON FUNCTION public.extract_title(lang text, doc jsonb) TO anon;
 
 REVOKE ALL ON FUNCTION public.fail_data_upload(id uuid, msg text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.fail_data_upload(id uuid, msg text) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION fail_overlay_data_table_upload(job_id uuid, error_message text, error_details jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.fail_overlay_data_table_upload(job_id uuid, error_message text, error_details jsonb) FROM PUBLIC;
 
 
 --
@@ -39087,6 +39932,21 @@ REVOKE ALL ON FUNCTION public.overlaps_nd(public.gidx, public.gidx) FROM PUBLIC;
 
 
 --
+-- Name: FUNCTION overlay_data_table_linked_toc_is_draft(toc_item_id integer, pid integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.overlay_data_table_linked_toc_is_draft(toc_item_id integer, pid integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.overlay_data_table_linked_toc_is_draft(toc_item_id integer, pid integer) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION overlay_data_tables_draft_toc_has_changes(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.overlay_data_tables_draft_toc_has_changes() FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION path(public.geometry); Type: ACL; Schema: public; Owner: -
 --
 
@@ -40429,6 +41289,14 @@ GRANT ALL ON FUNCTION public.remove_valid_child_sketch_class(parent integer, chi
 
 
 --
+-- Name: FUNCTION rename_overlay_data_table(table_id integer, new_name text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.rename_overlay_data_table(table_id integer, new_name text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.rename_overlay_data_table(table_id integer, new_name text) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION rename_report_tab(tab_id integer, title text, alternate_language_settings jsonb); Type: ACL; Schema: public; Owner: -
 --
 
@@ -40669,6 +41537,14 @@ GRANT ALL ON FUNCTION public.revoke_admin_access("projectId" integer, "userId" i
 
 REVOKE ALL ON FUNCTION public.revoke_api_key(id uuid) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.revoke_api_key(id uuid) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION rollback_overlay_data_table_version(table_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.rollback_overlay_data_table_version(table_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.rollback_overlay_data_table_version(table_id integer) TO seasketch_user;
 
 
 --
@@ -41240,6 +42116,14 @@ GRANT ALL ON FUNCTION public.slugify(text) TO anon;
 
 REVOKE ALL ON FUNCTION public.slugify(value text, allow_unicode boolean) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.slugify(value text, allow_unicode boolean) TO anon;
+
+
+--
+-- Name: FUNCTION soft_delete_overlay_data_table(table_id integer); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.soft_delete_overlay_data_table(table_id integer) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.soft_delete_overlay_data_table(table_id integer) TO seasketch_user;
 
 
 --
@@ -44066,6 +44950,14 @@ GRANT ALL ON FUNCTION public.submit_data_upload(id uuid, enable_ai_data_analyst 
 
 
 --
+-- Name: FUNCTION submit_overlay_data_table_upload(job_id uuid); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.submit_overlay_data_table_upload(job_id uuid) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.submit_overlay_data_table_upload(job_id uuid) TO seasketch_user;
+
+
+--
 -- Name: FUNCTION subpath(public.ltree, integer); Type: ACL; Schema: public; Owner: -
 --
 
@@ -44339,6 +45231,14 @@ GRANT ALL ON FUNCTION public.table_of_contents_items_metadata_format(item public
 
 REVOKE ALL ON FUNCTION public.table_of_contents_items_metadata_xml(item public.table_of_contents_items) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.table_of_contents_items_metadata_xml(item public.table_of_contents_items) TO anon;
+
+
+--
+-- Name: FUNCTION table_of_contents_items_overlay_data_tables(item public.table_of_contents_items); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.table_of_contents_items_overlay_data_tables(item public.table_of_contents_items) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.table_of_contents_items_overlay_data_tables(item public.table_of_contents_items) TO seasketch_user;
 
 
 --
@@ -44752,6 +45652,13 @@ REVOKE ALL ON FUNCTION public.trg_changelog_table_of_contents_items_parent_chang
 --
 
 REVOKE ALL ON FUNCTION public.trg_changelog_table_of_contents_items_title() FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION trg_publish_overlay_data_tables_for_toc_item(); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.trg_publish_overlay_data_tables_for_toc_item() FROM PUBLIC;
 
 
 --

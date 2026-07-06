@@ -460,6 +460,15 @@ query LayerSettingsChangeLog($id: Int!, $first: Int!) {
   }
 }
 
+query DataTableChangeLog($id: Int!, $first: Int!) {
+  tableOfContentsItem(id: $id) {
+    id
+    dataTableChangeLogs(first: $first) {
+      ...ChangeLogDetails
+    }
+  }
+}
+
 fragment ResolvableLayerCommentDetails on ResolvableLayerComment {
   id
   projectId
@@ -514,21 +523,20 @@ fragment FullAdminOverlay on TableOfContentsItem {
   stableId
   title
   enableDownload
+  enableDataTables
+  dataTableJoinColumn
   geoprocessingReferenceId
   copiedFromDataLibraryTemplateId
   primaryDownloadUrl
   projectBackgroundJobs {
-    id
-    type
-    title
-    state
-    progress
-    progressMessage
-    errorMessage
+    ...JobDetails
   }
   hasOriginalSourceUpload
   dataLayer {
     ...FullAdminDataLayer
+  }
+  overlayDataTables {
+    ...OverlayDataTableDetails
   }
   relatedReportCardDetails {
     isDraft
@@ -595,6 +603,28 @@ mutation UpdateEnableDownload($id: Int!, $enableDownload: Boolean) {
         eligableDownloadableLayersCount
       }
       primaryDownloadUrl
+    }
+  }
+}
+
+mutation UpdateDataTablesSettings(
+  $id: Int!
+  $enableDataTables: Boolean
+  $dataTableJoinColumn: String
+) {
+  updateTableOfContentsItem(
+    input: {
+      id: $id
+      patch: {
+        enableDataTables: $enableDataTables
+        dataTableJoinColumn: $dataTableJoinColumn
+      }
+    }
+  ) {
+    tableOfContentsItem {
+      id
+      enableDataTables
+      dataTableJoinColumn
     }
   }
 }

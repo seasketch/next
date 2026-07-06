@@ -1,0 +1,90 @@
+fragment OverlayDataTableDetails on OverlayDataTable {
+  id
+  name
+  version
+  joinColumn
+  overlayJoinColumn
+  rowCount
+  parquetRemote
+  columnStatsRemote
+  parquetUrl
+  columnStatsUrl
+  deletedAt
+  replacedById
+  createdAt
+  updatedAt
+}
+
+fragment OverlayDataTableUploadDetails on OverlayDataTableUpload {
+  id
+  tableOfContentsItemId
+  filename
+  contentType
+  processingOptions
+  overlayJoinColumn
+  errorDetails
+  presignedUploadUrl
+  replaceOverlayDataTableId
+  projectBackgroundJobId
+}
+
+mutation CreateOverlayDataTableUpload(
+  $tableOfContentsItemId: Int!
+  $filename: String!
+  $contentType: String!
+  $processingOptions: JSON
+  $replaceOverlayDataTableId: Int
+) {
+  createOverlayDataTableUpload(
+    input: {
+      tocItemId: $tableOfContentsItemId
+      filename: $filename
+      contentType: $contentType
+      processingOptions: $processingOptions
+      replaceOverlayDataTableId: $replaceOverlayDataTableId
+    }
+  ) {
+    overlayDataTableUpload {
+      ...OverlayDataTableUploadDetails
+    }
+    projectBackgroundJob {
+      ...JobDetails
+    }
+  }
+}
+
+mutation SubmitOverlayDataTableUpload($jobId: UUID!) {
+  submitOverlayDataTableUpload(input: { jobId: $jobId }) {
+    projectBackgroundJob {
+      id
+      state
+      progress
+      progressMessage
+    }
+  }
+}
+
+mutation RenameOverlayDataTable($id: Int!, $name: String!) {
+  renameOverlayDataTable(input: { tableId: $id, newName: $name }) {
+    overlayDataTable {
+      ...OverlayDataTableDetails
+    }
+  }
+}
+
+mutation SoftDeleteOverlayDataTable($id: Int!) {
+  softDeleteOverlayDataTable(input: { tableId: $id }) {
+    overlayDataTable {
+      id
+      deletedAt
+    }
+  }
+}
+
+mutation RollbackOverlayDataTableVersion($id: Int!) {
+  rollbackOverlayDataTableVersion(input: { tableId: $id }) {
+    overlayDataTable {
+      ...OverlayDataTableDetails
+    }
+  }
+}

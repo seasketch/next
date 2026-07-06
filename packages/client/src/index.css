@@ -7926,6 +7926,10 @@ select{
   max-height:100vh
 }
 
+.max-h-\[70vh\]{
+  max-height:70vh
+}
+
 .min-h-0{
   min-height:0px
 }
@@ -8470,6 +8474,15 @@ select{
 
 .min-w-lg{
   min-width:32rem
+}
+
+.min-w-max{
+  min-width:-webkit-max-content;
+  min-width:max-content
+}
+
+.min-w-\[14rem\]{
+  min-width:14rem
 }
 
 .\!max-w-128{
@@ -10711,6 +10724,11 @@ select{
   border-color:rgb(63 63 70 / var(--tw-border-opacity, 1))
 }
 
+.border-indigo-300{
+  --tw-border-opacity:1;
+  border-color:rgb(165 180 252 / var(--tw-border-opacity, 1))
+}
+
 .border-b-black{
   --tw-border-opacity:1;
   border-bottom-color:rgb(0 0 0 / var(--tw-border-opacity, 1))
@@ -11730,6 +11748,10 @@ select{
 .bg-zinc-900{
   --tw-bg-opacity:1;
   background-color:rgb(24 24 27 / var(--tw-bg-opacity, 1))
+}
+
+.bg-gray-800\/90{
+  background-color:rgb(31 41 55 / 0.9)
 }
 
 .bg-opacity-10{
@@ -12963,6 +12985,10 @@ select{
   padding-top:1px
 }
 
+.pb-2\.5{
+  padding-bottom:0.625rem
+}
+
 .text-left{
   text-align:left
 }
@@ -13973,6 +13999,10 @@ select{
   color:rgb(252 165 165 / var(--tw-placeholder-opacity, 1))
 }
 
+.accent-gray-400{
+  accent-color:#9ca3af
+}
+
 .\!opacity-100{
   opacity:1 !important
 }
@@ -14857,6 +14887,14 @@ select{
   contain:var(--tw-contain-size) var(--tw-contain-layout) var(--tw-contain-paint) var(--tw-contain-style)
 }
 
+.\[-ms-overflow-style\:none\]{
+  -ms-overflow-style:none
+}
+
+.\[scrollbar-width\:none\]{
+  scrollbar-width:none
+}
+
 .\[scrollbar-width\:thin\]{
   scrollbar-width:thin
 }
@@ -15381,6 +15419,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
   border-color:transparent
 }
 
+.hover\:border-gray-400:hover{
+  --tw-border-opacity:1;
+  border-color:rgb(156 163 175 / var(--tw-border-opacity, 1))
+}
+
 .hover\:border-opacity-100:hover{
   --tw-border-opacity:1
 }
@@ -15649,6 +15692,14 @@ input[type="checkbox"][indeterminate="true"]:checked {
   background-color:rgb(253 230 138 / var(--tw-bg-opacity, 1))
 }
 
+.hover\:bg-gray-600\/70:hover{
+  background-color:rgb(75 85 99 / 0.7)
+}
+
+.hover\:bg-gray-700\/80:hover{
+  background-color:rgb(55 65 81 / 0.8)
+}
+
 .hover\:bg-opacity-10:hover{
   --tw-bg-opacity:0.1
 }
@@ -15863,6 +15914,21 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .hover\:text-white:hover{
   --tw-text-opacity:1;
   color:rgb(255 255 255 / var(--tw-text-opacity, 1))
+}
+
+.hover\:text-primary-500:hover{
+  --tw-text-opacity:1;
+  color:rgb(46 115 182 / var(--tw-text-opacity, 1))
+}
+
+.hover\:text-indigo-700:hover{
+  --tw-text-opacity:1;
+  color:rgb(67 56 202 / var(--tw-text-opacity, 1))
+}
+
+.hover\:text-gray-200:hover{
+  --tw-text-opacity:1;
+  color:rgb(229 231 235 / var(--tw-text-opacity, 1))
 }
 
 .hover\:underline:hover{
@@ -16366,6 +16432,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .focus-visible\:ring-white\/50:focus-visible{
   --tw-ring-color:rgb(255 255 255 / 0.5)
+}
+
+.focus-visible\:ring-indigo-300:focus-visible{
+  --tw-ring-opacity:1;
+  --tw-ring-color:rgb(165 180 252 / var(--tw-ring-opacity, 1))
 }
 
 .focus-visible\:ring-offset-1:focus-visible{
@@ -18783,6 +18854,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
   .dark\:hover\:bg-opacity-50:hover{
     --tw-bg-opacity:0.5
   }
+}
+
+.\[\&\:\:-webkit-scrollbar\]\:hidden::-webkit-scrollbar{
+  display:none
 }
 
 .\[\&\>span\]\:min-h-0>span{
