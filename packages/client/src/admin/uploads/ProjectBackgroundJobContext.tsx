@@ -35,6 +35,7 @@ import ProjectBackgroundJobManager, {
   DataUploadErrorEvent,
   DataUploadProcessingCompleteEvent,
 } from "./ProjectBackgroundJobManager";
+import { dataTableChangeLogRefetchQueries } from "../changelogs/dataTableChangeLogRefetch";
 import sleep from "../../sleep";
 import ConvertFeatureLayerToHostedModal from "../data/arcgis/ConvertFeatureLayerToHostedModal";
 import AiDataAnalystUploadPromptModal from "./AiDataAnalystUploadPromptModal";
@@ -323,7 +324,11 @@ export default function DataUploadDropzone({
         "data-table-upload-complete",
         (event: { jobId: string; tableOfContentsItemId: number }) => {
           client.refetchQueries({
-            include: [GetLayerItemDocument, DraftTableOfContentsDocument],
+            include: [
+              GetLayerItemDocument,
+              DraftTableOfContentsDocument,
+              ...dataTableChangeLogRefetchQueries(event.tableOfContentsItemId),
+            ],
           });
         }
       );

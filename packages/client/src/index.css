@@ -6663,6 +6663,10 @@ select{
   z-index:auto
 }
 
+.z-\[999999\]{
+  z-index:999999
+}
+
 .order-1{
   order:1
 }
@@ -6962,6 +6966,11 @@ select{
 .my-auto{
   margin-top:auto;
   margin-bottom:auto
+}
+
+.my-0\.5{
+  margin-top:0.125rem;
+  margin-bottom:0.125rem
 }
 
 .-mb-0{
@@ -15698,6 +15707,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .hover\:bg-gray-700\/80:hover{
   background-color:rgb(55 65 81 / 0.8)
+}
+
+.hover\:bg-indigo-50:hover{
+  --tw-bg-opacity:1;
+  background-color:rgb(238 242 255 / var(--tw-bg-opacity, 1))
 }
 
 .hover\:bg-opacity-10:hover{

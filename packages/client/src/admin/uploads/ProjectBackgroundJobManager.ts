@@ -464,7 +464,9 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
           return {
             ...data,
             projectBackgroundJobs: [
-              ...existing.filter((entry) => entry.id !== job.id),
+              ...existing.filter(
+                (entry: { id: number }) => entry.id !== job.id
+              ),
               job,
             ],
           };

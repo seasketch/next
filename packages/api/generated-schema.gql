@@ -14699,6 +14699,7 @@ type Query implements Node {
     nodeId: ID!
   ): OverlayDataTable
   overlayDataTableLinkedTocIsDraft(pid: Int, tocItemId: Int): Boolean
+  overlayDataTableParquetPublicUrl(pRemote: String): String
 
   """Reads and enables pagination through a set of `OverlayDataTable`."""
   overlayDataTablesConnection(

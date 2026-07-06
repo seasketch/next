@@ -276,4 +276,79 @@ describe("overlay_data_tables", () => {
       },
     );
   });
+
+  test("replace records changelog when completed without session", async () => {
+    await projectTransaction(
+      pool,
+      "public",
+      async (conn, projectId, adminId) => {
+        await createSession(conn, adminId, true, false, projectId);
+        const { tocId } = await createDraftLayer(conn, projectId, adminId);
+
+        let jobId: string;
+        let oldId: number;
+        await asPostgres(
+          conn,
+          async () => {
+            jobId = (await conn.oneFirst(sql`
+            insert into project_background_jobs (project_id, title, type, user_id)
+            values (${projectId}, 'test', 'data_table_upload', ${adminId}) returning id`)) as string;
+
+            oldId = Number(await conn.oneFirst(sql`
+            insert into overlay_data_tables (
+              table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
+              row_count, created_by, version, parquet_remote, column_stats_remote
+            ) values (
+              ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId}, 1,
+              'r2://bucket/old.parquet', 'r2://bucket/old.json'
+            ) returning id`));
+
+            await conn.any(sql`
+            insert into overlay_data_table_uploads (
+              project_background_job_id, table_of_contents_item_id, filename, content_type,
+              overlay_geostats, replace_overlay_data_table_id
+            ) values (
+              ${jobId}, ${tocId}, 'fish.csv', 'text/csv',
+              '{"layers":[{"attributes":[]}]}'::jsonb,
+              ${oldId}
+            )`);
+            await clearSession(conn);
+            await conn.any(sql`
+              select set_config('seasketch.uploads_base_url', 'https://uploads.example.org', true)
+            `);
+            await conn.any(sql`
+              select complete_overlay_data_table_upload(
+                ${jobId}, 'fish', 'site_id', 'id', 20,
+                'r2://bucket/new.parquet', 'r2://bucket/new.json'
+              )`);
+          },
+          { userId: adminId, projectId },
+        );
+
+        const changelog = await conn.one(sql`
+          select field_group, editor_id, from_summary, to_summary
+          from change_logs
+          where entity_type = 'overlay_data_table'
+            and field_group = 'data_table:replaced'
+            and (meta->>'table_of_contents_item_id')::int = ${tocId}
+          order by last_at desc
+          limit 1`);
+        expect(changelog.field_group).toBe("data_table:replaced");
+        expect(changelog.editor_id).toBe(adminId);
+        expect(changelog.from_summary).toEqual(
+          expect.objectContaining({ name: "fish", version: 1 }),
+        );
+        expect(changelog.to_summary).toEqual(
+          expect.objectContaining({ name: "fish", version: 2 }),
+        );
+        expect(changelog.from_summary).toEqual(
+          expect.objectContaining({
+            name: "fish",
+            version: 1,
+            parquet_url: "https://uploads.example.org/old.parquet",
+          }),
+        );
+      },
+    );
+  });
 });

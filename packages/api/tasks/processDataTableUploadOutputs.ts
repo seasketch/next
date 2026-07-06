@@ -26,6 +26,14 @@ export default async function processDataTableUploadOutputs(
         ]);
         return;
       }
+      const uploadsBase =
+        process.env.UPLOADS_BASE_URL || process.env.TILES_BASE_URL || "";
+      if (uploadsBase) {
+        await client.query(
+          `select set_config('seasketch.uploads_base_url', $1, true)`,
+          [uploadsBase],
+        );
+      }
       await client.query(
         `select complete_overlay_data_table_upload($1, $2, $3, $4, $5, $6, $7)`,
         [

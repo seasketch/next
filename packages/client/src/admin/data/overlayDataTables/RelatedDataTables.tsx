@@ -1,4 +1,4 @@
-import { useCallback, useContext, useEffect, useMemo, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useApolloClient } from "@apollo/client";
 import { useTranslation } from "react-i18next";
 import {
@@ -8,7 +8,6 @@ import {
   ProjectBackgroundJobType,
   useGetLayerItemQuery,
   useRenameOverlayDataTableMutation,
-  useRollbackOverlayDataTableVersionMutation,
   useSoftDeleteOverlayDataTableMutation,
 } from "../../../generated/graphql";
 import { GeostatsLayer } from "@seasketch/geostats-types";
@@ -49,7 +48,6 @@ function DataTableRow({
   onRename,
   onDelete,
   onReplace,
-  onRollback,
 }: {
   table: OverlayDataTableDetailsFragment;
   job?: DataTableJob;
@@ -57,7 +55,6 @@ function DataTableRow({
   onRename: (id: number, name: string) => void;
   onDelete: (id: number) => void;
   onReplace: (id: number) => void;
-  onRollback: (id: number) => void;
 }) {
   const { t } = useTranslation("admin:data");
   const [editing, setEditing] = useState(false);
@@ -121,11 +118,8 @@ function DataTableRow({
       ) : (
         <>
           <p className="text-xs text-gray-500">
-            {t("{{count}} rows · {{joinColumn}} → {{overlayJoinColumn}}", {
-              count: table.rowCount.toLocaleString(),
-              joinColumn: table.joinColumn,
-              overlayJoinColumn: table.overlayJoinColumn,
-            })}
+            {/* eslint-disable-next-line i18next/no-literal-string */}
+            {`${table.rowCount.toLocaleString()} rows · ${table.joinColumn} → ${table.overlayJoinColumn}`}
           </p>
           {table.parquetUrl ? (
             <a
@@ -138,17 +132,19 @@ function DataTableRow({
               {table.parquetUrl}
             </a>
           ) : null}
+          {table.columnStatsUrl ? (
+            <a
+              href={table.columnStatsUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-xs text-gray-500 hover:text-primary-600 truncate block"
+              title={table.columnStatsUrl}
+            >
+              {t("Metadata")}
+            </a>
+          ) : null}
         </>
       )}
-      {!job && table.version > 1 ? (
-        <button
-          type="button"
-          className="text-xs text-indigo-600 hover:text-indigo-700 font-medium"
-          onClick={() => onRollback(table.id)}
-        >
-          {t("Rollback to previous version")}
-        </button>
-      ) : null}
     </li>
   );
 }
@@ -198,7 +194,7 @@ export default function RelatedDataTables({ item }: RelatedDataTablesProps) {
   const layer = layerItem.dataLayer;
   const source = layer?.dataSource;
   const geostatsLayer: GeostatsLayer | undefined = useMemo(() => {
-    const layers = source?.geostats?.layers || [];
+    const layers = (source?.geostats?.layers || []) as GeostatsLayer[];
     if (!layer) {
       return undefined;
     }
@@ -228,9 +224,6 @@ export default function RelatedDataTables({ item }: RelatedDataTablesProps) {
     refetchQueries: changeLogRefetchQueries,
   });
   const [deleteTable] = useSoftDeleteOverlayDataTableMutation({
-    refetchQueries: changeLogRefetchQueries,
-  });
-  const [rollbackTable] = useRollbackOverlayDataTableVersionMutation({
     refetchQueries: changeLogRefetchQueries,
   });
 
@@ -272,6 +265,30 @@ export default function RelatedDataTables({ item }: RelatedDataTablesProps) {
   const hasActiveUploads = activeDataTableJobs.some(
     (job) => job.state !== ProjectBackgroundJobState.Failed,
   );
+
+  const trackedJobStatesRef = useRef<Map<string, ProjectBackgroundJobState>>(
+    new Map(),
+  );
+
+  useEffect(() => {
+    let shouldRefetch = false;
+    for (const job of dataTableJobs) {
+      const previousState = trackedJobStatesRef.current.get(job.id);
+      if (
+        previousState &&
+        previousState !== ProjectBackgroundJobState.Complete &&
+        previousState !== ProjectBackgroundJobState.Failed &&
+        (job.state === ProjectBackgroundJobState.Complete ||
+          job.state === ProjectBackgroundJobState.Failed)
+      ) {
+        shouldRefetch = true;
+      }
+      trackedJobStatesRef.current.set(job.id, job.state);
+    }
+    if (shouldRefetch) {
+      void refetchTablesAndHistory();
+    }
+  }, [dataTableJobs, refetchTablesAndHistory]);
 
   useEffect(() => {
     if (!hasActiveUploads) {
@@ -351,11 +368,6 @@ export default function RelatedDataTables({ item }: RelatedDataTablesProps) {
                 setReplaceId(id);
                 setUploadOpen(true);
               }}
-              onRollback={(id) =>
-                rollbackTable({ variables: { id } }).then(() =>
-                  refetchTablesAndHistory(),
-                )
-              }
             />
           ))}
         </ul>

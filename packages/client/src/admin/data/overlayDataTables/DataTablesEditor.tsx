@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Trans, useTranslation } from "react-i18next";
+import { GeostatsLayer } from "@seasketch/geostats-types";
 import { FullAdminOverlayFragment } from "../../../generated/graphql";
 import EnableDataTables from "../EnableDataTables";
 import RelatedDataTables from "./RelatedDataTables";
@@ -14,8 +15,8 @@ export default function DataTablesEditor({
   const layer = item.dataLayer;
   const source = layer?.dataSource;
 
-  const geostatsLayer = useMemo(() => {
-    const layers = source?.geostats?.layers || [];
+  const geostatsLayer: GeostatsLayer | undefined = useMemo(() => {
+    const layers = (source?.geostats?.layers || []) as GeostatsLayer[];
     if (!layer) {
       return undefined;
     }

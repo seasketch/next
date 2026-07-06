@@ -16,6 +16,11 @@ export interface FieldGroupListItemProps {
   itemTitle?: ReactNode;
   /** When the change log has no editor profile, show this instead of "Unknown user". */
   missingProfileLabel?: string;
+  /** When set, replacement entries may offer rollback in a details tooltip. */
+  dataTableActions?: {
+    tableOfContentsItemId: number;
+    activeTables: { id: number; version: number }[];
+  };
 }
 
 export type Summary = Record<string, unknown>;

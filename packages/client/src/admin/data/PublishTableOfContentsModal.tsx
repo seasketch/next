@@ -19,7 +19,7 @@ import {
   summary,
   valueText,
 } from "../changelogs/fieldGroups/FieldGroupListItemBase";
-import { tocItemIdFromMeta } from "../../changelogs/fieldGroups/dataTableSummary";
+import { tocItemIdFromMeta } from "../changelogs/fieldGroups/dataTableSummary";
 import useProjectId from "../../useProjectId";
 import { CHANGE_LOG_INTRODUCTION_DATE } from "../changelogs/constants";
 import PublishSummarizedChangesPanel from "./PublishSummarizedChangesPanel";

@@ -19,6 +19,26 @@ export function tableNameFromSummary(s: Summary): string {
   return valueText(s.name);
 }
 
+export function tableIdFromSummary(s: Summary): number | undefined {
+  const value = s.id;
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+  if (typeof value === "string") {
+    const parsed = parseInt(value, 10);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  }
+  return undefined;
+}
+
+export function parquetUrlFromSummary(s: Summary): string | undefined {
+  const url = s.parquet_url;
+  if (typeof url === "string" && url.length > 0) {
+    return url;
+  }
+  return undefined;
+}
+
 export function tableVersionFromSummary(s: Summary): number | undefined {
   const version = s.version;
   if (typeof version === "number" && Number.isFinite(version)) {

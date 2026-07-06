@@ -72,6 +72,10 @@ export default function DataTablesChangeLogList({
     lastTocRef.current;
 
   const changeLogs = toc?.dataTableChangeLogs ? [...toc.dataTableChangeLogs] : [];
+  const activeTables = (toc?.overlayDataTables || []).map((table) => ({
+    id: table.id,
+    version: table.version,
+  }));
 
   const canShowMore =
     !showAllHistory &&
@@ -102,6 +106,10 @@ export default function DataTablesChangeLogList({
             key={changeLog.id}
             changeLog={changeLog}
             last={index === changeLogs.length - 1}
+            dataTableActions={{
+              tableOfContentsItemId,
+              activeTables,
+            }}
           />
         ))}
       </ul>

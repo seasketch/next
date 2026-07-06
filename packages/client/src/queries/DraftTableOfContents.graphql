@@ -463,6 +463,10 @@ query LayerSettingsChangeLog($id: Int!, $first: Int!) {
 query DataTableChangeLog($id: Int!, $first: Int!) {
   tableOfContentsItem(id: $id) {
     id
+    overlayDataTables {
+      id
+      version
+    }
     dataTableChangeLogs(first: $first) {
       ...ChangeLogDetails
     }

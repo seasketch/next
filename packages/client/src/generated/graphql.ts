@@ -12746,6 +12746,7 @@ export type Query = Node & {
   /** Reads a single `OverlayDataTable` using its globally unique `ID`. */
   overlayDataTableByNodeId?: Maybe<OverlayDataTable>;
   overlayDataTableLinkedTocIsDraft?: Maybe<Scalars['Boolean']>;
+  overlayDataTableParquetPublicUrl?: Maybe<Scalars['String']>;
   /** Reads and enables pagination through a set of `OverlayDataTable`. */
   overlayDataTablesConnection?: Maybe<OverlayDataTablesConnection>;
   overlayDataTableUpload?: Maybe<OverlayDataTableUpload>;
@@ -13667,6 +13668,12 @@ export type QueryOverlayDataTableByNodeIdArgs = {
 export type QueryOverlayDataTableLinkedTocIsDraftArgs = {
   pid?: Maybe<Scalars['Int']>;
   tocItemId?: Maybe<Scalars['Int']>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryOverlayDataTableParquetPublicUrlArgs = {
+  pRemote?: Maybe<Scalars['String']>;
 };
 
 
@@ -21672,7 +21679,10 @@ export type DataTableChangeLogQuery = (
   & { tableOfContentsItem?: Maybe<(
     { __typename?: 'TableOfContentsItem' }
     & Pick<TableOfContentsItem, 'id'>
-    & { dataTableChangeLogs?: Maybe<Array<(
+    & { overlayDataTables?: Maybe<Array<(
+      { __typename?: 'OverlayDataTable' }
+      & Pick<OverlayDataTable, 'id' | 'version'>
+    )>>, dataTableChangeLogs?: Maybe<Array<(
       { __typename?: 'ChangeLog' }
       & ChangeLogDetailsFragment
     )>> }
@@ -33388,6 +33398,10 @@ export const DataTableChangeLogDocument = gql`
     query DataTableChangeLog($id: Int!, $first: Int!) {
   tableOfContentsItem(id: $id) {
     id
+    overlayDataTables {
+      id
+      version
+    }
     dataTableChangeLogs(first: $first) {
       ...ChangeLogDetails
     }

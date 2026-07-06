@@ -232,3 +232,152 @@ create or replace function table_of_contents_items_data_table_change_logs(item t
 grant execute on function table_of_contents_items_data_table_change_logs(item table_of_contents_items) to seasketch_user;
 
 comment on function table_of_contents_items_data_table_change_logs(item table_of_contents_items) is '@simpleCollections only';
+
+create or replace function overlay_data_table_parquet_public_url(p_remote text)
+returns text
+language plpgsql
+stable
+as $$
+declare
+  base text;
+  key text;
+begin
+  if p_remote is null or length(trim(p_remote)) = 0 then
+    return null;
+  end if;
+
+  base := nullif(trim(current_setting('seasketch.uploads_base_url', true)), '');
+  if base is null then
+    return null;
+  end if;
+
+  key := regexp_replace(p_remote, '^r2://[^/]+/', '');
+  if key is null or length(trim(key)) = 0 then
+    return null;
+  end if;
+
+  return rtrim(base, '/') || '/' || key;
+end;
+$$;
+
+grant execute on function overlay_data_table_parquet_public_url(text) to seasketch_user;
+
+-- Replacement uploads complete in the background worker without a session.
+-- Use job.user_id for the changelog editor, same as the initial upload path.
+create or replace function complete_overlay_data_table_upload(
+  job_id uuid,
+  p_name text,
+  p_join_column text,
+  p_overlay_join_column text,
+  p_row_count integer,
+  p_parquet_remote text,
+  p_column_stats_remote text
+) returns overlay_data_tables
+language plpgsql
+security definer
+as $$
+declare
+  upload overlay_data_table_uploads;
+  job project_background_jobs;
+  new_row overlay_data_tables;
+  old_row overlay_data_tables;
+  editor_id int;
+  new_version int := 1;
+begin
+  select * into upload
+  from overlay_data_table_uploads
+  where project_background_job_id = job_id;
+  if upload is null then
+    raise exception 'Upload not found for job';
+  end if;
+
+  select * into job from project_background_jobs where id = job_id;
+
+  if upload.replace_overlay_data_table_id is not null then
+    select * into old_row
+    from overlay_data_tables
+    where id = upload.replace_overlay_data_table_id
+      and deleted_at is null;
+    if old_row is null then
+      raise exception 'Replace target no longer active';
+    end if;
+    new_version := old_row.version + 1;
+    update overlay_data_tables
+    set deleted_at = now(), updated_at = now()
+    where id = old_row.id;
+  end if;
+
+  insert into overlay_data_tables (
+    table_of_contents_item_id,
+    project_id,
+    name,
+    join_column,
+    overlay_join_column,
+    row_count,
+    created_by,
+    version,
+    parquet_remote,
+    column_stats_remote
+  ) values (
+    upload.table_of_contents_item_id,
+    job.project_id,
+    p_name,
+    p_join_column,
+    p_overlay_join_column,
+    p_row_count,
+    coalesce(job.user_id, nullif(current_setting('session.user_id', true), '')::integer),
+    new_version,
+    p_parquet_remote,
+    p_column_stats_remote
+  ) returning * into new_row;
+
+  if upload.replace_overlay_data_table_id is not null then
+    update overlay_data_tables
+    set replaced_by_id = new_row.id, updated_at = now()
+    where id = old_row.id;
+
+    editor_id := coalesce(job.user_id, nullif(current_setting('session.user_id', true), '')::int);
+    if editor_id is not null then
+      perform record_changelog(
+        new_row.project_id,
+        editor_id,
+        'overlay_data_table',
+        new_row.id,
+        'data_table:replaced'::change_log_field_group,
+        jsonb_build_object(
+          'name', old_row.name,
+          'version', old_row.version,
+          'id', old_row.id,
+          'parquet_url', overlay_data_table_parquet_public_url(old_row.parquet_remote)
+        ),
+        jsonb_build_object('name', new_row.name, 'version', new_row.version, 'id', new_row.id),
+        null, null,
+        jsonb_build_object('table_of_contents_item_id', new_row.table_of_contents_item_id)
+      );
+    end if;
+  else
+    editor_id := coalesce(job.user_id, nullif(current_setting('session.user_id', true), '')::int);
+    if editor_id is not null then
+      perform record_changelog(
+        new_row.project_id,
+        editor_id,
+        'overlay_data_table',
+        new_row.id,
+        'data_table:created'::change_log_field_group,
+        '{}'::jsonb,
+        jsonb_build_object('name', new_row.name, 'version', new_row.version),
+        null, null,
+        jsonb_build_object('table_of_contents_item_id', new_row.table_of_contents_item_id)
+      );
+    end if;
+  end if;
+
+  update project_background_jobs
+  set state = 'complete', progress = 1, progress_message = 'complete', error_message = null
+  where id = job_id;
+
+  return new_row;
+end;
+$$;
+
+revoke all on function complete_overlay_data_table_upload(uuid, text, text, text, integer, text, text) from public;
