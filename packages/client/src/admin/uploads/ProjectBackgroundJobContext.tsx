@@ -418,12 +418,10 @@ export default function DataUploadDropzone({
       filesToUpload: File[],
       processingOptionsByFile?: Map<File, DelimitedUploadProcessingOptions>
     ) => {
-      const droppedFileInfos: DroppedFileInfo[] = filesToUpload.map(
-        (file) => ({
-          name: file.name,
-          format: detectSupportedFormat(file.name),
-        })
-      );
+      const droppedFileInfos: DroppedFileInfo[] = filesToUpload.map((file) => ({
+        name: file.name,
+        format: detectSupportedFormat(file.name),
+      }));
 
       setState((prev) => ({
         ...prev,
@@ -714,7 +712,8 @@ export default function DataUploadDropzone({
         browseForFiles: (multiple?: boolean) => {
           const fileInput = document.createElement("input");
           fileInput.type = "file";
-          fileInput.accept = ".zip,.json,.geojson,.fgb,.tif,.tiff,.csv,.tsv,.txt";
+          fileInput.accept =
+            ".zip,.json,.geojson,.fgb,.tif,.tiff,.csv,.tsv,.txt";
           fileInput.multiple = multiple || false;
           fileInput.onchange = async (e) => {
             const files = (e.target as HTMLInputElement).files;
