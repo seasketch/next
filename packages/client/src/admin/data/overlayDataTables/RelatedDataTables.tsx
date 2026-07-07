@@ -121,26 +121,14 @@ function DataTableRow({
             {/* eslint-disable-next-line i18next/no-literal-string */}
             {`${table.rowCount.toLocaleString()} rows · ${table.joinColumn} → ${table.overlayJoinColumn}`}
           </p>
-          {table.parquetUrl ? (
+          {table.queryUrl ? (
             <a
-              href={table.parquetUrl}
+              href={table.queryUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-xs text-gray-500 hover:text-primary-600 font-mono truncate block"
-              title={table.parquetUrl}
+              className="text-xs text-primary-600 hover:text-primary-700 font-medium"
             >
-              {table.parquetUrl}
-            </a>
-          ) : null}
-          {table.columnStatsUrl ? (
-            <a
-              href={table.columnStatsUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-gray-500 hover:text-primary-600 truncate block"
-              title={table.columnStatsUrl}
-            >
-              {t("Metadata")}
+              {t("Explore data")}
             </a>
           ) : null}
         </>

@@ -146,6 +146,10 @@ app.get("*", async (c) => {
     return handleColumnStats(c, pathname.slice(1));
   }
 
+  if (pathname.endsWith("/data.parquet")) {
+    return handleParquetDownload(c, pathname.slice(1));
+  }
+
   return Response.json(
     {
       error: "Not found. Query endpoint is {tablePath}/query",
@@ -156,9 +160,11 @@ app.get("*", async (c) => {
 
 type AppContext = Context<Bindings>;
 
-async function handleColumnStats(
+async function handleStaticObject(
   c: AppContext,
-  key: string
+  key: string,
+  contentType: string,
+  downloadFilename: string
 ): Promise<Response> {
   const dev = isDev(c.env);
   const data = await getR2Object({ bucket: c.env.SSN_TILES, key, dev });
@@ -167,12 +173,27 @@ async function handleColumnStats(
   }
   return new Response(data, {
     headers: {
-      "Content-Type": "application/json",
+      "Content-Type": contentType,
+      "Content-Disposition": `attachment; filename="${downloadFilename}"`,
       "Cache-Control": dev
         ? "no-store"
         : `public, max-age=${BROWSER_MAX_AGE}, s-maxage=${EDGE_MAX_AGE}, immutable`,
     },
   });
+}
+
+async function handleColumnStats(
+  c: AppContext,
+  key: string
+): Promise<Response> {
+  return handleStaticObject(c, key, "application/json", "column-stats.json");
+}
+
+async function handleParquetDownload(
+  c: AppContext,
+  key: string
+): Promise<Response> {
+  return handleStaticObject(c, key, "application/octet-stream", "data.parquet");
 }
 
 async function handleQuery(

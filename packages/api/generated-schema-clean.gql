@@ -11789,6 +11789,7 @@ type OverlayDataTable implements Node {
   overlayJoinColumn: String!
   parquetRemote: String!
   parquetUrl: String
+  queryUrl: String
 
   """Reads a single `Project` that is related to this `OverlayDataTable`."""
   project: Project

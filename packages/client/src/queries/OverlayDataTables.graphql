@@ -9,6 +9,7 @@ fragment OverlayDataTableDetails on OverlayDataTable {
   columnStatsRemote
   parquetUrl
   columnStatsUrl
+  queryUrl
   deletedAt
   replacedById
   createdAt

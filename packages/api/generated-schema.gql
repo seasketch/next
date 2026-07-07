@@ -11943,6 +11943,7 @@ type OverlayDataTable implements Node {
   """Reads a single `Project` that is related to this `OverlayDataTable`."""
   project: Project
   projectId: Int!
+  queryUrl: String
   replacedById: Int
   rowCount: Int!
   tableOfContentsItemId: Int!

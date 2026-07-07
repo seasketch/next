@@ -36,6 +36,12 @@ export function queryUiHtml(tablePath: string): string {
   .wrap { max-width: 1000px; margin: 0 auto; padding: 24px 16px 64px; }
   h1 { font-size: 18px; margin: 0 0 2px; }
   .subtitle { color: var(--muted); font-size: 12px; font-family: ui-monospace, monospace; word-break: break-all; }
+  .header-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .header-actions a {
+    font-size: 12px; text-decoration: none; color: var(--accent);
+    border: 1px solid var(--border); border-radius: 6px; padding: 5px 10px; background: #fff;
+  }
+  .header-actions a:hover { background: var(--accent-soft); }
   .panel {
     background: var(--panel); border: 1px solid var(--border);
     border-radius: 10px; padding: 16px; margin-top: 16px;
@@ -92,6 +98,10 @@ export function queryUiHtml(tablePath: string): string {
 <div class="wrap">
   <h1>Data Table Query</h1>
   <div class="subtitle">${safePath}</div>
+  <div class="header-actions">
+    <a href="data.parquet" download="data.parquet">Download parquet</a>
+    <a href="column-stats.json" download="column-stats.json">Download metadata</a>
+  </div>
 
   <div class="panel filters">
     <div class="panel-head">

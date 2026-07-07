@@ -10803,6 +10803,7 @@ export type OverlayDataTable = Node & {
   /** Reads a single `Project` that is related to this `OverlayDataTable`. */
   project?: Maybe<Project>;
   projectId: Scalars['Int'];
+  queryUrl?: Maybe<Scalars['String']>;
   replacedById?: Maybe<Scalars['Int']>;
   rowCount: Scalars['Int'];
   tableOfContentsItemId: Scalars['Int'];
@@ -23816,7 +23817,7 @@ export type GetTilePackageQuery = (
 
 export type OverlayDataTableDetailsFragment = (
   { __typename?: 'OverlayDataTable' }
-  & Pick<OverlayDataTable, 'id' | 'name' | 'version' | 'joinColumn' | 'overlayJoinColumn' | 'rowCount' | 'parquetRemote' | 'columnStatsRemote' | 'parquetUrl' | 'columnStatsUrl' | 'deletedAt' | 'replacedById' | 'createdAt' | 'updatedAt'>
+  & Pick<OverlayDataTable, 'id' | 'name' | 'version' | 'joinColumn' | 'overlayJoinColumn' | 'rowCount' | 'parquetRemote' | 'columnStatsRemote' | 'parquetUrl' | 'columnStatsUrl' | 'queryUrl' | 'deletedAt' | 'replacedById' | 'createdAt' | 'updatedAt'>
 );
 
 export type OverlayDataTableUploadDetailsFragment = (
@@ -28496,6 +28497,7 @@ export const OverlayDataTableDetailsFragmentDoc = /*#__PURE__*/ gql`
   columnStatsRemote
   parquetUrl
   columnStatsUrl
+  queryUrl
   deletedAt
   replacedById
   createdAt

@@ -3,13 +3,34 @@ import { S3 } from "aws-sdk";
 
 export const DATA_TABLE_UPLOAD_PRESIGNED_URL_TTL = 60 * 120;
 
+function remoteKey(remote: string): string {
+  return remote.replace(/^r2:\/\//, "").split("/").slice(1).join("/");
+}
+
 function remoteToPublicUrl(remote: string | null | undefined): string | null {
   if (!remote) return null;
   const base =
     process.env.UPLOADS_BASE_URL || process.env.TILES_BASE_URL || "";
   if (!base) return null;
-  const key = remote.replace(/^r2:\/\//, "").split("/").slice(1).join("/");
-  return `${base.replace(/\/$/, "")}/${key}`;
+  return `${base.replace(/\/$/, "")}/${remoteKey(remote)}`;
+}
+
+function tablePathFromParquetRemote(
+  remote: string | null | undefined
+): string | null {
+  if (!remote) return null;
+  const key = remoteKey(remote);
+  const suffix = "/data.parquet";
+  if (!key.endsWith(suffix)) return null;
+  return key.slice(0, -suffix.length);
+}
+
+function remoteToQueryUrl(remote: string | null | undefined): string | null {
+  const tablePath = tablePathFromParquetRemote(remote);
+  if (!tablePath) return null;
+  const base =
+    process.env.DATA_TABLES_BASE_URL || "https://data-tables.seasketch.org";
+  return `${base.replace(/\/$/, "")}/${tablePath}/query`;
 }
 
 const OverlayDataTablePlugin = makeExtendSchemaPlugin(() => ({
@@ -17,6 +38,7 @@ const OverlayDataTablePlugin = makeExtendSchemaPlugin(() => ({
     extend type OverlayDataTable {
       parquetUrl: String @requires(columns: ["parquetRemote"])
       columnStatsUrl: String @requires(columns: ["columnStatsRemote"])
+      queryUrl: String @requires(columns: ["parquetRemote"])
     }
 
     extend type OverlayDataTableUpload {
@@ -28,6 +50,7 @@ const OverlayDataTablePlugin = makeExtendSchemaPlugin(() => ({
     OverlayDataTable: {
       parquetUrl: (table) => remoteToPublicUrl(table.parquetRemote),
       columnStatsUrl: (table) => remoteToPublicUrl(table.columnStatsRemote),
+      queryUrl: (table) => remoteToQueryUrl(table.parquetRemote),
     },
     OverlayDataTableUpload: {
       presignedUploadUrl: async (upload) => {
