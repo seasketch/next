@@ -10,6 +10,7 @@ import {
 import type { MyProfileQuery } from "../../generated/graphql";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import Warning from "../../components/Warning";
+import { setAiCartographerUploadReminderConfirmedAt } from "../uploads/aiCartographerUploadReminder";
 
 export default function AiDataAnalystProfileSettingsModal({
   onRequestClose,
@@ -46,6 +47,11 @@ export default function AiDataAnalystProfileSettingsModal({
           enableAiDataAnalyst: () => enableAi,
         },
       });
+      // Enabling in settings counts as a fresh confirmation so the upload
+      // reminder does not appear immediately afterward.
+      if (enableAi) {
+        setAiCartographerUploadReminderConfirmedAt(userId);
+      }
     },
   });
 

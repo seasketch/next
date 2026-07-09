@@ -5,6 +5,7 @@ import Modal from "../../components/Modal";
 import Spinner from "../../components/Spinner";
 import {
   MyProfileDocument,
+  useMyProfileQuery,
   useUpdateAiDataAnalysSettingsForMeMutation,
 } from "../../generated/graphql";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
@@ -12,7 +13,7 @@ import type ProjectBackgroundJobManager from "./ProjectBackgroundJobManager";
 import { SparklesIcon } from "@heroicons/react/outline";
 import { setAiCartographerUploadReminderConfirmedAt } from "./aiCartographerUploadReminder";
 
-export default function AiDataAnalystUploadPromptModal({
+export default function AiDataAnalystUploadReminderModal({
   manager,
   onFinished,
 }: {
@@ -22,35 +23,34 @@ export default function AiDataAnalystUploadPromptModal({
   const { t } = useTranslation("admin:data");
   const client = useApolloClient();
   const onError = useGlobalErrorHandler();
+  const { data: profileData } = useMyProfileQuery();
   const [saving, setSaving] = useState(false);
   const [flushError, setFlushError] = useState<string | null>(null);
   const chosenEnableAi = useRef<boolean | null>(null);
-  /** Which footer action is running (for per-button loading). */
   const [activeAction, setActiveAction] = useState<
-    "enable" | "disable" | "retry" | null
+    "continue" | "disable" | "retry" | null
   >(null);
 
   const [updateSettings] = useUpdateAiDataAnalysSettingsForMeMutation();
 
-  const recordReminderConfirmationIfEnabled = useCallback(
-    (enableAi: boolean) => {
-      if (!enableAi) {
-        return;
-      }
+  const userId = profileData?.me?.profile?.userId;
+
+  const recordConfirmation = useCallback(() => {
+    let id = userId;
+    if (id == null) {
       try {
         const data = client.readQuery<{
           me?: { profile?: { userId?: number | null } | null } | null;
         }>({ query: MyProfileDocument });
-        const userId = data?.me?.profile?.userId;
-        if (userId != null) {
-          setAiCartographerUploadReminderConfirmedAt(userId);
-        }
+        id = data?.me?.profile?.userId ?? undefined;
       } catch {
-        // Profile may not be in cache yet; reminder will show on next upload.
+        return;
       }
-    },
-    [client]
-  );
+    }
+    if (id != null) {
+      setAiCartographerUploadReminderConfirmedAt(id);
+    }
+  }, [client, userId]);
 
   const flushOrThrow = useCallback(
     async (enableAiDataAnalyst: boolean) => {
@@ -69,7 +69,9 @@ export default function AiDataAnalystUploadPromptModal({
     setFlushError(null);
     try {
       await flushOrThrow(choice);
-      recordReminderConfirmationIfEnabled(choice);
+      if (choice) {
+        recordConfirmation();
+      }
       onFinished();
     } catch (e: unknown) {
       const message =
@@ -80,40 +82,48 @@ export default function AiDataAnalystUploadPromptModal({
       setSaving(false);
       setActiveAction(null);
     }
-  }, [flushOrThrow, onError, onFinished, recordReminderConfirmationIfEnabled, t]);
+  }, [flushOrThrow, onError, onFinished, recordConfirmation, t]);
 
-  const choose = useCallback(
-    async (enableAi: boolean) => {
-      setSaving(true);
-      setActiveAction(enableAi ? "enable" : "disable");
-      setFlushError(null);
-      try {
-        await updateSettings({ variables: { enableAi } });
-        await client.refetchQueries({ include: [MyProfileDocument] });
-        chosenEnableAi.current = enableAi;
-        await flushOrThrow(enableAi);
-        recordReminderConfirmationIfEnabled(enableAi);
-        onFinished();
-      } catch (e: unknown) {
-        const message =
-          e instanceof Error ? e.message : t("Something went wrong.");
-        setFlushError(message);
-        onError(e instanceof Error ? e : new Error(String(e)));
-      } finally {
-        setSaving(false);
-        setActiveAction(null);
-      }
-    },
-    [
-      client,
-      flushOrThrow,
-      onError,
-      onFinished,
-      recordReminderConfirmationIfEnabled,
-      t,
-      updateSettings,
-    ]
-  );
+  const continueWithAi = useCallback(async () => {
+    setSaving(true);
+    setActiveAction("continue");
+    setFlushError(null);
+    try {
+      chosenEnableAi.current = true;
+      await flushOrThrow(true);
+      recordConfirmation();
+      onFinished();
+    } catch (e: unknown) {
+      const message =
+        e instanceof Error ? e.message : t("Could not start processing.");
+      setFlushError(message);
+      onError(e instanceof Error ? e : new Error(String(e)));
+    } finally {
+      setSaving(false);
+      setActiveAction(null);
+    }
+  }, [flushOrThrow, onError, onFinished, recordConfirmation, t]);
+
+  const disableAndContinue = useCallback(async () => {
+    setSaving(true);
+    setActiveAction("disable");
+    setFlushError(null);
+    try {
+      await updateSettings({ variables: { enableAi: false } });
+      await client.refetchQueries({ include: [MyProfileDocument] });
+      chosenEnableAi.current = false;
+      await flushOrThrow(false);
+      onFinished();
+    } catch (e: unknown) {
+      const message =
+        e instanceof Error ? e.message : t("Something went wrong.");
+      setFlushError(message);
+      onError(e instanceof Error ? e : new Error(String(e)));
+    } finally {
+      setSaving(false);
+      setActiveAction(null);
+    }
+  }, [client, flushOrThrow, onError, onFinished, t, updateSettings]);
 
   return (
     <Modal
@@ -123,10 +133,7 @@ export default function AiDataAnalystUploadPromptModal({
             className="h-5 w-5 shrink-0 text-primary-600"
             aria-hidden
           />
-          <span>{t("AI Cartographer")}</span>
-          <span className="bg-yellow-300/70 px-2 rounded text-sm">
-            {t("New!")}
-          </span>
+          <span>{t("AI Cartographer is on")}</span>
         </span>
       }
       onRequestClose={() => {}}
@@ -134,22 +141,22 @@ export default function AiDataAnalystUploadPromptModal({
       scrollable
       footer={[
         {
-          label: t("Disable for now"),
+          label: t("Continue with AI"),
+          variant: "primary",
+          disabled: saving,
+          loading: activeAction === "continue",
+          autoFocus: true,
+          onClick: () => {
+            void continueWithAi();
+          },
+        },
+        {
+          label: t("Disable and continue"),
           variant: "secondary",
           disabled: saving,
           loading: activeAction === "disable",
           onClick: () => {
-            void choose(false);
-          },
-        },
-        {
-          label: t("Enable for my account"),
-          variant: "primary",
-          disabled: saving,
-          loading: activeAction === "enable",
-          autoFocus: true,
-          onClick: () => {
-            void choose(true);
+            void disableAndContinue();
           },
         },
       ]}
@@ -157,16 +164,17 @@ export default function AiDataAnalystUploadPromptModal({
       <div className="space-y-3 text-sm text-gray-700">
         <p>
           <Trans ns="admin:data">
-            Our AI Cartographer can suggest titles, attribution, cartographic
-            styles, and popups for your uploads. To do this, we use an AI
-            service to analyze your layer's filename, metadata, statistics, and
-            sample column values. We scan for and redact personally identifiable
-            information (PII) where found.
+            The AI Cartographer is enabled for your account. This upload will be
+            analyzed to suggest a title, attribution, cartographic style, and
+            popups. A summary of your layer's metadata and sample values is sent
+            to an AI service; personally identifiable information (PII) is
+            redacted where found.
           </Trans>
         </p>
         <p>
           <Trans ns="admin:data">
-            For more information on how this system works, see{" "}
+            For more information about how this system works, including handling
+            of PII, read{" "}
             <a
               className="text-primary-500 underline"
               href="https://docs.seasketch.org/seasketch-documentation/administrators-guide/overlay-layers/ai-cartographer"
@@ -175,13 +183,8 @@ export default function AiDataAnalystUploadPromptModal({
             >
               our documentation
             </a>
-            . You can also toggle this setting later under{" "}
+            . You can change this anytime under{" "}
             <b>Settings → AI layer processing</b>.
-          </Trans>
-        </p>
-        <p>
-          <Trans ns="admin:data">
-            Would you like to enable the AI Cartographer for this upload?
           </Trans>
         </p>
         {flushError && (

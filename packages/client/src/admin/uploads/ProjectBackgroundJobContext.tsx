@@ -38,6 +38,7 @@ import ProjectBackgroundJobManager, {
 import sleep from "../../sleep";
 import ConvertFeatureLayerToHostedModal from "../data/arcgis/ConvertFeatureLayerToHostedModal";
 import AiDataAnalystUploadPromptModal from "./AiDataAnalystUploadPromptModal";
+import AiDataAnalystUploadReminderModal from "./AiDataAnalystUploadReminderModal";
 
 export type UploadType = "create" | "replace";
 
@@ -177,7 +178,7 @@ type DroppedFileInfo = {
 
 // How long the drop confirmation lingers before fading out and handing off to
 // the background job queue UI. Errors cancel this and require manual dismissal.
-const OVERLAY_DISMISS_DELAY = 1500;
+const OVERLAY_DISMISS_DELAY = 1000;
 
 export const ProjectBackgroundJobContext = createContext<{
   jobs: JobDetailsFragment[];
@@ -225,6 +226,7 @@ export default function DataUploadDropzone({
     finishedWithChangelog: boolean;
     changelog?: string;
     aiDataAnalystUploadPromptOpen: boolean;
+    aiDataAnalystUploadReminderOpen: boolean;
   }>({
     droppedFiles: 0,
     droppedFileInfos: [],
@@ -235,6 +237,7 @@ export default function DataUploadDropzone({
     replaceTableOfContentsItemId: null,
     finishedWithChangelog: true,
     aiDataAnalystUploadPromptOpen: false,
+    aiDataAnalystUploadReminderOpen: false,
   });
   const client = useApolloClient();
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -311,6 +314,12 @@ export default function DataUploadDropzone({
         setState((prev) => ({
           ...prev,
           aiDataAnalystUploadPromptOpen: true,
+        }));
+      });
+      manager.on("ai-data-analyst-upload-reminder-needed", () => {
+        setState((prev) => ({
+          ...prev,
+          aiDataAnalystUploadReminderOpen: true,
         }));
       });
       setState((prev) => ({
@@ -651,6 +660,17 @@ export default function DataUploadDropzone({
               setState((prev) => ({
                 ...prev,
                 aiDataAnalystUploadPromptOpen: false,
+              }));
+            }}
+          />
+        )}
+        {state.manager && state.aiDataAnalystUploadReminderOpen && (
+          <AiDataAnalystUploadReminderModal
+            manager={state.manager}
+            onFinished={() => {
+              setState((prev) => ({
+                ...prev,
+                aiDataAnalystUploadReminderOpen: false,
               }));
             }}
           />
