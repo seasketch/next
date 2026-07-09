@@ -10,6 +10,7 @@ import {
   MapOverlayContext,
 } from "../../dataLayers/MapContextManager";
 import BasemapContextProvider from "../../dataLayers/BasemapContext";
+import { ActivatedDataTableContextProvider } from "../../dataLayers/ActivatedDataTableContext";
 import MapManagerContextProvider from "../../dataLayers/MapManagerContextProvider";
 import MapUIProvider from "../../dataLayers/MapUIContext";
 import useMapData from "../../dataLayers/useMapData";
@@ -22,6 +23,9 @@ import { TableOfContentsMetadataModalProvider } from "../../dataLayers/TableOfCo
 import { LayerEditingContextProvider } from "./LayerEditingContext";
 import { DataDownloadModalProvider } from "../../dataLayers/DataDownloadModal";
 import { useContext } from "react";
+import {
+  ActivatedDataTableContext,
+} from "../../dataLayers/ActivatedDataTableContext";
 
 /**
  * Reads legend state from context so it stays in sync with the manager.
@@ -30,6 +34,9 @@ function DataSettingsLegend() {
   const { manager } = useContext(MapManagerContext);
   const overlayState = useContext(MapOverlayContext);
   const legendsState = useContext(LegendsContext);
+  const { legendFocusRequest, clearLegendFocusRequest } = useContext(
+    ActivatedDataTableContext
+  );
   const legendProps = useCommonLegendProps(
     {
       layerStatesByTocStaticId: overlayState.layerStatesByTocStaticId,
@@ -50,6 +57,8 @@ function DataSettingsLegend() {
       zOrder={{}}
       map={manager?.map}
       {...legendProps}
+      legendFocusRequest={legendFocusRequest}
+      onLegendFocusComplete={clearLegendFocusRequest}
     />
   );
 }
@@ -87,34 +96,36 @@ export default function DataSettings() {
             tableOfContentsItems,
           }}
         >
-          <MapManagerContextProvider preferencesKey={`${slug}-data-settings`}>
-            <MapUIProvider preferencesKey={`${slug}-data-settings-ui`}>
-              <TableOfContentsMetadataModalProvider>
-                <LayerEditingContextProvider>
-                  <DataDownloadModalProvider>
-                    <Switch>
-                      <Route path={`${path}`}>
-                        <DataUploadDropzone
-                          slug={slug}
-                          className="flex flex-row h-screen"
-                        >
-                          <div className="h-full w-128">
-                            <LayerAdminSidebar />
-                          </div>
-                          <div className="flex-1 h-full">
-                            <DataSettingsLegend />
-                            {data?.projectBySlug && (
-                              <MapboxMap bounds={bounds} className="h-full" />
-                            )}
-                          </div>
-                        </DataUploadDropzone>
-                      </Route>
-                    </Switch>
-                  </DataDownloadModalProvider>
-                </LayerEditingContextProvider>
-              </TableOfContentsMetadataModalProvider>
-            </MapUIProvider>
-          </MapManagerContextProvider>
+          <ActivatedDataTableContextProvider>
+            <MapManagerContextProvider preferencesKey={`${slug}-data-settings`}>
+              <MapUIProvider preferencesKey={`${slug}-data-settings-ui`}>
+                <TableOfContentsMetadataModalProvider>
+                  <LayerEditingContextProvider>
+                    <DataDownloadModalProvider>
+                      <Switch>
+                        <Route path={`${path}`}>
+                          <DataUploadDropzone
+                            slug={slug}
+                            className="flex flex-row h-screen"
+                          >
+                            <div className="h-full w-128">
+                              <LayerAdminSidebar />
+                            </div>
+                            <div className="flex-1 h-full">
+                              <DataSettingsLegend />
+                              {data?.projectBySlug && (
+                                <MapboxMap bounds={bounds} className="h-full" />
+                              )}
+                            </div>
+                          </DataUploadDropzone>
+                        </Route>
+                      </Switch>
+                    </DataDownloadModalProvider>
+                  </LayerEditingContextProvider>
+                </TableOfContentsMetadataModalProvider>
+              </MapUIProvider>
+            </MapManagerContextProvider>
+          </ActivatedDataTableContextProvider>
         </MapOverlayContext.Provider>
       </BasemapContextProvider>
     </DndProvider>

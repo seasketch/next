@@ -381,3 +381,91 @@ end;
 $$;
 
 revoke all on function complete_overlay_data_table_upload(uuid, text, text, text, integer, text, text) from public;
+
+alter table overlay_data_tables add column if not exists visualization_columns text[] default '{}';
+comment on column overlay_data_tables.visualization_columns is
+  'Columns that may/should be used for creating thematic maps. For example `count` or `density`';
+
+alter table overlay_data_tables add column if not exists visualization_ops text[] default '{mean}';
+comment on column overlay_data_tables.visualization_ops is
+  'Operations that may/should be used for creating thematic maps. For example `mean` or `max`';
+
+do $$ begin
+  if not exists (
+    select 1 from pg_enum e
+    inner join pg_type t on t.oid = e.enumtypid
+    where t.typname = 'change_log_field_group' and e.enumlabel = 'data_table:visualization_settings_updated'
+  ) then
+    alter type change_log_field_group add value 'data_table:visualization_settings_updated';
+  end if;
+end $$;
+
+create or replace function set_overlay_data_table_visualization_settings(
+  table_id integer,
+  visualization_columns text[],
+  visualization_ops text[]
+)
+returns overlay_data_tables
+language plpgsql
+security definer
+as $$
+declare
+  row overlay_data_tables;
+  old_columns text[];
+  old_ops text[];
+  editor_id int;
+  invalid_ops text[];
+begin
+  select * into row from overlay_data_tables where id = table_id and deleted_at is null;
+  if row is null then
+    raise exception 'Active data table not found';
+  end if;
+  if not session_is_admin(row.project_id) then
+    raise exception 'permission denied';
+  end if;
+  if not exists (
+    select 1 from table_of_contents_items
+    where id = row.table_of_contents_item_id and is_draft = true
+  ) then
+    raise exception 'Can only update visualization settings on draft layers';
+  end if;
+
+  select array_agg(op) into invalid_ops
+  from unnest(coalesce(set_overlay_data_table_visualization_settings.visualization_ops, '{}')) op
+  where op not in ('count', 'sum', 'mean', 'min', 'max', 'median');
+  if invalid_ops is not null and array_length(invalid_ops, 1) > 0 then
+    raise exception 'Invalid visualization op(s): %', array_to_string(invalid_ops, ', ');
+  end if;
+
+  old_columns := row.visualization_columns;
+  old_ops := row.visualization_ops;
+
+  update overlay_data_tables
+  set visualization_columns = coalesce(set_overlay_data_table_visualization_settings.visualization_columns, '{}'),
+      visualization_ops = coalesce(set_overlay_data_table_visualization_settings.visualization_ops, '{}'),
+      updated_at = now()
+  where id = table_id
+  returning * into row;
+
+  editor_id := nullif(current_setting('session.user_id', true), '')::int;
+  if editor_id is not null then
+    perform record_changelog(
+      row.project_id,
+      editor_id,
+      'overlay_data_table',
+      row.id,
+      'data_table:visualization_settings_updated'::change_log_field_group,
+      jsonb_build_object('visualizationColumns', old_columns, 'visualizationOps', old_ops),
+      jsonb_build_object('visualizationColumns', row.visualization_columns, 'visualizationOps', row.visualization_ops),
+      null, null,
+      jsonb_build_object('table_of_contents_item_id', row.table_of_contents_item_id, 'version', row.version)
+    );
+  end if;
+  return row;
+end;
+$$;
+
+grant execute on function set_overlay_data_table_visualization_settings(integer, text[], text[]) to seasketch_user;
+
+
+

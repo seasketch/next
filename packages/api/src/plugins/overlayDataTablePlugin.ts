@@ -36,9 +36,9 @@ function remoteToQueryUrl(remote: string | null | undefined): string | null {
 const OverlayDataTablePlugin = makeExtendSchemaPlugin(() => ({
   typeDefs: gql`
     extend type OverlayDataTable {
-      parquetUrl: String @requires(columns: ["parquetRemote"])
-      columnStatsUrl: String @requires(columns: ["columnStatsRemote"])
-      queryUrl: String @requires(columns: ["parquetRemote"])
+      parquetUrl: String @requires(columns: ["parquet_remote"])
+      columnStatsUrl: String @requires(columns: ["column_stats_remote"])
+      queryUrl: String @requires(columns: ["parquet_remote"])
     }
 
     extend type OverlayDataTableUpload {

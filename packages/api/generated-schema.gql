@@ -1106,6 +1106,7 @@ enum ChangeLogFieldGroup {
   DATA_TABLE_RENAMED
   DATA_TABLE_REPLACED
   DATA_TABLE_ROLLBACK
+  DATA_TABLE_VISUALIZATION_SETTINGS_UPDATED
   FOLDER_ACL
   FOLDER_CREATED
   FOLDER_DELETED
@@ -10681,6 +10682,12 @@ type Mutation {
     """
     input: SetForumOrderInput!
   ): SetForumOrderPayload
+  setOverlayDataTableVisualizationSettings(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: SetOverlayDataTableVisualizationSettingsInput!
+  ): SetOverlayDataTableVisualizationSettingsPayload
 
   """
   Admins can use this function to hide the contents of a message. Message will
@@ -11949,6 +11956,16 @@ type OverlayDataTable implements Node {
   tableOfContentsItemId: Int!
   updatedAt: Datetime
   version: Int!
+
+  """
+  Columns that may/should be used for creating thematic maps. For example `count` or `density`
+  """
+  visualizationColumns: [String]
+
+  """
+  Operations that may/should be used for creating thematic maps. For example `mean` or `max`
+  """
+  visualizationOps: [String]
 }
 
 """
@@ -16452,6 +16469,42 @@ type SetForumOrderPayload {
   """
   clientMutationId: String
   forums: [Forum!]
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `setOverlayDataTableVisualizationSettings` mutation."""
+input SetOverlayDataTableVisualizationSettingsInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  tableId: Int
+  visualizationColumns: [String]
+  visualizationOps: [String]
+}
+
+"""The output of our `setOverlayDataTableVisualizationSettings` mutation."""
+type SetOverlayDataTableVisualizationSettingsPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  overlayDataTable: OverlayDataTable
+
+  """An edge for our `OverlayDataTable`. May be used by Relay 1."""
+  overlayDataTableEdge(
+    """The method to use when ordering `OverlayDataTable`."""
+    orderBy: [OverlayDataTablesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): OverlayDataTablesEdge
+
+  """Reads a single `Project` that is related to this `OverlayDataTable`."""
+  project: Project
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.

@@ -1,0 +1,74 @@
+/**
+ * Landscape-oriented data table glyph for legend / TOC controls.
+ * Header row uses a filled band; body shows a 2x2 grid with light cell tinting.
+ */
+export default function DataTableIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 20 14"
+      fill="none"
+      aria-hidden
+      className={className}
+    >
+      <rect
+        x="1"
+        y="1"
+        width="18"
+        height="12"
+        rx="1.5"
+        stroke="currentColor"
+        strokeWidth="1.25"
+      />
+      <rect
+        x="1.625"
+        y="1.625"
+        width="16.75"
+        height="3.25"
+        rx="0.75"
+        fill="currentColor"
+        fillOpacity="0.28"
+      />
+      <line
+        x1="1"
+        y1="5"
+        x2="19"
+        y2="5"
+        stroke="currentColor"
+        strokeWidth="0.75"
+      />
+      <line
+        x1="10"
+        y1="5"
+        x2="10"
+        y2="13"
+        stroke="currentColor"
+        strokeWidth="0.75"
+      />
+      <line
+        x1="1"
+        y1="9"
+        x2="19"
+        y2="9"
+        stroke="currentColor"
+        strokeWidth="0.75"
+      />
+      <rect
+        x="1.625"
+        y="5.5"
+        width="7.75"
+        height="3"
+        fill="currentColor"
+        fillOpacity="0.08"
+      />
+      <rect
+        x="10.625"
+        y="9.5"
+        width="7.75"
+        height="2.75"
+        fill="currentColor"
+        fillOpacity="0.08"
+      />
+    </svg>
+  );
+}

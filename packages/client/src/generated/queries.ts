@@ -959,6 +959,7 @@ export enum ChangeLogFieldGroup {
   DataTableRenamed = 'DATA_TABLE_RENAMED',
   DataTableReplaced = 'DATA_TABLE_REPLACED',
   DataTableRollback = 'DATA_TABLE_ROLLBACK',
+  DataTableVisualizationSettingsUpdated = 'DATA_TABLE_VISUALIZATION_SETTINGS_UPDATED',
   FolderAcl = 'FOLDER_ACL',
   FolderCreated = 'FOLDER_CREATED',
   FolderDeleted = 'FOLDER_DELETED',
@@ -8371,6 +8372,7 @@ export type Mutation = {
    * forum IDs in the correct order. Missing ids will be added to the end of the list.
    */
   setForumOrder?: Maybe<SetForumOrderPayload>;
+  setOverlayDataTableVisualizationSettings?: Maybe<SetOverlayDataTableVisualizationSettingsPayload>;
   /**
    * Admins can use this function to hide the contents of a message. Message will
    * still appear in the client with the missing content, and should link to the
@@ -9818,6 +9820,12 @@ export type MutationSetForumOrderArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationSetOverlayDataTableVisualizationSettingsArgs = {
+  input: SetOverlayDataTableVisualizationSettingsInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationSetPostHiddenByModeratorArgs = {
   input: SetPostHiddenByModeratorInput;
 };
@@ -10809,6 +10817,10 @@ export type OverlayDataTable = Node & {
   tableOfContentsItemId: Scalars['Int'];
   updatedAt?: Maybe<Scalars['Datetime']>;
   version: Scalars['Int'];
+  /** Columns that may/should be used for creating thematic maps. For example `count` or `density` */
+  visualizationColumns?: Maybe<Array<Maybe<Scalars['String']>>>;
+  /** Operations that may/should be used for creating thematic maps. For example `mean` or `max` */
+  visualizationOps?: Maybe<Array<Maybe<Scalars['String']>>>;
 };
 
 /**
@@ -15241,6 +15253,41 @@ export type SetForumOrderPayload = {
   forums?: Maybe<Array<Forum>>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
+};
+
+/** All input for the `setOverlayDataTableVisualizationSettings` mutation. */
+export type SetOverlayDataTableVisualizationSettingsInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  tableId?: Maybe<Scalars['Int']>;
+  visualizationColumns?: Maybe<Array<Maybe<Scalars['String']>>>;
+  visualizationOps?: Maybe<Array<Maybe<Scalars['String']>>>;
+};
+
+/** The output of our `setOverlayDataTableVisualizationSettings` mutation. */
+export type SetOverlayDataTableVisualizationSettingsPayload = {
+  __typename?: 'SetOverlayDataTableVisualizationSettingsPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  overlayDataTable?: Maybe<OverlayDataTable>;
+  /** An edge for our `OverlayDataTable`. May be used by Relay 1. */
+  overlayDataTableEdge?: Maybe<OverlayDataTablesEdge>;
+  /** Reads a single `Project` that is related to this `OverlayDataTable`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `setOverlayDataTableVisualizationSettings` mutation. */
+export type SetOverlayDataTableVisualizationSettingsPayloadOverlayDataTableEdgeArgs = {
+  orderBy?: Maybe<Array<OverlayDataTablesOrderBy>>;
 };
 
 /** All input for the `setPostHiddenByModerator` mutation. */
@@ -23815,9 +23862,44 @@ export type GetTilePackageQuery = (
   )> }
 );
 
+export type ClientOverlayDataTableFragment = (
+  { __typename?: 'OverlayDataTable' }
+  & Pick<OverlayDataTable, 'id' | 'name' | 'version' | 'rowCount' | 'joinColumn' | 'overlayJoinColumn' | 'queryUrl' | 'columnStatsUrl' | 'visualizationColumns' | 'visualizationOps'>
+);
+
 export type OverlayDataTableDetailsFragment = (
   { __typename?: 'OverlayDataTable' }
-  & Pick<OverlayDataTable, 'id' | 'name' | 'version' | 'joinColumn' | 'overlayJoinColumn' | 'rowCount' | 'parquetRemote' | 'columnStatsRemote' | 'parquetUrl' | 'columnStatsUrl' | 'queryUrl' | 'deletedAt' | 'replacedById' | 'createdAt' | 'updatedAt'>
+  & Pick<OverlayDataTable, 'id' | 'name' | 'version' | 'joinColumn' | 'overlayJoinColumn' | 'rowCount' | 'parquetRemote' | 'columnStatsRemote' | 'parquetUrl' | 'columnStatsUrl' | 'queryUrl' | 'deletedAt' | 'replacedById' | 'createdAt' | 'updatedAt' | 'visualizationColumns' | 'visualizationOps'>
+);
+
+export type OverlayDataTableVisualizationMetadataQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type OverlayDataTableVisualizationMetadataQuery = (
+  { __typename?: 'Query' }
+  & { overlayDataTable?: Maybe<(
+    { __typename?: 'OverlayDataTable' }
+    & Pick<OverlayDataTable, 'id' | 'queryUrl' | 'columnStatsUrl' | 'visualizationColumns' | 'visualizationOps'>
+  )> }
+);
+
+export type OverlayDataTableVisualizationMetadataForLayerQueryVariables = Exact<{
+  tocItemId: Scalars['Int'];
+}>;
+
+
+export type OverlayDataTableVisualizationMetadataForLayerQuery = (
+  { __typename?: 'Query' }
+  & { tableOfContentsItem?: Maybe<(
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id'>
+    & { overlayDataTables?: Maybe<Array<(
+      { __typename?: 'OverlayDataTable' }
+      & Pick<OverlayDataTable, 'id' | 'queryUrl' | 'columnStatsUrl' | 'visualizationColumns' | 'visualizationOps'>
+    )>> }
+  )> }
 );
 
 export type OverlayDataTableUploadDetailsFragment = (
@@ -23906,6 +23988,24 @@ export type RollbackOverlayDataTableVersionMutation = (
   { __typename?: 'Mutation' }
   & { rollbackOverlayDataTableVersion?: Maybe<(
     { __typename?: 'RollbackOverlayDataTableVersionPayload' }
+    & { overlayDataTable?: Maybe<(
+      { __typename?: 'OverlayDataTable' }
+      & OverlayDataTableDetailsFragment
+    )> }
+  )> }
+);
+
+export type SetOverlayDataTableVisualizationSettingsMutationVariables = Exact<{
+  id: Scalars['Int'];
+  visualizationColumns: Array<Maybe<Scalars['String']>> | Maybe<Scalars['String']>;
+  visualizationOps: Array<Maybe<Scalars['String']>> | Maybe<Scalars['String']>;
+}>;
+
+
+export type SetOverlayDataTableVisualizationSettingsMutation = (
+  { __typename?: 'Mutation' }
+  & { setOverlayDataTableVisualizationSettings?: Maybe<(
+    { __typename?: 'SetOverlayDataTableVisualizationSettingsPayload' }
     & { overlayDataTable?: Maybe<(
       { __typename?: 'OverlayDataTable' }
       & OverlayDataTableDetailsFragment
@@ -24263,7 +24363,10 @@ export type OverlayFragment = (
   & { acl?: Maybe<(
     { __typename?: 'Acl' }
     & Pick<Acl, 'id' | 'type'>
-  )> }
+  )>, overlayDataTables?: Maybe<Array<(
+    { __typename?: 'OverlayDataTable' }
+    & ClientOverlayDataTableFragment
+  )>> }
 );
 
 export type PublishedTableOfContentsQueryVariables = Exact<{
@@ -28240,6 +28343,20 @@ export const BackgroundJobSubscriptionEventFragmentDoc = /*#__PURE__*/ gql`
   }
 }
     ${JobDetailsFragmentDoc}`;
+export const ClientOverlayDataTableFragmentDoc = /*#__PURE__*/ gql`
+    fragment ClientOverlayDataTable on OverlayDataTable {
+  id
+  name
+  version
+  rowCount
+  joinColumn
+  overlayJoinColumn
+  queryUrl
+  columnStatsUrl
+  visualizationColumns
+  visualizationOps
+}
+    `;
 export const OverlayFragmentDoc = /*#__PURE__*/ gql`
     fragment Overlay on TableOfContentsItem {
   id
@@ -28263,8 +28380,11 @@ export const OverlayFragmentDoc = /*#__PURE__*/ gql`
   hasMetadata
   primaryDownloadUrl
   dataSourceType
+  overlayDataTables {
+    ...ClientOverlayDataTable
+  }
 }
-    `;
+    ${ClientOverlayDataTableFragmentDoc}`;
 export const AdminOverlayFragmentDoc = /*#__PURE__*/ gql`
     fragment AdminOverlay on TableOfContentsItem {
   ...Overlay
@@ -28502,6 +28622,8 @@ export const OverlayDataTableDetailsFragmentDoc = /*#__PURE__*/ gql`
   replacedById
   createdAt
   updatedAt
+  visualizationColumns
+  visualizationOps
 }
     `;
 export const UserProfileDetailsFragmentDoc = /*#__PURE__*/ gql`
@@ -32486,6 +32608,31 @@ export const GetTilePackageDocument = /*#__PURE__*/ gql`
   }
 }
     ${OfflineTilePackageDetailsFragmentDoc}`;
+export const OverlayDataTableVisualizationMetadataDocument = /*#__PURE__*/ gql`
+    query OverlayDataTableVisualizationMetadata($id: Int!) {
+  overlayDataTable(id: $id) {
+    id
+    queryUrl
+    columnStatsUrl
+    visualizationColumns
+    visualizationOps
+  }
+}
+    `;
+export const OverlayDataTableVisualizationMetadataForLayerDocument = /*#__PURE__*/ gql`
+    query OverlayDataTableVisualizationMetadataForLayer($tocItemId: Int!) {
+  tableOfContentsItem(id: $tocItemId) {
+    id
+    overlayDataTables {
+      id
+      queryUrl
+      columnStatsUrl
+      visualizationColumns
+      visualizationOps
+    }
+  }
+}
+    `;
 export const CreateOverlayDataTableUploadDocument = /*#__PURE__*/ gql`
     mutation CreateOverlayDataTableUpload($tableOfContentsItemId: Int!, $filename: String!, $contentType: String!, $processingOptions: JSON, $replaceOverlayDataTableId: Int) {
   createOverlayDataTableUpload(
@@ -32535,6 +32682,17 @@ export const SoftDeleteOverlayDataTableDocument = /*#__PURE__*/ gql`
 export const RollbackOverlayDataTableVersionDocument = /*#__PURE__*/ gql`
     mutation RollbackOverlayDataTableVersion($id: Int!) {
   rollbackOverlayDataTableVersion(input: {tableId: $id}) {
+    overlayDataTable {
+      ...OverlayDataTableDetails
+    }
+  }
+}
+    ${OverlayDataTableDetailsFragmentDoc}`;
+export const SetOverlayDataTableVisualizationSettingsDocument = /*#__PURE__*/ gql`
+    mutation SetOverlayDataTableVisualizationSettings($id: Int!, $visualizationColumns: [String]!, $visualizationOps: [String]!) {
+  setOverlayDataTableVisualizationSettings(
+    input: {tableId: $id, visualizationColumns: $visualizationColumns, visualizationOps: $visualizationOps}
+  ) {
     overlayDataTable {
       ...OverlayDataTableDetails
     }
@@ -35014,6 +35172,8 @@ export const namedOperations = {
     OfflineSurveyMaps: 'OfflineSurveyMaps',
     BasemapOfflineSettings: 'BasemapOfflineSettings',
     getTilePackage: 'getTilePackage',
+    OverlayDataTableVisualizationMetadata: 'OverlayDataTableVisualizationMetadata',
+    OverlayDataTableVisualizationMetadataForLayer: 'OverlayDataTableVisualizationMetadataForLayer',
     ProjectAccessControlSettings: 'ProjectAccessControlSettings',
     ProjectDashboard: 'ProjectDashboard',
     ProjectDashboardBannerStats: 'ProjectDashboardBannerStats',
@@ -35186,6 +35346,7 @@ export const namedOperations = {
     RenameOverlayDataTable: 'RenameOverlayDataTable',
     SoftDeleteOverlayDataTable: 'SoftDeleteOverlayDataTable',
     RollbackOverlayDataTableVersion: 'RollbackOverlayDataTableVersion',
+    SetOverlayDataTableVisualizationSettings: 'SetOverlayDataTableVisualizationSettings',
     updateProjectAccessControlSettings: 'updateProjectAccessControlSettings',
     toggleLanguageSupport: 'toggleLanguageSupport',
     setTranslatedProps: 'setTranslatedProps',
@@ -35360,6 +35521,7 @@ export const namedOperations = {
     OfflineBasemapDetails: 'OfflineBasemapDetails',
     OfflineTileSettingsForCalculation: 'OfflineTileSettingsForCalculation',
     OfflineTileSettings: 'OfflineTileSettings',
+    ClientOverlayDataTable: 'ClientOverlayDataTable',
     OverlayDataTableDetails: 'OverlayDataTableDetails',
     OverlayDataTableUploadDetails: 'OverlayDataTableUploadDetails',
     ProjectMetadata: 'ProjectMetadata',

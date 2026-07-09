@@ -961,6 +961,7 @@ export enum ChangeLogFieldGroup {
   DataTableRenamed = 'DATA_TABLE_RENAMED',
   DataTableReplaced = 'DATA_TABLE_REPLACED',
   DataTableRollback = 'DATA_TABLE_ROLLBACK',
+  DataTableVisualizationSettingsUpdated = 'DATA_TABLE_VISUALIZATION_SETTINGS_UPDATED',
   FolderAcl = 'FOLDER_ACL',
   FolderCreated = 'FOLDER_CREATED',
   FolderDeleted = 'FOLDER_DELETED',
@@ -8373,6 +8374,7 @@ export type Mutation = {
    * forum IDs in the correct order. Missing ids will be added to the end of the list.
    */
   setForumOrder?: Maybe<SetForumOrderPayload>;
+  setOverlayDataTableVisualizationSettings?: Maybe<SetOverlayDataTableVisualizationSettingsPayload>;
   /**
    * Admins can use this function to hide the contents of a message. Message will
    * still appear in the client with the missing content, and should link to the
@@ -9820,6 +9822,12 @@ export type MutationSetForumOrderArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationSetOverlayDataTableVisualizationSettingsArgs = {
+  input: SetOverlayDataTableVisualizationSettingsInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationSetPostHiddenByModeratorArgs = {
   input: SetPostHiddenByModeratorInput;
 };
@@ -10811,6 +10819,10 @@ export type OverlayDataTable = Node & {
   tableOfContentsItemId: Scalars['Int'];
   updatedAt?: Maybe<Scalars['Datetime']>;
   version: Scalars['Int'];
+  /** Columns that may/should be used for creating thematic maps. For example `count` or `density` */
+  visualizationColumns?: Maybe<Array<Maybe<Scalars['String']>>>;
+  /** Operations that may/should be used for creating thematic maps. For example `mean` or `max` */
+  visualizationOps?: Maybe<Array<Maybe<Scalars['String']>>>;
 };
 
 /**
@@ -15243,6 +15255,41 @@ export type SetForumOrderPayload = {
   forums?: Maybe<Array<Forum>>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
+};
+
+/** All input for the `setOverlayDataTableVisualizationSettings` mutation. */
+export type SetOverlayDataTableVisualizationSettingsInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  tableId?: Maybe<Scalars['Int']>;
+  visualizationColumns?: Maybe<Array<Maybe<Scalars['String']>>>;
+  visualizationOps?: Maybe<Array<Maybe<Scalars['String']>>>;
+};
+
+/** The output of our `setOverlayDataTableVisualizationSettings` mutation. */
+export type SetOverlayDataTableVisualizationSettingsPayload = {
+  __typename?: 'SetOverlayDataTableVisualizationSettingsPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  overlayDataTable?: Maybe<OverlayDataTable>;
+  /** An edge for our `OverlayDataTable`. May be used by Relay 1. */
+  overlayDataTableEdge?: Maybe<OverlayDataTablesEdge>;
+  /** Reads a single `Project` that is related to this `OverlayDataTable`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `setOverlayDataTableVisualizationSettings` mutation. */
+export type SetOverlayDataTableVisualizationSettingsPayloadOverlayDataTableEdgeArgs = {
+  orderBy?: Maybe<Array<OverlayDataTablesOrderBy>>;
 };
 
 /** All input for the `setPostHiddenByModerator` mutation. */
@@ -23817,9 +23864,44 @@ export type GetTilePackageQuery = (
   )> }
 );
 
+export type ClientOverlayDataTableFragment = (
+  { __typename?: 'OverlayDataTable' }
+  & Pick<OverlayDataTable, 'id' | 'name' | 'version' | 'rowCount' | 'joinColumn' | 'overlayJoinColumn' | 'queryUrl' | 'columnStatsUrl' | 'visualizationColumns' | 'visualizationOps'>
+);
+
 export type OverlayDataTableDetailsFragment = (
   { __typename?: 'OverlayDataTable' }
-  & Pick<OverlayDataTable, 'id' | 'name' | 'version' | 'joinColumn' | 'overlayJoinColumn' | 'rowCount' | 'parquetRemote' | 'columnStatsRemote' | 'parquetUrl' | 'columnStatsUrl' | 'queryUrl' | 'deletedAt' | 'replacedById' | 'createdAt' | 'updatedAt'>
+  & Pick<OverlayDataTable, 'id' | 'name' | 'version' | 'joinColumn' | 'overlayJoinColumn' | 'rowCount' | 'parquetRemote' | 'columnStatsRemote' | 'parquetUrl' | 'columnStatsUrl' | 'queryUrl' | 'deletedAt' | 'replacedById' | 'createdAt' | 'updatedAt' | 'visualizationColumns' | 'visualizationOps'>
+);
+
+export type OverlayDataTableVisualizationMetadataQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type OverlayDataTableVisualizationMetadataQuery = (
+  { __typename?: 'Query' }
+  & { overlayDataTable?: Maybe<(
+    { __typename?: 'OverlayDataTable' }
+    & Pick<OverlayDataTable, 'id' | 'queryUrl' | 'columnStatsUrl' | 'visualizationColumns' | 'visualizationOps'>
+  )> }
+);
+
+export type OverlayDataTableVisualizationMetadataForLayerQueryVariables = Exact<{
+  tocItemId: Scalars['Int'];
+}>;
+
+
+export type OverlayDataTableVisualizationMetadataForLayerQuery = (
+  { __typename?: 'Query' }
+  & { tableOfContentsItem?: Maybe<(
+    { __typename?: 'TableOfContentsItem' }
+    & Pick<TableOfContentsItem, 'id'>
+    & { overlayDataTables?: Maybe<Array<(
+      { __typename?: 'OverlayDataTable' }
+      & Pick<OverlayDataTable, 'id' | 'queryUrl' | 'columnStatsUrl' | 'visualizationColumns' | 'visualizationOps'>
+    )>> }
+  )> }
 );
 
 export type OverlayDataTableUploadDetailsFragment = (
@@ -23908,6 +23990,24 @@ export type RollbackOverlayDataTableVersionMutation = (
   { __typename?: 'Mutation' }
   & { rollbackOverlayDataTableVersion?: Maybe<(
     { __typename?: 'RollbackOverlayDataTableVersionPayload' }
+    & { overlayDataTable?: Maybe<(
+      { __typename?: 'OverlayDataTable' }
+      & OverlayDataTableDetailsFragment
+    )> }
+  )> }
+);
+
+export type SetOverlayDataTableVisualizationSettingsMutationVariables = Exact<{
+  id: Scalars['Int'];
+  visualizationColumns: Array<Maybe<Scalars['String']>> | Maybe<Scalars['String']>;
+  visualizationOps: Array<Maybe<Scalars['String']>> | Maybe<Scalars['String']>;
+}>;
+
+
+export type SetOverlayDataTableVisualizationSettingsMutation = (
+  { __typename?: 'Mutation' }
+  & { setOverlayDataTableVisualizationSettings?: Maybe<(
+    { __typename?: 'SetOverlayDataTableVisualizationSettingsPayload' }
     & { overlayDataTable?: Maybe<(
       { __typename?: 'OverlayDataTable' }
       & OverlayDataTableDetailsFragment
@@ -24265,7 +24365,10 @@ export type OverlayFragment = (
   & { acl?: Maybe<(
     { __typename?: 'Acl' }
     & Pick<Acl, 'id' | 'type'>
-  )> }
+  )>, overlayDataTables?: Maybe<Array<(
+    { __typename?: 'OverlayDataTable' }
+    & ClientOverlayDataTableFragment
+  )>> }
 );
 
 export type PublishedTableOfContentsQueryVariables = Exact<{
@@ -28242,6 +28345,20 @@ export const BackgroundJobSubscriptionEventFragmentDoc = gql`
   }
 }
     ${JobDetailsFragmentDoc}`;
+export const ClientOverlayDataTableFragmentDoc = gql`
+    fragment ClientOverlayDataTable on OverlayDataTable {
+  id
+  name
+  version
+  rowCount
+  joinColumn
+  overlayJoinColumn
+  queryUrl
+  columnStatsUrl
+  visualizationColumns
+  visualizationOps
+}
+    `;
 export const OverlayFragmentDoc = gql`
     fragment Overlay on TableOfContentsItem {
   id
@@ -28265,8 +28382,11 @@ export const OverlayFragmentDoc = gql`
   hasMetadata
   primaryDownloadUrl
   dataSourceType
+  overlayDataTables {
+    ...ClientOverlayDataTable
+  }
 }
-    `;
+    ${ClientOverlayDataTableFragmentDoc}`;
 export const AdminOverlayFragmentDoc = gql`
     fragment AdminOverlay on TableOfContentsItem {
   ...Overlay
@@ -28504,6 +28624,8 @@ export const OverlayDataTableDetailsFragmentDoc = gql`
   replacedById
   createdAt
   updatedAt
+  visualizationColumns
+  visualizationOps
 }
     `;
 export const UserProfileDetailsFragmentDoc = gql`
@@ -37351,6 +37473,87 @@ export function useGetTilePackageLazyQuery(baseOptions?: Apollo.LazyQueryHookOpt
 export type GetTilePackageQueryHookResult = ReturnType<typeof useGetTilePackageQuery>;
 export type GetTilePackageLazyQueryHookResult = ReturnType<typeof useGetTilePackageLazyQuery>;
 export type GetTilePackageQueryResult = Apollo.QueryResult<GetTilePackageQuery, GetTilePackageQueryVariables>;
+export const OverlayDataTableVisualizationMetadataDocument = gql`
+    query OverlayDataTableVisualizationMetadata($id: Int!) {
+  overlayDataTable(id: $id) {
+    id
+    queryUrl
+    columnStatsUrl
+    visualizationColumns
+    visualizationOps
+  }
+}
+    `;
+
+/**
+ * __useOverlayDataTableVisualizationMetadataQuery__
+ *
+ * To run a query within a React component, call `useOverlayDataTableVisualizationMetadataQuery` and pass it any options that fit your needs.
+ * When your component renders, `useOverlayDataTableVisualizationMetadataQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useOverlayDataTableVisualizationMetadataQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useOverlayDataTableVisualizationMetadataQuery(baseOptions: Apollo.QueryHookOptions<OverlayDataTableVisualizationMetadataQuery, OverlayDataTableVisualizationMetadataQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<OverlayDataTableVisualizationMetadataQuery, OverlayDataTableVisualizationMetadataQueryVariables>(OverlayDataTableVisualizationMetadataDocument, options);
+      }
+export function useOverlayDataTableVisualizationMetadataLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<OverlayDataTableVisualizationMetadataQuery, OverlayDataTableVisualizationMetadataQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<OverlayDataTableVisualizationMetadataQuery, OverlayDataTableVisualizationMetadataQueryVariables>(OverlayDataTableVisualizationMetadataDocument, options);
+        }
+export type OverlayDataTableVisualizationMetadataQueryHookResult = ReturnType<typeof useOverlayDataTableVisualizationMetadataQuery>;
+export type OverlayDataTableVisualizationMetadataLazyQueryHookResult = ReturnType<typeof useOverlayDataTableVisualizationMetadataLazyQuery>;
+export type OverlayDataTableVisualizationMetadataQueryResult = Apollo.QueryResult<OverlayDataTableVisualizationMetadataQuery, OverlayDataTableVisualizationMetadataQueryVariables>;
+export const OverlayDataTableVisualizationMetadataForLayerDocument = gql`
+    query OverlayDataTableVisualizationMetadataForLayer($tocItemId: Int!) {
+  tableOfContentsItem(id: $tocItemId) {
+    id
+    overlayDataTables {
+      id
+      queryUrl
+      columnStatsUrl
+      visualizationColumns
+      visualizationOps
+    }
+  }
+}
+    `;
+
+/**
+ * __useOverlayDataTableVisualizationMetadataForLayerQuery__
+ *
+ * To run a query within a React component, call `useOverlayDataTableVisualizationMetadataForLayerQuery` and pass it any options that fit your needs.
+ * When your component renders, `useOverlayDataTableVisualizationMetadataForLayerQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useOverlayDataTableVisualizationMetadataForLayerQuery({
+ *   variables: {
+ *      tocItemId: // value for 'tocItemId'
+ *   },
+ * });
+ */
+export function useOverlayDataTableVisualizationMetadataForLayerQuery(baseOptions: Apollo.QueryHookOptions<OverlayDataTableVisualizationMetadataForLayerQuery, OverlayDataTableVisualizationMetadataForLayerQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<OverlayDataTableVisualizationMetadataForLayerQuery, OverlayDataTableVisualizationMetadataForLayerQueryVariables>(OverlayDataTableVisualizationMetadataForLayerDocument, options);
+      }
+export function useOverlayDataTableVisualizationMetadataForLayerLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<OverlayDataTableVisualizationMetadataForLayerQuery, OverlayDataTableVisualizationMetadataForLayerQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<OverlayDataTableVisualizationMetadataForLayerQuery, OverlayDataTableVisualizationMetadataForLayerQueryVariables>(OverlayDataTableVisualizationMetadataForLayerDocument, options);
+        }
+export type OverlayDataTableVisualizationMetadataForLayerQueryHookResult = ReturnType<typeof useOverlayDataTableVisualizationMetadataForLayerQuery>;
+export type OverlayDataTableVisualizationMetadataForLayerLazyQueryHookResult = ReturnType<typeof useOverlayDataTableVisualizationMetadataForLayerLazyQuery>;
+export type OverlayDataTableVisualizationMetadataForLayerQueryResult = Apollo.QueryResult<OverlayDataTableVisualizationMetadataForLayerQuery, OverlayDataTableVisualizationMetadataForLayerQueryVariables>;
 export const CreateOverlayDataTableUploadDocument = gql`
     mutation CreateOverlayDataTableUpload($tableOfContentsItemId: Int!, $filename: String!, $contentType: String!, $processingOptions: JSON, $replaceOverlayDataTableId: Int) {
   createOverlayDataTableUpload(
@@ -37541,6 +37744,45 @@ export function useRollbackOverlayDataTableVersionMutation(baseOptions?: Apollo.
 export type RollbackOverlayDataTableVersionMutationHookResult = ReturnType<typeof useRollbackOverlayDataTableVersionMutation>;
 export type RollbackOverlayDataTableVersionMutationResult = Apollo.MutationResult<RollbackOverlayDataTableVersionMutation>;
 export type RollbackOverlayDataTableVersionMutationOptions = Apollo.BaseMutationOptions<RollbackOverlayDataTableVersionMutation, RollbackOverlayDataTableVersionMutationVariables>;
+export const SetOverlayDataTableVisualizationSettingsDocument = gql`
+    mutation SetOverlayDataTableVisualizationSettings($id: Int!, $visualizationColumns: [String]!, $visualizationOps: [String]!) {
+  setOverlayDataTableVisualizationSettings(
+    input: {tableId: $id, visualizationColumns: $visualizationColumns, visualizationOps: $visualizationOps}
+  ) {
+    overlayDataTable {
+      ...OverlayDataTableDetails
+    }
+  }
+}
+    ${OverlayDataTableDetailsFragmentDoc}`;
+export type SetOverlayDataTableVisualizationSettingsMutationFn = Apollo.MutationFunction<SetOverlayDataTableVisualizationSettingsMutation, SetOverlayDataTableVisualizationSettingsMutationVariables>;
+
+/**
+ * __useSetOverlayDataTableVisualizationSettingsMutation__
+ *
+ * To run a mutation, you first call `useSetOverlayDataTableVisualizationSettingsMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useSetOverlayDataTableVisualizationSettingsMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [setOverlayDataTableVisualizationSettingsMutation, { data, loading, error }] = useSetOverlayDataTableVisualizationSettingsMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      visualizationColumns: // value for 'visualizationColumns'
+ *      visualizationOps: // value for 'visualizationOps'
+ *   },
+ * });
+ */
+export function useSetOverlayDataTableVisualizationSettingsMutation(baseOptions?: Apollo.MutationHookOptions<SetOverlayDataTableVisualizationSettingsMutation, SetOverlayDataTableVisualizationSettingsMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<SetOverlayDataTableVisualizationSettingsMutation, SetOverlayDataTableVisualizationSettingsMutationVariables>(SetOverlayDataTableVisualizationSettingsDocument, options);
+      }
+export type SetOverlayDataTableVisualizationSettingsMutationHookResult = ReturnType<typeof useSetOverlayDataTableVisualizationSettingsMutation>;
+export type SetOverlayDataTableVisualizationSettingsMutationResult = Apollo.MutationResult<SetOverlayDataTableVisualizationSettingsMutation>;
+export type SetOverlayDataTableVisualizationSettingsMutationOptions = Apollo.BaseMutationOptions<SetOverlayDataTableVisualizationSettingsMutation, SetOverlayDataTableVisualizationSettingsMutationVariables>;
 export const ProjectAccessControlSettingsDocument = gql`
     query ProjectAccessControlSettings($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -44606,6 +44848,8 @@ export const namedOperations = {
     OfflineSurveyMaps: 'OfflineSurveyMaps',
     BasemapOfflineSettings: 'BasemapOfflineSettings',
     getTilePackage: 'getTilePackage',
+    OverlayDataTableVisualizationMetadata: 'OverlayDataTableVisualizationMetadata',
+    OverlayDataTableVisualizationMetadataForLayer: 'OverlayDataTableVisualizationMetadataForLayer',
     ProjectAccessControlSettings: 'ProjectAccessControlSettings',
     ProjectDashboard: 'ProjectDashboard',
     ProjectDashboardBannerStats: 'ProjectDashboardBannerStats',
@@ -44778,6 +45022,7 @@ export const namedOperations = {
     RenameOverlayDataTable: 'RenameOverlayDataTable',
     SoftDeleteOverlayDataTable: 'SoftDeleteOverlayDataTable',
     RollbackOverlayDataTableVersion: 'RollbackOverlayDataTableVersion',
+    SetOverlayDataTableVisualizationSettings: 'SetOverlayDataTableVisualizationSettings',
     updateProjectAccessControlSettings: 'updateProjectAccessControlSettings',
     toggleLanguageSupport: 'toggleLanguageSupport',
     setTranslatedProps: 'setTranslatedProps',
@@ -44952,6 +45197,7 @@ export const namedOperations = {
     OfflineBasemapDetails: 'OfflineBasemapDetails',
     OfflineTileSettingsForCalculation: 'OfflineTileSettingsForCalculation',
     OfflineTileSettings: 'OfflineTileSettings',
+    ClientOverlayDataTable: 'ClientOverlayDataTable',
     OverlayDataTableDetails: 'OverlayDataTableDetails',
     OverlayDataTableUploadDetails: 'OverlayDataTableUploadDetails',
     ProjectMetadata: 'ProjectMetadata',

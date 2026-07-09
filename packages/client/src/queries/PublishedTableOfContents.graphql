@@ -20,6 +20,9 @@ fragment Overlay on TableOfContentsItem {
   hasMetadata
   primaryDownloadUrl
   dataSourceType
+  overlayDataTables {
+    ...ClientOverlayDataTable
+  }
 }
 
 query PublishedTableOfContents($slug: String!) {

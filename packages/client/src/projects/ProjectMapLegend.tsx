@@ -3,6 +3,7 @@ import { LayerTreeContext, LegendsContext, MapManagerContext, SketchLayerContext
 import Legend from "../dataLayers/Legend";
 import useCommonLegendProps from "../dataLayers/useCommonLegendProps";
 import { useMediaQuery } from "beautiful-react-hooks";
+import { ActivatedDataTableContext } from "../dataLayers/ActivatedDataTableContext";
 
 export default function ProjectMapLegend({
   showByDefault = false,
@@ -17,6 +18,9 @@ export default function ProjectMapLegend({
   const legendsCtx = useContext(LegendsContext);
   const { manager } = useContext(MapManagerContext);
   const { sketchClassLayerStates } = useContext(SketchLayerContext);
+  const { legendFocusRequest, clearLegendFocusRequest } = useContext(
+    ActivatedDataTableContext
+  );
   const loading = useMemo(() => {
     for (const key in layerTree.layerStatesByTocStaticId) {
       if (
@@ -50,6 +54,8 @@ export default function ProjectMapLegend({
         persistedStateKey="project-map-legend"
         {...legendProps}
         defaultToHidden={!showByDefault}
+        legendFocusRequest={legendFocusRequest}
+        onLegendFocusComplete={clearLegendFocusRequest}
       />
     );
   } else {

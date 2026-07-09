@@ -1,6 +1,8 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useApolloClient } from "@apollo/client";
 import { useTranslation } from "react-i18next";
+import { ChevronDownIcon, ChevronRightIcon } from "@radix-ui/react-icons";
+import clsx from "clsx";
 import {
   FullAdminOverlayFragment,
   OverlayDataTableDetailsFragment,
@@ -8,6 +10,7 @@ import {
   ProjectBackgroundJobType,
   useGetLayerItemQuery,
   useRenameOverlayDataTableMutation,
+  useSetOverlayDataTableVisualizationSettingsMutation,
   useSoftDeleteOverlayDataTableMutation,
 } from "../../../generated/graphql";
 import { GeostatsLayer } from "@seasketch/geostats-types";
@@ -15,6 +18,12 @@ import { ProjectBackgroundJobContext } from "../../uploads/ProjectBackgroundJobC
 import { dataTableChangeLogRefetchQueries } from "../../changelogs/dataTableChangeLogRefetch";
 import DataTableUploadJobProgress from "./DataTableUploadJobProgress";
 import DataTableUploadModal from "./DataTableUploadModal";
+import { DATA_TABLE_AGGREGATIONS } from "../../../dataLayers/dataTableQueryApi";
+import {
+  columnStatsUrlForTable,
+  numericColumnNames,
+  useDataTableColumnStats,
+} from "../../../dataLayers/useDataTableColumnStats";
 
 type RelatedDataTablesProps = {
   item: FullAdminOverlayFragment;
@@ -41,6 +50,129 @@ function getJobForTable(tableId: number, jobs: DataTableJob[]) {
   );
 }
 
+/**
+ * Admin controls for `overlay_data_tables.visualization_columns` /
+ * `.visualization_ops` -- the columns and aggregation ops that are valid for
+ * building a thematic map from this table. When either list is left empty,
+ * end users can choose freely in "Display settings" (see
+ * dataLayers/DataTableVisualizationControls.tsx).
+ */
+function VisualizationSettingsEditor({
+  table,
+  onSave,
+}: {
+  table: OverlayDataTableDetailsFragment;
+  onSave: (visualizationColumns: string[], visualizationOps: string[]) => void;
+}) {
+  const { t } = useTranslation("admin:data");
+  const { columnStats, loading } = useDataTableColumnStats(
+    columnStatsUrlForTable(table)
+  );
+  const numericColumns = numericColumnNames(columnStats);
+  const selectedColumns = (table.visualizationColumns || []).filter(
+    Boolean
+  ) as string[];
+  const selectedOps = (table.visualizationOps || []).filter(
+    Boolean
+  ) as string[];
+
+  const toggleColumn = (column: string) => {
+    onSave(
+      selectedColumns.includes(column)
+        ? selectedColumns.filter((c) => c !== column)
+        : [...selectedColumns, column],
+      selectedOps
+    );
+  };
+
+  const toggleOp = (op: string) => {
+    onSave(
+      selectedColumns,
+      selectedOps.includes(op)
+        ? selectedOps.filter((o) => o !== op)
+        : [...selectedOps, op]
+    );
+  };
+
+  return (
+    <div className="mt-1.5 rounded-md border border-gray-200 bg-gray-50 p-2 space-y-2">
+      <div>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-1">
+          {t("Visualize column(s)")}
+        </p>
+        <p className="text-[11px] text-gray-500 mb-1">
+          {t(
+            "Restrict which columns end users may visualize. Leave unselected to allow any numeric column."
+          )}
+        </p>
+        {loading ? (
+          <p className="text-xs text-gray-400 italic">
+            {t("Loading column metadata...")}
+          </p>
+        ) : numericColumns.length === 0 ? (
+          <p className="text-xs text-gray-400 italic">
+            {t("No numeric columns found.")}
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-x-3 gap-y-1">
+            {numericColumns.map((column) => (
+              <label
+                key={column}
+                className="flex items-center gap-1 text-xs text-gray-700"
+              >
+                <input
+                  type="checkbox"
+                  className="rounded border-gray-300"
+                  checked={selectedColumns.includes(column)}
+                  onChange={() => toggleColumn(column)}
+                />
+                {/* eslint-disable-next-line i18next/no-literal-string */}
+                {column}
+              </label>
+            ))}
+          </div>
+        )}
+      </div>
+      <div>
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-1">
+          {t("Allowed aggregation(s)")}
+        </p>
+        <p className="text-[11px] text-gray-500 mb-1">
+          {t(
+            "Restrict which aggregations end users may choose. Leave unselected to allow any."
+          )}
+        </p>
+        <div className="flex flex-wrap gap-x-3 gap-y-1">
+          {DATA_TABLE_AGGREGATIONS.map((op) => (
+            <label
+              key={op}
+              className="flex items-center gap-1 text-xs text-gray-700"
+            >
+              <input
+                type="checkbox"
+                className="rounded border-gray-300"
+                checked={selectedOps.includes(op)}
+                onChange={() => toggleOp(op)}
+              />
+              {/* eslint-disable-next-line i18next/no-literal-string */}
+              {op}
+            </label>
+          ))}
+        </div>
+      </div>
+      {(selectedColumns.length > 0 || selectedOps.length > 0) && (
+        <button
+          type="button"
+          className="text-xs text-gray-500 underline hover:text-gray-700"
+          onClick={() => onSave([], [])}
+        >
+          {t("Clear settings (let users choose freely)")}
+        </button>
+      )}
+    </div>
+  );
+}
+
 function DataTableRow({
   table,
   job,
@@ -48,6 +180,7 @@ function DataTableRow({
   onRename,
   onDelete,
   onReplace,
+  onSetVisualizationSettings,
 }: {
   table: OverlayDataTableDetailsFragment;
   job?: DataTableJob;
@@ -55,11 +188,21 @@ function DataTableRow({
   onRename: (id: number, name: string) => void;
   onDelete: (id: number) => void;
   onReplace: (id: number) => void;
+  onSetVisualizationSettings: (
+    id: number,
+    visualizationColumns: string[],
+    visualizationOps: string[]
+  ) => void;
 }) {
   const { t } = useTranslation("admin:data");
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(table.name);
+  const [visualizationSettingsOpen, setVisualizationSettingsOpen] =
+    useState(false);
   const isProcessing = Boolean(job);
+  const hasVisualizationConstraints =
+    (table.visualizationColumns || []).filter(Boolean).length > 0 ||
+    (table.visualizationOps || []).filter(Boolean).length > 0;
 
   return (
     <li className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm space-y-1.5">
@@ -121,16 +264,45 @@ function DataTableRow({
             {/* eslint-disable-next-line i18next/no-literal-string */}
             {`${table.rowCount.toLocaleString()} rows · ${table.joinColumn} → ${table.overlayJoinColumn}`}
           </p>
-          {table.queryUrl ? (
-            <a
-              href={table.queryUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+          <div className="flex items-center gap-3">
+            {table.queryUrl ? (
+              <a
+                href={table.queryUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-xs text-primary-600 hover:text-primary-700 font-medium"
+              >
+                {t("Explore data")}
+              </a>
+            ) : null}
+            <button
+              type="button"
+              className={clsx(
+                "flex items-center gap-0.5 text-xs font-medium hover:text-gray-700",
+                hasVisualizationConstraints
+                  ? "text-primary-600"
+                  : "text-gray-500"
+              )}
+              onClick={() =>
+                setVisualizationSettingsOpen(!visualizationSettingsOpen)
+              }
             >
-              {t("Explore data")}
-            </a>
-          ) : null}
+              {visualizationSettingsOpen ? (
+                <ChevronDownIcon className="w-3 h-3" />
+              ) : (
+                <ChevronRightIcon className="w-3 h-3" />
+              )}
+              {t("Thematic map settings")}
+            </button>
+          </div>
+          {visualizationSettingsOpen && (
+            <VisualizationSettingsEditor
+              table={table}
+              onSave={(columns, ops) =>
+                onSetVisualizationSettings(table.id, columns, ops)
+              }
+            />
+          )}
         </>
       )}
     </li>
@@ -214,6 +386,23 @@ export default function RelatedDataTables({ item }: RelatedDataTablesProps) {
   const [deleteTable] = useSoftDeleteOverlayDataTableMutation({
     refetchQueries: changeLogRefetchQueries,
   });
+  const [setVisualizationSettingsMutation] =
+    useSetOverlayDataTableVisualizationSettingsMutation({
+      refetchQueries: changeLogRefetchQueries,
+    });
+
+  const onSetVisualizationSettings = useCallback(
+    (
+      id: number,
+      visualizationColumns: string[],
+      visualizationOps: string[]
+    ) => {
+      void setVisualizationSettingsMutation({
+        variables: { id, visualizationColumns, visualizationOps },
+      });
+    },
+    [setVisualizationSettingsMutation]
+  );
 
   const dataTableJobs = useMemo(
     () =>
@@ -352,6 +541,7 @@ export default function RelatedDataTables({ item }: RelatedDataTablesProps) {
                   refetchTablesAndHistory(),
                 )
               }
+              onSetVisualizationSettings={onSetVisualizationSettings}
               onReplace={(id) => {
                 setReplaceId(id);
                 setUploadOpen(true);
