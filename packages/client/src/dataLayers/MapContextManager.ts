@@ -410,7 +410,9 @@ class MapContextManager extends EventEmitter {
         this.activatedDataTableSettings[tocStableId] = value;
         const table = this.getOverlayDataTable(tocStableId, value.tableId);
         const existingValues = this.activatedDataTableValues[tocStableId];
-        const queryReady = Boolean(value.query.column && value.query.op && table);
+        const queryReady = Boolean(
+          value.query.column && value.query.op && table
+        );
         const nextQueryKey =
           queryReady && table
             ? this.dataTableQueryKey(tocStableId, table, value)
@@ -485,10 +487,7 @@ class MapContextManager extends EventEmitter {
     return url.toString();
   }
 
-  private setActivatedDataTableLoading(
-    tocStableId: string,
-    loading: boolean
-  ) {
+  private setActivatedDataTableLoading(tocStableId: string, loading: boolean) {
     const currentlyLoading = Boolean(
       this.activatedDataTableLoading[tocStableId]
     );
@@ -568,12 +567,8 @@ class MapContextManager extends EventEmitter {
       const positiveValues = numericValues.filter((value) => value > 0);
       const min = numericValues.length ? Math.min(...numericValues) : 0;
       const max = numericValues.length ? Math.max(...numericValues) : 0;
-      const scaleMin = positiveValues.length
-        ? Math.min(...positiveValues)
-        : 0;
-      const scaleMax = positiveValues.length
-        ? Math.max(...positiveValues)
-        : 0;
+      const scaleMin = positiveValues.length ? Math.min(...positiveValues) : 0;
+      const scaleMax = positiveValues.length ? Math.max(...positiveValues) : 0;
       this.activatedDataTableValues[tocStableId] = {
         tableId: table.id,
         queryKey,
@@ -932,7 +927,12 @@ class MapContextManager extends EventEmitter {
         "circle-stroke-color-transition": DATA_TABLE_PAINT_TRANSITION,
         "circle-stroke-opacity": legendOnly
           ? symbolStrokeOpacity
-          : (["case", hasSymbolExpression, symbolStrokeOpacity, 0] as Expression),
+          : ([
+              "case",
+              hasSymbolExpression,
+              symbolStrokeOpacity,
+              0,
+            ] as Expression),
         "circle-stroke-opacity-transition": DATA_TABLE_PAINT_TRANSITION,
         "circle-stroke-width": symbolStrokeWidth,
         "circle-radius": symbolRadius,
@@ -3629,9 +3629,9 @@ class MapContextManager extends EventEmitter {
                 const dataTableSettings = this.activatedDataTableSettings[id];
                 const dataTableValues = this.activatedDataTableValues[id];
                 const dataTableOp = dataTableSettings?.query.op
-                  ? (Array.isArray(dataTableSettings.query.op)
-                      ? dataTableSettings.query.op[0]
-                      : dataTableSettings.query.op)
+                  ? Array.isArray(dataTableSettings.query.op)
+                    ? dataTableSettings.query.op[0]
+                    : dataTableSettings.query.op
                   : undefined;
                 const activeDataTable =
                   dataTableSettings?.query.column &&
@@ -3651,11 +3651,13 @@ class MapContextManager extends EventEmitter {
                     column: dataTableSettings.query.column,
                     op: dataTableOp as DataTableAggregation,
                     min:
-                      dataTableValues && dataTableValues.scaleMax > dataTableValues.scaleMin
+                      dataTableValues &&
+                      dataTableValues.scaleMax > dataTableValues.scaleMin
                         ? dataTableValues.scaleMin
                         : dataTableValues?.min ?? 0,
                     max:
-                      dataTableValues && dataTableValues.scaleMax > dataTableValues.scaleMin
+                      dataTableValues &&
+                      dataTableValues.scaleMax > dataTableValues.scaleMin
                         ? dataTableValues.scaleMax
                         : (dataTableValues?.min ?? 0) + 1,
                     hasZero: dataTableValues?.hasZero ?? false,
