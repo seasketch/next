@@ -9,10 +9,21 @@ services:
       POSTGRES_PASSWORD: password
     volumes:
       - ./init_dockerdb.sql:/docker-entrypoint-initdb.d/init_dockerdb.sql
-    command: ["postgres", "-c", "log_statement=all"]
+    # Avoid log_statement=all: graphile_worker polls constantly and will fill
+    # Docker's disk with container JSON logs (previously grew to ~232GB).
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "3"
   redis:
     image: "redis:alpine"
     command: >
       --requirepass ucsb
     ports:
       - "6379:6379"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
