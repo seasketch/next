@@ -1,0 +1,7 @@
+node_modules
+spatial_data
+tiles
+package-lock.json
+.DS_Store
+.wrangler
+.dev.vars

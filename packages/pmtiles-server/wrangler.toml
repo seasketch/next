@@ -1,0 +1,21 @@
+name = "pmtiles-server"
+main = "src/index.ts"
+compatibility_date = "2026-07-14"
+# Request-scoped timing context for Server-Timing (see src/timing.ts).
+compatibility_flags = ["nodejs_als"]
+
+# Workers Caching: serves cache hits without invoking the worker, collapses
+# concurrent misses, and participates in tiered caching.
+[cache]
+enabled = true
+
+[[r2_buckets]]
+binding = 'TILES_BUCKET'
+bucket_name = 'ssn-tiles'
+preview_bucket_name = 'ssn-tiles'
+
+[vars]
+PUBLIC_HOSTNAME = "tiles.seasketch.org" # optional override for TileJSON urls
+# The necessary secrets are:
+# - MAPBOX_ACCESS_TOKEN
+# Run `echo <VALUE> | wrangler secret put <NAME>` for each of these
