@@ -17,8 +17,10 @@ import { AsyncLocalStorage } from "node:async_hooks";
 export class RequestTiming {
   private stages = new Map<string, number>();
   private r2Reads = 0;
+  private prefixCacheHits = 0;
   private decompressMs = 0;
 
+  /** Time an async stage and accumulate its duration under `name`. */
   async measure<T>(name: string, fn: () => Promise<T>): Promise<T> {
     const start = performance.now();
     try {
@@ -28,18 +30,27 @@ export class RequestTiming {
     }
   }
 
+  /** Add duration to a named stage (sums if called repeatedly). */
   addStage(name: string, durationMs: number) {
     this.stages.set(name, (this.stages.get(name) ?? 0) + durationMs);
   }
 
+  /** Count one R2 range/object read for Server-Timing `desc`. */
   recordR2(_durationMs: number) {
     this.r2Reads += 1;
   }
 
+  /** Count a PoP Cache hit for the PMTiles archive prefix. */
+  recordPrefixCacheHit() {
+    this.prefixCacheHits += 1;
+  }
+
+  /** Accumulate gzip decompress wall time for Server-Timing `desc`. */
   recordDecompress(durationMs: number) {
     this.decompressMs += durationMs;
   }
 
+  /** Format a Server-Timing header value, or "" when nothing was recorded. */
   toHeader(): string {
     const parts: string[] = [];
 
@@ -48,6 +59,9 @@ export class RequestTiming {
       const details: string[] = [];
       if (this.r2Reads > 0) {
         details.push(`r2=${this.r2Reads}`);
+      }
+      if (this.prefixCacheHits > 0) {
+        details.push(`prefix-cache=${this.prefixCacheHits}`);
       }
       // Only mention decompress when the clock actually moved; Spectre
       // rounding often reports 0 for fast stream work nested in R2 awaits.
@@ -77,10 +91,12 @@ export class RequestTiming {
 
 const storage = new AsyncLocalStorage<RequestTiming>();
 
+/** Current request's RequestTiming from AsyncLocalStorage, if any. */
 export function getTiming(): RequestTiming | undefined {
   return storage.getStore();
 }
 
+/** Run `fn` with `timing` bound as the request-scoped RequestTiming store. */
 export function withTiming<T>(
   timing: RequestTiming,
   fn: () => Promise<T>

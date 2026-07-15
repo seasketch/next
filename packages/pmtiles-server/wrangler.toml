@@ -9,13 +9,23 @@ compatibility_flags = ["nodejs_als"]
 [cache]
 enabled = true
 
+# Default router always runs for /v2 auth; TilesBackend is the cached entrypoint.
+[exports.default]
+type = "worker"
+[exports.default.cache]
+enabled = false
+
+[exports.TilesBackend]
+type = "worker"
+[exports.TilesBackend.cache]
+enabled = true
+
 [[r2_buckets]]
 binding = 'TILES_BUCKET'
 bucket_name = 'ssn-tiles'
 preview_bucket_name = 'ssn-tiles'
 
-[vars]
-PUBLIC_HOSTNAME = "tiles.seasketch.org" # optional override for TileJSON urls
-# The necessary secrets are:
-# - MAPBOX_ACCESS_TOKEN
 # Run `echo <VALUE> | wrangler secret put <NAME>` for each of these
+
+[secrets]
+required = ["JWKS_URL", "MAPBOX_ACCESS_TOKEN", "PUBLIC_HOSTNAME"]

@@ -6,9 +6,14 @@ import {
   ResolvedValueCache,
   Source,
 } from "pmtiles";
+import {
+  fetchArchivePrefix,
+  PMTILES_PREFIX_LENGTH,
+} from "./archivePrefixCache";
+import { KeyNotFoundError } from "./errors";
 import { getTiming } from "./timing";
 
-export class KeyNotFoundError extends Error {}
+export { KeyNotFoundError } from "./errors";
 
 interface VectorLayer {
   id: string;
@@ -18,6 +23,7 @@ interface VectorLayer {
   maxzoom?: number;
 }
 
+/** TileJSON subset returned by pmtiles for Mapbox / preview consumers. */
 export interface TileJSON {
   tilejson: string;
   tiles: string[];
@@ -97,6 +103,14 @@ class R2Source implements Source {
     etag?: string
   ): Promise<RangeResponse> {
     const timing = getTiming();
+    if (
+      offset === 0 &&
+      length === PMTILES_PREFIX_LENGTH &&
+      etag === undefined
+    ) {
+      return fetchArchivePrefix(this.bucket, this.archiveName, timing);
+    }
+
     const start = performance.now();
     try {
       const resp = await this.bucket.get(`${this.archiveName}.pmtiles`, {
@@ -126,6 +140,12 @@ class R2Source implements Source {
   }
 }
 
+/**
+ * Build a PMTiles reader over `name.pmtiles` in R2.
+ *
+ * Uses an isolate-local ResolvedValueCache for decoded headers/directories,
+ * and routes the initial header/root read through PoP prefix caching.
+ */
 export function createPMTiles(name: string, bucket: R2Bucket): PMTiles {
   return new PMTiles(new R2Source(bucket, name), CACHE, nativeDecompress);
 }

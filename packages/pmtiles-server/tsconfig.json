@@ -34,7 +34,8 @@
 		// "rootDirs": [],                                   /* Allow multiple folders to be treated as one when resolving modules. */
 		// "typeRoots": [],                                  /* Specify multiple folders that act like `./node_modules/@types`. */
 		"types": [
-			"node"
+			"node",
+			"@cloudflare/vitest-pool-workers/types"
 		] /* Node types for nodejs_als; Workers runtime types come from worker-configuration.d.ts. */,
 		// "allowUmdGlobalAccess": true,                     /* Allow accessing UMD globals from modules. */
 		"resolveJsonModule": true /* Enable importing .json files */,

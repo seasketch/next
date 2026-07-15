@@ -1,0 +1,3 @@
+# Local wrangler + local API JWKS (tokens from localhost:3857 will not verify
+# against production api.seasket.ch keys).
+JWKS_URL=http://127.0.0.1:3857/.well-known/jwks.json
