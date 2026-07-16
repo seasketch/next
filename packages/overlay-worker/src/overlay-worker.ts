@@ -53,22 +53,10 @@ import area from "@turf/area";
 
 const SIMPLIFICATION_TOLERANCE = 0.000018;
 
-/** Connection pools keyed by origin (uploads legacy + tiles v2). */
-const poolsByOrigin = new Map<string, Pool>();
-
-function poolForUrl(url: string): { pool: Pool; path: string } {
-  const u = new URL(url);
-  const origin = u.origin;
-  let pool = poolsByOrigin.get(origin);
-  if (!pool) {
-    pool = new Pool(origin, {
-      // 10 second timeout for body
-      bodyTimeout: 10 * 1000,
-    });
-    poolsByOrigin.set(origin, pool);
-  }
-  return { pool, path: `${u.pathname}${u.search}` };
-}
+const pool = new Pool(`https://uploads.seasketch.org`, {
+  // 10 second timeout for body
+  bodyTimeout: 10 * 1000,
+});
 
 const cache = new LRUCache<string, ArrayBuffer>({
   maxSize: 1000 * 1024 * 128, // 128 MB
@@ -94,10 +82,9 @@ const sourceCache = new SourceCache("1GB", {
       return inFlightRequests.get(cacheKey) as Promise<ArrayBuffer>;
     } else {
       // console.log("cache miss", cacheKey);
-      const { pool, path } = poolForUrl(url);
       return pool
         .request({
-          path,
+          path: url.replace("https://uploads.seasketch.org", ""),
           method: "GET",
           headers: {
             Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
