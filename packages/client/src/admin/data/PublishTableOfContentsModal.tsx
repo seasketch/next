@@ -10,6 +10,7 @@ import {
   ChangeLogsSinceLastPublishQuery,
   LayersAndSourcesForItemsDocument,
   PublishedTableOfContentsDocument,
+  ProjectMetadataDocument,
   ResolvableLayerCommentThreadFragment,
   useChangeLogsSinceLastPublishQuery,
   usePublishTableOfContentsMutation,
@@ -70,6 +71,9 @@ export default function PublishTableOfContentsModal(props: {
     refetchQueries: [
       PublishedTableOfContentsDocument,
       LayersAndSourcesForItemsDocument,
+      // ACL → public UUID list may change; refresh token-required UUIDs for the
+      // admin map without a full page reload.
+      ProjectMetadataDocument,
     ],
   });
   const projectId = useProjectId();

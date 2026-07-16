@@ -16,5 +16,9 @@ declare namespace NodeJS {
     REACT_APP_CLOUDFLARE_IMAGES_ENDPOINT: string;
     REACT_APP_ARCGIS_DEVELOPER_API_KEY: string;
     REACT_APP_GOOGLE_MAPS_2D_TILE_API_KEY: string;
+    REACT_APP_TILES_AUTH_V2?: string;
+    REACT_APP_TILES_ACL_NAMESPACE?: string;
+    /** Local wrangler origin, e.g. http://127.0.0.1:8787 */
+    REACT_APP_TILES_ORIGIN?: string;
   }
 }

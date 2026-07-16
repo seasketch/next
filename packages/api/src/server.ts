@@ -133,7 +133,9 @@ app.get("/unsubscribeFromTopic", (req, res) => {
 
 app.get("/.well-known/jwks.json", async (req, res) => {
   const keys = await getJWKS(pool);
-  res.json(keys);
+  // RFC 7517 JWKS document. (Historically this returned a bare array; keep
+  // `keys` as the canonical shape for jose / createRemoteJWKSet.)
+  res.json({ keys });
 });
 
 const loadersPool = createPool({}, "admin");

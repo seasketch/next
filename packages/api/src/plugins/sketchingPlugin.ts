@@ -65,6 +65,13 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
         project. Must be refreshed occasionally.
         """
         sketchGeometryToken: String @requires(columns: ["id"])
+
+        """
+        Short-lived (90m) JWT for authorized overlay tile requests on
+        tiles.seasketch.org/v2/{ns}/.... Returns null if the user is not signed in.
+        Claims include role (admin|user) and project group ids.
+        """
+        mapAccessToken: String @requires(columns: ["id", "slug"])
       }
 
       extend type Mutation {
@@ -343,6 +350,42 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
           } else {
             return null;
           }
+        },
+        mapAccessToken: async (project, args, context) => {
+          const projectId = project.id;
+          const projectSlug = project.slug;
+          const userId = context?.user?.id;
+          if (!projectId || !userId) {
+            return null;
+          }
+          const pgClient = context.pgClient;
+          const { rows } = await pgClient.query(
+            `
+            select
+              session_is_admin($2::int) as is_admin,
+              (
+                select coalesce(array_agg(pg.id order by pg.id), '{}')
+                from project_group_members pgm
+                join project_groups pg on pg.id = pgm.group_id
+                where pgm.user_id = $1 and pg.project_id = $2
+              ) as group_ids
+            `,
+            [userId, projectId],
+          );
+          const isAdmin = Boolean(rows[0]?.is_admin);
+          const groups = ((rows[0]?.group_ids as number[]) ?? []).map(Number);
+          return context.loaders.signToken(
+            {
+              type: "map-access",
+              projectId: Number(projectId),
+              projectSlug,
+              userId: Number(userId),
+              role: isAdmin || context.user?.superuser ? "admin" : "user",
+              groups,
+              isSuperuser: Boolean(context.user?.superuser),
+            },
+            "90 minutes",
+          );
         },
       },
       Mutation: {

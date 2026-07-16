@@ -271,8 +271,14 @@ export default function DataUploadDropzone({
               ],
             })
             .then(() => {
+              // hostedTileUuidsRequiringAuth arrives via Draft TOC on the
+              // Project entity; MapManagerContextProvider syncs it into the
+              // manager. Brief delay so that React effect runs before tiles
+              // are requested.
               if (event.isFromCurrentSession && event.layerStaticIds.length) {
-                mapManager.showTocItems(event.layerStaticIds);
+                window.setTimeout(() => {
+                  mapManager.showTocItems(event.layerStaticIds);
+                }, 50);
               }
             });
         }

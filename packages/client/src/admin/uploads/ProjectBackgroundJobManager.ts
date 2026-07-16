@@ -32,7 +32,6 @@ export interface DataUploadProcessingCompleteEvent {
   isFromCurrentSession: boolean;
   layerStaticIds: string[];
   replaceTableOfContentsItemId?: number;
-  newSourceId: number;
 }
 
 export interface FeatureLayerConversionCompleteEvent {

@@ -12,6 +12,8 @@ fragment ProjectMetadata on Project {
   supportEmail
   isOfflineEnabled
   sketchGeometryToken
+  mapAccessToken
+  hostedTileUuidsRequiringAuth
   sketchClasses {
     id
     name

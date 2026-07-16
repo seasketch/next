@@ -843,6 +843,23 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
               [Number(project.id)],
             );
 
+            try {
+              if (process.env.NODE_ENV !== "test") {
+                const { writeProjectAclDocToR2 } =
+                  await import("../tilesAcl/writeProjectAclDoc");
+                await writeProjectAclDocToR2(pgClient, Number(project.id));
+              }
+            } catch (e: any) {
+              console.error(
+                JSON.stringify({
+                  msg: "tiles-acl-write-failed",
+                  projectId: project.id,
+                  error: e?.message || String(e),
+                }),
+              );
+              throw e;
+            }
+
             const shouldSetRegionFromEezBounds = geographies.some(
               (g) => g.clientTemplate === "eez",
             );

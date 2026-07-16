@@ -52,6 +52,11 @@ declare namespace NodeJS {
     CLOUDFLARE_SITE_TAG: string;
     PMTILES_SERVER_ZONE: string;
     R2_TILES_BUCKET: string;
+    /**
+     * ACL doc namespace for non-production. Production always uses "prod".
+     * Must not be set to "prod" outside NODE_ENV=production.
+     */
+    TILES_ACL_NAMESPACE?: string;
     GOOGLE_MAPS_2D_TILE_API_KEY: string;
     OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL: string;
     /** Parallel long-poll loops per API process (default 4). Each receives up to 10 messages per poll. */
