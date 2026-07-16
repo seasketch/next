@@ -1,12 +1,13 @@
-import { lookupAclForAuth } from "./auth/acl";
-import { authorizeAccess } from "./auth/authorize";
 import { applyCorsHeaders, corsPreflightResponse } from "./auth/cors";
 import {
-  extractTokenFromRequest,
-  resolveMapAccessToken,
-} from "./auth/jwt";
-import { parseV2Path, isV2PreviewPath } from "./auth/path";
-import type { AuthDecision, MapAccessClaims } from "./auth/types";
+  parseV2Path,
+  parseV2SubdividedPath,
+  isV2PreviewPath,
+} from "./auth/path";
+import type { AuthDecision } from "./auth/types";
+import { authorizeResource } from "./auth/resourceAuth";
+import { classifyResource } from "./resource";
+import type { ResourceDescriptor } from "./resource";
 import { renderTokenPrompt } from "./tokenPrompt";
 
 type GatewayEnv = Env & {
@@ -17,9 +18,6 @@ type GatewayEnv = Env & {
 type TilesBackendFetcher = {
   fetch(request: Request, options?: { cf?: { cacheKey?: string } }): Promise<Response>;
 };
-
-/** Data-library layers live under /projects/superuser/public/... and are always public. */
-const DATA_LIBRARY_STORAGE_SLUG = "superuser";
 
 /**
  * Authorize a /v2/{ns}/projects/{storageSlug}/public/{uuid}... request and
@@ -43,88 +41,38 @@ export async function handleGatewayRequest(
 
   const url = new URL(request.url);
   const parts = parseV2Path(url.pathname);
-  if (!parts) {
+  const subdivided = parseV2SubdividedPath(url.pathname);
+  if (!parts && !subdivided) {
     const headers = new Headers({ "Content-Type": "text/plain" });
     applyCorsHeaders(headers, request, { allowAuthorization: true });
     return new Response("Invalid /v2 tile URL", { status: 400, headers });
   }
 
-  const { ns, slug: storageSlug, uuid, legacyPath } = parts;
-
-  if (storageSlug === DATA_LIBRARY_STORAGE_SLUG) {
-    const decision: AuthDecision = {
-      allowed: true,
-      status: 200,
-      reason: "data_library",
-      aclClass: "public",
-      hadToken: false,
-      role: null,
-      groups: [],
-      aclVersion: null,
-    };
-    logAuthDecision({
-      ns,
-      storageSlug,
-      aclSlug: storageSlug,
-      uuid,
-      decision,
-      fromCache: false,
-      path: url.pathname,
-    });
-    return forwardToBackend(request, tilesBackend, legacyPath, decision);
+  const parsed = parts ?? subdivided!;
+  const { ns, slug: storageSlug, legacyPath } = parsed;
+  const resource = classifyResource(legacyPath);
+  if (!resource) {
+    return new Response("Invalid /v2 object URL", { status: 400 });
   }
-
-  let claims: MapAccessClaims | null = null;
-  let tokenError: string | null = null;
-  let tokenMode: "jwks" | "dev-trust" | null = null;
-  const rawToken = extractTokenFromRequest(request);
-
-  // Resolve token before ACL when present so we can look up the project ACL
-  // (JWT projectSlug), not only the storage-path slug.
-  // Non-prod namespaces accept local/dev JWTs without JWKS verification.
-  if (rawToken) {
-    try {
-      const resolved = await resolveMapAccessToken(
-        rawToken,
-        env.JWKS_URL,
-        ns
-      );
-      claims = resolved.claims;
-      tokenMode = resolved.mode;
-    } catch (e: any) {
-      tokenError = e?.message || "verify_failed";
-      claims = null;
-    }
-  }
-
-  const aclSlug = claims?.projectSlug || storageSlug;
-  const acl = await lookupAclForAuth(env.TILES_BUCKET, ns, aclSlug, uuid);
-
-  // Public tiles skip token requirements; clear spurious verify errors.
-  if (acl.class === "public") {
-    tokenError = null;
-  } else if (!rawToken) {
-    tokenError = null; // missing handled in authorizeAccess
-  }
-
-  const decision = authorizeAccess({
-    aclClass: acl.class,
-    aclRules: acl.rules,
-    claims,
-    tokenError,
-    aclProjectSlug: acl.doc?.slug || aclSlug,
+  const auth = await authorizeResource({
+    request,
+    env,
+    ns,
+    resource,
+    enforce: true,
   });
-  decision.aclVersion = acl.doc?.v ?? null;
+  const { decision, tokenMode } = auth;
 
   logAuthDecision({
     ns,
     storageSlug,
-    aclSlug,
-    uuid,
+    aclSlug: auth.aclSlug || storageSlug,
+    uuid: parts?.uuid ?? null,
     decision,
-    fromCache: acl.fromCache,
+    fromCache: false,
     path: url.pathname,
     tokenMode,
+    tokenType: auth.claims?.type ?? null,
   });
 
   if (!decision.allowed) {
@@ -134,11 +82,53 @@ export async function handleGatewayRequest(
   return forwardToBackend(request, tilesBackend, legacyPath, decision);
 }
 
+/** Authorize a classified legacy object/properties request and forward it. */
+export async function handleClassifiedRequest(
+  request: Request,
+  env: GatewayEnv,
+  backend: TilesBackendFetcher,
+  resource: ResourceDescriptor,
+  options: {
+    ns: string;
+    enforce: boolean;
+    backendPath?: string;
+    includeQueryInCacheKey?: boolean;
+  },
+): Promise<Response> {
+  const auth = await authorizeResource({
+    request,
+    env,
+    ns: options.ns,
+    resource,
+    enforce: options.enforce,
+  });
+  logAuthDecision({
+    ns: options.ns,
+    storageSlug: "slug" in resource ? resource.slug : "",
+    aclSlug: auth.aclSlug ?? "",
+    uuid: resource.kind === "published" ? resource.uuid : null,
+    decision: auth.decision,
+    fromCache: false,
+    path: new URL(request.url).pathname,
+    tokenMode: auth.tokenMode,
+    tokenType: auth.claims?.type ?? null,
+  });
+  if (!auth.decision.allowed) return authDenyResponse(request, auth.decision);
+  return forwardToBackend(
+    request,
+    backend,
+    options.backendPath ?? `/${resource.key}`,
+    auth.decision,
+    options.includeQueryInCacheKey,
+  );
+}
+
 async function forwardToBackend(
   request: Request,
   tilesBackend: TilesBackendFetcher,
   legacyPath: string,
-  decision: AuthDecision
+  decision: AuthDecision,
+  includeQueryInCacheKey = false,
 ): Promise<Response> {
   const forwardUrl = new URL(request.url);
   forwardUrl.pathname = legacyPath;
@@ -158,7 +148,7 @@ async function forwardToBackend(
   const cacheKey =
     download && download.length > 0
       ? `${legacyPath}?download=${download}`
-      : legacyPath;
+      : `${legacyPath}${includeQueryInCacheKey ? forwardUrl.search : ""}`;
 
   const backendResponse = await tilesBackend.fetch(forwardReq, {
     cf: { cacheKey },
@@ -171,11 +161,12 @@ function logAuthDecision(args: {
   ns: string;
   storageSlug: string;
   aclSlug: string;
-  uuid: string;
+  uuid: string | null;
   decision: AuthDecision;
   fromCache: boolean;
   path: string;
   tokenMode?: "jwks" | "dev-trust" | null;
+  tokenType?: "map-access" | "overlay-engine" | null;
 }) {
   const {
     ns,
@@ -186,6 +177,7 @@ function logAuthDecision(args: {
     fromCache,
     path,
     tokenMode,
+    tokenType,
   } = args;
   console.log(
     JSON.stringify({
@@ -201,6 +193,7 @@ function logAuthDecision(args: {
       aclClass: decision.aclClass,
       hadToken: decision.hadToken,
       tokenMode: tokenMode ?? null,
+      tokenType: tokenType ?? null,
       role: decision.role,
       groups: decision.groups,
       aclVersion: decision.aclVersion,
@@ -209,7 +202,10 @@ function logAuthDecision(args: {
   );
 }
 
-function authDenyResponse(request: Request, decision: AuthDecision): Response {
+export function authDenyResponse(
+  request: Request,
+  decision: AuthDecision,
+): Response {
   const url = new URL(request.url);
   const wantsHtmlPreview =
     isV2PreviewPath(url.pathname) &&
@@ -253,7 +249,7 @@ function acceptsHtml(request: Request): boolean {
   return /text\/html/i.test(accept);
 }
 
-function decorateGatewayResponse(
+export function decorateGatewayResponse(
   request: Request,
   backendResponse: Response,
   decision: AuthDecision

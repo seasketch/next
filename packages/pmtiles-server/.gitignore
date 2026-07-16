@@ -5,3 +5,5 @@ package-lock.json
 .DS_Store
 .wrangler
 .dev.vars
+# Large production FlatGeobuf fixtures downloaded for properties tests.
+test/fixtures/*.fgb

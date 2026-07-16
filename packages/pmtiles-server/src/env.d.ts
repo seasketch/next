@@ -4,4 +4,5 @@ interface Env {
   TILES_BUCKET: R2Bucket;
   PUBLIC_HOSTNAME?: string;
   JWKS_URL?: string;
+  AUTH_LEGACY_PROJECT_PATHS?: string;
 }

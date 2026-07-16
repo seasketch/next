@@ -1,13 +1,36 @@
 import { env } from "cloudflare:workers";
-import { generateKeyPair, SignJWT, type KeyLike } from "jose";
-import { beforeAll, describe, expect, it, vi } from "vitest";
+import {
+  exportJWK,
+  generateKeyPair,
+  SignJWT,
+  type JWK,
+  type KeyLike,
+} from "jose";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { handleGatewayRequest } from "../src/gateway";
 import type { ProjectAclDoc } from "../src/auth/types";
 
 let testPrivateKey: KeyLike;
+let productionPrivateKey: KeyLike;
+let otherPrivateKey: KeyLike;
+let productionJwk: JWK;
 
 beforeAll(async () => {
   testPrivateKey = (await generateKeyPair("RS256")).privateKey;
+  const production = await generateKeyPair("RS256");
+  const other = await generateKeyPair("RS256");
+  productionPrivateKey = production.privateKey;
+  otherPrivateKey = other.privateKey;
+  productionJwk = {
+    ...(await exportJWK(production.publicKey)),
+    kid: "production-key",
+    alg: "RS256",
+    use: "sig",
+  };
+});
+
+afterEach(() => {
+  vi.unstubAllGlobals();
 });
 
 async function adminToken(projectSlug: string) {
@@ -229,5 +252,156 @@ describe("authorization gateway", () => {
     );
     expect(forwardedUrl.searchParams.get("download")).toBe(filename);
     expect(forwardedUrl.searchParams.has("access_token")).toBe(false);
+  });
+});
+
+describe("prod gateway JWT verification", () => {
+  const slug = "prod-gateway-project";
+
+  function mockJwks(keys: JWK[]) {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ keys }), {
+          headers: { "Content-Type": "application/json" },
+        }),
+      ),
+    );
+  }
+
+  async function prodToken(options: {
+    type: "map-access" | "overlay-engine";
+    key?: KeyLike;
+    kid?: string;
+    issuer?: string;
+  }) {
+    const key = options.key ?? productionPrivateKey;
+    const claims =
+      options.type === "overlay-engine"
+        ? { type: "overlay-engine" }
+        : {
+            type: "map-access",
+            projectId: 1,
+            projectSlug: slug,
+            userId: 1,
+            role: "admin",
+            groups: [],
+          };
+    return new SignJWT(claims)
+      .setProtectedHeader({
+        alg: "RS256",
+        kid: options.kid ?? "production-key",
+      })
+      .setIssuer(options.issuer ?? "seasketch.org")
+      .setExpirationTime(Math.floor(Date.now() / 1000) + 3600)
+      .sign(key);
+  }
+
+  beforeAll(async () => {
+    await writeAcl("prod", slug, {
+      v: 1,
+      public: [],
+      rules: [{ t: "admins_only" }],
+      protected: { [UUID]: [0] },
+    });
+  });
+
+  it("allows JWKS-verified map-access tokens on prod /v2 routes", async () => {
+    const jwksUrl = `https://jwks.example/${crypto.randomUUID()}`;
+    mockJwks([productionJwk]);
+    const tilesBackend = backend();
+    const token = await prodToken({ type: "map-access" });
+    const response = await handleGatewayRequest(
+      new Request(
+        `https://tiles.seasketch.org/v2/prod/projects/${slug}/public/${UUID}.json`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      ),
+      { TILES_BUCKET: env.TILES_BUCKET, JWKS_URL: jwksUrl },
+      tilesBackend,
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("X-SS-Tile-Auth")).toBe(
+      "allow:admin:admins_only",
+    );
+    expect(tilesBackend.fetch).toHaveBeenCalledOnce();
+  });
+
+  it("allows JWKS-verified overlay-engine tokens on prod /v2 routes", async () => {
+    const jwksUrl = `https://jwks.example/${crypto.randomUUID()}`;
+    mockJwks([productionJwk]);
+    const tilesBackend = backend();
+    const token = await prodToken({ type: "overlay-engine" });
+    const response = await handleGatewayRequest(
+      new Request(
+        `https://tiles.seasketch.org/v2/prod/projects/${slug}/public/${UUID}.json`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      ),
+      { TILES_BUCKET: env.TILES_BUCKET, JWKS_URL: jwksUrl },
+      tilesBackend,
+    );
+    expect(response.status).toBe(200);
+    expect(response.headers.get("X-SS-Tile-Auth")).toBe(
+      "allow:overlay_engine:admins_only",
+    );
+    expect(tilesBackend.fetch).toHaveBeenCalledOnce();
+  });
+
+  it("rejects unverified map-access tokens on prod /v2 routes", async () => {
+    const jwksUrl = `https://jwks.example/${crypto.randomUUID()}`;
+    mockJwks([productionJwk]);
+    const tilesBackend = backend();
+    const token = await prodToken({
+      type: "map-access",
+      key: otherPrivateKey,
+      kid: "other-key",
+      issuer: "localhost",
+    });
+    const response = await handleGatewayRequest(
+      new Request(
+        `https://tiles.seasketch.org/v2/prod/projects/${slug}/public/${UUID}.json`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      ),
+      { TILES_BUCKET: env.TILES_BUCKET, JWKS_URL: jwksUrl },
+      tilesBackend,
+    );
+    expect(response.status).toBe(401);
+    expect(tilesBackend.fetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects unverified overlay-engine tokens on prod /v2 routes", async () => {
+    const jwksUrl = `https://jwks.example/${crypto.randomUUID()}`;
+    mockJwks([productionJwk]);
+    const tilesBackend = backend();
+    const token = await prodToken({
+      type: "overlay-engine",
+      key: otherPrivateKey,
+      kid: "other-key",
+      issuer: "localhost",
+    });
+    const response = await handleGatewayRequest(
+      new Request(
+        `https://tiles.seasketch.org/v2/prod/projects/${slug}/subdivided/12-output.fgb`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      ),
+      { TILES_BUCKET: env.TILES_BUCKET, JWKS_URL: jwksUrl },
+      tilesBackend,
+    );
+    expect(response.status).toBe(401);
+    expect(tilesBackend.fetch).not.toHaveBeenCalled();
+  });
+
+  it("rejects prod /v2 access when JWKS_URL is missing", async () => {
+    const tilesBackend = backend();
+    const token = await prodToken({ type: "map-access" });
+    const response = await handleGatewayRequest(
+      new Request(
+        `https://tiles.seasketch.org/v2/prod/projects/${slug}/public/${UUID}.json`,
+        { headers: { Authorization: `Bearer ${token}` } },
+      ),
+      { TILES_BUCKET: env.TILES_BUCKET },
+      tilesBackend,
+    );
+    expect(response.status).toBe(401);
+    expect(tilesBackend.fetch).not.toHaveBeenCalled();
   });
 });

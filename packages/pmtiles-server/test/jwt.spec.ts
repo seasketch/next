@@ -3,6 +3,7 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import {
   extractTokenFromRequest,
   resolveMapAccessToken,
+  resolveSeaSketchAccessToken,
   trustDecodeMapAccessToken,
   verifyMapAccessToken,
 } from "../src/auth/jwt";
@@ -50,11 +51,13 @@ function token(options: {
   issuer?: string;
   type?: string;
   expiresAt?: number | null;
+  claims?: Record<string, unknown>;
 }) {
   const key = options.key ?? productionPrivateKey;
   const kid = options.kid ?? "production-key";
   let jwt = new SignJWT({
     ...baseClaims,
+    ...(options.claims ?? {}),
     type: options.type ?? baseClaims.type,
   })
     .setProtectedHeader({ alg: "RS256", kid })
@@ -78,9 +81,111 @@ function mockJwks(...keysets: JWK[][]) {
       }),
     );
   }
+  // Keep serving the last keyset for JWKS cache refresh / retries.
+  if (keysets.length) {
+    fetchMock.mockResolvedValue(
+      new Response(JSON.stringify({ keys: keysets[keysets.length - 1] }), {
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+  }
   vi.stubGlobal("fetch", fetchMock);
   return fetchMock;
 }
+
+function jwksUrl() {
+  return `https://jwks.example/${crypto.randomUUID()}`;
+}
+
+describe.each([
+  {
+    type: "map-access" as const,
+    resolve: (jwt: string, url: string | undefined, ns: string) =>
+      resolveMapAccessToken(jwt, url, ns),
+  },
+  {
+    type: "overlay-engine" as const,
+    resolve: (jwt: string, url: string | undefined, ns: string) =>
+      resolveSeaSketchAccessToken(jwt, url, ns),
+  },
+])("prod namespace verification ($type)", ({ type, resolve }) => {
+  it("accepts a JWKS-verified production token", async () => {
+    const url = jwksUrl();
+    mockJwks([productionJwk]);
+    const jwt = await token({ type });
+    await expect(resolve(jwt, url, "prod")).resolves.toMatchObject({
+      mode: "jwks",
+      claims: { type },
+    });
+  });
+
+  it("rejects a locally signed token when JWKS is configured", async () => {
+    const url = jwksUrl();
+    mockJwks([productionJwk], [productionJwk]);
+    const locallySigned = await token({
+      type,
+      key: otherPrivateKey,
+      kid: "other-key",
+      issuer: "localhost",
+    });
+    await expect(resolve(locallySigned, url, "prod")).rejects.toThrow();
+  });
+
+  it("rejects when JWKS_URL is not configured", async () => {
+    const locallySigned = await token({
+      type,
+      key: otherPrivateKey,
+      kid: "other-key",
+      issuer: "localhost",
+    });
+    await expect(resolve(locallySigned, undefined, "prod")).rejects.toThrow(
+      "jwks_url_not_configured",
+    );
+  });
+
+  it("rejects a valid signature from an unknown issuer", async () => {
+    const url = jwksUrl();
+    mockJwks([productionJwk]);
+    const jwt = await token({
+      type,
+      issuer: "https://attacker.example",
+    });
+    await expect(resolve(jwt, url, "prod")).rejects.toThrow(/iss|issuer/i);
+  });
+
+  it("rejects an expired token", async () => {
+    const url = jwksUrl();
+    mockJwks([productionJwk]);
+    const jwt = await token({
+      type,
+      expiresAt: Math.floor(Date.now() / 1000) - 30,
+    });
+    await expect(resolve(jwt, url, "prod")).rejects.toThrow();
+  });
+
+  it("never allows dev-trust for prod", async () => {
+    const jwt = await token({
+      type,
+      key: otherPrivateKey,
+      kid: "other-key",
+      issuer: "localhost",
+    });
+    await expect(resolve(jwt, undefined, "prod")).rejects.toThrow();
+  });
+
+  it("allows decode-and-trust only outside prod", async () => {
+    const jwt = await token({
+      type,
+      key: otherPrivateKey,
+      kid: "other-key",
+      issuer: "localhost",
+    });
+    await expect(resolve(jwt, undefined, "dev-user")).resolves.toMatchObject({
+      mode: "dev-trust",
+      claims: { type },
+    });
+  });
+});
 
 describe("map-access JWTs", () => {
   it("extracts query tokens before Authorization headers", () => {
@@ -99,7 +204,7 @@ describe("map-access JWTs", () => {
   });
 
   it("verifies signature, issuer, expiry, type, and claims", async () => {
-    const url = `https://jwks.example/${crypto.randomUUID()}`;
+    const url = jwksUrl();
     mockJwks([productionJwk]);
 
     await expect(
@@ -112,20 +217,8 @@ describe("map-access JWTs", () => {
     });
   });
 
-  it("rejects a valid signature from an unknown issuer", async () => {
-    const url = `https://jwks.example/${crypto.randomUUID()}`;
-    mockJwks([productionJwk]);
-
-    await expect(
-      verifyMapAccessToken(
-        await token({ issuer: "https://attacker.example" }),
-        url,
-      ),
-    ).rejects.toThrow(/iss|issuer/i);
-  });
-
   it("refetches JWKS once when a new kid is missing", async () => {
-    const url = `https://jwks.example/${crypto.randomUUID()}`;
+    const url = jwksUrl();
     const fetchMock = mockJwks([otherJwk], [productionJwk, otherJwk]);
 
     await expect(
@@ -134,41 +227,13 @@ describe("map-access JWTs", () => {
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it("never falls back to unverified claims for prod", async () => {
-    const url = `https://jwks.example/${crypto.randomUUID()}`;
-    mockJwks([productionJwk], [productionJwk]);
-    const locallySigned = await token({
-      key: otherPrivateKey,
-      kid: "other-key",
-      issuer: "localhost",
-    });
-
-    await expect(
-      resolveMapAccessToken(locallySigned, url, "prod"),
-    ).rejects.toThrow();
-    await expect(
-      resolveMapAccessToken(locallySigned, undefined, "prod"),
-    ).rejects.toThrow("jwks_url_not_configured");
-    await expect(
-      resolveMapAccessToken(locallySigned, undefined, "local-dev"),
-    ).resolves.toMatchObject({
-      mode: "dev-trust",
-      claims: { projectSlug: "example" },
-    });
-  });
-
-  it("trusts a well-formed unverified token only outside prod", async () => {
-    const locallySigned = await token({
-      key: otherPrivateKey,
-      kid: "other-key",
-      issuer: "localhost",
-    });
-    await expect(
-      resolveMapAccessToken(locallySigned, undefined, "dev-user"),
-    ).resolves.toMatchObject({
-      mode: "dev-trust",
-      claims: { projectSlug: "example" },
-    });
+  it("resolveMapAccessToken rejects overlay-engine tokens", async () => {
+    const url = jwksUrl();
+    mockJwks([productionJwk]);
+    const jwt = await token({ type: "overlay-engine" });
+    await expect(resolveMapAccessToken(jwt, url, "prod")).rejects.toThrow(
+      /Unexpected token type/,
+    );
   });
 
   it("requires map-access type and an unexpired exp in dev-trust mode", async () => {
@@ -185,5 +250,35 @@ describe("map-access JWTs", () => {
     expect(() => trustDecodeMapAccessToken(wrongType)).toThrow(
       "Unexpected token type",
     );
+  });
+});
+
+describe("overlay-engine JWTs", () => {
+  it("resolveSeaSketchAccessToken accepts verified overlay-engine on prod", async () => {
+    const url = jwksUrl();
+    mockJwks([productionJwk]);
+    const jwt = await token({
+      type: "overlay-engine",
+      claims: { projectId: undefined },
+    });
+    await expect(
+      resolveSeaSketchAccessToken(jwt, url, "prod"),
+    ).resolves.toMatchObject({
+      mode: "jwks",
+      claims: { type: "overlay-engine" },
+    });
+  });
+
+  it("rejects overlay-engine tokens missing exp even in dev-trust", async () => {
+    const missingExp = await token({
+      type: "overlay-engine",
+      expiresAt: null,
+      key: otherPrivateKey,
+      kid: "other-key",
+      issuer: "localhost",
+    });
+    await expect(
+      resolveSeaSketchAccessToken(missingExp, undefined, "dev-user"),
+    ).rejects.toThrow("token_exp_required");
   });
 });

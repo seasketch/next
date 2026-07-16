@@ -1,4 +1,4 @@
-name = "pmtiles-server"
+name = "overlay-data-server"
 main = "src/index.ts"
 compatibility_date = "2026-07-14"
 # Request-scoped timing context for Server-Timing (see src/timing.ts).
@@ -19,6 +19,28 @@ enabled = false
 type = "worker"
 [exports.TilesBackend.cache]
 enabled = true
+
+# Range requests must reach ObjectBackend. Workers Caching strips Range on a
+# miss and asks the Worker for the whole body, which is inappropriate for large
+# FlatGeobuf and cloud-optimized GeoTIFF objects.
+[exports.ObjectBackend]
+type = "worker"
+[exports.ObjectBackend.cache]
+enabled = false
+
+[exports.PropertiesBackend]
+type = "worker"
+[exports.PropertiesBackend.cache]
+enabled = true
+
+[vars]
+# Compatibility rollout switch. Set true only after legacy project callers send
+# map-access or overlay-engine tokens.
+AUTH_LEGACY_PROJECT_PATHS = "false"
+
+# Large property scans can be CPU intensive. Paid Workers permit up to 300s.
+[limits]
+cpu_ms = 10_000
 
 [[r2_buckets]]
 binding = 'TILES_BUCKET'

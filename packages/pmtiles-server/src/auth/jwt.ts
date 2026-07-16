@@ -5,7 +5,11 @@ import {
   JWTPayload,
   JSONWebKeySet,
 } from "jose";
-import type { MapAccessClaims } from "./types";
+import type {
+  MapAccessClaims,
+  OverlayEngineClaims,
+  SeaSketchAccessClaims,
+} from "./types";
 
 type JwksCache = {
   url: string;
@@ -104,7 +108,7 @@ export function extractTokenFromRequest(request: Request): string | null {
 
 /** Outcome of resolveMapAccessToken, including how the token was accepted. */
 export type TokenResolveResult = {
-  claims: MapAccessClaims;
+  claims: SeaSketchAccessClaims;
   /** `jwks` = cryptographically verified; `dev-trust` = decoded only (non-prod ns) */
   mode: "jwks" | "dev-trust";
 };
@@ -125,11 +129,24 @@ export async function resolveMapAccessToken(
   jwksUrl: string | undefined,
   ns: string,
 ): Promise<TokenResolveResult> {
+  const resolved = await resolveSeaSketchAccessToken(token, jwksUrl, ns);
+  if (resolved.claims.type !== "map-access") {
+    throw new Error(`Unexpected token type: ${resolved.claims.type}`);
+  }
+  return resolved;
+}
+
+/** Resolve either a project map-access token or a global overlay-engine token. */
+export async function resolveSeaSketchAccessToken(
+  token: string,
+  jwksUrl: string | undefined,
+  ns: string,
+): Promise<TokenResolveResult> {
   const isProdNs = ns === PROD_ACL_NAMESPACE;
 
   if (jwksUrl) {
     try {
-      const claims = await verifyMapAccessToken(token, jwksUrl);
+      const claims = await verifySeaSketchAccessToken(token, jwksUrl);
       return { claims, mode: "jwks" };
     } catch (e) {
       if (isProdNs) {
@@ -145,7 +162,7 @@ export async function resolveMapAccessToken(
     throw new Error("dev_trust_not_allowed_on_prod");
   }
 
-  return { claims: trustDecodeMapAccessToken(token), mode: "dev-trust" };
+  return { claims: trustDecodeSeaSketchAccessToken(token), mode: "dev-trust" };
 }
 
 /**
@@ -157,13 +174,33 @@ export async function verifyMapAccessToken(
   jwksUrl: string,
   expectedSlug?: string,
 ): Promise<MapAccessClaims> {
+  const claims = await verifySeaSketchAccessToken(token, jwksUrl);
+  if (claims.type !== "map-access") {
+    throw new Error(`Unexpected token type: ${claims.type}`);
+  }
+  if (
+    expectedSlug &&
+    claims.projectSlug &&
+    claims.projectSlug !== expectedSlug
+  ) {
+    throw new Error(
+      `Token projectSlug mismatch: ${claims.projectSlug} !== ${expectedSlug}`,
+    );
+  }
+  return claims;
+}
+
+export async function verifySeaSketchAccessToken(
+  token: string,
+  jwksUrl: string,
+): Promise<SeaSketchAccessClaims> {
   const tryVerify = async (forceRefresh: boolean) => {
     const jwks = await loadJWKS(jwksUrl, { forceRefresh });
     const { payload } = await jwtVerify(token, jwks, {
       algorithms: ["RS256"],
       issuer: [...ALLOWED_MAP_ACCESS_ISSUERS],
     });
-    return assertMapAccessClaims(payload, expectedSlug);
+    return assertSeaSketchAccessClaims(payload);
   };
 
   try {
@@ -183,6 +220,16 @@ export async function verifyMapAccessToken(
  * (local API tokens whose keys are not in production JWKS).
  */
 export function trustDecodeMapAccessToken(token: string): MapAccessClaims {
+  const claims = trustDecodeSeaSketchAccessToken(token);
+  if (claims.type !== "map-access") {
+    throw new Error(`Unexpected token type: ${claims.type}`);
+  }
+  return claims;
+}
+
+export function trustDecodeSeaSketchAccessToken(
+  token: string,
+): SeaSketchAccessClaims {
   let payload: JWTPayload;
   try {
     payload = decodeJwt(token);
@@ -190,6 +237,26 @@ export function trustDecodeMapAccessToken(token: string): MapAccessClaims {
     throw new Error("token_malformed");
   }
 
+  return assertSeaSketchAccessClaims(payload);
+}
+
+function assertSeaSketchAccessClaims(
+  payload: JWTPayload,
+): SeaSketchAccessClaims {
+  if (typeof payload.exp !== "number") {
+    throw new Error("token_exp_required");
+  }
+  if (payload.exp * 1000 <= Date.now()) {
+    throw new Error("token_expired");
+  }
+  if (payload.type === "overlay-engine") {
+    return {
+      type: "overlay-engine",
+      exp: payload.exp,
+      iat: typeof payload.iat === "number" ? payload.iat : undefined,
+      iss: typeof payload.iss === "string" ? payload.iss : undefined,
+    } satisfies OverlayEngineClaims;
+  }
   return assertMapAccessClaims(payload);
 }
 
@@ -201,12 +268,7 @@ function assertMapAccessClaims(
   if (claims.type !== "map-access") {
     throw new Error(`Unexpected token type: ${claims.type}`);
   }
-  if (typeof payload.exp !== "number") {
-    throw new Error("token_exp_required");
-  }
-  if (payload.exp * 1000 <= Date.now()) {
-    throw new Error("token_expired");
-  }
+  if (typeof payload.exp !== "number") throw new Error("token_exp_required");
   if (
     expectedSlug &&
     claims.projectSlug &&

@@ -1,3 +1,8 @@
 # Local wrangler + local API JWKS (tokens from localhost:3857 will not verify
 # against production api.seasket.ch keys).
 JWKS_URL=http://127.0.0.1:3857/.well-known/jwks.json
+# Keep false until every legacy projects/* caller supplies auth.
+AUTH_LEGACY_PROJECT_PATHS=false
+PUBLIC_HOSTNAME=localhost:8787
+# Required only for browser preview pages.
+MAPBOX_ACCESS_TOKEN=

@@ -39,6 +39,10 @@ export function applyCorsHeaders(
   options?: { allowAuthorization?: boolean }
 ) {
   const origin = request.headers.get("Origin");
+  // Backends may set permissive CORS for direct public access. The gateway is
+  // authoritative for outward responses and must not preserve that wildcard
+  // when a browser supplied a disallowed Origin.
+  headers.delete("Access-Control-Allow-Origin");
   if (isAllowedOrigin(origin)) {
     headers.set("Access-Control-Allow-Origin", origin);
     headers.set("Vary", "Origin");

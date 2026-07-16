@@ -1,172 +1,186 @@
-# pmtiles-server
+# Overlay Data Server
 
-Cloudflare Worker that serves [PMTiles](https://github.com/protomaps/PMTiles) archives from R2 as authenticated ZXY tiles and TileJSON for SeaSketch (Mapbox GL).
+Cloudflare Worker for serving SeaSketch overlay data from the `ssn-tiles` R2
+bucket.
 
-Hosted archives are content-addressed and immutable (a data update publishes a new object key). After authorization, allow responses for tiles and TileJSON use long-lived edge caching. Protected responses are marked private so shared caches do not reuse another user’s tokens.
+The Worker has three responsibilities:
 
-Production hostname: `https://tiles.seasketch.org`.
+1. PMTiles-backed TileJSON, ZXY tiles, and browser previews.
+2. Streaming whole-object downloads and efficient byte-range reads for
+   FlatGeobuf, cloud-optimized GeoTIFF, PMTiles, and arbitrary object types.
+3. FlatGeobuf property extraction through the legacy-compatible `/properties`
+   API.
 
-SeaSketch publishes the data and its access policy; `pmtiles-server` enforces that policy before reading and serving the corresponding PMTiles archive.
+The default entrypoint is an uncached authorization and host-routing gateway.
+It invokes isolated `TilesBackend`, `ObjectBackend`, and `PropertiesBackend`
+entrypoints after credentials have been removed.
 
 ## Routes
 
-All paths are under `/v2/{ns}/…`, where `{ns}` is the ACL namespace (production uses `prod`).
+### Tiles, previews, and downloads
 
-Hosted overlays live at object keys of the form `projects/{slug}/public/{uuid}.pmtiles`. The URL path before `/v2/{ns}` is stripped for backend lookup, so these routes map 1:1 onto those keys:
+| Route                                                               | Result                       |
+| ------------------------------------------------------------------- | ---------------------------- |
+| `/projects/{slug}/public/{uuid}.json`                               | TileJSON                     |
+| `/projects/{slug}/public/{uuid}/{z}/{x}/{y}.{mvt,pbf,png,webp,jpg}` | Tile                         |
+| `/projects/{slug}/public/{uuid}`                                    | Browser preview              |
+| `/{r2-key}` on `uploads.seasketch.org`                              | Raw R2 object                |
+| `/v2/{ns}/projects/{slug}/public/{uuid}.{extension}`                | Auth-aware object download   |
+| `/v2/{ns}/projects/{slug}/subdivided/{objectPath}`                  | Admin-only subdivided output |
 
-| Path                                                       | Response                            |
-| ---------------------------------------------------------- | ----------------------------------- |
-| `/v2/{ns}/projects/{slug}/public/{uuid}/{z}/{x}/{y}.{ext}` | Tile (e.g. `.mvt`, `.png`, `.webp`) |
-| `/v2/{ns}/projects/{slug}/public/{uuid}.json`              | TileJSON                            |
-| `/v2/{ns}/projects/{slug}/public/{uuid}`                   | Mapbox GL preview page              |
+`GET` and `HEAD` are supported for raw objects. `?download=filename.ext` adds
+`Content-Disposition: attachment`. Raw objects expose ETag and R2 HTTP
+metadata, CORS, `Accept-Ranges: bytes`, and immutable cache headers.
 
-Preview pages require the `MAPBOX_ACCESS_TOKEN` Worker secret. For protected tilesets, open the preview with `?access_token=…`, or use the token dialog shown when the gateway returns 401/403. The preview map attaches the token to subsequent `/v2/` TileJSON and tile requests.
+Single RFC byte ranges are supported in closed (`bytes=0-1023`), open
+(`bytes=1024-`), and suffix (`bytes=-1024`) forms. Invalid, multiple, and
+unsatisfiable ranges return 416.
 
-## Authorization Tokens
+Host precedence is intentional:
 
-### How to send a token
+- `uploads.seasketch.org` always treats a non-empty path as an opaque R2 key.
+- `tiles.seasketch.org` gives TileJSON, ZXY, and preview routes precedence
+  (including root fixture archives such as `crdss-cells-6/{z}/{x}/{y}.pbf`)
+  and uses raw-object semantics for downloads.
+- `overlay.seasketch.org/properties` retains the legacy properties contract.
+- `workers.dev` supports the explicit routes and safe raw-object fallback for
+  preview testing.
 
-Provide a SeaSketch **map access** JWT in one of:
+Consequently, a project `.json` path is raw JSON on the uploads host but
+TileJSON on the tiles host. An extensionless published UUID is raw on uploads
+and a preview on tiles.
 
-1. Query string (preferred for Mapbox GL / browser maps — avoids CORS preflight on every tile):  
-   `?access_token=<jwt>`
-2. Header (fine for non-browser clients):  
-   `Authorization: Bearer <jwt>`
+### Properties
 
-The query parameter is stripped before the tile backend runs so cache keys stay clean.
-
-Public tilesets (listed in the [Project ACL Document](#access-control-documents)) do not require a token. Missing or invalid credentials on a protected tileset yield **401**; authenticated but insufficient access yields **403**.
-
-### Token source
-
-For namespace `prod` (protected layers), the Worker accepts only an **unexpired** RS256 JWT that:
-
-1. Has an `iss` claim in the known SeaSketch issuer set (`seasketch.org`, `api.seasket.ch`, with or without `https://`), and
-2. Has a signature that verifies against the Worker’s public JWKS (`JWKS_URL`, default [`https://api.seasket.ch/.well-known/jwks.json`](https://api.seasket.ch/.well-known/jwks.json)).
-
-### Required claims
-
-| Claim         | Type                  | Meaning                                                                                        |
-| ------------- | --------------------- | ---------------------------------------------------------------------------------------------- |
-| `type`        | string                | Must be `"map-access"`                                                                         |
-| `iss`         | string                | Must be a known SeaSketch issuer when the signature is JWKS-verified                           |
-| `projectId`   | number                | Project the token is scoped to                                                                 |
-| `projectSlug` | string                | Canonical project slug (must match the ACL document’s `slug`, except for SeaSketch superusers) |
-| `userId`      | number                | Authenticated user                                                                             |
-| `role`        | `"admin"` \| `"user"` | Project admin (or platform superuser treated as admin) vs participant                          |
-| `groups`      | number[]              | Project group ids the user belongs to                                                          |
-| `isSuperuser` | boolean (optional)    | Platform superuser; bypasses project ACL checks                                                |
-| `exp`         | number                | Expiration (unix seconds); the token must not be expired                                       |
-
-## Access Control Documents
-
-Project ACL documents tell the Worker which overlay tile UUIDs are public and which require a map-access JWT (and under what role/group rules). The Worker does not query SeaSketch’s database; it only reads these JSON files from R2. **SeaSketch must rewrite the document whenever a project’s Overlay Table of Contents is published**, so the gateway’s view of public vs protected matches what was just published.
-
-Until a layer appears as `public` (or an appropriate `protected` entry) in the published document, its UUID is treated as **admins-only**: clients need a valid admin (or superuser) token. That covers drafts and anything else not yet reflected by a publish.
-
-### Location and shape
-
-Per-project ACL JSON lives in the tiles R2 bucket:
+Both paths are accepted:
 
 ```text
-acl/{ns}/projects/{slug}.json
+GET /properties?dataset={r2-key}
+GET /v2/{ns}/properties?dataset={r2-key}
 ```
 
-Example:
+Query parameters:
 
-```json
-{
-  "v": 1710000000000,
-  "slug": "example-project",
-  "public": ["aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"],
-  "rules": [
-    { "t": "admins_only" },
-    { "t": "group", "g": [12, 34] },
-    { "t": "group", "g": [56] }
-  ],
-  "protected": {
-    "11111111-2222-3333-4444-555555555555": [0],
-    "66666666-7777-8888-9999-aaaaaaaaaaaa": [1, 2]
-  }
-}
-```
+- `dataset` (required): R2 key for a FlatGeobuf file.
+- `include`: comma-separated property names.
+- `includeProperties`: alias for `include`.
+- `bbox=true`: adds antimeridian-aware `__bbox`.
+- `cql2JSONQuery`: JSON-encoded CQL2 expression. Supported operators are
+  `and`, `or`, `not`, `=`, `!=`, `<`, `<=`, `>`, `>=`, `like`, `ilike`, and
+  `in`.
+- `v`: ignored by the handler but retained in the backend cache key.
 
-| Field       | Meaning                                                                    |
-| ----------- | -------------------------------------------------------------------------- |
-| `v`         | Version stamp (milliseconds). Higher values win if concurrent writes race. |
-| `slug`      | Canonical project slug; compared to token `projectSlug`.                   |
-| `public`    | Tile UUIDs anyone may fetch without a token.                               |
-| `rules`     | Deduplicated admins-only and group ACL rules.                              |
-| `protected` | Map of tile UUID → indexes in `rules`.                                     |
+Each result contains `__offset` and `__byteLength`, matching the existing
+overlay endpoint contract. Malformed input is 400 and a missing dataset is 404.
 
-Each protected UUID references every non-public ACL attached to its layer or an ancestor folder in the published TOC. **All referenced rules must pass.** A group rule passes when the token contains at least one id in that rule’s `g` list; project admins bypass the rule checks. This preserves nested TOC behavior—for example, a layer inside two group-limited folders requires membership matching both folder rules—while allowing all descendants of a folder to reuse one rule entry.
+## Authorization
 
-**Unlisted UUIDs** (not in `public` or `protected`) are treated as **`admins_only`**.
+Keys outside `projects/` are public fixtures. For example,
+`/eez-land-joined.fgb` can be read without a token. Data-library keys below
+`projects/superuser/public/` are also always public on every host and route.
 
-The Worker caches ACL docs in-memory per isolate and **revalidates against R2 before treating a request as a definitive deny**, so a layer that recently became public is not stuck denied on a stale isolate.
+Explicit `/v2/{ns}/...` routes always authorize protected project data. Tokens
+may be supplied with `Authorization: Bearer ...` or `access_token=...`.
+Credentials are stripped before backend invocation and never enter a cache key.
 
-## Using with a Development Environment
+### Map-access tokens
 
-Production ACL and client URLs use namespace **`prod`**. Local and staging installs share the same R2 bucket, so each developer (or environment) must use a **distinct namespace** in the `/v2/{ns}/…` path and when writing ACL objects (`TILES_ACL_NAMESPACE` on the API; `REACT_APP_TILES_ACL_NAMESPACE` on the client). The API refuses to write the `prod` namespace unless `NODE_ENV=production`.
+Published UUIDs use `acl/{ns}/projects/{slug}.json`. Public UUIDs need no
+token. Protected UUIDs use the existing project-admin, superuser, and group
+rules.
 
-### Unverified (dev) tokens
+Subdivided outputs (`projects/{slug}/subdivided/...`) do not consult the ACL
+document and do not infer a published-layer UUID. They require a map-access
+token for the path slug with project-admin role, or a SeaSketch superuser.
+Other unrecognized project-owned keys fail closed with the same admin-only
+policy.
 
-For any namespace **other than `prod`**:
+### Overlay-engine tokens
 
-1. The Worker first tries full JWKS signature verification (same as production).
-2. If that fails (typical for JWTs signed by a laptop API whose keys are not in production JWKS), the Worker **decodes the JWT without verifying the signature** and trusts the claims.
+A token with `type="overlay-engine"` is a service-wide read bypass for all
+overlay resources, including ranges and properties.
 
-Trusted / unverified tokens still must:
+- For namespace `prod`, RS256 signature and issuer verification against
+  `JWKS_URL` is mandatory.
+- For other namespaces, JWKS verification is attempted first and the existing
+  decode-and-trust development behavior is then allowed.
+- A numeric, unexpired `exp` is mandatory in both modes.
 
-- Have `type: "map-access"`
-- Have a non-expired `exp`
+Map-access and overlay-engine claim validation remain separate; another token
+type cannot receive this bypass.
 
-They are **never** accepted for namespace `prod`. That keeps forged local tokens from authorizing production ACL documents, while still letting you hit `tiles.seasketch.org/v2/<your-ns>/…` with a map-access JWT from your local API.
+### Legacy rollout switch
 
-### Preview + tokens in development
+Historically, hosted overlay objects used an implicit capability-URL model:
+content-addressed UUID paths under `projects/{slug}/public/{uuid}...` were
+effectively unguessable secrets, so the Worker treated them as publicly
+fetchable without tokens. Auth is now moving to explicit map-access /
+overlay-engine tokens plus per-project ACL documents; this switch bridges the
+two schemes during rollout.
 
-Same as production: `?access_token=` on the preview URL, or the HTML token dialog when the gateway rejects the request.
+`AUTH_LEGACY_PROJECT_PATHS` defaults to `"false"`. While false, non-v2
+`projects/...` requests preserve that legacy capability-URL behavior so domains
+can be remapped and tested without breaking callers. Authenticated routes
+(`/v2` and legacy paths once the switch is on) strictly expect a published ACL
+document; if the doc is missing, every layer UUID is treated as admins-only.
 
-## Other Considerations
+Set the switch to `"true"` only after legacy clients send tokens. It then
+treats legacy project paths as namespace `prod` and applies the same published,
+subdivided, and unknown-project rules described above. While ACLs are still
+being generated, a missing project ACL document is treated as all UUIDs public
+so authenticated clients are not locked out mid-rollout. Fixtures and
+data-library objects remain public.
 
-- **Data library (`superuser` storage path).** Objects under `/projects/superuser/public/{uuid}` are the shared data library. The gateway always allows these as public: it does **not** load an ACL document or require a token, regardless of namespace.
-- **Path slug vs project slug.** The `{slug}` in `/projects/{slug}/public/…` is the storage path (often the project slug at upload time). ACL lookup prefers the token’s `projectSlug` when a token is present, so renamed projects or copied data-library-style URLs still authorize against the correct project ACL.
-- **Caching.** Public allow responses may use immutable public cache headers. Non-public allows are forced to `Cache-Control: private, …` so intermediaries do not share protected tiles across users. The Worker’s gateway entrypoint itself is not Workers-Cache–eligible; the tile backend entrypoint is.
-- **JWKS cache.** Verified production tokens use an in-isolate JWKS cache (about one hour). If a newly rotated signing `kid` is missing, the Worker refetches JWKS once and retries verification.
-- **Observability.** Auth decisions are logged as JSON (`msg: "tile-auth"`). Responses include `X-SS-Tile-Auth` (`allow:…` or `deny:…`). Cache misses that hit the tile backend may include `Server-Timing`.
+## Caching
 
-## Deployment
+The default gateway is never fronted by Workers Caching, so authorization runs
+on every protected request. Tiles and property query responses use cached named
+entrypoints after auth.
 
-```bash
+`ObjectBackend` is not fronted by Workers Caching because a cache miss can
+strip `Range` and request the complete object. It instead uses
+`caches.default` with synthetic keys containing the object key and exact range.
+The cache stores an internal 200 representation and reconstructs the outward
+206 response. This provides PoP caching for frequently read FGB/COG headers,
+indexes, and data windows without buffering whole downloads.
+
+Protected outward responses are marked private even when an internal backend
+response is shared safely after gateway authorization.
+
+## Local development
+
+```sh
 npm install
-npm start          # wrangler dev
 npm test
 npm run typecheck
-npm run deploy
+npm run dev
 ```
 
-| Binding / var         | Purpose                                                                |
-| --------------------- | ---------------------------------------------------------------------- |
-| `TILES_BUCKET`        | R2 bucket for PMTiles, hosted downloads, + ACL docs (`ssn-tiles`)      |
-| `PUBLIC_HOSTNAME`     | Host embedded in TileJSON `tiles` URLs (default `tiles.seasketch.org`) |
-| `JWKS_URL`            | JWKS endpoint for verifying production map-access JWTs                 |
-| `MAPBOX_ACCESS_TOKEN` | Secret; Mapbox GL for preview pages only                               |
+Copy `.dev.vars.example` to `.dev.vars` and provide required values. Do not
+commit secrets.
 
-### Auth-aware object downloads
+## Preview deployment and domain remapping
 
-Hosted overlays (GeoJSON, FlatGeobuf, PMTiles, originals, …) are stored in the
-same R2 bucket as tile archives. The worker serves whole objects at:
+Deploy under the new Worker name first; this leaves the current production
+worker available:
 
-```
-/v2/{ns}/projects/{slug}/public/{uuid}.geojson?download=My%20Layer.geojson&access_token=...
-/v2/{ns}/projects/{slug}/public/{uuid}.pmtiles?download=My%20Layer.pmtiles&access_token=...
+```sh
+npx wrangler deploy
 ```
 
-`?download=` sets `Content-Disposition: attachment` (same as uploads-server).
-ACL checks use the UUID the same way as TileJSON / tiles.
+Run `npm run smoke -- https://overlay-data-server.<account>.workers.dev`
+before changing DNS. The smoke script accepts optional `SMOKE_PROJECT_KEY` and
+`SMOKE_TOKEN` environment variables for protected checks.
 
-```bash
-echo '<pk.token>' | npx wrangler secret put MAPBOX_ACCESS_TOKEN
-```
+The manual production sequence is:
 
-Local overrides go in a gitignored `.dev.vars`. After changing `wrangler.toml`, regenerate types with `npx wrangler types`.
+1. Validate a root FGB, a TIFF range, TileJSON, a ZXY tile, a download, and
+   public/protected properties on the preview URL.
+2. Map `uploads.seasketch.org` and verify opaque object compatibility.
+3. Map `overlay.seasketch.org` and verify `/properties` parity.
+4. Keep `AUTH_LEGACY_PROJECT_PATHS=false` during compatibility testing.
+5. Migrate callers, then enable the switch and verify protected legacy,
+   subdivided, data-library, and fixture cases.
+
+DNS, infrastructure, and caller migrations are intentionally outside this
+package.

@@ -42,6 +42,16 @@ export type MapAccessClaims = {
   iss?: string;
 };
 
+/** Service-wide claims used by trusted overlay processing workers. */
+export type OverlayEngineClaims = {
+  type: "overlay-engine";
+  iat?: number;
+  exp: number;
+  iss?: string;
+};
+
+export type SeaSketchAccessClaims = MapAccessClaims | OverlayEngineClaims;
+
 /** Result of loading a ProjectAclDoc and classifying one UUID. */
 export type AclLookupResult = {
   class: AclClass;
@@ -49,6 +59,8 @@ export type AclLookupResult = {
   doc: ProjectAclDoc | null;
   etag: string | null;
   fromCache: boolean;
+  /** True when no ACL object exists in R2 for this project yet. */
+  missing: boolean;
 };
 
 /** Outcome of authorizeAccess for logging and HTTP status mapping. */

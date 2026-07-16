@@ -112,6 +112,17 @@ describe("ACL document handling", () => {
     expect(classifyUuid(normalized, C).class).toBe("admins_only");
   });
 
+  it("marks projects without an ACL object as missing", async () => {
+    const ns = `test-${crypto.randomUUID()}`;
+    const slug = "no-acl-yet";
+    const result = await lookupAclForAuth(env.TILES_BUCKET, ns, slug, A);
+    expect(result).toMatchObject({
+      missing: true,
+      class: "admins_only",
+      etag: null,
+    });
+  });
+
   it("revalidates a cached deny before returning it", async () => {
     const ns = `test-${crypto.randomUUID()}`;
     const slug = "revalidation";
@@ -128,7 +139,7 @@ describe("ACL document handling", () => {
     // read from or write to the remote ssn-tiles bucket.
     await env.TILES_BUCKET.put(key, JSON.stringify(protectedDoc));
     expect(await lookupAclForAuth(env.TILES_BUCKET, ns, slug, A)).toMatchObject(
-      { class: "admins_only" },
+      { class: "admins_only", missing: false },
     );
 
     await env.TILES_BUCKET.put(

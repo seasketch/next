@@ -9,6 +9,8 @@ type CacheEntry = {
   doc: ProjectAclDoc | null;
   etag: string | null;
   fetchedAt: number;
+  /** True when R2 has no ACL object for this project. */
+  missing: boolean;
 };
 
 const memoryCache = new Map<string, CacheEntry>();
@@ -118,7 +120,19 @@ async function fetchAclFromR2(
   const obj = await bucket.get(key, opts);
 
   if (!obj) {
-    return { doc: emptyDoc(slug), etag: null, fetchedAt: Date.now() };
+    // Conditional gets return null when the ETag is unchanged; keep the cache.
+    if (onlyIfEtag) {
+      const prev = memoryCache.get(cacheKey(ns, slug));
+      if (prev) {
+        return { ...prev, fetchedAt: Date.now() };
+      }
+    }
+    return {
+      doc: emptyDoc(slug),
+      etag: null,
+      fetchedAt: Date.now(),
+      missing: true,
+    };
   }
 
   // With etagDoesNotMatch, a body-less object means the ETag is unchanged.
@@ -149,6 +163,7 @@ async function fetchAclFromR2(
     doc,
     etag: obj.etag ?? null,
     fetchedAt: Date.now(),
+    missing: false,
   };
 }
 
@@ -272,6 +287,7 @@ export async function lookupAcl(
     doc: entry.doc,
     etag: entry.etag,
     fromCache,
+    missing: entry.missing,
   };
 }
 

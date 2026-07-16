@@ -17,6 +17,12 @@ export type V2PathParts = {
   legacyPath: string;
 };
 
+export type V2SubdividedPathParts = {
+  ns: string;
+  slug: string;
+  legacyPath: string;
+};
+
 const UUID =
   "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 const NS_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$/;
@@ -73,6 +79,20 @@ export function parseV2Path(pathname: string): V2PathParts | null {
   if (m) return partsFromMatch(m);
 
   return null;
+}
+
+export function parseV2SubdividedPath(
+  pathname: string,
+): V2SubdividedPathParts | null {
+  const match = pathname.match(
+    /^\/v2\/([^/]+)\/projects\/([^/]+)\/subdivided\/(.+)$/,
+  );
+  if (!match || !NS_PATTERN.test(match[1]) || !match[3]) return null;
+  return {
+    ns: match[1],
+    slug: match[2],
+    legacyPath: `/projects/${match[2]}/subdivided/${match[3]}`,
+  };
 }
 
 /** True for any path under the /v2 auth gateway prefix. */
