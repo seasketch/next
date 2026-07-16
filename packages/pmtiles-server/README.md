@@ -118,18 +118,19 @@ fetchable without tokens. Auth is now moving to explicit map-access /
 overlay-engine tokens plus per-project ACL documents; this switch bridges the
 two schemes during rollout.
 
-`AUTH_LEGACY_PROJECT_PATHS` defaults to `"false"`. While false, non-v2
-`projects/...` requests preserve that legacy capability-URL behavior so domains
-can be remapped and tested without breaking callers. Authenticated routes
-(`/v2` and legacy paths once the switch is on) strictly expect a published ACL
-document; if the doc is missing, every layer UUID is treated as admins-only.
+`AUTH_LEGACY_PROJECT_PATHS` defaults to `"false"` (lax / compatibility mode):
 
-Set the switch to `"true"` only after legacy clients send tokens. It then
-treats legacy project paths as namespace `prod` and applies the same published,
-subdivided, and unknown-project rules described above. While ACLs are still
-being generated, a missing project ACL document is treated as all UUIDs public
-so authenticated clients are not locked out mid-rollout. Fixtures and
-data-library objects remain public.
+- Non-v2 `projects/...` requests keep capability-URL public behavior so domains
+  can be remapped without breaking callers.
+- On authenticated routes (`/v2`, and later legacy paths once the switch is on),
+  a **missing** project ACL document is treated as all layer UUIDs public so
+  projects that have not published an ACL yet are not locked out.
+
+Set the switch to `"true"` only after legacy clients send tokens and ACL docs
+are being published. It then treats legacy project paths as namespace `prod`,
+enforces the published / subdivided / unknown-project rules above, and treats a
+missing ACL document as admins-only. Fixtures and data-library objects remain
+public in both modes.
 
 ## Caching
 

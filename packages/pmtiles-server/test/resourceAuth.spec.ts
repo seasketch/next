@@ -148,7 +148,7 @@ describe("resource authorization", () => {
     }
   });
 
-  it("treats missing ACL docs as public when legacy auth is enabled", async () => {
+  it("treats missing ACL docs as public when legacy auth is disabled (lax)", async () => {
     const ns = `missing-acl-${crypto.randomUUID()}`;
     const resource = classifyResource(
       `projects/${SLUG}/public/${UUID}.fgb`,
@@ -157,7 +157,7 @@ describe("resource authorization", () => {
       request: new Request("https://uploads.example/v2/object"),
       env: {
         TILES_BUCKET: env.TILES_BUCKET,
-        AUTH_LEGACY_PROJECT_PATHS: "true",
+        AUTH_LEGACY_PROJECT_PATHS: "false",
       } as Env,
       ns,
       resource,
@@ -170,7 +170,7 @@ describe("resource authorization", () => {
     });
   });
 
-  it("treats missing ACL docs as admins-only when legacy auth is disabled", async () => {
+  it("treats missing ACL docs as admins-only when legacy auth is enabled (strict)", async () => {
     const ns = `missing-acl-${crypto.randomUUID()}`;
     const resource = classifyResource(
       `projects/${SLUG}/public/${UUID}.fgb`,
@@ -179,7 +179,7 @@ describe("resource authorization", () => {
       request: new Request("https://uploads.example/v2/object"),
       env: {
         TILES_BUCKET: env.TILES_BUCKET,
-        AUTH_LEGACY_PROJECT_PATHS: "false",
+        AUTH_LEGACY_PROJECT_PATHS: "true",
       } as Env,
       ns,
       resource,

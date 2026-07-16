@@ -104,9 +104,10 @@ export async function authorizeResource(args: {
     aclSlug,
     resource.uuid,
   );
-  // During legacy rollout, projects may not have an ACL doc yet. Treat every
-  // UUID as public when the switch is on; otherwise missing docs are admins-only.
-  if (acl.missing && legacyProjectAuthEnabled(env)) {
+  // AUTH_LEGACY_PROJECT_PATHS=false is the lax/compat mode: if no ACL doc has
+  // been published yet, treat every UUID as public. When the switch is true
+  // (strict), a missing doc is admins-only.
+  if (acl.missing && !legacyProjectAuthEnabled(env)) {
     return {
       decision: publicDecision("legacy_missing_acl"),
       claims,
