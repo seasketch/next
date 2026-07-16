@@ -29,17 +29,17 @@ const NS_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$/;
 
 // Current hosted format includes the `public` visibility segment.
 const V2_TILEJSON = new RegExp(
-  `^/v2/([^/]+)/(projects/([^/]+)/public/(${UUID}))\\.json$`
+  `^/v2/([^/]+)/(projects/([^/]+)/public/(${UUID}))\\.json$`,
 );
 const V2_TILE = new RegExp(
-  `^/v2/([^/]+)/(projects/([^/]+)/public/(${UUID})/\\d+/\\d+/\\d+\\.\\w+)$`
+  `^/v2/([^/]+)/(projects/([^/]+)/public/(${UUID})/\\d+/\\d+/\\d+\\.\\w+)$`,
 );
 /** Whole-object downloads: `{uuid}.pmtiles`, `{uuid}.geojson.json`, or `{uuid}/meta.xml`. */
 const V2_OBJECT = new RegExp(
-  `^/v2/([^/]+)/(projects/([^/]+)/public/(${UUID})(?:(?:\\.[a-zA-Z0-9]+)+|/(?:[^/]+)+))$`
+  `^/v2/([^/]+)/(projects/([^/]+)/public/(${UUID})(?:(?:\\.[a-zA-Z0-9]+)+|/(?:[^/]+)+))$`,
 );
 const V2_PREVIEW = new RegExp(
-  `^/v2/([^/]+)/(projects/([^/]+)/public/(${UUID}))/?$`
+  `^/v2/([^/]+)/(projects/([^/]+)/public/(${UUID}))/?$`,
 );
 
 function partsFromMatch(m: RegExpMatchArray): V2PathParts | null {

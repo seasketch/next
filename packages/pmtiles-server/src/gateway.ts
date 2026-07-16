@@ -16,7 +16,10 @@ type GatewayEnv = Env & {
 };
 
 type TilesBackendFetcher = {
-  fetch(request: Request, options?: { cf?: { cacheKey?: string } }): Promise<Response>;
+  fetch(
+    request: Request,
+    options?: { cf?: { cacheKey?: string } },
+  ): Promise<Response>;
 };
 
 /**
@@ -33,7 +36,7 @@ type TilesBackendFetcher = {
 export async function handleGatewayRequest(
   request: Request,
   env: GatewayEnv,
-  tilesBackend: TilesBackendFetcher
+  tilesBackend: TilesBackendFetcher,
 ): Promise<Response> {
   if (request.method === "OPTIONS") {
     return corsPreflightResponse(request);
@@ -198,7 +201,7 @@ function logAuthDecision(args: {
       groups: decision.groups,
       aclVersion: decision.aclVersion,
       fromCache,
-    })
+    }),
   );
 }
 
@@ -222,12 +225,11 @@ export function authDenyResponse(
     return new Response(
       renderTokenPrompt({
         hadToken: decision.hadToken,
-        error:
-          decision.reason.startsWith("invalid_token:")
-            ? decision.reason.replace(/^invalid_token:/, "")
-            : null,
+        error: decision.reason.startsWith("invalid_token:")
+          ? decision.reason.replace(/^invalid_token:/, "")
+          : null,
       }),
-      { status: decision.status, headers }
+      { status: decision.status, headers },
     );
   }
 
@@ -237,8 +239,7 @@ export function authDenyResponse(
     "X-SS-Tile-Auth": `deny:${decision.reason}`,
   });
   applyCorsHeaders(headers, request, { allowAuthorization: true });
-  const body =
-    decision.status === 401 ? "Unauthorized" : "Forbidden";
+  const body = decision.status === 401 ? "Unauthorized" : "Forbidden";
   return new Response(body, { status: decision.status, headers });
 }
 
@@ -252,13 +253,13 @@ function acceptsHtml(request: Request): boolean {
 export function decorateGatewayResponse(
   request: Request,
   backendResponse: Response,
-  decision: AuthDecision
+  decision: AuthDecision,
 ): Response {
   const headers = new Headers(backendResponse.headers);
   applyCorsHeaders(headers, request, { allowAuthorization: true });
   headers.set(
     "X-SS-Tile-Auth",
-    `allow:${decision.reason}:${decision.aclClass}`
+    `allow:${decision.reason}:${decision.aclClass}`,
   );
 
   if (decision.aclClass !== "public") {
