@@ -382,7 +382,9 @@ export default function QuotaUsageTreemap({
   );
 }
 
-export function humanizeOutputType(type: DataUploadOutputType | "Archives") {
+export function humanizeOutputType(
+  type: DataUploadOutputType | "Archives" | string,
+) {
   switch (type) {
     case DataUploadOutputType.FlatGeobuf:
       return "FlatGeoBuf";

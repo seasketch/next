@@ -108,7 +108,7 @@ function UploadFilenamePopover({
   const downloadName = output.originalFilename || output.filename || filename;
   const fileDescription = `${bytes(parseInt(output.size), {
     unitSeparator: "",
-  })} ${humanizeOutputType(output.type)}`;
+  })} ${humanizeOutputType(output.type)}`
 
   return (
     <Tooltip placement="top">
