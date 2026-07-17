@@ -39,7 +39,8 @@
     "db:logs": "docker compose logs -f --tail=100 db",
     "dev": "nodemon",
     "tiles-acl:backfill": "tsc -b && dotenv -e .env -- node dist/scripts/backfillTilesAclDocs.js",
-    "overlay-engine:token": "node scripts/mintOverlayEngineAccessToken.cjs"
+    "overlay-engine:token": "bash ./scripts/enqueueOverlayEngineTokenRefresh.sh",
+    "overlay-engine:token:show": "bash ./scripts/showOverlayEngineAccessToken.sh"
   },
   "bugs": {
     "url": "https://github.com/seasketch/next/issues"
