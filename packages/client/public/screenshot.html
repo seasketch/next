@@ -21,6 +21,22 @@
       throw new Error("No auth token (?auth) specified");
     }
     const token = params.get("auth");
+    const mapAccessToken = params.get("mapAccess");
+
+    function isHostedDataHost(hostname) {
+      if (
+        hostname === "tiles.seasketch.org" ||
+        hostname === "uploads.seasketch.org" ||
+        hostname === "localhost" ||
+        hostname === "127.0.0.1"
+      ) {
+        return true;
+      }
+      if (/tiles\.seasketch\.org$/i.test(hostname)) return true;
+      if (/uploads\.seasketch\.org$/i.test(hostname)) return true;
+      if (/\.workers\.dev$/i.test(hostname)) return true;
+      return false;
+    }
 
     async function loadImage(id, url, pixelRatio, map) {
       return new Promise((resolve, reject) => {
@@ -82,9 +98,17 @@
             return {
               url: Url.toString(),
             };
-          } else {
-            return { url };
           }
+          try {
+            const Url = new URL(url);
+            if (mapAccessToken && isHostedDataHost(Url.hostname)) {
+              Url.searchParams.set("access_token", mapAccessToken);
+              return { url: Url.toString() };
+            }
+          } catch (e) {
+            /* ignore invalid urls */
+          }
+          return { url };
         },
       });
       for (const spriteImage of Object.values(bestImages)) {

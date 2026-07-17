@@ -29,6 +29,8 @@ import RasterInfoModal, { RasterInfoHistogram } from "../RasterInfoModal";
 import Spinner from "../../../components/Spinner";
 import CustomizeTilesModal from "../CustomizeTilesModal";
 import { piiRiskToneClass } from "../piiGeostatsDisplay";
+import useCurrentProjectMetadata from "../../../useCurrentProjectMetadata";
+import { withHostedAuthParams } from "../../../dataLayers/tilesAuth";
 
 export { PII_REDACTION_THRESHOLD } from "../piiGeostatsDisplay";
 
@@ -513,6 +515,8 @@ function pluralizeGeometryType(type: GeostatsLayer["geometry"]) {
 
 function TilesetDetails({ url }: { url: string }) {
   const { t } = useTranslation("admin:data");
+  const { data: projectMeta } = useCurrentProjectMetadata();
+  const mapAccessToken = projectMeta?.project?.mapAccessToken;
   const [state, setState] = useState<{
     loading: boolean;
     error: string | null;
@@ -537,7 +541,10 @@ function TilesetDetails({ url }: { url: string }) {
   }>({ loading: true, error: null, tilejson: null });
 
   useEffect(() => {
-    fetch(url)
+    const authorizedUrl = withHostedAuthParams(url, {
+      accessToken: mapAccessToken,
+    });
+    fetch(authorizedUrl)
       .then((res) => res.json())
       .then((tilejson) => {
         setState({ loading: false, error: null, tilejson });
@@ -545,7 +552,7 @@ function TilesetDetails({ url }: { url: string }) {
       .catch((error) => {
         setState({ loading: false, error: error.message, tilejson: null });
       });
-  }, [url]);
+  }, [url, mapAccessToken]);
   if (state.loading) {
     return <Spinner />;
   } else if (state.error) {
