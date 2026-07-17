@@ -80,7 +80,6 @@
   "include": [
     "src/**/*",
     "tasks/**/*",
-    "scripts/backfillTilesAclDocs.ts",
     "process-env.d.ts"
   ],
   "exclude": ["node_modules", "**/*.spec.ts", "dist"]

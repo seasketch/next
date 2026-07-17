@@ -12,6 +12,16 @@ const PROJECTS_WITH_PUBLISHED_TOC_SQL = `
   order by p.id
 `;
 
+/** Project ids that have at least one published TOC item (ordered). */
+export async function listProjectIdsWithPublishedToc(
+  client: Pool | PoolClient,
+): Promise<number[]> {
+  const { rows } = await client.query<{ id: number }>(
+    PROJECTS_WITH_PUBLISHED_TOC_SQL,
+  );
+  return rows.map((row) => row.id);
+}
+
 export type TilesAclBackfillOptions =
   | { projectId: number; all?: false }
   | { all: true; projectId?: undefined };
@@ -73,15 +83,9 @@ export async function runTilesAclBackfill(
   const ns = resolveTilesAclNamespace();
   log(`Using ACL namespace: ${ns}`);
 
-  let ids: number[];
-  if (options.all) {
-    const { rows } = await client.query<{ id: number }>(
-      PROJECTS_WITH_PUBLISHED_TOC_SQL
-    );
-    ids = rows.map((row) => row.id);
-  } else {
-    ids = [options.projectId];
-  }
+  const ids = options.all
+    ? await listProjectIdsWithPublishedToc(client)
+    : [options.projectId];
 
   log(`Writing ACL docs for ${ids.length} project(s)...`);
   const failed: TilesAclBackfillResult["failed"] = [];
