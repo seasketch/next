@@ -15,6 +15,10 @@ import { SourceCache } from "fgb-source";
 import { Feature, MultiPolygon, Polygon } from "geojson";
 import { Pool } from "undici";
 import { LRUCache } from "lru-cache";
+import {
+  bustOverlayEngineAccessTokenCache,
+  getOverlayEngineAccessToken,
+} from "./overlayEngineAccessToken";
 
 const pool = new Pool("https://uploads.seasketch.org", {
   bodyTimeout: 10 * 1000,
@@ -26,6 +30,55 @@ const cache = new LRUCache<string, ArrayBuffer>({
 });
 
 const inFlightRequests = new Map<string, Promise<ArrayBuffer>>();
+
+/** Drain undici body; destroy() can emit unhandled UND_ERR_ABORTED. */
+async function discardResponseBody(body: {
+  dump?: () => Promise<void>;
+  arrayBuffer: () => Promise<ArrayBuffer>;
+}): Promise<void> {
+  if (typeof body.dump === "function") {
+    await body.dump();
+    return;
+  }
+  await body.arrayBuffer();
+}
+
+async function fetchUploadsRange(
+  url: string,
+  range: [number, number | null],
+  retriedAuth = false,
+): Promise<ArrayBuffer> {
+  const token = await getOverlayEngineAccessToken();
+  const response = await pool.request({
+    path: "/" + url.replace("https://uploads.seasketch.org/", ""),
+    method: "GET",
+    headers: {
+      Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (
+    (response.statusCode === 401 || response.statusCode === 403) &&
+    !retriedAuth
+  ) {
+    await discardResponseBody(response.body);
+    bustOverlayEngineAccessTokenCache();
+    return fetchUploadsRange(url, range, true);
+  }
+  if (response.statusCode >= 400) {
+    await discardResponseBody(response.body);
+    const authHint =
+      response.statusCode === 401 || response.statusCode === 403
+        ? " (uploads authentication failed)"
+        : "";
+    throw new Error(
+      `HTTP ${response.statusCode}${authHint}. ${url} range=${range[0]}-${
+        range[1] ? range[1] : ""
+      }`,
+    );
+  }
+  return response.body.arrayBuffer();
+}
 
 const sourceCache = new SourceCache("1GB", {
   fetchRangeFn: (
@@ -42,30 +95,21 @@ const sourceCache = new SourceCache("1GB", {
       return inFlightRequests.get(cacheKey) as Promise<ArrayBuffer>;
     } else {
       console.log("cache miss", cacheKey);
-      const request = pool
-        .request({
-          path: "/" + url.replace("https://uploads.seasketch.org/", ""),
-          method: "GET",
-          headers: {
-            Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
-          },
-        })
-        .then(async (response: any) => {
-          const buffer: ArrayBuffer = await response.body.arrayBuffer();
-          return buffer;
-        })
+      const request = fetchUploadsRange(url, range)
         .then((buffer: ArrayBuffer) => {
           cache.set(cacheKey, buffer);
-          inFlightRequests.delete(cacheKey);
           return buffer;
         })
         .catch((e: any) => {
-          inFlightRequests.delete(cacheKey);
+          const message = e instanceof Error ? e.message : String(e);
           throw new Error(
-            `${e.message}. ${url} range=${range[0]}-${
+            `${message}. ${url} range=${range[0]}-${
               range[1] ? range[1] : ""
-            }: ${e.message}`,
+            }: ${message}`,
           );
+        })
+        .finally(() => {
+          inFlightRequests.delete(cacheKey);
         });
       inFlightRequests.set(cacheKey, request);
       return request;

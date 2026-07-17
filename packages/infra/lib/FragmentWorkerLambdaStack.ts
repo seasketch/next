@@ -6,6 +6,7 @@
 import * as cdk from "aws-cdk-lib";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as lambda from "aws-cdk-lib/aws-lambda";
+import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import * as path from "path";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { Construct } from "constructs";
@@ -13,7 +14,13 @@ import { Construct } from "constructs";
 export class FragmentWorkerLambdaStack extends cdk.Stack {
   public readonly fn: NodejsFunction;
 
-  constructor(scope: Construct, id: string, props: cdk.StackProps) {
+  constructor(
+    scope: Construct,
+    id: string,
+    props: cdk.StackProps & {
+      overlayEngineAccessTokenSecret: secretsmanager.ISecret;
+    },
+  ) {
     super(scope, id, props);
 
     this.fn = new NodejsFunction(this, "FragmentWorker", {
@@ -31,7 +38,7 @@ export class FragmentWorkerLambdaStack extends cdk.Stack {
         platform: "node",
         esbuildVersion: "0.21.5",
         externalModules: ["undici"],
-        nodeModules: ["undici"],
+        nodeModules: ["undici", "@aws-sdk/client-secrets-manager"],
       },
       entry: path.join(__dirname, "../../fragment-worker/src/index.ts"),
       handler: "lambdaHandler",
@@ -43,6 +50,12 @@ export class FragmentWorkerLambdaStack extends cdk.Stack {
       retryAttempts: 0,
       memorySize: 10240,
       architecture: lambda.Architecture.ARM_64,
+      environment: {
+        OVERLAY_ENGINE_ACCESS_TOKEN_SECRET_ARN:
+          props.overlayEngineAccessTokenSecret.secretArn,
+      },
     });
+
+    props.overlayEngineAccessTokenSecret.grantRead(this.fn);
   }
 }

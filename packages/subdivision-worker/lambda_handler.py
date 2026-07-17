@@ -16,6 +16,10 @@ from points import process_points
 from raster import process_raster
 from lines import process_lines
 from geometry_utils import geometry_type_has_extra_dimensions, normalize_geometry_type
+from overlay_engine_access_token import (
+    bust_overlay_engine_access_token_cache,
+    get_overlay_engine_access_token,
+)
 import fiona
 
 # Cached AWS clients (reused across messages and invocations)
@@ -272,24 +276,42 @@ class EtaEstimator:
 
 
 def _download_with_progress(url: str, dest_path: str, progress_cb):
-    with requests.get(url, stream=True, timeout=60) as resp:
-        resp.raise_for_status()
-        total = resp.headers.get("Content-Length")
-        try:
-            total_bytes = int(total) if total is not None else None
-        except Exception:
-            total_bytes = None
-        bytes_read = 0
-        with open(dest_path, "wb") as f:
-            for chunk in resp.iter_content(chunk_size=1024 * 1024):
-                if not chunk:
-                    continue
-                f.write(chunk)
-                bytes_read += len(chunk)
-                try:
-                    progress_cb("download", bytes_read, total_bytes)
-                except Exception:
-                    pass
+    """Stream download from uploads; attaches overlay-engine Bearer, retries once on 401/403."""
+
+    def _stream(auth_token: str):
+        headers = {"Authorization": f"Bearer {auth_token}"}
+        with requests.get(url, stream=True, timeout=60, headers=headers) as resp:
+            if resp.status_code in (401, 403):
+                return resp.status_code
+            resp.raise_for_status()
+            total = resp.headers.get("Content-Length")
+            try:
+                total_bytes = int(total) if total is not None else None
+            except Exception:
+                total_bytes = None
+            bytes_read = 0
+            with open(dest_path, "wb") as f:
+                for chunk in resp.iter_content(chunk_size=1024 * 1024):
+                    if not chunk:
+                        continue
+                    f.write(chunk)
+                    bytes_read += len(chunk)
+                    try:
+                        progress_cb("download", bytes_read, total_bytes)
+                    except Exception:
+                        pass
+            return None
+
+    token = get_overlay_engine_access_token()
+    status = _stream(token)
+    if status in (401, 403):
+        bust_overlay_engine_access_token_cache()
+        token = get_overlay_engine_access_token()
+        status = _stream(token)
+        if status in (401, 403):
+            raise RuntimeError(
+                f"HTTP {status} (uploads authentication failed) downloading {url}"
+            )
 
 
 def _upload_to_r2(local_path: str, object_key: str, progress_cb=None) -> Dict[str, Any]:

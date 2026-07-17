@@ -20,6 +20,7 @@
     "test": "cd ../.. && npx vitest run packages/fragment-worker/__tests__"
   },
   "dependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.873.0",
     "fgb-source": "^1.0.0",
     "geobuf": "^4.0.0",
     "lru-cache": "^11.2.2",

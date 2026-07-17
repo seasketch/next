@@ -3,8 +3,8 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as sqs from "aws-cdk-lib/aws-sqs";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import * as path from "path";
-import * as s3 from "aws-cdk-lib/aws-s3";
 import { Construct } from "constructs";
 
 export class SubdivideWorkerLambdaStack extends cdk.Stack {
@@ -15,7 +15,8 @@ export class SubdivideWorkerLambdaStack extends cdk.Stack {
     props: cdk.StackProps & {
       productionQueue?: sqs.IQueue;
       devQueues?: sqs.IQueue[];
-    }
+      overlayEngineAccessTokenSecret: secretsmanager.ISecret;
+    },
   ) {
     super(scope, id, props);
 
@@ -23,7 +24,7 @@ export class SubdivideWorkerLambdaStack extends cdk.Stack {
       functionName: "SubdivisionWorker",
       code: lambda.DockerImageCode.fromImageAsset(
         path.join(__dirname, "../../subdivision-worker"),
-        {}
+        {},
       ),
       timeout: cdk.Duration.minutes(15),
       logGroup: new logs.LogGroup(this, "SubdivisionWorkerLogs", {
@@ -38,6 +39,8 @@ export class SubdivideWorkerLambdaStack extends cdk.Stack {
         R2_ENDPOINT: process.env.R2_ENDPOINT || "",
         R2_BUCKET: "ssn-tiles",
         R2_PUBLIC_BASE_URL: "https://uploads.seasketch.org",
+        OVERLAY_ENGINE_ACCESS_TOKEN_SECRET_ARN:
+          props.overlayEngineAccessTokenSecret.secretArn,
       },
       initialPolicy: [
         new iam.PolicyStatement({
@@ -51,6 +54,7 @@ export class SubdivideWorkerLambdaStack extends cdk.Stack {
       ],
     });
 
+    props.overlayEngineAccessTokenSecret.grantRead(fn);
     this.fn = fn;
   }
 }

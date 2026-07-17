@@ -199,13 +199,17 @@ const subdivideWorker = new SubdivideWorkerLambdaStack(
     env,
     devQueues: sqs.devOverlayEngineWorkerQueues,
     productionQueue: sqs.productionOverlayEngineWorkerQueue,
+    overlayEngineAccessTokenSecret: secrets.overlayEngineAccessTokenSecret,
   }
 );
 
 const fragmentWorker = new FragmentWorkerLambdaStack(
   app,
   "SeaSketchFragmentWorker",
-  { env }
+  {
+    env,
+    overlayEngineAccessTokenSecret: secrets.overlayEngineAccessTokenSecret,
+  }
 );
 
 new GraphQLStack(app, "SeaSketchGraphQLServer", {
