@@ -11,7 +11,7 @@ import {
  *
  * First deploy / debugging: from the maintenance bastion run
  *   npm run overlay-engine:token -- --publish
- * (see scripts/mintOverlayEngineAccessToken.ts).
+ * (see scripts/mintOverlayEngineAccessToken.cjs).
  */
 export default async function refreshOverlayEngineAccessToken(
   _payload: unknown,
