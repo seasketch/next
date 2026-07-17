@@ -297,5 +297,9 @@ export class GraphQLStack extends cdk.Stack {
     props.overlayEngineAccessTokenSecret.grantWrite(
       service.taskDefinition.taskRole,
     );
+    // GeographyPlugin (and other server-side uploads fetches) read the published JWT.
+    props.overlayEngineAccessTokenSecret.grantRead(
+      service.taskDefinition.taskRole,
+    );
   }
 }

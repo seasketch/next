@@ -3,6 +3,11 @@ import { PoolClient } from "pg";
 import * as cache from "../cache";
 import { createSource } from "fgb-source";
 import { startGeographySizeMetricCalculations } from "./reportsPlugin";
+import {
+  bustOverlayEngineAccessTokenCache,
+  fetchWithOverlayEngineAccessToken,
+  getOverlayEngineAccessToken,
+} from "../overlayEngine/overlayEngineAccessToken";
 
 type ClippingLayerArgs = {
   templateId?: string | null;
@@ -1483,10 +1488,10 @@ async function getBoundsForClippingLayer(
   let bounds;
   if (cql2_query === null) {
     // just grab the tilejson from the data server
-    const response = await fetch(`${url}.json`);
+    const response = await fetchWithOverlayEngineAccessToken(`${url}.json`);
     if (!response.ok) {
       throw new Error(
-        `Failed to fetch tilejson from ${url}: ${response.statusText}`,
+        `Failed to fetch tilejson from ${url}: ${response.status} ${response.statusText}`,
       );
     }
     const tilejson = await response.json();
@@ -1503,10 +1508,10 @@ async function getBoundsForClippingLayer(
       v: "5",
     }).toString();
     const overlayUrl = `https://overlay.seasketch.org/properties?${queryString}`;
-    const response = await fetch(overlayUrl);
+    const response = await fetchWithOverlayEngineAccessToken(overlayUrl);
     if (!response.ok) {
       throw new Error(
-        `Failed to fetch properties from overlay service: ${response.statusText}`,
+        `Failed to fetch properties from overlay service: ${response.status} ${response.statusText}`,
       );
     }
     const features = await response.json();
@@ -1563,7 +1568,37 @@ async function getBoundsForClippingLayerUrl(
     } | null = null;
     // This is a geojson layer, so we can't hit the tiles.seasketch.org endpoint, so we need to construct a url to the fgb file indicated by object_key
     const fgbUrl = `https://uploads.seasketch.org/${object_key}`;
-    const source = await createSource(fgbUrl);
+    const source = await createSource(fgbUrl, {
+      fetchRangeFn: async (_key, range) => {
+        const fetchRange = async (retriedAuth: boolean): Promise<ArrayBuffer> => {
+          const token = await getOverlayEngineAccessToken();
+          const headers: Record<string, string> = {
+            Range: `bytes=${range[0]}-${range[1] != null ? range[1] : ""}`,
+          };
+          if (token) {
+            headers.Authorization = `Bearer ${token}`;
+          }
+          const response = await fetch(fgbUrl, { headers });
+          if (
+            token &&
+            (response.status === 401 || response.status === 403) &&
+            !retriedAuth
+          ) {
+            bustOverlayEngineAccessTokenCache();
+            return fetchRange(true);
+          }
+          if (!response.ok) {
+            throw new Error(
+              `HTTP ${response.status} fetching ${fgbUrl} range=${range[0]}-${
+                range[1] != null ? range[1] : ""
+              }`,
+            );
+          }
+          return response.arrayBuffer();
+        };
+        return fetchRange(false);
+      },
+    });
     bounds = source.bounds;
     return [bounds.minX, bounds.minY, bounds.maxX, bounds.maxY];
   }
