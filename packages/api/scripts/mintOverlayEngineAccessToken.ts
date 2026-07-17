@@ -1,13 +1,18 @@
 /**
  * Mint an overlay-engine access token (and optionally publish to Secrets Manager).
  *
- * Usage (from packages/api):
+ * Runs the already-built dist script (no tsc). Bastion/prod images ship dist;
+ * locally run `npm run build` first if dist is stale.
+ *
+ * Usage (from packages/api, NODE_ENV=production required):
  *   npm run overlay-engine:token
  *   npm run overlay-engine:token -- --publish
  *   npm run overlay-engine:token -- --publish --secret-id=seasketch/overlay-engine/access-token
  *
- * On the maintenance bastion (after checkout + build), use the same commands with
- * ADMIN_DATABASE_URL / IAM DB auth and AWS credentials from the task role.
+ * Local with .env:
+ *   dotenv -e .env -- npm run overlay-engine:token -- --publish
+ *
+ * Bastion: same npm commands; env + AWS creds come from the task role.
  * Prefer ADMIN_DATABASE_URL (bypasses RLS) so signing can read `jwks`.
  */
 import { createPool } from "../src/pool";
