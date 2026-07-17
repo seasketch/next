@@ -91,6 +91,24 @@ token. Protected UUIDs use the existing project-admin, superuser, and group
 rules. Published-layer ACL enforcement is controlled by `AUTH_ACL_ENABLED`
 (default off / public capability-URLs).
 
+### Slack alerts on ACL deny (rollout)
+
+When `SLACK_WEBHOOK_URL` is set and `AUTH_DENY_SLACK_ENABLED` is not
+`"false"`, the gateway posts coalesced Slack messages for denials on:
+
+- TileJSON (`…/public/{uuid}` or `{uuid}.json`)
+- Downloads (`?download=`)
+- Direct `.fgb` / `.geojson` / `.geojson.json` object access
+- `/properties?dataset=…`
+
+ZXY tiles are ignored. Rapid denials for the same object+reason are
+coalesced in-memory (~3s burst, ~60s cooldown). Messages include project
+slug and a credential-stripped object URL.
+
+```bash
+echo 'https://hooks.slack.com/services/…' | wrangler secret put SLACK_WEBHOOK_URL
+```
+
 ### Subdivided outputs
 
 Subdivided outputs (`projects/{slug}/subdivided/...`) do not consult the ACL

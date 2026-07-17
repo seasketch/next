@@ -38,6 +38,9 @@ enabled = true
 AUTH_ACL_ENABLED = "false"
 AUTH_SUBDIVIDED_ACL_ENABLED = "false"
 AUTH_MISSING_ACL_PUBLIC = "true"
+# Slack ACL-deny alerts (TileJSON / download / FGB / GeoJSON / properties).
+# Requires SLACK_WEBHOOK_URL secret. Set to "false" to mute.
+AUTH_DENY_SLACK_ENABLED = "true"
 
 # Large property scans can be CPU intensive. Paid Workers permit up to 300s.
 [limits]
@@ -49,6 +52,7 @@ bucket_name = 'ssn-tiles'
 preview_bucket_name = 'ssn-tiles'
 
 # Run `echo <VALUE> | wrangler secret put <NAME>` for each of these
+# Optional: SLACK_WEBHOOK_URL — Incoming Webhook for ACL-deny rollout alerts
 
 [secrets]
 required = ["JWKS_URL", "MAPBOX_ACCESS_TOKEN", "PUBLIC_HOSTNAME"]

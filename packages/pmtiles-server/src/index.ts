@@ -57,6 +57,7 @@ export default class extends WorkerEntrypoint<Env> {
       {
         ns: aclNamespaceFromRequest(request),
         enforce: resourceAclEnabled(this.env, resource),
+        waitUntil: (p) => this.ctx.waitUntil(p),
       },
     );
   }
@@ -88,6 +89,7 @@ export default class extends WorkerEntrypoint<Env> {
         enforce: resourceAclEnabled(this.env, resource),
         backendPath: "/properties",
         includeQueryInCacheKey: true,
+        waitUntil: (p) => this.ctx.waitUntil(p),
       },
     );
     const headers = new Headers(response.headers);

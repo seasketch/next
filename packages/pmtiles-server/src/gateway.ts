@@ -5,6 +5,7 @@
 import { applyCorsHeaders, corsPreflightResponse } from "./auth/cors";
 import type { AuthDecision } from "./auth/types";
 import { authorizeResource } from "./auth/resourceAuth";
+import { maybeNotifyAuthDeny } from "./auth/slackAuthDeny";
 import {
   isPublishedPreviewPath,
   type ResourceDescriptor,
@@ -14,6 +15,8 @@ import { renderTokenPrompt } from "./tokenPrompt";
 type GatewayEnv = Env & {
   TILES_BUCKET: R2Bucket;
   JWKS_URL?: string;
+  SLACK_WEBHOOK_URL?: string;
+  AUTH_DENY_SLACK_ENABLED?: string;
 };
 
 type BackendFetcher = {
@@ -39,6 +42,7 @@ export async function handleClassifiedRequest(
     enforce: boolean;
     backendPath?: string;
     includeQueryInCacheKey?: boolean;
+    waitUntil?: (promise: Promise<unknown>) => void;
   },
 ): Promise<Response> {
   if (request.method === "OPTIONS") {
@@ -52,6 +56,7 @@ export async function handleClassifiedRequest(
     resource,
     enforce: options.enforce,
   });
+  const tokenType = auth.claims?.type ?? null;
   logAuthDecision({
     ns: options.ns,
     storageSlug: "slug" in resource ? resource.slug : "",
@@ -61,9 +66,20 @@ export async function handleClassifiedRequest(
     fromCache: false,
     path: new URL(request.url).pathname,
     tokenMode: auth.tokenMode,
-    tokenType: auth.claims?.type ?? null,
+    tokenType,
   });
-  if (!auth.decision.allowed) return authDenyResponse(request, auth.decision);
+  if (!auth.decision.allowed) {
+    maybeNotifyAuthDeny({
+      env,
+      request,
+      resource,
+      ns: options.ns,
+      decision: auth.decision,
+      tokenType,
+      waitUntil: options.waitUntil,
+    });
+    return authDenyResponse(request, auth.decision);
+  }
   return forwardToBackend(
     request,
     backend,
