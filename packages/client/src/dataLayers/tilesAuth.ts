@@ -60,7 +60,8 @@ export function isTilesHost(hostname: string): boolean {
   return false;
 }
 
-function isHostedDataHost(hostname: string): boolean {
+/** True for tiles/uploads hosts that serve the shared ssn-tiles R2 bucket. */
+export function isHostedDataHost(hostname: string): boolean {
   if (HOSTED_DATA_HOSTS.has(hostname)) return true;
   if (/tiles\.seasketch\.org$/i.test(hostname)) return true;
   if (/uploads\.seasketch\.org$/i.test(hostname)) return true;

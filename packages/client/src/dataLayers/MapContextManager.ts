@@ -32,9 +32,8 @@ import {
 } from "../generated/graphql";
 import {
   extractTilesUuidFromUrl,
-  isTilesHost,
-  rewriteToV2TilesUrl,
-  tilesAclNamespace,
+  isHostedDataHost,
+  rewriteHostedDownloadUrl,
   tilesAuthV2Enabled,
 } from "./tilesAuth";
 import { fetchGlStyle } from "../useMapboxStyle";
@@ -427,7 +426,7 @@ class MapContextManager extends EventEmitter {
     }
   }
 
-  /** Whether /v2 requests for this hosted tileset UUID should carry mapAccessToken. */
+  /** Whether /v2 requests for this hosted UUID (tiles or GeoJSON) need mapAccessToken. */
   private hostedUuidNeedsMapAccessToken(uuid: string): boolean {
     if (this.hostedTileUuidsRequiringAuth == null) {
       return true;
@@ -641,18 +640,20 @@ class MapContextManager extends EventEmitter {
           // eslint-disable-next-line i18next/no-literal-string
           headers: { authorization: `Bearer ${this.userAccessToken}` },
         };
-      } else if (tilesAuthV2Enabled() && isTilesHost(Url.hostname)) {
-        let out = rewriteToV2TilesUrl(Url.toString(), tilesAclNamespace());
-        const outUrl = new URL(out);
-        const uuid = extractTilesUuidFromUrl(out);
-        if (
+      } else if (tilesAuthV2Enabled() && isHostedDataHost(Url.hostname)) {
+        // Tiles (tiles.seasketch.org) and untiled GeoJSON (uploads.seasketch.org)
+        // share the same R2 bucket and /v2 auth gateway.
+        const uuid = extractTilesUuidFromUrl(Url.toString());
+        const token =
           uuid &&
           this.hostedUuidNeedsMapAccessToken(uuid) &&
           this.mapAccessToken
-        ) {
-          outUrl.searchParams.set("access_token", this.mapAccessToken);
-        }
-        if (!/gateway.api.globalfishingwatch.org/.test(out)) {
+            ? this.mapAccessToken
+            : null;
+        const rewritten =
+          rewriteHostedDownloadUrl(Url.toString(), token) || Url.toString();
+        const outUrl = new URL(rewritten);
+        if (!/gateway.api.globalfishingwatch.org/.test(rewritten)) {
           outUrl.searchParams.set("ssn-tr", "true");
         }
         return { url: outUrl.toString() };
