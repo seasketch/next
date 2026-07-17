@@ -17,6 +17,8 @@ query DraftTableOfContents($slug: String!) {
     id
     draftTableOfContentsHasChanges
     tableOfContentsLastPublished
+    # Keep auth UUID list in sync when draft TOC changes (e.g. new uploads)
+    hostedTileUuidsRequiringAuth
     region {
       geojson
     }

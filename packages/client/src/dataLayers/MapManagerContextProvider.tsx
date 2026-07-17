@@ -4,6 +4,8 @@ import { BBox } from "geojson";
 import type { CameraOptions } from "mapbox-gl";
 import bytes from "bytes";
 import useAccessToken from "../useAccessToken";
+import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
+import useMapAccessTokenRollover from "./useMapAccessTokenRollover";
 import { useProjectRegionQuery } from "../generated/graphql";
 import { BasemapContext } from "./BasemapContext";
 import type { BasemapContextState } from "./BasemapContext";
@@ -58,6 +60,14 @@ export default function MapManagerContextProvider({
   const parentOverlay = useContext(MapOverlayContext);
   const { slug } = useParams<{ slug: string }>();
   const token = useAccessToken();
+  const {
+    data: projectMeta,
+    refetch: refetchProjectMeta,
+  } = useCurrentProjectMetadata();
+  const mapAccessToken = projectMeta?.project?.mapAccessToken;
+  useMapAccessTokenRollover(mapAccessToken, () => {
+    refetchProjectMeta();
+  });
 
   let initialState: MapContextInterface = {
     layerStatesByTocStaticId: {},
@@ -151,6 +161,16 @@ export default function MapManagerContextProvider({
   useEffect(() => {
     managerRef.current?.setToken(token);
   }, [token]);
+
+  useEffect(() => {
+    managerRef.current?.setMapAccessToken(mapAccessToken);
+  }, [mapAccessToken]);
+
+  useEffect(() => {
+    managerRef.current?.setHostedTileUuidsRequiringAuth(
+      projectMeta?.project?.hostedTileUuidsRequiringAuth
+    );
+  }, [projectMeta?.project?.hostedTileUuidsRequiringAuth]);
 
   useEffect(() => {
     if (error) {

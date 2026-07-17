@@ -16,6 +16,7 @@ import { OfflineTilePackageBucketStack } from "../lib/OfflineTilePackageUploadSt
 import { DataUploadsStack } from "../lib/DataUploadsStack";
 import { UploadHandlerLambdaStack } from "../lib/UploadHandlerLambdaStack";
 import { SQSStack } from "../lib/SQSStack";
+import { SecretsStack } from "../lib/SecretsStack";
 import { OverlayWorkerLambdaStack } from "../lib/OverlayWorkerLambdaStack";
 import { SubdivideWorkerLambdaStack } from "../lib/SubdivideWorkerLambdaStack";
 import { FragmentWorkerLambdaStack } from "../lib/FragmentWorkerLambdaStack";
@@ -171,6 +172,8 @@ const uploadHandler = new UploadHandlerLambdaStack(
   }
 );
 
+const secrets = new SecretsStack(app, "SeaSketchSecrets", { env });
+
 const sqs = new SQSStack(app, "SeaSketchSQS", {
   env,
 });
@@ -182,8 +185,12 @@ const overlayWorker = new OverlayWorkerLambdaStack(
     env,
     devQueues: sqs.devOverlayEngineWorkerQueues,
     productionQueue: sqs.productionOverlayEngineWorkerQueue,
+    overlayEngineAccessTokenSecret: secrets.overlayEngineAccessTokenSecret,
   }
 );
+
+secrets.overlayEngineAccessTokenSecret.grantRead(maintenance.taskRole);
+secrets.overlayEngineAccessTokenSecret.grantWrite(maintenance.taskRole);
 
 const subdivideWorker = new SubdivideWorkerLambdaStack(
   app,
@@ -221,6 +228,7 @@ new GraphQLStack(app, "SeaSketchGraphQLServer", {
   fragmentWorkerLambdaArn: fragmentWorker.fn.functionArn,
   geostatsPiiClassifierLambdaArn: piiClassifier.fn.functionArn,
   overlayEngineWorkerSqsQueue: sqs.productionOverlayEngineWorkerQueue,
+  overlayEngineAccessTokenSecret: secrets.overlayEngineAccessTokenSecret,
 });
 
 uploadHandler.fn.grantInvoke;

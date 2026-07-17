@@ -51,6 +51,8 @@ import ReportsPlugin from "./plugins/reportsPlugin";
 import FeatureFlagsPlugin from "./plugins/featureFlagsPlugin";
 import UserActivityPlugin from "./plugins/userActivityPlugin";
 import DataUploadPiiClassifierWarmPlugin from "./plugins/dataUploadPiiClassifierWarmPlugin";
+import PublishTilesAclPlugin from "./plugins/publishTilesAclPlugin";
+import HostedTileUuidsRequiringAuthPlugin from "./plugins/hostedTileUuidsRequiringAuthPlugin";
 
 const pluginHook = makePluginHook([{ ...PgPubsub, ...SentryPlugin }]);
 
@@ -115,6 +117,8 @@ export default function graphileOptions(): PostGraphileOptions {
       ReportsPlugin,
       FeatureFlagsPlugin,
       UserActivityPlugin,
+      PublishTilesAclPlugin,
+      HostedTileUuidsRequiringAuthPlugin,
       // reorderSchemaFields(graphqlSchemaModifiers.fieldOrder),
       // extraDocumentationPlugin(graphqlSchemaModifiers.documentation),
     ],

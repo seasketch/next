@@ -50,6 +50,11 @@ import * as clipping from "polyclip-ts";
 import { reproject } from "./utils/reproject";
 import calcBBox from "@turf/bbox";
 import area from "@turf/area";
+import {
+  bustOverlayEngineAccessTokenCache,
+  getOverlayEngineAccessToken,
+  withAccessTokenQueryParam,
+} from "./overlayEngineAccessToken";
 
 const SIMPLIFICATION_TOLERANCE = 0.000018;
 
@@ -67,54 +72,83 @@ const cache = new LRUCache<string, ArrayBuffer>({
 
 const inFlightRequests = new Map<string, Promise<ArrayBuffer>>();
 
+/** Drain undici response body without destroy() — destroy emits unhandled UND_ERR_ABORTED and can kill the Lambda before SQS error reporting. */
+async function discardResponseBody(body: {
+  dump?: () => Promise<void>;
+  arrayBuffer: () => Promise<ArrayBuffer>;
+}): Promise<void> {
+  if (typeof body.dump === "function") {
+    await body.dump();
+    return;
+  }
+  await body.arrayBuffer();
+}
+
+async function fetchUploadsRange(
+  url: string,
+  range: [number, number | null],
+  retriedAuth = false,
+): Promise<ArrayBuffer> {
+  const token = await getOverlayEngineAccessToken();
+  const response = await pool.request({
+    path: url.replace("https://uploads.seasketch.org", ""),
+    method: "GET",
+    headers: {
+      Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
+      Authorization: `Bearer ${token}`,
+    },
+  });
+  if (
+    (response.statusCode === 401 || response.statusCode === 403) &&
+    !retriedAuth
+  ) {
+    await discardResponseBody(response.body);
+    bustOverlayEngineAccessTokenCache();
+    return fetchUploadsRange(url, range, true);
+  }
+  if (response.statusCode >= 400) {
+    await discardResponseBody(response.body);
+    const authHint =
+      response.statusCode === 401 || response.statusCode === 403
+        ? " (uploads authentication failed)"
+        : "";
+    throw new Error(
+      `HTTP ${response.statusCode}${authHint}. ${url} range=${range[0]}-${
+        range[1] ? range[1] : ""
+      }`,
+    );
+  }
+  return response.body.arrayBuffer();
+}
+
 const sourceCache = new SourceCache("1GB", {
   fetchRangeFn: (url, range) => {
-    // console.log("fetching", url, range);
     const cacheKey = `${url} range=${range[0]}-${range[1] ? range[1] : ""}`;
-    // console.time(cacheKey);
     const cached = cache.get(cacheKey);
     if (cached) {
-      // console.timeEnd(cacheKey);
-      // console.log("cache hit", cacheKey);
       return Promise.resolve(cached);
     } else if (inFlightRequests.has(cacheKey)) {
-      // console.log("in-flight request hit", cacheKey);
       return inFlightRequests.get(cacheKey) as Promise<ArrayBuffer>;
     } else {
-      // console.log("cache miss", cacheKey);
-      return pool
-        .request({
-          path: url.replace("https://uploads.seasketch.org", ""),
-          method: "GET",
-          headers: {
-            Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
-          },
-        })
-        .then(async (response) => {
-          const buffer = await response.body.arrayBuffer();
-          // console.log("fetched", cacheKey, buffer.byteLength);
-          return buffer;
-        })
+      const request = fetchUploadsRange(url, range)
         .then((buffer) => {
-          // console.timeEnd(cacheKey);
           cache.set(cacheKey, buffer);
-          // console.log("response", response.headers.get("x-cache-status"));
           return buffer;
         })
         .catch((e) => {
           console.log("rethrowing error for", cacheKey);
-          // rethrow error with enhanced error message consisting of url, range, and original error message
+          const message = e instanceof Error ? e.message : String(e);
           throw new Error(
-            `${e.message}. ${url} range=${range[0]}-${
+            `${message}. ${url} range=${range[0]}-${
               range[1] ? range[1] : ""
-            }: ${e.message}`,
+            }: ${message}`,
           );
+        })
+        .finally(() => {
+          inFlightRequests.delete(cacheKey);
         });
-      // .finally(() => {
-      //   inFlightRequests.delete(cacheKey);
-      // });
-      // inFlightRequests.set(cacheKey, request);
-      // return request;
+      inFlightRequests.set(cacheKey, request);
+      return request;
     }
   },
   maxCacheSize: "256MB",
@@ -335,8 +369,13 @@ export default async function handler(payload: OverlayWorkerPayload) {
         // epsg-index out of the overlay-engine bundle).
         const projectedFeature = reproject(intersectionFeature, payload.epsg);
 
-        const result = await calculateRasterStats(
+        const rasterToken = await getOverlayEngineAccessToken();
+        const authenticatedSourceUrl = withAccessTokenQueryParam(
           payload.sourceUrl,
+          rasterToken,
+        );
+        const result = await calculateRasterStats(
+          authenticatedSourceUrl,
           projectedFeature,
           { vrm: resolvedVrm, centerLonLat, fragmentAreaSqM },
         );

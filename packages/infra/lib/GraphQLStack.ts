@@ -12,6 +12,7 @@ import { ApplicationProtocol } from "aws-cdk-lib/aws-elasticloadbalancingv2";
 import { AwsLogDriver } from "aws-cdk-lib/aws-ecs";
 import { Construct } from "constructs";
 import { Queue } from "aws-cdk-lib/aws-sqs";
+import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 
 const JWKS_URI = `https://seasketch.auth0.com/.well-known/jwks.json`;
 const JWT_AUD = "https://api.seasketch.org";
@@ -43,6 +44,7 @@ export class GraphQLStack extends cdk.Stack {
       /** Same function the upload handler uses for PII scoring; warmed on createDataUpload. */
       geostatsPiiClassifierLambdaArn: string;
       overlayEngineWorkerSqsQueue: Queue;
+      overlayEngineAccessTokenSecret: secretsmanager.ISecret;
     }
   ) {
     super(scope, id, props);
@@ -182,6 +184,8 @@ export class GraphQLStack extends cdk.Stack {
             GEOSTATS_PII_CLASSIFIER_ARN: props.geostatsPiiClassifierLambdaArn,
             OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL:
               props.overlayEngineWorkerSqsQueue.queueUrl,
+            OVERLAY_ENGINE_ACCESS_TOKEN_SECRET_ARN:
+              props.overlayEngineAccessTokenSecret.secretArn,
           },
           containerPort: 3857,
         },
@@ -290,5 +294,8 @@ export class GraphQLStack extends cdk.Stack {
       service.taskDefinition.taskRole
     );
     props.uploadHandler.grantInvoke(service.taskDefinition.taskRole);
+    props.overlayEngineAccessTokenSecret.grantWrite(
+      service.taskDefinition.taskRole,
+    );
   }
 }

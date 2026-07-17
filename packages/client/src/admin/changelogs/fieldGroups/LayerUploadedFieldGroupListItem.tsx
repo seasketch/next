@@ -20,6 +20,8 @@ import BaseFieldGroupListItem, {
   valueText,
 } from "./FieldGroupListItemBase";
 import { PlusCircledIcon } from "@radix-ui/react-icons";
+import useCurrentProjectMetadata from "../../../useCurrentProjectMetadata";
+import { withHostedDownloadAuth } from "../../../dataLayers/tilesAuth";
 
 export default function LayerUploadedFieldGroupListItem(
   props: FieldGroupListItemProps
@@ -101,6 +103,8 @@ function UploadFilenamePopover({
   output: UploadOutput;
 }) {
   const { t } = useTranslation("admin:data");
+  const { data: projectMeta } = useCurrentProjectMetadata();
+  const mapAccessToken = projectMeta?.project?.mapAccessToken;
   const downloadName = output.originalFilename || output.filename || filename;
   const fileDescription = `${bytes(parseInt(output.size), {
     unitSeparator: "",
@@ -113,7 +117,10 @@ function UploadFilenamePopover({
           type="button"
           onClick={(event) => {
             event.currentTarget.blur();
-            downloadWithFilename(output.url, downloadName);
+            const url =
+              withHostedDownloadAuth(output.url, mapAccessToken) ||
+              output.url;
+            downloadWithFilename(url, downloadName);
           }}
           className="inline-flex max-w-full cursor-pointer items-center align-baseline text-sm font-medium leading-5 text-blue-600 underline decoration-blue-400 decoration-dotted underline-offset-4 hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
         >

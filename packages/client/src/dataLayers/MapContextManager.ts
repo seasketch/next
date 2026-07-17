@@ -30,6 +30,11 @@ import {
   SketchPresentFragmentDoc,
   SpriteDetailsFragment,
 } from "../generated/graphql";
+import {
+  extractTilesUuidFromUrl,
+  isHostedDataHost,
+  withHostedAuthParams,
+} from "./tilesAuth";
 import { fetchGlStyle } from "../useMapboxStyle";
 import LayerInteractivityManager from "./LayerInteractivityManager";
 import bytes from "bytes";
@@ -213,6 +218,13 @@ class MapContextManager extends EventEmitter {
   private mapContainer?: HTMLDivElement;
   private basemapsWereSet = false;
   private userAccessToken?: string | null;
+  private mapAccessToken?: string | null;
+  /**
+   * Authoritative list from Project.hostedTileUuidsRequiringAuth.
+   * `null` until ProjectMetadata arrives — fall back conservatively (attach
+   * token to any hosted UUID when a mapAccessToken is available).
+   */
+  private hostedTileUuidsRequiringAuth: Set<string> | null = null;
   private editableSketchId?: number;
   private selectedSketches?: number[];
   private sketchTimestamps = new global.Map<number, string>();
@@ -384,6 +396,41 @@ class MapContextManager extends EventEmitter {
 
   setToken(token: string | null | undefined) {
     this.userAccessToken = token;
+  }
+
+  setMapAccessToken(token: string | null | undefined) {
+    this.mapAccessToken = token;
+  }
+
+  setHostedTileUuidsRequiringAuth(uuids: string[] | null | undefined) {
+    const next =
+      uuids == null
+        ? null
+        : new global.Set(uuids.map((uuid) => uuid.toLowerCase()));
+
+    const previous = this.hostedTileUuidsRequiringAuth;
+    const unchanged =
+      previous === next ||
+      (previous != null &&
+        next != null &&
+        previous.size === next.size &&
+        Array.from(next).every((uuid) => previous.has(uuid)));
+
+    this.hostedTileUuidsRequiringAuth = next;
+
+    // Mapbox may already have failed /v2 requests without a token; rebuild
+    // the style so transformRequest runs again for visible hosted sources.
+    if (!unchanged) {
+      this.updateStyle();
+    }
+  }
+
+  /** Whether /v2 requests for this hosted UUID (tiles or GeoJSON) need mapAccessToken. */
+  private hostedUuidNeedsMapAccessToken(uuid: string): boolean {
+    if (this.hostedTileUuidsRequiringAuth == null) {
+      return true;
+    }
+    return this.hostedTileUuidsRequiringAuth.has(uuid);
   }
 
   /**
@@ -592,6 +639,23 @@ class MapContextManager extends EventEmitter {
           // eslint-disable-next-line i18next/no-literal-string
           headers: { authorization: `Bearer ${this.userAccessToken}` },
         };
+      } else if (isHostedDataHost(Url.hostname)) {
+        // Hosted tiles/uploads: append access_token (and ns in non-prod).
+        const uuid = extractTilesUuidFromUrl(Url.toString());
+        const token =
+          uuid &&
+          this.hostedUuidNeedsMapAccessToken(uuid) &&
+          this.mapAccessToken
+            ? this.mapAccessToken
+            : null;
+        const authorized = withHostedAuthParams(Url.toString(), {
+          accessToken: token,
+        });
+        const outUrl = new URL(authorized);
+
+        outUrl.searchParams.set("ssn-tr", "true");
+
+        return { url: outUrl.toString() };
       } else if (!/^data:/.test(url)) {
         if (!/gateway.api.globalfishingwatch.org/.test(url)) {
           Url.searchParams.set("ssn-tr", "true");
@@ -2143,6 +2207,7 @@ class MapContextManager extends EventEmitter {
       | "parentStableId"
       | "enableDownload"
       | "primaryDownloadUrl"
+      | "acl"
     >[]
   ) {
     this.clientDataSources = {};
