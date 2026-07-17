@@ -2,7 +2,7 @@ import { env, SELF } from "cloudflare:test";
 import { beforeAll, describe, expect, it } from "vitest";
 import { generateKeyPair, SignJWT, type KeyLike } from "jose";
 import { handleClassifiedRequest } from "../src/gateway";
-import { classifyResource } from "../src/resource";
+import { classifyResource, resourceAclEnabled } from "../src/resource";
 
 const uuid = "11111111-1111-1111-1111-111111111111";
 const projectJson = `projects/router-test/public/${uuid}.json`;
@@ -65,7 +65,7 @@ describe("host-aware router", () => {
     expect(await response.text()).toBe("fixture");
   });
 
-  it("keeps subdivided uploads public while AUTH_ACL_ENABLED is false", async () => {
+  it("keeps subdivided uploads public while AUTH_SUBDIVIDED_ACL_ENABLED is false", async () => {
     const response = await SELF.fetch(
       `https://uploads.seasketch.org/${subdivided}`,
     );
@@ -73,16 +73,26 @@ describe("host-aware router", () => {
     expect(await response.text()).toBe("subdivided");
   });
 
-  it("protects subdivided paths when ACL enforcement is enabled", async () => {
+  it("protects subdivided paths when AUTH_SUBDIVIDED_ACL_ENABLED is on", async () => {
     const resource = classifyResource(subdivided)!;
+    const gatewayEnv = {
+      TILES_BUCKET: env.TILES_BUCKET,
+      AUTH_ACL_ENABLED: "false",
+      AUTH_SUBDIVIDED_ACL_ENABLED: "true",
+    } as Env;
+    expect(resourceAclEnabled(gatewayEnv, resource)).toBe(true);
+
     const denied = await handleClassifiedRequest(
       new Request(`https://uploads.seasketch.org/${subdivided}?ns=dev-test`),
-      { TILES_BUCKET: env.TILES_BUCKET },
+      gatewayEnv,
       {
         fetch: async () => new Response("should-not-run"),
       },
       resource,
-      { ns: "dev-test", enforce: true },
+      {
+        ns: "dev-test",
+        enforce: resourceAclEnabled(gatewayEnv, resource),
+      },
     );
     expect(denied.status).toBe(401);
     expect(denied.headers.get("Cache-Control")).toBe("no-store");
@@ -103,12 +113,15 @@ describe("host-aware router", () => {
       new Request(`https://uploads.seasketch.org/${subdivided}?ns=dev-test`, {
         headers: { Authorization: `Bearer ${token}` },
       }),
-      { TILES_BUCKET: env.TILES_BUCKET },
+      gatewayEnv,
       {
         fetch: async () => new Response("subdivided-ok"),
       },
       resource,
-      { ns: "dev-test", enforce: true },
+      {
+        ns: "dev-test",
+        enforce: resourceAclEnabled(gatewayEnv, resource),
+      },
     );
     expect(allowed.status).toBe(200);
     expect(await allowed.text()).toBe("subdivided-ok");

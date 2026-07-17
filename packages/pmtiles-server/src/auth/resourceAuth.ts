@@ -35,8 +35,10 @@ const publicDecision = (reason: string): AuthDecision => ({
 /**
  * Authorize a classified overlay resource.
  *
- * @param enforce - When false (`AUTH_ACL_ENABLED=false`), project data is
- *   treated as publicly readable capability-URLs.
+ * @param enforce - When false, the resource is treated as a publicly readable
+ *   capability-URL. Callers should pass `resourceAclEnabled(env, resource)` so
+ *   subdivided outputs can use `AUTH_SUBDIVIDED_ACL_ENABLED` independently of
+ *   `AUTH_ACL_ENABLED`.
  */
 export async function authorizeResource(args: {
   request: Request;

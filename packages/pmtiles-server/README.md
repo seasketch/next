@@ -25,7 +25,7 @@ entrypoints after credentials have been removed.
 | `/projects/{slug}/public/{uuid}/{z}/{x}/{y}.{mvt,pbf,png,webp,jpg}` | Tile                         |
 | `/projects/{slug}/public/{uuid}`                                    | Browser preview              |
 | `/projects/{slug}/public/{uuid}.{extension}`                        | Object download              |
-| `/projects/{slug}/subdivided/{objectPath}`                          | Admin-only subdivided output |
+| `/projects/{slug}/subdivided/{objectPath}`                          | Subdivided output            |
 | `/{r2-key}` on `uploads.seasketch.org`                              | Raw R2 object                |
 
 `GET` and `HEAD` are supported for raw objects. `?download=filename.ext` adds
@@ -88,13 +88,22 @@ Keys outside `projects/` are public fixtures. For example,
 
 Published UUIDs use `acl/{ns}/projects/{slug}.json`. Public UUIDs need no
 token. Protected UUIDs use the existing project-admin, superuser, and group
-rules.
+rules. Published-layer ACL enforcement is controlled by `AUTH_ACL_ENABLED`
+(default off / public capability-URLs).
+
+### Subdivided outputs
 
 Subdivided outputs (`projects/{slug}/subdivided/...`) do not consult the ACL
-document and do not infer a published-layer UUID. They require a map-access
-token for the path slug with project-admin role, or a SeaSketch superuser.
-Other unrecognized project-owned keys fail closed with the same admin-only
-policy.
+document and do not infer a published-layer UUID. By default they are public.
+Set `AUTH_SUBDIVIDED_ACL_ENABLED=true` to require a map-access token for the
+path slug with project-admin role (or a SeaSketch superuser), or an
+overlay-engine token. This switch is independent of `AUTH_ACL_ENABLED`, so
+subdivided outputs can be gated before published map tiles. When
+`AUTH_ACL_ENABLED` is later turned on, subdivided outputs remain protected
+even if the subdivided-specific flag is left unset.
+
+Other unrecognized project-owned keys follow `AUTH_ACL_ENABLED` and fail
+closed with the same admin-only policy when enforcement is on.
 
 ### Overlay-engine tokens
 

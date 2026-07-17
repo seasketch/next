@@ -79,6 +79,30 @@ export function aclEnabled(env: Env): boolean {
 }
 
 /**
+ * When true, gate `/projects/{slug}/subdivided/...` with an admin map-access
+ * or overlay-engine token. Independent of AUTH_ACL_ENABLED so subdivided
+ * outputs can be locked down before published-layer ACL is enabled.
+ */
+export function subdividedAclEnabled(env: Env): boolean {
+  return String(env.AUTH_SUBDIVIDED_ACL_ENABLED).toLowerCase() === "true";
+}
+
+/**
+ * Whether ACL/token checks apply to this resource. Subdivided outputs use
+ * AUTH_SUBDIVIDED_ACL_ENABLED (or AUTH_ACL_ENABLED once general enforcement
+ * is on); everything else follows AUTH_ACL_ENABLED only.
+ */
+export function resourceAclEnabled(
+  env: Env,
+  resource: ResourceDescriptor,
+): boolean {
+  if (resource.kind === "subdivided") {
+    return subdividedAclEnabled(env) || aclEnabled(env);
+  }
+  return aclEnabled(env);
+}
+
+/**
  * When ACL is enabled and no project ACL doc exists yet: public if true,
  * admins-only if false.
  */

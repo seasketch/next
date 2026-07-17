@@ -1,8 +1,10 @@
 # Local wrangler + local API JWKS (tokens from localhost:3857 will not verify
 # against production api.seasket.ch keys).
 JWKS_URL=http://127.0.0.1:3857/.well-known/jwks.json
-# Lax defaults for local cutover; flip AUTH_ACL_ENABLED=true when testing ACL.
+# Lax defaults for local cutover. Flip AUTH_SUBDIVIDED_ACL_ENABLED=true to
+# gate subdivided outputs early; AUTH_ACL_ENABLED=true for published-layer ACL.
 AUTH_ACL_ENABLED=false
+AUTH_SUBDIVIDED_ACL_ENABLED=false
 AUTH_MISSING_ACL_PUBLIC=true
 PUBLIC_HOSTNAME=localhost:8787
 # Required only for browser preview pages.

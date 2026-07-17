@@ -34,8 +34,9 @@ type = "worker"
 enabled = true
 
 [vars]
-# Rollout knobs (not documented in README). Defaults are lax for cutover.
+# Rollout knobs. Defaults are lax for cutover.
 AUTH_ACL_ENABLED = "false"
+AUTH_SUBDIVIDED_ACL_ENABLED = "false"
 AUTH_MISSING_ACL_PUBLIC = "true"
 
 # Large property scans can be CPU intensive. Paid Workers permit up to 300s.

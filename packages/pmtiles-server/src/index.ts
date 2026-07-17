@@ -4,9 +4,9 @@ import { handleClassifiedRequest } from "./gateway";
 import { ObjectBackend } from "./objectBackend";
 import { PropertiesBackend } from "./propertiesBackend";
 import {
-  aclEnabled,
   aclNamespaceFromRequest,
   classifyResource,
+  resourceAclEnabled,
 } from "./resource";
 import { TilesBackend } from "./tilesBackend";
 
@@ -56,7 +56,7 @@ export default class extends WorkerEntrypoint<Env> {
       resource,
       {
         ns: aclNamespaceFromRequest(request),
-        enforce: aclEnabled(this.env),
+        enforce: resourceAclEnabled(this.env, resource),
       },
     );
   }
@@ -85,7 +85,7 @@ export default class extends WorkerEntrypoint<Env> {
       resource,
       {
         ns: aclNamespaceFromRequest(request),
-        enforce: aclEnabled(this.env),
+        enforce: resourceAclEnabled(this.env, resource),
         backendPath: "/properties",
         includeQueryInCacheKey: true,
       },
