@@ -9,6 +9,7 @@ function safeFilename(value: string): string {
   return value.replace(/[\r\n"]/g, "_");
 }
 
+/** Opaque R2 object downloads and byte-range reads (uncached entrypoint). */
 export class ObjectBackend extends WorkerEntrypoint<Env> {
   async fetch(request: Request): Promise<Response> {
     return handleObjectRequest(request, this.env, (promise) =>
@@ -17,6 +18,10 @@ export class ObjectBackend extends WorkerEntrypoint<Env> {
   }
 }
 
+/**
+ * Serve a whole object or single Range from R2.
+ * Path is the object key; `?download=` sets Content-Disposition.
+ */
 export async function handleObjectRequest(
   request: Request,
   env: Env,

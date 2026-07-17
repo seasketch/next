@@ -14,7 +14,7 @@ import { humanizeOutputType } from "../QuotaUsageTreemap";
 import { isRasterInfo } from "@seasketch/geostats-types";
 import slugify from "slugify";
 import useCurrentProjectMetadata from "../../../useCurrentProjectMetadata";
-import { rewriteHostedDownloadUrl } from "../../../dataLayers/tilesAuth";
+import { withHostedDownloadAuth } from "../../../dataLayers/tilesAuth";
 
 function filenameFromUrl(url: string): string {
   try {
@@ -76,7 +76,7 @@ export default function HostedLayerInfo({
   const { data: projectMeta } = useCurrentProjectMetadata();
   const mapAccessToken = projectMeta?.project?.mapAccessToken;
   const authUrl = (url: string) =>
-    rewriteHostedDownloadUrl(url, mapAccessToken) || url;
+    withHostedDownloadAuth(url, mapAccessToken) || url;
   const original = (source.outputs || []).find((output) => output.isOriginal);
   const metadata = (source.outputs || []).find(
     (output) => output.type === DataUploadOutputType.Xmlmetadata

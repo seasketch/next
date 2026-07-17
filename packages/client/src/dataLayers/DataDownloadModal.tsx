@@ -10,7 +10,7 @@ import {
 import bytes from "bytes";
 import { Trans, useTranslation } from "react-i18next";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
-import { rewriteHostedDownloadUrl } from "./tilesAuth";
+import { withHostedDownloadAuth } from "./tilesAuth";
 
 const priority = [
   DataUploadOutputType.ZippedShapefile,
@@ -47,7 +47,7 @@ export default function DataDownloadModal({
   });
 
   const authDownloadUrl = (url: string | null | undefined) =>
-    rewriteHostedDownloadUrl(url, mapAccessToken) || url || undefined;
+    withHostedDownloadAuth(url, mapAccessToken) || url || undefined;
 
   const sortedOptions = useMemo(() => {
     return [...(data?.tableOfContentsItem?.downloadOptions || [])]

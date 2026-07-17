@@ -1,3 +1,9 @@
+/**
+ * Path/key classification and ACL env helpers for query-param auth.
+ *
+ * Canonical URLs use `/projects/...` paths. Callers pass `?ns=` (ACL namespace,
+ * default `prod`) and `?access_token=` / Authorization for protected data.
+ */
 const UUID =
   "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 
@@ -7,6 +13,7 @@ const PUBLISHED = new RegExp(
 );
 const SUBDIVIDED = /^projects\/([^/]+)\/subdivided\/(.+)$/i;
 const PROJECT = /^projects\/([^/]+)\/(.+)$/i;
+const NS_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$/;
 
 export type ResourceDescriptor =
   | { kind: "public"; key: string }
@@ -15,6 +22,7 @@ export type ResourceDescriptor =
   | { kind: "subdivided"; key: string; slug: string }
   | { kind: "project_other"; key: string; slug: string };
 
+/** Normalize a URL pathname or dataset key into an R2 object key. */
 export function normalizeObjectKey(pathOrKey: string): string | null {
   let key = pathOrKey.replace(/^\/+/, "");
   try {
@@ -33,6 +41,7 @@ export function normalizeObjectKey(pathOrKey: string): string | null {
   return key;
 }
 
+/** Classify an R2 key / request path for authorization and routing. */
 export function classifyResource(pathOrKey: string): ResourceDescriptor | null {
   const key = normalizeObjectKey(pathOrKey);
   if (!key) return null;
@@ -64,6 +73,35 @@ export function classifyResource(pathOrKey: string): ResourceDescriptor | null {
   return { kind: "public", key };
 }
 
-export function legacyProjectAuthEnabled(env: Env): boolean {
-  return String(env.AUTH_LEGACY_PROJECT_PATHS).toLowerCase() === "true";
+/** When false, skip ACL/token checks (capability-URL compatibility). */
+export function aclEnabled(env: Env): boolean {
+  return String(env.AUTH_ACL_ENABLED).toLowerCase() === "true";
+}
+
+/**
+ * When ACL is enabled and no project ACL doc exists yet: public if true,
+ * admins-only if false.
+ */
+export function missingAclIsPublic(env: Env): boolean {
+  const raw = env.AUTH_MISSING_ACL_PUBLIC;
+  if (raw === undefined || raw === null || raw === "") return true;
+  return String(raw).toLowerCase() !== "false";
+}
+
+/**
+ * ACL namespace from `?ns=`. Defaults to `prod` when absent or invalid.
+ * Used for ACL doc keys and JWT trust policy.
+ */
+export function aclNamespaceFromRequest(request: Request): string {
+  const ns = new URL(request.url).searchParams.get("ns");
+  if (ns && NS_PATTERN.test(ns)) return ns;
+  return "prod";
+}
+
+/** HTML browser preview for a published UUID (no tile/extension suffix). */
+export function isPublishedPreviewPath(pathname: string): boolean {
+  return new RegExp(
+    `^/projects/[^/]+/public/${UUID}/?$`,
+    "i",
+  ).test(pathname);
 }

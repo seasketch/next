@@ -78,7 +78,7 @@ async function writeAcl(ns: string, doc: Omit<ProjectAclDoc, "slug">) {
 }
 
 describe("resource authorization", () => {
-  it("allows non-production overlay-engine tokens across project resources", async () => {
+  it("rejects unverified overlay-engine tokens even on non-prod namespaces", async () => {
     const token = await sign({
       type: "overlay-engine",
       key: otherPrivateKey,
@@ -98,10 +98,11 @@ describe("resource authorization", () => {
       enforce: true,
     });
     expect(result.decision).toMatchObject({
-      allowed: true,
-      reason: "overlay_engine",
+      allowed: false,
+      status: 401,
     });
-    expect(result.tokenMode).toBe("dev-trust");
+    expect(result.decision.reason).toMatch(/invalid_token:overlay_engine_requires_jwks/);
+    expect(result.tokenMode).toBeNull();
   });
 
   it("requires a matching admin or superuser for subdivided data", async () => {
@@ -148,16 +149,16 @@ describe("resource authorization", () => {
     }
   });
 
-  it("treats missing ACL docs as public when legacy auth is disabled (lax)", async () => {
+  it("treats missing ACL docs as public when AUTH_MISSING_ACL_PUBLIC is true", async () => {
     const ns = `missing-acl-${crypto.randomUUID()}`;
     const resource = classifyResource(
       `projects/${SLUG}/public/${UUID}.fgb`,
     )!;
     const result = await authorizeResource({
-      request: new Request("https://uploads.example/v2/object"),
+      request: new Request("https://uploads.example/object"),
       env: {
         TILES_BUCKET: env.TILES_BUCKET,
-        AUTH_LEGACY_PROJECT_PATHS: "false",
+        AUTH_MISSING_ACL_PUBLIC: "true",
       } as Env,
       ns,
       resource,
@@ -165,21 +166,21 @@ describe("resource authorization", () => {
     });
     expect(result.decision).toMatchObject({
       allowed: true,
-      reason: "legacy_missing_acl",
+      reason: "missing_acl_public",
       aclClass: "public",
     });
   });
 
-  it("treats missing ACL docs as admins-only when legacy auth is enabled (strict)", async () => {
+  it("treats missing ACL docs as admins-only when AUTH_MISSING_ACL_PUBLIC is false", async () => {
     const ns = `missing-acl-${crypto.randomUUID()}`;
     const resource = classifyResource(
       `projects/${SLUG}/public/${UUID}.fgb`,
     )!;
     const result = await authorizeResource({
-      request: new Request("https://uploads.example/v2/object"),
+      request: new Request("https://uploads.example/object"),
       env: {
         TILES_BUCKET: env.TILES_BUCKET,
-        AUTH_LEGACY_PROJECT_PATHS: "true",
+        AUTH_MISSING_ACL_PUBLIC: "false",
       } as Env,
       ns,
       resource,
@@ -190,6 +191,24 @@ describe("resource authorization", () => {
       status: 401,
       reason: "missing_token",
       aclClass: "admins_only",
+    });
+  });
+
+  it("skips ACL checks when enforce is false (acl_disabled)", async () => {
+    const resource = classifyResource(
+      `projects/${SLUG}/public/${UUID}.fgb`,
+    )!;
+    const result = await authorizeResource({
+      request: new Request("https://uploads.example/object"),
+      env: { TILES_BUCKET: env.TILES_BUCKET } as Env,
+      ns: "prod",
+      resource,
+      enforce: false,
+    });
+    expect(result.decision).toMatchObject({
+      allowed: true,
+      reason: "acl_disabled",
+      aclClass: "public",
     });
   });
 });

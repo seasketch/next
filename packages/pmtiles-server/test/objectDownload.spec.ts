@@ -2,7 +2,8 @@ import { env } from "cloudflare:workers";
 import { generateKeyPair, SignJWT, type KeyLike } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import type { ProjectAclDoc } from "../src/auth/types";
-import { handleGatewayRequest } from "../src/gateway";
+import { handleClassifiedRequest } from "../src/gateway";
+import { aclNamespaceFromRequest, classifyResource } from "../src/resource";
 import { handleTilesBackendRequest } from "../src/tilesBackend";
 
 const UUID = "a1b2c3d4-e5f6-7890-abcd-ef1234567890";
@@ -46,6 +47,16 @@ const tilesBackend = {
   fetch: (request: Request) => handleTilesBackendRequest(request, env),
 };
 
+async function gateway(request: Request, gatewayEnv: Env, backend: typeof tilesBackend) {
+  const resource = classifyResource(new URL(request.url).pathname);
+  if (!resource) return new Response("Invalid object path", { status: 400 });
+  return handleClassifiedRequest(request, gatewayEnv, backend, resource, {
+    ns: aclNamespaceFromRequest(request),
+    enforce: true,
+  });
+}
+
+
 describe("object downloads", () => {
   it("serves R2 objects with Content-Disposition from ?download=", async () => {
     await env.TILES_BUCKET.put(KEY, BODY, {
@@ -80,7 +91,7 @@ describe("object downloads", () => {
     expect(await response.text()).toBe("Tileset not found");
   });
 
-  it("denies protected /v2 downloads without a map-access token", async () => {
+  it("denies protected downloads without a map-access token", async () => {
     const ns = `test-${crypto.randomUUID()}`;
     await env.TILES_BUCKET.put(KEY, BODY, {
       httpMetadata: { contentType: "application/geo+json" },
@@ -92,9 +103,9 @@ describe("object downloads", () => {
       protected: { [UUID]: [0] },
     });
 
-    const response = await handleGatewayRequest(
+    const response = await gateway(
       new Request(
-        `https://tiles.seasketch.org/v2/${ns}/projects/${SLUG}/public/${UUID}.geojson?download=Layer.geojson`,
+        `https://tiles.seasketch.org/projects/${SLUG}/public/${UUID}.geojson?ns=${ns}&download=Layer.geojson`,
         { headers: { Accept: "application/geo+json" } },
       ),
       { TILES_BUCKET: env.TILES_BUCKET },
@@ -107,7 +118,7 @@ describe("object downloads", () => {
     expect(response.headers.get("Content-Disposition")).toBeNull();
   });
 
-  it("allows protected /v2 downloads with a valid admin token", async () => {
+  it("allows protected downloads with a valid admin token", async () => {
     const ns = `test-${crypto.randomUUID()}`;
     await env.TILES_BUCKET.put(KEY, BODY, {
       httpMetadata: { contentType: "application/geo+json" },
@@ -121,9 +132,9 @@ describe("object downloads", () => {
     const token = await adminToken(SLUG);
     const filename = "Admins Only.geojson";
 
-    const response = await handleGatewayRequest(
+    const response = await gateway(
       new Request(
-        `https://tiles.seasketch.org/v2/${ns}/projects/${SLUG}/public/${UUID}.geojson?download=${encodeURIComponent(
+        `https://tiles.seasketch.org/projects/${SLUG}/public/${UUID}.geojson?ns=${ns}&download=${encodeURIComponent(
           filename,
         )}&access_token=${token}`,
       ),
@@ -141,7 +152,7 @@ describe("object downloads", () => {
     expect(await response.text()).toContain("FeatureCollection");
   });
 
-  it("allows public /v2 downloads without a token", async () => {
+  it("allows public downloads without a token", async () => {
     const ns = `test-${crypto.randomUUID()}`;
     await env.TILES_BUCKET.put(KEY, BODY, {
       httpMetadata: { contentType: "application/geo+json" },
@@ -153,9 +164,9 @@ describe("object downloads", () => {
       protected: {},
     });
 
-    const response = await handleGatewayRequest(
+    const response = await gateway(
       new Request(
-        `https://tiles.seasketch.org/v2/${ns}/projects/${SLUG}/public/${UUID}.geojson?download=Public.geojson`,
+        `https://tiles.seasketch.org/projects/${SLUG}/public/${UUID}.geojson?ns=${ns}&download=Public.geojson`,
       ),
       { TILES_BUCKET: env.TILES_BUCKET },
       tilesBackend,

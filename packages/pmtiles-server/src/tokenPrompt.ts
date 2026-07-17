@@ -1,5 +1,5 @@
 /**
- * HTML form shown when a /v2 preview page is requested without a valid
+ * HTML form shown when a protected preview page is requested without a valid
  * map-access token (or with an invalid one). Submitting reloads the same URL
  * with ?access_token=…
  */

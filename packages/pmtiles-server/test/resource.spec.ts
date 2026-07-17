@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  aclEnabled,
+  aclNamespaceFromRequest,
   classifyResource,
-  legacyProjectAuthEnabled,
+  missingAclIsPublic,
   normalizeObjectKey,
 } from "../src/resource";
 
@@ -29,12 +31,30 @@ describe("overlay resource classification", () => {
     expect(normalizeObjectKey("/projects%2F..%2Fsecret")).toBeNull();
   });
 
-  it("defaults legacy project authentication off", () => {
-    expect(legacyProjectAuthEnabled({} as Env)).toBe(false);
+  it("defaults ACL enforcement off and missing ACL docs public", () => {
+    expect(aclEnabled({} as Env)).toBe(false);
+    expect(aclEnabled({ AUTH_ACL_ENABLED: "true" } as Env)).toBe(true);
+    expect(missingAclIsPublic({} as Env)).toBe(true);
     expect(
-      legacyProjectAuthEnabled({
-        AUTH_LEGACY_PROJECT_PATHS: "true",
-      } as Env),
-    ).toBe(true);
+      missingAclIsPublic({ AUTH_MISSING_ACL_PUBLIC: "false" } as Env),
+    ).toBe(false);
+  });
+
+  it("reads ACL namespace from ?ns= with prod default", () => {
+    expect(
+      aclNamespaceFromRequest(
+        new Request("https://tiles.example/projects/x/public/y.json?ns=dev-test"),
+      ),
+    ).toBe("dev-test");
+    expect(
+      aclNamespaceFromRequest(
+        new Request("https://tiles.example/projects/x/public/y.json"),
+      ),
+    ).toBe("prod");
+    expect(
+      aclNamespaceFromRequest(
+        new Request("https://tiles.example/x?ns=bad/ns"),
+      ),
+    ).toBe("prod");
   });
 });

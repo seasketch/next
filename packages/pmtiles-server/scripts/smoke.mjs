@@ -34,7 +34,14 @@ const cases = [
   },
   process.env.SMOKE_PROJECT_KEY && {
     name: "protected project object",
-    path: `/v2/prod/${process.env.SMOKE_PROJECT_KEY.replace(/^\/+/, "")}`,
+    path: (() => {
+      const key = process.env.SMOKE_PROJECT_KEY.replace(/^\/+/, "");
+      const q = new URLSearchParams();
+      if (process.env.SMOKE_NS) q.set("ns", process.env.SMOKE_NS);
+      if (token) q.set("access_token", token);
+      const qs = q.toString();
+      return `/${key}${qs ? `?${qs}` : ""}`;
+    })(),
     headers: auth,
     expectStatus: 200,
     maxBytes: 64 * 1024,

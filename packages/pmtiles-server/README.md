@@ -24,9 +24,9 @@ entrypoints after credentials have been removed.
 | `/projects/{slug}/public/{uuid}.json`                               | TileJSON                     |
 | `/projects/{slug}/public/{uuid}/{z}/{x}/{y}.{mvt,pbf,png,webp,jpg}` | Tile                         |
 | `/projects/{slug}/public/{uuid}`                                    | Browser preview              |
+| `/projects/{slug}/public/{uuid}.{extension}`                        | Object download              |
+| `/projects/{slug}/subdivided/{objectPath}`                          | Admin-only subdivided output |
 | `/{r2-key}` on `uploads.seasketch.org`                              | Raw R2 object                |
-| `/v2/{ns}/projects/{slug}/public/{uuid}.{extension}`                | Auth-aware object download   |
-| `/v2/{ns}/projects/{slug}/subdivided/{objectPath}`                  | Admin-only subdivided output |
 
 `GET` and `HEAD` are supported for raw objects. `?download=filename.ext` adds
 `Content-Disposition: attachment`. Raw objects expose ETag and R2 HTTP
@@ -52,11 +52,8 @@ and a preview on tiles.
 
 ### Properties
 
-Both paths are accepted:
-
 ```text
 GET /properties?dataset={r2-key}
-GET /v2/{ns}/properties?dataset={r2-key}
 ```
 
 Query parameters:
@@ -75,13 +72,17 @@ overlay endpoint contract. Malformed input is 400 and a missing dataset is 404.
 
 ## Authorization
 
+Canonical project URLs stay under `/projects/...`. Callers authorize with:
+
+- `access_token` query param, or `Authorization: Bearer ...`
+- optional `ns` query param for the ACL namespace (defaults to `prod`)
+
+Credentials (`access_token`, `Authorization`, and `ns`) are stripped before
+backend invocation and never enter a cache key.
+
 Keys outside `projects/` are public fixtures. For example,
 `/eez-land-joined.fgb` can be read without a token. Data-library keys below
-`projects/superuser/public/` are also always public on every host and route.
-
-Explicit `/v2/{ns}/...` routes always authorize protected project data. Tokens
-may be supplied with `Authorization: Bearer ...` or `access_token=...`.
-Credentials are stripped before backend invocation and never enter a cache key.
+`projects/superuser/public/` are also always public on every host.
 
 ### Map-access tokens
 
@@ -98,39 +99,37 @@ policy.
 ### Overlay-engine tokens
 
 A token with `type="overlay-engine"` is a service-wide read bypass for all
-overlay resources, including ranges and properties.
+overlay resources, including ranges and properties. Map-access and
+overlay-engine claim validation remain separate; another token type cannot
+receive this bypass.
 
-- For namespace `prod`, RS256 signature and issuer verification against
-  `JWKS_URL` is mandatory.
-- For other namespaces, JWKS verification is attempted first and the existing
-  decode-and-trust development behavior is then allowed.
-- A numeric, unexpired `exp` is mandatory in both modes.
+Both token types require a numeric, unexpired `exp`. Overlay-engine tokens
+always require RS256 signature and issuer verification against `JWKS_URL`,
+regardless of `ns`. Map-access tokens require the same when `ns=prod`.
 
-Map-access and overlay-engine claim validation remain separate; another token
-type cannot receive this bypass.
+### Authorization during local development
 
-### Legacy rollout switch
+Local SeaSketch installs still write tiles into the shared production
+`ssn-tiles` bucket and hit the production Worker. They publish ACL documents
+under a dedicated non-prod namespace (for example `dev-$USER`) and send that
+same value as `?ns=` on tile and download requests.
 
-Historically, hosted overlay objects used an implicit capability-URL model:
-content-addressed UUID paths under `projects/{slug}/public/{uuid}...` were
-effectively unguessable secrets, so the Worker treated them as publicly
-fetchable without tokens. Auth is now moving to explicit map-access /
-overlay-engine tokens plus per-project ACL documents; this switch bridges the
-two schemes during rollout.
+`ns` does two jobs together:
 
-`AUTH_LEGACY_PROJECT_PATHS` defaults to `"false"` (lax / compatibility mode):
+1. **Which ACL document is consulted** — `acl/{ns}/projects/{slug}.json`.
+   A local client's protected layers are authorized only against *their*
+   namespace's ACL docs, not against `acl/prod/...`.
+2. **Whether unverified map-access tokens are allowed** — for `ns=prod`,
+   JWKS + issuer verification is mandatory. For any other `ns`, JWKS is tried
+   first; if it fails (typical for tokens signed by a laptop API), the Worker
+   falls back to decode-and-trust for **map-access** tokens only (still
+   requiring `type=map-access` and an unexpired `exp`). Overlay-engine tokens
+   never use decode-and-trust — they are a bucket-wide bypass and must always
+   verify against `JWKS_URL`.
 
-- Non-v2 `projects/...` requests keep capability-URL public behavior so domains
-  can be remapped without breaking callers.
-- On authenticated routes (`/v2`, and later legacy paths once the switch is on),
-  a **missing** project ACL document is treated as all layer UUIDs public so
-  projects that have not published an ACL yet are not locked out.
-
-Set the switch to `"true"` only after legacy clients send tokens and ACL docs
-are being published. It then treats legacy project paths as namespace `prod`,
-enforces the published / subdivided / unknown-project rules above, and treats a
-missing ACL document as admins-only. Fixtures and data-library objects remain
-public in both modes.
+So a locally signed map-access token can unlock data that is protected under
+that local `ns`, but the same token cannot be used with `ns=prod` to read
+production ACL-protected layers.
 
 ## Caching
 
@@ -170,8 +169,8 @@ npx wrangler deploy
 ```
 
 Run `npm run smoke -- https://overlay-data-server.<account>.workers.dev`
-before changing DNS. The smoke script accepts optional `SMOKE_PROJECT_KEY` and
-`SMOKE_TOKEN` environment variables for protected checks.
+before changing DNS. The smoke script accepts optional `SMOKE_PROJECT_KEY`,
+`SMOKE_TOKEN`, and `SMOKE_NS` environment variables for protected checks.
 
 The manual production sequence is:
 
@@ -179,8 +178,7 @@ The manual production sequence is:
    public/protected properties on the preview URL.
 2. Map `uploads.seasketch.org` and verify opaque object compatibility.
 3. Map `overlay.seasketch.org` and verify `/properties` parity.
-4. Keep `AUTH_LEGACY_PROJECT_PATHS=false` during compatibility testing.
-5. Migrate callers, then enable the switch and verify protected legacy,
+4. Verify protected project URLs with `access_token` (and optional `ns`), plus
    subdivided, data-library, and fixture cases.
 
 DNS, infrastructure, and caller migrations are intentionally outside this

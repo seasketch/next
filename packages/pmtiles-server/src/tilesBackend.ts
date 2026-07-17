@@ -66,8 +66,8 @@ function applyTiming(headers: Headers, timing: RequestTiming) {
 }
 
 /**
- * Shared PMTiles / TileJSON / preview handler. Used by both the legacy
- * `/projects/...` route and (after auth) the `/v2/{ns}/projects/...` gateway.
+ * Shared PMTiles / TileJSON / preview handler for `/projects/...` paths
+ * (credentials already stripped by the default gateway).
  *
  * Workers Caching is enabled for this export (`wrangler.toml`) so immutable
  * tile/TileJSON responses can be served without re-invoking the Worker.
@@ -231,7 +231,7 @@ async function handle(
       headers.set("Content-Type", "text/html");
       headers.set("Cache-Control", "no-store");
       return respond(
-        new Response(renderPreview(tilejson, name, env.MAPBOX_ACCESS_TOKEN), {
+        new Response(renderPreview(tilejson, env.MAPBOX_ACCESS_TOKEN), {
           headers,
         })
       );

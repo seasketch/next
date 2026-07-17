@@ -7,8 +7,12 @@ import {
   type KeyLike,
 } from "jose";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
-import { handleGatewayRequest } from "../src/gateway";
+import { handleClassifiedRequest } from "../src/gateway";
 import type { ProjectAclDoc } from "../src/auth/types";
+import {
+  aclNamespaceFromRequest,
+  classifyResource,
+} from "../src/resource";
 
 let testPrivateKey: KeyLike;
 let productionPrivateKey: KeyLike;
@@ -76,6 +80,22 @@ function backend() {
   };
 }
 
+/** Authorize with ACL enforcement (end-state behavior under test). */
+async function gateway(
+  request: Request,
+  gatewayEnv: Env,
+  tilesBackend: ReturnType<typeof backend>,
+) {
+  const resource = classifyResource(new URL(request.url).pathname);
+  if (!resource) {
+    return new Response("Invalid object path", { status: 400 });
+  }
+  return handleClassifiedRequest(request, gatewayEnv, tilesBackend, resource, {
+    ns: aclNamespaceFromRequest(request),
+    enforce: true,
+  });
+}
+
 describe("authorization gateway", () => {
   it("allows public TileJSON and strips credentials before forwarding", async () => {
     const ns = `test-${crypto.randomUUID()}`;
@@ -88,9 +108,9 @@ describe("authorization gateway", () => {
     });
     const tilesBackend = backend();
 
-    const response = await handleGatewayRequest(
+    const response = await gateway(
       new Request(
-        `https://tiles.seasketch.org/v2/${ns}/projects/${slug}/public/${UUID}.json?access_token=invalid&other=kept`,
+        `https://tiles.seasketch.org/projects/${slug}/public/${UUID}.json?ns=${ns}&access_token=invalid&other=kept`,
         { headers: { Authorization: "Bearer invalid" } },
       ),
       { TILES_BUCKET: env.TILES_BUCKET },
@@ -117,9 +137,9 @@ describe("authorization gateway", () => {
     });
     const tilesBackend = backend();
 
-    const response = await handleGatewayRequest(
+    const response = await gateway(
       new Request(
-        `https://tiles.seasketch.org/v2/${ns}/projects/${slug}/public/${UUID}.json`,
+        `https://tiles.seasketch.org/projects/${slug}/public/${UUID}.json?ns=${ns}`,
         { headers: { Accept: "application/json" } },
       ),
       { TILES_BUCKET: env.TILES_BUCKET },
@@ -142,9 +162,9 @@ describe("authorization gateway", () => {
       protected: { [UUID]: [0] },
     });
 
-    const response = await handleGatewayRequest(
+    const response = await gateway(
       new Request(
-        `https://tiles.seasketch.org/v2/${ns}/projects/${slug}/public/${UUID}`,
+        `https://tiles.seasketch.org/projects/${slug}/public/${UUID}?ns=${ns}`,
         { headers: { Accept: "text/html" } },
       ),
       { TILES_BUCKET: env.TILES_BUCKET },
@@ -159,9 +179,9 @@ describe("authorization gateway", () => {
   it("bypasses ACL lookup and tokens for shared data-library paths", async () => {
     const ns = `test-${crypto.randomUUID()}`;
     const tilesBackend = backend();
-    const response = await handleGatewayRequest(
+    const response = await gateway(
       new Request(
-        `https://tiles.seasketch.org/v2/${ns}/projects/superuser/public/${UUID}.json`,
+        `https://tiles.seasketch.org/projects/superuser/public/${UUID}.json?ns=${ns}`,
       ),
       { TILES_BUCKET: env.TILES_BUCKET },
       tilesBackend,
@@ -174,16 +194,16 @@ describe("authorization gateway", () => {
     expect(tilesBackend.fetch).toHaveBeenCalledOnce();
   });
 
-  it("rejects malformed v2 URLs before any backend work", async () => {
+  it("rejects invalid object paths before any backend work", async () => {
     const tilesBackend = backend();
-    const response = await handleGatewayRequest(
-      new Request("https://tiles.seasketch.org/v2/prod/not-a-tile"),
+    const response = await gateway(
+      new Request("https://tiles.seasketch.org/projects/"),
       { TILES_BUCKET: env.TILES_BUCKET },
       tilesBackend,
     );
 
     expect(response.status).toBe(400);
-    expect(await response.text()).toBe("Invalid /v2 tile URL");
+    expect(await response.text()).toBe("Invalid object path");
     expect(tilesBackend.fetch).not.toHaveBeenCalled();
   });
 
@@ -198,9 +218,9 @@ describe("authorization gateway", () => {
     });
     const tilesBackend = backend();
     const token = await adminToken(slug);
-    const response = await handleGatewayRequest(
+    const response = await gateway(
       new Request(
-        `https://tiles.seasketch.org/v2/${ns}/projects/${slug}/public/${UUID}.json`,
+        `https://tiles.seasketch.org/projects/${slug}/public/${UUID}.json?ns=${ns}`,
         { headers: { Authorization: `Bearer ${token}` } },
       ),
       { TILES_BUCKET: env.TILES_BUCKET },
@@ -224,9 +244,9 @@ describe("authorization gateway", () => {
     const tilesBackend = backend();
     const token = await adminToken(slug);
     const filename = "My Layer.geojson";
-    const response = await handleGatewayRequest(
+    const response = await gateway(
       new Request(
-        `https://tiles.seasketch.org/v2/${ns}/projects/${slug}/public/${UUID}.geojson?download=${encodeURIComponent(filename)}&access_token=${token}`,
+        `https://tiles.seasketch.org/projects/${slug}/public/${UUID}.geojson?ns=${ns}&download=${encodeURIComponent(filename)}&access_token=${token}`,
       ),
       { TILES_BUCKET: env.TILES_BUCKET },
       tilesBackend,
@@ -252,6 +272,7 @@ describe("authorization gateway", () => {
     );
     expect(forwardedUrl.searchParams.get("download")).toBe(filename);
     expect(forwardedUrl.searchParams.has("access_token")).toBe(false);
+    expect(forwardedUrl.searchParams.has("ns")).toBe(false);
   });
 });
 
@@ -306,14 +327,14 @@ describe("prod gateway JWT verification", () => {
     });
   });
 
-  it("allows JWKS-verified map-access tokens on prod /v2 routes", async () => {
+  it("allows JWKS-verified map-access tokens on prod routes", async () => {
     const jwksUrl = `https://jwks.example/${crypto.randomUUID()}`;
     mockJwks([productionJwk]);
     const tilesBackend = backend();
     const token = await prodToken({ type: "map-access" });
-    const response = await handleGatewayRequest(
+    const response = await gateway(
       new Request(
-        `https://tiles.seasketch.org/v2/prod/projects/${slug}/public/${UUID}.json`,
+        `https://tiles.seasketch.org/projects/${slug}/public/${UUID}.json`,
         { headers: { Authorization: `Bearer ${token}` } },
       ),
       { TILES_BUCKET: env.TILES_BUCKET, JWKS_URL: jwksUrl },
@@ -326,14 +347,14 @@ describe("prod gateway JWT verification", () => {
     expect(tilesBackend.fetch).toHaveBeenCalledOnce();
   });
 
-  it("allows JWKS-verified overlay-engine tokens on prod /v2 routes", async () => {
+  it("allows JWKS-verified overlay-engine tokens on prod routes", async () => {
     const jwksUrl = `https://jwks.example/${crypto.randomUUID()}`;
     mockJwks([productionJwk]);
     const tilesBackend = backend();
     const token = await prodToken({ type: "overlay-engine" });
-    const response = await handleGatewayRequest(
+    const response = await gateway(
       new Request(
-        `https://tiles.seasketch.org/v2/prod/projects/${slug}/public/${UUID}.json`,
+        `https://tiles.seasketch.org/projects/${slug}/public/${UUID}.json`,
         { headers: { Authorization: `Bearer ${token}` } },
       ),
       { TILES_BUCKET: env.TILES_BUCKET, JWKS_URL: jwksUrl },
@@ -346,7 +367,7 @@ describe("prod gateway JWT verification", () => {
     expect(tilesBackend.fetch).toHaveBeenCalledOnce();
   });
 
-  it("rejects unverified map-access tokens on prod /v2 routes", async () => {
+  it("rejects unverified map-access tokens on prod routes", async () => {
     const jwksUrl = `https://jwks.example/${crypto.randomUUID()}`;
     mockJwks([productionJwk]);
     const tilesBackend = backend();
@@ -356,9 +377,9 @@ describe("prod gateway JWT verification", () => {
       kid: "other-key",
       issuer: "localhost",
     });
-    const response = await handleGatewayRequest(
+    const response = await gateway(
       new Request(
-        `https://tiles.seasketch.org/v2/prod/projects/${slug}/public/${UUID}.json`,
+        `https://tiles.seasketch.org/projects/${slug}/public/${UUID}.json`,
         { headers: { Authorization: `Bearer ${token}` } },
       ),
       { TILES_BUCKET: env.TILES_BUCKET, JWKS_URL: jwksUrl },
@@ -368,7 +389,7 @@ describe("prod gateway JWT verification", () => {
     expect(tilesBackend.fetch).not.toHaveBeenCalled();
   });
 
-  it("rejects unverified overlay-engine tokens on prod /v2 routes", async () => {
+  it("rejects unverified overlay-engine tokens on prod routes", async () => {
     const jwksUrl = `https://jwks.example/${crypto.randomUUID()}`;
     mockJwks([productionJwk]);
     const tilesBackend = backend();
@@ -378,9 +399,9 @@ describe("prod gateway JWT verification", () => {
       kid: "other-key",
       issuer: "localhost",
     });
-    const response = await handleGatewayRequest(
+    const response = await gateway(
       new Request(
-        `https://tiles.seasketch.org/v2/prod/projects/${slug}/subdivided/12-output.fgb`,
+        `https://tiles.seasketch.org/projects/${slug}/subdivided/12-output.fgb`,
         { headers: { Authorization: `Bearer ${token}` } },
       ),
       { TILES_BUCKET: env.TILES_BUCKET, JWKS_URL: jwksUrl },
@@ -390,12 +411,12 @@ describe("prod gateway JWT verification", () => {
     expect(tilesBackend.fetch).not.toHaveBeenCalled();
   });
 
-  it("rejects prod /v2 access when JWKS_URL is missing", async () => {
+  it("rejects prod access when JWKS_URL is missing", async () => {
     const tilesBackend = backend();
     const token = await prodToken({ type: "map-access" });
-    const response = await handleGatewayRequest(
+    const response = await gateway(
       new Request(
-        `https://tiles.seasketch.org/v2/prod/projects/${slug}/public/${UUID}.json`,
+        `https://tiles.seasketch.org/projects/${slug}/public/${UUID}.json`,
         { headers: { Authorization: `Bearer ${token}` } },
       ),
       { TILES_BUCKET: env.TILES_BUCKET },

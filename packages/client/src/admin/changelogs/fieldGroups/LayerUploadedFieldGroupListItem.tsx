@@ -21,7 +21,7 @@ import BaseFieldGroupListItem, {
 } from "./FieldGroupListItemBase";
 import { PlusCircledIcon } from "@radix-ui/react-icons";
 import useCurrentProjectMetadata from "../../../useCurrentProjectMetadata";
-import { rewriteHostedDownloadUrl } from "../../../dataLayers/tilesAuth";
+import { withHostedDownloadAuth } from "../../../dataLayers/tilesAuth";
 
 export default function LayerUploadedFieldGroupListItem(
   props: FieldGroupListItemProps
@@ -118,7 +118,7 @@ function UploadFilenamePopover({
           onClick={(event) => {
             event.currentTarget.blur();
             const url =
-              rewriteHostedDownloadUrl(output.url, mapAccessToken) ||
+              withHostedDownloadAuth(output.url, mapAccessToken) ||
               output.url;
             downloadWithFilename(url, downloadName);
           }}

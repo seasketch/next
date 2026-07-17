@@ -3,7 +3,7 @@ import { getHostedTileUuidsRequiringAuth } from "../tilesAcl/hostedTileUuidsRequ
 
 /**
  * Project.hostedTileUuidsRequiringAuth — UUIDs for SeaSketch-hosted overlays
- * that must send mapAccessToken on /v2 tile (and download) requests.
+ * that must send mapAccessToken on hosted tiles/uploads requests.
  *
  * Computed in Node (no SQL migration): reuses published ACL-doc public[] and
  * subtracts that from hosted UUIDs on published (+ draft for admins) TOC items.
@@ -13,10 +13,11 @@ const HostedTileUuidsRequiringAuthPlugin = makeExtendSchemaPlugin((build) => {
     typeDefs: gql`
       extend type Project {
         """
-        Content-addressed tileset UUIDs whose /v2 requests must include a map
-        access token. Equals hosted UUIDs from published TOC items (and draft
-        TOC items for project admins) that are not in the published ACL
-        document's public list. Empty for projects with no protected overlays.
+        Content-addressed tileset UUIDs whose hosted tiles/uploads requests
+        must include a map access token. Equals hosted UUIDs from published
+        TOC items (and draft TOC items for project admins) that are not in the
+        published ACL document's public list. Empty for projects with no
+        protected overlays.
         """
         hostedTileUuidsRequiringAuth: [String!]!
           @requires(columns: ["id"])

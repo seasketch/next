@@ -1,13 +1,14 @@
+/**
+ * Authorize classified overlay requests, then forward to a backend with
+ * credentials stripped from the URL and headers.
+ */
 import { applyCorsHeaders, corsPreflightResponse } from "./auth/cors";
-import {
-  parseV2Path,
-  parseV2SubdividedPath,
-  isV2PreviewPath,
-} from "./auth/path";
 import type { AuthDecision } from "./auth/types";
 import { authorizeResource } from "./auth/resourceAuth";
-import { classifyResource } from "./resource";
-import type { ResourceDescriptor } from "./resource";
+import {
+  isPublishedPreviewPath,
+  type ResourceDescriptor,
+} from "./resource";
 import { renderTokenPrompt } from "./tokenPrompt";
 
 type GatewayEnv = Env & {
@@ -15,7 +16,7 @@ type GatewayEnv = Env & {
   JWKS_URL?: string;
 };
 
-type TilesBackendFetcher = {
+type BackendFetcher = {
   fetch(
     request: Request,
     options?: { cf?: { cacheKey?: string } },
@@ -23,73 +24,15 @@ type TilesBackendFetcher = {
 };
 
 /**
- * Authorize a /v2/{ns}/projects/{storageSlug}/public/{uuid}... request and
- * forward to TilesBackend on allow.
+ * Authorize a classified request and forward to a backend on allow.
  *
- * ACL docs are keyed by the *project* slug (from the map-access JWT when
- * present, otherwise the storage path slug). Storage path slug may differ from
- * the project slug when a project was renamed or data_source URLs were copied.
- *
- * Exception: storage slug `superuser` is the shared data library — always
- * public, no ACL doc or token required.
+ * Credentials (`access_token`, `Authorization`, `ns`) are stripped before the
+ * backend fetch so they never enter Workers cache keys.
  */
-export async function handleGatewayRequest(
-  request: Request,
-  env: GatewayEnv,
-  tilesBackend: TilesBackendFetcher,
-): Promise<Response> {
-  if (request.method === "OPTIONS") {
-    return corsPreflightResponse(request);
-  }
-
-  const url = new URL(request.url);
-  const parts = parseV2Path(url.pathname);
-  const subdivided = parseV2SubdividedPath(url.pathname);
-  if (!parts && !subdivided) {
-    const headers = new Headers({ "Content-Type": "text/plain" });
-    applyCorsHeaders(headers, request, { allowAuthorization: true });
-    return new Response("Invalid /v2 tile URL", { status: 400, headers });
-  }
-
-  const parsed = parts ?? subdivided!;
-  const { ns, slug: storageSlug, legacyPath } = parsed;
-  const resource = classifyResource(legacyPath);
-  if (!resource) {
-    return new Response("Invalid /v2 object URL", { status: 400 });
-  }
-  const auth = await authorizeResource({
-    request,
-    env,
-    ns,
-    resource,
-    enforce: true,
-  });
-  const { decision, tokenMode } = auth;
-
-  logAuthDecision({
-    ns,
-    storageSlug,
-    aclSlug: auth.aclSlug || storageSlug,
-    uuid: parts?.uuid ?? null,
-    decision,
-    fromCache: false,
-    path: url.pathname,
-    tokenMode,
-    tokenType: auth.claims?.type ?? null,
-  });
-
-  if (!decision.allowed) {
-    return authDenyResponse(request, decision);
-  }
-
-  return forwardToBackend(request, tilesBackend, legacyPath, decision);
-}
-
-/** Authorize a classified legacy object/properties request and forward it. */
 export async function handleClassifiedRequest(
   request: Request,
   env: GatewayEnv,
-  backend: TilesBackendFetcher,
+  backend: BackendFetcher,
   resource: ResourceDescriptor,
   options: {
     ns: string;
@@ -98,6 +41,10 @@ export async function handleClassifiedRequest(
     includeQueryInCacheKey?: boolean;
   },
 ): Promise<Response> {
+  if (request.method === "OPTIONS") {
+    return corsPreflightResponse(request);
+  }
+
   const auth = await authorizeResource({
     request,
     env,
@@ -128,14 +75,15 @@ export async function handleClassifiedRequest(
 
 async function forwardToBackend(
   request: Request,
-  tilesBackend: TilesBackendFetcher,
-  legacyPath: string,
+  backend: BackendFetcher,
+  backendPath: string,
   decision: AuthDecision,
   includeQueryInCacheKey = false,
 ): Promise<Response> {
   const forwardUrl = new URL(request.url);
-  forwardUrl.pathname = legacyPath;
+  forwardUrl.pathname = backendPath;
   forwardUrl.searchParams.delete("access_token");
+  forwardUrl.searchParams.delete("ns");
 
   const forwardHeaders = new Headers(request.headers);
   forwardHeaders.delete("Authorization");
@@ -150,10 +98,10 @@ async function forwardToBackend(
   const download = forwardUrl.searchParams.get("download");
   const cacheKey =
     download && download.length > 0
-      ? `${legacyPath}?download=${download}`
-      : `${legacyPath}${includeQueryInCacheKey ? forwardUrl.search : ""}`;
+      ? `${backendPath}?download=${download}`
+      : `${backendPath}${includeQueryInCacheKey ? forwardUrl.search : ""}`;
 
-  const backendResponse = await tilesBackend.fetch(forwardReq, {
+  const backendResponse = await backend.fetch(forwardReq, {
     cf: { cacheKey },
   });
 
@@ -205,13 +153,13 @@ function logAuthDecision(args: {
   );
 }
 
-export function authDenyResponse(
+function authDenyResponse(
   request: Request,
   decision: AuthDecision,
 ): Response {
   const url = new URL(request.url);
   const wantsHtmlPreview =
-    isV2PreviewPath(url.pathname) &&
+    isPublishedPreviewPath(url.pathname) &&
     (request.method === "GET" || request.method === "HEAD") &&
     acceptsHtml(request);
 
@@ -250,7 +198,7 @@ function acceptsHtml(request: Request): boolean {
   return /text\/html/i.test(accept);
 }
 
-export function decorateGatewayResponse(
+function decorateGatewayResponse(
   request: Request,
   backendResponse: Response,
   decision: AuthDecision,

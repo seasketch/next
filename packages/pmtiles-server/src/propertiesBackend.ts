@@ -4,6 +4,7 @@ import { bboxForFeature } from "./properties/bbox";
 import { evaluateCql2JSONQuery } from "./properties/cql2";
 import { readFgbRecords } from "./properties/source";
 
+/** FlatGeobuf `/properties` extraction (cached entrypoint). */
 export class PropertiesBackend extends WorkerEntrypoint<Env> {
   async fetch(request: Request): Promise<Response> {
     return handlePropertiesRequest(request, this.env, (promise) =>

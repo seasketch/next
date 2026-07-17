@@ -4,5 +4,8 @@ interface Env {
   TILES_BUCKET: R2Bucket;
   PUBLIC_HOSTNAME?: string;
   JWKS_URL?: string;
-  AUTH_LEGACY_PROJECT_PATHS?: string;
+  /** When "true", consult ACL docs and require tokens for protected data. */
+  AUTH_ACL_ENABLED?: string;
+  /** When ACL enabled and doc missing: public unless explicitly "false". */
+  AUTH_MISSING_ACL_PUBLIC?: string;
 }

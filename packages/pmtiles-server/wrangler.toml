@@ -9,7 +9,7 @@ compatibility_flags = ["nodejs_als"]
 [cache]
 enabled = true
 
-# Default router always runs for /v2 auth; TilesBackend is the cached entrypoint.
+# Default router always runs for auth; TilesBackend is the cached entrypoint.
 [exports.default]
 type = "worker"
 [exports.default.cache]
@@ -34,9 +34,9 @@ type = "worker"
 enabled = true
 
 [vars]
-# Compatibility rollout switch. Set true only after legacy project callers send
-# map-access or overlay-engine tokens.
-AUTH_LEGACY_PROJECT_PATHS = "false"
+# Rollout knobs (not documented in README). Defaults are lax for cutover.
+AUTH_ACL_ENABLED = "false"
+AUTH_MISSING_ACL_PUBLIC = "true"
 
 # Large property scans can be CPU intensive. Paid Workers permit up to 300s.
 [limits]

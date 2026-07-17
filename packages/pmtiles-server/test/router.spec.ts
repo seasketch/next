@@ -1,11 +1,17 @@
 import { env, SELF } from "cloudflare:test";
 import { beforeAll, describe, expect, it } from "vitest";
+import { generateKeyPair, SignJWT, type KeyLike } from "jose";
+import { handleClassifiedRequest } from "../src/gateway";
+import { classifyResource } from "../src/resource";
 
 const uuid = "11111111-1111-1111-1111-111111111111";
 const projectJson = `projects/router-test/public/${uuid}.json`;
 const subdivided = "projects/router-test/subdivided/42-output.fgb";
 
+let testPrivateKey: KeyLike;
+
 beforeAll(async () => {
+  testPrivateKey = (await generateKeyPair("RS256")).privateKey;
   await env.TILES_BUCKET.put(projectJson, '{"raw":true}', {
     httpMetadata: { contentType: "application/json" },
   });
@@ -59,7 +65,7 @@ describe("host-aware router", () => {
     expect(await response.text()).toBe("fixture");
   });
 
-  it("keeps legacy subdivided uploads public while the switch is false", async () => {
+  it("keeps subdivided uploads public while AUTH_ACL_ENABLED is false", async () => {
     const response = await SELF.fetch(
       `https://uploads.seasketch.org/${subdivided}`,
     );
@@ -67,11 +73,44 @@ describe("host-aware router", () => {
     expect(await response.text()).toBe("subdivided");
   });
 
-  it("always protects explicit v2 subdivided routes", async () => {
-    const response = await SELF.fetch(
-      `https://uploads.seasketch.org/v2/dev-test/${subdivided}`,
+  it("protects subdivided paths when ACL enforcement is enabled", async () => {
+    const resource = classifyResource(subdivided)!;
+    const denied = await handleClassifiedRequest(
+      new Request(`https://uploads.seasketch.org/${subdivided}?ns=dev-test`),
+      { TILES_BUCKET: env.TILES_BUCKET },
+      {
+        fetch: async () => new Response("should-not-run"),
+      },
+      resource,
+      { ns: "dev-test", enforce: true },
     );
-    expect(response.status).toBe(401);
-    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(denied.status).toBe(401);
+    expect(denied.headers.get("Cache-Control")).toBe("no-store");
+
+    const token = await new SignJWT({
+      type: "map-access",
+      projectId: 1,
+      projectSlug: "router-test",
+      userId: 1,
+      role: "admin",
+      groups: [],
+    })
+      .setProtectedHeader({ alg: "RS256" })
+      .setExpirationTime(Math.floor(Date.now() / 1000) + 3600)
+      .sign(testPrivateKey);
+
+    const allowed = await handleClassifiedRequest(
+      new Request(`https://uploads.seasketch.org/${subdivided}?ns=dev-test`, {
+        headers: { Authorization: `Bearer ${token}` },
+      }),
+      { TILES_BUCKET: env.TILES_BUCKET },
+      {
+        fetch: async () => new Response("subdivided-ok"),
+      },
+      resource,
+      { ns: "dev-test", enforce: true },
+    );
+    expect(allowed.status).toBe(200);
+    expect(await allowed.text()).toBe("subdivided-ok");
   });
 });

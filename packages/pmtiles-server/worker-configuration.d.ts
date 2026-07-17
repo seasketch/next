@@ -3,7 +3,8 @@
 // Runtime types generated with workerd@1.20260710.1 2026-07-14 nodejs_als
 interface __BaseEnv_Env {
 	TILES_BUCKET: R2Bucket;
-	AUTH_LEGACY_PROJECT_PATHS: "false";
+	AUTH_ACL_ENABLED: "false";
+	AUTH_MISSING_ACL_PUBLIC: "true";
 	JWKS_URL: string;
 	MAPBOX_ACCESS_TOKEN: string;
 	PUBLIC_HOSTNAME: string;

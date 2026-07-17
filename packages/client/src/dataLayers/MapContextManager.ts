@@ -33,8 +33,7 @@ import {
 import {
   extractTilesUuidFromUrl,
   isHostedDataHost,
-  rewriteHostedDownloadUrl,
-  tilesAuthV2Enabled,
+  withHostedAuthParams,
 } from "./tilesAuth";
 import { fetchGlStyle } from "../useMapboxStyle";
 import LayerInteractivityManager from "./LayerInteractivityManager";
@@ -640,9 +639,8 @@ class MapContextManager extends EventEmitter {
           // eslint-disable-next-line i18next/no-literal-string
           headers: { authorization: `Bearer ${this.userAccessToken}` },
         };
-      } else if (tilesAuthV2Enabled() && isHostedDataHost(Url.hostname)) {
-        // Tiles (tiles.seasketch.org) and untiled GeoJSON (uploads.seasketch.org)
-        // share the same R2 bucket and /v2 auth gateway.
+      } else if (isHostedDataHost(Url.hostname)) {
+        // Hosted tiles/uploads: append access_token (and ns in non-prod).
         const uuid = extractTilesUuidFromUrl(Url.toString());
         const token =
           uuid &&
@@ -650,12 +648,13 @@ class MapContextManager extends EventEmitter {
           this.mapAccessToken
             ? this.mapAccessToken
             : null;
-        const rewritten =
-          rewriteHostedDownloadUrl(Url.toString(), token) || Url.toString();
-        const outUrl = new URL(rewritten);
-        if (!/gateway.api.globalfishingwatch.org/.test(rewritten)) {
-          outUrl.searchParams.set("ssn-tr", "true");
-        }
+        const authorized = withHostedAuthParams(Url.toString(), {
+          accessToken: token,
+        });
+        const outUrl = new URL(authorized);
+
+        outUrl.searchParams.set("ssn-tr", "true");
+
         return { url: outUrl.toString() };
       } else if (!/^data:/.test(url)) {
         if (!/gateway.api.globalfishingwatch.org/.test(url)) {

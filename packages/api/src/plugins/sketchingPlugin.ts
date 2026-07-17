@@ -68,7 +68,7 @@ const SketchingPlugin = makeExtendSchemaPlugin((build) => {
 
         """
         Short-lived (90m) JWT for authorized overlay tile requests on
-        tiles.seasketch.org/v2/{ns}/.... Returns null if the user is not signed in.
+        hosted tiles/uploads URLs with access_token (and optional ns). Returns null if the user is not signed in.
         Claims include role (admin|user) and project group ids.
         """
         mapAccessToken: String @requires(columns: ["id", "slug"])

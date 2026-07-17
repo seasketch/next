@@ -10,7 +10,7 @@ import type {
   SeaSketchAccessClaims,
 } from "./types";
 import {
-  legacyProjectAuthEnabled,
+  missingAclIsPublic,
   type ResourceDescriptor,
 } from "../resource";
 
@@ -32,6 +32,12 @@ const publicDecision = (reason: string): AuthDecision => ({
   aclVersion: null,
 });
 
+/**
+ * Authorize a classified overlay resource.
+ *
+ * @param enforce - When false (`AUTH_ACL_ENABLED=false`), project data is
+ *   treated as publicly readable capability-URLs.
+ */
 export async function authorizeResource(args: {
   request: Request;
   env: Env;
@@ -47,7 +53,7 @@ export async function authorizeResource(args: {
     return { decision: publicDecision("data_library"), claims: null, tokenMode: null, aclSlug: "superuser" };
   }
   if (!enforce) {
-    return { decision: publicDecision("legacy_compat"), claims: null, tokenMode: null, aclSlug: resource.slug };
+    return { decision: publicDecision("acl_disabled"), claims: null, tokenMode: null, aclSlug: resource.slug };
   }
 
   const rawToken = extractTokenFromRequest(request);
@@ -104,12 +110,10 @@ export async function authorizeResource(args: {
     aclSlug,
     resource.uuid,
   );
-  // AUTH_LEGACY_PROJECT_PATHS=false is the lax/compat mode: if no ACL doc has
-  // been published yet, treat every UUID as public. When the switch is true
-  // (strict), a missing doc is admins-only.
-  if (acl.missing && !legacyProjectAuthEnabled(env)) {
+  // Missing ACL docs: public when AUTH_MISSING_ACL_PUBLIC is not false.
+  if (acl.missing && missingAclIsPublic(env)) {
     return {
-      decision: publicDecision("legacy_missing_acl"),
+      decision: publicDecision("missing_acl_public"),
       claims,
       tokenMode,
       aclSlug,

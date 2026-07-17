@@ -173,17 +173,23 @@ describe.each([
     await expect(resolve(jwt, undefined, "prod")).rejects.toThrow();
   });
 
-  it("allows decode-and-trust only outside prod", async () => {
+  it("decode-and-trust outside prod is map-access only", async () => {
     const jwt = await token({
       type,
       key: otherPrivateKey,
       kid: "other-key",
       issuer: "localhost",
     });
-    await expect(resolve(jwt, undefined, "dev-user")).resolves.toMatchObject({
-      mode: "dev-trust",
-      claims: { type },
-    });
+    if (type === "map-access") {
+      await expect(resolve(jwt, undefined, "dev-user")).resolves.toMatchObject({
+        mode: "dev-trust",
+        claims: { type },
+      });
+    } else {
+      await expect(resolve(jwt, undefined, "dev-user")).rejects.toThrow(
+        "overlay_engine_requires_jwks",
+      );
+    }
   });
 });
 
@@ -269,16 +275,29 @@ describe("overlay-engine JWTs", () => {
     });
   });
 
-  it("rejects overlay-engine tokens missing exp even in dev-trust", async () => {
-    const missingExp = await token({
+  it("rejects unverified overlay-engine tokens even outside prod", async () => {
+    const jwt = await token({
       type: "overlay-engine",
-      expiresAt: null,
       key: otherPrivateKey,
       kid: "other-key",
       issuer: "localhost",
     });
     await expect(
-      resolveSeaSketchAccessToken(missingExp, undefined, "dev-user"),
-    ).rejects.toThrow("token_exp_required");
+      resolveSeaSketchAccessToken(jwt, undefined, "dev-user"),
+    ).rejects.toThrow("overlay_engine_requires_jwks");
+  });
+
+  it("rejects overlay-engine when JWKS verify fails outside prod", async () => {
+    const url = jwksUrl();
+    mockJwks([productionJwk]);
+    const jwt = await token({
+      type: "overlay-engine",
+      key: otherPrivateKey,
+      kid: "other-key",
+      issuer: "localhost",
+    });
+    await expect(
+      resolveSeaSketchAccessToken(jwt, url, "dev-user"),
+    ).rejects.toThrow("overlay_engine_requires_jwks");
   });
 });

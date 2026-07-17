@@ -109,7 +109,7 @@ export function extractTokenFromRequest(request: Request): string | null {
 /** Outcome of resolveMapAccessToken, including how the token was accepted. */
 export type TokenResolveResult = {
   claims: SeaSketchAccessClaims;
-  /** `jwks` = cryptographically verified; `dev-trust` = decoded only (non-prod ns) */
+  /** `jwks` = cryptographically verified; `dev-trust` = map-access decoded only (non-prod ns) */
   mode: "jwks" | "dev-trust";
 };
 
@@ -136,7 +136,13 @@ export async function resolveMapAccessToken(
   return resolved;
 }
 
-/** Resolve either a project map-access token or a global overlay-engine token. */
+/**
+ * Resolve either a project map-access token or a global overlay-engine token.
+ *
+ * Overlay-engine tokens always require JWKS verification (never decode-and-trust),
+ * because they are a service-wide read bypass. Map-access may use decode-and-trust
+ * on non-prod namespaces only.
+ */
 export async function resolveSeaSketchAccessToken(
   token: string,
   jwksUrl: string | undefined,
@@ -152,7 +158,13 @@ export async function resolveSeaSketchAccessToken(
       if (isProdNs) {
         throw e;
       }
-      // fall through to trusted decode for non-prod namespaces
+      // Non-prod: map-access may fall through to decode-and-trust.
+      // Overlay-engine must not — a forged token would unlock the whole bucket.
+      const peeked = peekSeaSketchAccessTokenType(token);
+      if (peeked === "overlay-engine") {
+        throw new Error("overlay_engine_requires_jwks");
+      }
+      // fall through for map-access (and unknown types handled by trust decode)
     }
   } else if (isProdNs) {
     throw new Error("jwks_url_not_configured");
@@ -162,7 +174,22 @@ export async function resolveSeaSketchAccessToken(
     throw new Error("dev_trust_not_allowed_on_prod");
   }
 
-  return { claims: trustDecodeSeaSketchAccessToken(token), mode: "dev-trust" };
+  const claims = trustDecodeMapAccessToken(token);
+  return { claims, mode: "dev-trust" };
+}
+
+/** Best-effort type peek without accepting the token. */
+function peekSeaSketchAccessTokenType(
+  token: string,
+): "map-access" | "overlay-engine" | null {
+  try {
+    const payload = decodeJwt(token);
+    if (payload.type === "overlay-engine") return "overlay-engine";
+    if (payload.type === "map-access") return "map-access";
+  } catch {
+    /* ignore */
+  }
+  return null;
 }
 
 /**
@@ -216,13 +243,18 @@ export async function verifySeaSketchAccessToken(
 }
 
 /**
- * Decode without verifying the signature. Only for non-prod ACL namespaces
- * (local API tokens whose keys are not in production JWKS).
+ * Decode a map-access token without verifying the signature.
+ * Only for non-prod ACL namespaces (local API tokens whose keys are not in
+ * production JWKS). Overlay-engine tokens are never accepted this way.
  */
 export function trustDecodeMapAccessToken(token: string): MapAccessClaims {
   const claims = trustDecodeSeaSketchAccessToken(token);
   if (claims.type !== "map-access") {
-    throw new Error(`Unexpected token type: ${claims.type}`);
+    throw new Error(
+      claims.type === "overlay-engine"
+        ? "overlay_engine_requires_jwks"
+        : `Unexpected token type: ${claims.type}`,
+    );
   }
   return claims;
 }

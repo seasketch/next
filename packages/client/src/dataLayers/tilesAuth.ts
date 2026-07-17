@@ -1,7 +1,7 @@
 /**
- * ACL namespace for /v2/{ns}/... tile URLs.
- * Production CRA builds always have NODE_ENV=production → "prod".
- * Local dev must set REACT_APP_TILES_ACL_NAMESPACE when using TILES_AUTH_V2.
+ * ACL namespace for hosted tiles/uploads query-param auth (`?ns=`).
+ * Production CRA builds always have NODE_ENV=production → omit `ns` and let
+ * the worker default to `prod`. Local/dev uses REACT_APP_TILES_ACL_NAMESPACE.
  */
 export function tilesAclNamespace(): string {
   if (process.env.NODE_ENV === "production") {
@@ -9,14 +9,14 @@ export function tilesAclNamespace(): string {
   }
   const ns = process.env.REACT_APP_TILES_ACL_NAMESPACE;
   if (!ns || !ns.trim()) {
-    // Only required when v2 auth is enabled; callers should check tilesAuthV2Enabled first
     return "dev-local";
   }
   return ns.trim();
 }
 
-export function tilesAuthV2Enabled(): boolean {
-  return process.env.REACT_APP_TILES_AUTH_V2 === "true";
+/** True when the client should send `?ns=` (non-production only). */
+export function shouldSendTilesAclNamespace(): boolean {
+  return process.env.NODE_ENV !== "production";
 }
 
 /**
@@ -93,59 +93,22 @@ export function extractTilesUuidFromUrl(url: string): string | null {
   }
 }
 
-/**
- * Rewrite https://tiles.../projects/... → https://tiles.../v2/{ns}/projects/...
- * Idempotent if already under /v2/.
- * When REACT_APP_TILES_ORIGIN is set, also retarget the host for local wrangler.
- */
-export function rewriteToV2TilesUrl(url: string, ns: string): string {
-  try {
-    const u = new URL(url);
-    // Retarget production tile host → local wrangler when configured
-    const originOverride = tilesOriginOverride();
-    if (originOverride && u.hostname === "tiles.seasketch.org") {
-      const o = new URL(originOverride);
-      u.protocol = o.protocol;
-      u.host = o.host;
-    }
-    if (!isTilesHost(u.hostname)) {
-      return url;
-    }
-    if (u.pathname.startsWith("/v2/")) {
-      return u.toString();
-    }
-    if (!u.pathname.startsWith("/projects/")) {
-      return u.toString();
-    }
-    // eslint-disable-next-line i18next/no-literal-string
-    u.pathname = `/v2/${ns}${u.pathname}`;
-    return u.toString();
-  } catch {
-    return url;
-  }
-}
+export type HostedAuthParamsOptions = {
+  accessToken?: string | null;
+};
 
 /**
- * Rewrite a hosted overlay download URL (uploads or tiles) onto the auth-aware
- * `/v2/{ns}/projects/...` gateway when TILES_AUTH_V2 is enabled.
- *
- * Uploads and tiles share the same R2 bucket; downloads go through pmtiles-server
- * so ACL + map-access tokens apply the same way as tile fetches. Preserves
- * `?download=` and optionally attaches `access_token` for `<a href>` downloads.
+ * Append auth query params to a hosted tiles/uploads URL without rewriting
+ * host or path. Optionally retargets host via REACT_APP_TILES_ORIGIN for local
+ * wrangler. Sets `access_token` when provided; sets `ns` only in non-production.
  */
-export function rewriteHostedDownloadUrl(
-  url: string | null | undefined,
-  accessToken?: string | null
-): string | null | undefined {
-  if (!url) return url;
-  if (!tilesAuthV2Enabled()) return url;
-
+export function withHostedAuthParams(
+  url: string,
+  options: HostedAuthParamsOptions = {}
+): string {
   try {
     const u = new URL(url);
     if (!isHostedDataHost(u.hostname)) {
-      return url;
-    }
-    if (!u.pathname.startsWith("/projects/") && !u.pathname.startsWith("/v2/")) {
       return url;
     }
 
@@ -154,25 +117,43 @@ export function rewriteHostedDownloadUrl(
       const o = new URL(originOverride);
       u.protocol = o.protocol;
       u.host = o.host;
-    } else if (
-      u.hostname === "uploads.seasketch.org" ||
-      /uploads\.seasketch\.org$/i.test(u.hostname)
-    ) {
-      u.protocol = "https:";
-      u.host = "tiles.seasketch.org";
     }
 
-    const ns = tilesAclNamespace();
-    if (!u.pathname.startsWith("/v2/")) {
+    if (shouldSendTilesAclNamespace()) {
       // eslint-disable-next-line i18next/no-literal-string
-      u.pathname = `/v2/${ns}${u.pathname}`;
+      u.searchParams.set("ns", tilesAclNamespace());
     }
 
-    if (accessToken) {
-      u.searchParams.set("access_token", accessToken);
+    if (options.accessToken) {
+      // eslint-disable-next-line i18next/no-literal-string
+      u.searchParams.set("access_token", options.accessToken);
     }
 
     return u.toString();
+  } catch {
+    return url;
+  }
+}
+
+/**
+ * Append auth params to a hosted download URL (`?download=` preserved).
+ * No-op for non-hosted hosts. Always on — extra query params are harmless if
+ * an older worker ignores them.
+ */
+export function withHostedDownloadAuth(
+  url: string | null | undefined,
+  accessToken?: string | null
+): string | null | undefined {
+  if (!url) return url;
+  try {
+    const u = new URL(url);
+    if (!isHostedDataHost(u.hostname)) {
+      return url;
+    }
+    if (!u.pathname.startsWith("/projects/")) {
+      return url;
+    }
+    return withHostedAuthParams(url, { accessToken });
   } catch {
     return url;
   }

@@ -24,12 +24,11 @@ function getColor(colors: string[], i: number) {
 }
 
 /**
- * HTML Mapbox GL preview page for a tileset (legacy and /v2 paths).
- * On /v2, reads/applies `access_token` via query or a token dialog.
+ * HTML Mapbox GL preview page for a published tileset.
+ * Reads/applies `access_token` (and optional `ns`) via query or a token dialog.
  */
 export default function renderPreview(
   tilejson: TileJSON,
-  name: string,
   mapboxAccessToken: string
 ) {
   let zoom = 5;
@@ -115,7 +114,7 @@ export default function renderPreview(
     <div id="token-dialog" role="dialog" aria-modal="true" aria-labelledby="token-dialog-title">
       <div class="card">
         <h2 id="token-dialog-title">Map access token</h2>
-        <p>Protected <code>/v2/</code> tile URLs need a SeaSketch <code>mapAccessToken</code>. You can also pass <code>?access_token=…</code> in the URL.</p>
+        <p>Protected tile URLs need a SeaSketch <code>mapAccessToken</code>. Pass it as <code>?access_token=…</code> on this page.</p>
         <div id="token-error" class="error"></div>
         <form id="token-form">
           <textarea id="token-input" required spellcheck="false" placeholder="eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9…"></textarea>
@@ -151,7 +150,6 @@ export default function renderPreview(
     </div>
     <script>
       mapboxgl.accessToken = ${JSON.stringify(mapboxAccessToken)};
-      const FALLBACK_NAME = ${JSON.stringify(name)};
       const TOKEN_KEY = "ss_map_access_token";
 
       function readAccessToken() {
@@ -166,15 +164,14 @@ export default function renderPreview(
 
       var accessToken = readAccessToken();
 
-      function isV2Path() {
-        return location.pathname.indexOf("/v2/") === 0;
-      }
-
       function tileJsonUrl() {
-        if (isV2Path()) {
-          return location.pathname.replace(/\\/$/, "") + ".json";
-        }
-        return "/" + FALLBACK_NAME + ".json";
+        var path = location.pathname.replace(/\\/$/, "") + ".json";
+        var u = new URL(path, location.origin);
+        var page = new URLSearchParams(location.search);
+        var ns = page.get("ns");
+        if (ns) u.searchParams.set("ns", ns);
+        if (accessToken) u.searchParams.set("access_token", accessToken);
+        return u.pathname + u.search;
       }
 
       function showTokenDialog(message) {
@@ -221,8 +218,10 @@ export default function renderPreview(
           if (!accessToken) return { url: url };
           try {
             var u = new URL(url, location.origin);
-            if (u.pathname.indexOf("/v2/") === 0 && !u.searchParams.has("access_token")) {
+            if (u.origin === location.origin && !u.searchParams.has("access_token")) {
               u.searchParams.set("access_token", accessToken);
+              var ns = new URLSearchParams(location.search).get("ns");
+              if (ns && !u.searchParams.has("ns")) u.searchParams.set("ns", ns);
               return { url: u.toString() };
             }
           } catch (e) {}

@@ -1,23 +1,20 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
-import { isV2ObjectPath, isV2Path } from "./auth/path";
 import { corsPreflightResponse } from "./auth/cors";
-import {
-  handleClassifiedRequest,
-  handleGatewayRequest,
-} from "./gateway";
+import { handleClassifiedRequest } from "./gateway";
 import { ObjectBackend } from "./objectBackend";
 import { PropertiesBackend } from "./propertiesBackend";
 import {
+  aclEnabled,
+  aclNamespaceFromRequest,
   classifyResource,
-  legacyProjectAuthEnabled,
 } from "./resource";
 import { TilesBackend } from "./tilesBackend";
 
 export { ObjectBackend, PropertiesBackend, TilesBackend };
 
 /**
- * Default entrypoint: authorize, then route to TilesBackend (TileJSON / ZXY /
- * preview), ObjectBackend (opaque R2 keys), or PropertiesBackend.
+ * Default entrypoint: authorize (using `?ns=` / `?access_token=`), then route
+ * to TilesBackend, ObjectBackend, or PropertiesBackend.
  */
 export default class extends WorkerEntrypoint<Env> {
   async fetch(request: Request): Promise<Response> {
@@ -38,29 +35,8 @@ export default class extends WorkerEntrypoint<Env> {
       return corsPreflightResponse(request);
     }
 
-    const v2Properties = url.pathname.match(/^\/v2\/([^/]+)\/properties\/?$/);
-    if (v2Properties) {
-      return this.routeProperties(request, v2Properties[1], true);
-    }
-
-    if (isV2Path(url.pathname)) {
-      const objectRequest =
-        url.pathname.includes("/subdivided/") || isV2ObjectPath(url.pathname);
-      return handleGatewayRequest(request, this.env, {
-        fetch: (req, options) =>
-          (objectRequest
-            ? this.ctx.exports.ObjectBackend
-            : this.ctx.exports.TilesBackend
-          ).fetch(req, options),
-      });
-    }
-
     if (url.pathname === "/properties" || url.pathname === "/properties/") {
-      return this.routeProperties(
-        request,
-        "prod",
-        legacyProjectAuthEnabled(this.env),
-      );
+      return this.routeProperties(request);
     }
 
     const resource = classifyResource(url.pathname);
@@ -79,17 +55,13 @@ export default class extends WorkerEntrypoint<Env> {
       { fetch: (req, options) => backend.fetch(req, options) },
       resource,
       {
-        ns: "prod",
-        enforce: legacyProjectAuthEnabled(this.env),
+        ns: aclNamespaceFromRequest(request),
+        enforce: aclEnabled(this.env),
       },
     );
   }
 
-  private async routeProperties(
-    request: Request,
-    ns: string,
-    enforce: boolean,
-  ): Promise<Response> {
+  private async routeProperties(request: Request): Promise<Response> {
     const url = new URL(request.url);
     const dataset = url.searchParams.get("dataset");
     const resource = dataset && classifyResource(dataset);
@@ -112,23 +84,20 @@ export default class extends WorkerEntrypoint<Env> {
       },
       resource,
       {
-        ns,
-        enforce,
+        ns: aclNamespaceFromRequest(request),
+        enforce: aclEnabled(this.env),
         backendPath: "/properties",
         includeQueryInCacheKey: true,
       },
     );
-    if (!url.pathname.startsWith("/v2/")) {
-      const headers = new Headers(response.headers);
-      headers.set("Access-Control-Allow-Origin", "*");
-      headers.delete("Vary");
-      return new Response(response.body, {
-        status: response.status,
-        statusText: response.statusText,
-        headers,
-      });
-    }
-    return response;
+    const headers = new Headers(response.headers);
+    headers.set("Access-Control-Allow-Origin", "*");
+    headers.delete("Vary");
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
   }
 }
 
