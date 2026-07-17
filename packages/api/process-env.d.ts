@@ -59,6 +59,8 @@ declare namespace NodeJS {
     TILES_ACL_NAMESPACE?: string;
     GOOGLE_MAPS_2D_TILE_API_KEY: string;
     OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL: string;
+    /** Secrets Manager ARN (or name) for the overlay-engine access token JSON. */
+    OVERLAY_ENGINE_ACCESS_TOKEN_SECRET_ARN?: string;
     /** Parallel long-poll loops per API process (default 4). Each receives up to 10 messages per poll. */
     OVERLAY_ENGINE_WORKER_SQS_CONSUMER_COUNT?: string;
     OVERLAY_WORKER_DEV_HANDLER?: string;

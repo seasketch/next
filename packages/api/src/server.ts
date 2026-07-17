@@ -259,6 +259,7 @@ run({
   0 */6 * * * updateCRWTemplate
   * 1 * * * refreshGmapsApiSession
   * * * * * cleanupTimedOutSpatialMetricTasks
+  0 3 * * * refreshOverlayEngineAccessToken
   `
       : `
   * * * * * cleanupProjectBackgroundJobs

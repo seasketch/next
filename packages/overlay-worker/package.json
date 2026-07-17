@@ -51,7 +51,8 @@
     "pbf": "^4.0.1",
     "point-in-polygon-hao": "^1.2.4",
     "polyclip-ts": "^0.16.8",
-    "undici": "^7.16.0"
+    "undici": "^7.16.0",
+    "@aws-sdk/client-secrets-manager": "^3.873.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.119",

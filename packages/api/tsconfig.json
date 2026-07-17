@@ -81,6 +81,7 @@
     "src/**/*",
     "tasks/**/*",
     "scripts/backfillTilesAclDocs.ts",
+    "scripts/mintOverlayEngineAccessToken.ts",
     "process-env.d.ts"
   ],
   "exclude": ["node_modules", "**/*.spec.ts", "dist"]
