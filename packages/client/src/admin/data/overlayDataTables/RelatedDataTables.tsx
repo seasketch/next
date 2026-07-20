@@ -1,8 +1,11 @@
 import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useApolloClient } from "@apollo/client";
 import { useTranslation } from "react-i18next";
-import { ChevronDownIcon, ChevronRightIcon } from "@radix-ui/react-icons";
-import clsx from "clsx";
+import { createPortal } from "react-dom";
+import {
+  TrashIcon,
+  UploadIcon,
+} from "@heroicons/react/outline";
 import {
   FullAdminOverlayFragment,
   OverlayDataTableDetailsFragment,
@@ -24,9 +27,9 @@ import {
   numericColumnNames,
   useDataTableColumnStats,
 } from "../../../dataLayers/useDataTableColumnStats";
-import { withHostedAuthParams } from "../../../dataLayers/tilesAuth";
 import useCurrentProjectMetadata from "../../../useCurrentProjectMetadata";
 import useDialog from "../../../components/useDialog";
+import Modal from "../../../components/Modal";
 
 type RelatedDataTablesProps = {
   item: FullAdminOverlayFragment;
@@ -101,62 +104,57 @@ function VisualizationSettingsEditor({
   };
 
   return (
-    <div className="mt-1.5 rounded-md border border-gray-200 bg-gray-50 p-2 space-y-2">
+    <div className="space-y-6">
+      <p className="text-sm text-gray-600">
+        {t(
+          "Optionally limit which columns and aggregations map users can choose when visualizing this table. Leave everything unchecked to allow free choice."
+        )}
+      </p>
       <div>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-1">
-          {t("Visualize column(s)")}
-        </p>
-        <p className="text-[11px] text-gray-500 mb-1">
-          {t(
-            "Restrict which columns end users may visualize. Leave unselected to allow any numeric column."
-          )}
+        <p className="text-sm font-medium text-gray-900">
+          {t("Columns")}
         </p>
         {loading ? (
-          <p className="text-xs text-gray-400 italic">
+          <p className="mt-2 text-sm text-gray-400 italic">
             {t("Loading column metadata...")}
           </p>
         ) : numericColumns.length === 0 ? (
-          <p className="text-xs text-gray-400 italic">
+          <p className="mt-2 text-sm text-gray-400 italic">
             {t("No numeric columns found.")}
           </p>
         ) : (
-          <div className="flex flex-wrap gap-x-3 gap-y-1">
+          <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
             {numericColumns.map((column) => (
               <label
                 key={column}
-                className="flex items-center gap-1 text-xs text-gray-700"
+                className="flex items-center gap-2 text-sm text-gray-700"
               >
                 <input
                   type="checkbox"
-                  className="rounded border-gray-300"
+                  className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                   checked={selectedColumns.includes(column)}
                   onChange={() => toggleColumn(column)}
                 />
                 {/* eslint-disable-next-line i18next/no-literal-string */}
-                {column}
+                <span className="truncate">{column}</span>
               </label>
             ))}
           </div>
         )}
       </div>
       <div>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-1">
-          {t("Allowed aggregation(s)")}
+        <p className="text-sm font-medium text-gray-900">
+          {t("Aggregations")}
         </p>
-        <p className="text-[11px] text-gray-500 mb-1">
-          {t(
-            "Restrict which aggregations end users may choose. Leave unselected to allow any."
-          )}
-        </p>
-        <div className="flex flex-wrap gap-x-3 gap-y-1">
+        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
           {DATA_TABLE_AGGREGATIONS.map((op) => (
             <label
               key={op}
-              className="flex items-center gap-1 text-xs text-gray-700"
+              className="flex items-center gap-2 text-sm text-gray-700"
             >
               <input
                 type="checkbox"
-                className="rounded border-gray-300"
+                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 checked={selectedOps.includes(op)}
                 onChange={() => toggleOp(op)}
               />
@@ -169,10 +167,10 @@ function VisualizationSettingsEditor({
       {(selectedColumns.length > 0 || selectedOps.length > 0) && (
         <button
           type="button"
-          className="text-xs text-gray-500 underline hover:text-gray-700"
+          className="text-sm text-gray-500 hover:text-gray-800 underline underline-offset-2"
           onClick={() => onSave([], [])}
         >
-          {t("Clear settings (let users choose freely)")}
+          {t("Clear all limits")}
         </button>
       )}
     </div>
@@ -201,128 +199,146 @@ function DataTableRow({
   ) => void;
 }) {
   const { t } = useTranslation("admin:data");
-  const { data: projectMeta } = useCurrentProjectMetadata();
-  const mapAccessToken = projectMeta?.project?.mapAccessToken;
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(table.name);
-  const [visualizationSettingsOpen, setVisualizationSettingsOpen] =
-    useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const isProcessing = Boolean(job);
-  const hasVisualizationConstraints =
-    (table.visualizationColumns || []).filter(Boolean).length > 0 ||
-    (table.visualizationOps || []).filter(Boolean).length > 0;
+  const sameJoinColumn = table.joinColumn === table.overlayJoinColumn;
 
   return (
-    <li className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm space-y-1.5">
-      <div className="flex items-center justify-between gap-2">
+    <li className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
         {editing ? (
           <input
-            className="text-sm border border-gray-300 rounded-md px-2 py-1 flex-1"
+            className="text-sm border border-gray-300 rounded-md px-2 py-1 flex-1 min-w-0"
             value={name}
+            autoFocus
             onChange={(e) => setName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                (e.target as HTMLInputElement).blur();
+              } else if (e.key === "Escape") {
+                setName(table.name);
+                setEditing(false);
+              }
+            }}
             onBlur={() => {
               setEditing(false);
-              if (name !== table.name) onRename(table.id, name);
+              if (name.trim() && name !== table.name) {
+                onRename(table.id, name.trim());
+              } else {
+                setName(table.name);
+              }
             }}
           />
         ) : (
           <button
             type="button"
-            className="font-medium text-left text-gray-900 hover:text-primary-600"
+            className="min-w-0 text-left group"
             onClick={() => setEditing(true)}
             disabled={isProcessing}
+            title={t("Rename")}
           >
-            {table.name}{" "}
-            <span className="text-gray-500 text-xs font-normal">
+            <span className="font-medium text-gray-900 group-hover:text-gray-700">
+              {table.name}
+            </span>{" "}
+            <span className="text-gray-400 text-xs font-normal">
               {t("v{{version}}", { version: table.version })}
             </span>
           </button>
         )}
-        <div className="flex items-center gap-2 text-xs shrink-0">
+        <div className="flex items-center gap-0.5 shrink-0 -mt-0.5 -mr-1">
           <button
             type="button"
-            className="text-primary-600 hover:text-primary-700 font-medium disabled:opacity-50"
+            className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-40"
             onClick={() => onReplace(table.id)}
             disabled={isProcessing}
+            title={t("Replace")}
+            aria-label={t("Replace")}
           >
-            {t("Replace")}
+            <UploadIcon className="w-4 h-4" aria-hidden />
           </button>
           <button
             type="button"
-            className="text-red-600 hover:text-red-700 font-medium disabled:opacity-50"
+            className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-40"
             onClick={() => onDelete(table.id)}
             disabled={isProcessing}
+            title={t("Delete")}
+            aria-label={t("Delete")}
           >
-            {t("Delete")}
+            <TrashIcon className="w-4 h-4" aria-hidden />
           </button>
         </div>
       </div>
       {job ? (
-        <DataTableUploadJobProgress
-          job={job}
-          onDismiss={
-            job.state === ProjectBackgroundJobState.Failed
-              ? () => onDismissJob(job.id)
-              : undefined
-          }
-        />
+        <div className="mt-2">
+          <DataTableUploadJobProgress
+            job={job}
+            onDismiss={
+              job.state === ProjectBackgroundJobState.Failed
+                ? () => onDismissJob(job.id)
+                : undefined
+            }
+          />
+        </div>
       ) : (
-        <>
+        <div className="mt-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           <p className="text-xs text-gray-500">
-            {/* eslint-disable-next-line i18next/no-literal-string */}
-            {`${table.rowCount.toLocaleString()} rows · ${table.joinColumn} → ${table.overlayJoinColumn}`}
+            {t("{{rowCount}} rows · joined by", {
+              rowCount: table.rowCount.toLocaleString(),
+            })}{" "}
+            {/* eslint-disable-next-line i18next/no-literal-string -- column identifiers */}
+            <code className="text-gray-600 font-mono text-[11px]">
+              {table.joinColumn}
+            </code>
+            {!sameJoinColumn && (
+              <>
+                {/* eslint-disable-next-line i18next/no-literal-string */}
+                <span className="text-gray-400"> → </span>
+                {/* eslint-disable-next-line i18next/no-literal-string -- column identifiers */}
+                <code className="text-gray-600 font-mono text-[11px]">
+                  {table.overlayJoinColumn}
+                </code>
+              </>
+            )}
           </p>
-          <div className="flex items-center gap-3">
-            {table.queryUrl ? (
-              <a
-                href={(() => {
-                  const url = new URL(
-                    withHostedAuthParams(table.queryUrl, {
-                      accessToken: mapAccessToken,
-                    })
-                  );
-                  // Force the interactive query builder (format is URL-driven).
-                  // eslint-disable-next-line i18next/no-literal-string
-                  url.searchParams.set("f", "html");
-                  return url.toString();
-                })()}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-xs text-primary-600 hover:text-primary-700 font-medium"
-              >
-                {t("Explore data")}
-              </a>
-            ) : null}
-            <button
-              type="button"
-              className={clsx(
-                "flex items-center gap-0.5 text-xs font-medium hover:text-gray-700",
-                hasVisualizationConstraints
-                  ? "text-primary-600"
-                  : "text-gray-500"
-              )}
-              onClick={() =>
-                setVisualizationSettingsOpen(!visualizationSettingsOpen)
-              }
-            >
-              {visualizationSettingsOpen ? (
-                <ChevronDownIcon className="w-3 h-3" />
-              ) : (
-                <ChevronRightIcon className="w-3 h-3" />
-              )}
-              {t("Thematic map settings")}
-            </button>
-          </div>
-          {visualizationSettingsOpen && (
-            <VisualizationSettingsEditor
-              table={table}
-              onSave={(columns, ops) =>
-                onSetVisualizationSettings(table.id, columns, ops)
-              }
-            />
-          )}
-        </>
+          <button
+            type="button"
+            className="text-xs font-medium text-gray-600 hover:text-gray-900 underline underline-offset-2 decoration-gray-300 hover:decoration-gray-500"
+            onClick={() => setSettingsOpen(true)}
+          >
+            {t("Thematic map settings")}
+          </button>
+        </div>
       )}
+      {settingsOpen
+        ? createPortal(
+            <Modal
+              open
+              onRequestClose={() => setSettingsOpen(false)}
+              title={t("Thematic map settings")}
+              scrollable
+              autoWidth
+              tipyTop
+              panelClassName="sm:max-w-lg"
+              footer={[
+                {
+                  label: t("Done"),
+                  variant: "primary",
+                  onClick: () => setSettingsOpen(false),
+                },
+              ]}
+            >
+              <VisualizationSettingsEditor
+                table={table}
+                onSave={(columns, ops) =>
+                  onSetVisualizationSettings(table.id, columns, ops)
+                }
+              />
+            </Modal>,
+            document.body
+          )
+        : null}
     </li>
   );
 }
