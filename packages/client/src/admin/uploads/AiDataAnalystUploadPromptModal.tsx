@@ -10,6 +10,7 @@ import {
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import type ProjectBackgroundJobManager from "./ProjectBackgroundJobManager";
 import { SparklesIcon } from "@heroicons/react/outline";
+import { setAiCartographerUploadReminderConfirmedAt } from "./aiCartographerUploadReminder";
 
 export default function AiDataAnalystUploadPromptModal({
   manager,
@@ -31,6 +32,26 @@ export default function AiDataAnalystUploadPromptModal({
 
   const [updateSettings] = useUpdateAiDataAnalysSettingsForMeMutation();
 
+  const recordReminderConfirmationIfEnabled = useCallback(
+    (enableAi: boolean) => {
+      if (!enableAi) {
+        return;
+      }
+      try {
+        const data = client.readQuery<{
+          me?: { profile?: { userId?: number | null } | null } | null;
+        }>({ query: MyProfileDocument });
+        const userId = data?.me?.profile?.userId;
+        if (userId != null) {
+          setAiCartographerUploadReminderConfirmedAt(userId);
+        }
+      } catch {
+        // Profile may not be in cache yet; reminder will show on next upload.
+      }
+    },
+    [client]
+  );
+
   const flushOrThrow = useCallback(
     async (enableAiDataAnalyst: boolean) => {
       await manager.flushPendingSubmitsAfterAiPrompt(enableAiDataAnalyst);
@@ -48,6 +69,7 @@ export default function AiDataAnalystUploadPromptModal({
     setFlushError(null);
     try {
       await flushOrThrow(choice);
+      recordReminderConfirmationIfEnabled(choice);
       onFinished();
     } catch (e: unknown) {
       const message =
@@ -58,7 +80,7 @@ export default function AiDataAnalystUploadPromptModal({
       setSaving(false);
       setActiveAction(null);
     }
-  }, [flushOrThrow, onError, onFinished, t]);
+  }, [flushOrThrow, onError, onFinished, recordReminderConfirmationIfEnabled, t]);
 
   const choose = useCallback(
     async (enableAi: boolean) => {
@@ -70,6 +92,7 @@ export default function AiDataAnalystUploadPromptModal({
         await client.refetchQueries({ include: [MyProfileDocument] });
         chosenEnableAi.current = enableAi;
         await flushOrThrow(enableAi);
+        recordReminderConfirmationIfEnabled(enableAi);
         onFinished();
       } catch (e: unknown) {
         const message =
@@ -81,7 +104,15 @@ export default function AiDataAnalystUploadPromptModal({
         setActiveAction(null);
       }
     },
-    [client, flushOrThrow, onError, onFinished, t, updateSettings]
+    [
+      client,
+      flushOrThrow,
+      onError,
+      onFinished,
+      recordReminderConfirmationIfEnabled,
+      t,
+      updateSettings,
+    ]
   );
 
   return (

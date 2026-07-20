@@ -13,6 +13,8 @@ import "./TooltipContent.css";
 import { humanizeOutputType } from "../QuotaUsageTreemap";
 import { isRasterInfo } from "@seasketch/geostats-types";
 import slugify from "slugify";
+import useCurrentProjectMetadata from "../../../useCurrentProjectMetadata";
+import { withHostedDownloadAuth } from "../../../dataLayers/tilesAuth";
 
 function filenameFromUrl(url: string): string {
   try {
@@ -71,6 +73,10 @@ export default function HostedLayerInfo({
     },
   });
   const { t } = useTranslation("admin:data");
+  const { data: projectMeta } = useCurrentProjectMetadata();
+  const mapAccessToken = projectMeta?.project?.mapAccessToken;
+  const authUrl = (url: string) =>
+    withHostedDownloadAuth(url, mapAccessToken) || url;
   const original = (source.outputs || []).find((output) => output.isOriginal);
   const metadata = (source.outputs || []).find(
     (output) => output.type === DataUploadOutputType.Xmlmetadata
@@ -103,7 +109,7 @@ export default function HostedLayerInfo({
                   className="text-primary-500 underline bg-transparent border-none p-0 cursor-pointer font-inherit text-left"
                   onClick={() =>
                     downloadWithFilename(
-                      original.url,
+                      authUrl(original.url),
                       original.originalFilename || filenameFromUrl(original.url)
                     )
                   }
@@ -133,7 +139,7 @@ export default function HostedLayerInfo({
                   className="text-primary-500 underline bg-transparent border-none p-0 cursor-pointer font-inherit"
                   onClick={() =>
                     downloadWithFilename(
-                      source.url!,
+                      authUrl(source.url!),
                       slugify(layerName) + ".geojson.json"
                     )
                   }
@@ -160,7 +166,7 @@ export default function HostedLayerInfo({
                   className="text-primary-500 underline bg-transparent border-none p-0 cursor-pointer font-inherit text-left"
                   onClick={() =>
                     downloadWithFilename(
-                      metadata.url,
+                      authUrl(metadata.url),
                       metadata.filename || filenameFromUrl(metadata.url)
                     )
                   }

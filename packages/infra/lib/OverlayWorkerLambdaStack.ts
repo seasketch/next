@@ -7,6 +7,7 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as sqs from "aws-cdk-lib/aws-sqs";
+import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import * as path from "path";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { Construct } from "constructs";
@@ -20,6 +21,7 @@ export class OverlayWorkerLambdaStack extends cdk.Stack {
     props: cdk.StackProps & {
       devQueues?: sqs.IQueue[];
       productionQueue: sqs.IQueue;
+      overlayEngineAccessTokenSecret: secretsmanager.ISecret;
     },
   ) {
     super(scope, id, props);
@@ -39,7 +41,7 @@ export class OverlayWorkerLambdaStack extends cdk.Stack {
         platform: "node",
         esbuildVersion: "0.21.5",
         externalModules: ["undici"],
-        nodeModules: ["undici", "@aws-sdk/client-sqs"],
+        nodeModules: ["undici", "@aws-sdk/client-sqs", "@aws-sdk/client-secrets-manager"],
         commandHooks: {
           beforeBundling() {
             return [];
@@ -72,6 +74,8 @@ export class OverlayWorkerLambdaStack extends cdk.Stack {
         OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL: props.productionQueue.queueUrl,
         // Absolute path at runtime inside Lambda for the Piscina worker
         PISCINA_WORKER_PATH: "/var/task/worker.js",
+        OVERLAY_ENGINE_ACCESS_TOKEN_SECRET_ARN:
+          props.overlayEngineAccessTokenSecret.secretArn,
       },
       initialPolicy: [
         new iam.PolicyStatement({
@@ -84,5 +88,7 @@ export class OverlayWorkerLambdaStack extends cdk.Stack {
         }),
       ],
     });
+
+    props.overlayEngineAccessTokenSecret.grantRead(this.fn);
   }
 }

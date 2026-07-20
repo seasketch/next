@@ -12,6 +12,7 @@ import { ApplicationProtocol } from "aws-cdk-lib/aws-elasticloadbalancingv2";
 import { AwsLogDriver } from "aws-cdk-lib/aws-ecs";
 import { Construct } from "constructs";
 import { Queue } from "aws-cdk-lib/aws-sqs";
+import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 
 const JWKS_URI = `https://seasketch.auth0.com/.well-known/jwks.json`;
 const JWT_AUD = "https://api.seasketch.org";
@@ -45,6 +46,7 @@ export class GraphQLStack extends cdk.Stack {
       geostatsPiiClassifierLambdaArn: string;
       overlayEngineWorkerSqsQueue: Queue;
       dataTablesHandlerLambdaArn: string;
+      overlayEngineAccessTokenSecret: secretsmanager.ISecret;
     }
   ) {
     super(scope, id, props);
@@ -185,6 +187,8 @@ export class GraphQLStack extends cdk.Stack {
             OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL:
               props.overlayEngineWorkerSqsQueue.queueUrl,
             DATA_TABLES_HANDLER_LAMBDA_ARN: props.dataTablesHandlerLambdaArn,
+            OVERLAY_ENGINE_ACCESS_TOKEN_SECRET_ARN:
+              props.overlayEngineAccessTokenSecret.secretArn,
           },
           containerPort: 3857,
         },
@@ -294,5 +298,12 @@ export class GraphQLStack extends cdk.Stack {
     );
     props.uploadHandler.grantInvoke(service.taskDefinition.taskRole);
     props.dataTablesHandler.grantInvoke(service.taskDefinition.taskRole);
+    props.overlayEngineAccessTokenSecret.grantWrite(
+      service.taskDefinition.taskRole,
+    );
+    // GeographyPlugin (and other server-side uploads fetches) read the published JWT.
+    props.overlayEngineAccessTokenSecret.grantRead(
+      service.taskDefinition.taskRole,
+    );
   }
 }

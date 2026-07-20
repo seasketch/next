@@ -17,6 +17,8 @@ import {
   getSuggestedFixesForMetricError,
   MetricSuggestedFixes,
 } from "./MetricSuggestedFixes";
+import useCurrentProjectMetadata from "../../useCurrentProjectMetadata";
+import { withHostedDownloadAuth } from "../../dataLayers/tilesAuth";
 
 /**
  * Inline menu (no portal) so it stays inside the Radix tooltip hover region.
@@ -184,6 +186,11 @@ export default function ReportTaskLineItem({
   reprocessLoading,
 }: ReportTaskLineItemProps) {
   const { t } = useTranslation("sketching");
+  const { data: projectMeta } = useCurrentProjectMetadata();
+  const mapAccessToken = projectMeta?.project?.mapAccessToken;
+  const authorizedOutputUrl = outputUrl
+    ? withHostedDownloadAuth(outputUrl, mapAccessToken) || outputUrl
+    : outputUrl;
   const [tooltipOpen, setTooltipOpen] = useState(false);
   const hasTopologyIssues =
     state === SpatialMetricState.Complete &&
@@ -273,9 +280,9 @@ export default function ReportTaskLineItem({
           <div className="text-gray-300 flex flex-wrap items-center gap-x-2 gap-y-1">
             {isAdmin && onReprocessSource ? (
               <>
-                {outputUrl ? (
+                {authorizedOutputUrl ? (
                   <a
-                    href={outputUrl}
+                    href={authorizedOutputUrl}
                     className="text-blue-400 hover:text-blue-300 underline"
                     target="_blank"
                     rel="noopener noreferrer"
@@ -291,14 +298,14 @@ export default function ReportTaskLineItem({
                   </span>
                 )}
                 <LayerOutputActionsMenu
-                  outputUrl={outputUrl ?? undefined}
+                  outputUrl={authorizedOutputUrl ?? undefined}
                   onReprocessSource={onReprocessSource}
                   reprocessLoading={reprocessLoading}
                 />
               </>
-            ) : isAdmin && outputUrl ? (
+            ) : isAdmin && authorizedOutputUrl ? (
               <a
-                href={outputUrl}
+                href={authorizedOutputUrl}
                 className="text-blue-400 hover:text-blue-300 underline"
                 target="_blank"
                 rel="noopener noreferrer"

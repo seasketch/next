@@ -42,6 +42,7 @@ import AiDataAnalystUploadPromptModal from "./AiDataAnalystUploadPromptModal";
 import DelimitedUploadConfigModal from "./delimitedSpatial/DelimitedUploadConfigModal";
 import { resolveDelimitedUploads } from "./delimitedSpatial/resolveDelimitedUploads";
 import { DelimitedUploadProcessingOptions } from "./delimitedSpatial/types";
+import AiDataAnalystUploadReminderModal from "./AiDataAnalystUploadReminderModal";
 
 export type UploadType = "create" | "replace";
 
@@ -198,7 +199,7 @@ type DroppedFileInfo = {
 
 // How long the drop confirmation lingers before fading out and handing off to
 // the background job queue UI. Errors cancel this and require manual dismissal.
-const OVERLAY_DISMISS_DELAY = 1500;
+const OVERLAY_DISMISS_DELAY = 1000;
 
 export const ProjectBackgroundJobContext = createContext<{
   jobs: JobDetailsFragment[];
@@ -256,6 +257,7 @@ export default function DataUploadDropzone({
       otherFiles: File[];
       autoConfigsByFile: Map<File, DelimitedUploadProcessingOptions>;
     } | null;
+    aiDataAnalystUploadReminderOpen: boolean;
   }>({
     droppedFiles: 0,
     droppedFileInfos: [],
@@ -267,6 +269,7 @@ export default function DataUploadDropzone({
     replaceTableOfContentsItemId: null,
     finishedWithChangelog: true,
     aiDataAnalystUploadPromptOpen: false,
+    aiDataAnalystUploadReminderOpen: false,
   });
   const client = useApolloClient();
   const dismissTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -300,8 +303,14 @@ export default function DataUploadDropzone({
               ],
             })
             .then(() => {
+              // hostedTileUuidsRequiringAuth arrives via Draft TOC on the
+              // Project entity; MapManagerContextProvider syncs it into the
+              // manager. Brief delay so that React effect runs before tiles
+              // are requested.
               if (event.isFromCurrentSession && event.layerStaticIds.length) {
-                mapManager.showTocItems(event.layerStaticIds);
+                window.setTimeout(() => {
+                  mapManager.showTocItems(event.layerStaticIds);
+                }, 50);
               }
             });
         }
@@ -355,6 +364,12 @@ export default function DataUploadDropzone({
         setState((prev) => ({
           ...prev,
           aiDataAnalystUploadPromptOpen: true,
+        }));
+      });
+      manager.on("ai-data-analyst-upload-reminder-needed", () => {
+        setState((prev) => ({
+          ...prev,
+          aiDataAnalystUploadReminderOpen: true,
         }));
       });
       setState((prev) => ({
@@ -781,6 +796,17 @@ export default function DataUploadDropzone({
             files={state.pendingDelimitedUpload.delimitedFiles}
             onSubmit={onSubmitDelimitedConfig}
             onCancel={onCancelDelimitedConfig}
+          />
+        )}
+        {state.manager && state.aiDataAnalystUploadReminderOpen && (
+          <AiDataAnalystUploadReminderModal
+            manager={state.manager}
+            onFinished={() => {
+              setState((prev) => ({
+                ...prev,
+                aiDataAnalystUploadReminderOpen: false,
+              }));
+            }}
           />
         )}
         <input {...getInputProps()} className="w-1 h-1" />

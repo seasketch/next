@@ -2,7 +2,8 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { useEffect, useState } from "react";
 
 export default function useAccessToken() {
-  const { getAccessTokenSilently, getAccessTokenWithPopup } = useAuth0();
+  const { getAccessTokenSilently, getAccessTokenWithPopup, logout } =
+    useAuth0();
   const [state, setState] = useState<string | null>();
   useEffect(() => {
     const opts = {
@@ -30,10 +31,16 @@ export default function useAccessToken() {
             getAccessTokenWithPopup(opts).then((token) => {
               setState(token);
             });
-          } else if (e.error === "login_required") {
+          } else if (
+            e.error === "invalid_grant" ||
+            e.error === "missing_refresh_token" ||
+            e.error === "login_required"
+          ) {
+            // Session can no longer be renewed. Clear the stale cached
+            // session (local-only logout, no redirect) so the UI shows a
+            // coherent signed-out state.
             setState(null);
-          } else if (e.error === "missing_refresh_token") {
-            setState(null);
+            logout({ openUrl: false });
           } else {
             console.error(e.error);
             setState(null);
@@ -42,6 +49,6 @@ export default function useAccessToken() {
           }
         });
     }
-  }, [getAccessTokenSilently, getAccessTokenWithPopup, setState]);
+  }, [getAccessTokenSilently, getAccessTokenWithPopup, logout, setState]);
   return state;
 }

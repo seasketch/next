@@ -71,11 +71,46 @@ async function createBookmarkScreenshot(
       ISSUER[0]
     );
 
+    // Map-access JWT so protected hosted tiles/uploads load in the screenshot.
+    const { rows: accessRows } = await client.query(
+      `
+      select
+        p.slug,
+        is_admin($2::int, $1::int) as is_admin,
+        (
+          select coalesce(array_agg(pg.id order by pg.id), '{}')
+          from project_group_members pgm
+          join project_groups pg on pg.id = pgm.group_id
+          where pgm.user_id = $1 and pg.project_id = $2
+        ) as group_ids
+      from projects p
+      where p.id = $2
+      `,
+      [user_id, project_id]
+    );
+    const projectSlug = accessRows[0]?.slug as string;
+    const isAdmin = Boolean(accessRows[0]?.is_admin);
+    const groups = ((accessRows[0]?.group_ids as number[]) ?? []).map(Number);
+    const mapAccessToken = await sign(
+      client,
+      {
+        type: "map-access",
+        projectId: Number(project_id),
+        projectSlug,
+        userId: Number(user_id),
+        role: isAdmin ? "admin" : "user",
+        groups,
+        isSuperuser: false,
+      },
+      "90 minutes",
+      ISSUER[0]
+    );
+
     const url = `${
       /localhost/.test(process.env.CLIENT_DOMAIN) ? "http" : "https"
     }://${process.env.CLIENT_DOMAIN}/screenshot.html?mt=${
       process.env.MAPBOX_ACCESS_TOKEN
-    }&auth=${token}`;
+    }&auth=${token}&mapAccess=${encodeURIComponent(mapAccessToken)}`;
 
     Sentry.setExtra("url", url);
     Sentry.setExtra(

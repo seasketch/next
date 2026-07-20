@@ -12,6 +12,7 @@ import {
   usePublishTableOfContentsMutation,
   PublishedTableOfContentsDocument,
   LayersAndSourcesForItemsDocument,
+  ProjectMetadataDocument,
 } from "../../generated/graphql";
 import { useApolloClient } from "@apollo/client";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
@@ -206,6 +207,7 @@ export default function SketchClassReportsAdmin({
     refetchQueries: [
       PublishedTableOfContentsDocument,
       LayersAndSourcesForItemsDocument,
+      ProjectMetadataDocument,
     ],
   });
 

@@ -27,6 +27,7 @@ import {
 import axios from "axios";
 import { DelimitedUploadProcessingOptions } from "./delimitedSpatial/types";
 import { DataTableUploadProcessingOptions } from "../data/overlayDataTables/types";
+import { needsAiCartographerUploadReminder } from "./aiCartographerUploadReminder";
 
 export interface DataUploadProcessingCompleteEvent {
   jobId: string;
@@ -37,7 +38,6 @@ export interface DataUploadProcessingCompleteEvent {
   isFromCurrentSession: boolean;
   layerStaticIds: string[];
   replaceTableOfContentsItemId?: number;
-  newSourceId: number;
 }
 
 export interface FeatureLayerConversionCompleteEvent {
@@ -121,6 +121,11 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
    * user must choose AI Data Analyst settings before `submitDataUpload` runs.
    */
   "ai-data-analyst-upload-prompt-needed": void;
+  /**
+   * Fired when AI Cartographer is already enabled and the periodic upload
+   * reminder should be shown before `submitDataUpload` runs.
+   */
+  "ai-data-analyst-upload-reminder-needed": void;
 }> {
   client: ApolloClient<any>;
   slug: string;
@@ -132,6 +137,7 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
   /** Jobs waiting for `submitDataUpload` until AI analyst prompt is resolved. */
   private pendingSubmitAfterAiPromptJobIds: string[] = [];
   private aiDataAnalystUploadPromptEmitted = false;
+  private aiDataAnalystUploadReminderEmitted = false;
   projectId: number;
 
   constructor(slug: string, projectId: number, client: ApolloClient<any>) {
@@ -202,8 +208,29 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
   }
 
   /**
-   * After the user saves AI analyst preferences, submit every upload that was
-   * held back. Safe to call when the queue is empty.
+   * True when AI is enabled and the periodic reminder interval has elapsed
+   * (or the user has never confirmed since enabling).
+   */
+  private async resolveNeedsAiDataAnalystUploadReminder(): Promise<boolean> {
+    const profile = await this.resolveMyProfile();
+    if (!profile?.enableAiDataAnalyst || profile.userId == null) {
+      return false;
+    }
+    // First-time opt-in prompt takes precedence.
+    if (profile.wasPromptedToEnableAiDataAnalystAt == null) {
+      return false;
+    }
+    return needsAiCartographerUploadReminder(profile.userId);
+  }
+
+  private queueJobForAiPrompt(jobId: string): void {
+    this.pendingSubmitAfterAiPromptJobIds.push(jobId);
+    delete this.abortControllers[jobId];
+  }
+
+  /**
+   * After the user saves AI analyst preferences (or confirms the reminder),
+   * submit every upload that was held back. Safe to call when the queue is empty.
    */
   async flushPendingSubmitsAfterAiPrompt(
     enableAiDataAnalyst: boolean
@@ -230,6 +257,7 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
       );
     }
     this.aiDataAnalystUploadPromptEmitted = false;
+    this.aiDataAnalystUploadReminderEmitted = false;
   }
 
   addJobToQueryCache(task: JobDetailsFragment) {
@@ -388,18 +416,26 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
                 const needsPrompt =
                   await this.resolveNeedsAiDataAnalystUploadPrompt();
                 if (needsPrompt) {
-                  this.pendingSubmitAfterAiPromptJobIds.push(jobId);
-                  delete this.abortControllers[jobId];
+                  this.queueJobForAiPrompt(jobId);
                   if (!this.aiDataAnalystUploadPromptEmitted) {
                     this.aiDataAnalystUploadPromptEmitted = true;
                     this.emit("ai-data-analyst-upload-prompt-needed");
+                  }
+                } else if (
+                  await this.resolveNeedsAiDataAnalystUploadReminder()
+                ) {
+                  this.queueJobForAiPrompt(jobId);
+                  if (!this.aiDataAnalystUploadReminderEmitted) {
+                    this.aiDataAnalystUploadReminderEmitted = true;
+                    this.emit("ai-data-analyst-upload-reminder-needed");
                   }
                 } else {
                   await this.client.mutate<SubmitDataUploadMutation>({
                     mutation: SubmitDataUploadDocument,
                     variables: {
                       jobId,
-                      enableAiDataAnalyst: await this.resolveEnableAiDataAnalyst(),
+                      enableAiDataAnalyst:
+                        await this.resolveEnableAiDataAnalyst(),
                     },
                   });
                   delete this.abortControllers[jobId];

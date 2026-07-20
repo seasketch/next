@@ -1,0 +1,58 @@
+name = "overlay-data-server"
+main = "src/index.ts"
+compatibility_date = "2026-07-14"
+# Request-scoped timing context for Server-Timing (see src/timing.ts).
+compatibility_flags = ["nodejs_als"]
+
+# Workers Caching: serves cache hits without invoking the worker, collapses
+# concurrent misses, and participates in tiered caching.
+[cache]
+enabled = true
+
+# Default router always runs for auth; TilesBackend is the cached entrypoint.
+[exports.default]
+type = "worker"
+[exports.default.cache]
+enabled = false
+
+[exports.TilesBackend]
+type = "worker"
+[exports.TilesBackend.cache]
+enabled = true
+
+# Range requests must reach ObjectBackend. Workers Caching strips Range on a
+# miss and asks the Worker for the whole body, which is inappropriate for large
+# FlatGeobuf and cloud-optimized GeoTIFF objects.
+[exports.ObjectBackend]
+type = "worker"
+[exports.ObjectBackend.cache]
+enabled = false
+
+[exports.PropertiesBackend]
+type = "worker"
+[exports.PropertiesBackend.cache]
+enabled = true
+
+[vars]
+# Rollout knobs. Defaults are lax for cutover.
+AUTH_ACL_ENABLED = "false"
+AUTH_SUBDIVIDED_ACL_ENABLED = "false"
+AUTH_MISSING_ACL_PUBLIC = "true"
+# Slack ACL-deny alerts (TileJSON / download / FGB / GeoJSON / properties).
+# Requires SLACK_WEBHOOK_URL secret. Set to "false" to mute.
+AUTH_DENY_SLACK_ENABLED = "true"
+
+# Large property scans can be CPU intensive. Paid Workers permit up to 300s.
+[limits]
+cpu_ms = 10_000
+
+[[r2_buckets]]
+binding = 'TILES_BUCKET'
+bucket_name = 'ssn-tiles'
+preview_bucket_name = 'ssn-tiles'
+
+# Run `echo <VALUE> | wrangler secret put <NAME>` for each of these
+# Optional: SLACK_WEBHOOK_URL — Incoming Webhook for ACL-deny rollout alerts
+
+[secrets]
+required = ["JWKS_URL", "MAPBOX_ACCESS_TOKEN", "PUBLIC_HOSTNAME"]

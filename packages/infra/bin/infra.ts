@@ -17,6 +17,7 @@ import { DataUploadsStack } from "../lib/DataUploadsStack";
 import { UploadHandlerLambdaStack } from "../lib/UploadHandlerLambdaStack";
 import { DataTablesHandlerLambdaStack } from "../lib/DataTablesHandlerLambdaStack";
 import { SQSStack } from "../lib/SQSStack";
+import { SecretsStack } from "../lib/SecretsStack";
 import { OverlayWorkerLambdaStack } from "../lib/OverlayWorkerLambdaStack";
 import { SubdivideWorkerLambdaStack } from "../lib/SubdivideWorkerLambdaStack";
 import { FragmentWorkerLambdaStack } from "../lib/FragmentWorkerLambdaStack";
@@ -172,6 +173,8 @@ const uploadHandler = new UploadHandlerLambdaStack(
   }
 );
 
+const secrets = new SecretsStack(app, "SeaSketchSecrets", { env });
+
 const dataTablesHandler = new DataTablesHandlerLambdaStack(
   app,
   "DataTablesHandler",
@@ -194,8 +197,12 @@ const overlayWorker = new OverlayWorkerLambdaStack(
     env,
     devQueues: sqs.devOverlayEngineWorkerQueues,
     productionQueue: sqs.productionOverlayEngineWorkerQueue,
+    overlayEngineAccessTokenSecret: secrets.overlayEngineAccessTokenSecret,
   }
 );
+
+secrets.overlayEngineAccessTokenSecret.grantRead(maintenance.taskRole);
+secrets.overlayEngineAccessTokenSecret.grantWrite(maintenance.taskRole);
 
 const subdivideWorker = new SubdivideWorkerLambdaStack(
   app,
@@ -204,13 +211,17 @@ const subdivideWorker = new SubdivideWorkerLambdaStack(
     env,
     devQueues: sqs.devOverlayEngineWorkerQueues,
     productionQueue: sqs.productionOverlayEngineWorkerQueue,
+    overlayEngineAccessTokenSecret: secrets.overlayEngineAccessTokenSecret,
   }
 );
 
 const fragmentWorker = new FragmentWorkerLambdaStack(
   app,
   "SeaSketchFragmentWorker",
-  { env }
+  {
+    env,
+    overlayEngineAccessTokenSecret: secrets.overlayEngineAccessTokenSecret,
+  }
 );
 
 new GraphQLStack(app, "SeaSketchGraphQLServer", {
@@ -235,6 +246,7 @@ new GraphQLStack(app, "SeaSketchGraphQLServer", {
   geostatsPiiClassifierLambdaArn: piiClassifier.fn.functionArn,
   overlayEngineWorkerSqsQueue: sqs.productionOverlayEngineWorkerQueue,
   dataTablesHandlerLambdaArn: dataTablesHandler.fn.functionArn,
+  overlayEngineAccessTokenSecret: secrets.overlayEngineAccessTokenSecret,
 });
 
 uploadHandler.fn.grantInvoke;

@@ -9,6 +9,8 @@ import {
 } from "../generated/graphql";
 import bytes from "bytes";
 import { Trans, useTranslation } from "react-i18next";
+import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
+import { withHostedDownloadAuth } from "./tilesAuth";
 
 const priority = [
   DataUploadOutputType.ZippedShapefile,
@@ -35,12 +37,17 @@ export default function DataDownloadModal({
 }) {
   const { t } = useTranslation("homepage");
   const onError = useGlobalErrorHandler();
+  const { data: projectMeta } = useCurrentProjectMetadata();
+  const mapAccessToken = projectMeta?.project?.mapAccessToken;
   const { data, loading } = useDataDownloadInfoQuery({
     variables: {
       tocId,
     },
     onError,
   });
+
+  const authDownloadUrl = (url: string | null | undefined) =>
+    withHostedDownloadAuth(url, mapAccessToken) || url || undefined;
 
   const sortedOptions = useMemo(() => {
     return [...(data?.tableOfContentsItem?.downloadOptions || [])]
@@ -192,7 +199,7 @@ export default function DataDownloadModal({
                     data?.tableOfContentsItem?.dataLayer?.dataSource
                       ?.uploadedSourceFilename || "Download..."
                   }
-                  href={original.url}
+                  href={authDownloadUrl(original.url)}
                   target="_blank"
                   rel="noreferrer"
                 >
@@ -211,6 +218,7 @@ export default function DataDownloadModal({
             <h3>{t("Alternate formats")}</h3>
             <ul className="space-y-2">
               {sortedOptions.map((option) => {
+                const href = authDownloadUrl(option.url);
                 const filename = new URL(
                   option.url || "https://www.example.com"
                 ).pathname
@@ -220,12 +228,12 @@ export default function DataDownloadModal({
                   option.url || "https://www.example.com"
                 ).searchParams.get("download");
                 return (
-                  <li>
+                  <li key={option.url || option.type}>
                     <div className="flex pr-4">
                       <a
                         className="text-primary-500 underline flex-1"
                         download={filename}
-                        href={option.url!}
+                        href={href!}
                       >
                         {downloadFilename || filename}
                       </a>

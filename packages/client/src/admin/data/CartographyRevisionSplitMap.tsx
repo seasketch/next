@@ -9,6 +9,11 @@ import type {
   FullAdminSourceFragment,
 } from "../../generated/graphql";
 import {
+  isHostedDataHost,
+  withHostedAuthParams,
+} from "../../dataLayers/tilesAuth";
+import useCurrentProjectMetadata from "../../useCurrentProjectMetadata";
+import {
   loadBaseStyleForBasemap,
   replaceOverlayOnMap,
   tocOrSourceBounds,
@@ -126,6 +131,30 @@ export default function CartographyRevisionSplitMap({
   compactChrome?: boolean;
 }) {
   const { t } = useTranslation("admin:data");
+  const { data: projectMeta } = useCurrentProjectMetadata();
+  const mapAccessToken = projectMeta?.project?.mapAccessToken ?? null;
+  const mapAccessTokenRef = useRef(mapAccessToken);
+  mapAccessTokenRef.current = mapAccessToken;
+
+  const transformRequest = useMemo(
+    (): mapboxgl.TransformRequestFunction => (url) => {
+      try {
+        const parsed = new URL(url);
+        if (isHostedDataHost(parsed.hostname)) {
+          return {
+            url: withHostedAuthParams(url, {
+              accessToken: mapAccessTokenRef.current,
+            }),
+          };
+        }
+      } catch {
+        // ignore invalid urls
+      }
+      return { url };
+    },
+    []
+  );
+
   /** Large padding makes tiny previews (e.g. h-28) zoom out to ~world scale */
   const fitBoundsPaddingPx = compactChrome ? 8 : 48;
   const fitBoundsPaddingRef = useRef(fitBoundsPaddingPx);
@@ -244,6 +273,7 @@ export default function CartographyRevisionSplitMap({
         container: singleEl.current,
         style: cloneDeep(baseStyle),
         attributionControl: true,
+        transformRequest,
         ...initialView,
       });
       singleMapRef.current = map;
@@ -283,12 +313,14 @@ export default function CartographyRevisionSplitMap({
       container: leftEl.current,
       style: cloneDeep(baseStyle),
       attributionControl: true,
+      transformRequest,
       ...initialView,
     });
     const rm = new mapboxgl.Map({
       container: rightEl.current,
       style: cloneDeep(baseStyle),
       attributionControl: false,
+      transformRequest,
       ...initialView,
     });
     leftMapRef.current = lm;
@@ -357,8 +389,17 @@ export default function CartographyRevisionSplitMap({
     };
     // Intentionally omit tocBounds / bounds arrays from deps so parent re-renders
     // with new array identities do not tear down maps; refs hold latest bounds for fit.
+    // Recreate when mapAccessToken first arrives so hosted TileJSON/tiles get auth.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [baseStyle, styleError, variant, dataLayer.id, dataSource.id]);
+  }, [
+    baseStyle,
+    styleError,
+    variant,
+    dataLayer.id,
+    dataSource.id,
+    mapAccessToken,
+    transformRequest,
+  ]);
 
   /** Compare — left map overlay only */
   useEffect(() => {

@@ -11259,6 +11259,13 @@ export type Project = Node & {
   hideForums: Scalars['Boolean'];
   hideOverlays: Scalars['Boolean'];
   hideSketches: Scalars['Boolean'];
+  /**
+   * Content-addressed tileset UUIDs whose /v2 requests must include a map
+   * access token. Equals hosted UUIDs from published TOC items (and draft
+   * TOC items for project admins) that are not in the published ACL
+   * document's public list. Empty for projects with no protected overlays.
+   */
+  hostedTileUuidsRequiringAuth: Array<Scalars['String']>;
   id: Scalars['Int'];
   importedArcgisServices?: Maybe<Array<Maybe<Scalars['String']>>>;
   /**
@@ -11302,6 +11309,12 @@ export type Project = Node & {
    * displayed at 48x48 pixels and must be a public url.
    */
   logoUrl?: Maybe<Scalars['String']>;
+  /**
+   * Short-lived (90m) JWT for authorized overlay tile requests on
+   * tiles.seasketch.org/v2/{ns}/.... Returns null if the user is not signed in.
+   * Claims include role (admin|user) and project group ids.
+   */
+  mapAccessToken?: Maybe<Scalars['String']>;
   mapboxPublicKey?: Maybe<Scalars['String']>;
   mapboxSecretKey?: Maybe<Scalars['String']>;
   /** Reads and enables pagination through a set of `ProjectMapDataRequest`. */
@@ -21428,7 +21441,7 @@ export type DraftTableOfContentsQuery = (
   { __typename?: 'Query' }
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'id' | 'draftTableOfContentsHasChanges' | 'tableOfContentsLastPublished'>
+    & Pick<Project, 'id' | 'draftTableOfContentsHasChanges' | 'tableOfContentsLastPublished' | 'hostedTileUuidsRequiringAuth'>
     & { region: (
       { __typename?: 'GeometryPolygon' }
       & Pick<GeometryPolygon, 'geojson'>
@@ -24215,7 +24228,7 @@ export type ProjectDashboardBannerStatsQuery = (
 
 export type ProjectMetadataFragment = (
   { __typename?: 'Project' }
-  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays' | 'aboutPageContents' | 'aboutPageEnabled' | 'customDocLink' | 'showScalebarByDefault' | 'showLegendByDefault'>
+  & Pick<Project, 'id' | 'slug' | 'url' | 'name' | 'description' | 'logoLink' | 'logoUrl' | 'accessControl' | 'sessionIsAdmin' | 'isFeatured' | 'supportEmail' | 'isOfflineEnabled' | 'sketchGeometryToken' | 'mapAccessToken' | 'hostedTileUuidsRequiringAuth' | 'supportedLanguages' | 'translatedProps' | 'hideForums' | 'hideSketches' | 'hideOverlays' | 'aboutPageContents' | 'aboutPageEnabled' | 'customDocLink' | 'showScalebarByDefault' | 'showLegendByDefault'>
   & { sketchClasses: Array<(
     { __typename?: 'SketchClass' }
     & Pick<SketchClass, 'id' | 'name' | 'geometryType' | 'canDigitize' | 'formElementId' | 'isArchived' | 'translatedProps' | 'isGeographyClippingEnabled' | 'useGeographyClipping' | 'previewNewReports'>
@@ -25826,7 +25839,7 @@ export type SketchingQuery = (
     & Pick<User, 'id'>
   )>, projectBySlug?: Maybe<(
     { __typename?: 'Project' }
-    & Pick<Project, 'sessionParticipationStatus' | 'id' | 'supportedLanguages' | 'sketchGeometryToken'>
+    & Pick<Project, 'sessionParticipationStatus' | 'id' | 'supportedLanguages' | 'sketchGeometryToken' | 'mapAccessToken'>
     & { sketchClasses: Array<(
       { __typename?: 'SketchClass' }
       & SketchingDetailsFragment
@@ -29064,6 +29077,8 @@ export const ProjectMetadataFragmentDoc = gql`
   supportEmail
   isOfflineEnabled
   sketchGeometryToken
+  mapAccessToken
+  hostedTileUuidsRequiringAuth
   sketchClasses {
     id
     name
@@ -32989,6 +33004,7 @@ export const DraftTableOfContentsDocument = gql`
     id
     draftTableOfContentsHasChanges
     tableOfContentsLastPublished
+    hostedTileUuidsRequiringAuth
     region {
       geojson
     }
@@ -41097,6 +41113,7 @@ export const SketchingDocument = gql`
       ...SketchFolderDetails
     }
     sketchGeometryToken
+    mapAccessToken
   }
 }
     ${SketchingDetailsFragmentDoc}

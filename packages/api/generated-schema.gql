@@ -12687,6 +12687,13 @@ type Project implements Node {
   hideForums: Boolean!
   hideOverlays: Boolean!
   hideSketches: Boolean!
+  """
+  Content-addressed tileset UUIDs whose /v2 requests must include a map
+  access token. Equals hosted UUIDs from published TOC items (and draft
+  TOC items for project admins) that are not in the published ACL
+  document's public list. Empty for projects with no protected overlays.
+  """
+  hostedTileUuidsRequiringAuth: [String!]!
   id: Int!
   importedArcgisServices: [String]
 
@@ -12791,6 +12798,12 @@ type Project implements Node {
   displayed at 48x48 pixels and must be a public url.
   """
   logoUrl: String
+  """
+  Short-lived (90m) JWT for authorized overlay tile requests on
+  tiles.seasketch.org/v2/{ns}/.... Returns null if the user is not signed in.
+  Claims include role (admin|user) and project group ids.
+  """
+  mapAccessToken: String
   mapboxPublicKey: String
   mapboxSecretKey: String
 
