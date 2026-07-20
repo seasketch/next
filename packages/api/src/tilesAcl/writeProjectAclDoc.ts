@@ -78,9 +78,87 @@ function ruleKey(rule: ProtectedAclEntry): string {
   return rule.t === "admins_only" ? "admins_only" : `group:${rule.g.join(",")}`;
 }
 
+type PlacementClass = "public" | "group" | "admins_only";
+
+/** Lower rank = more permissive. */
+const PLACEMENT_CLASS_RANK: Record<PlacementClass, number> = {
+  public: 0,
+  group: 1,
+  admins_only: 2,
+};
+
+function placementClass(rules: ProtectedAclEntry[]): PlacementClass {
+  if (rules.length === 0) return "public";
+  if (rules.some((rule) => rule.t === "admins_only")) return "admins_only";
+  return "group";
+}
+
+function unionGroupIds(placements: ProtectedAclEntry[][]): number[] {
+  const groups = new Set<number>();
+  for (const rules of placements) {
+    for (const rule of rules) {
+      if (rule.t === "group") {
+        for (const groupId of rule.g) groups.add(groupId);
+      }
+    }
+  }
+  return Array.from(groups).sort((a, b) => a - b);
+}
+
 /**
- * Build the compact document consumed by pmtiles-server. Each UUID references
- * every non-public ACL on its published TOC item and ancestor folders.
+ * When the same hosted UUID appears in multiple TOC placements, keep the most
+ * permissive policy (public > group > admins_only).
+ *
+ * - Any public placement → public.
+ * - Multiple group-only placements → one group rule with the union of all
+ *   group ids (OR across placements).
+ * - A single group placement keeps its ancestor rules intact (AND within that
+ *   path at authorize time).
+ * - Otherwise admins_only (pick the fewest-rule placement for the payload).
+ */
+function selectMostPermissivePlacement(
+  placements: ProtectedAclEntry[][]
+): ProtectedAclEntry[] {
+  if (placements.length === 0) return [];
+
+  let bestRank = PLACEMENT_CLASS_RANK.admins_only;
+  for (const rules of placements) {
+    bestRank = Math.min(bestRank, PLACEMENT_CLASS_RANK[placementClass(rules)]);
+  }
+
+  if (bestRank === PLACEMENT_CLASS_RANK.public) {
+    return [];
+  }
+
+  const candidates = placements.filter(
+    (rules) => PLACEMENT_CLASS_RANK[placementClass(rules)] === bestRank
+  );
+
+  if (bestRank === PLACEMENT_CLASS_RANK.group) {
+    if (candidates.length === 1) {
+      return candidates[0];
+    }
+    return [{ t: "group", g: unionGroupIds(candidates) }];
+  }
+
+  // admins_only: keep one placement's rules (extra group ancestors are inert
+  // once classify marks the UUID admins_only, but preserve the path for clarity).
+  let best = candidates[0];
+  for (let i = 1; i < candidates.length; i++) {
+    if (candidates[i].length < best.length) {
+      best = candidates[i];
+    }
+  }
+  return best;
+}
+
+/**
+ * Build the compact document consumed by pmtiles-server.
+ *
+ * Each published TOC layer contributes the non-public ACLs on itself and its
+ * ancestor folders. When the same hosted UUID appears more than once, the most
+ * permissive policy wins: public beats everything; otherwise group placements
+ * OR their group ids together so a shared tile URL stays as open as any copy.
  */
 export function buildProjectAclDocFromRows(
   rows: LayerAclRow[],
@@ -89,50 +167,40 @@ export function buildProjectAclDocFromRows(
 ): ProjectAclDoc {
   const rules: ProtectedAclEntry[] = [];
   const ruleIndexes = new Map<string, number>();
-  const uuidPolicies = new Map<
-    string,
-    { hasProtectedPath: boolean; ruleIndexes: Set<number> }
-  >();
+  const uuidPlacements = new Map<string, ProtectedAclEntry[][]>();
 
   for (const row of rows) {
     const uuid = extractHostedTilesUuid(row.url);
     if (!uuid) continue;
-    const policy = uuidPolicies.get(uuid) || {
-      hasProtectedPath: false,
-      ruleIndexes: new Set<number>(),
-    };
     const ancestorAcls = Array.isArray(row.ancestor_acls)
       ? row.ancestor_acls
       : [];
-
-    if (ancestorAcls.length > 0) {
-      policy.hasProtectedPath = true;
-      for (const value of ancestorAcls) {
-        const rule = normalizeRule(value);
-        const key = ruleKey(rule);
-        let index = ruleIndexes.get(key);
-        if (index === undefined) {
-          index = rules.length;
-          rules.push(rule);
-          ruleIndexes.set(key, index);
-        }
-        policy.ruleIndexes.add(index);
-      }
-    }
-    uuidPolicies.set(uuid, policy);
+    const placement = ancestorAcls.map((value) => normalizeRule(value));
+    const placements = uuidPlacements.get(uuid) || [];
+    placements.push(placement);
+    uuidPlacements.set(uuid, placements);
   }
 
   const publicUuids: string[] = [];
   const protectedMap: ProjectAclDoc["protected"] = {};
-  for (const uuid of Array.from(uuidPolicies.keys()).sort()) {
-    const policy = uuidPolicies.get(uuid)!;
-    if (policy.hasProtectedPath) {
-      protectedMap[uuid] = Array.from(policy.ruleIndexes).sort(
-        (a, b) => a - b
-      );
-    } else {
+  for (const uuid of Array.from(uuidPlacements.keys()).sort()) {
+    const selected = selectMostPermissivePlacement(uuidPlacements.get(uuid)!);
+    if (selected.length === 0) {
       publicUuids.push(uuid);
+      continue;
     }
+    const indexes = new Set<number>();
+    for (const rule of selected) {
+      const key = ruleKey(rule);
+      let index = ruleIndexes.get(key);
+      if (index === undefined) {
+        index = rules.length;
+        rules.push(rule);
+        ruleIndexes.set(key, index);
+      }
+      indexes.add(index);
+    }
+    protectedMap[uuid] = Array.from(indexes).sort((a, b) => a - b);
   }
 
   return {

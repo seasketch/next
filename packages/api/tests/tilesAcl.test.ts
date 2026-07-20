@@ -187,17 +187,233 @@ describe("buildProjectAclDocFromRows (tree scenarios)", () => {
     });
   });
 
-  test("keeps duplicate tile UUIDs protected if any TOC placement is protected", () => {
-    expect(
-      buildProjectAclDocFromRows(
-        [row(A, []), row(A, [{ t: "group", g: [4] }])],
-        "example",
-        123
-      )
-    ).toMatchObject({
-      public: [],
-      rules: [{ t: "group", g: [4] }],
-      protected: { [A]: [0] },
+  describe("duplicate tile UUID permissiveness", () => {
+    test("public placement wins over group duplicate", () => {
+      expect(
+        buildProjectAclDocFromRows(
+          [row(A, []), row(A, [{ t: "group", g: [4] }])],
+          "example",
+          123
+        )
+      ).toEqual({
+        v: 123,
+        slug: "example",
+        public: [A],
+        rules: [],
+        protected: {},
+      });
+    });
+
+    test("public placement wins over admins_only duplicate (Cable Zone case)", () => {
+      expect(
+        buildProjectAclDocFromRows(
+          [row(A, [{ t: "admins_only", g: [] }]), row(A, [])],
+          "example",
+          123
+        )
+      ).toEqual({
+        v: 123,
+        slug: "example",
+        public: [A],
+        rules: [],
+        protected: {},
+      });
+    });
+
+    test("public wins when public, group, and admins_only placements all exist", () => {
+      expect(
+        buildProjectAclDocFromRows(
+          [
+            row(A, [{ t: "admins_only", g: [] }]),
+            row(A, [{ t: "group", g: [4] }]),
+            row(A, []),
+          ],
+          "example",
+          1
+        )
+      ).toEqual({
+        v: 1,
+        slug: "example",
+        public: [A],
+        rules: [],
+        protected: {},
+      });
+    });
+
+    test("group placement wins over admins_only when both are protected", () => {
+      expect(
+        buildProjectAclDocFromRows(
+          [
+            row(B, [{ t: "admins_only", g: [] }]),
+            row(B, [{ t: "group", g: [4] }]),
+          ],
+          "example",
+          123
+        )
+      ).toEqual({
+        v: 123,
+        slug: "example",
+        public: [],
+        rules: [{ t: "group", g: [4] }],
+        protected: { [B]: [0] },
+      });
+    });
+
+    test("multiple group placements OR-union all permitted groups", () => {
+      expect(
+        buildProjectAclDocFromRows(
+          [
+            row(C, [{ t: "group", g: [4] }]),
+            row(C, [{ t: "group", g: [9, 20] }]),
+          ],
+          "example",
+          123
+        )
+      ).toEqual({
+        v: 123,
+        slug: "example",
+        public: [],
+        rules: [{ t: "group", g: [4, 9, 20] }],
+        protected: { [C]: [0] },
+      });
+    });
+
+    test("group union deduplicates overlapping ids and sorts them", () => {
+      expect(
+        buildProjectAclDocFromRows(
+          [
+            row(C, [{ t: "group", g: [20, 4] }]),
+            row(C, [{ t: "group", g: [4, 9] }]),
+            row(C, [{ t: "group", g: [20] }]),
+          ],
+          "example",
+          1
+        )
+      ).toEqual({
+        v: 1,
+        slug: "example",
+        public: [],
+        rules: [{ t: "group", g: [4, 9, 20] }],
+        protected: { [C]: [0] },
+      });
+    });
+
+    test("group union flattens multi-ancestor group paths across placements", () => {
+      // Placement 1 requires group 4 AND 9 along one path; placement 2 allows 20.
+      // Across duplicates we OR all group ids into one rule (most permissive).
+      expect(
+        buildProjectAclDocFromRows(
+          [
+            row(C, [
+              { t: "group", g: [4] },
+              { t: "group", g: [9] },
+            ]),
+            row(C, [{ t: "group", g: [20] }]),
+          ],
+          "example",
+          1
+        )
+      ).toEqual({
+        v: 1,
+        slug: "example",
+        public: [],
+        rules: [{ t: "group", g: [4, 9, 20] }],
+        protected: { [C]: [0] },
+      });
+    });
+
+    test("single group placement still ANDs multiple ancestor group ACLs", () => {
+      expect(
+        buildProjectAclDocFromRows(
+          [
+            row(D, [
+              { t: "group", g: [4] },
+              { t: "group", g: [9] },
+            ]),
+          ],
+          "example",
+          123
+        )
+      ).toEqual({
+        v: 123,
+        slug: "example",
+        public: [],
+        rules: [
+          { t: "group", g: [4] },
+          { t: "group", g: [9] },
+        ],
+        protected: { [D]: [0, 1] },
+      });
+    });
+
+    test("two admins_only duplicates stay admins_only", () => {
+      expect(
+        buildProjectAclDocFromRows(
+          [
+            row(E, [{ t: "admins_only", g: [] }]),
+            row(E, [
+              { t: "admins_only", g: [] },
+              { t: "group", g: [4] },
+            ]),
+          ],
+          "example",
+          1
+        )
+      ).toEqual({
+        v: 1,
+        slug: "example",
+        public: [],
+        rules: [{ t: "admins_only" }],
+        protected: { [E]: [0] },
+      });
+    });
+
+    test("admins_only duplicates prefer the fewer-rule placement payload", () => {
+      expect(
+        buildProjectAclDocFromRows(
+          [
+            row(E, [
+              { t: "admins_only", g: [] },
+              { t: "group", g: [4] },
+            ]),
+            row(E, [{ t: "admins_only", g: [] }]),
+          ],
+          "example",
+          1
+        )
+      ).toEqual({
+        v: 1,
+        slug: "example",
+        public: [],
+        rules: [{ t: "admins_only" }],
+        protected: { [E]: [0] },
+      });
+    });
+
+    test("does not merge policies across different UUIDs", () => {
+      expect(
+        buildProjectAclDocFromRows(
+          [
+            row(A, [{ t: "group", g: [4] }]),
+            row(B, [{ t: "group", g: [9] }]),
+            row(A, [{ t: "group", g: [20] }]),
+          ],
+          "example",
+          1
+        )
+      ).toEqual({
+        v: 1,
+        slug: "example",
+        public: [],
+        rules: [
+          { t: "group", g: [4, 20] },
+          { t: "group", g: [9] },
+        ],
+        protected: {
+          [A]: [0],
+          [B]: [1],
+        },
+      });
     });
   });
 
