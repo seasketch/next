@@ -154,7 +154,7 @@ export function queryUiHtml(tablePath: string): string {
   "use strict";
   var stats = null;
   var columns = [];
-  var STORAGE_KEY = "data-tables-worker:query-ui:v1:" + ${tablePathJs};
+  var STORAGE_KEY = "pmtiles-server:data-tables-query-ui:v1:" + ${tablePathJs};
   var OPS = ["count", "sum", "mean", "min", "max", "median"];
   var STRING_OPS = [["eq", "="], ["neq", "\\u2260"], ["in", "in"], ["is.null", "is null"], ["not.null", "not null"]];
   var NUMBER_OPS = [["eq", "="], ["neq", "\\u2260"], ["gt", ">"], ["gte", "\\u2265"], ["lt", "<"], ["lte", "\\u2264"], ["in", "in"], ["is.null", "is null"], ["not.null", "not null"]];

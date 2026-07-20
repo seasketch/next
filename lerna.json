@@ -17,7 +17,6 @@
     "packages/fgb-source",
     "packages/overlay-engine",
     "packages/sketch-preprocessing-worker",
-    "packages/data-tables-worker",
     "packages/overlay-worker",
     "packages/fragment-worker",
     "packages/ai-data-analyst",

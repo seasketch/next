@@ -45,8 +45,8 @@
  * **JSON response** (aggregated): `{ table, totalRows, rowsScanned, rowsMatched,
  * rowGroups, timing, groups }`. Raw mode returns `rows` instead of `groups`.
  *
- * Worker implementation: `packages/data-tables-worker/src/params.ts`.
- * Extended reference: `packages/data-tables-worker/README.md`.
+ * Implementation: `packages/pmtiles-server/src/dataTables/params.ts`.
+ * Extended reference: `packages/pmtiles-server/README.md`.
  *
  * @module dataTableQueryApi
  */
@@ -72,7 +72,7 @@ export const DATA_TABLE_AGGREGATIONS: DataTableAggregation[] = [
 
 /**
  * Filter operator for structured settings. Matches `FilterOperator` in
- * `packages/data-tables-worker/src/params.ts`.
+ * `packages/pmtiles-server/src/dataTables/params.ts`.
  *
  * URL encoding: `isNull` → `q.{col}=is.null`, `notNull` → `q.{col}=not.null`.
  * There is no `not.in`; use `neq` or multiple filters instead.

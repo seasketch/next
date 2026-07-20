@@ -88,7 +88,7 @@ export function fetchDataTableColumnStats(
  * `OverlayDataTable`) so admin and end-user forms can present real column
  * names and types rather than free text.
  *
- * @see packages/data-tables-worker/README.md#column-statsjson
+ * @see packages/pmtiles-server/README.md
  */
 export function useDataTableColumnStats(
   columnStatsUrl?: string | null,
