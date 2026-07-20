@@ -96,7 +96,7 @@ function Auth0ProviderWithRouter(props: any) {
 }
 
 function ApolloProviderWithToken(props: any) {
-  const { getAccessTokenSilently, getAccessTokenWithPopup, logout, user } =
+  const { getAccessTokenSilently, getAccessTokenWithPopup, logout } =
     useAuth0();
   const [client, setClient] =
     useState<ApolloClient<NormalizedCacheObject> | null>(null);
@@ -133,23 +133,25 @@ function ApolloProviderWithToken(props: any) {
       try {
         token = await getAccessTokenSilently(opts);
       } catch (e) {
-        // eslint-disable-next-line no-console
-        if (e.error === "missing_refresh_token") {
-          console.error(e);
-          token = null;
-          if (user) {
-            logout({
-              logoutParams: {
-                returnTo: window.location.origin,
-              },
-            });
-          }
-        } else if (e.error === "consent_required") {
+        if (e.error === "consent_required") {
           token = await getAccessTokenWithPopup(opts);
-        } else if (e.error === "login_required") {
+        } else if (
+          e.error === "invalid_grant" ||
+          e.error === "missing_refresh_token" ||
+          e.error === "login_required"
+        ) {
+          // The session can no longer be renewed (e.g. the refresh token
+          // expired or was revoked while the user was away). Clear the stale
+          // cached session so the UI reflects a coherent signed-out state,
+          // rather than showing a cached user that can't actually
+          // authenticate. openUrl: false performs a local-only logout without
+          // redirecting the browser.
+          console.warn(
+            // eslint-disable-next-line i18next/no-literal-string
+            `Auth0 session can no longer be renewed (${e.error}). Signing out.`
+          );
           token = null;
-        } else if (e.error === "missing_refresh_token") {
-          token = null;
+          logout({ openUrl: false });
         } else {
           console.error(e.error);
           token = null;
@@ -179,12 +181,9 @@ function ApolloProviderWithToken(props: any) {
       reconnect: true,
       lazy: true,
       connectionParams: async () => {
-        const token = await getAccessTokenSilently({
-          authorizationParams: {
-            audience: process.env.REACT_APP_AUTH0_AUDIENCE,
-            scope: process.env.REACT_APP_AUTH0_SCOPE,
-          },
-        });
+        // Reuse getToken so that non-recoverable token errors (e.g.
+        // invalid_grant) clear the stale session instead of throwing.
+        const token = await getToken();
         return {
           // eslint-disable-next-line i18next/no-literal-string
           Authorization: token ? `Bearer ${token}` : "",
