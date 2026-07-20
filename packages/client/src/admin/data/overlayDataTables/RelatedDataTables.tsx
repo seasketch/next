@@ -24,6 +24,8 @@ import {
   numericColumnNames,
   useDataTableColumnStats,
 } from "../../../dataLayers/useDataTableColumnStats";
+import { withHostedAuthParams } from "../../../dataLayers/tilesAuth";
+import useCurrentProjectMetadata from "../../../useCurrentProjectMetadata";
 
 type RelatedDataTablesProps = {
   item: FullAdminOverlayFragment;
@@ -65,8 +67,11 @@ function VisualizationSettingsEditor({
   onSave: (visualizationColumns: string[], visualizationOps: string[]) => void;
 }) {
   const { t } = useTranslation("admin:data");
+  const { data: projectMeta } = useCurrentProjectMetadata();
+  const mapAccessToken = projectMeta?.project?.mapAccessToken;
   const { columnStats, loading } = useDataTableColumnStats(
-    columnStatsUrlForTable(table)
+    columnStatsUrlForTable(table),
+    mapAccessToken
   );
   const numericColumns = numericColumnNames(columnStats);
   const selectedColumns = (table.visualizationColumns || []).filter(
@@ -195,6 +200,8 @@ function DataTableRow({
   ) => void;
 }) {
   const { t } = useTranslation("admin:data");
+  const { data: projectMeta } = useCurrentProjectMetadata();
+  const mapAccessToken = projectMeta?.project?.mapAccessToken;
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(table.name);
   const [visualizationSettingsOpen, setVisualizationSettingsOpen] =
@@ -267,7 +274,9 @@ function DataTableRow({
           <div className="flex items-center gap-3">
             {table.queryUrl ? (
               <a
-                href={table.queryUrl}
+                href={withHostedAuthParams(table.queryUrl, {
+                  accessToken: mapAccessToken,
+                })}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs text-primary-600 hover:text-primary-700 font-medium"

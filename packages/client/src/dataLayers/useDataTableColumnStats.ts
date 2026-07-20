@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { DataTablesColumnStats } from "@seasketch/geostats-types";
+import { withHostedAuthParams } from "./tilesAuth";
 
 export interface DataTableColumnStatsState {
   columnStats?: DataTablesColumnStats;
@@ -40,14 +41,25 @@ export function getCachedDataTableColumnStats(
   return columnStatsUrl ? columnStatsCache[columnStatsUrl] : undefined;
 }
 
-export function fetchDataTableColumnStats(columnStatsUrl: string) {
+/**
+ * Fetch column-stats.json for a data table. When `accessToken` is provided,
+ * appends hosted-auth query params (same ACL as the parent layer tiles).
+ * Cache keys use the bare URL so token rollover does not fragment the cache.
+ */
+export function fetchDataTableColumnStats(
+  columnStatsUrl: string,
+  accessToken?: string | null
+) {
   if (columnStatsCache[columnStatsUrl]) {
     return Promise.resolve(columnStatsCache[columnStatsUrl]);
   }
   if (columnStatsRequests[columnStatsUrl]) {
     return columnStatsRequests[columnStatsUrl]!;
   }
-  const request = fetch(columnStatsUrl)
+  const authorizedUrl = withHostedAuthParams(columnStatsUrl, {
+    accessToken,
+  });
+  const request = fetch(authorizedUrl)
     .then((response) => {
       if (!response.ok) {
         // eslint-disable-next-line i18next/no-literal-string
@@ -79,7 +91,8 @@ export function fetchDataTableColumnStats(columnStatsUrl: string) {
  * @see packages/data-tables-worker/README.md#column-statsjson
  */
 export function useDataTableColumnStats(
-  columnStatsUrl?: string | null
+  columnStatsUrl?: string | null,
+  accessToken?: string | null
 ): DataTableColumnStatsState {
   const [state, setState] = useState<DataTableColumnStatsState>({
     columnStats: getCachedDataTableColumnStats(columnStatsUrl),
@@ -106,7 +119,7 @@ export function useDataTableColumnStats(
       loading: true,
       error: columnStatsErrors[columnStatsUrl],
     });
-    fetchDataTableColumnStats(columnStatsUrl)
+    fetchDataTableColumnStats(columnStatsUrl, accessToken)
       .then((columnStats: DataTablesColumnStats) => {
         if (!cancelled) {
           setState({ columnStats, loading: false });
@@ -120,12 +133,15 @@ export function useDataTableColumnStats(
     return () => {
       cancelled = true;
     };
-  }, [columnStatsUrl]);
+  }, [columnStatsUrl, accessToken]);
 
   return state;
 }
 
-export function useDataTableColumnStatsMap(columnStatsUrls: string[]) {
+export function useDataTableColumnStatsMap(
+  columnStatsUrls: string[],
+  accessToken?: string | null
+) {
   const [state, setState] = useState<{
     [url: string]: DataTableColumnStatsState | undefined;
   }>(() =>
@@ -158,7 +174,7 @@ export function useDataTableColumnStatsMap(columnStatsUrls: string[]) {
       if (columnStatsCache[url]) {
         continue;
       }
-      fetchDataTableColumnStats(url)
+      fetchDataTableColumnStats(url, accessToken)
         .then((columnStats) => {
           if (!cancelled) {
             setState((prev) => ({
@@ -179,7 +195,7 @@ export function useDataTableColumnStatsMap(columnStatsUrls: string[]) {
     return () => {
       cancelled = true;
     };
-  }, [columnStatsUrls]);
+  }, [columnStatsUrls, accessToken]);
 
   return state;
 }

@@ -15,13 +15,23 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || function (mod) {
-    if (mod && mod.__esModule) return mod;
-    var result = {};
-    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
-    __setModuleDefault(result, mod);
-    return result;
-};
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = handleDataTableUpload;
 const tmp_1 = require("tmp");
@@ -39,12 +49,13 @@ function logDebug(message, details) {
     console.log(`[data-tables-handler] ${message}${suffix}`);
 }
 async function handleDataTableUpload(request) {
-    const { taskId, uploadId, objectKey, suffix, skipLoggingProgress } = request;
+    const { taskId, uploadId, objectKey, suffix, sourceUuid, skipLoggingProgress, } = request;
     logDebug("starting upload", {
         taskId,
         uploadId,
         objectKey,
         suffix,
+        sourceUuid,
         skipLoggingProgress: Boolean(skipLoggingProgress),
     });
     const pgClient = await (0, lambda_db_client_1.getClient)();
@@ -76,6 +87,9 @@ async function handleDataTableUpload(request) {
     const parquetPath = path.join(tmpobj.name, "data.parquet");
     const statsPath = path.join(tmpobj.name, "column-stats.json");
     try {
+        if (!sourceUuid) {
+            throw new Error("sourceUuid is required to store data tables under the parent layer path");
+        }
         await updateProgress("running", "downloading", 0.05);
         const uploadQ = await pgClient.query(`select filename, processing_options, overlay_geostats, overlay_join_column, replace_overlay_data_table_id
        from overlay_data_table_uploads where id = $1`, [uploadId]);
@@ -118,8 +132,8 @@ async function handleDataTableUpload(request) {
         });
         (0, fs_1.writeFileSync)(statsPath, JSON.stringify(columnStats));
         await updateProgress("running", "uploading", 0.8);
-        const parquetTarget = (0, remotes_1.buildR2Remote)(suffix, uploadId, "data.parquet");
-        const statsTarget = (0, remotes_1.buildR2Remote)(suffix, uploadId, "column-stats.json");
+        const parquetTarget = (0, remotes_1.buildR2Remote)(suffix, sourceUuid, uploadId, "data.parquet");
+        const statsTarget = (0, remotes_1.buildR2Remote)(suffix, sourceUuid, uploadId, "column-stats.json");
         await (0, remotes_1.putObject)(parquetPath, parquetTarget.remote);
         await (0, remotes_1.putObject)(statsPath, statsTarget.remote);
         const result = {

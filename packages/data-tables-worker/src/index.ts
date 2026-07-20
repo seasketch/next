@@ -16,7 +16,7 @@ import { queryUiHtml } from "./ui/html";
  *
  * Serves cacheable GET queries over parquet data tables stored in R2, e.g.
  *
- *   GET /projects/{slug}/public/dataTables/{uuid}/query
+ *   GET /projects/{slug}/public/{sourceUuid}/dataTables/{uploadId}/query
  *     ?groupBy=site&op=mean&column=count&q.year=2018&q.classcode=PYCHEL
  *
  * Content negotiation: text/html requests receive an interactive query UI;

@@ -21,6 +21,7 @@
   "dependencies": {
     "flatbuffers": "^25.9.23",
     "flatgeobuf": "^4.4.0",
+    "hyparquet": "^1.26.2",
     "jose": "^5.10.0",
     "pmtiles": "^4.4.1"
   }

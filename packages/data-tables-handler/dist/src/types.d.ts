@@ -11,6 +11,8 @@ export interface DataTablesHandlerRequest {
     uploadId: string;
     objectKey: string;
     suffix: string;
+    /** Parent layer hosted-tiles UUID (`data_sources.url`); used for R2 key prefix. */
+    sourceUuid: string;
     skipLoggingProgress?: boolean;
 }
 export interface DataTablesHandlerSuccess {

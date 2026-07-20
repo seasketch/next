@@ -3,15 +3,18 @@
 /**
  * Data table query API — types and semantics for GET `/query` requests.
  *
- * Each overlay data table is served by the data-tables-worker at an immutable
- * R2 prefix (`projects/{slug}/public/dataTables/{uploadId}`). Map clients
- * compile {@link DataTableQuerySettings} into query-string parameters, fetch
- * aggregated JSON, and join results to vector features using
+ * Each overlay data table lives at an immutable R2 prefix under the parent
+ * layer hosted UUID
+ * (`projects/{slug}/public/{sourceUuid}/dataTables/{uploadId}`), served by
+ * the Overlay Data Server (`uploads.seasketch.org` / pmtiles-server). Map
+ * clients compile {@link DataTableQuerySettings} into query-string
+ * parameters, fetch aggregated JSON (with `access_token` when required by
+ * the parent layer ACL), and join results to vector features using
  * `column-stats.json` join metadata.
  *
  * **Endpoints** (relative to `{tablePath}` or `OverlayDataTable.queryUrl`):
  *
- * - `GET /{tablePath}/query` — run a query (`f=json` for JSON, or HTML UI)
+ * - `GET /{tablePath}/query` — DataTablesBackend aggregation (`f=json` or HTML UI)
  * - `GET /{tablePath}/column-stats.json` — column metadata and join stats
  * - `GET /{tablePath}/data.parquet` — download underlying parquet
  *
@@ -147,14 +150,15 @@ export interface ResolvedDataTableVisualization {
 /**
  * Combines admin-set constraints ({@link DataTableVisualizationConstraints})
  * with the end user's choice in "Display settings" to produce a valid
- * column/op pair to pass to {@link buildDataTableQuerySearchParams} (and, in
- * the future, to MapContextManager for style calculation):
+ * column/op pair to pass to {@link buildDataTableQuerySearchParams}:
  *
  * - `op` must be one of `visualizationOps` when that list is non-empty;
  *   otherwise falls back to the user's choice, or `"mean"`.
  * - `column` must be one of `visualizationColumns` when that list is
- *   non-empty; otherwise falls back to the user's choice (which may be
- *   undefined, e.g. for a bare `count`).
+ *   non-empty; otherwise falls back to the user's choice. When neither
+ *   admin constraints nor a user choice supply a column, callers should
+ *   treat **all numeric columns** (from column-stats) as valid and pick a
+ *   default — see {@link DataTableVisualizationControls}.
  */
 export function resolveDataTableVisualizationSettings(
   constraints: DataTableVisualizationConstraints,
@@ -184,6 +188,22 @@ export function resolveDataTableVisualizationSettings(
       : userChoice.column;
 
   return { column, op, filters: userChoice.filters };
+}
+
+/**
+ * Prefer a sensible default numeric column when admin visualization
+ * constraints are empty. Prefers a column named `count` when present.
+ */
+export function pickDefaultDataTableColumn(
+  numericColumns: string[]
+): string | undefined {
+  if (numericColumns.length === 0) {
+    return undefined;
+  }
+  const countColumn = numericColumns.find(
+    (column) => column.toLowerCase() === "count"
+  );
+  return countColumn || numericColumns[0];
 }
 
 /**

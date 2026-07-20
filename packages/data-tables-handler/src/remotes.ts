@@ -71,11 +71,25 @@ export async function getStagingObject(
   await pipeline(body, createWriteStream(filepath));
 }
 
-export function buildR2Remote(slug: string, uploadId: string, filename: string) {
+/**
+ * Store data tables under the parent layer's hosted UUID so objects classify
+ * as `published` in the tiles ACL gateway and inherit the layer's ACL.
+ *
+ * `projects/{slug}/public/{sourceUuid}/dataTables/{uploadId}/{filename}`
+ */
+export function buildR2Remote(
+  slug: string,
+  sourceUuid: string,
+  uploadId: string,
+  filename: string,
+) {
   const bucket = process.env.R2_TILES_BUCKET || process.env.TILES_REMOTE?.replace("r2://", "").split("/")[0];
   if (!bucket) {
     throw new Error("R2_TILES_BUCKET or TILES_REMOTE must be set");
   }
-  const key = `projects/${slug}/public/dataTables/${uploadId}/${filename}`;
+  if (!sourceUuid) {
+    throw new Error("sourceUuid is required to store data tables under the parent layer path");
+  }
+  const key = `projects/${slug}/public/${sourceUuid}/dataTables/${uploadId}/${filename}`;
   return { remote: `r2://${bucket}/${key}`, key, bucket };
 }

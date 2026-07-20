@@ -246,10 +246,11 @@ begin
     return null;
   end if;
 
-  base := nullif(trim(current_setting('seasketch.uploads_base_url', true)), '');
-  if base is null then
-    return null;
-  end if;
+  -- Prefer an optional session override (tests); otherwise the public uploads host.
+  base := coalesce(
+    nullif(trim(current_setting('seasketch.uploads_base_url', true)), ''),
+    'https://uploads.seasketch.org'
+  );
 
   key := regexp_replace(p_remote, '^r2://[^/]+/', '');
   if key is null or length(trim(key)) = 0 then

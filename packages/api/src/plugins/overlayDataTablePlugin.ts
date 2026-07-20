@@ -7,12 +7,11 @@ function remoteKey(remote: string): string {
   return remote.replace(/^r2:\/\//, "").split("/").slice(1).join("/");
 }
 
+const UPLOADS_PUBLIC_BASE_URL = "https://uploads.seasketch.org";
+
 function remoteToPublicUrl(remote: string | null | undefined): string | null {
   if (!remote) return null;
-  const base =
-    process.env.UPLOADS_BASE_URL || process.env.TILES_BASE_URL || "";
-  if (!base) return null;
-  return `${base.replace(/\/$/, "")}/${remoteKey(remote)}`;
+  return `${UPLOADS_PUBLIC_BASE_URL}/${remoteKey(remote)}`;
 }
 
 function tablePathFromParquetRemote(
@@ -28,9 +27,9 @@ function tablePathFromParquetRemote(
 function remoteToQueryUrl(remote: string | null | undefined): string | null {
   const tablePath = tablePathFromParquetRemote(remote);
   if (!tablePath) return null;
-  const base =
-    process.env.DATA_TABLES_BASE_URL || "https://data-tables.seasketch.org";
-  return `${base.replace(/\/$/, "")}/${tablePath}/query`;
+  // Served by pmtiles-server DataTablesBackend on the uploads host (same ACL
+  // as the parent layer's published UUID).
+  return `${UPLOADS_PUBLIC_BASE_URL}/${tablePath}/query`;
 }
 
 const OverlayDataTablePlugin = makeExtendSchemaPlugin(() => ({

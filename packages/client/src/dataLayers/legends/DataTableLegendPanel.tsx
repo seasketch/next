@@ -18,6 +18,7 @@ import {
   columnStatsUrlForTable,
   useDataTableColumnStats,
 } from "../useDataTableColumnStats";
+import useCurrentProjectMetadata from "../../useCurrentProjectMetadata";
 import DataTableLegendBubble from "./DataTableLegendBubble";
 
 export default function DataTableLegendPanel({
@@ -51,6 +52,8 @@ export default function DataTableLegendPanel({
     setUserVisualizationChoice,
     setActiveTable,
   } = useContext(ActivatedDataTableContext);
+  const { data: projectMeta } = useCurrentProjectMetadata();
+  const mapAccessToken = projectMeta?.project?.mapAccessToken;
   const table = tables.find((entry) => entry.id === tableId);
 
   const metadataQuery = useOverlayDataTableVisualizationMetadataForLayerQuery({
@@ -87,7 +90,10 @@ export default function DataTableLegendPanel({
   const columnStatsUrl = tableMetadata
     ? columnStatsUrlForTable(tableMetadata)
     : undefined;
-  const columnStatsState = useDataTableColumnStats(columnStatsUrl);
+  const columnStatsState = useDataTableColumnStats(
+    columnStatsUrl,
+    mapAccessToken
+  );
   const columnStats = columnStatsState.columnStats;
   const userChoice = userVisualizationChoices[layerId] || {};
   const resolved = tableMetadata
@@ -148,14 +154,16 @@ export default function DataTableLegendPanel({
         />
       </div>
 
-      <div className="pt-1">
-        <DataTableLegendBubble
-          min={min}
-          max={max}
-          hasZero={hasZero}
-          showValueScale={showValueScale}
-        />
-      </div>
+      {(showValueScale || Boolean(column)) && (
+        <div className="pt-1">
+          <DataTableLegendBubble
+            min={min}
+            max={max}
+            hasZero={hasZero}
+            showValueScale={showValueScale}
+          />
+        </div>
+      )}
 
       {!columnStatsState.loading &&
         !columnStatsState.error &&

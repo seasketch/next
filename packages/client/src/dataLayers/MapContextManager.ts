@@ -496,7 +496,9 @@ class MapContextManager extends EventEmitter {
     });
     params.set("f", "json");
     url.search = params.toString();
-    return url.toString();
+    return withHostedAuthParams(url.toString(), {
+      accessToken: this.mapAccessToken,
+    });
   }
 
   private setActivatedDataTableLoading(tocStableId: string, loading: boolean) {
@@ -700,7 +702,10 @@ class MapContextManager extends EventEmitter {
         : undefined;
       if (!columnStats && columnStatsUrl) {
         try {
-          columnStats = await fetchDataTableColumnStats(columnStatsUrl);
+          columnStats = await fetchDataTableColumnStats(
+            columnStatsUrl,
+            this.mapAccessToken
+          );
         } catch (error) {
           console.error(error);
         }
@@ -3698,13 +3703,14 @@ class MapContextManager extends EventEmitter {
                     ? dataTableSettings.query.op[0]
                     : dataTableSettings.query.op
                   : undefined;
-                const activeDataTable =
-                  dataTableSettings?.query.column &&
-                  dataTableOp &&
-                  dataTableSettings.tableId
-                    ? this.getOverlayDataTable(id, dataTableSettings.tableId)
-                    : undefined;
-                if (activeDataTable && dataTableOp && dataTableSettings) {
+                // Show the data-table legend panel as soon as a table is
+                // activated — even before a column is resolved. Column/op
+                // controls live in that panel and pick a default numeric
+                // column from column-stats when admin constraints are empty.
+                const activeDataTable = dataTableSettings?.tableId
+                  ? this.getOverlayDataTable(id, dataTableSettings.tableId)
+                  : undefined;
+                if (activeDataTable && dataTableSettings) {
                   newLegendState[id] = {
                     id,
                     type: "DataTableLegendItem",
@@ -3714,7 +3720,7 @@ class MapContextManager extends EventEmitter {
                     tableId: dataTableSettings.tableId,
                     tableName: activeDataTable.name,
                     column: dataTableSettings.query.column,
-                    op: dataTableOp as DataTableAggregation,
+                    op: (dataTableOp || "mean") as DataTableAggregation,
                     min:
                       dataTableValues &&
                       dataTableValues.scaleMax > dataTableValues.scaleMin

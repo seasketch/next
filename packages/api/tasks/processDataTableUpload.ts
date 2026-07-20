@@ -1,11 +1,13 @@
 import { Helpers } from "graphile-worker";
 import AWS from "aws-sdk";
+import { extractHostedTilesUuid } from "../src/tilesAcl/writeProjectAclDoc";
 
 interface DataTablesHandlerRequest {
   taskId: string;
   uploadId: string;
   objectKey: string;
   suffix: string;
+  sourceUuid: string;
   skipLoggingProgress?: boolean;
 }
 
@@ -67,8 +69,15 @@ export default async function processDataTableUpload(
     const q = await client.query(
       `select
         odtu.id as upload_id,
-        odtu.id || '/' || odtu.filename as object_key
+        odtu.id || '/' || odtu.filename as object_key,
+        p.slug,
+        ds.url as data_source_url
       from overlay_data_table_uploads odtu
+      join project_background_jobs pbj on pbj.id = odtu.project_background_job_id
+      join projects p on p.id = pbj.project_id
+      join table_of_contents_items toc on toc.id = odtu.table_of_contents_item_id
+      join data_layers dl on dl.id = toc.data_layer_id
+      join data_sources ds on ds.id = dl.data_source_id
       where odtu.project_background_job_id = $1
       limit 1`,
       [jobId],
@@ -76,28 +85,35 @@ export default async function processDataTableUpload(
     if (!q.rows[0]) {
       throw new Error("Could not find upload for job " + jobId);
     }
-    const slugResults = await client.query(
-      `select slug from projects where id = (select project_id from project_background_jobs where id = $1)`,
-      [jobId],
-    );
+    const sourceUuid = extractHostedTilesUuid(q.rows[0].data_source_url);
+    if (!sourceUuid) {
+      const message =
+        "Parent layer has no hosted tiles UUID; data tables must be stored under the layer path for ACL";
+      await client.query(`select fail_overlay_data_table_upload($1, $2)`, [
+        jobId,
+        message,
+      ]);
+      throw new Error(message);
+    }
     try {
       await runDataTablesLambda({
         taskId: jobId,
         uploadId: q.rows[0].upload_id,
         objectKey: q.rows[0].object_key,
-        suffix: slugResults.rows[0].slug,
+        suffix: q.rows[0].slug,
+        sourceUuid,
       });
     } catch (e) {
       if (process.env.DATA_TABLES_LAMBDA_DEV_HANDLER) {
-        await client.query(
-          `select fail_overlay_data_table_upload($1, $2)`,
-          [jobId, (e as Error).message],
-        );
+        await client.query(`select fail_overlay_data_table_upload($1, $2)`, [
+          jobId,
+          (e as Error).message,
+        ]);
       } else {
-        await client.query(
-          `select fail_overlay_data_table_upload($1, $2)`,
-          [jobId, "Lambda invocation failure"],
-        );
+        await client.query(`select fail_overlay_data_table_upload($1, $2)`, [
+          jobId,
+          "Lambda invocation failure",
+        ]);
       }
     }
   });

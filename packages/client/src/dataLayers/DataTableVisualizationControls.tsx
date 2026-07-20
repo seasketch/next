@@ -7,10 +7,12 @@ import {
   DATA_TABLE_AGGREGATIONS,
   DataTableAggregation,
   DataTableVisualizationMetadata,
+  pickDefaultDataTableColumn,
   resolveDataTableVisualizationSettings,
 } from "./dataTableQueryApi";
 import {
   DataTableColumnStatsState,
+  columnStatsUrlForTable,
   numericColumnNames,
 } from "./useDataTableColumnStats";
 import clsx from "clsx";
@@ -148,12 +150,16 @@ export default function DataTableVisualizationControls({
   );
   const columnStats = columnStatsState?.columnStats;
   const error = columnStatsState?.error;
+  // Prefer GraphQL columnStatsUrl; fall back to rewriting queryUrl
+  // (/query → /column-stats.json) when the API host env is missing.
+  const resolvedColumnStatsUrl = columnStatsUrlForTable(metadata);
   const loading = Boolean(
     metadataLoading ||
       columnStatsState?.loading ||
-      (metadata.columnStatsUrl && !columnStatsState)
+      (resolvedColumnStatsUrl && !columnStatsState)
   );
 
+  // Empty admin visualizationColumns ⇒ all numeric columns are valid choices.
   const columnChoices = useMemo(
     () =>
       allowedColumns.length > 0
@@ -169,10 +175,17 @@ export default function DataTableVisualizationControls({
     [layerId, userVisualizationChoices]
   );
   const resolved = resolveDataTableVisualizationSettings(metadata, userChoice);
-  const defaultColumn = resolved.column || columnChoices[0];
+  const defaultColumn =
+    resolved.column ||
+    (allowedColumns.length > 0
+      ? columnChoices[0]
+      : pickDefaultDataTableColumn(columnChoices));
   const effectiveColumn = userChoice.column || defaultColumn;
   const showColumn = resolved.op !== "count" || Boolean(effectiveColumn);
 
+  // Persist a default column/op as soon as column-stats (or admin
+  // constraints) make one available, so the map query can start without a
+  // separate "Thematic map settings" step.
   useEffect(() => {
     if (loading || error || !effectiveColumn) {
       return;
@@ -264,7 +277,7 @@ export default function DataTableVisualizationControls({
       {allowedColumns.length === 0 &&
         !loading &&
         !error &&
-        !metadata.columnStatsUrl && (
+        !resolvedColumnStatsUrl && (
           <p className="text-xs text-gray-400 italic">
             {t("Column metadata is not available for this table.")}
           </p>
@@ -272,7 +285,7 @@ export default function DataTableVisualizationControls({
       {allowedColumns.length === 0 &&
         !loading &&
         !error &&
-        metadata.columnStatsUrl &&
+        resolvedColumnStatsUrl &&
         columnChoices.length === 0 && (
           <p className="text-xs text-gray-400 italic">
             {t("No numeric columns available to visualize.")}

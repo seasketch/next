@@ -35,12 +35,20 @@ function logDebug(message: string, details?: Record<string, unknown>) {
 export default async function handleDataTableUpload(
   request: DataTablesHandlerRequest,
 ): Promise<DataTablesHandlerResponse> {
-  const { taskId, uploadId, objectKey, suffix, skipLoggingProgress } = request;
+  const {
+    taskId,
+    uploadId,
+    objectKey,
+    suffix,
+    sourceUuid,
+    skipLoggingProgress,
+  } = request;
   logDebug("starting upload", {
     taskId,
     uploadId,
     objectKey,
     suffix,
+    sourceUuid,
     skipLoggingProgress: Boolean(skipLoggingProgress),
   });
   const pgClient = await getClient();
@@ -82,6 +90,11 @@ export default async function handleDataTableUpload(
   const statsPath = path.join(tmpobj.name, "column-stats.json");
 
   try {
+    if (!sourceUuid) {
+      throw new Error(
+        "sourceUuid is required to store data tables under the parent layer path",
+      );
+    }
     await updateProgress("running", "downloading", 0.05);
 
     const uploadQ = await pgClient.query(
@@ -152,8 +165,18 @@ export default async function handleDataTableUpload(
 
     await updateProgress("running", "uploading", 0.8);
 
-    const parquetTarget = buildR2Remote(suffix, uploadId, "data.parquet");
-    const statsTarget = buildR2Remote(suffix, uploadId, "column-stats.json");
+    const parquetTarget = buildR2Remote(
+      suffix,
+      sourceUuid,
+      uploadId,
+      "data.parquet",
+    );
+    const statsTarget = buildR2Remote(
+      suffix,
+      sourceUuid,
+      uploadId,
+      "column-stats.json",
+    );
     await putObject(parquetPath, parquetTarget.remote);
     await putObject(statsPath, statsTarget.remote);
 

@@ -2,7 +2,8 @@ name = "overlay-data-server"
 main = "src/index.ts"
 compatibility_date = "2026-07-14"
 # Request-scoped timing context for Server-Timing (see src/timing.ts).
-compatibility_flags = ["nodejs_als"]
+# nodejs_compat covers ALS (timing) and hyparquet's node-lean deps.
+compatibility_flags = ["nodejs_compat"]
 
 # Workers Caching: serves cache hits without invoking the worker, collapses
 # concurrent misses, and participates in tiered caching.
@@ -31,6 +32,12 @@ enabled = false
 [exports.PropertiesBackend]
 type = "worker"
 [exports.PropertiesBackend.cache]
+enabled = true
+
+# Data-table /query aggregations are deterministic per path+query string.
+[exports.DataTablesBackend]
+type = "worker"
+[exports.DataTablesBackend.cache]
 enabled = true
 
 [vars]

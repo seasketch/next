@@ -91,8 +91,8 @@ describe("overlay_data_tables", () => {
             await conn.any(sql`
               select complete_overlay_data_table_upload(
                 ${jobId}, 'fish', 'site_id', 'id', 10,
-                'r2://bucket/projects/test/public/dataTables/u1/data.parquet',
-                'r2://bucket/projects/test/public/dataTables/u1/column-stats.json'
+                'r2://bucket/projects/test/public/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/dataTables/u1/data.parquet',
+                'r2://bucket/projects/test/public/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/dataTables/u1/column-stats.json'
               )`);
           },
           { userId: adminId, projectId },
@@ -156,8 +156,8 @@ describe("overlay_data_tables", () => {
               row_count, created_by, parquet_remote, column_stats_remote
             ) values (
               ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId},
-              'r2://bucket/projects/test/public/dataTables/u1/data.parquet',
-              'r2://bucket/projects/test/public/dataTables/u1/column-stats.json'
+              'r2://bucket/projects/test/public/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/dataTables/u1/data.parquet',
+              'r2://bucket/projects/test/public/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/dataTables/u1/column-stats.json'
             )`);
           },
           { userId: adminId, projectId },

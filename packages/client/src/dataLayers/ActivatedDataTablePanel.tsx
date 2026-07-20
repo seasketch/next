@@ -13,6 +13,7 @@ import {
   columnStatsUrlForTable,
   fetchDataTableColumnStats,
 } from "./useDataTableColumnStats";
+import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 
 /**
  * Popover panel for choosing which OverlayDataTable is active for a layer.
@@ -35,6 +36,8 @@ export default function ActivatedDataTablePanel({
   const { activeTableIds, setActiveTable } = useContext(
     ActivatedDataTableContext
   );
+  const { data: projectMeta } = useCurrentProjectMetadata();
+  const mapAccessToken = projectMeta?.project?.mapAccessToken;
   const metadataQuery = useOverlayDataTableVisualizationMetadataForLayerQuery({
     variables: { tocItemId: tocItemId || -1 },
     skip: tocItemId === undefined,
@@ -63,10 +66,10 @@ export default function ActivatedDataTablePanel({
       const metadata = metadataByTableId[table.id] || table;
       const columnStatsUrl = columnStatsUrlForTable(metadata);
       if (columnStatsUrl) {
-        void fetchDataTableColumnStats(columnStatsUrl);
+        void fetchDataTableColumnStats(columnStatsUrl, mapAccessToken);
       }
     }
-  }, [metadataByTableId, tables]);
+  }, [metadataByTableId, tables, mapAccessToken]);
 
   return (
     <Popover.Content

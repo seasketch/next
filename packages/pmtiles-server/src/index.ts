@@ -1,5 +1,6 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { corsPreflightResponse } from "./auth/cors";
+import { DataTablesBackend } from "./dataTablesBackend";
 import { handleClassifiedRequest } from "./gateway";
 import { ObjectBackend } from "./objectBackend";
 import { PropertiesBackend } from "./propertiesBackend";
@@ -10,18 +11,22 @@ import {
 } from "./resource";
 import { TilesBackend } from "./tilesBackend";
 
-export { ObjectBackend, PropertiesBackend, TilesBackend };
+export { DataTablesBackend, ObjectBackend, PropertiesBackend, TilesBackend };
 
 /**
  * Default entrypoint: authorize (using `?ns=` / `?access_token=`), then route
- * to TilesBackend, ObjectBackend, or PropertiesBackend.
+ * to TilesBackend, ObjectBackend, PropertiesBackend, or DataTablesBackend.
  */
 export default class extends WorkerEntrypoint<Env> {
   async fetch(request: Request): Promise<Response> {
     const url = new URL(request.url);
 
     if (request.method === "OPTIONS") {
-      if (url.pathname === "/properties" || url.pathname === "/properties/") {
+      if (
+        url.pathname === "/properties" ||
+        url.pathname === "/properties/" ||
+        isDataTableQueryPath(url.pathname)
+      ) {
         return new Response(null, {
           status: 204,
           headers: {
@@ -37,6 +42,10 @@ export default class extends WorkerEntrypoint<Env> {
 
     if (url.pathname === "/properties" || url.pathname === "/properties/") {
       return this.routeProperties(request);
+    }
+
+    if (isDataTableQueryPath(url.pathname)) {
+      return this.routeDataTableQuery(request);
     }
 
     const resource = classifyResource(url.pathname);
@@ -57,6 +66,41 @@ export default class extends WorkerEntrypoint<Env> {
       {
         ns: aclNamespaceFromRequest(request),
         enforce: resourceAclEnabled(this.env, resource),
+        waitUntil: (p) => this.ctx.waitUntil(p),
+      },
+    );
+  }
+
+  /**
+   * Overlay data-table aggregations. Paths classify as `published` under the
+   * parent layer UUID (`…/public/{uuid}/dataTables/{uploadId}/query`), so the
+   * existing tiles ACL applies. Query string is part of the cache key.
+   */
+  private async routeDataTableQuery(request: Request): Promise<Response> {
+    const url = new URL(request.url);
+    const resource = classifyResource(url.pathname);
+    if (!resource) {
+      return new Response(JSON.stringify({ error: "Invalid object path" }), {
+        status: 400,
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          "Access-Control-Allow-Origin": "*",
+          "Cache-Control": "no-store",
+        },
+      });
+    }
+    return handleClassifiedRequest(
+      request,
+      this.env,
+      {
+        fetch: (req, options) =>
+          this.ctx.exports.DataTablesBackend.fetch(req, options),
+      },
+      resource,
+      {
+        ns: aclNamespaceFromRequest(request),
+        enforce: resourceAclEnabled(this.env, resource),
+        includeQueryInCacheKey: true,
         waitUntil: (p) => this.ctx.waitUntil(p),
       },
     );
@@ -101,6 +145,14 @@ export default class extends WorkerEntrypoint<Env> {
       headers,
     });
   }
+}
+
+/** True for overlay data-table query endpoints (hyparquet aggregation). */
+function isDataTableQueryPath(pathname: string): boolean {
+  return (
+    pathname.endsWith("/query") &&
+    pathname.includes("/dataTables/")
+  );
 }
 
 const TILE_EXT = "(?:mvt|pbf|png|webp|jpg|jpeg)";

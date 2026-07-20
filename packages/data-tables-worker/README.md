@@ -1,6 +1,11 @@
-# data-tables-worker
+# data-tables-worker (deprecated)
 
-Cloudflare Worker that serves highly cacheable GET queries over SeaSketch
+> **Deprecated.** Query serving and ACL now live in
+> [`packages/pmtiles-server`](../pmtiles-server) (`DataTablesBackend` on
+> `uploads.seasketch.org`). This package is kept temporarily for reference
+> during cutover; do not deploy new versions.
+
+Cloudflare Worker that served highly cacheable GET queries over SeaSketch
 overlay data tables stored as parquet in R2. It powers map visualizations by
 answering questions like "average PYCHEL count per site in 2018" which can
 then be joined against survey-site vector tiles in mapbox-gl-js.
@@ -20,7 +25,7 @@ matches -- no per-row objects are materialized during scans.
 Each uploaded data table lives at an immutable R2 prefix:
 
 ```
-{tablePath} = projects/{slug}/public/dataTables/{uploadId}
+{tablePath} = projects/{slug}/public/{sourceUuid}/dataTables/{uploadId}
 ```
 
 | URL | Description |
@@ -127,7 +132,7 @@ Successful `f=json` responses:
 
 ```json
 {
-  "table": "projects/california/public/dataTables/{uploadId}",
+  "table": "projects/california/public/{sourceUuid}/dataTables/{uploadId}",
   "totalRows": 353253,
   "rowsScanned": 353253,
   "rowsMatched": 2328,
@@ -236,13 +241,13 @@ Filter `op` values in TypeScript match `FilterOperator` in `src/params.ts`
 ### Example
 
 ```
-GET /projects/california/public/dataTables/{uploadId}/query
+GET /projects/california/public/{sourceUuid}/dataTables/{uploadId}/query
   ?groupBy=site&op=mean,count&column=count&q.year=2018&q.classcode=PYCHEL&f=json
 ```
 
 ```json
 {
-  "table": "projects/california/public/dataTables/…",
+  "table": "projects/california/public/{sourceUuid}/dataTables/…",
   "totalRows": 353253,
   "rowsScanned": 353253,
   "rowsMatched": 3,
