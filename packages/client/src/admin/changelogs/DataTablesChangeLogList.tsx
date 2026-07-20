@@ -7,6 +7,7 @@ import {
 } from "../../generated/graphql";
 import ChangeLogListItem from "./ChangeLogListItem";
 import {
+  DATA_TABLE_CHANGE_LOG_COLLAPSED_FIRST,
   DATA_TABLE_CHANGE_LOG_EXPANDED_FIRST,
   DATA_TABLE_CHANGE_LOG_PAGE_SIZE,
 } from "./dataTableChangeLogRefetch";
@@ -49,7 +50,7 @@ export default function DataTablesChangeLogList({
       id: tableOfContentsItemId,
       first: showAllHistory
         ? DATA_TABLE_CHANGE_LOG_EXPANDED_FIRST
-        : DATA_TABLE_CHANGE_LOG_PAGE_SIZE,
+        : DATA_TABLE_CHANGE_LOG_COLLAPSED_FIRST,
     }),
     [tableOfContentsItemId, showAllHistory],
   );
@@ -71,16 +72,20 @@ export default function DataTablesChangeLogList({
     (showAllHistory && loading ? lastTocRef.current : undefined) ??
     lastTocRef.current;
 
-  const changeLogs = toc?.dataTableChangeLogs ? [...toc.dataTableChangeLogs] : [];
+  const fetchedLogs = toc?.dataTableChangeLogs
+    ? [...toc.dataTableChangeLogs]
+    : [];
+  // Collapsed query peeks one past the page size so we know whether more exist.
+  const changeLogs = showAllHistory
+    ? fetchedLogs
+    : fetchedLogs.slice(0, DATA_TABLE_CHANGE_LOG_PAGE_SIZE);
   const activeTables = (toc?.overlayDataTables || []).map((table) => ({
     id: table.id,
     version: table.version,
   }));
 
   const canShowMore =
-    !showAllHistory &&
-    changeLogs.length >= DATA_TABLE_CHANGE_LOG_PAGE_SIZE &&
-    changeLogs.length > 0;
+    !showAllHistory && fetchedLogs.length > DATA_TABLE_CHANGE_LOG_PAGE_SIZE;
 
   const initialLoading = loading && !tocQuery && !showAllHistory;
 

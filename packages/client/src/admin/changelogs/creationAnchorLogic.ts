@@ -6,13 +6,18 @@ import {
 /** Max difference between LayerUploaded.lastAt and dataSource.createdAt to treat upload as creation. */
 export const CREATION_UPLOAD_MATCH_MS = 5 * 60 * 1000;
 
+/**
+ * Whether the collapsed history fetch exhausted the list. Callers request
+ * `pageSize + 1` when collapsed, so a result of `pageSize` or fewer means
+ * there is nothing more to load.
+ */
 export function hasLoadedFullHistory(
   changeLogsLength: number,
   pageSize: number,
   showAllHistory: boolean
 ): boolean {
   if (changeLogsLength === 0) return true;
-  if (changeLogsLength < pageSize) return true;
+  if (changeLogsLength <= pageSize) return true;
   return showAllHistory;
 }
 

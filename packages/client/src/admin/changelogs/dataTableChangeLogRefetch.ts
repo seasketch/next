@@ -4,12 +4,14 @@ import {
   GetLayerItemDocument,
 } from "../../generated/graphql";
 import {
+  LAYER_SETTINGS_CHANGE_LOG_COLLAPSED_FIRST,
   LAYER_SETTINGS_CHANGE_LOG_EXPANDED_FIRST,
   LAYER_SETTINGS_CHANGE_LOG_PAGE_SIZE,
 } from "./layerSettingsChangeLogRefetch";
 
 export {
   LAYER_SETTINGS_CHANGE_LOG_PAGE_SIZE as DATA_TABLE_CHANGE_LOG_PAGE_SIZE,
+  LAYER_SETTINGS_CHANGE_LOG_COLLAPSED_FIRST as DATA_TABLE_CHANGE_LOG_COLLAPSED_FIRST,
   LAYER_SETTINGS_CHANGE_LOG_EXPANDED_FIRST as DATA_TABLE_CHANGE_LOG_EXPANDED_FIRST,
 };
 
@@ -22,7 +24,7 @@ export function dataTableChangeLogRefetchQueries(
       query: DataTableChangeLogDocument,
       variables: {
         id: tableOfContentsItemId,
-        first: LAYER_SETTINGS_CHANGE_LOG_PAGE_SIZE,
+        first: LAYER_SETTINGS_CHANGE_LOG_COLLAPSED_FIRST,
       },
     },
     {

@@ -1,8 +1,14 @@
 import { RefetchQueriesInclude } from "@apollo/client";
 import { LayerSettingsChangeLogDocument } from "../../generated/graphql";
 
-/** Recent slice for layer settings history query (matches refetch mutation cache keys). */
+/** How many history items to show before "View full history". */
 export const LAYER_SETTINGS_CHANGE_LOG_PAGE_SIZE = 5;
+/**
+ * Collapsed fetch size: one more than the visible page so we can tell
+ * "exactly PAGE_SIZE items" from "there are more".
+ */
+export const LAYER_SETTINGS_CHANGE_LOG_COLLAPSED_FIRST =
+  LAYER_SETTINGS_CHANGE_LOG_PAGE_SIZE + 1;
 /** Cap when user expands history (newest-first; unlikely to exceed in practice). */
 export const LAYER_SETTINGS_CHANGE_LOG_EXPANDED_FIRST = 500;
 
@@ -15,7 +21,7 @@ export function layerSettingsChangeLogRefetchQueries(
       query: LayerSettingsChangeLogDocument,
       variables: {
         id: tableOfContentsItemId,
-        first: LAYER_SETTINGS_CHANGE_LOG_PAGE_SIZE,
+        first: LAYER_SETTINGS_CHANGE_LOG_COLLAPSED_FIRST,
       },
     },
     {
