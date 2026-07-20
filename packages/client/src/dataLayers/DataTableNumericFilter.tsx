@@ -14,7 +14,10 @@ import {
 import * as Popover from "@radix-ui/react-popover";
 import * as Slider from "@radix-ui/react-slider";
 import { GeostatsAttribute } from "@seasketch/geostats-types";
-import { DataTableFilter } from "./dataTableQueryApi";
+import {
+  DataTableFilter,
+  dataTableInFilterValues,
+} from "./dataTableQueryApi";
 import clsx from "clsx";
 
 /** Prefer discrete equality when unique values stay within this bound. */
@@ -99,10 +102,7 @@ function parseNumericFilterState(
   if (inFilter) {
     return {
       mode: "values" as NumericUiMode,
-      selected: (inFilter.value || "")
-        .split(",")
-        .map((value) => value.trim())
-        .filter(Boolean),
+      selected: dataTableInFilterValues(inFilter),
       multi: true,
       min: "",
       max: "",
@@ -157,7 +157,7 @@ function emitNumericFilters(
       return [{ column, op: "eq", value: "" }];
     }
     if (multi || selected.length > 1) {
-      return [{ column, op: "in", value: selected.join(",") }];
+      return [{ column, op: "in", values: selected }];
     }
     return [{ column, op: "eq", value: selected[0] }];
   }

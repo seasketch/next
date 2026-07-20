@@ -109,10 +109,6 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
    */
   "upload-processing-complete": DataUploadProcessingCompleteEvent;
   "data-table-upload-complete": { jobId: string; tableOfContentsItemId: number };
-  "data-table-upload-started": {
-    jobId: string;
-    tableOfContentsItemId: number;
-  };
   "feature-layer-conversion-complete": FeatureLayerConversionCompleteEvent;
   "file-uploaded": { uploadTaskId: string; jobId: string };
   "upload-submitted": UploadSubmittedEvent;
@@ -618,22 +614,49 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
     this.sessionUploadJobIds.push(jobId);
     this.activeJobs.add(jobId);
     this.abortControllers[jobId] = new AbortController();
-    this.emit("data-table-upload-started", {
-      jobId,
-      tableOfContentsItemId,
-    });
 
+    // Note: "upload-error" is reserved for spatial dropzone uploads (it
+    // clears dropzone state and shows the fullscreen error overlay). Data
+    // table upload failures surface on the job entry itself.
     void this.runDataTableFileUpload(jobId, presignedUrl, file).catch((e) => {
-      const message = e instanceof Error ? e.message : String(e);
       delete this.abortControllers[jobId];
-      this.emit("upload-error", {
-        error: message,
-        isQuotaError: /quota exceeded/i.test(message),
-        jobId,
-      });
+      if (axios.isCancel(e)) {
+        // User-initiated abort; abortUpload handles server-side cancellation.
+        return;
+      }
+      const message = e instanceof Error ? e.message : String(e);
+      this.markDataTableUploadFailed(jobId, message);
     });
 
     return { jobId };
+  }
+
+  /**
+   * Writes a failed state to the cached job entry when the browser-side PUT
+   * or submit mutation fails. Server-side failures arrive via subscription;
+   * this covers failures before the server ever hears about the upload.
+   */
+  private markDataTableUploadFailed(jobId: string, message: string) {
+    try {
+      this.client.cache.writeFragment({
+        // eslint-disable-next-line i18next/no-literal-string
+        id: `ProjectBackgroundJob:${jobId}`,
+        fragment: gql`
+          fragment DataTableUploadFailed on ProjectBackgroundJob {
+            state
+            progressMessage
+            errorMessage
+          }
+        `,
+        data: {
+          state: ProjectBackgroundJobState.Failed,
+          progressMessage: "failed",
+          errorMessage: message,
+        },
+      });
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   isUploadFromMySession(taskId: string) {

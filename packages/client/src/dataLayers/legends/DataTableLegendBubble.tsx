@@ -157,10 +157,12 @@ function SpecialSymbolEntry({
 export default function DataTableLegendBubble({
   min,
   max,
+  hasZero = true,
   showValueScale = true,
 }: {
   min: number;
   max: number;
+  /** Show the zero chip only when the current results actually contain 0. */
   hasZero?: boolean;
   showValueScale?: boolean;
 }) {
@@ -181,13 +183,15 @@ export default function DataTableLegendBubble({
             labelClassName="text-gray-600"
           />
         </li>
-        <li>
-          <SpecialSymbolEntry
-            symbol={<ZeroSymbol />}
-            label={0}
-            labelClassName="font-medium tabular-nums text-gray-700"
-          />
-        </li>
+        {hasZero && (
+          <li>
+            <SpecialSymbolEntry
+              symbol={<ZeroSymbol />}
+              label={0}
+              labelClassName="font-medium tabular-nums text-gray-700"
+            />
+          </li>
+        )}
       </ul>
     </div>
   );

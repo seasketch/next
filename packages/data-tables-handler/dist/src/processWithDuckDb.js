@@ -15,23 +15,13 @@ var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (
 }) : function(o, v) {
     o["default"] = v;
 });
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
+var __importStar = (this && this.__importStar) || function (mod) {
+    if (mod && mod.__esModule) return mod;
+    var result = {};
+    if (mod != null) for (var k in mod) if (k !== "default" && Object.prototype.hasOwnProperty.call(mod, k)) __createBinding(result, mod, k);
+    __setModuleDefault(result, mod);
+    return result;
+};
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
@@ -57,6 +47,18 @@ function all(conn, sql) {
 function escapePath(path) {
     return path.replace(/'/g, "''");
 }
+/** Runs fn against a fresh in-memory DuckDB, always closing it afterwards. */
+async function withDuckDb(fn) {
+    const db = new duckdb_1.default.Database(":memory:");
+    const conn = db.connect();
+    try {
+        return await fn(conn);
+    }
+    finally {
+        conn.close();
+        db.close();
+    }
+}
 function delimiterOption(delimiter) {
     switch (delimiter) {
         case "\t":
@@ -70,8 +72,6 @@ function delimiterOption(delimiter) {
     }
 }
 async function processCsvWithDuckDb(csvPath, parquetPath, options) {
-    const db = new duckdb_1.default.Database(":memory:");
-    const conn = db.connect();
     const { path: duckDbCsvPath, normalized } = (0, normalizeCsvEncoding_1.normalizeCsvEncodingIfNeeded)(csvPath, path.join(path.dirname(csvPath), "input.utf8.csv"));
     if (normalized) {
         console.log(`[data-tables-handler] normalized csv encoding to utf-8: ${duckDbCsvPath}`);
@@ -89,71 +89,70 @@ async function processCsvWithDuckDb(csvPath, parquetPath, options) {
     ]
         .filter(Boolean)
         .join(", ");
-    const columnPlans = await (0, inferCsvColumnPlans_1.inferCsvColumnPlans)(conn, duckDbCsvPath, readCsvOptionsSuffix);
-    const baseNullstr = (0, inferCsvColumnPlans_1.nullstrOption)(inferCsvColumnPlans_1.CSV_NULL_STRINGS_BASE);
-    await run(conn, `CREATE OR REPLACE TEMP TABLE _csv_raw AS SELECT * FROM read_csv('${escapePath(duckDbCsvPath)}', ${readCsvOptionsSuffix}, ${baseNullstr}, all_varchar=true${forceNotNullSql})`);
-    await run(conn, `CREATE OR REPLACE TABLE observations AS SELECT ${(0, inferCsvColumnPlans_1.buildTypedSelectSql)(columnPlans)} FROM _csv_raw`);
-    await run(conn, "DROP TABLE IF EXISTS _csv_raw");
-    const countRows = await all(conn, "SELECT COUNT(*)::INTEGER as count FROM observations");
-    const rowCount = countRows[0]?.count ?? 0;
-    const columns = await all(conn, `SELECT column_name FROM information_schema.columns WHERE table_name = 'observations' ORDER BY ordinal_position`);
-    const headers = columns.map((c) => c.column_name);
-    await run(conn, `COPY observations TO '${escapePath(parquetPath)}' (FORMAT PARQUET)`);
-    conn.close();
-    db.close();
-    return { rowCount, headers, joinValues: new Set() };
+    return withDuckDb(async (conn) => {
+        const columnPlans = await (0, inferCsvColumnPlans_1.inferCsvColumnPlans)(conn, duckDbCsvPath, readCsvOptionsSuffix);
+        const baseNullstr = (0, inferCsvColumnPlans_1.nullstrOption)(inferCsvColumnPlans_1.CSV_NULL_STRINGS_BASE);
+        await run(conn, `CREATE OR REPLACE TEMP TABLE _csv_raw AS SELECT * FROM read_csv('${escapePath(duckDbCsvPath)}', ${readCsvOptionsSuffix}, ${baseNullstr}, all_varchar=true${forceNotNullSql})`);
+        await run(conn, `CREATE OR REPLACE TABLE observations AS SELECT ${(0, inferCsvColumnPlans_1.buildTypedSelectSql)(columnPlans)} FROM _csv_raw`);
+        await run(conn, "DROP TABLE IF EXISTS _csv_raw");
+        const countRows = await all(conn, "SELECT COUNT(*)::INTEGER as count FROM observations");
+        const rowCount = countRows[0]?.count ?? 0;
+        const columns = await all(conn, `SELECT column_name FROM information_schema.columns WHERE table_name = 'observations' ORDER BY ordinal_position`);
+        const headers = columns.map((c) => c.column_name);
+        await run(conn, `COPY observations TO '${escapePath(parquetPath)}' (FORMAT PARQUET)`);
+        return { rowCount, headers };
+    });
 }
 async function readJoinValues(parquetPath, joinColumn) {
-    const db = new duckdb_1.default.Database(":memory:");
-    const conn = db.connect();
     const col = joinColumn.replace(/"/g, '""');
-    const rows = await all(conn, `SELECT DISTINCT CAST("${col}" AS VARCHAR) as v FROM read_parquet('${escapePath(parquetPath)}') WHERE "${col}" IS NOT NULL`);
-    conn.close();
-    db.close();
-    return new Set(rows.map((r) => r.v));
+    return withDuckDb(async (conn) => {
+        const rows = await all(conn, `SELECT DISTINCT CAST("${col}" AS VARCHAR) as v FROM read_parquet('${escapePath(parquetPath)}') WHERE "${col}" IS NOT NULL`);
+        return new Set(rows.map((r) => r.v));
+    });
 }
+/** Cap on histogram entries stored per column in column-stats.json. */
+const VALUES_HISTOGRAM_LIMIT = 500;
 async function computeColumnStatsFromParquet(parquetPath, tableName, joinInfo) {
-    const db = new duckdb_1.default.Database(":memory:");
-    const conn = db.connect();
-    await run(conn, `CREATE OR REPLACE TABLE observations AS SELECT * FROM read_parquet('${escapePath(parquetPath)}')`);
-    const countRows = await all(conn, "SELECT COUNT(*)::INTEGER as count FROM observations");
-    const rowCount = countRows[0]?.count ?? 0;
-    const schema = await all(conn, `SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'observations' ORDER BY ordinal_position`);
-    const columns = [];
-    for (const col of schema) {
-        const colName = col.column_name.replace(/"/g, '""');
-        const type = (0, validateJoinColumn_1.inferGeostatsType)(col.data_type);
-        const nonNull = await all(conn, `SELECT COUNT(*)::INTEGER as count FROM observations WHERE "${colName}" IS NOT NULL`);
-        const count = nonNull[0]?.count ?? 0;
-        const distinctRows = await all(conn, `SELECT CAST("${colName}" AS VARCHAR) as v, COUNT(*)::INTEGER as c FROM observations WHERE "${colName}" IS NOT NULL GROUP BY 1 ORDER BY c DESC LIMIT 500`);
-        const values = {};
-        for (const row of distinctRows) {
-            values[row.v] = row.c;
-        }
-        const attr = {
-            attribute: col.column_name,
-            count,
-            countDistinct: distinctRows.length,
-            type,
-            values,
-        };
-        if (type === "number") {
-            const stats = await all(conn, `SELECT MIN(CAST("${colName}" AS DOUBLE)) as min, MAX(CAST("${colName}" AS DOUBLE)) as max, AVG(CAST("${colName}" AS DOUBLE)) as avg, STDDEV(CAST("${colName}" AS DOUBLE)) as stdev FROM observations WHERE "${colName}" IS NOT NULL`);
-            if (stats[0]) {
-                attr.min =
-                    stats[0].min;
-                attr.max =
-                    stats[0].max;
+    return withDuckDb(async (conn) => {
+        await run(conn, `CREATE OR REPLACE TABLE observations AS SELECT * FROM read_parquet('${escapePath(parquetPath)}')`);
+        const countRows = await all(conn, "SELECT COUNT(*)::INTEGER as count FROM observations");
+        const rowCount = countRows[0]?.count ?? 0;
+        const schema = await all(conn, `SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'observations' ORDER BY ordinal_position`);
+        const columns = [];
+        for (const col of schema) {
+            const colName = col.column_name.replace(/"/g, '""');
+            const type = (0, validateJoinColumn_1.inferGeostatsType)(col.data_type);
+            const counts = await all(conn, `SELECT COUNT("${colName}")::INTEGER as count, COUNT(DISTINCT "${colName}")::INTEGER as count_distinct FROM observations`);
+            const count = counts[0]?.count ?? 0;
+            const countDistinct = counts[0]?.count_distinct ?? 0;
+            const distinctRows = await all(conn, `SELECT CAST("${colName}" AS VARCHAR) as v, COUNT(*)::INTEGER as c FROM observations WHERE "${colName}" IS NOT NULL GROUP BY 1 ORDER BY c DESC LIMIT ${VALUES_HISTOGRAM_LIMIT}`);
+            const values = {};
+            for (const row of distinctRows) {
+                values[row.v] = row.c;
             }
+            const attr = {
+                attribute: col.column_name,
+                count,
+                countDistinct,
+                type,
+                values,
+            };
+            if (type === "number") {
+                const stats = await all(conn, `SELECT MIN(CAST("${colName}" AS DOUBLE)) as min, MAX(CAST("${colName}" AS DOUBLE)) as max FROM observations WHERE "${colName}" IS NOT NULL`);
+                if (stats[0]) {
+                    attr.min =
+                        stats[0].min;
+                    attr.max =
+                        stats[0].max;
+                }
+            }
+            columns.push(attr);
         }
-        columns.push(attr);
-    }
-    conn.close();
-    db.close();
-    return {
-        table: tableName,
-        rowCount,
-        columns,
-        join: joinInfo,
-    };
+        return {
+            table: tableName,
+            rowCount,
+            columns,
+            join: joinInfo,
+        };
+    });
 }

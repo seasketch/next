@@ -97,11 +97,9 @@ export function useDataTableColumnStats(
   const [state, setState] = useState<DataTableColumnStatsState>({
     columnStats: getCachedDataTableColumnStats(columnStatsUrl),
     error: columnStatsUrl ? columnStatsErrors[columnStatsUrl] : undefined,
-    loading: Boolean(
-      columnStatsUrl &&
-        !columnStatsCache[columnStatsUrl] &&
-        columnStatsRequests[columnStatsUrl]
-    ),
+    // Uncached stats always trigger a fetch in the effect below, so start in
+    // loading state to avoid an empty-state flash on first render.
+    loading: Boolean(columnStatsUrl && !columnStatsCache[columnStatsUrl]),
   });
 
   useEffect(() => {

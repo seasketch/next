@@ -137,6 +137,13 @@ export default function DataTableUploadModal({
   const [candidates, setCandidates] = useState<JoinColumnCandidate[]>([]);
   const [analyzing, setAnalyzing] = useState(false);
   const [startingUpload, setStartingUpload] = useState(false);
+  // Delimiter detected by Papa.parse during analysis; passed to the server so
+  // TSV/tab-delimited files are processed with the same delimiter used for
+  // the preview.
+  const [detectedDelimiter, setDetectedDelimiter] = useState(",");
+  // Incremented per analyzeFile call so a slow parse of a previously chosen
+  // file can't clobber results from a newer selection.
+  const analysisGeneration = useRef(0);
 
   const formatFileSize = useCallback(
     (bytes: number) => {
@@ -154,6 +161,7 @@ export default function DataTableUploadModal({
   );
 
   const resetForm = useCallback(() => {
+    analysisGeneration.current++;
     setFile(null);
     setPreview(null);
     setError(null);
@@ -162,6 +170,7 @@ export default function DataTableUploadModal({
     setCandidates([]);
     setAnalyzing(false);
     setStartingUpload(false);
+    setDetectedDelimiter(",");
   }, []);
 
   useEffect(() => {
@@ -172,6 +181,8 @@ export default function DataTableUploadModal({
 
   const analyzeFile = useCallback(
     async (selected: File) => {
+      const generation = ++analysisGeneration.current;
+      const isCurrent = () => analysisGeneration.current === generation;
       setAnalyzing(true);
       setError(null);
       setPreview(null);
@@ -181,6 +192,9 @@ export default function DataTableUploadModal({
       try {
         const chunk = selected.slice(0, DELIMITED_SAMPLE_BYTES);
         const text = await chunk.text();
+        if (!isCurrent()) {
+          return;
+        }
         const parsed = Papa.parse<string[]>(text, {
           header: false,
           skipEmptyLines: true,
@@ -190,6 +204,7 @@ export default function DataTableUploadModal({
           setError(t("Could not parse CSV file"));
           return;
         }
+        setDetectedDelimiter(parsed.meta?.delimiter || ",");
         const headers = rows[0].map((h) => h.trim());
         const dataRows = rows.slice(1, 6);
         setPreview({ headers, rows: dataRows });
@@ -210,7 +225,9 @@ export default function DataTableUploadModal({
         setJoinColumn(picked.joinColumn);
         setOverlayJoinColumn(canonicalOverlayJoinColumn);
       } finally {
-        setAnalyzing(false);
+        if (isCurrent()) {
+          setAnalyzing(false);
+        }
       }
     },
     [geostatsLayer, canonicalOverlayJoinColumn, t],
@@ -253,7 +270,7 @@ export default function DataTableUploadModal({
     setError(null);
     try {
       const processingOptions: DataTableUploadProcessingOptions = {
-        delimiter: ",",
+        delimiter: detectedDelimiter,
         hasHeaderRow: true,
         joinColumn,
         overlayJoinColumn,

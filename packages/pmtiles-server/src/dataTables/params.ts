@@ -60,6 +60,10 @@ export interface ParsedQuery {
   filters: RawFilter[];
 }
 
+/** Upper bound for `limit` and `offset`; keeps responses and sort buffers
+ * within Workers memory limits. */
+export const MAX_LIMIT = 100000;
+
 export class QueryError extends Error {
   status: number;
   details?: Record<string, unknown>;
@@ -125,7 +129,12 @@ function parseFilterParam(column: string, raw: string): RawFilter {
   if (raw === "not.null") {
     return { column, op: "notNull" };
   }
-  if (raw.startsWith("in.(") && raw.endsWith(")")) {
+  if (raw.startsWith("in.")) {
+    if (!raw.startsWith("in.(") || !raw.endsWith(")")) {
+      throw new QueryError(
+        `Malformed in list for column "${column}". Use in.(a,b,"c,d").`
+      );
+    }
     const values = parseInList(raw.slice(4, -1));
     if (values.length === 0) {
       throw new QueryError(
@@ -203,26 +212,32 @@ export function parseQueryParams(searchParams: URLSearchParams): ParsedQuery {
 
   let limit: number | null = null;
   const limitParam = searchParams.get("limit");
-  if (limitParam !== null) {
-    if (limitParam.trim() === "") {
-      limit = null;
-    } else {
-      limit = Number(limitParam);
-      if (!Number.isInteger(limit) || limit < 1) {
-        throw new QueryError(
-          `Invalid limit "${limitParam}". Must be a positive integer, or omit for no limit.`
-        );
-      }
+  if (limitParam !== null && limitParam.trim() !== "") {
+    if (!/^\d+$/.test(limitParam.trim())) {
+      throw new QueryError(
+        `Invalid limit "${limitParam}". Must be a positive integer, or omit for no limit.`
+      );
+    }
+    limit = parseInt(limitParam, 10);
+    if (limit < 1 || limit > MAX_LIMIT) {
+      throw new QueryError(
+        `Invalid limit "${limitParam}". Must be between 1 and ${MAX_LIMIT}.`
+      );
     }
   }
 
   let offset = 0;
   const offsetParam = searchParams.get("offset");
   if (offsetParam !== null) {
-    offset = Number(offsetParam);
-    if (!Number.isInteger(offset) || offset < 0) {
+    if (!/^\d+$/.test(offsetParam.trim())) {
       throw new QueryError(
         `Invalid offset "${offsetParam}". Must be a non-negative integer.`
+      );
+    }
+    offset = parseInt(offsetParam, 10);
+    if (offset > MAX_LIMIT) {
+      throw new QueryError(
+        `Invalid offset "${offsetParam}". Must be at most ${MAX_LIMIT}.`
       );
     }
   }
@@ -230,13 +245,26 @@ export function parseQueryParams(searchParams: URLSearchParams): ParsedQuery {
   let orderBy: ParsedQuery["orderBy"] = null;
   const orderByParam = searchParams.get("orderBy");
   if (orderByParam !== null && orderByParam.trim().length > 0) {
-    const [key, direction = "asc"] = orderByParam.split(":");
-    if (direction !== "asc" && direction !== "desc") {
-      throw new QueryError(
-        `Invalid orderBy direction "${direction}". Use :asc or :desc.`
-      );
+    // Split on the last colon so keys containing ":" still parse.
+    const raw = orderByParam.trim();
+    const colon = raw.lastIndexOf(":");
+    let key = raw;
+    let direction: "asc" | "desc" = "asc";
+    if (colon !== -1) {
+      const suffix = raw.slice(colon + 1);
+      if (suffix !== "asc" && suffix !== "desc") {
+        throw new QueryError(
+          `Invalid orderBy direction "${suffix}". Use :asc or :desc.`
+        );
+      }
+      key = raw.slice(0, colon);
+      direction = suffix;
     }
-    orderBy = { key: key.trim(), direction };
+    key = key.trim();
+    if (!key) {
+      throw new QueryError(`orderBy requires a key, e.g. orderBy=mean:desc.`);
+    }
+    orderBy = { key, direction };
   }
 
   return { format, groupBy, ops, column, limit, offset, orderBy, filters };

@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import { DownloadIcon, ReplyIcon } from "@heroicons/react/outline";
 import * as Popover from "@radix-ui/react-popover";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 const CLOSE_DELAY_MS = 120;
@@ -51,6 +51,8 @@ export default function DataTableReplacementVersionMenu({
       setOpen(false);
     }, CLOSE_DELAY_MS);
   }, [clearCloseTimer]);
+
+  useEffect(() => clearCloseTimer, [clearCloseTimer]);
 
   const downloadFilename =
     // eslint-disable-next-line i18next/no-literal-string -- download filename

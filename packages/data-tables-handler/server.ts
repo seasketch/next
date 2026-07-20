@@ -12,8 +12,8 @@ const server = createServer(function (req, res) {
       body += chunk.toString();
     });
     req.on("end", async () => {
-      const data = JSON.parse(body);
       try {
+        const data = JSON.parse(body);
         const { processDataTableUpload } = await import("./handler");
         const outputs = await processDataTableUpload(data);
         res.setHeader("Content-Type", "application/json");

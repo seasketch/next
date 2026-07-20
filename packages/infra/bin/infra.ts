@@ -245,7 +245,6 @@ new GraphQLStack(app, "SeaSketchGraphQLServer", {
   fragmentWorkerLambdaArn: fragmentWorker.fn.functionArn,
   geostatsPiiClassifierLambdaArn: piiClassifier.fn.functionArn,
   overlayEngineWorkerSqsQueue: sqs.productionOverlayEngineWorkerQueue,
-  dataTablesHandlerLambdaArn: dataTablesHandler.fn.functionArn,
   overlayEngineAccessTokenSecret: secrets.overlayEngineAccessTokenSecret,
 });
 

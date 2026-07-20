@@ -1,22 +1,19 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
 import { BBox } from "geojson";
-import type { CameraOptions } from "mapbox-gl";
+import { CameraOptions } from "mapbox-gl";
 import bytes from "bytes";
 import useAccessToken from "../useAccessToken";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 import useMapAccessTokenRollover from "./useMapAccessTokenRollover";
 import { useProjectRegionQuery } from "../generated/graphql";
-import { BasemapContext } from "./BasemapContext";
-import type { BasemapContextState } from "./BasemapContext";
+import { BasemapContext, BasemapContextState } from "./BasemapContext";
 import MapContextManager, {
   DigitizingLockState,
   MapManagerContext,
   SketchLayerContext,
   MapOverlayContext,
   LegendsContext,
-} from "./MapContextManager";
-import type {
   MapContextInterface,
   MapManagerState,
   SketchLayerContextState,

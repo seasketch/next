@@ -10,7 +10,8 @@ export interface DataTablesHandlerRequest {
     taskId: string;
     uploadId: string;
     objectKey: string;
-    suffix: string;
+    /** Project slug; first path segment of the R2 key. */
+    slug: string;
     /** Parent layer hosted-tiles UUID (`data_sources.url`); used for R2 key prefix. */
     sourceUuid: string;
     skipLoggingProgress?: boolean;

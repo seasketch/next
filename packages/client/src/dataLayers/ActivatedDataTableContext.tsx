@@ -53,11 +53,11 @@ export const ActivatedDataTableContext =
 
 /**
  * Tracks which OverlayDataTable, if any, is "activated" for each layer, and
- * the user's raw display settings choices for it. This is UI selection state
- * only -- it does not yet drive any actual map visualization (e.g. a
- * thematic map join). That behavior will hook into this same context in a
- * future change, once it's decided how activated tables should affect layer
- * rendering. Kept as a small standalone context (rather than folded into
+ * the user's raw display settings choices for it. MapManagerContextProvider
+ * watches this context, reconciles choices with admin constraints
+ * (resolveDataTableVisualizationSettings), and pushes the result into
+ * MapContextManager to drive query execution and thematic map rendering.
+ * Kept as a small standalone context (rather than folded into
  * MapContextManager's state machine) so it can be shared identically by the
  * Legend and the overlay Table of Contents.
  */

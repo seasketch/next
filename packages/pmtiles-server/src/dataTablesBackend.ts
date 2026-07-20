@@ -14,6 +14,9 @@ import { queryUiHtml } from "./dataTables/ui/html";
 const BROWSER_MAX_AGE = 86400;
 /** CDN/edge cache lifetime. Table paths are versioned per uploadId. */
 const EDGE_MAX_AGE = 604800;
+/** Default page size for raw-row queries when the client omits `limit`;
+ * prevents accidentally materializing an entire table as JSON. */
+const RAW_DEFAULT_LIMIT = 10000;
 
 /** Parsed parquet footers are small and immutable per etag. */
 const MAX_METADATA_ENTRIES = 100;
@@ -62,13 +65,15 @@ export async function handleDataTableQuery(
   } catch (error) {
     return errorResponse(error);
   }
+  if (query.ops.length === 0 && query.limit === null) {
+    query = { ...query, limit: RAW_DEFAULT_LIMIT };
+  }
   timer.mark("parse");
 
-  const accept = request.headers.get("accept") || "";
-  const wantsHtml =
-    query.format === "html" ||
-    (query.format === null && accept.includes("text/html"));
-  if (wantsHtml) {
+  // Format depends only on the URL (`f=html`), never the Accept header: the
+  // Workers cache key is path+query, so Accept-based negotiation would let a
+  // cached HTML response be served to JSON clients and vice versa.
+  if (query.format === "html") {
     return new Response(queryUiHtml(tablePath), {
       headers: {
         "Content-Type": "text/html; charset=utf-8",
@@ -84,8 +89,6 @@ export async function handleDataTableQuery(
     const source = await openR2File({
       bucket: env.TILES_BUCKET,
       key: `${tablePath}/data.parquet`,
-      // Prefer the R2 binding; fall back to public uploads probe inside openR2File.
-      dev: false,
     });
     timer.mark("open");
     if (!source) {
@@ -131,17 +134,18 @@ export async function handleDataTableQuery(
     timer.mark("serialize");
 
     const etag = await makeETag(source.etag, canonicalQuery);
-    return new Response(JSON.stringify(body), {
-      headers: {
-        "Content-Type": "application/json; charset=utf-8",
-        ETag: etag,
-        "Server-Timing": timer.header(),
-        Vary: "Accept",
-        "Access-Control-Allow-Origin": "*",
-        "Timing-Allow-Origin": "*",
-        "Cache-Control": `public, max-age=${BROWSER_MAX_AGE}, s-maxage=${EDGE_MAX_AGE}, immutable`,
-      },
-    });
+    const headers = {
+      "Content-Type": "application/json; charset=utf-8",
+      ETag: etag,
+      "Server-Timing": timer.header(),
+      "Access-Control-Allow-Origin": "*",
+      "Timing-Allow-Origin": "*",
+      "Cache-Control": `public, max-age=${BROWSER_MAX_AGE}, s-maxage=${EDGE_MAX_AGE}, immutable`,
+    };
+    if (request.headers.get("if-none-match") === etag) {
+      return new Response(null, { status: 304, headers });
+    }
+    return new Response(JSON.stringify(body), { headers });
   } catch (error) {
     return errorResponse(error);
   }

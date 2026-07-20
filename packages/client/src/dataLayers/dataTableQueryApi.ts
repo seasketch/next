@@ -30,7 +30,7 @@
  *
  * | Param | Description |
  * | ----- | ----------- |
- * | `f` | `json` or `html`; overrides `Accept` header |
+ * | `f` | `json` (default) or `html` (interactive query UI) |
  * | `groupBy` | Comma-separated columns, e.g. `site` or `site,year` |
  * | `op` | Comma-separated: `count`, `sum`, `mean`, `min`, `max`, `median` |
  * | `column` | Numeric column to aggregate; required unless only `count` |
@@ -95,8 +95,24 @@ export type DataTableFilterOperator =
 export interface DataTableFilter {
   column: string;
   op: DataTableFilterOperator;
-  /** Required for all ops except `isNull` and `notNull`. For `in`, comma-separated list items. */
+  /** Required for all ops except `isNull`, `notNull`, and `in`. */
   value?: string;
+  /** List items for `in`. Items may contain commas; they are quoted on serialization. */
+  values?: string[];
+}
+
+/**
+ * Returns the list items of an `in` filter, tolerating the legacy
+ * comma-joined `value` representation.
+ */
+export function dataTableInFilterValues(filter: DataTableFilter): string[] {
+  if (filter.values) {
+    return filter.values;
+  }
+  return (filter.value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 }
 
 /**
@@ -217,10 +233,11 @@ export function serializeDataTableFilter(filter: DataTableFilter): string {
     case "notNull":
       return "not.null";
     case "in": {
-      if (value === undefined) {
-        throw new Error(`Filter on "${column}" with op "in" requires value`);
+      const rawItems = dataTableInFilterValues(filter);
+      if (rawItems.length === 0) {
+        throw new Error(`Filter on "${column}" with op "in" requires values`);
       }
-      const items = value.split(",").map((item) => {
+      const items = rawItems.map((item) => {
         const trimmed = item.trim();
         if (trimmed.includes(",") || trimmed.includes('"')) {
           return `"${trimmed.replace(/"/g, '""')}"`;

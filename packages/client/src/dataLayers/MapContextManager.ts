@@ -95,7 +95,7 @@ import {
   buildInaturalistSourcesAndLayers,
   normalizeInaturalistParams,
 } from "./inaturalist";
-import type {
+import {
   BasemapContextState,
   OptionalBasemapLayerValue,
 } from "./BasemapContext";
@@ -246,8 +246,8 @@ class MapContextManager extends EventEmitter {
    * Resolved data table visualization settings (column/op/filters), keyed by
    * layer stableId. Set via updateActivatedDataTableSettings by
    * MapManagerContextProvider, which combines ActivatedDataTableContext's
-   * user choices with admin constraints from OverlayDataTable. Not yet used
-   * to drive GL style calculation.
+   * user choices with admin constraints from OverlayDataTable. Drives query
+   * execution, feature-state joins, and the thematic circle layer style.
    */
   private activatedDataTableSettings: {
     [tocStableId: string]: ActivatedDataTableStyleSettings | undefined;
@@ -417,6 +417,9 @@ class MapContextManager extends EventEmitter {
         delete this.activatedDataTableValues[tocStableId];
         delete this.activatedDataTableSettings[tocStableId];
         delete this.activatedDataTableLoading[tocStableId];
+        // Invalidate any in-flight query so a late response can't resurrect
+        // state for a deactivated table.
+        delete this.activatedDataTableRequests[tocStableId];
         this.removeActivatedDataTableSourceListener(tocStableId);
       } else {
         this.activatedDataTableSettings[tocStableId] = value;
@@ -440,11 +443,6 @@ class MapContextManager extends EventEmitter {
         }
       }
     }
-    // eslint-disable-next-line no-console
-    console.log(
-      "[MapContextManager] updateActivatedDataTableSettings",
-      settings
-    );
     // Flush immediately when any layer entered loading so gray paint is
     // committed before the fetch can resolve and clear the flag.
     const anyLoading = Object.values(this.activatedDataTableLoading).some(
@@ -549,18 +547,26 @@ class MapContextManager extends EventEmitter {
     // Keep previous feature-state values while loading; style rebuild picks
     // up gray/faded paint from activatedDataTableLoading.
     this.setActivatedDataTableLoading(tocStableId, true);
-    // eslint-disable-next-line no-console
-    console.log("[MapContextManager] fetch data table values", queryUrl);
+    // A newer request or deactivation replaces/clears the entry in
+    // activatedDataTableRequests; treat this response as superseded then.
+    const isCurrent = () =>
+      this.activatedDataTableRequests[tocStableId] === queryKey;
     try {
       const response = await fetch(queryUrl, {
         headers: { accept: "application/json" },
       });
+      if (!isCurrent()) {
+        return;
+      }
       if (!response.ok) {
         throw new Error(`Data table query failed (${response.status})`);
       }
       const json = (await response.json()) as {
         groups?: DataTableQueryResultGroup[];
       };
+      if (!isCurrent()) {
+        return;
+      }
       const op = Array.isArray(settings.query.op)
         ? settings.query.op[0]
         : settings.query.op;
@@ -597,6 +603,9 @@ class MapContextManager extends EventEmitter {
       this.setActivatedDataTableLoading(tocStableId, false);
       void this.updateLegends();
     } catch (error) {
+      if (!isCurrent()) {
+        return;
+      }
       console.error(error);
       this.clearActivatedDataTableFeatureState(tocStableId);
       delete this.activatedDataTableValues[tocStableId];
@@ -830,10 +839,9 @@ class MapContextManager extends EventEmitter {
     if (!table) {
       return undefined;
     }
+    // Note: query execution is orchestrated exclusively by
+    // updateActivatedDataTableFeatureStates; style builders must stay pure.
     const values = this.activatedDataTableValues[tocStableId];
-    if (!values) {
-      void this.fetchActivatedDataTableValues(tocStableId, table, settings);
-    }
     const loading =
       !legendOnly && Boolean(this.activatedDataTableLoading[tocStableId]);
     const fillOpacity = loading
@@ -1043,7 +1051,16 @@ class MapContextManager extends EventEmitter {
   }
 
   setMapAccessToken(token: string | null | undefined) {
+    const changed = this.mapAccessToken !== token;
     this.mapAccessToken = token;
+    if (changed) {
+      // Query URLs embed the token (dataTableQueryUrl); a token arriving
+      // after a failed unauthenticated fetch should trigger a retry.
+      // Invalidate in-flight requests so their (possibly 401) responses are
+      // discarded, then re-run with the new token.
+      this.activatedDataTableRequests = {};
+      void this.updateActivatedDataTableFeatureStates();
+    }
   }
 
   setHostedTileUuidsRequiringAuth(uuids: string[] | null | undefined) {

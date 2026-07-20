@@ -1,4 +1,5 @@
-import { createReadStream, statSync } from "fs";
+import { createReadStream, createWriteStream, statSync } from "fs";
+import { pipeline } from "stream/promises";
 import {
   S3Client,
   PutObjectCommand,
@@ -18,7 +19,11 @@ const r2Client = new S3Client({
   },
 });
 
-export async function putObject(filepath: string, remote: string) {
+export async function putObject(
+  filepath: string,
+  remote: string,
+  contentType?: string,
+) {
   if (!/r2:/.test(remote) && !/s3:/.test(remote)) {
     throw new Error(`Invalid remote ${remote}`);
   }
@@ -31,32 +36,23 @@ export async function putObject(filepath: string, remote: string) {
   if (fileSizeBytes > 500 * 1024 * 1024) {
     const upload = new Upload({
       client,
-      params: { Bucket, Key, Body: fileStream },
+      params: { Bucket, Key, Body: fileStream, ContentType: contentType },
     });
     await upload.done();
   } else {
     await client.send(
-      new PutObjectCommand({ Bucket, Key, Body: fileStream }),
+      new PutObjectCommand({
+        Bucket,
+        Key,
+        Body: fileStream,
+        ContentType: contentType,
+      }),
     );
   }
   console.log(`putObject ${filepath} (${bytes(fileSizeBytes)}) to ${remote}`);
 }
 
-export async function getObject(filepath: string, remote: string) {
-  const isR2 = /r2:/.test(remote);
-  const parts = remote.replace(/\w+:\/\//, "").split("/");
-  const client = isR2 ? r2Client : s3Client;
-  const Bucket = parts[0];
-  const Key = parts.slice(1).join("/");
-  const response = await client.send(
-    new GetObjectCommand({ Bucket, Key }),
-  );
-  const body = response.Body as Readable;
-  const { createWriteStream } = await import("fs");
-  const { pipeline } = await import("stream/promises");
-  await pipeline(body, createWriteStream(filepath));
-}
-
+/** Download the user's raw upload from the S3 staging bucket. */
 export async function getStagingObject(
   filepath: string,
   objectKey: string,
@@ -66,8 +62,6 @@ export async function getStagingObject(
     new GetObjectCommand({ Bucket: bucket, Key: objectKey }),
   );
   const body = response.Body as Readable;
-  const { createWriteStream } = await import("fs");
-  const { pipeline } = await import("stream/promises");
   await pipeline(body, createWriteStream(filepath));
 }
 

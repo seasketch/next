@@ -157,14 +157,6 @@ export default function Legend({
       );
       if (element) {
         element.scrollIntoView({ behavior: "smooth", block: "nearest" });
-        element.classList.add("ring-2", "ring-primary-500", "ring-inset");
-        window.setTimeout(() => {
-          element.classList.remove(
-            "ring-2",
-            "ring-primary-500",
-            "ring-inset"
-          );
-        }, 2000);
       }
       onLegendFocusComplete?.();
     });

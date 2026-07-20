@@ -1,4 +1,4 @@
-import type { RefetchQueriesInclude } from "@apollo/client";
+import { RefetchQueriesInclude } from "@apollo/client";
 import { LayerSettingsChangeLogDocument } from "../../generated/graphql";
 
 /** Recent slice for layer settings history query (matches refetch mutation cache keys). */

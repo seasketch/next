@@ -266,6 +266,15 @@ function rowGroupMayMatch(
     return nullCount === undefined || nullCount < rowCount;
   }
 
+  // Timestamp statistics units vary by writer (millis/micros/DATE days).
+  // Filter values are epoch millis; only prune when stats decoded to Dates.
+  if (
+    filter.kind === "timestamp" &&
+    !(stats.min_value instanceof Date) &&
+    !(stats.max_value instanceof Date)
+  ) {
+    return true;
+  }
   const min = normalizeValue(stats.min_value, filter.kind);
   const max = normalizeValue(stats.max_value, filter.kind);
   if (min === null || max === null) return true;

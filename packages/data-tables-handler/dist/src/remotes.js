@@ -1,46 +1,13 @@
 "use strict";
-var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    var desc = Object.getOwnPropertyDescriptor(m, k);
-    if (!desc || ("get" in desc ? !m.__esModule : desc.writable || desc.configurable)) {
-      desc = { enumerable: true, get: function() { return m[k]; } };
-    }
-    Object.defineProperty(o, k2, desc);
-}) : (function(o, m, k, k2) {
-    if (k2 === undefined) k2 = k;
-    o[k2] = m[k];
-}));
-var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
-    Object.defineProperty(o, "default", { enumerable: true, value: v });
-}) : function(o, v) {
-    o["default"] = v;
-});
-var __importStar = (this && this.__importStar) || (function () {
-    var ownKeys = function(o) {
-        ownKeys = Object.getOwnPropertyNames || function (o) {
-            var ar = [];
-            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
-            return ar;
-        };
-        return ownKeys(o);
-    };
-    return function (mod) {
-        if (mod && mod.__esModule) return mod;
-        var result = {};
-        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
-        __setModuleDefault(result, mod);
-        return result;
-    };
-})();
 var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.putObject = putObject;
-exports.getObject = getObject;
 exports.getStagingObject = getStagingObject;
 exports.buildR2Remote = buildR2Remote;
 const fs_1 = require("fs");
+const promises_1 = require("stream/promises");
 const client_s3_1 = require("@aws-sdk/client-s3");
 const lib_storage_1 = require("@aws-sdk/lib-storage");
 const bytes_1 = __importDefault(require("bytes"));
@@ -53,7 +20,7 @@ const r2Client = new client_s3_1.S3Client({
         secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
     },
 });
-async function putObject(filepath, remote) {
+async function putObject(filepath, remote, contentType) {
     if (!/r2:/.test(remote) && !/s3:/.test(remote)) {
         throw new Error(`Invalid remote ${remote}`);
     }
@@ -66,34 +33,26 @@ async function putObject(filepath, remote) {
     if (fileSizeBytes > 500 * 1024 * 1024) {
         const upload = new lib_storage_1.Upload({
             client,
-            params: { Bucket, Key, Body: fileStream },
+            params: { Bucket, Key, Body: fileStream, ContentType: contentType },
         });
         await upload.done();
     }
     else {
-        await client.send(new client_s3_1.PutObjectCommand({ Bucket, Key, Body: fileStream }));
+        await client.send(new client_s3_1.PutObjectCommand({
+            Bucket,
+            Key,
+            Body: fileStream,
+            ContentType: contentType,
+        }));
     }
     console.log(`putObject ${filepath} (${(0, bytes_1.default)(fileSizeBytes)}) to ${remote}`);
 }
-async function getObject(filepath, remote) {
-    const isR2 = /r2:/.test(remote);
-    const parts = remote.replace(/\w+:\/\//, "").split("/");
-    const client = isR2 ? r2Client : s3Client;
-    const Bucket = parts[0];
-    const Key = parts.slice(1).join("/");
-    const response = await client.send(new client_s3_1.GetObjectCommand({ Bucket, Key }));
-    const body = response.Body;
-    const { createWriteStream } = await Promise.resolve().then(() => __importStar(require("fs")));
-    const { pipeline } = await Promise.resolve().then(() => __importStar(require("stream/promises")));
-    await pipeline(body, createWriteStream(filepath));
-}
+/** Download the user's raw upload from the S3 staging bucket. */
 async function getStagingObject(filepath, objectKey) {
     const bucket = process.env.BUCKET;
     const response = await s3Client.send(new client_s3_1.GetObjectCommand({ Bucket: bucket, Key: objectKey }));
     const body = response.Body;
-    const { createWriteStream } = await Promise.resolve().then(() => __importStar(require("fs")));
-    const { pipeline } = await Promise.resolve().then(() => __importStar(require("stream/promises")));
-    await pipeline(body, createWriteStream(filepath));
+    await (0, promises_1.pipeline)(body, (0, fs_1.createWriteStream)(filepath));
 }
 /**
  * Store data tables under the parent layer's hosted UUID so objects classify

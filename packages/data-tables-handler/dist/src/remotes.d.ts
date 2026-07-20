@@ -1,5 +1,5 @@
-export declare function putObject(filepath: string, remote: string): Promise<void>;
-export declare function getObject(filepath: string, remote: string): Promise<void>;
+export declare function putObject(filepath: string, remote: string, contentType?: string): Promise<void>;
+/** Download the user's raw upload from the S3 staging bucket. */
 export declare function getStagingObject(filepath: string, objectKey: string): Promise<void>;
 /**
  * Store data tables under the parent layer's hosted UUID so objects classify

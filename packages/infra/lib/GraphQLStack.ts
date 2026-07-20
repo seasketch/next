@@ -45,7 +45,6 @@ export class GraphQLStack extends cdk.Stack {
       /** Same function the upload handler uses for PII scoring; warmed on createDataUpload. */
       geostatsPiiClassifierLambdaArn: string;
       overlayEngineWorkerSqsQueue: Queue;
-      dataTablesHandlerLambdaArn: string;
       overlayEngineAccessTokenSecret: secretsmanager.ISecret;
     }
   ) {
@@ -186,7 +185,7 @@ export class GraphQLStack extends cdk.Stack {
             GEOSTATS_PII_CLASSIFIER_ARN: props.geostatsPiiClassifierLambdaArn,
             OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL:
               props.overlayEngineWorkerSqsQueue.queueUrl,
-            DATA_TABLES_HANDLER_LAMBDA_ARN: props.dataTablesHandlerLambdaArn,
+            DATA_TABLES_HANDLER_LAMBDA_ARN: props.dataTablesHandler.functionArn,
             OVERLAY_ENGINE_ACCESS_TOKEN_SECRET_ARN:
               props.overlayEngineAccessTokenSecret.secretArn,
           },

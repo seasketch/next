@@ -76,13 +76,13 @@ canonicalized for caching. When ACL enforcement is on, pass `access_token`
 (and optional `ns`) like any other published overlay asset — credentials are
 stripped before the backend runs.
 
-Content negotiation for `/query`:
+Response format depends only on the URL — the `Accept` header is ignored so
+that cached responses can never be served to the wrong client type:
 
 | Request | Response |
 | ------- | -------- |
-| `Accept: text/html` (browser default) | Interactive query builder UI |
-| `Accept: application/json`, or `f=json` | JSON query results |
-| `f=html` | Force the HTML UI regardless of `Accept` |
+| default (no `f`), or `f=json` | JSON query results |
+| `f=html` | Interactive query builder UI |
 
 The HTML UI loads sibling `column-stats.json` from the same origin to populate
 column pickers.
@@ -91,12 +91,12 @@ column pickers.
 
 | Param | Required | Description |
 | ----- | -------- | ----------- |
-| `f` | No | `json` or `html`; overrides `Accept`. Omitted from cache keys. |
+| `f` | No | `json` (default) or `html`. |
 | `groupBy` | When aggregating | Comma-separated columns, e.g. `site` or `site,year`. Requires at least one `op`. |
 | `op` | When `groupBy` is set | Comma-separated: `count`, `sum`, `mean`, `min`, `max`, `median`. Multiple ops share one `column` (except bare `count`). |
 | `column` | When any `op` other than `count` alone | Numeric column to aggregate, e.g. `column=count`. |
 | `orderBy` | No | Sort key with optional direction: `mean:desc`, `site` (asc). Valid keys are **groupBy columns** and **aggregation names** from `op`. |
-| `limit` | No | Max groups or raw rows. Positive integer. **Omit for no limit.** |
+| `limit` | No | Max groups or raw rows. `1`–`100000`. Aggregated queries default to no limit; raw-row queries default to `10000`. |
 | `offset` | No | Skip first N groups/rows after sorting (default `0`). |
 
 **Query modes**

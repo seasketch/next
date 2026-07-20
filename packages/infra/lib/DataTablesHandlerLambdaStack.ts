@@ -24,9 +24,6 @@ export class DataTablesHandlerLambdaStack extends cdk.Stack {
     },
   ) {
     super(scope, id, props);
-    if (!process.env.UPLOADS_BASE_URL) {
-      throw new Error("UPLOADS_BASE_URL must be set in environment");
-    }
     if (!process.env.TILES_REMOTE) {
       throw new Error("TILES_REMOTE must be set in environment");
     }
@@ -50,7 +47,6 @@ export class DataTablesHandlerLambdaStack extends cdk.Stack {
       environment: {
         NODE_ENV: "production",
         BUCKET: props.bucket.bucketName,
-        UPLOADS_BASE_URL: process.env.UPLOADS_BASE_URL,
         TILES_REMOTE: process.env.TILES_REMOTE,
         R2_ENDPOINT: process.env.R2_ENDPOINT!,
         R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID!,

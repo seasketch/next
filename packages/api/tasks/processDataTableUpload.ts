@@ -6,7 +6,9 @@ interface DataTablesHandlerRequest {
   taskId: string;
   uploadId: string;
   objectKey: string;
-  suffix: string;
+  /** Project slug; first path segment of the R2 key. */
+  slug: string;
+  /** Parent layer hosted-tiles UUID; R2 key prefix for ACL classification. */
   sourceUuid: string;
   skipLoggingProgress?: boolean;
 }
@@ -30,19 +32,25 @@ export async function runDataTablesLambda(event: DataTablesHandlerRequest) {
         `Data tables dev handler HTTP ${response.status}: ${text.slice(0, 500)}`,
       );
     }
-    return JSON.parse(text);
+    const data = JSON.parse(text);
+    if (data && data.error) {
+      throw new Error(data.error);
+    }
+    return data;
   }
   if (process.env.DATA_TABLES_HANDLER_LAMBDA_ARN) {
+    // The production lambda can only reach the production RDS instance. When
+    // this API runs against any other database, tell the lambda not to write
+    // progress updates (they would go to the wrong DB).
+    const apiUsesProductionDb =
+      !!process.env.PGHOST && /rds\.amazonaws\.com/.test(process.env.PGHOST);
     await client
       .invoke({
         InvocationType: "Event",
         FunctionName: process.env.DATA_TABLES_HANDLER_LAMBDA_ARN,
         Payload: JSON.stringify({
           ...event,
-          skipLoggingProgress:
-            process.env.PGHOST && /rds.amazonaws.com/.test(process.env.PGHOST)
-              ? false
-              : true,
+          skipLoggingProgress: !apiUsesProductionDb,
         }),
       })
       .promise();
@@ -100,7 +108,7 @@ export default async function processDataTableUpload(
         taskId: jobId,
         uploadId: q.rows[0].upload_id,
         objectKey: q.rows[0].object_key,
-        suffix: q.rows[0].slug,
+        slug: q.rows[0].slug,
         sourceUuid,
       });
     } catch (e) {

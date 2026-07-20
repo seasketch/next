@@ -1,7 +1,6 @@
 import { dirSync } from "tmp";
 import * as path from "path";
 import { writeFileSync } from "fs";
-import sanitize = require("sanitize-filename");
 import { getClient } from "./lambda-db-client";
 import {
   buildR2Remote,
@@ -23,6 +22,9 @@ import type {
   DataTablesHandlerResponse,
 } from "./types";
 
+const PARQUET_CONTENT_TYPE = "application/vnd.apache.parquet";
+const JSON_CONTENT_TYPE = "application/json; charset=utf-8";
+
 function defaultTableName(filename: string): string {
   return filename.replace(/\.[^.]+$/, "");
 }
@@ -39,7 +41,7 @@ export default async function handleDataTableUpload(
     taskId,
     uploadId,
     objectKey,
-    suffix,
+    slug,
     sourceUuid,
     skipLoggingProgress,
   } = request;
@@ -47,47 +49,39 @@ export default async function handleDataTableUpload(
     taskId,
     uploadId,
     objectKey,
-    suffix,
+    slug,
     sourceUuid,
     skipLoggingProgress: Boolean(skipLoggingProgress),
   });
-  const pgClient = await getClient();
+
+  const tmpobj = dirSync({ unsafeCleanup: true, keep: false, prefix: "dt-" });
+  const csvPath = path.join(tmpobj.name, "input.csv");
+  const parquetPath = path.join(tmpobj.name, "data.parquet");
+  const statsPath = path.join(tmpobj.name, "column-stats.json");
+
+  // Established inside try so that connection failures are still reported to
+  // the caller; if the DB is unreachable the job fails via timeout instead.
+  let pgClient: Awaited<ReturnType<typeof getClient>> | null = null;
 
   const updateProgress = async (
     state: "running" | "complete" | "failed",
     progressMessage: string,
     progress?: number,
   ) => {
-    if (skipLoggingProgress) return;
+    if (skipLoggingProgress || !pgClient) return;
     logDebug("updateProgress", { taskId, state, progressMessage, progress });
-    try {
-      if (progress !== undefined) {
-        await pgClient.query(
-          `update project_background_jobs set state = $1, progress = least($2::numeric, 1.0::numeric), progress_message = $3 where id = $4`,
-          [state, progress, progressMessage, taskId],
-        );
-      } else {
-        await pgClient.query(
-          `update project_background_jobs set state = $1, progress_message = $2 where id = $3`,
-          [state, progressMessage, taskId],
-        );
-      }
-    } catch (e) {
-      logDebug("updateProgress failed", {
-        taskId,
-        state,
-        progressMessage,
-        progress,
-        error: (e as Error).message,
-      });
-      throw e;
+    if (progress !== undefined) {
+      await pgClient.query(
+        `update project_background_jobs set state = $1, progress = least($2::numeric, 1.0::numeric), progress_message = $3 where id = $4`,
+        [state, progress, progressMessage, taskId],
+      );
+    } else {
+      await pgClient.query(
+        `update project_background_jobs set state = $1, progress_message = $2 where id = $3`,
+        [state, progressMessage, taskId],
+      );
     }
   };
-
-  const tmpobj = dirSync({ unsafeCleanup: true, keep: false, prefix: "dt-" });
-  const csvPath = path.join(tmpobj.name, "input.csv");
-  const parquetPath = path.join(tmpobj.name, "data.parquet");
-  const statsPath = path.join(tmpobj.name, "column-stats.json");
 
   try {
     if (!sourceUuid) {
@@ -95,6 +89,7 @@ export default async function handleDataTableUpload(
         "sourceUuid is required to store data tables under the parent layer path",
       );
     }
+    pgClient = await getClient();
     await updateProgress("running", "downloading", 0.05);
 
     const uploadQ = await pgClient.query(
@@ -166,19 +161,19 @@ export default async function handleDataTableUpload(
     await updateProgress("running", "uploading", 0.8);
 
     const parquetTarget = buildR2Remote(
-      suffix,
+      slug,
       sourceUuid,
       uploadId,
       "data.parquet",
     );
     const statsTarget = buildR2Remote(
-      suffix,
+      slug,
       sourceUuid,
       uploadId,
       "column-stats.json",
     );
-    await putObject(parquetPath, parquetTarget.remote);
-    await putObject(statsPath, statsTarget.remote);
+    await putObject(parquetPath, parquetTarget.remote, PARQUET_CONTENT_TYPE);
+    await putObject(statsPath, statsTarget.remote, JSON_CONTENT_TYPE);
 
     const result = {
       uploadId,
@@ -211,11 +206,19 @@ export default async function handleDataTableUpload(
       stack: error.stack,
     });
     const errorDetails = { message: error.message };
-    await pgClient.query(`select fail_overlay_data_table_upload($1, $2, $3)`, [
-      taskId,
-      error.message,
-      JSON.stringify(errorDetails),
-    ]);
+    if (pgClient) {
+      try {
+        await pgClient.query(
+          `select fail_overlay_data_table_upload($1, $2, $3)`,
+          [taskId, error.message, JSON.stringify(errorDetails)],
+        );
+      } catch (failError) {
+        logDebug("failed to record job failure", {
+          taskId,
+          error: (failError as Error).message,
+        });
+      }
+    }
     return { error: error.message, errorDetails };
   } finally {
     tmpobj.removeCallback();

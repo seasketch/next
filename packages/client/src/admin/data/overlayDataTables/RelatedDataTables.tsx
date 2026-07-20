@@ -26,6 +26,7 @@ import {
 } from "../../../dataLayers/useDataTableColumnStats";
 import { withHostedAuthParams } from "../../../dataLayers/tilesAuth";
 import useCurrentProjectMetadata from "../../../useCurrentProjectMetadata";
+import useDialog from "../../../components/useDialog";
 
 type RelatedDataTablesProps = {
   item: FullAdminOverlayFragment;
@@ -274,9 +275,17 @@ function DataTableRow({
           <div className="flex items-center gap-3">
             {table.queryUrl ? (
               <a
-                href={withHostedAuthParams(table.queryUrl, {
-                  accessToken: mapAccessToken,
-                })}
+                href={(() => {
+                  const url = new URL(
+                    withHostedAuthParams(table.queryUrl, {
+                      accessToken: mapAccessToken,
+                    })
+                  );
+                  // Force the interactive query builder (format is URL-driven).
+                  // eslint-disable-next-line i18next/no-literal-string
+                  url.searchParams.set("f", "html");
+                  return url.toString();
+                })()}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs text-primary-600 hover:text-primary-700 font-medium"
@@ -352,6 +361,7 @@ export default function RelatedDataTables({ item }: RelatedDataTablesProps) {
   const [replaceId, setReplaceId] = useState<number | undefined>();
   const { manager } = useContext(ProjectBackgroundJobContext);
   const client = useApolloClient();
+  const { confirmDelete } = useDialog();
 
   const { data, refetch } = useGetLayerItemQuery({
     variables: { id: item.id },
@@ -546,9 +556,17 @@ export default function RelatedDataTables({ item }: RelatedDataTablesProps) {
                 )
               }
               onDelete={(id) =>
-                deleteTable({ variables: { id } }).then(() =>
-                  refetchTablesAndHistory(),
-                )
+                confirmDelete({
+                  message: t("Delete data table?"),
+                  description: t(
+                    "\"{{name}}\" will no longer be available for display or analysis. Previous uploads remain in the change history.",
+                    { name: table.name },
+                  ),
+                  onDelete: async () => {
+                    await deleteTable({ variables: { id } });
+                    await refetchTablesAndHistory();
+                  },
+                })
               }
               onSetVisualizationSettings={onSetVisualizationSettings}
               onReplace={(id) => {

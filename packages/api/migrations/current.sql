@@ -109,6 +109,17 @@ begin
     end if;
   end if;
 
+  if exists (
+    select 1
+    from overlay_data_table_uploads odtu
+    inner join project_background_jobs pbj on pbj.id = odtu.project_background_job_id
+    where odtu.table_of_contents_item_id = toc_item_id
+      and odtu.filename = create_overlay_data_table_upload.filename
+      and pbj.state in ('queued', 'running')
+  ) then
+    raise exception 'There is already an active data table upload for this file';
+  end if;
+
   insert into project_background_jobs (
     project_id,
     title,
@@ -163,6 +174,7 @@ begin
       updated_at = now()
   where odtu.project_background_job_id = job_id;
 
+  -- Only fail jobs still in flight; never clobber a completed job.
   update project_background_jobs
   set
     state = 'failed',
@@ -171,7 +183,8 @@ begin
       else 'failed'
     end,
     error_message = fail_overlay_data_table_upload.error_message
-  where id = job_id;
+  where id = job_id
+    and state in ('queued', 'running');
 end;
 $$;
 
@@ -293,6 +306,10 @@ begin
   end if;
 
   select * into job from project_background_jobs where id = job_id;
+  -- Don't resurrect a job that already timed out or was cancelled.
+  if job.state not in ('queued', 'running') then
+    raise exception 'Job is no longer active (state: %)', job.state;
+  end if;
 
   if upload.replace_overlay_data_table_id is not null then
     select * into old_row

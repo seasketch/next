@@ -1,4 +1,4 @@
-import type { RefetchQueriesInclude } from "@apollo/client";
+import { RefetchQueriesInclude } from "@apollo/client";
 import {
   DataTableChangeLogDocument,
   GetLayerItemDocument,

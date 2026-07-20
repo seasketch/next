@@ -13,7 +13,10 @@ import {
 } from "@radix-ui/react-icons";
 import * as Popover from "@radix-ui/react-popover";
 import { GeostatsAttribute } from "@seasketch/geostats-types";
-import { DataTableFilter } from "./dataTableQueryApi";
+import {
+  DataTableFilter,
+  dataTableInFilterValues,
+} from "./dataTableQueryApi";
 import clsx from "clsx";
 
 type StringFilterMode = "value" | "isNull" | "notNull";
@@ -37,10 +40,7 @@ function parseStringFilterState(filters: DataTableFilter[]) {
   if (inFilter) {
     return {
       mode: "value" as StringFilterMode,
-      selected: (inFilter.value || "")
-        .split(",")
-        .map((value) => value.trim())
-        .filter(Boolean),
+      selected: dataTableInFilterValues(inFilter),
       multi: true,
     };
   }
@@ -76,7 +76,7 @@ function emitStringFilters(
     return [{ column, op: "eq", value: "" }];
   }
   if (multi || selected.length > 1) {
-    return [{ column, op: "in", value: selected.join(",") }];
+    return [{ column, op: "in", values: selected }];
   }
   return [{ column, op: "eq", value: selected[0] }];
 }

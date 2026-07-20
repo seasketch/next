@@ -1,9 +1,9 @@
 /**
  * A self-contained demo UI for exercising the query engine. Served when the
- * query endpoint is requested with Accept: text/html (or f=html). The page
- * loads ../column-stats.json (proxied by this worker, with CDN fallback) to
- * populate column pickers, then runs queries against the same endpoint with
- * f=json.
+ * query endpoint is requested with `f=html`. The page loads sibling
+ * column-stats.json and runs queries against the same endpoint with `f=json`,
+ * forwarding `access_token` / `ns` from the page URL so ACL-protected tables
+ * work in the browser.
  */
 
 function escapeHtml(text: string): string {
@@ -16,7 +16,8 @@ function escapeHtml(text: string): string {
 
 export function queryUiHtml(tablePath: string): string {
   const safePath = escapeHtml(tablePath);
-  const tablePathJs = JSON.stringify(tablePath);
+  // Escape "<" so the embedded string can never close the <script> tag.
+  const tablePathJs = JSON.stringify(tablePath).replace(/</g, "\\u003c");
   return `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -99,8 +100,8 @@ export function queryUiHtml(tablePath: string): string {
   <h1>Data Table Query</h1>
   <div class="subtitle">${safePath}</div>
   <div class="header-actions">
-    <a href="data.parquet" download="data.parquet">Download parquet</a>
-    <a href="column-stats.json" download="column-stats.json">Download metadata</a>
+    <a id="download-parquet" href="data.parquet" download="data.parquet">Download parquet</a>
+    <a id="download-stats" href="column-stats.json" download="column-stats.json">Download metadata</a>
   </div>
 
   <div class="panel filters">
@@ -158,6 +159,24 @@ export function queryUiHtml(tablePath: string): string {
   var OPS = ["count", "sum", "mean", "min", "max", "median"];
   var STRING_OPS = [["eq", "="], ["neq", "\\u2260"], ["in", "in"], ["is.null", "is null"], ["not.null", "not null"]];
   var NUMBER_OPS = [["eq", "="], ["neq", "\\u2260"], ["gt", ">"], ["gte", "\\u2265"], ["lt", "<"], ["lte", "\\u2264"], ["in", "in"], ["is.null", "is null"], ["not.null", "not null"]];
+
+  // Forward ACL credentials from this page's URL onto sibling fetches / links.
+  // The gateway strips them before the backend runs, but the browser must send
+  // them on every same-origin request to protected tables.
+  var pageParams = new URLSearchParams(location.search);
+  var accessToken = pageParams.get("access_token") || "";
+  var aclNamespace = pageParams.get("ns") || "";
+
+  function withAuthParams(params) {
+    if (aclNamespace) params.set("ns", aclNamespace);
+    if (accessToken) params.set("access_token", accessToken);
+    return params;
+  }
+
+  function authorizedUrl(path, params) {
+    var search = withAuthParams(params || new URLSearchParams()).toString();
+    return search ? path + "?" + search : path;
+  }
 
   function el(tag, attrs, children) {
     var node = document.createElement(tag);
@@ -345,7 +364,7 @@ export function queryUiHtml(tablePath: string): string {
     updateOrderByOptions();
     var params = buildQueryString();
     params.set("f", "json");
-    var href = "query?" + params.toString();
+    var href = authorizedUrl("query", params);
     var box = document.getElementById("url");
     box.innerHTML = "";
     box.appendChild(el("a", { href: href, target: "_blank", text: new URL(href, location.href).toString() }));
@@ -394,7 +413,7 @@ export function queryUiHtml(tablePath: string): string {
     ]));
     runBtn.setAttribute("disabled", "disabled");
     var t0 = performance.now();
-    fetch("query?" + params.toString(), { headers: { accept: "application/json" } })
+    fetch(authorizedUrl("query", params), { headers: { accept: "application/json" } })
       .then(function (res) { return res.json().then(function (body) { return { res: res, body: body }; }); })
       .then(function (r) {
         if (!r.res.ok) {
@@ -481,7 +500,12 @@ export function queryUiHtml(tablePath: string): string {
     updateUrl();
   }
 
-  fetch("column-stats.json", { headers: { accept: "application/json" } })
+  document.getElementById("download-parquet").setAttribute(
+    "href", authorizedUrl("data.parquet"));
+  document.getElementById("download-stats").setAttribute(
+    "href", authorizedUrl("column-stats.json"));
+
+  fetch(authorizedUrl("column-stats.json"), { headers: { accept: "application/json" } })
     .then(function (res) {
       if (!res.ok) throw new Error("column-stats.json not found (" + res.status + ")");
       return res.json();
