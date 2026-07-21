@@ -94,6 +94,7 @@ mutation UpdateFeatureFlags($slug: String!, $flags: JSON!) {
       id
       featureFlags {
         iNaturalistLayers
+        dataTables
       }
     }
   }

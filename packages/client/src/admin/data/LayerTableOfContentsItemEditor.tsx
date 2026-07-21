@@ -14,7 +14,10 @@ import useDebounce from "../../useDebounce";
 import GLStyleEditor from "./GLStyleEditor/GLStyleEditor";
 import { MapManagerContext } from "../../dataLayers/MapContextManager";
 import LayerEditorTabs from "./TableOfContentsItemEditor/LayerEditorTabs";
-import { CaretRightIcon, ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import {
+  CaretRightIcon,
+  ExclamationTriangleIcon,
+} from "@radix-ui/react-icons";
 import Skeleton from "../../components/Skeleton";
 import FolderIcon from "../../components/FolderIcon";
 import OverlayMetataEditor from "./OverlayMetadataEditor";
@@ -24,6 +27,7 @@ import { XIcon } from "@heroicons/react/outline";
 import LayerVersioning from "./TableOfContentsItemEditor/LayerVersioning";
 import DataTablesEditor from "./overlayDataTables/DataTablesEditor";
 import { layerSettingsChangeLogRefetchQueries } from "../changelogs/layerSettingsChangeLogRefetch";
+import useCurrentProjectMetadata from "../../useCurrentProjectMetadata";
 
 interface LayerTableOfContentsItemEditorProps {
   itemId: number;
@@ -146,7 +150,11 @@ export default function LayerTableOfContentsItemEditor(
     }
   );
 
-  const supportsDataTables = Boolean(geostats);
+  const { data: projectMeta } = useCurrentProjectMetadata();
+  const dataTablesFeatureEnabled = Boolean(
+    projectMeta?.project?.featureFlags?.dataTables
+  );
+  const supportsDataTables = Boolean(geostats) && dataTablesFeatureEnabled;
 
   const tabs = useMemo(() => {
     const items: {
@@ -204,15 +212,18 @@ export default function LayerTableOfContentsItemEditor(
       style={{ height: "calc(100vh)" }}
     >
       <div className="flex-0 shrink-0 border-b border-gray-600 bg-gray-700 text-primary-300 shadow-sm">
-        <div className="flex items-center gap-2 px-3 pt-3 pb-2">
+        <div className="flex items-center gap-2 px-3 pt-3 pb-3">
           <h4 className="min-w-0 flex-1 truncate font-medium text-indigo-100">
             {error ? t("Error") : item?.title || props.title || t("Loading")}
           </h4>
           <button
-            className="shrink-0 cursor-pointer rounded-full bg-gray-300 bg-opacity-25 p-1 focus:ring-blue-300"
+            type="button"
+            aria-label={t("Close layer editor")}
+            title={t("Close")}
+            className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-white border-opacity-5 bg-black bg-opacity-20 text-gray-200 transition-colors hover:border-opacity-10 hover:bg-gray-600 hover:text-white hover:shadow-sm focus:outline-none focus-visible:border-opacity-10 focus-visible:bg-gray-600 focus-visible:text-white focus-visible:shadow-sm focus-visible:ring-2 focus-visible:ring-indigo-300"
             onClick={onRequestClose}
           >
-            <XIcon className="h-5 w-5 text-white" />
+            <XIcon className="pointer-events-none h-5 w-5" aria-hidden />
           </button>
         </div>
         {item?.containedBy && item.containedBy.length > 0 && (
@@ -232,7 +243,9 @@ export default function LayerTableOfContentsItemEditor(
       )}
       {!item && !error && <LoadingSkeleton />}
       {item && activeTab === "settings" && <LayerSettings item={item} />}
-      {item && activeTab === "dataTables" && <DataTablesEditor item={item} />}
+      {item && activeTab === "dataTables" && supportsDataTables && (
+        <DataTablesEditor item={item} />
+      )}
       {item && activeTab === "versions" && <LayerVersioning item={item} />}
       {item && (
         <div

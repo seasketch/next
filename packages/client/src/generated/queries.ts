@@ -5570,6 +5570,11 @@ export type FailDataUploadPayloadDataUploadTaskEdgeArgs = {
 
 export type FeatureFlags = {
   __typename?: 'FeatureFlags';
+  /**
+   * When true, project admins see the Data Tables tab in layer editors
+   * and related map UI. Controlled from SeaSketch developer settings.
+   */
+  dataTables?: Maybe<Scalars['Boolean']>;
   iNaturalistLayers?: Maybe<Scalars['Boolean']>;
 };
 
@@ -24038,7 +24043,7 @@ export type ProjectMetadataFragment = (
     & Pick<RenderedAboutPageContent, 'lang' | 'html'>
   )>>>, featureFlags?: Maybe<(
     { __typename?: 'FeatureFlags' }
-    & Pick<FeatureFlags, 'iNaturalistLayers'>
+    & Pick<FeatureFlags, 'iNaturalistLayers' | 'dataTables'>
   )> }
 );
 
@@ -27076,7 +27081,7 @@ export type UpdateFeatureFlagsMutation = (
       & Pick<Project, 'id'>
       & { featureFlags?: Maybe<(
         { __typename?: 'FeatureFlags' }
-        & Pick<FeatureFlags, 'iNaturalistLayers'>
+        & Pick<FeatureFlags, 'iNaturalistLayers' | 'dataTables'>
       )> }
     )> }
   )> }
@@ -28909,6 +28914,7 @@ export const ProjectMetadataFragmentDoc = /*#__PURE__*/ gql`
   showLegendByDefault
   featureFlags {
     iNaturalistLayers
+    dataTables
   }
 }
     `;
@@ -34527,6 +34533,7 @@ export const UpdateFeatureFlagsDocument = /*#__PURE__*/ gql`
       id
       featureFlags {
         iNaturalistLayers
+        dataTables
       }
     }
   }

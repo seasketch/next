@@ -6443,6 +6443,11 @@ type FailDataUploadPayload {
 }
 
 type FeatureFlags {
+  """
+  When true, project admins see the Data Tables tab in layer editors
+  and related map UI. Controlled from SeaSketch developer settings.
+  """
+  dataTables: Boolean
   iNaturalistLayers: Boolean
 }
 

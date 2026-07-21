@@ -48,6 +48,7 @@ import DataTableLegendPanel from "./legends/DataTableLegendPanel";
 import { ClientOverlayDataTableFragment } from "../generated/graphql";
 import { DataTableAggregation } from "./dataTableQueryApi";
 import { LegendFocusRequest } from "./ActivatedDataTableContext";
+import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 
 require("../admin/data/arcgis/Accordion.css");
 
@@ -257,6 +258,10 @@ function LegendListItem({
   bottom?: boolean;
 }) {
   const [contextMenuIsOpen, setContextMenuIsOpen] = useState(false);
+  const { data: projectMeta } = useCurrentProjectMetadata();
+  const dataTablesFeatureEnabled = Boolean(
+    projectMeta?.project?.featureFlags?.dataTables
+  );
   const isSingleSymbol =
     item.type !== "DataTableLegendItem" &&
     ((item.type === "GLStyleLegendItem" &&
@@ -366,14 +371,16 @@ function LegendListItem({
                 </DropdownMenu.Trigger>
               </DropdownMenu.Root>
             )}
-            {item.overlayDataTables && item.overlayDataTables.length > 0 && (
-              <ActivatedDataTableButton
-                layerId={item.id}
-                tocItemId={item.tableOfContentsItemDetails?.id}
-                layerName={item.label}
-                tables={item.overlayDataTables}
-              />
-            )}
+            {dataTablesFeatureEnabled &&
+              item.overlayDataTables &&
+              item.overlayDataTables.length > 0 && (
+                <ActivatedDataTableButton
+                  layerId={item.id}
+                  tocItemId={item.tableOfContentsItemDetails?.id}
+                  layerName={item.label}
+                  tables={item.overlayDataTables}
+                />
+              )}
             <Toggle
               className={`inline-block`}
               onChange={() => {
