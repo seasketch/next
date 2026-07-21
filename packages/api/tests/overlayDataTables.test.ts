@@ -151,13 +151,29 @@ describe("overlay_data_tables", () => {
           conn,
           async () => {
             await conn.any(sql`
+              update table_of_contents_items
+              set enable_data_tables = true, data_table_join_column = 'id'
+              where id = ${tocId}`);
+            await conn.any(sql`
             insert into overlay_data_tables (
               table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
-              row_count, created_by, parquet_remote, column_stats_remote
+              row_count, created_by, parquet_remote, column_stats_remote,
+              visualization_columns, visualization_ops, required_filter_columns
             ) values (
               ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId},
               'r2://bucket/projects/test/public/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/dataTables/u1/data.parquet',
-              'r2://bucket/projects/test/public/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/dataTables/u1/column-stats.json'
+              'r2://bucket/projects/test/public/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/dataTables/u1/column-stats.json',
+              ${sql.array(['count'], 'text')}, ${sql.array(['sum'], 'text')},
+              ${sql.array(['year'], 'text')}
+            )`);
+            // Soft-deleted draft history must not be published.
+            await conn.any(sql`
+            insert into overlay_data_tables (
+              table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
+              row_count, created_by, parquet_remote, column_stats_remote, deleted_at
+            ) values (
+              ${tocId}, ${projectId}, 'old-fish', 'site_id', 'id', 1, ${adminId},
+              'r2://bucket/old.parquet', 'r2://bucket/old.json', now()
             )`);
           },
           { userId: adminId, projectId },
@@ -165,14 +181,55 @@ describe("overlay_data_tables", () => {
 
         await conn.any(sql`select publish_table_of_contents(${projectId})`);
 
-        const published = await conn.one(sql`
-          select odt.name, toc.is_draft
+        const publishedToc = await conn.one(sql`
+          select enable_data_tables, data_table_join_column
+          from table_of_contents_items
+          where project_id = ${projectId} and is_draft = false and is_folder = false`);
+        expect(publishedToc.enable_data_tables).toBe(true);
+        expect(publishedToc.data_table_join_column).toBe("id");
+
+        const published = await conn.many(sql`
+          select odt.name, toc.is_draft, odt.visualization_columns, odt.visualization_ops,
+            odt.required_filter_columns, odt.parquet_remote
+          from overlay_data_tables odt
+          inner join table_of_contents_items toc on toc.id = odt.table_of_contents_item_id
+          where odt.project_id = ${projectId} and toc.is_draft = false
+          order by odt.name`);
+
+        expect(published).toHaveLength(1);
+        expect(published[0].name).toBe("fish");
+        expect(published[0].is_draft).toBe(false);
+        expect(published[0].visualization_columns).toEqual(["count"]);
+        expect(published[0].visualization_ops).toEqual(["sum"]);
+        expect(published[0].required_filter_columns).toEqual(["year"]);
+
+        const draftStillThere = await conn.oneFirst(sql`
+          select count(*) from overlay_data_tables odt
+          inner join table_of_contents_items toc on toc.id = odt.table_of_contents_item_id
+          where odt.project_id = ${projectId} and toc.is_draft = true and odt.deleted_at is null`);
+        expect(draftStillThere).toBe(1);
+
+        // Republish replaces prior published copies (CASCADE delete of old published TOC).
+        await asPostgres(
+          conn,
+          async () => {
+            await conn.any(sql`
+              update overlay_data_tables
+              set name = 'fish-v2', visualization_ops = ${sql.array(['mean'], 'text')}
+              where table_of_contents_item_id = ${tocId} and deleted_at is null`);
+          },
+          { userId: adminId, projectId },
+        );
+        await conn.any(sql`select publish_table_of_contents(${projectId})`);
+
+        const republished = await conn.many(sql`
+          select odt.name, odt.visualization_ops
           from overlay_data_tables odt
           inner join table_of_contents_items toc on toc.id = odt.table_of_contents_item_id
           where odt.project_id = ${projectId} and toc.is_draft = false`);
-
-        expect(published.name).toBe("fish");
-        expect(published.is_draft).toBe(false);
+        expect(republished).toHaveLength(1);
+        expect(republished[0].name).toBe("fish-v2");
+        expect(republished[0].visualization_ops).toEqual(["mean"]);
       },
     );
   });
