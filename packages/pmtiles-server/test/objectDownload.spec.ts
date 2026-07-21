@@ -3,6 +3,7 @@ import { generateKeyPair, SignJWT, type KeyLike } from "jose";
 import { beforeAll, describe, expect, it } from "vitest";
 import type { ProjectAclDoc } from "../src/auth/types";
 import { handleClassifiedRequest } from "../src/gateway";
+import { handleObjectRequest } from "../src/objectBackend";
 import { aclNamespaceFromRequest, classifyResource } from "../src/resource";
 import { handleTilesBackendRequest } from "../src/tilesBackend";
 
@@ -77,6 +78,29 @@ describe("object downloads", () => {
       'attachment; filename="Layer _Name_.geojson"',
     );
     expect(await response.text()).toContain("FeatureCollection");
+  });
+
+  it("does not serve ACL documents from ObjectBackend", async () => {
+    const ns = `acl-download-${crypto.randomUUID()}`;
+    const aclKey = `acl/${ns}/projects/${SLUG}.json`;
+    await env.TILES_BUCKET.put(
+      aclKey,
+      JSON.stringify({
+        v: 1,
+        slug: SLUG,
+        public: [UUID],
+        rules: [],
+        protected: {},
+      }),
+    );
+
+    const response = await handleObjectRequest(
+      new Request(`https://tiles.seasketch.org/${aclKey}`),
+      env,
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.text()).toBe("Invalid object path");
   });
 
   it("does not treat TileJSON paths as raw object keys", async () => {

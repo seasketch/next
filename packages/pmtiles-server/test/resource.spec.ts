@@ -43,6 +43,13 @@ describe("overlay resource classification", () => {
     expect(normalizeObjectKey("/projects%2F..%2Fsecret")).toBeNull();
   });
 
+  it("rejects ACL document keys so they are not HTTP-downloadable", () => {
+    expect(normalizeObjectKey("/acl/prod/projects/example.json")).toBeNull();
+    expect(normalizeObjectKey("acl/dev-cburt/projects/example.json")).toBeNull();
+    expect(normalizeObjectKey("/ACL/prod/projects/example.json")).toBeNull();
+    expect(classifyResource("/acl/prod/projects/example.json")).toBeNull();
+  });
+
   it("defaults ACL enforcement off and missing ACL docs public", () => {
     expect(aclEnabled({} as Env)).toBe(false);
     expect(aclEnabled({ AUTH_ACL_ENABLED: "true" } as Env)).toBe(true);

@@ -235,6 +235,8 @@ backend invocation and never enter a cache key.
 Keys outside `projects/` are public fixtures. For example,
 `/eez-land-joined.fgb` can be read without a token. Data-library keys below
 `projects/superuser/public/` are also always public on every host.
+ACL documents (`acl/{ns}/projects/{slug}.json`) are stored in the same R2
+bucket for Worker-side authorization but are never served over HTTP.
 
 ### Map-access tokens
 
