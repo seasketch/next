@@ -67,6 +67,7 @@ import {
   DATA_TABLE_ZERO_FILL_OPACITY,
   DATA_TABLE_NO_DATA_COLOR,
   buildDataTableCircleRadiusExpression,
+  buildDataTableValueExpression,
 } from "./dataTableMapStyle";
 import {
   columnStatsUrlForTable,
@@ -854,11 +855,11 @@ class MapContextManager extends EventEmitter {
       ? settings.query.op[0]
       : settings.query.op;
     const label = `${op || "value"}(${settings.query.column})`;
-    const valueExpression = (
-      legendOnly
+    const valueExpression = buildDataTableValueExpression(
+      (legendOnly
         ? ["get", DATA_TABLE_VALUE_PROPERTY]
-        : ["feature-state", DATA_TABLE_VALUE_PROPERTY]
-    ) as Expression;
+        : ["feature-state", DATA_TABLE_VALUE_PROPERTY]) as Expression
+    );
     const isNoData = [
       "==",
       valueExpression,
@@ -866,6 +867,8 @@ class MapContextManager extends EventEmitter {
     ] as Expression;
     const isZero = ["==", valueExpression, 0] as Expression;
     const isPositive = [">", valueExpression, 0] as Expression;
+    // UNSET (-2 via coalesce) matches none of these, so missing feature-state
+    // stays hidden without Mapbox evaluating `>` / interpolate on null.
     const hasSymbolExpression = [
       "any",
       isNoData,
@@ -877,7 +880,9 @@ class MapContextManager extends EventEmitter {
     const scaleMax =
       values && values.scaleMax > values.scaleMin
         ? values.scaleMax
-        : scaleMin + 1;
+        : // Single positive value (or empty): keep interpolate valid and
+          // clamp that value to the max radius stop.
+          Math.max(scaleMin + 1, values?.scaleMax ?? 1);
     const symbolRadius = buildDataTableCircleRadiusExpression({
       valueExpression,
       scaleMin,
@@ -3742,16 +3747,21 @@ class MapContextManager extends EventEmitter {
                       dataTableValues &&
                       dataTableValues.scaleMax > dataTableValues.scaleMin
                         ? dataTableValues.scaleMin
-                        : dataTableValues?.min ?? 0,
+                        : dataTableValues?.scaleMax ??
+                          dataTableValues?.min ??
+                          0,
                     max:
                       dataTableValues &&
                       dataTableValues.scaleMax > dataTableValues.scaleMin
                         ? dataTableValues.scaleMax
-                        : (dataTableValues?.min ?? 0) + 1,
+                        : dataTableValues?.scaleMax ??
+                          (dataTableValues?.min ?? 0) + 1,
                     hasZero: dataTableValues?.hasZero ?? false,
+                    // Show the bubble scale for any positive values, including
+                    // a single unique value where scaleMin === scaleMax.
                     showValueScale:
                       Boolean(dataTableValues) &&
-                      dataTableValues.scaleMax > dataTableValues.scaleMin,
+                      dataTableValues.scaleMax > 0,
                   };
                   changes = true;
                 } else {

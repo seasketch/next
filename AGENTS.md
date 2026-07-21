@@ -76,7 +76,9 @@ export const MyComponent: React.FC<MyComponentProps> = ({ title }) => {
 
 ## React Client -- verifying your work
 
-- Whenever making changes to the client, run `npm run lint` from `packages/client` to ensure there are no linter errors that will break the build.
+- Whenever making changes to the client, verify that your work will compile.
+- Identify the **Client devserver** terminal session in the IDE. If available, that will show any compiler or linter errors when the live-reload cycle runs. This will usually yield any errors faster than running the linter directly.
+- Alternatively, run `npm run lint` from `packages/client` to ensure there are no linter errors that will break the build.
 
 ## Report Widgets
 

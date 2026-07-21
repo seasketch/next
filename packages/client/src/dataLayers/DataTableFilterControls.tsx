@@ -158,7 +158,9 @@ function isStringLikeColumn(column: GeostatsAttribute) {
   );
 }
 
-function defaultFiltersForColumn(column: GeostatsAttribute): DataTableFilter[] {
+export function defaultFiltersForColumn(
+  column: GeostatsAttribute
+): DataTableFilter[] {
   if (column.type === "number") {
     return defaultNumericFilters(column);
   }
@@ -171,6 +173,39 @@ function defaultFiltersForColumn(column: GeostatsAttribute): DataTableFilter[] {
     }
   }
   return [{ column: column.attribute, op: "notNull" }];
+}
+
+/**
+ * Ensure every required filter column has at least one filter entry, using
+ * sensible defaults (first string choice, full numeric range, etc.). Existing
+ * filters for those columns are kept. Optional filters are preserved.
+ */
+export function ensureRequiredDataTableFilters(
+  filters: DataTableFilter[] | undefined,
+  requiredColumns: string[],
+  columns: GeostatsAttribute[],
+  excludedColumns: string[] = []
+): DataTableFilter[] {
+  const excluded = new Set(excludedColumns.filter(Boolean));
+  const columnsByName = new Map(
+    columns.map((column) => [column.attribute, column])
+  );
+  const current = filters || [];
+  const next = [...current];
+  for (const columnName of requiredColumns) {
+    if (!columnName || excluded.has(columnName)) {
+      continue;
+    }
+    const column = columnsByName.get(columnName);
+    if (!column) {
+      continue;
+    }
+    if (next.some((filter) => filter.column === columnName)) {
+      continue;
+    }
+    next.push(...defaultFiltersForColumn(column));
+  }
+  return next;
 }
 
 function FilterValueEditor({
@@ -222,11 +257,14 @@ export default function DataTableFilterControls({
   columns,
   filters,
   visualizedColumns,
+  requiredColumns = [],
   onChange,
 }: {
   columns: GeostatsAttribute[];
   filters: DataTableFilter[];
   visualizedColumns: string[];
+  /** Admin-required filter columns; shown first and not removable. */
+  requiredColumns?: string[];
   onChange: (filters: DataTableFilter[]) => void;
 }) {
   const { t } = useTranslation("homepage");
@@ -234,22 +272,42 @@ export default function DataTableFilterControls({
     () => new Set(visualizedColumns.filter(Boolean)),
     [visualizedColumns]
   );
+  const requiredColumnSet = useMemo(
+    () =>
+      new Set(
+        requiredColumns.filter(
+          (column) => Boolean(column) && !excludedColumns.has(column)
+        )
+      ),
+    [excludedColumns, requiredColumns]
+  );
   const columnsByName = useMemo(
     () => new Map(columns.map((column) => [column.attribute, column])),
     [columns]
   );
-  // Stable display order: never follow "last edited" position in `filters`.
-  const activeColumnNames = useMemo(
-    () =>
-      Array.from(new Set(filters.map((filter) => filter.column)))
+  // Required columns first (admin order), then other active filters A–Z.
+  const activeColumnNames = useMemo(() => {
+    const active = new Set(
+      filters
+        .map((filter) => filter.column)
         .filter(
           (column) => columnsByName.has(column) && !excludedColumns.has(column)
         )
-        .sort((a, b) =>
-          a.localeCompare(b, undefined, { sensitivity: "base" })
-        ),
-    [columnsByName, excludedColumns, filters]
-  );
+    );
+    const requiredActive = requiredColumns.filter(
+      (column) => active.has(column) && columnsByName.has(column)
+    );
+    const optionalActive = Array.from(active)
+      .filter((column) => !requiredColumnSet.has(column))
+      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+    return [...requiredActive, ...optionalActive];
+  }, [
+    columnsByName,
+    excludedColumns,
+    filters,
+    requiredColumnSet,
+    requiredColumns,
+  ]);
   const availableColumns = useMemo(
     () =>
       columns
@@ -279,6 +337,7 @@ export default function DataTableFilterControls({
       {activeColumnNames.map((columnName) => {
         const column = columnsByName.get(columnName)!;
         const columnFilters = filtersForColumn(filters, columnName);
+        const isRequired = requiredColumnSet.has(columnName);
         const compact =
           isStringLikeColumn(column) ||
           column.type === "boolean" ||
@@ -309,18 +368,20 @@ export default function DataTableFilterControls({
                     )
                   }
                 />
-                <button
-                  type="button"
-                  aria-label={t("Remove filter")}
-                  className="flex-none text-gray-400 hover:text-red-600"
-                  onClick={() =>
-                    onChange(
-                      filters.filter((filter) => filter.column !== columnName)
-                    )
-                  }
-                >
-                  <Cross2Icon className="w-3 h-3" />
-                </button>
+                {!isRequired && (
+                  <button
+                    type="button"
+                    aria-label={t("Remove filter")}
+                    className="flex-none text-gray-400 hover:text-red-600"
+                    onClick={() =>
+                      onChange(
+                        filters.filter((filter) => filter.column !== columnName)
+                      )
+                    }
+                  >
+                    <Cross2Icon className="w-3 h-3" />
+                  </button>
+                )}
               </>
             ) : (
               <>
@@ -331,17 +392,22 @@ export default function DataTableFilterControls({
                     </div>
                     <div className="text-[10px] text-gray-400">{column.type}</div>
                   </div>
-                  <button
-                    type="button"
-                    className="text-gray-400 hover:text-red-600"
-                    onClick={() =>
-                      onChange(
-                        filters.filter((filter) => filter.column !== columnName)
-                      )
-                    }
-                  >
-                    <Cross2Icon className="w-3 h-3" />
-                  </button>
+                  {!isRequired && (
+                    <button
+                      type="button"
+                      aria-label={t("Remove filter")}
+                      className="text-gray-400 hover:text-red-600"
+                      onClick={() =>
+                        onChange(
+                          filters.filter(
+                            (filter) => filter.column !== columnName
+                          )
+                        )
+                      }
+                    >
+                      <Cross2Icon className="w-3 h-3" />
+                    </button>
+                  )}
                 </div>
                 <FilterValueEditor
                   column={column}

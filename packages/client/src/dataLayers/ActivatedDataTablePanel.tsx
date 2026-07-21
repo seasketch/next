@@ -56,6 +56,7 @@ export default function ActivatedDataTablePanel({
         columnStatsUrl: table.columnStatsUrl,
         visualizationColumns: table.visualizationColumns,
         visualizationOps: table.visualizationOps,
+        requiredFilterColumns: table.requiredFilterColumns,
       };
     }
     return next;

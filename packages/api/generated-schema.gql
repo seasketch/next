@@ -11793,6 +11793,12 @@ type OverlayDataTable implements Node {
   projectId: Int!
   queryUrl: String
   replacedById: Int
+
+  """
+  Columns that must appear as filters when this table is displayed on the map.
+  End users can change the filter values but cannot remove these filters.
+  """
+  requiredFilterColumns: [String]
   rowCount: Int!
   tableOfContentsItemId: Int!
   updatedAt: Datetime
@@ -16250,6 +16256,7 @@ input SetOverlayDataTableVisualizationSettingsInput {
   payload verbatim. May be used to track mutations by the client.
   """
   clientMutationId: String
+  requiredFilterColumns: [String]
   tableId: Int
   visualizationColumns: [String]
   visualizationOps: [String]

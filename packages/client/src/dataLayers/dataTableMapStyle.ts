@@ -9,6 +9,23 @@ export const DATA_TABLE_VALUE_PROPERTY = "__dataTableValue";
  */
 export const DATA_TABLE_NO_DATA_VALUE = -1;
 
+/**
+ * Stand-in used in paint expressions when feature-state / get returns null
+ * (feature not yet joined). Distinct from {@link DATA_TABLE_NO_DATA_VALUE}
+ * so those features stay hidden instead of rendering as "no data".
+ */
+export const DATA_TABLE_UNSET_VALUE = -2;
+
+/**
+ * Coalesce a possibly-null feature-state/get expression to a numeric
+ * sentinel so Mapbox never evaluates `>` / `interpolate` on null.
+ */
+export function buildDataTableValueExpression(
+  rawValueExpression: Expression
+): Expression {
+  return ["coalesce", rawValueExpression, DATA_TABLE_UNSET_VALUE] as Expression;
+}
+
 export const DATA_TABLE_ACTIVE_COLOR = "#2563eb";
 export const DATA_TABLE_NO_DATA_COLOR = "#9ca3af";
 export const DATA_TABLE_LOADING_COLOR = "#6b7280";
@@ -90,6 +107,11 @@ function radiusForStop(
 ): Expression {
   const zeroRadius = minRadius * 0.8;
   const noDataRadius = minRadius * 0.5;
+  const isUnset = [
+    "==",
+    valueExpression,
+    DATA_TABLE_UNSET_VALUE,
+  ] as Expression;
   const isNoData = [
     "==",
     valueExpression,
@@ -97,12 +119,17 @@ function radiusForStop(
   ] as Expression;
   const isZero = ["==", valueExpression, 0] as Expression;
   const isPositive = [">", valueExpression, 0] as Expression;
+  // Guarding unset/no-data/zero before interpolate avoids Mapbox warnings
+  // when feature-state is missing (null coalesced to UNSET).
   const sized = [
     "case",
+    isUnset,
+    0,
     isNoData,
     noDataRadius,
     isZero,
     zeroRadius,
+    isPositive,
     valueRadiusExpression(
       valueExpression,
       scaleMin,
@@ -110,6 +137,7 @@ function radiusForStop(
       minRadius,
       maxRadius
     ),
+    0,
   ] as Expression;
   if (!hideWhenMissing) {
     return sized;

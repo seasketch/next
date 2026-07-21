@@ -335,7 +335,10 @@ begin
     created_by,
     version,
     parquet_remote,
-    column_stats_remote
+    column_stats_remote,
+    visualization_columns,
+    visualization_ops,
+    required_filter_columns
   ) values (
     upload.table_of_contents_item_id,
     job.project_id,
@@ -346,7 +349,10 @@ begin
     coalesce(job.user_id, nullif(current_setting('session.user_id', true), '')::integer),
     new_version,
     p_parquet_remote,
-    p_column_stats_remote
+    p_column_stats_remote,
+    coalesce(old_row.visualization_columns, '{}'),
+    coalesce(old_row.visualization_ops, '{mean}'),
+    coalesce(old_row.required_filter_columns, '{}')
   ) returning * into new_row;
 
   if upload.replace_overlay_data_table_id is not null then
@@ -408,6 +414,10 @@ alter table overlay_data_tables add column if not exists visualization_ops text[
 comment on column overlay_data_tables.visualization_ops is
   'Operations that may/should be used for creating thematic maps. For example `mean` or `max`';
 
+alter table overlay_data_tables add column if not exists required_filter_columns text[] default '{}';
+comment on column overlay_data_tables.required_filter_columns is
+  'Columns that must appear as filters when this table is displayed on the map. End users can change the filter values but cannot remove these filters.';
+
 do $$ begin
   if not exists (
     select 1 from pg_enum e
@@ -418,10 +428,14 @@ do $$ begin
   end if;
 end $$;
 
+-- Signature change (added required_filter_columns); replace rather than overload.
+drop function if exists set_overlay_data_table_visualization_settings(integer, text[], text[]);
+
 create or replace function set_overlay_data_table_visualization_settings(
   table_id integer,
   visualization_columns text[],
-  visualization_ops text[]
+  visualization_ops text[],
+  required_filter_columns text[] default '{}'
 )
 returns overlay_data_tables
 language plpgsql
@@ -431,6 +445,7 @@ declare
   row overlay_data_tables;
   old_columns text[];
   old_ops text[];
+  old_required text[];
   editor_id int;
   invalid_ops text[];
 begin
@@ -457,10 +472,12 @@ begin
 
   old_columns := row.visualization_columns;
   old_ops := row.visualization_ops;
+  old_required := row.required_filter_columns;
 
   update overlay_data_tables
   set visualization_columns = coalesce(set_overlay_data_table_visualization_settings.visualization_columns, '{}'),
       visualization_ops = coalesce(set_overlay_data_table_visualization_settings.visualization_ops, '{}'),
+      required_filter_columns = coalesce(set_overlay_data_table_visualization_settings.required_filter_columns, '{}'),
       updated_at = now()
   where id = table_id
   returning * into row;
@@ -473,8 +490,20 @@ begin
       'overlay_data_table',
       row.id,
       'data_table:visualization_settings_updated'::change_log_field_group,
-      jsonb_build_object('visualizationColumns', old_columns, 'visualizationOps', old_ops),
-      jsonb_build_object('visualizationColumns', row.visualization_columns, 'visualizationOps', row.visualization_ops),
+      jsonb_build_object(
+        'name', row.name,
+        'version', row.version,
+        'visualizationColumns', old_columns,
+        'visualizationOps', old_ops,
+        'requiredFilterColumns', old_required
+      ),
+      jsonb_build_object(
+        'name', row.name,
+        'version', row.version,
+        'visualizationColumns', row.visualization_columns,
+        'visualizationOps', row.visualization_ops,
+        'requiredFilterColumns', row.required_filter_columns
+      ),
       null, null,
       jsonb_build_object('table_of_contents_item_id', row.table_of_contents_item_id, 'version', row.version)
     );
@@ -483,7 +512,7 @@ begin
 end;
 $$;
 
-grant execute on function set_overlay_data_table_visualization_settings(integer, text[], text[]) to seasketch_user;
+grant execute on function set_overlay_data_table_visualization_settings(integer, text[], text[], text[]) to seasketch_user;
 
 
 

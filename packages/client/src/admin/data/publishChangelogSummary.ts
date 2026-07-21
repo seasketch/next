@@ -59,6 +59,7 @@ const FIELD_GROUP_TO_BADGE: Partial<
   [ChangeLogFieldGroup.DataTableRenamed]: "dataTables",
   [ChangeLogFieldGroup.DataTableReplaced]: "dataTables",
   [ChangeLogFieldGroup.DataTableRollback]: "dataTables",
+  [ChangeLogFieldGroup.DataTableVisualizationSettingsUpdated]: "dataTables",
   [ChangeLogFieldGroup.FolderType]: "folderBehavior",
   [ChangeLogFieldGroup.ResolvableLayerCommentsCreated]: "comments",
   [ChangeLogFieldGroup.ResolvableLayerCommentsResponded]: "comments",

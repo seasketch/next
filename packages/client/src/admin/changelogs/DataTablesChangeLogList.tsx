@@ -11,6 +11,8 @@ import {
   DATA_TABLE_CHANGE_LOG_EXPANDED_FIRST,
   DATA_TABLE_CHANGE_LOG_PAGE_SIZE,
 } from "./dataTableChangeLogRefetch";
+import { summary } from "./fieldGroups/FieldGroupListItemBase";
+import { tableNameFromSummary } from "./fieldGroups/dataTableSummary";
 
 function findScrollParent(from: HTMLElement | null): HTMLElement | null {
   if (!from) return null;
@@ -83,6 +85,15 @@ export default function DataTablesChangeLogList({
     id: table.id,
     version: table.version,
   }));
+  const dataTableNameById = useMemo(() => {
+    const next = new Map<number, string>();
+    for (const table of toc?.overlayDataTables || []) {
+      if (table.name) {
+        next.set(table.id, table.name);
+      }
+    }
+    return next;
+  }, [toc?.overlayDataTables]);
 
   const canShowMore =
     !showAllHistory && fetchedLogs.length > DATA_TABLE_CHANGE_LOG_PAGE_SIZE;
@@ -111,6 +122,11 @@ export default function DataTablesChangeLogList({
             key={changeLog.id}
             changeLog={changeLog}
             last={index === changeLogs.length - 1}
+            itemTitle={titleForDataTableChangeLog(
+              changeLog,
+              dataTableNameById,
+              t("Data table")
+            )}
             dataTableActions={{
               tableOfContentsItemId,
               activeTables,
@@ -143,4 +159,21 @@ export default function DataTablesChangeLogList({
       )}
     </div>
   );
+}
+
+function titleForDataTableChangeLog(
+  changeLog: NonNullable<
+    NonNullable<
+      DataTableChangeLogQuery["tableOfContentsItem"]
+    >["dataTableChangeLogs"]
+  >[number],
+  dataTableNameById: Map<number, string>,
+  untitledLabel: string
+) {
+  const tableName =
+    tableNameFromSummary(summary(changeLog.toSummary)) ||
+    tableNameFromSummary(summary(changeLog.fromSummary)) ||
+    dataTableNameById.get(changeLog.entityId) ||
+    "";
+  return tableName || untitledLabel;
 }

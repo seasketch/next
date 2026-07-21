@@ -467,6 +467,7 @@ query DataTableChangeLog($id: Int!, $first: Int!) {
     id
     overlayDataTables {
       id
+      name
       version
     }
     dataTableChangeLogs(first: $first) {
@@ -1303,6 +1304,10 @@ query ChangeLogsSinceLastPublish($slug: String!) {
       isFolder
       unresolvedComment {
         ...ResolvableLayerCommentThread
+      }
+      overlayDataTables {
+        id
+        name
       }
       dataLayer {
         id

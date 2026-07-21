@@ -62,7 +62,7 @@ function InlineSelect({
         aria-label={ariaLabel}
         className={clsx(
           "inline-flex max-w-full min-w-0 items-center gap-1 rounded-md border border-gray-300 bg-white px-1.5 py-0.5",
-          "text-xs font-medium capitalize text-gray-700",
+          "text-xs font-medium text-gray-700",
           "hover:bg-gray-50",
           "focus:outline-none focus:ring-0 focus:border-gray-300",
           "focus-visible:ring-1 focus-visible:ring-primary-500 focus-visible:border-primary-500",
@@ -95,7 +95,7 @@ function InlineSelect({
               >
                 <div className="min-w-0 flex-1">
                   <Select.ItemText>
-                    <span className="block truncate font-medium capitalize">
+                    <span className="block truncate font-medium">
                       {option.label}
                     </span>
                   </Select.ItemText>
@@ -237,7 +237,7 @@ export default function DataTableVisualizationControls({
             }
           />
         ) : (
-          <span className="font-medium capitalize text-gray-700">
+          <span className="font-medium text-gray-700">
             {resolved.op}
           </span>
         )}

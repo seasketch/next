@@ -145,6 +145,16 @@ export function dataTableEventDescription(
       }
       return t("Rolled back to {{restored}}", { restored });
     }
+    case "DATA_TABLE_VISUALIZATION_SETTINGS_UPDATED": {
+      const name =
+        tableNameFromSummary(to) || tableNameFromSummary(from) || "";
+      if (name) {
+        return t("Updated map display settings for {{table}}", {
+          table: tableLabel(to.name ? to : from, fallback),
+        });
+      }
+      return t("Updated map display settings");
+    }
     default:
       return t("Updated data table");
   }

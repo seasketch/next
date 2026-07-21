@@ -65,8 +65,43 @@ function ZeroSymbol() {
 }
 
 function ValueScaleBubble({ min, max }: { min: number; max: number }) {
+  // Single unique positive value: one max-size bubble (matches map paint,
+  // which clamps that value to the top radius stop).
+  if (!(max > min)) {
+    const label = formatLegendNumber(max);
+    const labelY = BASELINE_Y - MAX_RADIUS;
+    return (
+      <svg
+        viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+        width={WIDTH}
+        height={HEIGHT}
+        className="block flex-none"
+        aria-hidden
+      >
+        <circle
+          cx={CENTER_X}
+          cy={BASELINE_Y - MAX_RADIUS}
+          r={MAX_RADIUS}
+          fill={FILL}
+        />
+        <text
+          x={CENTER_X}
+          y={labelY}
+          textAnchor="middle"
+          dominantBaseline="middle"
+          fill="white"
+          fontSize={labelFontSize(label, MAX_RADIUS)}
+          fontWeight={600}
+          style={{ fontVariantNumeric: "tabular-nums" }}
+        >
+          {label}
+        </text>
+      </svg>
+    );
+  }
+
   const displayMin = min;
-  const displayMax = max > min ? max : min + 1;
+  const displayMax = max;
   const displayMid = displayMin + (displayMax - displayMin) / 2;
 
   const stops = [

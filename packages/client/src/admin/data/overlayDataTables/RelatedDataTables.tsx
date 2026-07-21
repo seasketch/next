@@ -3,6 +3,8 @@ import { useApolloClient } from "@apollo/client";
 import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import {
+  CheckIcon,
+  CogIcon,
   TrashIcon,
   UploadIcon,
 } from "@heroicons/react/outline";
@@ -57,18 +59,25 @@ function getJobForTable(tableId: number, jobs: DataTableJob[]) {
 }
 
 /**
- * Admin controls for `overlay_data_tables.visualization_columns` /
- * `.visualization_ops` -- the columns and aggregation ops that are valid for
- * building a thematic map from this table. When either list is left empty,
- * end users can choose freely in "Display settings" (see
- * dataLayers/DataTableVisualizationControls.tsx).
+ * Map visualization limits (`visualization_columns` / `visualization_ops`).
+ * Empty lists mean end users may choose freely.
  */
-function VisualizationSettingsEditor({
+function MapDisplaySettings({
   table,
-  onSave,
+  selectedColumns,
+  selectedOps,
+  selectedRequiredFilters,
+  onColumnsChange,
+  onOpsChange,
+  onRequiredFiltersChange,
 }: {
   table: OverlayDataTableDetailsFragment;
-  onSave: (visualizationColumns: string[], visualizationOps: string[]) => void;
+  selectedColumns: string[];
+  selectedOps: string[];
+  selectedRequiredFilters: string[];
+  onColumnsChange: (columns: string[]) => void;
+  onOpsChange: (ops: string[]) => void;
+  onRequiredFiltersChange: (columns: string[]) => void;
 }) {
   const { t } = useTranslation("admin:data");
   const { data: projectMeta } = useCurrentProjectMetadata();
@@ -78,102 +87,420 @@ function VisualizationSettingsEditor({
     mapAccessToken
   );
   const numericColumns = numericColumnNames(columnStats);
-  const selectedColumns = (table.visualizationColumns || []).filter(
-    Boolean
-  ) as string[];
-  const selectedOps = (table.visualizationOps || []).filter(
-    Boolean
-  ) as string[];
+  const filterableColumns = useMemo(
+    () =>
+      (columnStats?.columns || [])
+        .map((column) => column.attribute)
+        .filter(
+          (column) => column && column !== table.joinColumn
+        )
+        .sort((a, b) =>
+          a.localeCompare(b, undefined, { sensitivity: "base" })
+        ),
+    [columnStats?.columns, table.joinColumn]
+  );
 
   const toggleColumn = (column: string) => {
-    onSave(
+    onColumnsChange(
       selectedColumns.includes(column)
         ? selectedColumns.filter((c) => c !== column)
-        : [...selectedColumns, column],
-      selectedOps
+        : [...selectedColumns, column]
     );
   };
 
   const toggleOp = (op: string) => {
-    onSave(
-      selectedColumns,
+    onOpsChange(
       selectedOps.includes(op)
         ? selectedOps.filter((o) => o !== op)
         : [...selectedOps, op]
     );
   };
 
+  const toggleRequiredFilter = (column: string) => {
+    onRequiredFiltersChange(
+      selectedRequiredFilters.includes(column)
+        ? selectedRequiredFilters.filter((c) => c !== column)
+        : [...selectedRequiredFilters, column]
+    );
+  };
+
   return (
-    <div className="space-y-6">
-      <p className="text-sm text-gray-600">
-        {t(
-          "Optionally limit which columns and aggregations map users can choose when visualizing this table. Leave everything unchecked to allow free choice."
-        )}
-      </p>
-      <div>
-        <p className="text-sm font-medium text-gray-900">
-          {t("Columns")}
-        </p>
+    <div className="space-y-5">
+      <div className="space-y-3">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-gray-900">
+            {t("Data columns")}
+          </p>
+          <p className="text-xs text-gray-500">
+            {t("Choose which measurements users can map.")}
+          </p>
+        </div>
         {loading ? (
-          <p className="mt-2 text-sm text-gray-400 italic">
+          <p className="text-sm text-gray-400 italic">
             {t("Loading column metadata...")}
           </p>
         ) : numericColumns.length === 0 ? (
-          <p className="mt-2 text-sm text-gray-400 italic">
+          <p className="text-sm text-gray-400 italic">
             {t("No numeric columns found.")}
           </p>
         ) : (
-          <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3">
-            {numericColumns.map((column) => (
-              <label
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+            <button
+              type="button"
+              className={`flex min-h-[40px] items-center gap-2 rounded-md border px-3 py-2 text-left text-sm transition ${
+                selectedColumns.length === 0
+                  ? "border-primary-500 bg-primary-50 text-primary-800"
+                  : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+              }`}
+              onClick={() => onColumnsChange([])}
+            >
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center">
+                {selectedColumns.length === 0 ? (
+                  <CheckIcon className="h-4 w-4" />
+                ) : null}
+              </span>
+              {t("All columns")}
+            </button>
+            {numericColumns.map((column: string) => (
+              <button
+                type="button"
                 key={column}
-                className="flex items-center gap-2 text-sm text-gray-700"
+                className={`flex min-h-[40px] items-center gap-2 rounded-md border px-3 py-2 text-left text-sm transition ${
+                  selectedColumns.includes(column)
+                    ? "border-primary-500 bg-primary-50 text-primary-800"
+                    : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                }`}
+                onClick={() => toggleColumn(column)}
               >
-                <input
-                  type="checkbox"
-                  className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                  checked={selectedColumns.includes(column)}
-                  onChange={() => toggleColumn(column)}
-                />
+                <span className="flex h-4 w-4 shrink-0 items-center justify-center">
+                  {selectedColumns.includes(column) ? (
+                    <CheckIcon className="h-4 w-4" />
+                  ) : null}
+                </span>
                 {/* eslint-disable-next-line i18next/no-literal-string */}
                 <span className="truncate">{column}</span>
-              </label>
+              </button>
             ))}
           </div>
         )}
       </div>
-      <div>
-        <p className="text-sm font-medium text-gray-900">
-          {t("Aggregations")}
-        </p>
-        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
+      <div className="space-y-3">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-gray-900">
+            {t("Calculations")}
+          </p>
+          <p className="text-xs text-gray-500">
+            {t("Choose how users can summarize values for each feature.")}
+          </p>
+        </div>
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+          <button
+            type="button"
+            className={`flex min-h-[40px] items-center gap-2 rounded-md border px-3 py-2 text-left text-sm transition ${
+              selectedOps.length === 0
+                ? "border-primary-500 bg-primary-50 text-primary-800"
+                : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+            }`}
+            onClick={() => onOpsChange([])}
+          >
+            <span className="flex h-4 w-4 shrink-0 items-center justify-center">
+              {selectedOps.length === 0 ? (
+                <CheckIcon className="h-4 w-4" />
+              ) : null}
+            </span>
+            {t("All calculations")}
+          </button>
           {DATA_TABLE_AGGREGATIONS.map((op) => (
-            <label
+            <button
+              type="button"
               key={op}
-              className="flex items-center gap-2 text-sm text-gray-700"
+              className={`flex min-h-[40px] items-center gap-2 rounded-md border px-3 py-2 text-left text-sm transition ${
+                selectedOps.includes(op)
+                  ? "border-primary-500 bg-primary-50 text-primary-800"
+                  : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+              }`}
+              onClick={() => toggleOp(op)}
             >
-              <input
-                type="checkbox"
-                className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                checked={selectedOps.includes(op)}
-                onChange={() => toggleOp(op)}
-              />
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center">
+                {selectedOps.includes(op) ? (
+                  <CheckIcon className="h-4 w-4" />
+                ) : null}
+              </span>
               {/* eslint-disable-next-line i18next/no-literal-string */}
               {op}
-            </label>
+            </button>
           ))}
         </div>
       </div>
-      {(selectedColumns.length > 0 || selectedOps.length > 0) && (
-        <button
-          type="button"
-          className="text-sm text-gray-500 hover:text-gray-800 underline underline-offset-2"
-          onClick={() => onSave([], [])}
-        >
-          {t("Clear all limits")}
-        </button>
-      )}
+      <div className="space-y-3">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-gray-900">
+            {t("Required filters")}
+          </p>
+          <p className="text-xs text-gray-500">
+            {t(
+              "These filters always appear in the legend. Users must choose a value and cannot remove them."
+            )}
+          </p>
+        </div>
+        {loading ? (
+          <p className="text-sm text-gray-400 italic">
+            {t("Loading column metadata...")}
+          </p>
+        ) : filterableColumns.length === 0 ? (
+          <p className="text-sm text-gray-400 italic">
+            {t("No filterable columns found.")}
+          </p>
+        ) : (
+          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+            <button
+              type="button"
+              className={`flex min-h-[40px] items-center gap-2 rounded-md border px-3 py-2 text-left text-sm transition ${
+                selectedRequiredFilters.length === 0
+                  ? "border-primary-500 bg-primary-50 text-primary-800"
+                  : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+              }`}
+              onClick={() => onRequiredFiltersChange([])}
+            >
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center">
+                {selectedRequiredFilters.length === 0 ? (
+                  <CheckIcon className="h-4 w-4" />
+                ) : null}
+              </span>
+              {t("None required")}
+            </button>
+            {filterableColumns.map((column: string) => (
+              <button
+                type="button"
+                key={column}
+                className={`flex min-h-[40px] items-center gap-2 rounded-md border px-3 py-2 text-left text-sm transition ${
+                  selectedRequiredFilters.includes(column)
+                    ? "border-primary-500 bg-primary-50 text-primary-800"
+                    : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
+                }`}
+                onClick={() => toggleRequiredFilter(column)}
+              >
+                <span className="flex h-4 w-4 shrink-0 items-center justify-center">
+                  {selectedRequiredFilters.includes(column) ? (
+                    <CheckIcon className="h-4 w-4" />
+                  ) : null}
+                </span>
+                {/* eslint-disable-next-line i18next/no-literal-string */}
+                <span className="truncate">{column}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
+  );
+}
+
+function DataTableSettingsModal({
+  table,
+  onClose,
+  onRename,
+  onDelete,
+  onReplace,
+  onSetVisualizationSettings,
+}: {
+  table: OverlayDataTableDetailsFragment;
+  onClose: () => void;
+  onRename: (id: number, name: string) => void | Promise<void>;
+  onDelete: (id: number) => void;
+  onReplace: (id: number) => void;
+  onSetVisualizationSettings: (
+    id: number,
+    visualizationColumns: string[],
+    visualizationOps: string[],
+    requiredFilterColumns: string[]
+  ) => void | Promise<void>;
+}) {
+  const { t } = useTranslation("admin:data");
+  const [draftName, setDraftName] = useState(table.name);
+  const [nameError, setNameError] = useState<string | undefined>();
+  const [draftColumns, setDraftColumns] = useState<string[]>(
+    (table.visualizationColumns || []).filter(Boolean) as string[]
+  );
+  const [draftOps, setDraftOps] = useState<string[]>(
+    (table.visualizationOps || []).filter(Boolean) as string[]
+  );
+  const [draftRequiredFilters, setDraftRequiredFilters] = useState<string[]>(
+    (table.requiredFilterColumns || []).filter(Boolean) as string[]
+  );
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    setDraftName(table.name);
+    setNameError(undefined);
+    setDraftColumns(
+      (table.visualizationColumns || []).filter(Boolean) as string[]
+    );
+    setDraftOps((table.visualizationOps || []).filter(Boolean) as string[]);
+    setDraftRequiredFilters(
+      (table.requiredFilterColumns || []).filter(Boolean) as string[]
+    );
+  }, [
+    table.name,
+    table.visualizationColumns,
+    table.visualizationOps,
+    table.requiredFilterColumns,
+  ]);
+
+  const originalColumns = (table.visualizationColumns || []).filter(
+    Boolean
+  ) as string[];
+  const originalOps = (table.visualizationOps || []).filter(
+    Boolean
+  ) as string[];
+  const originalRequiredFilters = (table.requiredFilterColumns || []).filter(
+    Boolean
+  ) as string[];
+  const nameDirty = draftName.trim() !== table.name;
+  const displayDirty =
+    JSON.stringify(draftColumns) !== JSON.stringify(originalColumns) ||
+    JSON.stringify(draftOps) !== JSON.stringify(originalOps) ||
+    JSON.stringify(draftRequiredFilters) !==
+      JSON.stringify(originalRequiredFilters);
+  const dirty = nameDirty || displayDirty;
+
+  const saveChanges = async () => {
+    const next = draftName.trim();
+    if (!next) {
+      setNameError(t("Name is required"));
+      return;
+    }
+    setNameError(undefined);
+    setSaving(true);
+    try {
+      if (nameDirty) {
+        await onRename(table.id, next);
+      }
+      if (displayDirty) {
+        await onSetVisualizationSettings(
+          table.id,
+          draftColumns,
+          draftOps,
+          draftRequiredFilters
+        );
+      }
+      onClose();
+    } catch (e) {
+      setNameError((e as Error).message || t("Could not rename table"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return createPortal(
+    <Modal
+      open
+      onRequestClose={onClose}
+      title={t("Data table settings")}
+      scrollable
+      autoWidth
+      tipyTop
+      panelClassName="sm:max-w-lg"
+      footerClassName="items-center !py-3"
+      footer={[
+        {
+          label: t("Cancel"),
+          onClick: onClose,
+          disabled: saving,
+        },
+        {
+          label: t("Save changes"),
+          variant: "primary",
+          onClick: () => void saveChanges(),
+          disabled: !dirty || saving,
+          loading: saving,
+        },
+      ]}
+    >
+      <div className="space-y-6">
+        <section className="space-y-2">
+          <label
+            htmlFor="data-table-name"
+            className="block text-sm font-medium text-gray-900"
+          >
+            {t("Table name")}
+          </label>
+          <input
+            id="data-table-name"
+            name="data-table-name"
+            value={draftName}
+            onChange={(event) => {
+              setDraftName(event.target.value);
+              setNameError(undefined);
+            }}
+            className={`block w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 ${
+              nameError ? "border-red-400" : "border-gray-300"
+            }`}
+          />
+          {nameError ? (
+            <p className="text-xs text-red-600">{nameError}</p>
+          ) : null}
+        </section>
+
+        <section className="space-y-4">
+          <div className="space-y-1">
+            <h3 className="text-sm font-semibold text-gray-900">
+              {t("Map display options")}
+            </h3>
+            <p className="text-sm text-gray-500">
+              {t(
+                "Control the choices available when someone displays this table on the map."
+              )}
+            </p>
+          </div>
+          <MapDisplaySettings
+            table={table}
+            selectedColumns={draftColumns}
+            selectedOps={draftOps}
+            selectedRequiredFilters={draftRequiredFilters}
+            onColumnsChange={setDraftColumns}
+            onOpsChange={setDraftOps}
+            onRequiredFiltersChange={setDraftRequiredFilters}
+          />
+        </section>
+
+        <section className="space-y-3">
+          <div className="space-y-1">
+            <h3 className="text-sm font-semibold text-gray-900">
+              {t("Table data")}
+            </h3>
+            <p className="text-sm text-gray-500">
+              {t("Upload a new version or remove this table from the layer.")}
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+              onClick={() => {
+                onClose();
+                onReplace(table.id);
+              }}
+            >
+              <UploadIcon className="h-4 w-4 text-gray-500" aria-hidden />
+              {t("Upload new version")}
+            </button>
+            <button
+              type="button"
+              className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+              onClick={() => {
+                onClose();
+                onDelete(table.id);
+              }}
+            >
+              <TrashIcon className="h-4 w-4" aria-hidden />
+              {t("Delete table")}
+            </button>
+          </div>
+        </section>
+      </div>
+    </Modal>,
+    document.body
   );
 }
 
@@ -189,86 +516,39 @@ function DataTableRow({
   table: OverlayDataTableDetailsFragment;
   job?: DataTableJob;
   onDismissJob: (jobId: string) => void;
-  onRename: (id: number, name: string) => void;
+  onRename: (id: number, name: string) => void | Promise<void>;
   onDelete: (id: number) => void;
   onReplace: (id: number) => void;
   onSetVisualizationSettings: (
     id: number,
     visualizationColumns: string[],
-    visualizationOps: string[]
-  ) => void;
+    visualizationOps: string[],
+    requiredFilterColumns: string[]
+  ) => void | Promise<void>;
 }) {
   const { t } = useTranslation("admin:data");
-  const [editing, setEditing] = useState(false);
-  const [name, setName] = useState(table.name);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const isProcessing = Boolean(job);
   const sameJoinColumn = table.joinColumn === table.overlayJoinColumn;
 
   return (
     <li className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
       <div className="flex items-start justify-between gap-3">
-        {editing ? (
-          <input
-            className="text-sm border border-gray-300 rounded-md px-2 py-1 flex-1 min-w-0"
-            value={name}
-            autoFocus
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                (e.target as HTMLInputElement).blur();
-              } else if (e.key === "Escape") {
-                setName(table.name);
-                setEditing(false);
-              }
-            }}
-            onBlur={() => {
-              setEditing(false);
-              if (name.trim() && name !== table.name) {
-                onRename(table.id, name.trim());
-              } else {
-                setName(table.name);
-              }
-            }}
-          />
-        ) : (
+        <div className="min-w-0">
+          <span className="font-medium text-gray-900">{table.name}</span>{" "}
+          <span className="text-gray-400 text-xs font-normal">
+            {t("v{{version}}", { version: table.version })}
+          </span>
+        </div>
+        {!job && (
           <button
             type="button"
-            className="min-w-0 text-left group"
-            onClick={() => setEditing(true)}
-            disabled={isProcessing}
-            title={t("Rename")}
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+            onClick={() => setSettingsOpen(true)}
           >
-            <span className="font-medium text-gray-900 group-hover:text-gray-700">
-              {table.name}
-            </span>{" "}
-            <span className="text-gray-400 text-xs font-normal">
-              {t("v{{version}}", { version: table.version })}
-            </span>
+            <CogIcon className="h-4 w-4" aria-hidden />
+            {t("Settings")}
           </button>
         )}
-        <div className="flex items-center gap-0.5 shrink-0 -mt-0.5 -mr-1">
-          <button
-            type="button"
-            className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-40"
-            onClick={() => onReplace(table.id)}
-            disabled={isProcessing}
-            title={t("Replace")}
-            aria-label={t("Replace")}
-          >
-            <UploadIcon className="w-4 h-4" aria-hidden />
-          </button>
-          <button
-            type="button"
-            className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-40"
-            onClick={() => onDelete(table.id)}
-            disabled={isProcessing}
-            title={t("Delete")}
-            aria-label={t("Delete")}
-          >
-            <TrashIcon className="w-4 h-4" aria-hidden />
-          </button>
-        </div>
       </div>
       {job ? (
         <div className="mt-2">
@@ -282,63 +562,36 @@ function DataTableRow({
           />
         </div>
       ) : (
-        <div className="mt-2 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          <p className="text-xs text-gray-500">
-            {t("{{rowCount}} rows · joined by", {
-              rowCount: table.rowCount.toLocaleString(),
-            })}{" "}
-            {/* eslint-disable-next-line i18next/no-literal-string -- column identifiers */}
-            <code className="text-gray-600 font-mono text-[11px]">
-              {table.joinColumn}
-            </code>
-            {!sameJoinColumn && (
-              <>
-                {/* eslint-disable-next-line i18next/no-literal-string */}
-                <span className="text-gray-400"> → </span>
-                {/* eslint-disable-next-line i18next/no-literal-string -- column identifiers */}
-                <code className="text-gray-600 font-mono text-[11px]">
-                  {table.overlayJoinColumn}
-                </code>
-              </>
-            )}
-          </p>
-          <button
-            type="button"
-            className="text-xs font-medium text-gray-600 hover:text-gray-900 underline underline-offset-2 decoration-gray-300 hover:decoration-gray-500"
-            onClick={() => setSettingsOpen(true)}
-          >
-            {t("Thematic map settings")}
-          </button>
-        </div>
+        <p className="mt-2 text-xs text-gray-500">
+          {t("{{rowCount}} rows · joined by", {
+            rowCount: table.rowCount.toLocaleString(),
+          })}{" "}
+          {/* eslint-disable-next-line i18next/no-literal-string -- column identifiers */}
+          <code className="text-gray-600 font-mono text-[11px]">
+            {table.joinColumn}
+          </code>
+          {!sameJoinColumn && (
+            <>
+              {/* eslint-disable-next-line i18next/no-literal-string */}
+              <span className="text-gray-400"> → </span>
+              {/* eslint-disable-next-line i18next/no-literal-string -- column identifiers */}
+              <code className="text-gray-600 font-mono text-[11px]">
+                {table.overlayJoinColumn}
+              </code>
+            </>
+          )}
+        </p>
       )}
-      {settingsOpen
-        ? createPortal(
-            <Modal
-              open
-              onRequestClose={() => setSettingsOpen(false)}
-              title={t("Thematic map settings")}
-              scrollable
-              autoWidth
-              tipyTop
-              panelClassName="sm:max-w-lg"
-              footer={[
-                {
-                  label: t("Done"),
-                  variant: "primary",
-                  onClick: () => setSettingsOpen(false),
-                },
-              ]}
-            >
-              <VisualizationSettingsEditor
-                table={table}
-                onSave={(columns, ops) =>
-                  onSetVisualizationSettings(table.id, columns, ops)
-                }
-              />
-            </Modal>,
-            document.body
-          )
-        : null}
+      {settingsOpen ? (
+        <DataTableSettingsModal
+          table={table}
+          onClose={() => setSettingsOpen(false)}
+          onRename={onRename}
+          onDelete={onDelete}
+          onReplace={onReplace}
+          onSetVisualizationSettings={onSetVisualizationSettings}
+        />
+      ) : null}
     </li>
   );
 }
@@ -427,13 +680,19 @@ export default function RelatedDataTables({ item }: RelatedDataTablesProps) {
     });
 
   const onSetVisualizationSettings = useCallback(
-    (
+    async (
       id: number,
       visualizationColumns: string[],
-      visualizationOps: string[]
+      visualizationOps: string[],
+      requiredFilterColumns: string[]
     ) => {
-      void setVisualizationSettingsMutation({
-        variables: { id, visualizationColumns, visualizationOps },
+      await setVisualizationSettingsMutation({
+        variables: {
+          id,
+          visualizationColumns,
+          visualizationOps,
+          requiredFilterColumns,
+        },
       });
     },
     [setVisualizationSettingsMutation]

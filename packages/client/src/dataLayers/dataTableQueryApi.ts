@@ -134,12 +134,15 @@ export interface DataTableQuerySettings {
 /**
  * Admin-configured constraints on how a data table may be visualized, as
  * stored on `overlay_data_tables.visualization_columns` /
- * `.visualization_ops`. Empty/null means "no constraint -- let the end user
- * choose".
+ * `.visualization_ops` / `.required_filter_columns`. Empty/null
+ * visualization columns/ops means "no constraint -- let the end user
+ * choose". Empty required filter columns means no filters are forced.
  */
 export interface DataTableVisualizationConstraints {
   visualizationColumns?: (string | null)[] | null;
   visualizationOps?: (string | null)[] | null;
+  /** Columns that must always appear as map filters (values are user-chosen). */
+  requiredFilterColumns?: (string | null)[] | null;
 }
 
 /** Metadata needed by the legend display settings UI before query/style work begins. */
@@ -161,6 +164,7 @@ export interface ResolvedDataTableVisualization {
   column?: string;
   op: DataTableAggregation;
   filters?: DataTableFilter[];
+  requiredFilterColumns: string[];
 }
 
 /**
@@ -203,7 +207,25 @@ export function resolveDataTableVisualizationSettings(
         : allowedColumns[0]
       : userChoice.column;
 
-  return { column, op, filters: userChoice.filters };
+  const requiredFilterColumns = (constraints.requiredFilterColumns?.filter(
+    (column): column is string => Boolean(column)
+  ) || []) as string[];
+
+  return {
+    column,
+    op,
+    filters: userChoice.filters,
+    requiredFilterColumns,
+  };
+}
+
+/** Normalize admin-required filter column names (drop empties, preserve order). */
+export function requiredDataTableFilterColumns(
+  constraints: DataTableVisualizationConstraints
+): string[] {
+  return (constraints.requiredFilterColumns?.filter(
+    (column): column is string => Boolean(column)
+  ) || []) as string[];
 }
 
 /**

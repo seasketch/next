@@ -1,4 +1,4 @@
-import { useContext, useMemo } from "react";
+import { useContext, useEffect, useMemo } from "react";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import { useTranslation } from "react-i18next";
 import DataTableIcon from "../../components/icons/DataTableIcon";
@@ -10,9 +10,12 @@ import { ActivatedDataTableContext } from "../ActivatedDataTableContext";
 import {
   DataTableAggregation,
   DataTableVisualizationMetadata,
+  requiredDataTableFilterColumns,
   resolveDataTableVisualizationSettings,
 } from "../dataTableQueryApi";
-import DataTableFilterControls from "../DataTableFilterControls";
+import DataTableFilterControls, {
+  ensureRequiredDataTableFilters,
+} from "../DataTableFilterControls";
 import DataTableVisualizationControls from "../DataTableVisualizationControls";
 import {
   columnStatsUrlForTable,
@@ -73,19 +76,26 @@ export default function DataTableLegendPanel({
         columnStatsUrl: entry.columnStatsUrl,
         visualizationColumns: entry.visualizationColumns,
         visualizationOps: entry.visualizationOps,
+        requiredFilterColumns: entry.requiredFilterColumns,
       };
     }
     return next;
   }, [metadataQuery.data?.tableOfContentsItem?.overlayDataTables]);
 
-  const tableMetadata = table
-    ? metadataByTableId[table.id] || {
+  const tableMetadata = useMemo(() => {
+    if (!table) {
+      return undefined;
+    }
+    return (
+      metadataByTableId[table.id] || {
         queryUrl: table.queryUrl,
         columnStatsUrl: table.columnStatsUrl,
         visualizationColumns: table.visualizationColumns,
         visualizationOps: table.visualizationOps,
+        requiredFilterColumns: table.requiredFilterColumns,
       }
-    : undefined;
+    );
+  }, [metadataByTableId, table]);
 
   const columnStatsUrl = tableMetadata
     ? columnStatsUrlForTable(tableMetadata)
@@ -95,14 +105,20 @@ export default function DataTableLegendPanel({
     mapAccessToken
   );
   const columnStats = columnStatsState.columnStats;
-  const userChoice = userVisualizationChoices[layerId] || {};
+  const storedChoice = userVisualizationChoices[layerId];
+  const userChoice = storedChoice || {};
   const resolved = tableMetadata
     ? resolveDataTableVisualizationSettings(tableMetadata, userChoice)
-    : { op, column };
+    : { op, column, requiredFilterColumns: [] as string[] };
   const effectiveColumn = userChoice.column || resolved.column || column;
   const visualizedColumns = useMemo(
     () => (effectiveColumn ? [effectiveColumn] : []),
     [effectiveColumn]
+  );
+  const requiredFilterColumns = useMemo(
+    () =>
+      tableMetadata ? requiredDataTableFilterColumns(tableMetadata) : [],
+    [tableMetadata]
   );
   const validFilterColumns = useMemo(
     () =>
@@ -113,13 +129,64 @@ export default function DataTableLegendPanel({
       ),
     [columnStats?.columns, visualizedColumns]
   );
-  const activeFilters = useMemo(
-    () =>
-      (userChoice.filters || []).filter((filter) =>
-        validFilterColumns.has(filter.column)
-      ),
-    [userChoice.filters, validFilterColumns]
-  );
+
+  // Persist required filters into user choice so map queries include them
+  // (and the legend shows them) as soon as column-stats are available.
+  useEffect(() => {
+    if (!tableMetadata || !columnStats?.columns?.length) {
+      return;
+    }
+    if (requiredFilterColumns.length === 0) {
+      return;
+    }
+    const ensured = ensureRequiredDataTableFilters(
+      storedChoice?.filters,
+      requiredFilterColumns,
+      columnStats.columns,
+      visualizedColumns
+    );
+    const current = storedChoice?.filters || [];
+    if (JSON.stringify(ensured) === JSON.stringify(current)) {
+      return;
+    }
+    setUserVisualizationChoice(layerId, {
+      column: effectiveColumn,
+      op: storedChoice?.op || op,
+      filters: ensured,
+    });
+  }, [
+    columnStats?.columns,
+    effectiveColumn,
+    layerId,
+    op,
+    requiredFilterColumns,
+    setUserVisualizationChoice,
+    storedChoice?.filters,
+    storedChoice?.op,
+    tableMetadata,
+    visualizedColumns,
+  ]);
+
+  const activeFilters = useMemo(() => {
+    const base = (userChoice.filters || []).filter((filter) =>
+      validFilterColumns.has(filter.column)
+    );
+    if (!columnStats?.columns?.length || requiredFilterColumns.length === 0) {
+      return base;
+    }
+    return ensureRequiredDataTableFilters(
+      base,
+      requiredFilterColumns,
+      columnStats.columns,
+      visualizedColumns
+    ).filter((filter) => validFilterColumns.has(filter.column));
+  }, [
+    columnStats?.columns,
+    requiredFilterColumns,
+    userChoice.filters,
+    validFilterColumns,
+    visualizedColumns,
+  ]);
 
   if (!table || !tableMetadata) {
     return null;
@@ -172,12 +239,18 @@ export default function DataTableLegendPanel({
             columns={columnStats.columns}
             filters={activeFilters}
             visualizedColumns={visualizedColumns}
+            requiredColumns={requiredFilterColumns}
             onChange={(filters) =>
               setUserVisualizationChoice(layerId, {
                 ...userChoice,
                 column: effectiveColumn,
                 op: userChoice.op || op,
-                filters,
+                filters: ensureRequiredDataTableFilters(
+                  filters,
+                  requiredFilterColumns,
+                  columnStats.columns,
+                  visualizedColumns
+                ),
               })
             }
           />

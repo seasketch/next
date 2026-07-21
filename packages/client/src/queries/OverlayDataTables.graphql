@@ -12,6 +12,7 @@ fragment ClientOverlayDataTable on OverlayDataTable {
   columnStatsUrl
   visualizationColumns
   visualizationOps
+  requiredFilterColumns
 }
 
 fragment OverlayDataTableDetails on OverlayDataTable {
@@ -32,6 +33,7 @@ fragment OverlayDataTableDetails on OverlayDataTable {
   updatedAt
   visualizationColumns
   visualizationOps
+  requiredFilterColumns
 }
 
 query OverlayDataTableVisualizationMetadata($id: Int!) {
@@ -41,6 +43,7 @@ query OverlayDataTableVisualizationMetadata($id: Int!) {
     columnStatsUrl
     visualizationColumns
     visualizationOps
+    requiredFilterColumns
   }
 }
 
@@ -53,6 +56,7 @@ query OverlayDataTableVisualizationMetadataForLayer($tocItemId: Int!) {
       columnStatsUrl
       visualizationColumns
       visualizationOps
+      requiredFilterColumns
     }
   }
 }
@@ -135,12 +139,14 @@ mutation SetOverlayDataTableVisualizationSettings(
   $id: Int!
   $visualizationColumns: [String]!
   $visualizationOps: [String]!
+  $requiredFilterColumns: [String]!
 ) {
   setOverlayDataTableVisualizationSettings(
     input: {
       tableId: $id
       visualizationColumns: $visualizationColumns
       visualizationOps: $visualizationOps
+      requiredFilterColumns: $requiredFilterColumns
     }
   ) {
     overlayDataTable {
