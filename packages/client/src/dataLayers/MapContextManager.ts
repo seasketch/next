@@ -59,7 +59,6 @@ import {
   LayerDataTableState,
   buildDataTableStatesFromLayers,
   layerStatesForPreferences,
-  resolveTableByStableId,
 } from "./dataTableLayerState";
 import {
   DATA_TABLE_ACTIVE_COLOR,
@@ -495,7 +494,9 @@ class MapContextManager extends EventEmitter {
         // TOC item present but table list not attached yet — keep intent.
         continue;
       }
-      const table = resolveTableByStableId(tables, dataTable.stableId);
+      const table = tables.find(
+        (entry) => entry.stableId === dataTable.stableId
+      );
       if (!table) {
         this.overlayStates.patch(tocStableId, { dataTable: undefined });
         settings[tocStableId] = undefined;

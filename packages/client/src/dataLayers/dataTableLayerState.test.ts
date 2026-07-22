@@ -3,26 +3,8 @@ import {
   applyDataTableStatesToLayerStates,
   buildDataTableStatesFromLayers,
   layerStatesForPreferences,
-  resolveTableByStableId,
   LayerStateWithDataTable,
 } from "./dataTableLayerState";
-
-describe("resolveTableByStableId", () => {
-  it("finds a table by stableId", () => {
-    const tables = [
-      { id: 1, stableId: "aaa" },
-      { id: 2, stableId: "bbb" },
-    ];
-    expect(resolveTableByStableId(tables, "bbb")?.id).toBe(2);
-  });
-
-  it("returns undefined when missing", () => {
-    expect(resolveTableByStableId([{ id: 1, stableId: "aaa" }], "zzz")).toBe(
-      undefined
-    );
-    expect(resolveTableByStableId(null, "aaa")).toBe(undefined);
-  });
-});
 
 describe("buildDataTableStatesFromLayers", () => {
   it("includes only visible layers with dataTable", () => {

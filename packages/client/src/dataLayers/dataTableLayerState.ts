@@ -30,15 +30,6 @@ export type DataTableStatesMap = {
   [tocStableId: string]: LayerDataTableState;
 };
 
-export function resolveTableByStableId<
-  T extends { id: number; stableId?: string | null }
->(tables: T[] | null | undefined, stableId: string): T | undefined {
-  if (!tables?.length) {
-    return undefined;
-  }
-  return tables.find((table) => table.stableId === stableId);
-}
-
 /**
  * Build bookmark/API dataTableStates from overlay layer states.
  * Only includes visible layers that have an active data table.

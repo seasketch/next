@@ -3,7 +3,6 @@ import {
   applyDataTableStatesToLayerStates,
   buildDataTableStatesFromLayers,
   layerStatesForPreferences,
-  resolveTableByStableId,
   LayerStateWithDataTable,
 } from "./dataTableLayerState";
 
@@ -29,24 +28,6 @@ describe("dataTable prefs restore semantics", () => {
       [id: string]: LayerStateWithDataTable;
     };
     expect(hydrated.sites.dataTable?.stableId).toBe("table-uuid");
-
-    // Simulate "catalog empty" — resolve fails; caller must NOT clear prefs.
-    expect(
-      resolveTableByStableId(undefined, hydrated.sites.dataTable!.stableId)
-    ).toBeUndefined();
-    expect(resolveTableByStableId([], hydrated.sites.dataTable!.stableId)).toBe(
-      undefined
-    );
-
-    // Once catalog arrives, resolve succeeds.
-    const table = resolveTableByStableId(
-      [
-        { id: 9, stableId: "other" },
-        { id: 10, stableId: "table-uuid" },
-      ],
-      hydrated.sites.dataTable!.stableId
-    );
-    expect(table?.id).toBe(10);
   });
 
   it("bookmark apply restores dataTable onto visible layers", () => {
@@ -58,8 +39,11 @@ describe("dataTable prefs restore semantics", () => {
       },
     };
     const bookmark = buildDataTableStatesFromLayers(before);
+    const layersAfterReload: { [id: string]: LayerStateWithDataTable } = {
+      sites: { visible: true, loading: false },
+    };
     const afterReload = applyDataTableStatesToLayerStates(
-      { sites: { visible: true, loading: false } },
+      layersAfterReload,
       bookmark
     );
     expect(afterReload.sites.dataTable).toEqual(before.sites.dataTable);
