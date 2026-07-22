@@ -2160,6 +2160,7 @@ input CreateMapBookmarkInput {
   payload verbatim. May be used to track mutations by the client.
   """
   clientMutationId: String
+  dataTableStates: JSON
   isPublic: Boolean
   layerNames: JSON
   mapDimensions: [Int]
@@ -8870,6 +8871,11 @@ type MapBookmark {
   """
   clientGeneratedThumbnail: String
   createdAt: Datetime!
+
+  """
+  JSON map of TOC stableId -> { stableId, column?, op?, filters? } for activated overlay data tables.
+  """
+  dataTableStates: JSON!
   id: UUID!
   imageId: String
   isPublic: Boolean!
@@ -11814,6 +11820,12 @@ type OverlayDataTable implements Node {
   """
   requiredFilterColumns: [String]
   rowCount: Int!
+
+  """
+  Stable logical identity for a data table across version replace and TOC
+  publish. Draft and published copies share the same UUID.
+  """
+  stableId: UUID!
   tableOfContentsItemId: Int!
   updatedAt: Datetime
   version: Int!

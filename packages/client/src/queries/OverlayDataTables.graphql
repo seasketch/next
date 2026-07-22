@@ -3,6 +3,7 @@
 # remote paths that only make sense to admins.
 fragment ClientOverlayDataTable on OverlayDataTable {
   id
+  stableId
   name
   version
   rowCount
@@ -17,6 +18,7 @@ fragment ClientOverlayDataTable on OverlayDataTable {
 
 fragment OverlayDataTableDetails on OverlayDataTable {
   id
+  stableId
   name
   version
   joinColumn

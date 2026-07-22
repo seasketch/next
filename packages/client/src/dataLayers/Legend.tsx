@@ -47,8 +47,12 @@ import ActivatedDataTableButton from "./ActivatedDataTableButton";
 import DataTableLegendPanel from "./legends/DataTableLegendPanel";
 import { ClientOverlayDataTableFragment } from "../generated/graphql";
 import { DataTableAggregation } from "./dataTableQueryApi";
-import { LegendFocusRequest } from "./ActivatedDataTableContext";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
+
+export interface LegendFocusRequest {
+  layerId: string;
+  requestId: number;
+}
 
 require("../admin/data/arcgis/Accordion.css");
 
@@ -122,6 +126,7 @@ export type LegendProps = {
   defaultToHidden?: boolean;
   legendFocusRequest?: LegendFocusRequest | null;
   onLegendFocusComplete?: () => void;
+  onDataTableActivated?: (layerId: string) => void;
 };
 
 export default function Legend({
@@ -138,6 +143,7 @@ export default function Legend({
   defaultToHidden = true,
   legendFocusRequest,
   onLegendFocusComplete,
+  onDataTableActivated,
 }: LegendProps) {
   const { t } = useTranslation("homepage");
   maxHeight = maxHeight || undefined;
@@ -227,6 +233,7 @@ export default function Legend({
                     skipTopBorder={i === 0}
                     top={i === 0}
                     bottom={i === items.length - 1}
+                    onDataTableActivated={onDataTableActivated}
                   />
                 );
               })}
@@ -247,6 +254,7 @@ function LegendListItem({
   editable,
   top,
   bottom,
+  onDataTableActivated,
 }: {
   item: LegendItem;
   visible: boolean;
@@ -256,6 +264,7 @@ function LegendListItem({
   editable?: boolean;
   top?: boolean;
   bottom?: boolean;
+  onDataTableActivated?: (layerId: string) => void;
 }) {
   const [contextMenuIsOpen, setContextMenuIsOpen] = useState(false);
   const { data: projectMeta } = useCurrentProjectMetadata();
@@ -379,6 +388,7 @@ function LegendListItem({
                   tocItemId={item.tableOfContentsItemDetails?.id}
                   layerName={item.label}
                   tables={item.overlayDataTables}
+                  onDataTableActivated={onDataTableActivated}
                 />
               )}
             <Toggle

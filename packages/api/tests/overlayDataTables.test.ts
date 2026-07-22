@@ -188,9 +188,13 @@ describe("overlay_data_tables", () => {
         expect(publishedToc.enable_data_tables).toBe(true);
         expect(publishedToc.data_table_join_column).toBe("id");
 
+        const draftStableId = await conn.oneFirst(sql`
+          select stable_id from overlay_data_tables
+          where table_of_contents_item_id = ${tocId} and deleted_at is null`);
+
         const published = await conn.many(sql`
           select odt.name, toc.is_draft, odt.visualization_columns, odt.visualization_ops,
-            odt.required_filter_columns, odt.parquet_remote
+            odt.required_filter_columns, odt.parquet_remote, odt.stable_id
           from overlay_data_tables odt
           inner join table_of_contents_items toc on toc.id = odt.table_of_contents_item_id
           where odt.project_id = ${projectId} and toc.is_draft = false
@@ -202,6 +206,7 @@ describe("overlay_data_tables", () => {
         expect(published[0].visualization_columns).toEqual(["count"]);
         expect(published[0].visualization_ops).toEqual(["sum"]);
         expect(published[0].required_filter_columns).toEqual(["year"]);
+        expect(published[0].stable_id).toBe(draftStableId);
 
         const draftStillThere = await conn.oneFirst(sql`
           select count(*) from overlay_data_tables odt
@@ -320,16 +325,17 @@ describe("overlay_data_tables", () => {
         );
 
         const oldRow = await conn.one(
-          sql`select deleted_at, replaced_by_id, version from overlay_data_tables where id = ${oldId!}`,
+          sql`select deleted_at, replaced_by_id, version, stable_id from overlay_data_tables where id = ${oldId!}`,
         );
         expect(oldRow.deleted_at).not.toBeNull();
         expect(oldRow.replaced_by_id).not.toBeNull();
 
         const newRow = await conn.one(
-          sql`select version, deleted_at from overlay_data_tables where id = ${oldRow.replaced_by_id}`,
+          sql`select version, deleted_at, stable_id from overlay_data_tables where id = ${oldRow.replaced_by_id}`,
         );
         expect(newRow.version).toBe(2);
         expect(newRow.deleted_at).toBeNull();
+        expect(newRow.stable_id).toBe(oldRow.stable_id);
       },
     );
   });
@@ -405,6 +411,55 @@ describe("overlay_data_tables", () => {
             parquet_url: "https://uploads.example.org/old.parquet",
           }),
         );
+      },
+    );
+  });
+
+  test("create_map_bookmark accepts dataTableStates", async () => {
+    await projectTransaction(
+      pool,
+      "public",
+      async (conn, projectId, adminId) => {
+        await createSession(conn, adminId, true, false, projectId);
+        const slug = (await conn.oneFirst(
+          sql`select slug from projects where id = ${projectId}`,
+        )) as string;
+        const basemapId = (await conn.oneFirst(sql`
+          insert into basemaps (project_id, name, type, url, thumbnail)
+          values (
+            ${projectId}, 'basemap a', 'MAPBOX',
+            'mapbox://my-map/id', 'https://thumbnail.org/1.png'
+          ) returning id`)) as number;
+
+        const dataTableStates = {
+          "toc-stable-id": {
+            stableId: "11111111-2222-3333-4444-555555555555",
+            column: "biomass",
+            op: "sum",
+          },
+        };
+
+        const bookmark = await conn.one(sql`
+          select data_table_states
+          from create_map_bookmark(
+            ${slug},
+            true,
+            ${sql.json({})},
+            ${sql.array([], "text")},
+            ${basemapId},
+            ${sql.json({})},
+            ${sql.json({ center: [0, 0], zoom: 1 })},
+            ${sql.array([800, 600], "int4")},
+            ${sql.array([], "int4")},
+            null,
+            'basemap a',
+            ${sql.json({})},
+            ${sql.json({})},
+            'data:image/jpeg;base64,abc',
+            ${sql.json(dataTableStates)}
+          )`);
+
+        expect(bookmark.data_table_states).toEqual(dataTableStates);
       },
     );
   });

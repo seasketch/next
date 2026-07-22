@@ -20,11 +20,6 @@ import MapContextManager, {
   MapOverlayContextState,
   LegendsContextState,
 } from "./MapContextManager";
-import { ActivatedDataTableContext } from "./ActivatedDataTableContext";
-import {
-  DataTableQuerySettings,
-  resolveDataTableVisualizationSettings,
-} from "./dataTableQueryApi";
 
 export interface MapManagerContextProviderProps {
   /**
@@ -200,59 +195,19 @@ export default function MapManagerContextProvider({
   const parentTocItems = parentOverlay.tableOfContentsItems;
   useEffect(() => {
     const manager = managerRef.current;
-    if (manager && parentDataSources && parentDataLayers && parentTocItems) {
+    // useMapData initializes these as [] before the GraphQL response arrives.
+    // Empty arrays are truthy, so guard on length — otherwise reset()+sync can
+    // run against an empty TOC catalog and drop restored LayerState.dataTable.
+    if (
+      manager &&
+      parentDataSources &&
+      parentDataLayers &&
+      parentTocItems &&
+      parentTocItems.length > 0
+    ) {
       manager.reset(parentDataSources, parentDataLayers, parentTocItems);
     }
   }, [parentDataLayers, parentDataSources, parentTocItems]);
-
-  // Bridge ActivatedDataTableContext (user's "Display settings" choices) →
-  // manager. MapContextManager can't use hooks directly, so this combines
-  // the user's raw column/op choice with admin constraints from
-  // OverlayDataTable (via parentTocItems) into a resolved, ready-to-query
-  // settings object before handing it off.
-  const { activeTableIds, userVisualizationChoices } = useContext(
-    ActivatedDataTableContext
-  );
-  const previousActiveTableIdsRef = useRef(activeTableIds);
-  useEffect(() => {
-    const manager = managerRef.current;
-    if (!manager) return;
-    const tocItemsByStableId = new Map(
-      (parentTocItems || []).map((item) => [item.stableId, item])
-    );
-    const settings: {
-      [tocStableId: string]:
-        | { tableId: number; query: DataTableQuerySettings }
-        | undefined;
-    } = {};
-    for (const tocStableId of Object.keys(activeTableIds)) {
-      const tableId = activeTableIds[tocStableId];
-      if (tableId === undefined) continue;
-      const table = tocItemsByStableId
-        .get(tocStableId)
-        ?.overlayDataTables?.find((t) => t.id === tableId);
-      if (!table) continue;
-      const resolved = resolveDataTableVisualizationSettings(
-        table,
-        userVisualizationChoices[tocStableId] || {}
-      );
-      settings[tocStableId] = {
-        tableId,
-        query: {
-          column: resolved.column,
-          op: resolved.op,
-          filters: resolved.filters,
-        },
-      };
-    }
-    for (const tocStableId of Object.keys(previousActiveTableIdsRef.current)) {
-      if (!(tocStableId in activeTableIds)) {
-        settings[tocStableId] = undefined;
-      }
-    }
-    previousActiveTableIdsRef.current = activeTableIds;
-    manager.updateActivatedDataTableSettings(settings);
-  }, [activeTableIds, userVisualizationChoices, parentTocItems]);
 
   // Merge manager's reactive overlay state with data from parent context
   const mergedOverlay = useMemo<MapOverlayContextState>(

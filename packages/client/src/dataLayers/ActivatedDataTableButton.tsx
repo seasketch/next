@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import clsx from "clsx";
 import { ClientOverlayDataTableFragment } from "../generated/graphql";
 import DataTableIcon from "../components/icons/DataTableIcon";
-import { ActivatedDataTableContext } from "./ActivatedDataTableContext";
+import { MapOverlayContext } from "./MapContextManager";
 import ActivatedDataTablePanel from "./ActivatedDataTablePanel";
 
 /**
@@ -18,6 +18,7 @@ export default function ActivatedDataTableButton({
   layerName,
   tables,
   className,
+  onDataTableActivated,
 }: {
   /** Table of contents stableId for the associated layer */
   layerId: string;
@@ -27,17 +28,19 @@ export default function ActivatedDataTableButton({
   layerName?: string;
   tables?: ClientOverlayDataTableFragment[] | null;
   className?: string;
+  /** Called when a table is activated (not when cleared), e.g. to focus the legend. */
+  onDataTableActivated?: (layerId: string) => void;
 }) {
   const { t } = useTranslation("homepage");
-  const { activeTableIds } = useContext(ActivatedDataTableContext);
+  const { layerStatesByTocStaticId } = useContext(MapOverlayContext);
   const [open, setOpen] = useState(false);
 
   if (!tables || tables.length === 0) {
     return null;
   }
 
-  const activeTableId = activeTableIds[layerId];
-  const activeTable = tables.find((table) => table.id === activeTableId);
+  const activeStableId = layerStatesByTocStaticId[layerId]?.dataTable?.stableId;
+  const activeTable = tables.find((table) => table.stableId === activeStableId);
   const title = activeTable
     ? // eslint-disable-next-line i18next/no-literal-string
       `${t("Data table")}: ${activeTable.name}`
@@ -79,6 +82,7 @@ export default function ActivatedDataTableButton({
           layerName={layerName}
           tables={tables}
           onTableSelected={() => setOpen(false)}
+          onDataTableActivated={onDataTableActivated}
         />
       </Popover.Portal>
     </Popover.Root>

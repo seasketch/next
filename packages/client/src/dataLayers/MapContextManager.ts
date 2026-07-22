@@ -52,7 +52,15 @@ import {
   DataTableAggregation,
   DataTableQuerySettings,
   buildDataTableQuerySearchParams,
+  resolveDataTableVisualizationSettings,
 } from "./dataTableQueryApi";
+import {
+  DataTableStatesMap,
+  LayerDataTableState,
+  buildDataTableStatesFromLayers,
+  layerStatesForPreferences,
+  resolveTableByStableId,
+} from "./dataTableLayerState";
 import {
   DATA_TABLE_ACTIVE_COLOR,
   DATA_TABLE_CIRCLE_FILL_OPACITY,
@@ -101,6 +109,8 @@ import {
   OptionalBasemapLayerValue,
 } from "./BasemapContext";
 import { LayerStateManager } from "./LayerStateManager";
+
+export type { LayerDataTableState, DataTableStatesMap } from "./dataTableLayerState";
 
 export const MeasureEventTypes = {
   Started: "measure_started",
@@ -195,6 +205,12 @@ export interface LayerState {
    * legend.
    */
   hidden?: boolean;
+  /**
+   * User intent for an activated overlay data table on this layer.
+   * Identified by overlay_data_tables.stable_id. Persisted with map prefs
+   * and map bookmarks.
+   */
+  dataTable?: LayerDataTableState;
 }
 
 export interface SketchClassLayerState extends LayerState {
@@ -245,10 +261,9 @@ class MapContextManager extends EventEmitter {
   private basemapState: BasemapContextState | null = null;
   /**
    * Resolved data table visualization settings (column/op/filters), keyed by
-   * layer stableId. Set via updateActivatedDataTableSettings by
-   * MapManagerContextProvider, which combines ActivatedDataTableContext's
-   * user choices with admin constraints from OverlayDataTable. Drives query
-   * execution, feature-state joins, and the thematic circle layer style.
+   * layer stableId. Derived from LayerState.dataTable via
+   * syncActivatedDataTablesFromLayerStates(). Drives query execution,
+   * feature-state joins, and the thematic circle layer style.
    */
   private activatedDataTableSettings: {
     [tocStableId: string]: ActivatedDataTableStyleSettings | undefined;
@@ -313,6 +328,7 @@ class MapContextManager extends EventEmitter {
         | "basemapOptionalLayerStates"
         | "visibleDataLayers"
         | "selectedBasemap"
+        | "dataTableStates"
       > = undefined;
   /**
    * The manager needs an up-to-date list of geoprocessing reference ids so that
@@ -403,11 +419,114 @@ class MapContextManager extends EventEmitter {
   }
 
   /**
-   * Update resolved data table visualization settings from
-   * ActivatedDataTableContext (user's "Display settings" choices, already
-   * reconciled with admin constraints). Called by MapManagerContextProvider
-   * whenever the active table or its settings change for any layer.
+   * Set or clear data-table user intent on a layer. Source of truth is
+   * LayerState.dataTable (persisted with prefs / bookmarks).
+   */
+  setLayerDataTable(
+    tocStableId: string,
+    state: LayerDataTableState | null
+  ) {
+    if (!this.overlayStates.has(tocStableId)) {
+      return;
+    }
+    if (state === null || !state.stableId) {
+      this.overlayStates.patch(tocStableId, { dataTable: undefined });
+    } else {
+      this.overlayStates.patch(tocStableId, {
+        dataTable: { ...state },
+      });
+    }
+    this.syncActivatedDataTablesFromLayerStates();
+    this.debouncedUpdatePreferences();
+  }
+
+  /**
+   * Apply a bookmark-style dataTableStates map onto current overlay layers.
+   */
+  applyDataTableStates(dataTableStates: DataTableStatesMap | null | undefined) {
+    const states = dataTableStates || {};
+    for (const tocStableId of this.overlayStates.keys()) {
+      const next = states[tocStableId];
+      if (next?.stableId) {
+        this.overlayStates.patch(tocStableId, {
+          dataTable: { ...next },
+        });
+      } else {
+        const current = this.overlayStates.getRaw(tocStableId);
+        if (current?.dataTable) {
+          this.overlayStates.patch(tocStableId, { dataTable: undefined });
+        }
+      }
+    }
+    this.syncActivatedDataTablesFromLayerStates();
+    this.debouncedUpdatePreferences();
+  }
+
+  /**
+   * Resolve LayerState.dataTable entries against the current TOC catalog and
+   * push into the query/style engine.
    *
+   * Important: do **not** clear persisted dataTable intent while the TOC
+   * catalog is still loading. `reset()` can run with empty arrays before
+   * PublishedTableOfContents returns; clearing here would wipe prefs on
+   * reload. Only drop dataTable once we have the layer's catalog entry and
+   * the stableId is absent from its table list.
+   */
+  private syncActivatedDataTablesFromLayerStates() {
+    const settings: {
+      [tocStableId: string]: ActivatedDataTableStyleSettings | undefined;
+    } = {};
+    const previousKeys = Object.keys(this.activatedDataTableSettings);
+    for (const tocStableId of this.overlayStates.keys()) {
+      const dataTable = this.overlayStates.getRaw(tocStableId)?.dataTable;
+      if (!dataTable?.stableId) {
+        if (previousKeys.includes(tocStableId)) {
+          settings[tocStableId] = undefined;
+        }
+        continue;
+      }
+      const tocItem = this.tocItems[tocStableId];
+      if (!tocItem) {
+        // Catalog not loaded for this layer yet — keep LayerState.dataTable.
+        continue;
+      }
+      const tables = tocItem.overlayDataTables;
+      if (tables === undefined) {
+        // TOC item present but table list not attached yet — keep intent.
+        continue;
+      }
+      const table = resolveTableByStableId(tables, dataTable.stableId);
+      if (!table) {
+        this.overlayStates.patch(tocStableId, { dataTable: undefined });
+        settings[tocStableId] = undefined;
+        continue;
+      }
+      const resolved = resolveDataTableVisualizationSettings(table, {
+        column: dataTable.column,
+        op: dataTable.op,
+        filters: dataTable.filters,
+      });
+      settings[tocStableId] = {
+        tableId: table.id,
+        query: {
+          column: resolved.column,
+          op: resolved.op,
+          filters: resolved.filters,
+        },
+      };
+    }
+    for (const tocStableId of previousKeys) {
+      if (!(tocStableId in settings) && !this.overlayStates.has(tocStableId)) {
+        settings[tocStableId] = undefined;
+      }
+    }
+    this.updateActivatedDataTableSettings(settings);
+  }
+
+  /**
+   * Update resolved data table visualization settings (already reconciled
+   * with admin constraints). Prefer setLayerDataTable / applyDataTableStates
+   * from UI code; this remains for the sync path.
    */
   updateActivatedDataTableSettings(settings: {
     [tocStableId: string]: ActivatedDataTableStyleSettings | undefined;
@@ -1506,7 +1625,7 @@ class MapContextManager extends EventEmitter {
     }
     if (this.preferencesKey) {
       const prefs = {
-        layers: this.overlayStates.getState(),
+        layers: layerStatesForPreferences(this.overlayStates.getState()),
         ...(this.map
           ? {
               cameraOptions: {
@@ -2931,9 +3050,9 @@ class MapContextManager extends EventEmitter {
         id: item.id,
         enableDownload: Boolean(item.enableDownload),
         primaryDownloadUrl: item.primaryDownloadUrl || undefined,
-        overlayDataTables: item.overlayDataTables?.length
-          ? item.overlayDataTables
-          : undefined,
+        // Always store an array once the TOC item is in the catalog so sync
+        // can distinguish "not loaded" (missing toc item) from "no tables".
+        overlayDataTables: item.overlayDataTables || [],
       };
       if (item.dataLayerId) {
         const layer = layersById[item.dataLayerId];
@@ -2966,7 +3085,9 @@ class MapContextManager extends EventEmitter {
       }
       this.debouncedUpdatePreferences();
     }
-    void this.updateActivatedDataTableFeatureStates();
+    // TOC catalog (including overlayDataTables) may have just arrived or
+    // changed — resolve LayerState.dataTable stableIds and (re)start queries.
+    this.syncActivatedDataTablesFromLayerStates();
     this.debouncedUpdateStyle();
     this.updateLegends();
     return;
@@ -3399,6 +3520,9 @@ class MapContextManager extends EventEmitter {
       ? undefined
       : await this.getMapThumbnail(sidebarState);
     const selectedId = this.basemapState?.selectedBasemap;
+    const dataTableStates = buildDataTableStatesFromLayers(
+      this.overlayStates.getState()
+    );
     return {
       cameraOptions: {
         center: this.map.getCenter().toArray(),
@@ -3416,7 +3540,77 @@ class MapContextManager extends EventEmitter {
       visibleSketches,
       basemapName: selectedId ? this.basemaps[selectedId]?.name || "" : "",
       clientGeneratedThumbnail,
+      dataTableStates,
     };
+  }
+
+  /**
+   * Wait briefly for in-flight data-table queries so thumbnails aren't gray.
+   * Always resolves so bookmark creation is not blocked.
+   */
+  private async waitForDataTableQueriesIdle(timeoutMs = 2500) {
+    const started = Date.now();
+    while (Date.now() - started < timeoutMs) {
+      const loading = Object.values(this.activatedDataTableLoading).some(
+        Boolean
+      );
+      if (!loading) {
+        return;
+      }
+      await new Promise((r) => setTimeout(r, 50));
+    }
+  }
+
+  /**
+   * Re-apply in-memory data-table feature-state onto a map (e.g. thumbnail
+   * clone). Style paint uses feature-state which is not part of getStyle().
+   */
+  private applyActivatedDataTableFeatureStatesToMap(targetMap: Map) {
+    for (const tocStableId of Object.keys(this.activatedDataTableValues)) {
+      const values = this.activatedDataTableValues[tocStableId]?.values;
+      const settings = this.activatedDataTableSettings[tocStableId];
+      if (!values || !settings) {
+        continue;
+      }
+      const layer = this.layers[tocStableId];
+      if (!layer) {
+        continue;
+      }
+      const table = this.getOverlayDataTable(tocStableId, settings.tableId);
+      if (!table?.overlayJoinColumn || !table.joinColumn) {
+        continue;
+      }
+      const sourceId = this.overlayStates.prefixedSourceId(layer.dataSourceId);
+      if (!targetMap.getSource(sourceId)) {
+        continue;
+      }
+      const columnStatsUrl = columnStatsUrlForTable(table);
+      const columnStats = columnStatsUrl
+        ? getCachedDataTableColumnStats(columnStatsUrl)
+        : undefined;
+      const joinIds = this.getJoinFeatureIdsFromColumnStats(
+        columnStats,
+        table.joinColumn
+      );
+      const allFeatureIds =
+        joinIds.length > 0 ? joinIds : Object.keys(values);
+      for (const featureId of allFeatureIds) {
+        const stateValue =
+          values[featureId] !== undefined
+            ? values[featureId]
+            : DATA_TABLE_NO_DATA_VALUE;
+        targetMap.setFeatureState(
+          {
+            source: sourceId,
+            id: featureId,
+            ...(layer.sourceLayer
+              ? { sourceLayer: layer.sourceLayer }
+              : {}),
+          },
+          { [DATA_TABLE_VALUE_PROPERTY]: stateValue }
+        );
+      }
+    }
   }
 
   getMapThumbnail = withTimeout(
@@ -3431,6 +3625,7 @@ class MapContextManager extends EventEmitter {
           if (!this.map) {
             throw new Error("Map not ready to create thumbnail");
           }
+          await this.waitForDataTableQueriesIdle();
           const { sprites } = await this.getComputedStyle();
           const style = this.map.getStyle();
           const div = document.createElement("div");
@@ -3452,7 +3647,12 @@ class MapContextManager extends EventEmitter {
             transformRequest: this.requestTransformer,
           });
           this.addSprites(sprites, newMap);
-          newMap.on("load", () => {
+          let captured = false;
+          const capture = () => {
+            if (captured) {
+              return;
+            }
+            captured = true;
             let clip: null | { x: number; width: number } = null;
             if (sidebarState.open && width >= 1080) {
               clip = {
@@ -3490,6 +3690,17 @@ class MapContextManager extends EventEmitter {
             newMap.remove();
             div.remove();
             return resolve(data);
+          };
+          newMap.on("load", () => {
+            this.applyActivatedDataTableFeatureStatesToMap(newMap);
+            // Wait for feature-state paint to commit before reading the canvas.
+            newMap.once("idle", () => {
+              capture();
+            });
+            // Fallback if idle never fires (e.g. no tiles for some sources).
+            setTimeout(() => {
+              capture();
+            }, 2000);
           });
         } catch (e) {
           reject(e);
@@ -3505,6 +3716,7 @@ class MapContextManager extends EventEmitter {
       | "basemapOptionalLayerStates"
       | "visibleDataLayers"
       | "selectedBasemap"
+      | "dataTableStates"
     > & { id?: string },
     savePreviousState = true,
     client?: ApolloClient<NormalizedCacheObject>
@@ -3536,6 +3748,10 @@ class MapContextManager extends EventEmitter {
       }
     }
     this.setVisibleTocItems((bookmark.visibleDataLayers || []) as string[]);
+    const dataTableStates =
+      (bookmark.dataTableStates as DataTableStatesMap | null | undefined) ||
+      {};
+    this.applyDataTableStates(dataTableStates);
     this.map.flyTo({
       ...bookmark.cameraOptions,
       animate: true,

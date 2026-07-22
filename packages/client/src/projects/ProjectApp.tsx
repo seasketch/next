@@ -15,7 +15,6 @@ import {
   MapOverlayContext,
 } from "../dataLayers/MapContextManager";
 import BasemapContextProvider from "../dataLayers/BasemapContext";
-import { ActivatedDataTableContextProvider } from "../dataLayers/ActivatedDataTableContext";
 import MapManagerContextProvider from "../dataLayers/MapManagerContextProvider";
 import MapUIProvider from "../dataLayers/MapUIContext";
 import {
@@ -148,75 +147,74 @@ export default function ProjectApp() {
               tableOfContentsItems,
             }}
           >
-            <ActivatedDataTableContextProvider>
-              <MapManagerContextProvider
-                preferencesKey={`${slug}-homepage`}
-                cacheSize={bytes("200mb")}
-                containerPortal={mapContainerPortal}
+            <MapManagerContextProvider
+              preferencesKey={`${slug}-homepage`}
+              cacheSize={bytes("200mb")}
+              containerPortal={mapContainerPortal}
+            >
+              <MapUIProvider
+                preferencesKey={`${slug}-homepage-ui`}
+                defaultShowScale={
+                  data?.project?.showScalebarByDefault || false
+                }
               >
-                <MapUIProvider
-                  preferencesKey={`${slug}-homepage-ui`}
-                  defaultShowScale={
-                    data?.project?.showScalebarByDefault || false
-                  }
-                >
-                  <MeasureControlContextProvider>
-                    <SketchUIStateContextProvider
-                      preferencesKey={`${slug}-homepage-sketches`}
-                    >
-                      <DataDownloadModalProvider>
-                        <TableOfContentsMetadataModalProvider>
-                          <Toolbar
-                            dark={dark}
-                            onExpand={onExpandSidebar}
-                            expanded={expandSidebar}
+                <MeasureControlContextProvider>
+                  <SketchUIStateContextProvider
+                    preferencesKey={`${slug}-homepage-sketches`}
+                  >
+                    <DataDownloadModalProvider>
+                      <TableOfContentsMetadataModalProvider>
+                        <Toolbar
+                          dark={dark}
+                          onExpand={onExpandSidebar}
+                          expanded={expandSidebar}
+                        />
+                        <Route path={`/${routeSlug}/profile`}>
+                          <UserProfileModal
+                            onRequestClose={() =>
+                              history.push(`/${routeSlug}/app`)
+                            }
                           />
-                          <Route path={`/${routeSlug}/profile`}>
-                            <UserProfileModal
-                              onRequestClose={() =>
-                                history.push(`/${routeSlug}/app`)
-                              }
-                            />
-                          </Route>
-                          <AnimatePresence initial={false}>
-                            <ProjectAppSidebar
-                              title={
-                                sidebarTitles[
-                                  showSidebar?.params["sidebar"] || ""
-                                ]
-                              }
-                              onClose={() =>
-                                history.replace(`/${routeSlug}/app`)
-                              }
-                              dark={dark}
-                              hidden={
-                                Boolean(!showSidebar) ||
-                                showSidebar?.params["sidebar"] === "embed"
-                              }
-                              noPadding={
-                                /sketches/.test(history.location.pathname) ||
-                                /forums/.test(history.location.pathname) ||
-                                /overlays/.test(history.location.pathname)
+                        </Route>
+                        <AnimatePresence initial={false}>
+                          <ProjectAppSidebar
+                            title={
+                              sidebarTitles[
+                                showSidebar?.params["sidebar"] || ""
+                              ]
+                            }
+                            onClose={() =>
+                              history.replace(`/${routeSlug}/app`)
+                            }
+                            dark={dark}
+                            hidden={
+                              Boolean(!showSidebar) ||
+                              showSidebar?.params["sidebar"] === "embed"
+                            }
+                            noPadding={
+                              /sketches/.test(history.location.pathname) ||
+                              /forums/.test(history.location.pathname) ||
+                              /overlays/.test(history.location.pathname)
+                            }
+                          >
+                            <Suspense
+                              fallback={
+                                <div className="flex mt-10 items-center justify-center self-center place-items-center justify-items-center">
+                                  <Spinner />
+                                </div>
                               }
                             >
-                              <Suspense
-                                fallback={
-                                  <div className="flex mt-10 items-center justify-center self-center place-items-center justify-items-center">
-                                    <Spinner />
-                                  </div>
-                                }
+                              <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className={`flex flex-col ${
+                                  /app\/forums\//.test(location.pathname)
+                                    ? "max-h-full overflow-hidden fffff"
+                                    : ""
+                                }`}
                               >
-                                <motion.div
-                                  initial={{ opacity: 0 }}
-                                  animate={{ opacity: 1 }}
-                                  exit={{ opacity: 0 }}
-                                  transition={{ duration: 0.2 }}
-                                  className={`flex flex-col ${
-                                    /app\/forums\//.test(location.pathname)
-                                      ? "max-h-full overflow-hidden fffff"
-                                      : ""
-                                  }`}
-                                >
                                   <Route path={`/${routeSlug}/app/about`}>
                                     <AboutPage />
                                   </Route>
@@ -337,40 +335,39 @@ export default function ProjectApp() {
                                       </div>
                                     </div>
                                   </Route>
-                                </motion.div>
-                              </Suspense>
-                            </ProjectAppSidebar>
-                          </AnimatePresence>
-                          <div className="flex flex-grow w-full h-full">
-                            <ProjectMapLegend
-                              showByDefault={
-                                data?.project?.showLegendByDefault || false
-                              }
-                              toolbarExpanded={expandSidebar}
-                              sidebarOpen={Boolean(showSidebar)}
-                            />
-                            <MapboxMap
-                              className="ml-2"
-                              showNavigationControls
-                              navigationControlsLocation="top-right"
-                              onRequestSidebarClose={onRequestSidebarClose}
-                              mapSettingsPopupActions={mapSettingsActions}
-                            />
-                            <div
-                              className="absolute flex items-center justify-center h-full pointer-events-none"
-                              style={{ width: "calc(100vw - 3.5rem)" }}
-                              ref={setMapContainerPortal}
-                            ></div>
-                          </div>
-                          <OfflineToastNotification />
-                          <OfflineResponsesToastNotification />
-                        </TableOfContentsMetadataModalProvider>
-                      </DataDownloadModalProvider>
-                    </SketchUIStateContextProvider>
-                  </MeasureControlContextProvider>
-                </MapUIProvider>
-              </MapManagerContextProvider>
-            </ActivatedDataTableContextProvider>
+                              </motion.div>
+                            </Suspense>
+                          </ProjectAppSidebar>
+                        </AnimatePresence>
+                        <div className="flex flex-grow w-full h-full">
+                          <ProjectMapLegend
+                            showByDefault={
+                              data?.project?.showLegendByDefault || false
+                            }
+                            toolbarExpanded={expandSidebar}
+                            sidebarOpen={Boolean(showSidebar)}
+                          />
+                          <MapboxMap
+                            className="ml-2"
+                            showNavigationControls
+                            navigationControlsLocation="top-right"
+                            onRequestSidebarClose={onRequestSidebarClose}
+                            mapSettingsPopupActions={mapSettingsActions}
+                          />
+                          <div
+                            className="absolute flex items-center justify-center h-full pointer-events-none"
+                            style={{ width: "calc(100vw - 3.5rem)" }}
+                            ref={setMapContainerPortal}
+                          ></div>
+                        </div>
+                        <OfflineToastNotification />
+                        <OfflineResponsesToastNotification />
+                      </TableOfContentsMetadataModalProvider>
+                    </DataDownloadModalProvider>
+                  </SketchUIStateContextProvider>
+                </MeasureControlContextProvider>
+              </MapUIProvider>
+            </MapManagerContextProvider>
           </MapOverlayContext.Provider>
         </BasemapContextProvider>
       </DndProvider>

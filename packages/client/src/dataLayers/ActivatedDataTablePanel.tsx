@@ -7,7 +7,7 @@ import {
   ClientOverlayDataTableFragment,
   useOverlayDataTableVisualizationMetadataForLayerQuery,
 } from "../generated/graphql";
-import { ActivatedDataTableContext } from "./ActivatedDataTableContext";
+import { MapManagerContext, MapOverlayContext } from "./MapContextManager";
 import { DataTableVisualizationMetadata } from "./dataTableQueryApi";
 import {
   columnStatsUrlForTable,
@@ -25,17 +25,18 @@ export default function ActivatedDataTablePanel({
   layerName,
   tables,
   onTableSelected,
+  onDataTableActivated,
 }: {
   layerId: string;
   tocItemId?: number;
   layerName?: string;
   tables: ClientOverlayDataTableFragment[];
   onTableSelected?: () => void;
+  onDataTableActivated?: (layerId: string) => void;
 }) {
   const { t } = useTranslation("homepage");
-  const { activeTableIds, setActiveTable } = useContext(
-    ActivatedDataTableContext
-  );
+  const { manager } = useContext(MapManagerContext);
+  const { layerStatesByTocStaticId } = useContext(MapOverlayContext);
   const { data: projectMeta } = useCurrentProjectMetadata();
   const mapAccessToken = projectMeta?.project?.mapAccessToken;
   const metadataQuery = useOverlayDataTableVisualizationMetadataForLayerQuery({
@@ -44,7 +45,7 @@ export default function ActivatedDataTablePanel({
     fetchPolicy: "cache-first",
   });
 
-  const activeTableId = activeTableIds[layerId];
+  const activeStableId = layerStatesByTocStaticId[layerId]?.dataTable?.stableId;
   const metadataByTableId = useMemo(() => {
     const next: {
       [tableId: number]: DataTableVisualizationMetadata | undefined;
@@ -94,14 +95,19 @@ export default function ActivatedDataTablePanel({
       )}
       <ul className="py-1 max-h-64 overflow-y-auto">
         {tables.map((table) => {
-          const isActive = table.id === activeTableId;
+          const isActive = table.stableId === activeStableId;
           return (
             <li key={table.id}>
               <button
                 type="button"
                 onClick={() => {
-                  setActiveTable(layerId, isActive ? null : table.id);
-                  if (!isActive) {
+                  if (isActive) {
+                    manager?.setLayerDataTable(layerId, null);
+                  } else if (table.stableId) {
+                    manager?.setLayerDataTable(layerId, {
+                      stableId: table.stableId,
+                    });
+                    onDataTableActivated?.(layerId);
                     onTableSelected?.();
                   }
                 }}

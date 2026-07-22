@@ -2,7 +2,7 @@ import { useContext, useEffect, useMemo } from "react";
 import { CaretDownIcon, CheckIcon } from "@radix-ui/react-icons";
 import * as Select from "@radix-ui/react-select";
 import { useTranslation } from "react-i18next";
-import { ActivatedDataTableContext } from "./ActivatedDataTableContext";
+import { MapManagerContext, MapOverlayContext } from "./MapContextManager";
 import {
   DATA_TABLE_AGGREGATIONS,
   DataTableAggregation,
@@ -133,9 +133,9 @@ export default function DataTableVisualizationControls({
   metadataLoading?: boolean;
 }) {
   const { t } = useTranslation("homepage");
-  const { userVisualizationChoices, setUserVisualizationChoice } = useContext(
-    ActivatedDataTableContext
-  );
+  const { manager } = useContext(MapManagerContext);
+  const { layerStatesByTocStaticId } = useContext(MapOverlayContext);
+  const dataTable = layerStatesByTocStaticId[layerId]?.dataTable;
 
   const allowedColumns = useMemo(
     () => (metadata.visualizationColumns || []).filter(Boolean) as string[],
@@ -160,7 +160,7 @@ export default function DataTableVisualizationControls({
   );
 
   // Empty admin visualizationColumns ⇒ all numeric columns are valid choices.
-  const columnChoices = useMemo(
+  const columnChoices: string[] = useMemo(
     () =>
       allowedColumns.length > 0
         ? allowedColumns
@@ -171,8 +171,12 @@ export default function DataTableVisualizationControls({
     allowedOps.length > 0 ? allowedOps : DATA_TABLE_AGGREGATIONS;
 
   const userChoice = useMemo(
-    () => userVisualizationChoices[layerId] || {},
-    [layerId, userVisualizationChoices]
+    () => ({
+      column: dataTable?.column,
+      op: dataTable?.op,
+      filters: dataTable?.filters,
+    }),
+    [dataTable?.column, dataTable?.filters, dataTable?.op]
   );
   const resolved = resolveDataTableVisualizationSettings(metadata, userChoice);
   const defaultColumn =
@@ -182,12 +186,14 @@ export default function DataTableVisualizationControls({
       : pickDefaultDataTableColumn(columnChoices));
   const effectiveColumn = userChoice.column || defaultColumn;
   const showColumn = resolved.op !== "count" || Boolean(effectiveColumn);
+  const tableStableId = dataTable?.stableId;
 
-  // Persist a default column/op as soon as column-stats (or admin
-  // constraints) make one available, so the map query can start without a
-  // separate "Thematic map settings" step.
+  // Persist a default column/op once column-stats (or admin constraints)
+  // make one available, so the map query can start without a separate
+  // settings step. Call the manager directly — don't route through a
+  // render-scoped helper omitted from the dependency list.
   useEffect(() => {
-    if (loading || error || !effectiveColumn) {
+    if (loading || error || !effectiveColumn || !tableStableId || !manager) {
       return;
     }
     if (
@@ -196,20 +202,23 @@ export default function DataTableVisualizationControls({
     ) {
       return;
     }
-    setUserVisualizationChoice(layerId, {
-      ...userChoice,
+    manager.setLayerDataTable(layerId, {
+      stableId: tableStableId,
       column: effectiveColumn,
       op: resolved.op,
       filters: userChoice.filters,
     });
   }, [
-    effectiveColumn,
-    error,
+    manager,
     layerId,
-    loading,
+    tableStableId,
+    effectiveColumn,
     resolved.op,
-    setUserVisualizationChoice,
-    userChoice,
+    userChoice.column,
+    userChoice.op,
+    userChoice.filters,
+    loading,
+    error,
   ]);
 
   const showColumnSelect = columnChoices.length > 1;
@@ -229,17 +238,18 @@ export default function DataTableVisualizationControls({
             ariaLabel={t("Aggregation")}
             value={resolved.op}
             options={opOptions}
-            onChange={(value) =>
-              setUserVisualizationChoice(layerId, {
-                ...userChoice,
+            onChange={(value) => {
+              if (!tableStableId) return;
+              manager?.setLayerDataTable(layerId, {
+                stableId: tableStableId,
+                column: userChoice.column,
                 op: value as DataTableAggregation,
-              })
-            }
+                filters: userChoice.filters,
+              });
+            }}
           />
         ) : (
-          <span className="font-medium text-gray-700">
-            {resolved.op}
-          </span>
+          <span className="font-medium text-gray-700">{resolved.op}</span>
         )}
         {showColumn && (
           <>
@@ -249,12 +259,15 @@ export default function DataTableVisualizationControls({
                 ariaLabel={t("Visualize column")}
                 value={effectiveColumn || ""}
                 options={columnOptions}
-                onChange={(value) =>
-                  setUserVisualizationChoice(layerId, {
-                    ...userChoice,
+                onChange={(value) => {
+                  if (!tableStableId) return;
+                  manager?.setLayerDataTable(layerId, {
+                    stableId: tableStableId,
                     column: value,
-                  })
-                }
+                    op: userChoice.op,
+                    filters: userChoice.filters,
+                  });
+                }}
               />
             ) : (
               <span className="font-medium text-gray-700">

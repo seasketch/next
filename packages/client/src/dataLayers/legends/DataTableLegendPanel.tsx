@@ -6,7 +6,7 @@ import {
   ClientOverlayDataTableFragment,
   useOverlayDataTableVisualizationMetadataForLayerQuery,
 } from "../../generated/graphql";
-import { ActivatedDataTableContext } from "../ActivatedDataTableContext";
+import { MapManagerContext, MapOverlayContext } from "../MapContextManager";
 import {
   DataTableAggregation,
   DataTableVisualizationMetadata,
@@ -50,11 +50,9 @@ export default function DataTableLegendPanel({
   tocItemId?: number;
 }) {
   const { t } = useTranslation("homepage");
-  const {
-    userVisualizationChoices,
-    setUserVisualizationChoice,
-    setActiveTable,
-  } = useContext(ActivatedDataTableContext);
+  const { manager } = useContext(MapManagerContext);
+  const { layerStatesByTocStaticId } = useContext(MapOverlayContext);
+  const dataTable = layerStatesByTocStaticId[layerId]?.dataTable;
   const { data: projectMeta } = useCurrentProjectMetadata();
   const mapAccessToken = projectMeta?.project?.mapAccessToken;
   const table = tables.find((entry) => entry.id === tableId);
@@ -105,8 +103,14 @@ export default function DataTableLegendPanel({
     mapAccessToken
   );
   const columnStats = columnStatsState.columnStats;
-  const storedChoice = userVisualizationChoices[layerId];
-  const userChoice = storedChoice || {};
+  const userChoice = useMemo(
+    () => ({
+      column: dataTable?.column,
+      op: dataTable?.op,
+      filters: dataTable?.filters,
+    }),
+    [dataTable?.column, dataTable?.filters, dataTable?.op]
+  );
   const resolved = tableMetadata
     ? resolveDataTableVisualizationSettings(tableMetadata, userChoice)
     : { op, column, requiredFilterColumns: [] as string[] };
@@ -124,47 +128,51 @@ export default function DataTableLegendPanel({
     () =>
       new Set(
         (columnStats?.columns || [])
-          .map((entry) => entry.attribute)
-          .filter((entry) => !visualizedColumns.includes(entry))
+          .map((entry: { attribute: string }) => entry.attribute)
+          .filter((entry: string) => !visualizedColumns.includes(entry))
       ),
     [columnStats?.columns, visualizedColumns]
   );
 
-  // Persist required filters into user choice so map queries include them
+  const tableStableId = dataTable?.stableId;
+
+  // Persist required filters into layer state so map queries include them
   // (and the legend shows them) as soon as column-stats are available.
   useEffect(() => {
-    if (!tableMetadata || !columnStats?.columns?.length) {
+    if (!tableMetadata || !columnStats?.columns?.length || !manager) {
       return;
     }
-    if (requiredFilterColumns.length === 0) {
+    if (requiredFilterColumns.length === 0 || !tableStableId) {
       return;
     }
     const ensured = ensureRequiredDataTableFilters(
-      storedChoice?.filters,
+      userChoice.filters,
       requiredFilterColumns,
       columnStats.columns,
       visualizedColumns
     );
-    const current = storedChoice?.filters || [];
+    const current = userChoice.filters || [];
     if (JSON.stringify(ensured) === JSON.stringify(current)) {
       return;
     }
-    setUserVisualizationChoice(layerId, {
+    manager.setLayerDataTable(layerId, {
+      stableId: tableStableId,
       column: effectiveColumn,
-      op: storedChoice?.op || op,
+      op: userChoice.op || op,
       filters: ensured,
     });
   }, [
-    columnStats?.columns,
-    effectiveColumn,
+    manager,
     layerId,
-    op,
-    requiredFilterColumns,
-    setUserVisualizationChoice,
-    storedChoice?.filters,
-    storedChoice?.op,
+    tableStableId,
     tableMetadata,
+    columnStats?.columns,
+    requiredFilterColumns,
     visualizedColumns,
+    userChoice.filters,
+    userChoice.op,
+    effectiveColumn,
+    op,
   ]);
 
   const activeFilters = useMemo(() => {
@@ -207,7 +215,7 @@ export default function DataTableLegendPanel({
             type="button"
             aria-label={t("Clear data table display")}
             title={t("Clear data table display")}
-            onClick={() => setActiveTable(layerId, null)}
+            onClick={() => manager?.setLayerDataTable(layerId, null)}
             className="flex-none p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
           >
             <Cross2Icon className="w-3.5 h-3.5" />
@@ -240,9 +248,10 @@ export default function DataTableLegendPanel({
             filters={activeFilters}
             visualizedColumns={visualizedColumns}
             requiredColumns={requiredFilterColumns}
-            onChange={(filters) =>
-              setUserVisualizationChoice(layerId, {
-                ...userChoice,
+            onChange={(filters) => {
+              if (!tableStableId) return;
+              manager?.setLayerDataTable(layerId, {
+                stableId: tableStableId,
                 column: effectiveColumn,
                 op: userChoice.op || op,
                 filters: ensureRequiredDataTableFilters(
@@ -251,8 +260,8 @@ export default function DataTableLegendPanel({
                   columnStats.columns,
                   visualizedColumns
                 ),
-              })
-            }
+              });
+            }}
           />
         )}
     </div>
