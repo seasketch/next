@@ -50,8 +50,10 @@ import { ApolloClient, NormalizedCacheObject } from "@apollo/client";
 import { compileLegendFromGLStyleLayers } from "./legends/compileLegend";
 import {
   DataTableAggregation,
+  DataTableQueryResultGroup,
   DataTableQuerySettings,
   buildDataTableQuerySearchParams,
+  parseDataTableQueryGroups,
   resolveDataTableVisualizationSettings,
 } from "./dataTableQueryApi";
 import {
@@ -141,13 +143,10 @@ const graphqlURL = new URL(
 
 const STALE_CUSTOM_SOURCE_SIZE = 3;
 
-type ActivatedDataTableStyleSettings = {
-  tableId: number;
+/** Catalog row + admin-resolved query, derived on demand from LayerState.dataTable. */
+type ResolvedDataTableActivation = {
+  table: ClientOverlayDataTableFragment;
   query: DataTableQuerySettings;
-};
-
-type DataTableQueryResultGroup = {
-  [key: string]: string | number | null | undefined;
 };
 
 export const BASE_SERVER_ENDPOINT = `${graphqlURL.protocol}//${graphqlURL.host}`;
@@ -262,17 +261,12 @@ class MapContextManager extends EventEmitter {
   /** Basemap state from BasemapContext, set via updateBasemapState by MapManagerContextProvider */
   private basemapState: BasemapContextState | null = null;
   /**
-   * Resolved data table visualization settings (column/op/filters), keyed by
-   * layer stableId. Derived from LayerState.dataTable via
-   * syncActivatedDataTablesFromLayerStates(). Drives query execution,
-   * feature-state joins, and the thematic circle layer style.
+   * Cached query results for activated data tables (keyed by TOC stableId).
+   * User intent lives on LayerState.dataTable; query params are resolved on
+   * demand from the TOC catalog + admin constraints.
    */
-  private activatedDataTableSettings: {
-    [tocStableId: string]: ActivatedDataTableStyleSettings | undefined;
-  } = {};
   private activatedDataTableValues: {
     [tocStableId: string]: {
-      tableId: number;
       queryKey: string;
       min: number;
       max: number;
@@ -462,110 +456,107 @@ class MapContextManager extends EventEmitter {
   }
 
   /**
-   * Resolve LayerState.dataTable entries against the current TOC catalog and
-   * push into the query/style engine.
+   * Resolve LayerState.dataTable against the TOC catalog + admin constraints.
+   * Returns undefined when intent is missing, the catalog isn't ready, or the
+   * stableId no longer exists. Does not mutate LayerState.
+   */
+  private resolveDataTableActivation(
+    tocStableId: string
+  ): ResolvedDataTableActivation | undefined {
+    const dataTable = this.overlayStates.getRaw(tocStableId)?.dataTable;
+    if (!dataTable?.stableId) {
+      return undefined;
+    }
+    const tables = this.tocItems[tocStableId]?.overlayDataTables;
+    if (!tables) {
+      return undefined;
+    }
+    const table = tables.find(
+      (entry) => entry.stableId === dataTable.stableId
+    );
+    if (!table) {
+      return undefined;
+    }
+    const resolved = resolveDataTableVisualizationSettings(table, {
+      column: dataTable.column,
+      op: dataTable.op,
+      filters: dataTable.filters,
+    });
+    return {
+      table,
+      query: {
+        column: resolved.column,
+        op: resolved.op,
+        filters: resolved.filters,
+      },
+    };
+  }
+
+  private clearDataTableEngineState(tocStableId: string) {
+    this.clearActivatedDataTableFeatureState(tocStableId);
+    delete this.activatedDataTableValues[tocStableId];
+    delete this.activatedDataTableLoading[tocStableId];
+    delete this.activatedDataTableRequests[tocStableId];
+    this.removeActivatedDataTableSourceListener(tocStableId);
+  }
+
+  /**
+   * After LayerState.dataTable or the TOC catalog changes: drop stale intent,
+   * clear engine state for inactive layers, and (re)start queries.
    *
    * Important: do **not** clear persisted dataTable intent while the TOC
-   * catalog is still loading. `reset()` can run with empty arrays before
-   * PublishedTableOfContents returns; clearing here would wipe prefs on
-   * reload. Only drop dataTable once we have the layer's catalog entry and
-   * the stableId is absent from its table list.
+   * catalog is still loading. Only drop dataTable once we have the layer's
+   * catalog entry and the stableId is absent from its table list.
    */
   private syncActivatedDataTablesFromLayerStates() {
-    const settings: {
-      [tocStableId: string]: ActivatedDataTableStyleSettings | undefined;
-    } = {};
-    const previousKeys = Object.keys(this.activatedDataTableSettings);
     for (const tocStableId of this.overlayStates.keys()) {
       const dataTable = this.overlayStates.getRaw(tocStableId)?.dataTable;
       if (!dataTable?.stableId) {
-        if (previousKeys.includes(tocStableId)) {
-          settings[tocStableId] = undefined;
-        }
+        this.clearDataTableEngineState(tocStableId);
         continue;
       }
       const tocItem = this.tocItems[tocStableId];
-      if (!tocItem) {
-        // Catalog not loaded for this layer yet — keep LayerState.dataTable.
+      if (!tocItem || tocItem.overlayDataTables === undefined) {
+        // Catalog not ready — keep intent, don't fetch yet.
         continue;
       }
-      const tables = tocItem.overlayDataTables;
-      if (tables === undefined) {
-        // TOC item present but table list not attached yet — keep intent.
-        continue;
-      }
-      const table = tables.find(
+      const table = tocItem.overlayDataTables.find(
         (entry) => entry.stableId === dataTable.stableId
       );
       if (!table) {
         this.overlayStates.patch(tocStableId, { dataTable: undefined });
-        settings[tocStableId] = undefined;
+        this.clearDataTableEngineState(tocStableId);
         continue;
       }
-      const resolved = resolveDataTableVisualizationSettings(table, {
-        column: dataTable.column,
-        op: dataTable.op,
-        filters: dataTable.filters,
-      });
-      settings[tocStableId] = {
-        tableId: table.id,
-        query: {
-          column: resolved.column,
-          op: resolved.op,
-          filters: resolved.filters,
-        },
-      };
-    }
-    for (const tocStableId of previousKeys) {
-      if (!(tocStableId in settings) && !this.overlayStates.has(tocStableId)) {
-        settings[tocStableId] = undefined;
+      const activation = this.resolveDataTableActivation(tocStableId);
+      if (!activation?.query.column || !activation.query.op) {
+        continue;
+      }
+      const nextQueryKey = this.dataTableQueryKey(
+        tocStableId,
+        activation.table,
+        activation.query
+      );
+      if (
+        this.activatedDataTableValues[tocStableId]?.queryKey !== nextQueryKey
+      ) {
+        // Mark loading *before* style rebuild so gray paint lands in the
+        // same pass as the query start.
+        this.activatedDataTableLoading[tocStableId] = true;
       }
     }
-    this.updateActivatedDataTableSettings(settings);
-  }
+    // Drop engine state for layers no longer present / no longer activated.
+    for (const tocStableId of Object.keys(this.activatedDataTableValues)) {
+      if (!this.overlayStates.getRaw(tocStableId)?.dataTable?.stableId) {
+        this.clearDataTableEngineState(tocStableId);
+      }
+    }
+    for (const tocStableId of Object.keys(this.activatedDataTableLoading)) {
+      if (!this.overlayStates.getRaw(tocStableId)?.dataTable?.stableId) {
+        this.clearDataTableEngineState(tocStableId);
+      }
+    }
 
-  /**
-   * Update resolved data table visualization settings (already reconciled
-   * with admin constraints). Prefer setLayerDataTable / applyDataTableStates
-   * from UI code; this remains for the sync path.
-   */
-  updateActivatedDataTableSettings(settings: {
-    [tocStableId: string]: ActivatedDataTableStyleSettings | undefined;
-  }) {
-    for (const [tocStableId, value] of Object.entries(settings)) {
-      if (!value) {
-        this.clearActivatedDataTableFeatureState(tocStableId);
-        delete this.activatedDataTableValues[tocStableId];
-        delete this.activatedDataTableSettings[tocStableId];
-        delete this.activatedDataTableLoading[tocStableId];
-        // Invalidate any in-flight query so a late response can't resurrect
-        // state for a deactivated table.
-        delete this.activatedDataTableRequests[tocStableId];
-        this.removeActivatedDataTableSourceListener(tocStableId);
-      } else {
-        this.activatedDataTableSettings[tocStableId] = value;
-        const table = this.getOverlayDataTable(tocStableId, value.tableId);
-        const existingValues = this.activatedDataTableValues[tocStableId];
-        const queryReady = Boolean(
-          value.query.column && value.query.op && table
-        );
-        const nextQueryKey =
-          queryReady && table
-            ? this.dataTableQueryKey(tocStableId, table, value)
-            : undefined;
-        // Mark loading *before* style rebuild so getComputedStyle /
-        // dataTableCircleLayer emit gray/faded paint in the same pass.
-        if (
-          queryReady &&
-          nextQueryKey &&
-          existingValues?.queryKey !== nextQueryKey
-        ) {
-          this.activatedDataTableLoading[tocStableId] = true;
-        }
-      }
-    }
-    // Flush immediately when any layer entered loading so gray paint is
-    // committed before the fetch can resolve and clear the flag.
     const anyLoading = Object.values(this.activatedDataTableLoading).some(
       Boolean
     );
@@ -578,39 +569,30 @@ class MapContextManager extends EventEmitter {
     void this.updateActivatedDataTableFeatureStates();
   }
 
-  private getOverlayDataTable(
-    tocStableId: string,
-    tableId: number
-  ): ClientOverlayDataTableFragment | undefined {
-    return this.tocItems[tocStableId]?.overlayDataTables?.find(
-      (table) => table.id === tableId
-    );
-  }
-
   private dataTableQueryKey(
     tocStableId: string,
     table: ClientOverlayDataTableFragment,
-    settings: ActivatedDataTableStyleSettings
+    query: DataTableQuerySettings
   ) {
     return JSON.stringify({
       tocStableId,
-      tableId: table.id,
+      tableStableId: table.stableId,
       queryUrl: table.queryUrl,
       joinColumn: table.joinColumn,
-      query: settings.query,
+      query,
     });
   }
 
   private dataTableQueryUrl(
     table: ClientOverlayDataTableFragment,
-    settings: ActivatedDataTableStyleSettings
+    query: DataTableQuerySettings
   ) {
-    if (!table.queryUrl || !settings.query.op) {
+    if (!table.queryUrl || !query.op) {
       return undefined;
     }
     const url = new URL(table.queryUrl);
     const params = buildDataTableQuerySearchParams({
-      ...settings.query,
+      ...query,
       groupBy: table.joinColumn,
     });
     params.set("f", "json");
@@ -645,16 +627,14 @@ class MapContextManager extends EventEmitter {
   private async fetchActivatedDataTableValues(
     tocStableId: string,
     table: ClientOverlayDataTableFragment,
-    settings: ActivatedDataTableStyleSettings
+    query: DataTableQuerySettings
   ) {
-    const queryUrl = this.dataTableQueryUrl(table, settings);
+    const queryUrl = this.dataTableQueryUrl(table, query);
     if (!queryUrl) {
-      this.clearActivatedDataTableFeatureState(tocStableId);
-      delete this.activatedDataTableValues[tocStableId];
-      this.setActivatedDataTableLoading(tocStableId, false);
+      this.clearDataTableEngineState(tocStableId);
       return;
     }
-    const queryKey = this.dataTableQueryKey(tocStableId, table, settings);
+    const queryKey = this.dataTableQueryKey(tocStableId, table, query);
     const cached = this.activatedDataTableValues[tocStableId];
     if (cached?.queryKey === queryKey) {
       this.setActivatedDataTableLoading(tocStableId, false);
@@ -688,37 +668,14 @@ class MapContextManager extends EventEmitter {
       if (!isCurrent()) {
         return;
       }
-      const op = Array.isArray(settings.query.op)
-        ? settings.query.op[0]
-        : settings.query.op;
-      const values: { [featureId: string]: number } = {};
-      for (const group of json.groups || []) {
-        const featureId = group[table.joinColumn];
-        const value = op ? group[op] : undefined;
-        if (
-          featureId !== null &&
-          featureId !== undefined &&
-          typeof value === "number" &&
-          Number.isFinite(value)
-        ) {
-          values[String(featureId)] = value;
-        }
-      }
-      const numericValues = Object.values(values);
-      const positiveValues = numericValues.filter((value) => value > 0);
-      const min = numericValues.length ? Math.min(...numericValues) : 0;
-      const max = numericValues.length ? Math.max(...numericValues) : 0;
-      const scaleMin = positiveValues.length ? Math.min(...positiveValues) : 0;
-      const scaleMax = positiveValues.length ? Math.max(...positiveValues) : 0;
+      const parsed = parseDataTableQueryGroups(
+        json.groups,
+        table.joinColumn,
+        query.op
+      );
       this.activatedDataTableValues[tocStableId] = {
-        tableId: table.id,
         queryKey,
-        min,
-        max,
-        scaleMin,
-        scaleMax,
-        hasZero: numericValues.some((value) => value === 0),
-        values,
+        ...parsed,
       };
       this.scheduleActivatedDataTableFeatureStateApply(tocStableId);
       this.setActivatedDataTableLoading(tocStableId, false);
@@ -739,23 +696,24 @@ class MapContextManager extends EventEmitter {
   }
 
   private async updateActivatedDataTableFeatureStates() {
+    const tocStableIds = new Set([
+      ...this.overlayStates.keys(),
+      ...Object.keys(this.activatedDataTableValues),
+    ]);
     await Promise.all(
-      Object.keys(this.activatedDataTableSettings).map(async (tocStableId) => {
-        const settings = this.activatedDataTableSettings[tocStableId];
-        if (!settings?.query.column || !settings.query.op) {
-          this.clearActivatedDataTableFeatureState(tocStableId);
-          delete this.activatedDataTableValues[tocStableId];
-          this.setActivatedDataTableLoading(tocStableId, false);
+      Array.from(tocStableIds).map(async (tocStableId) => {
+        const activation = this.resolveDataTableActivation(tocStableId);
+        if (!activation?.query.column || !activation.query.op) {
+          if (!this.overlayStates.getRaw(tocStableId)?.dataTable?.stableId) {
+            this.clearDataTableEngineState(tocStableId);
+          }
           return;
         }
-        const table = this.getOverlayDataTable(tocStableId, settings.tableId);
-        if (!table) {
-          this.clearActivatedDataTableFeatureState(tocStableId);
-          delete this.activatedDataTableValues[tocStableId];
-          this.setActivatedDataTableLoading(tocStableId, false);
-          return;
-        }
-        await this.fetchActivatedDataTableValues(tocStableId, table, settings);
+        await this.fetchActivatedDataTableValues(
+          tocStableId,
+          activation.table,
+          activation.query
+        );
       })
     );
   }
@@ -793,37 +751,31 @@ class MapContextManager extends EventEmitter {
     if (!this.map) {
       return;
     }
-    const values = this.activatedDataTableValues[tocStableId]?.values;
-    const settings = this.activatedDataTableSettings[tocStableId];
-    if (!values || !settings) {
+    const cached = this.activatedDataTableValues[tocStableId];
+    const activation = this.resolveDataTableActivation(tocStableId);
+    if (!cached?.values || !activation) {
       return;
     }
     const layer = this.layers[tocStableId];
-    if (!layer) {
-      return;
-    }
-    const table = this.getOverlayDataTable(tocStableId, settings.tableId);
-    if (!table?.overlayJoinColumn || !table.joinColumn) {
+    const table = activation.table;
+    if (!layer || !table.overlayJoinColumn || !table.joinColumn) {
       return;
     }
     const sourceId = this.overlayStates.prefixedSourceId(layer.dataSourceId);
     const columnStatsUrl = columnStatsUrlForTable(table);
+    const queryKeyAtStart = cached.queryKey;
     const applyWithColumnStats = async () => {
       if (!this.map) {
         return;
       }
       const currentValues = this.activatedDataTableValues[tocStableId]?.values;
-      const currentSettings = this.activatedDataTableSettings[tocStableId];
       const currentLayer = this.layers[tocStableId];
-      const currentTable = currentSettings
-        ? this.getOverlayDataTable(tocStableId, currentSettings.tableId)
-        : undefined;
+      const currentActivation = this.resolveDataTableActivation(tocStableId);
       if (
         !currentValues ||
-        !currentSettings ||
         !currentLayer ||
-        !currentTable?.overlayJoinColumn ||
-        !currentTable.joinColumn
+        !currentActivation?.table.overlayJoinColumn ||
+        !currentActivation.table.joinColumn
       ) {
         return;
       }
@@ -840,10 +792,10 @@ class MapContextManager extends EventEmitter {
           console.error(error);
         }
       }
-      // Re-check after the async column-stats fetch; settings may have changed.
+      // Re-check after the async column-stats fetch; activation may have changed.
       if (
         this.activatedDataTableValues[tocStableId]?.values !== currentValues ||
-        this.activatedDataTableSettings[tocStableId] !== currentSettings
+        this.activatedDataTableValues[tocStableId]?.queryKey !== queryKeyAtStart
       ) {
         return;
       }
@@ -852,7 +804,7 @@ class MapContextManager extends EventEmitter {
         new Set<string>();
       const joinIds = this.getJoinFeatureIdsFromColumnStats(
         columnStats,
-        currentTable.joinColumn
+        currentActivation.table.joinColumn
       );
       // Prefer the complete join-column ID set from column-stats. Fall back to
       // query result keys only if column-stats is missing.
@@ -914,7 +866,7 @@ class MapContextManager extends EventEmitter {
 
   private reapplyActivatedDataTableFeatureStates() {
     for (const tocStableId of Object.keys(this.activatedDataTableValues)) {
-      if (this.activatedDataTableSettings[tocStableId]) {
+      if (this.resolveDataTableActivation(tocStableId)) {
         this.scheduleActivatedDataTableFeatureStateApply(tocStableId);
       }
     }
@@ -952,12 +904,8 @@ class MapContextManager extends EventEmitter {
     sourceLayer?: string,
     legendOnly = false
   ): AnyLayer | undefined {
-    const settings = this.activatedDataTableSettings[tocStableId];
-    if (!settings?.query.column || !settings.query.op) {
-      return undefined;
-    }
-    const table = this.getOverlayDataTable(tocStableId, settings.tableId);
-    if (!table) {
+    const activation = this.resolveDataTableActivation(tocStableId);
+    if (!activation?.query.column || !activation.query.op) {
       return undefined;
     }
     // Note: query execution is orchestrated exclusively by
@@ -971,10 +919,10 @@ class MapContextManager extends EventEmitter {
     const strokeOpacity = loading
       ? DATA_TABLE_LOADING_STROKE_OPACITY
       : DATA_TABLE_CIRCLE_STROKE_OPACITY;
-    const op = Array.isArray(settings.query.op)
-      ? settings.query.op[0]
-      : settings.query.op;
-    const label = `${op || "value"}(${settings.query.column})`;
+    const op = Array.isArray(activation.query.op)
+      ? activation.query.op[0]
+      : activation.query.op;
+    const label = `${op || "value"}(${activation.query.column})`;
     const valueExpression = buildDataTableValueExpression(
       (legendOnly
         ? ["get", DATA_TABLE_VALUE_PROPERTY]
@@ -1094,11 +1042,7 @@ class MapContextManager extends EventEmitter {
   }
 
   private dataTablePromoteId(tocStableId: string, sourceLayer?: string | null) {
-    const settings = this.activatedDataTableSettings[tocStableId];
-    if (!settings) {
-      return undefined;
-    }
-    const table = this.getOverlayDataTable(tocStableId, settings.tableId);
+    const table = this.resolveDataTableActivation(tocStableId)?.table;
     if (!table?.overlayJoinColumn) {
       return undefined;
     }
@@ -3569,16 +3513,13 @@ class MapContextManager extends EventEmitter {
   private applyActivatedDataTableFeatureStatesToMap(targetMap: Map) {
     for (const tocStableId of Object.keys(this.activatedDataTableValues)) {
       const values = this.activatedDataTableValues[tocStableId]?.values;
-      const settings = this.activatedDataTableSettings[tocStableId];
-      if (!values || !settings) {
+      const activation = this.resolveDataTableActivation(tocStableId);
+      if (!values || !activation) {
         continue;
       }
       const layer = this.layers[tocStableId];
-      if (!layer) {
-        continue;
-      }
-      const table = this.getOverlayDataTable(tocStableId, settings.tableId);
-      if (!table?.overlayJoinColumn || !table.joinColumn) {
+      const table = activation.table;
+      if (!layer || !table.overlayJoinColumn || !table.joinColumn) {
         continue;
       }
       const sourceId = this.overlayStates.prefixedSourceId(layer.dataSourceId);
@@ -3931,30 +3872,31 @@ class MapContextManager extends EventEmitter {
                     (l: any) => l.metadata?.["s:respect-scale-and-offset"]
                   )
                 );
-                const dataTableSettings = this.activatedDataTableSettings[id];
+                const dataTableActivation =
+                  this.resolveDataTableActivation(id);
                 const dataTableValues = this.activatedDataTableValues[id];
-                const dataTableOp = dataTableSettings?.query.op
-                  ? Array.isArray(dataTableSettings.query.op)
-                    ? dataTableSettings.query.op[0]
-                    : dataTableSettings.query.op
+                const dataTableOp = dataTableActivation?.query.op
+                  ? Array.isArray(dataTableActivation.query.op)
+                    ? dataTableActivation.query.op[0]
+                    : dataTableActivation.query.op
                   : undefined;
                 // Show the data-table legend panel as soon as a table is
                 // activated — even before a column is resolved. Column/op
                 // controls live in that panel and pick a default numeric
                 // column from column-stats when admin constraints are empty.
-                const activeDataTable = dataTableSettings?.tableId
-                  ? this.getOverlayDataTable(id, dataTableSettings.tableId)
-                  : undefined;
-                if (activeDataTable && dataTableSettings) {
+                if (
+                  dataTableActivation &&
+                  dataTableActivation.table.stableId
+                ) {
                   newLegendState[id] = {
                     id,
                     type: "DataTableLegendItem",
                     label: this.tocItems[layer.tocId]?.label || "",
                     tableOfContentsItemDetails,
                     overlayDataTables,
-                    tableId: dataTableSettings.tableId,
-                    tableName: activeDataTable.name,
-                    column: dataTableSettings.query.column,
+                    tableStableId: dataTableActivation.table.stableId,
+                    tableName: dataTableActivation.table.name,
+                    column: dataTableActivation.query.column,
                     op: (dataTableOp || "mean") as DataTableAggregation,
                     min:
                       dataTableValues &&
@@ -4344,9 +4286,9 @@ class MapContextManager extends EventEmitter {
       source.type === DataSourceTypes.SeasketchMvt ||
       source.type === DataSourceTypes.Vector; // ||
     // source.type === DataSourceTypes.SeasketchRaster;
-    const dataTableSettings = this.activatedDataTableSettings[stableId];
+    const dataTableActivation = this.resolveDataTableActivation(stableId);
     const dataTableActive = Boolean(
-      dataTableSettings?.query.column && dataTableSettings?.query.op
+      dataTableActivation?.query.column && dataTableActivation?.query.op
     );
     if (dataTableActive) {
       const dataTableLayer = this.dataTableCircleLayer(

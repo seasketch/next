@@ -26,7 +26,7 @@ import DataTableLegendBubble from "./DataTableLegendBubble";
 
 export default function DataTableLegendPanel({
   layerId,
-  tableId,
+  tableStableId,
   tableName,
   column,
   op,
@@ -38,7 +38,7 @@ export default function DataTableLegendPanel({
   tocItemId,
 }: {
   layerId: string;
-  tableId: number;
+  tableStableId: string;
   tableName: string;
   column?: string;
   op: DataTableAggregation;
@@ -55,7 +55,7 @@ export default function DataTableLegendPanel({
   const dataTable = layerStatesByTocStaticId[layerId]?.dataTable;
   const { data: projectMeta } = useCurrentProjectMetadata();
   const mapAccessToken = projectMeta?.project?.mapAccessToken;
-  const table = tables.find((entry) => entry.id === tableId);
+  const table = tables.find((entry) => entry.stableId === tableStableId);
 
   const metadataQuery = useOverlayDataTableVisualizationMetadataForLayerQuery({
     variables: { tocItemId: tocItemId || -1 },
@@ -134,15 +134,13 @@ export default function DataTableLegendPanel({
     [columnStats?.columns, visualizedColumns]
   );
 
-  const tableStableId = dataTable?.stableId;
-
   // Persist required filters into layer state so map queries include them
   // (and the legend shows them) as soon as column-stats are available.
   useEffect(() => {
     if (!tableMetadata || !columnStats?.columns?.length || !manager) {
       return;
     }
-    if (requiredFilterColumns.length === 0 || !tableStableId) {
+    if (requiredFilterColumns.length === 0 || !dataTable?.stableId) {
       return;
     }
     const ensured = ensureRequiredDataTableFilters(
@@ -156,7 +154,7 @@ export default function DataTableLegendPanel({
       return;
     }
     manager.setLayerDataTable(layerId, {
-      stableId: tableStableId,
+      stableId: dataTable.stableId,
       column: effectiveColumn,
       op: userChoice.op || op,
       filters: ensured,
@@ -164,7 +162,7 @@ export default function DataTableLegendPanel({
   }, [
     manager,
     layerId,
-    tableStableId,
+    dataTable?.stableId,
     tableMetadata,
     columnStats?.columns,
     requiredFilterColumns,

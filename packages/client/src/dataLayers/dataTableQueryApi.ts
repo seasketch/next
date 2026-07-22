@@ -310,3 +310,55 @@ export function buildDataTableQuerySearchParams(
 
   return params;
 }
+
+/** One row/group object from an aggregated `/query` JSON response. */
+export type DataTableQueryResultGroup = {
+  [key: string]: string | number | null | undefined;
+};
+
+/** Parsed join values + scale extents from an aggregated query response. */
+export interface ParsedDataTableQueryValues {
+  values: { [featureId: string]: number };
+  min: number;
+  max: number;
+  /** Min of positive values only (for bubble scale); 0 when none. */
+  scaleMin: number;
+  /** Max of positive values only (for bubble scale); 0 when none. */
+  scaleMax: number;
+  hasZero: boolean;
+}
+
+/**
+ * Turn aggregated `/query` JSON into a featureId → numeric value map plus
+ * extents used for data-table circle symbology.
+ */
+export function parseDataTableQueryGroups(
+  groups: DataTableQueryResultGroup[] | null | undefined,
+  joinColumn: string,
+  op: DataTableAggregation | DataTableAggregation[] | undefined
+): ParsedDataTableQueryValues {
+  const resolvedOp = Array.isArray(op) ? op[0] : op;
+  const values: { [featureId: string]: number } = {};
+  for (const group of groups || []) {
+    const featureId = group[joinColumn];
+    const value = resolvedOp ? group[resolvedOp] : undefined;
+    if (
+      featureId !== null &&
+      featureId !== undefined &&
+      typeof value === "number" &&
+      Number.isFinite(value)
+    ) {
+      values[String(featureId)] = value;
+    }
+  }
+  const numericValues = Object.values(values);
+  const positiveValues = numericValues.filter((value) => value > 0);
+  return {
+    values,
+    min: numericValues.length ? Math.min(...numericValues) : 0,
+    max: numericValues.length ? Math.max(...numericValues) : 0,
+    scaleMin: positiveValues.length ? Math.min(...positiveValues) : 0,
+    scaleMax: positiveValues.length ? Math.max(...positiveValues) : 0,
+    hasZero: numericValues.some((value) => value === 0),
+  };
+}

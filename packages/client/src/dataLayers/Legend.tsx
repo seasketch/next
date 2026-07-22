@@ -91,7 +91,7 @@ export type InaturalistLegendItem = BaseLegendItem & {
 
 export type DataTableLegendItem = BaseLegendItem & {
   type: "DataTableLegendItem";
-  tableId: number;
+  tableStableId: string;
   tableName: string;
   column?: string;
   op: DataTableAggregation;
@@ -407,7 +407,7 @@ function LegendListItem({
           item.overlayDataTables.length > 0 && (
             <DataTableLegendPanel
               layerId={item.id}
-              tableId={item.tableId}
+              tableStableId={item.tableStableId}
               tableName={item.tableName}
               column={item.column}
               op={item.op}
