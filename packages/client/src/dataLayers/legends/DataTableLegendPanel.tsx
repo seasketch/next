@@ -1,5 +1,5 @@
 import { useContext, useEffect, useMemo } from "react";
-import { Cross2Icon } from "@radix-ui/react-icons";
+import { Cross2Icon, ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import { useTranslation } from "react-i18next";
 import DataTableIcon from "../../components/icons/DataTableIcon";
 import {
@@ -22,6 +22,7 @@ import {
   useDataTableColumnStats,
 } from "../useDataTableColumnStats";
 import useCurrentProjectMetadata from "../../useCurrentProjectMetadata";
+import Spinner from "../../components/Spinner";
 import DataTableLegendBubble from "./DataTableLegendBubble";
 
 export default function DataTableLegendPanel({
@@ -34,6 +35,8 @@ export default function DataTableLegendPanel({
   max,
   hasZero = false,
   showValueScale = true,
+  loading = false,
+  error,
   tables,
   tocItemId,
 }: {
@@ -46,6 +49,8 @@ export default function DataTableLegendPanel({
   max: number;
   hasZero?: boolean;
   showValueScale?: boolean;
+  loading?: boolean;
+  error?: string;
   tables: ClientOverlayDataTableFragment[];
   tocItemId?: number;
 }) {
@@ -209,6 +214,14 @@ export default function DataTableLegendPanel({
           >
             {tableName || table.name}
           </h3>
+          {error ? (
+            <ExclamationTriangleIcon
+              className="w-3.5 h-3.5 flex-none text-red-500"
+              aria-label={error}
+            />
+          ) : (
+            loading && <Spinner mini className="flex-none opacity-70" />
+          )}
           <button
             type="button"
             aria-label={t("Clear data table display")}
@@ -227,13 +240,25 @@ export default function DataTableLegendPanel({
         />
       </div>
 
-      {(showValueScale || Boolean(column)) && (
+      {error && (
+        <div
+          role="alert"
+          className="flex items-start gap-2 rounded-md bg-red-50 px-2.5 py-2 text-xs text-red-700 ring-1 ring-inset ring-red-100"
+        >
+          <ExclamationTriangleIcon className="w-3.5 h-3.5 flex-none mt-0.5 text-red-500" />
+          <span className="min-w-0 break-words leading-snug">{error}</span>
+        </div>
+      )}
+
+      {(loading || error || showValueScale || Boolean(column)) && (
         <div className="pt-1">
           <DataTableLegendBubble
             min={min}
             max={max}
             hasZero={hasZero}
             showValueScale={showValueScale}
+            loading={loading && !error}
+            error={error}
           />
         </div>
       )}

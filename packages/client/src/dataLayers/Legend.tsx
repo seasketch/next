@@ -99,6 +99,10 @@ export type DataTableLegendItem = BaseLegendItem & {
   max: number;
   hasZero?: boolean;
   showValueScale?: boolean;
+  /** Query in flight for circle values / bubble scale extents. */
+  loading?: boolean;
+  /** Failed to load circle values / bubble scale extents. */
+  error?: string;
 };
 
 export type LegendItem =
@@ -415,6 +419,8 @@ function LegendListItem({
               max={item.max}
               hasZero={item.hasZero}
               showValueScale={item.showValueScale}
+              loading={item.loading}
+              error={item.error}
               tables={item.overlayDataTables}
               tocItemId={item.tableOfContentsItemDetails?.id}
             />

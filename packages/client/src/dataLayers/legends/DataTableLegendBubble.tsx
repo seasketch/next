@@ -164,6 +164,38 @@ function ValueScaleBubble({ min, max }: { min: number; max: number }) {
   );
 }
 
+/** Placeholder nested bubbles that reserve the same footprint while loading. */
+function ValueScaleSkeleton() {
+  return (
+    <svg
+      viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
+      width={WIDTH}
+      height={HEIGHT}
+      className="block flex-none animate-pulse"
+      aria-hidden
+    >
+      <circle
+        cx={CENTER_X}
+        cy={BASELINE_Y - MAX_RADIUS}
+        r={MAX_RADIUS}
+        fill="rgb(191 219 254)"
+      />
+      <circle
+        cx={CENTER_X}
+        cy={BASELINE_Y - MID_RADIUS}
+        r={MID_RADIUS}
+        fill="rgb(219 234 254)"
+      />
+      <circle
+        cx={CENTER_X}
+        cy={BASELINE_Y - MIN_RADIUS}
+        r={MIN_RADIUS}
+        fill="rgb(239 246 255)"
+      />
+    </svg>
+  );
+}
+
 function SpecialSymbolEntry({
   symbol,
   label,
@@ -188,38 +220,67 @@ function SpecialSymbolEntry({
 /**
  * Data-table map legend with a compact, balanced layout:
  * nested bubble scale plus special-value chips.
+ *
+ * While `loading`, keep the scale footprint stable: show a skeleton if no
+ * extents yet, or dim the previous scale so refetch doesn't jump the layout.
+ * On `error`, dim any previous scale and keep special-value chips muted.
  */
 export default function DataTableLegendBubble({
   min,
   max,
   hasZero = true,
   showValueScale = true,
+  loading = false,
+  error,
 }: {
   min: number;
   max: number;
   /** Show the zero chip only when the current results actually contain 0. */
   hasZero?: boolean;
   showValueScale?: boolean;
+  loading?: boolean;
+  error?: string;
 }) {
   const { t } = useTranslation("homepage");
+  const hasError = Boolean(error);
+  const showSettledScale = showValueScale && !loading && !hasError;
+  const showStaleScale = Boolean(showValueScale && (loading || hasError));
+  const showSkeleton = Boolean(loading && !showValueScale && !hasError);
+  const muted = loading || hasError;
 
   return (
-    <div className="grid grid-cols-[auto_auto] items-end justify-between gap-x-3 min-w-0">
-      {showValueScale && (
+    <div
+      className="grid grid-cols-[auto_auto] items-end justify-between gap-x-3 min-w-0"
+      aria-busy={loading || undefined}
+    >
+      {(showSettledScale || showStaleScale || showSkeleton) && (
         <div className="flex-none">
-          <ValueScaleBubble min={min} max={max} />
+          {showSkeleton && <ValueScaleSkeleton />}
+          {showStaleScale && (
+            <div className="opacity-40 transition-opacity">
+              <ValueScaleBubble min={min} max={max} />
+            </div>
+          )}
+          {showSettledScale && <ValueScaleBubble min={min} max={max} />}
         </div>
       )}
       <ul className="flex flex-col items-start gap-2.5 pb-1.5 flex-none">
-        <li>
+        {loading && !hasError && (
+          <li>
+            <span className="text-xs text-gray-500 leading-none">
+              {t("Loading values…")}
+            </span>
+          </li>
+        )}
+        <li className={muted ? "opacity-50" : undefined}>
           <SpecialSymbolEntry
             symbol={<NoDataSymbol />}
             label={t("No data")}
             labelClassName="text-gray-600"
           />
         </li>
-        {hasZero && (
-          <li>
+        {hasZero && (!muted || showValueScale) && (
+          <li className={muted ? "opacity-40" : undefined}>
             <SpecialSymbolEntry
               symbol={<ZeroSymbol />}
               label={0}

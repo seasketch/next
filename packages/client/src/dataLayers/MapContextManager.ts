@@ -144,7 +144,7 @@ const graphqlURL = new URL(
 const STALE_CUSTOM_SOURCE_SIZE = 3;
 
 /** Catalog row + admin-resolved query, derived on demand from LayerState.dataTable. */
-type ResolvedDataTableActivation = {
+type ResolvedDataTableVisualizationSettings = {
   table: ClientOverlayDataTableFragment;
   query: DataTableQuerySettings;
 };
@@ -429,30 +429,41 @@ class MapContextManager extends EventEmitter {
         dataTable: { ...state },
       });
     }
-    this.syncActivatedDataTablesFromLayerStates();
+    // this.syncActivatedDataTablesFromLayerStates();
+    this.debouncedUpdateStyle();
     this.debouncedUpdatePreferences();
+    this.updateLegends();
   }
 
   /**
    * Apply a bookmark-style dataTableStates map onto current overlay layers.
+   * Clears dataTable only on layers that currently have one and are absent
+   * from the bookmark map; applies only keys present in dataTableStates.
    */
   applyDataTableStates(dataTableStates: DataTableStatesMap | null | undefined) {
     const states = dataTableStates || {};
+    // Bookmark apply must turn off data tables that aren't in the map.
+    // Only layers that already carry dataTable intent need clearing.
     for (const tocStableId of this.overlayStates.keys()) {
-      const next = states[tocStableId];
-      if (next?.stableId) {
-        this.overlayStates.patch(tocStableId, {
-          dataTable: { ...next },
-        });
-      } else {
-        const current = this.overlayStates.getRaw(tocStableId);
-        if (current?.dataTable) {
-          this.overlayStates.patch(tocStableId, { dataTable: undefined });
-        }
+      const overlayState = this.overlayStates.getRaw(tocStableId)?.dataTable;
+      if (!overlayState) {
+        continue;
+      }
+      if (!states[tocStableId]?.stableId) {
+        this.overlayStates.patch(tocStableId, { dataTable: undefined });
       }
     }
-    this.syncActivatedDataTablesFromLayerStates();
+    for (const [tocStableId, next] of Object.entries(states)) {
+      if (!next?.stableId || !this.overlayStates.has(tocStableId)) {
+        continue;
+      }
+      this.overlayStates.patch(tocStableId, {
+        dataTable: { ...next },
+      });
+    }
+    this.debouncedUpdateStyle();
     this.debouncedUpdatePreferences();
+    this.updateLegends();
   }
 
   /**
@@ -460,9 +471,9 @@ class MapContextManager extends EventEmitter {
    * Returns undefined when intent is missing, the catalog isn't ready, or the
    * stableId no longer exists. Does not mutate LayerState.
    */
-  private resolveDataTableActivation(
+  private resolveDataTableVisualizationSettings(
     tocStableId: string
-  ): ResolvedDataTableActivation | undefined {
+  ): ResolvedDataTableVisualizationSettings | undefined {
     const dataTable = this.overlayStates.getRaw(tocStableId)?.dataTable;
     if (!dataTable?.stableId) {
       return undefined;
@@ -471,9 +482,7 @@ class MapContextManager extends EventEmitter {
     if (!tables) {
       return undefined;
     }
-    const table = tables.find(
-      (entry) => entry.stableId === dataTable.stableId
-    );
+    const table = tables.find((entry) => entry.stableId === dataTable.stableId);
     if (!table) {
       return undefined;
     }
@@ -492,13 +501,13 @@ class MapContextManager extends EventEmitter {
     };
   }
 
-  private clearDataTableEngineState(tocStableId: string) {
-    this.clearActivatedDataTableFeatureState(tocStableId);
-    delete this.activatedDataTableValues[tocStableId];
-    delete this.activatedDataTableLoading[tocStableId];
-    delete this.activatedDataTableRequests[tocStableId];
-    this.removeActivatedDataTableSourceListener(tocStableId);
-  }
+  // private clearDataTableEngineState(tocStableId: string) {
+  //   this.clearActivatedDataTableFeatureState(tocStableId);
+  //   delete this.activatedDataTableValues[tocStableId];
+  //   delete this.activatedDataTableLoading[tocStableId];
+  //   delete this.activatedDataTableRequests[tocStableId];
+  //   this.removeActivatedDataTableSourceListener(tocStableId);
+  // }
 
   /**
    * After LayerState.dataTable or the TOC catalog changes: drop stale intent,
@@ -508,80 +517,80 @@ class MapContextManager extends EventEmitter {
    * catalog is still loading. Only drop dataTable once we have the layer's
    * catalog entry and the stableId is absent from its table list.
    */
-  private syncActivatedDataTablesFromLayerStates() {
-    for (const tocStableId of this.overlayStates.keys()) {
-      const dataTable = this.overlayStates.getRaw(tocStableId)?.dataTable;
-      if (!dataTable?.stableId) {
-        this.clearDataTableEngineState(tocStableId);
-        continue;
-      }
-      const tocItem = this.tocItems[tocStableId];
-      if (!tocItem || tocItem.overlayDataTables === undefined) {
-        // Catalog not ready — keep intent, don't fetch yet.
-        continue;
-      }
-      const table = tocItem.overlayDataTables.find(
-        (entry) => entry.stableId === dataTable.stableId
-      );
-      if (!table) {
-        this.overlayStates.patch(tocStableId, { dataTable: undefined });
-        this.clearDataTableEngineState(tocStableId);
-        continue;
-      }
-      const activation = this.resolveDataTableActivation(tocStableId);
-      if (!activation?.query.column || !activation.query.op) {
-        continue;
-      }
-      const nextQueryKey = this.dataTableQueryKey(
-        tocStableId,
-        activation.table,
-        activation.query
-      );
-      if (
-        this.activatedDataTableValues[tocStableId]?.queryKey !== nextQueryKey
-      ) {
-        // Mark loading *before* style rebuild so gray paint lands in the
-        // same pass as the query start.
-        this.activatedDataTableLoading[tocStableId] = true;
-      }
-    }
-    // Drop engine state for layers no longer present / no longer activated.
-    for (const tocStableId of Object.keys(this.activatedDataTableValues)) {
-      if (!this.overlayStates.getRaw(tocStableId)?.dataTable?.stableId) {
-        this.clearDataTableEngineState(tocStableId);
-      }
-    }
-    for (const tocStableId of Object.keys(this.activatedDataTableLoading)) {
-      if (!this.overlayStates.getRaw(tocStableId)?.dataTable?.stableId) {
-        this.clearDataTableEngineState(tocStableId);
-      }
-    }
+  // private syncActivatedDataTablesFromLayerStates() {
+  //   for (const tocStableId of this.overlayStates.keys()) {
+  //     const dataTable = this.overlayStates.getRaw(tocStableId)?.dataTable;
+  //     if (!dataTable?.stableId) {
+  //       this.clearDataTableEngineState(tocStableId);
+  //       continue;
+  //     }
+  //     const tocItem = this.tocItems[tocStableId];
+  //     if (!tocItem || tocItem.overlayDataTables === undefined) {
+  //       // Catalog not ready — keep intent, don't fetch yet.
+  //       continue;
+  //     }
+  //     const table = tocItem.overlayDataTables.find(
+  //       (entry) => entry.stableId === dataTable.stableId
+  //     );
+  //     if (!table) {
+  //       this.overlayStates.patch(tocStableId, { dataTable: undefined });
+  //       this.clearDataTableEngineState(tocStableId);
+  //       continue;
+  //     }
+  //     const activation = this.resolveDataTableActivation(tocStableId);
+  //     if (!activation?.query.column || !activation.query.op) {
+  //       continue;
+  //     }
+  //     const nextQueryKey = this.dataTableQueryKey(
+  //       tocStableId,
+  //       activation.table,
+  //       activation.query
+  //     );
+  //     if (
+  //       this.activatedDataTableValues[tocStableId]?.queryKey !== nextQueryKey
+  //     ) {
+  //       // Mark loading *before* style rebuild so gray paint lands in the
+  //       // same pass as the query start.
+  //       this.activatedDataTableLoading[tocStableId] = true;
+  //     }
+  //   }
+  //   // Drop engine state for layers no longer present / no longer activated.
+  //   for (const tocStableId of Object.keys(this.activatedDataTableValues)) {
+  //     if (!this.overlayStates.getRaw(tocStableId)?.dataTable?.stableId) {
+  //       this.clearDataTableEngineState(tocStableId);
+  //     }
+  //   }
+  //   for (const tocStableId of Object.keys(this.activatedDataTableLoading)) {
+  //     if (!this.overlayStates.getRaw(tocStableId)?.dataTable?.stableId) {
+  //       this.clearDataTableEngineState(tocStableId);
+  //     }
+  //   }
 
-    const anyLoading = Object.values(this.activatedDataTableLoading).some(
-      Boolean
-    );
-    if (anyLoading) {
-      void this.updateStyle();
-    } else {
-      this.debouncedUpdateStyle();
-    }
-    void this.updateLegends();
-    void this.updateActivatedDataTableFeatureStates();
-  }
+  //   const anyLoading = Object.values(this.activatedDataTableLoading).some(
+  //     Boolean
+  //   );
+  //   if (anyLoading) {
+  //     void this.updateStyle();
+  //   } else {
+  //     this.debouncedUpdateStyle();
+  //   }
+  //   void this.updateLegends();
+  //   void this.updateActivatedDataTableFeatureStates();
+  // }
 
-  private dataTableQueryKey(
-    tocStableId: string,
-    table: ClientOverlayDataTableFragment,
-    query: DataTableQuerySettings
-  ) {
-    return JSON.stringify({
-      tocStableId,
-      tableStableId: table.stableId,
-      queryUrl: table.queryUrl,
-      joinColumn: table.joinColumn,
-      query,
-    });
-  }
+  // private dataTableQueryKey(
+  //   tocStableId: string,
+  //   table: ClientOverlayDataTableFragment,
+  //   query: DataTableQuerySettings
+  // ) {
+  //   return JSON.stringify({
+  //     tocStableId,
+  //     tableStableId: table.stableId,
+  //     queryUrl: table.queryUrl,
+  //     joinColumn: table.joinColumn,
+  //     query,
+  //   });
+  // }
 
   private dataTableQueryUrl(
     table: ClientOverlayDataTableFragment,
@@ -624,99 +633,100 @@ class MapContextManager extends EventEmitter {
     }
   }
 
-  private async fetchActivatedDataTableValues(
-    tocStableId: string,
-    table: ClientOverlayDataTableFragment,
-    query: DataTableQuerySettings
-  ) {
-    const queryUrl = this.dataTableQueryUrl(table, query);
-    if (!queryUrl) {
-      this.clearDataTableEngineState(tocStableId);
-      return;
-    }
-    const queryKey = this.dataTableQueryKey(tocStableId, table, query);
-    const cached = this.activatedDataTableValues[tocStableId];
-    if (cached?.queryKey === queryKey) {
-      this.setActivatedDataTableLoading(tocStableId, false);
-      this.scheduleActivatedDataTableFeatureStateApply(tocStableId);
-      return;
-    }
-    if (this.activatedDataTableRequests[tocStableId] === queryKey) {
-      return;
-    }
-    this.activatedDataTableRequests[tocStableId] = queryKey;
-    // Keep previous feature-state values while loading; style rebuild picks
-    // up gray/faded paint from activatedDataTableLoading.
-    this.setActivatedDataTableLoading(tocStableId, true);
-    // A newer request or deactivation replaces/clears the entry in
-    // activatedDataTableRequests; treat this response as superseded then.
-    const isCurrent = () =>
-      this.activatedDataTableRequests[tocStableId] === queryKey;
-    try {
-      const response = await fetch(queryUrl, {
-        headers: { accept: "application/json" },
-      });
-      if (!isCurrent()) {
-        return;
-      }
-      if (!response.ok) {
-        throw new Error(`Data table query failed (${response.status})`);
-      }
-      const json = (await response.json()) as {
-        groups?: DataTableQueryResultGroup[];
-      };
-      if (!isCurrent()) {
-        return;
-      }
-      const parsed = parseDataTableQueryGroups(
-        json.groups,
-        table.joinColumn,
-        query.op
-      );
-      this.activatedDataTableValues[tocStableId] = {
-        queryKey,
-        ...parsed,
-      };
-      this.scheduleActivatedDataTableFeatureStateApply(tocStableId);
-      this.setActivatedDataTableLoading(tocStableId, false);
-      void this.updateLegends();
-    } catch (error) {
-      if (!isCurrent()) {
-        return;
-      }
-      console.error(error);
-      this.clearActivatedDataTableFeatureState(tocStableId);
-      delete this.activatedDataTableValues[tocStableId];
-      this.setActivatedDataTableLoading(tocStableId, false);
-    } finally {
-      if (this.activatedDataTableRequests[tocStableId] === queryKey) {
-        delete this.activatedDataTableRequests[tocStableId];
-      }
-    }
-  }
+  // private async fetchActivatedDataTableValues(
+  //   tocStableId: string,
+  //   table: ClientOverlayDataTableFragment,
+  //   query: DataTableQuerySettings
+  // ) {
+  //   const queryUrl = this.dataTableQueryUrl(table, query);
+  //   if (!queryUrl) {
+  //     this.clearDataTableEngineState(tocStableId);
+  //     return;
+  //   }
+  //   const queryKey = this.dataTableQueryKey(tocStableId, table, query);
+  //   const cached = this.activatedDataTableValues[tocStableId];
+  //   if (cached?.queryKey === queryKey) {
+  //     this.setActivatedDataTableLoading(tocStableId, false);
+  //     this.scheduleActivatedDataTableFeatureStateApply(tocStableId);
+  //     return;
+  //   }
+  //   if (this.activatedDataTableRequests[tocStableId] === queryKey) {
+  //     return;
+  //   }
+  //   this.activatedDataTableRequests[tocStableId] = queryKey;
+  //   // Keep previous feature-state values while loading; style rebuild picks
+  //   // up gray/faded paint from activatedDataTableLoading.
+  //   this.setActivatedDataTableLoading(tocStableId, true);
+  //   // A newer request or deactivation replaces/clears the entry in
+  //   // activatedDataTableRequests; treat this response as superseded then.
+  //   const isCurrent = () =>
+  //     this.activatedDataTableRequests[tocStableId] === queryKey;
+  //   try {
+  //     const response = await fetch(queryUrl, {
+  //       headers: { accept: "application/json" },
+  //     });
+  //     if (!isCurrent()) {
+  //       return;
+  //     }
+  //     if (!response.ok) {
+  //       throw new Error(`Data table query failed (${response.status})`);
+  //     }
+  //     const json = (await response.json()) as {
+  //       groups?: DataTableQueryResultGroup[];
+  //     };
+  //     if (!isCurrent()) {
+  //       return;
+  //     }
+  //     const parsed = parseDataTableQueryGroups(
+  //       json.groups,
+  //       table.joinColumn,
+  //       query.op
+  //     );
+  //     this.activatedDataTableValues[tocStableId] = {
+  //       queryKey,
+  //       ...parsed,
+  //     };
+  //     this.scheduleActivatedDataTableFeatureStateApply(tocStableId);
+  //     this.setActivatedDataTableLoading(tocStableId, false);
+  //     void this.updateLegends();
+  //   } catch (error) {
+  //     if (!isCurrent()) {
+  //       return;
+  //     }
+  //     console.error(error);
+  //     this.clearActivatedDataTableFeatureState(tocStableId);
+  //     delete this.activatedDataTableValues[tocStableId];
+  //     this.setActivatedDataTableLoading(tocStableId, false);
+  //   } finally {
+  //     if (this.activatedDataTableRequests[tocStableId] === queryKey) {
+  //       delete this.activatedDataTableRequests[tocStableId];
+  //     }
+  //   }
+  // }
 
-  private async updateActivatedDataTableFeatureStates() {
-    const tocStableIds = new Set([
-      ...this.overlayStates.keys(),
-      ...Object.keys(this.activatedDataTableValues),
-    ]);
-    await Promise.all(
-      Array.from(tocStableIds).map(async (tocStableId) => {
-        const activation = this.resolveDataTableActivation(tocStableId);
-        if (!activation?.query.column || !activation.query.op) {
-          if (!this.overlayStates.getRaw(tocStableId)?.dataTable?.stableId) {
-            this.clearDataTableEngineState(tocStableId);
-          }
-          return;
-        }
-        await this.fetchActivatedDataTableValues(
-          tocStableId,
-          activation.table,
-          activation.query
-        );
-      })
-    );
-  }
+  // private async updateActivatedDataTableFeatureStates() {
+  //   const tocStableIds = new Set([
+  //     ...this.overlayStates.keys(),
+  //     ...Object.keys(this.activatedDataTableValues),
+  //   ]);
+  //   await Promise.all(
+  //     Array.from(tocStableIds).map(async (tocStableId) => {
+  //       const activation =
+  //         this.resolveDataTableVisualizationSettings(tocStableId);
+  //       if (!activation?.query.column || !activation.query.op) {
+  //         if (!this.overlayStates.getRaw(tocStableId)?.dataTable?.stableId) {
+  //           this.clearDataTableEngineState(tocStableId);
+  //         }
+  //         return;
+  //       }
+  //       await this.fetchActivatedDataTableValues(
+  //         tocStableId,
+  //         activation.table,
+  //         activation.query
+  //       );
+  //     })
+  //   );
+  // }
 
   private removeActivatedDataTableSourceListener(tocStableId: string) {
     const listener = this.activatedDataTableSourceListeners[tocStableId];
@@ -752,7 +762,7 @@ class MapContextManager extends EventEmitter {
       return;
     }
     const cached = this.activatedDataTableValues[tocStableId];
-    const activation = this.resolveDataTableActivation(tocStableId);
+    const activation = this.resolveDataTableVisualizationSettings(tocStableId);
     if (!cached?.values || !activation) {
       return;
     }
@@ -770,7 +780,8 @@ class MapContextManager extends EventEmitter {
       }
       const currentValues = this.activatedDataTableValues[tocStableId]?.values;
       const currentLayer = this.layers[tocStableId];
-      const currentActivation = this.resolveDataTableActivation(tocStableId);
+      const currentActivation =
+        this.resolveDataTableVisualizationSettings(tocStableId);
       if (
         !currentValues ||
         !currentLayer ||
@@ -866,7 +877,7 @@ class MapContextManager extends EventEmitter {
 
   private reapplyActivatedDataTableFeatureStates() {
     for (const tocStableId of Object.keys(this.activatedDataTableValues)) {
-      if (this.resolveDataTableActivation(tocStableId)) {
+      if (this.resolveDataTableVisualizationSettings(tocStableId)) {
         this.scheduleActivatedDataTableFeatureStateApply(tocStableId);
       }
     }
@@ -904,7 +915,7 @@ class MapContextManager extends EventEmitter {
     sourceLayer?: string,
     legendOnly = false
   ): AnyLayer | undefined {
-    const activation = this.resolveDataTableActivation(tocStableId);
+    const activation = this.resolveDataTableVisualizationSettings(tocStableId);
     if (!activation?.query.column || !activation.query.op) {
       return undefined;
     }
@@ -1041,16 +1052,6 @@ class MapContextManager extends EventEmitter {
     };
   }
 
-  private dataTablePromoteId(tocStableId: string, sourceLayer?: string | null) {
-    const table = this.resolveDataTableActivation(tocStableId)?.table;
-    if (!table?.overlayJoinColumn) {
-      return undefined;
-    }
-    return sourceLayer
-      ? { [sourceLayer]: table.overlayJoinColumn }
-      : table.overlayJoinColumn;
-  }
-
   private setState = (action: SetStateAction<MapContextInterface>) => {
     if (typeof action === "function") {
       this.internalState = {
@@ -1122,14 +1123,6 @@ class MapContextManager extends EventEmitter {
   setMapAccessToken(token: string | null | undefined) {
     const changed = this.mapAccessToken !== token;
     this.mapAccessToken = token;
-    if (changed) {
-      // Query URLs embed the token (dataTableQueryUrl); a token arriving
-      // after a failed unauthenticated fetch should trigger a retry.
-      // Invalidate in-flight requests so their (possibly 401) responses are
-      // discarded, then re-run with the new token.
-      this.activatedDataTableRequests = {};
-      void this.updateActivatedDataTableFeatureStates();
-    }
   }
 
   setHostedTileUuidsRequiringAuth(uuids: string[] | null | undefined) {
@@ -2347,10 +2340,30 @@ class MapContextManager extends EventEmitter {
               const overlaySourceKey = this.overlayStates.prefixedSourceId(
                 source.id
               );
-              const dataTablePromoteId = this.dataTablePromoteId(
-                layerId,
-                layer.sourceLayer
-              );
+
+              // private dataTablePromoteId(tocStableId: string, sourceLayer?: string | null) {
+              //   const table =
+              //     this.resolveDataTableVisualizationSettings(tocStableId)?.table;
+              //   if (!table?.overlayJoinColumn) {
+              //     return undefined;
+              //   }
+              //   return sourceLayer
+              //     ? { [sourceLayer]: table.overlayJoinColumn }
+              //     : table.overlayJoinColumn;
+              // }
+
+              let dataTableVisualizationSettings =
+                this.resolveDataTableVisualizationSettings(layerId);
+
+              if (!dataTableVisualizationSettings?.table.joinColumn) {
+                dataTableVisualizationSettings = undefined;
+              }
+
+              console.log({ dataTableVisualizationSettings });
+
+              const promoteId =
+                dataTableVisualizationSettings?.table.overlayJoinColumn;
+
               if (!baseStyle.sources[overlaySourceKey]) {
                 switch (source.type) {
                   case DataSourceTypes.Vector:
@@ -2358,9 +2371,7 @@ class MapContextManager extends EventEmitter {
                       type: "vector",
                       attribution: source.attribution || "",
                       tiles: source.tiles as string[],
-                      ...(dataTablePromoteId
-                        ? { promoteId: dataTablePromoteId }
-                        : {}),
+                      ...(promoteId ? { promoteId } : {}),
                       ...(source.bounds
                         ? { bounds: source.bounds.map((b) => parseFloat(b)) }
                         : {}),
@@ -2389,9 +2400,7 @@ class MapContextManager extends EventEmitter {
                       type: "vector",
                       url,
                       attribution: source.attribution || "",
-                      ...(dataTablePromoteId
-                        ? { promoteId: dataTablePromoteId }
-                        : {}),
+                      ...(promoteId ? { promoteId } : {}),
                     };
                     break;
                   case DataSourceTypes.SeasketchVector:
@@ -2400,9 +2409,7 @@ class MapContextManager extends EventEmitter {
                       type: "geojson",
                       data: source.url!,
                       attribution: source.attribution || "",
-                      ...(dataTablePromoteId
-                        ? { promoteId: dataTablePromoteId }
-                        : {}),
+                      ...(promoteId ? { promoteId } : {}),
                     };
                     break;
                   case DataSourceTypes.SeasketchRaster:
@@ -2593,14 +2600,88 @@ class MapContextManager extends EventEmitter {
                     ? this.archivedSource.sourceLayer || undefined
                     : layer.sourceLayer || undefined
                   : undefined;
-                const dataTableLayer = this.dataTableCircleLayer(
-                  layerId,
-                  layer,
-                  overlaySourceKey,
-                  sourceLayer
-                );
-                if (dataTableLayer) {
-                  glLayers = [dataTableLayer];
+                if (
+                  dataTableVisualizationSettings &&
+                  dataTableVisualizationSettings.query.column &&
+                  dataTableVisualizationSettings.query.op
+                ) {
+                  const valueExpression = [
+                    "feature-state",
+                    "scaledValue",
+                  ] as Expression;
+                  // Unset feature-state is null; typeof !== "number" covers
+                  // that and any non-numeric sentinel in one check.
+                  const isNoData = [
+                    "!=",
+                    ["typeof", valueExpression],
+                    "number",
+                  ] as Expression;
+                  const isLoading = [
+                    "boolean",
+                    ["feature-state", "loading"],
+                    false,
+                  ] as Expression;
+                  glLayers = [
+                    {
+                      id: idForLayer(layer, 0),
+                      type: "circle",
+                      source: overlaySourceKey,
+                      ...(sourceLayer ? { "source-layer": sourceLayer } : {}),
+                      metadata: {
+                        "s:data-table-proporional-symbol": true,
+                      },
+                      paint: {
+                        "circle-color": [
+                          "case",
+                          isLoading,
+                          "#2563eb",
+                          isNoData,
+                          "#9ca3af",
+                          "#6b7280",
+                        ],
+                        "circle-opacity": [
+                          "case",
+                          isLoading,
+                          0.35,
+                          isNoData,
+                          0.35,
+                          0.8,
+                        ],
+                        "circle-stroke-opacity": [
+                          "case",
+                          isLoading,
+                          0.35,
+                          isNoData,
+                          0.8,
+                          1,
+                        ],
+                        "circle-stroke-color": [
+                          "case",
+                          isNoData,
+                          "#9ca3af",
+                          "#2563eb",
+                        ],
+                        "circle-stroke-width": ["case", isNoData, 2, 0],
+                        "circle-radius": buildDataTableCircleRadiusExpression({
+                          // Radius math still needs a numeric stand-in for null.
+                          valueExpression,
+                          scaleMin: 0,
+                          scaleMax: 10,
+                          zoomDependent: true,
+                          hideWhenMissing: false,
+                        }),
+                      },
+                    },
+                  ];
+                  // const dataTableLayer = this.dataTableCircleLayer(
+                  //   layerId,
+                  //   layer,
+                  //   overlaySourceKey,
+                  //   sourceLayer
+                  // );
+                  // if (dataTableLayer) {
+                  //   glLayers = [dataTableLayer];
+                  // }
                 }
                 if (
                   _staticOverlay &&
@@ -3040,7 +3121,7 @@ class MapContextManager extends EventEmitter {
     }
     // TOC catalog (including overlayDataTables) may have just arrived or
     // changed — resolve LayerState.dataTable stableIds and (re)start queries.
-    this.syncActivatedDataTablesFromLayerStates();
+    // this.syncActivatedDataTablesFromLayerStates();
     this.debouncedUpdateStyle();
     this.updateLegends();
     return;
@@ -3521,7 +3602,8 @@ class MapContextManager extends EventEmitter {
   private applyActivatedDataTableFeatureStatesToMap(targetMap: Map) {
     for (const tocStableId of Object.keys(this.activatedDataTableValues)) {
       const values = this.activatedDataTableValues[tocStableId]?.values;
-      const activation = this.resolveDataTableActivation(tocStableId);
+      const activation =
+        this.resolveDataTableVisualizationSettings(tocStableId);
       if (!values || !activation) {
         continue;
       }
@@ -3881,7 +3963,7 @@ class MapContextManager extends EventEmitter {
                   )
                 );
                 const dataTableActivation =
-                  this.resolveDataTableActivation(id);
+                  this.resolveDataTableVisualizationSettings(id);
                 const dataTableValues = this.activatedDataTableValues[id];
                 const dataTableOp = dataTableActivation?.query.op
                   ? Array.isArray(dataTableActivation.query.op)
@@ -3892,16 +3974,14 @@ class MapContextManager extends EventEmitter {
                 // activated — even before a column is resolved. Column/op
                 // controls live in that panel and pick a default numeric
                 // column from column-stats when admin constraints are empty.
-                if (
-                  dataTableActivation &&
-                  dataTableActivation.table.stableId
-                ) {
+                if (dataTableActivation && dataTableActivation.table.stableId) {
                   newLegendState[id] = {
                     id,
                     type: "DataTableLegendItem",
                     label: this.tocItems[layer.tocId]?.label || "",
                     tableOfContentsItemDetails,
                     overlayDataTables,
+                    loading: true,
                     tableStableId: dataTableActivation.table.stableId,
                     tableName: dataTableActivation.table.name,
                     column: dataTableActivation.query.column,
@@ -4294,7 +4374,8 @@ class MapContextManager extends EventEmitter {
       source.type === DataSourceTypes.SeasketchMvt ||
       source.type === DataSourceTypes.Vector; // ||
     // source.type === DataSourceTypes.SeasketchRaster;
-    const dataTableActivation = this.resolveDataTableActivation(stableId);
+    const dataTableActivation =
+      this.resolveDataTableVisualizationSettings(stableId);
     const dataTableActive = Boolean(
       dataTableActivation?.query.column && dataTableActivation?.query.op
     );
