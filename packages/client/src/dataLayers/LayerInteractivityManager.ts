@@ -73,16 +73,11 @@ export default class LayerInteractivityManager extends EventEmitter {
     sourceId: string;
     layerLabel?: string;
   }[] = [];
-  private inaturalistPopup?: Popup;
-  private inaturalistPopupSourceId?: string;
+  /** The single open Mapbox popup, if any (vector, image, or iNaturalist). */
   private activePopup?: Popup;
-  /** Style/data layer ids associated with the current Mapbox popup */
-  private activePopupLayerIds: string[] = [];
   private customSources: { [sourceId: string]: CustomGLSource<any> } = {};
   private tocItemLabels: { [stableId: string]: { label?: string } } = {};
   private selectedFeature?: mapboxgl.FeatureIdentifier;
-  /** Style layer id for the feature shown in the sidebar overlay */
-  private selectedFeatureLayerId?: string;
   private hoveredFeature?: mapboxgl.FeatureIdentifier;
 
   /**
@@ -223,11 +218,18 @@ export default class LayerInteractivityManager extends EventEmitter {
       // delete this.basemap;
     }
     this.basemap = basemap;
-    this.clearPopupsForHiddenLayers(
-      newInteractiveVectorLayerIds,
-      newInteractiveImageLayerIds,
-      newInaturalistConfigs
-    );
+    // Only one popup can be open; dismiss it whenever the interactive set changes
+    // (including turning a layer off).
+    if (
+      !sameStringSet(this.interactiveVectorLayerIds, newInteractiveVectorLayerIds) ||
+      !sameStringSet(this.interactiveImageLayerIds, newInteractiveImageLayerIds) ||
+      !sameStringSet(
+        this.inaturalistConfigs.map((c) => c.sourceId),
+        newInaturalistConfigs.map((c) => c.sourceId)
+      )
+    ) {
+      this.dismissOpenPopup();
+    }
     this.interactiveImageLayerIds = newInteractiveImageLayerIds;
     this.interactiveVectorLayerIds = newInteractiveVectorLayerIds;
     this.inaturalistConfigs = newInaturalistConfigs;
@@ -243,73 +245,23 @@ export default class LayerInteractivityManager extends EventEmitter {
     }
   }
 
-  /**
-   * Close map/sidebar popups whose owning layer is no longer visible/interactive.
-   */
-  private clearPopupsForHiddenLayers(
-    interactiveVectorLayerIds: string[],
-    interactiveImageLayerIds: string[],
-    inaturalistConfigs: { sourceId: string }[]
-  ) {
-    const isLayerStillInteractive = (layerId: string) =>
-      interactiveVectorLayerIds.includes(layerId) ||
-      interactiveImageLayerIds.includes(layerId);
-
-    const imageLayersRemoved = this.interactiveImageLayerIds.some(
-      (id) => !interactiveImageLayerIds.includes(id)
-    );
-    if (imageLayersRemoved && this.popupAbortController) {
-      this.popupAbortController.abort();
-      delete this.popupAbortController;
-    }
-
-    if (
-      this.activePopup &&
-      this.activePopupLayerIds.length > 0 &&
-      !this.activePopupLayerIds.some(isLayerStillInteractive)
-    ) {
-      this.clearActivePopup();
-    }
-
-    if (
-      this.selectedFeatureLayerId &&
-      !isLayerStillInteractive(this.selectedFeatureLayerId)
-    ) {
-      this.clearSidebarPopup();
-    }
-
-    if (
-      this.inaturalistPopup &&
-      (!this.inaturalistPopupSourceId ||
-        !inaturalistConfigs.some(
-          (config) => config.sourceId === this.inaturalistPopupSourceId
-        ))
-    ) {
-      this.inaturalistPopup.remove();
-      this.inaturalistPopup = undefined;
-      this.inaturalistPopupSourceId = undefined;
-    }
-  }
-
-  private setActivePopup(popup: Popup, layerIds: string[]) {
-    if (this.activePopup && this.activePopup !== popup) {
-      this.activePopup.remove();
-    }
+  private setActivePopup(popup: Popup) {
+    this.activePopup?.remove();
     this.activePopup = popup;
-    this.activePopupLayerIds = layerIds;
     popup.once("close", () => {
       if (this.activePopup === popup) {
         this.activePopup = undefined;
-        this.activePopupLayerIds = [];
       }
     });
   }
 
-  private clearActivePopup() {
-    if (this.activePopup) {
-      this.activePopup.remove();
-      this.activePopup = undefined;
-      this.activePopupLayerIds = [];
+  private dismissOpenPopup() {
+    this.activePopup?.remove();
+    this.activePopup = undefined;
+    this.clearSidebarPopup();
+    if (this.popupAbortController) {
+      this.popupAbortController.abort();
+      delete this.popupAbortController;
     }
   }
 
@@ -462,9 +414,10 @@ export default class LayerInteractivityManager extends EventEmitter {
       const topVectorIndex = this.getLayerDrawIndex(top.layer.id);
 
       if (inatHit && inatDrawIndex >= topVectorIndex) {
-        this.clearActivePopup();
         this.clearSidebarPopup();
-        this.showInaturalistPopup(inatHit.hit!, inatHit.sourceId);
+        this.setActivePopup(
+          await renderInaturalistPopup(this.map, inatHit.hit!)
+        );
         return;
       }
       const interactivitySetting = this.getInteractivitySettingForFeature(top);
@@ -496,13 +449,15 @@ export default class LayerInteractivityManager extends EventEmitter {
         );
         if (interactivitySetting.type === InteractivityType.Popup) {
           this.clearSidebarPopup();
-          const popup = new Popup({ closeOnClick: true, closeButton: true })
-            .setLngLat([e.lngLat.lng, e.lngLat.lat])
-            .setHTML(content)
-            .addTo(this.map!);
-          this.setActivePopup(popup, [top.layer.id]);
+          this.setActivePopup(
+            new Popup({ closeOnClick: true, closeButton: true })
+              .setLngLat([e.lngLat.lng, e.lngLat.lat])
+              .setHTML(content)
+              .addTo(this.map!)
+          );
         } else {
-          this.clearActivePopup();
+          this.activePopup?.remove();
+          this.activePopup = undefined;
           const titleContent = Mustache.render(
             interactivitySetting.title || "",
             {
@@ -524,11 +479,12 @@ export default class LayerInteractivityManager extends EventEmitter {
         const lyr = this.layers[top.layer.id];
         // @ts-ignore
         const layerLabel = (this.tocItemLabels || {})[lyr?.tocId]?.label;
-        const popup = new Popup({ closeOnClick: true, closeButton: true })
-          .setLngLat([e.lngLat.lng, e.lngLat.lat])
-          .setHTML(
-            Mustache.render(
-              `
+        this.setActivePopup(
+          new Popup({ closeOnClick: true, closeButton: true })
+            .setLngLat([e.lngLat.lng, e.lngLat.lat])
+            .setHTML(
+              Mustache.render(
+                `
               <div class="">
               ${
                 layerLabel
@@ -556,14 +512,14 @@ export default class LayerInteractivityManager extends EventEmitter {
                 </div>
               </div>
             `,
-              {
-                ...mustacheHelpers,
-                properties: top.properties,
-              }
+                {
+                  ...mustacheHelpers,
+                  properties: top.properties,
+                }
+              )
             )
-          )
-          .addTo(this.map!);
-        this.setActivePopup(popup, [top.layer.id]);
+            .addTo(this.map!)
+        );
         vectorPopupOpened = true;
       }
     } else {
@@ -573,9 +529,10 @@ export default class LayerInteractivityManager extends EventEmitter {
 
     if (!popupOpened && this.inaturalistConfigs.length) {
       if (inatHit?.hit) {
-        this.clearActivePopup();
         this.clearSidebarPopup();
-        this.showInaturalistPopup(inatHit.hit, inatHit.sourceId);
+        this.setActivePopup(
+          await renderInaturalistPopup(this.map, inatHit.hit)
+        );
         popupOpened = true;
       }
     }
@@ -595,9 +552,7 @@ export default class LayerInteractivityManager extends EventEmitter {
     }
   };
 
-  setSelectedFeature(
-    feature?: MapboxGeoJSONFeature | mapboxgl.FeatureIdentifier
-  ) {
+  setSelectedFeature(feature?: mapboxgl.FeatureIdentifier) {
     if (this.selectedFeature?.id === feature?.id) {
       return;
     }
@@ -623,10 +578,6 @@ export default class LayerInteractivityManager extends EventEmitter {
       });
     }
     this.selectedFeature = feature;
-    this.selectedFeatureLayerId =
-      feature && "layer" in feature && feature.layer
-        ? feature.layer.id
-        : undefined;
   }
 
   setHoveredFeature(feature?: mapboxgl.FeatureIdentifier) {
@@ -663,28 +614,6 @@ export default class LayerInteractivityManager extends EventEmitter {
       sidebarPopupTitle: undefined,
     });
     this.setSelectedFeature(undefined);
-    this.selectedFeatureLayerId = undefined;
-  };
-
-  private showInaturalistPopup = async (
-    hit: NonNullable<Awaited<ReturnType<typeof fetchInaturalistUtfgrid>>>,
-    sourceId?: string
-  ) => {
-    if (this.inaturalistPopup) {
-      this.inaturalistPopup.remove();
-      this.inaturalistPopup = undefined;
-      this.inaturalistPopupSourceId = undefined;
-    }
-    const matchingConfig =
-      (sourceId &&
-        this.inaturalistConfigs.find(
-          (config) => config.sourceId === sourceId
-        )) ||
-      this.inaturalistConfigs.find(
-        (config) => config.layerLabel === hit.layerLabel
-      );
-    this.inaturalistPopup = await renderInaturalistPopup(this.map, hit);
-    this.inaturalistPopupSourceId = matchingConfig?.sourceId ?? sourceId;
   };
 
   // Note, this will only work with ArcGIS Server
@@ -750,37 +679,33 @@ export default class LayerInteractivityManager extends EventEmitter {
     if (!this.popupAbortController.signal.aborted) {
       for (const sublayerData of data) {
         if (sublayerData.length) {
-          const matchedLayer = layers.find(
+          const interactivitySetting = layers.find(
             (l) =>
               l.sublayer?.toString() === sublayerData[0].sublayer.toString() &&
               l.dataSourceId === sublayerData[0].sourceId
-          );
-          const interactivitySetting = matchedLayer?.interactivitySettings;
-          const popupLayerId = matchedLayer?.id?.toString();
-          // Layer may have been turned off while identify was in-flight
-          if (
-            popupLayerId &&
-            !this.interactiveImageLayerIds.includes(popupLayerId)
-          ) {
-            break;
-          }
+          )?.interactivitySettings;
           if (
             interactivitySetting?.type === InteractivityType.AllPropertiesPopup
           ) {
             const data = sublayerData[0];
             let layerLabel: string | undefined;
-            if (data && matchedLayer) {
+            if (data) {
+              const lyr = layers.find(
+                (l) =>
+                  l.sublayer?.toString() === data.sublayer.toString() &&
+                  l.dataSourceId === data.sourceId
+              );
               // @ts-ignore
-              layerLabel = (this.tocItemLabels || {})[matchedLayer?.tocId]
-                ?.label;
+              layerLabel = (this.tocItemLabels || {})[lyr?.tocId]?.label;
             }
 
             const properties = sublayerData[0]?.attributes || {};
-            const popup = new Popup({ closeOnClick: true, closeButton: true })
-              .setLngLat(position)
-              .setHTML(
-                Mustache.render(
-                  `
+            this.setActivePopup(
+              new Popup({ closeOnClick: true, closeButton: true })
+                .setLngLat(position)
+                .setHTML(
+                  Mustache.render(
+                    `
                   ${
                     layerLabel
                       ? `<h3 class="font-medium p-1">${layerLabel}</h3>`
@@ -808,29 +733,26 @@ export default class LayerInteractivityManager extends EventEmitter {
                 </div>
               </div>
             `,
-                  {
-                    ...mustacheHelpers,
-                    properties,
-                  }
+                    {
+                      ...mustacheHelpers,
+                      properties,
+                    }
+                  )
                 )
-              )
-              .addTo(this.map!);
-            if (popupLayerId) {
-              this.setActivePopup(popup, [popupLayerId]);
-            }
+                .addTo(this.map!)
+            );
           } else {
-            const popup = new Popup({ closeOnClick: true, closeButton: true })
-              .setLngLat(position)
-              .setHTML(
-                Mustache.render(interactivitySetting!.longTemplate || "", {
-                  ...mustacheHelpers,
-                  ...sublayerData[0].attributes,
-                })
-              )
-              .addTo(this.map!);
-            if (popupLayerId) {
-              this.setActivePopup(popup, [popupLayerId]);
-            }
+            this.setActivePopup(
+              new Popup({ closeOnClick: true, closeButton: true })
+                .setLngLat(position)
+                .setHTML(
+                  Mustache.render(interactivitySetting!.longTemplate || "", {
+                    ...mustacheHelpers,
+                    ...sublayerData[0].attributes,
+                  })
+                )
+                .addTo(this.map!)
+            );
           }
           break;
         }
@@ -998,9 +920,8 @@ export default class LayerInteractivityManager extends EventEmitter {
       return null;
     }
     let best: {
-      hit: NonNullable<Awaited<ReturnType<typeof fetchInaturalistUtfgrid>>>;
+      hit: Awaited<ReturnType<typeof fetchInaturalistUtfgrid>>;
       layerIndex: number;
-      sourceId: string;
     } | null = null;
 
     for (const config of this.inaturalistConfigs) {
@@ -1015,7 +936,7 @@ export default class LayerInteractivityManager extends EventEmitter {
       }
       const layerIndex = this.getInatLayerDrawIndex(config.sourceId);
       if (best === null || layerIndex > best.layerIndex) {
-        best = { hit, layerIndex, sourceId: config.sourceId };
+        best = { hit, layerIndex };
       }
     }
 
@@ -1100,4 +1021,13 @@ function sortFeaturesByLayer(
     );
     return bLayerIndex - aLayerIndex;
   });
+}
+
+function sameStringSet(a: string[], b: string[]) {
+  if (a.length !== b.length) {
+    return false;
+  }
+  const sortedA = [...a].sort();
+  const sortedB = [...b].sort();
+  return sortedA.every((value, index) => value === sortedB[index]);
 }
