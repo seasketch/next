@@ -154,9 +154,7 @@ export default function ProjectApp() {
             >
               <MapUIProvider
                 preferencesKey={`${slug}-homepage-ui`}
-                defaultShowScale={
-                  data?.project?.showScalebarByDefault || false
-                }
+                defaultShowScale={data?.project?.showScalebarByDefault || false}
               >
                 <MeasureControlContextProvider>
                   <SketchUIStateContextProvider
@@ -183,9 +181,7 @@ export default function ProjectApp() {
                                 showSidebar?.params["sidebar"] || ""
                               ]
                             }
-                            onClose={() =>
-                              history.replace(`/${routeSlug}/app`)
-                            }
+                            onClose={() => history.replace(`/${routeSlug}/app`)}
                             dark={dark}
                             hidden={
                               Boolean(!showSidebar) ||
@@ -215,126 +211,123 @@ export default function ProjectApp() {
                                     : ""
                                 }`}
                               >
-                                  <Route path={`/${routeSlug}/app/about`}>
-                                    <AboutPage />
-                                  </Route>
-                                  <Route path={`/${routeSlug}/app/maps`}>
-                                    <BasemapControl />
-                                  </Route>
-                                  <Route path={`/${routeSlug}/app/overlays`}>
-                                    <LazyOverlays
-                                      layers={dataLayers || []}
-                                      sources={dataSources || []}
-                                      items={
-                                        (tableOfContentsItems ||
-                                          []) as TableOfContentsItem[]
-                                      }
-                                    />
-                                  </Route>
-                                  <Route
-                                    children={(match) => {
-                                      return (
-                                        <LazyForums
-                                          hidden={!Boolean(match.match?.url)}
-                                          forumId={
-                                            match.match &&
-                                            match.match.params &&
-                                            "id" in match.match.params
-                                              ? parseInt(match.match.params.id)
-                                              : undefined
-                                          }
-                                          topicId={
-                                            match.match &&
-                                            match.match.params &&
-                                            "topicId" in match.match.params
-                                              ? parseInt(
-                                                  match.match.params.topicId
-                                                )
-                                              : undefined
-                                          }
-                                          postNewTopic={Boolean(
-                                            match.match?.path &&
-                                              /new-post/.test(match.match.path)
-                                          )}
-                                        />
-                                      );
-                                    }}
-                                    path={[
-                                      `/${routeSlug}/app/forums/:id/new-post`,
-                                      `/${routeSlug}/app/forums/:id/:topicId`,
-                                      `/${routeSlug}/app/forums/:id`,
-                                      `/${routeSlug}/app/forums`,
-                                    ]}
+                                <Route path={`/${routeSlug}/app/about`}>
+                                  <AboutPage />
+                                </Route>
+                                <Route path={`/${routeSlug}/app/maps`}>
+                                  <BasemapControl />
+                                </Route>
+                                <Route path={`/${routeSlug}/app/overlays`}>
+                                  <LazyOverlays
+                                    layers={dataLayers || []}
+                                    sources={dataSources || []}
+                                    items={
+                                      (tableOfContentsItems ||
+                                        []) as TableOfContentsItem[]
+                                    }
                                   />
-                                  <Route
-                                    children={(match) => (
-                                      <LazySketchingTools
-                                        hidden={!Boolean(match.match)}
+                                </Route>
+                                <Route
+                                  children={(match) => {
+                                    return (
+                                      <LazyForums
+                                        hidden={!Boolean(match.match?.url)}
+                                        forumId={
+                                          match.match &&
+                                          match.match.params &&
+                                          "id" in match.match.params
+                                            ? parseInt(match.match.params.id)
+                                            : undefined
+                                        }
+                                        topicId={
+                                          match.match &&
+                                          match.match.params &&
+                                          "topicId" in match.match.params
+                                            ? parseInt(
+                                                match.match.params.topicId
+                                              )
+                                            : undefined
+                                        }
+                                        postNewTopic={Boolean(
+                                          match.match?.path &&
+                                            /new-post/.test(match.match.path)
+                                        )}
                                       />
-                                    )}
-                                    path={`/${routeSlug}/app/sketches`}
-                                  />
-                                  <Route path={`/${routeSlug}/app/settings`}>
-                                    <LazyCacheSettingsPage />
-                                  </Route>
-                                  <Route
-                                    path={`/${routeSlug}/app/accessibility`}
-                                  >
-                                    <div className="space-y-2 mt-2">
+                                    );
+                                  }}
+                                  path={[
+                                    `/${routeSlug}/app/forums/:id/new-post`,
+                                    `/${routeSlug}/app/forums/:id/:topicId`,
+                                    `/${routeSlug}/app/forums/:id`,
+                                    `/${routeSlug}/app/forums`,
+                                  ]}
+                                />
+                                <Route
+                                  children={(match) => (
+                                    <LazySketchingTools
+                                      hidden={!Boolean(match.match)}
+                                    />
+                                  )}
+                                  path={`/${routeSlug}/app/sketches`}
+                                />
+                                <Route path={`/${routeSlug}/app/settings`}>
+                                  <LazyCacheSettingsPage />
+                                </Route>
+                                <Route path={`/${routeSlug}/app/accessibility`}>
+                                  <div className="space-y-2 mt-2">
+                                    <p className="text-sm">
+                                      <Trans ns="accessibility">
+                                        Our team is committed to making
+                                        SeaSketch accessible to all users,
+                                        including those with disabilities. We
+                                        strive to follow the Web Content
+                                        Accessibility Guidelines (WCAG) to
+                                        ensure a seamless experience,
+                                        particularly around keyboard navigation
+                                        and overall usability. While we
+                                        continually work to improve
+                                        accessibility, we welcome feedback from
+                                        our users. If you encounter any issues
+                                        or have suggestions, please contact us
+                                        at{" "}
+                                        <a
+                                          className="text-primary-500"
+                                          href="mailto:accessibility@seasketch.org"
+                                        >
+                                          accessibility@seasketch.org
+                                        </a>
+                                        .
+                                      </Trans>
+                                    </p>
+                                    <h3 className="pt-5">
+                                      <Trans ns="accessibility">
+                                        Recent Updates
+                                      </Trans>
+                                    </h3>
+                                    <div>
+                                      <h4 className="text-sm font-bold text-gray-700">
+                                        {new Date(
+                                          "Jan 29 2025"
+                                        ).toLocaleDateString()}
+                                      </h4>
                                       <p className="text-sm">
                                         <Trans ns="accessibility">
-                                          Our team is committed to making
-                                          SeaSketch accessible to all users,
-                                          including those with disabilities. We
-                                          strive to follow the Web Content
-                                          Accessibility Guidelines (WCAG) to
-                                          ensure a seamless experience,
-                                          particularly around keyboard
-                                          navigation and overall usability.
-                                          While we continually work to improve
-                                          accessibility, we welcome feedback
-                                          from our users. If you encounter any
-                                          issues or have suggestions, please
-                                          contact us at{" "}
-                                          <a
-                                            className="text-primary-500"
-                                            href="mailto:accessibility@seasketch.org"
-                                          >
-                                            accessibility@seasketch.org
-                                          </a>
-                                          .
+                                          We conducted a comprehensive review of
+                                          the SeaSketch interface to improve
+                                          accessibility. Users can now fully
+                                          navigate basemaps, overlay layers, and
+                                          discussion forums using only keyboard
+                                          input. Additionally, we have
+                                          implemented numerous ARIA attributes
+                                          to enhance compatibility with screen
+                                          readers and other assistive
+                                          technologies, ensuring a more
+                                          inclusive experience for all users.
                                         </Trans>
                                       </p>
-                                      <h3 className="pt-5">
-                                        <Trans ns="accessibility">
-                                          Recent Updates
-                                        </Trans>
-                                      </h3>
-                                      <div>
-                                        <h4 className="text-sm font-bold text-gray-700">
-                                          {new Date(
-                                            "Jan 29 2025"
-                                          ).toLocaleDateString()}
-                                        </h4>
-                                        <p className="text-sm">
-                                          <Trans ns="accessibility">
-                                            We conducted a comprehensive review
-                                            of the SeaSketch interface to
-                                            improve accessibility. Users can now
-                                            fully navigate basemaps, overlay
-                                            layers, and discussion forums using
-                                            only keyboard input. Additionally,
-                                            we have implemented numerous ARIA
-                                            attributes to enhance compatibility
-                                            with screen readers and other
-                                            assistive technologies, ensuring a
-                                            more inclusive experience for all
-                                            users.
-                                          </Trans>
-                                        </p>
-                                      </div>
                                     </div>
-                                  </Route>
+                                  </div>
+                                </Route>
                               </motion.div>
                             </Suspense>
                           </ProjectAppSidebar>

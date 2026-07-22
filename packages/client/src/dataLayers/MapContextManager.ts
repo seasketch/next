@@ -110,7 +110,10 @@ import {
 } from "./BasemapContext";
 import { LayerStateManager } from "./LayerStateManager";
 
-export type { LayerDataTableState, DataTableStatesMap } from "./dataTableLayerState";
+export type {
+  LayerDataTableState,
+  DataTableStatesMap,
+} from "./dataTableLayerState";
 
 export const MeasureEventTypes = {
   Started: "measure_started",
@@ -422,10 +425,7 @@ class MapContextManager extends EventEmitter {
    * Set or clear data-table user intent on a layer. Source of truth is
    * LayerState.dataTable (persisted with prefs / bookmarks).
    */
-  setLayerDataTable(
-    tocStableId: string,
-    state: LayerDataTableState | null
-  ) {
+  setLayerDataTable(tocStableId: string, state: LayerDataTableState | null) {
     if (!this.overlayStates.has(tocStableId)) {
       return;
     }
@@ -3592,8 +3592,7 @@ class MapContextManager extends EventEmitter {
         columnStats,
         table.joinColumn
       );
-      const allFeatureIds =
-        joinIds.length > 0 ? joinIds : Object.keys(values);
+      const allFeatureIds = joinIds.length > 0 ? joinIds : Object.keys(values);
       for (const featureId of allFeatureIds) {
         const stateValue =
           values[featureId] !== undefined
@@ -3603,9 +3602,7 @@ class MapContextManager extends EventEmitter {
           {
             source: sourceId,
             id: featureId,
-            ...(layer.sourceLayer
-              ? { sourceLayer: layer.sourceLayer }
-              : {}),
+            ...(layer.sourceLayer ? { sourceLayer: layer.sourceLayer } : {}),
           },
           { [DATA_TABLE_VALUE_PROPERTY]: stateValue }
         );
@@ -3749,8 +3746,7 @@ class MapContextManager extends EventEmitter {
     }
     this.setVisibleTocItems((bookmark.visibleDataLayers || []) as string[]);
     const dataTableStates =
-      (bookmark.dataTableStates as DataTableStatesMap | null | undefined) ||
-      {};
+      (bookmark.dataTableStates as DataTableStatesMap | null | undefined) || {};
     this.applyDataTableStates(dataTableStates);
     this.map.flyTo({
       ...bookmark.cameraOptions,
@@ -3976,8 +3972,7 @@ class MapContextManager extends EventEmitter {
                     // Show the bubble scale for any positive values, including
                     // a single unique value where scaleMin === scaleMax.
                     showValueScale:
-                      Boolean(dataTableValues) &&
-                      dataTableValues.scaleMax > 0,
+                      Boolean(dataTableValues) && dataTableValues.scaleMax > 0,
                   };
                   changes = true;
                 } else {
