@@ -1542,6 +1542,13 @@ class MapContextManager extends EventEmitter {
     });
   }
 
+  /**
+   * Persist the current map session so a reload can restore it.
+   *
+   * Writes overlay visibility (including data-table intent), camera, and
+   * sketch-class display overrides to localStorage under `preferencesKey`.
+   * Ephemeral fields like loading/error are omitted. No-op when no key is set.
+   */
   private updatePreferences() {
     const sketchClassLayerStates = cloneDeep(
       this.internalState.sketchClassLayerStates || {}
@@ -1587,6 +1594,7 @@ class MapContextManager extends EventEmitter {
     }
   }
 
+  /** Coalesce rapid map-state changes into a single preferences write. */
   private debouncedUpdatePreferences = debounce(() => {
     this.updatePreferences();
   }, 200);
