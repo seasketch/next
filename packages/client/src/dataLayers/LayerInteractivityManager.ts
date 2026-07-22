@@ -73,7 +73,8 @@ export default class LayerInteractivityManager extends EventEmitter {
     sourceId: string;
     layerLabel?: string;
   }[] = [];
-  private inaturalistPopup?: Popup;
+  /** The single open Mapbox popup, if any (vector, image, or iNaturalist). */
+  private activePopup?: Popup;
   private customSources: { [sourceId: string]: CustomGLSource<any> } = {};
   private tocItemLabels: { [stableId: string]: { label?: string } } = {};
   private selectedFeature?: mapboxgl.FeatureIdentifier;
@@ -217,13 +218,21 @@ export default class LayerInteractivityManager extends EventEmitter {
       // delete this.basemap;
     }
     this.basemap = basemap;
+    // Only one popup can be open; dismiss it whenever the interactive set changes
+    // (including turning a layer off).
+    if (
+      !sameStringSet(this.interactiveVectorLayerIds, newInteractiveVectorLayerIds) ||
+      !sameStringSet(this.interactiveImageLayerIds, newInteractiveImageLayerIds) ||
+      !sameStringSet(
+        this.inaturalistConfigs.map((c) => c.sourceId),
+        newInaturalistConfigs.map((c) => c.sourceId)
+      )
+    ) {
+      this.dismissOpenPopup();
+    }
     this.interactiveImageLayerIds = newInteractiveImageLayerIds;
     this.interactiveVectorLayerIds = newInteractiveVectorLayerIds;
     this.inaturalistConfigs = newInaturalistConfigs;
-    if (!this.inaturalistConfigs.length && this.inaturalistPopup) {
-      this.inaturalistPopup.remove();
-      this.inaturalistPopup = undefined;
-    }
     this.layers = newActiveLayers;
     this.imageSources = newActiveImageSources;
     this.map.off("mousemove", this.debouncedMouseMoveListener);
@@ -233,6 +242,26 @@ export default class LayerInteractivityManager extends EventEmitter {
       this.inaturalistConfigs.length > 0
     ) {
       this.map.on("mousemove", this.debouncedMouseMoveListener);
+    }
+  }
+
+  private setActivePopup(popup: Popup) {
+    this.activePopup?.remove();
+    this.activePopup = popup;
+    popup.once("close", () => {
+      if (this.activePopup === popup) {
+        this.activePopup = undefined;
+      }
+    });
+  }
+
+  private dismissOpenPopup() {
+    this.activePopup?.remove();
+    this.activePopup = undefined;
+    this.clearSidebarPopup();
+    if (this.popupAbortController) {
+      this.popupAbortController.abort();
+      delete this.popupAbortController;
     }
   }
 
@@ -385,13 +414,9 @@ export default class LayerInteractivityManager extends EventEmitter {
       const topVectorIndex = this.getLayerDrawIndex(top.layer.id);
 
       if (inatHit && inatDrawIndex >= topVectorIndex) {
-        if (this.inaturalistPopup) {
-          this.inaturalistPopup.remove();
-          this.inaturalistPopup = undefined;
-        }
-        this.inaturalistPopup = await renderInaturalistPopup(
-          this.map,
-          inatHit.hit!
+        this.clearSidebarPopup();
+        this.setActivePopup(
+          await renderInaturalistPopup(this.map, inatHit.hit!)
         );
         return;
       }
@@ -423,15 +448,16 @@ export default class LayerInteractivityManager extends EventEmitter {
           }
         );
         if (interactivitySetting.type === InteractivityType.Popup) {
-          this.updateUI({
-            sidebarPopupContent: undefined,
-            sidebarPopupTitle: undefined,
-          });
-          new Popup({ closeOnClick: true, closeButton: true })
-            .setLngLat([e.lngLat.lng, e.lngLat.lat])
-            .setHTML(content)
-            .addTo(this.map!);
+          this.clearSidebarPopup();
+          this.setActivePopup(
+            new Popup({ closeOnClick: true, closeButton: true })
+              .setLngLat([e.lngLat.lng, e.lngLat.lat])
+              .setHTML(content)
+              .addTo(this.map!)
+          );
         } else {
+          this.activePopup?.remove();
+          this.activePopup = undefined;
           const titleContent = Mustache.render(
             interactivitySetting.title || "",
             {
@@ -449,18 +475,16 @@ export default class LayerInteractivityManager extends EventEmitter {
         interactivitySetting &&
         interactivitySetting.type === InteractivityType.AllPropertiesPopup
       ) {
-        this.updateUI({
-          sidebarPopupContent: undefined,
-          sidebarPopupTitle: undefined,
-        });
+        this.clearSidebarPopup();
         const lyr = this.layers[top.layer.id];
         // @ts-ignore
         const layerLabel = (this.tocItemLabels || {})[lyr?.tocId]?.label;
-        new Popup({ closeOnClick: true, closeButton: true })
-          .setLngLat([e.lngLat.lng, e.lngLat.lat])
-          .setHTML(
-            Mustache.render(
-              `
+        this.setActivePopup(
+          new Popup({ closeOnClick: true, closeButton: true })
+            .setLngLat([e.lngLat.lng, e.lngLat.lat])
+            .setHTML(
+              Mustache.render(
+                `
               <div class="">
               ${
                 layerLabel
@@ -488,32 +512,26 @@ export default class LayerInteractivityManager extends EventEmitter {
                 </div>
               </div>
             `,
-              {
-                ...mustacheHelpers,
-                properties: top.properties,
-              }
+                {
+                  ...mustacheHelpers,
+                  properties: top.properties,
+                }
+              )
             )
-          )
-          .addTo(this.map!);
+            .addTo(this.map!)
+        );
         vectorPopupOpened = true;
       }
     } else {
-      this.updateUI({
-        sidebarPopupContent: undefined,
-        sidebarPopupTitle: undefined,
-      });
-      this.setSelectedFeature(undefined);
+      this.clearSidebarPopup();
     }
     let popupOpened = vectorPopupOpened;
 
     if (!popupOpened && this.inaturalistConfigs.length) {
       if (inatHit?.hit) {
-        if (this.inaturalistPopup) {
-          this.inaturalistPopup.remove();
-        }
-        this.inaturalistPopup = await renderInaturalistPopup(
-          this.map,
-          inatHit.hit
+        this.clearSidebarPopup();
+        this.setActivePopup(
+          await renderInaturalistPopup(this.map, inatHit.hit)
         );
         popupOpened = true;
       }
@@ -682,11 +700,12 @@ export default class LayerInteractivityManager extends EventEmitter {
             }
 
             const properties = sublayerData[0]?.attributes || {};
-            new Popup({ closeOnClick: true, closeButton: true })
-              .setLngLat(position)
-              .setHTML(
-                Mustache.render(
-                  `
+            this.setActivePopup(
+              new Popup({ closeOnClick: true, closeButton: true })
+                .setLngLat(position)
+                .setHTML(
+                  Mustache.render(
+                    `
                   ${
                     layerLabel
                       ? `<h3 class="font-medium p-1">${layerLabel}</h3>`
@@ -714,23 +733,26 @@ export default class LayerInteractivityManager extends EventEmitter {
                 </div>
               </div>
             `,
-                  {
-                    ...mustacheHelpers,
-                    properties,
-                  }
+                    {
+                      ...mustacheHelpers,
+                      properties,
+                    }
+                  )
                 )
-              )
-              .addTo(this.map!);
+                .addTo(this.map!)
+            );
           } else {
-            new Popup({ closeOnClick: true, closeButton: true })
-              .setLngLat(position)
-              .setHTML(
-                Mustache.render(interactivitySetting!.longTemplate || "", {
-                  ...mustacheHelpers,
-                  ...sublayerData[0].attributes,
-                })
-              )
-              .addTo(this.map!);
+            this.setActivePopup(
+              new Popup({ closeOnClick: true, closeButton: true })
+                .setLngLat(position)
+                .setHTML(
+                  Mustache.render(interactivitySetting!.longTemplate || "", {
+                    ...mustacheHelpers,
+                    ...sublayerData[0].attributes,
+                  })
+                )
+                .addTo(this.map!)
+            );
           }
           break;
         }
@@ -999,4 +1021,13 @@ function sortFeaturesByLayer(
     );
     return bLayerIndex - aLayerIndex;
   });
+}
+
+function sameStringSet(a: string[], b: string[]) {
+  if (a.length !== b.length) {
+    return false;
+  }
+  const sortedA = [...a].sort();
+  const sortedB = [...b].sort();
+  return sortedA.every((value, index) => value === sortedB[index]);
 }
