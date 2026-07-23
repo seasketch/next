@@ -290,6 +290,7 @@ export class DataTableQueryManager {
             {
               loading: false,
               scaledValue: value !== null ? scaleValue(value) : null,
+              rawValue: value,
             }
           );
         }
