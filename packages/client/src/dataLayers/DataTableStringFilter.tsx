@@ -109,6 +109,8 @@ export default function DataTableStringFilter({
   const [mode, setMode] = useState<StringFilterMode>(parsed.mode);
   const [selected, setSelected] = useState<string[]>(parsed.selected);
   const searchRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const selectedOptionRef = useRef<HTMLButtonElement>(null);
   const pendingTypeRef = useRef("");
 
   const allValues = useMemo(
@@ -124,6 +126,14 @@ export default function DataTableStringFilter({
     return allValues.filter((value) => value.toLowerCase().includes(q));
   }, [allValues, query]);
 
+  /** First selected value in list order — used to scroll into view on open. */
+  const scrollTargetValue = useMemo(() => {
+    if (mode !== "value" || selected.length === 0) {
+      return undefined;
+    }
+    return filteredValues.find((value) => selected.includes(value));
+  }, [filteredValues, mode, selected]);
+
   useEffect(() => {
     if (!open) {
       setMulti(parsed.multi);
@@ -138,11 +148,25 @@ export default function DataTableStringFilter({
     if (!open) {
       return;
     }
+    // Wait for the popover list to lay out, then focus search and bring the
+    // current selection into view (important for long lists like years).
     const frame = window.requestAnimationFrame(() => {
       searchRef.current?.focus();
       if (pendingTypeRef.current) {
         setQuery(pendingTypeRef.current);
         pendingTypeRef.current = "";
+        return;
+      }
+      const list = listRef.current;
+      const item = selectedOptionRef.current;
+      if (list && item) {
+        // Scroll only the options list — avoid scrolling the map behind.
+        const itemOffset =
+          item.getBoundingClientRect().top -
+          list.getBoundingClientRect().top +
+          list.scrollTop;
+        list.scrollTop =
+          itemOffset - list.clientHeight / 2 + item.clientHeight / 2;
       }
     });
     return () => window.cancelAnimationFrame(frame);
@@ -266,7 +290,9 @@ export default function DataTableStringFilter({
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder={t("Search...")}
+                placeholder={t("Search {{count}} options...", {
+                  count: allValues.length,
+                })}
                 className="w-full rounded border border-gray-200 bg-gray-50 pl-7 pr-2 py-1 text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-0 focus:border-gray-300 focus-visible:ring-1 focus-visible:ring-primary-500 focus-visible:border-primary-500"
               />
             </div>
@@ -280,7 +306,7 @@ export default function DataTableStringFilter({
             </div>
           )}
 
-          <div className="max-h-48 overflow-y-auto py-1">
+          <div ref={listRef} className="max-h-48 overflow-y-auto py-1">
             {filteredValues.length === 0 ? (
               <p className="px-3 py-2 text-xs text-gray-400 italic">
                 {t("No matching values")}
@@ -291,6 +317,9 @@ export default function DataTableStringFilter({
                 return (
                   <button
                     key={value}
+                    ref={
+                      value === scrollTargetValue ? selectedOptionRef : undefined
+                    }
                     type="button"
                     className={clsx(
                       "w-full flex items-center gap-2 px-2.5 py-1.5 text-left text-xs hover:bg-gray-50",

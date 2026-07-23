@@ -526,6 +526,60 @@ class MapContextManager extends EventEmitter {
   }
 
   /**
+   * Active data-table proportional-symbol layers for hover value tooltips.
+   * Consumed by LayerInteractivityManager via MapUIContext.
+   */
+  getDataTableInteractiveLayers(): {
+    glLayerId: string;
+    sourceId: string;
+    sourceLayer?: string;
+    column: string;
+    op: string;
+  }[] {
+    const out: {
+      glLayerId: string;
+      sourceId: string;
+      sourceLayer?: string;
+      column: string;
+      op: string;
+    }[] = [];
+    for (const tocStableId of this.dataTableActiveTocIds) {
+      const overlayState = this.overlayStates.getRaw(tocStableId);
+      if (
+        !overlayState?.dataTable?.stableId ||
+        !overlayState.visible ||
+        overlayState.hidden
+      ) {
+        continue;
+      }
+      const activation =
+        this.resolveDataTableVisualizationSettings(tocStableId);
+      if (!activation?.query.column || !activation.query.op) {
+        continue;
+      }
+      const layer = this.layers[tocStableId];
+      if (!layer) {
+        continue;
+      }
+      const op = Array.isArray(activation.query.op)
+        ? activation.query.op[0]
+        : activation.query.op;
+      const sourceLayer =
+        this.archivedSource && this.archivedSource.dataLayerId === layer.id
+          ? this.archivedSource.sourceLayer || undefined
+          : layer.sourceLayer || undefined;
+      out.push({
+        glLayerId: idForLayer(layer, 0),
+        sourceId: this.overlayStates.prefixedSourceId(layer.dataSourceId),
+        sourceLayer,
+        column: activation.query.column,
+        op,
+      });
+    }
+    return out;
+  }
+
+  /**
    * Drive data-table queries / feature-state from LayerState.dataTable.
    * Style computation stays pure — this is the side-effect path.
    *
