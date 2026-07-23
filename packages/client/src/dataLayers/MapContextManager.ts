@@ -50,10 +50,6 @@ import { ApolloClient, NormalizedCacheObject } from "@apollo/client";
 import { compileLegendFromGLStyleLayers } from "./legends/compileLegend";
 import {
   DataTableAggregation,
-  DataTableQueryResultGroup,
-  DataTableQuerySettings,
-  buildDataTableQuerySearchParams,
-  parseDataTableQueryGroups,
   resolveDataTableVisualizationSettings,
 } from "./dataTableQueryApi";
 import {
@@ -74,6 +70,7 @@ import {
   DATA_TABLE_PAINT_TRANSITION,
   DATA_TABLE_VALUE_PROPERTY,
   DATA_TABLE_ZERO_FILL_OPACITY,
+  DATA_TABLE_ZERO_SENTINEL,
   DATA_TABLE_NO_DATA_COLOR,
   buildDataTableCircleRadiusExpression,
   buildDataTableValueExpression,
@@ -110,6 +107,10 @@ import {
   OptionalBasemapLayerValue,
 } from "./BasemapContext";
 import { LayerStateManager } from "./LayerStateManager";
+import {
+  DataTableQueryManager,
+  ResolvedDataTableVisualizationSettings,
+} from "./DataTableQueryManager";
 
 export type {
   LayerDataTableState,
@@ -142,12 +143,6 @@ const graphqlURL = new URL(
 );
 
 const STALE_CUSTOM_SOURCE_SIZE = 3;
-
-/** Catalog row + admin-resolved query, derived on demand from LayerState.dataTable. */
-type ResolvedDataTableVisualizationSettings = {
-  table: ClientOverlayDataTableFragment;
-  query: DataTableQuerySettings;
-};
 
 export const BASE_SERVER_ENDPOINT = `${graphqlURL.protocol}//${graphqlURL.host}`;
 
@@ -344,6 +339,12 @@ class MapContextManager extends EventEmitter {
     };
   } = {};
 
+  private dataTableQueryManager: DataTableQueryManager;
+  /** tocStableIds with LayerState.dataTable intent — keeps sync O(active). */
+  private dataTableActiveTocIds = new Set<string>();
+  /** Dedupes stacked `idle` listeners for data-table feature-state sync. */
+  private dataTableFeatureStateSyncIdleQueued = false;
+
   constructor(
     initialState: MapContextInterface,
     initialSketchState: SketchLayerContextState,
@@ -388,6 +389,18 @@ class MapContextManager extends EventEmitter {
     // vice-versa).
     this.overlayStates.on("stateChanged", this.onOverlayStateChanged);
     this.sketchStates.on("stateChanged", this.onSketchStateChanged);
+    this.dataTableQueryManager = new DataTableQueryManager(
+      this.mapAccessToken ?? null
+    );
+    this.dataTableQueryManager.setOnLegendSummaryChange(() => {
+      this.updateLegends();
+    });
+    // Seed from restored preferences / initial layer states.
+    for (const tocStableId of this.overlayStates.keys()) {
+      if (this.overlayStates.getRaw(tocStableId)?.dataTable?.stableId) {
+        this.dataTableActiveTocIds.add(tocStableId);
+      }
+    }
   }
 
   getCustomGLSource(sourceId: number) {
@@ -424,12 +437,20 @@ class MapContextManager extends EventEmitter {
     }
     if (state === null || !state.stableId) {
       this.overlayStates.patch(tocStableId, { dataTable: undefined });
+      this.dataTableActiveTocIds.delete(tocStableId);
+      const layer = this.layers[tocStableId];
+      if (layer) {
+        this.dataTableQueryManager.clearLegendSummary(
+          this.overlayStates.prefixedSourceId(layer.dataSourceId)
+        );
+      }
     } else {
       this.overlayStates.patch(tocStableId, {
         dataTable: { ...state },
       });
+      this.dataTableActiveTocIds.add(tocStableId);
     }
-    // this.syncActivatedDataTablesFromLayerStates();
+    this.scheduleDataTableFeatureStateSync();
     this.debouncedUpdateStyle();
     this.debouncedUpdatePreferences();
     this.updateLegends();
@@ -443,14 +464,16 @@ class MapContextManager extends EventEmitter {
   applyDataTableStates(dataTableStates: DataTableStatesMap | null | undefined) {
     const states = dataTableStates || {};
     // Bookmark apply must turn off data tables that aren't in the map.
-    // Only layers that already carry dataTable intent need clearing.
-    for (const tocStableId of this.overlayStates.keys()) {
-      const overlayState = this.overlayStates.getRaw(tocStableId)?.dataTable;
-      if (!overlayState) {
-        continue;
-      }
+    for (const tocStableId of [...this.dataTableActiveTocIds]) {
       if (!states[tocStableId]?.stableId) {
         this.overlayStates.patch(tocStableId, { dataTable: undefined });
+        this.dataTableActiveTocIds.delete(tocStableId);
+        const layer = this.layers[tocStableId];
+        if (layer) {
+          this.dataTableQueryManager.clearLegendSummary(
+            this.overlayStates.prefixedSourceId(layer.dataSourceId)
+          );
+        }
       }
     }
     for (const [tocStableId, next] of Object.entries(states)) {
@@ -460,10 +483,103 @@ class MapContextManager extends EventEmitter {
       this.overlayStates.patch(tocStableId, {
         dataTable: { ...next },
       });
+      this.dataTableActiveTocIds.add(tocStableId);
     }
+    this.scheduleDataTableFeatureStateSync();
     this.debouncedUpdateStyle();
     this.debouncedUpdatePreferences();
     this.updateLegends();
+  }
+
+  /**
+   * Idempotent apply path plus a follow-up on the next map `idle`.
+   *
+   * Important: if the map is *already* idle when we register `once("idle")`,
+   * Mapbox will not fire until it becomes busy again — so we also sync
+   * immediately and once more after the next paint when the style is loaded.
+   * That covers reload races where the TOC catalog / sources arrive after the
+   * first style settle, and style-hash early returns that never call setStyle.
+   */
+  private scheduleDataTableFeatureStateSync() {
+    this.syncDataTableFeatureStates();
+    if (!this.map) {
+      return;
+    }
+    const map = this.map;
+    if (!this.dataTableFeatureStateSyncIdleQueued) {
+      this.dataTableFeatureStateSyncIdleQueued = true;
+      map.once("idle", () => {
+        this.dataTableFeatureStateSyncIdleQueued = false;
+        if (this.map === map) {
+          this.syncDataTableFeatureStates();
+        }
+      });
+    }
+    // Already-idle maps never re-emit `idle` until something else dirties
+    // them. Retry once the current frame finishes if the style is ready.
+    requestAnimationFrame(() => {
+      if (this.map !== map || !map.isStyleLoaded()) {
+        return;
+      }
+      this.syncDataTableFeatureStates();
+    });
+  }
+
+  /**
+   * Drive data-table queries / feature-state from LayerState.dataTable.
+   * Style computation stays pure — this is the side-effect path.
+   *
+   * Only iterates layers with active data-table intent (not the full TOC).
+   * After style updates, reconciles applied markers against the live map:
+   * style diffs often keep feature-state on reused sources; only rebuilds
+   * that drop state (or missing sources) trigger a re-fetch via browser cache.
+   */
+  private syncDataTableFeatureStates() {
+    if (!this.map || this.dataTableActiveTocIds.size === 0) {
+      return;
+    }
+    for (const tocStableId of this.dataTableActiveTocIds) {
+      if (!this.overlayStates.getRaw(tocStableId)?.dataTable?.stableId) {
+        this.dataTableActiveTocIds.delete(tocStableId);
+        continue;
+      }
+      const activation =
+        this.resolveDataTableVisualizationSettings(tocStableId);
+      if (
+        !activation?.query.column ||
+        !activation.query.op ||
+        !activation.table.joinColumn ||
+        !activation.table.queryUrl
+      ) {
+        continue;
+      }
+      const layer = this.layers[tocStableId];
+      if (!layer) {
+        continue;
+      }
+      const sourceId = this.overlayStates.prefixedSourceId(layer.dataSourceId);
+      const sourceLayer =
+        this.archivedSource && this.archivedSource.dataLayerId === layer.id
+          ? this.archivedSource.sourceLayer || undefined
+          : layer.sourceLayer || undefined;
+      // Drop stale "applied" markers when the source/state didn't survive.
+      this.dataTableQueryManager.reconcileAppliedState(sourceId, sourceLayer);
+      if (!this.map.getSource(sourceId)) {
+        // Source not on the map yet (style still building). A scheduled
+        // idle / rAF retry will pick this up once sources exist.
+        continue;
+      }
+      const uuid = extractTilesUuidFromUrl(activation.table.queryUrl);
+      const requiresToken = uuid
+        ? this.hostedUuidNeedsMapAccessToken(uuid)
+        : false;
+      void this.dataTableQueryManager.applyFeatureState(
+        sourceId,
+        sourceLayer,
+        activation,
+        requiresToken
+      );
+    }
   }
 
   /**
@@ -500,233 +616,6 @@ class MapContextManager extends EventEmitter {
       },
     };
   }
-
-  // private clearDataTableEngineState(tocStableId: string) {
-  //   this.clearActivatedDataTableFeatureState(tocStableId);
-  //   delete this.activatedDataTableValues[tocStableId];
-  //   delete this.activatedDataTableLoading[tocStableId];
-  //   delete this.activatedDataTableRequests[tocStableId];
-  //   this.removeActivatedDataTableSourceListener(tocStableId);
-  // }
-
-  /**
-   * After LayerState.dataTable or the TOC catalog changes: drop stale intent,
-   * clear engine state for inactive layers, and (re)start queries.
-   *
-   * Important: do **not** clear persisted dataTable intent while the TOC
-   * catalog is still loading. Only drop dataTable once we have the layer's
-   * catalog entry and the stableId is absent from its table list.
-   */
-  // private syncActivatedDataTablesFromLayerStates() {
-  //   for (const tocStableId of this.overlayStates.keys()) {
-  //     const dataTable = this.overlayStates.getRaw(tocStableId)?.dataTable;
-  //     if (!dataTable?.stableId) {
-  //       this.clearDataTableEngineState(tocStableId);
-  //       continue;
-  //     }
-  //     const tocItem = this.tocItems[tocStableId];
-  //     if (!tocItem || tocItem.overlayDataTables === undefined) {
-  //       // Catalog not ready — keep intent, don't fetch yet.
-  //       continue;
-  //     }
-  //     const table = tocItem.overlayDataTables.find(
-  //       (entry) => entry.stableId === dataTable.stableId
-  //     );
-  //     if (!table) {
-  //       this.overlayStates.patch(tocStableId, { dataTable: undefined });
-  //       this.clearDataTableEngineState(tocStableId);
-  //       continue;
-  //     }
-  //     const activation = this.resolveDataTableActivation(tocStableId);
-  //     if (!activation?.query.column || !activation.query.op) {
-  //       continue;
-  //     }
-  //     const nextQueryKey = this.dataTableQueryKey(
-  //       tocStableId,
-  //       activation.table,
-  //       activation.query
-  //     );
-  //     if (
-  //       this.activatedDataTableValues[tocStableId]?.queryKey !== nextQueryKey
-  //     ) {
-  //       // Mark loading *before* style rebuild so gray paint lands in the
-  //       // same pass as the query start.
-  //       this.activatedDataTableLoading[tocStableId] = true;
-  //     }
-  //   }
-  //   // Drop engine state for layers no longer present / no longer activated.
-  //   for (const tocStableId of Object.keys(this.activatedDataTableValues)) {
-  //     if (!this.overlayStates.getRaw(tocStableId)?.dataTable?.stableId) {
-  //       this.clearDataTableEngineState(tocStableId);
-  //     }
-  //   }
-  //   for (const tocStableId of Object.keys(this.activatedDataTableLoading)) {
-  //     if (!this.overlayStates.getRaw(tocStableId)?.dataTable?.stableId) {
-  //       this.clearDataTableEngineState(tocStableId);
-  //     }
-  //   }
-
-  //   const anyLoading = Object.values(this.activatedDataTableLoading).some(
-  //     Boolean
-  //   );
-  //   if (anyLoading) {
-  //     void this.updateStyle();
-  //   } else {
-  //     this.debouncedUpdateStyle();
-  //   }
-  //   void this.updateLegends();
-  //   void this.updateActivatedDataTableFeatureStates();
-  // }
-
-  // private dataTableQueryKey(
-  //   tocStableId: string,
-  //   table: ClientOverlayDataTableFragment,
-  //   query: DataTableQuerySettings
-  // ) {
-  //   return JSON.stringify({
-  //     tocStableId,
-  //     tableStableId: table.stableId,
-  //     queryUrl: table.queryUrl,
-  //     joinColumn: table.joinColumn,
-  //     query,
-  //   });
-  // }
-
-  private dataTableQueryUrl(
-    table: ClientOverlayDataTableFragment,
-    query: DataTableQuerySettings
-  ) {
-    if (!table.queryUrl || !query.op) {
-      return undefined;
-    }
-    const url = new URL(table.queryUrl);
-    const params = buildDataTableQuerySearchParams({
-      ...query,
-      groupBy: table.joinColumn,
-    });
-    params.set("f", "json");
-    url.search = params.toString();
-    return withHostedAuthParams(url.toString(), {
-      accessToken: this.mapAccessToken,
-    });
-  }
-
-  private setActivatedDataTableLoading(tocStableId: string, loading: boolean) {
-    const currentlyLoading = Boolean(
-      this.activatedDataTableLoading[tocStableId]
-    );
-    if (currentlyLoading === loading) {
-      return;
-    }
-    if (loading) {
-      this.activatedDataTableLoading[tocStableId] = true;
-    } else {
-      delete this.activatedDataTableLoading[tocStableId];
-    }
-    // Loading appearance is part of the computed GL style (see
-    // dataTableCircleLayer). Apply immediately when entering loading so a
-    // fast fetch can't coalesce away the gray state via debouncedUpdateStyle.
-    if (loading) {
-      void this.updateStyle();
-    } else {
-      this.debouncedUpdateStyle();
-    }
-  }
-
-  // private async fetchActivatedDataTableValues(
-  //   tocStableId: string,
-  //   table: ClientOverlayDataTableFragment,
-  //   query: DataTableQuerySettings
-  // ) {
-  //   const queryUrl = this.dataTableQueryUrl(table, query);
-  //   if (!queryUrl) {
-  //     this.clearDataTableEngineState(tocStableId);
-  //     return;
-  //   }
-  //   const queryKey = this.dataTableQueryKey(tocStableId, table, query);
-  //   const cached = this.activatedDataTableValues[tocStableId];
-  //   if (cached?.queryKey === queryKey) {
-  //     this.setActivatedDataTableLoading(tocStableId, false);
-  //     this.scheduleActivatedDataTableFeatureStateApply(tocStableId);
-  //     return;
-  //   }
-  //   if (this.activatedDataTableRequests[tocStableId] === queryKey) {
-  //     return;
-  //   }
-  //   this.activatedDataTableRequests[tocStableId] = queryKey;
-  //   // Keep previous feature-state values while loading; style rebuild picks
-  //   // up gray/faded paint from activatedDataTableLoading.
-  //   this.setActivatedDataTableLoading(tocStableId, true);
-  //   // A newer request or deactivation replaces/clears the entry in
-  //   // activatedDataTableRequests; treat this response as superseded then.
-  //   const isCurrent = () =>
-  //     this.activatedDataTableRequests[tocStableId] === queryKey;
-  //   try {
-  //     const response = await fetch(queryUrl, {
-  //       headers: { accept: "application/json" },
-  //     });
-  //     if (!isCurrent()) {
-  //       return;
-  //     }
-  //     if (!response.ok) {
-  //       throw new Error(`Data table query failed (${response.status})`);
-  //     }
-  //     const json = (await response.json()) as {
-  //       groups?: DataTableQueryResultGroup[];
-  //     };
-  //     if (!isCurrent()) {
-  //       return;
-  //     }
-  //     const parsed = parseDataTableQueryGroups(
-  //       json.groups,
-  //       table.joinColumn,
-  //       query.op
-  //     );
-  //     this.activatedDataTableValues[tocStableId] = {
-  //       queryKey,
-  //       ...parsed,
-  //     };
-  //     this.scheduleActivatedDataTableFeatureStateApply(tocStableId);
-  //     this.setActivatedDataTableLoading(tocStableId, false);
-  //     void this.updateLegends();
-  //   } catch (error) {
-  //     if (!isCurrent()) {
-  //       return;
-  //     }
-  //     console.error(error);
-  //     this.clearActivatedDataTableFeatureState(tocStableId);
-  //     delete this.activatedDataTableValues[tocStableId];
-  //     this.setActivatedDataTableLoading(tocStableId, false);
-  //   } finally {
-  //     if (this.activatedDataTableRequests[tocStableId] === queryKey) {
-  //       delete this.activatedDataTableRequests[tocStableId];
-  //     }
-  //   }
-  // }
-
-  // private async updateActivatedDataTableFeatureStates() {
-  //   const tocStableIds = new Set([
-  //     ...this.overlayStates.keys(),
-  //     ...Object.keys(this.activatedDataTableValues),
-  //   ]);
-  //   await Promise.all(
-  //     Array.from(tocStableIds).map(async (tocStableId) => {
-  //       const activation =
-  //         this.resolveDataTableVisualizationSettings(tocStableId);
-  //       if (!activation?.query.column || !activation.query.op) {
-  //         if (!this.overlayStates.getRaw(tocStableId)?.dataTable?.stableId) {
-  //           this.clearDataTableEngineState(tocStableId);
-  //         }
-  //         return;
-  //       }
-  //       await this.fetchActivatedDataTableValues(
-  //         tocStableId,
-  //         activation.table,
-  //         activation.query
-  //       );
-  //     })
-  //   );
-  // }
 
   private removeActivatedDataTableSourceListener(tocStableId: string) {
     const listener = this.activatedDataTableSourceListeners[tocStableId];
@@ -873,39 +762,6 @@ class MapContextManager extends EventEmitter {
     };
     this.activatedDataTableSourceListeners[tocStableId] = listener;
     this.map.on("sourcedata", listener);
-  }
-
-  private reapplyActivatedDataTableFeatureStates() {
-    for (const tocStableId of Object.keys(this.activatedDataTableValues)) {
-      if (this.resolveDataTableVisualizationSettings(tocStableId)) {
-        this.scheduleActivatedDataTableFeatureStateApply(tocStableId);
-      }
-    }
-  }
-
-  private clearActivatedDataTableFeatureState(tocStableId: string) {
-    this.removeActivatedDataTableSourceListener(tocStableId);
-    if (!this.map) {
-      return;
-    }
-    const layer = this.layers[tocStableId];
-    const appliedIds = this.activatedDataTableAppliedFeatureIds[tocStableId];
-    if (!layer || !appliedIds) {
-      delete this.activatedDataTableAppliedFeatureIds[tocStableId];
-      return;
-    }
-    const sourceId = this.overlayStates.prefixedSourceId(layer.dataSourceId);
-    for (const featureId of appliedIds) {
-      this.map.removeFeatureState(
-        {
-          source: sourceId,
-          id: featureId,
-          ...(layer.sourceLayer ? { sourceLayer: layer.sourceLayer } : {}),
-        },
-        DATA_TABLE_VALUE_PROPERTY
-      );
-    }
-    delete this.activatedDataTableAppliedFeatureIds[tocStableId];
   }
 
   private dataTableCircleLayer(
@@ -1122,7 +978,15 @@ class MapContextManager extends EventEmitter {
 
   setMapAccessToken(token: string | null | undefined) {
     const changed = this.mapAccessToken !== token;
+    if (changed) {
+      this.dataTableQueryManager.setMapAccessToken(token ?? null);
+    }
     this.mapAccessToken = token;
+    // Hosted query/column-stats apply bails when the token is missing. Retry
+    // once it arrives so a reload race can't leave the legend stuck loading.
+    if (changed && token) {
+      this.scheduleDataTableFeatureStateSync();
+    }
   }
 
   setHostedTileUuidsRequiringAuth(uuids: string[] | null | undefined) {
@@ -1307,6 +1171,7 @@ class MapContextManager extends EventEmitter {
       throw new Error("Both initialBounds and initialCameraOptions are empty");
     }
     this.map = new Map(mapOptions);
+    this.dataTableQueryManager.setMap(this.map);
 
     this.addSprites(sprites, this.map);
 
@@ -1679,6 +1544,9 @@ class MapContextManager extends EventEmitter {
       this.emit("sketchLayerIdsChanged", sketchLayerIds);
       const styleHash = md5(JSON.stringify(style));
       if (styleHash === this.internalState.styleHash) {
+        // Style is unchanged, but catalog / token / sources may have become
+        // ready since the last settle — still retry feature-state apply.
+        this.scheduleDataTableFeatureStateSync();
         return;
       }
       this.addSprites(sprites, this.map);
@@ -1734,11 +1602,9 @@ class MapContextManager extends EventEmitter {
         }
         this.emit("customSourcesChanged", sources);
         this.setState((prev) => ({ ...prev, styleHash }));
-        this.map.once("idle", () => {
-          // Re-apply feature-state after setStyle clears it. Do not re-run
-          // queries here — that would fight the loading state machine.
-          this.reapplyActivatedDataTableFeatureStates();
-        });
+        // Style diffs may preserve feature-state on reused sources. Sync
+        // reconciles markers and only re-fetches when state was actually lost.
+        this.scheduleDataTableFeatureStateSync();
       };
       if (!this.mapIsLoaded) {
         setTimeout(update, 20);
@@ -2341,25 +2207,12 @@ class MapContextManager extends EventEmitter {
                 source.id
               );
 
-              // private dataTablePromoteId(tocStableId: string, sourceLayer?: string | null) {
-              //   const table =
-              //     this.resolveDataTableVisualizationSettings(tocStableId)?.table;
-              //   if (!table?.overlayJoinColumn) {
-              //     return undefined;
-              //   }
-              //   return sourceLayer
-              //     ? { [sourceLayer]: table.overlayJoinColumn }
-              //     : table.overlayJoinColumn;
-              // }
-
               let dataTableVisualizationSettings =
                 this.resolveDataTableVisualizationSettings(layerId);
 
               if (!dataTableVisualizationSettings?.table.joinColumn) {
                 dataTableVisualizationSettings = undefined;
               }
-
-              console.log({ dataTableVisualizationSettings });
 
               const promoteId =
                 dataTableVisualizationSettings?.table.overlayJoinColumn;
@@ -2600,6 +2453,9 @@ class MapContextManager extends EventEmitter {
                     ? this.archivedSource.sourceLayer || undefined
                     : layer.sourceLayer || undefined
                   : undefined;
+                /**
+                 * # Data Table proportional symbol layer calculation
+                 */
                 if (
                   dataTableVisualizationSettings &&
                   dataTableVisualizationSettings.query.column &&
@@ -2615,6 +2471,13 @@ class MapContextManager extends EventEmitter {
                     "!=",
                     ["typeof", valueExpression],
                     "number",
+                  ] as Expression;
+                  // Safe to compare numerically: every case chain checks
+                  // isNoData before isZero, so the value is a number here.
+                  const isZero = [
+                    "==",
+                    valueExpression,
+                    DATA_TABLE_ZERO_SENTINEL,
                   ] as Expression;
                   const isLoading = [
                     "boolean",
@@ -2634,54 +2497,54 @@ class MapContextManager extends EventEmitter {
                         "circle-color": [
                           "case",
                           isLoading,
-                          "#2563eb",
+                          DATA_TABLE_LOADING_COLOR,
                           isNoData,
-                          "#9ca3af",
-                          "#6b7280",
+                          DATA_TABLE_NO_DATA_COLOR,
+                          DATA_TABLE_ACTIVE_COLOR,
                         ],
                         "circle-opacity": [
                           "case",
                           isLoading,
-                          0.35,
+                          DATA_TABLE_LOADING_FILL_OPACITY,
                           isNoData,
-                          0.35,
-                          0.8,
+                          DATA_TABLE_NO_DATA_FILL_OPACITY,
+                          isZero,
+                          DATA_TABLE_ZERO_FILL_OPACITY,
+                          DATA_TABLE_CIRCLE_FILL_OPACITY,
                         ],
                         "circle-stroke-opacity": [
                           "case",
                           isLoading,
-                          0.35,
+                          DATA_TABLE_LOADING_STROKE_OPACITY,
                           isNoData,
-                          0.8,
+                          DATA_TABLE_CIRCLE_STROKE_OPACITY,
                           1,
                         ],
                         "circle-stroke-color": [
                           "case",
                           isNoData,
-                          "#9ca3af",
-                          "#2563eb",
+                          DATA_TABLE_NO_DATA_COLOR,
+                          DATA_TABLE_ACTIVE_COLOR,
                         ],
-                        "circle-stroke-width": ["case", isNoData, 2, 0],
+                        "circle-stroke-width": [
+                          "case",
+                          isNoData,
+                          2,
+                          isZero,
+                          2,
+                          0,
+                        ],
                         "circle-radius": buildDataTableCircleRadiusExpression({
                           // Radius math still needs a numeric stand-in for null.
                           valueExpression,
                           scaleMin: 0,
-                          scaleMax: 10,
+                          scaleMax: 1,
                           zoomDependent: true,
                           hideWhenMissing: false,
                         }),
                       },
                     },
                   ];
-                  // const dataTableLayer = this.dataTableCircleLayer(
-                  //   layerId,
-                  //   layer,
-                  //   overlaySourceKey,
-                  //   sourceLayer
-                  // );
-                  // if (dataTableLayer) {
-                  //   glLayers = [dataTableLayer];
-                  // }
                 }
                 if (
                   _staticOverlay &&
@@ -3108,6 +2971,11 @@ class MapContextManager extends EventEmitter {
       // Cleanup entries in overlayStates that no longer exist
       const validKeys = new Set(tocItems.map((i) => i.stableId));
       this.overlayStates.retainOnly(validKeys);
+      for (const id of [...this.dataTableActiveTocIds]) {
+        if (!validKeys.has(id)) {
+          this.dataTableActiveTocIds.delete(id);
+        }
+      }
       for (const stableId of this.overlayStates.keys()) {
         const layer = this.layers[stableId];
         if (layer) {
@@ -3116,12 +2984,16 @@ class MapContextManager extends EventEmitter {
             this.overlayStates.prefixedSourceId(layer.dataSourceId)
           );
         }
+        // Rebuild active set from restored LayerState (e.g. preferences).
+        if (this.overlayStates.getRaw(stableId)?.dataTable?.stableId) {
+          this.dataTableActiveTocIds.add(stableId);
+        }
       }
       this.debouncedUpdatePreferences();
     }
     // TOC catalog (including overlayDataTables) may have just arrived or
-    // changed — resolve LayerState.dataTable stableIds and (re)start queries.
-    // this.syncActivatedDataTablesFromLayerStates();
+    // changed — resolve LayerState.dataTable and (re)start queries.
+    this.scheduleDataTableFeatureStateSync();
     this.debouncedUpdateStyle();
     this.updateLegends();
     return;
@@ -3239,66 +3111,6 @@ class MapContextManager extends EventEmitter {
       this.internalState.digitizingLockedBy === id
     );
   }
-
-  // measure = () => {
-  //   if (this.interactivityManager) {
-  //     this.interactivityManager.pause();
-  //   }
-  //   this.emit(MeasureEventTypes.Started);
-  //   if (!this.map) {
-  //     throw new Error("Map not initialized");
-  //   }
-  //   if (this.MeasureControl) {
-  //     this.MeasureControl.destroy();
-  //   }
-  //   this.MeasureControl = new MeasureControl(this.map);
-  //   this.MeasureControl.on("update", (measureControlState: any) => {
-  //     this.setState((prev) => {
-  //       return {
-  //         ...prev,
-  //         measureControlState,
-  //       };
-  //     });
-  //   });
-  //   this.MeasureControl.start();
-  // };
-
-  // resetMeasurement = () => {
-  //   if (this.MeasureControl) {
-  //     this.MeasureControl.reset();
-  //   }
-  // };
-
-  // cancelMeasurement = () => {
-  //   this.MeasureControl?.destroy();
-  //   this.MeasureControl = undefined;
-  //   this.emit(MeasureEventTypes.Stopped);
-  //   this.setState((prev) => ({
-  //     ...prev,
-  //     measureControlState: undefined,
-  //   }));
-  //   if (this.interactivityManager) {
-  //     this.interactivityManager.resume();
-  //   }
-  // };
-
-  // pauseMeasurementTools = () => {
-  //   if (this.MeasureControl) {
-  //     this.MeasureControl.setPaused(true);
-  //   }
-  //   if (this.interactivityManager) {
-  //     this.interactivityManager.resume();
-  //   }
-  // };
-
-  // resumeMeasurementTools = () => {
-  //   if (this.MeasureControl) {
-  //     if (this.interactivityManager) {
-  //       this.interactivityManager.pause();
-  //     }
-  //     this.MeasureControl.setPaused(false);
-  //   }
-  // };
 
   private spritesById: { [id: string]: SpriteDetailsFragment } = {};
 
@@ -3964,7 +3776,6 @@ class MapContextManager extends EventEmitter {
                 );
                 const dataTableActivation =
                   this.resolveDataTableVisualizationSettings(id);
-                const dataTableValues = this.activatedDataTableValues[id];
                 const dataTableOp = dataTableActivation?.query.op
                   ? Array.isArray(dataTableActivation.query.op)
                     ? dataTableActivation.query.op[0]
@@ -3975,35 +3786,39 @@ class MapContextManager extends EventEmitter {
                 // controls live in that panel and pick a default numeric
                 // column from column-stats when admin constraints are empty.
                 if (dataTableActivation && dataTableActivation.table.stableId) {
+                  const sourceId = this.overlayStates.prefixedSourceId(
+                    layer.dataSourceId
+                  );
+                  const legendSummary =
+                    this.dataTableQueryManager.getLegendSummary(sourceId);
                   newLegendState[id] = {
                     id,
                     type: "DataTableLegendItem",
                     label: this.tocItems[layer.tocId]?.label || "",
                     tableOfContentsItemDetails,
                     overlayDataTables,
-                    loading: true,
+                    loading: legendSummary?.loading ?? true,
+                    error: legendSummary?.error,
                     tableStableId: dataTableActivation.table.stableId,
                     tableName: dataTableActivation.table.name,
                     column: dataTableActivation.query.column,
                     op: (dataTableOp || "mean") as DataTableAggregation,
                     min:
-                      dataTableValues &&
-                      dataTableValues.scaleMax > dataTableValues.scaleMin
-                        ? dataTableValues.scaleMin
-                        : dataTableValues?.scaleMax ??
-                          dataTableValues?.min ??
-                          0,
+                      legendSummary &&
+                      legendSummary.scaleMax > legendSummary.scaleMin
+                        ? legendSummary.scaleMin
+                        : legendSummary?.scaleMax ?? 0,
                     max:
-                      dataTableValues &&
-                      dataTableValues.scaleMax > dataTableValues.scaleMin
-                        ? dataTableValues.scaleMax
-                        : dataTableValues?.scaleMax ??
-                          (dataTableValues?.min ?? 0) + 1,
-                    hasZero: dataTableValues?.hasZero ?? false,
+                      legendSummary &&
+                      legendSummary.scaleMax > legendSummary.scaleMin
+                        ? legendSummary.scaleMax
+                        : legendSummary?.scaleMax ?? 1,
+                    hasZero: legendSummary?.hasZero ?? false,
                     // Show the bubble scale for any positive values, including
                     // a single unique value where scaleMin === scaleMax.
-                    showValueScale:
-                      Boolean(dataTableValues) && dataTableValues.scaleMax > 0,
+                    // Keep it during refetch (loading) so the legend dims the
+                    // stale scale instead of swapping layouts.
+                    showValueScale: (legendSummary?.scaleMax ?? 0) > 0,
                   };
                   changes = true;
                 } else {

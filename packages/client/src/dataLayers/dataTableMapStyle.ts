@@ -6,25 +6,33 @@ export const DATA_TABLE_VALUE_PROPERTY = "__dataTableValue";
 /**
  * Sentinel written to feature-state when a join site has no matching
  * table rows for the current filters (distinct from an explicit zero).
+ * Paint expressions treat non-numeric `scaledValue` as no-data.
  */
-export const DATA_TABLE_NO_DATA_VALUE = -1;
+export const DATA_TABLE_NO_DATA_VALUE = null;
 
 /**
- * Stand-in used in paint expressions when feature-state / get returns null
- * (feature not yet joined). Distinct from {@link DATA_TABLE_NO_DATA_VALUE}
- * so those features stay hidden instead of rendering as "no data".
+ * Stand-in used when feature-state / get returns null (feature not yet
+ * joined). Same null as {@link DATA_TABLE_NO_DATA_VALUE} in the scaledValue
+ * model — distinguish loading vs no-data via the `loading` feature-state.
  */
-export const DATA_TABLE_UNSET_VALUE = -2;
+export const DATA_TABLE_UNSET_VALUE = null;
 
 /**
- * Coalesce a possibly-null feature-state/get expression to a numeric
- * sentinel so Mapbox never evaluates `>` / `interpolate` on null.
+ * Coalesce a possibly-null feature-state/get expression. With null sentinels
+ * this is a no-op; kept for call sites that still wrap value expressions.
  */
 export function buildDataTableValueExpression(
   rawValueExpression: Expression
 ): Expression {
   return ["coalesce", rawValueExpression, DATA_TABLE_UNSET_VALUE] as Expression;
 }
+
+/**
+ * Sentinel written to `scaledValue` feature-state for a true zero value.
+ * Positive values scale 0–1 against scaleMin/scaleMax, so the smallest
+ * positive value also lands on 0 — zero needs its own marker.
+ */
+export const DATA_TABLE_ZERO_SENTINEL = -1;
 
 export const DATA_TABLE_ACTIVE_COLOR = "#2563eb";
 export const DATA_TABLE_NO_DATA_COLOR = "#9ca3af";
@@ -39,14 +47,16 @@ export const DATA_TABLE_LOADING_FILL_OPACITY = 0.35;
 export const DATA_TABLE_LOADING_STROKE_OPACITY = 0.25;
 
 /** Full-size radii used at high zoom (and in the legend). */
-export const DATA_TABLE_VALUE_MIN_RADIUS = 5;
+export const DATA_TABLE_VALUE_MIN_RADIUS = 10;
 export const DATA_TABLE_VALUE_MAX_RADIUS = 65;
-export const DATA_TABLE_ZERO_RADIUS = 4;
-/** No-data sites render at half the smallest positive-value symbol size. */
-export const DATA_TABLE_NO_DATA_RADIUS = DATA_TABLE_VALUE_MIN_RADIUS * 0.5;
+/** No-data sites render slightly smaller than the min positive-value symbol. */
+export const DATA_TABLE_NO_DATA_RADIUS = DATA_TABLE_VALUE_MIN_RADIUS * 0.9;
+/** Zero-value sites match the no-data footprint exactly, but in active blue. */
+export const DATA_TABLE_ZERO_RADIUS = DATA_TABLE_NO_DATA_RADIUS;
 
-export const DATA_TABLE_ZERO_FILL_OPACITY = 0.12;
-export const DATA_TABLE_NO_DATA_FILL_OPACITY = 0;
+/** Light fill shared by the no-data and zero-value symbols. */
+export const DATA_TABLE_NO_DATA_FILL_OPACITY = 0.35;
+export const DATA_TABLE_ZERO_FILL_OPACITY = DATA_TABLE_NO_DATA_FILL_OPACITY;
 
 export const DATA_TABLE_PAINT_TRANSITION = { duration: 450, delay: 0 };
 
@@ -105,28 +115,32 @@ function radiusForStop(
   maxRadius: number,
   hideWhenMissing: boolean
 ): Expression {
-  const zeroRadius = minRadius * 0.8;
-  const noDataRadius = minRadius * 0.5;
-  const isUnset = [
+  // Keep zoom-stop radii in the same ratio as the full-size legend constants.
+  const noDataRadius =
+    minRadius * (DATA_TABLE_NO_DATA_RADIUS / DATA_TABLE_VALUE_MIN_RADIUS);
+  const zeroRadius =
+    minRadius * (DATA_TABLE_ZERO_RADIUS / DATA_TABLE_VALUE_MIN_RADIUS);
+  // scaledValue is a number when present; null / missing feature-state is
+  // non-numeric. (UNSET and NO_DATA are both null in the current model.)
+  const isMissing = [
+    "!=",
+    ["typeof", valueExpression],
+    "number",
+  ] as Expression;
+  // True zeros carry the sentinel; the smallest positive value scales to 0,
+  // so a plain `== 0` check would misclassify it.
+  const isZero = [
     "==",
     valueExpression,
-    DATA_TABLE_UNSET_VALUE,
+    DATA_TABLE_ZERO_SENTINEL,
   ] as Expression;
-  const isNoData = [
-    "==",
-    valueExpression,
-    DATA_TABLE_NO_DATA_VALUE,
-  ] as Expression;
-  const isZero = ["==", valueExpression, 0] as Expression;
-  const isPositive = [">", valueExpression, 0] as Expression;
-  // Guarding unset/no-data/zero before interpolate avoids Mapbox warnings
-  // when feature-state is missing (null coalesced to UNSET).
+  const isPositive = [">=", valueExpression, 0] as Expression;
+  // Guard missing/zero before interpolate so Mapbox never runs `>` /
+  // interpolate on null.
   const sized = [
     "case",
-    isUnset,
-    0,
-    isNoData,
-    noDataRadius,
+    isMissing,
+    hideWhenMissing ? 0 : noDataRadius,
     isZero,
     zeroRadius,
     isPositive,
@@ -144,8 +158,9 @@ function radiusForStop(
   }
   return [
     "case",
-    ["any", isNoData, isZero, isPositive],
+    ["any", isZero, isPositive],
     sized,
+    // Missing / no-data: hidden when hideWhenMissing is set.
     0,
   ] as Expression;
 }
