@@ -52,7 +52,6 @@ export class DataTablesHandlerLambdaStack extends cdk.Stack {
         R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID!,
         R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY!,
         R2_TILES_BUCKET: process.env.R2_TILES_BUCKET!,
-        AWS_REGION: props.bucket.env.region,
         PGHOST: props.db.instanceEndpoint.hostname,
         PGUSER: "graphile",
         PGREGION: props.db.env.region,
