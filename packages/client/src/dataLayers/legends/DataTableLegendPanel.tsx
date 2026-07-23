@@ -22,7 +22,6 @@ import {
   useDataTableColumnStats,
 } from "../useDataTableColumnStats";
 import useCurrentProjectMetadata from "../../useCurrentProjectMetadata";
-import Spinner from "../../components/Spinner";
 import DataTableLegendBubble from "./DataTableLegendBubble";
 
 export default function DataTableLegendPanel({
@@ -214,13 +213,11 @@ export default function DataTableLegendPanel({
           >
             {tableName || table.name}
           </h3>
-          {error ? (
+          {error && (
             <ExclamationTriangleIcon
               className="w-3.5 h-3.5 flex-none text-red-500"
               aria-label={error}
             />
-          ) : (
-            loading && <Spinner mini className="flex-none opacity-70" />
           )}
           <button
             type="button"
