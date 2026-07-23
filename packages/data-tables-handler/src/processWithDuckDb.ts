@@ -1,4 +1,3 @@
-import duckdb from "duckdb";
 import * as path from "path";
 import {
   DataTablesColumnStats,
@@ -13,35 +12,10 @@ import {
   inferCsvColumnPlans,
   nullstrOption,
 } from "./inferCsvColumnPlans";
-
-function run(conn: duckdb.Connection, sql: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    conn.run(sql, (err) => (err ? reject(err) : resolve()));
-  });
-}
-
-function all<T>(conn: duckdb.Connection, sql: string): Promise<T[]> {
-  return new Promise((resolve, reject) => {
-    conn.all(sql, (err, rows) => (err ? reject(err) : resolve(rows as T[])));
-  });
-}
+import { all, run, withDuckDb } from "./duckDb";
 
 function escapePath(path: string): string {
   return path.replace(/'/g, "''");
-}
-
-/** Runs fn against a fresh in-memory DuckDB, always closing it afterwards. */
-async function withDuckDb<T>(
-  fn: (conn: duckdb.Connection) => Promise<T>,
-): Promise<T> {
-  const db = new duckdb.Database(":memory:");
-  const conn = db.connect();
-  try {
-    return await fn(conn);
-  } finally {
-    conn.close();
-    db.close();
-  }
 }
 
 function delimiterOption(delimiter: string): string {

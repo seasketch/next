@@ -53,7 +53,9 @@ export class DataTablesHandlerLambdaStack extends cdk.Stack {
         R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY!,
         R2_TILES_BUCKET: process.env.R2_TILES_BUCKET!,
         PGHOST: props.db.instanceEndpoint.hostname,
-        PGUSER: "graphile",
+        // Match SpatialUploadHandler: needs write access to project_background_jobs
+        // and execute on fail_overlay_data_table_upload (graphile cannot).
+        PGUSER: "admin",
         PGREGION: props.db.env.region,
         PGPORT: "5432",
         PGDATABASE: "seasketch",

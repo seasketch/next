@@ -6,18 +6,9 @@ exports.isNumericDuckDbType = isNumericDuckDbType;
 exports.decideNaNullHandling = decideNaNullHandling;
 exports.inferCsvColumnPlans = inferCsvColumnPlans;
 exports.buildTypedSelectSql = buildTypedSelectSql;
+const duckDb_1 = require("./duckDb");
 exports.CSV_NULL_STRINGS_BASE = ["", "N/A", "#N/A", "NULL", "null"];
 exports.CSV_NULL_STRINGS_WITH_NA = [...exports.CSV_NULL_STRINGS_BASE, "NA"];
-function run(conn, sql) {
-    return new Promise((resolve, reject) => {
-        conn.run(sql, (err) => (err ? reject(err) : resolve()));
-    });
-}
-function all(conn, sql) {
-    return new Promise((resolve, reject) => {
-        conn.all(sql, (err, rows) => (err ? reject(err) : resolve(rows)));
-    });
-}
 function nullstrOption(nullStrings) {
     return `nullstr=[${nullStrings.map((v) => `'${v.replace(/'/g, "''")}'`).join(", ")}]`;
 }
@@ -51,7 +42,7 @@ async function naLooksLikeValidCode(conn, quotedColumn, naLiteralCount) {
     if (naLiteralCount === 0) {
         return false;
     }
-    const freqRows = await all(conn, `SELECT
+    const freqRows = await (0, duckDb_1.all)(conn, `SELECT
       MAX(c)::INTEGER as max_c,
       MEDIAN(c)::DOUBLE as median_c
     FROM (
@@ -71,15 +62,15 @@ async function inferCsvColumnPlans(conn, csvPath, readCsvOptionsSuffix) {
     const escapedPath = csvPath.replace(/'/g, "''");
     const baseNullstr = nullstrOption(exports.CSV_NULL_STRINGS_BASE);
     const naNullstr = nullstrOption(exports.CSV_NULL_STRINGS_WITH_NA);
-    await run(conn, `CREATE OR REPLACE TEMP TABLE _csv_probe_strict AS SELECT * FROM read_csv('${escapedPath}', ${readCsvOptionsSuffix}, ${baseNullstr})`);
-    await run(conn, `CREATE OR REPLACE TEMP TABLE _csv_probe_na_null AS SELECT * FROM read_csv('${escapedPath}', ${readCsvOptionsSuffix}, ${naNullstr})`);
-    const strictSchema = await all(conn, `SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '_csv_probe_strict' ORDER BY ordinal_position`);
-    const naNullSchema = await all(conn, `SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '_csv_probe_na_null' ORDER BY ordinal_position`);
+    await (0, duckDb_1.run)(conn, `CREATE OR REPLACE TEMP TABLE _csv_probe_strict AS SELECT * FROM read_csv('${escapedPath}', ${readCsvOptionsSuffix}, ${baseNullstr})`);
+    await (0, duckDb_1.run)(conn, `CREATE OR REPLACE TEMP TABLE _csv_probe_na_null AS SELECT * FROM read_csv('${escapedPath}', ${readCsvOptionsSuffix}, ${naNullstr})`);
+    const strictSchema = await (0, duckDb_1.all)(conn, `SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '_csv_probe_strict' ORDER BY ordinal_position`);
+    const naNullSchema = await (0, duckDb_1.all)(conn, `SELECT column_name, data_type FROM information_schema.columns WHERE table_name = '_csv_probe_na_null' ORDER BY ordinal_position`);
     const naNullTypeByColumn = new Map(naNullSchema.map((col) => [col.column_name, col.data_type]));
     const plans = [];
     for (const col of strictSchema) {
         const quoted = quoteColumn(col.column_name);
-        const naLiteralRows = await all(conn, `SELECT COUNT(*)::INTEGER as count FROM _csv_probe_strict WHERE CAST(${quoted} AS VARCHAR) = 'NA'`);
+        const naLiteralRows = await (0, duckDb_1.all)(conn, `SELECT COUNT(*)::INTEGER as count FROM _csv_probe_strict WHERE CAST(${quoted} AS VARCHAR) = 'NA'`);
         const naLiteralCount = naLiteralRows[0]?.count ?? 0;
         const validNaCode = await naLooksLikeValidCode(conn, quoted, naLiteralCount);
         const decision = decideNaNullHandling(col.data_type, naNullTypeByColumn.get(col.column_name) || "VARCHAR", naLiteralCount, validNaCode);
@@ -91,8 +82,8 @@ async function inferCsvColumnPlans(conn, csvPath, readCsvOptionsSuffix) {
             console.log(`[data-tables-handler] preserving literal "NA" in column ${col.column_name} (${naLiteralCount} row(s); looks like a category code)`);
         }
     }
-    await run(conn, "DROP TABLE IF EXISTS _csv_probe_strict");
-    await run(conn, "DROP TABLE IF EXISTS _csv_probe_na_null");
+    await (0, duckDb_1.run)(conn, "DROP TABLE IF EXISTS _csv_probe_strict");
+    await (0, duckDb_1.run)(conn, "DROP TABLE IF EXISTS _csv_probe_na_null");
     return plans;
 }
 function buildTypedSelectSql(plans) {

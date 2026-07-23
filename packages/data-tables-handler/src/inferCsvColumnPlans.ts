@@ -1,4 +1,4 @@
-import duckdb from "duckdb";
+import { all, run, DuckDBConnection } from "./duckDb";
 
 export const CSV_NULL_STRINGS_BASE = ["", "N/A", "#N/A", "NULL", "null"];
 export const CSV_NULL_STRINGS_WITH_NA = [...CSV_NULL_STRINGS_BASE, "NA"];
@@ -8,18 +8,6 @@ export type CsvColumnPlan = {
   duckDbType: string;
   nullifyNa: boolean;
 };
-
-function run(conn: duckdb.Connection, sql: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    conn.run(sql, (err) => (err ? reject(err) : resolve()));
-  });
-}
-
-function all<T>(conn: duckdb.Connection, sql: string): Promise<T[]> {
-  return new Promise((resolve, reject) => {
-    conn.all(sql, (err, rows) => (err ? reject(err) : resolve(rows as T[])));
-  });
-}
 
 export function nullstrOption(nullStrings: string[]): string {
   return `nullstr=[${nullStrings.map((v) => `'${v.replace(/'/g, "''")}'`).join(", ")}]`;
@@ -64,7 +52,7 @@ export function decideNaNullHandling(
 }
 
 async function naLooksLikeValidCode(
-  conn: duckdb.Connection,
+  conn: DuckDBConnection,
   quotedColumn: string,
   naLiteralCount: number,
 ): Promise<boolean> {
@@ -94,7 +82,7 @@ async function naLooksLikeValidCode(
 }
 
 export async function inferCsvColumnPlans(
-  conn: duckdb.Connection,
+  conn: DuckDBConnection,
   csvPath: string,
   readCsvOptionsSuffix: string,
 ): Promise<CsvColumnPlan[]> {
