@@ -1,0 +1,31 @@
+{
+  "name": "data-tables-handler",
+  "version": "1.0.0",
+  "description": "Processes overlay-related CSV data table uploads to Parquet + column stats on R2. Intentionally omitted from lerna.json: the duckdb native dep compiles from source on unsupported Node ABIs and makes CI lerna bootstrap take ~40m. Install deps in this package directly (or via Docker). Track migration to @duckdb/node-api in https://github.com/seasketch/next/issues/971.",
+  "license": "BSD-3-Clause",
+  "main": "dist/handler.js",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "dev": "npx --yes tsx@4.19.3 watch server.ts",
+    "build:container": "docker build -f Dockerfile .. -t data-tables-handler:latest"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.758.0",
+    "@aws-sdk/lib-storage": "^3.758.0",
+    "@seasketch/geostats-types": "^1.0.0",
+    "aws-sdk": "^2.1234.0",
+    "bytes": "^3.1.2",
+    "duckdb": "^1.4.4",
+    "pg": "^8.8.0",
+    "tmp": "^0.2.1",
+    "typescript": "5.5.3"
+  },
+  "devDependencies": {
+    "@types/bytes": "^3.1.1",
+    "@types/node": "^18.11.4",
+    "@types/pg": "^8.6.5",
+    "@types/tmp": "^0.2.3",
+    "dotenv": "^16.0.3"
+  }
+}

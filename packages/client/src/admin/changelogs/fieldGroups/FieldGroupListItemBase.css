@@ -25,3 +25,7 @@
     0 20px 25px -5px rgba(17, 24, 39, 0.1),
     0 8px 10px -6px rgba(17, 24, 39, 0.1);
 }
+
+.change-log-data-table-version-menu {
+  pointer-events: auto;
+}

@@ -20,6 +20,10 @@ import {
   summary,
   valueText,
 } from "../changelogs/fieldGroups/FieldGroupListItemBase";
+import {
+  tableNameFromSummary,
+  tocItemIdFromMeta,
+} from "../changelogs/fieldGroups/dataTableSummary";
 import useProjectId from "../../useProjectId";
 import { CHANGE_LOG_INTRODUCTION_DATE } from "../changelogs/constants";
 import PublishSummarizedChangesPanel from "./PublishSummarizedChangesPanel";
@@ -112,6 +116,18 @@ export default function PublishTableOfContentsModal(props: {
         { title: item.title, isFolder: item.isFolder },
       ])
     );
+  }, [publishProject?.draftTableOfContentsItems]);
+  /** Active data-table id → name, for publish changelog titles. */
+  const dataTableNameById = useMemo(() => {
+    const next = new Map<number, string>();
+    for (const item of publishProject?.draftTableOfContentsItems || []) {
+      for (const table of item.overlayDataTables || []) {
+        if (table.name) {
+          next.set(table.id, table.name);
+        }
+      }
+    }
+    return next;
   }, [publishProject?.draftTableOfContentsItems]);
   /** TOC item ids whose current draft data source is tied to the Data Library (for changelog attribution). */
   const tocItemIdsWithDataLibrarySource = useMemo(() => {
@@ -306,6 +322,7 @@ export default function PublishTableOfContentsModal(props: {
               loading={loading}
               changeLogs={changeLogs}
               itemTitleById={itemTitleById}
+              dataTableNameById={dataTableNameById}
               tocItemIdsWithDataLibrarySource={tocItemIdsWithDataLibrarySource}
             />
           </div>
@@ -681,6 +698,7 @@ function AllChangesPanel({
   loading,
   changeLogs,
   itemTitleById,
+  dataTableNameById,
   tocItemIdsWithDataLibrarySource,
 }: {
   loading: boolean;
@@ -690,6 +708,7 @@ function AllChangesPanel({
     >["changeLogsSinceLastPublish"]
   >;
   itemTitleById: Map<number, { title: string; isFolder: boolean }>;
+  dataTableNameById: Map<number, string>;
   tocItemIdsWithDataLibrarySource: ReadonlySet<number>;
 }) {
   const { t } = useTranslation("admin:data");
@@ -746,7 +765,12 @@ function AllChangesPanel({
           <ChangeLogListItem
             key={changeLog.id}
             changeLog={changeLog}
-            itemTitle={titleForChangeLog(changeLog, itemTitleById, t)}
+            itemTitle={titleForChangeLog(
+              changeLog,
+              itemTitleById,
+              dataTableNameById,
+              t
+            )}
             last={index === changeLogs.length - 1}
             missingProfileLabel={
               changeLog.entityType === TOC_ENTITY_TYPE &&
@@ -768,8 +792,35 @@ function titleForChangeLog(
     >["changeLogsSinceLastPublish"]
   >[number],
   itemTitleById: Map<number, { title: string; isFolder: boolean }>,
+  dataTableNameById: Map<number, string>,
   fallback: (key: string) => string
 ) {
+  if (changeLog.entityType === "overlay_data_table") {
+    const tocItemId = tocItemIdFromMeta(changeLog.meta);
+    const overlayTitle =
+      tocItemId != null
+        ? itemTitleById.get(tocItemId)?.title ?? fallback("Unknown layer")
+        : fallback("Unknown layer");
+    const tableName =
+      tableNameFromSummary(summary(changeLog.toSummary)) ||
+      tableNameFromSummary(summary(changeLog.fromSummary)) ||
+      dataTableNameById.get(changeLog.entityId) ||
+      "";
+    if (!tableName) {
+      return overlayTitle;
+    }
+    return (
+      <span className="inline-flex h-6 min-w-0 items-center gap-1.5 align-middle leading-6">
+        <span className="min-w-0 truncate">{overlayTitle}</span>
+        {/* eslint-disable-next-line i18next/no-literal-string */}
+        <span className="flex-none text-gray-400" aria-hidden>
+          ·
+        </span>
+        <span className="min-w-0 truncate">{tableName}</span>
+      </span>
+    );
+  }
+
   if (changeLog.entityType !== "table_of_contents_items") {
     return undefined;
   }

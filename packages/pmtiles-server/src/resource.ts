@@ -38,6 +38,11 @@ export function normalizeObjectKey(pathOrKey: string): string | null {
   ) {
     return null;
   }
+  // ACL docs live in the same R2 bucket for Worker-side auth, but must never
+  // be HTTP-readable — they enumerate layer UUIDs and access rules.
+  if (key.split("/")[0].toLowerCase() === "acl") {
+    return null;
+  }
   return key;
 }
 

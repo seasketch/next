@@ -1,0 +1,158 @@
+# Lean, public-safe subset of OverlayDataTable fields for the map legend /
+# table of contents (ActivatedDataTableButton). Deliberately omits internal
+# remote paths that only make sense to admins.
+fragment ClientOverlayDataTable on OverlayDataTable {
+  id
+  stableId
+  name
+  version
+  rowCount
+  joinColumn
+  overlayJoinColumn
+  queryUrl
+  columnStatsUrl
+  visualizationColumns
+  visualizationOps
+  requiredFilterColumns
+}
+
+fragment OverlayDataTableDetails on OverlayDataTable {
+  id
+  stableId
+  name
+  version
+  joinColumn
+  overlayJoinColumn
+  rowCount
+  parquetRemote
+  columnStatsRemote
+  parquetUrl
+  columnStatsUrl
+  queryUrl
+  deletedAt
+  replacedById
+  createdAt
+  updatedAt
+  visualizationColumns
+  visualizationOps
+  requiredFilterColumns
+}
+
+query OverlayDataTableVisualizationMetadata($id: Int!) {
+  overlayDataTable(id: $id) {
+    id
+    queryUrl
+    columnStatsUrl
+    visualizationColumns
+    visualizationOps
+    requiredFilterColumns
+  }
+}
+
+query OverlayDataTableVisualizationMetadataForLayer($tocItemId: Int!) {
+  tableOfContentsItem(id: $tocItemId) {
+    id
+    overlayDataTables {
+      id
+      queryUrl
+      columnStatsUrl
+      visualizationColumns
+      visualizationOps
+      requiredFilterColumns
+    }
+  }
+}
+
+fragment OverlayDataTableUploadDetails on OverlayDataTableUpload {
+  id
+  tableOfContentsItemId
+  filename
+  contentType
+  processingOptions
+  overlayJoinColumn
+  errorDetails
+  presignedUploadUrl
+  replaceOverlayDataTableId
+  projectBackgroundJobId
+}
+
+mutation CreateOverlayDataTableUpload(
+  $tableOfContentsItemId: Int!
+  $filename: String!
+  $contentType: String!
+  $processingOptions: JSON
+  $replaceOverlayDataTableId: Int
+) {
+  createOverlayDataTableUpload(
+    input: {
+      tocItemId: $tableOfContentsItemId
+      filename: $filename
+      contentType: $contentType
+      processingOptions: $processingOptions
+      replaceOverlayDataTableId: $replaceOverlayDataTableId
+    }
+  ) {
+    overlayDataTableUpload {
+      ...OverlayDataTableUploadDetails
+    }
+    projectBackgroundJob {
+      ...JobDetails
+    }
+  }
+}
+
+mutation SubmitOverlayDataTableUpload($jobId: UUID!) {
+  submitOverlayDataTableUpload(input: { jobId: $jobId }) {
+    projectBackgroundJob {
+      id
+      state
+      progress
+      progressMessage
+    }
+  }
+}
+
+mutation RenameOverlayDataTable($id: Int!, $name: String!) {
+  renameOverlayDataTable(input: { tableId: $id, newName: $name }) {
+    overlayDataTable {
+      ...OverlayDataTableDetails
+    }
+  }
+}
+
+mutation SoftDeleteOverlayDataTable($id: Int!) {
+  softDeleteOverlayDataTable(input: { tableId: $id }) {
+    overlayDataTable {
+      id
+      deletedAt
+    }
+  }
+}
+
+mutation RollbackOverlayDataTableVersion($id: Int!) {
+  rollbackOverlayDataTableVersion(input: { tableId: $id }) {
+    overlayDataTable {
+      ...OverlayDataTableDetails
+    }
+  }
+}
+
+mutation SetOverlayDataTableVisualizationSettings(
+  $id: Int!
+  $visualizationColumns: [String]!
+  $visualizationOps: [String]!
+  $requiredFilterColumns: [String]!
+) {
+  setOverlayDataTableVisualizationSettings(
+    input: {
+      tableId: $id
+      visualizationColumns: $visualizationColumns
+      visualizationOps: $visualizationOps
+      requiredFilterColumns: $requiredFilterColumns
+    }
+  ) {
+    overlayDataTable {
+      ...OverlayDataTableDetails
+    }
+  }
+}

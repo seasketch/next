@@ -11,6 +11,8 @@ export function badgePopoverContentClassName(badgeKey: PublishBadgeKey): string 
       return "max-w-xs";
     case "comments":
       return "w-[30rem] max-w-[min(calc(100vw-1rem),30rem)]";
+    case "dataTables":
+      return "max-w-md";
     default:
       return "max-w-sm";
   }

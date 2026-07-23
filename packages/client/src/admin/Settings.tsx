@@ -992,6 +992,13 @@ function SuperUserSettings() {
   const [updateFeatureFlags, updateFeatureFlagsState] =
     useUpdateFeatureFlagsMutation({
       optimisticResponse: (input: UpdateFeatureFlagsMutationVariables) => {
+        const current = data?.project?.featureFlags;
+        const nextFlags =
+          input.flags &&
+          typeof input.flags === "object" &&
+          !Array.isArray(input.flags)
+            ? (input.flags as { [key: string]: boolean })
+            : {};
         return {
           __typename: "Mutation",
           updateFeatureFlags: {
@@ -1001,7 +1008,12 @@ function SuperUserSettings() {
               id: data!.project!.id,
               featureFlags: {
                 __typename: "FeatureFlags",
-                iNaturalistLayers: input.flags.iNaturalistLayers,
+                iNaturalistLayers:
+                  nextFlags.iNaturalistLayers ??
+                  current?.iNaturalistLayers ??
+                  false,
+                dataTables:
+                  nextFlags.dataTables ?? current?.dataTables ?? false,
               },
             },
           },
@@ -1235,6 +1247,30 @@ function SuperUserSettings() {
                 title={t("Enable iNaturalist Layers")}
                 description={t("Enable iNaturalist layers for this project.")}
               /> */}
+              <InputBlock
+                input={
+                  <Switch
+                    isToggled={Boolean(data?.project?.featureFlags?.dataTables)}
+                    onClick={(enabled) => {
+                      updateFeatureFlags({
+                        variables: {
+                          slug,
+                          flags: { dataTables: enabled },
+                        },
+                      });
+                    }}
+                  />
+                }
+                title={t("Enable Data Tables")}
+                description={t(
+                  "When enabled, project administrators can attach related data tables to layers and display them on the map. Alpha quality."
+                )}
+              />
+              {updateFeatureFlagsState.error && (
+                <p className="text-sm text-red-900">
+                  {updateFeatureFlagsState.error.message}
+                </p>
+              )}
             </div>
           </div>
         </form>

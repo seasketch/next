@@ -35,6 +35,7 @@ import {
   Summary,
   valueText,
 } from "../../changelogs/fieldGroups/FieldGroupListItemBase";
+import { dataTableEventDescription } from "../../changelogs/fieldGroups/dataTableSummary";
 import { formatTimeAgo } from "../../changelogs/ChangeLogTimelineItem";
 import { ResolvableCommentBody } from "../TableOfContentsItemEditor/ResolvableCommentEditor";
 import { oldestChangeLogId, PublishBadgeKey } from "../publishChangelogSummary";
@@ -418,6 +419,37 @@ function CommentPreviewItem({
   );
 }
 
+function DataTableActivityDetails({
+  logs,
+  t,
+}: {
+  logs: ChangeLogDetailsFragment[];
+  t: TFunction;
+}) {
+  const sorted = [...logs].sort(
+    (a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime(),
+  );
+  return (
+    <ul className="space-y-3 text-sm text-zinc-100">
+      {sorted.map((log) => {
+        const date = new Date(log.lastAt);
+        return (
+          <li key={log.id} className="space-y-0.5">
+            <p>{dataTableEventDescription(log.fieldGroup, log.fromSummary, log.toSummary, t)}</p>
+            <time
+              dateTime={date.toISOString()}
+              title={date.toLocaleString()}
+              className="text-xs text-zinc-400"
+            >
+              {formatTimeAgo(date)}
+            </time>
+          </li>
+        );
+      })}
+    </ul>
+  );
+}
+
 export default function PublishBadgeDetailContent(
   props: PublishBadgeDetailContentProps
 ) {
@@ -522,6 +554,10 @@ export default function PublishBadgeDetailContent(
           )}
         </div>
       );
+      break;
+    }
+    case "dataTables": {
+      main = <DataTableActivityDetails logs={logs} t={t} />;
       break;
     }
     case "metadata": {

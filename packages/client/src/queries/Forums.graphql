@@ -246,6 +246,7 @@ fragment MapBookmarkDetails on MapBookmark {
   basemapName
   sketchNames
   clientGeneratedThumbnail
+  dataTableStates
 }
 
 query GetBookmark($id: UUID!) {
@@ -269,6 +270,7 @@ mutation CreateMapBookmark(
   $layerNames: JSON!
   $sketchNames: JSON!
   $clientGeneratedThumbnail: String!
+  $dataTableStates: JSON
 ) {
   createMapBookmark(
     input: {
@@ -286,6 +288,7 @@ mutation CreateMapBookmark(
       layerNames: $layerNames
       sketchNames: $sketchNames
       clientGeneratedThumbnail: $clientGeneratedThumbnail
+      dataTableStates: $dataTableStates
     }
   ) {
     mapBookmark {

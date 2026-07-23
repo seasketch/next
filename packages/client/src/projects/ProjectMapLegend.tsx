@@ -1,13 +1,15 @@
-import { useContext, useMemo } from "react";
-import { LayerTreeContext, LegendsContext, MapManagerContext, SketchLayerContext } from "../dataLayers/MapContextManager";
-import Legend from "../dataLayers/Legend";
+import { useCallback, useContext, useMemo, useState } from "react";
+import {
+  LayerTreeContext,
+  LegendsContext,
+  MapManagerContext,
+  SketchLayerContext,
+} from "../dataLayers/MapContextManager";
+import Legend, { LegendFocusRequest } from "../dataLayers/Legend";
 import useCommonLegendProps from "../dataLayers/useCommonLegendProps";
-import { useMediaQuery } from "beautiful-react-hooks";
 
 export default function ProjectMapLegend({
   showByDefault = false,
-  toolbarExpanded = false,
-  sidebarOpen = false,
 }: {
   showByDefault?: boolean;
   toolbarExpanded?: boolean;
@@ -17,6 +19,8 @@ export default function ProjectMapLegend({
   const legendsCtx = useContext(LegendsContext);
   const { manager } = useContext(MapManagerContext);
   const { sketchClassLayerStates } = useContext(SketchLayerContext);
+  const [legendFocusRequest, setLegendFocusRequest] =
+    useState<LegendFocusRequest | null>(null);
   const loading = useMemo(() => {
     for (const key in layerTree.layerStatesByTocStaticId) {
       if (
@@ -30,12 +34,20 @@ export default function ProjectMapLegend({
   }, [layerTree.layerStatesByTocStaticId]);
 
   const legendProps = useCommonLegendProps(
-    { layerStatesByTocStaticId: layerTree.layerStatesByTocStaticId, legends: legendsCtx.legends },
+    {
+      layerStatesByTocStaticId: layerTree.layerStatesByTocStaticId,
+      legends: legendsCtx.legends,
+    },
     manager,
     sketchClassLayerStates
   );
 
-  const isSmall = useMediaQuery("(max-width: 1535px)");
+  const onDataTableActivated = useCallback((layerId: string) => {
+    setLegendFocusRequest({ layerId, requestId: Date.now() });
+  }, []);
+  const onLegendFocusComplete = useCallback(() => {
+    setLegendFocusRequest(null);
+  }, []);
 
   if (legendProps.items.length > 0) {
     return (
@@ -50,6 +62,9 @@ export default function ProjectMapLegend({
         persistedStateKey="project-map-legend"
         {...legendProps}
         defaultToHidden={!showByDefault}
+        legendFocusRequest={legendFocusRequest}
+        onLegendFocusComplete={onLegendFocusComplete}
+        onDataTableActivated={onDataTableActivated}
       />
     );
   } else {

@@ -8,6 +8,11 @@ const FeatureFlagsPlugin = makeExtendSchemaPlugin((build) => {
     typeDefs: gql`
       type FeatureFlags {
         iNaturalistLayers: Boolean
+        """
+        When true, project admins see the Data Tables tab in layer editors
+        and related map UI. Controlled from SeaSketch developer settings.
+        """
+        dataTables: Boolean
       }
 
       extend type Project {

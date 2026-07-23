@@ -16,12 +16,12 @@ import useMapData from "../../dataLayers/useMapData";
 import DataUploadDropzone from "../uploads/ProjectBackgroundJobContext";
 import { DndProvider } from "react-dnd";
 import { HTML5Backend } from "react-dnd-html5-backend";
-import Legend from "../../dataLayers/Legend";
+import Legend, { LegendFocusRequest } from "../../dataLayers/Legend";
 import useCommonLegendProps from "../../dataLayers/useCommonLegendProps";
 import { TableOfContentsMetadataModalProvider } from "../../dataLayers/TableOfContentsMetadataModal";
 import { LayerEditingContextProvider } from "./LayerEditingContext";
 import { DataDownloadModalProvider } from "../../dataLayers/DataDownloadModal";
-import { useContext } from "react";
+import { useCallback, useContext, useState } from "react";
 
 /**
  * Reads legend state from context so it stays in sync with the manager.
@@ -30,6 +30,8 @@ function DataSettingsLegend() {
   const { manager } = useContext(MapManagerContext);
   const overlayState = useContext(MapOverlayContext);
   const legendsState = useContext(LegendsContext);
+  const [legendFocusRequest, setLegendFocusRequest] =
+    useState<LegendFocusRequest | null>(null);
   const legendProps = useCommonLegendProps(
     {
       layerStatesByTocStaticId: overlayState.layerStatesByTocStaticId,
@@ -38,6 +40,13 @@ function DataSettingsLegend() {
     manager,
     {}
   );
+
+  const onDataTableActivated = useCallback((layerId: string) => {
+    setLegendFocusRequest({ layerId, requestId: Date.now() });
+  }, []);
+  const onLegendFocusComplete = useCallback(() => {
+    setLegendFocusRequest(null);
+  }, []);
 
   if (legendProps.items.length === 0) return null;
   return (
@@ -50,6 +59,9 @@ function DataSettingsLegend() {
       zOrder={{}}
       map={manager?.map}
       {...legendProps}
+      legendFocusRequest={legendFocusRequest}
+      onLegendFocusComplete={onLegendFocusComplete}
+      onDataTableActivated={onDataTableActivated}
     />
   );
 }

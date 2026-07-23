@@ -2,6 +2,7 @@ import { GeostatsLayer } from "@seasketch/geostats-types";
 import { type ProgressUpdater, type ResponseOutput } from "./uploadPipelineShared";
 import { Logger } from "./logger";
 import { type AiDataAnalystNotes } from "ai-data-analyst";
+import type { DelimitedUploadProcessingOptions } from "./spatialUploadsHandlerTypes";
 export default function fromMarkdown(md: string): any;
 /**
  * Process a vector upload, converting it to a normalized FlatGeobuf file and
@@ -30,6 +31,8 @@ export declare function processVectorUpload(options: {
     uploadFilename: string;
     /** When true, run title / attribution / column intelligence LLMs (requires CF_AIG_* env). */
     enableAiDataAnalyst?: boolean;
+    /** Column mapping / CRS for delimited (CSV/TSV/TXT) uploads. Required if `path` has a delimited extension. */
+    processingOptions?: DelimitedUploadProcessingOptions;
 }): Promise<{
     layers: GeostatsLayer[];
     /** Resolve after local processing; caller should await after uploads so LLMs overlap I/O. */

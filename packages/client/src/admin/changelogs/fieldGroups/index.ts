@@ -18,6 +18,12 @@ import LayerUploadedFieldGroupListItem from "./LayerUploadedFieldGroupListItem";
 import LayersPublishedFieldGroupListItem from "./LayersPublishedFieldGroupListItem";
 import LayersZOrderChangeFieldGroupListItem from "./LayersZOrderChangeFieldGroupListItem";
 import ResolvableLayerCommentFieldGroupListItem from "./ResolvableLayerCommentFieldGroupListItem";
+import DataTableCreatedFieldGroupListItem from "./DataTableCreatedFieldGroupListItem";
+import DataTableDeletedFieldGroupListItem from "./DataTableDeletedFieldGroupListItem";
+import DataTableRenamedFieldGroupListItem from "./DataTableRenamedFieldGroupListItem";
+import DataTableReplacedFieldGroupListItem from "./DataTableReplacedFieldGroupListItem";
+import DataTableRollbackFieldGroupListItem from "./DataTableRollbackFieldGroupListItem";
+import DataTableVisualizationSettingsUpdatedFieldGroupListItem from "./DataTableVisualizationSettingsUpdatedFieldGroupListItem";
 
 export { GenericFieldGroupListItem };
 
@@ -50,4 +56,11 @@ export const FIELD_GROUP_LIST_ITEM_COMPONENTS: Partial<
     ResolvableLayerCommentFieldGroupListItem,
   [ChangeLogFieldGroup.ResolvableLayerCommentsReopened]:
     ResolvableLayerCommentFieldGroupListItem,
+  [ChangeLogFieldGroup.DataTableCreated]: DataTableCreatedFieldGroupListItem,
+  [ChangeLogFieldGroup.DataTableDeleted]: DataTableDeletedFieldGroupListItem,
+  [ChangeLogFieldGroup.DataTableRenamed]: DataTableRenamedFieldGroupListItem,
+  [ChangeLogFieldGroup.DataTableReplaced]: DataTableReplacedFieldGroupListItem,
+  [ChangeLogFieldGroup.DataTableRollback]: DataTableRollbackFieldGroupListItem,
+  [ChangeLogFieldGroup.DataTableVisualizationSettingsUpdated]:
+    DataTableVisualizationSettingsUpdatedFieldGroupListItem,
 };

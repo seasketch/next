@@ -285,6 +285,8 @@ export function humanizeSourceType(type: DataUploadOutputType) {
       return "PNG";
     case DataUploadOutputType.ZippedShapefile:
       return "Shapefile";
+    case DataUploadOutputType.Csv:
+      return "CSV";
     default:
       return type;
   }

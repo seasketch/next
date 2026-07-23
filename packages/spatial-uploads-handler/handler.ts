@@ -1,7 +1,10 @@
 import handleUpload from "./src/handleUpload";
 import type { SpatialUploadsHandlerRequest } from "./src/spatialUploadsHandlerTypes";
 
-export type { SpatialUploadsHandlerRequest } from "./src/spatialUploadsHandlerTypes";
+export type {
+  SpatialUploadsHandlerRequest,
+  DelimitedUploadProcessingOptions,
+} from "./src/spatialUploadsHandlerTypes";
 
 export const processUpload = async (event: SpatialUploadsHandlerRequest) => {
   const s3LogPath = `s3://${process.env.BUCKET}/${event.taskId}.log.txt`;
@@ -13,6 +16,7 @@ export const processUpload = async (event: SpatialUploadsHandlerRequest) => {
       event.requestingUser,
       event.skipLoggingProgress,
       event.enableAiDataAnalyst,
+      event.processingOptions,
     );
     return {
       ...outputs,

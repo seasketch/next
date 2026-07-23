@@ -43,6 +43,16 @@ import {
   SketchClassMenuItemType,
 } from "./SketchClassItemMenu";
 import InaturalistLegendPanel from "./legends/INaturalistLegend";
+import ActivatedDataTableButton from "./ActivatedDataTableButton";
+import DataTableLegendPanel from "./legends/DataTableLegendPanel";
+import { ClientOverlayDataTableFragment } from "../generated/graphql";
+import { DataTableAggregation } from "./dataTableQueryApi";
+import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
+
+export interface LegendFocusRequest {
+  layerId: string;
+  requestId: number;
+}
 
 require("../admin/data/arcgis/Accordion.css");
 
@@ -51,6 +61,8 @@ interface BaseLegendItem {
   label: string;
   tableOfContentsItemDetails?: TocMenuItemType;
   isSketchClass?: boolean;
+  /** Data tables available for use in a thematic map or other visualization of this layer */
+  overlayDataTables?: ClientOverlayDataTableFragment[];
 }
 
 interface CustomGLSourceSymbolLegend extends BaseLegendItem {
@@ -77,10 +89,27 @@ export type InaturalistLegendItem = BaseLegendItem & {
       };
 };
 
+export type DataTableLegendItem = BaseLegendItem & {
+  type: "DataTableLegendItem";
+  tableStableId: string;
+  tableName: string;
+  column?: string;
+  op: DataTableAggregation;
+  min: number;
+  max: number;
+  hasZero?: boolean;
+  showValueScale?: boolean;
+  /** Query in flight for circle values / bubble scale extents. */
+  loading?: boolean;
+  /** Failed to load circle values / bubble scale extents. */
+  error?: string;
+};
+
 export type LegendItem =
   | GLStyleLegendItem
   | CustomGLSourceSymbolLegend
-  | InaturalistLegendItem;
+  | InaturalistLegendItem
+  | DataTableLegendItem;
 
 const PANEL_WIDTH = 180;
 
@@ -99,6 +128,9 @@ export type LegendProps = {
   editable?: boolean;
   /** Default visibility state of the legend. Only used if no persisted state exists. Defaults to true (hidden) */
   defaultToHidden?: boolean;
+  legendFocusRequest?: LegendFocusRequest | null;
+  onLegendFocusComplete?: () => void;
+  onDataTableActivated?: (layerId: string) => void;
 };
 
 export default function Legend({
@@ -113,6 +145,9 @@ export default function Legend({
   persistedStateKey,
   editable,
   defaultToHidden = true,
+  legendFocusRequest,
+  onLegendFocusComplete,
+  onDataTableActivated,
 }: LegendProps) {
   const { t } = useTranslation("homepage");
   maxHeight = maxHeight || undefined;
@@ -121,6 +156,23 @@ export default function Legend({
     defaultToHidden,
     true
   );
+
+  useEffect(() => {
+    if (!legendFocusRequest) {
+      return;
+    }
+    setHidden(false);
+    const frame = window.requestAnimationFrame(() => {
+      const element = document.getElementById(
+        `legend-item-${legendFocusRequest.layerId}`
+      );
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }
+      onLegendFocusComplete?.();
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [legendFocusRequest, onLegendFocusComplete, setHidden]);
 
   const layerEditingContext = useContext(LayerEditingContext);
   return (
@@ -185,6 +237,7 @@ export default function Legend({
                     skipTopBorder={i === 0}
                     top={i === 0}
                     bottom={i === items.length - 1}
+                    onDataTableActivated={onDataTableActivated}
                   />
                 );
               })}
@@ -205,6 +258,7 @@ function LegendListItem({
   editable,
   top,
   bottom,
+  onDataTableActivated,
 }: {
   item: LegendItem;
   visible: boolean;
@@ -214,18 +268,25 @@ function LegendListItem({
   editable?: boolean;
   top?: boolean;
   bottom?: boolean;
+  onDataTableActivated?: (layerId: string) => void;
 }) {
   const [contextMenuIsOpen, setContextMenuIsOpen] = useState(false);
+  const { data: projectMeta } = useCurrentProjectMetadata();
+  const dataTablesFeatureEnabled = Boolean(
+    projectMeta?.project?.featureFlags?.dataTables
+  );
   const isSingleSymbol =
-    (item.type === "GLStyleLegendItem" &&
+    item.type !== "DataTableLegendItem" &&
+    ((item.type === "GLStyleLegendItem" &&
       item.legend?.type === "SimpleGLLegend" &&
       item.legend.symbol) ||
-    (item.type === "CustomGLSourceSymbolLegend" && item.symbols.length <= 1);
+      (item.type === "CustomGLSourceSymbolLegend" && item.symbols.length <= 1));
 
   const inatLegendType = useInaturalistLegendType(item, map);
   return (
     <ErrorBoundary>
       <li
+        id={`legend-item-${item.id}`}
         className={`group ${
           skipTopBorder ? "" : "border-t border-black border-opacity-5"
         } p-2 max-w-full ${!visible ? "opacity-50" : "opacity-100"}`}
@@ -323,6 +384,17 @@ function LegendListItem({
                 </DropdownMenu.Trigger>
               </DropdownMenu.Root>
             )}
+            {dataTablesFeatureEnabled &&
+              item.overlayDataTables &&
+              item.overlayDataTables.length > 0 && (
+                <ActivatedDataTableButton
+                  layerId={item.id}
+                  tocItemId={item.tableOfContentsItemDetails?.id}
+                  layerName={item.label}
+                  tables={item.overlayDataTables}
+                  onDataTableActivated={onDataTableActivated}
+                />
+              )}
             <Toggle
               className={`inline-block`}
               onChange={() => {
@@ -334,7 +406,26 @@ function LegendListItem({
             />
           </div>
         </div>
-        {!isSingleSymbol && (
+        {item.type === "DataTableLegendItem" &&
+          item.overlayDataTables &&
+          item.overlayDataTables.length > 0 && (
+            <DataTableLegendPanel
+              layerId={item.id}
+              tableStableId={item.tableStableId}
+              tableName={item.tableName}
+              column={item.column}
+              op={item.op}
+              min={item.min}
+              max={item.max}
+              hasZero={item.hasZero}
+              showValueScale={item.showValueScale}
+              loading={item.loading}
+              error={item.error}
+              tables={item.overlayDataTables}
+              tocItemId={item.tableOfContentsItemDetails?.id}
+            />
+          )}
+        {!isSingleSymbol && item.type !== "DataTableLegendItem" && (
           <ul className="text-sm p-1">
             {item.type === "GLStyleLegendItem" &&
               item.legend?.type === "MultipleSymbolGLLegend" &&

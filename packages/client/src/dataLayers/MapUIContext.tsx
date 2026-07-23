@@ -414,6 +414,13 @@ export default function MapUIProvider({
         tocItemLabels
       );
     }
+    // Data-table value tooltips (feature-state rawValue) — independent of
+    // admin interactivity type, but refreshed on the same overlay cadence.
+    if (manager) {
+      interactivityManager.setDataTableLayers(
+        manager.getDataTableInteractiveLayers()
+      );
+    }
   }, [
     mapOverlay.layerStatesByTocStaticId,
     mapOverlay.dataLayers,
@@ -424,6 +431,7 @@ export default function MapUIProvider({
     interactivityManager,
     basemap,
     mapOverlay,
+    manager,
   ]);
 
   useEffect(() => {

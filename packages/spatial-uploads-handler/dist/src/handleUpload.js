@@ -66,7 +66,9 @@ slug,
  */
 requestingUser, skipLoggingProgress, 
 /** When true, run column intelligence / title / attribution LLMs (requires CF_AIG_* env). */
-enableAiDataAnalyst) {
+enableAiDataAnalyst, 
+/** Column mapping / CRS for delimited (CSV/TSV/TXT) uploads. */
+processingOptions) {
     if (DEBUG) {
         console.log("DEBUG MODE ENABLED");
     }
@@ -154,6 +156,7 @@ enableAiDataAnalyst) {
                 uploadFilename,
                 workingDirectory: dist,
                 enableAiDataAnalyst,
+                processingOptions,
             });
             stats = vectorResult.layers;
             aiDataAnalystNotesPromise = vectorResult.aiDataAnalystNotesPromise;

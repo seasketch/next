@@ -41,6 +41,16 @@ export type InteractivityUIUpdate = Partial<{
   sidebarPopupTitle: string | undefined;
 }>;
 
+/** Active data-table proportional-symbol layer for value tooltips. */
+export type DataTableInteractiveLayer = {
+  /** Mapbox GL style layer id (`idForLayer(layer, 0)`). */
+  glLayerId: string;
+  sourceId: string;
+  sourceLayer?: string;
+  column: string;
+  op: string;
+};
+
 /**
  * LayerInteractivityManager works in tandem with the MapContextManager to react
  * to user interaction which clicks, hovers, or otherwise interacts with map content
@@ -65,6 +75,10 @@ export default class LayerInteractivityManager extends EventEmitter {
   private popupAbortController: AbortController | undefined;
   private interactiveVectorLayerIds: string[] = [];
   private interactiveImageLayerIds: string[] = [];
+  /** glLayerId → data-table value tooltip config (independent of admin interactivity). */
+  private dataTableLayersByGlId: {
+    [glLayerId: string]: DataTableInteractiveLayer;
+  } = {};
   private basemap: BasemapDetailsFragment | undefined;
   private sketchLayerIds: string[] = [];
   private focusedSketchId?: number;
@@ -110,17 +124,43 @@ export default class LayerInteractivityManager extends EventEmitter {
 
   setSketchLayerIds(ids: string[]) {
     this.sketchLayerIds = ids;
+    this.syncMouseMoveListener();
+  }
+
+  setFocusedSketchId(id: number | null) {
+    this.focusedSketchId = id || undefined;
+  }
+
+  /**
+   * Layers with an active data-table visualization. Hover shows a value
+   * tooltip from `rawValue` feature-state. Works alongside popup / sidebar /
+   * banner interactivity; overrides an admin Tooltip (and SidebarOverlay
+   * short-template hover tooltip) because both compete for the same UI slot.
+   */
+  setDataTableLayers(layers: DataTableInteractiveLayer[]) {
+    const next: { [glLayerId: string]: DataTableInteractiveLayer } = {};
+    for (const layer of layers) {
+      next[layer.glLayerId] = layer;
+    }
+    this.dataTableLayersByGlId = next;
+    this.syncMouseMoveListener();
+  }
+
+  private syncMouseMoveListener() {
     this.map.off("mousemove", this.debouncedMouseMoveListener);
     if (
       this.interactiveVectorLayerIds.length > 0 ||
-      this.sketchLayerIds.length > 0
+      this.sketchLayerIds.length > 0 ||
+      this.inaturalistConfigs.length > 0 ||
+      Object.keys(this.dataTableLayersByGlId).length > 0
     ) {
       this.map.on("mousemove", this.debouncedMouseMoveListener);
     }
   }
 
-  setFocusedSketchId(id: number | null) {
-    this.focusedSketchId = id || undefined;
+  /** Layer ids that currently exist on the map (queryRenderedFeatures throws otherwise). */
+  private existingLayerIds(ids: string[]) {
+    return ids.filter((id) => Boolean(this.map.getLayer(id)));
   }
 
   /**
@@ -235,14 +275,7 @@ export default class LayerInteractivityManager extends EventEmitter {
     this.inaturalistConfigs = newInaturalistConfigs;
     this.layers = newActiveLayers;
     this.imageSources = newActiveImageSources;
-    this.map.off("mousemove", this.debouncedMouseMoveListener);
-    if (
-      this.interactiveVectorLayerIds.length > 0 ||
-      this.sketchLayerIds.length > 0 ||
-      this.inaturalistConfigs.length > 0
-    ) {
-      this.map.on("mousemove", this.debouncedMouseMoveListener);
-    }
+    this.syncMouseMoveListener();
   }
 
   private setActivePopup(popup: Popup) {
@@ -378,12 +411,20 @@ export default class LayerInteractivityManager extends EventEmitter {
       this.popupAbortController.abort();
       delete this.popupAbortController;
     }
-    const sketchFeatures = this.map!.queryRenderedFeatures(e.point, {
-      layers: this.sketchLayerIds || [],
-    });
-    const features = this.map!.queryRenderedFeatures(e.point, {
-      layers: this.interactiveVectorLayerIds,
-    });
+    const sketchLayerIds = this.existingLayerIds(this.sketchLayerIds || []);
+    const vectorLayerIds = this.existingLayerIds(
+      this.interactiveVectorLayerIds
+    );
+    const sketchFeatures = sketchLayerIds.length
+      ? this.map!.queryRenderedFeatures(e.point, {
+          layers: sketchLayerIds,
+        })
+      : [];
+    const features = vectorLayerIds.length
+      ? this.map!.queryRenderedFeatures(e.point, {
+          layers: vectorLayerIds,
+        })
+      : [];
     const allFeatures = [...sketchFeatures, ...features];
     sortFeaturesByLayer(allFeatures, this.map.getStyle());
     const top = allFeatures[0];
@@ -797,9 +838,12 @@ export default class LayerInteractivityManager extends EventEmitter {
     const inatDrawIndex = inatHit ? inatHit.layerIndex : -Infinity;
 
     // First, check sketch layers
-    const sketchFeatures = this.map!.queryRenderedFeatures(e.point, {
-      layers: this.sketchLayerIds,
-    });
+    const sketchLayerIds = this.existingLayerIds(this.sketchLayerIds);
+    const sketchFeatures = sketchLayerIds.length
+      ? this.map!.queryRenderedFeatures(e.point, {
+          layers: sketchLayerIds,
+        })
+      : [];
     if (sketchFeatures.length) {
       clear();
       if (
@@ -810,15 +854,34 @@ export default class LayerInteractivityManager extends EventEmitter {
       }
       return;
     }
-    const layerIds = this.interactiveVectorLayerIds;
-    const features = this.map!.queryRenderedFeatures(e.point, {
-      layers: layerIds,
+    const dataTableLayerIds = Object.keys(this.dataTableLayersByGlId);
+    const layerIds = this.existingLayerIds([
+      ...dataTableLayerIds,
+      ...this.interactiveVectorLayerIds,
+    ]);
+    // Deduplicate while preserving order (data-table ids first for lookup).
+    const seen = new Set<string>();
+    const uniqueLayerIds = layerIds.filter((id) => {
+      if (seen.has(id)) {
+        return false;
+      }
+      seen.add(id);
+      return true;
     });
+    const features = uniqueLayerIds.length
+      ? this.map!.queryRenderedFeatures(e.point, {
+          layers: uniqueLayerIds,
+        })
+      : [];
     let topVectorIndex = -Infinity;
-    if (features.length && layerIds.indexOf(features[0].layer.id) > -1) {
+    if (features.length && uniqueLayerIds.indexOf(features[0].layer.id) > -1) {
       const top = features[0];
       topVectorIndex = this.getLayerDrawIndex(top.layer.id);
       this.setHoveredFeature(top);
+      const dataTableConfig = this.dataTableLayersByGlId[top.layer.id];
+      const dataTableTooltip = dataTableConfig
+        ? this.buildDataTableValueTooltip(top, dataTableConfig, e)
+        : undefined;
       const interactivitySetting = this.getInteractivitySettingForFeature(top);
       if (interactivitySetting) {
         let cursor = "";
@@ -835,25 +898,33 @@ export default class LayerInteractivityManager extends EventEmitter {
                 ...(top.properties || {}),
               }),
             ];
+            // Data-table value tooltip sits alongside the banner.
+            tooltip = dataTableTooltip;
             break;
           case InteractivityType.Tooltip:
             cursor = "default";
-            tooltip = {
-              x: e.originalEvent.x,
-              y: e.originalEvent.y,
-              messages: [
-                Mustache.render(interactivitySetting.shortTemplate || "", {
-                  ...mustacheHelpers,
-                  ...(top.properties || {}),
-                }),
-              ],
-            };
+            // Data-table value wins over an admin Tooltip template.
+            tooltip =
+              dataTableTooltip ??
+              ({
+                x: e.originalEvent.x,
+                y: e.originalEvent.y,
+                messages: [
+                  Mustache.render(interactivitySetting.shortTemplate || "", {
+                    ...mustacheHelpers,
+                    ...(top.properties || {}),
+                  }),
+                ],
+              } as Tooltip);
             break;
           case InteractivityType.Popup:
           case InteractivityType.AllPropertiesPopup:
           case InteractivityType.SidebarOverlay:
             cursor = "pointer";
-            if (
+            if (dataTableTooltip) {
+              // Hover value inspection alongside click popup / sidebar.
+              tooltip = dataTableTooltip;
+            } else if (
               interactivitySetting.type === InteractivityType.SidebarOverlay &&
               interactivitySetting.shortTemplate?.length
             ) {
@@ -877,8 +948,10 @@ export default class LayerInteractivityManager extends EventEmitter {
                 ...(top.properties || {}),
               }),
             ];
+            tooltip = dataTableTooltip;
             break;
           default:
+            tooltip = dataTableTooltip;
             break;
         }
         if (interactivitySetting.cursor !== "AUTO") {
@@ -886,8 +959,11 @@ export default class LayerInteractivityManager extends EventEmitter {
         }
         this.map!.getCanvas().style.cursor = cursor;
         const currentInteractionTarget = `${top.id}-${interactivitySetting.id}`;
+        // Skip redundant banner/popup updates for the same feature — but always
+        // refresh when a data-table tooltip needs to follow the pointer.
         if (
           this.previousInteractionTarget === currentInteractionTarget &&
+          !dataTableTooltip &&
           (interactivitySetting.type === InteractivityType.Banner ||
             interactivitySetting.type === InteractivityType.FixedBlock ||
             interactivitySetting.type === InteractivityType.Popup ||
@@ -902,6 +978,14 @@ export default class LayerInteractivityManager extends EventEmitter {
             fixedBlocks,
           });
         }
+      } else if (dataTableTooltip) {
+        this.map!.getCanvas().style.cursor = "default";
+        this.previousInteractionTarget = `${top.id}-data-table`;
+        this.updateUI({
+          bannerMessages: [],
+          tooltip: dataTableTooltip,
+          fixedBlocks: [],
+        });
       } else {
         clear();
       }
@@ -914,6 +998,48 @@ export default class LayerInteractivityManager extends EventEmitter {
       clear();
     }
   };
+
+  /**
+   * Hover tooltip for a data-table proportional symbol, using `rawValue`
+   * feature-state written by DataTableQueryManager.
+   */
+  private buildDataTableValueTooltip(
+    feature: MapboxGeoJSONFeature,
+    config: DataTableInteractiveLayer,
+    e: MapMouseEvent
+  ): Tooltip | undefined {
+    if (feature.id === undefined || feature.id === null) {
+      return undefined;
+    }
+    const state = this.map.getFeatureState({
+      source: config.sourceId,
+      id: feature.id,
+      ...(config.sourceLayer ? { sourceLayer: config.sourceLayer } : {}),
+    }) as {
+      rawValue?: number | null;
+      loading?: boolean;
+      scaledValue?: number | null;
+    };
+    const position = {
+      x: e.originalEvent.x,
+      y: e.originalEvent.y,
+    };
+    if (state.loading) {
+      return { ...position, messages: ["Loading…"] };
+    }
+    if (!("rawValue" in state) && !("scaledValue" in state)) {
+      // Feature-state not applied yet (style still settling).
+      return undefined;
+    }
+    if (state.rawValue === null || state.rawValue === undefined) {
+      return { ...position, messages: ["No data"] };
+    }
+    const formatted = PopupNumberFormatter.format(state.rawValue);
+    return {
+      ...position,
+      messages: [`${config.op}(${config.column}): ${formatted}`],
+    };
+  }
 
   private async getTopInaturalistHit(e: MapMouseEvent) {
     if (!this.inaturalistConfigs.length) {

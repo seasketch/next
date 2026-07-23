@@ -45,6 +45,7 @@ fragment ProjectMetadata on Project {
   showLegendByDefault
   featureFlags {
     iNaturalistLayers
+    dataTables
   }
 }
 

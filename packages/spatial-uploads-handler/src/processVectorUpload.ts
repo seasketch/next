@@ -25,6 +25,10 @@ import {
   classifyGeostatsPii,
   composeAiDataAnalystNotesFromPromises,
 } from "./aiUploadNotes";
+import { convertDelimitedToGeoJSON } from "./formats/delimited";
+import type { DelimitedUploadProcessingOptions } from "./spatialUploadsHandlerTypes";
+
+const DELIMITED_EXTENSIONS = new Set([".csv", ".tsv", ".txt"]);
 
 export default function fromMarkdown(md: string) {
   return defaultMarkdownParser.parse(md)?.toJSON();
@@ -136,6 +140,8 @@ export async function processVectorUpload(options: {
   uploadFilename: string;
   /** When true, run title / attribution / column intelligence LLMs (requires CF_AIG_* env). */
   enableAiDataAnalyst?: boolean;
+  /** Column mapping / CRS for delimited (CSV/TSV/TXT) uploads. Required if `path` has a delimited extension. */
+  processingOptions?: DelimitedUploadProcessingOptions;
 }): Promise<{
   layers: GeostatsLayer[];
   /** Resolve after local processing; caller should await after uploads so LLMs overlap I/O. */
@@ -152,6 +158,7 @@ export async function processVectorUpload(options: {
     originalName,
     uploadFilename,
     enableAiDataAnalyst,
+    processingOptions,
   } = options;
   if (enableAiDataAnalyst) {
     assertAiDataAnalystEnvVarsPresent();
@@ -159,6 +166,24 @@ export async function processVectorUpload(options: {
   const originalFilePath = path;
   let workingFilePath = path;
   await updateProgress("running", "validating");
+
+  const isDelimited = DELIMITED_EXTENSIONS.has(parsePath(path).ext);
+  if (isDelimited) {
+    if (!processingOptions) {
+      throw new Error(
+        "This file requires column mapping configuration before it can be uploaded. Please configure coordinate columns and try again.",
+      );
+    }
+    const convertedPath = pathJoin(workingDirectory, jobId + ".geojson");
+    await updateProgress("running", "converting delimited text");
+    await convertDelimitedToGeoJSON(
+      logger,
+      workingFilePath,
+      convertedPath,
+      processingOptions,
+    );
+    workingFilePath = convertedPath;
+  }
 
   let titleP = enableAiDataAnalyst
     ? asNeverReject(generateTitle(uploadFilename), "generateTitle")
@@ -330,6 +355,17 @@ export async function processVectorUpload(options: {
     type = "ZippedShapefile";
   } else {
     throw new Error("Not a recognized file type");
+  }
+
+  if (isDelimited) {
+    if (/Feature Count: 0\b/.test(ogrInfo)) {
+      throw new Error(
+        "No spatial features could be extracted from this file using the selected columns. Double check the column mapping and try again.",
+      );
+    }
+    // The original output should reflect the file as uploaded (delimited
+    // text), not the GeoJSON it was converted to above.
+    type = "CSV";
   }
 
   const sidecarFiles = await collectAttributionSidecarContents(

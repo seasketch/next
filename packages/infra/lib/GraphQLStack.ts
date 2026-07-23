@@ -39,6 +39,7 @@ export class GraphQLStack extends cdk.Stack {
       spatialUploadsHandlerArn: string;
       overlayWorkerArn: string;
       uploadHandler: lambda.DockerImageFunction;
+      dataTablesHandler: lambda.DockerImageFunction;
       subdivisionWorkerLambdaArn: string;
       fragmentWorkerLambdaArn: string;
       /** Same function the upload handler uses for PII scoring; warmed on createDataUpload. */
@@ -184,6 +185,7 @@ export class GraphQLStack extends cdk.Stack {
             GEOSTATS_PII_CLASSIFIER_ARN: props.geostatsPiiClassifierLambdaArn,
             OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL:
               props.overlayEngineWorkerSqsQueue.queueUrl,
+            DATA_TABLES_HANDLER_LAMBDA_ARN: props.dataTablesHandler.functionArn,
             OVERLAY_ENGINE_ACCESS_TOKEN_SECRET_ARN:
               props.overlayEngineAccessTokenSecret.secretArn,
           },
@@ -294,6 +296,7 @@ export class GraphQLStack extends cdk.Stack {
       service.taskDefinition.taskRole
     );
     props.uploadHandler.grantInvoke(service.taskDefinition.taskRole);
+    props.dataTablesHandler.grantInvoke(service.taskDefinition.taskRole);
     props.overlayEngineAccessTokenSecret.grantWrite(
       service.taskDefinition.taskRole,
     );

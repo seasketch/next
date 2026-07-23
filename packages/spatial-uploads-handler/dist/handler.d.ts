@@ -1,5 +1,5 @@
 import type { SpatialUploadsHandlerRequest } from "./src/spatialUploadsHandlerTypes";
-export type { SpatialUploadsHandlerRequest } from "./src/spatialUploadsHandlerTypes";
+export type { SpatialUploadsHandlerRequest, DelimitedUploadProcessingOptions, } from "./src/spatialUploadsHandlerTypes";
 export declare const processUpload: (event: SpatialUploadsHandlerRequest) => Promise<{
     log: string;
     logfile: string;

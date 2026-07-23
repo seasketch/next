@@ -3,17 +3,19 @@
 Cloudflare Worker for serving SeaSketch overlay data from the `ssn-tiles` R2
 bucket.
 
-The Worker has three responsibilities:
+The Worker has four responsibilities:
 
 1. PMTiles-backed TileJSON, ZXY tiles, and browser previews.
 2. Streaming whole-object downloads and efficient byte-range reads for
    FlatGeobuf, cloud-optimized GeoTIFF, PMTiles, and arbitrary object types.
 3. FlatGeobuf property extraction through the legacy-compatible `/properties`
    API.
+4. Overlay data-table aggregations (`…/dataTables/{uploadId}/query`) via
+   hyparquet, sharing the parent layer's published-UUID ACL.
 
 The default entrypoint is an uncached authorization and host-routing gateway.
-It invokes isolated `TilesBackend`, `ObjectBackend`, and `PropertiesBackend`
-entrypoints after credentials have been removed.
+It invokes isolated `TilesBackend`, `ObjectBackend`, `PropertiesBackend`, and
+`DataTablesBackend` entrypoints after credentials have been removed.
 
 ## Routes
 
@@ -50,6 +52,156 @@ Consequently, a project `.json` path is raw JSON on the uploads host but
 TileJSON on the tiles host. An extensionless published UUID is raw on uploads
 and a preview on tiles.
 
+### Data table queries
+
+Overlay monitoring tables are stored under the parent layer UUID:
+
+```text
+projects/{slug}/public/{uuid}/dataTables/{uploadId}/data.parquet
+projects/{slug}/public/{uuid}/dataTables/{uploadId}/column-stats.json
+GET /projects/{slug}/public/{uuid}/dataTables/{uploadId}/query
+```
+
+Static parquet and `column-stats.json` are served by `ObjectBackend` (typically
+on `uploads.seasketch.org`). The `/query` path is handled by
+`DataTablesBackend` (hyparquet plan + execute). Paths classify as `published`
+for the parent `{uuid}`, so map-access tokens and ACL docs apply the same way
+as for tiles.
+
+#### Query API
+
+All queries are **GET** requests with parameters in the query string. There is
+no request body. Parameter order does not matter; identical queries are
+canonicalized for caching. When ACL enforcement is on, pass `access_token`
+(and optional `ns`) like any other published overlay asset — credentials are
+stripped before the backend runs.
+
+Response format depends only on the URL — the `Accept` header is ignored so
+that cached responses can never be served to the wrong client type:
+
+| Request | Response |
+| ------- | -------- |
+| default (no `f`), or `f=json` | JSON query results |
+| `f=html` | Interactive query builder UI |
+
+The HTML UI loads sibling `column-stats.json` from the same origin to populate
+column pickers.
+
+**Built-in parameters**
+
+| Param | Required | Description |
+| ----- | -------- | ----------- |
+| `f` | No | `json` (default) or `html`. |
+| `groupBy` | When aggregating | Comma-separated columns, e.g. `site` or `site,year`. Requires at least one `op`. |
+| `op` | When `groupBy` is set | Comma-separated: `count`, `sum`, `mean`, `min`, `max`, `median`. Multiple ops share one `column` (except bare `count`). |
+| `column` | When any `op` other than `count` alone | Numeric column to aggregate, e.g. `column=count`. |
+| `orderBy` | No | Sort key with optional direction: `mean:desc`, `site` (asc). Valid keys are **groupBy columns** and **aggregation names** from `op`. |
+| `limit` | No | Max groups or raw rows. `1`–`100000`. Aggregated queries default to no limit; raw-row queries default to `10000`. |
+| `offset` | No | Skip first N groups/rows after sorting (default `0`). |
+
+**Query modes**
+
+1. **Aggregated** — `groupBy` + `op` (+ `column` when needed). Returns a
+   `groups` array. Each object has the group key column(s) plus one property
+   per aggregation (`mean`, `count`, etc.).
+2. **Raw rows** — omit `groupBy` and `op`. Returns a `rows` array of matching
+   parquet records (all columns, subject to filters). Useful for inspection,
+   not typical map joins.
+
+**Aggregation semantics**
+
+| `op` | Behavior |
+| ---- | -------- |
+| `count` | With `column`: count non-null values in that column per group (`COUNT(col)`). Without `column`: count matching rows per group (`COUNT(*)`). |
+| `sum`, `mean` | Over non-null values in `column`. Groups with no non-null values return `null` for these ops. |
+| `min`, `max` | Extremes over non-null values in `column`. |
+| `median` | Median of non-null values in `column` (even-length groups average the two middle values). |
+
+When multiple aggregations are requested (`op=mean,count&column=count`), each
+group includes all of them, e.g.
+`{ "site": "PINOS", "mean": 12.4, "count": 87 }`.
+
+**Column filters (`q.` prefix)**
+
+Filters restrict which parquet rows participate before aggregation or raw
+output. Parameter names are `q.{columnName}`; operators are embedded in the
+value (PostgREST-like):
+
+| URL value | Meaning | Column types |
+| --------- | ------- | ------------ |
+| `{value}` or `eq.{value}` | equals | all |
+| `neq.{value}` | not equals | all |
+| `gt.{n}`, `gte.{n}`, `lt.{n}`, `lte.{n}` | comparisons | number, timestamp |
+| `in.(a,b,"Smith, John")` | value in list | all; quote items that contain commas; `""` escapes `"` |
+| `is.null` | column is null | all |
+| `not.null` | column is not null | all |
+
+Examples:
+
+```text
+q.year=2018
+q.year=eq.2018
+q.count=gte.5
+q.observer=in.(CHAD BURT,BRAD BURT)
+q.size=is.null
+q.year=gte.2010&q.year=lte.2018
+```
+
+Rules:
+
+- Unknown column names → `400` with
+  `{ error, validColumns: [{ name, type }] }`.
+- Type-invalid operators (e.g. `gt` on a string) → `400`.
+- Timestamp filters accept ISO 8601; comparisons use epoch milliseconds.
+- Boolean filters accept `true`/`false` or `1`/`0`.
+- There is no `not.in`; use `neq` or multiple filters instead.
+
+Implementation: `src/dataTables/params.ts`.
+
+**JSON response**
+
+```json
+{
+  "table": "projects/california/public/{uuid}/dataTables/{uploadId}",
+  "totalRows": 353253,
+  "rowsScanned": 353253,
+  "rowsMatched": 2328,
+  "rowGroups": { "total": 3, "scanned": 3 },
+  "timing": { "metadataMs": 209, "executeMs": 230, "totalMs": 439 },
+  "groups": [
+    { "site": "PINOS", "mean": 1, "count": 1 }
+  ]
+}
+```
+
+| Field | Description |
+| ----- | ----------- |
+| `table` | R2 prefix queried |
+| `totalRows` | Rows in the parquet file |
+| `rowsScanned` | Rows read from pruned row groups |
+| `rowsMatched` | Rows passing all filters |
+| `rowGroups.total` / `rowGroups.scanned` | Parquet row-group pruning stats |
+| `timing` | Server-side phase timings (ms) |
+| `groups` | Present when `groupBy` + `op` were requested |
+| `rows` | Present for raw-row mode (no aggregation) |
+
+Responses include `ETag`, `Cache-Control`, and `Vary: Accept`.
+
+**Example (thematic map join)**
+
+```text
+GET /projects/california/public/{uuid}/dataTables/{uploadId}/query
+  ?groupBy=site&op=mean,count&column=count
+  &q.year=2018&q.classcode=PYCHEL&f=json
+  &access_token=…
+```
+
+Map clients typically join `groups[]` to vector features using the data
+table's join column (see `column-stats.json` → `join`). Structured UI
+settings compile to these params via
+`packages/client/src/dataLayers/dataTableQueryApi.ts`
+(`buildDataTableQuerySearchParams`).
+
 ### Properties
 
 ```text
@@ -83,6 +235,8 @@ backend invocation and never enter a cache key.
 Keys outside `projects/` are public fixtures. For example,
 `/eez-land-joined.fgb` can be read without a token. Data-library keys below
 `projects/superuser/public/` are also always public on every host.
+ACL documents (`acl/{ns}/projects/{slug}.json`) are stored in the same R2
+bucket for Worker-side authorization but are never served over HTTP.
 
 ### Map-access tokens
 

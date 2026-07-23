@@ -25,8 +25,12 @@ import {
   type ProgressUpdater,
   type ResponseOutput,
 } from "./uploadPipelineShared";
+import type { DelimitedUploadProcessingOptions } from "./spatialUploadsHandlerTypes";
 
-export type { SpatialUploadsHandlerRequest } from "./spatialUploadsHandlerTypes";
+export type {
+  SpatialUploadsHandlerRequest,
+  DelimitedUploadProcessingOptions,
+} from "./spatialUploadsHandlerTypes";
 
 export {
   MAX_OUTPUT_SIZE,
@@ -56,6 +60,8 @@ export default async function handleUpload(
   skipLoggingProgress?: boolean,
   /** When true, run column intelligence / title / attribution LLMs (requires CF_AIG_* env). */
   enableAiDataAnalyst?: boolean,
+  /** Column mapping / CRS for delimited (CSV/TSV/TXT) uploads. */
+  processingOptions?: DelimitedUploadProcessingOptions,
 ): Promise<ProcessedUploadResponse> {
   if (DEBUG) {
     console.log("DEBUG MODE ENABLED");
@@ -173,6 +179,7 @@ export default async function handleUpload(
         uploadFilename,
         workingDirectory: dist,
         enableAiDataAnalyst,
+        processingOptions,
       });
       stats = vectorResult.layers;
       aiDataAnalystNotesPromise = vectorResult.aiDataAnalystNotesPromise;

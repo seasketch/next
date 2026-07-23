@@ -1,22 +1,19 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router";
 import { BBox } from "geojson";
-import type { CameraOptions } from "mapbox-gl";
+import { CameraOptions } from "mapbox-gl";
 import bytes from "bytes";
 import useAccessToken from "../useAccessToken";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 import useMapAccessTokenRollover from "./useMapAccessTokenRollover";
 import { useProjectRegionQuery } from "../generated/graphql";
-import { BasemapContext } from "./BasemapContext";
-import type { BasemapContextState } from "./BasemapContext";
+import { BasemapContext, BasemapContextState } from "./BasemapContext";
 import MapContextManager, {
   DigitizingLockState,
   MapManagerContext,
   SketchLayerContext,
   MapOverlayContext,
   LegendsContext,
-} from "./MapContextManager";
-import type {
   MapContextInterface,
   MapManagerState,
   SketchLayerContextState,
@@ -198,7 +195,16 @@ export default function MapManagerContextProvider({
   const parentTocItems = parentOverlay.tableOfContentsItems;
   useEffect(() => {
     const manager = managerRef.current;
-    if (manager && parentDataSources && parentDataLayers && parentTocItems) {
+    // useMapData initializes these as [] before the GraphQL response arrives.
+    // Empty arrays are truthy, so guard on length — otherwise reset()+sync can
+    // run against an empty TOC catalog and drop restored LayerState.dataTable.
+    if (
+      manager &&
+      parentDataSources &&
+      parentDataLayers &&
+      parentTocItems &&
+      parentTocItems.length > 0
+    ) {
       manager.reset(parentDataSources, parentDataLayers, parentTocItems);
     }
   }, [parentDataLayers, parentDataSources, parentTocItems]);

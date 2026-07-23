@@ -22,6 +22,16 @@ describe("overlay resource classification", () => {
         "/projects/example/public/11111111-1111-1111-1111-111111111111.fgb",
       ),
     ).toMatchObject({ kind: "published", slug: "example" });
+    // Data-table assets under the parent layer UUID inherit published ACL.
+    expect(
+      classifyResource(
+        "/projects/example/public/11111111-1111-1111-1111-111111111111/dataTables/22222222-2222-2222-2222-222222222222/query",
+      ),
+    ).toMatchObject({
+      kind: "published",
+      slug: "example",
+      uuid: "11111111-1111-1111-1111-111111111111",
+    });
     expect(
       classifyResource("/projects/example/subdivided/42-output.fgb"),
     ).toMatchObject({ kind: "subdivided", slug: "example" });
@@ -31,6 +41,13 @@ describe("overlay resource classification", () => {
     expect(normalizeObjectKey("/projects/example/")).toBeNull();
     expect(normalizeObjectKey("/projects/../secret")).toBeNull();
     expect(normalizeObjectKey("/projects%2F..%2Fsecret")).toBeNull();
+  });
+
+  it("rejects ACL document keys so they are not HTTP-downloadable", () => {
+    expect(normalizeObjectKey("/acl/prod/projects/example.json")).toBeNull();
+    expect(normalizeObjectKey("acl/dev-cburt/projects/example.json")).toBeNull();
+    expect(normalizeObjectKey("/ACL/prod/projects/example.json")).toBeNull();
+    expect(classifyResource("/acl/prod/projects/example.json")).toBeNull();
   });
 
   it("defaults ACL enforcement off and missing ACL docs public", () => {

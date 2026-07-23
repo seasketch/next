@@ -12,9 +12,12 @@ import InteractivitySettings from "./InteractivitySettings";
 import { gql, useApolloClient } from "@apollo/client";
 import useDebounce from "../../useDebounce";
 import GLStyleEditor from "./GLStyleEditor/GLStyleEditor";
-import Tabs, { NonLinkTabItem } from "../../components/Tabs";
 import { MapManagerContext } from "../../dataLayers/MapContextManager";
-import { CaretRightIcon, ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import LayerEditorTabs from "./TableOfContentsItemEditor/LayerEditorTabs";
+import {
+  CaretRightIcon,
+  ExclamationTriangleIcon,
+} from "@radix-ui/react-icons";
 import Skeleton from "../../components/Skeleton";
 import FolderIcon from "../../components/FolderIcon";
 import OverlayMetataEditor from "./OverlayMetadataEditor";
@@ -22,7 +25,9 @@ import useDialog from "../../components/useDialog";
 import LayerSettings from "./TableOfContentsItemEditor/LayerSettings";
 import { XIcon } from "@heroicons/react/outline";
 import LayerVersioning from "./TableOfContentsItemEditor/LayerVersioning";
+import DataTablesEditor from "./overlayDataTables/DataTablesEditor";
 import { layerSettingsChangeLogRefetchQueries } from "../changelogs/layerSettingsChangeLogRefetch";
+import useCurrentProjectMetadata from "../../useCurrentProjectMetadata";
 
 interface LayerTableOfContentsItemEditorProps {
   itemId: number;
@@ -102,6 +107,8 @@ export default function LayerTableOfContentsItemEditor(
     });
 
   const item = data?.tableOfContentsItem;
+  const [selectedTab, setSelectedTab] = useState("settings");
+  const activeTab = selectedTab;
 
   useEffect(() => {
     if (item?.stableId && item.dataLayer && manager) {
@@ -133,8 +140,6 @@ export default function LayerTableOfContentsItemEditor(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedStyle]);
 
-  const [selectedTab, setSelectedTab] = useState("settings");
-
   const geostats = (source?.geostats?.layers || []).find(
     (l: { layer: string }) => {
       if (!Boolean(layer?.sourceLayer)) {
@@ -145,35 +150,56 @@ export default function LayerTableOfContentsItemEditor(
     }
   );
 
-  const tabs: NonLinkTabItem[] = useMemo(() => {
-    return [
+  const { data: projectMeta } = useCurrentProjectMetadata();
+  const dataTablesFeatureEnabled = Boolean(
+    projectMeta?.project?.featureFlags?.dataTables
+  );
+  const supportsDataTables = Boolean(geostats) && dataTablesFeatureEnabled;
+
+  const tabs = useMemo(() => {
+    const items: {
+      id: string;
+      name: string;
+      title?: string;
+      current: boolean;
+    }[] = [
       {
-        name: "Settings",
+        name: t("Settings"),
         id: "settings",
-        current: selectedTab === "settings",
+        current: activeTab === "settings",
       },
       {
-        name: "Data Source",
+        name: t("Source"),
+        title: t("Data Source"),
         id: "versions",
-        current: selectedTab === "versions",
+        current: activeTab === "versions",
       },
       {
-        name: "Metadata",
-        id: "metadata",
-        current: selectedTab === "metadata",
-      },
-      {
-        name: "Style",
+        name: t("Style"),
         id: "style",
-        current: selectedTab === "style",
+        current: activeTab === "style",
       },
       {
-        name: "Interactivity",
+        name: t("Interact"),
         id: "interactivity",
-        current: selectedTab === "interactivity",
+        current: activeTab === "interactivity",
+      },
+      {
+        name: t("Metadata"),
+        id: "metadata",
+        current: activeTab === "metadata",
       },
     ];
-  }, [selectedTab]);
+    if (supportsDataTables) {
+      items.push({
+        name: t("Tables"),
+        title: t("Data Tables"),
+        id: "dataTables",
+        current: activeTab === "dataTables",
+      });
+    }
+    return items;
+  }, [activeTab, supportsDataTables, t]);
 
   const isArcGISCustomSource =
     source?.type === DataSourceTypes.ArcgisDynamicMapserver ||
@@ -185,26 +211,29 @@ export default function LayerTableOfContentsItemEditor(
       className="bg-white z-30 absolute bottom-0 w-128 flex flex-col"
       style={{ height: "calc(100vh)" }}
     >
-      <div className="flex-0 px-4 pt-4 pb-1 shadow-sm bg-gray-700 text-primary-300 flex items-center">
-        <h4 className="font-medium text-indigo-100 flex-1 truncate">
-          {error ? t("Error") : item?.title || props.title || t("Loading")}
-        </h4>
-        <button
-          className="bg-gray-300 bg-opacity-25 float-right rounded-full p-1 cursor-pointer focus:ring-blue-300"
-          onClick={onRequestClose}
-        >
-          <XIcon className="w-5 h-5 text-white" />
-        </button>
-      </div>
-      {item?.containedBy && item.containedBy.length > 0 && (
-        <div className="px-4 py-1 bg-gray-700 text-gray-300 text-sm">
-          <TableOfContentsItemFolderBreadcrumbs
-            parents={item.containedBy as OverlayFragment[]}
-          />
+      <div className="flex-0 shrink-0 border-b border-gray-600 bg-gray-700 text-primary-300 shadow-sm">
+        <div className="flex items-center gap-2 px-3 pt-3 pb-3">
+          <h4 className="min-w-0 flex-1 truncate font-medium text-indigo-100">
+            {error ? t("Error") : item?.title || props.title || t("Loading")}
+          </h4>
+          <button
+            type="button"
+            aria-label={t("Close layer editor")}
+            title={t("Close")}
+            className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-lg border border-white border-opacity-5 bg-black bg-opacity-20 text-gray-200 transition-colors hover:border-opacity-10 hover:bg-gray-600 hover:text-white hover:shadow-sm focus:outline-none focus-visible:border-opacity-10 focus-visible:bg-gray-600 focus-visible:text-white focus-visible:shadow-sm focus-visible:ring-2 focus-visible:ring-indigo-300"
+            onClick={onRequestClose}
+          >
+            <XIcon className="pointer-events-none h-5 w-5" aria-hidden />
+          </button>
         </div>
-      )}
-      <div className="flex-0 p-2 px-4 shadow-sm bg-gray-700 text-primary-300 flex items-center">
-        <Tabs dark small tabs={tabs} onClick={(id) => setSelectedTab(id)} />
+        {item?.containedBy && item.containedBy.length > 0 && (
+          <div className="px-3 pb-1.5 text-xs text-gray-300">
+            <TableOfContentsItemFolderBreadcrumbs
+              parents={item.containedBy as OverlayFragment[]}
+            />
+          </div>
+        )}
+        <LayerEditorTabs tabs={tabs} onSelect={setSelectedTab} />
       </div>
       {error && (
         <div className="p-4 py-6 space-y-2 text-red-800">
@@ -213,12 +242,15 @@ export default function LayerTableOfContentsItemEditor(
         </div>
       )}
       {!item && !error && <LoadingSkeleton />}
-      {item && selectedTab === "settings" && <LayerSettings item={item} />}
-      {item && selectedTab === "versions" && <LayerVersioning item={item} />}
+      {item && activeTab === "settings" && <LayerSettings item={item} />}
+      {item && activeTab === "dataTables" && supportsDataTables && (
+        <DataTablesEditor item={item} />
+      )}
+      {item && activeTab === "versions" && <LayerVersioning item={item} />}
       {item && (
         <div
           className={
-            selectedTab !== "metadata"
+            activeTab !== "metadata"
               ? "hidden"
               : "flex-1 flex flex-col overflow-y-hidden"
           }
@@ -230,7 +262,7 @@ export default function LayerTableOfContentsItemEditor(
         </div>
       )}
       {item &&
-        selectedTab === "interactivity" &&
+        activeTab === "interactivity" &&
         source &&
         source.type === DataSourceTypes.Inaturalist && (
           <div className="flex-1 overflow-y-auto px-4 pb-4">
@@ -246,7 +278,7 @@ export default function LayerTableOfContentsItemEditor(
           </div>
         )}
       {item &&
-        selectedTab === "interactivity" &&
+        activeTab === "interactivity" &&
         source &&
         source.type !== DataSourceTypes.Inaturalist && (
           <div className="flex-1 overflow-y-auto px-4 pb-4">
@@ -305,7 +337,7 @@ export default function LayerTableOfContentsItemEditor(
           </div>
         )}
 
-      {item && selectedTab === "style" && (
+      {item && activeTab === "style" && (
         <div className="h-full overflow-hidden">
           {source && source.type === DataSourceTypes.Inaturalist && (
             <div className="bg-gray-50 text-sm border p-4 rounded flex items-center space-x-4 m-4 mt-5">

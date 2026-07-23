@@ -1,0 +1,1 @@
+{"version":3,"file":"delimited.d.ts","sourceRoot":"","sources":["../../../src/formats/delimited.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,MAAM,EAAE,MAAM,WAAW,CAAC;AACnC,OAAO,KAAK,EAAE,gCAAgC,EAAE,MAAM,+BAA+B,CAAC;AAYtF;;;;;;;;GAQG;AACH,wBAAsB,yBAAyB,CAC7C,MAAM,EAAE,MAAM,EACd,SAAS,EAAE,MAAM,EACjB,UAAU,EAAE,MAAM,EAClB,OAAO,EAAE,gCAAgC,GACxC,OAAO,CAAC,IAAI,CAAC,CA0Df"}

@@ -10,11 +10,16 @@ export default function ChangeLogListItem({
   last,
   itemTitle,
   missingProfileLabel,
+  dataTableActions,
 }: {
   changeLog: ChangeLogDetailsFragment;
   last?: boolean;
   itemTitle?: ReactNode;
   missingProfileLabel?: string;
+  dataTableActions?: {
+    tableOfContentsItemId: number;
+    activeTables: { id: number; version: number }[];
+  };
 }) {
   const FieldGroupListItem =
     FIELD_GROUP_LIST_ITEM_COMPONENTS[changeLog.fieldGroup] ||
@@ -25,6 +30,7 @@ export default function ChangeLogListItem({
       last={last}
       itemTitle={itemTitle}
       missingProfileLabel={missingProfileLabel}
+      dataTableActions={dataTableActions}
     />
   );
 }

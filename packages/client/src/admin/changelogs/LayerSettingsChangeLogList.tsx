@@ -12,6 +12,7 @@ import {
 } from "./creationAnchorLogic";
 import SourceCreationAnchorItem from "./SourceCreationAnchorItem";
 import {
+  LAYER_SETTINGS_CHANGE_LOG_COLLAPSED_FIRST,
   LAYER_SETTINGS_CHANGE_LOG_EXPANDED_FIRST,
   LAYER_SETTINGS_CHANGE_LOG_PAGE_SIZE,
 } from "./layerSettingsChangeLogRefetch";
@@ -54,7 +55,7 @@ export default function LayerSettingsChangeLogList({
       id: tableOfContentsItemId,
       first: showAllHistory
         ? LAYER_SETTINGS_CHANGE_LOG_EXPANDED_FIRST
-        : LAYER_SETTINGS_CHANGE_LOG_PAGE_SIZE,
+        : LAYER_SETTINGS_CHANGE_LOG_COLLAPSED_FIRST,
     }),
     [tableOfContentsItemId, showAllHistory]
   );
@@ -80,9 +81,12 @@ export default function LayerSettingsChangeLogList({
   const relatedPublishChangeLogs = toc?.relatedPublishChangeLogs
     ? [...toc.relatedPublishChangeLogs]
     : [];
-  const changeLogs = [...directChangeLogs, ...relatedPublishChangeLogs]
-    .sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime())
-    .slice(0, variables.first);
+  const fetchedLogs = [...directChangeLogs, ...relatedPublishChangeLogs].sort(
+    (a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime()
+  );
+  const changeLogs = showAllHistory
+    ? fetchedLogs
+    : fetchedLogs.slice(0, LAYER_SETTINGS_CHANGE_LOG_PAGE_SIZE);
   const rawCreatedAt = toc?.dataLayer?.dataSource?.createdAt;
   const authorProfile = toc?.dataLayer?.dataSource?.authorProfile ?? undefined;
   const dataLibraryTemplateId = toc?.dataLayer?.dataSource?.dataLibraryTemplateId;
@@ -117,9 +121,7 @@ export default function LayerSettingsChangeLogList({
 
   const canShowMore =
     !showAllHistory &&
-    (directChangeLogs.length >= LAYER_SETTINGS_CHANGE_LOG_PAGE_SIZE ||
-      relatedPublishChangeLogs.length >= LAYER_SETTINGS_CHANGE_LOG_PAGE_SIZE) &&
-    itemCount > 0;
+    fetchedLogs.length > LAYER_SETTINGS_CHANGE_LOG_PAGE_SIZE;
 
   const initialLoading = loading && !tocQuery && !showAllHistory;
 

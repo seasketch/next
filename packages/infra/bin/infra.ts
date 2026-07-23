@@ -15,6 +15,7 @@ import { MailerLambdaStack } from "../lib/MailerLambdaStack";
 import { OfflineTilePackageBucketStack } from "../lib/OfflineTilePackageUploadStack";
 import { DataUploadsStack } from "../lib/DataUploadsStack";
 import { UploadHandlerLambdaStack } from "../lib/UploadHandlerLambdaStack";
+import { DataTablesHandlerLambdaStack } from "../lib/DataTablesHandlerLambdaStack";
 import { SQSStack } from "../lib/SQSStack";
 import { SecretsStack } from "../lib/SecretsStack";
 import { OverlayWorkerLambdaStack } from "../lib/OverlayWorkerLambdaStack";
@@ -174,6 +175,17 @@ const uploadHandler = new UploadHandlerLambdaStack(
 
 const secrets = new SecretsStack(app, "SeaSketchSecrets", { env });
 
+const dataTablesHandler = new DataTablesHandlerLambdaStack(
+  app,
+  "DataTablesHandler",
+  {
+    env,
+    vpc: db.vpc,
+    db: db.instance,
+    bucket: dataUploads.uploadsBucket,
+  }
+);
+
 const sqs = new SQSStack(app, "SeaSketchSQS", {
   env,
 });
@@ -228,6 +240,7 @@ new GraphQLStack(app, "SeaSketchGraphQLServer", {
   overlayWorkerArn: overlayWorker.fn.functionArn,
   normalizedOutputsBucket: dataUploads.normalizedUploadsBucket,
   uploadHandler: uploadHandler.fn,
+  dataTablesHandler: dataTablesHandler.fn,
   subdivisionWorkerLambdaArn: subdivideWorker.fn.functionArn,
   fragmentWorkerLambdaArn: fragmentWorker.fn.functionArn,
   geostatsPiiClassifierLambdaArn: piiClassifier.fn.functionArn,

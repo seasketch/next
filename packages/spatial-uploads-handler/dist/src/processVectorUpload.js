@@ -10,6 +10,8 @@ const prosemirror_markdown_1 = require("prosemirror-markdown");
 const metadata_parser_1 = require("@seasketch/metadata-parser");
 const ai_data_analyst_1 = require("ai-data-analyst");
 const aiUploadNotes_1 = require("./aiUploadNotes");
+const delimited_1 = require("./formats/delimited");
+const DELIMITED_EXTENSIONS = new Set([".csv", ".tsv", ".txt"]);
 function fromMarkdown(md) {
     var _a;
     return (_a = prosemirror_markdown_1.defaultMarkdownParser.parse(md)) === null || _a === void 0 ? void 0 : _a.toJSON();
@@ -94,13 +96,23 @@ async function collectAttributionSidecarContents(logger, workingDirectory, worki
  */
 async function processVectorUpload(options) {
     var _a;
-    const { logger, path, outputs, updateProgress, baseKey, workingDirectory, jobId, originalName, uploadFilename, enableAiDataAnalyst, } = options;
+    const { logger, path, outputs, updateProgress, baseKey, workingDirectory, jobId, originalName, uploadFilename, enableAiDataAnalyst, processingOptions, } = options;
     if (enableAiDataAnalyst) {
         (0, aiUploadNotes_1.assertAiDataAnalystEnvVarsPresent)();
     }
     const originalFilePath = path;
     let workingFilePath = path;
     await updateProgress("running", "validating");
+    const isDelimited = DELIMITED_EXTENSIONS.has((0, path_1.parse)(path).ext);
+    if (isDelimited) {
+        if (!processingOptions) {
+            throw new Error("This file requires column mapping configuration before it can be uploaded. Please configure coordinate columns and try again.");
+        }
+        const convertedPath = (0, path_1.join)(workingDirectory, jobId + ".geojson");
+        await updateProgress("running", "converting delimited text");
+        await (0, delimited_1.convertDelimitedToGeoJSON)(logger, workingFilePath, convertedPath, processingOptions);
+        workingFilePath = convertedPath;
+    }
     let titleP = enableAiDataAnalyst
         ? (0, aiUploadNotes_1.asNeverReject)((0, ai_data_analyst_1.generateTitle)(uploadFilename), "generateTitle")
         : null;
@@ -239,6 +251,14 @@ async function processVectorUpload(options) {
     }
     else {
         throw new Error("Not a recognized file type");
+    }
+    if (isDelimited) {
+        if (/Feature Count: 0\b/.test(ogrInfo)) {
+            throw new Error("No spatial features could be extracted from this file using the selected columns. Double check the column mapping and try again.");
+        }
+        // The original output should reflect the file as uploaded (delimited
+        // text), not the GeoJSON it was converted to above.
+        type = "CSV";
     }
     const sidecarFiles = await collectAttributionSidecarContents(logger, workingDirectory, workingFilePath, isZip || isRar);
     const attributionInputs = [];

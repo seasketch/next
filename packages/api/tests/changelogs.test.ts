@@ -270,6 +270,12 @@ describe("change_logs", () => {
 
     expect(groups.map((row: any) => row.enumlabel).sort()).toEqual(
       [
+        "data_table:created",
+        "data_table:deleted",
+        "data_table:renamed",
+        "data_table:replaced",
+        "data_table:rollback",
+        "data_table:visualization_settings_updated",
         "folder:acl",
         "folder:created",
         "folder:deleted",

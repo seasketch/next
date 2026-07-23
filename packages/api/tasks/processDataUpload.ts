@@ -29,7 +29,8 @@ export default async function processDataUpload(
     const q = await client.query(
       `
       select
-        id || '/' || filename as object_key
+        id || '/' || filename as object_key,
+        processing_options
       from
         data_upload_tasks
       where
@@ -42,6 +43,7 @@ export default async function processDataUpload(
       throw new Error("Could not find objectKey for job with ID=" + jobId);
     }
     const objectKey = q.rows[0].object_key;
+    const processingOptions = q.rows[0].processing_options ?? undefined;
     if (!job) {
       throw new Error("Could not find job with ID=" + job.id);
     }
@@ -75,6 +77,7 @@ export default async function processDataUpload(
         requestingUser: user.fullname
           ? `${user.fullname} <${user.email || user.canonical_email}>`
           : user.email || user.canonical_email,
+        processingOptions,
       });
     } catch (e) {
       console.error("error!!", e);
