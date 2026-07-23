@@ -64,9 +64,11 @@ export class DataTablesHandlerLambdaStack extends cdk.Stack {
     fn.addToRolePolicy(
       new iam.PolicyStatement({
         actions: ["rds-db:connect"],
-        resources: [
-          `arn:aws:rds-db:${props.db.env.region}:${props.db.env.account}:dbuser:${props.db.instanceResourceId}/graphile`,
-        ],
+        effect: iam.Effect.ALLOW,
+        // Same wildcard as UploadHandler/GraphQLStack: SeaSketchDB does not
+        // export DbiResourceId, so instanceResourceId can't be used here.
+        // https://github.com/aws/aws-cdk/issues/11851
+        resources: [`arn:aws:rds-db:*:*:dbuser:*/*`],
       }),
     );
 
