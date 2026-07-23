@@ -764,6 +764,88 @@ class MapContextManager extends EventEmitter {
     this.map.on("sourcedata", listener);
   }
 
+  /**
+   * Live map circle layer for an activated data table. ID and paint must stay
+   * in sync with {@link setLayerOpacity} so the legend opacity slider can
+   * call `setPaintProperty` on the same layer the style put on the map.
+   */
+  private buildDataTableProportionalSymbolLayer(
+    layer: { tocId: string } & DataLayerDetailsFragment,
+    sourceId: string,
+    sourceLayer?: string
+  ): AnyLayer {
+    const valueExpression = ["feature-state", "scaledValue"] as Expression;
+    // Unset feature-state is null; typeof !== "number" covers that and any
+    // non-numeric sentinel in one check.
+    const isNoData = [
+      "!=",
+      ["typeof", valueExpression],
+      "number",
+    ] as Expression;
+    // Safe to compare numerically: case chains check isNoData before isZero.
+    const isZero = [
+      "==",
+      valueExpression,
+      DATA_TABLE_ZERO_SENTINEL,
+    ] as Expression;
+    const isLoading = [
+      "boolean",
+      ["feature-state", "loading"],
+      false,
+    ] as Expression;
+    return {
+      id: idForLayer(layer, 0),
+      type: "circle",
+      source: sourceId,
+      ...(sourceLayer ? { "source-layer": sourceLayer } : {}),
+      metadata: {
+        "s:data-table-proporional-symbol": true,
+      },
+      paint: {
+        "circle-color": [
+          "case",
+          isLoading,
+          DATA_TABLE_LOADING_COLOR,
+          isNoData,
+          DATA_TABLE_NO_DATA_COLOR,
+          DATA_TABLE_ACTIVE_COLOR,
+        ],
+        "circle-opacity": [
+          "case",
+          isLoading,
+          DATA_TABLE_LOADING_FILL_OPACITY,
+          isNoData,
+          DATA_TABLE_NO_DATA_FILL_OPACITY,
+          isZero,
+          DATA_TABLE_ZERO_FILL_OPACITY,
+          DATA_TABLE_CIRCLE_FILL_OPACITY,
+        ],
+        "circle-stroke-opacity": [
+          "case",
+          isLoading,
+          DATA_TABLE_LOADING_STROKE_OPACITY,
+          isNoData,
+          DATA_TABLE_CIRCLE_STROKE_OPACITY,
+          1,
+        ],
+        "circle-stroke-color": [
+          "case",
+          isNoData,
+          DATA_TABLE_NO_DATA_COLOR,
+          DATA_TABLE_ACTIVE_COLOR,
+        ],
+        "circle-stroke-width": ["case", isNoData, 2, isZero, 2, 0],
+        "circle-radius": buildDataTableCircleRadiusExpression({
+          valueExpression,
+          scaleMin: 0,
+          scaleMax: 1,
+          zoomDependent: true,
+          hideWhenMissing: false,
+        }),
+      },
+    };
+  }
+
   private dataTableCircleLayer(
     tocStableId: string,
     layer: { tocId: string } & DataLayerDetailsFragment,
@@ -2461,89 +2543,12 @@ class MapContextManager extends EventEmitter {
                   dataTableVisualizationSettings.query.column &&
                   dataTableVisualizationSettings.query.op
                 ) {
-                  const valueExpression = [
-                    "feature-state",
-                    "scaledValue",
-                  ] as Expression;
-                  // Unset feature-state is null; typeof !== "number" covers
-                  // that and any non-numeric sentinel in one check.
-                  const isNoData = [
-                    "!=",
-                    ["typeof", valueExpression],
-                    "number",
-                  ] as Expression;
-                  // Safe to compare numerically: every case chain checks
-                  // isNoData before isZero, so the value is a number here.
-                  const isZero = [
-                    "==",
-                    valueExpression,
-                    DATA_TABLE_ZERO_SENTINEL,
-                  ] as Expression;
-                  const isLoading = [
-                    "boolean",
-                    ["feature-state", "loading"],
-                    false,
-                  ] as Expression;
                   glLayers = [
-                    {
-                      id: idForLayer(layer, 0),
-                      type: "circle",
-                      source: overlaySourceKey,
-                      ...(sourceLayer ? { "source-layer": sourceLayer } : {}),
-                      metadata: {
-                        "s:data-table-proporional-symbol": true,
-                      },
-                      paint: {
-                        "circle-color": [
-                          "case",
-                          isLoading,
-                          DATA_TABLE_LOADING_COLOR,
-                          isNoData,
-                          DATA_TABLE_NO_DATA_COLOR,
-                          DATA_TABLE_ACTIVE_COLOR,
-                        ],
-                        "circle-opacity": [
-                          "case",
-                          isLoading,
-                          DATA_TABLE_LOADING_FILL_OPACITY,
-                          isNoData,
-                          DATA_TABLE_NO_DATA_FILL_OPACITY,
-                          isZero,
-                          DATA_TABLE_ZERO_FILL_OPACITY,
-                          DATA_TABLE_CIRCLE_FILL_OPACITY,
-                        ],
-                        "circle-stroke-opacity": [
-                          "case",
-                          isLoading,
-                          DATA_TABLE_LOADING_STROKE_OPACITY,
-                          isNoData,
-                          DATA_TABLE_CIRCLE_STROKE_OPACITY,
-                          1,
-                        ],
-                        "circle-stroke-color": [
-                          "case",
-                          isNoData,
-                          DATA_TABLE_NO_DATA_COLOR,
-                          DATA_TABLE_ACTIVE_COLOR,
-                        ],
-                        "circle-stroke-width": [
-                          "case",
-                          isNoData,
-                          2,
-                          isZero,
-                          2,
-                          0,
-                        ],
-                        "circle-radius": buildDataTableCircleRadiusExpression({
-                          // Radius math still needs a numeric stand-in for null.
-                          valueExpression,
-                          scaleMin: 0,
-                          scaleMax: 1,
-                          zoomDependent: true,
-                          hideWhenMissing: false,
-                        }),
-                      },
-                    },
+                    this.buildDataTableProportionalSymbolLayer(
+                      layer,
+                      overlaySourceKey,
+                      sourceLayer
+                    ),
                   ];
                 }
                 if (
@@ -4195,14 +4200,18 @@ class MapContextManager extends EventEmitter {
       dataTableActivation?.query.column && dataTableActivation?.query.op
     );
     if (dataTableActive) {
-      const dataTableLayer = this.dataTableCircleLayer(
-        stableId,
+      // Must use the same layer id/paint as getComputedStyle. The old
+      // dataTableCircleLayer helper used a `-data-table` id suffix, so
+      // setPaintProperty was a no-op on a layer that isn't on the map.
+      const dataTableLayer = this.buildDataTableProportionalSymbolLayer(
         layer,
         this.overlayStates.prefixedSourceId(layer.dataSourceId),
         shouldHaveSourceLayer ? layer.sourceLayer || undefined : undefined
       );
-      if (dataTableLayer) {
+      if (this.map.getLayer(dataTableLayer.id)) {
         adjustLayerOpacities([dataTableLayer], opacity, this.map);
+      } else {
+        this.debouncedUpdateStyle();
       }
     } else if (layer.mapboxGlStyles?.length > 0) {
       let glLayers = (layer.mapboxGlStyles as any[]).map((lyr, i) => {
