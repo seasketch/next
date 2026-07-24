@@ -1422,6 +1422,8 @@ export type CreateCustomReportPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `Report` that is related to this `Report`. */
+  draft?: Maybe<Report>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   report?: Maybe<Report>;
@@ -2296,6 +2298,8 @@ export type CreateReportPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `Report` that is related to this `Report`. */
+  draft?: Maybe<Report>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   /** The `Report` that was created by this mutation. */
@@ -4691,6 +4695,8 @@ export type DeleteReportPayload = {
    */
   clientMutationId?: Maybe<Scalars['String']>;
   deletedReportNodeId?: Maybe<Scalars['ID']>;
+  /** Reads a single `Report` that is related to this `Report`. */
+  draft?: Maybe<Report>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   /** The `Report` that was deleted by this mutation. */
@@ -14404,6 +14410,8 @@ export type Report = Node & {
   __typename?: 'Report';
   createdAt: Scalars['Datetime'];
   dependencies: ReportOverlayDependencies;
+  /** Reads a single `Report` that is related to this `Report`. */
+  draft?: Maybe<Report>;
   draftId?: Maybe<Scalars['Int']>;
   /** Reads and enables pagination through a set of `Geography`. */
   geographies?: Maybe<Array<Geography>>;
@@ -14413,6 +14421,8 @@ export type Report = Node & {
   overlaySources: Array<ReportOverlaySource>;
   projectId: Scalars['Int'];
   publishedAt?: Maybe<Scalars['Datetime']>;
+  /** Reads and enables pagination through a set of `Report`. */
+  reportsByDraftIdConnection: ReportsConnection;
   /** Reads a single `SketchClass` that is related to this `Report`. */
   sketchClass?: Maybe<SketchClass>;
   sketchClassId?: Maybe<Scalars['Int']>;
@@ -14432,6 +14442,17 @@ export type ReportDependenciesArgs = {
 export type ReportGeographiesArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
+};
+
+
+export type ReportReportsByDraftIdConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<ReportCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<ReportsOrderBy>>;
 };
 
 
@@ -14458,6 +14479,8 @@ export type ReportCard = Node & {
 
 /** A condition to be used against `Report` object types. All fields are tested for equality and combined with a logical ‘and.’ */
 export type ReportCondition = {
+  /** Checks for equality with the object’s `draftId` field. */
+  draftId?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `id` field. */
   id?: Maybe<Scalars['Int']>;
   /** Checks for equality with the object’s `sketchClassId` field. */
@@ -14609,6 +14632,8 @@ export type ReportsEdge = {
 
 /** Methods to use when ordering `Report`. */
 export enum ReportsOrderBy {
+  DraftIdAsc = 'DRAFT_ID_ASC',
+  DraftIdDesc = 'DRAFT_ID_DESC',
   IdAsc = 'ID_ASC',
   IdDesc = 'ID_DESC',
   Natural = 'NATURAL',
@@ -18760,6 +18785,8 @@ export type UpdateReportPayload = {
    * unchanged and unused. May be used by a client to track mutations.
    */
   clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `Report` that is related to this `Report`. */
+  draft?: Maybe<Report>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
   /** The `Report` that was updated by this mutation. */
