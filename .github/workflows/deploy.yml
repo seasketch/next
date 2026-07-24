@@ -1,4 +1,9 @@
 name: Create Deployment
+# API-first deploy invariant:
+#   migrations -> server -> api_ready_gate (live GraphQL validation) -> client
+# Never publish the client until production GraphQL accepts every client operation.
+# Client-only deploys are allowed when deploy_server is skipped, but still must
+# pass live schema validation against https://api.seasket.ch/graphql.
 on:
   workflow_dispatch:
     inputs:
@@ -187,17 +192,69 @@ jobs:
           CF_AIG_URL: ${{ secrets.CF_AIG_URL }}
         run: |
           cdk deploy --require-approval never -e SeaSketchGraphQLServer
+  api_ready_gate:
+    name: API ready for client
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Fail closed: only proceed toward client publish when detect_changes succeeded
+    # and (if an API deploy was required) deploy_server succeeded.
+    if: |
+      always() &&
+      needs.detect_changes.result == 'success' &&
+      (github.event.inputs.force == 'true' || needs.detect_changes.outputs.client == 'true')
+    needs:
+      - detect_changes
+      - deploy_server
+    steps:
+      - name: Require successful server deploy when API changed
+        run: |
+          set -euo pipefail
+          force="${{ github.event.inputs.force }}"
+          api_changed="${{ needs.detect_changes.outputs.api }}"
+          server_result="${{ needs.deploy_server.result }}"
+          if [[ "$force" == "true" || "$api_changed" == "true" ]]; then
+            if [[ "$server_result" != "success" ]]; then
+              echo "API deploy was required (force=$force, api=$api_changed) but deploy_server result was '$server_result'." 1>&2
+              echo "Blocking client deploy until the GraphQL server is successfully updated." 1>&2
+              exit 1
+            fi
+            echo "Server deploy succeeded; proceeding to live schema validation."
+          else
+            if [[ "$server_result" != "success" && "$server_result" != "skipped" ]]; then
+              echo "Unexpected deploy_server result '$server_result' for a client-only deploy." 1>&2
+              exit 1
+            fi
+            echo "API deploy not required (deploy_server=$server_result); proceeding to live schema validation."
+          fi
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "23"
+          cache: "npm"
+          cache-dependency-path: packages/client/package-lock.json
+      - name: Install client dependencies for GraphQL validation
+        working-directory: ./packages/client
+        run: npm ci --ignore-scripts
+      - name: Validate client operations against live GraphQL schema
+        working-directory: ./packages/client
+        env:
+          GRAPHQL_ENDPOINT: https://api.seasket.ch/graphql
+        run: npm run graphql:validate:live
   deploy_client:
     name: Deploy Client
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    if: github.event.inputs.force == 'true' || needs.detect_changes.outputs.client == 'true'
+    if: |
+      always() &&
+      needs.api_ready_gate.result == 'success' &&
+      (github.event.inputs.force == 'true' || needs.detect_changes.outputs.client == 'true')
     concurrency: ${{github.event.inputs.environment }}_client
     environment:
       name: ${{github.event.inputs.environment}}_client
       url: https://www.seasketch.org/
     needs:
       - detect_changes
+      - api_ready_gate
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
