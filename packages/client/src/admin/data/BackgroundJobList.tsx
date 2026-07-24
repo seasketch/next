@@ -41,13 +41,23 @@ export default function BackgroundJobList({
   const [hiddenLocalUploads, setHiddenLocalUploads] = useState<string[]>([]);
   const backgroundJobContext = useContext(ProjectBackgroundJobContext);
   useEffect(() => {
-    if (backgroundJobContext.manager) {
-      backgroundJobContext.manager.on("upload-processing-complete", (event) => {
-        setTimeout(() => {
-          setHiddenLocalUploads((prev) => [...prev, event.jobId]);
-        }, 50);
-      });
+    const manager = backgroundJobContext.manager;
+    if (!manager) {
+      return;
     }
+    const hideCompletedUpload = (event: { jobId: string }) => {
+      setTimeout(() => {
+        setHiddenLocalUploads((prev) => [...prev, event.jobId]);
+      }, 50);
+    };
+    // Spatial uploads and data table uploads emit different completion events,
+    // but both need to be dismissed from the session job list.
+    manager.on("upload-processing-complete", hideCompletedUpload);
+    manager.on("data-table-upload-complete", hideCompletedUpload);
+    return () => {
+      manager.off("upload-processing-complete", hideCompletedUpload);
+      manager.off("data-table-upload-complete", hideCompletedUpload);
+    };
   }, [backgroundJobContext.manager]);
 
   const activeJobs = useMemo(() => {
