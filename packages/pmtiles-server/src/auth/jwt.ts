@@ -18,6 +18,11 @@ type JwksCache = {
 };
 
 let jwksCache: JwksCache | null = null;
+/** Coalesce concurrent JWKS fetches (cold isolate / key-rotation refresh). */
+const jwksInFlight = new Map<
+  string,
+  Promise<ReturnType<typeof createLocalJWKSet>>
+>();
 /** How long to reuse a fetched JWKS in this isolate before re-fetching. */
 const JWKS_TTL_MS = 60 * 60 * 1000; // 1 hour
 
@@ -54,25 +59,38 @@ async function loadJWKS(
     return jwksCache.jwks;
   }
 
-  const res = await fetch(jwksUrl, {
-    headers: { Accept: "application/json" },
-  });
-  if (!res.ok) {
-    throw new Error(`jwks_fetch_failed:${res.status}`);
-  }
-  const body = await res.json();
-  let keyset: JSONWebKeySet;
-  if (Array.isArray(body)) {
-    keyset = { keys: body };
-  } else if (body && Array.isArray((body as JSONWebKeySet).keys)) {
-    keyset = body as JSONWebKeySet;
-  } else {
-    throw new Error("jwks_malformed");
+  const flightKey = options?.forceRefresh ? `${jwksUrl}#refresh` : jwksUrl;
+  const existing = jwksInFlight.get(flightKey);
+  if (existing) {
+    return existing;
   }
 
-  const jwks = createLocalJWKSet(keyset);
-  jwksCache = { url: jwksUrl, jwks, fetchedAt: now };
-  return jwks;
+  const promise = (async () => {
+    const res = await fetch(jwksUrl, {
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) {
+      throw new Error(`jwks_fetch_failed:${res.status}`);
+    }
+    const body = await res.json();
+    let keyset: JSONWebKeySet;
+    if (Array.isArray(body)) {
+      keyset = { keys: body };
+    } else if (body && Array.isArray((body as JSONWebKeySet).keys)) {
+      keyset = body as JSONWebKeySet;
+    } else {
+      throw new Error("jwks_malformed");
+    }
+
+    const jwks = createLocalJWKSet(keyset);
+    jwksCache = { url: jwksUrl, jwks, fetchedAt: Date.now() };
+    return jwks;
+  })().finally(() => {
+    jwksInFlight.delete(flightKey);
+  });
+
+  jwksInFlight.set(flightKey, promise);
+  return promise;
 }
 
 /** jose: JWKS cache missed a newly rotated signing key */

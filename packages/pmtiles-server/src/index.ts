@@ -2,7 +2,7 @@ import { WorkerEntrypoint } from "cloudflare:workers";
 import { corsPreflightResponse } from "./auth/cors";
 import { DataTablesBackend } from "./dataTablesBackend";
 import { handleClassifiedRequest } from "./gateway";
-import { ObjectBackend } from "./objectBackend";
+import { handleObjectRequest, ObjectBackend } from "./objectBackend";
 import { PropertiesBackend } from "./propertiesBackend";
 import {
   aclNamespaceFromRequest,
@@ -53,22 +53,30 @@ export default class extends WorkerEntrypoint<Env> {
     // uploads host is always opaque R2; tiles/overlay hosts prefer PMTiles
     // presentation (including root fixture archives like crdss-cells-6).
     const uploadsHost = url.hostname === "uploads.seasketch.org";
-    const backend =
-      uploadsHost || !isTilePresentationResource(resource)
-        ? this.ctx.exports.ObjectBackend
-        : this.ctx.exports.TilesBackend;
+    const useObjectBackend =
+      uploadsHost || !isTilePresentationResource(resource);
 
-    return handleClassifiedRequest(
-      request,
-      this.env,
-      { fetch: (req, options) => backend.fetch(req, options) },
-      resource,
-      {
-        ns: aclNamespaceFromRequest(request),
-        enforce: resourceAclEnabled(this.env, resource),
-        waitUntil: (p) => this.ctx.waitUntil(p),
-      },
-    );
+    // ObjectBackend has Workers Caching disabled (Range must reach the Worker).
+    // Call it in-process: a ctx.exports loopback adds no cache benefit and
+    // intermittently never settles under concurrent eyeball requests (client
+    // often fetches several column-stats.json files at once).
+    const backend = useObjectBackend
+      ? {
+          fetch: (req: Request) =>
+            handleObjectRequest(req, this.env, (p) => this.ctx.waitUntil(p)),
+        }
+      : {
+          fetch: (
+            req: Request,
+            options?: { cf?: { cacheKey?: string } },
+          ) => this.ctx.exports.TilesBackend.fetch(req, options),
+        };
+
+    return handleClassifiedRequest(request, this.env, backend, resource, {
+      ns: aclNamespaceFromRequest(request),
+      enforce: resourceAclEnabled(this.env, resource),
+      waitUntil: (p) => this.ctx.waitUntil(p),
+    });
   }
 
   /**

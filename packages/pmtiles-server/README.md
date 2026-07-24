@@ -319,11 +319,13 @@ on every protected request. Tiles and property query responses use cached named
 entrypoints after auth.
 
 `ObjectBackend` is not fronted by Workers Caching because a cache miss can
-strip `Range` and request the complete object. It instead uses
-`caches.default` with synthetic keys containing the object key and exact range.
-The cache stores an internal 200 representation and reconstructs the outward
-206 response. This provides PoP caching for frequently read FGB/COG headers,
-indexes, and data windows without buffering whole downloads.
+strip `Range` and request the complete object. The gateway therefore calls
+`handleObjectRequest` in-process (no `ctx.exports` loopback) after auth.
+Range responses still use `caches.default` with synthetic keys containing the
+object key and exact range. The cache stores an internal 200 representation
+and reconstructs the outward 206 response. This provides PoP caching for
+frequently read FGB/COG headers, indexes, and data windows without buffering
+whole downloads.
 
 Protected outward responses are marked private even when an internal backend
 response is shared safely after gateway authorization.

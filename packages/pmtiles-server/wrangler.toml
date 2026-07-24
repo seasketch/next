@@ -24,6 +24,8 @@ enabled = true
 # Range requests must reach ObjectBackend. Workers Caching strips Range on a
 # miss and asks the Worker for the whole body, which is inappropriate for large
 # FlatGeobuf and cloud-optimized GeoTIFF objects.
+# The default gateway calls handleObjectRequest in-process (see src/index.ts);
+# this export remains for direct/smoke invocation and stays uncached.
 [exports.ObjectBackend]
 type = "worker"
 [exports.ObjectBackend.cache]
