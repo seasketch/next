@@ -230,16 +230,20 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: "23"
-      # Only graphql is required for schema validation. Avoid npm ci / lerna here:
-      # the client package.json references private @seasketch/* workspace packages
-      # that are not published to the public npm registry.
+          cache: npm
+          cache-dependency-path: packages/client/graphql-validate/package-lock.json
+      # Isolated package with only graphql — avoids private @seasketch/* deps in
+      # packages/client/package.json while still using setup-node npm caching.
       - name: Validate client operations against live GraphQL schema
-        working-directory: ./packages/client
+        working-directory: ./packages/client/graphql-validate
         env:
           GRAPHQL_ENDPOINT: https://api.seasket.ch/graphql
         run: |
-          npm install --no-save --no-package-lock graphql@15.3.0
-          node bin/validateLiveGraphql.js
+          set -euo pipefail
+          npm ci
+          # validate.js lives in this package so require("graphql") resolves here,
+          # not via packages/client/node_modules (NODE_PATH is not enough for that).
+          node ./validate.js
   deploy_client:
     name: Deploy Client
     runs-on: ubuntu-latest

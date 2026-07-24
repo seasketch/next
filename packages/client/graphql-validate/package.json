@@ -1,0 +1,8 @@
+{
+  "name": "seasketch-client-graphql-validate",
+  "private": true,
+  "description": "Isolated deps for live GraphQL schema validation in CI deploy gate",
+  "dependencies": {
+    "graphql": "15.3.0"
+  }
+}
