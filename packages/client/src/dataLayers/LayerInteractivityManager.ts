@@ -28,10 +28,35 @@ import {
   renderInaturalistPopup,
 } from "./inaturalistInteractivity";
 import { normalizeInaturalistParams } from "./inaturalist";
+import {
+  encodingParamsFromGlStyles,
+  styleRespectsScaleAndOffset,
+  type RasterValueEncodingParams,
+} from "./rasterValueEncoding";
+import {
+  clearRasterPixelQueryCaches,
+  queryRasterPixelValue,
+  setRasterPixelQueryAuthorizeUrl,
+  type RasterPixelHit,
+} from "./rasterPixelQuery";
+import {
+  extractRasterLegendLabels,
+  labelFromRasterLegendLabels,
+} from "./rasterLegendLabel";
 
 const PopupNumberFormatter = Intl.NumberFormat(undefined, {
   maximumFractionDigits: 2,
 });
+
+type InteractiveRasterLayer = {
+  layer: DataLayerDetailsFragment;
+  source: DataSourceDetailsFragment;
+  encoding: RasterValueEncodingParams;
+  /** Pre-extracted from mapboxGlStyles; avoid re-parsing on mousemove. */
+  legendLabels: Record<string, string>;
+  respectScaleAndOffset: boolean;
+  glLayerId: string;
+};
 
 export type InteractivityUIUpdate = Partial<{
   bannerMessages: string[];
@@ -75,6 +100,7 @@ export default class LayerInteractivityManager extends EventEmitter {
   private popupAbortController: AbortController | undefined;
   private interactiveVectorLayerIds: string[] = [];
   private interactiveImageLayerIds: string[] = [];
+  private interactiveRasterLayers: InteractiveRasterLayer[] = [];
   /** glLayerId → data-table value tooltip config (independent of admin interactivity). */
   private dataTableLayersByGlId: {
     [glLayerId: string]: DataTableInteractiveLayer;
@@ -93,6 +119,8 @@ export default class LayerInteractivityManager extends EventEmitter {
   private tocItemLabels: { [stableId: string]: { label?: string } } = {};
   private selectedFeature?: mapboxgl.FeatureIdentifier;
   private hoveredFeature?: mapboxgl.FeatureIdentifier;
+  /** Bumps to drop stale async raster hover results. */
+  private rasterHoverGeneration = 0;
 
   /**
    *
@@ -146,10 +174,16 @@ export default class LayerInteractivityManager extends EventEmitter {
     this.syncMouseMoveListener();
   }
 
+  /** Authorize hosted tile fetches (wired from MapContextManager). */
+  setAuthorizeUrl(fn: (url: string) => string) {
+    setRasterPixelQueryAuthorizeUrl(fn);
+  }
+
   private syncMouseMoveListener() {
     this.map.off("mousemove", this.debouncedMouseMoveListener);
     if (
       this.interactiveVectorLayerIds.length > 0 ||
+      this.interactiveRasterLayers.length > 0 ||
       this.sketchLayerIds.length > 0 ||
       this.inaturalistConfigs.length > 0 ||
       Object.keys(this.dataTableLayersByGlId).length > 0
@@ -185,6 +219,7 @@ export default class LayerInteractivityManager extends EventEmitter {
     } = {};
     const newInteractiveImageLayerIds: string[] = [];
     let newInteractiveVectorLayerIds: string[] = [];
+    const newInteractiveRasterLayers: InteractiveRasterLayer[] = [];
     const newInaturalistConfigs: {
       params: ReturnType<typeof normalizeInaturalistParams>;
       sourceId: string;
@@ -216,6 +251,35 @@ export default class LayerInteractivityManager extends EventEmitter {
               newInteractiveImageLayerIds.push(layer.id.toString());
               newActiveImageSources[source.id] = source;
               newActiveLayers[layer.id] = layer;
+            } else if (source.type === DataSourceTypes.SeasketchRaster) {
+              // Only Banner/Tooltip/Popup are implemented for rasters. Legacy
+              // Sidebar/AllProperties/etc. must not register or they win
+              // z-order and swallow hover for layers underneath.
+              const rasterType = layer.interactivitySettings.type;
+              const encoding = encodingParamsFromGlStyles(
+                layer.mapboxGlStyles
+              );
+              if (
+                encoding &&
+                source.url &&
+                (rasterType === InteractivityType.Banner ||
+                  rasterType === InteractivityType.Tooltip ||
+                  rasterType === InteractivityType.Popup)
+              ) {
+                newInteractiveRasterLayers.push({
+                  layer,
+                  source,
+                  encoding,
+                  legendLabels: extractRasterLegendLabels(
+                    layer.mapboxGlStyles
+                  ),
+                  respectScaleAndOffset: styleRespectsScaleAndOffset(
+                    layer.mapboxGlStyles
+                  ),
+                  glLayerId: idForLayer(layer, 0),
+                });
+                newActiveLayers[layer.id] = layer;
+              }
             } else {
               let GLStyles: Layer[];
               if (layer.mapboxGlStyles && Array.isArray(layer.mapboxGlStyles)) {
@@ -264,6 +328,10 @@ export default class LayerInteractivityManager extends EventEmitter {
       !sameStringSet(this.interactiveVectorLayerIds, newInteractiveVectorLayerIds) ||
       !sameStringSet(this.interactiveImageLayerIds, newInteractiveImageLayerIds) ||
       !sameStringSet(
+        this.interactiveRasterLayers.map((r) => r.glLayerId),
+        newInteractiveRasterLayers.map((r) => r.glLayerId)
+      ) ||
+      !sameStringSet(
         this.inaturalistConfigs.map((c) => c.sourceId),
         newInaturalistConfigs.map((c) => c.sourceId)
       )
@@ -272,6 +340,7 @@ export default class LayerInteractivityManager extends EventEmitter {
     }
     this.interactiveImageLayerIds = newInteractiveImageLayerIds;
     this.interactiveVectorLayerIds = newInteractiveVectorLayerIds;
+    this.interactiveRasterLayers = newInteractiveRasterLayers;
     this.inaturalistConfigs = newInaturalistConfigs;
     this.layers = newActiveLayers;
     this.imageSources = newActiveImageSources;
@@ -303,14 +372,16 @@ export default class LayerInteractivityManager extends EventEmitter {
    */
   destroy() {
     this.unregisterEventListeners(this.map);
+    clearRasterPixelQueryCaches();
+    this.rasterHoverGeneration += 1;
   }
 
   private unregisterEventListeners(map: Map) {
     map.off("mouseout", this.onMouseOut);
     map.off("mousemove", this.debouncedMouseMoveListener);
     map.off("click", this.onMouseClick);
-    map.on("movestart", this.onMoveStart);
-    map.on("moveend", this.onMoveEnd);
+    map.off("movestart", this.onMoveStart);
+    map.off("moveend", this.onMoveEnd);
   }
 
   private registerEventListeners(map: Map) {
@@ -359,6 +430,7 @@ export default class LayerInteractivityManager extends EventEmitter {
     if (this.paused) {
       return;
     }
+    this.rasterHoverGeneration += 1;
     this.updateUI({
       bannerMessages: [],
       fixedBlocks: [],
@@ -382,6 +454,7 @@ export default class LayerInteractivityManager extends EventEmitter {
     if (this.paused) {
       return;
     }
+    this.rasterHoverGeneration += 1;
     if (this.hoveredFeature) {
       this.map.setFeatureState(this.hoveredFeature, {
         hovered: false,
@@ -450,10 +523,42 @@ export default class LayerInteractivityManager extends EventEmitter {
     let vectorPopupOpened = false;
     const inatHit = await this.getTopInaturalistHit(e);
     const inatDrawIndex = inatHit ? inatHit.layerIndex : -Infinity;
+    const rasterHit = await this.getTopRasterHit(e);
+    const rasterIndex = rasterHit?.layerIndex ?? -Infinity;
+    const topVectorIndex = top
+      ? this.getLayerDrawIndex(top.layer.id)
+      : -Infinity;
+
+    if (
+      rasterHit &&
+      rasterIndex > topVectorIndex &&
+      rasterIndex >= inatDrawIndex
+    ) {
+      const interactivitySetting =
+        rasterHit.layer.layer.interactivitySettings;
+      if (
+        interactivitySetting &&
+        interactivitySetting.type === InteractivityType.Popup
+      ) {
+        const content = Mustache.render(
+          interactivitySetting.longTemplate || "{{label}}",
+          this.rasterMustacheContext(
+            rasterHit.hit,
+            rasterHit.layer.legendLabels
+          )
+        );
+        this.clearSidebarPopup();
+        this.setActivePopup(
+          new Popup({ closeOnClick: true, closeButton: true })
+            .setLngLat([e.lngLat.lng, e.lngLat.lat])
+            .setHTML(content)
+            .addTo(this.map!)
+        );
+        return;
+      }
+    }
 
     if (top) {
-      const topVectorIndex = this.getLayerDrawIndex(top.layer.id);
-
       if (inatHit && inatDrawIndex >= topVectorIndex) {
         this.clearSidebarPopup();
         this.setActivePopup(
@@ -854,6 +959,10 @@ export default class LayerInteractivityManager extends EventEmitter {
       }
       return;
     }
+
+    const hoverGeneration = ++this.rasterHoverGeneration;
+    const rasterHitPromise = this.getTopRasterHit(e);
+
     const dataTableLayerIds = Object.keys(this.dataTableLayersByGlId);
     const layerIds = this.existingLayerIds([
       ...dataTableLayerIds,
@@ -875,8 +984,25 @@ export default class LayerInteractivityManager extends EventEmitter {
       : [];
     let topVectorIndex = -Infinity;
     if (features.length && uniqueLayerIds.indexOf(features[0].layer.id) > -1) {
+      topVectorIndex = this.getLayerDrawIndex(features[0].layer.id);
+    }
+
+    const rasterHit = await rasterHitPromise;
+    if (hoverGeneration !== this.rasterHoverGeneration) {
+      return;
+    }
+    const rasterIndex = rasterHit?.layerIndex ?? -Infinity;
+
+    if (rasterHit && rasterIndex > topVectorIndex && rasterIndex >= inatDrawIndex) {
+      this.setHoveredFeature(undefined);
+      if (this.applyRasterHoverUI(e, rasterHit.layer, rasterHit.hit)) {
+        return;
+      }
+      // Unsupported raster type: fall through to vector/inat handling.
+    }
+
+    if (features.length && uniqueLayerIds.indexOf(features[0].layer.id) > -1) {
       const top = features[0];
-      topVectorIndex = this.getLayerDrawIndex(top.layer.id);
       this.setHoveredFeature(top);
       const dataTableConfig = this.dataTableLayersByGlId[top.layer.id];
       const dataTableTooltip = dataTableConfig
@@ -1039,6 +1165,142 @@ export default class LayerInteractivityManager extends EventEmitter {
       ...position,
       messages: [`${config.op}(${config.column}): ${formatted}`],
     };
+  }
+
+  private async getTopRasterHit(e: MapMouseEvent): Promise<{
+    layer: InteractiveRasterLayer;
+    hit: RasterPixelHit;
+    layerIndex: number;
+  } | null> {
+    if (!this.interactiveRasterLayers.length) {
+      return null;
+    }
+    const zoom = this.map.getZoom();
+    const candidates = this.interactiveRasterLayers.filter((rasterLayer) =>
+      Boolean(this.map.getLayer(rasterLayer.glLayerId))
+    );
+    const results = await Promise.all(
+      candidates.map(async (rasterLayer) => {
+        try {
+          const hit = await queryRasterPixelValue(
+            {
+              sourceId: String(rasterLayer.source.id),
+              url: rasterLayer.source.url || "",
+              tileSize: rasterLayer.source.tileSize,
+              minzoom: rasterLayer.source.minzoom,
+              maxzoom: rasterLayer.source.maxzoom,
+              rasterScale: rasterLayer.source.rasterScale,
+              rasterOffset: rasterLayer.source.rasterOffset,
+              respectScaleAndOffset: rasterLayer.respectScaleAndOffset,
+              encoding: rasterLayer.encoding,
+            },
+            e.lngLat.lng,
+            e.lngLat.lat,
+            zoom
+          );
+          if (!hit) {
+            return null;
+          }
+          return {
+            layer: rasterLayer,
+            hit,
+            layerIndex: this.getLayerDrawIndex(rasterLayer.glLayerId),
+          };
+        } catch {
+          return null;
+        }
+      })
+    );
+    let best: {
+      layer: InteractiveRasterLayer;
+      hit: RasterPixelHit;
+      layerIndex: number;
+    } | null = null;
+    for (const result of results) {
+      if (result && (best === null || result.layerIndex > best.layerIndex)) {
+        best = result;
+      }
+    }
+    return best;
+  }
+
+  private rasterMustacheContext(
+    hit: RasterPixelHit,
+    legendLabels: Record<string, string>
+  ) {
+    return {
+      ...mustacheHelpers,
+      value: hit.value,
+      // Labels are keyed by encoded DN, not the scale/offset display value.
+      label: labelFromRasterLegendLabels(legendLabels, hit.encodedValue),
+    };
+  }
+
+  /** @returns true if raster UI was applied (caller should not fall through). */
+  private applyRasterHoverUI(
+    e: MapMouseEvent,
+    rasterLayer: InteractiveRasterLayer,
+    hit: RasterPixelHit
+  ): boolean {
+    const interactivitySetting = rasterLayer.layer.interactivitySettings;
+    if (!interactivitySetting) {
+      return false;
+    }
+    const ctx = this.rasterMustacheContext(hit, rasterLayer.legendLabels);
+    // Prefer {{label}} so categorical legend names show by default; unlabeled
+    // values fall back to the numeric string via labelFromRasterLegendLabels.
+    const defaultTemplate = "{{label}}";
+    let cursor = "";
+    let bannerMessages: string[] = [];
+    let tooltip: Tooltip | undefined = undefined;
+    switch (interactivitySetting.type) {
+      case InteractivityType.Banner:
+        cursor = "default";
+        bannerMessages = [
+          Mustache.render(
+            interactivitySetting.shortTemplate || defaultTemplate,
+            ctx
+          ),
+        ];
+        break;
+      case InteractivityType.Tooltip:
+        cursor = "default";
+        tooltip = {
+          x: e.originalEvent.x,
+          y: e.originalEvent.y,
+          messages: [
+            Mustache.render(
+              interactivitySetting.shortTemplate || defaultTemplate,
+              ctx
+            ),
+          ],
+        };
+        break;
+      case InteractivityType.Popup:
+        cursor = "pointer";
+        break;
+      default:
+        // Unsupported raster types (sidebar, all-properties, etc.)
+        return false;
+    }
+    if (interactivitySetting.cursor !== "AUTO") {
+      cursor = interactivitySetting.cursor.toString().toLowerCase();
+    }
+    this.map!.getCanvas().style.cursor = cursor;
+    const target = `raster-${rasterLayer.layer.id}-${interactivitySetting.id}-${hit.value}`;
+    if (
+      this.previousInteractionTarget === target &&
+      interactivitySetting.type !== InteractivityType.Tooltip
+    ) {
+      return true;
+    }
+    this.previousInteractionTarget = target;
+    this.updateUI({
+      bannerMessages,
+      tooltip,
+      fixedBlocks: [],
+    });
+    return true;
   }
 
   private async getTopInaturalistHit(e: MapMouseEvent) {

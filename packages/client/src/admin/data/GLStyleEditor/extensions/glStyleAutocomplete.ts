@@ -1916,7 +1916,7 @@ export function getInsertLayerOptions(
       }
     }
   }
-  if (layer.attributes.find((a) => a.type === "string")) {
+  if (layer.attributes?.find((a) => a.type === "string")) {
     const isLine =
       layer.geometry === "LineString" || layer.geometry === "MultiLineString";
     for (const attribute of layer.attributes || []) {

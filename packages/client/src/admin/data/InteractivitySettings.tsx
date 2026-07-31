@@ -21,7 +21,11 @@ import Button from "../../components/Button";
 import useSourcePropertyNames from "./useSourcePropertyNames";
 import SetBasemapInteractivityLayers from "./SetBasemapInteractivityLayers";
 import { MapManagerContext } from "../../dataLayers/MapContextManager";
-import { GeostatsLayer } from "@seasketch/geostats-types";
+import {
+  GeostatsLayer,
+  RasterInfo,
+  isRasterInfo,
+} from "@seasketch/geostats-types";
 require("codemirror/addon/lint/lint");
 require("codemirror/addon/lint/json-lint");
 require("codemirror/mode/javascript/javascript");
@@ -40,9 +44,10 @@ export default function InteractivitySettings({
   dataSourceId?: number;
   sublayer?: string | null;
   basemap?: BasemapDetailsFragment;
-  geostats?: GeostatsLayer;
+  geostats?: GeostatsLayer | RasterInfo;
   changeLogRefetchTableOfContentsItemId?: number;
 }) {
+  const isRaster = isRasterInfo(geostats);
   const { t } = useTranslation("admin");
   const { data, loading } = useInteractivitySettingsByIdQuery({
     variables: {
@@ -139,7 +144,222 @@ export default function InteractivitySettings({
     }
   }, [save, type, settings?.type]);
 
-  const selectedType = type || settings?.type || InteractivityType.None;
+  const rawSelectedType = type || settings?.type || InteractivityType.None;
+  // Display-only: legacy raster types (Sidebar, etc.) show as None without
+  // writing to the DB until the admin explicitly picks an option.
+  const selectedType =
+    isRaster &&
+    rawSelectedType !== InteractivityType.None &&
+    rawSelectedType !== InteractivityType.Banner &&
+    rawSelectedType !== InteractivityType.Tooltip &&
+    rawSelectedType !== InteractivityType.Popup
+      ? InteractivityType.None
+      : rawSelectedType;
+  const templateAttributeNames = isRaster ? [] : attributeNames;
+
+  const items = useMemo(() => {
+    const bannerTooltip = !sublayer
+      ? [
+          {
+            label: t("Banner"),
+            description: basemap
+              ? t(
+                  "Short text can be displayed towards the top of the map when the user hovers over features in the selected basemap layers."
+                )
+              : isRaster
+              ? t(
+                  "Short text can be displayed towards the top of the map when the user hovers over raster values."
+                )
+              : t(
+                  "Short text can be displayed towards the top of the map when the user hovers over features."
+                ),
+            value: InteractivityType.Banner,
+            children: (
+              <>
+                <TemplateEditor
+                  type={InteractivityType.Banner}
+                  selectedType={selectedType}
+                  propName={"shortTemplate"}
+                  templateValue={shortTemplate || undefined}
+                  onSave={sanitizeTemplate}
+                  onChange={(value) => setShortTemplate(value)}
+                  attributeNames={templateAttributeNames}
+                  basemap={basemap}
+                  layers={data?.interactivitySetting?.layers as string[]}
+                  onSelectLayers={() => setPickLayersOpen(true)}
+                  geostats={geostats}
+                />
+              </>
+            ),
+          },
+          {
+            label: t("Tooltip"),
+            description: isRaster
+              ? t("The raster value is displayed next to the mouse cursor.")
+              : t("Short text is displayed next to the mouse cursor."),
+            value: InteractivityType.Tooltip,
+            children: (
+              <>
+                <TemplateEditor
+                  type={InteractivityType.Tooltip}
+                  selectedType={selectedType}
+                  propName={"shortTemplate"}
+                  templateValue={shortTemplate || undefined}
+                  onSave={sanitizeTemplate}
+                  onChange={(value) => setShortTemplate(value)}
+                  attributeNames={templateAttributeNames}
+                  basemap={basemap}
+                  layers={data?.interactivitySetting?.layers as string[]}
+                  onSelectLayers={() => setPickLayersOpen(true)}
+                  geostats={geostats}
+                />
+              </>
+            ),
+          },
+        ]
+      : [];
+
+    const customPopup = !sublayer
+      ? [
+          {
+            label: t("Custom Popup"),
+            description: t(
+              "Popup windows can be opened and closed to show detailed information."
+            ),
+            value: InteractivityType.Popup,
+            children: (
+              <>
+                <TemplateEditor
+                  type={InteractivityType.Popup}
+                  selectedType={selectedType}
+                  propName={"longTemplate"}
+                  templateValue={longTemplate || undefined}
+                  onSave={sanitizeTemplate}
+                  onChange={(value) => setLongTemplate(value)}
+                  attributeNames={templateAttributeNames}
+                  basemap={basemap}
+                  layers={data?.interactivitySetting?.layers as string[]}
+                  onSelectLayers={() => setPickLayersOpen(true)}
+                  geostats={geostats}
+                />
+              </>
+            ),
+          },
+        ]
+      : [];
+
+    if (isRaster) {
+      return [
+        {
+          label: t("None"),
+          value: InteractivityType.None,
+        },
+        ...bannerTooltip,
+        ...customPopup,
+      ];
+    }
+
+    return [
+      {
+        label: t("None"),
+        value: InteractivityType.None,
+      },
+      ...bannerTooltip,
+      ...customPopup,
+      {
+        label: t("Popup with all columns"),
+        description: t("Popup window which includes all column values."),
+        value: InteractivityType.AllPropertiesPopup,
+      },
+      {
+        label: t("Sidebar"),
+        description: t(
+          "Similar to a popup, but the content is displayed in a sidebar."
+        ),
+        value: InteractivityType.SidebarOverlay,
+        children: (
+          <>
+            {selectedType === InteractivityType.SidebarOverlay && (
+              <div className="mt-4">
+                <h4 className="text-sm font-normal">{t("Sidebar title")}</h4>
+                <p className="text-sm text-gray-500">
+                  {t(
+                    "You may reference feature properties in the title but html tags will not be rendered"
+                  )}
+                </p>
+                <TemplateEditor
+                  type={InteractivityType.SidebarOverlay}
+                  selectedType={selectedType}
+                  propName={"title"}
+                  templateValue={title || undefined}
+                  onSave={sanitizeTemplate}
+                  onChange={(value) => setTitle(value)}
+                  attributeNames={attributeNames}
+                  basemap={basemap}
+                  layers={data?.interactivitySetting?.layers as string[]}
+                  onSelectLayers={() => setPickLayersOpen(true)}
+                />
+                <h4 className="mt-4 text-sm font-normal">
+                  {t("Sidebar content")}
+                </h4>
+                <p className="text-sm text-gray-500">
+                  {t(
+                    "Content can reference feature properties and include html content."
+                  )}
+                </p>
+                <TemplateEditor
+                  type={InteractivityType.SidebarOverlay}
+                  selectedType={selectedType}
+                  propName={"longTemplate"}
+                  templateValue={longTemplate || undefined}
+                  onSave={sanitizeTemplate}
+                  onChange={(value) => setLongTemplate(value)}
+                  attributeNames={attributeNames}
+                  geostats={geostats}
+                  layers={data?.interactivitySetting?.layers as string[]}
+                  onSelectLayers={() => setPickLayersOpen(true)}
+                  basemap={basemap}
+                />
+                <h4 className="mt-4 text-sm font-normal">
+                  {t("Tooltip (optional)")}
+                </h4>
+                <p className="text-sm text-gray-500">
+                  {t(
+                    "If set, a tooltip will appear as a preview before the user clicks on a feature to show the full sidebar."
+                  )}
+                </p>
+                <TemplateEditor
+                  type={InteractivityType.Tooltip}
+                  selectedType={InteractivityType.Tooltip}
+                  propName={"shortTemplate"}
+                  templateValue={shortTemplate || undefined}
+                  onSave={sanitizeTemplate}
+                  onChange={(value) => setShortTemplate(value)}
+                  attributeNames={[]}
+                  basemap={basemap}
+                />
+              </div>
+            )}
+          </>
+        ),
+      },
+    ];
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    isRaster,
+    sublayer,
+    basemap,
+    selectedType,
+    shortTemplate,
+    longTemplate,
+    title,
+    attributeNames,
+    templateAttributeNames,
+    geostats,
+    data?.interactivitySetting?.layers,
+    t,
+  ]);
+
   return (
     <div>
       {pickLayersOpen && (
@@ -161,190 +381,7 @@ export default function InteractivitySettings({
                 : "SAVED"
               : "NONE"
           }
-          items={[
-            {
-              label: t("None"),
-              value: InteractivityType.None,
-            },
-            ...(!sublayer
-              ? [
-                  {
-                    label: t("Banner"),
-                    description: basemap
-                      ? t(
-                          "Short text can be displayed towards the top of the map when the user hovers over features in the selected basemap layers."
-                        )
-                      : t(
-                          "Short text can be displayed towards the top of the map when the user hovers over features."
-                        ),
-                    value: InteractivityType.Banner,
-                    children: (
-                      <>
-                        <TemplateEditor
-                          type={InteractivityType.Banner}
-                          selectedType={selectedType}
-                          propName={"shortTemplate"}
-                          templateValue={shortTemplate || undefined}
-                          onSave={sanitizeTemplate}
-                          onChange={(value) => setShortTemplate(value)}
-                          attributeNames={attributeNames}
-                          basemap={basemap}
-                          layers={data.interactivitySetting?.layers as string[]}
-                          onSelectLayers={() => setPickLayersOpen(true)}
-                          geostats={geostats}
-                        />
-                      </>
-                    ),
-                  },
-                  {
-                    label: t("Tooltip"),
-                    description:
-                      "Short text is displayed next to the mouse cursor.",
-                    value: InteractivityType.Tooltip,
-                    children: (
-                      <>
-                        <TemplateEditor
-                          type={InteractivityType.Tooltip}
-                          selectedType={selectedType}
-                          propName={"shortTemplate"}
-                          templateValue={shortTemplate || undefined}
-                          onSave={sanitizeTemplate}
-                          onChange={(value) => setShortTemplate(value)}
-                          attributeNames={attributeNames}
-                          basemap={basemap}
-                          layers={data.interactivitySetting?.layers as string[]}
-                          onSelectLayers={() => setPickLayersOpen(true)}
-                          geostats={geostats}
-                        />
-                      </>
-                    ),
-                  },
-                ]
-              : []),
-            ...(!sublayer
-              ? [
-                  {
-                    label: "Custom Popup",
-                    description:
-                      "Popup windows can be opened and closed to show detailed information.",
-                    value: InteractivityType.Popup,
-                    children: (
-                      <>
-                        <TemplateEditor
-                          type={InteractivityType.Popup}
-                          selectedType={selectedType}
-                          propName={"longTemplate"}
-                          templateValue={longTemplate || undefined}
-                          onSave={sanitizeTemplate}
-                          onChange={(value) => setLongTemplate(value)}
-                          attributeNames={attributeNames}
-                          basemap={basemap}
-                          layers={data.interactivitySetting?.layers as string[]}
-                          onSelectLayers={() => setPickLayersOpen(true)}
-                          geostats={geostats}
-                        />
-                      </>
-                    ),
-                  },
-                ]
-              : []),
-            {
-              label: "Popup with all columns",
-              description: "Popup window which includes all column values.",
-              value: InteractivityType.AllPropertiesPopup,
-            },
-            // {
-            //   label: "Fixed Block",
-            //   description:
-            //     "Content will be displayed in the corner of the map whenever the layer is turned on.",
-            //   value: InteractivityType.FixedBlock,
-            //   children: (
-            //     <TemplateEditor
-            //       type={InteractivityType.FixedBlock}
-            //       selectedType={selectedType}
-            //       propName={"longTemplate"}
-            //       templateValue={longTemplate || undefined}
-            //       onSave={sanitizeTemplate}
-            //       onChange={(value) => setLongTemplate(value)}
-            //       attributeNames={attributeNames}
-            //     />
-            //   ),
-            // },
-            {
-              label: "Sidebar",
-              description:
-                "Similar to a popup, but the content is displayed in a sidebar.",
-              value: InteractivityType.SidebarOverlay,
-              children: (
-                <>
-                  {selectedType === InteractivityType.SidebarOverlay && (
-                    <div className="mt-4">
-                      <h4 className="text-sm font-normal">
-                        {t("Sidebar title")}
-                      </h4>
-                      <p className="text-sm text-gray-500">
-                        {t(
-                          "You may reference feature properties in the title but html tags will not be rendered"
-                        )}
-                      </p>
-                      <TemplateEditor
-                        type={InteractivityType.SidebarOverlay}
-                        selectedType={selectedType}
-                        propName={"title"}
-                        templateValue={title || undefined}
-                        onSave={sanitizeTemplate}
-                        onChange={(value) => setTitle(value)}
-                        attributeNames={attributeNames}
-                        basemap={basemap}
-                        layers={data.interactivitySetting?.layers as string[]}
-                        onSelectLayers={() => setPickLayersOpen(true)}
-                      />
-                      <h4 className="mt-4 text-sm font-normal">
-                        {t("Sidebar content")}
-                      </h4>
-                      <p className="text-sm text-gray-500">
-                        {t(
-                          "Content can reference feature properties and include html content."
-                        )}
-                      </p>
-                      <TemplateEditor
-                        type={InteractivityType.SidebarOverlay}
-                        selectedType={selectedType}
-                        propName={"longTemplate"}
-                        templateValue={longTemplate || undefined}
-                        onSave={sanitizeTemplate}
-                        onChange={(value) => setLongTemplate(value)}
-                        attributeNames={attributeNames}
-                        geostats={geostats}
-                        layers={data.interactivitySetting?.layers as string[]}
-                        onSelectLayers={() => setPickLayersOpen(true)}
-                        basemap={basemap}
-                      />
-                      <h4 className="mt-4 text-sm font-normal">
-                        {t("Tooltip (optional)")}
-                      </h4>
-                      <p className="text-sm text-gray-500">
-                        {t(
-                          "If set, a tooltip will appear as a preview before the user clicks on a feature to show the full sidebar."
-                        )}
-                      </p>
-                      <TemplateEditor
-                        type={InteractivityType.Tooltip}
-                        selectedType={InteractivityType.Tooltip}
-                        propName={"shortTemplate"}
-                        templateValue={shortTemplate || undefined}
-                        onSave={sanitizeTemplate}
-                        onChange={(value) => setShortTemplate(value)}
-                        attributeNames={[]}
-                        basemap={basemap}
-                        // geostats={geostats}
-                      />
-                    </div>
-                  )}
-                </>
-              ),
-            },
-          ]}
+          items={items}
           value={selectedType}
           onChange={(type) => {
             setType(type);
@@ -366,14 +403,18 @@ function TemplateEditor(props: {
   layers?: string[];
   basemap?: any;
   onSelectLayers?: () => void;
-  geostats?: GeostatsLayer;
+  geostats?: GeostatsLayer | RasterInfo;
 }) {
   const { t } = useTranslation("admin");
   const onSave = () => props.onSave(props.propName);
   const { manager } = useContext(MapManagerContext);
+  const isRaster = isRasterInfo(props.geostats);
 
-  const attributes = useMemo(() => {
-    if (props.geostats) {
+  const attributes = useMemo((): string[] => {
+    if (isRaster) {
+      return ["value", "label"];
+    }
+    if (props.geostats && !isRasterInfo(props.geostats)) {
       return props.geostats.attributes.map((a) => a.attribute);
     }
     if (props.attributeNames.length > 0) {
@@ -385,8 +426,7 @@ function TemplateEditor(props: {
       });
       if (features && features.length > 0) {
         const feature = features[0];
-        const props = Object.keys(feature.properties || {});
-        return props;
+        return Object.keys(feature.properties || {});
       }
     }
     return [];
@@ -396,6 +436,7 @@ function TemplateEditor(props: {
     manager?.map,
     props.basemap,
     props.attributeNames,
+    isRaster,
   ]);
 
   if (props.selectedType === props.type) {
@@ -417,16 +458,18 @@ function TemplateEditor(props: {
           onChange={(editor, data, value) => {}}
         />
         <Button small label={t("save")} onClick={onSave} />
-        {props.propName === "longTemplate" && attributes.length > 0 && (
-          <Button
-            className="ml-1"
-            small
-            label={t("insert property list")}
-            onClick={() => {
-              const value = props.templateValue || "";
-              const newValue =
-                value +
-                `
+        {props.propName === "longTemplate" &&
+          attributes.length > 0 &&
+          !isRaster && (
+            <Button
+              className="ml-1"
+              small
+              label={t("insert property list")}
+              onClick={() => {
+                const value = props.templateValue || "";
+                const newValue =
+                  value +
+                  `
 <h2>Properties</h2>
 <dl>
 ${attributes
@@ -440,10 +483,10 @@ ${attributes
   .join("")}
 </dl>
 `;
-              props.onChange(newValue);
-            }}
-          />
-        )}
+                props.onChange(newValue);
+              }}
+            />
+          )}
         {props.basemap && (
           <Button
             className="ml-1"

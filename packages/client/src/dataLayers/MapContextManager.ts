@@ -1323,6 +1323,35 @@ class MapContextManager extends EventEmitter {
     return this.map;
   }
 
+  /**
+   * Authorize a hosted tiles/uploads URL (access_token, ns, ssn-tr).
+   * Shared by transformRequest and raster pixel sampling fetches.
+   */
+  authorizeHostedUrl = (url: string): string => {
+    try {
+      const Url = new URL(url);
+      if (!isHostedDataHost(Url.hostname)) {
+        return url;
+      }
+      const uuid = extractTilesUuidFromUrl(Url.toString());
+      const token =
+        uuid &&
+        this.hostedUuidNeedsMapAccessToken(uuid) &&
+        this.mapAccessToken
+          ? this.mapAccessToken
+          : null;
+      const authorized = withHostedAuthParams(Url.toString(), {
+        accessToken: token,
+      });
+      const outUrl = new URL(authorized);
+      // eslint-disable-next-line i18next/no-literal-string
+      outUrl.searchParams.set("ssn-tr", "true");
+      return outUrl.toString();
+    } catch {
+      return url;
+    }
+  };
+
   requestTransformer = (url: string, resourceType: mapboxgl.ResourceType) => {
     if (/^\/sprites\//.test(url)) {
       const { host, protocol } = window.location;
@@ -1364,22 +1393,7 @@ class MapContextManager extends EventEmitter {
           headers: { authorization: `Bearer ${this.userAccessToken}` },
         };
       } else if (isHostedDataHost(Url.hostname)) {
-        // Hosted tiles/uploads: append access_token (and ns in non-prod).
-        const uuid = extractTilesUuidFromUrl(Url.toString());
-        const token =
-          uuid &&
-          this.hostedUuidNeedsMapAccessToken(uuid) &&
-          this.mapAccessToken
-            ? this.mapAccessToken
-            : null;
-        const authorized = withHostedAuthParams(Url.toString(), {
-          accessToken: token,
-        });
-        const outUrl = new URL(authorized);
-
-        outUrl.searchParams.set("ssn-tr", "true");
-
-        return { url: outUrl.toString() };
+        return { url: this.authorizeHostedUrl(url) };
       } else if (!/^data:/.test(url)) {
         if (!/gateway.api.globalfishingwatch.org/.test(url)) {
           Url.searchParams.set("ssn-tr", "true");

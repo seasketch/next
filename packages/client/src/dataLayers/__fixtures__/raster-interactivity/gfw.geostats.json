@@ -1,0 +1,16 @@
+{
+  "bands": [
+    {
+      "base": 0,
+      "interval": 1,
+      "minimum": 0.004,
+      "maximum": 611.47802734375,
+      "scale": null,
+      "offset": null,
+      "noDataValue": -3.3999999521443642e38,
+      "colorInterpretation": "Gray"
+    }
+  ],
+  "byteEncoding": false,
+  "presentation": 1
+}

@@ -233,7 +233,9 @@ export default function GLStyleEditor(props: GLStyleEditorProps) {
   );
 
   const { layerTypes, insertOptions } = useMemo(() => {
-    const options = props.geostats
+    // Insert-layer autocomplete is vector-only (needs attributes).
+    // Rasters pass RasterInfo via dataSource.geostats for the GUI editor.
+    const options = props.geostats?.attributes
       ? getInsertLayerOptions(props.geostats, [
           ...(spriteQuery.data?.publicSprites || []),
           ...(spriteQuery.data?.projectBySlug?.sprites || []),

@@ -2,6 +2,8 @@
 
 Lambda-based worker for processing user uploads of spatial data in SeaSketch. Converts data into FlatGeobuf, GeoJSON, MVT, and COGs as appropriate depending on file format and size. Heavily relies on PMTiles to create compact tilesets that are easy and cheap to host.
 
+For **single-band continuous/categorical rasters**, scalar values are packed into RGB channels before tiling. See **[RGB_ENCODING.md](./RGB_ENCODING.md)** for the full encoding scheme, how `base` / `interval` / `byteEncoding` are chosen, Mapbox `raster-color-mix` integration, and client interactivity decoding.
+
 ## Arch
 
 This system relies on Lambda's support for containerized functions using a `Dockerfile` so that tippecanoe, gdal, and pmtiles can be included in the runtime environment. Deployment of this lambda is handled in the `infra/` package (UploadHandlerLambdaStack).

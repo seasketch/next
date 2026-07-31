@@ -348,6 +348,7 @@ export default function MapUIProvider({
 
     const map = manager.map;
     const im = new LayerInteractivityManager(map, dispatchInteractivityUI);
+    im.setAuthorizeUrl(manager.authorizeHostedUrl);
     interactivityManagerRef.current = im;
     setInteractivityManager(im);
 

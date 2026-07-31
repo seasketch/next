@@ -8023,6 +8023,10 @@ select{
   min-height:4.5rem
 }
 
+.min-h-\[40px\]{
+  min-height:40px
+}
+
 .min-h-\[48px\]{
   min-height:48px
 }
@@ -12512,6 +12516,11 @@ select{
   padding:1px
 }
 
+.\!py-3{
+  padding-top:0.75rem !important;
+  padding-bottom:0.75rem !important
+}
+
 .px-0{
   padding-left:0px;
   padding-right:0px
@@ -14531,6 +14540,11 @@ select{
   --tw-ring-color:rgb(46 115 182 / var(--tw-ring-opacity, 1))
 }
 
+.ring-red-100{
+  --tw-ring-opacity:1;
+  --tw-ring-color:rgb(254 226 226 / var(--tw-ring-opacity, 1))
+}
+
 .ring-red-200{
   --tw-ring-opacity:1;
   --tw-ring-color:rgb(254 202 202 / var(--tw-ring-opacity, 1))
@@ -15463,6 +15477,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
   border-color:transparent
 }
 
+.hover\:border-opacity-10:hover{
+  --tw-border-opacity:0.1
+}
+
 .hover\:border-opacity-100:hover{
   --tw-border-opacity:1
 }
@@ -16365,6 +16383,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
   border-color:rgb(46 115 182 / var(--tw-border-opacity, 1))
 }
 
+.focus-visible\:border-opacity-10:focus-visible{
+  --tw-border-opacity:0.1
+}
+
 .focus-visible\:bg-blue-100:focus-visible{
   --tw-bg-opacity:1;
   background-color:rgb(219 234 254 / var(--tw-bg-opacity, 1))
@@ -16373,6 +16395,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .focus-visible\:bg-blue-200:focus-visible{
   --tw-bg-opacity:1;
   background-color:rgb(191 219 254 / var(--tw-bg-opacity, 1))
+}
+
+.focus-visible\:bg-gray-600:focus-visible{
+  --tw-bg-opacity:1;
+  background-color:rgb(75 85 99 / var(--tw-bg-opacity, 1))
 }
 
 .focus-visible\:px-1:focus-visible{
@@ -16385,8 +16412,19 @@ input[type="checkbox"][indeterminate="true"]:checked {
   color:rgb(55 65 81 / var(--tw-text-opacity, 1))
 }
 
+.focus-visible\:text-white:focus-visible{
+  --tw-text-opacity:1;
+  color:rgb(255 255 255 / var(--tw-text-opacity, 1))
+}
+
 .focus-visible\:opacity-100:focus-visible{
   opacity:1
+}
+
+.focus-visible\:shadow-sm:focus-visible{
+  --tw-shadow:0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --tw-shadow-colored:0 1px 2px 0 var(--tw-shadow-color);
+  box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)
 }
 
 .focus-visible\:outline:focus-visible{

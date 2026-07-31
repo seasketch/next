@@ -28,6 +28,11 @@ import LayerVersioning from "./TableOfContentsItemEditor/LayerVersioning";
 import DataTablesEditor from "./overlayDataTables/DataTablesEditor";
 import { layerSettingsChangeLogRefetchQueries } from "../changelogs/layerSettingsChangeLogRefetch";
 import useCurrentProjectMetadata from "../../useCurrentProjectMetadata";
+import {
+  resolveSourceGeostats,
+  supportsSeasketchRasterInteractivity,
+} from "../../dataLayers/supportsSeasketchRasterInteractivity";
+import { isGeostatsLayer } from "@seasketch/geostats-types";
 
 interface LayerTableOfContentsItemEditorProps {
   itemId: number;
@@ -140,21 +145,33 @@ export default function LayerTableOfContentsItemEditor(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [debouncedStyle]);
 
-  const geostats = (source?.geostats?.layers || []).find(
-    (l: { layer: string }) => {
-      if (!Boolean(layer?.sourceLayer)) {
-        return true;
-      } else {
-        return l.layer === layer?.sourceLayer;
-      }
-    }
+  const geostats = resolveSourceGeostats(
+    source?.geostats,
+    layer?.sourceLayer
   );
+  const rasterInteractivitySupported = supportsSeasketchRasterInteractivity(
+    source?.type,
+    geostats
+  );
+  const vectorGeostats = isGeostatsLayer(geostats) ? geostats : undefined;
+
+  const interactivitySettingsSupported =
+    source &&
+    source.type !== DataSourceTypes.Inaturalist &&
+    source.type !== DataSourceTypes.ArcgisRasterTiles &&
+    source.type !== DataSourceTypes.Raster &&
+    source.type !== DataSourceTypes.RasterDem &&
+    source.type !== DataSourceTypes.Image &&
+    source.type !== DataSourceTypes.Video &&
+    (source.type !== DataSourceTypes.SeasketchRaster ||
+      rasterInteractivitySupported);
 
   const { data: projectMeta } = useCurrentProjectMetadata();
   const dataTablesFeatureEnabled = Boolean(
     projectMeta?.project?.featureFlags?.dataTables
   );
-  const supportsDataTables = Boolean(geostats) && dataTablesFeatureEnabled;
+  const supportsDataTables =
+    Boolean(vectorGeostats) && dataTablesFeatureEnabled;
 
   const tabs = useMemo(() => {
     const items: {
@@ -261,79 +278,76 @@ export default function LayerTableOfContentsItemEditor(
           />
         </div>
       )}
-      {item &&
-        activeTab === "interactivity" &&
-        source &&
-        source.type === DataSourceTypes.Inaturalist && (
-          <div className="flex-1 overflow-y-auto px-4 pb-4">
-            <div className="bg-gray-50 text-sm border p-4 rounded flex items-center space-x-4 m-4 mt-5">
-              <ExclamationTriangleIcon className="h-8 w-8 text-gray-600" />
-              <div className="flex-1">
-                <Trans ns="admin:data">
-                  Interactivity settings are not available for iNaturalist
-                  sources.
-                </Trans>
-              </div>
-            </div>
-          </div>
-        )}
-      {item &&
-        activeTab === "interactivity" &&
-        source &&
-        source.type !== DataSourceTypes.Inaturalist && (
+      {item && activeTab === "interactivity" && source && (
           <div className="flex-1 overflow-y-auto px-4 pb-4">
             <div className="mt-5">
-              {source &&
-                layer &&
-                source.type !== DataSourceTypes.ArcgisRasterTiles && (
-                  <InteractivitySettings
-                    id={layer.interactivitySettingsId}
-                    dataSourceId={layer.dataSourceId}
-                    sublayer={layer.sublayer}
-                    geostats={geostats}
-                    changeLogRefetchTableOfContentsItemId={item.id}
-                  />
-                )}
-              {source &&
-                layer &&
-                source.type === DataSourceTypes.ArcgisRasterTiles && (
-                  <div className="bg-gray-50 text-sm border p-4 rounded flex items-center space-x-4">
-                    <ExclamationTriangleIcon className="h-8 w-8 text-gray-600" />
-                    <div>
+              {!interactivitySettingsSupported && (
+                <div className="bg-gray-50 text-sm border p-4 rounded flex items-center space-x-4">
+                  <ExclamationTriangleIcon className="h-8 w-8 text-gray-600" />
+                  <div className="flex-1">
+                    {source.type === DataSourceTypes.Inaturalist ? (
+                      <Trans ns="admin:data">
+                        Interactivity settings are not available for iNaturalist
+                        sources.
+                      </Trans>
+                    ) : source.type === DataSourceTypes.ArcgisRasterTiles ? (
                       <Trans ns="admin:data">
                         Popups and other interactivity options are not supported
                         for tiled ArcGIS sources.
                       </Trans>
-                    </div>
+                    ) : source.type === DataSourceTypes.SeasketchRaster ? (
+                      <Trans ns="admin:data">
+                        Interactivity is only available for single-band
+                        SeaSketch rasters (continuous grayscale or categorical
+                        palette), not RGB imagery.
+                      </Trans>
+                    ) : (
+                      <Trans ns="admin:data">
+                        Popups and other interactivity options are not supported
+                        for this data source type.
+                      </Trans>
+                    )}
                   </div>
-                )}
+                </div>
+              )}
+              {interactivitySettingsSupported && layer && (
+                <InteractivitySettings
+                  id={layer.interactivitySettingsId}
+                  dataSourceId={layer.dataSourceId}
+                  sublayer={layer.sublayer}
+                  geostats={geostats}
+                  changeLogRefetchTableOfContentsItemId={item.id}
+                />
+              )}
             </div>
-            <div className="mt-5">
-              <MutableRadioGroup
-                value={layer?.renderUnder}
-                legend={t(`Basemap Integration`)}
-                mutate={mutateLayer}
-                mutationStatus={mutateLayerState}
-                propName={"renderUnder"}
-                variables={{ id: layer?.id }}
-                items={[
-                  {
-                    value: RenderUnderType.Labels,
-                    label: t("Show Under Labels"),
-                    description: t(
-                      "Display this layer under any text labels on the basemap."
-                    ),
-                  },
-                  {
-                    value: RenderUnderType.None,
-                    label: t("Cover Basemap"),
-                    description: t(
-                      "Render this layer above the basemap entirely."
-                    ),
-                  },
-                ]}
-              />
-            </div>
+            {source.type !== DataSourceTypes.Inaturalist && (
+              <div className="mt-5">
+                <MutableRadioGroup
+                  value={layer?.renderUnder}
+                  legend={t(`Basemap Integration`)}
+                  mutate={mutateLayer}
+                  mutationStatus={mutateLayerState}
+                  propName={"renderUnder"}
+                  variables={{ id: layer?.id }}
+                  items={[
+                    {
+                      value: RenderUnderType.Labels,
+                      label: t("Show Under Labels"),
+                      description: t(
+                        "Display this layer under any text labels on the basemap."
+                      ),
+                    },
+                    {
+                      value: RenderUnderType.None,
+                      label: t("Cover Basemap"),
+                      description: t(
+                        "Render this layer above the basemap entirely."
+                      ),
+                    },
+                  ]}
+                />
+              </div>
+            )}
           </div>
         )}
 
@@ -368,7 +382,7 @@ export default function LayerTableOfContentsItemEditor(
                   layerId={layer.id}
                   tocItemId={item.stableId}
                   tableOfContentsItemId={item.id}
-                  geostats={geostats}
+                  geostats={vectorGeostats}
                   dataSource={source}
                   type={
                     source.type === DataSourceTypes.SeasketchRaster

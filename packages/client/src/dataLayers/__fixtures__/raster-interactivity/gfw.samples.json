@@ -1,0 +1,15 @@
+{
+  "tile": "gfw-2-0-2.png",
+  "z": 2,
+  "x": 0,
+  "y": 2,
+  "tileSize": 512,
+  "encoding": { "base": 0, "interval": 1, "byteEncoding": false },
+  "opaque": [
+    { "px": 27, "py": 57, "r": 0, "g": 128, "b": 2, "a": 255, "value": 2 },
+    { "px": 28, "py": 57, "r": 0, "g": 128, "b": 30, "a": 255, "value": 30 },
+    { "px": 29, "py": 57, "r": 0, "g": 128, "b": 25, "a": 255, "value": 25 },
+    { "px": 48, "py": 79, "r": 0, "g": 129, "b": 175, "a": 255, "value": 431 }
+  ],
+  "transparent": [{ "px": 25, "py": 57, "r": 0, "g": 0, "b": 0, "a": 0 }]
+}
