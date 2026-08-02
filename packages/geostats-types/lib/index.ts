@@ -286,6 +286,9 @@ export interface RasterInfo {
 export function isRasterInfo(
   info: RasterInfo | GeostatsLayer | any,
 ): info is RasterInfo {
+  if (!info || typeof info !== "object") {
+    return false;
+  }
   return (info as RasterInfo).bands !== undefined;
 }
 

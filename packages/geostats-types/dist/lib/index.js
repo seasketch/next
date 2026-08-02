@@ -37,6 +37,9 @@ var SuggestedRasterPresentation;
     SuggestedRasterPresentation[SuggestedRasterPresentation["rgb"] = 2] = "rgb";
 })(SuggestedRasterPresentation || (exports.SuggestedRasterPresentation = SuggestedRasterPresentation = {}));
 function isRasterInfo(info) {
+    if (!info || typeof info !== "object") {
+        return false;
+    }
     return info.bands !== undefined;
 }
 function isGeostatsLayer(data) {
