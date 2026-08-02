@@ -396,6 +396,90 @@ export function compileLegendFromGLStyleLayers(
   }
 }
 
+/**
+ * Resolve a display label from layer metadata["s:legend-labels"].
+ * Keys are always compared as strings so falsy values like 0 / false work.
+ */
+function legendLabelFor(
+  metadata: SeaSketchLayerMetadata | undefined,
+  key: string | number | boolean | null | undefined,
+  fallback: string
+): string {
+  if (key === undefined || key === null) {
+    return fallback;
+  }
+  const labels = metadata?.["s:legend-labels"];
+  if (!labels) {
+    return fallback;
+  }
+  const stringKey = key.toString();
+  if (Object.prototype.hasOwnProperty.call(labels, stringKey)) {
+    return labels[stringKey];
+  }
+  return fallback;
+}
+
+/**
+ * Label for match/case fallback rows. Prefers an explicit "default" override,
+ * then (for simple boolean legends) the unused boolean's label.
+ */
+function fallbackLegendLabel(
+  metadata: SeaSketchLayerMetadata | undefined,
+  valuesUsed: any[] = []
+): string {
+  const fromDefault = legendLabelFor(metadata, "default", "");
+  if (fromDefault) {
+    return fromDefault;
+  }
+  if (valuesUsed.length === 1) {
+    const only = valuesUsed[0];
+    if (only === true) {
+      return legendLabelFor(metadata, false, "default");
+    }
+    if (only === false) {
+      return legendLabelFor(metadata, true, "default");
+    }
+  }
+  return "default";
+}
+
+/**
+ * Property name targeted by a match expression's first argument.
+ * Supports ["get", prop], ["at", i, ["get", prop]], and simple wrappers
+ * like ["to-string", ["get", prop]] / ["to-number", ["get", prop]].
+ */
+function matchExpressionProperty(matchArgumentExpression: Expression): {
+  prop: string;
+  matchArgumentContainsArrayAtExpression: boolean;
+} {
+  if (matchArgumentExpression[0] === "get") {
+    return {
+      prop: matchArgumentExpression[1],
+      matchArgumentContainsArrayAtExpression: false,
+    };
+  }
+  if (matchArgumentExpression[0] === "at") {
+    const getExpression = matchArgumentExpression[2];
+    if (!isExpression(getExpression) || getExpression[0] !== "get") {
+      throw new Error(
+        "Cannot interpret match expression with embedded at expression. Expected get expression within [at]"
+      );
+    }
+    return {
+      prop: getExpression[1],
+      matchArgumentContainsArrayAtExpression: true,
+    };
+  }
+  const nestedGet = findGetExpression(matchArgumentExpression);
+  if (nestedGet?.property) {
+    return {
+      prop: nestedGet.property,
+      matchArgumentContainsArrayAtExpression: false,
+    };
+  }
+  throw new Error("Cannot interpret first argument of match expression.");
+}
+
 function eliminateDuplicatesAndRenameDefaults(panels: GLLegendPanel[]) {
   for (const panel of panels) {
     if (panel.type === "GLLegendFilterPanel") {
@@ -608,11 +692,11 @@ export function pluckBubblePanels(context: { layers: SeaSketchGlLayer[] }) {
                   layer
                 )}-${exprData.facets.indexOf(facet)}`,
                 type: "GLLegendBubblePanel",
-                label:
-                  metadata["s:legend-labels"] &&
-                  interpolate[2][1] in metadata["s:legend-labels"]
-                    ? metadata["s:legend-labels"][interpolate[2][1]]
-                    : interpolate[2][1],
+                label: legendLabelFor(
+                  metadata,
+                  interpolate[2][1],
+                  interpolate[2][1]
+                ),
                 stops: stops
                   .filter((s) => "input" in s)
                   .map((s) => {
@@ -899,10 +983,11 @@ export function pluckGradientPanels(context: { layers: SeaSketchGlLayer[] }) {
               // @ts-ignore
               layer.paint[paintProp] = exprData.remainingValues;
               const getProp = findGetExpression(facet.expression)?.property;
-              let label = getProp || paintProp;
-              if (getProp && metadata["s:legend-labels"]?.[getProp]) {
-                label = metadata["s:legend-labels"][getProp];
-              }
+              const label = legendLabelFor(
+                metadata,
+                getProp,
+                getProp || paintProp
+              )
               panels.push({
                 panel: {
                   // eslint-disable-next-line i18next/no-literal-string
@@ -1266,10 +1351,7 @@ export function pluckStepPanels(context: { layers: SeaSketchGlLayer[] }) {
       const panel: GLLegendStepPanel = {
         id,
         type: "GLLegendStepPanel",
-        label:
-          metadata["s:legend-labels"] && prop in metadata["s:legend-labels"]
-            ? metadata["s:legend-labels"][prop]
-            : prop,
+        label: legendLabelFor(metadata, prop, prop),
         steps: [
           ...("s:steps" in metadata
             ? []
@@ -1351,15 +1433,11 @@ export function pluckFilterPanels(context: { layers: SeaSketchGlLayer[] }) {
             labels.add(prop);
           }
         );
-        let label = labels.size === 1 ? [...labels][0] : undefined;
         const metadata: SeaSketchLayerMetadata = layer.metadata || {};
-        if (
-          label &&
-          metadata["s:legend-labels"] &&
-          label in metadata["s:legend-labels"]
-        ) {
-          label = metadata["s:legend-labels"][label];
-        }
+        let label =
+          labels.size === 1
+            ? legendLabelFor(metadata, [...labels][0], [...labels][0])
+            : undefined;
         // Special case to consider here when plucking line layers. If there are one
         // or more filtered fill layers remaining, there is a state where none of
         // those filters pass and the line will be rendered without fill. We need
@@ -1469,30 +1547,16 @@ export function pluckListPanelsFromMatchExpressions(context: {
       featureProps,
       sortedLayers
     ) => {
-      let prop = expression[1][1];
-      let matchArgumentContainsArrayAtExpression = false;
       const matchArgumentExpression = expression[1];
       if (!isExpression(matchArgumentExpression)) {
         throw new Error("Cannot interpret first argument of match expression.");
-      } else if (matchArgumentExpression[0] === "get") {
-        prop = matchArgumentExpression[1];
-      } else if (matchArgumentExpression[0] === "at") {
-        const getExpression = matchArgumentExpression[2];
-        if (getExpression[0] !== "get") {
-          throw new Error(
-            "Cannot interpret match expression with embedded at expression. Expected get expression within [at]"
-          );
-        }
-        prop = getExpression[1];
-        matchArgumentContainsArrayAtExpression = true;
       }
+      const { prop, matchArgumentContainsArrayAtExpression } =
+        matchExpressionProperty(matchArgumentExpression);
       const defaultValue = expression[expression.length - 1];
       const inputOutputPairs = expression.slice(2, -1);
       const metadata: SeaSketchLayerMetadata = layer.metadata || {};
-      let panelLabel = expression[1][1].toString();
-      if (metadata["s:legend-labels"]?.[panelLabel]) {
-        panelLabel = metadata["s:legend-labels"][panelLabel];
-      }
+      const panelLabel = legendLabelFor(metadata, prop, prop);
       const panel: GLLegendListPanel = {
         id,
         type: "GLLegendListPanel",
@@ -1508,10 +1572,7 @@ export function pluckListPanelsFromMatchExpressions(context: {
           output !== NULLIFIED_EXPRESSION_OUTPUT_STRING
         ) {
           valuesUsed.push(input);
-          let label = input.toString();
-          if (input && metadata["s:legend-labels"]?.[input]) {
-            label = metadata["s:legend-labels"][input];
-          }
+          const label = legendLabelFor(metadata, input, input.toString());
 
           if (
             !metadata["s:excluded"] ||
@@ -1545,10 +1606,7 @@ export function pluckListPanelsFromMatchExpressions(context: {
         );
         for (const value of valuesForFeatureProperty) {
           if (!valuesUsed.includes(value)) {
-            let label = value.toString();
-            if (value && metadata["s:legend-labels"]?.[value.toString()]) {
-              label = metadata["s:legend-labels"][value.toString()];
-            }
+            const label = legendLabelFor(metadata, value, value.toString());
             if (
               !metadata["s:excluded"] ||
               !metadata["s:excluded"].includes(value)
@@ -1592,7 +1650,7 @@ export function pluckListPanelsFromMatchExpressions(context: {
         } else {
           panel.items.push({
             id: id + "-default",
-            label: "default",
+            label: fallbackLegendLabel(metadata, valuesUsed),
             symbol,
           });
         }
@@ -1669,11 +1727,12 @@ export function pluckListPanelsForCaseAndFilterExpressions(context: {
           } else {
             if (isSimple) {
               const prop = [...representedProperties.featurePropertiesUsed][0];
+              const metadata: SeaSketchLayerMetadata = layer.metadata || {};
               const panel: GLLegendListPanel = {
                 // eslint-disable-next-line i18next/no-literal-string
                 id: `${layers.indexOf(layer)}-${styleProp.prop}-case`,
                 type: "GLLegendListPanel",
-                label: prop,
+                label: legendLabelFor(metadata, prop, prop),
                 items: [],
               };
               const featureProps = propsForFilterExpressions(
@@ -1691,10 +1750,19 @@ export function pluckListPanelsForCaseAndFilterExpressions(context: {
                     ...featureProps,
                     ...propsForFilterExpressions([input]),
                   };
-                  valuesUsed.push(featureData[prop]);
+                  const matchedValue = featureData[prop];
+                  valuesUsed.push(matchedValue);
+                  const expressionLabel = labelForExpression(input);
+                  const label = legendLabelFor(
+                    metadata,
+                    matchedValue !== undefined && matchedValue !== null
+                      ? matchedValue
+                      : expressionLabel,
+                    expressionLabel
+                  );
                   panel.items.push({
                     id: panel.id + "-" + i,
-                    label: labelForExpression(input),
+                    label,
                     symbol: createSymbol(
                       layers.indexOf(layer),
                       layers,
@@ -1718,7 +1786,7 @@ export function pluckListPanelsForCaseAndFilterExpressions(context: {
                   if (!valuesUsed.includes(value)) {
                     panel.items.push({
                       id: panel.id + "-" + panel.items.length,
-                      label: `${value}`,
+                      label: legendLabelFor(metadata, value, `${value}`),
                       symbol: createSymbol(
                         layers.indexOf(layer),
                         layers,
@@ -1740,7 +1808,7 @@ export function pluckListPanelsForCaseAndFilterExpressions(context: {
               ) {
                 panel.items.push({
                   id: panel.id + "-default",
-                  label: "default",
+                  label: fallbackLegendLabel(metadata, valuesUsed),
                   symbol: createSymbol(
                     layers.indexOf(layer),
                     layers,
@@ -3631,8 +3699,9 @@ function consolidateNode(node: GroupByFilterNode) {
           listPanels[key] = {
             id: key,
             type: "GLLegendListPanel",
-            // label: subNode.filters.length === 1 ? " " : propName,
-            label: propName,
+            // Prefer the child panel label so s:legend-labels overrides
+            // applied in pluckFilterPanels survive consolidation.
+            label: panel.label || propName,
             items: [],
           };
         }
@@ -3644,7 +3713,9 @@ function consolidateNode(node: GroupByFilterNode) {
           });
         }
         const filterPropRepresentedInPanelLabel =
-          filterPropNames.size === 1 && filterPropNames.has(panel.label || "");
+          filterPropNames.size === 1 &&
+          (filterPropNames.has(panel.label || "") ||
+            filterPropNames.has(propName));
         list.items.push({
           id: panel.items[0].id,
           label:
