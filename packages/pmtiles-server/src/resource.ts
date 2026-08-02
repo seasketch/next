@@ -11,6 +11,14 @@ const PUBLISHED = new RegExp(
   `^projects/([^/]+)/public/(${UUID})(?:$|[./].*)`,
   "i",
 );
+/**
+ * Legacy Replace-tiles / pre-refactor keys: `{slug}/public/{uuid}…`
+ * (no `projects/` prefix). Still present in production R2 and data_sources.url.
+ */
+const LEGACY_PUBLISHED = new RegExp(
+  `^([^/]+)/public/(${UUID})(?:$|[./].*)`,
+  "i",
+);
 const SUBDIVIDED = /^projects\/([^/]+)\/subdivided\/(.+)$/i;
 const PROJECT = /^projects\/([^/]+)\/(.+)$/i;
 const NS_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,63}$/;
@@ -51,7 +59,7 @@ export function classifyResource(pathOrKey: string): ResourceDescriptor | null {
   const key = normalizeObjectKey(pathOrKey);
   if (!key) return null;
 
-  const published = key.match(PUBLISHED);
+  const published = key.match(PUBLISHED) ?? key.match(LEGACY_PUBLISHED);
   if (published) {
     const slug = published[1];
     if (slug.toLowerCase() === "superuser") {
@@ -130,7 +138,7 @@ export function aclNamespaceFromRequest(request: Request): string {
 /** HTML browser preview for a published UUID (no tile/extension suffix). */
 export function isPublishedPreviewPath(pathname: string): boolean {
   return new RegExp(
-    `^/projects/[^/]+/public/${UUID}/?$`,
+    `^/(?:projects/)?[^/]+/public/${UUID}/?$`,
     "i",
   ).test(pathname);
 }

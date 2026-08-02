@@ -72,6 +72,52 @@ describe("buildProjectAclDocFromRows (tree scenarios)", () => {
         `https://tiles.seasketch.org/projects/storage-slug/public/${A}/1/2/3.mvt`
       )
     ).toEqual({ storageSlug: "storage-slug", uuid: A });
+    // Legacy Replace-tiles URLs omit the projects/ prefix.
+    expect(
+      extractHostedTilesPath(
+        `https://tiles.seasketch.org/storage-slug/public/${A}`
+      )
+    ).toEqual({ storageSlug: "storage-slug", uuid: A });
+    expect(
+      extractHostedTilesPath(
+        `https://tiles.seasketch.org/storage-slug/public/${A}.json`
+      )
+    ).toEqual({ storageSlug: "storage-slug", uuid: A });
+  });
+
+  test("includes legacy Replace-tiles URLs in the ACL document", () => {
+    expect(
+      buildProjectAclDocFromRows(
+        [
+          {
+            slug: "example",
+            url: `https://tiles.seasketch.org/example/public/${A}`,
+            ancestor_acls: [],
+          },
+          {
+            slug: "example",
+            url: `https://tiles.seasketch.org/example/public/${B}`,
+            ancestor_acls: [{ t: "admins_only", g: [] }],
+          },
+          {
+            slug: "example",
+            url: `https://tiles.seasketch.org/example/public/${C}.json`,
+            ancestor_acls: [{ t: "group", g: [4] }],
+          },
+        ],
+        "example",
+        1
+      )
+    ).toEqual({
+      v: 1,
+      slug: "example",
+      public: [A],
+      rules: [{ t: "admins_only" }, { t: "group", g: [4] }],
+      protected: {
+        [B]: [0],
+        [C]: [1],
+      },
+    });
   });
 
   test("public root + private root + public-in-public-folder", () => {

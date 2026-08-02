@@ -172,7 +172,8 @@ const ReplacePMTilesPlugin = makeExtendSchemaPlugin((build) => {
               Key: pmtilesKey,
             })
             .createReadStream();
-          const r2Key = `${row.slug}/public/${uuid()}.pmtiles`;
+          // Canonical overlay key (matches spatial-uploads-handler).
+          const r2Key = `projects/${row.slug}/public/${uuid()}.pmtiles`;
           const r2Url = `https://tiles.seasketch.org/${r2Key.replace(
             ".pmtiles",
             ""

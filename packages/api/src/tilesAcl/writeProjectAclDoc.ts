@@ -17,9 +17,10 @@ export type ProjectAclDoc = {
   protected: Record<string, number[]>;
 };
 
-// Hosted tiles: /projects/{storageSlug}/public/{uuid}[.json|/z/x/y…]
+// Hosted tiles: [/projects]/{storageSlug}/public/{uuid}[.json|/z/x/y…]
+// Optional projects/ covers legacy Replace-tiles URLs.
 const HOSTED_TILES_PATH =
-  /\/projects\/([^/]+)\/public\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(?:\.|$|\/)/i;
+  /\/(?:projects\/)?([^/]+)\/public\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(?:\.|$|\/)/i;
 
 function getR2(): S3 {
   const { R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ENDPOINT } = process.env;

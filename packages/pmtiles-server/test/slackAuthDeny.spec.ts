@@ -62,6 +62,16 @@ describe("classifyAuthDenyNotifyTarget", () => {
       classifyAuthDenyNotifyTarget(`/${bare.key}`, new URLSearchParams(), bare),
     ).toBe("tilejson");
 
+    const legacyTilejson = classifyResource(`belize/public/${UUID}.json`)!;
+    expect(legacyTilejson.kind).toBe("published");
+    expect(
+      classifyAuthDenyNotifyTarget(
+        `/${legacyTilejson.key}`,
+        new URLSearchParams(),
+        legacyTilejson,
+      ),
+    ).toBe("tilejson");
+
     const fgb = classifyResource(
       `projects/belize/subdivided/12-${UUID}.fgb`,
     )!;

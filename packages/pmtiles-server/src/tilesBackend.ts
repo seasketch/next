@@ -11,9 +11,12 @@ const TILE_ROUTE = new RegExp(
 const UUID =
   "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
 
-/** TileJSON is generated from the PMTiles archive — not a stored `.json` object. */
+/**
+ * TileJSON is generated from the PMTiles archive — not a stored `.json` object.
+ * Optional `projects/` prefix covers legacy Replace-tiles URLs.
+ */
 const TILEJSON_ROUTE = new RegExp(
-  `^/(projects/[^/]+/public/(${UUID}))\\.json$`,
+  `^/((?:projects/)?[^/]+/public/(${UUID}))\\.json$`,
   "i"
 );
 
@@ -22,12 +25,12 @@ const TILEJSON_ROUTE = new RegExp(
  * (`{uuid}.pmtiles`, `{uuid}.geojson.json`, `{uuid}/metadata.xml`, …).
  */
 const OBJECT_ROUTE = new RegExp(
-  `^/(projects/[^/]+/public/(${UUID})(?:(?:\\.[a-zA-Z0-9]+)+|/(?:[^/]+)+))$`,
+  `^/((?:projects/)?[^/]+/public/(${UUID})(?:(?:\\.[a-zA-Z0-9]+)+|/(?:[^/]+)+))$`,
   "i"
 );
 
 const PREVIEW_ROUTE = new RegExp(
-  `^/(projects/[^/]+/public/(${UUID}))/?$`,
+  `^/((?:projects/)?[^/]+/public/(${UUID}))/?$`,
   "i"
 );
 

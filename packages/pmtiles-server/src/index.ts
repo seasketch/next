@@ -171,7 +171,7 @@ const FIXTURE_OR_PROJECT_ZXY = new RegExp(
   "i",
 );
 const PUBLISHED_TILEJSON_OR_PREVIEW = new RegExp(
-  `^projects/[^/]+/public/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(?:$|\\.json$)`,
+  `^(?:projects/)?[^/]+/public/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(?:$|\\.json$)`,
   "i",
 );
 

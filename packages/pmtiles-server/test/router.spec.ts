@@ -57,6 +57,20 @@ describe("host-aware router", () => {
     expect(await uploads.text()).toBe("Object not found");
   });
 
+  it("routes legacy Replace-tiles TileJSON through TilesBackend", async () => {
+    // Without projects/ prefix, .json must still be synthesized TileJSON —
+    // not an ObjectBackend lookup for a literal .json key.
+    const legacy = `legacy-slug/public/${uuid}.json`;
+    const tiles = await SELF.fetch(`https://tiles.seasketch.org/${legacy}`);
+    expect(tiles.status).toBe(404);
+    expect(await tiles.text()).toBe("Tileset not found");
+    expect(tiles.headers.get("x-ss-tile-auth")).toMatch(/^allow:/);
+
+    const uploads = await SELF.fetch(`https://uploads.seasketch.org/${legacy}`);
+    expect(uploads.status).toBe(404);
+    expect(await uploads.text()).toBe("Object not found");
+  });
+
   it("still serves non-tile fixture objects from ObjectBackend on tiles", async () => {
     const response = await SELF.fetch(
       "https://tiles.seasketch.org/router-fixture.fgb",

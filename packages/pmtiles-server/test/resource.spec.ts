@@ -22,6 +22,16 @@ describe("overlay resource classification", () => {
         "/projects/example/public/11111111-1111-1111-1111-111111111111.fgb",
       ),
     ).toMatchObject({ kind: "published", slug: "example" });
+    // Legacy Replace-tiles keys omit the projects/ prefix.
+    expect(
+      classifyResource(
+        "/example/public/11111111-1111-1111-1111-111111111111.json",
+      ),
+    ).toMatchObject({
+      kind: "published",
+      slug: "example",
+      uuid: "11111111-1111-1111-1111-111111111111",
+    });
     // Data-table assets under the parent layer UUID inherit published ACL.
     expect(
       classifyResource(

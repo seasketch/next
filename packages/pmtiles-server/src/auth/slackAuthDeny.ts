@@ -30,7 +30,7 @@ export type AuthDenySlackEvent = {
 const TILE_ZXY =
   /\/\d+\/\d+\/\d+\.(?:mvt|pbf|png|webp|jpe?g)$/i;
 const PUBLISHED_TILEJSON =
-  /^projects\/[^/]+\/public\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(?:\.json)?$/i;
+  /^(?:projects\/)?[^/]+\/public\/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(?:\.json)?$/i;
 
 /** Burst window: collapse rapid denials for the same object into one post. */
 export const AUTH_DENY_SLACK_COALESCE_MS = 3_000;
