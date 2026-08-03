@@ -40,8 +40,9 @@ import {
   type RasterPixelHit,
 } from "./rasterPixelQuery";
 import {
+  extractRasterLabelFormatOptions,
   extractRasterLegendLabels,
-  labelFromRasterLegendLabels,
+  rasterInteractionLabel,
 } from "./rasterLegendLabel";
 
 const PopupNumberFormatter = Intl.NumberFormat(undefined, {
@@ -54,6 +55,8 @@ type InteractiveRasterLayer = {
   encoding: RasterValueEncodingParams;
   /** Pre-extracted from mapboxGlStyles; avoid re-parsing on mousemove. */
   legendLabels: Record<string, string>;
+  /** Continuous legend presentation: round-numbers + value-suffix. */
+  labelFormat: ReturnType<typeof extractRasterLabelFormatOptions>;
   respectScaleAndOffset: boolean;
   glLayerId: string;
 };
@@ -271,6 +274,9 @@ export default class LayerInteractivityManager extends EventEmitter {
                   source,
                   encoding,
                   legendLabels: extractRasterLegendLabels(
+                    layer.mapboxGlStyles
+                  ),
+                  labelFormat: extractRasterLabelFormatOptions(
                     layer.mapboxGlStyles
                   ),
                   respectScaleAndOffset: styleRespectsScaleAndOffset(
@@ -542,10 +548,7 @@ export default class LayerInteractivityManager extends EventEmitter {
       ) {
         const content = Mustache.render(
           interactivitySetting.longTemplate || "{{label}}",
-          this.rasterMustacheContext(
-            rasterHit.hit,
-            rasterHit.layer.legendLabels
-          )
+          this.rasterMustacheContext(rasterHit.hit, rasterHit.layer)
         );
         this.clearSidebarPopup();
         this.setActivePopup(
@@ -1226,13 +1229,23 @@ export default class LayerInteractivityManager extends EventEmitter {
 
   private rasterMustacheContext(
     hit: RasterPixelHit,
-    legendLabels: Record<string, string>
+    rasterLayer: Pick<
+      InteractiveRasterLayer,
+      "legendLabels" | "labelFormat"
+    >
   ) {
     return {
       ...mustacheHelpers,
+      // Post scale/offset when s:respect-scale-and-offset is on.
       value: hit.value,
-      // Labels are keyed by encoded DN, not the scale/offset display value.
-      label: labelFromRasterLegendLabels(legendLabels, hit.encodedValue),
+      // Categorical: s:legend-labels by encoded DN. Continuous: legend-style
+      // formatting of the display value (locale, round-numbers, value-suffix).
+      label: rasterInteractionLabel(
+        rasterLayer.legendLabels,
+        hit.encodedValue,
+        hit.value,
+        rasterLayer.labelFormat
+      ),
     };
   }
 
@@ -1246,9 +1259,9 @@ export default class LayerInteractivityManager extends EventEmitter {
     if (!interactivitySetting) {
       return false;
     }
-    const ctx = this.rasterMustacheContext(hit, rasterLayer.legendLabels);
+    const ctx = this.rasterMustacheContext(hit, rasterLayer);
     // Prefer {{label}} so categorical legend names show by default; unlabeled
-    // values fall back to the numeric string via labelFromRasterLegendLabels.
+    // continuous values use the same formatting as legend min/max labels.
     const defaultTemplate = "{{label}}";
     let cursor = "";
     let bannerMessages: string[] = [];
