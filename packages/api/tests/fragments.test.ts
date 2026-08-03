@@ -4461,12 +4461,17 @@ function validateFragmentCoordinates(fragments: SketchFragment[]): void {
   }
 }
 
-// Helper function to write output files for debugging
+// Helper to regenerate committed fixture files under tests/outputs/.
+// Disabled by default so normal test runs do not dirty the working tree.
+// Set UPDATE_FRAGMENT_FIXTURES=1 to rewrite fixtures when intentionally updating them.
 async function writeOutput(
   testName: string,
   outputType: string,
   data: any
 ): Promise<void> {
+  if (process.env.UPDATE_FRAGMENT_FIXTURES !== "1") {
+    return;
+  }
   if (Array.isArray(data) && data[0]?.type === "Feature") {
     data = {
       type: "FeatureCollection",
@@ -4576,7 +4581,7 @@ function compareWithExpectedOutput(
       error.message.includes("Expected output file not found")
     ) {
       throw new Error(
-        `Expected output file "${filename}" not found for test "${testName}". Run the test with writeOutput enabled first to generate expected outputs.`
+        `Expected output file "${filename}" not found for test "${testName}". Re-run with UPDATE_FRAGMENT_FIXTURES=1 to generate expected outputs.`
       );
     }
     throw error;
