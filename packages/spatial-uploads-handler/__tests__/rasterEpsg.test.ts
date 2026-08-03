@@ -1,6 +1,8 @@
 import * as gdal from "gdal-async";
 import {
+  epsgFromGdalinfoMetadataJson,
   epsgFromProjJsonText,
+  parseEpsgCodeString,
   parseEpsgFromGdalsrsinfoSearchStdout,
   resolveEpsgFromSpatialReference,
   resolveRasterEpsg,
@@ -38,6 +40,32 @@ describe("rasterEpsg", () => {
       parseEpsgFromGdalsrsinfoSearchStdout("\n\nEPSG:4326\n\nPROJ.4 : ..."),
     ).toBe(4326);
     expect(parseEpsgFromGdalsrsinfoSearchStdout("no match")).toBeNull();
+    // gdalsrsinfo -e reports EPSG:-1 when no match; do not treat as a code.
+    expect(parseEpsgFromGdalsrsinfoSearchStdout("EPSG:-1\n")).toBeNull();
+  });
+
+  test("parseEpsgCodeString accepts EPSG:nnnn only", () => {
+    expect(parseEpsgCodeString("EPSG:4326")).toBe(4326);
+    expect(parseEpsgCodeString("epsg:3857")).toBe(3857);
+    expect(parseEpsgCodeString("EPSG:-1")).toBeNull();
+    expect(parseEpsgCodeString("4326")).toBeNull();
+  });
+
+  test("epsgFromGdalinfoMetadataJson reads CF / ACDD epsg keys", () => {
+    // Shape matches NOAA CRW NetCDF (and GeoTIFF after gdal_translate): GDAL
+    // WKT is GEOGCRS["unknown", ...] but metadata still declares EPSG:4326.
+    const gdalinfoJson = JSON.stringify({
+      metadata: {
+        "": {
+          "crs#epsg_code": "EPSG:4326",
+          "crs#grid_mapping_name": "latitude_longitude",
+          "NC_GLOBAL#geospatial_bounds_crs": "EPSG:4326",
+        },
+      },
+    });
+    expect(epsgFromGdalinfoMetadataJson(gdalinfoJson)).toBe(4326);
+    expect(epsgFromGdalinfoMetadataJson("{}")).toBeNull();
+    expect(epsgFromGdalinfoMetadataJson("not-json")).toBeNull();
   });
 
   test("resolveEpsgFromSpatialReference on maldives.tif fixture", async () => {

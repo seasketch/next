@@ -25,10 +25,22 @@ export declare function resolveEpsgFromSpatialReference(srs: GdalSpatialReferenc
 export declare function epsgFromProjJsonText(text: string): number | null;
 /** First standalone `EPSG:nnnn` line from `gdalsrsinfo -e` output. */
 export declare function parseEpsgFromGdalsrsinfoSearchStdout(stdout: string): number | null;
+/** Parse `EPSG:4326` / `epsg:4326` style strings; rejects non-positive codes. */
+export declare function parseEpsgCodeString(value: unknown): number | null;
+/**
+ * CF / ACDD NetCDF (and GeoTIFF derivatives) often declare EPSG in metadata
+ * even when GDAL builds an "unknown" geographic CRS that PROJ cannot match
+ * (e.g. NOAA CRW uses inverse_flattening 298.2572 vs WGS 84's 298.257223563).
+ *
+ * Prefer explicit CRS authority keys, then any metadata value shaped like
+ * `EPSG:nnnn`.
+ */
+export declare function epsgFromGdalinfoMetadataJson(text: string): number | null;
 /**
  * Best-effort EPSG for a raster path: OSR (in-process), then the same GDAL
- * utilities the Lambda image ships with (`gdalsrsinfo`), which use PROJ's full
- * CRS database and identification paths.
+ * utilities the Lambda image ships with (`gdalsrsinfo` / `gdalinfo`), which use
+ * PROJ's full CRS database and identification paths. Finally, CF/ACDD metadata
+ * keys such as `crs#epsg_code` when the WKT is an unrecognized geographic CRS.
  */
 export declare function resolveRasterEpsg(path: string, srs: GdalSpatialReferenceLike | null): Promise<number | null>;
 //# sourceMappingURL=rasterEpsg.d.ts.map
