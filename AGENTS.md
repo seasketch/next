@@ -35,6 +35,12 @@
   - Don't ever modify json files in packages/client/src/lang/ -- Those are automatically generated!
 - **Typescript features**
   - Our graphql codegen process uses an older babel system to parse code and extract gql strings. Don't use `import type` syntax anywhere in the client, or in code that is imported by it or there will be trouble. Check the `GraphQL:codegen` terminal task for errors caused by usage of this syntax.
+- **Type guards and untrusted JSON**
+  - Fields typed as GraphQL `JSON` (for example `geostats`) are untrusted at runtime. Narrow them with type guards; do not assume the declared TS shape is present.
+  - Type guards (`isX` / `value is Foo`) should take `unknown` (not `any`, and not only the success-case union). Handle `null` and `undefined` before reading properties.
+  - Prefer `typeof`, `Array.isArray`, and the `in` operator to narrow. Do **not** write `(value as Foo).prop` as the first step of a type guard — that assertion silences `strictNullChecks` and can throw at runtime (see the Interactivity Settings / `isRasterInfo` crash).
+  - When adding or editing a type guard, add a few unit tests for `null`, `undefined`, non-objects, and a valid example. Sibling guards in the same module should follow the same defensive pattern.
+  - Good reference implementations: `isGeostatsLayer` in `packages/geostats-types`, `isRasterSource` in `packages/client/src/reports/widgets/ClassTableRows.ts`.
 
 ## 📄 Example: Creating a New React Component (including i18n)
 
