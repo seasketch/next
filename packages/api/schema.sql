@@ -992,9 +992,10 @@ CREATE TYPE public.spatial_metric_type AS ENUM (
     'presence_table',
     'contextualized_mean',
     'overlay_area',
+    'column_stats',
     'column_values',
-    'distance_to_shore',
-    'raster_stats'
+    'raster_stats',
+    'distance_to_shore'
 );
 
 
@@ -1679,8 +1680,8 @@ CREATE TABLE public.sketch_classes (
     filter_api_version integer DEFAULT 1 NOT NULL,
     filter_api_server_location text,
     is_geography_clipping_enabled boolean DEFAULT false NOT NULL,
-    draft_report_id integer,
     report_id integer,
+    draft_report_id integer,
     preview_new_reports boolean DEFAULT false NOT NULL,
     CONSTRAINT sketch_classes_geoprocessing_client_url_check CHECK ((geoprocessing_client_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
     CONSTRAINT sketch_classes_geoprocessing_project_url_check CHECK ((geoprocessing_project_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
@@ -2991,6 +2992,9 @@ CREATE FUNCTION public.after_data_layers_update_or_delete_set_draft_table_of_con
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
 begin
+  if coalesce(current_setting('seasketch.skip_library_source_side_effects', true), '') = 'true' then
+    return NEW;
+  end if;
   update projects
   set draft_table_of_contents_has_changes = true
   where id in (
@@ -3014,6 +3018,9 @@ CREATE FUNCTION public.after_data_sources_update_or_delete_set_draft_table_of_co
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
 begin
+  if coalesce(current_setting('seasketch.skip_library_source_side_effects', true), '') = 'true' then
+    return NEW;
+  end if;
   update projects
   set draft_table_of_contents_has_changes = true
   where id in (
@@ -3745,7 +3752,6 @@ $$;
 
 CREATE FUNCTION public.generate_export_id(id integer, export_id text, body jsonb) RETURNS text
     LANGUAGE plpgsql IMMUTABLE
-    SET search_path TO 'public', 'pg_catalog'
     AS $$
     declare
       collected_text text;
@@ -3768,7 +3774,6 @@ CREATE FUNCTION public.generate_export_id(id integer, export_id text, body jsonb
 
 CREATE FUNCTION public.generate_label(id integer, body jsonb) RETURNS text
     LANGUAGE plpgsql IMMUTABLE
-    SET search_path TO 'public', 'pg_catalog'
     AS $$
     declare
       collected_text text;
@@ -4464,7 +4469,7 @@ CREATE FUNCTION public.before_insert_or_update_table_of_contents_items_trigger()
     if old.is_folder != new.is_folder then
       raise 'Cannot change is_folder. Create a new table of contents item';
     end if;
-    if old.is_draft = false then
+    if old.is_draft = false and coalesce(current_setting('seasketch.skip_library_source_side_effects', true), '') != 'true' then
       raise 'Cannot alter table of contents items after they are published';
     end if;
     if new.sort_index is null then
@@ -6423,7 +6428,6 @@ COMMENT ON FUNCTION public.copy_appearance(form_element_id integer, copy_from_id
 
 CREATE FUNCTION public.toc_to_tsvector(lang text, title text, metadata jsonb, translated_props jsonb) RETURNS tsvector
     LANGUAGE plpgsql IMMUTABLE
-    SET search_path TO 'public', 'pg_catalog'
     AS $$
     DECLARE
       title_translated_prop_is_filled_in boolean;
@@ -6712,7 +6716,6 @@ CREATE FUNCTION public.copy_data_library_template_item(template_id text, project
 
 CREATE FUNCTION public.create_bbox(geom public.geometry, sketch_id integer) RETURNS real[]
     LANGUAGE plpgsql IMMUTABLE SECURITY DEFINER
-    SET search_path TO 'public', 'pg_catalog'
     AS $$
     declare
       child_ids int[];
@@ -7552,7 +7555,6 @@ $$;
 
 CREATE FUNCTION public.create_bbox(geom public.geometry) RETURNS real[]
     LANGUAGE sql IMMUTABLE SECURITY DEFINER
-    SET search_path TO 'public', 'pg_catalog'
     AS $$
     select array[st_xmin(geom)::real, st_ymin(geom)::real, st_xmax(geom)::real, st_ymax(geom)::real];
   $$;
@@ -17817,7 +17819,9 @@ begin
         is_draft = false
     );
 
-  delete from data_sources where data_sources.id in (
+  -- Never delete shared data library sources; they are referenced by the
+  -- canonical template and by draft/published copies in other projects.
+  delete from data_sources where data_sources.data_library_template_id is null and data_sources.id in (
     select
       data_source_id
     from
@@ -17928,7 +17932,8 @@ begin
       translated_props,
       enable_download,
       enable_data_tables,
-      data_table_join_column
+      data_table_join_column,
+      copied_from_data_library_template_id
     ) values (
       false,
       "projectId",
@@ -17948,7 +17953,8 @@ begin
       item.translated_props,
       item.enable_download,
       item.enable_data_tables,
-      item.data_table_join_column
+      item.data_table_join_column,
+      item.copied_from_data_library_template_id
     ) returning id into new_toc_id;
     select
       type, id into acl_type, orig_acl_id
@@ -18032,9 +18038,15 @@ begin
     and draft_toc.is_folder = false
     and odt.deleted_at is null;
 
-  -- one-by-one, copy related sources and update foreign keys of layers
+  -- one-by-one, copy related sources and update foreign keys of layers.
+  -- Data library sources are skipped: published layers keep referencing the
+  -- shared source so library updates are visible to end-users immediately
+  -- ("live" layers), without requiring a republish.
   for source_id in
-    select distinct(data_source_id) from data_layers where id in (
+    select distinct(data_layers.data_source_id) from data_layers
+    inner join data_sources
+      on data_sources.id = data_layers.data_source_id
+    where data_sources.data_library_template_id is null and data_layers.id in (
       select
         data_layer_id
       from
@@ -18927,9 +18939,10 @@ CREATE FUNCTION public.replace_data_source(data_layer_id integer, data_source_id
       source_processing_job_key text;
     begin
         -- first, determine if a related table_of_contents_item has
-        -- data_library_template_id set. If so, we need to update the
-        -- related Toc items that have copied_from_data_library_template_id
-        -- matching.
+        -- data_library_template_id set. If so, this is a data library template
+        -- update and must fan out to copies in other projects (draft and
+        -- published) without generating changelog entries or flipping
+        -- draft_table_of_contents_has_changes.
 
         select data_library_template_id into dl_template_id from table_of_contents_items where table_of_contents_items.data_layer_id = replace_data_source.data_layer_id and data_library_template_id is not null limit 1;
 
@@ -18995,8 +19008,18 @@ CREATE FUNCTION public.replace_data_source(data_layer_id integer, data_source_id
           old_metadata_is_dynamic,
           projectid
         );
-        
+
         if dl_template_id is not null then
+          -- Library updates are "live": suppress draft_table_of_contents_has_changes
+          -- and layer:uploaded changelog side effects for the remainder of this
+          -- function. Statement-scoped (transaction-local) and cleared before
+          -- returning.
+          perform set_config('seasketch.skip_library_source_side_effects', 'true', true);
+
+          -- Stamp the template id onto the new source and every source
+          -- currently referenced by copies of this template (all versions of
+          -- the library source end up stamped, which is what the fan-out below
+          -- keys off of).
           update 
             data_sources
           set data_library_template_id = dl_template_id
@@ -19040,27 +19063,39 @@ CREATE FUNCTION public.replace_data_source(data_layer_id integer, data_source_id
           id = replace_data_source.data_layer_id;
 
         if dl_template_id is not null then
+          -- Fan out to every layer referencing any (stamped) version of the
+          -- library source. Covers draft copies, published copies, and copies
+          -- stranded on an older version (e.g. after a template rollback).
           update
             data_layers
           set
             data_source_id = replace_data_source.data_source_id,
             source_layer = replace_data_source.source_layer
           where
-            id = any (
-              select table_of_contents_items.data_layer_id from table_of_contents_items where copied_from_data_library_template_id = dl_template_id
+            id != replace_data_source.data_layer_id and
+            data_layers.data_source_id != replace_data_source.data_source_id and
+            data_layers.data_source_id in (
+              select id from data_sources where data_sources.data_library_template_id = dl_template_id
             );
+
+          -- Update bounds on exactly the TOC items whose layers were swapped
+          -- (template + all copies, draft and published).
+          update 
+            table_of_contents_items 
+          set bounds = replace_data_source.bounds 
+          where 
+            table_of_contents_items.data_layer_id in (
+              select id from data_layers where data_layers.data_source_id = replace_data_source.data_source_id
+            );
+
+          perform set_config('seasketch.skip_library_source_side_effects', 'false', true);
+        else
+          update 
+            table_of_contents_items 
+          set bounds = replace_data_source.bounds 
+          where 
+            table_of_contents_items.data_layer_id = replace_data_source.data_layer_id;
         end if;
-        
-        update 
-          table_of_contents_items 
-        set bounds = replace_data_source.bounds 
-        where 
-          table_of_contents_items.data_layer_id = replace_data_source.data_layer_id or (
-            case 
-              when dl_template_id is not null then copied_from_data_library_template_id = dl_template_id
-              else false
-            end
-          );
 
         if replacing_reporting_layer then
           -- trigger proprocessing graphile-worker job
@@ -22267,7 +22302,8 @@ CREATE TABLE public.spatial_metrics (
     duration interval,
     parameters jsonb DEFAULT '{}'::jsonb NOT NULL,
     dependency_hash text NOT NULL,
-    CONSTRAINT spatial_metrics_exclusive_reference CHECK ((((subject_fragment_id IS NOT NULL) AND (subject_geography_id IS NULL)) OR ((subject_fragment_id IS NULL) AND (subject_geography_id IS NOT NULL))))
+    CONSTRAINT spatial_metrics_exclusive_reference CHECK ((((subject_fragment_id IS NOT NULL) AND (subject_geography_id IS NULL)) OR ((subject_fragment_id IS NULL) AND (subject_geography_id IS NOT NULL)))),
+    CONSTRAINT spatial_metrics_requires_source_or_dependency CHECK (((type = 'total_area'::public.spatial_metric_type) OR (overlay_source_url IS NOT NULL) OR (source_processing_job_dependency IS NOT NULL)))
 );
 
 
@@ -23289,6 +23325,9 @@ CREATE FUNCTION public.table_of_contents_items_project_update() RETURNS trigger
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
     begin
+      if coalesce(current_setting('seasketch.skip_library_source_side_effects', true), '') = 'true' then
+        return NEW;
+      end if;
       if tg_op = 'INSERT' or tg_op = 'UPDATE' or tg_op = 'DELETE' then
         update projects set draft_table_of_contents_has_changes = true where id = NEW.project_id;
       end if;
@@ -24011,6 +24050,10 @@ declare
   v_url             text;
   v_toc             record;
 begin
+  if coalesce(current_setting('seasketch.skip_library_source_side_effects', true), '') = 'true' then
+    return new;
+  end if;
+
   if old.data_source_id is not distinct from new.data_source_id then
     return new;
   end if;
@@ -24059,7 +24102,7 @@ $$;
 -- Name: FUNCTION trg_changelog_data_layers_data_source_layer_uploaded(); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.trg_changelog_data_layers_data_source_layer_uploaded() IS 'Records layer:uploaded (replacement) when a data_layer data_source_id changes to an upload-backed source; to_summary may include data_sources.changelog (e.g. replace_data_source).';
+COMMENT ON FUNCTION public.trg_changelog_data_layers_data_source_layer_uploaded() IS 'Records layer:uploaded (replacement) when a data_layer data_source_id changes to an upload-backed source; to_summary may include data_sources.changelog (e.g. replace_data_source). Suppressed during data library source fan-out via seasketch.skip_library_source_side_effects.';
 
 
 --
@@ -26791,7 +26834,7 @@ ALTER TABLE public.data_sources ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDEN
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
-    NO MAXVALUE
+    MAXVALUE 2147483647
     CACHE 1
 );
 
@@ -27442,7 +27485,7 @@ ALTER TABLE public.projects ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
-    NO MAXVALUE
+    MAXVALUE 2147483647
     CACHE 1
 );
 
@@ -27466,7 +27509,7 @@ ALTER TABLE public.report_cards ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
-    NO MAXVALUE
+    MAXVALUE 2147483647
     CACHE 1
 );
 
@@ -27494,7 +27537,7 @@ ALTER TABLE public.reports ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
-    NO MAXVALUE
+    MAXVALUE 2147483647
     CACHE 1
 );
 
@@ -27552,7 +27595,7 @@ ALTER TABLE public.sketch_classes ALTER COLUMN id ADD GENERATED BY DEFAULT AS ID
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
-    NO MAXVALUE
+    MAXVALUE 2147483647
     CACHE 1
 );
 
@@ -28655,14 +28698,6 @@ ALTER TABLE ONLY public.source_processing_jobs
 
 ALTER TABLE ONLY public.spatial_metrics
     ADD CONSTRAINT spatial_metrics_pkey PRIMARY KEY (id);
-
-
---
--- Name: spatial_metrics spatial_metrics_requires_source_or_dependency; Type: CHECK CONSTRAINT; Schema: public; Owner: -
---
-
-ALTER TABLE public.spatial_metrics
-    ADD CONSTRAINT spatial_metrics_requires_source_or_dependency CHECK (((type = 'total_area'::public.spatial_metric_type) OR (overlay_source_url IS NOT NULL) OR (source_processing_job_dependency IS NOT NULL))) NOT VALID;
 
 
 --
@@ -33632,73 +33667,123 @@ GRANT INSERT,DELETE ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
+-- Name: COLUMN sketch_classes.id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(id) ON TABLE public.sketch_classes TO anon;
+GRANT INSERT(id) ON TABLE public.sketch_classes TO seasketch_user;
+
+
+--
+-- Name: COLUMN sketch_classes.project_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(project_id) ON TABLE public.sketch_classes TO anon;
+GRANT INSERT(project_id) ON TABLE public.sketch_classes TO seasketch_user;
+
+
+--
 -- Name: COLUMN sketch_classes.name; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(name) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT SELECT(name) ON TABLE public.sketch_classes TO anon;
+GRANT INSERT(name),UPDATE(name) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
 -- Name: COLUMN sketch_classes.geometry_type; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(geometry_type) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT SELECT(geometry_type) ON TABLE public.sketch_classes TO anon;
+GRANT INSERT(geometry_type),UPDATE(geometry_type) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
 -- Name: COLUMN sketch_classes.allow_multi; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(allow_multi) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT SELECT(allow_multi) ON TABLE public.sketch_classes TO anon;
+GRANT INSERT(allow_multi),UPDATE(allow_multi) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
 -- Name: COLUMN sketch_classes.is_archived; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(is_archived) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT SELECT(is_archived) ON TABLE public.sketch_classes TO anon;
+GRANT INSERT(is_archived),UPDATE(is_archived) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
 -- Name: COLUMN sketch_classes.geoprocessing_project_url; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(geoprocessing_project_url) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT SELECT(geoprocessing_project_url) ON TABLE public.sketch_classes TO anon;
+GRANT INSERT(geoprocessing_project_url),UPDATE(geoprocessing_project_url) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
 -- Name: COLUMN sketch_classes.geoprocessing_client_url; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(geoprocessing_client_url) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT SELECT(geoprocessing_client_url) ON TABLE public.sketch_classes TO anon;
+GRANT INSERT(geoprocessing_client_url),UPDATE(geoprocessing_client_url) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
 -- Name: COLUMN sketch_classes.geoprocessing_client_name; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(geoprocessing_client_name) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT SELECT(geoprocessing_client_name) ON TABLE public.sketch_classes TO anon;
+GRANT INSERT(geoprocessing_client_name),UPDATE(geoprocessing_client_name) ON TABLE public.sketch_classes TO seasketch_user;
+
+
+--
+-- Name: COLUMN sketch_classes.mapbox_gl_style; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(mapbox_gl_style) ON TABLE public.sketch_classes TO anon;
+GRANT INSERT(mapbox_gl_style) ON TABLE public.sketch_classes TO seasketch_user;
+
+
+--
+-- Name: COLUMN sketch_classes.form_element_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(form_element_id) ON TABLE public.sketch_classes TO anon;
+GRANT INSERT(form_element_id) ON TABLE public.sketch_classes TO seasketch_user;
+
+
+--
+-- Name: COLUMN sketch_classes.is_template; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(is_template) ON TABLE public.sketch_classes TO anon;
+GRANT INSERT(is_template) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
 -- Name: COLUMN sketch_classes.template_description; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(template_description) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT SELECT(template_description) ON TABLE public.sketch_classes TO anon;
+GRANT INSERT(template_description),UPDATE(template_description) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
 -- Name: COLUMN sketch_classes.preprocessing_endpoint; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(preprocessing_endpoint) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT SELECT(preprocessing_endpoint) ON TABLE public.sketch_classes TO anon;
+GRANT INSERT(preprocessing_endpoint),UPDATE(preprocessing_endpoint) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
 -- Name: COLUMN sketch_classes.preprocessing_project_url; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(preprocessing_project_url) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT SELECT(preprocessing_project_url) ON TABLE public.sketch_classes TO anon;
+GRANT INSERT(preprocessing_project_url),UPDATE(preprocessing_project_url) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
@@ -33706,35 +33791,55 @@ GRANT UPDATE(preprocessing_project_url) ON TABLE public.sketch_classes TO seaske
 --
 
 GRANT SELECT(translated_props) ON TABLE public.sketch_classes TO anon;
-GRANT UPDATE(translated_props) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT INSERT(translated_props),UPDATE(translated_props) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
 -- Name: COLUMN sketch_classes.filter_api_version; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(filter_api_version) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT SELECT(filter_api_version) ON TABLE public.sketch_classes TO anon;
+GRANT INSERT(filter_api_version),UPDATE(filter_api_version) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
 -- Name: COLUMN sketch_classes.filter_api_server_location; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(filter_api_server_location) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT SELECT(filter_api_server_location) ON TABLE public.sketch_classes TO anon;
+GRANT INSERT(filter_api_server_location),UPDATE(filter_api_server_location) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
 -- Name: COLUMN sketch_classes.is_geography_clipping_enabled; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(is_geography_clipping_enabled) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT SELECT(is_geography_clipping_enabled) ON TABLE public.sketch_classes TO anon;
+GRANT INSERT(is_geography_clipping_enabled),UPDATE(is_geography_clipping_enabled) ON TABLE public.sketch_classes TO seasketch_user;
+
+
+--
+-- Name: COLUMN sketch_classes.report_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(report_id) ON TABLE public.sketch_classes TO anon;
+GRANT INSERT(report_id) ON TABLE public.sketch_classes TO seasketch_user;
+
+
+--
+-- Name: COLUMN sketch_classes.draft_report_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(draft_report_id) ON TABLE public.sketch_classes TO anon;
+GRANT INSERT(draft_report_id) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
 -- Name: COLUMN sketch_classes.preview_new_reports; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(preview_new_reports) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT SELECT(preview_new_reports) ON TABLE public.sketch_classes TO anon;
+GRANT INSERT(preview_new_reports),UPDATE(preview_new_reports) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
@@ -34370,9 +34475,17 @@ GRANT SELECT ON TABLE public.projects TO anon;
 
 
 --
+-- Name: COLUMN projects.id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(id) ON TABLE public.projects TO anon;
+
+
+--
 -- Name: COLUMN projects.name; Type: ACL; Schema: public; Owner: -
 --
 
+GRANT SELECT(name) ON TABLE public.projects TO anon;
 GRANT UPDATE(name) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(name) ON TABLE public.projects TO seasketch_user;
 
@@ -34381,14 +34494,30 @@ GRANT UPDATE(name) ON TABLE public.projects TO seasketch_user;
 -- Name: COLUMN projects.description; Type: ACL; Schema: public; Owner: -
 --
 
+GRANT SELECT(description) ON TABLE public.projects TO anon;
 GRANT UPDATE(description) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(description) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.legacy_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(legacy_id) ON TABLE public.projects TO anon;
+
+
+--
+-- Name: COLUMN projects.slug; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(slug) ON TABLE public.projects TO anon;
 
 
 --
 -- Name: COLUMN projects.access_control; Type: ACL; Schema: public; Owner: -
 --
 
+GRANT SELECT(access_control) ON TABLE public.projects TO anon;
 GRANT UPDATE(access_control) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(access_control) ON TABLE public.projects TO seasketch_user;
 
@@ -34397,6 +34526,7 @@ GRANT UPDATE(access_control) ON TABLE public.projects TO seasketch_user;
 -- Name: COLUMN projects.is_listed; Type: ACL; Schema: public; Owner: -
 --
 
+GRANT SELECT(is_listed) ON TABLE public.projects TO anon;
 GRANT UPDATE(is_listed) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(is_listed) ON TABLE public.projects TO seasketch_user;
 
@@ -34405,6 +34535,7 @@ GRANT UPDATE(is_listed) ON TABLE public.projects TO seasketch_user;
 -- Name: COLUMN projects.logo_url; Type: ACL; Schema: public; Owner: -
 --
 
+GRANT SELECT(logo_url) ON TABLE public.projects TO anon;
 GRANT UPDATE(logo_url) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(logo_url) ON TABLE public.projects TO seasketch_user;
 
@@ -34413,6 +34544,7 @@ GRANT UPDATE(logo_url) ON TABLE public.projects TO seasketch_user;
 -- Name: COLUMN projects.logo_link; Type: ACL; Schema: public; Owner: -
 --
 
+GRANT SELECT(logo_link) ON TABLE public.projects TO anon;
 GRANT UPDATE(logo_link) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(logo_link) ON TABLE public.projects TO seasketch_user;
 
@@ -34421,13 +34553,29 @@ GRANT UPDATE(logo_link) ON TABLE public.projects TO seasketch_user;
 -- Name: COLUMN projects.is_featured; Type: ACL; Schema: public; Owner: -
 --
 
+GRANT SELECT(is_featured) ON TABLE public.projects TO anon;
 GRANT UPDATE(is_featured) ON TABLE public.projects TO seasketch_superuser;
+
+
+--
+-- Name: COLUMN projects.is_deleted; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(is_deleted) ON TABLE public.projects TO anon;
+
+
+--
+-- Name: COLUMN projects.deleted_at; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(deleted_at) ON TABLE public.projects TO anon;
 
 
 --
 -- Name: COLUMN projects.region; Type: ACL; Schema: public; Owner: -
 --
 
+GRANT SELECT(region) ON TABLE public.projects TO anon;
 GRANT UPDATE(region) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(region) ON TABLE public.projects TO seasketch_user;
 
@@ -34436,6 +34584,7 @@ GRANT UPDATE(region) ON TABLE public.projects TO seasketch_user;
 -- Name: COLUMN projects.data_sources_bucket_id; Type: ACL; Schema: public; Owner: -
 --
 
+GRANT SELECT(data_sources_bucket_id) ON TABLE public.projects TO anon;
 GRANT UPDATE(data_sources_bucket_id) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(data_sources_bucket_id) ON TABLE public.projects TO seasketch_user;
 
@@ -34444,6 +34593,7 @@ GRANT UPDATE(data_sources_bucket_id) ON TABLE public.projects TO seasketch_user;
 -- Name: COLUMN projects.invite_email_subject; Type: ACL; Schema: public; Owner: -
 --
 
+GRANT SELECT(invite_email_subject) ON TABLE public.projects TO anon;
 GRANT SELECT(invite_email_subject),UPDATE(invite_email_subject) ON TABLE public.projects TO seasketch_user;
 
 
@@ -34462,9 +34612,17 @@ GRANT SELECT(created_at) ON TABLE public.projects TO anon;
 
 
 --
+-- Name: COLUMN projects.creator_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(creator_id) ON TABLE public.projects TO anon;
+
+
+--
 -- Name: COLUMN projects.mapbox_secret_key; Type: ACL; Schema: public; Owner: -
 --
 
+GRANT SELECT(mapbox_secret_key) ON TABLE public.projects TO anon;
 GRANT SELECT(mapbox_secret_key),UPDATE(mapbox_secret_key) ON TABLE public.projects TO seasketch_user;
 
 
@@ -34472,7 +34630,22 @@ GRANT SELECT(mapbox_secret_key),UPDATE(mapbox_secret_key) ON TABLE public.projec
 -- Name: COLUMN projects.mapbox_public_key; Type: ACL; Schema: public; Owner: -
 --
 
+GRANT SELECT(mapbox_public_key) ON TABLE public.projects TO anon;
 GRANT UPDATE(mapbox_public_key) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.is_offline_enabled; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(is_offline_enabled) ON TABLE public.projects TO anon;
+
+
+--
+-- Name: COLUMN projects.data_hosting_quota; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(data_hosting_quota) ON TABLE public.projects TO anon;
 
 
 --
@@ -34508,6 +34681,7 @@ GRANT SELECT(table_of_contents_last_published) ON TABLE public.projects TO anon;
 -- Name: COLUMN projects.hide_forums; Type: ACL; Schema: public; Owner: -
 --
 
+GRANT SELECT(hide_forums) ON TABLE public.projects TO anon;
 GRANT UPDATE(hide_forums) ON TABLE public.projects TO seasketch_user;
 
 
@@ -34515,6 +34689,7 @@ GRANT UPDATE(hide_forums) ON TABLE public.projects TO seasketch_user;
 -- Name: COLUMN projects.hide_sketches; Type: ACL; Schema: public; Owner: -
 --
 
+GRANT SELECT(hide_sketches) ON TABLE public.projects TO anon;
 GRANT UPDATE(hide_sketches) ON TABLE public.projects TO seasketch_user;
 
 
@@ -34522,6 +34697,7 @@ GRANT UPDATE(hide_sketches) ON TABLE public.projects TO seasketch_user;
 -- Name: COLUMN projects.hide_overlays; Type: ACL; Schema: public; Owner: -
 --
 
+GRANT SELECT(hide_overlays) ON TABLE public.projects TO anon;
 GRANT UPDATE(hide_overlays) ON TABLE public.projects TO seasketch_user;
 
 
@@ -34537,13 +34713,29 @@ GRANT UPDATE(enable_download_by_default) ON TABLE public.projects TO seasketch_u
 -- Name: COLUMN projects.data_hosting_retention_period; Type: ACL; Schema: public; Owner: -
 --
 
+GRANT SELECT(data_hosting_retention_period) ON TABLE public.projects TO anon;
 GRANT UPDATE(data_hosting_retention_period) ON TABLE public.projects TO seasketch_user;
+
+
+--
+-- Name: COLUMN projects.about_page_contents; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(about_page_contents) ON TABLE public.projects TO anon;
+
+
+--
+-- Name: COLUMN projects.about_page_enabled; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(about_page_enabled) ON TABLE public.projects TO anon;
 
 
 --
 -- Name: COLUMN projects.custom_doc_link; Type: ACL; Schema: public; Owner: -
 --
 
+GRANT SELECT(custom_doc_link) ON TABLE public.projects TO anon;
 GRANT UPDATE(custom_doc_link) ON TABLE public.projects TO seasketch_user;
 
 
@@ -34551,6 +34743,7 @@ GRANT UPDATE(custom_doc_link) ON TABLE public.projects TO seasketch_user;
 -- Name: COLUMN projects.show_scalebar_by_default; Type: ACL; Schema: public; Owner: -
 --
 
+GRANT SELECT(show_scalebar_by_default) ON TABLE public.projects TO anon;
 GRANT UPDATE(show_scalebar_by_default) ON TABLE public.projects TO seasketch_user;
 
 
@@ -34558,6 +34751,7 @@ GRANT UPDATE(show_scalebar_by_default) ON TABLE public.projects TO seasketch_use
 -- Name: COLUMN projects.show_legend_by_default; Type: ACL; Schema: public; Owner: -
 --
 
+GRANT SELECT(show_legend_by_default) ON TABLE public.projects TO anon;
 GRANT UPDATE(show_legend_by_default) ON TABLE public.projects TO seasketch_user;
 
 
@@ -34611,6 +34805,62 @@ GRANT ALL ON FUNCTION public.add_image_to_sprite("spriteId" integer, "pixelRatio
 --
 
 GRANT SELECT ON TABLE public.report_cards TO anon;
+
+
+--
+-- Name: COLUMN report_cards.id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(id) ON TABLE public.report_cards TO anon;
+
+
+--
+-- Name: COLUMN report_cards.report_tab_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(report_tab_id) ON TABLE public.report_cards TO anon;
+
+
+--
+-- Name: COLUMN report_cards.body; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(body) ON TABLE public.report_cards TO anon;
+
+
+--
+-- Name: COLUMN report_cards."position"; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT("position") ON TABLE public.report_cards TO anon;
+
+
+--
+-- Name: COLUMN report_cards.alternate_language_settings; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(alternate_language_settings) ON TABLE public.report_cards TO anon;
+
+
+--
+-- Name: COLUMN report_cards.component_settings; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(component_settings) ON TABLE public.report_cards TO anon;
+
+
+--
+-- Name: COLUMN report_cards.updated_at; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(updated_at) ON TABLE public.report_cards TO anon;
+
+
+--
+-- Name: COLUMN report_cards.is_draft; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(is_draft) ON TABLE public.report_cards TO anon;
 
 
 --
@@ -36320,6 +36570,70 @@ GRANT ALL ON TABLE public.reports TO seasketch_user;
 
 
 --
+-- Name: COLUMN reports.id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(id) ON TABLE public.reports TO anon;
+GRANT ALL(id) ON TABLE public.reports TO seasketch_user;
+
+
+--
+-- Name: COLUMN reports.project_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(project_id) ON TABLE public.reports TO anon;
+GRANT ALL(project_id) ON TABLE public.reports TO seasketch_user;
+
+
+--
+-- Name: COLUMN reports.sketch_class_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(sketch_class_id) ON TABLE public.reports TO anon;
+GRANT ALL(sketch_class_id) ON TABLE public.reports TO seasketch_user;
+
+
+--
+-- Name: COLUMN reports.created_at; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(created_at) ON TABLE public.reports TO anon;
+GRANT ALL(created_at) ON TABLE public.reports TO seasketch_user;
+
+
+--
+-- Name: COLUMN reports.title; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(title) ON TABLE public.reports TO anon;
+GRANT ALL(title) ON TABLE public.reports TO seasketch_user;
+
+
+--
+-- Name: COLUMN reports.version; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(version) ON TABLE public.reports TO anon;
+GRANT ALL(version) ON TABLE public.reports TO seasketch_user;
+
+
+--
+-- Name: COLUMN reports.draft_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(draft_id) ON TABLE public.reports TO anon;
+GRANT ALL(draft_id) ON TABLE public.reports TO seasketch_user;
+
+
+--
+-- Name: COLUMN reports.published_at; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(published_at) ON TABLE public.reports TO anon;
+GRANT ALL(published_at) ON TABLE public.reports TO seasketch_user;
+
+
+--
 -- Name: FUNCTION create_custom_report(project_id integer, title text, sketch_class_ids integer[]); Type: ACL; Schema: public; Owner: -
 --
 
@@ -36887,150 +37201,259 @@ GRANT SELECT,INSERT,DELETE ON TABLE public.data_sources TO seasketch_user;
 
 
 --
+-- Name: COLUMN data_sources.id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(id) ON TABLE public.data_sources TO anon;
+GRANT SELECT(id),INSERT(id) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.created_at; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(created_at) ON TABLE public.data_sources TO anon;
+GRANT SELECT(created_at),INSERT(created_at) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.project_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(project_id) ON TABLE public.data_sources TO anon;
+GRANT SELECT(project_id),INSERT(project_id) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.type; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(type) ON TABLE public.data_sources TO anon;
+GRANT SELECT(type),INSERT(type) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
 -- Name: COLUMN data_sources.attribution; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(attribution) ON TABLE public.data_sources TO seasketch_user;
+GRANT SELECT(attribution) ON TABLE public.data_sources TO anon;
+GRANT SELECT(attribution),INSERT(attribution),UPDATE(attribution) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.bounds; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(bounds) ON TABLE public.data_sources TO anon;
+GRANT SELECT(bounds),INSERT(bounds) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.maxzoom; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(maxzoom) ON TABLE public.data_sources TO seasketch_user;
+GRANT SELECT(maxzoom) ON TABLE public.data_sources TO anon;
+GRANT SELECT(maxzoom),INSERT(maxzoom),UPDATE(maxzoom) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.minzoom; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(minzoom) ON TABLE public.data_sources TO seasketch_user;
+GRANT SELECT(minzoom) ON TABLE public.data_sources TO anon;
+GRANT SELECT(minzoom),INSERT(minzoom),UPDATE(minzoom) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.url; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(url) ON TABLE public.data_sources TO seasketch_user;
+GRANT SELECT(url) ON TABLE public.data_sources TO anon;
+GRANT SELECT(url),INSERT(url),UPDATE(url) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.scheme; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(scheme) ON TABLE public.data_sources TO seasketch_user;
+GRANT SELECT(scheme) ON TABLE public.data_sources TO anon;
+GRANT SELECT(scheme),INSERT(scheme),UPDATE(scheme) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.tiles; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(tiles) ON TABLE public.data_sources TO seasketch_user;
+GRANT SELECT(tiles) ON TABLE public.data_sources TO anon;
+GRANT SELECT(tiles),INSERT(tiles),UPDATE(tiles) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.tile_size; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(tile_size) ON TABLE public.data_sources TO seasketch_user;
+GRANT SELECT(tile_size) ON TABLE public.data_sources TO anon;
+GRANT SELECT(tile_size),INSERT(tile_size),UPDATE(tile_size) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.encoding; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(encoding) ON TABLE public.data_sources TO seasketch_user;
+GRANT SELECT(encoding) ON TABLE public.data_sources TO anon;
+GRANT SELECT(encoding),INSERT(encoding),UPDATE(encoding) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.buffer; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(buffer) ON TABLE public.data_sources TO seasketch_user;
+GRANT SELECT(buffer) ON TABLE public.data_sources TO anon;
+GRANT SELECT(buffer),INSERT(buffer),UPDATE(buffer) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.cluster; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(cluster) ON TABLE public.data_sources TO seasketch_user;
+GRANT SELECT(cluster) ON TABLE public.data_sources TO anon;
+GRANT SELECT(cluster),INSERT(cluster),UPDATE(cluster) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.cluster_max_zoom; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(cluster_max_zoom) ON TABLE public.data_sources TO seasketch_user;
+GRANT SELECT(cluster_max_zoom) ON TABLE public.data_sources TO anon;
+GRANT SELECT(cluster_max_zoom),INSERT(cluster_max_zoom),UPDATE(cluster_max_zoom) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.cluster_properties; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(cluster_properties) ON TABLE public.data_sources TO seasketch_user;
+GRANT SELECT(cluster_properties) ON TABLE public.data_sources TO anon;
+GRANT SELECT(cluster_properties),INSERT(cluster_properties),UPDATE(cluster_properties) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.cluster_radius; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(cluster_radius) ON TABLE public.data_sources TO seasketch_user;
+GRANT SELECT(cluster_radius) ON TABLE public.data_sources TO anon;
+GRANT SELECT(cluster_radius),INSERT(cluster_radius),UPDATE(cluster_radius) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.generate_id; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(generate_id) ON TABLE public.data_sources TO seasketch_user;
+GRANT SELECT(generate_id) ON TABLE public.data_sources TO anon;
+GRANT SELECT(generate_id),INSERT(generate_id),UPDATE(generate_id) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.line_metrics; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(line_metrics) ON TABLE public.data_sources TO seasketch_user;
+GRANT SELECT(line_metrics) ON TABLE public.data_sources TO anon;
+GRANT SELECT(line_metrics),INSERT(line_metrics),UPDATE(line_metrics) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.promote_id; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(promote_id) ON TABLE public.data_sources TO seasketch_user;
+GRANT SELECT(promote_id) ON TABLE public.data_sources TO anon;
+GRANT SELECT(promote_id),INSERT(promote_id),UPDATE(promote_id) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.tolerance; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(tolerance) ON TABLE public.data_sources TO seasketch_user;
+GRANT SELECT(tolerance) ON TABLE public.data_sources TO anon;
+GRANT SELECT(tolerance),INSERT(tolerance),UPDATE(tolerance) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.coordinates; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(coordinates) ON TABLE public.data_sources TO seasketch_user;
+GRANT SELECT(coordinates) ON TABLE public.data_sources TO anon;
+GRANT SELECT(coordinates),INSERT(coordinates),UPDATE(coordinates) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.urls; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(urls) ON TABLE public.data_sources TO seasketch_user;
+GRANT SELECT(urls) ON TABLE public.data_sources TO anon;
+GRANT SELECT(urls),INSERT(urls),UPDATE(urls) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.query_parameters; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(query_parameters) ON TABLE public.data_sources TO seasketch_user;
+GRANT SELECT(query_parameters) ON TABLE public.data_sources TO anon;
+GRANT SELECT(query_parameters),INSERT(query_parameters),UPDATE(query_parameters) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.use_device_pixel_ratio; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(use_device_pixel_ratio) ON TABLE public.data_sources TO seasketch_user;
+GRANT SELECT(use_device_pixel_ratio) ON TABLE public.data_sources TO anon;
+GRANT SELECT(use_device_pixel_ratio),INSERT(use_device_pixel_ratio),UPDATE(use_device_pixel_ratio) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.import_type; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(import_type) ON TABLE public.data_sources TO anon;
+GRANT SELECT(import_type),INSERT(import_type) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.original_source_url; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(original_source_url) ON TABLE public.data_sources TO anon;
+GRANT SELECT(original_source_url),INSERT(original_source_url) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.enhanced_security; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(enhanced_security) ON TABLE public.data_sources TO anon;
+GRANT SELECT(enhanced_security),INSERT(enhanced_security) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.bucket_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(bucket_id) ON TABLE public.data_sources TO anon;
+GRANT SELECT(bucket_id),INSERT(bucket_id) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.object_key; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(object_key) ON TABLE public.data_sources TO anon;
+GRANT SELECT(object_key),INSERT(object_key) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.byte_length; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(byte_length) ON TABLE public.data_sources TO anon;
+GRANT SELECT(byte_length),INSERT(byte_length) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
@@ -37038,7 +37461,55 @@ GRANT UPDATE(use_device_pixel_ratio) ON TABLE public.data_sources TO seasketch_u
 --
 
 GRANT SELECT(supports_dynamic_layers) ON TABLE public.data_sources TO anon;
-GRANT INSERT(supports_dynamic_layers),UPDATE(supports_dynamic_layers) ON TABLE public.data_sources TO seasketch_user;
+GRANT SELECT(supports_dynamic_layers),INSERT(supports_dynamic_layers),UPDATE(supports_dynamic_layers) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.uploaded_source_filename; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(uploaded_source_filename) ON TABLE public.data_sources TO anon;
+GRANT SELECT(uploaded_source_filename),INSERT(uploaded_source_filename) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.uploaded_source_layername; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(uploaded_source_layername) ON TABLE public.data_sources TO anon;
+GRANT SELECT(uploaded_source_layername),INSERT(uploaded_source_layername) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.normalized_source_object_key; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(normalized_source_object_key) ON TABLE public.data_sources TO anon;
+GRANT SELECT(normalized_source_object_key),INSERT(normalized_source_object_key) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.normalized_source_bytes; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(normalized_source_bytes) ON TABLE public.data_sources TO anon;
+GRANT SELECT(normalized_source_bytes),INSERT(normalized_source_bytes) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.geostats; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(geostats) ON TABLE public.data_sources TO anon;
+GRANT SELECT(geostats),INSERT(geostats) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.upload_task_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(upload_task_id) ON TABLE public.data_sources TO anon;
+GRANT SELECT(upload_task_id),INSERT(upload_task_id) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
@@ -37046,14 +37517,127 @@ GRANT INSERT(supports_dynamic_layers),UPDATE(supports_dynamic_layers) ON TABLE p
 --
 
 GRANT SELECT(translated_props) ON TABLE public.data_sources TO anon;
-GRANT UPDATE(translated_props) ON TABLE public.data_sources TO seasketch_user;
+GRANT SELECT(translated_props),INSERT(translated_props),UPDATE(translated_props) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.arcgis_fetch_strategy; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT UPDATE(arcgis_fetch_strategy) ON TABLE public.data_sources TO seasketch_user;
+GRANT SELECT(arcgis_fetch_strategy) ON TABLE public.data_sources TO anon;
+GRANT SELECT(arcgis_fetch_strategy),INSERT(arcgis_fetch_strategy),UPDATE(arcgis_fetch_strategy) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.uploaded_by; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(uploaded_by) ON TABLE public.data_sources TO anon;
+GRANT SELECT(uploaded_by),INSERT(uploaded_by) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.was_converted_from_esri_feature_layer; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(was_converted_from_esri_feature_layer) ON TABLE public.data_sources TO anon;
+GRANT SELECT(was_converted_from_esri_feature_layer),INSERT(was_converted_from_esri_feature_layer) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.created_by; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(created_by) ON TABLE public.data_sources TO anon;
+GRANT SELECT(created_by),INSERT(created_by) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.changelog; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(changelog) ON TABLE public.data_sources TO anon;
+GRANT SELECT(changelog),INSERT(changelog) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.raster_representative_colors; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(raster_representative_colors) ON TABLE public.data_sources TO anon;
+GRANT SELECT(raster_representative_colors),INSERT(raster_representative_colors) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.raster_offset; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(raster_offset) ON TABLE public.data_sources TO anon;
+GRANT SELECT(raster_offset),INSERT(raster_offset) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.raster_scale; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(raster_scale) ON TABLE public.data_sources TO anon;
+GRANT SELECT(raster_scale),INSERT(raster_scale) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.data_library_template_id; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(data_library_template_id) ON TABLE public.data_sources TO anon;
+GRANT SELECT(data_library_template_id),INSERT(data_library_template_id) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.data_library_metadata; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(data_library_metadata) ON TABLE public.data_sources TO anon;
+GRANT SELECT(data_library_metadata),INSERT(data_library_metadata) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.is_single_band_raster; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(is_single_band_raster) ON TABLE public.data_sources TO anon;
+GRANT SELECT(is_single_band_raster),INSERT(is_single_band_raster) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.raster_band_count; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(raster_band_count) ON TABLE public.data_sources TO anon;
+GRANT SELECT(raster_band_count),INSERT(raster_band_count) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.vector_geometry_type; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(vector_geometry_type) ON TABLE public.data_sources TO anon;
+GRANT SELECT(vector_geometry_type),INSERT(vector_geometry_type) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.feature_count; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(feature_count) ON TABLE public.data_sources TO anon;
+GRANT SELECT(feature_count),INSERT(feature_count) ON TABLE public.data_sources TO seasketch_user;
+
+
+--
+-- Name: COLUMN data_sources.column_details; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(column_details) ON TABLE public.data_sources TO anon;
+GRANT SELECT(column_details),INSERT(column_details) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
@@ -37069,8 +37653,8 @@ GRANT ALL ON FUNCTION public.data_sources_approximate_fgb_index_size(ds public.d
 --
 
 REVOKE ALL ON FUNCTION public.data_sources_author_profile(source public.data_sources) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.data_sources_author_profile(source public.data_sources) TO seasketch_user;
 GRANT ALL ON FUNCTION public.data_sources_author_profile(source public.data_sources) TO anon;
+GRANT ALL ON FUNCTION public.data_sources_author_profile(source public.data_sources) TO seasketch_user;
 
 
 --
@@ -37102,8 +37686,8 @@ GRANT ALL ON FUNCTION public.data_sources_is_convertible_legacy_source(data_sour
 --
 
 REVOKE ALL ON FUNCTION public.data_sources_outputs(source public.data_sources) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.data_sources_outputs(source public.data_sources) TO seasketch_user;
 GRANT ALL ON FUNCTION public.data_sources_outputs(source public.data_sources) TO anon;
+GRANT ALL ON FUNCTION public.data_sources_outputs(source public.data_sources) TO seasketch_user;
 
 
 --
@@ -40665,8 +41249,8 @@ GRANT ALL ON FUNCTION public.projects_most_used_layers(project public.projects, 
 --
 
 REVOKE ALL ON FUNCTION public.projects_my_folders(project public.projects) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.projects_my_folders(project public.projects) TO seasketch_user;
 GRANT ALL ON FUNCTION public.projects_my_folders(project public.projects) TO anon;
+GRANT ALL ON FUNCTION public.projects_my_folders(project public.projects) TO seasketch_user;
 
 
 --
@@ -40674,8 +41258,8 @@ GRANT ALL ON FUNCTION public.projects_my_folders(project public.projects) TO ano
 --
 
 REVOKE ALL ON FUNCTION public.projects_my_sketches(project public.projects) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.projects_my_sketches(project public.projects) TO seasketch_user;
 GRANT ALL ON FUNCTION public.projects_my_sketches(project public.projects) TO anon;
+GRANT ALL ON FUNCTION public.projects_my_sketches(project public.projects) TO seasketch_user;
 
 
 --
@@ -40707,8 +41291,8 @@ GRANT ALL ON FUNCTION public.projects_session_has_posts(project public.projects)
 --
 
 REVOKE ALL ON FUNCTION public.projects_session_has_privileged_access(p public.projects) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.projects_session_has_privileged_access(p public.projects) TO seasketch_user;
 GRANT ALL ON FUNCTION public.projects_session_has_privileged_access(p public.projects) TO anon;
+GRANT ALL ON FUNCTION public.projects_session_has_privileged_access(p public.projects) TO seasketch_user;
 
 
 --
@@ -40716,8 +41300,8 @@ GRANT ALL ON FUNCTION public.projects_session_has_privileged_access(p public.pro
 --
 
 REVOKE ALL ON FUNCTION public.projects_session_is_admin(p public.projects) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.projects_session_is_admin(p public.projects) TO seasketch_user;
 GRANT ALL ON FUNCTION public.projects_session_is_admin(p public.projects) TO anon;
+GRANT ALL ON FUNCTION public.projects_session_is_admin(p public.projects) TO seasketch_user;
 
 
 --
@@ -40733,8 +41317,8 @@ GRANT ALL ON FUNCTION public.projects_session_outstanding_survey_invites(project
 --
 
 REVOKE ALL ON FUNCTION public.projects_session_participation_status(p public.projects) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.projects_session_participation_status(p public.projects) TO seasketch_user;
 GRANT ALL ON FUNCTION public.projects_session_participation_status(p public.projects) TO anon;
+GRANT ALL ON FUNCTION public.projects_session_participation_status(p public.projects) TO seasketch_user;
 
 
 --
@@ -41681,8 +42265,8 @@ GRANT ALL ON FUNCTION public.sketch_classes_sketch_count(sketch_class public.ske
 --
 
 REVOKE ALL ON FUNCTION public.sketch_classes_use_geography_clipping(sketch_class public.sketch_classes) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.sketch_classes_use_geography_clipping(sketch_class public.sketch_classes) TO seasketch_user;
 GRANT ALL ON FUNCTION public.sketch_classes_use_geography_clipping(sketch_class public.sketch_classes) TO anon;
+GRANT ALL ON FUNCTION public.sketch_classes_use_geography_clipping(sketch_class public.sketch_classes) TO seasketch_user;
 
 
 --
