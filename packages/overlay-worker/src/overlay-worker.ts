@@ -232,19 +232,20 @@ export default async function handler(payload: OverlayWorkerPayload) {
             pageSize: "5MB",
           },
         );
-        const bufferedIntersectionFeature = applySubjectBuffer(
+        const bufferedSubjects = await bufferedSubjectsForAnalysis(
           intersectionFeature,
+          differenceSources,
           payload.bufferDistanceKm,
         );
 
         const processor = new OverlayEngineBatchProcessor(
           "overlay_area",
           1024 * 1024 * 1, // 5MB
-          simplify(bufferedIntersectionFeature, {
+          simplify(bufferedSubjects.intersectionFeature, {
             tolerance: SIMPLIFICATION_TOLERANCE,
           }),
           source,
-          differenceSources,
+          bufferedSubjects.differenceSources,
           helpers,
           payload.groupBy,
           workerPool,
@@ -285,19 +286,20 @@ export default async function handler(payload: OverlayWorkerPayload) {
         const columnValuesProperty =
           payload.type === "column_values" ? payload.valueColumn : undefined;
 
-        const bufferedIntersectionFeature = applySubjectBuffer(
+        const bufferedSubjects = await bufferedSubjectsForAnalysis(
           intersectionFeature,
+          differenceSources,
           payload.bufferDistanceKm,
         );
 
         const processor = new OverlayEngineBatchProcessor(
           payload.type,
           1024 * 1024 * 1, // 5MB
-          simplify(bufferedIntersectionFeature, {
+          simplify(bufferedSubjects.intersectionFeature, {
             tolerance: SIMPLIFICATION_TOLERANCE,
           }),
           source,
-          differenceSources,
+          bufferedSubjects.differenceSources,
           helpers,
           payload.groupBy,
           workerPool,
@@ -584,6 +586,63 @@ async function subjectsForAnalysis(
   } else {
     throw new Error("Unknown subject type. Must be geography or fragment.");
   }
+}
+
+/**
+ * Resolves the subject geometry and difference sources to pass to the
+ * OverlayEngineBatchProcessor, applying an optional buffer.
+ *
+ * Buffered subjects with difference sources (i.e. geography subjects like
+ * "EEZ minus land") can't just have their intersection feature buffered.
+ * The batch processor excludes any feature that overlaps a difference layer,
+ * so features in the buffer zone (e.g. waterways on land within 1km of a
+ * marine geography) would be wrongly excluded. Instead, materialize the true
+ * geography geometry (intersection minus differences), buffer that, and drop
+ * the difference sources entirely.
+ */
+async function bufferedSubjectsForAnalysis(
+  intersectionFeature: Feature<Polygon | MultiPolygon>,
+  differenceSources: {
+    layerId: string;
+    source: FlatGeobufSource<Feature<Polygon | MultiPolygon>>;
+    cql2Query?: Cql2Query | undefined;
+  }[],
+  bufferDistanceKm?: number,
+): Promise<{
+  intersectionFeature: Feature<Polygon | MultiPolygon>;
+  differenceSources: {
+    layerId: string;
+    source: FlatGeobufSource<Feature<Polygon | MultiPolygon>>;
+    cql2Query?: Cql2Query | undefined;
+  }[];
+}> {
+  if (
+    typeof bufferDistanceKm !== "number" ||
+    !isFinite(bufferDistanceKm) ||
+    bufferDistanceKm <= 0
+  ) {
+    return { intersectionFeature, differenceSources };
+  }
+  let subject = intersectionFeature;
+  if (differenceSources.length > 0) {
+    subject = await buildCompleteGeographyMultiPolygon(
+      subject,
+      differenceSources,
+    );
+    // Buffering a full-resolution geography (e.g. an EEZ with detailed
+    // coastline subtracted) is expensive. Pre-simplify proportional to the
+    // buffer distance (1% of it, in degrees) so error is negligible relative
+    // to the buffer itself.
+    const tolerance = Math.max(
+      SIMPLIFICATION_TOLERANCE,
+      bufferDistanceKm / 111 / 100,
+    );
+    subject = simplify(subject, { tolerance });
+  }
+  return {
+    intersectionFeature: applySubjectBuffer(subject, bufferDistanceKm),
+    differenceSources: [],
+  };
 }
 
 function applySubjectBuffer(
