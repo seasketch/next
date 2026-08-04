@@ -329,4 +329,108 @@ describe("widget export helpers", () => {
     expect(dataCol).toBeTruthy();
     expect(section!.rows[0][dataCol!]).toBeNull();
   });
+
+  test("buildInlineMetricsSection percent_count dedupes buffered fragment counts against geography total", () => {
+    const fragmentDep: MetricDependency = {
+      type: "count",
+      subjectType: "fragments",
+      stableId: "layerA",
+      parameters: { bufferDistanceKm: 1 },
+    };
+    const geographyDep: MetricDependency = {
+      type: "count",
+      subjectType: "geographies",
+      stableId: "layerA",
+      parameters: {},
+    };
+    const fragmentHash = hashMetricDependency(fragmentDep, urlMap);
+    const geographyHash = hashMetricDependency(geographyDep, urlMap);
+
+    // Two fragments whose buffers both matched feature id 3. The dedupe via
+    // uniqueIdIndex should produce a combined count of 4, not 5.
+    const fragmentCount1 = {
+      id: 1,
+      type: "count",
+      state: SpatialMetricState.Complete,
+      value: {
+        "*": {
+          count: 3,
+          uniqueIdIndex: { ranges: [[1, 3]], individuals: [] },
+        },
+      },
+      dependencyHash: fragmentHash,
+      sourceUrl: "https://example.com/a.geojson",
+      subject: {
+        __typename: "FragmentSubject",
+        geographies: [1],
+        sketches: [10],
+        hash: "frag1",
+      },
+    } as CardExportInput["metrics"][0];
+
+    const fragmentCount2 = {
+      id: 2,
+      type: "count",
+      state: SpatialMetricState.Complete,
+      value: {
+        "*": {
+          count: 2,
+          uniqueIdIndex: { ranges: [[3, 4]], individuals: [] },
+        },
+      },
+      dependencyHash: fragmentHash,
+      sourceUrl: "https://example.com/a.geojson",
+      subject: {
+        __typename: "FragmentSubject",
+        geographies: [1],
+        sketches: [10],
+        hash: "frag2",
+      },
+    } as CardExportInput["metrics"][0];
+
+    const geographyCount = {
+      id: 3,
+      type: "count",
+      state: SpatialMetricState.Complete,
+      value: {
+        "*": {
+          count: 20,
+          uniqueIdIndex: { ranges: [[1, 20]], individuals: [] },
+        },
+      },
+      dependencyHash: geographyHash,
+      sourceUrl: "https://example.com/a.geojson",
+      subject: {
+        __typename: "GeographySubject",
+        id: 1,
+      },
+    } as CardExportInput["metrics"][0];
+
+    const section = buildInlineMetricsSection({
+      ...minimalCardInput({
+        metrics: [fragmentCount1, fragmentCount2, geographyCount],
+      }),
+      primaryGeographyId: 1,
+      inlineNodes: [
+        {
+          walkIndex: 0,
+          dependencies: [fragmentDep, geographyDep],
+          componentSettings: { presentation: "percent_count" },
+        },
+      ],
+      sourceUrlMap: urlMap,
+    });
+
+    expect(section).not.toBeNull();
+    const dataCol = section!.columns
+      .map((c) => c.key)
+      .find((k) => !["scope", "sketchId", "sketchName"].includes(k));
+    expect(dataCol).toBeTruthy();
+    // 4 deduped features within buffer / 20 in geography
+    expect(section!.rows[0][dataCol!]).toBeCloseTo(0.2);
+    const meta = (section!.extras as {
+      columnMeta: Array<{ bufferDistanceKm?: number }>;
+    }).columnMeta;
+    expect(meta[0].bufferDistanceKm).toBe(1);
+  });
 });

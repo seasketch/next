@@ -310,6 +310,7 @@ export type InlineMetricComponentSettings = {
     | "overlay_area"
     | "geography_overlay_area"
     | "count"
+    | "percent_count"
     | "column_values"
     | "raster_stats"
     | "geography_raster_stats"
@@ -336,10 +337,7 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
   sketchClass,
   lang,
 }) => {
-  const { clippingGeography, primaryClippingGeographies } = usePrimaryGeography(
-    sketchClass,
-    geographies
-  );
+  const { clippingGeography } = usePrimaryGeography(sketchClass, geographies);
   const subjectReportContext = useSubjectReportContext();
   const emptyCollectionWithoutFragments =
     !subjectReportContext.loading &&
@@ -433,6 +431,8 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
             countCustomMessages?.[pluralKey] || countDefaultMessages[pluralKey];
           return `${formatters.count(count)} ${label}`;
         }
+        case "percent_count":
+          return formatters.percent(0);
         case "column_values": {
           const statKey = (componentSettings?.stat || "mean") as
             | "mean"
@@ -574,6 +574,34 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
           return `${formatters.count(count)} ${label}`;
         }
       }
+      case "percent_count": {
+        if (!clippingGeography) {
+          throw new Error(
+            "Primary geography for displaying percent of geography count not found."
+          );
+        }
+        const combined = combineMetricsForFragments(
+          metrics.filter(
+            (m) => m.type === "count" && subjectIsFragment(m.subject)
+          ) as Pick<Metric, "type" | "value">[],
+          "count"
+        ) as CountMetric;
+        const count = combined.value["*"]?.count ?? 0;
+        const geographyCountMetric = metrics.find(
+          (m) =>
+            m.type === "count" &&
+            subjectIsGeography(m.subject) &&
+            m.subject.id === clippingGeography.id
+        ) as CountMetric | undefined;
+        if (!geographyCountMetric) {
+          throw new Error("Geography count not found in metrics.");
+        }
+        const geographyCount = geographyCountMetric.value["*"]?.count ?? 0;
+        if (!geographyCount) {
+          return formatters.percent(0);
+        }
+        return formatters.percent(count / geographyCount);
+      }
       case "column_values": {
         const columnValues = metrics.filter(
           (m) => m.type === "column_values" && subjectIsFragment(m.subject)
@@ -710,7 +738,6 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
     componentSettings?.rasterStat,
     formatters,
     rasterUnitLabel,
-    primaryClippingGeographies,
     errors,
     pluralRules,
     componentSettings?.hideLabelForCount,
@@ -719,8 +746,9 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
     distinctCustomMessages,
     distinctDefaultMessages,
     componentSettings?.column,
-    clippingGeography?.id,
+    clippingGeography,
     componentSettings?.geographyId,
+    lang,
   ]);
 
   if (loading) {
@@ -938,6 +966,39 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
 
   const { filteredSources: sources } = useOverlaySources(dependencies);
   const relatedOverlay = useRelatedOverlay(dependencies);
+
+  const buffer = dependencies.find(
+    (d) => d.parameters?.bufferDistanceKm !== undefined
+  )?.parameters?.bufferDistanceKm;
+
+  const bufferFormatter = useNumberFormatters({
+    unit: "kilometer",
+    unitDisplay: "short",
+  });
+
+  const handleBufferClick = () => {
+    const currentValue = buffer !== undefined ? String(buffer) : "0";
+    const value = window.prompt(
+      t("Enter buffer distance in kilometers (or 0 for none)"),
+      currentValue
+    );
+    if (value === null) {
+      // User cancelled
+      return;
+    }
+    const numValue = value === "" || value === "0" ? 0 : Number(value);
+    if (!isFinite(numValue) || numValue < 0) {
+      return;
+    }
+    // Buffer both fragment and geography subjects. For percent_count, the
+    // denominator should count features near the geography the same way the
+    // numerator counts features near the sketch (e.g. waterways on land
+    // adjacent to a marine geography).
+    onUpdateDependencyParameters((dependency) => ({
+      ...dependency.parameters,
+      bufferDistanceKm: numValue === 0 ? undefined : numValue,
+    }));
+  };
 
   const { geographies } = useBaseReportContext();
   const subjectReportContext = useSubjectReportContext();
@@ -1435,6 +1496,18 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
             </div>
           </>
         )}
+        {(presentation === "count" || presentation === "percent_count") && (
+          <button
+            type="button"
+            onClick={handleBufferClick}
+            className="w-full text-left text-sm rounded hover:text-black focus:outline-none flex items-center space-x-2"
+          >
+            <span className="font-light text-gray-400">{t("Buffer")}</span>
+            <span className="flex-1 text-right hover:ring hover:ring-blue-300/20">
+              {bufferFormatter.distance(buffer ?? 0)}
+            </span>
+          </button>
+        )}
         {["overlay_area", "geography_overlay_area"].includes(presentation) && (
           <label className="flex items-center gap-2 cursor-pointer pt-1">
             <input
@@ -1488,6 +1561,10 @@ function formatPresentationLabel(presentation: string) {
       return "Overlay Area";
     case "geography_overlay_area":
       return "Geography Overlap Area";
+    case "count":
+      return "Feature Count";
+    case "percent_count":
+      return "Percent of Geography Feature Count";
     case "raster_stats":
       return "Raster Statistics";
     case "geography_raster_stats":

@@ -97,10 +97,7 @@ import { useWidgetDependencies } from "../hooks/useWidgetDependencies";
 import { ReportUIStateContext } from "../context/ReportUIStateContext";
 import { useReactNodeView } from "../ReactNodeView";
 import { FormLanguageContext } from "../../formElements/FormElement";
-import {
-  ExclamationTriangleIcon,
-  Pencil2Icon,
-} from "@radix-ui/react-icons";
+import { ExclamationTriangleIcon, Pencil2Icon } from "@radix-ui/react-icons";
 import { FolderIcon } from "@heroicons/react/outline";
 import Badge from "../../components/Badge";
 import ProfilePhoto from "../../admin/users/ProfilePhoto";
@@ -354,25 +351,22 @@ const WidgetErrorInline: FC<{
               </div>
             </div>
             <ul className="mt-1 space-y-1 !pl-0">
-                {Object.entries(errorMap).map(([error, count]) => (
-                  <li key={error} className="flex items-start gap-2">
-                    <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-red-400" />
-                    <span className="min-w-0 flex-1 whitespace-pre-wrap break-words">
-                      {error}
-                    </span>
-                    {Number(count) > 1 && (
-                      <Badge variant="error" className="ml-1 shrink-0">
-                        {Number(count)}
-                        {t("x")}
-                      </Badge>
-                    )}
-                  </li>
-                ))}
-              </ul>
-              <MetricSuggestedFixes
-                suggestedFixes={suggestedFixes}
-                compact
-              />
+              {Object.entries(errorMap).map(([error, count]) => (
+                <li key={error} className="flex items-start gap-2">
+                  <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-red-400" />
+                  <span className="min-w-0 flex-1 whitespace-pre-wrap break-words">
+                    {error}
+                  </span>
+                  {Number(count) > 1 && (
+                    <Badge variant="error" className="ml-1 shrink-0">
+                      {Number(count)}
+                      {t("x")}
+                    </Badge>
+                  )}
+                </li>
+              ))}
+            </ul>
+            <MetricSuggestedFixes suggestedFixes={suggestedFixes} compact />
             <WidgetErrorActions cardId={cardId} compact />
           </div>
           <Tooltip.Arrow className="fill-white" />
@@ -410,19 +404,19 @@ const WidgetErrorBlock: FC<{
           </div>
         ) : null}
         <ul className="py-1 !pl-0 space-y-1 text-sm text-gray-700">
-            {Object.entries(errorMap).map(([msg, count]) => (
-              <li key={msg} className="flex items-start gap-2">
-                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-red-400" />
-                <span className="min-w-0 flex-1">{msg}</span>
-                {Number(count) > 1 && (
-                  <Badge variant="error" className="ml-2 shrink-0">
-                    {Number(count)}
-                    {t("x")}
-                  </Badge>
-                )}
-              </li>
-            ))}
-          </ul>
+          {Object.entries(errorMap).map(([msg, count]) => (
+            <li key={msg} className="flex items-start gap-2">
+              <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-red-400" />
+              <span className="min-w-0 flex-1">{msg}</span>
+              {Number(count) > 1 && (
+                <Badge variant="error" className="ml-2 shrink-0">
+                  {Number(count)}
+                  {t("x")}
+                </Badge>
+              )}
+            </li>
+          ))}
+        </ul>
         <MetricSuggestedFixes suggestedFixes={suggestedFixes} />
         <WidgetErrorActions cardId={cardId} />
       </div>
@@ -1512,13 +1506,15 @@ export function buildReportCommandGroups({
               "Point",
               "MultiPoint",
               "LineString",
+              "MultiLineString",
             ].includes(source.vectorGeometryType)
           ) {
             inlineGroup.items.push({
               // eslint-disable-next-line i18next/no-literal-string
               id: `overlay-layer-${tocId}-feature-count`,
               label: "Feature Count",
-              description: "Count the number of overlapping features.",
+              description:
+                "Count the number of overlapping features, or features within a buffer distance.",
               screenshotSrc: "/slashCommands/feature-count.png",
               run: (state, dispatch, view) => {
                 return insertInlineMetric(view, state.selection.ranges[0], {
@@ -1530,6 +1526,36 @@ export function buildReportCommandGroups({
                     {
                       type: "count",
                       subjectType: "fragments",
+                      stableId,
+                      parameters: {},
+                    },
+                  ],
+                });
+              },
+            });
+            inlineGroup.items.push({
+              // eslint-disable-next-line i18next/no-literal-string
+              id: `overlay-layer-${tocId}-feature-count-percent-of-geography`,
+              label: "Count as % of Geography",
+              description:
+                "Percentage of the geography's features that overlap the sketch, or are within a buffer distance of it.",
+              screenshotSrc: "/slashCommands/feature-count.png",
+              run: (state, dispatch, view) => {
+                return insertInlineMetric(view, state.selection.ranges[0], {
+                  type: "InlineMetric",
+                  componentSettings: {
+                    presentation: "percent_count",
+                  },
+                  metrics: [
+                    {
+                      type: "count",
+                      subjectType: "fragments",
+                      stableId,
+                      parameters: {},
+                    },
+                    {
+                      type: "count",
+                      subjectType: "geographies",
                       stableId,
                       parameters: {},
                     },

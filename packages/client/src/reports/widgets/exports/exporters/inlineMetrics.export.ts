@@ -127,6 +127,9 @@ function humanPresentationLabel(presentation: string): string {
     case "count":
       return "Count";
     // eslint-disable-next-line i18next/no-literal-string
+    case "percent_count":
+      return "% of geography count";
+    // eslint-disable-next-line i18next/no-literal-string
     case "column_values":
       return "Column values";
     // eslint-disable-next-line i18next/no-literal-string
@@ -290,6 +293,26 @@ function extractInlineRawValue(
         ) as CountMetric;
         return combined.value["*"]?.count ?? 0;
       }
+      case "percent_count": {
+        const primary = opts.clippingGeographyId;
+        if (!primary) return null;
+        const combined = combineMetricsForFragments(
+          metrics.filter(
+            (m) => m.type === "count" && subjectIsFragment(m.subject),
+          ) as Pick<Metric, "type" | "value">[],
+          "count",
+        ) as CountMetric;
+        const count = combined.value["*"]?.count ?? 0;
+        const geographyCountMetric = metrics.find(
+          (m) =>
+            m.type === "count" &&
+            subjectIsGeography(m.subject) &&
+            m.subject.id === primary,
+        ) as CountMetric | undefined;
+        const geographyCount = geographyCountMetric?.value["*"]?.count ?? 0;
+        if (!geographyCount) return 0;
+        return count / geographyCount;
+      }
       case "column_values": {
         const columnValues = metrics.filter(
           (m) => m.type === "column_values" && subjectIsFragment(m.subject),
@@ -446,6 +469,9 @@ export function buildInlineMetricsSection(
         stat: c.node.componentSettings.stat,
         rasterStat: c.node.componentSettings.rasterStat,
         column: c.node.componentSettings.column,
+        bufferDistanceKm: c.node.dependencies.find(
+          (d) => d.parameters?.bufferDistanceKm !== undefined,
+        )?.parameters?.bufferDistanceKm,
         stableIds: c.node.dependencies.map((d) => d.stableId).filter(Boolean),
         sources: filterSourcesForDeps(input.sources, c.node.dependencies).map((s) => ({
           stableId: s.stableId,
