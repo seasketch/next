@@ -10,6 +10,7 @@ import {
 import { getAttributeValues } from "./extensions/glStyleAutocomplete";
 import {
   Cross2Icon,
+  DownloadIcon,
   LayersIcon,
   PersonIcon,
   QuestionMarkCircledIcon,
@@ -25,6 +26,25 @@ interface GeostatsModalProps {
   geostats: Geostats;
   onRequestClose: () => void;
   className?: string;
+}
+
+function downloadGeostatsJson(geostats: Geostats) {
+  const layerName = geostats.layers[0]?.layer;
+  /* eslint-disable i18next/no-literal-string -- download filename / mime type */
+  const filename =
+    geostats.layerCount === 1 && layerName
+      ? `${layerName}-geostats.json`
+      : "geostats.json";
+  const blob = new Blob([JSON.stringify(geostats, null, 2)], {
+    type: "application/json",
+  });
+  /* eslint-enable i18next/no-literal-string */
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 export default function GeostatsModal(props: GeostatsModalProps) {
@@ -46,7 +66,10 @@ export default function GeostatsModal(props: GeostatsModalProps) {
                 onRequestClose={props.onRequestClose}
                 closeLabel={t("Close")}
               >
-                <LayerMetaHeader layer={props.geostats.layers[0]} />
+                <LayerMetaHeader
+                  layer={props.geostats.layers[0]}
+                  onDownload={() => downloadGeostatsJson(props.geostats)}
+                />
               </ModalStickyHeader>
               <ul className="list-none space-y-3 px-6 py-5 pb-8" role="list">
                 {props.geostats.layers[0].attributes.map((attribute) => (
@@ -64,9 +87,14 @@ export default function GeostatsModal(props: GeostatsModalProps) {
                 onRequestClose={props.onRequestClose}
                 closeLabel={t("Close")}
               >
-                <h2 className="text-lg font-semibold tracking-tight text-slate-900">
-                  {t("Layers")}
-                </h2>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <h2 className="text-lg font-semibold tracking-tight text-slate-900">
+                    {t("Layers")}
+                  </h2>
+                  <DownloadDetailsButton
+                    onClick={() => downloadGeostatsJson(props.geostats)}
+                  />
+                </div>
               </ModalStickyHeader>
               <div className="space-y-8 px-5 py-6 pb-8">
                 {props.geostats.layers.map((layer) => (
@@ -78,6 +106,20 @@ export default function GeostatsModal(props: GeostatsModalProps) {
         </div>
       </Tooltip.Provider>
     </Modal>
+  );
+}
+
+function DownloadDetailsButton({ onClick }: { onClick: () => void }) {
+  const { t } = useTranslation("admin:data");
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="inline-flex items-center gap-1.5 rounded-md px-1.5 py-1 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-200/70 hover:text-slate-800"
+    >
+      <DownloadIcon className="h-3.5 w-3.5" aria-hidden />
+      {t("Download details")}
+    </button>
   );
 }
 
@@ -107,7 +149,13 @@ function ModalStickyHeader({
   );
 }
 
-function LayerMetaHeader({ layer }: { layer: GeostatsLayer }) {
+function LayerMetaHeader({
+  layer,
+  onDownload,
+}: {
+  layer: GeostatsLayer;
+  onDownload?: () => void;
+}) {
   const { t } = useTranslation("admin:data");
   return (
     <div className="flex items-start gap-3">
@@ -165,6 +213,14 @@ function LayerMetaHeader({ layer }: { layer: GeostatsLayer }) {
               ? t("1 column")
               : t("{{n}} columns", { n: layer.attributeCount })}
           </span>
+          {onDownload && (
+            <>
+              <span className="text-xs leading-5 text-slate-400" aria-hidden>
+                {String.fromCharCode(0x00b7)}
+              </span>
+              <DownloadDetailsButton onClick={onDownload} />
+            </>
+          )}
         </div>
       </div>
     </div>
