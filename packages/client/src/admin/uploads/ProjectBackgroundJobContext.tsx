@@ -829,7 +829,7 @@ export default function DataUploadDropzone({
                 >
                   <motion.div
                     layout
-                    className="rounded-2xl shadow-xl pointer-events-none max-w-3xl w-full mx-6 overflow-hidden"
+                    className="rounded-2xl shadow-xl pointer-events-none max-w-lg w-full mx-6 overflow-hidden"
                     style={{
                       background:
                         "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(250,252,255,0.97) 100%)",
@@ -885,7 +885,11 @@ export default function DataUploadDropzone({
                       {phase !== "error" && (
                         <motion.div
                           layout
-                          className="flex flex-wrap justify-center gap-3 mt-3"
+                          className={
+                            phase === "processing"
+                              ? "flex flex-wrap justify-center gap-3 mt-3"
+                              : "grid grid-cols-3 gap-3 mt-3 max-w-md mx-auto"
+                          }
                         >
                           <AnimatePresence>
                             {SUPPORTED_FORMATS.filter((format) =>
@@ -898,7 +902,9 @@ export default function DataUploadDropzone({
                                 <motion.div
                                   layout
                                   key={format.id}
-                                  className={`rounded-xl p-3 w-32 text-center ${
+                                  className={`rounded-xl p-3 text-center ${
+                                    active ? "w-32" : "w-full"
+                                  } ${
                                     active
                                       ? "ring-2 ring-cyan-500 shadow-md"
                                       : "ring-1 ring-gray-200"
