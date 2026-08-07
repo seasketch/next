@@ -76,6 +76,10 @@ import {
   ColumnStatisticsTable,
   ColumnStatisticsTableTooltipControls,
 } from "./ColumnStatisticsTable";
+import {
+  ColumnSumTable,
+  ColumnSumTableTooltipControls,
+} from "./ColumnSumTable";
 import { pickBestColumnForPercentOfColumnTotal } from "./columnTotalFromGeostats";
 import {
   ColumnValuesHistogram,
@@ -453,6 +457,7 @@ const memoizedWidgets: Record<string, WidgetComponent> = {
     ColumnStatisticsTable,
     "ColumnStatisticsTable"
   ),
+  ColumnSumTable: memoWidget(ColumnSumTable, "ColumnSumTable"),
   ColumnValuesHistogram: memoWidget(
     ColumnValuesHistogram,
     "ColumnValuesHistogram"
@@ -629,6 +634,8 @@ export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
       return <IntersectingFeaturesListTooltipControls {...props} />;
     case "ColumnStatisticsTable":
       return <ColumnStatisticsTableTooltipControls {...props} />;
+    case "ColumnSumTable":
+      return <ColumnSumTableTooltipControls {...props} />;
     case "ColumnValuesHistogram":
       return <ColumnValuesHistogramTooltipControls {...props} />;
     case "RasterValuesHistogram":
@@ -784,6 +791,9 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
       break;
     case "ColumnStatisticsTable":
       widget = <memoizedWidgets.ColumnStatisticsTable {...widgetProps} />;
+      break;
+    case "ColumnSumTable":
+      widget = <memoizedWidgets.ColumnSumTable {...widgetProps} />;
       break;
     case "ColumnValuesHistogram":
       widget = <memoizedWidgets.ColumnValuesHistogram {...widgetProps} />;
@@ -1485,7 +1495,10 @@ export function buildReportCommandGroups({
           unsupportedMessage =
             "Only single-band rasters are supported in the reporting tools.";
         } else if (source.vectorGeometryType) {
-          const groupByColumn = source.styleGroupByColumn || undefined;
+          const groupByColumn =
+            source.styleGroupByColumn ||
+            source.bestCategoryColumn ||
+            undefined;
           const bestLabelColumn = source.bestLabelColumn;
           const bestNumericColumn = source.bestContinuousColumn;
           const inlineGroup: CommandPaletteGroup = {
@@ -1743,6 +1756,48 @@ export function buildReportCommandGroups({
                   });
                 },
               });
+
+              // Class-total sums need a numeric column and a groupBy class key.
+              if (bestNumericColumn && groupByColumn) {
+                const sumColumn = pickBestColumnForPercentOfColumnTotal({
+                  preferred: bestNumericColumn,
+                });
+                if (sumColumn) {
+                  blockGroup.items.push({
+                    // eslint-disable-next-line i18next/no-literal-string
+                    id: `overlay-layer-${tocId}-column-sum-table`,
+                    label: "Column Totals by Class",
+                    description:
+                      "Sum a numeric column for overlapping features, grouped by a class key. Optionally compare each class sum to a geography total (e.g. % of province population).",
+                    screenshotSrc: "/slashCommands/column-sum-table.png",
+                    run: (state, dispatch, view) => {
+                      return insertBlockMetric(
+                        view,
+                        state.selection.ranges[0],
+                        {
+                          type: "ColumnSumTable",
+                          metrics: [
+                            {
+                              type: "column_values",
+                              subjectType: "fragments",
+                              stableId,
+                              parameters: {
+                                includedColumns: [sumColumn],
+                                groupBy: groupByColumn,
+                              },
+                            },
+                          ],
+                          componentSettings: {
+                            column: sumColumn,
+                            sumLabel: sumColumn,
+                            showZeroCountCategories: true,
+                          },
+                        }
+                      );
+                    },
+                  });
+                }
+              }
             }
 
             // "% of Column Total" needs a numeric column whose full-dataset

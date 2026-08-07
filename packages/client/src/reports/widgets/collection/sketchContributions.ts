@@ -176,8 +176,9 @@ export function sketchContributionsGeographyTotalArea(
 
 function extractCombinedClassSlice(
   combined: Pick<Metric, "type" | "value">,
-  metricType: "overlay_area" | "count" | "raster_stats",
-  groupByKey: string
+  metricType: "overlay_area" | "count" | "raster_stats" | "column_values",
+  groupByKey: string,
+  valueColumn?: string
 ): number {
   switch (metricType) {
     case "overlay_area":
@@ -192,6 +193,18 @@ function extractCombinedClassSlice(
         (combined.value as { bands?: Array<{ sum?: number }> })?.bands?.[0]
           ?.sum ?? 0
       );
+    case "column_values": {
+      if (!valueColumn) return 0;
+      const cell = (
+        combined.value as Record<
+          string,
+          Record<string, { sum?: number } | undefined>
+        >
+      )?.[groupByKey]?.[valueColumn];
+      return typeof cell?.sum === "number" && Number.isFinite(cell.sum)
+        ? cell.sum
+        : 0;
+    }
     default:
       return 0;
   }
@@ -204,12 +217,14 @@ export function sketchContributionsForClassTableRow(opts: {
   metrics: CompatibleSpatialMetricDetailsFragment[];
   source: OverlaySourceDetailsFragment;
   geographyId: number;
-  metricType: "overlay_area" | "count" | "raster_stats";
+  metricType: "overlay_area" | "count" | "raster_stats" | "column_values";
   groupByKey: string;
   childSketchIds: number[];
   geographyDenominator: number;
   sketchNameById: Map<number, string>;
   t: TFunction;
+  /** Required when metricType is column_values. */
+  valueColumn?: string;
 }): ClassRowSketchContribution[] {
   const {
     metrics,
@@ -221,6 +236,7 @@ export function sketchContributionsForClassTableRow(opts: {
     geographyDenominator,
     sketchNameById,
     t,
+    valueColumn,
   } = opts;
 
   const complete = dedupeCompleteSpatialMetrics(metrics);
@@ -253,7 +269,8 @@ export function sketchContributionsForClassTableRow(opts: {
     const primaryValue = extractCombinedClassSlice(
       combined,
       metricType,
-      groupByKey
+      groupByKey,
+      valueColumn
     );
     const hasOverlap = bucketHasIntraCollectionOverlap(
       bucket,
