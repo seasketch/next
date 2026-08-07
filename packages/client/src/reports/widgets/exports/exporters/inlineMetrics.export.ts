@@ -17,6 +17,10 @@ import type { CompatibleSpatialMetricDetailsFragment } from "../../../../generat
 import { filterMetricsByDependencies } from "../../../utils/metricSatisfiesDependency";
 import type { CardExportInput, WidgetExportSection } from "../types";
 import { resolveClippingGeographyForExport } from "../exportContextHelpers";
+import {
+  getColumnTotalFromGeostats,
+  getFeatureCountFromGeostats,
+} from "../../columnTotalFromGeostats";
 import { baseRow } from "./shared";
 
 export type InlineMetricExportNode = {
@@ -130,8 +134,14 @@ function humanPresentationLabel(presentation: string): string {
     case "percent_count":
       return "% of geography count";
     // eslint-disable-next-line i18next/no-literal-string
+    case "percent_count_total":
+      return "% of total count";
+    // eslint-disable-next-line i18next/no-literal-string
     case "column_values":
       return "Column values";
+    // eslint-disable-next-line i18next/no-literal-string
+    case "percent_column_total_overlapped":
+      return "% of column total";
     // eslint-disable-next-line i18next/no-literal-string
     case "raster_stats":
       return "Raster stats";
@@ -225,7 +235,11 @@ function buildInlineColumnDescriptors(input: BuildInlineMetricsInput): Array<{
 function extractInlineRawValue(
   metrics: CompatibleSpatialMetricDetailsFragment[],
   componentSettings: Record<string, unknown>,
-  opts: { clippingGeographyId?: number },
+  opts: {
+    clippingGeographyId?: number;
+    sources?: CardExportInput["sources"];
+    dependencies?: MetricDependency[];
+  },
 ): string | number | boolean | null {
   const presentation = (componentSettings.presentation as string) || "total_area";
   try {
@@ -312,6 +326,42 @@ function extractInlineRawValue(
         const geographyCount = geographyCountMetric?.value["*"]?.count ?? 0;
         if (!geographyCount) return 0;
         return count / geographyCount;
+      }
+      case "percent_count_total": {
+        const combined = combineMetricsForFragments(
+          metrics.filter(
+            (m) => m.type === "count" && subjectIsFragment(m.subject),
+          ) as Pick<Metric, "type" | "value">[],
+          "count",
+        ) as CountMetric;
+        const count = combined.value["*"]?.count ?? 0;
+        const source =
+          opts.sources && opts.dependencies
+            ? filterSourcesForDeps(opts.sources, opts.dependencies)[0]
+            : undefined;
+        const layerTotal = getFeatureCountFromGeostats(source?.geostats);
+        if (layerTotal === null || layerTotal === 0) return 0;
+        return count / layerTotal;
+      }
+      case "percent_column_total_overlapped": {
+        const columnValues = metrics.filter(
+          (m) => m.type === "column_values" && subjectIsFragment(m.subject),
+        );
+        if (!columnValues.length) return null;
+        const combined = combineMetricsForFragments(
+          columnValues as Pick<Metric, "type" | "value">[],
+          "column_values",
+        ) as ColumnValuesMetric;
+        const prop = (componentSettings.column as string) || "";
+        const cell = combined.value["*"]?.[prop];
+        if (!cell || !isNumberColumnValueStats(cell)) return null;
+        const source =
+          opts.sources && opts.dependencies
+            ? filterSourcesForDeps(opts.sources, opts.dependencies)[0]
+            : undefined;
+        const columnTotal = getColumnTotalFromGeostats(source?.geostats, prop);
+        if (columnTotal === null || columnTotal === 0) return 0;
+        return cell.sum / columnTotal;
       }
       case "column_values": {
         const columnValues = metrics.filter(
@@ -446,7 +496,11 @@ export function buildInlineMetricsSection(
       row[c.key] = extractInlineRawValue(
         forGrain,
         c.node.componentSettings,
-        { clippingGeographyId },
+        {
+          clippingGeographyId,
+          sources: input.sources,
+          dependencies: c.node.dependencies,
+        },
       );
     }
     rows.push(row);

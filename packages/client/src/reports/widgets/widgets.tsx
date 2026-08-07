@@ -76,6 +76,7 @@ import {
   ColumnStatisticsTable,
   ColumnStatisticsTableTooltipControls,
 } from "./ColumnStatisticsTable";
+import { pickBestColumnForPercentOfColumnTotal } from "./columnTotalFromGeostats";
 import {
   ColumnValuesHistogram,
   ColumnValuesHistogramTooltipControls,
@@ -1563,6 +1564,31 @@ export function buildReportCommandGroups({
                 });
               },
             });
+            inlineGroup.items.push({
+              // eslint-disable-next-line i18next/no-literal-string
+              id: `overlay-layer-${tocId}-feature-count-percent-of-total`,
+              label: "Count as % of Total",
+              description:
+                "Percentage of the layer's full feature count that overlaps the sketch, or is within a buffer distance of it. Uses layer statistics as the denominator, not a geography total.",
+              screenshotSrc: "/slashCommands/percent-count-total.png",
+              run: (state, dispatch, view) => {
+                return insertInlineMetric(view, state.selection.ranges[0], {
+                  type: "InlineMetric",
+                  componentSettings: {
+                    presentation: "percent_count_total",
+                    minimumFractionDigits: 0,
+                  },
+                  metrics: [
+                    {
+                      type: "count",
+                      subjectType: "fragments",
+                      stableId,
+                      parameters: {},
+                    },
+                  ],
+                });
+              },
+            });
             blockGroup.items.push({
               // eslint-disable-next-line i18next/no-literal-string
               id: `overlay-layer-${tocId}-feature-count-table`,
@@ -1719,7 +1745,47 @@ export function buildReportCommandGroups({
               });
             }
 
+            // "% of Column Total" needs a numeric column whose full-dataset
+            // sum can be recovered from geostats (avg × count).
+            // bestContinuousColumn is derived from those numeric attributes.
             if (bestNumericColumn) {
+              const columnForPercentTotal = pickBestColumnForPercentOfColumnTotal(
+                {
+                  preferred: bestNumericColumn,
+                }
+              );
+              if (columnForPercentTotal) {
+                inlineGroup.items.push({
+                  // eslint-disable-next-line i18next/no-literal-string
+                  id: `overlay-layer-${tocId}-percent-column-total-overlapped`,
+                  label: "% of Column Total",
+                  description:
+                    "Share of a column's full-dataset total that overlaps the sketch (or a buffer around it). Uses layer statistics as the denominator, not a geography total — useful for population and similar whole-feature quantities.",
+                  screenshotSrc:
+                    "/slashCommands/percent-column-total-overlapped.png",
+                  run: (state, dispatch, view) => {
+                    return insertInlineMetric(view, state.selection.ranges[0], {
+                      type: "InlineMetric",
+                      metrics: [
+                        {
+                          type: "column_values",
+                          subjectType: "fragments",
+                          stableId,
+                          parameters: {
+                            includedColumns: [columnForPercentTotal],
+                          },
+                        },
+                      ],
+                      componentSettings: {
+                        presentation: "percent_column_total_overlapped",
+                        column: columnForPercentTotal,
+                        minimumFractionDigits: 1,
+                      },
+                    });
+                  },
+                });
+              }
+
               blockGroup.items.push({
                 // eslint-disable-next-line i18next/no-literal-string
                 id: `overlay-layer-${tocId}-column-value-histogram`,

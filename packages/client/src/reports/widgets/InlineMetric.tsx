@@ -56,6 +56,11 @@ import { GeostatsLayer, isGeostatsLayer } from "@seasketch/geostats-types";
 import ColumnStatsWarning, {
   hasBufferedColumnValuesDependency,
 } from "./ColumnStatsWarning";
+import {
+  getColumnTotalFromGeostats,
+  getFeatureCountFromGeostats,
+  listColumnsWithGeostatsTotals,
+} from "./columnTotalFromGeostats";
 
 export type PluralizedMessages = Record<string, string>;
 export type PluralizedMessagesByLang = Record<string, PluralizedMessages>;
@@ -314,7 +319,9 @@ export type InlineMetricComponentSettings = {
     | "geography_overlay_area"
     | "count"
     | "percent_count"
+    | "percent_count_total"
     | "column_values"
+    | "percent_column_total_overlapped"
     | "raster_stats"
     | "geography_raster_stats"
     | "geography_proportion_captured";
@@ -435,6 +442,10 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
           return `${formatters.count(count)} ${label}`;
         }
         case "percent_count":
+          return formatters.percent(0);
+        case "percent_count_total":
+          return formatters.percent(0);
+        case "percent_column_total_overlapped":
           return formatters.percent(0);
         case "column_values": {
           const statKey = (componentSettings?.stat || "mean") as
@@ -605,6 +616,55 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
         }
         return formatters.percent(count / geographyCount);
       }
+      case "percent_count_total": {
+        const combined = combineMetricsForFragments(
+          metrics.filter(
+            (m) => m.type === "count" && subjectIsFragment(m.subject)
+          ) as Pick<Metric, "type" | "value">[],
+          "count"
+        ) as CountMetric;
+        const count = combined.value["*"]?.count ?? 0;
+        const layerTotal = getFeatureCountFromGeostats(sources?.[0]?.geostats);
+        if (layerTotal === null) {
+          throw new Error(
+            "Feature count not available in layer statistics (geostats)."
+          );
+        }
+        if (!layerTotal) {
+          return formatters.percent(0);
+        }
+        return formatters.percent(count / layerTotal);
+      }
+      case "percent_column_total_overlapped": {
+        const columnValues = metrics.filter(
+          (m) => m.type === "column_values" && subjectIsFragment(m.subject)
+        );
+        if (!columnValues.length) {
+          throw new Error("Column values not found in metrics.");
+        }
+        const combined = combineMetricsForFragments(
+          columnValues as Pick<Metric, "type" | "value">[],
+          "column_values"
+        ) as ColumnValuesMetric;
+        const prop = componentSettings?.column || "";
+        const values = combined.value["*"]?.[prop];
+        if (!values || !isNumberColumnValueStats(values)) {
+          return NaN.toLocaleString(lang);
+        }
+        const columnTotal = getColumnTotalFromGeostats(
+          sources?.[0]?.geostats,
+          prop
+        );
+        if (columnTotal === null) {
+          throw new Error(
+            "Column total not available in layer statistics (geostats)."
+          );
+        }
+        if (columnTotal === 0) {
+          return formatters.percent(0);
+        }
+        return formatters.percent(values.sum / columnTotal);
+      }
       case "column_values": {
         const columnValues = metrics.filter(
           (m) => m.type === "column_values" && subjectIsFragment(m.subject)
@@ -752,16 +812,19 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
     clippingGeography,
     componentSettings?.geographyId,
     lang,
+    sources,
   ]);
 
   // Combined fragment stats for the selected column, used to surface
   // accuracy warnings (entriesTruncated / weightsMayOverlap) next to the
   // displayed value. Geography-subject stats are intentionally excluded.
   const columnStatsForWarning = useMemo(() => {
+    const presentation = componentSettings?.presentation || "total_area";
     if (
       loading ||
       errors.length > 0 ||
-      (componentSettings?.presentation || "total_area") !== "column_values"
+      (presentation !== "column_values" &&
+        presentation !== "percent_column_total_overlapped")
     ) {
       return null;
     }
@@ -787,6 +850,14 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
     componentSettings?.presentation,
     componentSettings?.column,
   ]);
+
+  const columnStatsWarningDisplayedStats = useMemo(() => {
+    const presentation = componentSettings?.presentation || "total_area";
+    if (presentation === "percent_column_total_overlapped") {
+      return ["sum"];
+    }
+    return [componentSettings?.stat || "mean"];
+  }, [componentSettings?.presentation, componentSettings?.stat]);
 
   if (loading) {
     return (
@@ -822,7 +893,7 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
         {columnStatsForWarning && (
           <ColumnStatsWarning
             stats={columnStatsForWarning}
-            displayedStats={[componentSettings?.stat || "mean"]}
+            displayedStats={columnStatsWarningDisplayedStats}
             buffered={hasBufferedColumnValuesDependency(dependencies)}
             className="ml-0.5"
           />
@@ -1064,7 +1135,10 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
     const options: Array<{ value: string; label: ReactNode }> = [];
     const valueColumnAttributesByName: Record<string, { type?: string }> = {};
 
-    if (presentation !== "column_values") {
+    if (
+      presentation !== "column_values" &&
+      presentation !== "percent_column_total_overlapped"
+    ) {
       return { valueColumnOptions: options, valueColumnAttributesByName };
     }
 
@@ -1083,7 +1157,15 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
       return { valueColumnOptions: options, valueColumnAttributesByName };
     }
 
+    const columnsWithTotals =
+      presentation === "percent_column_total_overlapped"
+        ? new Set(listColumnsWithGeostatsTotals(source.geostats))
+        : null;
+
     for (const attr of geoLayer.attributes) {
+      if (columnsWithTotals && !columnsWithTotals.has(attr.attribute)) {
+        continue;
+      }
       valueColumnAttributesByName[attr.attribute] = { type: attr.type };
       const exampleValues = Object.keys(attr.values || {})
         .slice(0, 5)
@@ -1208,6 +1290,10 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
         ? { ...dependency.parameters, includedColumns: [value] }
         : { ...dependency.parameters }
     );
+
+    if (presentation === "percent_column_total_overlapped") {
+      return;
+    }
 
     const nextValueColumnIsNumeric =
       valueColumnAttributesByName[value]?.type === "number";
@@ -1370,15 +1456,17 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
           t={t}
         />
       )}
-      {presentation === "column_values" && valueColumnOptions.length > 0 && (
-        <LabeledDropdown
-          label={t("column")}
-          value={componentSettings?.column || ""}
-          options={valueColumnOptions}
-          onChange={handleValueColumnChange}
-          getDisplayLabel={(selected) => selected?.value || ""}
-        />
-      )}
+      {(presentation === "column_values" ||
+        presentation === "percent_column_total_overlapped") &&
+        valueColumnOptions.length > 0 && (
+          <LabeledDropdown
+            label={t("column")}
+            value={componentSettings?.column || ""}
+            options={valueColumnOptions}
+            onChange={handleValueColumnChange}
+            getDisplayLabel={(selected) => selected?.value || ""}
+          />
+        )}
       {presentation === "column_values" && (
         <LabeledDropdown
           label={t("Stat")}
@@ -1553,7 +1641,9 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
         )}
         {(presentation === "count" ||
           presentation === "percent_count" ||
-          presentation === "column_values") && (
+          presentation === "percent_count_total" ||
+          presentation === "column_values" ||
+          presentation === "percent_column_total_overlapped") && (
           <button
             type="button"
             onClick={handleBufferClick}
@@ -1622,6 +1712,12 @@ function formatPresentationLabel(presentation: string) {
       return "Feature Count";
     case "percent_count":
       return "Percent of Geography Feature Count";
+    case "percent_count_total":
+      return "Count as % of Total";
+    case "column_values":
+      return "Column Statistic";
+    case "percent_column_total_overlapped":
+      return "% of Column Total";
     case "raster_stats":
       return "Raster Statistics";
     case "geography_raster_stats":

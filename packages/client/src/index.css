@@ -13339,6 +13339,11 @@ select{
   color:transparent !important
 }
 
+.text-amber-500{
+  --tw-text-opacity:1;
+  color:rgb(245 158 11 / var(--tw-text-opacity, 1))
+}
+
 .text-amber-600{
   --tw-text-opacity:1;
   color:rgb(217 119 6 / var(--tw-text-opacity, 1))
@@ -13949,11 +13954,6 @@ select{
 .text-zinc-500{
   --tw-text-opacity:1;
   color:rgb(113 113 122 / var(--tw-text-opacity, 1))
-}
-
-.text-amber-500{
-  --tw-text-opacity:1;
-  color:rgb(245 158 11 / var(--tw-text-opacity, 1))
 }
 
 .text-opacity-50{
@@ -15809,6 +15809,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
   --tw-gradient-to:rgb(71 85 105 / 0.5) var(--tw-gradient-to-position)
 }
 
+.hover\:text-amber-600:hover{
+  --tw-text-opacity:1;
+  color:rgb(217 119 6 / var(--tw-text-opacity, 1))
+}
+
 .hover\:text-amber-900:hover{
   --tw-text-opacity:1;
   color:rgb(120 53 15 / var(--tw-text-opacity, 1))
@@ -15987,11 +15992,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .hover\:text-white:hover{
   --tw-text-opacity:1;
   color:rgb(255 255 255 / var(--tw-text-opacity, 1))
-}
-
-.hover\:text-amber-600:hover{
-  --tw-text-opacity:1;
-  color:rgb(217 119 6 / var(--tw-text-opacity, 1))
 }
 
 .hover\:underline:hover{
