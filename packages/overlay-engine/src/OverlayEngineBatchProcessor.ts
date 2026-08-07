@@ -44,11 +44,14 @@ import {
   PresenceTableMetric,
   PresenceTableValue,
   ColumnValuesMetric,
+  ColumnValuesEntry,
   NumberColumnValueStats,
   StringOrBooleanColumnValueStats,
   ValuesForColumns,
+  capColumnValueEntries,
+  numberColumnStatsFromEntries,
+  stringOrBooleanColumnStatsFromEntries,
 } from "./metrics/metrics";
-import { downsampleHistogram } from "./rasterStats";
 import { createUniqueIdIndex, countUniqueIds } from "./utils/uniqueIdIndex";
 import turfLength from "@turf/length";
 
@@ -151,8 +154,14 @@ export class OverlayEngineBatchProcessor<
   presenceOperationEarlyReturn = false;
   includedProperties?: string[];
   resultsLimit = 50;
-  columnValuesProperty?: string;
   overlappingFeatures = false;
+  /**
+   * Whether the subject feature was expanded with a distance buffer. Buffered
+   * subjects may overlap sibling fragments' subjects, so per-feature entry
+   * offsets are retained to detect shared parts when combining. Unbuffered
+   * fragments are disjoint, making offsets useless weight.
+   */
+  subjectIsBuffered = false;
 
   private progress: number = 0;
   private progressTarget: number = 0;
@@ -241,8 +250,8 @@ export class OverlayEngineBatchProcessor<
     pool?: WorkerPool<any, any>,
     includedProperties?: string[],
     resultsLimit?: number,
-    columnValuesProperty?: string,
     overlappingFeatures?: boolean,
+    subjectIsBuffered?: boolean,
   ) {
     this.operation = operation;
     this.pool = pool;
@@ -277,9 +286,7 @@ export class OverlayEngineBatchProcessor<
     if (resultsLimit) {
       this.resultsLimit = resultsLimit;
     }
-    if (this.operation === "column_values") {
-      this.columnValuesProperty = columnValuesProperty;
-    }
+    this.subjectIsBuffered = subjectIsBuffered ?? false;
   }
 
   private resetBatchData() {
@@ -540,7 +547,6 @@ export class OverlayEngineBatchProcessor<
       groupBy: this.groupBy,
       includedProperties: this.includedProperties,
       resultsLimit: this.resultsLimit,
-      property: this.columnValuesProperty,
       overlappingFeatures: this.overlappingFeatures,
     };
 
@@ -597,7 +603,7 @@ export class OverlayEngineBatchProcessor<
       differenceMultiPolygon: differenceMultiPolygon,
       subjectFeature: this.subjectFeature,
       groupBy: this.groupBy,
-      // property: this.columnValuesProperty!,
+      properties: this.includedProperties,
     }).catch((error) => {
       console.error(`Error collecting column values: ${error.message}`);
       throw error;
@@ -707,12 +713,19 @@ export class OverlayEngineBatchProcessor<
         }
       }
     }
-    // calculate statistics for each class and attribute
+    // Per-feature entries are only retained when the metric is scoped to a
+    // specific column list (includedColumns), to keep stored metric sizes
+    // bounded. Weight is still computed once per feature for all columns.
+    const includeEntries = Boolean(
+      this.includedProperties && this.includedProperties.length > 0
+    );
     for (const classKey in results) {
       columnStats[classKey] = {};
       for (const attr in results[classKey]) {
         columnStats[classKey][attr] = calculateColumnValueStats(
-          results[classKey][attr]
+          results[classKey][attr],
+          includeEntries,
+          this.subjectIsBuffered
         );
       }
     }
@@ -801,7 +814,12 @@ export class OverlayEngineBatchProcessor<
     feature: FeatureWithMetadata<Feature<Geometry>>
   ) {
     const results = this.getColumnValuesResults();
-    addColumnValuesToResults(results, feature, this.groupBy);
+    addColumnValuesToResults(
+      results,
+      feature,
+      this.groupBy,
+      this.includedProperties
+    );
   }
 
   private addOverlayFeatureToTotals(
@@ -959,139 +977,67 @@ export class OverlayEngineBatchProcessor<
   }
 }
 
+/**
+ * Computes statistics for a single column from the interim per-part records
+ * collected during batch processing.
+ *
+ * Sources preprocessed for reporting are subdivided at upload time, so a
+ * single original feature may intersect the subject as several parts. Parts
+ * are first grouped by original feature id (`__oidx`), summing their overlap
+ * weights, so that whole-feature values (count, sum, distinct values) are
+ * only counted once per original feature.
+ *
+ * When `includeEntries` is true, the per-feature records are retained on the
+ * returned stats so that stats from multiple fragments can later be combined
+ * exactly. If the feature count exceeds MAX_COLUMN_VALUE_ENTRIES, entries
+ * are omitted entirely (a partial list cannot support exact merging) and
+ * `entriesTruncated` is set instead.
+ *
+ * Part offsets are only recorded on entries when `includeOffsets` is true
+ * (i.e. the subject was buffered). Their sole purpose is detecting shared
+ * parts across overlapping buffered subjects; unbuffered fragments are
+ * disjoint, so offsets would just add payload weight.
+ */
 function calculateColumnValueStats(
-  values: ColumnValues[]
+  values: ColumnValues[],
+  includeEntries: boolean,
+  includeOffsets: boolean
 ): NumberColumnValueStats | StringOrBooleanColumnValueStats {
-  const count = values.length;
-
-  if (count === 0) {
-    return {
-      type: "number",
-      count: 0,
-      min: NaN,
-      max: NaN,
-      mean: NaN,
-      stdDev: NaN,
-      histogram: [],
-      countDistinct: 0,
-      sum: 0,
-    };
-  }
-
-  const firstValue = values[0][0];
-  if (typeof firstValue === "string" || typeof firstValue === "boolean") {
-    const distinctMap = new Map<string | boolean, number>();
-    for (const entry of values) {
-      const value = entry[0] as string | boolean;
-      const current = distinctMap.get(value) ?? 0;
-      distinctMap.set(value, current + 1);
-    }
-    const outputType = typeof firstValue === "boolean" ? "boolean" : "string";
-    return {
-      type: outputType,
-      distinctValues: Array.from(distinctMap.entries()),
-      countDistinct: distinctMap.size,
-    };
-  }
-
-  let min = Infinity;
-  let max = -Infinity;
-  let sum = 0;
-  let weightedSum = 0;
-  let totalWeight = 0;
-
-  const histogramMap = new Map<number, number>();
-  const distinctValues = new Set<number>();
-
-  for (const entry of values) {
-    const value = entry[0];
-    if (typeof value !== "number") {
-      continue;
-    }
-    distinctValues.add(value);
-    const weight = entry.length > 1 ? entry[1] : undefined;
-
-    if (value < min) min = value;
-    if (value > max) max = value;
-
-    sum += value;
-    if (
-      typeof weight === "number" &&
-      isFinite(weight) &&
-      weight > 0 &&
-      isFinite(value)
-    ) {
-      weightedSum += value * weight;
-      totalWeight += weight;
-    }
-
-    const histogramContribution =
-      typeof weight === "number" && isFinite(weight) && weight > 0 ? weight : 1;
-    histogramMap.set(
-      value,
-      (histogramMap.get(value) || 0) + histogramContribution
-    );
-  }
-
-  const mean = totalWeight > 0 ? weightedSum / totalWeight : sum / count;
-
-  let varianceNumerator = 0;
-  // Standard deviation - weighted if we have weights, otherwise unweighted
-  if (totalWeight > 0) {
-    for (const entry of values) {
-      const value = entry[0] as number;
-      const weight = entry.length > 1 ? entry[1] : undefined;
-      if (typeof weight !== "number" || !isFinite(weight) || weight <= 0) {
-        continue;
+  // Group subdivided parts by original feature id.
+  const byId = new Map<number, ColumnValuesEntry>();
+  for (const [value, weight, id, offset] of values) {
+    const existing = byId.get(id);
+    if (existing) {
+      existing.weight += weight;
+      if (includeOffsets) {
+        existing.offsets.push(offset);
       }
-      const diff = value - mean;
-      varianceNumerator += weight * diff * diff;
-    }
-    varianceNumerator = varianceNumerator / totalWeight;
-  } else {
-    for (const entry of values) {
-      const value = entry[0] as number;
-      const diff = value - mean;
-      varianceNumerator += diff * diff;
-    }
-    varianceNumerator = varianceNumerator / count;
-  }
-  const stdDev = Math.sqrt(varianceNumerator);
-
-  let histogram: [number, number][] = Array.from(histogramMap.entries()).sort(
-    (a, b) => {
-      if (typeof a[0] === "number" && typeof b[0] === "number") {
-        return a[0] - b[0];
-      } else {
-        return 0;
-      }
-    }
-  );
-
-  const MAX_HISTOGRAM_ENTRIES = 200;
-  if (histogram.length > MAX_HISTOGRAM_ENTRIES) {
-    if (typeof histogram[0][0] === "number") {
-      histogram = downsampleHistogram(
-        histogram as [number, number][],
-        MAX_HISTOGRAM_ENTRIES
-      );
     } else {
-      histogram = histogram.slice(0, MAX_HISTOGRAM_ENTRIES);
+      byId.set(id, {
+        id,
+        value,
+        weight,
+        offsets: includeOffsets ? [offset] : [],
+      });
+    }
+  }
+  const entries = Array.from(byId.values());
+
+  const firstValue = entries[0]?.value;
+  const stats =
+    typeof firstValue === "string" || typeof firstValue === "boolean"
+      ? stringOrBooleanColumnStatsFromEntries(entries)
+      : numberColumnStatsFromEntries(entries);
+
+  if (includeEntries) {
+    const capped = capColumnValueEntries(entries);
+    if (capped.entries) {
+      stats.entries = capped.entries;
+    }
+    if (capped.entriesTruncated) {
+      stats.entriesTruncated = true;
     }
   }
 
-  const countDistinct = distinctValues.size;
-
-  return {
-    type: "number",
-    count,
-    min,
-    max,
-    mean,
-    stdDev,
-    histogram,
-    countDistinct,
-    sum,
-    totalAreaSqKm: totalWeight > 0 ? totalWeight : undefined,
-  };
+  return stats;
 }

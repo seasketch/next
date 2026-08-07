@@ -66,7 +66,75 @@ export type PresenceTableMetric = OverlayMetricBase & {
         exceededLimit: boolean;
     };
 };
-export type StringOrBooleanColumnValueStats = {
+/**
+ * A per-original-feature record retained alongside column statistics.
+ *
+ * Sources used for overlay analysis are subdivided at upload time, so a
+ * single original feature may be represented by many parts in the FlatGeobuf
+ * file, and those parts may be spread across multiple fragments. Entries are
+ * keyed by the original feature id so that statistics can be combined across
+ * fragments without double-counting features.
+ */
+export type ColumnValuesEntry = {
+    /** `__oidx` of the original (pre-subdivision) feature. */
+    id: number;
+    /** The column's value for this feature. */
+    value: number | string | boolean;
+    /**
+     * Overlap weight. Area of overlap in square kilometers for polygonal
+     * features, or length of overlap in kilometers for linear features, summed
+     * across all subdivided parts of the feature seen within the subject.
+     * Zero for unweighted (e.g. point) features.
+     */
+    weight: number;
+    /**
+     * FlatGeobuf byte offsets (`__offset`) of the subdivided parts that
+     * contributed to this entry. When combining metrics whose subjects may
+     * overlap (e.g. buffered fragments), shared offsets across fragments
+     * indicate that summed weights may overstate the true overlap. Empty for
+     * metrics calculated with an unbuffered subject, where fragments are
+     * disjoint and overlap detection is unnecessary.
+     */
+    offsets: number[];
+};
+/**
+ * Maximum number of per-feature entries retained on a single column's stats.
+ * When a fragment sees more features than this, entries are dropped entirely
+ * (a partial list is useless for exact merging) and `entriesTruncated` is
+ * set; combining across fragments then falls back to approximate stat
+ * merging. Exactness matters most when feature counts are small (e.g.
+ * summing populations of a handful of districts); at large counts the
+ * relative error from double-counting boundary-spanning features shrinks,
+ * while the byte cost of entries grows, so a low cap is the right trade.
+ */
+export declare const MAX_COLUMN_VALUE_ENTRIES = 300;
+type ColumnValueStatsBase = {
+    /**
+     * Per-feature records used to exactly combine statistics across fragments
+     * without double-counting features that span fragment boundaries or were
+     * subdivided into multiple parts at upload time. Only present when the
+     * metric was calculated with includedColumns set (scoped column list) and
+     * the feature count was within {@link MAX_COLUMN_VALUE_ENTRIES}.
+     */
+    entries?: ColumnValuesEntry[];
+    /**
+     * True if entries were dropped because the feature count exceeded
+     * {@link MAX_COLUMN_VALUE_ENTRIES}. When set, no entries are stored at all.
+     */
+    entriesTruncated?: boolean;
+    /**
+     * Set only when stats from *multiple* fragments had to be combined
+     * approximately because per-feature entries were truncated on at least one
+     * input. In that case statistics may double-count features that span
+     * fragment boundaries. Not set when a single fragment's stats are returned
+     * as-is (exact even if its entries were truncated), when an exact merge
+     * merely capped its output entries, or when inputs simply lack entries
+     * (legacy metrics not scoped via includedColumns). This is the flag report
+     * widgets should use to surface accuracy warnings.
+     */
+    truncationAffectedMerge?: boolean;
+};
+export type StringOrBooleanColumnValueStats = ColumnValueStatsBase & {
     type: "string" | "boolean";
     /**
      * Distinct value ([0]) and count [1]
@@ -74,7 +142,7 @@ export type StringOrBooleanColumnValueStats = {
     distinctValues: [string | boolean, number][];
     countDistinct: number;
 };
-export type NumberColumnValueStats = {
+export type NumberColumnValueStats = ColumnValueStatsBase & {
     type: "number";
     count: number;
     min: number;
@@ -85,13 +153,46 @@ export type NumberColumnValueStats = {
     countDistinct: number;
     sum: number;
     /**
-     * If the source layer is polygonal, includes the total area of overlapped
-     * polygons in square meters. This is used to weight statistics when combining
-     * across fragments.
+     * Total overlap weight of the features contributing to these stats: summed
+     * area of overlap in square kilometers for polygonal sources, or summed
+     * length of overlap in kilometers for linear sources. Undefined for
+     * unweighted (e.g. point) sources.
+     *
+     * When per-feature entries are present this is derived from their weights.
+     * Its main purpose is to weight mean/stdDev when combining stats across
+     * fragments *without* entries (the approximate fallback path).
+     */
+    totalWeight?: number;
+    /**
+     * @deprecated Legacy name for {@link totalWeight}, misleading since the
+     * value is a length (km) for linear sources. Still present on metric values
+     * calculated before totalWeight was introduced, and read as a fallback when
+     * combining them. New calculations only set totalWeight.
      */
     totalAreaSqKm?: number;
+    /**
+     * Set when stats were combined from fragments that saw the same subdivided
+     * part (shared `__offset`). This can happen when subjects overlap (e.g.
+     * buffered fragments), in which case summed weights (and weighted
+     * mean/stdDev) may slightly overstate the true overlap. Whole-value
+     * statistics (count, sum, min, max, countDistinct) remain exact.
+     */
+    weightsMayOverlap?: boolean;
 };
 export declare function isNumberColumnValueStats(stats: NumberColumnValueStats | StringOrBooleanColumnValueStats): stats is NumberColumnValueStats;
+/**
+ * Type guard for {@link ColumnValuesEntry}. Accepts untrusted input (e.g.
+ * metric values deserialized from the database).
+ */
+export declare function isColumnValuesEntry(value: unknown): value is ColumnValuesEntry;
+/**
+ * Returns true if the given column stats carry a complete (untruncated) set
+ * of per-feature entries which can be used to exactly combine statistics
+ * across fragments.
+ */
+export declare function hasReliableColumnValueEntries(stats: unknown): stats is ColumnValueStatsBase & {
+    entries: ColumnValuesEntry[];
+};
 export type ValuesForColumns = {
     [attr: string]: StringOrBooleanColumnValueStats | NumberColumnValueStats;
 };
@@ -168,9 +269,38 @@ export type SourceType = "FlatGeobuf" | "GeoJSON" | "GeoTIFF";
  */
 export declare function combineRasterBandStats(statsArray: RasterBandStats[]): RasterBandStats;
 /**
+ * Applies the {@link MAX_COLUMN_VALUE_ENTRIES} cap to a set of entries.
+ * When the cap is exceeded, entries are dropped entirely rather than
+ * partially retained: a truncated list can never be used for exact merging
+ * (see {@link hasReliableColumnValueEntries}), so storing part of it would
+ * only add payload weight without any benefit.
+ */
+export declare function capColumnValueEntries(entries: ColumnValuesEntry[]): {
+    entries: ColumnValuesEntry[] | undefined;
+    entriesTruncated: boolean;
+};
+/**
+ * Computes NumberColumnValueStats from per-feature entries. Each entry
+ * represents a single original (pre-subdivision) feature, so counts, sums,
+ * and distinct values are exact. Mean and stdDev are weighted by each
+ * feature's overlap weight (area/length) when available.
+ */
+export declare function numberColumnStatsFromEntries(entries: ColumnValuesEntry[]): NumberColumnValueStats;
+/**
+ * Computes StringOrBooleanColumnValueStats from per-feature entries.
+ */
+export declare function stringOrBooleanColumnStatsFromEntries(entries: ColumnValuesEntry[]): StringOrBooleanColumnValueStats;
+/**
  * Combines ColumnValueStats from multiple fragments into a single ColumnValueStats.
- * If totalAreaSqKm is available, mean and stdDev are weighted by totalAreaSqKm.
- * Otherwise, they are weighted by count.
+ *
+ * When every input carries a complete set of per-feature entries, statistics
+ * are recomputed exactly from the merged entries, deduplicating features that
+ * span multiple fragments (or were subdivided into multiple parts at upload
+ * time) so values like `sum` are never double-counted.
+ *
+ * Otherwise falls back to approximate merging: if a total overlap weight is
+ * available (totalWeight, or the legacy totalAreaSqKm field), mean and stdDev
+ * are weighted by it; otherwise they are weighted by count.
  */
 export declare function combineNumberColumnValueStats(statsArray: NumberColumnValueStats[]): NumberColumnValueStats | undefined;
 export declare function combineStringOrBooleanColumnValueStats(statsArray: StringOrBooleanColumnValueStats[]): StringOrBooleanColumnValueStats | undefined;
@@ -189,20 +319,21 @@ export type MetricDependencyParameters = {
      */
     groupBy?: string;
     /**
-     * The includedColumns parameter is used to include specific columns in the
-     * results of the metric. For example, if the metric is "column_values", the
-     * results can be limited to the "habitat" column.
-     * In practice it is cheap to include all columns, so this parameter is
-     * typically not used.
+     * Columns to include in the metric results.
+     *
+     * For `column_values`, when set to a non-empty list only those columns are
+     * collected (in a single spatial pass), and per-feature records (`entries`)
+     * are retained on each so statistics can be combined exactly across
+     * fragments. When unset, all columns are collected without entries (legacy /
+     * unscoped behavior).
+     *
+     * Also used by `presence_table` to limit which feature properties are
+     * returned in the table.
      */
     includedColumns?: string[];
     /**
-     * The valueColumn parameter is used to specify the column that contains the
-     * values to be used in the metric. For example, if the metric is
-     * "column_values", the value column is the column that contains the values to
-     * be used in the metric.
-     *
-     * @default undefined
+     * @deprecated Use {@link includedColumns}. Unused by current report widgets;
+     * kept for wire/schema compatibility with older clients.
      */
     valueColumn?: string;
     /**

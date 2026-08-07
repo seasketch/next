@@ -7807,6 +7807,11 @@ export type MetricParameters = {
   maxDistanceKm?: Maybe<Scalars['Float']>;
   maxResults?: Maybe<Scalars['Int']>;
   sourceHasOverlappingFeatures?: Maybe<Scalars['Boolean']>;
+  /**
+   * Deprecated: use includedColumns. Never written by current report widgets;
+   * kept so older clients can still query the field.
+   * @deprecated Use includedColumns instead
+   */
   valueColumn?: Maybe<Scalars['String']>;
   vrm?: Maybe<Scalars['String']>;
 };

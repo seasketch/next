@@ -53,6 +53,9 @@ import useCurrentLang from "../../useCurrentLang";
 import * as Popover from "@radix-ui/react-popover";
 import { Pencil2Icon } from "@radix-ui/react-icons";
 import { GeostatsLayer, isGeostatsLayer } from "@seasketch/geostats-types";
+import ColumnStatsWarning, {
+  hasBufferedColumnValuesDependency,
+} from "./ColumnStatsWarning";
 
 export type PluralizedMessages = Record<string, string>;
 export type PluralizedMessagesByLang = Record<string, PluralizedMessages>;
@@ -751,6 +754,40 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
     lang,
   ]);
 
+  // Combined fragment stats for the selected column, used to surface
+  // accuracy warnings (entriesTruncated / weightsMayOverlap) next to the
+  // displayed value. Geography-subject stats are intentionally excluded.
+  const columnStatsForWarning = useMemo(() => {
+    if (
+      loading ||
+      errors.length > 0 ||
+      (componentSettings?.presentation || "total_area") !== "column_values"
+    ) {
+      return null;
+    }
+    const columnValues = metrics.filter(
+      (m) => m.type === "column_values" && subjectIsFragment(m.subject)
+    );
+    if (!columnValues.length) {
+      return null;
+    }
+    try {
+      const combined = combineMetricsForFragments(
+        columnValues as Pick<Metric, "type" | "value">[],
+        "column_values"
+      ) as ColumnValuesMetric;
+      return combined.value["*"]?.[componentSettings?.column || ""] || null;
+    } catch {
+      return null;
+    }
+  }, [
+    loading,
+    errors,
+    metrics,
+    componentSettings?.presentation,
+    componentSettings?.column,
+  ]);
+
   if (loading) {
     return (
       <div className="inline-block rounded border border-blue-600/30 w-12 h-content relative -mb-[3px] bg-blue-500/20">
@@ -782,6 +819,14 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
         style={underline ? { textDecorationStyle: "solid" } : undefined}
       >
         {formattedValue}
+        {columnStatsForWarning && (
+          <ColumnStatsWarning
+            stats={columnStatsForWarning}
+            displayedStats={[componentSettings?.stat || "mean"]}
+            buffered={hasBufferedColumnValuesDependency(dependencies)}
+            className="ml-0.5"
+          />
+        )}
       </span>
     );
   }
@@ -1154,6 +1199,16 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
       componentSettings: { ...componentSettings, column: value },
     });
 
+    // Scope the underlying metric dependency to the selected column. Metrics
+    // scoped via includedColumns retain per-feature records, allowing
+    // statistics to be combined exactly across fragments without
+    // double-counting features that span fragment boundaries.
+    onUpdateDependencyParameters((dependency) =>
+      dependency.type === "column_values"
+        ? { ...dependency.parameters, includedColumns: [value] }
+        : { ...dependency.parameters }
+    );
+
     const nextValueColumnIsNumeric =
       valueColumnAttributesByName[value]?.type === "number";
     if (
@@ -1496,7 +1551,9 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
             </div>
           </>
         )}
-        {(presentation === "count" || presentation === "percent_count") && (
+        {(presentation === "count" ||
+          presentation === "percent_count" ||
+          presentation === "column_values") && (
           <button
             type="button"
             onClick={handleBufferClick}

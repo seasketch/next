@@ -68,7 +68,8 @@ export interface ReportCardRegistration<T> {
   /**
    * Required layer parameters that must be set when selecting layers.
    * Each parameter name corresponds to a property that must exist in layerParameters.
-   * Example: ["valueColumn"] means each layer must have layerParameters.valueColumn set.
+   * Example: ["includedColumns"] means each layer must have
+   * layerParameters.includedColumns set.
    */
   requiredLayerParameters?: string[];
 }
@@ -100,7 +101,8 @@ export interface RegisterReportCardConfig<T> {
   /**
    * Required layer parameters that must be set when selecting layers.
    * Each parameter name corresponds to a property that must exist in layerParameters.
-   * Example: ["valueColumn"] means each layer must have layerParameters.valueColumn set.
+   * Example: ["includedColumns"] means each layer must have
+   * layerParameters.includedColumns set.
    */
   requiredLayerParameters?: string[];
 }

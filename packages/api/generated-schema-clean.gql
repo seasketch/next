@@ -9025,7 +9025,11 @@ type MetricParameters {
   maxDistanceKm: Float
   maxResults: Int
   sourceHasOverlappingFeatures: Boolean
-  valueColumn: String
+  """
+  Deprecated: use includedColumns. Never written by current report widgets;
+  kept so older clients can still query the field.
+  """
+  valueColumn: String @deprecated(reason: "Use includedColumns instead")
   vrm: String
 }
 

@@ -354,9 +354,7 @@ async function createPresenceTable({ features, differenceMultiPolygon, subjectFe
     }
     return results;
 }
-async function collectColumnValues({ features, differenceMultiPolygon, subjectFeature, 
-// property,
-groupBy, }) {
+async function collectColumnValues({ features, differenceMultiPolygon, subjectFeature, properties, groupBy, }) {
     const results = { "*": {} };
     for (const f of features) {
         if (f.feature.geometry.type === "Point" ||
@@ -392,11 +390,37 @@ groupBy, }) {
             f.feature.geometry.type === "MultiLineString") {
             f.feature = performOperationsOnFeature(f.feature, f.requiresIntersection, f.requiresDifference, differenceMultiPolygon, subjectFeature);
         }
-        addColumnValuesToResults(results, f.feature, groupBy);
+        addColumnValuesToResults(results, f.feature, groupBy, properties);
     }
     return results;
 }
-function addColumnValuesToResults(results, feature, groupBy) {
+function addColumnValuesToResults(results, feature, groupBy, properties) {
+    // Overlap weight for this (already clipped) part. Calculated once, shared
+    // by all collected columns.
+    let weight = 0;
+    if (feature.geometry.type === "Polygon" ||
+        feature.geometry.type === "MultiPolygon") {
+        const sqKm = (0, area_1.default)(feature) * 1e-6;
+        if (isNaN(sqKm) || sqKm === 0) {
+            return;
+        }
+        weight = sqKm;
+    }
+    else if (feature.geometry.type === "LineString" ||
+        feature.geometry.type === "MultiLineString") {
+        const length = (0, length_1.default)(feature);
+        if (isNaN(length) || length === 0) {
+            return;
+        }
+        weight = length;
+    }
+    const offset = feature.properties.__offset;
+    // Sources preprocessed for reporting are subdivided and stamp __oidx on
+    // each part. Fall back to the part's byte offset for sources without it
+    // (no cross-part grouping possible in that case).
+    const oidx = typeof feature.properties.__oidx === "number"
+        ? feature.properties.__oidx
+        : offset;
     for (const attr in feature.properties) {
         if (attr === "__oidx" ||
             attr === "__byteLength" ||
@@ -404,24 +428,13 @@ function addColumnValuesToResults(results, feature, groupBy) {
             attr === "__offset") {
             continue;
         }
+        if (properties !== undefined &&
+            properties.length > 0 &&
+            !properties.includes(attr)) {
+            continue;
+        }
         const value = feature.properties[attr];
-        const columnValue = [value];
-        if (feature.geometry.type === "Polygon" ||
-            feature.geometry.type === "MultiPolygon") {
-            const sqKm = (0, area_1.default)(feature) * 1e-6;
-            if (isNaN(sqKm) || sqKm === 0) {
-                continue;
-            }
-            columnValue.push(sqKm);
-        }
-        else if (feature.geometry.type === "LineString" ||
-            feature.geometry.type === "MultiLineString") {
-            const length = (0, length_1.default)(feature);
-            if (isNaN(length) || length === 0) {
-                continue;
-            }
-            columnValue.push(length);
-        }
+        const columnValue = [value, weight, oidx, offset];
         if (typeof value === "number" ||
             typeof value === "string" ||
             typeof value === "boolean") {
@@ -483,14 +496,11 @@ node_worker_threads_1.parentPort?.on("message", async (job) => {
             });
         }
         else if (operation === "column_values") {
-            // if (!job.property) {
-            //   throw new Error("property is required for column_values operation");
-            // }
             result = await collectColumnValues({
                 features: job.features,
                 differenceMultiPolygon: job.differenceMultiPolygon,
                 subjectFeature: job.subjectFeature,
-                // property: job.property,
+                properties: job.includedProperties,
                 groupBy: job.groupBy,
             });
         }

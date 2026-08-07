@@ -10,7 +10,7 @@ export declare class ProgressNotifier {
     private eta;
     private sendMessage;
     constructor(jobKey: string, maxWaitMs: number, queueUrl: string);
-    notify(progress: number, message?: string): Promise<import("@aws-sdk/client-sqs").SendMessageCommandOutput> | Promise<void>;
+    notify(progress: number, message?: string): Promise<void> | Promise<import("@aws-sdk/client-sqs").SendMessageCommandOutput>;
     sendNotification(): Promise<import("@aws-sdk/client-sqs").SendMessageCommandOutput>;
     flush(): void;
 }

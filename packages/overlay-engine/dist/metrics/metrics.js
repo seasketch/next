@@ -1,9 +1,15 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.MAX_COLUMN_VALUE_ENTRIES = void 0;
 exports.isNumberColumnValueStats = isNumberColumnValueStats;
+exports.isColumnValuesEntry = isColumnValuesEntry;
+exports.hasReliableColumnValueEntries = hasReliableColumnValueEntries;
 exports.subjectIsFragment = subjectIsFragment;
 exports.subjectIsGeography = subjectIsGeography;
 exports.combineRasterBandStats = combineRasterBandStats;
+exports.capColumnValueEntries = capColumnValueEntries;
+exports.numberColumnStatsFromEntries = numberColumnStatsFromEntries;
+exports.stringOrBooleanColumnStatsFromEntries = stringOrBooleanColumnStatsFromEntries;
 exports.combineNumberColumnValueStats = combineNumberColumnValueStats;
 exports.combineStringOrBooleanColumnValueStats = combineStringOrBooleanColumnValueStats;
 exports.hashMetricDependency = hashMetricDependency;
@@ -49,8 +55,63 @@ function downsampleColumnHistogram(histogram, maxEntries) {
     }
     return result;
 }
+/**
+ * Maximum number of per-feature entries retained on a single column's stats.
+ * When a fragment sees more features than this, entries are dropped entirely
+ * (a partial list is useless for exact merging) and `entriesTruncated` is
+ * set; combining across fragments then falls back to approximate stat
+ * merging. Exactness matters most when feature counts are small (e.g.
+ * summing populations of a handful of districts); at large counts the
+ * relative error from double-counting boundary-spanning features shrinks,
+ * while the byte cost of entries grows, so a low cap is the right trade.
+ */
+exports.MAX_COLUMN_VALUE_ENTRIES = 300;
 function isNumberColumnValueStats(stats) {
     return stats.type === "number";
+}
+/**
+ * Type guard for {@link ColumnValuesEntry}. Accepts untrusted input (e.g.
+ * metric values deserialized from the database).
+ */
+function isColumnValuesEntry(value) {
+    if (value === null || typeof value !== "object") {
+        return false;
+    }
+    const candidate = value;
+    if (typeof candidate.id !== "number") {
+        return false;
+    }
+    if (typeof candidate.value !== "number" &&
+        typeof candidate.value !== "string" &&
+        typeof candidate.value !== "boolean") {
+        return false;
+    }
+    if (typeof candidate.weight !== "number") {
+        return false;
+    }
+    if (!Array.isArray(candidate.offsets) ||
+        candidate.offsets.some((o) => typeof o !== "number")) {
+        return false;
+    }
+    return true;
+}
+/**
+ * Returns true if the given column stats carry a complete (untruncated) set
+ * of per-feature entries which can be used to exactly combine statistics
+ * across fragments.
+ */
+function hasReliableColumnValueEntries(stats) {
+    if (stats === null || typeof stats !== "object") {
+        return false;
+    }
+    const candidate = stats;
+    if (candidate.entriesTruncated === true) {
+        return false;
+    }
+    if (!Array.isArray(candidate.entries)) {
+        return false;
+    }
+    return candidate.entries.every(isColumnValuesEntry);
 }
 function subjectIsFragment(subject) {
     return subject != null && typeof subject === "object" && "hash" in subject;
@@ -157,9 +218,206 @@ function combineRasterBandStats(statsArray) {
     };
 }
 /**
+ * Applies the {@link MAX_COLUMN_VALUE_ENTRIES} cap to a set of entries.
+ * When the cap is exceeded, entries are dropped entirely rather than
+ * partially retained: a truncated list can never be used for exact merging
+ * (see {@link hasReliableColumnValueEntries}), so storing part of it would
+ * only add payload weight without any benefit.
+ */
+function capColumnValueEntries(entries) {
+    if (entries.length <= exports.MAX_COLUMN_VALUE_ENTRIES) {
+        return { entries, entriesTruncated: false };
+    }
+    return {
+        entries: undefined,
+        entriesTruncated: true,
+    };
+}
+/**
+ * Computes NumberColumnValueStats from per-feature entries. Each entry
+ * represents a single original (pre-subdivision) feature, so counts, sums,
+ * and distinct values are exact. Mean and stdDev are weighted by each
+ * feature's overlap weight (area/length) when available.
+ */
+function numberColumnStatsFromEntries(entries) {
+    const count = entries.length;
+    if (count === 0) {
+        return {
+            type: "number",
+            count: 0,
+            min: NaN,
+            max: NaN,
+            mean: NaN,
+            stdDev: NaN,
+            histogram: [],
+            countDistinct: 0,
+            sum: 0,
+        };
+    }
+    let minValue = Infinity;
+    let maxValue = -Infinity;
+    let sum = 0;
+    let weightedSum = 0;
+    let totalWeight = 0;
+    const histogramMap = new Map();
+    const distinctValues = new Set();
+    for (const entry of entries) {
+        const value = entry.value;
+        if (typeof value !== "number") {
+            continue;
+        }
+        distinctValues.add(value);
+        const weight = entry.weight;
+        if (value < minValue)
+            minValue = value;
+        if (value > maxValue)
+            maxValue = value;
+        sum += value;
+        if (isFinite(weight) && weight > 0 && isFinite(value)) {
+            weightedSum += value * weight;
+            totalWeight += weight;
+        }
+        const histogramContribution = isFinite(weight) && weight > 0 ? weight : 1;
+        histogramMap.set(value, (histogramMap.get(value) || 0) + histogramContribution);
+    }
+    const meanValue = totalWeight > 0 ? weightedSum / totalWeight : sum / count;
+    let varianceNumerator = 0;
+    if (totalWeight > 0) {
+        for (const entry of entries) {
+            const value = entry.value;
+            const weight = entry.weight;
+            if (typeof value !== "number" ||
+                !isFinite(weight) ||
+                weight <= 0) {
+                continue;
+            }
+            const diff = value - meanValue;
+            varianceNumerator += weight * diff * diff;
+        }
+        varianceNumerator = varianceNumerator / totalWeight;
+    }
+    else {
+        for (const entry of entries) {
+            const value = entry.value;
+            if (typeof value !== "number") {
+                continue;
+            }
+            const diff = value - meanValue;
+            varianceNumerator += diff * diff;
+        }
+        varianceNumerator = varianceNumerator / count;
+    }
+    const stdDev = Math.sqrt(varianceNumerator);
+    let histogram = Array.from(histogramMap.entries()).sort((a, b) => a[0] - b[0]);
+    const MAX_HISTOGRAM_ENTRIES = 200;
+    if (histogram.length > MAX_HISTOGRAM_ENTRIES) {
+        histogram = downsampleColumnHistogram(histogram, MAX_HISTOGRAM_ENTRIES);
+    }
+    return {
+        type: "number",
+        count,
+        min: minValue,
+        max: maxValue,
+        mean: meanValue,
+        stdDev,
+        histogram,
+        countDistinct: distinctValues.size,
+        sum,
+        totalWeight: totalWeight > 0 ? totalWeight : undefined,
+    };
+}
+/**
+ * Reads a stats object's total overlap weight, falling back to the legacy
+ * totalAreaSqKm field for metric values stored before the rename.
+ */
+function statsTotalWeight(stats) {
+    return typeof stats.totalWeight === "number"
+        ? stats.totalWeight
+        : stats.totalAreaSqKm;
+}
+/**
+ * Computes StringOrBooleanColumnValueStats from per-feature entries.
+ */
+function stringOrBooleanColumnStatsFromEntries(entries) {
+    const distinctMap = new Map();
+    let sawBoolean = false;
+    let sawString = false;
+    for (const entry of entries) {
+        const value = entry.value;
+        if (typeof value !== "string" && typeof value !== "boolean") {
+            continue;
+        }
+        if (typeof value === "boolean") {
+            sawBoolean = true;
+        }
+        else {
+            sawString = true;
+        }
+        distinctMap.set(value, (distinctMap.get(value) ?? 0) + 1);
+    }
+    return {
+        type: sawBoolean && !sawString ? "boolean" : "string",
+        distinctValues: Array.from(distinctMap.entries()),
+        countDistinct: distinctMap.size,
+    };
+}
+/**
+ * Merges per-feature entries from multiple fragments, deduplicating by
+ * original feature id. Weights of the same feature are summed across
+ * fragments (fragments are disjoint, so each fragment's clipped weight is a
+ * distinct portion of the feature). Returns `sharedOffsets: true` when the
+ * same subdivided part contributed to more than one fragment's stats, which
+ * indicates the subjects overlapped (e.g. buffered fragments) and summed
+ * weights may be overstated.
+ */
+function mergeColumnValueEntries(statsArray) {
+    const byId = new Map();
+    const seenOffsets = new Set();
+    let sharedOffsets = false;
+    for (const stats of statsArray) {
+        const offsetsInThisFragment = new Set();
+        for (const entry of stats.entries ?? []) {
+            const existing = byId.get(entry.id);
+            if (existing) {
+                existing.weight += entry.weight;
+                for (const offset of entry.offsets) {
+                    if (!existing.offsets.includes(offset)) {
+                        existing.offsets.push(offset);
+                    }
+                }
+            }
+            else {
+                byId.set(entry.id, {
+                    id: entry.id,
+                    value: entry.value,
+                    weight: entry.weight,
+                    offsets: [...entry.offsets],
+                });
+            }
+            for (const offset of entry.offsets) {
+                offsetsInThisFragment.add(offset);
+            }
+        }
+        for (const offset of offsetsInThisFragment) {
+            if (seenOffsets.has(offset)) {
+                sharedOffsets = true;
+            }
+            seenOffsets.add(offset);
+        }
+    }
+    return { entries: Array.from(byId.values()), sharedOffsets };
+}
+/**
  * Combines ColumnValueStats from multiple fragments into a single ColumnValueStats.
- * If totalAreaSqKm is available, mean and stdDev are weighted by totalAreaSqKm.
- * Otherwise, they are weighted by count.
+ *
+ * When every input carries a complete set of per-feature entries, statistics
+ * are recomputed exactly from the merged entries, deduplicating features that
+ * span multiple fragments (or were subdivided into multiple parts at upload
+ * time) so values like `sum` are never double-counted.
+ *
+ * Otherwise falls back to approximate merging: if a total overlap weight is
+ * available (totalWeight, or the legacy totalAreaSqKm field), mean and stdDev
+ * are weighted by it; otherwise they are weighted by count.
  */
 function combineNumberColumnValueStats(statsArray) {
     if (statsArray.length === 0) {
@@ -168,8 +426,28 @@ function combineNumberColumnValueStats(statsArray) {
     if (statsArray.length === 1) {
         return statsArray[0];
     }
-    // Determine whether to weight by area or by count
-    const useAreaWeight = statsArray.some((s) => typeof s.totalAreaSqKm === "number" && s.totalAreaSqKm > 0);
+    if (statsArray.every(hasReliableColumnValueEntries)) {
+        const { entries, sharedOffsets } = mergeColumnValueEntries(statsArray);
+        // Stats are computed from the full merged entry set (exact); the cap
+        // only limits what is retained for any further combination.
+        const combined = numberColumnStatsFromEntries(entries);
+        const capped = capColumnValueEntries(entries);
+        if (capped.entries) {
+            combined.entries = capped.entries;
+        }
+        if (capped.entriesTruncated) {
+            combined.entriesTruncated = true;
+        }
+        if (sharedOffsets) {
+            combined.weightsMayOverlap = true;
+        }
+        return combined;
+    }
+    // Determine whether to weight by overlap size (area/length) or by count
+    const useOverlapWeight = statsArray.some((s) => {
+        const weight = statsTotalWeight(s);
+        return typeof weight === "number" && weight > 0;
+    });
     let totalCount = 0;
     let totalSum = 0;
     let totalWeight = 0;
@@ -182,8 +460,9 @@ function combineNumberColumnValueStats(statsArray) {
     // Merge histograms by value
     const histogramMap = new Map();
     for (const stats of statsArray) {
-        const weight = useAreaWeight && typeof stats.totalAreaSqKm === "number"
-            ? Math.max(stats.totalAreaSqKm, 0)
+        const statsWeight = statsTotalWeight(stats);
+        const weight = useOverlapWeight && typeof statsWeight === "number"
+            ? Math.max(statsWeight, 0)
             : stats.count;
         if (!isFinite(weight) || weight <= 0) {
             continue;
@@ -243,13 +522,13 @@ function combineNumberColumnValueStats(statsArray) {
     if (combinedHistogram.length > MAX_HISTOGRAM_ENTRIES) {
         combinedHistogram = downsampleColumnHistogram(combinedHistogram, MAX_HISTOGRAM_ENTRIES);
     }
-    const totalAreaSqKm = useAreaWeight
-        ? statsArray.reduce((acc, s) => acc +
-            (typeof s.totalAreaSqKm === "number" && s.totalAreaSqKm > 0
-                ? s.totalAreaSqKm
-                : 0), 0)
+    const combinedTotalWeight = useOverlapWeight
+        ? statsArray.reduce((acc, s) => {
+            const weight = statsTotalWeight(s);
+            return acc + (typeof weight === "number" && weight > 0 ? weight : 0);
+        }, 0)
         : undefined;
-    return {
+    const result = {
         type: "number",
         count: combinedCount,
         min: combinedMin,
@@ -259,8 +538,18 @@ function combineNumberColumnValueStats(statsArray) {
         histogram: combinedHistogram,
         countDistinct: histogramMap.size,
         sum: combinedSum,
-        totalAreaSqKm,
+        totalWeight: combinedTotalWeight,
     };
+    // If exact merging wasn't possible because an input exceeded the entry
+    // cap, surface that on the combined result so consumers (e.g. report
+    // widgets) can warn that features spanning fragments may be
+    // double-counted. Inputs that merely lack entries (legacy metrics, or
+    // metrics not scoped via includedColumns) do not set these flags.
+    if (statsArray.some((s) => s.entriesTruncated === true)) {
+        result.entriesTruncated = true;
+        result.truncationAffectedMerge = true;
+    }
+    return result;
 }
 function combineStringOrBooleanColumnValueStats(statsArray) {
     if (statsArray.length === 0) {
@@ -268,6 +557,23 @@ function combineStringOrBooleanColumnValueStats(statsArray) {
     }
     if (statsArray.length === 1) {
         return statsArray[0];
+    }
+    if (statsArray.every(hasReliableColumnValueEntries)) {
+        const { entries } = mergeColumnValueEntries(statsArray);
+        const combined = stringOrBooleanColumnStatsFromEntries(entries);
+        // Preserve the declared type when entries alone are ambiguous (e.g. all
+        // fragments empty).
+        if (entries.length === 0) {
+            combined.type = statsArray[0].type;
+        }
+        const capped = capColumnValueEntries(entries);
+        if (capped.entries) {
+            combined.entries = capped.entries;
+        }
+        if (capped.entriesTruncated) {
+            combined.entriesTruncated = true;
+        }
+        return combined;
     }
     const distinctValues = [];
     for (const stats of statsArray) {
@@ -284,11 +590,18 @@ function combineStringOrBooleanColumnValueStats(statsArray) {
         }
     }
     const outputType = statsArray[0]?.type === "boolean" ? "boolean" : "string";
-    return {
+    const result = {
         type: outputType,
         distinctValues,
         countDistinct: distinctValues.length,
     };
+    // See combineNumberColumnValueStats: propagate truncation so consumers
+    // can warn that the approximate merge may double-count features.
+    if (statsArray.some((s) => s.entriesTruncated === true)) {
+        result.entriesTruncated = true;
+        result.truncationAffectedMerge = true;
+    }
+    return result;
 }
 /**
  * Creates a unique id for a given metric dependency. Any difference in

@@ -251,7 +251,6 @@ export default async function handler(payload: OverlayWorkerPayload) {
           workerPool,
           undefined,
           undefined,
-          undefined,
           payload.sourceHasOverlappingFeatures,
         );
         const area = await processor.calculate();
@@ -282,15 +281,28 @@ export default async function handler(payload: OverlayWorkerPayload) {
             pageSize: "5MB",
           },
         );
-        // Extract valueColumn from parameters for column_values
-        const columnValuesProperty =
-          payload.type === "column_values" ? payload.valueColumn : undefined;
-
         const bufferedSubjects = await bufferedSubjectsForAnalysis(
           intersectionFeature,
           differenceSources,
           payload.bufferDistanceKm,
         );
+
+        // Prefer includedColumns; fall back to deprecated valueColumn so a
+        // legacy scoped dependency still retains per-feature entries.
+        const includedColumns =
+          payload.includedColumns?.length
+            ? payload.includedColumns
+            : payload.valueColumn
+              ? [payload.valueColumn]
+              : undefined;
+
+        // Buffered subjects can overlap sibling fragments' subjects, so
+        // per-feature entry offsets must be retained for overlap detection
+        // when combining. Unbuffered fragments are disjoint and skip them.
+        const subjectIsBuffered =
+          typeof payload.bufferDistanceKm === "number" &&
+          isFinite(payload.bufferDistanceKm) &&
+          payload.bufferDistanceKm > 0;
 
         const processor = new OverlayEngineBatchProcessor(
           payload.type,
@@ -303,9 +315,10 @@ export default async function handler(payload: OverlayWorkerPayload) {
           helpers,
           payload.groupBy,
           workerPool,
-          payload.includedColumns,
+          includedColumns,
           payload.maxResults,
-          columnValuesProperty,
+          undefined,
+          subjectIsBuffered,
         );
         const result = await processor.calculate();
         await flushMessages();

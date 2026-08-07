@@ -5976,7 +5976,7 @@ async function collectColumnValues({
   features,
   differenceMultiPolygon,
   subjectFeature,
-  // property,
+  properties,
   groupBy
 }) {
   const results = { "*": {} };
@@ -6014,30 +6014,36 @@ async function collectColumnValues({
         subjectFeature
       );
     }
-    addColumnValuesToResults(results, f.feature, groupBy);
+    addColumnValuesToResults(results, f.feature, groupBy, properties);
   }
   return results;
 }
-function addColumnValuesToResults(results, feature2, groupBy) {
+function addColumnValuesToResults(results, feature2, groupBy, properties) {
+  let weight = 0;
+  if (feature2.geometry.type === "Polygon" || feature2.geometry.type === "MultiPolygon") {
+    const sqKm = turf_area_default(feature2) * 1e-6;
+    if (isNaN(sqKm) || sqKm === 0) {
+      return;
+    }
+    weight = sqKm;
+  } else if (feature2.geometry.type === "LineString" || feature2.geometry.type === "MultiLineString") {
+    const length3 = index_default2(feature2);
+    if (isNaN(length3) || length3 === 0) {
+      return;
+    }
+    weight = length3;
+  }
+  const offset = feature2.properties.__offset;
+  const oidx = typeof feature2.properties.__oidx === "number" ? feature2.properties.__oidx : offset;
   for (const attr in feature2.properties) {
     if (attr === "__oidx" || attr === "__byteLength" || attr === "__area" || attr === "__offset") {
       continue;
     }
-    const value = feature2.properties[attr];
-    const columnValue = [value];
-    if (feature2.geometry.type === "Polygon" || feature2.geometry.type === "MultiPolygon") {
-      const sqKm = turf_area_default(feature2) * 1e-6;
-      if (isNaN(sqKm) || sqKm === 0) {
-        continue;
-      }
-      columnValue.push(sqKm);
-    } else if (feature2.geometry.type === "LineString" || feature2.geometry.type === "MultiLineString") {
-      const length3 = index_default2(feature2);
-      if (isNaN(length3) || length3 === 0) {
-        continue;
-      }
-      columnValue.push(length3);
+    if (properties !== void 0 && properties.length > 0 && !properties.includes(attr)) {
+      continue;
     }
+    const value = feature2.properties[attr];
+    const columnValue = [value, weight, oidx, offset];
     if (typeof value === "number" || typeof value === "string" || typeof value === "boolean") {
       if (!(attr in results["*"]) || !Array.isArray(results["*"][attr])) {
         results["*"][attr] = [];
@@ -6098,7 +6104,7 @@ import_node_worker_threads.parentPort?.on(
           features: job.features,
           differenceMultiPolygon: job.differenceMultiPolygon,
           subjectFeature: job.subjectFeature,
-          // property: job.property,
+          properties: job.includedProperties,
           groupBy: job.groupBy
         });
       } else {

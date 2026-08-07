@@ -1645,7 +1645,12 @@ export function buildReportCommandGroups({
                 });
               },
             });
-            if (bestNumericColumn || source.anyColumn) {
+            // column_values widgets require a column to scope the metric to
+            // (includedColumns). If the layer has no usable column, skip
+            // these commands entirely rather than provisioning a broken
+            // dependency.
+            const columnForStats = bestNumericColumn || source.anyColumn;
+            if (columnForStats) {
               inlineGroup.items.push({
                 // eslint-disable-next-line i18next/no-literal-string
                 id: `overlay-layer-${tocId}-inline-column-stats`,
@@ -1661,50 +1666,58 @@ export function buildReportCommandGroups({
                         type: "column_values",
                         subjectType: "fragments",
                         stableId,
+                        parameters: {
+                          // Scope columns so per-feature records are retained
+                          // and fragment stats combine exactly.
+                          includedColumns: [columnForStats],
+                        },
                       },
                     ],
                     componentSettings: {
                       presentation: "column_values",
                       stat: "mean",
-                      column: bestNumericColumn || source.anyColumn,
+                      column: columnForStats,
+                    },
+                  });
+                },
+              });
+
+              blockGroup.items.push({
+                // eslint-disable-next-line i18next/no-literal-string
+                id: `overlay-layer-${tocId}-column-stats-table`,
+                label: "Column Statistics Table",
+                description:
+                  "Show key statistics for a column such as min, max, mean, sum, and distinct value count.",
+                screenshotSrc: "/slashCommands/column-stats-table.png",
+                run: (state, dispatch, view) => {
+                  return insertBlockMetric(view, state.selection.ranges[0], {
+                    type: "ColumnStatisticsTable",
+                    metrics: [
+                      {
+                        type: "column_values",
+                        subjectType: "fragments",
+                        stableId,
+                        parameters: {
+                          includedColumns: [columnForStats],
+                        },
+                      },
+                    ],
+                    componentSettings: {
+                      columns: [columnForStats],
+                      displayStats: bestNumericColumn
+                        ? {
+                            min: true,
+                            max: true,
+                            mean: true,
+                          }
+                        : {
+                            countDistinct: true,
+                          },
                     },
                   });
                 },
               });
             }
-
-            blockGroup.items.push({
-              // eslint-disable-next-line i18next/no-literal-string
-              id: `overlay-layer-${tocId}-column-stats-table`,
-              label: "Column Statistics Table",
-              description:
-                "Show key statistics for a column such as min, max, mean, sum, and distinct value count.",
-              screenshotSrc: "/slashCommands/column-stats-table.png",
-              run: (state, dispatch, view) => {
-                return insertBlockMetric(view, state.selection.ranges[0], {
-                  type: "ColumnStatisticsTable",
-                  metrics: [
-                    {
-                      type: "column_values",
-                      subjectType: "fragments",
-                      stableId,
-                    },
-                  ],
-                  componentSettings: {
-                    columns: [bestNumericColumn || source.anyColumn],
-                    displayStats: bestNumericColumn
-                      ? {
-                          min: true,
-                          max: true,
-                          mean: true,
-                        }
-                      : {
-                          countDistinct: true,
-                        },
-                  },
-                });
-              },
-            });
 
             if (bestNumericColumn) {
               blockGroup.items.push({
@@ -1721,6 +1734,9 @@ export function buildReportCommandGroups({
                         type: "column_values",
                         subjectType: "fragments",
                         stableId,
+                        parameters: {
+                          includedColumns: [bestNumericColumn],
+                        },
                       },
                     ],
                     componentSettings: {

@@ -55,16 +55,26 @@ export declare function createPresenceTable({ features, differenceMultiPolygon, 
     exceededLimit: boolean;
     values: PresenceTableValue[];
 }>;
+/**
+ * Interim record for a single (possibly subdivided) feature part that
+ * intersects the subject. Parts are grouped by original feature id when
+ * statistics are finalized so that subdivided features are not
+ * double-counted.
+ */
 export type ColumnValues = [
-    (
     /** column value */
-    number | string | boolean),
+    number | string | boolean,
+    /**
+     * Overlap weight: area in sq km if the feature is polygonal, length in km
+     * if it is linear, or 0 for unweighted (e.g. point) features.
+     */
+    number,
+    /** `__oidx` of the original (pre-subdivision) feature */
+    number,
+    /** `__offset` of this part in the FlatGeobuf file */
     number
-] | [
-    /** column value */
-    number | string | boolean
 ];
-export declare function collectColumnValues({ features, differenceMultiPolygon, subjectFeature, groupBy, }: {
+export declare function collectColumnValues({ features, differenceMultiPolygon, subjectFeature, properties, groupBy, }: {
     features: {
         feature: FeatureWithMetadata<Feature<Geometry>>;
         requiresIntersection: boolean;
@@ -72,6 +82,8 @@ export declare function collectColumnValues({ features, differenceMultiPolygon, 
     }[];
     differenceMultiPolygon: clipping.Geom[];
     subjectFeature: Feature<Polygon | MultiPolygon>;
+    /** If provided, only values for these columns are collected. */
+    properties?: string[];
     groupBy?: string;
 }): Promise<{
     [classKey: string]: {
@@ -82,6 +94,6 @@ export declare function addColumnValuesToResults(results: {
     [classKey: string]: {
         [attr: string]: ColumnValues[];
     };
-}, feature: FeatureWithMetadata<Feature<Geometry>>, groupBy?: string): void;
+}, feature: FeatureWithMetadata<Feature<Geometry>>, groupBy?: string, properties?: string[]): void;
 export declare function pick(object: any, keys?: string[]): any;
 //# sourceMappingURL=clipBatch.d.ts.map

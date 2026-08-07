@@ -59,6 +59,7 @@ const clipping = __importStar(require("polyclip-ts"));
 const reproject_1 = require("./utils/reproject");
 const bbox_1 = __importDefault(require("@turf/bbox"));
 const area_1 = __importDefault(require("@turf/area"));
+const overlayEngineAccessToken_1 = require("./overlayEngineAccessToken");
 const SIMPLIFICATION_TOLERANCE = 0.000018;
 const pool = new undici_1.Pool(`https://uploads.seasketch.org`, {
     // 10 second timeout for body
@@ -71,58 +72,72 @@ const cache = new lru_cache_1.LRUCache({
     },
 });
 const inFlightRequests = new Map();
+/** Drain undici response body without destroy() — destroy emits unhandled UND_ERR_ABORTED and can kill the Lambda before SQS error reporting. */
+async function discardResponseBody(body) {
+    if (typeof body.dump === "function") {
+        await body.dump();
+        return;
+    }
+    await body.arrayBuffer();
+}
+async function fetchUploadsRange(url, range, retriedAuth = false) {
+    const token = await (0, overlayEngineAccessToken_1.getOverlayEngineAccessToken)();
+    const response = await pool.request({
+        path: url.replace("https://uploads.seasketch.org", ""),
+        method: "GET",
+        headers: {
+            Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
+            Authorization: `Bearer ${token}`,
+        },
+    });
+    if ((response.statusCode === 401 || response.statusCode === 403) &&
+        !retriedAuth) {
+        await discardResponseBody(response.body);
+        (0, overlayEngineAccessToken_1.bustOverlayEngineAccessTokenCache)();
+        return fetchUploadsRange(url, range, true);
+    }
+    if (response.statusCode >= 400) {
+        await discardResponseBody(response.body);
+        const authHint = response.statusCode === 401 || response.statusCode === 403
+            ? " (uploads authentication failed)"
+            : "";
+        throw new Error(`HTTP ${response.statusCode}${authHint}. ${url} range=${range[0]}-${range[1] ? range[1] : ""}`);
+    }
+    return response.body.arrayBuffer();
+}
 const sourceCache = new fgb_source_1.SourceCache("1GB", {
     fetchRangeFn: (url, range) => {
-        // console.log("fetching", url, range);
         const cacheKey = `${url} range=${range[0]}-${range[1] ? range[1] : ""}`;
-        // console.time(cacheKey);
         const cached = cache.get(cacheKey);
         if (cached) {
-            // console.timeEnd(cacheKey);
-            // console.log("cache hit", cacheKey);
             return Promise.resolve(cached);
         }
         else if (inFlightRequests.has(cacheKey)) {
-            // console.log("in-flight request hit", cacheKey);
             return inFlightRequests.get(cacheKey);
         }
         else {
-            // console.log("cache miss", cacheKey);
-            return pool
-                .request({
-                path: url.replace("https://uploads.seasketch.org", ""),
-                method: "GET",
-                headers: {
-                    Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
-                },
-            })
-                .then(async (response) => {
-                const buffer = await response.body.arrayBuffer();
-                // console.log("fetched", cacheKey, buffer.byteLength);
-                return buffer;
-            })
+            const request = fetchUploadsRange(url, range)
                 .then((buffer) => {
-                // console.timeEnd(cacheKey);
                 cache.set(cacheKey, buffer);
-                // console.log("response", response.headers.get("x-cache-status"));
                 return buffer;
             })
                 .catch((e) => {
                 console.log("rethrowing error for", cacheKey);
-                // rethrow error with enhanced error message consisting of url, range, and original error message
-                throw new Error(`${e.message}. ${url} range=${range[0]}-${range[1] ? range[1] : ""}: ${e.message}`);
+                const message = e instanceof Error ? e.message : String(e);
+                throw new Error(`${message}. ${url} range=${range[0]}-${range[1] ? range[1] : ""}: ${message}`);
+            })
+                .finally(() => {
+                inFlightRequests.delete(cacheKey);
             });
-            // .finally(() => {
-            //   inFlightRequests.delete(cacheKey);
-            // });
-            // inFlightRequests.set(cacheKey, request);
-            // return request;
+            inFlightRequests.set(cacheKey, request);
+            return request;
         }
     },
     maxCacheSize: "256MB",
 });
 const workerPool = (0, OverlayEngineBatchProcessor_1.createClippingWorkerPool)(process.env.PISCINA_WORKER_PATH || "worker.js");
 async function handler(payload) {
+    var _a;
     console.log("Overlay worker (v2) received payload", payload);
     const startTime = Date.now();
     const progressNotifier = new ProgressNotifier_1.ProgressNotifier(payload.jobKey, 1000, payload.queueUrl);
@@ -169,11 +184,11 @@ async function handler(payload) {
                 const source = await sourceCache.get(payload.sourceUrl, {
                     pageSize: "5MB",
                 });
-                const bufferedIntersectionFeature = applySubjectBuffer(intersectionFeature, payload.bufferDistanceKm);
+                const bufferedSubjects = await bufferedSubjectsForAnalysis(intersectionFeature, differenceSources, payload.bufferDistanceKm);
                 const processor = new OverlayEngineBatchProcessor_1.OverlayEngineBatchProcessor("overlay_area", 1024 * 1024 * 1, // 5MB
-                (0, simplify_1.default)(bufferedIntersectionFeature, {
+                (0, simplify_1.default)(bufferedSubjects.intersectionFeature, {
                     tolerance: SIMPLIFICATION_TOLERANCE,
-                }), source, differenceSources, helpers, payload.groupBy, workerPool, undefined, undefined, undefined, payload.sourceHasOverlappingFeatures);
+                }), source, bufferedSubjects.differenceSources, helpers, payload.groupBy, workerPool, undefined, undefined, payload.sourceHasOverlappingFeatures);
                 const area = await processor.calculate();
                 await (0, messaging_1.flushMessages)();
                 await (0, messaging_1.sendResultMessage)(payload.jobKey, area, payload.queueUrl, Date.now() - startTime);
@@ -190,13 +205,24 @@ async function handler(payload) {
                 const source = await sourceCache.get(payload.sourceUrl, {
                     pageSize: "5MB",
                 });
-                // Extract valueColumn from parameters for column_values
-                const columnValuesProperty = payload.type === "column_values" ? payload.valueColumn : undefined;
-                const bufferedIntersectionFeature = applySubjectBuffer(intersectionFeature, payload.bufferDistanceKm);
+                const bufferedSubjects = await bufferedSubjectsForAnalysis(intersectionFeature, differenceSources, payload.bufferDistanceKm);
+                // Prefer includedColumns; fall back to deprecated valueColumn so a
+                // legacy scoped dependency still retains per-feature entries.
+                const includedColumns = ((_a = payload.includedColumns) === null || _a === void 0 ? void 0 : _a.length)
+                    ? payload.includedColumns
+                    : payload.valueColumn
+                        ? [payload.valueColumn]
+                        : undefined;
+                // Buffered subjects can overlap sibling fragments' subjects, so
+                // per-feature entry offsets must be retained for overlap detection
+                // when combining. Unbuffered fragments are disjoint and skip them.
+                const subjectIsBuffered = typeof payload.bufferDistanceKm === "number" &&
+                    isFinite(payload.bufferDistanceKm) &&
+                    payload.bufferDistanceKm > 0;
                 const processor = new OverlayEngineBatchProcessor_1.OverlayEngineBatchProcessor(payload.type, 1024 * 1024 * 1, // 5MB
-                (0, simplify_1.default)(bufferedIntersectionFeature, {
+                (0, simplify_1.default)(bufferedSubjects.intersectionFeature, {
                     tolerance: SIMPLIFICATION_TOLERANCE,
-                }), source, differenceSources, helpers, payload.groupBy, workerPool, payload.includedColumns, payload.maxResults, columnValuesProperty);
+                }), source, bufferedSubjects.differenceSources, helpers, payload.groupBy, workerPool, includedColumns, payload.maxResults, undefined, subjectIsBuffered);
                 const result = await processor.calculate();
                 await (0, messaging_1.flushMessages)();
                 await (0, messaging_1.sendResultMessage)(payload.jobKey, result, payload.queueUrl, Date.now() - startTime);
@@ -237,7 +263,9 @@ async function handler(payload) {
                 // to calculateRasterStats (which no longer owns reprojection, keeping
                 // epsg-index out of the overlay-engine bundle).
                 const projectedFeature = (0, reproject_1.reproject)(intersectionFeature, payload.epsg);
-                const result = await (0, overlay_engine_1.calculateRasterStats)(payload.sourceUrl, projectedFeature, { vrm: resolvedVrm, centerLonLat, fragmentAreaSqM });
+                const rasterToken = await (0, overlayEngineAccessToken_1.getOverlayEngineAccessToken)();
+                const authenticatedSourceUrl = (0, overlayEngineAccessToken_1.withAccessTokenQueryParam)(payload.sourceUrl, rasterToken);
+                const result = await (0, overlay_engine_1.calculateRasterStats)(authenticatedSourceUrl, projectedFeature, { vrm: resolvedVrm, centerLonLat, fragmentAreaSqM });
                 await (0, messaging_1.flushMessages)();
                 await (0, messaging_1.sendResultMessage)(payload.jobKey, result, payload.queueUrl, Date.now() - startTime);
                 return;
@@ -279,7 +307,7 @@ async function handler(payload) {
         try {
             progressNotifier.flush();
         }
-        catch (_a) { }
+        catch (_b) { }
         await (0, messaging_1.flushMessages)();
     }
 }
@@ -377,6 +405,39 @@ async function subjectsForAnalysis(subject, helpers) {
     else {
         throw new Error("Unknown subject type. Must be geography or fragment.");
     }
+}
+/**
+ * Resolves the subject geometry and difference sources to pass to the
+ * OverlayEngineBatchProcessor, applying an optional buffer.
+ *
+ * Buffered subjects with difference sources (i.e. geography subjects like
+ * "EEZ minus land") can't just have their intersection feature buffered.
+ * The batch processor excludes any feature that overlaps a difference layer,
+ * so features in the buffer zone (e.g. waterways on land within 1km of a
+ * marine geography) would be wrongly excluded. Instead, materialize the true
+ * geography geometry (intersection minus differences), buffer that, and drop
+ * the difference sources entirely.
+ */
+async function bufferedSubjectsForAnalysis(intersectionFeature, differenceSources, bufferDistanceKm) {
+    if (typeof bufferDistanceKm !== "number" ||
+        !isFinite(bufferDistanceKm) ||
+        bufferDistanceKm <= 0) {
+        return { intersectionFeature, differenceSources };
+    }
+    let subject = intersectionFeature;
+    if (differenceSources.length > 0) {
+        subject = await buildCompleteGeographyMultiPolygon(subject, differenceSources);
+        // Buffering a full-resolution geography (e.g. an EEZ with detailed
+        // coastline subtracted) is expensive. Pre-simplify proportional to the
+        // buffer distance (1% of it, in degrees) so error is negligible relative
+        // to the buffer itself.
+        const tolerance = Math.max(SIMPLIFICATION_TOLERANCE, bufferDistanceKm / 111 / 100);
+        subject = (0, simplify_1.default)(subject, { tolerance });
+    }
+    return {
+        intersectionFeature: applySubjectBuffer(subject, bufferDistanceKm),
+        differenceSources: [],
+    };
 }
 function applySubjectBuffer(feature, bufferDistanceKm) {
     if (typeof bufferDistanceKm !== "number" ||

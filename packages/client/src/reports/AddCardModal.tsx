@@ -270,10 +270,11 @@ function LayerItem({
   const registration = cardType
     ? getCardRegistration(cardType as ReportCardType)
     : null;
-  const requiresValueColumn =
-    (registration as any)?.requiredLayerParameters?.includes("valueColumn") ??
-    false;
-  const numericAttributes = requiresValueColumn
+  const requiresIncludedColumns =
+    (registration as any)?.requiredLayerParameters?.includes(
+      "includedColumns"
+    ) ?? false;
+  const numericAttributes = requiresIncludedColumns
     ? getNumericAttributesForLayer(layer)
     : [];
 
@@ -323,7 +324,7 @@ function LayerItem({
       </div>
       {checked && (
         <div className="mt-2 space-y-2 pl-7">
-          {requiresValueColumn && onValueColumnChange && (
+          {requiresIncludedColumns && onValueColumnChange && (
             <div className="flex items-center space-x-2">
               <span className="text-xs text-blue-600 font-medium">
                 {t("Column to analyze")} *
@@ -336,7 +337,7 @@ function LayerItem({
                 placeholderDescription={t(
                   "Choose which numeric column to calculate statistics for"
                 )}
-                value={selected?.parameters?.valueColumn}
+                value={selected?.parameters?.includedColumns?.[0]}
                 onChange={onValueColumnChange}
               />
             </div>
@@ -593,7 +594,7 @@ function LayerSelectionStep({
                               ...s,
                               parameters: {
                                 ...s.parameters,
-                                valueColumn: value,
+                                includedColumns: value ? [value] : undefined,
                               },
                             }
                           : s

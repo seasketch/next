@@ -99,7 +99,11 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
       type MetricParameters {
         groupBy: String
         includedColumns: [String!]
-        valueColumn: String
+        """
+        Deprecated: use includedColumns. Never written by current report widgets;
+        kept so older clients can still query the field.
+        """
+        valueColumn: String @deprecated(reason: "Use includedColumns instead")
         bufferDistanceKm: Float
         maxResults: Int
         maxDistanceKm: Float

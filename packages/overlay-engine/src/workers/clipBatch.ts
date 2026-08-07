@@ -503,25 +503,31 @@ export async function createPresenceTable({
   return results;
 }
 
-export type ColumnValues =
-  | [
-      (
-        /** column value */
-        number | string | boolean
-      ),
-      /* area of overlap (in sq meters) if feature is polygonal, or length in meters if feature is linestring */
-      number,
-    ]
-  | [
-      /** column value */
-      number | string | boolean,
-    ];
+/**
+ * Interim record for a single (possibly subdivided) feature part that
+ * intersects the subject. Parts are grouped by original feature id when
+ * statistics are finalized so that subdivided features are not
+ * double-counted.
+ */
+export type ColumnValues = [
+  /** column value */
+  number | string | boolean,
+  /**
+   * Overlap weight: area in sq km if the feature is polygonal, length in km
+   * if it is linear, or 0 for unweighted (e.g. point) features.
+   */
+  number,
+  /** `__oidx` of the original (pre-subdivision) feature */
+  number,
+  /** `__offset` of this part in the FlatGeobuf file */
+  number,
+];
 
 export async function collectColumnValues({
   features,
   differenceMultiPolygon,
   subjectFeature,
-  // property,
+  properties,
   groupBy,
 }: {
   features: {
@@ -531,7 +537,8 @@ export async function collectColumnValues({
   }[];
   differenceMultiPolygon: clipping.Geom[];
   subjectFeature: Feature<Polygon | MultiPolygon>;
-  // property: string;
+  /** If provided, only values for these columns are collected. */
+  properties?: string[];
   groupBy?: string;
 }) {
   const results: {
@@ -587,7 +594,7 @@ export async function collectColumnValues({
         subjectFeature,
       );
     }
-    addColumnValuesToResults(results, f.feature, groupBy);
+    addColumnValuesToResults(results, f.feature, groupBy, properties);
   }
   return results;
 }
@@ -600,7 +607,38 @@ export function addColumnValuesToResults(
   },
   feature: FeatureWithMetadata<Feature<Geometry>>,
   groupBy?: string,
+  properties?: string[],
 ) {
+  // Overlap weight for this (already clipped) part. Calculated once, shared
+  // by all collected columns.
+  let weight = 0;
+  if (
+    feature.geometry.type === "Polygon" ||
+    feature.geometry.type === "MultiPolygon"
+  ) {
+    const sqKm = calcArea(feature) * 1e-6;
+    if (isNaN(sqKm) || sqKm === 0) {
+      return;
+    }
+    weight = sqKm;
+  } else if (
+    feature.geometry.type === "LineString" ||
+    feature.geometry.type === "MultiLineString"
+  ) {
+    const length = turfLength(feature);
+    if (isNaN(length) || length === 0) {
+      return;
+    }
+    weight = length;
+  }
+  const offset = feature.properties.__offset;
+  // Sources preprocessed for reporting are subdivided and stamp __oidx on
+  // each part. Fall back to the part's byte offset for sources without it
+  // (no cross-part grouping possible in that case).
+  const oidx =
+    typeof feature.properties.__oidx === "number"
+      ? feature.properties.__oidx
+      : offset;
   for (const attr in feature.properties) {
     if (
       attr === "__oidx" ||
@@ -610,27 +648,15 @@ export function addColumnValuesToResults(
     ) {
       continue;
     }
-    const value = feature.properties[attr];
-    const columnValue: ColumnValues = [value];
     if (
-      feature.geometry.type === "Polygon" ||
-      feature.geometry.type === "MultiPolygon"
+      properties !== undefined &&
+      properties.length > 0 &&
+      !properties.includes(attr)
     ) {
-      const sqKm = calcArea(feature) * 1e-6;
-      if (isNaN(sqKm) || sqKm === 0) {
-        continue;
-      }
-      columnValue.push(sqKm);
-    } else if (
-      feature.geometry.type === "LineString" ||
-      feature.geometry.type === "MultiLineString"
-    ) {
-      const length = turfLength(feature);
-      if (isNaN(length) || length === 0) {
-        continue;
-      }
-      columnValue.push(length);
+      continue;
     }
+    const value = feature.properties[attr];
+    const columnValue: ColumnValues = [value, weight, oidx, offset];
     if (
       typeof value === "number" ||
       typeof value === "string" ||
@@ -678,7 +704,6 @@ parentPort?.on(
     groupBy?: string;
     limit?: number;
     includedProperties?: string[];
-    property?: string;
     overlappingFeatures?: boolean;
   }) => {
     try {
@@ -718,14 +743,11 @@ parentPort?.on(
           includedProperties: job.includedProperties,
         });
       } else if (operation === "column_values") {
-        // if (!job.property) {
-        //   throw new Error("property is required for column_values operation");
-        // }
         result = await collectColumnValues({
           features: job.features,
           differenceMultiPolygon: job.differenceMultiPolygon,
           subjectFeature: job.subjectFeature,
-          // property: job.property,
+          properties: job.includedProperties,
           groupBy: job.groupBy,
         });
       } else {

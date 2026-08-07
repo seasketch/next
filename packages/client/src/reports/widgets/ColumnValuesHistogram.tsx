@@ -23,6 +23,9 @@ import { LabeledDropdown } from "./LabeledDropdown";
 import * as Popover from "@radix-ui/react-popover";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { Pencil2Icon } from "@radix-ui/react-icons";
+import ColumnStatsWarning, {
+  hasBufferedColumnValuesDependency,
+} from "./ColumnStatsWarning";
 import { useRelatedOverlay } from "../hooks/useOverlaySources";
 import {
   Bucket,
@@ -226,7 +229,7 @@ function getColumnColorSource(
 
 export const ColumnValuesHistogram: ReportWidget<
   ColumnValuesHistogramSettings
-> = ({ metrics, componentSettings, sources, loading }) => {
+> = ({ metrics, componentSettings, sources, loading, dependencies }) => {
   const { t } = useTranslation("reports");
   const langContext = useContext(FormLanguageContext);
   const source = sources?.[0];
@@ -541,8 +544,15 @@ export const ColumnValuesHistogram: ReportWidget<
   return (
     <Tooltip.Provider>
       <div className="mt-3 rounded-md border border-gray-200 shadow-sm w-full max-w-full bg-white overflow-hidden">
-        <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-500 bg-gray-100 border-b">
-          {componentSettings?.title || t("Histogram")}
+        <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-gray-500 bg-gray-100 border-b flex items-center gap-1.5">
+          <span className="truncate">
+            {componentSettings?.title || t("Histogram")}
+          </span>
+          <ColumnStatsWarning
+            stats={columnStats}
+            displayedStats={["histogram", ...statsToShow]}
+            buffered={hasBufferedColumnValuesDependency(dependencies)}
+          />
         </div>
         <div className="px-3 py-3">
           <div className="relative h-32 w-full flex items-end gap-[1px] bg-gray-50 border border-gray-200 rounded pt-2">
@@ -769,7 +779,7 @@ export const ColumnValuesHistogram: ReportWidget<
 };
 
 export const ColumnValuesHistogramTooltipControls: ReportWidgetTooltipControls =
-  ({ node, onUpdate }) => {
+  ({ node, onUpdate, onUpdateDependencyParameters }) => {
     const { t } = useTranslation("admin:reports");
     const componentSettings = node.attrs?.componentSettings || {};
     const dependencies = useMemo(
@@ -948,14 +958,21 @@ export const ColumnValuesHistogramTooltipControls: ReportWidgetTooltipControls =
               label={t("column")}
               value={componentSettings?.column || ""}
               options={numericColumnOptions}
-              onChange={(value) =>
+              onChange={(value) => {
                 onUpdate({
                   componentSettings: {
                     ...componentSettings,
                     column: value,
                   },
-                })
-              }
+                });
+                // Scope the metric to the selected column so per-feature
+                // records are retained and fragment stats combine exactly.
+                onUpdateDependencyParameters((dependency) =>
+                  dependency.type === "column_values"
+                    ? { ...dependency.parameters, includedColumns: [value] }
+                    : { ...dependency.parameters }
+                );
+              }}
               getDisplayLabel={(selected) => selected?.value || ""}
             />
           )}

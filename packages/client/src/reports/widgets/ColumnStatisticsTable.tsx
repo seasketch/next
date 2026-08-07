@@ -50,6 +50,9 @@ import {
   getPresencePresentationOptions,
   renderPresenceSymbol,
 } from "./PresenceSymbols";
+import ColumnStatsWarning, {
+  hasBufferedColumnValuesDependency,
+} from "./ColumnStatsWarning";
 
 type ColumnStatisticsTableSettings = {
   unit?: AreaUnit | LengthUnit | "%";
@@ -123,7 +126,7 @@ const statLabels = (
 
 export const ColumnStatisticsTable: ReportWidget<
   ColumnStatisticsTableSettings
-> = ({ metrics, componentSettings, sources, loading }) => {
+> = ({ metrics, componentSettings, sources, loading, dependencies }) => {
   const { t } = useTranslation("reports");
   const langContext = useContext(FormLanguageContext);
   const formatters = useNumberFormatters({
@@ -334,6 +337,16 @@ export const ColumnStatisticsTable: ReportWidget<
                 >
                   {componentSettings?.columnSettings?.[row.column]?.label ||
                     row.column}
+                  {!loading && (
+                    <ColumnStatsWarning
+                      stats={row.stats}
+                      displayedStats={statsToShow}
+                      buffered={hasBufferedColumnValuesDependency(
+                        dependencies
+                      )}
+                      className="ml-1"
+                    />
+                  )}
                 </div>
                 {statsToShow.map((stat) => (
                   <div
@@ -412,28 +425,56 @@ export const ColumnStatisticsTableTooltipControls: ReportWidgetTooltipControls =
       return componentSettings?.columns || [];
     }, [componentSettings?.columns]);
 
+    // Keep a single column_values dependency scoped to the selected columns
+    // via includedColumns. One spatial pass computes weights once; per-feature
+    // records let stats combine exactly across fragments. Leave dependencies
+    // untouched when nothing is selected (e.g. while re-selecting columns).
+    const syncIncludedColumns = (columns: string[]) => {
+      if (columns.length === 0) {
+        return;
+      }
+      onUpdateAllDependencies((deps) => {
+        const template = deps.find((d) => d.type === "column_values");
+        if (!template) {
+          return deps;
+        }
+        const others = deps.filter((d) => d.type !== "column_values");
+        return [
+          ...others,
+          {
+            ...template,
+            parameters: { ...template.parameters, includedColumns: columns },
+          },
+        ];
+      });
+    };
+
     const handleColumnSelectionChange = (column: string, checked: boolean) => {
-      const nextSelected = new Set(selectedColumns);
+      const nextSelected = new Set<string>(selectedColumns as string[]);
       if (checked) {
         nextSelected.add(column);
       } else {
         nextSelected.delete(column);
       }
+      const columns = Array.from(nextSelected);
       onUpdate({
         componentSettings: {
           ...componentSettings,
-          columns: Array.from(nextSelected),
+          columns,
         },
       });
+      syncIncludedColumns(columns);
     };
 
     const handleSelectAll = () => {
+      const columns = numericColumnOptions.map((opt) => opt.value);
       onUpdate({
         componentSettings: {
           ...componentSettings,
-          columns: numericColumnOptions.map((opt) => opt.value),
+          columns,
         },
       });
+      syncIncludedColumns(columns);
     };
 
     const handleSelectNone = () => {
@@ -443,6 +484,7 @@ export const ColumnStatisticsTableTooltipControls: ReportWidgetTooltipControls =
           columns: [],
         },
       });
+      syncIncludedColumns([]);
     };
 
     const handleLabelChange = (column: string, value: string) => {

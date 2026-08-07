@@ -71,8 +71,14 @@ export declare class OverlayEngineBatchProcessor<TOp extends OperationType = Ope
     presenceOperationEarlyReturn: boolean;
     includedProperties?: string[];
     resultsLimit: number;
-    columnValuesProperty?: string;
     overlappingFeatures: boolean;
+    /**
+     * Whether the subject feature was expanded with a distance buffer. Buffered
+     * subjects may overlap sibling fragments' subjects, so per-feature entry
+     * offsets are retained to detect shared parts when combining. Unbuffered
+     * fragments are disjoint, making offsets useless weight.
+     */
+    subjectIsBuffered: boolean;
     private progress;
     private progressTarget;
     private isOverlayAreaOperation;
@@ -88,7 +94,7 @@ export declare class OverlayEngineBatchProcessor<TOp extends OperationType = Ope
         layerId: string;
         source: FlatGeobufSource<Feature<Polygon | MultiPolygon>>;
         cql2Query?: Cql2Query | undefined;
-    }[], helpers: OverlayWorkerHelpers, groupBy?: string, pool?: WorkerPool<any, any>, includedProperties?: string[], resultsLimit?: number, columnValuesProperty?: string, overlappingFeatures?: boolean);
+    }[], helpers: OverlayWorkerHelpers, groupBy?: string, pool?: WorkerPool<any, any>, includedProperties?: string[], resultsLimit?: number, overlappingFeatures?: boolean, subjectIsBuffered?: boolean);
     private resetBatchData;
     calculate(): Promise<OperationResultType<TOp>>;
     private processBatch;

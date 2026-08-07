@@ -580,7 +580,7 @@ describe("sketchFragmentOverlap", () => {
         expect(d15n.min).toBeCloseTo(1.373);
       });
 
-      it("Should include totalAreaSqKm for polygonal sources, and weigh statistics by intersected polygon area", async () => {
+      it("Should include totalWeight for polygonal sources, and weigh statistics by intersected polygon area", async () => {
         const source = await sourceCache.get<Feature<MultiPolygon>>(
           "https://uploads.seasketch.org/testing-offshore-priority-areas.fgb",
           {
@@ -604,7 +604,7 @@ describe("sketchFragmentOverlap", () => {
         );
         const results = await processor.calculate();
         const ssoln = results["*"]["SSOLN"] as NumberColumnValueStats;
-        expect(ssoln.totalAreaSqKm).toBeCloseTo(48774.93811324354);
+        expect(ssoln.totalWeight).toBeCloseTo(48774.93811324354);
         expect(ssoln.mean).toBeCloseTo(9.428);
         expect(ssoln.min).toBe(0);
         expect(ssoln.max).toBe(10);
