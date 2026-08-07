@@ -308,8 +308,12 @@ function extractInlineRawValue(
         return combined.value["*"]?.count ?? 0;
       }
       case "percent_count": {
-        const primary = opts.clippingGeographyId;
-        if (!primary) return null;
+        const geographyId =
+          componentSettings.geographyId === "auto" ||
+          componentSettings.geographyId === undefined
+            ? opts.clippingGeographyId
+            : (componentSettings.geographyId as number);
+        if (geographyId === undefined) return null;
         const combined = combineMetricsForFragments(
           metrics.filter(
             (m) => m.type === "count" && subjectIsFragment(m.subject),
@@ -321,7 +325,7 @@ function extractInlineRawValue(
           (m) =>
             m.type === "count" &&
             subjectIsGeography(m.subject) &&
-            m.subject.id === primary,
+            m.subject.id === geographyId,
         ) as CountMetric | undefined;
         const geographyCount = geographyCountMetric?.value["*"]?.count ?? 0;
         if (!geographyCount) return 0;

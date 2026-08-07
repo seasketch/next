@@ -589,7 +589,12 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
         }
       }
       case "percent_count": {
-        if (!clippingGeography) {
+        const geographyId =
+          componentSettings.geographyId === "auto" ||
+          componentSettings.geographyId === undefined
+            ? clippingGeography?.id
+            : componentSettings.geographyId;
+        if (geographyId === undefined) {
           throw new Error(
             "Primary geography for displaying percent of geography count not found."
           );
@@ -605,7 +610,7 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
           (m) =>
             m.type === "count" &&
             subjectIsGeography(m.subject) &&
-            m.subject.id === clippingGeography.id
+            m.subject.id === geographyId
         ) as CountMetric | undefined;
         if (!geographyCountMetric) {
           throw new Error("Geography count not found in metrics.");
@@ -1443,7 +1448,8 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
       )} */}
       {(presentation === "geography_overlay_area" ||
         presentation === "geography_raster_stats" ||
-        presentation === "geography_proportion_captured") && (
+        presentation === "geography_proportion_captured" ||
+        presentation === "percent_count") && (
         <GeographySelector
           geographies={geographies}
           clippingGeography={clippingGeography}
