@@ -95,7 +95,22 @@ self.addEventListener("message", (event) => {
   }
 });
 
-const fileExtensionRegexp = new RegExp("/[^/?]+\\.[^/]+$");
+/**
+ * Match real static-file URLs only. Project slugs can contain dots
+ * (e.g. /citizen.science) and must still use the HTML shell fallback —
+ * keep in sync with packages/client/cloudflare/worker.js.
+ */
+const staticFileExtensionRegexp =
+  /\.(?:js|mjs|cjs|css|map|json|wasm|txt|xml|html?|png|jpe?g|gif|svg|webp|ico|woff2?|ttf|eot|mp4|webm|pdf|csv|geojson|topojson)$/i;
+
+function isStaticFilePath(pathname: string): boolean {
+  const segments = pathname.split("/").filter(Boolean);
+  if (segments.length === 0) {
+    return false;
+  }
+  const last = segments[segments.length - 1];
+  return staticFileExtensionRegexp.test(last);
+}
 
 self.addEventListener("fetch", (event) => {
   const url = new URL(event.request.url);
@@ -108,7 +123,7 @@ self.addEventListener("fetch", (event) => {
     event.respondWith(graphqlQueryCache.handleRequest(url, event));
   } else if (
     url.host === self.location.host &&
-    !fileExtensionRegexp.test(url.pathname) &&
+    !isStaticFilePath(url.pathname) &&
     event.request.method === "GET"
   ) {
     event.respondWith(staticAssetCache.networkThenIndexHtmlCache(event));

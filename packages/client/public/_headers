@@ -5,9 +5,6 @@
 /index.html
   Cache-Control: no-cache, no-store, max-age=0, must-revalidate
 
-/404.html
-  Cache-Control: no-cache, no-store, max-age=0, must-revalidate
-
 /
   Cache-Control: no-cache, no-store, max-age=0, must-revalidate
 

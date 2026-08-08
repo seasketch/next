@@ -7,8 +7,12 @@
  * Combined with /static/* immutable _headers, a single no-header probe can poison
  * a hashed JS URL with HTML (the ChunkLoadError we saw in production).
  *
- * Instead: missing assets invoke the Worker, which SPA-falls-back only for
- * extensionless paths and returns a real no-store 404 for everything else.
+ * Instead: missing assets invoke the Worker, which SPA-falls-back for non-static
+ * paths (including dotted project slugs) and returns a real no-store 404 for
+ * known static-file extensions that are missing.
+ *
+ * html_handling: "none" keeps /screenshot.html (and similar) on their literal
+ * paths so _headers rules and Puppeteer URLs keep working without a 307 rewrite.
  */
 {
   "name": "seasketch-client",
@@ -17,7 +21,10 @@
   "assets": {
     "directory": "./build",
     "binding": "ASSETS",
-    "run_worker_first": ["/sprites/*"]
+    "html_handling": "none",
+    // Worker must run first for all requests. Otherwise navigations
+    // (Sec-Fetch-Mode: navigate) skip the script and miss SPA fallback.
+    "run_worker_first": true
   },
   "vars": {
     "SPRITES_BASE_URL": "https://seasketchpublicuploads-publicuploads056688dd-1evw01vk0kf8z.s3.us-west-2.amazonaws.com/sprites/"

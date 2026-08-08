@@ -1,4 +1,0 @@
-# Pages-era files that remain in public/ during the dual-deploy transition.
-# Workers must not upload _worker.js as a public asset (wrangler errors).
-_worker.js
-_routes.json
