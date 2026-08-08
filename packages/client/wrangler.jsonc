@@ -1,0 +1,25 @@
+/**
+ * Workers Static Assets hosting for the SeaSketch React client.
+ *
+ * We intentionally do NOT use assets.not_found_handling = "single-page-application".
+ * That mode serves index.html for non-asset navigations, but also for requests
+ * that omit Sec-Fetch-Mode — and Cloudflare's cache does not Vary on that header.
+ * Combined with /static/* immutable _headers, a single no-header probe can poison
+ * a hashed JS URL with HTML (the ChunkLoadError we saw in production).
+ *
+ * Instead: missing assets invoke the Worker, which SPA-falls-back only for
+ * extensionless paths and returns a real no-store 404 for everything else.
+ */
+{
+  "name": "seasketch-client",
+  "compatibility_date": "2026-08-07",
+  "main": "./cloudflare/worker.js",
+  "assets": {
+    "directory": "./build",
+    "binding": "ASSETS",
+    "run_worker_first": ["/sprites/*"]
+  },
+  "vars": {
+    "SPRITES_BASE_URL": "https://seasketchpublicuploads-publicuploads056688dd-1evw01vk0kf8z.s3.us-west-2.amazonaws.com/sprites/"
+  }
+}

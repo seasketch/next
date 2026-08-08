@@ -1,17 +1,14 @@
 # Update when deploying production site
-/static/index.html
-  Cache-Control: no-cache, no-store, max-age=0, must-revalidate
-
 /static/*
   Cache-Control: public, max-age=31536000, immutable
 
 /index.html
   Cache-Control: no-cache, no-store, max-age=0, must-revalidate
 
-/
+/404.html
   Cache-Control: no-cache, no-store, max-age=0, must-revalidate
 
-/static/index.html
+/
   Cache-Control: no-cache, no-store, max-age=0, must-revalidate
 
 /manifest.json
@@ -23,5 +20,3 @@
 /screenshot.html
   Cache-Control: no-cache, no-store, max-age=0, must-revalidate
   X-Robots-Tag: noindex, nofollow
-
-

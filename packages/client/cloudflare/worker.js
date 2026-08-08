@@ -1,17 +1,17 @@
 /**
- * Cloudflare Pages Advanced Mode worker.
+ * SeaSketch client Worker (Workers Static Assets).
  *
- * Architecture (static-first SPA):
- * - A top-level 404.html disables Pages' default "rewrite everything to /"
- *   SPA mode, so missing hashed assets under /static/* return a real 404
- *   instead of index.html (which was getting immutable-cached as JS).
- * - This worker only runs for non-static routes (_routes.json). Extensionless
- *   paths (/, /vanuatu, /vanuatu/app, /dashboard, …) are rewritten to
- *   index.html. Paths with a file extension fall through to ASSETS (404 if
- *   missing).
- * - /sprites/* is proxied to SPRITES_BASE_URL as before.
+ * Existing files under build/ are served by the platform (asset-first).
+ * Misses (and /sprites/* via run_worker_first) invoke this script:
+ * - /sprites/* → proxy to SPRITES_BASE_URL
+ * - extensionless paths (/, /vanuatu, /vanuatu/app, …) → index.html SPA shell
+ * - everything else (e.g. missing /static/js/*.chunk.js) → real 404, no-store
+ *
+ * Extension-based SPA fallback (not Sec-Fetch-Mode) avoids HTML-as-JS cache
+ * poisoning: Cloudflare does not Vary on Sec-Fetch-Mode, and /static/* has
+ * immutable Cache-Control via _headers.
  */
-const worker = {
+export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
@@ -28,22 +28,22 @@ const worker = {
       return newResponse;
     }
 
-    // Bare /:slug, /:slug/app, /dashboard, etc. — no file extension in the
-    // final path segment → serve the SPA shell.
     if (isExtensionlessPath(url.pathname)) {
       return env.ASSETS.fetch(new URL("/index.html", url.origin));
     }
 
-    // Unexpected extensioned path that still hit the worker: try the asset
-    // (or Pages 404.html). Never invent SPA HTML for *.js / *.css misses.
-    return env.ASSETS.fetch(request);
+    return new Response(null, {
+      status: 404,
+      headers: {
+        "Cache-Control": "no-store",
+      },
+    });
   },
 };
 
 /**
  * True for "/", "/vanuatu", "/vanuatu/app/foo".
- * False for "/static/js/x.js", "/manifest.json", "/foo.bar/baz" only when the
- * last segment contains a "." — so "/vanuatu/app" stays SPA.
+ * False for "/static/js/x.js", "/manifest.json".
  */
 function isExtensionlessPath(pathname) {
   const segments = pathname.split("/").filter(Boolean);
@@ -53,5 +53,3 @@ function isExtensionlessPath(pathname) {
   const last = segments[segments.length - 1];
   return !last.includes(".");
 }
-
-export default worker;
