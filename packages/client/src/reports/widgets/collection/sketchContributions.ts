@@ -1,11 +1,13 @@
-import type { TFunction } from "i18next";
-import type { Metric, MetricSubjectFragment } from "overlay-engine";
+import { TFunction } from "i18next";
 import {
+  Metric,
+  MetricSubjectFragment,
+  OverlayAreaMetricValue,
   combineMetricsForFragments,
   subjectIsFragment,
   TotalAreaMetric,
 } from "overlay-engine";
-import type {
+import {
   CompatibleSpatialMetricDetailsFragment,
   OverlaySourceDetailsFragment,
 } from "../../../generated/graphql";
@@ -27,6 +29,7 @@ export type ClassRowSketchContribution = {
   primaryValue: number;
   fractionOfGeography: number;
   hasOverlap: boolean;
+  /** Other child sketches linked via shared fragment metrics (sorted names). */
   overlapPartnerSketchNames: string[];
 };
 
@@ -181,8 +184,10 @@ function extractCombinedClassSlice(
   valueColumn?: string
 ): number {
   switch (metricType) {
-    case "overlay_area":
-      return (combined.value as Record<string, number>)?.[groupByKey] ?? 0;
+    case "overlay_area": {
+      const raw = (combined.value as OverlayAreaMetricValue)?.[groupByKey];
+      return typeof raw === "number" ? raw : 0;
+    }
     case "count":
       return (
         (combined.value as Record<string, { count: number }>)?.[groupByKey]
@@ -272,6 +277,8 @@ export function sketchContributionsForClassTableRow(opts: {
       groupByKey,
       valueColumn
     );
+    // Shared-fragment overlap (Venn): sketches that share fragment geometry
+    // are flagged so users know heading totals ≠ sum of sketch rows.
     const hasOverlap = bucketHasIntraCollectionOverlap(
       bucket,
       sketchId,

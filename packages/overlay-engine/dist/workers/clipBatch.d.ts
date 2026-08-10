@@ -2,7 +2,22 @@ import { FeatureWithMetadata } from "fgb-source";
 import { Feature, Geometry, LineString, MultiLineString, MultiPolygon, Polygon } from "geojson";
 import * as clipping from "polyclip-ts";
 import { PresenceTableValue } from "../metrics/metrics";
-export declare function clipBatch({ features, differenceMultiPolygon, subjectFeature, groupBy, overlappingFeatures, }: {
+/**
+ * Per-feature clip record produced only when collecting buffered fragment
+ * `overlay_area` overlap metadata (`collectOverlapEntries`). Unbuffered
+ * `overlay_area` never emits these. See {@link OverlayAreaOverlapInfo}.
+ */
+export type OverlayFeatureClipEntry = {
+    oidx: number;
+    classKey: string;
+    /** Area/length of the feature clipped to the buffered subject. */
+    clippedArea: number;
+    /** Full unclipped feature area/length; equals clippedArea when fully covered. */
+    featureArea: number;
+    /** Portion of the clipped geometry that lies inside the collar. */
+    collarArea: number;
+};
+export declare function clipBatch({ features, differenceMultiPolygon, subjectFeature, groupBy, overlappingFeatures, collectOverlapEntries, collarFeature, }: {
     features: {
         feature: FeatureWithMetadata<Feature<Polygon | MultiPolygon | LineString | MultiLineString>>;
         requiresIntersection: boolean;
@@ -12,8 +27,17 @@ export declare function clipBatch({ features, differenceMultiPolygon, subjectFea
     subjectFeature: Feature<Polygon | MultiPolygon>;
     groupBy?: string;
     overlappingFeatures?: boolean;
+    /**
+     * When true (buffered fragment `overlay_area` only), clip per-feature and
+     * attach `__featureEntries` for overlap detection. When false/omitted —
+     * the unbuffered default — use the ordinary class-aggregate clip path
+     * with no per-feature collar work.
+     * @see OverlayAreaOverlapInfo
+     */
+    collectOverlapEntries?: boolean;
+    collarFeature?: Feature<Polygon | MultiPolygon>;
 }): Promise<{
-    [classKey: string]: number;
+    [classKey: string]: number | OverlayFeatureClipEntry[] | undefined;
 }>;
 export declare function calculatedClippedOverlapSize(features: {
     feature: FeatureWithMetadata<Feature<Polygon | MultiPolygon | LineString | MultiLineString>>;

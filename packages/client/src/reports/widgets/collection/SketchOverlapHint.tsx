@@ -9,7 +9,9 @@ type SketchOverlapHintProps = {
 };
 
 /**
- * Icon + tooltip when this sketch shares fragment metrics with other sketches in the collection.
+ * Icon + tooltip when this sketch shares fragment metrics with other sketches
+ * in the collection (fragment system Venn overlap). Explains why the sum of
+ * sketch rows can exceed the collection heading total.
  */
 export default function SketchOverlapHint({
   hasOverlap,

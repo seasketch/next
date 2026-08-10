@@ -7,6 +7,21 @@ import { ColumnValues } from "./workers/clipBatch";
 import PQueue from "p-queue";
 import { createClippingWorkerPool, WorkerPool } from "./workers/pool";
 import { OverlayAreaMetric, CountMetric, PresenceMetric, PresenceTableMetric, PresenceTableValue, ColumnValuesMetric } from "./metrics/metrics";
+/**
+ * Options for collecting buffered fragment `overlay_area` overlap metadata.
+ * Produced by the worker only when `bufferDistanceKm > 0` on a fragment
+ * subject; consumed when finalizing results.
+ *
+ * When omitted (unbuffered / geography / non-`overlay_area`), the processor
+ * does not collect per-feature collar entries or attach `__overlap`.
+ *
+ * @see OverlayAreaOverlapInfo
+ */
+export type OverlayAreaOverlapCollectionOptions = {
+    collar: Feature<Polygon | MultiPolygon>;
+    bbox: [number, number, number, number];
+    bufferKm: number;
+};
 export { createClippingWorkerPool };
 export type OperationType = "overlay_area" | "count" | "presence" | "presence_table" | "column_values";
 /**
@@ -79,6 +94,19 @@ export declare class OverlayEngineBatchProcessor<TOp extends OperationType = Ope
      * fragments are disjoint, making offsets useless weight.
      */
     subjectIsBuffered: boolean;
+    /**
+     * When set (buffered fragment `overlay_area` only), the processor collects
+     * per-feature collar entries and attaches {@link OverlayAreaOverlapInfo}
+     * under `__overlap` on the result value. Left undefined for unbuffered
+     * subjects — no collar work, no `__overlap` payload.
+     */
+    overlayOverlapOptions?: OverlayAreaOverlapCollectionOptions;
+    /**
+     * Accumulated per-feature clip records for buffered fragment overlay_area
+     * overlap detection. Only populated when {@link overlayOverlapOptions} is
+     * set; stays empty (unused) on the unbuffered path.
+     */
+    private overlayFeatureEntries;
     private progress;
     private progressTarget;
     private isOverlayAreaOperation;
@@ -94,7 +122,13 @@ export declare class OverlayEngineBatchProcessor<TOp extends OperationType = Ope
         layerId: string;
         source: FlatGeobufSource<Feature<Polygon | MultiPolygon>>;
         cql2Query?: Cql2Query | undefined;
-    }[], helpers: OverlayWorkerHelpers, groupBy?: string, pool?: WorkerPool<any, any>, includedProperties?: string[], resultsLimit?: number, overlappingFeatures?: boolean, subjectIsBuffered?: boolean);
+    }[], helpers: OverlayWorkerHelpers, groupBy?: string, pool?: WorkerPool<any, any>, includedProperties?: string[], resultsLimit?: number, overlappingFeatures?: boolean, subjectIsBuffered?: boolean, overlayOverlapOptions?: OverlayAreaOverlapCollectionOptions);
+    /**
+     * True only for buffered fragment `overlay_area` (options provided by the
+     * worker). Gates the per-feature clip path and `__overlap` finalization so
+     * unbuffered runs keep the ordinary batch clip cost.
+     */
+    private collectsOverlayOverlapEntries;
     private resetBatchData;
     calculate(): Promise<OperationResultType<TOp>>;
     private processBatch;
@@ -103,6 +137,14 @@ export declare class OverlayEngineBatchProcessor<TOp extends OperationType = Ope
     private processCountBatch;
     private processPresenceBatch;
     private mergeOverlayBatchResults;
+    /**
+     * Builds {@link OverlayAreaOverlapInfo} from collected per-feature collar
+     * entries and attaches it under `__overlap` on the overlay_area result.
+     * No-op when {@link overlayOverlapOptions} is unset (unbuffered path).
+     *
+     * @see OverlayAreaOverlapInfo
+     */
+    private finalizeOverlayOverlapMetadata;
     private mergeCountBatchResults;
     private mergeColumnValuesBatchResults;
     /**

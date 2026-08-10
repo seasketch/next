@@ -31,14 +31,17 @@ import {
   collectColumnValues,
   ColumnValues,
   countFeatures,
+  OverlayFeatureClipEntry,
   pick,
   testForPresenceInSubject,
 } from "./workers/clipBatch";
 import PQueue from "p-queue";
 import { createClippingWorkerPool, WorkerPool } from "./workers/pool";
 import truncate from "@turf/truncate";
+import booleanIntersects from "@turf/boolean-intersects";
 import {
   OverlayAreaMetric,
+  OverlayAreaOverlapInfo,
   CountMetric,
   PresenceMetric,
   PresenceTableMetric,
@@ -51,9 +54,27 @@ import {
   capColumnValueEntries,
   numberColumnStatsFromEntries,
   stringOrBooleanColumnStatsFromEntries,
+  MAX_OVERLAY_AREA_OVERLAP_ENTRIES,
+  isOverlayAreaClassKey,
 } from "./metrics/metrics";
 import { createUniqueIdIndex, countUniqueIds } from "./utils/uniqueIdIndex";
 import turfLength from "@turf/length";
+
+/**
+ * Options for collecting buffered fragment `overlay_area` overlap metadata.
+ * Produced by the worker only when `bufferDistanceKm > 0` on a fragment
+ * subject; consumed when finalizing results.
+ *
+ * When omitted (unbuffered / geography / non-`overlay_area`), the processor
+ * does not collect per-feature collar entries or attach `__overlap`.
+ *
+ * @see OverlayAreaOverlapInfo
+ */
+export type OverlayAreaOverlapCollectionOptions = {
+  collar: Feature<Polygon | MultiPolygon>;
+  bbox: [number, number, number, number];
+  bufferKm: number;
+};
 
 export { createClippingWorkerPool };
 
@@ -163,6 +184,21 @@ export class OverlayEngineBatchProcessor<
    */
   subjectIsBuffered = false;
 
+  /**
+   * When set (buffered fragment `overlay_area` only), the processor collects
+   * per-feature collar entries and attaches {@link OverlayAreaOverlapInfo}
+   * under `__overlap` on the result value. Left undefined for unbuffered
+   * subjects — no collar work, no `__overlap` payload.
+   */
+  overlayOverlapOptions?: OverlayAreaOverlapCollectionOptions;
+
+  /**
+   * Accumulated per-feature clip records for buffered fragment overlay_area
+   * overlap detection. Only populated when {@link overlayOverlapOptions} is
+   * set; stays empty (unused) on the unbuffered path.
+   */
+  private overlayFeatureEntries: OverlayFeatureClipEntry[] = [];
+
   private progress: number = 0;
   private progressTarget: number = 0;
 
@@ -252,6 +288,7 @@ export class OverlayEngineBatchProcessor<
     resultsLimit?: number,
     overlappingFeatures?: boolean,
     subjectIsBuffered?: boolean,
+    overlayOverlapOptions?: OverlayAreaOverlapCollectionOptions,
   ) {
     this.operation = operation;
     this.pool = pool;
@@ -287,6 +324,18 @@ export class OverlayEngineBatchProcessor<
       this.resultsLimit = resultsLimit;
     }
     this.subjectIsBuffered = subjectIsBuffered ?? false;
+    this.overlayOverlapOptions = overlayOverlapOptions;
+  }
+
+  /**
+   * True only for buffered fragment `overlay_area` (options provided by the
+   * worker). Gates the per-feature clip path and `__overlap` finalization so
+   * unbuffered runs keep the ordinary batch clip cost.
+   */
+  private collectsOverlayOverlapEntries(): boolean {
+    return (
+      this.isOverlayAreaOperation() && this.overlayOverlapOptions !== undefined
+    );
   }
 
   private resetBatchData() {
@@ -507,6 +556,7 @@ export class OverlayEngineBatchProcessor<
 
         if (this.isOverlayAreaOperation()) {
           this.mergeOverlayBatchResults(resolvedBatchData);
+          this.finalizeOverlayOverlapMetadata();
         } else if (this.isCountOperation()) {
           this.mergeCountBatchResults(resolvedBatchData);
           this.finalizeCountResults();
@@ -548,6 +598,8 @@ export class OverlayEngineBatchProcessor<
       includedProperties: this.includedProperties,
       resultsLimit: this.resultsLimit,
       overlappingFeatures: this.overlappingFeatures,
+      collectOverlapEntries: this.collectsOverlayOverlapEntries(),
+      collarFeature: this.overlayOverlapOptions?.collar,
     };
 
     this.helpers.log(
@@ -624,10 +676,12 @@ export class OverlayEngineBatchProcessor<
       subjectFeature: this.subjectFeature,
       groupBy: this.groupBy,
       overlappingFeatures: this.overlappingFeatures,
+      collectOverlapEntries: this.collectsOverlayOverlapEntries(),
+      collarFeature: this.overlayOverlapOptions?.collar,
     }).catch((error) => {
       console.error(`Error processing batch: ${error.message}`);
       throw error;
-    });
+    }) as Promise<OperationResultType<"overlay_area">>;
   }
 
   private async processCountBatch(
@@ -663,14 +717,173 @@ export class OverlayEngineBatchProcessor<
   private mergeOverlayBatchResults(batchResults: OperationResultType<TOp>[]) {
     const results = this.getOverlayResults();
     for (const batchData of batchResults) {
-      const overlayBatchData = batchData as OperationResultType<"overlay_area">;
+      const overlayBatchData = batchData as OperationResultType<"overlay_area"> & {
+        __featureEntries?: OverlayFeatureClipEntry[];
+      };
       for (const classKey in overlayBatchData) {
-        if (!(classKey in results)) {
+        if (classKey === "__featureEntries") {
+          const entries = overlayBatchData.__featureEntries;
+          if (Array.isArray(entries)) {
+            this.overlayFeatureEntries.push(...entries);
+          }
+          continue;
+        }
+        if (!isOverlayAreaClassKey(classKey)) {
+          continue;
+        }
+        const amount = overlayBatchData[classKey];
+        if (typeof amount !== "number") {
+          continue;
+        }
+        if (!(classKey in results) || typeof results[classKey] !== "number") {
           results[classKey] = 0;
         }
-        results[classKey] += overlayBatchData[classKey];
+        results[classKey] = (results[classKey] as number) + amount;
       }
     }
+  }
+
+  /**
+   * Builds {@link OverlayAreaOverlapInfo} from collected per-feature collar
+   * entries and attaches it under `__overlap` on the overlay_area result.
+   * No-op when {@link overlayOverlapOptions} is unset (unbuffered path).
+   *
+   * @see OverlayAreaOverlapInfo
+   */
+  private finalizeOverlayOverlapMetadata() {
+    const options = this.overlayOverlapOptions;
+    if (!options || !this.isOverlayAreaOperation()) {
+      return;
+    }
+
+    // Merge duplicate oidx within the same class (subdivided parts).
+    // Sum part areas to reconstruct the original feature's total size when
+    // multiple subdivided pieces of the same __oidx appear in this fragment.
+    type Acc = {
+      area: number;
+      featureArea: number;
+      collarArea: number;
+      /** True when every seen part was fully covered by the buffered subject. */
+      fullyCovered: boolean;
+    };
+    const byClass = new Map<string, Map<number, Acc>>();
+
+    for (const entry of this.overlayFeatureEntries) {
+      let classMap = byClass.get(entry.classKey);
+      if (!classMap) {
+        classMap = new Map();
+        byClass.set(entry.classKey, classMap);
+      }
+      const partFullyCovered =
+        Math.abs(entry.featureArea - entry.clippedArea) < 1e-9;
+      const existing = classMap.get(entry.oidx);
+      if (!existing) {
+        classMap.set(entry.oidx, {
+          area: entry.clippedArea,
+          featureArea: entry.featureArea,
+          collarArea: entry.collarArea,
+          fullyCovered: partFullyCovered,
+        });
+      } else {
+        existing.area += entry.clippedArea;
+        existing.collarArea += entry.collarArea;
+        existing.featureArea += entry.featureArea;
+        existing.fullyCovered =
+          existing.fullyCovered && partFullyCovered;
+      }
+    }
+
+    // Also ensure classes that only appear as numeric totals get a collarArea.
+    const results = this.getOverlayResults();
+    const classes: OverlayAreaOverlapInfo["classes"] = {};
+
+    const allClassKeys = new Set<string>([
+      ...byClass.keys(),
+      ...Object.keys(results).filter(isOverlayAreaClassKey),
+    ]);
+
+    type FlatEntry = {
+      classKey: string;
+      oidx: number;
+      area: number;
+      featureArea: number;
+      collarArea: number;
+    };
+    const flat: FlatEntry[] = [];
+
+    for (const classKey of allClassKeys) {
+      const classMap = byClass.get(classKey);
+      let collarArea = 0;
+      if (classMap) {
+        for (const [oidx, acc] of classMap) {
+          collarArea += acc.collarArea;
+          flat.push({
+            classKey,
+            oidx,
+            area: acc.area,
+            // Encode fully-covered as 0 so combine can apply exact correction.
+            featureArea: acc.fullyCovered ? 0 : acc.featureArea,
+            collarArea: acc.collarArea,
+          });
+        }
+      }
+      classes[classKey] = { collarArea };
+    }
+
+    // Cap across all classes; keep largest-area entries.
+    flat.sort((a, b) => b.area - a.area);
+    const truncated = flat.length > MAX_OVERLAY_AREA_OVERLAP_ENTRIES;
+    const kept = truncated
+      ? flat.slice(0, MAX_OVERLAY_AREA_OVERLAP_ENTRIES)
+      : flat;
+
+    const keptByClass = new Map<string, FlatEntry[]>();
+    for (const entry of kept) {
+      const list = keptByClass.get(entry.classKey) || [];
+      list.push(entry);
+      keptByClass.set(entry.classKey, list);
+    }
+
+    for (const classKey of Object.keys(classes)) {
+      const list = keptByClass.get(classKey) || [];
+      if (list.length === 0) {
+        if (truncated) {
+          classes[classKey].entriesTruncated = true;
+        }
+        continue;
+      }
+      const oidx: number[] = [];
+      const area: number[] = [];
+      const featureArea: number[] = [];
+      let anyPartial = false;
+      for (const e of list) {
+        oidx.push(e.oidx);
+        area.push(e.area);
+        // 0 = fully covered (featureArea === area)
+        const fa =
+          Math.abs(e.featureArea - e.area) < 1e-9 ? 0 : e.featureArea;
+        featureArea.push(fa);
+        if (fa !== 0) {
+          anyPartial = true;
+        }
+      }
+      classes[classKey].oidx = oidx;
+      classes[classKey].area = area;
+      if (anyPartial) {
+        classes[classKey].featureArea = featureArea;
+      }
+      if (truncated) {
+        classes[classKey].entriesTruncated = true;
+      }
+    }
+
+    const overlap: OverlayAreaOverlapInfo = {
+      bufferKm: options.bufferKm,
+      bbox: options.bbox,
+      classes,
+    };
+
+    results.__overlap = overlap;
   }
 
   private mergeCountBatchResults(
@@ -828,12 +1041,41 @@ export class OverlayEngineBatchProcessor<
     // get area in square kilometers
     const size = this.getSize(feature);
     const results = this.getOverlayResults();
-    results["*"] = (results["*"] || 0) + size;
+    results["*"] = ((results["*"] as number) || 0) + size;
+    let classKey = "*";
     if (this.groupBy) {
-      const classKey = feature.properties?.[this.groupBy];
-      if (classKey) {
-        results[classKey] = (results[classKey] || 0) + size;
+      const key = feature.properties?.[this.groupBy];
+      if (key) {
+        classKey = String(key);
+        results[classKey] = ((results[classKey] as number) || 0) + size;
       }
+    }
+
+    // Fully-inside features skip the clip batch; still record collar entries
+    // when collecting buffered overlap metadata.
+    // @see OverlayAreaOverlapInfo
+    if (this.collectsOverlayOverlapEntries()) {
+      const oidx = feature.properties?.__oidx;
+      if (typeof oidx !== "number") {
+        return;
+      }
+      const collar = this.overlayOverlapOptions!.collar;
+      let inCollar = true;
+      try {
+        inCollar = booleanIntersects(feature as Feature, collar);
+      } catch {
+        inCollar = true;
+      }
+      if (!inCollar) {
+        return;
+      }
+      this.overlayFeatureEntries.push({
+        oidx,
+        classKey,
+        clippedArea: size,
+        featureArea: size, // fully inside subject ⇒ fully covered
+        collarArea: size,
+      });
     }
   }
 

@@ -1977,7 +1977,9 @@ export function buildReportCommandGroups({
                       },
                     ],
                     componentSettings: {
-                      // presentation: "overlay_area",
+                      // Hide "% Within" until an admin picks a geography.
+                      // Legacy reports omit this and keep the old default (primary).
+                      percentGeographyId: null,
                     },
                   });
                 },

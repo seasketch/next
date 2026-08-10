@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.calculateDistanceToShore = exports.calculateRasterStats = exports.initializeGeographySources = exports.mergeUniqueIdIndexes = exports.countUniqueIds = exports.createUniqueIdIndex = exports.extractMetricDependenciesFromReportBody = exports.hashMetricDependency = exports.isNumberColumnValueStats = exports.combineMetricsForFragments = exports.combineRasterBandStats = exports.subjectIsGeography = exports.subjectIsFragment = exports.MAX_COLUMN_VALUE_ENTRIES = exports.capColumnValueEntries = exports.stringOrBooleanColumnStatsFromEntries = exports.numberColumnStatsFromEntries = exports.hasReliableColumnValueEntries = exports.isColumnValuesEntry = exports.combineStringOrBooleanColumnValueStats = exports.combineNumberColumnValueStats = exports.calculateFragmentOverlap = exports.mergeTouchingFragments = exports.eliminateOverlap = exports.createFragments = exports.calculateArea = exports.calculateGeographyOverlap = exports.clipToGeographies = exports.clipSketchToPolygons = exports.clipToGeography = exports.unionAtAntimeridian = exports.prepareSketch = void 0;
+exports.computeBufferedSubjectAndCollar = exports.calculateDistanceToShore = exports.calculateRasterStats = exports.initializeGeographySources = exports.mergeUniqueIdIndexes = exports.countUniqueIds = exports.createUniqueIdIndex = exports.extractMetricDependenciesFromReportBody = exports.hashMetricDependency = exports.isNumberColumnValueStats = exports.combineMetricsForFragments = exports.combineRasterBandStats = exports.subjectIsGeography = exports.subjectIsFragment = exports.MAX_OVERLAY_AREA_OVERLAP_ENTRIES = exports.MAX_COLUMN_VALUE_ENTRIES = exports.capColumnValueEntries = exports.stringOrBooleanColumnStatsFromEntries = exports.numberColumnStatsFromEntries = exports.hasReliableColumnValueEntries = exports.isColumnValuesEntry = exports.getOverlayAreaClassValueRange = exports.getOverlayAreaDisplayedClassValue = exports.getOverlayAreaClassTotals = exports.getOverlayAreaOverlapCombineResult = exports.getOverlayAreaOverlapInfo = exports.isOverlayAreaOverlapCombineResult = exports.isOverlayAreaOverlapInfo = exports.isOverlayAreaClassKey = exports.classifyOverlayAreaOverlapScope = exports.combineOverlayAreaMetrics = exports.combineStringOrBooleanColumnValueStats = exports.combineNumberColumnValueStats = exports.calculateFragmentOverlap = exports.mergeTouchingFragments = exports.eliminateOverlap = exports.createFragments = exports.calculateArea = exports.calculateGeographyOverlap = exports.clipToGeographies = exports.clipSketchToPolygons = exports.clipToGeography = exports.unionAtAntimeridian = exports.prepareSketch = void 0;
 var prepareSketch_1 = require("./utils/prepareSketch");
 Object.defineProperty(exports, "prepareSketch", { enumerable: true, get: function () { return prepareSketch_1.prepareSketch; } });
 var unionAtAntimeridian_1 = require("./utils/unionAtAntimeridian");
@@ -21,12 +21,23 @@ Object.defineProperty(exports, "calculateFragmentOverlap", { enumerable: true, g
 var metrics_1 = require("./metrics/metrics");
 Object.defineProperty(exports, "combineNumberColumnValueStats", { enumerable: true, get: function () { return metrics_1.combineNumberColumnValueStats; } });
 Object.defineProperty(exports, "combineStringOrBooleanColumnValueStats", { enumerable: true, get: function () { return metrics_1.combineStringOrBooleanColumnValueStats; } });
+Object.defineProperty(exports, "combineOverlayAreaMetrics", { enumerable: true, get: function () { return metrics_1.combineOverlayAreaMetrics; } });
+Object.defineProperty(exports, "classifyOverlayAreaOverlapScope", { enumerable: true, get: function () { return metrics_1.classifyOverlayAreaOverlapScope; } });
+Object.defineProperty(exports, "isOverlayAreaClassKey", { enumerable: true, get: function () { return metrics_1.isOverlayAreaClassKey; } });
+Object.defineProperty(exports, "isOverlayAreaOverlapInfo", { enumerable: true, get: function () { return metrics_1.isOverlayAreaOverlapInfo; } });
+Object.defineProperty(exports, "isOverlayAreaOverlapCombineResult", { enumerable: true, get: function () { return metrics_1.isOverlayAreaOverlapCombineResult; } });
+Object.defineProperty(exports, "getOverlayAreaOverlapInfo", { enumerable: true, get: function () { return metrics_1.getOverlayAreaOverlapInfo; } });
+Object.defineProperty(exports, "getOverlayAreaOverlapCombineResult", { enumerable: true, get: function () { return metrics_1.getOverlayAreaOverlapCombineResult; } });
+Object.defineProperty(exports, "getOverlayAreaClassTotals", { enumerable: true, get: function () { return metrics_1.getOverlayAreaClassTotals; } });
+Object.defineProperty(exports, "getOverlayAreaDisplayedClassValue", { enumerable: true, get: function () { return metrics_1.getOverlayAreaDisplayedClassValue; } });
+Object.defineProperty(exports, "getOverlayAreaClassValueRange", { enumerable: true, get: function () { return metrics_1.getOverlayAreaClassValueRange; } });
 Object.defineProperty(exports, "isColumnValuesEntry", { enumerable: true, get: function () { return metrics_1.isColumnValuesEntry; } });
 Object.defineProperty(exports, "hasReliableColumnValueEntries", { enumerable: true, get: function () { return metrics_1.hasReliableColumnValueEntries; } });
 Object.defineProperty(exports, "numberColumnStatsFromEntries", { enumerable: true, get: function () { return metrics_1.numberColumnStatsFromEntries; } });
 Object.defineProperty(exports, "stringOrBooleanColumnStatsFromEntries", { enumerable: true, get: function () { return metrics_1.stringOrBooleanColumnStatsFromEntries; } });
 Object.defineProperty(exports, "capColumnValueEntries", { enumerable: true, get: function () { return metrics_1.capColumnValueEntries; } });
 Object.defineProperty(exports, "MAX_COLUMN_VALUE_ENTRIES", { enumerable: true, get: function () { return metrics_1.MAX_COLUMN_VALUE_ENTRIES; } });
+Object.defineProperty(exports, "MAX_OVERLAY_AREA_OVERLAP_ENTRIES", { enumerable: true, get: function () { return metrics_1.MAX_OVERLAY_AREA_OVERLAP_ENTRIES; } });
 Object.defineProperty(exports, "subjectIsFragment", { enumerable: true, get: function () { return metrics_1.subjectIsFragment; } });
 Object.defineProperty(exports, "subjectIsGeography", { enumerable: true, get: function () { return metrics_1.subjectIsGeography; } });
 Object.defineProperty(exports, "combineRasterBandStats", { enumerable: true, get: function () { return metrics_1.combineRasterBandStats; } });
@@ -45,4 +56,6 @@ var rasterStats_1 = require("./rasterStats");
 Object.defineProperty(exports, "calculateRasterStats", { enumerable: true, get: function () { return rasterStats_1.calculateRasterStats; } });
 var calculateDistanceToShore_1 = require("./calculateDistanceToShore");
 Object.defineProperty(exports, "calculateDistanceToShore", { enumerable: true, get: function () { return calculateDistanceToShore_1.calculateDistanceToShore; } });
+var computeSubjectCollar_1 = require("./metrics/computeSubjectCollar");
+Object.defineProperty(exports, "computeBufferedSubjectAndCollar", { enumerable: true, get: function () { return computeSubjectCollar_1.computeBufferedSubjectAndCollar; } });
 //# sourceMappingURL=index.js.map

@@ -1,6 +1,16 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.MAX_COLUMN_VALUE_ENTRIES = void 0;
+exports.MAX_COLUMN_VALUE_ENTRIES = exports.MAX_OVERLAY_AREA_OVERLAP_ENTRIES = void 0;
+exports.isOverlayAreaClassKey = isOverlayAreaClassKey;
+exports.isOverlayAreaOverlapInfo = isOverlayAreaOverlapInfo;
+exports.isOverlayAreaOverlapCombineResult = isOverlayAreaOverlapCombineResult;
+exports.getOverlayAreaOverlapInfo = getOverlayAreaOverlapInfo;
+exports.getOverlayAreaOverlapCombineResult = getOverlayAreaOverlapCombineResult;
+exports.getOverlayAreaClassTotals = getOverlayAreaClassTotals;
+exports.getOverlayAreaDisplayedClassValue = getOverlayAreaDisplayedClassValue;
+exports.getOverlayAreaClassValueRange = getOverlayAreaClassValueRange;
+exports.combineOverlayAreaMetrics = combineOverlayAreaMetrics;
+exports.classifyOverlayAreaOverlapScope = classifyOverlayAreaOverlapScope;
 exports.isNumberColumnValueStats = isNumberColumnValueStats;
 exports.isColumnValuesEntry = isColumnValuesEntry;
 exports.hasReliableColumnValueEntries = hasReliableColumnValueEntries;
@@ -54,6 +64,373 @@ function downsampleColumnHistogram(histogram, maxEntries) {
         result.push([value, count]);
     }
     return result;
+}
+/**
+ * Maximum number of per-feature collar entries retained on a buffered
+ * {@link OverlayAreaMetric} fragment row, shared across all classes.
+ * Largest-area entries are kept when truncating; residual overcount falls
+ * back to the collar-area bound. Sized generously because the canonical
+ * ocean-sketch case puts nearly all contributing features in the collar.
+ */
+exports.MAX_OVERLAY_AREA_OVERLAP_ENTRIES = 2000;
+/** True for class-total keys; false for reserved `__`-prefixed metadata keys. */
+function isOverlayAreaClassKey(key) {
+    return !key.startsWith("__");
+}
+function isOverlayAreaOverlapInfo(value) {
+    if (value === null || typeof value !== "object" || Array.isArray(value)) {
+        return false;
+    }
+    const v = value;
+    return (typeof v.bufferKm === "number" &&
+        Array.isArray(v.bbox) &&
+        v.bbox.length === 4 &&
+        typeof v.classes === "object" &&
+        v.classes !== null &&
+        !Array.isArray(v.classes));
+}
+function isOverlayAreaOverlapCombineResult(value) {
+    if (value === null || typeof value !== "object" || Array.isArray(value)) {
+        return false;
+    }
+    const v = value;
+    return (typeof v.flagged === "boolean" &&
+        typeof v.perClass === "object" &&
+        v.perClass !== null &&
+        !Array.isArray(v.perClass));
+}
+/**
+ * Reads fragment-level {@link OverlayAreaOverlapInfo} from a metric value, if present.
+ */
+function getOverlayAreaOverlapInfo(value) {
+    if (!value || typeof value !== "object") {
+        return null;
+    }
+    const raw = value.__overlap;
+    return isOverlayAreaOverlapInfo(raw) ? raw : null;
+}
+/**
+ * Reads combine-time {@link OverlayAreaOverlapCombineResult} from a metric value, if present.
+ */
+function getOverlayAreaOverlapCombineResult(value) {
+    if (!value || typeof value !== "object") {
+        return null;
+    }
+    const raw = value.__overlap;
+    return isOverlayAreaOverlapCombineResult(raw) ? raw : null;
+}
+/** Numeric class totals only (strips reserved `__` keys). */
+function getOverlayAreaClassTotals(value) {
+    const result = {};
+    if (!value || typeof value !== "object") {
+        return result;
+    }
+    for (const key of Object.keys(value)) {
+        if (!isOverlayAreaClassKey(key)) {
+            continue;
+        }
+        const v = value[key];
+        if (typeof v === "number" && Number.isFinite(v)) {
+            result[key] = v;
+        }
+    }
+    return result;
+}
+/**
+ * Displayed / export upper estimate for a class after combine:
+ * `naiveSum − overcountMin`, falling back to the stored class total.
+ */
+function getOverlayAreaDisplayedClassValue(value, classKey) {
+    const combine = getOverlayAreaOverlapCombineResult(value);
+    const stored = getOverlayAreaClassTotals(value)[classKey] ?? 0;
+    if (!combine?.perClass?.[classKey]) {
+        return stored;
+    }
+    const { naiveSum, overcountMin } = combine.perClass[classKey];
+    return naiveSum - overcountMin;
+}
+/**
+ * Class value range after combine: `[naive − overcountMax, naive − overcountMin]`.
+ * Equal bounds mean an exact correction (or no overcount).
+ */
+function getOverlayAreaClassValueRange(value, classKey) {
+    const combine = getOverlayAreaOverlapCombineResult(value);
+    if (!combine?.perClass?.[classKey]) {
+        return null;
+    }
+    const { naiveSum, overcountMin, overcountMax } = combine.perClass[classKey];
+    return {
+        naiveSum,
+        low: naiveSum - overcountMax,
+        high: naiveSum - overcountMin,
+    };
+}
+function bboxesIntersect(a, b) {
+    return a[0] <= b[2] && a[2] >= b[0] && a[1] <= b[3] && a[3] >= b[1];
+}
+function featureAreaAt(classInfo, index, clippedArea) {
+    const fa = classInfo.featureArea?.[index];
+    if (fa === undefined || fa === 0) {
+        return clippedArea;
+    }
+    return fa;
+}
+/**
+ * Combines `overlay_area` fragment values, correcting double-counted class
+ * totals when buffered `__overlap` metadata is available. Fragments without
+ * `__overlap` (unbuffered, or stale pre-upgrade rows) contribute only their
+ * numeric class totals — no collar/entry work runs at combine time for them.
+ *
+ * @see OverlayAreaOverlapInfo for the full double-counting model and the
+ * producer gate (buffered fragment subjects only).
+ */
+function combineOverlayAreaMetrics(values) {
+    const numericValues = values.map((v) => getOverlayAreaClassTotals(v));
+    const naiveCombined = combineGroupedValues(numericValues, (group) => group.reduce((acc, n) => acc + n, 0));
+    if (values.length <= 1) {
+        return naiveCombined;
+    }
+    const overlapInfos = values.map((v) => getOverlayAreaOverlapInfo(v));
+    const usableIndexes = [];
+    for (let i = 0; i < overlapInfos.length; i++) {
+        if (overlapInfos[i]) {
+            usableIndexes.push(i);
+        }
+    }
+    // Need at least two fragments with overlap metadata to detect anything.
+    if (usableIndexes.length < 2) {
+        return naiveCombined;
+    }
+    // Gate 1: if no pair of buffered bboxes intersects, the sum is exact.
+    let anyBboxIntersect = false;
+    const intersectingPairs = [];
+    for (let a = 0; a < usableIndexes.length; a++) {
+        for (let b = a + 1; b < usableIndexes.length; b++) {
+            const ia = usableIndexes[a];
+            const ib = usableIndexes[b];
+            const infoA = overlapInfos[ia];
+            const infoB = overlapInfos[ib];
+            if (bboxesIntersect(infoA.bbox, infoB.bbox)) {
+                anyBboxIntersect = true;
+                intersectingPairs.push([ia, ib]);
+            }
+        }
+    }
+    if (!anyBboxIntersect) {
+        return naiveCombined;
+    }
+    const classKeys = new Set(Object.keys(naiveCombined));
+    for (const idx of usableIndexes) {
+        for (const key of Object.keys(overlapInfos[idx].classes)) {
+            classKeys.add(key);
+        }
+    }
+    const perClass = {};
+    const corrected = { ...naiveCombined };
+    // With groupBy, derive corrected "*" from named classes only (after the
+    // loop). Intentionally omit uncategorized features that landed under "*"
+    // (missing/falsy groupBy) — "*" here means "sum of reported classes".
+    const namedClassKeys = [...classKeys].filter((k) => k !== "*");
+    const hasNamedClasses = namedClassKeys.length > 0;
+    for (const classKey of classKeys) {
+        if (classKey === "*" && hasNamedClasses) {
+            continue;
+        }
+        const naiveSum = naiveCombined[classKey] ?? 0;
+        // oidx → areas across fragments + resolved feature area
+        const byOidx = new Map();
+        for (const idx of usableIndexes) {
+            const classInfo = overlapInfos[idx].classes[classKey];
+            if (!classInfo?.oidx?.length || !classInfo.area?.length) {
+                continue;
+            }
+            const n = Math.min(classInfo.oidx.length, classInfo.area.length);
+            for (let i = 0; i < n; i++) {
+                const oidx = classInfo.oidx[i];
+                const area = classInfo.area[i];
+                if (!Number.isFinite(oidx) || !Number.isFinite(area)) {
+                    continue;
+                }
+                // featureArea 0/absent ⇒ fully covered by this buffer.
+                const encodedFa = classInfo.featureArea?.[i];
+                const fullyCovered = encodedFa === undefined || encodedFa === 0;
+                const Af = featureAreaAt(classInfo, i, area);
+                const existing = byOidx.get(oidx);
+                if (!existing) {
+                    byOidx.set(oidx, {
+                        areas: [area],
+                        featureArea: Af,
+                        allFullyCovered: fullyCovered,
+                    });
+                }
+                else {
+                    existing.areas.push(area);
+                    existing.allFullyCovered =
+                        existing.allFullyCovered && fullyCovered;
+                    // Prefer a larger explicit featureArea from partial coverage.
+                    if (Af > existing.featureArea) {
+                        existing.featureArea = Af;
+                    }
+                }
+            }
+        }
+        let overcountMin = 0;
+        let overcountMax = 0;
+        for (const { areas, featureArea: Af, allFullyCovered, } of byOidx.values()) {
+            if (areas.length < 2) {
+                continue;
+            }
+            const sum = areas.reduce((acc, a) => acc + a, 0);
+            const maxA = Math.max(...areas);
+            // true ∈ [maxA, min(sum, Af)] ⇒ overcount ∈ [sum - min(sum,Af), sum - maxA]
+            // Only apply the Af clamp to overcountMin when every fragment reports
+            // full coverage — otherwise Af may be underestimated (e.g. subdivided
+            // parts) and the displayed upper estimate could fall below the truth.
+            if (allFullyCovered) {
+                overcountMin += Math.max(0, sum - Af);
+            }
+            else if (Af > maxA) {
+                // Partial coverage with an explicit feature area: still a valid
+                // lower bound on overcount when Af is trusted (non-subdivided).
+                overcountMin += Math.max(0, sum - Af);
+            }
+            overcountMax += Math.max(0, sum - maxA);
+        }
+        // Truncation residual: collar bound on features not represented in
+        // entries. Added to overcountMax only (cannot prove a minimum overcount).
+        // Take the largest pairwise min(residual) once — summing every pair would
+        // overstate uncertainty when 3+ truncated fragments' bboxes intersect.
+        let truncationResidual = 0;
+        for (const [ia, ib] of intersectingPairs) {
+            const ca = overlapInfos[ia].classes[classKey];
+            const cb = overlapInfos[ib].classes[classKey];
+            if (!ca || !cb) {
+                continue;
+            }
+            if (!ca.entriesTruncated && !cb.entriesTruncated) {
+                continue;
+            }
+            const residualA = Math.max(0, (ca.collarArea || 0) -
+                (ca.area || []).reduce((acc, n) => acc + (n || 0), 0));
+            const residualB = Math.max(0, (cb.collarArea || 0) -
+                (cb.area || []).reduce((acc, n) => acc + (n || 0), 0));
+            truncationResidual = Math.max(truncationResidual, Math.min(residualA, residualB));
+        }
+        overcountMax += truncationResidual;
+        // Keep overcountMax ≥ overcountMin after residual additions.
+        if (overcountMax < overcountMin) {
+            overcountMax = overcountMin;
+        }
+        if (overcountMin === 0 && overcountMax === 0) {
+            continue;
+        }
+        perClass[classKey] = { overcountMin, overcountMax, naiveSum };
+        corrected[classKey] = naiveSum - overcountMin;
+    }
+    if (Object.keys(perClass).length === 0) {
+        return naiveCombined;
+    }
+    if (hasNamedClasses) {
+        let starCorrected = 0;
+        let starOverMin = 0;
+        let starOverMax = 0;
+        let starNaiveFromClasses = 0;
+        for (const k of namedClassKeys) {
+            const cv = corrected[k];
+            if (typeof cv === "number" && Number.isFinite(cv)) {
+                starCorrected += cv;
+            }
+            const pc = perClass[k];
+            if (pc) {
+                starNaiveFromClasses += pc.naiveSum;
+                starOverMin += pc.overcountMin;
+                starOverMax += pc.overcountMax;
+            }
+            else {
+                const n = naiveCombined[k];
+                if (typeof n === "number" && Number.isFinite(n)) {
+                    starNaiveFromClasses += n;
+                }
+            }
+        }
+        const storedStar = naiveCombined["*"];
+        const starNaive = typeof storedStar === "number" && Number.isFinite(storedStar)
+            ? storedStar
+            : starNaiveFromClasses;
+        // Keep identity: displayed "*" = naiveSum − overcountMin = sum of classes.
+        if (starOverMin > 0 || starOverMax > 0 || typeof storedStar === "number") {
+            corrected["*"] = starCorrected;
+            if (starOverMin > 0 || starOverMax > 0) {
+                if (starOverMax < starOverMin) {
+                    starOverMax = starOverMin;
+                }
+                perClass["*"] = {
+                    overcountMin: starOverMin,
+                    overcountMax: starOverMax,
+                    naiveSum: starNaive,
+                };
+            }
+        }
+    }
+    const flagged = Object.values(perClass).some((p) => p.overcountMax > p.overcountMin);
+    corrected.__overlap = {
+        flagged,
+        perClass,
+    };
+    return corrected;
+}
+/**
+ * Classifies whether overlap among buffered fragment metrics is within a
+ * single sketch (fragment splitting) or between different sketches in a
+ * collection. Callers with subject info should attach the result onto the
+ * combined `__overlap` metadata.
+ *
+ * @see OverlayAreaOverlapInfo
+ */
+function classifyOverlayAreaOverlapScope(metrics) {
+    const fragmentHashes = [];
+    const sketchIdsByFragment = [];
+    for (const m of metrics) {
+        if (!subjectIsFragment(m.subject)) {
+            continue;
+        }
+        fragmentHashes.push(m.subject.hash);
+        sketchIdsByFragment.push([...m.subject.sketches]);
+    }
+    let within = false;
+    let between = false;
+    const partnerSketchIds = new Set();
+    for (let i = 0; i < sketchIdsByFragment.length; i++) {
+        for (let j = i + 1; j < sketchIdsByFragment.length; j++) {
+            const a = new Set(sketchIdsByFragment[i]);
+            const b = sketchIdsByFragment[j];
+            let shared = false;
+            for (const id of b) {
+                if (a.has(id)) {
+                    shared = true;
+                    break;
+                }
+            }
+            if (shared) {
+                within = true;
+            }
+            else {
+                between = true;
+                for (const id of sketchIdsByFragment[i]) {
+                    partnerSketchIds.add(id);
+                }
+                for (const id of b) {
+                    partnerSketchIds.add(id);
+                }
+            }
+        }
+    }
+    const scope = within && between ? "both" : between ? "between-sketches" : "within-sketch";
+    return {
+        scope,
+        partnerSketchIds: Array.from(partnerSketchIds).sort((a, b) => a - b),
+        fragmentsInvolved: fragmentHashes,
+    };
 }
 /**
  * Maximum number of per-feature entries retained on a single column's stats.
@@ -665,6 +1042,13 @@ function fnv1a(input) {
 /**
  * Combines a list of metrics for fragments into a single metric. All metrics
  * must have the same type (e.g. total_area, count, etc.)
+ *
+ * For buffered fragment `overlay_area` values that carry `__overlap`, see
+ * {@link OverlayAreaOverlapInfo} and {@link combineOverlayAreaMetrics}: class
+ * totals may be corrected and a combine-time `__overlap` result attached when
+ * residual uncertainty remains. Unbuffered rows (no `__overlap`) combine by
+ * ordinary summation with no overlap machinery cost.
+ *
  * @param metrics - The metrics to combine.
  * @returns The combined metric.
  */
@@ -866,10 +1250,15 @@ function combineMetricsForFragments(metrics, expectedMetricType) {
             };
         }
         case "overlay_area": {
+            /**
+             * Combines fragment `overlay_area` values with optional buffered-overlap
+             * correction. See {@link OverlayAreaOverlapInfo} and
+             * {@link combineOverlayAreaMetrics}.
+             */
             const values = metrics.map((m) => m.value);
             return {
                 type: "overlay_area",
-                value: combineGroupedValues(values, (v) => v.reduce((acc, v) => acc + v, 0)),
+                value: combineOverlayAreaMetrics(values),
             };
         }
         default:
@@ -882,7 +1271,8 @@ function combineGroupedValues(values, combineFn) {
     for (const value of values) {
         if (typeof value === "object" && value !== null) {
             for (const key in value) {
-                if (typeof key === "string") {
+                // Skip reserved metadata keys (e.g. overlay_area `__overlap`).
+                if (typeof key === "string" && !key.startsWith("__")) {
                     keys.add(key);
                 }
             }

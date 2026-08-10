@@ -184,11 +184,43 @@ async function handler(payload) {
                 const source = await sourceCache.get(payload.sourceUrl, {
                     pageSize: "5MB",
                 });
+                const subjectIsBuffered = typeof payload.bufferDistanceKm === "number" &&
+                    isFinite(payload.bufferDistanceKm) &&
+                    payload.bufferDistanceKm > 0;
+                /**
+                 * For buffered fragment subjects, compute the boundary collar and
+                 * collect per-feature overlap metadata so the client can detect
+                 * double-counting across adjacent fragments.
+                 * @see OverlayAreaOverlapInfo
+                 */
+                let overlayOverlapOptions;
+                // Must match subjectsForAnalysis's fragment path (hash/geobuf payload).
+                // A previous subjectIsFragment guard required fragmentHash, which the
+                // API never sends — so __overlap was never attached.
+                if (subjectIsBuffered && subjectIsFragment(payload.subject)) {
+                    // Fragments typically have no difference sources; collar is computed
+                    // from the unbuffered fragment geometry before buffering.
+                    let collarSubject = intersectionFeature;
+                    if (differenceSources.length > 0) {
+                        collarSubject = await buildCompleteGeographyMultiPolygon(intersectionFeature, differenceSources);
+                    }
+                    try {
+                        const { collar, bbox } = (0, overlay_engine_1.computeBufferedSubjectAndCollar)(collarSubject, payload.bufferDistanceKm);
+                        overlayOverlapOptions = {
+                            collar,
+                            bbox,
+                            bufferKm: payload.bufferDistanceKm,
+                        };
+                    }
+                    catch (err) {
+                        console.warn("Failed to compute overlay_area collar; continuing without overlap metadata", err);
+                    }
+                }
                 const bufferedSubjects = await bufferedSubjectsForAnalysis(intersectionFeature, differenceSources, payload.bufferDistanceKm);
                 const processor = new OverlayEngineBatchProcessor_1.OverlayEngineBatchProcessor("overlay_area", 1024 * 1024 * 1, // 5MB
                 (0, simplify_1.default)(bufferedSubjects.intersectionFeature, {
                     tolerance: SIMPLIFICATION_TOLERANCE,
-                }), source, bufferedSubjects.differenceSources, helpers, payload.groupBy, workerPool, undefined, undefined, payload.sourceHasOverlappingFeatures);
+                }), source, bufferedSubjects.differenceSources, helpers, payload.groupBy, workerPool, undefined, undefined, payload.sourceHasOverlappingFeatures, subjectIsBuffered, overlayOverlapOptions);
                 const area = await processor.calculate();
                 await (0, messaging_1.flushMessages)();
                 await (0, messaging_1.sendResultMessage)(payload.jobKey, area, payload.queueUrl, Date.now() - startTime);
@@ -358,9 +390,22 @@ function validatePayload(data) {
     }
     return data;
 }
-// Type guard for enhanced fragment subjects
+/**
+ * Type guard for fragment subjects in worker payloads.
+ *
+ * The API sends `{ hash, geobuf }` (see calculateSpatialMetricsBatch). The
+ * historical FragmentSubjectPayload type documents `fragmentHash`; accept
+ * either so callers that key on this guard (e.g. buffered overlay_area collar
+ * collection) actually run for real fragment jobs.
+ */
 function subjectIsFragment(subject) {
-    return "hash" in subject && "fragmentHash" in subject;
+    if (subject == null || typeof subject !== "object") {
+        return false;
+    }
+    if ("type" in subject && subject.type === "geography") {
+        return false;
+    }
+    return "hash" in subject || "fragmentHash" in subject;
 }
 // Type guard for enhanced geography subjects
 function subjectIsGeography(subject) {

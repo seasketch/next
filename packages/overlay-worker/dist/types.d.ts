@@ -38,9 +38,12 @@ export type GeographySubjectPayload = {
 };
 export type FragmentSubjectPayload = {
     /**
-     * The fragment's hash identifier.
+     * The fragment's hash identifier. The API sends this as `hash`;
+     * `fragmentHash` is accepted as a legacy alias by subjectIsFragment.
      */
-    fragmentHash: string;
+    hash?: string;
+    /** @deprecated Prefer `hash`. Kept for backwards-compatible payloads. */
+    fragmentHash?: string;
     /**
      * If a geobuf can be provided directly, it will be provided here. This is the
      * preferred method, but it may not be possible to provide a geobuf due to

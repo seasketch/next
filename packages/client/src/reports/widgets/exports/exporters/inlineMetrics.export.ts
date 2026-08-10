@@ -1,7 +1,10 @@
 import type { MetricDependency } from "overlay-engine";
 import {
   combineMetricsForFragments,
+  getOverlayAreaClassTotals,
+  getOverlayAreaOverlapCombineResult,
   isNumberColumnValueStats,
+  isOverlayAreaClassKey,
   subjectIsFragment,
   subjectIsGeography,
   type ColumnValuesMetric,
@@ -10,9 +13,11 @@ import {
   type Metric,
   type MetricSubjectFragment,
   type OverlayAreaMetric,
+  type OverlayAreaMetricValue,
   type RasterStats,
   type TotalAreaMetric,
 } from "overlay-engine";
+import { attachOverlayAreaOverlapScope } from "../../ClassTableRows";
 import type { CompatibleSpatialMetricDetailsFragment } from "../../../../generated/graphql";
 import { filterMetricsByDependencies } from "../../../utils/metricSatisfiesDependency";
 import type { CardExportInput, WidgetExportSection } from "../types";
@@ -275,11 +280,19 @@ function extractInlineRawValue(
         return combined.value.meters;
       }
       case "overlay_area": {
-        const combined = combineMetricsForFragments(
-          metrics as Pick<Metric, "type" | "value">[],
+        const overlayMetrics = metrics.filter(
+          (m) => m.type === "overlay_area" && subjectIsFragment(m.subject),
+        );
+        let combined = combineMetricsForFragments(
+          overlayMetrics as Pick<Metric, "type" | "value">[],
           "overlay_area",
         ) as OverlayAreaMetric;
-        return combined.value["*"] ?? 0;
+        combined = attachOverlayAreaOverlapScope(
+          combined,
+          overlayMetrics,
+        ) as OverlayAreaMetric;
+        const totals = getOverlayAreaClassTotals(combined.value);
+        return totals["*"] ?? 0;
       }
       case "geography_overlay_area": {
         const geographyId =
@@ -295,9 +308,14 @@ function extractInlineRawValue(
             m.subject.id === geographyId,
         ) as OverlayAreaMetric | undefined;
         if (!geographyOverlayMetric) return null;
+        const totals = getOverlayAreaClassTotals(geographyOverlayMetric.value);
         const totalArea =
-          geographyOverlayMetric.value["*"] ??
-          Object.values(geographyOverlayMetric.value).reduce((s, v) => s + v, 0);
+          totals["*"] ??
+          Object.entries(geographyOverlayMetric.value).reduce(
+            (s, [key, v]) =>
+              isOverlayAreaClassKey(key) && typeof v === "number" ? s + v : s,
+            0,
+          );
         return totalArea;
       }
       case "count": {
@@ -469,6 +487,35 @@ export function buildInlineMetricsSection(
   const grains = rowGrains(input.subject);
   const inlineCols = buildInlineColumnDescriptors(input);
 
+  const overlayAccuracyCols = inlineCols.flatMap((c) => {
+    if (c.node.componentSettings.presentation !== "overlay_area") {
+      return [];
+    }
+    return [
+      {
+        // eslint-disable-next-line i18next/no-literal-string
+        key: `${c.key}__minSqKm`,
+        // eslint-disable-next-line i18next/no-literal-string
+        label: `${c.label} (min km²)`,
+        type: "number" as const,
+      },
+      {
+        // eslint-disable-next-line i18next/no-literal-string
+        key: `${c.key}__maxSqKm`,
+        // eslint-disable-next-line i18next/no-literal-string
+        label: `${c.label} (max km²)`,
+        type: "number" as const,
+      },
+      {
+        // eslint-disable-next-line i18next/no-literal-string
+        key: `${c.key}__accuracyNote`,
+        // eslint-disable-next-line i18next/no-literal-string
+        label: `${c.label} accuracy`,
+        type: "string" as const,
+      },
+    ];
+  });
+
   const columns: WidgetExportSection["columns"] = [
     // eslint-disable-next-line i18next/no-literal-string
     { key: "scope", label: "scope", type: "string" },
@@ -482,6 +529,7 @@ export function buildInlineMetricsSection(
       label: c.label,
       type: "number" as const,
     })),
+    ...overlayAccuracyCols,
   ];
 
   const rows: WidgetExportSection["rows"] = [];
@@ -506,6 +554,52 @@ export function buildInlineMetricsSection(
           dependencies: c.node.dependencies,
         },
       );
+      if (c.node.componentSettings.presentation === "overlay_area") {
+        const overlayMetrics = forGrain.filter(
+          (m) => m.type === "overlay_area" && subjectIsFragment(m.subject),
+        );
+        try {
+          let combined = combineMetricsForFragments(
+            overlayMetrics as Pick<Metric, "type" | "value">[],
+            "overlay_area",
+          ) as OverlayAreaMetric;
+          combined = attachOverlayAreaOverlapScope(
+            combined,
+            overlayMetrics,
+          ) as OverlayAreaMetric;
+          const combine = getOverlayAreaOverlapCombineResult(
+            combined.value as OverlayAreaMetricValue,
+          );
+          const star = combine?.perClass?.["*"];
+          if (star) {
+            row[`${c.key}__minSqKm`] = star.naiveSum - star.overcountMax;
+            row[`${c.key}__maxSqKm`] = star.naiveSum - star.overcountMin;
+            /* eslint-disable i18next/no-literal-string -- machine-readable CSV notes */
+            if (
+              star.overcountMax > star.overcountMin &&
+              star.naiveSum > 0
+            ) {
+              const residual = star.overcountMax - star.overcountMin;
+              const pct = Math.ceil((residual / star.naiveSum) * 100);
+              row[`${c.key}__accuracyNote`] =
+                `may be overestimated up to ${pct}%`;
+            } else if (star.overcountMin > 0) {
+              row[`${c.key}__accuracyNote`] = "deduplicated";
+            } else {
+              row[`${c.key}__accuracyNote`] = "";
+            }
+            /* eslint-enable i18next/no-literal-string */
+          } else {
+            row[`${c.key}__minSqKm`] = null;
+            row[`${c.key}__maxSqKm`] = null;
+            row[`${c.key}__accuracyNote`] = "";
+          }
+        } catch {
+          row[`${c.key}__minSqKm`] = null;
+          row[`${c.key}__maxSqKm`] = null;
+          row[`${c.key}__accuracyNote`] = "";
+        }
+      }
     }
     rows.push(row);
   }

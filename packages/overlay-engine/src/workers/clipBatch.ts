@@ -21,12 +21,30 @@ import booleanDisjoint from "@turf/boolean-disjoint";
 import lineSplit from "@turf/line-split";
 import along from "@turf/along";
 
+/**
+ * Per-feature clip record produced only when collecting buffered fragment
+ * `overlay_area` overlap metadata (`collectOverlapEntries`). Unbuffered
+ * `overlay_area` never emits these. See {@link OverlayAreaOverlapInfo}.
+ */
+export type OverlayFeatureClipEntry = {
+  oidx: number;
+  classKey: string;
+  /** Area/length of the feature clipped to the buffered subject. */
+  clippedArea: number;
+  /** Full unclipped feature area/length; equals clippedArea when fully covered. */
+  featureArea: number;
+  /** Portion of the clipped geometry that lies inside the collar. */
+  collarArea: number;
+};
+
 export async function clipBatch({
   features,
   differenceMultiPolygon,
   subjectFeature,
   groupBy,
   overlappingFeatures,
+  collectOverlapEntries,
+  collarFeature,
 }: {
   features: {
     feature: FeatureWithMetadata<
@@ -39,7 +57,29 @@ export async function clipBatch({
   subjectFeature: Feature<Polygon | MultiPolygon>;
   groupBy?: string;
   overlappingFeatures?: boolean;
-}) {
+  /**
+   * When true (buffered fragment `overlay_area` only), clip per-feature and
+   * attach `__featureEntries` for overlap detection. When false/omitted —
+   * the unbuffered default — use the ordinary class-aggregate clip path
+   * with no per-feature collar work.
+   * @see OverlayAreaOverlapInfo
+   */
+  collectOverlapEntries?: boolean;
+  collarFeature?: Feature<Polygon | MultiPolygon>;
+}): Promise<{
+  [classKey: string]: number | OverlayFeatureClipEntry[] | undefined;
+}> {
+  if (collectOverlapEntries) {
+    return clipBatchCollectingOverlapEntries({
+      features,
+      differenceMultiPolygon,
+      subjectFeature,
+      groupBy,
+      collarFeature,
+    });
+  }
+
+  // Unbuffered / no-overlap-metadata path: aggregate class totals only.
   const results: { [classKey: string]: number } = { "*": 0 };
   if (groupBy) {
     const classKeys = ["*"];
@@ -75,6 +115,217 @@ export async function clipBatch({
     results["*"] += size;
   }
   return results;
+}
+
+/**
+ * Per-feature clip pass used only for buffered fragment `overlay_area`.
+ * Produces headline class totals plus collar entries for
+ * {@link OverlayAreaOverlapInfo}. Not used when `collectOverlapEntries` is
+ * false (unbuffered path).
+ */
+function clipBatchCollectingOverlapEntries({
+  features,
+  differenceMultiPolygon,
+  subjectFeature,
+  groupBy,
+  collarFeature,
+}: {
+  features: {
+    feature: FeatureWithMetadata<
+      Feature<Polygon | MultiPolygon | LineString | MultiLineString>
+    >;
+    requiresIntersection: boolean;
+    requiresDifference: boolean;
+  }[];
+  differenceMultiPolygon: clipping.Geom[];
+  subjectFeature: Feature<Polygon | MultiPolygon>;
+  groupBy?: string;
+  collarFeature?: Feature<Polygon | MultiPolygon>;
+}): {
+  [classKey: string]: number | OverlayFeatureClipEntry[] | undefined;
+} {
+  const results: {
+    [classKey: string]: number | OverlayFeatureClipEntry[] | undefined;
+  } = { "*": 0 };
+  const featureEntries: OverlayFeatureClipEntry[] = [];
+
+  for (const f of features) {
+    const classKey =
+      (groupBy && f.feature.properties?.[groupBy]
+        ? String(f.feature.properties[groupBy])
+        : null) || null;
+
+    const clipped = clipSingleFeatureToSubject(
+      f,
+      differenceMultiPolygon,
+      subjectFeature,
+    );
+    if (!clipped || clipped.size <= 0) {
+      continue;
+    }
+
+    results["*"] = (results["*"] as number) + clipped.size;
+    if (classKey) {
+      results[classKey] = ((results[classKey] as number) || 0) + clipped.size;
+    }
+
+    const oidx = f.feature.properties?.__oidx;
+    if (typeof oidx !== "number") {
+      continue;
+    }
+
+    let collarArea = 0;
+    if (collarFeature && clipped.geometry) {
+      collarArea = sizeInsideCollar(clipped.geometry, collarFeature);
+    } else if (!collarFeature) {
+      // No collar available — treat entire clip as collar (conservative).
+      collarArea = clipped.size;
+    }
+
+    if (collarArea > 0) {
+      const entryClass = classKey || "*";
+      featureEntries.push({
+        oidx,
+        classKey: entryClass,
+        clippedArea: clipped.size,
+        featureArea: clipped.featureSize,
+        collarArea,
+      });
+    }
+  }
+
+  if (featureEntries.length > 0) {
+    results.__featureEntries = featureEntries;
+  }
+  return results;
+}
+
+function clipSingleFeatureToSubject(
+  f: {
+    feature: FeatureWithMetadata<
+      Feature<Polygon | MultiPolygon | LineString | MultiLineString>
+    >;
+    requiresIntersection: boolean;
+    requiresDifference: boolean;
+  },
+  differenceGeoms: clipping.Geom[],
+  subjectFeature: Feature<Polygon | MultiPolygon>,
+): {
+  size: number;
+  featureSize: number;
+  geometry:
+    | Feature<Polygon | MultiPolygon | LineString | MultiLineString>
+    | null;
+} | null {
+  const featureSize = calcSize(f.feature);
+  const geomType = f.feature.geometry.type;
+
+  if (geomType === "Polygon" || geomType === "MultiPolygon") {
+    let geom: clipping.Geom;
+    if (f.feature.geometry.type === "Polygon") {
+      geom = [f.feature.geometry.coordinates] as clipping.Geom;
+    } else {
+      geom = f.feature.geometry.coordinates as clipping.Geom;
+    }
+
+    if (f.requiresIntersection) {
+      geom = clipping.intersection(
+        geom,
+        subjectFeature.geometry.coordinates as clipping.Geom,
+      );
+    }
+
+    if (geom.length > 0 && differenceGeoms.length > 0 && f.requiresDifference) {
+      geom = clipping.difference(geom, ...differenceGeoms);
+    } else if (geom.length > 0 && differenceGeoms.length > 0) {
+      // requiresDifference may be false when ContainerIndex said "inside",
+      // but buffered collection still applies differences when present.
+      geom = clipping.difference(geom, ...differenceGeoms);
+    }
+
+    if (!geom.length) {
+      return null;
+    }
+
+    const geometry = {
+      type: "Feature",
+      geometry: {
+        type: "MultiPolygon",
+        coordinates: geom,
+      },
+      properties: {},
+    } as Feature<MultiPolygon>;
+
+    return {
+      size: calcSize(geometry),
+      featureSize,
+      geometry,
+    };
+  }
+
+  if (geomType === "LineString" || geomType === "MultiLineString") {
+    const processed = performOperationsOnFeature(
+      f.feature,
+      f.requiresIntersection,
+      f.requiresDifference || differenceGeoms.length > 0,
+      differenceGeoms,
+      subjectFeature,
+    );
+    if (
+      processed.geometry.type !== "LineString" &&
+      processed.geometry.type !== "MultiLineString"
+    ) {
+      return null;
+    }
+    const geometry = processed as Feature<LineString | MultiLineString>;
+    const size = calcSize(geometry);
+    if (size <= 0) {
+      return null;
+    }
+    return { size, featureSize, geometry };
+  }
+
+  return null;
+}
+
+function sizeInsideCollar(
+  clipped: Feature<Polygon | MultiPolygon | LineString | MultiLineString>,
+  collarFeature: Feature<Polygon | MultiPolygon>,
+): number {
+  if (
+    clipped.geometry.type === "Polygon" ||
+    clipped.geometry.type === "MultiPolygon"
+  ) {
+    let geom: clipping.Geom;
+    if (clipped.geometry.type === "Polygon") {
+      geom = [clipped.geometry.coordinates] as clipping.Geom;
+    } else {
+      geom = clipped.geometry.coordinates as clipping.Geom;
+    }
+    const inside = clipping.intersection(
+      geom,
+      collarFeature.geometry.coordinates as clipping.Geom,
+    );
+    if (!inside.length) {
+      return 0;
+    }
+    return calcSize({
+      type: "Feature",
+      geometry: { type: "MultiPolygon", coordinates: inside },
+      properties: {},
+    } as Feature<MultiPolygon>);
+  }
+
+  // Lines: approximate collar membership via intersection test; if the line
+  // intersects the collar, count its full clipped length (conservative).
+  try {
+    if (booleanIntersects(clipped, collarFeature)) {
+      return calcSize(clipped);
+    }
+  } catch {
+    return calcSize(clipped);
+  }
+  return 0;
 }
 
 function calcSize(
@@ -705,6 +956,8 @@ parentPort?.on(
     limit?: number;
     includedProperties?: string[];
     overlappingFeatures?: boolean;
+    collectOverlapEntries?: boolean;
+    collarFeature?: Feature<Polygon | MultiPolygon>;
   }) => {
     try {
       const operation = job.operation || "overlay_area"; // Default to overlay_area for backward compatibility
@@ -720,6 +973,8 @@ parentPort?.on(
           subjectFeature: job.subjectFeature,
           groupBy: job.groupBy,
           overlappingFeatures: job.overlappingFeatures,
+          collectOverlapEntries: job.collectOverlapEntries,
+          collarFeature: job.collarFeature,
         });
       } else if (operation === "count") {
         result = await countFeatures({

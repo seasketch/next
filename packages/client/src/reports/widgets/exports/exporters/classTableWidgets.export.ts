@@ -1,11 +1,77 @@
-import type { CountMetric, OverlayAreaMetric, RasterStats } from "overlay-engine";
+import type {
+  CountMetric,
+  OverlayAreaMetric,
+  OverlayAreaMetricValue,
+  RasterStats,
+} from "overlay-engine";
+import { getOverlayAreaOverlapCombineResult } from "overlay-engine";
 import {
   combineMetricsBySource,
   getClassTableRows,
 } from "../../ClassTableRows";
 import { sketchContributionsForClassTableRow } from "../../collection/sketchContributions";
+import {
+  buildPercentGeographyValuesBySourceId,
+  overlayAreaClassTotalFromValue,
+  resolveOverlappingAreasPercentGeographyId,
+} from "../../overlappingAreasPercentGeography";
 import type { WidgetExporter, WidgetExportSection, WidgetExporterInput } from "../types";
 import { baseRow } from "./shared";
+
+function overlayAccuracyNote(
+  value: OverlayAreaMetricValue | undefined,
+  groupByKey: string,
+): {
+  overlapAreaSqKm: number;
+  overlapAreaMinSqKm: number | null;
+  overlapAreaMaxSqKm: number | null;
+  accuracyNote: string;
+} {
+  const raw = value?.[groupByKey];
+  const displayed = typeof raw === "number" ? raw : 0;
+  const combine = getOverlayAreaOverlapCombineResult(value);
+  const perClass = combine?.perClass?.[groupByKey];
+  if (!perClass) {
+    return {
+      overlapAreaSqKm: displayed,
+      overlapAreaMinSqKm: null,
+      overlapAreaMaxSqKm: null,
+      accuracyNote: "",
+    };
+  }
+  const { naiveSum, overcountMin, overcountMax } = perClass;
+  const min = naiveSum - overcountMax;
+  const max = naiveSum - overcountMin;
+  if (overcountMin === overcountMax && overcountMin > 0) {
+    return {
+      overlapAreaSqKm: displayed,
+      overlapAreaMinSqKm: min,
+      overlapAreaMaxSqKm: max,
+      // eslint-disable-next-line i18next/no-literal-string
+      accuracyNote: "deduplicated",
+    };
+  }
+  if (overcountMax > overcountMin && naiveSum > 0) {
+    // Residual uncertainty after the displayed correction (naive − overcountMin).
+    const residual = overcountMax - overcountMin;
+    const pct = Math.ceil((residual / naiveSum) * 100);
+    return {
+      overlapAreaSqKm: displayed,
+      overlapAreaMinSqKm: min,
+      overlapAreaMaxSqKm: max,
+      // Machine-readable CSV accuracy note (not UI copy).
+      // eslint-disable-next-line i18next/no-literal-string
+      accuracyNote: `may be overestimated up to ${pct}%`,
+    };
+  }
+  return {
+    overlapAreaSqKm: displayed,
+    overlapAreaMinSqKm: min,
+    overlapAreaMaxSqKm: max,
+    // eslint-disable-next-line i18next/no-literal-string
+    accuracyNote: "deduplicated",
+  };
+}
 
 function buildSketchNameById(
   subject: import("../types").ExportSubjectContext,
@@ -96,6 +162,9 @@ function exportClassTableWidget(
       ...(mode === "overlay_area"
         ? {
             overlapAreaSqKm: null,
+            overlapAreaMinSqKm: null,
+            overlapAreaMaxSqKm: null,
+            accuracyNote: "",
             geographyTotalAreaSqKm: null,
             fractionOfGeography: null,
           }
@@ -124,37 +193,73 @@ function exportClassTableWidget(
   }
 
   if (mode === "overlay_area") {
+    const percentGeographyId = resolveOverlappingAreasPercentGeographyId(
+      componentSettings as {
+        percentGeographyId?: number | "primary" | null;
+        showPercentColumn?: boolean;
+      },
+      primaryGeographyId,
+    );
+    const percentGeographyName =
+      percentGeographyId !== undefined
+        ? geographies.find((g) => g.id === percentGeographyId)?.name ?? ""
+        : "";
     const combinedMetrics = combineMetricsBySource<OverlayAreaMetric>(
       metrics,
       sources,
       primaryGeographyId,
       "overlay_area",
     );
+    const geographyValuesBySourceId =
+      percentGeographyId !== undefined
+        ? buildPercentGeographyValuesBySourceId({
+            percentGeographyId,
+            clippingGeographyId: primaryGeographyId,
+            metrics,
+            sources,
+            combinedBySource: combinedMetrics,
+          })
+        : null;
+    const sourceByStableId = new Map(
+      sources.map((s) => [s.stableId, s] as const),
+    );
     for (const r of classRows) {
       const combinedForSource = combinedMetrics[r.sourceId];
-      const overlap = combinedForSource?.fragments?.value?.[r.groupByKey] ?? 0;
+      const fragmentValue = combinedForSource?.fragments
+        ?.value as OverlayAreaMetricValue | undefined;
+      const accuracy = overlayAccuracyNote(fragmentValue, r.groupByKey);
+      const source = sourceByStableId.get(r.sourceId);
       const geographyTotal =
-        combinedForSource?.geographies?.value?.[r.groupByKey] ?? 0;
+        geographyValuesBySourceId !== null
+          ? overlayAreaClassTotalFromValue(
+              geographyValuesBySourceId.get(r.sourceId),
+              r.groupByKey,
+            )
+          : null;
       const fraction =
-        geographyTotal > 0 && Number.isFinite(geographyTotal)
-          ? overlap / geographyTotal
+        typeof geographyTotal === "number" &&
+        geographyTotal > 0 &&
+        Number.isFinite(geographyTotal)
+          ? accuracy.overlapAreaSqKm / geographyTotal
           : null;
       rows.push({
         ...baseRow("collection", subject.sketchId, subject.sketchName),
-        sourceTitle:
-          sources.find((s) => s.stableId === r.sourceId)?.tableOfContentsItem
-            ?.title ?? "",
+        sourceTitle: source?.tableOfContentsItem?.title ?? "",
         classLabel: r.label,
         primaryGeographyId,
         primaryGeographyName,
-        overlapAreaSqKm: overlap,
+        percentGeographyId: percentGeographyId ?? null,
+        percentGeographyName,
+        overlapAreaSqKm: accuracy.overlapAreaSqKm,
+        overlapAreaMinSqKm: accuracy.overlapAreaMinSqKm,
+        overlapAreaMaxSqKm: accuracy.overlapAreaMaxSqKm,
+        accuracyNote: accuracy.accuracyNote,
         geographyTotalAreaSqKm: geographyTotal,
         fractionOfGeography: fraction,
         hasOverlap: null,
         overlapPartnerSketchNames: null,
       });
       if (isCollection) {
-        const source = sources.find((s) => s.stableId === r.sourceId);
         if (!source) continue;
         const sketchLines = sketchContributionsForClassTableRow({
           metrics,
@@ -174,15 +279,19 @@ function exportClassTableWidget(
         for (const sk of sketchLines) {
           rows.push({
             ...baseRow("sketch", sk.sketchId, sk.sketchName),
-            sourceTitle:
-              sources.find((s) => s.stableId === r.sourceId)
-                ?.tableOfContentsItem?.title ?? "",
+            sourceTitle: source.tableOfContentsItem?.title ?? "",
             classLabel: r.label,
             primaryGeographyId,
             primaryGeographyName,
+            percentGeographyId: percentGeographyId ?? null,
+            percentGeographyName,
             overlapAreaSqKm: sk.primaryValue,
+            overlapAreaMinSqKm: null,
+            overlapAreaMaxSqKm: null,
+            accuracyNote: "",
             geographyTotalAreaSqKm: geographyTotal,
-            fractionOfGeography: sk.fractionOfGeography,
+            fractionOfGeography:
+              percentGeographyId !== undefined ? sk.fractionOfGeography : null,
             hasOverlap: sk.hasOverlap,
             overlapPartnerSketchNames: sk.overlapPartnerSketchNames.join("; "),
           });
@@ -357,7 +466,24 @@ function defaultColumns(
   if (mode === "overlay_area") {
     return [
       ...base,
+      { key: "percentGeographyId", label: "percentGeographyId", type: "number" },
+      {
+        key: "percentGeographyName",
+        label: "percentGeographyName",
+        type: "string",
+      },
       { key: "overlapAreaSqKm", label: "overlapAreaSqKm", type: "number" },
+      {
+        key: "overlapAreaMinSqKm",
+        label: "overlapAreaMinSqKm",
+        type: "number",
+      },
+      {
+        key: "overlapAreaMaxSqKm",
+        label: "overlapAreaMaxSqKm",
+        type: "number",
+      },
+      { key: "accuracyNote", label: "accuracyNote", type: "string" },
       {
         key: "geographyTotalAreaSqKm",
         label: "geographyTotalAreaSqKm",

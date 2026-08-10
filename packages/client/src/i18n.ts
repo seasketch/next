@@ -20,13 +20,21 @@ i18n
         }/${namespace}.json`
       )
         .then((resources) => {
+          // webpack JSON imports are `{ default: { ...keys } }`; unwrap so a
+          // translation key named "default" is not shadowed by the module export.
+          const translations =
+            resources &&
+            typeof resources.default === "object" &&
+            resources.default !== null
+              ? resources.default
+              : resources;
           if (isDefault) {
             callback(null, {
-              ...resources,
+              ...translations,
               ...plurals,
             });
           } else {
-            callback(null, resources);
+            callback(null, translations);
           }
         })
         .catch((error) => {

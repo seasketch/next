@@ -187,8 +187,8 @@ describe("Static strategy", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(json.data.projectBySlug.id).toBe(1);
 
-    // Wait for any pending cache operations to complete
-    await waitForCacheOperations();
+    // putToCaches is fire-and-forget; wait until the entry is readable
+    await waitUntilCached(cache, "ProjectBySlug", { slug: "maldives" });
 
     const secondRequest = await mockGqlRequest(
       ProjectBySlug,
@@ -202,8 +202,6 @@ describe("Static strategy", () => {
       }
     );
     const response2 = await cache.handleRequest(ENDPOINT_URL, secondRequest);
-    // Wait for any pending cache operations to complete
-    await waitForCacheOperations();
     expect(fetch).toHaveBeenCalledTimes(1);
     expect((await response2.json()).data.projectBySlug.name).toBe("Maldives");
     await cache.clear();
@@ -224,7 +222,7 @@ describe("Static strategy", () => {
       }
     );
     const response = await cache.handleRequest(ENDPOINT_URL, request);
-    await sleep(50);
+    await waitUntilCached(cache, "ProjectBySlug", { slug: "maldives" });
     const json = await response.json();
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(json.data.projectBySlug.id).toBe(1);
@@ -239,7 +237,7 @@ describe("Static strategy", () => {
       }
     );
     const response2 = await cache.handleRequest(ENDPOINT_URL, secondRequest);
-    await sleep(50);
+    await waitUntilCached(cache, "ProjectBySlug", { slug: "azores" });
     expect(fetch).toHaveBeenCalledTimes(2);
     expect((await response2.json()).data.projectBySlug.name).toBe("Azores");
     const thirdRequest = await mockGqlRequest(
@@ -252,7 +250,6 @@ describe("Static strategy", () => {
       }
     );
     const response3 = await cache.handleRequest(ENDPOINT_URL, thirdRequest);
-    await sleep(50);
     expect(fetch).toHaveBeenCalledTimes(2);
     expect((await response3.json()).data.projectBySlug.name).toBe("Azores");
     await cache.clear();
@@ -288,8 +285,7 @@ describe("lru strategy", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(json.data.projectBySlug.name).toBe("Maldives");
 
-    // Wait for cache operations to complete
-    await waitForCacheOperations();
+    await waitUntilCached(cache, "ProjectBySlug", { slug: "maldives" });
 
     const azoresRequest = await mockGqlRequest(
       ProjectBySlug,
@@ -301,7 +297,7 @@ describe("lru strategy", () => {
       }
     );
     await cache.handleRequest(ENDPOINT_URL, azoresRequest);
-    await waitForCacheOperations();
+    await waitUntilCached(cache, "ProjectBySlug", { slug: "azores" });
 
     const fijiRequest = await mockGqlRequest(
       ProjectBySlug,
@@ -313,7 +309,9 @@ describe("lru strategy", () => {
       }
     );
     await cache.handleRequest(ENDPOINT_URL, fijiRequest);
-    await waitForCacheOperations();
+    await waitUntilCached(cache, "ProjectBySlug", { slug: "fiji" });
+    // LRU prune is debounced; wait until the oldest entry is actually gone
+    await waitUntilNotCached(cache, "ProjectBySlug", { slug: "maldives" });
     expect(fetch).toHaveBeenCalledTimes(3);
 
     // Azores should still be in cache
@@ -327,7 +325,6 @@ describe("lru strategy", () => {
       }
     );
     await cache.handleRequest(ENDPOINT_URL, azoresRequest2);
-    await waitForCacheOperations();
     expect(fetch).toHaveBeenCalledTimes(3);
 
     // Maldives should not, and trigger another request
@@ -344,7 +341,7 @@ describe("lru strategy", () => {
       ENDPOINT_URL,
       maldivesRequest2
     );
-    await waitForCacheOperations();
+    await waitUntilCached(cache, "ProjectBySlug", { slug: "maldives" });
     // expect(fetch).toHaveBeenCalledTimes(4);
     expect((await maldivesEdited.json()).data.projectBySlug.name).toBe(
       "Maldives (Edited)"
@@ -364,7 +361,6 @@ describe("lru strategy", () => {
       ENDPOINT_URL,
       azoresRequest3
     );
-    await waitForCacheOperations();
     // expect(fetch).toHaveBeenCalledTimes(4);
     expect((await azoresCached.json()).data.projectBySlug.name).toBe("Azores");
     await cache.clear();
@@ -378,7 +374,7 @@ describe("byArgs strategy", () => {
     ]);
     await cache.clear();
     cache.cachePruningDebounceInterval = 5;
-    cache.setStrategyArgs("selected-projects", [{ slug: "maldives" }]);
+    await cache.setStrategyArgs("selected-projects", [{ slug: "maldives" }]);
     const maldivesRequest = await mockGqlRequest(
       ProjectBySlug,
       { slug: "maldives" },
@@ -393,7 +389,7 @@ describe("byArgs strategy", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(json.data.projectBySlug.name).toBe("Maldives");
 
-    await waitForCacheOperations();
+    await waitUntilCached(cache, "ProjectBySlug", { slug: "maldives" });
 
     const secondMaldivesRequest = await mockGqlRequest(
       ProjectBySlug,
@@ -412,8 +408,6 @@ describe("byArgs strategy", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
     expect(json2.data.projectBySlug.name).toBe("Maldives");
 
-    await waitForCacheOperations();
-
     // The following are ignored by the strategy
     const azoresRequest = await mockGqlRequest(
       ProjectBySlug,
@@ -428,8 +422,6 @@ describe("byArgs strategy", () => {
     const json3 = await response3.json();
     expect(fetch).toHaveBeenCalledTimes(2);
     expect(json3.data.projectBySlug.name).toBe("azores");
-
-    await waitForCacheOperations();
 
     const secondazoresRequest = await mockGqlRequest(
       ProjectBySlug,
@@ -455,9 +447,43 @@ function sleep(ms: number) {
 }
 
 /**
- * Wait for cache operations to complete to prevent race conditions in tests
+ * handleRequest intentionally does not await putToCaches. Poll the public
+ * cache API until the background write is visible (avoids fixed-sleep flakes).
  */
-async function waitForCacheOperations() {
-  // Wait for debounced cache pruning to complete
-  await sleep(20);
+async function waitUntilCached(
+  cache: GraphqlQueryCache,
+  queryName: string,
+  variables: Record<string, unknown>,
+  timeoutMs = 2000
+) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (await cache.getCacheStatus(queryName, variables)) {
+      return;
+    }
+    await sleep(5);
+  }
+  throw new Error(
+    `Timed out waiting for ${queryName} ${JSON.stringify(variables)} to be cached`
+  );
+}
+
+async function waitUntilNotCached(
+  cache: GraphqlQueryCache,
+  queryName: string,
+  variables: Record<string, unknown>,
+  timeoutMs = 2000
+) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (!(await cache.getCacheStatus(queryName, variables))) {
+      return;
+    }
+    await sleep(5);
+  }
+  throw new Error(
+    `Timed out waiting for ${queryName} ${JSON.stringify(
+      variables
+    )} to be evicted from cache`
+  );
 }
