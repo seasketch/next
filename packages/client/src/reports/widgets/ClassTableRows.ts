@@ -4,6 +4,10 @@ import {
   subjectIsFragment,
   subjectIsGeography,
   combineMetricsForFragments,
+  classifyOverlayAreaOverlapScope,
+  getOverlayAreaOverlapCombineResult,
+  OverlayAreaMetricValue,
+  OverlayAreaOverlapCombineResult,
 } from "overlay-engine";
 import { AnyLayer } from "mapbox-gl";
 import { GeostatsLayer } from "@seasketch/geostats-types";
@@ -447,18 +451,72 @@ export function combineMetricsBySource<T extends Metric>(
               .slice()
               .sort((a, b) => Number(b.id) - Number(a.id))[0]
           : geographyMetrics[0];
+      const fragmentMetrics = sourceMetrics.filter(
+        (m) =>
+          subjectIsFragment(m.subject) &&
+          m.subject.geographies.includes(geographyId)
+      );
+      let fragments = combineMetricsForFragments(
+        fragmentMetrics as Pick<Metric, "type" | "value">[],
+        expectedMetricType
+      ) as T;
+
+      // Attach within/between-sketch scope onto buffered overlay_area combine
+      // metadata when present. @see OverlayAreaOverlapInfo
+      if (
+        expectedMetricType === "overlay_area" ||
+        fragmentMetrics.some((m) => m.type === "overlay_area")
+      ) {
+        fragments = attachOverlayAreaOverlapScope(
+          fragments,
+          fragmentMetrics
+        ) as T;
+      }
+
       result[source.stableId] = {
-        fragments: combineMetricsForFragments(
-          sourceMetrics.filter(
-            (m) =>
-              subjectIsFragment(m.subject) &&
-              m.subject.geographies.includes(geographyId)
-          ) as Pick<Metric, "type" | "value">[],
-          expectedMetricType
-        ) as T,
+        fragments,
         geographies: geographyMetric as unknown as T,
       };
     }
   }
   return result;
+}
+
+/**
+ * Enriches a combined overlay_area metric's `__overlap` result with
+ * within-sketch / between-sketches scope derived from fragment subjects.
+ *
+ * @see OverlayAreaOverlapInfo
+ * @see classifyOverlayAreaOverlapScope
+ */
+export function attachOverlayAreaOverlapScope<T extends Metric>(
+  combined: Pick<T, "type" | "value">,
+  fragmentMetrics: { type?: string | null; subject?: unknown }[]
+): Pick<T, "type" | "value"> {
+  if (combined.type !== "overlay_area") {
+    return combined;
+  }
+  const value = combined.value as OverlayAreaMetricValue;
+  const overlap = getOverlayAreaOverlapCombineResult(value);
+  if (!overlap) {
+    return combined;
+  }
+  const withSubjects = fragmentMetrics.filter(
+    (m): m is { type?: string | null; subject: Metric["subject"] } =>
+      m.subject != null
+  );
+  const scopeInfo = classifyOverlayAreaOverlapScope(withSubjects);
+  const enriched: OverlayAreaOverlapCombineResult = {
+    ...overlap,
+    scope: scopeInfo.scope,
+    partnerSketchIds: scopeInfo.partnerSketchIds,
+    fragmentsInvolved: scopeInfo.fragmentsInvolved,
+  };
+  return {
+    ...combined,
+    value: {
+      ...value,
+      __overlap: enriched,
+    },
+  };
 }

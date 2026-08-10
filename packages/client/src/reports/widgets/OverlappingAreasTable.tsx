@@ -1,8 +1,10 @@
-import { Fragment, useContext, useMemo } from "react";
+import { Fragment, ReactNode, useContext, useMemo } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import {
+  getOverlayAreaOverlapCombineResult,
   MetricDependency,
   OverlayAreaMetric,
+  OverlayAreaMetricValue,
 } from "overlay-engine";
 import {
   ReportWidget,
@@ -41,7 +43,10 @@ import { ClassRowSettingsPopover } from "./ClassRowSettingsPopover";
 import { LabeledDropdown } from "./LabeledDropdown";
 import ReportLayerVisibilityCheckbox from "../components/ReportLayerVisibilityCheckbox";
 import { LayersIcon } from "@radix-ui/react-icons";
-import { usePrimaryGeography } from "../hooks/usePrimaryGeography";
+import {
+  SketchClassPrimaryGeoFields,
+  usePrimaryGeography,
+} from "../hooks/usePrimaryGeography";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import {
   OverlapDebugTooltip,
@@ -52,6 +57,17 @@ import SketchOverlapHint from "./collection/SketchOverlapHint";
 import { sketchContributionsForClassTableRow } from "./collection/sketchContributions";
 import { useCollectionSketchExpand } from "./collection/useCollectionSketchExpand";
 import { ReportUIStateContext } from "../context/ReportUIStateContext";
+import BufferedOverlapWarning, {
+  bufferedOverlapWarrantsWarning,
+} from "./BufferedOverlapWarning";
+import { useBaseReportContext } from "../context/BaseReportContext";
+import { useSubjectReportContext } from "../context/SubjectReportContext";
+import { SketchGeometryType } from "../../generated/graphql";
+import {
+  OverlappingAreasPercentGeographyId,
+  overlayAreaGeographyClassTotal,
+  resolveOverlappingAreasPercentGeographyId,
+} from "./overlappingAreasPercentGeography";
 
 // Accept both area and length style units; default to km (area).
 type OverlapUnit = "km" | "mi" | "acres" | "ha";
@@ -67,7 +83,18 @@ type OverlappingAreasTableSettings = {
   areaLabel?: string;
   percentWithinLabel?: string;
   showAreaColumn?: boolean;
+  /**
+   * @deprecated Prefer {@link percentGeographyId}. Kept for backwards
+   * compatibility with saved reports. When `percentGeographyId` is unset,
+   * `false` hides the column and `true`/absent shows it against the primary
+   * clipping geography.
+   */
   showPercentColumn?: boolean;
+  /**
+   * Which geography to use for the "% Within" denominator. See
+   * {@link resolveOverlappingAreasPercentGeographyId}.
+   */
+  percentGeographyId?: OverlappingAreasPercentGeographyId;
   hideColorSwatches?: boolean;
 } & ClassTableRowComponentSettings;
 
@@ -85,7 +112,11 @@ const areaUnitToOverlapUnit: Record<AreaUnit, OverlapUnit> = {
   hectare: "ha",
 };
 
-type OverlapRow = OverlapDebugTooltipRow;
+type OverlapRow = OverlapDebugTooltipRow & {
+  overcountMin?: number;
+  overcountMax?: number;
+  naiveSum?: number;
+};
 
 export const OverlappingAreasTable: ReportWidget<
   OverlappingAreasTableSettings
@@ -108,7 +139,11 @@ export const OverlappingAreasTable: ReportWidget<
   const sortBy = componentSettings.sortBy || "overlap";
   const rowsPerPage = componentSettings.rowsPerPage ?? 10;
   const showAreaColumn = componentSettings.showAreaColumn ?? true;
-  const showPercentColumn = componentSettings.showPercentColumn ?? true;
+  const percentGeographyId = resolveOverlappingAreasPercentGeographyId(
+    componentSettings,
+    primaryGeographyId
+  );
+  const showPercentColumn = percentGeographyId !== undefined;
   const showColorSwatches = !componentSettings.hideColorSwatches;
   const areaColumnAlignClass =
     showAreaColumn && showPercentColumn ? "text-center" : "text-right";
@@ -117,6 +152,16 @@ export const OverlappingAreasTable: ReportWidget<
   const areaLabel = componentSettings.areaLabel || t("Area");
   const percentWithinLabel =
     componentSettings.percentWithinLabel || t("% Within");
+
+  const bufferKm = useMemo(() => {
+    const dep = (dependencies || []).find(
+      (d) =>
+        d.type === "overlay_area" &&
+        typeof d.parameters?.bufferDistanceKm === "number" &&
+        d.parameters.bufferDistanceKm > 0
+    );
+    return dep?.parameters?.bufferDistanceKm as number | undefined;
+  }, [dependencies]);
 
   const formatters = useNumberFormatters({
     unit:
@@ -164,13 +209,31 @@ export const OverlappingAreasTable: ReportWidget<
 
     let rows = classRows.map((r) => {
       const combinedForSource = combinedMetrics[r.sourceId];
-      const overlap = combinedForSource?.fragments?.value?.[r.groupByKey] ?? 0;
+      const fragmentValue = combinedForSource?.fragments
+        ?.value as OverlayAreaMetricValue | undefined;
+      const overlapRaw = fragmentValue?.[r.groupByKey];
+      const overlap = typeof overlapRaw === "number" ? overlapRaw : 0;
+      // Denominator may be a different geography than the clipping geography
+      // used to combine fragment (numerator) metrics.
+      const source = sources.find((s) => s.stableId === r.sourceId);
       const geographyTotal =
-        combinedForSource?.geographies?.value?.[r.groupByKey] ?? 0;
+        percentGeographyId !== undefined
+          ? overlayAreaGeographyClassTotal(
+              metrics,
+              source?.sourceUrl,
+              percentGeographyId,
+              r.groupByKey
+            )
+          : undefined;
+      const combineResult = getOverlayAreaOverlapCombineResult(fragmentValue);
+      const perClass = combineResult?.perClass?.[r.groupByKey];
       return {
         ...r,
         overlap,
         geographyTotal,
+        overcountMin: perClass?.overcountMin,
+        overcountMax: perClass?.overcountMax,
+        naiveSum: perClass?.naiveSum,
       };
     });
 
@@ -190,6 +253,7 @@ export const OverlappingAreasTable: ReportWidget<
     dependencies,
     sources,
     primaryGeographyId,
+    percentGeographyId,
     componentSettings.customRowLabels,
     componentSettings.rowLinkedStableIds,
     componentSettings.excludedRowKeys,
@@ -199,6 +263,25 @@ export const OverlappingAreasTable: ReportWidget<
     t,
     loading,
   ]);
+
+  const cardFootnotePct = useMemo(() => {
+    let maxPct = 0;
+    for (const row of rows) {
+      if (
+        typeof row.overcountMax === "number" &&
+        typeof row.naiveSum === "number" &&
+        typeof row.overcountMin === "number" &&
+        bufferedOverlapWarrantsWarning(
+          row.overcountMin,
+          row.overcountMax,
+          row.naiveSum
+        )
+      ) {
+        maxPct = Math.max(maxPct, (row.overcountMax / row.naiveSum) * 100);
+      }
+    }
+    return maxPct > 0 ? Math.ceil(maxPct) : 0;
+  }, [rows]);
 
   const {
     isCollection,
@@ -377,30 +460,46 @@ export const OverlappingAreasTable: ReportWidget<
                   {loading ? (
                     <MetricLoadingDots />
                   ) : (
-                    formatters.area(row.overlap)
+                    <span className="inline-flex items-center gap-1.5 justify-end">
+                      {typeof row.overcountMin === "number" &&
+                        typeof row.overcountMax === "number" &&
+                        typeof row.naiveSum === "number" && (
+                          <BufferedOverlapWarning
+                            overcountMin={row.overcountMin}
+                            overcountMax={row.overcountMax}
+                            total={row.naiveSum}
+                            formatArea={(sqKm) => formatters.area(sqKm)}
+                          />
+                        )}
+                      {formatters.area(row.overlap)}
+                    </span>
                   )}
                 </div>
               )}
               {showPercentColumn && (
                 <div className="flex-none text-right text-gray-700 tabular-nums text-sm min-w-[70px]">
-                  {typeof percent === "number" &&
-                    percent > 1.05 &&
-                    primaryGeographyId !== undefined && (
-                      <OverlapDebugTooltip
-                        row={row}
-                        percent={percent}
-                        metrics={metrics}
-                        sources={sources}
-                        primaryGeographyId={primaryGeographyId}
-                        formatters={formatters}
-                      />
-                    )}
                   {loading ? (
                     <MetricLoadingDots />
-                  ) : typeof percent === "number" ? (
-                    formatters.percent(percent)
                   ) : (
-                    formatters.percent(0)
+                    <span className="inline-flex items-center gap-1.5 justify-end">
+                      {typeof percent === "number" &&
+                        percent > 1.05 &&
+                        percentGeographyId !== undefined && (
+                          <OverlapDebugTooltip
+                            row={row}
+                            percent={percent}
+                            metrics={metrics}
+                            sources={sources}
+                            primaryGeographyId={percentGeographyId}
+                            formatters={formatters}
+                            bufferKm={bufferKm}
+                            classLabel={row.label}
+                          />
+                        )}
+                      {typeof percent === "number"
+                        ? formatters.percent(percent)
+                        : formatters.percent(0)}
+                    </span>
                   )}
                 </div>
               )}
@@ -440,6 +539,11 @@ export const OverlappingAreasTable: ReportWidget<
                       sketchDisplayName={sk.sketchName}
                       overlapPartnerSketchNames={
                         sk.overlapPartnerSketchNames
+                      }
+                      mode={
+                        sk.hasBufferedOverlap
+                          ? "buffer"
+                          : "fragment"
                       }
                     />
                   </div>
@@ -490,6 +594,16 @@ export const OverlappingAreasTable: ReportWidget<
           onPageChange={setCurrentPage}
         />
       )}
+      {printing && cardFootnotePct > 0 && (
+        <div className="px-3 py-2 border-t border-amber-200 bg-amber-50 text-xs text-amber-900">
+          <Trans
+            ns="reports"
+            i18nKey="bufferedOverlapCardFootnote"
+            defaults="Some areas near buffered boundaries could not be fully deduplicated. Percentages next to area values are the maximum possible overestimation (highest in this table: {{pct}}%)."
+            values={{ pct: cardFootnotePct }}
+          />
+        </div>
+      )}
       </div>
     </Tooltip.Provider>
   );
@@ -517,10 +631,23 @@ export const OverlappingAreasTableTooltipControls: ReportWidgetTooltipControls =
     const sortBy = settings.sortBy || "overlap";
     const rowsPerPage = settings.rowsPerPage ?? 10;
     const showAreaColumn = settings.showAreaColumn ?? true;
-    const showPercentColumn = settings.showPercentColumn ?? true;
     const showColorSwatches = !settings.hideColorSwatches;
 
     const { filteredSources: sources } = useOverlaySources(dependencies);
+    const { geographies } = useBaseReportContext();
+    const subjectReportContext = useSubjectReportContext();
+    const tooltipSketchClass = subjectReportContext.data?.sketch?.sketchClass;
+    const sketchClassForPrimaryGeography: SketchClassPrimaryGeoFields =
+      tooltipSketchClass ?? {
+        geometryType: SketchGeometryType.Polygon,
+        clippingGeographies: [],
+        validChildren: [],
+        project: { sketchClasses: [] },
+      };
+    const { clippingGeography } = usePrimaryGeography(
+      sketchClassForPrimaryGeography,
+      geographies
+    );
 
     const handleUpdate = (patch: Partial<OverlappingAreasTableSettings>) => {
       onUpdate({
@@ -531,12 +658,127 @@ export const OverlappingAreasTableTooltipControls: ReportWidgetTooltipControls =
       });
     };
 
+    const percentGeographyDropdownValue = useMemo(() => {
+      if (settings.percentGeographyId === null) {
+        return "none";
+      }
+      if (settings.percentGeographyId === "primary") {
+        return "primary";
+      }
+      if (
+        typeof settings.percentGeographyId === "number" &&
+        Number.isFinite(settings.percentGeographyId)
+      ) {
+        return String(settings.percentGeographyId);
+      }
+      // Legacy boolean / unset → match runtime resolve (default on → primary).
+      if (settings.showPercentColumn === false) {
+        return "none";
+      }
+      return "primary";
+    }, [settings.percentGeographyId, settings.showPercentColumn]);
+
+    const geographyOptions = useMemo(() => {
+      const defaultSuffix = (
+        <span className="text-gray-400"> {t("default")}</span>
+      );
+      const options: Array<{ value: string; label: ReactNode }> = [
+        { value: "none", label: t("None") },
+      ];
+      if (clippingGeography) {
+        options.push({
+          value: "primary",
+          label: (
+            <span>
+              {clippingGeography.name}
+              {defaultSuffix}
+            </span>
+          ),
+        });
+      } else {
+        options.push({
+          value: "primary",
+          label: (
+            <span>
+              {t("Primary clipping geography")}
+              {defaultSuffix}
+            </span>
+          ),
+        });
+      }
+      for (const g of geographies) {
+        if (clippingGeography && g.id === clippingGeography.id) {
+          continue;
+        }
+        options.push({ value: String(g.id), label: g.name });
+      }
+      return options;
+    }, [geographies, clippingGeography, t]);
+
+    const handlePercentGeographyChange = (value: string) => {
+      if (value === "none") {
+        handleUpdate({
+          percentGeographyId: null,
+          showPercentColumn: undefined,
+        });
+        return;
+      }
+      if (value === "primary") {
+        handleUpdate({
+          percentGeographyId: "primary",
+          showPercentColumn: undefined,
+        });
+        return;
+      }
+      const geographyId = Number(value);
+      if (!Number.isFinite(geographyId)) {
+        return;
+      }
+      handleUpdate({
+        percentGeographyId: geographyId,
+        showPercentColumn: undefined,
+      });
+    };
+
     const sortOptions = [
       { value: "overlap", label: t("Overlap") },
       { value: "name", label: t("Name") },
     ];
 
     const selectedAreaUnit = overlapUnitToAreaUnit[unit];
+
+    const buffer = dependencies.find(
+      (m) => m.parameters?.bufferDistanceKm !== undefined
+    )?.parameters?.bufferDistanceKm;
+
+    const handleBufferClick = () => {
+      const currentValue = buffer !== undefined ? String(buffer) : "0";
+      const value = window.prompt(
+        t("Enter buffer distance in kilometers (or 0 for none)"),
+        currentValue
+      );
+      if (value === null) {
+        return;
+      }
+      const numValue = value === "" || value === "0" ? 0 : Number(value);
+      onUpdateDependencyParameters((dependency) => {
+        if (dependency.subjectType === "geographies") {
+          return {
+            ...dependency.parameters,
+            bufferDistanceKm: undefined,
+          };
+        }
+        return {
+          ...dependency.parameters,
+          bufferDistanceKm: numValue === 0 ? undefined : numValue,
+        };
+      });
+    };
+
+    const bufferFormatter = useNumberFormatters({
+      unit: "kilometer",
+      unitDisplay: "short",
+    });
 
     return (
       <div className="flex gap-3 items-center text-sm text-gray-800">
@@ -564,6 +806,21 @@ export const OverlappingAreasTableTooltipControls: ReportWidgetTooltipControls =
             handleUpdate({ sortBy: val as "overlap" | "name" })
           }
         />
+        <LabeledDropdown
+          label={t("% Geography")}
+          value={percentGeographyDropdownValue}
+          options={geographyOptions}
+          onChange={handlePercentGeographyChange}
+          getDisplayLabel={(selected) => {
+            if (selected?.value === "none") {
+              return t("None");
+            }
+            if (selected?.value === "primary") {
+              return clippingGeography?.name || t("Primary clipping geography");
+            }
+            return selected?.label;
+          }}
+        />
 
         <ClassRowSettingsPopover
           settings={settings}
@@ -586,6 +843,16 @@ export const OverlappingAreasTableTooltipControls: ReportWidgetTooltipControls =
           onUpdate={onUpdate}
         />
         <TooltipMorePopover>
+          <button
+            type="button"
+            onClick={handleBufferClick}
+            className="w-full text-left text-sm rounded hover:text-black focus:outline-none flex items-center space-x-2"
+          >
+            <span className="font-light text-gray-400">{t("Buffer")}</span>
+            <span className="flex-1 text-right hover:ring hover:ring-blue-300/20">
+              {bufferFormatter.distance(buffer ?? 0)}
+            </span>
+          </button>
           <div className="space-y-2">
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
               {t("Show columns")}
@@ -605,16 +872,6 @@ export const OverlappingAreasTableTooltipControls: ReportWidgetTooltipControls =
               onChange={(next) =>
                 handleUpdate({
                   showAreaColumn: next ? undefined : false,
-                })
-              }
-            />
-            <TooltipBooleanConfigurationOption
-              label={t("% of geography")}
-              checked={showPercentColumn}
-              checkboxFirst
-              onChange={(next) =>
-                handleUpdate({
-                  showPercentColumn: next ? undefined : false,
                 })
               }
             />

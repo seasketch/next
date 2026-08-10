@@ -27,6 +27,9 @@ export {
   MetricType,
   TotalAreaMetric,
   OverlayAreaMetric,
+  OverlayAreaMetricValue,
+  OverlayAreaOverlapInfo,
+  OverlayAreaOverlapCombineResult,
   CountMetric,
   PresenceMetric,
   PresenceTableMetric,
@@ -37,12 +40,23 @@ export {
   StringOrBooleanColumnValueStats,
   combineNumberColumnValueStats,
   combineStringOrBooleanColumnValueStats,
+  combineOverlayAreaMetrics,
+  classifyOverlayAreaOverlapScope,
+  isOverlayAreaClassKey,
+  isOverlayAreaOverlapInfo,
+  isOverlayAreaOverlapCombineResult,
+  getOverlayAreaOverlapInfo,
+  getOverlayAreaOverlapCombineResult,
+  getOverlayAreaClassTotals,
+  getOverlayAreaDisplayedClassValue,
+  getOverlayAreaClassValueRange,
   isColumnValuesEntry,
   hasReliableColumnValueEntries,
   numberColumnStatsFromEntries,
   stringOrBooleanColumnStatsFromEntries,
   capColumnValueEntries,
   MAX_COLUMN_VALUE_ENTRIES,
+  MAX_OVERLAY_AREA_OVERLAP_ENTRIES,
   MetricTypeMap,
   subjectIsFragment,
   subjectIsGeography,
@@ -71,3 +85,4 @@ export {
 export { initializeGeographySources } from "./geographies/geographies";
 export { calculateRasterStats } from "./rasterStats";
 export { calculateDistanceToShore } from "./calculateDistanceToShore";
+export { computeBufferedSubjectAndCollar } from "./metrics/computeSubjectCollar";

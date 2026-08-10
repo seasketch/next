@@ -14,13 +14,14 @@ export function extractTotalAreaSqKmFromMetric(
   return 0;
 }
 
-/** overlay_area slice for groupByKey from one metric row. */
+/** overlay_area slice for groupByKey from one metric row (skips `__` metadata). */
 export function extractOverlayAreaForGroupFromMetric(
   m: CompatibleSpatialMetricDetailsFragment | Pick<Metric, "type" | "value">,
   groupByKey: string,
 ): number {
   if (m.type !== "overlay_area") return 0;
-  const raw = (m.value as Record<string, number>)?.[groupByKey];
+  if (groupByKey.startsWith("__")) return 0;
+  const raw = (m.value as Record<string, unknown>)?.[groupByKey];
   return typeof raw === "number" ? raw : 0;
 }
 

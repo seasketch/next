@@ -5643,8 +5643,19 @@ async function clipBatch({
   differenceMultiPolygon,
   subjectFeature,
   groupBy,
-  overlappingFeatures
+  overlappingFeatures,
+  collectOverlapEntries,
+  collarFeature
 }) {
+  if (collectOverlapEntries) {
+    return clipBatchCollectingOverlapEntries({
+      features,
+      differenceMultiPolygon,
+      subjectFeature,
+      groupBy,
+      collarFeature
+    });
+  }
   const results = { "*": 0 };
   if (groupBy) {
     const classKeys = ["*"];
@@ -5680,6 +5691,143 @@ async function clipBatch({
     results["*"] += size;
   }
   return results;
+}
+function clipBatchCollectingOverlapEntries({
+  features,
+  differenceMultiPolygon,
+  subjectFeature,
+  groupBy,
+  collarFeature
+}) {
+  const results = { "*": 0 };
+  const featureEntries = [];
+  for (const f of features) {
+    const classKey = (groupBy && f.feature.properties?.[groupBy] ? String(f.feature.properties[groupBy]) : null) || null;
+    const clipped = clipSingleFeatureToSubject(
+      f,
+      differenceMultiPolygon,
+      subjectFeature
+    );
+    if (!clipped || clipped.size <= 0) {
+      continue;
+    }
+    results["*"] = results["*"] + clipped.size;
+    if (classKey) {
+      results[classKey] = (results[classKey] || 0) + clipped.size;
+    }
+    const oidx = f.feature.properties?.__oidx;
+    if (typeof oidx !== "number") {
+      continue;
+    }
+    let collarArea = 0;
+    if (collarFeature && clipped.geometry) {
+      collarArea = sizeInsideCollar(clipped.geometry, collarFeature);
+    } else if (!collarFeature) {
+      collarArea = clipped.size;
+    }
+    if (collarArea > 0) {
+      const entryClass = classKey || "*";
+      featureEntries.push({
+        oidx,
+        classKey: entryClass,
+        clippedArea: clipped.size,
+        featureArea: clipped.featureSize,
+        collarArea
+      });
+    }
+  }
+  if (featureEntries.length > 0) {
+    results.__featureEntries = featureEntries;
+  }
+  return results;
+}
+function clipSingleFeatureToSubject(f, differenceGeoms, subjectFeature) {
+  const featureSize = calcSize(f.feature);
+  const geomType = f.feature.geometry.type;
+  if (geomType === "Polygon" || geomType === "MultiPolygon") {
+    let geom;
+    if (f.feature.geometry.type === "Polygon") {
+      geom = [f.feature.geometry.coordinates];
+    } else {
+      geom = f.feature.geometry.coordinates;
+    }
+    if (f.requiresIntersection) {
+      geom = intersection2(
+        geom,
+        subjectFeature.geometry.coordinates
+      );
+    }
+    if (geom.length > 0 && differenceGeoms.length > 0 && f.requiresDifference) {
+      geom = difference(geom, ...differenceGeoms);
+    } else if (geom.length > 0 && differenceGeoms.length > 0) {
+      geom = difference(geom, ...differenceGeoms);
+    }
+    if (!geom.length) {
+      return null;
+    }
+    const geometry = {
+      type: "Feature",
+      geometry: {
+        type: "MultiPolygon",
+        coordinates: geom
+      },
+      properties: {}
+    };
+    return {
+      size: calcSize(geometry),
+      featureSize,
+      geometry
+    };
+  }
+  if (geomType === "LineString" || geomType === "MultiLineString") {
+    const processed = performOperationsOnFeature(
+      f.feature,
+      f.requiresIntersection,
+      f.requiresDifference || differenceGeoms.length > 0,
+      differenceGeoms,
+      subjectFeature
+    );
+    if (processed.geometry.type !== "LineString" && processed.geometry.type !== "MultiLineString") {
+      return null;
+    }
+    const geometry = processed;
+    const size = calcSize(geometry);
+    if (size <= 0) {
+      return null;
+    }
+    return { size, featureSize, geometry };
+  }
+  return null;
+}
+function sizeInsideCollar(clipped, collarFeature) {
+  if (clipped.geometry.type === "Polygon" || clipped.geometry.type === "MultiPolygon") {
+    let geom;
+    if (clipped.geometry.type === "Polygon") {
+      geom = [clipped.geometry.coordinates];
+    } else {
+      geom = clipped.geometry.coordinates;
+    }
+    const inside = intersection2(
+      geom,
+      collarFeature.geometry.coordinates
+    );
+    if (!inside.length) {
+      return 0;
+    }
+    return calcSize({
+      type: "Feature",
+      geometry: { type: "MultiPolygon", coordinates: inside },
+      properties: {}
+    });
+  }
+  try {
+    if (turf_boolean_intersects_default(clipped, collarFeature)) {
+      return calcSize(clipped);
+    }
+  } catch {
+    return calcSize(clipped);
+  }
+  return 0;
 }
 function calcSize(feature2) {
   if (feature2.geometry.type === "Polygon" || feature2.geometry.type === "MultiPolygon") {
@@ -6076,7 +6224,9 @@ import_node_worker_threads.parentPort?.on(
           differenceMultiPolygon: job.differenceMultiPolygon,
           subjectFeature: job.subjectFeature,
           groupBy: job.groupBy,
-          overlappingFeatures: job.overlappingFeatures
+          overlappingFeatures: job.overlappingFeatures,
+          collectOverlapEntries: job.collectOverlapEntries,
+          collarFeature: job.collarFeature
         });
       } else if (operation2 === "count") {
         result = await countFeatures({

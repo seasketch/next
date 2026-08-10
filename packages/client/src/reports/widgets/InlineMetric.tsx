@@ -7,8 +7,13 @@ import {
   Metric,
   MetricDependency,
   OverlayAreaMetric,
+  OverlayAreaMetricValue,
+  OverlayAreaOverlapCombineResult,
   TotalAreaMetric,
   combineMetricsForFragments,
+  getOverlayAreaClassTotals,
+  getOverlayAreaOverlapCombineResult,
+  isOverlayAreaClassKey,
   subjectIsFragment,
   subjectIsGeography,
   isNumberColumnValueStats,
@@ -56,6 +61,8 @@ import { GeostatsLayer, isGeostatsLayer } from "@seasketch/geostats-types";
 import ColumnStatsWarning, {
   hasBufferedColumnValuesDependency,
 } from "./ColumnStatsWarning";
+import BufferedOverlapWarning from "./BufferedOverlapWarning";
+import { attachOverlayAreaOverlapScope } from "./ClassTableRows";
 import {
   getColumnTotalFromGeostats,
   getFeatureCountFromGeostats,
@@ -535,16 +542,24 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
         return formatters.distance(combined.value.meters / 1000);
       }
       case "overlay_area": {
-        const overlayMetrics = metrics.filter((m) => m.type === "overlay_area");
+        const overlayMetrics = metrics.filter(
+          (m) => m.type === "overlay_area" && subjectIsFragment(m.subject)
+        );
         if (overlayMetrics.length === 0) {
           throw new Error("Overlay area not found in metrics.");
         }
-        const combined = combineMetricsForFragments(
-          metrics as Pick<Metric, "type" | "value">[],
+        // Corrected totals + optional residual-uncertainty metadata.
+        // @see OverlayAreaOverlapInfo
+        let combined = combineMetricsForFragments(
+          overlayMetrics as Pick<Metric, "type" | "value">[],
           "overlay_area"
         ) as OverlayAreaMetric;
-
-        return formatters.area(combined.value["*"]);
+        combined = attachOverlayAreaOverlapScope(
+          combined,
+          overlayMetrics
+        ) as OverlayAreaMetric;
+        const totals = getOverlayAreaClassTotals(combined.value);
+        return formatters.area(totals["*"] ?? 0);
       }
       case "geography_overlay_area": {
         const geographyId =
@@ -564,10 +579,14 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
         if (!geographyOverlayMetric) {
           throw new Error("Geography overlay area not found in metrics.");
         }
+        const totals = getOverlayAreaClassTotals(geographyOverlayMetric.value);
         const totalArea =
-          geographyOverlayMetric.value["*"] ??
-          Object.values(geographyOverlayMetric.value).reduce(
-            (sum, v) => sum + v,
+          totals["*"] ??
+          Object.entries(geographyOverlayMetric.value).reduce(
+            (sum, [key, v]) =>
+              isOverlayAreaClassKey(key) && typeof v === "number"
+                ? sum + v
+                : sum,
             0
           );
         return formatters.area(totalArea);
@@ -864,6 +883,46 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
     return [componentSettings?.stat || "mean"];
   }, [componentSettings?.presentation, componentSettings?.stat]);
 
+  // Buffered overlay_area residual-uncertainty warning (exact corrections stay silent).
+  // @see OverlayAreaOverlapInfo
+  const overlayOverlapForWarning = useMemo((): {
+    combine: OverlayAreaOverlapCombineResult;
+    total: number;
+  } | null => {
+    const presentation = componentSettings?.presentation || "total_area";
+    if (loading || errors.length > 0 || presentation !== "overlay_area") {
+      return null;
+    }
+    const overlayMetrics = metrics.filter(
+      (m) => m.type === "overlay_area" && subjectIsFragment(m.subject)
+    );
+    if (!overlayMetrics.length) {
+      return null;
+    }
+    try {
+      let combined = combineMetricsForFragments(
+        overlayMetrics as Pick<Metric, "type" | "value">[],
+        "overlay_area"
+      ) as OverlayAreaMetric;
+      combined = attachOverlayAreaOverlapScope(
+        combined,
+        overlayMetrics
+      ) as OverlayAreaMetric;
+      const combine = getOverlayAreaOverlapCombineResult(
+        combined.value as OverlayAreaMetricValue
+      );
+      if (!combine?.perClass?.["*"]) {
+        return null;
+      }
+      return {
+        combine,
+        total: combine.perClass["*"].naiveSum,
+      };
+    } catch {
+      return null;
+    }
+  }, [loading, errors, metrics, componentSettings?.presentation]);
+
   if (loading) {
     return (
       <div className="inline-block rounded border border-blue-600/30 w-12 h-content relative -mb-[3px] bg-blue-500/20">
@@ -900,6 +959,19 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
             stats={columnStatsForWarning}
             displayedStats={columnStatsWarningDisplayedStats}
             buffered={hasBufferedColumnValuesDependency(dependencies)}
+            className="ml-0.5"
+          />
+        )}
+        {overlayOverlapForWarning && (
+          <BufferedOverlapWarning
+            overcountMin={
+              overlayOverlapForWarning.combine.perClass["*"].overcountMin
+            }
+            overcountMax={
+              overlayOverlapForWarning.combine.perClass["*"].overcountMax
+            }
+            total={overlayOverlapForWarning.total}
+            formatArea={(sqKm) => formatters.area(sqKm)}
             className="ml-0.5"
           />
         )}
@@ -1649,7 +1721,8 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
           presentation === "percent_count" ||
           presentation === "percent_count_total" ||
           presentation === "column_values" ||
-          presentation === "percent_column_total_overlapped") && (
+          presentation === "percent_column_total_overlapped" ||
+          presentation === "overlay_area") && (
           <button
             type="button"
             onClick={handleBufferClick}
