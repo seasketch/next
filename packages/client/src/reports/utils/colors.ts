@@ -91,6 +91,96 @@ export function extractPaletteColorsFromVectorStyle(
   return unique.length > 0 ? unique : undefined;
 }
 
+/**
+ * If `filter` is a simple equality (or all-of equalities) on `attribute`,
+ * return the matched literal value. Used for one-layer-per-category styles.
+ */
+function categoryValueFromFilter(
+  filter: unknown,
+  attribute: string
+): string | number | boolean | undefined {
+  if (!Array.isArray(filter) || filter.length < 2) return undefined;
+  const op = filter[0];
+  if (op === "all") {
+    for (let i = 1; i < filter.length; i++) {
+      const matched = categoryValueFromFilter(filter[i], attribute);
+      if (matched !== undefined) return matched;
+    }
+    return undefined;
+  }
+  if (op !== "==" || filter.length < 3) return undefined;
+  const a = filter[1];
+  const b = filter[2];
+  const isGet = (expr: unknown) =>
+    Array.isArray(expr) && expr[0] === "get" && expr[1] === attribute;
+  const isLegacyProp = (expr: unknown) => expr === attribute;
+  if ((isGet(a) || isLegacyProp(a)) && isLiteralCategoryValue(b)) {
+    return b;
+  }
+  if ((isGet(b) || isLegacyProp(b)) && isLiteralCategoryValue(a)) {
+    return a;
+  }
+  return undefined;
+}
+
+function isLiteralCategoryValue(
+  value: unknown
+): value is string | number | boolean {
+  return (
+    typeof value === "string" ||
+    typeof value === "number" ||
+    typeof value === "boolean"
+  );
+}
+
+/**
+ * Best solid swatch color for a single layer. Prefers fill/circle color;
+ * falls back to fill-outline-color for pattern-only fills; skips transparent
+ * line paint (common "outline disabled" layers with line-opacity: 0).
+ */
+function solidColorFromLayer(layer: AnyLayer): string | undefined {
+  if (
+    layer.type !== "fill" &&
+    layer.type !== "circle" &&
+    layer.type !== "line"
+  ) {
+    return undefined;
+  }
+  if (!layer.paint) return undefined;
+  const paint = layer.paint as Record<string, unknown>;
+
+  if (layer.type === "fill") {
+    const fillColor = paint["fill-color"];
+    if (typeof fillColor === "string" && !isTransparentColor(fillColor)) {
+      return fillColor;
+    }
+    const outline = paint["fill-outline-color"];
+    if (typeof outline === "string" && !isTransparentColor(outline)) {
+      return outline;
+    }
+    return undefined;
+  }
+
+  if (layer.type === "circle") {
+    const circleColor = paint["circle-color"];
+    if (typeof circleColor === "string" && !isTransparentColor(circleColor)) {
+      return circleColor;
+    }
+    return undefined;
+  }
+
+  const opacity = paint["line-opacity"];
+  if (typeof opacity === "number" && opacity <= 0) {
+    return undefined;
+  }
+  const lineColor = paint["line-color"];
+  if (typeof lineColor === "string" && !isTransparentColor(lineColor)) {
+    return lineColor;
+  }
+
+  return undefined;
+}
+
 export function extractColorsForCategories(
   values: string[],
   categoryField: GeostatsAttribute,
@@ -137,6 +227,33 @@ export function extractColorsForCategories(
       }
     }
   }
+
+  // One-layer-per-category styles (common in SeaSketch cartography) use a
+  // filter like ["==", ["get", "type"], "orchard"] instead of match paint.
+  // Fill gaps left by the match-expression pass above; prefer fill layers.
+  const layerOrder: Array<"fill" | "circle" | "line"> = [
+    "fill",
+    "circle",
+    "line",
+  ];
+  for (const layerType of layerOrder) {
+    for (const layer of style) {
+      if (layer.type !== layerType) continue;
+      const matched = categoryValueFromFilter(
+        (layer as { filter?: unknown }).filter,
+        attribute
+      );
+      if (matched === undefined) continue;
+      const key = String(matched);
+      if (!values.some((v) => String(v) === key)) continue;
+      if (colors[key] !== undefined) continue;
+      const color = solidColorFromLayer(layer);
+      if (color) {
+        colors[key] = color;
+      }
+    }
+  }
+
   return colors;
 }
 

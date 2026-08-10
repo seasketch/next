@@ -350,10 +350,14 @@ export function getClassTableRows(options: {
         }
         for (const value of values) {
           const key = classTableRowKey(dependency.stableId!, value);
-          const resolved: string | undefined =
-            colors[value] ||
-            extractColorForLayers(source.mapboxGlStyles as AnyLayer[]);
-          const rowSwatch = vectorSwatchFromSource(source, resolved);
+          // Only use a category-specific color. Falling back to
+          // extractColorForLayers(all layers) incorrectly paints every
+          // unmatched category with the first fill-color in the style.
+          const resolved = colors[value];
+          const rowSwatch =
+            resolved !== undefined && !isTransparentColor(resolved)
+              ? { color: resolved }
+              : {};
           rows.push({
             key,
             label: options.customLabels?.[key] || value,
