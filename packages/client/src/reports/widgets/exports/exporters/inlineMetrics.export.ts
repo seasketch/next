@@ -575,10 +575,12 @@ export function buildInlineMetricsSection(
             row[`${c.key}__minSqKm`] = star.naiveSum - star.overcountMax;
             row[`${c.key}__maxSqKm`] = star.naiveSum - star.overcountMin;
             /* eslint-disable i18next/no-literal-string -- machine-readable CSV notes */
-            if (star.overcountMax > star.overcountMin) {
-              const pct = Math.ceil(
-                (star.overcountMax / star.naiveSum) * 100,
-              );
+            if (
+              star.overcountMax > star.overcountMin &&
+              star.naiveSum > 0
+            ) {
+              const residual = star.overcountMax - star.overcountMin;
+              const pct = Math.ceil((residual / star.naiveSum) * 100);
               row[`${c.key}__accuracyNote`] =
                 `may be overestimated up to ${pct}%`;
             } else if (star.overcountMin > 0) {

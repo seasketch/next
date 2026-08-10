@@ -6,23 +6,17 @@ type SketchOverlapHintProps = {
   hasOverlap: boolean;
   sketchDisplayName: string;
   overlapPartnerSketchNames: string[];
-  /**
-   * `fragment` (default): sketches share unbuffered fragment geometry.
-   * `buffer`: sketches' analysis buffers overlap (buffered overlay_area).
-   * @see OverlayAreaOverlapInfo
-   */
-  mode?: "fragment" | "buffer";
 };
 
 /**
  * Icon + tooltip when this sketch shares fragment metrics with other sketches
- * in the collection, or when buffered analysis regions overlap.
+ * in the collection (fragment system Venn overlap). Explains why the sum of
+ * sketch rows can exceed the collection heading total.
  */
 export default function SketchOverlapHint({
   hasOverlap,
   sketchDisplayName,
   overlapPartnerSketchNames,
-  mode = "fragment",
 }: SketchOverlapHintProps) {
   const { t } = useTranslation("reports");
 
@@ -31,14 +25,9 @@ export default function SketchOverlapHint({
   }
 
   const partners = overlapPartnerSketchNames;
-  const footer =
-    mode === "buffer"
-      ? t(
-          "Buffer overlaps with these sketches. Together these rows may total more than the collection value above."
-        )
-      : t(
-          "Collection stats take this overlap into account to avoid double-counting. Collection totals will be less than the sum of individual sketch values when there is overlap."
-        );
+  const footer = t(
+    "Collection stats take this overlap into account to avoid double-counting. Collection totals will be less than the sum of individual sketch values when there is overlap."
+  );
 
   return (
     <Tooltip.Root delayDuration={300}>

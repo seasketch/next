@@ -50,8 +50,10 @@ function overlayAccuracyNote(
       accuracyNote: "deduplicated",
     };
   }
-  if (overcountMax > overcountMin) {
-    const pct = Math.ceil((overcountMax / naiveSum) * 100);
+  if (overcountMax > overcountMin && naiveSum > 0) {
+    // Residual uncertainty after the displayed correction (naive − overcountMin).
+    const residual = overcountMax - overcountMin;
+    const pct = Math.ceil((residual / naiveSum) * 100);
     return {
       overlapAreaSqKm: displayed,
       overlapAreaMinSqKm: min,

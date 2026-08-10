@@ -2,8 +2,6 @@ import type { TFunction } from "i18next";
 import type { Metric, MetricSubjectFragment } from "overlay-engine";
 import {
   combineMetricsForFragments,
-  getOverlayAreaOverlapCombineResult,
-  OverlayAreaMetricValue,
   subjectIsFragment,
   TotalAreaMetric,
 } from "overlay-engine";
@@ -12,7 +10,6 @@ import type {
   OverlaySourceDetailsFragment,
 } from "../../../generated/graphql";
 import { dedupeCompleteSpatialMetrics } from "./dedupeMetrics";
-import { attachOverlayAreaOverlapScope } from "../ClassTableRows";
 
 export type GeographySketchContribution = {
   sketchId: number;
@@ -30,12 +27,8 @@ export type ClassRowSketchContribution = {
   primaryValue: number;
   fractionOfGeography: number;
   hasOverlap: boolean;
+  /** Other child sketches linked via shared fragment metrics (sorted names). */
   overlapPartnerSketchNames: string[];
-  /**
-   * True when overlap partners come from buffered analysis regions rather
-   * than shared unbuffered fragments. @see OverlayAreaOverlapInfo
-   */
-  hasBufferedOverlap?: boolean;
 };
 
 /**
@@ -272,72 +265,30 @@ export function sketchContributionsForClassTableRow(opts: {
     const bucket = baseFiltered.filter((m) =>
       (m.subject as MetricSubjectFragment).sketches.includes(sketchId)
     );
-    let combined = combineMetricsForFragments(
+    const combined = combineMetricsForFragments(
       bucket as Pick<Metric, "type" | "value">[],
       metricType
     );
-    if (metricType === "overlay_area") {
-      combined = attachOverlayAreaOverlapScope(combined, bucket);
-    }
     const primaryValue = extractCombinedClassSlice(
       combined,
       metricType,
       groupByKey,
       valueColumn
     );
-    const fragmentOverlap = bucketHasIntraCollectionOverlap(
+    // Shared-fragment overlap (Venn): sketches that share fragment geometry
+    // are flagged so users know heading totals ≠ sum of sketch rows.
+    const hasOverlap = bucketHasIntraCollectionOverlap(
       bucket,
       sketchId,
       collectionSketchIds
     );
-    let overlapPartnerSketchNames = overlapPartnerSketchNamesForBucket(
+    const overlapPartnerSketchNames = overlapPartnerSketchNamesForBucket(
       sketchId,
       bucket,
       sketchNameById,
       t,
       collectionSketchIds
     );
-    let hasBufferedOverlap = false;
-
-    // Buffered overlay_area: partners from combine-time scope metadata.
-    // @see OverlayAreaOverlapInfo
-    if (metricType === "overlay_area") {
-      const overlap = getOverlayAreaOverlapCombineResult(
-        combined.value as OverlayAreaMetricValue
-      );
-      if (
-        overlap &&
-        (overlap.scope === "between-sketches" || overlap.scope === "both") &&
-        overlap.partnerSketchIds?.length
-      ) {
-        const partnerIds = overlap.partnerSketchIds.filter((id) => {
-          if (id === sketchId) return false;
-          if (collectionSketchIds && collectionSketchIds.size > 0) {
-            return collectionSketchIds.has(id);
-          }
-          return true;
-        });
-        if (partnerIds.length > 0) {
-          hasBufferedOverlap = true;
-          const names = partnerIds
-            .map(
-              (id) =>
-                sketchNameById.get(id) ?? t("Sketch #{{id}}", { id })
-            )
-            .sort((a, b) => a.localeCompare(b));
-          // Prefer buffer partners when present; merge with fragment partners.
-          const merged = new Set([
-            ...overlapPartnerSketchNames,
-            ...names,
-          ]);
-          overlapPartnerSketchNames = Array.from(merged).sort((a, b) =>
-            a.localeCompare(b)
-          );
-        }
-      }
-    }
-
-    const hasOverlap = fragmentOverlap || hasBufferedOverlap;
 
     rows.push({
       sketchId,
@@ -348,7 +299,6 @@ export function sketchContributionsForClassTableRow(opts: {
         geographyDenominator > 0 ? primaryValue / geographyDenominator : 0,
       hasOverlap,
       overlapPartnerSketchNames,
-      hasBufferedOverlap,
     });
   }
 

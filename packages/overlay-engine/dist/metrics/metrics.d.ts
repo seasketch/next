@@ -210,10 +210,13 @@ export declare function getOverlayAreaClassValueRange(value: OverlayAreaMetricVa
     naiveSum: number;
 } | null;
 /**
- * Combines buffered `overlay_area` fragment values, correcting double-counted
- * class totals when `__overlap` metadata is available.
+ * Combines `overlay_area` fragment values, correcting double-counted class
+ * totals when buffered `__overlap` metadata is available. Fragments without
+ * `__overlap` (unbuffered, or stale pre-upgrade rows) contribute only their
+ * numeric class totals — no collar/entry work runs at combine time for them.
  *
- * @see OverlayAreaOverlapInfo for the full double-counting model.
+ * @see OverlayAreaOverlapInfo for the full double-counting model and the
+ * producer gate (buffered fragment subjects only).
  */
 export declare function combineOverlayAreaMetrics(values: OverlayAreaMetricValue[]): OverlayAreaMetricValue;
 /**

@@ -176,10 +176,13 @@ function featureAreaAt(classInfo, index, clippedArea) {
     return fa;
 }
 /**
- * Combines buffered `overlay_area` fragment values, correcting double-counted
- * class totals when `__overlap` metadata is available.
+ * Combines `overlay_area` fragment values, correcting double-counted class
+ * totals when buffered `__overlap` metadata is available. Fragments without
+ * `__overlap` (unbuffered, or stale pre-upgrade rows) contribute only their
+ * numeric class totals — no collar/entry work runs at combine time for them.
  *
- * @see OverlayAreaOverlapInfo for the full double-counting model.
+ * @see OverlayAreaOverlapInfo for the full double-counting model and the
+ * producer gate (buffered fragment subjects only).
  */
 function combineOverlayAreaMetrics(values) {
     const numericValues = values.map((v) => getOverlayAreaClassTotals(v));
@@ -224,7 +227,15 @@ function combineOverlayAreaMetrics(values) {
     }
     const perClass = {};
     const corrected = { ...naiveCombined };
+    // With groupBy, collar entries live under named class keys. The aggregate
+    // "*" total has no oidx list — derive it from corrected named classes after
+    // the loop rather than leaving it at the naive (double-counted) sum.
+    const namedClassKeys = [...classKeys].filter((k) => k !== "*");
+    const hasNamedClasses = namedClassKeys.length > 0;
     for (const classKey of classKeys) {
+        if (classKey === "*" && hasNamedClasses) {
+            continue;
+        }
         const naiveSum = naiveCombined[classKey] ?? 0;
         // oidx → areas across fragments + resolved feature area
         const byOidx = new Map();
@@ -314,6 +325,48 @@ function combineOverlayAreaMetrics(values) {
     }
     if (Object.keys(perClass).length === 0) {
         return naiveCombined;
+    }
+    if (hasNamedClasses) {
+        let starCorrected = 0;
+        let starOverMin = 0;
+        let starOverMax = 0;
+        let starNaiveFromClasses = 0;
+        for (const k of namedClassKeys) {
+            const cv = corrected[k];
+            if (typeof cv === "number" && Number.isFinite(cv)) {
+                starCorrected += cv;
+            }
+            const pc = perClass[k];
+            if (pc) {
+                starNaiveFromClasses += pc.naiveSum;
+                starOverMin += pc.overcountMin;
+                starOverMax += pc.overcountMax;
+            }
+            else {
+                const n = naiveCombined[k];
+                if (typeof n === "number" && Number.isFinite(n)) {
+                    starNaiveFromClasses += n;
+                }
+            }
+        }
+        const storedStar = naiveCombined["*"];
+        const starNaive = typeof storedStar === "number" && Number.isFinite(storedStar)
+            ? storedStar
+            : starNaiveFromClasses;
+        // Keep identity: displayed "*" = naiveSum − overcountMin = sum of classes.
+        if (starOverMin > 0 || starOverMax > 0 || typeof storedStar === "number") {
+            corrected["*"] = starCorrected;
+            if (starOverMin > 0 || starOverMax > 0) {
+                if (starOverMax < starOverMin) {
+                    starOverMax = starOverMin;
+                }
+                perClass["*"] = {
+                    overcountMin: starOverMin,
+                    overcountMax: starOverMax,
+                    naiveSum: starNaive,
+                };
+            }
+        }
     }
     const flagged = Object.values(perClass).some((p) => p.overcountMax > p.overcountMin);
     corrected.__overlap = {

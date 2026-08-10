@@ -277,7 +277,9 @@ export const OverlappingAreasTable: ReportWidget<
           row.naiveSum
         )
       ) {
-        maxPct = Math.max(maxPct, (row.overcountMax / row.naiveSum) * 100);
+        // Residual uncertainty after the displayed correction.
+        const residual = row.overcountMax - row.overcountMin;
+        maxPct = Math.max(maxPct, (residual / row.naiveSum) * 100);
       }
     }
     return maxPct > 0 ? Math.ceil(maxPct) : 0;
@@ -539,11 +541,6 @@ export const OverlappingAreasTable: ReportWidget<
                       sketchDisplayName={sk.sketchName}
                       overlapPartnerSketchNames={
                         sk.overlapPartnerSketchNames
-                      }
-                      mode={
-                        sk.hasBufferedOverlap
-                          ? "buffer"
-                          : "fragment"
                       }
                     />
                   </div>

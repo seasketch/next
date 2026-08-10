@@ -884,6 +884,7 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
   }, [componentSettings?.presentation, componentSettings?.stat]);
 
   // Buffered overlay_area residual-uncertainty warning (exact corrections stay silent).
+  // Skip entirely when no buffer — avoids a second combine on the unbuffered path.
   // @see OverlayAreaOverlapInfo
   const overlayOverlapForWarning = useMemo((): {
     combine: OverlayAreaOverlapCombineResult;
@@ -891,6 +892,15 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
   } | null => {
     const presentation = componentSettings?.presentation || "total_area";
     if (loading || errors.length > 0 || presentation !== "overlay_area") {
+      return null;
+    }
+    const isBuffered = (dependencies || []).some(
+      (d) =>
+        d.type === "overlay_area" &&
+        typeof d.parameters?.bufferDistanceKm === "number" &&
+        d.parameters.bufferDistanceKm > 0
+    );
+    if (!isBuffered) {
       return null;
     }
     const overlayMetrics = metrics.filter(
@@ -921,7 +931,13 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
     } catch {
       return null;
     }
-  }, [loading, errors, metrics, componentSettings?.presentation]);
+  }, [
+    loading,
+    errors,
+    metrics,
+    dependencies,
+    componentSettings?.presentation,
+  ]);
 
   if (loading) {
     return (

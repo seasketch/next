@@ -4,7 +4,25 @@ import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import { Trans, useTranslation } from "react-i18next";
 import { ReportUIStateContext } from "../context/ReportUIStateContext";
 
-const WARNING_THRESHOLD = 0.1; // 10%
+const WARNING_THRESHOLD = 0.1; // 10% of naive total
+
+/**
+ * Residual uncertainty after the displayed correction
+ * (`naiveSum − overcountMin`). Exact corrections have residual 0.
+ */
+export function bufferedOverlapResidual(
+  overcountMin: number,
+  overcountMax: number
+): number {
+  if (
+    !Number.isFinite(overcountMin) ||
+    !Number.isFinite(overcountMax) ||
+    overcountMax <= overcountMin
+  ) {
+    return 0;
+  }
+  return overcountMax - overcountMin;
+}
 
 /**
  * Amber accuracy warning for buffered `overlay_area` results with residual
@@ -12,7 +30,7 @@ const WARNING_THRESHOLD = 0.1; // 10%
  *
  * Renders nothing when:
  * - `overcountMax === overcountMin` (exact correction — silence guarantee), or
- * - residual uncertainty is below 10% of `total`.
+ * - residual (`overcountMax − overcountMin`) is below 10% of `total` (naive sum).
  *
  * On screen: icon + tooltip with magnitude and range.
  * When printing: icon + visible "≤N%" label (tooltips are not available).
@@ -32,7 +50,7 @@ export default function BufferedOverlapWarning({
   overcountMin: number;
   /** Maximum overcount relative to the naive sum (km²). */
   overcountMax: number;
-  /** Naive (or displayed) class total used for the percentage. */
+  /** Naive class total used as the percentage denominator. */
   total: number;
   /** Formats an absolute area for the low–high range. */
   formatArea: (sqKm: number) => string;
@@ -41,17 +59,18 @@ export default function BufferedOverlapWarning({
   const { t } = useTranslation("reports");
   const { printing } = useContext(ReportUIStateContext);
 
+  const residual = bufferedOverlapResidual(overcountMin, overcountMax);
+
   if (
-    !Number.isFinite(overcountMax) ||
     !Number.isFinite(total) ||
     total <= 0 ||
-    overcountMax <= overcountMin ||
-    overcountMax / total < WARNING_THRESHOLD
+    residual <= 0 ||
+    residual / total < WARNING_THRESHOLD
   ) {
     return null;
   }
 
-  const pct = Math.ceil((overcountMax / total) * 100);
+  const pct = Math.ceil((residual / total) * 100);
   const low = Math.max(0, total - overcountMax);
   const high = Math.max(0, total - overcountMin);
 
@@ -123,11 +142,11 @@ export function bufferedOverlapWarrantsWarning(
   overcountMax: number,
   total: number
 ): boolean {
+  const residual = bufferedOverlapResidual(overcountMin, overcountMax);
   return (
-    Number.isFinite(overcountMax) &&
     Number.isFinite(total) &&
     total > 0 &&
-    overcountMax > overcountMin &&
-    overcountMax / total >= WARNING_THRESHOLD
+    residual > 0 &&
+    residual / total >= WARNING_THRESHOLD
   );
 }

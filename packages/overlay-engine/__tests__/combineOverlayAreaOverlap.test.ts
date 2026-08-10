@@ -263,6 +263,67 @@ describe("combineOverlayAreaMetrics", () => {
     expect(getOverlayAreaOverlapCombineResult(result)).toBeNull();
   });
 
+  it("derives corrected '*' from named class totals when groupBy is used", () => {
+    // Two fragments share a fully-covered forest feature (5+5) and each has
+    // a unique urban strip (3 and 2). Naive "*" = 15; corrected classes sum
+    // to 5+5 = 10.
+    const values: OverlayAreaMetricValue[] = [
+      {
+        "*": 8,
+        forest: 5,
+        urban: 3,
+        __overlap: makeOverlap({
+          bbox: [0, 0, 2, 2],
+          classes: {
+            forest: {
+              collarArea: 5,
+              oidx: [1],
+              area: [5],
+              featureArea: [0],
+            },
+            urban: {
+              collarArea: 3,
+              oidx: [2],
+              area: [3],
+              featureArea: [0],
+            },
+          },
+        }),
+      },
+      {
+        "*": 7,
+        forest: 5,
+        urban: 2,
+        __overlap: makeOverlap({
+          bbox: [1, 1, 3, 3],
+          classes: {
+            forest: {
+              collarArea: 5,
+              oidx: [1],
+              area: [5],
+              featureArea: [0],
+            },
+            urban: {
+              collarArea: 2,
+              oidx: [3],
+              area: [2],
+              featureArea: [0],
+            },
+          },
+        }),
+      },
+    ];
+    const result = combineOverlayAreaMetrics(values);
+    expect(result.forest).toBe(5);
+    expect(result.urban).toBe(5);
+    expect(result["*"]).toBe(10);
+    const combine = getOverlayAreaOverlapCombineResult(result)!;
+    expect(combine.perClass["*"].naiveSum).toBe(15);
+    expect(combine.perClass["*"].overcountMin).toBe(5);
+    expect(combine.perClass["*"].overcountMax).toBe(5);
+    expect(getOverlayAreaDisplayedClassValue(result, "*")).toBe(10);
+  });
+
   it("combineMetricsForFragments delegates to combineOverlayAreaMetrics", () => {
     const metrics: Pick<Metric, "type" | "value">[] = [
       {
