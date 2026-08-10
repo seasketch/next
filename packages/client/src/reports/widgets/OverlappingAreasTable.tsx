@@ -497,13 +497,15 @@ export const OverlappingAreasTable: ReportWidget<
                     <span className="inline-flex items-center gap-1.5 justify-end">
                       {typeof percent === "number" &&
                         percent > 1.05 &&
-                        percentGeographyId !== undefined && (
+                        percentGeographyId !== undefined &&
+                        primaryGeographyId !== undefined && (
                           <OverlapDebugTooltip
                             row={row}
                             percent={percent}
                             metrics={metrics}
                             sources={sources}
-                            primaryGeographyId={percentGeographyId}
+                            clippingGeographyId={primaryGeographyId}
+                            percentGeographyId={percentGeographyId}
                             formatters={formatters}
                             bufferKm={bufferKm}
                             classLabel={row.label}

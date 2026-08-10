@@ -20,7 +20,16 @@ type OverlapDebugTooltipProps = {
   percent: number;
   metrics: CompatibleSpatialMetricDetailsFragment[];
   sources: OverlaySourceDetailsFragment[];
-  primaryGeographyId: number;
+  /**
+   * Sketch clipping geography — used to find fragment metrics (numerator).
+   * Fragments are tagged with clipping geography ids.
+   */
+  clippingGeographyId: number;
+  /**
+   * Geography used as the "% Within" denominator. May differ from clipping
+   * when the admin picks a non-primary percent geography.
+   */
+  percentGeographyId: number;
   formatters: ReturnType<typeof useNumberFormatters>;
   /** When set, percent > 100% is explained as a buffered-numerator effect. */
   bufferKm?: number;
@@ -32,7 +41,8 @@ export function OverlapDebugTooltip({
   percent,
   metrics,
   sources,
-  primaryGeographyId,
+  clippingGeographyId,
+  percentGeographyId,
   formatters,
   bufferKm,
   classLabel,
@@ -49,24 +59,29 @@ export function OverlapDebugTooltip({
               m.sourceUrl === source.sourceUrl &&
               subjectIsFragment(m.subject) &&
               (m.subject as { geographies: number[] }).geographies.includes(
-                primaryGeographyId,
-              ),
+                clippingGeographyId
+              )
           ),
-    [metrics, source, primaryGeographyId],
+    [metrics, source, clippingGeographyId]
   );
 
-  const geographyMetric = useMemo(
-    () =>
-      !source
-        ? undefined
-        : metrics.find(
-            (m) =>
-              m.sourceUrl === source.sourceUrl &&
-              subjectIsGeography(m.subject) &&
-              (m.subject as { id: number }).id === primaryGeographyId,
-          ),
-    [metrics, source, primaryGeographyId],
-  );
+  const geographyMetric = useMemo(() => {
+    if (!source) {
+      return undefined;
+    }
+    const matches = metrics.filter(
+      (m) =>
+        m.sourceUrl === source.sourceUrl &&
+        subjectIsGeography(m.subject) &&
+        (m.subject as { id: number }).id === percentGeographyId
+    );
+    if (!matches.length) {
+      return undefined;
+    }
+    return matches
+      .slice()
+      .sort((a, b) => Number(b.id) - Number(a.id))[0];
+  }, [metrics, source, percentGeographyId]);
 
   return (
     <Tooltip.Provider>
@@ -89,10 +104,10 @@ export function OverlapDebugTooltip({
                       {
                         buffer: t("{{km}} km", { km: bufferKm }),
                         class: classLabel || row.label,
-                      },
+                      }
                     )
                   : t(
-                      "The percent within exceeds 100% because the overlap area is larger than the geography total. This can happen when sketch geometries extend beyond the geography boundary.",
+                      "The percent within exceeds 100% because the overlap area is larger than the geography total. This can happen when sketch geometries extend beyond the geography boundary."
                     )}
               </p>
               <table className="w-full border-t border-gray-200">
@@ -134,7 +149,7 @@ export function OverlapDebugTooltip({
                         row.groupByKey
                       ] ?? geographyMetric.value,
                       null,
-                      2,
+                      2
                     )}
                   </pre>
                 </div>
@@ -162,7 +177,7 @@ export function OverlapDebugTooltip({
                             row.groupByKey
                           ] ?? m.value,
                           null,
-                          2,
+                          2
                         )}
                       </pre>
                     </div>
