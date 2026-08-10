@@ -244,6 +244,64 @@ describe("combineOverlayAreaMetrics", () => {
     expect(combine.flagged).toBe(true);
   });
 
+  it("truncation residual uses the largest pairwise bound once (not per pair)", () => {
+    // Three mutually intersecting truncated fragments. Pairwise mins would be
+    // min(10,8)=8, min(10,6)=6, min(8,6)=6 → sum 20 if stacked; once → 8.
+    const values: OverlayAreaMetricValue[] = [
+      {
+        forest: 15,
+        __overlap: makeOverlap({
+          bbox: [0, 0, 3, 3],
+          classes: {
+            forest: {
+              collarArea: 15,
+              oidx: [1],
+              area: [5],
+              featureArea: [0],
+              entriesTruncated: true,
+            },
+          },
+        }),
+      },
+      {
+        forest: 13,
+        __overlap: makeOverlap({
+          bbox: [1, 1, 4, 4],
+          classes: {
+            forest: {
+              collarArea: 13,
+              oidx: [1],
+              area: [5],
+              featureArea: [0],
+              entriesTruncated: true,
+            },
+          },
+        }),
+      },
+      {
+        forest: 11,
+        __overlap: makeOverlap({
+          bbox: [2, 2, 5, 5],
+          classes: {
+            forest: {
+              collarArea: 11,
+              oidx: [1],
+              area: [5],
+              featureArea: [0],
+              entriesTruncated: true,
+            },
+          },
+        }),
+      },
+    ];
+    const result = combineOverlayAreaMetrics(values);
+    const combine = getOverlayAreaOverlapCombineResult(result)!;
+    // Shared feature counted 3× (5+5+5); true 5 → overcountMin = 10
+    expect(combine.perClass.forest.overcountMin).toBe(10);
+    // Residuals: 15-5=10, 13-5=8, 11-5=6 → max pairwise min = 8
+    expect(combine.perClass.forest.overcountMax).toBe(10 + 8);
+  });
+
   it("mixed stale + new metrics degrade without throwing (no flag)", () => {
     const values: OverlayAreaMetricValue[] = [
       {

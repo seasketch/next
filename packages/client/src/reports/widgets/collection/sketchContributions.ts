@@ -1,11 +1,13 @@
-import type { TFunction } from "i18next";
-import type { Metric, MetricSubjectFragment } from "overlay-engine";
+import { TFunction } from "i18next";
 import {
+  Metric,
+  MetricSubjectFragment,
+  OverlayAreaMetricValue,
   combineMetricsForFragments,
   subjectIsFragment,
   TotalAreaMetric,
 } from "overlay-engine";
-import type {
+import {
   CompatibleSpatialMetricDetailsFragment,
   OverlaySourceDetailsFragment,
 } from "../../../generated/graphql";

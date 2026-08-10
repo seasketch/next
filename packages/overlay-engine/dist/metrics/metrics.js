@@ -227,9 +227,9 @@ function combineOverlayAreaMetrics(values) {
     }
     const perClass = {};
     const corrected = { ...naiveCombined };
-    // With groupBy, collar entries live under named class keys. The aggregate
-    // "*" total has no oidx list — derive it from corrected named classes after
-    // the loop rather than leaving it at the naive (double-counted) sum.
+    // With groupBy, derive corrected "*" from named classes only (after the
+    // loop). Intentionally omit uncategorized features that landed under "*"
+    // (missing/falsy groupBy) — "*" here means "sum of reported classes".
     const namedClassKeys = [...classKeys].filter((k) => k !== "*");
     const hasNamedClasses = namedClassKeys.length > 0;
     for (const classKey of classKeys) {
@@ -296,8 +296,11 @@ function combineOverlayAreaMetrics(values) {
             }
             overcountMax += Math.max(0, sum - maxA);
         }
-        // Truncation residual: collar bound on features not represented in entries.
-        // Added to overcountMax only (cannot prove a minimum overcount).
+        // Truncation residual: collar bound on features not represented in
+        // entries. Added to overcountMax only (cannot prove a minimum overcount).
+        // Take the largest pairwise min(residual) once — summing every pair would
+        // overstate uncertainty when 3+ truncated fragments' bboxes intersect.
+        let truncationResidual = 0;
         for (const [ia, ib] of intersectingPairs) {
             const ca = overlapInfos[ia].classes[classKey];
             const cb = overlapInfos[ib].classes[classKey];
@@ -311,8 +314,9 @@ function combineOverlayAreaMetrics(values) {
                 (ca.area || []).reduce((acc, n) => acc + (n || 0), 0));
             const residualB = Math.max(0, (cb.collarArea || 0) -
                 (cb.area || []).reduce((acc, n) => acc + (n || 0), 0));
-            overcountMax += Math.min(residualA, residualB);
+            truncationResidual = Math.max(truncationResidual, Math.min(residualA, residualB));
         }
+        overcountMax += truncationResidual;
         // Keep overcountMax ≥ overcountMin after residual additions.
         if (overcountMax < overcountMin) {
             overcountMax = overcountMin;
