@@ -65,7 +65,8 @@ import { useSubjectReportContext } from "../context/SubjectReportContext";
 import { SketchGeometryType } from "../../generated/graphql";
 import {
   OverlappingAreasPercentGeographyId,
-  overlayAreaGeographyClassTotal,
+  buildPercentGeographyValuesBySourceId,
+  overlayAreaClassTotalFromValue,
   resolveOverlappingAreasPercentGeographyId,
 } from "./overlappingAreasPercentGeography";
 
@@ -200,6 +201,7 @@ export const OverlappingAreasTable: ReportWidget<
       throw new Error("Primary geography not found.");
     }
 
+    // Fragments (numerator) always combined against the clipping geography.
     const combinedMetrics = combineMetricsBySource<OverlayAreaMetric>(
       metrics,
       sources,
@@ -207,21 +209,30 @@ export const OverlappingAreasTable: ReportWidget<
       "overlay_area"
     );
 
+    // "% Within" denominator: O(1) per row via a sourceId → geography value map.
+    // Reuses combine's geography half when percent geo === clipping; otherwise
+    // one linear scan of metrics for the selected geography.
+    const geographyValuesBySourceId =
+      percentGeographyId !== undefined
+        ? buildPercentGeographyValuesBySourceId({
+            percentGeographyId,
+            clippingGeographyId: primaryGeographyId,
+            metrics,
+            sources,
+            combinedBySource: combinedMetrics,
+          })
+        : null;
+
     let rows = classRows.map((r) => {
       const combinedForSource = combinedMetrics[r.sourceId];
       const fragmentValue = combinedForSource?.fragments
         ?.value as OverlayAreaMetricValue | undefined;
       const overlapRaw = fragmentValue?.[r.groupByKey];
       const overlap = typeof overlapRaw === "number" ? overlapRaw : 0;
-      // Denominator may be a different geography than the clipping geography
-      // used to combine fragment (numerator) metrics.
-      const source = sources.find((s) => s.stableId === r.sourceId);
       const geographyTotal =
-        percentGeographyId !== undefined
-          ? overlayAreaGeographyClassTotal(
-              metrics,
-              source?.sourceUrl,
-              percentGeographyId,
+        geographyValuesBySourceId !== null
+          ? overlayAreaClassTotalFromValue(
+              geographyValuesBySourceId.get(r.sourceId),
               r.groupByKey
             )
           : undefined;

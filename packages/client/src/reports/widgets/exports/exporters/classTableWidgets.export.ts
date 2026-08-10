@@ -11,7 +11,8 @@ import {
 } from "../../ClassTableRows";
 import { sketchContributionsForClassTableRow } from "../../collection/sketchContributions";
 import {
-  overlayAreaGeographyClassTotal,
+  buildPercentGeographyValuesBySourceId,
+  overlayAreaClassTotalFromValue,
   resolveOverlappingAreasPercentGeographyId,
 } from "../../overlappingAreasPercentGeography";
 import type { WidgetExporter, WidgetExportSection, WidgetExporterInput } from "../types";
@@ -209,18 +210,29 @@ function exportClassTableWidget(
       primaryGeographyId,
       "overlay_area",
     );
+    const geographyValuesBySourceId =
+      percentGeographyId !== undefined
+        ? buildPercentGeographyValuesBySourceId({
+            percentGeographyId,
+            clippingGeographyId: primaryGeographyId,
+            metrics,
+            sources,
+            combinedBySource: combinedMetrics,
+          })
+        : null;
+    const sourceByStableId = new Map(
+      sources.map((s) => [s.stableId, s] as const),
+    );
     for (const r of classRows) {
       const combinedForSource = combinedMetrics[r.sourceId];
       const fragmentValue = combinedForSource?.fragments
         ?.value as OverlayAreaMetricValue | undefined;
       const accuracy = overlayAccuracyNote(fragmentValue, r.groupByKey);
-      const source = sources.find((s) => s.stableId === r.sourceId);
+      const source = sourceByStableId.get(r.sourceId);
       const geographyTotal =
-        percentGeographyId !== undefined
-          ? overlayAreaGeographyClassTotal(
-              metrics,
-              source?.sourceUrl,
-              percentGeographyId,
+        geographyValuesBySourceId !== null
+          ? overlayAreaClassTotalFromValue(
+              geographyValuesBySourceId.get(r.sourceId),
               r.groupByKey,
             )
           : null;

@@ -4,6 +4,7 @@ import {
 } from "overlay-engine";
 import {
   CompatibleSpatialMetricDetailsFragment,
+  OverlaySourceDetailsFragment,
   SpatialMetricState,
 } from "../../generated/graphql";
 
@@ -57,29 +58,135 @@ export function resolveOverlappingAreasPercentGeographyId(
   return primaryGeographyId;
 }
 
-/** Class total (km²) for one overlay_area geography metric. */
+/**
+ * One linear scan of metrics → best complete `overlay_area` geography value
+ * per `sourceUrl` for {@link geographyId} (highest metric id wins).
+ */
+export function indexOverlayAreaGeographyValuesBySourceUrl(
+  metrics: CompatibleSpatialMetricDetailsFragment[],
+  geographyId: number
+): Map<string, OverlayAreaMetricValue> {
+  const best = new Map<
+    string,
+    { id: number; value: OverlayAreaMetricValue }
+  >();
+  for (const m of metrics) {
+    if (m.type !== "overlay_area") {
+      continue;
+    }
+    if (m.state !== SpatialMetricState.Complete) {
+      continue;
+    }
+    if (!m.sourceUrl) {
+      continue;
+    }
+    if (!subjectIsGeography(m.subject) || m.subject.id !== geographyId) {
+      continue;
+    }
+    const id =
+      m.id === null || m.id === undefined ? Number.NEGATIVE_INFINITY : Number(m.id);
+    const prev = best.get(m.sourceUrl);
+    if (!prev || id > prev.id) {
+      best.set(m.sourceUrl, {
+        id,
+        value: m.value as OverlayAreaMetricValue,
+      });
+    }
+  }
+  const byUrl = new Map<string, OverlayAreaMetricValue>();
+  for (const [url, entry] of best) {
+    byUrl.set(url, entry.value);
+  }
+  return byUrl;
+}
+
+/**
+ * Remap sourceUrl → value into stableId → value for O(1) row lookups.
+ */
+export function mapGeographyValuesBySourceStableId(
+  bySourceUrl: Map<string, OverlayAreaMetricValue>,
+  sources: OverlaySourceDetailsFragment[]
+): Map<string, OverlayAreaMetricValue> {
+  const byStableId = new Map<string, OverlayAreaMetricValue>();
+  for (const source of sources) {
+    if (!source.sourceUrl) {
+      continue;
+    }
+    const value = bySourceUrl.get(source.sourceUrl);
+    if (value) {
+      byStableId.set(source.stableId, value);
+    }
+  }
+  return byStableId;
+}
+
+/**
+ * Build stableId → geography metric value for the "% Within" denominator.
+ *
+ * - When `percentGeographyId === clippingGeographyId` and `combinedBySource`
+ *   is provided (from {@link combineMetricsBySource} on the clipping geo),
+ *   reuse its `geographies` halves — no second metric scan.
+ * - Otherwise one linear scan of `metrics` for the percent geography.
+ */
+export function buildPercentGeographyValuesBySourceId(opts: {
+  percentGeographyId: number;
+  clippingGeographyId: number;
+  metrics: CompatibleSpatialMetricDetailsFragment[];
+  sources: OverlaySourceDetailsFragment[];
+  /** Result of combineMetricsBySource(clippingGeographyId). */
+  combinedBySource?: {
+    [sourceId: string]: {
+      geographies?: { value?: OverlayAreaMetricValue } | null;
+    };
+  };
+}): Map<string, OverlayAreaMetricValue> {
+  const {
+    percentGeographyId,
+    clippingGeographyId,
+    metrics,
+    sources,
+    combinedBySource,
+  } = opts;
+
+  if (percentGeographyId === clippingGeographyId && combinedBySource) {
+    const byStableId = new Map<string, OverlayAreaMetricValue>();
+    for (const [sourceId, combined] of Object.entries(combinedBySource)) {
+      const value = combined.geographies?.value;
+      if (value && typeof value === "object") {
+        byStableId.set(sourceId, value);
+      }
+    }
+    return byStableId;
+  }
+
+  return mapGeographyValuesBySourceStableId(
+    indexOverlayAreaGeographyValuesBySourceUrl(metrics, percentGeographyId),
+    sources
+  );
+}
+
+/** Class total (km²) from a geography metric value object. */
+export function overlayAreaClassTotalFromValue(
+  value: OverlayAreaMetricValue | undefined,
+  groupByKey: string
+): number {
+  const raw = value?.[groupByKey];
+  return typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
+}
+
+/**
+ * @deprecated Prefer {@link buildPercentGeographyValuesBySourceId} +
+ * {@link overlayAreaClassTotalFromValue} for O(1) per-row lookups.
+ */
 export function overlayAreaGeographyClassTotal(
   metrics: CompatibleSpatialMetricDetailsFragment[],
   sourceUrl: string | null | undefined,
   geographyId: number,
   groupByKey: string
 ): number {
-  const matches = metrics.filter(
-    (m) =>
-      m.type === "overlay_area" &&
-      m.state === SpatialMetricState.Complete &&
-      (!sourceUrl || m.sourceUrl === sourceUrl) &&
-      subjectIsGeography(m.subject) &&
-      m.subject.id === geographyId
-  );
-  if (!matches.length) {
+  if (!sourceUrl) {
     return 0;
   }
-  const geographyMetric = matches
-    .slice()
-    .sort((a, b) => Number(b.id) - Number(a.id))[0];
-  const raw = (geographyMetric.value as OverlayAreaMetricValue | undefined)?.[
-    groupByKey
-  ];
-  return typeof raw === "number" ? raw : 0;
+  const byUrl = indexOverlayAreaGeographyValuesBySourceUrl(metrics, geographyId);
+  return overlayAreaClassTotalFromValue(byUrl.get(sourceUrl), groupByKey);
 }
