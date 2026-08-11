@@ -19,6 +19,7 @@ import {
   pixelCountsToAreaKm2,
 } from "../src/rasterOverlayArea";
 import { computeBufferedSubjectAndCollar } from "../src/metrics/computeSubjectCollar";
+import * as clipping from "polyclip-ts";
 
 const FIXTURE_DIR = join(__dirname, "fixtures/raster-overlay-area");
 
@@ -207,6 +208,105 @@ describe("combineRasterOverlayAreaMetrics", () => {
     expect(combined.overlap.perClass["1"].overcountEstimate).toBeGreaterThanOrEqual(
       2,
     );
+  });
+
+  it("does not degenerate the estimate to hardMax when one buffered bbox contains the other", () => {
+    // Regression for the "Mangrove test 2" sketch: two disjoint fragments,
+    // 0.5 km buffers. The tiny fragment's buffered bbox sits entirely inside
+    // the big fragment's buffered bbox, so λ = bboxOverlap/min(bboxArea)
+    // clamps to 1 and the old Ê = U × λ collapsed to the hard ceiling
+    // (all of the small fragment's collar habitat), warning at ~14% when the
+    // true double-count is ~7% (below the 10% gate).
+    //
+    // Buffered bboxes are computed from the committed real fragments; collar
+    // habitat km² are the verified values from the production run.
+    const fragments = loadJson<{
+      features: Feature<Polygon | MultiPolygon>[];
+    }>("mangrove-test-2-fragments.geojson.json").features;
+    expect(fragments).toHaveLength(2);
+
+    const infos = fragments.map((frag) => {
+      const { buffered } = computeBufferedSubjectAndCollar(frag, 0.5);
+      const box = calcBBox(buffered, { recompute: true }) as [
+        number,
+        number,
+        number,
+        number,
+      ];
+      const bboxAreaKm2 =
+        calcArea({
+          type: "Feature",
+          properties: {},
+          geometry: {
+            type: "Polygon",
+            coordinates: [
+              [
+                [box[0], box[1]],
+                [box[2], box[1]],
+                [box[2], box[3]],
+                [box[0], box[3]],
+                [box[0], box[1]],
+              ],
+            ],
+          },
+        }) / 1_000_000;
+      return { bbox: box, bboxAreaKm2 };
+    });
+
+    // Containment precondition for this regression: B's buffered bbox is
+    // inside A's buffered bbox (λ would clamp to 1).
+    const [a, b] = infos;
+    expect(b.bbox[0]).toBeGreaterThanOrEqual(a.bbox[0]);
+    expect(b.bbox[1]).toBeGreaterThanOrEqual(a.bbox[1]);
+    expect(b.bbox[2]).toBeLessThanOrEqual(a.bbox[2]);
+    expect(b.bbox[3]).toBeLessThanOrEqual(a.bbox[3]);
+
+    // Verified habitat values from the production run (report 180).
+    const collarHabitatA = 4.563068474872067;
+    const collarHabitatB = 0.7260849930530756;
+    const combined = combineRasterOverlayAreaMetrics([
+      {
+        areas: { "*": collarHabitatA },
+        overlap: {
+          bufferKm: 0.5,
+          bbox: a.bbox,
+          bboxAreaKm2: a.bboxAreaKm2,
+          collarAreas: { "*": collarHabitatA },
+          innerAreas: { "*": 0 },
+        },
+      },
+      {
+        areas: { "*": collarHabitatB },
+        overlap: {
+          bufferKm: 0.5,
+          bbox: b.bbox,
+          bboxAreaKm2: b.bboxAreaKm2,
+          collarAreas: { "*": collarHabitatB },
+          innerAreas: { "*": 0 },
+        },
+      },
+    ]);
+
+    expect(combined.overlap).toBeDefined();
+    if (!combined.overlap || !("perClass" in combined.overlap)) {
+      throw new Error("expected combine overlap");
+    }
+    const pc = combined.overlap.perClass["*"];
+    const naive = collarHabitatA + collarHabitatB;
+    expect(pc.naiveSum).toBeCloseTo(naive, 6);
+    // Hard ceiling is still the smaller collar's habitat — that bound is
+    // geometrically correct (true overcount 0.376 ≤ 0.726).
+    expect(pc.overcountMax).toBeCloseTo(collarHabitatB, 6);
+    // The estimate must be strictly inside the ceiling, not pinned to it.
+    // Ground truth (habitat in buffer(A) ∩ buffer(B)) is ~0.376 km²;
+    // the density model gives ~0.31 km².
+    expect(pc.overcountEstimate).toBeLessThan(pc.overcountMax * 0.75);
+    expect(pc.overcountEstimate).toBeGreaterThan(0.2);
+    expect(pc.overcountEstimate).toBeLessThan(0.45);
+    // 5.9% of naive — below the 10% warning gate (true value is 7.1%,
+    // also below the gate; the old model warned at 13.7%).
+    expect(pc.overcountEstimate / pc.naiveSum).toBeLessThan(0.1);
+    expect(combined.overlap.flagged).toBe(false);
   });
 
   it("attachRasterOverlayAreaOverlapScope fills sketch ids and scope", () => {
@@ -420,6 +520,117 @@ describe("calculateRasterOverlayArea vs GDAL fixtures", () => {
         ),
       ).toBeLessThan(1e-9);
       expect(result.overlap.bboxAreaKm2).toBeGreaterThan(0);
+    },
+    180_000,
+  );
+
+  it(
+    "mangrove-test-2 buffered fragments: overcount bounds honest vs ground truth",
+    async () => {
+      const fixture = loadJson<{
+        sourceUrl: string;
+        epsg: number;
+        bufferDistanceKm: number;
+        expected: {
+          naiveSumKm2: number;
+          overcountMaxKm2: number;
+          unionHabitatKm2: number;
+          trueOvercountKm2: number;
+        };
+        toleranceKm2: number;
+      }>("mangrove-test-2-overcount.json");
+      const fragments = loadJson<{
+        features: Feature<Polygon | MultiPolygon>[];
+      }>("mangrove-test-2-fragments.geojson.json").features;
+
+      const computeValue = async (
+        featureWgs: Feature<Polygon | MultiPolygon>,
+        collarWgs?: Feature<Polygon | MultiPolygon>,
+      ) => {
+        const wgsBBox = calcBBox(featureWgs, { recompute: true }) as [
+          number,
+          number,
+          number,
+          number,
+        ];
+        return calculateRasterOverlayArea(
+          fixture.sourceUrl,
+          reprojectFeature(featureWgs, fixture.epsg),
+          {
+            vrm: "auto",
+            centerLonLat: [
+              (wgsBBox[0] + wgsBBox[2]) / 2,
+              (wgsBBox[1] + wgsBBox[3]) / 2,
+            ],
+            fragmentAreaSqM: calcArea(featureWgs),
+            groupByValue: false,
+            ...(collarWgs
+              ? {
+                  collar: {
+                    feature: reprojectFeature(collarWgs, fixture.epsg),
+                    bbox: wgsBBox,
+                    bufferKm: fixture.bufferDistanceKm,
+                  },
+                }
+              : {}),
+          },
+        );
+      };
+
+      // Same pipeline as the overlay-worker's raster_overlay_area case.
+      const bufferedFeatures: Feature<Polygon | MultiPolygon>[] = [];
+      const values: RasterOverlayAreaMetricValue[] = [];
+      for (const frag of fragments) {
+        const { buffered, collar } = computeBufferedSubjectAndCollar(
+          frag,
+          fixture.bufferDistanceKm,
+        );
+        bufferedFeatures.push(buffered);
+        values.push(await computeValue(buffered, collar));
+      }
+
+      const combined = combineRasterOverlayAreaMetrics(values);
+      const tol = fixture.toleranceKm2;
+      expect(combined.areas["*"]).toBeCloseTo(
+        fixture.expected.naiveSumKm2,
+        1,
+      );
+      expect(combined.overlap).toBeDefined();
+      if (!combined.overlap || !("perClass" in combined.overlap)) {
+        throw new Error("expected combine overlap");
+      }
+      const pc = combined.overlap.perClass["*"];
+      expect(
+        Math.abs(pc.overcountMax - fixture.expected.overcountMaxKm2),
+      ).toBeLessThanOrEqual(tol);
+
+      // Ground truth: habitat inside union(buffer A, buffer B). The true
+      // double-count is naive − union.
+      const unionCoords = clipping.union(
+        bufferedFeatures[0].geometry.coordinates as clipping.Geom,
+        bufferedFeatures[1].geometry.coordinates as clipping.Geom,
+      );
+      const unionValue = await computeValue({
+        type: "Feature",
+        properties: {},
+        geometry: {
+          type: "MultiPolygon",
+          coordinates: unionCoords as MultiPolygon["coordinates"],
+        },
+      });
+      const trueOvercount = pc.naiveSum - (unionValue.areas["*"] ?? 0);
+      expect(
+        Math.abs(trueOvercount - fixture.expected.trueOvercountKm2),
+      ).toBeLessThanOrEqual(tol);
+
+      // Bounds must bracket the truth…
+      expect(trueOvercount).toBeGreaterThanOrEqual(pc.overcountMin);
+      expect(trueOvercount).toBeLessThanOrEqual(pc.overcountMax + tol);
+      // …and the estimate must gate consistently with the truth for this
+      // case: both sides of the 10% warning threshold agree (no warning).
+      expect(trueOvercount / pc.naiveSum).toBeLessThan(0.1);
+      expect(pc.overcountEstimate / pc.naiveSum).toBeLessThan(0.1);
+      expect(combined.overlap.flagged).toBe(false);
     },
     180_000,
   );

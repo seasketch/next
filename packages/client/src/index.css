@@ -15775,6 +15775,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
   background-color:rgb(253 230 138 / var(--tw-bg-opacity, 1))
 }
 
+.hover\:bg-blue-100\/70:hover{
+  background-color:rgb(219 234 254 / 0.7)
+}
+
 .hover\:bg-opacity-10:hover{
   --tw-bg-opacity:0.1
 }

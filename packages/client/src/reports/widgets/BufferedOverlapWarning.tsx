@@ -81,7 +81,10 @@ export default function BufferedOverlapWarning({
     return null;
   }
 
-  const pct = Math.ceil((gateMagnitude / total) * 100);
+  // "up to N%" must match the low end of the displayed range
+  // (total − overcountMax), so it is always derived from the hard residual —
+  // the estimate only decides whether the warning shows at all.
+  const pct = Math.ceil((residual / total) * 100);
   const low = Math.max(0, total - overcountMax);
   const high = Math.max(0, total - overcountMin);
 

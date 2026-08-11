@@ -520,7 +520,11 @@ export type RasterOverlayAreaOverlapPair = {
             collarB: number;
             /** U = min(collarA, collarB) — hard geometric ceiling for this pair. */
             hardMax: number;
-            /** Ê = U × λ — proportional estimate (uniform collar-habitat assumption). */
+            /**
+             * Ê = min(U, I × √(ρA·ρB)) where I = bboxOverlapKm2 and
+             * ρX = collarX / bboxAreaKm2_X — uniform collar-habitat density
+             * estimate of habitat inside the bbox intersection, capped at U.
+             */
             estimate: number;
         };
     };

@@ -283,8 +283,7 @@ function combineOverlayAreaMetrics(values) {
                 }
                 else {
                     existing.areas.push(area);
-                    existing.allFullyCovered =
-                        existing.allFullyCovered && fullyCovered;
+                    existing.allFullyCovered = existing.allFullyCovered && fullyCovered;
                     // Prefer a larger explicit featureArea from partial coverage.
                     if (Af > existing.featureArea) {
                         existing.featureArea = Af;
@@ -294,7 +293,7 @@ function combineOverlayAreaMetrics(values) {
         }
         let overcountMin = 0;
         let overcountMax = 0;
-        for (const { areas, featureArea: Af, allFullyCovered, } of byOidx.values()) {
+        for (const { areas, featureArea: Af, allFullyCovered } of byOidx.values()) {
             if (areas.length < 2) {
                 continue;
             }
@@ -668,6 +667,8 @@ function combineRasterOverlayAreaMetrics(values) {
             }
             const denom = Math.min(infoA.bboxAreaKm2, infoB.bboxAreaKm2);
             const lambda = denom > 0 ? Math.max(0, Math.min(1, bboxOverlapKm2 / denom)) : 0;
+            const bboxAreaA = infoA.bboxAreaKm2;
+            const bboxAreaB = infoB.bboxAreaKm2;
             const classKeys = new Set([
                 ...Object.keys(infoA.collarAreas),
                 ...Object.keys(infoB.collarAreas),
@@ -683,11 +684,27 @@ function combineRasterOverlayAreaMetrics(values) {
                 }
                 sourcePositive = true;
                 const hardMax = Math.min(collarA, collarB);
+                // Uniform-density co-occurrence estimate. Treating each fragment's
+                // collar habitat as uniformly spread over its buffered bbox gives two
+                // predictions for habitat inside the bbox intersection I:
+                // ρA×I and ρB×I (ρ = collar habitat / bbox area). Take their
+                // geometric mean, Ê = I × √(ρA·ρB), capped at the hard ceiling U.
+                //
+                // Identical to the previous Ê = U × λ when the pair is symmetric
+                // (equal bboxes and collars), but does NOT degenerate to U when one
+                // buffered bbox is contained in the other (λ clamps to 1 there, which
+                // grossly overstated the overlap — the small fragment's whole collar
+                // habitat was flagged as double-counted even though the true buffer
+                // intersection near the fragments' closest approach is much smaller).
+                const estimate = bboxAreaA > 0 && bboxAreaB > 0
+                    ? Math.min(hardMax, bboxOverlapKm2 *
+                        Math.sqrt((collarA / bboxAreaA) * (collarB / bboxAreaB)))
+                    : hardMax * lambda;
                 perClass[k] = {
                     collarA,
                     collarB,
                     hardMax,
-                    estimate: hardMax * lambda,
+                    estimate,
                 };
             }
             if (!sourcePositive) {
@@ -1021,9 +1038,7 @@ function numberColumnStatsFromEntries(entries) {
         for (const entry of entries) {
             const value = entry.value;
             const weight = entry.weight;
-            if (typeof value !== "number" ||
-                !isFinite(weight) ||
-                weight <= 0) {
+            if (typeof value !== "number" || !isFinite(weight) || weight <= 0) {
                 continue;
             }
             const diff = value - meanValue;
