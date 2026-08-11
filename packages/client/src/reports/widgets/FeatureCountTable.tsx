@@ -18,7 +18,6 @@ import {
 import { LabeledDropdown } from "./LabeledDropdown";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
 import { useOverlaySources } from "../hooks/useOverlaySources";
-import { useNumberFormatters } from "../hooks/useNumberFormatters";
 import { SpatialMetricState } from "../../generated/graphql";
 import {
   ClassTableRow,
@@ -40,6 +39,11 @@ import {
 } from "./Pagination";
 import { usePagination } from "../hooks/usePagination";
 import { ClassRowSettingsPopover } from "./ClassRowSettingsPopover";
+import {
+  applyBufferSettingsToParameters,
+  BufferSelector,
+  getBufferSettingsFromDependencies,
+} from "./BufferSelector";
 import ReportLayerVisibilityCheckbox from "../components/ReportLayerVisibilityCheckbox";
 import { LayersIcon } from "@radix-ui/react-icons";
 import { usePrimaryGeography } from "../hooks/usePrimaryGeography";
@@ -86,7 +90,8 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
   const countLabel = componentSettings.countLabel || t("Count");
   const percentWithinLabel =
     componentSettings.percentWithinLabel || t("% Within");
-  const truncateRowLabels = shouldTruncateClassTableRowLabels(componentSettings);
+  const truncateRowLabels =
+    shouldTruncateClassTableRowLabels(componentSettings);
 
   const { clippingGeography } = usePrimaryGeography(sketchClass, geographies);
   const primaryGeographyId = clippingGeography?.id;
@@ -213,7 +218,7 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
               : 0,
           sketchNameById,
           t,
-        }),
+        })
       );
     }
     return map;
@@ -267,181 +272,188 @@ export const FeatureCountTable: ReportWidget<FeatureCountTableSettings> = ({
   return (
     <Tooltip.Provider delayDuration={400}>
       <div className="mt-3 rounded-md border border-gray-200 shadow-sm w-full max-w-full bg-white overflow-hidden">
-      <div className="divide-y divide-gray-100">
-        {/* Header row */}
-        <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200">
-          {hasVisibilityColumn && (
-            <div className="flex-none w-6 flex justify-center text-gray-600 text-xs font-semibold uppercase tracking-wide">
-              <LayersIcon className="w-4 h-4" />
-            </div>
-          )}
-          <div className="flex-1 min-w-0 text-gray-600 text-xs font-semibold uppercase tracking-wide">
-            {nameLabel}
-          </div>
-          <div
-            className={`flex-none text-gray-600 text-xs font-semibold uppercase tracking-wide min-w-[80px] ${
-              showPercentColumn ? "text-center" : "text-right"
-            }`}
-          >
-            {countLabel}
-          </div>
-          {showPercentColumn && (
-            <div className="flex-none text-right text-gray-600 text-xs font-semibold uppercase tracking-wide min-w-[70px]">
-              {percentWithinLabel}
-            </div>
-          )}
-        </div>
-        {paginatedRows.map((row) => {
-          const percent =
-            !loading &&
-            typeof row.geographyTotal === "number" &&
-            row.geographyTotal > 0
-              ? row.count / row.geographyTotal
-              : undefined;
-          const stableId = resolveClassTableRowStableId(
-            row,
-            componentSettings.rowLinkedStableIds
-          );
-          const displayLabel =
-            row.key === "*" ? t("All features") : row.label;
-          const expanded = isSketchBreakdownExpanded(row.key);
-          const sketchLines = sketchLinesByRowKey.get(row.key) ?? [];
-          return (
-            <Fragment key={row.key}>
-            <div
-              className={`flex items-center gap-3 px-3 py-2 hover:bg-gray-50 ${
-                row.count === 0 ? "opacity-50" : ""
-              }`}
-            >
-              {hasVisibilityColumn && (
-                <div className="flex-none w-6 flex justify-center">
-                  {stableId ? (
-                    <ReportLayerVisibilityCheckbox stableId={stableId} />
-                  ) : (
-                    <span className="text-xs text-gray-400"></span>
-                  )}
-                </div>
-              )}
-              {showColorSwatches && <SwatchForClassTableRow row={row} />}
-              <div className="flex-1 min-w-0 text-gray-800 text-sm">
-                <CollectionExpandableName
-                  displayLabel={displayLabel}
-                  truncateRowLabels={truncateRowLabels}
-                  expanded={expanded}
-                  onToggle={() => toggleRow(row.key)}
-                  loading={loading}
-                  isCollection={isCollection}
-                  caretTooltipEnabled={!hideCaretExpandTooltip}
-                  caretTooltipLabel={t("Expand sketch details")}
-                  expandAriaLabelExpanded={t(
-                    "Collapse sketch breakdown for {{name}}",
-                    { name: displayLabel },
-                  )}
-                  expandAriaLabelCollapsed={t(
-                    "Expand sketch breakdown for {{name}}",
-                    { name: displayLabel },
-                  )}
-                />
-              </div>
-              <div
-                className={`flex-none text-gray-900 tabular-nums text-sm min-w-[80px] ${
-                  showPercentColumn ? "text-center" : "text-right"
-                }`}
-              >
-                {loading ? <MetricLoadingDots /> : row.count.toLocaleString()}
-              </div>
-              {showPercentColumn && (
-                <div className="flex-none text-right text-gray-700 tabular-nums text-sm min-w-[70px]">
-                  {loading ? (
-                    <MetricLoadingDots />
-                  ) : typeof percent === "number" ? (
-                    `${(percent * 100).toFixed(1)}%`
-                  ) : (
-                    "—"
-                  )}
-                </div>
-              )}
-            </div>
-            {isCollection && expanded && sketchLines.length === 0 && (
-              <div className="flex flex-wrap items-center gap-3 border-t border-slate-200/80 bg-slate-100 px-3 py-2.5 text-sm italic text-gray-600">
-                <div className="flex-none w-6" aria-hidden />
-                {hasSwatchColumn && (
-                  <div className="flex-none w-4" aria-hidden />
-                )}
-                <div className="min-w-0 flex-1">
-                  {t(
-                    "No individual sketches contributed to this category.",
-                  )}
-                </div>
+        <div className="divide-y divide-gray-100">
+          {/* Header row */}
+          <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200">
+            {hasVisibilityColumn && (
+              <div className="flex-none w-6 flex justify-center text-gray-600 text-xs font-semibold uppercase tracking-wide">
+                <LayersIcon className="w-4 h-4" />
               </div>
             )}
-            {isCollection &&
-              expanded &&
-              sketchLines.map((sk) => (
+            <div className="flex-1 min-w-0 text-gray-600 text-xs font-semibold uppercase tracking-wide">
+              {nameLabel}
+            </div>
+            <div
+              className={`flex-none text-gray-600 text-xs font-semibold uppercase tracking-wide min-w-[80px] ${
+                showPercentColumn ? "text-center" : "text-right"
+              }`}
+            >
+              {countLabel}
+            </div>
+            {showPercentColumn && (
+              <div className="flex-none text-right text-gray-600 text-xs font-semibold uppercase tracking-wide min-w-[70px]">
+                {percentWithinLabel}
+              </div>
+            )}
+          </div>
+          {paginatedRows.map((row) => {
+            const percent =
+              !loading &&
+              typeof row.geographyTotal === "number" &&
+              row.geographyTotal > 0
+                ? row.count / row.geographyTotal
+                : undefined;
+            const stableId = resolveClassTableRowStableId(
+              row,
+              componentSettings.rowLinkedStableIds
+            );
+            const displayLabel =
+              row.key === "*" ? t("All features") : row.label;
+            const expanded = isSketchBreakdownExpanded(row.key);
+            const sketchLines = sketchLinesByRowKey.get(row.key) ?? [];
+            return (
+              <Fragment key={row.key}>
                 <div
-                  key={`${row.key}-sketch-${sk.sketchId}`}
-                  className={`flex flex-wrap items-center gap-3 border-t border-slate-200/80 bg-slate-100 px-3 py-2 hover:bg-slate-200/30 ${
+                  className={`flex items-center gap-3 px-3 py-2 hover:bg-gray-50 ${
                     row.count === 0 ? "opacity-50" : ""
                   }`}
                 >
                   {hasVisibilityColumn && (
-                    <div className="flex-none w-6" aria-hidden />
+                    <div className="flex-none w-6 flex justify-center">
+                      {stableId ? (
+                        <ReportLayerVisibilityCheckbox stableId={stableId} />
+                      ) : (
+                        <span className="text-xs text-gray-400"></span>
+                      )}
+                    </div>
                   )}
-                  {hasSwatchColumn && (
-                    <div className="flex-none w-4 flex justify-center" aria-hidden />
-                  )}
-                  <div className="flex min-w-0 flex-1 items-center gap-1 text-sm text-gray-800">
-                    <span className="min-w-0">{sk.sketchName}</span>
-                    <SketchOverlapHint
-                      hasOverlap={sk.hasOverlap}
-                      sketchDisplayName={sk.sketchName}
-                      overlapPartnerSketchNames={
-                        sk.overlapPartnerSketchNames
-                      }
+                  {showColorSwatches && <SwatchForClassTableRow row={row} />}
+                  <div className="flex-1 min-w-0 text-gray-800 text-sm">
+                    <CollectionExpandableName
+                      displayLabel={displayLabel}
+                      truncateRowLabels={truncateRowLabels}
+                      expanded={expanded}
+                      onToggle={() => toggleRow(row.key)}
+                      loading={loading}
+                      isCollection={isCollection}
+                      caretTooltipEnabled={!hideCaretExpandTooltip}
+                      caretTooltipLabel={t("Expand sketch details")}
+                      expandAriaLabelExpanded={t(
+                        "Collapse sketch breakdown for {{name}}",
+                        { name: displayLabel }
+                      )}
+                      expandAriaLabelCollapsed={t(
+                        "Expand sketch breakdown for {{name}}",
+                        { name: displayLabel }
+                      )}
                     />
                   </div>
                   <div
-                    className={`flex-none tabular-nums text-sm text-gray-900 min-w-[80px] ${
+                    className={`flex-none text-gray-900 tabular-nums text-sm min-w-[80px] ${
                       showPercentColumn ? "text-center" : "text-right"
                     }`}
                   >
                     {loading ? (
                       <MetricLoadingDots />
                     ) : (
-                      Math.round(sk.primaryValue).toLocaleString()
+                      row.count.toLocaleString()
                     )}
                   </div>
                   {showPercentColumn && (
-                    <div className="flex-none min-w-[70px] text-right tabular-nums text-sm text-gray-700">
+                    <div className="flex-none text-right text-gray-700 tabular-nums text-sm min-w-[70px]">
                       {loading ? (
                         <MetricLoadingDots />
+                      ) : typeof percent === "number" ? (
+                        `${(percent * 100).toFixed(1)}%`
                       ) : (
-                        `${(sk.fractionOfGeography * 100).toFixed(1)}%`
+                        "—"
                       )}
                     </div>
                   )}
                 </div>
-              ))}
-            </Fragment>
-          );
-        })}
-        <TablePaddingRows
-          count={paddingRowsCount}
-          includeColorColumn={hasAnyColor}
-          includeVisibilityColumn={hasVisibilityColumn}
-          showPercentColumn={showPercentColumn}
-          numericAlign={showPercentColumn ? "center" : "right"}
-        />
-      </div>
-      {showPagination && (
-        <PaginationFooter
-          currentPage={currentPage}
-          totalPages={totalPages}
-          totalRows={totalRows}
-          pageBounds={pageBounds}
-          onPageChange={setCurrentPage}
-        />
-      )}
+                {isCollection && expanded && sketchLines.length === 0 && (
+                  <div className="flex flex-wrap items-center gap-3 border-t border-slate-200/80 bg-slate-100 px-3 py-2.5 text-sm italic text-gray-600">
+                    <div className="flex-none w-6" aria-hidden />
+                    {hasSwatchColumn && (
+                      <div className="flex-none w-4" aria-hidden />
+                    )}
+                    <div className="min-w-0 flex-1">
+                      {t(
+                        "No individual sketches contributed to this category."
+                      )}
+                    </div>
+                  </div>
+                )}
+                {isCollection &&
+                  expanded &&
+                  sketchLines.map((sk) => (
+                    <div
+                      key={`${row.key}-sketch-${sk.sketchId}`}
+                      className={`flex flex-wrap items-center gap-3 border-t border-slate-200/80 bg-slate-100 px-3 py-2 hover:bg-slate-200/30 ${
+                        row.count === 0 ? "opacity-50" : ""
+                      }`}
+                    >
+                      {hasVisibilityColumn && (
+                        <div className="flex-none w-6" aria-hidden />
+                      )}
+                      {hasSwatchColumn && (
+                        <div
+                          className="flex-none w-4 flex justify-center"
+                          aria-hidden
+                        />
+                      )}
+                      <div className="flex min-w-0 flex-1 items-center gap-1 text-sm text-gray-800">
+                        <span className="min-w-0">{sk.sketchName}</span>
+                        <SketchOverlapHint
+                          hasOverlap={sk.hasOverlap}
+                          sketchDisplayName={sk.sketchName}
+                          overlapPartnerSketchNames={
+                            sk.overlapPartnerSketchNames
+                          }
+                        />
+                      </div>
+                      <div
+                        className={`flex-none tabular-nums text-sm text-gray-900 min-w-[80px] ${
+                          showPercentColumn ? "text-center" : "text-right"
+                        }`}
+                      >
+                        {loading ? (
+                          <MetricLoadingDots />
+                        ) : (
+                          Math.round(sk.primaryValue).toLocaleString()
+                        )}
+                      </div>
+                      {showPercentColumn && (
+                        <div className="flex-none min-w-[70px] text-right tabular-nums text-sm text-gray-700">
+                          {loading ? (
+                            <MetricLoadingDots />
+                          ) : (
+                            `${(sk.fractionOfGeography * 100).toFixed(1)}%`
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+              </Fragment>
+            );
+          })}
+          <TablePaddingRows
+            count={paddingRowsCount}
+            includeColorColumn={hasAnyColor}
+            includeVisibilityColumn={hasVisibilityColumn}
+            showPercentColumn={showPercentColumn}
+            numericAlign={showPercentColumn ? "center" : "right"}
+          />
+        </div>
+        {showPagination && (
+          <PaginationFooter
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalRows={totalRows}
+            pageBounds={pageBounds}
+            onPageChange={setCurrentPage}
+          />
+        )}
       </div>
     </Tooltip.Provider>
   );
@@ -483,40 +495,14 @@ export const FeatureCountTableTooltipControls: ReportWidgetTooltipControls = ({
     { value: "name", label: t("Name") },
   ];
 
-  const buffer = ((node.attrs?.metrics || []) as MetricDependency[]).find(
-    (m) => m.parameters?.bufferDistanceKm !== undefined
-  )?.parameters?.bufferDistanceKm;
-
-  const handleBufferClick = () => {
-    const currentValue = buffer !== undefined ? String(buffer) : "0";
-    const value = window.prompt(
-      t("Enter buffer distance in kilometers (or 0 for none)"),
-      currentValue
-    );
-    if (value === null) {
-      // User cancelled
-      return;
-    }
-    const numValue = value === "" || value === "0" ? 0 : Number(value);
-    onUpdateDependencyParameters((dependency) => {
-      if (dependency.subjectType === "geographies") {
-        return {
-          ...dependency.parameters,
-          bufferDistanceKm: undefined,
-        };
-      } else {
-        return {
-          ...dependency.parameters,
-          bufferDistanceKm: numValue === 0 ? undefined : numValue,
-        };
-      }
-    });
-  };
-
-  const bufferFormatter = useNumberFormatters({
-    unit: "kilometer",
-    unitDisplay: "short",
-  });
+  const bufferSettings = useMemo(
+    () => getBufferSettingsFromDependencies(dependencies || []),
+    [dependencies]
+  );
+  const showBufferGeography = useMemo(
+    () => (dependencies || []).some((d) => d.subjectType === "geographies"),
+    [dependencies]
+  );
 
   return (
     <div className="flex gap-3 items-center text-sm text-gray-800">
@@ -550,16 +536,16 @@ export const FeatureCountTableTooltipControls: ReportWidgetTooltipControls = ({
         }
       />
       <TooltipMorePopover>
-        <button
-          type="button"
-          onClick={handleBufferClick}
-          className="w-full text-left text-sm rounded hover:text-black focus:outline-none flex items-center space-x-2"
-        >
-          <span className="font-light text-gray-400">{t("Buffer")}</span>
-          <span className="flex-1 text-right hover:ring hover:ring-blue-300/20">
-            {bufferFormatter.distance(buffer ?? 0)}
-          </span>
-        </button>
+        <BufferSelector
+          distanceKm={bufferSettings.distanceKm}
+          bufferGeography={bufferSettings.bufferGeography}
+          showBufferGeography={showBufferGeography}
+          onChange={(next) => {
+            onUpdateDependencyParameters((dependency) =>
+              applyBufferSettingsToParameters(dependency, next)
+            );
+          }}
+        />
         <TooltipBooleanConfigurationOption
           label={t("Show % column")}
           checked={showPercentColumn}

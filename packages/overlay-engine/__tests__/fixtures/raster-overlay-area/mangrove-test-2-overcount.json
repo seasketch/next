@@ -1,0 +1,18 @@
+{
+  "sourceUrl": "http://uploads.seasketch.org/testing-mangroves-2020-subdivided.tif",
+  "fragments": "mangrove-test-2-fragments.geojson.json",
+  "epsg": 3857,
+  "vrm": "auto",
+  "groupBy": null,
+  "bufferDistanceKm": 0.5,
+  "expected": {
+    "naiveSumKm2": 5.2892,
+    "collarHabitatA": 4.5631,
+    "collarHabitatB": 0.7261,
+    "overcountMaxKm2": 0.7261,
+    "unionHabitatKm2": 4.9135,
+    "trueOvercountKm2": 0.3757
+  },
+  "toleranceKm2": 0.05,
+  "notes": "Real-world regression from the 'Mangrove test 2' sketch (report 180): two disjoint fragments whose 0.5 km buffers overlap. The small fragment's buffered bbox is fully contained in the large fragment's bbox, so the old estimate (hardMax x lambda) degenerated to hardMax (0.726 km2, 13.7% of naive) and warned, while the true double-counted habitat in buffer(A) intersect buffer(B) is only ~0.376 km2 (7.1% of naive, below the 10% warning gate). Ground truth verified via habitat counts on union/intersection of the buffered geometries against the same raster."
+}

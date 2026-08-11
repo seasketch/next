@@ -4,6 +4,7 @@ import {
   calculateFragmentOverlap,
   calculateGeographyOverlap,
   calculateRasterStats,
+  calculateRasterOverlayArea,
   computeBufferedSubjectAndCollar,
   Cql2Query,
   initializeGeographySources,
@@ -456,6 +457,116 @@ export default async function handler(payload: OverlayWorkerPayload) {
         );
         return;
         // }
+      }
+      case "raster_overlay_area": {
+        if (!payload.sourceUrl) {
+          throw new Error("sourceUrl is required for raster_overlay_area");
+        }
+        if (!payload.epsg || typeof payload.epsg !== "number") {
+          throw new Error("epsg is required for raster_overlay_area");
+        }
+        let { intersectionFeature, differenceSources } =
+          await subjectsForAnalysis(
+            payload.subject as MetricSubjectFragment | MetricSubjectGeography,
+            helpers,
+          );
+        if (subjectIsGeography(payload.subject)) {
+          intersectionFeature = await buildCompleteGeographyMultiPolygon(
+            intersectionFeature,
+            differenceSources,
+          );
+        }
+
+        const subjectIsBuffered =
+          typeof payload.bufferDistanceKm === "number" &&
+          isFinite(payload.bufferDistanceKm) &&
+          payload.bufferDistanceKm > 0;
+
+        // Collar metadata only for buffered fragment subjects (same gate as
+        // overlay_area). Geography subjects may buffer geometry but never
+        // attach overlap.
+        let collarWgs: Feature<Polygon | MultiPolygon> | undefined;
+        let bufferedBbox: [number, number, number, number] | undefined;
+        let unbufferedForCollar = intersectionFeature;
+        if (subjectIsBuffered && subjectIsFragment(payload.subject)) {
+          if (differenceSources.length > 0) {
+            unbufferedForCollar = await buildCompleteGeographyMultiPolygon(
+              intersectionFeature,
+              differenceSources,
+            );
+          }
+          try {
+            const { collar, bbox } = computeBufferedSubjectAndCollar(
+              unbufferedForCollar,
+              payload.bufferDistanceKm!,
+            );
+            collarWgs = collar;
+            bufferedBbox = bbox;
+          } catch (err) {
+            console.warn(
+              "Failed to compute raster_overlay_area collar; continuing without overlap metadata",
+              err,
+            );
+          }
+        }
+
+        const bufferedSubjects = await bufferedSubjectsForAnalysis(
+          intersectionFeature,
+          differenceSources,
+          payload.bufferDistanceKm,
+        );
+        intersectionFeature = bufferedSubjects.intersectionFeature;
+
+        const resolvedVrm: false | "auto" | number =
+          payload.vrm !== undefined
+            ? payload.vrm
+            : subjectIsGeography(payload.subject)
+              ? false
+              : "auto";
+
+        const wgs84BBox = calcBBox(intersectionFeature, { recompute: true });
+        const centerLonLat: [number, number] = [
+          (wgs84BBox[0] + wgs84BBox[2]) / 2,
+          (wgs84BBox[1] + wgs84BBox[3]) / 2,
+        ];
+        const fragmentAreaSqM = area(intersectionFeature);
+
+        const projectedFeature = reproject(intersectionFeature, payload.epsg);
+        const projectedCollar =
+          collarWgs != null ? reproject(collarWgs, payload.epsg) : undefined;
+
+        const rasterToken = await getOverlayEngineAccessToken();
+        const authenticatedSourceUrl = withAccessTokenQueryParam(
+          payload.sourceUrl,
+          rasterToken,
+        );
+
+        const result = await calculateRasterOverlayArea(
+          authenticatedSourceUrl,
+          projectedFeature,
+          {
+            vrm: resolvedVrm,
+            centerLonLat,
+            fragmentAreaSqM,
+            groupByValue: payload.groupBy === "value",
+            collar:
+              projectedCollar && bufferedBbox && subjectIsBuffered
+                ? {
+                    feature: projectedCollar,
+                    bbox: bufferedBbox,
+                    bufferKm: payload.bufferDistanceKm!,
+                  }
+                : undefined,
+          },
+        );
+        await flushMessages();
+        await sendResultMessage(
+          payload.jobKey,
+          result,
+          payload.queueUrl,
+          Date.now() - startTime,
+        );
+        return;
       }
       case "distance_to_shore": {
         console.log("distance_to_shore", payload);

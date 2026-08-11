@@ -97,6 +97,10 @@ import {
   RasterProportionTable,
   RasterProportionTableTooltipControls,
 } from "./RasterProportionTable";
+import {
+  RasterAreaCapturedTable,
+  RasterAreaCapturedTableTooltipControls,
+} from "./RasterAreaCapturedTable";
 import { Mark, Node } from "prosemirror-model";
 import { useWidgetDependencies } from "../hooks/useWidgetDependencies";
 import { ReportUIStateContext } from "../context/ReportUIStateContext";
@@ -474,6 +478,10 @@ const memoizedWidgets: Record<string, WidgetComponent> = {
     RasterProportionTable,
     "RasterProportionTable"
   ),
+  RasterAreaCapturedTable: memoWidget(
+    RasterAreaCapturedTable,
+    "RasterAreaCapturedTable"
+  ),
   InlineLayerToggle: memoWidget(InlineLayerToggle, "InlineLayerToggle"),
   BlockLayerToggle: memoWidget(BlockLayerToggle, "BlockLayerToggle"),
 };
@@ -644,6 +652,8 @@ export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
       return <RasterStatisticsTableTooltipControls {...props} />;
     case "RasterProportionTable":
       return <RasterProportionTableTooltipControls {...props} />;
+    case "RasterAreaCapturedTable":
+      return <RasterAreaCapturedTableTooltipControls {...props} />;
     case "BlockLayerToggle":
       return <BlockLayerToggleTooltipControls {...props} />;
     case "InlineLayerToggle":
@@ -806,6 +816,9 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
       break;
     case "RasterProportionTable":
       widget = <memoizedWidgets.RasterProportionTable {...widgetProps} />;
+      break;
+    case "RasterAreaCapturedTable":
+      widget = <memoizedWidgets.RasterAreaCapturedTable {...widgetProps} />;
       break;
     case "InlineLayerToggle":
       widget = <memoizedWidgets.InlineLayerToggle {...widgetProps} />;
@@ -1487,6 +1500,47 @@ export function buildReportCommandGroups({
                   },
                 ],
                 componentSettings: {},
+              });
+            },
+          });
+          // Like OverlappingAreasTable: one command; class breakdown defaults
+          // from styleGroupByColumn ("value" for categorical rasters).
+          const rasterAreaGroupBy =
+            source.styleGroupByColumn === "value" ? "value" : undefined;
+          blockGroup.items.push({
+            // eslint-disable-next-line i18next/no-literal-string
+            id: `overlay-layer-${tocId}-raster-area-captured-table`,
+            label: "Raster Area Captured Table",
+            description:
+              "Table of raster area (km²) captured by the sketch. Optionally show percent of a geography. Categorical rasters default to one row per class; change Group by under Rows to use a single total.",
+            screenshotSrc: "/slashCommands/raster-proportion.png",
+            run: (state, dispatch, view) => {
+              return insertBlockMetric(view, state.selection.ranges[0], {
+                type: "RasterAreaCapturedTable",
+                metrics: [
+                  {
+                    type: "raster_overlay_area",
+                    subjectType: "fragments",
+                    stableId,
+                    ...(rasterAreaGroupBy
+                      ? { parameters: { groupBy: rasterAreaGroupBy } }
+                      : {}),
+                  },
+                  {
+                    type: "raster_overlay_area",
+                    subjectType: "geographies",
+                    stableId,
+                    parameters: {
+                      vrm: false,
+                      ...(rasterAreaGroupBy
+                        ? { groupBy: rasterAreaGroupBy }
+                        : {}),
+                    },
+                  },
+                ],
+                // Hide "% Captured" until an admin picks a geography (same
+                // pattern as OverlappingAreasTable percentGeographyId: null).
+                componentSettings: { geographyId: null },
               });
             },
           });

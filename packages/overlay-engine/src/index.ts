@@ -69,6 +69,21 @@ export {
   combineRasterBandStats,
   combineMetricsForFragments,
   RasterStats,
+  RasterOverlayAreaMetric,
+  RasterOverlayAreaMetricValue,
+  RasterOverlayAreaAreas,
+  RasterOverlayAreaOverlapInfo,
+  RasterOverlayAreaOverlapCombineResult,
+  RasterOverlayAreaOverlapPair,
+  MAX_RASTER_OVERLAY_AREA_CLASSES,
+  combineRasterOverlayAreaMetrics,
+  attachRasterOverlayAreaOverlapScope,
+  isRasterOverlayAreaOverlapInfo,
+  isRasterOverlayAreaOverlapCombineResult,
+  getRasterOverlayAreaOverlapInfo,
+  getRasterOverlayAreaOverlapCombineResult,
+  getRasterOverlayAreaDisplayedClassValue,
+  getRasterOverlayAreaClassValueRange,
   MetricDependency,
   isNumberColumnValueStats,
   MetricDependencySubjectType,
@@ -84,5 +99,6 @@ export {
 } from "./utils/uniqueIdIndex";
 export { initializeGeographySources } from "./geographies/geographies";
 export { calculateRasterStats } from "./rasterStats";
+export { calculateRasterOverlayArea } from "./rasterOverlayArea";
 export { calculateDistanceToShore } from "./calculateDistanceToShore";
 export { computeBufferedSubjectAndCollar } from "./metrics/computeSubjectCollar";

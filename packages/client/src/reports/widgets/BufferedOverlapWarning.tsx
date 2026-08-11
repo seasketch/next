@@ -45,6 +45,7 @@ export default function BufferedOverlapWarning({
   total,
   formatArea,
   className,
+  overcountEstimate,
 }: {
   /** Minimum overcount relative to the naive sum (km²). */
   overcountMin: number;
@@ -55,21 +56,34 @@ export default function BufferedOverlapWarning({
   /** Formats an absolute area for the low–high range. */
   formatArea: (sqKm: number) => string;
   className?: string;
+  /**
+   * When set (raster_overlay_area), the warning gate uses
+   * `overcountEstimate / total` instead of residual hardMax uncertainty.
+   * The displayed numeric range still uses overcountMin/Max.
+   */
+  overcountEstimate?: number;
 }) {
   const { t } = useTranslation("reports");
   const { printing } = useContext(ReportUIStateContext);
 
   const residual = bufferedOverlapResidual(overcountMin, overcountMax);
+  const gateMagnitude =
+    typeof overcountEstimate === "number" && Number.isFinite(overcountEstimate)
+      ? overcountEstimate
+      : residual;
 
   if (
     !Number.isFinite(total) ||
     total <= 0 ||
-    residual <= 0 ||
-    residual / total < WARNING_THRESHOLD
+    gateMagnitude <= 0 ||
+    gateMagnitude / total < WARNING_THRESHOLD
   ) {
     return null;
   }
 
+  // "up to N%" must match the low end of the displayed range
+  // (total − overcountMax), so it is always derived from the hard residual —
+  // the estimate only decides whether the warning shows at all.
   const pct = Math.ceil((residual / total) * 100);
   const low = Math.max(0, total - overcountMax);
   const high = Math.max(0, total - overcountMin);

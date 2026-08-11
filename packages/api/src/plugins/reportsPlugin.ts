@@ -80,6 +80,129 @@ type ReportOverlaySourcePartial = {
   anyColumn?: string;
 };
 
+/**
+ * Suggested groupBy for raster overlay sources. Returns `"value"` when there
+ * are ≥2 distinct pixel classes (categories / legend labels / opaque style
+ * stops, minus `s:excluded`) — same heuristic as the client
+ * `defaultRasterOverlayAreaGroupBy` / `canRasterBreakdownByValue`.
+ */
+function rasterStyleGroupByColumn(
+  geostats: unknown,
+  mapboxGlStyles: AnyLayer[] | null | undefined,
+): "value" | undefined {
+  const excluded = new Set<string>();
+  if (mapboxGlStyles?.length) {
+    for (const layer of mapboxGlStyles) {
+      const raw = (layer as { metadata?: { [k: string]: unknown } })?.metadata?.[
+        "s:excluded"
+      ];
+      if (!Array.isArray(raw)) continue;
+      for (const v of raw) {
+        if (typeof v === "number" && Number.isFinite(v)) {
+          excluded.add(String(Math.round(v)));
+        } else if (typeof v === "string" && v.length > 0) {
+          excluded.add(v);
+        }
+      }
+    }
+  }
+
+  const values = new Set<string>();
+  const push = (key: string) => {
+    if (key && !excluded.has(key)) values.add(key);
+  };
+
+  if (isRasterInfo(geostats)) {
+    const categories = geostats.bands?.[0]?.stats?.categories ?? [];
+    for (const bucket of categories) {
+      if (!Array.isArray(bucket) || typeof bucket[0] !== "number") continue;
+      push(String(Math.round(bucket[0])));
+    }
+  }
+
+  if (values.size === 0 && mapboxGlStyles?.length) {
+    for (const layer of mapboxGlStyles) {
+      const labels = (layer as { metadata?: { [k: string]: unknown } })
+        ?.metadata?.["s:legend-labels"];
+      if (labels && typeof labels === "object" && !Array.isArray(labels)) {
+        for (const key of Object.keys(labels as Record<string, unknown>)) {
+          push(key);
+        }
+      }
+    }
+  }
+
+  if (values.size === 0 && mapboxGlStyles?.length) {
+    for (const layer of mapboxGlStyles) {
+      if (layer.type !== "raster" || !("paint" in layer) || !layer.paint) {
+        continue;
+      }
+      const rasterColor = (layer.paint as Record<string, unknown>)[
+        "raster-color"
+      ];
+      if (!Array.isArray(rasterColor) || rasterColor.length < 3) continue;
+      const fn = rasterColor[0];
+      if (fn === "step") {
+        for (let i = 3; i < rasterColor.length; i += 2) {
+          const stop = rasterColor[i];
+          const color = rasterColor[i + 1];
+          if (
+            typeof stop === "number" &&
+            isOpaqueRasterStyleColor(color)
+          ) {
+            push(String(Math.round(stop)));
+          }
+        }
+      } else if (fn === "match") {
+        let i = 2;
+        while (i < rasterColor.length) {
+          if (i === rasterColor.length - 1) break;
+          const input = rasterColor[i];
+          const color = rasterColor[i + 1];
+          if (isOpaqueRasterStyleColor(color)) {
+            if (typeof input === "number") {
+              push(String(Math.round(input)));
+            } else if (typeof input === "string") {
+              push(input);
+            }
+          }
+          i += 2;
+        }
+      }
+    }
+  }
+
+  return values.size >= 2 ? "value" : undefined;
+}
+
+function isOpaqueRasterStyleColor(color: unknown): boolean {
+  if (typeof color !== "string" || color.length === 0) return false;
+  if (/transparent/i.test(color)) return false;
+  // rgba(..., 0) / hsla(..., 0)
+  if (/^(?:rgba?|hsla?)\([^)]*,\s*0(?:\.0+)?\s*\)$/i.test(color)) return false;
+  return true;
+}
+
+function styleGroupByColumnForSource(args: {
+  geostats?: unknown;
+  mapboxGlStyles?: AnyLayer[] | null;
+  vectorGeometryType?: string | null;
+  columnNames: Set<string>;
+  rasterBandCount?: number | null;
+}): string | undefined {
+  if (args.rasterBandCount != null && args.rasterBandCount >= 1) {
+    return rasterStyleGroupByColumn(args.geostats, args.mapboxGlStyles);
+  }
+  if (!args.vectorGeometryType) {
+    return undefined;
+  }
+  return groupByFromStyle(
+    args.mapboxGlStyles,
+    args.vectorGeometryType,
+    args.columnNames,
+  );
+}
+
 const ReportsPlugin = makeExtendSchemaPlugin((build) => {
   const { pgSql: sql } = build;
   return {
@@ -164,9 +287,9 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         """
         vectorGeometryType: String
         """
-        If a column is used for a categorical map presentation, this is the
-        column name. Useful for report widgets that support "groupBy" options,
-        in which case this column should be pre-selected.
+        Suggested groupBy for report widgets. For vectors: the attribute used
+        by categorical map symbology. For categorical single-band rasters: the
+        literal "value" (pixel class). Null when a single total row is better.
         """
         styleGroupByColumn: String
         """
@@ -200,7 +323,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
       }
 
       input NodeDependency {
-        # e.g. "total_area", "presence", "presence_table", "column_values", "raster_stats", "distance_to_shore"
+        # e.g. "total_area", "presence", "presence_table", "column_values", "raster_stats", "raster_overlay_area", "distance_to_shore"
         type: String!
         # "fragments" or "geographies"
         subjectType: String!
@@ -415,11 +538,15 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
                 : {}),
               ...(wantStyleGroupByColumn
                 ? {
-                    styleGroupByColumn: groupByFromStyle(
-                      row.mapbox_gl_styles,
-                      row.vector_geometry_type,
-                      new Set(Object.keys(row.column_details || {})),
-                    ),
+                    styleGroupByColumn: styleGroupByColumnForSource({
+                      geostats: row.geostats,
+                      mapboxGlStyles: row.mapbox_gl_styles,
+                      vectorGeometryType: row.vector_geometry_type,
+                      columnNames: new Set(
+                        Object.keys(row.column_details || {}),
+                      ),
+                      rasterBandCount: row.raster_band_count,
+                    }),
                   }
                 : {}),
             };
@@ -1195,11 +1322,13 @@ async function getOverlaySourcesByStableIds(
             string,
             { type: string; countDistinct: number }
           >;
-          row.styleGroupByColumn = groupByFromStyle(
-            row.mapboxGlStyles,
-            row.vectorGeometryType,
-            new Set(Object.keys(layer.attributes || {})),
-          );
+          row.styleGroupByColumn = styleGroupByColumnForSource({
+            geostats: row.geostats,
+            mapboxGlStyles: row.mapboxGlStyles,
+            vectorGeometryType: row.vectorGeometryType,
+            columnNames: new Set(Object.keys(layer.attributes || {})),
+            rasterBandCount: row.rasterBandCount,
+          });
           row.bestCategoryColumn =
             row.ai_best_category_column ||
             pickBestCategoryColumn(attributes, row.featureCount || 0);
@@ -1214,6 +1343,18 @@ async function getOverlaySourcesByStableIds(
           delete row.ai_best_category_column;
           delete row.ai_best_numeric_column;
         }
+      } else if (
+        row.rasterBandCount != null &&
+        row.rasterBandCount >= 1 &&
+        row.geostats
+      ) {
+        row.styleGroupByColumn = styleGroupByColumnForSource({
+          geostats: row.geostats,
+          mapboxGlStyles: row.mapboxGlStyles,
+          vectorGeometryType: row.vectorGeometryType,
+          columnNames: new Set(),
+          rasterBandCount: row.rasterBandCount,
+        });
       }
       results[row.stableId] = row;
     }
@@ -1358,7 +1499,9 @@ async function getOverlaySourcesForDependencies(
   for (const dependency of dependencies) {
     if (
       dependency.stableId &&
-      ["raster_stats", "column_values"].includes(dependency.type)
+      ["raster_stats", "raster_overlay_area", "column_values"].includes(
+        dependency.type,
+      )
     ) {
       keepHistogram[dependency.stableId] = true;
     }

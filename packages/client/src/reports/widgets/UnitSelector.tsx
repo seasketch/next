@@ -1,8 +1,28 @@
-import { useContext, useMemo } from "react";
+import { useCallback, useContext, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { FormLanguageContext } from "../../formElements/FormElement";
+import { TooltipDropdownOption } from "../../editor/TooltipMenu";
 import { LabeledDropdown } from "./LabeledDropdown";
 import { AreaUnit, LengthUnit, getLocalizedUnitLabel } from "../utils/units";
+
+/** Compact label for the closed dropdown trigger (menu keeps long names). */
+function shortUnitTriggerLabel(
+  unit: string,
+  locale: string,
+  isArea: boolean
+): string {
+  let label = getLocalizedUnitLabel(
+    unit as AreaUnit | LengthUnit,
+    locale,
+    isArea,
+    "short"
+  );
+  // Match useNumberFormatters: area km/mi are shown with a squared suffix.
+  if (isArea && (unit === "kilometer" || unit === "mile")) {
+    label += "²";
+  }
+  return label;
+}
 
 type UnitSelectorAreaProps = {
   unitType: "area";
@@ -140,6 +160,17 @@ function UnitSelectorArea({
     }
   };
 
+  const locale = langContext?.lang?.code?.toLowerCase() || "en";
+  const getDisplayLabel = useCallback(
+    (selected?: TooltipDropdownOption) => {
+      if (!selected || selected.value === "__unit:none__") {
+        return selected?.label ?? t("None");
+      }
+      return shortUnitTriggerLabel(selected.value, locale, true);
+    },
+    [locale, t]
+  );
+
   return (
     <LabeledDropdown
       label={t("Unit")}
@@ -148,6 +179,7 @@ function UnitSelectorArea({
       title={t("Area unit")}
       options={options}
       onChange={(val) => handleChange(val)}
+      getDisplayLabel={getDisplayLabel}
     />
   );
 }
@@ -219,6 +251,17 @@ function UnitSelectorDistance({
     }
   };
 
+  const locale = langContext?.lang?.code?.toLowerCase() || "en";
+  const getDisplayLabel = useCallback(
+    (selected?: TooltipDropdownOption) => {
+      if (!selected || selected.value === "__unit:none__") {
+        return selected?.label ?? t("None");
+      }
+      return shortUnitTriggerLabel(selected.value, locale, false);
+    },
+    [locale, t]
+  );
+
   return (
     <LabeledDropdown
       label={t("Unit")}
@@ -227,6 +270,7 @@ function UnitSelectorDistance({
       title={t("Distance unit")}
       options={options}
       onChange={(val) => handleChange(val)}
+      getDisplayLabel={getDisplayLabel}
     />
   );
 }

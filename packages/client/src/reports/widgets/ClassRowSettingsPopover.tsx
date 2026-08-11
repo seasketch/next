@@ -30,13 +30,17 @@ import {
   ClassTableRow,
   ClassTableRowComponentSettings,
   classTableRowKey,
+  canRasterBreakdownByValue,
+  defaultRasterOverlayAreaGroupBy,
   getClassTableRows,
+  isRasterSource,
 } from "./ClassTableRows";
 import { MetricDependency } from "overlay-engine";
 import { OverlaySourceDetailsFragment } from "../../generated/graphql";
 import { GeostatsLayer, isGeostatsLayer } from "@seasketch/geostats-types";
 import { useOverlaySources } from "../hooks/useOverlaySources";
 import * as Tooltip from "@radix-ui/react-tooltip";
+import { getBufferSettingsFromDependencies } from "./BufferSelector";
 
 function GroupByPicker({
   value,
@@ -125,7 +129,10 @@ type ClassRowSettingsPopoverProps = {
   /** Show the "Show color swatches" toggle in the footer. */
   showColorSwatches?: boolean;
   onShowColorSwatchesChange?: (value: boolean) => void;
-  /** Hide the "Group by" section (for raster sources that have no attribute columns). */
+  /**
+   * Hide group-by controls. Rasters use a "Breakdown by value" checkbox
+   * instead of the vector Group by picker (unless this is set).
+   */
   hideGroupBy?: boolean;
 };
 
@@ -155,12 +162,11 @@ export const ClassRowSettingsPopover = ({
     return dependencies?.[0]?.type || "count";
   }, [dependencies]);
 
-  // Get bufferDistanceKm from existing dependencies if present
-  const bufferDistanceKm = useMemo(() => {
-    return dependencies?.find(
-      (d) => d.parameters?.bufferDistanceKm !== undefined
-    )?.parameters?.bufferDistanceKm;
-  }, [dependencies]);
+  // Mirror current buffer settings onto newly added sources.
+  const bufferSettings = useMemo(
+    () => getBufferSettingsFromDependencies(dependencies || []),
+    [dependencies]
+  );
 
   // Get tableOfContentsItemIds that are already in use
   const currentSourceIds = useMemo(() => {
@@ -187,30 +193,51 @@ export const ClassRowSettingsPopover = ({
 
     onUpdateAllDependencies((currentDeps) => {
       const newDeps = [...currentDeps];
-      const baseParams: Record<string, any> = {};
-      if (bufferDistanceKm !== undefined) {
-        baseParams.bufferDistanceKm = bufferDistanceKm;
+      const fragmentBufferParams: Record<string, any> = {};
+      if (bufferSettings.distanceKm !== undefined) {
+        fragmentBufferParams.bufferDistanceKm = bufferSettings.distanceKm;
+      }
+      const geographyBufferParams: Record<string, any> = {};
+      if (
+        bufferSettings.distanceKm !== undefined &&
+        bufferSettings.bufferGeography
+      ) {
+        geographyBufferParams.bufferDistanceKm = bufferSettings.distanceKm;
       }
 
       for (const layerValue of validLayers) {
         const source = overlaySources.find(
           (s) => s.stableId === layerValue.stableId
         );
-        const parameters = { ...baseParams };
+        const fragmentParameters = { ...fragmentBufferParams };
+        const geographyParameters = { ...geographyBufferParams };
         if (source?.containsOverlappingFeatures) {
-          parameters.sourceHasOverlappingFeatures = true;
+          fragmentParameters.sourceHasOverlappingFeatures = true;
+          geographyParameters.sourceHasOverlappingFeatures = true;
+        }
+        // Mirror slash-command defaults: categorical rasters start grouped.
+        if (
+          metricType === "raster_overlay_area" &&
+          source &&
+          defaultRasterOverlayAreaGroupBy(source)
+        ) {
+          fragmentParameters.groupBy = "value";
+          geographyParameters.groupBy = "value";
         }
         newDeps.push({
           type: metricType,
           subjectType: "fragments",
           stableId: layerValue.stableId,
-          parameters,
+          parameters: fragmentParameters,
         });
         newDeps.push({
           type: metricType,
           subjectType: "geographies",
           stableId: layerValue.stableId,
-          parameters,
+          parameters:
+            metricType === "raster_overlay_area"
+              ? { ...geographyParameters, vrm: false }
+              : geographyParameters,
         });
       }
 
@@ -447,18 +474,104 @@ export const ClassRowSettingsPopover = ({
               const sourceStableId = group.source?.stableId;
               const groupByActive =
                 !!sourceStableId && !!currentGroupByBySource[sourceStableId];
+              const sourceIsRaster =
+                !!group.source && isRasterSource(group.source);
+              const rasterBreakdownAvailable =
+                !!group.source && canRasterBreakdownByValue(group.source);
+              // Source options only for real configuration (group-by / overlap).
+              // Multi-source remove is a trash icon in the header instead.
               const showSourceOptionsPopover =
-                !hideGroupBy ||
-                (metricType === "overlay_area" && !!sourceStableId) ||
-                (groupedRows.length > 1 && !!sourceStableId);
+                (!hideGroupBy && !sourceIsRaster) ||
+                (metricType === "overlay_area" && !!sourceStableId);
               const canRemoveThisSource =
                 groupedRows.length > 1 && !!sourceStableId;
+
+              const setRasterBreakdownByValue = (enabled: boolean) => {
+                const targetId = group.source?.stableId;
+                if (!targetId) return;
+                if (enabled && !rasterBreakdownAvailable) return;
+                if (!enabled) {
+                  onUpdateSettings({
+                    includeAllFeaturesRowForGroupedSources: (
+                      settings.includeAllFeaturesRowForGroupedSources || []
+                    ).filter((id) => id !== targetId),
+                  });
+                }
+                onUpdateDependencyParameters((dependency) => {
+                  const nextParams = { ...(dependency.parameters || {}) };
+                  if (dependency.stableId === targetId) {
+                    if (enabled) {
+                      nextParams.groupBy = "value";
+                    } else {
+                      delete nextParams.groupBy;
+                    }
+                  }
+                  return nextParams;
+                });
+              };
+
               return (
                 <div key={group.title}>
                   <div className="px-3 py-2 font-semibold text-gray-600 bg-blue-50/20 border-b flex items-center justify-between gap-2">
                     <span className="text-sm truncate font-medium text-gray-700 min-w-0">
                       {group.title}
                     </span>
+                    <div className="flex items-center gap-1.5 flex-shrink-0">
+                    {sourceIsRaster && !hideGroupBy && (
+                      <Tooltip.Root>
+                        <Tooltip.Trigger asChild>
+                          <span className="inline-flex">
+                            <button
+                              type="button"
+                              // Allow clearing a stale groupBy; only block enabling.
+                              disabled={
+                                !rasterBreakdownAvailable && !groupByActive
+                              }
+                              className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium border transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-400 ${
+                                !rasterBreakdownAvailable && !groupByActive
+                                  ? "text-gray-400 border-transparent opacity-50 cursor-not-allowed"
+                                  : groupByActive
+                                    ? "text-gray-900 bg-blue-50 border-blue-200 hover:bg-blue-100/70"
+                                    : "text-gray-600 border-transparent hover:bg-blue-100/50 hover:border-blue-200 opacity-50"
+                              }`}
+                              onClick={() =>
+                                setRasterBreakdownByValue(!groupByActive)
+                              }
+                            >
+                              <input
+                                type="checkbox"
+                                checked={groupByActive}
+                                disabled={
+                                  !rasterBreakdownAvailable && !groupByActive
+                                }
+                                readOnly
+                                tabIndex={-1}
+                                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500 h-3.5 w-3.5 pointer-events-none disabled:opacity-40"
+                              />
+                              <span>{t("Breakdown by value")}</span>
+                            </button>
+                          </span>
+                        </Tooltip.Trigger>
+                        {!rasterBreakdownAvailable && (
+                          <Tooltip.Portal>
+                            <Tooltip.Content
+                              side="top"
+                              sideOffset={4}
+                              className="bg-gray-900 text-white text-xs px-2 py-1.5 rounded shadow-lg z-[80] max-w-[260px] leading-snug"
+                            >
+                              {groupByActive
+                                ? t(
+                                    "This layer does not have multiple pixel classes. Turn off breakdown to restore the total row."
+                                  )
+                                : t(
+                                    "This layer does not have multiple pixel classes to break down. Presence or single-value rasters use one total row."
+                                  )}
+                              <Tooltip.Arrow className="fill-gray-900" />
+                            </Tooltip.Content>
+                          </Tooltip.Portal>
+                        )}
+                      </Tooltip.Root>
+                    )}
                     {showSourceOptionsPopover ? (
                       <Popover.Root>
                         <Popover.Trigger asChild>
@@ -501,7 +614,7 @@ export const ClassRowSettingsPopover = ({
                           </p>
                         </div> */}
                           <div className="divide-y divide-gray-100">
-                            {!hideGroupBy && (
+                            {!hideGroupBy && !sourceIsRaster && (
                               <div className="px-3 py-3">
                                 <h4 className="text-xs font-semibold text-gray-700 mb-1">
                                   {t("Group by")}
@@ -732,36 +845,40 @@ export const ClassRowSettingsPopover = ({
                                   </div>
                                 </div>
                               )}
-                            {groupedRows.length > 1 &&
-                              group.source?.stableId && (
-                                <div className="px-3 py-3">
-                                  <h4 className="text-xs font-semibold text-gray-700 mb-1">
-                                    {t("Remove source")}
-                                  </h4>
-                                  <p className="text-xs text-gray-500 mb-2">
-                                    {t(
-                                      "Remove this data source from the table. Rows and metrics for this source will no longer appear."
-                                    )}
-                                  </p>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      handleRemoveSource(
-                                        group.source!.stableId!
-                                      );
-                                    }}
-                                    className="flex items-center gap-2 px-2 py-1.5 text-xs font-medium text-red-700 hover:text-red-800 hover:bg-red-50 rounded-md border border-red-200 transition-colors"
-                                  >
-                                    <TrashIcon className="w-3.5 h-3.5" />
-                                    {t("Remove this source")}
-                                  </button>
-                                </div>
-                              )}
                           </div>
                           </Popover.Content>
                         </Popover.Portal>
                       </Popover.Root>
                     ) : null}
+                    {canRemoveThisSource && (
+                      <Tooltip.Root>
+                        <Tooltip.Trigger asChild>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleRemoveSource(sourceStableId!);
+                            }}
+                            className="flex items-center justify-center w-7 h-7 rounded-md text-gray-500 hover:text-red-700 hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-red-400"
+                            aria-label={t("Remove this source")}
+                          >
+                            <TrashIcon className="w-3.5 h-3.5" />
+                          </button>
+                        </Tooltip.Trigger>
+                        <Tooltip.Portal>
+                          <Tooltip.Content
+                            side="top"
+                            sideOffset={4}
+                            className="bg-gray-900 text-white text-xs px-2 py-1.5 rounded shadow-lg z-[80] max-w-[220px] leading-snug"
+                          >
+                            {t(
+                              "Remove this data source from the table. Rows and metrics for this source will no longer appear."
+                            )}
+                            <Tooltip.Arrow className="fill-gray-900" />
+                          </Tooltip.Content>
+                        </Tooltip.Portal>
+                      </Tooltip.Root>
+                    )}
+                    </div>
                   </div>
 
                   {group.rows.map((row) => {
@@ -772,17 +889,9 @@ export const ClassRowSettingsPopover = ({
                       settings.customRowLabels?.[row.key] || "";
                     const stableId = row.sourceId ? row.sourceId : undefined;
                     const defaultLabel =
-                      row.groupByKey === "*"
-                        ? groupedRows.length === 1
-                          ? t("All features")
-                          : group.title
-                        : row.groupByKey;
+                      row.groupByKey === "*" ? group.title : row.groupByKey;
                     const chipLabel =
-                      row.groupByKey === "*"
-                        ? groupedRows.length === 1
-                          ? t("All features")
-                          : group.title
-                        : row.groupByKey;
+                      row.groupByKey === "*" ? group.title : row.groupByKey;
                     return (
                       <div
                         key={row.key}
@@ -931,7 +1040,7 @@ export const ClassRowSettingsPopover = ({
                               >
                                 {canRemoveThisSource
                                   ? t(
-                                      "Row visibility can only be changed when this source has multiple rows. If you wish to remove this source entirely, click 'Source options'."
+                                      "Row visibility can only be changed when this source has multiple rows. If you wish to remove this source entirely, use the trash icon."
                                     )
                                   : t(
                                       "Row visibility can only be changed when this source has multiple rows."

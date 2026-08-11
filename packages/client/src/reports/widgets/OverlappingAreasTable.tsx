@@ -19,6 +19,11 @@ import { useNumberFormatters } from "../hooks/useNumberFormatters";
 import { UnitSelector } from "./UnitSelector";
 import { AreaUnit } from "../utils/units";
 import { NumberRoundingControl } from "./NumberRoundingControl";
+import {
+  applyBufferSettingsToParameters,
+  BufferSelector,
+  getBufferSettingsFromDependencies,
+} from "./BufferSelector";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
 import { useOverlaySources } from "../hooks/useOverlaySources";
 import {
@@ -757,38 +762,14 @@ export const OverlappingAreasTableTooltipControls: ReportWidgetTooltipControls =
 
     const selectedAreaUnit = overlapUnitToAreaUnit[unit];
 
-    const buffer = dependencies.find(
-      (m) => m.parameters?.bufferDistanceKm !== undefined
-    )?.parameters?.bufferDistanceKm;
-
-    const handleBufferClick = () => {
-      const currentValue = buffer !== undefined ? String(buffer) : "0";
-      const value = window.prompt(
-        t("Enter buffer distance in kilometers (or 0 for none)"),
-        currentValue
-      );
-      if (value === null) {
-        return;
-      }
-      const numValue = value === "" || value === "0" ? 0 : Number(value);
-      onUpdateDependencyParameters((dependency) => {
-        if (dependency.subjectType === "geographies") {
-          return {
-            ...dependency.parameters,
-            bufferDistanceKm: undefined,
-          };
-        }
-        return {
-          ...dependency.parameters,
-          bufferDistanceKm: numValue === 0 ? undefined : numValue,
-        };
-      });
-    };
-
-    const bufferFormatter = useNumberFormatters({
-      unit: "kilometer",
-      unitDisplay: "short",
-    });
+    const bufferSettings = useMemo(
+      () => getBufferSettingsFromDependencies(dependencies),
+      [dependencies]
+    );
+    const showBufferGeography = useMemo(
+      () => dependencies.some((d) => d.subjectType === "geographies"),
+      [dependencies]
+    );
 
     return (
       <div className="flex gap-3 items-center text-sm text-gray-800">
@@ -853,16 +834,16 @@ export const OverlappingAreasTableTooltipControls: ReportWidgetTooltipControls =
           onUpdate={onUpdate}
         />
         <TooltipMorePopover>
-          <button
-            type="button"
-            onClick={handleBufferClick}
-            className="w-full text-left text-sm rounded hover:text-black focus:outline-none flex items-center space-x-2"
-          >
-            <span className="font-light text-gray-400">{t("Buffer")}</span>
-            <span className="flex-1 text-right hover:ring hover:ring-blue-300/20">
-              {bufferFormatter.distance(buffer ?? 0)}
-            </span>
-          </button>
+          <BufferSelector
+            distanceKm={bufferSettings.distanceKm}
+            bufferGeography={bufferSettings.bufferGeography}
+            showBufferGeography={showBufferGeography}
+            onChange={(next) => {
+              onUpdateDependencyParameters((dependency) =>
+                applyBufferSettingsToParameters(dependency, next)
+              );
+            }}
+          />
           <div className="space-y-2">
             <div className="text-xs font-semibold text-gray-600 uppercase tracking-wide">
               {t("Show columns")}

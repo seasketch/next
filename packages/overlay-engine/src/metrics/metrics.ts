@@ -1,4 +1,5 @@
-import { Feature, LineString } from "geojson";
+import { Feature, LineString, Polygon } from "geojson";
+import turfArea from "@turf/area";
 import {
   min,
   max,
@@ -63,7 +64,15 @@ export type MetricType =
   | "presence_table"
   | "column_values"
   | "raster_stats"
-  | "distance_to_shore";
+  | "distance_to_shore"
+  | "raster_overlay_area";
+
+/**
+ * Max distinct class keys allowed when `groupBy: "value"` for
+ * {@link RasterOverlayAreaMetric}. Exceeding this throws at calculation time —
+ * grouping a continuous raster by value is a misconfiguration.
+ */
+export const MAX_RASTER_OVERLAY_AREA_CLASSES = 32;
 
 type MetricBase = {
   type: MetricType;
@@ -502,8 +511,7 @@ export function combineOverlayAreaMetrics(
           });
         } else {
           existing.areas.push(area);
-          existing.allFullyCovered =
-            existing.allFullyCovered && fullyCovered;
+          existing.allFullyCovered = existing.allFullyCovered && fullyCovered;
           // Prefer a larger explicit featureArea from partial coverage.
           if (Af > existing.featureArea) {
             existing.featureArea = Af;
@@ -514,11 +522,7 @@ export function combineOverlayAreaMetrics(
 
     let overcountMin = 0;
     let overcountMax = 0;
-    for (const {
-      areas,
-      featureArea: Af,
-      allFullyCovered,
-    } of byOidx.values()) {
+    for (const { areas, featureArea: Af, allFullyCovered } of byOidx.values()) {
       if (areas.length < 2) {
         continue;
       }
@@ -987,6 +991,571 @@ export type DistanceToShoreMetric = OverlayMetricBase & {
   };
 };
 
+/**
+ * Per-class area totals in km² for {@link RasterOverlayAreaMetric}.
+ * - `"*"` = all valid pixels in the subject (nodata already excluded by geoblaze).
+ * - When `dependency.parameters.groupBy === "value"`, additional keys are
+ *   `String(Math.round(pixelValue))` for each distinct value present.
+ */
+export type RasterOverlayAreaAreas = {
+  [classKey: string]: number;
+};
+
+/**
+ * Fragment-only metadata when `bufferDistanceKm > 0` on a fragment subject.
+ * Aggregate-only (no oidx): rasters have no feature identity.
+ *
+ * Geometry fact (same as overlay_area): for disjoint fragments A,B,
+ * `buffer(A,d) ∩ buffer(B,d) ⊆ collar(A)`. Buffered interiors are pairwise
+ * disjoint; only collar pixels can double-count.
+ *
+ * Identity: `areas[k] === innerAreas[k] + collarAreas[k]` (within float error).
+ */
+export type RasterOverlayAreaOverlapInfo = {
+  bufferKm: number;
+  /** Bounding box of the buffered subject (WGS84). */
+  bbox: [number, number, number, number];
+  /** Geodesic area of `bbox` as a polygon (km²). Used for overlap intensity. */
+  bboxAreaKm2: number;
+  /** Per-class area (km²) inside the collar. */
+  collarAreas: RasterOverlayAreaAreas;
+  /** Per-class area (km²) inside the eroded interior (= areas − collar). */
+  innerAreas: RasterOverlayAreaAreas;
+};
+
+/**
+ * One source-positive buffered pair that contributes to uncertainty.
+ * "Source-positive" = both collars have habitat for at least one class
+ * (bbox-only overlap with empty collars is ignored).
+ */
+export type RasterOverlayAreaOverlapPair = {
+  /**
+   * Fragment identity / sketch ids are OPTIONAL because
+   * combineMetricsForFragments only receives `Pick<Metric, "type" | "value">`.
+   * The engine combine fills pair indexes + numbers; a separate helper
+   * ({@link attachRasterOverlayAreaOverlapScope}) is called client-side with
+   * full metrics (subjects) to fill hashes/sketch ids for tooltips.
+   */
+  fragmentHashA?: string;
+  fragmentHashB?: string;
+  /** Sketch ids from each fragment subject (for collection tooltips). */
+  sketchIdsA?: number[];
+  sketchIdsB?: number[];
+  /** Indexes into the combined fragment array (stable across combine). */
+  indexA: number;
+  indexB: number;
+  /** Geodesic area (km²) of bboxA ∩ bboxB. */
+  bboxOverlapKm2: number;
+  /**
+   * λ = bboxOverlapKm2 / min(bboxAreaA, bboxAreaB), clamped to [0, 1].
+   * Fraction of the smaller buffered bbox that overlaps the other.
+   */
+  overlapIntensity: number;
+  perClass: {
+    [classKey: string]: {
+      collarA: number;
+      collarB: number;
+      /** U = min(collarA, collarB) — hard geometric ceiling for this pair. */
+      hardMax: number;
+      /**
+       * Ê = min(U, I × √(ρA·ρB)) where I = bboxOverlapKm2 and
+       * ρX = collarX / bboxAreaKm2_X — uniform collar-habitat density
+       * estimate of habitat inside the bbox intersection, capped at U.
+       */
+      estimate: number;
+    };
+  };
+};
+
+/**
+ * Combine-time result. Omitted entirely when there are no source-positive
+ * intersecting pairs (exact sum — user must not see warnings).
+ *
+ * Display: shown value = naiveSum − overcountMin (= naive; min is 0).
+ * Error bar: [naiveSum − overcountMax, naiveSum − overcountMin].
+ * Central explainable estimate: overcountEstimate (tooltip copy).
+ *
+ * Warning gate (widget): show BufferedOverlapWarning-style UI only when
+ * `overcountEstimate / naiveSum ≥ 10%` for that class (not merely hardMax).
+ */
+export type RasterOverlayAreaOverlapCombineResult = {
+  flagged: boolean;
+  scope?: "within-sketch" | "between-sketches" | "both";
+  /** Sketches that participate in ≥1 source-positive overlapping pair. */
+  partnerSketchIds?: number[];
+  fragmentsInvolved?: string[];
+  /** Per-pair detail for sketch-level explanatory tooltips. */
+  pairs: RasterOverlayAreaOverlapPair[];
+  perClass: {
+    [classKey: string]: {
+      /** Always 0 without pixel identity. */
+      overcountMin: number;
+      /** Aggregated hard ceiling (max over pairs of U, capped). */
+      overcountMax: number;
+      /** Aggregated proportional estimate (max over pairs of Ê, capped). */
+      overcountEstimate: number;
+      naiveSum: number;
+      /** Σ collarAreas across fragments. */
+      collarSum: number;
+      /** Σ innerAreas across fragments. */
+      innerSum: number;
+    };
+  };
+};
+
+export type RasterOverlayAreaMetricValue = {
+  areas: RasterOverlayAreaAreas;
+  /** Resolved VRM for this calculation, or null when disabled. Audit only. */
+  vrm?: [number, number] | null;
+  /** Source raster EPSG. Audit only. */
+  epsg?: number;
+  /**
+   * Fragment rows: {@link RasterOverlayAreaOverlapInfo} when buffered.
+   * Combined rows: {@link RasterOverlayAreaOverlapCombineResult} when residual
+   * overcount bounds were computed. Omitted for unbuffered exact sums.
+   */
+  overlap?:
+    | RasterOverlayAreaOverlapInfo
+    | RasterOverlayAreaOverlapCombineResult;
+};
+
+export type RasterOverlayAreaMetric = OverlayMetricBase & {
+  type: "raster_overlay_area";
+  value: RasterOverlayAreaMetricValue;
+};
+
+export function isRasterOverlayAreaOverlapInfo(
+  value: unknown,
+): value is RasterOverlayAreaOverlapInfo {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.bufferKm === "number" &&
+    Array.isArray(v.bbox) &&
+    v.bbox.length === 4 &&
+    typeof v.bboxAreaKm2 === "number" &&
+    typeof v.collarAreas === "object" &&
+    v.collarAreas !== null &&
+    !Array.isArray(v.collarAreas) &&
+    typeof v.innerAreas === "object" &&
+    v.innerAreas !== null &&
+    !Array.isArray(v.innerAreas)
+  );
+}
+
+export function isRasterOverlayAreaOverlapCombineResult(
+  value: unknown,
+): value is RasterOverlayAreaOverlapCombineResult {
+  if (value === null || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+  const v = value as Record<string, unknown>;
+  return (
+    typeof v.flagged === "boolean" &&
+    Array.isArray(v.pairs) &&
+    typeof v.perClass === "object" &&
+    v.perClass !== null &&
+    !Array.isArray(v.perClass)
+  );
+}
+
+export function getRasterOverlayAreaOverlapInfo(
+  value: RasterOverlayAreaMetricValue | null | undefined,
+): RasterOverlayAreaOverlapInfo | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  return isRasterOverlayAreaOverlapInfo(value.overlap) ? value.overlap : null;
+}
+
+export function getRasterOverlayAreaOverlapCombineResult(
+  value: RasterOverlayAreaMetricValue | null | undefined,
+): RasterOverlayAreaOverlapCombineResult | null {
+  if (!value || typeof value !== "object") {
+    return null;
+  }
+  return isRasterOverlayAreaOverlapCombineResult(value.overlap)
+    ? value.overlap
+    : null;
+}
+
+/**
+ * Displayed class value after combine: `naiveSum − overcountMin` (= naive),
+ * falling back to the stored area total.
+ */
+export function getRasterOverlayAreaDisplayedClassValue(
+  value: RasterOverlayAreaMetricValue | null | undefined,
+  classKey: string,
+): number {
+  const combine = getRasterOverlayAreaOverlapCombineResult(value);
+  const stored = value?.areas?.[classKey] ?? 0;
+  if (!combine?.perClass?.[classKey]) {
+    return stored;
+  }
+  const { naiveSum, overcountMin } = combine.perClass[classKey];
+  return naiveSum - overcountMin;
+}
+
+/**
+ * Class value range after combine:
+ * `[naive − overcountMax, naive − overcountMin]`.
+ */
+export function getRasterOverlayAreaClassValueRange(
+  value: RasterOverlayAreaMetricValue | null | undefined,
+  classKey: string,
+): { low: number; high: number; naiveSum: number } | null {
+  const combine = getRasterOverlayAreaOverlapCombineResult(value);
+  if (!combine?.perClass?.[classKey]) {
+    return null;
+  }
+  const { naiveSum, overcountMin, overcountMax } = combine.perClass[classKey];
+  return {
+    naiveSum,
+    low: naiveSum - overcountMax,
+    high: naiveSum - overcountMin,
+  };
+}
+
+/** Tiny km² floor below which collar habitat is treated as empty. */
+const RASTER_OVERLAY_AREA_COLLAR_EPS_KM2 = 1e-12;
+
+function bboxAsPolygon(b: [number, number, number, number]): Feature<Polygon> {
+  const [minX, minY, maxX, maxY] = b;
+  return {
+    type: "Feature",
+    properties: {},
+    geometry: {
+      type: "Polygon",
+      coordinates: [
+        [
+          [minX, minY],
+          [maxX, minY],
+          [maxX, maxY],
+          [minX, maxY],
+          [minX, minY],
+        ],
+      ],
+    },
+  };
+}
+
+function bboxIntersectionAreaKm2(
+  a: [number, number, number, number],
+  b: [number, number, number, number],
+): number {
+  const minX = Math.max(a[0], b[0]);
+  const minY = Math.max(a[1], b[1]);
+  const maxX = Math.min(a[2], b[2]);
+  const maxY = Math.min(a[3], b[3]);
+  if (minX >= maxX || minY >= maxY) {
+    return 0;
+  }
+  // Callers pass WGS84 bboxes; @turf/area is geodesic.
+  return turfArea(bboxAsPolygon([minX, minY, maxX, maxY])) / 1_000_000;
+}
+
+/**
+ * Combines `raster_overlay_area` fragment values. Unbuffered (or single)
+ * fragments combine by exact per-key summation. Buffered fragments with
+ * intersecting, source-positive collars attach a proportional overcount
+ * estimate — see {@link RasterOverlayAreaOverlapCombineResult}.
+ *
+ * Pair aggregation uses **max** over pairs (not sum) so 3-way bbox clusters
+ * do not invent impossible stacked overcount.
+ */
+export function combineRasterOverlayAreaMetrics(
+  values: RasterOverlayAreaMetricValue[],
+): RasterOverlayAreaMetricValue {
+  const empty: RasterOverlayAreaMetricValue = { areas: { "*": 0 } };
+  if (values.length === 0) {
+    return empty;
+  }
+
+  const areas: RasterOverlayAreaAreas = {};
+  for (const v of values) {
+    if (!v?.areas || typeof v.areas !== "object") {
+      continue;
+    }
+    for (const [key, n] of Object.entries(v.areas)) {
+      if (typeof n === "number" && Number.isFinite(n)) {
+        areas[key] = (areas[key] ?? 0) + n;
+      }
+    }
+  }
+  if (Object.keys(areas).length === 0) {
+    areas["*"] = 0;
+  }
+
+  const result: RasterOverlayAreaMetricValue = { areas };
+
+  if (values.length <= 1) {
+    return result;
+  }
+
+  const overlapInfos = values.map((v) => getRasterOverlayAreaOverlapInfo(v));
+  const usableIndexes: number[] = [];
+  for (let i = 0; i < overlapInfos.length; i++) {
+    if (overlapInfos[i]) {
+      usableIndexes.push(i);
+    }
+  }
+  if (usableIndexes.length < 2) {
+    return result;
+  }
+
+  type PairWork = {
+    indexA: number;
+    indexB: number;
+    bboxOverlapKm2: number;
+    overlapIntensity: number;
+    perClass: RasterOverlayAreaOverlapPair["perClass"];
+  };
+  const sourcePositivePairs: PairWork[] = [];
+
+  for (let a = 0; a < usableIndexes.length; a++) {
+    for (let b = a + 1; b < usableIndexes.length; b++) {
+      const ia = usableIndexes[a];
+      const ib = usableIndexes[b];
+      const infoA = overlapInfos[ia]!;
+      const infoB = overlapInfos[ib]!;
+      if (!bboxesIntersect(infoA.bbox, infoB.bbox)) {
+        continue;
+      }
+      const bboxOverlapKm2 = bboxIntersectionAreaKm2(infoA.bbox, infoB.bbox);
+      if (bboxOverlapKm2 <= 0) {
+        continue;
+      }
+      const denom = Math.min(infoA.bboxAreaKm2, infoB.bboxAreaKm2);
+      const lambda =
+        denom > 0 ? Math.max(0, Math.min(1, bboxOverlapKm2 / denom)) : 0;
+      const bboxAreaA = infoA.bboxAreaKm2;
+      const bboxAreaB = infoB.bboxAreaKm2;
+
+      const classKeys = new Set([
+        ...Object.keys(infoA.collarAreas),
+        ...Object.keys(infoB.collarAreas),
+      ]);
+      const perClass: RasterOverlayAreaOverlapPair["perClass"] = {};
+      let sourcePositive = false;
+      for (const k of classKeys) {
+        const collarA = infoA.collarAreas[k] ?? 0;
+        const collarB = infoB.collarAreas[k] ?? 0;
+        if (
+          collarA <= RASTER_OVERLAY_AREA_COLLAR_EPS_KM2 ||
+          collarB <= RASTER_OVERLAY_AREA_COLLAR_EPS_KM2
+        ) {
+          continue;
+        }
+        sourcePositive = true;
+        const hardMax = Math.min(collarA, collarB);
+        // Uniform-density co-occurrence estimate. Treating each fragment's
+        // collar habitat as uniformly spread over its buffered bbox gives two
+        // predictions for habitat inside the bbox intersection I:
+        // ρA×I and ρB×I (ρ = collar habitat / bbox area). Take their
+        // geometric mean, Ê = I × √(ρA·ρB), capped at the hard ceiling U.
+        //
+        // Identical to the previous Ê = U × λ when the pair is symmetric
+        // (equal bboxes and collars), but does NOT degenerate to U when one
+        // buffered bbox is contained in the other (λ clamps to 1 there, which
+        // grossly overstated the overlap — the small fragment's whole collar
+        // habitat was flagged as double-counted even though the true buffer
+        // intersection near the fragments' closest approach is much smaller).
+        const estimate =
+          bboxAreaA > 0 && bboxAreaB > 0
+            ? Math.min(
+                hardMax,
+                bboxOverlapKm2 *
+                  Math.sqrt((collarA / bboxAreaA) * (collarB / bboxAreaB)),
+              )
+            : hardMax * lambda;
+        perClass[k] = {
+          collarA,
+          collarB,
+          hardMax,
+          estimate,
+        };
+      }
+      if (!sourcePositive) {
+        continue;
+      }
+      sourcePositivePairs.push({
+        indexA: ia,
+        indexB: ib,
+        bboxOverlapKm2,
+        overlapIntensity: lambda,
+        perClass,
+      });
+    }
+  }
+
+  if (sourcePositivePairs.length === 0) {
+    return result;
+  }
+
+  const allClassKeys = new Set<string>(Object.keys(areas));
+  for (const idx of usableIndexes) {
+    for (const k of Object.keys(overlapInfos[idx]!.collarAreas)) {
+      allClassKeys.add(k);
+    }
+    for (const k of Object.keys(overlapInfos[idx]!.innerAreas)) {
+      allClassKeys.add(k);
+    }
+  }
+
+  const perClass: RasterOverlayAreaOverlapCombineResult["perClass"] = {};
+  let flagged = false;
+
+  for (const classKey of allClassKeys) {
+    const naiveSum = areas[classKey] ?? 0;
+    let collarSum = 0;
+    let innerSum = 0;
+    for (const idx of usableIndexes) {
+      collarSum += overlapInfos[idx]!.collarAreas[classKey] ?? 0;
+      innerSum += overlapInfos[idx]!.innerAreas[classKey] ?? 0;
+    }
+
+    let overcountMax = 0;
+    let overcountEstimate = 0;
+    for (const pair of sourcePositivePairs) {
+      const pc = pair.perClass[classKey];
+      if (!pc) {
+        continue;
+      }
+      overcountMax = Math.max(overcountMax, pc.hardMax);
+      overcountEstimate = Math.max(overcountEstimate, pc.estimate);
+    }
+
+    const cap = Math.min(naiveSum, collarSum);
+    overcountMax = Math.min(overcountMax, cap);
+    overcountEstimate = Math.min(overcountEstimate, cap);
+
+    if (overcountMax === 0 && overcountEstimate === 0) {
+      continue;
+    }
+
+    perClass[classKey] = {
+      overcountMin: 0,
+      overcountMax,
+      overcountEstimate,
+      naiveSum,
+      collarSum,
+      innerSum,
+    };
+    if (naiveSum > 0 && overcountEstimate / naiveSum >= 0.1) {
+      flagged = true;
+    }
+  }
+
+  if (Object.keys(perClass).length === 0) {
+    return result;
+  }
+
+  result.overlap = {
+    flagged,
+    pairs: sourcePositivePairs.map((p) => ({
+      indexA: p.indexA,
+      indexB: p.indexB,
+      bboxOverlapKm2: p.bboxOverlapKm2,
+      overlapIntensity: p.overlapIntensity,
+      perClass: p.perClass,
+    })),
+    perClass,
+  };
+  return result;
+}
+
+/**
+ * Client-side enrichment: fill fragment hashes / sketch ids / scope on a
+ * combine-time {@link RasterOverlayAreaOverlapCombineResult} using full
+ * metrics that still carry subjects. Mirrors
+ * {@link classifyOverlayAreaOverlapScope} for vector overlay_area.
+ */
+export function attachRasterOverlayAreaOverlapScope(
+  combined: Pick<RasterOverlayAreaMetric, "type" | "value">,
+  fragmentMetrics: { type?: string | null; subject?: unknown }[],
+): Pick<RasterOverlayAreaMetric, "type" | "value"> {
+  if (combined.type !== "raster_overlay_area") {
+    return combined;
+  }
+  const combine = getRasterOverlayAreaOverlapCombineResult(combined.value);
+  if (!combine) {
+    return combined;
+  }
+
+  const subjects = fragmentMetrics.map((m) =>
+    subjectIsFragment(m.subject) ? m.subject : null,
+  );
+
+  const pairs: RasterOverlayAreaOverlapPair[] = combine.pairs.map((p) => {
+    const subA = subjects[p.indexA];
+    const subB = subjects[p.indexB];
+    return {
+      ...p,
+      fragmentHashA: subA?.hash,
+      fragmentHashB: subB?.hash,
+      sketchIdsA: subA?.sketches ? [...subA.sketches] : undefined,
+      sketchIdsB: subB?.sketches ? [...subB.sketches] : undefined,
+    };
+  });
+
+  const partnerSketchIds = new Set<number>();
+  const fragmentsInvolved = new Set<string>();
+  let within = false;
+  let between = false;
+  for (const p of pairs) {
+    if (p.fragmentHashA) {
+      fragmentsInvolved.add(p.fragmentHashA);
+    }
+    if (p.fragmentHashB) {
+      fragmentsInvolved.add(p.fragmentHashB);
+    }
+    const a = new Set(p.sketchIdsA ?? []);
+    const b = new Set(p.sketchIdsB ?? []);
+    for (const id of a) {
+      partnerSketchIds.add(id);
+    }
+    for (const id of b) {
+      partnerSketchIds.add(id);
+    }
+    const shared = [...a].some((id) => b.has(id));
+    const onlyA = [...a].some((id) => !b.has(id));
+    const onlyB = [...b].some((id) => !a.has(id));
+    if (shared) {
+      within = true;
+    }
+    if (onlyA || onlyB) {
+      between = true;
+    }
+  }
+
+  let scope: RasterOverlayAreaOverlapCombineResult["scope"];
+  if (within && between) {
+    scope = "both";
+  } else if (within) {
+    scope = "within-sketch";
+  } else if (between) {
+    scope = "between-sketches";
+  }
+
+  const enriched: RasterOverlayAreaOverlapCombineResult = {
+    ...combine,
+    pairs,
+    scope,
+    partnerSketchIds: [...partnerSketchIds],
+    fragmentsInvolved: [...fragmentsInvolved],
+  };
+
+  return {
+    ...combined,
+    value: {
+      ...combined.value,
+      overlap: enriched,
+    },
+  };
+}
+
 export type Metric =
   | TotalAreaMetric
   | OverlayAreaMetric
@@ -995,7 +1564,8 @@ export type Metric =
   | PresenceTableMetric
   | ColumnValuesMetric
   | RasterStats
-  | DistanceToShoreMetric;
+  | DistanceToShoreMetric
+  | RasterOverlayAreaMetric;
 
 export type MetricTypeMap = {
   total_area: TotalAreaMetric;
@@ -1006,6 +1576,7 @@ export type MetricTypeMap = {
   column_values: ColumnValuesMetric;
   raster_stats: RasterStats;
   distance_to_shore: DistanceToShoreMetric;
+  raster_overlay_area: RasterOverlayAreaMetric;
 };
 
 export function subjectIsFragment(
@@ -1237,11 +1808,7 @@ export function numberColumnStatsFromEntries(
     for (const entry of entries) {
       const value = entry.value;
       const weight = entry.weight;
-      if (
-        typeof value !== "number" ||
-        !isFinite(weight) ||
-        weight <= 0
-      ) {
+      if (typeof value !== "number" || !isFinite(weight) || weight <= 0) {
         continue;
       }
       const diff = value - meanValue;
@@ -1609,9 +2176,11 @@ export type MetricDependency = {
 
 export type MetricDependencyParameters = {
   /**
-   * The groupBy parameter is used to group the results of the metric by a
-   * specific attribute. For example, if the metric is "overlay_area", the
-   * results can be grouped by the "class" attribute.
+   * Vector metrics: attribute name to group by (e.g. "class" for overlay_area).
+   *
+   * `raster_overlay_area`: set to `"value"` to group by rounded pixel value;
+   * omit for a single `"*"` total only. Slash commands only offer grouping when
+   * `RasterInfo.presentation` is categorical.
    */
   groupBy?: string;
   /**
@@ -1633,8 +2202,12 @@ export type MetricDependencyParameters = {
    */
   valueColumn?: string;
   /**
-   * The bufferDistanceKm parameter is used to specify the buffer distance in kilometers around the subject.
-   * This is used to exclude features that are outside the buffer distance from the subject.
+   * Buffer distance (km) around the subject. Used by `overlay_area`,
+   * `column_values`, `count`, `presence*`, and `raster_overlay_area`.
+   *
+   * For `raster_overlay_area` on fragment subjects, enables collar overlap
+   * metadata ({@link RasterOverlayAreaOverlapInfo}). Geography subjects never
+   * attach overlap metadata (same gate as `overlay_area`).
    *
    * @default undefined
    */
@@ -1657,12 +2230,12 @@ export type MetricDependencyParameters = {
    */
   sourceHasOverlappingFeatures?: boolean;
   /**
-   * The vrm parameter is used to specify the virtual resampling factor to use for raster_stats metrics.
-   * If "auto", the virtual resampling factor will be determined automatically based on the ground sample distance of the raster.
-   * If false, the virtual resampling factor will be set to 1.
-   * If a number, the virtual resampling factor will be set to the number.
+   * Virtual resampling for `raster_stats` and `raster_overlay_area`.
+   * If "auto", determined from ground sample distance of the raster.
+   * If false, disabled (effective factor 1 / null).
+   * If a number, applied as `[n, n]`.
    *
-   * @default "auto" for fragment stats, false for geography stats
+   * @default "auto" for fragment subjects, false for geography subjects
    */
   vrm?: false | "auto" | number;
   /**
@@ -1803,6 +2376,13 @@ export function combineMetricsForFragments<T extends Metric>(
                   epsg: undefined,
                 },
               ],
+            },
+          };
+        case "raster_overlay_area":
+          return {
+            type: "raster_overlay_area",
+            value: {
+              areas: { "*": 0 },
             },
           };
         case "column_values":
@@ -1997,6 +2577,15 @@ export function combineMetricsForFragments<T extends Metric>(
       return {
         type: "overlay_area",
         value: combineOverlayAreaMetrics(values),
+      };
+    }
+    case "raster_overlay_area": {
+      const values = metrics.map(
+        (m) => m.value as RasterOverlayAreaMetricValue,
+      );
+      return {
+        type: "raster_overlay_area",
+        value: combineRasterOverlayAreaMetrics(values),
       };
     }
     default:

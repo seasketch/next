@@ -1,0 +1,17 @@
+{
+  "sourceUrl": "http://uploads.seasketch.org/testing-mangroves-2020.tif",
+  "sketch": "Mangrove-bordering-sketch.geojson.json",
+  "epsg": 6933,
+  "vrm": false,
+  "groupBy": null,
+  "pixelCounts": {
+    "*": 43
+  },
+  "expected": {
+    "areas": {
+      "*": 0.02572114034119996
+    }
+  },
+  "toleranceKm2": 0.005,
+  "notes": "Equal-area CRS: count \u00d7 pixelWidth \u00d7 pixelHeight / 1e6. Screenshot UI ~0.01 km\u00b2."
+}
