@@ -235,10 +235,11 @@ describe("getClassTableRows with Samoa fixture data", () => {
         groupByKey: "18",
         sourceId: "ht1woHIfG",
         stableId: undefined,
-        colors: ["#4e79a7", "#f28e2c"],
-        multiColorSwatchLayout: "soft-scatter",
       }),
     ]);
+    // Category rows only get a single `color` when extractColorsForCategories
+    // resolves one; unmatched categories intentionally have no palette fallback.
+    expect(rows.find((r) => r.key === "ht1woHIfG-18")?.colors).toBeUndefined();
   });
 
   test("builds raster rows from a real Samoa style ramp", () => {
@@ -261,7 +262,7 @@ describe("getClassTableRows with Samoa fixture data", () => {
     expect(rows).toEqual([
       expect.objectContaining({
         key: "dBbilSYL6-*",
-        label: "All features",
+        label: "Fish Caught",
         groupByKey: "*",
         sourceId: "dBbilSYL6",
         stableId: "fish-caught-layer",

@@ -1,6 +1,11 @@
 import { Fragment, useContext, useMemo } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import { MetricDependency, RasterStats } from "overlay-engine";
+import {
+  MetricDependency,
+  RasterOverlayAreaMetric,
+  getRasterOverlayAreaOverlapCombineResult,
+  getRasterOverlayAreaDisplayedClassValue,
+} from "overlay-engine";
 import {
   ReportWidget,
   TableHeadingsEditor,
@@ -50,27 +55,61 @@ import { sketchContributionsForClassTableRow } from "./collection/sketchContribu
 import { useCollectionSketchExpand } from "./collection/useCollectionSketchExpand";
 import { ReportUIStateContext } from "../context/ReportUIStateContext";
 import { SketchGeometryType } from "../../generated/graphql";
+import { UnitSelector } from "./UnitSelector";
+import { AreaUnit } from "../utils/units";
+import BufferedOverlapWarning from "./BufferedOverlapWarning";
 
-type RasterProportionTableSettings = {
-  geographyId?: number | "auto";
-  sortBy?: "value" | "name";
+type AreaDisplayUnit = "km" | "mi" | "acres" | "ha";
+
+type RasterAreaCapturedTableSettings = {
+  /**
+   * Geography used for the "% Captured" denominator.
+   * - `undefined` / `"auto"` → primary clipping geography (default; show %)
+   * - `number` → that geography (show %)
+   * - `null` → no % column
+   */
+  geographyId?: number | "auto" | null;
+  sortBy?: "area" | "name";
   minimumFractionDigits?: number;
   rowsPerPage?: number;
   nameLabel?: string;
-  valueLabel?: string;
-  sumLabel?: string;
-  showSumColumn?: boolean;
+  areaLabel?: string;
+  percentLabel?: string;
+  /**
+   * @deprecated Prefer `geographyId: null` to hide the % column. Kept for
+   * saved reports that used the old "Show % of geography" toggle.
+   */
+  showPercentColumn?: boolean;
   showZeroRows?: boolean;
   hideColorSwatches?: boolean;
+  unit?: AreaDisplayUnit;
 } & ClassTableRowComponentSettings;
 
-type ProportionRow = ClassTableRow & {
-  sketchSum: number;
-  geographySum: number;
+type AreaRow = ClassTableRow & {
+  areaKm2: number;
+  geographyAreaKm2: number;
+  overcountMin?: number;
+  overcountMax?: number;
+  overcountEstimate?: number;
+  naiveSum?: number;
 };
 
-export const RasterProportionTable: ReportWidget<
-  RasterProportionTableSettings
+const displayUnitToAreaUnit: Record<AreaDisplayUnit, AreaUnit> = {
+  km: "kilometer",
+  mi: "mile",
+  acres: "acre",
+  ha: "hectare",
+};
+
+const areaUnitToDisplayUnit: Record<AreaUnit, AreaDisplayUnit> = {
+  kilometer: "km",
+  mile: "mi",
+  acre: "acres",
+  hectare: "ha",
+};
+
+export const RasterAreaCapturedTable: ReportWidget<
+  RasterAreaCapturedTableSettings
 > = ({
   metrics,
   componentSettings,
@@ -84,7 +123,17 @@ export const RasterProportionTable: ReportWidget<
   const { t } = useTranslation("reports");
   const { printing } = useContext(ReportUIStateContext);
 
+  const showPercentColumn =
+    componentSettings.geographyId === null
+      ? false
+      : componentSettings.showPercentColumn === false
+        ? false
+        : true;
+
+  // Geography metrics / % denominator. When % is off, still resolve against
+  // the clipping geography so combineMetricsBySource has a valid id.
   const geographyId: number | undefined =
+    componentSettings.geographyId === null ||
     componentSettings.geographyId === "auto" ||
     componentSettings.geographyId === undefined
       ? clippingGeography?.id
@@ -94,18 +143,19 @@ export const RasterProportionTable: ReportWidget<
   const rowsPerPage = componentSettings.rowsPerPage ?? 10;
   const showZeroRows = componentSettings.showZeroRows ?? true;
   const showColorSwatches = !componentSettings.hideColorSwatches;
-  const showSumColumn = componentSettings.showSumColumn ?? false;
+  const unit: AreaDisplayUnit = componentSettings.unit || "km";
   const nameLabel = componentSettings.nameLabel || t("Name");
-  const valueLabel = componentSettings.valueLabel || t("% Captured");
-  const sumLabel = componentSettings.sumLabel || t("Sum");
-  const truncateRowLabels =
-    shouldTruncateClassTableRowLabels(componentSettings);
+  const areaLabel = componentSettings.areaLabel || t("Area");
+  const percentLabel = componentSettings.percentLabel || t("% Captured");
+  const truncateRowLabels = shouldTruncateClassTableRowLabels(componentSettings);
 
   const formatters = useNumberFormatters({
+    unit: displayUnitToAreaUnit[unit],
+    unitDisplay: "short",
     minimumFractionDigits: componentSettings.minimumFractionDigits,
   });
 
-  const rows = useMemo<ProportionRow[]>(() => {
+  const rows = useMemo<AreaRow[]>(() => {
     const classRows = getClassTableRows({
       dependencies: dependencies || [],
       sources,
@@ -120,8 +170,8 @@ export const RasterProportionTable: ReportWidget<
     if (sources.length === 0 || metrics.length === 0 || loading) {
       return classRows.map((r) => ({
         ...r,
-        sketchSum: NaN,
-        geographySum: NaN,
+        areaKm2: NaN,
+        geographyAreaKm2: NaN,
       }));
     }
 
@@ -129,41 +179,49 @@ export const RasterProportionTable: ReportWidget<
       throw new Error("Primary geography not found.");
     }
 
-    const combinedMetrics = combineMetricsBySource<RasterStats>(
+    const combinedMetrics = combineMetricsBySource<RasterOverlayAreaMetric>(
       metrics,
       sources,
       geographyId,
-      "raster_stats"
+      "raster_overlay_area"
     );
 
-    let rows = classRows.map((r) => {
+    let next = classRows.map((r) => {
       const combinedForSource = combinedMetrics[r.sourceId];
-      const sketchBands = combinedForSource?.fragments?.value?.bands;
-      const geographyBands = combinedForSource?.geographies?.value?.bands;
-      const sketchSum = sketchBands?.[0]?.sum ?? 0;
-      const geographySum = geographyBands?.[0]?.sum ?? 0;
+      const fragmentValue = combinedForSource?.fragments?.value;
+      const geographyValue = combinedForSource?.geographies?.value;
+      const areaKm2 = getRasterOverlayAreaDisplayedClassValue(
+        fragmentValue,
+        r.groupByKey
+      );
+      const geographyAreaKm2 =
+        typeof geographyValue?.areas?.[r.groupByKey] === "number"
+          ? geographyValue.areas[r.groupByKey]
+          : 0;
+      const combine = getRasterOverlayAreaOverlapCombineResult(fragmentValue);
+      const perClass = combine?.perClass?.[r.groupByKey];
       return {
         ...r,
-        sketchSum,
-        geographySum,
+        areaKm2,
+        geographyAreaKm2,
+        overcountMin: perClass?.overcountMin,
+        overcountMax: perClass?.overcountMax,
+        overcountEstimate: perClass?.overcountEstimate,
+        naiveSum: perClass?.naiveSum,
       };
     });
 
     if (sortBy === "name") {
-      rows = rows.sort((a, b) => a.label.localeCompare(b.label));
+      next = next.sort((a, b) => a.label.localeCompare(b.label));
     } else {
-      rows = rows.sort((a, b) => {
-        const aPercent = a.geographySum > 0 ? a.sketchSum / a.geographySum : 0;
-        const bPercent = b.geographySum > 0 ? b.sketchSum / b.geographySum : 0;
-        return bPercent - aPercent;
-      });
+      next = next.sort((a, b) => b.areaKm2 - a.areaKm2);
     }
 
     if (!showZeroRows) {
-      rows = rows.filter((r) => r.sketchSum > 0);
+      next = next.filter((r) => r.areaKm2 > 0);
     }
 
-    return rows;
+    return next;
   }, [
     metrics,
     dependencies,
@@ -210,13 +268,13 @@ export const RasterProportionTable: ReportWidget<
           metrics,
           source,
           geographyId,
-          metricType: "raster_stats",
+          metricType: "raster_overlay_area",
           groupByKey: row.groupByKey,
           childSketchIds,
           geographyDenominator:
-            typeof row.geographySum === "number" &&
-            Number.isFinite(row.geographySum)
-              ? row.geographySum
+            typeof row.geographyAreaKm2 === "number" &&
+            Number.isFinite(row.geographyAreaKm2)
+              ? row.geographyAreaKm2
               : 0,
           sketchNameById,
           t,
@@ -263,7 +321,6 @@ export const RasterProportionTable: ReportWidget<
     <Tooltip.Provider delayDuration={400}>
       <div className="mt-3 rounded-md border border-gray-200 shadow-sm w-full max-w-full bg-white overflow-hidden">
         <div className="divide-y divide-gray-100">
-          {/* Header row */}
           <div className="flex items-center gap-3 px-3 py-2 bg-gray-50 border-b border-gray-200">
             {hasVisibilityColumn && (
               <div className="flex-none w-6 flex justify-center text-xs text-gray-600 font-semibold uppercase tracking-wide">
@@ -273,19 +330,23 @@ export const RasterProportionTable: ReportWidget<
             <div className="flex-1 min-w-0 text-gray-600 text-xs font-semibold uppercase tracking-wide">
               {nameLabel}
             </div>
-            {showSumColumn && (
-              <div className="flex-none text-center text-gray-600 text-xs font-semibold uppercase tracking-wide min-w-[80px]">
-                {sumLabel}
+            <div
+              className={`flex-none text-gray-600 text-xs font-semibold uppercase tracking-wide min-w-[80px] ${
+                showPercentColumn ? "text-center" : "text-right"
+              }`}
+            >
+              {areaLabel}
+            </div>
+            {showPercentColumn && (
+              <div className="flex-none text-right text-gray-600 text-xs font-semibold uppercase tracking-wide min-w-[80px]">
+                {percentLabel}
               </div>
             )}
-            <div className="flex-none text-right text-gray-600 text-xs font-semibold uppercase tracking-wide min-w-[80px]">
-              {valueLabel}
-            </div>
           </div>
           {paginatedRows.map((row) => {
             const percent =
-              !loading && row.geographySum > 0
-                ? row.sketchSum / row.geographySum
+              !loading && row.geographyAreaKm2 > 0
+                ? row.areaKm2 / row.geographyAreaKm2
                 : 0;
             const stableId = resolveClassTableRowStableId(
               row,
@@ -297,7 +358,7 @@ export const RasterProportionTable: ReportWidget<
               <Fragment key={row.key}>
                 <div
                   className={`flex items-center gap-3 px-3 py-2 hover:bg-gray-50 ${
-                    row.sketchSum === 0 ? "opacity-50" : ""
+                    row.areaKm2 === 0 ? "opacity-50" : ""
                   }`}
                 >
                   {hasVisibilityColumn && (
@@ -328,22 +389,39 @@ export const RasterProportionTable: ReportWidget<
                       )}
                     />
                   </div>
-                  {showSumColumn && (
-                    <div className="flex-none text-center text-gray-900 tabular-nums text-sm min-w-[80px]">
-                      {loading ? (
-                        <MetricLoadingDots />
-                      ) : (
-                        formatters.decimal(row.sketchSum)
-                      )}
-                    </div>
-                  )}
-                  <div className="flex-none text-right text-gray-900 tabular-nums text-sm min-w-[80px]">
+                  <div
+                    className={`flex-none text-gray-900 tabular-nums text-sm min-w-[80px] flex items-center gap-1 ${
+                      showPercentColumn ? "justify-center" : "justify-end"
+                    }`}
+                  >
                     {loading ? (
                       <MetricLoadingDots />
                     ) : (
-                      formatters.percent(percent)
+                      <>
+                        <span>{formatters.area(row.areaKm2)}</span>
+                        {typeof row.overcountEstimate === "number" &&
+                          typeof row.overcountMax === "number" &&
+                          typeof row.naiveSum === "number" && (
+                            <BufferedOverlapWarning
+                              overcountMin={row.overcountMin ?? 0}
+                              overcountMax={row.overcountMax}
+                              overcountEstimate={row.overcountEstimate}
+                              total={row.naiveSum}
+                              formatArea={(sqKm) => formatters.area(sqKm)}
+                            />
+                          )}
+                      </>
                     )}
                   </div>
+                  {showPercentColumn && (
+                    <div className="flex-none text-right text-gray-900 tabular-nums text-sm min-w-[80px]">
+                      {loading ? (
+                        <MetricLoadingDots />
+                      ) : (
+                        formatters.percent(percent)
+                      )}
+                    </div>
+                  )}
                 </div>
                 {isCollection && expanded && sketchLines.length === 0 && (
                   <div className="flex flex-wrap items-center gap-3 border-t border-slate-200/80 bg-slate-100 px-3 py-2.5 text-sm italic text-gray-600">
@@ -364,7 +442,7 @@ export const RasterProportionTable: ReportWidget<
                     <div
                       key={`${row.key}-sketch-${sk.sketchId}`}
                       className={`flex flex-wrap items-center gap-3 border-t border-slate-200/80 bg-slate-100 px-3 py-2 hover:bg-slate-200/30 ${
-                        row.sketchSum === 0 ? "opacity-50" : ""
+                        row.areaKm2 === 0 ? "opacity-50" : ""
                       }`}
                     >
                       {hasVisibilityColumn && (
@@ -386,22 +464,26 @@ export const RasterProportionTable: ReportWidget<
                           }
                         />
                       </div>
-                      {showSumColumn && (
-                        <div className="flex-none text-center text-gray-900 tabular-nums text-sm min-w-[80px]">
-                          {loading ? (
-                            <MetricLoadingDots />
-                          ) : (
-                            formatters.decimal(sk.primaryValue)
-                          )}
-                        </div>
-                      )}
-                      <div className="flex-none text-right text-gray-900 tabular-nums text-sm min-w-[80px]">
+                      <div
+                        className={`flex-none text-gray-900 tabular-nums text-sm min-w-[80px] ${
+                          showPercentColumn ? "text-center" : "text-right"
+                        }`}
+                      >
                         {loading ? (
                           <MetricLoadingDots />
                         ) : (
-                          formatters.percent(sk.fractionOfGeography)
+                          formatters.area(sk.primaryValue)
                         )}
                       </div>
+                      {showPercentColumn && (
+                        <div className="flex-none text-right text-gray-900 tabular-nums text-sm min-w-[80px]">
+                          {loading ? (
+                            <MetricLoadingDots />
+                          ) : (
+                            formatters.percent(sk.fractionOfGeography)
+                          )}
+                        </div>
+                      )}
                     </div>
                   ))}
               </Fragment>
@@ -410,11 +492,9 @@ export const RasterProportionTable: ReportWidget<
           <TablePaddingRows
             count={paddingRowsCount}
             includeVisibilityColumn={hasVisibilityColumn}
-            includeColorColumn={
-              showColorSwatches && rows.some(classTableRowHasSwatch)
-            }
-            showPercentColumn={showSumColumn}
-            numericAlign={showSumColumn ? "center" : "right"}
+            includeColorColumn={hasSwatchColumn}
+            showPercentColumn={showPercentColumn}
+            numericAlign={showPercentColumn ? "center" : "right"}
           />
         </div>
         {!loading && rows.length === 0 && (
@@ -436,7 +516,7 @@ export const RasterProportionTable: ReportWidget<
   );
 };
 
-export const RasterProportionTableTooltipControls: ReportWidgetTooltipControls =
+export const RasterAreaCapturedTableTooltipControls: ReportWidgetTooltipControls =
   ({
     node,
     onUpdate,
@@ -448,27 +528,35 @@ export const RasterProportionTableTooltipControls: ReportWidgetTooltipControls =
       () => (node.attrs?.metrics || []) as MetricDependency[],
       [node.attrs?.metrics]
     );
-    const settings: RasterProportionTableSettings = useMemo(
+    const settings: RasterAreaCapturedTableSettings = useMemo(
       () => node.attrs?.componentSettings || {},
       [node.attrs?.componentSettings]
     );
 
     const sortBy = settings.sortBy || "name";
     const showZeroRows = settings.showZeroRows ?? true;
-    const showSumColumn = settings.showSumColumn ?? false;
+    const showPercentColumn =
+      settings.geographyId === null
+        ? false
+        : settings.showPercentColumn === false
+          ? false
+          : true;
     const rowsPerPage = settings.rowsPerPage ?? 10;
+    const unit: AreaDisplayUnit = settings.unit || "km";
 
     const headingsLabelKeys = useMemo(
       (): string[] =>
-        showSumColumn
-          ? ["nameLabel", "valueLabel", "sumLabel"]
-          : ["nameLabel", "valueLabel"],
-      [showSumColumn]
+        showPercentColumn
+          ? ["nameLabel", "areaLabel", "percentLabel"]
+          : ["nameLabel", "areaLabel"],
+      [showPercentColumn]
     );
     const headingsLabelDisplayNames = useMemo(
       (): string[] =>
-        showSumColumn ? ["Name", "% Captured", "Sum"] : ["Name", "% Captured"],
-      [showSumColumn]
+        showPercentColumn
+          ? ["Name", "Area", "% Captured"]
+          : ["Name", "Area"],
+      [showPercentColumn]
     );
 
     const { filteredSources: sources } = useOverlaySources(dependencies);
@@ -488,7 +576,7 @@ export const RasterProportionTableTooltipControls: ReportWidgetTooltipControls =
       geographies
     );
 
-    const handleUpdate = (patch: Partial<RasterProportionTableSettings>) => {
+    const handleUpdate = (patch: Partial<RasterAreaCapturedTableSettings>) => {
       onUpdate({
         componentSettings: {
           ...settings,
@@ -504,20 +592,13 @@ export const RasterProportionTableTooltipControls: ReportWidgetTooltipControls =
       return fragmentDep?.parameters?.vrm;
     }, [dependencies]);
 
-    const currentGeographyVrm = useMemo(() => {
-      const geographyDep = dependencies.find(
-        (d) => d.subjectType === "geographies"
-      );
-      return geographyDep?.parameters?.vrm;
-    }, [dependencies]);
-
     const handleVrmChange = (next: false | "auto" | number | undefined) => {
       onUpdateDependencyParameters((dependency) => {
         const params = { ...(dependency.parameters || {}) };
         if (dependency.subjectType !== "fragments") {
           return params;
         }
-        if (next === undefined) {
+        if (next === undefined || next === "auto") {
           delete params.vrm;
         } else {
           params.vrm = next;
@@ -526,106 +607,133 @@ export const RasterProportionTableTooltipControls: ReportWidgetTooltipControls =
       });
     };
 
-    const handleGeographyVrmChange = (
-      next: false | "auto" | number | undefined
-    ) => {
+    const buffer = dependencies.find(
+      (m) => m.parameters?.bufferDistanceKm !== undefined
+    )?.parameters?.bufferDistanceKm;
+
+    const handleBufferClick = () => {
+      const currentValue = buffer !== undefined ? String(buffer) : "0";
+      const value = window.prompt(
+        t(
+          "Enter buffer distance in kilometers (or 0 for none). Buffers pull in habitat outside the sketch; when neighboring sketches' buffers overlap on this layer, totals may include a small double-count — we'll flag it only when the estimated overlap is material."
+        ),
+        currentValue
+      );
+      if (value === null) {
+        return;
+      }
+      const numValue = value === "" || value === "0" ? 0 : Number(value);
       onUpdateDependencyParameters((dependency) => {
-        const params = { ...(dependency.parameters || {}) };
-        if (dependency.subjectType !== "geographies") {
-          return params;
+        if (dependency.subjectType === "geographies") {
+          return {
+            ...dependency.parameters,
+            bufferDistanceKm: undefined,
+          };
         }
-        if (next === undefined) {
-          delete params.vrm;
-        } else {
-          params.vrm = next;
-        }
-        return params;
+        return {
+          ...dependency.parameters,
+          bufferDistanceKm: numValue === 0 ? undefined : numValue,
+        };
       });
     };
 
-    const sortOptions = [
-      { value: "name", label: t("Name") },
-      { value: "value", label: t("% Captured") },
-    ];
+    const bufferFormatter = useNumberFormatters({
+      unit: "kilometer",
+      unitDisplay: "short",
+    });
 
     return (
-      <div className="flex gap-3 items-center text-sm text-gray-800">
-        <GeographySelector
-          geographies={geographies}
-          clippingGeography={clippingGeography}
-          value={settings.geographyId}
-          onChange={(geographyId) => {
-            if (geographyId === null) return;
-            handleUpdate({ geographyId });
-          }}
-          t={t}
-        />
-        <NumberRoundingControl
-          value={settings.minimumFractionDigits}
-          onChange={(minimumFractionDigits) =>
-            handleUpdate({ minimumFractionDigits })
-          }
-        />
-        <LabeledDropdown
-          label={t("Sort by")}
-          value={sortBy}
-          options={sortOptions}
-          onChange={(val) => handleUpdate({ sortBy: val as "value" | "name" })}
-        />
-        <ClassRowSettingsPopover
-          settings={settings}
-          onUpdateSettings={(patch) => handleUpdate(patch)}
-          dependencies={dependencies || []}
-          sources={sources}
-          onUpdateDependencyParameters={onUpdateDependencyParameters}
-          onUpdateAllDependencies={onUpdateAllDependencies}
-          t={t}
-          allowedGeometryTypes={["SingleBandRaster"]}
-          hideGroupBy={true}
-          showZeros={showZeroRows}
-          onShowZerosChange={(next) => handleUpdate({ showZeroRows: next })}
-          showColorSwatches={!settings.hideColorSwatches}
-          onShowColorSwatchesChange={(next) =>
-            handleUpdate({ hideColorSwatches: next ? undefined : true })
-          }
-        />
-        <TableHeadingsEditor
-          labelKeys={headingsLabelKeys}
-          labelDisplayNames={headingsLabelDisplayNames}
-          componentSettings={settings}
-          onUpdate={onUpdate}
-        />
-        <TooltipBooleanConfigurationOption
-          label={t("show sum")}
-          checked={showSumColumn}
-          onChange={(next) => handleUpdate({ showSumColumn: next })}
-        />
-        <TooltipMorePopover>
-          <PaginationSetting
-            rowsPerPage={rowsPerPage}
-            onChange={(next: number) => handleUpdate({ rowsPerPage: next })}
+      <Tooltip.Provider>
+        <div className="flex gap-3 items-center text-sm text-gray-800">
+          <UnitSelector
+            unitType="area"
+            value={displayUnitToAreaUnit[unit]}
+            onChange={(val: AreaUnit) =>
+              handleUpdate({ unit: areaUnitToDisplayUnit[val] })
+            }
+            unitDisplay="short"
           />
-          <VrmSelector
-            label={t("Sketch VRM")}
-            value={currentVrm}
-            onChange={handleVrmChange}
-          />
-          <VrmSelector
-            geography
-            value={currentGeographyVrm}
-            onChange={handleGeographyVrmChange}
-          />
-          <TooltipBooleanConfigurationOption
-            label={t("Truncate row labels")}
-            checked={shouldTruncateClassTableRowLabels(settings)}
-            checkboxFirst
-            onChange={(next) =>
-              handleUpdate({
-                disableRowLabelTruncation: next ? undefined : true,
-              })
+          <NumberRoundingControl
+            value={settings.minimumFractionDigits}
+            onChange={(minimumFractionDigits) =>
+              handleUpdate({ minimumFractionDigits })
             }
           />
-        </TooltipMorePopover>
-      </div>
+          <LabeledDropdown
+            label={t("Sort by")}
+            value={sortBy}
+            options={[
+              { value: "name", label: t("Name") },
+              { value: "area", label: t("Area") },
+            ]}
+            onChange={(val) =>
+              handleUpdate({ sortBy: val as "area" | "name" })
+            }
+          />
+          <GeographySelector
+            value={
+              settings.geographyId === undefined
+                ? settings.showPercentColumn === false
+                  ? null
+                  : "auto"
+                : settings.geographyId
+            }
+            onChange={(geographyId) =>
+              handleUpdate({
+                geographyId,
+                // Clear legacy toggle when using the None/geography dropdown.
+                showPercentColumn: undefined,
+              })
+            }
+            geographies={geographies}
+            clippingGeography={clippingGeography}
+            t={t}
+            allowNone
+          />
+          <button
+            type="button"
+            className="text-sm text-gray-700 hover:text-gray-900 underline-offset-2 hover:underline"
+            onClick={handleBufferClick}
+          >
+            {buffer !== undefined && buffer > 0
+              ? t("Buffer {{distance}}", {
+                  distance: bufferFormatter.decimal(buffer),
+                })
+              : t("Buffer")}
+          </button>
+          <ClassRowSettingsPopover
+            settings={settings}
+            onUpdateSettings={(patch) => handleUpdate(patch)}
+            dependencies={dependencies || []}
+            sources={sources}
+            onUpdateDependencyParameters={onUpdateDependencyParameters}
+            onUpdateAllDependencies={onUpdateAllDependencies}
+            t={t}
+            allowedGeometryTypes={["SingleBandRaster"]}
+            showZeros={showZeroRows}
+            onShowZerosChange={(next) => handleUpdate({ showZeroRows: next })}
+          />
+          <TableHeadingsEditor
+            labelKeys={headingsLabelKeys}
+            labelDisplayNames={headingsLabelDisplayNames}
+            componentSettings={settings}
+            onUpdate={onUpdate}
+          />
+          <TooltipMorePopover>
+            <PaginationSetting
+              rowsPerPage={rowsPerPage}
+              onChange={(next) => handleUpdate({ rowsPerPage: next })}
+            />
+            <VrmSelector value={currentVrm} onChange={handleVrmChange} />
+            <TooltipBooleanConfigurationOption
+              label={t("Hide color swatches")}
+              checked={!!settings.hideColorSwatches}
+              onChange={(hideColorSwatches) =>
+                handleUpdate({ hideColorSwatches })
+              }
+            />
+          </TooltipMorePopover>
+        </div>
+      </Tooltip.Provider>
     );
   };

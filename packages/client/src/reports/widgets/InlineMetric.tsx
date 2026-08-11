@@ -1052,14 +1052,17 @@ export function GeographySelector({
   value,
   onChange,
   t,
+  allowNone,
 }: {
   geographies: Pick<{ id: number; name: string }, "id" | "name">[];
   clippingGeography:
     | Pick<{ id: number; name: string }, "id" | "name">
     | undefined;
-  value: number | "auto" | undefined;
-  onChange: (geographyId: number | "auto" | undefined) => void;
+  value: number | "auto" | null | undefined;
+  onChange: (geographyId: number | "auto" | null | undefined) => void;
   t: (key: string) => string;
+  /** When true, adds a "None" option (value `null`) — hides % of geography. */
+  allowNone?: boolean;
 }) {
   const autoLabelWithTooltip = useMemo(
     () => (
@@ -1090,6 +1093,14 @@ export function GeographySelector({
 
   const options = useMemo(
     () => [
+      ...(allowNone
+        ? [
+            {
+              value: "none" as const,
+              label: t("None"),
+            },
+          ]
+        : []),
       {
         value: "auto" as const,
         label: autoLabelWithTooltip,
@@ -1099,11 +1110,15 @@ export function GeographySelector({
         label: g.name,
       })),
     ],
-    [geographies, autoLabelWithTooltip]
+    [geographies, autoLabelWithTooltip, allowNone, t]
   );
 
   const dropdownValue =
-    value === undefined || value === "auto" ? "auto" : String(value);
+    value === null
+      ? "none"
+      : value === undefined || value === "auto"
+        ? "auto"
+        : String(value);
 
   return (
     <LabeledDropdown
@@ -1112,13 +1127,18 @@ export function GeographySelector({
       // title={t("Geography")}
       options={options}
       getDisplayLabel={(selected) => {
+        if (selected?.value === "none") {
+          return t("None");
+        }
         if (selected?.value === "auto") {
           return t("auto");
         }
         return selected?.label;
       }}
       onChange={(next) => {
-        if (next === "auto") {
+        if (next === "none") {
+          onChange(null);
+        } else if (next === "auto") {
           onChange(undefined);
         } else {
           const parsed = Number(next);
@@ -1542,11 +1562,12 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
           geographies={geographies}
           clippingGeography={clippingGeography}
           value={componentSettings.geographyId}
-          onChange={(geographyId) =>
+          onChange={(geographyId) => {
+            if (geographyId === null) return;
             onUpdate({
               componentSettings: { ...componentSettings, geographyId },
-            })
-          }
+            });
+          }}
           t={t}
         />
       )}

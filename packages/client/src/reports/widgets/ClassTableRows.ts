@@ -8,9 +8,15 @@ import {
   getOverlayAreaOverlapCombineResult,
   OverlayAreaMetricValue,
   OverlayAreaOverlapCombineResult,
+  attachRasterOverlayAreaOverlapScope,
+  RasterOverlayAreaMetric,
 } from "overlay-engine";
 import { AnyLayer } from "mapbox-gl";
-import { GeostatsLayer } from "@seasketch/geostats-types";
+import {
+  GeostatsLayer,
+  isRasterInfo,
+  RasterInfo,
+} from "@seasketch/geostats-types";
 import {
   CompatibleSpatialMetricDetailsFragment,
   OverlaySourceDetailsFragment,
@@ -22,6 +28,10 @@ import {
   extractPaletteColorsFromVectorStyle,
   isTransparentColor,
 } from "../utils/colors";
+import {
+  extractRasterLegendLabels,
+  labelFromRasterLegendLabels,
+} from "../../dataLayers/rasterLegendLabel";
 
 export type ClassTableRow = {
   key: string;
@@ -46,7 +56,7 @@ export type ClassTableRow = {
 /**
  * True when the overlay source is a raster dataset (geostats has bands, not vector layers).
  */
-function isRasterSource(
+export function isRasterSource(
   source: OverlaySourceDetailsFragment
 ): source is OverlaySourceDetailsFragment & { geostats: { bands: unknown[] } } {
   const g = source?.geostats;
@@ -59,10 +69,150 @@ function isRasterSource(
   );
 }
 
+/**
+ * Pixel-class keys usable as Raster Area Captured groupBy "value" rows.
+ * Prefers RasterInfo categories, then legend labels, then opaque style stops
+ * (minus `s:excluded`).
+ */
+export function getRasterOverlayAreaClassValues(
+  source: Pick<OverlaySourceDetailsFragment, "geostats" | "mapboxGlStyles">
+): string[] {
+  const styles = source.mapboxGlStyles as AnyLayer[] | undefined;
+  const excluded = getRasterExcludedValuesFromStyle(styles);
+  const values: string[] = [];
+  const push = (key: string) => {
+    if (!key || excluded.has(key) || values.includes(key)) return;
+    values.push(key);
+  };
+
+  if (isRasterInfo(source.geostats)) {
+    const categoryBuckets = source.geostats.bands?.[0]?.stats?.categories ?? [];
+    for (const bucket of categoryBuckets) {
+      if (!Array.isArray(bucket) || typeof bucket[0] !== "number") continue;
+      push(String(Math.round(bucket[0])));
+    }
+  }
+
+  if (values.length === 0) {
+    for (const key of Object.keys(extractRasterLegendLabels(styles))) {
+      push(key);
+    }
+  }
+
+  if (values.length === 0) {
+    for (const key of Object.keys(getRasterCategoryColorsFromStyle(styles))) {
+      push(key);
+    }
+  }
+
+  return values;
+}
+
+/**
+ * True when the source has at least two distinct class values to break down.
+ * Presence / single-class rasters (e.g. mangroves) return false.
+ */
+export function canRasterBreakdownByValue(
+  source: Pick<OverlaySourceDetailsFragment, "geostats" | "mapboxGlStyles">
+): boolean {
+  return getRasterOverlayAreaClassValues(source).length >= 2;
+}
+
+/**
+ * Default `groupBy` for Raster Area Captured — same role as
+ * `styleGroupByColumn` for OverlappingAreasTable.
+ *
+ * Returns `"value"` only when a multi-class breakdown is available.
+ */
+export function defaultRasterOverlayAreaGroupBy(
+  source: Pick<OverlaySourceDetailsFragment, "geostats" | "mapboxGlStyles">
+): "value" | undefined {
+  return canRasterBreakdownByValue(source) ? "value" : undefined;
+}
+
 type RasterColorsFromStyle = {
   colors: string[];
   multiColorSwatchLayout: "raster-ramp-order" | "soft-scatter";
 };
+
+/**
+ * Per-value colors from a categorical raster-color step/match expression.
+ * Keys are stringified stop values (matching groupBy "value" class keys).
+ */
+export function getRasterCategoryColorsFromStyle(
+  layers: AnyLayer[] | undefined
+): { [value: string]: string } {
+  const out: { [value: string]: string } = {};
+  if (!layers?.length) {
+    return out;
+  }
+  for (const layer of layers) {
+    if (layer.type !== "raster" || !layer.paint) continue;
+    const rasterColor = (layer.paint as Record<string, unknown>)[
+      "raster-color"
+    ];
+    if (!Array.isArray(rasterColor) || rasterColor.length < 3) continue;
+    const fn = rasterColor[0];
+    if (fn === "step") {
+      // step: ["step", input, default, stop1, color1, stop2, color2, ...]
+      for (let i = 3; i < rasterColor.length; i += 2) {
+        const stop = rasterColor[i];
+        const color = rasterColor[i + 1];
+        if (
+          typeof stop === "number" &&
+          typeof color === "string" &&
+          !isTransparentColor(color)
+        ) {
+          out[String(Math.round(stop))] = color;
+        }
+      }
+    } else if (fn === "match") {
+      let i = 2;
+      while (i < rasterColor.length) {
+        if (i === rasterColor.length - 1) break;
+        const input = rasterColor[i];
+        const color = rasterColor[i + 1];
+        if (
+          typeof color === "string" &&
+          !isTransparentColor(color) &&
+          (typeof input === "number" || typeof input === "string")
+        ) {
+          const key =
+            typeof input === "number"
+              ? String(Math.round(input))
+              : String(input);
+          out[key] = color;
+        }
+        i += 2;
+      }
+    }
+  }
+  return out;
+}
+
+/** Values listed in style metadata `s:excluded` (skipped as table rows by default). */
+export function getRasterExcludedValuesFromStyle(
+  layers: AnyLayer[] | undefined
+): Set<string> {
+  const excluded = new Set<string>();
+  if (!layers?.length) {
+    return excluded;
+  }
+  for (const layer of layers) {
+    const raw = (layer as { metadata?: { [k: string]: unknown } })?.metadata?.[
+      "s:excluded"
+    ];
+    if (!Array.isArray(raw)) continue;
+    for (const v of raw) {
+      if (typeof v === "number" && Number.isFinite(v)) {
+        excluded.add(String(Math.round(v)));
+      } else if (typeof v === "string" && v.length > 0) {
+        excluded.add(v);
+      }
+    }
+  }
+  return excluded;
+}
 
 /**
  * Extracts color values from raster-color. Interpolate/step → ramp order for
@@ -255,7 +405,103 @@ export function getClassTableRows(options: {
     const source = options.sources.find(
       (s) => s.stableId === dependency.stableId
     );
-    const layer = source?.geostats?.layers?.[0] as GeostatsLayer | undefined;
+    const isRaster = source ? isRasterSource(source) : false;
+    const vectorLayer = source?.geostats?.layers?.[0] as
+      | GeostatsLayer
+      | undefined;
+    const rasterInfo =
+      source && isRaster && isRasterInfo(source.geostats)
+        ? (source.geostats as RasterInfo)
+        : undefined;
+    const layer = isRaster ? undefined : vectorLayer;
+
+    // Categorical raster groupBy ("value"): build rows from class values
+    // even when the vector layer path would find nothing.
+    if (
+      source &&
+      isRaster &&
+      dependency.parameters?.groupBy === "value" &&
+      rasterInfo
+    ) {
+      const styles = source.mapboxGlStyles as AnyLayer[] | undefined;
+      const legendLabels = extractRasterLegendLabels(styles);
+      const categoryColors = getRasterCategoryColorsFromStyle(styles);
+      const values = getRasterOverlayAreaClassValues(source);
+      const includeAllFeaturesRow =
+        options.includeAllFeaturesRowForGroupedSources?.includes(
+          dependency.stableId!
+        );
+
+      // No discoverable classes (presence / continuous) — keep a total row so
+      // enabling groupBy never blanks the settings popover or table.
+      if (values.length === 0) {
+        const totalKey = classTableRowKey(dependency.stableId!, "*");
+        const rasterSwatch = styles?.length
+          ? getRasterColorsFromStyle(styles)
+          : undefined;
+        rows.push({
+          key: totalKey,
+          label:
+            options.customLabels?.[totalKey] ||
+            source.tableOfContentsItem?.title ||
+            options.allFeaturesLabel,
+          groupByKey: "*",
+          sourceId: dependency.stableId!.toString(),
+          stableId: options.stableIds?.[totalKey],
+          ...(rasterSwatch
+            ? {
+                colors: rasterSwatch.colors,
+                multiColorSwatchLayout: rasterSwatch.multiColorSwatchLayout,
+              }
+            : {}),
+        });
+        continue;
+      }
+
+      if (includeAllFeaturesRow) {
+        const totalKey = classTableRowKey(dependency.stableId!, "*");
+        const rasterSwatch = styles?.length
+          ? getRasterColorsFromStyle(styles)
+          : undefined;
+        rows.push({
+          key: totalKey,
+          label:
+            options.customLabels?.[totalKey] ||
+            source.tableOfContentsItem?.title ||
+            options.allFeaturesLabel,
+          groupByKey: "*",
+          sourceId: dependency.stableId!.toString(),
+          stableId: options.stableIds?.[totalKey],
+          ...(rasterSwatch
+            ? {
+                colors: rasterSwatch.colors,
+                multiColorSwatchLayout: rasterSwatch.multiColorSwatchLayout,
+              }
+            : {}),
+        });
+      }
+      for (const value of values) {
+        const key = classTableRowKey(dependency.stableId!, value);
+        const color = categoryColors[value];
+        const rowSwatch =
+          color !== undefined && !isTransparentColor(color) ? { color } : {};
+        const numericValue = Number(value);
+        rows.push({
+          key,
+          label:
+            options.customLabels?.[key] ||
+            (Number.isFinite(numericValue)
+              ? labelFromRasterLegendLabels(legendLabels, numericValue)
+              : legendLabels[value] || value),
+          groupByKey: value,
+          sourceId: dependency.stableId!.toString(),
+          stableId: options.stableIds?.[key],
+          ...rowSwatch,
+        });
+      }
+      continue;
+    }
+
     if (!source || !layer) {
       if (dependency.parameters?.groupBy) {
         [1, 2, 3].forEach((i) => {
@@ -301,9 +547,8 @@ export function getClassTableRows(options: {
           key,
           label:
             options.customLabels?.[key] ||
-            (multiSource
-              ? source?.tableOfContentsItem?.title || options.allFeaturesLabel
-              : options.allFeaturesLabel),
+            source?.tableOfContentsItem?.title ||
+            options.allFeaturesLabel,
           groupByKey: "*",
           sourceId: dependency.stableId!.toString(),
           stableId: options.stableIds?.[key],
@@ -446,8 +691,7 @@ export function combineMetricsBySource<T extends Metric>(
           (!expectedMetricType || m.type === expectedMetricType)
       );
       const geographyMetrics = sourceMetrics.filter(
-        (m) =>
-          subjectIsGeography(m.subject) && m.subject.id === geographyId
+        (m) => subjectIsGeography(m.subject) && m.subject.id === geographyId
       );
       const geographyMetric =
         geographyMetrics.length > 1
@@ -473,6 +717,16 @@ export function combineMetricsBySource<T extends Metric>(
       ) {
         fragments = attachOverlayAreaOverlapScope(
           fragments,
+          fragmentMetrics
+        ) as T;
+      }
+
+      if (
+        expectedMetricType === "raster_overlay_area" ||
+        fragmentMetrics.some((m) => m.type === "raster_overlay_area")
+      ) {
+        fragments = attachRasterOverlayAreaOverlapScope(
+          fragments as Pick<RasterOverlayAreaMetric, "type" | "value">,
           fragmentMetrics
         ) as T;
       }

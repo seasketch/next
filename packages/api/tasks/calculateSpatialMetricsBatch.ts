@@ -228,7 +228,10 @@ function collectGeographyIds(metrics: SpatialMetricJson[]): number[] {
 function collectRasterSourceUrls(metrics: SpatialMetricJson[]): string[] {
   const s = new Set<string>();
   for (const m of metrics) {
-    if (m.type === "raster_stats" && m.sourceUrl) {
+    if (
+      (m.type === "raster_stats" || m.type === "raster_overlay_area") &&
+      m.sourceUrl
+    ) {
       s.add(m.sourceUrl);
     }
   }
@@ -382,6 +385,7 @@ async function processOneSpatialMetric(
       metric.type === "presence_table" ||
       metric.type === "column_values" ||
       metric.type === "raster_stats" ||
+      metric.type === "raster_overlay_area" ||
       metric.type === "distance_to_shore"
     ) {
       if (!metric.sourceUrl) {
@@ -395,11 +399,14 @@ async function processOneSpatialMetric(
       }
 
       let epsg: number | null = null;
-      if (metric.type === "raster_stats") {
+      if (
+        metric.type === "raster_stats" ||
+        metric.type === "raster_overlay_area"
+      ) {
         const e = epsgByUrl.get(metric.sourceUrl);
         if (e == null) {
           throw new Error(
-            `Missing EPSG for raster_stats after batch preload (metric ${metric.id}, url ${metric.sourceUrl})`,
+            `Missing EPSG for ${metric.type} after batch preload (metric ${metric.id}, url ${metric.sourceUrl})`,
           );
         }
         epsg = e;

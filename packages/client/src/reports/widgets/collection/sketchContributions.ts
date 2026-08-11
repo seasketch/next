@@ -179,7 +179,12 @@ export function sketchContributionsGeographyTotalArea(
 
 function extractCombinedClassSlice(
   combined: Pick<Metric, "type" | "value">,
-  metricType: "overlay_area" | "count" | "raster_stats" | "column_values",
+  metricType:
+    | "overlay_area"
+    | "count"
+    | "raster_stats"
+    | "raster_overlay_area"
+    | "column_values",
   groupByKey: string,
   valueColumn?: string
 ): number {
@@ -198,6 +203,13 @@ function extractCombinedClassSlice(
         (combined.value as { bands?: Array<{ sum?: number }> })?.bands?.[0]
           ?.sum ?? 0
       );
+    case "raster_overlay_area": {
+      const areas = (
+        combined.value as { areas?: Record<string, number> } | undefined
+      )?.areas;
+      const raw = areas?.[groupByKey];
+      return typeof raw === "number" && Number.isFinite(raw) ? raw : 0;
+    }
     case "column_values": {
       if (!valueColumn) return 0;
       const cell = (
@@ -222,7 +234,12 @@ export function sketchContributionsForClassTableRow(opts: {
   metrics: CompatibleSpatialMetricDetailsFragment[];
   source: OverlaySourceDetailsFragment;
   geographyId: number;
-  metricType: "overlay_area" | "count" | "raster_stats" | "column_values";
+  metricType:
+    | "overlay_area"
+    | "count"
+    | "raster_stats"
+    | "raster_overlay_area"
+    | "column_values";
   groupByKey: string;
   childSketchIds: number[];
   geographyDenominator: number;

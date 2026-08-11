@@ -1,0 +1,27 @@
+{
+  "sourceUrl": "http://uploads.seasketch.org/testing-mangroves-2020.tif",
+  "sketch": "Mangrove-bordering-sketch.geojson.json",
+  "epsg": 6933,
+  "vrm": false,
+  "groupBy": null,
+  "bufferDistanceKm": 1,
+  "expected": {
+    "areas": {
+      "*": 1.2573450464465654
+    },
+    "collarAreas": {
+      "*": 1.2573450464465654
+    },
+    "innerAreas": {
+      "*": 0.0
+    },
+    "bbox": [
+      168.40517412784388,
+      -17.542444117356748,
+      168.45791378389265,
+      -17.503722574371576
+    ]
+  },
+  "toleranceKm2": 0.06286725232232827,
+  "notes": "SpatiaLite buffer in EPSG:6933; turf buffer may differ slightly \u2014 tolerance sized to collar."
+}

@@ -1,5 +1,11 @@
 import { Feature, LineString } from "geojson";
-export type MetricType = "total_area" | "overlay_area" | "count" | "presence" | "presence_table" | "column_values" | "raster_stats" | "distance_to_shore";
+export type MetricType = "total_area" | "overlay_area" | "count" | "presence" | "presence_table" | "column_values" | "raster_stats" | "distance_to_shore" | "raster_overlay_area";
+/**
+ * Max distinct class keys allowed when `groupBy: "value"` for
+ * {@link RasterOverlayAreaMetric}. Exceeding this throws at calculation time —
+ * grouping a continuous raster by value is a misconfiguration.
+ */
+export declare const MAX_RASTER_OVERLAY_AREA_CLASSES = 32;
 type MetricBase = {
     type: MetricType;
     subject: MetricSubjectFragment | MetricSubjectGeography;
@@ -450,7 +456,166 @@ export type DistanceToShoreMetric = OverlayMetricBase & {
         geojsonLine: Feature<LineString>;
     };
 };
-export type Metric = TotalAreaMetric | OverlayAreaMetric | CountMetric | PresenceMetric | PresenceTableMetric | ColumnValuesMetric | RasterStats | DistanceToShoreMetric;
+/**
+ * Per-class area totals in km² for {@link RasterOverlayAreaMetric}.
+ * - `"*"` = all valid pixels in the subject (nodata already excluded by geoblaze).
+ * - When `dependency.parameters.groupBy === "value"`, additional keys are
+ *   `String(Math.round(pixelValue))` for each distinct value present.
+ */
+export type RasterOverlayAreaAreas = {
+    [classKey: string]: number;
+};
+/**
+ * Fragment-only metadata when `bufferDistanceKm > 0` on a fragment subject.
+ * Aggregate-only (no oidx): rasters have no feature identity.
+ *
+ * Geometry fact (same as overlay_area): for disjoint fragments A,B,
+ * `buffer(A,d) ∩ buffer(B,d) ⊆ collar(A)`. Buffered interiors are pairwise
+ * disjoint; only collar pixels can double-count.
+ *
+ * Identity: `areas[k] === innerAreas[k] + collarAreas[k]` (within float error).
+ */
+export type RasterOverlayAreaOverlapInfo = {
+    bufferKm: number;
+    /** Bounding box of the buffered subject (WGS84). */
+    bbox: [number, number, number, number];
+    /** Geodesic area of `bbox` as a polygon (km²). Used for overlap intensity. */
+    bboxAreaKm2: number;
+    /** Per-class area (km²) inside the collar. */
+    collarAreas: RasterOverlayAreaAreas;
+    /** Per-class area (km²) inside the eroded interior (= areas − collar). */
+    innerAreas: RasterOverlayAreaAreas;
+};
+/**
+ * One source-positive buffered pair that contributes to uncertainty.
+ * "Source-positive" = both collars have habitat for at least one class
+ * (bbox-only overlap with empty collars is ignored).
+ */
+export type RasterOverlayAreaOverlapPair = {
+    /**
+     * Fragment identity / sketch ids are OPTIONAL because
+     * combineMetricsForFragments only receives `Pick<Metric, "type" | "value">`.
+     * The engine combine fills pair indexes + numbers; a separate helper
+     * ({@link attachRasterOverlayAreaOverlapScope}) is called client-side with
+     * full metrics (subjects) to fill hashes/sketch ids for tooltips.
+     */
+    fragmentHashA?: string;
+    fragmentHashB?: string;
+    /** Sketch ids from each fragment subject (for collection tooltips). */
+    sketchIdsA?: number[];
+    sketchIdsB?: number[];
+    /** Indexes into the combined fragment array (stable across combine). */
+    indexA: number;
+    indexB: number;
+    /** Geodesic area (km²) of bboxA ∩ bboxB. */
+    bboxOverlapKm2: number;
+    /**
+     * λ = bboxOverlapKm2 / min(bboxAreaA, bboxAreaB), clamped to [0, 1].
+     * Fraction of the smaller buffered bbox that overlaps the other.
+     */
+    overlapIntensity: number;
+    perClass: {
+        [classKey: string]: {
+            collarA: number;
+            collarB: number;
+            /** U = min(collarA, collarB) — hard geometric ceiling for this pair. */
+            hardMax: number;
+            /** Ê = U × λ — proportional estimate (uniform collar-habitat assumption). */
+            estimate: number;
+        };
+    };
+};
+/**
+ * Combine-time result. Omitted entirely when there are no source-positive
+ * intersecting pairs (exact sum — user must not see warnings).
+ *
+ * Display: shown value = naiveSum − overcountMin (= naive; min is 0).
+ * Error bar: [naiveSum − overcountMax, naiveSum − overcountMin].
+ * Central explainable estimate: overcountEstimate (tooltip copy).
+ *
+ * Warning gate (widget): show BufferedOverlapWarning-style UI only when
+ * `overcountEstimate / naiveSum ≥ 10%` for that class (not merely hardMax).
+ */
+export type RasterOverlayAreaOverlapCombineResult = {
+    flagged: boolean;
+    scope?: "within-sketch" | "between-sketches" | "both";
+    /** Sketches that participate in ≥1 source-positive overlapping pair. */
+    partnerSketchIds?: number[];
+    fragmentsInvolved?: string[];
+    /** Per-pair detail for sketch-level explanatory tooltips. */
+    pairs: RasterOverlayAreaOverlapPair[];
+    perClass: {
+        [classKey: string]: {
+            /** Always 0 without pixel identity. */
+            overcountMin: number;
+            /** Aggregated hard ceiling (max over pairs of U, capped). */
+            overcountMax: number;
+            /** Aggregated proportional estimate (max over pairs of Ê, capped). */
+            overcountEstimate: number;
+            naiveSum: number;
+            /** Σ collarAreas across fragments. */
+            collarSum: number;
+            /** Σ innerAreas across fragments. */
+            innerSum: number;
+        };
+    };
+};
+export type RasterOverlayAreaMetricValue = {
+    areas: RasterOverlayAreaAreas;
+    /** Resolved VRM for this calculation, or null when disabled. Audit only. */
+    vrm?: [number, number] | null;
+    /** Source raster EPSG. Audit only. */
+    epsg?: number;
+    /**
+     * Fragment rows: {@link RasterOverlayAreaOverlapInfo} when buffered.
+     * Combined rows: {@link RasterOverlayAreaOverlapCombineResult} when residual
+     * overcount bounds were computed. Omitted for unbuffered exact sums.
+     */
+    overlap?: RasterOverlayAreaOverlapInfo | RasterOverlayAreaOverlapCombineResult;
+};
+export type RasterOverlayAreaMetric = OverlayMetricBase & {
+    type: "raster_overlay_area";
+    value: RasterOverlayAreaMetricValue;
+};
+export declare function isRasterOverlayAreaOverlapInfo(value: unknown): value is RasterOverlayAreaOverlapInfo;
+export declare function isRasterOverlayAreaOverlapCombineResult(value: unknown): value is RasterOverlayAreaOverlapCombineResult;
+export declare function getRasterOverlayAreaOverlapInfo(value: RasterOverlayAreaMetricValue | null | undefined): RasterOverlayAreaOverlapInfo | null;
+export declare function getRasterOverlayAreaOverlapCombineResult(value: RasterOverlayAreaMetricValue | null | undefined): RasterOverlayAreaOverlapCombineResult | null;
+/**
+ * Displayed class value after combine: `naiveSum − overcountMin` (= naive),
+ * falling back to the stored area total.
+ */
+export declare function getRasterOverlayAreaDisplayedClassValue(value: RasterOverlayAreaMetricValue | null | undefined, classKey: string): number;
+/**
+ * Class value range after combine:
+ * `[naive − overcountMax, naive − overcountMin]`.
+ */
+export declare function getRasterOverlayAreaClassValueRange(value: RasterOverlayAreaMetricValue | null | undefined, classKey: string): {
+    low: number;
+    high: number;
+    naiveSum: number;
+} | null;
+/**
+ * Combines `raster_overlay_area` fragment values. Unbuffered (or single)
+ * fragments combine by exact per-key summation. Buffered fragments with
+ * intersecting, source-positive collars attach a proportional overcount
+ * estimate — see {@link RasterOverlayAreaOverlapCombineResult}.
+ *
+ * Pair aggregation uses **max** over pairs (not sum) so 3-way bbox clusters
+ * do not invent impossible stacked overcount.
+ */
+export declare function combineRasterOverlayAreaMetrics(values: RasterOverlayAreaMetricValue[]): RasterOverlayAreaMetricValue;
+/**
+ * Client-side enrichment: fill fragment hashes / sketch ids / scope on a
+ * combine-time {@link RasterOverlayAreaOverlapCombineResult} using full
+ * metrics that still carry subjects. Mirrors
+ * {@link classifyOverlayAreaOverlapScope} for vector overlay_area.
+ */
+export declare function attachRasterOverlayAreaOverlapScope(combined: Pick<RasterOverlayAreaMetric, "type" | "value">, fragmentMetrics: {
+    type?: string | null;
+    subject?: unknown;
+}[]): Pick<RasterOverlayAreaMetric, "type" | "value">;
+export type Metric = TotalAreaMetric | OverlayAreaMetric | CountMetric | PresenceMetric | PresenceTableMetric | ColumnValuesMetric | RasterStats | DistanceToShoreMetric | RasterOverlayAreaMetric;
 export type MetricTypeMap = {
     total_area: TotalAreaMetric;
     overlay_area: OverlayAreaMetric;
@@ -460,6 +625,7 @@ export type MetricTypeMap = {
     column_values: ColumnValuesMetric;
     raster_stats: RasterStats;
     distance_to_shore: DistanceToShoreMetric;
+    raster_overlay_area: RasterOverlayAreaMetric;
 };
 export declare function subjectIsFragment(subject: any | MetricSubjectFragment | MetricSubjectGeography): subject is MetricSubjectFragment;
 export declare function subjectIsGeography(subject: any | MetricSubjectFragment | MetricSubjectGeography): subject is MetricSubjectGeography;
@@ -518,9 +684,11 @@ export type MetricDependency = {
 };
 export type MetricDependencyParameters = {
     /**
-     * The groupBy parameter is used to group the results of the metric by a
-     * specific attribute. For example, if the metric is "overlay_area", the
-     * results can be grouped by the "class" attribute.
+     * Vector metrics: attribute name to group by (e.g. "class" for overlay_area).
+     *
+     * `raster_overlay_area`: set to `"value"` to group by rounded pixel value;
+     * omit for a single `"*"` total only. Slash commands only offer grouping when
+     * `RasterInfo.presentation` is categorical.
      */
     groupBy?: string;
     /**
@@ -542,8 +710,12 @@ export type MetricDependencyParameters = {
      */
     valueColumn?: string;
     /**
-     * The bufferDistanceKm parameter is used to specify the buffer distance in kilometers around the subject.
-     * This is used to exclude features that are outside the buffer distance from the subject.
+     * Buffer distance (km) around the subject. Used by `overlay_area`,
+     * `column_values`, `count`, `presence*`, and `raster_overlay_area`.
+     *
+     * For `raster_overlay_area` on fragment subjects, enables collar overlap
+     * metadata ({@link RasterOverlayAreaOverlapInfo}). Geography subjects never
+     * attach overlap metadata (same gate as `overlay_area`).
      *
      * @default undefined
      */
@@ -566,12 +738,12 @@ export type MetricDependencyParameters = {
      */
     sourceHasOverlappingFeatures?: boolean;
     /**
-     * The vrm parameter is used to specify the virtual resampling factor to use for raster_stats metrics.
-     * If "auto", the virtual resampling factor will be determined automatically based on the ground sample distance of the raster.
-     * If false, the virtual resampling factor will be set to 1.
-     * If a number, the virtual resampling factor will be set to the number.
+     * Virtual resampling for `raster_stats` and `raster_overlay_area`.
+     * If "auto", determined from ground sample distance of the raster.
+     * If false, disabled (effective factor 1 / null).
+     * If a number, applied as `[n, n]`.
      *
-     * @default "auto" for fragment stats, false for geography stats
+     * @default "auto" for fragment subjects, false for geography subjects
      */
     vrm?: false | "auto" | number;
     /**

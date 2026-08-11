@@ -1,0 +1,28 @@
+{
+  "sourceUrl": "http://uploads.seasketch.org/testing-substrate-classes.tif",
+  "sketch": "Substrate-Test.geojson.json",
+  "epsg": 3857,
+  "vrm": false,
+  "groupBy": "value",
+  "groundPixelMeters": {
+    "mX": 31.42142515428684,
+    "mY": 31.276411481303352
+  },
+  "pixelCounts": {
+    "*": 15246,
+    "0": 4764,
+    "1": 1925,
+    "2": 8557
+  },
+  "expected": {
+    "areas": {
+      "*": 14.982997694740556,
+      "0": 4.681818248573004,
+      "1": 1.8917926382248178,
+      "2": 8.409386807942735
+    }
+  },
+  "toleranceKm2": 0.05,
+  "toleranceKm2StarAndZero": 2.0,
+  "notes": "Web Mercator: geodesic ground-pixel size at sketch centroid. Classes 1/2 match geoblaze pixel counts exactly; class 0 and * can differ vs GDAL mask edge/nodata inclusion — use looser tolerance for those keys."
+}
