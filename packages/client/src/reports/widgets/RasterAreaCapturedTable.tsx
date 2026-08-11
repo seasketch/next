@@ -58,15 +58,21 @@ import { SketchGeometryType } from "../../generated/graphql";
 import { UnitSelector } from "./UnitSelector";
 import { AreaUnit } from "../utils/units";
 import BufferedOverlapWarning from "./BufferedOverlapWarning";
+import {
+  applyBufferSettingsToParameters,
+  BufferSelector,
+  getBufferSettingsFromDependencies,
+} from "./BufferSelector";
 
 type AreaDisplayUnit = "km" | "mi" | "acres" | "ha";
 
 type RasterAreaCapturedTableSettings = {
   /**
    * Geography used for the "% Captured" denominator.
-   * - `undefined` / `"auto"` → primary clipping geography (default; show %)
+   * - `null` → no % column (new-widget default)
+   * - `"auto"` → primary clipping geography (show %)
    * - `number` → that geography (show %)
-   * - `null` → no % column
+   * - `undefined` → legacy: treat like `"auto"` unless `showPercentColumn` is false
    */
   geographyId?: number | "auto" | null;
   sortBy?: "area" | "name";
@@ -127,8 +133,8 @@ export const RasterAreaCapturedTable: ReportWidget<
     componentSettings.geographyId === null
       ? false
       : componentSettings.showPercentColumn === false
-        ? false
-        : true;
+      ? false
+      : true;
 
   // Geography metrics / % denominator. When % is off, still resolve against
   // the clipping geography so combineMetricsBySource has a valid id.
@@ -147,7 +153,8 @@ export const RasterAreaCapturedTable: ReportWidget<
   const nameLabel = componentSettings.nameLabel || t("Name");
   const areaLabel = componentSettings.areaLabel || t("Area");
   const percentLabel = componentSettings.percentLabel || t("% Captured");
-  const truncateRowLabels = shouldTruncateClassTableRowLabels(componentSettings);
+  const truncateRowLabels =
+    shouldTruncateClassTableRowLabels(componentSettings);
 
   const formatters = useNumberFormatters({
     unit: displayUnitToAreaUnit[unit],
@@ -539,8 +546,8 @@ export const RasterAreaCapturedTableTooltipControls: ReportWidgetTooltipControls
       settings.geographyId === null
         ? false
         : settings.showPercentColumn === false
-          ? false
-          : true;
+        ? false
+        : true;
     const rowsPerPage = settings.rowsPerPage ?? 10;
     const unit: AreaDisplayUnit = settings.unit || "km";
 
@@ -553,9 +560,7 @@ export const RasterAreaCapturedTableTooltipControls: ReportWidgetTooltipControls
     );
     const headingsLabelDisplayNames = useMemo(
       (): string[] =>
-        showPercentColumn
-          ? ["Name", "Area", "% Captured"]
-          : ["Name", "Area"],
+        showPercentColumn ? ["Name", "Area", "% Captured"] : ["Name", "Area"],
       [showPercentColumn]
     );
 
@@ -607,40 +612,14 @@ export const RasterAreaCapturedTableTooltipControls: ReportWidgetTooltipControls
       });
     };
 
-    const buffer = dependencies.find(
-      (m) => m.parameters?.bufferDistanceKm !== undefined
-    )?.parameters?.bufferDistanceKm;
-
-    const handleBufferClick = () => {
-      const currentValue = buffer !== undefined ? String(buffer) : "0";
-      const value = window.prompt(
-        t(
-          "Enter buffer distance in kilometers (or 0 for none). Buffers pull in habitat outside the sketch; when neighboring sketches' buffers overlap on this layer, totals may include a small double-count — we'll flag it only when the estimated overlap is material."
-        ),
-        currentValue
-      );
-      if (value === null) {
-        return;
-      }
-      const numValue = value === "" || value === "0" ? 0 : Number(value);
-      onUpdateDependencyParameters((dependency) => {
-        if (dependency.subjectType === "geographies") {
-          return {
-            ...dependency.parameters,
-            bufferDistanceKm: undefined,
-          };
-        }
-        return {
-          ...dependency.parameters,
-          bufferDistanceKm: numValue === 0 ? undefined : numValue,
-        };
-      });
-    };
-
-    const bufferFormatter = useNumberFormatters({
-      unit: "kilometer",
-      unitDisplay: "short",
-    });
+    const bufferSettings = useMemo(
+      () => getBufferSettingsFromDependencies(dependencies),
+      [dependencies]
+    );
+    const showBufferGeography = useMemo(
+      () => dependencies.some((d) => d.subjectType === "geographies"),
+      [dependencies]
+    );
 
     return (
       <Tooltip.Provider>
@@ -666,41 +645,8 @@ export const RasterAreaCapturedTableTooltipControls: ReportWidgetTooltipControls
               { value: "name", label: t("Name") },
               { value: "area", label: t("Area") },
             ]}
-            onChange={(val) =>
-              handleUpdate({ sortBy: val as "area" | "name" })
-            }
+            onChange={(val) => handleUpdate({ sortBy: val as "area" | "name" })}
           />
-          <GeographySelector
-            value={
-              settings.geographyId === undefined
-                ? settings.showPercentColumn === false
-                  ? null
-                  : "auto"
-                : settings.geographyId
-            }
-            onChange={(geographyId) =>
-              handleUpdate({
-                geographyId,
-                // Clear legacy toggle when using the None/geography dropdown.
-                showPercentColumn: undefined,
-              })
-            }
-            geographies={geographies}
-            clippingGeography={clippingGeography}
-            t={t}
-            allowNone
-          />
-          <button
-            type="button"
-            className="text-sm text-gray-700 hover:text-gray-900 underline-offset-2 hover:underline"
-            onClick={handleBufferClick}
-          >
-            {buffer !== undefined && buffer > 0
-              ? t("Buffer {{distance}}", {
-                  distance: bufferFormatter.decimal(buffer),
-                })
-              : t("Buffer")}
-          </button>
           <ClassRowSettingsPopover
             settings={settings}
             onUpdateSettings={(patch) => handleUpdate(patch)}
@@ -720,6 +666,36 @@ export const RasterAreaCapturedTableTooltipControls: ReportWidgetTooltipControls
             onUpdate={onUpdate}
           />
           <TooltipMorePopover>
+            <GeographySelector
+              value={
+                settings.geographyId === undefined
+                  ? settings.showPercentColumn === false
+                    ? null
+                    : "auto"
+                  : settings.geographyId
+              }
+              onChange={(geographyId) =>
+                handleUpdate({
+                  geographyId,
+                  // Clear legacy toggle when using the None/geography dropdown.
+                  showPercentColumn: undefined,
+                })
+              }
+              geographies={geographies}
+              clippingGeography={clippingGeography}
+              t={t}
+              allowNone
+            />
+            <BufferSelector
+              distanceKm={bufferSettings.distanceKm}
+              bufferGeography={bufferSettings.bufferGeography}
+              showBufferGeography={showBufferGeography}
+              onChange={(next) => {
+                onUpdateDependencyParameters((dependency) =>
+                  applyBufferSettingsToParameters(dependency, next)
+                );
+              }}
+            />
             <PaginationSetting
               rowsPerPage={rowsPerPage}
               onChange={(next) => handleUpdate({ rowsPerPage: next })}

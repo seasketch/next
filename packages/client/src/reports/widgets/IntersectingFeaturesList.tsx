@@ -13,7 +13,6 @@ import {
   useOverlaySources,
   useRelatedOverlay,
 } from "../hooks/useOverlaySources";
-import { useNumberFormatters } from "../hooks/useNumberFormatters";
 import { GeostatsLayer, isGeostatsLayer } from "@seasketch/geostats-types";
 import { CaretDownIcon, Pencil2Icon } from "@radix-ui/react-icons";
 import * as Popover from "@radix-ui/react-popover";
@@ -22,6 +21,11 @@ import {
   PresenceTableValue,
 } from "./IntersectingFeaturesList.utils";
 import { ReportUIStateContext } from "../context/ReportUIStateContext";
+import {
+  applyBufferSettingsToParameters,
+  BufferSelector,
+  getBufferSettingsFromDependencies,
+} from "./BufferSelector";
 type IntersectingFeaturesListSettings = {
   labelColumn?: string;
   maxDisplayItems?: number;
@@ -358,41 +362,14 @@ export const IntersectingFeaturesListTooltipControls: ReportWidgetTooltipControl
 
     const relatedOverlay = useRelatedOverlay(dependencies);
 
-    // Get buffer from dependencies
-    const buffer = ((node.attrs?.metrics || []) as MetricDependency[]).find(
-      (m) => m.parameters?.bufferDistanceKm !== undefined
-    )?.parameters?.bufferDistanceKm;
-
-    const handleBufferClick = () => {
-      const currentValue = buffer !== undefined ? String(buffer) : "0";
-      const value = window.prompt(
-        t("Enter buffer distance in kilometers (or 0 for none)"),
-        currentValue
-      );
-      if (value === null) {
-        // User cancelled
-        return;
-      }
-      const numValue = value === "" || value === "0" ? 0 : Number(value);
-      onUpdateDependencyParameters((dependency) => {
-        if (dependency.subjectType === "geographies") {
-          return {
-            ...dependency.parameters,
-            bufferDistanceKm: undefined,
-          };
-        } else {
-          return {
-            ...dependency.parameters,
-            bufferDistanceKm: numValue === 0 ? undefined : numValue,
-          };
-        }
-      });
-    };
-
-    const bufferFormatter = useNumberFormatters({
-      unit: "kilometer",
-      unitDisplay: "short",
-    });
+    const bufferSettings = useMemo(
+      () => getBufferSettingsFromDependencies(dependencies),
+      [dependencies]
+    );
+    const showBufferGeography = useMemo(
+      () => dependencies.some((d) => d.subjectType === "geographies"),
+      [dependencies]
+    );
 
     return (
       <div className="flex gap-3 items-center text-sm text-gray-800">
@@ -467,16 +444,16 @@ export const IntersectingFeaturesListTooltipControls: ReportWidgetTooltipControl
           </Popover.Root>
         )}
         <TooltipMorePopover>
-          <button
-            type="button"
-            onClick={handleBufferClick}
-            className="w-full text-left text-sm rounded hover:text-black focus:outline-none flex items-center space-x-2"
-          >
-            <span className="font-light text-gray-400">{t("buffer")}</span>
-            <span className="flex-1 text-right hover:ring hover:ring-blue-300/20">
-              {bufferFormatter.distance(buffer ?? 0)}
-            </span>
-          </button>
+          <BufferSelector
+            distanceKm={bufferSettings.distanceKm}
+            bufferGeography={bufferSettings.bufferGeography}
+            showBufferGeography={showBufferGeography}
+            onChange={(next) => {
+              onUpdateDependencyParameters((dependency) =>
+                applyBufferSettingsToParameters(dependency, next)
+              );
+            }}
+          />
           <div className="flex">
             <span className="text-sm font-light text-gray-400 whitespace-nowrap pr-1">
               {t("Component Type")}

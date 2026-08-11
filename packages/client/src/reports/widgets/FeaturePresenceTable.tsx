@@ -12,7 +12,6 @@ import {
 } from "../../editor/TooltipMenu";
 import { LabeledDropdown } from "./LabeledDropdown";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
-import { useNumberFormatters } from "../hooks/useNumberFormatters";
 import {
   PaginationFooter,
   PaginationSetting,
@@ -20,6 +19,11 @@ import {
 } from "./Pagination";
 import { usePagination } from "../hooks/usePagination";
 import { ClassRowSettingsPopover } from "./ClassRowSettingsPopover";
+import {
+  applyBufferSettingsToParameters,
+  BufferSelector,
+  getBufferSettingsFromDependencies,
+} from "./BufferSelector";
 import ReportLayerVisibilityCheckbox from "../components/ReportLayerVisibilityCheckbox";
 import { LayersIcon } from "@radix-ui/react-icons";
 import * as Tooltip from "@radix-ui/react-tooltip";
@@ -420,39 +424,14 @@ export const FeaturePresenceTableTooltipControls: ReportWidgetTooltipControls =
       });
     };
 
-    const buffer = ((node.attrs?.metrics || []) as MetricDependency[]).find(
-      (m) => m.parameters?.bufferDistanceKm !== undefined
-    )?.parameters?.bufferDistanceKm;
-
-    const handleBufferClick = () => {
-      const currentValue = buffer !== undefined ? String(buffer) : "0";
-      const value = window.prompt(
-        t("Enter buffer distance in kilometers (or 0 for none)"),
-        currentValue
-      );
-      if (value === null) {
-        return;
-      }
-      const numValue = value === "" || value === "0" ? 0 : Number(value);
-      onUpdateDependencyParameters((dependency) => {
-        if (dependency.subjectType === "geographies") {
-          return {
-            ...dependency.parameters,
-            bufferDistanceKm: undefined,
-          };
-        } else {
-          return {
-            ...dependency.parameters,
-            bufferDistanceKm: numValue === 0 ? undefined : numValue,
-          };
-        }
-      });
-    };
-
-    const bufferFormatter = useNumberFormatters({
-      unit: "kilometer",
-      unitDisplay: "short",
-    });
+    const bufferSettings = useMemo(
+      () => getBufferSettingsFromDependencies(dependencies || []),
+      [dependencies]
+    );
+    const showBufferGeography = useMemo(
+      () => (dependencies || []).some((d) => d.subjectType === "geographies"),
+      [dependencies]
+    );
 
     const presencePresentationOptions = getPresencePresentationOptions();
 
@@ -490,16 +469,16 @@ export const FeaturePresenceTableTooltipControls: ReportWidgetTooltipControls =
           }
         />
         <TooltipMorePopover>
-          <button
-            type="button"
-            onClick={handleBufferClick}
-            className="w-full text-left text-sm rounded hover:text-black focus:outline-none flex items-center space-x-2"
-          >
-            <span className="font-light text-gray-400">{t("Buffer")}</span>
-            <span className="flex-1 text-right hover:ring hover:ring-blue-300/20">
-              {bufferFormatter.distance(buffer ?? 0)}
-            </span>
-          </button>
+          <BufferSelector
+            distanceKm={bufferSettings.distanceKm}
+            bufferGeography={bufferSettings.bufferGeography}
+            showBufferGeography={showBufferGeography}
+            onChange={(next) => {
+              onUpdateDependencyParameters((dependency) =>
+                applyBufferSettingsToParameters(dependency, next)
+              );
+            }}
+          />
           <PaginationSetting
             rowsPerPage={rowsPerPage}
             onChange={(next: number) => handleUpdate({ rowsPerPage: next })}

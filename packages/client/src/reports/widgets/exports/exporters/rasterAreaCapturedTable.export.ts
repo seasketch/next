@@ -23,7 +23,10 @@ export const exportRasterAreaCapturedTable: WidgetExporter = (input) => {
     primaryGeographyId,
   } = input;
 
+  // Match widget: when % is off (null) or auto/unset, still resolve against
+  // the primary clipping geography for combineMetricsBySource.
   const geographyId =
+    componentSettings.geographyId === null ||
     componentSettings.geographyId === "auto" ||
     componentSettings.geographyId === undefined
       ? primaryGeographyId

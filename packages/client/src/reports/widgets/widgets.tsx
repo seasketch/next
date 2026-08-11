@@ -1512,7 +1512,7 @@ export function buildReportCommandGroups({
             id: `overlay-layer-${tocId}-raster-area-captured-table`,
             label: "Raster Area Captured Table",
             description:
-              "Table of raster area (km²) captured by the sketch, with percent of a geography. Categorical rasters default to one row per class; change Group by under Rows to use a single total.",
+              "Table of raster area (km²) captured by the sketch. Optionally show percent of a geography. Categorical rasters default to one row per class; change Group by under Rows to use a single total.",
             screenshotSrc: "/slashCommands/raster-proportion.png",
             run: (state, dispatch, view) => {
               return insertBlockMetric(view, state.selection.ranges[0], {
@@ -1538,7 +1538,9 @@ export function buildReportCommandGroups({
                     },
                   },
                 ],
-                componentSettings: {},
+                // Hide "% Captured" until an admin picks a geography (same
+                // pattern as OverlappingAreasTable percentGeographyId: null).
+                componentSettings: { geographyId: null },
               });
             },
           });

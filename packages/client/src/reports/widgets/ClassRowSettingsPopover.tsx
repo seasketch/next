@@ -40,6 +40,7 @@ import { OverlaySourceDetailsFragment } from "../../generated/graphql";
 import { GeostatsLayer, isGeostatsLayer } from "@seasketch/geostats-types";
 import { useOverlaySources } from "../hooks/useOverlaySources";
 import * as Tooltip from "@radix-ui/react-tooltip";
+import { getBufferSettingsFromDependencies } from "./BufferSelector";
 
 function GroupByPicker({
   value,
@@ -161,12 +162,11 @@ export const ClassRowSettingsPopover = ({
     return dependencies?.[0]?.type || "count";
   }, [dependencies]);
 
-  // Get bufferDistanceKm from existing dependencies if present
-  const bufferDistanceKm = useMemo(() => {
-    return dependencies?.find(
-      (d) => d.parameters?.bufferDistanceKm !== undefined
-    )?.parameters?.bufferDistanceKm;
-  }, [dependencies]);
+  // Mirror current buffer settings onto newly added sources.
+  const bufferSettings = useMemo(
+    () => getBufferSettingsFromDependencies(dependencies || []),
+    [dependencies]
+  );
 
   // Get tableOfContentsItemIds that are already in use
   const currentSourceIds = useMemo(() => {
@@ -193,18 +193,27 @@ export const ClassRowSettingsPopover = ({
 
     onUpdateAllDependencies((currentDeps) => {
       const newDeps = [...currentDeps];
-      const baseParams: Record<string, any> = {};
-      if (bufferDistanceKm !== undefined) {
-        baseParams.bufferDistanceKm = bufferDistanceKm;
+      const fragmentBufferParams: Record<string, any> = {};
+      if (bufferSettings.distanceKm !== undefined) {
+        fragmentBufferParams.bufferDistanceKm = bufferSettings.distanceKm;
+      }
+      const geographyBufferParams: Record<string, any> = {};
+      if (
+        bufferSettings.distanceKm !== undefined &&
+        bufferSettings.bufferGeography
+      ) {
+        geographyBufferParams.bufferDistanceKm = bufferSettings.distanceKm;
       }
 
       for (const layerValue of validLayers) {
         const source = overlaySources.find(
           (s) => s.stableId === layerValue.stableId
         );
-        const parameters = { ...baseParams };
+        const fragmentParameters = { ...fragmentBufferParams };
+        const geographyParameters = { ...geographyBufferParams };
         if (source?.containsOverlappingFeatures) {
-          parameters.sourceHasOverlappingFeatures = true;
+          fragmentParameters.sourceHasOverlappingFeatures = true;
+          geographyParameters.sourceHasOverlappingFeatures = true;
         }
         // Mirror slash-command defaults: categorical rasters start grouped.
         if (
@@ -212,13 +221,14 @@ export const ClassRowSettingsPopover = ({
           source &&
           defaultRasterOverlayAreaGroupBy(source)
         ) {
-          parameters.groupBy = "value";
+          fragmentParameters.groupBy = "value";
+          geographyParameters.groupBy = "value";
         }
         newDeps.push({
           type: metricType,
           subjectType: "fragments",
           stableId: layerValue.stableId,
-          parameters,
+          parameters: fragmentParameters,
         });
         newDeps.push({
           type: metricType,
@@ -226,8 +236,8 @@ export const ClassRowSettingsPopover = ({
           stableId: layerValue.stableId,
           parameters:
             metricType === "raster_overlay_area"
-              ? { ...parameters, vrm: false }
-              : parameters,
+              ? { ...geographyParameters, vrm: false }
+              : geographyParameters,
         });
       }
 
@@ -468,10 +478,11 @@ export const ClassRowSettingsPopover = ({
                 !!group.source && isRasterSource(group.source);
               const rasterBreakdownAvailable =
                 !!group.source && canRasterBreakdownByValue(group.source);
+              // Source options only for real configuration (group-by / overlap).
+              // Multi-source remove is a trash icon in the header instead.
               const showSourceOptionsPopover =
                 (!hideGroupBy && !sourceIsRaster) ||
-                (metricType === "overlay_area" && !!sourceStableId) ||
-                (groupedRows.length > 1 && !!sourceStableId);
+                (metricType === "overlay_area" && !!sourceStableId);
               const canRemoveThisSource =
                 groupedRows.length > 1 && !!sourceStableId;
 
@@ -834,36 +845,39 @@ export const ClassRowSettingsPopover = ({
                                   </div>
                                 </div>
                               )}
-                            {groupedRows.length > 1 &&
-                              group.source?.stableId && (
-                                <div className="px-3 py-3">
-                                  <h4 className="text-xs font-semibold text-gray-700 mb-1">
-                                    {t("Remove source")}
-                                  </h4>
-                                  <p className="text-xs text-gray-500 mb-2">
-                                    {t(
-                                      "Remove this data source from the table. Rows and metrics for this source will no longer appear."
-                                    )}
-                                  </p>
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      handleRemoveSource(
-                                        group.source!.stableId!
-                                      );
-                                    }}
-                                    className="flex items-center gap-2 px-2 py-1.5 text-xs font-medium text-red-700 hover:text-red-800 hover:bg-red-50 rounded-md border border-red-200 transition-colors"
-                                  >
-                                    <TrashIcon className="w-3.5 h-3.5" />
-                                    {t("Remove this source")}
-                                  </button>
-                                </div>
-                              )}
                           </div>
                           </Popover.Content>
                         </Popover.Portal>
                       </Popover.Root>
                     ) : null}
+                    {canRemoveThisSource && (
+                      <Tooltip.Root>
+                        <Tooltip.Trigger asChild>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleRemoveSource(sourceStableId!);
+                            }}
+                            className="flex items-center justify-center w-7 h-7 rounded-md text-gray-500 hover:text-red-700 hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors focus:outline-none focus-visible:ring-1 focus-visible:ring-red-400"
+                            aria-label={t("Remove this source")}
+                          >
+                            <TrashIcon className="w-3.5 h-3.5" />
+                          </button>
+                        </Tooltip.Trigger>
+                        <Tooltip.Portal>
+                          <Tooltip.Content
+                            side="top"
+                            sideOffset={4}
+                            className="bg-gray-900 text-white text-xs px-2 py-1.5 rounded shadow-lg z-[80] max-w-[220px] leading-snug"
+                          >
+                            {t(
+                              "Remove this data source from the table. Rows and metrics for this source will no longer appear."
+                            )}
+                            <Tooltip.Arrow className="fill-gray-900" />
+                          </Tooltip.Content>
+                        </Tooltip.Portal>
+                      </Tooltip.Root>
+                    )}
                     </div>
                   </div>
 
@@ -1026,7 +1040,7 @@ export const ClassRowSettingsPopover = ({
                               >
                                 {canRemoveThisSource
                                   ? t(
-                                      "Row visibility can only be changed when this source has multiple rows. If you wish to remove this source entirely, click 'Source options'."
+                                      "Row visibility can only be changed when this source has multiple rows. If you wish to remove this source entirely, use the trash icon."
                                     )
                                   : t(
                                       "Row visibility can only be changed when this source has multiple rows."
