@@ -7621,6 +7621,13 @@ CREATE TABLE public.reports (
 
 
 --
+-- Name: COLUMN reports.draft_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.reports.draft_id IS '@omit filter,order';
+
+
+--
 -- Name: create_custom_report(integer, text, integer[]); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -31554,6 +31561,13 @@ ALTER TABLE ONLY public.report_tabs
 
 ALTER TABLE ONLY public.reports
     ADD CONSTRAINT reports_draft_id_fkey FOREIGN KEY (draft_id) REFERENCES public.reports(id) ON DELETE CASCADE;
+
+
+--
+-- Name: CONSTRAINT reports_draft_id_fkey ON reports; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON CONSTRAINT reports_draft_id_fkey ON public.reports IS '@omit';
 
 
 --
