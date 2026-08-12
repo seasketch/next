@@ -22,7 +22,7 @@ import { prepareSketch } from "../../src/utils/prepareSketch";
 import { compareResults } from "./compareResults";
 import { WorkerPool } from "../../src/workers/pool";
 import simplify from "@turf/simplify";
-import { calculateRasterStats } from "../../src/rasterStats";
+import { rasterStatsCollectedAndStreamed } from "../helpers/rasterStatsMatch";
 const _proj4 = require("proj4");
 _proj4.defs(
   "EPSG:6933",
@@ -886,18 +886,22 @@ describe("sketchFragmentOverlap", () => {
 });
 
 describe("Raster metrics", () => {
-  it("Should calculate raster stats", async () => {
-    const source = "https://uploads.seasketch.org/testing-fiji-bathy-3.tif";
-    // const source = "https://uploads.seasketch.org/gebco-cog.tif";
-    const prepared = prepareSketch(
-      require("./sketches/Kanacea-Island.geojson.json"),
-    );
-    const f = reprojectFeatureTo6933(prepared.feature);
-    const stats = await calculateRasterStats(source, f);
-    expect(stats.bands[0].mean).toBeCloseTo(-20.6035);
-    expect(stats.bands[0].min).toBeCloseTo(-207);
-    expect(stats.bands[0].max).toBeCloseTo(54);
-  });
+  it(
+    "Should calculate raster stats",
+    async () => {
+      const source = "https://uploads.seasketch.org/testing-fiji-bathy-3.tif";
+      // const source = "https://uploads.seasketch.org/gebco-cog.tif";
+      const prepared = prepareSketch(
+        require("./sketches/Kanacea-Island.geojson.json"),
+      );
+      const f = reprojectFeatureTo6933(prepared.feature);
+      const stats = await rasterStatsCollectedAndStreamed(source, f);
+      expect(stats.bands[0].mean).toBeCloseTo(-20.6035);
+      expect(stats.bands[0].min).toBeCloseTo(-207);
+      expect(stats.bands[0].max).toBeCloseTo(54);
+    },
+    120_000,
+  );
 });
 
 describe("Distance to shore metrics", () => {

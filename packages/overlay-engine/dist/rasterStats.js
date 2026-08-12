@@ -12,6 +12,7 @@ const helpers_1 = require("@turf/helpers");
 // @ts-ignore
 const proj4_1 = __importDefault(require("proj4"));
 const bbox_1 = __importDefault(require("@turf/bbox"));
+const geoblazeBandStats_1 = require("./geoblazeBandStats");
 /**
  * Verbose `console.log` for raster stats / VRM (set `RASTER_STATS_VERBOSE=0` to disable).
  */
@@ -214,12 +215,7 @@ async function calculateRasterStats(sourceUrl, feature, options) {
         const groundDims = centerLonLat != null
             ? groundPixelDimensionsMeters(raster, centerLonLat)
             : { mX: 0, mY: 0 };
-        // calculate the number of pixels on each axis of the bounding box, based
-        // on the ground dimensions and the pixel width/height of the raster
-        const intersectingPixelCounts = [
-            Math.floor(featureBBox[2] - featureBBox[0] / raster.pixelWidth),
-            Math.floor(featureBBox[3] - featureBBox[1] / raster.pixelHeight),
-        ];
+        const intersectingPixelCounts = (0, geoblazeBandStats_1.intersectingWindowPixelCounts)(featureBBox, raster);
         const vrmOpt = options?.vrm ?? "auto";
         const resolvedVrm = resolveVrm(vrmOpt, fragmentAreaSqM, groundDims, intersectingPixelCounts);
         console.log("resolvedVrm", resolvedVrm);
@@ -247,7 +243,7 @@ async function calculateRasterStats(sourceUrl, feature, options) {
             resolvedVrm,
             statsExtra: statsExtra ?? null,
         });
-        const stats = await geoblaze.stats(raster, feature, {
+        const stats = await (0, geoblazeBandStats_1.computeGeoblazeBandStats)(geoblaze, raster, feature, {
             stats: [
                 "count",
                 "min",
@@ -259,7 +255,10 @@ async function calculateRasterStats(sourceUrl, feature, options) {
                 "invalid",
                 "sum",
             ],
-        }, undefined, statsExtra);
+        }, statsExtra, intersectingPixelCounts, {
+            forceStream: options?.forceStream === true,
+            forceCollect: options?.forceCollect === true,
+        });
         logRasterStatsVerbose("geoblaze.stats completed", {
             sourceUrl,
             bandCount: stats.length,
@@ -273,9 +272,7 @@ async function calculateRasterStats(sourceUrl, feature, options) {
         });
         return {
             bands: stats.map((stat) => {
-                const rawHistogram = Array.isArray(stat.histogram)
-                    ? stat.histogram
-                    : Object.values(stat.histogram).map((r) => [r.n, r.ct]);
+                const rawHistogram = Object.values(stat.histogram).map((r) => [r.n, r.ct]);
                 const histogram = downsampleHistogram(rawHistogram, 200);
                 return {
                     count: stat.count,

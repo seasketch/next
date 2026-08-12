@@ -56,6 +56,16 @@ export declare function calculateRasterStats(sourceUrl: string, feature: Feature
     vrm?: false | "auto" | number;
     centerLonLat?: [number, number];
     fragmentAreaSqM?: number;
+    /**
+     * Test-only: run the streaming pixel path even when the window is below
+     * the collected-pixel threshold. Production callers must omit this.
+     */
+    forceStream?: boolean;
+    /**
+     * Test-only: run geoblaze.stats even when the bbox window is above the
+     * streaming threshold. Production callers must omit this.
+     */
+    forceCollect?: boolean;
 }): Promise<{
     bands: RasterBandStats[];
 }>;

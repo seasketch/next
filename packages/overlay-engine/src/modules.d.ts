@@ -1,1 +1,10 @@
-declare module 'geojson-antimeridian-cut';
+declare module "geojson-antimeridian-cut";
+declare module "dufour-peyton-intersection";
+declare module "snap-bbox";
+declare module "geoaffine";
+declare module "bbox-fns/bbox-area.js";
+declare module "bbox-fns/boolean-intersects.js";
+declare module "bbox-fns/calc-all.js";
+declare module "bbox-fns/merge.js";
+declare module "bbox-fns/union.js";
+declare module "bbox-fns/precise/reproject.js";

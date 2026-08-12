@@ -6,6 +6,11 @@ import { CreateSourceOptions, FlatGeobufSource, SourceCache } from "fgb-source";
 import { GuaranteedOverlayWorkerHelpers } from "../utils/helpers";
 export type ClippingOperation = "INTERSECT" | "DIFFERENCE";
 /**
+ * Force geography boolean ops onto the polyclip-ts path. Intended for tests;
+ * production can use `OVERLAY_ENGINE_FORCE_POLYCLIP_TS=1` instead.
+ */
+export declare function setForcePolyclipTs(enabled: boolean): void;
+/**
  * The result of a single clipping operation, as returned by a ClippingSource
  * clip method.
  */

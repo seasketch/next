@@ -5,6 +5,10 @@ import { point } from "@turf/helpers";
 import proj4 from "proj4";
 import { RasterBandStats } from "./metrics/metrics";
 import calcBBox from "@turf/bbox";
+import {
+  computeGeoblazeBandStats,
+  intersectingWindowPixelCounts,
+} from "./geoblazeBandStats";
 
 export type HistogramEntry = [number, number];
 
@@ -229,6 +233,16 @@ export async function calculateRasterStats(
     vrm?: false | "auto" | number;
     centerLonLat?: [number, number];
     fragmentAreaSqM?: number;
+    /**
+     * Test-only: run the streaming pixel path even when the window is below
+     * the collected-pixel threshold. Production callers must omit this.
+     */
+    forceStream?: boolean;
+    /**
+     * Test-only: run geoblaze.stats even when the bbox window is above the
+     * streaming threshold. Production callers must omit this.
+     */
+    forceCollect?: boolean;
   },
 ): Promise<{ bands: RasterBandStats[] }> {
   const geoblaze = getGeoblaze();
@@ -279,12 +293,10 @@ export async function calculateRasterStats(
       centerLonLat != null
         ? groundPixelDimensionsMeters(raster, centerLonLat)
         : { mX: 0, mY: 0 };
-    // calculate the number of pixels on each axis of the bounding box, based
-    // on the ground dimensions and the pixel width/height of the raster
-    const intersectingPixelCounts = [
-      Math.floor(featureBBox[2] - featureBBox[0] / raster.pixelWidth),
-      Math.floor(featureBBox[3] - featureBBox[1] / raster.pixelHeight),
-    ] as [number, number];
+    const intersectingPixelCounts = intersectingWindowPixelCounts(
+      featureBBox as BBox,
+      raster,
+    );
     const vrmOpt = options?.vrm ?? "auto";
     const resolvedVrm = resolveVrm(
       vrmOpt,
@@ -321,7 +333,8 @@ export async function calculateRasterStats(
       statsExtra: statsExtra ?? null,
     });
 
-    const stats = await geoblaze.stats(
+    const stats = await computeGeoblazeBandStats(
+      geoblaze,
       raster,
       feature,
       {
@@ -337,34 +350,31 @@ export async function calculateRasterStats(
           "sum",
         ],
       },
-      undefined,
       statsExtra,
+      intersectingPixelCounts,
+      {
+        forceStream: options?.forceStream === true,
+        forceCollect: options?.forceCollect === true,
+      },
     );
 
     logRasterStatsVerbose("geoblaze.stats completed", {
       sourceUrl,
       bandCount: stats.length,
-      perBand: stats.map(
-        (
-          s: { count?: number; sum?: number; min?: number; max?: number },
-          i: number,
-        ) => ({
-          bandIndex: i,
-          count: s.count,
-          sum: s.sum,
-          min: s.min,
-          max: s.max,
-        }),
-      ),
+      perBand: stats.map((s, i) => ({
+        bandIndex: i,
+        count: s.count,
+        sum: s.sum,
+        min: s.min,
+        max: s.max,
+      })),
     });
 
     return {
-      bands: stats.map((stat: any) => {
-        const rawHistogram: HistogramEntry[] = Array.isArray(stat.histogram)
-          ? (stat.histogram as HistogramEntry[])
-          : Object.values(
-              stat.histogram as Record<string, { n: number; ct: number }>,
-            ).map((r) => [r.n, r.ct] as HistogramEntry);
+      bands: stats.map((stat) => {
+        const rawHistogram: HistogramEntry[] = Object.values(stat.histogram).map(
+          (r) => [r.n, r.ct] as HistogramEntry,
+        );
 
         const histogram = downsampleHistogram(rawHistogram, 200);
 

@@ -20,6 +20,7 @@ import {
 } from "../src/rasterOverlayArea";
 import { computeBufferedSubjectAndCollar } from "../src/metrics/computeSubjectCollar";
 import * as clipping from "polyclip-ts";
+import { expectOverlayAreaMatch } from "./helpers/rasterStatsMatch";
 
 const FIXTURE_DIR = join(__dirname, "fixtures/raster-overlay-area");
 
@@ -49,6 +50,23 @@ function reprojectFeature(
   const geom = JSON.parse(JSON.stringify(feature.geometry));
   geom.coordinates = mapCoords(geom.coordinates);
   return { ...feature, geometry: geom };
+}
+
+async function overlayAreaCollectedAndStreamed(
+  sourceUrl: string,
+  feature: Feature<Polygon | MultiPolygon>,
+  options: Parameters<typeof calculateRasterOverlayArea>[2],
+) {
+  const collected = await calculateRasterOverlayArea(sourceUrl, feature, {
+    ...options,
+    forceCollect: true,
+  });
+  const streamed = await calculateRasterOverlayArea(sourceUrl, feature, {
+    ...options,
+    forceStream: true,
+  });
+  expectOverlayAreaMatch(streamed, collected);
+  return collected;
 }
 
 describe("histogramToClassCounts / pixelCountsToAreaKm2", () => {
@@ -392,7 +410,7 @@ describe("calculateRasterOverlayArea vs GDAL fixtures", () => {
         (bbox[0] + bbox[2]) / 2,
         (bbox[1] + bbox[3]) / 2,
       ];
-      const result = await calculateRasterOverlayArea(
+      const result = await overlayAreaCollectedAndStreamed(
         fixture.sourceUrl,
         projected,
         {
@@ -429,7 +447,7 @@ describe("calculateRasterOverlayArea vs GDAL fixtures", () => {
         (bbox[0] + bbox[2]) / 2,
         (bbox[1] + bbox[3]) / 2,
       ];
-      const result = await calculateRasterOverlayArea(
+      const result = await overlayAreaCollectedAndStreamed(
         fixture.sourceUrl,
         projected,
         {
@@ -483,7 +501,7 @@ describe("calculateRasterOverlayArea vs GDAL fixtures", () => {
         (wgsBBox[0] + wgsBBox[2]) / 2,
         (wgsBBox[1] + wgsBBox[3]) / 2,
       ];
-      const result = await calculateRasterOverlayArea(
+      const result = await overlayAreaCollectedAndStreamed(
         fixture.sourceUrl,
         projectedBuffered,
         {
@@ -553,7 +571,7 @@ describe("calculateRasterOverlayArea vs GDAL fixtures", () => {
           number,
           number,
         ];
-        return calculateRasterOverlayArea(
+        return overlayAreaCollectedAndStreamed(
           fixture.sourceUrl,
           reprojectFeature(featureWgs, fixture.epsg),
           {

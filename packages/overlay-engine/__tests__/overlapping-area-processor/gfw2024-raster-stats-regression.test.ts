@@ -24,7 +24,7 @@ import {
   type RasterStats,
 } from "../../src/metrics/metrics";
 import { prepareSketch } from "../../src/utils/prepareSketch";
-import { calculateRasterStats } from "../../src/rasterStats";
+import { rasterStatsCollectedAndStreamed } from "../helpers/rasterStatsMatch";
 
 const GFW_RASTER_URL = "https://uploads.seasketch.org/testing-gfw-2024.tif";
 
@@ -83,11 +83,15 @@ async function sumGfwRasterAcrossFragments(
       (bbox[0] + bbox[2]) / 2,
       (bbox[1] + bbox[3]) / 2,
     ];
-    const { bands } = await calculateRasterStats(GFW_RASTER_URL, fragment, {
-      vrm,
-      centerLonLat,
-      fragmentAreaSqM,
-    });
+    const { bands } = await rasterStatsCollectedAndStreamed(
+      GFW_RASTER_URL,
+      fragment,
+      {
+        vrm,
+        centerLonLat,
+        fragmentAreaSqM,
+      },
+    );
     metrics.push({
       type: "raster_stats",
       value: { bands: [bands[0]] },
@@ -102,7 +106,7 @@ async function sumGfwRasterAcrossFragments(
 }
 
 describe("GFW 2024 raster_stats regression (#918)", () => {
-  vi.setConfig({ testTimeout: 1000 * 120 });
+  vi.setConfig({ testTimeout: 1000 * 240 });
 
   const { fetchRangeFn } = makeFetchRangeFn(
     "https://uploads.seasketch.org",

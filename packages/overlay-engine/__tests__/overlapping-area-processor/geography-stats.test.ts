@@ -39,7 +39,7 @@ function reprojectFeatureTo6933(feature: any) {
   geom.coordinates = rc(geom.coordinates);
   return { ...feature, geometry: geom };
 }
-import { calculateRasterStats } from "../../src/rasterStats";
+import { rasterStatsCollectedAndStreamed } from "../helpers/rasterStatsMatch";
 
 // const writer = new DebuggingFgbWriter("./classified-features.fgb", [
 //   { name: "classification", type: "string" },
@@ -357,7 +357,7 @@ describe("OverlappingAreaBatchedClippingProcessor - Geography Test Cases", () =>
         const source = "https://uploads.seasketch.org/testing-fiji-bathy-3.tif";
         // const source = "https://uploads.seasketch.org/gebco-cog.tif";
         const f = reprojectFeatureTo6933(intersectionFeatureGeojson);
-        const stats = await calculateRasterStats(source, f);
+        const stats = await rasterStatsCollectedAndStreamed(source, f);
         expect(stats.bands[0].count).toBeCloseTo(8130600);
       });
     });

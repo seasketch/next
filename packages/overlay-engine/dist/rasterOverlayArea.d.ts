@@ -36,6 +36,16 @@ export type CalculateRasterOverlayAreaOptions = {
         bbox: [number, number, number, number];
         bufferKm: number;
     };
+    /**
+     * Test-only: run the streaming pixel path even when the window is below
+     * the geoblaze value-array threshold. Production callers must omit this.
+     */
+    forceStream?: boolean;
+    /**
+     * Test-only: run geoblaze.stats even when the bbox window is above the
+     * streaming threshold. Production callers must omit this.
+     */
+    forceCollect?: boolean;
 };
 /**
  * Calculate raster overlay area (km²) for a feature already reprojected into

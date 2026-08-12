@@ -10,6 +10,7 @@ const bbox_1 = __importDefault(require("@turf/bbox"));
 const area_1 = __importDefault(require("@turf/area"));
 const metrics_1 = require("./metrics/metrics");
 const rasterStats_1 = require("./rasterStats");
+const geoblazeBandStats_1 = require("./geoblazeBandStats");
 // geoblaze is CommonJS; keep the same lazy require pattern as rasterStats.ts
 let _geoblaze = null;
 function getGeoblaze() {
@@ -164,25 +165,20 @@ async function calculateRasterOverlayArea(sourceUrl, feature, options) {
                 mX: Math.abs(raster.pixelWidth),
                 mY: Math.abs(raster.pixelHeight),
             };
-        const intersectingPixelCounts = [
-            Math.max(1, Math.floor(Math.abs(featureBBox[2] - featureBBox[0]) /
-                Math.abs(raster.pixelWidth))),
-            Math.max(1, Math.floor(Math.abs(featureBBox[3] - featureBBox[1]) /
-                Math.abs(raster.pixelHeight))),
-        ];
+        const intersectingPixelCounts = (0, geoblazeBandStats_1.intersectingWindowPixelCounts)(featureBBox, raster);
         const vrmOpt = options?.vrm ?? "auto";
         const resolvedVrm = (0, rasterStats_1.resolveVrm)(vrmOpt, fragmentAreaSqM, groundDims, intersectingPixelCounts);
         const statsExtra = resolvedVrm != null
             ? { vrm: resolvedVrm, rescale: true }
             : undefined;
-        const subjectAreas = await statsPassToAreas(geoblaze, raster, feature, groupByValue, groundDims, statsExtra);
+        const subjectAreas = await statsPassToAreas(geoblaze, raster, feature, groupByValue, groundDims, statsExtra, options?.forceStream === true, options?.forceCollect === true);
         const result = {
             areas: subjectAreas,
             vrm: resolvedVrm,
             ...(rasterEpsg != null ? { epsg: rasterEpsg } : {}),
         };
         if (options?.collar) {
-            const collarAreas = await statsPassToAreas(geoblaze, raster, options.collar.feature, groupByValue, groundDims, statsExtra);
+            const collarAreas = await statsPassToAreas(geoblaze, raster, options.collar.feature, groupByValue, groundDims, statsExtra, options?.forceStream === true, options?.forceCollect === true);
             const innerAreas = subtractAreas(subjectAreas, collarAreas);
             const bboxAreaKm2 = (0, area_1.default)({
                 type: "Feature",
@@ -228,7 +224,7 @@ async function calculateRasterOverlayArea(sourceUrl, feature, options) {
         throw e;
     }
 }
-async function statsPassToAreas(geoblaze, raster, feature, groupByValue, groundDims, statsExtra) {
+async function statsPassToAreas(geoblaze, raster, feature, groupByValue, groundDims, statsExtra, forceStream = false, forceCollect = false) {
     const featureBBox = (0, bbox_1.default)(feature, { recompute: true });
     const rasterBBox = [raster.xmin, raster.ymin, raster.xmax, raster.ymax];
     if (!intersects(featureBBox, rasterBBox)) {
@@ -237,12 +233,16 @@ async function statsPassToAreas(geoblaze, raster, feature, groupByValue, groundD
     try {
         // Prefer `valid` (non-nodata) over `count` (includes nodata). Same as
         // geoprocessing's area = valid * pw * ph.
-        const stats = await geoblaze.stats(raster, feature, {
+        const stats = await (0, geoblazeBandStats_1.computeGeoblazeBandStats)(geoblaze, raster, feature, {
             stats: groupByValue
                 ? ["valid", "count", "histogram"]
                 : ["valid", "count"],
-        }, undefined, statsExtra);
-        const band0 = stats[0] ?? {};
+        }, statsExtra, (0, geoblazeBandStats_1.intersectingWindowPixelCounts)(featureBBox, raster), { forceStream, forceCollect });
+        const band0 = stats[0] ?? {
+            valid: 0,
+            count: 0,
+            histogram: {},
+        };
         const validCount = typeof band0.valid === "number" && Number.isFinite(band0.valid)
             ? band0.valid
             : typeof band0.count === "number" && Number.isFinite(band0.count)
