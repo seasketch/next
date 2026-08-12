@@ -43,7 +43,8 @@ function groupByFromStyle(mapboxGlStyles, geometryType, columnNames) {
             if (/step/.test(value[0]))
                 continue;
             const getExpr = findGetExpression(value);
-            if ((getExpr === null || getExpr === void 0 ? void 0 : getExpr.property) &&
+            if (typeof (getExpr === null || getExpr === void 0 ? void 0 : getExpr.property) === "string" &&
+                getExpr.property.length > 0 &&
                 (!columnNames.size || columnNames.has(getExpr.property))) {
                 return getExpr.property;
             }

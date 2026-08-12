@@ -242,6 +242,76 @@ describe("getClassTableRows with Samoa fixture data", () => {
     expect(rows.find((r) => r.key === "ht1woHIfG-18")?.colors).toBeUndefined();
   });
 
+  test("does not throw when groupBy is a stale attributes-array index", () => {
+    const source = {
+      stableId: "sectors",
+      geostats: {
+        layers: [
+          {
+            attributes: [
+              { attribute: "fid", type: "number", values: {} },
+              { attribute: "response_id", type: "number", values: {} },
+              { attribute: "priority", type: "number", values: {} },
+              {
+                attribute: "aquaculture_mariculture_species_other",
+                type: "string",
+                values: { other: 1 },
+              },
+              {
+                attribute: "aquaculture_mariculture_functions_other",
+                type: "string",
+                values: { other: 1 },
+              },
+              {
+                attribute: "aquaculture_mariculture_status",
+                type: "string",
+                values: { Active: 2, Inactive: 1 },
+              },
+            ],
+          },
+        ],
+      },
+      mapboxGlStyles: [],
+      tableOfContentsItem: { title: "Sectors" },
+    };
+
+    expect(() =>
+      getClassTableRows({
+        dependencies: [
+          {
+            subjectType: "fragments",
+            stableId: "sectors",
+            type: "column_values",
+            parameters: { groupBy: "5" },
+          },
+        ] as any,
+        sources: [source] as any,
+        allFeaturesLabel: "All features",
+      })
+    ).not.toThrow();
+
+    const rows = getClassTableRows({
+      dependencies: [
+        {
+          subjectType: "fragments",
+          stableId: "sectors",
+          type: "column_values",
+          parameters: { groupBy: "5" },
+        },
+      ] as any,
+      sources: [source] as any,
+      allFeaturesLabel: "All features",
+    });
+
+    expect(rows).toEqual([
+      expect.objectContaining({
+        key: "sectors-*",
+        groupByKey: "*",
+        sourceId: "sectors",
+      }),
+    ]);
+  });
+
   test("builds raster rows from a real Samoa style ramp", () => {
     const rows = getClassTableRows({
       dependencies: [

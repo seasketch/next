@@ -556,15 +556,13 @@ export function getClassTableRows(options: {
         });
       }
     } else {
-      if (dependency.parameters?.groupBy) {
-        const attr = layer.attributes?.find(
-          (a) => a.attribute === dependency.parameters?.groupBy
-        );
-        if (!attr) {
-          throw new Error(
-            `Attribute ${dependency.parameters?.groupBy} not found in geostats layer`
-          );
-        }
+      const groupBy = dependency.parameters?.groupBy;
+      const attr = groupBy
+        ? layer.attributes?.find((a) => a.attribute === String(groupBy))
+        : undefined;
+      // Stale groupBy values (e.g. an attributes-array index saved as "5")
+      // must not crash the report editor; fall back to a single total row.
+      if (groupBy && attr) {
         const values = Object.keys(attr.values || {});
         const colors = extractColorsForCategories(
           values,

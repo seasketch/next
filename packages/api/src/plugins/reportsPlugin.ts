@@ -20,6 +20,13 @@ import {
   compressSpatialMetricSubjectsForWire,
   type FragmentSubjectCatalogEntry,
 } from "../reports/compressSpatialMetricSubjects";
+import {
+  knownColumnName,
+  normalizeColumnDetails,
+  pickBestCategoryColumn,
+  pickBestContinuousColumn,
+  pickBestLabelColumn,
+} from "./reportColumnDetails";
 
 /**
  * Confirms the session may load report dependency metrics: sketch viewers via
@@ -512,6 +519,8 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
             }
           }
           return result.rows.map((row: any) => {
+            const columnDetails = normalizeColumnDetails(row.column_details);
+            const columnNames = Object.keys(columnDetails);
             return {
               __typename: "ReportOverlaySource",
               stableId: row.stable_id,
@@ -523,15 +532,15 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
               rasterBandCount: row.raster_band_count,
               vectorGeometryType: row.vector_geometry_type,
               bestCategoryColumn:
-                row.ai_best_category_column ||
-                pickBestCategoryColumn(row.column_details, row.feature_count),
+                knownColumnName(columnDetails, row.ai_best_category_column) ||
+                pickBestCategoryColumn(columnDetails, row.feature_count),
               bestContinuousColumn:
-                row.ai_best_numeric_column ||
-                pickBestContinuousColumn(row.column_details, row.feature_count),
+                knownColumnName(columnDetails, row.ai_best_numeric_column) ||
+                pickBestContinuousColumn(columnDetails, row.feature_count),
               bestLabelColumn:
-                row.ai_best_label_column ||
-                pickBestLabelColumn(row.column_details, row.feature_count),
-              anyColumn: Object.keys(row.column_details || {})[0],
+                knownColumnName(columnDetails, row.ai_best_label_column) ||
+                pickBestLabelColumn(columnDetails, row.feature_count),
+              anyColumn: columnNames[0],
               ...(wantGeostats ? { geostats: row.geostats } : {}),
               ...(wantMapboxGlStyles
                 ? { mapboxGlStyles: row.mapbox_gl_styles }
@@ -542,9 +551,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
                       geostats: row.geostats,
                       mapboxGlStyles: row.mapbox_gl_styles,
                       vectorGeometryType: row.vector_geometry_type,
-                      columnNames: new Set(
-                        Object.keys(row.column_details || {}),
-                      ),
+                      columnNames: new Set(columnNames),
                       rasterBandCount: row.raster_band_count,
                     }),
                   }
@@ -1318,27 +1325,25 @@ async function getOverlaySourcesByStableIds(
       ) {
         const layer = row.geostats.layers[0] as GeostatsLayer;
         if (layer) {
-          const attributes = layer.attributes as unknown as Record<
-            string,
-            { type: string; countDistinct: number }
-          >;
+          const columnDetails = normalizeColumnDetails(layer.attributes);
+          const columnNames = Object.keys(columnDetails);
           row.styleGroupByColumn = styleGroupByColumnForSource({
             geostats: row.geostats,
             mapboxGlStyles: row.mapboxGlStyles,
             vectorGeometryType: row.vectorGeometryType,
-            columnNames: new Set(Object.keys(layer.attributes || {})),
+            columnNames: new Set(columnNames),
             rasterBandCount: row.rasterBandCount,
           });
           row.bestCategoryColumn =
-            row.ai_best_category_column ||
-            pickBestCategoryColumn(attributes, row.featureCount || 0);
+            knownColumnName(columnDetails, row.ai_best_category_column) ||
+            pickBestCategoryColumn(columnDetails, row.featureCount || 0);
           row.bestContinuousColumn =
-            row.ai_best_numeric_column ||
-            pickBestContinuousColumn(attributes, row.featureCount || 0);
+            knownColumnName(columnDetails, row.ai_best_numeric_column) ||
+            pickBestContinuousColumn(columnDetails, row.featureCount || 0);
           row.bestLabelColumn =
-            row.ai_best_label_column ||
-            pickBestLabelColumn(attributes, row.featureCount || 0);
-          row.anyColumn = Object.keys(attributes)[0];
+            knownColumnName(columnDetails, row.ai_best_label_column) ||
+            pickBestLabelColumn(columnDetails, row.featureCount || 0);
+          row.anyColumn = columnNames[0];
           delete row.ai_best_label_column;
           delete row.ai_best_category_column;
           delete row.ai_best_numeric_column;
@@ -1907,137 +1912,3 @@ function resolveInfoRequestsTopLevelField(
   return false;
 }
 
-// Column names that are never useful for user-facing categorisation,
-// continuous measurement, or labelling.
-const JUNK_COLUMN_PATTERNS = [
-  /^shape[_-]?length$/i,
-  /^shape[_-]?area$/i,
-  /^area[_-]?km2?$/i,
-  /^area$/i,
-  /^length$/i,
-  /^perimeter$/i,
-  /^fid$/i,
-  /^gid$/i,
-  /^id$/i,
-  /^objectid$/i,
-  /^oid$/i,
-  /^globalid$/i,
-  /^uuid$/i,
-  /_id$/i,
-];
-
-function isJunkColumn(name: string): boolean {
-  return JUNK_COLUMN_PATTERNS.some((p) => p.test(name));
-}
-
-/**
- * Picks the best column to use for categorical map or report presentations.
- * Ranks columns by:
- *   * type - strings over booleans over numbers
- *   * cardinality - 2–20 distinct values is ideal; penalise all-unique (better
- *     used as a label) and very high cardinality
- *   * name - junk names (IDs, shape-area, etc.) are penalised
- */
-function pickBestCategoryColumn(
-  columnDetails: Record<string, { type: string; countDistinct: number }>,
-  featureCount: number,
-): string | undefined {
-  if (!columnDetails) return undefined;
-
-  const scored = Object.entries(columnDetails)
-    .map(([name, { type, countDistinct }]) => {
-      let score = 0;
-
-      // Must have at least 2 distinct values to be useful as a category
-      if (countDistinct < 2) return { name, score: -Infinity };
-
-      // Type preference
-      if (type === "string") score += 10;
-      else if (type === "boolean") score += 5;
-      else if (type === "number") score += 2;
-
-      // Ideal cardinality: 2–20 distinct values
-      if (countDistinct <= 20) score += 8;
-      else if (countDistinct <= 50) score += 4;
-      else if (countDistinct <= 100) score += 1;
-      else score -= 5;
-
-      // All-unique values are better used as labels, not categories
-      if (featureCount > 0 && countDistinct === featureCount) score -= 10;
-
-      // Penalise system/junk column names
-      if (isJunkColumn(name)) score -= 20;
-
-      return { name, score };
-    })
-    .sort((a, b) => b.score - a.score);
-
-  if (!scored.length || scored[0].score === -Infinity) return undefined;
-  return scored[0].name;
-}
-
-/**
- * Picks the best numeric column for continuous (gradient/proportional)
- * presentations. Prefers numeric columns with meaningful variance.
- */
-function pickBestContinuousColumn(
-  columnDetails: Record<string, { type: string; countDistinct: number }>,
-  featureCount: number,
-): string | undefined {
-  if (!columnDetails) return undefined;
-
-  const scored = Object.entries(columnDetails)
-    .filter(([, { type }]) => type === "number")
-    .map(([name, { countDistinct }]) => {
-      let score = 0;
-
-      // More distinct numeric values → better for continuous scale
-      const ratio = featureCount > 0 ? countDistinct / featureCount : 0;
-      score += ratio * 10;
-
-      // Penalise if too few distinct values (effectively categorical)
-      if (countDistinct <= 2) score -= 8;
-
-      // Penalise junk columns (area, length, etc.)
-      if (isJunkColumn(name)) score -= 20;
-
-      return { name, score };
-    })
-    .sort((a, b) => b.score - a.score);
-
-  if (!scored.length) return undefined;
-  const best = scored[0];
-  // Don't return a column that has been penalised below a useful threshold
-  return best.score > -10 ? best.name : undefined;
-}
-
-/**
- * Picks the best column to use as a human-readable label for each feature.
- * Prefers string columns with high uniqueness (close to one value per feature).
- */
-function pickBestLabelColumn(
-  columnDetails: Record<string, { type: string; countDistinct: number }>,
-  featureCount: number,
-): string | undefined {
-  if (!columnDetails) return undefined;
-
-  const scored = Object.entries(columnDetails)
-    .filter(([, { type }]) => type === "string")
-    .map(([name, { countDistinct }]) => {
-      let score = 0;
-
-      // Ideal: nearly unique values (one per feature)
-      const ratio = featureCount > 0 ? countDistinct / featureCount : 0;
-      score += ratio * 10;
-
-      // Penalise junk column names
-      if (isJunkColumn(name)) score -= 20;
-
-      return { name, score };
-    })
-    .sort((a, b) => b.score - a.score);
-
-  if (!scored.length) return undefined;
-  const best = scored[0];
-  return best.score > -10 ? best.name : undefined;
-}

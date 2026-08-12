@@ -42,7 +42,8 @@ export function groupByFromStyle(
 
       const getExpr = findGetExpression(value);
       if (
-        getExpr?.property &&
+        typeof getExpr?.property === "string" &&
+        getExpr.property.length > 0 &&
         (!columnNames.size || columnNames.has(getExpr.property))
       ) {
         return getExpr.property;
