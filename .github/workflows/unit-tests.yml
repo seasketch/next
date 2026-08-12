@@ -132,6 +132,31 @@ jobs:
           reporter: jest-junit
           fail-on-error: false
 
+  test-overlay-engine:
+    name: Test Overlay Engine
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: ".nvmrc"
+          cache: npm
+          cache-dependency-path: "**/package-lock.json"
+      - name: Install dependencies
+        run: npx lerna@6.6.2 bootstrap --ci --scope=overlay-engine --include-dependencies
+      - name: Run tests
+        working-directory: ./packages/overlay-engine
+        run: npx vitest run --reporter=default --reporter=junit --outputFile=junit.xml
+      - name: Overlay Engine Test Report
+        uses: dorny/test-reporter@v3
+        if: ${{ !cancelled() }}
+        with:
+          name: Overlay Engine Test Output
+          path: packages/overlay-engine/junit.xml
+          reporter: jest-junit
+          fail-on-error: false
+
   build-client:
     name: Build React Client
     runs-on: ubuntu-latest
