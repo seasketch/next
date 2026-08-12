@@ -29,7 +29,7 @@ jobs:
           cache: npm
           cache-dependency-path: "**/package-lock.json"
       - name: Install dependencies
-        run: npx lerna@6.6.2 bootstrap --ci
+        run: npx lerna@6.6.2 bootstrap --ci --scope='@seasketch/api' --include-dependencies
       - name: Build API
         working-directory: ./packages/api
         run: npm run build
@@ -75,7 +75,7 @@ jobs:
           cache: npm
           cache-dependency-path: "**/package-lock.json"
       - name: Install dependencies
-        run: npx lerna@6.6.2 bootstrap --ci
+        run: npx lerna@6.6.2 bootstrap --ci --scope='@seasketch/api' --scope=client --include-dependencies
       - name: Build API
         working-directory: ./packages/api
         run: npm run build
