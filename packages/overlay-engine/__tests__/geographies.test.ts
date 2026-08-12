@@ -5,10 +5,11 @@ import {
   ClippingFn,
   ClippingLayerOption,
   clipToGeographies,
+  setForcePolyclipTs,
 } from "../src/geographies/geographies";
 import { SourceCache } from "fgb-source";
 import { prepareSketch } from "../src/utils/prepareSketch";
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, afterEach } from "vitest";
 import { hawaiiTestFeatures } from "./test-features";
 import { GeographySettings, SketchFragment } from "../src/fragments";
 import { saveOutput, readOutput, compareFragments } from "./test-helpers";
@@ -458,5 +459,124 @@ describe("clipToGeographies", () => {
     );
     expect(results).not.toBeNull();
     expect(results?.geometry.type).toBe("MultiPolygon");
+  });
+});
+
+describe("clipSketchToPolygons polyclip-ts path", () => {
+  const subjectFeature: Feature<Polygon> = {
+    type: "Feature",
+    properties: {},
+    geometry: {
+      type: "Polygon",
+      coordinates: [
+        [
+          [0, 0],
+          [2, 0],
+          [2, 2],
+          [0, 2],
+          [0, 0],
+        ],
+      ],
+    },
+  };
+
+  const clipFeature: Feature<Polygon> = {
+    type: "Feature",
+    properties: {},
+    geometry: {
+      type: "Polygon",
+      coordinates: [
+        [
+          [1, -1],
+          [3, -1],
+          [3, 3],
+          [1, 3],
+          [1, -1],
+        ],
+      ],
+    },
+  };
+
+  async function* clipSource() {
+    yield clipFeature;
+  }
+
+  afterEach(() => {
+    setForcePolyclipTs(false);
+    delete process.env.OVERLAY_ENGINE_FORCE_POLYCLIP_TS;
+  });
+
+  it("produces the same DIFFERENCE result via setForcePolyclipTs as the default path", async () => {
+    const preparedSketch = prepareSketch(subjectFeature);
+
+    const defaultResult = await clipSketchToPolygons(
+      preparedSketch,
+      "DIFFERENCE",
+      undefined,
+      clipSource()
+    );
+
+    setForcePolyclipTs(true);
+    const forcedResult = await clipSketchToPolygons(
+      preparedSketch,
+      "DIFFERENCE",
+      undefined,
+      clipSource()
+    );
+
+    expect(defaultResult.changed).toBe(true);
+    expect(forcedResult.changed).toBe(true);
+    expect(forcedResult.output).not.toBeNull();
+    expect(forcedResult.output?.geometry.coordinates).toEqual(
+      defaultResult.output?.geometry.coordinates
+    );
+  });
+
+  it("produces the same INTERSECT result via OVERLAY_ENGINE_FORCE_POLYCLIP_TS", async () => {
+    const preparedSketch = prepareSketch(subjectFeature);
+
+    const defaultResult = await clipSketchToPolygons(
+      preparedSketch,
+      "INTERSECT",
+      undefined,
+      clipSource()
+    );
+
+    process.env.OVERLAY_ENGINE_FORCE_POLYCLIP_TS = "1";
+    const forcedResult = await clipSketchToPolygons(
+      preparedSketch,
+      "INTERSECT",
+      undefined,
+      clipSource()
+    );
+
+    expect(defaultResult.changed).toBe(true);
+    expect(forcedResult.changed).toBe(true);
+    expect(forcedResult.output).not.toBeNull();
+    expect(forcedResult.output?.geometry.coordinates).toEqual(
+      defaultResult.output?.geometry.coordinates
+    );
+  });
+
+  it("can clip a real geography fixture entirely on the polyclip-ts path", async () => {
+    setForcePolyclipTs(true);
+    const preparedSketch = prepareSketch(
+      hawaiiTestFeatures.clipToTerritorialSea
+    );
+    const fgbSource = await sourceCache.get<Feature<MultiPolygon | Polygon>>(
+      territorialSeaUrl
+    );
+
+    const result = await clipSketchToPolygons(
+      preparedSketch,
+      "INTERSECT",
+      { op: "=", args: [{ property: "UNION" }, "Hawaii"] },
+      fgbSource.getFeaturesAsync(preparedSketch.envelopes)
+    );
+
+    expect(result.changed).toBe(true);
+    expect(result.output).not.toBeNull();
+    expect(result.output?.geometry.type).toBe("MultiPolygon");
+    expect(result.output!.geometry.coordinates.length).toBeGreaterThan(0);
   });
 });

@@ -6,6 +6,7 @@ import {
   evaluateCql2JSONQuery,
 } from "../cql2";
 import * as polygonClipping from "polygon-clipping";
+import * as polyclipTs from "polyclip-ts";
 import {
   createFragments,
   eliminateOverlap,
@@ -23,6 +24,111 @@ import {
 } from "../utils/helpers";
 
 export type ClippingOperation = "INTERSECT" | "DIFFERENCE";
+
+/**
+ * When true, geography clipping boolean ops use polyclip-ts directly instead
+ * of trying polygon-clipping first. Set via {@link setForcePolyclipTs} in tests,
+ * or with env `OVERLAY_ENGINE_FORCE_POLYCLIP_TS=1`.
+ */
+let forcePolyclipTs = false;
+
+/**
+ * Force geography boolean ops onto the polyclip-ts path. Intended for tests;
+ * production can use `OVERLAY_ENGINE_FORCE_POLYCLIP_TS=1` instead.
+ */
+export function setForcePolyclipTs(enabled: boolean): void {
+  forcePolyclipTs = enabled;
+}
+
+function preferPolyclipTs(): boolean {
+  return (
+    forcePolyclipTs || process.env.OVERLAY_ENGINE_FORCE_POLYCLIP_TS === "1"
+  );
+}
+
+/**
+ * polygon-clipping can throw "Unable to complete output ring..." on certain
+ * near-degenerate / high-precision geometries. polyclip-ts is a maintained
+ * fork that fixes many of those cases; use it as a fallback so reclipping
+ * does not hard-fail for otherwise valid sketches.
+ */
+function isPolygonClippingTopologyError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    error.message.includes("Unable to complete output ring")
+  );
+}
+
+function runBooleanOp(
+  op: ClippingOperation,
+  subject: polygonClipping.Geom,
+  clipPolygons: polygonClipping.Polygon[],
+  usePolyclipTs: boolean,
+): polygonClipping.MultiPolygon {
+  const clipper = usePolyclipTs ? polyclipTs : polygonClipping;
+  if (op === "INTERSECT") {
+    return clipper.intersection(subject as any, clipPolygons as any);
+  }
+  if (op === "DIFFERENCE") {
+    return clipper.difference(subject as any, clipPolygons as any);
+  }
+  throw new Error(`Unknown operation: ${op}`);
+}
+
+/**
+ * Runs a boolean op with polygon-clipping by default, falling back to
+ * polyclip-ts on known topology errors. When preferPolyclipTs() is set, skips
+ * straight to polyclip-ts.
+ */
+function runBooleanOpWithFallback(
+  op: ClippingOperation,
+  subject: polygonClipping.Geom,
+  clipPolygons: polygonClipping.Polygon[],
+): polygonClipping.MultiPolygon {
+  if (preferPolyclipTs()) {
+    return runBooleanOp(op, subject, clipPolygons, true);
+  }
+  try {
+    return runBooleanOp(op, subject, clipPolygons, false);
+  } catch (error) {
+    if (!isPolygonClippingTopologyError(error)) {
+      throw error;
+    }
+    console.warn(
+      `polygon-clipping ${op} failed (${(error as Error).message}); retrying with polyclip-ts`,
+    );
+    return runBooleanOp(op, subject, clipPolygons, true);
+  }
+}
+
+function intersectGeomsWithFallback(
+  geoms: polygonClipping.Geom[],
+): polygonClipping.MultiPolygon {
+  if (geoms.length === 0) {
+    return [];
+  }
+  if (geoms.length === 1) {
+    // Normalize Polygon -> MultiPolygon
+    const geom = geoms[0];
+    return Array.isArray(geom[0]?.[0]?.[0])
+      ? (geom as polygonClipping.MultiPolygon)
+      : [geom as polygonClipping.Polygon];
+  }
+  if (preferPolyclipTs()) {
+    return polyclipTs.intersection(geoms[0], ...geoms.slice(1));
+  }
+  try {
+    return polygonClipping.intersection(geoms[0], ...geoms.slice(1));
+  } catch (error) {
+    if (!isPolygonClippingTopologyError(error)) {
+      throw error;
+    }
+    console.warn(
+      `polygon-clipping INTERSECT failed (${(error as Error).message}); retrying with polyclip-ts`,
+    );
+    return polyclipTs.intersection(geoms[0], ...geoms.slice(1));
+  }
+}
 
 /**
  * The result of a single clipping operation, as returned by a ClippingSource
@@ -231,18 +337,23 @@ export async function clipToGeography(
     return preparedSketch.feature;
   } else if (filteredFeatures.length === 0) {
     return null;
+  } else if (filteredFeatures.length === 1) {
+    return {
+      ...preparedSketch.feature,
+      geometry: {
+        ...preparedSketch.feature.geometry,
+        coordinates: filteredFeatures[0].geometry.coordinates,
+      },
+    };
   } else {
-    const intersection = polygonClipping.intersection(
-      features[0].geometry.coordinates as polygonClipping.Geom,
-      ...filteredFeatures
-        .slice(1)
-        .map((f) => f.geometry.coordinates as polygonClipping.Geom),
+    const geoms = filteredFeatures.map(
+      (f) => f.geometry.coordinates as polygonClipping.Geom,
     );
     return {
       ...preparedSketch.feature,
       geometry: {
         ...preparedSketch.feature.geometry,
-        coordinates: intersection,
+        coordinates: intersectGeomsWithFallback(geoms),
       },
     };
   }
@@ -382,20 +493,9 @@ export async function clipSketchToPolygons(
     return { changed: false, output: preparedSketch.feature, op };
   }
 
-  let output: typeof preparedSketch.feature.geometry.coordinates;
-  if (op === "INTERSECT") {
-    output = polygonClipping.intersection(
-      preparedSketch.feature.geometry.coordinates as polygonClipping.Geom,
-      polygons,
-    );
-  } else if (op === "DIFFERENCE") {
-    output = polygonClipping.difference(
-      preparedSketch.feature.geometry.coordinates as polygonClipping.Geom,
-      polygons,
-    );
-  } else {
-    throw new Error(`Unknown operation: ${op}`);
-  }
+  const subject = preparedSketch.feature.geometry
+    .coordinates as polygonClipping.Geom;
+  const output = runBooleanOpWithFallback(op, subject, polygons);
 
   if (output.length === 0) {
     return { changed: true, output: null, op };
