@@ -116,7 +116,7 @@ jobs:
           cache: npm
           cache-dependency-path: "**/package-lock.json"
       - name: Install dependencies
-        run: npx lerna@6.6.2 bootstrap --ci
+        run: npx lerna@6.6.2 bootstrap --ci --scope=client --include-dependencies
       - name: Test client
         working-directory: ./packages/client
         env:
@@ -170,7 +170,7 @@ jobs:
       - id: short_sha
         run: echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
       - name: Install dependencies
-        run: npx lerna@6.6.2 bootstrap --ci
+        run: npx lerna@6.6.2 bootstrap --ci --scope=client --include-dependencies
       - name: Build client
         working-directory: ./packages/client
         env:
