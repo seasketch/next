@@ -34,5 +34,6 @@ export class GeostatsPiiClassifierLambdaStack extends cdk.Stack {
       memorySize: 4096,
       retryAttempts: 0,
     });
+    cdk.Tags.of(this.fn).add("Cost Center", "pii-classifier");
   }
 }

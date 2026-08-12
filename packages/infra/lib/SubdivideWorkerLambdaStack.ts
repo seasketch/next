@@ -55,6 +55,7 @@ export class SubdivideWorkerLambdaStack extends cdk.Stack {
     });
 
     props.overlayEngineAccessTokenSecret.grantRead(fn);
+    cdk.Tags.of(fn).add("Cost Center", "subdivision-worker");
     this.fn = fn;
   }
 }

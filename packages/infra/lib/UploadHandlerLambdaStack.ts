@@ -141,6 +141,7 @@ export class UploadHandlerLambdaStack extends cdk.Stack {
     if (props.piiClassifierFn) {
       props.piiClassifierFn.grantInvoke(fn);
     }
+    cdk.Tags.of(fn).add("Cost Center", "spatial-upload-handler");
     this.fn = fn;
   }
 }

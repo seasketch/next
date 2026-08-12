@@ -74,6 +74,7 @@ export class DataTablesHandlerLambdaStack extends cdk.Stack {
       }),
     );
 
+    cdk.Tags.of(fn).add("Cost Center", "data-tables-handler");
     this.fn = fn;
   }
 }

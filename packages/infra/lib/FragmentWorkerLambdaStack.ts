@@ -57,5 +57,6 @@ export class FragmentWorkerLambdaStack extends cdk.Stack {
     });
 
     props.overlayEngineAccessTokenSecret.grantRead(this.fn);
+    cdk.Tags.of(this.fn).add("Cost Center", "fragment-worker");
   }
 }

@@ -91,5 +91,9 @@ export class MailerLambdaStack extends cdk.Stack {
 
     const eventSource = new SnsEventSource(notificationTopic);
     projectInviteStatusUpdaterFunction.addEventSource(eventSource);
+    cdk.Tags.of(projectInviteStatusUpdaterFunction).add(
+      "Cost Center",
+      "project-invite-status-handler"
+    );
   }
 }
