@@ -1,6 +1,7 @@
 import { SpatialMetricState } from "../../generated/graphql";
 import {
   combineMetricsBySource,
+  findGeostatsAttributeByName,
   getClassTableRows,
   hasClassTableRowVisibilityToggle,
   resolveClassTableRowStableId,
@@ -242,7 +243,41 @@ describe("getClassTableRows with Samoa fixture data", () => {
     expect(rows.find((r) => r.key === "ht1woHIfG-18")?.colors).toBeUndefined();
   });
 
-  test("does not throw when groupBy is a stale attributes-array index", () => {
+  test("findGeostatsAttributeByName matches column names, not array indexes", () => {
+    const layer = {
+      attributes: [
+        { attribute: "fid", type: "number", values: {} },
+        { attribute: "response_id", type: "number", values: {} },
+        { attribute: "priority", type: "number", values: {} },
+        {
+          attribute: "aquaculture_mariculture_species_other",
+          type: "string",
+          values: { other: 1 },
+        },
+        {
+          attribute: "aquaculture_mariculture_functions_other",
+          type: "string",
+          values: { other: 1 },
+        },
+        {
+          attribute: "aquaculture_mariculture_status",
+          type: "string",
+          values: { Active: 2, Inactive: 1 },
+        },
+      ],
+    };
+
+    expect(
+      findGeostatsAttributeByName(layer as any, "aquaculture_mariculture_status")
+        ?.attribute
+    ).toBe("aquaculture_mariculture_status");
+    expect(findGeostatsAttributeByName(layer as any, "5")).toBeUndefined();
+    expect(findGeostatsAttributeByName(layer as any, "9")).toBeUndefined();
+    expect(findGeostatsAttributeByName(layer as any, null)).toBeUndefined();
+    expect(findGeostatsAttributeByName(undefined, "status")).toBeUndefined();
+  });
+
+  test("throws when groupBy is not an attribute name", () => {
     const source = {
       stableId: "sectors",
       geostats: {
@@ -250,18 +285,6 @@ describe("getClassTableRows with Samoa fixture data", () => {
           {
             attributes: [
               { attribute: "fid", type: "number", values: {} },
-              { attribute: "response_id", type: "number", values: {} },
-              { attribute: "priority", type: "number", values: {} },
-              {
-                attribute: "aquaculture_mariculture_species_other",
-                type: "string",
-                values: { other: 1 },
-              },
-              {
-                attribute: "aquaculture_mariculture_functions_other",
-                type: "string",
-                values: { other: 1 },
-              },
               {
                 attribute: "aquaculture_mariculture_status",
                 type: "string",
@@ -288,7 +311,7 @@ describe("getClassTableRows with Samoa fixture data", () => {
         sources: [source] as any,
         allFeaturesLabel: "All features",
       })
-    ).not.toThrow();
+    ).toThrow("Attribute 5 not found in geostats layer");
 
     const rows = getClassTableRows({
       dependencies: [
@@ -296,20 +319,13 @@ describe("getClassTableRows with Samoa fixture data", () => {
           subjectType: "fragments",
           stableId: "sectors",
           type: "column_values",
-          parameters: { groupBy: "5" },
+          parameters: { groupBy: "aquaculture_mariculture_status" },
         },
       ] as any,
       sources: [source] as any,
       allFeaturesLabel: "All features",
     });
-
-    expect(rows).toEqual([
-      expect.objectContaining({
-        key: "sectors-*",
-        groupByKey: "*",
-        sourceId: "sectors",
-      }),
-    ]);
+    expect(rows.map((r) => r.groupByKey)).toEqual(["Active", "Inactive"]);
   });
 
   test("builds raster rows from a real Samoa style ramp", () => {

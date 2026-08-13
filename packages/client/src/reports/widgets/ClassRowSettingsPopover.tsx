@@ -32,6 +32,7 @@ import {
   classTableRowKey,
   canRasterBreakdownByValue,
   defaultRasterOverlayAreaGroupBy,
+  findGeostatsAttributeByName,
   getClassTableRows,
   isRasterSource,
 } from "./ClassTableRows";
@@ -258,11 +259,11 @@ export const ClassRowSettingsPopover = ({
             (s) => s.stableId === dep.stableId
           );
           if (relatedSource && dep.parameters?.groupBy) {
-            const values = Object.keys(
-              relatedSource.geostats?.layers?.[0]?.attributes?.[
-                dep.parameters?.groupBy
-              ]?.values || {}
+            const groupByAttr = findGeostatsAttributeByName(
+              relatedSource.geostats?.layers?.[0],
+              dep.parameters.groupBy
             );
+            const values = Object.keys(groupByAttr?.values || {});
             if (
               settings.includeAllFeaturesRowForGroupedSources?.includes(
                 dep.stableId!

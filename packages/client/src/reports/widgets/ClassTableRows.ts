@@ -70,6 +70,20 @@ export function isRasterSource(
 }
 
 /**
+ * Look up a geostats attribute by its column name (`attribute`), never by
+ * position in the `attributes` array. Index-based references are invalid.
+ */
+export function findGeostatsAttributeByName(
+  layer: Pick<GeostatsLayer, "attributes"> | null | undefined,
+  name: string | undefined | null
+) {
+  if (!layer?.attributes?.length || typeof name !== "string" || name === "") {
+    return undefined;
+  }
+  return layer.attributes.find((a) => a.attribute === name);
+}
+
+/**
  * Pixel-class keys usable as Raster Area Captured groupBy "value" rows.
  * Prefers RasterInfo categories, then legend labels, then opaque style stops
  * (minus `s:excluded`).
@@ -558,10 +572,11 @@ export function getClassTableRows(options: {
     } else {
       const groupBy = dependency.parameters?.groupBy;
       const attr = groupBy
-        ? layer.attributes?.find((a) => a.attribute === String(groupBy))
+        ? findGeostatsAttributeByName(layer, groupBy)
         : undefined;
-      // Stale groupBy values (e.g. an attributes-array index saved as "5")
-      // must not crash the report editor; fall back to a single total row.
+      if (groupBy && !attr) {
+        throw new Error(`Attribute ${groupBy} not found in geostats layer`);
+      }
       if (groupBy && attr) {
         const values = Object.keys(attr.values || {});
         const colors = extractColorsForCategories(
