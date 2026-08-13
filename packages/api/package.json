@@ -12,7 +12,7 @@
     "url": "git+https://github.com/seasketch/next.git"
   },
   "scripts": {
-    "test": "jest --runInBand",
+    "test": "jest",
     "start": "node dist/src/server.js",
     "debug": "nodemon --inspect dist/src/server.js",
     "watch": "nodemon",

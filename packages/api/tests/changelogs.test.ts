@@ -45,8 +45,13 @@ async function withPg<T>(
   }
 }
 
-async function clearLogs(conn: DatabaseTransactionConnectionType) {
-  await withPg(conn, () => conn.any(sql`delete from change_logs`));
+async function clearLogs(
+  conn: DatabaseTransactionConnectionType,
+  projectId: number,
+) {
+  await withPg(conn, () =>
+    conn.any(sql`delete from change_logs where project_id = ${projectId}`),
+  );
 }
 
 async function countLogs(
@@ -308,7 +313,7 @@ describe("change_logs", () => {
       async (conn, projectId, adminId) => {
         await createSession(conn, adminId, true, false, projectId);
         const layer = await createTocLayer(conn, projectId);
-        await clearLogs(conn);
+        await clearLogs(conn, projectId);
 
         const firstId = await withPg(conn, () =>
           conn.oneFirst(sql`
@@ -383,7 +388,7 @@ describe("change_logs", () => {
         await createSession(conn, adminId, true, false, projectId);
         const layer = await createTocLayer(conn, projectId, "Layer A");
         const folder = await createFolder(conn, projectId, "Folder A");
-        await clearLogs(conn);
+        await clearLogs(conn, projectId);
 
         await conn.any(
           sql`update table_of_contents_items set title = 'Layer B' where id = ${layer.itemId}`,
@@ -404,8 +409,8 @@ describe("change_logs", () => {
         expect(log.from_summary).toEqual({ title: "Folder A" });
         expect(log.to_summary).toEqual({ title: "Folder B" });
 
-        await clearLogs(conn);
-        await clearLogs(conn);
+        await clearLogs(conn, projectId);
+        await clearLogs(conn, projectId);
         await clearSession(conn);
         await withPg(conn, () =>
           conn.any(
@@ -423,7 +428,7 @@ describe("change_logs", () => {
       "public",
       async (conn, projectId, adminId) => {
         await createSession(conn, adminId, true, false, projectId);
-        await clearLogs(conn);
+        await clearLogs(conn, projectId);
         const folder = await createFolder(conn, projectId, "New Folder");
 
         let log = await onlyLogFor(conn, projectId, "folder:created");
@@ -431,7 +436,7 @@ describe("change_logs", () => {
         expect(log.from_summary).toEqual({});
         expect(log.to_summary).toEqual({ title: "New Folder" });
 
-        await clearLogs(conn);
+        await clearLogs(conn, projectId);
         await conn.any(
           sql`update table_of_contents_items set hide_children = true where id = ${folder.itemId}`,
         );
@@ -470,7 +475,7 @@ describe("change_logs", () => {
       async (conn, projectId, adminId) => {
         await createSession(conn, adminId, true, false, projectId);
         const layer = await createTocLayer(conn, projectId);
-        await clearLogs(conn);
+        await clearLogs(conn, projectId);
 
         await conn.any(sql`
           update table_of_contents_items
@@ -526,7 +531,7 @@ describe("change_logs", () => {
         });
         expect(log.net_zero_changes).toBe(false);
 
-        await clearLogs(conn);
+        await clearLogs(conn, projectId);
         await conn.any(sql`
           update interactivity_settings
           set type = 'ALL_PROPERTIES_POPUP'
@@ -545,7 +550,7 @@ describe("change_logs", () => {
         expect(log.to_blob).toMatchObject({ type: "ALL_PROPERTIES_POPUP" });
         expect(log.net_zero_changes).toBe(false);
 
-        await clearLogs(conn);
+        await clearLogs(conn, projectId);
         await conn.any(sql`
           update interactivity_settings
           set cursor = 'POINTER'
@@ -568,7 +573,7 @@ describe("change_logs", () => {
             sql`update table_of_contents_items set enable_download = true where id = ${layer.itemId}`,
           ),
         );
-        await clearLogs(conn);
+        await clearLogs(conn, projectId);
 
         await conn.any(
           sql`update table_of_contents_items set enable_download = false where id = ${layer.itemId}`,
@@ -584,7 +589,7 @@ describe("change_logs", () => {
             sql`update table_of_contents_items set enable_download = true where id = ${layer.itemId}`,
           ),
         );
-        await clearLogs(conn);
+        await clearLogs(conn, projectId);
         await conn.any(
           sql`select set_config('seasketch.bulk_layer_download', 'true', true)`,
         );
@@ -616,7 +621,7 @@ describe("change_logs", () => {
         const folderA = await createFolder(conn, projectId, "Folder A");
         const folderB = await createFolder(conn, projectId, "Folder B");
         const layer = await createTocLayer(conn, projectId);
-        await clearLogs(conn);
+        await clearLogs(conn, projectId);
 
         await conn.any(
           sql`select update_table_of_contents_item_parent(${layer.itemId}, ${folderA.stableId})`,
@@ -628,7 +633,7 @@ describe("change_logs", () => {
           parent_stable_id: folderA.stableId,
         });
 
-        await clearLogs(conn);
+        await clearLogs(conn, projectId);
         await conn.any(
           sql`select update_table_of_contents_item_children(${folderA.itemId}, ${sql.array(
             [layer.itemId],
@@ -660,7 +665,7 @@ describe("change_logs", () => {
         const groupId = await createGroup(conn, projectId, "Test Group", [
           userA,
         ]);
-        await clearLogs(conn);
+        await clearLogs(conn, projectId);
 
         await conn.any(
           sql`update access_control_lists set type = 'admins_only' where id = ${layerAclId}`,
@@ -678,7 +683,7 @@ describe("change_logs", () => {
         expect(log.from_summary).toEqual({ type: "public", groups: [] });
         expect(log.to_summary).toEqual({ type: "group", groups: [] });
 
-        await clearLogs(conn);
+        await clearLogs(conn, projectId);
         await addGroupToAcl(conn, layerAclId, groupId);
         log = await onlyLogFor(conn, projectId, "layer:acl");
         expect(log.from_summary).toEqual({
@@ -705,7 +710,7 @@ describe("change_logs", () => {
         await createSession(conn, adminId, true, false, projectId);
         const layer = await createTocLayer(conn, projectId, "Delete Layer");
         const folder = await createFolder(conn, projectId, "Delete Folder");
-        await clearLogs(conn);
+        await clearLogs(conn, projectId);
 
         await withPg(conn, () =>
           conn.any(
@@ -750,7 +755,7 @@ describe("change_logs", () => {
       "public",
       async (conn, projectId, adminId, [userA]) => {
         await createSession(conn, adminId, true, false, projectId);
-        await clearLogs(conn);
+        await clearLogs(conn, projectId);
 
         const insertSourceId = Number(
           await conn.oneFirst(sql`
@@ -786,7 +791,7 @@ describe("change_logs", () => {
           url: "https://example.com/uploaded-a.fgb",
         });
 
-        await clearLogs(conn);
+        await clearLogs(conn, projectId);
         const normal = await createTocLayer(conn, projectId, "Replace via TOC");
         const replacementSourceId = Number(
           await conn.oneFirst(sql`
@@ -806,7 +811,7 @@ describe("change_logs", () => {
             returning id
           `),
         );
-        await clearLogs(conn);
+        await clearLogs(conn, projectId);
         await conn.any(sql`
           update table_of_contents_items
           set data_layer_id = ${replacementLayerId}
@@ -820,7 +825,7 @@ describe("change_logs", () => {
           changelog: "cleaned geometry",
         });
 
-        await clearLogs(conn);
+        await clearLogs(conn, projectId);
         const secondReplacementSourceId = Number(
           await conn.oneFirst(sql`
             insert into data_sources (
@@ -858,7 +863,7 @@ describe("change_logs", () => {
         await createSession(conn, adminId, true, false, projectId);
         const layerA = await createTocLayer(conn, projectId, "Layer A");
         const layerB = await createTocLayer(conn, projectId, "Layer B");
-        await clearLogs(conn);
+        await clearLogs(conn, projectId);
 
         await conn.any(sql`select publish_table_of_contents(${projectId})`);
         let log = await onlyLogFor(conn, projectId, "layers:published");
@@ -869,7 +874,7 @@ describe("change_logs", () => {
         expect(log.from_blob).toBeNull();
         expect(log.to_blob).toBeNull();
 
-        await clearLogs(conn);
+        await clearLogs(conn, projectId);
         await conn.any(sql`
           select update_z_indexes(${sql.array(
             [layerB.layerId, layerA.layerId],
@@ -914,7 +919,7 @@ describe("change_logs", () => {
             where id in (${target.sourceId}, ${other.sourceId})
           `),
         );
-        await clearLogs(conn);
+        await clearLogs(conn, projectId);
 
         await conn.any(sql`select publish_table_of_contents(${projectId})`);
         const beforeCreationPublish = await latestLogFor(
@@ -1082,7 +1087,7 @@ describe("change_logs", () => {
             where id = ${layer.sourceId}
           `),
         );
-        await clearLogs(conn);
+        await clearLogs(conn, projectId);
 
         const netZeroChangeId = await withPg(conn, () =>
           conn.oneFirst(sql`

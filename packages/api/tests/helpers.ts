@@ -8,7 +8,7 @@ import {
   SqlSqlTokenType,
   QueryResultType,
 } from "slonik";
-import shortid from "shortid";
+import { randomUUID } from "crypto";
 import { QueryResult } from "pg";
 // @ts-ignore
 import { raw } from "slonik-sql-tag-raw";
@@ -39,9 +39,25 @@ jest.mock("aws-sdk/clients/ses", () => {
   return jest.fn(() => mSES);
 });
 
+export function uniqueId(prefix = "t") {
+  return `${prefix}-${randomUUID()}`;
+}
+
+export function uniqueEmail() {
+  return `${randomUUID()}@example.com`;
+}
+
+export function uniqueSlug() {
+  return `p${randomUUID().replace(/-/g, "").slice(0, 20)}`;
+}
+
+export function uniqueName(prefix = "n") {
+  return `${prefix}-${randomUUID().replace(/-/g, "").slice(0, 12)}`;
+}
+
 export async function createUser(conn: DatabaseTransactionConnectionType) {
-  const sub = `test:${shortid()}`;
-  const canonicalEmail = `${shortid()}@example.com`;
+  const sub = `test:${randomUUID()}`;
+  const canonicalEmail = uniqueEmail();
   const id = await conn.oneFirst(
     sql`select get_or_create_user_by_sub(${sub}, ${canonicalEmail})`
   );
@@ -54,7 +70,7 @@ export async function createProject(
   accessControl = "admins_only"
 ) {
   await createSession(conn, adminId);
-  const slug = `${shortid()}`;
+  const slug = uniqueSlug();
   const id = await conn.oneFirst(
     sql`select id from create_project(${slug}, ${slug})`
   );
@@ -149,7 +165,7 @@ export async function createGroup(
 ) {
   const groupId = await conn.oneFirst(
     sql`insert into project_groups (project_id, name) values (${projectId}, ${
-      name || shortid()
+      name || uniqueName("grp")
     }) returning id`
   );
   if (participantIds) {
