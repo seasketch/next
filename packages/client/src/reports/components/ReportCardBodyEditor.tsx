@@ -83,6 +83,7 @@ import { usePrimaryGeography } from "../hooks/usePrimaryGeography";
 import type { SketchClassPrimaryGeoFields } from "../hooks/usePrimaryGeography";
 import { CalculationDetailsModal } from "./CalculationDetailsModal";
 import { SketchGeometryType } from "../../generated/graphql";
+import useIsSuperuser from "../../useIsSuperuser";
 
 interface ReportCardBodyEditorProps {
   /**
@@ -453,6 +454,8 @@ function ReportCardBodyEditorInner({
     },
   });
 
+  const isSuperuser = useIsSuperuser();
+
   const [preprocessSourceMutation] = usePreprocessSourceMutation();
   const [pendingOverlayKey, setPendingOverlayKey] = useState<string | null>(
     null
@@ -558,6 +561,7 @@ function ReportCardBodyEditorInner({
           ) || []
         ),
         onProcessLayer: handleOverlaySelection,
+        isSuperuser: Boolean(isSuperuser),
       }),
     [
       geographies,
@@ -568,6 +572,7 @@ function ReportCardBodyEditorInner({
       handleOverlaySelection,
       sketchClass?.project?.sketchClasses,
       sketchClass?.validChildren,
+      isSuperuser,
     ]
   );
 

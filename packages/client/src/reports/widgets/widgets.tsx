@@ -28,7 +28,10 @@ import {
 import getSlug from "../../getSlug";
 import { AnyLayer } from "mapbox-gl";
 import { EditorView } from "prosemirror-view";
-import { MetricDependency } from "overlay-engine";
+import {
+  MetricDependency,
+  OUS_DEMOGRAPHICS_DEFAULT_GROUP_BY,
+} from "overlay-engine";
 import {
   NodeSelection,
   SelectionRange,
@@ -101,6 +104,10 @@ import {
   RasterAreaCapturedTable,
   RasterAreaCapturedTableTooltipControls,
 } from "./RasterAreaCapturedTable";
+import {
+  OusDemographicsTable,
+  OusDemographicsTableTooltipControls,
+} from "./OusDemographicsTable";
 import { Mark, Node } from "prosemirror-model";
 import { useWidgetDependencies } from "../hooks/useWidgetDependencies";
 import { ReportUIStateContext } from "../context/ReportUIStateContext";
@@ -482,6 +489,10 @@ const memoizedWidgets: Record<string, WidgetComponent> = {
     RasterAreaCapturedTable,
     "RasterAreaCapturedTable"
   ),
+  OusDemographicsTable: memoWidget(
+    OusDemographicsTable,
+    "OusDemographicsTable"
+  ),
   InlineLayerToggle: memoWidget(InlineLayerToggle, "InlineLayerToggle"),
   BlockLayerToggle: memoWidget(BlockLayerToggle, "BlockLayerToggle"),
 };
@@ -654,6 +665,8 @@ export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
       return <RasterProportionTableTooltipControls {...props} />;
     case "RasterAreaCapturedTable":
       return <RasterAreaCapturedTableTooltipControls {...props} />;
+    case "OusDemographicsTable":
+      return <OusDemographicsTableTooltipControls {...props} />;
     case "BlockLayerToggle":
       return <BlockLayerToggleTooltipControls {...props} />;
     case "InlineLayerToggle":
@@ -820,6 +833,9 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
     case "RasterAreaCapturedTable":
       widget = <memoizedWidgets.RasterAreaCapturedTable {...widgetProps} />;
       break;
+    case "OusDemographicsTable":
+      widget = <memoizedWidgets.OusDemographicsTable {...widgetProps} />;
+      break;
     case "InlineLayerToggle":
       widget = <memoizedWidgets.InlineLayerToggle {...widgetProps} />;
       break;
@@ -888,6 +904,12 @@ export type BuildReportCommandGroupsArgs = {
   onProcessLayer?: (tocId: number, sourceId: number) => Promise<boolean>;
   projectSlug?: string;
   childSketchClassGeometryTypes?: SketchGeometryType[];
+  /**
+   * Enables the "Superuser Widgets" command group. These widgets encode
+   * dataset-specific methodology (e.g. Ocean Use Survey demographics) and
+   * only appear for sources with the required columns.
+   */
+  isSuperuser?: boolean;
 };
 
 export function ProcessForReportingFooter({
@@ -1164,6 +1186,7 @@ export function buildReportCommandGroups({
   overlayAugmenter,
   onProcessLayer,
   projectSlug,
+  isSuperuser,
 }: BuildReportCommandGroupsArgs = {}): CommandPaletteGroup[] {
   const commandGroups: CommandPaletteGroup[] = [];
 
@@ -2189,6 +2212,61 @@ export function buildReportCommandGroups({
         id: "layer-overlay-analysis",
         label: "Overlay Layer Widgets",
         items: sortedItems,
+      });
+    }
+  }
+
+  // Superuser-only widgets encode dataset-specific methodology and require
+  // strictly validated columns, so they appear at the end of the menu and
+  // only for conforming sources.
+  if (isSuperuser && sources && showPolygonOptions) {
+    const superuserItems: CommandPaletteItem[] = sources
+      .filter(
+        (source) =>
+          source.tableOfContentsItemId &&
+          source.vectorGeometryType &&
+          ["Polygon", "MultiPolygon"].includes(source.vectorGeometryType) &&
+          source.hasOusDemographicsColumns
+      )
+      .map((source) => {
+        const title = source.tableOfContentsItem?.title || "Ocean Use Survey";
+        const tocId = source.tableOfContentsItemId!;
+        const stableId = source.tableOfContentsItem?.stableId;
+        return {
+          // eslint-disable-next-line i18next/no-literal-string
+          id: `superuser-ous-demographics-${tocId}`,
+          // eslint-disable-next-line i18next/no-literal-string
+          label: `OUS Demographics Table: ${title}`,
+          description:
+            "People represented by Ocean Use Survey responses overlapping the plan, grouped by sector, village, or another column. Requires response_id, participants, represented_in_sector, and sector columns.",
+          popoverHeader: <OverlayLayerInfo tableOfContentsItemId={tocId} />,
+          popoverStatus: (
+            <OverlayProcessingStatus tableOfContentsItemId={tocId} />
+          ),
+          run: (state, dispatch, view) => {
+            return insertBlockMetric(view, state.selection.ranges[0], {
+              type: "OusDemographicsTable",
+              componentSettings: {},
+              metrics: [
+                {
+                  type: "ous_demographics",
+                  subjectType: "fragments",
+                  stableId,
+                  parameters: {
+                    groupBy: OUS_DEMOGRAPHICS_DEFAULT_GROUP_BY,
+                  },
+                },
+              ],
+            });
+          },
+        } as CommandPaletteItem;
+      })
+      .sort((a, b) => a.label.localeCompare(b.label));
+    if (superuserItems.length) {
+      commandGroups.push({
+        id: "superuser-widgets",
+        label: "Superuser Widgets",
+        items: superuserItems,
       });
     }
   }

@@ -65,7 +65,8 @@ export type MetricType =
   | "column_values"
   | "raster_stats"
   | "distance_to_shore"
-  | "raster_overlay_area";
+  | "raster_overlay_area"
+  | "ous_demographics";
 
 /**
  * Max distinct class keys allowed when `groupBy: "value"` for
@@ -1556,6 +1557,216 @@ export function attachRasterOverlayAreaOverlapScope(
   };
 }
 
+/**
+ * Columns an Ocean Use Survey dataset must provide for the
+ * `ous_demographics` metric. The chosen `groupBy` column (e.g. `village`,
+ * `gear_type`) must also be present when it differs from `sector`.
+ *
+ * - `response_id` — identifies a single survey response. A response may
+ *   include many shapes (one or more per sector).
+ * - `participants` — how many people the whole response represents
+ *   (e.g. "my answers represent the 20 people in my family").
+ * - `represented_in_sector` — how many of those people each shape's sector
+ *   represents. Summing shape values can exceed `participants`, so
+ *   per-respondent values are clamped:
+ *   `min(max(represented_in_sector across shapes), participants)`.
+ * - `sector` — the default grouping column.
+ */
+export const OUS_DEMOGRAPHICS_REQUIRED_COLUMNS = [
+  "response_id",
+  "participants",
+  "represented_in_sector",
+  "sector",
+] as const;
+
+/** Default `groupBy` column for new `ous_demographics` dependencies. */
+export const OUS_DEMOGRAPHICS_DEFAULT_GROUP_BY = "sector";
+
+/**
+ * Group key under which respondent-level rollups are stored on
+ * {@link OusDemographicsMetricValue}. A respondent's rollup value is the
+ * clamped max of `represented_in_sector` across all of their shapes in any
+ * group — i.e. "people represented by this response, in any sector".
+ */
+export const OUS_DEMOGRAPHICS_ROLLUP_KEY = "*";
+
+/**
+ * Per-respondent contribution retained on `ous_demographics` metric values.
+ * Keeping respondent-level detail (rather than pre-summed group totals) lets
+ * fragment metrics be combined without double counting: a survey shape that
+ * straddles a fragment boundary appears in both fragments' metrics under the
+ * same `responseId`, and combining takes the max rather than the sum.
+ */
+export type OusDemographicsRespondentValue = {
+  /**
+   * People represented in this group by this respondent, already clamped to
+   * `min(max(represented_in_sector across shapes in group), participants)`.
+   */
+  representedInSector: number;
+  /** Response-level participant count (constant across a response's shapes). */
+  participants: number;
+};
+
+export type OusDemographicsGroupRespondents = {
+  [responseId: string]: OusDemographicsRespondentValue;
+};
+
+/**
+ * Dataset-wide totals for one group, computed from every feature in the
+ * source (not just those intersecting the subject). Identical on every
+ * fragment metric calculated for the same source + groupBy, and used by
+ * report widgets as the "Total People Represented In Survey" column and
+ * percentage denominators — geographies play no role in this metric.
+ */
+export type OusDemographicsGroupTotals = {
+  /** Sum of clamped `representedInSector` over all respondents in the group. */
+  representedInSector: number;
+  /** Sum of `participants`, counted once per respondent in the group. */
+  participants: number;
+  /** Number of distinct respondents with at least one shape in the group. */
+  respondents: number;
+};
+
+export type OusDemographicsMetricValue = {
+  /**
+   * Respondents with at least one shape intersecting the subject, per group
+   * key (e.g. "Fishing", "Trolling", "Lausake"), plus the
+   * {@link OUS_DEMOGRAPHICS_ROLLUP_KEY} rollup across all groups.
+   */
+  groups: {
+    [groupKey: string]: OusDemographicsGroupRespondents;
+  };
+  /** Dataset-level totals per group key (plus the rollup key). */
+  totals: {
+    [groupKey: string]: OusDemographicsGroupTotals;
+  };
+};
+
+/**
+ * Ocean Use Survey demographics metric. Answers "how many people does this
+ * plan affect, per sector / gear type / village?" for survey datasets that
+ * carry {@link OUS_DEMOGRAPHICS_REQUIRED_COLUMNS}. Calculated for fragment
+ * subjects only.
+ */
+export type OusDemographicsMetric = OverlayMetricBase & {
+  type: "ous_demographics";
+  value: OusDemographicsMetricValue;
+};
+
+/**
+ * Within-plan summary for one group, derived from combined fragment metrics
+ * via {@link summarizeOusDemographicsValue}.
+ */
+export type OusDemographicsGroupSummary = {
+  /** "People Using Ocean Within Plan": sum of clamped per-respondent values. */
+  representedInSector: number;
+  /** Sum of `participants` (once per respondent) for within-plan respondents. */
+  participants: number;
+  /** Distinct respondents with at least one shape intersecting the subject. */
+  respondents: number;
+};
+
+/**
+ * Sums per-respondent contributions into within-plan group summaries.
+ * Row keys should come from `value.totals` (so groups with zero within-plan
+ * respondents still render); this helper only summarizes `value.groups`.
+ */
+export function summarizeOusDemographicsValue(
+  value: OusDemographicsMetricValue | null | undefined,
+): { [groupKey: string]: OusDemographicsGroupSummary } {
+  const result: { [groupKey: string]: OusDemographicsGroupSummary } = {};
+  if (!value || typeof value !== "object" || !value.groups) {
+    return result;
+  }
+  for (const groupKey of Object.keys(value.groups)) {
+    const respondents = value.groups[groupKey];
+    const summary: OusDemographicsGroupSummary = {
+      representedInSector: 0,
+      participants: 0,
+      respondents: 0,
+    };
+    for (const responseId of Object.keys(respondents)) {
+      const entry = respondents[responseId];
+      if (!entry || typeof entry !== "object") {
+        continue;
+      }
+      if (Number.isFinite(entry.representedInSector)) {
+        summary.representedInSector += entry.representedInSector;
+      }
+      if (Number.isFinite(entry.participants)) {
+        summary.participants += entry.participants;
+      }
+      summary.respondents += 1;
+    }
+    result[groupKey] = summary;
+  }
+  return result;
+}
+
+/**
+ * Combines `ous_demographics` fragment values. Per-group respondent maps are
+ * merged by `responseId`, taking the max `representedInSector` — so a survey
+ * shape split across fragment boundaries contributes its people count exactly
+ * once, with no overlap-collar machinery. `totals` are dataset-wide and
+ * identical across fragments; the first non-empty totals object wins.
+ */
+export function combineOusDemographicsMetrics(
+  values: OusDemographicsMetricValue[],
+): OusDemographicsMetricValue {
+  const combined: OusDemographicsMetricValue = { groups: {}, totals: {} };
+  for (const value of values) {
+    if (!value || typeof value !== "object") {
+      continue;
+    }
+    if (
+      Object.keys(combined.totals).length === 0 &&
+      value.totals &&
+      typeof value.totals === "object"
+    ) {
+      combined.totals = value.totals;
+    }
+    if (!value.groups || typeof value.groups !== "object") {
+      continue;
+    }
+    for (const groupKey of Object.keys(value.groups)) {
+      const respondents = value.groups[groupKey];
+      if (!respondents || typeof respondents !== "object") {
+        continue;
+      }
+      const target = (combined.groups[groupKey] =
+        combined.groups[groupKey] || {});
+      for (const responseId of Object.keys(respondents)) {
+        const entry = respondents[responseId];
+        if (
+          !entry ||
+          typeof entry !== "object" ||
+          !Number.isFinite(entry.representedInSector) ||
+          !Number.isFinite(entry.participants)
+        ) {
+          continue;
+        }
+        const existing = target[responseId];
+        if (!existing) {
+          target[responseId] = {
+            representedInSector: entry.representedInSector,
+            participants: entry.participants,
+          };
+        } else {
+          existing.representedInSector = Math.max(
+            existing.representedInSector,
+            entry.representedInSector,
+          );
+          existing.participants = Math.max(
+            existing.participants,
+            entry.participants,
+          );
+        }
+      }
+    }
+  }
+  return combined;
+}
+
 export type Metric =
   | TotalAreaMetric
   | OverlayAreaMetric
@@ -1565,7 +1776,8 @@ export type Metric =
   | ColumnValuesMetric
   | RasterStats
   | DistanceToShoreMetric
-  | RasterOverlayAreaMetric;
+  | RasterOverlayAreaMetric
+  | OusDemographicsMetric;
 
 export type MetricTypeMap = {
   total_area: TotalAreaMetric;
@@ -1577,6 +1789,7 @@ export type MetricTypeMap = {
   raster_stats: RasterStats;
   distance_to_shore: DistanceToShoreMetric;
   raster_overlay_area: RasterOverlayAreaMetric;
+  ous_demographics: OusDemographicsMetric;
 };
 
 export function subjectIsFragment(
@@ -2412,6 +2625,11 @@ export function combineMetricsForFragments<T extends Metric>(
             type: "presence_table",
             value: { values: [], exceededLimit: false },
           };
+        case "ous_demographics":
+          return {
+            type: "ous_demographics",
+            value: { groups: {}, totals: {} },
+          };
         default:
           throw new Error(`Unsupported metric type: ${expectedMetricType}`);
       }
@@ -2586,6 +2804,15 @@ export function combineMetricsForFragments<T extends Metric>(
       return {
         type: "raster_overlay_area",
         value: combineRasterOverlayAreaMetrics(values),
+      };
+    }
+    case "ous_demographics": {
+      const values = metrics.map(
+        (m) => m.value as OusDemographicsMetricValue,
+      );
+      return {
+        type: "ous_demographics",
+        value: combineOusDemographicsMetrics(values),
       };
     }
     default:

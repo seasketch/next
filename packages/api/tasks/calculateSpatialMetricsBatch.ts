@@ -386,7 +386,8 @@ async function processOneSpatialMetric(
       metric.type === "column_values" ||
       metric.type === "raster_stats" ||
       metric.type === "raster_overlay_area" ||
-      metric.type === "distance_to_shore"
+      metric.type === "distance_to_shore" ||
+      metric.type === "ous_demographics"
     ) {
       if (!metric.sourceUrl) {
         await helpers.withPgClient(async (client) => {

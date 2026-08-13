@@ -679,6 +679,7 @@ fragment OverlaySourceListDetails on ReportOverlaySource {
   bestContinuousColumn
   bestLabelColumn
   anyColumn
+  hasOusDemographicsColumns
 }
 
 fragment OverlaySourceDetails on ReportOverlaySource {

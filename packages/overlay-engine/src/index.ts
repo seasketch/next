@@ -91,6 +91,17 @@ export {
   hashMetricDependency,
   // findPrimaryGeographyId,
   extractMetricDependenciesFromReportBody,
+  OusDemographicsMetric,
+  OusDemographicsMetricValue,
+  OusDemographicsRespondentValue,
+  OusDemographicsGroupRespondents,
+  OusDemographicsGroupTotals,
+  OusDemographicsGroupSummary,
+  combineOusDemographicsMetrics,
+  summarizeOusDemographicsValue,
+  OUS_DEMOGRAPHICS_REQUIRED_COLUMNS,
+  OUS_DEMOGRAPHICS_DEFAULT_GROUP_BY,
+  OUS_DEMOGRAPHICS_ROLLUP_KEY,
 } from "./metrics/metrics";
 export {
   createUniqueIdIndex,
@@ -101,4 +112,8 @@ export { initializeGeographySources } from "./geographies/geographies";
 export { calculateRasterStats } from "./rasterStats";
 export { calculateRasterOverlayArea } from "./rasterOverlayArea";
 export { calculateDistanceToShore } from "./calculateDistanceToShore";
+export {
+  calculateOusDemographics,
+  OusDemographicsAggregator,
+} from "./metrics/ousDemographics";
 export { computeBufferedSubjectAndCollar } from "./metrics/computeSubjectCollar";

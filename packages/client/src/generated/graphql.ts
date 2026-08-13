@@ -14536,6 +14536,12 @@ export type ReportOverlaySource = {
   bestLabelColumn?: Maybe<Scalars['String']>;
   containsOverlappingFeatures?: Maybe<Scalars['Boolean']>;
   geostats: Scalars['JSON'];
+  /**
+   * True when the source has every column required by the ous_demographics
+   * metric (response_id, participants, represented_in_sector, sector).
+   * Used to gate the superuser-only OUS Demographics Table widget.
+   */
+  hasOusDemographicsColumns?: Maybe<Scalars['Boolean']>;
   mapboxGlStyles: Scalars['JSON'];
   output?: Maybe<DataUploadOutput>;
   outputId: Scalars['Int'];
@@ -25103,7 +25109,7 @@ export type RecalculateSpatialMetricsMutation = (
 
 export type OverlaySourceListDetailsFragment = (
   { __typename?: 'ReportOverlaySource' }
-  & Pick<ReportOverlaySource, 'tableOfContentsItemId' | 'stableId' | 'containsOverlappingFeatures' | 'rasterBandCount' | 'vectorGeometryType' | 'styleGroupByColumn' | 'bestCategoryColumn' | 'bestContinuousColumn' | 'bestLabelColumn' | 'anyColumn'>
+  & Pick<ReportOverlaySource, 'tableOfContentsItemId' | 'stableId' | 'containsOverlappingFeatures' | 'rasterBandCount' | 'vectorGeometryType' | 'styleGroupByColumn' | 'bestCategoryColumn' | 'bestContinuousColumn' | 'bestLabelColumn' | 'anyColumn' | 'hasOusDemographicsColumns'>
   & { tableOfContentsItem: (
     { __typename?: 'TableOfContentsItem' }
     & Pick<TableOfContentsItem, 'title' | 'stableId'>
@@ -29306,6 +29312,7 @@ export const OverlaySourceListDetailsFragmentDoc = gql`
   bestContinuousColumn
   bestLabelColumn
   anyColumn
+  hasOusDemographicsColumns
 }
     ${SourceProcessingJobDetailsFragmentDoc}`;
 export const OverlaySourceDetailsFragmentDoc = gql`

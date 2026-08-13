@@ -188,9 +188,10 @@ async function handler(payload) {
                     isFinite(payload.bufferDistanceKm) &&
                     payload.bufferDistanceKm > 0;
                 /**
-                 * For buffered fragment subjects, compute the boundary collar and
-                 * collect per-feature overlap metadata so the client can detect
-                 * double-counting across adjacent fragments.
+                 * Overlap metadata options for buffered fragment `overlay_area` only.
+                 * Remains undefined (and the batch processor skips all collar /
+                 * `__overlap` work) when there is no buffer or the subject is a
+                 * geography — unbuffered `overlay_area` has no extra overhead.
                  * @see OverlayAreaOverlapInfo
                  */
                 let overlayOverlapOptions;
@@ -302,6 +303,96 @@ async function handler(payload) {
                 await (0, messaging_1.sendResultMessage)(payload.jobKey, result, payload.queueUrl, Date.now() - startTime);
                 return;
                 // }
+            }
+            case "raster_overlay_area": {
+                if (!payload.sourceUrl) {
+                    throw new Error("sourceUrl is required for raster_overlay_area");
+                }
+                if (!payload.epsg || typeof payload.epsg !== "number") {
+                    throw new Error("epsg is required for raster_overlay_area");
+                }
+                let { intersectionFeature, differenceSources } = await subjectsForAnalysis(payload.subject, helpers);
+                if (subjectIsGeography(payload.subject)) {
+                    intersectionFeature = await buildCompleteGeographyMultiPolygon(intersectionFeature, differenceSources);
+                }
+                const subjectIsBuffered = typeof payload.bufferDistanceKm === "number" &&
+                    isFinite(payload.bufferDistanceKm) &&
+                    payload.bufferDistanceKm > 0;
+                // Collar metadata only for buffered fragment subjects (same gate as
+                // overlay_area). Geography subjects may buffer geometry but never
+                // attach overlap.
+                let collarWgs;
+                let bufferedBbox;
+                let unbufferedForCollar = intersectionFeature;
+                if (subjectIsBuffered && subjectIsFragment(payload.subject)) {
+                    if (differenceSources.length > 0) {
+                        unbufferedForCollar = await buildCompleteGeographyMultiPolygon(intersectionFeature, differenceSources);
+                    }
+                    try {
+                        const { collar, bbox } = (0, overlay_engine_1.computeBufferedSubjectAndCollar)(unbufferedForCollar, payload.bufferDistanceKm);
+                        collarWgs = collar;
+                        bufferedBbox = bbox;
+                    }
+                    catch (err) {
+                        console.warn("Failed to compute raster_overlay_area collar; continuing without overlap metadata", err);
+                    }
+                }
+                const bufferedSubjects = await bufferedSubjectsForAnalysis(intersectionFeature, differenceSources, payload.bufferDistanceKm);
+                intersectionFeature = bufferedSubjects.intersectionFeature;
+                const resolvedVrm = payload.vrm !== undefined
+                    ? payload.vrm
+                    : subjectIsGeography(payload.subject)
+                        ? false
+                        : "auto";
+                const wgs84BBox = (0, bbox_1.default)(intersectionFeature, { recompute: true });
+                const centerLonLat = [
+                    (wgs84BBox[0] + wgs84BBox[2]) / 2,
+                    (wgs84BBox[1] + wgs84BBox[3]) / 2,
+                ];
+                const fragmentAreaSqM = (0, area_1.default)(intersectionFeature);
+                const projectedFeature = (0, reproject_1.reproject)(intersectionFeature, payload.epsg);
+                const projectedCollar = collarWgs != null ? (0, reproject_1.reproject)(collarWgs, payload.epsg) : undefined;
+                const rasterToken = await (0, overlayEngineAccessToken_1.getOverlayEngineAccessToken)();
+                const authenticatedSourceUrl = (0, overlayEngineAccessToken_1.withAccessTokenQueryParam)(payload.sourceUrl, rasterToken);
+                const result = await (0, overlay_engine_1.calculateRasterOverlayArea)(authenticatedSourceUrl, projectedFeature, {
+                    vrm: resolvedVrm,
+                    centerLonLat,
+                    fragmentAreaSqM,
+                    groupByValue: payload.groupBy === "value",
+                    collar: projectedCollar && bufferedBbox && subjectIsBuffered
+                        ? {
+                            feature: projectedCollar,
+                            bbox: bufferedBbox,
+                            bufferKm: payload.bufferDistanceKm,
+                        }
+                        : undefined,
+                });
+                await (0, messaging_1.flushMessages)();
+                await (0, messaging_1.sendResultMessage)(payload.jobKey, result, payload.queueUrl, Date.now() - startTime);
+                return;
+            }
+            case "ous_demographics": {
+                if (!payload.sourceUrl) {
+                    throw new Error("sourceUrl is required for ous_demographics");
+                }
+                if (!subjectIsFragment(payload.subject)) {
+                    // Dataset-level totals are embedded in each fragment metric, so
+                    // geography subjects are never needed for this metric type.
+                    throw new Error("ous_demographics metrics only support fragment subjects");
+                }
+                const { intersectionFeature } = await subjectsForAnalysis(payload.subject, helpers);
+                const source = await sourceCache.get(payload.sourceUrl, {
+                    pageSize: "5MB",
+                });
+                const result = await (0, overlay_engine_1.calculateOusDemographics)((0, simplify_1.default)(intersectionFeature, {
+                    tolerance: SIMPLIFICATION_TOLERANCE,
+                }), source, {
+                    groupBy: payload.groupBy,
+                    helpers,
+                });
+                await (0, messaging_1.flushMessages)();
+                await (0, messaging_1.sendResultMessage)(payload.jobKey, result, payload.queueUrl, Date.now() - startTime);
+                return;
             }
             case "distance_to_shore": {
                 console.log("distance_to_shore", payload);

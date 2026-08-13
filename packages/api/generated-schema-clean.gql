@@ -15659,6 +15659,13 @@ type ReportOverlaySource {
   bestLabelColumn: String
   containsOverlappingFeatures: Boolean
   geostats: JSON!
+
+  """
+  True when the source has every column required by the ous_demographics
+  metric (response_id, participants, represented_in_sector, sector).
+  Used to gate the superuser-only OUS Demographics Table widget.
+  """
+  hasOusDemographicsColumns: Boolean
   mapboxGlStyles: JSON!
   output: DataUploadOutput
   outputId: Int!

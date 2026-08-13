@@ -3,6 +3,7 @@ import {
   calculateDistanceToShore,
   calculateFragmentOverlap,
   calculateGeographyOverlap,
+  calculateOusDemographics,
   calculateRasterStats,
   calculateRasterOverlayArea,
   computeBufferedSubjectAndCollar,
@@ -557,6 +558,46 @@ export default async function handler(payload: OverlayWorkerPayload) {
                     bufferKm: payload.bufferDistanceKm!,
                   }
                 : undefined,
+          },
+        );
+        await flushMessages();
+        await sendResultMessage(
+          payload.jobKey,
+          result,
+          payload.queueUrl,
+          Date.now() - startTime,
+        );
+        return;
+      }
+      case "ous_demographics": {
+        if (!payload.sourceUrl) {
+          throw new Error("sourceUrl is required for ous_demographics");
+        }
+        if (!subjectIsFragment(payload.subject)) {
+          // Dataset-level totals are embedded in each fragment metric, so
+          // geography subjects are never needed for this metric type.
+          throw new Error(
+            "ous_demographics metrics only support fragment subjects",
+          );
+        }
+        const { intersectionFeature } = await subjectsForAnalysis(
+          payload.subject as MetricSubjectFragment,
+          helpers,
+        );
+        const source = await sourceCache.get<Feature<MultiPolygon | Polygon>>(
+          payload.sourceUrl,
+          {
+            pageSize: "5MB",
+          },
+        );
+        const result = await calculateOusDemographics(
+          simplify(intersectionFeature, {
+            tolerance: SIMPLIFICATION_TOLERANCE,
+          }),
+          source,
+          {
+            groupBy: payload.groupBy,
+            helpers,
           },
         );
         await flushMessages();

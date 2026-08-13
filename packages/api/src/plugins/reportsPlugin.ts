@@ -5,7 +5,11 @@ import {
 } from "@seasketch/geostats-types";
 import { makeExtendSchemaPlugin, gql, embed } from "graphile-utils";
 import { AnyLayer } from "mapbox-gl";
-import { hashMetricDependency, MetricDependency } from "overlay-engine";
+import {
+  hashMetricDependency,
+  MetricDependency,
+  OUS_DEMOGRAPHICS_REQUIRED_COLUMNS,
+} from "overlay-engine";
 import { Pool, PoolClient } from "pg";
 import { extractMetricDependenciesFromReportBody } from "overlay-engine";
 import type {
@@ -85,7 +89,21 @@ type ReportOverlaySourcePartial = {
   bestContinuousColumn?: string;
   bestLabelColumn?: string;
   anyColumn?: string;
+  hasOusDemographicsColumns?: boolean;
 };
+
+/**
+ * Whether a vector source has every column required by the ous_demographics
+ * metric (response_id, participants, represented_in_sector, sector). Computed
+ * server-side so clients don't need full geostats just to gate the
+ * OUS Demographics Table command in the report editor.
+ */
+function sourceHasOusDemographicsColumns(columnNames: string[]): boolean {
+  const names = new Set(columnNames);
+  return OUS_DEMOGRAPHICS_REQUIRED_COLUMNS.every((column) =>
+    names.has(column),
+  );
+}
 
 /**
  * Suggested groupBy for raster overlay sources. Returns `"value"` when there
@@ -327,10 +345,16 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         high cardinality will be picked.
         """
         bestLabelColumn: String
+        """
+        True when the source has every column required by the ous_demographics
+        metric (response_id, participants, represented_in_sector, sector).
+        Used to gate the superuser-only OUS Demographics Table widget.
+        """
+        hasOusDemographicsColumns: Boolean
       }
 
       input NodeDependency {
-        # e.g. "total_area", "presence", "presence_table", "column_values", "raster_stats", "raster_overlay_area", "distance_to_shore"
+        # e.g. "total_area", "presence", "presence_table", "column_values", "raster_stats", "raster_overlay_area", "distance_to_shore", "ous_demographics"
         type: String!
         # "fragments" or "geographies"
         subjectType: String!
@@ -541,6 +565,8 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
                 knownColumnName(columnDetails, row.ai_best_label_column) ||
                 pickBestLabelColumn(columnDetails, row.feature_count),
               anyColumn: columnNames[0],
+              hasOusDemographicsColumns:
+                sourceHasOusDemographicsColumns(columnNames),
               ...(wantGeostats ? { geostats: row.geostats } : {}),
               ...(wantMapboxGlStyles
                 ? { mapboxGlStyles: row.mapbox_gl_styles }
@@ -1344,6 +1370,8 @@ async function getOverlaySourcesByStableIds(
             knownColumnName(columnDetails, row.ai_best_label_column) ||
             pickBestLabelColumn(columnDetails, row.featureCount || 0);
           row.anyColumn = columnNames[0];
+          row.hasOusDemographicsColumns =
+            sourceHasOusDemographicsColumns(columnNames);
           delete row.ai_best_label_column;
           delete row.ai_best_category_column;
           delete row.ai_best_numeric_column;

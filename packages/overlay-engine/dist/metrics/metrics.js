@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.MAX_COLUMN_VALUE_ENTRIES = exports.MAX_OVERLAY_AREA_OVERLAP_ENTRIES = exports.MAX_RASTER_OVERLAY_AREA_CLASSES = void 0;
+exports.OUS_DEMOGRAPHICS_ROLLUP_KEY = exports.OUS_DEMOGRAPHICS_DEFAULT_GROUP_BY = exports.OUS_DEMOGRAPHICS_REQUIRED_COLUMNS = exports.MAX_COLUMN_VALUE_ENTRIES = exports.MAX_OVERLAY_AREA_OVERLAP_ENTRIES = exports.MAX_RASTER_OVERLAY_AREA_CLASSES = void 0;
 exports.isOverlayAreaClassKey = isOverlayAreaClassKey;
 exports.isOverlayAreaOverlapInfo = isOverlayAreaOverlapInfo;
 exports.isOverlayAreaOverlapCombineResult = isOverlayAreaOverlapCombineResult;
@@ -25,6 +25,8 @@ exports.getRasterOverlayAreaDisplayedClassValue = getRasterOverlayAreaDisplayedC
 exports.getRasterOverlayAreaClassValueRange = getRasterOverlayAreaClassValueRange;
 exports.combineRasterOverlayAreaMetrics = combineRasterOverlayAreaMetrics;
 exports.attachRasterOverlayAreaOverlapScope = attachRasterOverlayAreaOverlapScope;
+exports.summarizeOusDemographicsValue = summarizeOusDemographicsValue;
+exports.combineOusDemographicsMetrics = combineOusDemographicsMetrics;
 exports.subjectIsFragment = subjectIsFragment;
 exports.subjectIsGeography = subjectIsGeography;
 exports.combineRasterBandStats = combineRasterBandStats;
@@ -865,6 +867,122 @@ function attachRasterOverlayAreaOverlapScope(combined, fragmentMetrics) {
         },
     };
 }
+/**
+ * Columns an Ocean Use Survey dataset must provide for the
+ * `ous_demographics` metric. The chosen `groupBy` column (e.g. `village`,
+ * `gear_type`) must also be present when it differs from `sector`.
+ *
+ * - `response_id` — identifies a single survey response. A response may
+ *   include many shapes (one or more per sector).
+ * - `participants` — how many people the whole response represents
+ *   (e.g. "my answers represent the 20 people in my family").
+ * - `represented_in_sector` — how many of those people each shape's sector
+ *   represents. Summing shape values can exceed `participants`, so
+ *   per-respondent values are clamped:
+ *   `min(max(represented_in_sector across shapes), participants)`.
+ * - `sector` — the default grouping column.
+ */
+exports.OUS_DEMOGRAPHICS_REQUIRED_COLUMNS = [
+    "response_id",
+    "participants",
+    "represented_in_sector",
+    "sector",
+];
+/** Default `groupBy` column for new `ous_demographics` dependencies. */
+exports.OUS_DEMOGRAPHICS_DEFAULT_GROUP_BY = "sector";
+/**
+ * Group key under which respondent-level rollups are stored on
+ * {@link OusDemographicsMetricValue}. A respondent's rollup value is the
+ * clamped max of `represented_in_sector` across all of their shapes in any
+ * group — i.e. "people represented by this response, in any sector".
+ */
+exports.OUS_DEMOGRAPHICS_ROLLUP_KEY = "*";
+/**
+ * Sums per-respondent contributions into within-plan group summaries.
+ * Row keys should come from `value.totals` (so groups with zero within-plan
+ * respondents still render); this helper only summarizes `value.groups`.
+ */
+function summarizeOusDemographicsValue(value) {
+    const result = {};
+    if (!value || typeof value !== "object" || !value.groups) {
+        return result;
+    }
+    for (const groupKey of Object.keys(value.groups)) {
+        const respondents = value.groups[groupKey];
+        const summary = {
+            representedInSector: 0,
+            participants: 0,
+            respondents: 0,
+        };
+        for (const responseId of Object.keys(respondents)) {
+            const entry = respondents[responseId];
+            if (!entry || typeof entry !== "object") {
+                continue;
+            }
+            if (Number.isFinite(entry.representedInSector)) {
+                summary.representedInSector += entry.representedInSector;
+            }
+            if (Number.isFinite(entry.participants)) {
+                summary.participants += entry.participants;
+            }
+            summary.respondents += 1;
+        }
+        result[groupKey] = summary;
+    }
+    return result;
+}
+/**
+ * Combines `ous_demographics` fragment values. Per-group respondent maps are
+ * merged by `responseId`, taking the max `representedInSector` — so a survey
+ * shape split across fragment boundaries contributes its people count exactly
+ * once, with no overlap-collar machinery. `totals` are dataset-wide and
+ * identical across fragments; the first non-empty totals object wins.
+ */
+function combineOusDemographicsMetrics(values) {
+    const combined = { groups: {}, totals: {} };
+    for (const value of values) {
+        if (!value || typeof value !== "object") {
+            continue;
+        }
+        if (Object.keys(combined.totals).length === 0 &&
+            value.totals &&
+            typeof value.totals === "object") {
+            combined.totals = value.totals;
+        }
+        if (!value.groups || typeof value.groups !== "object") {
+            continue;
+        }
+        for (const groupKey of Object.keys(value.groups)) {
+            const respondents = value.groups[groupKey];
+            if (!respondents || typeof respondents !== "object") {
+                continue;
+            }
+            const target = (combined.groups[groupKey] =
+                combined.groups[groupKey] || {});
+            for (const responseId of Object.keys(respondents)) {
+                const entry = respondents[responseId];
+                if (!entry ||
+                    typeof entry !== "object" ||
+                    !Number.isFinite(entry.representedInSector) ||
+                    !Number.isFinite(entry.participants)) {
+                    continue;
+                }
+                const existing = target[responseId];
+                if (!existing) {
+                    target[responseId] = {
+                        representedInSector: entry.representedInSector,
+                        participants: entry.participants,
+                    };
+                }
+                else {
+                    existing.representedInSector = Math.max(existing.representedInSector, entry.representedInSector);
+                    existing.participants = Math.max(existing.participants, entry.participants);
+                }
+            }
+        }
+    }
+    return combined;
+}
 function subjectIsFragment(subject) {
     return subject != null && typeof subject === "object" && "hash" in subject;
 }
@@ -1498,6 +1616,11 @@ function combineMetricsForFragments(metrics, expectedMetricType) {
                         type: "presence_table",
                         value: { values: [], exceededLimit: false },
                     };
+                case "ous_demographics":
+                    return {
+                        type: "ous_demographics",
+                        value: { groups: {}, totals: {} },
+                    };
                 default:
                     throw new Error(`Unsupported metric type: ${expectedMetricType}`);
             }
@@ -1646,6 +1769,13 @@ function combineMetricsForFragments(metrics, expectedMetricType) {
             return {
                 type: "raster_overlay_area",
                 value: combineRasterOverlayAreaMetrics(values),
+            };
+        }
+        case "ous_demographics": {
+            const values = metrics.map((m) => m.value);
+            return {
+                type: "ous_demographics",
+                value: combineOusDemographicsMetrics(values),
             };
         }
         default:
