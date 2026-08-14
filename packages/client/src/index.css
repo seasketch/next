@@ -7951,6 +7951,14 @@ select{
   max-height:100vh
 }
 
+.max-h-\[min\(36rem\2c calc\(100dvh-2rem\)\)\]{
+  max-height:min(36rem,calc(100dvh - 2rem))
+}
+
+.max-h-none{
+  max-height:none
+}
+
 .min-h-0{
   min-height:0px
 }
@@ -8836,6 +8844,10 @@ select{
 
 .max-w-xs{
   max-width:20rem
+}
+
+.max-w-\[280px\]{
+  max-width:280px
 }
 
 .flex-1{
@@ -10021,6 +10033,10 @@ select{
 
 .text-ellipsis{
   text-overflow:ellipsis
+}
+
+.whitespace-normal{
+  white-space:normal
 }
 
 .whitespace-nowrap{
@@ -18338,6 +18354,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
   .lg\:h-64{
     height:16rem
+  }
+
+  .lg\:max-h-none{
+    max-height:none
   }
 
   .lg\:min-h-\[420px\]{

@@ -2414,7 +2414,11 @@ export function TooltipBooleanConfigurationOption({
     </span>
   );
   return (
-    <label className="flex items-center gap-2 text-sm text-gray-800">
+    <label
+      className={`flex items-center gap-2 text-sm text-gray-800 ${
+        checkboxFirst ? "" : "w-full justify-between"
+      }`}
+    >
       {checkboxFirst ? (
         <>
           {input}
@@ -2487,10 +2491,15 @@ export function TableHeadingsEditor({
     }
   }, [initialLabels, isPopoverOpen]);
 
-  // Debounced update of componentSettings
+  // Debounced update of componentSettings. Only persist while the popover
+  // is open — changing labelKeys (e.g. hiding a column) must not write
+  // back, or a new-key `undefined !== ""` comparison loops with onUpdate.
   useEffect(() => {
+    if (!isPopoverOpen) {
+      return;
+    }
     const hasChanges = labelKeys.some(
-      (key) => debouncedLocalState[key] !== initialLabels[key]
+      (key) => (debouncedLocalState[key] || "") !== (initialLabels[key] || "")
     );
     if (hasChanges) {
       const updatedSettings: Record<string, any> = {};
@@ -2499,7 +2508,7 @@ export function TableHeadingsEditor({
       });
       onUpdate({ componentSettings: updatedSettings });
     }
-  }, [debouncedLocalState, initialLabels, labelKeys, onUpdate]);
+  }, [debouncedLocalState, initialLabels, isPopoverOpen, labelKeys, onUpdate]);
 
   // Explicit save when popover closes
   const handlePopoverOpenChange = (open: boolean) => {

@@ -9,10 +9,13 @@ import {
   summarizeOusDemographicsValue,
   combineMetricsForFragments,
   OUS_DEMOGRAPHICS_DEFAULT_GROUP_BY,
-  OUS_DEMOGRAPHICS_REQUIRED_COLUMNS,
   OUS_DEMOGRAPHICS_ROLLUP_KEY,
 } from "overlay-engine";
-import { ReportWidget, TableHeadingsEditor } from "./widgets";
+import {
+  ReportWidget,
+  TableHeadingsEditor,
+  TooltipBooleanConfigurationOption,
+} from "./widgets";
 import {
   ReportWidgetTooltipControls,
   TooltipMorePopover,
@@ -70,6 +73,8 @@ export type OusDemographicsTableSettings = {
    */
   totalMode?: OusDemographicsTotalMode;
   showPercentColumn?: boolean;
+  /** Overall rollup row. Off by default. */
+  showTotalRow?: boolean;
   sortBy?: "within" | "name";
   rowsPerPage?: number;
 };
@@ -80,6 +85,21 @@ type OusDemographicsRow = {
   within: number;
   total: number;
 };
+
+/**
+ * Default column headings from the original OUS reports. Both totaling
+ * methods share the same labels; participants mode simply hides the
+ * percent column.
+ */
+function defaultOusHeadingLabels(t: TFunction) {
+  return {
+    groupLabel: t("Group"),
+    withinLabel: t("People Using Ocean Within Plan"),
+    totalLabel: t("Total People Represented In Survey"),
+    percentLabel: t("% People Using Ocean Within Plan"),
+    rollupLabel: t("Total"),
+  };
+}
 
 function completedOusFragmentMetrics(
   metrics: CompatibleSpatialMetricDetailsFragment[],
@@ -165,20 +185,22 @@ export const OusDemographicsTable: ReportWidget<
 }) => {
   const { t } = useTranslation("reports");
   const totalMode = componentSettings.totalMode || "representedInSector";
-  const sortBy = componentSettings.sortBy || "within";
+  const sortBy = componentSettings.sortBy || "name";
   const rowsPerPage = componentSettings.rowsPerPage ?? 15;
   // In participants mode within-plan values are lower bounds ("+"), so a
   // percentage against the participants total would be misleading.
   const showPercentColumn =
     (componentSettings.showPercentColumn ?? true) &&
     totalMode !== "participants";
+  const showTotalRow = componentSettings.showTotalRow ?? false;
   const plusSuffix = totalMode === "participants";
 
-  const groupLabel = componentSettings.groupLabel || t("Group");
-  const withinLabel = componentSettings.withinLabel || t("People Within Plan");
-  const totalLabel = componentSettings.totalLabel || t("Total in Survey");
-  const percentLabel = componentSettings.percentLabel || t("% Within Plan");
-  const rollupLabel = componentSettings.rollupLabel || t("Total") || "Total";
+  const defaults = defaultOusHeadingLabels(t);
+  const groupLabel = componentSettings.groupLabel || defaults.groupLabel;
+  const withinLabel = componentSettings.withinLabel || defaults.withinLabel;
+  const totalLabel = componentSettings.totalLabel || defaults.totalLabel;
+  const percentLabel = componentSettings.percentLabel || defaults.percentLabel;
+  const rollupLabel = componentSettings.rollupLabel || defaults.rollupLabel;
 
   const { printing } = useContext(ReportUIStateContext);
 
@@ -226,17 +248,18 @@ export const OusDemographicsTable: ReportWidget<
       rows = rows.sort((a, b) => b.within - a.within);
     }
     const rollupTotals = totals[OUS_DEMOGRAPHICS_ROLLUP_KEY];
-    const rollupRow: OusDemographicsRow | undefined = rollupTotals
-      ? {
-          key: OUS_DEMOGRAPHICS_ROLLUP_KEY,
-          label: rollupLabel,
-          within:
-            summaries[OUS_DEMOGRAPHICS_ROLLUP_KEY]?.representedInSector ?? 0,
-          total: rollupTotals[totalMode] ?? 0,
-        }
-      : undefined;
+    const rollupRow: OusDemographicsRow | undefined =
+      showTotalRow && rollupTotals
+        ? {
+            key: OUS_DEMOGRAPHICS_ROLLUP_KEY,
+            label: rollupLabel,
+            within:
+              summaries[OUS_DEMOGRAPHICS_ROLLUP_KEY]?.representedInSector ?? 0,
+            total: rollupTotals[totalMode] ?? 0,
+          }
+        : undefined;
     return { rows, rollupRow };
-  }, [ready, combinedValue, totalMode, sortBy, rollupLabel]);
+  }, [ready, combinedValue, totalMode, sortBy, rollupLabel, showTotalRow]);
 
   const {
     isCollection,
@@ -543,52 +566,58 @@ function OusDemographicsHelpPopover() {
         <div className="px-1 space-y-3 text-xs text-gray-700 max-w-xs max-h-96 overflow-y-auto">
           <p>
             <Trans ns="admin:reports">
-              Counts the people represented by Ocean Use Survey responses whose
-              mapped areas overlap the plan, grouped by a column such as sector
-              or village. The dataset must include <code>response_id</code>,{" "}
-              <code>participants</code>, <code>represented_in_sector</code>, and{" "}
-              <code>sector</code> columns.
+              Reports how many people from an Ocean Use Survey use the ocean
+              within the plan, grouped by a column such as sector, gear type, or
+              village.
             </Trans>
           </p>
           <p>
             <Trans ns="admin:reports">
-              <b>How counting works.</b> Each response has a whole-survey{" "}
-              <code>participants</code> count ("my answers represent 20
-              people"), and each shape has a <code>represented_in_sector</code>{" "}
-              count for its sector. Per respondent and group, the metric takes
-              the largest <code>represented_in_sector</code> across their shapes
-              in the group, clamped so it never exceeds{" "}
-              <code>participants</code>. Respondents are deduplicated, so a
-              person is never counted twice within a row no matter how many
-              shapes they drew.
+              <b>Required columns.</b> The source must include{" "}
+              <code>response_id</code>, <code>participants</code>,{" "}
+              <code>represented_in_sector</code>, and the grouping column (
+              <code>sector</code> by default).
             </Trans>
           </p>
           <p>
             <Trans ns="admin:reports">
-              <b>Group by.</b> Any text column can be used. Multi-value columns
-              (e.g. a comma-separated <code>fishing_method</code>
-              column) are <i>not</i> split by the engine. To build a gear-type
-              table, preprocess the survey export into an "exploded" layer — one
-              row per shape per gear, duplicating the shape geometry and
-              respondent columns, with a single-value <code>gear_type</code>{" "}
-              column — and upload it as its own source.
+              <b>Two counts on every response.</b>{" "}
+              <code>participants</code> is how many people the whole response
+              represents ("my answers stand for 20 people").{" "}
+              <code>represented_in_sector</code> is how many of those people a
+              given sector polygon represents. A respondent may draw many
+              shapes. For each group, the metric keeps the largest sector count
+              and never lets it exceed <code>participants</code>. The same
+              person is counted only once in a row.
             </Trans>
           </p>
           <p>
             <Trans ns="admin:reports">
-              <b>Total column.</b> "Sector representation" totals the same
-              clamped per-sector counts across the whole survey, so the percent
-              column is meaningful. "All participants" totals the whole-response{" "}
-              <code>participants</code> count instead — use it for
-              respondent-level groupings like village, where within-plan values
-              are a lower bound and are displayed with a "+" suffix (the percent
-              column is hidden).
+              <b>Who is within the plan.</b> A response counts if any of its
+              sector polygons overlap the sketch. Geographies are not used.
+              Every group in the dataset is listed, including those with no
+              overlap (shown as zero).
             </Trans>
           </p>
           <p>
             <Trans ns="admin:reports">
-              Percentages compare within-plan people to the whole survey
-              dataset. Geographies play no role in this widget.
+              <b>Group by.</b> Any text column can be used for the rows.
+              Comma-separated values are <i>not</i> split. For gears, start from
+              Fishing shapes, split <code>fishing_method</code> into one row per
+              gear, copy the polygon and <code>represented_in_sector</code>{" "}
+              (do not divide it), and add a single-value <code>gear_type</code>{" "}
+              column. Upload that layer as its own source.
+            </Trans>
+          </p>
+          <p>
+            <Trans ns="admin:reports">
+              <b>Total column.</b> The within-plan column always uses
+              overlapping <code>represented_in_sector</code> counts.
+              "Sector-specific polygons" uses that same count for the whole
+              survey, so a percent is meaningful. "Entire group response" uses{" "}
+              <code>participants</code> instead — better for village-style
+              groupings. Within-plan values are then a lower bound (shown with
+              +) and the percent column is hidden.
             </Trans>
           </p>
         </div>
@@ -608,7 +637,7 @@ export const OusDemographicsTableTooltipControls: ReportWidgetTooltipControls =
     );
 
     const totalMode = settings.totalMode || "representedInSector";
-    const sortBy = settings.sortBy || "within";
+    const sortBy = settings.sortBy || "name";
     const rowsPerPage = settings.rowsPerPage ?? 15;
 
     const { filteredSources: sources } = useOverlaySources(dependencies || []);
@@ -640,9 +669,43 @@ export const OusDemographicsTableTooltipControls: ReportWidgetTooltipControls =
       });
     };
 
+    const headingDefaults = useMemo(() => defaultOusHeadingLabels(t), [t]);
+    const headingLabelKeys = useMemo(
+      () => [
+        "groupLabel",
+        "withinLabel",
+        "totalLabel",
+        ...(totalMode === "participants" ? [] : ["percentLabel"]),
+        ...(settings.showTotalRow ? ["rollupLabel"] : []),
+      ],
+      [totalMode, settings.showTotalRow]
+    );
+    const headingLabelDisplayNames = useMemo(
+      () => [
+        headingDefaults.groupLabel,
+        headingDefaults.withinLabel,
+        headingDefaults.totalLabel,
+        ...(totalMode === "participants" ? [] : [headingDefaults.percentLabel]),
+        ...(settings.showTotalRow ? [t("Total row")] : []),
+      ],
+      [headingDefaults, totalMode, settings.showTotalRow, t]
+    );
+
     const totalModeOptions = [
-      { value: "representedInSector", label: t("Sector representation") },
-      { value: "participants", label: t("All participants (+)") },
+      {
+        value: "representedInSector",
+        label: t("Sector-specific polygons"),
+        description: t(
+          "Uses the same sector-polygon counts as the within-plan column, totaled across the whole survey. Counts are exact, and a percent can be shown."
+        ),
+      },
+      {
+        value: "participants",
+        label: t("Entire group response (+)"),
+        description: t(
+          "Uses the full person count from each response. Best when grouping by village or similar. The within-plan column is then a lower bound (shown with +), and the percent column is hidden."
+        ),
+      },
     ];
 
     const sortOptions = [
@@ -674,34 +737,26 @@ export const OusDemographicsTableTooltipControls: ReportWidgetTooltipControls =
           label={t("Total")}
           value={totalMode}
           options={totalModeOptions}
+          contentClassName="max-h-96"
           onChange={(val) =>
             handleUpdate({
               totalMode: val as OusDemographicsTotalMode,
             })
           }
           title={
-            <div className="max-w-[220px] text-xs font-normal normal-case text-gray-500">
-              {t(
-                "Sector representation: survey-wide sum of clamped per-sector counts (enables %). All participants: whole-response participant totals; within-plan values become lower bounds shown with a + suffix."
-              )}
+            <div className="max-w-[280px] text-xs font-normal normal-case text-gray-500 leading-snug">
+              <Trans ns="admin:reports">
+                Calculations are always based on overlap with sector-specific
+                polygons. Choose whether the Total column should use those same
+                sector counts (<code>represented_in_sector</code>), or the full{" "}
+                <code>participants</code> count from each group response.
+              </Trans>
             </div>
           }
         />
         <TableHeadingsEditor
-          labelKeys={[
-            "groupLabel",
-            "withinLabel",
-            "totalLabel",
-            "percentLabel",
-            "rollupLabel",
-          ]}
-          labelDisplayNames={[
-            "Group",
-            "People Within Plan",
-            "Total in Survey",
-            "% Within Plan",
-            "Total row",
-          ]}
+          labelKeys={headingLabelKeys}
+          labelDisplayNames={headingLabelDisplayNames}
           componentSettings={settings}
           onUpdate={onUpdate}
         />
@@ -716,32 +771,21 @@ export const OusDemographicsTableTooltipControls: ReportWidgetTooltipControls =
             }
           />
           {totalMode !== "participants" && (
-            <label className="flex items-center gap-2 text-sm text-gray-800">
-              <span className="font-light text-gray-400 whitespace-nowrap">
-                {t("Show % column")}
-              </span>
-              <input
-                type="checkbox"
-                className="h-4 w-4 shrink-0 rounded border-gray-300 text-gray-600 focus:ring-slate-500"
-                checked={settings.showPercentColumn ?? true}
-                onChange={(e) =>
-                  handleUpdate({ showPercentColumn: e.target.checked })
-                }
-              />
-            </label>
+            <TooltipBooleanConfigurationOption
+              label={t("Show % column")}
+              checked={settings.showPercentColumn ?? true}
+              onChange={(next) => handleUpdate({ showPercentColumn: next })}
+            />
           )}
+          <TooltipBooleanConfigurationOption
+            label={t("Show total row")}
+            checked={settings.showTotalRow ?? false}
+            onChange={(next) => handleUpdate({ showTotalRow: next })}
+          />
           <PaginationSetting
             rowsPerPage={rowsPerPage}
             onChange={(next: number) => handleUpdate({ rowsPerPage: next })}
           />
-          <div className="text-xs text-gray-500 max-w-[240px]">
-            {t(
-              "Requires columns: {{columns}}. Rows come from the whole dataset, so groups with no overlap still display with a zero count.",
-              {
-                columns: OUS_DEMOGRAPHICS_REQUIRED_COLUMNS.join(", "),
-              }
-            )}
-          </div>
           <div className="flex">
             <span className="text-sm font-light text-gray-400 whitespace-nowrap pr-1">
               {t("Component Type")}

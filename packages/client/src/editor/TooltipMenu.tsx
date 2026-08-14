@@ -1600,6 +1600,8 @@ export function getActiveLinks(state: EditorState) {
 export type TooltipDropdownOption = {
   value: string;
   label: ReactNode;
+  /** Optional secondary text shown under the label in the menu. */
+  description?: ReactNode;
   icon?: ReactNode;
   disabled?: boolean;
   /**
@@ -1635,6 +1637,8 @@ export function TooltipDropdown({
   const displayLabel = getDisplayLabel
     ? getDisplayLabel(selected)
     : selected?.label ?? value;
+  const { className: contentClassName, ...restContentProps } =
+    contentProps ?? {};
   return (
     <DropdownMenu.Root onOpenChange={onOpenChange}>
       <DropdownMenu.Trigger asChild>
@@ -1656,8 +1660,10 @@ export function TooltipDropdown({
       </DropdownMenu.Trigger>
       <DropdownMenu.Portal>
         <DropdownMenu.Content
-          {...contentProps}
-          className="bg-white text-gray-900 border border-black/20 rounded shadow-lg px-1 py-1 z-50 max-h-72 overflow-auto"
+          {...restContentProps}
+          className={`bg-white text-gray-900 border border-black/20 rounded shadow-lg px-1 py-1 z-50 overflow-auto ${
+            contentClassName ?? "max-h-72"
+          }`}
           sideOffset={6}
           side="bottom"
           collisionPadding={8}
@@ -1669,7 +1675,7 @@ export function TooltipDropdown({
               <div className="px-2 py-1 text-xs font-semibold text-gray-600">
                 {title}
               </div>
-              {/* <DropdownMenu.Separator className="h-px bg-gray-200 my-1" /> */}
+              <DropdownMenu.Separator className="h-px bg-gray-200 my-1" />
             </>
           )}
           {options.map((opt) => (
@@ -1678,7 +1684,7 @@ export function TooltipDropdown({
               disabled={opt.disabled}
               className={
                 opt.className ??
-                `px-2 py-1 text-sm flex items-center gap-2 rounded ${
+                `px-2 py-1.5 text-sm flex items-start gap-2 rounded ${
                   opt.disabled
                     ? "text-gray-400 cursor-not-allowed"
                     : "hover:bg-gray-100 focus:bg-gray-100 cursor-pointer"
@@ -1695,14 +1701,19 @@ export function TooltipDropdown({
                 onChange(opt.value);
               }}
             >
-              {opt.icon ? (
-                <span className="flex items-center gap-2">
-                  <span className={ICON_CONTAINER_CLASSES}>{opt.icon}</span>
-                  <span>{opt.label}</span>
+              {opt.icon && (
+                <span className={`${ICON_CONTAINER_CLASSES} mt-0.5`}>
+                  {opt.icon}
                 </span>
-              ) : (
-                opt.label
               )}
+              <span className="min-w-0 flex flex-col items-start gap-0.5">
+                <span>{opt.label}</span>
+                {opt.description && (
+                  <span className="text-xs font-normal normal-case text-gray-500 leading-snug max-w-[280px] whitespace-normal">
+                    {opt.description}
+                  </span>
+                )}
+              </span>
             </DropdownMenu.Item>
           ))}
         </DropdownMenu.Content>

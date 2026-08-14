@@ -12,6 +12,8 @@ type LabeledDropdownProps = {
   title?: ReactNode;
   ariaLabel?: string;
   getDisplayLabel?: (selected?: TooltipDropdownOption) => ReactNode;
+  /** Extra class names for the dropdown panel (e.g. a taller max-height). */
+  contentClassName?: string;
 };
 
 /**
@@ -26,6 +28,7 @@ export function LabeledDropdown({
   title,
   ariaLabel,
   getDisplayLabel,
+  contentClassName,
 }: LabeledDropdownProps) {
   return (
     <div className="flex items-center gap-2 text-sm text-gray-800">
@@ -39,6 +42,9 @@ export function LabeledDropdown({
         onChange={onChange}
         ariaLabel={ariaLabel}
         getDisplayLabel={getDisplayLabel}
+        contentProps={
+          contentClassName ? { className: contentClassName } : undefined
+        }
       />
     </div>
   );
