@@ -39,6 +39,10 @@ import {
 } from "../widgets/widgets";
 import { DetailsView } from "../widgets/prosemirror/details";
 import {
+  TabContainerView,
+  createProtectTabContainerPlugin,
+} from "../widgets/prosemirror/tabs";
+import {
   CompatibleSpatialMetricDetailsFragment,
   OverlaySourceDetailsFragment,
   ProjectReportingLayersDocument,
@@ -440,6 +444,7 @@ function ReportCardBodyEditorInner({
       ActiveParagraphPlaceholderPlugin(),
       createImageDropPlugin(schema, uploadFile),
       createFriendlyInlineAtomPlugin(),
+      createProtectTabContainerPlugin(),
     ];
     return { schema, plugins };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -622,6 +627,12 @@ function ReportCardBodyEditorInner({
         },
         details(node, view, getPos) {
           return new DetailsView(node, view, getPos as () => number);
+        },
+        tabContainer(node, view, getPos) {
+          return new TabContainerView(node, view, getPos as () => number, {
+            tabListLabel: t("Card tabs"),
+            cardId,
+          });
         },
         blockMetric(node, view, getPos, decorations) {
           return createReactNodeView({

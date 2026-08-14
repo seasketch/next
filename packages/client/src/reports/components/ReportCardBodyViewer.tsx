@@ -14,8 +14,10 @@ import ReactNodeViewPortalsProvider, {
 import "prosemirror-view/style/prosemirror.css";
 import { ReportWidgetNodeViewRouter } from "../widgets/widgets";
 import { DetailsView } from "../widgets/prosemirror/details";
+import { TabContainerView } from "../widgets/prosemirror/tabs";
 import ReportCardTitleToolbar from "../widgets/ReportCardTitleToolbar";
 import { ReportUIStateContext } from "../context/ReportUIStateContext";
+import { useTranslation } from "react-i18next";
 
 type ReportCardBodyViewerProps = {
   body: any;
@@ -29,6 +31,9 @@ function ReportCardBodyViewerInner({
   cardId,
 }: ReportCardBodyViewerProps) {
   const { printing } = useContext(ReportUIStateContext);
+  const { t } = useTranslation("admin:sketching");
+  // Capture once so `t` identity changes do not rebuild every node view.
+  const tabListLabel = t("Card tabs");
   const rootRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView>();
   const { createPortal, removePortal, setSelection } =
@@ -75,6 +80,14 @@ function ReportCardBodyViewerInner({
         });
       },
       // @ts-ignore
+      tabContainer(node, view, getPos) {
+        return new TabContainerView(node, view, getPos as () => number, {
+          forceShowAll: printing,
+          tabListLabel,
+          cardId,
+        });
+      },
+      // @ts-ignore
       reportTitle(node, view, getPos, decorations) {
         return createReactNodeView({
           node,
@@ -90,7 +103,7 @@ function ReportCardBodyViewerInner({
         });
       },
     }),
-    [createPortal, removePortal, cardId, printing]
+    [createPortal, removePortal, cardId, printing, tabListLabel]
   );
 
   // Create/destroy the view when core configuration changes

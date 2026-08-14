@@ -138,7 +138,12 @@ function Item(props: ReportCardActionMenuItemProps): JSX.Element {
   );
 }
 
+function Separator(): JSX.Element {
+  return <DropdownMenu.Separator className="my-1 h-px bg-black/5" />;
+}
+
 // Attach Item as a static property for namespaced API
 ReportCardActionMenu.Item = Item;
+ReportCardActionMenu.Separator = Separator;
 
 export default ReportCardActionMenu;

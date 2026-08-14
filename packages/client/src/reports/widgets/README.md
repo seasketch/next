@@ -52,6 +52,7 @@ The report UI exposes a global **`printing`** flag on `ReportUIStateContext` (pl
 - Any widget that hides important content behind expand/collapse, tabs, or similar should **expand or reveal that content while `printing` is true**, so paper/PDF output matches what authors expect.
 - **Collection “class” tables** use `useCollectionSketchExpand(sketchClass, { forceAllExpanded: printing })` and `isSketchBreakdownExpanded(rowKey)` so per-sketch breakdown rows open for print.
 - **ProseMirror `details` blocks** (`DetailsView`) listen for `beforeprint` / `afterprint` locally so `<details>` stay open for print even though the ProseMirror document attrs may still say “closed” after preview closes.
+- **In-card tabs** (`tabContainer` / `TabContainerView`) keep every panel in the document so metric dependency extraction still sees hidden-tab widgets. The selected tab is view-local (not persisted). While `printing` is true—or on `beforeprint`—all panels are shown stacked with their labels, same idea as expanded collapsible blocks. Authors add/remove/manage tabs from the card action menu; “Remove tabbed display” inlines every panel’s content.
 
 ## Export Support (CSV/JSON)
 

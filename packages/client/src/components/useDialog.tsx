@@ -126,6 +126,7 @@ export default function useDialog() {
               : () => resolve(true),
             onCancel: () => resolve(false),
             submitting: false,
+            icon: options?.icon,
             primaryButtonText: options?.primaryButtonText,
             secondaryButtonText: options?.secondaryButtonText,
           });

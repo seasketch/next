@@ -48,4 +48,32 @@ describe("reportBodySchema widget parsing", () => {
       componentSettings: { rowsPerPage: 15 },
     });
   });
+
+  test("parses a card body with a tabContainer", () => {
+    const doc = reportBodySchema.nodeFromJSON({
+      type: "doc",
+      content: [
+        { type: "reportTitle", content: [{ type: "text", text: "Title" }] },
+        {
+          type: "tabContainer",
+          content: [
+            {
+              type: "tabPanel",
+              attrs: { id: "a", label: "Emau" },
+              content: [{ type: "paragraph", content: [{ type: "text", text: "Hi" }] }],
+            },
+            {
+              type: "tabPanel",
+              attrs: { id: "b", label: "Torba" },
+              content: [{ type: "paragraph" }],
+            },
+          ],
+        },
+      ],
+    });
+    expect(doc.childCount).toBe(2);
+    expect(doc.child(1).type.name).toBe("tabContainer");
+    expect(doc.child(1).childCount).toBe(2);
+    expect(doc.child(1).child(0).attrs.label).toBe("Emau");
+  });
 });

@@ -6,6 +6,7 @@ import {
   useRef,
   memo,
   useCallback,
+  useEffect,
   useState,
 } from "react";
 // react-scripts@4 / webpack 4 — see ReportFullPrintBridge
@@ -15,8 +16,25 @@ import ReportCardBodyViewer from "./components/ReportCardBodyViewer";
 import {
   CompatibleSpatialMetricDetailsFragment,
   OverlaySourceDetailsFragment,
+  BaseDraftReportContextDocument,
+  ReportDependenciesDocument,
+  ReportOverlaySourcesDocument,
+  useUpdateReportCardBodyMutation,
 } from "../generated/graphql";
-import { subjectIsFragment } from "overlay-engine";
+import {
+  extractMetricDependenciesFromReportBody,
+  hashMetricDependency,
+  subjectIsFragment,
+} from "overlay-engine";
+import { useGlobalErrorHandler } from "../components/GlobalErrorHandler";
+import CardTabsManagementModal from "./components/CardTabsManagementModal";
+import {
+  docHasTabContainer,
+  unwrapCardBodyTabs,
+  wrapCardBodyInTabs,
+  clearSelectedCardTabId,
+} from "./widgets/prosemirror/tabs";
+import type { PMJSONNode } from "./widgets/prosemirror/tabs/wrapCardInTabs";
 import { ErrorBoundary } from "@sentry/react";
 import ErrorBoundaryFallback from "../components/ErrorBoundaryFallback";
 import ReactNodeViewPortalsProvider from "./ReactNodeView/PortalProvider";
@@ -32,6 +50,17 @@ import { download } from "../download";
 import { collectReportCardTitle } from "../admin/sketchClasses/SketchClassReportsAdmin";
 import { REACT_PRINT_PAGE_STYLE } from "./reactPrintPageStyle";
 require("../formElements/prosemirror-body.css");
+
+const EMPTY_OVERLAY_SOURCE_URLS: { [stableId: string]: string } = {};
+
+function metricDependenciesFingerprint(body: PMJSONNode): string {
+  const dependencies = extractMetricDependenciesFromReportBody(body as any);
+  const hashes = dependencies.map((d) =>
+    hashMetricDependency(d, EMPTY_OVERLAY_SOURCE_URLS)
+  );
+  hashes.sort();
+  return hashes.join("\n");
+}
 
 export type ReportCardIcon = "info" | "warning" | "error";
 
@@ -53,6 +82,8 @@ export type InnerReportCardProps = ReportCardComponentProps & {
   editing: number | null;
   preselectTitle?: boolean;
   adminMode?: boolean;
+  /** Bumped after tab-structure saves so the viewer remounts with the new body. */
+  bodyEpoch?: number;
   // Dependencies from useCardDependencies (including computed loading/errors)
   metrics: CompatibleSpatialMetricDetailsFragment[];
   sources: OverlaySourceDetailsFragment[];
@@ -78,6 +109,7 @@ export const InnerReportCard = memo(function InnerReportCard({
   editing,
   preselectTitle,
   adminMode,
+  bodyEpoch = 0,
 }: InnerReportCardProps) {
   let tint = config.tint || "text-black";
   const icon = config.icon;
@@ -179,6 +211,7 @@ export const InnerReportCard = memo(function InnerReportCard({
               />
             ) : (
               <ReportCardBodyViewer
+                key={bodyEpoch}
                 body={config.body}
                 className={`ReportCard ReportCardBody ProseMirrorBody ${
                   icon ? "hasIcon" : ""
@@ -227,7 +260,13 @@ export default function ReportCard(
   } = reportUiState;
 
   const { t } = useTranslation("admin:sketching");
+  const onError = useGlobalErrorHandler();
   const [cardPrintPrep, setCardPrintPrep] = useState(false);
+  const [manageTabsOpen, setManageTabsOpen] = useState(false);
+  const [manageTabsBody, setManageTabsBody] = useState<PMJSONNode | null>(null);
+  const [savingCardTabs, setSavingCardTabs] = useState(false);
+  const [cardBodyEpoch, setCardBodyEpoch] = useState(0);
+  const [localBody, setLocalBody] = useState<PMJSONNode | null>(null);
   const cardPrintSurfaceRef = useRef<HTMLDivElement>(null);
 
   const reportUiForCardPrintSubtree = useMemo(
@@ -363,14 +402,122 @@ export default function ReportCard(
     ],
   );
 
+  const [updateReportCardBody] = useUpdateReportCardBodyMutation({
+    onError,
+  });
+
+  const displayBody = (localBody ?? props.config.body) as PMJSONNode;
+  const configForRender = useMemo(
+    () =>
+      localBody ? { ...props.config, body: localBody } : props.config,
+    [localBody, props.config]
+  );
+
+  useEffect(() => {
+    if (!localBody) {
+      return;
+    }
+    if (JSON.stringify(props.config.body) === JSON.stringify(localBody)) {
+      setLocalBody(null);
+    }
+  }, [localBody, props.config.body]);
+
+  const saveCardBody = useCallback(
+    async (nextBody: PMJSONNode) => {
+      const currentBody = displayBody;
+      if (JSON.stringify(nextBody) === JSON.stringify(currentBody)) {
+        return;
+      }
+      const depsChanged =
+        metricDependenciesFingerprint(nextBody) !==
+        metricDependenciesFingerprint(currentBody);
+      const reportId = baseReportContext.report.id;
+      setSavingCardTabs(true);
+      try {
+        await updateReportCardBody({
+          variables: {
+            id: props.config.id,
+            body: nextBody,
+          },
+          refetchQueries: [
+            {
+              query: BaseDraftReportContextDocument,
+              variables: { reportId },
+            },
+            ...(depsChanged
+              ? [ReportDependenciesDocument, ReportOverlaySourcesDocument]
+              : []),
+          ],
+          awaitRefetchQueries: true,
+        });
+        setLocalBody(nextBody);
+        setCardBodyEpoch((n) => n + 1);
+      } finally {
+        setSavingCardTabs(false);
+      }
+    },
+    [
+      baseReportContext.report.id,
+      displayBody,
+      props.config.id,
+      updateReportCardBody,
+    ]
+  );
+
+  const hasCardContentTabs = useMemo(
+    () => docHasTabContainer(displayBody),
+    [displayBody]
+  );
+
+  const onUseTabbedDisplay = useCallback(() => {
+    const wrapped = wrapCardBodyInTabs(displayBody, [
+      t("Tab {{number}}", { number: 1 }),
+      t("Tab {{number}}", { number: 2 }),
+    ]);
+    setManageTabsBody(wrapped);
+    setManageTabsOpen(true);
+  }, [displayBody, t]);
+
+  const onRemoveTabbedDisplay = useCallback(async () => {
+    const next = unwrapCardBodyTabs(displayBody);
+    clearSelectedCardTabId(props.config.id);
+    await saveCardBody(next);
+    setManageTabsOpen(false);
+    setManageTabsBody(null);
+  }, [displayBody, saveCardBody]);
+
+  const onManageCardTabs = useCallback(() => {
+    setManageTabsBody(displayBody);
+    setManageTabsOpen(true);
+  }, [displayBody]);
+
+  const closeManageTabs = useCallback(() => {
+    setManageTabsOpen(false);
+    setManageTabsBody(null);
+  }, []);
+
   const toolbarContextValue = useMemo(() => {
     return {
       ...toolbarContext,
-      loading: toolbarContext.loading || cardDependenciesLoading,
+      loading: toolbarContext.loading || cardDependenciesLoading || savingCardTabs,
       onDownloadResults,
       onPrint,
+      hasCardContentTabs,
+      onUseTabbedDisplay,
+      onRemoveTabbedDisplay,
+      onManageCardTabs,
     };
-  }, [toolbarContext, cardDependenciesLoading, onDownloadResults, onPrint]);
+  }, [
+    toolbarContext,
+    cardDependenciesLoading,
+    savingCardTabs,
+    onDownloadResults,
+    onPrint,
+    hasCardContentTabs,
+    onUseTabbedDisplay,
+    onRemoveTabbedDisplay,
+    onManageCardTabs,
+  ]);
 
   return (
     <CardDependenciesContext.Provider
@@ -391,6 +538,7 @@ export default function ReportCard(
       <ReportCardTitleToolbarContext.Provider value={toolbarContextValue}>
         <InnerReportCard
           {...props}
+          config={configForRender}
           editing={editing}
           preselectTitle={preselectTitle}
           adminMode={adminMode}
@@ -398,6 +546,7 @@ export default function ReportCard(
           sources={cardDependencies.overlaySources}
           loading={cardDependenciesLoading}
           errors={cardDependencies.errors}
+          bodyEpoch={cardBodyEpoch}
         />
         {cardPrintPrep && (
           <div
@@ -408,6 +557,7 @@ export default function ReportCard(
               <div ref={cardPrintSurfaceRef} className="w-full bg-white">
                 <InnerReportCard
                   {...props}
+                  config={configForRender}
                   editing={editing}
                   preselectTitle={preselectTitle}
                   adminMode={adminMode}
@@ -415,6 +565,7 @@ export default function ReportCard(
                   sources={cardDependencies.overlaySources}
                   loading={cardDependenciesLoading}
                   errors={cardDependencies.errors}
+                  bodyEpoch={cardBodyEpoch}
                 />
               </div>
             </ReportUIStateContext.Provider>
@@ -429,6 +580,18 @@ export default function ReportCard(
           metrics={[]}
           adminMode={adminMode}
           showAdminDetails={showAdminCalculationDetails}
+        />
+      )}
+      {adminMode && (
+        <CardTabsManagementModal
+          open={manageTabsOpen}
+          body={manageTabsBody ?? displayBody}
+          saving={savingCardTabs}
+          onClose={closeManageTabs}
+          onSave={async (nextBody) => {
+            await saveCardBody(nextBody);
+            closeManageTabs();
+          }}
         />
       )}
     </CardDependenciesContext.Provider>

@@ -1,6 +1,7 @@
 import { Schema, Node, NodeSpec } from "prosemirror-model";
 import { addListNodes } from "prosemirror-schema-list";
 import { detailsNodes } from "./details";
+import { tabsNodes } from "./tabs/schema";
 import { baseSchema } from "../../../editor/config";
 
 export type ImageLayout = "center" | "left" | "right" | "full";
@@ -261,17 +262,21 @@ const resultsParagraphSpec: NodeSpec = {
   },
 };
 
-// Add metrics and details/summary nodes
+// Add metrics, details/summary, and in-card tab nodes
 const { details, summary } = detailsNodes();
+const { tabContainer, tabPanel } = tabsNodes();
 
 const nodes = reportNodes
   .update("image", reportImageSpec)
+  .update("doc", { content: "reportTitle (tabContainer | block)*" })
   .append({
     metric: metricSpec,
     blockMetric: blockMetricSpec,
     details,
     summary,
     resultsParagraph: resultsParagraphSpec,
+    tabContainer,
+    tabPanel,
   });
 
 export const reportBodySchema = new Schema({

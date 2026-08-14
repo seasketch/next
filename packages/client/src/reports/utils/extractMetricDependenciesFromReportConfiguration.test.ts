@@ -51,6 +51,69 @@ describe("extractMetricDependenciesFromReportConfiguration", () => {
     expect(deps[0].stableId).toBe("s1");
   });
 
+  test("collects metric dependencies inside tab panels", () => {
+    const report = {
+      id: 1,
+      tabs: [
+        {
+          id: 10,
+          position: 0,
+          title: "T",
+          cards: [
+            {
+              id: 100,
+              type: "TextBlock",
+              body: {
+                type: "doc",
+                content: [
+                  { type: "reportTitle" },
+                  {
+                    type: "tabContainer",
+                    content: [
+                      {
+                        type: "tabPanel",
+                        attrs: { id: "a", label: "Emau" },
+                        content: [
+                          {
+                            type: "blockMetric",
+                            attrs: {
+                              type: "OusDemographicsTable",
+                              metrics: [
+                                {
+                                  type: "count",
+                                  subjectType: "fragments",
+                                  stableId: "hidden-tab",
+                                },
+                              ],
+                            },
+                          },
+                        ],
+                      },
+                      {
+                        type: "tabPanel",
+                        attrs: { id: "b", label: "Torba" },
+                        content: [{ type: "paragraph" }],
+                      },
+                    ],
+                  },
+                ],
+              },
+              alternateLanguageSettings: {},
+              componentSettings: {},
+              position: 0,
+              reportingLayers: [],
+            },
+          ],
+          alternateLanguageSettings: {},
+        },
+      ],
+    } as unknown as ReportConfiguration;
+
+    const deps = extractMetricDependenciesFromReportConfiguration(report);
+    expect(deps).toHaveLength(1);
+    expect(deps[0].stableId).toBe("hidden-tab");
+  });
+
   test("fingerprint changes when card body changes", () => {
     const a = {
       id: 1,

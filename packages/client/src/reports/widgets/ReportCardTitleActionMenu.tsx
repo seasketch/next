@@ -1,6 +1,12 @@
 import { memo, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { Pencil1Icon, TrashIcon } from "@radix-ui/react-icons";
+import {
+  ColumnsIcon,
+  MixerHorizontalIcon,
+  Pencil1Icon,
+  TrashIcon,
+  ValueNoneIcon,
+} from "@radix-ui/react-icons";
 import { CalculatorIcon, SwitchHorizontalIcon } from "@heroicons/react/outline";
 import ReportCardActionMenu from "../components/ReportCardActionMenu";
 import Spinner from "../../components/Spinner";
@@ -22,6 +28,10 @@ export interface ReportCardTitleActionMenuProps {
   openMoveCardToTabModal?: (cardId: number) => void;
   openCalculationDetailsModal?: (cardId: number) => void;
   setEditing: (cardId: number) => void;
+  hasCardContentTabs?: boolean;
+  onUseTabbedDisplay?: () => void;
+  onRemoveTabbedDisplay?: () => void;
+  onManageCardTabs?: () => void;
 }
 
 /**
@@ -39,9 +49,13 @@ const ReportCardTitleActionMenu = memo(function ReportCardTitleActionMenu({
   openMoveCardToTabModal,
   openCalculationDetailsModal,
   setEditing,
+  hasCardContentTabs,
+  onUseTabbedDisplay,
+  onRemoveTabbedDisplay,
+  onManageCardTabs,
 }: ReportCardTitleActionMenuProps) {
   const { t } = useTranslation("admin:sketching");
-  const { confirmDelete } = useDialog();
+  const { confirm, confirmDelete } = useDialog();
   const onError = useGlobalErrorHandler();
   const [deleteCardMutation] = useDeleteReportCardMutation({
     onError,
@@ -123,16 +137,60 @@ const ReportCardTitleActionMenu = memo(function ReportCardTitleActionMenu({
           {t("Move to tab")}
         </ReportCardActionMenu.Item>
       )}
-      {adminMode && (
+      {adminMode && !hasCardContentTabs && onUseTabbedDisplay && (
         <ReportCardActionMenu.Item
-          icon={<TrashIcon className="h-4 w-4" />}
-          variant="danger"
+          icon={<ColumnsIcon className="h-4 w-4" />}
           onSelect={() => {
-            handleDeleteCard(cardId);
+            onUseTabbedDisplay();
           }}
         >
-          {t("Delete card")}
+          {t("Use tabbed display")}
         </ReportCardActionMenu.Item>
+      )}
+      {adminMode && hasCardContentTabs && onManageCardTabs && (
+        <ReportCardActionMenu.Item
+          icon={<MixerHorizontalIcon className="h-4 w-4" />}
+          onSelect={() => {
+            onManageCardTabs();
+          }}
+        >
+          {t("Manage tabs")}
+        </ReportCardActionMenu.Item>
+      )}
+      {adminMode && hasCardContentTabs && onRemoveTabbedDisplay && (
+        <ReportCardActionMenu.Item
+          icon={<ValueNoneIcon className="h-4 w-4" />}
+          onSelect={() => {
+            void (async () => {
+              const ok = await confirm(t("Remove tabbed display?"), {
+                icon: "alert",
+                primaryButtonText: t("Remove"),
+                description: t(
+                  "Content from each tab will be moved to the main card body."
+                ),
+              });
+              if (ok) {
+                onRemoveTabbedDisplay();
+              }
+            })();
+          }}
+        >
+          {t("Remove tabbed display")}
+        </ReportCardActionMenu.Item>
+      )}
+      {adminMode && (
+        <>
+          <ReportCardActionMenu.Separator />
+          <ReportCardActionMenu.Item
+            icon={<TrashIcon className="h-4 w-4" />}
+            variant="danger"
+            onSelect={() => {
+              handleDeleteCard(cardId);
+            }}
+          >
+            {t("Delete card")}
+          </ReportCardActionMenu.Item>
+        </>
       )}
     </ReportCardActionMenu>
   );

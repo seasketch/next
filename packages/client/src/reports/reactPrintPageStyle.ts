@@ -32,5 +32,23 @@ export const REACT_PRINT_PAGE_STYLE = `
       break-after: avoid;
       page-break-after: avoid;
     }
+    .report-tabs-control {
+      display: none !important;
+    }
+    .report-tabs .report-tabs-panels > * {
+      display: block !important;
+    }
+    .report-tabs [data-report-tab-panel] + [data-report-tab-panel] {
+      margin-top: 1.25rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(0, 0, 0, 0.08);
+    }
+    .report-tabs [data-report-tab-panel]::before {
+      content: attr(data-tab-label);
+      display: block;
+      font-weight: 600;
+      font-size: 1rem;
+      margin-bottom: 0.5rem;
+    }
   }
 `;

@@ -133,6 +133,10 @@ export default function ReportCardTitleToolbar({ node }: { node: Node }) {
           openMoveCardToTabModal={context.openMoveCardToTabModal}
           openCalculationDetailsModal={context.openCalculationDetailsModal}
           setEditing={context.setEditing ?? noop}
+          hasCardContentTabs={context.hasCardContentTabs}
+          onUseTabbedDisplay={context.onUseTabbedDisplay}
+          onRemoveTabbedDisplay={context.onRemoveTabbedDisplay}
+          onManageCardTabs={context.onManageCardTabs}
         />
       </div>
     </h1>
@@ -156,6 +160,10 @@ export const ReportCardTitleToolbarContext = createContext<{
   setEditing?: (editing: number | null, preselectTitle?: boolean) => void;
   onDownloadResults?: (format: "csv" | "json") => void;
   onPrint?: () => void;
+  hasCardContentTabs?: boolean;
+  onUseTabbedDisplay?: () => void;
+  onRemoveTabbedDisplay?: () => void;
+  onManageCardTabs?: () => void;
 }>({
   adminMode: false,
   cardId: 0,
@@ -167,4 +175,8 @@ export const ReportCardTitleToolbarContext = createContext<{
   setEditing: () => {},
   onDownloadResults: undefined,
   onPrint: undefined,
+  hasCardContentTabs: false,
+  onUseTabbedDisplay: undefined,
+  onRemoveTabbedDisplay: undefined,
+  onManageCardTabs: undefined,
 });

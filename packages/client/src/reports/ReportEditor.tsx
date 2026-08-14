@@ -1029,6 +1029,8 @@ function sortableReportContentPropsEqual(
   if (pc.length !== nc.length) return false;
   for (let i = 0; i < pc.length; i++) {
     if (pc[i].id !== nc[i].id) return false;
+    // Tab-management mutations replace the top-level body object.
+    if (pc[i].body !== nc[i].body) return false;
   }
   if (prev.onMoveCardToTab !== next.onMoveCardToTab) return false;
   if (prev.onShowCalculationDetails !== next.onShowCalculationDetails) {

@@ -468,3 +468,114 @@ div[attachments="forumAttachments"] {
     display: none;
   }
 }
+
+/* In-card iOS-style segmented tabs */
+.report-tabs {
+  margin-top: 0.25rem;
+}
+
+.report-tabs-control {
+  display: flex;
+  justify-content: center;
+  margin: 0.15rem 0 0.85rem;
+}
+
+.report-tabs-track {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  background: #e5e7eb;
+  border-radius: 10px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.report-tabs-tab {
+  appearance: none;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  padding: 4px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.25;
+  color: #111827;
+  cursor: pointer;
+}
+
+.report-tabs-tab[aria-selected="true"] {
+  background: #ffffff;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04);
+}
+
+/* Hide inactive panels via the NodeView root, not classes on PM children.
+   ProseMirror rewrites contentDOM from toDOM and would strip panel classes. */
+.report-tabs:not([data-show-all="true"]) .report-tabs-panels > * {
+  display: none;
+}
+
+.report-tabs[data-active-index="0"]:not([data-show-all="true"]) .report-tabs-panels > :nth-child(1),
+.report-tabs[data-active-index="1"]:not([data-show-all="true"]) .report-tabs-panels > :nth-child(2),
+.report-tabs[data-active-index="2"]:not([data-show-all="true"]) .report-tabs-panels > :nth-child(3),
+.report-tabs[data-active-index="3"]:not([data-show-all="true"]) .report-tabs-panels > :nth-child(4),
+.report-tabs[data-active-index="4"]:not([data-show-all="true"]) .report-tabs-panels > :nth-child(5),
+.report-tabs[data-active-index="5"]:not([data-show-all="true"]) .report-tabs-panels > :nth-child(6),
+.report-tabs[data-active-index="6"]:not([data-show-all="true"]) .report-tabs-panels > :nth-child(7),
+.report-tabs[data-active-index="7"]:not([data-show-all="true"]) .report-tabs-panels > :nth-child(8),
+.report-tabs[data-active-index="8"]:not([data-show-all="true"]) .report-tabs-panels > :nth-child(9),
+.report-tabs[data-active-index="9"]:not([data-show-all="true"]) .report-tabs-panels > :nth-child(10),
+.report-tabs[data-active-index="10"]:not([data-show-all="true"]) .report-tabs-panels > :nth-child(11),
+.report-tabs[data-active-index="11"]:not([data-show-all="true"]) .report-tabs-panels > :nth-child(12) {
+  display: block;
+}
+
+.report-tabs[data-show-all="true"] .report-tabs-control {
+  display: none;
+}
+
+.report-tabs[data-show-all="true"] .report-tabs-panels > * {
+  display: block;
+}
+
+.report-tabs[data-show-all="true"] [data-report-tab-panel] + [data-report-tab-panel] {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.report-tabs[data-show-all="true"] [data-report-tab-panel]::before {
+  content: attr(data-tab-label);
+  display: block;
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.3;
+  color: #111827;
+  margin-bottom: 0.5rem;
+}
+
+@media print {
+  .report-tabs-control {
+    display: none !important;
+  }
+
+  .report-tabs .report-tabs-panels > * {
+    display: block !important;
+  }
+
+  .report-tabs [data-report-tab-panel] + [data-report-tab-panel] {
+    margin-top: 1.25rem;
+    padding-top: 1rem;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  .report-tabs [data-report-tab-panel]::before {
+    content: attr(data-tab-label);
+    display: block;
+    font-weight: 600;
+    font-size: 1rem;
+    line-height: 1.3;
+    color: #111827;
+    margin-bottom: 0.5rem;
+  }
+}
