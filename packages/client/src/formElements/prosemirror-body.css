@@ -509,6 +509,32 @@ div[attachments="forumAttachments"] {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04);
 }
 
+/* Match card-body skeleton: keep the control’s size, hide live chrome. */
+.ReportCard.loadingSkeleton .report-tabs-control {
+  pointer-events: none;
+}
+
+.ReportCard.loadingSkeleton .report-tabs-track {
+  background-color: rgb(0 0 0 / 0.05);
+  background-image: linear-gradient(
+    -20deg,
+    transparent,
+    rgba(0, 0, 0, 0.02),
+    rgba(20, 0, 180, 0.05),
+    rgba(0, 0, 0, 0.02)
+  );
+  background-size: 400% 400%;
+  animation: loadingSkeleton 2s ease-in-out infinite;
+}
+
+.ReportCard.loadingSkeleton .report-tabs-tab,
+.ReportCard.loadingSkeleton .report-tabs-tab[aria-selected="true"] {
+  color: transparent;
+  cursor: default;
+  background: transparent;
+  box-shadow: none;
+}
+
 /* Hide inactive panels via the NodeView root, not classes on PM children.
    ProseMirror rewrites contentDOM from toDOM and would strip panel classes. */
 .report-tabs:not([data-show-all="true"]) .report-tabs-panels > * {
