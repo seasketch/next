@@ -80,6 +80,305 @@ A screenshot review of these UIs, aimed at the timeslider questions above, is in
 
 ## Temporal Metadata and Data Schemas
 
+This is the proposed system of record. Everything else — timeslider domain and step, Mapbox filters, overlay metrics, admin fields, ingest — should read from it rather than re-deriving time from titles or ad-hoc columns.
+
+The observations above collapse into a small set of rules:
+
+- **Instant and interval are both first-class**, at every granularity (layer, feature/row, band).
+- **Precision is a field**, not inferred from string width. `2018` is a year, not midnight on 1 January.
+- **Bounds are half-open:** inclusive start, exclusive end (`start ≤ t < end`), as QGIS shows it. Convert inclusive-end formats (KML `TimeSpan`, some ISO 19115, STAC) on ingest.
+- **Calendar values are UTC.** Date-only data is a UTC calendar year/month/day, not a project-local timezone. Full timestamps with an offset are converted to UTC on ingest. v1 does not store a source timezone.
+- **Metadata is the source of truth.** Feature/row columns and raster band ids are projections of that metadata into a form each renderer can query. Do not treat filename years, GeoJSON-T `when`, or GeoTIFF `DateTime` as stored time.
+
+### Core values
+
+A temporal value is either an instant or an interval, plus an explicit precision. Display and admin editing use reduced-precision ISO 8601, the same lexical convention as KML (`2018`, `2018-06`, `2018-06-15`, `2018-06-15T14:30:00Z`). Comparison, filtering, and the map clock use the **expanded half-open interval** of that value.
+
+```ts
+type TemporalPrecision =
+  | "year"
+  | "month"
+  | "day"
+  | "hour"
+  | "minute"
+  | "second";
+
+/** Reduced-precision ISO 8601. Precision is *not* inferred from this string. */
+type TemporalIso = string;
+
+type TemporalInstant = {
+  kind: "instant";
+  at: TemporalIso;
+  precision: TemporalPrecision;
+};
+
+type TemporalInterval = {
+  kind: "interval";
+  /** Inclusive. */
+  start: TemporalIso;
+  /** Exclusive. `null` means open-ended (through present / latest available). */
+  end: TemporalIso | null;
+  precision: TemporalPrecision;
+};
+
+type TemporalValue = TemporalInstant | TemporalInterval;
+```
+
+**Expansion** (the only matching rule):
+
+| Value | Expanded `[start, end)` |
+| --- | --- |
+| instant `2018` @ year | `[2018-01-01T00:00:00Z, 2019-01-01T00:00:00Z)` |
+| instant `2018-06-15T14:30:00Z` @ second | `[14:30:00Z, 14:30:01Z)` |
+| interval `2018` → `2020` @ year | `[2018-01-01T00:00:00Z, 2020-01-01T00:00:00Z)` |
+| interval `2018` → `null` @ year | `[2018-01-01T00:00:00Z, now)` |
+
+A source, feature, band, or row is **visible** when its expanded interval intersects the map clock interval: `value.start < clock.end && clock.start < value.end`. An instant clock is itself expanded to one step of the current view resolution so “show 2018” is a year, not a zero-width tick.
+
+That expansion is why **annual mangrove cover is an interval, not an instant**. Admin can type `2018`; the stored value is `{ kind: "interval", start: "2018", end: "2019", precision: "year" }`. A tagged-shark ping is an instant. The two kinds also pick timeslider UX (Google Earth’s `TimeSpan` pointer vs `TimeStamp` moving window); matching still goes through the same intersection rule.
+
+Intervals may be open-ended (`end: null`) for living programs such as GFW. The client substitutes “now” or the source’s latest available granule when resolving the clock.
+
+### Source metadata
+
+Store this as JSON on the hosted object that owns the pixels or rows — `data_sources.temporal` for layers, `overlay_data_tables.temporal` for Data Tables — **not** only inside `geostats`. Geostats is regenerated on process and is the wrong place for admin corrections. Raster band stats may *copy* a `when` for convenience; the source of record is still `temporal`.
+
+```ts
+type TemporalGranularity =
+  | "layer"    // whole source is one instant or interval ("Mangroves 2018")
+  | "feature"  // per-vector-feature time (tracks, KML placemarks)
+  | "band"     // per-raster-band / raster-array field (GMW, CRW)
+  | "row"      // Data Table observations
+  | "remote";  // GFW and similar; SeaSketch does not store the time series
+
+type TemporalStep = {
+  count: number;
+  unit: TemporalPrecision;
+};
+
+type TemporalInfo = {
+  version: 1;
+  granularity: TemporalGranularity;
+  /**
+   * Union of the source in time. Always an interval (instants are expanded).
+   * This is what the timeslider uses for domain and coverage paint.
+   */
+  coverage: TemporalInterval;
+  /**
+   * Native spacing of members (annual bands, hourly fixes). Default slider step
+   * is the coarsest native resolution among visible sources.
+   */
+  nativeResolution: TemporalPrecision;
+  /**
+   * Default *view* resolution. May be coarser than native — survey events
+   * recorded to the day but compared by year.
+   */
+  defaultViewResolution: TemporalPrecision;
+  /**
+   * Present only if this source can re-aggregate the same data (GFW 4Wings,
+   * Data Tables). Do not list values the renderer cannot honor.
+   */
+  supportedViewResolutions?: TemporalPrecision[];
+  /** How members are addressed. Omitted when granularity is `layer`. */
+  mapping?: TemporalMapping;
+  /**
+   * Regular series. Prefer this over listing 42 annual members.
+   * `end` is exclusive, same as intervals.
+   */
+  series?: {
+    start: TemporalIso;
+    end: TemporalIso | null;
+    step: TemporalStep;
+  };
+  /**
+   * Irregular or sparse members, when `series` would lie (1999, 2000, 2010,
+   * 2018). Also the place to pin per-band time if the step is not uniform.
+   */
+  members?: TemporalValue[];
+  /** Kepler/GFW-style histogram in the slider is cheap for this source. */
+  providesSliderStats?: boolean;
+  /** Who last wrote this record. Re-ingest must not clobber `admin`. */
+  authoredBy?: "ingest" | "admin" | "heuristic" | "library";
+};
+
+type TemporalMapping =
+  | {
+      type: "feature" | "row";
+      startColumn: "_when_start";
+      endColumn: "_when_end";
+      /** Original columns the wizard / ingest used. */
+      sourceColumns?: { instant?: string; start?: string; end?: string };
+    }
+  | {
+      type: "band";
+      /** Tileset band id (MRT / raster-array) or 1-based GDAL band index. */
+      bands: Array<{ id: string; index: number; when: TemporalValue }>;
+    }
+  | { type: "remote"; driver: "gfw-4wings" };
+```
+
+`coverage` is always an interval so the client never has to guess. For a layer-level year it equals the expanded value. For a 41-year cube it is the union (`1985` → `2026`). For feature tracks it is computed at ingest from the populated columns (min start, max end).
+
+`nativeResolution` and `defaultViewResolution` are the two knobs from the timeslider review. A 42-band annual COG has both set to `year` and **no** `supportedViewResolutions` — the slider must not offer hour ticks. GFW has `nativeResolution: "hour"` and `supportedViewResolutions: ["hour", "day", "month", "year"]`. A Data Table of daily survey samples intended for annual comparison has `nativeResolution: "day"` and `defaultViewResolution: "year"`.
+
+Folders of separate annual layers do not need a parent schema. Each layer carries its own `coverage`; the map clock unions currently visible sources, as in [Timeslider UI References](timeslider-ui-references.md).
+
+### Feature and row columns
+
+Mapbox GL expressions cannot filter GeoJSON-T `when` objects, and they cannot filter *mixed-width* ISO 8601 (`"2018"` vs `"2018-06-15T14:00:00Z"` sorts as a string prefix, not as time). The columns therefore store the **already-expanded** half-open interval as ordinary JSON numbers.
+
+The quantum is **seconds since 1970-01-01T00:00:00Z**. That is enough for tracks (shark pings, vessel fixes) without inventing a millisecond type. A year-precision feature is still just the expanded interval (`2018-01-01T00:00:00Z` → `2019-01-01T00:00:00Z`), not a single midnight instant.
+
+| Column | Type | Meaning |
+| --- | --- | --- |
+| `_when_start` | number | Inclusive start, UTC seconds since epoch |
+| `_when_end` | number | Exclusive end, UTC seconds since epoch |
+
+```
+_when_start < clockEndSec && clockStartSec < _when_end
+```
+
+**2038 is not a problem for this representation.** The Y2038 bug is signed int32 overflowing at `2^31 − 1` seconds (19 January 2038). JSON numbers, JavaScript, Mapbox GL, and Parquet `timestamp[s]` are IEEE 754 doubles or int64. Seconds stay exact in a double until `2^53` (~year 285 million). Living sources with `end: null` (GFW, “through present”) will be fine in 2038, 2048, and well beyond.
+
+The ingest pipeline must not *down-cast* these columns to 32-bit. Write them as Integer64 (or float64) in FlatGeobuf. Pin tippecanoe with `-T _when_start:int` / `-T _when_end:int` so MVT uses the spec’s int64, not int32 and not float32 (float32 spacing around 2026 is ~128 seconds). Small GeoJSON sources already go through JSON numbers and need no special case. Postgres `integer` (int4) is also int32 — if these ever become first-class columns, use `bigint`.
+
+Do **not** use a single `_when` column. It cannot represent a span, and a year written as one epoch instant would collapse to midnight 1 January. Expansion happens once, at ingest or in the Data Table wizard.
+
+An optional `_when` string (the original reduced-precision ISO) may be kept for popups and labels. It is not a filter key.
+
+For **Data Tables**, Parquet/Arrow `timestamp[s, UTC]` is the matching physical type. The query engine can derive `_when_start` / `_when_end` from that timestamp plus `TemporalInfo.precision`, or persist the two numbers. Dedicated temporal query parameters should use those columns, not raw `YEAR` strings.
+
+### Raster bands
+
+A multi-temporal raster is a `granularity: "band"` source. Each band has a `TemporalValue`. For GMW-style annual cubes, `series` is enough and `mapping.bands[].id` should be the reduced-precision ISO year (`"1985"`, …) so a `raster-array` style can set `raster-array-band` from the map clock without an extra lookup. Irregular or CF-derived times (CRW from NetCDF) list `members` / `mapping.bands` explicitly.
+
+Layer-level single-date rasters (`granularity: "layer"`) do not need band mapping. Visibility is a style show/hide against `coverage`, same as a vector layer with no per-feature time.
+
+### Remote sources (GFW)
+
+GFW does not get `_when_*` columns or a stored cube. Its `TemporalInfo` is a capability descriptor:
+
+```ts
+{
+  version: 1,
+  granularity: "remote",
+  coverage: { kind: "interval", start: "2012-01-01", end: null, precision: "day" },
+  nativeResolution: "hour",
+  defaultViewResolution: "day",
+  supportedViewResolutions: ["hour", "day", "month", "year"],
+  providesSliderStats: true,
+  mapping: { type: "remote", driver: "gfw-4wings" },
+}
+```
+
+The map clock is translated into 4Wings request params. Report metrics (`gfw_report` and the like) take the same range and aggregation from widget config, defaulting to this descriptor.
+
+### Map clock (client state, not stored on the source)
+
+One clock for the map, as in Cesium/QGIS. Layers subscribe; there is not a slider per source.
+
+```ts
+type TemporalClock = {
+  /** Derived from visible sources; user can override (range vs instant). */
+  mode: "instant" | "window" | "cumulative";
+  start: TemporalIso; // inclusive
+  end: TemporalIso;   // exclusive; equals start+step in `instant` mode
+  viewResolution: TemporalPrecision;
+};
+```
+
+This is session UI state. It is not part of `TemporalInfo`.
+
+### Worked examples
+
+**Layer-level annual raster** (“Mangroves 2018” as its own upload):
+
+```json
+{
+  "version": 1,
+  "granularity": "layer",
+  "coverage": { "kind": "interval", "start": "2018", "end": "2019", "precision": "year" },
+  "nativeResolution": "year",
+  "defaultViewResolution": "year",
+  "authoredBy": "admin"
+}
+```
+
+**42-band Global Mangrove Watch cube:**
+
+```json
+{
+  "version": 1,
+  "granularity": "band",
+  "coverage": { "kind": "interval", "start": "1985", "end": "2026", "precision": "year" },
+  "nativeResolution": "year",
+  "defaultViewResolution": "year",
+  "series": { "start": "1985", "end": "2026", "step": { "count": 1, "unit": "year" } },
+  "mapping": {
+    "type": "band",
+    "bands": [
+      { "id": "1985", "index": 1, "when": { "kind": "interval", "start": "1985", "end": "1986", "precision": "year" } }
+    ]
+  },
+  "authoredBy": "ingest"
+}
+```
+
+(`mapping.bands` can be omitted when `series` plus “band 1 = series.start” is unambiguous. List them when CF/NetCDF times are irregular.)
+
+**Vector track** (tagged shark, per-feature instants):
+
+```json
+{
+  "version": 1,
+  "granularity": "feature",
+  "coverage": { "kind": "interval", "start": "2019-03-12T06:14:00Z", "end": "2019-11-02T18:03:01Z", "precision": "second" },
+  "nativeResolution": "hour",
+  "defaultViewResolution": "day",
+  "mapping": {
+    "type": "feature",
+    "startColumn": "_when_start",
+    "endColumn": "_when_end",
+    "sourceColumns": { "instant": "timestamp" }
+  },
+  "authoredBy": "ingest"
+}
+```
+
+**Data Table** (daily samples, compared by year):
+
+```json
+{
+  "version": 1,
+  "granularity": "row",
+  "coverage": { "kind": "interval", "start": "2008", "end": "2025", "precision": "year" },
+  "nativeResolution": "day",
+  "defaultViewResolution": "year",
+  "supportedViewResolutions": ["day", "month", "year"],
+  "providesSliderStats": true,
+  "mapping": {
+    "type": "row",
+    "startColumn": "_when_start",
+    "endColumn": "_when_end",
+    "sourceColumns": { "instant": "DATE" }
+  },
+  "authoredBy": "admin"
+}
+```
+
+### What ingest writes vs what admin edits
+
+Ingest fills `TemporalInfo` from native time when it exists (KML `TimeStamp`/`TimeSpan`, netCDF-CF `time`, STAC `datetime` / `start_datetime`/`end_datetime`, Esri `timeInfo`, FGDC/ISO sidecars, per-band GDAL tags) and, for features/rows, materializes `_when_start` / `_when_end`. Filename and title heuristics may *propose* a layer-level year; they are not stored unless confirmed.
+
+Admin can set or correct `coverage`, precision, granularity, and the column/band mapping, then reprocess to rewrite the physical columns. `authoredBy: "admin"` means a later automatic ingest must not overwrite those fields.
+
+### Open questions
+
+- Exact Postgres shape (`temporal jsonb` vs generated columns for `coverage` start/end, to match how `geostats` already fans out `raster_band_count`). JSONB is enough to start.
+- Whether MVT also carries a `_when` label string. Useful for popups; not required to render.
+- Whether a Data Library product that grows a new GMW year updates `series.end` in place (so report widgets pick up the year) or publishes a new source version. The latter matches current source replace; the former is the “automatic annual updates” hope in Reporting.
+- Inclusive-end leftovers after ingest (a STAC end of `2018-12-31T23:59:59Z` must become exclusive `2019-01-01`). Worth a single conversion helper and tests; do not leak mixed conventions into stored JSON.
+
 ## Rendering and Analysis Strategies, Constraints
 
 ### Map Rendering
@@ -87,7 +386,7 @@ A screenshot review of these UIs, aimed at the timeslider questions above, is in
 - Vector
   - SeaSketch uses MVT & GeoJSON for visualization.
   - Sources with layer-level temporal constraints would have visibility controlled via dynamic style updates. Could be direct modification by the MapContext or a whole getCalculatedStyle cycle.
-  - Sources with feature-level time constraints would need to have their visibility controlled by dynamic updates to the mapbox-gl-style. This means a standard prop must be present like `_when`, or `_when_start` and `_when_end`. It also implies the prop **must be easily filterable via mapbox-gl-style expressions**. A full ISO 8601 string won't work. GeoJSON-T won't work. Likely we'll need to use something like epoch (but probably not that, due to 2038 problem and a host of others...).
+  - Sources with feature-level time constraints would need to have their visibility controlled by dynamic updates to the mapbox-gl-style. Features must carry the canonical `_when_start` / `_when_end` JSON numbers from [Temporal Metadata and Data Schemas](#temporal-metadata-and-data-schemas) (UTC seconds since epoch, expanded half-open interval). Those are filterable with Mapbox GL expressions; GeoJSON-T and mixed-width ISO 8601 are not. Do not store a single epoch instant — a year-precision value would collapse to midnight 1 January and miss the rest of the year. Do not let tippecanoe encode these as int32 or float32.
 - Raster
   - SeaSketch visualizes rasters using PMTile archives of image tiles
   - Like with vectors, layer-level temporal constraints are easy.
@@ -96,8 +395,8 @@ A screenshot review of these UIs, aimed at the timeslider questions above, is in
   - While data tables have a whole-table temporal range, managing visibility on that is not the target. Rather it is visualizing data/observation rows for a given instant, or aggregating data for a time span.
   - Currently, data table rendering relies on a "sites" or features mvt layer, which is then enriched with data queried from data tables via pmtiles-server. Data returned as json is applied to features via `feature-state` as supported by the mapbox-gl-js api. We just visualize by date with a generic dropdown that filters on columns like `YEAR`.
   - Upon upload, csv table data won't have structured temporal data. There may be a "when" column with ISO 8601 dates, or they could just be a YEAR column with a numeric year (or even strings). It could really be anything (or nothing).
-  - Like vector features, rows will need to be enriched with `_when`, or `_when_start` and `_when_end` columns that normalize provide temporal data into a standard form. Parquet encodings and the broader ecosystem may have standard ways of storing this sort of temporal information. It should be leveraged, and dedicated temporal query parameters should be added to the query engine hosted on pmtiles-server that leverage this information.
-  - Admins will need to be provided some sort of "wizard" to identify temporal column(s) and provide neded information necessary to coerce them into normalized data. The tables would then be reprocessed and a new version created with these standard columns populated.
+  - Like vector features, rows will need to be enriched with `_when_start` and `_when_end` columns that normalize temporal data into the standard half-open interval (UTC seconds). Parquet/Arrow `timestamp[s, UTC]` should be used for the physical instants; the query engine on pmtiles-server should accept dedicated temporal parameters that apply `TemporalInfo` precision and those columns, not raw `YEAR` strings.
+  - Admins will need to be provided some sort of "wizard" to identify temporal column(s) and provide needed information necessary to coerce them into normalized data. The tables would then be reprocessed and a new version created with these standard columns populated.
 - GFW
   - GFW integration with SeaSketch is a special case that doesn't build on much of the SeaSketch temporal support, other than the timeslider and client temporal context
   - SeaSketch will pull MVT directly from the GFW 4Wings API
@@ -108,7 +407,7 @@ A screenshot review of these UIs, aimed at the timeslider questions above, is in
 - Vector
   - Reporting widgets will need to keep track of what data source(s) contribute to a time series
   - For single-temporal range sources (e.g. "Mangroves 2019"), the overlay engine and metrics suffice as-is and it's just a matter of book-keeping on the widget side to organize the data.
-  - For sources with per-feature temporal data, the overlay-engine will need to aggregate stats in a single metric by standard properties (e.g. `_when`, `_when_start`, `_when_end`). It is unclear if existing metrics can support this with their types and structure, or if dedicated new metrics need to be created (e.g. `overlay-area-by-when` , `column-stats-by-when`).
+  - For sources with per-feature temporal data, the overlay-engine will need to aggregate stats in a single metric by `_when_start` / `_when_end` (or by the expanded interval bucketed at the widget’s view resolution). It is unclear if existing metrics can support this with their types and structure, or if dedicated new metrics need to be created (e.g. `overlay-area-by-when` , `column-stats-by-when`).
   - For these sources with per-feature temporal data, widgets should probably provide the means to set a range of dates they want in the time series, if it is to be a subset of the full dataset. These should probably flow through to the overlay-engine and metrics so that huge metrics aren't slowly calculated on large data sources when not necessary.
 - Raster
   - Pretty much all the details related to vector layers apply to rasters, with the difference being that multi-temporal layers are defined by having bands which apply to an instant/timespan instead of individual vector features.
@@ -122,12 +421,12 @@ A screenshot review of these UIs, aimed at the timeslider questions above, is in
 
 ## Data Upload and Ingest
 
-*Whene*ver a supported data source is uploaded to SeaSketch, the system transforms that data into a canonical form (e.g. FGB or COG) and produces a pmtile package for visualization. This system also looks for metadata that can be used to populate the interface, and optionally runs the AI cartographer.
+Whenever a supported data source is uploaded to SeaSketch, the system transforms that data into a canonical form (e.g. FGB or COG) and produces a pmtile package for visualization. This system also looks for metadata that can be used to populate the interface, and optionally runs the AI cartographer.
 
-An additional step in this process will need to be added that inspects the data source for native temporal information. So extract TimeSpan or TimeStamp elements from KML, or Esri or FGDC temporal metadata from shapefile xml sidecars for example. This information would be interpretted and transformed into the system of record for temporal information in SeaSketch, saving admins the time of manually entering information in the SeaSketch admin interface. We could also use a combination of heuristics and LLM APIs to identify timestamp or time span columns in vector features and use them to populate standardized temporal columns like when, when_start, when_end.
+An additional step in this process will need to be added that inspects the data source for native temporal information. So extract TimeSpan or TimeStamp elements from KML, or Esri or FGDC temporal metadata from shapefile xml sidecars for example. This information would be interpreted and transformed into `TemporalInfo` plus `_when_start` / `_when_end` as described above, saving admins the time of manually entering information in the SeaSketch admin interface. We could also use a combination of heuristics and LLM APIs to identify timestamp or time span columns in vector features and use them to populate those standardized columns.
 
 ## Administrative Interface
 
-Temporal coverage information should be exposed in the layer admin interface and where possible be editable. There may be mistakes in the source or import process that assigns temporal information, we may have layers that were uploaded before the introduction of the system, or the uploaded layer may just be lacking this information in the uploaded format. For example, if I have those uploaded rasters of annual mangrove cover, I should be able as an administrator to set the layer _timestamp_ as YYYY- (or is it a timespan?).
+Temporal coverage information should be exposed in the layer admin interface and where possible be editable. There may be mistakes in the source or import process that assigns temporal information, we may have layers that were uploaded before the introduction of the system, or the uploaded layer may just be lacking this information in the uploaded format. For those uploaded rasters of annual mangrove cover, the administrator sets a **year interval** (`2018` → stored as `{ start: "2018", end: "2019", precision: "year" }`), not a timestamp. Instant vs interval is a control in that form; annual coverage defaults to interval.
 
 Beyond just assigning source-level temporal coverage, it may be possible to give admins the ability to identify temporal columns that weren't processed during upload (either due to ai being disabled, heuristics not matching, or an unknown format). Admins could walk thru a "wizard" where they pin down the exact timestamp format, then send the source through the processing workflow once more to create a revision that has populated feature-level temporal columns.
