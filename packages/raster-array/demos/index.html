@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>@seasketch/raster-array demos</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="home">
+      <h1>Mapbox raster-array (MRT) demos</h1>
+      <p class="lead">
+        Self-hosted Mapbox Raster Tiles produced from multi-band GeoTIFF and
+        NetCDF — no Mapbox Tiling Service. These pages use the same Mapbox GL JS
+        3.4 <code>raster-array</code> source SeaSketch already depends on.
+      </p>
+      <div class="grid" id="cards">
+        <a href="mangrove.html">
+          <h2>Global Mangrove Watch</h2>
+          <p>41 annual presence bands (1985–2025) with a year slider and playback.</p>
+        </a>
+        <a href="gmw-global.html">
+          <h2>GMW full globe</h2>
+          <p>Ready — 1,696 cells mosaicked to one GeoTIFF, then encoded z0–10 (8,243 tiles).</p>
+        </a>
+        <a href="sst.html">
+          <h2>SST / NetCDF</h2>
+          <p>Synthetic monthly sea-surface temperature encoded from a NetCDF cube.</p>
+        </a>
+        <a href="blocks.html">
+          <h2>Block grouping</h2>
+          <p>All bands in one MRT block vs one band per block — watch Range requests.</p>
+        </a>
+        <a href="official.html">
+          <h2>Mapbox control</h2>
+          <p>Official Mapbox-hosted GFS temperature tileset, to confirm GL JS + token.</p>
+        </a>
+      </div>
+      <p class="lead" style="margin-top: 28px" id="status">Looking for encoded tilesets…</p>
+    </div>
+    <script>
+      fetch("/tilesets")
+        .then((r) => r.json())
+        .then((sets) => {
+          const el = document.getElementById("status");
+          if (!sets.length) {
+            el.textContent =
+              "No tilesets yet. From packages/raster-array run: npm run fixtures";
+            return;
+          }
+          el.textContent =
+            "Encoded tilesets: " + sets.map((s) => `${s.id} (${s.bands.length} bands)`).join(", ");
+        })
+        .catch(() => {
+          document.getElementById("status").textContent =
+            "Demo server is not running. npm run demo";
+        });
+    </script>
+  </body>
+</html>

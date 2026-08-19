@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>GMW mangroves — raster-array</title>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.css" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="map"></div>
+    <div id="hover"></div>
+    <div class="topbar">
+      <div>
+        <h1>Global Mangrove Watch v4.1</h1>
+        <p>Self-hosted MRT · 41 annual bands · <code>raster-array-band</code></p>
+      </div>
+      <label style="font-size: 13px; color: var(--muted)">
+        Region
+        <select id="region" style="margin-left: 8px">
+          <option value="gmw-florida">Florida Bay / Everglades</option>
+          <option value="gmw-sundarbans">Sundarbans</option>
+          <option value="gmw-borneo">Borneo (S08E116)</option>
+          <option value="gmw-global">Full globe (z0–10 mosaic)</option>
+          <option value="categories-all">Synthetic blob (always available)</option>
+        </select>
+      </label>
+      <nav id="nav"></nav>
+    </div>
+    <div class="legend">
+      <div>Presence</div>
+      <div class="swatch"><i style="background:#3dd68c"></i> mangrove</div>
+      <div class="swatch"><i style="background:#000"></i> nodata / water</div>
+      <div class="meta" id="query">Hover for value</div>
+    </div>
+    <div class="slider">
+      <div class="slider-row">
+        <button class="icon" id="play" type="button">▶</button>
+        <div class="year" id="year">—</div>
+        <input id="band" type="range" min="0" max="1" value="0" />
+      </div>
+      <div class="ticks" id="ticks"></div>
+      <div class="meta">Playback only changes <code>raster-array-band</code>. Tiles stay cached.</div>
+    </div>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.js"></script>
+    <script src="/config.js"></script>
+    <script type="module">
+      import {
+        nav,
+        createMap,
+        loadTileset,
+        mangrovePaint,
+        bindSlider,
+        addRasterArrayLayer,
+        showError,
+      } from "./app.js";
+
+      document.getElementById("nav").innerHTML = nav("GMW");
+
+      const FALLBACK = {
+        "gmw-florida": [-81.3, 25.4, 9],
+        "gmw-sundarbans": [89.2, 22.2, 9],
+        "gmw-borneo": [116.4, -8.4, 10],
+        "gmw-global": [20, 5, 2],
+        "categories-all": [-81.3, 25.6, 10],
+      };
+
+      const map = await createMap([-81.3, 25.4], 9);
+      let layerId = "raster-layer";
+      let sourceId = "raster-src";
+      let currentTileset = null;
+
+      async function show(id) {
+        const [lon, lat, zoom] = FALLBACK[id] || [0, 0, 2];
+        let tj;
+        try {
+          tj = await loadTileset(id);
+        } catch (err) {
+          if (id !== "categories-all") {
+            alert(`${id} is not encoded yet. Falling back to the synthetic blob.\n${err.message}`);
+            document.getElementById("region").value = "categories-all";
+            return show("categories-all");
+          }
+          throw err;
+        }
+        currentTileset = { id, tj };
+        const layer = tj.raster_layers[0];
+        const bands = layer.fields.bands;
+        await addRasterArrayLayer(map, {
+          sourceId,
+          layerId,
+          tilesetId: id,
+          tilejson: tj,
+          paint: mangrovePaint(bands[bands.length - 1]),
+        });
+        map.jumpTo({ center: [lon, lat], zoom });
+        bindSlider({
+          bands,
+          onBand: (band) => {
+            if (map.getLayer(layerId)) {
+              map.setPaintProperty(layerId, "raster-array-band", band);
+            }
+          },
+        });
+      }
+
+      document.getElementById("region").addEventListener("change", (e) => {
+        show(e.target.value).catch(showError);
+      });
+
+      map.on("mousemove", async (e) => {
+        const hover = document.getElementById("hover");
+        const query = document.getElementById("query");
+        if (!currentTileset || !map.getSource(sourceId)) return;
+        try {
+          const band = map.getPaintProperty(layerId, "raster-array-band");
+          const layerName = currentTileset.tj.raster_layers[0].id;
+          const result = await map.queryRasterValue(sourceId, e.lngLat, {
+            layerName,
+            bands: [band],
+          });
+          const value = result?.[layerName]?.[band]?.[0];
+          if (value == null) {
+            hover.style.display = "none";
+            query.textContent = "Hover for value";
+            return;
+          }
+          hover.style.display = "block";
+          hover.style.left = e.point.x + "px";
+          hover.style.top = e.point.y + "px";
+          hover.textContent = `${band}: ${value}`;
+          query.textContent = `${band}: ${value}`;
+        } catch {
+          hover.style.display = "none";
+        }
+      });
+
+      try {
+        await show(document.getElementById("region").value);
+      } catch (err) {
+        showError(err);
+      }
+    </script>
+  </body>
+</html>

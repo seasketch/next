@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>SST NetCDF — raster-array</title>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.css" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="map"></div>
+    <div class="topbar">
+      <div>
+        <h1>Synthetic SST from NetCDF</h1>
+        <p>24 monthly bands, offset 0 / scale 0.1, bilinear resampling</p>
+      </div>
+      <nav id="nav"></nav>
+    </div>
+    <div class="legend">
+      <div>Sea surface temperature</div>
+      <div class="swatch"><i style="background:#2c7bb6"></i> cooler</div>
+      <div class="swatch"><i style="background:#fdae61"></i> warm blob</div>
+      <div class="swatch"><i style="background:#d7191c"></i> hottest</div>
+    </div>
+    <div class="slider">
+      <div class="slider-row">
+        <button class="icon" id="play" type="button">▶</button>
+        <div class="year" id="year" style="min-width: 7ch">—</div>
+        <input id="band" type="range" min="0" max="1" value="0" />
+      </div>
+      <div class="ticks" id="ticks"></div>
+      <div class="meta">Source is a GDAL-written NetCDF, tiled the same way as a GeoTIFF.</div>
+    </div>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.js"></script>
+    <script src="/config.js"></script>
+    <script type="module">
+      import {
+        nav,
+        createMap,
+        loadTileset,
+        continuousPaint,
+        bindSlider,
+        addRasterArrayLayer,
+        showError,
+      } from "./app.js";
+      document.getElementById("nav").innerHTML = nav("SST / NetCDF");
+
+      try {
+        const map = await createMap([-40, 8], 2, {
+          style: "mapbox://styles/mapbox/dark-v11",
+          hash: true,
+        });
+        const tj = await loadTileset("sst");
+        const layer = tj.raster_layers[0];
+        const bands = layer.fields.bands;
+        const range = layer.fields.range;
+        const stops = [
+          range[0], "#2c7bb6",
+          (range[0] + range[1]) / 2, "#fdae61",
+          range[1], "#d7191c",
+        ];
+        await addRasterArrayLayer(map, {
+          sourceId: "sst-src",
+          layerId: "sst-layer",
+          tilesetId: "sst",
+          tilejson: tj,
+          paint: continuousPaint(bands[0], range, stops),
+        });
+        bindSlider({
+          bands,
+          playMs: 220,
+          onBand: (band) => map.setPaintProperty("sst-layer", "raster-array-band", band),
+        });
+      } catch (err) {
+        showError(err);
+      }
+    </script>
+  </body>
+</html>

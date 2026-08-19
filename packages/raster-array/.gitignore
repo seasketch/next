@@ -1,0 +1,16 @@
+node_modules
+dist
+.tsbuildinfo
+*.tsbuildinfo
+.DS_Store
+
+# Local source rasters, mosaics, and encoded tiles. Rebuild with
+# `npm run fixtures` / `npm run gmw:global` — do not commit these.
+demos/tiles/
+fixtures/
+*.tif
+*.tiff
+*.mrt
+*.nc
+*.pmtiles
+*.zip

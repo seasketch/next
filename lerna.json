@@ -19,7 +19,8 @@
     "packages/overlay-worker",
     "packages/fragment-worker",
     "packages/ai-data-analyst",
-    "packages/gl-style-builder"
+    "packages/gl-style-builder",
+    "packages/raster-array"
   ],
   "version": "independent"
 }

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>GMW globe — raster-array</title>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.css" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="map"></div>
+    <div id="hover"></div>
+    <div class="topbar">
+      <div>
+        <h1>Global Mangrove Watch — full globe</h1>
+        <p>All 1° cells mosaicked to one GeoTIFF, then the same MRT encoder</p>
+      </div>
+      <label style="font-size: 13px; color: var(--muted)">
+        Jump
+        <select id="place" style="margin-left: 8px">
+          <option value="0,8,2">Globe</option>
+          <option value="-81.3,25.4,9">Florida Bay</option>
+          <option value="89.2,22.2,9">Sundarbans</option>
+          <option value="6.3,4.5,8">Niger Delta</option>
+          <option value="-48.5,-1.0,8">Amazon mouth</option>
+          <option value="117.3,-0.6,8">Mahakam Delta</option>
+          <option value="145.8,-17.0,8">Queensland</option>
+        </select>
+      </label>
+      <nav id="nav"></nav>
+    </div>
+    <div class="legend">
+      <div>Presence</div>
+      <div class="swatch"><i style="background:#3dd68c"></i> mangrove</div>
+      <div class="swatch"><i style="background:#000"></i> nodata / water</div>
+      <div class="meta" id="stats">Loading tileset…</div>
+    </div>
+    <div class="slider">
+      <div class="slider-row">
+        <button class="icon" id="play" type="button">▶</button>
+        <div class="year" id="year">—</div>
+        <input id="band" type="range" min="0" max="1" value="0" />
+      </div>
+      <div class="ticks" id="ticks"></div>
+      <div class="meta">z0–10 from one global mosaic. Playback only changes <code>raster-array-band</code>.</div>
+    </div>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.js"></script>
+    <script src="/config.js"></script>
+    <script type="module">
+      import {
+        nav,
+        createMap,
+        loadTileset,
+        mangrovePaint,
+        bindSlider,
+        addRasterArrayLayer,
+        showError,
+      } from "./app.js";
+
+      document.getElementById("nav").innerHTML = nav("GMW globe");
+
+      try {
+        const map = await createMap([20, 5], 2, {
+          style: "mapbox://styles/mapbox/satellite-streets-v12",
+        });
+        const tj = await loadTileset("gmw-global");
+        const layer = tj.raster_layers[0];
+        const bands = layer.fields.bands;
+        await addRasterArrayLayer(map, {
+          sourceId: "raster-src",
+          layerId: "raster-layer",
+          tilesetId: "gmw-global",
+          tilejson: tj,
+          paint: mangrovePaint(bands[bands.length - 1]),
+        });
+        bindSlider({
+          bands,
+          onBand: (band) => {
+            if (map.getLayer("raster-layer")) {
+              map.setPaintProperty("raster-layer", "raster-array-band", band);
+            }
+          },
+        });
+
+        fetch("/tiles/gmw-global/encode-stats.json")
+          .then((r) => (r.ok ? r.json() : null))
+          .then((s) => {
+            const el = document.getElementById("stats");
+            if (!s) {
+              el.textContent = `${bands.length} bands · maxzoom ${tj.maxzoom}`;
+              return;
+            }
+            const mb = (s.bytesOut / 1e6).toFixed(1);
+            const encMin = ((s.encodeElapsedMs ?? s.elapsedMs) / 60000).toFixed(1);
+            const mosaicMin = s.reusedMosaic
+              ? "mosaic reused"
+              : s.mosaicElapsedMs
+                ? `mosaic ${(s.mosaicElapsedMs / 60000).toFixed(1)} min`
+                : null;
+            el.textContent = [s.writtenTiles + " tiles", mb + " MB", mosaicMin, `encode ${encMin} min`]
+              .filter(Boolean)
+              .join(" · ");
+          })
+          .catch(() => {
+            document.getElementById("stats").textContent = `${bands.length} annual bands`;
+          });
+
+        document.getElementById("place").addEventListener("change", (e) => {
+          const [lon, lat, zoom] = e.target.value.split(",").map(Number);
+          map.jumpTo({ center: [lon, lat], zoom });
+        });
+
+        map.on("mousemove", async (e) => {
+          const hover = document.getElementById("hover");
+          try {
+            const band = map.getPaintProperty("raster-layer", "raster-array-band");
+            const result = await map.queryRasterValue("raster-src", e.lngLat, {
+              layerName: layer.id,
+              bands: [band],
+            });
+            const value = result?.[layer.id]?.[band]?.[0];
+            if (value == null) {
+              hover.style.display = "none";
+              return;
+            }
+            hover.style.display = "block";
+            hover.style.left = e.point.x + "px";
+            hover.style.top = e.point.y + "px";
+            hover.textContent = `${band}: ${value}`;
+          } catch {
+            hover.style.display = "none";
+          }
+        });
+      } catch (err) {
+        showError(
+          new Error(
+            `${err.message}\n\nEncode the globe first:\n  cd packages/raster-array && npm run gmw:global`,
+          ),
+        );
+      }
+    </script>
+  </body>
+</html>
