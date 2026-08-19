@@ -8,11 +8,14 @@ import {
   putObject,
 } from "./remotes";
 import {
+  assertUnmatchedRecordFractionAllowed,
   getGeostatsLayer,
   validateJoinColumnChoice,
 } from "./validateJoinColumn";
 import {
   computeColumnStatsFromParquet,
+  countParquetJoinMatches,
+  filterParquetByJoinValues,
   processCsvWithDuckDb,
   readJoinValues,
 } from "./processWithDuckDb";
@@ -115,12 +118,15 @@ export default async function handleDataTableUpload(
     await updateProgress("running", "processing", 0.2);
 
     logDebug("processing csv with duckdb", { csvPath, parquetPath });
-    const { rowCount, headers } = await processCsvWithDuckDb(
+    const { rowCount: importedRowCount, headers } = await processCsvWithDuckDb(
       csvPath,
       parquetPath,
       processingOptions,
     );
-    logDebug("csv processed", { rowCount, columnCount: headers.length });
+    logDebug("csv processed", {
+      rowCount: importedRowCount,
+      columnCount: headers.length,
+    });
 
     const joinValues = await readJoinValues(parquetPath, joinColumn);
     const layer = getGeostatsLayer(upload.overlay_geostats);
@@ -137,12 +143,49 @@ export default async function handleDataTableUpload(
       matchRate: joinValidation.matchRate,
       matchedRows: joinValidation.matchedRows,
       unmatchedRows: joinValidation.unmatchedRows,
+      histogramComplete: joinValidation.histogramComplete,
     });
+
+    let rowCount = Math.trunc(Number(importedRowCount));
+    let droppedJoinValues: string[] = [];
+    let droppedRowCount = 0;
+    const canDropUnmatched =
+      joinValidation.histogramComplete &&
+      joinValidation.unmatchedJoinValues.length > 0;
+    if (canDropUnmatched) {
+      droppedJoinValues = [...joinValidation.unmatchedJoinValues].sort((a, b) =>
+        a.localeCompare(b),
+      );
+      const matchCounts = await countParquetJoinMatches(
+        parquetPath,
+        joinColumn,
+        joinValidation.matchedJoinValues,
+      );
+      assertUnmatchedRecordFractionAllowed(
+        matchCounts.unmatchedRowCount,
+        matchCounts.totalRowCount,
+        droppedJoinValues,
+      );
+      await updateProgress("running", "dropping unmatched sites", 0.45);
+      const filtered = await filterParquetByJoinValues(
+        parquetPath,
+        joinColumn,
+        joinValidation.matchedJoinValues,
+      );
+      rowCount = filtered.rowCount;
+      droppedRowCount = filtered.droppedRowCount;
+      logDebug("dropped unmatched join values", {
+        droppedSites: droppedJoinValues.length,
+        droppedRowCount,
+        remainingRowCount: rowCount,
+      });
+    }
 
     await updateProgress("running", "computing stats", 0.6);
 
     const tableName =
       processingOptions.name || defaultTableName(upload.filename);
+    const DROPPED_VALUES_LIMIT = 500;
     const columnStats = await computeColumnStatsFromParquet(
       parquetPath,
       tableName,
@@ -153,6 +196,15 @@ export default async function handleDataTableUpload(
         matchedRows: joinValidation.matchedRows,
         unmatchedRows: joinValidation.unmatchedRows,
         unmatchedOverlayValues: joinValidation.unmatchedOverlayValues,
+        ...(droppedJoinValues.length > 0
+          ? {
+              droppedJoinValues: droppedJoinValues.slice(
+                0,
+                DROPPED_VALUES_LIMIT,
+              ),
+              droppedRowCount,
+            }
+          : {}),
       },
     );
 
@@ -180,7 +232,7 @@ export default async function handleDataTableUpload(
       name: tableName,
       joinColumn,
       overlayJoinColumn,
-      rowCount: Math.trunc(Number(rowCount)),
+      rowCount,
       parquetRemote: parquetTarget.remote,
       columnStatsRemote: statsTarget.remote,
     };

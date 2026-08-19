@@ -18,7 +18,8 @@ import {
   useSetOverlayDataTableVisualizationSettingsMutation,
   useSoftDeleteOverlayDataTableMutation,
 } from "../../../generated/graphql";
-import { GeostatsLayer } from "@seasketch/geostats-types";
+import { DataTablesColumnStats, GeostatsLayer } from "@seasketch/geostats-types";
+import { droppedJoinInfoFromColumnStats } from "./droppedJoinInfo";
 import { ProjectBackgroundJobContext } from "../../uploads/ProjectBackgroundJobContext";
 import { dataTableChangeLogRefetchQueries } from "../../changelogs/dataTableChangeLogRefetch";
 import DataTableUploadJobProgress from "./DataTableUploadJobProgress";
@@ -40,6 +41,49 @@ type RelatedDataTablesProps = {
 type DataTableJob = NonNullable<
   FullAdminOverlayFragment["projectBackgroundJobs"]
 >[number];
+
+const DROPPED_SITES_SHOWN = 15;
+
+function DataTableDroppedSitesNotice({
+  columnStats,
+}: {
+  columnStats?: DataTablesColumnStats;
+}) {
+  const { t } = useTranslation("admin:data");
+  const { droppedJoinValues, droppedRowCount } =
+    droppedJoinInfoFromColumnStats(columnStats);
+  if (droppedJoinValues.length === 0) {
+    return null;
+  }
+
+  const shown = droppedJoinValues.slice(0, DROPPED_SITES_SHOWN);
+  const extra = droppedJoinValues.length - shown.length;
+  const sites =
+    extra > 0
+      ? t("{{sites}}, and {{count}} more", {
+          sites: shown.join(", "),
+          count: extra,
+        })
+      : shown.join(", ");
+  const rowCount = droppedRowCount ?? 0;
+
+  return (
+    <p className="mt-2 text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5">
+      {rowCount > 0
+        ? t(
+            "{{rowCount}} rows were removed because these sites are not in this layer: {{sites}}",
+            {
+              rowCount: rowCount.toLocaleString(),
+              sites,
+            }
+          )
+        : t(
+            "These sites are not in this layer and were removed: {{sites}}",
+            { sites }
+          )}
+    </p>
+  );
+}
 
 function isActiveDataTableJob(job: DataTableJob) {
   return (
@@ -473,6 +517,7 @@ function DataTableSettingsModal({
               {t("Upload a new version or remove this table from the layer.")}
             </p>
           </div>
+          <DataTableDroppedSitesFromUrl table={table} />
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -529,6 +574,11 @@ function DataTableRow({
   const { t } = useTranslation("admin:data");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const sameJoinColumn = table.joinColumn === table.overlayJoinColumn;
+  const { data: projectMeta } = useCurrentProjectMetadata();
+  const { columnStats } = useDataTableColumnStats(
+    columnStatsUrlForTable(table),
+    projectMeta?.project?.mapAccessToken
+  );
 
   return (
     <li className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
@@ -582,6 +632,7 @@ function DataTableRow({
           )}
         </p>
       )}
+      {!job ? <DataTableDroppedSitesNotice columnStats={columnStats} /> : null}
       {settingsOpen ? (
         <DataTableSettingsModal
           table={table}
@@ -594,6 +645,19 @@ function DataTableRow({
       ) : null}
     </li>
   );
+}
+
+function DataTableDroppedSitesFromUrl({
+  table,
+}: {
+  table: OverlayDataTableDetailsFragment;
+}) {
+  const { data: projectMeta } = useCurrentProjectMetadata();
+  const { columnStats } = useDataTableColumnStats(
+    columnStatsUrlForTable(table),
+    projectMeta?.project?.mapAccessToken
+  );
+  return <DataTableDroppedSitesNotice columnStats={columnStats} />;
 }
 
 function PendingDataTableUploadRow({

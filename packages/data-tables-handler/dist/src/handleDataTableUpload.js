@@ -91,8 +91,11 @@ async function handleDataTableUpload(request) {
         await (0, remotes_1.getStagingObject)(csvPath, objectKey);
         await updateProgress("running", "processing", 0.2);
         logDebug("processing csv with duckdb", { csvPath, parquetPath });
-        const { rowCount, headers } = await (0, processWithDuckDb_1.processCsvWithDuckDb)(csvPath, parquetPath, processingOptions);
-        logDebug("csv processed", { rowCount, columnCount: headers.length });
+        const { rowCount: importedRowCount, headers } = await (0, processWithDuckDb_1.processCsvWithDuckDb)(csvPath, parquetPath, processingOptions);
+        logDebug("csv processed", {
+            rowCount: importedRowCount,
+            columnCount: headers.length,
+        });
         const joinValues = await (0, processWithDuckDb_1.readJoinValues)(parquetPath, joinColumn);
         const layer = (0, validateJoinColumn_1.getGeostatsLayer)(upload.overlay_geostats);
         const joinValidation = (0, validateJoinColumn_1.validateJoinColumnChoice)(headers, joinColumn, overlayJoinColumn, layer, joinValues);
@@ -102,9 +105,30 @@ async function handleDataTableUpload(request) {
             matchRate: joinValidation.matchRate,
             matchedRows: joinValidation.matchedRows,
             unmatchedRows: joinValidation.unmatchedRows,
+            histogramComplete: joinValidation.histogramComplete,
         });
+        let rowCount = Math.trunc(Number(importedRowCount));
+        let droppedJoinValues = [];
+        let droppedRowCount = 0;
+        const canDropUnmatched = joinValidation.histogramComplete &&
+            joinValidation.unmatchedJoinValues.length > 0;
+        if (canDropUnmatched) {
+            droppedJoinValues = [...joinValidation.unmatchedJoinValues].sort((a, b) => a.localeCompare(b));
+            const matchCounts = await (0, processWithDuckDb_1.countParquetJoinMatches)(parquetPath, joinColumn, joinValidation.matchedJoinValues);
+            (0, validateJoinColumn_1.assertUnmatchedRecordFractionAllowed)(matchCounts.unmatchedRowCount, matchCounts.totalRowCount, droppedJoinValues);
+            await updateProgress("running", "dropping unmatched sites", 0.45);
+            const filtered = await (0, processWithDuckDb_1.filterParquetByJoinValues)(parquetPath, joinColumn, joinValidation.matchedJoinValues);
+            rowCount = filtered.rowCount;
+            droppedRowCount = filtered.droppedRowCount;
+            logDebug("dropped unmatched join values", {
+                droppedSites: droppedJoinValues.length,
+                droppedRowCount,
+                remainingRowCount: rowCount,
+            });
+        }
         await updateProgress("running", "computing stats", 0.6);
         const tableName = processingOptions.name || defaultTableName(upload.filename);
+        const DROPPED_VALUES_LIMIT = 500;
         const columnStats = await (0, processWithDuckDb_1.computeColumnStatsFromParquet)(parquetPath, tableName, {
             column: joinColumn,
             overlayAttribute: overlayJoinColumn,
@@ -112,6 +136,12 @@ async function handleDataTableUpload(request) {
             matchedRows: joinValidation.matchedRows,
             unmatchedRows: joinValidation.unmatchedRows,
             unmatchedOverlayValues: joinValidation.unmatchedOverlayValues,
+            ...(droppedJoinValues.length > 0
+                ? {
+                    droppedJoinValues: droppedJoinValues.slice(0, DROPPED_VALUES_LIMIT),
+                    droppedRowCount,
+                }
+                : {}),
         });
         (0, fs_1.writeFileSync)(statsPath, JSON.stringify(columnStats));
         await updateProgress("running", "uploading", 0.8);
@@ -124,7 +154,7 @@ async function handleDataTableUpload(request) {
             name: tableName,
             joinColumn,
             overlayJoinColumn,
-            rowCount: Math.trunc(Number(rowCount)),
+            rowCount,
             parquetRemote: parquetTarget.remote,
             columnStatsRemote: statsTarget.remote,
         };

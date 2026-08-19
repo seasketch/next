@@ -28,7 +28,9 @@ export default function DataTableUploadJobProgress({
     ? job.errorMessage || t("Upload failed")
     : job.progressMessage === "uploading"
       ? t("Uploading file…")
-      : job.progressMessage || t("Processing…");
+      : job.progressMessage === "dropping unmatched sites"
+        ? t("Removing sites not found in this layer…")
+        : job.progressMessage || t("Processing…");
 
   if (failed) {
     return (

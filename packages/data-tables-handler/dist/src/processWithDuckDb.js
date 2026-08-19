@@ -25,8 +25,11 @@ var __importStar = (this && this.__importStar) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.processCsvWithDuckDb = processCsvWithDuckDb;
 exports.readJoinValues = readJoinValues;
+exports.countParquetJoinMatches = countParquetJoinMatches;
+exports.filterParquetByJoinValues = filterParquetByJoinValues;
 exports.computeColumnStatsFromParquet = computeColumnStatsFromParquet;
 const path = __importStar(require("path"));
+const fs_1 = require("fs");
 const validateJoinColumn_1 = require("./validateJoinColumn");
 const normalizeCsvEncoding_1 = require("./normalizeCsvEncoding");
 const inferCsvColumnPlans_1 = require("./inferCsvColumnPlans");
@@ -84,6 +87,74 @@ async function readJoinValues(parquetPath, joinColumn) {
         const rows = await (0, duckDb_1.all)(conn, `SELECT DISTINCT CAST("${col}" AS VARCHAR) as v FROM read_parquet('${escapePath(parquetPath)}') WHERE "${col}" IS NOT NULL`);
         return new Set(rows.map((r) => r.v));
     });
+}
+function escapeSqlString(value) {
+    return value.replace(/'/g, "''");
+}
+function joinValuesInList(values) {
+    return values.map((value) => `'${escapeSqlString(value)}'`).join(", ");
+}
+/**
+ * Counts rows whose join column is (or is not) in `keepValues`. NULL join
+ * values count as unmatched.
+ */
+async function countParquetJoinMatches(parquetPath, joinColumn, keepValues) {
+    if (keepValues.length === 0) {
+        throw new Error("No values in the join column match overlay feature identifiers");
+    }
+    const col = joinColumn.replace(/"/g, '""');
+    const inList = joinValuesInList(keepValues);
+    return (0, duckDb_1.withDuckDb)(async (conn) => {
+        const rows = await (0, duckDb_1.all)(conn, `SELECT
+        COUNT(*)::INTEGER as total,
+        COUNT(*) FILTER (WHERE CAST("${col}" AS VARCHAR) IN (${inList}))::INTEGER as matched
+      FROM read_parquet('${escapePath(parquetPath)}')`);
+        const totalRowCount = rows[0]?.total ?? 0;
+        const matchedRowCount = rows[0]?.matched ?? 0;
+        return {
+            totalRowCount,
+            matchedRowCount,
+            unmatchedRowCount: totalRowCount - matchedRowCount,
+        };
+    });
+}
+/**
+ * Rewrites `parquetPath` so it only contains rows whose join column is in
+ * `keepValues`. Used to drop CSV rows that do not match overlay features.
+ */
+async function filterParquetByJoinValues(parquetPath, joinColumn, keepValues) {
+    if (keepValues.length === 0) {
+        throw new Error("No values in the join column match overlay feature identifiers");
+    }
+    const col = joinColumn.replace(/"/g, '""');
+    const inList = joinValuesInList(keepValues);
+    const filteredPath = `${parquetPath}.filtered.parquet`;
+    try {
+        return await (0, duckDb_1.withDuckDb)(async (conn) => {
+            const beforeRows = await (0, duckDb_1.all)(conn, `SELECT COUNT(*)::INTEGER as count FROM read_parquet('${escapePath(parquetPath)}')`);
+            const beforeCount = beforeRows[0]?.count ?? 0;
+            await (0, duckDb_1.run)(conn, `COPY (
+          SELECT * FROM read_parquet('${escapePath(parquetPath)}')
+          WHERE CAST("${col}" AS VARCHAR) IN (${inList})
+        ) TO '${escapePath(filteredPath)}' (FORMAT PARQUET)`);
+            const afterRows = await (0, duckDb_1.all)(conn, `SELECT COUNT(*)::INTEGER as count FROM read_parquet('${escapePath(filteredPath)}')`);
+            const afterCount = afterRows[0]?.count ?? 0;
+            (0, fs_1.renameSync)(filteredPath, parquetPath);
+            return {
+                rowCount: afterCount,
+                droppedRowCount: beforeCount - afterCount,
+            };
+        });
+    }
+    catch (error) {
+        try {
+            (0, fs_1.unlinkSync)(filteredPath);
+        }
+        catch {
+            // filtered file may not exist if COPY failed before writing
+        }
+        throw error;
+    }
 }
 /** Cap on histogram entries stored per column in column-stats.json. */
 const VALUES_HISTOGRAM_LIMIT = 500;

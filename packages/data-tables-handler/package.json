@@ -7,6 +7,7 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
+    "test": "npx --yes tsx@4.19.3 --test src/validateJoinColumn.test.ts",
     "dev": "npx --yes tsx@4.19.3 watch server.ts",
     "build:container": "docker build -f Dockerfile .. -t data-tables-handler:latest"
   },

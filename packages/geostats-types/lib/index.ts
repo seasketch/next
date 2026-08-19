@@ -326,5 +326,12 @@ export interface DataTablesColumnStats {
     matchedRows: number;
     unmatchedRows: number;
     unmatchedOverlayValues: number;
+    /**
+     * Distinct join values removed because they are not present in the
+     * overlay layer (only when the geostats histogram is complete).
+     */
+    droppedJoinValues?: string[];
+    /** Table rows removed along with {@link droppedJoinValues}. */
+    droppedRowCount?: number;
   };
 }

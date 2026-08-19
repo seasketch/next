@@ -12,5 +12,5 @@
     "declaration": true
   },
   "include": ["handler.ts", "server.ts", "src/**/*.ts"],
-  "exclude": ["dist", "node_modules"]
+  "exclude": ["dist", "node_modules", "**/*.test.ts"]
 }

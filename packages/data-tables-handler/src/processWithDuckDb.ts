@@ -1,4 +1,5 @@
 import * as path from "path";
+import { renameSync, unlinkSync } from "fs";
 import {
   DataTablesColumnStats,
   GeostatsAttribute,
@@ -112,6 +113,110 @@ export async function readJoinValues(
     );
     return new Set(rows.map((r) => r.v));
   });
+}
+
+function escapeSqlString(value: string): string {
+  return value.replace(/'/g, "''");
+}
+
+function joinValuesInList(values: string[]): string {
+  return values.map((value) => `'${escapeSqlString(value)}'`).join(", ");
+}
+
+/**
+ * Counts rows whose join column is (or is not) in `keepValues`. NULL join
+ * values count as unmatched.
+ */
+export async function countParquetJoinMatches(
+  parquetPath: string,
+  joinColumn: string,
+  keepValues: string[],
+): Promise<{
+  totalRowCount: number;
+  matchedRowCount: number;
+  unmatchedRowCount: number;
+}> {
+  if (keepValues.length === 0) {
+    throw new Error(
+      "No values in the join column match overlay feature identifiers",
+    );
+  }
+  const col = joinColumn.replace(/"/g, '""');
+  const inList = joinValuesInList(keepValues);
+  return withDuckDb(async (conn) => {
+    const rows = await all<{
+      total: number;
+      matched: number;
+    }>(
+      conn,
+      `SELECT
+        COUNT(*)::INTEGER as total,
+        COUNT(*) FILTER (WHERE CAST("${col}" AS VARCHAR) IN (${inList}))::INTEGER as matched
+      FROM read_parquet('${escapePath(parquetPath)}')`,
+    );
+    const totalRowCount = rows[0]?.total ?? 0;
+    const matchedRowCount = rows[0]?.matched ?? 0;
+    return {
+      totalRowCount,
+      matchedRowCount,
+      unmatchedRowCount: totalRowCount - matchedRowCount,
+    };
+  });
+}
+
+/**
+ * Rewrites `parquetPath` so it only contains rows whose join column is in
+ * `keepValues`. Used to drop CSV rows that do not match overlay features.
+ */
+export async function filterParquetByJoinValues(
+  parquetPath: string,
+  joinColumn: string,
+  keepValues: string[],
+): Promise<{ rowCount: number; droppedRowCount: number }> {
+  if (keepValues.length === 0) {
+    throw new Error(
+      "No values in the join column match overlay feature identifiers",
+    );
+  }
+  const col = joinColumn.replace(/"/g, '""');
+  const inList = joinValuesInList(keepValues);
+  const filteredPath = `${parquetPath}.filtered.parquet`;
+
+  try {
+    return await withDuckDb(async (conn) => {
+      const beforeRows = await all<{ count: number }>(
+        conn,
+        `SELECT COUNT(*)::INTEGER as count FROM read_parquet('${escapePath(parquetPath)}')`,
+      );
+      const beforeCount = beforeRows[0]?.count ?? 0;
+
+      await run(
+        conn,
+        `COPY (
+          SELECT * FROM read_parquet('${escapePath(parquetPath)}')
+          WHERE CAST("${col}" AS VARCHAR) IN (${inList})
+        ) TO '${escapePath(filteredPath)}' (FORMAT PARQUET)`,
+      );
+
+      const afterRows = await all<{ count: number }>(
+        conn,
+        `SELECT COUNT(*)::INTEGER as count FROM read_parquet('${escapePath(filteredPath)}')`,
+      );
+      const afterCount = afterRows[0]?.count ?? 0;
+      renameSync(filteredPath, parquetPath);
+      return {
+        rowCount: afterCount,
+        droppedRowCount: beforeCount - afterCount,
+      };
+    });
+  } catch (error) {
+    try {
+      unlinkSync(filteredPath);
+    } catch {
+      // filtered file may not exist if COPY failed before writing
+    }
+    throw error;
+  }
 }
 
 /** Cap on histogram entries stored per column in column-stats.json. */
