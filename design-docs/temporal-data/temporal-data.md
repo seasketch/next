@@ -317,6 +317,47 @@ type TemporalClock = {
 
 This is session UI state. It is not part of `TemporalInfo`.
 
+### Client architecture: `MapTemporalState` context
+
+Map state on the client is no longer one monolithic context. `MapContextManager` remains the imperative style engine, but React state has been split into focused providers (`BasemapContext`, `MapUIStateContext`, `MeasureControlContext`, `SketchUIStateContext`, plus `MapManagerContext` / `MapOverlayContext` / `LegendsContext` provided by `MapManagerContextProvider`). Temporal state follows that refactoring direction: a dedicated **`MapTemporalState`** context in its own file, not new fields on the manager's contexts and not more state inside `MapContextManager`'s React surface.
+
+**Shape and file.** `packages/client/src/dataLayers/MapTemporalStateContext.tsx`, modeled on `BasemapContext.tsx`: a plain provider (`useState` / `useMemo` / `useCallback`, no manager class) exposing the clock, derived slider inputs, and actions.
+
+```ts
+type MapTemporalStateValue = {
+  /** null when no visible layer has temporal metadata → slider hidden. */
+  clock: TemporalClock | null;
+  /** Union of expanded `coverage` for visible temporal sources (slider domain). */
+  domain: TemporalInterval | null;
+  /** Coarsest nativeResolution among visible temporal sources (slider step). */
+  resolution: TemporalPrecision | null;
+  /** Visible sources with TemporalInfo, joined for the slider and debugging. */
+  temporalSources: Array<{ tocStableId: string; dataSourceId: number; temporal: TemporalInfo }>;
+  setClock: (clock: TemporalClock) => void;
+  // playback (play/pause/step) can be added here later without touching the manager
+};
+```
+
+**Deriving the domain.** The provider joins layer visibility (`MapOverlayContext.layerStatesByTocStaticId`, `visible && !hidden`) with `dataSources[].temporal`. That requires `temporal` on the map data-source fragment so `useMapData()` → `MapOverlayContext` → `manager.reset()` all carry it. Memoize the join; the clock must **not** live in `MapOverlayContext` — that context is the hot path and clock ticks would re-render the whole TOC.
+
+**Driving the map.** Follow the existing bridge pattern (`MapManagerContextProvider` bridges `BasemapContext` state into `manager.updateBasemapState()` + `updateStyle()`): a `useEffect` in the temporal provider pushes clock changes into a small new manager API instead of touching the map directly. Give `MapContextManager` a first-class temporal override — e.g. `setTemporallyFilteredTocItems(stableIds: string[])` — that `getComputedStyle()` respects like `LayerState.hidden` but tracks separately, so it composes with (rather than fights) user TOC checkboxes and legend eye toggles, and shows correctly in legends. Do **not** implement the clock with `hideTocItems` (unchecks the TOC) or raw `map.setFilter` / `map.setStyle` outside the manager (wiped on the next style rebuild).
+
+Later granularities reuse the same bridge and become additional style-computation inputs inside `getComputedStyle()`: feature-level (`_when_start` / `_when_end` filter expressions), band (`raster-array-band` from `mapping.bands`), and remote (4Wings tile params from the clock).
+
+**Provider composition** (in `ProjectApp.tsx` and sibling stacks) — under `MapManagerContextProvider` (it needs `manager` and the overlay catalog), beside the other tool providers:
+
+```
+BasemapContextProvider
+  MapOverlayContext.Provider (catalog seed)
+    MapManagerContextProvider
+      MapUIProvider
+        MapTemporalStateProvider   ← new
+          MeasureControlContextProvider
+            SketchUIStateContextProvider
+```
+
+**Timeslider UI.** A `TimeSlider` overlay component that consumes only `MapTemporalState`, mounted like existing map chrome — a sibling of `ProjectMapLegend` in `ProjectApp`, or inside `MapboxMap` alongside `MeasurementToolsOverlay` (absolute positioning, `pointer-events-auto`, respecting sidebar width). It renders nothing when `clock` is null, which is the "appears automatically" behavior. It should not import `MapContextManager`.
+
 ### Worked examples
 
 **Layer-level annual raster** (“Mangroves 2018” as its own upload):

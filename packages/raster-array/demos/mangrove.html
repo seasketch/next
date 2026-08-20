@@ -12,16 +12,18 @@
     <div class="topbar">
       <div>
         <h1>Global Mangrove Watch v4.1</h1>
-        <p>Self-hosted MRT · 41 annual bands · <code>raster-array-band</code></p>
+        <p>Global z0–12 mosaic · 41 annual bands · <code>raster-array-band</code></p>
       </div>
       <label style="font-size: 13px; color: var(--muted)">
-        Region
-        <select id="region" style="margin-left: 8px">
-          <option value="gmw-florida">Florida Bay / Everglades</option>
-          <option value="gmw-sundarbans">Sundarbans</option>
-          <option value="gmw-borneo">Borneo (S08E116)</option>
-          <option value="gmw-global">Full globe (z0–10 mosaic)</option>
-          <option value="categories-all">Synthetic blob (always available)</option>
+        Jump
+        <select id="place" style="margin-left: 8px">
+          <option value="20,5,2">Globe</option>
+          <option value="-81.3,25.4,9">Florida Bay</option>
+          <option value="89.2,22.2,9">Sundarbans</option>
+          <option value="6.3,4.5,8">Niger Delta</option>
+          <option value="-48.5,-1.0,8">Amazon mouth</option>
+          <option value="117.3,-0.6,8">Mahakam Delta</option>
+          <option value="145.8,-17.0,8">Queensland</option>
         </select>
       </label>
       <nav id="nav"></nav>
@@ -56,28 +58,18 @@
 
       document.getElementById("nav").innerHTML = nav("GMW");
 
-      const FALLBACK = {
-        "gmw-florida": [-81.3, 25.4, 9],
-        "gmw-sundarbans": [89.2, 22.2, 9],
-        "gmw-borneo": [116.4, -8.4, 10],
-        "gmw-global": [20, 5, 2],
-        "categories-all": [-81.3, 25.6, 10],
-      };
-
-      const map = await createMap([-81.3, 25.4], 9);
-      let layerId = "raster-layer";
-      let sourceId = "raster-src";
+      const map = await createMap([20, 5], 2);
+      const layerId = "raster-layer";
+      const sourceId = "raster-src";
       let currentTileset = null;
 
       async function show(id) {
-        const [lon, lat, zoom] = FALLBACK[id] || [0, 0, 2];
         let tj;
         try {
           tj = await loadTileset(id);
         } catch (err) {
           if (id !== "categories-all") {
             alert(`${id} is not encoded yet. Falling back to the synthetic blob.\n${err.message}`);
-            document.getElementById("region").value = "categories-all";
             return show("categories-all");
           }
           throw err;
@@ -92,7 +84,6 @@
           tilejson: tj,
           paint: mangrovePaint(bands[bands.length - 1]),
         });
-        map.jumpTo({ center: [lon, lat], zoom });
         bindSlider({
           bands,
           onBand: (band) => {
@@ -103,8 +94,9 @@
         });
       }
 
-      document.getElementById("region").addEventListener("change", (e) => {
-        show(e.target.value).catch(showError);
+      document.getElementById("place").addEventListener("change", (e) => {
+        const [lon, lat, zoom] = e.target.value.split(",").map(Number);
+        map.jumpTo({ center: [lon, lat], zoom });
       });
 
       map.on("mousemove", async (e) => {
@@ -135,7 +127,7 @@
       });
 
       try {
-        await show(document.getElementById("region").value);
+        await show("gmw-global");
       } catch (err) {
         showError(err);
       }
