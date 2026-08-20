@@ -105,6 +105,10 @@ import {
   RasterAreaCapturedTableTooltipControls,
 } from "./RasterAreaCapturedTable";
 import {
+  ClassCompositionChart,
+  ClassCompositionChartTooltipControls,
+} from "./ClassCompositionChart";
+import {
   OusDemographicsTable,
   OusDemographicsTableTooltipControls,
 } from "./OusDemographicsTable";
@@ -489,6 +493,10 @@ const memoizedWidgets: Record<string, WidgetComponent> = {
     RasterAreaCapturedTable,
     "RasterAreaCapturedTable"
   ),
+  ClassCompositionChart: memoWidget(
+    ClassCompositionChart,
+    "ClassCompositionChart"
+  ),
   OusDemographicsTable: memoWidget(
     OusDemographicsTable,
     "OusDemographicsTable"
@@ -665,6 +673,8 @@ export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
       return <RasterProportionTableTooltipControls {...props} />;
     case "RasterAreaCapturedTable":
       return <RasterAreaCapturedTableTooltipControls {...props} />;
+    case "ClassCompositionChart":
+      return <ClassCompositionChartTooltipControls {...props} />;
     case "OusDemographicsTable":
       return <OusDemographicsTableTooltipControls {...props} />;
     case "BlockLayerToggle":
@@ -832,6 +842,9 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
       break;
     case "RasterAreaCapturedTable":
       widget = <memoizedWidgets.RasterAreaCapturedTable {...widgetProps} />;
+      break;
+    case "ClassCompositionChart":
+      widget = <memoizedWidgets.ClassCompositionChart {...widgetProps} />;
       break;
     case "OusDemographicsTable":
       widget = <memoizedWidgets.OusDemographicsTable {...widgetProps} />;
@@ -1567,6 +1580,29 @@ export function buildReportCommandGroups({
               });
             },
           });
+          if (rasterAreaGroupBy === "value") {
+            blockGroup.items.push({
+              // eslint-disable-next-line i18next/no-literal-string
+              id: `overlay-layer-${tocId}-class-composition-chart`,
+              label: "Composition Chart",
+              description:
+                "Pie or waffle chart showing the share of the sketch covered by each class in a categorical raster.",
+              run: (state, dispatch, view) => {
+                return insertBlockMetric(view, state.selection.ranges[0], {
+                  type: "ClassCompositionChart",
+                  metrics: [
+                    {
+                      type: "raster_overlay_area",
+                      subjectType: "fragments",
+                      stableId,
+                      parameters: { groupBy: "value" },
+                    },
+                  ],
+                  componentSettings: {},
+                });
+              },
+            });
+          }
           childGroups = [inlineGroup, blockGroup];
         } else if (source.rasterBandCount && source.rasterBandCount > 1) {
           unsupportedMessage =

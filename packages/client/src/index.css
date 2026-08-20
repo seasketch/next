@@ -8996,6 +8996,10 @@ select{
   max-width:20rem
 }
 
+.max-w-\[180px\]{
+  max-width:180px
+}
+
 .flex-1{
   flex:1 1 0%
 }
@@ -19164,6 +19168,12 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
   .dark\:hover\:bg-opacity-50:hover{
     --tw-bg-opacity:0.5
+  }
+}
+
+@media print{
+  .print\:hidden{
+    display:none
   }
 }
 
