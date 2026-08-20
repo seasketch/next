@@ -12,7 +12,7 @@
     <div class="topbar">
       <div>
         <h1>Global Mangrove Watch — full globe</h1>
-        <p>All 1° cells mosaicked to one GeoTIFF, then the same MRT encoder</p>
+        <p>1,696 cells · 41 years · one <code>raster-array</code> source</p>
       </div>
       <label style="font-size: 13px; color: var(--muted)">
         Jump
@@ -41,7 +41,7 @@
         <input id="band" type="range" min="0" max="1" value="0" />
       </div>
       <div class="ticks" id="ticks"></div>
-      <div class="meta">z0–10 from one global mosaic. Playback only changes <code>raster-array-band</code>.</div>
+      <div class="meta">z0–12 mosaic. Playback only changes <code>raster-array-band</code>.</div>
     </div>
     <script src="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.js"></script>
     <script src="/config.js"></script>
@@ -50,6 +50,7 @@
         nav,
         createMap,
         loadTileset,
+        loadEncodeStats,
         mangrovePaint,
         bindSlider,
         addRasterArrayLayer,
@@ -81,12 +82,12 @@
           },
         });
 
-        fetch("/tiles/gmw-global/encode-stats.json")
-          .then((r) => (r.ok ? r.json() : null))
+        const originLabel = tj._source === "remote" ? "tiles.seasketch.org" : "local tiles";
+        loadEncodeStats("gmw-global")
           .then((s) => {
             const el = document.getElementById("stats");
             if (!s) {
-              el.textContent = `${bands.length} bands · maxzoom ${tj.maxzoom}`;
+              el.textContent = `${bands.length} bands · z${tj.minzoom}–${tj.maxzoom} · ${originLabel}`;
               return;
             }
             const mb = (s.bytesOut / 1e6).toFixed(1);
@@ -96,12 +97,19 @@
               : s.mosaicElapsedMs
                 ? `mosaic ${(s.mosaicElapsedMs / 60000).toFixed(1)} min`
                 : null;
-            el.textContent = [s.writtenTiles + " tiles", mb + " MB", mosaicMin, `encode ${encMin} min`]
+            el.textContent = [
+              s.writtenTiles + " tiles",
+              mb + " MB",
+              `z${s.minzoom ?? tj.minzoom}–${s.maxzoom ?? tj.maxzoom}`,
+              mosaicMin,
+              `encode ${encMin} min`,
+              originLabel,
+            ]
               .filter(Boolean)
               .join(" · ");
           })
           .catch(() => {
-            document.getElementById("stats").textContent = `${bands.length} annual bands`;
+            document.getElementById("stats").textContent = `${bands.length} annual bands · ${originLabel}`;
           });
 
         document.getElementById("place").addEventListener("change", (e) => {
@@ -133,7 +141,7 @@
       } catch (err) {
         showError(
           new Error(
-            `${err.message}\n\nEncode the globe first:\n  cd packages/raster-array && npm run gmw:global`,
+            `${err.message}\n\nLocal fallback: npm run gmw:global\nPublished: https://tiles.seasketch.org/raster-array/gmw-global.mrt.json`,
           ),
         );
       }

@@ -65,10 +65,72 @@ export async function createMap(center, zoom, extra = {}) {
   return map;
 }
 
+/** Worker TileJSON for large products that should not live in demos/tiles. */
+export const REMOTE_TILESETS = {
+  "gmw-global": {
+    tilejson: "https://tiles.seasketch.org/raster-array/gmw-global.mrt.json",
+    stats: "https://tiles.seasketch.org/raster-array/gmw-global-encode-stats.json",
+  },
+};
+
+function attachTilesetMeta(json, { id, source, tilejsonUrl }) {
+  json._id = id;
+  json._source = source;
+  json._tilejsonUrl = tilejsonUrl;
+  if (!json.raster_layers && json.rasterLayers) {
+    json.raster_layers = json.rasterLayers;
+  }
+  return json;
+}
+
 export async function loadTileset(id) {
-  const res = await fetch(`/tiles/${id}/tilejson.json`);
-  if (!res.ok) throw new Error(`Tileset ${id} not found. Run npm run fixtures.`);
-  return res.json();
+  const localUrl = `${location.origin}/tiles/${id}/tilejson.json`;
+  try {
+    const local = await fetch(`/tiles/${id}/tilejson.json`);
+    if (local.ok) {
+      return attachTilesetMeta(await local.json(), {
+        id,
+        source: "local",
+        tilejsonUrl: localUrl,
+      });
+    }
+  } catch {
+    // fall through to a published Worker archive
+  }
+
+  const remote = REMOTE_TILESETS[id];
+  if (remote) {
+    const res = await fetch(remote.tilejson);
+    if (!res.ok) {
+      throw new Error(
+        `Tileset "${id}" is not local and is not published (${res.status} at ${remote.tilejson}).`,
+      );
+    }
+    return attachTilesetMeta(await res.json(), {
+      id,
+      source: "remote",
+      tilejsonUrl: remote.tilejson,
+    });
+  }
+
+  throw new Error(`Tileset ${id} not found. Run npm run fixtures.`);
+}
+
+export async function loadEncodeStats(id) {
+  try {
+    const local = await fetch(`/tiles/${id}/encode-stats.json`);
+    if (local.ok) return local.json();
+  } catch {
+    // try remote
+  }
+  const remote = REMOTE_TILESETS[id];
+  if (!remote?.stats) return null;
+  try {
+    const res = await fetch(remote.stats);
+    return res.ok ? res.json() : null;
+  } catch {
+    return null;
+  }
 }
 
 export function mangrovePaint(band) {
@@ -100,12 +162,13 @@ export function continuousPaint(band, range, stops) {
 
 export async function addRasterArrayLayer(map, options) {
   const { sourceId, layerId, tilesetId, tilejson, paint } = options;
-  const layer = tilejson.raster_layers[0];
+  const layer = tilejson.raster_layers?.[0] || tilejson.rasterLayers?.[0];
   if (!layer) throw new Error("TileJSON is missing raster_layers[0]");
   if (map.getLayer(layerId)) map.removeLayer(layerId);
   if (map.getSource(sourceId)) map.removeSource(sourceId);
 
-  const tilejsonUrl = `${location.origin}/tiles/${tilesetId}/tilejson.json`;
+  const tilejsonUrl =
+    tilejson._tilejsonUrl || `${location.origin}/tiles/${tilesetId}/tilejson.json`;
   map.addSource(sourceId, {
     type: "raster-array",
     url: tilejsonUrl,
