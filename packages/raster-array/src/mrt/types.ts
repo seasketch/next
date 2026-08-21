@@ -52,6 +52,8 @@ export type EncodeMrtTileOptions = {
   x: number;
   y: number;
   layers: MrtLayerInput[];
+  /** zlib level for NumericData blocks. Default 9; 6 is faster for large cubes. */
+  gzipLevel?: number;
 };
 
 export type MrtDataIndexEntry = {

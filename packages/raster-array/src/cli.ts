@@ -3,13 +3,16 @@ import { readFileSync, writeFileSync } from "fs";
 import { resolve } from "path";
 import { encodeTileset } from "./tiler";
 import { decodeMrtTile, getMrtHeaderLength } from "./mrt/decode";
+import { packMrtPmtiles } from "./pmtiles/pack";
+import { openPmtiles } from "./pmtiles/read";
 
 function usage(): never {
   console.log(`@seasketch/raster-array — GeoTIFF/NetCDF → Mapbox Raster Tiles (MRT)
 
 Usage:
   raster-array encode <input.tif|input.nc> <outdir> [options]
-  raster-array inspect <tile.mrt>
+  raster-array pack <tiles-dir> <out.pmtiles>
+  raster-array inspect <tile.mrt|archive.pmtiles> [z x y]
 
 Encode options:
   --layer <name>           Source-layer name (default: data)
@@ -29,9 +32,10 @@ Encode options:
   --tile-url <template>    TileJSON tiles URL (default: {z}/{x}/{y}.mrt)
   --keep-empty             Write all-nodata tiles too
   --concurrency <n>        Parallel gdal jobs (default: 4)
+  --pmtiles [path]         Pack {outdir} into a .mrt.pmtiles after encode
 
-Full-globe GMW: mosaic the zip to one GeoTIFF, then encode it:
-  npm run gmw:global
+The encode directory is a scratch tree. The shipping product is the archive.
+Globe GMW lives in packages/data-library-gmw.
 `);
   process.exit(1);
 }
@@ -72,33 +76,68 @@ function num(flags: Record<string, string | boolean>, key: string): number | und
 
 async function main() {
   const { command, positional, flags } = parseArgs(process.argv.slice(2));
+  if (command === "pack") {
+    const tilesDir = positional[0];
+    const output = positional[1];
+    if (!tilesDir || !output) usage();
+    const result = await packMrtPmtiles({
+      tilesDir: resolve(tilesDir),
+      outputPath: resolve(output),
+    });
+    console.log(
+      JSON.stringify(
+        {
+          output: result.outputPath,
+          tiles: result.tileCount,
+          entries: result.tileEntries,
+          contents: result.tileContents,
+          bytes: result.bytesOut,
+        },
+        null,
+        2,
+      ),
+    );
+    return;
+  }
+
   if (command === "inspect") {
     const file = positional[0];
     if (!file) usage();
+    if (file.endsWith(".pmtiles")) {
+      const archive = openPmtiles(resolve(file));
+      const z = positional[1] != null ? Number(positional[1]) : undefined;
+      const x = positional[2] != null ? Number(positional[2]) : undefined;
+      const y = positional[3] != null ? Number(positional[3]) : undefined;
+      const tile =
+        z != null && x != null && y != null ? archive.getTile(z, x, y) : null;
+      console.log(
+        JSON.stringify(
+          {
+            file,
+            format: archive.metadata.format,
+            header: {
+              minzoom: archive.header.minZoom,
+              maxzoom: archive.header.maxZoom,
+              addressed: archive.header.numAddressedTiles,
+              entries: archive.header.numTileEntries,
+              contents: archive.header.numTileContents,
+              tileType: archive.header.tileType,
+              tileCompression: archive.header.tileCompression,
+            },
+            metadata: archive.metadata,
+            tile:
+              tile && z != null && x != null && y != null
+                ? inspectMrt(tile, `${z}/${x}/${y}`)
+                : undefined,
+          },
+          null,
+          2,
+        ),
+      );
+      return;
+    }
     const buf = readFileSync(resolve(file));
-    const headerLength = getMrtHeaderLength(buf);
-    const tile = decodeMrtTile(buf);
-    const summary = {
-      file,
-      bytes: buf.length,
-      headerLength,
-      zxy: `${tile.z}/${tile.x}/${tile.y}`,
-      layers: Object.values(tile.layers).map((layer) => ({
-        name: layer.name,
-        units: layer.units,
-        tileSize: layer.tileSize,
-        buffer: layer.buffer,
-        pixelFormat: layer.pixelFormat,
-        bands: Object.keys(layer.bandData),
-        blocks: layer.dataIndex.map((b) => ({
-          bands: b.bands,
-          bytes: b.lastByte - b.firstByte + 1,
-          offset: b.offset,
-          scale: b.scale,
-          codec: b.codec,
-        })),
-      })),
-    };
+    const summary = { file, ...inspectMrt(buf) };
     const json = JSON.stringify(summary, null, 2);
     console.log(json);
     if (flags["out"] && typeof flags["out"] === "string") {
@@ -151,6 +190,17 @@ async function main() {
       concurrency: num(flags, "concurrency"),
       onProgress: (m) => console.error(m),
     });
+    const resolvedOut = resolve(outputDir);
+    const packed =
+      flags.pmtiles === undefined
+        ? undefined
+        : await packMrtPmtiles({
+            tilesDir: resolvedOut,
+            outputPath:
+              typeof flags.pmtiles === "string"
+                ? resolve(flags.pmtiles)
+                : `${resolvedOut.replace(/\/$/, "")}.mrt.pmtiles`,
+          });
     console.log(
       JSON.stringify(
         {
@@ -160,7 +210,9 @@ async function main() {
           offset: result.offset,
           scale: result.scale,
           range: result.range,
-          tilejson: `${resolve(outputDir)}/tilejson.json`,
+          tilejson: `${resolvedOut}/tilejson.json`,
+          pmtiles: packed?.outputPath,
+          pmtilesBytes: packed?.bytesOut,
         },
         null,
         2,
@@ -170,6 +222,30 @@ async function main() {
   }
 
   usage();
+}
+
+function inspectMrt(buf: Buffer, zxy?: string) {
+  const tile = decodeMrtTile(buf);
+  return {
+    bytes: buf.length,
+    headerLength: getMrtHeaderLength(buf),
+    zxy: zxy ?? `${tile.z}/${tile.x}/${tile.y}`,
+    layers: Object.values(tile.layers).map((layer) => ({
+      name: layer.name,
+      units: layer.units,
+      tileSize: layer.tileSize,
+      buffer: layer.buffer,
+      pixelFormat: layer.pixelFormat,
+      bands: Object.keys(layer.bandData),
+      blocks: layer.dataIndex.map((b) => ({
+        bands: b.bands,
+        bytes: b.lastByte - b.firstByte + 1,
+        offset: b.offset,
+        scale: b.scale,
+        codec: b.codec,
+      })),
+    })),
+  };
 }
 
 main().catch((err) => {

@@ -17,6 +17,7 @@ export type { EncodeTilesetOptions, EncodeTilesetResult } from "./tiler";
 export { buildTileJson } from "./tilejson";
 export type { RasterArrayTileJson } from "./tilejson";
 export { listGmwSources, parseGmwCellName } from "./gmw";
+export { gdalInfo, gdalTranslate, gdalWarp, gdalWarpMosaic } from "./gdal";
 export type { GmwSource } from "./gmw";
 export {
   tileBounds3857,
@@ -25,3 +26,7 @@ export {
   uniqueTilesForBboxes,
   lonLatToMercator,
 } from "./webmercator";
+export { packMrtPmtiles, collectMrtTiles } from "./pmtiles/pack";
+export type { PackMrtPmtilesOptions, PackMrtPmtilesResult } from "./pmtiles/pack";
+export { writePmtilesArchive, writePmtilesArchiveToFile } from "./pmtiles/write";
+export { openPmtiles, openPmtilesBytes } from "./pmtiles/read";

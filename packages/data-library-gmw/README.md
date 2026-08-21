@@ -20,7 +20,8 @@ The job now:
 3. **Encode** — `gdal_translate -projwin` from those warped cells (same CRS). Pack PMTiles at the end of `build`.
 4. **Analysis** — same-CRS `gdalwarp` of the 1° cells **in EPSG:4326** (`SKIP_NOSOURCE`, no `-t_srs`). Do not warp to 3857. Display tiles still use the per-cell 3857 warp.
 
-The day-long z0–12 tree at `packages/raster-array/demos/tiles/gmw-global` is left alone. A copy is at `gmw-global.preserved-z0-12`. This package writes only under `work/`.
+This package writes only under `work/`. Do not overwrite any leftover local
+scratch tree from an earlier encode.
 
 ## Prerequisites
 
@@ -54,10 +55,10 @@ npm run demo   # http://127.0.0.1:8765/gmw-global.html
 
 The page can use the local `work/dist/gmw-global.pmtiles` or `https://tiles.seasketch.org/dataLibrary/gmw-global`. The Mapbox token comes from `packages/client/.env`. Legend stats are file size and zoom from the local archive only.
 
-To pack the preserved day-long fixture without re-encoding:
+To pack an existing scratch `{z}/{x}/{y}.mrt` tree without re-encoding:
 
 ```bash
-npm run pack -- --scratch ../raster-array/demos/tiles/gmw-global.preserved-z0-12
+npm run pack -- --scratch /path/to/tiles
 ```
 
 ## Upload

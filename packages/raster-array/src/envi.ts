@@ -162,24 +162,60 @@ export function readEnviBsqBytes(enviPath: string): {
   header: EnviHeader;
   bands: Uint8Array[];
 } {
+  const { header, bands } = readEnviByteBands(enviPath);
+  if (header.interleave !== "bsq") {
+    throw new Error(`readEnviBsqBytes expected BSQ, got ${header.interleave}`);
+  }
+  return { header, bands };
+}
+
+/**
+ * Byte ENVI bands. BSQ is a zero-copy view; BIP/BIL are copied into band-major
+ * arrays. GDAL's ENVI driver defaults to BIP — do not fall back to the generic
+ * DataView reader for GMW (41 × 258² samples).
+ */
+export function readEnviByteBands(enviPath: string): {
+  header: EnviHeader;
+  bands: Uint8Array[];
+} {
   const { hdr, data } =
     existsSync(enviPath) && enviPath.endsWith(".hdr")
       ? findEnviPair(enviPath)
       : findEnviPair(enviPath);
   const header = parseEnviHeader(readFileSync(hdr, "utf8"));
   if (header.dataType !== 1) {
-    throw new Error(`readEnviBsqBytes expected Byte data, got type ${header.dataType}`);
-  }
-  if (header.interleave !== "bsq") {
-    throw new Error(`readEnviBsqBytes expected BSQ, got ${header.interleave}`);
+    throw new Error(`readEnviByteBands expected Byte data, got type ${header.dataType}`);
   }
   const buf = readFileSync(data);
   const n = header.samples * header.lines;
   const start = header.headerOffset;
-  const bands: Uint8Array[] = [];
-  for (let b = 0; b < header.bands; b++) {
-    const offset = start + b * n;
-    bands.push(buf.subarray(offset, offset + n));
+  const src = buf.subarray(start);
+  if (header.interleave === "bsq") {
+    const bands: Uint8Array[] = [];
+    for (let b = 0; b < header.bands; b++) {
+      bands.push(src.subarray(b * n, (b + 1) * n));
+    }
+    return { header, bands };
+  }
+  const bands = Array.from({ length: header.bands }, () => new Uint8Array(n));
+  if (header.interleave === "bil") {
+    for (let row = 0; row < header.lines; row++) {
+      for (let b = 0; b < header.bands; b++) {
+        const srcOff = (row * header.bands + b) * header.samples;
+        bands[b]!.set(
+          src.subarray(srcOff, srcOff + header.samples),
+          row * header.samples,
+        );
+      }
+    }
+    return { header, bands };
+  }
+  // BIP
+  for (let i = 0; i < n; i++) {
+    const base = i * header.bands;
+    for (let b = 0; b < header.bands; b++) {
+      bands[b]![i] = src[base + b]!;
+    }
   }
   return { header, bands };
 }

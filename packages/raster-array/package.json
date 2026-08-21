@@ -1,7 +1,7 @@
 {
   "name": "@seasketch/raster-array",
   "version": "0.1.0",
-  "description": "Encode multi-band GeoTIFF/NetCDF as Mapbox Raster Tiles (MRT) for raster-array sources. Proof of concept; not wired into SeaSketch ingest yet.",
+  "description": "Encode multi-band GeoTIFF/NetCDF as Mapbox Raster Tiles (MRT) and pack them into PMTiles.",
   "author": "Chad Burt <chad@underbluewaters.net>",
   "homepage": "https://github.com/seasketch/next#readme",
   "license": "BSD-3-Clause",
@@ -24,9 +24,7 @@
     "test:watch": "vitest watch",
     "encode": "npx --yes tsx@4.19.3 src/cli.ts encode",
     "inspect": "npx --yes tsx@4.19.3 src/cli.ts inspect",
-    "fixtures": "npx --yes tsx@4.19.3 scripts/build-fixtures.ts",
-    "gmw:global": "npx --yes tsx@4.19.3 scripts/encode-gmw-global.ts",
-    "demo": "npx --yes tsx@4.19.3 demos/server.ts"
+    "pack": "npx --yes tsx@4.19.3 src/cli.ts pack"
   },
   "bugs": {
     "url": "https://github.com/seasketch/next/issues"

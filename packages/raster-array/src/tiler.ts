@@ -9,7 +9,7 @@ import {
   GdalDatasetInfo,
   isNetCdf,
 } from "./gdal";
-import { readEnviBands, readEnviBsqBytes } from "./envi";
+import { readEnviBands, readEnviByteBands } from "./envi";
 import { encodeMrtTile, encodeSample } from "./mrt/encode";
 import { MRT_NODATA } from "./mrt/types";
 import { buildTileJson, RasterArrayTileJson } from "./tilejson";
@@ -200,6 +200,8 @@ export async function encodeTileset(
         await gdalTranslate(warpedPath, enviPath, [
           "-of",
           "ENVI",
+          "-co",
+          "INTERLEAVE=BSQ",
           "-projwin",
           String(window.minX),
           String(window.maxY),
@@ -381,7 +383,7 @@ async function resolveSource(
 
 function readTileBands(enviPath: string): ArrayLike<number>[] {
   try {
-    return readEnviBsqBytes(enviPath).bands;
+    return readEnviByteBands(enviPath).bands;
   } catch {
     return readEnviBands(enviPath).bands;
   }

@@ -4,9 +4,8 @@ dist
 *.tsbuildinfo
 .DS_Store
 
-# Local source rasters, mosaics, and encoded tiles. Rebuild with
-# `npm run fixtures` / `npm run gmw:global` — do not commit these.
-demos/tiles/
+# Local rasters and leftover encode trees
+demos/
 fixtures/
 *.tif
 *.tiff

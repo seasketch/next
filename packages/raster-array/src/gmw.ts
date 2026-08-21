@@ -18,6 +18,12 @@ export type GmwSource = {
   mercator: BBox;
 };
 
+/**
+ * GMW 1° cells are named by the **north-west** corner (the GeoTIFF origin),
+ * not the south-west corner. `GMW_N25W081` is lon −81…−80, lat 24…25.
+ * Using SW naming shifts every coverage bbox 1° north and drops the southern
+ * fringe of isolated cells.
+ */
 export function parseGmwCellName(
   filename: string,
 ): [number, number, number, number] | null {
@@ -26,9 +32,9 @@ export function parseGmwCellName(
   if (!m) return null;
   const lat = Number(m[2]);
   const lon = Number(m[4]);
-  const south = m[1] === "S" ? -lat : lat;
+  const north = m[1] === "S" ? -lat : lat;
   const west = m[3] === "W" ? -lon : lon;
-  return [west, south, west + 1, south + 1];
+  return [west, north - 1, west + 1, north];
 }
 
 export function vsizipPath(zipPath: string, inner: string): string {

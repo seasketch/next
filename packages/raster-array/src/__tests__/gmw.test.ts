@@ -3,21 +3,21 @@ import { parseGmwCellName } from "../gmw";
 import { bboxLonLatToMercator, uniqueTilesForBboxes } from "../webmercator";
 
 describe("GMW 1° cell names", () => {
-  it("parses northern west cells", () => {
+  it("parses northern west cells from the NW origin", () => {
     expect(parseGmwCellName("GMW_N25W081_v4112_mng_ext.tif")).toEqual([
-      -81, 25, -80, 26,
+      -81, 24, -80, 25,
     ]);
   });
 
-  it("parses southern east cells", () => {
+  it("parses southern east cells from the NW origin", () => {
     expect(parseGmwCellName("GMW_S08E116_v4112_mng_ext.tif")).toEqual([
-      116, -8, 117, -7,
+      116, -9, 117, -8,
     ]);
   });
 
-  it("parses equator / 3-digit lon", () => {
+  it("parses equator / 3-digit lon from the NW origin", () => {
     expect(parseGmwCellName("GMW_N00E008_v4112_mng_ext.tif")).toEqual([
-      8, 0, 9, 1,
+      8, -1, 9, 0,
     ]);
   });
 

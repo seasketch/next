@@ -28,7 +28,8 @@ export function encodeMrtTile(options: EncodeMrtTileOptions): Buffer {
     throw new Error("At least one layer is required");
   }
 
-  const preparedLayers = layers.map((layer) => prepareLayer(layer));
+  const gzipLevel = options.gzipLevel ?? 9;
+  const preparedLayers = layers.map((layer) => prepareLayer(layer, gzipLevel));
 
   // Compress every block first. firstByte/lastByte are fixed64, so header size
   // does not depend on the offset values themselves — only on counts/names.
@@ -65,7 +66,7 @@ type PreparedLayer = {
   blocks: PreparedBlock[];
 };
 
-function prepareLayer(layer: MrtLayerInput): PreparedLayer {
+function prepareLayer(layer: MrtLayerInput, gzipLevel: number): PreparedLayer {
   if (layer.tileSize < 1 || (layer.tileSize & (layer.tileSize - 1)) !== 0) {
     throw new Error(`tileSize must be a power of two, got ${layer.tileSize}`);
   }
@@ -98,7 +99,7 @@ function prepareLayer(layer: MrtLayerInput): PreparedLayer {
       bands: group.map((b) => b.id),
       offset,
       scale,
-      bytes: gzipSync(encodeNumericData(values), { level: 9 }),
+      bytes: gzipSync(encodeNumericData(values), { level: gzipLevel }),
       firstByte: 0,
       lastByte: 0,
     };
