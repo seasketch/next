@@ -24,10 +24,28 @@ interface VectorLayer {
 }
 
 /** TileJSON subset returned by pmtiles for Mapbox / preview consumers. */
+export interface RasterArrayLayer {
+  id: string;
+  minzoom?: number;
+  maxzoom?: number;
+  fields?: {
+    name?: string;
+    bands?: string[];
+    tilesize?: number;
+    buffer?: number;
+    units?: string;
+    scale?: number;
+    offset?: number;
+    range?: [number, number];
+  };
+}
+
 export interface TileJSON {
   tilejson: string;
   tiles: string[];
-  vector_layers: VectorLayer[];
+  vector_layers?: VectorLayer[];
+  raster_layers?: RasterArrayLayer[];
+  format?: string;
   attribution?: string;
   bounds?: [number, number, number, number];
   center?: [number, number, number];

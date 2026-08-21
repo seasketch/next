@@ -23,9 +23,9 @@ It invokes isolated `TilesBackend`, `ObjectBackend`, `PropertiesBackend`, and
 
 | Route                                                               | Result                       |
 | ------------------------------------------------------------------- | ---------------------------- |
-| `/projects/{slug}/public/{uuid}.json`                               | TileJSON                     |
-| `/projects/{slug}/public/{uuid}/{z}/{x}/{y}.{mvt,pbf,png,webp,jpg}` | Tile                         |
-| `/projects/{slug}/public/{uuid}`                                    | Browser preview              |
+| `/{path}.json`                                                      | TileJSON                     |
+| `/{path}/{z}/{x}/{y}.{mvt,pbf,png,webp,jpg,mrt}`                    | Tile                         |
+| `/{path}`                                                           | HTML preview                 |
 | `/projects/{slug}/public/{uuid}.{extension}`                        | Object download              |
 | `/projects/{slug}/subdivided/{objectPath}`                          | Subdivided output            |
 | `/{r2-key}` on `uploads.seasketch.org`                              | Raw R2 object                |

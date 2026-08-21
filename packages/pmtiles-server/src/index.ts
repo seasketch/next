@@ -9,6 +9,7 @@ import {
   classifyResource,
   resourceAclEnabled,
 } from "./resource";
+import { isTilePresentationKey } from "./presentationRoutes";
 import { TilesBackend } from "./tilesBackend";
 
 export { DataTablesBackend, ObjectBackend, PropertiesBackend, TilesBackend };
@@ -54,7 +55,7 @@ export default class extends WorkerEntrypoint<Env> {
     // presentation (including root fixture archives like crdss-cells-6).
     const uploadsHost = url.hostname === "uploads.seasketch.org";
     const useObjectBackend =
-      uploadsHost || !isTilePresentationResource(resource);
+      uploadsHost || !isTilePresentationKey(resource.key);
 
     // ObjectBackend has Workers Caching disabled (Range must reach the Worker).
     // Call it in-process: a ctx.exports loopback adds no cache benefit and
@@ -163,29 +164,3 @@ function isDataTableQueryPath(pathname: string): boolean {
   );
 }
 
-const TILE_EXT = "(?:mvt|pbf|png|webp|jpg|jpeg)";
-// Same archive-name charset as TilesBackend TILE_ROUTE.
-const ARCHIVE_NAME = "[0-9a-zA-Z/!\\-_.*'()]+";
-const FIXTURE_OR_PROJECT_ZXY = new RegExp(
-  `^(?:${ARCHIVE_NAME})/\\d+/\\d+/\\d+\\.${TILE_EXT}$`,
-  "i",
-);
-const PUBLISHED_TILEJSON_OR_PREVIEW = new RegExp(
-  `^(?:projects/)?[^/]+/public/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}(?:$|\\.json$)`,
-  "i",
-);
-
-/**
- * Paths that TilesBackend should serve as PMTiles TileJSON / ZXY / preview.
- * Includes root fixture archives (e.g. crdss-cells-6/0/0/0.pbf) and
- * published / data-library presentation URLs.
- */
-function isTilePresentationResource(
-  resource: ReturnType<typeof classifyResource>,
-): boolean {
-  if (!resource) return false;
-  return (
-    FIXTURE_OR_PROJECT_ZXY.test(resource.key) ||
-    PUBLISHED_TILEJSON_OR_PREVIEW.test(resource.key)
-  );
-}

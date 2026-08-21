@@ -12,6 +12,8 @@ import {
 describe("overlay resource classification", () => {
   it("classifies fixtures, data-library, published, and subdivided keys", () => {
     expect(classifyResource("/eez-land-joined.fgb")?.kind).toBe("public");
+    expect(classifyResource("/dataLibrary/gmw-global")?.kind).toBe("public");
+    expect(classifyResource("/dataLibrary/gmw-global.json")?.kind).toBe("public");
     expect(
       classifyResource(
         "/projects/superuser/public/11111111-1111-1111-1111-111111111111.fgb",
