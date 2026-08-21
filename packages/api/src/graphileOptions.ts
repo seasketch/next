@@ -54,6 +54,7 @@ import DataUploadPiiClassifierWarmPlugin from "./plugins/dataUploadPiiClassifier
 import OverlayDataTablePlugin from "./plugins/overlayDataTablePlugin";
 import PublishTilesAclPlugin from "./plugins/publishTilesAclPlugin";
 import HostedTileUuidsRequiringAuthPlugin from "./plugins/hostedTileUuidsRequiringAuthPlugin";
+import TemporalPlugin from "./plugins/temporalPlugin";
 
 const pluginHook = makePluginHook([{ ...PgPubsub, ...SentryPlugin }]);
 
@@ -115,6 +116,8 @@ export default function graphileOptions(): PostGraphileOptions {
       AboutPagePlugin,
       ReplacePMTilesPlugin,
       GeographyPlugin,
+      // Must precede ReportsPlugin, which references the TemporalInfo scalar.
+      TemporalPlugin,
       ReportsPlugin,
       FeatureFlagsPlugin,
       UserActivityPlugin,

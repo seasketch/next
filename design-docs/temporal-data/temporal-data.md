@@ -137,7 +137,7 @@ Intervals may be open-ended (`end: null`) for living programs such as GFW. The c
 
 ### Source metadata
 
-Store this as JSON on the hosted object that owns the pixels or rows — `data_sources.temporal` for layers, `overlay_data_tables.temporal` for Data Tables — **not** only inside `geostats`. Geostats is regenerated on process and is the wrong place for admin corrections. Raster band stats may _copy_ a `when` for convenience; the source of record is still `temporal`.
+Store this as JSON on the object that owns the data — `data_sources.temporal` for layers (vector, raster, and remote), `overlay_data_tables.temporal` for Data Tables — **not** only inside `geostats`. Geostats is regenerated on process and is the wrong place for admin corrections. Raster band stats may _copy_ a `when` for convenience; the source of record is still `temporal`.
 
 ```ts
 type TemporalGranularity =
@@ -483,6 +483,7 @@ Admin can set or correct `coverage`, precision, granularity, and the column/band
   - Upon upload, csv table data won't have structured temporal data. There may be a "when" column with ISO 8601 dates, or they could just be a YEAR column with a numeric year (or even strings). It could really be anything (or nothing). We should attempt to identify and normalize these columns on ingest, but it can't be assumed that will always work.
   - Like vector features, rows will need to be enriched with `_when_start` and `_when_end` columns that normalize temporal data into the standard half-open interval (UTC seconds). Parquet/Arrow `timestamp[s, UTC]` should be used for the physical instants; the query engine on pmtiles-server should accept dedicated temporal parameters that apply `TemporalInfo` precision and those columns, not raw `YEAR` strings.
   - Admins will need to be provided some sort of "wizard" to identify temporal column(s) and provide needed information necessary to coerce them into normalized data. The tables would then be reprocessed and a new version created with these standard columns populated.
+  - **Replace / new version (TBD).** `complete_overlay_data_table_upload` does not yet carry `temporal` onto the new row. When we add Data Table temporal support, a replacement should start from the previous version's `TemporalInfo` to help parse the new file. If columns and settings are compatible, keep the mapping/precision and update coverage / availability for the new range. If they are not, fall back to the default ingest heuristics and/or AI. Details still need to be designed.
 - GFW
   - GFW integration with SeaSketch is a special case that doesn't build on much of the SeaSketch temporal support, other than the timeslider and client temporal context
   - SeaSketch will pull MVT directly from the GFW 4Wings API

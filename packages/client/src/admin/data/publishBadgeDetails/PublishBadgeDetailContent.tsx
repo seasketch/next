@@ -36,6 +36,7 @@ import {
   valueText,
 } from "../../changelogs/fieldGroups/FieldGroupListItemBase";
 import { dataTableEventDescription } from "../../changelogs/fieldGroups/dataTableSummary";
+import { temporalCoverageLabel } from "../../changelogs/fieldGroups/LayerTemporalFieldGroupListItem";
 import { formatTimeAgo } from "../../changelogs/ChangeLogTimelineItem";
 import { ResolvableCommentBody } from "../TableOfContentsItemEditor/ResolvableCommentEditor";
 import { oldestChangeLogId, PublishBadgeKey } from "../publishChangelogSummary";
@@ -484,6 +485,16 @@ export default function PublishBadgeDetailContent(
     case "attribution": {
       const from = valueText(fromS.attribution, t("null"));
       const to = valueText(toS.attribution, t("null"));
+      main = <FromToLine fromText={from} toText={to} />;
+      break;
+    }
+    case "temporal": {
+      const from = temporalCoverageLabel(
+        fromS.temporal,
+        t("null"),
+        t("present")
+      );
+      const to = temporalCoverageLabel(toS.temporal, t("null"), t("present"));
       main = <FromToLine fromText={from} toText={to} />;
       break;
     }

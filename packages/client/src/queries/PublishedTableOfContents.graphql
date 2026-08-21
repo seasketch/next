@@ -67,6 +67,7 @@ fragment DataSourceDetails on DataSource {
   rasterRepresentativeColors
   rasterOffset
   rasterScale
+  temporal
 }
 
 fragment ClientSprite on Sprite {

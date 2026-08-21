@@ -29,6 +29,7 @@ import LayerSettingsChangeLogList from "../../changelogs/LayerSettingsChangeLogL
 import { layerSettingsChangeLogRefetchQueries } from "../../changelogs/layerSettingsChangeLogRefetch";
 import NewResolvableComment from "./NewResolvableComment";
 import ResolvableComment from "./ResolvableComment";
+import TemporalCoverageEditor from "./TemporalCoverageEditor";
 
 export default function LayerSettings({
   item,
@@ -272,6 +273,13 @@ export default function LayerSettings({
           layer={layer}
           className="mt-5"
           changeLogRefetchTableOfContentsItemId={item.id}
+        />
+      )}
+
+      {source && (
+        <TemporalCoverageEditor
+          source={source}
+          changeLogRefetchQueries={changeLogRefetchQueries}
         />
       )}
 

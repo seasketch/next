@@ -302,6 +302,7 @@ fragment FullAdminSource on DataSource {
   uploadedSourceFilename
   uploadedBy
   geostats
+  temporal
   translatedProps
   arcgisFetchStrategy
   dataLibraryMetadata
@@ -710,6 +711,13 @@ mutation UpdateDataSource($id: Int!, $attribution: String) {
       supportsDynamicLayers
       translatedProps
     }
+  }
+}
+
+mutation UpdateDataSourceTemporal($dataSourceId: Int!, $temporal: TemporalInfo) {
+  updateDataSourceTemporal(dataSourceId: $dataSourceId, temporal: $temporal) {
+    id
+    temporal
   }
 }
 

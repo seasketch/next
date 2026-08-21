@@ -16331,6 +16331,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
   border-color:transparent
 }
 
+.focus\:border-primary-300:focus{
+  --tw-border-opacity:1;
+  border-color:rgb(71 163 220 / var(--tw-border-opacity, 1))
+}
+
 .focus\:bg-black:focus{
   --tw-bg-opacity:1;
   background-color:rgb(0 0 0 / var(--tw-bg-opacity, 1))

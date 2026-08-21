@@ -1120,6 +1120,7 @@ enum ChangeLogFieldGroup {
   LAYER_INTERACTIVITY
   LAYER_METADATA
   LAYER_PARENT_CHANGED
+  LAYER_TEMPORAL
   LAYER_TITLE
   LAYER_UPLOADED
   LAYERS_PUBLISHED
@@ -3601,6 +3602,13 @@ type DataSource implements Node {
   ArcGIS map service setting. If enabled, client can reorder layers and apply layer-specific opacity settings.
   """
   supportsDynamicLayers: Boolean!
+
+  """
+  Temporal metadata for this source: coverage, resolution, mapping
+  (layer, feature, band, or remote), and availability. Used for vector,
+  raster, and remote layers. Null when the source has none.
+  """
+  temporal: TemporalInfo
 
   """
   For tiled sources, a list of endpoints that can be used to retrieve tiles.
@@ -10863,6 +10871,12 @@ type Mutation {
   ): UpdateDataSourcePayload
 
   """
+  Admin mutation. Sets (or clears, when null) the TemporalInfo document
+  for a data source. authoredBy is forced to "admin".
+  """
+  updateDataSourceTemporal(dataSourceId: Int!, temporal: TemporalInfo): DataSource!
+
+  """
   Updates a single `EmailNotificationPreference` using a unique key and a patch.
   """
   updateEmailNotificationPreferenceByUserId(
@@ -11095,6 +11109,12 @@ type Mutation {
     """
     input: UpdateOptionalBasemapLayerByNodeIdInput!
   ): UpdateOptionalBasemapLayerPayload
+
+  """
+  Admin mutation. Sets (or clears, when null) the TemporalInfo document
+  for an overlay data table. authoredBy is forced to "admin".
+  """
+  updateOverlayDataTableTemporal(overlayDataTableId: Int!, temporal: TemporalInfo): OverlayDataTable!
 
   """
   Updates the contents of the post. Can only be used by the author for 5 minutes after posting.
@@ -11823,6 +11843,12 @@ type OverlayDataTable implements Node {
   """
   stableId: UUID!
   tableOfContentsItemId: Int!
+
+  """
+  Temporal metadata for this data table: coverage, resolution, row
+  mapping, and availability. Null when the table has none.
+  """
+  temporal: TemporalInfo
   updatedAt: Datetime
   version: Int!
 
@@ -15686,6 +15712,13 @@ type ReportOverlaySource {
   tableOfContentsItem: TableOfContentsItem!
   tableOfContentsItemId: Int!
 
+  """
+  TemporalInfo from the overlay's data source, if assigned. Applies to
+  vector, raster, and remote layers. Time-series report widgets use it
+  to place the source on a time axis.
+  """
+  temporal: TemporalInfo
+
   """GeoJSON geometry type, if the source is a vector layer."""
   vectorGeometryType: String
 }
@@ -18534,6 +18567,14 @@ enum TableOfContentsItemsOrderBy {
   STABLE_ID_ASC
   STABLE_ID_DESC
 }
+
+"""
+A complete TemporalInfo document for a data source or data table: coverage,
+resolution, how time is mapped (layer, feature, band, row, or remote), and
+availability. Applies to vector, raster, and remote layers as well as Data
+Tables. Validated against @seasketch/geostats-types isTemporalInfo.
+"""
+scalar TemporalInfo
 
 enum TileScheme {
   TMS

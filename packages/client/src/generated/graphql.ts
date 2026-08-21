@@ -34,6 +34,13 @@ export type Scalars = {
   GeoJSON: any;
   /** The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf). */
   JSON: any;
+  /**
+   * A complete TemporalInfo document for a data source or data table: coverage,
+   * resolution, how time is mapped (layer, feature, band, row, or remote), and
+   * availability. Applies to vector, raster, and remote layers as well as Data
+   * Tables. Validated against @seasketch/geostats-types isTemporalInfo.
+   */
+  TemporalInfo: import("@seasketch/geostats-types").TemporalInfo;
   /** A universally unique identifier as defined by [RFC 4122](https://tools.ietf.org/html/rfc4122). */
   UUID: any;
   /** The `Upload` scalar type represents a file upload. */
@@ -975,6 +982,7 @@ export enum ChangeLogFieldGroup {
   LayerInteractivity = 'LAYER_INTERACTIVITY',
   LayerMetadata = 'LAYER_METADATA',
   LayerParentChanged = 'LAYER_PARENT_CHANGED',
+  LayerTemporal = 'LAYER_TEMPORAL',
   LayerTitle = 'LAYER_TITLE',
   LayerUploaded = 'LAYER_UPLOADED',
   LayersPublished = 'LAYERS_PUBLISHED',
@@ -3075,6 +3083,12 @@ export type DataSource = Node & {
   sourceProcessingJobsConnection: SourceProcessingJobsConnection;
   /** ArcGIS map service setting. If enabled, client can reorder layers and apply layer-specific opacity settings. */
   supportsDynamicLayers: Scalars['Boolean'];
+  /**
+   * Temporal metadata for this source: coverage, resolution, mapping
+   * (layer, feature, band, or remote), and availability. Used for vector,
+   * raster, and remote layers. Null when the source has none.
+   */
+  temporal?: Maybe<Scalars['TemporalInfo']>;
   /** For tiled sources, a list of endpoints that can be used to retrieve tiles. */
   tiles?: Maybe<Array<Maybe<Scalars['String']>>>;
   /** The minimum visual size to display tiles for this layer. Only configurable for raster layers. */
@@ -8365,6 +8379,11 @@ export type Mutation = {
   updateDataSource?: Maybe<UpdateDataSourcePayload>;
   /** Updates a single `DataSource` using its globally unique id and a patch. */
   updateDataSourceByNodeId?: Maybe<UpdateDataSourcePayload>;
+  /**
+   * Admin mutation. Sets (or clears, when null) the TemporalInfo document
+   * for a data source. authoredBy is forced to "admin".
+   */
+  updateDataSourceTemporal: DataSource;
   /** Updates a single `EmailNotificationPreference` using a unique key and a patch. */
   updateEmailNotificationPreferenceByUserId?: Maybe<UpdateEmailNotificationPreferencePayload>;
   updateFeatureFlags?: Maybe<UpdateFeatureFlagsPayload>;
@@ -8417,6 +8436,11 @@ export type Mutation = {
   updateOptionalBasemapLayer?: Maybe<UpdateOptionalBasemapLayerPayload>;
   /** Updates a single `OptionalBasemapLayer` using its globally unique id and a patch. */
   updateOptionalBasemapLayerByNodeId?: Maybe<UpdateOptionalBasemapLayerPayload>;
+  /**
+   * Admin mutation. Sets (or clears, when null) the TemporalInfo document
+   * for an overlay data table. authoredBy is forced to "admin".
+   */
+  updateOverlayDataTableTemporal: OverlayDataTable;
   /** Updates the contents of the post. Can only be used by the author for 5 minutes after posting. */
   updatePost?: Maybe<UpdatePostPayload>;
   /** Updates a single `Profile` using a unique key and a patch. */
@@ -9942,6 +9966,13 @@ export type MutationUpdateDataSourceByNodeIdArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateDataSourceTemporalArgs = {
+  dataSourceId: Scalars['Int'];
+  temporal?: Maybe<Scalars['TemporalInfo']>;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateEmailNotificationPreferenceByUserIdArgs = {
   input: UpdateEmailNotificationPreferenceByUserIdInput;
 };
@@ -10100,6 +10131,13 @@ export type MutationUpdateOptionalBasemapLayerArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateOptionalBasemapLayerByNodeIdArgs = {
   input: UpdateOptionalBasemapLayerByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateOverlayDataTableTemporalArgs = {
+  overlayDataTableId: Scalars['Int'];
+  temporal?: Maybe<Scalars['TemporalInfo']>;
 };
 
 
@@ -10691,6 +10729,11 @@ export type OverlayDataTable = Node & {
    */
   stableId: Scalars['UUID'];
   tableOfContentsItemId: Scalars['Int'];
+  /**
+   * Temporal metadata for this data table: coverage, resolution, row
+   * mapping, and availability. Null when the table has none.
+   */
+  temporal?: Maybe<Scalars['TemporalInfo']>;
   updatedAt?: Maybe<Scalars['Datetime']>;
   version: Scalars['Int'];
   /** Columns that may/should be used for creating thematic maps. For example `count` or `density` */
@@ -14559,6 +14602,12 @@ export type ReportOverlaySource = {
   styleGroupByColumn?: Maybe<Scalars['String']>;
   tableOfContentsItem: TableOfContentsItem;
   tableOfContentsItemId: Scalars['Int'];
+  /**
+   * TemporalInfo from the overlay's data source, if assigned. Applies to
+   * vector, raster, and remote layers. Time-series report widgets use it
+   * to place the source on a time axis.
+   */
+  temporal?: Maybe<Scalars['TemporalInfo']>;
   /** GeoJSON geometry type, if the source is a vector layer. */
   vectorGeometryType?: Maybe<Scalars['String']>;
 };
@@ -17091,6 +17140,7 @@ export enum TableOfContentsItemsOrderBy {
   StableIdAsc = 'STABLE_ID_ASC',
   StableIdDesc = 'STABLE_ID_DESC'
 }
+
 
 export enum TileScheme {
   Tms = 'TMS',
@@ -21460,7 +21510,7 @@ export type UpdateFolderMutation = (
 
 export type FullAdminSourceFragment = (
   { __typename?: 'DataSource' }
-  & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'uploadedBy' | 'geostats' | 'translatedProps' | 'arcgisFetchStrategy' | 'dataLibraryMetadata' | 'rasterRepresentativeColors' | 'hostingQuotaUsed' | 'changelog' | 'isConvertibleLegacySource'>
+  & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'uploadedSourceFilename' | 'uploadedBy' | 'geostats' | 'temporal' | 'translatedProps' | 'arcgisFetchStrategy' | 'dataLibraryMetadata' | 'rasterRepresentativeColors' | 'hostingQuotaUsed' | 'changelog' | 'isConvertibleLegacySource'>
   & { authorProfile?: Maybe<(
     { __typename?: 'Profile' }
     & Pick<Profile, 'userId' | 'affiliations' | 'email' | 'fullname' | 'nickname' | 'picture'>
@@ -21756,6 +21806,20 @@ export type UpdateDataSourceMutation = (
       & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'createdAt' | 'encoding' | 'enhancedSecurity' | 'generateId' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'promoteId' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'translatedProps'>
     )> }
   )> }
+);
+
+export type UpdateDataSourceTemporalMutationVariables = Exact<{
+  dataSourceId: Scalars['Int'];
+  temporal?: Maybe<Scalars['TemporalInfo']>;
+}>;
+
+
+export type UpdateDataSourceTemporalMutation = (
+  { __typename?: 'Mutation' }
+  & { updateDataSourceTemporal: (
+    { __typename?: 'DataSource' }
+    & Pick<DataSource, 'id' | 'temporal'>
+  ) }
 );
 
 export type InteractivitySettingsForLayerQueryVariables = Exact<{
@@ -24227,7 +24291,7 @@ export type PublishedTableOfContentsQuery = (
 
 export type DataSourceDetailsFragment = (
   { __typename?: 'DataSource' }
-  & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'encoding' | 'enhancedSecurity' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'translatedProps' | 'arcgisFetchStrategy' | 'rasterRepresentativeColors' | 'rasterOffset' | 'rasterScale'>
+  & Pick<DataSource, 'id' | 'attribution' | 'bounds' | 'buffer' | 'byteLength' | 'cluster' | 'clusterMaxZoom' | 'clusterProperties' | 'clusterRadius' | 'coordinates' | 'encoding' | 'enhancedSecurity' | 'importType' | 'lineMetrics' | 'maxzoom' | 'minzoom' | 'originalSourceUrl' | 'queryParameters' | 'scheme' | 'tiles' | 'tileSize' | 'tolerance' | 'type' | 'url' | 'urls' | 'useDevicePixelRatio' | 'supportsDynamicLayers' | 'translatedProps' | 'arcgisFetchStrategy' | 'rasterRepresentativeColors' | 'rasterOffset' | 'rasterScale' | 'temporal'>
 );
 
 export type ClientSpriteFragment = (
@@ -25109,7 +25173,7 @@ export type RecalculateSpatialMetricsMutation = (
 
 export type OverlaySourceListDetailsFragment = (
   { __typename?: 'ReportOverlaySource' }
-  & Pick<ReportOverlaySource, 'tableOfContentsItemId' | 'stableId' | 'containsOverlappingFeatures' | 'rasterBandCount' | 'vectorGeometryType' | 'styleGroupByColumn' | 'bestCategoryColumn' | 'bestContinuousColumn' | 'bestLabelColumn' | 'anyColumn' | 'hasOusDemographicsColumns'>
+  & Pick<ReportOverlaySource, 'tableOfContentsItemId' | 'stableId' | 'containsOverlappingFeatures' | 'temporal' | 'rasterBandCount' | 'vectorGeometryType' | 'styleGroupByColumn' | 'bestCategoryColumn' | 'bestContinuousColumn' | 'bestLabelColumn' | 'anyColumn' | 'hasOusDemographicsColumns'>
   & { tableOfContentsItem: (
     { __typename?: 'TableOfContentsItem' }
     & Pick<TableOfContentsItem, 'title' | 'stableId'>
@@ -25121,7 +25185,7 @@ export type OverlaySourceListDetailsFragment = (
 
 export type OverlaySourceDetailsFragment = (
   { __typename?: 'ReportOverlaySource' }
-  & Pick<ReportOverlaySource, 'tableOfContentsItemId' | 'stableId' | 'containsOverlappingFeatures' | 'geostats' | 'mapboxGlStyles' | 'sourceUrl' | 'anyColumn' | 'bestCategoryColumn' | 'bestContinuousColumn' | 'bestLabelColumn' | 'vectorGeometryType' | 'rasterBandCount'>
+  & Pick<ReportOverlaySource, 'tableOfContentsItemId' | 'stableId' | 'containsOverlappingFeatures' | 'temporal' | 'geostats' | 'mapboxGlStyles' | 'sourceUrl' | 'anyColumn' | 'bestCategoryColumn' | 'bestContinuousColumn' | 'bestLabelColumn' | 'vectorGeometryType' | 'rasterBandCount'>
   & { tableOfContentsItem: (
     { __typename?: 'TableOfContentsItem' }
     & Pick<TableOfContentsItem, 'title' | 'stableId'>
@@ -28332,6 +28396,7 @@ export const FullAdminSourceFragmentDoc = gql`
   uploadedSourceFilename
   uploadedBy
   geostats
+  temporal
   translatedProps
   arcgisFetchStrategy
   dataLibraryMetadata
@@ -29001,6 +29066,7 @@ export const DataSourceDetailsFragmentDoc = gql`
   rasterRepresentativeColors
   rasterOffset
   rasterScale
+  temporal
 }
     `;
 export const ClientSpriteFragmentDoc = gql`
@@ -29298,6 +29364,7 @@ export const OverlaySourceListDetailsFragmentDoc = gql`
   tableOfContentsItemId
   stableId
   containsOverlappingFeatures
+  temporal
   tableOfContentsItem {
     title
     stableId
@@ -29320,6 +29387,7 @@ export const OverlaySourceDetailsFragmentDoc = gql`
   tableOfContentsItemId
   stableId
   containsOverlappingFeatures
+  temporal
   tableOfContentsItem {
     title
     stableId
@@ -33733,6 +33801,41 @@ export function useUpdateDataSourceMutation(baseOptions?: Apollo.MutationHookOpt
 export type UpdateDataSourceMutationHookResult = ReturnType<typeof useUpdateDataSourceMutation>;
 export type UpdateDataSourceMutationResult = Apollo.MutationResult<UpdateDataSourceMutation>;
 export type UpdateDataSourceMutationOptions = Apollo.BaseMutationOptions<UpdateDataSourceMutation, UpdateDataSourceMutationVariables>;
+export const UpdateDataSourceTemporalDocument = gql`
+    mutation UpdateDataSourceTemporal($dataSourceId: Int!, $temporal: TemporalInfo) {
+  updateDataSourceTemporal(dataSourceId: $dataSourceId, temporal: $temporal) {
+    id
+    temporal
+  }
+}
+    `;
+export type UpdateDataSourceTemporalMutationFn = Apollo.MutationFunction<UpdateDataSourceTemporalMutation, UpdateDataSourceTemporalMutationVariables>;
+
+/**
+ * __useUpdateDataSourceTemporalMutation__
+ *
+ * To run a mutation, you first call `useUpdateDataSourceTemporalMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateDataSourceTemporalMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateDataSourceTemporalMutation, { data, loading, error }] = useUpdateDataSourceTemporalMutation({
+ *   variables: {
+ *      dataSourceId: // value for 'dataSourceId'
+ *      temporal: // value for 'temporal'
+ *   },
+ * });
+ */
+export function useUpdateDataSourceTemporalMutation(baseOptions?: Apollo.MutationHookOptions<UpdateDataSourceTemporalMutation, UpdateDataSourceTemporalMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateDataSourceTemporalMutation, UpdateDataSourceTemporalMutationVariables>(UpdateDataSourceTemporalDocument, options);
+      }
+export type UpdateDataSourceTemporalMutationHookResult = ReturnType<typeof useUpdateDataSourceTemporalMutation>;
+export type UpdateDataSourceTemporalMutationResult = Apollo.MutationResult<UpdateDataSourceTemporalMutation>;
+export type UpdateDataSourceTemporalMutationOptions = Apollo.BaseMutationOptions<UpdateDataSourceTemporalMutation, UpdateDataSourceTemporalMutationVariables>;
 export const InteractivitySettingsForLayerDocument = gql`
     query InteractivitySettingsForLayer($layerId: Int!) {
   dataLayer(id: $layerId) {
@@ -44830,6 +44933,7 @@ export const namedOperations = {
     UpdateDataTablesSettings: 'UpdateDataTablesSettings',
     UpdateLayer: 'UpdateLayer',
     UpdateDataSource: 'UpdateDataSource',
+    UpdateDataSourceTemporal: 'UpdateDataSourceTemporal',
     UpdateInteractivitySettings: 'UpdateInteractivitySettings',
     UpdateZIndexes: 'UpdateZIndexes',
     UpdateRenderUnderType: 'UpdateRenderUnderType',

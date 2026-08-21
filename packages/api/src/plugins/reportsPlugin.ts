@@ -1,7 +1,9 @@
 import {
   GeostatsLayer,
   isRasterInfo,
+  isTemporalInfo,
   RasterInfo,
+  TemporalInfo,
 } from "@seasketch/geostats-types";
 import { makeExtendSchemaPlugin, gql, embed } from "graphile-utils";
 import { AnyLayer } from "mapbox-gl";
@@ -90,6 +92,7 @@ type ReportOverlaySourcePartial = {
   bestLabelColumn?: string;
   anyColumn?: string;
   hasOusDemographicsColumns?: boolean;
+  temporal?: TemporalInfo | null;
 };
 
 /**
@@ -351,6 +354,12 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         Used to gate the superuser-only OUS Demographics Table widget.
         """
         hasOusDemographicsColumns: Boolean
+        """
+        TemporalInfo from the overlay's data source, if assigned. Applies to
+        vector, raster, and remote layers. Time-series report widgets use it
+        to place the source on a time axis.
+        """
+        temporal: TemporalInfo
       }
 
       input NodeDependency {
@@ -492,6 +501,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
               items.id as table_of_contents_item_id,
               items.stable_id as stable_id,
               ${wantGeostats ? "s.geostats as geostats," : ""}
+              s.temporal as temporal,
               l.mapbox_gl_styles as mapbox_gl_styles,
               o.id as output_id,
               o.url as source_url,
@@ -568,6 +578,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
               hasOusDemographicsColumns:
                 sourceHasOusDemographicsColumns(columnNames),
               ...(wantGeostats ? { geostats: row.geostats } : {}),
+              temporal: isTemporalInfo(row.temporal) ? row.temporal : null,
               ...(wantMapboxGlStyles
                 ? { mapboxGlStyles: row.mapbox_gl_styles }
                 : {}),
@@ -641,6 +652,11 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
             },
           );
           return rows[0];
+        },
+        temporal(reportOverlaySource) {
+          return isTemporalInfo(reportOverlaySource.temporal)
+            ? reportOverlaySource.temporal
+            : null;
         },
         async sourceProcessingJob(
           reportOverlaySource,
@@ -1317,6 +1333,7 @@ async function getOverlaySourcesByStableIds(
         coalesce(reporting_output.source_processing_job_key, jobs.job_key) as "sourceProcessingJobId",
         reporting_output.id as "outputId",
         sources.geostats as "geostats",
+        sources.temporal as "temporal",
         layers.mapbox_gl_styles as "mapboxGlStyles",
         reporting_output.contains_overlapping_features as "containsOverlappingFeatures",
         sources.raster_band_count as "rasterBandCount",
@@ -1338,6 +1355,8 @@ async function getOverlaySourcesByStableIds(
       [stableIds, isDraft],
     );
     for (const row of overlaySourceRows) {
+      // Untrusted jsonb; never surface a malformed stored document.
+      row.temporal = isTemporalInfo(row.temporal) ? row.temporal : null;
       if (row.geostats) {
         stripUnnecessaryGeostatsFields(
           row.geostats,

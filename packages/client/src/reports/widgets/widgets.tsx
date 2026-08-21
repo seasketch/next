@@ -109,6 +109,12 @@ import {
   ClassCompositionChartTooltipControls,
 } from "./ClassCompositionChart";
 import {
+  RasterTimeSeries,
+  RasterTimeSeriesTooltipControls,
+  buildRasterTimeSeriesDependencies,
+} from "./RasterTimeSeries";
+import { findTimeSeriesSiblingStableIds } from "./temporalChart";
+import {
   OusDemographicsTable,
   OusDemographicsTableTooltipControls,
 } from "./OusDemographicsTable";
@@ -497,6 +503,7 @@ const memoizedWidgets: Record<string, WidgetComponent> = {
     ClassCompositionChart,
     "ClassCompositionChart"
   ),
+  RasterTimeSeries: memoWidget(RasterTimeSeries, "RasterTimeSeries"),
   OusDemographicsTable: memoWidget(
     OusDemographicsTable,
     "OusDemographicsTable"
@@ -675,6 +682,8 @@ export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
       return <RasterAreaCapturedTableTooltipControls {...props} />;
     case "ClassCompositionChart":
       return <ClassCompositionChartTooltipControls {...props} />;
+    case "RasterTimeSeries":
+      return <RasterTimeSeriesTooltipControls {...props} />;
     case "OusDemographicsTable":
       return <OusDemographicsTableTooltipControls {...props} />;
     case "BlockLayerToggle":
@@ -846,6 +855,9 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
     case "ClassCompositionChart":
       widget = <memoizedWidgets.ClassCompositionChart {...widgetProps} />;
       break;
+    case "RasterTimeSeries":
+      widget = <memoizedWidgets.RasterTimeSeries {...widgetProps} />;
+      break;
     case "OusDemographicsTable":
       widget = <memoizedWidgets.OusDemographicsTable {...widgetProps} />;
       break;
@@ -898,6 +910,8 @@ export type BuildReportCommandGroupsArgs = {
     id: number;
     title: string;
     stableId: string;
+    parentStableId?: string | null;
+    isFolder?: boolean | null;
     copiedFromDataLibraryTemplateId?: string | null;
     dataLayer?: {
       dataSource?: {
@@ -1599,6 +1613,32 @@ export function buildReportCommandGroups({
                     },
                   ],
                   componentSettings: {},
+                });
+              },
+            });
+          }
+          if (stableId) {
+            const timeSeriesMode =
+              source.styleGroupByColumn === "value" ? "area" : "stats";
+            blockGroup.items.push({
+              // eslint-disable-next-line i18next/no-literal-string
+              id: `overlay-layer-${tocId}-raster-time-series`,
+              label: "Time Series",
+              description:
+                "Chart raster statistics, area, or sums over time. Same-folder yearly siblings are added when their titles match after dates are stripped. Add or remove layers in the widget settings.",
+              run: (state, dispatch, view) => {
+                const siblingIds = findTimeSeriesSiblingStableIds({
+                  subject: source,
+                  sources: sources || [],
+                  tocItems: draftTableOfContentsItems || [],
+                });
+                return insertBlockMetric(view, state.selection.ranges[0], {
+                  type: "RasterTimeSeries",
+                  metrics: buildRasterTimeSeriesDependencies(
+                    [stableId, ...siblingIds],
+                    timeSeriesMode
+                  ),
+                  componentSettings: { mode: timeSeriesMode },
                 });
               },
             });

@@ -1,12 +1,8 @@
 import { useContext, useMemo } from "react";
 import { MetricDependency } from "overlay-engine";
-import {
-  OverlaySourceDetailsFragment,
-  useProjectReportingLayersQuery,
-} from "../../generated/graphql";
+import { OverlaySourceDetailsFragment } from "../../generated/graphql";
 import { DraftReportContext } from "../DraftReportContext";
 import { ReportDependenciesContext } from "../context/ReportDependenciesContext";
-import getSlug from "../../getSlug";
 
 export function useOverlaySources(dependencies?: MetricDependency[]): {
   allSources: OverlaySourceDetailsFragment[];

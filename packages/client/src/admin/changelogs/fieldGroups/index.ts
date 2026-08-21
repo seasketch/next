@@ -13,6 +13,7 @@ import LayerDownloadableFieldGroupListItem from "./LayerDownloadableFieldGroupLi
 import LayerInteractivityFieldGroupListItem from "./LayerInteractivityFieldGroupListItem";
 import LayerMetadataFieldGroupListItem from "./LayerMetadataFieldGroupListItem";
 import LayerParentChangedFieldGroupListItem from "./LayerParentChangedFieldGroupListItem";
+import LayerTemporalFieldGroupListItem from "./LayerTemporalFieldGroupListItem";
 import LayerTitleFieldGroupListItem from "./LayerTitleFieldGroupListItem";
 import LayerUploadedFieldGroupListItem from "./LayerUploadedFieldGroupListItem";
 import LayersPublishedFieldGroupListItem from "./LayersPublishedFieldGroupListItem";
@@ -37,6 +38,7 @@ export const FIELD_GROUP_LIST_ITEM_COMPONENTS: Partial<
   [ChangeLogFieldGroup.LayerCartography]: LayerCartographyFieldGroupListItem,
   [ChangeLogFieldGroup.LayerMetadata]: LayerMetadataFieldGroupListItem,
   [ChangeLogFieldGroup.LayerAttribution]: LayerAttributionFieldGroupListItem,
+  [ChangeLogFieldGroup.LayerTemporal]: LayerTemporalFieldGroupListItem,
   [ChangeLogFieldGroup.LayerDownloadable]: LayerDownloadableFieldGroupListItem,
   [ChangeLogFieldGroup.LayerInteractivity]: LayerInteractivityFieldGroupListItem,
   [ChangeLogFieldGroup.LayerParentChanged]:

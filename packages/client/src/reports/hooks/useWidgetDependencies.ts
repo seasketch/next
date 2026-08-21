@@ -64,7 +64,8 @@ function useStableMetrics(
 }
 
 /**
- * Stable comparison for sources array - only returns new array if content changes
+ * Stable comparison for sources array — only returns a new array if
+ * tableOfContentsItemId or sourceUrl changes.
  */
 function useStableSources(
   sources: OverlaySourceDetailsFragment[]
@@ -149,7 +150,6 @@ export function useWidgetDependencies(
       ...cardSources,
       ...draftReportContext.draftOverlaySources,
     ];
-    // Dedupe by stableId
     const sourceIds = new Set<string>();
     return combined.filter((s) => {
       if (s.stableId && sourceIds.has(s.stableId)) {
