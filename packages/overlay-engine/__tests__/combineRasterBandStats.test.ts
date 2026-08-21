@@ -75,8 +75,8 @@ describe("combineRasterBandStats", () => {
     expect(result.max).toBe(15);
     expect(result.range).toBe(15 - 0);
 
-    // mean = totalSum / totalCount
-    expect(result.mean).toBeCloseTo(700 / 150, 6);
+    // mean = totalSum / total *valid* count (count includes invalid pixels)
+    expect(result.mean).toBeCloseTo(700 / (150 - 3), 6);
 
     // median cannot be combined, so implementation sets it to NaN
     expect(Number.isNaN(result.median)).toBe(true);
@@ -86,6 +86,38 @@ describe("combineRasterBandStats", () => {
       [1, 100],
       [10, 50],
     ]);
+  });
+
+  it("keeps the combined mean within [min, max] when a fragment is entirely nodata", () => {
+    // Regression test: a fragment fully outside the raster's valid data
+    // contributes count === invalid with sum 0. Its pixels must not dilute
+    // the combined mean (which previously fell below the combined min).
+    const allNodata = makeBand({
+      count: 10.956363636363637,
+      invalid: 10.956363636363637,
+      sum: 0,
+    });
+
+    const valid = makeBand({
+      count: 54.278347107438016,
+      invalid: 30.966611570247935,
+      sum: 164.62451693069838,
+      min: 5.947144985198975,
+      max: 7.869998931884766,
+      mean: 7.06187304965204,
+      median: 7,
+      range: 1.922853946685791,
+      histogram: [[7, 23.31173553719008]],
+    });
+
+    const result = combineRasterBandStats([allNodata, valid])!;
+
+    expect(result.min).toBeCloseTo(5.947144985198975, 6);
+    expect(result.max).toBeCloseTo(7.869998931884766, 6);
+    // mean = sum / (count - invalid) of the valid band only
+    expect(result.mean).toBeCloseTo(7.06187304965204, 6);
+    expect(result.mean).toBeGreaterThanOrEqual(result.min);
+    expect(result.mean).toBeLessThanOrEqual(result.max);
   });
 
   it("merges overlapping histogram bins and keeps them sorted", () => {
