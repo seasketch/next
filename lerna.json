@@ -20,7 +20,8 @@
     "packages/fragment-worker",
     "packages/ai-data-analyst",
     "packages/gl-style-builder",
-    "packages/raster-array"
+    "packages/raster-array",
+    "packages/data-library-gmw"
   ],
   "version": "independent"
 }

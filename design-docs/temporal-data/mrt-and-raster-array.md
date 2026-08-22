@@ -40,14 +40,14 @@ Raster MTS *produces* those tiles and hosts them on Mapbox’s CDN. They do **no
 
 ```
 encode XYZ .mrt bytes
-    → MBTiles (metadata format=mrt) or a scratch {z}/{x}/{y} tree
-    → pmtiles convert / pack
+    → scratch {z}/{x}/{y}.mrt tree (+ tilejson.json)
+    → raster-array pack (native JS PMTiles v3 writer)
     → one {name}.mrt.pmtiles on R2
     → TilesBackend getZxy → GET {name}/{z}/{x}/{y}.mrt  (+ Range into that tile)
     → GL JS raster-array (unchanged)
 ```
 
-This is the same pipeline as vector and RGB rasters (`gdal_translate -of mbtiles` / tippecanoe → `pmtiles convert` → TilesBackend). The only new parts are the MRT payload, `format: "mrt"` metadata, a `.mrt` ZXY extension, and honoring Range on the **extracted tile body**.
+The Worker hop is the same as vector and RGB rasters. The **packer** is not: we write PMTiles in `@seasketch/raster-array` (Hilbert tile-ids, gzip directories, SHA-256 dedupe, `tile_compression = None`) instead of sqlite MBTiles + the `pmtiles` CLI. That keeps the later Lambda path free of extra binaries. The new parts on the wire are the MRT payload, `format: "mrt"` metadata, a `.mrt` ZXY extension, and honoring Range on the **extracted tile body**.
 
 GL JS cannot open a `.pmtiles` URL as a `raster-array` source (its built-in PMTiles support is vector / image raster). Do not wait for Mapbox to add that. Do not invent a second archive format. Do **not** publish a loose `{z}/{x}/{y}.mrt` prefix to R2 except as tiny local demo fixtures.
 
@@ -75,8 +75,8 @@ PMTiles is not appendable. Incremental encode (`--keep-existing` for a z12 pass)
               ▼                                           ▼
 ┌─────────────────────────────┐         ┌──────────────────────────────────┐
 │ Upload adapter (Lambda)     │         │ Data Library jobs (workstation)  │
-│ spatial-uploads-handler     │         │ e.g. packages/gmw-products       │
-│ one file → one MRT PMTiles  │         │ GMW: z0–12 MRT archive + COG     │
+│ spatial-uploads-handler     │         │ packages/data-library-gmw        │
+│ one file → one MRT PMTiles  │         │ GMW: z0–12 MRT archive + GeoTIFF │
 │ MRT_ENABLED on the Lambda   │         │ writes R2 + a runbook, not the DB│
 └─────────────────────────────┘         └────────────────┬─────────────────┘
               │                                           │
@@ -109,16 +109,16 @@ Everything that speaks MRT imports this package. It must not know about GMW zip 
 - `encodeMrtTile` / `decodeMrtTile`, quantization (`value = offset + scale * code`).
 - TileJSON (`format: "mrt"`, `raster_layers`, band ids), stored in the PMTiles JSON metadata so the Worker can emit `{name}.json` the same way it does for vector archives.
 - Web Mercator XYZ helpers and “cut this window from a raster, encode one tile.”
-- A **single-input** tiler: one GeoTIFF or one NetCDF subdataset → **one `{name}.mrt.pmtiles`**. Internally that may be a scratch `{z}/{x}/{y}.mrt` tree or an MBTiles (`format=mrt`) that `pmtiles convert` packs; the directory is not the product. Native zoom, cap (e.g. 12), skip-empty tiles, `bandsPerBlock`.
-- Unit tests against the decoder; CLI `encode` / `inspect` / `pack` for fixtures.
+- A **single-input** tiler: one GeoTIFF or one NetCDF subdataset → scratch `{z}/{x}/{y}.mrt` → **one `{name}.mrt.pmtiles`**. The directory is not the product. Native zoom, cap (e.g. 12), skip-empty tiles, `bandsPerBlock`. Native JS packer (no MBTiles, no `pmtiles` CLI).
+- Unit tests against the decoder and packer; CLI `encode` / `inspect` / `pack` for fixtures.
 
 **Out of scope**
 
-- Listing `/vsizip/` GMW 1° cells, coverage footprints, occupancy pyramids.
+- Listing `/vsizip/` GMW 1° cells as a *library job* concern — but `listGmwSources` stayed in this package because regional fixtures (`npm run fixtures`) and `data-library-gmw` both need the same zip layout. Occupancy pyramids still belong in the GMW job.
 - Writing `data_upload_outputs`.
 - Overlay-engine stats.
 
-The current `packages/raster-array` PoC is this module plus GMW encode scripts and an extensive **demo viewer**. Keep the viewer in this package and adapt it (see [Demo viewer](#demo-viewer-fixtures-and-remote-tilesets)). Pull GMW zip/mosaic/globe-encode scripts out to module 3.
+Regional fixture demos stay here. The globe viewer lives with the job in `packages/data-library-gmw` (`npm run demo`). `scripts/encode-gmw-global.ts` is a stub that points there.
 
 GDAL: the core may call `gdal_translate` / `gdalwarp` CLI, or accept pre-windowed typed arrays so Lambda can use the `gdal-async` binding it already has. Do not add npm deps the upload Lambda does not already ship.
 
@@ -143,7 +143,7 @@ A single GMW 1° cell (`3711²`, 41 Byte bands) is the design target. The full G
 
 ### 3. Data Library jobs — starting with GMW
 
-A **separate package** (proposed `packages/gmw-products`), not a mode of the upload handler and not a publisher of production metadata. The SeaSketch team runs it when GMW v4.1.x is released. Later the same pattern can host other cubes that do not fit Lambda.
+A **separate package** (`packages/data-library-gmw`), not a mode of the upload handler and not a publisher of production metadata. The SeaSketch team runs it when GMW v4.1.x is released. Later the same pattern can host other cubes that do not fit Lambda.
 
 **What the job does**
 
@@ -159,7 +159,7 @@ dataLibrary/GLOBAL_MANGROVE_WATCH/{release}/analysis.tif
 
 - Print a **runbook** for the operator: public URLs, suggested changelog text, suggested `TemporalInfo`, and “open the superuser GMW layer → Versions → register these hosted products.” Do not print ad-hoc `UPDATE data_sources` SQL, and do not call Graphile / `replace_data_source` from the job.
 
-Coral Reef Watch’s `updateCRWTemplate` job is a different pattern (download → `createSourceReplacementJob` → Lambda → `replace_data_source`). Do not copy that into `gmw-products`. CRW can stay on the upload path if each cube is one NetCDF that fits Lambda.
+Coral Reef Watch’s `updateCRWTemplate` job is a different pattern (download → `createSourceReplacementJob` → Lambda → `replace_data_source`). Do not copy that into `data-library-gmw`. CRW can stay on the upload path if each cube is one NetCDF that fits Lambda.
 
 **Products** (one Data Library template, two derivatives)
 
@@ -183,7 +183,7 @@ Library templates already *are* versioned. They are ordinary `superuser` TOC / l
 
 `DataLibraryModal` only copies a template into a project (`copy_data_library_template_item`). Copies cannot be replaced (`copiedFromDataLibraryTemplateId` disables upload). The template itself can be replaced today only by **drag-drop through the upload Lambda** on the superuser layer’s Versioning panel — which cannot accept a globe already sitting on R2.
 
-**Decision: extend that Versioning UI for hosted library products. Do not have `gmw-products` emit customized production SQL.**
+**Decision: extend that Versioning UI for hosted library products. Do not have `data-library-gmw` emit customized production SQL.**
 
 Printed SQL looks attractive for a yearly job, and a script that *only* called `replace_data_source` after inserting a complete source would technically hit the versioning hook. It is still the wrong operator interface:
 
@@ -316,7 +316,7 @@ dataLibrary/{templateId}/{release}/display.mrt.pmtiles
 
 ## pmtiles-server
 
-`packages/pmtiles-server` is the only public HTTP front for overlay bytes. MRT has to live here — not a second Worker and not only the raster-array demo server. Today the Worker already does three things we must reuse: **ACL + `access_token`**, **PMTiles `getZxy` on TilesBackend**, and a **per-source HTML preview** at `GET /projects/{slug}/public/{uuid}` (vector vs image raster). It does **not** yet speak MRT.
+`packages/pmtiles-server` is the only public HTTP front for overlay bytes. MRT lives here — not a second Worker and not only the raster-array demo server. The Worker already did three things we reuse: **ACL + `access_token`**, **PMTiles `getZxy` on TilesBackend**, and a **per-source HTML preview** at `GET /projects/{slug}/public/{uuid}` (vector vs image raster). TilesBackend now also speaks MRT (see [Implementation notes](#implementation-notes-2026-08)).
 
 TilesBackend is the **right** place to add `{z}/{x}/{y}.mrt`. Add `.mrt` to `TILE_EXT` / `isTilePresentationResource`. The archive name is `{uuid}.mrt` (file `{uuid}.mrt.pmtiles`), not `{uuid}/mrt/8/72`. Do **not** serve production tiles as loose objects on ObjectBackend — that is the millions-of-files path we are refusing.
 
@@ -424,7 +424,7 @@ The local demo server (`npm run demo`, `http://127.0.0.1:8765`) remains for thes
 
 ### What goes on R2 (large products)
 
-The global GMW tileset is hundreds of MB at z0–10 and much larger at z11–12. Do not commit it, do not require every developer to run `gmw:global`, and do not upload a `demos/tiles/gmw-global/{z}/{x}/{y}` tree.
+The global GMW tileset is hundreds of MB at z0–10 and much larger at z11–12. Do not commit it, do not require every developer to run `data-library-gmw`, and do not upload a `demos/tiles/gmw-global/{z}/{x}/{y}` tree.
 
 Publish **one archive** to the `ssn-tiles` R2 bucket as a **public fixture** (keys outside `projects/`, same class as `crdss-cells-6`):
 
@@ -440,52 +440,58 @@ https://tiles.seasketch.org/raster-array/gmw-global.mrt.json
 https://tiles.seasketch.org/raster-array/gmw-global.mrt/{z}/{x}/{y}.mrt
 ```
 
-A publish step (rclone / wrangler / one-off script in the GMW package) uploads the packed archive after `gmw:global`. That is not part of `npm run fixtures`. One PUT, not 8,243 (z0–10) or hundreds of thousands (z12).
+A publish step (rclone / wrangler / one-off script in `packages/data-library-gmw`) uploads the packed archive after `npm run pack`. That is not part of `npm run fixtures`. One PUT, not 8,243 (z0–10) or hundreds of thousands (z12).
 
 ### Viewer behavior
 
 - **Catalog.** Pages declare a tileset as `local` (fixture directory or local `.mrt.pmtiles`) or `remote` (Worker TileJSON on `tiles.seasketch.org`). The globe page is remote.
-- **Fallback.** Optional: if a developer has packed the globe locally, prefer that file; otherwise use the R2 archive URL. Missing remote tiles should say “not published” rather than “run gmw:global.”
+- **Fallback.** Optional: if a developer has packed the globe locally, prefer that file; otherwise use the R2 archive URL. Missing remote tiles should say “not published” rather than “run data-library-gmw.”
 - **Improve, don’t shrink.** Keep slider, playback, place jumps, hover query, encode-stats, and the official Mapbox control. Worth adding: a tileset picker driven by a small manifest, bandwidth/Range logging on the blocks page, and a note in the UI when a layer is remote vs fixture.
 - **Token.** Mapbox style token still comes from `packages/client/.env`. Remote MRT URLs do not need it.
 
-When the GMW encode job moves to `packages/gmw-products`, the **viewer stays here**. The job’s output is `display.mrt.pmtiles` + analysis COG under `dataLibrary/…` plus a runbook; the raster-array demo may consume a release TileJSON or keep the separate `raster-array/gmw-global.mrt.pmtiles` fixture. It is a consumer, not the publisher.
+The GMW encode job and globe demo live in `packages/data-library-gmw`. The job’s output is `display.mrt.pmtiles` + analysis GeoTIFF under `dataLibrary/…` plus a runbook. `npm run demo` there serves only that local archive.
 
 ## GMW global encode
 
-The PoC (`npm run gmw:global`) mosaics 1,696 vsizip cells to one sparse EPSG:3857 GeoTIFF (`SKIP_NOSOURCE`, `SPARSE_OK`, no COG overviews), then runs the single-file tiler with 1° `coverageBboxes`. That is correct enough to ship a library product, and too slow (~3.5 tiles/s, hours per extra zoom).
+The first globe encode (mosaic → `encodeTileset` with 1° `coverageBboxes`) wrote 38,230 tiles and skipped **297,822** empty windows (~89%). Wall time was ~20 hours of encode plus ~2.4 hours of mosaic. That tree is preserved at `packages/raster-array/demos/tiles/gmw-global.preserved-z0-12`. Do not overwrite `demos/tiles/gmw-global`.
+
+**Current job (`packages/data-library-gmw`)**
+
+1. **Occupancy** — each 1° cell is downsampled with `gdal_translate -r max` (cells already have 58…928 overviews). Any year ≠ nodata marks the coarse pixel; those pixels map to z12 XYZ, then parents down to z0. Result: ~38k tiles instead of ~336k GDAL windows.
+2. **Warp each 1° cell to EPSG:3857 once** (tiled GTiff). Then each occupied tile is a same-CRS `gdal_translate -projwin` (or a small mosaic warp if it spans cells). Cutting from the 1.3M-wide tropical mosaic was the slow read. `build` packs `display.mrt.pmtiles` when encode finishes.
+3. **Analysis mosaic** is separate and stays in **EPSG:4326** (source CRS). Same-CRS `gdalwarp` of the 1° cells (`SKIP_NOSOURCE`, no `-t_srs`). A VRT + translate of the tropical envelope densifies ocean. The `fixtures/gmw-global/gmw-global.3857.tif` file is a display leftover; do not copy it to `analysis.tif`.
+
+`--keep-existing` resumes an encode. Scratch output is `work/tiles` only; the CLI refuses a folder named `gmw-global`.
 
 **Keep**
 
-- Workstation / ECS, not Lambda.
-- Incremental zoom on a **scratch** tree or MBTiles (`--keep-existing --minzoom 12 --maxzoom 12`). Pack the PMTiles archive **once** at the end — the format is not appendable.
+- Workstation / ECS, not Lambda. See [GMW on EC2 / ECS](gmw-ecs-orchestration.md).
+- Pack the PMTiles archive **once** at the end — the format is not appendable. The packer streams tile files so a 1.8 GB tree does not need 2× RAM.
 - One analysis raster (not 1,696 overlay sources).
-- Native **z12** (~38 m/px vs ~30 m source). Regional fixtures already go to z11; the globe must match.
-- One `display.mrt.pmtiles` as the published display product. Never rclone a `{z}/{x}/{y}.mrt` prefix to R2.
+- Native **z12**. One `display.mrt.pmtiles`. Never rclone a `{z}/{x}/{y}.mrt` prefix to R2.
 
-**Optimize in the GMW package, not the upload tiler**
+**Still worth doing later**
 
-1. **Occupancy before GDAL** — ~85% of z11 candidates inside 1° footprints are empty ocean. Skip tiles that miss allocated mosaic blocks or a 1-bit occupancy pyramid.
-2. **Cut display tiles from the 1° cells (or a VRT of them)**, not from the 1.3M-wide mosaic. Cells are 3711² and already have overviews. The mosaic/COG is the *analysis* product; it is a poor XYZ read source.
-3. In-process GDAL (Python/`rasterio` worker, or bindings) to avoid 10⁵ process spawns on a z12 pass.
-4. Optional later: shard XYZ lists across ECS tasks.
+- Long-lived GDAL/rasterio workers so z12 is not 20k process spawns.
+- Occupancy from allocated mosaic blocks / a 1-bit pyramid (current downsample is conservative; a few empty edge tiles remain).
+- Optional: shard XYZ lists across ECS tasks.
 
-A multi-hour z0–12 run is acceptable for a yearly library update. (1)+(2) should pull that toward tens of minutes.
+### Analysis raster
 
-### Analysis COG
+Overlay-engine `raster_overlay_area` is single-band today and `getValues` on a geography-sized window densifies ocean. The library product should be tiled/sparse so a follow-on overlay change can **walk 512² tiles**, skip empty ones, and histogram per tile — still one `sourceUrl`, bands as years (or one-pass areas-by-year). That work lives in `packages/overlay-engine`; it is not a prerequisite to publish the MRT.
 
-Overlay-engine `raster_overlay_area` is single-band today and `getValues` on a geography-sized window densifies ocean. The library COG should be tiled/sparse so a follow-on overlay change can **walk 512² tiles**, skip empty ones, and histogram per tile — still one `sourceUrl`, bands as years (or one-pass areas-by-year). That work lives in `packages/overlay-engine`, gated on the COG existing; it is not a prerequisite to publish the MRT.
+`data-library-gmw analysis` writes a **tiled sparse EPSG:4326 GeoTIFF** (`SPARSE_OK`) mosaiced from the source cells. Do **not** `gdal_translate -of COG` the tropical envelope without care — a naive COG translate densifies empty ocean and can balloon the file. Range-friendly COG conversion is a later overlay-engine concern.
 
-Do not ask the upload handler to build this globe COG.
+Do not ask the upload handler to build this globe raster.
 
 ## Implementation sequence
 
-1. **Core cleanup + pack** — Treat `packages/raster-array` as the shared library. Encoder product is `{name}.mrt.pmtiles` (scratch ZXY or MBTiles `format=mrt` → `pmtiles convert`). Move GMW zip/mosaic/globe-encode scripts toward `packages/gmw-products` (or `scripts/` there). Keep and improve the demo viewer; commit small packed fixtures; point the globe page at the Worker archive URL. No handler/client imports yet.
-2. **pmtiles-server** — TilesBackend: `.mrt` ZXY from `{name}.mrt.pmtiles`, TileJSON at `{name}.mrt.json` with `format: "mrt"` / `raster_layers`, Range on the extracted tile (clamp, no 416). Preview: if the MRT sibling exists, GL JS 3.4 `raster-array` + default style + band slider; else today’s RGB/vector preview. Public root archives for fixtures (`raster-array/gmw-global.mrt`) and library products (`dataLibrary/…/display.mrt`).
+1. **Core cleanup + pack** — **Done (2026-08).** `packages/raster-array` is the shared library. Encoder product is `{name}.mrt.pmtiles` via a native JS writer (scratch `{z}/{x}/{y}.mrt` → `pack`). Globe mosaic/encode/pack/runbook moved to `packages/data-library-gmw`. Demo viewer kept; globe page points at the Worker archive URL. No handler/client imports.
+2. **pmtiles-server** — **Done (2026-08).** TilesBackend: `.mrt` ZXY from `{name}.mrt.pmtiles`, TileJSON at `{name}.mrt.json` with `format: "mrt"` / `raster_layers`, Range on the extracted tile (clamp, no 416). Preview: if the MRT sibling exists, GL JS 3.4 `raster-array` + default style + band slider; else today’s RGB/vector preview. Public root archives for fixtures (`raster-array/gmw-global.mrt`) and library products (`dataLibrary/…/display.mrt`).
 3. **Additive schema** — `data_upload_output_type` value `MRT`. Handler `SupportedTypes` / `ResponseOutput` union. No GraphQL feature flag. Nothing writes `MRT` yet.
 4. **Upload adapter, `MRT_ENABLED` unset** — Deploy the encoder behind the env. Tests: 1° GMW cell and synthetic stack emit **one** `.mrt.pmtiles` in `transition` / `true`; RGB GeoTIFF never does; unset env never does; `transition` keeps RGB PMTiles `url` + mix styles; `true` sets `url` to `…/{uuid}.mrt` + raster-array styles and skips RGB PMTiles.
 5. **Client consume + cartography** — If `url` is the MRT archive, add `raster-array` and bind the clock to `raster-array-band`. GUI / `gl-style-builder` / `determineVisualizationType` branch on MRT vs RGB-packed PMTiles. Hover via `queryRasterValue`. Optional: GUI may target a transitional `MRT` output while `url` is still the RGB archive. Ship this before `MRT_ENABLED=true`.
-6. **GMW library job** — z0–12 packed `display.mrt.pmtiles` + analysis COG onto `dataLibrary/GLOBAL_MANGROVE_WATCH/{release}/`; print the runbook. Superuser Versioning “register hosted products” attaches them via `replace_data_source`. Occupancy / per-cell tiling as the first speed work.
+6. **GMW library job** — **Workstation CLI + occupancy/cell encode done (2026-08); admin attach still open.** `packages/data-library-gmw` builds occupancy → cell-cut MRT → streamed `display.mrt.pmtiles` + analysis GeoTIFF and prints the runbook. Superuser Versioning “register hosted products” (not built yet) attaches them via `replace_data_source`. The first 20-hour tree is preserved; a production re-encode from this path has not finished on this machine yet.
 7. **Overlay-engine** — Tile-walk + multi-band / `when` for library GMW (and later any multi-band Reporting COG). Separate PR.
 
 ## Non-goals
@@ -507,5 +513,67 @@ Do not ask the upload handler to build this globe COG.
 - Globe mosaic (sparse 3857 GTiff): ~0.45 GB, 29.998 m/px, native zoom ~12.
 - Globe MRT z0–10: 8,243 tiles, ~323 MB. z11 is a keep-existing pass (~65k candidates). Those counts are why the published product must be one archive.
 - Regional fixtures (`gmw-florida`, `gmw-sundarbans`, `gmw-borneo`) encode to **maxzoom 11** from the same source cells.
-- Demo viewer: `packages/raster-array` → `npm run demo` → `http://127.0.0.1:8765`. Token from `packages/client/.env` (`REACT_APP_MAPBOX_ACCESS_TOKEN`). Keep this app; small tilesets as fixtures (directory and/or packed), globe from one R2 archive via `tiles.seasketch.org`.
+- Regional demos: `packages/raster-array` → `npm run demo` → `http://127.0.0.1:8766`. Globe: `packages/data-library-gmw` → `npm run demo` → `http://127.0.0.1:8765/gmw-global.html` (local `work/dist/display.mrt.pmtiles` only). Token from `packages/client/.env` (`REACT_APP_MAPBOX_ACCESS_TOKEN`).
+
+## Implementation notes (2026-08)
+
+Notes from the first isolated slice (raster-array packer, pmtiles-server MRT, `packages/data-library-gmw`). Client and `spatial-uploads-handler` were not touched.
+
+### Package name
+
+The Data Library job is `packages/data-library-gmw` (`@seasketch/data-library-gmw`), not `gmw-products`. It is listed in root `lerna.json`. The CLI does not call Graphile / `replace_data_source` and does not print production SQL.
+
+### Native JS PMTiles writer
+
+`@seasketch/raster-array` writes PMTiles v3 in-process (`src/pmtiles/`). No sqlite, no `pmtiles` CLI, no extra runtime deps — that is the Lambda-safe path later. Archives are clustered, SHA-256-deduped, `tile_type = Unknown`, `tile_compression = None`. Leaf directories are emitted when the gzipped root would exceed 16 KB. `pack` walks a scratch `{z}/{x}/{y}.mrt` tree plus `tilejson.json`. Incremental `--keep-existing` still writes that tree; pack once at the end.
+
+### TileJSON for Unknown tile type
+
+Official `pmtiles` `getTileJson` uses `tileTypeExt(Unknown) === ""`, so a Worker that only forwarded that document would advertise `{z}/{x}/{y}` with no `.mrt`. TilesBackend **rewrites** `tiles` to `{publicBase}/{name}/{z}/{x}/{y}.mrt` and copies `format` / `raster_layers` from archive metadata.
+
+### `{name}.mrt.json` capture
+
+The TileJSON / preview regex must be `/(.+\.mrt)\.json` and `/(.+\.mrt)/?$`. A first draft `/(.+)\.mrt.json` captured `gmw-global` and looked up `gmw-global.pmtiles` (404). `createPMTiles(name)` opens `{name}.pmtiles`, so the captured name has to keep the `.mrt` suffix (`gmw-global.mrt` → `gmw-global.mrt.pmtiles`).
+
+OBJECT_ROUTE must skip `.mrt.json` so TileJSON is not treated as a raw object download. Fixture / library presentation uses `/\.mrt(?:\.json)?$/`, which does **not** match `.mrt.pmtiles` downloads.
+
+### Range on extracted tiles
+
+`sliceByteRange` clamps the 16 KB GL JS probe. A 416 on a small low-zoom tile breaks the layer. 206 responses use `Cache-Control: private, no-store` so immutable Workers cache does not store one byte-range of a tile. `Content-Type` for `.mrt` is `application/octet-stream`, not `application/x-protobuf`.
+
+### GMW listing stayed in the core
+
+Plan said listing `/vsizip/` cells was out of scope for `@seasketch/raster-array`. Regional fixtures and the library job both need the same zip layout, so `listGmwSources` / `parseGmwCellName` stayed in the core and are exported. Occupancy pyramids and globe orchestration still belong in `data-library-gmw`. The job imports raster-array **source** via relative paths (`../../raster-array/src/…`) so a `tsc` of the core is not required to run the CLI.
+
+### Tiler already skips a second 3857 warp
+
+`encodeTileset` detects an EPSG:3857 input and skips `gdalwarp`. The GMW mosaic can be fed straight into encode.
+
+### What this slice did not do
+
+- SeaSketch client `raster-array` source, timeslider, cartography.
+- `MRT_ENABLED` / upload Lambda.
+- Schema `data_upload_output_type = MRT`.
+- Superuser Versioning “register hosted products” UI.
+- A finished production re-encode from the new occupancy/cell-cut path (CLI is ready).
+
+### GMW cell names are the NW origin
+
+`GMW_N25W081` is lon −81…−80, lat **24…25** (GeoTIFF origin = NW corner). An earlier `parseGmwCellName` treated the number as the SW corner and shifted every coverage bbox 1° north. Occupancy and cell-cut encode use the corrected bounds.
+
+### Occupancy + cell-cut encode (2026-08)
+
+First globe encode stats (mosaic-backed `encodeTileset`): 336,052 candidates, 38,230 written, 297,822 empty, 1.8 GB, ~20 h. z12 alone was 244,466 candidates / 20,675 written.
+
+The job no longer uses that tiler for the globe. Occupancy + warp-from-1° cells is the display path; the mosaic stays the analysis product. PMTiles pack is part of `build` and streams from the scratch tree.
+
+Python `osgeo` / rasterio are **not** installed on the workstation that ran the PoC. Per-tile GDAL CLI remains; occupancy is what removes the empty-ocean majority.
+
+GDAL's ENVI driver defaults to **BIP**. The generic ENVI reader (`readEnviBands`) is a per-sample DataView loop — ~seconds per 41-band tile. Always pass `-co INTERLEAVE=BSQ` and use `readEnviByteBands`. This was a large part of the original ~3.5 tiles/s.
+
+MRT gzip of a 41 × 258² uint32 tile is ~0.5–1 s and is CPU-bound. Running it on the encode event loop serialized the whole job (~1.8 tiles/s on a 10-core machine). `encodeFromCells` now gzips in a `child_process.fork` pool (`tsx` loads the worker). Florida smoke (2 cells, 147 occupied tiles): **133 written in 50 s (~2.9/s)** vs ~20 h for the old 336k-candidate globe. Linear scale for 38k occupied tiles is a few hours, not a day. In-process GDAL would still help.
+
+### Preserved fixture
+
+`packages/raster-array/demos/tiles/gmw-global` and `gmw-global.preserved-z0-12` are the day-long z0–12 tree. `data-library-gmw` writes only under `work/` and refuses a scratch folder named `gmw-global`. Pack the preserved tree if you need an archive without re-encoding.
 
