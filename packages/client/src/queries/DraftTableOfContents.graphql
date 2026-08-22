@@ -447,7 +447,9 @@ query LayerSettingsChangeLog($id: Int!, $first: Int!) {
     }
     copiedFromDataLibraryTemplateId
     dataLayer {
+      id
       dataSource {
+        id
         dataLibraryTemplateId
         createdAt
         authorProfile {

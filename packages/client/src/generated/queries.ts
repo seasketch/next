@@ -21584,9 +21584,10 @@ export type LayerSettingsChangeLogQuery = (
       & ChangeLogDetailsFragment
     )>>, dataLayer?: Maybe<(
       { __typename?: 'DataLayer' }
+      & Pick<DataLayer, 'id'>
       & { dataSource?: Maybe<(
         { __typename?: 'DataSource' }
-        & Pick<DataSource, 'dataLibraryTemplateId' | 'createdAt'>
+        & Pick<DataSource, 'id' | 'dataLibraryTemplateId' | 'createdAt'>
         & { authorProfile?: Maybe<(
           { __typename?: 'Profile' }
           & Pick<Profile, 'userId' | 'affiliations' | 'email' | 'fullname' | 'nickname' | 'picture'>
@@ -31102,7 +31103,9 @@ export const LayerSettingsChangeLogDocument = /*#__PURE__*/ gql`
     }
     copiedFromDataLibraryTemplateId
     dataLayer {
+      id
       dataSource {
+        id
         dataLibraryTemplateId
         createdAt
         authorProfile {

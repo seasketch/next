@@ -12,6 +12,22 @@ import { isTemporalInfo, TemporalInfo } from "@seasketch/geostats-types";
  * reads it whole.
  */
 
+function parseStoredTemporal(value: unknown): unknown {
+  if (typeof value !== "string") {
+    return value;
+  }
+  try {
+    return JSON.parse(value);
+  } catch {
+    return value;
+  }
+}
+
+function readTemporalField(source: { temporal?: unknown }): TemporalInfo | null {
+  const value = parseStoredTemporal(source?.temporal);
+  return isTemporalInfo(value) ? value : null;
+}
+
 function validateTemporalInfo(value: unknown): TemporalInfo | null {
   if (value === null || value === undefined) {
     return null;
@@ -96,12 +112,10 @@ const TemporalPlugin = makeExtendSchemaPlugin((build) => {
       TemporalInfo: TemporalInfoScalar as any,
       DataSource: {
         // Defensive: never surface a malformed stored document.
-        temporal: (source) =>
-          isTemporalInfo(source.temporal) ? source.temporal : null,
+        temporal: (source) => readTemporalField(source),
       },
       OverlayDataTable: {
-        temporal: (source) =>
-          isTemporalInfo(source.temporal) ? source.temporal : null,
+        temporal: (source) => readTemporalField(source),
       },
       Mutation: {
         updateDataSourceTemporal: async (
@@ -140,7 +154,13 @@ const TemporalPlugin = makeExtendSchemaPlugin((build) => {
               );
             }
           );
-          return row;
+          if (!row) {
+            throw new Error("Data source not found");
+          }
+          // @omit + @requires does not always populate this column on the
+          // mutation query-builder path; attach the document we just wrote so
+          // the payload is a real DataSource { id, temporal } Apollo can merge.
+          return { ...row, temporal: doc };
         },
         updateOverlayDataTableTemporal: async (
           _query,
@@ -183,7 +203,10 @@ const TemporalPlugin = makeExtendSchemaPlugin((build) => {
               );
             }
           );
-          return row;
+          if (!row) {
+            throw new Error("Overlay data table not found");
+          }
+          return { ...row, temporal: doc };
         },
       },
     },

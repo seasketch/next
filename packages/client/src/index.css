@@ -8197,6 +8197,10 @@ select{
   min-height:100vh
 }
 
+.min-h-\[7rem\]{
+  min-height:7rem
+}
+
 .\!w-\[340px\]{
   width:340px !important
 }
@@ -10940,6 +10944,10 @@ select{
   border-color:rgb(63 63 70 / var(--tw-border-opacity, 1))
 }
 
+.border-white\/5{
+  border-color:rgb(255 255 255 / 0.05)
+}
+
 .border-b-black{
   --tw-border-opacity:1;
   border-bottom-color:rgb(0 0 0 / var(--tw-border-opacity, 1))
@@ -11971,6 +11979,14 @@ select{
 .bg-zinc-900{
   --tw-bg-opacity:1;
   background-color:rgb(24 24 27 / var(--tw-bg-opacity, 1))
+}
+
+.bg-gray-900\/30{
+  background-color:rgb(17 24 39 / 0.3)
+}
+
+.bg-gray-900\/40{
+  background-color:rgb(17 24 39 / 0.4)
 }
 
 .bg-opacity-10{
@@ -14138,6 +14154,11 @@ select{
   color:rgb(113 113 122 / var(--tw-text-opacity, 1))
 }
 
+.text-red-300{
+  --tw-text-opacity:1;
+  color:rgb(252 165 165 / var(--tw-text-opacity, 1))
+}
+
 .text-opacity-50{
   --tw-text-opacity:0.5
 }
@@ -15127,6 +15148,10 @@ select{
 .contain-paint{
   --tw-contain-paint:paint;
   contain:var(--tw-contain-size) var(--tw-contain-layout) var(--tw-contain-paint) var(--tw-contain-style)
+}
+
+.\[color-scheme\:dark\]{
+  color-scheme:dark
 }
 
 .\[scrollbar-width\:thin\]{
@@ -19180,6 +19205,14 @@ input[type="checkbox"][indeterminate="true"]:checked {
   .print\:hidden{
     display:none
   }
+}
+
+.\[\&\:\:-webkit-calendar-picker-indicator\]\:cursor-pointer::-webkit-calendar-picker-indicator{
+  cursor:pointer
+}
+
+.\[\&\:\:-webkit-calendar-picker-indicator\]\:opacity-80::-webkit-calendar-picker-indicator{
+  opacity:0.8
 }
 
 .\[\&\>span\]\:min-h-0>span{
