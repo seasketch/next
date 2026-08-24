@@ -148,7 +148,8 @@ describe("createProtectTabContainerPlugin", () => {
       0,
       0
     );
-    const next = transform!(slice);
+    const view = {} as Parameters<NonNullable<typeof transform>>[1];
+    const next = transform!.call(plugin, slice, view);
     expect(childTypes(next)).toEqual(["paragraph"]);
     expect(next.content.child(0).textContent).toBe("From clipboard");
   });

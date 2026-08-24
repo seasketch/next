@@ -100,6 +100,7 @@ const landUseFilterStyle = [
 const typeAttribute = {
   attribute: "type",
   type: "string",
+  count: 5,
   values: {
     construction: 1,
     industrial: 1,
@@ -134,6 +135,7 @@ describe("extractColorsForCategories", () => {
   test("still resolves match-expression paint colors", () => {
     const style = [
       {
+        id: "land-use-match",
         type: "fill",
         paint: {
           "fill-color": [
