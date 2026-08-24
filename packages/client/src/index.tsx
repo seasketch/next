@@ -30,6 +30,7 @@ import { GraphqlQueryCacheContext } from "./offline/GraphqlQueryCache/useGraphql
 import { OfflineStateDetector } from "./offline/OfflineStateContext";
 import { onError } from "@apollo/client/link/error";
 import { DialogProvider } from "./components/useDialog";
+import { ToastProvider } from "./components/Toast";
 
 const history = createBrowserHistory();
 
@@ -310,7 +311,9 @@ ReactDOM.render(
           <Auth0ProviderWithRouter>
             <ApolloProviderWithToken>
               <DialogProvider>
-                <App />
+                <ToastProvider>
+                  <App />
+                </ToastProvider>
               </DialogProvider>
             </ApolloProviderWithToken>
           </Auth0ProviderWithRouter>

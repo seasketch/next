@@ -77,7 +77,7 @@ export const TableOfContentsItemMenu = React.forwardRef<
     }, [currentOpacity]);
 
     // TODO: adjust this value as context menu grows in size
-    const intersectsBottom = (transform?.y || 0) > window.innerHeight - 260;
+    const intersectsBottom = (transform?.y || 0) > window.innerHeight - 320;
     const metadataContext = useContext(TableOfContentsMetadataModalContext);
     return (
       <MenuType.Content
