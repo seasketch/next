@@ -487,7 +487,7 @@ div[attachments="forumAttachments"] {
   align-items: center;
   background: #e5e7eb;
   border-radius: 10px;
-  padding: 3px;
+  padding: 4px;
   gap: 2px;
 }
 
@@ -496,7 +496,7 @@ div[attachments="forumAttachments"] {
   border: none;
   background: transparent;
   border-radius: 8px;
-  padding: 4px 14px;
+  padding: 5px 14px;
   font-size: 13px;
   font-weight: 500;
   line-height: 1.25;

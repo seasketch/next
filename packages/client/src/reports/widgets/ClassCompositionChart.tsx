@@ -1,18 +1,17 @@
-import { useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import {
   MetricDependency,
   RasterOverlayAreaMetric,
   getRasterOverlayAreaDisplayedClassValue,
 } from "overlay-engine";
-import { CaretDownIcon, GridIcon, PieChartIcon } from "@radix-ui/react-icons";
+import { GridIcon, PieChartIcon } from "@radix-ui/react-icons";
 import { ReportWidget } from "./widgets";
 import {
   ReportWidgetTooltipControls,
+  TooltipDropdown,
   TooltipMorePopover,
-  TooltipPopoverContent,
 } from "../../editor/TooltipMenu";
-import * as Popover from "@radix-ui/react-popover";
 import { useNumberFormatters } from "../hooks/useNumberFormatters";
 import { useOverlaySources } from "../hooks/useOverlaySources";
 import {
@@ -26,6 +25,7 @@ import { usePrimaryGeography } from "../hooks/usePrimaryGeography";
 import { CompositionChartDatum, PieChart } from "./charts/PieChart";
 import { WaffleChart } from "./charts/WaffleChart";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
+import { ReportUIStateContext } from "../context/ReportUIStateContext";
 
 export type CompositionChartType = "pie" | "waffle";
 
@@ -53,7 +53,7 @@ export function getEnabledChartTypes(
     (v): v is CompositionChartType => v === "pie" || v === "waffle"
   );
   if (valid.length > 0) {
-    return valid;
+    return Array.from(new Set(valid));
   }
   if (settings.chartType === "pie" || settings.chartType === "waffle") {
     return [settings.chartType];
@@ -91,6 +91,7 @@ export const ClassCompositionChart: ReportWidget<
   geographies,
 }) => {
   const { clippingGeography } = usePrimaryGeography(sketchClass, geographies);
+  const { printing } = useContext(ReportUIStateContext);
   const { t } = useTranslation("reports");
   const { percent: formatPercent, area: formatArea } = useNumberFormatters();
 
@@ -100,8 +101,13 @@ export const ClassCompositionChart: ReportWidget<
   // Viewer preference; null follows the admin-configured default.
   const [viewerChartType, setViewerChartType] =
     useState<CompositionChartType | null>(null);
+  useEffect(() => {
+    setViewerChartType(null);
+  }, [componentSettings.chartTypes, componentSettings.chartType]);
   const chartType =
-    viewerChartType && enabledChartTypes.includes(viewerChartType)
+    !printing &&
+    viewerChartType &&
+    enabledChartTypes.includes(viewerChartType)
       ? viewerChartType
       : enabledChartTypes[0];
 
@@ -228,76 +234,81 @@ export const ClassCompositionChart: ReportWidget<
   );
 
   return (
-    <div className="mt-3 rounded-md border border-gray-200 shadow-sm w-full max-w-full bg-white overflow-hidden p-3 relative">
-      {showViewerToggle && !loading && !noOverlap && (
-        <div className="absolute top-2 right-2 flex rounded-md border border-gray-200 overflow-hidden print:hidden z-10">
-          <button
-            type="button"
-            aria-label={t("Pie chart")}
-            title={t("Pie chart")}
-            onClick={() => setViewerChartType("pie")}
-            className={`p-1.5 ${
-              chartType === "pie"
-                ? "bg-gray-100 text-gray-900"
-                : "bg-white text-gray-400 hover:text-gray-700"
-            }`}
+    <div className="mt-3 rounded-md border border-gray-200 shadow-sm w-full max-w-full bg-white overflow-hidden relative">
+      {showViewerToggle && !printing && !loading && !noOverlap && (
+        <div className="flex justify-center pt-2 print:hidden">
+          <div
+            className="report-tabs-track"
+            role="tablist"
+            aria-label={t("Chart display")}
           >
-            <PieChartIcon className="w-4 h-4" />
-          </button>
-          <button
-            type="button"
-            aria-label={t("Waffle chart")}
-            title={t("Waffle chart")}
-            onClick={() => setViewerChartType("waffle")}
-            className={`p-1.5 border-l border-gray-200 ${
-              chartType === "waffle"
-                ? "bg-gray-100 text-gray-900"
-                : "bg-white text-gray-400 hover:text-gray-700"
-            }`}
-          >
-            <GridIcon className="w-4 h-4" />
-          </button>
+            {enabledChartTypes.map((type) => (
+              <button
+                key={type}
+                type="button"
+                role="tab"
+                aria-label={type === "pie" ? t("Pie chart") : t("Waffle chart")}
+                aria-selected={chartType === type}
+                title={type === "pie" ? t("Pie chart") : t("Waffle chart")}
+                onClick={() => setViewerChartType(type)}
+                className="report-tabs-tab inline-flex items-center justify-center focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+              >
+                {type === "pie" ? (
+                  <PieChartIcon className="w-4 h-4" />
+                ) : (
+                  <GridIcon className="w-4 h-4" />
+                )}
+              </button>
+            ))}
+          </div>
         </div>
       )}
-      {noOverlap ? (
-        <div className="text-gray-600 text-sm py-2">
-          <Trans ns="reports">
-            The sketch does not overlap any mapped classes in this layer.
-          </Trans>
-        </div>
-      ) : chartType === "pie" ? (
-        <div className="flex flex-wrap items-center gap-4">
-          {loading ? (
-            <div
-              className="flex-none rounded-full bg-gray-200 animate-pulse"
-              style={{ width: 150, height: 150 }}
-              aria-hidden
-            />
-          ) : (
-            <PieChart data={rows} size={150} className="flex-none" />
-          )}
-          {legend}
-        </div>
-      ) : (
-        <div>
-          {loading ? (
-            <div
-              className="w-full bg-gray-100 animate-pulse rounded"
-              style={{ aspectRatio: "2 / 1" }}
-              aria-hidden
-            />
-          ) : (
-            <WaffleChart data={rows} />
-          )}
-          {legend}
-        </div>
-      )}
+      <div className={showViewerToggle ? "px-3 pb-3 pt-2" : "p-3"}>
+        {noOverlap ? (
+          <div className="text-gray-600 text-sm py-2">
+            <Trans ns="reports">
+              The sketch does not overlap any mapped classes in this layer.
+            </Trans>
+          </div>
+        ) : chartType === "pie" ? (
+          <div className="flex flex-wrap items-center gap-4">
+            {loading ? (
+              <div
+                className="flex-none rounded-full bg-gray-200 animate-pulse"
+                style={{ width: 150, height: 150 }}
+                aria-hidden
+              />
+            ) : (
+              <PieChart data={rows} size={150} className="flex-none" />
+            )}
+            {legend}
+          </div>
+        ) : (
+          <div>
+            {loading ? (
+              <div
+                className="w-full bg-gray-100 animate-pulse rounded"
+                style={{ aspectRatio: "2 / 1" }}
+                aria-hidden
+              />
+            ) : (
+              <WaffleChart data={rows} />
+            )}
+            {legend}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
 
 export const ClassCompositionChartTooltipControls: ReportWidgetTooltipControls =
-  ({ node, onUpdate, onUpdateDependencyParameters, onUpdateAllDependencies }) => {
+  ({
+    node,
+    onUpdate,
+    onUpdateDependencyParameters,
+    onUpdateAllDependencies,
+  }) => {
     const { t } = useTranslation("admin:reports");
     const dependencies = useMemo(
       () => (node.attrs?.metrics || []) as MetricDependency[],
@@ -342,74 +353,44 @@ export const ClassCompositionChartTooltipControls: ReportWidgetTooltipControls =
     };
 
     const enabledChartTypes = getEnabledChartTypes(settings);
-
-    const chartTypeLabels: { type: CompositionChartType; label: string }[] = [
-      { type: "pie", label: t("Pie") },
-      { type: "waffle", label: t("Waffle") },
-    ];
-
-    const chartSummary =
+    const chartDisplayValue =
       enabledChartTypes.length === 1
-        ? chartTypeLabels.find((c) => c.type === enabledChartTypes[0])?.label
-        : t("Pie & Waffle");
-
-    const toggleChartType = (type: CompositionChartType, checked: boolean) => {
-      let updated = checked
-        ? enabledChartTypes.includes(type)
-          ? enabledChartTypes
-          : [...enabledChartTypes, type]
-        : enabledChartTypes.filter((v) => v !== type);
-      if (updated.length === 0) {
-        // At least one visualization type is required.
-        return;
-      }
-      handleUpdate({ chartTypes: updated, chartType: undefined });
-    };
+        ? enabledChartTypes[0]
+        : enabledChartTypes[0] === "pie"
+        ? "both_pie"
+        : "both_waffle";
 
     return (
       <div className="flex gap-3 items-center text-sm text-gray-800">
-        <Popover.Root>
-          <Popover.Trigger asChild>
-            <button
-              type="button"
-              className="h-6 bg-transparent text-gray-900 text-sm px-1 border-none rounded inline-flex items-center gap-1.5 hover:bg-gray-100 active:bg-gray-100 focus:bg-gray-100 data-[state=open]:bg-gray-100 focus:outline-none whitespace-nowrap"
-            >
-              <span className="font-light text-gray-400">{t("Chart")}</span>
-              <span>{chartSummary}</span>
-              <CaretDownIcon className="w-4 h-4 text-gray-400" />
-            </button>
-          </Popover.Trigger>
-          <TooltipPopoverContent>
-            <div className="px-1 space-y-2">
-              {chartTypeLabels.map(({ type, label }) => {
-                const checked = enabledChartTypes.includes(type);
-                const isLastChecked = checked && enabledChartTypes.length === 1;
-                return (
-                  <label
-                    key={type}
-                    className={`flex items-center gap-2 text-sm text-gray-800 ${
-                      isLastChecked ? "opacity-60" : ""
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 shrink-0 rounded border-gray-300 text-gray-600 focus:ring-slate-500"
-                      checked={checked}
-                      disabled={isLastChecked}
-                      onChange={(e) => toggleChartType(type, e.target.checked)}
-                    />
-                    <span>{label}</span>
-                  </label>
-                );
-              })}
-              <p className="text-xs font-light text-gray-400 max-w-[180px]">
-                {t(
-                  "When more than one is checked, viewers can switch between chart types."
-                )}
-              </p>
-            </div>
-          </TooltipPopoverContent>
-        </Popover.Root>
+        <div className="flex items-center gap-2 text-sm text-gray-800">
+          <span className="font-light text-gray-400 whitespace-nowrap">
+            {t("Charts")}
+          </span>
+          <TooltipDropdown
+            value={chartDisplayValue}
+            options={[
+              { value: "pie", label: t("Pie") },
+              { value: "waffle", label: t("Waffle") },
+              { value: "both_pie", label: t("Pie, Waffle") },
+              { value: "both_waffle", label: t("Waffle, Pie") },
+            ]}
+            onChange={(value) => {
+              const chartTypesByDisplay: Record<
+                string,
+                CompositionChartType[]
+              > = {
+                pie: ["pie"],
+                waffle: ["waffle"],
+                both_pie: ["pie", "waffle"],
+                both_waffle: ["waffle", "pie"],
+              };
+              const chartTypes =
+                chartTypesByDisplay[value] ?? chartTypesByDisplay.waffle;
+              handleUpdate({ chartTypes, chartType: undefined });
+            }}
+            ariaLabel={t("Charts")}
+          />
+        </div>
         <ClassRowSettingsPopover
           settings={settings}
           onUpdateSettings={(patch) => handleUpdate(patch)}

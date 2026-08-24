@@ -24,7 +24,6 @@ import {
 import { createPortal } from "react-dom";
 import { TFunction, useTranslation } from "react-i18next";
 import { getActiveMarks } from "./EditorMenuBar";
-import { ReportWidgetTooltipControlsRouter } from "../reports/widgets/widgets";
 import ImageTooltipControls from "../reports/widgets/ImageTooltipControls";
 import { formElements } from "./config";
 import {
@@ -50,6 +49,17 @@ const ICON_CONTAINER_CLASSES =
   "flex items-center justify-center w-4 h-4 overflow-hidden";
 const ICON_TOGGLE_BUTTON_CLASSES =
   "w-7 h-7 inline-flex items-center justify-center rounded border border-transparent hover:bg-gray-100 focus:outline-none active:bg-gray-100";
+
+function LazyReportWidgetTooltipControlsRouter(
+  props: ReportWidgetTooltipControlsProps
+) {
+  // Render-time require: widgets.tsx and this file import each other, and CRA
+  // Fast Refresh can read a static binding while widgets.tsx is in TDZ.
+  const { ReportWidgetTooltipControlsRouter } = require("../reports/widgets/widgets") as {
+    ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls;
+  };
+  return <ReportWidgetTooltipControlsRouter {...props} />;
+}
 
 function selectionIsOnlyMetricNode(
   state: EditorState,
@@ -1326,7 +1336,7 @@ export default function TooltipMenu({
                         {/* <div className="flex items-center gap-2 text-sm text-gray-800"></div> */}
                       </>
                     )}
-                    <ReportWidgetTooltipControlsRouter
+                    <LazyReportWidgetTooltipControlsRouter
                       node={selectedMetric.node}
                       onUpdate={updateMetricNode}
                       onUpdateDependencyParameters={updateDependencyParameters}
@@ -1621,6 +1631,7 @@ export function TooltipDropdown({
   ariaLabel,
   onOpenChange,
   title,
+  titleDescription,
   contentProps,
   getDisplayLabel,
 }: {
@@ -1630,6 +1641,8 @@ export function TooltipDropdown({
   ariaLabel?: string;
   onOpenChange?: (open: boolean) => void;
   title?: ReactNode;
+  /** Optional one-line hint under the menu heading. */
+  titleDescription?: ReactNode;
   contentProps?: React.HTMLAttributes<HTMLDivElement>;
   getDisplayLabel?: (selected?: TooltipDropdownOption) => ReactNode;
 }) {
@@ -1672,8 +1685,15 @@ export function TooltipDropdown({
         >
           {title && (
             <>
-              <div className="px-2 py-1 text-xs font-semibold text-gray-600">
-                {title}
+              <div className="px-2 py-1">
+                <div className="text-xs font-semibold text-gray-600">
+                  {title}
+                </div>
+                {titleDescription && (
+                  <div className="text-xs font-normal text-gray-500 leading-snug mt-0.5 max-w-[220px] whitespace-normal">
+                    {titleDescription}
+                  </div>
+                )}
               </div>
               <DropdownMenu.Separator className="h-px bg-gray-200 my-1" />
             </>

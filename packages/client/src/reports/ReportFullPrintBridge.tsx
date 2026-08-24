@@ -17,7 +17,10 @@ import { useBaseReportContext } from "./context/BaseReportContext";
 import { ReportUIStateContext } from "./context/ReportUIStateContext";
 import { useSubjectReportContext } from "./context/SubjectReportContext";
 import { ReportCardWithToolbarContext } from "./SortableReportContent";
-import { REACT_PRINT_PAGE_STYLE } from "./reactPrintPageStyle";
+import {
+  REACT_PRINT_PAGE_STYLE,
+  REPORT_PRINT_CONTENT_WIDTH,
+} from "./reactPrintPageStyle";
 
 export type ReportPrintControlsRef = MutableRefObject<{
   runPrint: () => void;
@@ -116,12 +119,22 @@ export default function ReportFullPrintBridge({
   return (
     <div
       ref={contentRef}
-      className="pointer-events-none absolute left-0 top-0 z-[2147483646] box-border w-full overflow-visible bg-white text-black"
+      className="pointer-events-none absolute left-0 top-0 z-[2147483646] box-border overflow-hidden bg-white text-black"
+      style={{
+        width: REPORT_PRINT_CONTENT_WIDTH,
+        maxWidth: REPORT_PRINT_CONTENT_WIDTH,
+      }}
       aria-hidden
     >
       {mountPrintLayout && (
         <ReportUIStateContext.Provider value={printSurfaceContextValue}>
-          <div className="report-print-root box-border w-full bg-white p-0 text-sm text-black">
+          <div
+            className="report-print-root box-border bg-white p-0 text-sm text-black"
+            style={{
+              width: REPORT_PRINT_CONTENT_WIDTH,
+              maxWidth: REPORT_PRINT_CONTENT_WIDTH,
+            }}
+          >
             <header className="mb-6 border-b border-black/15 pb-4">
               <h1 className="text-2xl font-bold text-black">
                 {subjectReportContext.data?.sketch?.name ?? t("Sketch report")}

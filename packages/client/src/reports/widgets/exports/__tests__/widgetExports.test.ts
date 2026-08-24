@@ -433,4 +433,50 @@ describe("widget export helpers", () => {
     }).columnMeta;
     expect(meta[0].bufferDistanceKm).toBe(1);
   });
+
+  test("buildInlineMetricsSection raster_overlay_area exports total km²", () => {
+    const dep: MetricDependency = {
+      type: "raster_overlay_area",
+      subjectType: "fragments",
+      stableId: "layerA",
+      parameters: {},
+    };
+    const h = hashMetricDependency(dep, urlMap);
+    const metric = {
+      id: 1,
+      type: "raster_overlay_area",
+      state: SpatialMetricState.Complete,
+      value: { areas: { "*": 20.5 } },
+      dependencyHash: h,
+      sourceUrl: "https://example.com/a.geojson",
+      subject: {
+        __typename: "FragmentSubject",
+        geographies: [1],
+        sketches: [10],
+        hash: "frag1",
+      },
+    } as CardExportInput["metrics"][0];
+
+    const section = buildInlineMetricsSection({
+      ...minimalCardInput({ metrics: [metric] }),
+      inlineNodes: [
+        {
+          walkIndex: 0,
+          dependencies: [dep],
+          componentSettings: { presentation: "raster_overlay_area" },
+        },
+      ],
+      sourceUrlMap: urlMap,
+    });
+
+    expect(section).not.toBeNull();
+    const dataCol = section!.columns
+      .map((c) => c.key)
+      .find((k) => !["scope", "sketchId", "sketchName"].includes(k) && !k.includes("__"));
+    expect(dataCol).toBeTruthy();
+    expect(section!.rows[0][dataCol!]).toBe(20.5);
+    expect(
+      section!.columns.some((c) => c.key === `${dataCol}__minSqKm`)
+    ).toBe(true);
+  });
 });

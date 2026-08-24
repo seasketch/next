@@ -2,6 +2,7 @@ import { createLayerYearTemporalInfo } from "@seasketch/geostats-types";
 import {
   coverageForSource,
   findTimeSeriesSiblingStableIds,
+  findTimeSeriesSiblings,
   rasterBandValueDomain,
   splitObservedRuns,
   titleKeyWithoutDates,
@@ -208,6 +209,50 @@ describe("findTimeSeriesSiblingStableIds", () => {
         tocItems: rootToc,
       })
     ).toEqual(["se19"]);
+  });
+
+  test("includes unprocessed same-folder single-band rasters", () => {
+    const tocWithUnprocessed = [
+      ...toc,
+      {
+        id: 20,
+        title: "DHW 2018",
+        stableId: "dhw-2018",
+        parentStableId: "folder-a",
+        dataLayer: {
+          dataSource: { id: 99, isSingleBandRaster: true },
+        },
+      },
+      {
+        id: 21,
+        title: "DHW 2019",
+        stableId: "dhw-2019",
+        parentStableId: "folder-a",
+        dataLayer: {
+          dataSource: { id: 100, isSingleBandRaster: false },
+        },
+      },
+    ];
+    expect(
+      findTimeSeriesSiblings({
+        subject: sources[0],
+        sources,
+        tocItems: tocWithUnprocessed,
+      })
+    ).toEqual([
+      {
+        stableId: "s-2016",
+        title: "DHW 2016",
+        processed: true,
+        sourceId: undefined,
+      },
+      {
+        stableId: "dhw-2018",
+        title: "DHW 2018",
+        processed: false,
+        sourceId: 99,
+      },
+    ]);
   });
 });
 

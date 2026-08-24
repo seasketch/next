@@ -7,6 +7,9 @@ import {
   isOverlayAreaClassKey,
   subjectIsFragment,
   subjectIsGeography,
+  attachRasterOverlayAreaOverlapScope,
+  getRasterOverlayAreaDisplayedClassValue,
+  getRasterOverlayAreaOverlapCombineResult,
   type ColumnValuesMetric,
   type CountMetric,
   type DistanceToShoreMetric,
@@ -14,6 +17,7 @@ import {
   type MetricSubjectFragment,
   type OverlayAreaMetric,
   type OverlayAreaMetricValue,
+  type RasterOverlayAreaMetric,
   type RasterStats,
   type TotalAreaMetric,
 } from "overlay-engine";
@@ -156,6 +160,9 @@ function humanPresentationLabel(presentation: string): string {
     // eslint-disable-next-line i18next/no-literal-string
     case "geography_proportion_captured":
       return "Geography proportion captured";
+    // eslint-disable-next-line i18next/no-literal-string
+    case "raster_overlay_area":
+      return "Raster area captured";
     default:
       return presentation;
   }
@@ -463,6 +470,22 @@ function extractInlineRawValue(
         if (!geographySum) return 0;
         return sketchSum / geographySum;
       }
+      case "raster_overlay_area": {
+        const overlayMetrics = metrics.filter(
+          (m) =>
+            m.type === "raster_overlay_area" && subjectIsFragment(m.subject),
+        );
+        if (!overlayMetrics.length) return null;
+        let combined = combineMetricsForFragments(
+          overlayMetrics as Pick<Metric, "type" | "value">[],
+          "raster_overlay_area",
+        ) as RasterOverlayAreaMetric;
+        combined = attachRasterOverlayAreaOverlapScope(
+          combined,
+          overlayMetrics,
+        ) as RasterOverlayAreaMetric;
+        return getRasterOverlayAreaDisplayedClassValue(combined.value, "*");
+      }
       default:
         return null;
     }
@@ -488,7 +511,11 @@ export function buildInlineMetricsSection(
   const inlineCols = buildInlineColumnDescriptors(input);
 
   const overlayAccuracyCols = inlineCols.flatMap((c) => {
-    if (c.node.componentSettings.presentation !== "overlay_area") {
+    const presentation = c.node.componentSettings.presentation as string;
+    if (
+      presentation !== "overlay_area" &&
+      presentation !== "raster_overlay_area"
+    ) {
       return [];
     }
     return [
@@ -569,6 +596,53 @@ export function buildInlineMetricsSection(
           ) as OverlayAreaMetric;
           const combine = getOverlayAreaOverlapCombineResult(
             combined.value as OverlayAreaMetricValue,
+          );
+          const star = combine?.perClass?.["*"];
+          if (star) {
+            row[`${c.key}__minSqKm`] = star.naiveSum - star.overcountMax;
+            row[`${c.key}__maxSqKm`] = star.naiveSum - star.overcountMin;
+            /* eslint-disable i18next/no-literal-string -- machine-readable CSV notes */
+            if (
+              star.overcountMax > star.overcountMin &&
+              star.naiveSum > 0
+            ) {
+              const residual = star.overcountMax - star.overcountMin;
+              const pct = Math.ceil((residual / star.naiveSum) * 100);
+              row[`${c.key}__accuracyNote`] =
+                `may be overestimated up to ${pct}%`;
+            } else if (star.overcountMin > 0) {
+              row[`${c.key}__accuracyNote`] = "deduplicated";
+            } else {
+              row[`${c.key}__accuracyNote`] = "";
+            }
+            /* eslint-enable i18next/no-literal-string */
+          } else {
+            row[`${c.key}__minSqKm`] = null;
+            row[`${c.key}__maxSqKm`] = null;
+            row[`${c.key}__accuracyNote`] = "";
+          }
+        } catch {
+          row[`${c.key}__minSqKm`] = null;
+          row[`${c.key}__maxSqKm`] = null;
+          row[`${c.key}__accuracyNote`] = "";
+        }
+      }
+      if (c.node.componentSettings.presentation === "raster_overlay_area") {
+        const overlayMetrics = forGrain.filter(
+          (m) =>
+            m.type === "raster_overlay_area" && subjectIsFragment(m.subject),
+        );
+        try {
+          let combined = combineMetricsForFragments(
+            overlayMetrics as Pick<Metric, "type" | "value">[],
+            "raster_overlay_area",
+          ) as RasterOverlayAreaMetric;
+          combined = attachRasterOverlayAreaOverlapScope(
+            combined,
+            overlayMetrics,
+          ) as RasterOverlayAreaMetric;
+          const combine = getRasterOverlayAreaOverlapCombineResult(
+            combined.value,
           );
           const star = combine?.perClass?.["*"];
           if (star) {

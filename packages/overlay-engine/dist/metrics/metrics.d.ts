@@ -827,7 +827,8 @@ export type MetricDependencyParameters = {
     valueColumn?: string;
     /**
      * Buffer distance (km) around the subject. Used by `overlay_area`,
-     * `column_values`, `count`, `presence*`, and `raster_overlay_area`.
+     * `column_values`, `count`, `presence*`, `raster_overlay_area`, and
+     * `raster_stats`.
      *
      * For `raster_overlay_area` on fragment subjects, enables collar overlap
      * metadata ({@link RasterOverlayAreaOverlapInfo}). Geography subjects never

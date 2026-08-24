@@ -36,6 +36,13 @@ export type TimeSeriesTocItem = {
   stableId: string;
   parentStableId?: string | null;
   isFolder?: boolean | null;
+  dataLayer?: {
+    dataSource?: {
+      id?: number | null;
+      type?: string | null;
+      isSingleBandRaster?: boolean | null;
+    } | null;
+  } | null;
 };
 
 export type TimeSeriesSiblingSource = {
@@ -175,17 +182,28 @@ export function titleKeyWithoutDates(title: string): string {
     .toLowerCase();
 }
 
+export type TimeSeriesSiblingMatch = {
+  stableId: string;
+  title: string;
+  processed: boolean;
+  /** Data source id; required to kick off preprocessSource. */
+  sourceId?: number;
+};
+
 /**
  * Same-folder title siblings that look like the same raster series.
- * Requires TOC parent topology (folder or root). Returns other overlay
- * source stableIds only — never invents layers that are not already
- * processed for reporting.
+ * Requires TOC parent topology (folder or root).
+ *
+ * Processed overlay sources must match raster shape (band count +
+ * categorical vs continuous). Unprocessed single-band rasters with a
+ * matching title are included so insert can preprocess them the same
+ * way the layer picker does.
  */
-export function findTimeSeriesSiblingStableIds(args: {
+export function findTimeSeriesSiblings(args: {
   subject: TimeSeriesSiblingSource;
   sources: TimeSeriesSiblingSource[];
   tocItems: TimeSeriesTocItem[];
-}): string[] {
+}): TimeSeriesSiblingMatch[] {
   const { subject, sources, tocItems } = args;
   if (!subject.stableId || !subject.tableOfContentsItemId) {
     return [];
@@ -202,19 +220,47 @@ export function findTimeSeriesSiblingStableIds(args: {
     return [];
   }
   const subjectShape = rasterSeriesShape(subject);
-  const ids: string[] = [];
+  const matches: TimeSeriesSiblingMatch[] = [];
+  const seen = new Set<string>();
   for (const item of tocItems) {
     if (item.isFolder || item.id === subjectToc.id) continue;
     if ((item.parentStableId ?? null) !== parent) continue;
     if (titleKeyWithoutDates(item.title) !== key) continue;
     const source = sources.find((s) => s.tableOfContentsItemId === item.id);
-    if (!source?.stableId || source.stableId === subject.stableId) continue;
-    if (rasterSeriesShape(source) !== subjectShape) continue;
-    if (!ids.includes(source.stableId)) {
-      ids.push(source.stableId);
+    if (source?.stableId) {
+      if (source.stableId === subject.stableId) continue;
+      if (rasterSeriesShape(source) !== subjectShape) continue;
+      if (seen.has(source.stableId)) continue;
+      seen.add(source.stableId);
+      matches.push({
+        stableId: source.stableId,
+        title: item.title,
+        processed: true,
+        sourceId: item.dataLayer?.dataSource?.id ?? undefined,
+      });
+      continue;
     }
+    if (!isEligibleUnprocessedRaster(item)) continue;
+    if (!item.stableId || item.stableId === subject.stableId) continue;
+    if (seen.has(item.stableId)) continue;
+    seen.add(item.stableId);
+    matches.push({
+      stableId: item.stableId,
+      title: item.title,
+      processed: false,
+      sourceId: item.dataLayer?.dataSource?.id ?? undefined,
+    });
   }
-  return ids;
+  return matches;
+}
+
+/** Overlay-source stableIds for matching siblings, processed and not. */
+export function findTimeSeriesSiblingStableIds(args: {
+  subject: TimeSeriesSiblingSource;
+  sources: TimeSeriesSiblingSource[];
+  tocItems: TimeSeriesTocItem[];
+}): string[] {
+  return findTimeSeriesSiblings(args).map((s) => s.stableId);
 }
 
 /** First-band value domain from raster geostats, or null. */
@@ -250,6 +296,10 @@ export function unionRasterValueDomain(
   }
   if (!Number.isFinite(lo) || !Number.isFinite(hi)) return null;
   return [lo, hi];
+}
+
+function isEligibleUnprocessedRaster(item: TimeSeriesTocItem): boolean {
+  return item.dataLayer?.dataSource?.isSingleBandRaster === true;
 }
 
 function rasterSeriesShape(source: TimeSeriesSiblingSource): string {

@@ -33,10 +33,9 @@ import { createReportImageUploader } from "../utils/uploadReportImage";
 import { useApolloClient } from "@apollo/client";
 import { useReactNodeViewPortals } from "../ReactNodeView/PortalProvider";
 import { createReactNodeView } from "../ReactNodeView";
-import {
-  ReportWidgetNodeViewRouter,
-  buildReportCommandGroups,
-} from "../widgets/widgets";
+import { buildReportCommandGroups } from "../widgets/widgets";
+import { ReportWidgetNodeView } from "../widgets/ReportWidgetNodeView";
+import { TimeSeriesProcessingModal } from "../widgets/TimeSeriesProcessingModal";
 import { DetailsView } from "../widgets/prosemirror/details";
 import {
   TabContainerView,
@@ -465,6 +464,11 @@ function ReportCardBodyEditorInner({
   const [pendingOverlayKey, setPendingOverlayKey] = useState<string | null>(
     null
   );
+  const [timeSeriesPrep, setTimeSeriesPrep] = useState<{
+    current: number;
+    total: number;
+    error: string | null;
+  } | null>(null);
 
   const [deleteCardMutation, deleteCardMutationState] =
     useDeleteReportCardMutation({
@@ -493,6 +497,58 @@ function ReportCardBodyEditorInner({
       return true;
     },
     [preprocessSourceMutation]
+  );
+
+  const handlePrepareTimeSeriesLayers = useCallback(
+    async (args: {
+      unprocessed: Array<{ title: string; sourceId: number }>;
+      insert: () => void;
+    }) => {
+      const { unprocessed, insert } = args;
+      setTimeSeriesPrep({
+        current: 1,
+        total: unprocessed.length,
+        error: null,
+      });
+      try {
+        for (let i = 0; i < unprocessed.length; i++) {
+          const layer = unprocessed[i];
+          setTimeSeriesPrep({
+            current: i + 1,
+            total: unprocessed.length,
+            error: null,
+          });
+          const isLastLayer = i === unprocessed.length - 1;
+          await preprocessSourceMutation({
+            variables: { slug: getSlug(), sourceId: layer.sourceId },
+            refetchQueries: isLastLayer
+              ? [
+                  {
+                    query: ProjectReportingLayersDocument,
+                    variables: { slug: getSlug() },
+                  },
+                ]
+              : [],
+            awaitRefetchQueries: isLastLayer,
+          });
+        }
+        insert();
+        setTimeSeriesPrep(null);
+      } catch (err) {
+        setTimeSeriesPrep((prev) =>
+          prev
+            ? {
+                ...prev,
+                error:
+                  err instanceof Error
+                    ? err.message
+                    : t("An unexpected error occurred"),
+              }
+            : prev
+        );
+      }
+    },
+    [preprocessSourceMutation, t]
   );
 
   const viewRef = useRef<EditorView>();
@@ -566,6 +622,7 @@ function ReportCardBodyEditorInner({
           ) || []
         ),
         onProcessLayer: handleOverlaySelection,
+        onPrepareTimeSeriesLayers: handlePrepareTimeSeriesLayers,
         isSuperuser: Boolean(isSuperuser),
       }),
     [
@@ -575,6 +632,7 @@ function ReportCardBodyEditorInner({
       reportingLayersQuery.data?.projectBySlug?.reportingLayers,
       reportingLayersQuery.data?.projectBySlug?.draftTableOfContentsItems,
       handleOverlaySelection,
+      handlePrepareTimeSeriesLayers,
       sketchClass?.project?.sketchClasses,
       sketchClass?.validChildren,
       isSuperuser,
@@ -619,7 +677,7 @@ function ReportCardBodyEditorInner({
             getPos,
             // @ts-ignore
             decorations,
-            component: ReportWidgetNodeViewRouter,
+            component: ReportWidgetNodeView,
             onCreatePortal: createPortal,
             onDestroy: removePortal,
             cardId,
@@ -642,7 +700,7 @@ function ReportCardBodyEditorInner({
             getPos,
             // @ts-ignore
             decorations,
-            component: ReportWidgetNodeViewRouter,
+            component: ReportWidgetNodeView,
             onCreatePortal: createPortal,
             onDestroy: removePortal,
             cardId,
@@ -787,6 +845,15 @@ function ReportCardBodyEditorInner({
         imageUploadFile={uploadFile}
       />
       {commandPalette}
+      {timeSeriesPrep && (
+        <TimeSeriesProcessingModal
+          open
+          current={timeSeriesPrep.current}
+          total={timeSeriesPrep.total}
+          error={timeSeriesPrep.error}
+          onDismiss={() => setTimeSeriesPrep(null)}
+        />
+      )}
       <div
         className={`ProseMirrorBody ReportCardBodyEditor ReportCardBody`}
         ref={root}

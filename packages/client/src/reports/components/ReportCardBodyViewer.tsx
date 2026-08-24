@@ -12,7 +12,7 @@ import ReactNodeViewPortalsProvider, {
 } from "../ReactNodeView/PortalProvider";
 
 import "prosemirror-view/style/prosemirror.css";
-import { ReportWidgetNodeViewRouter } from "../widgets/widgets";
+import { ReportWidgetNodeView } from "../widgets/ReportWidgetNodeView";
 import { DetailsView } from "../widgets/prosemirror/details";
 import { TabContainerView } from "../widgets/prosemirror/tabs";
 import ReportCardTitleToolbar from "../widgets/ReportCardTitleToolbar";
@@ -52,7 +52,7 @@ function ReportCardBodyViewerInner({
           getPos,
           // @ts-ignore
           decorations,
-          component: ReportWidgetNodeViewRouter,
+          component: ReportWidgetNodeView,
           onCreatePortal: createPortal,
           onDestroy: removePortal,
           cardId,
@@ -67,7 +67,7 @@ function ReportCardBodyViewerInner({
           getPos,
           // @ts-ignore
           decorations,
-          component: ReportWidgetNodeViewRouter,
+          component: ReportWidgetNodeView,
           onCreatePortal: createPortal,
           onDestroy: removePortal,
           cardId,

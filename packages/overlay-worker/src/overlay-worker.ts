@@ -416,6 +416,13 @@ export default async function handler(payload: OverlayWorkerPayload) {
             JSON.stringify(intersectionFeature, null, 2).length,
           );
         }
+        const bufferedSubjects = await bufferedSubjectsForAnalysis(
+          intersectionFeature,
+          differenceSources,
+          payload.bufferDistanceKm,
+        );
+        intersectionFeature = bufferedSubjects.intersectionFeature;
+
         // Resolve effective VRM: use payload.vrm if explicitly set; otherwise
         // default to false for geography subjects (to avoid array-size errors)
         // and 'auto' for fragment subjects.
