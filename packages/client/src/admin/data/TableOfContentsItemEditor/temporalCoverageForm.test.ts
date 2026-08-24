@@ -9,6 +9,7 @@ import {
   inclusiveThroughFromExclusive,
   inferTemporalMode,
   isOneUnitInterval,
+  sourceSupportsTemporalEditor,
   sourceTemporalCapabilities,
   spanPickerType,
   summarizeTemporalInfo,
@@ -146,6 +147,44 @@ describe("formStateFromTemporal / infer", () => {
   });
 });
 
+describe("sourceSupportsTemporalEditor", () => {
+  it("allows SeaSketch-hosted vector and raster sources", () => {
+    expect(sourceSupportsTemporalEditor(DataSourceTypes.SeasketchRaster)).toBe(
+      true
+    );
+    expect(sourceSupportsTemporalEditor(DataSourceTypes.SeasketchMvt)).toBe(
+      true
+    );
+    expect(sourceSupportsTemporalEditor(DataSourceTypes.SeasketchVector)).toBe(
+      true
+    );
+  });
+
+  it("allows remote tiles and GeoJSON", () => {
+    expect(sourceSupportsTemporalEditor(DataSourceTypes.Vector)).toBe(true);
+    expect(sourceSupportsTemporalEditor(DataSourceTypes.Raster)).toBe(true);
+    expect(sourceSupportsTemporalEditor(DataSourceTypes.RasterDem)).toBe(true);
+    expect(sourceSupportsTemporalEditor(DataSourceTypes.Geojson)).toBe(true);
+  });
+
+  it("hides the editor for ArcGIS and other remote services", () => {
+    expect(
+      sourceSupportsTemporalEditor(DataSourceTypes.ArcgisDynamicMapserver)
+    ).toBe(false);
+    expect(sourceSupportsTemporalEditor(DataSourceTypes.ArcgisVector)).toBe(
+      false
+    );
+    expect(sourceSupportsTemporalEditor(DataSourceTypes.ArcgisRasterTiles)).toBe(
+      false
+    );
+    expect(sourceSupportsTemporalEditor(DataSourceTypes.Inaturalist)).toBe(
+      false
+    );
+    expect(sourceSupportsTemporalEditor(DataSourceTypes.Image)).toBe(false);
+    expect(sourceSupportsTemporalEditor(null)).toBe(false);
+  });
+});
+
 describe("sourceTemporalCapabilities", () => {
   it("omits column and bands on a single-band raster", () => {
     const caps = sourceTemporalCapabilities({
@@ -180,6 +219,30 @@ describe("sourceTemporalCapabilities", () => {
       geostats: null,
     });
     expect(caps).toEqual({ hasColumn: true, hasBands: false });
+  });
+
+  it("offers a column on remote GeoJSON and vector tiles", () => {
+    expect(
+      sourceTemporalCapabilities({
+        type: DataSourceTypes.Geojson,
+        geostats: null,
+      })
+    ).toEqual({ hasColumn: true, hasBands: false });
+    expect(
+      sourceTemporalCapabilities({
+        type: DataSourceTypes.Vector,
+        geostats: null,
+      })
+    ).toEqual({ hasColumn: true, hasBands: false });
+  });
+
+  it("does not treat ArcGIS services as temporal-capable", () => {
+    expect(
+      sourceTemporalCapabilities({
+        type: DataSourceTypes.ArcgisDynamicMapserver,
+        geostats: null,
+      })
+    ).toEqual({ hasColumn: false, hasBands: false });
   });
 });
 

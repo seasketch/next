@@ -128,6 +128,7 @@ query layersAndSourcesForItems(
       rasterRepresentativeColors
       rasterOffset
       rasterScale
+      temporal
     }
     dataLayersForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
       interactivitySettings {

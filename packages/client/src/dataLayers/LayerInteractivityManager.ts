@@ -124,6 +124,8 @@ export default class LayerInteractivityManager extends EventEmitter {
   private hoveredFeature?: mapboxgl.FeatureIdentifier;
   /** Bumps to drop stale async raster hover results. */
   private rasterHoverGeneration = 0;
+  /** TOC stableIds paint-hidden by the map clock. */
+  private clockHiddenTocIds = new Set<string>();
 
   /**
    *
@@ -151,6 +153,59 @@ export default class LayerInteractivityManager extends EventEmitter {
 
   setCustomSources(sources: { [sourceId: string]: CustomGLSource<any> }) {
     this.customSources = sources;
+  }
+
+  /**
+   * Overlay TOC items currently paint-hidden by the timeslider. Raster pixel
+   * queries ignore Mapbox opacity, so this list (and paint-opacity === 0)
+   * must be consulted on hover — not only `setVisibleLayers`.
+   */
+  setClockHiddenTocIds(ids: string[]) {
+    this.clockHiddenTocIds = new Set(ids);
+  }
+
+  private tocIdOfLayer(layer: DataLayerDetailsFragment): string | undefined {
+    const withToc = layer as DataLayerDetailsFragment & { tocId?: string };
+    return withToc.tocId;
+  }
+
+  private isClockHiddenLayer(layer: DataLayerDetailsFragment): boolean {
+    const tocId = this.tocIdOfLayer(layer);
+    return Boolean(tocId && this.clockHiddenTocIds.has(tocId));
+  }
+
+  private isClockHiddenGlLayer(glLayerId: string): boolean {
+    const dataLayer = isSeaSketchLayerId(glLayerId)
+      ? this.layers[layerIdFromStyleLayerId(glLayerId)]
+      : this.layers[glLayerId];
+    return Boolean(dataLayer && this.isClockHiddenLayer(dataLayer));
+  }
+
+  /**
+   * Clock hide sets a constant opacity of 0. Mapbox still returns those
+   * features from queryRenderedFeatures, and raster hits read the source
+   * directly.
+   */
+  private isPaintHiddenOnMap(
+    glLayerId: string,
+    layer = this.map.getLayer(glLayerId)
+  ): boolean {
+    if (!layer) return true;
+    const type = layer && "type" in layer ? layer.type : undefined;
+    let prop: string | undefined;
+    if (type === "raster") prop = "raster-opacity";
+    else if (type === "fill") prop = "fill-opacity";
+    else if (type === "line") prop = "line-opacity";
+    else if (type === "circle") prop = "circle-opacity";
+    else if (type === "symbol") prop = "icon-opacity";
+    else if (type === "heatmap") prop = "heatmap-opacity";
+    else if (type === "fill-extrusion") prop = "fill-extrusion-opacity";
+    if (!prop) return false;
+    try {
+      return this.map.getPaintProperty(glLayerId, prop) === 0;
+    } catch {
+      return false;
+    }
   }
 
   setSketchLayerIds(ids: string[]) {
@@ -197,7 +252,17 @@ export default class LayerInteractivityManager extends EventEmitter {
 
   /** Layer ids that currently exist on the map (queryRenderedFeatures throws otherwise). */
   private existingLayerIds(ids: string[]) {
-    return ids.filter((id) => Boolean(this.map.getLayer(id)));
+    return ids.filter((id) => {
+      const layer = this.map.getLayer(id);
+      if (!layer || this.isClockHiddenGlLayer(id)) return false;
+      // Data-table layers may not have admin interactivity and therefore may
+      // not be represented in `this.layers`; retain the paint fallback only
+      // for that case instead of querying Mapbox paint for every hover layer.
+      return (
+        !this.dataTableLayersByGlId[id] ||
+        !this.isPaintHiddenOnMap(id, layer)
+      );
+    });
   }
 
   /**
@@ -1179,9 +1244,17 @@ export default class LayerInteractivityManager extends EventEmitter {
       return null;
     }
     const zoom = this.map.getZoom();
-    const candidates = this.interactiveRasterLayers.filter((rasterLayer) =>
-      Boolean(this.map.getLayer(rasterLayer.glLayerId))
-    );
+    const candidates = this.interactiveRasterLayers.filter((rasterLayer) => {
+      const mapLayer = this.map.getLayer(rasterLayer.glLayerId);
+      if (!mapLayer) return false;
+      if (this.isClockHiddenLayer(rasterLayer.layer)) {
+        return false;
+      }
+      if (this.isPaintHiddenOnMap(rasterLayer.glLayerId, mapLayer)) {
+        return false;
+      }
+      return true;
+    });
     const results = await Promise.all(
       candidates.map(async (rasterLayer) => {
         try {

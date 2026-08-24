@@ -20,6 +20,7 @@ import MapContextManager, {
   MapOverlayContextState,
   LegendsContextState,
 } from "./MapContextManager";
+import MapTemporalStateProvider from "./MapTemporalStateContext";
 
 export interface MapManagerContextProviderProps {
   /**
@@ -31,6 +32,11 @@ export interface MapManagerContextProviderProps {
   containerPortal?: HTMLDivElement | null;
   bounds?: BBox;
   camera?: CameraOptions;
+  /**
+   * Mount the map-clock provider (and allow TimeSlider). Opt in only on
+   * maps that can show overlay layers — surveys and form maps stay off.
+   */
+  enableTemporal?: boolean;
   children: React.ReactNode;
 }
 
@@ -51,6 +57,7 @@ export default function MapManagerContextProvider({
   containerPortal,
   bounds,
   camera,
+  enableTemporal = false,
   children,
 }: MapManagerContextProviderProps) {
   const basemapState = useContext(BasemapContext);
@@ -226,7 +233,11 @@ export default function MapManagerContextProvider({
       <SketchLayerContext.Provider value={sketchLayerState}>
         <MapOverlayContext.Provider value={mergedOverlay}>
           <LegendsContext.Provider value={legendsState}>
-            {children}
+            {enableTemporal ? (
+              <MapTemporalStateProvider>{children}</MapTemporalStateProvider>
+            ) : (
+              children
+            )}
           </LegendsContext.Provider>
         </MapOverlayContext.Provider>
       </SketchLayerContext.Provider>

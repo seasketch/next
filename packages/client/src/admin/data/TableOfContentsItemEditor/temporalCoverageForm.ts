@@ -37,32 +37,35 @@ export type SourceTemporalCapabilities = {
   hasBands: boolean;
 };
 
-const VECTOR_TYPES: DataSourceTypes[] = [
+const EDITOR_VECTOR_TYPES: DataSourceTypes[] = [
   DataSourceTypes.SeasketchVector,
   DataSourceTypes.SeasketchMvt,
   DataSourceTypes.Geojson,
-  DataSourceTypes.ArcgisVector,
   DataSourceTypes.Vector,
 ];
 
-const RASTER_TYPES: DataSourceTypes[] = [
+const EDITOR_RASTER_TYPES: DataSourceTypes[] = [
   DataSourceTypes.SeasketchRaster,
   DataSourceTypes.Raster,
   DataSourceTypes.RasterDem,
-  DataSourceTypes.Image,
-  DataSourceTypes.ArcgisRasterTiles,
 ];
+
+export function sourceSupportsTemporalEditor(
+  sourceType: DataSourceTypes | undefined | null
+): boolean {
+  if (!sourceType) return false;
+  return (
+    EDITOR_VECTOR_TYPES.indexOf(sourceType) !== -1 ||
+    EDITOR_RASTER_TYPES.indexOf(sourceType) !== -1
+  );
+}
 
 export function sourceTemporalCapabilities(
   source: Pick<FullAdminSourceFragment, "type" | "geostats">,
-  sublayerType?: SublayerType | null
+  _sublayerType?: SublayerType | null
 ): SourceTemporalCapabilities {
-  let isVector = VECTOR_TYPES.indexOf(source.type) !== -1;
-  let isRaster = RASTER_TYPES.indexOf(source.type) !== -1;
-  if (source.type === DataSourceTypes.ArcgisDynamicMapserver) {
-    isVector = sublayerType === SublayerType.Vector;
-    isRaster = sublayerType === SublayerType.Raster;
-  }
+  const isVector = EDITOR_VECTOR_TYPES.indexOf(source.type) !== -1;
+  const isRaster = EDITOR_RASTER_TYPES.indexOf(source.type) !== -1;
   let hasBands = false;
   if (isRaster && isRasterInfo(source.geostats)) {
     hasBands = source.geostats.bands.length > 1;

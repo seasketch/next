@@ -9,6 +9,7 @@ import React, {
   useMemo,
 } from "react";
 import { MapManagerContext } from "../dataLayers/MapContextManager";
+import { MapTemporalEnabledContext } from "../dataLayers/MapTemporalStateContext";
 import { BasemapContext } from "../dataLayers/BasemapContext";
 import { MapUIStateContext } from "../dataLayers/MapUIContext";
 import { motion, AnimatePresence } from "framer-motion";
@@ -19,6 +20,7 @@ import MapBookmarkDetailsOverlay from "./MapBookmarkDetailsOverlay";
 import { CogIcon } from "@heroicons/react/outline";
 import { MeasurementToolsOverlay } from "../MeasureControl";
 import SidebarPopup from "../dataLayers/SidebarPopup";
+import TimeSlider from "../dataLayers/TimeSlider";
 import clsx from "clsx";
 import * as Popover from "@radix-ui/react-popover";
 import { Cross2Icon } from "@radix-ui/react-icons";
@@ -54,6 +56,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
   const uiState = useContext(MapUIStateContext);
   const basemapState = useContext(BasemapContext);
   const { manager, ready, styleError } = useContext(MapManagerContext);
+  const temporalEnabled = useContext(MapTemporalEnabledContext);
   const [showSpinner, setShowSpinner] = useState(true);
   const [showBookmarkOverlayId, setShowBookmarkOverlayId] = useState<
     string | null
@@ -250,6 +253,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
         </Popover.Root>
       )}
       <MeasurementToolsOverlay placement={measurementToolsPlacement} />
+      {temporalEnabled ? <TimeSlider /> : null}
 
       <div
         className={`w-full h-full absolute top-0 left-0  z-10 pointer-events-none duration-500 transition-opacity flex items-center justify-center ${

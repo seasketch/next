@@ -13,6 +13,7 @@ import {
   EyeOpenIcon,
   HeightIcon,
 } from "@radix-ui/react-icons";
+import { ClockIcon } from "@heroicons/react/outline";
 import { Trans, useTranslation } from "react-i18next";
 import Spinner from "../components/Spinner";
 import SimpleSymbol from "./legends/SimpleSymbol";
@@ -26,7 +27,7 @@ import LegendStepPanel from "./legends/LegendStepPanel";
 import LegendSimpleSymbolPanel from "./legends/LegendSimpleSymbolPanel";
 import { useLocalForage } from "../useLocalForage";
 import { ErrorBoundary } from "@sentry/react";
-import { useContext, useEffect, useMemo, useState } from "react";
+import { memo, useContext, useEffect, useMemo, useState } from "react";
 import {
   TableOfContentsItemMenu,
   TocMenuItemType,
@@ -119,6 +120,8 @@ export type LegendProps = {
   zOrder: { [id: string]: number };
   opacity: { [id: string]: number };
   hiddenItems: string[];
+  /** TOC stableIds paint-hidden by the map clock. Distinct from hiddenItems. */
+  clockHiddenItems?: string[];
   onHiddenItemsChange?: (id: string, hidden: boolean) => void;
   className?: string;
   loading?: boolean;
@@ -138,6 +141,7 @@ export default function Legend({
   items,
   loading,
   hiddenItems,
+  clockHiddenItems,
   onHiddenItemsChange,
   map,
   maxHeight,
@@ -150,6 +154,10 @@ export default function Legend({
   onDataTableActivated,
 }: LegendProps) {
   const { t } = useTranslation("homepage");
+  const clockHiddenItemSet = useMemo(
+    () => new Set(clockHiddenItems || []),
+    [clockHiddenItems]
+  );
   maxHeight = maxHeight || undefined;
   const [hidden, setHidden] = useLocalForage<boolean>(
     persistedStateKey || "legend",
@@ -233,6 +241,7 @@ export default function Legend({
                     key={item.id}
                     item={item}
                     visible={!hiddenItems || !hiddenItems.includes(item.id)}
+                    clockHidden={clockHiddenItemSet.has(item.id)}
                     map={map}
                     skipTopBorder={i === 0}
                     top={i === 0}
@@ -249,9 +258,10 @@ export default function Legend({
   );
 }
 
-function LegendListItem({
+const LegendListItem = memo(function LegendListItem({
   item,
   visible,
+  clockHidden,
   map,
   onHiddenItemsChange,
   skipTopBorder,
@@ -262,6 +272,7 @@ function LegendListItem({
 }: {
   item: LegendItem;
   visible: boolean;
+  clockHidden?: boolean;
   map?: Map;
   onHiddenItemsChange?: (id: string, hidden: boolean) => void;
   skipTopBorder?: boolean;
@@ -283,13 +294,16 @@ function LegendListItem({
       (item.type === "CustomGLSourceSymbolLegend" && item.symbols.length <= 1));
 
   const inatLegendType = useInaturalistLegendType(item, map);
+  const { t } = useTranslation("homepage");
   return (
     <ErrorBoundary>
       <li
         id={`legend-item-${item.id}`}
         className={`group ${
           skipTopBorder ? "" : "border-t border-black border-opacity-5"
-        } p-2 max-w-full ${!visible ? "opacity-50" : "opacity-100"}`}
+        } p-2 max-w-full ${
+          !visible || clockHidden ? "opacity-50" : "opacity-100"
+        }`}
       >
         <div className="flex items-center space-x-2">
           {/* If single-symbol, show inline image */}
@@ -406,6 +420,12 @@ function LegendListItem({
             />
           </div>
         </div>
+        {clockHidden && (
+          <div className="mt-1 flex items-center gap-1 text-xs text-gray-600">
+            <ClockIcon className="h-3.5 w-3.5 flex-none" aria-hidden />
+            <span>{t("Hidden by time slider")}</span>
+          </div>
+        )}
         {item.type === "DataTableLegendItem" &&
           item.overlayDataTables &&
           item.overlayDataTables.length > 0 && (
@@ -452,7 +472,7 @@ function LegendListItem({
       </li>
     </ErrorBoundary>
   );
-}
+});
 
 function PanelFactory({ panel, map }: { panel: GLLegendPanel; map?: Map }) {
   return (

@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useGlobalErrorHandler } from "../../../components/GlobalErrorHandler";
 import {
-  FullAdminDataLayerFragment,
   FullAdminSourceFragment,
   useUpdateDataSourceTemporalMutation,
 } from "../../../generated/graphql";
@@ -27,11 +26,9 @@ const temporalFieldClassName =
 
 export default function TemporalCoverageEditor({
   source,
-  layer,
   changeLogRefetchQueries,
 }: {
   source: FullAdminSourceFragment;
-  layer?: Pick<FullAdminDataLayerFragment, "sublayerType"> | null;
   changeLogRefetchQueries?: any[];
 }) {
   const { t } = useTranslation("admin:data");
@@ -44,10 +41,7 @@ export default function TemporalCoverageEditor({
   });
 
   const existing = isTemporalInfo(source.temporal) ? source.temporal : null;
-  const caps = useMemo(
-    () => sourceTemporalCapabilities(source, layer?.sublayerType),
-    [source, layer?.sublayerType]
-  );
+  const caps = useMemo(() => sourceTemporalCapabilities(source), [source]);
   const modes = useMemo(() => allowedTemporalModes(caps), [caps]);
   const presentText = t("present");
   const summary = summarizeTemporalInfo(existing, presentText);

@@ -30,6 +30,7 @@ import { layerSettingsChangeLogRefetchQueries } from "../../changelogs/layerSett
 import NewResolvableComment from "./NewResolvableComment";
 import ResolvableComment from "./ResolvableComment";
 import TemporalCoverageEditor from "./TemporalCoverageEditor";
+import { sourceSupportsTemporalEditor } from "./temporalCoverageForm";
 
 export default function LayerSettings({
   item,
@@ -234,13 +235,11 @@ export default function LayerSettings({
       />
     )} */}
       </div>
-      {source && (
+      {source && sourceSupportsTemporalEditor(source.type) && (
         <TemporalCoverageEditor
           source={source}
-          layer={layer}
           changeLogRefetchQueries={changeLogRefetchQueries}
         />
-
       )}
       {item.relatedReportCardDetails &&
         item.relatedReportCardDetails.length > 0 && (
