@@ -42,9 +42,7 @@ describe("paddedTimeSeriesYDomain", () => {
   });
 
   test("a percent ceil does not exceed 100% or clip the observed max", () => {
-    expect(paddedTimeSeriesYDomain([0.8, 0.95], { ceil: 1 })).toEqual([
-      0, 1,
-    ]);
+    expect(paddedTimeSeriesYDomain([0.8, 0.95], { ceil: 1 })).toEqual([0, 1]);
     expect(paddedTimeSeriesYDomain([0.03, 0.09], { ceil: 1 })?.[1]).toBeCloseTo(
       0.09 * 1.25
     );
@@ -66,7 +64,9 @@ describe("paddedTimeSeriesYDomain", () => {
   });
 
   test("ignores non-finite values and returns null when none remain", () => {
-    expect(paddedTimeSeriesYDomain([null, undefined, NaN, Infinity])).toBeNull();
+    expect(
+      paddedTimeSeriesYDomain([null, undefined, NaN, Infinity])
+    ).toBeNull();
     expect(paddedTimeSeriesYDomain([])).toBeNull();
   });
 });
@@ -106,6 +106,7 @@ describe("yAxisGutterWidth", () => {
     const formatKm2 = (value: number) => {
       if (value === 0) return "0 km²";
       if (value === 1) return "1 km²";
+      // eslint-disable-next-line i18next/no-literal-string
       return `${value} km²`;
     };
     const { ticks } = timeSeriesYAxis([0, 1], []);

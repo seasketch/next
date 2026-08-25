@@ -25,7 +25,6 @@ export const REACT_PRINT_PAGE_STYLE = `
     .report-print-root {
       width: ${REPORT_PRINT_CONTENT_WIDTH} !important;
       max-width: ${REPORT_PRINT_CONTENT_WIDTH} !important;
-      overflow-x: hidden !important;
       background: #ffffff !important;
       color: #000000 !important;
     }

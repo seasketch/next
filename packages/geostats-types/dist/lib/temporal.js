@@ -263,7 +263,17 @@ function isTemporalInterval(value) {
         return false;
     if (value.end !== null && !isTemporalIso(value.end))
         return false;
-    return isTemporalPrecision(value.precision);
+    if (!isTemporalPrecision(value.precision))
+        return false;
+    if (value.end === null)
+        return true;
+    const expanded = expandTemporalValue({
+        kind: "interval",
+        start: value.start,
+        end: value.end,
+        precision: value.precision,
+    });
+    return expanded !== null && expanded.start < expanded.end;
 }
 function isTemporalValue(value) {
     return isTemporalInstant(value) || isTemporalInterval(value);
@@ -361,8 +371,15 @@ function isTemporalInfo(value) {
             return false;
         }
     }
-    if (value.mapping !== undefined && !isTemporalMapping(value.mapping)) {
-        return false;
+    if (value.granularity === "layer") {
+        if (value.mapping !== undefined)
+            return false;
+    }
+    else {
+        if (!isTemporalMapping(value.mapping))
+            return false;
+        if (value.mapping.type !== value.granularity)
+            return false;
     }
     if (value.availability !== undefined &&
         !isTemporalAvailability(value.availability)) {

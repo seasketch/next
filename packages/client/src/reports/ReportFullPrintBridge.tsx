@@ -119,7 +119,7 @@ export default function ReportFullPrintBridge({
   return (
     <div
       ref={contentRef}
-      className="pointer-events-none absolute left-0 top-0 z-[2147483646] box-border overflow-hidden bg-white text-black"
+      className="pointer-events-none absolute left-0 top-0 z-[2147483646] box-border bg-white text-black"
       style={{
         width: REPORT_PRINT_CONTENT_WIDTH,
         maxWidth: REPORT_PRINT_CONTENT_WIDTH,

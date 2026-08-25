@@ -22,7 +22,13 @@ export const exportRasterTimeSeries: WidgetExporter = (input) => {
     primaryGeographyId,
   } = input;
 
-  if (!primaryGeographyId) {
+  const geographyId =
+    componentSettings.geographyId === undefined ||
+    componentSettings.geographyId === "auto"
+      ? primaryGeographyId
+      : (componentSettings.geographyId as number | undefined);
+
+  if (!geographyId) {
     return [];
   }
 
@@ -33,7 +39,7 @@ export const exportRasterTimeSeries: WidgetExporter = (input) => {
   const combined = combineMetricsBySource(
     metrics,
     sources,
-    primaryGeographyId,
+    geographyId,
     mode === "area" ? "raster_overlay_area" : "raster_stats"
   );
 

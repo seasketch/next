@@ -615,6 +615,18 @@ test("isTemporalInfo rejects malformed documents", () => {
     }),
     false // coverage must be an interval
   );
+  assert.equal(
+    isTemporalInfo({
+      ...valid,
+      coverage: {
+        kind: "interval",
+        start: "2020",
+        end: "2019",
+        precision: "year",
+      },
+    }),
+    false
+  );
   assert.equal(isTemporalInfo({ ...valid, nativeResolution: "eon" }), false);
   assert.equal(
     isTemporalInfo({ ...valid, supportedViewResolutions: ["year", "eon"] }),
@@ -632,6 +644,39 @@ test("isTemporalInfo rejects malformed documents", () => {
   assert.equal(isTemporalInfo({ ...valid, authoredBy: "robot" }), false);
   const { coverage, ...missingCoverage } = valid;
   assert.equal(isTemporalInfo(missingCoverage), false);
+});
+
+test("isTemporalInfo requires mapping to match granularity", () => {
+  const valid = createLayerYearTemporalInfo(2018);
+  const mappings = {
+    feature: {
+      type: "feature",
+      startColumn: "_when_start",
+      endColumn: "_when_end",
+    },
+    band: { type: "band", bands: [] },
+    row: {
+      type: "row",
+      startColumn: "_when_start",
+      endColumn: "_when_end",
+    },
+    remote: { type: "remote", driver: "gfw-4wings" },
+  };
+  for (const granularity of ["feature", "band", "row", "remote"]) {
+    assert.equal(
+      isTemporalInfo({
+        ...valid,
+        granularity,
+        mapping: mappings[granularity === "feature" ? "row" : "feature"],
+      }),
+      false
+    );
+    assert.equal(
+      isTemporalInfo({ ...valid, granularity, mapping: mappings[granularity] }),
+      true
+    );
+  }
+  assert.equal(isTemporalInfo({ ...valid, mapping: mappings.band }), false);
 });
 
 test("isTemporalClock", () => {

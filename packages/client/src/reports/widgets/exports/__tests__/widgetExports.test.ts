@@ -21,6 +21,7 @@ import { sectionToCsv } from "../csv";
 import { packageSectionsAsCsvBlob } from "../package";
 import { buildRawExportPayload } from "../raw";
 import { buildInlineMetricsSection } from "../exporters/inlineMetrics.export";
+import { exportRasterTimeSeries } from "../exporters/rasterTimeSeries.export";
 import type { CardExportInput, WidgetExportSection } from "../types";
 
 const urlMap = { layerA: "https://example.com/a.geojson" };
@@ -478,5 +479,72 @@ describe("widget export helpers", () => {
     expect(
       section!.columns.some((c) => c.key === `${dataCol}__minSqKm`)
     ).toBe(true);
+  });
+
+  test("raster time-series export uses its selected geography", () => {
+    const source = {
+      stableId: "layerA",
+      sourceUrl: urlMap.layerA,
+      tableOfContentsItem: { title: "Layer A" },
+      temporal: {
+        version: 1,
+        granularity: "layer",
+        coverage: {
+          kind: "interval",
+          start: "2020",
+          end: "2021",
+          precision: "year",
+        },
+        nativeResolution: "year",
+        defaultViewResolution: "year",
+      },
+    } as CardExportInput["sources"][0];
+    const fragment = {
+      id: 1,
+      type: "raster_overlay_area",
+      state: SpatialMetricState.Complete,
+      value: { areas: { "*": 50 } },
+      dependencyHash: "fragment",
+      sourceUrl: urlMap.layerA,
+      subject: {
+        __typename: "FragmentSubject",
+        geographies: [1, 2],
+        sketches: [10],
+        hash: "frag1",
+      },
+    } as CardExportInput["metrics"][0];
+    const geography = (id: number, area: number) =>
+      ({
+        id: id + 1,
+        type: "raster_overlay_area",
+        state: SpatialMetricState.Complete,
+        value: { areas: { "*": area } },
+        // eslint-disable-next-line i18next/no-literal-string
+        dependencyHash: `geography-${id}`,
+        sourceUrl: urlMap.layerA,
+        subject: {
+          __typename: "GeographySubject",
+          id,
+        },
+      } as CardExportInput["metrics"][0]);
+
+    const sections = exportRasterTimeSeries({
+      ...minimalCardInput({
+        sources: [source],
+        metrics: [fragment, geography(1, 100), geography(2, 200)],
+        geographies: [
+          { id: 1, name: "G1", translatedProps: {}, stableIds: [] },
+          { id: 2, name: "G2", translatedProps: {}, stableIds: [] },
+        ],
+        primaryGeographyId: 1,
+      }),
+      dependencies: [],
+      componentSettings: {
+        mode: "area",
+        geographyId: 2,
+      },
+    });
+
+    expect(sections[0].rows[0].fractionOfGeography).toBe(0.25);
   });
 });

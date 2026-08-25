@@ -277,7 +277,7 @@ export default function renderPreview(
         `
         }
 
-        ${tilejson.vector_layers
+        ${(tilejson.vector_layers ?? [])
           .map(
             (layer, i) => `
           var layerColor = '#' + "${getColor(lightColors, i)}";

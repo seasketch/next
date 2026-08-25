@@ -163,7 +163,7 @@ describe("sourceSupportsTemporalEditor", () => {
   it("allows remote tiles and GeoJSON", () => {
     expect(sourceSupportsTemporalEditor(DataSourceTypes.Vector)).toBe(true);
     expect(sourceSupportsTemporalEditor(DataSourceTypes.Raster)).toBe(true);
-    expect(sourceSupportsTemporalEditor(DataSourceTypes.RasterDem)).toBe(true);
+    expect(sourceSupportsTemporalEditor(DataSourceTypes.RasterDem)).toBe(false);
     expect(sourceSupportsTemporalEditor(DataSourceTypes.Geojson)).toBe(true);
   });
 

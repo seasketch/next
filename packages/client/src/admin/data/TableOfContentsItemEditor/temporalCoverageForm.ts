@@ -47,7 +47,6 @@ const EDITOR_VECTOR_TYPES: DataSourceTypes[] = [
 const EDITOR_RASTER_TYPES: DataSourceTypes[] = [
   DataSourceTypes.SeasketchRaster,
   DataSourceTypes.Raster,
-  DataSourceTypes.RasterDem,
 ];
 
 export function sourceSupportsTemporalEditor(

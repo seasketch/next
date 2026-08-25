@@ -441,7 +441,15 @@ export function isTemporalInterval(value: unknown): value is TemporalInterval {
   if (value.kind !== "interval") return false;
   if (!isTemporalIso(value.start)) return false;
   if (value.end !== null && !isTemporalIso(value.end)) return false;
-  return isTemporalPrecision(value.precision);
+  if (!isTemporalPrecision(value.precision)) return false;
+  if (value.end === null) return true;
+  const expanded = expandTemporalValue({
+    kind: "interval",
+    start: value.start,
+    end: value.end,
+    precision: value.precision,
+  });
+  return expanded !== null && expanded.start < expanded.end;
 }
 
 export function isTemporalValue(value: unknown): value is TemporalValue {
@@ -533,8 +541,11 @@ export function isTemporalInfo(value: unknown): value is TemporalInfo {
       return false;
     }
   }
-  if (value.mapping !== undefined && !isTemporalMapping(value.mapping)) {
-    return false;
+  if (value.granularity === "layer") {
+    if (value.mapping !== undefined) return false;
+  } else {
+    if (!isTemporalMapping(value.mapping)) return false;
+    if (value.mapping.type !== value.granularity) return false;
   }
   if (
     value.availability !== undefined &&

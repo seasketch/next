@@ -14,6 +14,13 @@ const PROJECT_NAME = `projects/mrt-test/public/${UUID}`;
 const FIXTURE_NAME = "raster-array/gmw-global";
 const LIBRARY_PLAIN = "dataLibrary/gmw-global";
 
+function encodedArrayBuffer(value: string): ArrayBuffer {
+  const encoded = new TextEncoder().encode(value);
+  const buffer = new ArrayBuffer(encoded.byteLength);
+  new Uint8Array(buffer).set(encoded);
+  return buffer;
+}
+
 async function putArchive(name: string) {
   await env.TILES_BUCKET.put(`${name}.pmtiles`, TINY_MRT_PMTILES, {
     httpMetadata: { contentType: "application/octet-stream" },
@@ -22,7 +29,7 @@ async function putArchive(name: string) {
 
 describe("byte range into an extracted MRT tile", () => {
   it("clamps an oversize 16 KB probe instead of 416", () => {
-    const body = new TextEncoder().encode("MRT-TEST-TILE").buffer;
+    const body = encodedArrayBuffer("MRT-TEST-TILE");
     const sliced = sliceByteRange(body, "bytes=0-16383");
     expect(sliced.status).toBe(206);
     expect(sliced.contentRange).toBe("bytes 0-12/13");
@@ -30,7 +37,7 @@ describe("byte range into an extracted MRT tile", () => {
   });
 
   it("returns 416 only when start is past EOF", () => {
-    const body = new TextEncoder().encode("abc").buffer;
+    const body = encodedArrayBuffer("abc");
     const sliced = sliceByteRange(body, "bytes=10-20");
     expect(sliced.status).toBe(416);
   });
