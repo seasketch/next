@@ -151,6 +151,7 @@ export default function ProjectApp() {
               preferencesKey={`${slug}-homepage`}
               cacheSize={bytes("200mb")}
               containerPortal={mapContainerPortal}
+              enableTemporal
             >
               <MapUIProvider
                 preferencesKey={`${slug}-homepage-ui`}

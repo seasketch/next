@@ -21,6 +21,7 @@ import type {
   Tooltip,
 } from "./MapContextManager";
 import { BasemapContext } from "./BasemapContext";
+import { MapClockHiddenTocIdsContext } from "./MapTemporalStateContext";
 import type { BasemapContextState } from "./BasemapContext";
 import LayerInteractivityManager from "./LayerInteractivityManager";
 import type { InteractivityUIUpdate } from "./LayerInteractivityManager";
@@ -199,6 +200,18 @@ export default function MapUIProvider({
   const { manager, ready } = useContext(MapManagerContext);
   const mapOverlay = useContext(MapOverlayContext);
   const basemap = useContext(BasemapContext);
+  const clockHiddenTocIds = useContext(MapClockHiddenTocIdsContext);
+  const visibleLayerConfiguration = useMemo(
+    () => buildVisibleLayers(mapOverlay, basemap),
+    [
+      mapOverlay.layerStatesByTocStaticId,
+      mapOverlay.dataLayers,
+      mapOverlay.dataSources,
+      mapOverlay.tableOfContentsItems,
+      basemap.selectedBasemap,
+      basemap.basemaps,
+    ]
+  );
   const { getPreferences, updateSlice } = useMapPreferences(preferencesKey);
 
   const [interactivityUI, dispatchInteractivityUI] = useReducer(
@@ -399,6 +412,10 @@ export default function MapUIProvider({
   // interactivity manager is first created (it may be created after the data
   // is already available).
   useEffect(() => {
+    interactivityManager?.setClockHiddenTocIds(clockHiddenTocIds);
+  }, [interactivityManager, clockHiddenTocIds]);
+
+  useEffect(() => {
     if (!interactivityManager) return;
 
     const {
@@ -406,7 +423,7 @@ export default function MapUIProvider({
       dataSources,
       basemap: resolvedBasemap,
       tocItemLabels,
-    } = buildVisibleLayers(mapOverlay, basemap);
+    } = visibleLayerConfiguration;
     if (resolvedBasemap) {
       interactivityManager.setVisibleLayers(
         visibleLayers,
@@ -423,16 +440,9 @@ export default function MapUIProvider({
       );
     }
   }, [
-    mapOverlay.layerStatesByTocStaticId,
-    mapOverlay.dataLayers,
-    mapOverlay.dataSources,
-    mapOverlay.tableOfContentsItems,
-    basemap.selectedBasemap,
-    basemap.basemaps,
     interactivityManager,
-    basemap,
-    mapOverlay,
     manager,
+    visibleLayerConfiguration,
   ]);
 
   useEffect(() => {

@@ -1,0 +1,15 @@
+node_modules
+dist
+.tsbuildinfo
+*.tsbuildinfo
+.DS_Store
+
+# Local rasters and leftover encode trees
+demos/
+fixtures/
+*.tif
+*.tiff
+*.mrt
+*.nc
+*.pmtiles
+*.zip

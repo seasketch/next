@@ -291,6 +291,58 @@ describe("Live data library updates", () => {
     });
   });
 
+  test("library project admin can update attribution and temporal on a published shared source", async () => {
+    await projectTransaction(
+      pool,
+      "public",
+      async (conn, projectId, adminId, [userA]) => {
+        const template = await createTemplate(conn, adminId);
+        await createLibraryCopy(conn, projectId, template);
+        await publish(conn, projectId, adminId);
+        await publish(conn, template.templateProjectId, adminId);
+        await resetProjectState(conn, [
+          projectId,
+          template.templateProjectId,
+        ]);
+
+        await createSession(
+          conn,
+          adminId,
+          true,
+          false,
+          template.templateProjectId
+        );
+        const attribution = await conn.oneFirst(
+          sql`update data_sources set attribution = 'NOAA CRW' where id = ${template.sourceId} returning attribution`
+        );
+        expect(attribution).toBe("NOAA CRW");
+        const temporal = await conn.oneFirst(
+          sql`update data_sources set temporal = '{"version":1}'::jsonb where id = ${template.sourceId} returning temporal`
+        );
+        expect(temporal).toBeTruthy();
+        await clearSession(conn);
+
+        expect(await draftHasChanges(conn, projectId)).toBe(false);
+        expect(await changeLogCount(conn, projectId)).toBe(0);
+        expect(await draftHasChanges(conn, template.templateProjectId)).toBe(
+          true
+        );
+        expect(
+          await changeLogCount(conn, template.templateProjectId)
+        ).toBeGreaterThan(0);
+
+        const otherProjectId = await createProject(conn, userA, "public");
+        await createSession(conn, userA, true, false, otherProjectId);
+        await expect(
+          conn.oneFirst(
+            sql`update data_sources set attribution = 'nope' where id = ${template.sourceId} returning attribution`
+          )
+        ).rejects.toThrow();
+        await clearSession(conn);
+      }
+    );
+  });
+
   test("replace_data_source fans out to draft and published copies without publish or changelog side effects", async () => {
     await projectTransaction(pool, "public", async (conn, projectId, adminId) => {
       const template = await createTemplate(conn, adminId);

@@ -294,6 +294,7 @@ describe("change_logs", () => {
         "layer:interactivity",
         "layer:metadata",
         "layer:parent-changed",
+        "layer:temporal",
         "layer:title",
         "layer:uploaded",
         "layers:published",

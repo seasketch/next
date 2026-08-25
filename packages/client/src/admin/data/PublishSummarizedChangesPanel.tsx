@@ -102,6 +102,8 @@ function badgeLabel(key: PublishBadgeKey, t: (s: string) => string): string {
       return t("access");
     case "attribution":
       return t("attribution");
+    case "temporal":
+      return t("temporal coverage");
     case "metadata":
       return t("metadata");
     case "cartography":

@@ -1084,17 +1084,22 @@ export function expressionMatchesPalette(
   skipFirstColor?: boolean
 ) {
   let paletteColors = (
-    Array.isArray(palette) ? [] : (colorScale[palette] as string[])
-  ) as ((i: number) => string) | string[];
+    Array.isArray(palette) ? [] : (colorScale[palette] as string[] | undefined)
+  ) as ((i: number) => string) | string[] | undefined;
   if (typeof paletteColors === "function" && steps) {
     const nStops = steps?.steps === "continuous" ? 10 : steps.n;
     // @ts-ignore
     paletteColors = getColorStops(palette, nStops, reversed);
   }
+  // Named palettes like "customPalette" are not d3-scale-chromatic keys.
+  // Treat them as unmatched so PaletteSelect shows "Custom palette".
+  if (!Array.isArray(paletteColors)) {
+    return false;
+  }
   const expressionColors = extractColorsFromExpression(expression);
   for (const color of expressionColors) {
     if (
-      !(paletteColors as string[]).includes(color) &&
+      !paletteColors.includes(color) &&
       (!skipFirstColor || expressionColors.indexOf(color) !== 0)
     ) {
       return false;

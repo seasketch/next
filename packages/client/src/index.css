@@ -1407,7 +1407,7 @@ div[attachments="forumAttachments"] {
   align-items: center;
   background: #e5e7eb;
   border-radius: 10px;
-  padding: 3px;
+  padding: 4px;
   gap: 2px;
 }
 
@@ -1417,7 +1417,7 @@ div[attachments="forumAttachments"] {
   border: none;
   background: transparent;
   border-radius: 8px;
-  padding: 4px 14px;
+  padding: 5px 14px;
   font-size: 13px;
   font-weight: 500;
   line-height: 1.25;
@@ -5974,6 +5974,10 @@ select{
   inset:0px
 }
 
+.inset-auto{
+  inset:auto
+}
+
 .-inset-x-10{
   left:-2.5rem;
   right:-2.5rem
@@ -8187,6 +8191,10 @@ select{
 
 .min-h-\[64px\]{
   min-height:64px
+}
+
+.min-h-\[7rem\]{
+  min-height:7rem
 }
 
 .min-h-full{
@@ -10881,6 +10889,10 @@ select{
   border-color:rgb(255 255 255 / 0.3)
 }
 
+.border-white\/5{
+  border-color:rgb(255 255 255 / 0.05)
+}
+
 .border-white\/60{
   border-color:rgb(255 255 255 / 0.6)
 }
@@ -11447,8 +11459,20 @@ select{
   background-color:rgb(17 24 39 / var(--tw-bg-opacity, 1))
 }
 
+.bg-gray-900\/30{
+  background-color:rgb(17 24 39 / 0.3)
+}
+
+.bg-gray-900\/40{
+  background-color:rgb(17 24 39 / 0.4)
+}
+
 .bg-gray-900\/80{
   background-color:rgb(17 24 39 / 0.8)
+}
+
+.bg-gray-900\/90{
+  background-color:rgb(17 24 39 / 0.9)
 }
 
 .bg-gray-950{
@@ -11737,6 +11761,10 @@ select{
   background-color:rgb(56 189 248 / 0.25)
 }
 
+.bg-sky-400\/70{
+  background-color:rgb(56 189 248 / 0.7)
+}
+
 .bg-sky-50{
   --tw-bg-opacity:1;
   background-color:rgb(240 249 255 / var(--tw-bg-opacity, 1))
@@ -11882,6 +11910,10 @@ select{
 
 .bg-white\/10{
   background-color:rgb(255 255 255 / 0.1)
+}
+
+.bg-white\/20{
+  background-color:rgb(255 255 255 / 0.2)
 }
 
 .bg-white\/5{
@@ -13871,6 +13903,11 @@ select{
   color:rgb(254 202 202 / var(--tw-text-opacity, 1))
 }
 
+.text-red-300{
+  --tw-text-opacity:1;
+  color:rgb(252 165 165 / var(--tw-text-opacity, 1))
+}
+
 .text-red-400{
   --tw-text-opacity:1;
   color:rgb(248 113 113 / var(--tw-text-opacity, 1))
@@ -14234,6 +14271,10 @@ select{
 
 .accent-gray-400{
   accent-color:#9ca3af
+}
+
+.accent-sky-400{
+  accent-color:#38bdf8
 }
 
 .\!opacity-100{
@@ -15125,6 +15166,10 @@ select{
   contain:var(--tw-contain-size) var(--tw-contain-layout) var(--tw-contain-paint) var(--tw-contain-style)
 }
 
+.\[color-scheme\:dark\]{
+  color-scheme:dark
+}
+
 .\[scrollbar-width\:thin\]{
   scrollbar-width:thin
 }
@@ -15941,6 +15986,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
   background-color:rgb(255 255 255 / 0.15)
 }
 
+.hover\:bg-white\/20:hover{
+  background-color:rgb(255 255 255 / 0.2)
+}
+
 .hover\:bg-white\/5:hover{
   background-color:rgb(255 255 255 / 0.05)
 }
@@ -16708,6 +16757,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .focus-visible\:ring-red-400:focus-visible{
   --tw-ring-opacity:1;
   --tw-ring-color:rgb(248 113 113 / var(--tw-ring-opacity, 1))
+}
+
+.focus-visible\:ring-sky-400:focus-visible{
+  --tw-ring-opacity:1;
+  --tw-ring-color:rgb(56 189 248 / var(--tw-ring-opacity, 1))
 }
 
 .focus-visible\:ring-white\/50:focus-visible{
@@ -19165,6 +19219,20 @@ input[type="checkbox"][indeterminate="true"]:checked {
   .dark\:hover\:bg-opacity-50:hover{
     --tw-bg-opacity:0.5
   }
+}
+
+@media print{
+  .print\:hidden{
+    display:none
+  }
+}
+
+.\[\&\:\:-webkit-calendar-picker-indicator\]\:cursor-pointer::-webkit-calendar-picker-indicator{
+  cursor:pointer
+}
+
+.\[\&\:\:-webkit-calendar-picker-indicator\]\:opacity-80::-webkit-calendar-picker-indicator{
+  opacity:0.8
 }
 
 .\[\&\>span\]\:min-h-0>span{

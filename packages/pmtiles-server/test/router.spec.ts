@@ -57,6 +57,42 @@ describe("host-aware router", () => {
     expect(await uploads.text()).toBe("Object not found");
   });
 
+  it("routes dataLibrary/gmw-global TileJSON through TilesBackend", async () => {
+    const tiles = await SELF.fetch(
+      "https://tiles.seasketch.org/dataLibrary/gmw-global.json",
+    );
+    expect(tiles.status).toBe(404);
+    expect(await tiles.text()).toBe("Tileset not found");
+
+    const uploads = await SELF.fetch(
+      "https://uploads.seasketch.org/dataLibrary/gmw-global.json",
+    );
+    expect(uploads.status).toBe(404);
+    expect(await uploads.text()).toBe("Object not found");
+  });
+
+  it("keeps a raw .pmtiles download on ObjectBackend", async () => {
+    const tiles = await SELF.fetch(
+      "https://tiles.seasketch.org/dataLibrary/gmw-global.pmtiles",
+    );
+    expect(tiles.status).toBe(404);
+    expect(await tiles.text()).toBe("Object not found");
+  });
+
+  it("routes fixture MRT ZXY through TilesBackend on the tiles host", async () => {
+    const tiles = await SELF.fetch(
+      "https://tiles.seasketch.org/raster-array/gmw-global/0/0/0.mrt",
+    );
+    expect(tiles.status).toBe(404);
+    expect(await tiles.text()).toBe("Tileset not found");
+
+    const uploads = await SELF.fetch(
+      "https://uploads.seasketch.org/raster-array/gmw-global/0/0/0.mrt",
+    );
+    expect(uploads.status).toBe(404);
+    expect(await uploads.text()).toBe("Object not found");
+  });
+
   it("routes legacy Replace-tiles TileJSON through TilesBackend", async () => {
     // Without projects/ prefix, .json must still be synthesized TileJSON —
     // not an ObjectBackend lookup for a literal .json key.

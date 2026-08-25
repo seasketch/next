@@ -99,7 +99,10 @@ export default function DataSettings() {
             tableOfContentsItems,
           }}
         >
-          <MapManagerContextProvider preferencesKey={`${slug}-data-settings`}>
+          <MapManagerContextProvider
+            preferencesKey={`${slug}-data-settings`}
+            enableTemporal
+          >
             <MapUIProvider preferencesKey={`${slug}-data-settings-ui`}>
               <TableOfContentsMetadataModalProvider>
                 <LayerEditingContextProvider>

@@ -1875,11 +1875,15 @@ export function combineRasterBandStats(
   const histogramMap = new Map<number, number>();
 
   for (const stats of statsArray) {
-    totalCount += stats.count;
+    if (isFinite(stats.count)) {
+      totalCount += stats.count;
+    }
     if (isFinite(stats.sum)) {
       totalSum += stats.sum;
     }
-    totalInvalid += stats.invalid;
+    if (isFinite(stats.invalid)) {
+      totalInvalid += stats.invalid;
+    }
     if (isFinite(stats.min) && stats.min !== null) {
       mins.push(stats.min);
     }
@@ -1910,8 +1914,13 @@ export function combineRasterBandStats(
     200,
   );
 
-  // Calculate combined mean using sum/count (not average of means)
-  const combinedMean = totalCount > 0 ? totalSum / totalCount : NaN;
+  // Calculate combined mean using sum / valid-pixel count (not average of
+  // means). Note `count` includes invalid (nodata) pixels — per-band means
+  // are sum / (count - invalid), so the combined mean must use the same
+  // denominator or fragments containing nodata pixels will dilute it,
+  // potentially below the combined min.
+  const totalValid = Math.max(0, totalCount - totalInvalid);
+  const combinedMean = totalValid > 0 ? totalSum / totalValid : NaN;
 
   // Calculate combined range
   const combinedMin = mins.length > 0 ? min(mins) : NaN;
@@ -2416,7 +2425,8 @@ export type MetricDependencyParameters = {
   valueColumn?: string;
   /**
    * Buffer distance (km) around the subject. Used by `overlay_area`,
-   * `column_values`, `count`, `presence*`, and `raster_overlay_area`.
+   * `column_values`, `count`, `presence*`, `raster_overlay_area`, and
+   * `raster_stats`.
    *
    * For `raster_overlay_area` on fragment subjects, enables collar overlap
    * metadata ({@link RasterOverlayAreaOverlapInfo}). Geography subjects never

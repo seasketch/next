@@ -14,6 +14,7 @@ export type PublishBadgeKey =
   | "title"
   | "access"
   | "attribution"
+  | "temporal"
   | "metadata"
   | "cartography"
   | "downloads"
@@ -30,6 +31,7 @@ export const PUBLISH_BADGE_ORDER: PublishBadgeKey[] = [
   "title",
   "access",
   "attribution",
+  "temporal",
   "metadata",
   "cartography",
   "downloads",
@@ -48,6 +50,7 @@ const FIELD_GROUP_TO_BADGE: Partial<
   [ChangeLogFieldGroup.LayerAcl]: "access",
   [ChangeLogFieldGroup.FolderAcl]: "access",
   [ChangeLogFieldGroup.LayerAttribution]: "attribution",
+  [ChangeLogFieldGroup.LayerTemporal]: "temporal",
   [ChangeLogFieldGroup.LayerMetadata]: "metadata",
   [ChangeLogFieldGroup.LayerCartography]: "cartography",
   [ChangeLogFieldGroup.LayerDownloadable]: "downloads",

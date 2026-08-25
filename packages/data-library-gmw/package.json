@@ -1,0 +1,31 @@
+{
+  "name": "@seasketch/data-library-gmw",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Workstation job: Global Mangrove Watch analysis GeoTIFF + MRT PMTiles for the Data Library.",
+  "author": "Chad Burt <chad@underbluewaters.net>",
+  "license": "BSD-3-Clause",
+  "bin": {
+    "data-library-gmw": "src/cli.ts"
+  },
+  "scripts": {
+    "build": "npx --yes tsx@4.19.3 src/cli.ts build",
+    "occupancy": "npx --yes tsx@4.19.3 src/cli.ts occupancy",
+    "warp": "npx --yes tsx@4.19.3 src/cli.ts warp",
+    "mosaic": "npx --yes tsx@4.19.3 src/cli.ts mosaic",
+    "encode": "npx --yes tsx@4.19.3 src/cli.ts encode",
+    "pack": "npx --yes tsx@4.19.3 src/cli.ts pack",
+    "analysis": "npx --yes tsx@4.19.3 src/cli.ts analysis",
+    "runbook": "npx --yes tsx@4.19.3 src/cli.ts runbook",
+    "demo": "npx --yes tsx@4.19.3 demo/server.ts",
+    "test": "npx --yes tsx@4.19.3 --test src/runbook.test.ts src/occupancy.test.ts src/analysisMosaic.test.ts"
+  },
+  "dependencies": {
+    "@seasketch/raster-array": "file:../raster-array",
+    "tsx": "4.19.3"
+  },
+  "devDependencies": {
+    "@types/node": "^18.11.4",
+    "typescript": "5.5.3"
+  }
+}

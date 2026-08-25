@@ -1,5 +1,5 @@
 import { InlineMetric, InlineMetricTooltipControls } from "./InlineMetric";
-import { ReportWidgetTooltipControls } from "../../editor/TooltipMenu";
+import { ReportWidgetTooltipControlsProps } from "../../editor/TooltipMenu";
 import {
   FC,
   useCallback,
@@ -104,6 +104,16 @@ import {
   RasterAreaCapturedTable,
   RasterAreaCapturedTableTooltipControls,
 } from "./RasterAreaCapturedTable";
+import {
+  ClassCompositionChart,
+  ClassCompositionChartTooltipControls,
+} from "./ClassCompositionChart";
+import {
+  RasterTimeSeries,
+  RasterTimeSeriesTooltipControls,
+  buildRasterTimeSeriesDependencies,
+} from "./RasterTimeSeries";
+import { findTimeSeriesSiblings } from "./temporalChart";
 import {
   OusDemographicsTable,
   OusDemographicsTableTooltipControls,
@@ -489,6 +499,11 @@ const memoizedWidgets: Record<string, WidgetComponent> = {
     RasterAreaCapturedTable,
     "RasterAreaCapturedTable"
   ),
+  ClassCompositionChart: memoWidget(
+    ClassCompositionChart,
+    "ClassCompositionChart"
+  ),
+  RasterTimeSeries: memoWidget(RasterTimeSeries, "RasterTimeSeries"),
   OusDemographicsTable: memoWidget(
     OusDemographicsTable,
     "OusDemographicsTable"
@@ -631,9 +646,14 @@ function labelColumnForGeostatsLayer(
   return scoredAttributes[0]?.attribute;
 }
 
-export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
-  props
-) => {
+// Function declarations (not `const`) so these exports are initialized during
+// module instantiation. widgets.tsx sits in a circular import graph with
+// individual widgets and TooltipMenu; CRA Fast Refresh re-evaluates that
+// graph and a `const` router throws "Cannot access X before initialization".
+
+export function ReportWidgetTooltipControlsRouter(
+  props: ReportWidgetTooltipControlsProps
+) {
   switch (props.node.attrs.type) {
     case "InlineMetric":
       return <InlineMetricTooltipControls {...props} />;
@@ -665,6 +685,10 @@ export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
       return <RasterProportionTableTooltipControls {...props} />;
     case "RasterAreaCapturedTable":
       return <RasterAreaCapturedTableTooltipControls {...props} />;
+    case "ClassCompositionChart":
+      return <ClassCompositionChartTooltipControls {...props} />;
+    case "RasterTimeSeries":
+      return <RasterTimeSeriesTooltipControls {...props} />;
     case "OusDemographicsTable":
       return <OusDemographicsTableTooltipControls {...props} />;
     case "BlockLayerToggle":
@@ -674,9 +698,9 @@ export const ReportWidgetTooltipControlsRouter: ReportWidgetTooltipControls = (
     default:
       return null;
   }
-};
+}
 
-export const ReportWidgetNodeViewRouter: FC = (props: any) => {
+export function ReportWidgetNodeViewRouter(props: any) {
   // NOTE: We intentionally avoid useReportContext() here to prevent re-renders
   // when unrelated context data changes. Error components access context themselves.
   const languageContext = useContext(FormLanguageContext);
@@ -833,6 +857,12 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
     case "RasterAreaCapturedTable":
       widget = <memoizedWidgets.RasterAreaCapturedTable {...widgetProps} />;
       break;
+    case "ClassCompositionChart":
+      widget = <memoizedWidgets.ClassCompositionChart {...widgetProps} />;
+      break;
+    case "RasterTimeSeries":
+      widget = <memoizedWidgets.RasterTimeSeries {...widgetProps} />;
+      break;
     case "OusDemographicsTable":
       widget = <memoizedWidgets.OusDemographicsTable {...widgetProps} />;
       break;
@@ -877,7 +907,7 @@ export const ReportWidgetNodeViewRouter: FC = (props: any) => {
       {widget}
     </ErrorBoundary>
   );
-};
+}
 
 export type BuildReportCommandGroupsArgs = {
   sources?: OverlaySourceListDetailsFragment[];
@@ -885,11 +915,14 @@ export type BuildReportCommandGroupsArgs = {
     id: number;
     title: string;
     stableId: string;
+    parentStableId?: string | null;
+    isFolder?: boolean | null;
     copiedFromDataLibraryTemplateId?: string | null;
     dataLayer?: {
       dataSource?: {
         id: number;
         type: DataSourceTypes;
+        isSingleBandRaster?: boolean | null;
       } | null;
     } | null;
   }>;
@@ -902,6 +935,14 @@ export type BuildReportCommandGroupsArgs = {
     item: CommandPaletteItem;
   }) => CommandPaletteItem;
   onProcessLayer?: (tocId: number, sourceId: number) => Promise<boolean>;
+  /**
+   * Time Series insert: preprocess unprocessed yearly siblings, then
+   * call `insert`. Used to block the editor with a progress modal.
+   */
+  onPrepareTimeSeriesLayers?: (args: {
+    unprocessed: Array<{ title: string; sourceId: number }>;
+    insert: () => void;
+  }) => void;
   projectSlug?: string;
   childSketchClassGeometryTypes?: SketchGeometryType[];
   /**
@@ -1185,6 +1226,7 @@ export function buildReportCommandGroups({
   overlayFooterItem,
   overlayAugmenter,
   onProcessLayer,
+  onPrepareTimeSeriesLayers,
   projectSlug,
   isSuperuser,
 }: BuildReportCommandGroupsArgs = {}): CommandPaletteGroup[] {
@@ -1412,6 +1454,29 @@ export function buildReportCommandGroups({
           });
           inlineGroup.items.push({
             // eslint-disable-next-line i18next/no-literal-string
+            id: `overlay-layer-${tocId}-inline-raster-area-captured`,
+            label: "Raster Area Captured",
+            description:
+              "Absolute area of the raster captured by the sketch, in chosen units (e.g. km²).",
+            screenshotSrc: "/slashCommands/overlapping-area.png",
+            run: (state, dispatch, view) => {
+              return insertInlineMetric(view, state.selection.ranges[0], {
+                type: "InlineMetric",
+                metrics: [
+                  {
+                    type: "raster_overlay_area",
+                    subjectType: "fragments",
+                    stableId,
+                  },
+                ],
+                componentSettings: {
+                  presentation: "raster_overlay_area",
+                },
+              });
+            },
+          });
+          inlineGroup.items.push({
+            // eslint-disable-next-line i18next/no-literal-string
             id: `overlay-layer-${tocId}-inline-geography-proportion-captured`,
             label: "Geography Proportion Captured",
             description:
@@ -1567,6 +1632,71 @@ export function buildReportCommandGroups({
               });
             },
           });
+          if (rasterAreaGroupBy === "value") {
+            blockGroup.items.push({
+              // eslint-disable-next-line i18next/no-literal-string
+              id: `overlay-layer-${tocId}-class-composition-chart`,
+              label: "Composition Chart",
+              description:
+                "Pie or waffle chart showing the share of the sketch covered by each class in a categorical raster.",
+              run: (state, dispatch, view) => {
+                return insertBlockMetric(view, state.selection.ranges[0], {
+                  type: "ClassCompositionChart",
+                  metrics: [
+                    {
+                      type: "raster_overlay_area",
+                      subjectType: "fragments",
+                      stableId,
+                      parameters: { groupBy: "value" },
+                    },
+                  ],
+                  componentSettings: {},
+                });
+              },
+            });
+          }
+          if (stableId) {
+            const timeSeriesMode =
+              source.styleGroupByColumn === "value" ? "area" : "stats";
+            blockGroup.items.push({
+              // eslint-disable-next-line i18next/no-literal-string
+              id: `overlay-layer-${tocId}-raster-time-series`,
+              label: "Time Series",
+              description:
+                "Chart raster statistics, area, or sums over time. Same-folder yearly siblings are added when their titles match after dates are stripped. Unprocessed siblings are prepared for reporting first. Add or remove layers in the widget settings.",
+              run: (state, dispatch, view) => {
+                const siblings = findTimeSeriesSiblings({
+                  subject: source,
+                  sources: sources || [],
+                  tocItems: draftTableOfContentsItems || [],
+                });
+                const siblingIds = siblings.map((s) => s.stableId);
+                const range = state.selection.ranges[0];
+                const insert = () =>
+                  insertBlockMetric(view, range, {
+                    type: "RasterTimeSeries",
+                    metrics: buildRasterTimeSeriesDependencies(
+                      [stableId, ...siblingIds],
+                      timeSeriesMode
+                    ),
+                    componentSettings: { mode: timeSeriesMode },
+                  });
+                const unprocessed = siblings.flatMap((s) =>
+                  !s.processed && typeof s.sourceId === "number"
+                    ? [{ title: s.title, sourceId: s.sourceId }]
+                    : []
+                );
+                if (unprocessed.length > 0 && onPrepareTimeSeriesLayers) {
+                  onPrepareTimeSeriesLayers({
+                    unprocessed,
+                    insert,
+                  });
+                  return;
+                }
+                return insert();
+              },
+            });
+          }
           childGroups = [inlineGroup, blockGroup];
         } else if (source.rasterBandCount && source.rasterBandCount > 1) {
           unsupportedMessage =

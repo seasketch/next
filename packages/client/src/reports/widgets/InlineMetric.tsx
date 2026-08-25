@@ -8,7 +8,6 @@ import {
   MetricDependency,
   OverlayAreaMetric,
   OverlayAreaMetricValue,
-  OverlayAreaOverlapCombineResult,
   TotalAreaMetric,
   combineMetricsForFragments,
   getOverlayAreaClassTotals,
@@ -18,6 +17,10 @@ import {
   subjectIsGeography,
   isNumberColumnValueStats,
   RasterStats,
+  RasterOverlayAreaMetric,
+  attachRasterOverlayAreaOverlapScope,
+  getRasterOverlayAreaDisplayedClassValue,
+  getRasterOverlayAreaOverlapCombineResult,
 } from "overlay-engine";
 import { useNumberFormatters } from "../hooks/useNumberFormatters";
 import {
@@ -336,7 +339,8 @@ export type InlineMetricComponentSettings = {
     | "percent_column_total_overlapped"
     | "raster_stats"
     | "geography_raster_stats"
-    | "geography_proportion_captured";
+    | "geography_proportion_captured"
+    | "raster_overlay_area";
   stat?: ColumnValuesStatKey;
   rasterStat?: RasterValuesStatKey;
   hideLabelForCount?: boolean;
@@ -495,6 +499,8 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
         }
         case "geography_proportion_captured":
           return formatters.percent(0);
+        case "raster_overlay_area":
+          return formatters.area(0);
         default:
           // eslint-disable-next-line i18next/no-literal-string
           errors.push(`Unsupported presentation: ${presentation}`);
@@ -816,6 +822,26 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
         }
         return formatters.percent(sketchSum / geographySum);
       }
+      case "raster_overlay_area": {
+        const overlayMetrics = metrics.filter(
+          (m) =>
+            m.type === "raster_overlay_area" && subjectIsFragment(m.subject)
+        );
+        if (overlayMetrics.length === 0) {
+          throw new Error("Raster overlay area not found in metrics.");
+        }
+        let combined = combineMetricsForFragments(
+          overlayMetrics as Pick<Metric, "type" | "value">[],
+          "raster_overlay_area"
+        ) as RasterOverlayAreaMetric;
+        combined = attachRasterOverlayAreaOverlapScope(
+          combined,
+          overlayMetrics
+        ) as RasterOverlayAreaMetric;
+        return formatters.area(
+          getRasterOverlayAreaDisplayedClassValue(combined.value, "*")
+        );
+      }
       default:
         // eslint-disable-next-line i18next/no-literal-string
         errors.push(`Unsupported presentation: ${presentation}`);
@@ -888,20 +914,29 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
     return [componentSettings?.stat || "mean"];
   }, [componentSettings?.presentation, componentSettings?.stat]);
 
-  // Buffered overlay_area residual-uncertainty warning (exact corrections stay silent).
-  // Skip entirely when no buffer — avoids a second combine on the unbuffered path.
+  // Buffered overlay_area / raster_overlay_area residual-uncertainty warning
+  // (exact corrections stay silent). Skip entirely when no buffer — avoids a
+  // second combine on the unbuffered path.
   // @see OverlayAreaOverlapInfo
   const overlayOverlapForWarning = useMemo((): {
-    combine: OverlayAreaOverlapCombineResult;
+    overcountMin: number;
+    overcountMax: number;
+    overcountEstimate?: number;
     total: number;
   } | null => {
     const presentation = componentSettings?.presentation || "total_area";
-    if (loading || errors.length > 0 || presentation !== "overlay_area") {
+    const metricType =
+      presentation === "raster_overlay_area"
+        ? "raster_overlay_area"
+        : presentation === "overlay_area"
+        ? "overlay_area"
+        : null;
+    if (loading || errors.length > 0 || !metricType) {
       return null;
     }
     const isBuffered = (dependencies || []).some(
       (d) =>
-        d.type === "overlay_area" &&
+        d.type === metricType &&
         typeof d.parameters?.bufferDistanceKm === "number" &&
         d.parameters.bufferDistanceKm > 0
     );
@@ -909,12 +944,34 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
       return null;
     }
     const overlayMetrics = metrics.filter(
-      (m) => m.type === "overlay_area" && subjectIsFragment(m.subject)
+      (m) => m.type === metricType && subjectIsFragment(m.subject)
     );
     if (!overlayMetrics.length) {
       return null;
     }
     try {
+      if (metricType === "raster_overlay_area") {
+        let combined = combineMetricsForFragments(
+          overlayMetrics as Pick<Metric, "type" | "value">[],
+          "raster_overlay_area"
+        ) as RasterOverlayAreaMetric;
+        combined = attachRasterOverlayAreaOverlapScope(
+          combined,
+          overlayMetrics
+        ) as RasterOverlayAreaMetric;
+        const combine = getRasterOverlayAreaOverlapCombineResult(
+          combined.value
+        );
+        if (!combine?.perClass?.["*"]) {
+          return null;
+        }
+        return {
+          overcountMin: combine.perClass["*"].overcountMin,
+          overcountMax: combine.perClass["*"].overcountMax,
+          overcountEstimate: combine.perClass["*"].overcountEstimate,
+          total: combine.perClass["*"].naiveSum,
+        };
+      }
       let combined = combineMetricsForFragments(
         overlayMetrics as Pick<Metric, "type" | "value">[],
         "overlay_area"
@@ -930,7 +987,8 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
         return null;
       }
       return {
-        combine,
+        overcountMin: combine.perClass["*"].overcountMin,
+        overcountMax: combine.perClass["*"].overcountMax,
         total: combine.perClass["*"].naiveSum,
       };
     } catch {
@@ -985,12 +1043,9 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
         )}
         {overlayOverlapForWarning && (
           <BufferedOverlapWarning
-            overcountMin={
-              overlayOverlapForWarning.combine.perClass["*"].overcountMin
-            }
-            overcountMax={
-              overlayOverlapForWarning.combine.perClass["*"].overcountMax
-            }
+            overcountMin={overlayOverlapForWarning.overcountMin}
+            overcountMax={overlayOverlapForWarning.overcountMax}
+            overcountEstimate={overlayOverlapForWarning.overcountEstimate}
             total={overlayOverlapForWarning.total}
             formatArea={(sqKm) => formatters.area(sqKm)}
             className="ml-0.5"
@@ -1467,9 +1522,12 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
 
   return (
     <>
-      {["total_area", "overlay_area", "geography_overlay_area"].includes(
-        presentation
-      ) && (
+      {[
+        "total_area",
+        "overlay_area",
+        "geography_overlay_area",
+        "raster_overlay_area",
+      ].includes(presentation) && (
         <UnitSelector
           unitType="area"
           value={unit as AreaUnit}
@@ -1740,7 +1798,9 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
           presentation === "percent_count_total" ||
           presentation === "column_values" ||
           presentation === "percent_column_total_overlapped" ||
-          presentation === "overlay_area") && (
+          presentation === "overlay_area" ||
+          presentation === "raster_overlay_area" ||
+          presentation === "geography_proportion_captured") && (
           <BufferSelector
             distanceKm={bufferSettings.distanceKm}
             bufferGeography={bufferSettings.bufferGeography}
@@ -1772,6 +1832,9 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
               {t("Source has overlapping features")}
             </span>
           </label>
+        )}
+        {presentation === "raster_overlay_area" && (
+          <VrmSelector value={currentVrm} onChange={handleVrmChange} />
         )}
         {presentation === "geography_proportion_captured" && (
           <VrmSelector
@@ -1821,6 +1884,8 @@ function formatPresentationLabel(presentation: string) {
       return "Geography Raster Statistics";
     case "geography_proportion_captured":
       return "Geography Proportion Captured";
+    case "raster_overlay_area":
+      return "Raster Area Captured";
     default:
       return presentation;
   }

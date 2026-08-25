@@ -46,13 +46,13 @@ describe("applyDataTableStatesToLayerStates", () => {
       tocC: { visible: true, loading: false },
     };
     const next = applyDataTableStatesToLayerStates(layers, {
-      tocA: { stableId: "new-a", column: "y", op: "avg" },
+      tocA: { stableId: "new-a", column: "y", op: "mean" },
       tocC: { stableId: "new-c" },
     });
     expect(next.tocA.dataTable).toEqual({
       stableId: "new-a",
       column: "y",
-      op: "avg",
+      op: "mean",
     });
     expect(next.tocB.dataTable).toBeUndefined();
     expect(next.tocC.dataTable).toEqual({ stableId: "new-c" });

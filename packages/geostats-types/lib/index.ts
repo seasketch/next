@@ -1,5 +1,12 @@
 import { GeoJsonGeometryTypes } from "geojson";
 
+export * from "./temporal";
+export {
+  createLayerYearTemporalInfo,
+  expandTemporalValue,
+  isTemporalInfo,
+} from "./temporal";
+
 /**
  * Attribute type as translated to a javacsript type
  */

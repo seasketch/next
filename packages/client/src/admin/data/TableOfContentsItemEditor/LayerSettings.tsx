@@ -29,6 +29,8 @@ import LayerSettingsChangeLogList from "../../changelogs/LayerSettingsChangeLogL
 import { layerSettingsChangeLogRefetchQueries } from "../../changelogs/layerSettingsChangeLogRefetch";
 import NewResolvableComment from "./NewResolvableComment";
 import ResolvableComment from "./ResolvableComment";
+import TemporalCoverageEditor from "./TemporalCoverageEditor";
+import { sourceSupportsTemporalEditor } from "./temporalCoverageForm";
 
 export default function LayerSettings({
   item,
@@ -109,7 +111,7 @@ export default function LayerSettings({
 
   return (
     <div className="flex-1 overflow-y-auto px-4 pb-4">
-      <div className="md:max-w-sm mt-5 relative">
+      <div className="mt-5 relative">
         <MutableAutosaveInput
           // autofocus
           mutation={mutateItem}
@@ -158,10 +160,10 @@ export default function LayerSettings({
           propName="title"
           typeName="TableOfContentsItem"
           defaultValue={item.title}
-          className="p-0.5 absolute -right-9 top-8 -mt-0.5 border rounded hover:shadow-sm"
+          className="p-0.5 absolute right-0 top-0 border rounded hover:shadow-sm"
         />
       </div>
-      <div className="md:max-w-sm mt-5 relative">
+      <div className="mt-5 relative">
         <MutableAutosaveInput
           propName="attribution"
           mutation={mutateSource}
@@ -233,6 +235,12 @@ export default function LayerSettings({
       />
     )} */}
       </div>
+      {source && sourceSupportsTemporalEditor(source.type) && (
+        <TemporalCoverageEditor
+          source={source}
+          changeLogRefetchQueries={changeLogRefetchQueries}
+        />
+      )}
       {item.relatedReportCardDetails &&
         item.relatedReportCardDetails.length > 0 && (
           <>

@@ -10,6 +10,7 @@ type LabeledDropdownProps = {
   options: TooltipDropdownOption[];
   onChange: (value: string) => void;
   title?: ReactNode;
+  titleDescription?: ReactNode;
   ariaLabel?: string;
   getDisplayLabel?: (selected?: TooltipDropdownOption) => ReactNode;
   /** Extra class names for the dropdown panel (e.g. a taller max-height). */
@@ -26,6 +27,7 @@ export function LabeledDropdown({
   options,
   onChange,
   title,
+  titleDescription,
   ariaLabel,
   getDisplayLabel,
   contentClassName,
@@ -38,6 +40,7 @@ export function LabeledDropdown({
       <TooltipDropdown
         value={value}
         title={title}
+        titleDescription={titleDescription}
         options={options}
         onChange={onChange}
         ariaLabel={ariaLabel}

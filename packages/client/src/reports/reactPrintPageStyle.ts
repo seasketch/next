@@ -1,3 +1,10 @@
+/**
+ * Printable content width. Fits A4 (210mm) and US Letter (215.9mm) after
+ * the 12mm `@page` margin. Charts measure this live clone before
+ * react-to-print snapshots the SVG — do not substitute a CSS scale.
+ */
+export const REPORT_PRINT_CONTENT_WIDTH = "186mm";
+
 /** Passed to react-to-print `pageStyle` (CRA/webpack 4 import path see ReportFullPrintBridge). */
 // eslint-disable-next-line i18next/no-literal-string -- CSS for print iframe only
 export const REACT_PRINT_PAGE_STYLE = `
@@ -5,6 +12,8 @@ export const REACT_PRINT_PAGE_STYLE = `
   @media print {
     html,
     body {
+      width: ${REPORT_PRINT_CONTENT_WIDTH} !important;
+      max-width: ${REPORT_PRINT_CONTENT_WIDTH} !important;
       margin: 0 !important;
       padding: 0 !important;
       background: #ffffff !important;
@@ -14,8 +23,8 @@ export const REACT_PRINT_PAGE_STYLE = `
       print-color-adjust: exact !important;
     }
     .report-print-root {
-      width: 100% !important;
-      max-width: none !important;
+      width: ${REPORT_PRINT_CONTENT_WIDTH} !important;
+      max-width: ${REPORT_PRINT_CONTENT_WIDTH} !important;
       background: #ffffff !important;
       color: #000000 !important;
     }

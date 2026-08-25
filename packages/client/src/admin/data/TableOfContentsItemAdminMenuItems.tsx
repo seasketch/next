@@ -14,11 +14,12 @@ import {
   useProjectMetadataQuery,
 } from "../../generated/graphql";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
-import { useContext, useState } from "react";
+import { useContext } from "react";
 import { LayerEditingContext } from "./LayerEditingContext";
 import getSlug from "../../getSlug";
 import { ProjectBackgroundJobContext } from "../uploads/ProjectBackgroundJobContext";
 import { TreeItem } from "../../components/TreeView";
+import { useLayerStyleClipboardMenu } from "./useLayerStyleClipboardMenu";
 
 export default function TableOfContentsItemAdminMenuItems({
   type,
@@ -51,6 +52,8 @@ export default function TableOfContentsItemAdminMenuItems({
   const backgroundJobContext = useContext(ProjectBackgroundJobContext);
 
   const item = items[0];
+  const { showStyleClipboard, canPaste, copyStyle, pasteStyle } =
+    useLayerStyleClipboardMenu(item);
 
   return (
     <>
@@ -121,6 +124,29 @@ export default function TableOfContentsItemAdminMenuItems({
             className={MenuBarItemClasses}
           >
             {t("Host on SeaSketch...")}
+          </MenuType.Item>
+        </>
+      )}
+      {showStyleClipboard && (
+        <>
+          <MenuType.Item
+            style={{ minWidth: 120 }}
+            className={MenuBarItemClasses}
+            onSelect={() => {
+              void copyStyle();
+            }}
+          >
+            <Trans ns="admin:data">Copy style</Trans>
+          </MenuType.Item>
+          <MenuType.Item
+            style={{ minWidth: 120 }}
+            className={MenuBarItemClasses}
+            disabled={!canPaste}
+            onSelect={() => {
+              void pasteStyle();
+            }}
+          >
+            <Trans ns="admin:data">Paste style</Trans>
           </MenuType.Item>
         </>
       )}

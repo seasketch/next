@@ -2,7 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { MetricDependency } from "overlay-engine";
 import { LabeledDropdown } from "./LabeledDropdown";
-import { TooltipDropdownOption } from "../../editor/TooltipMenu";
+import {
+  TooltipDropdownOption,
+  TooltipInfoIcon,
+} from "../../editor/TooltipMenu";
 
 export type BufferSettings = {
   /** Buffer distance in kilometers. `undefined` means buffering is off. */
@@ -229,7 +232,31 @@ export function BufferSelector({
       label={t("Buffer")}
       value={dropdownValue}
       ariaLabel={t("Buffer")}
-      title={t("Buffer")}
+      title={
+        <div className="flex items-center space-x-2">
+          <span>{t("Buffer")}</span>
+          <TooltipInfoIcon
+            side="right"
+            content={
+              <div className="space-y-1.5">
+                <p>
+                  {t(
+                    "Expand the sketch outward by a distance before calculating metrics, so the analysis includes nearby area around the drawn shape. Choose None to use the sketch as drawn."
+                  )}
+                </p>
+                {showBufferGeography && (
+                  <p>
+                    {t(
+                      "When buffer geography is checked, the comparison geography is expanded by the same distance so percentages stay consistent."
+                    )}
+                  </p>
+                )}
+              </div>
+            }
+            className="-mr-1"
+          />
+        </div>
+      }
       options={options}
       getDisplayLabel={(selected) => {
         if (!selected || selected.value === NONE_VALUE) {

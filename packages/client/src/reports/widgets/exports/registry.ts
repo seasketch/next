@@ -13,6 +13,8 @@ import { exportRasterValuesHistogram } from "./exporters/rasterValuesHistogram.e
 import { exportIntersectingFeaturesList } from "./exporters/intersectingFeaturesList.export";
 import { exportColumnSumTable } from "./exporters/columnSumTable.export";
 import { exportRasterAreaCapturedTable } from "./exporters/rasterAreaCapturedTable.export";
+import { exportClassCompositionChart } from "./exporters/classCompositionChart.export";
+import { exportRasterTimeSeries } from "./exporters/rasterTimeSeries.export";
 import { exportOusDemographicsTable } from "./exporters/ousDemographicsTable.export";
 
 const REGISTRY: Record<string, WidgetExporter> = {
@@ -22,6 +24,8 @@ const REGISTRY: Record<string, WidgetExporter> = {
   FeaturePresenceTable: exportFeaturePresenceTable,
   RasterProportionTable: exportRasterProportionTable,
   RasterAreaCapturedTable: exportRasterAreaCapturedTable,
+  ClassCompositionChart: exportClassCompositionChart,
+  RasterTimeSeries: exportRasterTimeSeries,
   ColumnStatisticsTable: exportColumnStatisticsTable,
   ColumnValuesHistogram: exportColumnValuesHistogram,
   ColumnSumTable: exportColumnSumTable,

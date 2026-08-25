@@ -96,17 +96,14 @@ function buildCategoricalRasterLayer(geostats, aiDataAnalystNotes) {
         throw new Error("Geostats must be a raster info");
     }
     let colors = [];
-    let colorScaleName;
-    let paletteReverse;
+    let colorScale;
     if (geostats.bands[0].colorTable) {
         colors = geostats.bands[0].colorTable;
     }
     else if (geostats.bands[0].stats.categories) {
         const categories = geostats.bands[0].stats.categories;
-        const colorScale = (0, colorScales_1.getColorScale)("categorical", (aiDataAnalystNotes === null || aiDataAnalystNotes === void 0 ? void 0 : aiDataAnalystNotes.palette) || "schemeTableau10", aiDataAnalystNotes === null || aiDataAnalystNotes === void 0 ? void 0 : aiDataAnalystNotes.custom_palette);
-        colorScaleName = colorScale.name;
+        colorScale = (0, colorScales_1.getColorScale)("categorical", (aiDataAnalystNotes === null || aiDataAnalystNotes === void 0 ? void 0 : aiDataAnalystNotes.palette) || "schemeTableau10", aiDataAnalystNotes === null || aiDataAnalystNotes === void 0 ? void 0 : aiDataAnalystNotes.custom_palette);
         const reversePalette = (0, ai_data_analyst_1.effectiveReverseNamedPalette)(aiDataAnalystNotes);
-        paletteReverse = reversePalette;
         if (reversePalette) {
             categories.reverse();
         }
@@ -134,10 +131,12 @@ function buildCategoricalRasterLayer(geostats, aiDataAnalystNotes) {
         layout: {
             visibility: "visible",
         },
-        metadata: Object.assign(Object.assign({}, (colorScaleName ? { "s:palette": colorScaleName } : {})), { "s:type": "Categorical Raster" }),
+        metadata: {
+            "s:type": "Categorical Raster",
+        },
     };
-    if (colorScaleName && colorScaleName !== "customPalette") {
-        layer.metadata["s:palette"] = colorScaleName;
+    if (colorScale) {
+        (0, colorScales_1.setPaletteMetadata)(layer, colorScale);
     }
     return [layer];
 }

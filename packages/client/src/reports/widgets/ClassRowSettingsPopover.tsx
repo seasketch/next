@@ -217,10 +217,12 @@ export const ClassRowSettingsPopover = ({
           geographyParameters.sourceHasOverlappingFeatures = true;
         }
         // Mirror slash-command defaults: categorical rasters start grouped.
+        // Composition-style widgets hide the group-by control because they
+        // always break down by pixel class.
         if (
           metricType === "raster_overlay_area" &&
           source &&
-          defaultRasterOverlayAreaGroupBy(source)
+          (hideGroupBy || defaultRasterOverlayAreaGroupBy(source))
         ) {
           fragmentParameters.groupBy = "value";
           geographyParameters.groupBy = "value";
@@ -889,10 +891,14 @@ export const ClassRowSettingsPopover = ({
                     const customLabel =
                       settings.customRowLabels?.[row.key] || "";
                     const stableId = row.sourceId ? row.sourceId : undefined;
+                    // `row.label` is already the style / geostats default
+                    // (customLabels are omitted from this getClassTableRows
+                    // call so the input placeholder stays the original).
                     const defaultLabel =
-                      row.groupByKey === "*" ? group.title : row.groupByKey;
-                    const chipLabel =
-                      row.groupByKey === "*" ? group.title : row.groupByKey;
+                      row.groupByKey === "*"
+                        ? group.title
+                        : row.label || row.groupByKey;
+                    const chipLabel = defaultLabel;
                     return (
                       <div
                         key={row.key}

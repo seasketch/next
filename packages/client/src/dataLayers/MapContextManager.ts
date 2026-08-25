@@ -80,7 +80,7 @@ import {
   fetchDataTableColumnStats,
   getCachedDataTableColumnStats,
 } from "./useDataTableColumnStats";
-import { DataTablesColumnStats } from "@seasketch/geostats-types";
+import { DataTablesColumnStats, isTemporalInfo } from "@seasketch/geostats-types";
 import { LegendItem } from "./Legend";
 import { EventEmitter } from "eventemitter3";
 import cloneDeep from "lodash.clonedeep";
@@ -111,6 +111,11 @@ import {
   DataTableQueryManager,
   ResolvedDataTableVisualizationSettings,
 } from "./DataTableQueryManager";
+import {
+  applyClockPaintHidden,
+  canKeepTilesWhenClockHidden,
+  snapClockOpacityTransitions,
+} from "./mapTemporalStyle";
 
 export type {
   LayerDataTableState,
@@ -342,6 +347,11 @@ class MapContextManager extends EventEmitter {
   private dataTableQueryManager: DataTableQueryManager;
   /** tocStableIds with LayerState.dataTable intent — keeps sync O(active). */
   private dataTableActiveTocIds = new Set<string>();
+  /**
+   * Overlay TOC stableIds hidden by the map clock. Independent of
+   * LayerState.hidden (legend eye) and LayerState.visible (TOC checkbox).
+   */
+  private temporallyHiddenTocIds = new Set<string>();
   /** Dedupes stacked `idle` listeners for data-table feature-state sync. */
   private dataTableFeatureStateSyncIdleQueued = false;
 
@@ -548,7 +558,8 @@ class MapContextManager extends EventEmitter {
       if (
         !overlayState?.dataTable?.stableId ||
         !overlayState.visible ||
-        overlayState.hidden
+        overlayState.hidden ||
+        this.temporallyHiddenTocIds.has(tocStableId)
       ) {
         continue;
       }
@@ -2506,7 +2517,8 @@ class MapContextManager extends EventEmitter {
                         const layers = isUnderLabels ? underLabels : overLabels;
                         if (
                           !this.overlayStates.getRaw(layerId)?.hidden ||
-                          source.type === DataSourceTypes.ArcgisDynamicMapserver
+                          source.type ===
+                            DataSourceTypes.ArcgisDynamicMapserver
                         ) {
                           let layersToAdd = styleData.layers;
                           const _overlayState =
@@ -2630,20 +2642,40 @@ class MapContextManager extends EventEmitter {
                   );
                 }
                 const layers = isUnderLabels ? underLabels : overLabels;
-                if (!_staticOverlay?.hidden) {
+                if (!this.isLegendEyeHidden(layerId)) {
                   if (
                     layer.interactivitySettings?.type ===
                     InteractivityType.SidebarOverlay
                   ) {
                     glLayers = addInteractivityExpressions(glLayers);
                   }
+                  if (this.temporallyHiddenTocIds.has(layerId)) {
+                    glLayers = applyClockPaintHidden(
+                      glLayers
+                    ) as AnyLayer[];
+                  } else if (
+                    canKeepTilesWhenClockHidden(source.type) &&
+                    isTemporalInfo(source.temporal)
+                  ) {
+                    glLayers = snapClockOpacityTransitions(
+                      glLayers
+                    ) as AnyLayer[];
+                  }
                   layers.push(...glLayers);
                 }
               } else if (source.type === DataSourceTypes.Inaturalist) {
                 const inatLayers = inaturalistGeneratedLayers[layerId];
-                if (inatLayers && !this.overlayStates.getRaw(layerId)?.hidden) {
+                if (inatLayers && !this.isLegendEyeHidden(layerId)) {
                   const targetLayers = isUnderLabels ? underLabels : overLabels;
-                  targetLayers.push(...inatLayers);
+                  targetLayers.push(
+                    ...(this.temporallyHiddenTocIds.has(layerId)
+                      ? (applyClockPaintHidden(inatLayers) as AnyLayer[])
+                      : isTemporalInfo(source.temporal)
+                      ? (snapClockOpacityTransitions(
+                          inatLayers
+                        ) as AnyLayer[])
+                      : inatLayers)
+                  );
                 }
               } else if (
                 isCustomSourceType(source.type) &&
@@ -2666,7 +2698,7 @@ class MapContextManager extends EventEmitter {
                   this.archivedSource.sublayer
                     ? this.archivedSource.sublayer
                     : layer.sublayer;
-                if (!settings?.hidden) {
+                if (!this.isLegendEyeHidden(layerId)) {
                   this.customSources[source.id].sublayers!.unshift({
                     id: sublayer!,
                     opacity:
@@ -3077,6 +3109,29 @@ class MapContextManager extends EventEmitter {
       this.hideTocItem(id);
     }
     this.debouncedUpdateStyle();
+  }
+
+  /**
+   * Replace the set of TOC items hidden by the map clock. Does not change
+   * TOC checkboxes or legend-eye state. Pass [] to clear the filter.
+   */
+  setTemporallyFilteredTocItems(stableIds: string[]) {
+    if (
+      this.temporallyHiddenTocIds.size === stableIds.length &&
+      stableIds.every((id) => this.temporallyHiddenTocIds.has(id))
+    ) {
+      return;
+    }
+    this.temporallyHiddenTocIds = new Set(stableIds);
+    // Range inputs can emit far faster than a whole-style update can finish.
+    // Preserve the declarative style path, but wait briefly for dragging to
+    // settle. Playback ticks are much farther apart than this delay.
+    this.debouncedUpdateStyle(50);
+  }
+
+  /** Legend-eye hide — omit the layer from the computed style. */
+  private isLegendEyeHidden(layerId: string): boolean {
+    return Boolean(this.overlayStates.getRaw(layerId)?.hidden);
   }
 
   showTocItems(stableIds: string[]) {
@@ -4248,6 +4303,11 @@ class MapContextManager extends EventEmitter {
       throw new Error("Opacity should be between 0 and 1");
     }
     this.overlayStates.setOpacity(stableId, opacity);
+    // Clock-hidden layers stay at paint 0 so the TOC slider cannot unhide them.
+    // Stored LayerState.opacity is still updated for the next matching year.
+    if (this.temporallyHiddenTocIds.has(stableId)) {
+      return;
+    }
     const layer = this.layers[stableId];
     if (!layer || !this.map) {
       this.debouncedUpdateStyle();

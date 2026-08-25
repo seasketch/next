@@ -1,4 +1,4 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useContext, useMemo } from "react";
 import MapContextManager, {
   LayerTreeContextState,
   LegendsContextState,
@@ -6,6 +6,7 @@ import MapContextManager, {
   SketchClassLayerState,
 } from "./MapContextManager";
 import { LegendItem } from "./Legend";
+import { MapClockHiddenTocIdsContext } from "./MapTemporalStateContext";
 
 /**
  * Provides handlers for the Legend state. This is used by the TOC component.
@@ -37,6 +38,8 @@ export default function useCommonLegendProps(
     },
     [manager]
   );
+
+  const clockHiddenItems = useContext(MapClockHiddenTocIdsContext);
 
   const hiddenItems = useMemo(() => {
     const hiddenItems: string[] = [];
@@ -81,6 +84,7 @@ export default function useCommonLegendProps(
   return {
     onHiddenItemsChange,
     hiddenItems,
+    clockHiddenItems,
     items,
   };
 }

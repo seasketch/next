@@ -128,6 +128,7 @@ query layersAndSourcesForItems(
       rasterRepresentativeColors
       rasterOffset
       rasterScale
+      temporal
     }
     dataLayersForItems(tableOfContentsItemIds: $tableOfContentsItemIds) {
       interactivitySettings {
@@ -302,6 +303,7 @@ fragment FullAdminSource on DataSource {
   uploadedSourceFilename
   uploadedBy
   geostats
+  temporal
   translatedProps
   arcgisFetchStrategy
   dataLibraryMetadata
@@ -446,7 +448,9 @@ query LayerSettingsChangeLog($id: Int!, $first: Int!) {
     }
     copiedFromDataLibraryTemplateId
     dataLayer {
+      id
       dataSource {
+        id
         dataLibraryTemplateId
         createdAt
         authorProfile {
@@ -710,6 +714,13 @@ mutation UpdateDataSource($id: Int!, $attribution: String) {
       supportsDynamicLayers
       translatedProps
     }
+  }
+}
+
+mutation UpdateDataSourceTemporal($dataSourceId: Int!, $temporal: TemporalInfo) {
+  updateDataSourceTemporal(dataSourceId: $dataSourceId, temporal: $temporal) {
+    id
+    temporal
   }
 }
 

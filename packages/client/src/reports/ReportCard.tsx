@@ -48,7 +48,10 @@ import { ReportCardTitleToolbarContext } from "./widgets/ReportCardTitleToolbar"
 import { exportReportCard } from "./widgets/exports";
 import { download } from "../download";
 import { collectReportCardTitle } from "../admin/sketchClasses/SketchClassReportsAdmin";
-import { REACT_PRINT_PAGE_STYLE } from "./reactPrintPageStyle";
+import {
+  REACT_PRINT_PAGE_STYLE,
+  REPORT_PRINT_CONTENT_WIDTH,
+} from "./reactPrintPageStyle";
 require("../formElements/prosemirror-body.css");
 
 const EMPTY_OVERLAY_SOURCE_URLS: { [stableId: string]: string } = {};
@@ -170,6 +173,8 @@ export const InnerReportCard = memo(function InnerReportCard({
 
   const footerContainerRef = useRef<HTMLDivElement>(null);
 
+  const [hmrBoundaryResetKey, setHmrBoundaryResetKey] = useState(0);
+  const hmrBoundaryRetriesRef = useRef(0);
   const errorBoundaryFallback = useCallback(
     (props: any) => {
       return (
@@ -181,6 +186,24 @@ export const InnerReportCard = memo(function InnerReportCard({
     },
     [t]
   );
+  const handleReportBodyError = useCallback((error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    // CRA Fast Refresh can throw a one-frame TDZ error while the widgets
+    // circular import graph is mid-evaluation. Retry once after that stack
+    // clears so the card does not stay stuck on the fallback.
+    if (
+      hmrBoundaryRetriesRef.current < 2 &&
+      /before initialization/i.test(message)
+    ) {
+      hmrBoundaryRetriesRef.current += 1;
+      window.setTimeout(() => {
+        setHmrBoundaryResetKey((key) => key + 1);
+        window.setTimeout(() => {
+          hmrBoundaryRetriesRef.current = 0;
+        }, 1000);
+      }, 0);
+    }
+  }, []);
 
   const content = (
     <div
@@ -198,7 +221,11 @@ export const InnerReportCard = memo(function InnerReportCard({
     >
       <div className="">
         <div className={`px-4 pb-4 text-sm ${loading ? "loading" : ""}`}>
-          <ErrorBoundary fallback={errorBoundaryFallback}>
+          <ErrorBoundary
+            key={hmrBoundaryResetKey}
+            fallback={errorBoundaryFallback}
+            onError={handleReportBodyError}
+          >
             {adminMode && isSelectedForEditing ? (
               <ReportCardBodyEditor
                 body={config.body}
@@ -554,7 +581,14 @@ export default function ReportCard(
             className="pointer-events-none absolute left-0 top-0 z-[-1] box-border w-full bg-white text-black"
           >
             <ReportUIStateContext.Provider value={reportUiForCardPrintSubtree}>
-              <div ref={cardPrintSurfaceRef} className="w-full bg-white">
+              <div
+                ref={cardPrintSurfaceRef}
+                className="report-print-root bg-white"
+                style={{
+                  width: REPORT_PRINT_CONTENT_WIDTH,
+                  maxWidth: REPORT_PRINT_CONTENT_WIDTH,
+                }}
+              >
                 <InnerReportCard
                   {...props}
                   config={configForRender}

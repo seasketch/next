@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Global Mangrove Watch</title>
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.css" rel="stylesheet" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div id="map"></div>
+    <div id="hover"></div>
+    <div class="topbar">
+      <div>
+        <h1>Global Mangrove Watch v4.1.2</h1>
+        <p id="source-label">Loading…</p>
+      </div>
+      <label style="font-size: 13px; color: var(--muted)">
+        Source
+        <select id="source" style="margin-left: 8px">
+          <option value="local">Local archive</option>
+          <option value="remote">tiles.seasketch.org</option>
+        </select>
+      </label>
+      <label style="font-size: 13px; color: var(--muted)">
+        Jump
+        <select id="place" style="margin-left: 8px">
+          <option value="20,5,2">Globe</option>
+          <option value="-81.3,25.4,9">Florida Bay</option>
+          <option value="89.2,22.2,9">Sundarbans</option>
+          <option value="6.3,4.5,8">Niger Delta</option>
+          <option value="-48.5,-1.0,8">Amazon mouth</option>
+          <option value="117.3,-0.6,8">Mahakam Delta</option>
+          <option value="177.96,-17.40,12">Fiji</option>
+          <option value="145.8,-17.0,8">Queensland</option>
+        </select>
+      </label>
+    </div>
+    <div class="legend">
+      <div>Presence</div>
+      <div class="swatch"><i style="background:#3dd68c"></i> mangrove</div>
+      <div class="swatch"><i style="background:#000"></i> nodata / water</div>
+      <div class="meta" id="stats">Loading local archive…</div>
+    </div>
+    <div class="slider">
+      <div class="slider-row">
+        <button class="icon" id="play" type="button">▶</button>
+        <div class="year" id="year">—</div>
+        <input id="band" type="range" min="0" max="1" value="0" />
+      </div>
+      <div class="ticks" id="ticks"></div>
+      <div class="meta">Playback only changes <code>raster-array-band</code>.</div>
+    </div>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.4.0/mapbox-gl.js"></script>
+    <script src="/config.js"></script>
+    <script type="module">
+      import {
+        createMap,
+        loadTileset,
+        mangrovePaint,
+        bindSlider,
+        addRasterArrayLayer,
+        showError,
+      } from "./app.js";
+
+      const params = new URLSearchParams(location.search);
+      const initialSource = params.get("src") === "remote" ? "remote" : "local";
+      document.getElementById("source").value = initialSource;
+
+      try {
+        const map = await createMap([20, 5], 2);
+        let layer = null;
+
+        async function show(source) {
+          const tj = await loadTileset(source);
+          layer = tj.raster_layers[0];
+          const bands = layer.fields.bands;
+          await addRasterArrayLayer(map, {
+            sourceId: "raster-src",
+            layerId: "raster-layer",
+            tilejson: tj,
+            paint: mangrovePaint(bands[bands.length - 1]),
+          });
+          bindSlider({
+            bands,
+            onBand: (band) => {
+              if (map.getLayer("raster-layer")) {
+                map.setPaintProperty("raster-layer", "raster-array-band", band);
+              }
+            },
+          });
+          document.getElementById("source-label").textContent =
+            source === "remote"
+              ? "https://tiles.seasketch.org/dataLibrary/gmw-global"
+              : "Local gmw-global.pmtiles";
+          const el = document.getElementById("stats");
+          const parts = [`${bands.length} years`, `z${tj.minzoom}–${tj.maxzoom}`];
+          if (source === "local" && typeof tj._bytes === "number" && tj._bytes > 0) {
+            parts.push(`${(tj._bytes / 1e9).toFixed(2)} GB`);
+          }
+          el.textContent = parts.join(" · ");
+        }
+
+        await show(initialSource);
+
+        document.getElementById("source").addEventListener("change", async (e) => {
+          const source = e.target.value;
+          const url = new URL(location.href);
+          url.searchParams.set("src", source);
+          history.replaceState(null, "", url);
+          try {
+            await show(source);
+          } catch (err) {
+            showError(err);
+          }
+        });
+
+        document.getElementById("place").addEventListener("change", (e) => {
+          const [lon, lat, zoom] = e.target.value.split(",").map(Number);
+          map.jumpTo({ center: [lon, lat], zoom });
+        });
+
+        map.on("mousemove", async (e) => {
+          const hover = document.getElementById("hover");
+          if (!layer) return;
+          try {
+            const band = map.getPaintProperty("raster-layer", "raster-array-band");
+            const result = await map.queryRasterValue("raster-src", e.lngLat, {
+              layerName: layer.id,
+              bands: [band],
+            });
+            const value = result?.[layer.id]?.[band]?.[0];
+            if (value == null) {
+              hover.style.display = "none";
+              return;
+            }
+            hover.style.display = "block";
+            hover.style.left = e.point.x + "px";
+            hover.style.top = e.point.y + "px";
+            hover.textContent = `${band}: ${value}`;
+          } catch {
+            hover.style.display = "none";
+          }
+        });
+      } catch (err) {
+        showError(err);
+      }
+    </script>
+  </body>
+</html>
