@@ -1639,6 +1639,7 @@ export function buildReportCommandGroups({
               label: "Composition Chart",
               description:
                 "Pie or waffle chart showing the share of the sketch covered by each class in a categorical raster.",
+              screenshotSrc: "/slashCommands/class-composition-chart.png",
               run: (state, dispatch, view) => {
                 return insertBlockMetric(view, state.selection.ranges[0], {
                   type: "ClassCompositionChart",
@@ -1663,6 +1664,7 @@ export function buildReportCommandGroups({
               id: `overlay-layer-${tocId}-raster-time-series`,
               label: "Time Series",
               description: "Chart raster statistics, area, or sums over time.",
+              screenshotSrc: "/slashCommands/raster-time-series.png",
               run: (state, dispatch, view) => {
                 const siblings = findTimeSeriesSiblings({
                   subject: source,
