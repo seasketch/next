@@ -28,4 +28,20 @@ describe("numberColumnStatOrZero", () => {
       )
     ).toBe(40);
   });
+
+  it("returns countDistinct for a string column, not zero", () => {
+    expect(
+      numberColumnStatOrZero(
+        {
+          Island: {
+            type: "string",
+            countDistinct: 1,
+            distinctValues: [["Santo", 2]],
+          },
+        },
+        "Island",
+        "countDistinct"
+      )
+    ).toBe(1);
+  });
 });

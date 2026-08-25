@@ -10,8 +10,10 @@ export type InlineColumnStat =
   | "countDistinct";
 
 /**
- * Numeric column-stat used by inline metrics. Missing or non-numeric cells
- * are treated as zero so empty overlaps read as 0, not NaN.
+ * Column-stat used by inline metrics. Missing cells and inapplicable stats
+ * (e.g. mean on a string column) are treated as zero so empty overlaps read
+ * as 0, not NaN. countDistinct is valid on number, string, and boolean
+ * columns.
  */
 export function numberColumnStatOrZero(
   values: ValuesForColumns | undefined,
@@ -19,14 +21,20 @@ export function numberColumnStatOrZero(
   stat: InlineColumnStat
 ): number {
   const cell = values?.[column];
-  if (!cell || !isNumberColumnValueStats(cell)) {
+  if (!cell) {
+    return 0;
+  }
+  if (stat === "countDistinct") {
+    return typeof cell.countDistinct === "number" &&
+      Number.isFinite(cell.countDistinct)
+      ? cell.countDistinct
+      : 0;
+  }
+  if (!isNumberColumnValueStats(cell)) {
     return 0;
   }
   if (stat === "count") {
     return cell.count;
-  }
-  if (stat === "countDistinct") {
-    return cell.countDistinct;
   }
   const n = cell[stat];
   return typeof n === "number" && Number.isFinite(n) ? n : 0;
