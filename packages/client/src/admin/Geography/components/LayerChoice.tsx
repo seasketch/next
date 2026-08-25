@@ -4,8 +4,9 @@ import Button from "../../../components/Button";
 import {
   DataSourceTypes,
   DataUploadOutputType,
-  OverlayForGeographyFragment,
+  OverlayForGeographyListFragment,
   useOverlaysForGeographyQuery,
+  useOverlayForGeographyDetailsQuery,
   AuthorProfileFragment,
 } from "../../../generated/graphql";
 import getSlug from "../../../getSlug";
@@ -34,7 +35,7 @@ interface Group {
 }
 
 interface LayerChoiceGroup extends Group {
-  data: OverlayForGeographyFragment;
+  data: OverlayForGeographyListFragment;
 }
 
 interface LayerChoiceProps {
@@ -174,41 +175,33 @@ export default function LayerChoice({
   const addedSourcesRef = useRef<Set<string>>(new Set());
 
   const validChoices = useMemo(() => {
-    if (!data?.projectBySlug?.draftTableOfContentsItems) {
+    const items = data?.projectBySlug?.polygonOverlaysForGeography;
+    if (!items) {
       return [];
-    } else {
-      const excludeIds = excludeDataLayerIds || [];
-      const choices = data.projectBySlug.draftTableOfContentsItems
-        .filter(
-          (item: OverlayForGeographyFragment) =>
-            (item.dataLayer?.vectorGeometryType?.toUpperCase() === "POLYGON" ||
-              item.dataLayer?.vectorGeometryType?.toUpperCase() ===
-                "MULTIPOLYGON") &&
-            Boolean(item.dataLayer?.dataSource?.geostats)
-        )
-        .filter((item: OverlayForGeographyFragment) =>
-          Boolean(
-            (item.dataLayer?.dataSource?.outputs || []).some(
-              (output) => output.type === DataUploadOutputType.FlatGeobuf
-            )
-          )
-        )
-        .sort(
-          (a: OverlayForGeographyFragment, b: OverlayForGeographyFragment) =>
-            a.dataLayer?.dataSource?.createdAt >
-            b.dataLayer?.dataSource?.createdAt
-              ? -1
-              : 1
-        )
-        .map((item: OverlayForGeographyFragment) => ({
-          value: item.id,
-          label: item.title + " (" + item.dataLayer?.vectorGeometryType + ")",
-          data: item,
-          disabled: excludeIds.includes(item.dataLayer?.id ?? -1),
-        }));
-      return choices;
     }
-  }, [data?.projectBySlug?.draftTableOfContentsItems, excludeDataLayerIds]);
+    const excludeIds = excludeDataLayerIds || [];
+    return items.map((item: OverlayForGeographyListFragment) => ({
+      value: item.id,
+      label:
+        item.title +
+        " (" +
+        (item.dataLayer?.dataSource?.vectorGeometryType || "") +
+        ")",
+      data: item,
+      disabled: excludeIds.includes(item.dataLayer?.id ?? -1),
+    }));
+  }, [data?.projectBySlug?.polygonOverlaysForGeography, excludeDataLayerIds]);
+
+  const selectedTocId = selectedLayer?.value;
+  const { data: detailsData, loading: detailsLoading } =
+    useOverlayForGeographyDetailsQuery({
+      variables: { id: selectedTocId! },
+      skip: selectedTocId == null,
+      onError,
+    });
+  const detailsItem = detailsData?.tableOfContentsItem;
+  const selectedDetails =
+    detailsItem && detailsItem.id === selectedTocId ? detailsItem : undefined;
 
   // Cleanup function to remove all added layers and sources
   const cleanupLayersAndSources = useCallback(() => {
@@ -238,42 +231,43 @@ export default function LayerChoice({
     // Clean up any existing layers and sources
     cleanupLayersAndSources();
 
-    if (!selectedLayer?.data.dataLayer) return;
+    if (!selectedDetails?.dataLayer) return;
 
-    map.fitBounds(selectedLayer.data.bounds! as LngLatBoundsLike, {
-      animate: true,
-      // maxDuration: 500,
-      speed: 3,
-    });
+    if (selectedDetails.bounds) {
+      map.fitBounds(selectedDetails.bounds as LngLatBoundsLike, {
+        animate: true,
+        // maxDuration: 500,
+        speed: 3,
+      });
+    }
 
-    const sourceId = `${SOURCE_PREFIX}-${selectedLayer.value}`;
-    const layerId = `${LAYER_PREFIX}-${selectedLayer.value}`;
+    const sourceId = `${SOURCE_PREFIX}-${selectedDetails.id}`;
+    const layerId = `${LAYER_PREFIX}-${selectedDetails.id}`;
 
     // Add the new source
     const source: AnySourceData =
-      selectedLayer.data.dataLayer.dataSource?.type ===
-        DataSourceTypes.Geojson ||
-      selectedLayer.data.dataLayer.dataSource?.type ===
+      selectedDetails.dataLayer.dataSource?.type === DataSourceTypes.Geojson ||
+      selectedDetails.dataLayer.dataSource?.type ===
         DataSourceTypes.SeasketchVector
         ? {
             type: "geojson",
-            data: selectedLayer.data.dataLayer.dataSource?.url || "",
+            data: selectedDetails.dataLayer.dataSource?.url || "",
           }
         : {
             type: "vector",
-            url: selectedLayer.data.dataLayer.dataSource!.url! + ".json",
+            url: selectedDetails.dataLayer.dataSource!.url! + ".json",
           };
     map.addSource(sourceId, source);
     addedSourcesRef.current.add(sourceId);
 
     // Add each style layer from the mapboxGlStyles array
-    const styleLayers = selectedLayer.data.dataLayer.mapboxGlStyles || [];
+    const styleLayers = selectedDetails.dataLayer.mapboxGlStyles || [];
     styleLayers.forEach((styleLayer: any, index: number) => {
       const layerStyle = {
         ...styleLayer,
         id: `${layerId}-${index}`,
         source: sourceId,
-        "source-layer": selectedLayer.data.dataLayer?.sourceLayer || "",
+        "source-layer": selectedDetails.dataLayer?.sourceLayer || "",
       };
       map.addLayer(layerStyle as AnyLayer);
       addedLayersRef.current.add(`${layerId}-${index}`);
@@ -283,7 +277,7 @@ export default function LayerChoice({
     return () => {
       cleanupLayersAndSources();
     };
-  }, [cleanupLayersAndSources, map, selectedLayer]);
+  }, [cleanupLayersAndSources, map, selectedDetails]);
 
   // Dedicated cleanup effect for component unmounting
   useEffect(() => {
@@ -302,17 +296,9 @@ export default function LayerChoice({
     const fullLayer = validChoices.find(
       (choice) => choice.value === value.value
     );
-    const geostats: GeostatsLayer =
-      fullLayer?.data.dataLayer?.dataSource?.geostats?.layers[0];
 
     setSelectedLayer(fullLayer);
-
-    // Automatically choose the best attribute for labeling
-    const bestAttribute = chooseBestLabelAttribute(
-      geostats,
-      fullLayer?.data.dataLayer?.mapboxGlStyles
-    );
-    setSelectedAttribute(bestAttribute);
+    setSelectedAttribute(undefined);
 
     // Check if the selected layer is disabled (i.e., its dataLayerId is in excludeDataLayerIds)
     if (
@@ -330,23 +316,30 @@ export default function LayerChoice({
     }
   };
 
-  const geostatsLayer: GeostatsLayer =
-    selectedLayer?.data.dataLayer?.dataSource?.geostats?.layers[0];
+  const geostatsLayer: GeostatsLayer | undefined =
+    selectedDetails?.dataLayer?.dataSource?.geostats?.layers?.[0];
+  const styleLayers = selectedDetails?.dataLayer?.mapboxGlStyles;
 
-  const size = (selectedLayer?.data.dataLayer?.dataSource?.outputs || []).find(
+  useEffect(() => {
+    if (!geostatsLayer) {
+      return;
+    }
+    setSelectedAttribute(chooseBestLabelAttribute(geostatsLayer, styleLayers));
+  }, [geostatsLayer, styleLayers]);
+
+  const size = (selectedDetails?.dataLayer?.dataSource?.outputs || []).find(
     (output) => output.type === DataUploadOutputType.FlatGeobuf
   )?.size;
 
-  const featureCount = geostatsLayer?.count;
+  const featureCount =
+    selectedLayer?.data.dataLayer?.dataSource?.featureCount ??
+    geostatsLayer?.count;
   const bytesPerFeature = size && featureCount ? size / featureCount : 0;
   const isLargeLayer = bytesPerFeature > 3 * 1024 * 1024; // 3MB in bytes
 
   const getAttributeOptions = useMemo(() => {
     if (!geostatsLayer?.attributes) return [];
-    const scoredAttributes = scoreAttributes(
-      geostatsLayer,
-      selectedLayer?.data.dataLayer?.mapboxGlStyles
-    );
+    const scoredAttributes = scoreAttributes(geostatsLayer, styleLayers);
     return scoredAttributes.map(({ attribute, hasUniqueValues }) => {
       const attr = geostatsLayer.attributes.find(
         (a) => a.attribute === attribute
@@ -358,16 +351,13 @@ export default function LayerChoice({
         disabled: !hasUniqueValues,
       };
     });
-  }, [geostatsLayer, selectedLayer?.data.dataLayer?.mapboxGlStyles]);
+  }, [geostatsLayer, styleLayers]);
 
   const hasSuitableAttributes = useMemo(() => {
     if (!geostatsLayer?.attributes) return false;
-    const scoredAttributes = scoreAttributes(
-      geostatsLayer,
-      selectedLayer?.data.dataLayer?.mapboxGlStyles
-    );
+    const scoredAttributes = scoreAttributes(geostatsLayer, styleLayers);
     return scoredAttributes.some((attr) => attr.hasUniqueValues);
-  }, [geostatsLayer, selectedLayer?.data.dataLayer?.mapboxGlStyles]);
+  }, [geostatsLayer, styleLayers]);
 
   return (
     <div className="w-full absolute flex justify-center items-center z-20 top-0">
@@ -408,6 +398,11 @@ export default function LayerChoice({
                 title={""}
                 loading={loading}
               />
+            </div>
+          )}
+          {selectedLayer && detailsLoading && (
+            <div className="flex justify-center items-center h-16">
+              <Spinner />
             </div>
           )}
 
@@ -521,7 +516,10 @@ export default function LayerChoice({
             primary
             loading={saving}
             onClick={async () => {
-              if (!selectedLayer?.data.dataLayer?.id) return;
+              const dataLayerId =
+                selectedDetails?.dataLayer?.id ??
+                selectedLayer?.data.dataLayer?.id;
+              if (!dataLayerId) return;
 
               setSaving(true);
               try {
@@ -556,18 +554,19 @@ export default function LayerChoice({
                     : undefined;
 
                 await onSubmit({
-                  dataLayerId: selectedLayer.data.dataLayer.id,
+                  dataLayerId,
                   selectedAttribute:
                     mode === "geographyCreation" && featureCount !== 1
                       ? selectedAttribute
                       : undefined,
                   attributeValues,
                   eraseLand: mode === "geographyCreation" ? eraseLand : false,
-                  layerTitle: selectedLayer.data.title,
-                  authorProfile: selectedLayer.data.dataLayer.dataSource
+                  layerTitle: selectedLayer?.data.title || "",
+                  authorProfile: selectedDetails?.dataLayer?.dataSource
                     ?.authorProfile as AuthorProfileFragment | undefined,
                   createdAt:
-                    selectedLayer.data.dataLayer.dataSource?.createdAt ||
+                    selectedDetails?.dataLayer?.dataSource?.createdAt ||
+                    selectedLayer?.data.dataLayer?.dataSource?.createdAt ||
                     new Date().toISOString(),
                 });
               } finally {
@@ -576,6 +575,8 @@ export default function LayerChoice({
             }}
             disabled={
               !selectedLayer ||
+              detailsLoading ||
+              !selectedDetails?.dataLayer?.id ||
               saving ||
               !!validationError ||
               (mode === "geographyCreation" &&

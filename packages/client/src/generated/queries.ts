@@ -11260,6 +11260,11 @@ export type Project = Node & {
    * in this list. Those users can be accessed via `unapprovedParticipants()`
    */
   participants?: Maybe<Array<User>>;
+  /**
+   * Draft polygon overlays that can be used as a Geography base or clipping layer.
+   * Limited to layers with Polygon/MultiPolygon geometry and a FlatGeobuf output.
+   */
+  polygonOverlaysForGeography?: Maybe<Array<TableOfContentsItem>>;
   /** Reads and enables pagination through a set of `ProjectBackgroundJob`. */
   projectBackgroundJobs: Array<ProjectBackgroundJob>;
   region: GeometryPolygon;
@@ -11693,6 +11698,16 @@ export type ProjectParticipantsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<ParticipantSortBy>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectPolygonOverlaysForGeographyArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -23406,15 +23421,28 @@ export type GenerateMissingFragmentsForProjectMutation = (
   ) }
 );
 
-export type OverlayForGeographyFragment = (
+export type OverlayForGeographyListFragment = (
+  { __typename?: 'TableOfContentsItem' }
+  & Pick<TableOfContentsItem, 'id' | 'title'>
+  & { dataLayer?: Maybe<(
+    { __typename?: 'DataLayer' }
+    & Pick<DataLayer, 'id'>
+    & { dataSource?: Maybe<(
+      { __typename?: 'DataSource' }
+      & Pick<DataSource, 'createdAt' | 'id' | 'vectorGeometryType' | 'featureCount'>
+    )> }
+  )> }
+);
+
+export type OverlayForGeographyDetailsFragment = (
   { __typename?: 'TableOfContentsItem' }
   & Pick<TableOfContentsItem, 'id' | 'title' | 'bounds'>
   & { dataLayer?: Maybe<(
     { __typename?: 'DataLayer' }
-    & Pick<DataLayer, 'id' | 'vectorGeometryType' | 'sourceLayer' | 'mapboxGlStyles'>
+    & Pick<DataLayer, 'id' | 'sourceLayer' | 'mapboxGlStyles'>
     & { dataSource?: Maybe<(
       { __typename?: 'DataSource' }
-      & Pick<DataSource, 'createdAt' | 'id' | 'geostats' | 'type' | 'url'>
+      & Pick<DataSource, 'createdAt' | 'id' | 'geostats' | 'type' | 'url' | 'featureCount' | 'vectorGeometryType'>
       & { outputs?: Maybe<Array<(
         { __typename?: 'DataUploadOutput' }
         & Pick<DataUploadOutput, 'type' | 'size'>
@@ -23436,10 +23464,23 @@ export type OverlaysForGeographyQuery = (
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id'>
-    & { draftTableOfContentsItems?: Maybe<Array<(
+    & { polygonOverlaysForGeography?: Maybe<Array<(
       { __typename?: 'TableOfContentsItem' }
-      & OverlayForGeographyFragment
+      & OverlayForGeographyListFragment
     )>> }
+  )> }
+);
+
+export type OverlayForGeographyDetailsQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type OverlayForGeographyDetailsQuery = (
+  { __typename?: 'Query' }
+  & { tableOfContentsItem?: Maybe<(
+    { __typename?: 'TableOfContentsItem' }
+    & OverlayForGeographyDetailsFragment
   )> }
 );
 
@@ -28817,14 +28858,28 @@ export const SpriteDetailsFragmentDoc = /*#__PURE__*/ gql`
   }
 }
     `;
-export const OverlayForGeographyFragmentDoc = /*#__PURE__*/ gql`
-    fragment OverlayForGeography on TableOfContentsItem {
+export const OverlayForGeographyListFragmentDoc = /*#__PURE__*/ gql`
+    fragment OverlayForGeographyList on TableOfContentsItem {
+  id
+  title
+  dataLayer {
+    id
+    dataSource {
+      createdAt
+      id
+      vectorGeometryType
+      featureCount
+    }
+  }
+}
+    `;
+export const OverlayForGeographyDetailsFragmentDoc = /*#__PURE__*/ gql`
+    fragment OverlayForGeographyDetails on TableOfContentsItem {
   id
   title
   bounds
   dataLayer {
     id
-    vectorGeometryType
     sourceLayer
     mapboxGlStyles
     dataSource {
@@ -28833,6 +28888,8 @@ export const OverlayForGeographyFragmentDoc = /*#__PURE__*/ gql`
       geostats
       type
       url
+      featureCount
+      vectorGeometryType
       outputs {
         type
         size
@@ -32344,12 +32401,19 @@ export const OverlaysForGeographyDocument = /*#__PURE__*/ gql`
     query OverlaysForGeography($slug: String!) {
   projectBySlug(slug: $slug) {
     id
-    draftTableOfContentsItems {
-      ...OverlayForGeography
+    polygonOverlaysForGeography {
+      ...OverlayForGeographyList
     }
   }
 }
-    ${OverlayForGeographyFragmentDoc}`;
+    ${OverlayForGeographyListFragmentDoc}`;
+export const OverlayForGeographyDetailsDocument = /*#__PURE__*/ gql`
+    query OverlayForGeographyDetails($id: Int!) {
+  tableOfContentsItem(id: $id) {
+    ...OverlayForGeographyDetails
+  }
+}
+    ${OverlayForGeographyDetailsFragmentDoc}`;
 export const JoinProjectDocument = /*#__PURE__*/ gql`
     mutation JoinProject($projectId: Int!) {
   joinProject(input: {projectId: $projectId}) {
@@ -35103,6 +35167,7 @@ export const namedOperations = {
     EEZLayer: 'EEZLayer',
     GeographyById: 'GeographyById',
     OverlaysForGeography: 'OverlaysForGeography',
+    OverlayForGeographyDetails: 'OverlayForGeographyDetails',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     OfflineSurveys: 'OfflineSurveys',
     SurveysById: 'SurveysById',
@@ -35452,7 +35517,8 @@ export const namedOperations = {
     ClippingDataSourceDetails: 'ClippingDataSourceDetails',
     ClippingLayerDetails: 'ClippingLayerDetails',
     GeographyDetails: 'GeographyDetails',
-    OverlayForGeography: 'OverlayForGeography',
+    OverlayForGeographyList: 'OverlayForGeographyList',
+    OverlayForGeographyDetails: 'OverlayForGeographyDetails',
     MapEssentials: 'MapEssentials',
     OfflineTilePackageDetails: 'OfflineTilePackageDetails',
     BasemapOfflineSupportInfo: 'BasemapOfflineSupportInfo',

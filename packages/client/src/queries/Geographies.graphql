@@ -190,13 +190,28 @@ mutation GenerateMissingFragmentsForProject($slug: String!) {
   }
 }
 
-fragment OverlayForGeography on TableOfContentsItem {
+# Slim list for the Geography layer picker. Do not add geostats or
+# mapboxGlStyles here — those payloads freeze the admin UI on large projects.
+fragment OverlayForGeographyList on TableOfContentsItem {
+  id
+  title
+  dataLayer {
+    id
+    dataSource {
+      createdAt
+      id
+      vectorGeometryType
+      featureCount
+    }
+  }
+}
+
+fragment OverlayForGeographyDetails on TableOfContentsItem {
   id
   title
   bounds
   dataLayer {
     id
-    vectorGeometryType
     sourceLayer
     mapboxGlStyles
     dataSource {
@@ -205,6 +220,8 @@ fragment OverlayForGeography on TableOfContentsItem {
       geostats
       type
       url
+      featureCount
+      vectorGeometryType
       outputs {
         type
         size
@@ -225,8 +242,14 @@ fragment OverlayForGeography on TableOfContentsItem {
 query OverlaysForGeography($slug: String!) {
   projectBySlug(slug: $slug) {
     id
-    draftTableOfContentsItems {
-      ...OverlayForGeography
+    polygonOverlaysForGeography {
+      ...OverlayForGeographyList
     }
+  }
+}
+
+query OverlayForGeographyDetails($id: Int!) {
+  tableOfContentsItem(id: $id) {
+    ...OverlayForGeographyDetails
   }
 }

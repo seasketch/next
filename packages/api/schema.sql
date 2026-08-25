@@ -16901,6 +16901,41 @@ in this list. Those users can be accessed via `unapprovedParticipants()`
 
 
 --
+-- Name: projects_polygon_overlays_for_geography(public.projects); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.projects_polygon_overlays_for_geography(p public.projects) RETURNS SETOF public.table_of_contents_items
+    LANGUAGE sql STABLE
+    AS $$
+  select toc.*
+  from table_of_contents_items toc
+  inner join data_layers dl on dl.id = toc.data_layer_id
+  inner join data_sources ds on ds.id = dl.data_source_id
+  where toc.project_id = p.id
+    and toc.is_draft is true
+    and lower(ds.vector_geometry_type) in ('polygon', 'multipolygon')
+    and exists (
+      select 1
+      from data_upload_outputs o
+      where o.data_source_id = ds.id
+        and o.type = 'FlatGeobuf'
+    )
+  order by ds.created_at desc nulls last, toc.id desc;
+$$;
+
+
+--
+-- Name: FUNCTION projects_polygon_overlays_for_geography(p public.projects); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.projects_polygon_overlays_for_geography(p public.projects) IS '
+@simpleCollections only
+Draft polygon overlays that can be used as a Geography base or clipping layer.
+Limited to layers with Polygon/MultiPolygon geometry and a FlatGeobuf output.
+';
+
+
+--
 -- Name: projects_session_has_posts(public.projects); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -41461,6 +41496,14 @@ GRANT ALL ON FUNCTION public.projects_participant_count(p public.projects) TO se
 
 REVOKE ALL ON FUNCTION public.projects_participants(p public.projects, order_by public.participant_sort_by, direction public.sort_by_direction) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.projects_participants(p public.projects, order_by public.participant_sort_by, direction public.sort_by_direction) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION projects_polygon_overlays_for_geography(p public.projects); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.projects_polygon_overlays_for_geography(p public.projects) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.projects_polygon_overlays_for_geography(p public.projects) TO anon;
 
 
 --

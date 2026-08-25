@@ -11262,6 +11262,11 @@ export type Project = Node & {
    * in this list. Those users can be accessed via `unapprovedParticipants()`
    */
   participants?: Maybe<Array<User>>;
+  /**
+   * Draft polygon overlays that can be used as a Geography base or clipping layer.
+   * Limited to layers with Polygon/MultiPolygon geometry and a FlatGeobuf output.
+   */
+  polygonOverlaysForGeography?: Maybe<Array<TableOfContentsItem>>;
   /** Reads and enables pagination through a set of `ProjectBackgroundJob`. */
   projectBackgroundJobs: Array<ProjectBackgroundJob>;
   region: GeometryPolygon;
@@ -11695,6 +11700,16 @@ export type ProjectParticipantsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<ParticipantSortBy>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectPolygonOverlaysForGeographyArgs = {
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
 };
 
 
@@ -23408,15 +23423,28 @@ export type GenerateMissingFragmentsForProjectMutation = (
   ) }
 );
 
-export type OverlayForGeographyFragment = (
+export type OverlayForGeographyListFragment = (
+  { __typename?: 'TableOfContentsItem' }
+  & Pick<TableOfContentsItem, 'id' | 'title'>
+  & { dataLayer?: Maybe<(
+    { __typename?: 'DataLayer' }
+    & Pick<DataLayer, 'id'>
+    & { dataSource?: Maybe<(
+      { __typename?: 'DataSource' }
+      & Pick<DataSource, 'createdAt' | 'id' | 'vectorGeometryType' | 'featureCount'>
+    )> }
+  )> }
+);
+
+export type OverlayForGeographyDetailsFragment = (
   { __typename?: 'TableOfContentsItem' }
   & Pick<TableOfContentsItem, 'id' | 'title' | 'bounds'>
   & { dataLayer?: Maybe<(
     { __typename?: 'DataLayer' }
-    & Pick<DataLayer, 'id' | 'vectorGeometryType' | 'sourceLayer' | 'mapboxGlStyles'>
+    & Pick<DataLayer, 'id' | 'sourceLayer' | 'mapboxGlStyles'>
     & { dataSource?: Maybe<(
       { __typename?: 'DataSource' }
-      & Pick<DataSource, 'createdAt' | 'id' | 'geostats' | 'type' | 'url'>
+      & Pick<DataSource, 'createdAt' | 'id' | 'geostats' | 'type' | 'url' | 'featureCount' | 'vectorGeometryType'>
       & { outputs?: Maybe<Array<(
         { __typename?: 'DataUploadOutput' }
         & Pick<DataUploadOutput, 'type' | 'size'>
@@ -23438,10 +23466,23 @@ export type OverlaysForGeographyQuery = (
   & { projectBySlug?: Maybe<(
     { __typename?: 'Project' }
     & Pick<Project, 'id'>
-    & { draftTableOfContentsItems?: Maybe<Array<(
+    & { polygonOverlaysForGeography?: Maybe<Array<(
       { __typename?: 'TableOfContentsItem' }
-      & OverlayForGeographyFragment
+      & OverlayForGeographyListFragment
     )>> }
+  )> }
+);
+
+export type OverlayForGeographyDetailsQueryVariables = Exact<{
+  id: Scalars['Int'];
+}>;
+
+
+export type OverlayForGeographyDetailsQuery = (
+  { __typename?: 'Query' }
+  & { tableOfContentsItem?: Maybe<(
+    { __typename?: 'TableOfContentsItem' }
+    & OverlayForGeographyDetailsFragment
   )> }
 );
 
@@ -28819,14 +28860,28 @@ export const SpriteDetailsFragmentDoc = gql`
   }
 }
     `;
-export const OverlayForGeographyFragmentDoc = gql`
-    fragment OverlayForGeography on TableOfContentsItem {
+export const OverlayForGeographyListFragmentDoc = gql`
+    fragment OverlayForGeographyList on TableOfContentsItem {
+  id
+  title
+  dataLayer {
+    id
+    dataSource {
+      createdAt
+      id
+      vectorGeometryType
+      featureCount
+    }
+  }
+}
+    `;
+export const OverlayForGeographyDetailsFragmentDoc = gql`
+    fragment OverlayForGeographyDetails on TableOfContentsItem {
   id
   title
   bounds
   dataLayer {
     id
-    vectorGeometryType
     sourceLayer
     mapboxGlStyles
     dataSource {
@@ -28835,6 +28890,8 @@ export const OverlayForGeographyFragmentDoc = gql`
       geostats
       type
       url
+      featureCount
+      vectorGeometryType
       outputs {
         type
         size
@@ -36927,12 +36984,12 @@ export const OverlaysForGeographyDocument = gql`
     query OverlaysForGeography($slug: String!) {
   projectBySlug(slug: $slug) {
     id
-    draftTableOfContentsItems {
-      ...OverlayForGeography
+    polygonOverlaysForGeography {
+      ...OverlayForGeographyList
     }
   }
 }
-    ${OverlayForGeographyFragmentDoc}`;
+    ${OverlayForGeographyListFragmentDoc}`;
 
 /**
  * __useOverlaysForGeographyQuery__
@@ -36961,6 +37018,41 @@ export function useOverlaysForGeographyLazyQuery(baseOptions?: Apollo.LazyQueryH
 export type OverlaysForGeographyQueryHookResult = ReturnType<typeof useOverlaysForGeographyQuery>;
 export type OverlaysForGeographyLazyQueryHookResult = ReturnType<typeof useOverlaysForGeographyLazyQuery>;
 export type OverlaysForGeographyQueryResult = Apollo.QueryResult<OverlaysForGeographyQuery, OverlaysForGeographyQueryVariables>;
+export const OverlayForGeographyDetailsDocument = gql`
+    query OverlayForGeographyDetails($id: Int!) {
+  tableOfContentsItem(id: $id) {
+    ...OverlayForGeographyDetails
+  }
+}
+    ${OverlayForGeographyDetailsFragmentDoc}`;
+
+/**
+ * __useOverlayForGeographyDetailsQuery__
+ *
+ * To run a query within a React component, call `useOverlayForGeographyDetailsQuery` and pass it any options that fit your needs.
+ * When your component renders, `useOverlayForGeographyDetailsQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useOverlayForGeographyDetailsQuery({
+ *   variables: {
+ *      id: // value for 'id'
+ *   },
+ * });
+ */
+export function useOverlayForGeographyDetailsQuery(baseOptions: Apollo.QueryHookOptions<OverlayForGeographyDetailsQuery, OverlayForGeographyDetailsQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<OverlayForGeographyDetailsQuery, OverlayForGeographyDetailsQueryVariables>(OverlayForGeographyDetailsDocument, options);
+      }
+export function useOverlayForGeographyDetailsLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<OverlayForGeographyDetailsQuery, OverlayForGeographyDetailsQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<OverlayForGeographyDetailsQuery, OverlayForGeographyDetailsQueryVariables>(OverlayForGeographyDetailsDocument, options);
+        }
+export type OverlayForGeographyDetailsQueryHookResult = ReturnType<typeof useOverlayForGeographyDetailsQuery>;
+export type OverlayForGeographyDetailsLazyQueryHookResult = ReturnType<typeof useOverlayForGeographyDetailsLazyQuery>;
+export type OverlayForGeographyDetailsQueryResult = Apollo.QueryResult<OverlayForGeographyDetailsQuery, OverlayForGeographyDetailsQueryVariables>;
 export const JoinProjectDocument = gql`
     mutation JoinProject($projectId: Int!) {
   joinProject(input: {projectId: $projectId}) {
@@ -44808,6 +44900,7 @@ export const namedOperations = {
     EEZLayer: 'EEZLayer',
     GeographyById: 'GeographyById',
     OverlaysForGeography: 'OverlaysForGeography',
+    OverlayForGeographyDetails: 'OverlayForGeographyDetails',
     GetBasemapsAndRegion: 'GetBasemapsAndRegion',
     OfflineSurveys: 'OfflineSurveys',
     SurveysById: 'SurveysById',
@@ -45157,7 +45250,8 @@ export const namedOperations = {
     ClippingDataSourceDetails: 'ClippingDataSourceDetails',
     ClippingLayerDetails: 'ClippingLayerDetails',
     GeographyDetails: 'GeographyDetails',
-    OverlayForGeography: 'OverlayForGeography',
+    OverlayForGeographyList: 'OverlayForGeographyList',
+    OverlayForGeographyDetails: 'OverlayForGeographyDetails',
     MapEssentials: 'MapEssentials',
     OfflineTilePackageDetails: 'OfflineTilePackageDetails',
     BasemapOfflineSupportInfo: 'BasemapOfflineSupportInfo',

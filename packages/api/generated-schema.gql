@@ -12854,6 +12854,19 @@ type Project implements Node {
     orderBy: ParticipantSortBy
   ): [User!]
 
+  """
+  Draft polygon overlays that can be used as a Geography base or clipping layer.
+  Limited to layers with Polygon/MultiPolygon geometry and a FlatGeobuf output.
+  
+  """
+  polygonOverlaysForGeography(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [TableOfContentsItem!]
+
   """Reads and enables pagination through a set of `ProjectBackgroundJob`."""
   projectBackgroundJobs(
     """
