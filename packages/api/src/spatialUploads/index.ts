@@ -13,6 +13,11 @@ import * as colorScale from "d3-scale-chromatic";
 import { colord } from "colord";
 import { deriveInteractivitySettingsFromAiNotes } from "./interactivityFromAiNotes";
 import { buildGlStyle, effectiveReverseNamedPalette } from "gl-style-builder";
+import {
+  adminAuthoredSourceFieldsFrom,
+  attributionForNewSource,
+  layerHasMapboxGlStyles,
+} from "./sourceReplacement";
 
 const alphabet =
   "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz";
@@ -44,6 +49,7 @@ export async function createDBRecordsForProcessedLayer(
   },
 ) {
   let dataLibraryMetadata: any;
+  let oldSourceFields = adminAuthoredSourceFieldsFrom(null);
   if (replace) {
     const metadataQuery = await client.query(
       `
@@ -52,6 +58,16 @@ export async function createDBRecordsForProcessedLayer(
       [jobId],
     );
     dataLibraryMetadata = metadataQuery.rows[0]?.data_library_metadata;
+    const oldSourceResults = await client.query(
+      `
+      select attribution, temporal, translated_props from data_sources where id = $1
+    `,
+      [replace.sourceId],
+    );
+    if (!oldSourceResults.rows.length) {
+      throw new Error("Could not find source to replace");
+    }
+    oldSourceFields = adminAuthoredSourceFieldsFrom(oldSourceResults.rows[0]);
   }
   const uploadCountResult = await client.query(
     `
@@ -170,8 +186,10 @@ export async function createDBRecordsForProcessedLayer(
         uploaded_by,
         created_by,
         changelog,
-        data_library_metadata
-      ) values ($1, $2, $3, $4, $5, $6, (select url from data_sources_buckets where bucket = $7), $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $19, $20, $21)
+        data_library_metadata,
+        temporal,
+        translated_props
+      ) values ($1, $2, $3, $4, $5, $6, (select url from data_sources_buckets where bucket = $7), $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $19, $20, $21, $22, $23)
       returning *
     `,
     [
@@ -209,21 +227,19 @@ export async function createDBRecordsForProcessedLayer(
                 layerCount: 1,
               },
       pmtiles && !isVector ? 512 : null,
-      (() => {
-        const aiAttr = layer.aiDataAnalystNotes?.attribution;
-        if (conversionTask?.attribution) {
-          return conversionTask.attribution;
-        }
-        if (aiAttr !== undefined) {
-          return aiAttr;
-        }
-        return layer.geostats?.metadata?.attribution ?? null;
-      })(),
+      attributionForNewSource({
+        oldAttribution: replace ? oldSourceFields.attribution : undefined,
+        conversionAttribution: conversionTask?.attribution,
+        aiAttribution: layer.aiDataAnalystNotes?.attribution,
+        geostatsAttribution: layer.geostats?.metadata?.attribution ?? null,
+      }),
       conversionTask?.location || null,
       Boolean(conversionTask),
       uploadedBy,
       changelog,
       dataLibraryMetadata || null,
+      replace ? oldSourceFields.temporal : null,
+      replace ? oldSourceFields.translated_props : {},
     ],
   );
   const dataSourceId = rows[0].id;
@@ -367,18 +383,6 @@ export async function createDBRecordsForProcessedLayer(
   const sourceLayer = pmtiles ? layer.name : undefined;
 
   if (replace) {
-    // create archived_data_sources record with the old data_source
-    // first, get the related source, layer, and table of contents items
-    const sourceResults = await client.query(
-      `
-          select * from data_sources where id = $1
-        `,
-      [replace.sourceId],
-    );
-    if (!sourceResults.rows.length) {
-      throw new Error("Could not find source to replace");
-    }
-    const source = sourceResults.rows[0];
     const layerResults = await client.query(
       `
           select * from data_layers where id = $1
@@ -407,6 +411,9 @@ export async function createDBRecordsForProcessedLayer(
       );
     }
     const tocItem = tocResults.rows[0];
+    const preserveExistingStyles = layerHasMapboxGlStyles(
+      dataLayer.mapbox_gl_styles,
+    );
     // attach the new data source to the existing layer
     // Do this as a single transaction using a stored procedure to avoid any
     // inconsistency in state
@@ -419,48 +426,26 @@ export async function createDBRecordsForProcessedLayer(
         dataSourceId,
         sourceLayer,
         layer.bounds,
-        // if the new data source is a conversion task, use the mapbox_gl_styles
-        // from the conversion task (translated esri styles). Otherwise, if the
-        // existing layer being replaced already has a style, leave it blank.
-        // The replace_data_source stored procedure will fill it in with the
-        // existing style when left null. Finally, for the case where the
-        // existing style is blank (e.g. an arcgis layer is being replace by an upload),
-        // generate a new style based on the geometry type.
-        conversionTask
-          ? JSON.stringify(conversionTask.mapbox_gl_styles)
-          : dataLayer.mapbox_gl_styles
-            ? null
-            : JSON.stringify(
-                await getStyle(
+        // Keep admin cartography. replace_data_source coalesces null gl_styles
+        // to the existing mapbox_gl_styles. Only generate (AI or heuristic)
+        // when the layer has none — e.g. ArcGIS → hosted. Conversion-task
+        // styles are used only in that empty-style case.
+        preserveExistingStyles
+          ? null
+          : JSON.stringify(
+              conversionTask?.mapbox_gl_styles ??
+                (await getStyle(
                   isVector
                     ? (layer.geostats as GeostatsLayer)?.geometry || "Polygon"
                     : "Raster",
                   uploadCount,
                   layer.geostats,
                   layer.aiDataAnalystNotes,
-                ),
-              ),
+                )),
+            ),
         tocItem.stable_id,
       ],
     );
-
-    if (layer.aiDataAnalystNotes) {
-      const derived = deriveInteractivitySettingsFromAiNotes(
-        layer.aiDataAnalystNotes,
-        layer.geostats,
-      );
-      await client.query(
-        `
-        update interactivity_settings
-        set type = $1::interactivity_type,
-            short_template = $2
-        where id = (
-          select interactivity_settings_id from data_layers where id = $3
-        )
-      `,
-        [derived.type, derived.short_template, dataLayer.id],
-      );
-    }
 
     // TODO: if it is a conversion task, update
     // metadata using the data on the conversion task
