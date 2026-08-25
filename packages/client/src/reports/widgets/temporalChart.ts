@@ -41,6 +41,7 @@ export type TimeSeriesTocItem = {
       id?: number | null;
       type?: string | null;
       isSingleBandRaster?: boolean | null;
+      temporal?: unknown;
     } | null;
   } | null;
 };
@@ -51,6 +52,7 @@ export type TimeSeriesSiblingSource = {
   rasterBandCount?: number | null;
   styleGroupByColumn?: string | null;
   tableOfContentsItem?: { title?: string | null } | null;
+  temporal?: unknown;
 };
 
 /**
@@ -195,9 +197,10 @@ export type TimeSeriesSiblingMatch = {
  * Requires TOC parent topology (folder or root).
  *
  * Processed overlay sources must match raster shape (band count +
- * categorical vs continuous). Unprocessed single-band rasters with a
- * matching title are included so insert can preprocess them the same
- * way the layer picker does.
+ * categorical vs continuous) and have temporal coverage. Unprocessed
+ * single-band rasters with a matching title and temporal coverage are
+ * included so insert can preprocess them the same way the layer picker
+ * does.
  */
 export function findTimeSeriesSiblings(args: {
   subject: TimeSeriesSiblingSource;
@@ -206,6 +209,9 @@ export function findTimeSeriesSiblings(args: {
 }): TimeSeriesSiblingMatch[] {
   const { subject, sources, tocItems } = args;
   if (!subject.stableId || !subject.tableOfContentsItemId) {
+    return [];
+  }
+  if (!coverageForSource(subject)) {
     return [];
   }
   const subjectToc = tocItems.find((i) => i.id === subject.tableOfContentsItemId);
@@ -229,6 +235,7 @@ export function findTimeSeriesSiblings(args: {
     const source = sources.find((s) => s.tableOfContentsItemId === item.id);
     if (source?.stableId) {
       if (source.stableId === subject.stableId) continue;
+      if (!coverageForSource(source)) continue;
       if (rasterSeriesShape(source) !== subjectShape) continue;
       if (seen.has(source.stableId)) continue;
       seen.add(source.stableId);
@@ -241,6 +248,7 @@ export function findTimeSeriesSiblings(args: {
       continue;
     }
     if (!isEligibleUnprocessedRaster(item)) continue;
+    if (!coverageForSource(item.dataLayer?.dataSource)) continue;
     if (!item.stableId || item.stableId === subject.stableId) continue;
     if (seen.has(item.stableId)) continue;
     seen.add(item.stableId);

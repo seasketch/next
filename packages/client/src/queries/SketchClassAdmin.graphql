@@ -953,6 +953,7 @@ query ProjectReportingLayers($slug: String!) {
           attribution
           vectorGeometryType
           isSingleBandRaster
+          temporal
         }
       }
       copiedFromDataLibraryTemplateId

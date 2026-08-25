@@ -126,30 +126,35 @@ describe("findTimeSeriesSiblingStableIds", () => {
       tableOfContentsItemId: 1,
       rasterBandCount: 1,
       styleGroupByColumn: null,
+      temporal: createLayerYearTemporalInfo(2015),
     },
     {
       stableId: "s-2016",
       tableOfContentsItemId: 2,
       rasterBandCount: 1,
       styleGroupByColumn: null,
+      temporal: createLayerYearTemporalInfo(2016),
     },
     {
       stableId: "s-2017",
       tableOfContentsItemId: 3,
       rasterBandCount: 1,
       styleGroupByColumn: null,
+      temporal: createLayerYearTemporalInfo(2017),
     },
     {
       stableId: "s-gmw",
       tableOfContentsItemId: 4,
       rasterBandCount: 1,
       styleGroupByColumn: "value",
+      temporal: createLayerYearTemporalInfo(2016),
     },
     {
       stableId: "s-nested",
       tableOfContentsItemId: 5,
       rasterBandCount: 1,
       styleGroupByColumn: null,
+      temporal: createLayerYearTemporalInfo(2018),
     },
   ];
 
@@ -161,6 +166,20 @@ describe("findTimeSeriesSiblingStableIds", () => {
         tocItems: toc,
       })
     ).toEqual(["s-2016"]);
+  });
+
+  test("does not treat title-matched rasters without temporal coverage as siblings", () => {
+    const timeless = sources.map((source) => ({
+      ...source,
+      temporal: null,
+    }));
+    expect(
+      findTimeSeriesSiblingStableIds({
+        subject: timeless[0],
+        sources: timeless,
+        tocItems: toc,
+      })
+    ).toEqual([]);
   });
 
   test("does not cross folders or pick a different raster type", () => {
@@ -190,16 +209,19 @@ describe("findTimeSeriesSiblingStableIds", () => {
         stableId: "se18",
         tableOfContentsItemId: 10,
         rasterBandCount: 1,
+        temporal: createLayerYearTemporalInfo(2018),
       },
       {
         stableId: "se19",
         tableOfContentsItemId: 11,
         rasterBandCount: 1,
+        temporal: createLayerYearTemporalInfo(2019),
       },
       {
         stableId: "se20",
         tableOfContentsItemId: 12,
         rasterBandCount: 1,
+        temporal: createLayerYearTemporalInfo(2020),
       },
     ];
     expect(
@@ -220,7 +242,11 @@ describe("findTimeSeriesSiblingStableIds", () => {
         stableId: "dhw-2018",
         parentStableId: "folder-a",
         dataLayer: {
-          dataSource: { id: 99, isSingleBandRaster: true },
+          dataSource: {
+            id: 99,
+            isSingleBandRaster: true,
+            temporal: createLayerYearTemporalInfo(2018),
+          },
         },
       },
       {
@@ -230,6 +256,15 @@ describe("findTimeSeriesSiblingStableIds", () => {
         parentStableId: "folder-a",
         dataLayer: {
           dataSource: { id: 100, isSingleBandRaster: false },
+        },
+      },
+      {
+        id: 22,
+        title: "DHW 2020",
+        stableId: "dhw-2020",
+        parentStableId: "folder-a",
+        dataLayer: {
+          dataSource: { id: 101, isSingleBandRaster: true },
         },
       },
     ];

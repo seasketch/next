@@ -113,7 +113,7 @@ import {
   RasterTimeSeriesTooltipControls,
   buildRasterTimeSeriesDependencies,
 } from "./RasterTimeSeries";
-import { findTimeSeriesSiblings } from "./temporalChart";
+import { coverageForSource, findTimeSeriesSiblings } from "./temporalChart";
 import {
   OusDemographicsTable,
   OusDemographicsTableTooltipControls,
@@ -923,6 +923,7 @@ export type BuildReportCommandGroupsArgs = {
         id: number;
         type: DataSourceTypes;
         isSingleBandRaster?: boolean | null;
+        temporal?: unknown;
       } | null;
     } | null;
   }>;
@@ -1656,7 +1657,7 @@ export function buildReportCommandGroups({
               },
             });
           }
-          if (stableId) {
+          if (stableId && coverageForSource(source)) {
             const timeSeriesMode =
               source.styleGroupByColumn === "value" ? "area" : "stats";
             blockGroup.items.push({
