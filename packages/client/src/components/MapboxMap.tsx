@@ -186,6 +186,18 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
     }
   }, [map, manager, basemapState.selectedBasemap, mapContainer.current, ready, props.lazyLoadReady]);
 
+  useEffect(() => {
+    if (!map || !mapContainer.current) {
+      return;
+    }
+    const container = mapContainer.current;
+    const observer = new ResizeObserver(() => {
+      map.resize();
+    });
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, [map]);
+
   let measurementToolsPlacement:
     | "top-right"
     | "top-left"
@@ -200,12 +212,17 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
   }
   return (
     <div
-      className={`flex-1 bg-gray-300 ${props.className} ${
-        props.hideDrawControls ? "hide-draw-controls" : ""
-      } ${!interactive ? "non-interactive" : ""}`}
-      ref={mapContainer}
-      onClick={!interactive ? props.onClickNonInteractive : undefined}
+      className={`timeslider-map-root relative min-h-0 flex-1 ${
+        props.className ?? ""
+      }`}
     >
+      <div
+        className={`absolute inset-0 bg-gray-300 ${
+          props.hideDrawControls ? "hide-draw-controls" : ""
+        } ${!interactive ? "non-interactive" : ""}`}
+        ref={mapContainer}
+        onClick={!interactive ? props.onClickNonInteractive : undefined}
+      >
       {createPortal(
         <SidebarPopup
           onClose={() => {
@@ -253,7 +270,6 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
         </Popover.Root>
       )}
       <MeasurementToolsOverlay placement={measurementToolsPlacement} />
-      {temporalEnabled ? <TimeSlider /> : null}
 
       <div
         className={`w-full h-full absolute top-0 left-0  z-10 pointer-events-none duration-500 transition-opacity flex items-center justify-center ${
@@ -289,7 +305,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
           ) : null}
         </AnimatePresence>
       </div>
-      <div className="pointer-events-none absolute bottom-4 left-0 w-full flex justify-center z-10">
+      <div className="timeslider-map-bottom-overlay pointer-events-none absolute bottom-4 left-0 z-10 flex w-full justify-center">
         {visibleInatCtas.length > 0 && (
           <div
             className="relative"
@@ -450,6 +466,8 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
           }
         ></Tooltip>
       </AnimatePresence>
+      </div>
+      {temporalEnabled ? <TimeSlider /> : null}
     </div>
   );
 });

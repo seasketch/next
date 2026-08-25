@@ -222,6 +222,25 @@ body .mapboxgl-canvas-container.mapboxgl-interactive {
   display: none;
 }
 
+/*
+ * TimeSlider docks over the map without shrinking the Mapbox canvas.
+ * :has() lifts attribution and other bottom chrome when the bar is present.
+ */
+.timeslider-map-root {
+  --timeslider-dock-height: 0px;
+}
+.timeslider-map-root:has(.timeslider-dock) {
+  --timeslider-dock-height: 52px;
+}
+.timeslider-map-root:has(.timeslider-dock) .mapboxgl-ctrl-bottom-left,
+.timeslider-map-root:has(.timeslider-dock) .mapboxgl-ctrl-bottom-right {
+  margin-bottom: var(--timeslider-dock-height);
+}
+.timeslider-map-root:has(.timeslider-dock) .timeslider-map-bottom-overlay {
+  bottom: calc(1rem + var(--timeslider-dock-height));
+}
+
+
 .survey .mapboxgl-ctrl-top-left {
   margin-top: 10px;
 }

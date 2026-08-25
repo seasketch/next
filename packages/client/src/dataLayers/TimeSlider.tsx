@@ -1,13 +1,19 @@
 import { PauseIcon, PlayIcon } from "@heroicons/react/solid";
 import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { expandTemporalValue } from "@seasketch/geostats-types";
+import { useLocation } from "react-router-dom";
 import { currentSidebarState } from "../projects/ProjectAppSidebar";
+import {
+  timeSliderLeadingInset,
+  useHomepageFlyoutState,
+} from "../projects/HomepageFlyoutContext";
 import { MapTemporalStateContext } from "./MapTemporalStateContext";
 import {
-  enumerateSteps,
   formatClockLabel,
   instantClockForStep,
+  layoutTimeSliderCoverageMarks,
+  layoutTimeSliderSteps,
+  nearestTimeSliderStepIndex,
 } from "./mapTemporal";
 
 const PLAY_MS = 700;
@@ -20,18 +26,23 @@ export default function TimeSlider() {
   const [playing, setPlaying] = useState(false);
   const clockRef = useRef(clock);
   clockRef.current = clock;
+  const { pathname } = useLocation();
+  const flyout = useHomepageFlyoutState();
 
-  const steps = useMemo(() => {
-    if (!domain || !resolution) return [];
-    return enumerateSteps(domain, resolution);
+  const layouts = useMemo(() => {
+    if (!domain || !resolution) {
+      return [];
+    }
+    return layoutTimeSliderSteps(domain, resolution);
   }, [domain, resolution]);
+  const steps = useMemo(() => layouts.map((layout) => layout.step), [layouts]);
   const stepIndexes = useMemo(() => {
     const indexes: { [step: string]: number } = {};
-    steps.forEach((step, index) => {
-      indexes[step] = index;
+    layouts.forEach((layout, index) => {
+      indexes[layout.step] = index;
     });
     return indexes;
-  }, [steps]);
+  }, [layouts]);
 
   const index = clock ? stepIndexes[clock.start] ?? -1 : -1;
 
@@ -57,31 +68,27 @@ export default function TimeSlider() {
   }, [clock]);
 
   const marks = useMemo(() => {
-    if (!domain) return [];
-    const domainExpanded = expandTemporalValue(domain);
-    if (!domainExpanded) return [];
-    const span = domainExpanded.end - domainExpanded.start;
-    if (span <= 0) return [];
-    return temporalSources.map((source) => {
-      const expanded = expandTemporalValue(source.temporal.coverage);
-      if (!expanded) return null;
-      const left = Math.max(
-        0,
-        ((expanded.start - domainExpanded.start) / span) * 100
-      );
-      const width = Math.max(
-        1.5,
-        ((expanded.end - expanded.start) / span) * 100
-      );
-      return { id: source.tocStableId, left, width };
-    });
-  }, [domain, temporalSources]);
+    if (!resolution) return [];
+    return layoutTimeSliderCoverageMarks(
+      layouts,
+      temporalSources,
+      resolution
+    );
+  }, [layouts, temporalSources, resolution]);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const draggingRef = useRef(false);
 
   if (!clock || !domain || !resolution || steps.length === 0) {
     return null;
   }
 
   const sidebar = currentSidebarState();
+  const inset = timeSliderLeadingInset({
+    overlayOpen: /\/app\/\w+/.test(pathname) && sidebar.open,
+    overlayWidth: sidebar.width,
+    flyoutOpen: flyout.open,
+    flyoutWidth: flyout.width,
+  });
   const label = formatClockLabel(clock);
 
   const goToIndex = (nextIndex: number) => {
@@ -90,72 +97,98 @@ export default function TimeSlider() {
     if (next) setClock(next);
   };
 
+  const seekFromClientX = (clientX: number) => {
+    const el = trackRef.current;
+    if (!el || layouts.length === 0) return;
+    const rect = el.getBoundingClientRect();
+    if (rect.width <= 0) return;
+    const pct = ((clientX - rect.left) / rect.width) * 100;
+    goToIndex(nearestTimeSliderStepIndex(layouts, pct));
+  };
+
+  const thumbPct =
+    index >= 0 ? layouts[index]?.midPct ?? 0 : layouts[0]?.midPct ?? 0;
+
   return (
     <div
-      className="pointer-events-none absolute bottom-8 left-0 z-20 flex w-full justify-center px-4"
+      className="timeslider-dock absolute bottom-0 left-0 right-0 z-0 flex min-h-[52px] w-full select-none items-center gap-3 border-t border-black/40 bg-cool-gray-800 px-3 py-2 text-gray-100"
       style={{
-        paddingLeft: sidebar.open ? sidebar.width + 24 : 24,
+        paddingLeft: inset || undefined,
+        transition: "padding-left 200ms ease",
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "ArrowLeft") {
+          event.preventDefault();
+          goToIndex(index - 1);
+        } else if (event.key === "ArrowRight") {
+          event.preventDefault();
+          goToIndex(index + 1);
+        }
       }}
     >
-      <div
-        className="pointer-events-auto flex w-full max-w-xl items-center gap-3 rounded-xl border border-white/10 bg-gray-800/90 px-3 py-2 text-white shadow-lg backdrop-blur-sm"
-        onKeyDown={(event) => {
-          if (event.key === "ArrowLeft") {
-            event.preventDefault();
-            goToIndex(index - 1);
-          } else if (event.key === "ArrowRight") {
-            event.preventDefault();
-            goToIndex(index + 1);
-          }
-        }}
+      <button
+        type="button"
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-white/10 text-white hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
+        aria-label={playing ? t("Pause") : t("Play")}
+        onClick={() => setPlaying((prev) => !prev)}
       >
-        <button
-          type="button"
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 hover:bg-white/20 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400"
-          aria-label={playing ? t("Pause") : t("Play")}
-          onClick={() => setPlaying((prev) => !prev)}
-        >
-          {playing ? (
-            <PauseIcon className="h-4 w-4" aria-hidden />
-          ) : (
-            <PlayIcon className="h-4 w-4" aria-hidden />
-          )}
-        </button>
+        {playing ? (
+          <PauseIcon className="h-5 w-5" aria-hidden />
+        ) : (
+          <PlayIcon className="h-5 w-5" aria-hidden />
+        )}
+      </button>
+      <div
+        className="w-20 shrink-0 truncate text-sm font-semibold tabular-nums tracking-tight"
+        aria-live="polite"
+      >
+        {label}
+      </div>
+      <div className="min-w-0 flex-1 pr-2">
         <div
-          className="w-20 shrink-0 truncate text-sm font-semibold tabular-nums"
-          aria-live="polite"
+          ref={trackRef}
+          role="slider"
+          tabIndex={0}
+          aria-label={t("Time")}
+          aria-valuemin={0}
+          aria-valuemax={Math.max(0, steps.length - 1)}
+          aria-valuenow={index < 0 ? 0 : index}
+          aria-valuetext={label}
+          className="timeslider-track relative flex h-6 w-full cursor-pointer items-center touch-none focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-cool-gray-800"
+          onPointerDown={(event) => {
+            if (event.button !== 0) return;
+            draggingRef.current = true;
+            setPlaying(false);
+            event.currentTarget.setPointerCapture(event.pointerId);
+            seekFromClientX(event.clientX);
+          }}
+          onPointerMove={(event) => {
+            if (!draggingRef.current) return;
+            seekFromClientX(event.clientX);
+          }}
+          onPointerUp={() => {
+            draggingRef.current = false;
+          }}
+          onPointerCancel={() => {
+            draggingRef.current = false;
+          }}
         >
-          {label}
-        </div>
-        <div className="min-w-0 flex-1">
-          <input
-            type="range"
-            min={0}
-            max={Math.max(0, steps.length - 1)}
-            step={1}
-            value={index < 0 ? 0 : index}
-            aria-label={t("Time")}
-            aria-valuetext={label}
-            className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-white/20 accent-sky-400"
-            onChange={(event) => {
-              setPlaying(false);
-              goToIndex(parseInt(event.target.value, 10));
-            }}
-          />
-          <div className="relative mt-1.5 h-1.5">
-            {marks.map((mark) =>
-              mark ? (
-                <span
-                  key={mark.id}
-                  className="absolute top-0 h-1 rounded-full bg-sky-400/70"
-                  style={{
-                    left: `${mark.left}%`,
-                    width: `${Math.min(mark.width, 100 - mark.left)}%`,
-                  }}
-                />
-              ) : null
-            )}
+          <div className="pointer-events-none relative h-1.5 w-full overflow-hidden rounded-full bg-white/15">
+            {marks.map((mark) => (
+              <span
+                key={mark.id}
+                className="absolute inset-y-0 bg-sky-400/45"
+                style={{
+                  left: `${mark.left}%`,
+                  width: `${Math.min(mark.width, 100 - mark.left)}%`,
+                }}
+              />
+            ))}
           </div>
+          <div
+            className="pointer-events-none absolute top-1/2 h-3.5 w-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-slate-50 bg-sky-400 shadow"
+            style={{ left: `${thumbPct}%` }}
+          />
         </div>
       </div>
     </div>

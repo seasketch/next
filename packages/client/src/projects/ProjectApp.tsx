@@ -46,6 +46,7 @@ import { DataDownloadModalProvider } from "../dataLayers/DataDownloadModal";
 import AboutPage from "./AboutPage";
 import getSlug from "../getSlug";
 import ReportPublishedDataPrefetch from "./ReportPublishedDataPrefetch";
+import { HomepageFlyoutProvider } from "./HomepageFlyoutContext";
 
 const LazyOverlays = React.lazy(
   () => import(/* webpackChunkName: "Overlays" */ "./OverlayLayers")
@@ -163,6 +164,7 @@ export default function ProjectApp() {
                   >
                     <DataDownloadModalProvider>
                       <TableOfContentsMetadataModalProvider>
+                        <HomepageFlyoutProvider>
                         <Toolbar
                           dark={dark}
                           onExpand={onExpandSidebar}
@@ -356,6 +358,7 @@ export default function ProjectApp() {
                         </div>
                         <OfflineToastNotification />
                         <OfflineResponsesToastNotification />
+                        </HomepageFlyoutProvider>
                       </TableOfContentsMetadataModalProvider>
                     </DataDownloadModalProvider>
                   </SketchUIStateContextProvider>

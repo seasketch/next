@@ -193,6 +193,105 @@ export function enumerateSteps(
   return steps;
 }
 
+export type TimeSliderStepLayout = {
+  step: TemporalIso;
+  startPct: number;
+  endPct: number;
+  midPct: number;
+};
+
+function sliderPct(value: number): number {
+  return Math.round(value * 10000) / 10000;
+}
+
+/**
+ * Places each clock step in an equal-width slot (ordinal band scale).
+ * Ten annual steps therefore snap at 5, 15, … 95 — not the native-range
+ * positions 0 … 100, and not leap-year-skewed millisecond midpoints.
+ */
+export function layoutTimeSliderSteps(
+  domain: TemporalInterval,
+  resolution: TemporalPrecision,
+  now: number = Date.now()
+): TimeSliderStepLayout[] {
+  const steps = enumerateSteps(domain, resolution, now);
+  const n = steps.length;
+  if (n === 0) return [];
+  return steps.map((step, i) => ({
+    step,
+    startPct: sliderPct((i / n) * 100),
+    endPct: sliderPct(((i + 1) / n) * 100),
+    midPct: sliderPct(((i + 0.5) / n) * 100),
+  }));
+}
+
+/** Map a pointer position (0–100 along the track) to the containing step. */
+export function nearestTimeSliderStepIndex(
+  layouts: TimeSliderStepLayout[],
+  pct: number
+): number {
+  if (layouts.length === 0) return -1;
+  const clamped = Math.max(0, Math.min(100, pct));
+  for (let i = 0; i < layouts.length; i++) {
+    const layout = layouts[i];
+    const last = i === layouts.length - 1;
+    if (
+      clamped >= layout.startPct &&
+      (last ? clamped <= layout.endPct : clamped < layout.endPct)
+    ) {
+      return i;
+    }
+  }
+  let best = 0;
+  let bestDist = Infinity;
+  for (let i = 0; i < layouts.length; i++) {
+    const dist = Math.abs(layouts[i].midPct - clamped);
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = i;
+    }
+  }
+  return best;
+}
+
+export type TimeSliderCoverageMark = {
+  id: string;
+  left: number;
+  width: number;
+};
+
+/** Coverage painted onto the same equal-width slots as the snap points. */
+export function layoutTimeSliderCoverageMarks(
+  layouts: TimeSliderStepLayout[],
+  sources: VisibleTemporalSource[],
+  resolution: TemporalPrecision,
+  now: number = Date.now()
+): TimeSliderCoverageMark[] {
+  if (layouts.length === 0) return [];
+  const marks: TimeSliderCoverageMark[] = [];
+  for (const source of sources) {
+    const coverage = expandTemporalValue(source.temporal.coverage, now);
+    if (!coverage) continue;
+    let startPct: number | null = null;
+    let endPct: number | null = null;
+    for (const layout of layouts) {
+      const step = expandTemporalIso(layout.step, resolution);
+      if (!step || step.start >= coverage.end || coverage.start >= step.end) {
+        continue;
+      }
+      if (startPct === null) startPct = layout.startPct;
+      endPct = layout.endPct;
+    }
+    if (startPct === null || endPct === null || endPct <= startPct) continue;
+    marks.push({
+      id: source.tocStableId,
+      left: startPct,
+      width: sliderPct(endPct - startPct),
+    });
+  }
+  return marks;
+}
+
 export function instantClockForStep(
   step: TemporalIso,
   resolution: TemporalPrecision

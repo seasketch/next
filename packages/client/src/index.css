@@ -8185,6 +8185,10 @@ select{
   min-height:48px
 }
 
+.min-h-\[52px\]{
+  min-height:52px
+}
+
 .min-h-\[540px\]{
   min-height:540px
 }
@@ -10535,6 +10539,10 @@ select{
   border-color:rgb(0 0 0 / 0.2)
 }
 
+.border-black\/40{
+  border-color:rgb(0 0 0 / 0.4)
+}
+
 .border-black\/5{
   border-color:rgb(0 0 0 / 0.05)
 }
@@ -10852,6 +10860,11 @@ select{
 
 .border-slate-300\/90{
   border-color:rgb(203 213 225 / 0.9)
+}
+
+.border-slate-50{
+  --tw-border-opacity:1;
+  border-color:rgb(248 250 252 / var(--tw-border-opacity, 1))
 }
 
 .border-slate-800{
@@ -11761,8 +11774,8 @@ select{
   background-color:rgb(56 189 248 / 0.25)
 }
 
-.bg-sky-400\/70{
-  background-color:rgb(56 189 248 / 0.7)
+.bg-sky-400\/45{
+  background-color:rgb(56 189 248 / 0.45)
 }
 
 .bg-sky-50{
@@ -11912,8 +11925,8 @@ select{
   background-color:rgb(255 255 255 / 0.1)
 }
 
-.bg-white\/20{
-  background-color:rgb(255 255 255 / 0.2)
+.bg-white\/15{
+  background-color:rgb(255 255 255 / 0.15)
 }
 
 .bg-white\/5{
@@ -13439,6 +13452,11 @@ select{
 
 .not-italic{
   font-style:normal
+}
+
+.ordinal{
+  --tw-ordinal:ordinal;
+  font-variant-numeric:var(--tw-ordinal) var(--tw-slashed-zero) var(--tw-numeric-figure) var(--tw-numeric-spacing) var(--tw-numeric-fraction)
 }
 
 .lining-nums{
@@ -15376,6 +15394,28 @@ body .mapboxgl-canvas-container.mapboxgl-interactive {
   display: none;
 }
 
+/*
+ * TimeSlider docks over the map without shrinking the Mapbox canvas.
+ * :has() lifts attribution and other bottom chrome when the bar is present.
+ */
+
+.timeslider-map-root {
+  --timeslider-dock-height: 0px;
+}
+
+.timeslider-map-root:has(.timeslider-dock) {
+  --timeslider-dock-height: 52px;
+}
+
+.timeslider-map-root:has(.timeslider-dock) .mapboxgl-ctrl-bottom-left,
+.timeslider-map-root:has(.timeslider-dock) .mapboxgl-ctrl-bottom-right {
+  margin-bottom: var(--timeslider-dock-height);
+}
+
+.timeslider-map-root:has(.timeslider-dock) .timeslider-map-bottom-overlay {
+  bottom: calc(1rem + var(--timeslider-dock-height));
+}
+
 .survey .mapboxgl-ctrl-top-left {
   margin-top: 10px;
 }
@@ -16774,6 +16814,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .focus-visible\:ring-offset-2:focus-visible{
   --tw-ring-offset-width:2px
+}
+
+.focus-visible\:ring-offset-cool-gray-800:focus-visible{
+  --tw-ring-offset-color:#1F2937
 }
 
 .focus-visible\:ring-offset-gray-900:focus-visible{

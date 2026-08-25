@@ -8,6 +8,9 @@ import {
   hasInternalTimeSeries,
   instantClockForStep,
   latestClock,
+  layoutTimeSliderCoverageMarks,
+  layoutTimeSliderSteps,
+  nearestTimeSliderStepIndex,
   reconcileClock,
   shouldShowTimeSlider,
   sourceParticipatesInMapClock,
@@ -125,6 +128,68 @@ describe("steps and clocks", () => {
       end: "2018",
       viewResolution: "year",
     });
+  });
+
+  it("anchors ten annual steps at the midpoint of each year span", () => {
+    const layouts = layoutTimeSliderSteps(
+      {
+        kind: "interval",
+        start: "2011",
+        end: "2021",
+        precision: "year",
+      },
+      "year"
+    );
+    expect(layouts.map((layout) => layout.step)).toEqual([
+      "2011",
+      "2012",
+      "2013",
+      "2014",
+      "2015",
+      "2016",
+      "2017",
+      "2018",
+      "2019",
+      "2020",
+    ]);
+    expect(layouts.map((layout) => layout.midPct)).toEqual([
+      5, 15, 25, 35, 45, 55, 65, 75, 85, 95,
+    ]);
+  });
+
+  it("maps a pointer to the year span it sits in, not the nearest native tick", () => {
+    const layouts = layoutTimeSliderSteps(
+      {
+        kind: "interval",
+        start: "2011",
+        end: "2021",
+        precision: "year",
+      },
+      "year"
+    );
+    expect(nearestTimeSliderStepIndex(layouts, 0)).toBe(0);
+    expect(nearestTimeSliderStepIndex(layouts, 7)).toBe(0);
+    expect(nearestTimeSliderStepIndex(layouts, 10)).toBe(1);
+    expect(nearestTimeSliderStepIndex(layouts, 95)).toBe(9);
+    expect(nearestTimeSliderStepIndex(layouts, 100)).toBe(9);
+  });
+
+  it("paints a single-year coverage mark on that year's slot", () => {
+    const layouts = layoutTimeSliderSteps(
+      {
+        kind: "interval",
+        start: "2011",
+        end: "2021",
+        precision: "year",
+      },
+      "year"
+    );
+    expect(
+      layoutTimeSliderCoverageMarks(layouts, [yearSource("gmw-2011", 2011)], "year")
+    ).toEqual([{ id: "gmw-2011", left: 0, width: 10 }]);
+    expect(
+      layoutTimeSliderCoverageMarks(layouts, [yearSource("gmw-2020", 2020)], "year")
+    ).toEqual([{ id: "gmw-2020", left: 90, width: 10 }]);
   });
 });
 

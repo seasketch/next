@@ -25,7 +25,12 @@ import { useSketchUIState } from "./Sketches/SketchUIStateContextProvider";
 import { useTranslatedProps } from "../components/TranslatedPropControl";
 import { HAS_SKIPPED_JOIN_PROJECT_PROMPT_LOCALSTORAGE_KEY } from "../auth/JoinProject";
 import UserSessionCard from "./UserSessionCard";
-import { useContext, useState } from "react";
+import { useContext, useEffect, useLayoutEffect, useState } from "react";
+import {
+  HOMEPAGE_FLYOUT_MS,
+  HOMEPAGE_FLYOUT_WIDTH,
+  useSetHomepageFlyout,
+} from "./HomepageFlyoutContext";
 import { GraphqlQueryCacheContext } from "../offline/GraphqlQueryCache/useGraphqlQueryCache";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import clsx from "clsx";
@@ -103,16 +108,45 @@ export default function Toolbar({
     expanded && !sketchingContext.editorIsOpen && !Boolean(showSidebar);
 
   const [animating, setAnimating] = useState(false);
+  const setHomepageFlyout = useSetHomepageFlyout();
 
   // query whether the screen is a mobile phone in portrait orientation
   const isSmall = useMediaQuery(
     "only screen and (max-width: 768px) and (orientation: portrait)"
   );
+  const flyoutWidth =
+    expanded && !isSmall ? HOMEPAGE_FLYOUT_WIDTH : 0;
+  const flyoutOpen = Boolean(expanded) && !isSmall;
+
+  useLayoutEffect(() => {
+    setHomepageFlyout({
+      open: flyoutOpen,
+      width: flyoutWidth,
+    });
+    // Initial paint only — later updates wait for the width animation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    const id = window.setTimeout(() => {
+      setHomepageFlyout({
+        open: flyoutOpen,
+        width: flyoutWidth,
+      });
+    }, HOMEPAGE_FLYOUT_MS);
+    return () => window.clearTimeout(id);
+  }, [flyoutOpen, flyoutWidth, setHomepageFlyout]);
 
   return (
     <motion.nav
       onAnimationStart={() => setAnimating(true)}
-      onAnimationComplete={() => setAnimating(false)}
+      onAnimationComplete={() => {
+        setAnimating(false);
+        setHomepageFlyout({
+          open: flyoutOpen,
+          width: flyoutWidth,
+        });
+      }}
       role="navigation"
       style={{ boxShadow: "0px -2px 5px rgba(0,0,0,0.5)" }}
       className={`absolute left-0 h-screen overflow-hidden ${
