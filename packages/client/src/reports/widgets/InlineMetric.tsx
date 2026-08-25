@@ -15,7 +15,6 @@ import {
   isOverlayAreaClassKey,
   subjectIsFragment,
   subjectIsGeography,
-  isNumberColumnValueStats,
   RasterStats,
   RasterOverlayAreaMetric,
   attachRasterOverlayAreaOverlapScope,
@@ -76,6 +75,7 @@ import {
   getFeatureCountFromGeostats,
   listColumnsWithGeostatsTotals,
 } from "./columnTotalFromGeostats";
+import { numberColumnStatOrZero } from "./inlineColumnValues";
 
 export type PluralizedMessages = Record<string, string>;
 export type PluralizedMessagesByLang = Record<string, PluralizedMessages>;
@@ -682,10 +682,7 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
           "column_values"
         ) as ColumnValuesMetric;
         const prop = componentSettings?.column || "";
-        const values = combined.value["*"]?.[prop];
-        if (!values || !isNumberColumnValueStats(values)) {
-          return NaN.toLocaleString(lang);
-        }
+        const sum = numberColumnStatOrZero(combined.value["*"], prop, "sum");
         const columnTotal = getColumnTotalFromGeostats(
           sources?.[0]?.geostats,
           prop
@@ -698,7 +695,7 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
         if (columnTotal === 0) {
           return formatters.percent(0);
         }
-        return formatters.percent(values.sum / columnTotal);
+        return formatters.percent(sum / columnTotal);
       }
       case "column_values": {
         const columnValues = metrics.filter(
@@ -720,25 +717,24 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
           | "sum"
           | "count"
           | "countDistinct";
-        const values = combined.value["*"]!;
+        const values = combined.value["*"];
         if (componentSettings?.stat === "countDistinct") {
-          const value = values[prop]?.countDistinct ?? 0;
-          const countDistinct = value ?? 0;
+          const countDistinct = numberColumnStatOrZero(
+            values,
+            prop,
+            "countDistinct"
+          );
           const pluralKey = pluralRules.select(countDistinct) as string;
           const label =
             distinctCustomMessages?.[pluralKey] ||
             distinctDefaultMessages[pluralKey];
           return `${formatters.count(countDistinct)} ${label}`;
         }
-        const value = values[prop];
-        if (value && isNumberColumnValueStats(value)) {
-          if (componentSettings?.stat === "count") {
-            return value.count;
-          }
-          return formatters.decimal(value[statKey]);
-        } else {
-          return NaN.toLocaleString(lang);
+        const value = numberColumnStatOrZero(values, prop, statKey);
+        if (componentSettings?.stat === "count") {
+          return value;
         }
+        return formatters.decimal(value);
       }
       case "raster_stats": {
         const rasterStats = metrics.find((m) => m.type === "raster_stats");

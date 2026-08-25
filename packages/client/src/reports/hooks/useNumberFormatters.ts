@@ -210,12 +210,13 @@ export function useNumberFormatters({
         // Very small rounding issues are fine
         value = 1;
       }
+      if (value === 0) {
+        return formatters.largePercentFormatter.format(value);
+      }
       if (minimumFractionDigits !== undefined) {
         return formatters.specifiedPercentFormatter.format(value);
       }
-      if (value === 0) {
-        return formatters.largePercentFormatter.format(value);
-      } else if (value < 0.001) {
+      if (value < 0.001) {
         return (
           "< " +
           Intl.NumberFormat(langContext?.lang?.code, {
@@ -235,6 +236,9 @@ export function useNumberFormatters({
 
   const decimal = useCallback(
     (value: number) => {
+      if (value === 0) {
+        return formatters.largeDecimalFormatter.format(value);
+      }
       if (minimumFractionDigits !== undefined) {
         return formatters.specifiedDecimalFormatter.format(value);
       }

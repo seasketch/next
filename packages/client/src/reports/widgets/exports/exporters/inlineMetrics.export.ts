@@ -3,7 +3,6 @@ import {
   combineMetricsForFragments,
   getOverlayAreaClassTotals,
   getOverlayAreaOverlapCombineResult,
-  isNumberColumnValueStats,
   isOverlayAreaClassKey,
   subjectIsFragment,
   subjectIsGeography,
@@ -26,6 +25,10 @@ import type { CompatibleSpatialMetricDetailsFragment } from "../../../../generat
 import { filterMetricsByDependencies } from "../../../utils/metricSatisfiesDependency";
 import type { CardExportInput, WidgetExportSection } from "../types";
 import { resolveClippingGeographyForExport } from "../exportContextHelpers";
+import {
+  InlineColumnStat,
+  numberColumnStatOrZero,
+} from "../../inlineColumnValues";
 import {
   getColumnTotalFromGeostats,
   getFeatureCountFromGeostats,
@@ -382,15 +385,14 @@ function extractInlineRawValue(
           "column_values",
         ) as ColumnValuesMetric;
         const prop = (componentSettings.column as string) || "";
-        const cell = combined.value["*"]?.[prop];
-        if (!cell || !isNumberColumnValueStats(cell)) return null;
+        const sum = numberColumnStatOrZero(combined.value["*"], prop, "sum");
         const source =
           opts.sources && opts.dependencies
             ? filterSourcesForDeps(opts.sources, opts.dependencies)[0]
             : undefined;
         const columnTotal = getColumnTotalFromGeostats(source?.geostats, prop);
         if (columnTotal === null || columnTotal === 0) return 0;
-        return cell.sum / columnTotal;
+        return sum / columnTotal;
       }
       case "column_values": {
         const columnValues = metrics.filter(
@@ -403,18 +405,11 @@ function extractInlineRawValue(
         ) as ColumnValuesMetric;
         const prop = (componentSettings.column as string) || "";
         const statKey = (componentSettings.stat as string) || "mean";
-        const values = combined.value["*"];
-        if (!values) return null;
-        if (statKey === "countDistinct") {
-          return values[prop]?.countDistinct ?? 0;
-        }
-        const cell = values[prop];
-        if (cell && isNumberColumnValueStats(cell)) {
-          if (statKey === "count") return cell.count;
-          const v = cell[statKey as keyof typeof cell];
-          return typeof v === "number" && Number.isFinite(v) ? v : null;
-        }
-        return null;
+        return numberColumnStatOrZero(
+          combined.value["*"],
+          prop,
+          statKey as InlineColumnStat,
+        );
       }
       case "raster_stats": {
         const combined = combineMetricsForFragments(

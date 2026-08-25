@@ -1600,7 +1600,7 @@ export function buildReportCommandGroups({
             id: `overlay-layer-${tocId}-raster-area-captured-table`,
             label: "Raster Area Captured Table",
             description:
-              "Table of raster area (km²) captured by the sketch. Optionally show percent of a geography. Categorical rasters default to one row per class; change Group by under Rows to use a single total.",
+              "Table of raster area (km²) captured by the sketch. Optionally show percent of a geography. Supports grouping by class.",
             screenshotSrc: "/slashCommands/raster-proportion.png",
             run: (state, dispatch, view) => {
               return insertBlockMetric(view, state.selection.ranges[0], {
@@ -1662,8 +1662,7 @@ export function buildReportCommandGroups({
               // eslint-disable-next-line i18next/no-literal-string
               id: `overlay-layer-${tocId}-raster-time-series`,
               label: "Time Series",
-              description:
-                "Chart raster statistics, area, or sums over time. Same-folder yearly siblings are added when their titles match after dates are stripped. Unprocessed siblings are prepared for reporting first. Add or remove layers in the widget settings.",
+              description: "Chart raster statistics, area, or sums over time.",
               run: (state, dispatch, view) => {
                 const siblings = findTimeSeriesSiblings({
                   subject: source,
@@ -1703,9 +1702,7 @@ export function buildReportCommandGroups({
             "Only single-band rasters are supported in the reporting tools.";
         } else if (source.vectorGeometryType) {
           const groupByColumn =
-            source.styleGroupByColumn ||
-            source.bestCategoryColumn ||
-            undefined;
+            source.styleGroupByColumn || source.bestCategoryColumn || undefined;
           const bestLabelColumn = source.bestLabelColumn;
           const bestNumericColumn = source.bestContinuousColumn;
           const inlineGroup: CommandPaletteGroup = {
@@ -2011,11 +2008,10 @@ export function buildReportCommandGroups({
             // sum can be recovered from geostats (avg × count).
             // bestContinuousColumn is derived from those numeric attributes.
             if (bestNumericColumn) {
-              const columnForPercentTotal = pickBestColumnForPercentOfColumnTotal(
-                {
+              const columnForPercentTotal =
+                pickBestColumnForPercentOfColumnTotal({
                   preferred: bestNumericColumn,
-                }
-              );
+                });
               if (columnForPercentTotal) {
                 inlineGroup.items.push({
                   // eslint-disable-next-line i18next/no-literal-string
