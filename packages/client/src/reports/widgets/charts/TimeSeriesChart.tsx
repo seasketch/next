@@ -194,6 +194,44 @@ export function timeSeriesYAxis(
   return { domain: [d0, d1], ticks: scale.ticks(tickTarget) };
 }
 
+/**
+ * Fraction digits so adjacent percent-axis ticks stay distinct. Tick values
+ * are fractions (0.001 = 0.1%). The narrative "< 0.1%" formatter is wrong
+ * here: a 0–0.1% domain would label every positive tick the same.
+ */
+export function percentAxisFractionDigits(ticks: readonly number[]): number {
+  let step = Infinity;
+  const sorted = [...ticks].filter((n) => Number.isFinite(n)).sort((a, b) => a - b);
+  for (let i = 1; i < sorted.length; i++) {
+    const delta = sorted[i] - sorted[i - 1];
+    if (delta > 0 && delta < step) step = delta;
+  }
+  if (!Number.isFinite(step) || !(step > 0)) return 0;
+  const percentStep = step * 100;
+  if (percentStep >= 1) return 0;
+  return Math.min(4, Math.max(0, Math.ceil(-Math.log10(percentStep))));
+}
+
+export function formatPercentAxisTick(
+  value: number,
+  ticks: readonly number[],
+  locale?: string
+): string {
+  if (value === 0) {
+    return new Intl.NumberFormat(locale, {
+      style: "percent",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0,
+    }).format(0);
+  }
+  const digits = percentAxisFractionDigits(ticks);
+  return new Intl.NumberFormat(locale, {
+    style: "percent",
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  }).format(value);
+}
+
 /** Left-gutter width for y-axis labels at the chart's tick font size. */
 export function yAxisGutterWidth(labels: readonly string[]): number {
   let widest = 0;

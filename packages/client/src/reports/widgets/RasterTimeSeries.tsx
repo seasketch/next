@@ -29,8 +29,10 @@ import { usePrimaryGeography } from "../hooks/usePrimaryGeography";
 import { combineMetricsBySource } from "./ClassTableRows";
 import { GeographySelector } from "./InlineMetric";
 import {
+  formatPercentAxisTick,
   paddedTimeSeriesYDomain,
   TIME_SERIES_PERCENT_Y_ZERO_SPAN,
+  timeSeriesYAxis,
   TimeSeriesChart,
   TimeSeriesDatum,
 } from "./charts/TimeSeriesChart";
@@ -467,6 +469,12 @@ export const RasterTimeSeries: ReportWidget<RasterTimeSeriesSettings> = ({
     [percentData]
   );
 
+  const formatPercentValue = useMemo(() => {
+    const values = percentData.map((d) => d.value);
+    const { ticks } = timeSeriesYAxis(percentYDomain, values);
+    return (value: number) => formatPercentAxisTick(value, ticks);
+  }, [percentData, percentYDomain]);
+
   const formatAbsoluteValue = useMemo(() => {
     if (mode === "area") {
       return (v: number) => formatters.area(v);
@@ -589,11 +597,7 @@ export const RasterTimeSeries: ReportWidget<RasterTimeSeriesSettings> = ({
                   data={chartData}
                   mode={mode === "stats" ? "envelope" : "line"}
                   color={DEFAULT_TIME_SERIES_COLOR}
-                  formatValue={
-                    isPercent
-                      ? (v) => formatters.percent(v)
-                      : formatAbsoluteValue
-                  }
+                  formatValue={isPercent ? formatPercentValue : formatAbsoluteValue}
                   formatX={(ms) => formatTimeTick(ms, xPrecision)}
                   yDomain={isPercent ? percentYDomain : absoluteYDomain}
                   xTickDensity={

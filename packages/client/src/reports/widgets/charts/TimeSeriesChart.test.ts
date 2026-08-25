@@ -1,4 +1,5 @@
 import {
+  formatPercentAxisTick,
   paddedTimeSeriesYDomain,
   removeOverlappingTimeTicks,
   timeSeriesXDomain,
@@ -98,6 +99,16 @@ describe("removeOverlappingTimeTicks", () => {
         40
       ).map((tick) => tick.label)
     ).toEqual(["2018", "2019"]);
+  });
+});
+
+describe("formatPercentAxisTick", () => {
+  test("keeps tiny percent ticks distinct instead of collapsing them to < 0.1%", () => {
+    const { ticks } = timeSeriesYAxis([0, 0.001], [0.0008]);
+    const labels = ticks.map((tick) => formatPercentAxisTick(tick, ticks));
+    expect(labels[0]).toBe("0%");
+    expect(new Set(labels).size).toBe(labels.length);
+    expect(labels.some((label) => label.includes("<"))).toBe(false);
   });
 });
 
