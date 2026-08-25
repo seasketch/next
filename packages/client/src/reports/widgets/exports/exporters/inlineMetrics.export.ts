@@ -447,6 +447,43 @@ function extractInlineRawValue(
             ? opts.clippingGeographyId
             : (componentSettings.geographyId as number);
         if (geographyId === undefined) return null;
+        const overlayFragmentMetrics = metrics.filter(
+          (m) => m.type === "overlay_area" && subjectIsFragment(m.subject),
+        );
+        const overlayGeographyMetric = metrics.find(
+          (m) =>
+            m.type === "overlay_area" &&
+            subjectIsGeography(m.subject) &&
+            m.subject.id === geographyId,
+        ) as OverlayAreaMetric | undefined;
+        if (overlayFragmentMetrics.length > 0 || overlayGeographyMetric) {
+          let sketchArea = 0;
+          if (overlayFragmentMetrics.length > 0) {
+            let combined = combineMetricsForFragments(
+              overlayFragmentMetrics as Pick<Metric, "type" | "value">[],
+              "overlay_area",
+            ) as OverlayAreaMetric;
+            combined = attachOverlayAreaOverlapScope(
+              combined,
+              overlayFragmentMetrics,
+            ) as OverlayAreaMetric;
+            sketchArea = getOverlayAreaClassTotals(combined.value)["*"] ?? 0;
+          }
+          const geographyTotals = overlayGeographyMetric
+            ? getOverlayAreaClassTotals(overlayGeographyMetric.value)
+            : {};
+          const geographyArea =
+            geographyTotals["*"] ??
+            Object.entries(overlayGeographyMetric?.value || {}).reduce(
+              (s, [key, v]) =>
+                isOverlayAreaClassKey(key) && typeof v === "number"
+                  ? s + v
+                  : s,
+              0,
+            );
+          if (!geographyArea) return 0;
+          return sketchArea / geographyArea;
+        }
         const fragmentRasterMetrics = metrics.filter(
           (m) => m.type === "raster_stats" && subjectIsFragment(m.subject),
         );

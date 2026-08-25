@@ -435,6 +435,139 @@ describe("widget export helpers", () => {
     expect(meta[0].bufferDistanceKm).toBe(1);
   });
 
+  test("buildInlineMetricsSection geography_proportion_captured divides overlay area by geography total", () => {
+    const fragmentDep: MetricDependency = {
+      type: "overlay_area",
+      subjectType: "fragments",
+      stableId: "layerA",
+      parameters: {},
+    };
+    const geographyDep: MetricDependency = {
+      type: "overlay_area",
+      subjectType: "geographies",
+      stableId: "layerA",
+      parameters: {},
+    };
+    const fragmentHash = hashMetricDependency(fragmentDep, urlMap);
+    const geographyHash = hashMetricDependency(geographyDep, urlMap);
+
+    const fragmentOverlay = {
+      id: 1,
+      type: "overlay_area",
+      state: SpatialMetricState.Complete,
+      value: { "*": 10 },
+      dependencyHash: fragmentHash,
+      sourceUrl: "https://example.com/a.geojson",
+      subject: {
+        __typename: "FragmentSubject",
+        geographies: [1],
+        sketches: [10],
+        hash: "frag1",
+      },
+    } as CardExportInput["metrics"][0];
+
+    const geographyOverlay = {
+      id: 2,
+      type: "overlay_area",
+      state: SpatialMetricState.Complete,
+      value: { "*": 50 },
+      dependencyHash: geographyHash,
+      sourceUrl: "https://example.com/a.geojson",
+      subject: {
+        __typename: "GeographySubject",
+        id: 1,
+      },
+    } as CardExportInput["metrics"][0];
+
+    const section = buildInlineMetricsSection({
+      ...minimalCardInput({
+        metrics: [fragmentOverlay, geographyOverlay],
+      }),
+      primaryGeographyId: 1,
+      inlineNodes: [
+        {
+          walkIndex: 0,
+          dependencies: [fragmentDep, geographyDep],
+          componentSettings: { presentation: "geography_proportion_captured" },
+        },
+      ],
+      sourceUrlMap: urlMap,
+    });
+
+    expect(section).not.toBeNull();
+    const dataCol = section!.columns
+      .map((c) => c.key)
+      .find((k) => !["scope", "sketchId", "sketchName"].includes(k));
+    expect(dataCol).toBeTruthy();
+    expect(section!.rows[0][dataCol!]).toBeCloseTo(0.2);
+  });
+
+  test("buildInlineMetricsSection geography_proportion_captured is 0 when geography overlay area is 0", () => {
+    const fragmentDep: MetricDependency = {
+      type: "overlay_area",
+      subjectType: "fragments",
+      stableId: "layerA",
+      parameters: {},
+    };
+    const geographyDep: MetricDependency = {
+      type: "overlay_area",
+      subjectType: "geographies",
+      stableId: "layerA",
+      parameters: {},
+    };
+    const fragmentHash = hashMetricDependency(fragmentDep, urlMap);
+    const geographyHash = hashMetricDependency(geographyDep, urlMap);
+
+    const section = buildInlineMetricsSection({
+      ...minimalCardInput({
+        metrics: [
+          {
+            id: 1,
+            type: "overlay_area",
+            state: SpatialMetricState.Complete,
+            value: { "*": 10 },
+            dependencyHash: fragmentHash,
+            sourceUrl: "https://example.com/a.geojson",
+            subject: {
+              __typename: "FragmentSubject",
+              geographies: [1],
+              sketches: [10],
+              hash: "frag1",
+            },
+          } as CardExportInput["metrics"][0],
+          {
+            id: 2,
+            type: "overlay_area",
+            state: SpatialMetricState.Complete,
+            value: { "*": 0 },
+            dependencyHash: geographyHash,
+            sourceUrl: "https://example.com/a.geojson",
+            subject: {
+              __typename: "GeographySubject",
+              id: 1,
+            },
+          } as CardExportInput["metrics"][0],
+        ],
+      }),
+      primaryGeographyId: 1,
+      inlineNodes: [
+        {
+          walkIndex: 0,
+          dependencies: [fragmentDep, geographyDep],
+          componentSettings: { presentation: "geography_proportion_captured" },
+        },
+      ],
+      sourceUrlMap: urlMap,
+    });
+
+    expect(section).not.toBeNull();
+    const dataCol = section!.columns
+      .map((c) => c.key)
+      .find((k) => !["scope", "sketchId", "sketchName"].includes(k));
+    expect(dataCol).toBeTruthy();
+    expect(section!.rows[0][dataCol!]).toBe(0);
+  });
+
   test("buildInlineMetricsSection raster_overlay_area exports total km²", () => {
     const dep: MetricDependency = {
       type: "raster_overlay_area",

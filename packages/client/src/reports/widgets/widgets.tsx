@@ -2113,6 +2113,43 @@ export function buildReportCommandGroups({
                   });
                 },
               });
+              inlineGroup.items.push({
+                // eslint-disable-next-line i18next/no-literal-string
+                id: `overlay-layer-${tocId}-geography-proportion-captured`,
+                label: "Geography Proportion Captured",
+                description:
+                  "Percentage of this layer's area within a geography that overlaps the sketch.",
+                screenshotSrc: "/slashCommands/percent-geography.png",
+                run: (state, dispatch, view) => {
+                  const overlayParams = source.containsOverlappingFeatures
+                    ? { sourceHasOverlappingFeatures: true }
+                    : undefined;
+                  return insertInlineMetric(view, state.selection.ranges[0], {
+                    type: "InlineMetric",
+                    metrics: [
+                      {
+                        type: "overlay_area",
+                        subjectType: "fragments",
+                        stableId,
+                        ...(overlayParams
+                          ? { parameters: { ...overlayParams } }
+                          : {}),
+                      },
+                      {
+                        type: "overlay_area",
+                        subjectType: "geographies",
+                        stableId,
+                        ...(overlayParams
+                          ? { parameters: { ...overlayParams } }
+                          : {}),
+                      },
+                    ],
+                    componentSettings: {
+                      presentation: "geography_proportion_captured",
+                    },
+                  });
+                },
+              });
               if (
                 clippingGeography ||
                 (geographies?.length && geographies.length > 1)

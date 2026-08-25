@@ -785,6 +785,49 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
         if (geographyId === undefined) {
           throw new Error("Primary geography not found.");
         }
+        const overlayFragmentMetrics = metrics.filter(
+          (m) => m.type === "overlay_area" && subjectIsFragment(m.subject)
+        );
+        const overlayGeographyMetric = metrics.find(
+          (m) =>
+            m.type === "overlay_area" &&
+            subjectIsGeography(m.subject) &&
+            m.subject.id === geographyId
+        ) as OverlayAreaMetric | undefined;
+        if (overlayFragmentMetrics.length > 0 || overlayGeographyMetric) {
+          if (overlayFragmentMetrics.length === 0) {
+            throw new Error("Overlay area not found in metrics.");
+          }
+          if (!overlayGeographyMetric) {
+            throw new Error("Geography overlay area not found in metrics.");
+          }
+          let combined = combineMetricsForFragments(
+            overlayFragmentMetrics as Pick<Metric, "type" | "value">[],
+            "overlay_area"
+          ) as OverlayAreaMetric;
+          combined = attachOverlayAreaOverlapScope(
+            combined,
+            overlayFragmentMetrics
+          ) as OverlayAreaMetric;
+          const sketchArea =
+            getOverlayAreaClassTotals(combined.value)["*"] ?? 0;
+          const geographyTotals = getOverlayAreaClassTotals(
+            overlayGeographyMetric.value
+          );
+          const geographyArea =
+            geographyTotals["*"] ??
+            Object.entries(overlayGeographyMetric.value).reduce(
+              (sum, [key, v]) =>
+                isOverlayAreaClassKey(key) && typeof v === "number"
+                  ? sum + v
+                  : sum,
+              0
+            );
+          if (!geographyArea) {
+            return formatters.percent(0);
+          }
+          return formatters.percent(sketchArea / geographyArea);
+        }
         // Sketch sum: combine fragment raster_stats metrics
         const fragmentRasterMetrics = metrics.filter(
           (m) => m.type === "raster_stats" && subjectIsFragment(m.subject)
@@ -924,7 +967,9 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
     const metricType =
       presentation === "raster_overlay_area"
         ? "raster_overlay_area"
-        : presentation === "overlay_area"
+        : presentation === "overlay_area" ||
+          (presentation === "geography_proportion_captured" &&
+            (dependencies || []).some((d) => d.type === "overlay_area"))
         ? "overlay_area"
         : null;
     if (loading || errors.length > 0 || !metricType) {
@@ -1259,6 +1304,18 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
   const showBufferGeography = useMemo(
     () => dependencies.some((d) => d.subjectType === "geographies"),
     [dependencies]
+  );
+  const isOverlayGeographyProportion = useMemo(
+    () =>
+      presentation === "geography_proportion_captured" &&
+      dependencies.some((d) => d.type === "overlay_area"),
+    [presentation, dependencies]
+  );
+  const isRasterGeographyProportion = useMemo(
+    () =>
+      presentation === "geography_proportion_captured" &&
+      dependencies.some((d) => d.type === "raster_stats"),
+    [presentation, dependencies]
   );
 
   const { geographies } = useBaseReportContext();
@@ -1808,7 +1865,8 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
             }}
           />
         )}
-        {["overlay_area", "geography_overlay_area"].includes(presentation) && (
+        {(["overlay_area", "geography_overlay_area"].includes(presentation) ||
+          isOverlayGeographyProportion) && (
           <label className="flex items-center gap-2 cursor-pointer pt-1">
             <input
               type="checkbox"
@@ -1832,7 +1890,7 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
         {presentation === "raster_overlay_area" && (
           <VrmSelector value={currentVrm} onChange={handleVrmChange} />
         )}
-        {presentation === "geography_proportion_captured" && (
+        {isRasterGeographyProportion && (
           <VrmSelector
             label={t("Sketch VRM")}
             value={currentVrm}
@@ -1840,7 +1898,7 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
           />
         )}
         {(presentation === "geography_raster_stats" ||
-          presentation === "geography_proportion_captured") && (
+          isRasterGeographyProportion) && (
           <VrmSelector
             geography
             value={currentGeographyVrm}
