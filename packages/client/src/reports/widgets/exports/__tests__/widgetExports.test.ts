@@ -12,16 +12,20 @@ jest.mock(
         new Blob(["PK\u0003\u0004"], { type: "application/zip" });
     },
   }),
-  { virtual: true },
+  { virtual: true }
 );
 
 import { hashMetricDependency, type MetricDependency } from "overlay-engine";
-import { SpatialMetricState, SketchGeometryType } from "../../../../generated/graphql";
+import {
+  SpatialMetricState,
+  SketchGeometryType,
+} from "../../../../generated/graphql";
 import { sectionToCsv } from "../csv";
 import { packageSectionsAsCsvBlob } from "../package";
 import { buildRawExportPayload } from "../raw";
 import { buildInlineMetricsSection } from "../exporters/inlineMetrics.export";
 import { exportRasterTimeSeries } from "../exporters/rasterTimeSeries.export";
+import { exportVectorTimeSeries } from "../exporters/vectorTimeSeries.export";
 import type { CardExportInput, WidgetExportSection } from "../types";
 
 const urlMap = { layerA: "https://example.com/a.geojson" };
@@ -31,7 +35,7 @@ function tStub(key: string) {
 }
 
 function minimalCardInput(
-  overrides: Partial<CardExportInput> = {},
+  overrides: Partial<CardExportInput> = {}
 ): CardExportInput {
   return {
     reportId: 9,
@@ -94,7 +98,9 @@ describe("widget export helpers", () => {
       columns: [{ key: "x", label: "x", type: "string" }],
       rows: [{ x: 1 }],
     };
-    const { blob, isZip, filenameBase } = await packageSectionsAsCsvBlob([section]);
+    const { blob, isZip, filenameBase } = await packageSectionsAsCsvBlob([
+      section,
+    ]);
     expect(isZip).toBe(true);
     expect(filenameBase).toBe("export");
     expect(blob.type).toContain("zip");
@@ -239,9 +245,7 @@ describe("widget export helpers", () => {
           sketchId: 10,
           sketchName: "Collection",
           isCollection: true,
-          childSketches: [
-            { id: 20, name: "Child" },
-          ],
+          childSketches: [{ id: 20, name: "Child" }],
         },
       }),
       inlineNodes: [
@@ -429,9 +433,11 @@ describe("widget export helpers", () => {
     expect(dataCol).toBeTruthy();
     // 4 deduped features within buffer / 20 in geography
     expect(section!.rows[0][dataCol!]).toBeCloseTo(0.2);
-    const meta = (section!.extras as {
-      columnMeta: Array<{ bufferDistanceKm?: number }>;
-    }).columnMeta;
+    const meta = (
+      section!.extras as {
+        columnMeta: Array<{ bufferDistanceKm?: number }>;
+      }
+    ).columnMeta;
     expect(meta[0].bufferDistanceKm).toBe(1);
   });
 
@@ -606,12 +612,15 @@ describe("widget export helpers", () => {
     expect(section).not.toBeNull();
     const dataCol = section!.columns
       .map((c) => c.key)
-      .find((k) => !["scope", "sketchId", "sketchName"].includes(k) && !k.includes("__"));
+      .find(
+        (k) =>
+          !["scope", "sketchId", "sketchName"].includes(k) && !k.includes("__")
+      );
     expect(dataCol).toBeTruthy();
     expect(section!.rows[0][dataCol!]).toBe(20.5);
-    expect(
-      section!.columns.some((c) => c.key === `${dataCol}__minSqKm`)
-    ).toBe(true);
+    expect(section!.columns.some((c) => c.key === `${dataCol}__minSqKm`)).toBe(
+      true
+    );
   });
 
   test("raster time-series export uses its selected geography", () => {
@@ -678,6 +687,75 @@ describe("widget export helpers", () => {
       },
     });
 
+    expect(sections[0].rows[0].fractionOfGeography).toBe(0.25);
+  });
+
+  test("vector time-series export uses its selected geography", () => {
+    const source = {
+      stableId: "layerA",
+      sourceUrl: urlMap.layerA,
+      vectorGeometryType: "Polygon",
+      tableOfContentsItem: { title: "Layer A" },
+      temporal: {
+        version: 1,
+        granularity: "layer",
+        coverage: {
+          kind: "interval",
+          start: "2020",
+          end: "2021",
+          precision: "year",
+        },
+        nativeResolution: "year",
+        defaultViewResolution: "year",
+      },
+    } as CardExportInput["sources"][0];
+    const fragment = {
+      id: 1,
+      type: "overlay_area",
+      state: SpatialMetricState.Complete,
+      value: { "*": 50 },
+      dependencyHash: "fragment",
+      sourceUrl: urlMap.layerA,
+      subject: {
+        __typename: "FragmentSubject",
+        geographies: [1, 2],
+        sketches: [10],
+        hash: "frag1",
+      },
+    } as CardExportInput["metrics"][0];
+    const geography = (id: number, area: number) =>
+      ({
+        id: id + 1,
+        type: "overlay_area",
+        state: SpatialMetricState.Complete,
+        value: { "*": area },
+        // eslint-disable-next-line i18next/no-literal-string
+        dependencyHash: `geography-${id}`,
+        sourceUrl: urlMap.layerA,
+        subject: {
+          __typename: "GeographySubject",
+          id,
+        },
+      } as CardExportInput["metrics"][0]);
+
+    const sections = exportVectorTimeSeries({
+      ...minimalCardInput({
+        sources: [source],
+        metrics: [fragment, geography(1, 100), geography(2, 200)],
+        geographies: [
+          { id: 1, name: "G1", translatedProps: {}, stableIds: [] },
+          { id: 2, name: "G2", translatedProps: {}, stableIds: [] },
+        ],
+        primaryGeographyId: 1,
+      }),
+      dependencies: [],
+      componentSettings: {
+        mode: "geometry",
+        geographyId: 2,
+      },
+    });
+
+    expect(sections[0].rows[0].measure).toBe(50);
     expect(sections[0].rows[0].fractionOfGeography).toBe(0.25);
   });
 });

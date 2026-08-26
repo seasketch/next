@@ -41,6 +41,7 @@ export type TimeSeriesTocItem = {
       id?: number | null;
       type?: string | null;
       isSingleBandRaster?: boolean | null;
+      vectorGeometryType?: string | null;
       temporal?: unknown;
     } | null;
   } | null;
@@ -50,10 +51,45 @@ export type TimeSeriesSiblingSource = {
   stableId: string;
   tableOfContentsItemId?: number | null;
   rasterBandCount?: number | null;
+  vectorGeometryType?: string | null;
   styleGroupByColumn?: string | null;
   tableOfContentsItem?: { title?: string | null } | null;
   temporal?: unknown;
 };
+
+export type VectorGeometryFamily = "polygon" | "line" | "point";
+
+/** Collapse Multi* types so yearly polygon/line/point siblings can match. */
+export function vectorGeometryFamily(
+  geometryType: string | null | undefined
+): VectorGeometryFamily | null {
+  switch (geometryType) {
+    case "Polygon":
+    case "MultiPolygon":
+      return "polygon";
+    case "LineString":
+    case "MultiLineString":
+      return "line";
+    case "Point":
+    case "MultiPoint":
+      return "point";
+    default:
+      return null;
+  }
+}
+
+/**
+ * True when this source is a whole-layer time step (one TOC item per
+ * year/interval). Feature / band / row / remote sources keep internal time
+ * and must not join a layer Time Series.
+ */
+export function isLayerGranularityTemporal(source: unknown): boolean {
+  if (!source || typeof source !== "object" || !("temporal" in source)) {
+    return false;
+  }
+  const temporal = source.temporal;
+  return isTemporalInfo(temporal) && temporal.granularity === "layer";
+}
 
 /**
  * Expands a source's TemporalInfo coverage to a UTC interval used for
@@ -193,14 +229,14 @@ export type TimeSeriesSiblingMatch = {
 };
 
 /**
- * Same-folder title siblings that look like the same raster series.
+ * Same-folder title siblings that look like the same time series.
  * Requires TOC parent topology (folder or root).
  *
- * Processed overlay sources must match raster shape (band count +
- * categorical vs continuous) and have temporal coverage. Unprocessed
- * single-band rasters with a matching title and temporal coverage are
+ * Processed overlay sources must match series shape (raster band/class
+ * or vector geometry family) and have temporal coverage. Unprocessed
+ * same-shape layers with a matching title and temporal coverage are
  * included so insert can preprocess them the same way the layer picker
- * does.
+ * does. Rasters never match vectors.
  */
 export function findTimeSeriesSiblings(args: {
   subject: TimeSeriesSiblingSource;
@@ -214,7 +250,9 @@ export function findTimeSeriesSiblings(args: {
   if (!coverageForSource(subject)) {
     return [];
   }
-  const subjectToc = tocItems.find((i) => i.id === subject.tableOfContentsItemId);
+  const subjectToc = tocItems.find(
+    (i) => i.id === subject.tableOfContentsItemId
+  );
   if (!subjectToc || subjectToc.isFolder) {
     return [];
   }
@@ -225,7 +263,14 @@ export function findTimeSeriesSiblings(args: {
   if (key.length < 2) {
     return [];
   }
-  const subjectShape = rasterSeriesShape(subject);
+  const subjectShape = seriesShape(subject);
+  if (!subjectShape) {
+    return [];
+  }
+  const subjectIsVector = subjectShape.startsWith("vector:");
+  if (subjectIsVector && !isLayerGranularityTemporal(subject)) {
+    return [];
+  }
   const matches: TimeSeriesSiblingMatch[] = [];
   const seen = new Set<string>();
   for (const item of tocItems) {
@@ -236,7 +281,8 @@ export function findTimeSeriesSiblings(args: {
     if (source?.stableId) {
       if (source.stableId === subject.stableId) continue;
       if (!coverageForSource(source)) continue;
-      if (rasterSeriesShape(source) !== subjectShape) continue;
+      if (subjectIsVector && !isLayerGranularityTemporal(source)) continue;
+      if (seriesShape(source) !== subjectShape) continue;
       if (seen.has(source.stableId)) continue;
       seen.add(source.stableId);
       matches.push({
@@ -247,8 +293,14 @@ export function findTimeSeriesSiblings(args: {
       });
       continue;
     }
-    if (!isEligibleUnprocessedRaster(item)) continue;
+    if (!isEligibleUnprocessedSibling(item, subjectShape)) continue;
     if (!coverageForSource(item.dataLayer?.dataSource)) continue;
+    if (
+      subjectIsVector &&
+      !isLayerGranularityTemporal(item.dataLayer?.dataSource)
+    ) {
+      continue;
+    }
     if (!item.stableId || item.stableId === subject.stableId) continue;
     if (seen.has(item.stableId)) continue;
     seen.add(item.stableId);
@@ -306,15 +358,32 @@ export function unionRasterValueDomain(
   return [lo, hi];
 }
 
-function isEligibleUnprocessedRaster(item: TimeSeriesTocItem): boolean {
-  return item.dataLayer?.dataSource?.isSingleBandRaster === true;
+function isEligibleUnprocessedSibling(
+  item: TimeSeriesTocItem,
+  subjectShape: string
+): boolean {
+  if (subjectShape.startsWith("raster:")) {
+    return item.dataLayer?.dataSource?.isSingleBandRaster === true;
+  }
+  const family = vectorGeometryFamily(
+    item.dataLayer?.dataSource?.vectorGeometryType
+  );
+  // eslint-disable-next-line i18next/no-literal-string
+  return family !== null && subjectShape === `vector:${family}`;
 }
 
-function rasterSeriesShape(source: TimeSeriesSiblingSource): string {
-  const bands = source.rasterBandCount ?? 0;
-  const categorical = source.styleGroupByColumn === "value";
-  // eslint-disable-next-line i18next/no-literal-string
-  return `${bands}:${categorical ? "cat" : "cont"}`;
+function seriesShape(source: TimeSeriesSiblingSource): string | null {
+  const family = vectorGeometryFamily(source.vectorGeometryType);
+  if (family) {
+    // eslint-disable-next-line i18next/no-literal-string
+    return `vector:${family}`;
+  }
+  if (source.rasterBandCount && source.rasterBandCount > 0) {
+    const categorical = source.styleGroupByColumn === "value";
+    // eslint-disable-next-line i18next/no-literal-string
+    return `raster:${source.rasterBandCount}:${categorical ? "cat" : "cont"}`;
+  }
+  return null;
 }
 
 function nativeUnitMs(start: number, precision: TemporalPrecision): number {

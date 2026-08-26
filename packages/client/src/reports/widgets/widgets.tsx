@@ -113,7 +113,17 @@ import {
   RasterTimeSeriesTooltipControls,
   buildRasterTimeSeriesDependencies,
 } from "./RasterTimeSeries";
-import { coverageForSource, findTimeSeriesSiblings } from "./temporalChart";
+import {
+  VectorTimeSeries,
+  VectorTimeSeriesTooltipControls,
+  buildVectorTimeSeriesDependencies,
+  defaultVectorTimeSeriesMode,
+} from "./VectorTimeSeries";
+import {
+  coverageForSource,
+  findTimeSeriesSiblings,
+  isLayerGranularityTemporal,
+} from "./temporalChart";
 import {
   OusDemographicsTable,
   OusDemographicsTableTooltipControls,
@@ -504,6 +514,7 @@ const memoizedWidgets: Record<string, WidgetComponent> = {
     "ClassCompositionChart"
   ),
   RasterTimeSeries: memoWidget(RasterTimeSeries, "RasterTimeSeries"),
+  VectorTimeSeries: memoWidget(VectorTimeSeries, "VectorTimeSeries"),
   OusDemographicsTable: memoWidget(
     OusDemographicsTable,
     "OusDemographicsTable"
@@ -689,6 +700,8 @@ export function ReportWidgetTooltipControlsRouter(
       return <ClassCompositionChartTooltipControls {...props} />;
     case "RasterTimeSeries":
       return <RasterTimeSeriesTooltipControls {...props} />;
+    case "VectorTimeSeries":
+      return <VectorTimeSeriesTooltipControls {...props} />;
     case "OusDemographicsTable":
       return <OusDemographicsTableTooltipControls {...props} />;
     case "BlockLayerToggle":
@@ -863,6 +876,9 @@ export function ReportWidgetNodeViewRouter(props: any) {
     case "RasterTimeSeries":
       widget = <memoizedWidgets.RasterTimeSeries {...widgetProps} />;
       break;
+    case "VectorTimeSeries":
+      widget = <memoizedWidgets.VectorTimeSeries {...widgetProps} />;
+      break;
     case "OusDemographicsTable":
       widget = <memoizedWidgets.OusDemographicsTable {...widgetProps} />;
       break;
@@ -923,6 +939,7 @@ export type BuildReportCommandGroupsArgs = {
         id: number;
         type: DataSourceTypes;
         isSingleBandRaster?: boolean | null;
+        vectorGeometryType?: string | null;
         temporal?: unknown;
       } | null;
     } | null;
@@ -1841,6 +1858,73 @@ export function buildReportCommandGroups({
                 });
               },
             });
+            if (
+              stableId &&
+              coverageForSource(source) &&
+              isLayerGranularityTemporal(source)
+            ) {
+              const timeSeriesMode = defaultVectorTimeSeriesMode(
+                source.vectorGeometryType
+              );
+              blockGroup.items.push({
+                // eslint-disable-next-line i18next/no-literal-string
+                id: `overlay-layer-${tocId}-vector-time-series`,
+                label: "Time Series",
+                description:
+                  "Chart feature counts, overlap, or column statistics over time.",
+                screenshotSrc: "/slashCommands/raster-time-series.png",
+                run: (state, dispatch, view) => {
+                  const siblings = findTimeSeriesSiblings({
+                    subject: source,
+                    sources: sources || [],
+                    tocItems: draftTableOfContentsItems || [],
+                  });
+                  const siblingIds = siblings.map((s) => s.stableId);
+                  const ids = [stableId, ...siblingIds];
+                  const overlappingByStableId: {
+                    [id: string]: boolean | undefined;
+                  } = {};
+                  for (const id of ids) {
+                    const match = (sources || []).find(
+                      (s) => s.stableId === id
+                    );
+                    if (match?.containsOverlappingFeatures) {
+                      overlappingByStableId[id] = true;
+                    }
+                  }
+                  const range = state.selection.ranges[0];
+                  const insert = () =>
+                    insertBlockMetric(view, range, {
+                      type: "VectorTimeSeries",
+                      metrics: buildVectorTimeSeriesDependencies({
+                        stableIds: ids,
+                        mode: timeSeriesMode,
+                        column: source.bestContinuousColumn || undefined,
+                        overlappingByStableId,
+                      }),
+                      componentSettings: {
+                        mode: timeSeriesMode,
+                        ...(source.bestContinuousColumn
+                          ? { column: source.bestContinuousColumn }
+                          : {}),
+                      },
+                    });
+                  const unprocessed = siblings.flatMap((s) =>
+                    !s.processed && typeof s.sourceId === "number"
+                      ? [{ title: s.title, sourceId: s.sourceId }]
+                      : []
+                  );
+                  if (unprocessed.length > 0 && onPrepareTimeSeriesLayers) {
+                    onPrepareTimeSeriesLayers({
+                      unprocessed,
+                      insert,
+                    });
+                    return;
+                  }
+                  return insert();
+                },
+              });
+            }
             blockGroup.items.push({
               // eslint-disable-next-line i18next/no-literal-string
               id: `overlay-layer-${tocId}-feature-presence-table`,

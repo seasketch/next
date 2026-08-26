@@ -15,6 +15,7 @@ import { exportColumnSumTable } from "./exporters/columnSumTable.export";
 import { exportRasterAreaCapturedTable } from "./exporters/rasterAreaCapturedTable.export";
 import { exportClassCompositionChart } from "./exporters/classCompositionChart.export";
 import { exportRasterTimeSeries } from "./exporters/rasterTimeSeries.export";
+import { exportVectorTimeSeries } from "./exporters/vectorTimeSeries.export";
 import { exportOusDemographicsTable } from "./exporters/ousDemographicsTable.export";
 
 const REGISTRY: Record<string, WidgetExporter> = {
@@ -26,6 +27,7 @@ const REGISTRY: Record<string, WidgetExporter> = {
   RasterAreaCapturedTable: exportRasterAreaCapturedTable,
   ClassCompositionChart: exportClassCompositionChart,
   RasterTimeSeries: exportRasterTimeSeries,
+  VectorTimeSeries: exportVectorTimeSeries,
   ColumnStatisticsTable: exportColumnStatisticsTable,
   ColumnValuesHistogram: exportColumnValuesHistogram,
   ColumnSumTable: exportColumnSumTable,
@@ -35,6 +37,8 @@ const REGISTRY: Record<string, WidgetExporter> = {
   OusDemographicsTable: exportOusDemographicsTable,
 };
 
-export function getWidgetExporter(widgetType: string): WidgetExporter | undefined {
+export function getWidgetExporter(
+  widgetType: string
+): WidgetExporter | undefined {
   return REGISTRY[widgetType];
 }

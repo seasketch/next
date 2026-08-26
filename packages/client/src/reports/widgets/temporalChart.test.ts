@@ -3,10 +3,12 @@ import {
   coverageForSource,
   findTimeSeriesSiblingStableIds,
   findTimeSeriesSiblings,
+  isLayerGranularityTemporal,
   rasterBandValueDomain,
   splitObservedRuns,
   titleKeyWithoutDates,
   unionRasterValueDomain,
+  vectorGeometryFamily,
 } from "./temporalChart";
 
 describe("titleKeyWithoutDates", () => {
@@ -286,6 +288,201 @@ describe("findTimeSeriesSiblingStableIds", () => {
         title: "DHW 2018",
         processed: false,
         sourceId: 99,
+      },
+    ]);
+  });
+});
+
+describe("vectorGeometryFamily", () => {
+  test("collapses Multi* types and rejects junk", () => {
+    expect(vectorGeometryFamily("Polygon")).toBe("polygon");
+    expect(vectorGeometryFamily("MultiPolygon")).toBe("polygon");
+    expect(vectorGeometryFamily("LineString")).toBe("line");
+    expect(vectorGeometryFamily("Point")).toBe("point");
+    expect(vectorGeometryFamily(null)).toBeNull();
+    expect(vectorGeometryFamily("SingleBandRaster")).toBeNull();
+  });
+});
+
+describe("findTimeSeriesSiblings vector layers", () => {
+  const toc = [
+    {
+      id: 1,
+      title: "Reefs 2015",
+      stableId: "reefs-2015",
+      parentStableId: "folder-a",
+    },
+    {
+      id: 2,
+      title: "Reefs 2016",
+      stableId: "reefs-2016",
+      parentStableId: "folder-a",
+    },
+    {
+      id: 3,
+      title: "Reefs 2017",
+      stableId: "reefs-2017",
+      parentStableId: "folder-b",
+    },
+    {
+      id: 4,
+      title: "Reefs 2016",
+      stableId: "reefs-points",
+      parentStableId: "folder-a",
+    },
+  ];
+  const sources = [
+    {
+      stableId: "v-2015",
+      tableOfContentsItemId: 1,
+      vectorGeometryType: "Polygon",
+      temporal: createLayerYearTemporalInfo(2015),
+    },
+    {
+      stableId: "v-2016",
+      tableOfContentsItemId: 2,
+      vectorGeometryType: "MultiPolygon",
+      temporal: createLayerYearTemporalInfo(2016),
+    },
+    {
+      stableId: "v-2017",
+      tableOfContentsItemId: 3,
+      vectorGeometryType: "Polygon",
+      temporal: createLayerYearTemporalInfo(2017),
+    },
+    {
+      stableId: "v-points",
+      tableOfContentsItemId: 4,
+      vectorGeometryType: "Point",
+      temporal: createLayerYearTemporalInfo(2016),
+    },
+  ];
+
+  test("matches same-folder yearly polygons including MultiPolygon", () => {
+    expect(
+      findTimeSeriesSiblingStableIds({
+        subject: sources[0],
+        sources,
+        tocItems: toc,
+      })
+    ).toEqual(["v-2016"]);
+  });
+
+  test("does not cross folders or match a different geometry family", () => {
+    const ids = findTimeSeriesSiblingStableIds({
+      subject: sources[0],
+      sources,
+      tocItems: toc,
+    });
+    expect(ids).not.toContain("v-2017");
+    expect(ids).not.toContain("v-points");
+  });
+
+  test("rejects feature-granularity subjects and siblings", () => {
+    const featureTemporal = {
+      version: 1 as const,
+      granularity: "feature" as const,
+      coverage: {
+        kind: "interval" as const,
+        start: "2015",
+        end: "2016",
+        precision: "year" as const,
+      },
+      nativeResolution: "year" as const,
+      defaultViewResolution: "year" as const,
+      mapping: {
+        type: "feature" as const,
+        startColumn: "_when_start" as const,
+        endColumn: "_when_end" as const,
+      },
+    };
+    expect(isLayerGranularityTemporal({ temporal: featureTemporal })).toBe(
+      false
+    );
+    expect(
+      findTimeSeriesSiblingStableIds({
+        subject: { ...sources[0], temporal: featureTemporal },
+        sources,
+        tocItems: toc,
+      })
+    ).toEqual([]);
+    expect(
+      findTimeSeriesSiblingStableIds({
+        subject: sources[0],
+        sources: sources.map((source, index) =>
+          index === 1 ? { ...source, temporal: featureTemporal } : source
+        ),
+        tocItems: toc,
+      })
+    ).toEqual([]);
+  });
+
+  test("does not match a raster with the same title", () => {
+    expect(
+      findTimeSeriesSiblingStableIds({
+        subject: sources[0],
+        sources: [
+          ...sources,
+          {
+            stableId: "r-2016",
+            tableOfContentsItemId: 2,
+            rasterBandCount: 1,
+            temporal: createLayerYearTemporalInfo(2016),
+          },
+        ],
+        tocItems: toc,
+      })
+    ).toEqual(["v-2016"]);
+  });
+
+  test("includes unprocessed same-folder vector siblings", () => {
+    const tocWithUnprocessed = [
+      ...toc,
+      {
+        id: 20,
+        title: "Reefs 2018",
+        stableId: "reefs-2018",
+        parentStableId: "folder-a",
+        dataLayer: {
+          dataSource: {
+            id: 77,
+            vectorGeometryType: "Polygon",
+            temporal: createLayerYearTemporalInfo(2018),
+          },
+        },
+      },
+      {
+        id: 21,
+        title: "Reefs 2019",
+        stableId: "reefs-2019",
+        parentStableId: "folder-a",
+        dataLayer: {
+          dataSource: {
+            id: 78,
+            vectorGeometryType: "Point",
+            temporal: createLayerYearTemporalInfo(2019),
+          },
+        },
+      },
+    ];
+    expect(
+      findTimeSeriesSiblings({
+        subject: sources[0],
+        sources,
+        tocItems: tocWithUnprocessed,
+      })
+    ).toEqual([
+      {
+        stableId: "v-2016",
+        title: "Reefs 2016",
+        processed: true,
+        sourceId: undefined,
+      },
+      {
+        stableId: "reefs-2018",
+        title: "Reefs 2018",
+        processed: false,
+        sourceId: 77,
       },
     ]);
   });

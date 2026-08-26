@@ -1,7 +1,10 @@
 import { describe, expect, test } from "@jest/globals";
 import { createLayerYearTemporalInfo } from "@seasketch/geostats-types";
 import { OverlaySourceListDetailsFragment } from "../../generated/graphql";
-import { CommandPaletteGroup, CommandPaletteItem } from "../commandPalette/types";
+import {
+  CommandPaletteGroup,
+  CommandPaletteItem,
+} from "../commandPalette/types";
 import { buildReportCommandGroups } from "./widgets";
 
 function rasterSource(
@@ -24,7 +27,8 @@ function rasterSource(
       title: "Mangrove Extent (2020)",
       stableId: "mangrove-2020",
     },
-    sourceProcessingJob: null as unknown as OverlaySourceListDetailsFragment["sourceProcessingJob"],
+    sourceProcessingJob:
+      null as unknown as OverlaySourceListDetailsFragment["sourceProcessingJob"],
   };
 }
 
@@ -54,13 +58,14 @@ function timeSeriesLabels(groups: CommandPaletteGroup[]): string[] {
 function vectorSource(
   geometryType: string,
   tocId = 22,
-  stableId = "suma"
+  stableId = "suma",
+  temporal: OverlaySourceListDetailsFragment["temporal"] = null
 ): OverlaySourceListDetailsFragment {
   return {
     tableOfContentsItemId: tocId,
     stableId,
     containsOverlappingFeatures: false,
-    temporal: null,
+    temporal,
     rasterBandCount: null,
     vectorGeometryType: geometryType,
     styleGroupByColumn: null,
@@ -73,7 +78,8 @@ function vectorSource(
       title: "Special Unique Marine Areas (SUMA)",
       stableId,
     },
-    sourceProcessingJob: null as unknown as OverlaySourceListDetailsFragment["sourceProcessingJob"],
+    sourceProcessingJob:
+      null as unknown as OverlaySourceListDetailsFragment["sourceProcessingJob"],
   };
 }
 
@@ -102,6 +108,49 @@ describe("buildReportCommandGroups Time Series", () => {
     expect(timeSeriesLabels(groups)).toEqual([
       "overlay-layer-11-raster-time-series",
     ]);
+  });
+
+  test("does not offer Time Series when the vector has no temporal coverage", () => {
+    const groups = buildReportCommandGroups({
+      sources: [vectorSource("Polygon")],
+    });
+    expect(timeSeriesLabels(groups)).toEqual([]);
+  });
+
+  test("offers Time Series when the vector has temporal coverage", () => {
+    const groups = buildReportCommandGroups({
+      sources: [
+        vectorSource("Polygon", 22, "suma", createLayerYearTemporalInfo(2019)),
+      ],
+    });
+    expect(timeSeriesLabels(groups)).toEqual([
+      "overlay-layer-22-vector-time-series",
+    ]);
+  });
+
+  test("does not offer Time Series for feature-granularity vectors", () => {
+    const groups = buildReportCommandGroups({
+      sources: [
+        vectorSource("Polygon", 22, "suma", {
+          version: 1,
+          granularity: "feature",
+          coverage: {
+            kind: "interval",
+            start: "2019",
+            end: "2020",
+            precision: "year",
+          },
+          nativeResolution: "year",
+          defaultViewResolution: "year",
+          mapping: {
+            type: "feature",
+            startColumn: "_when_start",
+            endColumn: "_when_end",
+          },
+        }),
+      ],
+    });
+    expect(timeSeriesLabels(groups)).toEqual([]);
   });
 });
 
@@ -145,4 +194,3 @@ describe("buildReportCommandGroups Geography Proportion Captured", () => {
     ).toContain("Geography Proportion Captured");
   });
 });
-
