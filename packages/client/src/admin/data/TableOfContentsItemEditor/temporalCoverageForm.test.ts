@@ -209,8 +209,13 @@ describe("sourceTemporalCapabilities", () => {
       },
     });
     expect(caps.hasBands).toBe(true);
-    expect(allowedTemporalModes(caps)).toContain("bands");
-    expect(allowedTemporalModes(caps)).not.toContain("column");
+    expect(allowedTemporalModes(caps)).toEqual([
+      "none",
+      "bands",
+      "year",
+      "month",
+      "span",
+    ]);
   });
 
   it("offers a column on vector sources", () => {
@@ -219,6 +224,13 @@ describe("sourceTemporalCapabilities", () => {
       geostats: null,
     });
     expect(caps).toEqual({ hasColumn: true, hasBands: false });
+    expect(allowedTemporalModes(caps)).toEqual([
+      "none",
+      "year",
+      "month",
+      "span",
+      "column",
+    ]);
   });
 
   it("offers a column on remote GeoJSON and vector tiles", () => {

@@ -76,9 +76,9 @@ export function allowedTemporalModes(
   caps: SourceTemporalCapabilities
 ): TemporalCoverageMode[] {
   const modes: TemporalCoverageMode[] = ["none"];
-  if (caps.hasColumn) modes.push("column");
   if (caps.hasBands) modes.push("bands");
   modes.push("year", "month", "span");
+  if (caps.hasColumn) modes.push("column");
   return modes;
 }
 

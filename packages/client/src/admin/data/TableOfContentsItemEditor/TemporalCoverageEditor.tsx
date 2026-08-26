@@ -1,7 +1,7 @@
 import { Dialog } from "@headlessui/react";
 import { XIcon } from "@heroicons/react/outline";
 import { isTemporalInfo } from "@seasketch/geostats-types";
-import { useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useGlobalErrorHandler } from "../../../components/GlobalErrorHandler";
 import {
@@ -49,6 +49,8 @@ export default function TemporalCoverageEditor({
   const [form, setForm] = useState<TemporalCoverageFormState>(() =>
     formStateFromTemporal(existing, caps)
   );
+  const primaryInputRef = useRef<HTMLInputElement>(null);
+  const throughInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -66,6 +68,7 @@ export default function TemporalCoverageEditor({
   }));
 
   const save = async () => {
+    if (!canSave || mutationState.loading) return;
     const result = temporalFromFormState(form);
     if (!result.ok) {
       setValidationError(validationMessage(result.error, t));
@@ -76,6 +79,11 @@ export default function TemporalCoverageEditor({
       variables: { dataSourceId: source.id, temporal: result.temporal },
     });
     setOpen(false);
+  };
+
+  const onSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    void save();
   };
 
   return (
@@ -113,6 +121,11 @@ export default function TemporalCoverageEditor({
       <Dialog
         open={open}
         onClose={() => setOpen(false)}
+        initialFocus={
+          form.mode === "year" || form.mode === "month" || form.mode === "span"
+            ? primaryInputRef
+            : undefined
+        }
         className="relative z-50"
       >
         <div className="fixed inset-0 bg-black/50" aria-hidden="true" />
@@ -121,6 +134,7 @@ export default function TemporalCoverageEditor({
             className="w-full max-w-xl overflow-hidden rounded-xl border border-white/10 bg-gray-700 text-gray-100 shadow-2xl [color-scheme:dark]"
             style={{ colorScheme: "dark" }}
           >
+            <form onSubmit={onSubmit}>
             <div className="border-b border-gray-600">
               <div className="flex items-center gap-2 px-3 pt-3 pb-2">
                 <Dialog.Title className="min-w-0 flex-1 truncate font-medium text-indigo-100">
@@ -192,8 +206,10 @@ export default function TemporalCoverageEditor({
                     <Trans ns="admin:data">Year</Trans>
                   </span>
                   <input
+                    ref={primaryInputRef}
                     type="text"
                     inputMode="numeric"
+                    autoFocus
                     // eslint-disable-next-line i18next/no-literal-string
                     placeholder="1996"
                     className={`w-28 ${temporalFieldClassName}`}
@@ -210,7 +226,9 @@ export default function TemporalCoverageEditor({
                     <Trans ns="admin:data">Month</Trans>
                   </span>
                   <input
+                    ref={primaryInputRef}
                     type="month"
+                    autoFocus
                     className={temporalFieldClassName}
                     value={form.month}
                     onChange={(e) =>
@@ -227,10 +245,12 @@ export default function TemporalCoverageEditor({
                         <Trans ns="admin:data">From</Trans>
                       </span>
                       <input
+                        ref={primaryInputRef}
                         type={spanPickerType(form.spanPrecision)}
                         inputMode={
                           form.spanPrecision === "year" ? "numeric" : undefined
                         }
+                        autoFocus
                         className={`${
                           form.spanPrecision === "year" ? "w-28" : "w-40"
                         } ${temporalFieldClassName}`}
@@ -238,6 +258,17 @@ export default function TemporalCoverageEditor({
                         onChange={(e) =>
                           setForm((prev) => ({ ...prev, from: e.target.value }))
                         }
+                        onKeyDown={(e) => {
+                          if (e.key !== "Enter") return;
+                          if (
+                            !form.ongoing &&
+                            form.from.trim() &&
+                            !form.through.trim()
+                          ) {
+                            e.preventDefault();
+                            throughInputRef.current?.focus();
+                          }
+                        }}
                       />
                     </label>
                     {!form.ongoing && (
@@ -250,6 +281,7 @@ export default function TemporalCoverageEditor({
                             <Trans ns="admin:data">Through</Trans>
                           </span>
                           <input
+                            ref={throughInputRef}
                             type={spanPickerType(form.spanPrecision)}
                             inputMode={
                               form.spanPrecision === "year"
@@ -338,10 +370,9 @@ export default function TemporalCoverageEditor({
                 <Trans ns="admin:data">Cancel</Trans>
               </button>
               <button
-                type="button"
+                type="submit"
                 disabled={!canSave || mutationState.loading}
                 className="rounded-md bg-blue-600 px-3 py-1.5 text-sm text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40"
-                onClick={save}
               >
                 {mutationState.loading ? (
                   <Trans ns="admin:data">Saving…</Trans>
@@ -350,6 +381,7 @@ export default function TemporalCoverageEditor({
                 )}
               </button>
             </div>
+            </form>
           </Dialog.Panel>
         </div>
       </Dialog>
