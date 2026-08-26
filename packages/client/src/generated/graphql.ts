@@ -25047,7 +25047,7 @@ export type UpdateReportCardMutation = (
     { __typename?: 'UpdateReportCardPayload' }
     & { reportCard?: Maybe<(
       { __typename?: 'ReportCard' }
-      & Pick<ReportCard, 'id'>
+      & Pick<ReportCard, 'id' | 'updatedAt'>
     )> }
   )> }
 );
@@ -39809,6 +39809,7 @@ export const UpdateReportCardDocument = gql`
   ) {
     reportCard {
       id
+      updatedAt
     }
   }
 }
