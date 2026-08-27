@@ -1,0 +1,18 @@
+{
+  "type": "Feature",
+  "properties": {
+    "name": "Shore polygon origin edge"
+  },
+  "geometry": {
+    "type": "Polygon",
+    "coordinates": [
+      [
+        [178.8, -16.43],
+        [178.9, -16.43],
+        [178.9, -16.39],
+        [178.8, -16.39],
+        [178.8, -16.43]
+      ]
+    ]
+  }
+}

@@ -7393,6 +7393,10 @@ select{
   height:1.25rem
 }
 
+.h-56{
+  height:14rem
+}
+
 .h-6{
   height:1.5rem
 }
@@ -18292,4 +18296,8 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .\[\&\>span\]\:min-w-0>span{
   min-width:0px
+}
+
+.\[\&_\.mapboxgl-ctrl-logo\]\:hidden .mapboxgl-ctrl-logo{
+  display:none
 }

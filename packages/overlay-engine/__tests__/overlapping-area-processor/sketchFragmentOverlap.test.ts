@@ -904,7 +904,25 @@ describe("Raster metrics", () => {
   );
 });
 
+/**
+ * Expected meters: independent Shapely nearest-pair vs a bbox clip of
+ * land-big-2.fgb (throwaway /tmp script, not committed), then Turf spherical
+ * length of that pair — the same distance function overlay-engine uses.
+ *
+ * WGS84 geodesic of the same pair is a few meters to ~0.4% shorter; do not
+ * treat JS output as ground truth without checking the pair.
+ */
+function sameLngLat(
+  a: [number, number] | number[],
+  b: [number, number] | number[],
+  eps = 1e-5,
+) {
+  return Math.abs(a[0] - b[0]) < eps && Math.abs(a[1] - b[1]) < eps;
+}
+
 describe("Distance to shore metrics", () => {
+  vi.setConfig({ testTimeout: 1000 * 60 });
+
   it("Should calculate distance to shore", async () => {
     const sourceUrl = "https://uploads.seasketch.org/land-big-2.fgb";
     const source = await createSource<Feature<Polygon>>(sourceUrl);
@@ -929,7 +947,8 @@ describe("Distance to shore metrics", () => {
       require("./sketches/Midpoint-test-4.geojson.json"),
     );
     const result = await calculateDistanceToShore(prepared.feature, source);
-    expect(result.meters).toBeCloseTo(1515.481);
+    // Oracle pair Turf length ~1514 m (WGS84 geodesic 1507 m).
+    expect(result.meters).toBeCloseTo(1515.481, 0);
   });
 
   it("Should be able to find the shore, even if very far away", async () => {
@@ -939,7 +958,12 @@ describe("Distance to shore metrics", () => {
       require("./sketches/Distance-test.geojson.json"),
     );
     const result = await calculateDistanceToShore(prepared.feature, source);
-    expect(result.meters).toBeCloseTo(213248.537548996);
+    // Oracle nearest pair (Shapely AEQD vs land-big-2 clip):
+    // [178.254077566, -14.584860928] → [179.0930151, -16.2202505]
+    // WGS84 geodesic 202129 m; Turf spherical 202869.65 m.
+    // The previous 213248 m expected value was the old H3 early-stop bug
+    // (first ring whose bbox hit land, not geodesic nearest).
+    expect(result.meters).toBeCloseTo(202869.65, 0);
   });
 
   it("Should be able to find the appropriate shoreline across the antimeridian", async () => {
@@ -949,7 +973,36 @@ describe("Distance to shore metrics", () => {
       require("./sketches/Distance-test-3.geojson.json"),
     );
     const result = await calculateDistanceToShore(prepared.feature, source);
-    expect(result.meters).toBeCloseTo(12843.832120885687);
+    // Oracle pair Turf length ~12843 m (WGS84 geodesic 12861 m).
+    expect(result.meters).toBeCloseTo(12843.832120885687, 0);
+  });
+
+  it("Should measure from a point along a LineString edge, not only vertices", async () => {
+    const sourceUrl = "https://uploads.seasketch.org/land-big-2.fgb";
+    const source = await createSource<Feature<Polygon>>(sourceUrl);
+    const feature = require("./sketches/Shore-line-origin-edge.geojson.json");
+    const result = await calculateDistanceToShore(feature, source);
+    // Oracle pair Turf length 7201.7 m (WGS84 geodesic 7167 m).
+    expect(result.meters).toBeCloseTo(7201.7, -1);
+    expect(result.geojsonLine).toBeTruthy();
+    const origin = result.geojsonLine!.geometry.coordinates[0];
+    const [a, b] = feature.geometry.coordinates as [number, number][];
+    expect(sameLngLat(origin, a)).toBe(false);
+    expect(sameLngLat(origin, b)).toBe(false);
+  });
+
+  it("Should measure from a polygon edge, not only vertices", async () => {
+    const sourceUrl = "https://uploads.seasketch.org/land-big-2.fgb";
+    const source = await createSource<Feature<Polygon>>(sourceUrl);
+    const feature = require("./sketches/Shore-polygon-origin-edge.geojson.json");
+    const result = await calculateDistanceToShore(feature, source);
+    // Oracle pair Turf length 3865.8 m (WGS84 geodesic 3847 m).
+    expect(result.meters).toBeCloseTo(3865.8, -1);
+    expect(result.geojsonLine).toBeTruthy();
+    const origin = result.geojsonLine!.geometry.coordinates[0];
+    const ring = feature.geometry.coordinates[0] as [number, number][];
+    const vertices = ring.slice(0, -1);
+    expect(vertices.some((v) => sameLngLat(origin, v))).toBe(false);
   });
 });
 
