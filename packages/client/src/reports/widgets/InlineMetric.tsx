@@ -69,7 +69,10 @@ import ColumnStatsWarning, {
   hasBufferedColumnValuesDependency,
 } from "./ColumnStatsWarning";
 import BufferedOverlapWarning from "./BufferedOverlapWarning";
-import { attachOverlayAreaOverlapScope } from "./ClassTableRows";
+import {
+  attachOverlayAreaOverlapScope,
+  fragmentMetricsTaggedWithGeography,
+} from "./ClassTableRows";
 import {
   getColumnTotalFromGeostats,
   getFeatureCountFromGeostats,
@@ -630,8 +633,10 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
           );
         }
         const combined = combineMetricsForFragments(
-          metrics.filter(
-            (m) => m.type === "count" && subjectIsFragment(m.subject)
+          fragmentMetricsTaggedWithGeography(
+            metrics,
+            geographyId,
+            "count"
           ) as Pick<Metric, "type" | "value">[],
           "count"
         ) as CountMetric;
@@ -785,8 +790,10 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
         if (geographyId === undefined) {
           throw new Error("Primary geography not found.");
         }
-        const overlayFragmentMetrics = metrics.filter(
-          (m) => m.type === "overlay_area" && subjectIsFragment(m.subject)
+        const overlayFragmentMetrics = fragmentMetricsTaggedWithGeography(
+          metrics,
+          geographyId,
+          "overlay_area"
         );
         const overlayGeographyMetric = metrics.find(
           (m) =>
@@ -794,10 +801,10 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
             subjectIsGeography(m.subject) &&
             m.subject.id === geographyId
         ) as OverlayAreaMetric | undefined;
-        if (overlayFragmentMetrics.length > 0 || overlayGeographyMetric) {
-          if (overlayFragmentMetrics.length === 0) {
-            throw new Error("Overlay area not found in metrics.");
-          }
+        const hasOverlayArea =
+          overlayGeographyMetric != null ||
+          metrics.some((m) => m.type === "overlay_area");
+        if (hasOverlayArea) {
           if (!overlayGeographyMetric) {
             throw new Error("Geography overlay area not found in metrics.");
           }
@@ -829,8 +836,10 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
           return formatters.percent(sketchArea / geographyArea);
         }
         // Sketch sum: combine fragment raster_stats metrics
-        const fragmentRasterMetrics = metrics.filter(
-          (m) => m.type === "raster_stats" && subjectIsFragment(m.subject)
+        const fragmentRasterMetrics = fragmentMetricsTaggedWithGeography(
+          metrics,
+          geographyId,
+          "raster_stats"
         );
         const combinedSketch = combineMetricsForFragments(
           fragmentRasterMetrics as Pick<Metric, "type" | "value">[],

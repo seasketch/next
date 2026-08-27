@@ -574,6 +574,162 @@ describe("widget export helpers", () => {
     expect(section!.rows[0][dataCol!]).toBe(0);
   });
 
+  test("buildInlineMetricsSection geography_proportion_captured is 0 when the sketch is outside the selected geography", () => {
+    const fragmentDep: MetricDependency = {
+      type: "overlay_area",
+      subjectType: "fragments",
+      stableId: "layerA",
+      parameters: {},
+    };
+    const geographyDep: MetricDependency = {
+      type: "overlay_area",
+      subjectType: "geographies",
+      stableId: "layerA",
+      parameters: {},
+    };
+    const fragmentHash = hashMetricDependency(fragmentDep, urlMap);
+    const geographyHash = hashMetricDependency(geographyDep, urlMap);
+
+    const section = buildInlineMetricsSection({
+      ...minimalCardInput({
+        geographies: [
+          { id: 1, name: "G1", translatedProps: {}, stableIds: [] },
+          { id: 2, name: "G2", translatedProps: {}, stableIds: [] },
+        ],
+        metrics: [
+          {
+            id: 1,
+            type: "overlay_area",
+            state: SpatialMetricState.Complete,
+            value: { "*": 10 },
+            dependencyHash: fragmentHash,
+            sourceUrl: "https://example.com/a.geojson",
+            subject: {
+              __typename: "FragmentSubject",
+              geographies: [1],
+              sketches: [10],
+              hash: "frag1",
+            },
+          } as CardExportInput["metrics"][0],
+          {
+            id: 2,
+            type: "overlay_area",
+            state: SpatialMetricState.Complete,
+            value: { "*": 50 },
+            dependencyHash: geographyHash,
+            sourceUrl: "https://example.com/a.geojson",
+            subject: {
+              __typename: "GeographySubject",
+              id: 2,
+            },
+          } as CardExportInput["metrics"][0],
+        ],
+      }),
+      primaryGeographyId: 1,
+      inlineNodes: [
+        {
+          walkIndex: 0,
+          dependencies: [fragmentDep, geographyDep],
+          componentSettings: {
+            presentation: "geography_proportion_captured",
+            geographyId: 2,
+          },
+        },
+      ],
+      sourceUrlMap: urlMap,
+    });
+
+    expect(section).not.toBeNull();
+    const dataCol = section!.columns
+      .map((c) => c.key)
+      .find((k) => !["scope", "sketchId", "sketchName"].includes(k));
+    expect(dataCol).toBeTruthy();
+    expect(section!.rows[0][dataCol!]).toBe(0);
+  });
+
+  test("buildInlineMetricsSection percent_count is 0 when the sketch is outside the selected geography", () => {
+    const fragmentDep: MetricDependency = {
+      type: "count",
+      subjectType: "fragments",
+      stableId: "layerA",
+      parameters: {},
+    };
+    const geographyDep: MetricDependency = {
+      type: "count",
+      subjectType: "geographies",
+      stableId: "layerA",
+      parameters: {},
+    };
+    const fragmentHash = hashMetricDependency(fragmentDep, urlMap);
+    const geographyHash = hashMetricDependency(geographyDep, urlMap);
+
+    const section = buildInlineMetricsSection({
+      ...minimalCardInput({
+        geographies: [
+          { id: 1, name: "G1", translatedProps: {}, stableIds: [] },
+          { id: 2, name: "G2", translatedProps: {}, stableIds: [] },
+        ],
+        metrics: [
+          {
+            id: 1,
+            type: "count",
+            state: SpatialMetricState.Complete,
+            value: {
+              "*": {
+                count: 10,
+                uniqueIdIndex: { ranges: [], individuals: [1] },
+              },
+            },
+            dependencyHash: fragmentHash,
+            sourceUrl: "https://example.com/a.geojson",
+            subject: {
+              __typename: "FragmentSubject",
+              geographies: [1],
+              sketches: [10],
+              hash: "frag1",
+            },
+          } as CardExportInput["metrics"][0],
+          {
+            id: 2,
+            type: "count",
+            state: SpatialMetricState.Complete,
+            value: {
+              "*": {
+                count: 20,
+                uniqueIdIndex: { ranges: [[1, 20]], individuals: [] },
+              },
+            },
+            dependencyHash: geographyHash,
+            sourceUrl: "https://example.com/a.geojson",
+            subject: {
+              __typename: "GeographySubject",
+              id: 2,
+            },
+          } as CardExportInput["metrics"][0],
+        ],
+      }),
+      primaryGeographyId: 1,
+      inlineNodes: [
+        {
+          walkIndex: 0,
+          dependencies: [fragmentDep, geographyDep],
+          componentSettings: {
+            presentation: "percent_count",
+            geographyId: 2,
+          },
+        },
+      ],
+      sourceUrlMap: urlMap,
+    });
+
+    expect(section).not.toBeNull();
+    const dataCol = section!.columns
+      .map((c) => c.key)
+      .find((k) => !["scope", "sketchId", "sketchName"].includes(k));
+    expect(dataCol).toBeTruthy();
+    expect(section!.rows[0][dataCol!]).toBe(0);
+  });
+
   test("buildInlineMetricsSection raster_overlay_area exports total km²", () => {
     const dep: MetricDependency = {
       type: "raster_overlay_area",

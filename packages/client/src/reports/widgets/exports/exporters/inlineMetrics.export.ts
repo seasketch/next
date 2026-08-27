@@ -20,7 +20,10 @@ import {
   type RasterStats,
   type TotalAreaMetric,
 } from "overlay-engine";
-import { attachOverlayAreaOverlapScope } from "../../ClassTableRows";
+import {
+  attachOverlayAreaOverlapScope,
+  fragmentMetricsTaggedWithGeography,
+} from "../../ClassTableRows";
 import type { CompatibleSpatialMetricDetailsFragment } from "../../../../generated/graphql";
 import { filterMetricsByDependencies } from "../../../utils/metricSatisfiesDependency";
 import type { CardExportInput, WidgetExportSection } from "../types";
@@ -343,8 +346,10 @@ function extractInlineRawValue(
             : (componentSettings.geographyId as number);
         if (geographyId === undefined) return null;
         const combined = combineMetricsForFragments(
-          metrics.filter(
-            (m) => m.type === "count" && subjectIsFragment(m.subject),
+          fragmentMetricsTaggedWithGeography(
+            metrics,
+            geographyId,
+            "count",
           ) as Pick<Metric, "type" | "value">[],
           "count",
         ) as CountMetric;
@@ -447,8 +452,10 @@ function extractInlineRawValue(
             ? opts.clippingGeographyId
             : (componentSettings.geographyId as number);
         if (geographyId === undefined) return null;
-        const overlayFragmentMetrics = metrics.filter(
-          (m) => m.type === "overlay_area" && subjectIsFragment(m.subject),
+        const overlayFragmentMetrics = fragmentMetricsTaggedWithGeography(
+          metrics,
+          geographyId,
+          "overlay_area",
         );
         const overlayGeographyMetric = metrics.find(
           (m) =>
@@ -456,7 +463,10 @@ function extractInlineRawValue(
             subjectIsGeography(m.subject) &&
             m.subject.id === geographyId,
         ) as OverlayAreaMetric | undefined;
-        if (overlayFragmentMetrics.length > 0 || overlayGeographyMetric) {
+        const hasOverlayArea =
+          overlayGeographyMetric != null ||
+          metrics.some((m) => m.type === "overlay_area");
+        if (hasOverlayArea) {
           let sketchArea = 0;
           if (overlayFragmentMetrics.length > 0) {
             let combined = combineMetricsForFragments(
@@ -484,8 +494,10 @@ function extractInlineRawValue(
           if (!geographyArea) return 0;
           return sketchArea / geographyArea;
         }
-        const fragmentRasterMetrics = metrics.filter(
-          (m) => m.type === "raster_stats" && subjectIsFragment(m.subject),
+        const fragmentRasterMetrics = fragmentMetricsTaggedWithGeography(
+          metrics,
+          geographyId,
+          "raster_stats",
         );
         const combinedSketch = combineMetricsForFragments(
           fragmentRasterMetrics as Pick<Metric, "type" | "value">[],

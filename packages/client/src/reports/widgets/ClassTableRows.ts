@@ -650,6 +650,25 @@ export function getClassTableRows(options: {
 }
 
 /**
+ * Fragment metrics tagged with `geographyId` (`subject.geographies`).
+ */
+export function fragmentMetricsTaggedWithGeography(
+  metrics: CompatibleSpatialMetricDetailsFragment[],
+  geographyId: number,
+  metricType?: string
+): CompatibleSpatialMetricDetailsFragment[] {
+  return metrics.filter((m) => {
+    if (metricType && m.type !== metricType) {
+      return false;
+    }
+    if (!subjectIsFragment(m.subject)) {
+      return false;
+    }
+    return m.subject.geographies.includes(geographyId);
+  });
+}
+
+/**
  * Combine complete metrics per overlay source for one geography.
  *
  * Fragment metrics are filtered to those tagged with `geographyId`
@@ -719,10 +738,9 @@ export function combineMetricsBySource<T extends Metric>(
               .slice()
               .sort((a, b) => Number(b.id) - Number(a.id))[0]
           : geographyMetrics[0];
-      const fragmentMetrics = sourceMetrics.filter(
-        (m) =>
-          subjectIsFragment(m.subject) &&
-          m.subject.geographies.includes(geographyId)
+      const fragmentMetrics = fragmentMetricsTaggedWithGeography(
+        sourceMetrics,
+        geographyId
       );
       let fragments = combineMetricsForFragments(
         fragmentMetrics as Pick<Metric, "type" | "value">[],

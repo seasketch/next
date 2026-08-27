@@ -3,7 +3,6 @@ import { Trans, useTranslation } from "react-i18next";
 import {
   MetricDependency,
   subjectIsFragment,
-  subjectIsGeography,
   ColumnValuesMetric,
   Metric,
   isNumberColumnValueStats,
@@ -100,9 +99,9 @@ function groupByOptionsFromSource(
 type ColumnSumTableSettings = {
   column?: string;
   /**
-   * Geography used as the denominator for the optional "% of geography"
-   * column. When undefined / unset, that column is hidden and no geography
-   * column_values dependency is required.
+   * Geography used as the "% of class total" denominator. When set, Sum is
+   * also restricted to fragments tagged with this geography. When undefined,
+   * the percent column is hidden and Sum uses the primary clipping geography.
    */
   percentGeographyId?: number;
   showZeroCountCategories?: boolean;
@@ -178,6 +177,10 @@ export const ColumnSumTable: ReportWidget<ColumnSumTableSettings> = ({
 
   const { clippingGeography } = usePrimaryGeography(sketchClass, geographies);
   const primaryGeographyId = clippingGeography?.id;
+  const fragmentGeographyId =
+    showPercentColumn && percentGeographyId !== undefined
+      ? percentGeographyId
+      : primaryGeographyId;
   const { printing } = useContext(ReportUIStateContext);
 
   const rows = useMemo<ColumnSumRow[]>(() => {
@@ -213,17 +216,16 @@ export const ColumnSumTable: ReportWidget<ColumnSumTableSettings> = ({
       }));
     }
 
-    if (!primaryGeographyId) {
+    if (!fragmentGeographyId) {
       throw new Error("Primary geography not found.");
     }
 
-    // Fragment membership is always relative to the sketch clipping
-    // geography. The optional percent geography may be a different land /
-    // analysis geography used only as a denominator.
+    // Sum from fragments tagged with fragmentGeographyId (clipping geography
+    // unless the widget reports against another).
     const combinedMetrics = combineMetricsBySource<ColumnValuesMetric>(
       metrics,
       sources,
-      primaryGeographyId,
+      fragmentGeographyId,
       "column_values"
     );
 
@@ -237,23 +239,13 @@ export const ColumnSumTable: ReportWidget<ColumnSumTableSettings> = ({
         column
       );
 
-      let geographyTotal: number | undefined;
-      if (showPercentColumn && percentGeographyId !== undefined) {
-        const source = sources.find((s) => s.stableId === r.sourceId);
-        const geographyMetric = metrics.find(
-          (m) =>
-            m.type === "column_values" &&
-            m.state === SpatialMetricState.Complete &&
-            subjectIsGeography(m.subject) &&
-            m.subject.id === percentGeographyId &&
-            (!source?.sourceUrl || m.sourceUrl === source.sourceUrl)
-        ) as ColumnValuesMetric | undefined;
-        geographyTotal = columnSumFromMetric(
-          geographyMetric,
-          r.groupByKey,
-          column
-        );
-      }
+      const geographyTotal = showPercentColumn
+        ? columnSumFromMetric(
+            combinedForSource?.geographies,
+            r.groupByKey,
+            column
+          )
+        : undefined;
 
       return {
         ...r,
@@ -282,10 +274,9 @@ export const ColumnSumTable: ReportWidget<ColumnSumTableSettings> = ({
     loading,
     sortBy,
     showZero,
-    primaryGeographyId,
+    fragmentGeographyId,
     column,
     showPercentColumn,
-    percentGeographyId,
     componentSettings.customRowLabels,
     componentSettings.rowLinkedStableIds,
     componentSettings.excludedRowKeys,
@@ -304,7 +295,7 @@ export const ColumnSumTable: ReportWidget<ColumnSumTableSettings> = ({
   });
 
   const sketchLinesByRowKey = useMemo(() => {
-    if (!isCollection || !primaryGeographyId || loading || !column) {
+    if (!isCollection || !fragmentGeographyId || loading || !column) {
       return new Map<
         string,
         ReturnType<typeof sketchContributionsForClassTableRow>
@@ -322,7 +313,7 @@ export const ColumnSumTable: ReportWidget<ColumnSumTableSettings> = ({
         sketchContributionsForClassTableRow({
           metrics,
           source,
-          geographyId: primaryGeographyId,
+          geographyId: fragmentGeographyId,
           metricType: "column_values",
           groupByKey: row.groupByKey,
           childSketchIds,
@@ -340,7 +331,7 @@ export const ColumnSumTable: ReportWidget<ColumnSumTableSettings> = ({
     return map;
   }, [
     isCollection,
-    primaryGeographyId,
+    fragmentGeographyId,
     loading,
     column,
     rows,

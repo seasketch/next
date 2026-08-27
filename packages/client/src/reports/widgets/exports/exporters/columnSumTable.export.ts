@@ -1,9 +1,7 @@
 import {
   ColumnValuesMetric,
   isNumberColumnValueStats,
-  subjectIsGeography,
 } from "overlay-engine";
-import { SpatialMetricState } from "../../../../generated/graphql";
 import {
   combineMetricsBySource,
   getClassTableRows,
@@ -64,7 +62,11 @@ export const exportColumnSumTable: WidgetExporter = (
     typeof percentGeographyId === "number" &&
     Number.isFinite(percentGeographyId);
 
-  if (!primaryGeographyId) {
+  const fragmentGeographyId = showPercent
+    ? percentGeographyId
+    : primaryGeographyId;
+
+  if (!primaryGeographyId || !fragmentGeographyId) {
     return [
       {
         id: "column-sum-table",
@@ -101,7 +103,7 @@ export const exportColumnSumTable: WidgetExporter = (
   const combinedMetrics = combineMetricsBySource<ColumnValuesMetric>(
     metrics,
     sources,
-    primaryGeographyId,
+    fragmentGeographyId,
     "column_values"
   );
 
@@ -156,23 +158,13 @@ export const exportColumnSumTable: WidgetExporter = (
       r.groupByKey,
       column
     );
-    let geographyTotal = 0;
-    if (showPercent && percentGeographyId !== undefined) {
-      const source = sources.find((s) => s.stableId === r.sourceId);
-      const geographyMetric = metrics.find(
-        (m) =>
-          m.type === "column_values" &&
-          m.state === SpatialMetricState.Complete &&
-          subjectIsGeography(m.subject) &&
-          m.subject.id === percentGeographyId &&
-          (!source?.sourceUrl || m.sourceUrl === source.sourceUrl)
-      ) as ColumnValuesMetric | undefined;
-      geographyTotal = columnSumFromMetric(
-        geographyMetric,
-        r.groupByKey,
-        column
-      );
-    }
+    const geographyTotal = showPercent
+      ? columnSumFromMetric(
+          combinedForSource?.geographies,
+          r.groupByKey,
+          column
+        )
+      : 0;
     const fraction =
       geographyTotal > 0 && Number.isFinite(geographyTotal)
         ? sum / geographyTotal
@@ -201,7 +193,7 @@ export const exportColumnSumTable: WidgetExporter = (
       const sketchLines = sketchContributionsForClassTableRow({
         metrics,
         source,
-        geographyId: primaryGeographyId,
+        geographyId: fragmentGeographyId,
         metricType: "column_values",
         groupByKey: r.groupByKey,
         childSketchIds,

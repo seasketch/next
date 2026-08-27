@@ -2,6 +2,7 @@ import { SpatialMetricState } from "../../generated/graphql";
 import {
   combineMetricsBySource,
   findGeostatsAttributeByName,
+  fragmentMetricsTaggedWithGeography,
   getClassTableRows,
   hasClassTableRowVisibilityToggle,
   resolveClassTableRowStableId,
@@ -77,6 +78,42 @@ describe("ClassTableRows helpers", () => {
         },
       ])
     ).toBe(false);
+  });
+});
+
+describe("fragmentMetricsTaggedWithGeography", () => {
+  test("keeps fragments tagged with the requested geography", () => {
+    const metrics = [
+      {
+        type: "count",
+        subject: {
+          __typename: "FragmentSubject",
+          hash: "a",
+          sketches: [1],
+          geographies: [1],
+        },
+      },
+      {
+        type: "count",
+        subject: {
+          __typename: "FragmentSubject",
+          hash: "b",
+          sketches: [1],
+          geographies: [2],
+        },
+      },
+      {
+        type: "count",
+        subject: {
+          __typename: "GeographySubject",
+          id: 2,
+        },
+      },
+    ] as any[];
+
+    const tagged = fragmentMetricsTaggedWithGeography(metrics, 2, "count");
+    expect(tagged).toHaveLength(1);
+    expect((tagged[0].subject as { hash: string }).hash).toBe("b");
   });
 });
 
