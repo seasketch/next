@@ -1,4 +1,5 @@
 import type { WidgetExporter } from "./types";
+import { exportDistanceToShoreMap } from "./exporters/distanceToShoreMap.export";
 import { exportGeographySizeTable } from "./exporters/geographySizeTable.export";
 import {
   exportOverlappingAreasTable,
@@ -20,6 +21,7 @@ import { exportOusDemographicsTable } from "./exporters/ousDemographicsTable.exp
 
 const REGISTRY: Record<string, WidgetExporter> = {
   GeographySizeTable: exportGeographySizeTable,
+  DistanceToShoreMap: exportDistanceToShoreMap,
   OverlappingAreasTable: exportOverlappingAreasTable,
   FeatureCountTable: exportFeatureCountTable,
   FeaturePresenceTable: exportFeaturePresenceTable,

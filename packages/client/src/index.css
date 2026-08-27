@@ -19324,3 +19324,7 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .\[\&\>span\]\:min-w-0>span{
   min-width:0px
 }
+
+.\[\&_\.mapboxgl-ctrl-logo\]\:hidden .mapboxgl-ctrl-logo{
+  display:none
+}

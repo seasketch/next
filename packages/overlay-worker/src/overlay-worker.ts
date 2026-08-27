@@ -617,27 +617,39 @@ export default async function handler(payload: OverlayWorkerPayload) {
         return;
       }
       case "distance_to_shore": {
-        console.log("distance_to_shore", payload);
         if (!payload.sourceUrl) {
           throw new Error("sourceUrl is required for distance_to_shore");
         }
         if (subjectIsGeography(payload.subject)) {
           throw new Error("distance_to_shore for geographies not implemented.");
         }
-        const { intersectionFeature, differenceSources } =
-          await subjectsForAnalysis(
-            payload.subject as MetricSubjectFragment | MetricSubjectGeography,
-            helpers,
-          );
+        const { intersectionFeature } = await subjectsForAnalysis(
+          payload.subject as MetricSubjectFragment | MetricSubjectGeography,
+          helpers,
+        );
         const source = await sourceCache.get<Feature<Polygon>>(
           payload.sourceUrl,
           {
             pageSize: "5MB",
           },
         );
+        const minimumDistanceMeters =
+          typeof (payload as { minimumDistanceMeters?: unknown })
+            .minimumDistanceMeters === "number"
+            ? (payload as { minimumDistanceMeters: number })
+                .minimumDistanceMeters
+            : typeof (payload as { miminumDistanceMeters?: unknown })
+                  .miminumDistanceMeters === "number"
+              ? (payload as { miminumDistanceMeters: number })
+                  .miminumDistanceMeters
+              : undefined;
         const result = await calculateDistanceToShore(
           intersectionFeature,
           source,
+          {
+            helpers,
+            minimumDistanceMeters,
+          },
         );
         await flushMessages();
         await sendResultMessage(

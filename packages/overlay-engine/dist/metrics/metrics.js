@@ -1720,7 +1720,17 @@ function combineMetricsForFragments(metrics, expectedMetricType) {
             };
         }
         case "distance_to_shore": {
-            const values = metrics.map((m) => m.value);
+            const values = metrics
+                .map((m) => m.value)
+                .filter((v) => v != null && typeof v.meters === "number");
+            if (values.length === 0) {
+                return {
+                    type: "distance_to_shore",
+                    value: {
+                        meters: Infinity,
+                    },
+                };
+            }
             // return the closest
             const closest = values.reduce((acc, v) => {
                 if (v.meters < acc.meters) {

@@ -44,6 +44,10 @@ import {
   GeographySizeTableTooltipControls,
 } from "./GeographySizeTable";
 import {
+  DistanceToShoreMap,
+  DistanceToShoreMapTooltipControls,
+} from "./DistanceToShoreMap";
+import {
   SketchAttributesTable,
   SketchAttributesTableTooltipControls,
 } from "./SketchAttributesTable";
@@ -463,6 +467,7 @@ const WidgetErrorBlock: FC<{
 const memoizedWidgets: Record<string, WidgetComponent> = {
   InlineMetric: memoWidget(InlineMetric, "InlineMetric"),
   GeographySizeTable: memoWidget(GeographySizeTable, "GeographySizeTable"),
+  DistanceToShoreMap: memoWidget(DistanceToShoreMap, "DistanceToShoreMap"),
   SketchAttributesTable: memoWidget(
     SketchAttributesTable,
     "SketchAttributesTable"
@@ -670,6 +675,8 @@ export function ReportWidgetTooltipControlsRouter(
       return <InlineMetricTooltipControls {...props} />;
     case "GeographySizeTable":
       return <GeographySizeTableTooltipControls {...props} />;
+    case "DistanceToShoreMap":
+      return <DistanceToShoreMapTooltipControls {...props} />;
     case "SketchAttributesTable":
       return <SketchAttributesTableTooltipControls {...props} />;
     case "MpaGuideLevelOfProtection":
@@ -830,6 +837,9 @@ export function ReportWidgetNodeViewRouter(props: any) {
       break;
     case "GeographySizeTable":
       widget = <memoizedWidgets.GeographySizeTable {...widgetProps} />;
+      break;
+    case "DistanceToShoreMap":
+      widget = <memoizedWidgets.DistanceToShoreMap {...widgetProps} />;
       break;
     case "SketchAttributesTable":
       widget = <memoizedWidgets.SketchAttributesTable {...widgetProps} />;
@@ -1346,6 +1356,27 @@ export function buildReportCommandGroups({
     items: [],
   };
   if (showPolygonOptions) {
+    sketchBlockWidgetsGroup.items.push({
+      id: "distance-to-shore-map",
+      label: "Distance to Shore Map",
+      description: "Map of the shortest path between the sketch and the shoreline.",
+      screenshotSrc: "/slashCommands/distance-to-shore.png",
+      run: (state, dispatch, view) => {
+        return insertBlockMetric(view, state.selection.ranges[0], {
+          type: "DistanceToShoreMap",
+          metrics: [
+            {
+              type: "distance_to_shore",
+              subjectType: "fragments",
+            },
+          ],
+          componentSettings: {
+            unit: "kilometer",
+            unitDisplay: "short",
+          },
+        });
+      },
+    });
     sketchBlockWidgetsGroup.items.push({
       id: "sketch-attributes-table",
       label: "Sketch Attributes Table",
