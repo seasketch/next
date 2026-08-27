@@ -21,13 +21,12 @@ type OverlapDebugTooltipProps = {
   metrics: CompatibleSpatialMetricDetailsFragment[];
   sources: OverlaySourceDetailsFragment[];
   /**
-   * Sketch clipping geography — used to find fragment metrics (numerator).
-   * Fragments are tagged with clipping geography ids.
+   * Geography whose tags select the fragment metrics that contribute to Area.
    */
-  clippingGeographyId: number;
+  fragmentGeographyId: number;
   /**
-   * Geography used as the "% Within" denominator. May differ from clipping
-   * when the admin picks a non-primary percent geography.
+   * Geography used as the "% Within" denominator. Same as
+   * {@link fragmentGeographyId} when the widget reports against that geography.
    */
   percentGeographyId: number;
   formatters: ReturnType<typeof useNumberFormatters>;
@@ -41,7 +40,7 @@ export function OverlapDebugTooltip({
   percent,
   metrics,
   sources,
-  clippingGeographyId,
+  fragmentGeographyId,
   percentGeographyId,
   formatters,
   bufferKm,
@@ -59,10 +58,10 @@ export function OverlapDebugTooltip({
               m.sourceUrl === source.sourceUrl &&
               subjectIsFragment(m.subject) &&
               (m.subject as { geographies: number[] }).geographies.includes(
-                clippingGeographyId
+                fragmentGeographyId
               )
           ),
-    [metrics, source, clippingGeographyId]
+    [metrics, source, fragmentGeographyId]
   );
 
   const geographyMetric = useMemo(() => {

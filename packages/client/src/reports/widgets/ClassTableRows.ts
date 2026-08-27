@@ -649,6 +649,13 @@ export function getClassTableRows(options: {
   return rows.filter((r) => !options.excludedRowKeys?.includes(r.key));
 }
 
+/**
+ * Combine complete metrics per overlay source for one geography.
+ *
+ * Fragment metrics are filtered to those tagged with `geographyId`
+ * (see `subject.geographies`) before summing. The geography-subject metric
+ * for that same id is returned alongside.
+ */
 export function combineMetricsBySource<T extends Metric>(
   metrics: CompatibleSpatialMetricDetailsFragment[],
   sources: OverlaySourceDetailsFragment[],

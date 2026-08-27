@@ -233,6 +233,7 @@ function extractCombinedClassSlice(
 export function sketchContributionsForClassTableRow(opts: {
   metrics: CompatibleSpatialMetricDetailsFragment[];
   source: OverlaySourceDetailsFragment;
+  /** Fragments tagged with this geography are included in each sketch's sum. */
   geographyId: number;
   metricType:
     | "overlay_area"

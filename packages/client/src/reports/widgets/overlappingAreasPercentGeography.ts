@@ -9,10 +9,12 @@ import {
 } from "../../generated/graphql";
 
 /**
- * Geography used as the OverlappingAreasTable "% Within" denominator.
- * - `null` — hide the percent column (new-widget default)
+ * Geography the OverlappingAreasTable is configured to report numbers against.
+ * - `null` — hide the percent column (new-widget default); Area still sums
+ *   fragments tagged with the primary clipping geography
  * - `"primary"` — sketch clipping geography
- * - `number` — a specific project geography id
+ * - `number` — a specific project geography; Area is summed from fragments
+ *   tagged with that geography
  */
 export type OverlappingAreasPercentGeographyId = number | "primary" | null;
 
@@ -26,8 +28,9 @@ export type OverlappingAreasPercentGeographySettings = {
 };
 
 /**
- * Resolves the geography id for the "% Within" column, or `undefined` when the
- * column should be hidden.
+ * Resolves the geography the widget reports numbers against, or `undefined`
+ * when the percent column should be hidden (Area then uses the primary
+ * clipping geography).
  *
  * Backwards compatibility: saved reports that only set `showPercentColumn`
  * (or leave settings empty, which historically defaulted the column on) keep
@@ -56,6 +59,24 @@ export function resolveOverlappingAreasPercentGeographyId(
     return undefined;
   }
   return primaryGeographyId;
+}
+
+/**
+ * Geography used when summing Area from fragment metrics.
+ *
+ * By default this is the primary (clipping) geography. If the widget is
+ * configured to report numbers for another geography, fragments are filtered
+ * to only those tagged with that geography.
+ *
+ * @param reportingGeographyId Geography the widget reports against, or
+ *   `undefined` to use `primaryGeographyId`.
+ * @param primaryGeographyId Sketch-class clipping geography.
+ */
+export function resolveOverlappingAreasFragmentGeographyId(
+  reportingGeographyId: number | undefined,
+  primaryGeographyId: number | undefined
+): number | undefined {
+  return reportingGeographyId ?? primaryGeographyId;
 }
 
 /**
@@ -123,17 +144,18 @@ export function mapGeographyValuesBySourceStableId(
 /**
  * Build stableId → geography metric value for the "% Within" denominator.
  *
- * - When `percentGeographyId === clippingGeographyId` and `combinedBySource`
- *   is provided (from {@link combineMetricsBySource} on the clipping geo),
+ * - When `percentGeographyId === fragmentGeographyId` and `combinedBySource`
+ *   is provided (from {@link combineMetricsBySource} on that geography),
  *   reuse its `geographies` halves — no second metric scan.
  * - Otherwise one linear scan of `metrics` for the percent geography.
  */
 export function buildPercentGeographyValuesBySourceId(opts: {
   percentGeographyId: number;
-  clippingGeographyId: number;
+  /** Geography fragments were summed against. */
+  fragmentGeographyId: number;
   metrics: CompatibleSpatialMetricDetailsFragment[];
   sources: OverlaySourceDetailsFragment[];
-  /** Result of combineMetricsBySource(clippingGeographyId). */
+  /** Result of combineMetricsBySource(fragmentGeographyId). */
   combinedBySource?: {
     [sourceId: string]: {
       geographies?: { value?: OverlayAreaMetricValue } | null;
@@ -142,13 +164,13 @@ export function buildPercentGeographyValuesBySourceId(opts: {
 }): Map<string, OverlayAreaMetricValue> {
   const {
     percentGeographyId,
-    clippingGeographyId,
+    fragmentGeographyId,
     metrics,
     sources,
     combinedBySource,
   } = opts;
 
-  if (percentGeographyId === clippingGeographyId && combinedBySource) {
+  if (percentGeographyId === fragmentGeographyId && combinedBySource) {
     const byStableId = new Map<string, OverlayAreaMetricValue>();
     for (const [sourceId, combined] of Object.entries(combinedBySource)) {
       const value = combined.geographies?.value;

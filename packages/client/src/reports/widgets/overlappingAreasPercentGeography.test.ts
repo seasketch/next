@@ -3,6 +3,7 @@ import {
   buildPercentGeographyValuesBySourceId,
   indexOverlayAreaGeographyValuesBySourceUrl,
   overlayAreaClassTotalFromValue,
+  resolveOverlappingAreasFragmentGeographyId,
   resolveOverlappingAreasPercentGeographyId,
 } from "./overlappingAreasPercentGeography";
 
@@ -15,6 +16,8 @@ describe("overlappingAreasPercentGeography", () => {
       )
     ).toBeUndefined();
     expect(resolveOverlappingAreasPercentGeographyId({}, 1)).toBe(1);
+    expect(resolveOverlappingAreasFragmentGeographyId(20, 1)).toBe(20);
+    expect(resolveOverlappingAreasFragmentGeographyId(undefined, 1)).toBe(1);
   });
 
   test("index keeps highest metric id per sourceUrl", () => {
@@ -62,13 +65,13 @@ describe("overlappingAreasPercentGeography", () => {
     );
   });
 
-  test("build reuses combinedBySource when percent geo equals clipping", () => {
+  test("build reuses combinedBySource when percent geo equals fragment geo", () => {
     const combinedBySource = {
       src1: { geographies: { value: { forest: 42 } } },
     };
     const map = buildPercentGeographyValuesBySourceId({
       percentGeographyId: 7,
-      clippingGeographyId: 7,
+      fragmentGeographyId: 7,
       metrics: [
         {
           id: 99,
@@ -85,10 +88,10 @@ describe("overlappingAreasPercentGeography", () => {
     expect(overlayAreaClassTotalFromValue(map.get("src1"), "forest")).toBe(42);
   });
 
-  test("build scans metrics when percent geo differs from clipping", () => {
+  test("build scans metrics when percent geo differs from fragment geo", () => {
     const map = buildPercentGeographyValuesBySourceId({
       percentGeographyId: 20,
-      clippingGeographyId: 7,
+      fragmentGeographyId: 7,
       metrics: [
         {
           id: 1,

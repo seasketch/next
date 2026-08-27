@@ -1,4 +1,7 @@
-import { resolveOverlappingAreasPercentGeographyId } from "./overlappingAreasPercentGeography";
+import {
+  resolveOverlappingAreasFragmentGeographyId,
+  resolveOverlappingAreasPercentGeographyId,
+} from "./overlappingAreasPercentGeography";
 
 describe("resolveOverlappingAreasPercentGeographyId", () => {
   const primaryId = 42;
@@ -61,5 +64,25 @@ describe("resolveOverlappingAreasPercentGeographyId", () => {
         primaryId
       )
     ).toBe(7);
+  });
+});
+
+describe("resolveOverlappingAreasFragmentGeographyId", () => {
+  const primaryId = 42;
+
+  test("filters fragments to the reporting geography when one is configured", () => {
+    expect(resolveOverlappingAreasFragmentGeographyId(99, primaryId)).toBe(99);
+  });
+
+  test("defaults to the primary clipping geography", () => {
+    expect(
+      resolveOverlappingAreasFragmentGeographyId(undefined, primaryId)
+    ).toBe(primaryId);
+  });
+
+  test("uses the primary clipping geography when it is also the reporting geography", () => {
+    expect(
+      resolveOverlappingAreasFragmentGeographyId(primaryId, primaryId)
+    ).toBe(primaryId);
   });
 });

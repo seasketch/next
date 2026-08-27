@@ -171,6 +171,55 @@ describe("combineMetricsBySource", () => {
     expect(result["reef-source"].geographies.value.reef).toBe(7);
   });
 
+  test("excludes fragment metrics that are not tagged with the requested geography", () => {
+    const sourceUrl = "https://example.com/reef.fgb";
+    const metrics = [
+      {
+        id: "10",
+        state: SpatialMetricState.Complete,
+        sourceUrl,
+        type: "overlay_area",
+        subject: {
+          __typename: "FragmentSubject",
+          hash: "fragment-a",
+          sketches: [1],
+          geographies: [1],
+        },
+        value: {
+          reef: 10,
+        },
+      },
+      {
+        id: "20",
+        state: SpatialMetricState.Complete,
+        sourceUrl,
+        type: "overlay_area",
+        subject: {
+          __typename: "GeographySubject",
+          id: 2,
+        },
+        value: {
+          reef: 100,
+        },
+      },
+    ] as any[];
+
+    const result = combineMetricsBySource<any>(
+      metrics as any,
+      [
+        {
+          stableId: "reef-source",
+          sourceUrl,
+        },
+      ] as any,
+      2,
+      "overlay_area"
+    );
+
+    expect(result["reef-source"].fragments.value["*"]).toBe(0);
+    expect(result["reef-source"].geographies.value.reef).toBe(100);
+  });
+
   test("combines real Samoa raster metrics for a report card", () => {
     const result = combineMetricsBySource<any>(
       getSamoaCardMetrics(2577) as any,
