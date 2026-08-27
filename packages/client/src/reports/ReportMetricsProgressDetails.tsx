@@ -17,7 +17,12 @@ import { subjectIsFragment } from "overlay-engine";
 import ReportTaskLineItem from "./components/ReportTaskLineItem";
 import CircularProgressIndicator from "./components/CircularProgressIndicator";
 import * as Tooltip from "@radix-ui/react-tooltip";
-import { ChevronDownIcon, ClockIcon } from "@radix-ui/react-icons";
+import {
+  ChevronDownIcon,
+  ClockIcon,
+  ExternalLinkIcon,
+  QuestionMarkCircledIcon,
+} from "@radix-ui/react-icons";
 import {
   CheckCircleIcon,
   PauseIcon,
@@ -37,6 +42,8 @@ import type {
   AuthorProfileFragment,
   CompatibleSpatialMetricProgressFieldsFragment,
 } from "../generated/graphql";
+import { layerAdminUrl } from "../admin/data/layerAdminDeepLink";
+import FolderIcon from "../components/FolderIcon";
 
 const METRIC_GROUP_COLLAPSE_THRESHOLD = 5;
 
@@ -667,7 +674,6 @@ export default function ReportMetricsProgressDetails({
 
   const { data: reportingLayersData } = useProjectReportingLayersQuery({
     variables: { slug: getSlug() },
-    fetchPolicy: "cache-only",
   });
 
   const overlayAttributionByTocId = useMemo(() => {
@@ -679,6 +685,11 @@ export default function ReportMetricsProgressDetails({
         profile: AuthorProfileFragment | null;
         createdAt: string | null;
         sourceTypeLabel: string;
+        geometryTypeLabel: string | null;
+        version: number | null;
+        attribution: string | null;
+        folderTitle: string | null;
+        isHostedUpload: boolean;
       }
     >();
     for (const item of items) {
@@ -688,6 +699,17 @@ export default function ReportMetricsProgressDetails({
         profile: ds.authorProfile ?? null,
         createdAt: ds.createdAt ?? null,
         sourceTypeLabel: sourceTypeLabel(ds.type, t),
+        geometryTypeLabel: geometryTypeLabel(
+          {
+            vectorGeometryType: ds.vectorGeometryType,
+            isSingleBandRaster: ds.isSingleBandRaster,
+          },
+          t
+        ),
+        version: item.dataLayer?.version ?? null,
+        attribution: ds.attribution ?? null,
+        folderTitle: item.containedBy?.[0]?.title ?? null,
+        isHostedUpload: isHostedUploadSource(ds.type),
       });
     }
     return map;
@@ -732,31 +754,55 @@ export default function ReportMetricsProgressDetails({
                     key={"rtli-layer-" + tocId}
                     className="rounded-md border border-gray-100 bg-gray-50/50 px-2 py-1.5 flex items-center gap-2 min-w-0"
                   >
-                    <span className="flex-1 flex items-center space-x-2">
+                    <span className="flex-1 flex items-center space-x-2 min-w-0">
                       {attribution?.profile && (
-                        <span className="flex-shrink-0 flex items-center text-xs">
-                          <AuthorAvatarWithTooltip
-                            profile={attribution.profile}
+                        <span className="flex-shrink-0 w-5 h-5 rounded-full overflow-hidden">
+                          <ProfilePhoto
+                            fullname={
+                              attribution.profile.fullname ?? undefined
+                            }
+                            email={attribution.profile.email ?? undefined}
+                            canonicalEmail={attribution.profile.email ?? ""}
+                            picture={attribution.profile.picture ?? undefined}
                           />
                         </span>
                       )}
-                      <span
-                        className="text-sm font-medium min-w-0 truncate"
-                        title={layerTitle}
-                      >
+                      <span className="text-sm font-medium min-w-0 truncate">
                         {layerTitle}
                       </span>
-                      {attribution && (
-                        <span className="flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 text-xs font-medium">
-                          {attribution.sourceTypeLabel}
-                        </span>
-                      )}
-                      {layer.output?.epsg && (
-                        // eslint-disable-next-line i18next/no-literal-string
-                        <span className="flex-shrink-0 inline-flex items-center px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-xs font-medium">
-                          EPSG:{layer.output.epsg}
-                        </span>
-                      )}
+                      <OverlaySourceInfoTooltip
+                        title={layerTitle}
+                        sourceTypeLabel={
+                          attribution?.sourceTypeLabel ??
+                          (layer.rasterBandCount != null
+                            ? t("Raster")
+                            : layer.vectorGeometryType
+                            ? t("Vector")
+                            : undefined)
+                        }
+                        geometryTypeLabel={
+                          attribution?.geometryTypeLabel ??
+                          geometryTypeLabel(
+                            {
+                              vectorGeometryType: layer.vectorGeometryType,
+                              rasterBandCount: layer.rasterBandCount,
+                            },
+                            t
+                          )
+                        }
+                        version={attribution?.version}
+                        createdAt={attribution?.createdAt}
+                        isHostedUpload={attribution?.isHostedUpload ?? true}
+                        profile={attribution?.profile}
+                        attribution={attribution?.attribution}
+                        folderTitle={attribution?.folderTitle}
+                        epsg={layer.output?.epsg}
+                        adminHref={
+                          isAdmin && tocId != null
+                            ? layerAdminUrl(getSlug(), tocId)
+                            : undefined
+                        }
+                      />
                     </span>
                     <span className="flex-shrink-0 ml-auto flex items-center">
                       <ReportTaskLineItem
@@ -1060,6 +1106,224 @@ function nameForGeography(
   return geographies.find((g) => g.id === subject.id)?.name;
 }
 
+function geometryTypeLabel(
+  args: {
+    vectorGeometryType?: string | null;
+    rasterBandCount?: number | null;
+    isSingleBandRaster?: boolean | null;
+  },
+  t: (key: string) => string
+): string | null {
+  if (args.rasterBandCount === 1 || args.isSingleBandRaster === true) {
+    return t("Single-band raster");
+  }
+  if (args.rasterBandCount != null && args.rasterBandCount > 1) {
+    return t("Multi-band raster");
+  }
+  const geometry = args.vectorGeometryType;
+  if (geometry === "Polygon" || geometry === "MultiPolygon") {
+    return t("Polygon");
+  }
+  if (geometry === "LineString" || geometry === "MultiLineString") {
+    return t("Line");
+  }
+  if (geometry === "Point" || geometry === "MultiPoint") {
+    return t("Point");
+  }
+  return null;
+}
+
+function formatOverlaySourceType(
+  typeLabel?: string,
+  geomLabel?: string | null
+): string | undefined {
+  if (typeLabel && geomLabel) {
+    const detail = geomLabel.replace(/\s+raster$/i, "");
+    return `${typeLabel} (${detail})`;
+  }
+  return typeLabel || geomLabel || undefined;
+}
+
+function OverlaySourceInfoTooltip({
+  title,
+  sourceTypeLabel: typeLabel,
+  geometryTypeLabel: geomLabel,
+  version,
+  createdAt,
+  isHostedUpload,
+  profile,
+  attribution,
+  folderTitle,
+  epsg,
+  adminHref,
+}: {
+  title: string;
+  sourceTypeLabel?: string;
+  geometryTypeLabel?: string | null;
+  version?: number | null;
+  createdAt?: string | null;
+  isHostedUpload?: boolean;
+  profile?: AuthorProfileFragment | null;
+  attribution?: string | null;
+  folderTitle?: string | null;
+  epsg?: number | null;
+  adminHref?: string;
+}) {
+  const { t } = useTranslation("sketching");
+  const viewMoreLabel = t("View more layer details");
+  const createdDate = createdAt ? new Date(createdAt) : null;
+  const authorName = profile?.fullname || profile?.email || null;
+  const combinedType = formatOverlaySourceType(typeLabel, geomLabel);
+  const formattedDate = createdDate
+    ? createdDate.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      })
+    : null;
+  const originLabel =
+    formattedDate == null
+      ? null
+      : isHostedUpload
+      ? t("Uploaded {{date}}", { date: formattedDate })
+      : t("Created {{date}}", { date: formattedDate });
+  const hasDetails =
+    Boolean(combinedType) ||
+    (version != null && version > 0) ||
+    Boolean(originLabel) ||
+    Boolean(authorName) ||
+    Boolean(attribution) ||
+    Boolean(folderTitle) ||
+    epsg != null ||
+    Boolean(adminHref);
+
+  if (!hasDetails) {
+    return null;
+  }
+
+  return (
+    <Tooltip.Root delayDuration={200} disableHoverableContent={false}>
+      <Tooltip.Trigger asChild>
+        <span
+          className="flex-shrink-0 text-slate-400 hover:text-slate-600 rounded-full p-0.5 cursor-help"
+          aria-label={t("Layer details")}
+        >
+          <QuestionMarkCircledIcon className="h-3.5 w-3.5" aria-hidden />
+        </span>
+      </Tooltip.Trigger>
+      <Tooltip.Portal>
+        <Tooltip.Content
+          className="z-[80] w-64 overflow-hidden rounded-lg border border-gray-200 bg-white p-0 text-left text-gray-900 shadow-lg"
+          sideOffset={6}
+          side="top"
+        >
+          <div className="px-3 py-2.5">
+            {folderTitle && (
+              <div
+                className="mb-1.5 flex items-center gap-1.5 text-xs text-gray-500"
+                title={folderTitle}
+              >
+                <FolderIcon className="h-3.5 w-3.5 flex-shrink-0 text-slate-400" />
+                <span className="min-w-0 truncate">{folderTitle}</span>
+              </div>
+            )}
+            <div className="text-sm font-semibold text-gray-900 leading-snug">
+              {title}
+            </div>
+            {(originLabel || (version != null && version > 0)) && (
+              <div className="mt-1 flex items-center gap-1.5 text-xs text-gray-500">
+                {originLabel && <span>{originLabel}</span>}
+                {version != null && version > 0 && (
+                  <span className="font-medium text-blue-600 bg-blue-50 border border-blue-200 px-1 rounded">
+                    {
+                      // eslint-disable-next-line i18next/no-literal-string
+                      `v${version}`
+                    }
+                  </span>
+                )}
+              </div>
+            )}
+            {(authorName ||
+              attribution ||
+              combinedType ||
+              epsg != null) && (
+              <dl className="mt-2.5 grid grid-cols-[3.25rem_1fr] gap-x-2 gap-y-1.5 text-xs">
+                {(authorName || profile) && (
+                  <>
+                    <dt className="pt-0.5 text-gray-400">{t("Author")}</dt>
+                    <dd className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        {profile && (
+                          <span className="h-4 w-4 flex-shrink-0 overflow-hidden rounded-full">
+                            <ProfilePhoto
+                              fullname={profile.fullname ?? undefined}
+                              email={profile.email ?? undefined}
+                              canonicalEmail={profile.email ?? ""}
+                              picture={profile.picture ?? undefined}
+                            />
+                          </span>
+                        )}
+                        <span className="truncate text-gray-800">
+                          {authorName || t("Unknown")}
+                        </span>
+                      </div>
+                      {attribution && (
+                        <div className="mt-0.5 truncate italic text-gray-500">
+                          {attribution}
+                        </div>
+                      )}
+                    </dd>
+                  </>
+                )}
+                {!profile && attribution && (
+                  <>
+                    <dt className="text-gray-400">{t("Author")}</dt>
+                    <dd className="min-w-0 truncate italic text-gray-500">
+                      {attribution}
+                    </dd>
+                  </>
+                )}
+                {combinedType && (
+                  <>
+                    <dt className="text-gray-400">{t("Type")}</dt>
+                    <dd className="min-w-0 text-gray-800">{combinedType}</dd>
+                  </>
+                )}
+                {epsg != null && (
+                  <>
+                    <dt className="text-gray-400">{t("EPSG")}</dt>
+                    <dd className="min-w-0 text-gray-800">{epsg}</dd>
+                  </>
+                )}
+              </dl>
+            )}
+          </div>
+          {adminHref && (
+            <a
+              href={adminHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 border-t border-gray-100 px-3 py-2 text-xs font-medium text-blue-600 hover:bg-gray-50 hover:text-blue-800"
+            >
+              {viewMoreLabel}
+              <ExternalLinkIcon className="h-3 w-3 shrink-0" aria-hidden />
+            </a>
+          )}
+          <Tooltip.Arrow className="fill-white" />
+        </Tooltip.Content>
+      </Tooltip.Portal>
+    </Tooltip.Root>
+  );
+}
+
+function isHostedUploadSource(type: DataSourceTypes): boolean {
+  return (
+    type === DataSourceTypes.SeasketchVector ||
+    type === DataSourceTypes.SeasketchRaster ||
+    type === DataSourceTypes.SeasketchMvt
+  );
+}
+
 function sourceTypeLabel(
   type: DataSourceTypes,
   t: (key: string) => string
@@ -1075,57 +1339,6 @@ function sourceTypeLabel(
   ];
   if (rasterTypes.includes(type)) return t("Raster");
   return t("Vector");
-}
-
-function AuthorAvatarWithTooltip({
-  profile,
-}: {
-  profile: AuthorProfileFragment;
-}) {
-  const { t } = useTranslation("sketching");
-  return (
-    <Tooltip.Root delayDuration={200}>
-      <Tooltip.Trigger asChild>
-        <span className="inline-flex items-center gap-1.5 cursor-default">
-          <span className="w-5 h-5 flex-shrink-0 rounded-full overflow-hidden inline-block">
-            <ProfilePhoto
-              className="opacity-50 hover:opacity-100 grayscale hover:grayscale-0 transition-all duration-200"
-              fullname={profile.fullname ?? undefined}
-              email={profile.email ?? undefined}
-              canonicalEmail={profile.email ?? ""}
-              picture={profile.picture ?? undefined}
-            />
-          </span>
-          {/* <span className="truncate">{name || t("Unknown")}</span> */}
-        </span>
-      </Tooltip.Trigger>
-      <Tooltip.Portal>
-        <Tooltip.Content
-          className="bg-gray-900 text-white text-xs rounded px-2 py-1.5 z-50 max-w-xs"
-          sideOffset={4}
-          side="top"
-        >
-          <div className="space-y-0.5">
-            {profile.fullname && (
-              <div className="font-medium">
-                {t("Uploaded by ")}
-                {profile.fullname}
-              </div>
-            )}
-            {profile.email && (
-              <div className="text-gray-300 truncate">{profile.email}</div>
-            )}
-            {profile.affiliations && (
-              <div className="text-gray-400 text-[11px]">
-                {profile.affiliations}
-              </div>
-            )}
-          </div>
-          <Tooltip.Arrow className="fill-gray-900" />
-        </Tooltip.Content>
-      </Tooltip.Portal>
-    </Tooltip.Root>
-  );
 }
 
 function groupMetricsBySourceAndOperation(

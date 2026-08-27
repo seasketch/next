@@ -4,14 +4,31 @@ import useSegmentState from "../../components/useSegmentState";
 import BackgroundJobList from "./BackgroundJobList";
 import BaseMapEditor from "./BasemapEditor";
 import TableOfContentsEditor from "./TableOfContentsEditor";
-import { memo } from "react";
+import { memo, useEffect, useRef } from "react";
+import { useLocation } from "react-router-dom";
+import { parseTocItemIdFromSearch } from "./layerAdminDeepLink";
 
 export default memo(function LayerAdminSidebar() {
+  const location = useLocation();
+  const pendingOverlayTabFromDeepLink = useRef(
+    parseTocItemIdFromSearch(location.search) != null
+  );
   const [selectedTab, setSelectedTab, segments] = useSegmentState({
     segments: ["Maps", "Overlay Layers"],
     defaultValue: "Maps",
     storageKey: "data-admin-tabs",
   });
+
+  useEffect(() => {
+    if (pendingOverlayTabFromDeepLink.current) {
+      setSelectedTab("Overlay Layers");
+      pendingOverlayTabFromDeepLink.current = false;
+    }
+  }, [setSelectedTab]);
+
+  const visibleTab = pendingOverlayTabFromDeepLink.current
+    ? "Overlay Layers"
+    : selectedTab;
   // const [selectedTab, setSelectedTab] = useState<Segment>("Basemaps");
   const containerClassName = "flex flex-col h-full overflow-hidden";
   return (
@@ -20,7 +37,7 @@ export default memo(function LayerAdminSidebar() {
         <div className="max-w-sm m-auto mt-4">
           <SegmentControl
             segments={segments}
-            value={selectedTab}
+            value={visibleTab}
             onClick={setSelectedTab}
           />
         </div>
@@ -28,12 +45,12 @@ export default memo(function LayerAdminSidebar() {
       <div className="flex-2 overflow-y-auto">
         <div
           className={
-            selectedTab === "Overlay Layers" ? containerClassName : "hidden"
+            visibleTab === "Overlay Layers" ? containerClassName : "hidden"
           }
         >
           <TableOfContentsEditor />
         </div>
-        <div className={selectedTab === "Maps" ? containerClassName : "hidden"}>
+        <div className={visibleTab === "Maps" ? containerClassName : "hidden"}>
           <BaseMapEditor />
         </div>
       </div>

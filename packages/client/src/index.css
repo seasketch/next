@@ -9587,6 +9587,22 @@ select{
   grid-template-columns:minmax(0,1fr) minmax(16rem,22rem)
 }
 
+.grid-cols-\[1rem_1fr\]{
+  grid-template-columns:1rem 1fr
+}
+
+.grid-cols-\[2\.75rem_1fr\]{
+  grid-template-columns:2.75rem 1fr
+}
+
+.grid-cols-\[1\.25rem_1fr\]{
+  grid-template-columns:1.25rem 1fr
+}
+
+.grid-cols-\[3\.25rem_1fr\]{
+  grid-template-columns:3.25rem 1fr
+}
+
 .grid-rows-6{
   grid-template-rows:repeat(6, minmax(0, 1fr))
 }
@@ -9833,6 +9849,10 @@ select{
 
 .gap-y-8{
   row-gap:2rem
+}
+
+.gap-y-1\.5{
+  row-gap:0.375rem
 }
 
 .-space-x-1 > :not([hidden]) ~ :not([hidden]){
@@ -13258,6 +13278,10 @@ select{
   padding-top:1px
 }
 
+.pt-2\.5{
+  padding-top:0.625rem
+}
+
 .text-left{
   text-align:left
 }
@@ -16275,6 +16299,16 @@ input[type="checkbox"][indeterminate="true"]:checked {
   color:rgb(255 255 255 / var(--tw-text-opacity, 1))
 }
 
+.hover\:text-blue-600:hover{
+  --tw-text-opacity:1;
+  color:rgb(37 99 235 / var(--tw-text-opacity, 1))
+}
+
+.hover\:text-slate-600:hover{
+  --tw-text-opacity:1;
+  color:rgb(71 85 105 / var(--tw-text-opacity, 1))
+}
+
 .hover\:underline:hover{
   -webkit-text-decoration-line:underline;
           text-decoration-line:underline
@@ -16806,6 +16840,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .focus-visible\:ring-white\/50:focus-visible{
   --tw-ring-color:rgb(255 255 255 / 0.5)
+}
+
+.focus-visible\:ring-blue-500\/40:focus-visible{
+  --tw-ring-color:rgb(59 130 246 / 0.4)
 }
 
 .focus-visible\:ring-offset-1:focus-visible{

@@ -1,4 +1,11 @@
-import { Suspense, useCallback, useContext, useEffect, useState } from "react";
+import {
+  Suspense,
+  useCallback,
+  useContext,
+  useEffect,
+  useRef,
+  useState,
+} from "react";
 import { Route, useHistory, useParams } from "react-router-dom";
 import { Trans, useTranslation } from "react-i18next";
 import Spinner from "../../components/Spinner";
@@ -65,6 +72,7 @@ import withScrolling, {
   createHorizontalStrength,
 } from "@nosferatu500/react-dnd-scrollzone";
 import { useApolloClient } from "@apollo/client";
+import { parseTocItemIdFromSearch } from "./layerAdminDeepLink";
 
 const ScrollingComponent = withScrolling("div");
 
@@ -145,6 +153,46 @@ export default function TableOfContentsEditor() {
   });
 
   const layerEditingContext = useContext(LayerEditingContext);
+  const consumedTocItemDeepLink = useRef(false);
+
+  useEffect(() => {
+    if (consumedTocItemDeepLink.current) {
+      return;
+    }
+    const tocItemId = parseTocItemIdFromSearch(history.location.search);
+    if (tocItemId == null) {
+      return;
+    }
+    if (tocQuery.loading) {
+      return;
+    }
+
+    consumedTocItemDeepLink.current = true;
+    const items =
+      tocQuery.data?.projectBySlug?.draftTableOfContentsItems ?? [];
+    const item = items.find((tocItem) => tocItem.id === tocItemId);
+    if (item) {
+      layerEditingContext.setOpenEditor({
+        id: item.id,
+        isFolder: Boolean(item.isFolder),
+        title: item.title,
+      });
+      if (item.stableId && !item.isFolder && manager) {
+        manager.showTocItems([item.stableId]);
+      }
+    }
+
+    history.replace({
+      pathname: history.location.pathname,
+      search: "",
+    });
+  }, [
+    history,
+    layerEditingContext,
+    manager,
+    tocQuery.data?.projectBySlug?.draftTableOfContentsItems,
+    tocQuery.loading,
+  ]);
 
   const openUnresolvedCommentLayer = useCallback(
     (node: TreeItem) => {
