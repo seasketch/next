@@ -5,6 +5,7 @@ import { MetadataXmlFileFragment } from "../generated/graphql";
 import { Trans } from "react-i18next";
 import MetadataDocumentView from "./MetadataDocumentView";
 import EsriRestUrlFooter from "./EsriRestUrlFooter";
+import CkanSourceFooter from "./CkanSourceFooter";
 
 export default function MetadataModal({
   document,
@@ -15,6 +16,8 @@ export default function MetadataModal({
   xml,
   hostedSourceLastUpdated,
   esriRestUrl,
+  ckanDatasetUrl,
+  ckanSiteTitle,
 }: {
   document?: any;
   onRequestClose: () => void;
@@ -24,6 +27,8 @@ export default function MetadataModal({
   xml?: (MetadataXmlFileFragment & { format?: string }) | null;
   hostedSourceLastUpdated?: string;
   esriRestUrl?: string | null;
+  ckanDatasetUrl?: string | null;
+  ckanSiteTitle?: string | null;
 }) {
   const showTitle = useMemo(() => {
     return (
@@ -87,6 +92,9 @@ export default function MetadataModal({
             </div>
           )}
           {esriRestUrl && <EsriRestUrlFooter url={esriRestUrl} />}
+          {ckanDatasetUrl && (
+            <CkanSourceFooter url={ckanDatasetUrl} siteTitle={ckanSiteTitle} />
+          )}
           {hostedSourceLastUpdated && (
             <p className="mt-5 text-sm bg-gray-50 p-2 border border-gray-300 rounded">
               <Trans ns="homepage">

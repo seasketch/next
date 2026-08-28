@@ -1031,6 +1031,83 @@ export enum ChangeLogsOrderBy {
   ProjectIdDesc = 'PROJECT_ID_DESC'
 }
 
+export type CkanDatasetPreview = {
+  __typename?: 'CkanDatasetPreview';
+  availableLanguages: Array<Scalars['String']>;
+  baseUrl: Scalars['String'];
+  datasetId: Scalars['String'];
+  datasetPageUrl: Scalars['String'];
+  datasetTitle?: Maybe<Scalars['String']>;
+  description?: Maybe<Scalars['String']>;
+  document: Scalars['JSON'];
+  fields: Scalars['JSON'];
+  schemaAvailable: Scalars['Boolean'];
+  siteTitle?: Maybe<Scalars['String']>;
+};
+
+export type CkanMetadataSource = Node & {
+  __typename?: 'CkanMetadataSource';
+  /** Normalized CKAN catalogue base URL, e.g. https://open.canada.ca/data/en */
+  baseUrl: Scalars['String'];
+  createdAt: Scalars['Datetime'];
+  datasetType: Scalars['String'];
+  /** Source-level field selection, order, and label overrides applied to every layer linked to this catalogue. */
+  displayConfig: Scalars['JSON'];
+  id: Scalars['Int'];
+  /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
+  nodeId: Scalars['ID'];
+  /** Reads a single `Project` that is related to this `CkanMetadataSource`. */
+  project?: Maybe<Project>;
+  projectId: Scalars['Int'];
+  title?: Maybe<Scalars['String']>;
+};
+
+/**
+ * A condition to be used against `CkanMetadataSource` object types. All fields are
+ * tested for equality and combined with a logical ‘and.’
+ */
+export type CkanMetadataSourceCondition = {
+  /** Checks for equality with the object’s `id` field. */
+  id?: Maybe<Scalars['Int']>;
+  /** Checks for equality with the object’s `projectId` field. */
+  projectId?: Maybe<Scalars['Int']>;
+};
+
+/** An input for mutations affecting `CkanMetadataSource` */
+export type CkanMetadataSourceInput = {
+  /** Normalized CKAN catalogue base URL, e.g. https://open.canada.ca/data/en */
+  baseUrl: Scalars['String'];
+  createdAt?: Maybe<Scalars['Datetime']>;
+  datasetType?: Maybe<Scalars['String']>;
+  /** Source-level field selection, order, and label overrides applied to every layer linked to this catalogue. */
+  displayConfig?: Maybe<Scalars['JSON']>;
+  projectId: Scalars['Int'];
+  title?: Maybe<Scalars['String']>;
+};
+
+/** Represents an update to a `CkanMetadataSource`. Fields that are set will be updated. */
+export type CkanMetadataSourcePatch = {
+  /** Normalized CKAN catalogue base URL, e.g. https://open.canada.ca/data/en */
+  baseUrl?: Maybe<Scalars['String']>;
+  createdAt?: Maybe<Scalars['Datetime']>;
+  datasetType?: Maybe<Scalars['String']>;
+  /** Source-level field selection, order, and label overrides applied to every layer linked to this catalogue. */
+  displayConfig?: Maybe<Scalars['JSON']>;
+  projectId?: Maybe<Scalars['Int']>;
+  title?: Maybe<Scalars['String']>;
+};
+
+/** Methods to use when ordering `CkanMetadataSource`. */
+export enum CkanMetadataSourcesOrderBy {
+  IdAsc = 'ID_ASC',
+  IdDesc = 'ID_DESC',
+  Natural = 'NATURAL',
+  PrimaryKeyAsc = 'PRIMARY_KEY_ASC',
+  PrimaryKeyDesc = 'PRIMARY_KEY_DESC',
+  ProjectIdAsc = 'PROJECT_ID_ASC',
+  ProjectIdDesc = 'PROJECT_ID_DESC'
+}
+
 /** All input for the `clearFormElementStyle` mutation. */
 export type ClearFormElementStyleInput = {
   /**
@@ -1381,6 +1458,33 @@ export type CreateBasemapPayload = {
 /** The output of our create `Basemap` mutation. */
 export type CreateBasemapPayloadBasemapEdgeArgs = {
   orderBy?: Maybe<Array<BasemapsOrderBy>>;
+};
+
+/** All input for the create `CkanMetadataSource` mutation. */
+export type CreateCkanMetadataSourceInput = {
+  /** The `CkanMetadataSource` to be created by this mutation. */
+  ckanMetadataSource: CkanMetadataSourceInput;
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+};
+
+/** The output of our create `CkanMetadataSource` mutation. */
+export type CreateCkanMetadataSourcePayload = {
+  __typename?: 'CreateCkanMetadataSourcePayload';
+  /** The `CkanMetadataSource` that was created by this mutation. */
+  ckanMetadataSource?: Maybe<CkanMetadataSource>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `Project` that is related to this `CkanMetadataSource`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
 };
 
 /** All input for the create `CommunityGuideline` mutation. */
@@ -3840,6 +3944,56 @@ export type DeleteBasemapPayload = {
 /** The output of our delete `Basemap` mutation. */
 export type DeleteBasemapPayloadBasemapEdgeArgs = {
   orderBy?: Maybe<Array<BasemapsOrderBy>>;
+};
+
+/** All input for the `deleteCkanMetadataSourceByNodeId` mutation. */
+export type DeleteCkanMetadataSourceByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `CkanMetadataSource` to be deleted. */
+  nodeId: Scalars['ID'];
+};
+
+/** All input for the `deleteCkanMetadataSourceByProjectIdAndBaseUrl` mutation. */
+export type DeleteCkanMetadataSourceByProjectIdAndBaseUrlInput = {
+  /** Normalized CKAN catalogue base URL, e.g. https://open.canada.ca/data/en */
+  baseUrl: Scalars['String'];
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  projectId: Scalars['Int'];
+};
+
+/** All input for the `deleteCkanMetadataSource` mutation. */
+export type DeleteCkanMetadataSourceInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+};
+
+/** The output of our delete `CkanMetadataSource` mutation. */
+export type DeleteCkanMetadataSourcePayload = {
+  __typename?: 'DeleteCkanMetadataSourcePayload';
+  /** The `CkanMetadataSource` that was deleted by this mutation. */
+  ckanMetadataSource?: Maybe<CkanMetadataSource>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  deletedCkanMetadataSourceNodeId?: Maybe<Scalars['ID']>;
+  /** Reads a single `Project` that is related to this `CkanMetadataSource`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
 };
 
 /** All input for the `deleteCommunityGuidelineByNodeId` mutation. */
@@ -7937,6 +8091,8 @@ export type Mutation = {
   createApiKey: CreateApiKeyResponse;
   /** Creates a single `Basemap`. */
   createBasemap?: Maybe<CreateBasemapPayload>;
+  /** Creates a single `CkanMetadataSource`. */
+  createCkanMetadataSource?: Maybe<CreateCkanMetadataSourcePayload>;
   /** Creates a single `CommunityGuideline`. */
   createCommunityGuideline?: Maybe<CreateCommunityGuidelinePayload>;
   createCustomReport?: Maybe<CreateCustomReportPayload>;
@@ -8034,6 +8190,12 @@ export type Mutation = {
   deleteBasemap?: Maybe<DeleteBasemapPayload>;
   /** Deletes a single `Basemap` using its globally unique id. */
   deleteBasemapByNodeId?: Maybe<DeleteBasemapPayload>;
+  /** Deletes a single `CkanMetadataSource` using a unique key. */
+  deleteCkanMetadataSource?: Maybe<DeleteCkanMetadataSourcePayload>;
+  /** Deletes a single `CkanMetadataSource` using its globally unique id. */
+  deleteCkanMetadataSourceByNodeId?: Maybe<DeleteCkanMetadataSourcePayload>;
+  /** Deletes a single `CkanMetadataSource` using a unique key. */
+  deleteCkanMetadataSourceByProjectIdAndBaseUrl?: Maybe<DeleteCkanMetadataSourcePayload>;
   /** Deletes a single `CommunityGuideline` using a unique key. */
   deleteCommunityGuideline?: Maybe<DeleteCommunityGuidelinePayload>;
   /** Deletes a single `CommunityGuideline` using its globally unique id. */
@@ -8179,6 +8341,12 @@ export type Mutation = {
   /** Re-enable discussion forum posting for a user that was previously banned. */
   enableForumPosting?: Maybe<EnableForumPostingPayload>;
   enableOfflineSupport?: Maybe<EnableOfflineSupportPayload>;
+  /**
+   * Ensure a project has a ckan_metadata_sources row for the catalogue
+   * that hosts this dataset URL, creating one with the site title when
+   * missing.
+   */
+  ensureCkanMetadataSource?: Maybe<CkanMetadataSource>;
   failDataUpload?: Maybe<FailDataUploadPayload>;
   /**
    * Enqueue generation of geometry fragments for sketches that are missing them.
@@ -8364,6 +8532,12 @@ export type Mutation = {
   /** Updates a single `Basemap` using its globally unique id and a patch. */
   updateBasemapByNodeId?: Maybe<UpdateBasemapPayload>;
   updateBasemapOfflineTileSettings?: Maybe<UpdateBasemapOfflineTileSettingsPayload>;
+  /** Updates a single `CkanMetadataSource` using a unique key and a patch. */
+  updateCkanMetadataSource?: Maybe<UpdateCkanMetadataSourcePayload>;
+  /** Updates a single `CkanMetadataSource` using its globally unique id and a patch. */
+  updateCkanMetadataSourceByNodeId?: Maybe<UpdateCkanMetadataSourcePayload>;
+  /** Updates a single `CkanMetadataSource` using a unique key and a patch. */
+  updateCkanMetadataSourceByProjectIdAndBaseUrl?: Maybe<UpdateCkanMetadataSourcePayload>;
   /** Updates a single `CommunityGuideline` using a unique key and a patch. */
   updateCommunityGuideline?: Maybe<UpdateCommunityGuidelinePayload>;
   /** Updates a single `CommunityGuideline` using its globally unique id and a patch. */
@@ -8692,6 +8866,12 @@ export type MutationCreateBasemapArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateCkanMetadataSourceArgs = {
+  input: CreateCkanMetadataSourceInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateCommunityGuidelineArgs = {
   input: CreateCommunityGuidelineInput;
 };
@@ -8976,6 +9156,24 @@ export type MutationDeleteBasemapArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationDeleteBasemapByNodeIdArgs = {
   input: DeleteBasemapByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteCkanMetadataSourceArgs = {
+  input: DeleteCkanMetadataSourceInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteCkanMetadataSourceByNodeIdArgs = {
+  input: DeleteCkanMetadataSourceByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationDeleteCkanMetadataSourceByProjectIdAndBaseUrlArgs = {
+  input: DeleteCkanMetadataSourceByProjectIdAndBaseUrlInput;
 };
 
 
@@ -9403,6 +9601,13 @@ export type MutationEnableForumPostingArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationEnableOfflineSupportArgs = {
   input: EnableOfflineSupportInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationEnsureCkanMetadataSourceArgs = {
+  projectId: Scalars['Int'];
+  url: Scalars['String'];
 };
 
 
@@ -9914,6 +10119,24 @@ export type MutationUpdateBasemapByNodeIdArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateBasemapOfflineTileSettingsArgs = {
   input: UpdateBasemapOfflineTileSettingsInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateCkanMetadataSourceArgs = {
+  input: UpdateCkanMetadataSourceInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateCkanMetadataSourceByNodeIdArgs = {
+  input: UpdateCkanMetadataSourceByNodeIdInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateCkanMetadataSourceByProjectIdAndBaseUrlArgs = {
+  input: UpdateCkanMetadataSourceByProjectIdAndBaseUrlInput;
 };
 
 
@@ -11124,6 +11347,8 @@ export type Project = Node & {
   changeLogsConnection: ChangeLogsConnection;
   /** Reads and enables pagination through a set of `ChangeLog`. */
   changeLogsSinceLastPublish?: Maybe<Array<ChangeLog>>;
+  /** Reads and enables pagination through a set of `CkanMetadataSource`. */
+  ckanMetadataSources: Array<CkanMetadataSource>;
   /** Reads and enables pagination through a set of `ResolvableLayerComment`. */
   commentsSinceLastPublish?: Maybe<Array<ResolvableLayerComment>>;
   /** Reads a single `CommunityGuideline` that is related to this `Project`. */
@@ -11470,6 +11695,18 @@ export type ProjectChangeLogsConnectionArgs = {
 export type ProjectChangeLogsSinceLastPublishArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * SeaSketch Project type. This root type contains most of the fields and queries
+ * needed to drive the application.
+ */
+export type ProjectCkanMetadataSourcesArgs = {
+  condition?: Maybe<CkanMetadataSourceCondition>;
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<CkanMetadataSourcesOrderBy>>;
 };
 
 
@@ -12530,6 +12767,17 @@ export type Query = Node & {
   changeLogByNodeId?: Maybe<ChangeLog>;
   /** Reads and enables pagination through a set of `ChangeLog`. */
   changeLogsConnection?: Maybe<ChangeLogsConnection>;
+  /**
+   * Fetch a CKAN dataset and return the field universe plus a generated
+   * metadata document for the admin preview UI.
+   */
+  ckanDatasetPreview?: Maybe<CkanDatasetPreview>;
+  ckanMetadataSource?: Maybe<CkanMetadataSource>;
+  /** Reads a single `CkanMetadataSource` using its globally unique `ID`. */
+  ckanMetadataSourceByNodeId?: Maybe<CkanMetadataSource>;
+  ckanMetadataSourceByProjectIdAndBaseUrl?: Maybe<CkanMetadataSource>;
+  /** Reads a set of `CkanMetadataSource`. */
+  ckanMetadataSources?: Maybe<Array<CkanMetadataSource>>;
   collectAttachmentIdsFromProsemirrorBody?: Maybe<Array<Maybe<Scalars['String']>>>;
   collectTextFromProsemirrorBodyForLabel?: Maybe<Scalars['String']>;
   communityGuideline?: Maybe<CommunityGuideline>;
@@ -12990,6 +13238,42 @@ export type QueryChangeLogsConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<ChangeLogsOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryCkanDatasetPreviewArgs = {
+  config?: Maybe<Scalars['JSON']>;
+  lang?: Maybe<Scalars['String']>;
+  url: Scalars['String'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryCkanMetadataSourceArgs = {
+  id: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryCkanMetadataSourceByNodeIdArgs = {
+  nodeId: Scalars['ID'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryCkanMetadataSourceByProjectIdAndBaseUrlArgs = {
+  baseUrl: Scalars['String'];
+  projectId: Scalars['Int'];
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryCkanMetadataSourcesArgs = {
+  condition?: Maybe<CkanMetadataSourceCondition>;
+  first?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<CkanMetadataSourcesOrderBy>>;
 };
 
 
@@ -16668,9 +16952,15 @@ export type TableOfContentsItem = Node & {
   /** Reads and enables pagination through a set of `ChangeLog`. */
   changeLogs?: Maybe<Array<ChangeLog>>;
   /**
+   * Fully-qualified CKAN dataset page or API URL. When set, metadata is fetched
+   * from the record at view time and is not editable in SeaSketch.
+   */
+  ckanDatasetUrl?: Maybe<Scalars['String']>;
+  /**
    * Metadata will be returned as directly stored in the SeaSketch
    * database or computed by fetching from a 3rd party service,
-   * depending on the data source type.
+   * depending on the data source type. Pass lang to localize CKAN
+   * metadata using the viewer's SeaSketch language code.
    */
   computedMetadata?: Maybe<Scalars['JSON']>;
   containedBy?: Maybe<Array<Maybe<TableOfContentsItem>>>;
@@ -16827,6 +17117,21 @@ export type TableOfContentsItemCartographyChangeLogsArgs = {
 export type TableOfContentsItemChangeLogsArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
+};
+
+
+/**
+ * TableOfContentsItems represent a tree-view of folders and operational layers
+ * that can be added to the map. Both layers and folders may be nested into other
+ * folders for organization, and each folder has its own access control list.
+ *
+ * Items that represent data layers have a `DataLayer` relation, which in turn has
+ * a reference to a `DataSource`. Usually these relations should be fetched in
+ * batch only once the layer is turned on, using the
+ * `dataLayersAndSourcesByLayerId` query.
+ */
+export type TableOfContentsItemComputedMetadataArgs = {
+  lang?: Maybe<Scalars['String']>;
 };
 
 
@@ -17064,6 +17369,11 @@ export type TableOfContentsItemInput = {
 export type TableOfContentsItemPatch = {
   /** If set, users will be able to zoom to the bounds of this item. [minx, miny, maxx, maxy] */
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
+  /**
+   * Fully-qualified CKAN dataset page or API URL. When set, metadata is fetched
+   * from the record at view time and is not editable in SeaSketch.
+   */
+  ckanDatasetUrl?: Maybe<Scalars['String']>;
   /** If is_folder=false, a DataLayers visibility will be controlled by this item */
   dataLayerId?: Maybe<Scalars['Int']>;
   /** Overlay attribute name used as the canonical feature ID for linked data tables. Required when enable_data_tables is true. */
@@ -17709,6 +18019,61 @@ export type UpdateBasemapPayload = {
 /** The output of our update `Basemap` mutation. */
 export type UpdateBasemapPayloadBasemapEdgeArgs = {
   orderBy?: Maybe<Array<BasemapsOrderBy>>;
+};
+
+/** All input for the `updateCkanMetadataSourceByNodeId` mutation. */
+export type UpdateCkanMetadataSourceByNodeIdInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** The globally unique `ID` which will identify a single `CkanMetadataSource` to be updated. */
+  nodeId: Scalars['ID'];
+  /** An object where the defined keys will be set on the `CkanMetadataSource` being updated. */
+  patch: CkanMetadataSourcePatch;
+};
+
+/** All input for the `updateCkanMetadataSourceByProjectIdAndBaseUrl` mutation. */
+export type UpdateCkanMetadataSourceByProjectIdAndBaseUrlInput = {
+  /** Normalized CKAN catalogue base URL, e.g. https://open.canada.ca/data/en */
+  baseUrl: Scalars['String'];
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** An object where the defined keys will be set on the `CkanMetadataSource` being updated. */
+  patch: CkanMetadataSourcePatch;
+  projectId: Scalars['Int'];
+};
+
+/** All input for the `updateCkanMetadataSource` mutation. */
+export type UpdateCkanMetadataSourceInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  id: Scalars['Int'];
+  /** An object where the defined keys will be set on the `CkanMetadataSource` being updated. */
+  patch: CkanMetadataSourcePatch;
+};
+
+/** The output of our update `CkanMetadataSource` mutation. */
+export type UpdateCkanMetadataSourcePayload = {
+  __typename?: 'UpdateCkanMetadataSourcePayload';
+  /** The `CkanMetadataSource` that was updated by this mutation. */
+  ckanMetadataSource?: Maybe<CkanMetadataSource>;
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  /** Reads a single `Project` that is related to this `CkanMetadataSource`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
 };
 
 export type UpdateClippingLayerPayload = {
@@ -20866,6 +21231,73 @@ export type SetBasemapMaxZoomMutation = (
   )> }
 );
 
+export type CkanDatasetPreviewQueryVariables = Exact<{
+  url: Scalars['String'];
+  config?: Maybe<Scalars['JSON']>;
+  lang?: Maybe<Scalars['String']>;
+}>;
+
+
+export type CkanDatasetPreviewQuery = (
+  { __typename?: 'Query' }
+  & { ckanDatasetPreview?: Maybe<(
+    { __typename?: 'CkanDatasetPreview' }
+    & Pick<CkanDatasetPreview, 'baseUrl' | 'datasetId' | 'datasetPageUrl' | 'siteTitle' | 'datasetTitle' | 'description' | 'availableLanguages' | 'schemaAvailable' | 'fields' | 'document'>
+  )> }
+);
+
+export type ProjectCkanMetadataSourcesQueryVariables = Exact<{
+  slug: Scalars['String'];
+}>;
+
+
+export type ProjectCkanMetadataSourcesQuery = (
+  { __typename?: 'Query' }
+  & { projectBySlug?: Maybe<(
+    { __typename?: 'Project' }
+    & Pick<Project, 'id' | 'supportedLanguages'>
+    & { ckanMetadataSources: Array<(
+      { __typename?: 'CkanMetadataSource' }
+      & Pick<CkanMetadataSource, 'id' | 'projectId' | 'baseUrl' | 'datasetType' | 'title' | 'displayConfig' | 'createdAt'>
+    )>, draftTableOfContentsItems?: Maybe<Array<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'title' | 'ckanDatasetUrl' | 'isFolder'>
+    )>> }
+  )> }
+);
+
+export type EnsureCkanMetadataSourceMutationVariables = Exact<{
+  projectId: Scalars['Int'];
+  url: Scalars['String'];
+}>;
+
+
+export type EnsureCkanMetadataSourceMutation = (
+  { __typename?: 'Mutation' }
+  & { ensureCkanMetadataSource?: Maybe<(
+    { __typename?: 'CkanMetadataSource' }
+    & Pick<CkanMetadataSource, 'id' | 'projectId' | 'baseUrl' | 'datasetType' | 'title' | 'displayConfig' | 'createdAt'>
+  )> }
+);
+
+export type UpdateCkanMetadataSourceMutationVariables = Exact<{
+  id: Scalars['Int'];
+  displayConfig?: Maybe<Scalars['JSON']>;
+  title?: Maybe<Scalars['String']>;
+}>;
+
+
+export type UpdateCkanMetadataSourceMutation = (
+  { __typename?: 'Mutation' }
+  & { updateCkanMetadataSource?: Maybe<(
+    { __typename?: 'UpdateCkanMetadataSourcePayload' }
+    & { ckanMetadataSource?: Maybe<(
+      { __typename?: 'CkanMetadataSource' }
+      & Pick<CkanMetadataSource, 'id' | 'projectId' | 'baseUrl' | 'datasetType' | 'title' | 'displayConfig' | 'createdAt'>
+    )> }
+  )> }
+);
+
 export type CreateProjectMutationVariables = Exact<{
   name: Scalars['String'];
   slug: Scalars['String'];
@@ -22002,6 +22434,7 @@ export type MetadataXmlFileFragment = (
 export type GetMetadataQueryVariables = Exact<{
   itemId?: Maybe<Scalars['Int']>;
   stableId?: Maybe<Scalars['String']>;
+  lang?: Maybe<Scalars['String']>;
 }>;
 
 
@@ -22009,7 +22442,7 @@ export type GetMetadataQuery = (
   { __typename?: 'Query' }
   & { tableOfContentsItemByIdentifier?: Maybe<(
     { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'computedMetadata' | 'usesDynamicMetadata' | 'isCustomGlSource' | 'hideArcGisRestLink' | 'metadataFormat' | 'hostedSourceLastUpdated'>
+    & Pick<TableOfContentsItem, 'id' | 'computedMetadata' | 'usesDynamicMetadata' | 'isCustomGlSource' | 'hideArcGisRestLink' | 'ckanDatasetUrl' | 'metadataFormat' | 'hostedSourceLastUpdated'>
     & { metadataXml?: Maybe<(
       { __typename?: 'DataUploadOutput' }
       & MetadataXmlFileFragment
@@ -22027,6 +22460,7 @@ export type GetMetadataQuery = (
 export type UpdateMetadataMutationVariables = Exact<{
   itemId: Scalars['Int'];
   metadata?: Maybe<Scalars['JSON']>;
+  lang?: Maybe<Scalars['String']>;
 }>;
 
 
@@ -22037,6 +22471,23 @@ export type UpdateMetadataMutation = (
     & { tableOfContentsItem?: Maybe<(
       { __typename?: 'TableOfContentsItem' }
       & Pick<TableOfContentsItem, 'id' | 'metadata' | 'usesDynamicMetadata' | 'computedMetadata'>
+    )> }
+  )> }
+);
+
+export type UpdateCkanDatasetUrlMutationVariables = Exact<{
+  itemId: Scalars['Int'];
+  ckanDatasetUrl?: Maybe<Scalars['String']>;
+}>;
+
+
+export type UpdateCkanDatasetUrlMutation = (
+  { __typename?: 'Mutation' }
+  & { updateTableOfContentsItem?: Maybe<(
+    { __typename?: 'UpdateTableOfContentsItemPayload' }
+    & { tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'ckanDatasetUrl' | 'usesDynamicMetadata'>
     )> }
   )> }
 );
@@ -22062,6 +22513,7 @@ export type UpdateMetadataFromXmlMutationVariables = Exact<{
   itemId: Scalars['Int'];
   xml: Scalars['String'];
   filename?: Maybe<Scalars['String']>;
+  lang?: Maybe<Scalars['String']>;
 }>;
 
 
@@ -22536,6 +22988,7 @@ export type CreateINaturalistTableOfContentsItemMutation = (
 
 export type LayerMetadataChangesQueryVariables = Exact<{
   id: Scalars['Int'];
+  lang?: Maybe<Scalars['String']>;
 }>;
 
 
@@ -32104,6 +32557,188 @@ export function useSetBasemapMaxZoomMutation(baseOptions?: Apollo.MutationHookOp
 export type SetBasemapMaxZoomMutationHookResult = ReturnType<typeof useSetBasemapMaxZoomMutation>;
 export type SetBasemapMaxZoomMutationResult = Apollo.MutationResult<SetBasemapMaxZoomMutation>;
 export type SetBasemapMaxZoomMutationOptions = Apollo.BaseMutationOptions<SetBasemapMaxZoomMutation, SetBasemapMaxZoomMutationVariables>;
+export const CkanDatasetPreviewDocument = gql`
+    query CkanDatasetPreview($url: String!, $config: JSON, $lang: String) {
+  ckanDatasetPreview(url: $url, config: $config, lang: $lang) {
+    baseUrl
+    datasetId
+    datasetPageUrl
+    siteTitle
+    datasetTitle
+    description
+    availableLanguages
+    schemaAvailable
+    fields
+    document
+  }
+}
+    `;
+
+/**
+ * __useCkanDatasetPreviewQuery__
+ *
+ * To run a query within a React component, call `useCkanDatasetPreviewQuery` and pass it any options that fit your needs.
+ * When your component renders, `useCkanDatasetPreviewQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useCkanDatasetPreviewQuery({
+ *   variables: {
+ *      url: // value for 'url'
+ *      config: // value for 'config'
+ *      lang: // value for 'lang'
+ *   },
+ * });
+ */
+export function useCkanDatasetPreviewQuery(baseOptions: Apollo.QueryHookOptions<CkanDatasetPreviewQuery, CkanDatasetPreviewQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<CkanDatasetPreviewQuery, CkanDatasetPreviewQueryVariables>(CkanDatasetPreviewDocument, options);
+      }
+export function useCkanDatasetPreviewLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<CkanDatasetPreviewQuery, CkanDatasetPreviewQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<CkanDatasetPreviewQuery, CkanDatasetPreviewQueryVariables>(CkanDatasetPreviewDocument, options);
+        }
+export type CkanDatasetPreviewQueryHookResult = ReturnType<typeof useCkanDatasetPreviewQuery>;
+export type CkanDatasetPreviewLazyQueryHookResult = ReturnType<typeof useCkanDatasetPreviewLazyQuery>;
+export type CkanDatasetPreviewQueryResult = Apollo.QueryResult<CkanDatasetPreviewQuery, CkanDatasetPreviewQueryVariables>;
+export const ProjectCkanMetadataSourcesDocument = gql`
+    query ProjectCkanMetadataSources($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    supportedLanguages
+    ckanMetadataSources {
+      id
+      projectId
+      baseUrl
+      datasetType
+      title
+      displayConfig
+      createdAt
+    }
+    draftTableOfContentsItems {
+      id
+      title
+      ckanDatasetUrl
+      isFolder
+    }
+  }
+}
+    `;
+
+/**
+ * __useProjectCkanMetadataSourcesQuery__
+ *
+ * To run a query within a React component, call `useProjectCkanMetadataSourcesQuery` and pass it any options that fit your needs.
+ * When your component renders, `useProjectCkanMetadataSourcesQuery` returns an object from Apollo Client that contains loading, error, and data properties
+ * you can use to render your UI.
+ *
+ * @param baseOptions options that will be passed into the query, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options;
+ *
+ * @example
+ * const { data, loading, error } = useProjectCkanMetadataSourcesQuery({
+ *   variables: {
+ *      slug: // value for 'slug'
+ *   },
+ * });
+ */
+export function useProjectCkanMetadataSourcesQuery(baseOptions: Apollo.QueryHookOptions<ProjectCkanMetadataSourcesQuery, ProjectCkanMetadataSourcesQueryVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useQuery<ProjectCkanMetadataSourcesQuery, ProjectCkanMetadataSourcesQueryVariables>(ProjectCkanMetadataSourcesDocument, options);
+      }
+export function useProjectCkanMetadataSourcesLazyQuery(baseOptions?: Apollo.LazyQueryHookOptions<ProjectCkanMetadataSourcesQuery, ProjectCkanMetadataSourcesQueryVariables>) {
+          const options = {...defaultOptions, ...baseOptions}
+          return Apollo.useLazyQuery<ProjectCkanMetadataSourcesQuery, ProjectCkanMetadataSourcesQueryVariables>(ProjectCkanMetadataSourcesDocument, options);
+        }
+export type ProjectCkanMetadataSourcesQueryHookResult = ReturnType<typeof useProjectCkanMetadataSourcesQuery>;
+export type ProjectCkanMetadataSourcesLazyQueryHookResult = ReturnType<typeof useProjectCkanMetadataSourcesLazyQuery>;
+export type ProjectCkanMetadataSourcesQueryResult = Apollo.QueryResult<ProjectCkanMetadataSourcesQuery, ProjectCkanMetadataSourcesQueryVariables>;
+export const EnsureCkanMetadataSourceDocument = gql`
+    mutation EnsureCkanMetadataSource($projectId: Int!, $url: String!) {
+  ensureCkanMetadataSource(projectId: $projectId, url: $url) {
+    id
+    projectId
+    baseUrl
+    datasetType
+    title
+    displayConfig
+    createdAt
+  }
+}
+    `;
+export type EnsureCkanMetadataSourceMutationFn = Apollo.MutationFunction<EnsureCkanMetadataSourceMutation, EnsureCkanMetadataSourceMutationVariables>;
+
+/**
+ * __useEnsureCkanMetadataSourceMutation__
+ *
+ * To run a mutation, you first call `useEnsureCkanMetadataSourceMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useEnsureCkanMetadataSourceMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [ensureCkanMetadataSourceMutation, { data, loading, error }] = useEnsureCkanMetadataSourceMutation({
+ *   variables: {
+ *      projectId: // value for 'projectId'
+ *      url: // value for 'url'
+ *   },
+ * });
+ */
+export function useEnsureCkanMetadataSourceMutation(baseOptions?: Apollo.MutationHookOptions<EnsureCkanMetadataSourceMutation, EnsureCkanMetadataSourceMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<EnsureCkanMetadataSourceMutation, EnsureCkanMetadataSourceMutationVariables>(EnsureCkanMetadataSourceDocument, options);
+      }
+export type EnsureCkanMetadataSourceMutationHookResult = ReturnType<typeof useEnsureCkanMetadataSourceMutation>;
+export type EnsureCkanMetadataSourceMutationResult = Apollo.MutationResult<EnsureCkanMetadataSourceMutation>;
+export type EnsureCkanMetadataSourceMutationOptions = Apollo.BaseMutationOptions<EnsureCkanMetadataSourceMutation, EnsureCkanMetadataSourceMutationVariables>;
+export const UpdateCkanMetadataSourceDocument = gql`
+    mutation UpdateCkanMetadataSource($id: Int!, $displayConfig: JSON, $title: String) {
+  updateCkanMetadataSource(
+    input: {id: $id, patch: {displayConfig: $displayConfig, title: $title}}
+  ) {
+    ckanMetadataSource {
+      id
+      projectId
+      baseUrl
+      datasetType
+      title
+      displayConfig
+      createdAt
+    }
+  }
+}
+    `;
+export type UpdateCkanMetadataSourceMutationFn = Apollo.MutationFunction<UpdateCkanMetadataSourceMutation, UpdateCkanMetadataSourceMutationVariables>;
+
+/**
+ * __useUpdateCkanMetadataSourceMutation__
+ *
+ * To run a mutation, you first call `useUpdateCkanMetadataSourceMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateCkanMetadataSourceMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateCkanMetadataSourceMutation, { data, loading, error }] = useUpdateCkanMetadataSourceMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      displayConfig: // value for 'displayConfig'
+ *      title: // value for 'title'
+ *   },
+ * });
+ */
+export function useUpdateCkanMetadataSourceMutation(baseOptions?: Apollo.MutationHookOptions<UpdateCkanMetadataSourceMutation, UpdateCkanMetadataSourceMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateCkanMetadataSourceMutation, UpdateCkanMetadataSourceMutationVariables>(UpdateCkanMetadataSourceDocument, options);
+      }
+export type UpdateCkanMetadataSourceMutationHookResult = ReturnType<typeof useUpdateCkanMetadataSourceMutation>;
+export type UpdateCkanMetadataSourceMutationResult = Apollo.MutationResult<UpdateCkanMetadataSourceMutation>;
+export type UpdateCkanMetadataSourceMutationOptions = Apollo.BaseMutationOptions<UpdateCkanMetadataSourceMutation, UpdateCkanMetadataSourceMutationVariables>;
 export const CreateProjectDocument = gql`
     mutation CreateProject($name: String!, $slug: String!) {
   createProject(input: {name: $name, slug: $slug}) {
@@ -34290,13 +34925,14 @@ export type UpdateEnableHighDpiRequestsMutationHookResult = ReturnType<typeof us
 export type UpdateEnableHighDpiRequestsMutationResult = Apollo.MutationResult<UpdateEnableHighDpiRequestsMutation>;
 export type UpdateEnableHighDpiRequestsMutationOptions = Apollo.BaseMutationOptions<UpdateEnableHighDpiRequestsMutation, UpdateEnableHighDpiRequestsMutationVariables>;
 export const GetMetadataDocument = gql`
-    query GetMetadata($itemId: Int, $stableId: String) {
+    query GetMetadata($itemId: Int, $stableId: String, $lang: String) {
   tableOfContentsItemByIdentifier(id: $itemId, stableId: $stableId) {
     id
-    computedMetadata
+    computedMetadata(lang: $lang)
     usesDynamicMetadata
     isCustomGlSource
     hideArcGisRestLink
+    ckanDatasetUrl
     metadataXml {
       ...MetadataXmlFile
     }
@@ -34329,6 +34965,7 @@ export const GetMetadataDocument = gql`
  *   variables: {
  *      itemId: // value for 'itemId'
  *      stableId: // value for 'stableId'
+ *      lang: // value for 'lang'
  *   },
  * });
  */
@@ -34344,13 +34981,13 @@ export type GetMetadataQueryHookResult = ReturnType<typeof useGetMetadataQuery>;
 export type GetMetadataLazyQueryHookResult = ReturnType<typeof useGetMetadataLazyQuery>;
 export type GetMetadataQueryResult = Apollo.QueryResult<GetMetadataQuery, GetMetadataQueryVariables>;
 export const UpdateMetadataDocument = gql`
-    mutation UpdateMetadata($itemId: Int!, $metadata: JSON) {
+    mutation UpdateMetadata($itemId: Int!, $metadata: JSON, $lang: String) {
   updateTableOfContentsItem(input: {id: $itemId, patch: {metadata: $metadata}}) {
     tableOfContentsItem {
       id
       metadata
       usesDynamicMetadata
-      computedMetadata
+      computedMetadata(lang: $lang)
     }
   }
 }
@@ -34372,6 +35009,7 @@ export type UpdateMetadataMutationFn = Apollo.MutationFunction<UpdateMetadataMut
  *   variables: {
  *      itemId: // value for 'itemId'
  *      metadata: // value for 'metadata'
+ *      lang: // value for 'lang'
  *   },
  * });
  */
@@ -34382,6 +35020,46 @@ export function useUpdateMetadataMutation(baseOptions?: Apollo.MutationHookOptio
 export type UpdateMetadataMutationHookResult = ReturnType<typeof useUpdateMetadataMutation>;
 export type UpdateMetadataMutationResult = Apollo.MutationResult<UpdateMetadataMutation>;
 export type UpdateMetadataMutationOptions = Apollo.BaseMutationOptions<UpdateMetadataMutation, UpdateMetadataMutationVariables>;
+export const UpdateCkanDatasetUrlDocument = gql`
+    mutation UpdateCkanDatasetUrl($itemId: Int!, $ckanDatasetUrl: String) {
+  updateTableOfContentsItem(
+    input: {id: $itemId, patch: {ckanDatasetUrl: $ckanDatasetUrl}}
+  ) {
+    tableOfContentsItem {
+      id
+      ckanDatasetUrl
+      usesDynamicMetadata
+    }
+  }
+}
+    `;
+export type UpdateCkanDatasetUrlMutationFn = Apollo.MutationFunction<UpdateCkanDatasetUrlMutation, UpdateCkanDatasetUrlMutationVariables>;
+
+/**
+ * __useUpdateCkanDatasetUrlMutation__
+ *
+ * To run a mutation, you first call `useUpdateCkanDatasetUrlMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateCkanDatasetUrlMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateCkanDatasetUrlMutation, { data, loading, error }] = useUpdateCkanDatasetUrlMutation({
+ *   variables: {
+ *      itemId: // value for 'itemId'
+ *      ckanDatasetUrl: // value for 'ckanDatasetUrl'
+ *   },
+ * });
+ */
+export function useUpdateCkanDatasetUrlMutation(baseOptions?: Apollo.MutationHookOptions<UpdateCkanDatasetUrlMutation, UpdateCkanDatasetUrlMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateCkanDatasetUrlMutation, UpdateCkanDatasetUrlMutationVariables>(UpdateCkanDatasetUrlDocument, options);
+      }
+export type UpdateCkanDatasetUrlMutationHookResult = ReturnType<typeof useUpdateCkanDatasetUrlMutation>;
+export type UpdateCkanDatasetUrlMutationResult = Apollo.MutationResult<UpdateCkanDatasetUrlMutation>;
+export type UpdateCkanDatasetUrlMutationOptions = Apollo.BaseMutationOptions<UpdateCkanDatasetUrlMutation, UpdateCkanDatasetUrlMutationVariables>;
 export const UpdateHideArcGisRestLinkDocument = gql`
     mutation UpdateHideArcGISRestLink($id: Int!, $hideArcGisRestLink: Boolean!) {
   updateTableOfContentsItem(
@@ -34422,11 +35100,11 @@ export type UpdateHideArcGisRestLinkMutationHookResult = ReturnType<typeof useUp
 export type UpdateHideArcGisRestLinkMutationResult = Apollo.MutationResult<UpdateHideArcGisRestLinkMutation>;
 export type UpdateHideArcGisRestLinkMutationOptions = Apollo.BaseMutationOptions<UpdateHideArcGisRestLinkMutation, UpdateHideArcGisRestLinkMutationVariables>;
 export const UpdateMetadataFromXmlDocument = gql`
-    mutation UpdateMetadataFromXML($itemId: Int!, $xml: String!, $filename: String) {
+    mutation UpdateMetadataFromXML($itemId: Int!, $xml: String!, $filename: String, $lang: String) {
   updateTocMetadataFromXML(id: $itemId, xmlMetadata: $xml, filename: $filename) {
     id
     metadata
-    computedMetadata
+    computedMetadata(lang: $lang)
     metadataXml {
       ...MetadataXmlFile
     }
@@ -34460,6 +35138,7 @@ export type UpdateMetadataFromXmlMutationFn = Apollo.MutationFunction<UpdateMeta
  *      itemId: // value for 'itemId'
  *      xml: // value for 'xml'
  *      filename: // value for 'filename'
+ *      lang: // value for 'lang'
  *   },
  * });
  */
@@ -35474,11 +36153,11 @@ export type CreateINaturalistTableOfContentsItemMutationHookResult = ReturnType<
 export type CreateINaturalistTableOfContentsItemMutationResult = Apollo.MutationResult<CreateINaturalistTableOfContentsItemMutation>;
 export type CreateINaturalistTableOfContentsItemMutationOptions = Apollo.BaseMutationOptions<CreateINaturalistTableOfContentsItemMutation, CreateINaturalistTableOfContentsItemMutationVariables>;
 export const LayerMetadataChangesDocument = gql`
-    query LayerMetadataChanges($id: Int!) {
+    query LayerMetadataChanges($id: Int!, $lang: String) {
   tableOfContentsItem(id: $id) {
     id
     metadata
-    computedMetadata
+    computedMetadata(lang: $lang)
     changeLogs(first: 100000) {
       ...ChangeLogDetails
       fromBlob
@@ -35501,6 +36180,7 @@ export const LayerMetadataChangesDocument = gql`
  * const { data, loading, error } = useLayerMetadataChangesQuery({
  *   variables: {
  *      id: // value for 'id'
+ *      lang: // value for 'lang'
  *   },
  * });
  */
@@ -44930,6 +45610,8 @@ export const namedOperations = {
     GetOptionalBasemapLayer: 'GetOptionalBasemapLayer',
     GetOptionalBasemapLayerMetadata: 'GetOptionalBasemapLayerMetadata',
     MapboxKeys: 'MapboxKeys',
+    CkanDatasetPreview: 'CkanDatasetPreview',
+    ProjectCkanMetadataSources: 'ProjectCkanMetadataSources',
     DashboardStats: 'DashboardStats',
     DashboardBannerStats: 'DashboardBannerStats',
     DataUploadTasks: 'DataUploadTasks',
@@ -45087,6 +45769,8 @@ export const namedOperations = {
     UpdateOptionalBasemapLayerMetadata: 'UpdateOptionalBasemapLayerMetadata',
     UpdateInteractivitySettingsLayers: 'UpdateInteractivitySettingsLayers',
     SetBasemapMaxZoom: 'SetBasemapMaxZoom',
+    EnsureCkanMetadataSource: 'EnsureCkanMetadataSource',
+    UpdateCkanMetadataSource: 'UpdateCkanMetadataSource',
     CreateProject: 'CreateProject',
     CreateProjectWithGeographies: 'CreateProjectWithGeographies',
     VerifyEmail: 'VerifyEmail',
@@ -45117,6 +45801,7 @@ export const namedOperations = {
     UpdateFetchStrategy: 'UpdateFetchStrategy',
     UpdateEnableHighDPIRequests: 'UpdateEnableHighDPIRequests',
     UpdateMetadata: 'UpdateMetadata',
+    UpdateCkanDatasetUrl: 'UpdateCkanDatasetUrl',
     UpdateHideArcGISRestLink: 'UpdateHideArcGISRestLink',
     UpdateMetadataFromXML: 'UpdateMetadataFromXML',
     PublishTableOfContents: 'PublishTableOfContents',

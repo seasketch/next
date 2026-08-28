@@ -1,0 +1,240 @@
+{
+  "help": "https://open.canada.ca/data/en/api/3/action/help_show?name=package_show",
+  "success": true,
+  "result": {
+    "association_type": [],
+    "audience": [],
+    "author": null,
+    "author_email": null,
+    "collection": "fgp",
+    "contact_information": "{ \"en\": { \"organization_name\": \"Government of British Columbia; Government of British Columbia; GeoBC Inquiries\", \"phone\": \"\", \"delivery_point\": \"\", \"city\": \"\", \"administrative_area\": \"\", \"postal_code\": \"\", \"country\": \"\", \"electronic_mail_address\": \"Susan.Westmacott@gov.bc.ca\" }, \"fr\": { \"organization_name\": \"Gouvernement de la Colombie-Britannique; Gouvernement de la Colombie-Britannique; GeoBC Inquiries\", \"phone\": \"\", \"delivery_point\": \"\", \"city\": \"\", \"administrative_area\": \"\", \"postal_code\": \"\", \"country\": \"\", \"electronic_mail_address\": \"Susan.Westmacott@gov.bc.ca\" } }",
+    "contributor": {},
+    "creator": "Susan Westmacott",
+    "creator_user_id": "b88b9549-3a4b-43a9-9375-5f3fc20fe782",
+    "data_series_issue_identification": {},
+    "data_series_name": {},
+    "date_published": "2015-04-09 00:00:00",
+    "display_flags": [
+      "fgp_viewer"
+    ],
+    "distributor": "{ \"en\": { \"organization_name\": \"Government of British Columbia; Government of British Columbia; GeoBC Inquiries\", \"phone\": \"\", \"address\": \"\", \"city\": \"\", \"administrative_area\": \"\", \"postal_code\": \"\", \"country\": \"\", \"electronic_mail_address\": \"Susan.Westmacott@gov.bc.ca\" }, \"fr\": { \"organization_name\": \"Gouvernement de la Colombie-Britannique; Gouvernement de la Colombie-Britannique; GeoBC Inquiries\", \"phone\": \"\", \"address\": \"\", \"city\": \"\", \"administrative_area\": \"\", \"postal_code\": \"\", \"country\": \"\", \"electronic_mail_address\": \"Susan.Westmacott@gov.bc.ca\" } }",
+    "federated_date_modified": "2026-01-27",
+    "file_id": "0bc73892-e41f-41d0-8d8e-828c16139337",
+    "frequency": "as_needed",
+    "geographic_region": [],
+    "hierarchy_level": "dataset; jeuDonnées",
+    "id": "0bc73892-e41f-41d0-8d8e-828c16139337",
+    "imso_approval": "true",
+    "isopen": false,
+    "jurisdiction": "provincial",
+    "keywords": {
+      "en": [
+        "FADM",
+        "administrative division",
+        "boundaries",
+        "boundary",
+        "forestry",
+        "forests",
+        "Government information"
+      ],
+      "fr-t-en": [
+        "FERME",
+        "division administrative",
+        "frontières",
+        "limite",
+        "sylviculture",
+        "forêts",
+        "Information gouvernementale"
+      ]
+    },
+    "license_id": "bc-oglbc",
+    "license_title": "Open Government Licence - British Columbia",
+    "license_url": "https://www2.gov.bc.ca/gov/content/data/open-data/open-government-licence-bc",
+    "maintainer": null,
+    "maintainer_contact_form": {},
+    "maintainer_email": "Susan.Westmacott@gov.bc.ca",
+    "metadata_contact": {
+      "en": "Government of British Columbia; Government of British Columbia; GeoBC Inquiries",
+      "fr": "Gouvernement de la Colombie-Britannique; Gouvernement de la Colombie-Britannique; GeoBC Inquiries"
+    },
+    "metadata_created": "2020-06-11T13:54:49.094790",
+    "metadata_modified": "2026-01-28T19:42:01.759925",
+    "name": "0bc73892-e41f-41d0-8d8e-828c16139337",
+    "notes": "The spatial representation for a Natural Resource (NR) District, that is an administrative area established by the Ministry, within NR Regions.",
+    "notes_translated": {
+      "en": "The spatial representation for a Natural Resource (NR) District, that is an administrative area established by the Ministry, within NR Regions.",
+      "fr-t-en": "La représentation spatiale d'un district de ressources naturelles (RN), c'est-à-dire une zone administrative établie par le ministère, au sein des régions NR.\n\n** Cet élément de métadonnées provenant d’une tierce partie a été traduit à l'aide d'un outil de traduction automatisée (Amazon Translate). **"
+    },
+    "num_resources": 4,
+    "num_tags": 0,
+    "org_section": {},
+    "org_title_at_publication": {
+      "en": "Government of British Columbia",
+      "fr": "Gouvernment de la Colombie-Britannique"
+    },
+    "organization": {
+      "id": "962985bb-8a54-425e-9783-4d67466cb531",
+      "name": "bc-cb",
+      "title": "Government of British Columbia | Gouvernment de la Colombie-Britannique",
+      "type": "organization",
+      "description": "",
+      "image_url": "",
+      "created": "2019-06-06T15:56:59.528307",
+      "is_organization": true,
+      "approval_status": "approved",
+      "state": "active"
+    },
+    "owner_org": "962985bb-8a54-425e-9783-4d67466cb531",
+    "place_of_publication": [],
+    "position_name": {},
+    "private": false,
+    "program_page_url": {},
+    "ready_to_publish": "true",
+    "reference_system_information": "EPSG:3005,EPSG,unknown",
+    "responsible_role": "custodian; conservateur",
+    "restrictions": "unrestricted",
+    "spatial": "{\"type\": \"Polygon\", \"coordinates\": [[[-139.5, 48], [-113.5, 48], [-113.5, 60], [-139.5, 60], [-139.5, 48]]]}",
+    "spatial_representation_type": [
+      "grid"
+    ],
+    "state": "active",
+    "status": "completed",
+    "subject": [
+      "government_and_politics"
+    ],
+    "time_period_coverage_start": "0001-01-01 00:00:00",
+    "title": "Natural Resource (NR) Districts",
+    "title_translated": {
+      "en": "Natural Resource (NR) Districts",
+      "fr-t-en": "Districts de ressources naturelles (NR)"
+    },
+    "topic_category": [
+      "boundaries"
+    ],
+    "type": "dataset",
+    "url": null,
+    "version": null,
+    "resources": [
+      {
+        "cache_last_updated": null,
+        "cache_url": null,
+        "created": "2026-01-28T19:42:01.803334",
+        "data_quality": [],
+        "datastore_active": false,
+        "description": null,
+        "format": "HTML",
+        "hash": "",
+        "id": "8388429a-fb85-488f-b143-03c70962e51e",
+        "language": [
+          "en"
+        ],
+        "last_modified": null,
+        "metadata_modified": "2026-01-28T19:42:01.780386",
+        "mimetype": null,
+        "mimetype_inner": null,
+        "name": "BC Geographic Warehouse Custom Download",
+        "name_translated": {
+          "en": "BC Geographic Warehouse Custom Download",
+          "fr-t-en": "Téléchargement personnalisé de BC Geographic Warehouse"
+        },
+        "package_id": "0bc73892-e41f-41d0-8d8e-828c16139337",
+        "position": 0,
+        "resource_type": "dataset",
+        "state": "active",
+        "url": "https://catalogue.data.gov.bc.ca/dataset/natural-resource-nr-district/resource/2d9d0a5c-bdf7-47e8-9038-103a93e6205a",
+        "url_type": null
+      },
+      {
+        "cache_last_updated": null,
+        "cache_url": null,
+        "created": "2026-01-28T19:42:01.803343",
+        "data_quality": [],
+        "datastore_active": false,
+        "description": null,
+        "format": "HTML",
+        "hash": "",
+        "id": "e0f2b3b9-442c-4e2a-a287-a207e62291e2",
+        "language": [
+          "en"
+        ],
+        "last_modified": null,
+        "metadata_modified": "2026-01-28T19:42:01.780593",
+        "mimetype": null,
+        "mimetype_inner": null,
+        "name": "Original metadata (https://catalogue.data.gov.bc.ca)",
+        "name_translated": {
+          "en": "Original metadata (https://catalogue.data.gov.bc.ca)",
+          "fr-t-en": "Métadonnées originales (https://catalogue.data.gov.bc.ca)"
+        },
+        "package_id": "0bc73892-e41f-41d0-8d8e-828c16139337",
+        "position": 1,
+        "resource_type": "dataset",
+        "state": "active",
+        "url": "https://catalogue.data.gov.bc.ca/dataset/natural-resource-nr-district",
+        "url_type": null
+      },
+      {
+        "cache_last_updated": null,
+        "cache_url": null,
+        "created": "2026-01-28T19:42:01.803344",
+        "data_quality": [],
+        "datastore_active": false,
+        "description": null,
+        "format": "WMS",
+        "hash": "",
+        "id": "da28a85b-0a0b-463f-8259-a24e41f34737",
+        "language": [
+          "en"
+        ],
+        "last_modified": null,
+        "metadata_modified": "2026-01-28T19:42:01.780707",
+        "mimetype": null,
+        "mimetype_inner": null,
+        "name": "ADM_NR_DISTRICTS_SPG",
+        "name_translated": {
+          "en": "ADM_NR_DISTRICTS_SPG",
+          "fr-t-en": "ADM_NR_DISTRICTS_SPG"
+        },
+        "package_id": "0bc73892-e41f-41d0-8d8e-828c16139337",
+        "position": 2,
+        "resource_type": "web_service",
+        "state": "active",
+        "url": "https://openmaps.gov.bc.ca/geo/pub/WHSE_ADMIN_BOUNDARIES.ADM_NR_DISTRICTS_SPG/ows?service=WMS&request=GetCapabilities&layers=pub:WHSE_ADMIN_BOUNDARIES.ADM_NR_DISTRICTS_SPG&legend_format=image/png&feature_info_type=text/plain",
+        "url_type": null
+      },
+      {
+        "cache_last_updated": null,
+        "cache_url": null,
+        "created": "2026-01-28T19:42:01.803346",
+        "data_quality": [],
+        "datastore_active": false,
+        "description": null,
+        "format": "WMS",
+        "hash": "",
+        "id": "eef5d0b0-55c5-45c9-a232-358b4e387cfc",
+        "language": [
+          "en"
+        ],
+        "last_modified": null,
+        "metadata_modified": "2026-01-28T19:42:01.780798",
+        "mimetype": null,
+        "mimetype_inner": null,
+        "name": "ADM_NR_DISTRICTS_SPG",
+        "name_translated": {
+          "en": "ADM_NR_DISTRICTS_SPG",
+          "fr-t-en": "ADM_NR_DISTRICTS_SPG"
+        },
+        "package_id": "0bc73892-e41f-41d0-8d8e-828c16139337",
+        "position": 3,
+        "resource_type": "web_service",
+        "state": "active",
+        "url": "https://openmaps.gov.bc.ca/geo/pub/WHSE_ADMIN_BOUNDARIES.ADM_NR_DISTRICTS_SPG/ows?service=WMS&request=GetCapabilities&layers=pub:WHSE_ADMIN_BOUNDARIES.ADM_NR_DISTRICTS_SPG&legend_format=image/png&feature_info_type=text/plain",
+        "url_type": null
+      }
+    ],
+    "tags": [],
+    "groups": [],
+    "relationships_as_subject": [],
+    "relationships_as_object": []
+  }
+}

@@ -1,0 +1,5162 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`ckanFieldsToProseMirror > round-trips every Canada fixture in EN and fr > crown-EN 1`] = `
+{
+  "content": [
+    {
+      "attrs": {
+        "level": 1,
+      },
+      "content": [
+        {
+          "text": "TANTALIS - Crown Tenures",
+          "type": "text",
+        },
+      ],
+      "type": "heading",
+    },
+    {
+      "content": [
+        {
+          "text": "Current Land Act tenures and applications for such tenures: a subset of crown land dispositions that are issued for specific purposes and periods of time under an agreement between an individual or company and the provincial government for an interest in crown land. Conveyances of ownership are not included. For example Leases, Licenses and Reserves are included, but Crown Grants and Acquisitions are not. Historical records (e.g. expired, replaced, or completed) are not included in this view.",
+          "type": "text",
+        },
+      ],
+      "type": "paragraph",
+    },
+    {
+      "content": [
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Publisher - Current Organization Name: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Government of British Columbia",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Licence: ",
+                  "type": "text",
+                },
+                {
+                  "marks": [
+                    {
+                      "attrs": {
+                        "href": "https://www2.gov.bc.ca/gov/content/data/open-data/open-government-licence-bc",
+                      },
+                      "type": "link",
+                    },
+                  ],
+                  "text": "Open Government Licence - British Columbia",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Creator: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Crown Lands Registry Help",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Date Published: ",
+                  "type": "text",
+                },
+                {
+                  "text": "2011-03-09",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Maintenance and Update Frequency: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Irregular",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Contact Email: ",
+                  "type": "text",
+                },
+                {
+                  "text": "clrhelp@gov.bc.ca",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Status: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Ongoing",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+      ],
+      "type": "bullet_list",
+    },
+    {
+      "content": [
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Keywords:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "CLRS",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Canada",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Crown Land",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Crown Land Registry",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Crown Tenure",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "tantalis",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Government information",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Spatial Representation Type:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Grid",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Subject:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Economics and Industry",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Topic category:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Economy",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+      ],
+      "type": "bullet_list",
+    },
+  ],
+  "type": "doc",
+}
+`;
+
+exports[`ckanFieldsToProseMirror > round-trips every Canada fixture in EN and fr > crown-fr 1`] = `
+{
+  "content": [
+    {
+      "attrs": {
+        "level": 1,
+      },
+      "content": [
+        {
+          "text": "TANTALIS - Crown Tenures",
+          "type": "text",
+        },
+      ],
+      "type": "heading",
+    },
+    {
+      "content": [
+        {
+          "text": "Les tenures en vigueur en vertu de la Loi foncière et les demandes de telles tenures : un sous-ensemble de dispositions de terres domaniales qui sont émises à des fins et pour des périodes spécifiques en vertu d'un accord entre une personne ou une entreprise et le gouvernement provincial concernant un intérêt sur des terres domaniales. Les transferts de propriété ne sont pas inclus. Par exemple, les baux, les licences et les réserves sont inclus, mais pas les subventions et acquisitions de l'État. Les enregistrements historiques (par exemple, expirés, remplacés ou complétés) ne sont pas inclus dans cette vue.",
+          "type": "text",
+        },
+      ],
+      "type": "paragraph",
+    },
+    {
+      "content": [
+        {
+          "text": "** Cet élément de métadonnées provenant d’une tierce partie a été traduit à l'aide d'un outil de traduction automatisée (Amazon Translate). **",
+          "type": "text",
+        },
+      ],
+      "type": "paragraph",
+    },
+    {
+      "content": [
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Éditeur - Nom actuel de l’organisation: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Gouvernment de la Colombie-Britannique",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Licence: ",
+                  "type": "text",
+                },
+                {
+                  "marks": [
+                    {
+                      "attrs": {
+                        "href": "https://www2.gov.bc.ca/gov/content/data/open-data/open-government-licence-bc",
+                      },
+                      "type": "link",
+                    },
+                  ],
+                  "text": "Open Government Licence - British Columbia",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Auteur: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Crown Lands Registry Help",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Date de publication: ",
+                  "type": "text",
+                },
+                {
+                  "text": "2011-03-09",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Fréquence d'entretien et de mise à jour: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Irrégulier",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Courriel - Personne-ressource: ",
+                  "type": "text",
+                },
+                {
+                  "text": "clrhelp@gov.bc.ca",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "État: ",
+                  "type": "text",
+                },
+                {
+                  "text": "En continu",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+      ],
+      "type": "bullet_list",
+    },
+    {
+      "content": [
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Mots clés:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "CLRS",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Canada",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Terre de la Couronne",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Registre des terres de la Couronne",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Mandat de la Couronne",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "tantale",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Information gouvernementale",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Type représentation spatiale:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Grille",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Sujet:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Économie et industrie",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Catégorie thématique:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Économie",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+      ],
+      "type": "bullet_list",
+    },
+  ],
+  "type": "doc",
+}
+`;
+
+exports[`ckanFieldsToProseMirror > round-trips every Canada fixture in EN and fr > municipalities-EN 1`] = `
+{
+  "content": [
+    {
+      "attrs": {
+        "level": 1,
+      },
+      "content": [
+        {
+          "text": "Municipalities - Legally Defined Administrative Areas of BC",
+          "type": "text",
+        },
+      ],
+      "type": "heading",
+    },
+    {
+      "content": [
+        {
+          "text": "Legally defined ",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "type": "strong",
+            },
+          ],
+          "text": "Municipal",
+          "type": "text",
+        },
+        {
+          "text": " polygons were drawn from metes and bounds descriptions as written in Letters Patent for Municipalities in the province of British Columbia. In the event of a discrepancy in the data, the metes and bounds description will prevail. Although the boundaries were drawn based on the legal metes and bounds descriptions, they may differ from how regional districts and their member municipalities and electoral areas currently view and/or manage their boundaries. Where discrepancies are noted, the Ministry of Housing and Municipal Affairs (the custodian) enters into discussion with the local governments whose boundaries are affected. In order to effect a change to the boundary, Cabinet approval is required. This is done through an Order in Council (OIC). While discrepancies to administrative boundaries are being resolved, boundaries may be adjusted on an ongoing basis until the requested changes are completed. The OIC_YEAR and OIC_NUMBER fields indicate the year that the boundary was passed under OIC and its associated number. The AFFECTED_ADMIN_AREA_ABRVN identifies the administrative areas that are affected by the OIC. See all of the administrative areas currently in the ",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/12f0fd64-94d5-422a-832e-6627a2a01702",
+              },
+              "type": "link",
+            },
+            {
+              "type": "strong",
+            },
+          ],
+          "text": "Administrative Boundaries Management System (ABMS)",
+          "type": "text",
+        },
+        {
+          "text": ". The complimentary ",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/e50b6560-0549-41a6-8035-6b828066692e",
+              },
+              "type": "link",
+            },
+          ],
+          "text": "point dataset",
+          "type": "text",
+        },
+        {
+          "text": " that defines the administrative areas is also available. Other individual legally defined administrative area datasets are available from the following records: ",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/d1aff64e-dbfe-45a6-af97-582b7f6418b9",
+              },
+              "type": "link",
+            },
+          ],
+          "text": "Regional Districts",
+          "type": "text",
+        },
+        {
+          "text": " ",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/81940c47-a534-47e0-94d0-947c96a59de4",
+              },
+              "type": "link",
+            },
+          ],
+          "text": "Electoral Areas",
+          "type": "text",
+        },
+        {
+          "text": " ",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/a7e32e45-63ae-4f5a-9275-9402b6deebdc",
+              },
+              "type": "link",
+            },
+          ],
+          "text": "Province of British Columbia",
+          "type": "text",
+        },
+        {
+          "text": " ",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/df3f5a9f-2dc0-4b9e-b593-fc205933e32d",
+              },
+              "type": "link",
+            },
+          ],
+          "text": "Islands Trust",
+          "type": "text",
+        },
+        {
+          "text": " ",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/cea5f554-f2f7-4cfd-a8f0-63e7c83dc191",
+              },
+              "type": "link",
+            },
+          ],
+          "text": "Local Trust Areas",
+          "type": "text",
+        },
+      ],
+      "type": "paragraph",
+    },
+    {
+      "content": [
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Publisher - Current Organization Name: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Government of British Columbia",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Licence: ",
+                  "type": "text",
+                },
+                {
+                  "marks": [
+                    {
+                      "attrs": {
+                        "href": "https://www2.gov.bc.ca/gov/content/data/open-data/open-government-licence-bc",
+                      },
+                      "type": "link",
+                    },
+                  ],
+                  "text": "Open Government Licence - British Columbia",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Creator: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Joy Sinnett",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Date Published: ",
+                  "type": "text",
+                },
+                {
+                  "text": "2016-03-10",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Maintenance and Update Frequency: ",
+                  "type": "text",
+                },
+                {
+                  "text": "As Needed",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Contact Email: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Joy.Sinnett@gov.bc.ca",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Status: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Completed",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+      ],
+      "type": "bullet_list",
+    },
+    {
+      "content": [
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Keywords:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "ABMS",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Administrative boundaries",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "jurisdicational boundaries",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "local government",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "metes and bounds",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "municipal boundaries",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "municipalities",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "municipality",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Government information",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Spatial Representation Type:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Grid",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Subject:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Government and Politics",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Topic category:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Boundaries",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+      ],
+      "type": "bullet_list",
+    },
+  ],
+  "type": "doc",
+}
+`;
+
+exports[`ckanFieldsToProseMirror > round-trips every Canada fixture in EN and fr > municipalities-fr 1`] = `
+{
+  "content": [
+    {
+      "attrs": {
+        "level": 1,
+      },
+      "content": [
+        {
+          "text": "Municipalités - Zones administratives légalement définies de la Colombie-Britannique",
+          "type": "text",
+        },
+      ],
+      "type": "heading",
+    },
+    {
+      "content": [
+        {
+          "text": "Les polygones ",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "type": "strong",
+            },
+          ],
+          "text": "Municipal",
+          "type": "text",
+        },
+        {
+          "text": " définis légalement ont été dessinés à partir des descriptions des mètres et des limites telles qu'elles sont écrites dans les lettres patentes pour les municipalités de la province de la Colombie-Britannique. En cas de divergence entre les données, la description des limites et des limites prévaudra. Bien que les limites aient été tracées sur la base de la description des limites et des limites légales, elles peuvent différer de la façon dont les districts régionaux et leurs municipalités membres et les zones électorales voient et/ou gèrent actuellement leurs limites. Lorsque des divergences sont constatées, le ministère du Logement et des Affaires municipales (le gardien) engage des discussions avec les administrations locales dont les limites sont concernées. Pour modifier les limites, l'approbation du Cabinet est requise. Cela se fait par le biais d'un décret en conseil (OCI). Pendant que les divergences dans les limites administratives sont en cours de résolution, les limites peuvent être ajustées de façon continue jusqu'à ce que les modifications demandées soient effectuées. Les champs OIC_YEAR et OIC_NUMBER indiquent l'année où la frontière a été franchie dans le cadre de l'OCI et son numéro associé. L'AFFECTED_ADMIN_AREA_ABRVN identifie les zones administratives qui sont affectées par l'OCI. Consultez toutes les zones administratives actuellement incluses dans le [__Système de gestion des limites administratives (ABMS) __] (",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/12f0fd64-94d5-422a-832e-6627a2a01702",
+              },
+              "type": "link",
+            },
+          ],
+          "text": "https://catalogue.data.gov.bc.ca/dataset/12f0fd64-94d5-422a-832e-6627a2a01702",
+          "type": "text",
+        },
+        {
+          "text": "). Le [jeu de données de points] gratuit (",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/e50b6560-0549-41a6-8035-6b828066692e",
+              },
+              "type": "link",
+            },
+          ],
+          "text": "https://catalogue.data.gov.bc.ca/dataset/e50b6560-0549-41a6-8035-6b828066692e",
+          "type": "text",
+        },
+        {
+          "text": ") qui définit les zones administratives est également disponible. D'autres ensembles de données sur les zones administratives définies par la loi sont disponibles dans les dossiers suivants : [Districts régionaux] (",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/d1aff64e-dbfe-45a6-af97-582b7f6418b9",
+              },
+              "type": "link",
+            },
+          ],
+          "text": "https://catalogue.data.gov.bc.ca/dataset/d1aff64e-dbfe-45a6-af97-582b7f6418b9",
+          "type": "text",
+        },
+        {
+          "text": ") [Régions électorales] (",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/81940c47-a534-47e0-94d0-947c96a59de4",
+              },
+              "type": "link",
+            },
+          ],
+          "text": "https://catalogue.data.gov.bc.ca/dataset/81940c47-a534-47e0-94d0-947c96a59de4",
+          "type": "text",
+        },
+        {
+          "text": ") [Province de la Colombie-Britannique] (",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/a7e32e45-63ae-4f5a-9275-9402b6deebdc",
+              },
+              "type": "link",
+            },
+          ],
+          "text": "https://catalogue.data.gov.bc.ca/dataset/a7e32e45-63ae-4f5a-9275-9402b6deebdc",
+          "type": "text",
+        },
+        {
+          "text": ") [Islands Trust] (",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/df3f5a9f-2dc0-4b9e-b593-fc205933e32d",
+              },
+              "type": "link",
+            },
+          ],
+          "text": "https://catalogue.data.gov.bc.ca/dataset/df3f5a9f-2dc0-4b9e-b593-fc205933e32d",
+          "type": "text",
+        },
+        {
+          "text": ") [Zones de confiance locales] ( ",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/cea5f554-f2f7-4cfd-a8f0-63e7c83dc191",
+              },
+              "type": "link",
+            },
+          ],
+          "text": "https://catalogue.data.gov.bc.ca/dataset/cea5f554-f2f7-4cfd-a8f0-63e7c83dc191",
+          "type": "text",
+        },
+        {
+          "text": ")",
+          "type": "text",
+        },
+      ],
+      "type": "paragraph",
+    },
+    {
+      "content": [
+        {
+          "text": "** Cet élément de métadonnées provenant d’une tierce partie a été traduit à l'aide d'un outil de traduction automatisée (Amazon Translate). **",
+          "type": "text",
+        },
+      ],
+      "type": "paragraph",
+    },
+    {
+      "content": [
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Éditeur - Nom actuel de l’organisation: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Gouvernment de la Colombie-Britannique",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Licence: ",
+                  "type": "text",
+                },
+                {
+                  "marks": [
+                    {
+                      "attrs": {
+                        "href": "https://www2.gov.bc.ca/gov/content/data/open-data/open-government-licence-bc",
+                      },
+                      "type": "link",
+                    },
+                  ],
+                  "text": "Open Government Licence - British Columbia",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Auteur: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Joy Sinnett",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Date de publication: ",
+                  "type": "text",
+                },
+                {
+                  "text": "2016-03-10",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Fréquence d'entretien et de mise à jour: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Au besoin",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Courriel - Personne-ressource: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Joy.Sinnett@gov.bc.ca",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "État: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Complété",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+      ],
+      "type": "bullet_list",
+    },
+    {
+      "content": [
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Mots clés:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "ABMS",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Frontières administratives",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "limites juridictionnelles",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "gouvernement local",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "mètres et limites",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "limites municipales",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "municipalités",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "municipalité",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Information gouvernementale",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Type représentation spatiale:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Grille",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Sujet:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Gouvernement et vie politique",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Catégorie thématique:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Frontières",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+      ],
+      "type": "bullet_list",
+    },
+  ],
+  "type": "doc",
+}
+`;
+
+exports[`ckanFieldsToProseMirror > round-trips every Canada fixture in EN and fr > nrd-EN 1`] = `
+{
+  "content": [
+    {
+      "attrs": {
+        "level": 1,
+      },
+      "content": [
+        {
+          "text": "Natural Resource (NR) Districts",
+          "type": "text",
+        },
+      ],
+      "type": "heading",
+    },
+    {
+      "content": [
+        {
+          "text": "The spatial representation for a Natural Resource (NR) District, that is an administrative area established by the Ministry, within NR Regions.",
+          "type": "text",
+        },
+      ],
+      "type": "paragraph",
+    },
+    {
+      "content": [
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Publisher - Current Organization Name: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Government of British Columbia",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Licence: ",
+                  "type": "text",
+                },
+                {
+                  "marks": [
+                    {
+                      "attrs": {
+                        "href": "https://www2.gov.bc.ca/gov/content/data/open-data/open-government-licence-bc",
+                      },
+                      "type": "link",
+                    },
+                  ],
+                  "text": "Open Government Licence - British Columbia",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Creator: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Susan Westmacott",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Date Published: ",
+                  "type": "text",
+                },
+                {
+                  "text": "2015-04-09",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Maintenance and Update Frequency: ",
+                  "type": "text",
+                },
+                {
+                  "text": "As Needed",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Contact Email: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Susan.Westmacott@gov.bc.ca",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Status: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Completed",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+      ],
+      "type": "bullet_list",
+    },
+    {
+      "content": [
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Keywords:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "FADM",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "administrative division",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "boundaries",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "boundary",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "forestry",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "forests",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Government information",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Spatial Representation Type:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Grid",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Subject:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Government and Politics",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Topic category:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Boundaries",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+      ],
+      "type": "bullet_list",
+    },
+  ],
+  "type": "doc",
+}
+`;
+
+exports[`ckanFieldsToProseMirror > round-trips every Canada fixture in EN and fr > nrd-fr 1`] = `
+{
+  "content": [
+    {
+      "attrs": {
+        "level": 1,
+      },
+      "content": [
+        {
+          "text": "Districts de ressources naturelles (NR)",
+          "type": "text",
+        },
+      ],
+      "type": "heading",
+    },
+    {
+      "content": [
+        {
+          "text": "La représentation spatiale d'un district de ressources naturelles (RN), c'est-à-dire une zone administrative établie par le ministère, au sein des régions NR.",
+          "type": "text",
+        },
+      ],
+      "type": "paragraph",
+    },
+    {
+      "content": [
+        {
+          "text": "** Cet élément de métadonnées provenant d’une tierce partie a été traduit à l'aide d'un outil de traduction automatisée (Amazon Translate). **",
+          "type": "text",
+        },
+      ],
+      "type": "paragraph",
+    },
+    {
+      "content": [
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Éditeur - Nom actuel de l’organisation: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Gouvernment de la Colombie-Britannique",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Licence: ",
+                  "type": "text",
+                },
+                {
+                  "marks": [
+                    {
+                      "attrs": {
+                        "href": "https://www2.gov.bc.ca/gov/content/data/open-data/open-government-licence-bc",
+                      },
+                      "type": "link",
+                    },
+                  ],
+                  "text": "Open Government Licence - British Columbia",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Auteur: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Susan Westmacott",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Date de publication: ",
+                  "type": "text",
+                },
+                {
+                  "text": "2015-04-09",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Fréquence d'entretien et de mise à jour: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Au besoin",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Courriel - Personne-ressource: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Susan.Westmacott@gov.bc.ca",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "État: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Complété",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+      ],
+      "type": "bullet_list",
+    },
+    {
+      "content": [
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Mots clés:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "FERME",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "division administrative",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "frontières",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "limite",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "sylviculture",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "forêts",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Information gouvernementale",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Type représentation spatiale:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Grille",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Sujet:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Gouvernement et vie politique",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Catégorie thématique:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Frontières",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+      ],
+      "type": "bullet_list",
+    },
+  ],
+  "type": "doc",
+}
+`;
+
+exports[`ckanFieldsToProseMirror > round-trips every Canada fixture in EN and fr > parcels-EN 1`] = `
+{
+  "content": [
+    {
+      "attrs": {
+        "level": 1,
+      },
+      "content": [
+        {
+          "text": "TANTALIS - Surveyed Parcels",
+          "type": "text",
+        },
+      ],
+      "type": "heading",
+    },
+    {
+      "content": [
+        {
+          "text": "TA_SURVEY_PARCELS_SVW Contains the spatial representation (polygon) of all active primary and subdivision parcels of land that are or have been within the purview of the B.C. Crown Land Management program. The view was created to provide a simplified view of this data from the survey parcel information in the Tantalis operational system. Primary and subdivision parcels are the two types of parcels (as identified by the PARCEL_TYPE attribute) that are generally suitable for transfer of ownership",
+          "type": "text",
+        },
+      ],
+      "type": "paragraph",
+    },
+    {
+      "content": [
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Publisher - Current Organization Name: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Government of British Columbia",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Licence: ",
+                  "type": "text",
+                },
+                {
+                  "marks": [
+                    {
+                      "attrs": {
+                        "href": "https://www2.gov.bc.ca/gov/content/data/open-data/open-government-licence-bc",
+                      },
+                      "type": "link",
+                    },
+                  ],
+                  "text": "Open Government Licence - British Columbia",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Creator: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Crown Lands Registry Help",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Date Published: ",
+                  "type": "text",
+                },
+                {
+                  "text": "2011-03-09",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Maintenance and Update Frequency: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Irregular",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Contact Email: ",
+                  "type": "text",
+                },
+                {
+                  "text": "clrhelp@gov.bc.ca",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Status: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Ongoing",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+      ],
+      "type": "bullet_list",
+    },
+    {
+      "content": [
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Keywords:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "CLRS",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Crown Land Registry",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Crown Lands",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "section",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "tantalis",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "township",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Government information",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Spatial Representation Type:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Grid",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Subject:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Government and Politics",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Topic category:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Boundaries",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+      ],
+      "type": "bullet_list",
+    },
+  ],
+  "type": "doc",
+}
+`;
+
+exports[`ckanFieldsToProseMirror > round-trips every Canada fixture in EN and fr > parcels-fr 1`] = `
+{
+  "content": [
+    {
+      "attrs": {
+        "level": 1,
+      },
+      "content": [
+        {
+          "text": "TANTALIS - Colis inspectés",
+          "type": "text",
+        },
+      ],
+      "type": "heading",
+    },
+    {
+      "content": [
+        {
+          "text": "TA_SURVEY_PARCELS_SVW Contient la représentation spatiale (polygone) de toutes les parcelles de terrain principales et de lotissement actives qui relèvent ou ont été du ressort du programme de gestion des terres de la Couronne de la Colombie-Britannique. La vue a été créée pour fournir une vue simplifiée de ces données à partir des informations sur les colis d'enquête dans le système opérationnel Tantalis. Les parcelles principales et les parcelles de lotissement sont les deux types de parcelles (identifiés par l'attribut PARCEL_TYPE) qui conviennent généralement au transfert de propriété",
+          "type": "text",
+        },
+      ],
+      "type": "paragraph",
+    },
+    {
+      "content": [
+        {
+          "text": "** Cet élément de métadonnées provenant d’une tierce partie a été traduit à l'aide d'un outil de traduction automatisée (Amazon Translate). **",
+          "type": "text",
+        },
+      ],
+      "type": "paragraph",
+    },
+    {
+      "content": [
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Éditeur - Nom actuel de l’organisation: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Gouvernment de la Colombie-Britannique",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Licence: ",
+                  "type": "text",
+                },
+                {
+                  "marks": [
+                    {
+                      "attrs": {
+                        "href": "https://www2.gov.bc.ca/gov/content/data/open-data/open-government-licence-bc",
+                      },
+                      "type": "link",
+                    },
+                  ],
+                  "text": "Open Government Licence - British Columbia",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Auteur: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Crown Lands Registry Help",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Date de publication: ",
+                  "type": "text",
+                },
+                {
+                  "text": "2011-03-09",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Fréquence d'entretien et de mise à jour: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Irrégulier",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Courriel - Personne-ressource: ",
+                  "type": "text",
+                },
+                {
+                  "text": "clrhelp@gov.bc.ca",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "État: ",
+                  "type": "text",
+                },
+                {
+                  "text": "En continu",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+      ],
+      "type": "bullet_list",
+    },
+    {
+      "content": [
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Mots clés:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "CLRS",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Registre des terres de la Couronne",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Terres de la Couronne",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "section",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "tantale",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "canton",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Information gouvernementale",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Type représentation spatiale:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Grille",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Sujet:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Gouvernement et vie politique",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Catégorie thématique:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Frontières",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+      ],
+      "type": "bullet_list",
+    },
+  ],
+  "type": "doc",
+}
+`;
+
+exports[`ckanFieldsToProseMirror > round-trips every Canada fixture in EN and fr > regional-EN 1`] = `
+{
+  "content": [
+    {
+      "attrs": {
+        "level": 1,
+      },
+      "content": [
+        {
+          "text": "Regional Districts - Legally Defined Administrative Areas of BC",
+          "type": "text",
+        },
+      ],
+      "type": "heading",
+    },
+    {
+      "content": [
+        {
+          "text": "Legally defined ",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "type": "strong",
+            },
+          ],
+          "text": "Regional District",
+          "type": "text",
+        },
+        {
+          "text": " polygons were drawn from metes and bounds descriptions as written in Letters Patent for Regional Districts in the province of British Columbia. In the event of a discrepancy in the data, the metes and bounds description will prevail. Although the boundaries were drawn based on the legal metes and bounds descriptions, they may differ from how regional districts and their member municipalities and electoral areas currently view and/or manage their boundaries. Where discrepancies are noted, the Ministry of Housing and Municipal Affairs (the custodian) enters into discussion with the local governments whose boundaries are affected. In order to effect a change to the boundary, Cabinet approval is required. This is done through an Order in Council (OIC). While discrepancies to administrative boundaries are being resolved, boundaries may be adjusted on an ongoing basis until the requested changes are completed. The OIC_YEAR and OIC_NUMBER fields indicate the year that the boundary was passed under OIC and its associated number. The AFFECTED_ADMIN_AREA_ABRVN identifies the administrative areas that are affected by the OIC. Please note that the Northern Rockies Regional Municipality appears to be a gap in the Regional District layer, but it is a municipality and can be found in the ",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/municipalities-legally-defined-administrative-areas-of-bc",
+              },
+              "type": "link",
+            },
+          ],
+          "text": "Municipalities Layer",
+          "type": "text",
+        },
+        {
+          "text": ". A polygon dataset that includes all of the administrative areas currently in the ",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "type": "strong",
+            },
+          ],
+          "text": "Administrative Boundaries Management System (ABMS)",
+          "type": "text",
+        },
+        {
+          "text": " is available ",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/legally-defined-administrative-areas-of-bc",
+              },
+              "type": "link",
+            },
+          ],
+          "text": "here",
+          "type": "text",
+        },
+        {
+          "text": ". A complimentary point dataset that defines the administrative areas is also available available ",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/legally-defined-administrative-areas-of-bc-boundary-locations",
+              },
+              "type": "link",
+            },
+          ],
+          "text": "here",
+          "type": "text",
+        },
+        {
+          "text": ". Other individual datasets are available from the following records: ",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/municipalities-legally-defined-administrative-areas-of-bc",
+              },
+              "type": "link",
+            },
+          ],
+          "text": "https://catalogue.data.gov.bc.ca/dataset/municipalities-legally-defined-administrative-areas-of-bc",
+          "type": "text",
+        },
+        {
+          "text": " ",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/electoral-areas-legally-defined-administrative-areas-of-bc",
+              },
+              "type": "link",
+            },
+          ],
+          "text": "https://catalogue.data.gov.bc.ca/dataset/electoral-areas-legally-defined-administrative-areas-of-bc",
+          "type": "text",
+        },
+        {
+          "text": " ",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/province-of-british-columbia-legally-defined-administrative-areas-of-bc",
+              },
+              "type": "link",
+            },
+          ],
+          "text": "https://catalogue.data.gov.bc.ca/dataset/province-of-british-columbia-legally-defined-administrative-areas-of-bc",
+          "type": "text",
+        },
+        {
+          "text": " ",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/islands-trust-legally-defined-administrative-areas-of-bc",
+              },
+              "type": "link",
+            },
+          ],
+          "text": "https://catalogue.data.gov.bc.ca/dataset/islands-trust-legally-defined-administrative-areas-of-bc",
+          "type": "text",
+        },
+        {
+          "text": " ",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/local-trust-areas-legally-defined-administrative-areas-of-bc",
+              },
+              "type": "link",
+            },
+          ],
+          "text": "https://catalogue.data.gov.bc.ca/dataset/local-trust-areas-legally-defined-administrative-areas-of-bc",
+          "type": "text",
+        },
+      ],
+      "type": "paragraph",
+    },
+    {
+      "content": [
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Publisher - Current Organization Name: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Government of British Columbia",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Licence: ",
+                  "type": "text",
+                },
+                {
+                  "marks": [
+                    {
+                      "attrs": {
+                        "href": "https://www2.gov.bc.ca/gov/content/data/open-data/open-government-licence-bc",
+                      },
+                      "type": "link",
+                    },
+                  ],
+                  "text": "Open Government Licence - British Columbia",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Creator: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Joy Sinnett",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Date Published: ",
+                  "type": "text",
+                },
+                {
+                  "text": "2016-03-10",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Maintenance and Update Frequency: ",
+                  "type": "text",
+                },
+                {
+                  "text": "As Needed",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Contact Email: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Joy.Sinnett@gov.bc.ca",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Status: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Completed",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+      ],
+      "type": "bullet_list",
+    },
+    {
+      "content": [
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Keywords:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "ABMS",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Administrative boundaries",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "RD",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "electoral area boundaries",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "jurisdiction",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "local government",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "metes and bounds",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "regional district",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "regional district boundaries",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Government information",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Spatial Representation Type:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Grid",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Subject:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Government and Politics",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Topic category:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Boundaries",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+      ],
+      "type": "bullet_list",
+    },
+  ],
+  "type": "doc",
+}
+`;
+
+exports[`ckanFieldsToProseMirror > round-trips every Canada fixture in EN and fr > regional-fr 1`] = `
+{
+  "content": [
+    {
+      "attrs": {
+        "level": 1,
+      },
+      "content": [
+        {
+          "text": "Districts régionaux - Zones administratives légalement définies de la Colombie-Britannique",
+          "type": "text",
+        },
+      ],
+      "type": "heading",
+    },
+    {
+      "content": [
+        {
+          "text": "Les polygones ",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "type": "strong",
+            },
+          ],
+          "text": "Districts régionaux",
+          "type": "text",
+        },
+        {
+          "text": " définis légalement ont été dessinés à partir des descriptions des mètres et des limites telles qu'elles sont écrites dans les lettres patentes pour les districts régionaux de la province de la Colombie-Britannique. En cas de divergence entre les données, la description des limites et des limites prévaut. Bien que les limites aient été tracées sur la base de la description des limites et des limites légales, elles peuvent différer de la façon dont les districts régionaux et leurs municipalités membres et les zones électorales voient et/ou gèrent actuellement leurs limites. Lorsque des divergences sont constatées, le ministère du Logement et des Affaires municipales (le gardien) engage des discussions avec les administrations locales dont les limites sont concernées. Pour modifier les limites, l'approbation du Cabinet est requise. Cela se fait par le biais d'un décret en conseil (OCI). Pendant que les divergences dans les limites administratives sont en cours de résolution, les limites peuvent être ajustées de façon continue jusqu'à ce que les modifications demandées soient effectuées. Les champs OIC_YEAR et OIC_NUMBER indiquent l'année où la frontière a été franchie dans le cadre de l'OCI et son numéro associé. L'AFFECTED_ADMIN_AREA_ABRVN identifie les zones administratives qui sont affectées par l'OCI. Veuillez noter que la municipalité régionale des Rocheuses du Nord semble être une lacune dans la couche du district régional, mais il s'agit d'une municipalité et se trouve dans la [couche des municipalités] (",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/municipalities-legally-defined-administrative-areas-of-bc",
+              },
+              "type": "link",
+            },
+          ],
+          "text": "https://catalogue.data.gov.bc.ca/dataset/municipalities-legally-defined-administrative-areas-of-bc",
+          "type": "text",
+        },
+        {
+          "text": "). Un jeu de données polygonales qui inclut toutes les zones administratives actuellement incluses dans le __Système de gestion des limites administratives (ABMS) __ est disponible [ici] (",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/legally-defined-administrative-areas-of-bc",
+              },
+              "type": "link",
+            },
+          ],
+          "text": "https://catalogue.data.gov.bc.ca/dataset/legally-defined-administrative-areas-of-bc",
+          "type": "text",
+        },
+        {
+          "text": "). Un ensemble de données de points complémentaire qui définit les zones administratives est également disponible [ici] (",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/legally-defined-administrative-areas-of-bc-boundary-locations",
+              },
+              "type": "link",
+            },
+          ],
+          "text": "https://catalogue.data.gov.bc.ca/dataset/legally-defined-administrative-areas-of-bc-boundary-locations",
+          "type": "text",
+        },
+        {
+          "text": "). D'autres ensembles de données individuels sont disponibles à partir des enregistrements suivants : ",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/municipalities-legally-defined-administrative-areas-of-bc",
+              },
+              "type": "link",
+            },
+          ],
+          "text": "https://catalogue.data.gov.bc.ca/dataset/municipalities-legally-defined-administrative-areas-of-bc",
+          "type": "text",
+        },
+        {
+          "text": " ",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/electoral-areas-legally-defined-administrative-areas-of-bc",
+              },
+              "type": "link",
+            },
+          ],
+          "text": "https://catalogue.data.gov.bc.ca/dataset/electoral-areas-legally-defined-administrative-areas-of-bc",
+          "type": "text",
+        },
+        {
+          "text": " ",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/province-of-british-columbia-legally-defined-administrative-areas-of-bc",
+              },
+              "type": "link",
+            },
+          ],
+          "text": "https://catalogue.data.gov.bc.ca/dataset/province-of-british-columbia-legally-defined-administrative-areas-of-bc",
+          "type": "text",
+        },
+        {
+          "text": " ",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/islands-trust-legally-defined-administrative-areas-of-bc",
+              },
+              "type": "link",
+            },
+          ],
+          "text": "https://catalogue.data.gov.bc.ca/dataset/islands-trust-legally-defined-administrative-areas-of-bc",
+          "type": "text",
+        },
+        {
+          "text": " ",
+          "type": "text",
+        },
+        {
+          "marks": [
+            {
+              "attrs": {
+                "href": "https://catalogue.data.gov.bc.ca/dataset/local-trust-areas-legally-defined-administrative-areas-of-bc",
+              },
+              "type": "link",
+            },
+          ],
+          "text": "https://catalogue.data.gov.bc.ca/dataset/local-trust-areas-legally-defined-administrative-areas-of-bc",
+          "type": "text",
+        },
+      ],
+      "type": "paragraph",
+    },
+    {
+      "content": [
+        {
+          "text": "** Cet élément de métadonnées provenant d’une tierce partie a été traduit à l'aide d'un outil de traduction automatisée (Amazon Translate). **",
+          "type": "text",
+        },
+      ],
+      "type": "paragraph",
+    },
+    {
+      "content": [
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Éditeur - Nom actuel de l’organisation: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Gouvernment de la Colombie-Britannique",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Licence: ",
+                  "type": "text",
+                },
+                {
+                  "marks": [
+                    {
+                      "attrs": {
+                        "href": "https://www2.gov.bc.ca/gov/content/data/open-data/open-government-licence-bc",
+                      },
+                      "type": "link",
+                    },
+                  ],
+                  "text": "Open Government Licence - British Columbia",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Auteur: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Joy Sinnett",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Date de publication: ",
+                  "type": "text",
+                },
+                {
+                  "text": "2016-03-10",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Fréquence d'entretien et de mise à jour: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Au besoin",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Courriel - Personne-ressource: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Joy.Sinnett@gov.bc.ca",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "État: ",
+                  "type": "text",
+                },
+                {
+                  "text": "Complété",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+          ],
+          "type": "list_item",
+        },
+      ],
+      "type": "bullet_list",
+    },
+    {
+      "content": [
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Mots clés:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "ABMS",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Frontières administratives",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "RD",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "limites des circonscriptions électorales",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "juridiction",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "gouvernement local",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "mètres et limites",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "district régional",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "limites des districts régionaux",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Information gouvernementale",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Type représentation spatiale:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Grille",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Sujet:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Gouvernement et vie politique",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+        {
+          "content": [
+            {
+              "content": [
+                {
+                  "marks": [
+                    {
+                      "type": "strong",
+                    },
+                  ],
+                  "text": "Catégorie thématique:",
+                  "type": "text",
+                },
+              ],
+              "type": "paragraph",
+            },
+            {
+              "content": [
+                {
+                  "content": [
+                    {
+                      "content": [
+                        {
+                          "text": "Frontières",
+                          "type": "text",
+                        },
+                      ],
+                      "type": "paragraph",
+                    },
+                  ],
+                  "type": "list_item",
+                },
+              ],
+              "type": "bullet_list",
+            },
+          ],
+          "type": "list_item",
+        },
+      ],
+      "type": "bullet_list",
+    },
+  ],
+  "type": "doc",
+}
+`;

@@ -1,0 +1,269 @@
+{
+  "help": "https://open.canada.ca/data/en/api/3/action/help_show?name=package_show",
+  "success": true,
+  "result": {
+    "association_type": [],
+    "audience": [],
+    "author": null,
+    "author_email": null,
+    "collection": "fgp",
+    "contact_information": "{ \"en\": { \"organization_name\": \"Government of British Columbia; Government of British Columbia; BC Parks\", \"phone\": \"\", \"delivery_point\": \"\", \"city\": \"\", \"administrative_area\": \"\", \"postal_code\": \"\", \"country\": \"\", \"electronic_mail_address\": \"clrhelp@gov.bc.ca\" }, \"fr\": { \"organization_name\": \"Gouvernement de la Colombie-Britannique; Gouvernement de la Colombie-Britannique; BC Parks\", \"phone\": \"\", \"delivery_point\": \"\", \"city\": \"\", \"administrative_area\": \"\", \"postal_code\": \"\", \"country\": \"\", \"electronic_mail_address\": \"clrhelp@gov.bc.ca\" } }",
+    "contributor": {},
+    "creator": "Crown Lands Registry Help",
+    "creator_user_id": "b88b9549-3a4b-43a9-9375-5f3fc20fe782",
+    "data_series_issue_identification": {},
+    "data_series_name": {},
+    "date_published": "2011-03-09 00:00:00",
+    "display_flags": [
+      "fgp_viewer"
+    ],
+    "distributor": "{ \"en\": { \"organization_name\": \"Government of British Columbia; Government of British Columbia; BC Parks\", \"phone\": \"\", \"address\": \"\", \"city\": \"\", \"administrative_area\": \"\", \"postal_code\": \"\", \"country\": \"\", \"electronic_mail_address\": \"clrhelp@gov.bc.ca\" }, \"fr\": { \"organization_name\": \"Gouvernement de la Colombie-Britannique; Gouvernement de la Colombie-Britannique; BC Parks\", \"phone\": \"\", \"address\": \"\", \"city\": \"\", \"administrative_area\": \"\", \"postal_code\": \"\", \"country\": \"\", \"electronic_mail_address\": \"clrhelp@gov.bc.ca\" } }",
+    "federated_date_modified": "2026-01-27",
+    "file_id": "3544ad91-0cf2-4926-a08a-bfe42d9a031d",
+    "frequency": "irregular",
+    "geographic_region": [],
+    "hierarchy_level": "dataset; jeuDonnées",
+    "id": "3544ad91-0cf2-4926-a08a-bfe42d9a031d",
+    "imso_approval": "true",
+    "isopen": false,
+    "jurisdiction": "provincial",
+    "keywords": {
+      "en": [
+        "CLRS",
+        "Canada",
+        "Crown Land",
+        "Crown Land Registry",
+        "Crown Tenure",
+        "tantalis",
+        "Government information"
+      ],
+      "fr-t-en": [
+        "CLRS",
+        "Canada",
+        "Terre de la Couronne",
+        "Registre des terres de la Couronne",
+        "Mandat de la Couronne",
+        "tantale",
+        "Information gouvernementale"
+      ]
+    },
+    "license_id": "bc-oglbc",
+    "license_title": "Open Government Licence - British Columbia",
+    "license_url": "https://www2.gov.bc.ca/gov/content/data/open-data/open-government-licence-bc",
+    "maintainer": null,
+    "maintainer_contact_form": {},
+    "maintainer_email": "clrhelp@gov.bc.ca",
+    "metadata_contact": {
+      "en": "Government of British Columbia; Government of British Columbia; BC Parks",
+      "fr": "Gouvernement de la Colombie-Britannique; Gouvernement de la Colombie-Britannique; BC Parks"
+    },
+    "metadata_created": "2020-06-05T16:15:22.956352",
+    "metadata_modified": "2026-01-28T19:48:03.845764",
+    "name": "3544ad91-0cf2-4926-a08a-bfe42d9a031d",
+    "notes": "Current Land Act tenures and applications for such tenures: a subset of crown land dispositions that are issued for specific purposes and periods of time under an agreement between an individual or company and the provincial government for an interest in crown land. Conveyances of ownership are not included. For example Leases, Licenses and Reserves are included, but Crown Grants and Acquisitions are not. Historical records (e.g. expired, replaced, or completed) are not included in this view.",
+    "notes_translated": {
+      "en": "Current Land Act tenures and applications for such tenures: a subset of crown land dispositions that are issued for specific purposes and periods of time under an agreement between an individual or company and the provincial government for an interest in crown land. Conveyances of ownership are not included. For example Leases, Licenses and Reserves are included, but Crown Grants and Acquisitions are not. Historical records (e.g. expired, replaced, or completed) are not included in this view.",
+      "fr-t-en": "Les tenures en vigueur en vertu de la Loi foncière et les demandes de telles tenures : un sous-ensemble de dispositions de terres domaniales qui sont émises à des fins et pour des périodes spécifiques en vertu d'un accord entre une personne ou une entreprise et le gouvernement provincial concernant un intérêt sur des terres domaniales. Les transferts de propriété ne sont pas inclus. Par exemple, les baux, les licences et les réserves sont inclus, mais pas les subventions et acquisitions de l'État. Les enregistrements historiques (par exemple, expirés, remplacés ou complétés) ne sont pas inclus dans cette vue.\n\n** Cet élément de métadonnées provenant d’une tierce partie a été traduit à l'aide d'un outil de traduction automatisée (Amazon Translate). **"
+    },
+    "num_resources": 5,
+    "num_tags": 0,
+    "org_section": {},
+    "org_title_at_publication": {
+      "en": "Government of British Columbia",
+      "fr": "Gouvernment de la Colombie-Britannique"
+    },
+    "organization": {
+      "id": "962985bb-8a54-425e-9783-4d67466cb531",
+      "name": "bc-cb",
+      "title": "Government of British Columbia | Gouvernment de la Colombie-Britannique",
+      "type": "organization",
+      "description": "",
+      "image_url": "",
+      "created": "2019-06-06T15:56:59.528307",
+      "is_organization": true,
+      "approval_status": "approved",
+      "state": "active"
+    },
+    "owner_org": "962985bb-8a54-425e-9783-4d67466cb531",
+    "place_of_publication": [],
+    "position_name": {},
+    "private": false,
+    "program_page_url": {},
+    "ready_to_publish": "true",
+    "reference_system_information": "EPSG:3005,EPSG,unknown",
+    "responsible_role": "pointOfContact; contact",
+    "restrictions": "unrestricted",
+    "spatial": "{\"type\": \"Polygon\", \"coordinates\": [[[-139.5, 48], [-113.5, 48], [-113.5, 60], [-139.5, 60], [-139.5, 48]]]}",
+    "spatial_representation_type": [
+      "grid"
+    ],
+    "state": "active",
+    "status": "ongoing",
+    "subject": [
+      "economics_and_industry"
+    ],
+    "time_period_coverage_start": "0001-01-01 00:00:00",
+    "title": "TANTALIS - Crown Tenures",
+    "title_translated": {
+      "en": "TANTALIS - Crown Tenures",
+      "fr-t-en": "TANTALIS - Crown Tenures"
+    },
+    "topic_category": [
+      "economy"
+    ],
+    "type": "dataset",
+    "url": null,
+    "version": null,
+    "resources": [
+      {
+        "cache_last_updated": null,
+        "cache_url": null,
+        "created": "2026-01-28T19:48:03.891141",
+        "data_quality": [],
+        "datastore_active": false,
+        "description": null,
+        "format": "HTML",
+        "hash": "",
+        "id": "7a9cbf7f-bb29-44bd-a72f-22607b4b9f58",
+        "language": [
+          "en"
+        ],
+        "last_modified": null,
+        "metadata_modified": "2026-01-28T19:48:03.868351",
+        "mimetype": null,
+        "mimetype_inner": null,
+        "name": "BC Geographic Warehouse Custom Download",
+        "name_translated": {
+          "en": "BC Geographic Warehouse Custom Download",
+          "fr-t-en": "Téléchargement personnalisé de BC Geographic Warehouse"
+        },
+        "package_id": "3544ad91-0cf2-4926-a08a-bfe42d9a031d",
+        "position": 0,
+        "resource_type": "dataset",
+        "state": "active",
+        "url": "https://catalogue.data.gov.bc.ca/dataset/tantalis-crown-tenures/resource/e4196f7a-a13e-4da6-a651-e986b8433ab6",
+        "url_type": null
+      },
+      {
+        "cache_last_updated": null,
+        "cache_url": null,
+        "created": "2026-01-28T19:48:03.891147",
+        "data_quality": [],
+        "datastore_active": false,
+        "description": null,
+        "format": "HTML",
+        "hash": "",
+        "id": "af74e9e5-ae8b-4171-9aa9-69b72fe7c588",
+        "language": [
+          "en"
+        ],
+        "last_modified": null,
+        "metadata_modified": "2026-01-28T19:48:03.868504",
+        "mimetype": null,
+        "mimetype_inner": null,
+        "name": "Original metadata (https://catalogue.data.gov.bc.ca)",
+        "name_translated": {
+          "en": "Original metadata (https://catalogue.data.gov.bc.ca)",
+          "fr-t-en": "Métadonnées originales (https://catalogue.data.gov.bc.ca)"
+        },
+        "package_id": "3544ad91-0cf2-4926-a08a-bfe42d9a031d",
+        "position": 1,
+        "resource_type": "dataset",
+        "state": "active",
+        "url": "https://catalogue.data.gov.bc.ca/dataset/tantalis-crown-tenures",
+        "url_type": null
+      },
+      {
+        "cache_last_updated": null,
+        "cache_url": null,
+        "created": "2026-01-28T19:48:03.891148",
+        "data_quality": [],
+        "datastore_active": false,
+        "description": null,
+        "format": "KML",
+        "hash": "",
+        "id": "96e5b487-17c0-4487-b9dc-7543b4814f6b",
+        "language": [
+          "en"
+        ],
+        "last_modified": null,
+        "metadata_modified": "2026-01-28T19:48:03.868604",
+        "mimetype": null,
+        "mimetype_inner": null,
+        "name": "TA_CROWN_TENURES_SVW",
+        "name_translated": {
+          "en": "TA_CROWN_TENURES_SVW",
+          "fr-t-en": "TA_CROWN_TENURES_SVW"
+        },
+        "package_id": "3544ad91-0cf2-4926-a08a-bfe42d9a031d",
+        "position": 2,
+        "resource_type": "dataset",
+        "state": "active",
+        "url": "https://openmaps.gov.bc.ca/kml/geo/layers/WHSE_TANTALIS.TA_CROWN_TENURES_SVW_loader.kml",
+        "url_type": null
+      },
+      {
+        "cache_last_updated": null,
+        "cache_url": null,
+        "created": "2026-01-28T19:48:03.891150",
+        "data_quality": [],
+        "datastore_active": false,
+        "description": null,
+        "format": "WMS",
+        "hash": "",
+        "id": "b65471b0-234d-47ea-8c66-4b112e92def4",
+        "language": [
+          "en"
+        ],
+        "last_modified": null,
+        "metadata_modified": "2026-01-28T19:48:03.868699",
+        "mimetype": null,
+        "mimetype_inner": null,
+        "name": "TA_CROWN_TENURES_SVW",
+        "name_translated": {
+          "en": "TA_CROWN_TENURES_SVW",
+          "fr-t-en": "TA_CROWN_TENURES_SVW"
+        },
+        "package_id": "3544ad91-0cf2-4926-a08a-bfe42d9a031d",
+        "position": 3,
+        "resource_type": "web_service",
+        "state": "active",
+        "url": "https://openmaps.gov.bc.ca/geo/pub/WHSE_TANTALIS.TA_CROWN_TENURES_SVW/ows?service=WMS&request=GetCapabilities&layers=pub:WHSE_TANTALIS.TA_CROWN_TENURES_SVW&legend_format=image/png&feature_info_type=text/plain",
+        "url_type": null
+      },
+      {
+        "cache_last_updated": null,
+        "cache_url": null,
+        "created": "2026-01-28T19:48:03.891151",
+        "data_quality": [],
+        "datastore_active": false,
+        "description": null,
+        "format": "WMS",
+        "hash": "",
+        "id": "c14f96c1-d4b5-43e2-9108-28fbb7014a20",
+        "language": [
+          "en"
+        ],
+        "last_modified": null,
+        "metadata_modified": "2026-01-28T19:48:03.868816",
+        "mimetype": null,
+        "mimetype_inner": null,
+        "name": "TA_CROWN_TENURES_SVW",
+        "name_translated": {
+          "en": "TA_CROWN_TENURES_SVW",
+          "fr-t-en": "TA_CROWN_TENURES_SVW"
+        },
+        "package_id": "3544ad91-0cf2-4926-a08a-bfe42d9a031d",
+        "position": 4,
+        "resource_type": "web_service",
+        "state": "active",
+        "url": "https://openmaps.gov.bc.ca/geo/pub/WHSE_TANTALIS.TA_CROWN_TENURES_SVW/ows?service=WMS&request=GetCapabilities&layers=pub:WHSE_TANTALIS.TA_CROWN_TENURES_SVW&legend_format=image/png&feature_info_type=text/plain",
+        "url_type": null
+      }
+    ],
+    "tags": [],
+    "groups": [],
+    "relationships_as_subject": [],
+    "relationships_as_object": []
+  }
+}

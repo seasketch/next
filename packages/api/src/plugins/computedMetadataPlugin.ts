@@ -2,6 +2,10 @@ import { makeExtendSchemaPlugin, gql } from "graphile-utils";
 import { DOMParser } from "prosemirror-model";
 import { JSDOM } from "jsdom";
 import { schema } from "../prosemirror/basicSchema";
+import {
+  buildCkanDocument,
+  loadCkanPackageAndSchema,
+} from "../ckan/resolve";
 
 const ComputedMetadataPlugin = makeExtendSchemaPlugin((build) => {
   return {
@@ -10,17 +14,20 @@ const ComputedMetadataPlugin = makeExtendSchemaPlugin((build) => {
         """
         Metadata will be returned as directly stored in the SeaSketch
         database or computed by fetching from a 3rd party service,
-        depending on the data source type.
+        depending on the data source type. Pass lang to localize CKAN
+        metadata using the viewer's SeaSketch language code.
         """
-        computedMetadata: JSON
-          @requires(columns: ["id", "metadata", "data_layer_id"])
+        computedMetadata(lang: String): JSON
+          @requires(
+            columns: ["id", "metadata", "data_layer_id", "ckan_dataset_url", "project_id"]
+          )
       }
     `,
     resolvers: {
       TableOfContentsItem: {
         computedMetadata: async ({ id }, args, context, info) => {
           const r = await context.pgClient.query(
-            `select id, metadata, data_layer_id from table_of_contents_items where id = $1`,
+            `select id, metadata, data_layer_id, ckan_dataset_url, project_id from table_of_contents_items where id = $1`,
             [id]
           );
           if (r.rows.length === 0) {
@@ -28,6 +35,26 @@ const ComputedMetadataPlugin = makeExtendSchemaPlugin((build) => {
           }
           const item = r.rows[0];
           item.dataLayerId = item.data_layer_id;
+          if (item.ckan_dataset_url) {
+            try {
+              const { parsed, pkg, schema: ckanSchema } =
+                await loadCkanPackageAndSchema(item.ckan_dataset_url);
+              const source = await context.adminPool.query(
+                `select display_config from public.ckan_metadata_sources
+                 where project_id = $1 and base_url = $2`,
+                [item.project_id, parsed.baseUrl]
+              );
+              return buildCkanDocument(
+                pkg,
+                ckanSchema,
+                source.rows[0]?.display_config,
+                args.lang
+              );
+            } catch (error) {
+              console.error("CKAN metadata fetch failed", error);
+              return item.metadata ?? null;
+            }
+          }
           if (item.metadata) {
             return item.metadata;
           } else if (item.dataLayerId) {

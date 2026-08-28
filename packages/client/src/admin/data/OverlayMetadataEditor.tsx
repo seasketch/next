@@ -1,7 +1,9 @@
 import { Trans, useTranslation } from "react-i18next";
 import {
   GetMetadataDocument,
+  useEnsureCkanMetadataSourceMutation,
   useGetMetadataQuery,
+  useUpdateCkanDatasetUrlMutation,
   useUpdateMetadataFromXmlMutation,
   useUpdateMetadataMutation,
 } from "../../generated/graphql";
@@ -21,9 +23,16 @@ import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import { layerSettingsChangeLogRefetchQueries } from "../changelogs/layerSettingsChangeLogRefetch";
 import LayerMetadataRevisionModal from "./LayerMetadataRevisionModal";
 import EsriRestUrlFooter from "../../dataLayers/EsriRestUrlFooter";
+import CkanSourceFooter, {
+  localizedCkanDatasetUrl,
+} from "../../dataLayers/CkanSourceFooter";
 import HideArcGISRestLinkControl from "../../dataLayers/HideArcGISRestLinkControl";
 import { esriRestUrlFromMetadataItem } from "../../dataLayers/esriRestUrl";
 import MetadataFooterSetting from "../../dataLayers/MetadataFooterSetting";
+import useCurrentLang from "../../useCurrentLang";
+import useProjectId from "../../useProjectId";
+import getSlug from "../../getSlug";
+import { Link } from "react-router-dom";
 
 export default function OverlayMetataEditor({
   id,
@@ -32,9 +41,12 @@ export default function OverlayMetataEditor({
   id: number;
   registerPreventUnload?: (id: string, message: string | undefined) => void;
 }) {
+  const lang = useCurrentLang();
+  const projectId = useProjectId();
   const { data, error, loading } = useGetMetadataQuery({
     variables: {
       itemId: id,
+      lang: lang.code,
     },
   });
   const { t } = useTranslation("admin:data");
@@ -43,13 +55,31 @@ export default function OverlayMetataEditor({
     () => [...layerSettingsChangeLogRefetchQueries(id)],
     [id]
   );
+  const metadataQueryVars = useMemo(
+    () => ({ itemId: id, lang: lang.code }),
+    [id, lang.code]
+  );
   const [mutation, mutationState] = useUpdateMetadataMutation({
     refetchQueries: [
       ...changeLogRefetchQueries,
-      { query: GetMetadataDocument, variables: { itemId: id } },
+      { query: GetMetadataDocument, variables: metadataQueryVars },
     ],
   });
+  const [updateCkanUrl, updateCkanUrlState] = useUpdateCkanDatasetUrlMutation({
+    refetchQueries: [
+      ...changeLogRefetchQueries,
+      { query: GetMetadataDocument, variables: metadataQueryVars },
+    ],
+  });
+  const [ensureCkanSource] = useEnsureCkanMetadataSourceMutation();
+  const savedCkanUrl =
+    data?.tableOfContentsItemByIdentifier?.ckanDatasetUrl || "";
+  const [ckanUrlDraft, setCkanUrlDraft] = useState(savedCkanUrl);
+  useEffect(() => {
+    setCkanUrlDraft(savedCkanUrl);
+  }, [savedCkanUrl]);
 
+  const usingCkanMetadata = Boolean(savedCkanUrl);
   const usingDynamicMetadata = Boolean(
     data?.tableOfContentsItemByIdentifier?.usesDynamicMetadata
   );
@@ -270,24 +300,73 @@ export default function OverlayMetataEditor({
                   </div>
                 )}
               </div>
-              {esriRestUrl && !hideArcGisRestLink && (
+              {esriRestUrl && !hideArcGisRestLink && !usingCkanMetadata && (
                 <EsriRestUrlFooter url={esriRestUrl} />
+              )}
+              {usingCkanMetadata && (
+                <CkanSourceFooter
+                  url={localizedCkanDatasetUrl(savedCkanUrl, lang.code)}
+                />
               )}
               {usingDynamicMetadata && (
                 <div className="absolute inset-0 pointer-events-none">
                   <div className="h-1/3 flex items-center justify-center px-6">
                     <p className="max-w-xs text-center text-sm text-gray-700 bg-white/90 border border-gray-200 rounded-md shadow-sm px-4 py-3">
-                      {t(
-                        "Using dynamic service metadata. Disable this setting to customize content."
-                      )}
+                      {usingCkanMetadata
+                        ? t(
+                            "Using linked CKAN metadata. Clear the record URL to customize content in SeaSketch."
+                          )
+                        : t(
+                            "Using dynamic service metadata. Disable this setting to customize content."
+                          )}
                     </p>
                   </div>
                 </div>
               )}
             </div>
-            {(esriRestUrl || dynamicMetadataAvailable) && (
-              <div className="flex-none border-t border-gray-200 bg-white divide-y divide-gray-200">
-                {dynamicMetadataAvailable && (
+            <div className="flex-none border-t border-gray-200 bg-white divide-y divide-gray-200">
+              <MetadataFooterSetting
+                title={t("Link to an external metadata record")}
+                description={t(
+                  "Paste a CKAN dataset URL to display a live summary from that catalogue. Field selection is configured once per source."
+                )}
+              >
+                <div className="w-72">
+                  {/* eslint-disable-next-line i18next/no-literal-string */}
+                  <input
+                    type="url"
+                    className="w-full rounded border border-gray-300 px-2 py-1 text-sm"
+                    value={ckanUrlDraft}
+                    placeholder="https://open.canada.ca/data/en/dataset/…"
+                    disabled={updateCkanUrlState.loading}
+                    onChange={(event) => setCkanUrlDraft(event.target.value)}
+                    onBlur={async () => {
+                      const next = ckanUrlDraft.trim() || null;
+                      const current = savedCkanUrl || null;
+                      if (next === current) {
+                        return;
+                      }
+                      await updateCkanUrl({
+                        variables: { itemId: id, ckanDatasetUrl: next },
+                      });
+                      if (next && projectId) {
+                        await ensureCkanSource({
+                          variables: { projectId, url: next },
+                        });
+                      }
+                    }}
+                  />
+                  {usingCkanMetadata && (
+                    <Link
+                      to={`/${getSlug()}/admin/data/ckan-metadata`}
+                      className="mt-1 block text-xs text-primary-600 underline"
+                    >
+                      {t("Configure fields for this CKAN source")}
+                    </Link>
+                  )}
+                </div>
+              </MetadataFooterSetting>
+              {dynamicMetadataAvailable && !usingCkanMetadata && (
                   <MetadataFooterSetting
                     title={t("Use dynamic service metadata")}
                     description={t(
@@ -338,7 +417,6 @@ export default function OverlayMetataEditor({
                   />
                 )}
               </div>
-            )}
           </div>
         </div>
       )}

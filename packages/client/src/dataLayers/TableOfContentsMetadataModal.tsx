@@ -2,6 +2,8 @@ import { createContext, useMemo, useState } from "react";
 import { useGetMetadataQuery } from "../generated/graphql";
 import MetadataModal from "./MetadataModal";
 import { esriRestUrlFromMetadataItem } from "./esriRestUrl";
+import { localizedCkanDatasetUrl } from "./CkanSourceFooter";
+import useCurrentLang from "../useCurrentLang";
 
 export const TableOfContentsMetadataModalContext = createContext<{
   id?: number;
@@ -28,10 +30,12 @@ export default function TableOfContentsMetadataModal({
     throw new Error("id or stableId is required");
   }
 
+  const lang = useCurrentLang();
   const { data, loading, error } = useGetMetadataQuery({
     variables: {
       itemId: id,
       stableId,
+      lang: lang.code,
     },
     skip: !id && !stableId,
   });
@@ -63,6 +67,14 @@ export default function TableOfContentsMetadataModal({
         data?.tableOfContentsItemByIdentifier?.hostedSourceLastUpdated
       }
       esriRestUrl={hideArcGisRestLink ? null : esriRestUrl}
+      ckanDatasetUrl={
+        data?.tableOfContentsItemByIdentifier?.ckanDatasetUrl
+          ? localizedCkanDatasetUrl(
+              data.tableOfContentsItemByIdentifier.ckanDatasetUrl,
+              lang.code
+            )
+          : null
+      }
     />
   );
 }

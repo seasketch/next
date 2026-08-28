@@ -1,0 +1,461 @@
+{
+  "help": "https://catalogue.data.gov.bc.ca/api/3/action/help_show?name=package_show",
+  "success": true,
+  "result": {
+    "author": "d6755923-2d11-4a36-9f2b-faf984cff0e1",
+    "author_email": null,
+    "creator_user_id": "d6755923-2d11-4a36-9f2b-faf984cff0e1",
+    "download_audience": "Public",
+    "id": "0bc73892-e41f-41d0-8d8e-828c16139337",
+    "isopen": false,
+    "license_id": "2",
+    "license_title": "Open Government Licence - British Columbia",
+    "license_url": "https://www2.gov.bc.ca/gov/content?id=A519A56BC2BF44E4A008B33FCF527F61",
+    "lineage_statement": "There are multiple representation of this dataset due to the size of the dataset and thus a generalized dataset was built for performance in web mapping applications. The [downloadable resource](https://catalogue.data.gov.bc.ca/dataset/0bc73892-e41f-41d0-8d8e-828c16139337/resource/2d9d0a5c-bdf7-47e8-9038-103a93e6205a) from the BC Geographic Warehouse is to be used for analysis.\n<br><br>\nThe generalized dataset is for web mapping purposes:\n WHSE_ADMIN_BOUNDARIES.ADM_NR_DISTRICTS_SPG\n\n<br>\nThis dataset supersedes the Forest District Boundaries\n WHSE_ADMIN_BOUNDARIES.FADM_DISTRICT",
+    "maintainer": null,
+    "maintainer_email": null,
+    "metadata_created": "2015-03-05T22:13:13.316356",
+    "metadata_modified": "2025-09-05T23:13:38.990226",
+    "metadata_visibility": "Public",
+    "name": "natural-resource-nr-district",
+    "notes": "The spatial representation for a Natural Resource (NR) District, that is an administrative area established by the Ministry, within NR Regions.",
+    "num_resources": 3,
+    "num_tags": 6,
+    "organization": {
+      "id": "32cf90fc-9350-4ab6-995f-11a66125b5a1",
+      "name": "forest-tenures",
+      "title": "Forest Tenures Branch",
+      "type": "organization",
+      "description": "Custodian: Doug Kelly\n\nDelegate: Ivan Eggers",
+      "image_url": "",
+      "created": "2014-12-10T15:05:02.728167",
+      "is_organization": true,
+      "approval_status": "approved",
+      "state": "active"
+    },
+    "owner_org": "32cf90fc-9350-4ab6-995f-11a66125b5a1",
+    "private": false,
+    "publish_state": "PUBLISHED",
+    "record_create_date": "2015-03-04",
+    "record_last_modified": "2025-09-05",
+    "record_publish_date": "2015-04-09",
+    "replacement_record": "",
+    "resource_status": "completed",
+    "retention_expiry_date": "",
+    "security_class": "PUBLIC",
+    "source_data_path": "",
+    "state": "active",
+    "title": "Natural Resource (NR) Districts",
+    "type": "bcdc_dataset",
+    "url": null,
+    "version": null,
+    "view_audience": "Public",
+    "contacts": [
+      {
+        "displayed": [],
+        "email": "Susan.Westmacott@gov.bc.ca",
+        "name": "Susan Westmacott",
+        "org": "e51a8106-11c7-4436-a967-7cee18bfb159",
+        "role": "dataSteward"
+      },
+      {
+        "displayed": [
+          "displayed"
+        ],
+        "email": "foresttenuresbranch@gov.bc.ca",
+        "name": "Forest Tenures Branch",
+        "org": "32cf90fc-9350-4ab6-995f-11a66125b5a1",
+        "role": "pointOfContact"
+      },
+      {
+        "displayed": [],
+        "email": "Lindsay.Scott@gov.bc.ca",
+        "name": "Lindsay Scott",
+        "org": "32cf90fc-9350-4ab6-995f-11a66125b5a1",
+        "role": "businessExpert"
+      },
+      {
+        "displayed": [
+          "displayed"
+        ],
+        "email": "geobcinfo@gov.bc.ca",
+        "name": "GeoBC",
+        "org": "e51a8106-11c7-4436-a967-7cee18bfb159",
+        "role": "pointOfContact"
+      }
+    ],
+    "dates": [
+      {
+        "date": "2015-03-04",
+        "type": "Created"
+      }
+    ],
+    "more_info": [
+      {
+        "description": "",
+        "url": ""
+      }
+    ],
+    "resources": [
+      {
+        "bcdc_type": "geographic",
+        "cache_last_updated": null,
+        "cache_url": "null",
+        "created": "2019-05-04T16:54:50.686000",
+        "datastore_active": "false",
+        "description": "The Distribution Service allows for data to be downloaded in various file formats from the B.C. Geographic Warehouse (BCGW), a central government repository of spatial and non-spatial data.",
+        "format": "multiple",
+        "hash": "",
+        "id": "2d9d0a5c-bdf7-47e8-9038-103a93e6205a",
+        "iso_topic_category": [
+          "boundaries"
+        ],
+        "json_table_schema": {},
+        "last_modified": "2021-02-09T07:00:45",
+        "metadata_modified": "2025-09-05T23:10:44.884551",
+        "mimetype": "null",
+        "mimetype_inner": "null",
+        "name": "BC Geographic Warehouse Custom Download",
+        "object_name": "WHSE_ADMIN_BOUNDARIES.ADM_NR_DISTRICTS_SP",
+        "object_short_name": "ADM_NR_DST",
+        "object_table_comments": "NR DISTRICT SP is the spatial representation for a Natural Resource (NR) District, that is an administrative area established by the Ministry, within NR Regions.These Ministry of Forests (MOF) boundaries have changed from the boundaries captured in FADM DISTRICT REGION object due to the change in administrative areas due to downsizing in 2001. The SDE entity types allowed in this layer are multi-part polygons.",
+        "ofi": "True",
+        "package_id": "0bc73892-e41f-41d0-8d8e-828c16139337",
+        "position": 0,
+        "projection_name": "epsg3005",
+        "resource_access_method": "indirect access",
+        "resource_storage_location": "bc geographic warehouse",
+        "resource_type": "data",
+        "resource_update_cycle": "asNeeded",
+        "size": null,
+        "spatial_datatype": "SDO_GEOMETRY",
+        "state": "active",
+        "supplemental_info": "Click <b>Access/Download</b> in the toolbar to download this dataset. For more information on using the distribution order form see [How to download data using the Catalogue or iMapBC](https://bcgov.github.io/data-publication/pages/dps_data_distribution_w.html). If the data is visible through public WMS, click the <b>Preview</b> button on the toolbar.",
+        "url": "",
+        "url_type": "null",
+        "details": [
+          {
+            "column_comments": "DISTRICT NAME is the long name of the NR District, e.g., Selkirk District.",
+            "column_name": "DISTRICT_NAME",
+            "data_precision": 60,
+            "data_type": "VARCHAR2",
+            "short_name": "DSTRCT_NM"
+          },
+          {
+            "column_comments": "ORG UNIT is the organizational unit code obtained from the CORP ORG UNIT object, e.g., DSE.",
+            "column_name": "ORG_UNIT",
+            "data_precision": 3,
+            "data_type": "VARCHAR2",
+            "short_name": "ORG_UNIT"
+          },
+          {
+            "column_comments": "ORG UNIT NAME is the name or title of a ministry office or section, e.g., Selkirk District.",
+            "column_name": "ORG_UNIT_NAME",
+            "data_precision": 100,
+            "data_type": "VARCHAR2",
+            "short_name": "ORG_NT_NM"
+          },
+          {
+            "column_comments": "REGION ORG UNIT is the organizational unit code obtained from the CORP ORG UNIT object, e.g., RKB. which indicates which ORG UNIT this district is within.",
+            "column_name": "REGION_ORG_UNIT",
+            "data_precision": 3,
+            "data_type": "VARCHAR2",
+            "short_name": "RGN_RG_NT"
+          },
+          {
+            "column_comments": "ORG UNIT NAME is the name or title of a Region, e.g., Kootenay Boundary Region.",
+            "column_name": "REGION_ORG_UNIT_NAME",
+            "data_precision": 100,
+            "data_type": "VARCHAR2",
+            "short_name": "RGN_RG_NTM"
+          },
+          {
+            "column_comments": "FEATURE CODE contains an alphanumeric value based on the Canadian Council of Surveys and Mapping’s (CCSM) system for classification of geographic features.",
+            "column_name": "FEATURE_CODE",
+            "data_precision": 10,
+            "data_type": "VARCHAR2",
+            "short_name": "FEATURE_CD"
+          },
+          {
+            "column_comments": "FEATURE NAME is the The English name of the feature, e.g., Natural Resource District",
+            "column_name": "FEATURE_NAME",
+            "data_precision": 100,
+            "data_type": "VARCHAR2",
+            "short_name": "FEATURE_NM"
+          },
+          {
+            "column_comments": "SHAPE is the column used to reference the spatial coordinates defining the feature.",
+            "column_name": "SHAPE",
+            "data_precision": 1,
+            "data_type": "SDO_GEOMETRY",
+            "short_name": "SHAPE"
+          },
+          {
+            "column_comments": "OBJECTID is a column required by spatial layers that interact with ESRI ArcSDE. It is populated with unique values automatically by SDE",
+            "column_name": "OBJECTID",
+            "data_precision": 38,
+            "data_type": "NUMBER",
+            "short_name": "OBJECTID"
+          },
+          {
+            "column_comments": "SE_ANNO_CAD_DATA is a binary column used by spatial tools to store annotation, curve features and CAD data when using the SDO_GEOMETRY storage data type.",
+            "column_name": "SE_ANNO_CAD_DATA",
+            "data_precision": 4000,
+            "data_type": "BLOB"
+          },
+          {
+            "column_comments": "FEATURE_AREA_SQM is the system calculated area of a two-dimensional polygon in square meters",
+            "column_name": "FEATURE_AREA_SQM",
+            "data_precision": 19,
+            "data_type": "NUMBER",
+            "short_name": "AREA_SQM"
+          },
+          {
+            "column_comments": "FEATURE_LENGTH_M is the system calculated length or perimeter of a geometry in meters",
+            "column_name": "FEATURE_LENGTH_M",
+            "data_precision": 19,
+            "data_type": "NUMBER",
+            "short_name": "FEAT_LEN"
+          }
+        ],
+        "geographic_extent": [
+          {
+            "east_bound_longitude": "-113.5",
+            "north_bound_latitude": "60.0",
+            "south_bound_latitude": "48.0",
+            "west_bound_longitude": "-139.5"
+          }
+        ],
+        "preview_info": [
+          {
+            "layer_name": "WHSE_ADMIN_BOUNDARIES.ADM_NR_DISTRICTS_SPG",
+            "link_to_imap": "http://maps.gov.bc.ca/ess/hm/imap4m/?catalogLayers=364,365,3462,3463&scale=800000.0&center=-13884978.8303,6397223.6898",
+            "preview_image_url": "",
+            "preview_latitude": "49.71592534",
+            "preview_longitude": "-124.73088703",
+            "preview_map_service_url": "https://openmaps.gov.bc.ca/geo/pub/WHSE_ADMIN_BOUNDARIES.ADM_NR_DISTRICTS_SPG/ows?",
+            "preview_zoom_level": "40"
+          }
+        ]
+      },
+      {
+        "bcdc_type": "webservice",
+        "cache_last_updated": null,
+        "cache_url": null,
+        "created": "2015-12-14T10:36:52.667000",
+        "datastore_active": false,
+        "description": "Web Mapping Service (WMS) allows for data to be fed out via a service from the B.C. Geographic Warehouse (BCGW), a central government repository of spatial and non-spatial data.",
+        "format": "wms",
+        "hash": "",
+        "id": "e6676e55-2a6f-4b2b-91ad-3caf291ac5d4",
+        "iso_topic_category": [
+          "boundaries"
+        ],
+        "json_table_schema": {},
+        "last_modified": "2021-02-09T07:00:45",
+        "metadata_modified": "2025-09-05T23:13:38.995591",
+        "mimetype": null,
+        "mimetype_inner": null,
+        "name": "WMS getCapabilities request",
+        "object_name": "WHSE_ADMIN_BOUNDARIES.ADM_NR_DISTRICTS_SPG",
+        "object_table_comments": "This is a low-resolution \"generalized\" copy of NR DISTRICTS SP. The spatial representation for a Natural Resource (NR) District, that is an administrative area established by the Ministry, within NR Regions.These Ministry of Forests (MOF) boundaries have changed from the boundaries captured in FADM DISTRICT REGION object due to the change in administrative areas due to downsizing in 2001. The SDE entity types allowed in this layer are multi-part polygons.",
+        "package_id": "0bc73892-e41f-41d0-8d8e-828c16139337",
+        "position": 1,
+        "projection_name": "epsg4326",
+        "resource_access_method": "service",
+        "resource_storage_location": "bc geographic warehouse",
+        "resource_type": "data",
+        "resource_update_cycle": "asNeeded",
+        "size": null,
+        "spatial_datatype": "UNKNOWN",
+        "state": "active",
+        "supplemental_info": "Click <b>Access/Download</b> in the toolbar to see or copy the WMS call. For more information see [Web Mapping Services](https://www2.gov.bc.ca/gov/content?id=95D78D544B244F34B89223EF069DF74E).",
+        "url": "https://openmaps.gov.bc.ca/geo/pub/WHSE_ADMIN_BOUNDARIES.ADM_NR_DISTRICTS_SPG/ows?service=WMS&request=GetCapabilities",
+        "url_type": null,
+        "details": [
+          {
+            "column_comments": "DISTRICT NAME is the long name of the NR District, e.g., Selkirk District.",
+            "column_name": "DISTRICT_NAME",
+            "data_precision": 60,
+            "data_type": "VARCHAR2"
+          },
+          {
+            "column_comments": "ORG UNIT is the organizational unit code obtained from the CORP ORG UNIT object, e.g., DSE.",
+            "column_name": "ORG_UNIT",
+            "data_precision": 3,
+            "data_type": "VARCHAR2"
+          },
+          {
+            "column_comments": "ORG UNIT NAME is the name or title of a ministry office or section, e.g., Selkirk District.",
+            "column_name": "ORG_UNIT_NAME",
+            "data_precision": 100,
+            "data_type": "VARCHAR2"
+          },
+          {
+            "column_comments": "REGION ORG UNIT is the organizational unit code obtained from the CORP ORG UNIT object, e.g., RKB. which indicates which ORG UNIT this district is within.",
+            "column_name": "REGION_ORG_UNIT",
+            "data_precision": 3,
+            "data_type": "VARCHAR2"
+          },
+          {
+            "column_comments": "ORG UNIT NAME is the name or title of a Region, e.g., Kootenay Boundary Region.",
+            "column_name": "REGION_ORG_UNIT_NAME",
+            "data_precision": 100,
+            "data_type": "VARCHAR2"
+          },
+          {
+            "column_comments": "FEATURE CODE contains an alphanumeric value based on the Canadian Council of Surveys and Mapping’s (CCSM) system for classification of geographic features.",
+            "column_name": "FEATURE_CODE",
+            "data_precision": 10,
+            "data_type": "VARCHAR2"
+          },
+          {
+            "column_comments": "FEATURE NAME is the The English name of the feature, e.g., Natural Resource District",
+            "column_name": "FEATURE_NAME",
+            "data_precision": 100,
+            "data_type": "VARCHAR2"
+          },
+          {
+            "column_comments": "SHAPE is the column used to reference the spatial coordinates defining the feature.",
+            "column_name": "SHAPE",
+            "data_precision": 1,
+            "data_type": "SDO_GEOMETRY"
+          },
+          {
+            "column_comments": "OBJECTID is a column required by spatial layers that interact with ESRI ArcSDE. It is populated with unique values automatically by SDE",
+            "column_name": "OBJECTID",
+            "data_precision": 38,
+            "data_type": "NUMBER"
+          },
+          {
+            "column_comments": "SE_ANNO_CAD_DATA is a binary column used by spatial tools to store annotation, curve features and CAD data when using the SDO_GEOMETRY storage data type.",
+            "column_name": "SE_ANNO_CAD_DATA",
+            "data_precision": 4000,
+            "data_type": "BLOB"
+          },
+          {
+            "column_comments": "FEATURE_AREA_SQM is the system calculated area of a two-dimensional polygon in square meters",
+            "column_name": "FEATURE_AREA_SQM",
+            "data_precision": 19,
+            "data_type": "NUMBER"
+          },
+          {
+            "column_comments": "FEATURE_LENGTH_M is the system calculated length or perimeter of a geometry in meters",
+            "column_name": "FEATURE_LENGTH_M",
+            "data_precision": 19,
+            "data_type": "NUMBER"
+          }
+        ],
+        "geographic_extent": [
+          {
+            "east_bound_longitude": "-113.5",
+            "north_bound_latitude": "60.0",
+            "south_bound_latitude": "48.0",
+            "west_bound_longitude": "-139.5"
+          }
+        ],
+        "preview_info": [
+          {
+            "layer_name": "WHSE_ADMIN_BOUNDARIES.ADM_NR_DISTRICTS_SPG",
+            "link_to_imap": "http://maps.gov.bc.ca/ess/hm/imap4m/?catalogLayers=364,365,3462,3463&scale=800000.0&center=-13884978.8303,6397223.6898",
+            "preview_image_url": "",
+            "preview_latitude": "49.71592534",
+            "preview_longitude": "-124.73088703",
+            "preview_map_service_url": "https://openmaps.gov.bc.ca/geo/pub/WHSE_ADMIN_BOUNDARIES.ADM_NR_DISTRICTS_SPG/ows?",
+            "preview_zoom_level": "40"
+          }
+        ]
+      },
+      {
+        "bcdc_type": "geographic",
+        "cache_last_updated": null,
+        "cache_url": null,
+        "created": "2022-03-11T23:50:43.462833",
+        "datastore_active": false,
+        "description": "The Distribution Service has not been configured for download from the B.C. Geographic Warehouse (BCGW), a central government repository of spatial and non-spatial data.\r\n\r\n",
+        "format": "oracle_sde",
+        "hash": "",
+        "id": "f06cdfcb-836c-4eed-aba2-899ca6147d40",
+        "iso_topic_category": [
+          "boundaries",
+          "geoscientificInformation"
+        ],
+        "json_table_schema": {},
+        "last_modified": "2021-02-09T07:00:45",
+        "metadata_modified": "2025-09-05T23:10:44.884786",
+        "mimetype": null,
+        "mimetype_inner": null,
+        "name": "View Generalized BC Geographic Warehouse details (export is not enabled)",
+        "object_name": "WHSE_ADMIN_BOUNDARIES.ADM_NR_DISTRICTS_SPG",
+        "package_id": "0bc73892-e41f-41d0-8d8e-828c16139337",
+        "position": 2,
+        "projection_name": "epsg3005",
+        "resource_access_method": "indirect access",
+        "resource_storage_location": "bc geographic warehouse",
+        "resource_type": "data",
+        "resource_update_cycle": "asNeeded",
+        "size": null,
+        "spatial_datatype": "SDO_GEOMETRY",
+        "state": "active",
+        "supplemental_info": "Refer to the main dataset page for more information around access and who to contact if requesting access.",
+        "url": "",
+        "url_type": null,
+        "geographic_extent": [
+          {
+            "east_bound_longitude": "-113.5",
+            "north_bound_latitude": "60.0",
+            "south_bound_latitude": "48.0",
+            "west_bound_longitude": "-139.5"
+          }
+        ]
+      }
+    ],
+    "tags": [
+      {
+        "display_name": "FADM",
+        "id": "1a56f28b-3807-45d6-abc1-f3059227849a",
+        "name": "FADM",
+        "state": "active",
+        "vocabulary_id": null
+      },
+      {
+        "display_name": "administrative division",
+        "id": "94ccc472-39df-4f95-998b-1ef9259535e5",
+        "name": "administrative division",
+        "state": "active",
+        "vocabulary_id": null
+      },
+      {
+        "display_name": "boundaries",
+        "id": "397bc56f-ac81-4319-87d7-f25149397627",
+        "name": "boundaries",
+        "state": "active",
+        "vocabulary_id": null
+      },
+      {
+        "display_name": "boundary",
+        "id": "f66434f8-48c3-4044-bac7-63fb6b23054c",
+        "name": "boundary",
+        "state": "active",
+        "vocabulary_id": null
+      },
+      {
+        "display_name": "forestry",
+        "id": "d1310908-ce38-4455-9734-ee402807d5ba",
+        "name": "forestry",
+        "state": "active",
+        "vocabulary_id": null
+      },
+      {
+        "display_name": "forests",
+        "id": "d217f414-2229-4d36-992e-306163bdf306",
+        "name": "forests",
+        "state": "active",
+        "vocabulary_id": null
+      }
+    ],
+    "groups": [],
+    "relationships_as_subject": [],
+    "relationships_as_object": []
+  }
+}

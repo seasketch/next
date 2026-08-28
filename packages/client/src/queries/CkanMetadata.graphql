@@ -1,0 +1,68 @@
+query CkanDatasetPreview($url: String!, $config: JSON, $lang: String) {
+  ckanDatasetPreview(url: $url, config: $config, lang: $lang) {
+    baseUrl
+    datasetId
+    datasetPageUrl
+    siteTitle
+    datasetTitle
+    description
+    availableLanguages
+    schemaAvailable
+    fields
+    document
+  }
+}
+
+query ProjectCkanMetadataSources($slug: String!) {
+  projectBySlug(slug: $slug) {
+    id
+    supportedLanguages
+    ckanMetadataSources {
+      id
+      projectId
+      baseUrl
+      datasetType
+      title
+      displayConfig
+      createdAt
+    }
+    draftTableOfContentsItems {
+      id
+      title
+      ckanDatasetUrl
+      isFolder
+    }
+  }
+}
+
+mutation EnsureCkanMetadataSource($projectId: Int!, $url: String!) {
+  ensureCkanMetadataSource(projectId: $projectId, url: $url) {
+    id
+    projectId
+    baseUrl
+    datasetType
+    title
+    displayConfig
+    createdAt
+  }
+}
+
+mutation UpdateCkanMetadataSource(
+  $id: Int!
+  $displayConfig: JSON
+  $title: String
+) {
+  updateCkanMetadataSource(
+    input: { id: $id, patch: { displayConfig: $displayConfig, title: $title } }
+  ) {
+    ckanMetadataSource {
+      id
+      projectId
+      baseUrl
+      datasetType
+      title
+      displayConfig
+      createdAt
+    }
+  }
+}

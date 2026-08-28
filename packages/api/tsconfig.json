@@ -73,6 +73,7 @@
     { "path": "../mapbox-gl-esri-sources" },
     { "path": "../metadata-parser" },
     { "path": "../overlay-engine" },
+    { "path": "../ckan-metadata" },
     { "path": "../spatial-uploads-handler" },
     { "path": "../vector-data-source" },
     { "path": "../ai-data-analyst" }

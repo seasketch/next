@@ -15,6 +15,7 @@
     "packages/geostats-types",
     "packages/fgb-source",
     "packages/overlay-engine",
+    "packages/ckan-metadata",
     "packages/sketch-preprocessing-worker",
     "packages/overlay-worker",
     "packages/fragment-worker",

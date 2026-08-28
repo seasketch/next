@@ -1,0 +1,305 @@
+{
+  "help": "https://open.canada.ca/data/en/api/3/action/help_show?name=package_show",
+  "success": true,
+  "result": {
+    "association_type": [],
+    "audience": [],
+    "author": null,
+    "author_email": null,
+    "collection": "fgp",
+    "contact_information": "{\"en\": {\"organization_name\": \"Government of British Columbia; Government of British Columbia; GeoBC Inquiries\", \"electronic_mail_address\": \"Joy.Sinnett@gov.bc.ca\"}, \"fr\": {\"organization_name\": \"Gouvernement de la Colombie-Britannique; Gouvernement de la Colombie-Britannique; GeoBC Inquiries\", \"electronic_mail_address\": \"Joy.Sinnett@gov.bc.ca\"}}",
+    "contributor": {
+      "en": "Government of British Columbia; Government of British Columbia; Governance and Structure",
+      "fr": "Gouvernement de la Colombie-Britannique; Gouvernement de la Colombie-Britannique; Governance and Structure"
+    },
+    "creator": "Joy Sinnett",
+    "creator_user_id": "b88b9549-3a4b-43a9-9375-5f3fc20fe782",
+    "date_published": "2016-03-10 00:00:00",
+    "display_flags": [
+      "fgp_viewer"
+    ],
+    "distributor": "{\"en\": {\"organization_name\": \"Government of British Columbia; Government of British Columbia; GeoBC Inquiries\", \"electronic_mail_address\": \"Joy.Sinnett@gov.bc.ca\"}, \"fr\": {\"organization_name\": \"Gouvernement de la Colombie-Britannique; Gouvernement de la Colombie-Britannique; GeoBC Inquiries\", \"electronic_mail_address\": \"Joy.Sinnett@gov.bc.ca\"}}",
+    "federated_date_modified": "2026-08-11",
+    "file_id": "d1aff64e-dbfe-45a6-af97-582b7f6418b9",
+    "frequency": "as_needed",
+    "geographic_region": [],
+    "hierarchy_level": "dataset; jeuDonnées",
+    "id": "d1aff64e-dbfe-45a6-af97-582b7f6418b9",
+    "imso_approval": "true",
+    "isopen": false,
+    "jurisdiction": "provincial",
+    "keywords": {
+      "en": [
+        "ABMS",
+        "Administrative boundaries",
+        "RD",
+        "electoral area boundaries",
+        "jurisdiction",
+        "local government",
+        "metes and bounds",
+        "regional district",
+        "regional district boundaries",
+        "Government information"
+      ],
+      "fr-t-en": [
+        "ABMS",
+        "Frontières administratives",
+        "RD",
+        "limites des circonscriptions électorales",
+        "juridiction",
+        "gouvernement local",
+        "mètres et limites",
+        "district régional",
+        "limites des districts régionaux",
+        "Information gouvernementale"
+      ]
+    },
+    "license_id": "bc-oglbc",
+    "license_title": "Open Government Licence - British Columbia",
+    "license_url": "https://www2.gov.bc.ca/gov/content/data/open-data/open-government-licence-bc",
+    "maintainer": null,
+    "maintainer_email": "Joy.Sinnett@gov.bc.ca",
+    "metadata_contact": {
+      "en": "Government of British Columbia; Government of British Columbia; GeoBC Inquiries",
+      "fr": "Gouvernement de la Colombie-Britannique; Gouvernement de la Colombie-Britannique; GeoBC Inquiries"
+    },
+    "metadata_created": "2020-06-05T18:26:44.248280",
+    "metadata_modified": "2026-08-12T18:30:54.563206",
+    "name": "d1aff64e-dbfe-45a6-af97-582b7f6418b9",
+    "notes": "Legally defined __Regional District__ polygons were drawn from metes and bounds descriptions as written in Letters Patent for Regional Districts in the province of British Columbia. In the event of a discrepancy in the data, the metes and bounds description will prevail. Although the boundaries were drawn based on the legal metes and bounds descriptions, they may differ from how regional districts and their member municipalities and electoral areas currently view and/or manage their boundaries. Where discrepancies are noted, the Ministry of Housing and Municipal Affairs (the custodian) enters into discussion with the local governments whose boundaries are affected. In order to effect a change to the boundary, Cabinet approval is required. This is done through an Order in Council (OIC). While discrepancies to administrative boundaries are being resolved, boundaries may be adjusted on an ongoing basis until the requested changes are completed. The OIC_YEAR and OIC_NUMBER fields indicate the year that the boundary was passed under OIC and its associated number. The AFFECTED_ADMIN_AREA_ABRVN identifies the administrative areas that are affected by the OIC. Please note that the Northern Rockies Regional Municipality appears to be a gap in the Regional District layer, but it is a municipality and can be found in the [Municipalities Layer](https://catalogue.data.gov.bc.ca/dataset/municipalities-legally-defined-administrative-areas-of-bc). A polygon dataset that includes all of the administrative areas currently in the __Administrative Boundaries Management System (ABMS)__ is available [here](https://catalogue.data.gov.bc.ca/dataset/legally-defined-administrative-areas-of-bc). A complimentary point dataset that defines the administrative areas is also available available [here](https://catalogue.data.gov.bc.ca/dataset/legally-defined-administrative-areas-of-bc-boundary-locations). Other individual datasets are available from the following records: https://catalogue.data.gov.bc.ca/dataset/municipalities-legally-defined-administrative-areas-of-bc https://catalogue.data.gov.bc.ca/dataset/electoral-areas-legally-defined-administrative-areas-of-bc https://catalogue.data.gov.bc.ca/dataset/province-of-british-columbia-legally-defined-administrative-areas-of-bc https://catalogue.data.gov.bc.ca/dataset/islands-trust-legally-defined-administrative-areas-of-bc https://catalogue.data.gov.bc.ca/dataset/local-trust-areas-legally-defined-administrative-areas-of-bc",
+    "notes_translated": {
+      "en": "Legally defined __Regional District__ polygons were drawn from metes and bounds descriptions as written in Letters Patent for Regional Districts in the province of British Columbia. In the event of a discrepancy in the data, the metes and bounds description will prevail. Although the boundaries were drawn based on the legal metes and bounds descriptions, they may differ from how regional districts and their member municipalities and electoral areas currently view and/or manage their boundaries. Where discrepancies are noted, the Ministry of Housing and Municipal Affairs (the custodian) enters into discussion with the local governments whose boundaries are affected. In order to effect a change to the boundary, Cabinet approval is required. This is done through an Order in Council (OIC). While discrepancies to administrative boundaries are being resolved, boundaries may be adjusted on an ongoing basis until the requested changes are completed. The OIC_YEAR and OIC_NUMBER fields indicate the year that the boundary was passed under OIC and its associated number. The AFFECTED_ADMIN_AREA_ABRVN identifies the administrative areas that are affected by the OIC. Please note that the Northern Rockies Regional Municipality appears to be a gap in the Regional District layer, but it is a municipality and can be found in the [Municipalities Layer](https://catalogue.data.gov.bc.ca/dataset/municipalities-legally-defined-administrative-areas-of-bc). A polygon dataset that includes all of the administrative areas currently in the __Administrative Boundaries Management System (ABMS)__ is available [here](https://catalogue.data.gov.bc.ca/dataset/legally-defined-administrative-areas-of-bc). A complimentary point dataset that defines the administrative areas is also available available [here](https://catalogue.data.gov.bc.ca/dataset/legally-defined-administrative-areas-of-bc-boundary-locations). Other individual datasets are available from the following records: https://catalogue.data.gov.bc.ca/dataset/municipalities-legally-defined-administrative-areas-of-bc https://catalogue.data.gov.bc.ca/dataset/electoral-areas-legally-defined-administrative-areas-of-bc https://catalogue.data.gov.bc.ca/dataset/province-of-british-columbia-legally-defined-administrative-areas-of-bc https://catalogue.data.gov.bc.ca/dataset/islands-trust-legally-defined-administrative-areas-of-bc https://catalogue.data.gov.bc.ca/dataset/local-trust-areas-legally-defined-administrative-areas-of-bc",
+      "fr-t-en": "Les polygones __Districts régionaux__ définis légalement ont été dessinés à partir des descriptions des mètres et des limites telles qu'elles sont écrites dans les lettres patentes pour les districts régionaux de la province de la Colombie-Britannique. En cas de divergence entre les données, la description des limites et des limites prévaut. Bien que les limites aient été tracées sur la base de la description des limites et des limites légales, elles peuvent différer de la façon dont les districts régionaux et leurs municipalités membres et les zones électorales voient et/ou gèrent actuellement leurs limites. Lorsque des divergences sont constatées, le ministère du Logement et des Affaires municipales (le gardien) engage des discussions avec les administrations locales dont les limites sont concernées. Pour modifier les limites, l'approbation du Cabinet est requise. Cela se fait par le biais d'un décret en conseil (OCI). Pendant que les divergences dans les limites administratives sont en cours de résolution, les limites peuvent être ajustées de façon continue jusqu'à ce que les modifications demandées soient effectuées. Les champs OIC_YEAR et OIC_NUMBER indiquent l'année où la frontière a été franchie dans le cadre de l'OCI et son numéro associé. L'AFFECTED_ADMIN_AREA_ABRVN identifie les zones administratives qui sont affectées par l'OCI. Veuillez noter que la municipalité régionale des Rocheuses du Nord semble être une lacune dans la couche du district régional, mais il s'agit d'une municipalité et se trouve dans la [couche des municipalités] (https://catalogue.data.gov.bc.ca/dataset/municipalities-legally-defined-administrative-areas-of-bc). Un jeu de données polygonales qui inclut toutes les zones administratives actuellement incluses dans le __Système de gestion des limites administratives (ABMS) __ est disponible [ici] (https://catalogue.data.gov.bc.ca/dataset/legally-defined-administrative-areas-of-bc). Un ensemble de données de points complémentaire qui définit les zones administratives est également disponible [ici] (https://catalogue.data.gov.bc.ca/dataset/legally-defined-administrative-areas-of-bc-boundary-locations). D'autres ensembles de données individuels sont disponibles à partir des enregistrements suivants : https://catalogue.data.gov.bc.ca/dataset/municipalities-legally-defined-administrative-areas-of-bc https://catalogue.data.gov.bc.ca/dataset/electoral-areas-legally-defined-administrative-areas-of-bc https://catalogue.data.gov.bc.ca/dataset/province-of-british-columbia-legally-defined-administrative-areas-of-bc https://catalogue.data.gov.bc.ca/dataset/islands-trust-legally-defined-administrative-areas-of-bc https://catalogue.data.gov.bc.ca/dataset/local-trust-areas-legally-defined-administrative-areas-of-bc\n\n** Cet élément de métadonnées provenant d’une tierce partie a été traduit à l'aide d'un outil de traduction automatisée (Amazon Translate). **"
+    },
+    "num_resources": 6,
+    "num_tags": 0,
+    "org_section": {
+      "en": "GeoBC Inquiries",
+      "fr": "GeoBC Inquiries"
+    },
+    "org_title_at_publication": {
+      "en": "Government of British Columbia",
+      "fr": "Gouvernment de la Colombie-Britannique"
+    },
+    "organization": {
+      "id": "962985bb-8a54-425e-9783-4d67466cb531",
+      "name": "bc-cb",
+      "title": "Government of British Columbia | Gouvernment de la Colombie-Britannique",
+      "type": "organization",
+      "description": "",
+      "image_url": "",
+      "created": "2019-06-06T15:56:59.528307",
+      "is_organization": true,
+      "approval_status": "approved",
+      "state": "active"
+    },
+    "owner_org": "962985bb-8a54-425e-9783-4d67466cb531",
+    "place_of_publication": [],
+    "private": false,
+    "ready_to_publish": "true",
+    "reference_system_information": "EPSG:3005,EPSG,unknown",
+    "responsible_role": "pointOfContact; contact",
+    "restrictions": "unrestricted",
+    "spatial": "{\"type\": \"Polygon\", \"coordinates\": [[[-139.5, 48], [-113.5, 48], [-113.5, 60], [-139.5, 60], [-139.5, 48]]]}",
+    "spatial_representation_type": [
+      "grid"
+    ],
+    "state": "active",
+    "status": "completed",
+    "subject": [
+      "government_and_politics"
+    ],
+    "time_period_coverage_start": "0001-01-01 00:00:00",
+    "title": "Regional Districts - Legally Defined Administrative Areas of BC",
+    "title_translated": {
+      "en": "Regional Districts - Legally Defined Administrative Areas of BC",
+      "fr-t-en": "Districts régionaux - Zones administratives légalement définies de la Colombie-Britannique"
+    },
+    "topic_category": [
+      "boundaries"
+    ],
+    "type": "dataset",
+    "url": null,
+    "version": null,
+    "resources": [
+      {
+        "cache_last_updated": null,
+        "cache_url": null,
+        "created": "2026-08-12T18:30:54.617224",
+        "data_quality": [],
+        "datastore_active": false,
+        "description": null,
+        "format": "HTML",
+        "hash": "",
+        "id": "92eec6c8-b06c-4a32-830d-5cc2ca312d3b",
+        "language": [
+          "en"
+        ],
+        "last_modified": null,
+        "metadata_modified": "2026-08-12T18:30:54.558337",
+        "mimetype": null,
+        "mimetype_inner": null,
+        "name": "BC Geographic Warehouse Custom Download",
+        "name_translated": {
+          "en": "BC Geographic Warehouse Custom Download",
+          "fr-t-en": "Téléchargement personnalisé de BC Geographic Warehouse"
+        },
+        "package_id": "d1aff64e-dbfe-45a6-af97-582b7f6418b9",
+        "position": 0,
+        "resource_type": "dataset",
+        "state": "active",
+        "url": "https://catalogue.data.gov.bc.ca/dataset/regional-districts-legally-defined-administrative-areas-of-bc/resource/eb5a9d9b-fb7b-40aa-a3fe-020993345bbc",
+        "url_type": null
+      },
+      {
+        "cache_last_updated": null,
+        "cache_url": null,
+        "created": "2026-08-12T18:30:54.617230",
+        "data_quality": [],
+        "datastore_active": false,
+        "description": null,
+        "format": "HTML",
+        "hash": "",
+        "id": "6b20ced0-1584-4f3c-ab93-565a5c9a57cb",
+        "language": [
+          "en"
+        ],
+        "last_modified": null,
+        "metadata_modified": "2026-08-12T18:30:54.558426",
+        "mimetype": null,
+        "mimetype_inner": null,
+        "name": "Original metadata (https://catalogue.data.gov.bc.ca)",
+        "name_translated": {
+          "en": "Original metadata (https://catalogue.data.gov.bc.ca)",
+          "fr-t-en": "Métadonnées originales (https://catalogue.data.gov.bc.ca)"
+        },
+        "package_id": "d1aff64e-dbfe-45a6-af97-582b7f6418b9",
+        "position": 1,
+        "resource_type": "dataset",
+        "state": "active",
+        "url": "https://catalogue.data.gov.bc.ca/dataset/regional-districts-legally-defined-administrative-areas-of-bc",
+        "url_type": null
+      },
+      {
+        "cache_last_updated": null,
+        "cache_url": null,
+        "created": "2026-08-12T18:30:54.617232",
+        "data_quality": [],
+        "datastore_active": false,
+        "description": null,
+        "format": "KML",
+        "hash": "",
+        "id": "1f8e9777-8cfe-4f43-8c0d-d4228761ab7a",
+        "language": [
+          "en"
+        ],
+        "last_modified": null,
+        "metadata_modified": "2026-08-12T18:30:54.558529",
+        "mimetype": null,
+        "mimetype_inner": null,
+        "name": "ABMS_REGIONAL_DISTRICTS_SP",
+        "name_translated": {
+          "en": "ABMS_REGIONAL_DISTRICTS_SP",
+          "fr-t-en": "ABMS_REGIONAL_DISTRICTS_SP"
+        },
+        "package_id": "d1aff64e-dbfe-45a6-af97-582b7f6418b9",
+        "position": 2,
+        "resource_type": "dataset",
+        "state": "active",
+        "url": "https://openmaps.gov.bc.ca/kml/geo/layers/WHSE_LEGAL_ADMIN_BOUNDARIES.ABMS_REGIONAL_DISTRICTS_SP_loader.kml",
+        "url_type": null
+      },
+      {
+        "cache_last_updated": null,
+        "cache_url": null,
+        "created": "2026-08-12T18:30:54.617234",
+        "data_quality": [],
+        "datastore_active": false,
+        "description": null,
+        "format": "WMS",
+        "hash": "",
+        "id": "322dd6a1-99be-435f-9583-c40f61cfba12",
+        "language": [
+          "en"
+        ],
+        "last_modified": null,
+        "metadata_modified": "2026-08-12T18:30:54.558602",
+        "mimetype": null,
+        "mimetype_inner": null,
+        "name": "ABMS_REGIONAL_DISTRICTS_SP",
+        "name_translated": {
+          "en": "ABMS_REGIONAL_DISTRICTS_SP",
+          "fr-t-en": "ABMS_REGIONAL_DISTRICTS_SP"
+        },
+        "package_id": "d1aff64e-dbfe-45a6-af97-582b7f6418b9",
+        "position": 3,
+        "resource_type": "web_service",
+        "state": "active",
+        "url": "https://openmaps.gov.bc.ca/geo/pub/WHSE_LEGAL_ADMIN_BOUNDARIES.ABMS_REGIONAL_DISTRICTS_SP/ows?service=WMS&request=GetCapabilities&layers=pub:WHSE_LEGAL_ADMIN_BOUNDARIES.ABMS_REGIONAL_DISTRICTS_SP&legend_format=image/png&feature_info_type=text/plain",
+        "url_type": null
+      },
+      {
+        "cache_last_updated": null,
+        "cache_url": null,
+        "created": "2026-08-12T18:30:54.617236",
+        "data_quality": [],
+        "datastore_active": false,
+        "description": null,
+        "format": "WMS",
+        "hash": "",
+        "id": "dbf5d768-1f49-4e6a-ae80-efadaa5b5fae",
+        "language": [
+          "en"
+        ],
+        "last_modified": null,
+        "metadata_modified": "2026-08-12T18:30:54.558673",
+        "mimetype": null,
+        "mimetype_inner": null,
+        "name": "ABMS_REGIONAL_DISTRICTS_SP",
+        "name_translated": {
+          "en": "ABMS_REGIONAL_DISTRICTS_SP",
+          "fr-t-en": "ABMS_REGIONAL_DISTRICTS_SP"
+        },
+        "package_id": "d1aff64e-dbfe-45a6-af97-582b7f6418b9",
+        "position": 4,
+        "resource_type": "web_service",
+        "state": "active",
+        "url": "https://openmaps.gov.bc.ca/geo/pub/WHSE_LEGAL_ADMIN_BOUNDARIES.ABMS_REGIONAL_DISTRICTS_SP/ows?service=WMS&request=GetCapabilities&layers=pub:WHSE_LEGAL_ADMIN_BOUNDARIES.ABMS_REGIONAL_DISTRICTS_SP&legend_format=image/png&feature_info_type=text/plain",
+        "url_type": null
+      },
+      {
+        "cache_last_updated": null,
+        "cache_url": null,
+        "created": "2026-08-12T18:30:54.617237",
+        "data_quality": [],
+        "datastore_active": false,
+        "description": null,
+        "format": "XLS",
+        "hash": "",
+        "id": "e95a7ddb-fd6a-4179-8ffa-074cfad38f95",
+        "language": [
+          "en"
+        ],
+        "last_modified": null,
+        "metadata_modified": "2026-08-12T18:30:54.558744",
+        "mimetype": null,
+        "mimetype_inner": null,
+        "name": "ABMS_Attribute_Codes_and_Descriptions",
+        "name_translated": {
+          "en": "ABMS_Attribute_Codes_and_Descriptions",
+          "fr-t-en": "ABMS_Codes_Attributs_et_Descriptions"
+        },
+        "package_id": "d1aff64e-dbfe-45a6-af97-582b7f6418b9",
+        "position": 5,
+        "resource_type": "dataset",
+        "state": "active",
+        "url": "https://catalogue.data.gov.bc.ca/dataset/d1aff64e-dbfe-45a6-af97-582b7f6418b9/resource/094b7f09-698a-4122-8149-6cd27460b3f9/download/abmsattributecodesanddescriptions.xlsx",
+        "url_type": null
+      }
+    ],
+    "tags": [],
+    "groups": [],
+    "relationships_as_subject": [],
+    "relationships_as_object": []
+  }
+}

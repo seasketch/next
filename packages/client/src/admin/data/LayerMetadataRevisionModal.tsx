@@ -18,6 +18,7 @@ import {
   useUpdateMetadataMutation,
 } from "../../generated/graphql";
 import { layerSettingsChangeLogRefetchQueries } from "../changelogs/layerSettingsChangeLogRefetch";
+import useCurrentLang from "../../useCurrentLang";
 
 type MetadataRevision = {
   id: string;
@@ -49,9 +50,10 @@ export default function LayerMetadataRevisionModal({
   onRollbackComplete?: () => void;
 }) {
   const { t } = useTranslation("admin:data");
+  const lang = useCurrentLang();
   const onError = useGlobalErrorHandler();
   const { data, loading, error, refetch } = useLayerMetadataChangesQuery({
-    variables: { id: tableOfContentsItemId },
+    variables: { id: tableOfContentsItemId, lang: lang.code },
     fetchPolicy: "cache-and-network",
   });
 
@@ -78,11 +80,11 @@ export default function LayerMetadataRevisionModal({
     refetchQueries: [
       {
         query: LayerMetadataChangesDocument,
-        variables: { id: tableOfContentsItemId },
+        variables: { id: tableOfContentsItemId, lang: lang.code },
       },
       {
         query: GetMetadataDocument,
-        variables: { itemId: tableOfContentsItemId },
+        variables: { itemId: tableOfContentsItemId, lang: lang.code },
       },
       ...layerSettingsChangeLogRefetchQueries(tableOfContentsItemId),
     ],

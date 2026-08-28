@@ -124,6 +124,7 @@
     "mustache": "^4.2.0",
     "nanoid": "^3.1.17",
     "node-html-parser": "^6.1.13",
+    "ckan-metadata": "^1.0.0",
     "overlay-engine": "^1.0.0",
     "overlay-worker": "^1.0.0",
     "pg-format": "^1.0.4",

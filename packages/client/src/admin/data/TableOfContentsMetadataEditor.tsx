@@ -5,6 +5,7 @@ import {
 } from "../../generated/graphql";
 import MetadataEditor from "../MetadataEditor";
 import { esriRestUrlFromMetadataItem } from "../../dataLayers/esriRestUrl";
+import useCurrentLang from "../../useCurrentLang";
 
 interface TableOfContentsMetadataEditorProps {
   onRequestClose?: () => void;
@@ -15,9 +16,11 @@ export default function TableOfContentsMetadataEditor({
   onRequestClose,
   id,
 }: TableOfContentsMetadataEditorProps) {
+  const lang = useCurrentLang();
   const { data, error, loading } = useGetMetadataQuery({
     variables: {
       itemId: id,
+      lang: lang.code,
     },
   });
   const [mutation, mutationState] = useUpdateMetadataMutation();

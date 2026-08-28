@@ -1,0 +1,26 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.packageTitle = exports.applyDisplayConfig = exports.ckanFieldsToProseMirror = exports.markdownToProseMirror = exports.discoverCkanFields = exports.CORE_RECOMMENDED_FIELD_IDS = exports.TECHNICAL_FIELD_IDS = exports.normalizeCkanPackage = exports.isCkanDisplayConfig = exports.isCkanSchema = exports.isCkanPackage = exports.resolveFluentLabel = exports.resolveFluent = exports.negotiateCkanLocale = exports.localizedDatasetPageUrl = exports.parseCkanUrl = void 0;
+var parseCkanUrl_1 = require("./parseCkanUrl");
+Object.defineProperty(exports, "parseCkanUrl", { enumerable: true, get: function () { return parseCkanUrl_1.parseCkanUrl; } });
+Object.defineProperty(exports, "localizedDatasetPageUrl", { enumerable: true, get: function () { return parseCkanUrl_1.localizedDatasetPageUrl; } });
+var locale_1 = require("./locale");
+Object.defineProperty(exports, "negotiateCkanLocale", { enumerable: true, get: function () { return locale_1.negotiateCkanLocale; } });
+Object.defineProperty(exports, "resolveFluent", { enumerable: true, get: function () { return locale_1.resolveFluent; } });
+Object.defineProperty(exports, "resolveFluentLabel", { enumerable: true, get: function () { return locale_1.resolveFluentLabel; } });
+var normalize_1 = require("./normalize");
+Object.defineProperty(exports, "isCkanPackage", { enumerable: true, get: function () { return normalize_1.isCkanPackage; } });
+Object.defineProperty(exports, "isCkanSchema", { enumerable: true, get: function () { return normalize_1.isCkanSchema; } });
+Object.defineProperty(exports, "isCkanDisplayConfig", { enumerable: true, get: function () { return normalize_1.isCkanDisplayConfig; } });
+Object.defineProperty(exports, "normalizeCkanPackage", { enumerable: true, get: function () { return normalize_1.normalizeCkanPackage; } });
+Object.defineProperty(exports, "TECHNICAL_FIELD_IDS", { enumerable: true, get: function () { return normalize_1.TECHNICAL_FIELD_IDS; } });
+Object.defineProperty(exports, "CORE_RECOMMENDED_FIELD_IDS", { enumerable: true, get: function () { return normalize_1.CORE_RECOMMENDED_FIELD_IDS; } });
+var discoverFields_1 = require("./discoverFields");
+Object.defineProperty(exports, "discoverCkanFields", { enumerable: true, get: function () { return discoverFields_1.discoverCkanFields; } });
+var markdownToProseMirror_1 = require("./markdownToProseMirror");
+Object.defineProperty(exports, "markdownToProseMirror", { enumerable: true, get: function () { return markdownToProseMirror_1.markdownToProseMirror; } });
+var toProseMirror_1 = require("./toProseMirror");
+Object.defineProperty(exports, "ckanFieldsToProseMirror", { enumerable: true, get: function () { return toProseMirror_1.ckanFieldsToProseMirror; } });
+Object.defineProperty(exports, "applyDisplayConfig", { enumerable: true, get: function () { return toProseMirror_1.applyDisplayConfig; } });
+Object.defineProperty(exports, "packageTitle", { enumerable: true, get: function () { return toProseMirror_1.packageTitle; } });
+//# sourceMappingURL=index.js.map

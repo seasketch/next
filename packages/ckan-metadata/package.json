@@ -1,0 +1,45 @@
+{
+  "name": "ckan-metadata",
+  "version": "1.0.0",
+  "description": "Normalize CKAN dataset records into SeaSketch metadata ProseMirror documents",
+  "author": "Chad Burt <chad@underbluewaters.net>",
+  "homepage": "https://github.com/seasketch/next",
+  "license": "BSD-3-Clause",
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "directories": {
+    "lib": "dist",
+    "test": "__tests__"
+  },
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/seasketch/next.git"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest watch",
+    "build": "tsc",
+    "watch": "tsc --watch",
+    "refresh-fixtures": "npx tsx scripts/refresh-fixtures.ts"
+  },
+  "bugs": {
+    "url": "https://github.com/seasketch/next/issues"
+  },
+  "dependencies": {
+    "markdown-it": "^14.1.0"
+  },
+  "devDependencies": {
+    "@types/markdown-it": "^14.1.2",
+    "@types/node": "^24.10.1",
+    "prosemirror-model": "^1.19.3",
+    "prosemirror-schema-basic": "^1.2.3",
+    "prosemirror-schema-list": "^1.5.1",
+    "tsx": "^4.19.2",
+    "typescript": "^5.5.2",
+    "vitest": "^1.6.1"
+  }
+}

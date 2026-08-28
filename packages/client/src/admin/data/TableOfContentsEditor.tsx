@@ -63,6 +63,7 @@ import AddRemoteGeoJSONModal from "./AddRemoteGeoJSONModal";
 import QuotaUsageDetails from "./QuotaUsageDetails";
 import DataDownloadSettingsPanel from "./DataDownloadSettingsPanel";
 import SharingSettingsPanel from "./SharingSettingsPanel";
+import CkanMetadataSourcesPanel from "./CkanMetadataSourcesPanel";
 import AdminDataViewScreenHeading from "./AdminDataViewScreenHeading";
 import DataHostingRetentionPeriodModal from "./DataHostingRetentionPeriodModal";
 import AiDataAnalystProfileSettingsModal from "./AiDataAnalystProfileSettingsModal";
@@ -112,6 +113,9 @@ export default function TableOfContentsEditor() {
       } else if (view === "sharing") {
         // eslint-disable-next-line i18next/no-literal-string
         history.push(`/${slug}/admin/data/sharing-settings`);
+      } else if (view === "ckan") {
+        // eslint-disable-next-line i18next/no-literal-string
+        history.push(`/${slug}/admin/data/ckan-metadata`);
       } else {
         // eslint-disable-next-line i18next/no-literal-string
         history.push(`/${slug}/admin/data`);
@@ -128,6 +132,8 @@ export default function TableOfContentsEditor() {
     ? "sharing"
     : /download-settings/.test(history.location.pathname)
     ? "downloads"
+    : /ckan-metadata/.test(history.location.pathname)
+    ? "ckan"
     : "tree";
   const { manager } = useContext(MapManagerContext);
 
@@ -669,6 +675,9 @@ export default function TableOfContentsEditor() {
           />
         )}
       </Route>
+      <Route path={`/${slug}/admin/data/ckan-metadata`}>
+        <CkanMetadataSourcesPanel slug={slug} />
+      </Route>
       <Route path={`/${slug}/admin/data/sharing-settings`}>
         {tocQuery.data?.projectBySlug?.id != null && (
           <SharingSettingsPanel
@@ -807,6 +816,9 @@ function Header({
                 </MenubarRadioItem>
                 <MenubarRadioItem value="sharing">
                   <Trans ns="admin:data">Sharing Settings</Trans>
+                </MenubarRadioItem>
+                <MenubarRadioItem value="ckan">
+                  <Trans ns="admin:data">CKAN metadata</Trans>
                 </MenubarRadioItem>
               </Menubar.RadioGroup>
               <MenuBarSeparator />

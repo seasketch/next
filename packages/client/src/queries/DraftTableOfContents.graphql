@@ -865,13 +865,14 @@ fragment MetadataXmlFile on DataUploadOutput {
   isCustomUpload
 }
 
-query GetMetadata($itemId: Int, $stableId: String) {
+query GetMetadata($itemId: Int, $stableId: String, $lang: String) {
   tableOfContentsItemByIdentifier(id: $itemId, stableId: $stableId) {
     id
-    computedMetadata
+    computedMetadata(lang: $lang)
     usesDynamicMetadata
     isCustomGlSource
     hideArcGisRestLink
+    ckanDatasetUrl
     metadataXml {
       ...MetadataXmlFile
     }
@@ -889,7 +890,7 @@ query GetMetadata($itemId: Int, $stableId: String) {
   }
 }
 
-mutation UpdateMetadata($itemId: Int!, $metadata: JSON) {
+mutation UpdateMetadata($itemId: Int!, $metadata: JSON, $lang: String) {
   updateTableOfContentsItem(
     input: { id: $itemId, patch: { metadata: $metadata } }
   ) {
@@ -897,7 +898,19 @@ mutation UpdateMetadata($itemId: Int!, $metadata: JSON) {
       id
       metadata
       usesDynamicMetadata
-      computedMetadata
+      computedMetadata(lang: $lang)
+    }
+  }
+}
+
+mutation UpdateCkanDatasetUrl($itemId: Int!, $ckanDatasetUrl: String) {
+  updateTableOfContentsItem(
+    input: { id: $itemId, patch: { ckanDatasetUrl: $ckanDatasetUrl } }
+  ) {
+    tableOfContentsItem {
+      id
+      ckanDatasetUrl
+      usesDynamicMetadata
     }
   }
 }
@@ -917,6 +930,7 @@ mutation UpdateMetadataFromXML(
   $itemId: Int!
   $xml: String!
   $filename: String
+  $lang: String
 ) {
   updateTocMetadataFromXML(
     id: $itemId
@@ -925,7 +939,7 @@ mutation UpdateMetadataFromXML(
   ) {
     id
     metadata
-    computedMetadata
+    computedMetadata(lang: $lang)
     metadataXml {
       ...MetadataXmlFile
     }
@@ -1287,11 +1301,11 @@ mutation createINaturalistTableOfContentsItem(
   }
 }
 
-query LayerMetadataChanges($id: Int!) {
+query LayerMetadataChanges($id: Int!, $lang: String) {
   tableOfContentsItem(id: $id) {
     id
     metadata
-    computedMetadata
+    computedMetadata(lang: $lang)
     changeLogs(first: 100000) {
       ...ChangeLogDetails
       fromBlob

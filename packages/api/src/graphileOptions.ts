@@ -40,6 +40,7 @@ import SketchClassStylePlugin from "./plugins/sketchClassStylePlugin";
 import DataUploadTasksSubscriptionPlugin from "./plugins/dataUploadTasksSubscriptionPlugin";
 import DraftTocStatusPlugin from "./plugins/projectDraftTableOfContentsStatusSubscription";
 import ComputedMetadataPlugin from "./plugins/computedMetadataPlugin";
+import CkanPlugin from "./plugins/ckanPlugin";
 import SearchOverlaysRateLimiterPlugin from "./plugins/searchOverlaysRateLimiterPlugin";
 import ProjectBackgroundJobSubscriptionPlugin from "./plugins/projectBackgroundJobSubscriptionPlugin";
 import MetadataParserPlugin from "./plugins/metadataParserPlugin";
@@ -109,6 +110,7 @@ export default function graphileOptions(): PostGraphileOptions {
       SketchClassStylePlugin,
       DraftTocStatusPlugin,
       ComputedMetadataPlugin,
+      CkanPlugin,
       SearchOverlaysRateLimiterPlugin,
       ProjectBackgroundJobSubscriptionPlugin,
       MetadataParserPlugin,
