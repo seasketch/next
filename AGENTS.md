@@ -80,6 +80,19 @@ export const MyComponent: React.FC<MyComponentProps> = ({ title }) => {
 
 - `packages/api/migrations/current.sql` is the only place for in-progress migration work. Do not create/edit files in `packages/api/migrations/committed` directly. Do not edit schema.sql directly.
 
+### Adding columns to tables that are copied on publish/duplicate
+
+Several functions insert with **hard-coded column lists**. New columns are **not** copied unless you update those lists. There is no clever shortcut around this.
+
+When adding a column to `table_of_contents_items`, `data_layers`, `data_sources`, or related copy targets, you **must** `CREATE OR REPLACE` every function that copies those rows and add the column to both the insert column list and the values/`SELECT` list. The current definitions live in `packages/api/schema.sql` and the latest committed migration that redefined them. In particular:
+
+- `publish_table_of_contents` — copies draft TOC items (and related layers/sources) into published rows
+- `copy_table_of_contents_item` — duplicates a layer/folder
+
+Those functions already say so in comments (`TODO: this will have to be modified with the addition of any columns`). Read the comment. Update the function.
+
+**Never** add a trigger (or similar side-channel) to backfill, copy, or “sync” the new column onto published/copied rows. The publish process commonly copies thousands of layers and running side-effects for each will bog down the mutations.
+
 ## React Client -- verifying your work
 
 - Whenever making changes to the client, verify that your work will compile.

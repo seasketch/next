@@ -871,11 +871,21 @@ query GetMetadata($itemId: Int, $stableId: String) {
     computedMetadata
     usesDynamicMetadata
     isCustomGlSource
+    hideArcGisRestLink
     metadataXml {
       ...MetadataXmlFile
     }
     metadataFormat
     hostedSourceLastUpdated
+    dataLayer {
+      id
+      sublayer
+      dataSource {
+        id
+        type
+        url
+      }
+    }
   }
 }
 
@@ -888,6 +898,17 @@ mutation UpdateMetadata($itemId: Int!, $metadata: JSON) {
       metadata
       usesDynamicMetadata
       computedMetadata
+    }
+  }
+}
+
+mutation UpdateHideArcGISRestLink($id: Int!, $hideArcGisRestLink: Boolean!) {
+  updateTableOfContentsItem(
+    input: { id: $id, patch: { hideArcGisRestLink: $hideArcGisRestLink } }
+  ) {
+    tableOfContentsItem {
+      id
+      hideArcGisRestLink
     }
   }
 }

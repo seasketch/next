@@ -12,6 +12,8 @@ import Modal from "../components/Modal";
 import { Pencil1Icon } from "@radix-ui/react-icons";
 import useMetadataEditor from "./data/useMetadataEditor";
 import { MetadataXmlFileFragment } from "../generated/graphql";
+import EsriRestUrlFooter from "../dataLayers/EsriRestUrlFooter";
+import HideArcGISRestLinkControl from "../dataLayers/HideArcGISRestLinkControl";
 
 const { schema, plugins } = editorConfig;
 interface MetadataEditorProps {
@@ -30,6 +32,9 @@ interface MetadataEditorProps {
   usingDynamicMetadata?: boolean;
   dynamicMetadataAvailable?: boolean;
   xml?: (MetadataXmlFileFragment & { format: string }) | null;
+  esriRestUrl?: string | null;
+  itemId?: number;
+  hideArcGisRestLink?: boolean;
 }
 
 export default function MetadataEditor({
@@ -42,6 +47,9 @@ export default function MetadataEditor({
   usingDynamicMetadata,
   dynamicMetadataAvailable,
   xml,
+  esriRestUrl,
+  itemId,
+  hideArcGisRestLink,
 }: MetadataEditorProps) {
   const { t } = useTranslation("admin");
   const { confirm } = useDialog();
@@ -181,6 +189,15 @@ export default function MetadataEditor({
           </div>
         )}
       </div>
+      {esriRestUrl && !hideArcGisRestLink && (
+        <EsriRestUrlFooter url={esriRestUrl} />
+      )}
+      {esriRestUrl && itemId != null && (
+        <HideArcGISRestLinkControl
+          itemId={itemId}
+          hideArcGisRestLink={Boolean(hideArcGisRestLink)}
+        />
+      )}
     </Modal>
   );
 }

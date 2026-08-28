@@ -4,6 +4,7 @@ import Spinner from "../components/Spinner";
 import { MetadataXmlFileFragment } from "../generated/graphql";
 import { Trans } from "react-i18next";
 import MetadataDocumentView from "./MetadataDocumentView";
+import EsriRestUrlFooter from "./EsriRestUrlFooter";
 
 export default function MetadataModal({
   document,
@@ -13,6 +14,7 @@ export default function MetadataModal({
   title,
   xml,
   hostedSourceLastUpdated,
+  esriRestUrl,
 }: {
   document?: any;
   onRequestClose: () => void;
@@ -21,6 +23,7 @@ export default function MetadataModal({
   title?: string;
   xml?: (MetadataXmlFileFragment & { format?: string }) | null;
   hostedSourceLastUpdated?: string;
+  esriRestUrl?: string | null;
 }) {
   const showTitle = useMemo(() => {
     return (
@@ -83,6 +86,7 @@ export default function MetadataModal({
               </a>
             </div>
           )}
+          {esriRestUrl && <EsriRestUrlFooter url={esriRestUrl} />}
           {hostedSourceLastUpdated && (
             <p className="mt-5 text-sm bg-gray-50 p-2 border border-gray-300 rounded">
               <Trans ns="homepage">

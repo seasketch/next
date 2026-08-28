@@ -101,7 +101,7 @@ function pickDescription(info: any, layer?: any) {
 }
 
 export function generateMetadataForLayer(
-  url: string,
+  _url: string,
   mapServerInfo: any,
   layer: any
 ) {
@@ -204,25 +204,6 @@ export function generateMetadataForLayer(
             },
           ]
         : []),
-      { type: "paragraph" },
-      {
-        type: "paragraph",
-        content: [
-          {
-            type: "text",
-            marks: [
-              {
-                type: "link",
-                attrs: {
-                  href: url,
-                  title: "ArcGIS Server",
-                },
-              },
-            ],
-            text: url,
-          },
-        ],
-      },
     ],
   };
 }

@@ -6564,6 +6564,7 @@ CREATE TABLE public.table_of_contents_items (
     has_metadata boolean GENERATED ALWAYS AS ((metadata IS NOT NULL)) STORED,
     enable_data_tables boolean DEFAULT false NOT NULL,
     data_table_join_column text,
+    hide_arcgis_rest_link boolean DEFAULT false NOT NULL,
     CONSTRAINT table_of_contents_items_data_tables_join_column_required CHECK (((NOT enable_data_tables) OR ((data_table_join_column IS NOT NULL) AND (length(btrim(data_table_join_column)) > 0)))),
     CONSTRAINT table_of_contents_items_metadata_check CHECK (((metadata IS NULL) OR (char_length((metadata)::text) < 100000))),
     CONSTRAINT titlechk CHECK ((char_length(title) > 0))
@@ -6711,6 +6712,14 @@ COMMENT ON COLUMN public.table_of_contents_items.enable_data_tables IS 'When tru
 --
 
 COMMENT ON COLUMN public.table_of_contents_items.data_table_join_column IS 'Overlay attribute name used as the canonical feature ID for linked data tables. Required when enable_data_tables is true.';
+
+
+--
+-- Name: COLUMN table_of_contents_items.hide_arcgis_rest_link; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.table_of_contents_items.hide_arcgis_rest_link IS '@name hideArcGISRestLink
+When true, the ESRI REST URL is omitted from the public metadata page. Defaults to false so ArcGIS service URLs are shown.';
 
 
 --
@@ -7452,6 +7461,7 @@ CREATE FUNCTION public.copy_table_of_contents_item(item_id integer, copy_data_so
         sort_index,
         hide_children,
         enable_download,
+        hide_arcgis_rest_link,
         translated_props,
         data_source_type,
         original_source_upload_available,
@@ -7476,6 +7486,7 @@ CREATE FUNCTION public.copy_table_of_contents_item(item_id integer, copy_data_so
         sort_index,
         hide_children,
         enable_download,
+        hide_arcgis_rest_link,
         translated_props,
         data_source_type,
         original_source_upload_available,
@@ -18017,7 +18028,8 @@ begin
       enable_download,
       enable_data_tables,
       data_table_join_column,
-      copied_from_data_library_template_id
+      copied_from_data_library_template_id,
+      hide_arcgis_rest_link
     ) values (
       false,
       "projectId",
@@ -18038,7 +18050,8 @@ begin
       item.enable_download,
       item.enable_data_tables,
       item.data_table_join_column,
-      item.copied_from_data_library_template_id
+      item.copied_from_data_library_template_id,
+      item.hide_arcgis_rest_link
     ) returning id into new_toc_id;
     select
       type, id into acl_type, orig_acl_id
@@ -36575,6 +36588,14 @@ GRANT UPDATE(enable_data_tables) ON TABLE public.table_of_contents_items TO seas
 
 GRANT SELECT(data_table_join_column) ON TABLE public.table_of_contents_items TO anon;
 GRANT UPDATE(data_table_join_column) ON TABLE public.table_of_contents_items TO seasketch_user;
+
+
+--
+-- Name: COLUMN table_of_contents_items.hide_arcgis_rest_link; Type: ACL; Schema: public; Owner: -
+--
+
+GRANT SELECT(hide_arcgis_rest_link) ON TABLE public.table_of_contents_items TO anon;
+GRANT UPDATE(hide_arcgis_rest_link) ON TABLE public.table_of_contents_items TO seasketch_user;
 
 
 --

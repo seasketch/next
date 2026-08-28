@@ -1,9 +1,10 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   useGetMetadataQuery,
   useUpdateMetadataMutation,
 } from "../../generated/graphql";
 import MetadataEditor from "../MetadataEditor";
+import { esriRestUrlFromMetadataItem } from "../../dataLayers/esriRestUrl";
 
 interface TableOfContentsMetadataEditorProps {
   onRequestClose?: () => void;
@@ -20,6 +21,10 @@ export default function TableOfContentsMetadataEditor({
     },
   });
   const [mutation, mutationState] = useUpdateMetadataMutation();
+  const esriRestUrl = useMemo(
+    () => esriRestUrlFromMetadataItem(data?.tableOfContentsItemByIdentifier),
+    [data?.tableOfContentsItemByIdentifier]
+  );
 
   return (
     <MetadataEditor
@@ -50,6 +55,11 @@ export default function TableOfContentsMetadataEditor({
             }
           : undefined
       }
+      esriRestUrl={esriRestUrl}
+      itemId={id}
+      hideArcGisRestLink={Boolean(
+        data?.tableOfContentsItemByIdentifier?.hideArcGisRestLink
+      )}
     />
   );
 }

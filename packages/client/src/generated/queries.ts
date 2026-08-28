@@ -16708,6 +16708,8 @@ export type TableOfContentsItem = Node & {
   hasMetadata?: Maybe<Scalars['Boolean']>;
   hasOriginalSourceUpload: Scalars['Boolean'];
   hasUnresolvedComment?: Maybe<Scalars['Boolean']>;
+  /** When true, the ESRI REST URL is omitted from the public metadata page. Defaults to false so ArcGIS service URLs are shown. */
+  hideArcGisRestLink: Scalars['Boolean'];
   hideChildren: Scalars['Boolean'];
   hostedSourceLastUpdated?: Maybe<Scalars['Datetime']>;
   id: Scalars['Int'];
@@ -17068,6 +17070,8 @@ export type TableOfContentsItemPatch = {
   enableDataTables?: Maybe<Scalars['Boolean']>;
   enableDownload?: Maybe<Scalars['Boolean']>;
   geoprocessingReferenceId?: Maybe<Scalars['String']>;
+  /** When true, the ESRI REST URL is omitted from the public metadata page. Defaults to false so ArcGIS service URLs are shown. */
+  hideArcGisRestLink?: Maybe<Scalars['Boolean']>;
   hideChildren?: Maybe<Scalars['Boolean']>;
   /**
    * If set, folders with this property cannot be toggled in order to activate all
@@ -22003,10 +22007,17 @@ export type GetMetadataQuery = (
   { __typename?: 'Query' }
   & { tableOfContentsItemByIdentifier?: Maybe<(
     { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'computedMetadata' | 'usesDynamicMetadata' | 'isCustomGlSource' | 'metadataFormat' | 'hostedSourceLastUpdated'>
+    & Pick<TableOfContentsItem, 'id' | 'computedMetadata' | 'usesDynamicMetadata' | 'isCustomGlSource' | 'hideArcGisRestLink' | 'metadataFormat' | 'hostedSourceLastUpdated'>
     & { metadataXml?: Maybe<(
       { __typename?: 'DataUploadOutput' }
       & MetadataXmlFileFragment
+    )>, dataLayer?: Maybe<(
+      { __typename?: 'DataLayer' }
+      & Pick<DataLayer, 'id' | 'sublayer'>
+      & { dataSource?: Maybe<(
+        { __typename?: 'DataSource' }
+        & Pick<DataSource, 'id' | 'type' | 'url'>
+      )> }
     )> }
   )> }
 );
@@ -22024,6 +22035,23 @@ export type UpdateMetadataMutation = (
     & { tableOfContentsItem?: Maybe<(
       { __typename?: 'TableOfContentsItem' }
       & Pick<TableOfContentsItem, 'id' | 'metadata' | 'usesDynamicMetadata' | 'computedMetadata'>
+    )> }
+  )> }
+);
+
+export type UpdateHideArcGisRestLinkMutationVariables = Exact<{
+  id: Scalars['Int'];
+  hideArcGisRestLink: Scalars['Boolean'];
+}>;
+
+
+export type UpdateHideArcGisRestLinkMutation = (
+  { __typename?: 'Mutation' }
+  & { updateTableOfContentsItem?: Maybe<(
+    { __typename?: 'UpdateTableOfContentsItemPayload' }
+    & { tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'hideArcGisRestLink'>
     )> }
   )> }
 );
@@ -31450,11 +31478,21 @@ export const GetMetadataDocument = /*#__PURE__*/ gql`
     computedMetadata
     usesDynamicMetadata
     isCustomGlSource
+    hideArcGisRestLink
     metadataXml {
       ...MetadataXmlFile
     }
     metadataFormat
     hostedSourceLastUpdated
+    dataLayer {
+      id
+      sublayer
+      dataSource {
+        id
+        type
+        url
+      }
+    }
   }
 }
     ${MetadataXmlFileFragmentDoc}`;
@@ -31466,6 +31504,18 @@ export const UpdateMetadataDocument = /*#__PURE__*/ gql`
       metadata
       usesDynamicMetadata
       computedMetadata
+    }
+  }
+}
+    `;
+export const UpdateHideArcGisRestLinkDocument = /*#__PURE__*/ gql`
+    mutation UpdateHideArcGISRestLink($id: Int!, $hideArcGisRestLink: Boolean!) {
+  updateTableOfContentsItem(
+    input: {id: $id, patch: {hideArcGisRestLink: $hideArcGisRestLink}}
+  ) {
+    tableOfContentsItem {
+      id
+      hideArcGisRestLink
     }
   }
 }
@@ -35307,6 +35357,7 @@ export const namedOperations = {
     UpdateFetchStrategy: 'UpdateFetchStrategy',
     UpdateEnableHighDPIRequests: 'UpdateEnableHighDPIRequests',
     UpdateMetadata: 'UpdateMetadata',
+    UpdateHideArcGISRestLink: 'UpdateHideArcGISRestLink',
     UpdateMetadataFromXML: 'UpdateMetadataFromXML',
     PublishTableOfContents: 'PublishTableOfContents',
     ImportArcGISService: 'ImportArcGISService',

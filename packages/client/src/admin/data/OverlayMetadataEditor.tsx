@@ -1,5 +1,6 @@
 import { Trans, useTranslation } from "react-i18next";
 import {
+  GetMetadataDocument,
   useGetMetadataQuery,
   useUpdateMetadataFromXmlMutation,
   useUpdateMetadataMutation,
@@ -13,18 +14,16 @@ import useMetadataEditor from "./useMetadataEditor";
 import Warning from "../../components/Warning";
 import EditorMenuBar from "../../editor/EditorMenuBar";
 import useDialog from "../../components/useDialog";
-import {
-  Dispatch,
-  SetStateAction,
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import Button from "../../components/Button";
+import Switch from "../../components/Switch";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import { layerSettingsChangeLogRefetchQueries } from "../changelogs/layerSettingsChangeLogRefetch";
 import LayerMetadataRevisionModal from "./LayerMetadataRevisionModal";
+import EsriRestUrlFooter from "../../dataLayers/EsriRestUrlFooter";
+import HideArcGISRestLinkControl from "../../dataLayers/HideArcGISRestLinkControl";
+import { esriRestUrlFromMetadataItem } from "../../dataLayers/esriRestUrl";
+import MetadataFooterSetting from "../../dataLayers/MetadataFooterSetting";
 
 export default function OverlayMetataEditor({
   id,
@@ -45,7 +44,10 @@ export default function OverlayMetataEditor({
     [id]
   );
   const [mutation, mutationState] = useUpdateMetadataMutation({
-    refetchQueries: changeLogRefetchQueries,
+    refetchQueries: [
+      ...changeLogRefetchQueries,
+      { query: GetMetadataDocument, variables: { itemId: id } },
+    ],
   });
 
   const usingDynamicMetadata = Boolean(
@@ -53,6 +55,13 @@ export default function OverlayMetataEditor({
   );
   const dynamicMetadataAvailable =
     data?.tableOfContentsItemByIdentifier?.isCustomGlSource || false;
+  const esriRestUrl = useMemo(
+    () => esriRestUrlFromMetadataItem(data?.tableOfContentsItemByIdentifier),
+    [data?.tableOfContentsItemByIdentifier]
+  );
+  const hideArcGisRestLink = Boolean(
+    data?.tableOfContentsItemByIdentifier?.hideArcGisRestLink
+  );
 
   const { state, hasChanges, viewRef, onChange, schema, reset } =
     useMetadataEditor({
@@ -176,146 +185,168 @@ export default function OverlayMetataEditor({
         </div>
       )}
       {!loading && !error && (
-        <>
-          {usingDynamicMetadata && (
-            <Warning className="-mt-0.5" level="info">
-              <p className="mb-2">
-                <Trans ns="admin:data">
-                  This layer is currently using dynamic metadata from the
-                  service. Updates published to the origin server will be
-                  reflected here.
-                </Trans>
-              </p>
-              <Button
-                onClick={async () => {
-                  mutation({
-                    variables: {
-                      itemId: id,
-                      metadata: state.doc.toJSON(),
-                    },
-                  }).then(reset);
-                }}
-                loading={mutationState.loading}
-                small
-                label={t("Convert to editable metadata")}
-              />
-            </Warning>
-          )}
-          <div
-            className={`flex flex-col overflow-hidden ${
-              usingDynamicMetadata ? "pointer-events-none opacity-20" : ""
-            }`}
-          >
-            <EditorMenuBar
-              tocId={id}
-              showUploadOption={true}
-              view={viewRef.current?.view}
-              className="border-t border-b pl-0 bg-gray-100 shadow-sm mb-1 border-black border-opacity-10 flex-none"
-              state={state}
-              schema={schema}
-              onUploadMetadataClick={onUploadMetadataClick}
-              dynamicMetadataAvailable={dynamicMetadataAvailable}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div
+              className={
+                usingDynamicMetadata ? "pointer-events-none opacity-20" : ""
+              }
             >
-              <button
-                type="button"
-                onClick={() => setShowHistory(true)}
-                title={t("View metadata history")}
-                aria-label={t("View metadata history")}
-                className="overflow-hidden m-0 py-0 h-9 px-2 inline-flex items-center justify-center text-gray-800 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
-              >
-                <ClockIcon className="h-5 w-5" />
-              </button>
-              <div className="flex-1 justify-end flex">
-                <Button
-                  disabled={!hasChanges}
-                  primary
-                  small
-                  loading={mutationState.loading}
-                  onClick={async () => {
-                    mutation({
-                      variables: {
-                        itemId: id,
-                        metadata: state.doc.toJSON(),
-                      },
-                    }).then(reset);
-                  }}
-                  label={t("Save changes")}
-                />
-              </div>
-            </EditorMenuBar>
-            <div className="p-4 pt-2 flex-1 overflow-y-auto">
-              <ProseMirror
-                className="metadata small-variant"
+              <EditorMenuBar
+                tocId={id}
+                showUploadOption={true}
+                view={viewRef.current?.view}
+                className="border-t border-b pl-0 bg-gray-100 shadow-sm mb-1 border-black border-opacity-10 flex-none"
                 state={state}
-                onChange={onChange}
-                // @ts-ignore
-                ref={viewRef}
-              />
-              {!usingDynamicMetadata && xml && (
-                <div className="mt-5 bg-blue-50 p-2 border rounded text-sm">
-                  <Trans ns="homepage">
-                    This layer includes metadata in {xml.format} XML format.
-                  </Trans>
-                  <div className="mt-1">
-                    <a
-                      href={xml.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-white bg-primary-500 rounded px-1 py-0.5"
-                      download={xml.filename}
-                    >
-                      <Trans ns="homepage">Download</Trans>
-                    </a>
-                    <button
-                      onClick={onUploadMetadataClick}
-                      className="bg-primary-500 text-white rounded px-1 ml-2"
-                    >
-                      <Trans ns="admin:data">Update</Trans>
-                    </button>
+                schema={schema}
+                onUploadMetadataClick={onUploadMetadataClick}
+                dynamicMetadataAvailable={dynamicMetadataAvailable}
+              >
+                <button
+                  type="button"
+                  onClick={() => setShowHistory(true)}
+                  title={t("View metadata history")}
+                  aria-label={t("View metadata history")}
+                  className="overflow-hidden m-0 py-0 h-9 px-2 inline-flex items-center justify-center text-gray-800 hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  <ClockIcon className="h-5 w-5" />
+                </button>
+                <div className="flex-1 justify-end flex">
+                  <Button
+                    disabled={!hasChanges}
+                    primary
+                    small
+                    loading={mutationState.loading}
+                    onClick={async () => {
+                      mutation({
+                        variables: {
+                          itemId: id,
+                          metadata: state.doc.toJSON(),
+                        },
+                      }).then(reset);
+                    }}
+                    label={t("Save changes")}
+                  />
+                </div>
+              </EditorMenuBar>
+            </div>
+            <div className="relative flex-1 min-h-0 overflow-y-auto px-4 pt-2 pb-4">
+              <div
+                className={
+                  usingDynamicMetadata
+                    ? "pointer-events-none opacity-20"
+                    : ""
+                }
+              >
+                <ProseMirror
+                  className="metadata small-variant"
+                  state={state}
+                  onChange={onChange}
+                  // @ts-ignore
+                  ref={viewRef}
+                />
+                {!usingDynamicMetadata && xml && (
+                  <div className="mt-5 bg-blue-50 p-2 border rounded text-sm">
+                    <Trans ns="homepage">
+                      This layer includes metadata in {xml.format} XML format.
+                    </Trans>
+                    <div className="mt-1">
+                      <a
+                        href={xml.url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-white bg-primary-500 rounded px-1 py-0.5"
+                        download={xml.filename}
+                      >
+                        <Trans ns="homepage">Download</Trans>
+                      </a>
+                      <button
+                        onClick={onUploadMetadataClick}
+                        className="bg-primary-500 text-white rounded px-1 ml-2"
+                      >
+                        <Trans ns="admin:data">Update</Trans>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              {esriRestUrl && !hideArcGisRestLink && (
+                <EsriRestUrlFooter url={esriRestUrl} />
+              )}
+              {usingDynamicMetadata && (
+                <div className="absolute inset-0 pointer-events-none">
+                  <div className="h-1/3 flex items-center justify-center px-6">
+                    <p className="max-w-xs text-center text-sm text-gray-700 bg-white/90 border border-gray-200 rounded-md shadow-sm px-4 py-3">
+                      {t(
+                        "Using dynamic service metadata. Disable this setting to customize content."
+                      )}
+                    </p>
                   </div>
                 </div>
               )}
-              {dynamicMetadataAvailable && !usingDynamicMetadata && (
-                <Warning className="mt-6" level="info">
-                  <p className="pb-4">
-                    {t(
-                      "Metadata from this ArcGIS Service has been customized within SeaSketch and will no longer show changes published from the origin server."
-                    )}
-                  </p>
-                  <Button
-                    small
-                    loading={mutationState.loading}
-                    label={t("Use metadata direct from the service")}
-                    onClick={async () => {
-                      if (
-                        await confirm(t("Are you sure you want to proceed?"), {
-                          description: t(
-                            "Using dynamic service metadata will discard any changes you have made within SeaSketch."
-                          ),
-                        })
-                      ) {
-                        mutation({
-                          variables: {
-                            itemId: id,
-                            metadata: null,
-                          },
-                        }).then(() => {
-                          reset();
-                        });
-                      }
-                    }}
-                  />
-                </Warning>
-              )}
             </div>
+            {(esriRestUrl || dynamicMetadataAvailable) && (
+              <div className="flex-none border-t border-gray-200 bg-white divide-y divide-gray-200">
+                {dynamicMetadataAvailable && (
+                  <MetadataFooterSetting
+                    title={t("Use dynamic service metadata")}
+                    description={t(
+                      "When enabled, use metadata directly from the service, rather than customizing content in SeaSketch."
+                    )}
+                  >
+                    <Switch
+                      disabled={mutationState.loading}
+                      isToggled={usingDynamicMetadata}
+                      onClick={async (next) => {
+                        if (next === usingDynamicMetadata) {
+                          return;
+                        }
+                        if (next) {
+                          if (
+                            await confirm(
+                              t("Are you sure you want to proceed?"),
+                              {
+                                description: t(
+                                  "Using dynamic service metadata will discard any changes you have made within SeaSketch."
+                                ),
+                              }
+                            )
+                          ) {
+                            mutation({
+                              variables: {
+                                itemId: id,
+                                metadata: null,
+                              },
+                            }).then(reset);
+                          }
+                        } else {
+                          mutation({
+                            variables: {
+                              itemId: id,
+                              metadata: state.doc.toJSON(),
+                            },
+                          }).then(reset);
+                        }
+                      }}
+                    />
+                  </MetadataFooterSetting>
+                )}
+                {esriRestUrl && (
+                  <HideArcGISRestLinkControl
+                    itemId={id}
+                    hideArcGisRestLink={hideArcGisRestLink}
+                  />
+                )}
+              </div>
+            )}
           </div>
-          {showHistory && (
-            <LayerMetadataRevisionModal
-              tableOfContentsItemId={id}
-              onRequestClose={() => setShowHistory(false)}
-            />
-          )}
-        </>
+        </div>
+      )}
+      {showHistory && (
+        <LayerMetadataRevisionModal
+          tableOfContentsItemId={id}
+          onRequestClose={() => setShowHistory(false)}
+        />
       )}
     </>
   );

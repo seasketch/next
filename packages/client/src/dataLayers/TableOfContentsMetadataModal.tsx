@@ -1,6 +1,7 @@
-import { createContext, useState } from "react";
+import { createContext, useMemo, useState } from "react";
 import { useGetMetadataQuery } from "../generated/graphql";
 import MetadataModal from "./MetadataModal";
+import { esriRestUrlFromMetadataItem } from "./esriRestUrl";
 
 export const TableOfContentsMetadataModalContext = createContext<{
   id?: number;
@@ -35,6 +36,14 @@ export default function TableOfContentsMetadataModal({
     skip: !id && !stableId,
   });
 
+  const esriRestUrl = useMemo(
+    () => esriRestUrlFromMetadataItem(data?.tableOfContentsItemByIdentifier),
+    [data?.tableOfContentsItemByIdentifier]
+  );
+  const hideArcGisRestLink = Boolean(
+    data?.tableOfContentsItemByIdentifier?.hideArcGisRestLink
+  );
+
   return (
     <MetadataModal
       document={data?.tableOfContentsItemByIdentifier?.computedMetadata}
@@ -53,6 +62,7 @@ export default function TableOfContentsMetadataModal({
       hostedSourceLastUpdated={
         data?.tableOfContentsItemByIdentifier?.hostedSourceLastUpdated
       }
+      esriRestUrl={hideArcGisRestLink ? null : esriRestUrl}
     />
   );
 }

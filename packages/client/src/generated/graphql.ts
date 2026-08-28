@@ -16710,6 +16710,8 @@ export type TableOfContentsItem = Node & {
   hasMetadata?: Maybe<Scalars['Boolean']>;
   hasOriginalSourceUpload: Scalars['Boolean'];
   hasUnresolvedComment?: Maybe<Scalars['Boolean']>;
+  /** When true, the ESRI REST URL is omitted from the public metadata page. Defaults to false so ArcGIS service URLs are shown. */
+  hideArcGisRestLink: Scalars['Boolean'];
   hideChildren: Scalars['Boolean'];
   hostedSourceLastUpdated?: Maybe<Scalars['Datetime']>;
   id: Scalars['Int'];
@@ -17070,6 +17072,8 @@ export type TableOfContentsItemPatch = {
   enableDataTables?: Maybe<Scalars['Boolean']>;
   enableDownload?: Maybe<Scalars['Boolean']>;
   geoprocessingReferenceId?: Maybe<Scalars['String']>;
+  /** When true, the ESRI REST URL is omitted from the public metadata page. Defaults to false so ArcGIS service URLs are shown. */
+  hideArcGisRestLink?: Maybe<Scalars['Boolean']>;
   hideChildren?: Maybe<Scalars['Boolean']>;
   /**
    * If set, folders with this property cannot be toggled in order to activate all
@@ -22005,10 +22009,17 @@ export type GetMetadataQuery = (
   { __typename?: 'Query' }
   & { tableOfContentsItemByIdentifier?: Maybe<(
     { __typename?: 'TableOfContentsItem' }
-    & Pick<TableOfContentsItem, 'id' | 'computedMetadata' | 'usesDynamicMetadata' | 'isCustomGlSource' | 'metadataFormat' | 'hostedSourceLastUpdated'>
+    & Pick<TableOfContentsItem, 'id' | 'computedMetadata' | 'usesDynamicMetadata' | 'isCustomGlSource' | 'hideArcGisRestLink' | 'metadataFormat' | 'hostedSourceLastUpdated'>
     & { metadataXml?: Maybe<(
       { __typename?: 'DataUploadOutput' }
       & MetadataXmlFileFragment
+    )>, dataLayer?: Maybe<(
+      { __typename?: 'DataLayer' }
+      & Pick<DataLayer, 'id' | 'sublayer'>
+      & { dataSource?: Maybe<(
+        { __typename?: 'DataSource' }
+        & Pick<DataSource, 'id' | 'type' | 'url'>
+      )> }
     )> }
   )> }
 );
@@ -22026,6 +22037,23 @@ export type UpdateMetadataMutation = (
     & { tableOfContentsItem?: Maybe<(
       { __typename?: 'TableOfContentsItem' }
       & Pick<TableOfContentsItem, 'id' | 'metadata' | 'usesDynamicMetadata' | 'computedMetadata'>
+    )> }
+  )> }
+);
+
+export type UpdateHideArcGisRestLinkMutationVariables = Exact<{
+  id: Scalars['Int'];
+  hideArcGisRestLink: Scalars['Boolean'];
+}>;
+
+
+export type UpdateHideArcGisRestLinkMutation = (
+  { __typename?: 'Mutation' }
+  & { updateTableOfContentsItem?: Maybe<(
+    { __typename?: 'UpdateTableOfContentsItemPayload' }
+    & { tableOfContentsItem?: Maybe<(
+      { __typename?: 'TableOfContentsItem' }
+      & Pick<TableOfContentsItem, 'id' | 'hideArcGisRestLink'>
     )> }
   )> }
 );
@@ -34268,11 +34296,21 @@ export const GetMetadataDocument = gql`
     computedMetadata
     usesDynamicMetadata
     isCustomGlSource
+    hideArcGisRestLink
     metadataXml {
       ...MetadataXmlFile
     }
     metadataFormat
     hostedSourceLastUpdated
+    dataLayer {
+      id
+      sublayer
+      dataSource {
+        id
+        type
+        url
+      }
+    }
   }
 }
     ${MetadataXmlFileFragmentDoc}`;
@@ -34344,6 +34382,45 @@ export function useUpdateMetadataMutation(baseOptions?: Apollo.MutationHookOptio
 export type UpdateMetadataMutationHookResult = ReturnType<typeof useUpdateMetadataMutation>;
 export type UpdateMetadataMutationResult = Apollo.MutationResult<UpdateMetadataMutation>;
 export type UpdateMetadataMutationOptions = Apollo.BaseMutationOptions<UpdateMetadataMutation, UpdateMetadataMutationVariables>;
+export const UpdateHideArcGisRestLinkDocument = gql`
+    mutation UpdateHideArcGISRestLink($id: Int!, $hideArcGisRestLink: Boolean!) {
+  updateTableOfContentsItem(
+    input: {id: $id, patch: {hideArcGisRestLink: $hideArcGisRestLink}}
+  ) {
+    tableOfContentsItem {
+      id
+      hideArcGisRestLink
+    }
+  }
+}
+    `;
+export type UpdateHideArcGisRestLinkMutationFn = Apollo.MutationFunction<UpdateHideArcGisRestLinkMutation, UpdateHideArcGisRestLinkMutationVariables>;
+
+/**
+ * __useUpdateHideArcGisRestLinkMutation__
+ *
+ * To run a mutation, you first call `useUpdateHideArcGisRestLinkMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateHideArcGisRestLinkMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateHideArcGisRestLinkMutation, { data, loading, error }] = useUpdateHideArcGisRestLinkMutation({
+ *   variables: {
+ *      id: // value for 'id'
+ *      hideArcGisRestLink: // value for 'hideArcGisRestLink'
+ *   },
+ * });
+ */
+export function useUpdateHideArcGisRestLinkMutation(baseOptions?: Apollo.MutationHookOptions<UpdateHideArcGisRestLinkMutation, UpdateHideArcGisRestLinkMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateHideArcGisRestLinkMutation, UpdateHideArcGisRestLinkMutationVariables>(UpdateHideArcGisRestLinkDocument, options);
+      }
+export type UpdateHideArcGisRestLinkMutationHookResult = ReturnType<typeof useUpdateHideArcGisRestLinkMutation>;
+export type UpdateHideArcGisRestLinkMutationResult = Apollo.MutationResult<UpdateHideArcGisRestLinkMutation>;
+export type UpdateHideArcGisRestLinkMutationOptions = Apollo.BaseMutationOptions<UpdateHideArcGisRestLinkMutation, UpdateHideArcGisRestLinkMutationVariables>;
 export const UpdateMetadataFromXmlDocument = gql`
     mutation UpdateMetadataFromXML($itemId: Int!, $xml: String!, $filename: String) {
   updateTocMetadataFromXML(id: $itemId, xmlMetadata: $xml, filename: $filename) {
@@ -45040,6 +45117,7 @@ export const namedOperations = {
     UpdateFetchStrategy: 'UpdateFetchStrategy',
     UpdateEnableHighDPIRequests: 'UpdateEnableHighDPIRequests',
     UpdateMetadata: 'UpdateMetadata',
+    UpdateHideArcGISRestLink: 'UpdateHideArcGISRestLink',
     UpdateMetadataFromXML: 'UpdateMetadataFromXML',
     PublishTableOfContents: 'PublishTableOfContents',
     ImportArcGISService: 'ImportArcGISService',

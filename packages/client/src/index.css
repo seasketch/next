@@ -7607,6 +7607,10 @@ select{
   margin-top:2px
 }
 
+.mt-auto{
+  margin-top:auto
+}
+
 .box-border{
   box-sizing:border-box
 }
@@ -19323,4 +19327,8 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .\[\&\>span\]\:min-w-0>span{
   min-width:0px
+}
+
+.\[\&_\.mapboxgl-ctrl-logo\]\:hidden .mapboxgl-ctrl-logo{
+  display:none
 }

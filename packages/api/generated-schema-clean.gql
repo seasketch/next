@@ -18195,6 +18195,11 @@ type TableOfContentsItem implements Node {
   hasMetadata: Boolean
   hasOriginalSourceUpload: Boolean!
   hasUnresolvedComment: Boolean
+
+  """
+  When true, the ESRI REST URL is omitted from the public metadata page. Defaults to false so ArcGIS service URLs are shown.
+  """
+  hideArcGisRestLink: Boolean!
   hideChildren: Boolean!
   hostedSourceLastUpdated: Datetime
   id: Int!
@@ -18481,6 +18486,11 @@ input TableOfContentsItemPatch {
   enableDataTables: Boolean
   enableDownload: Boolean
   geoprocessingReferenceId: String
+
+  """
+  When true, the ESRI REST URL is omitted from the public metadata page. Defaults to false so ArcGIS service URLs are shown.
+  """
+  hideArcGisRestLink: Boolean
   hideChildren: Boolean
 
   """
