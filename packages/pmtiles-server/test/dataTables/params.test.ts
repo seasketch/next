@@ -113,6 +113,15 @@ describe("parseQueryParams", () => {
     });
     expect(() => parse("orderBy=site:sideways")).toThrow(QueryError);
   });
+
+  it("parses when.start / when.end as epoch seconds", () => {
+    const q = parse("when.start=1514764800&when.end=1546300800");
+    expect(q.when).toEqual({ startSec: 1514764800, endSec: 1546300800 });
+    expect(parse("groupBy=site&op=count").when).toBeNull();
+    expect(() => parse("when.start=1514764800")).toThrow(QueryError);
+    expect(() => parse("when.start=foo&when.end=1")).toThrow(QueryError);
+    expect(() => parse("when.start=10&when.end=10")).toThrow(QueryError);
+  });
 });
 
 describe("canonicalQueryString", () => {

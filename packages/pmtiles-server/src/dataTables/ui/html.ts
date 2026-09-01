@@ -438,7 +438,9 @@ export function queryUiHtml(tablePath: string): string {
 
   function init(data) {
     stats = data;
-    columns = data.columns || [];
+    columns = (data.columns || []).filter(function (c) {
+      return c.attribute !== "_when_start" && c.attribute !== "_when_end";
+    });
     var groupBy = document.getElementById("group-by");
     columns.forEach(function (c) {
       var cb = el("input", { type: "checkbox", value: c.attribute });

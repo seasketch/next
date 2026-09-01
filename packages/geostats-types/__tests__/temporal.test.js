@@ -26,6 +26,17 @@ const {
   isTemporalInfo,
   isTemporalClock,
   createLayerYearTemporalInfo,
+  isTemporalDateFormat,
+  isDataTableTemporalSourceColumns,
+  isLegacyTemporalSourceColumns,
+  isDataTableTemporalConfig,
+  toDataTableTemporalSourceColumns,
+  deriveWhenIntervalFromRow,
+  nativePrecisionFromSourceColumns,
+  sourceColumnNames,
+  coverageFromDerivedIntervals,
+  availabilityFromDerivedIntervals,
+  formatTemporalIsoFromMs,
 } = require("../dist/lib/temporal.js");
 
 const utc = (...args) => Date.UTC(...args);
@@ -714,4 +725,193 @@ test("createLayerYearTemporalInfo builds the admin v1 document", () => {
     defaultViewResolution: "year",
     authoredBy: "admin",
   });
+});
+
+// ---------------------------------------------------------------------------
+// Data Table temporal config + row derivation
+// ---------------------------------------------------------------------------
+
+test("isDataTableTemporalSourceColumns accepts the three mapping kinds", () => {
+  assert.equal(isTemporalDateFormat("mdy"), true);
+  assert.equal(isTemporalDateFormat("ymd"), false);
+  assert.equal(
+    isDataTableTemporalSourceColumns({
+      kind: "instant",
+      column: "Date",
+      format: "mdy",
+    }),
+    true
+  );
+  assert.equal(
+    isDataTableTemporalSourceColumns({
+      kind: "components",
+      year: "year",
+      month: "month",
+      day: "day",
+    }),
+    true
+  );
+  assert.equal(
+    isDataTableTemporalSourceColumns({ kind: "components", year: "survey_year" }),
+    true
+  );
+  assert.equal(
+    isDataTableTemporalSourceColumns({
+      kind: "components",
+      year: "year",
+      day: "day",
+    }),
+    false
+  );
+  assert.equal(
+    isDataTableTemporalSourceColumns({
+      kind: "span",
+      start: "from",
+      end: "through",
+      format: "iso",
+    }),
+    true
+  );
+  assert.equal(isDataTableTemporalSourceColumns(null), false);
+  assert.equal(isDataTableTemporalSourceColumns(undefined), false);
+  assert.equal(isDataTableTemporalSourceColumns({ instant: "DATE" }), false);
+});
+
+test("legacy sourceColumns still validate on TemporalInfo", () => {
+  assert.equal(
+    isLegacyTemporalSourceColumns({ instant: "DATE" }),
+    true
+  );
+  assert.equal(isLegacyTemporalSourceColumns({ kind: "instant" }), false);
+  assert.equal(isLegacyTemporalSourceColumns({}), false);
+  assert.equal(
+    isTemporalMapping({
+      type: "row",
+      startColumn: "_when_start",
+      endColumn: "_when_end",
+      sourceColumns: {
+        kind: "instant",
+        column: "Date",
+        format: "mdy",
+      },
+    }),
+    true
+  );
+  assert.equal(
+    isDataTableTemporalConfig({
+      sourceColumns: { kind: "instant", column: "Date", format: "mdy" },
+      defaultViewResolution: "year",
+      supportedViewResolutions: ["day", "month", "year"],
+    }),
+    true
+  );
+  assert.equal(
+    isDataTableTemporalConfig({
+      sourceColumns: { instant: "DATE" },
+    }),
+    false
+  );
+  assert.deepEqual(
+    toDataTableTemporalSourceColumns({ instant: "DATE" }),
+    { kind: "instant", column: "DATE", format: "iso" }
+  );
+});
+
+test("deriveWhenIntervalFromRow handles year, components, and slash dates", () => {
+  const yearOnly = deriveWhenIntervalFromRow(
+    { survey_year: 2018 },
+    { kind: "instant", column: "survey_year", format: "year" }
+  );
+  assert.deepEqual(yearOnly, {
+    startSec: utc(2018, 0, 1) / 1000,
+    endSec: utc(2019, 0, 1) / 1000,
+    startIso: "2018",
+    endIso: "2019",
+    precision: "year",
+  });
+
+  const kfm = deriveWhenIntervalFromRow(
+    { year: 2018, month: 6, day: 15 },
+    { kind: "components", year: "year", month: "month", day: "day" }
+  );
+  assert.deepEqual(kfm, {
+    startSec: utc(2018, 5, 15) / 1000,
+    endSec: utc(2018, 5, 16) / 1000,
+    startIso: "2018-06-15",
+    endIso: "2018-06-16",
+    precision: "day",
+  });
+
+  const ccfrp = deriveWhenIntervalFromRow(
+    { Date: "8/31/2023" },
+    { kind: "instant", column: "Date", format: "mdy" }
+  );
+  assert.deepEqual(ccfrp, {
+    startSec: utc(2023, 7, 31) / 1000,
+    endSec: utc(2023, 8, 1) / 1000,
+    startIso: "2023-08-31",
+    endIso: "2023-09-01",
+    precision: "day",
+  });
+
+  const estuary = deriveWhenIntervalFromRow(
+    { samplecollectiondate: "31/08/2023" },
+    { kind: "instant", column: "samplecollectiondate", format: "dmy" }
+  );
+  assert.equal(estuary.startIso, "2023-08-31");
+
+  assert.equal(
+    deriveWhenIntervalFromRow(
+      { Date: "not-a-date" },
+      { kind: "instant", column: "Date", format: "mdy" }
+    ),
+    null
+  );
+  assert.equal(
+    deriveWhenIntervalFromRow(
+      { Date: "13/01/2023" },
+      { kind: "instant", column: "Date", format: "mdy" }
+    ),
+    null
+  );
+  assert.equal(deriveWhenIntervalFromRow({}, { kind: "instant", column: "Date", format: "mdy" }), null);
+});
+
+test("deriveWhenIntervalFromRow expands inclusive span ends", () => {
+  const span = deriveWhenIntervalFromRow(
+    { from: "2018", through: "2020" },
+    { kind: "span", start: "from", end: "through", format: "year" }
+  );
+  assert.deepEqual(span, {
+    startSec: utc(2018, 0, 1) / 1000,
+    endSec: utc(2021, 0, 1) / 1000,
+    startIso: "2018",
+    endIso: "2021",
+    precision: "year",
+  });
+});
+
+test("coverage and availability summarize derived intervals", () => {
+  const source = {
+    kind: "instant",
+    column: "Date",
+    format: "mdy",
+  };
+  const intervals = [
+    deriveWhenIntervalFromRow({ Date: "1/1/2018" }, source),
+    deriveWhenIntervalFromRow({ Date: "1/1/2018" }, source),
+    deriveWhenIntervalFromRow({ Date: "6/15/2020" }, source),
+  ].filter(Boolean);
+  assert.equal(nativePrecisionFromSourceColumns(source), "day");
+  assert.deepEqual(sourceColumnNames(source), ["Date"]);
+  const coverage = coverageFromDerivedIntervals(intervals);
+  assert.equal(coverage.start, "2018-01-01");
+  assert.equal(coverage.end, "2020-06-16");
+  const availability = availabilityFromDerivedIntervals(intervals, "year");
+  assert.equal(availability.type, "histogram");
+  assert.deepEqual(availability.bins, [
+    { start: "2018", count: 2 },
+    { start: "2020", count: 1 },
+  ]);
+  assert.equal(formatTemporalIsoFromMs(utc(2018, 5, 15), "month"), "2018-06");
 });

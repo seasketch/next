@@ -8,6 +8,7 @@ const NODE_TESTS = [
   "test/dataTables/calculations.test.ts",
   "test/dataTables/params.test.ts",
   "test/dataTables/blockReader.test.ts",
+  "test/dataTables/temporalPreview.test.ts",
 ];
 
 export default defineConfig({

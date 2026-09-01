@@ -1,9 +1,11 @@
 import { describe, expect, it } from "@jest/globals";
 import { createLayerYearTemporalInfo } from "@seasketch/geostats-types";
 import {
+  advanceClock,
   collectVisibleTemporalSources,
   coverageKey,
   enumerateSteps,
+  formatClockLabel,
   formatIsoFromMs,
   hasInternalTimeSeries,
   instantClockForStep,
@@ -12,9 +14,14 @@ import {
   layoutTimeSliderSteps,
   nearestTimeSliderStepIndex,
   reconcileClock,
+  stepKeysForClock,
+  resolutionForSources,
   shouldShowTimeSlider,
   sourceParticipatesInMapClock,
+  supportedViewResolutionsForSources,
   tocIdsHiddenByClock,
+  viewResolutionsThatFit,
+  windowClockForRange,
   VisibleTemporalSource,
 } from "./mapTemporal";
 
@@ -186,10 +193,10 @@ describe("steps and clocks", () => {
     );
     expect(
       layoutTimeSliderCoverageMarks(layouts, [yearSource("gmw-2011", 2011)], "year")
-    ).toEqual([{ id: "gmw-2011", left: 0, width: 10 }]);
+    ).toEqual([{ id: "gmw-2011", left: 0, width: 10, kind: "coverage" }]);
     expect(
       layoutTimeSliderCoverageMarks(layouts, [yearSource("gmw-2020", 2020)], "year")
-    ).toEqual([{ id: "gmw-2020", left: 90, width: 10 }]);
+    ).toEqual([{ id: "gmw-2020", left: 90, width: 10, kind: "coverage" }]);
   });
 });
 
@@ -279,6 +286,53 @@ describe("collectVisibleTemporalSources", () => {
     ).toEqual([]);
   });
 
+  it("includes an activated data table with row temporal metadata", () => {
+    const temporal = {
+      ...createLayerYearTemporalInfo(2018),
+      granularity: "row" as const,
+      defaultViewResolution: "year" as const,
+      mapping: {
+        type: "row" as const,
+        startColumn: "_when_start" as const,
+        endColumn: "_when_end" as const,
+        sourceColumns: {
+          kind: "instant" as const,
+          column: "survey_year",
+          format: "year" as const,
+        },
+      },
+    };
+    expect(
+      collectVisibleTemporalSources(
+        {
+          a: {
+            visible: true,
+            hidden: false,
+            dataTable: { stableId: "table-1" },
+          },
+        } as any,
+        [
+          {
+            isFolder: false,
+            dataLayerId: 1,
+            stableId: "a",
+            overlayDataTables: [{ stableId: "table-1", temporal }],
+          },
+        ] as any,
+        [{ id: 1, dataSourceId: 9 }] as any,
+        [{ id: 9, type: "SEASKETCH_MVT" }] as any
+      )
+    ).toEqual([
+      {
+        kind: "dataTable",
+        tocStableId: "a",
+        dataSourceId: 9,
+        tableStableId: "table-1",
+        temporal,
+      },
+    ]);
+  });
+
   it("includes hosted rasters with temporal metadata", () => {
     expect(
       collectVisibleTemporalSources(
@@ -295,6 +349,7 @@ describe("collectVisibleTemporalSources", () => {
       )
     ).toEqual([
       {
+        kind: "layer",
         tocStableId: "a",
         dataSourceId: 9,
         temporal: createLayerYearTemporalInfo(2018),
@@ -314,6 +369,27 @@ describe("tocIdsHiddenByClock", () => {
     ).toEqual(["b"]);
   });
 
+  it("does not hide a row-granularity data table layer", () => {
+    const temporal = createLayerYearTemporalInfo(2018);
+    temporal.granularity = "row";
+    temporal.coverage.end = "2021";
+    const clock = instantClockForStep("2015", "year")!;
+    expect(
+      tocIdsHiddenByClock(
+        [
+          {
+            kind: "dataTable",
+            tocStableId: "sites",
+            dataSourceId: 1,
+            tableStableId: "table-1",
+            temporal,
+          },
+        ],
+        clock
+      )
+    ).toEqual([]);
+  });
+
   it("does not hide a band source for missing the clock", () => {
     const temporal = createLayerYearTemporalInfo(1985);
     temporal.granularity = "band";
@@ -325,5 +401,151 @@ describe("tocIdsHiddenByClock", () => {
         clock
       )
     ).toEqual([]);
+  });
+});
+
+describe("view resolution and window clocks", () => {
+  it("prefers defaultViewResolution over nativeResolution", () => {
+    const temporal = createLayerYearTemporalInfo(2018);
+    temporal.granularity = "row";
+    temporal.nativeResolution = "day";
+    temporal.defaultViewResolution = "year";
+    temporal.coverage = {
+      kind: "interval",
+      start: "2010",
+      end: "2021",
+      precision: "year",
+    };
+    expect(
+      resolutionForSources([
+        {
+          kind: "dataTable",
+          tocStableId: "a",
+          dataSourceId: 1,
+          tableStableId: "t",
+          temporal,
+        },
+      ])
+    ).toBe("year");
+  });
+
+  it("intersects supported view resolutions and keeps those that fit", () => {
+    const temporal = createLayerYearTemporalInfo(2018);
+    temporal.supportedViewResolutions = ["year", "month", "day"];
+    temporal.coverage = {
+      kind: "interval",
+      start: "1966",
+      end: "2022",
+      precision: "year",
+    };
+    const sources: VisibleTemporalSource[] = [
+      { tocStableId: "a", dataSourceId: 1, temporal },
+    ];
+    expect(supportedViewResolutionsForSources(sources)).toEqual([
+      "year",
+      "month",
+      "day",
+    ]);
+    const domain = {
+      kind: "interval" as const,
+      start: "1966",
+      end: "2022",
+      precision: "year" as const,
+    };
+    expect(viewResolutionsThatFit(domain, ["year", "month", "day"])).toEqual([
+      "year",
+      "month",
+      "day",
+    ]);
+    expect(
+      viewResolutionsThatFit(
+        {
+          kind: "interval",
+          start: "1800",
+          end: "2022",
+          precision: "year",
+        },
+        ["year", "month", "day"]
+      )
+    ).toEqual(["year", "month"]);
+  });
+
+  it("builds a window clock and labels the inclusive range", () => {
+    const clock = windowClockForRange("2018", "2021", "year");
+    expect(clock).toEqual({
+      mode: "window",
+      start: "2018",
+      end: "2021",
+      viewResolution: "year",
+    });
+    expect(formatClockLabel(clock!, undefined, ["2018", "2019", "2020"])).toBe(
+      "2018 – 2020"
+    );
+    const domain = {
+      kind: "interval" as const,
+      start: "2018",
+      end: "2022",
+      precision: "year" as const,
+    };
+    expect(stepKeysForClock(clock!, domain, "year")).toEqual([
+      "2018",
+      "2019",
+      "2020",
+    ]);
+    expect(
+      stepKeysForClock(instantClockForStep("2020", "year")!, domain, "year")
+    ).toEqual(["2020"]);
+  });
+
+  it("advances a window without changing its width", () => {
+    const clock = windowClockForRange("2016", "2018", "year")!;
+    const next = advanceClock(
+      clock,
+      ["2015", "2016", "2017", "2018", "2019"],
+      "year"
+    );
+    expect(next?.start).toBe("2017");
+    expect(next?.end).toBe("2019");
+    expect(next?.mode).toBe("window");
+  });
+
+  it("rolls availability bins into count-scaled histogram marks", () => {
+    const temporal = createLayerYearTemporalInfo(2018);
+    temporal.granularity = "row";
+    temporal.providesSliderStats = true;
+    temporal.coverage = {
+      kind: "interval",
+      start: "2018",
+      end: "2021",
+      precision: "year",
+    };
+    temporal.availability = {
+      type: "histogram",
+      resolution: "year",
+      start: "2018",
+      end: "2021",
+      bins: [
+        { start: "2018", count: 10 },
+        { start: "2020", count: 5 },
+      ],
+    };
+    const layouts = layoutTimeSliderSteps(temporal.coverage, "year");
+    const marks = layoutTimeSliderCoverageMarks(
+      layouts,
+      [
+        {
+          kind: "dataTable",
+          tocStableId: "a",
+          dataSourceId: 1,
+          tableStableId: "t",
+          temporal,
+        },
+      ],
+      "year"
+    );
+    const bars = marks.filter((mark) => mark.kind === "histogram");
+    expect(bars.map((bar) => bar.count)).toEqual([10, 5]);
+    expect(bars[0].heightPct).toBe(100);
+    expect(bars[1].heightPct).toBe(50);
   });
 });

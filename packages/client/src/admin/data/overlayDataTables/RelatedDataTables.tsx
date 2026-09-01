@@ -4,10 +4,12 @@ import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import {
   CheckIcon,
+  ClockIcon,
   CogIcon,
   TrashIcon,
   UploadIcon,
 } from "@heroicons/react/outline";
+import { isTemporalInfo } from "@seasketch/geostats-types";
 import {
   FullAdminOverlayFragment,
   OverlayDataTableDetailsFragment,
@@ -24,6 +26,7 @@ import { ProjectBackgroundJobContext } from "../../uploads/ProjectBackgroundJobC
 import { dataTableChangeLogRefetchQueries } from "../../changelogs/dataTableChangeLogRefetch";
 import DataTableUploadJobProgress from "./DataTableUploadJobProgress";
 import DataTableUploadModal from "./DataTableUploadModal";
+import DataTableTemporalEditor from "./DataTableTemporalEditor";
 import { DATA_TABLE_AGGREGATIONS } from "../../../dataLayers/dataTableQueryApi";
 import {
   columnStatsUrlForTable,
@@ -551,19 +554,23 @@ function DataTableSettingsModal({
 
 function DataTableRow({
   table,
+  tableOfContentsItemId,
   job,
   onDismissJob,
   onRename,
   onDelete,
   onReplace,
+  onRefresh,
   onSetVisualizationSettings,
 }: {
   table: OverlayDataTableDetailsFragment;
+  tableOfContentsItemId: number;
   job?: DataTableJob;
   onDismissJob: (jobId: string) => void;
   onRename: (id: number, name: string) => void | Promise<void>;
   onDelete: (id: number) => void;
   onReplace: (id: number) => void;
+  onRefresh: () => void;
   onSetVisualizationSettings: (
     id: number,
     visualizationColumns: string[],
@@ -573,6 +580,7 @@ function DataTableRow({
 }) {
   const { t } = useTranslation("admin:data");
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [temporalOpen, setTemporalOpen] = useState(false);
   const sameJoinColumn = table.joinColumn === table.overlayJoinColumn;
   const { data: projectMeta } = useCurrentProjectMetadata();
   const { columnStats } = useDataTableColumnStats(
@@ -590,14 +598,24 @@ function DataTableRow({
           </span>
         </div>
         {!job && (
-          <button
-            type="button"
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-            onClick={() => setSettingsOpen(true)}
-          >
-            <CogIcon className="h-4 w-4" aria-hidden />
-            {t("Settings")}
-          </button>
+          <div className="flex shrink-0 items-center gap-1">
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+              onClick={() => setTemporalOpen(true)}
+            >
+              <ClockIcon className="h-4 w-4" aria-hidden />
+              {isTemporalInfo(table.temporal) ? t("Temporal") : t("Set time")}
+            </button>
+            <button
+              type="button"
+              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+              onClick={() => setSettingsOpen(true)}
+            >
+              <CogIcon className="h-4 w-4" aria-hidden />
+              {t("Settings")}
+            </button>
+          </div>
         )}
       </div>
       {job ? (
@@ -641,6 +659,16 @@ function DataTableRow({
           onDelete={onDelete}
           onReplace={onReplace}
           onSetVisualizationSettings={onSetVisualizationSettings}
+        />
+      ) : null}
+      {temporalOpen ? (
+        <DataTableTemporalEditor
+          table={table}
+          tableOfContentsItemId={tableOfContentsItemId}
+          job={job}
+          open={temporalOpen}
+          onClose={() => setTemporalOpen(false)}
+          onJobStarted={onRefresh}
         />
       ) : null}
     </li>
@@ -887,6 +915,7 @@ export default function RelatedDataTables({ item }: RelatedDataTablesProps) {
             <DataTableRow
               key={table.id}
               table={table}
+              tableOfContentsItemId={layerItem.id}
               job={getJobForTable(table.id, dataTableJobs)}
               onDismissJob={onDismissJob}
               onRename={(id, name) =>
@@ -908,6 +937,9 @@ export default function RelatedDataTables({ item }: RelatedDataTablesProps) {
                 })
               }
               onSetVisualizationSettings={onSetVisualizationSettings}
+              onRefresh={() => {
+                void refetchTablesAndHistory();
+              }}
               onReplace={(id) => {
                 setReplaceId(id);
                 setUploadOpen(true);

@@ -37,7 +37,7 @@ describe("overlay resource classification", () => {
     // Data-table assets under the parent layer UUID inherit published ACL.
     expect(
       classifyResource(
-        "/projects/example/public/11111111-1111-1111-1111-111111111111/dataTables/22222222-2222-2222-2222-222222222222/query",
+        "/projects/example/public/11111111-1111-1111-1111-111111111111/dataTables/22222222-2222-2222-2222-222222222222/temporal-preview",
       ),
     ).toMatchObject({
       kind: "published",

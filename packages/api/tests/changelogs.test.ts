@@ -280,6 +280,7 @@ describe("change_logs", () => {
         "data_table:renamed",
         "data_table:replaced",
         "data_table:rollback",
+        "data_table:temporal",
         "data_table:visualization_settings_updated",
         "folder:acl",
         "folder:created",

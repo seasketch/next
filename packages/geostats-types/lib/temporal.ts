@@ -84,13 +84,64 @@ export type TemporalAvailability =
       bins: Array<{ start: TemporalIso; count: number }>;
     };
 
+/** Physical columns written onto parquet / MVT features. */
+export const WHEN_START_COLUMN = "_when_start";
+export const WHEN_END_COLUMN = "_when_end";
+
+/**
+ * How a single date/time cell is parsed. `iso` is reduced-precision ISO 8601
+ * (same as TemporalIso). `mdy` / `dmy` are slash dates (`8/31/2024`,
+ * `31/08/2024`). `year` is a 4-digit calendar year (number or string).
+ */
+export type TemporalDateFormat = "iso" | "mdy" | "dmy" | "year";
+
+/**
+ * Wizard / reprocess argument: how to derive `_when_*` from source columns.
+ * Discriminated by `kind`. This is the ephemeral job config — not persisted
+ * on the table until reprocess succeeds (then copied onto mapping.sourceColumns).
+ */
+export type DataTableTemporalSourceColumns =
+  | { kind: "instant"; column: string; format: TemporalDateFormat }
+  | { kind: "components"; year: string; month?: string; day?: string }
+  | { kind: "span"; start: string; end: string; format: TemporalDateFormat };
+
+/**
+ * Legacy sourceColumns shape from the design-doc v1 examples
+ * (`{ instant: "DATE" }`). Still accepted on stored TemporalInfo.
+ */
+export type LegacyTemporalSourceColumns = {
+  instant?: string;
+  start?: string;
+  end?: string;
+};
+
+export type TemporalSourceColumns =
+  | DataTableTemporalSourceColumns
+  | LegacyTemporalSourceColumns;
+
+/**
+ * Admin wizard + reprocess job argument. Shared by the client, the
+ * pmtiles-server temporal-preview endpoint, and the data-tables-handler
+ * Lambda so all three interpret the same document.
+ */
+export type DataTableTemporalConfig = {
+  sourceColumns: DataTableTemporalSourceColumns;
+  /**
+   * Default *view* resolution after reprocess. May be coarser than the
+   * native precision implied by the mapping (day-recorded surveys compared
+   * by year).
+   */
+  defaultViewResolution?: TemporalPrecision;
+  supportedViewResolutions?: TemporalPrecision[];
+};
+
 export type TemporalMapping =
   | {
       type: "feature" | "row";
       startColumn: "_when_start";
       endColumn: "_when_end";
       /** Original columns the wizard / ingest used. */
-      sourceColumns?: { instant?: string; start?: string; end?: string };
+      sourceColumns?: TemporalSourceColumns;
     }
   | {
       type: "band";
@@ -492,17 +543,99 @@ export function isTemporalAvailability(
   return false;
 }
 
+export function isTemporalDateFormat(
+  value: unknown
+): value is TemporalDateFormat {
+  return (
+    value === "iso" || value === "mdy" || value === "dmy" || value === "year"
+  );
+}
+
+function isNonEmptyString(value: unknown): value is string {
+  return typeof value === "string" && value.length > 0;
+}
+
+export function isDataTableTemporalSourceColumns(
+  value: unknown
+): value is DataTableTemporalSourceColumns {
+  if (!isRecord(value)) return false;
+  if (value.kind === "instant") {
+    return isNonEmptyString(value.column) && isTemporalDateFormat(value.format);
+  }
+  if (value.kind === "components") {
+    if (!isNonEmptyString(value.year)) return false;
+    if (value.month !== undefined && !isNonEmptyString(value.month)) {
+      return false;
+    }
+    if (value.day !== undefined && !isNonEmptyString(value.day)) {
+      return false;
+    }
+    // day without month is not a valid calendar mapping
+    if (value.day !== undefined && value.month === undefined) return false;
+    return true;
+  }
+  if (value.kind === "span") {
+    return (
+      isNonEmptyString(value.start) &&
+      isNonEmptyString(value.end) &&
+      isTemporalDateFormat(value.format)
+    );
+  }
+  return false;
+}
+
+export function isLegacyTemporalSourceColumns(
+  value: unknown
+): value is LegacyTemporalSourceColumns {
+  if (!isRecord(value)) return false;
+  if ("kind" in value) return false;
+  const allowed = ["instant", "start", "end"];
+  let any = false;
+  for (const key of Object.keys(value)) {
+    if (allowed.indexOf(key) === -1) return false;
+    const v = value[key];
+    if (v !== undefined && typeof v !== "string") return false;
+    if (typeof v === "string" && v.length > 0) any = true;
+  }
+  return any;
+}
+
+export function isTemporalSourceColumns(
+  value: unknown
+): value is TemporalSourceColumns {
+  return (
+    isDataTableTemporalSourceColumns(value) ||
+    isLegacyTemporalSourceColumns(value)
+  );
+}
+
+export function isDataTableTemporalConfig(
+  value: unknown
+): value is DataTableTemporalConfig {
+  if (!isRecord(value)) return false;
+  if (!isDataTableTemporalSourceColumns(value.sourceColumns)) return false;
+  if (
+    value.defaultViewResolution !== undefined &&
+    !isTemporalPrecision(value.defaultViewResolution)
+  ) {
+    return false;
+  }
+  if (value.supportedViewResolutions !== undefined) {
+    if (!Array.isArray(value.supportedViewResolutions)) return false;
+    if (!value.supportedViewResolutions.every(isTemporalPrecision)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 export function isTemporalMapping(value: unknown): value is TemporalMapping {
   if (!isRecord(value)) return false;
   if (value.type === "feature" || value.type === "row") {
     if (value.startColumn !== "_when_start") return false;
     if (value.endColumn !== "_when_end") return false;
     if (value.sourceColumns !== undefined) {
-      if (!isRecord(value.sourceColumns)) return false;
-      for (const key of ["instant", "start", "end"]) {
-        const v = (value.sourceColumns as Record<string, unknown>)[key];
-        if (v !== undefined && typeof v !== "string") return false;
-      }
+      return isTemporalSourceColumns(value.sourceColumns);
     }
     return true;
   }
@@ -601,4 +734,369 @@ export function createLayerYearTemporalInfo(year: number): TemporalInfo {
     defaultViewResolution: "year",
     authoredBy: "admin",
   };
+}
+
+// ---------------------------------------------------------------------------
+// Data Table row derivation (wizard preview + reprocess)
+// ---------------------------------------------------------------------------
+
+/** Half-open interval in UTC epoch *seconds*, plus the reduced-precision ISO. */
+export type DerivedWhenInterval = {
+  startSec: number;
+  endSec: number;
+  startIso: TemporalIso;
+  endIso: TemporalIso;
+  precision: TemporalPrecision;
+};
+
+/**
+ * Native precision implied by the mapping itself (before looking at values).
+ * ISO cells may be finer or coarser per-row; callers should take the finest
+ * successful parse when computing TemporalInfo.nativeResolution.
+ */
+export function nativePrecisionFromSourceColumns(
+  source: DataTableTemporalSourceColumns
+): TemporalPrecision {
+  if (source.kind === "components") {
+    if (source.day) return "day";
+    if (source.month) return "month";
+    return "year";
+  }
+  if (source.format === "year") return "year";
+  if (source.format === "iso") return "day";
+  return "day";
+}
+
+/** Column names the mapping reads from a row. */
+export function sourceColumnNames(
+  source: DataTableTemporalSourceColumns | LegacyTemporalSourceColumns
+): string[] {
+  if ("kind" in source && source.kind === "instant") {
+    return [source.column];
+  }
+  if ("kind" in source && source.kind === "components") {
+    const names = [source.year];
+    if (source.month) names.push(source.month);
+    if (source.day) names.push(source.day);
+    return names;
+  }
+  if ("kind" in source && source.kind === "span") {
+    return [source.start, source.end];
+  }
+  const legacy = source as LegacyTemporalSourceColumns;
+  return [legacy.instant, legacy.start, legacy.end].filter(
+    (name): name is string => typeof name === "string" && name.length > 0
+  );
+}
+
+/**
+ * Coerce a wizard mapping or a stored TemporalInfo.sourceColumns into the
+ * discriminated config used by preview / reprocess.
+ */
+export function toDataTableTemporalSourceColumns(
+  source: TemporalSourceColumns
+): DataTableTemporalSourceColumns | null {
+  if (isDataTableTemporalSourceColumns(source)) return source;
+  if (!isLegacyTemporalSourceColumns(source)) return null;
+  if (source.instant) {
+    return { kind: "instant", column: source.instant, format: "iso" };
+  }
+  if (source.start && source.end) {
+    return { kind: "span", start: source.start, end: source.end, format: "iso" };
+  }
+  if (source.start) {
+    return { kind: "instant", column: source.start, format: "iso" };
+  }
+  return null;
+}
+
+/** Reduced-precision ISO from UTC epoch milliseconds. */
+export function formatTemporalIsoFromMs(
+  ms: number,
+  precision: TemporalPrecision
+): TemporalIso {
+  const date = new Date(ms);
+  const y = String(date.getUTCFullYear()).padStart(4, "0");
+  if (precision === "year") return y;
+  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+  if (precision === "month") return `${y}-${m}`;
+  const d = String(date.getUTCDate()).padStart(2, "0");
+  if (precision === "day") return `${y}-${m}-${d}`;
+  const h = String(date.getUTCHours()).padStart(2, "0");
+  const min = String(date.getUTCMinutes()).padStart(2, "0");
+  const s = String(date.getUTCSeconds()).padStart(2, "0");
+  if (precision === "hour") return `${y}-${m}-${d}T${h}:00:00Z`;
+  if (precision === "minute") return `${y}-${m}-${d}T${h}:${min}:00Z`;
+  return `${y}-${m}-${d}T${h}:${min}:${s}Z`;
+}
+
+function cellToText(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length === 0 ? null : trimmed;
+  }
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
+  if (typeof value === "bigint") {
+    return value.toString();
+  }
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString();
+  }
+  return null;
+}
+
+function parseYearNumber(value: unknown): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const year = Math.trunc(value);
+    if (year >= 1000 && year <= 9999) return year;
+    return null;
+  }
+  const text = cellToText(value);
+  if (!text) return null;
+  if (!/^\d{4}(?:\.0+)?$/.test(text)) return null;
+  const year = parseInt(text, 10);
+  if (year < 1000 || year > 9999) return null;
+  return year;
+}
+
+function parseIntInRange(
+  value: unknown,
+  min: number,
+  max: number
+): number | null {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const n = Math.trunc(value);
+    return n >= min && n <= max ? n : null;
+  }
+  const text = cellToText(value);
+  if (!text || !/^\d{1,2}(?:\.0+)?$/.test(text)) return null;
+  const n = parseInt(text, 10);
+  return n >= min && n <= max ? n : null;
+}
+
+const SLASH_DATE_RE = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+
+function parseSlashDate(
+  value: unknown,
+  format: "mdy" | "dmy"
+): IsoComponents | null {
+  const text = cellToText(value);
+  if (!text) return null;
+  const m = SLASH_DATE_RE.exec(text);
+  if (!m) return null;
+  const a = parseInt(m[1], 10);
+  const b = parseInt(m[2], 10);
+  const year = parseInt(m[3], 10);
+  const month = format === "mdy" ? a : b;
+  const day = format === "mdy" ? b : a;
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const ms = Date.UTC(year, month - 1, day);
+  const d = new Date(ms);
+  if (d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day) return null;
+  return { year, month, day, hour: 0, minute: 0, second: 0 };
+}
+
+function precisionFromIsoText(iso: string): TemporalPrecision {
+  if (iso.length === 4) return "year";
+  if (iso.length === 7) return "month";
+  if (iso.length === 10) return "day";
+  if (/T\d{2}:\d{2}:\d{2}/.test(iso)) return "second";
+  if (/T\d{2}:\d{2}/.test(iso)) return "minute";
+  if (/T\d{2}/.test(iso)) return "hour";
+  return "day";
+}
+
+function intervalFromComponents(
+  c: IsoComponents,
+  precision: TemporalPrecision
+): DerivedWhenInterval | null {
+  const start = truncate(c, precision);
+  const end = advance(c, precision);
+  if (!(end > start)) return null;
+  return {
+    startSec: start / 1000,
+    endSec: end / 1000,
+    startIso: formatTemporalIsoFromMs(start, precision),
+    endIso: formatTemporalIsoFromMs(end, precision),
+    precision,
+  };
+}
+
+function parseFormattedCell(
+  value: unknown,
+  format: TemporalDateFormat
+): DerivedWhenInterval | null {
+  if (format === "year") {
+    const year = parseYearNumber(value);
+    if (year === null) return null;
+    return intervalFromComponents(
+      { year, month: 1, day: 1, hour: 0, minute: 0, second: 0 },
+      "year"
+    );
+  }
+  if (format === "mdy" || format === "dmy") {
+    const c = parseSlashDate(value, format);
+    if (!c) return null;
+    return intervalFromComponents(c, "day");
+  }
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    const ms = value.getTime();
+    const d = new Date(ms);
+    return intervalFromComponents(
+      {
+        year: d.getUTCFullYear(),
+        month: d.getUTCMonth() + 1,
+        day: d.getUTCDate(),
+        hour: d.getUTCHours(),
+        minute: d.getUTCMinutes(),
+        second: d.getUTCSeconds(),
+      },
+      "second"
+    );
+  }
+  const text = cellToText(value);
+  if (!text) return null;
+  const c = parseTemporalIso(text);
+  if (!c) return null;
+  return intervalFromComponents(c, precisionFromIsoText(text));
+}
+
+function parseComponentsRow(
+  row: Record<string, unknown>,
+  source: Extract<DataTableTemporalSourceColumns, { kind: "components" }>
+): DerivedWhenInterval | null {
+  const year = parseYearNumber(row[source.year]);
+  if (year === null) return null;
+  let month = 1;
+  let day = 1;
+  let precision: TemporalPrecision = "year";
+  if (source.month) {
+    const parsedMonth = parseIntInRange(row[source.month], 1, 12);
+    if (parsedMonth === null) return null;
+    month = parsedMonth;
+    precision = "month";
+  }
+  if (source.day) {
+    const parsedDay = parseIntInRange(row[source.day], 1, 31);
+    if (parsedDay === null) return null;
+    day = parsedDay;
+    precision = "day";
+  }
+  const ms = Date.UTC(year, month - 1, day);
+  const d = new Date(ms);
+  if (d.getUTCMonth() !== month - 1 || d.getUTCDate() !== day) return null;
+  return intervalFromComponents(
+    { year, month, day, hour: 0, minute: 0, second: 0 },
+    precision
+  );
+}
+
+/**
+ * Expand one table row into `_when_start` / `_when_end` (UTC seconds).
+ * Returns null when any required cell is missing or unparseable.
+ */
+export function deriveWhenIntervalFromRow(
+  row: Record<string, unknown>,
+  source: DataTableTemporalSourceColumns
+): DerivedWhenInterval | null {
+  if (source.kind === "instant") {
+    return parseFormattedCell(row[source.column], source.format);
+  }
+  if (source.kind === "components") {
+    return parseComponentsRow(row, source);
+  }
+  const start = parseFormattedCell(row[source.start], source.format);
+  const end = parseFormattedCell(row[source.end], source.format);
+  if (!start || !end) return null;
+  const precision = finerPrecision(start.precision, end.precision);
+  // Source span ends are inclusive calendar values; store exclusive end.
+  if (!(end.endSec > start.startSec)) return null;
+  return {
+    startSec: start.startSec,
+    endSec: end.endSec,
+    startIso: start.startIso,
+    endIso: end.endIso,
+    precision,
+  };
+}
+
+export function coverageFromDerivedIntervals(
+  intervals: DerivedWhenInterval[]
+): TemporalInterval | null {
+  if (intervals.length === 0) return null;
+  let minStart = intervals[0].startSec;
+  let maxEnd = intervals[0].endSec;
+  let startIso = intervals[0].startIso;
+  let endIso = intervals[0].endIso;
+  let precision = intervals[0].precision;
+  for (let i = 1; i < intervals.length; i++) {
+    const interval = intervals[i];
+    if (interval.startSec < minStart) {
+      minStart = interval.startSec;
+      startIso = interval.startIso;
+    }
+    if (interval.endSec > maxEnd) {
+      maxEnd = interval.endSec;
+      endIso = interval.endIso;
+    }
+    precision = finerPrecision(precision, interval.precision);
+  }
+  return {
+    kind: "interval",
+    start: startIso,
+    end: endIso,
+    precision,
+  };
+}
+
+/**
+ * Sparse occupancy/count histogram at `resolution` (capped at day by callers
+ * when native is finer). Empty bins are omitted.
+ */
+export function availabilityFromDerivedIntervals(
+  intervals: DerivedWhenInterval[],
+  resolution: TemporalPrecision
+): TemporalAvailability | null {
+  const coverage = coverageFromDerivedIntervals(intervals);
+  if (!coverage) return null;
+  const binCounts = new Map<string, number>();
+  for (const interval of intervals) {
+    let t = interval.startSec * 1000;
+    const end = interval.endSec * 1000;
+    while (t < end) {
+      const iso = formatTemporalIsoFromMs(t, resolution);
+      binCounts.set(iso, (binCounts.get(iso) || 0) + 1);
+      const next = expandTemporalIso(iso, resolution);
+      if (!next || next.end <= t) break;
+      t = next.end;
+    }
+  }
+  const bins = Array.from(binCounts.entries())
+    .map(([start, count]) => ({ start, count }))
+    .sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0));
+  return {
+    type: "histogram",
+    resolution,
+    start: coverage.start,
+    end: coverage.end,
+    bins,
+  };
+}
+
+/**
+ * Finest precision among successful parses, falling back to the mapping's
+ * implied native precision.
+ */
+export function nativeResolutionFromDerived(
+  source: DataTableTemporalSourceColumns,
+  intervals: DerivedWhenInterval[]
+): TemporalPrecision {
+  let precision = nativePrecisionFromSourceColumns(source);
+  for (const interval of intervals) {
+    precision = finerPrecision(precision, interval.precision);
+  }
+  return precision;
 }

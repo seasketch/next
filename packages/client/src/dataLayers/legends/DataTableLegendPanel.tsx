@@ -10,8 +10,11 @@ import { MapManagerContext, MapOverlayContext } from "../MapContextManager";
 import {
   DataTableAggregation,
   DataTableVisualizationMetadata,
+  isWhenStepLimitError,
+  omitFiltersForColumns,
   requiredDataTableFilterColumns,
   resolveDataTableVisualizationSettings,
+  temporalSourceFilterColumns,
 } from "../dataTableQueryApi";
 import DataTableFilterControls, {
   ensureRequiredDataTableFilters,
@@ -128,6 +131,10 @@ export default function DataTableLegendPanel({
       tableMetadata ? requiredDataTableFilterColumns(tableMetadata) : [],
     [tableMetadata]
   );
+  const temporalFilterColumns = useMemo(
+    () => temporalSourceFilterColumns(table?.temporal),
+    [table?.temporal]
+  );
   const validFilterColumns = useMemo(
     () =>
       new Set(
@@ -144,15 +151,25 @@ export default function DataTableLegendPanel({
     if (!tableMetadata || !columnStats?.columns?.length || !manager) {
       return;
     }
-    if (requiredFilterColumns.length === 0 || !dataTable?.stableId) {
+    if (!dataTable?.stableId) {
       return;
     }
-    const ensured = ensureRequiredDataTableFilters(
-      userChoice.filters,
-      requiredFilterColumns,
-      columnStats.columns,
-      visualizedColumns
+    const required = requiredFilterColumns.filter(
+      (column) => temporalFilterColumns.indexOf(column) === -1
     );
+    const stripped = omitFiltersForColumns(
+      userChoice.filters,
+      temporalFilterColumns
+    );
+    const ensured =
+      required.length > 0
+        ? ensureRequiredDataTableFilters(
+            stripped,
+            required,
+            columnStats.columns,
+            [...visualizedColumns, ...temporalFilterColumns]
+          )
+        : stripped || [];
     const current = userChoice.filters || [];
     if (JSON.stringify(ensured) === JSON.stringify(current)) {
       return;
@@ -170,6 +187,7 @@ export default function DataTableLegendPanel({
     tableMetadata,
     columnStats?.columns,
     requiredFilterColumns,
+    temporalFilterColumns,
     visualizedColumns,
     userChoice.filters,
     userChoice.op,
@@ -202,6 +220,14 @@ export default function DataTableLegendPanel({
     return null;
   }
 
+  const displayError = error
+    ? isWhenStepLimitError({ message: error })
+      ? t(
+          "This time step is too detailed for the selected range. Choose a coarser step such as Month or Year."
+        )
+      : error
+    : undefined;
+
   return (
     <div className="space-y-3 pt-1.5">
       <div className="space-y-1.5">
@@ -213,10 +239,10 @@ export default function DataTableLegendPanel({
           >
             {tableName || table.name}
           </h3>
-          {error && (
+          {displayError && (
             <ExclamationTriangleIcon
               className="w-3.5 h-3.5 flex-none text-red-500"
-              aria-label={error}
+              aria-label={displayError}
             />
           )}
           <button
@@ -237,13 +263,13 @@ export default function DataTableLegendPanel({
         />
       </div>
 
-      {error && (
+      {displayError && (
         <div
           role="alert"
           className="flex items-start gap-2 rounded-md bg-red-50 px-2.5 py-2 text-xs text-red-700 ring-1 ring-inset ring-red-100"
         >
           <ExclamationTriangleIcon className="w-3.5 h-3.5 flex-none mt-0.5 text-red-500" />
-          <span className="min-w-0 break-words leading-snug">{error}</span>
+          <span className="min-w-0 break-words leading-snug">{displayError}</span>
         </div>
       )}
 
@@ -267,7 +293,10 @@ export default function DataTableLegendPanel({
             columns={columnStats.columns}
             filters={activeFilters}
             visualizedColumns={visualizedColumns}
-            requiredColumns={requiredFilterColumns}
+            requiredColumns={requiredFilterColumns.filter(
+              (column) => temporalFilterColumns.indexOf(column) === -1
+            )}
+            hiddenColumns={temporalFilterColumns}
             onChange={(filters) => {
               if (!tableStableId) return;
               manager?.setLayerDataTable(layerId, {

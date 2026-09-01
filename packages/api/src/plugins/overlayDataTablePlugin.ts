@@ -32,12 +32,21 @@ function remoteToQueryUrl(remote: string | null | undefined): string | null {
   return `${UPLOADS_PUBLIC_BASE_URL}/${tablePath}/query`;
 }
 
+function remoteToTemporalPreviewUrl(
+  remote: string | null | undefined
+): string | null {
+  const tablePath = tablePathFromParquetRemote(remote);
+  if (!tablePath) return null;
+  return `${UPLOADS_PUBLIC_BASE_URL}/${tablePath}/temporal-preview`;
+}
+
 const OverlayDataTablePlugin = makeExtendSchemaPlugin(() => ({
   typeDefs: gql`
     extend type OverlayDataTable {
       parquetUrl: String @requires(columns: ["parquet_remote"])
       columnStatsUrl: String @requires(columns: ["column_stats_remote"])
       queryUrl: String @requires(columns: ["parquet_remote"])
+      temporalPreviewUrl: String @requires(columns: ["parquet_remote"])
     }
 
     extend type OverlayDataTableUpload {
@@ -50,6 +59,8 @@ const OverlayDataTablePlugin = makeExtendSchemaPlugin(() => ({
       parquetUrl: (table) => remoteToPublicUrl(table.parquetRemote),
       columnStatsUrl: (table) => remoteToPublicUrl(table.columnStatsRemote),
       queryUrl: (table) => remoteToQueryUrl(table.parquetRemote),
+      temporalPreviewUrl: (table) =>
+        remoteToTemporalPreviewUrl(table.parquetRemote),
     },
     OverlayDataTableUpload: {
       presignedUploadUrl: async (upload) => {

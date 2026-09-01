@@ -8,6 +8,10 @@ import {
   parseQueryParams,
   QueryError,
 } from "./dataTables/params";
+import {
+  parseTemporalPreviewConfig,
+  previewTemporalMapping,
+} from "./dataTables/temporalPreview";
 import { queryUiHtml } from "./dataTables/ui/html";
 
 /** Browser cache lifetime for query JSON responses. */
@@ -48,12 +52,22 @@ export async function handleDataTableQuery(
 
   const url = new URL(request.url);
   const pathname = url.pathname;
-  if (!pathname.endsWith("/query")) {
-    return jsonError("Not found. Query endpoint is {tablePath}/query", 404);
+  const isPreview = pathname.endsWith("/temporal-preview");
+  const isQuery = pathname.endsWith("/query");
+  if (!isPreview && !isQuery) {
+    return jsonError(
+      "Not found. Endpoints are {tablePath}/query and {tablePath}/temporal-preview",
+      404
+    );
   }
-  const tablePath = pathname.replace(/^\/+/, "").slice(0, -"/query".length);
+  const suffix = isPreview ? "/temporal-preview" : "/query";
+  const tablePath = pathname.replace(/^\/+/, "").slice(0, -suffix.length);
   if (!tablePath) {
     return jsonError("Missing table path", 404);
+  }
+
+  if (isPreview) {
+    return handleTemporalPreview(request, env, url, tablePath);
   }
 
   const requestStart = Date.now();
@@ -130,6 +144,7 @@ export async function handleDataTableQuery(
       ...(result.groups !== undefined
         ? { groups: result.groups }
         : { rows: result.rows }),
+      ...(result.series !== undefined ? { series: result.series } : {}),
     };
     timer.mark("serialize");
 
@@ -219,6 +234,62 @@ function errorResponse(error: unknown): Response {
     }),
   );
   return jsonError("Internal server error", 500);
+}
+
+async function handleTemporalPreview(
+  request: Request,
+  env: Env,
+  url: URL,
+  tablePath: string
+): Promise<Response> {
+  const requestStart = Date.now();
+  const timer = new Timer(requestStart);
+  let config;
+  try {
+    config = parseTemporalPreviewConfig(url.searchParams.get("config"));
+  } catch (error) {
+    return errorResponse(error);
+  }
+  timer.mark("parse");
+
+  const started = Date.now();
+  try {
+    const source = await openR2File({
+      bucket: env.TILES_BUCKET,
+      key: `${tablePath}/data.parquet`,
+    });
+    timer.mark("open");
+    if (!source) {
+      throw new QueryError(
+        `No data table found at "${tablePath}/data.parquet".`,
+        404
+      );
+    }
+    const metadata = await getParquetMetadata(source);
+    timer.mark("metadata");
+    const result = await previewTemporalMapping({
+      file: source.buffer,
+      metadata,
+      config,
+    });
+    timer.mark("preview");
+    const body = {
+      table: tablePath,
+      ...result,
+      timing: { totalMs: Date.now() - started },
+    };
+    return new Response(JSON.stringify(body), {
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Server-Timing": timer.header(),
+        "Access-Control-Allow-Origin": "*",
+        "Timing-Allow-Origin": "*",
+        "Cache-Control": "private, max-age=60",
+      },
+    });
+  } catch (error) {
+    return errorResponse(error);
+  }
 }
 
 function jsonError(message: string, status: number): Response {

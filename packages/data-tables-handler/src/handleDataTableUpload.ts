@@ -4,9 +4,18 @@ import { writeFileSync } from "fs";
 import { getClient } from "./lambda-db-client";
 import {
   buildR2Remote,
+  getR2Object,
   getStagingObject,
   putObject,
 } from "./remotes";
+import {
+  configFromStoredTemporal,
+  deriveWhenColumnsOnParquet,
+} from "./deriveWhenColumns";
+import {
+  isDataTableTemporalConfig,
+  type DataTableTemporalConfig,
+} from "../../geostats-types/lib/temporal";
 import {
   assertUnmatchedRecordFractionAllowed,
   getGeostatsLayer,
@@ -96,7 +105,9 @@ export default async function handleDataTableUpload(
     await updateProgress("running", "downloading", 0.05);
 
     const uploadQ = await pgClient.query(
-      `select filename, processing_options, overlay_geostats, overlay_join_column, replace_overlay_data_table_id
+      `select filename, processing_options, overlay_geostats, overlay_join_column,
+              replace_overlay_data_table_id, reprocess_of_overlay_data_table_id,
+              temporal_config
        from overlay_data_table_uploads where id = $1`,
       [uploadId],
     );
@@ -111,6 +122,81 @@ export default async function handleDataTableUpload(
       processingOptions.overlayJoinColumn || upload.overlay_join_column;
     if (!joinColumn || !overlayJoinColumn) {
       throw new Error("Join column and overlay join column are required");
+    }
+
+    const temporalConfig = isDataTableTemporalConfig(upload.temporal_config)
+      ? (upload.temporal_config as DataTableTemporalConfig)
+      : null;
+    const isReprocess = Boolean(upload.reprocess_of_overlay_data_table_id);
+
+    if (isReprocess) {
+      if (!temporalConfig) {
+        throw new Error("Reprocess job is missing a valid temporal_config");
+      }
+      const sourceQ = await pgClient.query(
+        `select name, join_column, overlay_join_column, parquet_remote
+         from overlay_data_tables where id = $1`,
+        [upload.reprocess_of_overlay_data_table_id],
+      );
+      if (!sourceQ.rows[0]?.parquet_remote) {
+        throw new Error("Source data table parquet is missing");
+      }
+      await updateProgress("running", "downloading parquet", 0.1);
+      await getR2Object(sourceQ.rows[0].parquet_remote, parquetPath);
+      await updateProgress("running", "deriving temporal columns", 0.35);
+      const derived = await deriveWhenColumnsOnParquet(parquetPath, temporalConfig);
+      logDebug("temporal columns derived", {
+        parseableCount: derived.parseableCount,
+        unparseableCount: derived.unparseableCount,
+      });
+      await updateProgress("running", "computing stats", 0.6);
+      const tableName =
+        processingOptions.name ||
+        sourceQ.rows[0].name ||
+        defaultTableName(upload.filename);
+      const columnStats = await computeColumnStatsFromParquet(
+        parquetPath,
+        tableName,
+        {
+          column: joinColumn,
+          overlayAttribute: overlayJoinColumn,
+          matchRate: 1,
+          matchedRows: derived.rowCount,
+          unmatchedRows: 0,
+          unmatchedOverlayValues: 0,
+        },
+      );
+      writeFileSync(statsPath, JSON.stringify(columnStats));
+      await updateProgress("running", "uploading", 0.8);
+      const parquetTarget = buildR2Remote(
+        slug,
+        sourceUuid,
+        uploadId,
+        "data.parquet",
+      );
+      const statsTarget = buildR2Remote(
+        slug,
+        sourceUuid,
+        uploadId,
+        "column-stats.json",
+      );
+      await putObject(parquetPath, parquetTarget.remote, PARQUET_CONTENT_TYPE);
+      await putObject(statsPath, statsTarget.remote, JSON_CONTENT_TYPE);
+      const result = {
+        uploadId,
+        name: tableName,
+        joinColumn,
+        overlayJoinColumn,
+        rowCount: derived.rowCount,
+        parquetRemote: parquetTarget.remote,
+        columnStatsRemote: statsTarget.remote,
+        temporal: derived.temporal,
+      };
+      await pgClient.query(
+        `SELECT graphile_worker.add_job('processDataTableUploadOutputs', $1::json)`,
+        [JSON.stringify({ jobId: taskId, data: result })],
+      );
+      return { success: result };
     }
 
     logDebug("downloading staging object", { objectKey, csvPath });
@@ -181,6 +267,34 @@ export default async function handleDataTableUpload(
       });
     }
 
+    let derivedTemporal: unknown = undefined;
+    if (upload.replace_overlay_data_table_id) {
+      const prevQ = await pgClient.query(
+        `select temporal from overlay_data_tables where id = $1`,
+        [upload.replace_overlay_data_table_id],
+      );
+      const prevConfig =
+        temporalConfig || configFromStoredTemporal(prevQ.rows[0]?.temporal);
+      if (prevConfig) {
+        try {
+          await updateProgress("running", "deriving temporal columns", 0.55);
+          const derived = await deriveWhenColumnsOnParquet(
+            parquetPath,
+            prevConfig,
+          );
+          derivedTemporal = derived.temporal;
+          logDebug("csv replace re-derived temporal columns", {
+            parseableCount: derived.parseableCount,
+            unparseableCount: derived.unparseableCount,
+          });
+        } catch (deriveError) {
+          logDebug("csv replace could not re-derive temporal columns", {
+            message: (deriveError as Error).message,
+          });
+        }
+      }
+    }
+
     await updateProgress("running", "computing stats", 0.6);
 
     const tableName =
@@ -235,6 +349,7 @@ export default async function handleDataTableUpload(
       rowCount,
       parquetRemote: parquetTarget.remote,
       columnStatsRemote: statsTarget.remote,
+      ...(derivedTemporal ? { temporal: derivedTemporal } : {}),
     };
     logDebug("upload processing complete, enqueueing outputs job", {
       taskId,

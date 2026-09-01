@@ -49,10 +49,14 @@ export const DATA_TABLE_LOADING_STROKE_OPACITY = 0.25;
 /** Full-size radii used at high zoom (and in the legend). */
 export const DATA_TABLE_VALUE_MIN_RADIUS = 10;
 export const DATA_TABLE_VALUE_MAX_RADIUS = 65;
-/** No-data sites render slightly smaller than the min positive-value symbol. */
-export const DATA_TABLE_NO_DATA_RADIUS = DATA_TABLE_VALUE_MIN_RADIUS * 0.9;
-/** Zero-value sites match the no-data footprint exactly, but in active blue. */
-export const DATA_TABLE_ZERO_RADIUS = DATA_TABLE_NO_DATA_RADIUS;
+/** No-data sites render as a small grey fill with a faint black outline. */
+export const DATA_TABLE_NO_DATA_RADIUS = DATA_TABLE_VALUE_MIN_RADIUS * 0.45;
+/** Zero-value sites stay near the min positive-value footprint, in active blue. */
+export const DATA_TABLE_ZERO_RADIUS = DATA_TABLE_VALUE_MIN_RADIUS * 0.9;
+export const DATA_TABLE_NO_DATA_STROKE_WIDTH = 1;
+export const DATA_TABLE_NO_DATA_STROKE_COLOR = "#000000";
+export const DATA_TABLE_NO_DATA_STROKE_OPACITY = 0.2;
+export const DATA_TABLE_ZERO_STROKE_WIDTH = 2;
 
 /** Light fill shared by the no-data and zero-value symbols. */
 export const DATA_TABLE_NO_DATA_FILL_OPACITY = 0.35;

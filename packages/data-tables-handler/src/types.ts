@@ -26,6 +26,7 @@ export interface DataTablesHandlerSuccess {
   rowCount: number;
   parquetRemote: string;
   columnStatsRemote: string;
+  temporal?: unknown;
 }
 
 export interface DataTablesHandlerResponse {

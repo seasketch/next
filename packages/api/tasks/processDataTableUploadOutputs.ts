@@ -11,6 +11,7 @@ export default async function processDataTableUploadOutputs(
       rowCount: number;
       parquetRemote: string;
       columnStatsRemote: string;
+      temporal?: unknown;
     };
   },
   helpers: Helpers,
@@ -27,7 +28,7 @@ export default async function processDataTableUploadOutputs(
         return;
       }
       await client.query(
-        `select complete_overlay_data_table_upload($1, $2, $3, $4, $5, $6, $7)`,
+        `select complete_overlay_data_table_upload($1, $2, $3, $4, $5, $6, $7, $8::jsonb)`,
         [
           jobId,
           data.name,
@@ -36,6 +37,7 @@ export default async function processDataTableUploadOutputs(
           data.rowCount,
           data.parquetRemote,
           data.columnStatsRemote,
+          data.temporal ? JSON.stringify(data.temporal) : null,
         ],
       );
     } catch (e) {

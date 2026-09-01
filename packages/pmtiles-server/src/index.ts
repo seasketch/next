@@ -156,11 +156,11 @@ export default class extends WorkerEntrypoint<Env> {
   }
 }
 
-/** True for overlay data-table query endpoints (hyparquet aggregation). */
+/** True for overlay data-table query / temporal-preview endpoints. */
 function isDataTableQueryPath(pathname: string): boolean {
   return (
-    pathname.endsWith("/query") &&
-    pathname.includes("/dataTables/")
+    pathname.includes("/dataTables/") &&
+    (pathname.endsWith("/query") || pathname.endsWith("/temporal-preview"))
   );
 }
 

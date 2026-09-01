@@ -1,6 +1,11 @@
 import { ClockIcon } from "@heroicons/react/outline";
 import { Trans, useTranslation } from "react-i18next";
 import { isTemporalInfo } from "@seasketch/geostats-types";
+import {
+  inclusiveThroughFromExclusive,
+  isOneUnitInterval,
+  SpanPrecision,
+} from "../../data/TableOfContentsItemEditor/temporalCoverageForm";
 import BaseFieldGroupListItem, {
   ChangeValue,
   FieldGroupListItemProps,
@@ -45,6 +50,20 @@ function temporalCoverage(value: unknown): {
   };
 }
 
+function asSpanPrecision(precision: string): SpanPrecision {
+  if (precision === "year" || precision === "month" || precision === "day") {
+    return precision;
+  }
+  return "day";
+}
+
+/** Range separator: spaced when either bound has hyphens (ISO dates). */
+export function formatCoverageRange(start: string, end: string): string {
+  const spaced = start.indexOf("-") !== -1 || end.indexOf("-") !== -1;
+  // eslint-disable-next-line i18next/no-literal-string
+  return spaced ? `${start} \u2013 ${end}` : `${start}\u2013${end}`;
+}
+
 export function temporalCoverageLabel(
   value: unknown,
   nullText: string,
@@ -54,22 +73,30 @@ export function temporalCoverageLabel(
   if (!coverage) {
     return nullText;
   }
-  if (coverage.precision === "year") {
+  const precision = asSpanPrecision(coverage.precision);
+  if (coverage.end === null) {
+    return formatCoverageRange(
+      precision === "year"
+        ? String(parseInt(coverage.start, 10) || coverage.start)
+        : coverage.start,
+      presentText
+    );
+  }
+  if (precision === "year") {
     const start = parseInt(coverage.start, 10);
-    if (coverage.end === null) {
-      // eslint-disable-next-line i18next/no-literal-string
-      return `${start}–${presentText}`;
-    }
     const endInclusive = parseInt(coverage.end, 10) - 1;
     if (Number.isFinite(start) && Number.isFinite(endInclusive)) {
       return endInclusive <= start
         ? String(start)
-        : // eslint-disable-next-line i18next/no-literal-string
-          `${start}–${endInclusive}`;
+        : formatCoverageRange(String(start), String(endInclusive));
     }
   }
-  // eslint-disable-next-line i18next/no-literal-string
-  return `${coverage.start}–${coverage.end ?? presentText}`;
+  if (isOneUnitInterval(coverage.start, coverage.end, precision)) {
+    return coverage.start;
+  }
+  const through =
+    inclusiveThroughFromExclusive(coverage.end, precision) || coverage.end;
+  return formatCoverageRange(coverage.start, through);
 }
 
 export default function LayerTemporalFieldGroupListItem(

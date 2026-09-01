@@ -65,6 +65,7 @@ fragment JobDetails on ProjectBackgroundJob {
     tableOfContentsItemId
     filename
     replaceOverlayDataTableId
+    reprocessOfOverlayDataTableId
   }
 }
 

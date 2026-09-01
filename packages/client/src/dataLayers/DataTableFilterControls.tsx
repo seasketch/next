@@ -258,6 +258,7 @@ export default function DataTableFilterControls({
   filters,
   visualizedColumns,
   requiredColumns = [],
+  hiddenColumns = [],
   onChange,
 }: {
   columns: GeostatsAttribute[];
@@ -265,12 +266,17 @@ export default function DataTableFilterControls({
   visualizedColumns: string[];
   /** Admin-required filter columns; shown first and not removable. */
   requiredColumns?: string[];
+  /** Columns replaced by the timeslider (temporal source columns). */
+  hiddenColumns?: string[];
   onChange: (filters: DataTableFilter[]) => void;
 }) {
   const { t } = useTranslation("homepage");
   const excludedColumns = useMemo(
-    () => new Set(visualizedColumns.filter(Boolean)),
-    [visualizedColumns]
+    () =>
+      new Set(
+        [...visualizedColumns, ...hiddenColumns].filter(Boolean)
+      ),
+    [hiddenColumns, visualizedColumns]
   );
   const requiredColumnSet = useMemo(
     () =>

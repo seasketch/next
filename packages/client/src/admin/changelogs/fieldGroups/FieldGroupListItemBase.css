@@ -1,3 +1,4 @@
+.change-log-details-tooltip,
 .Tooltip.change-log-details-tooltip {
   width: auto;
   max-width: min(22rem, calc(100vw - 1rem));
@@ -28,4 +29,7 @@
 
 .change-log-data-table-version-menu {
   pointer-events: auto;
+  width: 14rem;
+  max-width: min(14rem, calc(100vw - 1rem));
+  padding: 0.25rem;
 }

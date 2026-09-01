@@ -1,4 +1,9 @@
 import { summary, Summary, valueText } from "./FieldGroupListItemBase";
+import {
+  DATA_TABLE_TEMPORAL_FIELD_GROUP,
+  isTemporalReprocess,
+  temporalSettingsSnapshot,
+} from "./dataTableTemporalChange";
 
 export function tocItemIdFromMeta(meta: unknown): number | undefined {
   if (!meta || typeof meta !== "object" || Array.isArray(meta)) {
@@ -94,6 +99,7 @@ export function dataTableEventDescription(
   fromSummary: unknown,
   toSummary: unknown,
   t: (key: string, opts?: Record<string, unknown>) => string,
+  meta?: unknown,
 ): string {
   const from = summary(fromSummary);
   const to = summary(toSummary);
@@ -144,6 +150,42 @@ export function dataTableEventDescription(
         });
       }
       return t("Rolled back to {{restored}}", { restored });
+    }
+    case DATA_TABLE_TEMPORAL_FIELD_GROUP: {
+      const none = t("None");
+      const present = t("present");
+      const fromSnap = temporalSettingsSnapshot(from.temporal, none, present);
+      const toSnap = temporalSettingsSnapshot(to.temporal, none, present);
+      const name =
+        tableNameFromSummary(to) || tableNameFromSummary(from) || fallback;
+      const reprocessed = isTemporalReprocess(fromSummary, toSummary, meta);
+      if (reprocessed) {
+        return t(
+          "Reprocessed {{name}} temporal settings ({{fromCoverage}} → {{toCoverage}})",
+          {
+            name,
+            fromCoverage: fromSnap.coverageLabel,
+            toCoverage: toSnap.coverageLabel,
+          }
+        );
+      }
+      if (!from.temporal && to.temporal) {
+        return t("Set {{name}} temporal coverage to {{coverage}}", {
+          name,
+          coverage: toSnap.coverageLabel,
+        });
+      }
+      if (from.temporal && !to.temporal) {
+        return t("Cleared {{name}} temporal coverage", { name });
+      }
+      return t(
+        "Updated {{name}} temporal settings ({{fromCoverage}} → {{toCoverage}})",
+        {
+          name,
+          fromCoverage: fromSnap.coverageLabel,
+          toCoverage: toSnap.coverageLabel,
+        }
+      );
     }
     case "DATA_TABLE_VISUALIZATION_SETTINGS_UPDATED": {
       const name =
