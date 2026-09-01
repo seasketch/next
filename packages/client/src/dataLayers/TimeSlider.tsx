@@ -346,12 +346,16 @@ export default function TimeSlider() {
         }`}
         onClick={() => {
           if (windowMode) {
-            const next = instantClockForStep(clock.start, resolution);
+            const next = instantClockForStep(lastStep || clock.start, resolution);
             if (next) setClock(next);
             return;
           }
           setPlaying(false);
-          const next = windowClockForRange(clock.start, clock.end, resolution);
+          const first = steps[0];
+          const last = steps[steps.length - 1];
+          const rangeEnd = instantClockForStep(last, resolution)?.end;
+          if (!first || !rangeEnd) return;
+          const next = windowClockForRange(first, rangeEnd, resolution);
           if (next) setClock(next);
         }}
       >

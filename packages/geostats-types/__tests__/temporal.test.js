@@ -915,3 +915,23 @@ test("coverage and availability summarize derived intervals", () => {
   ]);
   assert.equal(formatTemporalIsoFromMs(utc(2018, 5, 15), "month"), "2018-06");
 });
+
+test("availabilityFromDerivedIntervals increments every overlapping bin", () => {
+  const span = deriveWhenIntervalFromRow(
+    { from: "2018", through: "2020" },
+    { kind: "span", start: "from", end: "through", format: "year" }
+  );
+  const point = deriveWhenIntervalFromRow(
+    { from: "2019", through: "2019" },
+    { kind: "span", start: "from", end: "through", format: "year" }
+  );
+  const availability = availabilityFromDerivedIntervals(
+    [span, point].filter(Boolean),
+    "year"
+  );
+  assert.deepEqual(availability.bins, [
+    { start: "2018", count: 1 },
+    { start: "2019", count: 2 },
+    { start: "2020", count: 1 },
+  ]);
+});

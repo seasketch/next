@@ -138,6 +138,34 @@ describe("deriveWhenColumnsOnParquet", () => {
     }
   });
 
+  it("counts a span row in every overlapping year bin", async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "dt-when-span-"));
+    const csvPath = writeCsv(
+      dir,
+      "span.csv",
+      ["site,from,through", "A,2018,2020", "B,2019,2019"].join("\n"),
+    );
+    const parquetPath = path.join(dir, "data.parquet");
+    await processCsvWithDuckDb(csvPath, parquetPath, { hasHeaderRow: true });
+    const derived = await deriveWhenColumnsOnParquet(parquetPath, {
+      sourceColumns: {
+        kind: "span",
+        start: "from",
+        end: "through",
+        format: "year",
+      },
+    });
+    assert.equal(derived.parseableCount, 2);
+    if (derived.temporal.availability?.type !== "histogram") {
+      assert.fail("expected histogram availability");
+    }
+    assert.deepEqual(derived.temporal.availability.bins, [
+      { start: "2018", count: 1 },
+      { start: "2019", count: 2 },
+      { start: "2020", count: 1 },
+    ]);
+  });
+
   it("fails when no rows parse", async () => {
     const dir = mkdtempSync(path.join(tmpdir(), "dt-when-bad-"));
     const csvPath = writeCsv(dir, "bad.csv", "site,Date\nA,not-a-date\n");

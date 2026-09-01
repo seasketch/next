@@ -1,14 +1,16 @@
 import { Dialog } from "@headlessui/react";
-import { XIcon } from "@heroicons/react/outline";
+import { ExclamationCircleIcon, XIcon } from "@heroicons/react/outline";
 import {
   DataTableTemporalConfig,
   TemporalDateFormat,
   TemporalPrecision,
   isTemporalInfo,
 } from "@seasketch/geostats-types";
+import { AnimatePresence, motion } from "framer-motion";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useGlobalErrorHandler } from "../../../components/GlobalErrorHandler";
+import Spinner from "../../../components/Spinner";
 import {
   JobDetailsFragment,
   OverlayDataTableDetailsFragment,
@@ -24,7 +26,6 @@ import {
 } from "../../../dataLayers/useDataTableColumnStats";
 import { withHostedAuthParams } from "../../../dataLayers/tilesAuth";
 import useCurrentProjectMetadata from "../../../useCurrentProjectMetadata";
-import DataTableUploadJobProgress from "./DataTableUploadJobProgress";
 import LayerEditorTabs from "../TableOfContentsItemEditor/LayerEditorTabs";
 import { dataTableMutationRefetchQueries } from "../../changelogs/dataTableChangeLogRefetch";
 import {
@@ -189,6 +190,110 @@ function ColumnSelect({
   );
 }
 
+function reprocessProgressLabel(
+  job: DataTableJob | undefined,
+  t: (key: string) => string
+) {
+  if (!job) {
+    return t("Starting reprocess…");
+  }
+  if (job.state === ProjectBackgroundJobState.Failed) {
+    return job.errorMessage || t("Reprocessing failed");
+  }
+  switch (job.progressMessage) {
+    case "uploading":
+      return t("Saving processed table…");
+    case "dropping unmatched sites":
+      return t("Removing sites not found in this layer…");
+    case "deriving temporal columns":
+      return t("Deriving date columns…");
+    case "computing stats":
+      return t("Computing coverage…");
+    case "downloading parquet":
+    case "downloading":
+      return t("Reading table…");
+    case "processing":
+      return t("Processing…");
+    default:
+      return job.progressMessage || t("Reprocessing…");
+  }
+}
+
+function TemporalReprocessOverlay({ job }: { job?: DataTableJob }) {
+  const { t } = useTranslation("admin:data");
+  const failed = job?.state === ProjectBackgroundJobState.Failed;
+  const progress = job?.progress ?? 0;
+  const label = reprocessProgressLabel(job, t);
+  const percent = Math.round(progress * 100);
+
+  return (
+    <motion.div
+      key="reprocess-overlay"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.28 }}
+      className="absolute inset-0 z-10 flex flex-col items-center justify-center overflow-hidden bg-gray-950/70 px-6 backdrop-blur-[3px]"
+      role="status"
+      aria-live="polite"
+      aria-busy={!failed}
+    >
+      {!failed ? (
+        <motion.div
+          className="pointer-events-none absolute inset-y-0 w-1/3 bg-gradient-to-r from-transparent via-sky-400/10 to-transparent"
+          initial={{ left: "-33%" }}
+          animate={{ left: "100%" }}
+          transition={{ duration: 2.6, loop: Infinity, ease: "linear" }}
+        />
+      ) : null}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, ease: "easeOut" }}
+        className="relative w-full max-w-sm text-center"
+      >
+        {failed ? (
+          <ExclamationCircleIcon
+            className="mx-auto h-8 w-8 text-red-300"
+            aria-hidden
+          />
+        ) : (
+          <Spinner large color="white" className="opacity-80" />
+        )}
+        <p
+          className={`mt-3 text-sm font-medium ${
+            failed ? "text-red-100" : "text-gray-100"
+          }`}
+        >
+          {failed ? t("Reprocessing failed") : t("Reprocessing table…")}
+        </p>
+        <p
+          className={`mt-1 max-h-24 overflow-y-auto text-xs ${
+            failed
+              ? "whitespace-pre-wrap break-words font-mono text-red-200/90"
+              : "text-gray-300"
+          }`}
+        >
+          {label}
+        </p>
+        {!failed ? (
+          <div className="mt-4">
+            <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
+              <div
+                className="h-full rounded-full bg-sky-400 transition-[width] duration-500 ease-out"
+                style={{ width: `${percent}%` }}
+              />
+            </div>
+            <p className="mt-2 text-xs tabular-nums text-sky-200/80">
+              {t("{{percent}}%", { percent })}
+            </p>
+          </div>
+        ) : null}
+      </motion.div>
+    </motion.div>
+  );
+}
+
 export default function DataTableTemporalEditor({
   table,
   tableOfContentsItemId,
@@ -219,6 +324,7 @@ export default function DataTableTemporalEditor({
   const [previewError, setPreviewError] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [reprocessing, setReprocessing] = useState(false);
   const [removeRequired, setRemoveRequired] = useState(false);
 
   const changeLogRefetchQueries = useMemo(
@@ -260,6 +366,7 @@ export default function DataTableTemporalEditor({
       setPreview(null);
       setPreviewError(null);
       setRemoveRequired(false);
+      setReprocessing(false);
     }
   }, [open, table.temporal]);
 
@@ -348,6 +455,8 @@ export default function DataTableTemporalEditor({
     job &&
     (job.state === ProjectBackgroundJobState.Queued ||
       job.state === ProjectBackgroundJobState.Running);
+  const jobFailed = job?.state === ProjectBackgroundJobState.Failed;
+  const showJobOverlay = Boolean(reprocessing || jobRunning || jobFailed);
 
   const tabs: Array<{ id: DataTableTemporalMode; name: string }> = [
     { id: "none", name: t("None") },
@@ -410,13 +519,18 @@ export default function DataTableTemporalEditor({
       if (allUnparseable) {
         return;
       }
-      await createReprocess({
-        variables: {
-          tableId: table.id,
-          temporalConfig: nextConfig as DataTableTemporalConfig,
-        },
-      });
-      onJobStarted();
+      setReprocessing(true);
+      try {
+        await createReprocess({
+          variables: {
+            tableId: table.id,
+            temporalConfig: nextConfig as DataTableTemporalConfig,
+          },
+        });
+        onJobStarted();
+      } catch {
+        setReprocessing(false);
+      }
     } finally {
       setSaving(false);
     }
@@ -468,21 +582,34 @@ export default function DataTableTemporalEditor({
                   <XIcon className="h-5 w-5" aria-hidden />
                 </button>
               </div>
-              <LayerEditorTabs
-                tabs={tabs.map((tab) => ({
-                  ...tab,
-                  current: form.mode === tab.id,
-                }))}
-                onSelect={(id) => setMode(id as DataTableTemporalMode)}
-              />
+              <div
+                className={
+                  showJobOverlay
+                    ? "pointer-events-none opacity-40 transition-opacity duration-300"
+                    : undefined
+                }
+              >
+                <LayerEditorTabs
+                  tabs={tabs.map((tab) => ({
+                    ...tab,
+                    current: form.mode === tab.id,
+                  }))}
+                  onSelect={(id) => {
+                    if (!showJobOverlay) {
+                      setMode(id as DataTableTemporalMode);
+                    }
+                  }}
+                />
+              </div>
             </div>
 
-            <div className="min-h-0 min-w-0 flex-1 space-y-5 overflow-x-hidden overflow-y-auto px-5 py-5">
-              {jobRunning ||
-              job?.state === ProjectBackgroundJobState.Failed ? (
-                <DataTableUploadJobProgress job={job!} />
-              ) : null}
-
+            <div
+              className={`min-h-0 min-w-0 flex-1 space-y-5 overflow-x-hidden overflow-y-auto px-5 py-5 ${
+                showJobOverlay
+                  ? "[&>:not(.temporal-preview)]:pointer-events-none [&>:not(.temporal-preview)]:opacity-40 [&>:not(.temporal-preview)]:transition-opacity [&>:not(.temporal-preview)]:duration-300"
+                  : ""
+              }`}
+            >
               {form.mode === "none" && (
                 <p className="text-sm text-gray-400">
                   <Trans ns="admin:data">
@@ -626,7 +753,13 @@ export default function DataTableTemporalEditor({
 
               {form.mode !== "none" && (
                 <>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  <div
+                    className={
+                      form.mode === "instant"
+                        ? "grid grid-cols-1 gap-3 sm:grid-cols-2"
+                        : "grid grid-cols-1 gap-3 sm:grid-cols-3"
+                    }
+                  >
                     <label className="block space-y-1">
                       <span className="text-sm text-gray-200">
                         {t("Default view")}
@@ -649,18 +782,28 @@ export default function DataTableTemporalEditor({
                         ))}
                       </select>
                     </label>
-                    <fieldset className="space-y-1">
-                      <legend className="text-sm text-gray-200">
+                    <div
+                      className={
+                        form.mode === "instant"
+                          ? "space-y-1"
+                          : "space-y-1 sm:col-span-2"
+                      }
+                    >
+                      <div className="text-sm text-gray-200">
                         {t("Supported views")}
-                      </legend>
-                      <div className="flex flex-wrap gap-2">
+                      </div>
+                      <div
+                        role="group"
+                        aria-label={t("Supported views")}
+                        className="flex min-h-[2.375rem] flex-wrap items-center gap-x-5 gap-y-2"
+                      >
                         {allowedViews.map((resolution) => {
                           const checked =
                             form.supportedViewResolutions.includes(resolution);
                           return (
                             <label
                               key={resolution}
-                              className="inline-flex items-center gap-1.5 text-xs text-gray-200"
+                              className="inline-flex items-center gap-1.5 text-sm text-gray-200"
                             >
                               <input
                                 type="checkbox"
@@ -684,7 +827,7 @@ export default function DataTableTemporalEditor({
                           );
                         })}
                       </div>
-                    </fieldset>
+                    </div>
                   </div>
 
                   {requiredOverlap.length > 0 && (
@@ -708,11 +851,30 @@ export default function DataTableTemporalEditor({
                     </div>
                   )}
 
-                  <section className="space-y-2">
+                  <section className="temporal-preview space-y-2">
                     <h3 className="text-sm font-medium text-gray-100">
-                      {t("Preview")}
+                      {showJobOverlay
+                        ? jobFailed
+                          ? t("Reprocessing failed")
+                          : t("Reprocessing")
+                        : t("Preview")}
                     </h3>
-                    <div className="flex h-64 min-w-0 flex-col overflow-hidden rounded-md border border-white/10 bg-black/20">
+                    <div
+                      className={`relative flex h-64 min-w-0 flex-col overflow-hidden rounded-md border bg-black/20 ${
+                        jobFailed
+                          ? "border-red-400/40"
+                          : showJobOverlay
+                          ? "border-sky-400/30"
+                          : "border-white/10"
+                      }`}
+                    >
+                      <div
+                        className={`flex min-h-0 flex-1 flex-col transition duration-500 ${
+                          showJobOverlay
+                            ? "pointer-events-none scale-[0.99] opacity-25 blur-[2px]"
+                            : ""
+                        }`}
+                      >
                       {statsLoading || previewLoading ? (
                         <p className="m-auto px-4 text-center text-sm italic text-gray-400">
                           {t("Reading table dates…")}
@@ -825,6 +987,12 @@ export default function DataTableTemporalEditor({
                           {t("Choose columns to preview parsed dates.")}
                         </p>
                       )}
+                      </div>
+                      <AnimatePresence>
+                        {showJobOverlay ? (
+                          <TemporalReprocessOverlay job={job} />
+                        ) : null}
+                      </AnimatePresence>
                     </div>
                   </section>
                 </>
@@ -844,8 +1012,7 @@ export default function DataTableTemporalEditor({
                 type="submit"
                 className="rounded-md bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={
-                  saving ||
-                  jobRunning ||
+                  showJobOverlay ||
                   (form.mode !== "none" &&
                     (!config || allUnparseable))
                 }

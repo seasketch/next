@@ -197,13 +197,32 @@ export async function deriveWhenColumnsOnParquet(
         ? "day"
         : nativeResolution;
 
+    const unit = histogramUnit(histogramResolution);
+    // A row increments every native bin it intersects (same rule as
+    // when.step / availabilityFromDerivedIntervals), not only the bin of
+    // `_when_start`.
     const binRows = await all<{ bin_sec: number; count: number }>(
       conn,
-      `SELECT
-         epoch(date_trunc('${histogramUnit(histogramResolution)}', timezone('UTC', to_timestamp(${startCol})))) as bin_sec,
-         COUNT(*)::INTEGER as count
-       FROM observations
-       WHERE ${startCol} IS NOT NULL
+      `WITH bounds AS (
+         SELECT
+           date_trunc('${unit}', timezone('UTC', to_timestamp(MIN(${startCol})))) AS first_ts,
+           timezone('UTC', to_timestamp(MAX(${endCol}))) AS end_ts
+         FROM observations
+         WHERE ${startCol} IS NOT NULL
+       ),
+       bin_starts AS (
+         SELECT first_ts + (INTERVAL 1 ${unit}) * i AS bin_ts
+         FROM bounds, generate_series(0, 40000) AS g(i)
+         WHERE first_ts + (INTERVAL 1 ${unit}) * i < end_ts
+       )
+       SELECT
+         epoch(bin_ts)::BIGINT AS bin_sec,
+         COUNT(o.${startCol})::INTEGER AS count
+       FROM bin_starts
+       INNER JOIN observations o
+         ON o.${startCol} IS NOT NULL
+        AND o.${startCol} < epoch(bin_ts + INTERVAL 1 ${unit})
+        AND o.${endCol} > epoch(bin_ts)
        GROUP BY 1
        ORDER BY 1`,
     );

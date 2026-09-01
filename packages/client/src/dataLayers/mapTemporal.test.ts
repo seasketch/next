@@ -9,6 +9,7 @@ import {
   formatIsoFromMs,
   hasInternalTimeSeries,
   instantClockForStep,
+  lastIncludedStep,
   latestClock,
   layoutTimeSliderCoverageMarks,
   layoutTimeSliderSteps,
@@ -495,6 +496,25 @@ describe("view resolution and window clocks", () => {
     expect(
       stepKeysForClock(instantClockForStep("2020", "year")!, domain, "year")
     ).toEqual(["2020"]);
+  });
+
+  it("opens a window over every slider step (Instant → Range)", () => {
+    const domain = {
+      kind: "interval" as const,
+      start: "1999-09-07",
+      end: "2024-12-21",
+      precision: "day" as const,
+    };
+    const steps = ["1999", "2000", "2001", "2023", "2024"];
+    const rangeEnd = instantClockForStep(steps[steps.length - 1], "year")?.end;
+    const clock = windowClockForRange(steps[0], rangeEnd!, "year");
+    expect(clock).toEqual({
+      mode: "window",
+      start: "1999",
+      end: "2025",
+      viewResolution: "year",
+    });
+    expect(lastIncludedStep(clock!, steps, "year")).toBe("2024");
   });
 
   it("advances a window without changing its width", () => {

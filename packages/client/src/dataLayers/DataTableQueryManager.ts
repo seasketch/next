@@ -67,8 +67,15 @@ export class DataTableQueryManager {
   /** Parsed query results keyed by getQueryKey (url + settings + when). */
   private resultCache = new Map<string, CachedQueryResult>();
   private resultCacheOrder: string[] = [];
-  /** Shared in-flight fetches keyed by queryKey — never aborted on clock change. */
+  /** Shared in-flight fetches keyed by queryKey. Window fetches pass an AbortSignal. */
   private fetchInFlight = new Map<string, Promise<CachedQueryResult>>();
+  /** sourceId → pending Range-query debounce (rejected when the clock moves). */
+  private windowDebounces = new Map<
+    string,
+    { timer: ReturnType<typeof setTimeout>; reject: (error: Error) => void }
+  >();
+  /** sourceId → AbortController for the in-flight Range aggregate query. */
+  private windowFetchAborts = new Map<string, AbortController>();
 
   private seriesCountsByTable = new Map<string, { [step: string]: number }>();
   private onSeriesCountsChange:
@@ -258,11 +265,12 @@ export class DataTableQueryManager {
     this.applyGeneration.set(sourceId, generation);
     const isCurrent = () => this.applyGeneration.get(sourceId) === generation;
     const sourceReady = () => Boolean(this.map?.getSource(sourceId));
+    const isWindow = this.temporalClock?.mode === "window";
+    // Drop a pending Range debounce/fetch even when switching back to Instant.
+    this.cancelWindowWork(sourceId);
 
     try {
       const cached = this.resultCache.get(queryKey);
-      const pending =
-        cached || this.fetchParsed(settings.table, query, tokenRequired);
       if (cached) {
         if (!sourceReady()) {
           return;
@@ -277,6 +285,13 @@ export class DataTableQueryManager {
           isCurrent
         );
         return;
+      }
+
+      if (isWindow) {
+        await this.waitWindowDebounce(sourceId);
+        if (!isCurrent()) {
+          return;
+        }
       }
 
       const loadingIds = await this.getFeatureIds(settings, tokenRequired);
@@ -304,7 +319,18 @@ export class DataTableQueryManager {
         );
       }
 
-      const parsed = await pending;
+      let signal: AbortSignal | undefined;
+      if (isWindow) {
+        const controller = new AbortController();
+        this.windowFetchAborts.set(sourceId, controller);
+        signal = controller.signal;
+      }
+      const parsed = await this.fetchParsed(
+        settings.table,
+        query,
+        tokenRequired,
+        signal
+      );
       if (!isCurrent() || !sourceReady()) {
         return;
       }
@@ -336,6 +362,8 @@ export class DataTableQueryManager {
   }
 
   private static RESULT_CACHE_LIMIT = 32;
+  /** Wait for the Range thumbs to settle before hitting the engine. */
+  private static WINDOW_QUERY_DEBOUNCE_MS = 100;
 
   private paintKey(queryKey: string) {
     const clock = this.temporalClock;
@@ -361,10 +389,35 @@ export class DataTableQueryManager {
     }
   }
 
+  private cancelWindowWork(sourceId: string) {
+    const pending = this.windowDebounces.get(sourceId);
+    if (pending) {
+      clearTimeout(pending.timer);
+      this.windowDebounces.delete(sourceId);
+      pending.reject(new DOMException("AbortError", "AbortError"));
+    }
+    const controller = this.windowFetchAborts.get(sourceId);
+    if (controller) {
+      controller.abort();
+      this.windowFetchAborts.delete(sourceId);
+    }
+  }
+
+  private waitWindowDebounce(sourceId: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const timer = setTimeout(() => {
+        this.windowDebounces.delete(sourceId);
+        resolve();
+      }, DataTableQueryManager.WINDOW_QUERY_DEBOUNCE_MS);
+      this.windowDebounces.set(sourceId, { timer, reject });
+    });
+  }
+
   private fetchParsed(
     table: ClientOverlayDataTableFragment,
     query: DataTableQuerySettings,
-    tokenRequired: boolean
+    tokenRequired: boolean,
+    signal?: AbortSignal
   ): Promise<CachedQueryResult> {
     const queryKey = this.getQueryKey(table.queryUrl!, query);
     const cached = this.resultCache.get(queryKey);
@@ -372,11 +425,14 @@ export class DataTableQueryManager {
       return Promise.resolve(cached);
     }
     const existing = this.fetchInFlight.get(queryKey);
-    if (existing) {
+    if (existing && !signal) {
       return existing;
     }
-    const promise = this.query(table, query, tokenRequired)
+    const promise = this.query(table, query, tokenRequired, signal)
       .then((parsed) => {
+        if (signal?.aborted) {
+          throw new DOMException("AbortError", "AbortError");
+        }
         this.rememberParsed(queryKey, parsed);
         return parsed;
       })
@@ -385,7 +441,9 @@ export class DataTableQueryManager {
           this.fetchInFlight.delete(queryKey);
         }
       });
-    this.fetchInFlight.set(queryKey, promise);
+    if (!signal) {
+      this.fetchInFlight.set(queryKey, promise);
+    }
     return promise;
   }
 
@@ -419,6 +477,7 @@ export class DataTableQueryManager {
     if (series) {
       this.publishSeriesCounts(settings.table.stableId, series);
     }
+    // Range aggregates fit the legend to this window, not the all-time series.
     await this.paintParsed(
       sourceId,
       sourceLayerId,
@@ -427,9 +486,9 @@ export class DataTableQueryManager {
       cached,
       tokenRequired,
       isCurrent,
-      series?.scaleMin ?? cached.scaleMin,
-      series?.scaleMax ?? cached.scaleMax,
-      series?.hasZero ?? cached.hasZero
+      cached.scaleMin,
+      cached.scaleMax,
+      cached.hasZero
     );
   }
 
