@@ -5,13 +5,14 @@ import {
   formatTemporalIsoFromMs,
   isDataTableTemporalConfig,
   nativePrecisionFromSourceColumns,
+  sourceColumnNames,
   TemporalDateFormat,
   TemporalInfo,
   TemporalPrecision,
   toDataTableTemporalSourceColumns,
   WHEN_END_COLUMN,
   WHEN_START_COLUMN,
-} from "../../geostats-types/lib/temporal";
+} from "@seasketch/geostats-types";
 import { all, run, withDuckDb } from "./duckDb";
 
 function escapePath(path: string): string {
@@ -49,16 +50,25 @@ function instantExprs(
   const ts = `COALESCE(
     try_strptime(${s}, '%Y-%m-%dT%H:%M:%SZ'),
     try_strptime(${s}, '%Y-%m-%dT%H:%M:%S'),
+    try_strptime(${s}, '%Y-%m-%dT%H:%MZ'),
+    try_strptime(${s}, '%Y-%m-%dT%H:%M'),
+    try_strptime(${s}, '%Y-%m-%dT%HZ'),
+    try_strptime(${s}, '%Y-%m-%dT%H'),
     try_strptime(${s}, '%Y-%m-%d %H:%M:%S'),
     try_strptime(${s}, '%Y-%m-%d'),
     try_strptime(${s}, '%Y-%m'),
     try_strptime(${s}, '%Y')
   )`;
+  // Match geostats-types precisionFromIsoText: year/month/day by length,
+  // then T-time tokens for second / minute / hour, else day.
   const endInterval = `CASE
     WHEN length(${s}) = 4 THEN INTERVAL 1 YEAR
     WHEN length(${s}) = 7 THEN INTERVAL 1 MONTH
     WHEN length(${s}) = 10 THEN INTERVAL 1 DAY
-    ELSE INTERVAL 1 SECOND
+    WHEN regexp_matches(${s}, 'T[0-9]{2}:[0-9]{2}:[0-9]{2}') THEN INTERVAL 1 SECOND
+    WHEN regexp_matches(${s}, 'T[0-9]{2}:[0-9]{2}') THEN INTERVAL 1 MINUTE
+    WHEN regexp_matches(${s}, 'T[0-9]{2}') THEN INTERVAL 1 HOUR
+    ELSE INTERVAL 1 DAY
   END`;
   return {
     start: `epoch(${ts})`,
@@ -288,6 +298,14 @@ export async function deriveWhenColumnsOnParquet(
       temporal,
     };
   });
+}
+
+export function missingSourceColumns(
+  headers: string[],
+  source: DataTableTemporalSourceColumns
+): string[] {
+  const headerSet = new Set(headers);
+  return sourceColumnNames(source).filter((name) => !headerSet.has(name));
 }
 
 export function configFromStoredTemporal(

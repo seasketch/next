@@ -88,6 +88,41 @@ function DataTableDroppedSitesNotice({
   );
 }
 
+function temporalReplaceWarningFromColumnStats(
+  columnStats?: DataTablesColumnStats
+): string | undefined {
+  if (!columnStats || typeof columnStats !== "object") {
+    return undefined;
+  }
+  if (!("temporalReplaceWarning" in columnStats)) {
+    return undefined;
+  }
+  const warning = columnStats.temporalReplaceWarning;
+  return typeof warning === "string" && warning.length > 0
+    ? warning
+    : undefined;
+}
+
+function DataTableTemporalReplaceNotice({
+  columnStats,
+}: {
+  columnStats?: DataTablesColumnStats;
+}) {
+  const { t } = useTranslation("admin:data");
+  const detail = temporalReplaceWarningFromColumnStats(columnStats);
+  if (!detail) {
+    return null;
+  }
+  return (
+    <p className="mt-2 text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5">
+      {t(
+        "Time settings could not be applied to this replacement file. {{detail}}",
+        { detail }
+      )}
+    </p>
+  );
+}
+
 function isActiveDataTableJob(job: DataTableJob) {
   return (
     job.type === ProjectBackgroundJobType.DataTableUpload &&
@@ -650,7 +685,12 @@ function DataTableRow({
           )}
         </p>
       )}
-      {!job ? <DataTableDroppedSitesNotice columnStats={columnStats} /> : null}
+      {!job ? (
+        <>
+          <DataTableDroppedSitesNotice columnStats={columnStats} />
+          <DataTableTemporalReplaceNotice columnStats={columnStats} />
+        </>
+      ) : null}
       {settingsOpen ? (
         <DataTableSettingsModal
           table={table}
@@ -685,7 +725,12 @@ function DataTableDroppedSitesFromUrl({
     columnStatsUrlForTable(table),
     projectMeta?.project?.mapAccessToken
   );
-  return <DataTableDroppedSitesNotice columnStats={columnStats} />;
+  return (
+    <>
+      <DataTableDroppedSitesNotice columnStats={columnStats} />
+      <DataTableTemporalReplaceNotice columnStats={columnStats} />
+    </>
+  );
 }
 
 function PendingDataTableUploadRow({

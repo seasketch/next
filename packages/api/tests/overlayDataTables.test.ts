@@ -295,6 +295,30 @@ describe("overlay_data_tables", () => {
         await createSession(conn, adminId, true, false, projectId);
         const { tocId } = await createDraftLayer(conn, projectId, adminId);
 
+        const temporal = {
+          version: 1,
+          granularity: "row",
+          coverage: {
+            kind: "interval",
+            start: "2018",
+            end: "2019",
+            precision: "year",
+          },
+          nativeResolution: "year",
+          defaultViewResolution: "year",
+          mapping: {
+            type: "row",
+            startColumn: "_when_start",
+            endColumn: "_when_end",
+            sourceColumns: {
+              kind: "instant",
+              column: "survey_year",
+              format: "year",
+            },
+          },
+          authoredBy: "admin",
+        };
+
         await asPostgres(
           conn,
           async () => {
@@ -306,13 +330,15 @@ describe("overlay_data_tables", () => {
             insert into overlay_data_tables (
               table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
               row_count, created_by, parquet_remote, column_stats_remote,
-              visualization_columns, visualization_ops, required_filter_columns
+              visualization_columns, visualization_ops, required_filter_columns,
+              temporal
             ) values (
               ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId},
               'r2://bucket/projects/test/public/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/dataTables/u1/data.parquet',
               'r2://bucket/projects/test/public/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/dataTables/u1/column-stats.json',
               ${sql.array(['count'], 'text')}, ${sql.array(['sum'], 'text')},
-              ${sql.array(['year'], 'text')}
+              ${sql.array(['year'], 'text')},
+              ${sql.json(temporal)}
             )`);
             // Soft-deleted draft history must not be published.
             await conn.any(sql`
@@ -342,7 +368,7 @@ describe("overlay_data_tables", () => {
 
         const published = await conn.many(sql`
           select odt.name, toc.is_draft, odt.visualization_columns, odt.visualization_ops,
-            odt.required_filter_columns, odt.parquet_remote, odt.stable_id
+            odt.required_filter_columns, odt.parquet_remote, odt.stable_id, odt.temporal
           from overlay_data_tables odt
           inner join table_of_contents_items toc on toc.id = odt.table_of_contents_item_id
           where odt.project_id = ${projectId} and toc.is_draft = false
@@ -355,6 +381,7 @@ describe("overlay_data_tables", () => {
         expect(published[0].visualization_ops).toEqual(["sum"]);
         expect(published[0].required_filter_columns).toEqual(["year"]);
         expect(published[0].stable_id).toBe(draftStableId);
+        expect(published[0].temporal).toEqual(temporal);
 
         const draftStillThere = await conn.oneFirst(sql`
           select count(*) from overlay_data_tables odt

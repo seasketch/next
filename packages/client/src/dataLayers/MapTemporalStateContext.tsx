@@ -18,8 +18,8 @@ import {
   collectVisibleTemporalSources,
   coverageKey,
   domainForSources,
-  instantClockForStep,
   reconcileClock,
+  snapClockToResolution,
   resolutionForSources,
   shouldShowTimeSlider,
   supportedViewResolutionsForSources,
@@ -228,14 +228,7 @@ export default function MapTemporalStateProvider({
           return prev;
         }
         if (prev && prev.start) {
-          return {
-            ...prev,
-            viewResolution: next,
-            end:
-              prev.mode === "window"
-                ? prev.end
-                : instantClockForStep(prev.start, next)?.end || prev.end,
-          };
+          return snapClockToResolution(prev, domain, next) || prev;
         }
         return reconcileClock(prev, domain, next, [], temporalSources);
       });

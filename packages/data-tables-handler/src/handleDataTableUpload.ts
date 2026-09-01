@@ -11,11 +11,12 @@ import {
 import {
   configFromStoredTemporal,
   deriveWhenColumnsOnParquet,
+  missingSourceColumns,
 } from "./deriveWhenColumns";
 import {
   isDataTableTemporalConfig,
   type DataTableTemporalConfig,
-} from "../../geostats-types/lib/temporal";
+} from "@seasketch/geostats-types";
 import {
   assertUnmatchedRecordFractionAllowed,
   getGeostatsLayer,
@@ -268,6 +269,7 @@ export default async function handleDataTableUpload(
     }
 
     let derivedTemporal: unknown = undefined;
+    let temporalReplaceWarning: string | undefined;
     if (upload.replace_overlay_data_table_id) {
       const prevQ = await pgClient.query(
         `select temporal from overlay_data_tables where id = $1`,
@@ -276,21 +278,34 @@ export default async function handleDataTableUpload(
       const prevConfig =
         temporalConfig || configFromStoredTemporal(prevQ.rows[0]?.temporal);
       if (prevConfig) {
-        try {
-          await updateProgress("running", "deriving temporal columns", 0.55);
-          const derived = await deriveWhenColumnsOnParquet(
-            parquetPath,
-            prevConfig,
-          );
-          derivedTemporal = derived.temporal;
-          logDebug("csv replace re-derived temporal columns", {
-            parseableCount: derived.parseableCount,
-            unparseableCount: derived.unparseableCount,
+        const missing = missingSourceColumns(
+          headers,
+          prevConfig.sourceColumns,
+        );
+        if (missing.length > 0) {
+          temporalReplaceWarning = `Missing date columns: ${missing.join(", ")}`;
+          logDebug("csv replace skipped temporal re-derive; missing columns", {
+            missing,
           });
-        } catch (deriveError) {
-          logDebug("csv replace could not re-derive temporal columns", {
-            message: (deriveError as Error).message,
-          });
+        } else {
+          try {
+            await updateProgress("running", "deriving temporal columns", 0.55);
+            const derived = await deriveWhenColumnsOnParquet(
+              parquetPath,
+              prevConfig,
+            );
+            derivedTemporal = derived.temporal;
+            logDebug("csv replace re-derived temporal columns", {
+              parseableCount: derived.parseableCount,
+              unparseableCount: derived.unparseableCount,
+            });
+          } catch (deriveError) {
+            const message = (deriveError as Error).message;
+            temporalReplaceWarning = message;
+            logDebug("csv replace could not re-derive temporal columns", {
+              message,
+            });
+          }
         }
       }
     }
@@ -321,6 +336,9 @@ export default async function handleDataTableUpload(
           : {}),
       },
     );
+    if (temporalReplaceWarning) {
+      columnStats.temporalReplaceWarning = temporalReplaceWarning;
+    }
 
     writeFileSync(statsPath, JSON.stringify(columnStats));
 

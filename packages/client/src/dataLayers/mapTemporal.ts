@@ -590,10 +590,71 @@ function clockStepIndex(
   return steps.indexOf(clock.start);
 }
 
+function stepOverlapsExpanded(
+  step: TemporalIso,
+  resolution: TemporalPrecision,
+  expanded: { start: number; end: number }
+): boolean {
+  const range = expandTemporalIso(step, resolution);
+  if (!range) return false;
+  return range.start < expanded.end && range.end > expanded.start;
+}
+
+/**
+ * Re-express a clock at a new slider resolution without jumping to latest.
+ * Instant year 2018 → month becomes 2018-01; a window keeps every overlapping
+ * step. If nothing overlaps, pick the step nearest the previous start.
+ */
+export function snapClockToResolution(
+  clock: TemporalClock,
+  domain: TemporalInterval,
+  resolution: TemporalPrecision,
+  now: number = Date.now()
+): TemporalClock | null {
+  const steps = enumerateSteps(domain, resolution, now);
+  if (steps.length === 0) return null;
+  const expanded = expandTemporalClock(clock);
+  if (!expanded) {
+    return latestClock(domain, resolution, now);
+  }
+
+  const overlapping = steps.filter((step) =>
+    stepOverlapsExpanded(step, resolution, expanded)
+  );
+
+  const pickInstant = (step: TemporalIso) =>
+    instantClockForStep(step, resolution);
+
+  if (overlapping.length === 0) {
+    let nearest = steps[0];
+    let nearestDist = Infinity;
+    for (const step of steps) {
+      const range = expandTemporalIso(step, resolution);
+      if (!range) continue;
+      const dist = Math.abs(range.start - expanded.start);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearest = step;
+      }
+    }
+    return pickInstant(nearest);
+  }
+
+  if (clock.mode === "window") {
+    const first = overlapping[0];
+    const last = overlapping[overlapping.length - 1];
+    const end = nextIsoAtPrecision(last, resolution);
+    if (!end) return pickInstant(first);
+    return windowClockForRange(first, end, resolution);
+  }
+
+  return pickInstant(overlapping[0]);
+}
+
 /**
  * Keep the current clock when it is still a valid step and does not hide a
- * newly toggled layer-granularity source. Otherwise snap to the latest step
- * of the new source (or the domain).
+ * newly toggled layer-granularity source. A resolution change snaps the
+ * previous interval onto the new step list instead of jumping to latest.
  */
 export function reconcileClock(
   previous: TemporalClock | null,
@@ -612,10 +673,14 @@ export function reconcileClock(
       !prevIds.has(source.tocStableId) &&
       source.temporal.granularity === "layer"
   );
-  if (previous && previous.viewResolution === resolution) {
-    const idx = clockStepIndex(previous, steps);
+  const aligned =
+    previous && previous.viewResolution !== resolution
+      ? snapClockToResolution(previous, domain, resolution, now)
+      : previous;
+  if (aligned) {
+    const idx = clockStepIndex(aligned, steps);
     if (idx !== -1) {
-      const expanded = expandTemporalClock(previous);
+      const expanded = expandTemporalClock(aligned);
       const hidesNew =
         expanded &&
         newLayerSources.some(
@@ -623,7 +688,7 @@ export function reconcileClock(
             !temporalValueIntersects(source.temporal.coverage, expanded, now)
         );
       if (!hidesNew) {
-        return previous;
+        return aligned;
       }
       const newDomain = unionTemporalCoverage(
         newLayerSources.map((source) => source.temporal.coverage),

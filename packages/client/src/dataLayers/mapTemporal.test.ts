@@ -15,6 +15,7 @@ import {
   layoutTimeSliderSteps,
   nearestTimeSliderStepIndex,
   reconcileClock,
+  snapClockToResolution,
   stepKeysForClock,
   resolutionForSources,
   shouldShowTimeSlider,
@@ -239,6 +240,56 @@ describe("reconcileClock", () => {
       [yearSource("a", 2015), yearSource("b", 2020)]
     );
     expect(clock?.start).toBe("2020");
+  });
+
+  it("snaps a year clock onto the first overlapping month instead of latest", () => {
+    const previous = instantClockForStep("2018", "year");
+    const clock = reconcileClock(
+      previous,
+      domain,
+      "month",
+      ["a"],
+      [yearSource("a", 2018)]
+    );
+    expect(clock?.start).toBe("2018-01");
+    expect(clock?.viewResolution).toBe("month");
+    expect(clock?.end).toBe("2018-02");
+  });
+});
+
+describe("snapClockToResolution", () => {
+  const domain = {
+    kind: "interval" as const,
+    start: "2015",
+    end: "2021",
+    precision: "year" as const,
+  };
+
+  it("maps an instant year onto the first month of that year", () => {
+    const clock = instantClockForStep("2018", "year");
+    expect(clock).toBeTruthy();
+    const snapped = snapClockToResolution(clock!, domain, "month");
+    expect(snapped?.mode).toBe("instant");
+    expect(snapped?.start).toBe("2018-01");
+    expect(snapped?.end).toBe("2018-02");
+    expect(snapped?.viewResolution).toBe("month");
+  });
+
+  it("keeps every overlapping month of a year window", () => {
+    const clock = windowClockForRange("2018", "2020", "year");
+    expect(clock).toBeTruthy();
+    const snapped = snapClockToResolution(clock!, domain, "month");
+    expect(snapped?.mode).toBe("window");
+    expect(snapped?.start).toBe("2018-01");
+    expect(snapped?.end).toBe("2020-01");
+    expect(snapped?.viewResolution).toBe("month");
+  });
+
+  it("picks the nearest in-domain step when nothing overlaps", () => {
+    const clock = instantClockForStep("2010", "year");
+    expect(clock).toBeTruthy();
+    const snapped = snapClockToResolution(clock!, domain, "year");
+    expect(snapped?.start).toBe("2015");
   });
 });
 

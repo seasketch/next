@@ -4,8 +4,17 @@ import * as path from "path";
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
 import { processCsvWithDuckDb } from "./processWithDuckDb";
-import { deriveWhenColumnsOnParquet, whenSelectSql } from "./deriveWhenColumns";
-import { deriveWhenIntervalFromRow } from "../../geostats-types/lib/temporal";
+import {
+  deriveWhenColumnsOnParquet,
+  missingSourceColumns,
+  whenSelectSql,
+} from "./deriveWhenColumns";
+import {
+  deriveWhenIntervalFromRow,
+  WHEN_END_COLUMN,
+  WHEN_START_COLUMN,
+} from "../../geostats-types/lib/temporal";
+import { all, withDuckDb } from "./duckDb";
 
 function writeCsv(dir: string, name: string, body: string): string {
   const csvPath = path.join(dir, name);
@@ -28,7 +37,41 @@ describe("whenSelectSql", () => {
     });
     assert.match(mdy.start, /%m\/%d\/%Y/);
   });
+
+  it("uses ISO text precision for interval width, not string length", () => {
+    const iso = whenSelectSql({
+      kind: "instant",
+      column: "observed_at",
+      format: "iso",
+    });
+    assert.match(iso.end, /INTERVAL 1 MINUTE/);
+    assert.match(iso.end, /INTERVAL 1 HOUR/);
+    assert.match(iso.start, /%Y-%m-%dT%H:%M'/);
+  });
 });
+
+describe("missingSourceColumns", () => {
+  it("returns mapped columns that are not in the header list", () => {
+    expectMissing(
+      ["site", "year"],
+      { kind: "components", year: "year", month: "month", day: "day" },
+      ["month", "day"]
+    );
+    expectMissing(
+      ["site", "Date"],
+      { kind: "instant", column: "Date", format: "mdy" },
+      []
+    );
+  });
+});
+
+function expectMissing(
+  headers: string[],
+  source: Parameters<typeof missingSourceColumns>[1],
+  expected: string[]
+) {
+  assert.deepEqual(missingSourceColumns(headers, source), expected);
+}
 
 describe("deriveWhenColumnsOnParquet", () => {
   it("matches TS derivation for year, mdy, and component mappings", async () => {
@@ -164,6 +207,37 @@ describe("deriveWhenColumnsOnParquet", () => {
       { start: "2019", count: 2 },
       { start: "2020", count: 1 },
     ]);
+  });
+
+  it("matches TS minute-precision ISO intervals", async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "dt-when-iso-"));
+    const csvPath = writeCsv(
+      dir,
+      "iso.csv",
+      ["site,observed_at", "A,2018-06-15T14:30"].join("\n"),
+    );
+    const parquetPath = path.join(dir, "data.parquet");
+    await processCsvWithDuckDb(csvPath, parquetPath, { hasHeaderRow: true });
+    const source = {
+      kind: "instant" as const,
+      column: "observed_at",
+      format: "iso" as const,
+    };
+    const ts = deriveWhenIntervalFromRow({ observed_at: "2018-06-15T14:30" }, source);
+    assert.ok(ts);
+    assert.equal(ts.precision, "minute");
+    assert.equal(ts.endSec - ts.startSec, 60);
+
+    await deriveWhenColumnsOnParquet(parquetPath, { sourceColumns: source });
+    const rows = await withDuckDb((conn) =>
+      all<{ start: number; end: number }>(
+        conn,
+        `SELECT ${WHEN_START_COLUMN} AS start, ${WHEN_END_COLUMN} AS end
+         FROM read_parquet('${parquetPath.replace(/'/g, "''")}')`,
+      ),
+    );
+    assert.equal(Number(rows[0]?.start), ts.startSec);
+    assert.equal(Number(rows[0]?.end), ts.endSec);
   });
 
   it("fails when no rows parse", async () => {

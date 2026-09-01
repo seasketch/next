@@ -250,7 +250,11 @@ export class DataTableQueryManager {
     }
     const query = this.queryWithClock(settings);
     const queryKey = this.getQueryKey(settings.table.queryUrl, query);
-    const paintKey = this.paintKey(queryKey);
+    const paintKey = clockAwarePaintKey(
+      queryKey,
+      this.temporalClock,
+      settings.table.temporal
+    );
 
     if (this.appliedQueryKeys.get(sourceId) === paintKey) {
       return;
@@ -268,6 +272,7 @@ export class DataTableQueryManager {
     const isWindow = this.temporalClock?.mode === "window";
     // Drop a pending Range debounce/fetch even when switching back to Instant.
     this.cancelWindowWork(sourceId);
+    let didSetLoading = false;
 
     try {
       const cached = this.resultCache.get(queryKey);
@@ -308,6 +313,7 @@ export class DataTableQueryManager {
         scaleMax: previousSummary?.scaleMax ?? 0,
         hasZero: previousSummary?.hasZero ?? false,
       });
+      didSetLoading = true;
       for (const id of loadingIds) {
         this.map.setFeatureState(
           {
@@ -345,6 +351,14 @@ export class DataTableQueryManager {
       );
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
+        if (didSetLoading) {
+          await this.clearLoadingFeatureState(
+            sourceId,
+            sourceLayerId,
+            settings,
+            tokenRequired
+          );
+        }
         return;
       }
       console.error(error);
@@ -365,10 +379,46 @@ export class DataTableQueryManager {
   /** Wait for the Range thumbs to settle before hitting the engine. */
   private static WINDOW_QUERY_DEBOUNCE_MS = 100;
 
-  private paintKey(queryKey: string) {
-    const clock = this.temporalClock;
-    if (!clock) return queryKey;
-    return `${queryKey}#${clock.mode}:${clock.start}:${clock.end}`;
+  /**
+   * Drop `loading: true` without wiping already-painted values. A newer
+   * apply will set loading or paint; this only prevents a stuck grey state
+   * when a Range fetch is aborted after loading markers were written.
+   */
+  private async clearLoadingFeatureState(
+    sourceId: string,
+    sourceLayerId: string | undefined,
+    settings: ResolvedDataTableVisualizationSettings,
+    tokenRequired: boolean
+  ) {
+    const map = this.map;
+    if (!map?.getSource(sourceId)) {
+      return;
+    }
+    const prev = this.legendSummaries.get(sourceId);
+    if (prev?.loading) {
+      this.publishLegendSummary(sourceId, {
+        ...prev,
+        loading: false,
+      });
+    }
+    try {
+      const ids = await this.getFeatureIds(settings, tokenRequired);
+      if (!map.getSource(sourceId)) {
+        return;
+      }
+      for (const id of ids) {
+        map.setFeatureState(
+          {
+            source: sourceId,
+            sourceLayer: sourceLayerId,
+            id,
+          },
+          { loading: false }
+        );
+      }
+    } catch {
+      // Feature ids are best-effort; the next apply will repair state.
+    }
   }
 
   private rememberParsed(queryKey: string, parsed: CachedQueryResult) {
@@ -565,11 +615,7 @@ export class DataTableQueryManager {
   ): DataTableQuerySettings {
     const query = { ...settings.query };
     const temporal = settings.table.temporal;
-    if (
-      !isTemporalInfo(temporal) ||
-      temporal.granularity !== "row" ||
-      temporal.mapping?.type !== "row"
-    ) {
+    if (!tableHasRowTemporal(temporal)) {
       return query;
     }
     query.filters = omitFiltersForColumns(
@@ -594,11 +640,7 @@ export class DataTableQueryManager {
     settings: ResolvedDataTableVisualizationSettings
   ): DataTableQuerySettings | null {
     const temporal = settings.table.temporal;
-    if (
-      !isTemporalInfo(temporal) ||
-      temporal.granularity !== "row" ||
-      temporal.mapping?.type !== "row"
-    ) {
+    if (!tableHasRowTemporal(temporal)) {
       return null;
     }
     const instantClock: TemporalClock | null = this.temporalClock
@@ -792,4 +834,28 @@ export class DataTableQueryManager {
     const featureIds = Object.keys(column.values);
     return featureIds;
   }
+}
+
+/** Row-mapped tables are the only ones whose paint depends on the map clock. */
+export function tableHasRowTemporal(temporal: unknown): boolean {
+  return (
+    isTemporalInfo(temporal) &&
+    temporal.granularity === "row" &&
+    temporal.mapping?.type === "row"
+  );
+}
+
+/**
+ * Feature-state cache key. Clock is only mixed in for row-temporal tables so
+ * a shared timeslider does not force every data table to re-paint.
+ */
+export function clockAwarePaintKey(
+  queryKey: string,
+  clock: TemporalClock | null,
+  temporal: unknown
+): string {
+  if (!clock || !tableHasRowTemporal(temporal)) {
+    return queryKey;
+  }
+  return `${queryKey}#${clock.mode}:${clock.start}:${clock.end}`;
 }

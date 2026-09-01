@@ -341,4 +341,9 @@ export interface DataTablesColumnStats {
     /** Table rows removed along with {@link droppedJoinValues}. */
     droppedRowCount?: number;
   };
+  /**
+   * Set when a CSV replace could not re-derive `_when_*` from the previous
+   * table's temporal mapping (missing columns or parse failure).
+   */
+  temporalReplaceWarning?: string;
 }
