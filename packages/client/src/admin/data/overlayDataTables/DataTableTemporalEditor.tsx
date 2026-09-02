@@ -2,6 +2,7 @@ import { Dialog } from "@headlessui/react";
 import { ExclamationCircleIcon, XIcon } from "@heroicons/react/outline";
 import {
   DataTableTemporalConfig,
+  GeostatsAttribute,
   TemporalDateFormat,
   TemporalPrecision,
   isTemporalInfo,
@@ -21,9 +22,9 @@ import {
 } from "../../../generated/graphql";
 import {
   columnStatsUrlForTable,
-  numericColumnNames,
   useDataTableColumnStats,
 } from "../../../dataLayers/useDataTableColumnStats";
+import AttributeSelect from "../styleEditor/AttributeSelect";
 import { withHostedAuthParams } from "../../../dataLayers/tilesAuth";
 import useCurrentProjectMetadata from "../../../useCurrentProjectMetadata";
 import LayerEditorTabs from "../TableOfContentsItemEditor/LayerEditorTabs";
@@ -32,6 +33,7 @@ import {
   DATE_FORMATS,
   DataTableTemporalFormState,
   DataTableTemporalMode,
+  TemporalColumnUnavailableReason,
   allowedViewResolutionsForForm,
   applyNativeDefaults,
   configFromForm,
@@ -39,9 +41,11 @@ import {
   isResolutionOnlyChange,
   parsedIsoPattern,
   sourceColumnsFromForm,
+  temporalColumnAvailability,
   temporalInfoWithResolutions,
   withComponentMonth,
   withComponentYear,
+  withInstantColumn,
   withSpanStart,
 } from "./dataTableTemporalForm";
 
@@ -116,7 +120,7 @@ function formatLabel(format: TemporalDateFormat, t: (key: string) => string) {
     case "dmy":
       return t("DD/MM/YYYY");
     case "iso":
-      return t("ISO date");
+      return t("ISO date (e.g. YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ)");
     case "year":
       return t("Year");
     default:
@@ -146,46 +150,73 @@ function resolutionLabel(
   }
 }
 
+function unavailableColumnHint(
+  reason: TemporalColumnUnavailableReason,
+  t: (key: string) => string
+) {
+  switch (reason) {
+    case "date_string":
+      return t('Use "A date column" for date strings');
+    case "not_numeric":
+      return t('Needs a number. Date strings belong on "A date column"');
+    case "unsupported_type":
+      return t("This column type cannot be used for dates");
+    default:
+      return "";
+  }
+}
+
 function ColumnSelect({
   id,
   label,
   value,
-  columns,
+  attributes,
+  mode,
   allowEmpty,
   emptyLabel,
   disabled,
   onChange,
+  onUnavailableActivate,
 }: {
   id: string;
   label: string;
   value: string;
-  columns: string[];
+  attributes: GeostatsAttribute[];
+  mode: Exclude<DataTableTemporalMode, "none">;
   allowEmpty?: boolean;
   emptyLabel?: string;
   disabled?: boolean;
   onChange: (value: string) => void;
+  onUnavailableActivate: (attr: GeostatsAttribute) => void;
 }) {
+  const { t } = useTranslation("admin:data");
   return (
-    <label className="block space-y-1">
+    <label className="block min-w-0 space-y-1">
       <span className="text-sm text-gray-200">{label}</span>
-      <select
+      <AttributeSelect
         id={id}
-        value={value}
+        attributes={attributes}
+        value={value || undefined}
+        onChange={onChange}
+        placeholder={allowEmpty ? emptyLabel : t("Select a column")}
+        includeNone={allowEmpty}
         disabled={disabled}
-        onChange={(event) => onChange(event.target.value)}
-        className="block w-full rounded-md border border-white/10 bg-gray-900/40 px-2.5 py-1.5 text-sm text-green-300 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-600 disabled:cursor-not-allowed disabled:opacity-40"
-      >
-        {allowEmpty ? (
-          <option value="">{emptyLabel}</option>
-        ) : (
-          <option value="" />
-        )}
-        {columns.map((column) => (
-          <option key={column} value={column}>
-            {column}
-          </option>
-        ))}
-      </select>
+        fullWidth
+        triggerClassName="border !border-white/10 bg-gray-900/40 px-2.5 text-left text-green-300 hover:!border-white/20 disabled:cursor-not-allowed disabled:opacity-40 [&>span:first-child]:min-w-0 [&>span:first-child]:flex-1 [&>span:first-child]:truncate"
+        contentStyle={{ zIndex: 80 }}
+        contentMaxWidth={340}
+        attributeAvailability={(attr) => {
+          const availability = temporalColumnAvailability(attr, mode);
+          if (availability.available) {
+            return { available: true };
+          }
+          return {
+            available: false,
+            hint: unavailableColumnHint(availability.reason, t),
+          };
+        }}
+        onUnavailableAttributeActivate={onUnavailableActivate}
+      />
     </label>
   );
 }
@@ -326,6 +357,12 @@ export default function DataTableTemporalEditor({
   const [saving, setSaving] = useState(false);
   const [reprocessing, setReprocessing] = useState(false);
   const [removeRequired, setRemoveRequired] = useState(false);
+  const [columnHint, setColumnHint] = useState<{
+    column: string;
+    reason: TemporalColumnUnavailableReason;
+    suggestedMode?: Exclude<DataTableTemporalMode, "none">;
+    switched?: boolean;
+  } | null>(null);
 
   const changeLogRefetchQueries = useMemo(
     () => dataTableMutationRefetchQueries(tableOfContentsItemId),
@@ -345,19 +382,20 @@ export default function DataTableTemporalEditor({
       refetchQueries: changeLogRefetchQueries,
     });
 
-  const columns = useMemo(
+  const attributes = useMemo(
     () =>
       (columnStats?.columns || [])
-        .map((column) => column.attribute)
-        .filter((name) => name && !name.startsWith("_when_"))
+        .filter(
+          (column) =>
+            column.attribute && !column.attribute.startsWith("_when_")
+        )
+        .slice()
         .sort((a, b) =>
-          a.localeCompare(b, undefined, { sensitivity: "base" })
+          a.attribute.localeCompare(b.attribute, undefined, {
+            sensitivity: "base",
+          })
         ),
     [columnStats?.columns]
-  );
-  const numericColumns = useMemo(
-    () => numericColumnNames(columnStats),
-    [columnStats]
   );
 
   useEffect(() => {
@@ -367,6 +405,7 @@ export default function DataTableTemporalEditor({
       setPreviewError(null);
       setRemoveRequired(false);
       setReprocessing(false);
+      setColumnHint(null);
     }
   }, [open, table.temporal]);
 
@@ -466,10 +505,39 @@ export default function DataTableTemporalEditor({
   ];
 
   const setMode = (mode: DataTableTemporalMode) => {
+    setColumnHint(null);
     setForm((prev) => {
       const next = { ...prev, mode };
       return mode === "none" ? next : applyNativeDefaults(next);
     });
+  };
+
+  const applyInstantColumn = (attr: GeostatsAttribute) => {
+    setForm((prev) =>
+      withInstantColumn({ ...prev, mode: "instant" }, attr.attribute, attr)
+    );
+  };
+
+  const onUnavailableActivate = (attr: GeostatsAttribute) => {
+    if (form.mode === "none") {
+      return;
+    }
+    const availability = temporalColumnAvailability(attr, form.mode);
+    if (availability.available) {
+      return;
+    }
+    const shouldSwitch =
+      availability.reason === "date_string" &&
+      availability.suggestedMode === "instant";
+    setColumnHint({
+      column: attr.attribute,
+      reason: availability.reason,
+      suggestedMode: availability.suggestedMode,
+      switched: shouldSwitch,
+    });
+    if (shouldSwitch) {
+      applyInstantColumn(attr);
+    }
   };
 
   const save = async () => {
@@ -619,18 +687,69 @@ export default function DataTableTemporalEditor({
                 </p>
               )}
 
+              {columnHint && form.mode !== "none" && (
+                <div className="rounded-md border border-sky-400/40 bg-sky-500/10 px-3 py-2 text-sm text-sky-100">
+                  <p>
+                    {columnHint.switched
+                      ? t(
+                          "{{column}} cannot be used on that tab. Switched to A date column.",
+                          { column: columnHint.column }
+                        )
+                      : columnHint.reason === "date_string"
+                      ? t(
+                          "{{column}} contains date strings. Use the A date column tab.",
+                          { column: columnHint.column }
+                        )
+                      : columnHint.reason === "not_numeric"
+                      ? t(
+                          "{{column}} is not numeric. Year, month, and day need number columns. If it contains dates, use the A date column tab.",
+                          { column: columnHint.column }
+                        )
+                      : t("{{column}} cannot be used as a date.", {
+                          column: columnHint.column,
+                        })}
+                  </p>
+                  {columnHint.suggestedMode &&
+                  columnHint.suggestedMode !== form.mode ? (
+                    <button
+                      type="button"
+                      className="mt-2 text-sm font-medium text-sky-200 underline hover:text-white"
+                      onClick={() => {
+                        const attr = attributes.find(
+                          (column) => column.attribute === columnHint.column
+                        );
+                        if (attr && columnHint.suggestedMode === "instant") {
+                          applyInstantColumn(attr);
+                          setColumnHint((prev) =>
+                            prev ? { ...prev, switched: true } : prev
+                          );
+                        }
+                      }}
+                    >
+                      {t("Switch to A date column")}
+                    </button>
+                  ) : null}
+                </div>
+              )}
+
               {form.mode === "instant" && (
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <ColumnSelect
                     id="dt-temporal-instant-column"
                     label={t("Date column")}
                     value={form.instantColumn}
-                    columns={columns}
-                    onChange={(instantColumn) =>
+                    attributes={attributes}
+                    mode="instant"
+                    onChange={(instantColumn) => {
+                      setColumnHint(null);
+                      const attr = attributes.find(
+                        (column) => column.attribute === instantColumn
+                      );
                       setForm((prev) =>
-                        applyNativeDefaults({ ...prev, instantColumn })
-                      )
-                    }
+                        withInstantColumn(prev, instantColumn, attr)
+                      );
+                    }}
+                    onUnavailableActivate={onUnavailableActivate}
                   />
                   <label className="block space-y-1">
                     <span className="text-sm text-gray-200">
@@ -666,36 +785,45 @@ export default function DataTableTemporalEditor({
                     id="dt-temporal-year"
                     label={t("Year")}
                     value={form.yearColumn}
-                    columns={numericColumns.length ? numericColumns : columns}
-                    onChange={(yearColumn) =>
-                      setForm((prev) => withComponentYear(prev, yearColumn))
-                    }
+                    attributes={attributes}
+                    mode="components"
+                    onChange={(yearColumn) => {
+                      setColumnHint(null);
+                      setForm((prev) => withComponentYear(prev, yearColumn));
+                    }}
+                    onUnavailableActivate={onUnavailableActivate}
                   />
                   <ColumnSelect
                     id="dt-temporal-month"
                     label={t("Month")}
                     value={form.monthColumn}
-                    columns={columns}
+                    attributes={attributes}
+                    mode="components"
                     allowEmpty
                     emptyLabel={t("Optional")}
                     disabled={!form.yearColumn}
-                    onChange={(monthColumn) =>
-                      setForm((prev) => withComponentMonth(prev, monthColumn))
-                    }
+                    onChange={(monthColumn) => {
+                      setColumnHint(null);
+                      setForm((prev) => withComponentMonth(prev, monthColumn));
+                    }}
+                    onUnavailableActivate={onUnavailableActivate}
                   />
                   <ColumnSelect
                     id="dt-temporal-day"
                     label={t("Day")}
                     value={form.dayColumn}
-                    columns={columns}
+                    attributes={attributes}
+                    mode="components"
                     allowEmpty
                     emptyLabel={t("Optional")}
                     disabled={!form.yearColumn || !form.monthColumn}
-                    onChange={(dayColumn) =>
+                    onChange={(dayColumn) => {
+                      setColumnHint(null);
                       setForm((prev) =>
                         applyNativeDefaults({ ...prev, dayColumn })
-                      )
-                    }
+                      );
+                    }}
+                    onUnavailableActivate={onUnavailableActivate}
                   />
                 </div>
               )}
@@ -706,22 +834,33 @@ export default function DataTableTemporalEditor({
                     id="dt-temporal-span-start"
                     label={t("Start column")}
                     value={form.spanStartColumn}
-                    columns={columns}
-                    onChange={(spanStartColumn) =>
-                      setForm((prev) => withSpanStart(prev, spanStartColumn))
-                    }
+                    attributes={attributes}
+                    mode="span"
+                    onChange={(spanStartColumn) => {
+                      setColumnHint(null);
+                      const attr = attributes.find(
+                        (column) => column.attribute === spanStartColumn
+                      );
+                      setForm((prev) =>
+                        withSpanStart(prev, spanStartColumn, attr)
+                      );
+                    }}
+                    onUnavailableActivate={onUnavailableActivate}
                   />
                   <ColumnSelect
                     id="dt-temporal-span-end"
                     label={t("End column")}
                     value={form.spanEndColumn}
-                    columns={columns}
+                    attributes={attributes}
+                    mode="span"
                     disabled={!form.spanStartColumn}
-                    onChange={(spanEndColumn) =>
+                    onChange={(spanEndColumn) => {
+                      setColumnHint(null);
                       setForm((prev) =>
                         applyNativeDefaults({ ...prev, spanEndColumn })
-                      )
-                    }
+                      );
+                    }}
+                    onUnavailableActivate={onUnavailableActivate}
                   />
                   <label className="block space-y-1">
                     <span className="text-sm text-gray-200">

@@ -15,6 +15,14 @@
   @apply opacity-50;
 }
 
+.LayerEditorPalette [data-unavailable="true"] {
+  @apply opacity-60;
+}
+
+.LayerEditorPalette [data-unavailable="true"][data-highlighted] {
+  @apply opacity-100;
+}
+
 .LayerEditorPalette [data-state="checked"] {
   @apply bg-black bg-opacity-30 border border-blue-500;
 }

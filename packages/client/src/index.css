@@ -3297,6 +3297,14 @@ input.SAPRangeMini[type="range"]::-ms-thumb {
   opacity:0.5
 }
 
+.LayerEditorPalette [data-unavailable="true"]{
+  opacity:0.6
+}
+
+.LayerEditorPalette [data-unavailable="true"][data-highlighted]{
+  opacity:1
+}
+
 .LayerEditorPalette [data-state="checked"]{
   border-width:1px;
   --tw-border-opacity:1;
@@ -7656,6 +7664,10 @@ select{
   display:inline
 }
 
+.\!flex{
+  display:flex !important
+}
+
 .flex{
   display:flex
 }
@@ -7907,6 +7919,10 @@ select{
 
 .h-\[19px\]{
   height:19px
+}
+
+.h-\[2\.375rem\]{
+  height:2.375rem
 }
 
 .h-\[200\%\]{
@@ -9693,6 +9709,10 @@ select{
   justify-content:center
 }
 
+.\!justify-between{
+  justify-content:space-between !important
+}
+
 .justify-between{
   justify-content:space-between
 }
@@ -11021,6 +11041,19 @@ select{
   border-color:rgb(63 63 70 / var(--tw-border-opacity, 1))
 }
 
+.\!border-white\/10{
+  border-color:rgb(255 255 255 / 0.1) !important
+}
+
+.\!border-white{
+  --tw-border-opacity:1 !important;
+  border-color:rgb(255 255 255 / var(--tw-border-opacity, 1)) !important
+}
+
+.border-sky-400\/40{
+  border-color:rgb(56 189 248 / 0.4)
+}
+
 .border-b-black{
   --tw-border-opacity:1;
   border-bottom-color:rgb(0 0 0 / var(--tw-border-opacity, 1))
@@ -12110,6 +12143,10 @@ select{
 .bg-zinc-900{
   --tw-bg-opacity:1;
   background-color:rgb(24 24 27 / var(--tw-bg-opacity, 1))
+}
+
+.bg-sky-500\/10{
+  background-color:rgb(14 165 233 / 0.1)
 }
 
 .bg-opacity-10{
@@ -15912,6 +15949,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
   border-color:transparent
 }
 
+.hover\:\!border-white\/20:hover{
+  border-color:rgb(255 255 255 / 0.2) !important
+}
+
 .hover\:border-opacity-10:hover{
   --tw-border-opacity:0.1
 }
@@ -19462,6 +19503,20 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .\[\&\>\:not\(\.temporal-preview\)\]\:duration-300>:not(.temporal-preview){
   transition-duration:300ms
+}
+
+.\[\&\>span\:first-child\]\:min-w-0>span:first-child{
+  min-width:0px
+}
+
+.\[\&\>span\:first-child\]\:flex-1>span:first-child{
+  flex:1 1 0%
+}
+
+.\[\&\>span\:first-child\]\:truncate>span:first-child{
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap
 }
 
 .\[\&\>span\]\:min-h-0>span{

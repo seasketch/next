@@ -1,11 +1,13 @@
 import {
   DataTableTemporalConfig,
   DataTableTemporalSourceColumns,
+  GeostatsAttribute,
   TemporalDateFormat,
   TemporalInfo,
   TemporalPrecision,
   isTemporalInfo,
   nativePrecisionFromSourceColumns,
+  parseTemporalIso,
   sourceColumnNames,
   toDataTableTemporalSourceColumns,
 } from "@seasketch/geostats-types";
@@ -127,12 +129,17 @@ export function withComponentMonth(
 
 export function withSpanStart(
   form: DataTableTemporalFormState,
-  spanStartColumn: string
+  spanStartColumn: string,
+  attr?: GeostatsAttribute | null
 ): DataTableTemporalFormState {
   return applyNativeDefaults({
     ...form,
     spanStartColumn,
     spanEndColumn: spanStartColumn ? form.spanEndColumn : "",
+    spanFormat:
+      spanStartColumn && attr
+        ? inferredInstantFormat(attr)
+        : form.spanFormat,
   });
 }
 
@@ -307,5 +314,157 @@ export function temporalInfoWithResolutions(
     defaultViewResolution: form.defaultViewResolution,
     supportedViewResolutions: form.supportedViewResolutions,
     authoredBy: "admin",
+  };
+}
+
+export type TemporalColumnUnavailableReason =
+  | "not_numeric"
+  | "date_string"
+  | "unsupported_type";
+
+export type TemporalColumnAvailability =
+  | { available: true }
+  | {
+      available: false;
+      reason: TemporalColumnUnavailableReason;
+      suggestedMode?: Exclude<DataTableTemporalMode, "none">;
+    };
+
+const SLASH_DATE_RE = /^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/;
+const YEAR_STRING_RE = /^\d{4}(?:\.0+)?$/;
+
+function columnSampleValues(attr: GeostatsAttribute, limit = 20): string[] {
+  return Object.keys(attr.values || {})
+    .filter((value) => value.length > 0)
+    .slice(0, limit);
+}
+
+function classifySlashDate(
+  sample: string
+): "mdy" | "dmy" | "ambiguous" | null {
+  const match = SLASH_DATE_RE.exec(sample);
+  if (!match) {
+    return null;
+  }
+  const first = parseInt(match[1], 10);
+  const second = parseInt(match[2], 10);
+  const firstLooksLikeDay = first > 12;
+  const secondLooksLikeDay = second > 12;
+  if (firstLooksLikeDay && !secondLooksLikeDay) {
+    return "dmy";
+  }
+  if (secondLooksLikeDay && !firstLooksLikeDay) {
+    return "mdy";
+  }
+  return "ambiguous";
+}
+
+/** True when sample values look like ISO or slash-formatted dates. */
+export function columnLooksLikeDateString(attr: GeostatsAttribute): boolean {
+  if (attr.type === "number" || attr.type === "boolean") {
+    return false;
+  }
+  const samples = columnSampleValues(attr);
+  if (samples.length === 0) {
+    return false;
+  }
+  let hits = 0;
+  for (const sample of samples) {
+    if (parseTemporalIso(sample) || classifySlashDate(sample)) {
+      hits += 1;
+    }
+  }
+  return hits >= Math.max(1, Math.ceil(samples.length / 2));
+}
+
+export function inferredInstantFormat(
+  attr: GeostatsAttribute
+): TemporalDateFormat {
+  if (attr.type === "number") {
+    return "year";
+  }
+  const samples = columnSampleValues(attr);
+  let iso = 0;
+  let mdy = 0;
+  let dmy = 0;
+  let slashAmbiguous = 0;
+  let year = 0;
+  for (const sample of samples) {
+    const slash = classifySlashDate(sample);
+    if (slash === "mdy") {
+      mdy += 1;
+    } else if (slash === "dmy") {
+      dmy += 1;
+    } else if (slash === "ambiguous") {
+      slashAmbiguous += 1;
+    } else if (parseTemporalIso(sample) && /[-T ]/.test(sample)) {
+      iso += 1;
+    } else if (YEAR_STRING_RE.test(sample)) {
+      year += 1;
+    }
+  }
+  const slash = mdy + dmy + slashAmbiguous;
+  if (iso > 0 && iso >= slash && iso >= year) {
+    return "iso";
+  }
+  if (slash > 0 && slash >= year) {
+    return dmy > mdy ? "dmy" : "mdy";
+  }
+  if (year > 0) {
+    return "year";
+  }
+  return "iso";
+}
+
+export function withInstantColumn(
+  form: DataTableTemporalFormState,
+  instantColumn: string,
+  attr?: GeostatsAttribute | null
+): DataTableTemporalFormState {
+  return applyNativeDefaults({
+    ...form,
+    instantColumn,
+    instantFormat:
+      instantColumn && attr
+        ? inferredInstantFormat(attr)
+        : form.instantFormat,
+  });
+}
+
+/**
+ * Which source columns can be chosen on a given mapping tab. Invalid columns
+ * stay visible so admins can tell they need a different tab.
+ */
+export function temporalColumnAvailability(
+  attr: GeostatsAttribute,
+  mode: Exclude<DataTableTemporalMode, "none">
+): TemporalColumnAvailability {
+  if (mode === "components") {
+    if (attr.type === "number") {
+      return { available: true };
+    }
+    if (columnLooksLikeDateString(attr)) {
+      return {
+        available: false,
+        reason: "date_string",
+        suggestedMode: "instant",
+      };
+    }
+    return {
+      available: false,
+      reason: "not_numeric",
+      suggestedMode: "instant",
+    };
+  }
+  if (
+    attr.type === "string" ||
+    attr.type === "number" ||
+    attr.type === "mixed"
+  ) {
+    return { available: true };
+  }
+  return {
+    available: false,
+    reason: "unsupported_type",
   };
 }

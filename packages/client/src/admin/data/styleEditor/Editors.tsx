@@ -321,6 +321,7 @@ export const Select = {
       style={{
         backdropFilter: "blur(8px)",
         stroke: "white",
+        ...props.style,
       }}
       // @ts-ignore
       ref={ref}
@@ -342,7 +343,7 @@ export const Select = {
       className={`text-sm leading-none rounded flex items-start flex-col justify-center relative select-none bg-opacity-30 border border-transparent p-1 py-1.5 ${props.className}`}
       // @ts-ignore
       ref={ref}
-      style={{ minWidth: 80 }}
+      style={{ minWidth: 80, ...props.style }}
     />
   )),
 };
