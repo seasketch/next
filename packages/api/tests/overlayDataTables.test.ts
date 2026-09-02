@@ -117,6 +117,154 @@ describe("overlay_data_tables", () => {
     );
   });
 
+  test("complete writes temporal only when the processor supplies it", async () => {
+    await projectTransaction(
+      pool,
+      "public",
+      async (conn, projectId, adminId) => {
+        await createSession(conn, adminId, true, false, projectId);
+        const { tocId } = await createDraftLayer(conn, projectId, adminId);
+        const temporal = {
+          version: 1,
+          granularity: "row",
+          coverage: {
+            kind: "interval",
+            start: "2018",
+            end: "2019",
+            precision: "year",
+          },
+          nativeResolution: "year",
+          defaultViewResolution: "year",
+          mapping: {
+            type: "row",
+            startColumn: "_when_start",
+            endColumn: "_when_end",
+            sourceColumns: {
+              kind: "instant",
+              column: "survey_year",
+              format: "year",
+            },
+          },
+          authoredBy: "admin",
+        };
+
+        await asPostgres(
+          conn,
+          async () => {
+            const jobId = (await conn.oneFirst(sql`
+            insert into project_background_jobs (project_id, title, type, user_id)
+            values (${projectId}, 'test', 'data_table_upload', ${adminId}) returning id`)) as string;
+            await conn.any(sql`
+            insert into overlay_data_table_uploads (
+              project_background_job_id, table_of_contents_item_id, filename, content_type,
+              overlay_geostats, temporal_config
+            ) values (
+              ${jobId}, ${tocId}, 'fish.csv', 'text/csv', '{"layers":[]}'::jsonb,
+              ${sql.json({
+                sourceColumns: {
+                  kind: "instant",
+                  column: "survey_year",
+                  format: "year",
+                },
+              })}
+            )`);
+            await conn.any(sql`
+              select complete_overlay_data_table_upload(
+                ${jobId}, 'fish', 'site_id', 'id', 10,
+                'r2://bucket/a.parquet', 'r2://bucket/a.json',
+                ${sql.json(temporal)}
+              )`);
+          },
+          { userId: adminId, projectId },
+        );
+
+        const row = await conn.one(
+          sql`select temporal from overlay_data_tables
+              where table_of_contents_item_id = ${tocId} and deleted_at is null`,
+        );
+        expect(row.temporal).toEqual(temporal);
+      },
+    );
+  });
+
+  test("reprocess stores ephemeral config and leaves table temporal untouched", async () => {
+    await projectTransaction(
+      pool,
+      "public",
+      async (conn, projectId, adminId) => {
+        await createSession(conn, adminId, true, false, projectId);
+        const { tocId, sourceId } = await createDraftLayer(
+          conn,
+          projectId,
+          adminId,
+        );
+        await conn.any(sql`
+          update table_of_contents_items
+          set enable_data_tables = true, data_table_join_column = 'id'
+          where id = ${tocId}`);
+        await conn.any(sql`
+          update data_sources
+          set geostats = '{"layers":[{"attributes":[]}]}'::jsonb
+          where id = ${sourceId}`);
+
+        const tableId = Number(
+          await conn.oneFirst(sql`
+            insert into overlay_data_tables (
+              table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
+              row_count, created_by, version, parquet_remote, column_stats_remote,
+              temporal
+            ) values (
+              ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId}, 1,
+              'r2://bucket/old.parquet', 'r2://bucket/old.json',
+              ${sql.json({
+                version: 1,
+                granularity: "row",
+                coverage: {
+                  kind: "interval",
+                  start: "2018",
+                  end: "2019",
+                  precision: "year",
+                },
+                nativeResolution: "year",
+                defaultViewResolution: "year",
+                authoredBy: "admin",
+              })}
+            ) returning id`),
+        );
+
+        const previous = await conn.oneFirst(
+          sql`select temporal from overlay_data_tables where id = ${tableId}`,
+        );
+
+        const upload = await conn.one(sql`
+          select * from create_overlay_data_table_reprocess(
+            ${tableId},
+            ${sql.json({
+              sourceColumns: {
+                kind: "instant",
+                column: "survey_year",
+                format: "year",
+              },
+            })}
+          )`);
+
+        expect(upload.reprocess_of_overlay_data_table_id).toBe(tableId);
+        expect(upload.temporal_config).toEqual({
+          sourceColumns: {
+            kind: "instant",
+            column: "survey_year",
+            format: "year",
+          },
+        });
+
+        const after = await conn.oneFirst(
+          sql`select temporal from overlay_data_tables where id = ${tableId}`,
+        );
+        expect(after).toEqual(previous);
+      },
+    );
+  });
+
   test("non-admin cannot insert overlay data tables", async () => {
     await projectTransaction(
       pool,
@@ -147,6 +295,30 @@ describe("overlay_data_tables", () => {
         await createSession(conn, adminId, true, false, projectId);
         const { tocId } = await createDraftLayer(conn, projectId, adminId);
 
+        const temporal = {
+          version: 1,
+          granularity: "row",
+          coverage: {
+            kind: "interval",
+            start: "2018",
+            end: "2019",
+            precision: "year",
+          },
+          nativeResolution: "year",
+          defaultViewResolution: "year",
+          mapping: {
+            type: "row",
+            startColumn: "_when_start",
+            endColumn: "_when_end",
+            sourceColumns: {
+              kind: "instant",
+              column: "survey_year",
+              format: "year",
+            },
+          },
+          authoredBy: "admin",
+        };
+
         await asPostgres(
           conn,
           async () => {
@@ -158,13 +330,15 @@ describe("overlay_data_tables", () => {
             insert into overlay_data_tables (
               table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
               row_count, created_by, parquet_remote, column_stats_remote,
-              visualization_columns, visualization_ops, required_filter_columns
+              visualization_columns, visualization_ops, required_filter_columns,
+              temporal
             ) values (
               ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId},
               'r2://bucket/projects/test/public/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/dataTables/u1/data.parquet',
               'r2://bucket/projects/test/public/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/dataTables/u1/column-stats.json',
               ${sql.array(['count'], 'text')}, ${sql.array(['sum'], 'text')},
-              ${sql.array(['year'], 'text')}
+              ${sql.array(['year'], 'text')},
+              ${sql.json(temporal)}
             )`);
             // Soft-deleted draft history must not be published.
             await conn.any(sql`
@@ -194,7 +368,7 @@ describe("overlay_data_tables", () => {
 
         const published = await conn.many(sql`
           select odt.name, toc.is_draft, odt.visualization_columns, odt.visualization_ops,
-            odt.required_filter_columns, odt.parquet_remote, odt.stable_id
+            odt.required_filter_columns, odt.parquet_remote, odt.stable_id, odt.temporal
           from overlay_data_tables odt
           inner join table_of_contents_items toc on toc.id = odt.table_of_contents_item_id
           where odt.project_id = ${projectId} and toc.is_draft = false
@@ -207,6 +381,7 @@ describe("overlay_data_tables", () => {
         expect(published[0].visualization_ops).toEqual(["sum"]);
         expect(published[0].required_filter_columns).toEqual(["year"]);
         expect(published[0].stable_id).toBe(draftStableId);
+        expect(published[0].temporal).toEqual(temporal);
 
         const draftStillThere = await conn.oneFirst(sql`
           select count(*) from overlay_data_tables odt
@@ -409,6 +584,225 @@ describe("overlay_data_tables", () => {
             name: "fish",
             version: 1,
             parquet_url: "https://uploads.example.org/old.parquet",
+          }),
+        );
+      },
+    );
+  });
+
+  test("in-place temporal save records data_table:temporal changelog", async () => {
+    await projectTransaction(
+      pool,
+      "public",
+      async (conn, projectId, adminId) => {
+        await createSession(conn, adminId, true, false, projectId);
+        const { tocId } = await createDraftLayer(conn, projectId, adminId);
+        const previous = {
+          version: 1,
+          granularity: "row",
+          coverage: {
+            kind: "interval",
+            start: "2018",
+            end: "2019",
+            precision: "year",
+          },
+          nativeResolution: "year",
+          defaultViewResolution: "year",
+          authoredBy: "admin",
+        };
+        const next = {
+          ...previous,
+          defaultViewResolution: "month",
+          supportedViewResolutions: ["year", "month"],
+        };
+
+        let tableId = 0;
+        await asPostgres(
+          conn,
+          async () => {
+            tableId = Number(
+              await conn.oneFirst(sql`
+                insert into overlay_data_tables (
+                  table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
+                  row_count, created_by, version, parquet_remote, column_stats_remote,
+                  temporal
+                ) values (
+                  ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId}, 1,
+                  'r2://bucket/a.parquet', 'r2://bucket/a.json',
+                  ${sql.json(previous)}
+                ) returning id`),
+            );
+          },
+          { userId: adminId, projectId },
+        );
+
+        await conn.any(sql`
+          select update_overlay_data_table_temporal(
+            ${tableId},
+            ${sql.json(next)}
+          )`);
+
+        const changelog = await conn.one(sql`
+          select field_group, editor_id, from_summary, to_summary, meta
+          from change_logs
+          where entity_type = 'overlay_data_table'
+            and entity_id = ${tableId}
+            and field_group = 'data_table:temporal'
+          order by last_at desc
+          limit 1`);
+        expect(changelog.editor_id).toBe(adminId);
+        expect(changelog.meta).toEqual(
+          expect.objectContaining({
+            table_of_contents_item_id: tocId,
+            reprocessed: false,
+          }),
+        );
+        expect(changelog.from_summary).toEqual(
+          expect.objectContaining({
+            name: "fish",
+            version: 1,
+            temporal: previous,
+          }),
+        );
+        expect(changelog.to_summary).toEqual(
+          expect.objectContaining({
+            name: "fish",
+            version: 1,
+            temporal: next,
+          }),
+        );
+      },
+    );
+  });
+
+  test("temporal reprocess records data_table:temporal, not replaced", async () => {
+    await projectTransaction(
+      pool,
+      "public",
+      async (conn, projectId, adminId) => {
+        await createSession(conn, adminId, true, false, projectId);
+        const { tocId } = await createDraftLayer(conn, projectId, adminId);
+        const previous = {
+          version: 1,
+          granularity: "row",
+          coverage: {
+            kind: "interval",
+            start: "2018",
+            end: "2019",
+            precision: "year",
+          },
+          nativeResolution: "year",
+          defaultViewResolution: "year",
+          authoredBy: "admin",
+        };
+        const next = {
+          ...previous,
+          coverage: {
+            kind: "interval",
+            start: "1999",
+            end: "2026",
+            precision: "year",
+          },
+          mapping: {
+            type: "row",
+            startColumn: "_when_start",
+            endColumn: "_when_end",
+            sourceColumns: {
+              kind: "instant",
+              column: "survey_year",
+              format: "year",
+            },
+          },
+        };
+
+        let jobId: string;
+        let oldId: number;
+        await asPostgres(
+          conn,
+          async () => {
+            jobId = (await conn.oneFirst(sql`
+            insert into project_background_jobs (project_id, title, type, user_id)
+            values (${projectId}, 'reprocess', 'data_table_upload', ${adminId}) returning id`)) as string;
+
+            oldId = Number(await conn.oneFirst(sql`
+            insert into overlay_data_tables (
+              table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
+              row_count, created_by, version, parquet_remote, column_stats_remote,
+              temporal
+            ) values (
+              ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId}, 1,
+              'r2://bucket/old.parquet', 'r2://bucket/old.json',
+              ${sql.json(previous)}
+            ) returning id`));
+
+            await conn.any(sql`
+            insert into overlay_data_table_uploads (
+              project_background_job_id, table_of_contents_item_id, filename, content_type,
+              overlay_geostats, replace_overlay_data_table_id,
+              reprocess_of_overlay_data_table_id, temporal_config
+            ) values (
+              ${jobId}, ${tocId}, 'reprocess.parquet', 'application/vnd.apache.parquet',
+              '{"layers":[{"attributes":[]}]}'::jsonb,
+              ${oldId}, ${oldId},
+              ${sql.json({
+                sourceColumns: {
+                  kind: "instant",
+                  column: "survey_year",
+                  format: "year",
+                },
+              })}
+            )`);
+            await clearSession(conn);
+            await conn.any(sql`
+              select set_config('seasketch.uploads_base_url', 'https://uploads.example.org', true)
+            `);
+            await conn.any(sql`
+              select complete_overlay_data_table_upload(
+                ${jobId}, 'fish', 'site_id', 'id', 10,
+                'r2://bucket/new.parquet', 'r2://bucket/new.json',
+                ${sql.json(next)}
+              )`);
+          },
+          { userId: adminId, projectId },
+        );
+
+        const groups = await conn.any(sql`
+          select field_group
+          from change_logs
+          where entity_type = 'overlay_data_table'
+            and (meta->>'table_of_contents_item_id')::int = ${tocId}
+          order by last_at desc`);
+        expect(groups.map((row) => row.field_group)).toEqual([
+          "data_table:temporal",
+        ]);
+
+        const changelog = await conn.one(sql`
+          select field_group, from_summary, to_summary, meta
+          from change_logs
+          where entity_type = 'overlay_data_table'
+            and field_group = 'data_table:temporal'
+            and (meta->>'table_of_contents_item_id')::int = ${tocId}
+          order by last_at desc
+          limit 1`);
+        expect(changelog.meta).toEqual(
+          expect.objectContaining({
+            table_of_contents_item_id: tocId,
+            reprocessed: true,
+          }),
+        );
+        expect(changelog.from_summary).toEqual(
+          expect.objectContaining({
+            name: "fish",
+            version: 1,
+            temporal: previous,
+            parquet_url: "https://uploads.example.org/old.parquet",
+          }),
+        );
+        expect(changelog.to_summary).toEqual(
+          expect.objectContaining({
+            name: "fish",
+            version: 2,
+            temporal: next,
           }),
         );
       },

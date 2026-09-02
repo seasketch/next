@@ -58,6 +58,7 @@ import {
   buildDataTableStatesFromLayers,
   layerStatesForPreferences,
 } from "./dataTableLayerState";
+import { TemporalClock } from "@seasketch/geostats-types";
 import {
   DATA_TABLE_ACTIVE_COLOR,
   DATA_TABLE_CIRCLE_FILL_OPACITY,
@@ -66,11 +67,15 @@ import {
   DATA_TABLE_LOADING_FILL_OPACITY,
   DATA_TABLE_LOADING_STROKE_OPACITY,
   DATA_TABLE_NO_DATA_FILL_OPACITY,
+  DATA_TABLE_NO_DATA_STROKE_COLOR,
+  DATA_TABLE_NO_DATA_STROKE_OPACITY,
+  DATA_TABLE_NO_DATA_STROKE_WIDTH,
   DATA_TABLE_NO_DATA_VALUE,
   DATA_TABLE_PAINT_TRANSITION,
   DATA_TABLE_VALUE_PROPERTY,
   DATA_TABLE_ZERO_FILL_OPACITY,
   DATA_TABLE_ZERO_SENTINEL,
+  DATA_TABLE_ZERO_STROKE_WIDTH,
   DATA_TABLE_NO_DATA_COLOR,
   buildDataTableCircleRadiusExpression,
   buildDataTableValueExpression,
@@ -354,6 +359,7 @@ class MapContextManager extends EventEmitter {
   private temporallyHiddenTocIds = new Set<string>();
   /** Dedupes stacked `idle` listeners for data-table feature-state sync. */
   private dataTableFeatureStateSyncIdleQueued = false;
+  private dataTableClockRaf: number | null = null;
 
   constructor(
     initialState: MapContextInterface,
@@ -890,16 +896,23 @@ class MapContextManager extends EventEmitter {
           isLoading,
           DATA_TABLE_LOADING_STROKE_OPACITY,
           isNoData,
-          DATA_TABLE_CIRCLE_STROKE_OPACITY,
+          DATA_TABLE_NO_DATA_STROKE_OPACITY,
           1,
         ],
         "circle-stroke-color": [
           "case",
           isNoData,
-          DATA_TABLE_NO_DATA_COLOR,
+          DATA_TABLE_NO_DATA_STROKE_COLOR,
           DATA_TABLE_ACTIVE_COLOR,
         ],
-        "circle-stroke-width": ["case", isNoData, 2, isZero, 2, 0],
+        "circle-stroke-width": [
+          "case",
+          isNoData,
+          DATA_TABLE_NO_DATA_STROKE_WIDTH,
+          isZero,
+          DATA_TABLE_ZERO_STROKE_WIDTH,
+          0,
+        ],
         "circle-radius": buildDataTableCircleRadiusExpression({
           valueExpression,
           scaleMin: 0,
@@ -993,7 +1006,7 @@ class MapContextManager extends EventEmitter {
       : ([
           "case",
           isNoData,
-          DATA_TABLE_CIRCLE_STROKE_OPACITY,
+          DATA_TABLE_NO_DATA_STROKE_OPACITY,
           isZero,
           DATA_TABLE_CIRCLE_STROKE_OPACITY,
           strokeOpacity,
@@ -1011,12 +1024,12 @@ class MapContextManager extends EventEmitter {
       : ([
           "case",
           isNoData,
-          DATA_TABLE_NO_DATA_COLOR,
+          DATA_TABLE_NO_DATA_STROKE_COLOR,
           activeStrokeColor,
         ] as Expression);
     const symbolStrokeWidth = loading
       ? 1
-      : (["case", isNoData, 1.5, 1] as Expression);
+      : (["case", isNoData, DATA_TABLE_NO_DATA_STROKE_WIDTH, 1] as Expression);
     return {
       // eslint-disable-next-line i18next/no-literal-string
       id: `${idForLayer(layer, 0)}-data-table`,
@@ -3112,9 +3125,47 @@ class MapContextManager extends EventEmitter {
   }
 
   /**
-   * Replace the set of TOC items hidden by the map clock. Does not change
-   * TOC checkboxes or legend-eye state. Pass [] to clear the filter.
+   * Update the map clock used for data-table queries. Instant clocks share
+   * one cached `when.step` series; window clocks query the selected range.
+   * Painting coalesces to one animation frame so dragging can scrub live.
    */
+  setTemporalClock(clock: TemporalClock | null) {
+    this.dataTableQueryManager.setTemporalClock(clock);
+    if (this.dataTableClockRaf != null) {
+      return;
+    }
+    this.dataTableClockRaf = requestAnimationFrame(() => {
+      this.dataTableClockRaf = null;
+      this.syncDataTableFeatureStates();
+    });
+  }
+
+  setOnDataTableSeriesCountsChange(
+    callback:
+      | ((counts: {
+          [tableStableId: string]: { [step: string]: number };
+        }) => void)
+      | null
+  ) {
+    this.dataTableQueryManager.setOnSeriesCountsChange(callback);
+  }
+
+  getDataTableSeriesCounts(): {
+    [tableStableId: string]: { [step: string]: number };
+  } {
+    return this.dataTableQueryManager.getSeriesCounts();
+  }
+
+  setOnDataTableQueryErrorsChange(
+    callback: ((errors: string[]) => void) | null
+  ) {
+    this.dataTableQueryManager.setOnQueryErrorsChange(callback);
+  }
+
+  getDataTableQueryErrors(): string[] {
+    return this.dataTableQueryManager.getQueryErrors();
+  }
+
   setTemporallyFilteredTocItems(stableIds: string[]) {
     if (
       this.temporallyHiddenTocIds.size === stableIds.length &&

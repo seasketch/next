@@ -258,7 +258,8 @@ CREATE TYPE public.change_log_field_group AS ENUM (
     'data_table:replaced',
     'data_table:rollback',
     'data_table:visualization_settings_updated',
-    'layer:temporal'
+    'layer:temporal',
+    'data_table:temporal'
 );
 
 
@@ -5942,10 +5943,10 @@ COMMENT ON COLUMN public.overlay_data_tables.temporal IS '@omit';
 
 
 --
--- Name: complete_overlay_data_table_upload(uuid, text, text, text, integer, text, text); Type: FUNCTION; Schema: public; Owner: -
+-- Name: complete_overlay_data_table_upload(uuid, text, text, text, integer, text, text, jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.complete_overlay_data_table_upload(job_id uuid, p_name text, p_join_column text, p_overlay_join_column text, p_row_count integer, p_parquet_remote text, p_column_stats_remote text) RETURNS public.overlay_data_tables
+CREATE FUNCTION public.complete_overlay_data_table_upload(job_id uuid, p_name text, p_join_column text, p_overlay_join_column text, p_row_count integer, p_parquet_remote text, p_column_stats_remote text, p_temporal jsonb DEFAULT NULL::jsonb) RETURNS public.overlay_data_tables
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
 declare
@@ -5997,7 +5998,8 @@ begin
     visualization_columns,
     visualization_ops,
     required_filter_columns,
-    stable_id
+    stable_id,
+    temporal
   ) values (
     upload.table_of_contents_item_id,
     job.project_id,
@@ -6012,7 +6014,8 @@ begin
     coalesce(old_row.visualization_columns, '{}'),
     coalesce(old_row.visualization_ops, '{mean}'),
     coalesce(old_row.required_filter_columns, '{}'),
-    coalesce(old_row.stable_id, uuid_generate_v4())
+    coalesce(old_row.stable_id, uuid_generate_v4()),
+    p_temporal
   ) returning * into new_row;
 
   if upload.replace_overlay_data_table_id is not null then
@@ -6022,22 +6025,51 @@ begin
 
     editor_id := coalesce(job.user_id, nullif(current_setting('session.user_id', true), '')::int);
     if editor_id is not null then
-      perform record_changelog(
-        new_row.project_id,
-        editor_id,
-        'overlay_data_table',
-        new_row.id,
-        'data_table:replaced'::change_log_field_group,
-        jsonb_build_object(
-          'name', old_row.name,
-          'version', old_row.version,
-          'id', old_row.id,
-          'parquet_url', overlay_data_table_parquet_public_url(old_row.parquet_remote)
-        ),
-        jsonb_build_object('name', new_row.name, 'version', new_row.version, 'id', new_row.id),
-        null, null,
-        jsonb_build_object('table_of_contents_item_id', new_row.table_of_contents_item_id)
-      );
+      if upload.reprocess_of_overlay_data_table_id is not null then
+        -- Temporal reprocess: distinct from a CSV/source replacement.
+        perform record_changelog(
+          new_row.project_id,
+          editor_id,
+          'overlay_data_table',
+          new_row.id,
+          'data_table:temporal'::change_log_field_group,
+          jsonb_build_object(
+            'name', old_row.name,
+            'version', old_row.version,
+            'id', old_row.id,
+            'temporal', old_row.temporal,
+            'parquet_url', overlay_data_table_parquet_public_url(old_row.parquet_remote)
+          ),
+          jsonb_build_object(
+            'name', new_row.name,
+            'version', new_row.version,
+            'id', new_row.id,
+            'temporal', new_row.temporal
+          ),
+          null, null,
+          jsonb_build_object(
+            'table_of_contents_item_id', new_row.table_of_contents_item_id,
+            'reprocessed', true
+          )
+        );
+      else
+        perform record_changelog(
+          new_row.project_id,
+          editor_id,
+          'overlay_data_table',
+          new_row.id,
+          'data_table:replaced'::change_log_field_group,
+          jsonb_build_object(
+            'name', old_row.name,
+            'version', old_row.version,
+            'id', old_row.id,
+            'parquet_url', overlay_data_table_parquet_public_url(old_row.parquet_remote)
+          ),
+          jsonb_build_object('name', new_row.name, 'version', new_row.version, 'id', new_row.id),
+          null, null,
+          jsonb_build_object('table_of_contents_item_id', new_row.table_of_contents_item_id)
+        );
+      end if;
     end if;
   else
     editor_id := coalesce(job.user_id, nullif(current_setting('session.user_id', true), '')::int);
@@ -6063,6 +6095,13 @@ begin
   return new_row;
 end;
 $$;
+
+
+--
+-- Name: FUNCTION complete_overlay_data_table_upload(job_id uuid, p_name text, p_join_column text, p_overlay_join_column text, p_row_count integer, p_parquet_remote text, p_column_stats_remote text, p_temporal jsonb); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.complete_overlay_data_table_upload(job_id uuid, p_name text, p_join_column text, p_overlay_join_column text, p_row_count integer, p_parquet_remote text, p_column_stats_remote text, p_temporal jsonb) IS '@omit';
 
 
 --
@@ -8454,7 +8493,9 @@ CREATE TABLE public.overlay_data_table_uploads (
     replace_overlay_data_table_id integer,
     error_details jsonb,
     created_at timestamp with time zone DEFAULT now(),
-    updated_at timestamp with time zone DEFAULT now()
+    updated_at timestamp with time zone DEFAULT now(),
+    temporal_config jsonb,
+    reprocess_of_overlay_data_table_id integer
 );
 
 
@@ -8463,6 +8504,154 @@ CREATE TABLE public.overlay_data_table_uploads (
 --
 
 COMMENT ON TABLE public.overlay_data_table_uploads IS '@omit delete';
+
+
+--
+-- Name: COLUMN overlay_data_table_uploads.temporal_config; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.overlay_data_table_uploads.temporal_config IS 'Ephemeral DataTableTemporalConfig for a reprocess (or CSV replace) job. Not copied onto overlay_data_tables until the job completes successfully.';
+
+
+--
+-- Name: COLUMN overlay_data_table_uploads.reprocess_of_overlay_data_table_id; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.overlay_data_table_uploads.reprocess_of_overlay_data_table_id IS 'When set, the processor reads the current parquet for this table instead of a newly uploaded CSV.';
+
+
+--
+-- Name: create_overlay_data_table_reprocess(integer, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_overlay_data_table_reprocess(table_id integer, temporal_config jsonb) RETURNS public.overlay_data_table_uploads
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+declare
+  upload overlay_data_table_uploads;
+  job project_background_jobs;
+  tbl overlay_data_tables;
+  pid int;
+  geostats jsonb;
+  join_col text;
+  enabled boolean;
+begin
+  select *
+    into tbl
+  from overlay_data_tables
+  where id = table_id
+    and deleted_at is null;
+  if tbl is null then
+    raise exception 'Data table not found or not active';
+  end if;
+
+  select project_id, enable_data_tables, data_table_join_column
+    into pid, enabled, join_col
+  from table_of_contents_items
+  where id = tbl.table_of_contents_item_id
+    and is_draft = true
+    and is_folder = false;
+  if pid is null then
+    raise exception 'Can only reprocess data tables on draft layers';
+  end if;
+  if not session_is_admin(pid) then
+    raise exception 'permission denied';
+  end if;
+  if not coalesce(enabled, false) then
+    raise exception 'Data tables are not enabled for this layer';
+  end if;
+  if temporal_config is null or jsonb_typeof(temporal_config) <> 'object' then
+    raise exception 'temporal_config is required';
+  end if;
+  if temporal_config->'sourceColumns' is null then
+    raise exception 'temporal_config.sourceColumns is required';
+  end if;
+
+  select ds.geostats into geostats
+  from table_of_contents_items toc
+  inner join data_layers dl on dl.id = toc.data_layer_id
+  inner join data_sources ds on ds.id = dl.data_source_id
+  where toc.id = tbl.table_of_contents_item_id;
+  if geostats is null then
+    raise exception 'Overlay layer has no geostats';
+  end if;
+
+  if exists (
+    select 1
+    from overlay_data_table_uploads odtu
+    inner join project_background_jobs pbj on pbj.id = odtu.project_background_job_id
+    where odtu.replace_overlay_data_table_id = tbl.id
+      and pbj.state in ('queued', 'running')
+  ) then
+    raise exception 'There is already an active upload or reprocess for this data table';
+  end if;
+
+  insert into project_background_jobs (
+    project_id,
+    title,
+    user_id,
+    type,
+    timeout_at
+  ) values (
+    pid,
+    'Reprocess data table temporal ' || tbl.name,
+    nullif(current_setting('session.user_id', true), '')::integer,
+    'data_table_upload',
+    timezone('utc', now()) + interval '15 minutes'
+  ) returning * into job;
+
+  insert into overlay_data_table_uploads (
+    project_background_job_id,
+    table_of_contents_item_id,
+    filename,
+    content_type,
+    processing_options,
+    overlay_geostats,
+    overlay_join_column,
+    replace_overlay_data_table_id,
+    reprocess_of_overlay_data_table_id,
+    temporal_config
+  ) values (
+    job.id,
+    tbl.table_of_contents_item_id,
+    'reprocess-' || tbl.stable_id::text || '.parquet',
+    'application/vnd.apache.parquet',
+    jsonb_build_object(
+      'joinColumn', tbl.join_column,
+      'overlayJoinColumn', tbl.overlay_join_column,
+      'name', tbl.name
+    ),
+    geostats,
+    coalesce(join_col, tbl.overlay_join_column),
+    tbl.id,
+    tbl.id,
+    temporal_config
+  ) returning * into upload;
+
+  update project_background_jobs
+  set
+    state = 'running',
+    progress_message = 'queued',
+    started_at = now(),
+    timeout_at = timezone('utc', now()) + interval '60 seconds'
+  where id = job.id;
+
+  perform graphile_worker.add_job(
+    'processDataTableUpload',
+    json_build_object('jobId', job.id),
+    max_attempts := 1
+  );
+
+  return upload;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION create_overlay_data_table_reprocess(table_id integer, temporal_config jsonb); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.create_overlay_data_table_reprocess(table_id integer, temporal_config jsonb) IS 'Admin-only. Starts a draft reprocess job that derives _when_* columns from the current parquet using an ephemeral temporal_config. Does not write overlay_data_tables.temporal until the job succeeds.';
 
 
 --
@@ -25569,6 +25758,8 @@ CREATE FUNCTION public.update_overlay_data_table_temporal(p_overlay_data_table_i
     AS $$
 declare
   v_row public.overlay_data_tables;
+  v_old jsonb;
+  v_editor int;
 begin
   select * into v_row from overlay_data_tables where id = p_overlay_data_table_id;
   if v_row.id is null then
@@ -25583,10 +25774,41 @@ begin
   ) then
     raise exception 'Can only update temporal coverage on draft data tables';
   end if;
+  v_old := v_row.temporal;
+  if v_old is not distinct from p_temporal then
+    return v_row;
+  end if;
   update overlay_data_tables
     set temporal = p_temporal
     where id = p_overlay_data_table_id
     returning * into v_row;
+  v_editor := nullif(current_setting('session.user_id', true), '')::int;
+  if v_editor is not null then
+    perform record_changelog(
+      v_row.project_id,
+      v_editor,
+      'overlay_data_table',
+      v_row.id,
+      'data_table:temporal'::change_log_field_group,
+      jsonb_build_object(
+        'name', v_row.name,
+        'version', v_row.version,
+        'id', v_row.id,
+        'temporal', v_old
+      ),
+      jsonb_build_object(
+        'name', v_row.name,
+        'version', v_row.version,
+        'id', v_row.id,
+        'temporal', v_row.temporal
+      ),
+      null, null,
+      jsonb_build_object(
+        'table_of_contents_item_id', v_row.table_of_contents_item_id,
+        'reprocessed', false
+      )
+    );
+  end if;
   return v_row;
 end;
 $$;
@@ -31478,6 +31700,14 @@ ALTER TABLE ONLY public.overlay_data_table_uploads
 
 
 --
+-- Name: overlay_data_table_uploads overlay_data_table_uploads_reprocess_of_overlay_data_table_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.overlay_data_table_uploads
+    ADD CONSTRAINT overlay_data_table_uploads_reprocess_of_overlay_data_table_fkey FOREIGN KEY (reprocess_of_overlay_data_table_id) REFERENCES public.overlay_data_tables(id);
+
+
+--
 -- Name: overlay_data_table_uploads overlay_data_table_uploads_table_of_contents_item_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -36323,10 +36553,10 @@ GRANT SELECT ON TABLE public.overlay_data_tables TO seasketch_user;
 
 
 --
--- Name: FUNCTION complete_overlay_data_table_upload(job_id uuid, p_name text, p_join_column text, p_overlay_join_column text, p_row_count integer, p_parquet_remote text, p_column_stats_remote text); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION complete_overlay_data_table_upload(job_id uuid, p_name text, p_join_column text, p_overlay_join_column text, p_row_count integer, p_parquet_remote text, p_column_stats_remote text, p_temporal jsonb); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.complete_overlay_data_table_upload(job_id uuid, p_name text, p_join_column text, p_overlay_join_column text, p_row_count integer, p_parquet_remote text, p_column_stats_remote text) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.complete_overlay_data_table_upload(job_id uuid, p_name text, p_join_column text, p_overlay_join_column text, p_row_count integer, p_parquet_remote text, p_column_stats_remote text, p_temporal jsonb) FROM PUBLIC;
 
 
 --
@@ -37001,6 +37231,14 @@ GRANT ALL ON FUNCTION public.create_metadata_xml_output(data_source_id integer, 
 --
 
 GRANT SELECT ON TABLE public.overlay_data_table_uploads TO seasketch_user;
+
+
+--
+-- Name: FUNCTION create_overlay_data_table_reprocess(table_id integer, temporal_config jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_overlay_data_table_reprocess(table_id integer, temporal_config jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_overlay_data_table_reprocess(table_id integer, temporal_config jsonb) TO seasketch_user;
 
 
 --

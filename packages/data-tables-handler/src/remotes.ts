@@ -52,6 +52,24 @@ export async function putObject(
   console.log(`putObject ${filepath} (${bytes(fileSizeBytes)}) to ${remote}`);
 }
 
+/** Download an existing hosted parquet (or other object) from R2. */
+export async function getR2Object(
+  remote: string,
+  filepath: string,
+): Promise<void> {
+  if (!/^r2:\/\//.test(remote)) {
+    throw new Error(`Expected r2:// remote, got ${remote}`);
+  }
+  const parts = remote.replace(/^r2:\/\//, "").split("/");
+  const Bucket = parts[0];
+  const Key = parts.slice(1).join("/");
+  const response = await r2Client.send(
+    new GetObjectCommand({ Bucket, Key }),
+  );
+  const body = response.Body as Readable;
+  await pipeline(body, createWriteStream(filepath));
+}
+
 /** Download the user's raw upload from the S3 staging bucket. */
 export async function getStagingObject(
   filepath: string,

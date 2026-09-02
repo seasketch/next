@@ -246,6 +246,12 @@ export async function computeColumnStatsFromParquet(
 
     const columns: GeostatsAttribute[] = [];
     for (const col of schema) {
+      if (
+        col.column_name === "_when_start" ||
+        col.column_name === "_when_end"
+      ) {
+        continue;
+      }
       const colName = col.column_name.replace(/"/g, '""');
       const type = inferGeostatsType(col.data_type);
       const counts = await all<{ count: number; count_distinct: number }>(

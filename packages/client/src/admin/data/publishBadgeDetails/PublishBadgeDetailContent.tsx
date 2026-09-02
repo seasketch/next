@@ -436,7 +436,7 @@ function DataTableActivityDetails({
         const date = new Date(log.lastAt);
         return (
           <li key={log.id} className="space-y-0.5">
-            <p>{dataTableEventDescription(log.fieldGroup, log.fromSummary, log.toSummary, t)}</p>
+            <p>{dataTableEventDescription(log.fieldGroup, log.fromSummary, log.toSummary, t, log.meta)}</p>
             <time
               dateTime={date.toISOString()}
               title={date.toLocaleString()}

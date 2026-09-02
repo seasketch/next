@@ -25,9 +25,27 @@ export type VisibleTemporalSource = {
   tocStableId: string;
   dataSourceId: number;
   temporal: TemporalInfo;
+  kind?: "layer" | "dataTable";
+  tableStableId?: string;
 };
 
-const MAX_STEPS = 2000;
+/**
+ * Max clock steps the slider will offer. Must stay in sync with
+ * `MAX_WHEN_STEPS` on the overlay query server. 40_000 is ~109 years of
+ * daily steps — enough for monitoring tables without exploding the
+ * histogram (empty days are not painted).
+ */
+export const TIME_SLIDER_MAX_STEPS = 40000;
+const MAX_STEPS = TIME_SLIDER_MAX_STEPS;
+
+const VIEW_RESOLUTIONS: TemporalPrecision[] = [
+  "year",
+  "month",
+  "day",
+  "hour",
+  "minute",
+  "second",
+];
 
 const INTERNAL_TIME: TemporalGranularity[] = [
   "feature",
@@ -112,12 +130,27 @@ export function collectVisibleTemporalSources(
     const layer = layersById[item.dataLayerId];
     if (!layer) continue;
     const source = sourcesById[layer.dataSourceId];
-    if (!source || !isTemporalInfo(source.temporal)) continue;
-    if (!sourceParticipatesInMapClock(source.type)) continue;
+    if (source && isTemporalInfo(source.temporal)) {
+      if (sourceParticipatesInMapClock(source.type)) {
+        out.push({
+          kind: "layer",
+          tocStableId: item.stableId,
+          dataSourceId: source.id,
+          temporal: source.temporal,
+        });
+      }
+    }
+    const activatedStableId = layerStates[item.stableId]?.dataTable?.stableId;
+    if (!activatedStableId) continue;
+    const tables = item.overlayDataTables || [];
+    const table = tables.find((entry) => entry.stableId === activatedStableId);
+    if (!table || !isTemporalInfo(table.temporal)) continue;
     out.push({
+      kind: "dataTable",
       tocStableId: item.stableId,
-      dataSourceId: source.id,
-      temporal: source.temporal,
+      dataSourceId: source?.id || layer.dataSourceId,
+      tableStableId: table.stableId,
+      temporal: table.temporal,
     });
   }
   return out;
@@ -133,14 +166,77 @@ export function domainForSources(
   );
 }
 
+function sourceViewResolution(source: VisibleTemporalSource): TemporalPrecision {
+  return (
+    source.temporal.defaultViewResolution || source.temporal.nativeResolution
+  );
+}
+
 export function resolutionForSources(
   sources: VisibleTemporalSource[]
 ): TemporalPrecision | null {
   if (sources.length === 0) return null;
   return sources.reduce(
-    (acc, source) => coarserPrecision(acc, source.temporal.nativeResolution),
-    sources[0].temporal.nativeResolution
+    (acc, source) => coarserPrecision(acc, sourceViewResolution(source)),
+    sourceViewResolution(sources[0])
   );
+}
+
+export function supportedViewResolutionsForSources(
+  sources: VisibleTemporalSource[]
+): TemporalPrecision[] {
+  if (sources.length === 0) return [];
+  let current: TemporalPrecision[] | null = null;
+  for (const source of sources) {
+    const listed = source.temporal.supportedViewResolutions;
+    const list =
+      listed && listed.length > 0
+        ? listed
+        : [sourceViewResolution(source)];
+    current = current
+      ? current.filter((precision) => list.indexOf(precision) !== -1)
+      : list.slice();
+  }
+  if (current && current.length > 0) {
+    return VIEW_RESOLUTIONS.filter(
+      (precision) => current!.indexOf(precision) !== -1
+    );
+  }
+  const fallback = resolutionForSources(sources);
+  return fallback ? [fallback] : [];
+}
+
+export function viewResolutionsThatFit(
+  domain: TemporalInterval,
+  candidates: TemporalPrecision[],
+  now: number = Date.now()
+): TemporalPrecision[] {
+  return candidates.filter((resolution) =>
+    resolutionFitsDomain(domain, resolution, now)
+  );
+}
+
+/** True when `resolution` covers the domain without exceeding {@link TIME_SLIDER_MAX_STEPS}. */
+export function resolutionFitsDomain(
+  domain: TemporalInterval,
+  resolution: TemporalPrecision,
+  now: number = Date.now()
+): boolean {
+  const expanded = expandTemporalValue(domain, now);
+  if (!expanded || expanded.end <= expanded.start) return false;
+  let count = 0;
+  let t = expanded.start;
+  while (t < expanded.end) {
+    count += 1;
+    if (count > MAX_STEPS) {
+      return false;
+    }
+    const iso = formatIsoFromMs(t, resolution);
+    const next = expandTemporalIso(iso, resolution);
+    if (!next || next.end <= t) break;
+    t = next.end;
+  }
+  return count > 0;
 }
 
 export function formatIsoFromMs(
@@ -258,18 +354,116 @@ export type TimeSliderCoverageMark = {
   id: string;
   left: number;
   width: number;
+  count?: number;
+  heightPct?: number;
+  kind?: "coverage" | "histogram";
 };
+
+function sourceMarkId(source: VisibleTemporalSource): string {
+  return source.tableStableId
+    ? // eslint-disable-next-line i18next/no-literal-string
+      `table:${source.tableStableId}`
+    : source.tocStableId;
+}
+
+function histogramCountForStep(
+  source: VisibleTemporalSource,
+  stepStart: number,
+  stepEnd: number,
+  now: number,
+  stepIso?: string,
+  queryCounts?: { [tableStableId: string]: { [step: string]: number } }
+): number | null {
+  if (source.tableStableId && queryCounts && queryCounts[source.tableStableId]) {
+    if (!stepIso) return 0;
+    return queryCounts[source.tableStableId][stepIso] ?? 0;
+  }
+  const availability = source.temporal.availability;
+  if (!availability || availability.type !== "histogram") {
+    return null;
+  }
+  let count = 0;
+  let matched = false;
+  for (const bin of availability.bins) {
+    const expanded = expandTemporalIso(
+      bin.start,
+      availability.resolution
+    );
+    if (!expanded || expanded.start >= stepEnd || stepStart >= expanded.end) {
+      continue;
+    }
+    matched = true;
+    count += bin.count;
+  }
+  if (!matched) {
+    const coverage = expandTemporalValue(source.temporal.coverage, now);
+    if (
+      coverage &&
+      stepStart < coverage.end &&
+      coverage.start < stepEnd
+    ) {
+      return 0;
+    }
+  }
+  return matched ? count : 0;
+}
 
 /** Coverage painted onto the same equal-width slots as the snap points. */
 export function layoutTimeSliderCoverageMarks(
   layouts: TimeSliderStepLayout[],
   sources: VisibleTemporalSource[],
   resolution: TemporalPrecision,
-  now: number = Date.now()
+  now: number = Date.now(),
+  queryCounts?: { [tableStableId: string]: { [step: string]: number } }
 ): TimeSliderCoverageMark[] {
   if (layouts.length === 0) return [];
   const marks: TimeSliderCoverageMark[] = [];
-  for (const source of sources) {
+  const histogramSources = sources.filter(
+    (source) =>
+      (source.tableStableId &&
+        queryCounts &&
+        queryCounts[source.tableStableId]) ||
+      (source.temporal.providesSliderStats &&
+        source.temporal.availability?.type === "histogram")
+  );
+  const bandSources = sources.filter(
+    (source) => histogramSources.indexOf(source) === -1
+  );
+
+  if (histogramSources.length > 0) {
+    const stepCounts = layouts.map((layout) => {
+      const step = expandTemporalIso(layout.step, resolution);
+      if (!step) return 0;
+      return histogramSources.reduce((acc, source) => {
+        const count = histogramCountForStep(
+          source,
+          step.start,
+          step.end,
+          now,
+          layout.step,
+          queryCounts
+        );
+        return acc + (count || 0);
+      }, 0);
+    });
+    const maxCount = stepCounts.reduce((acc, count) => Math.max(acc, count), 0);
+    layouts.forEach((layout, index) => {
+      const count = stepCounts[index];
+      if (count <= 0) return;
+      marks.push({
+        // eslint-disable-next-line i18next/no-literal-string
+        id: `hist:${layout.step}`,
+        left: layout.startPct,
+        width: sliderPct(layout.endPct - layout.startPct),
+        count,
+        heightPct:
+          maxCount > 0 ? Math.max(8, Math.round((count / maxCount) * 100)) : 8,
+        kind: "histogram",
+      });
+    });
+  }
+
+  for (const source of bandSources) {
     const coverage = expandTemporalValue(source.temporal.coverage, now);
     if (!coverage) continue;
     let startPct: number | null = null;
@@ -284,9 +478,10 @@ export function layoutTimeSliderCoverageMarks(
     }
     if (startPct === null || endPct === null || endPct <= startPct) continue;
     marks.push({
-      id: source.tocStableId,
+      id: sourceMarkId(source),
       left: startPct,
       width: sliderPct(endPct - startPct),
+      kind: "coverage",
     });
   }
   return marks;
@@ -306,6 +501,78 @@ export function instantClockForStep(
   };
 }
 
+export function windowClockForRange(
+  start: TemporalIso,
+  end: TemporalIso,
+  resolution: TemporalPrecision
+): TemporalClock | null {
+  const startMs = expandTemporalIso(start, resolution);
+  const endMs = expandTemporalIso(end, resolution);
+  if (!startMs || !endMs || endMs.end <= startMs.start) {
+    return instantClockForStep(start, resolution);
+  }
+  return {
+    mode: "window",
+    start,
+    end,
+    viewResolution: resolution,
+  };
+}
+
+/** Slider step keys covered by the current clock (one key, or a window). */
+export function stepKeysForClock(
+  clock: TemporalClock,
+  domain: TemporalInterval,
+  resolution: TemporalPrecision
+): string[] {
+  if (clock.mode !== "window") {
+    return [clock.start];
+  }
+  const steps = enumerateSteps(domain, resolution);
+  const last = lastIncludedStep(clock, steps, resolution);
+  const startIdx = steps.indexOf(clock.start);
+  const lastIdx = last ? steps.indexOf(last) : startIdx;
+  if (startIdx < 0) {
+    return [clock.start];
+  }
+  return steps.slice(startIdx, Math.max(startIdx, lastIdx) + 1);
+}
+
+export function lastIncludedStep(
+  clock: TemporalClock,
+  steps: TemporalIso[],
+  resolution: TemporalPrecision
+): TemporalIso | null {
+  const endIdx = steps.findIndex(
+    (step) => nextIsoAtPrecision(step, resolution) === clock.end
+  );
+  if (endIdx >= 0) return steps[endIdx];
+  const startIdx = steps.indexOf(clock.start);
+  if (startIdx >= 0) return steps[startIdx];
+  return clock.start;
+}
+
+export function advanceClock(
+  clock: TemporalClock,
+  steps: TemporalIso[],
+  resolution: TemporalPrecision
+): TemporalClock | null {
+  if (steps.length === 0) return null;
+  const startIdx = steps.indexOf(clock.start);
+  if (clock.mode === "window") {
+    const last = lastIncludedStep(clock, steps, resolution);
+    const lastIdx = last ? steps.indexOf(last) : startIdx;
+    const width = Math.max(0, lastIdx - startIdx);
+    const nextStart = startIdx < 0 ? 0 : (startIdx + 1) % (steps.length - width);
+    const nextLast = Math.min(nextStart + width, steps.length - 1);
+    const end = nextIsoAtPrecision(steps[nextLast], resolution);
+    if (!end) return instantClockForStep(steps[nextStart], resolution);
+    return windowClockForRange(steps[nextStart], end, resolution);
+  }
+  const nextIndex = startIdx < 0 ? 0 : (startIdx + 1) % steps.length;
+  return instantClockForStep(steps[nextIndex], resolution);
+}
+
 export function latestClock(
   domain: TemporalInterval,
   resolution: TemporalPrecision,
@@ -323,10 +590,71 @@ function clockStepIndex(
   return steps.indexOf(clock.start);
 }
 
+function stepOverlapsExpanded(
+  step: TemporalIso,
+  resolution: TemporalPrecision,
+  expanded: { start: number; end: number }
+): boolean {
+  const range = expandTemporalIso(step, resolution);
+  if (!range) return false;
+  return range.start < expanded.end && range.end > expanded.start;
+}
+
+/**
+ * Re-express a clock at a new slider resolution without jumping to latest.
+ * Instant year 2018 → month becomes 2018-01; a window keeps every overlapping
+ * step. If nothing overlaps, pick the step nearest the previous start.
+ */
+export function snapClockToResolution(
+  clock: TemporalClock,
+  domain: TemporalInterval,
+  resolution: TemporalPrecision,
+  now: number = Date.now()
+): TemporalClock | null {
+  const steps = enumerateSteps(domain, resolution, now);
+  if (steps.length === 0) return null;
+  const expanded = expandTemporalClock(clock);
+  if (!expanded) {
+    return latestClock(domain, resolution, now);
+  }
+
+  const overlapping = steps.filter((step) =>
+    stepOverlapsExpanded(step, resolution, expanded)
+  );
+
+  const pickInstant = (step: TemporalIso) =>
+    instantClockForStep(step, resolution);
+
+  if (overlapping.length === 0) {
+    let nearest = steps[0];
+    let nearestDist = Infinity;
+    for (const step of steps) {
+      const range = expandTemporalIso(step, resolution);
+      if (!range) continue;
+      const dist = Math.abs(range.start - expanded.start);
+      if (dist < nearestDist) {
+        nearestDist = dist;
+        nearest = step;
+      }
+    }
+    return pickInstant(nearest);
+  }
+
+  if (clock.mode === "window") {
+    const first = overlapping[0];
+    const last = overlapping[overlapping.length - 1];
+    const end = nextIsoAtPrecision(last, resolution);
+    if (!end) return pickInstant(first);
+    return windowClockForRange(first, end, resolution);
+  }
+
+  return pickInstant(overlapping[0]);
+}
+
 /**
  * Keep the current clock when it is still a valid step and does not hide a
- * newly toggled layer-granularity source. Otherwise snap to the latest step
- * of the new source (or the domain).
+ * newly toggled layer-granularity source. A resolution change snaps the
+ * previous interval onto the new step list instead of jumping to latest.
  */
 export function reconcileClock(
   previous: TemporalClock | null,
@@ -345,10 +673,14 @@ export function reconcileClock(
       !prevIds.has(source.tocStableId) &&
       source.temporal.granularity === "layer"
   );
-  if (previous && previous.viewResolution === resolution) {
-    const idx = clockStepIndex(previous, steps);
+  const aligned =
+    previous && previous.viewResolution !== resolution
+      ? snapClockToResolution(previous, domain, resolution, now)
+      : previous;
+  if (aligned) {
+    const idx = clockStepIndex(aligned, steps);
     if (idx !== -1) {
-      const expanded = expandTemporalClock(previous);
+      const expanded = expandTemporalClock(aligned);
       const hidesNew =
         expanded &&
         newLayerSources.some(
@@ -356,7 +688,7 @@ export function reconcileClock(
             !temporalValueIntersects(source.temporal.coverage, expanded, now)
         );
       if (!hidesNew) {
-        return previous;
+        return aligned;
       }
       const newDomain = unionTemporalCoverage(
         newLayerSources.map((source) => source.temporal.coverage),
@@ -393,12 +725,13 @@ export function tocIdsHiddenByClock(
   return hidden;
 }
 
-export function formatClockLabel(
-  clock: TemporalClock,
+function formatIsoLabel(
+  iso: TemporalIso,
+  resolution: TemporalPrecision,
   locale?: string
 ): string {
-  const parts = parseTemporalIso(clock.start);
-  if (!parts) return clock.start;
+  const parts = parseTemporalIso(iso);
+  if (!parts) return iso;
   const date = new Date(
     Date.UTC(
       parts.year,
@@ -410,7 +743,7 @@ export function formatClockLabel(
     )
   );
   const loc = locale || undefined;
-  switch (clock.viewResolution) {
+  switch (resolution) {
     case "year":
       return String(date.getUTCFullYear());
     case "month":
@@ -429,4 +762,22 @@ export function formatClockLabel(
     default:
       return date.toLocaleString(loc, { timeZone: "UTC" });
   }
+}
+
+export function formatClockLabel(
+  clock: TemporalClock,
+  locale?: string,
+  steps?: TemporalIso[]
+): string {
+  const startLabel = formatIsoLabel(clock.start, clock.viewResolution, locale);
+  if (clock.mode !== "window") {
+    return startLabel;
+  }
+  const last = lastIncludedStep(clock, steps || [], clock.viewResolution);
+  if (!last || last === clock.start) {
+    return startLabel;
+  }
+  const endLabel = formatIsoLabel(last, clock.viewResolution, locale);
+  // eslint-disable-next-line i18next/no-literal-string
+  return `${startLabel} – ${endLabel}`;
 }

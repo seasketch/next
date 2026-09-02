@@ -10,13 +10,17 @@ RUN npm ci
 COPY geostats-types/ ./
 RUN npm run build
 WORKDIR /usr/app
-# Replace registry package with the freshly built workspace copy.
-# (cp -r into an existing dir nests; remove first.)
+# Replace the registry package with the freshly built workspace copy.
+# Copy only the published shape (package.json + dist) so tsc does not
+# follow composite source files under /usr/geostats-types/lib.
 RUN rm -rf node_modules/@seasketch/geostats-types \
-  && mkdir -p node_modules/@seasketch \
-  && cp -r /usr/geostats-types node_modules/@seasketch/geostats-types
+  && mkdir -p node_modules/@seasketch/geostats-types \
+  && cp /usr/geostats-types/package.json node_modules/@seasketch/geostats-types/ \
+  && cp -r /usr/geostats-types/dist node_modules/@seasketch/geostats-types/dist
 COPY data-tables-handler/tsconfig.json data-tables-handler/handler.ts ./
 COPY data-tables-handler/src ./src
+# Tests import workspace source via a relative path that is outside rootDir here.
+RUN rm -f src/*.test.ts
 RUN npm run build
 
 FROM amazon/aws-lambda-nodejs:20

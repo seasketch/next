@@ -4,7 +4,14 @@ import {
   readBloomFilter,
   sbbfContains,
 } from "hyparquet/src/bloom.js";
-import { ParsedQuery, QueryError, RawFilter } from "../params";
+import {
+  ParsedQuery,
+  QueryError,
+  RawFilter,
+  TemporalWhenFilter,
+  WHEN_END_COLUMN,
+  WHEN_START_COLUMN,
+} from "../params";
 
 export type ColumnKind = "string" | "number" | "boolean" | "timestamp";
 
@@ -30,6 +37,11 @@ export interface ReadSpan {
 export interface QueryPlan {
   columns: Map<string, ColumnInfo>;
   filters: CompiledFilter[];
+  /**
+   * Clock filter, only set when `_when_*` columns exist. Null when the
+   * request omitted when.* or the table has not been reprocessed yet.
+   */
+  when: TemporalWhenFilter | null;
   /** Columns that must be read from the parquet file. undefined = all. */
   neededColumns: string[] | undefined;
   spans: ReadSpan[];
@@ -335,6 +347,21 @@ export async function planQuery(
   }
 
   const filters = compileFilters(query.filters, columns);
+  if (
+    query.whenStep &&
+    (!columns.has(WHEN_START_COLUMN) || !columns.has(WHEN_END_COLUMN))
+  ) {
+    throw new QueryError(
+      "when.step requires _when_start and _when_end columns. Reprocess the table with a temporal mapping first."
+    );
+  }
+
+  const when =
+    query.when &&
+    columns.has(WHEN_START_COLUMN) &&
+    columns.has(WHEN_END_COLUMN)
+      ? query.when
+      : null;
 
   // Determine which columns need to be read
   let neededColumns: string[] | undefined;
@@ -342,9 +369,13 @@ export async function planQuery(
     const needed = new Set<string>(query.groupBy);
     if (query.column) needed.add(query.column);
     for (const f of filters) needed.add(f.column);
+    if (when) {
+      needed.add(WHEN_START_COLUMN);
+      needed.add(WHEN_END_COLUMN);
+    }
     neededColumns = [...needed];
   } else {
-    // raw row output returns all columns
+    // raw row output returns all columns except hidden _when_*
     neededColumns = undefined;
   }
 
@@ -361,6 +392,9 @@ export async function planQuery(
       if (!rowGroupMayMatch(filter, chunk.meta_data.statistics, numRows)) {
         return false;
       }
+    }
+    if (when && !rowGroupMayMatchWhen(rowGroup, when)) {
+      return false;
     }
     return true;
   });
@@ -404,10 +438,39 @@ export async function planQuery(
   return {
     columns,
     filters,
+    when,
     neededColumns,
     spans,
     rowGroupsTotal: metadata.row_groups.length,
     rowGroupsScanned: scanned,
     totalRows: Number(metadata.num_rows),
   };
+}
+
+function columnStats(
+  rowGroup: FileMetaData["row_groups"][number],
+  name: string
+) {
+  return rowGroup.columns.find(
+    (c) => c.meta_data?.path_in_schema.join(".") === name
+  )?.meta_data?.statistics;
+}
+
+/**
+ * `_when_start < clockEnd && _when_end > clockStart`. Conservative: keep
+ * the group when stats are missing.
+ */
+function rowGroupMayMatchWhen(
+  rowGroup: FileMetaData["row_groups"][number],
+  when: TemporalWhenFilter
+): boolean {
+  const startStats = columnStats(rowGroup, WHEN_START_COLUMN);
+  const endStats = columnStats(rowGroup, WHEN_END_COLUMN);
+  const minStart = startStats
+    ? normalizeValue(startStats.min_value, "number")
+    : null;
+  const maxEnd = endStats ? normalizeValue(endStats.max_value, "number") : null;
+  if (typeof minStart === "number" && minStart >= when.endSec) return false;
+  if (typeof maxEnd === "number" && maxEnd <= when.startSec) return false;
+  return true;
 }

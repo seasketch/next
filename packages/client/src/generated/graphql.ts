@@ -968,6 +968,7 @@ export enum ChangeLogFieldGroup {
   DataTableRenamed = 'DATA_TABLE_RENAMED',
   DataTableReplaced = 'DATA_TABLE_REPLACED',
   DataTableRollback = 'DATA_TABLE_ROLLBACK',
+  DataTableTemporal = 'DATA_TABLE_TEMPORAL',
   DataTableVisualizationSettingsUpdated = 'DATA_TABLE_VISUALIZATION_SETTINGS_UPDATED',
   FolderAcl = 'FOLDER_ACL',
   FolderCreated = 'FOLDER_CREATED',
@@ -2009,6 +2010,40 @@ export type CreateOptionalBasemapLayerPayload = {
   optionalBasemapLayer?: Maybe<OptionalBasemapLayer>;
   /** Our root query field type. Allows us to run any query from our mutation payload. */
   query?: Maybe<Query>;
+};
+
+/** All input for the `createOverlayDataTableReprocess` mutation. */
+export type CreateOverlayDataTableReprocessInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  tableId?: Maybe<Scalars['Int']>;
+  temporalConfig?: Maybe<Scalars['JSON']>;
+};
+
+/** The output of our `createOverlayDataTableReprocess` mutation. */
+export type CreateOverlayDataTableReprocessPayload = {
+  __typename?: 'CreateOverlayDataTableReprocessPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  overlayDataTableUpload?: Maybe<OverlayDataTableUpload>;
+  /** An edge for our `OverlayDataTableUpload`. May be used by Relay 1. */
+  overlayDataTableUploadEdge?: Maybe<OverlayDataTableUploadsEdge>;
+  /** Reads a single `ProjectBackgroundJob` that is related to this `OverlayDataTableUpload`. */
+  projectBackgroundJob?: Maybe<ProjectBackgroundJob>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `createOverlayDataTableReprocess` mutation. */
+export type CreateOverlayDataTableReprocessPayloadOverlayDataTableUploadEdgeArgs = {
+  orderBy?: Maybe<Array<OverlayDataTableUploadsOrderBy>>;
 };
 
 /** All input for the `createOverlayDataTableUpload` mutation. */
@@ -7970,6 +8005,12 @@ export type Mutation = {
   createOfflineTileSetting?: Maybe<CreateOfflineTileSettingPayload>;
   /** Creates a single `OptionalBasemapLayer`. */
   createOptionalBasemapLayer?: Maybe<CreateOptionalBasemapLayerPayload>;
+  /**
+   * Admin-only. Starts a draft reprocess job that derives _when_* columns from the
+   * current parquet using an ephemeral temporal_config. Does not write
+   * overlay_data_tables.temporal until the job succeeds.
+   */
+  createOverlayDataTableReprocess?: Maybe<CreateOverlayDataTableReprocessPayload>;
   createOverlayDataTableUpload?: Maybe<CreateOverlayDataTableUploadPayload>;
   createPost: Post;
   /**
@@ -8812,6 +8853,12 @@ export type MutationCreateOfflineTileSettingArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateOptionalBasemapLayerArgs = {
   input: CreateOptionalBasemapLayerInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateOverlayDataTableReprocessArgs = {
+  input: CreateOverlayDataTableReprocessInput;
 };
 
 
@@ -10734,6 +10781,7 @@ export type OverlayDataTable = Node & {
    * mapping, and availability. Null when the table has none.
    */
   temporal?: Maybe<Scalars['TemporalInfo']>;
+  temporalPreviewUrl?: Maybe<Scalars['String']>;
   updatedAt?: Maybe<Scalars['Datetime']>;
   version: Scalars['Int'];
   /** Columns that may/should be used for creating thematic maps. For example `count` or `density` */
@@ -10770,7 +10818,14 @@ export type OverlayDataTableUpload = Node & {
   projectBackgroundJob?: Maybe<ProjectBackgroundJob>;
   projectBackgroundJobId: Scalars['UUID'];
   replaceOverlayDataTableId?: Maybe<Scalars['Int']>;
+  /** When set, the processor reads the current parquet for this table instead of a newly uploaded CSV. */
+  reprocessOfOverlayDataTableId?: Maybe<Scalars['Int']>;
   tableOfContentsItemId: Scalars['Int'];
+  /**
+   * Ephemeral DataTableTemporalConfig for a reprocess (or CSV replace) job. Not
+   * copied onto overlay_data_tables until the job completes successfully.
+   */
+  temporalConfig?: Maybe<Scalars['JSON']>;
   updatedAt?: Maybe<Scalars['Datetime']>;
 };
 
@@ -21016,7 +21071,7 @@ export type JobDetailsFragment = (
     )> }
   )>, overlayDataTableUpload?: Maybe<(
     { __typename?: 'OverlayDataTableUpload' }
-    & Pick<OverlayDataTableUpload, 'id' | 'tableOfContentsItemId' | 'filename' | 'replaceOverlayDataTableId'>
+    & Pick<OverlayDataTableUpload, 'id' | 'tableOfContentsItemId' | 'filename' | 'replaceOverlayDataTableId' | 'reprocessOfOverlayDataTableId'>
   )> }
 );
 
@@ -23836,12 +23891,12 @@ export type GetTilePackageQuery = (
 
 export type ClientOverlayDataTableFragment = (
   { __typename?: 'OverlayDataTable' }
-  & Pick<OverlayDataTable, 'id' | 'stableId' | 'name' | 'version' | 'rowCount' | 'joinColumn' | 'overlayJoinColumn' | 'queryUrl' | 'columnStatsUrl' | 'visualizationColumns' | 'visualizationOps' | 'requiredFilterColumns'>
+  & Pick<OverlayDataTable, 'id' | 'stableId' | 'name' | 'version' | 'rowCount' | 'joinColumn' | 'overlayJoinColumn' | 'queryUrl' | 'columnStatsUrl' | 'visualizationColumns' | 'visualizationOps' | 'requiredFilterColumns' | 'temporal'>
 );
 
 export type OverlayDataTableDetailsFragment = (
   { __typename?: 'OverlayDataTable' }
-  & Pick<OverlayDataTable, 'id' | 'stableId' | 'name' | 'version' | 'joinColumn' | 'overlayJoinColumn' | 'rowCount' | 'parquetRemote' | 'columnStatsRemote' | 'parquetUrl' | 'columnStatsUrl' | 'queryUrl' | 'deletedAt' | 'replacedById' | 'createdAt' | 'updatedAt' | 'visualizationColumns' | 'visualizationOps' | 'requiredFilterColumns'>
+  & Pick<OverlayDataTable, 'id' | 'stableId' | 'name' | 'version' | 'joinColumn' | 'overlayJoinColumn' | 'rowCount' | 'parquetRemote' | 'columnStatsRemote' | 'parquetUrl' | 'columnStatsUrl' | 'queryUrl' | 'deletedAt' | 'replacedById' | 'createdAt' | 'updatedAt' | 'visualizationColumns' | 'visualizationOps' | 'requiredFilterColumns' | 'temporal'>
 );
 
 export type OverlayDataTableVisualizationMetadataQueryVariables = Exact<{
@@ -23876,7 +23931,7 @@ export type OverlayDataTableVisualizationMetadataForLayerQuery = (
 
 export type OverlayDataTableUploadDetailsFragment = (
   { __typename?: 'OverlayDataTableUpload' }
-  & Pick<OverlayDataTableUpload, 'id' | 'tableOfContentsItemId' | 'filename' | 'contentType' | 'processingOptions' | 'overlayJoinColumn' | 'errorDetails' | 'presignedUploadUrl' | 'replaceOverlayDataTableId' | 'projectBackgroundJobId'>
+  & Pick<OverlayDataTableUpload, 'id' | 'tableOfContentsItemId' | 'filename' | 'contentType' | 'processingOptions' | 'overlayJoinColumn' | 'errorDetails' | 'presignedUploadUrl' | 'replaceOverlayDataTableId' | 'reprocessOfOverlayDataTableId' | 'projectBackgroundJobId'>
 );
 
 export type CreateOverlayDataTableUploadMutationVariables = Exact<{
@@ -23982,6 +24037,40 @@ export type SetOverlayDataTableVisualizationSettingsMutation = (
     & { overlayDataTable?: Maybe<(
       { __typename?: 'OverlayDataTable' }
       & OverlayDataTableDetailsFragment
+    )> }
+  )> }
+);
+
+export type UpdateOverlayDataTableTemporalMutationVariables = Exact<{
+  overlayDataTableId: Scalars['Int'];
+  temporal?: Maybe<Scalars['TemporalInfo']>;
+}>;
+
+
+export type UpdateOverlayDataTableTemporalMutation = (
+  { __typename?: 'Mutation' }
+  & { updateOverlayDataTableTemporal: (
+    { __typename?: 'OverlayDataTable' }
+    & Pick<OverlayDataTable, 'id' | 'temporal'>
+  ) }
+);
+
+export type CreateOverlayDataTableReprocessMutationVariables = Exact<{
+  tableId: Scalars['Int'];
+  temporalConfig: Scalars['JSON'];
+}>;
+
+
+export type CreateOverlayDataTableReprocessMutation = (
+  { __typename?: 'Mutation' }
+  & { createOverlayDataTableReprocess?: Maybe<(
+    { __typename?: 'CreateOverlayDataTableReprocessPayload' }
+    & { overlayDataTableUpload?: Maybe<(
+      { __typename?: 'OverlayDataTableUpload' }
+      & OverlayDataTableUploadDetailsFragment
+    )>, projectBackgroundJob?: Maybe<(
+      { __typename?: 'ProjectBackgroundJob' }
+      & JobDetailsFragment
     )> }
   )> }
 );
@@ -28283,6 +28372,7 @@ export const JobDetailsFragmentDoc = gql`
     tableOfContentsItemId
     filename
     replaceOverlayDataTableId
+    reprocessOfOverlayDataTableId
   }
 }
     ${DataUploadDetailsFragmentDoc}`;
@@ -28330,6 +28420,7 @@ export const ClientOverlayDataTableFragmentDoc = gql`
   visualizationColumns
   visualizationOps
   requiredFilterColumns
+  temporal
 }
     `;
 export const OverlayFragmentDoc = gql`
@@ -28602,6 +28693,7 @@ export const OverlayDataTableDetailsFragmentDoc = gql`
   visualizationColumns
   visualizationOps
   requiredFilterColumns
+  temporal
 }
     `;
 export const UserProfileDetailsFragmentDoc = gql`
@@ -29039,6 +29131,7 @@ export const OverlayDataTableUploadDetailsFragmentDoc = gql`
   errorDetails
   presignedUploadUrl
   replaceOverlayDataTableId
+  reprocessOfOverlayDataTableId
   projectBackgroundJobId
 }
     `;
@@ -37915,6 +38008,86 @@ export function useSetOverlayDataTableVisualizationSettingsMutation(baseOptions?
 export type SetOverlayDataTableVisualizationSettingsMutationHookResult = ReturnType<typeof useSetOverlayDataTableVisualizationSettingsMutation>;
 export type SetOverlayDataTableVisualizationSettingsMutationResult = Apollo.MutationResult<SetOverlayDataTableVisualizationSettingsMutation>;
 export type SetOverlayDataTableVisualizationSettingsMutationOptions = Apollo.BaseMutationOptions<SetOverlayDataTableVisualizationSettingsMutation, SetOverlayDataTableVisualizationSettingsMutationVariables>;
+export const UpdateOverlayDataTableTemporalDocument = gql`
+    mutation UpdateOverlayDataTableTemporal($overlayDataTableId: Int!, $temporal: TemporalInfo) {
+  updateOverlayDataTableTemporal(
+    overlayDataTableId: $overlayDataTableId
+    temporal: $temporal
+  ) {
+    id
+    temporal
+  }
+}
+    `;
+export type UpdateOverlayDataTableTemporalMutationFn = Apollo.MutationFunction<UpdateOverlayDataTableTemporalMutation, UpdateOverlayDataTableTemporalMutationVariables>;
+
+/**
+ * __useUpdateOverlayDataTableTemporalMutation__
+ *
+ * To run a mutation, you first call `useUpdateOverlayDataTableTemporalMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useUpdateOverlayDataTableTemporalMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [updateOverlayDataTableTemporalMutation, { data, loading, error }] = useUpdateOverlayDataTableTemporalMutation({
+ *   variables: {
+ *      overlayDataTableId: // value for 'overlayDataTableId'
+ *      temporal: // value for 'temporal'
+ *   },
+ * });
+ */
+export function useUpdateOverlayDataTableTemporalMutation(baseOptions?: Apollo.MutationHookOptions<UpdateOverlayDataTableTemporalMutation, UpdateOverlayDataTableTemporalMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<UpdateOverlayDataTableTemporalMutation, UpdateOverlayDataTableTemporalMutationVariables>(UpdateOverlayDataTableTemporalDocument, options);
+      }
+export type UpdateOverlayDataTableTemporalMutationHookResult = ReturnType<typeof useUpdateOverlayDataTableTemporalMutation>;
+export type UpdateOverlayDataTableTemporalMutationResult = Apollo.MutationResult<UpdateOverlayDataTableTemporalMutation>;
+export type UpdateOverlayDataTableTemporalMutationOptions = Apollo.BaseMutationOptions<UpdateOverlayDataTableTemporalMutation, UpdateOverlayDataTableTemporalMutationVariables>;
+export const CreateOverlayDataTableReprocessDocument = gql`
+    mutation CreateOverlayDataTableReprocess($tableId: Int!, $temporalConfig: JSON!) {
+  createOverlayDataTableReprocess(
+    input: {tableId: $tableId, temporalConfig: $temporalConfig}
+  ) {
+    overlayDataTableUpload {
+      ...OverlayDataTableUploadDetails
+    }
+    projectBackgroundJob {
+      ...JobDetails
+    }
+  }
+}
+    ${OverlayDataTableUploadDetailsFragmentDoc}
+${JobDetailsFragmentDoc}`;
+export type CreateOverlayDataTableReprocessMutationFn = Apollo.MutationFunction<CreateOverlayDataTableReprocessMutation, CreateOverlayDataTableReprocessMutationVariables>;
+
+/**
+ * __useCreateOverlayDataTableReprocessMutation__
+ *
+ * To run a mutation, you first call `useCreateOverlayDataTableReprocessMutation` within a React component and pass it any options that fit your needs.
+ * When your component renders, `useCreateOverlayDataTableReprocessMutation` returns a tuple that includes:
+ * - A mutate function that you can call at any time to execute the mutation
+ * - An object with fields that represent the current status of the mutation's execution
+ *
+ * @param baseOptions options that will be passed into the mutation, supported options are listed on: https://www.apollographql.com/docs/react/api/react-hooks/#options-2;
+ *
+ * @example
+ * const [createOverlayDataTableReprocessMutation, { data, loading, error }] = useCreateOverlayDataTableReprocessMutation({
+ *   variables: {
+ *      tableId: // value for 'tableId'
+ *      temporalConfig: // value for 'temporalConfig'
+ *   },
+ * });
+ */
+export function useCreateOverlayDataTableReprocessMutation(baseOptions?: Apollo.MutationHookOptions<CreateOverlayDataTableReprocessMutation, CreateOverlayDataTableReprocessMutationVariables>) {
+        const options = {...defaultOptions, ...baseOptions}
+        return Apollo.useMutation<CreateOverlayDataTableReprocessMutation, CreateOverlayDataTableReprocessMutationVariables>(CreateOverlayDataTableReprocessDocument, options);
+      }
+export type CreateOverlayDataTableReprocessMutationHookResult = ReturnType<typeof useCreateOverlayDataTableReprocessMutation>;
+export type CreateOverlayDataTableReprocessMutationResult = Apollo.MutationResult<CreateOverlayDataTableReprocessMutation>;
+export type CreateOverlayDataTableReprocessMutationOptions = Apollo.BaseMutationOptions<CreateOverlayDataTableReprocessMutation, CreateOverlayDataTableReprocessMutationVariables>;
 export const ProjectAccessControlSettingsDocument = gql`
     query ProjectAccessControlSettings($slug: String!) {
   projectBySlug(slug: $slug) {
@@ -45162,6 +45335,8 @@ export const namedOperations = {
     SoftDeleteOverlayDataTable: 'SoftDeleteOverlayDataTable',
     RollbackOverlayDataTableVersion: 'RollbackOverlayDataTableVersion',
     SetOverlayDataTableVisualizationSettings: 'SetOverlayDataTableVisualizationSettings',
+    UpdateOverlayDataTableTemporal: 'UpdateOverlayDataTableTemporal',
+    CreateOverlayDataTableReprocess: 'CreateOverlayDataTableReprocess',
     updateProjectAccessControlSettings: 'updateProjectAccessControlSettings',
     toggleLanguageSupport: 'toggleLanguageSupport',
     setTranslatedProps: 'setTranslatedProps',

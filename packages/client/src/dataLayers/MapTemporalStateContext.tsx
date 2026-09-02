@@ -19,9 +19,12 @@ import {
   coverageKey,
   domainForSources,
   reconcileClock,
+  snapClockToResolution,
   resolutionForSources,
   shouldShowTimeSlider,
+  supportedViewResolutionsForSources,
   tocIdsHiddenByClock,
+  viewResolutionsThatFit,
 } from "./mapTemporal";
 
 export type MapTemporalStateValue = {
@@ -34,8 +37,14 @@ export type MapTemporalStateValue = {
   clock: TemporalClock | null;
   domain: TemporalInterval | null;
   resolution: TemporalPrecision | null;
+  availableResolutions: TemporalPrecision[];
   temporalSources: VisibleTemporalSource[];
+  /** Filtered row counts per table + step, from the last `when.step` query. */
+  queryStepCounts: { [tableStableId: string]: { [step: string]: number } };
+  /** Distinct data-table `/query` errors for the current clock / resolution. */
+  queryErrors: string[];
   setClock: (clock: TemporalClock) => void;
+  setViewResolution: (resolution: TemporalPrecision) => void;
 };
 
 const noop = () => {};
@@ -58,8 +67,12 @@ export const MapTemporalStateContext = createContext<MapTemporalStateValue>({
   clock: null,
   domain: null,
   resolution: null,
+  availableResolutions: [],
   temporalSources: [],
+  queryStepCounts: {},
+  queryErrors: [],
   setClock: noop,
+  setViewResolution: noop,
 });
 
 export default function MapTemporalStateProvider({
@@ -70,6 +83,12 @@ export default function MapTemporalStateProvider({
   const overlay = useContext(MapOverlayContext);
   const { manager } = useContext(MapManagerContext);
   const [clock, setClockState] = useState<TemporalClock | null>(null);
+  const [userResolution, setUserResolution] =
+    useState<TemporalPrecision | null>(null);
+  const [queryStepCounts, setQueryStepCounts] = useState<{
+    [tableStableId: string]: { [step: string]: number };
+  }>({});
+  const [queryErrors, setQueryErrors] = useState<string[]>([]);
   const previousIdsRef = useRef<string[]>([]);
 
   const temporalSources = useMemo(
@@ -94,9 +113,12 @@ export default function MapTemporalStateProvider({
         .map(
           (source) =>
             // eslint-disable-next-line i18next/no-literal-string
-            `${source.tocStableId}:${coverageKey(source.temporal.coverage)}:${
-              source.temporal.granularity
-            }:${source.temporal.nativeResolution}`
+            `${source.tocStableId}:${source.tableStableId || ""}:${coverageKey(
+              source.temporal.coverage
+            )}:${source.temporal.granularity}:${
+              source.temporal.defaultViewResolution ||
+              source.temporal.nativeResolution
+            }`
         )
         .join(";"),
     [temporalSources]
@@ -111,11 +133,29 @@ export default function MapTemporalStateProvider({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [showSlider, sourcesSignature]
   );
-  const resolution = useMemo(
+  const availableResolutions = useMemo(() => {
+    if (!showSlider || !domain) return [];
+    return viewResolutionsThatFit(
+      domain,
+      supportedViewResolutionsForSources(temporalSources)
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showSlider, domain, sourcesSignature]);
+  const autoResolution = useMemo(
     () => (showSlider ? resolutionForSources(temporalSources) : null),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [showSlider, sourcesSignature]
   );
+  const resolution = useMemo(() => {
+    if (!showSlider) return null;
+    if (userResolution && availableResolutions.indexOf(userResolution) !== -1) {
+      return userResolution;
+    }
+    if (autoResolution && availableResolutions.indexOf(autoResolution) !== -1) {
+      return autoResolution;
+    }
+    return availableResolutions[0] || autoResolution;
+  }, [showSlider, userResolution, availableResolutions, autoResolution]);
 
   useEffect(() => {
     if (!showSlider || !domain || !resolution) {
@@ -154,6 +194,23 @@ export default function MapTemporalStateProvider({
   }, [manager, clockHiddenTocIds]);
 
   useEffect(() => {
+    if (!manager) return;
+    manager.setTemporalClock(showSlider ? clock : null);
+  }, [manager, showSlider, clock]);
+
+  useEffect(() => {
+    if (!manager) return;
+    setQueryStepCounts(manager.getDataTableSeriesCounts());
+    setQueryErrors(manager.getDataTableQueryErrors());
+    manager.setOnDataTableSeriesCountsChange(setQueryStepCounts);
+    manager.setOnDataTableQueryErrorsChange(setQueryErrors);
+    return () => {
+      manager.setOnDataTableSeriesCountsChange(null);
+      manager.setOnDataTableQueryErrorsChange(null);
+    };
+  }, [manager]);
+
+  useEffect(() => {
     return () => {
       manager?.setTemporallyFilteredTocItems([]);
     };
@@ -163,16 +220,47 @@ export default function MapTemporalStateProvider({
     setClockState(next);
   }, []);
 
+  const setViewResolution = useCallback(
+    (next: TemporalPrecision) => {
+      setUserResolution(next);
+      setClockState((prev) => {
+        if (!domain) {
+          return prev;
+        }
+        if (prev && prev.start) {
+          return snapClockToResolution(prev, domain, next) || prev;
+        }
+        return reconcileClock(prev, domain, next, [], temporalSources);
+      });
+    },
+    [domain, temporalSources]
+  );
+
   const value = useMemo<MapTemporalStateValue>(
     () => ({
       enabled: true,
       clock: showSlider ? clock : null,
       domain: showSlider ? domain : null,
       resolution: showSlider ? resolution : null,
+      availableResolutions: showSlider ? availableResolutions : [],
       temporalSources,
+      queryStepCounts,
+      queryErrors,
       setClock,
+      setViewResolution,
     }),
-    [showSlider, clock, domain, resolution, temporalSources, setClock]
+    [
+      showSlider,
+      clock,
+      domain,
+      resolution,
+      availableResolutions,
+      temporalSources,
+      queryStepCounts,
+      queryErrors,
+      setClock,
+      setViewResolution,
+    ]
   );
 
   return (

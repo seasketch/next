@@ -47,6 +47,21 @@ export interface RawFilter {
   values?: string[];
 }
 
+export interface TemporalWhenFilter {
+  /** Inclusive clock start, UTC seconds since epoch. */
+  startSec: number;
+  /** Exclusive clock end, UTC seconds since epoch. */
+  endSec: number;
+}
+
+export type WhenStepPrecision =
+  | "year"
+  | "month"
+  | "day"
+  | "hour"
+  | "minute"
+  | "second";
+
 export interface ParsedQuery {
   /** null means "negotiate via the Accept header" */
   format: OutputFormat | null;
@@ -58,6 +73,18 @@ export interface ParsedQuery {
   offset: number;
   orderBy: { key: string; direction: "asc" | "desc" } | null;
   filters: RawFilter[];
+  /**
+   * Optional map-clock filter. Applied as
+   * `_when_start < endSec && _when_end > startSec` when those columns exist;
+   * ignored when they do not.
+   */
+  when: TemporalWhenFilter | null;
+  /**
+   * When set with `when`, aggregated groups are also keyed by the time-step
+   * bin they overlap (`when.step=year` → `"2018"`). Requires `when.start` /
+   * `when.end` and at least one aggregation.
+   */
+  whenStep: WhenStepPrecision | null;
 }
 
 /** Upper bound for `limit` and `offset`; keeps responses and sort buffers
@@ -267,7 +294,107 @@ export function parseQueryParams(searchParams: URLSearchParams): ParsedQuery {
     orderBy = { key, direction };
   }
 
-  return { format, groupBy, ops, column, limit, offset, orderBy, filters };
+  const when = parseWhenParams(searchParams);
+  const whenStep = parseWhenStepParam(searchParams, when, ops, groupBy);
+
+  return {
+    format,
+    groupBy,
+    ops,
+    column,
+    limit,
+    offset,
+    orderBy,
+    filters,
+    when,
+    whenStep,
+  };
+}
+
+const WHEN_START_COLUMN = "_when_start";
+const WHEN_END_COLUMN = "_when_end";
+
+export function isHiddenWhenColumn(name: string): boolean {
+  return name === WHEN_START_COLUMN || name === WHEN_END_COLUMN;
+}
+
+export { WHEN_START_COLUMN, WHEN_END_COLUMN };
+
+function parseEpochSeconds(raw: string, label: string): number {
+  if (!/^-?\d+$/.test(raw.trim())) {
+    throw new QueryError(
+      `Invalid ${label} "${raw}". Use integer UTC seconds since epoch.`
+    );
+  }
+  const n = Number(raw);
+  if (!Number.isSafeInteger(n)) {
+    throw new QueryError(
+      `Invalid ${label} "${raw}". Value is outside the safe integer range.`
+    );
+  }
+  return n;
+}
+
+function parseWhenParams(
+  searchParams: URLSearchParams
+): TemporalWhenFilter | null {
+  const startRaw = searchParams.get("when.start");
+  const endRaw = searchParams.get("when.end");
+  if (startRaw === null && endRaw === null) return null;
+  if (startRaw === null || endRaw === null) {
+    throw new QueryError(
+      `when.start and when.end must be provided together (UTC epoch seconds).`
+    );
+  }
+  const startSec = parseEpochSeconds(startRaw, "when.start");
+  const endSec = parseEpochSeconds(endRaw, "when.end");
+  if (!(endSec > startSec)) {
+    throw new QueryError(
+      `when.end must be greater than when.start (half-open interval).`
+    );
+  }
+  return { startSec, endSec };
+}
+
+const WHEN_STEP_VALUES: WhenStepPrecision[] = [
+  "year",
+  "month",
+  "day",
+  "hour",
+  "minute",
+  "second",
+];
+
+function parseWhenStepParam(
+  searchParams: URLSearchParams,
+  when: TemporalWhenFilter | null,
+  ops: Aggregation[],
+  groupBy: string[]
+): WhenStepPrecision | null {
+  const raw = searchParams.get("when.step");
+  if (raw === null || raw.trim() === "") return null;
+  const step = raw.trim();
+  if (!(WHEN_STEP_VALUES as string[]).includes(step)) {
+    throw new QueryError(
+      `Invalid when.step "${raw}". Use ${WHEN_STEP_VALUES.join(", ")}.`
+    );
+  }
+  if (!when) {
+    throw new QueryError(
+      `when.step requires when.start and when.end (the full series range).`
+    );
+  }
+  if (ops.length === 0) {
+    throw new QueryError(
+      `when.step requires an aggregation via the "op" parameter.`
+    );
+  }
+  if (groupBy.includes("step")) {
+    throw new QueryError(
+      `groupBy cannot include "step" when when.step is set; "step" is reserved.`
+    );
+  }
+  return step as WhenStepPrecision;
 }
 
 /**

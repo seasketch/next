@@ -25,6 +25,8 @@ import DataTableRenamedFieldGroupListItem from "./DataTableRenamedFieldGroupList
 import DataTableReplacedFieldGroupListItem from "./DataTableReplacedFieldGroupListItem";
 import DataTableRollbackFieldGroupListItem from "./DataTableRollbackFieldGroupListItem";
 import DataTableVisualizationSettingsUpdatedFieldGroupListItem from "./DataTableVisualizationSettingsUpdatedFieldGroupListItem";
+import DataTableTemporalFieldGroupListItem from "./DataTableTemporalFieldGroupListItem";
+import { DATA_TABLE_TEMPORAL_FIELD_GROUP } from "./dataTableTemporalChange";
 
 export { GenericFieldGroupListItem };
 
@@ -65,4 +67,6 @@ export const FIELD_GROUP_LIST_ITEM_COMPONENTS: Partial<
   [ChangeLogFieldGroup.DataTableRollback]: DataTableRollbackFieldGroupListItem,
   [ChangeLogFieldGroup.DataTableVisualizationSettingsUpdated]:
     DataTableVisualizationSettingsUpdatedFieldGroupListItem,
+  [DATA_TABLE_TEMPORAL_FIELD_GROUP as ChangeLogFieldGroup]:
+    DataTableTemporalFieldGroupListItem,
 };

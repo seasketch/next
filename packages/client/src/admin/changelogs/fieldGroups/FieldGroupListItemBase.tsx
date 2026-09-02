@@ -1,14 +1,13 @@
 import clsx from "clsx";
 import { ReactNode } from "react";
 import { ExternalLinkIcon } from "@heroicons/react/outline";
+import * as Tooltip from "@radix-ui/react-tooltip";
 import { ChangeLogDetailsFragment } from "../../../generated/graphql";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "../../../components/Tooltip";
 import ChangeLogTimelineItem from "../ChangeLogTimelineItem";
 import "./FieldGroupListItemBase.css";
+
+export const CHANGE_LOG_TOOLTIP_DELAY_MS = 120;
+export const CHANGE_LOG_TOOLTIP_SKIP_DELAY_MS = 300;
 
 export interface FieldGroupListItemProps {
   changeLog: ChangeLogDetailsFragment;
@@ -69,7 +68,7 @@ export function ChangeValue({
 }) {
   const className = details
     ? clsx(
-        "inline-flex max-w-full cursor-help items-center gap-1 align-baseline text-sm font-medium leading-5 text-blue-600 underline decoration-blue-400 decoration-dotted underline-offset-4 hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500",
+        "inline-flex max-w-full cursor-help items-center gap-1 align-baseline text-sm font-medium leading-5 text-blue-600 underline decoration-blue-400 decoration-dotted underline-offset-4 hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500 data-[state=open]:text-blue-700",
         deleted && "line-through decoration-blue-400"
       )
     : clsx(
@@ -81,16 +80,21 @@ export function ChangeValue({
 
   if (details) {
     return (
-      <Tooltip placement="top">
-        <TooltipTrigger asChild>
+      <Tooltip.Root delayDuration={CHANGE_LOG_TOOLTIP_DELAY_MS}>
+        <Tooltip.Trigger asChild>
           <button type="button" className={className}>
             <span className="min-w-0">{children}</span>
           </button>
-        </TooltipTrigger>
-        <TooltipContent className=" change-log-details-tooltip">
+        </Tooltip.Trigger>
+        <Tooltip.Content
+          side="top"
+          sideOffset={6}
+          collisionPadding={8}
+          className="change-log-details-tooltip z-[999999]"
+        >
           {details}
-        </TooltipContent>
-      </Tooltip>
+        </Tooltip.Content>
+      </Tooltip.Root>
     );
   }
 
@@ -135,16 +139,21 @@ export default function BaseFieldGroupListItem({
   footer?: ReactNode;
 }) {
   return (
-    <ChangeLogTimelineItem
-      profile={changeLog.editorProfile}
-      missingProfileLabel={missingProfileLabel}
-      date={new Date((changeLog as ChangeLogWithTimestamp).lastAt)}
-      icon={icon}
-      iconClassName={iconClassName}
-      last={last}
-      itemTitle={itemTitle}
-      summary={children}
-      footer={footer}
-    />
+    <Tooltip.Provider
+      delayDuration={CHANGE_LOG_TOOLTIP_DELAY_MS}
+      skipDelayDuration={CHANGE_LOG_TOOLTIP_SKIP_DELAY_MS}
+    >
+      <ChangeLogTimelineItem
+        profile={changeLog.editorProfile}
+        missingProfileLabel={missingProfileLabel}
+        date={new Date((changeLog as ChangeLogWithTimestamp).lastAt)}
+        icon={icon}
+        iconClassName={iconClassName}
+        last={last}
+        itemTitle={itemTitle}
+        summary={children}
+        footer={footer}
+      />
+    </Tooltip.Provider>
   );
 }

@@ -65,16 +65,66 @@ export type TemporalAvailability = {
         count: number;
     }>;
 };
+/** Physical columns written onto parquet / MVT features. */
+export declare const WHEN_START_COLUMN = "_when_start";
+export declare const WHEN_END_COLUMN = "_when_end";
+/**
+ * How a single date/time cell is parsed. `iso` is reduced-precision ISO 8601
+ * (same as TemporalIso). `mdy` / `dmy` are slash dates (`8/31/2024`,
+ * `31/08/2024`). `year` is a 4-digit calendar year (number or string).
+ */
+export type TemporalDateFormat = "iso" | "mdy" | "dmy" | "year";
+/**
+ * Wizard / reprocess argument: how to derive `_when_*` from source columns.
+ * Discriminated by `kind`. This is the ephemeral job config — not persisted
+ * on the table until reprocess succeeds (then copied onto mapping.sourceColumns).
+ */
+export type DataTableTemporalSourceColumns = {
+    kind: "instant";
+    column: string;
+    format: TemporalDateFormat;
+} | {
+    kind: "components";
+    year: string;
+    month?: string;
+    day?: string;
+} | {
+    kind: "span";
+    start: string;
+    end: string;
+    format: TemporalDateFormat;
+};
+/**
+ * Legacy sourceColumns shape from the design-doc v1 examples
+ * (`{ instant: "DATE" }`). Still accepted on stored TemporalInfo.
+ */
+export type LegacyTemporalSourceColumns = {
+    instant?: string;
+    start?: string;
+    end?: string;
+};
+export type TemporalSourceColumns = DataTableTemporalSourceColumns | LegacyTemporalSourceColumns;
+/**
+ * Admin wizard + reprocess job argument. Shared by the client, the
+ * pmtiles-server temporal-preview endpoint, and the data-tables-handler
+ * Lambda so all three interpret the same document.
+ */
+export type DataTableTemporalConfig = {
+    sourceColumns: DataTableTemporalSourceColumns;
+    /**
+     * Default *view* resolution after reprocess. May be coarser than the
+     * native precision implied by the mapping (day-recorded surveys compared
+     * by year).
+     */
+    defaultViewResolution?: TemporalPrecision;
+    supportedViewResolutions?: TemporalPrecision[];
+};
 export type TemporalMapping = {
     type: "feature" | "row";
     startColumn: "_when_start";
     endColumn: "_when_end";
     /** Original columns the wizard / ingest used. */
-    sourceColumns?: {
-        instant?: string;
-        start?: string;
-        end?: string;
-    };
+    sourceColumns?: TemporalSourceColumns;
 } | {
     type: "band";
     /** Tileset band id (MRT / raster-array) or 1-based GDAL band index. */
@@ -198,6 +248,11 @@ export declare function isTemporalInterval(value: unknown): value is TemporalInt
 export declare function isTemporalValue(value: unknown): value is TemporalValue;
 export declare function isTemporalStep(value: unknown): value is TemporalStep;
 export declare function isTemporalAvailability(value: unknown): value is TemporalAvailability;
+export declare function isTemporalDateFormat(value: unknown): value is TemporalDateFormat;
+export declare function isDataTableTemporalSourceColumns(value: unknown): value is DataTableTemporalSourceColumns;
+export declare function isLegacyTemporalSourceColumns(value: unknown): value is LegacyTemporalSourceColumns;
+export declare function isTemporalSourceColumns(value: unknown): value is TemporalSourceColumns;
+export declare function isDataTableTemporalConfig(value: unknown): value is DataTableTemporalConfig;
 export declare function isTemporalMapping(value: unknown): value is TemporalMapping;
 /**
  * Validates a complete TemporalInfo document — used by the GraphQL scalar
@@ -210,5 +265,44 @@ export declare function isTemporalClock(value: unknown): value is TemporalClock;
  * worked example in the design doc ("Mangroves 2018").
  */
 export declare function createLayerYearTemporalInfo(year: number): TemporalInfo;
+/** Half-open interval in UTC epoch *seconds*, plus the reduced-precision ISO. */
+export type DerivedWhenInterval = {
+    startSec: number;
+    endSec: number;
+    startIso: TemporalIso;
+    endIso: TemporalIso;
+    precision: TemporalPrecision;
+};
+/**
+ * Native precision implied by the mapping itself (before looking at values).
+ * ISO cells may be finer or coarser per-row; callers should take the finest
+ * successful parse when computing TemporalInfo.nativeResolution.
+ */
+export declare function nativePrecisionFromSourceColumns(source: DataTableTemporalSourceColumns): TemporalPrecision;
+/** Column names the mapping reads from a row. */
+export declare function sourceColumnNames(source: DataTableTemporalSourceColumns | LegacyTemporalSourceColumns): string[];
+/**
+ * Coerce a wizard mapping or a stored TemporalInfo.sourceColumns into the
+ * discriminated config used by preview / reprocess.
+ */
+export declare function toDataTableTemporalSourceColumns(source: TemporalSourceColumns): DataTableTemporalSourceColumns | null;
+/** Reduced-precision ISO from UTC epoch milliseconds. */
+export declare function formatTemporalIsoFromMs(ms: number, precision: TemporalPrecision): TemporalIso;
+/**
+ * Expand one table row into `_when_start` / `_when_end` (UTC seconds).
+ * Returns null when any required cell is missing or unparseable.
+ */
+export declare function deriveWhenIntervalFromRow(row: Record<string, unknown>, source: DataTableTemporalSourceColumns): DerivedWhenInterval | null;
+export declare function coverageFromDerivedIntervals(intervals: DerivedWhenInterval[]): TemporalInterval | null;
+/**
+ * Sparse occupancy/count histogram at `resolution` (capped at day by callers
+ * when native is finer). Empty bins are omitted.
+ */
+export declare function availabilityFromDerivedIntervals(intervals: DerivedWhenInterval[], resolution: TemporalPrecision): TemporalAvailability | null;
+/**
+ * Finest precision among successful parses, falling back to the mapping's
+ * implied native precision.
+ */
+export declare function nativeResolutionFromDerived(source: DataTableTemporalSourceColumns, intervals: DerivedWhenInterval[]): TemporalPrecision;
 export {};
 //# sourceMappingURL=temporal.d.ts.map

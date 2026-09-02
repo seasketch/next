@@ -252,4 +252,10 @@ describe("validation", () => {
       run("groupBy=site&op=count&orderBy=depth")
     ).rejects.toThrow(/orderBy/);
   });
+
+  it("rejects when.step when _when_* columns are missing", async () => {
+    await expect(
+      run("groupBy=site&op=count&when.start=1&when.end=2&when.step=year")
+    ).rejects.toThrow(/when.step requires/);
+  });
 });

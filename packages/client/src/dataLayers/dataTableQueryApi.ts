@@ -1,5 +1,16 @@
 /* eslint-disable i18next/no-literal-string -- query URL serialization, not UI copy */
 
+import {
+  expandTemporalClock,
+  expandTemporalValue,
+  isTemporalInfo,
+  isTemporalPrecision,
+  sourceColumnNames,
+  TemporalClock,
+  TemporalPrecision,
+  toDataTableTemporalSourceColumns,
+} from "@seasketch/geostats-types";
+
 /**
  * Data table query API — types and semantics for GET `/query` requests.
  *
@@ -37,6 +48,8 @@
  * | `orderBy` | Sort key, optional `:desc`, e.g. `mean:desc` or `site` |
  * | `limit` | Max groups/rows (omit for no limit) |
  * | `offset` | Skip N groups/rows after sorting (default 0) |
+ * | `when.start` / `when.end` | Half-open clock window (UTC epoch seconds) |
+ * | `when.step` | With `when.*`, aggregate every timeslider step in that range |
  *
  * **Column filters** use a `q.{columnName}` prefix with PostgREST-style
  * operators in the value. See {@link DataTableFilter} and
@@ -105,6 +118,29 @@ export interface DataTableFilter {
  * Returns the list items of an `in` filter, tolerating the legacy
  * comma-joined `value` representation.
  */
+/** Date columns replaced by the map clock; must not also appear as `q.*`. */
+export function temporalSourceFilterColumns(temporal: unknown): string[] {
+  if (!isTemporalInfo(temporal) || temporal.mapping?.type !== "row") {
+    return [];
+  }
+  const mapped = temporal.mapping.sourceColumns
+    ? toDataTableTemporalSourceColumns(temporal.mapping.sourceColumns)
+    : null;
+  return mapped ? sourceColumnNames(mapped) : [];
+}
+
+export function omitFiltersForColumns(
+  filters: DataTableFilter[] | undefined,
+  columns: string[]
+): DataTableFilter[] | undefined {
+  if (!filters || columns.length === 0) {
+    return filters;
+  }
+  const hidden = new Set(columns);
+  const next = filters.filter((filter) => !hidden.has(filter.column));
+  return next;
+}
+
 export function dataTableInFilterValues(filter: DataTableFilter): string[] {
   if (filter.values) {
     return filter.values;
@@ -129,6 +165,74 @@ export interface DataTableQuerySettings {
   /** Group key column(s), e.g. the join column for a thematic map. */
   groupBy?: string | string[];
   filters?: DataTableFilter[];
+  /** Half-open clock window in UTC epoch seconds (`when.start` / `when.end`). */
+  when?: { start: number; end: number } | null;
+  /**
+   * With {@link when}, request one series covering every timeslider step
+   * (`when.step=year`). Groups include a `step` key; the response also has
+   * `series` summary stats (global scale, per-step row counts).
+   */
+  whenStep?: TemporalPrecision | null;
+}
+
+/**
+ * Clock → `/query` `when.*` params.
+ *
+ * Instant: one `when.step` series over the table's full coverage so the
+ * slider can scrub from cache. Window (range): a single aggregate over the
+ * selected `[start, end)` — means/sums must be recalculated by the engine,
+ * not combined from per-step bins (rows can overlap multiple steps).
+ */
+export function dataTableQueryClockParams(
+  clock: TemporalClock | null,
+  temporal: unknown
+): Pick<DataTableQuerySettings, "when" | "whenStep"> {
+  if (
+    !isTemporalInfo(temporal) ||
+    temporal.granularity !== "row" ||
+    temporal.mapping?.type !== "row"
+  ) {
+    return {};
+  }
+  if (!clock) {
+    return {};
+  }
+  if (clock.mode === "window") {
+    const expanded = expandTemporalClock(clock);
+    if (!expanded || !(expanded.end > expanded.start)) {
+      return {};
+    }
+    return {
+      when: {
+        start: Math.floor(expanded.start / 1000),
+        end: Math.floor(expanded.end / 1000),
+      },
+    };
+  }
+  const coverage = expandTemporalValue(temporal.coverage);
+  if (coverage && coverage.end > coverage.start) {
+    return {
+      when: {
+        start: Math.floor(coverage.start / 1000),
+        end: Math.floor(coverage.end / 1000),
+      },
+      whenStep:
+        clock.viewResolution ||
+        temporal.defaultViewResolution ||
+        temporal.nativeResolution ||
+        "year",
+    };
+  }
+  const expanded = expandTemporalClock(clock);
+  if (!expanded || !(expanded.end > expanded.start)) {
+    return {};
+  }
+  return {
+    when: {
+      start: Math.floor(expanded.start / 1000),
+      end: Math.floor(expanded.end / 1000),
+    },
+  };
 }
 
 /**
@@ -308,7 +412,68 @@ export function buildDataTableQuerySearchParams(
     params.append(`q.${filter.column}`, serializeDataTableFilter(filter));
   }
 
+  if (settings.when) {
+    params.set("when.start", String(settings.when.start));
+    params.set("when.end", String(settings.when.end));
+  }
+  if (settings.whenStep) {
+    params.set("when.step", settings.whenStep);
+  }
+
   return params;
+}
+
+/** Structured `/query` failure. Server `QueryError` is `{ error, code?, ... }`. */
+export type DataTableQueryFailure = {
+  message: string;
+  code?: string;
+  step?: string;
+  maxSteps?: number;
+};
+
+export const WHEN_STEP_LIMIT_ERROR_CODE = "when_step_limit";
+
+export function isWhenStepLimitError(failure: DataTableQueryFailure): boolean {
+  if (failure.code === WHEN_STEP_LIMIT_ERROR_CODE) {
+    return true;
+  }
+  return /produces more than \d+ bins/.test(failure.message);
+}
+
+export function dataTableQueryFailureFromBody(
+  body: unknown,
+  fallback: string
+): DataTableQueryFailure {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return { message: fallback };
+  }
+  const record = body as { [key: string]: unknown };
+  if (typeof record.error !== "string" || !record.error) {
+    return { message: fallback };
+  }
+  return {
+    message: record.error,
+    code: typeof record.code === "string" ? record.code : undefined,
+    step: typeof record.step === "string" ? record.step : undefined,
+    maxSteps: typeof record.maxSteps === "number" ? record.maxSteps : undefined,
+  };
+}
+
+/**
+ * Read a failed `/query` response. Prefer the JSON `error` string so callers
+ * can show the server reason instead of a generic HTTP status.
+ */
+export async function dataTableQueryFailureFromResponse(
+  response: Response
+): Promise<DataTableQueryFailure> {
+  const fallback = `Failed to fetch data table query: ${
+    response.statusText || response.status
+  }`;
+  try {
+    return dataTableQueryFailureFromBody(await response.json(), fallback);
+  } catch {
+    return { message: fallback };
+  }
 }
 
 /** One row/group object from an aggregated `/query` JSON response. */
@@ -361,4 +526,204 @@ export function parseDataTableQueryGroups(
     scaleMax: positiveValues.length ? Math.max(...positiveValues) : 0,
     hasZero: numericValues.some((value) => value === 0),
   };
+}
+
+export const EMPTY_DATA_TABLE_QUERY_VALUES: ParsedDataTableQueryValues = {
+  values: {},
+  min: 0,
+  max: 0,
+  scaleMin: 0,
+  scaleMax: 0,
+  hasZero: false,
+};
+
+export type DataTableQuerySeriesStepStat = {
+  step: string;
+  rows: number;
+  groups: number;
+};
+
+/** Server `series` object on a `when.step` query. */
+export type DataTableQuerySeriesMeta = {
+  step: string;
+  steps: string[];
+  min: number;
+  max: number;
+  scaleMin: number;
+  scaleMax: number;
+  hasZero: boolean;
+  stepStats: DataTableQuerySeriesStepStat[];
+};
+
+export type ParsedDataTableQuerySeries = DataTableQuerySeriesMeta & {
+  byStep: { [step: string]: ParsedDataTableQueryValues };
+  featureCountsByStep: { [step: string]: { [featureId: string]: number } };
+};
+
+export function isDataTableQuerySeriesMeta(
+  value: unknown
+): value is DataTableQuerySeriesMeta {
+  if (value === null || value === undefined || typeof value !== "object") {
+    return false;
+  }
+  if (!("step" in value) || !("steps" in value) || !("stepStats" in value)) {
+    return false;
+  }
+  if (!isTemporalPrecision(value.step) || !Array.isArray(value.steps)) {
+    return false;
+  }
+  if (!value.steps.every((step) => typeof step === "string")) {
+    return false;
+  }
+  if (!Array.isArray(value.stepStats)) {
+    return false;
+  }
+  if (!("min" in value) || !("max" in value)) {
+    return false;
+  }
+  if (!("scaleMin" in value) || !("scaleMax" in value) || !("hasZero" in value)) {
+    return false;
+  }
+  return (
+    typeof value.min === "number" &&
+    typeof value.max === "number" &&
+    typeof value.scaleMin === "number" &&
+    typeof value.scaleMax === "number" &&
+    typeof value.hasZero === "boolean"
+  );
+}
+
+export function isParsedDataTableQuerySeries(
+  value: unknown
+): value is ParsedDataTableQuerySeries {
+  return (
+    isDataTableQuerySeriesMeta(value) &&
+    "byStep" in value &&
+    typeof value.byStep === "object" &&
+    value.byStep !== null
+  );
+}
+
+/**
+ * Split a `when.step` `/query` response into per-step join maps. Uses the
+ * server's global `scaleMin`/`scaleMax` so symbol sizes stay consistent
+ * while scrubbing.
+ */
+export function parseDataTableQuerySeries(
+  groups: DataTableQueryResultGroup[] | null | undefined,
+  series: unknown,
+  joinColumn: string,
+  op: DataTableAggregation | DataTableAggregation[] | undefined
+): ParsedDataTableQuerySeries | null {
+  if (!isDataTableQuerySeriesMeta(series)) {
+    return null;
+  }
+  const buckets: { [step: string]: DataTableQueryResultGroup[] } = {};
+  const featureCountsByStep: {
+    [step: string]: { [featureId: string]: number };
+  } = {};
+  for (const group of groups || []) {
+    const step = group.step;
+    if (typeof step !== "string") {
+      continue;
+    }
+    if (!buckets[step]) {
+      buckets[step] = [];
+    }
+    buckets[step].push(group);
+    const featureId = group[joinColumn];
+    const count = group.count;
+    if (
+      featureId !== null &&
+      featureId !== undefined &&
+      typeof count === "number" &&
+      Number.isFinite(count)
+    ) {
+      if (!featureCountsByStep[step]) {
+        featureCountsByStep[step] = {};
+      }
+      featureCountsByStep[step][String(featureId)] = count;
+    }
+  }
+  const byStep: { [step: string]: ParsedDataTableQueryValues } = {};
+  for (const step of Object.keys(buckets)) {
+    byStep[step] = parseDataTableQueryGroups(buckets[step], joinColumn, op);
+  }
+  return {
+    ...series,
+    byStep,
+    featureCountsByStep,
+  };
+}
+
+function extentsFromValues(values: {
+  [featureId: string]: number;
+}): ParsedDataTableQueryValues {
+  const numericValues = Object.values(values);
+  const positiveValues = numericValues.filter((value) => value > 0);
+  return {
+    values,
+    min: numericValues.length ? Math.min(...numericValues) : 0,
+    max: numericValues.length ? Math.max(...numericValues) : 0,
+    scaleMin: positiveValues.length ? Math.min(...positiveValues) : 0,
+    scaleMax: positiveValues.length ? Math.max(...positiveValues) : 0,
+    hasZero: numericValues.some((value) => value === 0),
+  };
+}
+
+/** Combine one or more series bins (instant scrub uses a single key). */
+export function combineSeriesSteps(
+  series: ParsedDataTableQuerySeries,
+  stepKeys: string[],
+  op: DataTableAggregation
+): ParsedDataTableQueryValues {
+  if (stepKeys.length === 0) {
+    return EMPTY_DATA_TABLE_QUERY_VALUES;
+  }
+  if (stepKeys.length === 1) {
+    return series.byStep[stepKeys[0]] || EMPTY_DATA_TABLE_QUERY_VALUES;
+  }
+  const values: { [featureId: string]: number } = {};
+  const weights: { [featureId: string]: number } = {};
+  const medianBags: { [featureId: string]: number[] } = {};
+  for (const step of stepKeys) {
+    const parsed = series.byStep[step];
+    if (!parsed) continue;
+    const stepCounts = series.featureCountsByStep[step] || {};
+    for (const featureId of Object.keys(parsed.values)) {
+      const value = parsed.values[featureId];
+      const n = stepCounts[featureId] ?? 1;
+      if (op === "mean") {
+        const prevWeight = weights[featureId] ?? 0;
+        const prevSum = (values[featureId] ?? 0) * prevWeight;
+        const nextWeight = prevWeight + n;
+        values[featureId] = nextWeight
+          ? (prevSum + value * n) / nextWeight
+          : 0;
+        weights[featureId] = nextWeight;
+      } else if (op === "sum" || op === "count") {
+        values[featureId] = (values[featureId] ?? 0) + value;
+      } else if (op === "min") {
+        values[featureId] =
+          featureId in values ? Math.min(values[featureId], value) : value;
+      } else if (op === "max") {
+        values[featureId] =
+          featureId in values ? Math.max(values[featureId], value) : value;
+      } else {
+        if (!medianBags[featureId]) {
+          medianBags[featureId] = [];
+        }
+        medianBags[featureId].push(value);
+      }
+    }
+  }
+  if (op === "median") {
+    for (const featureId of Object.keys(medianBags)) {
+      const bag = medianBags[featureId].slice().sort((a, b) => a - b);
+      const mid = Math.floor(bag.length / 2);
+      values[featureId] =
+        bag.length % 2 === 1 ? bag[mid] : (bag[mid - 1] + bag[mid]) / 2;
+    }
+  }
+  return extentsFromValues(values);
 }

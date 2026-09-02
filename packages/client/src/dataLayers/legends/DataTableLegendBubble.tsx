@@ -2,9 +2,10 @@ import { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import {
   DATA_TABLE_ACTIVE_COLOR,
-  DATA_TABLE_NO_DATA_COLOR,
   DATA_TABLE_NO_DATA_FILL_OPACITY,
   DATA_TABLE_NO_DATA_RADIUS,
+  DATA_TABLE_NO_DATA_STROKE_OPACITY,
+  DATA_TABLE_NO_DATA_STROKE_WIDTH,
   DATA_TABLE_ZERO_FILL_OPACITY,
   DATA_TABLE_ZERO_RADIUS,
 } from "../dataTableMapStyle";
@@ -39,16 +40,18 @@ function labelFontSize(text: string, radius: number) {
   return 11;
 }
 
-/** Grey outline + light grey fill, matching map no-data symbology. */
+/** Light grey fill + faint black outline, matching map no-data symbology. */
 function NoDataSymbol() {
-  const size = Math.max(DATA_TABLE_NO_DATA_RADIUS * 2, 7);
+  const size = DATA_TABLE_NO_DATA_RADIUS * 2;
   return (
     <span
-      className="rounded-full border-[1.5px] flex-none"
+      className="rounded-full flex-none"
       style={{
         width: size,
         height: size,
-        borderColor: DATA_TABLE_NO_DATA_COLOR,
+        borderWidth: DATA_TABLE_NO_DATA_STROKE_WIDTH,
+        borderStyle: "solid",
+        borderColor: `rgba(0, 0, 0, ${DATA_TABLE_NO_DATA_STROKE_OPACITY})`,
         backgroundColor: `rgba(156, 163, 175, ${DATA_TABLE_NO_DATA_FILL_OPACITY})`,
       }}
     />
