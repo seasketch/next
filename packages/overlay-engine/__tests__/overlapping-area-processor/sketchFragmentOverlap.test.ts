@@ -960,12 +960,14 @@ describe("Samoa test cases", () => {
   let sourceCache: SourceCache;
   let clippingFn: ClippingFn;
   let pool: WorkerPool<any, any>;
+  let fetchRangeFn: ReturnType<typeof makeFetchRangeFn>["fetchRangeFn"];
 
   beforeAll(async () => {
-    const { fetchRangeFn, cacheHits, cacheMisses } = makeFetchRangeFn(
+    const made = makeFetchRangeFn(
       `https://uploads.seasketch.org`,
       1000 * 1024 * 128,
     );
+    fetchRangeFn = made.fetchRangeFn;
 
     sourceCache = new SourceCache("256mb");
     clippingFn = async (sketch, source, op, query) => {
@@ -986,7 +988,9 @@ describe("Samoa test cases", () => {
   it("overlapping source features should be counted independently", async () => {
     const fragment2 = require("./fragments/fragment-c55ab756.geojson.json");
     const sourceUrl = "https://uploads.seasketch.org/testing-samoa-ebsa.fgb";
-    const source = await createSource<Feature<MultiPolygon>>(sourceUrl);
+    const source = await createSource<Feature<MultiPolygon>>(sourceUrl, {
+      fetchRangeFn,
+    });
     const sqKm = calcArea(fragment2) / 1_000_000;
     const processor = new OverlayEngineBatchProcessor(
       "overlay_area",
@@ -1013,7 +1017,9 @@ describe("Samoa test cases", () => {
   it("Known test case from Samoa - NTZ-6 fragments should produce expected Unknown benthic overlap area", async () => {
     const sourceUrl =
       "https://uploads.seasketch.org/testing-samoa-geomorphology.fgb";
-    const source = await createSource<Feature<MultiPolygon>>(sourceUrl);
+    const source = await createSource<Feature<MultiPolygon>>(sourceUrl, {
+      fetchRangeFn,
+    });
     const metrics: {
       type: "overlay_area";
       value: { [key: string]: number };

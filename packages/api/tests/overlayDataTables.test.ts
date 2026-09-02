@@ -202,38 +202,45 @@ describe("overlay_data_tables", () => {
           update table_of_contents_items
           set enable_data_tables = true, data_table_join_column = 'id'
           where id = ${tocId}`);
-        await conn.any(sql`
-          update data_sources
-          set geostats = '{"layers":[{"attributes":[]}]}'::jsonb
-          where id = ${sourceId}`);
 
-        const tableId = Number(
-          await conn.oneFirst(sql`
-            insert into overlay_data_tables (
-              table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
-              row_count, created_by, version, parquet_remote, column_stats_remote,
-              temporal
-            ) values (
-              ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId}, 1,
-              'r2://bucket/old.parquet', 'r2://bucket/old.json',
-              ${sql.json({
-                version: 1,
-                granularity: "row",
-                coverage: {
-                  kind: "interval",
-                  start: "2018",
-                  end: "2019",
-                  precision: "year",
-                },
-                nativeResolution: "year",
-                defaultViewResolution: "year",
-                authoredBy: "admin",
-              })}
-            ) returning id`),
-        );
-
-        const previous = await conn.oneFirst(
-          sql`select temporal from overlay_data_tables where id = ${tableId}`,
+        let tableId: number;
+        let previous: unknown;
+        await asPostgres(
+          conn,
+          async () => {
+            await conn.any(sql`
+              update data_sources
+              set geostats = '{"layers":[{"attributes":[]}]}'::jsonb
+              where id = ${sourceId}`);
+            tableId = Number(
+              await conn.oneFirst(sql`
+                insert into overlay_data_tables (
+                  table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
+                  row_count, created_by, version, parquet_remote, column_stats_remote,
+                  temporal
+                ) values (
+                  ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId}, 1,
+                  'r2://bucket/old.parquet', 'r2://bucket/old.json',
+                  ${sql.json({
+                    version: 1,
+                    granularity: "row",
+                    coverage: {
+                      kind: "interval",
+                      start: "2018",
+                      end: "2019",
+                      precision: "year",
+                    },
+                    nativeResolution: "year",
+                    defaultViewResolution: "year",
+                    authoredBy: "admin",
+                  })}
+                ) returning id`),
+            );
+            previous = await conn.oneFirst(
+              sql`select temporal from overlay_data_tables where id = ${tableId}`,
+            );
+          },
+          { userId: adminId, projectId },
         );
 
         const upload = await conn.one(sql`
