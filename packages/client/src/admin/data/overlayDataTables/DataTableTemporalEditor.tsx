@@ -113,14 +113,19 @@ function temporalPreviewUrlForTable(table: OverlayDataTableDetailsFragment) {
   }
 }
 
-function formatLabel(format: TemporalDateFormat, t: (key: string) => string) {
+function formatLabel(
+  format: TemporalDateFormat,
+  t: (key: string, options?: { [key: string]: string }) => string
+) {
   switch (format) {
     case "mdy":
       return t("MM/DD/YYYY");
     case "dmy":
       return t("DD/MM/YYYY");
     case "iso":
-      return t("ISO date (e.g. YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ)");
+      return t("ISO date (e.g. {{example}})", {
+        example: "YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ",
+      });
     case "year":
       return t("Year");
     default:
@@ -361,7 +366,6 @@ export default function DataTableTemporalEditor({
     column: string;
     reason: TemporalColumnUnavailableReason;
     suggestedMode?: Exclude<DataTableTemporalMode, "none">;
-    switched?: boolean;
   } | null>(null);
 
   const changeLogRefetchQueries = useMemo(
@@ -526,18 +530,11 @@ export default function DataTableTemporalEditor({
     if (availability.available) {
       return;
     }
-    const shouldSwitch =
-      availability.reason === "date_string" &&
-      availability.suggestedMode === "instant";
     setColumnHint({
       column: attr.attribute,
       reason: availability.reason,
       suggestedMode: availability.suggestedMode,
-      switched: shouldSwitch,
     });
-    if (shouldSwitch) {
-      applyInstantColumn(attr);
-    }
   };
 
   const save = async () => {
@@ -690,24 +687,45 @@ export default function DataTableTemporalEditor({
               {columnHint && form.mode !== "none" && (
                 <div className="rounded-md border border-sky-400/40 bg-sky-500/10 px-3 py-2 text-sm text-sky-100">
                   <p>
-                    {columnHint.switched
+                    {columnHint.reason === "date_string" &&
+                    columnHint.suggestedMode
                       ? t(
-                          "{{column}} cannot be used on that tab. Switched to A date column.",
-                          { column: columnHint.column }
+                          "{{column}} cannot be used with {{tab}}. It looks like date strings. Try {{suggested}} instead.",
+                          {
+                            column: columnHint.column,
+                            tab:
+                              tabs.find((tab) => tab.id === form.mode)?.name ||
+                              form.mode,
+                            suggested:
+                              tabs.find(
+                                (tab) => tab.id === columnHint.suggestedMode
+                              )?.name || columnHint.suggestedMode,
+                          }
                         )
-                      : columnHint.reason === "date_string"
+                      : columnHint.reason === "not_numeric" &&
+                        columnHint.suggestedMode
                       ? t(
-                          "{{column}} contains date strings. Use the A date column tab.",
-                          { column: columnHint.column }
+                          "{{column}} cannot be used with {{tab}}. Those settings need number columns. If it contains dates, try {{suggested}}.",
+                          {
+                            column: columnHint.column,
+                            tab:
+                              tabs.find((tab) => tab.id === form.mode)?.name ||
+                              form.mode,
+                            suggested:
+                              tabs.find(
+                                (tab) => tab.id === columnHint.suggestedMode
+                              )?.name || columnHint.suggestedMode,
+                          }
                         )
-                      : columnHint.reason === "not_numeric"
-                      ? t(
-                          "{{column}} is not numeric. Year, month, and day need number columns. If it contains dates, use the A date column tab.",
-                          { column: columnHint.column }
-                        )
-                      : t("{{column}} cannot be used as a date.", {
-                          column: columnHint.column,
-                        })}
+                      : t(
+                          "{{column}} cannot be used with {{tab}}.",
+                          {
+                            column: columnHint.column,
+                            tab:
+                              tabs.find((tab) => tab.id === form.mode)?.name ||
+                              form.mode,
+                          }
+                        )}
                   </p>
                   {columnHint.suggestedMode &&
                   columnHint.suggestedMode !== form.mode ? (
@@ -720,13 +738,18 @@ export default function DataTableTemporalEditor({
                         );
                         if (attr && columnHint.suggestedMode === "instant") {
                           applyInstantColumn(attr);
-                          setColumnHint((prev) =>
-                            prev ? { ...prev, switched: true } : prev
-                          );
+                          setColumnHint(null);
+                        } else if (columnHint.suggestedMode) {
+                          setMode(columnHint.suggestedMode);
                         }
                       }}
                     >
-                      {t("Switch to A date column")}
+                      {t("Switch to {{tab}}", {
+                        tab:
+                          tabs.find(
+                            (tab) => tab.id === columnHint.suggestedMode
+                          )?.name || columnHint.suggestedMode,
+                      })}
                     </button>
                   ) : null}
                 </div>
