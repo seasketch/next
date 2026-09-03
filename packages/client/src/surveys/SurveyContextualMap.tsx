@@ -20,8 +20,12 @@ import { MapManagerContext } from "../dataLayers/MapContextManager";
 import BasemapContextProvider from "../dataLayers/BasemapContext";
 import MapManagerContextProvider from "../dataLayers/MapManagerContextProvider";
 import MapUIProvider from "../dataLayers/MapUIContext";
-import { useContext } from "react";
+import { useContext, useEffect } from "react";
 import getSlug from "../getSlug";
+import {
+  applySurveyMapCamera,
+  surveyMapCameraKey,
+} from "./surveyContextualMapCamera";
 
 export default function SurveyContextualMap(props: {
   basemaps: number[];
@@ -71,6 +75,18 @@ function SurveyContextualMapInner(props: {
   const onError = useGlobalErrorHandler();
   const [mutate, state] = useUpdateFormElementMapCameraMutation({ onError });
   const windowSize = useWindowSize();
+  const cameraKey = surveyMapCameraKey(props.cameraOptions);
+
+  // The Mapbox instance is reused when advancing between map-layout pages.
+  // Apply the new page's starting camera after the style updates; without
+  // this, only the first map page (or a remount after a non-map page) gets
+  // the configured extent. Spatial/drawing inputs keep their own maps.
+  useEffect(() => {
+    applySurveyMapCamera(manager?.map, props.cameraOptions);
+    // cameraKey captures the configured extent; props.cameraOptions is read
+    // from the current render when that extent changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [manager?.map, cameraKey]);
 
   return (
     <SurveyMapPortal>

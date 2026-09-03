@@ -862,6 +862,9 @@ function SurveyApp() {
                       displayHideMapButton={stage === 1}
                       onRequestStageChange={setStage}
                       hideControls={style.layout === FormElementLayout.MapTop}
+                      formElementId={
+                        (formElement.exiting || formElement.current).id
+                      }
                       basemaps={
                         (style.mapBasemaps as number[] | undefined) || []
                       }

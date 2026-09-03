@@ -10561,15 +10561,6 @@ select{
   border-color:rgb(0 0 0 / 0.15) !important
 }
 
-.\!border-white{
-  --tw-border-opacity:1 !important;
-  border-color:rgb(255 255 255 / var(--tw-border-opacity, 1)) !important
-}
-
-.\!border-white\/10{
-  border-color:rgb(255 255 255 / 0.1) !important
-}
-
 .border-\[\#ff6600\]{
   --tw-border-opacity:1;
   border-color:rgb(255 102 0 / var(--tw-border-opacity, 1))
@@ -10924,10 +10915,6 @@ select{
   border-color:rgb(56 189 248 / 0.3)
 }
 
-.border-sky-400\/40{
-  border-color:rgb(56 189 248 / 0.4)
-}
-
 .border-slate-100{
   --tw-border-opacity:1;
   border-color:rgb(241 245 249 / var(--tw-border-opacity, 1))
@@ -11056,6 +11043,19 @@ select{
 .border-zinc-700{
   --tw-border-opacity:1;
   border-color:rgb(63 63 70 / var(--tw-border-opacity, 1))
+}
+
+.\!border-white\/10{
+  border-color:rgb(255 255 255 / 0.1) !important
+}
+
+.\!border-white{
+  --tw-border-opacity:1 !important;
+  border-color:rgb(255 255 255 / var(--tw-border-opacity, 1)) !important
+}
+
+.border-sky-400\/40{
+  border-color:rgb(56 189 248 / 0.4)
 }
 
 .border-b-black{
@@ -11922,10 +11922,6 @@ select{
   background-color:rgb(14 165 233 / var(--tw-bg-opacity, 1))
 }
 
-.bg-sky-500\/10{
-  background-color:rgb(14 165 233 / 0.1)
-}
-
 .bg-sky-500\/20{
   background-color:rgb(14 165 233 / 0.2)
 }
@@ -12151,6 +12147,10 @@ select{
 .bg-zinc-900{
   --tw-bg-opacity:1;
   background-color:rgb(24 24 27 / var(--tw-bg-opacity, 1))
+}
+
+.bg-sky-500\/10{
+  background-color:rgb(14 165 233 / 0.1)
 }
 
 .bg-opacity-10{
@@ -15917,10 +15917,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
   border-color:rgb(156 163 175 / var(--tw-border-opacity, 1)) !important
 }
 
-.hover\:\!border-white\/20:hover{
-  border-color:rgb(255 255 255 / 0.2) !important
-}
-
 .hover\:border-black:hover{
   --tw-border-opacity:1;
   border-color:rgb(0 0 0 / var(--tw-border-opacity, 1))
@@ -15968,6 +15964,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .hover\:border-transparent:hover{
   border-color:transparent
+}
+
+.hover\:\!border-white\/20:hover{
+  border-color:rgb(255 255 255 / 0.2) !important
 }
 
 .hover\:border-opacity-10:hover{
