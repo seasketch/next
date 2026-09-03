@@ -119,6 +119,10 @@ const LazyPrivacyPolicy = React.lazy(
   () => import(/* webpackChunkName: "PrivacyPolicy" */ "./PrivacyPolicy")
 );
 
+const LazyDataHandling = React.lazy(
+  () => import(/* webpackChunkName: "DataHandling" */ "./DataHandling")
+);
+
 const LazySuperuserDashboard = React.lazy(
   () => import(/* webpackChunkName: "SuperuserDashboard" */ "./Dashboard")
 );
@@ -139,6 +143,8 @@ function shouldScrollMarketingPageToTop(pathname: string, hash: string) {
     "/new-project",
     "/terms-of-use",
     "/privacy-policy",
+    "/data-handling",
+    "/subprocessors",
     "/signin",
     "/submit-offline-surveys",
     "/account-settings",
@@ -167,6 +173,8 @@ function App() {
     location.pathname === "/submit-offline-surveys" ||
     location.pathname === "/terms-of-use" ||
     location.pathname === "/privacy-policy" ||
+    location.pathname === "/data-handling" ||
+    location.pathname === "/subprocessors" ||
     location.pathname === "/new-project";
   useEffect(() => {
     if (user) {
@@ -218,6 +226,8 @@ function App() {
     "/team",
     "/terms-of-use",
     "/privacy-policy",
+    "/data-handling",
+    "/subprocessors",
     "/uses/map-portal-hosting",
     "/uses/ocean-use-surveys",
     "/uses/sketching-and-analysis",
@@ -329,6 +339,9 @@ function App() {
                 </Route>
                 <Route exact path="/privacy-policy">
                   <LazyPrivacyPolicy />
+                </Route>
+                <Route exact path={["/data-handling", "/subprocessors"]}>
+                  <LazyDataHandling />
                 </Route>
                 <Route path="/new-project">
                   <NewProjectPage />

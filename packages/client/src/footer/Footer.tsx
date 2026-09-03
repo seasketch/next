@@ -66,6 +66,11 @@ export default function Footer() {
                 </a>
               </li>
               <li>
+                <a className="hover:text-white" href="/data-handling">
+                  Data Handling
+                </a>
+              </li>
+              <li>
                 <a
                   className="hover:text-white"
                   href="https://github.com/seasketch"
