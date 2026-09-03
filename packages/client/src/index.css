@@ -9548,6 +9548,11 @@ select{
           user-select:text
 }
 
+.select-all{
+  -webkit-user-select:all;
+          user-select:all
+}
+
 .resize{
   resize:both
 }
@@ -17188,6 +17193,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .disabled\:cursor-wait:disabled{
   cursor:wait
+}
+
+.disabled\:cursor-default:disabled{
+  cursor:default
 }
 
 .disabled\:bg-blue-400:disabled{

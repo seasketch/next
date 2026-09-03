@@ -17,6 +17,8 @@ import {
   DataTableFilter,
   dataTableInFilterValues,
 } from "./dataTableQueryApi";
+import { applyVisibleMultiSelection } from "./dataTableFilterSelection";
+import DataTableFilterMultiSelectRow from "./DataTableFilterMultiSelectRow";
 import clsx from "clsx";
 
 type StringFilterMode = "value" | "isNull" | "notNull";
@@ -243,6 +245,18 @@ export default function DataTableStringFilter({
     }
   };
 
+  const selectVisible = (action: "all" | "none") => {
+    const nextSelected = applyVisibleMultiSelection(
+      selected,
+      filteredValues,
+      action
+    );
+    setMulti(true);
+    setMode("value");
+    setSelected(nextSelected);
+    commit("value", nextSelected, true);
+  };
+
   const onTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
     if (event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey) {
       pendingTypeRef.current = event.key;
@@ -355,15 +369,14 @@ export default function DataTableStringFilter({
           </div>
 
           <div className="border-t border-black/5 px-2 py-1.5 space-y-1.5 bg-gray-50/80">
-            <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer select-none">
-              <input
-                type="checkbox"
-                className="rounded border-gray-300 text-primary-600 focus:ring-0 focus-visible:ring-1 focus-visible:ring-primary-500"
-                checked={multi}
-                onChange={(e) => onMultiToggle(e.target.checked)}
-              />
-              <span>{t("Select multiple")}</span>
-            </label>
+            <DataTableFilterMultiSelectRow
+              multi={multi}
+              selected={mode === "value" ? selected : []}
+              visibleValues={filteredValues}
+              onMultiToggle={onMultiToggle}
+              onSelectAll={() => selectVisible("all")}
+              onSelectNone={() => selectVisible("none")}
+            />
             <div className="flex gap-1">
               <button
                 type="button"
