@@ -539,6 +539,34 @@ export function windowClockForRange(
   };
 }
 
+/**
+ * Instant ↔ Range for the timeslider. Range always covers every step so a
+ * single-step domain still becomes a window (handles on both edges) instead
+ * of silently staying instant.
+ */
+export function clockForSliderMode(
+  mode: "instant" | "window",
+  clock: TemporalClock,
+  steps: TemporalIso[],
+  resolution: TemporalPrecision
+): TemporalClock | null {
+  if (mode === "window") {
+    const first = steps[0];
+    if (!first) return null;
+    const last = steps[steps.length - 1] || first;
+    const rangeEnd = instantClockForStep(last, resolution)?.end;
+    if (!rangeEnd) return null;
+    return {
+      mode: "window",
+      start: first,
+      end: rangeEnd,
+      viewResolution: resolution,
+    };
+  }
+  const last = lastIncludedStep(clock, steps, resolution);
+  return instantClockForStep(last || clock.start, resolution);
+}
+
 /** Slider step keys covered by the current clock (one key, or a window). */
 export function stepKeysForClock(
   clock: TemporalClock,

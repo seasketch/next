@@ -1,6 +1,6 @@
 /* eslint-disable i18next/no-literal-string */
-import { describe, expect, it, jest } from "@jest/globals";
-import { render, screen } from "@testing-library/react";
+import { beforeAll, describe, expect, it, jest } from "@jest/globals";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { TemporalInfo } from "@seasketch/geostats-types";
 import TimeSlider from "./TimeSlider";
@@ -51,6 +51,7 @@ function renderSlider(
     viewResolution: "year",
   }
 ) {
+  const setClock = jest.fn();
   const value: MapTemporalStateValue = {
     enabled: true,
     clock,
@@ -76,16 +77,17 @@ function renderSlider(
     },
     queryStepCountsLoading: loading,
     queryErrors: [],
-    setClock: jest.fn(),
+    setClock,
     setViewResolution: jest.fn(),
   };
-  return render(
+  const view = render(
     <MemoryRouter>
       <MapTemporalStateContext.Provider value={value}>
         <TimeSlider />
       </MapTemporalStateContext.Provider>
     </MemoryRouter>
   );
+  return { ...view, setClock };
 }
 
 describe("TimeSlider histogram loading", () => {
@@ -164,5 +166,93 @@ describe("TimeSlider histogram loading", () => {
     });
     expect(container.querySelectorAll(".bg-sky-300\\/70")).toHaveLength(2);
     expect(container.querySelectorAll(".bg-sky-300\\/20")).toHaveLength(1);
+  });
+});
+
+describe("TimeSlider Instant / Range mode", () => {
+  beforeAll(() => {
+    Object.assign(Element.prototype, {
+      setPointerCapture: () => {},
+      releasePointerCapture: () => {},
+      hasPointerCapture: () => false,
+    });
+  });
+
+  it("shows Instant and Range as a pressed-state switch", () => {
+    renderSlider(false);
+    expect(screen.getByRole("button", { name: "Instant" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    expect(screen.getByRole("button", { name: "Range" })).toHaveAttribute(
+      "aria-pressed",
+      "false"
+    );
+  });
+
+  it("opens a full-domain window when Range is chosen", () => {
+    const { setClock } = renderSlider(false);
+    fireEvent.click(screen.getByRole("button", { name: "Range" }));
+    expect(setClock).toHaveBeenCalledWith({
+      mode: "window",
+      start: "2018",
+      end: "2021",
+      viewResolution: "year",
+    });
+  });
+
+  it("does not change the clock when the active mode is clicked again", () => {
+    const { setClock } = renderSlider(false);
+    fireEvent.click(screen.getByRole("button", { name: "Instant" }));
+    expect(setClock).not.toHaveBeenCalled();
+  });
+
+  it("returns to instant on the last included step", () => {
+    const { setClock } = renderSlider(false, {
+      mode: "window",
+      start: "2018",
+      end: "2021",
+      viewResolution: "year",
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Instant" }));
+    expect(setClock).toHaveBeenCalledWith({
+      mode: "instant",
+      start: "2020",
+      end: "2021",
+      viewResolution: "year",
+    });
+  });
+
+  it("does not keep the end handle captured after pointerup", () => {
+    const { container, setClock } = renderSlider(false, {
+      mode: "window",
+      start: "2018",
+      end: "2021",
+      viewResolution: "year",
+    });
+    const track = container.querySelector(".timeslider-track");
+    expect(track).toBeTruthy();
+    jest.spyOn(track!, "getBoundingClientRect").mockReturnValue({
+      x: 0,
+      y: 0,
+      top: 0,
+      left: 0,
+      bottom: 32,
+      right: 200,
+      width: 200,
+      height: 32,
+      toJSON: () => ({}),
+    });
+    fireEvent.pointerDown(track!, {
+      button: 0,
+      buttons: 1,
+      clientX: 190,
+      pointerId: 1,
+    });
+    expect(setClock).toHaveBeenCalled();
+    const callsAfterDown = setClock.mock.calls.length;
+    fireEvent.pointerUp(track!, { button: 0, buttons: 0, pointerId: 1 });
+    fireEvent.pointerMove(track!, { buttons: 0, clientX: 20, pointerId: 1 });
+    expect(setClock.mock.calls.length).toBe(callsAfterDown);
   });
 });

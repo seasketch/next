@@ -15,6 +15,7 @@ import {
   layoutTimeSliderSteps,
   nearestTimeSliderStepIndex,
   timeSliderWindowExtents,
+  clockForSliderMode,
   windowClockForRange,
   windowStepIndexes,
   reconcileClock,
@@ -619,6 +620,28 @@ describe("view resolution and window clocks", () => {
     expect(
       stepKeysForClock(instantClockForStep("2020", "year")!, domain, "year")
     ).toEqual(["2020"]);
+  });
+
+  it("forces a window even when the domain is a single step", () => {
+    const instant = instantClockForStep("2018", "year")!;
+    expect(clockForSliderMode("window", instant, ["2018"], "year")).toEqual({
+      mode: "window",
+      start: "2018",
+      end: "2019",
+      viewResolution: "year",
+    });
+  });
+
+  it("returns to instant on the last included window step", () => {
+    const window = windowClockForRange("2018", "2021", "year")!;
+    expect(
+      clockForSliderMode("instant", window, ["2018", "2019", "2020"], "year")
+    ).toEqual({
+      mode: "instant",
+      start: "2020",
+      end: "2021",
+      viewResolution: "year",
+    });
   });
 
   it("opens a window over every slider step (Instant → Range)", () => {

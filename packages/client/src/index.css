@@ -14404,6 +14404,10 @@ select{
   color:rgb(113 113 122 / var(--tw-text-opacity, 1))
 }
 
+.text-white\/70{
+  color:rgb(255 255 255 / 0.7)
+}
+
 .text-opacity-50{
   --tw-text-opacity:0.5
 }

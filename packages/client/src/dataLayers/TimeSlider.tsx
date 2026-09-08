@@ -14,6 +14,7 @@ import { MapTemporalStateContext } from "./MapTemporalStateContext";
 import {
   advanceClock,
   formatClockLabel,
+  clockForSliderMode,
   instantClockForStep,
   layoutTimeSliderCoverageMarks,
   layoutTimeSliderSteps,
@@ -106,7 +107,6 @@ export default function TimeSlider() {
   const { startIndex, endIndex } = clock
     ? windowStepIndexes(layouts, clock, resolution || clock.viewResolution)
     : { startIndex: -1, endIndex: -1 };
-  const lastStep = endIndex >= 0 ? steps[endIndex] : null;
   const windowMode = clock?.mode === "window";
 
   useEffect(() => {
@@ -140,6 +140,20 @@ export default function TimeSlider() {
   const coverageMarks = marks.filter((mark) => mark.kind !== "histogram");
   const trackRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef<"start" | "end" | "instant" | null>(null);
+  const dragPointerIdRef = useRef<number | null>(null);
+
+  const clearDrag = (el?: HTMLElement | null, pointerId?: number | null) => {
+    draggingRef.current = null;
+    const id = pointerId ?? dragPointerIdRef.current;
+    dragPointerIdRef.current = null;
+    if (el && id != null && el.hasPointerCapture(id)) {
+      el.releasePointerCapture(id);
+    }
+  };
+
+  useEffect(() => {
+    clearDrag(trackRef.current);
+  }, [windowMode]);
 
   if (!clock || !domain || !resolution || steps.length === 0) {
     return null;
@@ -160,6 +174,14 @@ export default function TimeSlider() {
         )
       : queryErrors[0]
     : null;
+
+  const applyMode = (mode: "instant" | "window") => {
+    clearDrag(trackRef.current);
+    setPlaying(false);
+    if ((mode === "window") === windowMode) return;
+    const next = clockForSliderMode(mode, clock, steps, resolution);
+    if (next) setClock(next);
+  };
 
   const goToIndex = (nextIndex: number, handle: "start" | "end" | "instant") => {
     const clamped = Math.max(0, Math.min(steps.length - 1, nextIndex));
@@ -281,22 +303,31 @@ export default function TimeSlider() {
           aria-valuetext={label}
           className="timeslider-track relative h-8 w-full cursor-pointer touch-none focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-cool-gray-800"
           onPointerDown={(event) => {
-            if (event.button !== 0) return;
+            if (event.button > 0) return;
             const handle = handleForClientX(event.clientX);
             draggingRef.current = handle;
+            dragPointerIdRef.current = event.pointerId;
             setPlaying(false);
             event.currentTarget.setPointerCapture(event.pointerId);
             seekFromClientX(event.clientX, handle);
           }}
           onPointerMove={(event) => {
             if (!draggingRef.current) return;
+            if (event.buttons === 0) {
+              clearDrag(event.currentTarget, event.pointerId);
+              return;
+            }
             seekFromClientX(event.clientX, draggingRef.current);
           }}
-          onPointerUp={() => {
-            draggingRef.current = null;
+          onPointerUp={(event) => {
+            clearDrag(event.currentTarget, event.pointerId);
           }}
-          onPointerCancel={() => {
+          onPointerCancel={(event) => {
+            clearDrag(event.currentTarget, event.pointerId);
+          }}
+          onLostPointerCapture={() => {
             draggingRef.current = null;
+            dragPointerIdRef.current = null;
           }}
         >
           <div
@@ -405,30 +436,38 @@ export default function TimeSlider() {
           ))}
         </select>
       )}
-      <button
-        type="button"
-        className={`h-8 shrink-0 rounded-md px-2 text-xs font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 ${
-          windowMode
-            ? "bg-sky-400/20 text-sky-100"
-            : "bg-white/10 text-white hover:bg-white/20"
-        }`}
-        onClick={() => {
-          if (windowMode) {
-            const next = instantClockForStep(lastStep || clock.start, resolution);
-            if (next) setClock(next);
-            return;
-          }
-          setPlaying(false);
-          const first = steps[0];
-          const last = steps[steps.length - 1];
-          const rangeEnd = instantClockForStep(last, resolution)?.end;
-          if (!first || !rangeEnd) return;
-          const next = windowClockForRange(first, rangeEnd, resolution);
-          if (next) setClock(next);
-        }}
+      <div
+        role="group"
+        aria-label={t("Time mode")}
+        className="flex h-8 shrink-0 rounded-md bg-black/30 p-0.5"
       >
-        {windowMode ? t("Range") : t("Instant")}
-      </button>
+        <button
+          type="button"
+          aria-pressed={!windowMode}
+          className={`rounded px-2 text-xs font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 ${
+            !windowMode
+              ? "bg-sky-400/25 text-sky-100"
+              : "text-white/70 hover:text-white"
+          }`}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={() => applyMode("instant")}
+        >
+          {t("Instant")}
+        </button>
+        <button
+          type="button"
+          aria-pressed={windowMode}
+          className={`rounded px-2 text-xs font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 ${
+            windowMode
+              ? "bg-sky-400/25 text-sky-100"
+              : "text-white/70 hover:text-white"
+          }`}
+          onPointerDown={(event) => event.stopPropagation()}
+          onClick={() => applyMode("window")}
+        >
+          {t("Range")}
+        </button>
+      </div>
       </div>
     </div>
   );
