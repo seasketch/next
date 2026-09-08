@@ -51,12 +51,16 @@ export const DATA_TABLE_VALUE_MIN_RADIUS = 10;
 export const DATA_TABLE_VALUE_MAX_RADIUS = 65;
 /** No-data sites render as a small grey fill with a faint black outline. */
 export const DATA_TABLE_NO_DATA_RADIUS = DATA_TABLE_VALUE_MIN_RADIUS * 0.45;
-/** Zero-value sites stay near the min positive-value footprint, in active blue. */
-export const DATA_TABLE_ZERO_RADIUS = DATA_TABLE_VALUE_MIN_RADIUS * 0.9;
+/**
+ * True zeros stay smaller than the smallest positive bubble, including
+ * stroke. A near-min radius plus a 2px ring read as *larger* than low
+ * positives when zoomed out.
+ */
+export const DATA_TABLE_ZERO_RADIUS = DATA_TABLE_VALUE_MIN_RADIUS * 0.4;
 export const DATA_TABLE_NO_DATA_STROKE_WIDTH = 1;
 export const DATA_TABLE_NO_DATA_STROKE_COLOR = "#000000";
 export const DATA_TABLE_NO_DATA_STROKE_OPACITY = 0.2;
-export const DATA_TABLE_ZERO_STROKE_WIDTH = 2;
+export const DATA_TABLE_ZERO_STROKE_WIDTH = 1;
 
 /** Light fill shared by the no-data and zero-value symbols. */
 export const DATA_TABLE_NO_DATA_FILL_OPACITY = 0.35;
@@ -122,8 +126,11 @@ function radiusForStop(
   // Keep zoom-stop radii in the same ratio as the full-size legend constants.
   const noDataRadius =
     minRadius * (DATA_TABLE_NO_DATA_RADIUS / DATA_TABLE_VALUE_MIN_RADIUS);
-  const zeroRadius =
-    minRadius * (DATA_TABLE_ZERO_RADIUS / DATA_TABLE_VALUE_MIN_RADIUS);
+  const zeroRadius = Math.max(
+    1,
+    minRadius * (DATA_TABLE_ZERO_RADIUS / DATA_TABLE_VALUE_MIN_RADIUS) -
+      DATA_TABLE_ZERO_STROKE_WIDTH / 2
+  );
   // scaledValue is a number when present; null / missing feature-state is
   // non-numeric. (UNSET and NO_DATA are both null in the current model.)
   const isMissing = [

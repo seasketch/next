@@ -10,16 +10,33 @@ import {
   DATA_TABLE_ZERO_RADIUS,
 } from "../dataTableMapStyle";
 
-function formatLegendNumber(value: number) {
+/** Small positives stay visible but never show more than two decimal places. */
+export function formatLegendNumber(value: number) {
+  if (value === 0) {
+    return "0";
+  }
+  const abs = Math.abs(value);
+  if (abs >= 100) {
+    return value.toLocaleString(undefined, {
+      maximumFractionDigits: 0,
+      useGrouping: false,
+    });
+  }
+  if (abs >= 1) {
+    return value.toLocaleString(undefined, {
+      maximumFractionDigits: 1,
+      useGrouping: false,
+    });
+  }
   return value.toLocaleString(undefined, {
-    maximumFractionDigits: 1,
+    maximumFractionDigits: 2,
     useGrouping: false,
   });
 }
 
-const MAX_RADIUS = 32;
-const MID_RADIUS = 19;
-const MIN_RADIUS = 10;
+const MAX_RADIUS = 40;
+const MID_RADIUS = 24;
+const MIN_RADIUS = 14;
 const FILL = "rgba(37, 99, 235, 0.92)";
 const RING_STROKE = "rgba(255, 255, 255, 0.95)";
 const EMPTY_FILL = "rgba(156, 163, 175, 0.45)";
@@ -162,11 +179,15 @@ function ValueScaleBubble({
     );
   }
 
-  const displayMid = min + (max - min) / 2;
+  const positiveMin = min > 0 ? min : null;
+  const displayMid =
+    positiveMin != null ? positiveMin + (max - positiveMin) / 2 : max / 2;
   const stops = [
     { value: max, radius: MAX_RADIUS },
     { value: displayMid, radius: MID_RADIUS },
-    { value: min, radius: MIN_RADIUS },
+    ...(positiveMin != null
+      ? [{ value: positiveMin, radius: MIN_RADIUS }]
+      : []),
   ];
 
   return (
@@ -243,12 +264,10 @@ function SpecialSymbolEntry({
 }
 
 /**
- * Data-table map legend: nested bubble scale on the left, zero-value and
- * no-data symbols stacked to the right.
+ * Data-table map legend: nested bubble scale on the left (positive
+ * values only). True zeros use a smaller dedicated mark — not a stacked
+ * bubble labeled "0".
  *
- * All three symbols are always rendered in a fixed footprint so loading,
- * errors, or new extents change content (colors, labels, dimming) but never
- * shift layout:
  * - data settled → blue scale with numbers
  * - refetch with previous extents → same scale, dimmed
  * - first load / no data → grey scale, no numbers (pulsing while loading)
@@ -257,13 +276,14 @@ function SpecialSymbolEntry({
 export default function DataTableLegendBubble({
   min,
   max,
+  hasZero = false,
   showValueScale = true,
   loading = false,
   error,
 }: {
   min: number;
   max: number;
-  /** Retained for API compatibility; all symbols are always shown. */
+  /** True zeros get a dedicated mark, not a stacked-scale stop. */
   hasZero?: boolean;
   /** True when there are real positive extents to label the scale with. */
   showValueScale?: boolean;
@@ -295,13 +315,15 @@ export default function DataTableLegendBubble({
             muted ? "opacity-50" : "opacity-100"
           }`}
         >
-          <li>
-            <SpecialSymbolEntry
-              symbol={<ZeroSymbol />}
-              label={0}
-              labelClassName="font-medium tabular-nums text-gray-700"
-            />
-          </li>
+          {hasZero ? (
+            <li>
+              <SpecialSymbolEntry
+                symbol={<ZeroSymbol />}
+                label={0}
+                labelClassName="font-medium tabular-nums text-gray-700"
+              />
+            </li>
+          ) : null}
           <li>
             <SpecialSymbolEntry
               symbol={<NoDataSymbol />}
