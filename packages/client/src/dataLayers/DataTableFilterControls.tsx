@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import * as Popover from "@radix-ui/react-popover";
 import { GeostatsAttribute } from "@seasketch/geostats-types";
-import { DataTableFilter } from "./dataTableQueryApi";
+import { DataTableFilter, dataTableFilterLabel } from "./dataTableQueryApi";
 import DataTableNumericFilter, {
   defaultNumericFilters,
 } from "./DataTableNumericFilter";
@@ -212,10 +212,12 @@ function FilterValueEditor({
   column,
   filters,
   onChange,
+  queryLoading = false,
 }: {
   column: GeostatsAttribute;
   filters: DataTableFilter[];
   onChange: (filters: DataTableFilter[]) => void;
+  queryLoading?: boolean;
 }) {
   if (column.type === "number") {
     return (
@@ -223,6 +225,7 @@ function FilterValueEditor({
         column={column}
         filters={filters}
         onChange={onChange}
+        queryLoading={queryLoading}
       />
     );
   }
@@ -259,6 +262,8 @@ export default function DataTableFilterControls({
   visualizedColumns,
   requiredColumns = [],
   hiddenColumns = [],
+  columnLabels = {},
+  queryLoading = false,
   onChange,
 }: {
   columns: GeostatsAttribute[];
@@ -266,8 +271,12 @@ export default function DataTableFilterControls({
   visualizedColumns: string[];
   /** Admin-required filter columns; shown first and not removable. */
   requiredColumns?: string[];
-  /** Columns replaced by the timeslider (temporal source columns). */
+  /** Columns hidden from the Add filter list (temporal sources, admin-hidden). */
   hiddenColumns?: string[];
+  /** Custom labels keyed by original column name. */
+  columnLabels?: Record<string, string>;
+  /** True while the map query for the current filters is in flight. */
+  queryLoading?: boolean;
   onChange: (filters: DataTableFilter[]) => void;
 }) {
   const { t } = useTranslation("homepage");
@@ -363,11 +372,12 @@ export default function DataTableFilterControls({
                   title={column.attribute}
                   className="min-w-0 flex-1 truncate text-xs font-medium text-gray-700"
                 >
-                  {column.attribute}
+                  {dataTableFilterLabel(column.attribute, columnLabels)}
                 </span>
                 <FilterValueEditor
                   column={column}
                   filters={columnFilters}
+                  queryLoading={queryLoading}
                   onChange={(nextFilters) =>
                     onChange(
                       replaceColumnFilters(filters, columnName, nextFilters)
@@ -394,7 +404,7 @@ export default function DataTableFilterControls({
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">
                     <div className="text-xs font-medium text-gray-700 truncate">
-                      {column.attribute}
+                      {dataTableFilterLabel(column.attribute, columnLabels)}
                     </div>
                     <div className="text-[10px] text-gray-400">{column.type}</div>
                   </div>
@@ -418,6 +428,7 @@ export default function DataTableFilterControls({
                 <FilterValueEditor
                   column={column}
                   filters={columnFilters}
+                  queryLoading={queryLoading}
                   onChange={(nextFilters) =>
                     onChange(
                       replaceColumnFilters(filters, columnName, nextFilters)
@@ -460,10 +471,7 @@ export default function DataTableFilterControls({
                     }}
                   >
                     <span className="block truncate text-gray-800">
-                      {column.attribute}
-                    </span>
-                    <span className="block text-[10px] text-gray-500">
-                      {column.type}
+                      {dataTableFilterLabel(column.attribute, columnLabels)}
                     </span>
                   </button>
                 ))}

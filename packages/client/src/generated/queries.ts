@@ -10749,6 +10749,10 @@ export type OverlayDataTable = Node & {
   createdAt?: Maybe<Scalars['Datetime']>;
   createdBy: Scalars['Int'];
   deletedAt?: Maybe<Scalars['Datetime']>;
+  /** Custom display labels for filter columns, keyed by original column name. Empty or missing keys use the column name. */
+  filterColumnLabels?: Maybe<Scalars['JSON']>;
+  /** Filter columns omitted from the end-user Add filter list. Required filters cannot be hidden. */
+  hiddenFilterColumns?: Maybe<Array<Maybe<Scalars['String']>>>;
   id: Scalars['Int'];
   joinColumn: Scalars['String'];
   name: Scalars['String'];
@@ -15212,6 +15216,8 @@ export type SetOverlayDataTableVisualizationSettingsInput = {
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
+  filterColumnLabels?: Maybe<Scalars['JSON']>;
+  hiddenFilterColumns?: Maybe<Array<Maybe<Scalars['String']>>>;
   requiredFilterColumns?: Maybe<Array<Maybe<Scalars['String']>>>;
   tableId?: Maybe<Scalars['Int']>;
   visualizationColumns?: Maybe<Array<Maybe<Scalars['String']>>>;
@@ -23889,12 +23895,12 @@ export type GetTilePackageQuery = (
 
 export type ClientOverlayDataTableFragment = (
   { __typename?: 'OverlayDataTable' }
-  & Pick<OverlayDataTable, 'id' | 'stableId' | 'name' | 'version' | 'rowCount' | 'joinColumn' | 'overlayJoinColumn' | 'queryUrl' | 'columnStatsUrl' | 'visualizationColumns' | 'visualizationOps' | 'requiredFilterColumns' | 'temporal'>
+  & Pick<OverlayDataTable, 'id' | 'stableId' | 'name' | 'version' | 'rowCount' | 'joinColumn' | 'overlayJoinColumn' | 'queryUrl' | 'columnStatsUrl' | 'visualizationColumns' | 'visualizationOps' | 'requiredFilterColumns' | 'hiddenFilterColumns' | 'filterColumnLabels' | 'temporal'>
 );
 
 export type OverlayDataTableDetailsFragment = (
   { __typename?: 'OverlayDataTable' }
-  & Pick<OverlayDataTable, 'id' | 'stableId' | 'name' | 'version' | 'joinColumn' | 'overlayJoinColumn' | 'rowCount' | 'parquetRemote' | 'columnStatsRemote' | 'parquetUrl' | 'columnStatsUrl' | 'queryUrl' | 'deletedAt' | 'replacedById' | 'createdAt' | 'updatedAt' | 'visualizationColumns' | 'visualizationOps' | 'requiredFilterColumns' | 'temporal'>
+  & Pick<OverlayDataTable, 'id' | 'stableId' | 'name' | 'version' | 'joinColumn' | 'overlayJoinColumn' | 'rowCount' | 'parquetRemote' | 'columnStatsRemote' | 'parquetUrl' | 'columnStatsUrl' | 'queryUrl' | 'deletedAt' | 'replacedById' | 'createdAt' | 'updatedAt' | 'visualizationColumns' | 'visualizationOps' | 'requiredFilterColumns' | 'hiddenFilterColumns' | 'filterColumnLabels' | 'temporal'>
 );
 
 export type OverlayDataTableVisualizationMetadataQueryVariables = Exact<{
@@ -23906,7 +23912,7 @@ export type OverlayDataTableVisualizationMetadataQuery = (
   { __typename?: 'Query' }
   & { overlayDataTable?: Maybe<(
     { __typename?: 'OverlayDataTable' }
-    & Pick<OverlayDataTable, 'id' | 'queryUrl' | 'columnStatsUrl' | 'visualizationColumns' | 'visualizationOps' | 'requiredFilterColumns'>
+    & Pick<OverlayDataTable, 'id' | 'queryUrl' | 'columnStatsUrl' | 'visualizationColumns' | 'visualizationOps' | 'requiredFilterColumns' | 'hiddenFilterColumns' | 'filterColumnLabels'>
   )> }
 );
 
@@ -23922,7 +23928,7 @@ export type OverlayDataTableVisualizationMetadataForLayerQuery = (
     & Pick<TableOfContentsItem, 'id'>
     & { overlayDataTables?: Maybe<Array<(
       { __typename?: 'OverlayDataTable' }
-      & Pick<OverlayDataTable, 'id' | 'queryUrl' | 'columnStatsUrl' | 'visualizationColumns' | 'visualizationOps' | 'requiredFilterColumns'>
+      & Pick<OverlayDataTable, 'id' | 'queryUrl' | 'columnStatsUrl' | 'visualizationColumns' | 'visualizationOps' | 'requiredFilterColumns' | 'hiddenFilterColumns' | 'filterColumnLabels'>
     )>> }
   )> }
 );
@@ -24025,6 +24031,8 @@ export type SetOverlayDataTableVisualizationSettingsMutationVariables = Exact<{
   visualizationColumns: Array<Maybe<Scalars['String']>> | Maybe<Scalars['String']>;
   visualizationOps: Array<Maybe<Scalars['String']>> | Maybe<Scalars['String']>;
   requiredFilterColumns: Array<Maybe<Scalars['String']>> | Maybe<Scalars['String']>;
+  hiddenFilterColumns: Array<Maybe<Scalars['String']>> | Maybe<Scalars['String']>;
+  filterColumnLabels: Scalars['JSON'];
 }>;
 
 
@@ -28418,6 +28426,8 @@ export const ClientOverlayDataTableFragmentDoc = /*#__PURE__*/ gql`
   visualizationColumns
   visualizationOps
   requiredFilterColumns
+  hiddenFilterColumns
+  filterColumnLabels
   temporal
 }
     `;
@@ -28691,6 +28701,8 @@ export const OverlayDataTableDetailsFragmentDoc = /*#__PURE__*/ gql`
   visualizationColumns
   visualizationOps
   requiredFilterColumns
+  hiddenFilterColumns
+  filterColumnLabels
   temporal
 }
     `;
@@ -32756,6 +32768,8 @@ export const OverlayDataTableVisualizationMetadataDocument = /*#__PURE__*/ gql`
     visualizationColumns
     visualizationOps
     requiredFilterColumns
+    hiddenFilterColumns
+    filterColumnLabels
   }
 }
     `;
@@ -32770,6 +32784,8 @@ export const OverlayDataTableVisualizationMetadataForLayerDocument = /*#__PURE__
       visualizationColumns
       visualizationOps
       requiredFilterColumns
+      hiddenFilterColumns
+      filterColumnLabels
     }
   }
 }
@@ -32830,9 +32846,9 @@ export const RollbackOverlayDataTableVersionDocument = /*#__PURE__*/ gql`
 }
     ${OverlayDataTableDetailsFragmentDoc}`;
 export const SetOverlayDataTableVisualizationSettingsDocument = /*#__PURE__*/ gql`
-    mutation SetOverlayDataTableVisualizationSettings($id: Int!, $visualizationColumns: [String]!, $visualizationOps: [String]!, $requiredFilterColumns: [String]!) {
+    mutation SetOverlayDataTableVisualizationSettings($id: Int!, $visualizationColumns: [String]!, $visualizationOps: [String]!, $requiredFilterColumns: [String]!, $hiddenFilterColumns: [String]!, $filterColumnLabels: JSON!) {
   setOverlayDataTableVisualizationSettings(
-    input: {tableId: $id, visualizationColumns: $visualizationColumns, visualizationOps: $visualizationOps, requiredFilterColumns: $requiredFilterColumns}
+    input: {tableId: $id, visualizationColumns: $visualizationColumns, visualizationOps: $visualizationOps, requiredFilterColumns: $requiredFilterColumns, hiddenFilterColumns: $hiddenFilterColumns, filterColumnLabels: $filterColumnLabels}
   ) {
     overlayDataTable {
       ...OverlayDataTableDetails

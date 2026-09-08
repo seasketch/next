@@ -196,17 +196,17 @@ export default function DataTableVisualizationControls({
     if (loading || error || !effectiveColumn || !tableStableId || !manager) {
       return;
     }
-    if (
-      userChoice.column === effectiveColumn &&
-      userChoice.op === resolved.op
-    ) {
+    const latest = manager.getLayerDataTable?.(layerId);
+    const latestColumn = latest?.column ?? userChoice.column;
+    const latestOp = latest?.op ?? userChoice.op;
+    if (latestColumn === effectiveColumn && latestOp === resolved.op) {
       return;
     }
     manager.setLayerDataTable(layerId, {
-      stableId: tableStableId,
+      stableId: latest?.stableId || tableStableId,
       column: effectiveColumn,
       op: resolved.op,
-      filters: userChoice.filters,
+      filters: latest?.filters ?? userChoice.filters,
     });
   }, [
     manager,
@@ -244,7 +244,9 @@ export default function DataTableVisualizationControls({
                 stableId: tableStableId,
                 column: userChoice.column,
                 op: value as DataTableAggregation,
-                filters: userChoice.filters,
+                filters:
+                  manager.getLayerDataTable?.(layerId)?.filters ??
+                  userChoice.filters,
               });
             }}
           />
@@ -265,7 +267,9 @@ export default function DataTableVisualizationControls({
                     stableId: tableStableId,
                     column: value,
                     op: userChoice.op,
-                    filters: userChoice.filters,
+                    filters:
+                      manager.getLayerDataTable?.(layerId)?.filters ??
+                      userChoice.filters,
                   });
                 }}
               />

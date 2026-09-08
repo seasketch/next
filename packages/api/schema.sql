@@ -5896,6 +5896,8 @@ CREATE TABLE public.overlay_data_tables (
     required_filter_columns text[] DEFAULT '{}'::text[],
     stable_id uuid DEFAULT public.uuid_generate_v4() NOT NULL,
     temporal jsonb,
+    hidden_filter_columns text[] DEFAULT '{}'::text[],
+    filter_column_labels jsonb DEFAULT '{}'::jsonb,
     CONSTRAINT overlay_data_tables_version_positive CHECK ((version > 0))
 );
 
@@ -5940,6 +5942,20 @@ COMMENT ON COLUMN public.overlay_data_tables.stable_id IS 'Stable logical identi
 --
 
 COMMENT ON COLUMN public.overlay_data_tables.temporal IS '@omit';
+
+
+--
+-- Name: COLUMN overlay_data_tables.hidden_filter_columns; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.overlay_data_tables.hidden_filter_columns IS 'Filter columns omitted from the end-user Add filter list. Required filters cannot be hidden.';
+
+
+--
+-- Name: COLUMN overlay_data_tables.filter_column_labels; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.overlay_data_tables.filter_column_labels IS 'Custom display labels for filter columns, keyed by original column name. Empty or missing keys use the column name.';
 
 
 --
@@ -5998,6 +6014,8 @@ begin
     visualization_columns,
     visualization_ops,
     required_filter_columns,
+    hidden_filter_columns,
+    filter_column_labels,
     stable_id,
     temporal
   ) values (
@@ -6014,6 +6032,8 @@ begin
     coalesce(old_row.visualization_columns, '{}'),
     coalesce(old_row.visualization_ops, '{mean}'),
     coalesce(old_row.required_filter_columns, '{}'),
+    coalesce(old_row.hidden_filter_columns, '{}'),
+    coalesce(old_row.filter_column_labels, '{}'::jsonb),
     coalesce(old_row.stable_id, uuid_generate_v4()),
     p_temporal
   ) returning * into new_row;
@@ -18295,6 +18315,8 @@ begin
     visualization_columns,
     visualization_ops,
     required_filter_columns,
+    hidden_filter_columns,
+    filter_column_labels,
     temporal,
     stable_id
   )
@@ -18312,6 +18334,8 @@ begin
     odt.visualization_columns,
     odt.visualization_ops,
     odt.required_filter_columns,
+    odt.hidden_filter_columns,
+    odt.filter_column_labels,
     odt.temporal,
     odt.stable_id
   from overlay_data_tables odt
@@ -21583,10 +21607,10 @@ Set the order in which discussion forums will be displayed. Provide a list of fo
 
 
 --
--- Name: set_overlay_data_table_visualization_settings(integer, text[], text[], text[]); Type: FUNCTION; Schema: public; Owner: -
+-- Name: set_overlay_data_table_visualization_settings(integer, text[], text[], text[], text[], jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.set_overlay_data_table_visualization_settings(table_id integer, visualization_columns text[], visualization_ops text[], required_filter_columns text[] DEFAULT '{}'::text[]) RETURNS public.overlay_data_tables
+CREATE FUNCTION public.set_overlay_data_table_visualization_settings(table_id integer, visualization_columns text[], visualization_ops text[], required_filter_columns text[] DEFAULT '{}'::text[], hidden_filter_columns text[] DEFAULT '{}'::text[], filter_column_labels jsonb DEFAULT '{}'::jsonb) RETURNS public.overlay_data_tables
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
 declare
@@ -21594,8 +21618,13 @@ declare
   old_columns text[];
   old_ops text[];
   old_required text[];
+  old_hidden text[];
+  old_labels jsonb;
   editor_id int;
   invalid_ops text[];
+  new_required text[];
+  new_hidden text[];
+  new_labels jsonb;
 begin
   select * into row from overlay_data_tables where id = table_id and deleted_at is null;
   if row is null then
@@ -21618,14 +21647,45 @@ begin
     raise exception 'Invalid visualization op(s): %', array_to_string(invalid_ops, ', ');
   end if;
 
+  if set_overlay_data_table_visualization_settings.filter_column_labels is not null
+     and jsonb_typeof(set_overlay_data_table_visualization_settings.filter_column_labels) is distinct from 'object' then
+    raise exception 'filter_column_labels must be a JSON object';
+  end if;
+
+  select coalesce(array_agg(c order by ordinality), '{}')
+    into new_required
+  from unnest(coalesce(set_overlay_data_table_visualization_settings.required_filter_columns, '{}')) with ordinality as t(c, ordinality)
+  where c is not null and c <> '';
+
+  select coalesce(array_agg(c order by ordinality), '{}')
+    into new_hidden
+  from unnest(coalesce(set_overlay_data_table_visualization_settings.hidden_filter_columns, '{}')) with ordinality as t(c, ordinality)
+  where c is not null and c <> ''
+    and not (c = any(new_required));
+
+  select coalesce(
+    (
+      select jsonb_object_agg(key, trim(val))
+      from jsonb_each_text(
+        coalesce(set_overlay_data_table_visualization_settings.filter_column_labels, '{}'::jsonb)
+      ) as labels(key, val)
+      where length(key) > 0 and length(trim(val)) > 0
+    ),
+    '{}'::jsonb
+  ) into new_labels;
+
   old_columns := row.visualization_columns;
   old_ops := row.visualization_ops;
   old_required := row.required_filter_columns;
+  old_hidden := row.hidden_filter_columns;
+  old_labels := row.filter_column_labels;
 
   update overlay_data_tables
   set visualization_columns = coalesce(set_overlay_data_table_visualization_settings.visualization_columns, '{}'),
       visualization_ops = coalesce(set_overlay_data_table_visualization_settings.visualization_ops, '{}'),
-      required_filter_columns = coalesce(set_overlay_data_table_visualization_settings.required_filter_columns, '{}'),
+      required_filter_columns = new_required,
+      hidden_filter_columns = new_hidden,
+      filter_column_labels = new_labels,
       updated_at = now()
   where id = table_id
   returning * into row;
@@ -21643,14 +21703,18 @@ begin
         'version', row.version,
         'visualizationColumns', old_columns,
         'visualizationOps', old_ops,
-        'requiredFilterColumns', old_required
+        'requiredFilterColumns', old_required,
+        'hiddenFilterColumns', old_hidden,
+        'filterColumnLabels', old_labels
       ),
       jsonb_build_object(
         'name', row.name,
         'version', row.version,
         'visualizationColumns', row.visualization_columns,
         'visualizationOps', row.visualization_ops,
-        'requiredFilterColumns', row.required_filter_columns
+        'requiredFilterColumns', row.required_filter_columns,
+        'hiddenFilterColumns', row.hidden_filter_columns,
+        'filterColumnLabels', row.filter_column_labels
       ),
       null, null,
       jsonb_build_object('table_of_contents_item_id', row.table_of_contents_item_id, 'version', row.version)
@@ -42610,11 +42674,11 @@ GRANT ALL ON FUNCTION public.set_forum_order("forumIds" integer[]) TO seasketch_
 
 
 --
--- Name: FUNCTION set_overlay_data_table_visualization_settings(table_id integer, visualization_columns text[], visualization_ops text[], required_filter_columns text[]); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION set_overlay_data_table_visualization_settings(table_id integer, visualization_columns text[], visualization_ops text[], required_filter_columns text[], hidden_filter_columns text[], filter_column_labels jsonb); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.set_overlay_data_table_visualization_settings(table_id integer, visualization_columns text[], visualization_ops text[], required_filter_columns text[]) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.set_overlay_data_table_visualization_settings(table_id integer, visualization_columns text[], visualization_ops text[], required_filter_columns text[]) TO seasketch_user;
+REVOKE ALL ON FUNCTION public.set_overlay_data_table_visualization_settings(table_id integer, visualization_columns text[], visualization_ops text[], required_filter_columns text[], hidden_filter_columns text[], filter_column_labels jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.set_overlay_data_table_visualization_settings(table_id integer, visualization_columns text[], visualization_ops text[], required_filter_columns text[], hidden_filter_columns text[], filter_column_labels jsonb) TO seasketch_user;
 
 
 --

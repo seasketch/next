@@ -50,6 +50,8 @@ import { ApolloClient, NormalizedCacheObject } from "@apollo/client";
 import { compileLegendFromGLStyleLayers } from "./legends/compileLegend";
 import {
   DataTableAggregation,
+  hiddenDataTableFilterColumns,
+  omitFiltersForColumns,
   resolveDataTableVisualizationSettings,
 } from "./dataTableQueryApi";
 import {
@@ -451,8 +453,10 @@ class MapContextManager extends EventEmitter {
     if (!this.overlayStates.has(tocStableId)) {
       return;
     }
+    const previousTableId =
+      this.overlayStates.getRaw(tocStableId)?.dataTable?.stableId;
     if (state === null || !state.stableId) {
-      this.overlayStates.patch(tocStableId, { dataTable: undefined });
+      this.overlayStates.patch(tocStableId, { dataTable: undefined }, true);
       this.dataTableActiveTocIds.delete(tocStableId);
       const layer = this.layers[tocStableId];
       if (layer) {
@@ -460,16 +464,35 @@ class MapContextManager extends EventEmitter {
           this.overlayStates.prefixedSourceId(layer.dataSourceId)
         );
       }
+      if (previousTableId) {
+        this.dataTableQueryManager.clearSeriesForTable(previousTableId);
+      }
     } else {
-      this.overlayStates.patch(tocStableId, {
-        dataTable: { ...state },
-      });
+      this.overlayStates.patch(
+        tocStableId,
+        {
+          dataTable: { ...state },
+        },
+        true
+      );
       this.dataTableActiveTocIds.add(tocStableId);
+      if (previousTableId && previousTableId !== state.stableId) {
+        this.dataTableQueryManager.clearSeriesForTable(previousTableId);
+      }
     }
     this.scheduleDataTableFeatureStateSync();
     this.debouncedUpdateStyle();
     this.debouncedUpdatePreferences();
     this.updateLegends();
+  }
+
+  /**
+   * Latest data-table intent from overlay state (not the possibly-stale
+   * React context snapshot). Use this when reconciling required filters so
+   * an in-flight legend effect cannot overwrite a newer user selection.
+   */
+  getLayerDataTable(tocStableId: string): LayerDataTableState | undefined {
+    return this.overlayStates.getRaw(tocStableId)?.dataTable;
   }
 
   /**
@@ -482,7 +505,9 @@ class MapContextManager extends EventEmitter {
     // Bookmark apply must turn off data tables that aren't in the map.
     for (const tocStableId of [...this.dataTableActiveTocIds]) {
       if (!states[tocStableId]?.stableId) {
-        this.overlayStates.patch(tocStableId, { dataTable: undefined });
+        const previousTableId =
+          this.overlayStates.getRaw(tocStableId)?.dataTable?.stableId;
+        this.overlayStates.patch(tocStableId, { dataTable: undefined }, true);
         this.dataTableActiveTocIds.delete(tocStableId);
         const layer = this.layers[tocStableId];
         if (layer) {
@@ -490,15 +515,22 @@ class MapContextManager extends EventEmitter {
             this.overlayStates.prefixedSourceId(layer.dataSourceId)
           );
         }
+        if (previousTableId) {
+          this.dataTableQueryManager.clearSeriesForTable(previousTableId);
+        }
       }
     }
     for (const [tocStableId, next] of Object.entries(states)) {
       if (!next?.stableId || !this.overlayStates.has(tocStableId)) {
         continue;
       }
-      this.overlayStates.patch(tocStableId, {
-        dataTable: { ...next },
-      });
+      this.overlayStates.patch(
+        tocStableId,
+        {
+          dataTable: { ...next },
+        },
+        true
+      );
       this.dataTableActiveTocIds.add(tocStableId);
     }
     this.scheduleDataTableFeatureStateSync();
@@ -683,7 +715,13 @@ class MapContextManager extends EventEmitter {
       query: {
         column: resolved.column,
         op: resolved.op,
-        filters: resolved.filters,
+        filters: omitFiltersForColumns(
+          resolved.filters,
+          [
+            ...hiddenDataTableFilterColumns(table),
+            table.joinColumn,
+          ].filter(Boolean)
+        ),
       },
     };
   }
@@ -3154,6 +3192,16 @@ class MapContextManager extends EventEmitter {
     [tableStableId: string]: { [step: string]: number };
   } {
     return this.dataTableQueryManager.getSeriesCounts();
+  }
+
+  setOnDataTableSeriesCountsLoadingChange(
+    callback: ((loading: boolean) => void) | null
+  ) {
+    this.dataTableQueryManager.setOnSeriesCountsLoadingChange(callback);
+  }
+
+  getDataTableSeriesCountsLoading(): boolean {
+    return this.dataTableQueryManager.getSeriesCountsLoading();
   }
 
   setOnDataTableQueryErrorsChange(

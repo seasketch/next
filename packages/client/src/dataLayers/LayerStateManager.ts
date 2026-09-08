@@ -485,14 +485,24 @@ export class LayerStateManager<TState extends LayerState> extends EventEmitter {
   /**
    * Patch arbitrary properties on a layer's state.
    * Useful for SketchLayerState extras (sketchClassId, filterMvtUrl, etc.).
+   *
+   * Interactive updates (data-table filters) should pass `immediate` so React
+   * sees the new state in the same turn as the map query — a debounced notify
+   * lets the legend reset from stale props and diverge from the map.
    */
-  patch(key: string, partial: Partial<TState>): void {
+  patch(key: string, partial: Partial<TState>, immediate = false): void {
     const s = this.rawState[key];
     if (!s) return;
     for (const k of Object.keys(partial) as (keyof TState)[]) {
       (s as any)[k] = partial[k];
     }
-    this.debouncedCheckAndNotify();
+    if (immediate) {
+      this.debouncedCheckAndNotify.cancel();
+      this.shortDebouncedCheckAndNotify.cancel();
+      this.checkAndNotify();
+    } else {
+      this.debouncedCheckAndNotify();
+    }
   }
 
   /**

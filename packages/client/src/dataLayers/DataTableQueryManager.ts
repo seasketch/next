@@ -81,6 +81,12 @@ export class DataTableQueryManager {
   private onSeriesCountsChange:
     | ((counts: { [tableStableId: string]: { [step: string]: number } }) => void)
     | null = null;
+  /** Tables whose timeslider histogram series is in flight. */
+  private seriesLoadingTables = new Set<string>();
+  private seriesLoadingGenerations = new Map<string, number>();
+  private lastSeriesLoading = false;
+  private onSeriesCountsLoadingChange: ((loading: boolean) => void) | null =
+    null;
   private onQueryErrorsChange: ((errors: string[]) => void) | null = null;
 
   private temporalClock: TemporalClock | null = null;
@@ -136,6 +142,26 @@ export class DataTableQueryManager {
       counts[tableId] = value;
     }
     return counts;
+  }
+
+  setOnSeriesCountsLoadingChange(callback: ((loading: boolean) => void) | null) {
+    this.onSeriesCountsLoadingChange = callback;
+  }
+
+  getSeriesCountsLoading(): boolean {
+    return this.seriesLoadingTables.size > 0;
+  }
+
+  clearSeriesForTable(tableStableId: string) {
+    const hadCounts = this.seriesCountsByTable.delete(tableStableId);
+    const hadLoading = this.seriesLoadingTables.delete(tableStableId);
+    this.seriesLoadingGenerations.delete(tableStableId);
+    if (hadCounts) {
+      this.onSeriesCountsChange?.(this.getSeriesCounts());
+    }
+    if (hadLoading) {
+      this.notifySeriesLoading();
+    }
   }
 
   setOnQueryErrorsChange(callback: ((errors: string[]) => void) | null) {
@@ -273,6 +299,12 @@ export class DataTableQueryManager {
     // Drop a pending Range debounce/fetch even when switching back to Instant.
     this.cancelWindowWork(sourceId);
     let didSetLoading = false;
+    let seriesFetchGen: number | undefined;
+    const seriesQuery = this.seriesQuerySettings(settings);
+    const applyIsSeriesQuery = Boolean(
+      seriesQuery &&
+        this.getQueryKey(settings.table.queryUrl, seriesQuery) === queryKey
+    );
 
     try {
       const cached = this.resultCache.get(queryKey);
@@ -292,6 +324,18 @@ export class DataTableQueryManager {
         return;
       }
 
+      const previousSummary = this.legendSummaries.get(sourceId);
+      this.publishLegendSummary(sourceId, {
+        loading: true,
+        scaleMin: previousSummary?.scaleMin ?? 0,
+        scaleMax: previousSummary?.scaleMax ?? 0,
+        hasZero: previousSummary?.hasZero ?? false,
+      });
+      didSetLoading = true;
+      if (applyIsSeriesQuery) {
+        seriesFetchGen = this.beginSeriesLoading(settings.table.stableId);
+      }
+
       if (isWindow) {
         await this.waitWindowDebounce(sourceId);
         if (!isCurrent()) {
@@ -304,16 +348,11 @@ export class DataTableQueryManager {
         return;
       }
       if (!sourceReady() || !this.map) {
+        if (seriesFetchGen !== undefined) {
+          this.completeSeriesFetch(settings.table.stableId, seriesFetchGen);
+        }
         return;
       }
-      const previousSummary = this.legendSummaries.get(sourceId);
-      this.publishLegendSummary(sourceId, {
-        loading: true,
-        scaleMin: previousSummary?.scaleMin ?? 0,
-        scaleMax: previousSummary?.scaleMax ?? 0,
-        hasZero: previousSummary?.hasZero ?? false,
-      });
-      didSetLoading = true;
       for (const id of loadingIds) {
         this.map.setFeatureState(
           {
@@ -338,6 +377,9 @@ export class DataTableQueryManager {
         signal
       );
       if (!isCurrent() || !sourceReady()) {
+        if (seriesFetchGen !== undefined && isCurrent()) {
+          this.completeSeriesFetch(settings.table.stableId, seriesFetchGen);
+        }
         return;
       }
       await this.paintCached(
@@ -347,11 +389,17 @@ export class DataTableQueryManager {
         paintKey,
         parsed,
         tokenRequired,
-        isCurrent
+        isCurrent,
+        seriesFetchGen
       );
     } catch (error) {
+      if (seriesFetchGen !== undefined) {
+        this.completeSeriesFetch(settings.table.stableId, seriesFetchGen);
+      }
       if (error instanceof DOMException && error.name === "AbortError") {
-        if (didSetLoading) {
+        // A newer apply owns loading/paint. Don't dim the legend back to
+        // idle for a request the user has already replaced.
+        if (didSetLoading && isCurrent()) {
           await this.clearLoadingFeatureState(
             sourceId,
             sourceLayerId,
@@ -504,11 +552,20 @@ export class DataTableQueryManager {
     paintKey: string,
     cached: CachedQueryResult,
     tokenRequired: boolean,
-    isCurrent: () => boolean
+    isCurrent: () => boolean,
+    seriesFetchGen?: number
   ) {
     if (isParsedDataTableQuerySeries(cached)) {
       const slice = this.sliceSeries(settings, cached);
-      this.publishSeriesCounts(settings.table.stableId, cached);
+      if (seriesFetchGen !== undefined) {
+        this.completeSeriesFetch(
+          settings.table.stableId,
+          seriesFetchGen,
+          cached
+        );
+      } else {
+        this.settleSeriesCounts(settings.table.stableId, cached);
+      }
       await this.paintParsed(
         sourceId,
         sourceLayerId,
@@ -525,7 +582,7 @@ export class DataTableQueryManager {
     }
     const series = this.cachedSeriesFor(settings);
     if (series) {
-      this.publishSeriesCounts(settings.table.stableId, series);
+      this.echoSeriesCountsIfSettled(settings.table.stableId, series);
     }
     // Range aggregates fit the legend to this window, not the all-time series.
     await this.paintParsed(
@@ -680,6 +737,13 @@ export class DataTableQueryManager {
     if (!settings.table.queryUrl) return;
     const seriesQuery = this.seriesQuerySettings(settings);
     if (!seriesQuery) return;
+    const queryKey = this.getQueryKey(settings.table.queryUrl, seriesQuery);
+    const cached = this.resultCache.get(queryKey);
+    if (isParsedDataTableQuerySeries(cached)) {
+      this.settleSeriesCounts(settings.table.stableId, cached);
+      return;
+    }
+    const fetchGen = this.beginSeriesLoading(settings.table.stableId);
     try {
       const parsed = await this.fetchParsed(
         settings.table,
@@ -687,9 +751,12 @@ export class DataTableQueryManager {
         tokenRequired
       );
       if (isParsedDataTableQuerySeries(parsed)) {
-        this.publishSeriesCounts(settings.table.stableId, parsed);
+        this.completeSeriesFetch(settings.table.stableId, fetchGen, parsed);
+      } else {
+        this.completeSeriesFetch(settings.table.stableId, fetchGen);
       }
     } catch (error) {
+      this.completeSeriesFetch(settings.table.stableId, fetchGen);
       if (error instanceof DOMException && error.name === "AbortError") {
         return;
       }
@@ -736,7 +803,7 @@ export class DataTableQueryManager {
     return combineSeriesSteps(series, keys, op);
   }
 
-  private publishSeriesCounts(
+  private setSeriesCounts(
     tableStableId: string,
     series: ParsedDataTableQuerySeries
   ) {
@@ -746,6 +813,63 @@ export class DataTableQueryManager {
     }
     this.seriesCountsByTable.set(tableStableId, counts);
     this.onSeriesCountsChange?.(this.getSeriesCounts());
+  }
+
+  private notifySeriesLoading() {
+    const next = this.seriesLoadingTables.size > 0;
+    if (next === this.lastSeriesLoading) {
+      return;
+    }
+    this.lastSeriesLoading = next;
+    this.onSeriesCountsLoadingChange?.(next);
+  }
+
+  private beginSeriesLoading(tableStableId: string): number {
+    const generation =
+      (this.seriesLoadingGenerations.get(tableStableId) ?? 0) + 1;
+    this.seriesLoadingGenerations.set(tableStableId, generation);
+    this.seriesLoadingTables.add(tableStableId);
+    this.notifySeriesLoading();
+    return generation;
+  }
+
+  /** Cache hit: counts are current; invalidate any in-flight series fetch. */
+  private settleSeriesCounts(
+    tableStableId: string,
+    series: ParsedDataTableQuerySeries
+  ) {
+    const generation =
+      (this.seriesLoadingGenerations.get(tableStableId) ?? 0) + 1;
+    this.seriesLoadingGenerations.set(tableStableId, generation);
+    this.seriesLoadingTables.delete(tableStableId);
+    this.setSeriesCounts(tableStableId, series);
+    this.notifySeriesLoading();
+  }
+
+  private completeSeriesFetch(
+    tableStableId: string,
+    generation: number,
+    series?: ParsedDataTableQuerySeries
+  ) {
+    if (this.seriesLoadingGenerations.get(tableStableId) !== generation) {
+      return;
+    }
+    if (series) {
+      this.setSeriesCounts(tableStableId, series);
+    }
+    this.seriesLoadingTables.delete(tableStableId);
+    this.notifySeriesLoading();
+  }
+
+  /** Don't replace counts while a newer series fetch owns the histogram. */
+  private echoSeriesCountsIfSettled(
+    tableStableId: string,
+    series: ParsedDataTableQuerySeries
+  ) {
+    if (this.seriesLoadingTables.has(tableStableId)) {
+      return;
+    }
+    this.setSeriesCounts(tableStableId, series);
   }
 
   /**

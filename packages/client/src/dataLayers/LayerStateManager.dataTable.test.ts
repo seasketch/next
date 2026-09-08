@@ -33,6 +33,28 @@ describe("LayerStateManager dataTable regression", () => {
     expect(after.loading).toBe(false);
   });
 
+  it("emits stateChanged synchronously for immediate dataTable patches", () => {
+    const manager = new LayerStateManager<LayerState>("overlays");
+    manager.addLayer("toc-1", { visible: true, loading: false });
+    const seen: Array<string | undefined> = [];
+    manager.on("stateChanged", (state: { [key: string]: LayerState }) => {
+      seen.push(state["toc-1"]?.dataTable?.column);
+    });
+
+    manager.patch(
+      "toc-1",
+      { dataTable: { stableId: "a", column: "depth" } },
+      true
+    );
+    expect(seen).toContain("depth");
+    expect(manager.getState()["toc-1"].dataTable?.column).toBe("depth");
+
+    const beforeDebounced = seen.length;
+    manager.patch("toc-1", { dataTable: { stableId: "a", column: "temp" } });
+    expect(seen.length).toBe(beforeDebounced);
+    expect(manager.getRaw("toc-1")?.dataTable?.column).toBe("temp");
+  });
+
   it("replacing dataTable via patch updates the object reference", () => {
     const manager = new LayerStateManager<LayerState>("overlays");
     manager.addLayer("toc-1", { visible: true, loading: false });

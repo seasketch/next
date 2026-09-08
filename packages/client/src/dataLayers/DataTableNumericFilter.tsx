@@ -237,6 +237,15 @@ function serializeBound(value: number, preferInteger: boolean) {
   return String(rounded);
 }
 
+function numericStateKey(
+  state: ReturnType<typeof parseNumericFilterState>
+): string {
+  return JSON.stringify(state);
+}
+
+/** Publish slider motion after thumbs settle, without waiting for pointer-up. */
+const SLIDER_COMMIT_DEBOUNCE_MS = 100;
+
 /**
  * Compact single-line numeric filter for the data-table legend.
  * Discrete columns (few unique values) default to equality selection;
@@ -246,10 +255,13 @@ export default function DataTableNumericFilter({
   column,
   filters,
   onChange,
+  queryLoading = false,
 }: {
   column: GeostatsAttribute;
   filters: DataTableFilter[];
   onChange: (filters: DataTableFilter[]) => void;
+  /** Map query for the current selection is in flight. */
+  queryLoading?: boolean;
 }) {
   const { t } = useTranslation("homepage");
   const preferDiscrete = useMemo(
@@ -272,6 +284,16 @@ export default function DataTableNumericFilter({
   const listRef = useRef<HTMLDivElement>(null);
   const selectedOptionRef = useRef<HTMLButtonElement>(null);
   const pendingTypeRef = useRef("");
+  const draftRangeRef = useRef<[number, number] | null>(null);
+  const selectedRef = useRef(selected);
+  const multiRef = useRef(multi);
+  const pendingEmitKeyRef = useRef<string | null>(null);
+  const dragCommitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
+  draftRangeRef.current = draftRange;
+  selectedRef.current = selected;
+  multiRef.current = multi;
 
   const allValues = useMemo(
     () =>
@@ -340,17 +362,40 @@ export default function DataTableNumericFilter({
   const sliderValue = draftRange || committedRange;
 
   useEffect(() => {
+    if (draftRange) {
+      return;
+    }
+    const incoming = numericStateKey(parsed);
+    if (
+      pendingEmitKeyRef.current &&
+      incoming !== pendingEmitKeyRef.current
+    ) {
+      // Parent still has the previous filters (or a stale write). Keep the
+      // values the user just chose so the dropdown does not snap back.
+      return;
+    }
+    pendingEmitKeyRef.current = null;
+    setMode(parsed.mode);
+    setMulti(parsed.multi);
+    setSelected(parsed.selected);
+    setMin(parsed.min);
+    setMax(parsed.max);
+  }, [draftRange, parsed]);
+
+  useEffect(() => {
     if (!open) {
-      setMode(parsed.mode);
-      setMulti(parsed.multi);
-      setSelected(parsed.selected);
-      setMin(parsed.min);
-      setMax(parsed.max);
-      setDraftRange(null);
       setQuery("");
       pendingTypeRef.current = "";
     }
-  }, [open, parsed]);
+  }, [open]);
+
+  useEffect(() => {
+    return () => {
+      if (dragCommitTimerRef.current != null) {
+        clearTimeout(dragCommitTimerRef.current);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     if (!open) {
@@ -390,16 +435,47 @@ export default function DataTableNumericFilter({
     nextMin: string,
     nextMax: string
   ) => {
-    onChange(
-      emitNumericFilters(
-        column.attribute,
-        nextMode,
-        nextSelected,
-        nextMulti,
-        nextMin,
-        nextMax
-      )
+    const nextFilters = emitNumericFilters(
+      column.attribute,
+      nextMode,
+      nextSelected,
+      nextMulti,
+      nextMin,
+      nextMax
     );
+    pendingEmitKeyRef.current = numericStateKey(
+      parseNumericFilterState(nextFilters, preferDiscrete)
+    );
+    onChange(nextFilters);
+  };
+
+  const clearDragCommitTimer = () => {
+    if (dragCommitTimerRef.current != null) {
+      clearTimeout(dragCommitTimerRef.current);
+      dragCommitTimerRef.current = null;
+    }
+  };
+
+  const applyRangeNumbers = (lo: number, hi: number, persist: boolean) => {
+    const nextMin = serializeBound(lo, bounds.preferInteger);
+    const nextMax = serializeBound(hi, bounds.preferInteger);
+    setMode("range");
+    setMin(nextMin);
+    setMax(nextMax);
+    if (persist) {
+      setDraftRange(null);
+      commit("range", selectedRef.current, multiRef.current, nextMin, nextMax);
+    }
+    return { nextMin, nextMax };
+  };
+
+  const flushPendingRange = () => {
+    clearDragCommitTimer();
+    const draft = draftRangeRef.current;
+    if (!draft) {
+      return;
+    }
+    applyRangeNumbers(draft[0], draft[1], true);
   };
 
   const displayLabel = (() => {
@@ -525,6 +601,7 @@ export default function DataTableNumericFilter({
   };
 
   const onRangeChange = (nextMin: string, nextMax: string) => {
+    clearDragCommitTimer();
     setMode("range");
     setMin(nextMin);
     setMax(nextMax);
@@ -544,6 +621,16 @@ export default function DataTableNumericFilter({
     );
     setMode("range");
     setDraftRange([lo, hi]);
+    clearDragCommitTimer();
+    dragCommitTimerRef.current = setTimeout(() => {
+      dragCommitTimerRef.current = null;
+      // Keep draftRange so the thumbs stay on the pointer; only publish.
+      const nextMin = serializeBound(lo, bounds.preferInteger);
+      const nextMax = serializeBound(hi, bounds.preferInteger);
+      setMin(nextMin);
+      setMax(nextMax);
+      commit("range", selectedRef.current, multiRef.current, nextMin, nextMax);
+    }, SLIDER_COMMIT_DEBOUNCE_MS);
   };
 
   const onSliderCommit = (values: number[]) => {
@@ -556,10 +643,7 @@ export default function DataTableNumericFilter({
       bounds.min,
       bounds.max
     );
-    const nextMin = serializeBound(lo, bounds.preferInteger);
-    const nextMax = serializeBound(hi, bounds.preferInteger);
-    setDraftRange(null);
-    onRangeChange(nextMin, nextMax);
+    applyRangeNumbers(lo, hi, true);
   };
 
   const onExactMinChange = (raw: string) => {
@@ -622,15 +706,25 @@ export default function DataTableNumericFilter({
   };
 
   return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
+    <Popover.Root
+      open={open}
+      onOpenChange={(nextOpen) => {
+        if (!nextOpen) {
+          flushPendingRange();
+        }
+        setOpen(nextOpen);
+      }}
+    >
       <Popover.Trigger asChild>
         <button
           type="button"
           onKeyDown={onTriggerKeyDown}
+          aria-busy={queryLoading || undefined}
           className={clsx(
             "min-w-0 max-w-[58%] inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-1.5 py-0.5 text-left text-xs text-gray-700",
             "hover:bg-gray-50 focus:outline-none focus:ring-0 focus:border-gray-300",
-            "focus-visible:ring-1 focus-visible:ring-primary-500 focus-visible:border-primary-500"
+            "focus-visible:ring-1 focus-visible:ring-primary-500 focus-visible:border-primary-500",
+            queryLoading && "opacity-80"
           )}
         >
           <span className="truncate flex-1 font-medium">{displayLabel}</span>
@@ -647,11 +741,6 @@ export default function DataTableNumericFilter({
             event.preventDefault();
             if (mode === "values") {
               searchRef.current?.focus();
-            }
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              setOpen(false);
             }
           }}
         >

@@ -55,6 +55,7 @@ export default function TimeSlider() {
     availableResolutions,
     temporalSources,
     queryStepCounts,
+    queryStepCountsLoading,
     queryErrors,
     setClock,
     setViewResolution,
@@ -275,18 +276,34 @@ export default function TimeSlider() {
             draggingRef.current = null;
           }}
         >
-          <div className="pointer-events-none relative mb-1.5 h-5 w-full overflow-hidden rounded-sm">
-            {histogramMarks.map((mark) => (
-              <span
-                key={mark.id}
-                className="absolute bottom-0 bg-sky-300/55"
-                style={{
-                  left: `${mark.left}%`,
-                  width: `${Math.min(mark.width, 100 - mark.left)}%`,
-                  height: `${mark.heightPct ?? 40}%`,
-                }}
-              />
-            ))}
+          <div
+            className={`pointer-events-none relative mb-1.5 h-5 w-full overflow-hidden rounded-sm ${
+              queryStepCountsLoading ? "animate-pulse" : ""
+            }`}
+            aria-busy={queryStepCountsLoading || undefined}
+          >
+            {queryStepCountsLoading && histogramMarks.length === 0 ? (
+              <span className="absolute inset-x-0 bottom-0 h-2 rounded-sm bg-gray-400/30" />
+            ) : (
+              histogramMarks.map((mark) => (
+                <span
+                  key={mark.id}
+                  className={`absolute bottom-0 ${
+                    queryStepCountsLoading
+                      ? "bg-gray-400/40"
+                      : "bg-sky-300/55"
+                  }`}
+                  style={{
+                    left: `${mark.left}%`,
+                    width: `${Math.min(mark.width, 100 - mark.left)}%`,
+                    height: `${mark.heightPct ?? 40}%`,
+                  }}
+                />
+              ))
+            )}
+            {queryStepCountsLoading ? (
+              <span className="sr-only">{t("Loading observation counts")}</span>
+            ) : null}
           </div>
           <div className="pointer-events-none absolute bottom-1.5 h-1.5 w-full overflow-hidden rounded-full bg-white/15">
             {coverageMarks.map((mark) => (

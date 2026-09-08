@@ -1,5 +1,6 @@
 import { MixerHorizontalIcon } from "@radix-ui/react-icons";
 import { Trans, useTranslation } from "react-i18next";
+import { parseFilterColumnLabels } from "../../../dataLayers/dataTableQueryApi";
 import BaseFieldGroupListItem, {
   ChangeValue,
   FieldGroupListItemProps,
@@ -25,12 +26,31 @@ function listsEqual(a: string[], b: string[]) {
   return a.every((entry, index) => entry === b[index]);
 }
 
+function labelsEqual(a: Record<string, string>, b: Record<string, string>) {
+  const keys = Array.from(new Set([...Object.keys(a), ...Object.keys(b)])).sort();
+  return keys.every((key) => a[key] === b[key]);
+}
+
+function formatLabels(value: unknown, noneLabel: string) {
+  const labels = parseFilterColumnLabels(value);
+  const keys = Object.keys(labels).sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: "base" })
+  );
+  if (keys.length === 0) {
+    return noneLabel;
+  }
+  // eslint-disable-next-line i18next/no-literal-string -- column identifiers from changelog JSON
+  return keys.map((column) => `${column}: ${labels[column]}`).join(", ");
+}
+
 function SettingsDetails({
   from,
   to,
   columnsLabel,
   calculationsLabel,
   requiredFiltersLabel,
+  hiddenFiltersLabel,
+  labelsLabel,
   allColumnsLabel,
   allCalculationsLabel,
   noneLabel,
@@ -40,6 +60,8 @@ function SettingsDetails({
   columnsLabel: string;
   calculationsLabel: string;
   requiredFiltersLabel: string;
+  hiddenFiltersLabel: string;
+  labelsLabel: string;
   allColumnsLabel: string;
   allCalculationsLabel: string;
   noneLabel: string;
@@ -59,6 +81,16 @@ function SettingsDetails({
       label: requiredFiltersLabel,
       before: formatColumnList(stringList(from.requiredFilterColumns), noneLabel),
       after: formatColumnList(stringList(to.requiredFilterColumns), noneLabel),
+    },
+    {
+      label: hiddenFiltersLabel,
+      before: formatColumnList(stringList(from.hiddenFilterColumns), noneLabel),
+      after: formatColumnList(stringList(to.hiddenFilterColumns), noneLabel),
+    },
+    {
+      label: labelsLabel,
+      before: formatLabels(from.filterColumnLabels, noneLabel),
+      after: formatLabels(to.filterColumnLabels, noneLabel),
     },
   ];
 
@@ -111,12 +143,22 @@ export default function DataTableVisualizationSettingsUpdatedFieldGroupListItem(
   const toOps = stringList(to.visualizationOps);
   const fromRequired = stringList(from.requiredFilterColumns);
   const toRequired = stringList(to.requiredFilterColumns);
+  const fromHidden = stringList(from.hiddenFilterColumns);
+  const toHidden = stringList(to.hiddenFilterColumns);
+  const fromLabels = parseFilterColumnLabels(from.filterColumnLabels);
+  const toLabels = parseFilterColumnLabels(to.filterColumnLabels);
 
   const columnsChanged = !listsEqual(fromColumns, toColumns);
   const opsChanged = !listsEqual(fromOps, toOps);
   const requiredChanged = !listsEqual(fromRequired, toRequired);
+  const hiddenChanged = !listsEqual(fromHidden, toHidden);
+  const labelsChanged = !labelsEqual(fromLabels, toLabels);
   const changedCount =
-    Number(columnsChanged) + Number(opsChanged) + Number(requiredChanged);
+    Number(columnsChanged) +
+    Number(opsChanged) +
+    Number(requiredChanged) +
+    Number(hiddenChanged) +
+    Number(labelsChanged);
 
   const namedSummary = tableNameFromSummary(to)
     ? to
@@ -137,6 +179,8 @@ export default function DataTableVisualizationSettingsUpdatedFieldGroupListItem(
       columnsLabel={t("Data columns")}
       calculationsLabel={t("Calculations")}
       requiredFiltersLabel={t("Required filters")}
+      hiddenFiltersLabel={t("Hidden filters")}
+      labelsLabel={t("Filter labels")}
       allColumnsLabel={allColumnsLabel}
       allCalculationsLabel={allCalculationsLabel}
       noneLabel={noneLabel}
@@ -184,6 +228,28 @@ export default function DataTableVisualizationSettingsUpdatedFieldGroupListItem(
           {" -> "}
           <ChangeValue>
             {formatColumnList(toRequired, noneLabel)}
+          </ChangeValue>
+        </Trans>
+      ) : changedCount === 1 && hiddenChanged ? (
+        <Trans ns="admin:data">
+          updated hidden filters from{" "}
+          <ChangeValue deleted>
+            {formatColumnList(fromHidden, noneLabel)}
+          </ChangeValue>{" "}
+          {" -> "}
+          <ChangeValue>
+            {formatColumnList(toHidden, noneLabel)}
+          </ChangeValue>
+        </Trans>
+      ) : changedCount === 1 && labelsChanged ? (
+        <Trans ns="admin:data">
+          updated filter labels from{" "}
+          <ChangeValue deleted>
+            {formatLabels(from.filterColumnLabels, noneLabel)}
+          </ChangeValue>{" "}
+          {" -> "}
+          <ChangeValue>
+            {formatLabels(to.filterColumnLabels, noneLabel)}
           </ChangeValue>
         </Trans>
       ) : showTableInSummary ? (

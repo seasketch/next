@@ -20,6 +20,7 @@ import {
   useSetOverlayDataTableVisualizationSettingsMutation,
   useUpdateOverlayDataTableTemporalMutation,
 } from "../../../generated/graphql";
+import { parseFilterColumnLabels } from "../../../dataLayers/dataTableQueryApi";
 import {
   columnStatsUrlForTable,
   useDataTableColumnStats,
@@ -567,6 +568,12 @@ export default function DataTableTemporalEditor({
             requiredFilterColumns: (table.requiredFilterColumns || []).filter(
               (column): column is string =>
                 typeof column === "string" && !mappedNames.includes(column)
+            ),
+            hiddenFilterColumns: (table.hiddenFilterColumns || []).filter(
+              (column): column is string => Boolean(column)
+            ),
+            filterColumnLabels: parseFilterColumnLabels(
+              table.filterColumnLabels
             ),
           },
         });

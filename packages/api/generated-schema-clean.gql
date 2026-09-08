@@ -11862,6 +11862,16 @@ type OverlayDataTable implements Node {
   createdAt: Datetime
   createdBy: Int!
   deletedAt: Datetime
+
+  """
+  Custom display labels for filter columns, keyed by original column name. Empty or missing keys use the column name.
+  """
+  filterColumnLabels: JSON
+
+  """
+  Filter columns omitted from the end-user Add filter list. Required filters cannot be hidden.
+  """
+  hiddenFilterColumns: [String]
   id: Int!
   joinColumn: String!
   name: String!
@@ -16393,6 +16403,8 @@ input SetOverlayDataTableVisualizationSettingsInput {
   payload verbatim. May be used to track mutations by the client.
   """
   clientMutationId: String
+  filterColumnLabels: JSON
+  hiddenFilterColumns: [String]
   requiredFilterColumns: [String]
   tableId: Int
   visualizationColumns: [String]

@@ -338,6 +338,7 @@ describe("overlay_data_tables", () => {
               table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
               row_count, created_by, parquet_remote, column_stats_remote,
               visualization_columns, visualization_ops, required_filter_columns,
+              hidden_filter_columns, filter_column_labels,
               temporal
             ) values (
               ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId},
@@ -345,6 +346,8 @@ describe("overlay_data_tables", () => {
               'r2://bucket/projects/test/public/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/dataTables/u1/column-stats.json',
               ${sql.array(['count'], 'text')}, ${sql.array(['sum'], 'text')},
               ${sql.array(['year'], 'text')},
+              ${sql.array(['region'], 'text')},
+              ${sql.json({ year: 'Year' })},
               ${sql.json(temporal)}
             )`);
             // Soft-deleted draft history must not be published.
@@ -375,7 +378,8 @@ describe("overlay_data_tables", () => {
 
         const published = await conn.many(sql`
           select odt.name, toc.is_draft, odt.visualization_columns, odt.visualization_ops,
-            odt.required_filter_columns, odt.parquet_remote, odt.stable_id, odt.temporal
+            odt.required_filter_columns, odt.hidden_filter_columns, odt.filter_column_labels,
+            odt.parquet_remote, odt.stable_id, odt.temporal
           from overlay_data_tables odt
           inner join table_of_contents_items toc on toc.id = odt.table_of_contents_item_id
           where odt.project_id = ${projectId} and toc.is_draft = false
@@ -387,6 +391,8 @@ describe("overlay_data_tables", () => {
         expect(published[0].visualization_columns).toEqual(["count"]);
         expect(published[0].visualization_ops).toEqual(["sum"]);
         expect(published[0].required_filter_columns).toEqual(["year"]);
+        expect(published[0].hidden_filter_columns).toEqual(["region"]);
+        expect(published[0].filter_column_labels).toEqual({ year: "Year" });
         expect(published[0].stable_id).toBe(draftStableId);
         expect(published[0].temporal).toEqual(temporal);
 
@@ -417,6 +423,58 @@ describe("overlay_data_tables", () => {
         expect(republished).toHaveLength(1);
         expect(republished[0].name).toBe("fish-v2");
         expect(republished[0].visualization_ops).toEqual(["mean"]);
+      },
+    );
+  });
+
+  test("set_overlay_data_table_visualization_settings stores hidden filters and labels", async () => {
+    await projectTransaction(
+      pool,
+      "public",
+      async (conn, projectId, adminId) => {
+        await createSession(conn, adminId, true, false, projectId);
+        const { tocId } = await createDraftLayer(conn, projectId, adminId);
+        let tableId = 0;
+        await asPostgres(
+          conn,
+          async () => {
+            await conn.any(sql`
+              update table_of_contents_items
+              set enable_data_tables = true, data_table_join_column = 'id'
+              where id = ${tocId}`);
+            tableId = Number(
+              await conn.oneFirst(sql`
+              insert into overlay_data_tables (
+                table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
+                row_count, created_by, parquet_remote, column_stats_remote
+              ) values (
+                ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId},
+                'r2://bucket/a.parquet', 'r2://bucket/a.json'
+              ) returning id`),
+            );
+          },
+          { userId: adminId, projectId },
+        );
+
+        await conn.any(sql`
+          select set_overlay_data_table_visualization_settings(
+            ${tableId},
+            ${sql.array(["count"], "text")},
+            ${sql.array(["mean"], "text")},
+            ${sql.array(["year"], "text")},
+            ${sql.array(["year", "region"], "text")},
+            ${sql.json({ year: " Year ", species: "   ", "": "nope" })}
+          )`);
+
+        const row = await conn.one(sql`
+          select visualization_columns, visualization_ops, required_filter_columns,
+            hidden_filter_columns, filter_column_labels
+          from overlay_data_tables where id = ${tableId}`);
+        expect(row.visualization_columns).toEqual(["count"]);
+        expect(row.visualization_ops).toEqual(["mean"]);
+        expect(row.required_filter_columns).toEqual(["year"]);
+        expect(row.hidden_filter_columns).toEqual(["region"]);
+        expect(row.filter_column_labels).toEqual({ year: "Year" });
       },
     );
   });

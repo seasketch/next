@@ -58,6 +58,8 @@ export default function ActivatedDataTablePanel({
         visualizationColumns: table.visualizationColumns,
         visualizationOps: table.visualizationOps,
         requiredFilterColumns: table.requiredFilterColumns,
+        hiddenFilterColumns: table.hiddenFilterColumns,
+        filterColumnLabels: table.filterColumnLabels,
       };
     }
     return next;

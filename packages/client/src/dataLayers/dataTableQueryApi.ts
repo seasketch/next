@@ -238,7 +238,8 @@ export function dataTableQueryClockParams(
 /**
  * Admin-configured constraints on how a data table may be visualized, as
  * stored on `overlay_data_tables.visualization_columns` /
- * `.visualization_ops` / `.required_filter_columns`. Empty/null
+ * `.visualization_ops` / `.required_filter_columns` /
+ * `.hidden_filter_columns` / `.filter_column_labels`. Empty/null
  * visualization columns/ops means "no constraint -- let the end user
  * choose". Empty required filter columns means no filters are forced.
  */
@@ -247,6 +248,10 @@ export interface DataTableVisualizationConstraints {
   visualizationOps?: (string | null)[] | null;
   /** Columns that must always appear as map filters (values are user-chosen). */
   requiredFilterColumns?: (string | null)[] | null;
+  /** Columns omitted from the end-user Add filter list. */
+  hiddenFilterColumns?: (string | null)[] | null;
+  /** Custom labels keyed by original column name. Untrusted JSON at runtime. */
+  filterColumnLabels?: unknown;
 }
 
 /** Metadata needed by the legend display settings UI before query/style work begins. */
@@ -329,6 +334,65 @@ export function requiredDataTableFilterColumns(
 ): string[] {
   return (constraints.requiredFilterColumns?.filter(
     (column): column is string => Boolean(column)
+  ) || []) as string[];
+}
+
+/**
+ * True when `value` is a string-to-string map of filter column labels.
+ * GraphQL `JSON` is untrusted; callers must use this before reading keys.
+ */
+export function isFilterColumnLabels(
+  value: unknown
+): value is Record<string, string> {
+  if (value == null || typeof value !== "object" || Array.isArray(value)) {
+    return false;
+  }
+  for (const key of Object.keys(value)) {
+    const entry = (value as Record<string, unknown>)[key];
+    if (typeof entry !== "string") {
+      return false;
+    }
+  }
+  return true;
+}
+
+/** Drop empty keys/values from a filter-label map. Invalid JSON yields `{}`. */
+export function parseFilterColumnLabels(
+  value: unknown
+): Record<string, string> {
+  if (!isFilterColumnLabels(value)) {
+    return {};
+  }
+  const next: Record<string, string> = {};
+  for (const [column, label] of Object.entries(value)) {
+    const trimmed = label.trim();
+    if (column && trimmed) {
+      next[column] = trimmed;
+    }
+  }
+  return next;
+}
+
+export function dataTableFilterLabel(
+  column: string,
+  labels?: Record<string, string> | null
+): string {
+  const label = labels?.[column]?.trim();
+  return label || column;
+}
+
+/**
+ * Normalize admin-hidden filter columns. Required columns cannot be hidden.
+ */
+export function hiddenDataTableFilterColumns(
+  constraints: DataTableVisualizationConstraints
+): string[] {
+  const required = new Set(requiredDataTableFilterColumns(constraints));
+  return (constraints.hiddenFilterColumns?.filter(
+    (column): column is string =>
+      typeof column === "string" &&
+      column.length > 0 &&
+      !required.has(column)
   ) || []) as string[];
 }
 

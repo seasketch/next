@@ -27,7 +27,10 @@ import { dataTableChangeLogRefetchQueries } from "../../changelogs/dataTableChan
 import DataTableUploadJobProgress from "./DataTableUploadJobProgress";
 import DataTableUploadModal from "./DataTableUploadModal";
 import DataTableTemporalEditor from "./DataTableTemporalEditor";
-import { DATA_TABLE_AGGREGATIONS } from "../../../dataLayers/dataTableQueryApi";
+import {
+  DATA_TABLE_AGGREGATIONS,
+  parseFilterColumnLabels,
+} from "../../../dataLayers/dataTableQueryApi";
 import {
   columnStatsUrlForTable,
   numericColumnNames,
@@ -46,6 +49,21 @@ type DataTableJob = NonNullable<
 >[number];
 
 const DROPPED_SITES_SHOWN = 15;
+
+function stringColumns(values?: (string | null)[] | null): string[] {
+  return (values || []).filter((value): value is string => Boolean(value));
+}
+
+function normalizedFilterLabels(labels: Record<string, string>) {
+  const next: Record<string, string> = {};
+  for (const [column, label] of Object.entries(labels)) {
+    const trimmed = label.trim();
+    if (trimmed && trimmed !== column) {
+      next[column] = trimmed;
+    }
+  }
+  return next;
+}
 
 function DataTableDroppedSitesNotice({
   columnStats,
@@ -149,17 +167,25 @@ function MapDisplaySettings({
   selectedColumns,
   selectedOps,
   selectedRequiredFilters,
+  selectedHiddenFilters,
+  filterLabels,
   onColumnsChange,
   onOpsChange,
   onRequiredFiltersChange,
+  onHiddenFiltersChange,
+  onFilterLabelsChange,
 }: {
   table: OverlayDataTableDetailsFragment;
   selectedColumns: string[];
   selectedOps: string[];
   selectedRequiredFilters: string[];
+  selectedHiddenFilters: string[];
+  filterLabels: Record<string, string>;
   onColumnsChange: (columns: string[]) => void;
   onOpsChange: (ops: string[]) => void;
   onRequiredFiltersChange: (columns: string[]) => void;
+  onHiddenFiltersChange: (columns: string[]) => void;
+  onFilterLabelsChange: (labels: Record<string, string>) => void;
 }) {
   const { t } = useTranslation("admin:data");
   const { data: projectMeta } = useCurrentProjectMetadata();
@@ -183,11 +209,16 @@ function MapDisplaySettings({
   );
 
   const toggleColumn = (column: string) => {
-    onColumnsChange(
-      selectedColumns.includes(column)
-        ? selectedColumns.filter((c) => c !== column)
-        : [...selectedColumns, column]
-    );
+    if (selectedColumns.includes(column)) {
+      onColumnsChange(selectedColumns.filter((c) => c !== column));
+      return;
+    }
+    onColumnsChange([...selectedColumns, column]);
+    if (selectedRequiredFilters.includes(column)) {
+      onRequiredFiltersChange(
+        selectedRequiredFilters.filter((c) => c !== column)
+      );
+    }
   };
 
   const toggleOp = (op: string) => {
@@ -199,11 +230,44 @@ function MapDisplaySettings({
   };
 
   const toggleRequiredFilter = (column: string) => {
-    onRequiredFiltersChange(
-      selectedRequiredFilters.includes(column)
-        ? selectedRequiredFilters.filter((c) => c !== column)
-        : [...selectedRequiredFilters, column]
-    );
+    if (selectedColumns.includes(column)) {
+      return;
+    }
+    if (selectedRequiredFilters.includes(column)) {
+      onRequiredFiltersChange(
+        selectedRequiredFilters.filter((c) => c !== column)
+      );
+      return;
+    }
+    onRequiredFiltersChange([...selectedRequiredFilters, column]);
+    if (selectedHiddenFilters.includes(column)) {
+      onHiddenFiltersChange(
+        selectedHiddenFilters.filter((c) => c !== column)
+      );
+    }
+  };
+
+  const toggleHiddenFilter = (column: string) => {
+    if (selectedColumns.includes(column)) {
+      return;
+    }
+    if (selectedHiddenFilters.includes(column)) {
+      onHiddenFiltersChange(selectedHiddenFilters.filter((c) => c !== column));
+      return;
+    }
+    onHiddenFiltersChange([...selectedHiddenFilters, column]);
+    if (selectedRequiredFilters.includes(column)) {
+      onRequiredFiltersChange(
+        selectedRequiredFilters.filter((c) => c !== column)
+      );
+    }
+  };
+
+  const setFilterLabel = (column: string, label: string) => {
+    onFilterLabelsChange({
+      ...filterLabels,
+      [column]: label,
+    });
   };
 
   return (
@@ -316,12 +380,10 @@ function MapDisplaySettings({
       </div>
       <div className="space-y-3">
         <div className="space-y-1">
-          <p className="text-sm font-medium text-gray-900">
-            {t("Required filters")}
-          </p>
+          <p className="text-sm font-medium text-gray-900">{t("Filters")}</p>
           <p className="text-xs text-gray-500">
             {t(
-              "These filters always appear in the legend. Users must choose a value and cannot remove them."
+              "Required filters always appear and cannot be removed. Hidden filters are not offered to map users. Labels replace the original column name. Chosen data columns stay hidden from filters."
             )}
           </p>
         </div>
@@ -334,43 +396,88 @@ function MapDisplaySettings({
             {t("No filterable columns found.")}
           </p>
         ) : (
-          <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
-            <button
-              type="button"
-              className={`flex min-h-[40px] items-center gap-2 rounded-md border px-3 py-2 text-left text-sm transition ${
-                selectedRequiredFilters.length === 0
-                  ? "border-primary-500 bg-primary-50 text-primary-800"
-                  : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
-              }`}
-              onClick={() => onRequiredFiltersChange([])}
-            >
-              <span className="flex h-4 w-4 shrink-0 items-center justify-center">
-                {selectedRequiredFilters.length === 0 ? (
-                  <CheckIcon className="h-4 w-4" />
-                ) : null}
-              </span>
-              {t("None required")}
-            </button>
-            {filterableColumns.map((column: string) => (
-              <button
-                type="button"
-                key={column}
-                className={`flex min-h-[40px] items-center gap-2 rounded-md border px-3 py-2 text-left text-sm transition ${
-                  selectedRequiredFilters.includes(column)
-                    ? "border-primary-500 bg-primary-50 text-primary-800"
-                    : "border-gray-200 bg-white text-gray-700 hover:border-gray-300 hover:bg-gray-50"
-                }`}
-                onClick={() => toggleRequiredFilter(column)}
-              >
-                <span className="flex h-4 w-4 shrink-0 items-center justify-center">
-                  {selectedRequiredFilters.includes(column) ? (
-                    <CheckIcon className="h-4 w-4" />
-                  ) : null}
-                </span>
-                {/* eslint-disable-next-line i18next/no-literal-string */}
-                <span className="truncate">{column}</span>
-              </button>
-            ))}
+          <div className="overflow-hidden rounded-md border border-gray-200">
+            <div className="max-h-80 overflow-y-auto">
+              <table className="min-w-full table-fixed text-left text-sm">
+                <thead className="sticky top-0 bg-gray-50 text-xs font-medium text-gray-500">
+                  <tr>
+                    <th className="w-[32%] px-3 py-2">{t("Column")}</th>
+                    <th className="w-[18%] px-3 py-2 text-center">
+                      {t("Required")}
+                    </th>
+                    <th className="w-[18%] px-3 py-2 text-center">
+                      {t("Hidden")}
+                    </th>
+                    <th className="px-3 py-2">{t("Label")}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 bg-white">
+                  {filterableColumns.map((column: string) => {
+                    const isDataColumn = selectedColumns.includes(column);
+                    const isRequired =
+                      !isDataColumn &&
+                      selectedRequiredFilters.includes(column);
+                    const isHidden =
+                      isDataColumn || selectedHiddenFilters.includes(column);
+                    return (
+                      <tr
+                        key={column}
+                        className={isHidden ? "bg-gray-50 text-gray-500" : ""}
+                      >
+                        <td className="px-3 py-2">
+                          {/* eslint-disable-next-line i18next/no-literal-string */}
+                          <span className="block truncate font-mono text-xs text-gray-800">
+                            {column}
+                          </span>
+                          {isDataColumn ? (
+                            <span className="block text-[11px] text-gray-400">
+                              {t("Used as a map value")}
+                            </span>
+                          ) : null}
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          {isDataColumn ? (
+                            <span className="text-xs text-gray-400">
+                              {t("n/a")}
+                            </span>
+                          ) : (
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                              checked={isRequired}
+                              disabled={isHidden}
+                              aria-label={t("Require {{column}}", { column })}
+                              onChange={() => toggleRequiredFilter(column)}
+                            />
+                          )}
+                        </td>
+                        <td className="px-3 py-2 text-center">
+                          <input
+                            type="checkbox"
+                            className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 disabled:opacity-60"
+                            checked={isHidden}
+                            disabled={isDataColumn || isRequired}
+                            aria-label={t("Hide {{column}}", { column })}
+                            onChange={() => toggleHiddenFilter(column)}
+                          />
+                        </td>
+                        <td className="px-3 py-2">
+                          <input
+                            type="text"
+                            value={filterLabels[column] || ""}
+                            placeholder={column}
+                            onChange={(event) =>
+                              setFilterLabel(column, event.target.value)
+                            }
+                            className="w-full rounded-md border border-gray-300 px-2 py-1 text-xs shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                          />
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
@@ -395,7 +502,9 @@ function DataTableSettingsModal({
     id: number,
     visualizationColumns: string[],
     visualizationOps: string[],
-    requiredFilterColumns: string[]
+    requiredFilterColumns: string[],
+    hiddenFilterColumns: string[],
+    filterColumnLabels: Record<string, string>
   ) => void | Promise<void>;
 }) {
   const { t } = useTranslation("admin:data");
@@ -410,6 +519,12 @@ function DataTableSettingsModal({
   const [draftRequiredFilters, setDraftRequiredFilters] = useState<string[]>(
     (table.requiredFilterColumns || []).filter(Boolean) as string[]
   );
+  const [draftHiddenFilters, setDraftHiddenFilters] = useState<string[]>(
+    (table.hiddenFilterColumns || []).filter(Boolean) as string[]
+  );
+  const [draftFilterLabels, setDraftFilterLabels] = useState<
+    Record<string, string>
+  >(() => parseFilterColumnLabels(table.filterColumnLabels));
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -422,28 +537,41 @@ function DataTableSettingsModal({
     setDraftRequiredFilters(
       (table.requiredFilterColumns || []).filter(Boolean) as string[]
     );
+    setDraftHiddenFilters(
+      (table.hiddenFilterColumns || []).filter(Boolean) as string[]
+    );
+    setDraftFilterLabels(parseFilterColumnLabels(table.filterColumnLabels));
   }, [
     table.name,
     table.visualizationColumns,
     table.visualizationOps,
     table.requiredFilterColumns,
+    table.hiddenFilterColumns,
+    table.filterColumnLabels,
   ]);
 
-  const originalColumns = (table.visualizationColumns || []).filter(
-    Boolean
-  ) as string[];
-  const originalOps = (table.visualizationOps || []).filter(
-    Boolean
-  ) as string[];
-  const originalRequiredFilters = (table.requiredFilterColumns || []).filter(
-    Boolean
-  ) as string[];
+  const originalColumns = stringColumns(table.visualizationColumns);
+  const originalOps = stringColumns(table.visualizationOps);
+  const originalRequiredFilters = stringColumns(table.requiredFilterColumns);
+  const originalHiddenFilters = stringColumns(table.hiddenFilterColumns);
+  const originalFilterLabels = parseFilterColumnLabels(
+    table.filterColumnLabels
+  );
   const nameDirty = draftName.trim() !== table.name;
+  const savedFilterLabels = normalizedFilterLabels(draftFilterLabels);
+  const requiredForSave = draftRequiredFilters.filter(
+    (column) => !draftColumns.includes(column)
+  );
+  const labelsDirty =
+    JSON.stringify(savedFilterLabels) !== JSON.stringify(originalFilterLabels);
   const displayDirty =
     JSON.stringify(draftColumns) !== JSON.stringify(originalColumns) ||
     JSON.stringify(draftOps) !== JSON.stringify(originalOps) ||
-    JSON.stringify(draftRequiredFilters) !==
-      JSON.stringify(originalRequiredFilters);
+    JSON.stringify(requiredForSave) !==
+      JSON.stringify(originalRequiredFilters) ||
+    JSON.stringify(draftHiddenFilters) !==
+      JSON.stringify(originalHiddenFilters) ||
+    labelsDirty;
   const dirty = nameDirty || displayDirty;
 
   const saveChanges = async () => {
@@ -463,7 +591,9 @@ function DataTableSettingsModal({
           table.id,
           draftColumns,
           draftOps,
-          draftRequiredFilters
+          requiredForSave,
+          draftHiddenFilters,
+          savedFilterLabels
         );
       }
       onClose();
@@ -482,7 +612,7 @@ function DataTableSettingsModal({
       scrollable
       autoWidth
       tipyTop
-      panelClassName="sm:max-w-lg"
+      panelClassName="sm:max-w-2xl"
       footerClassName="items-center !py-3"
       footer={[
         {
@@ -540,9 +670,13 @@ function DataTableSettingsModal({
             selectedColumns={draftColumns}
             selectedOps={draftOps}
             selectedRequiredFilters={draftRequiredFilters}
+            selectedHiddenFilters={draftHiddenFilters}
+            filterLabels={draftFilterLabels}
             onColumnsChange={setDraftColumns}
             onOpsChange={setDraftOps}
             onRequiredFiltersChange={setDraftRequiredFilters}
+            onHiddenFiltersChange={setDraftHiddenFilters}
+            onFilterLabelsChange={setDraftFilterLabels}
           />
         </section>
 
@@ -610,7 +744,9 @@ function DataTableRow({
     id: number,
     visualizationColumns: string[],
     visualizationOps: string[],
-    requiredFilterColumns: string[]
+    requiredFilterColumns: string[],
+    hiddenFilterColumns: string[],
+    filterColumnLabels: Record<string, string>
   ) => void | Promise<void>;
 }) {
   const { t } = useTranslation("admin:data");
@@ -821,7 +957,9 @@ export default function RelatedDataTables({ item }: RelatedDataTablesProps) {
       id: number,
       visualizationColumns: string[],
       visualizationOps: string[],
-      requiredFilterColumns: string[]
+      requiredFilterColumns: string[],
+      hiddenFilterColumns: string[],
+      filterColumnLabels: Record<string, string>
     ) => {
       await setVisualizationSettingsMutation({
         variables: {
@@ -829,6 +967,8 @@ export default function RelatedDataTables({ item }: RelatedDataTablesProps) {
           visualizationColumns,
           visualizationOps,
           requiredFilterColumns,
+          hiddenFilterColumns,
+          filterColumnLabels,
         },
       });
     },

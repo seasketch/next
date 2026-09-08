@@ -14,6 +14,8 @@ fragment ClientOverlayDataTable on OverlayDataTable {
   visualizationColumns
   visualizationOps
   requiredFilterColumns
+  hiddenFilterColumns
+  filterColumnLabels
   temporal
 }
 
@@ -37,6 +39,8 @@ fragment OverlayDataTableDetails on OverlayDataTable {
   visualizationColumns
   visualizationOps
   requiredFilterColumns
+  hiddenFilterColumns
+  filterColumnLabels
   temporal
 }
 
@@ -48,6 +52,8 @@ query OverlayDataTableVisualizationMetadata($id: Int!) {
     visualizationColumns
     visualizationOps
     requiredFilterColumns
+    hiddenFilterColumns
+    filterColumnLabels
   }
 }
 
@@ -61,6 +67,8 @@ query OverlayDataTableVisualizationMetadataForLayer($tocItemId: Int!) {
       visualizationColumns
       visualizationOps
       requiredFilterColumns
+      hiddenFilterColumns
+      filterColumnLabels
     }
   }
 }
@@ -145,6 +153,8 @@ mutation SetOverlayDataTableVisualizationSettings(
   $visualizationColumns: [String]!
   $visualizationOps: [String]!
   $requiredFilterColumns: [String]!
+  $hiddenFilterColumns: [String]!
+  $filterColumnLabels: JSON!
 ) {
   setOverlayDataTableVisualizationSettings(
     input: {
@@ -152,6 +162,8 @@ mutation SetOverlayDataTableVisualizationSettings(
       visualizationColumns: $visualizationColumns
       visualizationOps: $visualizationOps
       requiredFilterColumns: $requiredFilterColumns
+      hiddenFilterColumns: $hiddenFilterColumns
+      filterColumnLabels: $filterColumnLabels
     }
   ) {
     overlayDataTable {

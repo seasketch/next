@@ -41,6 +41,8 @@ export type MapTemporalStateValue = {
   temporalSources: VisibleTemporalSource[];
   /** Filtered row counts per table + step, from the last `when.step` query. */
   queryStepCounts: { [tableStableId: string]: { [step: string]: number } };
+  /** True while a histogram series fetch for current filters is in flight. */
+  queryStepCountsLoading: boolean;
   /** Distinct data-table `/query` errors for the current clock / resolution. */
   queryErrors: string[];
   setClock: (clock: TemporalClock) => void;
@@ -70,6 +72,7 @@ export const MapTemporalStateContext = createContext<MapTemporalStateValue>({
   availableResolutions: [],
   temporalSources: [],
   queryStepCounts: {},
+  queryStepCountsLoading: false,
   queryErrors: [],
   setClock: noop,
   setViewResolution: noop,
@@ -88,6 +91,7 @@ export default function MapTemporalStateProvider({
   const [queryStepCounts, setQueryStepCounts] = useState<{
     [tableStableId: string]: { [step: string]: number };
   }>({});
+  const [queryStepCountsLoading, setQueryStepCountsLoading] = useState(false);
   const [queryErrors, setQueryErrors] = useState<string[]>([]);
   const previousIdsRef = useRef<string[]>([]);
 
@@ -201,11 +205,14 @@ export default function MapTemporalStateProvider({
   useEffect(() => {
     if (!manager) return;
     setQueryStepCounts(manager.getDataTableSeriesCounts());
+    setQueryStepCountsLoading(manager.getDataTableSeriesCountsLoading());
     setQueryErrors(manager.getDataTableQueryErrors());
     manager.setOnDataTableSeriesCountsChange(setQueryStepCounts);
+    manager.setOnDataTableSeriesCountsLoadingChange(setQueryStepCountsLoading);
     manager.setOnDataTableQueryErrorsChange(setQueryErrors);
     return () => {
       manager.setOnDataTableSeriesCountsChange(null);
+      manager.setOnDataTableSeriesCountsLoadingChange(null);
       manager.setOnDataTableQueryErrorsChange(null);
     };
   }, [manager]);
@@ -245,6 +252,7 @@ export default function MapTemporalStateProvider({
       availableResolutions: showSlider ? availableResolutions : [],
       temporalSources,
       queryStepCounts,
+      queryStepCountsLoading,
       queryErrors,
       setClock,
       setViewResolution,
@@ -257,6 +265,7 @@ export default function MapTemporalStateProvider({
       availableResolutions,
       temporalSources,
       queryStepCounts,
+      queryStepCountsLoading,
       queryErrors,
       setClock,
       setViewResolution,

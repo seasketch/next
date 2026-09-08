@@ -10,8 +10,10 @@ import { MapManagerContext, MapOverlayContext } from "../MapContextManager";
 import {
   DataTableAggregation,
   DataTableVisualizationMetadata,
+  hiddenDataTableFilterColumns,
   isWhenStepLimitError,
   omitFiltersForColumns,
+  parseFilterColumnLabels,
   requiredDataTableFilterColumns,
   resolveDataTableVisualizationSettings,
   temporalSourceFilterColumns,
@@ -82,6 +84,8 @@ export default function DataTableLegendPanel({
         visualizationColumns: entry.visualizationColumns,
         visualizationOps: entry.visualizationOps,
         requiredFilterColumns: entry.requiredFilterColumns,
+        hiddenFilterColumns: entry.hiddenFilterColumns,
+        filterColumnLabels: entry.filterColumnLabels,
       };
     }
     return next;
@@ -98,6 +102,8 @@ export default function DataTableLegendPanel({
         visualizationColumns: table.visualizationColumns,
         visualizationOps: table.visualizationOps,
         requiredFilterColumns: table.requiredFilterColumns,
+        hiddenFilterColumns: table.hiddenFilterColumns,
+        filterColumnLabels: table.filterColumnLabels,
       }
     );
   }, [metadataByTableId, table]);
@@ -131,35 +137,62 @@ export default function DataTableLegendPanel({
       tableMetadata ? requiredDataTableFilterColumns(tableMetadata) : [],
     [tableMetadata]
   );
+  const hiddenFilterColumns = useMemo(
+    () => (tableMetadata ? hiddenDataTableFilterColumns(tableMetadata) : []),
+    [tableMetadata]
+  );
+  const filterColumnLabels = useMemo(
+    () => parseFilterColumnLabels(tableMetadata?.filterColumnLabels),
+    [tableMetadata]
+  );
   const temporalFilterColumns = useMemo(
     () => temporalSourceFilterColumns(table?.temporal),
     [table?.temporal]
+  );
+  const omittedFilterColumns = useMemo(
+    () =>
+      [
+        ...temporalFilterColumns,
+        ...hiddenFilterColumns,
+        table?.joinColumn,
+      ].filter((column): column is string => Boolean(column)),
+    [hiddenFilterColumns, table?.joinColumn, temporalFilterColumns]
   );
   const validFilterColumns = useMemo(
     () =>
       new Set(
         (columnStats?.columns || [])
           .map((entry: { attribute: string }) => entry.attribute)
-          .filter((entry: string) => !visualizedColumns.includes(entry))
+          .filter(
+            (entry: string) =>
+              !visualizedColumns.includes(entry) &&
+              omittedFilterColumns.indexOf(entry) === -1
+          )
       ),
-    [columnStats?.columns, visualizedColumns]
+    [columnStats?.columns, omittedFilterColumns, visualizedColumns]
   );
 
   // Persist required filters into layer state so map queries include them
   // (and the legend shows them) as soon as column-stats are available.
+  // Read the latest intent from the manager — not React props — so a
+  // column-stats/metadata rerender cannot write back a stale filter set
+  // while a newer range/value selection is already on the map.
   useEffect(() => {
     if (!tableMetadata || !columnStats?.columns?.length || !manager) {
       return;
     }
-    if (!dataTable?.stableId) {
+    const latest = manager.getLayerDataTable?.(layerId);
+    const stableId = latest?.stableId || dataTable?.stableId;
+    if (!stableId) {
       return;
     }
+    const latestFilters = latest?.filters ?? userChoice.filters;
     const required = requiredFilterColumns.filter(
-      (column) => temporalFilterColumns.indexOf(column) === -1
+      (column) => omittedFilterColumns.indexOf(column) === -1
     );
     const stripped = omitFiltersForColumns(
-      userChoice.filters,
-      temporalFilterColumns
+      latestFilters,
+      omittedFilterColumns
     );
     const ensured =
       required.length > 0
@@ -167,17 +200,17 @@ export default function DataTableLegendPanel({
             stripped,
             required,
             columnStats.columns,
-            [...visualizedColumns, ...temporalFilterColumns]
+            [...visualizedColumns, ...omittedFilterColumns]
           )
         : stripped || [];
-    const current = userChoice.filters || [];
+    const current = latestFilters || [];
     if (JSON.stringify(ensured) === JSON.stringify(current)) {
       return;
     }
     manager.setLayerDataTable(layerId, {
-      stableId: dataTable.stableId,
-      column: effectiveColumn,
-      op: userChoice.op || op,
+      stableId,
+      column: latest?.column ?? effectiveColumn,
+      op: latest?.op || userChoice.op || op,
       filters: ensured,
     });
   }, [
@@ -187,7 +220,7 @@ export default function DataTableLegendPanel({
     tableMetadata,
     columnStats?.columns,
     requiredFilterColumns,
-    temporalFilterColumns,
+    omittedFilterColumns,
     visualizedColumns,
     userChoice.filters,
     userChoice.op,
@@ -206,10 +239,11 @@ export default function DataTableLegendPanel({
       base,
       requiredFilterColumns,
       columnStats.columns,
-      visualizedColumns
+      [...visualizedColumns, ...omittedFilterColumns]
     ).filter((filter) => validFilterColumns.has(filter.column));
   }, [
     columnStats?.columns,
+    omittedFilterColumns,
     requiredFilterColumns,
     userChoice.filters,
     validFilterColumns,
@@ -294,9 +328,11 @@ export default function DataTableLegendPanel({
             filters={activeFilters}
             visualizedColumns={visualizedColumns}
             requiredColumns={requiredFilterColumns.filter(
-              (column) => temporalFilterColumns.indexOf(column) === -1
+              (column) => omittedFilterColumns.indexOf(column) === -1
             )}
-            hiddenColumns={temporalFilterColumns}
+            hiddenColumns={omittedFilterColumns}
+            columnLabels={filterColumnLabels}
+            queryLoading={loading && !error}
             onChange={(filters) => {
               if (!tableStableId) return;
               manager?.setLayerDataTable(layerId, {
@@ -307,7 +343,7 @@ export default function DataTableLegendPanel({
                   filters,
                   requiredFilterColumns,
                   columnStats.columns,
-                  visualizedColumns
+                  [...visualizedColumns, ...omittedFilterColumns]
                 ),
               });
             }}
