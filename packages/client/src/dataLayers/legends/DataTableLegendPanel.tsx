@@ -8,6 +8,7 @@ import {
 } from "../../generated/graphql";
 import { MapManagerContext, MapOverlayContext } from "../MapContextManager";
 import {
+  allowedDataTableVisualizationColumns,
   DataTableAggregation,
   DataTableVisualizationMetadata,
   hiddenDataTableFilterColumns,
@@ -25,6 +26,7 @@ import DataTableFilterControls, {
 import DataTableVisualizationControls from "../DataTableVisualizationControls";
 import {
   columnStatsUrlForTable,
+  numericColumnNames,
   useDataTableColumnStats,
 } from "../useDataTableColumnStats";
 import useCurrentProjectMetadata from "../../useCurrentProjectMetadata";
@@ -130,8 +132,12 @@ export default function DataTableLegendPanel({
     : { op, column, requiredFilterColumns: [] as string[] };
   const effectiveColumn = userChoice.column || resolved.column || column;
   const visualizedColumns = useMemo(
-    () => (effectiveColumn ? [effectiveColumn] : []),
-    [effectiveColumn]
+    () =>
+      allowedDataTableVisualizationColumns(
+        tableMetadata,
+        numericColumnNames(columnStats)
+      ),
+    [columnStats, tableMetadata]
   );
   const requiredFilterColumns = useMemo(
     () =>

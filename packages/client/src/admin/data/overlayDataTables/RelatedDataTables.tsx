@@ -28,6 +28,7 @@ import DataTableUploadJobProgress from "./DataTableUploadJobProgress";
 import DataTableUploadModal from "./DataTableUploadModal";
 import DataTableTemporalEditor from "./DataTableTemporalEditor";
 import {
+  allowedDataTableVisualizationColumns,
   DATA_TABLE_AGGREGATIONS,
   isAlwaysHiddenFilterColumn,
   parseFilterColumnLabels,
@@ -196,6 +197,14 @@ function MapDisplaySettings({
     mapAccessToken
   );
   const numericColumns = numericColumnNames(columnStats);
+  const dataColumns = useMemo(
+    () =>
+      allowedDataTableVisualizationColumns(
+        { visualizationColumns: selectedColumns },
+        numericColumns
+      ),
+    [numericColumns, selectedColumns]
+  );
   const filterableColumns = useMemo(
     () =>
       (columnStats?.columns || [])
@@ -237,7 +246,7 @@ function MapDisplaySettings({
   };
 
   const toggleRequiredFilter = (column: string) => {
-    if (selectedColumns.includes(column)) {
+    if (dataColumns.includes(column)) {
       return;
     }
     if (selectedRequiredFilters.includes(column)) {
@@ -255,7 +264,7 @@ function MapDisplaySettings({
   };
 
   const toggleHiddenFilter = (column: string) => {
-    if (selectedColumns.includes(column)) {
+    if (dataColumns.includes(column)) {
       return;
     }
     if (selectedHiddenFilters.includes(column)) {
@@ -420,7 +429,7 @@ function MapDisplaySettings({
                 </thead>
                 <tbody className="divide-y divide-gray-100 bg-white">
                   {filterableColumns.map((column: string) => {
-                    const isDataColumn = selectedColumns.includes(column);
+                    const isDataColumn = dataColumns.includes(column);
                     const isRequired =
                       !isDataColumn &&
                       selectedRequiredFilters.includes(column);

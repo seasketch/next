@@ -4,6 +4,7 @@ import * as Select from "@radix-ui/react-select";
 import { useTranslation } from "react-i18next";
 import { MapManagerContext, MapOverlayContext } from "./MapContextManager";
 import {
+  allowedDataTableVisualizationColumns,
   DATA_TABLE_AGGREGATIONS,
   DataTableAggregation,
   DataTableVisualizationMetadata,
@@ -170,11 +171,8 @@ export default function DataTableVisualizationControls({
 
   // Empty admin visualizationColumns ⇒ all numeric columns are valid choices.
   const columnChoices: string[] = useMemo(
-    () =>
-      allowedColumns.length > 0
-        ? allowedColumns
-        : numericColumnNames(columnStats),
-    [allowedColumns, columnStats]
+    () => allowedDataTableVisualizationColumns(metadata, numericColumnNames(columnStats)),
+    [columnStats, metadata]
   );
   const opChoices =
     allowedOps.length > 0 ? allowedOps : DATA_TABLE_AGGREGATIONS;

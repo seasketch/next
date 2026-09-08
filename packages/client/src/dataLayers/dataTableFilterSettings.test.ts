@@ -1,5 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 import {
+  allowedDataTableVisualizationColumns,
+  configuredDataTableVisualizationColumns,
   dataTableFilterLabel,
   hiddenDataTableFilterColumns,
   isAlwaysHiddenFilterColumn,
@@ -100,6 +102,25 @@ describe("isAlwaysHiddenFilterColumn", () => {
       true
     );
     expect(isAlwaysHiddenFilterColumn("", undefined, null)).toBe(true);
+  });
+});
+
+describe("allowedDataTableVisualizationColumns", () => {
+  it("returns every configured data column, not only a current selection", () => {
+    expect(
+      allowedDataTableVisualizationColumns(
+        { visualizationColumns: ["cpue", "biomass", null, ""] },
+        ["cpue", "biomass", "depth"]
+      )
+    ).toEqual(["cpue", "biomass"]);
+  });
+
+  it("falls back to all numeric columns when none are configured", () => {
+    expect(
+      allowedDataTableVisualizationColumns({}, ["cpue", "biomass"])
+    ).toEqual(["cpue", "biomass"]);
+    expect(configuredDataTableVisualizationColumns(null)).toEqual([]);
+    expect(configuredDataTableVisualizationColumns(undefined)).toEqual([]);
   });
 });
 

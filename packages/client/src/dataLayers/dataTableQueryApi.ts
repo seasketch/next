@@ -367,6 +367,27 @@ export function resolveDataTableVisualizationSettings(
   };
 }
 
+/** Admin-configured map-value columns, or `[]` when any numeric column is allowed. */
+export function configuredDataTableVisualizationColumns(
+  constraints?: DataTableVisualizationConstraints | null
+): string[] {
+  return (constraints?.visualizationColumns?.filter(
+    (column): column is string => Boolean(column)
+  ) || []) as string[];
+}
+
+/**
+ * Columns that can be the map value — and therefore stay out of filters.
+ * Uses the admin list when it is non-empty; otherwise every numeric column.
+ */
+export function allowedDataTableVisualizationColumns(
+  constraints: DataTableVisualizationConstraints | undefined,
+  numericColumns: string[]
+): string[] {
+  const configured = configuredDataTableVisualizationColumns(constraints);
+  return configured.length > 0 ? configured : numericColumns;
+}
+
 /** Normalize admin-required filter column names (drop empties, preserve order). */
 export function requiredDataTableFilterColumns(
   constraints: DataTableVisualizationConstraints
