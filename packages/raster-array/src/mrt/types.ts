@@ -45,6 +45,13 @@ export type MrtLayerInput = {
    * are GPU-only. `1` is best for first-paint of a single year.
    */
   bandsPerBlock?: number | "all";
+  /**
+   * Block filters applied before varint packing, in order. `["delta",
+   * "zigzag"]` difference-encodes each band spatially (rows/cols; never
+   * across bands) then maps signed deltas to small varints — measured ~35%
+   * smaller for smooth fields like DHW. Decoded natively by mapbox-gl.
+   */
+  filters?: Array<"delta" | "zigzag">;
 };
 
 export type EncodeMrtTileOptions = {

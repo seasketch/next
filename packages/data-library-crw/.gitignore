@@ -1,0 +1,7 @@
+node_modules
+work
+*.tif
+*.pmtiles
+*.vrt
+*.nc
+.DS_Store

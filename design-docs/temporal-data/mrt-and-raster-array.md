@@ -361,7 +361,7 @@ GL JS 3.4 sends `Range: bytes=0-16383` on every `.mrt` **tile URL**, then fetche
 3. **Expose `Content-Range` / `Accept-Ranges`** (`Access-Control-Expose-Headers`). CORS already allows `*`; GL JS must be able to read the range response.
 4. `Content-Type: application/octet-stream` when metadata `format` is `mrt` / tile type is Unknown. Today’s `contentTypeForTileType` default is `application/x-protobuf`, which is wrong for MRT.
 
-Do **not** put `206` slices in TilesBackend’s immutable Workers cache — those keys would miss on a different range of the same tile. Cache the full extracted tile inside the isolate (already true for PMTiles directories + `getZxy`) and slice per request. Returning `200` with the full tile (ignoring Range) is an acceptable fallback if slicing fights the existing cache, because the default encoder puts every band in one block; honoring Range is still the target so `--bands-per-block 1` stays useful.
+Do **not** put `206` slices in TilesBackend’s immutable Workers cache — those keys would miss on a different range of the same tile. Cache the full extracted tile inside the isolate (already true for PMTiles directories + `getZxy`) and slice per request. Returning `200` with the full tile (ignoring Range) remains an acceptable fallback, and flips GL JS into `entireBuffer` mode (zero fetches while scrubbing) — but for products with heavy tiles it front-loads the entire timeline per tile and was **rejected** for daily DHW after measuring ~200 MB for one z3 viewport. Honor ranges exactly for those; see [Timeslider scrubbing performance](#timeslider-scrubbing-performance-2026-09).
 
 Tests: archive whose extracted tile is smaller than 16 KB, `Range: bytes=0-16383` → `206` + clamped `Content-Range`; `{uuid}.mrt/{z}/{x}/{y}.mrt` denied without token; public `raster-array/gmw-global.mrt/…` and `dataLibrary/…/display.mrt/…` allowed with no token; `{uuid}.json` still describes the RGB/vector archive, not the MRT sibling.
 
@@ -514,6 +514,55 @@ Do not ask the upload handler to build this globe raster.
 - Globe MRT z0–10: 8,243 tiles, ~323 MB. z11 is a keep-existing pass (~65k candidates). Those counts are why the published product must be one archive.
 - Regional fixtures (`gmw-florida`, `gmw-sundarbans`, `gmw-borneo`) encode to **maxzoom 11** from the same source cells.
 - Regional demos: `packages/raster-array` → `npm run demo` → `http://127.0.0.1:8766`. Globe: `packages/data-library-gmw` → `npm run demo` → `http://127.0.0.1:8765/gmw-global.html` (local `work/dist/display.mrt.pmtiles` only). Token from `packages/client/.env` (`REACT_APP_MAPBOX_ACCESS_TOKEN`).
+
+## Timeslider scrubbing performance (2026-09)
+
+Findings from profiling 365-band daily CRW DHW (`packages/data-library-crw`, demo on port 8767) at a full-globe view. These were established by reading mapbox-gl's decoder source (`src/data/mrt/mrt.js`, `src/source/raster_array_tile.ts`) and confirmed with DevTools traces and scripted 364-band scrubs. **Read this before touching band grouping, tile serving, or timeslider code — every one of these was learned the hard way.**
+
+### How GL JS actually consumes MRT (the model that matters)
+
+- A `raster-array` source in **partial mode** (the default) fetches a 16 KB header probe per tile (`Range: bytes=0-16383`), then one Range request per gzip **block** as bands are requested. Changing `raster-array-band` re-enters a fetch → worker-decode → texture-upload pipeline per visible tile whenever the band's block is not already decoded.
+- **The decode unit is the block, not the band.** A miss gunzips and varint-decodes *every* band in the block (plus delta/zigzag filters). Asking for one band of a 16-band block costs 16 bands of `readVarint`.
+- **Decoded blocks live in a per-tile, per-layer LRU of `MRT_DECODED_BAND_CACHE_SIZE = 30` blocks** (hard-coded). Band changes inside an already-decoded block are a *synchronous texture update* — no fetch, no worker. This is the fast path scrubbing must stay on.
+- **Crossing into a new block cancels in-flight decodes for the layer (`flushQueues`) and cancelled results are discarded, never cached.** Scrubbing faster than the pipeline completes throws away most of the work it triggers — the map "catches up" only when the user slows down. This is why scrubbing felt laggy even with all bytes in the browser HTTP cache: cached bytes are not decoded blocks.
+- **`entireBuffer`:** if the response to the byte-0 header probe contains the whole tile (server "ignores" the Range), GL JS keeps the complete `.mrt` in memory and slices blocks locally — zero network for every subsequent band change on that tile. This is deliberate, supported behavior (`raster_array_tile.ts`, "in case range requests were ignored"). Newer GL JS exposes the same thing as the non-`partial` mode (whole tile loaded and parsed in the worker).
+
+### Measured (global view, 42 visible 256px tiles, 364 daily bands, M-series workstation)
+
+| Configuration | Scrub behavior |
+| --- | --- |
+| `bandsPerBlock: 1`, partial | ~280 Range requests/s, CPU nearly idle — request latency bound |
+| `bandsPerBlock: 8`, partial | ~117 requests/s; ~30–70 ms p50 per request even on localhost |
+| `bandsPerBlock: 16` + full-body probe (`entireBuffer`) | **0 requests**, 60 fps locked (max frame 17.8 ms) across two full-year scrubs |
+
+Main-thread frame rate was *never* the bottleneck once slider updates were rAF-coalesced — perceived lag is the per-tile pipeline latency trailing the slider.
+
+**But `entireBuffer` was later rejected for daily DHW**: full-body-on-probe front-loads every band of every visible tile — a single z3 viewport (which fetches z4 tiles: 256px tiles mean tile zoom = map zoom + 1) measured **196–266 MB** before the user touches the slider. The shipped configuration is partial mode + delta/zigzag filters + 0.1 quantization + 30-day blocks (see payload table below): ~6 MB initial viewport, blocks fetched on demand, and after one pass through the year the 13 blocks/tile sit inside the 30-block decoded LRU so scrubbing is synchronous.
+
+### Payload: encoder filters and quantization (2026-09)
+
+The mapbox-gl decoder natively inverts per-block **filters** declared in the dataIndex: `delta_filter` (spatial: cumsum along columns then rows of each band — never across bands, so no temporal delta) and `zigzag_filter`. `@seasketch/raster-array` implements the encode side (`src/mrt/filters.ts`), validated by round-tripping tiles through mapbox-gl v3.29's actual `mrt.esm.js` decoder. Measured on a heavy Atlantic z4 daily-DHW tile (364 bands, 16 bands/block, gzip 6):
+
+| Encoding | Size | vs. unfiltered |
+| --- | --- | --- |
+| absolute uint32 varints (old encoder) | 5.16 MB | 100% |
+| + spatial delta+zigzag | 3.37 MB | 65% |
+| + quantize 0.1 °C-weeks (was 0.01) | 2.58 MB | 50% |
+| **both** | **2.14 MB** | **41%** |
+
+Remapping the 5-byte nodata sentinel bought nothing (gzip already crushes those runs). Temporal (across-band) delta would be the biggest win but the GL JS decoder has no such filter. Experiment script: `packages/raster-array/scripts/filter-experiment.ts`.
+
+### Rules derived from the above
+
+- **Always encode with `filters: ["delta", "zigzag"]`** for smooth quantitative fields, and quantize no finer than the visualization needs (daily DHW uses 0.1 °C-weeks; NOAA alert thresholds are 4 and 8). Together: 2.4× smaller tiles for free — the decoder inverts filters natively.
+- **Choose `bandsPerBlock` so the whole timeline is ≤ 30 blocks.** Then one pass through the timeline leaves every band of every visible tile decoded, and all further scrubbing is synchronous. Current products: daily DHW 365/30 = 13 blocks (~180 KB filtered per block); annual composites 8 (40 years = 5 blocks); categorical BAA one block per tile (tiles ~70 KB). Cost per boundary miss grows with block size; decoded-memory retention is unchanged (always 4 B/px/band once decoded).
+- **Serve exact ranges (partial mode) for heavy daily products; `entireBuffer` only for light ones.** Full-body-on-probe means paying the whole timeline per tile up front (~200 MB per z3 viewport for daily DHW — rejected). Partial mode costs one 16 KB probe + one current block per tile initially (~6 MB per viewport), then pay-as-you-scrub. The trade-off flips for small archives (annual composites, BAA) where whole tiles are ≤ a few hundred KB — there `entireBuffer` is still attractive. The first fast scrub through unseen blocks will trail the slider (in-flight decodes cancelled at block boundaries); the second pass is synchronous.
+- **Do not bother with HTTP-cache warming, tile prefetching, or a service worker.** Chrome satisfied only ~14–36 % of GL JS's Range requests from a warmed cache in testing (browsers do not reliably slice ranges from cached responses), and none of it addresses the decode-side cost. Block sizing + filters solve both layers with zero client hacks. A service-worker range-slicer was built, measured, and reverted.
+- **Version tile URLs when archives are rebuilt.** The demo server appends `?v={archiveBytes}` to tile URLs. Without it, a browser can serve a stale cached 206 for the header probe (or a running server can hold stale PMTiles directory offsets after the file is replaced underneath it) and the layer renders nothing or garbage. Restart the demo server after re-packing.
+- **`pixel_format` uint16/uint8 is NOT a size optimization.** In MRT the format is *channels per 32-bit word* (uint16 = two 16-bit channels, e.g. wind u/v; uint8 = four channels, imagery). Single-channel quantitative data stays uint32; the decoded band is always 4 bytes/pixel feeding an RGBA8 texture, and the varint stream is one word per pixel regardless. Do not re-encode single-channel products to uint16 expecting memory or bandwidth wins — this was evaluated and rejected.
+- **GL JS version matters a lot.** The client and demos were on 3.4.0 (May 2024); Mapbox rewrote the MRT pbf decoder immediately after, and later versions add per-band decode-task dedup and better cancellation. The CRW demo now runs 3.29.0. Upgrade the SeaSketch client's mapbox-gl before wiring the timeslider to `raster-array-band`.
+- **Coalesce band updates with `requestAnimationFrame`.** Slider input and playback must set `raster-array-band` at most once per frame (done in the CRW demo `bindSlider` and in `packages/client/src/dataLayers/TimeSlider.tsx`). Playback should advance by elapsed intervals, not one band per tick, or high speeds quantize to the display refresh rate.
+- **Memory caveat.** Decoded-block retention is GB-scale during long scrubs (3–5 GB JS heap observed at a globe view) and there is no GL JS API to bound it — known upstream issue [mapbox-gl-js#13685](https://github.com/mapbox/mapbox-gl-js/issues/13685). The 30-block LRU per tile is the only cap. Watch mobile/WebView targets.
 
 ## Implementation notes (2026-08)
 

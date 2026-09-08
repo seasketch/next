@@ -166,6 +166,68 @@ describe("MRT v1 encode/decode", () => {
     expect(decodeSample(MRT_NODATA, 0, 1)).toBeNull();
   });
 
+  it("round-trips delta+zigzag filters, including nodata boundaries", () => {
+    // 4×4 band with a smooth gradient, nodata holes, and a max-value pixel to
+    // exercise mod-2^32 wraparound at data/nodata transitions.
+    const a = Uint32Array.from([
+      100, 101, 102, 103,
+      110, MRT_NODATA, 112, 113,
+      120, 121, MRT_NODATA, 123,
+      130, 131, 132, 0xfffffffe,
+    ]);
+    const b = Uint32Array.from({ length: 16 }, (_, i) => i % 5 === 0 ? MRT_NODATA : i * 7);
+    const buf = encodeMrtTile({
+      z: 2,
+      x: 1,
+      y: 1,
+      layers: [
+        {
+          name: "dhw",
+          tileSize: 4,
+          buffer: 0,
+          bandsPerBlock: 2,
+          filters: ["delta", "zigzag"],
+          bands: [
+            { id: "2026-01-01", values: Uint32Array.from(a) },
+            { id: "2026-01-02", values: Uint32Array.from(b) },
+          ],
+        },
+      ],
+    });
+    const layer = decodeMrtTile(buf).layers.dhw;
+    expect(layer.dataIndex[0]?.filters).toEqual([
+      "delta_filter",
+      "zigzag_filter",
+    ]);
+    expect([...layer.bandData["2026-01-01"]!]).toEqual([...a]);
+    expect([...layer.bandData["2026-01-02"]!]).toEqual([...b]);
+  });
+
+  it("filtered smooth data compresses smaller than unfiltered", () => {
+    const dim = 64;
+    const smooth = Uint32Array.from({ length: dim * dim }, (_, i) => {
+      const x = i % dim;
+      const y = Math.floor(i / dim);
+      return 1000 + x * 3 + y * 2;
+    });
+    const encode = (filters?: Array<"delta" | "zigzag">) =>
+      encodeMrtTile({
+        z: 0,
+        x: 0,
+        y: 0,
+        layers: [
+          {
+            name: "t",
+            tileSize: dim,
+            buffer: 0,
+            filters,
+            bands: [{ id: "a", values: Uint32Array.from(smooth) }],
+          },
+        ],
+      }).length;
+    expect(encode(["delta", "zigzag"])).toBeLessThan(encode() / 2);
+  });
+
   it("rejects a non-power-of-two tileSize", () => {
     expect(() =>
       encodeMrtTile({

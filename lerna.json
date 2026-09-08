@@ -21,7 +21,8 @@
     "packages/ai-data-analyst",
     "packages/gl-style-builder",
     "packages/raster-array",
-    "packages/data-library-gmw"
+    "packages/data-library-gmw",
+    "packages/data-library-crw"
   ],
   "version": "independent"
 }

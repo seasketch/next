@@ -1,9 +1,9 @@
 import { ExclamationCircleIcon } from "@heroicons/react/outline";
 import { PauseIcon, PlayIcon } from "@heroicons/react/solid";
-import { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
-import { TemporalPrecision } from "@seasketch/geostats-types";
+import { TemporalClock, TemporalPrecision } from "@seasketch/geostats-types";
 import { currentSidebarState } from "../projects/ProjectAppSidebar";
 import {
   timeSliderLeadingInset,
@@ -62,6 +62,28 @@ export default function TimeSlider() {
   const [playing, setPlaying] = useState(false);
   const clockRef = useRef(clock);
   clockRef.current = clock;
+  const pendingClockRef = useRef<TemporalClock | null>(null);
+  const clockRafRef = useRef(0);
+
+  const scheduleClock = useCallback(
+    (next: TemporalClock) => {
+      pendingClockRef.current = next;
+      if (clockRafRef.current) return;
+      clockRafRef.current = requestAnimationFrame(() => {
+        clockRafRef.current = 0;
+        const pending = pendingClockRef.current;
+        pendingClockRef.current = null;
+        if (pending) setClock(pending);
+      });
+    },
+    [setClock]
+  );
+
+  useEffect(() => {
+    return () => {
+      if (clockRafRef.current) cancelAnimationFrame(clockRafRef.current);
+    };
+  }, []);
   const { pathname } = useLocation();
   const flyout = useHomepageFlyoutState();
 
@@ -91,14 +113,20 @@ export default function TimeSlider() {
     if (!playing || windowMode || steps.length < 2 || !resolution) {
       return;
     }
-    const id = window.setInterval(() => {
+    let raf = 0;
+    let last = performance.now();
+    const tick = (now: number) => {
+      raf = requestAnimationFrame(tick);
+      if (now - last < PLAY_MS) return;
+      last = now;
       const current = clockRef.current;
       if (!current || current.mode === "window") return;
       const next = advanceClock(current, steps, resolution);
-      if (next) setClock(next);
-    }, PLAY_MS);
-    return () => window.clearInterval(id);
-  }, [playing, windowMode, steps, resolution, setClock]);
+      if (next) scheduleClock(next);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [playing, windowMode, steps, resolution, scheduleClock]);
 
   useEffect(() => {
     if (!clock || windowMode) setPlaying(false);
@@ -143,7 +171,7 @@ export default function TimeSlider() {
     const clamped = Math.max(0, Math.min(steps.length - 1, nextIndex));
     if (handle === "instant" || !windowMode) {
       const next = instantClockForStep(steps[clamped], resolution);
-      if (next) setClock(next);
+      if (next) scheduleClock(next);
       return;
     }
     let nextStart = handle === "start" ? clamped : startIndex < 0 ? 0 : startIndex;
@@ -156,7 +184,7 @@ export default function TimeSlider() {
     const end = instantClockForStep(steps[nextEnd], resolution)?.end;
     if (!end) return;
     const next = windowClockForRange(steps[nextStart], end, resolution);
-    if (next) setClock(next);
+    if (next) scheduleClock(next);
   };
 
   const handleForClientX = (clientX: number): "start" | "end" | "instant" => {
@@ -347,7 +375,7 @@ export default function TimeSlider() {
         onClick={() => {
           if (windowMode) {
             const next = instantClockForStep(lastStep || clock.start, resolution);
-            if (next) setClock(next);
+            if (next) scheduleClock(next);
             return;
           }
           setPlaying(false);
@@ -356,7 +384,7 @@ export default function TimeSlider() {
           const rangeEnd = instantClockForStep(last, resolution)?.end;
           if (!first || !rangeEnd) return;
           const next = windowClockForRange(first, rangeEnd, resolution);
-          if (next) setClock(next);
+          if (next) scheduleClock(next);
         }}
       >
         {windowMode ? t("Range") : t("Instant")}

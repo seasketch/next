@@ -44,8 +44,12 @@ export type EncodeTilesetOptions = {
   offset?: number;
   scale?: number;
   bandsPerBlock?: number | "all";
+  /** MRT block filters (see `MrtLayerInput.filters`). */
+  filters?: Array<"delta" | "zigzag">;
   resampling?: Resampling;
   nodata?: number;
+  /** zlib level for MRT NumericData blocks. Default 9. */
+  gzipLevel?: number;
   /** TileJSON `tiles` template. `{name}` is replaced with the layer folder. */
   tileUrl?: string;
   skipEmpty?: boolean;
@@ -60,6 +64,8 @@ export type EncodeTilesetOptions = {
    * mostly empty ocean; passing scene bounds avoids spawning GDAL for those.
    */
   coverageBboxes?: BBox[];
+  /** If set, only these XYZ tiles are cut (e.g. ocean occupancy from a prior encode). */
+  onlyTiles?: Array<{ z: number; x: number; y: number }>;
   onProgress?: (message: string) => void;
 };
 
@@ -157,17 +163,25 @@ export async function encodeTileset(
     log(`Zoom ${minzoom}–${maxzoom} (native ~${nativeZoom}), bounds ${bounds.map((n) => n.toFixed(3)).join(", ")}`);
 
     const jobs: Array<{ z: number; x: number; y: number }> = [];
-    for (let z = minzoom; z <= maxzoom; z++) {
-      const tiles = options.coverageBboxes?.length
-        ? uniqueTilesForBboxes(options.coverageBboxes, z)
-        : tilesForBbox(mercatorBbox, z);
-      jobs.push(...tiles);
+    if (options.onlyTiles?.length) {
+      for (const tile of options.onlyTiles) {
+        if (tile.z >= minzoom && tile.z <= maxzoom) jobs.push(tile);
+      }
+    } else {
+      for (let z = minzoom; z <= maxzoom; z++) {
+        const tiles = options.coverageBboxes?.length
+          ? uniqueTilesForBboxes(options.coverageBboxes, z)
+          : tilesForBbox(mercatorBbox, z);
+        jobs.push(...tiles);
+      }
     }
     log(
       `${jobs.length} candidate XYZ tiles` +
-        (options.coverageBboxes?.length
-          ? ` (coverage of ${options.coverageBboxes.length} footprints)`
-          : ""),
+        (options.onlyTiles?.length
+          ? " (occupancy allowlist)"
+          : options.coverageBboxes?.length
+            ? ` (coverage of ${options.coverageBboxes.length} footprints)`
+            : ""),
     );
 
     const outDim = tileSize + 2 * buffer;
@@ -254,6 +268,7 @@ export async function encodeTileset(
         z: tile.z,
         x: tile.x,
         y: tile.y,
+        gzipLevel: options.gzipLevel,
         layers: [
           {
             name: options.layerName ?? "data",
@@ -264,6 +279,7 @@ export async function encodeTileset(
             scale,
             bands: encodedBands,
             bandsPerBlock: options.bandsPerBlock ?? "all",
+            filters: options.filters,
           },
         ],
       });

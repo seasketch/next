@@ -1,4 +1,5 @@
 import { gzipSync } from "zlib";
+import { applyFilters, MrtFilterName } from "./filters";
 import { PbfWriter } from "./pbf";
 import {
   EncodeMrtTileOptions,
@@ -17,7 +18,9 @@ import {
  *
  * Pixel values are uint32 varints inside:
  *   NumericData { uint32_values = 2 { packed values = 1 } }
- * then gzip (not raw deflate). Filters are omitted in this encoder.
+ * then gzip (not raw deflate). Optional per-layer filters (spatial delta,
+ * zigzag) are applied before varint packing and declared in the dataIndex so
+ * the GL JS decoder can invert them.
  */
 export function encodeMrtTile(options: EncodeMrtTileOptions): Buffer {
   const { z, x, y, layers } = options;
@@ -56,6 +59,7 @@ type PreparedBlock = {
   bands: string[];
   offset: number;
   scale: number;
+  filters: MrtFilterName[];
   bytes: Buffer;
   firstByte: number;
   lastByte: number;
@@ -92,13 +96,16 @@ function prepareLayer(layer: MrtLayerInput, gzipLevel: number): PreparedLayer {
     throw new Error("scale must be non-zero");
   }
 
+  const filters = layer.filters ?? [];
   const groups = groupBands(layer.bands, layer.bandsPerBlock ?? "all");
   const blocks: PreparedBlock[] = groups.map((group) => {
     const values = concatBandMajor(group.map((b) => b.values));
+    applyFilters(values, filters, group.length, dim);
     return {
       bands: group.map((b) => b.id),
       offset,
       scale,
+      filters,
       bytes: gzipSync(encodeNumericData(values), { level: gzipLevel }),
       firstByte: 0,
       lastByte: 0,
@@ -198,6 +205,12 @@ function serializeDataIndexEntry(block: PreparedBlock): Buffer {
   const w = new PbfWriter();
   w.writeFixed64Field(1, block.firstByte);
   w.writeFixed64Field(2, block.lastByte);
+  // Repeated Filter (field 3), one message per filter, in application order.
+  // The decoder inverts them in reverse order. Filter is a oneof: field 1 =
+  // Delta (empty message; blockSize 0), field 2 = Zigzag (empty message).
+  for (const filter of block.filters) {
+    w.writeMessageField(3, serializeFilter(filter));
+  }
   w.writeMessageField(4, serializeGzipCodec());
   // GL JS 3.4 reads offset/scale as protobuf floats on fields 5/6
   // (`mrt_pbf_decoder.js`). Fields 8/9 doubles are ignored by that decoder.
@@ -213,6 +226,12 @@ function serializeDataIndexEntry(block: PreparedBlock): Buffer {
 function serializeGzipCodec(): Buffer {
   const w = new PbfWriter();
   w.writeMessageField(1, Buffer.alloc(0));
+  return w.finish();
+}
+
+function serializeFilter(filter: MrtFilterName): Buffer {
+  const w = new PbfWriter();
+  w.writeMessageField(filter === "delta" ? 1 : 2, Buffer.alloc(0));
   return w.finish();
 }
 

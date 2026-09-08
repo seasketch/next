@@ -1,4 +1,5 @@
 import { gunzipSync } from "zlib";
+import { undoFilters } from "./filters";
 import { PbfReader } from "./pbf";
 import {
   DecodedMrtLayer,
@@ -87,6 +88,7 @@ function readLayer(pbf: PbfReader, file: Uint8Array): DecodedMrtLayer {
     const slice = file.subarray(block.firstByte, block.lastByte + 1);
     const inflated = gunzipSync(slice);
     const values = readNumericData(inflated, block.bands.length * samplesPerBand);
+    undoFilters(values, block.filters, block.bands.length, dim);
     for (let i = 0; i < block.bands.length; i++) {
       const start = i * samplesPerBand;
       layer.bandData[block.bands[i]!] = values.subarray(

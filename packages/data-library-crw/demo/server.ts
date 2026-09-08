@@ -2,12 +2,16 @@ import { existsSync, readFileSync, statSync } from "fs";
 import { createServer, IncomingMessage, ServerResponse } from "http";
 import { extname, join, resolve } from "path";
 import { openPmtiles } from "../../raster-array/src/pmtiles/read";
+import {
+  PRODUCT_IDS,
+  PRODUCTS,
+  archiveFilename,
+  requireProduct,
+} from "../src/products";
 
 const ROOT = resolve(__dirname);
-const PORT = Number(process.env.PORT || 8765);
-const ARCHIVE =
-  process.env.GMW_PMTILES ??
-  join(ROOT, "..", "work", "dist", "gmw-global.pmtiles");
+const PORT = Number(process.env.PORT || 8767);
+const DIST = join(ROOT, "..", "work", "dist");
 
 function loadMapboxToken(): string {
   if (process.env.MAPBOX_ACCESS_TOKEN) return process.env.MAPBOX_ACCESS_TOKEN;
@@ -34,9 +38,23 @@ function loadMapboxToken(): string {
 }
 
 const TOKEN = loadMapboxToken();
-const hasLocalArchive = existsSync(ARCHIVE);
-const archive = hasLocalArchive ? openPmtiles(ARCHIVE) : null;
-const archiveBytes = hasLocalArchive ? statSync(ARCHIVE).size : 0;
+
+type OpenArchive = {
+  archive: ReturnType<typeof openPmtiles>;
+  bytes: number;
+  path: string;
+};
+
+const archives = new Map<string, OpenArchive>();
+for (const id of PRODUCT_IDS) {
+  const path = join(DIST, archiveFilename(requireProduct(id)));
+  if (!existsSync(path)) continue;
+  archives.set(id, {
+    archive: openPmtiles(path),
+    bytes: statSync(path).size,
+    path,
+  });
+}
 
 const MIME: Record<string, string> = {
   ".html": "text/html; charset=utf-8",
@@ -60,11 +78,10 @@ function send(
   res.end(body);
 }
 
-function tileJson(host: string) {
-  if (!archive) {
-    throw new Error("local archive is not available");
-  }
-  const meta = archive.metadata as {
+function tileJson(host: string, productId: string) {
+  const opened = archives.get(productId);
+  if (!opened) throw new Error(`local archive is not available for ${productId}`);
+  const meta = opened.archive.metadata as {
     name?: string;
     bounds?: number[];
     minzoom?: number;
@@ -75,15 +92,17 @@ function tileJson(host: string) {
   const origin = `http://${host}`;
   return {
     ...meta,
-    tiles: [`${origin}/tiles/display/{z}/{x}/{y}.mrt`],
+    // Archive size as a version param: rebuilt archives get new tile URLs so
+    // the demo service worker's in-memory bodies can never go stale.
+    tiles: [`${origin}/tiles/${productId}/{z}/{x}/{y}.mrt?v=${opened.bytes}`],
     format: "mrt",
     scheme: "xyz",
-    minzoom: meta.minzoom ?? archive.header.minZoom,
-    maxzoom: meta.maxzoom ?? archive.header.maxZoom,
+    minzoom: meta.minzoom ?? opened.archive.header.minZoom,
+    maxzoom: meta.maxzoom ?? opened.archive.header.maxZoom,
     raster_layers: meta.raster_layers ?? meta.rasterLayers,
     rasterLayers: meta.raster_layers ?? meta.rasterLayers,
-    _bytes: archiveBytes,
-    _archive: "gmw-global.pmtiles",
+    _bytes: opened.bytes,
+    _archive: archiveFilename(requireProduct(productId)),
   };
 }
 
@@ -92,8 +111,17 @@ function sendRangeBuffer(
   res: ServerResponse,
   buf: Buffer,
   type: string,
+  etag?: string,
 ) {
   const range = req.headers.range;
+  if (etag) {
+    res.setHeader("ETag", etag);
+    if (!range && req.headers["if-none-match"] === etag) {
+      res.writeHead(304);
+      res.end();
+      return;
+    }
+  }
   res.setHeader("Accept-Ranges", "bytes");
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader(
@@ -114,6 +142,10 @@ function sendRangeBuffer(
     res.end();
     return;
   }
+  // Honor ranges exactly (partial mode). Serving the whole tile on the byte-0
+  // header probe flips GL JS into `entireBuffer` mode, which front-loads every
+  // band of every visible tile — ~200 MB for a z3 viewport of daily DHW. With
+  // 30-day blocks the pay-as-you-scrub partial mode is the right trade.
   const start = m[1] ? Number(m[1]) : 0;
   const end = m[2] ? Math.min(Number(m[2]), buf.length - 1) : buf.length - 1;
   if (!Number.isFinite(start) || !Number.isFinite(end) || start >= buf.length || start > end) {
@@ -143,57 +175,68 @@ const server = createServer((req, res) => {
   }
 
   if (url.pathname === "/config.js") {
+    const catalog = PRODUCT_IDS.map((id) => ({
+      id,
+      title: PRODUCTS[id].title,
+      shortTitle: PRODUCTS[id].shortTitle,
+      cadence: PRODUCTS[id].cadence,
+    }));
     send(
       res,
       200,
-      `window.MAPBOX_TOKEN = ${JSON.stringify(TOKEN)};\n`,
+      `window.MAPBOX_TOKEN = ${JSON.stringify(TOKEN)};\n` +
+        `window.CRW = ${JSON.stringify({
+          products: catalog,
+          localProducts: [...archives.keys()],
+        })};\n`,
       "text/javascript; charset=utf-8",
     );
     return;
   }
 
-  if (url.pathname === "/tiles/display/tilejson.json") {
-    if (!archive) {
+  const tilejsonMatch = url.pathname.match(/^\/tiles\/([a-z0-9-]+)\/tilejson\.json$/);
+  if (tilejsonMatch) {
+    const productId = tilejsonMatch[1]!;
+    if (!archives.has(productId)) {
       send(
         res,
         404,
-        "Local gmw-global.pmtiles not found. Open ?src=remote or run npm run pack.",
+        `Local crw-${productId}-v1.pmtiles not found. Open ?src=remote or run npm run pack.`,
         "text/plain",
       );
       return;
     }
-    send(res, 200, JSON.stringify(tileJson(host)), "application/json; charset=utf-8");
+    send(res, 200, JSON.stringify(tileJson(host, productId)), "application/json; charset=utf-8");
     return;
   }
 
   const mrtMatch = url.pathname.match(
-    /^\/tiles\/display\/(\d+)\/(\d+)\/(\d+)\.mrt$/,
+    /^\/tiles\/([a-z0-9-]+)\/(\d+)\/(\d+)\/(\d+)\.mrt$/,
   );
   if (mrtMatch) {
-    if (!archive) {
+    const opened = archives.get(mrtMatch[1]!);
+    if (!opened) {
       send(res, 404, "tile not found", "text/plain");
       return;
     }
-    const tile = archive.getTile(
-      Number(mrtMatch[1]),
+    const tile = opened.archive.getTile(
       Number(mrtMatch[2]),
       Number(mrtMatch[3]),
+      Number(mrtMatch[4]),
     );
     if (!tile) {
       send(res, 404, "tile not found", "text/plain");
       return;
     }
-    sendRangeBuffer(req, res, tile, "application/octet-stream");
+    // A validator lets Chrome satisfy Mapbox's Range requests from a
+    // prefetched full-body cache entry instead of hitting the network.
+    const etag = `"${opened.bytes}-${mrtMatch[2]}-${mrtMatch[3]}-${mrtMatch[4]}-${tile.length}"`;
+    sendRangeBuffer(req, res, tile, "application/octet-stream", etag);
     return;
   }
 
   let pathname = url.pathname;
-  if (pathname === "/" || pathname === "/gmw-global.html") {
-    if (!hasLocalArchive && url.searchParams.get("src") !== "remote") {
-      res.writeHead(302, { Location: "/gmw-global.html?src=remote" });
-      res.end();
-      return;
-    }
+  if (pathname === "/" || pathname === "/index.html") {
     pathname = "/index.html";
   }
   const filePath = join(ROOT, pathname.replace(/^\//, ""));
@@ -206,15 +249,11 @@ const server = createServer((req, res) => {
 });
 
 server.listen(PORT, () => {
-  const page = hasLocalArchive
-    ? `http://127.0.0.1:${PORT}/gmw-global.html`
-    : `http://127.0.0.1:${PORT}/gmw-global.html?src=remote`;
-  console.log(`GMW globe demo → ${page}`);
-  if (hasLocalArchive) {
-    console.log(`archive: ${ARCHIVE} (${(archiveBytes / 1e9).toFixed(2)} GB)`);
+  const local = [...archives.keys()];
+  console.log(`CRW demo → http://127.0.0.1:${PORT}/`);
+  if (local.length) {
+    console.log(`local archives: ${local.join(", ")}`);
   } else {
-    console.log(
-      `local archive missing (${ARCHIVE}); serving remote tiles.seasketch.org`,
-    );
+    console.log("no local archives; use ?src=remote after upload");
   }
 });
