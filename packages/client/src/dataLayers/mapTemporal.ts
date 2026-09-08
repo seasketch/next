@@ -321,6 +321,26 @@ export function layoutTimeSliderSteps(
   }));
 }
 
+/**
+ * Inclusive start / inclusive last-step edges for a range-mode window.
+ * Instant thumbs sit on {@link TimeSliderStepLayout.midPct}; range handles
+ * sit on the first step's start and the last included step's end.
+ */
+export function timeSliderWindowExtents(
+  layouts: TimeSliderStepLayout[],
+  startIndex: number,
+  endIndex: number
+): { startPct: number; endPct: number } {
+  if (layouts.length === 0) {
+    return { startPct: 0, endPct: 100 };
+  }
+  const start = layouts[Math.max(0, Math.min(startIndex, layouts.length - 1))];
+  const end = layouts[Math.max(0, Math.min(endIndex, layouts.length - 1))];
+  const startPct = start.startPct;
+  const endPct = Math.max(startPct, end.endPct);
+  return { startPct, endPct };
+}
+
 /** Map a pointer position (0–100 along the track) to the containing step. */
 export function nearestTimeSliderStepIndex(
   layouts: TimeSliderStepLayout[],
@@ -547,9 +567,77 @@ export function lastIncludedStep(
     (step) => nextIsoAtPrecision(step, resolution) === clock.end
   );
   if (endIdx >= 0) return steps[endIdx];
+  const clockEndMs =
+    expandTemporalIso(clock.end, resolution)?.start ??
+    expandTemporalClock(clock)?.end;
+  if (clockEndMs != null) {
+    for (let i = steps.length - 1; i >= 0; i--) {
+      const next = nextIsoAtPrecision(steps[i], resolution);
+      const nextMs = next
+        ? expandTemporalIso(next, resolution)?.start
+        : undefined;
+      if (nextMs === clockEndMs) {
+        return steps[i];
+      }
+    }
+    for (let i = steps.length - 1; i >= 0; i--) {
+      const step = expandTemporalIso(steps[i], resolution);
+      if (step && step.start < clockEndMs) {
+        return steps[i];
+      }
+    }
+  }
   const startIdx = steps.indexOf(clock.start);
   if (startIdx >= 0) return steps[startIdx];
   return clock.start;
+}
+
+/**
+ * First and last layout indexes covered by the clock. Uses exact step keys
+ * when they match, otherwise intersects the expanded clock interval so a
+ * window whose `end` is a formatted variant still hugs the right bins.
+ */
+export function windowStepIndexes(
+  layouts: TimeSliderStepLayout[],
+  clock: TemporalClock,
+  resolution: TemporalPrecision
+): { startIndex: number; endIndex: number } {
+  if (layouts.length === 0) {
+    return { startIndex: -1, endIndex: -1 };
+  }
+  const steps = layouts.map((layout) => layout.step);
+  const exactStart = steps.indexOf(clock.start);
+  if (clock.mode !== "window") {
+    const index = exactStart >= 0 ? exactStart : 0;
+    return { startIndex: index, endIndex: index };
+  }
+  const last = lastIncludedStep(clock, steps, resolution);
+  const exactEnd = last ? steps.indexOf(last) : -1;
+  if (exactStart >= 0 && exactEnd >= 0) {
+    return {
+      startIndex: Math.min(exactStart, exactEnd),
+      endIndex: Math.max(exactStart, exactEnd),
+    };
+  }
+  const range = expandTemporalClock(clock);
+  if (!range) {
+    const index = Math.max(0, exactStart);
+    return { startIndex: index, endIndex: index };
+  }
+  let startIndex = -1;
+  let endIndex = -1;
+  layouts.forEach((layout, index) => {
+    const step = expandTemporalIso(layout.step, resolution);
+    if (!step || step.end <= range.start || step.start >= range.end) {
+      return;
+    }
+    if (startIndex < 0) startIndex = index;
+    endIndex = index;
+  });
+  if (startIndex < 0) {
+    return { startIndex: 0, endIndex: 0 };
+  }
+  return { startIndex, endIndex };
 }
 
 export function advanceClock(

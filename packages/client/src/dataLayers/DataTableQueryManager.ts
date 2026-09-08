@@ -121,6 +121,7 @@ export class DataTableQueryManager {
   clearLegendSummary(sourceId: string) {
     if (this.legendSummaries.delete(sourceId)) {
       this.onLegendSummaryChange?.();
+      this.notifySeriesLoading();
     }
   }
 
@@ -148,8 +149,9 @@ export class DataTableQueryManager {
     this.onSeriesCountsLoadingChange = callback;
   }
 
+  /** Histogram + map share this: series fetch or any legend query in flight. */
   getSeriesCountsLoading(): boolean {
-    return this.seriesLoadingTables.size > 0;
+    return this.isQueryLoading();
   }
 
   clearSeriesForTable(tableStableId: string) {
@@ -202,6 +204,7 @@ export class DataTableQueryManager {
     this.legendSummaries.set(sourceId, summary);
     this.onLegendSummaryChange?.();
     this.onQueryErrorsChange?.(this.getQueryErrors());
+    this.notifySeriesLoading();
   }
 
   /**
@@ -815,8 +818,20 @@ export class DataTableQueryManager {
     this.onSeriesCountsChange?.(this.getSeriesCounts());
   }
 
+  private isQueryLoading(): boolean {
+    if (this.seriesLoadingTables.size > 0) {
+      return true;
+    }
+    for (const summary of this.legendSummaries.values()) {
+      if (summary.loading) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   private notifySeriesLoading() {
-    const next = this.seriesLoadingTables.size > 0;
+    const next = this.isQueryLoading();
     if (next === this.lastSeriesLoading) {
       return;
     }

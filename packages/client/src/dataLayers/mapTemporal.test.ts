@@ -14,6 +14,9 @@ import {
   layoutTimeSliderCoverageMarks,
   layoutTimeSliderSteps,
   nearestTimeSliderStepIndex,
+  timeSliderWindowExtents,
+  windowClockForRange,
+  windowStepIndexes,
   reconcileClock,
   snapClockToResolution,
   stepKeysForClock,
@@ -23,7 +26,6 @@ import {
   supportedViewResolutionsForSources,
   tocIdsHiddenByClock,
   viewResolutionsThatFit,
-  windowClockForRange,
   VisibleTemporalSource,
 } from "./mapTemporal";
 
@@ -181,6 +183,76 @@ describe("steps and clocks", () => {
     expect(nearestTimeSliderStepIndex(layouts, 10)).toBe(1);
     expect(nearestTimeSliderStepIndex(layouts, 95)).toBe(9);
     expect(nearestTimeSliderStepIndex(layouts, 100)).toBe(9);
+  });
+
+  it("places range handles on step edges, not midpoints", () => {
+    const layouts = layoutTimeSliderSteps(
+      {
+        kind: "interval",
+        start: "2011",
+        end: "2021",
+        precision: "year",
+      },
+      "year"
+    );
+    expect(timeSliderWindowExtents(layouts, 0, 9)).toEqual({
+      startPct: 0,
+      endPct: 100,
+    });
+    expect(timeSliderWindowExtents(layouts, 2, 4)).toEqual({
+      startPct: 20,
+      endPct: 50,
+    });
+    expect(timeSliderWindowExtents(layouts, 3, 3)).toEqual({
+      startPct: 30,
+      endPct: 40,
+    });
+  });
+
+  it("resolves a window onto the first and last intersecting year slots", () => {
+    const layouts = layoutTimeSliderSteps(
+      {
+        kind: "interval",
+        start: "2011",
+        end: "2021",
+        precision: "year",
+      },
+      "year"
+    );
+    const clock = windowClockForRange("2013", "2016", "year")!;
+    expect(windowStepIndexes(layouts, clock, "year")).toEqual({
+      startIndex: 2,
+      endIndex: 4,
+    });
+    expect(timeSliderWindowExtents(layouts, 2, 4)).toEqual({
+      startPct: layouts[2].startPct,
+      endPct: layouts[4].endPct,
+    });
+  });
+
+  it("still hugs year bins when the clock end is a formatted exclusive ISO", () => {
+    const layouts = layoutTimeSliderSteps(
+      {
+        kind: "interval",
+        start: "2018",
+        end: "2021",
+        precision: "year",
+      },
+      "year"
+    );
+    const clock = {
+      mode: "window" as const,
+      start: "2019",
+      end: "2021-01-01T00:00:00.000Z",
+      viewResolution: "year" as const,
+    };
+    expect(lastIncludedStep(clock, layouts.map((l) => l.step), "year")).toBe(
+      "2020"
+    );
+    expect(windowStepIndexes(layouts, clock, "year")).toEqual({
+      startIndex: 1,
+      endIndex: 2,
+    });
   });
 
   it("paints a single-year coverage mark on that year's slot", () => {

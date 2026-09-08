@@ -11067,6 +11067,10 @@ select{
   border-color:rgb(63 63 70 / var(--tw-border-opacity, 1))
 }
 
+.border-white\/90{
+  border-color:rgb(255 255 255 / 0.9)
+}
+
 .border-b-black{
   --tw-border-opacity:1;
   border-bottom-color:rgb(0 0 0 / var(--tw-border-opacity, 1))
@@ -12168,6 +12172,18 @@ select{
 
 .bg-gray-400\/40{
   background-color:rgb(156 163 175 / 0.4)
+}
+
+.bg-sky-300\/70{
+  background-color:rgb(125 211 252 / 0.7)
+}
+
+.bg-sky-200\/55{
+  background-color:rgb(186 230 253 / 0.55)
+}
+
+.bg-sky-300\/10{
+  background-color:rgb(125 211 252 / 0.1)
 }
 
 .bg-opacity-10{

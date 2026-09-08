@@ -42,15 +42,18 @@ const temporal: TemporalInfo = {
   authoredBy: "admin",
 };
 
-function renderSlider(loading: boolean) {
+function renderSlider(
+  loading: boolean,
+  clock: MapTemporalStateValue["clock"] = {
+    mode: "instant",
+    start: "2018",
+    end: "2019",
+    viewResolution: "year",
+  }
+) {
   const value: MapTemporalStateValue = {
     enabled: true,
-    clock: {
-      mode: "instant",
-      start: "2018",
-      end: "2019",
-      viewResolution: "year",
-    },
+    clock,
     domain: {
       kind: "interval",
       start: "2018",
@@ -89,7 +92,7 @@ describe("TimeSlider histogram loading", () => {
   it("paints observation counts in the active color when settled", () => {
     const { container } = renderSlider(false);
     expect(container.querySelector("[aria-busy='true']")).toBeNull();
-    expect(container.querySelector(".bg-sky-300\\/55")).toBeTruthy();
+    expect(container.querySelector(".bg-sky-300\\/70")).toBeTruthy();
     expect(container.querySelector(".bg-gray-400\\/40")).toBeNull();
   });
 
@@ -99,7 +102,67 @@ describe("TimeSlider histogram loading", () => {
     expect(track).toBeTruthy();
     expect(track?.className).toMatch(/animate-pulse/);
     expect(container.querySelector(".bg-gray-400\\/40")).toBeTruthy();
-    expect(container.querySelector(".bg-sky-300\\/55")).toBeNull();
+    expect(container.querySelector(".bg-sky-300\\/70")).toBeNull();
     expect(screen.getByText("Loading observation counts")).toBeInTheDocument();
+  });
+
+  it("greys range-mode histogram bars while a map query is in flight", () => {
+    const { container } = renderSlider(true, {
+      mode: "window",
+      start: "2018",
+      end: "2021",
+      viewResolution: "year",
+    });
+    const track = container.querySelector("[aria-busy='true']");
+    expect(track).toBeTruthy();
+    expect(track?.className).toMatch(/animate-pulse/);
+    expect(container.querySelector(".bg-gray-400\\/40")).toBeTruthy();
+  });
+
+  it("sits range handles on the first and last step edges", () => {
+    const { getByTestId, queryByTestId } = renderSlider(false, {
+      mode: "window",
+      start: "2018",
+      end: "2021",
+      viewResolution: "year",
+    });
+    expect(queryByTestId("timeslider-range-start")).toHaveStyle({ left: "0%" });
+    expect(queryByTestId("timeslider-range-end")).toHaveStyle({
+      left: "100%",
+    });
+    expect(getByTestId("timeslider-range-start")).toBeInTheDocument();
+  });
+
+  it("spans a partial window from the first step start to the last step end", () => {
+    const { getByTestId } = renderSlider(false, {
+      mode: "window",
+      start: "2019",
+      end: "2021",
+      viewResolution: "year",
+    });
+    // 2018 | 2019 | 2020 — window is 2019–2021 exclusive → 2019 and 2020
+    expect(getByTestId("timeslider-range-start")).toHaveStyle({
+      left: "33.3333%",
+    });
+    expect(getByTestId("timeslider-range-end")).toHaveStyle({
+      left: "100%",
+    });
+  });
+
+  it("highlights only the histogram bins inside the window", () => {
+    const { container, getByTestId } = renderSlider(false, {
+      mode: "window",
+      start: "2019",
+      end: "2021-01-01T00:00:00.000Z",
+      viewResolution: "year",
+    });
+    expect(getByTestId("timeslider-range-start")).toHaveStyle({
+      left: "33.3333%",
+    });
+    expect(getByTestId("timeslider-range-end")).toHaveStyle({
+      left: "100%",
+    });
+    expect(container.querySelectorAll(".bg-sky-300\\/70")).toHaveLength(2);
+    expect(container.querySelectorAll(".bg-sky-300\\/20")).toHaveLength(1);
   });
 });

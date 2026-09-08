@@ -15,14 +15,43 @@ import {
   advanceClock,
   formatClockLabel,
   instantClockForStep,
-  lastIncludedStep,
   layoutTimeSliderCoverageMarks,
   layoutTimeSliderSteps,
   nearestTimeSliderStepIndex,
+  timeSliderWindowExtents,
   windowClockForRange,
+  windowStepIndexes,
 } from "./mapTemporal";
 
 const PLAY_MS = 700;
+
+function RangeHandle({
+  pct,
+  side,
+  label,
+}: {
+  pct: number;
+  side: "start" | "end";
+  label: string;
+}) {
+  return (
+    <div
+      data-testid={
+        side === "start" ? "timeslider-range-start" : "timeslider-range-end"
+      }
+      aria-hidden
+      title={label}
+      className={
+        side === "start"
+          ? "pointer-events-none absolute bottom-0 z-10 flex h-8 items-end"
+          : "pointer-events-none absolute bottom-0 z-10 flex h-8 -translate-x-full items-end"
+      }
+      style={{ left: `${pct}%` }}
+    >
+      <div className="mb-px h-7 w-2.5 rounded-[3px] border-2 border-white bg-sky-400 shadow-md" />
+    </div>
+  );
+}
 
 function resolutionOptionLabel(
   resolution: TemporalPrecision,
@@ -73,19 +102,11 @@ export default function TimeSlider() {
     return layoutTimeSliderSteps(domain, resolution);
   }, [domain, resolution]);
   const steps = useMemo(() => layouts.map((layout) => layout.step), [layouts]);
-  const stepIndexes = useMemo(() => {
-    const indexes: { [step: string]: number } = {};
-    layouts.forEach((layout, index) => {
-      indexes[layout.step] = index;
-    });
-    return indexes;
-  }, [layouts]);
 
-  const startIndex = clock ? stepIndexes[clock.start] ?? -1 : -1;
-  const lastStep = clock
-    ? lastIncludedStep(clock, steps, clock.viewResolution)
-    : null;
-  const endIndex = lastStep ? stepIndexes[lastStep] ?? startIndex : startIndex;
+  const { startIndex, endIndex } = clock
+    ? windowStepIndexes(layouts, clock, resolution || clock.viewResolution)
+    : { startIndex: -1, endIndex: -1 };
+  const lastStep = endIndex >= 0 ? steps[endIndex] : null;
   const windowMode = clock?.mode === "window";
 
   useEffect(() => {
@@ -167,8 +188,11 @@ export default function TimeSlider() {
     const rect = el.getBoundingClientRect();
     if (rect.width <= 0) return "start";
     const pct = ((clientX - rect.left) / rect.width) * 100;
-    const startPct = startIndex >= 0 ? layouts[startIndex]?.midPct ?? 0 : 0;
-    const endPct = endIndex >= 0 ? layouts[endIndex]?.midPct ?? 100 : 100;
+    const { startPct, endPct } = timeSliderWindowExtents(
+      layouts,
+      startIndex,
+      endIndex
+    );
     return Math.abs(pct - endPct) < Math.abs(pct - startPct) ? "end" : "start";
   };
 
@@ -184,14 +208,13 @@ export default function TimeSlider() {
     goToIndex(nearestTimeSliderStepIndex(layouts, pct), handle);
   };
 
-  const startThumbPct =
+  const instantThumbPct =
     startIndex >= 0
       ? layouts[startIndex]?.midPct ?? 0
       : layouts[0]?.midPct ?? 0;
-  const endThumbPct =
-    endIndex >= 0 ? layouts[endIndex]?.midPct ?? startThumbPct : startThumbPct;
-  const rangeLeft = Math.min(startThumbPct, endThumbPct);
-  const rangeWidth = Math.abs(endThumbPct - startThumbPct);
+  const { startPct: rangeStartPct, endPct: rangeEndPct } =
+    timeSliderWindowExtents(layouts, startIndex, endIndex);
+  const rangeWidth = Math.max(0, rangeEndPct - rangeStartPct);
 
   return (
     <div
@@ -256,7 +279,7 @@ export default function TimeSlider() {
           aria-valuemax={Math.max(0, steps.length - 1)}
           aria-valuenow={startIndex < 0 ? 0 : startIndex}
           aria-valuetext={label}
-          className="timeslider-track relative flex h-8 w-full cursor-pointer items-end touch-none focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-cool-gray-800"
+          className="timeslider-track relative h-8 w-full cursor-pointer touch-none focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 focus-visible:ring-offset-2 focus-visible:ring-offset-cool-gray-800"
           onPointerDown={(event) => {
             if (event.button !== 0) return;
             const handle = handleForClientX(event.clientX);
@@ -277,7 +300,7 @@ export default function TimeSlider() {
           }}
         >
           <div
-            className={`pointer-events-none relative mb-1.5 h-5 w-full overflow-hidden rounded-sm ${
+            className={`pointer-events-none absolute inset-x-0 top-0 h-5 overflow-hidden rounded-sm ${
               queryStepCountsLoading ? "animate-pulse" : ""
             }`}
             aria-busy={queryStepCountsLoading || undefined}
@@ -285,26 +308,45 @@ export default function TimeSlider() {
             {queryStepCountsLoading && histogramMarks.length === 0 ? (
               <span className="absolute inset-x-0 bottom-0 h-2 rounded-sm bg-gray-400/30" />
             ) : (
-              histogramMarks.map((mark) => (
-                <span
-                  key={mark.id}
-                  className={`absolute bottom-0 ${
-                    queryStepCountsLoading
-                      ? "bg-gray-400/40"
-                      : "bg-sky-300/55"
-                  }`}
-                  style={{
-                    left: `${mark.left}%`,
-                    width: `${Math.min(mark.width, 100 - mark.left)}%`,
-                    height: `${mark.heightPct ?? 40}%`,
-                  }}
-                />
-              ))
+              histogramMarks.map((mark) => {
+                const markIndex = mark.id.startsWith("hist:")
+                  ? steps.indexOf(mark.id.slice("hist:".length))
+                  : -1;
+                const inRange =
+                  !windowMode ||
+                  (markIndex >= startIndex && markIndex <= endIndex);
+                return (
+                  <span
+                    key={mark.id}
+                    className={`absolute bottom-0 ${
+                      queryStepCountsLoading
+                        ? "bg-gray-400/40"
+                        : inRange
+                        ? "bg-sky-300/70"
+                        : "bg-sky-300/20"
+                    }`}
+                    style={{
+                      left: `${mark.left}%`,
+                      width: `${Math.min(mark.width, 100 - mark.left)}%`,
+                      height: `${mark.heightPct ?? 40}%`,
+                    }}
+                  />
+                );
+              })
             )}
             {queryStepCountsLoading ? (
               <span className="sr-only">{t("Loading observation counts")}</span>
             ) : null}
           </div>
+          {windowMode && (
+            <span
+              className="pointer-events-none absolute inset-y-0 bg-sky-300/10"
+              style={{
+                left: `${rangeStartPct}%`,
+                width: `${rangeWidth}%`,
+              }}
+            />
+          )}
           <div className="pointer-events-none absolute bottom-1.5 h-1.5 w-full overflow-hidden rounded-full bg-white/15">
             {coverageMarks.map((mark) => (
               <span
@@ -318,22 +360,31 @@ export default function TimeSlider() {
             ))}
             {windowMode && (
               <span
-                className="absolute inset-y-0 bg-sky-200/40"
+                className="absolute inset-y-0 bg-sky-200/55"
                 style={{
-                  left: `${rangeLeft}%`,
+                  left: `${rangeStartPct}%`,
                   width: `${rangeWidth}%`,
                 }}
               />
             )}
           </div>
-          <div
-            className="pointer-events-none absolute bottom-0.5 h-3.5 w-3.5 -translate-x-1/2 rounded-full border-2 border-slate-50 bg-sky-400 shadow"
-            style={{ left: `${startThumbPct}%` }}
-          />
-          {windowMode && (
+          {windowMode ? (
+            <>
+              <RangeHandle
+                pct={rangeStartPct}
+                side="start"
+                label={t("Range start")}
+              />
+              <RangeHandle
+                pct={rangeEndPct}
+                side="end"
+                label={t("Range end")}
+              />
+            </>
+          ) : (
             <div
-              className="pointer-events-none absolute bottom-0.5 h-3.5 w-3.5 -translate-x-1/2 rounded-full border-2 border-slate-50 bg-sky-200 shadow"
-              style={{ left: `${endThumbPct}%` }}
+              className="pointer-events-none absolute bottom-0.5 h-3.5 w-3.5 -translate-x-1/2 rounded-full border-2 border-slate-50 bg-sky-400 shadow"
+              style={{ left: `${instantThumbPct}%` }}
             />
           )}
         </div>
