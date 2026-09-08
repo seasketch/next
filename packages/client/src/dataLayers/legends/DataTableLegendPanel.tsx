@@ -11,6 +11,7 @@ import {
   DataTableAggregation,
   DataTableVisualizationMetadata,
   hiddenDataTableFilterColumns,
+  isAlwaysHiddenFilterColumn,
   isWhenStepLimitError,
   omitFiltersForColumns,
   parseFilterColumnLabels,
@@ -149,15 +150,27 @@ export default function DataTableLegendPanel({
     () => temporalSourceFilterColumns(table?.temporal),
     [table?.temporal]
   );
-  const omittedFilterColumns = useMemo(
-    () =>
-      [
-        ...temporalFilterColumns,
-        ...hiddenFilterColumns,
-        table?.joinColumn,
-      ].filter((column): column is string => Boolean(column)),
-    [hiddenFilterColumns, table?.joinColumn, temporalFilterColumns]
-  );
+  const omittedFilterColumns = useMemo(() => {
+    const names = new Set<string>([
+      ...temporalFilterColumns,
+      ...hiddenFilterColumns,
+    ]);
+    if (table?.joinColumn) {
+      names.add(table.joinColumn);
+    }
+    for (const entry of columnStats?.columns || []) {
+      if (isAlwaysHiddenFilterColumn(entry.attribute, table?.temporal, null)) {
+        names.add(entry.attribute);
+      }
+    }
+    return Array.from(names);
+  }, [
+    columnStats?.columns,
+    hiddenFilterColumns,
+    table?.joinColumn,
+    table?.temporal,
+    temporalFilterColumns,
+  ]);
   const validFilterColumns = useMemo(
     () =>
       new Set(

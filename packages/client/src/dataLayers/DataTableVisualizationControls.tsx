@@ -7,6 +7,8 @@ import {
   DATA_TABLE_AGGREGATIONS,
   DataTableAggregation,
   DataTableVisualizationMetadata,
+  dataTableFilterLabel,
+  parseFilterColumnLabels,
   pickDefaultDataTableColumn,
   resolveDataTableVisualizationSettings,
 } from "./dataTableQueryApi";
@@ -20,10 +22,12 @@ import clsx from "clsx";
 export function DataTableVisualizationLabel({
   op,
   column,
+  columnLabels,
   className,
 }: {
   op: DataTableAggregation;
   column?: string;
+  columnLabels?: Record<string, string>;
   className?: string;
 }) {
   const { t } = useTranslation("homepage");
@@ -31,9 +35,10 @@ export function DataTableVisualizationLabel({
     return <span className={className}>{t("Count")}</span>;
   }
   if (column) {
+    const label = dataTableFilterLabel(column, columnLabels);
     return (
       <span className={className}>
-        {t("{{op}} of {{column}}", { op, column })}
+        {t("{{op}} of {{column}}", { op, column: label })}
       </span>
     );
   }
@@ -150,6 +155,10 @@ export default function DataTableVisualizationControls({
   );
   const columnStats = columnStatsState?.columnStats;
   const error = columnStatsState?.error;
+  const columnLabels = useMemo(
+    () => parseFilterColumnLabels(metadata.filterColumnLabels),
+    [metadata.filterColumnLabels]
+  );
   // Prefer GraphQL columnStatsUrl; fall back to rewriting queryUrl
   // (/query → /column-stats.json) when the API host env is missing.
   const resolvedColumnStatsUrl = columnStatsUrlForTable(metadata);
@@ -226,7 +235,7 @@ export default function DataTableVisualizationControls({
   const opOptions = opChoices.map((op) => ({ value: op, label: op }));
   const columnOptions = columnChoices.map((column) => ({
     value: column,
-    label: column,
+    label: dataTableFilterLabel(column, columnLabels),
   }));
 
   return (
@@ -275,7 +284,9 @@ export default function DataTableVisualizationControls({
               />
             ) : (
               <span className="font-medium text-gray-700">
-                {effectiveColumn}
+                {effectiveColumn
+                  ? dataTableFilterLabel(effectiveColumn, columnLabels)
+                  : effectiveColumn}
               </span>
             )}
           </>

@@ -123,10 +123,49 @@ export function temporalSourceFilterColumns(temporal: unknown): string[] {
   if (!isTemporalInfo(temporal) || temporal.mapping?.type !== "row") {
     return [];
   }
+  const names: string[] = [];
+  const seen = new Set<string>();
+  const add = (name: string | undefined) => {
+    if (!name || seen.has(name)) {
+      return;
+    }
+    seen.add(name);
+    names.push(name);
+  };
   const mapped = temporal.mapping.sourceColumns
     ? toDataTableTemporalSourceColumns(temporal.mapping.sourceColumns)
     : null;
-  return mapped ? sourceColumnNames(mapped) : [];
+  if (mapped) {
+    for (const name of sourceColumnNames(mapped)) {
+      add(name);
+    }
+  }
+  add(temporal.mapping.startColumn);
+  add(temporal.mapping.endColumn);
+  return names;
+}
+
+/** Derived coverage columns (`_when_start`, `_when_end`, …). */
+export function isInternalWhenColumn(column: string): boolean {
+  return column.startsWith("_when_");
+}
+
+/**
+ * Join, temporal-source, and derived `_when_*` columns are not user filters
+ * and do not appear in admin Filter settings.
+ */
+export function isAlwaysHiddenFilterColumn(
+  column: string,
+  temporal?: unknown,
+  joinColumn?: string | null
+): boolean {
+  if (!column || isInternalWhenColumn(column)) {
+    return true;
+  }
+  if (joinColumn && column === joinColumn) {
+    return true;
+  }
+  return temporalSourceFilterColumns(temporal).indexOf(column) !== -1;
 }
 
 export function omitFiltersForColumns(

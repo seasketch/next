@@ -29,6 +29,7 @@ import DataTableUploadModal from "./DataTableUploadModal";
 import DataTableTemporalEditor from "./DataTableTemporalEditor";
 import {
   DATA_TABLE_AGGREGATIONS,
+  isAlwaysHiddenFilterColumn,
   parseFilterColumnLabels,
 } from "../../../dataLayers/dataTableQueryApi";
 import {
@@ -200,12 +201,18 @@ function MapDisplaySettings({
       (columnStats?.columns || [])
         .map((column) => column.attribute)
         .filter(
-          (column) => column && column !== table.joinColumn
+          (column) =>
+            column &&
+            !isAlwaysHiddenFilterColumn(
+              column,
+              table.temporal,
+              table.joinColumn
+            )
         )
         .sort((a, b) =>
           a.localeCompare(b, undefined, { sensitivity: "base" })
         ),
-    [columnStats?.columns, table.joinColumn]
+    [columnStats?.columns, table.joinColumn, table.temporal]
   );
 
   const toggleColumn = (column: string) => {
@@ -383,7 +390,7 @@ function MapDisplaySettings({
           <p className="text-sm font-medium text-gray-900">{t("Filters")}</p>
           <p className="text-xs text-gray-500">
             {t(
-              "Required filters always appear and cannot be removed. Hidden filters are not offered to map users. Labels replace the original column name. Chosen data columns stay hidden from filters."
+              "Required filters always appear and cannot be removed. Hidden filters are not offered to map users. Labels replace the original column name. Chosen data columns stay hidden from filters. Columns used for temporal coverage are omitted."
             )}
           </p>
         </div>
@@ -763,7 +770,9 @@ function DataTableRow({
     <li className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <span className="font-medium text-gray-900">{table.name}</span>{" "}
+          <div className="truncate font-medium text-gray-900" title={table.name}>
+            {table.name}
+          </div>
           <span className="text-gray-400 text-xs font-normal">
             {t("v{{version}}", { version: table.version })}
           </span>

@@ -2,6 +2,7 @@ import { describe, expect, it } from "@jest/globals";
 import {
   dataTableFilterLabel,
   hiddenDataTableFilterColumns,
+  isAlwaysHiddenFilterColumn,
   isFilterColumnLabels,
   parseFilterColumnLabels,
   requiredDataTableFilterColumns,
@@ -52,6 +53,53 @@ describe("dataTableFilterLabel", () => {
     expect(dataTableFilterLabel("year")).toBe("year");
     expect(dataTableFilterLabel("year", { species: "Species" })).toBe("year");
     expect(dataTableFilterLabel("year", { year: "  Year  " })).toBe("Year");
+  });
+});
+
+describe("isAlwaysHiddenFilterColumn", () => {
+  const temporal = {
+    version: 1,
+    granularity: "row",
+    coverage: {
+      kind: "interval",
+      start: "1999",
+      end: "2025",
+      precision: "year",
+    },
+    nativeResolution: "day",
+    defaultViewResolution: "year",
+    mapping: {
+      type: "row",
+      startColumn: "_when_start",
+      endColumn: "_when_end",
+      sourceColumns: {
+        kind: "components",
+        year: "year",
+        month: "month",
+        day: "day",
+      },
+    },
+    authoredBy: "admin",
+  };
+
+  it("hides join, temporal source, and derived when columns", () => {
+    expect(isAlwaysHiddenFilterColumn("site", temporal, "site")).toBe(true);
+    expect(isAlwaysHiddenFilterColumn("year", temporal, "site")).toBe(true);
+    expect(isAlwaysHiddenFilterColumn("month", temporal, "site")).toBe(true);
+    expect(isAlwaysHiddenFilterColumn("_when_start", temporal, "site")).toBe(
+      true
+    );
+    expect(isAlwaysHiddenFilterColumn("classcode", temporal, "site")).toBe(
+      false
+    );
+  });
+
+  it("rejects nullish and non-object temporal without treating every column as hidden", () => {
+    expect(isAlwaysHiddenFilterColumn("year", null, null)).toBe(false);
+    expect(isAlwaysHiddenFilterColumn("_when_end", undefined, "site")).toBe(
+      true
+    );
+    expect(isAlwaysHiddenFilterColumn("", undefined, null)).toBe(true);
   });
 });
 

@@ -8,6 +8,7 @@
     "build": "tsc",
     "watch": "tsc -w",
     "test": "npx --yes tsx@4.19.3 --test src/validateJoinColumn.test.ts src/deriveWhenColumns.test.ts",
+    "predev": "node -e \"const fs=require('fs');const path=require('path');const src=path.resolve('..','geostats-types');const dest=path.resolve('node_modules','@seasketch','geostats-types');if(!fs.existsSync(src)||!fs.existsSync(path.dirname(path.dirname(dest))))process.exit(0);let linked=false;try{linked=fs.lstatSync(dest).isSymbolicLink()&&fs.realpathSync(dest)===src;}catch(e){}if(linked)process.exit(0);fs.rmSync(dest,{recursive:true,force:true});fs.mkdirSync(path.dirname(dest),{recursive:true});fs.symlinkSync(src,dest,'dir');console.log('Linked workspace @seasketch/geostats-types');\"",
     "dev": "npx --yes tsx@4.19.3 watch server.ts",
     "build:container": "docker build -f Dockerfile .. -t data-tables-handler:latest"
   },

@@ -103,6 +103,8 @@ describe("buildDataTableQuerySearchParams", () => {
       "year",
       "month",
       "day",
+      "_when_start",
+      "_when_end",
     ]);
     const filters = omitFiltersForColumns(
       [
