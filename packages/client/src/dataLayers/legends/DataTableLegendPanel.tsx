@@ -22,6 +22,7 @@ import {
 } from "../dataTableQueryApi";
 import DataTableFilterControls, {
   ensureRequiredDataTableFilters,
+  sanitizeDataTableFilters,
 } from "../DataTableFilterControls";
 import DataTableVisualizationControls from "../DataTableVisualizationControls";
 import {
@@ -205,7 +206,13 @@ export default function DataTableLegendPanel({
     if (!stableId || stableId !== tableStableId) {
       return;
     }
-    const latestFilters = latest.filters;
+    if (columnStatsState.loading) {
+      return;
+    }
+    const latestFilters = sanitizeDataTableFilters(
+      latest.filters,
+      columnStats.columns
+    );
     const required = requiredFilterColumns.filter(
       (column) => omittedFilterColumns.indexOf(column) === -1
     );
@@ -238,6 +245,7 @@ export default function DataTableLegendPanel({
     tableStableId,
     tableMetadata,
     columnStats?.columns,
+    columnStatsState.loading,
     requiredFilterColumns,
     omittedFilterColumns,
     visualizedColumns,
@@ -248,9 +256,10 @@ export default function DataTableLegendPanel({
   ]);
 
   const activeFilters = useMemo(() => {
-    const base = (userChoice.filters || []).filter((filter) =>
-      validFilterColumns.has(filter.column)
-    );
+    const base = sanitizeDataTableFilters(
+      userChoice.filters,
+      columnStats?.columns || []
+    ).filter((filter) => validFilterColumns.has(filter.column));
     if (!columnStats?.columns?.length || requiredFilterColumns.length === 0) {
       return base;
     }

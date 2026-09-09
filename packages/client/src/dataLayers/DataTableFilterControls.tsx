@@ -180,6 +180,57 @@ export function defaultFiltersForColumn(
  * sensible defaults (first string choice, full numeric range, etc.). Existing
  * filters for those columns are kept. Optional filters are preserved.
  */
+function stringValuesForColumn(column: GeostatsAttribute): Set<string> | null {
+  if (!isStringLikeColumn(column) || !column.values) {
+    return null;
+  }
+  return new Set(Object.keys(column.values));
+}
+
+/**
+ * Drop filters that do not belong on this table: unknown columns, or
+ * string eq/in values that are not in the current column-stats. Shared
+ * column names (e.g. classcode) must not carry another table's values.
+ */
+export function sanitizeDataTableFilters(
+  filters: DataTableFilter[] | undefined,
+  columns: GeostatsAttribute[]
+): DataTableFilter[] {
+  if (!filters?.length) {
+    return [];
+  }
+  const columnsByName = new Map(
+    columns.map((column) => [column.attribute, column])
+  );
+  const next: DataTableFilter[] = [];
+  for (const filter of filters) {
+    const column = columnsByName.get(filter.column);
+    if (!column) {
+      continue;
+    }
+    const allowed = stringValuesForColumn(column);
+    if (allowed) {
+      if (filter.op === "eq" && filter.value != null) {
+        if (!allowed.has(filter.value)) {
+          continue;
+        }
+      }
+      if (filter.op === "in") {
+        const values = (filter.values || []).filter((value) =>
+          allowed.has(value)
+        );
+        if (values.length === 0) {
+          continue;
+        }
+        next.push({ ...filter, values });
+        continue;
+      }
+    }
+    next.push(filter);
+  }
+  return next;
+}
+
 export function ensureRequiredDataTableFilters(
   filters: DataTableFilter[] | undefined,
   requiredColumns: string[],

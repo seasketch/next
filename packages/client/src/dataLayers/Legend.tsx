@@ -430,6 +430,7 @@ const LegendListItem = memo(function LegendListItem({
           item.overlayDataTables &&
           item.overlayDataTables.length > 0 && (
             <DataTableLegendPanel
+              key={item.tableStableId}
               layerId={item.id}
               tableStableId={item.tableStableId}
               tableName={item.tableName}

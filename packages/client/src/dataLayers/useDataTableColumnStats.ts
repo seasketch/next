@@ -90,17 +90,30 @@ export function fetchDataTableColumnStats(
  *
  * @see packages/pmtiles-server/README.md
  */
+function columnStatsStateForUrl(
+  columnStatsUrl?: string | null
+): DataTableColumnStatsState {
+  return {
+    columnStats: getCachedDataTableColumnStats(columnStatsUrl),
+    error: columnStatsUrl ? columnStatsErrors[columnStatsUrl] : undefined,
+    // Uncached stats always trigger a fetch, so start in loading state
+    // to avoid an empty-state flash — and never keep another URL's stats.
+    loading: Boolean(columnStatsUrl && !columnStatsCache[columnStatsUrl]),
+  };
+}
+
 export function useDataTableColumnStats(
   columnStatsUrl?: string | null,
   accessToken?: string | null
 ): DataTableColumnStatsState {
-  const [state, setState] = useState<DataTableColumnStatsState>({
-    columnStats: getCachedDataTableColumnStats(columnStatsUrl),
-    error: columnStatsUrl ? columnStatsErrors[columnStatsUrl] : undefined,
-    // Uncached stats always trigger a fetch in the effect below, so start in
-    // loading state to avoid an empty-state flash on first render.
-    loading: Boolean(columnStatsUrl && !columnStatsCache[columnStatsUrl]),
-  });
+  const [statsUrl, setStatsUrl] = useState(columnStatsUrl);
+  const [state, setState] = useState<DataTableColumnStatsState>(() =>
+    columnStatsStateForUrl(columnStatsUrl)
+  );
+  if (columnStatsUrl !== statsUrl) {
+    setStatsUrl(columnStatsUrl);
+    setState(columnStatsStateForUrl(columnStatsUrl));
+  }
 
   useEffect(() => {
     if (!columnStatsUrl) {
