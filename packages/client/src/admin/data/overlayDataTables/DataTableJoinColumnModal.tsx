@@ -61,7 +61,8 @@ export default function DataTableJoinColumnModal({
       scrollable
       autoWidth
       panelClassName="sm:max-w-lg"
-      bodyClassName="px-6 py-4 flex flex-col gap-4 min-h-0 max-h-[70vh]"
+      bodyClassName="px-6 py-4 flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto"
+      footerClassName="relative z-10 shrink-0 border-t border-gray-200 bg-gray-100"
       footer={[
         {
           label: t("Cancel"),
@@ -96,7 +97,7 @@ export default function DataTableJoinColumnModal({
             </Trans>
           </Warning>
         ) : (
-          <div className="flex min-h-0 flex-1 flex-col gap-4">
+          <div className="flex flex-col gap-4">
             {suggested.length > 0 ? (
               <section className="space-y-2">
                 <h3 className="text-sm font-semibold text-gray-900">
@@ -125,11 +126,11 @@ export default function DataTableJoinColumnModal({
             ) : null}
 
             {other.length > 0 ? (
-              <section className="flex min-h-0 flex-1 flex-col gap-2">
+              <section className="space-y-2">
                 <h3 className="text-sm font-semibold text-gray-900">
                   {t("Unsuitable columns")}
                 </h3>
-                <div className="min-h-0 flex-1 divide-y divide-gray-100 overflow-y-auto rounded-md border border-gray-200 pr-1">
+                <div className="divide-y divide-gray-100 rounded-md border border-gray-200">
                   {other.map((option) => (
                     <UnsuitableColumnRow
                       key={option.attribute}
