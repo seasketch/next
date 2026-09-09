@@ -194,6 +194,13 @@ export default function DataTableStringFilter({
     if (selected.length === 0) {
       return t("Select a value");
     }
+    if (
+      allValues.length > 0 &&
+      selected.length === allValues.length &&
+      allValues.every((value) => selected.includes(value))
+    ) {
+      return t("All");
+    }
     if (selected.length === 1) {
       return selected[0];
     }

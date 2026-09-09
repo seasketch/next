@@ -31,6 +31,22 @@ function renderFilter(
 }
 
 describe("DataTableStringFilter multi-select", () => {
+  it("selects all from single-select without enabling multi-select first", () => {
+    const onChange = renderFilter([
+      { column: "species", op: "eq", value: "bass" },
+    ]);
+
+    fireEvent.click(screen.getByRole("button", { name: /bass/i }));
+    expect(screen.getByLabelText("Select multiple")).not.toBeChecked();
+    fireEvent.click(screen.getByRole("button", { name: "Select all" }));
+
+    expect(onChange).toHaveBeenLastCalledWith([
+      { column: "species", op: "in", values: ["bass", "anchovy", "cod"] },
+    ]);
+    expect(screen.getByLabelText("Select multiple")).toBeChecked();
+    expect(screen.getByRole("button", { name: "All" })).toBeInTheDocument();
+  });
+
   it("selects all and none after enabling multi-select", () => {
     const onChange = renderFilter([
       { column: "species", op: "eq", value: "bass" },
@@ -38,7 +54,7 @@ describe("DataTableStringFilter multi-select", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /bass/i }));
     expect(screen.getByLabelText("Select multiple")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Select all" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Select all" })).toBeEnabled();
 
     fireEvent.click(screen.getByLabelText("Select multiple"));
     expect(onChange).toHaveBeenLastCalledWith([

@@ -4,6 +4,8 @@ import { visibleSelectionStatus } from "./dataTableFilterSelection";
 /**
  * Footer row for data-table value filters: the multi-select checkbox plus
  * All / None actions that apply to the currently visible option list.
+ * All / None stay available in single-select so users can take the common
+ * "show every value" action without first discovering multi-select.
  */
 export default function DataTableFilterMultiSelectRow({
   multi,
@@ -38,29 +40,27 @@ export default function DataTableFilterMultiSelectRow({
         />
         <span>{t("Select multiple")}</span>
       </label>
-      {multi && (
-        <div className="flex flex-none items-center">
-          <button
-            type="button"
-            disabled={noVisible || allSelected}
-            aria-label={t("Select all")}
-            onClick={onSelectAll}
-            className="text-xs font-medium text-primary-600 hover:text-primary-700 disabled:cursor-default disabled:text-gray-300"
-          >
-            {t("All")}
-          </button>
-          <span className="mx-1.5 h-3 w-px bg-gray-300" aria-hidden />
-          <button
-            type="button"
-            disabled={noVisible || noneSelected}
-            aria-label={t("Select none")}
-            onClick={onSelectNone}
-            className="text-xs font-medium text-primary-600 hover:text-primary-700 disabled:cursor-default disabled:text-gray-300"
-          >
-            {t("None")}
-          </button>
-        </div>
-      )}
+      <div className="flex flex-none items-center">
+        <button
+          type="button"
+          disabled={noVisible || allSelected}
+          aria-label={t("Select all")}
+          onClick={onSelectAll}
+          className="text-xs font-medium text-primary-600 hover:text-primary-700 disabled:cursor-default disabled:text-gray-300"
+        >
+          {t("All")}
+        </button>
+        <span className="mx-1.5 h-3 w-px bg-gray-300" aria-hidden />
+        <button
+          type="button"
+          disabled={noVisible || noneSelected}
+          aria-label={t("Select none")}
+          onClick={onSelectNone}
+          className="text-xs font-medium text-primary-600 hover:text-primary-700 disabled:cursor-default disabled:text-gray-300"
+        >
+          {t("None")}
+        </button>
+      </div>
     </div>
   );
 }
