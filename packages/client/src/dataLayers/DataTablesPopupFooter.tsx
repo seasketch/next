@@ -105,10 +105,9 @@ export default function DataTablesPopupFooter({
           <ActivatedDataTablePanel
             layerId={tocStableId}
             tocItemId={item.id}
-            layerName={item.title}
             tables={tables}
-            onTableSelected={() => {
-              setOpen(false);
+            onTableSelected={() => setOpen(false)}
+            onDataTableActivated={() => {
               if (variant === "popup") {
                 // Get the popup out of the way so the new visualization and
                 // legend controls are immediately visible.

@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
+import { ReactNode, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Cross2Icon } from "@radix-ui/react-icons";
+import { Cross2Icon, PlusIcon } from "@radix-ui/react-icons";
 import * as Popover from "@radix-ui/react-popover";
 import { GeostatsAttribute } from "@seasketch/geostats-types";
 import { DataTableFilter, dataTableFilterLabel } from "./dataTableQueryApi";
@@ -316,6 +316,7 @@ export default function DataTableFilterControls({
   columnLabels = {},
   queryLoading = false,
   onChange,
+  trailingAction,
 }: {
   columns: GeostatsAttribute[];
   filters: DataTableFilter[];
@@ -329,6 +330,8 @@ export default function DataTableFilterControls({
   /** True while the map query for the current filters is in flight. */
   queryLoading?: boolean;
   onChange: (filters: DataTableFilter[]) => void;
+  /** Rendered opposite the Add filter button (e.g. a clear-table action). */
+  trailingAction?: ReactNode;
 }) {
   const { t } = useTranslation("homepage");
   const excludedColumns = useMemo(
@@ -491,46 +494,54 @@ export default function DataTableFilterControls({
           </div>
         );
       })}
-      {availableColumns.length > 0 && (
-        <Popover.Root open={addFilterOpen} onOpenChange={setAddFilterOpen}>
-          <Popover.Trigger asChild>
-            <button
-              type="button"
-              className="text-xs rounded border border-gray-300 bg-white px-2 py-1 text-gray-700 hover:bg-gray-50"
-            >
-              {t("Add filter+")}
-            </button>
-          </Popover.Trigger>
-          <Popover.Portal>
-            <Popover.Content
-              align="start"
-              sideOffset={6}
-              className="z-50 w-56 rounded-md border border-black/10 bg-white p-1 shadow-lg"
-            >
-              <div className="max-h-52 overflow-y-auto">
-                {availableColumns.map((column) => (
-                  <button
-                    key={column.attribute}
-                    type="button"
-                    className="w-full rounded px-2 py-1.5 text-left text-xs hover:bg-gray-50"
-                    onClick={() => {
-                      onChange([
-                        ...filters,
-                        ...defaultFiltersForColumn(column),
-                      ]);
-                      setAddFilterOpen(false);
-                    }}
-                  >
-                    <span className="block truncate text-gray-800">
-                      {dataTableFilterLabel(column.attribute, columnLabels)}
-                    </span>
-                  </button>
-                ))}
-              </div>
-              <Popover.Arrow className="fill-white" />
-            </Popover.Content>
-          </Popover.Portal>
-        </Popover.Root>
+      {(availableColumns.length > 0 || trailingAction) && (
+        <div className="flex items-center justify-between gap-2 pt-1">
+          {availableColumns.length > 0 ? (
+            <Popover.Root open={addFilterOpen} onOpenChange={setAddFilterOpen}>
+              <Popover.Trigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-2 py-1 text-xs font-medium text-gray-700 shadow-sm transition-colors hover:border-gray-400 hover:bg-gray-50"
+                >
+                  <PlusIcon className="h-3 w-3 text-gray-500" aria-hidden />
+                  {t("Add filter")}
+                </button>
+              </Popover.Trigger>
+              <Popover.Portal>
+                <Popover.Content
+                  align="start"
+                  sideOffset={6}
+                  className="z-50 w-56 rounded-md border border-black/10 bg-white p-1 shadow-lg"
+                >
+                  <div className="max-h-52 overflow-y-auto">
+                    {availableColumns.map((column) => (
+                      <button
+                        key={column.attribute}
+                        type="button"
+                        className="w-full rounded px-2 py-1.5 text-left text-xs hover:bg-gray-50"
+                        onClick={() => {
+                          onChange([
+                            ...filters,
+                            ...defaultFiltersForColumn(column),
+                          ]);
+                          setAddFilterOpen(false);
+                        }}
+                      >
+                        <span className="block truncate text-gray-800">
+                          {dataTableFilterLabel(column.attribute, columnLabels)}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  <Popover.Arrow className="fill-white" />
+                </Popover.Content>
+              </Popover.Portal>
+            </Popover.Root>
+          ) : (
+            <span aria-hidden />
+          )}
+          {trailingAction}
+        </div>
       )}
       {availableColumns.length === 0 && activeColumnNames.length === 0 && (
         <p className="text-xs text-gray-400 italic">

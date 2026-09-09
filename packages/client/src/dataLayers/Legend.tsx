@@ -404,7 +404,6 @@ const LegendListItem = memo(function LegendListItem({
                 <ActivatedDataTableButton
                   layerId={item.id}
                   tocItemId={item.tableOfContentsItemDetails?.id}
-                  layerName={item.label}
                   tables={item.overlayDataTables}
                   onDataTableActivated={onDataTableActivated}
                 />

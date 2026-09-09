@@ -10,12 +10,11 @@ import ActivatedDataTablePanel from "./ActivatedDataTablePanel";
 /**
  * Button + popover for choosing which OverlayDataTable (if any) is
  * "activated" for a layer and configuring its map display. Used in the
- * map Legend, and eventually the overlay Table of Contents as well.
+ * map Legend and the overlay Table of Contents.
  */
 export default function ActivatedDataTableButton({
   layerId,
   tocItemId,
-  layerName,
   tables,
   className,
   onDataTableActivated,
@@ -24,8 +23,6 @@ export default function ActivatedDataTableButton({
   layerId: string;
   /** Numeric TableOfContentsItem id, used to prefetch table metadata in one query */
   tocItemId?: number;
-  /** Used as a subtitle in the popover header */
-  layerName?: string;
   tables?: ClientOverlayDataTableFragment[] | null;
   className?: string;
   /** Called when a table is activated (not when cleared), e.g. to focus the legend. */
@@ -53,6 +50,9 @@ export default function ActivatedDataTableButton({
           type="button"
           aria-label={title}
           title={title}
+          onClick={(event) => {
+            event.stopPropagation();
+          }}
           className={clsx(
             "relative inline-flex items-center justify-center w-5 h-5 rounded",
             open
@@ -79,7 +79,6 @@ export default function ActivatedDataTableButton({
         <ActivatedDataTablePanel
           layerId={layerId}
           tocItemId={tocItemId}
-          layerName={layerName}
           tables={tables}
           onTableSelected={() => setOpen(false)}
           onDataTableActivated={onDataTableActivated}

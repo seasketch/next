@@ -27,6 +27,7 @@ import {
 import * as ContextMenu from "@radix-ui/react-context-menu";
 import * as RadixTooltip from "@radix-ui/react-tooltip";
 import { DotsHorizontalIcon, EyeClosedIcon } from "@radix-ui/react-icons";
+import ActivatedDataTableButton from "../../dataLayers/ActivatedDataTableButton";
 
 export interface TreeNodeDataProps {
   id: number;
@@ -116,9 +117,14 @@ export default function TreeItemComponent({
   isHidden,
   highlights,
   showContextMenuButtons,
+  enableDataTables,
 }: TreeNodeComponentProps) {
   const isChecked = checked !== CheckState.UNCHECKED;
   const hasCheckedChildren = checked !== CheckState.UNCHECKED;
+  const showDataTableButton =
+    Boolean(enableDataTables) &&
+    node.isLeaf &&
+    Boolean(node.overlayDataTables?.length);
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [{ isDragging }, drag, dragPreview] = useDrag(
@@ -505,6 +511,20 @@ export default function TreeItemComponent({
               />
             </WrapWithErrorTooltip>
           )}
+          {showDataTableButton && (
+            <div
+              className="flex items-center justify-center flex-none"
+              style={{ marginLeft: 6 }}
+              onClick={(event) => event.stopPropagation()}
+              onMouseDown={(event) => event.stopPropagation()}
+            >
+              <ActivatedDataTableButton
+                layerId={node.id}
+                tocItemId={node.tocItemId}
+                tables={node.overlayDataTables}
+              />
+            </div>
+          )}
           {!node.hideChildren &&
             !node.isLeaf &&
             node.type !== "Sketch" &&
@@ -549,9 +569,12 @@ export default function TreeItemComponent({
             <label
               id={`${node.id}-label`}
               ref={isContextMenuTarget ? setLabelRef : undefined}
-              className={`px-1 cursor-pointer select-none truncate min-w-0 ${
+              className={`${
+                showDataTableButton ? "pr-1" : "px-1"
+              } cursor-pointer select-none truncate min-w-0 ${
                 error ? "text-red-600" : ""
               } ${isHidden ? "opacity-50" : ""}`}
+              style={showDataTableButton ? { marginLeft: 6 } : undefined}
               onClick={updateSelectionOnClick}
               onContextMenu={contextMenuHandler}
               onMouseEnter={(e) => {
@@ -714,6 +737,7 @@ export default function TreeItemComponent({
                   onUnhide={onUnhide}
                   onUnresolvedCommentClick={onUnresolvedCommentClick}
                   showContextMenuButtons={showContextMenuButtons}
+                  enableDataTables={enableDataTables}
                 />
               ))}
             </ul>

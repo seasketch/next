@@ -12,10 +12,14 @@ import {
   LayerTreeContext,
   MapManagerContext,
 } from "../dataLayers/MapContextManager";
-import { OverlayFragment } from "../generated/graphql";
+import {
+  OverlayFragment,
+  useProjectMetadataQuery,
+} from "../generated/graphql";
 import TreeItemComponent, {
   SortingState,
 } from "../projects/Sketches/TreeItemComponent";
+import getSlug from "../getSlug";
 import useLocalStorage from "../useLocalStorage";
 import ContextMenuDropdown, {
   DropdownDividerProps,
@@ -48,6 +52,10 @@ export interface TreeItem {
   /** References TreeItem.type */
   dropAcceptsTypes?: string[];
   bbox?: number[];
+  /** Overlay data tables attached to this TOC item, if any */
+  overlayDataTables?: OverlayFragment["overlayDataTables"];
+  /** Numeric TableOfContentsItem id for data-table metadata prefetch */
+  tocItemId?: number;
 }
 
 interface TreeViewProps {
@@ -147,6 +155,7 @@ export interface TreeNodeComponentProps {
   onUnhide?: (stableId: string) => void;
   onUnresolvedCommentClick?: (node: TreeItem) => void;
   showContextMenuButtons?: (node: TreeItem) => boolean;
+  enableDataTables?: boolean;
 }
 export enum CheckState {
   CHECKED,
@@ -192,6 +201,15 @@ const TreeView = memo(function TreeView({
   ...props
 }: TreeViewProps) {
   const treeRef = useRef<HTMLDivElement>(null);
+
+  const slug = getSlug();
+  const { data: projectMeta } = useProjectMetadataQuery({
+    variables: { slug },
+    skip: !slug,
+  });
+  const enableDataTables = Boolean(
+    projectMeta?.project?.featureFlags?.dataTables
+  );
 
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
     if (!treeRef.current) return;
@@ -545,6 +563,7 @@ const TreeView = memo(function TreeView({
             onUnhide={props.onUnhide}
             onUnresolvedCommentClick={props.onUnresolvedCommentClick}
             showContextMenuButtons={showContextMenuButtons}
+            enableDataTables={enableDataTables}
           />
         ))}
       </ContextMenu.Root>
@@ -730,6 +749,8 @@ export function overlayLayerFragmentsToTreeItems(
       hasUnresolvedComment: Boolean(fragment.hasUnresolvedComment),
       type: fragment.__typename!,
       dropAcceptsTypes: editable ? ["TableOfContentsItem"] : [],
+      overlayDataTables: fragment.overlayDataTables,
+      tocItemId: fragment.id,
     });
   }
   return items;

@@ -15,7 +15,7 @@ import {
   ProjectBackgroundJobState,
   ProjectBackgroundJobType,
   useGetLayerItemQuery,
-  useRenameOverlayDataTableMutation,
+  useUpdateOverlayDataTableDetailsMutation,
   useSetOverlayDataTableVisualizationSettingsMutation,
   useSoftDeleteOverlayDataTableMutation,
 } from "../../../generated/graphql";
@@ -501,17 +501,23 @@ function MapDisplaySettings({
   );
 }
 
+const DATA_TABLE_DESCRIPTION_MAX = 200;
+
 function DataTableSettingsModal({
   table,
   onClose,
-  onRename,
+  onUpdateDetails,
   onDelete,
   onReplace,
   onSetVisualizationSettings,
 }: {
   table: OverlayDataTableDetailsFragment;
   onClose: () => void;
-  onRename: (id: number, name: string) => void | Promise<void>;
+  onUpdateDetails: (
+    id: number,
+    name: string,
+    description: string | null
+  ) => void | Promise<void>;
   onDelete: (id: number) => void;
   onReplace: (id: number) => void;
   onSetVisualizationSettings: (
@@ -525,6 +531,9 @@ function DataTableSettingsModal({
 }) {
   const { t } = useTranslation("admin:data");
   const [draftName, setDraftName] = useState(table.name);
+  const [draftDescription, setDraftDescription] = useState(
+    table.description || ""
+  );
   const [nameError, setNameError] = useState<string | undefined>();
   const [draftColumns, setDraftColumns] = useState<string[]>(
     (table.visualizationColumns || []).filter(Boolean) as string[]
@@ -545,6 +554,7 @@ function DataTableSettingsModal({
 
   useEffect(() => {
     setDraftName(table.name);
+    setDraftDescription(table.description || "");
     setNameError(undefined);
     setDraftColumns(
       (table.visualizationColumns || []).filter(Boolean) as string[]
@@ -559,6 +569,7 @@ function DataTableSettingsModal({
     setDraftFilterLabels(parseFilterColumnLabels(table.filterColumnLabels));
   }, [
     table.name,
+    table.description,
     table.visualizationColumns,
     table.visualizationOps,
     table.requiredFilterColumns,
@@ -574,6 +585,8 @@ function DataTableSettingsModal({
     table.filterColumnLabels
   );
   const nameDirty = draftName.trim() !== table.name;
+  const nextDescription = draftDescription.trim() || null;
+  const descriptionDirty = nextDescription !== (table.description || null);
   const savedFilterLabels = normalizedFilterLabels(draftFilterLabels);
   const requiredForSave = draftRequiredFilters.filter(
     (column) => !draftColumns.includes(column)
@@ -588,7 +601,7 @@ function DataTableSettingsModal({
     JSON.stringify(draftHiddenFilters) !==
       JSON.stringify(originalHiddenFilters) ||
     labelsDirty;
-  const dirty = nameDirty || displayDirty;
+  const dirty = nameDirty || descriptionDirty || displayDirty;
 
   const saveChanges = async () => {
     const next = draftName.trim();
@@ -599,8 +612,8 @@ function DataTableSettingsModal({
     setNameError(undefined);
     setSaving(true);
     try {
-      if (nameDirty) {
-        await onRename(table.id, next);
+      if (nameDirty || descriptionDirty) {
+        await onUpdateDetails(table.id, next, nextDescription);
       }
       if (displayDirty) {
         await onSetVisualizationSettings(
@@ -668,6 +681,28 @@ function DataTableSettingsModal({
           {nameError ? (
             <p className="text-xs text-red-600">{nameError}</p>
           ) : null}
+          <label
+            htmlFor="data-table-description"
+            className="block text-sm font-medium text-gray-900 pt-2"
+          >
+            {t("Description")}
+          </label>
+          <textarea
+            id="data-table-description"
+            name="data-table-description"
+            rows={3}
+            maxLength={DATA_TABLE_DESCRIPTION_MAX}
+            value={draftDescription}
+            onChange={(event) => setDraftDescription(event.target.value)}
+            className="block w-full rounded-md border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+          />
+          <p className="text-xs text-gray-500">
+            {t(
+              "Shown under the table name in the Data Tables menu. Keep it to about two short lines."
+            )}{" "}
+            {/* eslint-disable-next-line i18next/no-literal-string */}
+            {`(${draftDescription.length}/${DATA_TABLE_DESCRIPTION_MAX})`}
+          </p>
         </section>
 
         <section className="space-y-4">
@@ -742,7 +777,7 @@ function DataTableRow({
   tableOfContentsItemId,
   job,
   onDismissJob,
-  onRename,
+  onUpdateDetails,
   onDelete,
   onReplace,
   onRefresh,
@@ -752,7 +787,11 @@ function DataTableRow({
   tableOfContentsItemId: number;
   job?: DataTableJob;
   onDismissJob: (jobId: string) => void;
-  onRename: (id: number, name: string) => void | Promise<void>;
+  onUpdateDetails: (
+    id: number,
+    name: string,
+    description: string | null
+  ) => void | Promise<void>;
   onDelete: (id: number) => void;
   onReplace: (id: number) => void;
   onRefresh: () => void;
@@ -871,7 +910,7 @@ function DataTableRow({
         <DataTableSettingsModal
           table={table}
           onClose={() => setSettingsOpen(false)}
-          onRename={onRename}
+          onUpdateDetails={onUpdateDetails}
           onDelete={onDelete}
           onReplace={onReplace}
           onSetVisualizationSettings={onSetVisualizationSettings}
@@ -991,7 +1030,7 @@ export default function RelatedDataTables({ item }: RelatedDataTablesProps) {
     });
   }, [refetch, client, changeLogRefetchQueries]);
 
-  const [renameTable] = useRenameOverlayDataTableMutation({
+  const [updateTableDetails] = useUpdateOverlayDataTableDetailsMutation({
     refetchQueries: changeLogRefetchQueries,
   });
   const [deleteTable] = useSoftDeleteOverlayDataTableMutation({
@@ -1153,10 +1192,10 @@ export default function RelatedDataTables({ item }: RelatedDataTablesProps) {
               tableOfContentsItemId={layerItem.id}
               job={getJobForTable(table.id, dataTableJobs)}
               onDismissJob={onDismissJob}
-              onRename={(id, name) =>
-                renameTable({ variables: { id, name } }).then(() =>
-                  refetchTablesAndHistory(),
-                )
+              onUpdateDetails={(id, name, description) =>
+                updateTableDetails({
+                  variables: { id, name, description },
+                }).then(() => refetchTablesAndHistory())
               }
               onDelete={(id) =>
                 confirmDelete({

@@ -5902,6 +5902,8 @@ CREATE TABLE public.overlay_data_tables (
     filter_column_labels jsonb DEFAULT '{}'::jsonb,
     nodata_values jsonb DEFAULT '[]'::jsonb NOT NULL,
     source_parquet_remote text,
+    description text,
+    CONSTRAINT overlay_data_tables_description_length CHECK (((description IS NULL) OR (char_length(description) <= 200))),
     CONSTRAINT overlay_data_tables_version_positive CHECK ((version > 0))
 );
 
@@ -5977,6 +5979,13 @@ COMMENT ON COLUMN public.overlay_data_tables.source_parquet_remote IS 'Immutable
 
 
 --
+-- Name: COLUMN overlay_data_tables.description; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.overlay_data_tables.description IS 'Optional short description shown in the data table picker. Displayed on at most two lines.';
+
+
+--
 -- Name: complete_overlay_data_table_upload(uuid, text, text, text, integer, text, text, jsonb, jsonb, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -6043,7 +6052,8 @@ begin
     stable_id,
     temporal,
     nodata_values,
-    source_parquet_remote
+    source_parquet_remote,
+    description
   ) values (
     upload.table_of_contents_item_id,
     job.project_id,
@@ -6063,7 +6073,8 @@ begin
     coalesce(old_row.stable_id, uuid_generate_v4()),
     p_temporal,
     next_nodata,
-    coalesce(p_source_parquet_remote, old_row.source_parquet_remote, p_parquet_remote)
+    coalesce(p_source_parquet_remote, old_row.source_parquet_remote, p_parquet_remote),
+    old_row.description
   ) returning * into new_row;
 
   if upload.replace_overlay_data_table_id is not null then
@@ -18433,7 +18444,8 @@ begin
     temporal,
     nodata_values,
     source_parquet_remote,
-    stable_id
+    stable_id,
+    description
   )
   select
     published_toc.id,
@@ -18454,7 +18466,8 @@ begin
     odt.temporal,
     odt.nodata_values,
     odt.source_parquet_remote,
-    odt.stable_id
+    odt.stable_id,
+    odt.description
   from overlay_data_tables odt
   inner join table_of_contents_items draft_toc
     on draft_toc.id = odt.table_of_contents_item_id
@@ -25926,6 +25939,82 @@ CREATE FUNCTION public.update_mapbox_secret_key(project_id integer, secret text)
       end if;
     end;
   $$;
+
+
+--
+-- Name: update_overlay_data_table_details(integer, text, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_overlay_data_table_details(table_id integer, name text, description text) RETURNS public.overlay_data_tables
+    LANGUAGE plpgsql SECURITY DEFINER
+    AS $$
+declare
+  row overlay_data_tables;
+  old_name text;
+  old_description text;
+  next_name text;
+  next_description text;
+  editor_id int;
+begin
+  select * into row from overlay_data_tables where id = table_id and deleted_at is null;
+  if row is null then
+    raise exception 'Active data table not found';
+  end if;
+  if not session_is_admin(row.project_id) then
+    raise exception 'permission denied';
+  end if;
+  if not exists (
+    select 1 from table_of_contents_items
+    where id = row.table_of_contents_item_id and is_draft = true
+  ) then
+    raise exception 'Can only update data tables on draft layers';
+  end if;
+
+  next_name := btrim(coalesce(update_overlay_data_table_details.name, ''));
+  if next_name = '' then
+    raise exception 'Name is required';
+  end if;
+  next_description := nullif(btrim(coalesce(update_overlay_data_table_details.description, '')), '');
+  if next_description is not null and char_length(next_description) > 200 then
+    raise exception 'Description must be 200 characters or fewer';
+  end if;
+
+  old_name := row.name;
+  old_description := row.description;
+
+  update overlay_data_tables
+  set name = next_name,
+      description = next_description,
+      updated_at = now()
+  where id = table_id
+  returning * into row;
+
+  editor_id := nullif(current_setting('session.user_id', true), '')::int;
+  if editor_id is not null
+     and (old_name is distinct from next_name
+          or old_description is distinct from next_description) then
+    perform record_changelog(
+      row.project_id,
+      editor_id,
+      'overlay_data_table',
+      row.id,
+      'data_table:renamed'::change_log_field_group,
+      jsonb_build_object('name', old_name, 'description', old_description),
+      jsonb_build_object('name', next_name, 'description', next_description),
+      null, null,
+      jsonb_build_object('table_of_contents_item_id', row.table_of_contents_item_id, 'version', row.version)
+    );
+  end if;
+  return row;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION update_overlay_data_table_details(table_id integer, name text, description text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.update_overlay_data_table_details(table_id integer, name text, description text) IS 'Admin-only. Updates the display name and optional short description of a draft overlay data table.';
 
 
 --
@@ -46329,6 +46418,14 @@ REVOKE ALL ON FUNCTION public.update_google_maps_tile_api_session(p_map_type tex
 
 REVOKE ALL ON FUNCTION public.update_mapbox_secret_key(project_id integer, secret text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.update_mapbox_secret_key(project_id integer, secret text) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION update_overlay_data_table_details(table_id integer, name text, description text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_overlay_data_table_details(table_id integer, name text, description text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_overlay_data_table_details(table_id integer, name text, description text) TO seasketch_user;
 
 
 --

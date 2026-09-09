@@ -1,5 +1,5 @@
 import { useContext, useEffect, useMemo } from "react";
-import { Cross2Icon, ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
 import { useTranslation } from "react-i18next";
 import DataTableIcon from "../../components/icons/DataTableIcon";
 import {
@@ -290,6 +290,22 @@ export default function DataTableLegendPanel({
       : error
     : undefined;
 
+  const showFilterControls =
+    !columnStatsState.loading &&
+    !columnStatsState.error &&
+    Boolean(columnStats?.columns?.length);
+
+  const clearTableButton = (
+    <button
+      type="button"
+      title={t("Clear data table display")}
+      onClick={() => manager?.setLayerDataTable(layerId, null)}
+      className="text-xs text-primary-600 underline decoration-primary-600/30 underline-offset-2 transition-colors hover:text-primary-700 hover:decoration-primary-700/60"
+    >
+      {t("Clear visualization")}
+    </button>
+  );
+
   return (
     <div className="space-y-3 pt-1.5">
       <div className="space-y-1.5">
@@ -307,15 +323,6 @@ export default function DataTableLegendPanel({
               aria-label={displayError}
             />
           )}
-          <button
-            type="button"
-            aria-label={t("Clear data table display")}
-            title={t("Clear data table display")}
-            onClick={() => manager?.setLayerDataTable(layerId, null)}
-            className="flex-none p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-          >
-            <Cross2Icon className="w-3.5 h-3.5" />
-          </button>
         </div>
         <DataTableVisualizationControls
           key={tableStableId}
@@ -349,39 +356,40 @@ export default function DataTableLegendPanel({
         </div>
       )}
 
-      {!columnStatsState.loading &&
-        !columnStatsState.error &&
-        columnStats?.columns && (
-          <DataTableFilterControls
-            key={tableStableId}
-            columns={columnStats.columns}
-            filters={activeFilters}
-            visualizedColumns={visualizedColumns}
-            requiredColumns={requiredFilterColumns.filter(
-              (column) => omittedFilterColumns.indexOf(column) === -1
-            )}
-            hiddenColumns={omittedFilterColumns}
-            columnLabels={filterColumnLabels}
-            queryLoading={loading && !error}
-            onChange={(filters) => {
-              const latest = manager?.getLayerDataTable?.(layerId);
-              if (!latest?.stableId || latest.stableId !== tableStableId) {
-                return;
-              }
-              manager?.setLayerDataTable(layerId, {
-                stableId: latest.stableId,
-                column: latest.column ?? effectiveColumn,
-                op: latest.op || userChoice.op || op,
-                filters: ensureRequiredDataTableFilters(
-                  filters,
-                  requiredFilterColumns,
-                  columnStats.columns,
-                  [...visualizedColumns, ...omittedFilterColumns]
-                ),
-              });
-            }}
-          />
-        )}
+      {showFilterControls && columnStats?.columns ? (
+        <DataTableFilterControls
+          key={tableStableId}
+          columns={columnStats.columns}
+          filters={activeFilters}
+          visualizedColumns={visualizedColumns}
+          requiredColumns={requiredFilterColumns.filter(
+            (column) => omittedFilterColumns.indexOf(column) === -1
+          )}
+          hiddenColumns={omittedFilterColumns}
+          columnLabels={filterColumnLabels}
+          queryLoading={loading && !error}
+          trailingAction={clearTableButton}
+          onChange={(filters) => {
+            const latest = manager?.getLayerDataTable?.(layerId);
+            if (!latest?.stableId || latest.stableId !== tableStableId) {
+              return;
+            }
+            manager?.setLayerDataTable(layerId, {
+              stableId: latest.stableId,
+              column: latest.column ?? effectiveColumn,
+              op: latest.op || userChoice.op || op,
+              filters: ensureRequiredDataTableFilters(
+                filters,
+                requiredFilterColumns,
+                columnStats.columns,
+                [...visualizedColumns, ...omittedFilterColumns]
+              ),
+            });
+          }}
+        />
+      ) : (
+        <div className="flex justify-end pt-1">{clearTableButton}</div>
+      )}
     </div>
   );
 }

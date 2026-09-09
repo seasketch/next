@@ -1,6 +1,6 @@
-import { useContext, useEffect, useMemo } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
-import { CheckIcon } from "@radix-ui/react-icons";
+import { CheckIcon, Cross2Icon } from "@radix-ui/react-icons";
 import { useTranslation } from "react-i18next";
 import clsx from "clsx";
 import {
@@ -22,14 +22,12 @@ import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 export default function ActivatedDataTablePanel({
   layerId,
   tocItemId,
-  layerName,
   tables,
   onTableSelected,
   onDataTableActivated,
 }: {
   layerId: string;
   tocItemId?: number;
-  layerName?: string;
   tables: ClientOverlayDataTableFragment[];
   onTableSelected?: () => void;
   onDataTableActivated?: (layerId: string) => void;
@@ -75,6 +73,14 @@ export default function ActivatedDataTablePanel({
     }
   }, [metadataByTableId, tables, mapAccessToken]);
 
+  const [hoveringClear, setHoveringClear] = useState(false);
+
+  const clearSelection = () => {
+    setHoveringClear(false);
+    manager?.setLayerDataTable(layerId, null);
+    onTableSelected?.();
+  };
+
   return (
     <Popover.Content
       align="end"
@@ -83,15 +89,15 @@ export default function ActivatedDataTablePanel({
       className="w-72 rounded-md bg-white text-gray-900 border border-black border-opacity-10 shadow-lg py-1.5 data-[state=open]:data-[side=bottom]:animate-slideUpAndFade data-[state=open]:data-[side=top]:animate-slideDownAndFade"
     >
       <div className="px-3 pt-1 pb-2 border-b border-black border-opacity-5">
-        <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+        <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-600">
           {t("Data Tables")}
         </h4>
-        {layerName && (
-          <p className="text-xs text-gray-400 truncate">{layerName}</p>
-        )}
+        <p className="text-xs text-gray-600 leading-snug mt-0.5">
+          {t("Visualize datasets related to this layer.")}
+        </p>
       </div>
       {metadataQuery.loading && (
-        <div className="px-3 py-1 text-xs text-gray-400 border-b border-black border-opacity-5">
+        <div className="px-3 py-1 text-xs text-gray-600 border-b border-black border-opacity-5">
           {t("Loading table metadata...")}
         </div>
       )}
@@ -99,14 +105,23 @@ export default function ActivatedDataTablePanel({
         {tables.map((table) => {
           const isActive = table.stableId === activeStableId;
           return (
-            <li key={table.id}>
+            <li
+              key={table.id}
+              className={clsx(
+                "flex items-center gap-3 px-3 py-2 hover:bg-gray-50",
+                isActive && "bg-primary-600 bg-opacity-5"
+              )}
+            >
               <button
                 type="button"
                 aria-pressed={isActive}
                 onClick={() => {
                   if (isActive) {
-                    manager?.setLayerDataTable(layerId, null);
-                  } else if (table.stableId) {
+                    onTableSelected?.();
+                    return;
+                  }
+                  if (table.stableId) {
+                    manager?.showTocItems([layerId]);
                     manager?.setLayerDataTable(layerId, {
                       stableId: table.stableId,
                     });
@@ -114,26 +129,37 @@ export default function ActivatedDataTablePanel({
                     onTableSelected?.();
                   }
                 }}
-                className={clsx(
-                  "w-full flex items-center gap-3 text-left px-3 py-2 text-sm hover:bg-gray-50",
-                  isActive && "bg-primary-600 bg-opacity-5"
-                )}
+                className="flex-1 min-w-0 text-left text-sm"
               >
-                <span className="flex-1 min-w-0">
-                  <span className="block truncate font-medium">
-                    {table.name}
-                  </span>
-                  <span className="block text-xs text-gray-500">
-                    {/* eslint-disable-next-line i18next/no-literal-string */}
-                    {`${table.rowCount.toLocaleString()} ${t("rows")}`}
-                  </span>
-                </span>
-                <span className="w-4 flex-none" aria-hidden>
-                  {isActive && (
-                    <CheckIcon className="w-4 h-4 text-primary-600" />
+                <span className="block truncate font-medium">{table.name}</span>
+                <span className="block text-xs text-gray-600 line-clamp-2 leading-snug">
+                  {table.description?.trim() ? (
+                    table.description
+                  ) : (
+                    // eslint-disable-next-line i18next/no-literal-string
+                    `${table.rowCount.toLocaleString()} ${t("rows")}`
                   )}
                 </span>
               </button>
+              <span className="w-5 flex-none">
+                {isActive && (
+                  <button
+                    type="button"
+                    aria-label={t("Clear data table display")}
+                    title={t("Clear data table display")}
+                    onClick={clearSelection}
+                    onPointerEnter={() => setHoveringClear(true)}
+                    onPointerLeave={() => setHoveringClear(false)}
+                    className="relative flex h-5 w-5 items-center justify-center text-primary-600 before:absolute before:-inset-[20%] before:content-['']"
+                  >
+                    {hoveringClear ? (
+                      <Cross2Icon className="h-4 w-4" />
+                    ) : (
+                      <CheckIcon className="h-4 w-4" />
+                    )}
+                  </button>
+                )}
+              </span>
             </li>
           );
         })}
