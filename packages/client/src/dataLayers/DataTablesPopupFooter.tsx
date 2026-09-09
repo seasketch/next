@@ -38,8 +38,7 @@ export default function DataTablesPopupFooter({
   const [open, setOpen] = useState(false);
 
   const item = useMemo(
-    () =>
-      (tableOfContentsItems || []).find((i) => i.stableId === tocStableId),
+    () => (tableOfContentsItems || []).find((i) => i.stableId === tocStableId),
     [tableOfContentsItems, tocStableId]
   );
   const tables = item?.overlayDataTables || [];
@@ -51,9 +50,7 @@ export default function DataTablesPopupFooter({
 
   const activeStableId =
     layerStatesByTocStaticId[tocStableId]?.dataTable?.stableId;
-  const activeTable = tables.find(
-    (table) => table.stableId === activeStableId
-  );
+  const activeTable = tables.find((table) => table.stableId === activeStableId);
   const name = activeTable?.name;
 
   return (
@@ -76,13 +73,12 @@ export default function DataTablesPopupFooter({
           </Trans>
         ) : count === 1 ? (
           <Trans ns="homepage">
-            This layer includes a <strong>data table</strong> that can be
-            visualized on the map.
+            This layer includes a data table that can be visualized on the map.
           </Trans>
         ) : (
           <Trans ns="homepage">
-            This layer includes <strong>{{ count }} data tables</strong> that
-            can be visualized on the map.
+            This layer includes {{ count }} data tables that can be visualized
+            on the map.
           </Trans>
         )}
       </p>
