@@ -277,6 +277,7 @@ describe("change_logs", () => {
       [
         "data_table:created",
         "data_table:deleted",
+        "data_table:nodata",
         "data_table:renamed",
         "data_table:replaced",
         "data_table:rollback",
