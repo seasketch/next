@@ -1,5 +1,4 @@
 import SegmentControl from "../../components/SegmentControl";
-import { ToastViewport } from "../../components/Toast";
 import useSegmentState from "../../components/useSegmentState";
 import BackgroundJobList from "./BackgroundJobList";
 import BaseMapEditor from "./BasemapEditor";
@@ -58,7 +57,6 @@ export default memo(function LayerAdminSidebar() {
         style={{ maxHeight: 400 }}
         className="flex-0 overflow-y-hidden"
       />
-      <ToastViewport />
     </div>
   );
 });

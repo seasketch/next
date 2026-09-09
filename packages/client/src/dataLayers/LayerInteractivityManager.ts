@@ -67,7 +67,20 @@ export type InteractivityUIUpdate = Partial<{
   fixedBlocks: string[];
   sidebarPopupContent: string | undefined;
   sidebarPopupTitle: string | undefined;
+  /**
+   * Mount point for the Data Tables call-to-action inside the currently open
+   * map popup. React portals DataTablesPopupFooter into `element`.
+   */
+  dataTablesPopupTarget: DataTablesPopupFooterTarget | undefined;
+  /** TOC stableId of the layer shown in the sidebar popup, if any. */
+  sidebarPopupTocStableId: string | undefined;
 }>;
+
+/** Element within an open map popup that hosts the Data Tables footer CTA. */
+export type DataTablesPopupFooterTarget = {
+  element: HTMLElement;
+  tocStableId: string;
+};
 
 /** Active data-table proportional-symbol layer for value tooltips. */
 export type DataTableInteractiveLayer = {
@@ -119,7 +132,9 @@ export default class LayerInteractivityManager extends EventEmitter {
   /** The single open Mapbox popup, if any (vector, image, or iNaturalist). */
   private activePopup?: Popup;
   private customSources: { [sourceId: string]: CustomGLSource<any> } = {};
-  private tocItemLabels: { [stableId: string]: { label?: string } } = {};
+  private tocItemLabels: {
+    [stableId: string]: { label?: string; dataTableCount?: number };
+  } = {};
   private selectedFeature?: mapboxgl.FeatureIdentifier;
   private hoveredFeature?: mapboxgl.FeatureIdentifier;
   /** Bumps to drop stale async raster hover results. */
@@ -277,6 +292,7 @@ export default class LayerInteractivityManager extends EventEmitter {
     tocItemLabels: {
       [stableId: string]: {
         label?: string;
+        dataTableCount?: number;
       };
     }
   ) {
@@ -418,14 +434,62 @@ export default class LayerInteractivityManager extends EventEmitter {
     this.syncMouseMoveListener();
   }
 
-  private setActivePopup(popup: Popup) {
+  private setActivePopup(popup: Popup, footerTarget?: DataTablesPopupFooterTarget) {
     this.activePopup?.remove();
     this.activePopup = popup;
+    this.updateUI({ dataTablesPopupTarget: footerTarget });
     popup.once("close", () => {
       if (this.activePopup === popup) {
         this.activePopup = undefined;
+        this.updateUI({ dataTablesPopupTarget: undefined });
       }
     });
+  }
+
+  /**
+   * Close the open map popup, if any. Used by the Data Tables popup footer
+   * after a table is activated so the new visualization isn't obscured.
+   */
+  closeActivePopup() {
+    this.activePopup?.remove();
+    this.activePopup = undefined;
+  }
+
+  /** Resolve the TOC stableId of the overlay layer that produced a feature. */
+  private tocIdForFeature(
+    feature: MapboxGeoJSONFeature
+  ): string | undefined {
+    const dataLayer = isSeaSketchLayerId(feature.layer.id)
+      ? this.layers[layerIdFromStyleLayerId(feature.layer.id)]
+      : this.layers[feature.layer.id];
+    return dataLayer ? this.tocIdOfLayer(dataLayer) : undefined;
+  }
+
+  /**
+   * Wraps rendered popup HTML in a container and, if the source TOC item has
+   * data tables, appends an empty footer element. React (MapboxMap) portals
+   * the DataTablesPopupFooter call-to-action into that element, keeping the
+   * footer consistent across custom templates and all-columns popups.
+   */
+  private popupContentWithDataTablesFooter(
+    html: string,
+    tocStableId?: string
+  ): {
+    element: HTMLElement;
+    footerTarget?: DataTablesPopupFooterTarget;
+  } {
+    const container = document.createElement("div");
+    container.innerHTML = html;
+    if (
+      tocStableId &&
+      (this.tocItemLabels[tocStableId]?.dataTableCount || 0) > 0
+    ) {
+      const footer = document.createElement("div");
+      footer.className = "seasketch-data-tables-popup-footer";
+      container.appendChild(footer);
+      return { element: container, footerTarget: { element: footer, tocStableId } };
+    }
+    return { element: container };
   }
 
   private dismissOpenPopup() {
@@ -490,7 +554,9 @@ export default class LayerInteractivityManager extends EventEmitter {
       prev.fixedBlocks?.join("") !== next.fixedBlocks?.join("") ||
       prev.tooltip !== next.tooltip ||
       prev.sidebarPopupContent !== next.sidebarPopupContent ||
-      prev.sidebarPopupTitle !== next.sidebarPopupTitle
+      prev.sidebarPopupTitle !== next.sidebarPopupTitle ||
+      prev.sidebarPopupTocStableId !== next.sidebarPopupTocStableId ||
+      prev.dataTablesPopupTarget !== next.dataTablesPopupTarget
     ) {
       this._previousUIState = next;
       this._onUIUpdate(update);
@@ -616,11 +682,16 @@ export default class LayerInteractivityManager extends EventEmitter {
           this.rasterMustacheContext(rasterHit.hit, rasterHit.layer)
         );
         this.clearSidebarPopup();
+        const { element, footerTarget } = this.popupContentWithDataTablesFooter(
+          content,
+          this.tocIdOfLayer(rasterHit.layer.layer)
+        );
         this.setActivePopup(
           new Popup({ closeOnClick: true, closeButton: true })
             .setLngLat([e.lngLat.lng, e.lngLat.lat])
-            .setHTML(content)
-            .addTo(this.map!)
+            .setDOMContent(element)
+            .addTo(this.map!),
+          footerTarget
         );
         return;
       }
@@ -663,11 +734,17 @@ export default class LayerInteractivityManager extends EventEmitter {
         );
         if (interactivitySetting.type === InteractivityType.Popup) {
           this.clearSidebarPopup();
+          const { element, footerTarget } =
+            this.popupContentWithDataTablesFooter(
+              content,
+              this.tocIdForFeature(top)
+            );
           this.setActivePopup(
             new Popup({ closeOnClick: true, closeButton: true })
               .setLngLat([e.lngLat.lng, e.lngLat.lat])
-              .setHTML(content)
-              .addTo(this.map!)
+              .setDOMContent(element)
+              .addTo(this.map!),
+            footerTarget
           );
         } else {
           this.activePopup?.remove();
@@ -682,6 +759,7 @@ export default class LayerInteractivityManager extends EventEmitter {
           this.updateUI({
             sidebarPopupContent: content,
             sidebarPopupTitle: titleContent,
+            sidebarPopupTocStableId: this.tocIdForFeature(top),
           });
           this.setSelectedFeature(top);
         }
@@ -693,11 +771,7 @@ export default class LayerInteractivityManager extends EventEmitter {
         const lyr = this.layers[top.layer.id];
         // @ts-ignore
         const layerLabel = (this.tocItemLabels || {})[lyr?.tocId]?.label;
-        this.setActivePopup(
-          new Popup({ closeOnClick: true, closeButton: true })
-            .setLngLat([e.lngLat.lng, e.lngLat.lat])
-            .setHTML(
-              Mustache.render(
+        const allPropsContent = Mustache.render(
                 `
               <div class="">
               ${
@@ -726,13 +800,21 @@ export default class LayerInteractivityManager extends EventEmitter {
                 </div>
               </div>
             `,
-                {
-                  ...mustacheHelpers,
-                  properties: top.properties,
-                }
-              )
-            )
-            .addTo(this.map!)
+          {
+            ...mustacheHelpers,
+            properties: top.properties,
+          }
+        );
+        const { element, footerTarget } = this.popupContentWithDataTablesFooter(
+          allPropsContent,
+          this.tocIdForFeature(top)
+        );
+        this.setActivePopup(
+          new Popup({ closeOnClick: true, closeButton: true })
+            .setLngLat([e.lngLat.lng, e.lngLat.lat])
+            .setDOMContent(element)
+            .addTo(this.map!),
+          footerTarget
         );
         vectorPopupOpened = true;
       }
@@ -826,6 +908,7 @@ export default class LayerInteractivityManager extends EventEmitter {
     this.updateUI({
       sidebarPopupContent: undefined,
       sidebarPopupTitle: undefined,
+      sidebarPopupTocStableId: undefined,
     });
     this.setSelectedFeature(undefined);
   };

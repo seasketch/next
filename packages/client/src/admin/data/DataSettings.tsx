@@ -22,6 +22,8 @@ import { TableOfContentsMetadataModalProvider } from "../../dataLayers/TableOfCo
 import { LayerEditingContextProvider } from "./LayerEditingContext";
 import { DataDownloadModalProvider } from "../../dataLayers/DataDownloadModal";
 import { useCallback, useContext, useState } from "react";
+import useDataTableActivationFeedback from "../../dataLayers/useDataTableActivationFeedback";
+import { ToastViewport } from "../../components/Toast";
 
 /**
  * Reads legend state from context so it stays in sync with the manager.
@@ -47,22 +49,25 @@ function DataSettingsLegend() {
   const onLegendFocusComplete = useCallback(() => {
     setLegendFocusRequest(null);
   }, []);
+  useDataTableActivationFeedback(onDataTableActivated);
 
   if (legendProps.items.length === 0) return null;
   return (
-    <Legend
-      editable
-      backdropBlur
-      maxHeight={800}
-      className="absolute ml-5 top-5 z-10"
-      opacity={{}}
-      zOrder={{}}
-      map={manager?.map}
-      {...legendProps}
-      legendFocusRequest={legendFocusRequest}
-      onLegendFocusComplete={onLegendFocusComplete}
-      onDataTableActivated={onDataTableActivated}
-    />
+    <div className="absolute ml-5 top-5 z-10">
+      <Legend
+        editable
+        backdropBlur
+        maxHeight={800}
+        opacity={{}}
+        zOrder={{}}
+        map={manager?.map}
+        {...legendProps}
+        legendFocusRequest={legendFocusRequest}
+        onLegendFocusComplete={onLegendFocusComplete}
+        onDataTableActivated={onDataTableActivated}
+      />
+      <ToastViewport className="pointer-events-none absolute left-full top-0 ml-2 z-20" />
+    </div>
   );
 }
 

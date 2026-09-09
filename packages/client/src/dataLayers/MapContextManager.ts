@@ -527,6 +527,13 @@ class MapContextManager extends EventEmitter {
     this.debouncedUpdateStyle();
     this.debouncedUpdatePreferences();
     this.updateLegends();
+    if (next?.stableId && next.stableId !== previousTableId) {
+      this.emit("dataTableActivated", {
+        tocStableId,
+        stableId: next.stableId,
+        switchedFromTable: Boolean(previousTableId),
+      });
+    }
   }
 
   /**
@@ -4731,6 +4738,10 @@ export interface MapUIStateContextState {
   fixedBlocks: string[];
   sidebarPopupContent?: string;
   sidebarPopupTitle?: string;
+  /** TOC stableId of the layer shown in the sidebar popup, for the Data Tables footer */
+  sidebarPopupTocStableId?: string;
+  /** Mount point + layer for the Data Tables CTA portaled into the open map popup */
+  dataTablesPopupTarget?: { element: HTMLElement; tocStableId: string };
   displayedMapBookmark?: {
     id: string;
     errors: {

@@ -1,8 +1,9 @@
 import { AnimatePresence, motion } from "framer-motion";
+import { ReactNode } from "react";
 
 require("./sidebar-popup.css");
 
-export default function SidebarPopup(props: { content?: string, title?: string; onClose: () => void }) {
+export default function SidebarPopup(props: { content?: string, title?: string; onClose: () => void; footer?: ReactNode }) {
   return (
     <AnimatePresence>
       {props.content && <motion.div
@@ -18,6 +19,7 @@ export default function SidebarPopup(props: { content?: string, title?: string; 
           </div>
 
           <div className="p-4 overflow-y-auto flex-1" dangerouslySetInnerHTML={{ __html: props.content }} />
+          {props.footer}
         </div>
       </motion.div>}
 

@@ -7,6 +7,8 @@ import {
 } from "../dataLayers/MapContextManager";
 import Legend, { LegendFocusRequest } from "../dataLayers/Legend";
 import useCommonLegendProps from "../dataLayers/useCommonLegendProps";
+import useDataTableActivationFeedback from "../dataLayers/useDataTableActivationFeedback";
+import { ToastViewport } from "../components/Toast";
 
 export default function ProjectMapLegend({
   showByDefault = false,
@@ -48,24 +50,28 @@ export default function ProjectMapLegend({
   const onLegendFocusComplete = useCallback(() => {
     setLegendFocusRequest(null);
   }, []);
+  useDataTableActivationFeedback(onDataTableActivated);
 
   if (legendProps.items.length > 0) {
     return (
-      <Legend
-        className={`absolute transition-transform right-8 -top-1.5 m-4 z-[1]`}
-        backdropBlur
-        maxHeight={500}
-        opacity={{}}
-        zOrder={{}}
-        map={manager?.map}
-        loading={loading}
-        persistedStateKey="project-map-legend"
-        {...legendProps}
-        defaultToHidden={!showByDefault}
-        legendFocusRequest={legendFocusRequest}
-        onLegendFocusComplete={onLegendFocusComplete}
-        onDataTableActivated={onDataTableActivated}
-      />
+      <div className="absolute right-8 -top-1.5 m-4 z-[1]">
+        <Legend
+          className="transition-transform"
+          backdropBlur
+          maxHeight={500}
+          opacity={{}}
+          zOrder={{}}
+          map={manager?.map}
+          loading={loading}
+          persistedStateKey="project-map-legend"
+          {...legendProps}
+          defaultToHidden={!showByDefault}
+          legendFocusRequest={legendFocusRequest}
+          onLegendFocusComplete={onLegendFocusComplete}
+          onDataTableActivated={onDataTableActivated}
+        />
+        <ToastViewport className="pointer-events-none absolute right-full top-0 mr-2 z-20" />
+      </div>
     );
   } else {
     return null;

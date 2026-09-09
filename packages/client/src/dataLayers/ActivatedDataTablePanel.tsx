@@ -102,6 +102,7 @@ export default function ActivatedDataTablePanel({
             <li key={table.id}>
               <button
                 type="button"
+                aria-pressed={isActive}
                 onClick={() => {
                   if (isActive) {
                     manager?.setLayerDataTable(layerId, null);
@@ -114,15 +115,10 @@ export default function ActivatedDataTablePanel({
                   }
                 }}
                 className={clsx(
-                  "w-full flex items-start gap-2 text-left px-3 py-2 text-sm hover:bg-gray-50",
+                  "w-full flex items-center gap-3 text-left px-3 py-2 text-sm hover:bg-gray-50",
                   isActive && "bg-primary-600 bg-opacity-5"
                 )}
               >
-                <span className="w-4 pt-0.5 flex-none">
-                  {isActive && (
-                    <CheckIcon className="w-4 h-4 text-primary-600" />
-                  )}
-                </span>
                 <span className="flex-1 min-w-0">
                   <span className="block truncate font-medium">
                     {table.name}
@@ -131,6 +127,11 @@ export default function ActivatedDataTablePanel({
                     {/* eslint-disable-next-line i18next/no-literal-string */}
                     {`${table.rowCount.toLocaleString()} ${t("rows")}`}
                   </span>
+                </span>
+                <span className="w-4 flex-none" aria-hidden>
+                  {isActive && (
+                    <CheckIcon className="w-4 h-4 text-primary-600" />
+                  )}
                 </span>
               </button>
             </li>

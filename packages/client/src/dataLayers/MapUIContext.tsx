@@ -53,7 +53,9 @@ function buildVisibleLayers(
   visibleLayers: DataLayerDetailsFragment[];
   dataSources: { [id: string]: DataSourceDetailsFragment };
   basemap: BasemapDetailsFragment | undefined;
-  tocItemLabels: { [stableId: string]: { label?: string } };
+  tocItemLabels: {
+    [stableId: string]: { label?: string; dataTableCount?: number };
+  };
 } {
   const dataLayers = overlay.dataLayers ?? [];
   const dataSourcesList = overlay.dataSources ?? [];
@@ -72,11 +74,16 @@ function buildVisibleLayers(
   }
 
   const visibleLayers: DataLayerDetailsFragment[] = [];
-  const tocItemLabels: { [stableId: string]: { label?: string } } = {};
+  const tocItemLabels: {
+    [stableId: string]: { label?: string; dataTableCount?: number };
+  } = {};
 
   for (const item of tableOfContentsItems) {
     const stableId = item.stableId;
-    tocItemLabels[stableId] = { label: item.title ?? undefined };
+    tocItemLabels[stableId] = {
+      label: item.title ?? undefined,
+      dataTableCount: item.overlayDataTables?.length || 0,
+    };
     const state = layerStates[stableId];
     if (!state?.visible || state.hidden) continue;
     const dataLayerId = item.dataLayerId;
@@ -120,6 +127,10 @@ interface InteractivityUIState {
   fixedBlocks: string[];
   sidebarPopupContent: string | undefined;
   sidebarPopupTitle: string | undefined;
+  sidebarPopupTocStableId: string | undefined;
+  dataTablesPopupTarget:
+    | { element: HTMLElement; tocStableId: string }
+    | undefined;
 }
 
 const initialInteractivityUIState: InteractivityUIState = {
@@ -128,6 +139,8 @@ const initialInteractivityUIState: InteractivityUIState = {
   fixedBlocks: [],
   sidebarPopupContent: undefined,
   sidebarPopupTitle: undefined,
+  sidebarPopupTocStableId: undefined,
+  dataTablesPopupTarget: undefined,
 };
 
 /**
@@ -172,6 +185,20 @@ function interactivityUIReducer(
     state.sidebarPopupTitle !== update.sidebarPopupTitle
   ) {
     next.sidebarPopupTitle = update.sidebarPopupTitle;
+    changed = true;
+  }
+  if (
+    "sidebarPopupTocStableId" in update &&
+    state.sidebarPopupTocStableId !== update.sidebarPopupTocStableId
+  ) {
+    next.sidebarPopupTocStableId = update.sidebarPopupTocStableId;
+    changed = true;
+  }
+  if (
+    "dataTablesPopupTarget" in update &&
+    state.dataTablesPopupTarget !== update.dataTablesPopupTarget
+  ) {
+    next.dataTablesPopupTarget = update.dataTablesPopupTarget;
     changed = true;
   }
 
@@ -496,6 +523,8 @@ export default function MapUIProvider({
       fixedBlocks: interactivityUI.fixedBlocks,
       sidebarPopupContent: interactivityUI.sidebarPopupContent,
       sidebarPopupTitle: interactivityUI.sidebarPopupTitle,
+      sidebarPopupTocStableId: interactivityUI.sidebarPopupTocStableId,
+      dataTablesPopupTarget: interactivityUI.dataTablesPopupTarget,
       displayedMapBookmark,
       loadingOverlay,
       showLoadingOverlay,

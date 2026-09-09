@@ -19,8 +19,14 @@ type ToastItem = {
 
 const AUTO_DISMISS_MS = 1200;
 
+type ToastOptions = {
+  description?: string;
+  /** Auto-dismiss delay. Defaults to AUTO_DISMISS_MS. */
+  duration?: number;
+};
+
 const ToastContext = createContext<{
-  toast: (title: string, options?: { description?: string }) => void;
+  toast: (title: string, options?: ToastOptions) => void;
   current: ToastItem | null;
   visible: boolean;
 }>({
@@ -32,18 +38,19 @@ const ToastContext = createContext<{
 export function ToastProvider({ children }: { children?: ReactNode }) {
   const [current, setCurrent] = useState<ToastItem | null>(null);
   const [visible, setVisible] = useState(false);
+  const [duration, setDuration] = useState(AUTO_DISMISS_MS);
 
-  const toast = useCallback(
-    (title: string, options?: { description?: string }) => {
-      setCurrent({
-        id: Date.now(),
-        title,
-        description: options?.description,
-      });
-      setVisible(true);
-    },
-    []
-  );
+  const toast = useCallback((title: string, options?: ToastOptions) => {
+    setCurrent({
+      id: Date.now(),
+      title,
+      description: options?.description,
+    });
+    setDuration(
+      typeof options?.duration === "number" ? options.duration : AUTO_DISMISS_MS
+    );
+    setVisible(true);
+  }, []);
 
   useEffect(() => {
     if (!visible || !current) {
@@ -51,11 +58,11 @@ export function ToastProvider({ children }: { children?: ReactNode }) {
     }
     const timeout = setTimeout(() => {
       setVisible(false);
-    }, AUTO_DISMISS_MS);
+    }, duration);
     return () => {
       clearTimeout(timeout);
     };
-  }, [visible, current]);
+  }, [visible, current, duration]);
 
   const value = useMemo(
     () => ({ toast, current, visible }),
@@ -67,13 +74,16 @@ export function ToastProvider({ children }: { children?: ReactNode }) {
   );
 }
 
-export function ToastViewport() {
+export function ToastViewport({ className }: { className?: string }) {
   const { current, visible } = useContext(ToastContext);
 
   return (
     <div
       aria-live="polite"
-      className="pointer-events-none absolute bottom-4 right-4 z-20"
+      className={
+        className ||
+        "pointer-events-none absolute bottom-4 right-4 z-20"
+      }
     >
       <Transition
         show={visible && Boolean(current)}
@@ -85,17 +95,16 @@ export function ToastViewport() {
         leaveFrom="opacity-100"
         leaveTo="opacity-0"
       >
-        <div className="flex max-w-xs items-center gap-1.5 rounded-full bg-gray-900/90 px-2.5 py-1 text-white shadow-md">
+        <div className="flex w-64 items-start gap-1.5 rounded-md bg-gray-900/90 px-3 py-2 text-white shadow-md">
           <CheckCircleIcon
-            className="h-3.5 w-3.5 flex-none text-primary-300"
+            className="h-3.5 w-3.5 flex-none text-primary-300 mt-0.5"
             aria-hidden="true"
           />
-          <p className="truncate text-xs leading-5">
+          <p className="text-xs leading-5">
             <span className="font-medium">{current?.title}</span>
             {current?.description && (
-              <span className="font-normal text-gray-300">
-                {/* eslint-disable-next-line i18next/no-literal-string */}
-                {` · ${current.description}`}
+              <span className="mt-0.5 block font-normal text-gray-300">
+                {current.description}
               </span>
             )}
           </p>

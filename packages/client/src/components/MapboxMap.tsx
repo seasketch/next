@@ -20,6 +20,7 @@ import MapBookmarkDetailsOverlay from "./MapBookmarkDetailsOverlay";
 import { CogIcon } from "@heroicons/react/outline";
 import { MeasurementToolsOverlay } from "../MeasureControl";
 import SidebarPopup from "../dataLayers/SidebarPopup";
+import DataTablesPopupFooter from "../dataLayers/DataTablesPopupFooter";
 import TimeSlider from "../dataLayers/TimeSlider";
 import clsx from "clsx";
 import * as Popover from "@radix-ui/react-popover";
@@ -230,9 +231,26 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
           }}
           content={uiState.sidebarPopupContent}
           title={uiState.sidebarPopupTitle}
+          footer={
+            uiState.sidebarPopupTocStableId ? (
+              <DataTablesPopupFooter
+                tocStableId={uiState.sidebarPopupTocStableId}
+                variant="sidebar"
+              />
+            ) : undefined
+          }
         />,
         document.body
       )}
+
+      {/* Data Tables call-to-action rendered into the open map popup */}
+      {uiState.dataTablesPopupTarget &&
+        createPortal(
+          <DataTablesPopupFooter
+            tocStableId={uiState.dataTablesPopupTarget.tocStableId}
+          />,
+          uiState.dataTablesPopupTarget.element
+        )}
 
       {props.mapSettingsPopupActions && (
         <Popover.Root>
