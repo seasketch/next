@@ -326,7 +326,12 @@ export interface ResolvedDataTableVisualization {
  *   non-empty; otherwise falls back to the user's choice. When neither
  *   admin constraints nor a user choice supply a column, callers should
  *   treat **all numeric columns** (from column-stats) as valid and pick a
- *   default — see {@link DataTableVisualizationControls}.
+ *   default — see {@link effectiveDataTableVisualizationColumn}.
+ *
+ * Legend labels and persisted layer state must use this resolved column
+ * (or {@link effectiveDataTableVisualizationColumn}), not a raw stored
+ * pick. A leftover column from first-numeric defaulting or an earlier
+ * admin setting can be invalid once visualizationColumns is set.
  */
 export function resolveDataTableVisualizationSettings(
   constraints: DataTableVisualizationConstraints,
@@ -365,6 +370,18 @@ export function resolveDataTableVisualizationSettings(
     filters: userChoice.filters,
     requiredFilterColumns,
   };
+}
+
+/**
+ * Column the legend should show and persist. Same value the map query
+ * uses: a stored pick only when it is still allowed, otherwise the first
+ * admin-allowed column, otherwise a numeric default from column-stats.
+ */
+export function effectiveDataTableVisualizationColumn(
+  resolved: Pick<ResolvedDataTableVisualization, "column">,
+  numericColumns: string[]
+): string | undefined {
+  return resolved.column || pickDefaultDataTableColumn(numericColumns);
 }
 
 /** Admin-configured map-value columns, or `[]` when any numeric column is allowed. */

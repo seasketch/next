@@ -3,11 +3,13 @@ import {
   allowedDataTableVisualizationColumns,
   configuredDataTableVisualizationColumns,
   dataTableFilterLabel,
+  effectiveDataTableVisualizationColumn,
   hiddenDataTableFilterColumns,
   isAlwaysHiddenFilterColumn,
   isFilterColumnLabels,
   parseFilterColumnLabels,
   requiredDataTableFilterColumns,
+  resolveDataTableVisualizationSettings,
 } from "./dataTableQueryApi";
 
 describe("isFilterColumnLabels", () => {
@@ -102,6 +104,53 @@ describe("isAlwaysHiddenFilterColumn", () => {
       true
     );
     expect(isAlwaysHiddenFilterColumn("", undefined, null)).toBe(true);
+  });
+});
+
+describe("resolveDataTableVisualizationSettings", () => {
+  it("falls back to the first allowed column when the stored pick is not allowed", () => {
+    expect(
+      resolveDataTableVisualizationSettings(
+        { visualizationColumns: ["Amount"] },
+        { column: "Latitude", op: "mean" }
+      ).column
+    ).toBe("Amount");
+  });
+
+  it("keeps a stored pick that is still allowed", () => {
+    expect(
+      resolveDataTableVisualizationSettings(
+        { visualizationColumns: ["Amount", "Count"] },
+        { column: "Count" }
+      ).column
+    ).toBe("Count");
+  });
+
+  it("keeps a stored pick when any numeric column is allowed", () => {
+    expect(
+      resolveDataTableVisualizationSettings({}, { column: "Latitude" }).column
+    ).toBe("Latitude");
+  });
+});
+
+describe("effectiveDataTableVisualizationColumn", () => {
+  it("prefers the resolved query column over a stale stored pick", () => {
+    expect(
+      effectiveDataTableVisualizationColumn(
+        { column: "Amount" },
+        ["Latitude", "Longitude", "Amount"]
+      )
+    ).toBe("Amount");
+  });
+
+  it("picks a numeric default only when nothing is resolved", () => {
+    expect(
+      effectiveDataTableVisualizationColumn({ column: undefined }, [
+        "Latitude",
+        "count",
+        "Amount",
+      ])
+    ).toBe("count");
   });
 });
 

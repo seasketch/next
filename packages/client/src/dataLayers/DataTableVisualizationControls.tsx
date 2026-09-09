@@ -10,7 +10,7 @@ import {
   DataTableVisualizationMetadata,
   dataTableFilterLabel,
   parseFilterColumnLabels,
-  pickDefaultDataTableColumn,
+  effectiveDataTableVisualizationColumn,
   resolveDataTableVisualizationSettings,
 } from "./dataTableQueryApi";
 import {
@@ -186,12 +186,12 @@ export default function DataTableVisualizationControls({
     [dataTable?.column, dataTable?.filters, dataTable?.op]
   );
   const resolved = resolveDataTableVisualizationSettings(metadata, userChoice);
-  const defaultColumn =
-    resolved.column ||
-    (allowedColumns.length > 0
-      ? columnChoices[0]
-      : pickDefaultDataTableColumn(columnChoices));
-  const effectiveColumn = userChoice.column || defaultColumn;
+  // Use the query column, not a raw stored pick. A first-numeric default
+  // (e.g. Latitude) can linger after admin limits the table to Amount.
+  const effectiveColumn = effectiveDataTableVisualizationColumn(
+    resolved,
+    columnChoices
+  );
   const showColumn = resolved.op !== "count" || Boolean(effectiveColumn);
   const tableStableId = dataTable?.stableId;
 

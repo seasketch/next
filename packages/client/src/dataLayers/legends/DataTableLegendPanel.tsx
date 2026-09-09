@@ -17,6 +17,7 @@ import {
   omitFiltersForColumns,
   parseFilterColumnLabels,
   requiredDataTableFilterColumns,
+  effectiveDataTableVisualizationColumn,
   resolveDataTableVisualizationSettings,
   temporalSourceFilterColumns,
 } from "../dataTableQueryApi";
@@ -131,7 +132,6 @@ export default function DataTableLegendPanel({
   const resolved = tableMetadata
     ? resolveDataTableVisualizationSettings(tableMetadata, userChoice)
     : { op, column, requiredFilterColumns: [] as string[] };
-  const effectiveColumn = userChoice.column || resolved.column || column;
   const visualizedColumns = useMemo(
     () =>
       allowedDataTableVisualizationColumns(
@@ -140,6 +140,9 @@ export default function DataTableLegendPanel({
       ),
     [columnStats, tableMetadata]
   );
+  const effectiveColumn =
+    effectiveDataTableVisualizationColumn(resolved, visualizedColumns) ||
+    column;
   const requiredFilterColumns = useMemo(
     () =>
       tableMetadata ? requiredDataTableFilterColumns(tableMetadata) : [],
@@ -235,7 +238,7 @@ export default function DataTableLegendPanel({
     }
     manager.setLayerDataTable(layerId, {
       stableId,
-      column: latest?.column ?? effectiveColumn,
+      column: effectiveColumn ?? latest?.column,
       op: latest?.op || userChoice.op || op,
       filters: ensured,
     });
@@ -376,7 +379,7 @@ export default function DataTableLegendPanel({
             }
             manager?.setLayerDataTable(layerId, {
               stableId: latest.stableId,
-              column: latest.column ?? effectiveColumn,
+              column: effectiveColumn ?? latest.column,
               op: latest.op || userChoice.op || op,
               filters: ensureRequiredDataTableFilters(
                 filters,

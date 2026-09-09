@@ -41,4 +41,33 @@ describe("DataTableVisualizationControls labels", () => {
       screen.queryByLabelText("Visualize column")?.textContent
     ).not.toMatch(/CPUE_catch_per_angler_hour/);
   });
+
+  it("labels the admin-allowed column when layer state still has a stale pick", () => {
+    render(
+      <MapOverlayContext.Provider
+        value={{
+          layerStatesByTocStaticId: {
+            sites: {
+              dataTable: {
+                stableId: "catch",
+                column: "Latitude",
+                op: "mean",
+              },
+            },
+          },
+          styleHash: "",
+        }}
+      >
+        <DataTableVisualizationControls
+          layerId="sites"
+          metadata={{
+            visualizationColumns: ["Amount"],
+            visualizationOps: ["mean"],
+          }}
+        />
+      </MapOverlayContext.Provider>
+    );
+    expect(screen.getByText("Amount")).toBeTruthy();
+    expect(screen.queryByText("Latitude")).toBeNull();
+  });
 });
