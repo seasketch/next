@@ -8,7 +8,10 @@ import {
   StopIcon,
   UserAddIcon,
 } from "@heroicons/react/outline";
+import Fuse from "fuse.js";
 import ProfilePhoto from "./ProfilePhoto";
+import HighlightedText from "./HighlightedText";
+import { UserListDetailsFragment } from "../../generated/graphql";
 
 export default function ParticipantRow({
   index,
@@ -25,6 +28,7 @@ export default function ParticipantRow({
   needsApproval,
   denied,
   approved,
+  matches,
 }: {
   picture?: string;
   fullname?: string;
@@ -40,6 +44,7 @@ export default function ParticipantRow({
   needsApproval?: boolean;
   denied?: boolean;
   approved?: boolean;
+  matches?: Fuse.FuseResult<UserListDetailsFragment>;
 }) {
   return (
     <button
@@ -68,7 +73,16 @@ export default function ParticipantRow({
         className="truncate text-sm xl:text-base flex-grow"
         style={{ lineHeight: "1.5rem" }}
       >
-        {fullname || email || canonicalEmail}
+        <HighlightedText
+          text={fullname || email || canonicalEmail}
+          match={
+            fullname
+              ? matches?.matches?.find((m) => m.key === "profile.fullname")
+              : email
+              ? matches?.matches?.find((m) => m.key === "profile.email")
+              : matches?.matches?.find((m) => m.key === "canonicalEmail")
+          }
+        />
       </span>
       <GroupList
         needsApproval={needsApproval}

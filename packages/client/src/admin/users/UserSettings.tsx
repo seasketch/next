@@ -200,6 +200,7 @@ function UserSettings() {
               projectId={data.projectBySlug.id}
               slug={slug}
               adminsOnly={false}
+              accessRequests
             />
           </Route>
           <Route

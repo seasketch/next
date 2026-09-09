@@ -19,11 +19,11 @@ import {
 import { useHistory, useParams } from "react-router";
 import InviteRow from "./InviteRow";
 import EditInviteModal from "./EditInviteModal";
-import { SearchIcon } from "@heroicons/react/outline";
 import Fuse from "fuse.js";
 import { useHotkeys } from "react-hotkeys-hook";
-import { XCircleIcon } from "@heroicons/react/solid";
 import useDialog from "../../components/useDialog";
+import { downloadCsv, invitesExportFilename, invitesToCsv } from "./exportCsv";
+import ListSearchInput from "./ListSearchInput";
 
 interface Props {
   invites: InviteDetailsFragment[];
@@ -151,50 +151,18 @@ function InviteList(props: Props) {
   );
 
   return (
-    <div className="min-h-full flex-1 flex-col flex max-w-6xl border-r">
+    <div className="min-h-full flex-1 flex-col flex w-full min-w-0">
       <div
-        className="flex-none shadow bg-cool-gray-50 p-2 flex"
+        className="flex-none shadow bg-cool-gray-50 px-3 py-2 flex items-center space-x-2"
         style={{ zIndex: 1 }}
       >
-        {/* <Button small label={<Trans ns="admin">Invite Users</Trans>} /> */}
-        <div className="px-3 max-w-xs">
-          <label htmlFor="search" className="sr-only">
-            <Trans ns="admin">Search</Trans>
-          </label>
-          <div className="mt-1 relative rounded-md shadow-sm">
-            <div
-              className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none"
-              aria-hidden="true"
-            >
-              <SearchIcon
-                className="mr-3 h-4 w-4 text-gray-400"
-                aria-hidden="true"
-              />
-            </div>
-            <input
-              ref={searchBar}
-              type="text"
-              name="search"
-              id="search"
-              className="focus:ring-blue-300 focus:border-blue-300 block w-full pl-9 sm:text-sm border-gray-300 rounded-md"
-              placeholder={t("Search")}
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            <div
-              className={`${
-                query?.length > 0 ? "visible" : "hidden"
-              } cursor-pointer absolute inset-y-0 right-2 pl-3 flex items-center`}
-              onClick={() => setQuery("")}
-              aria-hidden="true"
-            >
-              <XCircleIcon className="w-4 h-4 text-gray-400" />
-            </div>
-          </div>
-        </div>
+        <ListSearchInput
+          value={query}
+          onChange={setQuery}
+          inputRef={searchBar}
+        />
         {status.length === 1 && status[0] === InviteStatus.Unsent && (
           <Button
-            className="mt-1"
             label={<Trans ns="admin">Send All Invites</Trans>}
             onClick={async () => {
               if (
@@ -211,6 +179,17 @@ function InviteList(props: Props) {
             }}
           />
         )}
+        <div className="flex-1" />
+        <Button
+          disabled={invites.length === 0}
+          label={t("Export to CSV")}
+          onClick={() => {
+            downloadCsv(
+              invitesExportFilename(props.slug, status),
+              invitesToCsv(invites)
+            );
+          }}
+        />
       </div>
 
       <div className="flex-grow overflow-y-auto">

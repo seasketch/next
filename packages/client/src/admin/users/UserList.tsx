@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { AutoSizer } from "react-virtualized";
 import { FixedSizeList as List } from "react-window";
 import ParticipantRow from "./ParticipantRow";
@@ -7,13 +7,16 @@ import { Trans, useTranslation } from "react-i18next";
 import ParticipantModal from "./ParticipantModal";
 import Button from "../../components/Button";
 import {
-  ParticipationStatus,
   useDeleteGroupMutation,
   useRenameGroupMutation,
   UserListDetailsFragment,
 } from "../../generated/graphql";
 import { useHistory } from "react-router";
 import useDialog from "../../components/useDialog";
+import { downloadCsv, usersExportFilename, usersToCsv } from "./exportCsv";
+import Fuse from "fuse.js";
+import { useHotkeys } from "react-hotkeys-hook";
+import ListSearchInput from "./ListSearchInput";
 
 interface UserListProps {
   users: UserListDetailsFragment[];
@@ -22,6 +25,7 @@ interface UserListProps {
   groupId?: number;
   groupName?: string;
   adminsOnly: boolean;
+  accessRequests?: boolean;
 }
 
 export default function UserList(props: UserListProps) {
@@ -43,61 +47,112 @@ export default function UserList(props: UserListProps) {
 
   const [renameGroup] = useRenameGroupMutation();
 
-  let participants = props.users;
-  if (props.adminsOnly) {
-    participants = props.users.filter((u) => u.isAdmin);
-  }
-  if (props.groupId) {
-    participants = props.users.filter(
-      (u) => !!u.groups?.find((g) => g.id === props.groupId)
-    );
-  }
-
-  const Row = ({ index, style }: { index: number; style: any }) => {
-    const user = participants ? participants[index] : undefined;
-    if (!user) {
-      return (
-        <div
-          style={style}
-          className="w-full bg-white p-1 px-2 flex items-center relative border-b border-opacity-10"
-        >
-          <Skeleton className="w-6 h-6 rounded-full mr-2" />
-          <Skeleton className="w-full h-1/2 rounded" />
-        </div>
-      );
-    } else {
-      return (
-        <ParticipantRow
-          index={index}
-          style={style}
-          picture={user.profile?.picture || undefined}
-          email={user.profile?.email}
-          fullname={user.profile?.fullname || undefined}
-          isAdmin={!!user.isAdmin}
-          canonicalEmail={user.canonicalEmail!}
-          groups={(user.groups || []).map((g) => g.name!)}
-          onClick={() => setOpenModalUserId(user.id)}
-          isBanned={user.bannedFromForums || false}
-          needsApproval={user.needsAccessRequestApproval || false}
-          approved={Boolean(user.approvedBy)}
-          denied={Boolean(user.deniedBy)}
-        />
+  const participants = useMemo(() => {
+    let users = props.users;
+    if (props.adminsOnly) {
+      users = users.filter((u) => u.isAdmin);
+    }
+    if (props.groupId) {
+      users = users.filter(
+        (u) => !!u.groups?.find((g) => g.id === props.groupId)
       );
     }
-  };
+    return users;
+  }, [props.users, props.adminsOnly, props.groupId]);
+
+  const searchBar = useRef<HTMLInputElement>(null);
+  useHotkeys("ctrl+f, ⌘+f", (e) => {
+    searchBar.current?.focus();
+    e.preventDefault();
+    return false;
+  });
+  const [query, setQuery] = useState("");
+  const searchIndex = useMemo(
+    () =>
+      new Fuse(participants, {
+        includeMatches: true,
+        keys: [
+          "profile.fullname",
+          "profile.nickname",
+          "profile.email",
+          "canonicalEmail",
+          "groups.name",
+        ],
+        isCaseSensitive: false,
+        includeScore: true,
+        threshold: 0.25,
+      }),
+    [participants]
+  );
+  const searchResults = useMemo(() => {
+    if (!query) {
+      return undefined;
+    }
+    try {
+      return searchIndex.search(query);
+    } catch (e) {
+      return undefined;
+    }
+  }, [query, searchIndex]);
+
+  const displayed = searchResults
+    ? searchResults.map((result) => result.item)
+    : participants;
+
+  const Row = useCallback(
+    ({ index, style }: { index: number; style: any }) => {
+      const user = displayed ? displayed[index] : undefined;
+      if (!user) {
+        return (
+          <div
+            style={style}
+            className="w-full bg-white p-1 px-2 flex items-center relative border-b border-opacity-10"
+          >
+            <Skeleton className="w-6 h-6 rounded-full mr-2" />
+            <Skeleton className="w-full h-1/2 rounded" />
+          </div>
+        );
+      } else {
+        return (
+          <ParticipantRow
+            index={index}
+            style={style}
+            picture={user.profile?.picture || undefined}
+            email={user.profile?.email}
+            fullname={user.profile?.fullname || undefined}
+            isAdmin={!!user.isAdmin}
+            canonicalEmail={user.canonicalEmail!}
+            groups={(user.groups || []).map((g) => g.name!)}
+            onClick={() => setOpenModalUserId(user.id)}
+            isBanned={user.bannedFromForums || false}
+            needsApproval={user.needsAccessRequestApproval || false}
+            approved={Boolean(user.approvedBy)}
+            denied={Boolean(user.deniedBy)}
+            matches={searchResults ? searchResults[index] : undefined}
+          />
+        );
+      }
+    },
+    [displayed, searchResults]
+  );
 
   const { prompt, confirmDelete } = useDialog();
 
   return (
-    <div className="min-h-full flex-1 flex-col flex max-w-6xl border-r">
+    <div className="min-h-full flex-1 flex-col flex w-full min-w-0">
       <div
-        className="flex-none shadow bg-cool-gray-50 p-2 space-x-2"
+        className="flex-none shadow bg-cool-gray-50 px-3 py-2 flex items-center space-x-2"
         style={{ zIndex: 1 }}
       >
+        <ListSearchInput
+          id="user-search"
+          value={query}
+          onChange={setQuery}
+          inputRef={searchBar}
+        />
         {props.groupId && (
           <>
             <Button
-              small
               label={t("Rename Group")}
               onClick={() => {
                 prompt({
@@ -139,7 +194,6 @@ export default function UserList(props: UserListProps) {
               }}
             />
             <Button
-              small
               label={t("Delete Group")}
               onClick={() => {
                 confirmDelete({
@@ -154,6 +208,14 @@ export default function UserList(props: UserListProps) {
             />
           </>
         )}
+        <div className="flex-1" />
+        <Button
+          disabled={displayed.length === 0}
+          label={t("Export to CSV")}
+          onClick={() => {
+            downloadCsv(usersExportFilename(props), usersToCsv(displayed));
+          }}
+        />
       </div>
 
       <div className="flex-grow overflow-y-auto">
@@ -163,7 +225,7 @@ export default function UserList(props: UserListProps) {
               <List
                 height={height}
                 width={width}
-                itemCount={participants.length}
+                itemCount={displayed.length}
                 itemSize={40}
               >
                 {Row}
@@ -171,9 +233,13 @@ export default function UserList(props: UserListProps) {
             </>
           )}
         </AutoSizer>
-        {participants.length === 0 && (
+        {displayed.length === 0 && (
           <div className="mt-4 ml-auto mr-auto w-56 text-gray-500 text-center border-4 border-dashed rounded-lg p-4">
-            <Trans ns="admin">This group has no users</Trans>
+            {query ? (
+              <Trans ns="admin">None found</Trans>
+            ) : (
+              <Trans ns="admin">This group has no users</Trans>
+            )}
           </div>
         )}
         {openModalUserId && (

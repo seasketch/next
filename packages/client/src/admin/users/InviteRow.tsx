@@ -8,7 +8,7 @@ import { GroupList } from "./ParticipantRow";
 import InviteIcon from "./InviteIcon";
 import Fuse from "fuse.js";
 import { InviteDetailsFragment, InviteStatus } from "../../generated/graphql";
-import strind from "strind";
+import HighlightedText from "./HighlightedText";
 
 function InviteRow({
   index,
@@ -93,42 +93,6 @@ function InviteRow({
       <GroupList isAdmin={makeAdmin} groups={groups.map((g) => g.name)} />
     </button>
   );
-}
-
-function HighlightedText({
-  match,
-  text,
-}: {
-  match?: Fuse.FuseResultMatch;
-  text?: string;
-}) {
-  if (!text) {
-    return <span></span>;
-  } else if (match) {
-    const parts = strind(text, [...match.indices], ({ chars, matches }) => {
-      return {
-        text: chars,
-        isHighlighted: matches,
-      };
-    });
-    return (
-      <>
-        {(parts.matched as { text: string; isHighlighted: boolean }[]).map(
-          ({ text, isHighlighted }) => {
-            return (
-              <span
-                className={`${isHighlighted ? "bg-yellow-100" : "bg-white"}`}
-              >
-                {text}
-              </span>
-            );
-          }
-        )}
-      </>
-    );
-  } else {
-    return <span>{text}</span>;
-  }
 }
 
 // InviteRow.whyDidYouRender = true;
