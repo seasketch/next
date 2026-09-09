@@ -6,6 +6,13 @@ export {
   expandTemporalValue,
   isTemporalInfo,
 } from "./temporal";
+export * from "./nodata";
+export {
+  isDataTableNodataConfig,
+  isDataTableNodataValue,
+  nodataValueMatches,
+  normalizeNodataValues,
+} from "./nodata";
 
 /**
  * Attribute type as translated to a javacsript type

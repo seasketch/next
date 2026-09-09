@@ -259,7 +259,8 @@ CREATE TYPE public.change_log_field_group AS ENUM (
     'data_table:rollback',
     'data_table:visualization_settings_updated',
     'layer:temporal',
-    'data_table:temporal'
+    'data_table:temporal',
+    'data_table:nodata'
 );
 
 
@@ -994,10 +995,9 @@ CREATE TYPE public.spatial_metric_type AS ENUM (
     'presence_table',
     'contextualized_mean',
     'overlay_area',
-    'column_stats',
     'column_values',
-    'raster_stats',
     'distance_to_shore',
+    'raster_stats',
     'raster_overlay_area',
     'ous_demographics'
 );
@@ -1684,8 +1684,8 @@ CREATE TABLE public.sketch_classes (
     filter_api_version integer DEFAULT 1 NOT NULL,
     filter_api_server_location text,
     is_geography_clipping_enabled boolean DEFAULT false NOT NULL,
-    report_id integer,
     draft_report_id integer,
+    report_id integer,
     preview_new_reports boolean DEFAULT false NOT NULL,
     CONSTRAINT sketch_classes_geoprocessing_client_url_check CHECK ((geoprocessing_client_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
     CONSTRAINT sketch_classes_geoprocessing_project_url_check CHECK ((geoprocessing_project_url ~* 'https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,255}\.[a-z]{2,9}\y([-a-zA-Z0-9@:%_\+.~#?&//=]*)$'::text)),
@@ -3777,6 +3777,7 @@ $$;
 
 CREATE FUNCTION public.generate_export_id(id integer, export_id text, body jsonb) RETURNS text
     LANGUAGE plpgsql IMMUTABLE
+    SET search_path TO 'public', 'pg_catalog'
     AS $$
     declare
       collected_text text;
@@ -3799,6 +3800,7 @@ CREATE FUNCTION public.generate_export_id(id integer, export_id text, body jsonb
 
 CREATE FUNCTION public.generate_label(id integer, body jsonb) RETURNS text
     LANGUAGE plpgsql IMMUTABLE
+    SET search_path TO 'public', 'pg_catalog'
     AS $$
     declare
       collected_text text;
@@ -5898,6 +5900,8 @@ CREATE TABLE public.overlay_data_tables (
     temporal jsonb,
     hidden_filter_columns text[] DEFAULT '{}'::text[],
     filter_column_labels jsonb DEFAULT '{}'::jsonb,
+    nodata_values jsonb DEFAULT '[]'::jsonb NOT NULL,
+    source_parquet_remote text,
     CONSTRAINT overlay_data_tables_version_positive CHECK ((version > 0))
 );
 
@@ -5959,10 +5963,24 @@ COMMENT ON COLUMN public.overlay_data_tables.filter_column_labels IS 'Custom dis
 
 
 --
--- Name: complete_overlay_data_table_upload(uuid, text, text, text, integer, text, text, jsonb); Type: FUNCTION; Schema: public; Owner: -
+-- Name: COLUMN overlay_data_tables.nodata_values; Type: COMMENT; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.complete_overlay_data_table_upload(job_id uuid, p_name text, p_join_column text, p_overlay_join_column text, p_row_count integer, p_parquet_remote text, p_column_stats_remote text, p_temporal jsonb DEFAULT NULL::jsonb) RETURNS public.overlay_data_tables
+COMMENT ON COLUMN public.overlay_data_tables.nodata_values IS 'Sentinel values rewritten to SQL NULL in parquet. Empty cells are always no-data. @omit create,update';
+
+
+--
+-- Name: COLUMN overlay_data_tables.source_parquet_remote; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.overlay_data_tables.source_parquet_remote IS 'Immutable pre-nodata parquet used as the reprocess source so sentinels can be added or removed. @omit';
+
+
+--
+-- Name: complete_overlay_data_table_upload(uuid, text, text, text, integer, text, text, jsonb, jsonb, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.complete_overlay_data_table_upload(job_id uuid, p_name text, p_join_column text, p_overlay_join_column text, p_row_count integer, p_parquet_remote text, p_column_stats_remote text, p_temporal jsonb DEFAULT NULL::jsonb, p_nodata_values jsonb DEFAULT NULL::jsonb, p_source_parquet_remote text DEFAULT NULL::text) RETURNS public.overlay_data_tables
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
 declare
@@ -5972,6 +5990,7 @@ declare
   old_row overlay_data_tables;
   editor_id int;
   new_version int := 1;
+  next_nodata jsonb;
 begin
   select * into upload
   from overlay_data_table_uploads
@@ -6000,6 +6019,11 @@ begin
     where id = old_row.id;
   end if;
 
+  next_nodata := coalesce(p_nodata_values, old_row.nodata_values, '[]'::jsonb);
+  if jsonb_typeof(next_nodata) <> 'array' then
+    next_nodata := '[]'::jsonb;
+  end if;
+
   insert into overlay_data_tables (
     table_of_contents_item_id,
     project_id,
@@ -6017,7 +6041,9 @@ begin
     hidden_filter_columns,
     filter_column_labels,
     stable_id,
-    temporal
+    temporal,
+    nodata_values,
+    source_parquet_remote
   ) values (
     upload.table_of_contents_item_id,
     job.project_id,
@@ -6035,7 +6061,9 @@ begin
     coalesce(old_row.hidden_filter_columns, '{}'),
     coalesce(old_row.filter_column_labels, '{}'::jsonb),
     coalesce(old_row.stable_id, uuid_generate_v4()),
-    p_temporal
+    p_temporal,
+    next_nodata,
+    coalesce(p_source_parquet_remote, old_row.source_parquet_remote, p_parquet_remote)
   ) returning * into new_row;
 
   if upload.replace_overlay_data_table_id is not null then
@@ -6045,8 +6073,34 @@ begin
 
     editor_id := coalesce(job.user_id, nullif(current_setting('session.user_id', true), '')::int);
     if editor_id is not null then
-      if upload.reprocess_of_overlay_data_table_id is not null then
-        -- Temporal reprocess: distinct from a CSV/source replacement.
+      if upload.reprocess_of_overlay_data_table_id is not null
+         and upload.nodata_config is not null then
+        perform record_changelog(
+          new_row.project_id,
+          editor_id,
+          'overlay_data_table',
+          new_row.id,
+          'data_table:nodata'::change_log_field_group,
+          jsonb_build_object(
+            'name', old_row.name,
+            'version', old_row.version,
+            'id', old_row.id,
+            'nodata_values', old_row.nodata_values,
+            'parquet_url', overlay_data_table_parquet_public_url(old_row.parquet_remote)
+          ),
+          jsonb_build_object(
+            'name', new_row.name,
+            'version', new_row.version,
+            'id', new_row.id,
+            'nodata_values', new_row.nodata_values
+          ),
+          null, null,
+          jsonb_build_object(
+            'table_of_contents_item_id', new_row.table_of_contents_item_id,
+            'reprocessed', true
+          )
+        );
+      elsif upload.reprocess_of_overlay_data_table_id is not null then
         perform record_changelog(
           new_row.project_id,
           editor_id,
@@ -6118,10 +6172,10 @@ $$;
 
 
 --
--- Name: FUNCTION complete_overlay_data_table_upload(job_id uuid, p_name text, p_join_column text, p_overlay_join_column text, p_row_count integer, p_parquet_remote text, p_column_stats_remote text, p_temporal jsonb); Type: COMMENT; Schema: public; Owner: -
+-- Name: FUNCTION complete_overlay_data_table_upload(job_id uuid, p_name text, p_join_column text, p_overlay_join_column text, p_row_count integer, p_parquet_remote text, p_column_stats_remote text, p_temporal jsonb, p_nodata_values jsonb, p_source_parquet_remote text); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.complete_overlay_data_table_upload(job_id uuid, p_name text, p_join_column text, p_overlay_join_column text, p_row_count integer, p_parquet_remote text, p_column_stats_remote text, p_temporal jsonb) IS '@omit';
+COMMENT ON FUNCTION public.complete_overlay_data_table_upload(job_id uuid, p_name text, p_join_column text, p_overlay_join_column text, p_row_count integer, p_parquet_remote text, p_column_stats_remote text, p_temporal jsonb, p_nodata_values jsonb, p_source_parquet_remote text) IS '@omit';
 
 
 --
@@ -6519,6 +6573,7 @@ COMMENT ON FUNCTION public.copy_appearance(form_element_id integer, copy_from_id
 
 CREATE FUNCTION public.toc_to_tsvector(lang text, title text, metadata jsonb, translated_props jsonb) RETURNS tsvector
     LANGUAGE plpgsql IMMUTABLE
+    SET search_path TO 'public', 'pg_catalog'
     AS $$
     DECLARE
       title_translated_prop_is_filled_in boolean;
@@ -6816,6 +6871,7 @@ CREATE FUNCTION public.copy_data_library_template_item(template_id text, project
 
 CREATE FUNCTION public.create_bbox(geom public.geometry, sketch_id integer) RETURNS real[]
     LANGUAGE plpgsql IMMUTABLE SECURITY DEFINER
+    SET search_path TO 'public', 'pg_catalog'
     AS $$
     declare
       child_ids int[];
@@ -7659,6 +7715,7 @@ $$;
 
 CREATE FUNCTION public.create_bbox(geom public.geometry) RETURNS real[]
     LANGUAGE sql IMMUTABLE SECURITY DEFINER
+    SET search_path TO 'public', 'pg_catalog'
     AS $$
     select array[st_xmin(geom)::real, st_ymin(geom)::real, st_xmax(geom)::real, st_ymax(geom)::real];
   $$;
@@ -8515,7 +8572,8 @@ CREATE TABLE public.overlay_data_table_uploads (
     created_at timestamp with time zone DEFAULT now(),
     updated_at timestamp with time zone DEFAULT now(),
     temporal_config jsonb,
-    reprocess_of_overlay_data_table_id integer
+    reprocess_of_overlay_data_table_id integer,
+    nodata_config jsonb
 );
 
 
@@ -8541,10 +8599,17 @@ COMMENT ON COLUMN public.overlay_data_table_uploads.reprocess_of_overlay_data_ta
 
 
 --
--- Name: create_overlay_data_table_reprocess(integer, jsonb); Type: FUNCTION; Schema: public; Owner: -
+-- Name: COLUMN overlay_data_table_uploads.nodata_config; Type: COMMENT; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.create_overlay_data_table_reprocess(table_id integer, temporal_config jsonb) RETURNS public.overlay_data_table_uploads
+COMMENT ON COLUMN public.overlay_data_table_uploads.nodata_config IS 'Ephemeral DataTableNodataConfig for a reprocess (or CSV replace) job. Not copied onto overlay_data_tables until the job completes successfully.';
+
+
+--
+-- Name: create_overlay_data_table_reprocess(integer, jsonb, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_overlay_data_table_reprocess(table_id integer, temporal_config jsonb DEFAULT NULL::jsonb, nodata_config jsonb DEFAULT NULL::jsonb) RETURNS public.overlay_data_table_uploads
     LANGUAGE plpgsql SECURITY DEFINER
     AS $$
 declare
@@ -8555,6 +8620,7 @@ declare
   geostats jsonb;
   join_col text;
   enabled boolean;
+  job_title text;
 begin
   select *
     into tbl
@@ -8580,11 +8646,25 @@ begin
   if not coalesce(enabled, false) then
     raise exception 'Data tables are not enabled for this layer';
   end if;
-  if temporal_config is null or jsonb_typeof(temporal_config) <> 'object' then
-    raise exception 'temporal_config is required';
+
+  if temporal_config is not null then
+    if jsonb_typeof(temporal_config) <> 'object' then
+      raise exception 'temporal_config must be an object';
+    end if;
+    if temporal_config->'sourceColumns' is null then
+      raise exception 'temporal_config.sourceColumns is required';
+    end if;
   end if;
-  if temporal_config->'sourceColumns' is null then
-    raise exception 'temporal_config.sourceColumns is required';
+  if nodata_config is not null then
+    if jsonb_typeof(nodata_config) <> 'object' then
+      raise exception 'nodata_config must be an object';
+    end if;
+    if jsonb_typeof(nodata_config->'values') <> 'array' then
+      raise exception 'nodata_config.values must be an array';
+    end if;
+  end if;
+  if temporal_config is null and nodata_config is null then
+    raise exception 'temporal_config or nodata_config is required';
   end if;
 
   select ds.geostats into geostats
@@ -8606,6 +8686,14 @@ begin
     raise exception 'There is already an active upload or reprocess for this data table';
   end if;
 
+  if nodata_config is not null and temporal_config is null then
+    job_title := 'Reprocess data table no-data ' || tbl.name;
+  elsif temporal_config is not null and nodata_config is null then
+    job_title := 'Reprocess data table temporal ' || tbl.name;
+  else
+    job_title := 'Reprocess data table ' || tbl.name;
+  end if;
+
   insert into project_background_jobs (
     project_id,
     title,
@@ -8614,7 +8702,7 @@ begin
     timeout_at
   ) values (
     pid,
-    'Reprocess data table temporal ' || tbl.name,
+    job_title,
     nullif(current_setting('session.user_id', true), '')::integer,
     'data_table_upload',
     timezone('utc', now()) + interval '15 minutes'
@@ -8630,7 +8718,8 @@ begin
     overlay_join_column,
     replace_overlay_data_table_id,
     reprocess_of_overlay_data_table_id,
-    temporal_config
+    temporal_config,
+    nodata_config
   ) values (
     job.id,
     tbl.table_of_contents_item_id,
@@ -8645,7 +8734,8 @@ begin
     coalesce(join_col, tbl.overlay_join_column),
     tbl.id,
     tbl.id,
-    temporal_config
+    temporal_config,
+    nodata_config
   ) returning * into upload;
 
   update project_background_jobs
@@ -8668,10 +8758,10 @@ $$;
 
 
 --
--- Name: FUNCTION create_overlay_data_table_reprocess(table_id integer, temporal_config jsonb); Type: COMMENT; Schema: public; Owner: -
+-- Name: FUNCTION create_overlay_data_table_reprocess(table_id integer, temporal_config jsonb, nodata_config jsonb); Type: COMMENT; Schema: public; Owner: -
 --
 
-COMMENT ON FUNCTION public.create_overlay_data_table_reprocess(table_id integer, temporal_config jsonb) IS 'Admin-only. Starts a draft reprocess job that derives _when_* columns from the current parquet using an ephemeral temporal_config. Does not write overlay_data_tables.temporal until the job succeeds.';
+COMMENT ON FUNCTION public.create_overlay_data_table_reprocess(table_id integer, temporal_config jsonb, nodata_config jsonb) IS 'Admin-only. Starts a draft reprocess job that applies nodata sentinels and/or derives _when_* columns from the source (pre-nodata) parquet. Metadata is written only when the job succeeds.';
 
 
 --
@@ -8688,6 +8778,8 @@ declare
   geostats jsonb;
   join_col text;
   enabled boolean;
+  effective_options jsonb;
+  prior_temporal jsonb;
 begin
   select project_id, enable_data_tables, data_table_join_column
   into pid, enabled, join_col
@@ -8715,6 +8807,8 @@ begin
     raise exception 'Overlay layer has no geostats';
   end if;
 
+  effective_options := coalesce(processing_options, '{}'::jsonb);
+
   if replace_overlay_data_table_id is not null then
     if not exists (
       select 1 from overlay_data_tables
@@ -8723,6 +8817,25 @@ begin
         and deleted_at is null
     ) then
       raise exception 'Replace target data table not found or not active';
+    end if;
+    -- Preserve admin/wizard temporal column mapping across replacement, unless
+    -- the caller supplied their own temporal options.
+    if effective_options -> 'temporal' is null then
+      select temporal into prior_temporal
+      from overlay_data_tables
+      where id = replace_overlay_data_table_id;
+      if prior_temporal is not null and prior_temporal -> 'mapping' -> 'sourceColumns' is not null then
+        effective_options := jsonb_set(
+          effective_options,
+          '{temporal}',
+          jsonb_strip_nulls(jsonb_build_object(
+            'sourceColumns', prior_temporal -> 'mapping' -> 'sourceColumns',
+            'precision', prior_temporal ->> 'nativeResolution',
+            'defaultViewResolution', prior_temporal ->> 'defaultViewResolution',
+            'authoredBy', coalesce(prior_temporal ->> 'authoredBy', 'ingest')
+          ))
+        );
+      end if;
     end if;
   end if;
 
@@ -8765,7 +8878,7 @@ begin
     toc_item_id,
     create_overlay_data_table_upload.filename,
     content_type,
-    coalesce(processing_options, '{}'::jsonb),
+    effective_options,
     geostats,
     join_col,
     replace_overlay_data_table_id
@@ -18318,6 +18431,8 @@ begin
     hidden_filter_columns,
     filter_column_labels,
     temporal,
+    nodata_values,
+    source_parquet_remote,
     stable_id
   )
   select
@@ -18337,6 +18452,8 @@ begin
     odt.hidden_filter_columns,
     odt.filter_column_labels,
     odt.temporal,
+    odt.nodata_values,
+    odt.source_parquet_remote,
     odt.stable_id
   from overlay_data_tables odt
   inner join table_of_contents_items draft_toc
@@ -22656,8 +22773,7 @@ CREATE TABLE public.spatial_metrics (
     duration interval,
     parameters jsonb DEFAULT '{}'::jsonb NOT NULL,
     dependency_hash text NOT NULL,
-    CONSTRAINT spatial_metrics_exclusive_reference CHECK ((((subject_fragment_id IS NOT NULL) AND (subject_geography_id IS NULL)) OR ((subject_fragment_id IS NULL) AND (subject_geography_id IS NOT NULL)))),
-    CONSTRAINT spatial_metrics_requires_source_or_dependency CHECK (((type = 'total_area'::public.spatial_metric_type) OR (overlay_source_url IS NOT NULL) OR (source_processing_job_dependency IS NOT NULL)))
+    CONSTRAINT spatial_metrics_exclusive_reference CHECK ((((subject_fragment_id IS NOT NULL) AND (subject_geography_id IS NULL)) OR ((subject_fragment_id IS NULL) AND (subject_geography_id IS NOT NULL))))
 );
 
 
@@ -25813,6 +25929,84 @@ CREATE FUNCTION public.update_mapbox_secret_key(project_id integer, secret text)
 
 
 --
+-- Name: update_overlay_data_table_nodata(integer, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_overlay_data_table_nodata(table_id integer, nodata_values jsonb) RETURNS public.overlay_data_tables
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_row public.overlay_data_tables;
+  v_old jsonb;
+  v_next jsonb;
+  v_editor int;
+begin
+  select * into v_row from overlay_data_tables where id = table_id;
+  if v_row.id is null then
+    raise exception 'Overlay data table not found';
+  end if;
+  if not session_is_admin(v_row.project_id) then
+    raise exception 'Permission denied. Must be a project admin';
+  end if;
+  if not overlay_data_table_linked_toc_is_draft(
+    v_row.table_of_contents_item_id,
+    v_row.project_id
+  ) then
+    raise exception 'Can only update no-data values on draft data tables';
+  end if;
+  v_next := coalesce(nodata_values, '[]'::jsonb);
+  if jsonb_typeof(v_next) <> 'array' then
+    raise exception 'nodata_values must be a JSON array';
+  end if;
+  v_old := v_row.nodata_values;
+  if v_old is not distinct from v_next then
+    return v_row;
+  end if;
+  update overlay_data_tables
+    set nodata_values = v_next
+    where id = table_id
+    returning * into v_row;
+  v_editor := nullif(current_setting('session.user_id', true), '')::int;
+  if v_editor is not null then
+    perform record_changelog(
+      v_row.project_id,
+      v_editor,
+      'overlay_data_table',
+      v_row.id,
+      'data_table:nodata'::change_log_field_group,
+      jsonb_build_object(
+        'name', v_row.name,
+        'version', v_row.version,
+        'id', v_row.id,
+        'nodata_values', v_old
+      ),
+      jsonb_build_object(
+        'name', v_row.name,
+        'version', v_row.version,
+        'id', v_row.id,
+        'nodata_values', v_row.nodata_values
+      ),
+      null, null,
+      jsonb_build_object(
+        'table_of_contents_item_id', v_row.table_of_contents_item_id,
+        'reprocessed', false
+      )
+    );
+  end if;
+  return v_row;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION update_overlay_data_table_nodata(table_id integer, nodata_values jsonb); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.update_overlay_data_table_nodata(table_id integer, nodata_values jsonb) IS 'Admin-only. Updates stored no-data sentinels without rewriting parquet. Used when clearing custom values.';
+
+
+--
 -- Name: update_overlay_data_table_temporal(integer, jsonb); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -27332,7 +27526,7 @@ ALTER TABLE public.data_sources ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDEN
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
-    MAXVALUE 2147483647
+    NO MAXVALUE
     CACHE 1
 );
 
@@ -27983,7 +28177,7 @@ ALTER TABLE public.projects ALTER COLUMN id ADD GENERATED BY DEFAULT AS IDENTITY
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
-    MAXVALUE 2147483647
+    NO MAXVALUE
     CACHE 1
 );
 
@@ -28007,7 +28201,7 @@ ALTER TABLE public.report_cards ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
-    MAXVALUE 2147483647
+    NO MAXVALUE
     CACHE 1
 );
 
@@ -28035,7 +28229,7 @@ ALTER TABLE public.reports ALTER COLUMN id ADD GENERATED ALWAYS AS IDENTITY (
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
-    MAXVALUE 2147483647
+    NO MAXVALUE
     CACHE 1
 );
 
@@ -28093,7 +28287,7 @@ ALTER TABLE public.sketch_classes ALTER COLUMN id ADD GENERATED BY DEFAULT AS ID
     START WITH 1
     INCREMENT BY 1
     NO MINVALUE
-    MAXVALUE 2147483647
+    NO MAXVALUE
     CACHE 1
 );
 
@@ -29196,6 +29390,14 @@ ALTER TABLE ONLY public.source_processing_jobs
 
 ALTER TABLE ONLY public.spatial_metrics
     ADD CONSTRAINT spatial_metrics_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: spatial_metrics spatial_metrics_requires_source_or_dependency; Type: CHECK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE public.spatial_metrics
+    ADD CONSTRAINT spatial_metrics_requires_source_or_dependency CHECK (((type = 'total_area'::public.spatial_metric_type) OR (overlay_source_url IS NOT NULL) OR (source_processing_job_dependency IS NOT NULL))) NOT VALID;
 
 
 --
@@ -34187,123 +34389,73 @@ GRANT INSERT,DELETE ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
--- Name: COLUMN sketch_classes.id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(id) ON TABLE public.sketch_classes TO anon;
-GRANT INSERT(id) ON TABLE public.sketch_classes TO seasketch_user;
-
-
---
--- Name: COLUMN sketch_classes.project_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(project_id) ON TABLE public.sketch_classes TO anon;
-GRANT INSERT(project_id) ON TABLE public.sketch_classes TO seasketch_user;
-
-
---
 -- Name: COLUMN sketch_classes.name; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(name) ON TABLE public.sketch_classes TO anon;
-GRANT INSERT(name),UPDATE(name) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT UPDATE(name) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
 -- Name: COLUMN sketch_classes.geometry_type; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(geometry_type) ON TABLE public.sketch_classes TO anon;
-GRANT INSERT(geometry_type),UPDATE(geometry_type) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT UPDATE(geometry_type) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
 -- Name: COLUMN sketch_classes.allow_multi; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(allow_multi) ON TABLE public.sketch_classes TO anon;
-GRANT INSERT(allow_multi),UPDATE(allow_multi) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT UPDATE(allow_multi) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
 -- Name: COLUMN sketch_classes.is_archived; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(is_archived) ON TABLE public.sketch_classes TO anon;
-GRANT INSERT(is_archived),UPDATE(is_archived) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT UPDATE(is_archived) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
 -- Name: COLUMN sketch_classes.geoprocessing_project_url; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(geoprocessing_project_url) ON TABLE public.sketch_classes TO anon;
-GRANT INSERT(geoprocessing_project_url),UPDATE(geoprocessing_project_url) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT UPDATE(geoprocessing_project_url) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
 -- Name: COLUMN sketch_classes.geoprocessing_client_url; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(geoprocessing_client_url) ON TABLE public.sketch_classes TO anon;
-GRANT INSERT(geoprocessing_client_url),UPDATE(geoprocessing_client_url) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT UPDATE(geoprocessing_client_url) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
 -- Name: COLUMN sketch_classes.geoprocessing_client_name; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(geoprocessing_client_name) ON TABLE public.sketch_classes TO anon;
-GRANT INSERT(geoprocessing_client_name),UPDATE(geoprocessing_client_name) ON TABLE public.sketch_classes TO seasketch_user;
-
-
---
--- Name: COLUMN sketch_classes.mapbox_gl_style; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(mapbox_gl_style) ON TABLE public.sketch_classes TO anon;
-GRANT INSERT(mapbox_gl_style) ON TABLE public.sketch_classes TO seasketch_user;
-
-
---
--- Name: COLUMN sketch_classes.form_element_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(form_element_id) ON TABLE public.sketch_classes TO anon;
-GRANT INSERT(form_element_id) ON TABLE public.sketch_classes TO seasketch_user;
-
-
---
--- Name: COLUMN sketch_classes.is_template; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(is_template) ON TABLE public.sketch_classes TO anon;
-GRANT INSERT(is_template) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT UPDATE(geoprocessing_client_name) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
 -- Name: COLUMN sketch_classes.template_description; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(template_description) ON TABLE public.sketch_classes TO anon;
-GRANT INSERT(template_description),UPDATE(template_description) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT UPDATE(template_description) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
 -- Name: COLUMN sketch_classes.preprocessing_endpoint; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(preprocessing_endpoint) ON TABLE public.sketch_classes TO anon;
-GRANT INSERT(preprocessing_endpoint),UPDATE(preprocessing_endpoint) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT UPDATE(preprocessing_endpoint) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
 -- Name: COLUMN sketch_classes.preprocessing_project_url; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(preprocessing_project_url) ON TABLE public.sketch_classes TO anon;
-GRANT INSERT(preprocessing_project_url),UPDATE(preprocessing_project_url) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT UPDATE(preprocessing_project_url) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
@@ -34311,55 +34463,35 @@ GRANT INSERT(preprocessing_project_url),UPDATE(preprocessing_project_url) ON TAB
 --
 
 GRANT SELECT(translated_props) ON TABLE public.sketch_classes TO anon;
-GRANT INSERT(translated_props),UPDATE(translated_props) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT UPDATE(translated_props) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
 -- Name: COLUMN sketch_classes.filter_api_version; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(filter_api_version) ON TABLE public.sketch_classes TO anon;
-GRANT INSERT(filter_api_version),UPDATE(filter_api_version) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT UPDATE(filter_api_version) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
 -- Name: COLUMN sketch_classes.filter_api_server_location; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(filter_api_server_location) ON TABLE public.sketch_classes TO anon;
-GRANT INSERT(filter_api_server_location),UPDATE(filter_api_server_location) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT UPDATE(filter_api_server_location) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
 -- Name: COLUMN sketch_classes.is_geography_clipping_enabled; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(is_geography_clipping_enabled) ON TABLE public.sketch_classes TO anon;
-GRANT INSERT(is_geography_clipping_enabled),UPDATE(is_geography_clipping_enabled) ON TABLE public.sketch_classes TO seasketch_user;
-
-
---
--- Name: COLUMN sketch_classes.report_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(report_id) ON TABLE public.sketch_classes TO anon;
-GRANT INSERT(report_id) ON TABLE public.sketch_classes TO seasketch_user;
-
-
---
--- Name: COLUMN sketch_classes.draft_report_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(draft_report_id) ON TABLE public.sketch_classes TO anon;
-GRANT INSERT(draft_report_id) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT UPDATE(is_geography_clipping_enabled) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
 -- Name: COLUMN sketch_classes.preview_new_reports; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(preview_new_reports) ON TABLE public.sketch_classes TO anon;
-GRANT INSERT(preview_new_reports),UPDATE(preview_new_reports) ON TABLE public.sketch_classes TO seasketch_user;
+GRANT UPDATE(preview_new_reports) ON TABLE public.sketch_classes TO seasketch_user;
 
 
 --
@@ -34995,17 +35127,9 @@ GRANT SELECT ON TABLE public.projects TO anon;
 
 
 --
--- Name: COLUMN projects.id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(id) ON TABLE public.projects TO anon;
-
-
---
 -- Name: COLUMN projects.name; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(name) ON TABLE public.projects TO anon;
 GRANT UPDATE(name) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(name) ON TABLE public.projects TO seasketch_user;
 
@@ -35014,30 +35138,14 @@ GRANT UPDATE(name) ON TABLE public.projects TO seasketch_user;
 -- Name: COLUMN projects.description; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(description) ON TABLE public.projects TO anon;
 GRANT UPDATE(description) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(description) ON TABLE public.projects TO seasketch_user;
-
-
---
--- Name: COLUMN projects.legacy_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(legacy_id) ON TABLE public.projects TO anon;
-
-
---
--- Name: COLUMN projects.slug; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(slug) ON TABLE public.projects TO anon;
 
 
 --
 -- Name: COLUMN projects.access_control; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(access_control) ON TABLE public.projects TO anon;
 GRANT UPDATE(access_control) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(access_control) ON TABLE public.projects TO seasketch_user;
 
@@ -35046,7 +35154,6 @@ GRANT UPDATE(access_control) ON TABLE public.projects TO seasketch_user;
 -- Name: COLUMN projects.is_listed; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(is_listed) ON TABLE public.projects TO anon;
 GRANT UPDATE(is_listed) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(is_listed) ON TABLE public.projects TO seasketch_user;
 
@@ -35055,7 +35162,6 @@ GRANT UPDATE(is_listed) ON TABLE public.projects TO seasketch_user;
 -- Name: COLUMN projects.logo_url; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(logo_url) ON TABLE public.projects TO anon;
 GRANT UPDATE(logo_url) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(logo_url) ON TABLE public.projects TO seasketch_user;
 
@@ -35064,7 +35170,6 @@ GRANT UPDATE(logo_url) ON TABLE public.projects TO seasketch_user;
 -- Name: COLUMN projects.logo_link; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(logo_link) ON TABLE public.projects TO anon;
 GRANT UPDATE(logo_link) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(logo_link) ON TABLE public.projects TO seasketch_user;
 
@@ -35073,29 +35178,13 @@ GRANT UPDATE(logo_link) ON TABLE public.projects TO seasketch_user;
 -- Name: COLUMN projects.is_featured; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(is_featured) ON TABLE public.projects TO anon;
 GRANT UPDATE(is_featured) ON TABLE public.projects TO seasketch_superuser;
-
-
---
--- Name: COLUMN projects.is_deleted; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(is_deleted) ON TABLE public.projects TO anon;
-
-
---
--- Name: COLUMN projects.deleted_at; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(deleted_at) ON TABLE public.projects TO anon;
 
 
 --
 -- Name: COLUMN projects.region; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(region) ON TABLE public.projects TO anon;
 GRANT UPDATE(region) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(region) ON TABLE public.projects TO seasketch_user;
 
@@ -35104,7 +35193,6 @@ GRANT UPDATE(region) ON TABLE public.projects TO seasketch_user;
 -- Name: COLUMN projects.data_sources_bucket_id; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(data_sources_bucket_id) ON TABLE public.projects TO anon;
 GRANT UPDATE(data_sources_bucket_id) ON TABLE public.projects TO seasketch_superuser;
 GRANT UPDATE(data_sources_bucket_id) ON TABLE public.projects TO seasketch_user;
 
@@ -35113,7 +35201,6 @@ GRANT UPDATE(data_sources_bucket_id) ON TABLE public.projects TO seasketch_user;
 -- Name: COLUMN projects.invite_email_subject; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(invite_email_subject) ON TABLE public.projects TO anon;
 GRANT SELECT(invite_email_subject),UPDATE(invite_email_subject) ON TABLE public.projects TO seasketch_user;
 
 
@@ -35132,17 +35219,9 @@ GRANT SELECT(created_at) ON TABLE public.projects TO anon;
 
 
 --
--- Name: COLUMN projects.creator_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(creator_id) ON TABLE public.projects TO anon;
-
-
---
 -- Name: COLUMN projects.mapbox_secret_key; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(mapbox_secret_key) ON TABLE public.projects TO anon;
 GRANT SELECT(mapbox_secret_key),UPDATE(mapbox_secret_key) ON TABLE public.projects TO seasketch_user;
 
 
@@ -35150,22 +35229,7 @@ GRANT SELECT(mapbox_secret_key),UPDATE(mapbox_secret_key) ON TABLE public.projec
 -- Name: COLUMN projects.mapbox_public_key; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(mapbox_public_key) ON TABLE public.projects TO anon;
 GRANT UPDATE(mapbox_public_key) ON TABLE public.projects TO seasketch_user;
-
-
---
--- Name: COLUMN projects.is_offline_enabled; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(is_offline_enabled) ON TABLE public.projects TO anon;
-
-
---
--- Name: COLUMN projects.data_hosting_quota; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(data_hosting_quota) ON TABLE public.projects TO anon;
 
 
 --
@@ -35201,7 +35265,6 @@ GRANT SELECT(table_of_contents_last_published) ON TABLE public.projects TO anon;
 -- Name: COLUMN projects.hide_forums; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(hide_forums) ON TABLE public.projects TO anon;
 GRANT UPDATE(hide_forums) ON TABLE public.projects TO seasketch_user;
 
 
@@ -35209,7 +35272,6 @@ GRANT UPDATE(hide_forums) ON TABLE public.projects TO seasketch_user;
 -- Name: COLUMN projects.hide_sketches; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(hide_sketches) ON TABLE public.projects TO anon;
 GRANT UPDATE(hide_sketches) ON TABLE public.projects TO seasketch_user;
 
 
@@ -35217,7 +35279,6 @@ GRANT UPDATE(hide_sketches) ON TABLE public.projects TO seasketch_user;
 -- Name: COLUMN projects.hide_overlays; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(hide_overlays) ON TABLE public.projects TO anon;
 GRANT UPDATE(hide_overlays) ON TABLE public.projects TO seasketch_user;
 
 
@@ -35233,29 +35294,13 @@ GRANT UPDATE(enable_download_by_default) ON TABLE public.projects TO seasketch_u
 -- Name: COLUMN projects.data_hosting_retention_period; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(data_hosting_retention_period) ON TABLE public.projects TO anon;
 GRANT UPDATE(data_hosting_retention_period) ON TABLE public.projects TO seasketch_user;
-
-
---
--- Name: COLUMN projects.about_page_contents; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(about_page_contents) ON TABLE public.projects TO anon;
-
-
---
--- Name: COLUMN projects.about_page_enabled; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(about_page_enabled) ON TABLE public.projects TO anon;
 
 
 --
 -- Name: COLUMN projects.custom_doc_link; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(custom_doc_link) ON TABLE public.projects TO anon;
 GRANT UPDATE(custom_doc_link) ON TABLE public.projects TO seasketch_user;
 
 
@@ -35263,7 +35308,6 @@ GRANT UPDATE(custom_doc_link) ON TABLE public.projects TO seasketch_user;
 -- Name: COLUMN projects.show_scalebar_by_default; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(show_scalebar_by_default) ON TABLE public.projects TO anon;
 GRANT UPDATE(show_scalebar_by_default) ON TABLE public.projects TO seasketch_user;
 
 
@@ -35271,7 +35315,6 @@ GRANT UPDATE(show_scalebar_by_default) ON TABLE public.projects TO seasketch_use
 -- Name: COLUMN projects.show_legend_by_default; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(show_legend_by_default) ON TABLE public.projects TO anon;
 GRANT UPDATE(show_legend_by_default) ON TABLE public.projects TO seasketch_user;
 
 
@@ -35325,62 +35368,6 @@ GRANT ALL ON FUNCTION public.add_image_to_sprite("spriteId" integer, "pixelRatio
 --
 
 GRANT SELECT ON TABLE public.report_cards TO anon;
-
-
---
--- Name: COLUMN report_cards.id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(id) ON TABLE public.report_cards TO anon;
-
-
---
--- Name: COLUMN report_cards.report_tab_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(report_tab_id) ON TABLE public.report_cards TO anon;
-
-
---
--- Name: COLUMN report_cards.body; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(body) ON TABLE public.report_cards TO anon;
-
-
---
--- Name: COLUMN report_cards."position"; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT("position") ON TABLE public.report_cards TO anon;
-
-
---
--- Name: COLUMN report_cards.alternate_language_settings; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(alternate_language_settings) ON TABLE public.report_cards TO anon;
-
-
---
--- Name: COLUMN report_cards.component_settings; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(component_settings) ON TABLE public.report_cards TO anon;
-
-
---
--- Name: COLUMN report_cards.updated_at; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(updated_at) ON TABLE public.report_cards TO anon;
-
-
---
--- Name: COLUMN report_cards.is_draft; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(is_draft) ON TABLE public.report_cards TO anon;
 
 
 --
@@ -36617,10 +36604,10 @@ GRANT SELECT ON TABLE public.overlay_data_tables TO seasketch_user;
 
 
 --
--- Name: FUNCTION complete_overlay_data_table_upload(job_id uuid, p_name text, p_join_column text, p_overlay_join_column text, p_row_count integer, p_parquet_remote text, p_column_stats_remote text, p_temporal jsonb); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION complete_overlay_data_table_upload(job_id uuid, p_name text, p_join_column text, p_overlay_join_column text, p_row_count integer, p_parquet_remote text, p_column_stats_remote text, p_temporal jsonb, p_nodata_values jsonb, p_source_parquet_remote text); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.complete_overlay_data_table_upload(job_id uuid, p_name text, p_join_column text, p_overlay_join_column text, p_row_count integer, p_parquet_remote text, p_column_stats_remote text, p_temporal jsonb) FROM PUBLIC;
+REVOKE ALL ON FUNCTION public.complete_overlay_data_table_upload(job_id uuid, p_name text, p_join_column text, p_overlay_join_column text, p_row_count integer, p_parquet_remote text, p_column_stats_remote text, p_temporal jsonb, p_nodata_values jsonb, p_source_parquet_remote text) FROM PUBLIC;
 
 
 --
@@ -37098,70 +37085,6 @@ GRANT ALL ON TABLE public.reports TO seasketch_user;
 
 
 --
--- Name: COLUMN reports.id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(id) ON TABLE public.reports TO anon;
-GRANT ALL(id) ON TABLE public.reports TO seasketch_user;
-
-
---
--- Name: COLUMN reports.project_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(project_id) ON TABLE public.reports TO anon;
-GRANT ALL(project_id) ON TABLE public.reports TO seasketch_user;
-
-
---
--- Name: COLUMN reports.sketch_class_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(sketch_class_id) ON TABLE public.reports TO anon;
-GRANT ALL(sketch_class_id) ON TABLE public.reports TO seasketch_user;
-
-
---
--- Name: COLUMN reports.created_at; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(created_at) ON TABLE public.reports TO anon;
-GRANT ALL(created_at) ON TABLE public.reports TO seasketch_user;
-
-
---
--- Name: COLUMN reports.title; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(title) ON TABLE public.reports TO anon;
-GRANT ALL(title) ON TABLE public.reports TO seasketch_user;
-
-
---
--- Name: COLUMN reports.version; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(version) ON TABLE public.reports TO anon;
-GRANT ALL(version) ON TABLE public.reports TO seasketch_user;
-
-
---
--- Name: COLUMN reports.draft_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(draft_id) ON TABLE public.reports TO anon;
-GRANT ALL(draft_id) ON TABLE public.reports TO seasketch_user;
-
-
---
--- Name: COLUMN reports.published_at; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(published_at) ON TABLE public.reports TO anon;
-GRANT ALL(published_at) ON TABLE public.reports TO seasketch_user;
-
-
---
 -- Name: FUNCTION create_custom_report(project_id integer, title text, sketch_class_ids integer[]); Type: ACL; Schema: public; Owner: -
 --
 
@@ -37298,11 +37221,11 @@ GRANT SELECT ON TABLE public.overlay_data_table_uploads TO seasketch_user;
 
 
 --
--- Name: FUNCTION create_overlay_data_table_reprocess(table_id integer, temporal_config jsonb); Type: ACL; Schema: public; Owner: -
+-- Name: FUNCTION create_overlay_data_table_reprocess(table_id integer, temporal_config jsonb, nodata_config jsonb); Type: ACL; Schema: public; Owner: -
 --
 
-REVOKE ALL ON FUNCTION public.create_overlay_data_table_reprocess(table_id integer, temporal_config jsonb) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.create_overlay_data_table_reprocess(table_id integer, temporal_config jsonb) TO seasketch_user;
+REVOKE ALL ON FUNCTION public.create_overlay_data_table_reprocess(table_id integer, temporal_config jsonb, nodata_config jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_overlay_data_table_reprocess(table_id integer, temporal_config jsonb, nodata_config jsonb) TO seasketch_user;
 
 
 --
@@ -37737,259 +37660,150 @@ GRANT SELECT,INSERT,DELETE ON TABLE public.data_sources TO seasketch_user;
 
 
 --
--- Name: COLUMN data_sources.id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(id) ON TABLE public.data_sources TO anon;
-GRANT SELECT(id),INSERT(id) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.created_at; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(created_at) ON TABLE public.data_sources TO anon;
-GRANT SELECT(created_at),INSERT(created_at) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.project_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(project_id) ON TABLE public.data_sources TO anon;
-GRANT SELECT(project_id),INSERT(project_id) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.type; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(type) ON TABLE public.data_sources TO anon;
-GRANT SELECT(type),INSERT(type) ON TABLE public.data_sources TO seasketch_user;
-
-
---
 -- Name: COLUMN data_sources.attribution; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(attribution) ON TABLE public.data_sources TO anon;
-GRANT SELECT(attribution),INSERT(attribution),UPDATE(attribution) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.bounds; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(bounds) ON TABLE public.data_sources TO anon;
-GRANT SELECT(bounds),INSERT(bounds) ON TABLE public.data_sources TO seasketch_user;
+GRANT UPDATE(attribution) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.maxzoom; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(maxzoom) ON TABLE public.data_sources TO anon;
-GRANT SELECT(maxzoom),INSERT(maxzoom),UPDATE(maxzoom) ON TABLE public.data_sources TO seasketch_user;
+GRANT UPDATE(maxzoom) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.minzoom; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(minzoom) ON TABLE public.data_sources TO anon;
-GRANT SELECT(minzoom),INSERT(minzoom),UPDATE(minzoom) ON TABLE public.data_sources TO seasketch_user;
+GRANT UPDATE(minzoom) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.url; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(url) ON TABLE public.data_sources TO anon;
-GRANT SELECT(url),INSERT(url),UPDATE(url) ON TABLE public.data_sources TO seasketch_user;
+GRANT UPDATE(url) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.scheme; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(scheme) ON TABLE public.data_sources TO anon;
-GRANT SELECT(scheme),INSERT(scheme),UPDATE(scheme) ON TABLE public.data_sources TO seasketch_user;
+GRANT UPDATE(scheme) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.tiles; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(tiles) ON TABLE public.data_sources TO anon;
-GRANT SELECT(tiles),INSERT(tiles),UPDATE(tiles) ON TABLE public.data_sources TO seasketch_user;
+GRANT UPDATE(tiles) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.tile_size; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(tile_size) ON TABLE public.data_sources TO anon;
-GRANT SELECT(tile_size),INSERT(tile_size),UPDATE(tile_size) ON TABLE public.data_sources TO seasketch_user;
+GRANT UPDATE(tile_size) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.encoding; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(encoding) ON TABLE public.data_sources TO anon;
-GRANT SELECT(encoding),INSERT(encoding),UPDATE(encoding) ON TABLE public.data_sources TO seasketch_user;
+GRANT UPDATE(encoding) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.buffer; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(buffer) ON TABLE public.data_sources TO anon;
-GRANT SELECT(buffer),INSERT(buffer),UPDATE(buffer) ON TABLE public.data_sources TO seasketch_user;
+GRANT UPDATE(buffer) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.cluster; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(cluster) ON TABLE public.data_sources TO anon;
-GRANT SELECT(cluster),INSERT(cluster),UPDATE(cluster) ON TABLE public.data_sources TO seasketch_user;
+GRANT UPDATE(cluster) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.cluster_max_zoom; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(cluster_max_zoom) ON TABLE public.data_sources TO anon;
-GRANT SELECT(cluster_max_zoom),INSERT(cluster_max_zoom),UPDATE(cluster_max_zoom) ON TABLE public.data_sources TO seasketch_user;
+GRANT UPDATE(cluster_max_zoom) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.cluster_properties; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(cluster_properties) ON TABLE public.data_sources TO anon;
-GRANT SELECT(cluster_properties),INSERT(cluster_properties),UPDATE(cluster_properties) ON TABLE public.data_sources TO seasketch_user;
+GRANT UPDATE(cluster_properties) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.cluster_radius; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(cluster_radius) ON TABLE public.data_sources TO anon;
-GRANT SELECT(cluster_radius),INSERT(cluster_radius),UPDATE(cluster_radius) ON TABLE public.data_sources TO seasketch_user;
+GRANT UPDATE(cluster_radius) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.generate_id; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(generate_id) ON TABLE public.data_sources TO anon;
-GRANT SELECT(generate_id),INSERT(generate_id),UPDATE(generate_id) ON TABLE public.data_sources TO seasketch_user;
+GRANT UPDATE(generate_id) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.line_metrics; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(line_metrics) ON TABLE public.data_sources TO anon;
-GRANT SELECT(line_metrics),INSERT(line_metrics),UPDATE(line_metrics) ON TABLE public.data_sources TO seasketch_user;
+GRANT UPDATE(line_metrics) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.promote_id; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(promote_id) ON TABLE public.data_sources TO anon;
-GRANT SELECT(promote_id),INSERT(promote_id),UPDATE(promote_id) ON TABLE public.data_sources TO seasketch_user;
+GRANT UPDATE(promote_id) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.tolerance; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(tolerance) ON TABLE public.data_sources TO anon;
-GRANT SELECT(tolerance),INSERT(tolerance),UPDATE(tolerance) ON TABLE public.data_sources TO seasketch_user;
+GRANT UPDATE(tolerance) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.coordinates; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(coordinates) ON TABLE public.data_sources TO anon;
-GRANT SELECT(coordinates),INSERT(coordinates),UPDATE(coordinates) ON TABLE public.data_sources TO seasketch_user;
+GRANT UPDATE(coordinates) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.urls; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(urls) ON TABLE public.data_sources TO anon;
-GRANT SELECT(urls),INSERT(urls),UPDATE(urls) ON TABLE public.data_sources TO seasketch_user;
+GRANT UPDATE(urls) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.query_parameters; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(query_parameters) ON TABLE public.data_sources TO anon;
-GRANT SELECT(query_parameters),INSERT(query_parameters),UPDATE(query_parameters) ON TABLE public.data_sources TO seasketch_user;
+GRANT UPDATE(query_parameters) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.use_device_pixel_ratio; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(use_device_pixel_ratio) ON TABLE public.data_sources TO anon;
-GRANT SELECT(use_device_pixel_ratio),INSERT(use_device_pixel_ratio),UPDATE(use_device_pixel_ratio) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.import_type; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(import_type) ON TABLE public.data_sources TO anon;
-GRANT SELECT(import_type),INSERT(import_type) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.original_source_url; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(original_source_url) ON TABLE public.data_sources TO anon;
-GRANT SELECT(original_source_url),INSERT(original_source_url) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.enhanced_security; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(enhanced_security) ON TABLE public.data_sources TO anon;
-GRANT SELECT(enhanced_security),INSERT(enhanced_security) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.bucket_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(bucket_id) ON TABLE public.data_sources TO anon;
-GRANT SELECT(bucket_id),INSERT(bucket_id) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.object_key; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(object_key) ON TABLE public.data_sources TO anon;
-GRANT SELECT(object_key),INSERT(object_key) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.byte_length; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(byte_length) ON TABLE public.data_sources TO anon;
-GRANT SELECT(byte_length),INSERT(byte_length) ON TABLE public.data_sources TO seasketch_user;
+GRANT UPDATE(use_device_pixel_ratio) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
@@ -37997,55 +37811,7 @@ GRANT SELECT(byte_length),INSERT(byte_length) ON TABLE public.data_sources TO se
 --
 
 GRANT SELECT(supports_dynamic_layers) ON TABLE public.data_sources TO anon;
-GRANT SELECT(supports_dynamic_layers),INSERT(supports_dynamic_layers),UPDATE(supports_dynamic_layers) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.uploaded_source_filename; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(uploaded_source_filename) ON TABLE public.data_sources TO anon;
-GRANT SELECT(uploaded_source_filename),INSERT(uploaded_source_filename) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.uploaded_source_layername; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(uploaded_source_layername) ON TABLE public.data_sources TO anon;
-GRANT SELECT(uploaded_source_layername),INSERT(uploaded_source_layername) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.normalized_source_object_key; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(normalized_source_object_key) ON TABLE public.data_sources TO anon;
-GRANT SELECT(normalized_source_object_key),INSERT(normalized_source_object_key) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.normalized_source_bytes; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(normalized_source_bytes) ON TABLE public.data_sources TO anon;
-GRANT SELECT(normalized_source_bytes),INSERT(normalized_source_bytes) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.geostats; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(geostats) ON TABLE public.data_sources TO anon;
-GRANT SELECT(geostats),INSERT(geostats) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.upload_task_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(upload_task_id) ON TABLE public.data_sources TO anon;
-GRANT SELECT(upload_task_id),INSERT(upload_task_id) ON TABLE public.data_sources TO seasketch_user;
+GRANT INSERT(supports_dynamic_layers),UPDATE(supports_dynamic_layers) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
@@ -38053,127 +37819,14 @@ GRANT SELECT(upload_task_id),INSERT(upload_task_id) ON TABLE public.data_sources
 --
 
 GRANT SELECT(translated_props) ON TABLE public.data_sources TO anon;
-GRANT SELECT(translated_props),INSERT(translated_props),UPDATE(translated_props) ON TABLE public.data_sources TO seasketch_user;
+GRANT UPDATE(translated_props) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
 -- Name: COLUMN data_sources.arcgis_fetch_strategy; Type: ACL; Schema: public; Owner: -
 --
 
-GRANT SELECT(arcgis_fetch_strategy) ON TABLE public.data_sources TO anon;
-GRANT SELECT(arcgis_fetch_strategy),INSERT(arcgis_fetch_strategy),UPDATE(arcgis_fetch_strategy) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.uploaded_by; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(uploaded_by) ON TABLE public.data_sources TO anon;
-GRANT SELECT(uploaded_by),INSERT(uploaded_by) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.was_converted_from_esri_feature_layer; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(was_converted_from_esri_feature_layer) ON TABLE public.data_sources TO anon;
-GRANT SELECT(was_converted_from_esri_feature_layer),INSERT(was_converted_from_esri_feature_layer) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.created_by; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(created_by) ON TABLE public.data_sources TO anon;
-GRANT SELECT(created_by),INSERT(created_by) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.changelog; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(changelog) ON TABLE public.data_sources TO anon;
-GRANT SELECT(changelog),INSERT(changelog) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.raster_representative_colors; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(raster_representative_colors) ON TABLE public.data_sources TO anon;
-GRANT SELECT(raster_representative_colors),INSERT(raster_representative_colors) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.raster_offset; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(raster_offset) ON TABLE public.data_sources TO anon;
-GRANT SELECT(raster_offset),INSERT(raster_offset) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.raster_scale; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(raster_scale) ON TABLE public.data_sources TO anon;
-GRANT SELECT(raster_scale),INSERT(raster_scale) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.data_library_template_id; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(data_library_template_id) ON TABLE public.data_sources TO anon;
-GRANT SELECT(data_library_template_id),INSERT(data_library_template_id) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.data_library_metadata; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(data_library_metadata) ON TABLE public.data_sources TO anon;
-GRANT SELECT(data_library_metadata),INSERT(data_library_metadata) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.is_single_band_raster; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(is_single_band_raster) ON TABLE public.data_sources TO anon;
-GRANT SELECT(is_single_band_raster),INSERT(is_single_band_raster) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.raster_band_count; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(raster_band_count) ON TABLE public.data_sources TO anon;
-GRANT SELECT(raster_band_count),INSERT(raster_band_count) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.vector_geometry_type; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(vector_geometry_type) ON TABLE public.data_sources TO anon;
-GRANT SELECT(vector_geometry_type),INSERT(vector_geometry_type) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.feature_count; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(feature_count) ON TABLE public.data_sources TO anon;
-GRANT SELECT(feature_count),INSERT(feature_count) ON TABLE public.data_sources TO seasketch_user;
-
-
---
--- Name: COLUMN data_sources.column_details; Type: ACL; Schema: public; Owner: -
---
-
-GRANT SELECT(column_details) ON TABLE public.data_sources TO anon;
-GRANT SELECT(column_details),INSERT(column_details) ON TABLE public.data_sources TO seasketch_user;
+GRANT UPDATE(arcgis_fetch_strategy) ON TABLE public.data_sources TO seasketch_user;
 
 
 --
@@ -38196,8 +37849,8 @@ GRANT ALL ON FUNCTION public.data_sources_approximate_fgb_index_size(ds public.d
 --
 
 REVOKE ALL ON FUNCTION public.data_sources_author_profile(source public.data_sources) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.data_sources_author_profile(source public.data_sources) TO anon;
 GRANT ALL ON FUNCTION public.data_sources_author_profile(source public.data_sources) TO seasketch_user;
+GRANT ALL ON FUNCTION public.data_sources_author_profile(source public.data_sources) TO anon;
 
 
 --
@@ -38229,8 +37882,8 @@ GRANT ALL ON FUNCTION public.data_sources_is_convertible_legacy_source(data_sour
 --
 
 REVOKE ALL ON FUNCTION public.data_sources_outputs(source public.data_sources) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.data_sources_outputs(source public.data_sources) TO anon;
 GRANT ALL ON FUNCTION public.data_sources_outputs(source public.data_sources) TO seasketch_user;
+GRANT ALL ON FUNCTION public.data_sources_outputs(source public.data_sources) TO anon;
 
 
 --
@@ -41792,8 +41445,8 @@ GRANT ALL ON FUNCTION public.projects_most_used_layers(project public.projects, 
 --
 
 REVOKE ALL ON FUNCTION public.projects_my_folders(project public.projects) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.projects_my_folders(project public.projects) TO anon;
 GRANT ALL ON FUNCTION public.projects_my_folders(project public.projects) TO seasketch_user;
+GRANT ALL ON FUNCTION public.projects_my_folders(project public.projects) TO anon;
 
 
 --
@@ -41801,8 +41454,8 @@ GRANT ALL ON FUNCTION public.projects_my_folders(project public.projects) TO sea
 --
 
 REVOKE ALL ON FUNCTION public.projects_my_sketches(project public.projects) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.projects_my_sketches(project public.projects) TO anon;
 GRANT ALL ON FUNCTION public.projects_my_sketches(project public.projects) TO seasketch_user;
+GRANT ALL ON FUNCTION public.projects_my_sketches(project public.projects) TO anon;
 
 
 --
@@ -41842,8 +41495,8 @@ GRANT ALL ON FUNCTION public.projects_session_has_posts(project public.projects)
 --
 
 REVOKE ALL ON FUNCTION public.projects_session_has_privileged_access(p public.projects) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.projects_session_has_privileged_access(p public.projects) TO anon;
 GRANT ALL ON FUNCTION public.projects_session_has_privileged_access(p public.projects) TO seasketch_user;
+GRANT ALL ON FUNCTION public.projects_session_has_privileged_access(p public.projects) TO anon;
 
 
 --
@@ -41851,8 +41504,8 @@ GRANT ALL ON FUNCTION public.projects_session_has_privileged_access(p public.pro
 --
 
 REVOKE ALL ON FUNCTION public.projects_session_is_admin(p public.projects) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.projects_session_is_admin(p public.projects) TO anon;
 GRANT ALL ON FUNCTION public.projects_session_is_admin(p public.projects) TO seasketch_user;
+GRANT ALL ON FUNCTION public.projects_session_is_admin(p public.projects) TO anon;
 
 
 --
@@ -41868,8 +41521,8 @@ GRANT ALL ON FUNCTION public.projects_session_outstanding_survey_invites(project
 --
 
 REVOKE ALL ON FUNCTION public.projects_session_participation_status(p public.projects) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.projects_session_participation_status(p public.projects) TO anon;
 GRANT ALL ON FUNCTION public.projects_session_participation_status(p public.projects) TO seasketch_user;
+GRANT ALL ON FUNCTION public.projects_session_participation_status(p public.projects) TO anon;
 
 
 --
@@ -42816,8 +42469,8 @@ GRANT ALL ON FUNCTION public.sketch_classes_sketch_count(sketch_class public.ske
 --
 
 REVOKE ALL ON FUNCTION public.sketch_classes_use_geography_clipping(sketch_class public.sketch_classes) FROM PUBLIC;
-GRANT ALL ON FUNCTION public.sketch_classes_use_geography_clipping(sketch_class public.sketch_classes) TO anon;
 GRANT ALL ON FUNCTION public.sketch_classes_use_geography_clipping(sketch_class public.sketch_classes) TO seasketch_user;
+GRANT ALL ON FUNCTION public.sketch_classes_use_geography_clipping(sketch_class public.sketch_classes) TO anon;
 
 
 --
@@ -46676,6 +46329,14 @@ REVOKE ALL ON FUNCTION public.update_google_maps_tile_api_session(p_map_type tex
 
 REVOKE ALL ON FUNCTION public.update_mapbox_secret_key(project_id integer, secret text) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.update_mapbox_secret_key(project_id integer, secret text) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION update_overlay_data_table_nodata(table_id integer, nodata_values jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_overlay_data_table_nodata(table_id integer, nodata_values jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_overlay_data_table_nodata(table_id integer, nodata_values jsonb) TO seasketch_user;
 
 
 --

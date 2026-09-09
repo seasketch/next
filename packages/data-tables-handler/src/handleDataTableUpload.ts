@@ -1,6 +1,6 @@
 import { dirSync } from "tmp";
 import * as path from "path";
-import { writeFileSync } from "fs";
+import { copyFileSync, writeFileSync } from "fs";
 import { getClient } from "./lambda-db-client";
 import {
   buildR2Remote,
@@ -14,7 +14,13 @@ import {
   missingSourceColumns,
 } from "./deriveWhenColumns";
 import {
+  applyNodataValuesOnParquet,
+  configFromStoredNodata,
+  parseNodataConfig,
+} from "./applyNodataValues";
+import {
   isDataTableTemporalConfig,
+  type DataTableNodataValue,
   type DataTableTemporalConfig,
 } from "@seasketch/geostats-types";
 import {
@@ -108,7 +114,7 @@ export default async function handleDataTableUpload(
     const uploadQ = await pgClient.query(
       `select filename, processing_options, overlay_geostats, overlay_join_column,
               replace_overlay_data_table_id, reprocess_of_overlay_data_table_id,
-              temporal_config
+              temporal_config, nodata_config
        from overlay_data_table_uploads where id = $1`,
       [uploadId],
     );
@@ -128,28 +134,62 @@ export default async function handleDataTableUpload(
     const temporalConfig = isDataTableTemporalConfig(upload.temporal_config)
       ? (upload.temporal_config as DataTableTemporalConfig)
       : null;
+    const jobNodata = parseNodataConfig(upload.nodata_config);
     const isReprocess = Boolean(upload.reprocess_of_overlay_data_table_id);
 
     if (isReprocess) {
-      if (!temporalConfig) {
-        throw new Error("Reprocess job is missing a valid temporal_config");
-      }
       const sourceQ = await pgClient.query(
-        `select name, join_column, overlay_join_column, parquet_remote
+        `select name, join_column, overlay_join_column, parquet_remote,
+                source_parquet_remote, temporal, nodata_values
          from overlay_data_tables where id = $1`,
         [upload.reprocess_of_overlay_data_table_id],
       );
       if (!sourceQ.rows[0]?.parquet_remote) {
         throw new Error("Source data table parquet is missing");
       }
+      const nextTemporal =
+        temporalConfig || configFromStoredTemporal(sourceQ.rows[0].temporal);
+      const nextNodata =
+        jobNodata || configFromStoredNodata(sourceQ.rows[0].nodata_values);
+      if (!nextTemporal && !nextNodata) {
+        throw new Error("Reprocess job is missing temporal_config or nodata_config");
+      }
+      const sourceRemote =
+        sourceQ.rows[0].source_parquet_remote || sourceQ.rows[0].parquet_remote;
       await updateProgress("running", "downloading parquet", 0.1);
-      await getR2Object(sourceQ.rows[0].parquet_remote, parquetPath);
-      await updateProgress("running", "deriving temporal columns", 0.35);
-      const derived = await deriveWhenColumnsOnParquet(parquetPath, temporalConfig);
-      logDebug("temporal columns derived", {
-        parseableCount: derived.parseableCount,
-        unparseableCount: derived.unparseableCount,
-      });
+      await getR2Object(sourceRemote, parquetPath);
+      const sourceParquetPath = path.join(tmpobj.name, "source.parquet");
+      copyFileSync(parquetPath, sourceParquetPath);
+      let appliedNodata: DataTableNodataValue[] = nextNodata?.values ?? [];
+      let rowCount = 0;
+      if (nextNodata) {
+        await updateProgress("running", "applying no-data values", 0.25);
+        const nodataResult = await applyNodataValuesOnParquet(
+          parquetPath,
+          nextNodata.values,
+          [joinColumn],
+        );
+        appliedNodata = nodataResult.values;
+        rowCount = nodataResult.rowCount;
+        logDebug("nodata values applied", {
+          values: appliedNodata,
+          rowCount: nodataResult.rowCount,
+        });
+      }
+      let derivedTemporal: unknown = sourceQ.rows[0].temporal ?? undefined;
+      if (nextTemporal) {
+        await updateProgress("running", "deriving temporal columns", 0.35);
+        const derived = await deriveWhenColumnsOnParquet(
+          parquetPath,
+          nextTemporal,
+        );
+        derivedTemporal = derived.temporal;
+        rowCount = derived.rowCount;
+        logDebug("temporal columns derived", {
+          parseableCount: derived.parseableCount,
+          unparseableCount: derived.unparseableCount,
+        });
+      }
       await updateProgress("running", "computing stats", 0.6);
       const tableName =
         processingOptions.name ||
@@ -162,7 +202,7 @@ export default async function handleDataTableUpload(
           column: joinColumn,
           overlayAttribute: overlayJoinColumn,
           matchRate: 1,
-          matchedRows: derived.rowCount,
+          matchedRows: rowCount,
           unmatchedRows: 0,
           unmatchedOverlayValues: 0,
         },
@@ -175,12 +215,19 @@ export default async function handleDataTableUpload(
         uploadId,
         "data.parquet",
       );
+      const sourceTarget = buildR2Remote(
+        slug,
+        sourceUuid,
+        uploadId,
+        "source.parquet",
+      );
       const statsTarget = buildR2Remote(
         slug,
         sourceUuid,
         uploadId,
         "column-stats.json",
       );
+      await putObject(sourceParquetPath, sourceTarget.remote, PARQUET_CONTENT_TYPE);
       await putObject(parquetPath, parquetTarget.remote, PARQUET_CONTENT_TYPE);
       await putObject(statsPath, statsTarget.remote, JSON_CONTENT_TYPE);
       const result = {
@@ -188,10 +235,12 @@ export default async function handleDataTableUpload(
         name: tableName,
         joinColumn,
         overlayJoinColumn,
-        rowCount: derived.rowCount,
+        rowCount,
         parquetRemote: parquetTarget.remote,
         columnStatsRemote: statsTarget.remote,
-        temporal: derived.temporal,
+        sourceParquetRemote: sourceTarget.remote,
+        ...(derivedTemporal ? { temporal: derivedTemporal } : {}),
+        nodataValues: appliedNodata,
       };
       await pgClient.query(
         `SELECT graphile_worker.add_job('processDataTableUploadOutputs', $1::json)`,
@@ -270,11 +319,28 @@ export default async function handleDataTableUpload(
 
     let derivedTemporal: unknown = undefined;
     let temporalReplaceWarning: string | undefined;
+    let appliedNodata: DataTableNodataValue[] = [];
+    const sourceParquetPath = path.join(tmpobj.name, "source.parquet");
+    copyFileSync(parquetPath, sourceParquetPath);
     if (upload.replace_overlay_data_table_id) {
       const prevQ = await pgClient.query(
-        `select temporal from overlay_data_tables where id = $1`,
+        `select temporal, nodata_values from overlay_data_tables where id = $1`,
         [upload.replace_overlay_data_table_id],
       );
+      const prevNodata =
+        jobNodata || configFromStoredNodata(prevQ.rows[0]?.nodata_values);
+      if (prevNodata && prevNodata.values.length > 0) {
+        await updateProgress("running", "applying no-data values", 0.5);
+        const nodataResult = await applyNodataValuesOnParquet(
+          parquetPath,
+          prevNodata.values,
+          [joinColumn],
+        );
+        appliedNodata = nodataResult.values;
+        logDebug("csv replace applied nodata values", {
+          values: appliedNodata,
+        });
+      }
       const prevConfig =
         temporalConfig || configFromStoredTemporal(prevQ.rows[0]?.temporal);
       if (prevConfig) {
@@ -350,12 +416,19 @@ export default async function handleDataTableUpload(
       uploadId,
       "data.parquet",
     );
+    const sourceTarget = buildR2Remote(
+      slug,
+      sourceUuid,
+      uploadId,
+      "source.parquet",
+    );
     const statsTarget = buildR2Remote(
       slug,
       sourceUuid,
       uploadId,
       "column-stats.json",
     );
+    await putObject(sourceParquetPath, sourceTarget.remote, PARQUET_CONTENT_TYPE);
     await putObject(parquetPath, parquetTarget.remote, PARQUET_CONTENT_TYPE);
     await putObject(statsPath, statsTarget.remote, JSON_CONTENT_TYPE);
 
@@ -367,7 +440,9 @@ export default async function handleDataTableUpload(
       rowCount,
       parquetRemote: parquetTarget.remote,
       columnStatsRemote: statsTarget.remote,
+      sourceParquetRemote: sourceTarget.remote,
       ...(derivedTemporal ? { temporal: derivedTemporal } : {}),
+      nodataValues: appliedNodata,
     };
     logDebug("upload processing complete, enqueueing outputs job", {
       taskId,

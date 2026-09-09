@@ -42,6 +42,7 @@ fragment OverlayDataTableDetails on OverlayDataTable {
   hiddenFilterColumns
   filterColumnLabels
   temporal
+  nodataValues
 }
 
 query OverlayDataTableVisualizationMetadata($id: Int!) {
@@ -185,12 +186,27 @@ mutation UpdateOverlayDataTableTemporal(
   }
 }
 
+mutation UpdateOverlayDataTableNodata($tableId: Int!, $nodataValues: JSON!) {
+  updateOverlayDataTableNodata(
+    input: { tableId: $tableId, nodataValues: $nodataValues }
+  ) {
+    overlayDataTable {
+      ...OverlayDataTableDetails
+    }
+  }
+}
+
 mutation CreateOverlayDataTableReprocess(
   $tableId: Int!
-  $temporalConfig: JSON!
+  $temporalConfig: JSON
+  $nodataConfig: JSON
 ) {
   createOverlayDataTableReprocess(
-    input: { tableId: $tableId, temporalConfig: $temporalConfig }
+    input: {
+      tableId: $tableId
+      temporalConfig: $temporalConfig
+      nodataConfig: $nodataConfig
+    }
   ) {
     overlayDataTableUpload {
       ...OverlayDataTableUploadDetails

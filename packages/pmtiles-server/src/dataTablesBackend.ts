@@ -12,6 +12,10 @@ import {
   parseTemporalPreviewConfig,
   previewTemporalMapping,
 } from "./dataTables/temporalPreview";
+import {
+  parseNodataPreviewConfig,
+  previewNodataValues,
+} from "./dataTables/nodataPreview";
 import { queryUiHtml } from "./dataTables/ui/html";
 
 /** Browser cache lifetime for query JSON responses. */
@@ -52,22 +56,30 @@ export async function handleDataTableQuery(
 
   const url = new URL(request.url);
   const pathname = url.pathname;
-  const isPreview = pathname.endsWith("/temporal-preview");
+  const isTemporalPreview = pathname.endsWith("/temporal-preview");
+  const isNodataPreview = pathname.endsWith("/nodata-preview");
   const isQuery = pathname.endsWith("/query");
-  if (!isPreview && !isQuery) {
+  if (!isTemporalPreview && !isNodataPreview && !isQuery) {
     return jsonError(
-      "Not found. Endpoints are {tablePath}/query and {tablePath}/temporal-preview",
+      "Not found. Endpoints are {tablePath}/query, {tablePath}/temporal-preview, and {tablePath}/nodata-preview",
       404
     );
   }
-  const suffix = isPreview ? "/temporal-preview" : "/query";
+  const suffix = isTemporalPreview
+    ? "/temporal-preview"
+    : isNodataPreview
+    ? "/nodata-preview"
+    : "/query";
   const tablePath = pathname.replace(/^\/+/, "").slice(0, -suffix.length);
   if (!tablePath) {
     return jsonError("Missing table path", 404);
   }
 
-  if (isPreview) {
+  if (isTemporalPreview) {
     return handleTemporalPreview(request, env, url, tablePath);
+  }
+  if (isNodataPreview) {
+    return handleNodataPreview(request, env, url, tablePath);
   }
 
   const requestStart = Date.now();
@@ -271,6 +283,63 @@ async function handleTemporalPreview(
       file: source.buffer,
       metadata,
       config,
+    });
+    timer.mark("preview");
+    const body = {
+      table: tablePath,
+      ...result,
+      timing: { totalMs: Date.now() - started },
+    };
+    return new Response(JSON.stringify(body), {
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Server-Timing": timer.header(),
+        "Access-Control-Allow-Origin": "*",
+        "Timing-Allow-Origin": "*",
+        "Cache-Control": "private, max-age=60",
+      },
+    });
+  } catch (error) {
+    return errorResponse(error);
+  }
+}
+
+async function handleNodataPreview(
+  request: Request,
+  env: Env,
+  url: URL,
+  tablePath: string
+): Promise<Response> {
+  const requestStart = Date.now();
+  const timer = new Timer(requestStart);
+  let config;
+  try {
+    config = parseNodataPreviewConfig(url.searchParams.get("config"));
+  } catch (error) {
+    return errorResponse(error);
+  }
+  timer.mark("parse");
+
+  const started = Date.now();
+  try {
+    const source = await openR2File({
+      bucket: env.TILES_BUCKET,
+      key: `${tablePath}/data.parquet`,
+    });
+    timer.mark("open");
+    if (!source) {
+      throw new QueryError(
+        `No data table found at "${tablePath}/data.parquet".`,
+        404
+      );
+    }
+    const metadata = await getParquetMetadata(source);
+    timer.mark("metadata");
+    const result = await previewNodataValues({
+      file: source.buffer,
+      metadata,
+      config,
+      joinColumn: url.searchParams.get("joinColumn"),
     });
     timer.mark("preview");
     const body = {

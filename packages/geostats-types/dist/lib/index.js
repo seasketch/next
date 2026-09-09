@@ -14,7 +14,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SuggestedRasterPresentation = exports.isTemporalInfo = exports.expandTemporalValue = exports.createLayerYearTemporalInfo = void 0;
+exports.SuggestedRasterPresentation = exports.normalizeNodataValues = exports.nodataValueMatches = exports.isDataTableNodataValue = exports.isDataTableNodataConfig = exports.isTemporalInfo = exports.expandTemporalValue = exports.createLayerYearTemporalInfo = void 0;
 exports.isNumericGeostatsAttribute = isNumericGeostatsAttribute;
 exports.isLegacyGeostatsLayer = isLegacyGeostatsLayer;
 exports.isLegacyGeostatsAttribute = isLegacyGeostatsAttribute;
@@ -25,6 +25,12 @@ var temporal_1 = require("./temporal");
 Object.defineProperty(exports, "createLayerYearTemporalInfo", { enumerable: true, get: function () { return temporal_1.createLayerYearTemporalInfo; } });
 Object.defineProperty(exports, "expandTemporalValue", { enumerable: true, get: function () { return temporal_1.expandTemporalValue; } });
 Object.defineProperty(exports, "isTemporalInfo", { enumerable: true, get: function () { return temporal_1.isTemporalInfo; } });
+__exportStar(require("./nodata"), exports);
+var nodata_1 = require("./nodata");
+Object.defineProperty(exports, "isDataTableNodataConfig", { enumerable: true, get: function () { return nodata_1.isDataTableNodataConfig; } });
+Object.defineProperty(exports, "isDataTableNodataValue", { enumerable: true, get: function () { return nodata_1.isDataTableNodataValue; } });
+Object.defineProperty(exports, "nodataValueMatches", { enumerable: true, get: function () { return nodata_1.nodataValueMatches; } });
+Object.defineProperty(exports, "normalizeNodataValues", { enumerable: true, get: function () { return nodata_1.normalizeNodataValues; } });
 function isNumericGeostatsAttribute(attr) {
     return attr.type === "number";
 }

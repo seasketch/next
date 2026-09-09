@@ -1103,6 +1103,7 @@ input ChangeLogCondition {
 enum ChangeLogFieldGroup {
   DATA_TABLE_CREATED
   DATA_TABLE_DELETED
+  DATA_TABLE_NODATA
   DATA_TABLE_RENAMED
   DATA_TABLE_REPLACED
   DATA_TABLE_ROLLBACK
@@ -2272,6 +2273,7 @@ input CreateOverlayDataTableReprocessInput {
   payload verbatim. May be used to track mutations by the client.
   """
   clientMutationId: String
+  nodataConfig: JSON
   tableId: Int
   temporalConfig: JSON
 }
@@ -9443,9 +9445,9 @@ type Mutation {
   ): CreateOptionalBasemapLayerPayload
 
   """
-  Admin-only. Starts a draft reprocess job that derives _when_* columns from the
-  current parquet using an ephemeral temporal_config. Does not write
-  overlay_data_tables.temporal until the job succeeds.
+  Admin-only. Starts a draft reprocess job that applies nodata sentinels and/or
+  derives _when_* columns from the source (pre-nodata) parquet. Metadata is
+  written only when the job succeeds.
   """
   createOverlayDataTableReprocess(
     """
@@ -11161,6 +11163,16 @@ type Mutation {
   ): UpdateOptionalBasemapLayerPayload
 
   """
+  Admin-only. Updates stored no-data sentinels without rewriting parquet. Used when clearing custom values.
+  """
+  updateOverlayDataTableNodata(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: UpdateOverlayDataTableNodataInput!
+  ): UpdateOverlayDataTableNodataPayload
+
+  """
   Admin mutation. Sets (or clears, when null) the TemporalInfo document
   for an overlay data table. authoredBy is forced to "admin".
   """
@@ -11877,6 +11889,11 @@ type OverlayDataTable implements Node {
   name: String!
 
   """
+  Sentinel values rewritten to SQL NULL in parquet. Empty cells are always no-data. @omit create,update
+  """
+  nodataValues: JSON!
+
+  """
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
@@ -11896,6 +11913,11 @@ type OverlayDataTable implements Node {
   """
   requiredFilterColumns: [String]
   rowCount: Int!
+
+  """
+  Immutable pre-nodata parquet used as the reprocess source so sentinels can be added or removed. @omit
+  """
+  sourceParquetRemote: String
 
   """
   Stable logical identity for a data table across version replace and TOC
@@ -11981,6 +12003,12 @@ type OverlayDataTableUpload implements Node {
   errorDetails: JSON
   filename: String!
   id: UUID!
+
+  """
+  Ephemeral DataTableNodataConfig for a reprocess (or CSV replace) job. Not
+  copied onto overlay_data_tables until the job completes successfully.
+  """
+  nodataConfig: JSON
 
   """
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
@@ -20320,6 +20348,41 @@ type UpdateOptionalBasemapLayerPayload {
 
   """The `OptionalBasemapLayer` that was updated by this mutation."""
   optionalBasemapLayer: OptionalBasemapLayer
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `updateOverlayDataTableNodata` mutation."""
+input UpdateOverlayDataTableNodataInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  nodataValues: JSON
+  tableId: Int
+}
+
+"""The output of our `updateOverlayDataTableNodata` mutation."""
+type UpdateOverlayDataTableNodataPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  overlayDataTable: OverlayDataTable
+
+  """An edge for our `OverlayDataTable`. May be used by Relay 1."""
+  overlayDataTableEdge(
+    """The method to use when ordering `OverlayDataTable`."""
+    orderBy: [OverlayDataTablesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): OverlayDataTablesEdge
+
+  """Reads a single `Project` that is related to this `OverlayDataTable`."""
+  project: Project
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.

@@ -2,14 +2,13 @@ import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "r
 import { useApolloClient } from "@apollo/client";
 import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
+import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import {
   CheckIcon,
-  ClockIcon,
   CogIcon,
   TrashIcon,
   UploadIcon,
 } from "@heroicons/react/outline";
-import { isTemporalInfo } from "@seasketch/geostats-types";
 import {
   FullAdminOverlayFragment,
   OverlayDataTableDetailsFragment,
@@ -27,6 +26,7 @@ import { dataTableChangeLogRefetchQueries } from "../../changelogs/dataTableChan
 import DataTableUploadJobProgress from "./DataTableUploadJobProgress";
 import DataTableUploadModal from "./DataTableUploadModal";
 import DataTableTemporalEditor from "./DataTableTemporalEditor";
+import DataTableNodataEditor from "./DataTableNodataEditor";
 import {
   allowedDataTableVisualizationColumns,
   DATA_TABLE_AGGREGATIONS,
@@ -768,6 +768,7 @@ function DataTableRow({
   const { t } = useTranslation("admin:data");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [temporalOpen, setTemporalOpen] = useState(false);
+  const [nodataOpen, setNodataOpen] = useState(false);
   const sameJoinColumn = table.joinColumn === table.overlayJoinColumn;
   const { data: projectMeta } = useCurrentProjectMetadata();
   const { columnStats } = useDataTableColumnStats(
@@ -787,24 +788,45 @@ function DataTableRow({
           </span>
         </div>
         {!job && (
-          <div className="flex shrink-0 items-center gap-1">
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-              onClick={() => setTemporalOpen(true)}
-            >
-              <ClockIcon className="h-4 w-4" aria-hidden />
-              {isTemporalInfo(table.temporal) ? t("Temporal") : t("Set time")}
-            </button>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-              onClick={() => setSettingsOpen(true)}
-            >
-              <CogIcon className="h-4 w-4" aria-hidden />
-              {t("Settings")}
-            </button>
-          </div>
+          <DropdownMenu.Root modal={false}>
+            <DropdownMenu.Trigger asChild>
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary-500"
+                aria-label={t("Settings")}
+              >
+                <CogIcon className="h-4 w-4" aria-hidden />
+                {t("Settings")}
+              </button>
+            </DropdownMenu.Trigger>
+            <DropdownMenu.Portal>
+              <DropdownMenu.Content
+                align="end"
+                sideOffset={4}
+                onCloseAutoFocus={(event) => event.preventDefault()}
+                className="z-50 min-w-[12rem] rounded-md border border-black/5 bg-white p-1 text-sm shadow-lg"
+              >
+                <DropdownMenu.Item
+                  className="flex cursor-pointer select-none items-center rounded px-2 py-1.5 text-gray-700 outline-none data-[highlighted]:bg-gray-100"
+                  onSelect={() => setSettingsOpen(true)}
+                >
+                  {t("Column Settings")}
+                </DropdownMenu.Item>
+                <DropdownMenu.Item
+                  className="flex cursor-pointer select-none items-center rounded px-2 py-1.5 text-gray-700 outline-none data-[highlighted]:bg-gray-100"
+                  onSelect={() => setTemporalOpen(true)}
+                >
+                  {t("Temporal Coverage")}
+                </DropdownMenu.Item>
+                <DropdownMenu.Item
+                  className="flex cursor-pointer select-none items-center rounded px-2 py-1.5 text-gray-700 outline-none data-[highlighted]:bg-gray-100"
+                  onSelect={() => setNodataOpen(true)}
+                >
+                  {t("No Data Values")}
+                </DropdownMenu.Item>
+              </DropdownMenu.Content>
+            </DropdownMenu.Portal>
+          </DropdownMenu.Root>
         )}
       </div>
       {job ? (
@@ -862,6 +884,16 @@ function DataTableRow({
           job={job}
           open={temporalOpen}
           onClose={() => setTemporalOpen(false)}
+          onJobStarted={onRefresh}
+        />
+      ) : null}
+      {nodataOpen ? (
+        <DataTableNodataEditor
+          table={table}
+          tableOfContentsItemId={tableOfContentsItemId}
+          job={job}
+          open={nodataOpen}
+          onClose={() => setNodataOpen(false)}
           onJobStarted={onRefresh}
         />
       ) : null}

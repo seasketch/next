@@ -4,6 +4,11 @@ import {
   isTemporalReprocess,
   temporalSettingsSnapshot,
 } from "./dataTableTemporalChange";
+import {
+  DATA_TABLE_NODATA_FIELD_GROUP,
+  isNodataReprocess,
+  nodataValuesLabel,
+} from "./dataTableNodataChange";
 
 export function tocItemIdFromMeta(meta: unknown): number | undefined {
   if (!meta || typeof meta !== "object" || Array.isArray(meta)) {
@@ -185,6 +190,24 @@ export function dataTableEventDescription(
           fromCoverage: fromSnap.coverageLabel,
           toCoverage: toSnap.coverageLabel,
         }
+      );
+    }
+    case DATA_TABLE_NODATA_FIELD_GROUP: {
+      const name =
+        tableNameFromSummary(to) || tableNameFromSummary(from) || fallback;
+      const none = t("None");
+      const fromLabel = nodataValuesLabel(from, none);
+      const toLabel = nodataValuesLabel(to, none);
+      const reprocessed = isNodataReprocess(meta, fromSummary, toSummary);
+      if (reprocessed) {
+        return t(
+          "Reprocessed {{name}} no-data values ({{fromValues}} → {{toValues}})",
+          { name, fromValues: fromLabel, toValues: toLabel }
+        );
+      }
+      return t(
+        "Updated {{name}} no-data values ({{fromValues}} → {{toValues}})",
+        { name, fromValues: fromLabel, toValues: toLabel }
       );
     }
     case "DATA_TABLE_VISUALIZATION_SETTINGS_UPDATED": {

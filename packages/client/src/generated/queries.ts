@@ -963,6 +963,7 @@ export type ChangeLogCondition = {
 export enum ChangeLogFieldGroup {
   DataTableCreated = 'DATA_TABLE_CREATED',
   DataTableDeleted = 'DATA_TABLE_DELETED',
+  DataTableNodata = 'DATA_TABLE_NODATA',
   DataTableRenamed = 'DATA_TABLE_RENAMED',
   DataTableReplaced = 'DATA_TABLE_REPLACED',
   DataTableRollback = 'DATA_TABLE_ROLLBACK',
@@ -2017,6 +2018,7 @@ export type CreateOverlayDataTableReprocessInput = {
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
+  nodataConfig?: Maybe<Scalars['JSON']>;
   tableId?: Maybe<Scalars['Int']>;
   temporalConfig?: Maybe<Scalars['JSON']>;
 };
@@ -8004,9 +8006,9 @@ export type Mutation = {
   /** Creates a single `OptionalBasemapLayer`. */
   createOptionalBasemapLayer?: Maybe<CreateOptionalBasemapLayerPayload>;
   /**
-   * Admin-only. Starts a draft reprocess job that derives _when_* columns from the
-   * current parquet using an ephemeral temporal_config. Does not write
-   * overlay_data_tables.temporal until the job succeeds.
+   * Admin-only. Starts a draft reprocess job that applies nodata sentinels and/or
+   * derives _when_* columns from the source (pre-nodata) parquet. Metadata is
+   * written only when the job succeeds.
    */
   createOverlayDataTableReprocess?: Maybe<CreateOverlayDataTableReprocessPayload>;
   createOverlayDataTableUpload?: Maybe<CreateOverlayDataTableUploadPayload>;
@@ -8475,6 +8477,8 @@ export type Mutation = {
   updateOptionalBasemapLayer?: Maybe<UpdateOptionalBasemapLayerPayload>;
   /** Updates a single `OptionalBasemapLayer` using its globally unique id and a patch. */
   updateOptionalBasemapLayerByNodeId?: Maybe<UpdateOptionalBasemapLayerPayload>;
+  /** Admin-only. Updates stored no-data sentinels without rewriting parquet. Used when clearing custom values. */
+  updateOverlayDataTableNodata?: Maybe<UpdateOverlayDataTableNodataPayload>;
   /**
    * Admin mutation. Sets (or clears, when null) the TemporalInfo document
    * for an overlay data table. authoredBy is forced to "admin".
@@ -10180,6 +10184,12 @@ export type MutationUpdateOptionalBasemapLayerByNodeIdArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
+export type MutationUpdateOverlayDataTableNodataArgs = {
+  input: UpdateOverlayDataTableNodataInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
 export type MutationUpdateOverlayDataTableTemporalArgs = {
   overlayDataTableId: Scalars['Int'];
   temporal?: Maybe<Scalars['TemporalInfo']>;
@@ -10756,6 +10766,8 @@ export type OverlayDataTable = Node & {
   id: Scalars['Int'];
   joinColumn: Scalars['String'];
   name: Scalars['String'];
+  /** Sentinel values rewritten to SQL NULL in parquet. Empty cells are always no-data. @omit create,update */
+  nodataValues: Scalars['JSON'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   overlayJoinColumn: Scalars['String'];
@@ -10772,6 +10784,8 @@ export type OverlayDataTable = Node & {
    */
   requiredFilterColumns?: Maybe<Array<Maybe<Scalars['String']>>>;
   rowCount: Scalars['Int'];
+  /** Immutable pre-nodata parquet used as the reprocess source so sentinels can be added or removed. @omit */
+  sourceParquetRemote?: Maybe<Scalars['String']>;
   /**
    * Stable logical identity for a data table across version replace and TOC
    * publish. Draft and published copies share the same UUID.
@@ -10810,6 +10824,11 @@ export type OverlayDataTableUpload = Node & {
   errorDetails?: Maybe<Scalars['JSON']>;
   filename: Scalars['String'];
   id: Scalars['UUID'];
+  /**
+   * Ephemeral DataTableNodataConfig for a reprocess (or CSV replace) job. Not
+   * copied onto overlay_data_tables until the job completes successfully.
+   */
+  nodataConfig?: Maybe<Scalars['JSON']>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   overlayGeostats: Scalars['JSON'];
@@ -18575,6 +18594,40 @@ export type UpdateOptionalBasemapLayerPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `updateOverlayDataTableNodata` mutation. */
+export type UpdateOverlayDataTableNodataInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  nodataValues?: Maybe<Scalars['JSON']>;
+  tableId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `updateOverlayDataTableNodata` mutation. */
+export type UpdateOverlayDataTableNodataPayload = {
+  __typename?: 'UpdateOverlayDataTableNodataPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  overlayDataTable?: Maybe<OverlayDataTable>;
+  /** An edge for our `OverlayDataTable`. May be used by Relay 1. */
+  overlayDataTableEdge?: Maybe<OverlayDataTablesEdge>;
+  /** Reads a single `Project` that is related to this `OverlayDataTable`. */
+  project?: Maybe<Project>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `updateOverlayDataTableNodata` mutation. */
+export type UpdateOverlayDataTableNodataPayloadOverlayDataTableEdgeArgs = {
+  orderBy?: Maybe<Array<OverlayDataTablesOrderBy>>;
+};
+
 /** All input for the `updatePost` mutation. */
 export type UpdatePostInput = {
   /**
@@ -23900,7 +23953,7 @@ export type ClientOverlayDataTableFragment = (
 
 export type OverlayDataTableDetailsFragment = (
   { __typename?: 'OverlayDataTable' }
-  & Pick<OverlayDataTable, 'id' | 'stableId' | 'name' | 'version' | 'joinColumn' | 'overlayJoinColumn' | 'rowCount' | 'parquetRemote' | 'columnStatsRemote' | 'parquetUrl' | 'columnStatsUrl' | 'queryUrl' | 'deletedAt' | 'replacedById' | 'createdAt' | 'updatedAt' | 'visualizationColumns' | 'visualizationOps' | 'requiredFilterColumns' | 'hiddenFilterColumns' | 'filterColumnLabels' | 'temporal'>
+  & Pick<OverlayDataTable, 'id' | 'stableId' | 'name' | 'version' | 'joinColumn' | 'overlayJoinColumn' | 'rowCount' | 'parquetRemote' | 'columnStatsRemote' | 'parquetUrl' | 'columnStatsUrl' | 'queryUrl' | 'deletedAt' | 'replacedById' | 'createdAt' | 'updatedAt' | 'visualizationColumns' | 'visualizationOps' | 'requiredFilterColumns' | 'hiddenFilterColumns' | 'filterColumnLabels' | 'temporal' | 'nodataValues'>
 );
 
 export type OverlayDataTableVisualizationMetadataQueryVariables = Exact<{
@@ -24061,9 +24114,27 @@ export type UpdateOverlayDataTableTemporalMutation = (
   ) }
 );
 
+export type UpdateOverlayDataTableNodataMutationVariables = Exact<{
+  tableId: Scalars['Int'];
+  nodataValues: Scalars['JSON'];
+}>;
+
+
+export type UpdateOverlayDataTableNodataMutation = (
+  { __typename?: 'Mutation' }
+  & { updateOverlayDataTableNodata?: Maybe<(
+    { __typename?: 'UpdateOverlayDataTableNodataPayload' }
+    & { overlayDataTable?: Maybe<(
+      { __typename?: 'OverlayDataTable' }
+      & OverlayDataTableDetailsFragment
+    )> }
+  )> }
+);
+
 export type CreateOverlayDataTableReprocessMutationVariables = Exact<{
   tableId: Scalars['Int'];
-  temporalConfig: Scalars['JSON'];
+  temporalConfig?: Maybe<Scalars['JSON']>;
+  nodataConfig?: Maybe<Scalars['JSON']>;
 }>;
 
 
@@ -28704,6 +28775,7 @@ export const OverlayDataTableDetailsFragmentDoc = /*#__PURE__*/ gql`
   hiddenFilterColumns
   filterColumnLabels
   temporal
+  nodataValues
 }
     `;
 export const UserProfileDetailsFragmentDoc = /*#__PURE__*/ gql`
@@ -32867,10 +32939,21 @@ export const UpdateOverlayDataTableTemporalDocument = /*#__PURE__*/ gql`
   }
 }
     `;
+export const UpdateOverlayDataTableNodataDocument = /*#__PURE__*/ gql`
+    mutation UpdateOverlayDataTableNodata($tableId: Int!, $nodataValues: JSON!) {
+  updateOverlayDataTableNodata(
+    input: {tableId: $tableId, nodataValues: $nodataValues}
+  ) {
+    overlayDataTable {
+      ...OverlayDataTableDetails
+    }
+  }
+}
+    ${OverlayDataTableDetailsFragmentDoc}`;
 export const CreateOverlayDataTableReprocessDocument = /*#__PURE__*/ gql`
-    mutation CreateOverlayDataTableReprocess($tableId: Int!, $temporalConfig: JSON!) {
+    mutation CreateOverlayDataTableReprocess($tableId: Int!, $temporalConfig: JSON, $nodataConfig: JSON) {
   createOverlayDataTableReprocess(
-    input: {tableId: $tableId, temporalConfig: $temporalConfig}
+    input: {tableId: $tableId, temporalConfig: $temporalConfig, nodataConfig: $nodataConfig}
   ) {
     overlayDataTableUpload {
       ...OverlayDataTableUploadDetails
@@ -35538,6 +35621,7 @@ export const namedOperations = {
     RollbackOverlayDataTableVersion: 'RollbackOverlayDataTableVersion',
     SetOverlayDataTableVisualizationSettings: 'SetOverlayDataTableVisualizationSettings',
     UpdateOverlayDataTableTemporal: 'UpdateOverlayDataTableTemporal',
+    UpdateOverlayDataTableNodata: 'UpdateOverlayDataTableNodata',
     CreateOverlayDataTableReprocess: 'CreateOverlayDataTableReprocess',
     updateProjectAccessControlSettings: 'updateProjectAccessControlSettings',
     toggleLanguageSupport: 'toggleLanguageSupport',

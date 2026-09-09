@@ -272,6 +272,113 @@ describe("overlay_data_tables", () => {
     );
   });
 
+  test("admin can start a no-data reprocess without writing nodata_values yet", async () => {
+    await projectTransaction(
+      pool,
+      "public",
+      async (conn, projectId, adminId) => {
+        await createSession(conn, adminId, true, false, projectId);
+        const { tocId, sourceId } = await createDraftLayer(
+          conn,
+          projectId,
+          adminId,
+        );
+        await conn.any(sql`
+          update table_of_contents_items
+          set enable_data_tables = true, data_table_join_column = 'id'
+          where id = ${tocId}`);
+        let tableId: number;
+        await asPostgres(
+          conn,
+          async () => {
+            await conn.any(sql`
+              update data_sources
+              set geostats = '{"layers":[{"attributes":[]}]}'::jsonb
+              where id = ${sourceId}`);
+            tableId = Number(
+              await conn.oneFirst(sql`
+              insert into overlay_data_tables (
+                table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
+                row_count, created_by, version, parquet_remote, column_stats_remote
+              ) values (
+                ${tocId}, ${projectId}, 'wq', 'siteid', 'siteid', 10, ${adminId}, 1,
+                'r2://bucket/old.parquet', 'r2://bucket/old.json'
+              ) returning id`),
+            );
+          },
+          { userId: adminId, projectId },
+        );
+
+        const upload = await conn.one(sql`
+          select * from create_overlay_data_table_reprocess(
+            ${tableId},
+            null,
+            ${sql.json({ values: [-88, "NA"] })}
+          )`);
+
+        expect(upload.reprocess_of_overlay_data_table_id).toBe(tableId);
+        expect(upload.nodata_config).toEqual({ values: [-88, "NA"] });
+        expect(upload.temporal_config).toBeNull();
+        const stored = await conn.oneFirst(
+          sql`select nodata_values from overlay_data_tables where id = ${tableId}`,
+        );
+        expect(stored).toEqual([]);
+      },
+    );
+  });
+
+  test("admin can start a no-data reprocess that clears sentinels", async () => {
+    await projectTransaction(
+      pool,
+      "public",
+      async (conn, projectId, adminId) => {
+        await createSession(conn, adminId, true, false, projectId);
+        const { tocId, sourceId } = await createDraftLayer(
+          conn,
+          projectId,
+          adminId,
+        );
+        await conn.any(sql`
+          update table_of_contents_items
+          set enable_data_tables = true, data_table_join_column = 'id'
+          where id = ${tocId}`);
+        let tableId: number;
+        await asPostgres(
+          conn,
+          async () => {
+            await conn.any(sql`
+              update data_sources
+              set geostats = '{"layers":[{"attributes":[]}]}'::jsonb
+              where id = ${sourceId}`);
+            tableId = Number(
+              await conn.oneFirst(sql`
+              insert into overlay_data_tables (
+                table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
+                row_count, created_by, version, parquet_remote, column_stats_remote,
+                nodata_values
+              ) values (
+                ${tocId}, ${projectId}, 'wq', 'siteid', 'siteid', 10, ${adminId}, 1,
+                'r2://bucket/old.parquet', 'r2://bucket/old.json',
+                ${sql.json([-88])}
+              ) returning id`),
+            );
+          },
+          { userId: adminId, projectId },
+        );
+
+        const upload = await conn.one(sql`
+          select * from create_overlay_data_table_reprocess(
+            ${tableId},
+            null,
+            ${sql.json({ values: [] })}
+          )`);
+
+        expect(upload.nodata_config).toEqual({ values: [] });
+        expect(upload.reprocess_of_overlay_data_table_id).toBe(tableId);
+      },
+    );
+  });
+
   test("non-admin cannot insert overlay data tables", async () => {
     await projectTransaction(
       pool,
