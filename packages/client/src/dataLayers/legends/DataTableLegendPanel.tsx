@@ -201,11 +201,11 @@ export default function DataTableLegendPanel({
       return;
     }
     const latest = manager.getLayerDataTable?.(layerId);
-    const stableId = latest?.stableId || dataTable?.stableId;
-    if (!stableId) {
+    const stableId = latest?.stableId;
+    if (!stableId || stableId !== tableStableId) {
       return;
     }
-    const latestFilters = latest?.filters ?? userChoice.filters;
+    const latestFilters = latest.filters;
     const required = requiredFilterColumns.filter(
       (column) => omittedFilterColumns.indexOf(column) === -1
     );
@@ -235,7 +235,7 @@ export default function DataTableLegendPanel({
   }, [
     manager,
     layerId,
-    dataTable?.stableId,
+    tableStableId,
     tableMetadata,
     columnStats?.columns,
     requiredFilterColumns,
@@ -309,6 +309,7 @@ export default function DataTableLegendPanel({
           </button>
         </div>
         <DataTableVisualizationControls
+          key={tableStableId}
           layerId={layerId}
           metadata={tableMetadata}
           columnStatsState={columnStatsState}
@@ -343,6 +344,7 @@ export default function DataTableLegendPanel({
         !columnStatsState.error &&
         columnStats?.columns && (
           <DataTableFilterControls
+            key={tableStableId}
             columns={columnStats.columns}
             filters={activeFilters}
             visualizedColumns={visualizedColumns}
@@ -353,11 +355,14 @@ export default function DataTableLegendPanel({
             columnLabels={filterColumnLabels}
             queryLoading={loading && !error}
             onChange={(filters) => {
-              if (!tableStableId) return;
+              const latest = manager?.getLayerDataTable?.(layerId);
+              if (!latest?.stableId || latest.stableId !== tableStableId) {
+                return;
+              }
               manager?.setLayerDataTable(layerId, {
-                stableId: tableStableId,
-                column: effectiveColumn,
-                op: userChoice.op || op,
+                stableId: latest.stableId,
+                column: latest.column ?? effectiveColumn,
+                op: latest.op || userChoice.op || op,
                 filters: ensureRequiredDataTableFilters(
                   filters,
                   requiredFilterColumns,

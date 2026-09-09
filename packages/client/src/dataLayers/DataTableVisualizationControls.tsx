@@ -204,16 +204,19 @@ export default function DataTableVisualizationControls({
       return;
     }
     const latest = manager.getLayerDataTable?.(layerId);
-    const latestColumn = latest?.column ?? userChoice.column;
-    const latestOp = latest?.op ?? userChoice.op;
+    if (!latest?.stableId || latest.stableId !== tableStableId) {
+      return;
+    }
+    const latestColumn = latest.column;
+    const latestOp = latest.op;
     if (latestColumn === effectiveColumn && latestOp === resolved.op) {
       return;
     }
     manager.setLayerDataTable(layerId, {
-      stableId: latest?.stableId || tableStableId,
+      stableId: latest.stableId,
       column: effectiveColumn,
       op: resolved.op,
-      filters: latest?.filters ?? userChoice.filters,
+      filters: latest.filters,
     });
   }, [
     manager,
@@ -247,13 +250,15 @@ export default function DataTableVisualizationControls({
             options={opOptions}
             onChange={(value) => {
               if (!tableStableId) return;
+              const latest = manager?.getLayerDataTable?.(layerId);
+              if (!latest?.stableId || latest.stableId !== tableStableId) {
+                return;
+              }
               manager?.setLayerDataTable(layerId, {
-                stableId: tableStableId,
-                column: userChoice.column,
+                stableId: latest.stableId,
+                column: latest.column,
                 op: value as DataTableAggregation,
-                filters:
-                  manager.getLayerDataTable?.(layerId)?.filters ??
-                  userChoice.filters,
+                filters: latest.filters,
               });
             }}
           />
@@ -270,13 +275,15 @@ export default function DataTableVisualizationControls({
                 options={columnOptions}
                 onChange={(value) => {
                   if (!tableStableId) return;
+                  const latest = manager?.getLayerDataTable?.(layerId);
+                  if (!latest?.stableId || latest.stableId !== tableStableId) {
+                    return;
+                  }
                   manager?.setLayerDataTable(layerId, {
-                    stableId: tableStableId,
+                    stableId: latest.stableId,
                     column: value,
-                    op: userChoice.op,
-                    filters:
-                      manager.getLayerDataTable?.(layerId)?.filters ??
-                      userChoice.filters,
+                    op: latest.op,
+                    filters: latest.filters,
                   });
                 }}
               />

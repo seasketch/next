@@ -60,6 +60,11 @@ import {
   buildDataTableStatesFromLayers,
   layerStatesForPreferences,
 } from "./dataTableLayerState";
+import {
+  RememberedDataTableSettings,
+  parseDataTableSettingsMemory,
+  resolveLayerDataTableChange,
+} from "./dataTableSettingsMemory";
 import { TemporalClock } from "@seasketch/geostats-types";
 import {
   DATA_TABLE_ACTIVE_COLOR,
@@ -244,6 +249,8 @@ type FullInternalState = MapContextInterface & SketchLayerContextState;
 class MapContextManager extends EventEmitter {
   map?: Map;
   private preferencesKey?: string;
+  /** Last-used column/op/filters keyed by table stableId (LRU, persisted). */
+  private dataTableSettingsMemory: RememberedDataTableSettings[] = [];
   private clientDataSources: {
     [dataSourceId: string]: DataSourceDetailsFragment;
   } = {};
@@ -384,6 +391,7 @@ class MapContextManager extends EventEmitter {
     // @ts-ignore
     window.mapContext = this;
     this.preferencesKey = preferencesKey;
+    this.dataTableSettingsMemory = this.loadDataTableSettingsMemory();
     this.internalState = { ...initialState, ...initialSketchState };
     this.initialCameraOptions = initialCameraOptions;
     this.initialBounds = initialBounds;
@@ -415,10 +423,37 @@ class MapContextManager extends EventEmitter {
     });
     // Seed from restored preferences / initial layer states.
     for (const tocStableId of this.overlayStates.keys()) {
-      if (this.overlayStates.getRaw(tocStableId)?.dataTable?.stableId) {
+      const restored = this.overlayStates.getRaw(tocStableId)?.dataTable;
+      if (restored?.stableId) {
         this.dataTableActiveTocIds.add(tocStableId);
+        this.commitDataTableSettingsMemory(
+          resolveLayerDataTableChange(undefined, restored, this.dataTableSettingsMemory)
+            .memory
+        );
       }
     }
+  }
+
+  private loadDataTableSettingsMemory(): RememberedDataTableSettings[] {
+    if (!this.preferencesKey || typeof window === "undefined") {
+      return [];
+    }
+    try {
+      const raw = window.localStorage.getItem(this.preferencesKey);
+      if (!raw) {
+        return [];
+      }
+      const prefs = JSON.parse(raw);
+      return parseDataTableSettingsMemory(prefs?.dataTableSettings);
+    } catch {
+      return [];
+    }
+  }
+
+  private commitDataTableSettingsMemory(
+    memory: RememberedDataTableSettings[]
+  ) {
+    this.dataTableSettingsMemory = memory;
   }
 
   getCustomGLSource(sourceId: number) {
@@ -447,15 +482,23 @@ class MapContextManager extends EventEmitter {
 
   /**
    * Set or clear data-table user intent on a layer. Source of truth is
-   * LayerState.dataTable (persisted with prefs / bookmarks).
+   * LayerState.dataTable (persisted with prefs / bookmarks). Switching
+   * tables restores that table's last column/op/filters from memory.
    */
   setLayerDataTable(tocStableId: string, state: LayerDataTableState | null) {
     if (!this.overlayStates.has(tocStableId)) {
       return;
     }
-    const previousTableId =
-      this.overlayStates.getRaw(tocStableId)?.dataTable?.stableId;
-    if (state === null || !state.stableId) {
+    const previous = this.overlayStates.getRaw(tocStableId)?.dataTable;
+    const previousTableId = previous?.stableId;
+    const resolved = resolveLayerDataTableChange(
+      previous,
+      state,
+      this.dataTableSettingsMemory
+    );
+    this.commitDataTableSettingsMemory(resolved.memory);
+    const next = resolved.next;
+    if (next === null || !next.stableId) {
       this.overlayStates.patch(tocStableId, { dataTable: undefined }, true);
       this.dataTableActiveTocIds.delete(tocStableId);
       const layer = this.layers[tocStableId];
@@ -471,12 +514,12 @@ class MapContextManager extends EventEmitter {
       this.overlayStates.patch(
         tocStableId,
         {
-          dataTable: { ...state },
+          dataTable: { ...next },
         },
         true
       );
       this.dataTableActiveTocIds.add(tocStableId);
-      if (previousTableId && previousTableId !== state.stableId) {
+      if (previousTableId && previousTableId !== next.stableId) {
         this.dataTableQueryManager.clearSeriesForTable(previousTableId);
       }
     }
@@ -505,8 +548,17 @@ class MapContextManager extends EventEmitter {
     // Bookmark apply must turn off data tables that aren't in the map.
     for (const tocStableId of [...this.dataTableActiveTocIds]) {
       if (!states[tocStableId]?.stableId) {
-        const previousTableId =
-          this.overlayStates.getRaw(tocStableId)?.dataTable?.stableId;
+        const previous = this.overlayStates.getRaw(tocStableId)?.dataTable;
+        const previousTableId = previous?.stableId;
+        if (previous?.stableId) {
+          this.commitDataTableSettingsMemory(
+            resolveLayerDataTableChange(
+              previous,
+              null,
+              this.dataTableSettingsMemory
+            ).memory
+          );
+        }
         this.overlayStates.patch(tocStableId, { dataTable: undefined }, true);
         this.dataTableActiveTocIds.delete(tocStableId);
         const layer = this.layers[tocStableId];
@@ -524,10 +576,17 @@ class MapContextManager extends EventEmitter {
       if (!next?.stableId || !this.overlayStates.has(tocStableId)) {
         continue;
       }
+      const previous = this.overlayStates.getRaw(tocStableId)?.dataTable;
+      const resolved = resolveLayerDataTableChange(
+        previous,
+        next,
+        this.dataTableSettingsMemory
+      );
+      this.commitDataTableSettingsMemory(resolved.memory);
       this.overlayStates.patch(
         tocStableId,
         {
-          dataTable: { ...next },
+          dataTable: { ...(resolved.next || next) },
         },
         true
       );
@@ -1648,6 +1707,7 @@ class MapContextManager extends EventEmitter {
     if (this.preferencesKey) {
       const prefs = {
         layers: layerStatesForPreferences(this.overlayStates.getState()),
+        dataTableSettings: this.dataTableSettingsMemory,
         ...(this.map
           ? {
               cameraOptions: {

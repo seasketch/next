@@ -4,8 +4,10 @@ import {
 } from "./dataTableQueryApi";
 
 /**
- * Persisted / bookmarked data-table intent for a single overlay layer.
- * Identifies the table by overlay_data_tables.stable_id (not row id).
+ * Active data-table intent for a single overlay layer.
+ * Identifies the table by overlay_data_tables.stable_id (survives replace).
+ * Last-used column/op/filters for other tables live in
+ * `dataTableSettingsMemory` (max 6, persisted with map prefs).
  */
 export interface LayerDataTableState {
   stableId: string;

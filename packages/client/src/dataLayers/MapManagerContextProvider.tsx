@@ -24,8 +24,9 @@ import MapTemporalStateProvider from "./MapTemporalStateContext";
 
 export interface MapManagerContextProviderProps {
   /**
-   * Full localStorage key for persisting layers, camera, sketchClassLayerStates.
-   * Must include project slug to avoid cross-project leakage (e.g. myproject-homepage).
+   * Full localStorage key for persisting layers, camera, sketchClassLayerStates,
+   * and per-table data-table filter settings. Must include project slug to
+   * avoid cross-project leakage (e.g. myproject-homepage).
    */
   preferencesKey?: string;
   cacheSize?: number;
