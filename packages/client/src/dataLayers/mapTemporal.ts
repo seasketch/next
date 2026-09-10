@@ -375,8 +375,7 @@ export type TimeSliderCoverageMark = {
   left: number;
   width: number;
   count?: number;
-  heightPct?: number;
-  kind?: "coverage" | "histogram";
+  kind?: "coverage";
 };
 
 function sourceMarkId(source: VisibleTemporalSource): string {
@@ -438,23 +437,21 @@ export function layoutTimeSliderCoverageMarks(
 ): TimeSliderCoverageMark[] {
   if (layouts.length === 0) return [];
   const marks: TimeSliderCoverageMark[] = [];
-  const histogramSources = sources.filter(
+  const presenceSources = sources.filter(
     (source) =>
-      (source.tableStableId &&
-        queryCounts &&
-        queryCounts[source.tableStableId]) ||
+      Boolean(source.tableStableId) ||
       (source.temporal.providesSliderStats &&
         source.temporal.availability?.type === "histogram")
   );
   const bandSources = sources.filter(
-    (source) => histogramSources.indexOf(source) === -1
+    (source) => presenceSources.indexOf(source) === -1
   );
 
-  if (histogramSources.length > 0) {
-    const stepCounts = layouts.map((layout) => {
+  if (presenceSources.length > 0) {
+    const occupied = layouts.map((layout) => {
       const step = expandTemporalIso(layout.step, resolution);
-      if (!step) return 0;
-      return histogramSources.reduce((acc, source) => {
+      if (!step) return false;
+      return presenceSources.some((source) => {
         const count = histogramCountForStep(
           source,
           step.start,
@@ -463,24 +460,30 @@ export function layoutTimeSliderCoverageMarks(
           layout.step,
           queryCounts
         );
-        return acc + (count || 0);
-      }, 0);
-    });
-    const maxCount = stepCounts.reduce((acc, count) => Math.max(acc, count), 0);
-    layouts.forEach((layout, index) => {
-      const count = stepCounts[index];
-      if (count <= 0) return;
-      marks.push({
-        // eslint-disable-next-line i18next/no-literal-string
-        id: `hist:${layout.step}`,
-        left: layout.startPct,
-        width: sliderPct(layout.endPct - layout.startPct),
-        count,
-        heightPct:
-          maxCount > 0 ? Math.max(8, Math.round((count / maxCount) * 100)) : 8,
-        kind: "histogram",
+        return (count || 0) > 0;
       });
     });
+    let index = 0;
+    while (index < layouts.length) {
+      if (!occupied[index]) {
+        index += 1;
+        continue;
+      }
+      const start = index;
+      while (index + 1 < layouts.length && occupied[index + 1]) {
+        index += 1;
+      }
+      const first = layouts[start];
+      const last = layouts[index];
+      marks.push({
+        // eslint-disable-next-line i18next/no-literal-string
+        id: `presence:${first.step}:${last.step}`,
+        left: first.startPct,
+        width: sliderPct(last.endPct - first.startPct),
+        kind: "coverage",
+      });
+      index += 1;
+    }
   }
 
   for (const source of bandSources) {

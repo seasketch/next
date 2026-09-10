@@ -90,25 +90,25 @@ function renderSlider(
   return { ...view, setClock };
 }
 
-describe("TimeSlider histogram loading", () => {
-  it("paints observation counts in the active color when settled", () => {
+describe("TimeSlider coverage loading", () => {
+  it("paints occupied steps on the track when settled", () => {
     const { container } = renderSlider(false);
     expect(container.querySelector("[aria-busy='true']")).toBeNull();
-    expect(container.querySelector(".bg-sky-300\\/70")).toBeTruthy();
+    expect(container.querySelector(".bg-sky-400\\/45")).toBeTruthy();
     expect(container.querySelector(".bg-gray-400\\/40")).toBeNull();
   });
 
-  it("greys and pulses the same bars while series counts are loading", () => {
+  it("greys and pulses the track while series counts are loading", () => {
     const { container } = renderSlider(true);
     const track = container.querySelector("[aria-busy='true']");
     expect(track).toBeTruthy();
     expect(track?.className).toMatch(/animate-pulse/);
     expect(container.querySelector(".bg-gray-400\\/40")).toBeTruthy();
-    expect(container.querySelector(".bg-sky-300\\/70")).toBeNull();
+    expect(container.querySelector(".bg-sky-400\\/45")).toBeNull();
     expect(screen.getByText("Loading observation counts")).toBeInTheDocument();
   });
 
-  it("greys range-mode histogram bars while a map query is in flight", () => {
+  it("greys the track in range mode while a map query is in flight", () => {
     const { container } = renderSlider(true, {
       mode: "window",
       start: "2018",
@@ -151,7 +151,7 @@ describe("TimeSlider histogram loading", () => {
     });
   });
 
-  it("highlights only the histogram bins inside the window", () => {
+  it("keeps presence coverage on the track while a window is selected", () => {
     const { container, getByTestId } = renderSlider(false, {
       mode: "window",
       start: "2019",
@@ -164,12 +164,12 @@ describe("TimeSlider histogram loading", () => {
     expect(getByTestId("timeslider-range-end")).toHaveStyle({
       left: "100%",
     });
-    expect(container.querySelectorAll(".bg-sky-300\\/70")).toHaveLength(2);
-    expect(container.querySelectorAll(".bg-sky-300\\/20")).toHaveLength(1);
+    expect(container.querySelector(".bg-sky-400\\/45")).toBeTruthy();
+    expect(container.querySelector(".bg-sky-200\\/55")).toBeTruthy();
   });
 });
 
-describe("TimeSlider Instant / Range mode", () => {
+describe("TimeSlider Single / Range mode", () => {
   beforeAll(() => {
     Object.assign(Element.prototype, {
       setPointerCapture: () => {},
@@ -178,9 +178,9 @@ describe("TimeSlider Instant / Range mode", () => {
     });
   });
 
-  it("shows Instant and Range as a pressed-state switch", () => {
+  it("shows Single and Range as a pressed-state switch", () => {
     renderSlider(false);
-    expect(screen.getByRole("button", { name: "Instant" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Single" })).toHaveAttribute(
       "aria-pressed",
       "true"
     );
@@ -203,7 +203,7 @@ describe("TimeSlider Instant / Range mode", () => {
 
   it("does not change the clock when the active mode is clicked again", () => {
     const { setClock } = renderSlider(false);
-    fireEvent.click(screen.getByRole("button", { name: "Instant" }));
+    fireEvent.click(screen.getByRole("button", { name: "Single" }));
     expect(setClock).not.toHaveBeenCalled();
   });
 
@@ -214,7 +214,7 @@ describe("TimeSlider Instant / Range mode", () => {
       end: "2021",
       viewResolution: "year",
     });
-    fireEvent.click(screen.getByRole("button", { name: "Instant" }));
+    fireEvent.click(screen.getByRole("button", { name: "Single" }));
     expect(setClock).toHaveBeenCalledWith({
       mode: "instant",
       start: "2020",

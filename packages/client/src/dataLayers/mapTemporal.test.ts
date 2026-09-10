@@ -677,7 +677,7 @@ describe("view resolution and window clocks", () => {
     expect(next?.mode).toBe("window");
   });
 
-  it("rolls availability bins into count-scaled histogram marks", () => {
+  it("paints presence coverage for steps with records and leaves gaps empty", () => {
     const temporal = createLayerYearTemporalInfo(2018);
     temporal.granularity = "row";
     temporal.providesSliderStats = true;
@@ -711,9 +711,11 @@ describe("view resolution and window clocks", () => {
       ],
       "year"
     );
-    const bars = marks.filter((mark) => mark.kind === "histogram");
-    expect(bars.map((bar) => bar.count)).toEqual([10, 5]);
-    expect(bars[0].heightPct).toBe(100);
-    expect(bars[1].heightPct).toBe(50);
+    expect(marks).toHaveLength(2);
+    expect(marks[0].left).toBe(0);
+    expect(marks[0].width).toBeCloseTo(100 / 3);
+    expect(marks[1].left).toBeCloseTo((2 / 3) * 100);
+    expect(marks[1].width).toBeCloseTo(100 / 3);
+    expect(marks.every((mark) => mark.kind === "coverage")).toBe(true);
   });
 });

@@ -225,12 +225,17 @@ body .mapboxgl-canvas-container.mapboxgl-interactive {
 /*
  * TimeSlider docks over the map without shrinking the Mapbox canvas.
  * :has() lifts attribution and other bottom chrome when the bar is present.
+ *
+ * Scale follows the map pane (container queries), not the window. Admin
+ * split views stay compact; a full-width project map steps up gradually.
  */
 .timeslider-map-root {
+  container-type: inline-size;
+  container-name: timeslider-map;
   --timeslider-dock-height: 0px;
 }
 .timeslider-map-root:has(.timeslider-dock) {
-  --timeslider-dock-height: 52px;
+  --timeslider-dock-height: 56px;
 }
 .timeslider-map-root:has(.timeslider-dock) .mapboxgl-ctrl-bottom-left,
 .timeslider-map-root:has(.timeslider-dock) .mapboxgl-ctrl-bottom-right {
@@ -238,6 +243,76 @@ body .mapboxgl-canvas-container.mapboxgl-interactive {
 }
 .timeslider-map-root:has(.timeslider-dock) .timeslider-map-bottom-overlay {
   bottom: calc(1rem + var(--timeslider-dock-height));
+}
+
+.timeslider-dock {
+  --ts-dock-min-h: 52px;
+  --ts-dock-px: 0.75rem;
+  --ts-dock-py: 0.5rem;
+  --ts-row-gap: 0.75rem;
+  --ts-cluster-h: 2.5rem;
+  --ts-cluster-p: 0.25rem;
+  --ts-cluster-gap: 0.25rem;
+  --ts-play-h: 2rem;
+  --ts-play-icon: 1.5rem;
+  --ts-btn-h: 1.75rem;
+  --ts-btn-w: 2rem;
+  --ts-btn-text: 0.75rem;
+  --ts-glyph: 1rem;
+  --ts-watch-px: 0.75rem;
+  --ts-watch-text: 13px;
+  --ts-track-h: 2.5rem;
+  --ts-rail-h: 0.375rem;
+  --ts-thumb: 0.875rem;
+  --ts-handle-h: 1.75rem;
+  --ts-handle-w: 0.625rem;
+}
+
+@container timeslider-map (min-width: 720px) {
+  .timeslider-dock {
+    --ts-dock-px: 0.875rem;
+    --ts-row-gap: 0.875rem;
+    --ts-watch-px: 0.875rem;
+  }
+}
+
+@container timeslider-map (min-width: 960px) {
+  .timeslider-dock {
+    --ts-dock-min-h: 56px;
+    --ts-dock-py: 0.625rem;
+    --ts-cluster-h: 2.75rem;
+    --ts-play-h: 2.125rem;
+    --ts-play-icon: 1.625rem;
+    --ts-btn-h: 1.875rem;
+    --ts-watch-text: 14px;
+    --ts-track-h: 2.75rem;
+    --ts-rail-h: 0.4375rem;
+    --ts-thumb: 0.9375rem;
+  }
+}
+
+@container timeslider-map (min-width: 1280px) {
+  .timeslider-dock {
+    --ts-dock-min-h: 64px;
+    --ts-dock-px: 1rem;
+    --ts-row-gap: 1rem;
+    --ts-cluster-h: 3rem;
+    --ts-cluster-p: 0.375rem;
+    --ts-cluster-gap: 0.375rem;
+    --ts-play-h: 2.5rem;
+    --ts-play-icon: 1.75rem;
+    --ts-btn-h: 2rem;
+    --ts-btn-w: 2.25rem;
+    --ts-btn-text: 0.875rem;
+    --ts-glyph: 1.25rem;
+    --ts-watch-px: 1rem;
+    --ts-watch-text: 15px;
+    --ts-track-h: 3rem;
+    --ts-rail-h: 0.5rem;
+    --ts-thumb: 1rem;
+    --ts-handle-h: 2rem;
+    --ts-handle-w: 0.75rem;
+  }
 }
 
 
