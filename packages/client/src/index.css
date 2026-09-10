@@ -11087,6 +11087,11 @@ select{
   border-color:rgb(255 255 255 / 0.9)
 }
 
+.border-primary-400{
+  --tw-border-opacity:1;
+  border-color:rgb(61 153 210 / var(--tw-border-opacity, 1))
+}
+
 .border-b-black{
   --tw-border-opacity:1;
   border-bottom-color:rgb(0 0 0 / var(--tw-border-opacity, 1))

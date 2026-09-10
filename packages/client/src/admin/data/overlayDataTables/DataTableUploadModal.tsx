@@ -23,8 +23,13 @@ import {
 import { DELIMITED_SAMPLE_BYTES } from "../../uploads/delimitedSpatial/detectDelimitedGeometry";
 import { DataTableUploadProcessingOptions } from "./types";
 import ProjectBackgroundJobManager from "../../uploads/ProjectBackgroundJobManager";
-
-const CSV_ACCEPT = ".csv,.tsv,.txt";
+import { useRegisterDropTarget } from "../../uploads/DataAdminDropTargetContext";
+import { DROP_TARGET_PRIORITY } from "../../uploads/dropTargets";
+import LocalFileDropzone from "../../uploads/LocalFileDropzone";
+import {
+  DATA_TABLE_FILE_ACCEPT,
+  pickDataTableDrop,
+} from "../../uploads/uploadFileTypes";
 
 function DataTableCsvJoinColumnPicker({
   joinColumn,
@@ -115,6 +120,7 @@ export default function DataTableUploadModal({
   geostatsLayer,
   canonicalOverlayJoinColumn,
   replaceTableId,
+  initialFile,
   onUploadStarted,
   uploadOverlayDataTable,
 }: {
@@ -124,6 +130,7 @@ export default function DataTableUploadModal({
   geostatsLayer: GeostatsLayer | undefined;
   canonicalOverlayJoinColumn: string;
   replaceTableId?: number;
+  initialFile?: File | null;
   onUploadStarted: () => void;
   uploadOverlayDataTable?: ProjectBackgroundJobManager["uploadOverlayDataTable"];
 }) {
@@ -172,6 +179,19 @@ export default function DataTableUploadModal({
     setStartingUpload(false);
     setDetectedDelimiter(",");
   }, []);
+
+  useRegisterDropTarget({
+    id: "table-upload-modal",
+    priority: DROP_TARGET_PRIORITY.modal,
+    intent: replaceTableId
+      ? {
+          kind: "replaceDataTable",
+          tableOfContentsItemId,
+          replaceTableId,
+        }
+      : { kind: "createDataTable", tableOfContentsItemId },
+    enabled: open,
+  });
 
   useEffect(() => {
     if (!open) {
@@ -247,6 +267,30 @@ export default function DataTableUploadModal({
       }
     },
     [analyzeFile],
+  );
+
+  useEffect(() => {
+    if (open && initialFile) {
+      onFileSelected(initialFile);
+    }
+  }, [open, initialFile, onFileSelected]);
+
+  const onDroppedFiles = useCallback(
+    (files: File[]) => {
+      const picked = pickDataTableDrop(files);
+      if (!picked.ok) {
+        setError(
+          picked.reason === "multiple"
+            ? t("Drop a single CSV, TSV, or TXT file.")
+            : t(
+                "Data tables accept .csv, .tsv, or .txt files with a header row."
+              )
+        );
+        return;
+      }
+      onFileSelected(picked.file);
+    },
+    [onFileSelected, t]
   );
 
   const onInputChange = useCallback(
@@ -370,20 +414,34 @@ export default function DataTableUploadModal({
         <input
           ref={fileInputRef}
           type="file"
-          accept={CSV_ACCEPT}
+          accept={DATA_TABLE_FILE_ACCEPT}
           className="hidden"
           onChange={onInputChange}
           disabled={startingUpload || analyzing}
         />
 
-        {!file ? (
-          <div className="rounded-xl border border-gray-200 bg-white px-6 py-8 text-center">
+        <LocalFileDropzone
+          accept={DATA_TABLE_FILE_ACCEPT}
+          disabled={startingUpload || analyzing}
+          onFiles={onDroppedFiles}
+          label={
+            replaceTableId
+              ? t("Drop a CSV to replace this table")
+              : t("Drop a CSV to upload a data table")
+          }
+          className="rounded-xl"
+        >
+          {!file ? (
+          <div className="rounded-xl border border-dashed border-gray-300 bg-white px-6 py-8 text-center">
             <UploadIcon className="mx-auto h-10 w-10 text-gray-400" />
             <p className="mt-3 text-sm font-medium text-gray-900">
               {t("Choose a CSV file")}
             </p>
             <p className="mt-1 text-sm text-gray-500">
               {t(".csv, .tsv, or .txt with a header row")}
+            </p>
+            <p className="mt-1 text-sm text-gray-500">
+              {t("Drag and drop a file here, or browse on your computer.")}
             </p>
             <button
               type="button"
@@ -475,6 +533,7 @@ export default function DataTableUploadModal({
             ) : null}
           </div>
         )}
+        </LocalFileDropzone>
 
         {error ? <Warning>{error}</Warning> : null}
       </div>

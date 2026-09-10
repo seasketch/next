@@ -1,19 +1,30 @@
 import { useMemo } from "react";
-import { Trans, useTranslation } from "react-i18next";
+import { Trans } from "react-i18next";
 import { GeostatsLayer } from "@seasketch/geostats-types";
 import { FullAdminOverlayFragment } from "../../../generated/graphql";
 import EnableDataTables from "../EnableDataTables";
 import RelatedDataTables from "./RelatedDataTables";
 import DataTablesChangeLogList from "../../changelogs/DataTablesChangeLogList";
+import { useRegisterDropTarget } from "../../uploads/DataAdminDropTargetContext";
+import { DROP_TARGET_PRIORITY } from "../../uploads/dropTargets";
 
 export default function DataTablesEditor({
   item,
 }: {
   item: FullAdminOverlayFragment;
 }) {
-  const { t } = useTranslation("admin:data");
   const layer = item.dataLayer;
   const source = layer?.dataSource;
+
+  const tablesReady = Boolean(
+    item.enableDataTables && item.dataTableJoinColumn
+  );
+  useRegisterDropTarget({
+    id: "data-tables-not-ready",
+    priority: DROP_TARGET_PRIORITY.editorTab,
+    intent: { kind: "blocked" },
+    enabled: !tablesReady,
+  });
 
   const geostatsLayer: GeostatsLayer | undefined = useMemo(() => {
     const layers = (source?.geostats?.layers || []) as GeostatsLayer[];

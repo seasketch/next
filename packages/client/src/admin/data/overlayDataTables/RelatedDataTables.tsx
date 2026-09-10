@@ -3,9 +3,11 @@ import { useApolloClient } from "@apollo/client";
 import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
+import { AnimatePresence, motion } from "framer-motion";
 import {
   CheckIcon,
   CogIcon,
+  PlusIcon,
   TrashIcon,
   UploadIcon,
 } from "@heroicons/react/outline";
@@ -22,6 +24,13 @@ import {
 import { DataTablesColumnStats, GeostatsLayer } from "@seasketch/geostats-types";
 import { droppedJoinInfoFromColumnStats } from "./droppedJoinInfo";
 import { ProjectBackgroundJobContext } from "../../uploads/ProjectBackgroundJobContext";
+import { useRegisterDropTarget } from "../../uploads/DataAdminDropTargetContext";
+import { DROP_TARGET_PRIORITY } from "../../uploads/dropTargets";
+import LocalFileDropzone from "../../uploads/LocalFileDropzone";
+import {
+  DATA_TABLE_FILE_ACCEPT,
+  pickDataTableDrop,
+} from "../../uploads/uploadFileTypes";
 import { dataTableChangeLogRefetchQueries } from "../../changelogs/dataTableChangeLogRefetch";
 import DataTableUploadJobProgress from "./DataTableUploadJobProgress";
 import DataTableUploadModal from "./DataTableUploadModal";
@@ -958,6 +967,36 @@ function DataTableDroppedSitesFromUrl({
   );
 }
 
+function DropToAddDataTableRow({ fileName }: { fileName?: string }) {
+  const { t } = useTranslation("admin:data");
+  const title = fileName
+    ? fileName.replace(/\.[^.]+$/, "")
+    : t("New data table");
+  return (
+    <motion.li
+      initial={{ opacity: 0, y: -10, height: 0 }}
+      animate={{ opacity: 1, y: 0, height: "auto" }}
+      exit={{ opacity: 0, y: -8, height: 0 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+      className="overflow-hidden"
+    >
+      <div className="rounded-lg border-2 border-dashed border-primary-400 bg-primary-50 p-3 shadow-sm">
+        <div className="flex items-start gap-3">
+          <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-100 text-primary-700">
+            <PlusIcon className="h-5 w-5" aria-hidden />
+          </span>
+          <div className="min-w-0">
+            <div className="truncate font-medium text-primary-900">{title}</div>
+            <p className="mt-0.5 text-xs text-primary-700">
+              {t("Drop to add a new data table to this layer")}
+            </p>
+          </div>
+        </div>
+      </div>
+    </motion.li>
+  );
+}
+
 function PendingDataTableUploadRow({
   job,
   onDismissJob,
@@ -990,7 +1029,20 @@ export default function RelatedDataTables({ item }: RelatedDataTablesProps) {
   const { t } = useTranslation("admin:data");
   const [uploadOpen, setUploadOpen] = useState(false);
   const [replaceId, setReplaceId] = useState<number | undefined>();
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [dropError, setDropError] = useState<string | null>(null);
+  const [isTableDropActive, setIsTableDropActive] = useState(false);
+  const [draggedTableFileName, setDraggedTableFileName] = useState<
+    string | undefined
+  >();
   const { manager } = useContext(ProjectBackgroundJobContext);
+
+  useRegisterDropTarget({
+    id: "tables-tab",
+    priority: DROP_TARGET_PRIORITY.editorTab,
+    intent: { kind: "createDataTable", tableOfContentsItemId: item.id },
+    enabled: !uploadOpen,
+  });
   const client = useApolloClient();
   const { confirmDelete } = useDialog();
 
@@ -1139,11 +1191,54 @@ export default function RelatedDataTables({ item }: RelatedDataTablesProps) {
 
   const openUploadModal = useCallback(() => {
     setReplaceId(undefined);
+    setPendingFile(null);
+    setDropError(null);
     setUploadOpen(true);
   }, []);
 
+  const onDroppedTableFiles = useCallback(
+    (files: File[]) => {
+      const picked = pickDataTableDrop(files);
+      if (!picked.ok) {
+        setDropError(
+          picked.reason === "multiple"
+            ? t("Drop a single CSV, TSV, or TXT file.")
+            : t("Data tables accept .csv, .tsv, or .txt files with a header row.")
+        );
+        return;
+      }
+      setDropError(null);
+      setReplaceId(undefined);
+      setPendingFile(picked.file);
+      setUploadOpen(true);
+    },
+    [t]
+  );
+
+  const onTableDropStateChange = useCallback(
+    (state: { isDragActive: boolean; draggedFileNames: string[] }) => {
+      setIsTableDropActive((prev) =>
+        prev === state.isDragActive ? prev : state.isDragActive
+      );
+      setDraggedTableFileName((prev) => {
+        const next = state.draggedFileNames[0];
+        return prev === next ? prev : next;
+      });
+    },
+    []
+  );
+
   return (
-    <div className="mt-6">
+    <>
+    <LocalFileDropzone
+      accept={DATA_TABLE_FILE_ACCEPT}
+      disabled={uploadOpen}
+      onFiles={onDroppedTableFiles}
+      onDragStateChange={onTableDropStateChange}
+      label={t("Drop a CSV to add a data table")}
+      className="mt-6"
+      dragClassName=""
+    >
       <div className="flex items-start justify-between gap-4 mb-3">
         <div className="min-w-0 flex-1">
           <h3 className="text-sm font-semibold text-gray-900">
@@ -1163,10 +1258,13 @@ export default function RelatedDataTables({ item }: RelatedDataTablesProps) {
           {t("Upload Table")}
         </button>
       </div>
-      {tables.length === 0 && pendingNewUploadJobs.length === 0 ? (
+      {tables.length === 0 &&
+      pendingNewUploadJobs.length === 0 &&
+      !isTableDropActive ? (
         <div className="rounded-lg border border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-center">
           <p className="text-sm text-gray-600">
-            {t("No data tables associated with this layer.")}
+            {t("No data tables associated with this layer.")}{" "}
+            {t("Drag and drop a CSV here, or upload a table.")}
           </p>
           <button
             type="button"
@@ -1178,6 +1276,14 @@ export default function RelatedDataTables({ item }: RelatedDataTablesProps) {
         </div>
       ) : (
         <ul className="space-y-2">
+          <AnimatePresence>
+            {isTableDropActive ? (
+              <DropToAddDataTableRow
+                key="drop-to-add-data-table"
+                fileName={draggedTableFileName}
+              />
+            ) : null}
+          </AnimatePresence>
           {pendingNewUploadJobs.map((job) => (
             <PendingDataTableUploadRow
               key={job.id}
@@ -1216,22 +1322,34 @@ export default function RelatedDataTables({ item }: RelatedDataTablesProps) {
               }}
               onReplace={(id) => {
                 setReplaceId(id);
+                setPendingFile(null);
+                setDropError(null);
                 setUploadOpen(true);
               }}
             />
           ))}
         </ul>
       )}
+      {dropError ? (
+        <p className="mt-3 text-sm text-red-700" role="alert">
+          {dropError}
+        </p>
+      ) : null}
+    </LocalFileDropzone>
       <DataTableUploadModal
         open={uploadOpen}
-        onClose={() => setUploadOpen(false)}
+        onClose={() => {
+          setUploadOpen(false);
+          setPendingFile(null);
+        }}
         tableOfContentsItemId={layerItem.id}
         geostatsLayer={geostatsLayer}
         canonicalOverlayJoinColumn={overlayJoinColumn}
         replaceTableId={replaceId}
+        initialFile={pendingFile}
         onUploadStarted={onUploadStarted}
         uploadOverlayDataTable={manager?.uploadOverlayDataTable.bind(manager)}
       />
-    </div>
+    </>
   );
 }

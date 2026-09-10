@@ -2,7 +2,6 @@
 import {
   memo,
   useCallback,
-  useContext,
   useEffect,
   useMemo,
   useRef,
@@ -23,7 +22,8 @@ import getSlug from "../../../getSlug";
 import useProjectId from "../../../useProjectId";
 import { getBestSpriteImage } from "./extensions/glStyleSprites";
 import { EditorView } from "@codemirror/view";
-import { ProjectBackgroundJobContext } from "../../uploads/ProjectBackgroundJobContext";
+import { useRegisterDropTarget } from "../../uploads/DataAdminDropTargetContext";
+import { DROP_TARGET_PRIORITY } from "../../uploads/dropTargets";
 import useIsSuperuser from "../../../useIsSuperuser";
 import { CollectionIcon, ShareIcon, TrashIcon } from "@heroicons/react/outline";
 import useDialog from "../../../components/useDialog";
@@ -167,7 +167,12 @@ export default function SpritePopover({
   const { styles, attributes } = usePopper(spriteState?.target, popperElement, {
     modifiers: [{ name: "arrow", options: { element: arrowElement } }],
   });
-  const uploadContext = useContext(ProjectBackgroundJobContext);
+  useRegisterDropTarget({
+    id: "sprite-popover",
+    priority: DROP_TARGET_PRIORITY.blocker,
+    intent: { kind: "blocked" },
+    enabled: Boolean(spriteState?.target),
+  });
 
   const [share, shareMutationState] = useShareSpriteMutation();
 
@@ -176,14 +181,6 @@ export default function SpritePopover({
   const [selectedCategory, setSelectedCategory] = useState<
     null | "uploads" | string
   >(null);
-
-  useEffect(() => {
-    if (spriteState?.target) {
-      uploadContext.setDisabled(true);
-    } else {
-      uploadContext.setDisabled(false);
-    }
-  }, [spriteState?.target]);
 
   useEffect(() => {
     const listener = (e: MouseEvent) => {

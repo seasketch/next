@@ -26,6 +26,8 @@ import LayerSettings from "./TableOfContentsItemEditor/LayerSettings";
 import { XIcon } from "@heroicons/react/outline";
 import LayerVersioning from "./TableOfContentsItemEditor/LayerVersioning";
 import DataTablesEditor from "./overlayDataTables/DataTablesEditor";
+import { useRegisterDropTarget } from "../uploads/DataAdminDropTargetContext";
+import { DROP_TARGET_PRIORITY } from "../uploads/dropTargets";
 import { layerSettingsChangeLogRefetchQueries } from "../changelogs/layerSettingsChangeLogRefetch";
 import useCurrentProjectMetadata from "../../useCurrentProjectMetadata";
 import {
@@ -114,6 +116,12 @@ export default function LayerTableOfContentsItemEditor(
   const item = data?.tableOfContentsItem;
   const [selectedTab, setSelectedTab] = useState("settings");
   const activeTab = selectedTab;
+  useRegisterDropTarget({
+    id: "layer-editor-other-tabs",
+    priority: DROP_TARGET_PRIORITY.editorTab,
+    intent: { kind: "blocked" },
+    enabled: activeTab !== "versions" && activeTab !== "dataTables",
+  });
 
   useEffect(() => {
     if (item?.stableId && item.dataLayer && manager) {

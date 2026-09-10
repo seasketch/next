@@ -6,6 +6,7 @@ import TableOfContentsEditor from "./TableOfContentsEditor";
 import { memo, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { parseTocItemIdFromSearch } from "./layerAdminDeepLink";
+import { useOverlayListPageEnabled } from "../uploads/DataAdminDropTargetContext";
 
 export default memo(function LayerAdminSidebar() {
   const location = useLocation();
@@ -28,7 +29,7 @@ export default memo(function LayerAdminSidebar() {
   const visibleTab = pendingOverlayTabFromDeepLink.current
     ? "Overlay Layers"
     : selectedTab;
-  // const [selectedTab, setSelectedTab] = useState<Segment>("Basemaps");
+  useOverlayListPageEnabled(visibleTab === "Overlay Layers");
   const containerClassName = "flex flex-col h-full overflow-hidden";
   return (
     <div className="relative flex flex-col h-full bg-white">

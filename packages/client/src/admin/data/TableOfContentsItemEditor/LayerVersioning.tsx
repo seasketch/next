@@ -30,9 +30,13 @@ import {
 } from "react";
 import LayerInfoList, { isRemoteSource } from "./LayerInfoList";
 import getSlug from "../../../getSlug";
-import { motion } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
 import { XIcon } from "@heroicons/react/outline";
 import { ProjectBackgroundJobContext } from "../../uploads/ProjectBackgroundJobContext";
+import { useRegisterDropTarget } from "../../uploads/DataAdminDropTargetContext";
+import { DROP_TARGET_PRIORITY } from "../../uploads/dropTargets";
+import LocalFileDropzone from "../../uploads/LocalFileDropzone";
+import { SPATIAL_FILE_ACCEPT } from "../../uploads/uploadFileTypes";
 import ProgressBar from "../../../components/ProgressBar";
 import { MapManagerContext } from "../../../dataLayers/MapContextManager";
 import Warning from "../../../components/Warning";
@@ -75,32 +79,18 @@ export default function LayerVersioning({
     });
 
   const jobContext = useContext(ProjectBackgroundJobContext);
+  const { handleSpatialFiles } = jobContext;
+  const { manager } = useContext(MapManagerContext);
+  const canReplaceSource =
+    !isInaturalist && !item.copiedFromDataLibraryTemplateId;
 
-  useEffect(() => {
-    if (item.dataLayer?.dataSourceId) {
-      setSelectedItemId(item.dataLayer.dataSourceId);
-      manager?.zoomToTocItem(item.stableId, {
-        onlyIfNotVisible: true,
-      });
-    }
-    if (isInaturalist) {
-      jobContext.setDisabled(true);
-    } else {
-      jobContext.setDisabled(false);
-    }
-    if (!item.copiedFromDataLibraryTemplateId) {
-      jobContext.setUploadType("replace", item.id);
-    }
-    return () => {
-      jobContext.setUploadType("create");
-    };
-  }, [
-    item.id,
-    item.stableId,
-    item.dataLayer?.dataSourceId,
-    item.copiedFromDataLibraryTemplateId,
-    isInaturalist,
-  ]);
+  useRegisterDropTarget({
+    id: "source-tab",
+    priority: DROP_TARGET_PRIORITY.editorTab,
+    intent: canReplaceSource
+      ? { kind: "replaceSpatialSource", tableOfContentsItemId: item.id }
+      : { kind: "blocked" },
+  });
 
   const versions = useMemo(() => {
     let versions = [
@@ -147,7 +137,14 @@ export default function LayerVersioning({
     versions[0]?.source?.id
   );
 
-  const { manager } = useContext(MapManagerContext);
+  useEffect(() => {
+    if (item.dataLayer?.dataSourceId) {
+      setSelectedItemId(item.dataLayer.dataSourceId);
+      manager?.zoomToTocItem(item.stableId, {
+        onlyIfNotVisible: true,
+      });
+    }
+  }, [item.dataLayer?.dataSourceId, item.stableId, manager]);
 
   useEffect(() => {
     if (jobContext.manager && !item.copiedFromDataLibraryTemplateId) {
@@ -196,6 +193,36 @@ export default function LayerVersioning({
     }
   }, [selectedItemId, item.dataLayer?.dataSourceId, manager]);
 
+  const [isSourceDropActive, setIsSourceDropActive] = useState(false);
+  const [draggedSourceFileName, setDraggedSourceFileName] = useState<
+    string | undefined
+  >();
+
+  const onDroppedSourceFiles = useCallback(
+    (files: File[]) => {
+      if (!canReplaceSource) {
+        return;
+      }
+      handleSpatialFiles(files, {
+        replaceTableOfContentsItemId: item.id,
+      });
+    },
+    [canReplaceSource, handleSpatialFiles, item.id]
+  );
+
+  const onSourceDropStateChange = useCallback(
+    (state: { isDragActive: boolean; draggedFileNames: string[] }) => {
+      setIsSourceDropActive((prev) =>
+        prev === state.isDragActive ? prev : state.isDragActive
+      );
+      setDraggedSourceFileName((prev) => {
+        const next = state.draggedFileNames[0];
+        return prev === next ? prev : next;
+      });
+    },
+    []
+  );
+
   const submitChangelog = useCallback(() => {
     if (currentJob!.dataUploadTask) {
       setChangelogMutation({
@@ -211,15 +238,31 @@ export default function LayerVersioning({
     }));
   }, [changelogState.content, currentJob, setChangelogMutation]);
 
+  const showDropPreview = isSourceDropActive && canReplaceSource;
+  const nextVersion = (versions[0]?.version || item.dataLayer?.version || 1) + 1;
+
   return (
-    <Container
-      dragActive={
-        jobContext.dragActive && !item.copiedFromDataLibraryTemplateId
-      }
-    >
+    <Container>
       <h2 className="font-medium px-2 py-2 border-b">{t("Versions")}</h2>
       <VersionsContainer>
+        <LocalFileDropzone
+          accept={SPATIAL_FILE_ACCEPT}
+          disabled={!canReplaceSource}
+          onFiles={onDroppedSourceFiles}
+          onDragStateChange={onSourceDropStateChange}
+          label={t("Drop a spatial data file to create a new source version")}
+          dragClassName=""
+        >
         <div className="px-4 py-4 space-y-2">
+          <AnimatePresence>
+            {showDropPreview ? (
+              <DropToAddSourceVersionRow
+                key="drop-to-add-source-version"
+                version={nextVersion}
+                fileName={draggedSourceFileName}
+              />
+            ) : null}
+          </AnimatePresence>
           {relatedJobs.length > 0 &&
             relatedJobs.map((job) => (
               <JobListItem
@@ -302,7 +345,9 @@ export default function LayerVersioning({
                     <button
                       className="underline text-primary-500"
                       onClick={() => {
-                        jobContext.browseForFiles(false);
+                        jobContext.browseForFiles(false, {
+                          replaceTableOfContentsItemId: item.id,
+                        });
                       }}
                     >
                       browse for files on your computer
@@ -314,6 +359,7 @@ export default function LayerVersioning({
             </div>
           )}
         </>
+        </LocalFileDropzone>
       </VersionsContainer>
       {data?.projectBySlug?.projectBackgroundJobs.find(
         (j) => j.id === selectedItemId
@@ -430,21 +476,41 @@ export default function LayerVersioning({
   );
 }
 
-function Container({
-  children,
-  dragActive,
-}: {
-  dragActive: boolean;
-  children: ReactNode;
-}) {
+function Container({ children }: { children: ReactNode }) {
   return (
-    <div
-      className={`h-full bg-gray-100 flex flex-col overflow-y-hidden ${
-        dragActive ? "ring-4 ring-blue-600" : ""
-      }`}
-    >
+    <div className="h-full bg-gray-100 flex flex-col overflow-y-hidden">
       {children}
     </div>
+  );
+}
+
+function DropToAddSourceVersionRow({
+  version,
+  fileName,
+}: {
+  version: number;
+  fileName?: string;
+}) {
+  const { t } = useTranslation("admin:data");
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: 0.2, ease: "easeOut" }}
+    >
+      <div className="group relative flex items-center space-x-2 rounded-l-full rounded-r-full border-2 border-dashed border-blue-400 bg-blue-50 pr-4">
+        <VersionDot version={version} color="blue-500" />
+        <div className="flex min-w-0 space-x-1 text-sm font-medium items-center">
+          <span className="truncate text-blue-900">
+            {fileName || t("New version")}
+          </span>
+          <span className="font-normal text-blue-700 flex-none">
+            {t("drop to update this layer")}
+          </span>
+        </div>
+      </div>
+    </motion.div>
   );
 }
 

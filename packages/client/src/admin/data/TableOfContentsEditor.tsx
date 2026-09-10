@@ -41,6 +41,8 @@ import {
 } from "../../components/Menubar";
 import bbox from "@turf/bbox";
 import { ProjectBackgroundJobContext } from "../uploads/ProjectBackgroundJobContext";
+import { useRegisterDropTarget } from "../uploads/DataAdminDropTargetContext";
+import { DROP_TARGET_PRIORITY } from "../uploads/dropTargets";
 import { Feature } from "geojson";
 import { Map } from "mapbox-gl";
 import * as Tooltip from "@radix-ui/react-tooltip";
@@ -153,6 +155,26 @@ export default function TableOfContentsEditor() {
   });
 
   const layerEditingContext = useContext(LayerEditingContext);
+  useRegisterDropTarget({
+    id: "overlay-list",
+    priority: DROP_TARGET_PRIORITY.page,
+    intent: { kind: "newSpatialLayer" },
+    enabled: selectedView === "tree",
+  });
+  useRegisterDropTarget({
+    id: "toc-aux-view",
+    priority: DROP_TARGET_PRIORITY.auxView,
+    intent: { kind: "blocked" },
+    enabled: selectedView !== "tree",
+  });
+  useRegisterDropTarget({
+    id: "toc-folder-or-metadata",
+    priority: DROP_TARGET_PRIORITY.editorTab,
+    intent: { kind: "blocked" },
+    enabled:
+      Boolean(layerEditingContext.openEditor?.isFolder) ||
+      Boolean(layerEditingContext.openMetadataEditor),
+  });
   const consumedTocItemDeepLink = useRef(false);
 
   useEffect(() => {
