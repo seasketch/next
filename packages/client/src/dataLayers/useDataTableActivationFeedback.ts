@@ -41,7 +41,7 @@ export default function useDataTableActivationFeedback(
       const name = table?.name || t("data table");
       toast(t("Visualizing {{name}}", { name }), {
         description: t("Use the legend to adjust data table settings"),
-        duration: 2000,
+        duration: 3000,
       });
     };
     manager.on("dataTableActivated", onActivated);
