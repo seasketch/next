@@ -868,3 +868,93 @@ export function combineSeriesSteps(
   }
   return extentsFromValues(values);
 }
+
+/** One clock step in a per-feature `when.step` series (null = no rows). */
+export type DataTableFeatureSeriesPoint = {
+  step: string;
+  value: number | null;
+};
+
+/**
+ * Values for one join key across every series step. Missing groups stay
+ * `null` so a sparkline can show gaps instead of interpolating through them.
+ */
+export function featureSeriesFromParsed(
+  series: ParsedDataTableQuerySeries,
+  featureId: string
+): DataTableFeatureSeriesPoint[] {
+  const id = String(featureId);
+  const steps = series.steps.length > 0 ? series.steps : Object.keys(series.byStep);
+  return steps.map((step) => {
+    const value = series.byStep[step]?.values[id];
+    return {
+      step,
+      value: typeof value === "number" && Number.isFinite(value) ? value : null,
+    };
+  });
+}
+
+/** Drop leading/trailing empty steps so a sparkline hugs the observed range. */
+export function trimFeatureSeries(
+  points: DataTableFeatureSeriesPoint[]
+): DataTableFeatureSeriesPoint[] {
+  let start = 0;
+  let end = points.length - 1;
+  while (start < points.length && points[start].value === null) {
+    start += 1;
+  }
+  while (end >= start && points[end].value === null) {
+    end -= 1;
+  }
+  return start === 0 && end === points.length - 1
+    ? points
+    : points.slice(start, end + 1);
+}
+
+/** A chart is useful only when the site has at least two observed steps. */
+export function shouldShowDataTableSeriesChart(
+  points: DataTableFeatureSeriesPoint[] | undefined | null
+): boolean {
+  if (!points || points.length < 2) {
+    return false;
+  }
+  let observed = 0;
+  for (const point of points) {
+    if (point.value !== null) {
+      observed += 1;
+      if (observed >= 2) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
+ * Thin a long daily series for an SVG sparkline. Always keeps the first and
+ * last points plus any `keepSteps` (the current clock selection).
+ */
+export function downsampleFeatureSeries(
+  points: DataTableFeatureSeriesPoint[],
+  maxPoints: number,
+  keepSteps: string[] = []
+): DataTableFeatureSeriesPoint[] {
+  if (maxPoints < 2 || points.length <= maxPoints) {
+    return points;
+  }
+  const keep = new Set(keepSteps);
+  const chosen = new Set<number>([0, points.length - 1]);
+  for (let i = 0; i < points.length; i++) {
+    if (keep.has(points[i].step)) {
+      chosen.add(i);
+    }
+  }
+  const remaining = Math.max(maxPoints - chosen.size, 0);
+  if (remaining > 0) {
+    const stride = (points.length - 1) / (remaining + 1);
+    for (let i = 1; i <= remaining; i++) {
+      chosen.add(Math.round(i * stride));
+    }
+  }
+  return points.filter((_, index) => chosen.has(index));
+}

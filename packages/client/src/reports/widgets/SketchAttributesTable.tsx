@@ -3,7 +3,7 @@ import { Trans, useTranslation } from "react-i18next";
 import * as Popover from "@radix-ui/react-popover";
 import { MixerHorizontalIcon } from "@radix-ui/react-icons";
 import { FormLanguageContext } from "../../formElements/FormElement";
-import type { ReportWidget } from "./widgets";
+import { ReportWidget } from "./reportWidgetShared";
 import {
   ReportWidgetTooltipControls,
   TooltipPopoverContent,

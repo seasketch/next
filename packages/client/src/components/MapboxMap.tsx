@@ -2,6 +2,7 @@ import mapboxgl, { Map, MapboxOptions } from "mapbox-gl";
 import ReactDOM, { createPortal } from "react-dom";
 import React, {
   useEffect,
+  useLayoutEffect,
   useState,
   useRef,
   useContext,
@@ -22,6 +23,8 @@ import { MeasurementToolsOverlay } from "../MeasureControl";
 import SidebarPopup from "../dataLayers/SidebarPopup";
 import DataTablesPopupFooter from "../dataLayers/DataTablesPopupFooter";
 import TimeSlider from "../dataLayers/TimeSlider";
+import DataTableValueTooltip from "../dataLayers/DataTableValueTooltip";
+import { placeMapTooltip } from "./placeMapTooltip";
 import clsx from "clsx";
 import * as Popover from "@radix-ui/react-popover";
 import { Cross2Icon } from "@radix-ui/react-icons";
@@ -224,334 +227,372 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
         ref={mapContainer}
         onClick={!interactive ? props.onClickNonInteractive : undefined}
       >
-      {createPortal(
-        <SidebarPopup
-          onClose={() => {
-            uiState.interactivityManager?.clearSidebarPopup();
-          }}
-          content={uiState.sidebarPopupContent}
-          title={uiState.sidebarPopupTitle}
-          footer={
-            uiState.sidebarPopupTocStableId ? (
-              <DataTablesPopupFooter
-                tocStableId={uiState.sidebarPopupTocStableId}
-                variant="sidebar"
-              />
-            ) : undefined
-          }
-        />,
-        document.body
-      )}
-
-      {/* Data Tables call-to-action rendered into the open map popup */}
-      {uiState.dataTablesPopupTarget &&
-        createPortal(
-          <DataTablesPopupFooter
-            tocStableId={uiState.dataTablesPopupTarget.tocStableId}
+        {createPortal(
+          <SidebarPopup
+            onClose={() => {
+              uiState.interactivityManager?.clearSidebarPopup();
+            }}
+            content={uiState.sidebarPopupContent}
+            title={uiState.sidebarPopupTitle}
+            footer={
+              uiState.sidebarPopupTocStableId ? (
+                <DataTablesPopupFooter
+                  tocStableId={uiState.sidebarPopupTocStableId}
+                  variant="sidebar"
+                />
+              ) : undefined
+            }
           />,
-          uiState.dataTablesPopupTarget.element
+          document.body
         )}
 
-      {props.mapSettingsPopupActions && (
-        <Popover.Root>
-          <Popover.Trigger asChild>
-            <button
-              className={clsx(
-                "absolute bg-white ring-2 ring-black/10 rounded top-28 z-[1] p-[5px]",
-                props.navigationControlsLocation === "top-right"
-                  ? "right-2.5"
-                  : "left-2.5"
-              )}
-              aria-label="Map settings"
-            >
-              <CogIcon className="w-5 h-5" />
-            </button>
-          </Popover.Trigger>
-          <Popover.Portal>
-            <Popover.Content
-              className="w-[260px] rounded bg-white p-2 shadow-[0_10px_38px_-10px_hsla(206,22%,7%,.35),0_10px_20px_-15px_hsla(206,22%,7%,.2)] will-change-[transform,opacity] focus:shadow-[0_10px_38px_-10px_hsla(206,22%,7%,.35),0_10px_20px_-15px_hsla(206,22%,7%,.2),0_0_0_2px_theme(colors.violet7)] data-[state=open]:data-[side=bottom]:animate-slideUpAndFade data-[state=open]:data-[side=left]:animate-slideRightAndFade data-[state=open]:data-[side=right]:animate-slideLeftAndFade data-[state=open]:data-[side=top]:animate-slideDownAndFade"
-              sideOffset={5}
-              style={{ zIndex: 99999999 }}
-            >
-              <div className="flex flex-col gap-2.5">
-                {props.mapSettingsPopupActions}
-              </div>
-              <Popover.Close
-                className="absolute right-[-5px] top-[5px] inline-flex size-[25px] cursor-default items-center justify-center rounded-full text-white/0 outline-none hover:bg-violet4 focus:shadow-[0_0_0_2px] focus:shadow-violet7"
-                aria-label="Close"
+        {/* Data Tables call-to-action rendered into the open map popup */}
+        {uiState.dataTablesPopupTarget &&
+          createPortal(
+            <DataTablesPopupFooter
+              tocStableId={uiState.dataTablesPopupTarget.tocStableId}
+            />,
+            uiState.dataTablesPopupTarget.element
+          )}
+
+        {props.mapSettingsPopupActions && (
+          <Popover.Root>
+            <Popover.Trigger asChild>
+              <button
+                className={clsx(
+                  "absolute bg-white ring-2 ring-black/10 rounded top-28 z-[1] p-[5px]",
+                  props.navigationControlsLocation === "top-right"
+                    ? "right-2.5"
+                    : "left-2.5"
+                )}
+                aria-label="Map settings"
               >
-                <Cross2Icon />
-              </Popover.Close>
-              <Popover.Arrow className="fill-white" />
-            </Popover.Content>
-          </Popover.Portal>
-        </Popover.Root>
-      )}
-      <MeasurementToolsOverlay placement={measurementToolsPlacement} />
-
-      <div
-        className={`w-full h-full absolute top-0 left-0  z-10 pointer-events-none duration-500 transition-opacity flex items-center justify-center ${
-          uiState.showLoadingOverlay ? "opacity-100" : "opacity-0"
-        }`}
-        style={{ backdropFilter: "blur(12px)" }}
-      >
-        {!ready && (
-          <div className="bg-gray-100 bg-opacity-30 text-blue-800 border-blue-800 border-opacity-20 shadow-inner border text-base p-4 rounded-full flex items-center">
-            <span>{uiState.loadingOverlay}</span>
-            <Spinner color="white" className="ml-2" />
-          </div>
+                <CogIcon className="w-5 h-5" />
+              </button>
+            </Popover.Trigger>
+            <Popover.Portal>
+              <Popover.Content
+                className="w-[260px] rounded bg-white p-2 shadow-[0_10px_38px_-10px_hsla(206,22%,7%,.35),0_10px_20px_-15px_hsla(206,22%,7%,.2)] will-change-[transform,opacity] focus:shadow-[0_10px_38px_-10px_hsla(206,22%,7%,.35),0_10px_20px_-15px_hsla(206,22%,7%,.2),0_0_0_2px_theme(colors.violet7)] data-[state=open]:data-[side=bottom]:animate-slideUpAndFade data-[state=open]:data-[side=left]:animate-slideRightAndFade data-[state=open]:data-[side=right]:animate-slideLeftAndFade data-[state=open]:data-[side=top]:animate-slideDownAndFade"
+                sideOffset={5}
+                style={{ zIndex: 99999999 }}
+              >
+                <div className="flex flex-col gap-2.5">
+                  {props.mapSettingsPopupActions}
+                </div>
+                <Popover.Close
+                  className="absolute right-[-5px] top-[5px] inline-flex size-[25px] cursor-default items-center justify-center rounded-full text-white/0 outline-none hover:bg-violet4 focus:shadow-[0_0_0_2px] focus:shadow-violet7"
+                  aria-label="Close"
+                >
+                  <Cross2Icon />
+                </Popover.Close>
+                <Popover.Arrow className="fill-white" />
+              </Popover.Content>
+            </Popover.Portal>
+          </Popover.Root>
         )}
-      </div>
-      {showSpinner && (
-        <Spinner className="absolute top-1/2 left-1/2 -ml-5 -mt-5" large />
-      )}
-      <div className="w-full absolute top-0 z-10 items-center justify-center">
-        <AnimatePresence>
-          {uiState.offlineTileSimulatorActive ? (
-            <motion.div
-              initial={{ opacity: 0, translateY: -40 }}
-              animate={{ opacity: 1, translateY: 0 }}
-              exit={{ opacity: 0, translateY: -40 }}
-              transition={{ duration: 0.2 }}
-              className="text-lg p-0.5 px-4 py-2"
+        <MeasurementToolsOverlay placement={measurementToolsPlacement} />
+
+        <div
+          className={`w-full h-full absolute top-0 left-0  z-10 pointer-events-none duration-500 transition-opacity flex items-center justify-center ${
+            uiState.showLoadingOverlay ? "opacity-100" : "opacity-0"
+          }`}
+          style={{ backdropFilter: "blur(12px)" }}
+        >
+          {!ready && (
+            <div className="bg-gray-100 bg-opacity-30 text-blue-800 border-blue-800 border-opacity-20 shadow-inner border text-base p-4 rounded-full flex items-center">
+              <span>{uiState.loadingOverlay}</span>
+              <Spinner color="white" className="ml-2" />
+            </div>
+          )}
+        </div>
+        {showSpinner && (
+          <Spinner className="absolute top-1/2 left-1/2 -ml-5 -mt-5" large />
+        )}
+        <div className="w-full absolute top-0 z-10 items-center justify-center">
+          <AnimatePresence>
+            {uiState.offlineTileSimulatorActive ? (
+              <motion.div
+                initial={{ opacity: 0, translateY: -40 }}
+                animate={{ opacity: 1, translateY: 0 }}
+                exit={{ opacity: 0, translateY: -40 }}
+                transition={{ duration: 0.2 }}
+                className="text-lg p-0.5 px-4 py-2"
+                style={{
+                  backgroundColor: "orange",
+                }}
+              >
+                <Trans ns="admin:offline">Offline Tile Simulator Active</Trans>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+        </div>
+        <div className="timeslider-map-bottom-overlay pointer-events-none absolute bottom-4 left-0 z-10 flex w-full justify-center">
+          {visibleInatCtas.length > 0 && (
+            <div
+              className="relative"
               style={{
-                backgroundColor: "orange",
+                minHeight: 80 + Math.max(0, (visibleInatCtas.length - 1) * 10),
+                width: 400,
               }}
             >
-              <Trans ns="admin:offline">Offline Tile Simulator Active</Trans>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
-      </div>
-      <div className="timeslider-map-bottom-overlay pointer-events-none absolute bottom-4 left-0 z-10 flex w-full justify-center">
-        {visibleInatCtas.length > 0 && (
-          <div
-            className="relative"
-            style={{
-              minHeight: 80 + Math.max(0, (visibleInatCtas.length - 1) * 10),
-              width: 400,
-            }}
-          >
-            {visibleInatCtas.map((cta, idx) => {
-              const offset = idx * 10;
-              const scale = Math.max(0.8, 1 - idx * 0.05);
-              return (
-                <div
-                  key={cta.projectId}
-                  className="pointer-events-auto absolute left-1/2 -translate-x-1/2"
-                  style={{
-                    bottom: offset,
-                    transform: `translate(-50%, ${-offset}px) scale(${scale})`,
-                    transformOrigin: "bottom center",
-                    zIndex: 1000 - idx,
-                    transition: "transform 180ms ease, bottom 180ms ease",
-                  }}
-                >
-                  <INaturalistProjectCallToAction
-                    projectId={cta.projectId}
-                    onHide={(id) =>
-                      setHiddenInatCtas((prev) => {
-                        const next = new Set(prev);
-                        next.add(id);
-                        return next;
-                      })
+              {visibleInatCtas.map((cta, idx) => {
+                const offset = idx * 10;
+                const scale = Math.max(0.8, 1 - idx * 0.05);
+                return (
+                  <div
+                    key={cta.projectId}
+                    className="pointer-events-auto absolute left-1/2 -translate-x-1/2"
+                    style={{
+                      bottom: offset,
+                      transform: `translate(-50%, ${-offset}px) scale(${scale})`,
+                      transformOrigin: "bottom center",
+                      zIndex: 1000 - idx,
+                      transition: "transform 180ms ease, bottom 180ms ease",
+                    }}
+                  >
+                    <INaturalistProjectCallToAction
+                      projectId={cta.projectId}
+                      onHide={(id) =>
+                        setHiddenInatCtas((prev) => {
+                          const next = new Set(prev);
+                          next.add(id);
+                          return next;
+                        })
+                      }
+                    />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+        <div className="flex justify-center absolute top-0 right-1/2 text-xs z-10 pointer-events-none">
+          <AnimatePresence>
+            {uiState.bannerMessages?.length ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5 }}
+                className="text-sm p-0.5 w-full px-4 "
+                style={{
+                  backgroundColor: "rgba(255,255,255,0.5)",
+                  // backgroundImage:
+                  //   "linear-gradient(to right, rgba(255,255,255,0.5), rgba(255,255,255,0.5), rgba(255,255,255,0))",
+                }}
+                dangerouslySetInnerHTML={{
+                  __html: uiState.bannerMessages.join(","),
+                }}
+              />
+            ) : null}
+          </AnimatePresence>
+        </div>
+        <div
+          className="flex justify-center items-center absolute top-0 left-0 text-xs z-10 pointer-events-none w-full"
+          style={
+            sidebar.open
+              ? {
+                  paddingLeft: sidebar.width + "px",
+                }
+              : {}
+          }
+        >
+          <AnimatePresence>
+            {uiState.displayedMapBookmark ? (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.5 }}
+                className="text-sm px-4 pointer-events-auto mt-2 p-2 rounded"
+                style={{
+                  backgroundColor: "rgba(255,255,255,0.5)",
+                }}
+                onMouseEnter={() => {
+                  manager?.cancelBookmarkBannerHiding();
+                }}
+                onMouseLeave={() => {
+                  manager?.hideBookmarkBanner(1000);
+                }}
+              >
+                {uiState.displayedMapBookmark.errors.missingBasemap ||
+                uiState.displayedMapBookmark.errors.missingLayers.length > 0 ||
+                uiState.displayedMapBookmark.errors.missingSketches.length >
+                  0 ? (
+                  <Trans
+                    ns="map"
+                    i18nKey="missingLayerCount"
+                    count={
+                      (uiState.displayedMapBookmark.errors.missingBasemap
+                        ? 1
+                        : 0) +
+                      uiState.displayedMapBookmark.errors.missingLayers.length +
+                      uiState.displayedMapBookmark.errors.missingSketches.length
                     }
                   />
-                </div>
-              );
-            })}
+                ) : (
+                  <Trans ns="map">Map bookmark shown</Trans>
+                )}
+                <button
+                  className="px-1 bg-gray-100 rounded-sm shadow ml-1"
+                  onClick={() => {
+                    manager?.undoMapBookmark();
+                  }}
+                >
+                  <Trans ns="map">undo</Trans>
+                </button>
+                <button
+                  className="px-1 bg-gray-100 rounded-sm shadow ml-1 -mr-1.5"
+                  onClick={() =>
+                    setShowBookmarkOverlayId(
+                      uiState.displayedMapBookmark?.id || null
+                    )
+                  }
+                >
+                  <Trans ns="map">view details</Trans>
+                </button>
+              </motion.div>
+            ) : null}
+          </AnimatePresence>
+        </div>
+        {showBookmarkOverlayId && (
+          <MapBookmarkDetailsOverlay
+            bookmarkId={showBookmarkOverlayId}
+            onRequestClose={() => setShowBookmarkOverlayId(null)}
+          />
+        )}
+        {styleError && (
+          <div className="flex w-full absolute top-1 place-content-center z-10 text-center">
+            <div className=" bg-red-900 text-white p-1 text-sm">
+              {
+                //eslint-disable-next-line
+              }
+              Basemap Error: {styleError.message}
+            </div>
           </div>
         )}
-      </div>
-      <div className="flex justify-center absolute top-0 right-1/2 text-xs z-10 pointer-events-none">
-        <AnimatePresence>
-          {uiState.bannerMessages?.length ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.5 }}
-              className="text-sm p-0.5 w-full px-4 "
-              style={{
-                backgroundColor: "rgba(255,255,255,0.5)",
-                // backgroundImage:
-                //   "linear-gradient(to right, rgba(255,255,255,0.5), rgba(255,255,255,0.5), rgba(255,255,255,0))",
-              }}
-              dangerouslySetInnerHTML={{
-                __html: uiState.bannerMessages.join(","),
-              }}
-            />
-          ) : null}
-        </AnimatePresence>
-      </div>
-      <div
-        className="flex justify-center items-center absolute top-0 left-0 text-xs z-10 pointer-events-none w-full"
-        style={
-          sidebar.open
-            ? {
-                paddingLeft: sidebar.width + "px",
-              }
-            : {}
-        }
-      >
-        <AnimatePresence>
-          {uiState.displayedMapBookmark ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.5 }}
-              className="text-sm px-4 pointer-events-auto mt-2 p-2 rounded"
-              style={{
-                backgroundColor: "rgba(255,255,255,0.5)",
-              }}
-              onMouseEnter={() => {
-                manager?.cancelBookmarkBannerHiding();
-              }}
-              onMouseLeave={() => {
-                manager?.hideBookmarkBanner(1000);
-              }}
-            >
-              {uiState.displayedMapBookmark.errors.missingBasemap ||
-              uiState.displayedMapBookmark.errors.missingLayers.length > 0 ||
-              uiState.displayedMapBookmark.errors.missingSketches.length > 0 ? (
-                <Trans
-                  ns="map"
-                  i18nKey="missingLayerCount"
-                  count={
-                    (uiState.displayedMapBookmark.errors.missingBasemap
-                      ? 1
-                      : 0) +
-                    uiState.displayedMapBookmark.errors.missingLayers.length +
-                    uiState.displayedMapBookmark.errors.missingSketches.length
-                  }
-                />
-              ) : (
-                <Trans ns="map">Map bookmark shown</Trans>
-              )}
-              <button
-                className="px-1 bg-gray-100 rounded-sm shadow ml-1"
-                onClick={() => {
-                  manager?.undoMapBookmark();
-                }}
-              >
-                <Trans ns="map">undo</Trans>
-              </button>
-              <button
-                className="px-1 bg-gray-100 rounded-sm shadow ml-1 -mr-1.5"
-                onClick={() =>
-                  setShowBookmarkOverlayId(
-                    uiState.displayedMapBookmark?.id || null
-                  )
-                }
-              >
-                <Trans ns="map">view details</Trans>
-              </button>
-            </motion.div>
-          ) : null}
-        </AnimatePresence>
-      </div>
-      {showBookmarkOverlayId && (
-        <MapBookmarkDetailsOverlay
-          bookmarkId={showBookmarkOverlayId}
-          onRequestClose={() => setShowBookmarkOverlayId(null)}
-        />
-      )}
-      {styleError && (
-        <div className="flex w-full absolute top-1 place-content-center z-10 text-center">
-          <div className=" bg-red-900 text-white p-1 text-sm">
-            {
-              //eslint-disable-next-line
-            }
-            Basemap Error: {styleError.message}
-          </div>
-        </div>
-      )}
 
-      <AnimatePresence>
-        <Tooltip
-          visible={!!uiState.tooltip}
-          x={uiState.tooltip?.x}
-          y={uiState.tooltip?.y}
-          content={
-            uiState.tooltip ? (
-              <div
-                dangerouslySetInnerHTML={{
-                  __html: uiState.tooltip?.messages.join(",") || "",
-                }}
-              ></div>
-            ) : undefined
-          }
-        ></Tooltip>
-      </AnimatePresence>
+        <AnimatePresence>
+          <Tooltip
+            visible={!!uiState.tooltip}
+            x={uiState.tooltip?.x}
+            y={uiState.tooltip?.y}
+            padded={!uiState.tooltip?.dataTable}
+            content={
+              uiState.tooltip?.dataTable ? (
+                <DataTableValueTooltip content={uiState.tooltip.dataTable} />
+              ) : uiState.tooltip ? (
+                <div
+                  dangerouslySetInnerHTML={{
+                    __html: uiState.tooltip?.messages.join(",") || "",
+                  }}
+                ></div>
+              ) : undefined
+            }
+          ></Tooltip>
+        </AnimatePresence>
       </div>
       {temporalEnabled ? <TimeSlider /> : null}
     </div>
   );
 });
 
-// TODO: Keep tooltip around and hide/show it so that framer-motion can be used
-// to animate entry *and exit* and tween between x and y position.
+// Kept mounted so Framer Motion can animate entry/exit. Position is applied
+// instantly (cursor-follow should not lag); scale/opacity use transformOrigin
+// from placeMapTooltip so flips grow away from the pointer.
 function Tooltip({
   x,
   y,
   visible,
   content,
+  padded = true,
 }: {
   x?: number;
   y?: number;
   content?: React.ReactNode;
   visible: boolean;
+  padded?: boolean;
 }) {
-  const [state, setState] = useState<{
-    x: number;
-    y: number;
-    children: React.ReactNode;
-  }>({ x: 0, y: 0, children: "" });
+  const nodeRef = useRef<HTMLDivElement>(null);
+  const [heldContent, setHeldContent] = useState<React.ReactNode>("");
+  const [placed, setPlaced] = useState({
+    left: 0,
+    top: 0,
+    origin: "top left",
+  });
+  const cursorX = x || 0;
+  const cursorY = y || 0;
+  const children = visible ? content : heldContent;
 
-  useEffect(() => {
-    if (x && y) {
-      setState({ x, y, children: content });
+  useLayoutEffect(() => {
+    if (visible && content) {
+      setHeldContent(content);
     }
-  }, [x, y, content]);
+  }, [visible, content]);
+
+  useLayoutEffect(() => {
+    const node = nodeRef.current;
+    if (!node || !cursorX || !cursorY) {
+      return;
+    }
+    setPlaced(
+      placeMapTooltip({
+        cursorX,
+        cursorY,
+        width: node.offsetWidth,
+        height: node.offsetHeight,
+        viewportWidth: window.innerWidth,
+        viewportHeight: window.innerHeight,
+      })
+    );
+  }, [cursorX, cursorY, children, visible]);
+
+  // Data-table tooltips are large; a spring scale-in overshoots and covers
+  // the cursor. Fade only for those, and never capture pointer events.
+  const scaleIn = padded;
 
   return ReactDOM.createPortal(
     <motion.div
+      ref={nodeRef}
       transition={{
         scale: { type: "spring", stiffness: 200 },
         default: { duration: 0.1 },
       }}
-      className="absolute z-50 bg-white p-1 px-2 shadow-lg rounded text-sm"
-      style={{ left: state.x + 15, top: state.y + 15 }}
+      className={clsx(
+        "pointer-events-none absolute z-50 bg-white shadow-lg rounded text-sm",
+        padded ? "p-1 px-2" : "px-3 py-2.5"
+      )}
+      style={{
+        left: placed.left,
+        top: placed.top,
+        transformOrigin: placed.origin,
+      }}
       animate={visible ? "visible" : "hidden"}
       variants={{
         hidden: {
-          scale: 0.5,
+          scale: scaleIn ? 0.8 : 1,
           opacity: 0,
           transition: {
             type: "easeOut",
-            duration: 0.3,
+            duration: 0.1,
           },
         },
         visible: {
           scale: 1,
           opacity: 1,
-          transition: {
-            type: "spring",
-            stiffness: 300,
-            duration: 0.1,
-          },
+          transition: scaleIn
+            ? {
+                type: "spring",
+                stiffness: 300,
+                duration: 0.1,
+              }
+            : {
+                duration: 0.1,
+              },
         },
       }}
-      // animate={{
-      //   opacity: visible ? 1 : 0,
-      //   scale: visible ? 1 : 0.5,
-      //   // @ts-ignore
-      //   // left: state.x + 15,
-      //   // top: state.y + 15,
-      // }}
     >
-      {state.children}
+      {children}
     </motion.div>,
     document.getElementById("tooltip-container")!
   );

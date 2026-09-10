@@ -897,3 +897,35 @@ export function formatClockLabel(
   // eslint-disable-next-line i18next/no-literal-string
   return `${startLabel} – ${endLabel}`;
 }
+
+/**
+ * Inclusive start–end for a window clock, without needing enumerated steps.
+ * Instant clocks and single-step windows return undefined.
+ */
+export function formatWindowClockRange(
+  clock: TemporalClock,
+  locale?: string
+): string | undefined {
+  if (clock.mode !== "window") {
+    return undefined;
+  }
+  const last = previousIsoAtPrecision(clock.end, clock.viewResolution);
+  if (!last || last === clock.start) {
+    return undefined;
+  }
+  const startLabel = formatIsoLabel(clock.start, clock.viewResolution, locale);
+  const endLabel = formatIsoLabel(last, clock.viewResolution, locale);
+  // eslint-disable-next-line i18next/no-literal-string
+  return `${startLabel} – ${endLabel}`;
+}
+
+function previousIsoAtPrecision(
+  iso: TemporalIso,
+  precision: TemporalPrecision
+): TemporalIso | null {
+  const expanded = expandTemporalIso(iso, precision);
+  if (!expanded) {
+    return null;
+  }
+  return formatIsoFromMs(expanded.start - 1, precision);
+}

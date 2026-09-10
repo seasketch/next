@@ -12,7 +12,7 @@ import {
   ReportWidget,
   TableHeadingsEditor,
   TooltipBooleanConfigurationOption,
-} from "./widgets";
+} from "./reportWidgetShared";
 import {
   ReportWidgetTooltipControls,
   TooltipMorePopover,

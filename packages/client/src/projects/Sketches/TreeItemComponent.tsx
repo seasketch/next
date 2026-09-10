@@ -522,6 +522,8 @@ export default function TreeItemComponent({
                 layerId={node.id}
                 tocItemId={node.tocItemId}
                 tables={node.overlayDataTables}
+                side="right"
+                align="start"
               />
             </div>
           )}

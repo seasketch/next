@@ -10,7 +10,7 @@ import {
   subjectIsFragment,
   TotalAreaMetric,
 } from "overlay-engine";
-import { ReportWidget, TableHeadingsEditor } from "./widgets";
+import { ReportWidget, TableHeadingsEditor } from "./reportWidgetShared";
 import { useNumberFormatters } from "../hooks/useNumberFormatters";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
 import { ReportWidgetTooltipControls } from "../../editor/TooltipMenu";

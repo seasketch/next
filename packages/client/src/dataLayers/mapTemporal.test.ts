@@ -6,6 +6,7 @@ import {
   coverageKey,
   enumerateSteps,
   formatClockLabel,
+  formatWindowClockRange,
   formatIsoFromMs,
   hasInternalTimeSeries,
   instantClockForStep,
@@ -606,6 +607,7 @@ describe("view resolution and window clocks", () => {
     expect(formatClockLabel(clock!, undefined, ["2018", "2019", "2020"])).toBe(
       "2018 – 2020"
     );
+    expect(formatWindowClockRange(clock!)).toBe("2018 – 2020");
     const domain = {
       kind: "interval" as const,
       start: "2018",

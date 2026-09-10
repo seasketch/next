@@ -2,7 +2,7 @@ import { useContext, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import VisibilityCheckboxAnimated from "../../dataLayers/tableOfContents/VisibilityCheckboxAnimated";
 import { LayerTreeContext, MapManagerContext } from "../../dataLayers/MapContextManager";
-import { ReportWidget } from "./widgets";
+import { ReportWidget } from "./reportWidgetShared";
 import { ReportWidgetTooltipControls } from "../../editor/TooltipMenu";
 import { LayerToggleTooltipControlsBase } from "./LayerToggleControls";
 

@@ -9,6 +9,10 @@ import {
   parseDataTableQueryGroups,
   combineSeriesSteps,
   parseDataTableQuerySeries,
+  featureSeriesFromParsed,
+  downsampleFeatureSeries,
+  shouldShowDataTableSeriesChart,
+  trimFeatureSeries,
   temporalSourceFilterColumns,
 } from "./dataTableQueryApi";
 
@@ -235,6 +239,64 @@ describe("parseDataTableQuerySeries", () => {
     const combined = combineSeriesSteps(parsed!, ["2018", "2019"], "mean");
     expect(combined.values.A).toBe(7);
     expect(combined.values.B).toBe(0);
+  });
+
+  it("extracts a per-feature series with gaps for missing steps", () => {
+    const parsed = parseDataTableQuerySeries(
+      [
+        { step: "2018", site: "A", mean: 10, count: 2 },
+        { step: "2018", site: "B", mean: 0, count: 1 },
+        { step: "2019", site: "A", mean: 4, count: 2 },
+      ],
+      series,
+      "site",
+      "mean"
+    );
+    expect(parsed).not.toBeNull();
+    expect(featureSeriesFromParsed(parsed!, "A")).toEqual([
+      { step: "2018", value: 10 },
+      { step: "2019", value: 4 },
+    ]);
+    expect(featureSeriesFromParsed(parsed!, "B")).toEqual([
+      { step: "2018", value: 0 },
+      { step: "2019", value: null },
+    ]);
+    expect(shouldShowDataTableSeriesChart(featureSeriesFromParsed(parsed!, "A"))).toBe(
+      true
+    );
+    expect(shouldShowDataTableSeriesChart(featureSeriesFromParsed(parsed!, "B"))).toBe(
+      false
+    );
+  });
+
+  it("downsamples long series while keeping endpoints and the current step", () => {
+    const points = Array.from({ length: 20 }, (_, index) => ({
+      step: String(2000 + index),
+      value: index,
+    }));
+    const sampled = downsampleFeatureSeries(points, 6, ["2010"]);
+    expect(sampled[0]).toEqual({ step: "2000", value: 0 });
+    expect(sampled[sampled.length - 1]).toEqual({ step: "2019", value: 19 });
+    expect(sampled.some((point) => point.step === "2010")).toBe(true);
+    expect(sampled.length).toBeLessThanOrEqual(7);
+  });
+
+  it("trims leading and trailing empty steps", () => {
+    expect(
+      trimFeatureSeries([
+        { step: "2008", value: null },
+        { step: "2009", value: null },
+        { step: "2010", value: 2 },
+        { step: "2011", value: null },
+        { step: "2012", value: 1 },
+        { step: "2013", value: null },
+      ])
+    ).toEqual([
+      { step: "2010", value: 2 },
+      { step: "2011", value: null },
+      { step: "2012", value: 1 },
+    ]);
+    expect(trimFeatureSeries([{ step: "2010", value: null }])).toEqual([]);
   });
 });
 

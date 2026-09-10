@@ -1,6 +1,7 @@
 import { describe, expect, it } from "@jest/globals";
 import {
   clockAwarePaintKey,
+  DataTableQueryManager,
   tableHasRowTemporal,
 } from "./DataTableQueryManager";
 
@@ -77,5 +78,20 @@ describe("clockAwarePaintKey", () => {
 
   it("leaves the query key alone when there is no clock", () => {
     expect(clockAwarePaintKey("q1", null, rowTemporal)).toBe("q1");
+  });
+});
+
+describe("getTooltipRangeLabel", () => {
+  it("labels a window clock and stays quiet for instant clocks", () => {
+    const manager = new DataTableQueryManager(null);
+    manager.setTemporalClock({
+      mode: "window",
+      start: "1999",
+      end: "2025",
+      viewResolution: "year",
+    });
+    expect(manager.getTooltipRangeLabel()).toBe("1999 – 2024");
+    manager.setTemporalClock(clock);
+    expect(manager.getTooltipRangeLabel()).toBeUndefined();
   });
 });

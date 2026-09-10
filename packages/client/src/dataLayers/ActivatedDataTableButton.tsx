@@ -18,6 +18,8 @@ export default function ActivatedDataTableButton({
   tables,
   className,
   onDataTableActivated,
+  side,
+  align,
 }: {
   /** Table of contents stableId for the associated layer */
   layerId: string;
@@ -27,6 +29,8 @@ export default function ActivatedDataTableButton({
   className?: string;
   /** Called when a table is activated (not when cleared), e.g. to focus the legend. */
   onDataTableActivated?: (layerId: string) => void;
+  side?: "top" | "right" | "bottom" | "left";
+  align?: "start" | "center" | "end";
 }) {
   const { t } = useTranslation("homepage");
   const { layerStatesByTocStaticId } = useContext(MapOverlayContext);
@@ -82,6 +86,8 @@ export default function ActivatedDataTableButton({
           tables={tables}
           onTableSelected={() => setOpen(false)}
           onDataTableActivated={onDataTableActivated}
+          side={side}
+          align={align}
         />
       </Popover.Portal>
     </Popover.Root>

@@ -35,8 +35,15 @@ export function buildDataTableValueExpression(
 export const DATA_TABLE_ZERO_SENTINEL = -1;
 
 export const DATA_TABLE_ACTIVE_COLOR = "#2563eb";
+/** Slightly darker fill/stroke while a bubble's tooltip is showing. */
+export const DATA_TABLE_HOVER_COLOR = "#1d4ed8";
 export const DATA_TABLE_NO_DATA_COLOR = "#9ca3af";
+export const DATA_TABLE_NO_DATA_HOVER_COLOR = "#6b7280";
 export const DATA_TABLE_LOADING_COLOR = "#6b7280";
+export const DATA_TABLE_LOADING_HOVER_COLOR = "#4b5563";
+
+export const DATA_TABLE_HOVER_FILL_OPACITY = 0.95;
+export const DATA_TABLE_HOVER_STROKE_WIDTH = 1.25;
 
 export const DATA_TABLE_CIRCLE_FILL_OPACITY = 0.8;
 export const DATA_TABLE_CIRCLE_STROKE_OPACITY = Math.min(
@@ -225,4 +232,49 @@ export function buildDataTableCircleRadiusExpression({
     );
   }
   return expression as Expression;
+}
+
+export function dataTableHoveredExpression(): Expression {
+  return ["boolean", ["feature-state", "hovered"], false] as Expression;
+}
+
+export function buildDataTableCircleColorExpression(
+  isLoading: Expression,
+  isNoData: Expression
+): Expression {
+  return [
+    "case",
+    dataTableHoveredExpression(),
+    [
+      "case",
+      isLoading,
+      DATA_TABLE_LOADING_HOVER_COLOR,
+      isNoData,
+      DATA_TABLE_NO_DATA_HOVER_COLOR,
+      DATA_TABLE_HOVER_COLOR,
+    ],
+    isLoading,
+    DATA_TABLE_LOADING_COLOR,
+    isNoData,
+    DATA_TABLE_NO_DATA_COLOR,
+    DATA_TABLE_ACTIVE_COLOR,
+  ] as Expression;
+}
+
+export function buildDataTableCircleStrokeColorExpression(
+  isNoData: Expression
+): Expression {
+  return [
+    "case",
+    dataTableHoveredExpression(),
+    [
+      "case",
+      isNoData,
+      DATA_TABLE_NO_DATA_HOVER_COLOR,
+      DATA_TABLE_HOVER_COLOR,
+    ],
+    isNoData,
+    DATA_TABLE_NO_DATA_STROKE_COLOR,
+    DATA_TABLE_ACTIVE_COLOR,
+  ] as Expression;
 }

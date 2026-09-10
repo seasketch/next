@@ -7,6 +7,7 @@ import mapboxgl, {
   Popup,
 } from "mapbox-gl";
 import {
+  DataTableTooltipContent,
   idForLayer,
   isSeaSketchLayerId,
   layerIdFromStyleLayerId,
@@ -90,6 +91,15 @@ export type DataTableInteractiveLayer = {
   sourceLayer?: string;
   column: string;
   op: string;
+  columnLabel?: string;
+  tableName?: string;
+  tableDescription?: string;
+  layerTitle?: string;
+  getSeries?: (featureId: string) => {
+    points: DataTableTooltipContent["series"];
+    currentSteps: string[];
+  } | null;
+  getRangeLabel?: () => string | undefined;
 };
 
 /**
@@ -1101,6 +1111,7 @@ export default class LayerInteractivityManager extends EventEmitter {
         })
       : [];
     if (sketchFeatures.length) {
+      this.setHoveredFeature(undefined);
       clear();
       if (
         !this.focusedSketchId ||
@@ -1154,12 +1165,16 @@ export default class LayerInteractivityManager extends EventEmitter {
 
     if (features.length && uniqueLayerIds.indexOf(features[0].layer.id) > -1) {
       const top = features[0];
-      this.setHoveredFeature(top);
       const dataTableConfig = this.dataTableLayersByGlId[top.layer.id];
       const dataTableTooltip = dataTableConfig
         ? this.buildDataTableValueTooltip(top, dataTableConfig, e)
         : undefined;
       const interactivitySetting = this.getInteractivitySettingForFeature(top);
+      if (dataTableTooltip || interactivitySetting) {
+        this.setHoveredFeature(top);
+      } else {
+        this.setHoveredFeature(undefined);
+      }
       if (interactivitySetting) {
         let cursor = "";
         this.map!.getCanvas().style.cursor = cursor;
@@ -1301,20 +1316,46 @@ export default class LayerInteractivityManager extends EventEmitter {
       x: e.originalEvent.x,
       y: e.originalEvent.y,
     };
+    const columnLabel = config.columnLabel || config.column;
+    const series = config.getSeries?.(String(feature.id));
+    const meta = {
+      columnLabel,
+      op: config.op,
+      tableName: config.tableName,
+      tableDescription: config.tableDescription,
+      layerTitle: config.layerTitle,
+      siteLabel: String(feature.id),
+      series: series?.points,
+      currentSteps: series?.currentSteps,
+      rangeLabel: config.getRangeLabel?.(),
+    };
     if (state.loading) {
-      return { ...position, messages: ["Loading…"] };
+      return {
+        ...position,
+        messages: ["Loading…"],
+        dataTable: { ...meta, status: "loading" },
+      };
     }
     if (!("rawValue" in state) && !("scaledValue" in state)) {
       // Feature-state not applied yet (style still settling).
       return undefined;
     }
     if (state.rawValue === null || state.rawValue === undefined) {
-      return { ...position, messages: ["No data"] };
+      return {
+        ...position,
+        messages: ["No data"],
+        dataTable: { ...meta, status: "empty" },
+      };
     }
     const formatted = PopupNumberFormatter.format(state.rawValue);
     return {
       ...position,
-      messages: [`${config.op}(${config.column}): ${formatted}`],
+      messages: [`${columnLabel}: ${formatted}`],
+      dataTable: {
+        ...meta,
+        status: "value",
+        formattedValue: formatted,
+      },
     };
   }
 

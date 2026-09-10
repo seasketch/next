@@ -1,7 +1,7 @@
 import { useContext, useMemo, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { MetricDependency } from "overlay-engine";
-import { ReportWidget } from "./widgets";
+import { ReportWidget } from "./reportWidgetShared";
 import {
   ReportWidgetTooltipControls,
   TooltipPopoverContent,

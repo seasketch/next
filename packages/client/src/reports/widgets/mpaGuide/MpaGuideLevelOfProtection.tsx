@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Trans, useTranslation } from "react-i18next";
-import type { ReportWidget } from "../widgets";
+import { ReportWidget } from "../reportWidgetShared";
 import { useSubjectReportContext } from "../../context/SubjectReportContext";
 import {
   calculateLOP,

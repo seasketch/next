@@ -9,9 +9,11 @@ import {
   buildDataTableQuerySearchParams,
   combineSeriesSteps,
   DataTableAggregation,
+  DataTableFeatureSeriesPoint,
   dataTableQueryClockParams,
   dataTableQueryFailureFromResponse,
   DataTableQuerySettings,
+  featureSeriesFromParsed,
   isParsedDataTableQuerySeries,
   omitFiltersForColumns,
   ParsedDataTableQuerySeries,
@@ -20,7 +22,7 @@ import {
   parseDataTableQuerySeries,
   temporalSourceFilterColumns,
 } from "./dataTableQueryApi";
-import { stepKeysForClock } from "./mapTemporal";
+import { formatWindowClockRange, stepKeysForClock } from "./mapTemporal";
 import { fetchDataTableColumnStats } from "./useDataTableColumnStats";
 import { ClientOverlayDataTableFragment } from "../generated/graphql";
 import { shouldSendTilesAclNamespace, tilesAclNamespace } from "./tilesAuth";
@@ -168,6 +170,43 @@ export class DataTableQueryManager {
 
   setOnQueryErrorsChange(callback: ((errors: string[]) => void) | null) {
     this.onQueryErrorsChange = callback;
+  }
+
+  /**
+   * Cached full-coverage series for one join key (same query as the
+   * timeslider histogram / instant scrub). Null until that fetch lands.
+   */
+  getFeatureSeries(
+    settings: ResolvedDataTableVisualizationSettings,
+    featureId: string
+  ): {
+    points: DataTableFeatureSeriesPoint[];
+    currentSteps: string[];
+  } | null {
+    const series = this.cachedSeriesFor(settings);
+    if (!series) {
+      return null;
+    }
+    const points = featureSeriesFromParsed(series, featureId);
+    if (points.length === 0) {
+      return null;
+    }
+    return {
+      points,
+      currentSteps: this.currentSeriesStepKeys(settings, series),
+    };
+  }
+
+  /**
+   * Inclusive window label for tooltips (range mode only). Reads the live
+   * map clock so it does not depend on the series cache or TOC temporal.
+   */
+  getTooltipRangeLabel(): string | undefined {
+    const clock = this.temporalClock;
+    if (!clock) {
+      return undefined;
+    }
+    return formatWindowClockRange(clock);
   }
 
   getQueryErrors(): string[] {
@@ -781,10 +820,10 @@ export class DataTableQueryManager {
     return ops.length === 1 ? ops[0] : ops;
   }
 
-  private sliceSeries(
+  private currentSeriesStepKeys(
     settings: ResolvedDataTableVisualizationSettings,
     series: ParsedDataTableQuerySeries
-  ): ParsedDataTableQueryValues {
+  ): string[] {
     const clock = this.temporalClock;
     const temporal = settings.table.temporal;
     const resolution: TemporalPrecision =
@@ -794,12 +833,17 @@ export class DataTableQueryManager {
       isTemporalInfo(temporal) && temporal.coverage?.kind === "interval"
         ? temporal.coverage
         : null;
-    const keys =
-      clock && coverage
-        ? stepKeysForClock(clock, coverage, resolution)
-        : clock
-        ? [clock.start]
-        : [];
+    if (clock && coverage) {
+      return stepKeysForClock(clock, coverage, resolution);
+    }
+    return clock ? [clock.start] : [];
+  }
+
+  private sliceSeries(
+    settings: ResolvedDataTableVisualizationSettings,
+    series: ParsedDataTableQuerySeries
+  ): ParsedDataTableQueryValues {
+    const keys = this.currentSeriesStepKeys(settings, series);
     const op: DataTableAggregation = Array.isArray(settings.query.op)
       ? settings.query.op[0]
       : settings.query.op || "mean";

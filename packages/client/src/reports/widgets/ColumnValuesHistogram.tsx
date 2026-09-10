@@ -12,7 +12,7 @@ import {
 import { Expression } from "mapbox-gl";
 import { scaleLinear } from "d3-scale";
 import { ExpressionEvaluator } from "../../dataLayers/legends/ExpressionEvaluator";
-import { ReportWidget, TooltipBooleanConfigurationOption } from "./widgets";
+import { ReportWidget, TooltipBooleanConfigurationOption } from "./reportWidgetShared";
 import {
   ReportWidgetTooltipControls,
   TooltipMorePopover,

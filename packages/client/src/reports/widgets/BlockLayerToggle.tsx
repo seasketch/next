@@ -6,7 +6,7 @@ import {
   LayerTreeContext,
   MapManagerContext,
 } from "../../dataLayers/MapContextManager";
-import { ReportWidget } from "./widgets";
+import { ReportWidget } from "./reportWidgetShared";
 import { ReportWidgetTooltipControls } from "../../editor/TooltipMenu";
 import { LayerToggleTooltipControlsBase } from "./LayerToggleControls";
 

@@ -7,7 +7,11 @@ import {
   combineMetricsForFragments,
   subjectIsFragment,
 } from "overlay-engine";
-import { ReportWidget, TableHeadingsEditor } from "./widgets";
+import {
+  ReportWidget,
+  TableHeadingsEditor,
+  TooltipBooleanConfigurationOption,
+} from "./reportWidgetShared";
 import {
   ReportWidgetTooltipControls,
   TooltipMorePopover,
@@ -20,7 +24,6 @@ import { NumberRoundingControl } from "./NumberRoundingControl";
 import * as Popover from "@radix-ui/react-popover";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { Pencil2Icon } from "@radix-ui/react-icons";
-import { TooltipBooleanConfigurationOption } from "./widgets";
 import { UnitSelector } from "./UnitSelector";
 import { VrmSelector } from "./VrmSelector";
 import {

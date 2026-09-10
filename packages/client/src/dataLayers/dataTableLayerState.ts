@@ -33,6 +33,27 @@ export type DataTableStatesMap = {
 };
 
 /**
+ * Only one overlay may show a data-table visualization at a time.
+ * If several are present, keep `keepTocStableId` when it has a table,
+ * otherwise the last entry in the map.
+ */
+export function exclusiveDataTableStates(
+  dataTableStates: DataTableStatesMap | null | undefined,
+  keepTocStableId?: string
+): DataTableStatesMap {
+  const states = dataTableStates || {};
+  const ids = Object.keys(states).filter((id) => states[id]?.stableId);
+  if (ids.length === 0) {
+    return {};
+  }
+  const keep =
+    keepTocStableId && states[keepTocStableId]?.stableId
+      ? keepTocStableId
+      : ids[ids.length - 1];
+  return { [keep]: { ...states[keep] } };
+}
+
+/**
  * Build bookmark/API dataTableStates from overlay layer states.
  * Only includes visible layers that have an active data table.
  */
@@ -51,7 +72,8 @@ export function buildDataTableStatesFromLayers(
 
 /**
  * Merge bookmark dataTableStates onto a copy of layer states.
- * Clears dataTable on layers not present in the bookmark map.
+ * At most one visualization is kept. Clears dataTable on every other layer,
+ * including layers absent from the bookmark map.
  * Does not add layers that are missing from `layers`.
  */
 export function applyDataTableStatesToLayerStates<
@@ -61,7 +83,7 @@ export function applyDataTableStatesToLayerStates<
   dataTableStates: DataTableStatesMap | null | undefined
 ): { [tocStableId: string]: T } {
   const next: { [tocStableId: string]: T } = {};
-  const states = dataTableStates || {};
+  const states = exclusiveDataTableStates(dataTableStates);
   for (const [tocStableId, state] of Object.entries(layers)) {
     const dataTable = states[tocStableId];
     if (dataTable?.stableId) {

@@ -13,6 +13,7 @@ import {
   TooltipMorePopover,
   TooltipPopoverContent,
 } from "../../editor/TooltipMenu";
+import { TableHeadingsEditor } from "./reportWidgetShared";
 import {
   CompatibleSpatialMetricDetailsFragment,
   Geography,
@@ -1004,9 +1005,6 @@ function VectorTimeSeriesHeadingsEditor(props: {
   componentSettings: VectorTimeSeriesSettings;
   onUpdate: (attrs: { componentSettings: VectorTimeSeriesSettings }) => void;
 }) {
-  // Loaded lazily so this module does not import widgets.tsx at init time
-  // (that cycle left VectorTimeSeries undefined while the router memoized it).
-  const { TableHeadingsEditor } = require("./widgets");
   return (
     <TableHeadingsEditor
       labelKeys={["absoluteLabel", "percentLabel"]}

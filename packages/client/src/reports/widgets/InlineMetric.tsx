@@ -47,7 +47,7 @@ import {
   ReportWidget,
   ReportWidgetProps,
   TooltipBooleanConfigurationOption,
-} from "./widgets";
+} from "./reportWidgetShared";
 import { useBaseReportContext } from "../context/BaseReportContext";
 import { useSubjectReportContext } from "../context/SubjectReportContext";
 import { usePrimaryGeography } from "../hooks/usePrimaryGeography";

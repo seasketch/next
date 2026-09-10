@@ -25,12 +25,17 @@ export default function ActivatedDataTablePanel({
   tables,
   onTableSelected,
   onDataTableActivated,
+  side,
+  align = "end",
 }: {
   layerId: string;
   tocItemId?: number;
   tables: ClientOverlayDataTableFragment[];
   onTableSelected?: () => void;
   onDataTableActivated?: (layerId: string) => void;
+  /** Preferred popover side. Overlay TOC uses `right`; legend/popup keep default. */
+  side?: "top" | "right" | "bottom" | "left";
+  align?: "start" | "center" | "end";
 }) {
   const { t } = useTranslation("homepage");
   const { manager } = useContext(MapManagerContext);
@@ -83,10 +88,11 @@ export default function ActivatedDataTablePanel({
 
   return (
     <Popover.Content
-      align="end"
+      side={side}
+      align={align}
       sideOffset={6}
       style={{ zIndex: 99999999 }}
-      className="w-72 rounded-md bg-white text-gray-900 border border-black border-opacity-10 shadow-lg py-1.5 data-[state=open]:data-[side=bottom]:animate-slideUpAndFade data-[state=open]:data-[side=top]:animate-slideDownAndFade"
+      className="w-72 rounded-md bg-white text-gray-900 border border-black border-opacity-10 shadow-lg py-1.5 data-[state=open]:data-[side=bottom]:animate-slideUpAndFade data-[state=open]:data-[side=top]:animate-slideDownAndFade data-[state=open]:data-[side=right]:animate-slideLeftAndFade data-[state=open]:data-[side=left]:animate-slideRightAndFade"
     >
       <div className="px-3 pt-1 pb-2 border-b border-black border-opacity-5">
         <h4 className="text-xs font-semibold uppercase tracking-wide text-gray-600">
@@ -117,7 +123,7 @@ export default function ActivatedDataTablePanel({
                 aria-pressed={isActive}
                 onClick={() => {
                   if (isActive) {
-                    onTableSelected?.();
+                    clearSelection();
                     return;
                   }
                   if (table.stableId) {

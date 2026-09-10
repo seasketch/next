@@ -50,14 +50,18 @@ import { ApolloClient, NormalizedCacheObject } from "@apollo/client";
 import { compileLegendFromGLStyleLayers } from "./legends/compileLegend";
 import {
   DataTableAggregation,
+  DataTableFeatureSeriesPoint,
+  dataTableFilterLabel,
   hiddenDataTableFilterColumns,
   omitFiltersForColumns,
+  parseFilterColumnLabels,
   resolveDataTableVisualizationSettings,
 } from "./dataTableQueryApi";
 import {
   DataTableStatesMap,
   LayerDataTableState,
   buildDataTableStatesFromLayers,
+  exclusiveDataTableStates,
   layerStatesForPreferences,
 } from "./dataTableLayerState";
 import {
@@ -84,8 +88,13 @@ import {
   DATA_TABLE_ZERO_SENTINEL,
   DATA_TABLE_ZERO_STROKE_WIDTH,
   DATA_TABLE_NO_DATA_COLOR,
+  DATA_TABLE_HOVER_FILL_OPACITY,
+  DATA_TABLE_HOVER_STROKE_WIDTH,
+  buildDataTableCircleColorExpression,
   buildDataTableCircleRadiusExpression,
+  buildDataTableCircleStrokeColorExpression,
   buildDataTableValueExpression,
+  dataTableHoveredExpression,
 } from "./dataTableMapStyle";
 import {
   columnStatsUrlForTable,
@@ -432,6 +441,7 @@ class MapContextManager extends EventEmitter {
         );
       }
     }
+    this.deactivateOtherDataTables();
   }
 
   private loadDataTableSettingsMemory(): RememberedDataTableSettings[] {
@@ -484,6 +494,8 @@ class MapContextManager extends EventEmitter {
    * Set or clear data-table user intent on a layer. Source of truth is
    * LayerState.dataTable (persisted with prefs / bookmarks). Switching
    * tables restores that table's last column/op/filters from memory.
+   * Only one overlay may visualize a table at a time — activating a table
+   * clears others so they return to their default map style.
    */
   setLayerDataTable(tocStableId: string, state: LayerDataTableState | null) {
     if (!this.overlayStates.has(tocStableId)) {
@@ -499,18 +511,9 @@ class MapContextManager extends EventEmitter {
     this.commitDataTableSettingsMemory(resolved.memory);
     const next = resolved.next;
     if (next === null || !next.stableId) {
-      this.overlayStates.patch(tocStableId, { dataTable: undefined }, true);
-      this.dataTableActiveTocIds.delete(tocStableId);
-      const layer = this.layers[tocStableId];
-      if (layer) {
-        this.dataTableQueryManager.clearLegendSummary(
-          this.overlayStates.prefixedSourceId(layer.dataSourceId)
-        );
-      }
-      if (previousTableId) {
-        this.dataTableQueryManager.clearSeriesForTable(previousTableId);
-      }
+      this.forgetLayerDataTable(tocStableId, previousTableId);
     } else {
+      this.deactivateOtherDataTables(tocStableId);
       this.overlayStates.patch(
         tocStableId,
         {
@@ -537,6 +540,54 @@ class MapContextManager extends EventEmitter {
   }
 
   /**
+   * Drop data-table visualization from a layer so its default GL style
+   * (for example a site list) is used on the next style update.
+   */
+  private forgetLayerDataTable(
+    tocStableId: string,
+    previousTableId?: string
+  ) {
+    this.overlayStates.patch(tocStableId, { dataTable: undefined }, true);
+    this.dataTableActiveTocIds.delete(tocStableId);
+    const layer = this.layers[tocStableId];
+    if (layer) {
+      this.dataTableQueryManager.clearLegendSummary(
+        this.overlayStates.prefixedSourceId(layer.dataSourceId)
+      );
+    }
+    if (previousTableId) {
+      this.dataTableQueryManager.clearSeriesForTable(previousTableId);
+    }
+  }
+
+  /**
+   * Turn off every active data-table visualization except `keepTocStableId`.
+   * When omitted, keeps the last remaining active layer.
+   */
+  private deactivateOtherDataTables(keepTocStableId?: string) {
+    const active = [...this.dataTableActiveTocIds];
+    const keep =
+      keepTocStableId ??
+      (active.length > 0 ? active[active.length - 1] : undefined);
+    for (const tocStableId of active) {
+      if (tocStableId === keep) {
+        continue;
+      }
+      const previous = this.overlayStates.getRaw(tocStableId)?.dataTable;
+      if (previous?.stableId) {
+        this.commitDataTableSettingsMemory(
+          resolveLayerDataTableChange(
+            previous,
+            null,
+            this.dataTableSettingsMemory
+          ).memory
+        );
+      }
+      this.forgetLayerDataTable(tocStableId, previous?.stableId);
+    }
+  }
+
+  /**
    * Latest data-table intent from overlay state (not the possibly-stale
    * React context snapshot). Use this when reconciling required filters so
    * an in-flight legend effect cannot overwrite a newer user selection.
@@ -551,12 +602,11 @@ class MapContextManager extends EventEmitter {
    * from the bookmark map; applies only keys present in dataTableStates.
    */
   applyDataTableStates(dataTableStates: DataTableStatesMap | null | undefined) {
-    const states = dataTableStates || {};
+    const states = exclusiveDataTableStates(dataTableStates);
     // Bookmark apply must turn off data tables that aren't in the map.
     for (const tocStableId of [...this.dataTableActiveTocIds]) {
       if (!states[tocStableId]?.stableId) {
         const previous = this.overlayStates.getRaw(tocStableId)?.dataTable;
-        const previousTableId = previous?.stableId;
         if (previous?.stableId) {
           this.commitDataTableSettingsMemory(
             resolveLayerDataTableChange(
@@ -566,17 +616,7 @@ class MapContextManager extends EventEmitter {
             ).memory
           );
         }
-        this.overlayStates.patch(tocStableId, { dataTable: undefined }, true);
-        this.dataTableActiveTocIds.delete(tocStableId);
-        const layer = this.layers[tocStableId];
-        if (layer) {
-          this.dataTableQueryManager.clearLegendSummary(
-            this.overlayStates.prefixedSourceId(layer.dataSourceId)
-          );
-        }
-        if (previousTableId) {
-          this.dataTableQueryManager.clearSeriesForTable(previousTableId);
-        }
+        this.forgetLayerDataTable(tocStableId, previous?.stableId);
       }
     }
     for (const [tocStableId, next] of Object.entries(states)) {
@@ -649,6 +689,15 @@ class MapContextManager extends EventEmitter {
     sourceLayer?: string;
     column: string;
     op: string;
+    columnLabel: string;
+    tableName?: string;
+    tableDescription?: string;
+    layerTitle?: string;
+    getSeries?: (featureId: string) => {
+      points: DataTableFeatureSeriesPoint[];
+      currentSteps: string[];
+    } | null;
+    getRangeLabel?: () => string | undefined;
   }[] {
     const out: {
       glLayerId: string;
@@ -656,6 +705,15 @@ class MapContextManager extends EventEmitter {
       sourceLayer?: string;
       column: string;
       op: string;
+      columnLabel: string;
+      tableName?: string;
+      tableDescription?: string;
+      layerTitle?: string;
+      getSeries?: (featureId: string) => {
+        points: DataTableFeatureSeriesPoint[];
+        currentSteps: string[];
+      } | null;
+      getRangeLabel?: () => string | undefined;
     }[] = [];
     for (const tocStableId of this.dataTableActiveTocIds) {
       const overlayState = this.overlayStates.getRaw(tocStableId);
@@ -669,26 +727,43 @@ class MapContextManager extends EventEmitter {
       }
       const activation =
         this.resolveDataTableVisualizationSettings(tocStableId);
-      if (!activation?.query.column || !activation.query.op) {
+      if (!activation?.query.op) {
+        continue;
+      }
+      const op = Array.isArray(activation.query.op)
+        ? activation.query.op[0]
+        : activation.query.op;
+      if (!activation.query.column && op !== "count") {
         continue;
       }
       const layer = this.layers[tocStableId];
       if (!layer) {
         continue;
       }
-      const op = Array.isArray(activation.query.op)
-        ? activation.query.op[0]
-        : activation.query.op;
       const sourceLayer =
         this.archivedSource && this.archivedSource.dataLayerId === layer.id
           ? this.archivedSource.sourceLayer || undefined
           : layer.sourceLayer || undefined;
+      const columnLabels = parseFilterColumnLabels(
+        activation.table.filterColumnLabels
+      );
+      const column = activation.query.column;
+      const description = activation.table.description?.trim();
       out.push({
         glLayerId: idForLayer(layer, 0),
         sourceId: this.overlayStates.prefixedSourceId(layer.dataSourceId),
         sourceLayer,
-        column: activation.query.column,
+        column: column || "",
         op,
+        columnLabel: column
+          ? dataTableFilterLabel(column, columnLabels)
+          : "",
+        tableName: activation.table.name || undefined,
+        tableDescription: description || undefined,
+        layerTitle: this.tocItems[tocStableId]?.label,
+        getSeries: (featureId: string) =>
+          this.dataTableQueryManager.getFeatureSeries(activation, featureId),
+        getRangeLabel: () => this.dataTableQueryManager.getTooltipRangeLabel(),
       });
     }
     return out;
@@ -968,6 +1043,7 @@ class MapContextManager extends EventEmitter {
       ["feature-state", "loading"],
       false,
     ] as Expression;
+    const isHovered = dataTableHoveredExpression();
     return {
       id: idForLayer(layer, 0),
       type: "circle",
@@ -977,14 +1053,10 @@ class MapContextManager extends EventEmitter {
         "s:data-table-proporional-symbol": true,
       },
       paint: {
-        "circle-color": [
-          "case",
+        "circle-color": buildDataTableCircleColorExpression(
           isLoading,
-          DATA_TABLE_LOADING_COLOR,
-          isNoData,
-          DATA_TABLE_NO_DATA_COLOR,
-          DATA_TABLE_ACTIVE_COLOR,
-        ],
+          isNoData
+        ),
         "circle-opacity": [
           "case",
           isLoading,
@@ -993,6 +1065,8 @@ class MapContextManager extends EventEmitter {
           DATA_TABLE_NO_DATA_FILL_OPACITY,
           isZero,
           DATA_TABLE_ZERO_FILL_OPACITY,
+          isHovered,
+          DATA_TABLE_HOVER_FILL_OPACITY,
           DATA_TABLE_CIRCLE_FILL_OPACITY,
         ],
         "circle-stroke-opacity": [
@@ -1003,18 +1077,17 @@ class MapContextManager extends EventEmitter {
           DATA_TABLE_NO_DATA_STROKE_OPACITY,
           1,
         ],
-        "circle-stroke-color": [
-          "case",
-          isNoData,
-          DATA_TABLE_NO_DATA_STROKE_COLOR,
-          DATA_TABLE_ACTIVE_COLOR,
-        ],
+        "circle-stroke-color": buildDataTableCircleStrokeColorExpression(
+          isNoData
+        ),
         "circle-stroke-width": [
           "case",
           isNoData,
           DATA_TABLE_NO_DATA_STROKE_WIDTH,
           isZero,
           DATA_TABLE_ZERO_STROKE_WIDTH,
+          isHovered,
+          DATA_TABLE_HOVER_STROKE_WIDTH,
           0,
         ],
         "circle-radius": buildDataTableCircleRadiusExpression({
@@ -3212,6 +3285,7 @@ class MapContextManager extends EventEmitter {
           this.dataTableActiveTocIds.add(stableId);
         }
       }
+      this.deactivateOtherDataTables();
       this.debouncedUpdatePreferences();
     }
     // TOC catalog (including overlayDataTables) may have just arrived or
@@ -4698,10 +4772,28 @@ class MapContextManager extends EventEmitter {
 
 export default MapContextManager;
 
+export type DataTableTooltipStatus = "loading" | "empty" | "value";
+
+/** Structured hover payload for data-table proportional symbols. */
+export type DataTableTooltipContent = {
+  status: DataTableTooltipStatus;
+  columnLabel: string;
+  op: string;
+  formattedValue?: string;
+  tableName?: string;
+  tableDescription?: string;
+  layerTitle?: string;
+  siteLabel?: string;
+  series?: DataTableFeatureSeriesPoint[];
+  currentSteps?: string[];
+  rangeLabel?: string;
+};
+
 export interface Tooltip {
   x: number;
   y: number;
   messages: string[];
+  dataTable?: DataTableTooltipContent;
 }
 
 /**

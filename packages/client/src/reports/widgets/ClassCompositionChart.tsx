@@ -6,7 +6,7 @@ import {
   getRasterOverlayAreaDisplayedClassValue,
 } from "overlay-engine";
 import { GridIcon, PieChartIcon } from "@radix-ui/react-icons";
-import { ReportWidget } from "./widgets";
+import { ReportWidget } from "./reportWidgetShared";
 import {
   ReportWidgetTooltipControls,
   TooltipDropdown,

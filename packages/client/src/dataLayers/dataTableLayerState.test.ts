@@ -2,9 +2,31 @@ import { describe, expect, it } from "@jest/globals";
 import {
   applyDataTableStatesToLayerStates,
   buildDataTableStatesFromLayers,
+  exclusiveDataTableStates,
   layerStatesForPreferences,
   LayerStateWithDataTable,
 } from "./dataTableLayerState";
+
+describe("exclusiveDataTableStates", () => {
+  it("keeps only one visualization, preferring keepTocStableId", () => {
+    const states = {
+      tocA: { stableId: "table-a", column: "biomass" },
+      tocB: { stableId: "table-b", column: "count" },
+    };
+    expect(exclusiveDataTableStates(states)).toEqual({
+      tocB: { stableId: "table-b", column: "count" },
+    });
+    expect(exclusiveDataTableStates(states, "tocA")).toEqual({
+      tocA: { stableId: "table-a", column: "biomass" },
+    });
+  });
+
+  it("returns empty for missing or blank maps", () => {
+    expect(exclusiveDataTableStates(null)).toEqual({});
+    expect(exclusiveDataTableStates(undefined)).toEqual({});
+    expect(exclusiveDataTableStates({})).toEqual({});
+  });
+});
 
 describe("buildDataTableStatesFromLayers", () => {
   it("includes only visible layers with dataTable", () => {
@@ -49,11 +71,7 @@ describe("applyDataTableStatesToLayerStates", () => {
       tocA: { stableId: "new-a", column: "y", op: "mean" },
       tocC: { stableId: "new-c" },
     });
-    expect(next.tocA.dataTable).toEqual({
-      stableId: "new-a",
-      column: "y",
-      op: "mean",
-    });
+    expect(next.tocA.dataTable).toBeUndefined();
     expect(next.tocB.dataTable).toBeUndefined();
     expect(next.tocC.dataTable).toEqual({ stableId: "new-c" });
   });
