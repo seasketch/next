@@ -27,9 +27,11 @@ import {
   formatClockLabel,
   clockForSliderMode,
   instantClockForStep,
+  layoutTimeSliderAxisTicks,
   layoutTimeSliderCoverageMarks,
   layoutTimeSliderSteps,
   nearestTimeSliderStepIndex,
+  TimeSliderAxisTick,
   timeSliderWindowExtents,
   windowClockForRange,
   windowStepIndexes,
@@ -53,14 +55,37 @@ function playRateLabel(rate: number) {
   return `${rate}×`;
 }
 
+function TrackAxis({ ticks }: { ticks: TimeSliderAxisTick[] }) {
+  return (
+    <div
+      className="pointer-events-none absolute inset-x-0 bottom-0 top-1/2 z-0"
+      aria-hidden
+      data-testid="timeslider-axis"
+    >
+      {ticks.map((tick) => (
+        <div
+          key={tick.id}
+          className="absolute top-0"
+          style={{ left: `${tick.pct}%` }}
+        >
+          <span className="timeslider-axis-mark" />
+          <span className="timeslider-axis-label">{tick.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function RangeHandle({
   pct,
   side,
   label,
+  animate,
 }: {
   pct: number;
   side: "start" | "end";
   label: string;
+  animate: boolean;
 }) {
   return (
     <div
@@ -69,11 +94,11 @@ function RangeHandle({
       }
       aria-hidden
       title={label}
-      className={
+      className={`${
         side === "start"
           ? "pointer-events-none absolute top-1/2 z-10 flex -translate-y-1/2 items-center"
           : "pointer-events-none absolute top-1/2 z-10 flex -translate-x-full -translate-y-1/2 items-center"
-      }
+      } ${animate ? "transition-[left] duration-200 ease-out" : ""}`}
       style={{ left: `${pct}%` }}
     >
       <div className="h-[var(--ts-handle-h)] w-[var(--ts-handle-w)] rounded-[3px] border-2 border-white bg-sky-400 shadow-md" />
@@ -171,13 +196,33 @@ function ControlTip({
   label: string;
   children: ReactElement;
 }) {
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    const close = () => setOpen(false);
+    const onVisibility = () => {
+      if (document.hidden) {
+        close();
+      }
+    };
+    window.addEventListener("blur", close);
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      window.removeEventListener("blur", close);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
+  }, [open]);
+
   return (
-    <Tooltip.Root>
+    <Tooltip.Root open={open} onOpenChange={setOpen} disableHoverableContent>
       <Tooltip.Trigger asChild>{children}</Tooltip.Trigger>
       <Tooltip.Portal>
         <Tooltip.Content
           side="top"
-          sideOffset={10}
+          sideOffset={24}
           className="z-50 select-none rounded-md bg-gray-900 px-2.5 py-1 text-xs font-medium text-gray-100 shadow-md ring-1 ring-white/10"
         >
           {label}
@@ -257,9 +302,11 @@ const CLUSTER_BUTTON =
 const CLUSTER_BUTTON_DISABLED =
   "flex h-[var(--ts-btn-h)] shrink-0 items-center justify-center rounded-md text-white/25 cursor-default focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400";
 const PLAY_BUTTON =
-  "flex h-[var(--ts-play-h)] w-[var(--ts-btn-w)] shrink-0 items-center justify-center rounded-md text-white hover:bg-white/10 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400";
+  "flex h-[var(--ts-play-h)] w-[var(--ts-btn-w)] shrink-0 items-center justify-center rounded-md text-white/80 hover:text-sky-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400";
 const PLAY_BUTTON_DISABLED =
   "flex h-[var(--ts-play-h)] w-[var(--ts-btn-w)] shrink-0 items-center justify-center rounded-md text-white/25 cursor-default focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400";
+const MODE_SWITCH_BUTTON =
+  "relative z-10 flex h-full w-[var(--ts-btn-w)] shrink-0 items-center justify-center rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-sky-400";
 
 export default function TimeSlider() {
   const { t } = useTranslation("homepage");
@@ -277,6 +324,7 @@ export default function TimeSlider() {
   } = useContext(MapTemporalStateContext);
   const [playing, setPlaying] = useState(false);
   const [playRate, setPlayRate] = useState(PLAY_RATES[0]);
+  const [dragging, setDragging] = useState(false);
   const clockRef = useRef(clock);
   clockRef.current = clock;
   const dockRef = useRef<HTMLDivElement>(null);
@@ -295,6 +343,23 @@ export default function TimeSlider() {
     ? windowStepIndexes(layouts, clock, resolution || clock.viewResolution)
     : { startIndex: -1, endIndex: -1 };
   const windowMode = clock?.mode === "window";
+  const instantThumbPct =
+    startIndex >= 0
+      ? layouts[startIndex]?.midPct ?? 0
+      : layouts[0]?.midPct ?? 0;
+  const { startPct: rangeStartPct, endPct: rangeEndPct } =
+    timeSliderWindowExtents(layouts, startIndex, endIndex);
+  const rangeWidth = Math.max(0, rangeEndPct - rangeStartPct);
+  const prevThumbPctRef = useRef(instantThumbPct);
+  const prevRangeRef = useRef({ start: rangeStartPct, end: rangeEndPct });
+  const thumbJumped = Math.abs(instantThumbPct - prevThumbPctRef.current) > 40;
+  const rangeJumped =
+    Math.abs(rangeStartPct - prevRangeRef.current.start) > 40 ||
+    Math.abs(rangeEndPct - prevRangeRef.current.end) > 40;
+  useEffect(() => {
+    prevThumbPctRef.current = instantThumbPct;
+    prevRangeRef.current = { start: rangeStartPct, end: rangeEndPct };
+  }, [instantThumbPct, rangeStartPct, rangeEndPct]);
 
   const tickPlayback = () => {
     const current = clockRef.current;
@@ -326,6 +391,7 @@ export default function TimeSlider() {
     );
   }, [layouts, temporalSources, resolution, queryStepCounts]);
   const trackRef = useRef<HTMLDivElement>(null);
+  const [trackWidth, setTrackWidth] = useState(0);
   const draggingRef = useRef<"start" | "end" | "instant" | null>(null);
   const dragPointerIdRef = useRef<number | null>(null);
 
@@ -333,6 +399,7 @@ export default function TimeSlider() {
     draggingRef.current = null;
     const id = pointerId ?? dragPointerIdRef.current;
     dragPointerIdRef.current = null;
+    setDragging(false);
     if (el && id != null && el.hasPointerCapture(id)) {
       el.releasePointerCapture(id);
     }
@@ -343,6 +410,29 @@ export default function TimeSlider() {
   }, [windowMode]);
 
   const dockVisible = Boolean(clock && domain && resolution && steps.length);
+  const axisTicks = useMemo(
+    () =>
+      resolution
+        ? layoutTimeSliderAxisTicks(layouts, resolution, trackWidth)
+        : [],
+    [layouts, resolution, trackWidth]
+  );
+
+  useLayoutEffect(() => {
+    if (!dockVisible) return;
+    const track = trackRef.current;
+    if (!track) return;
+    const syncWidth = () => {
+      setTrackWidth(track.getBoundingClientRect().width);
+    };
+    syncWidth();
+    if (typeof ResizeObserver === "undefined") {
+      return;
+    }
+    const observer = new ResizeObserver(syncWidth);
+    observer.observe(track);
+    return () => observer.disconnect();
+  }, [dockVisible]);
 
   useLayoutEffect(() => {
     if (!dockVisible) return;
@@ -447,20 +537,42 @@ export default function TimeSlider() {
     goToIndex(nearestTimeSliderStepIndex(layouts, pct), handle);
   };
 
-  const instantThumbPct =
-    startIndex >= 0
-      ? layouts[startIndex]?.midPct ?? 0
-      : layouts[0]?.midPct ?? 0;
-  const { startPct: rangeStartPct, endPct: rangeEndPct } =
-    timeSliderWindowExtents(layouts, startIndex, endIndex);
-  const rangeWidth = Math.max(0, rangeEndPct - rangeStartPct);
-
   const playbackDisabled = windowMode;
-  const playTooltip = playbackDisabled
-    ? t("Switch to single view to play")
-    : playing
-    ? t("Pause")
-    : t("Play");
+  const animateThumb = !dragging && !thumbJumped && !(playing && playRate > 2);
+  const animateRange = !dragging && !rangeJumped && !(playing && playRate > 2);
+  const playDisabledReason = t("Playback not available in range mode");
+  const playButton = (
+    <button
+      type="button"
+      aria-label={
+        playbackDisabled ? playDisabledReason : playing ? t("Pause") : t("Play")
+      }
+      aria-disabled={playbackDisabled || undefined}
+      className={playbackDisabled ? PLAY_BUTTON_DISABLED : PLAY_BUTTON}
+      onClick={
+        playbackDisabled
+          ? undefined
+          : () => {
+              if (!playing) {
+                tickPlayback();
+              }
+              setPlaying((prev) => !prev);
+            }
+      }
+    >
+      {playing ? (
+        <PauseIcon
+          className="h-[var(--ts-play-icon)] w-[var(--ts-play-icon)]"
+          aria-hidden
+        />
+      ) : (
+        <PlayIcon
+          className="h-[var(--ts-play-icon)] w-[var(--ts-play-icon)] translate-x-px"
+          aria-hidden
+        />
+      )}
+    </button>
+  );
 
   return (
     <div
@@ -496,44 +608,17 @@ export default function TimeSlider() {
         </div>
       ) : null}
       <div className="flex w-full items-center gap-[var(--ts-row-gap)]">
-        <Tooltip.Provider delayDuration={300} skipDelayDuration={500}>
+        <Tooltip.Provider delayDuration={1000} skipDelayDuration={400}>
           <div
             role="group"
             aria-label={t("Time controls")}
-            className="flex h-[var(--ts-cluster-h)] shrink-0 items-center gap-[var(--ts-cluster-gap)] rounded-lg bg-white/[0.08] p-[var(--ts-cluster-p)] ring-1 ring-inset ring-white/10 shadow-sm"
+            className="flex h-[var(--ts-cluster-h)] shrink-0 items-center gap-[var(--ts-cluster-gap)] rounded-lg bg-white/[0.06] p-[var(--ts-cluster-p)] ring-1 ring-inset ring-white/10 shadow-sm"
           >
-            <ControlTip label={playTooltip}>
-              <button
-                type="button"
-                aria-label={playing ? t("Pause") : t("Play")}
-                aria-disabled={playbackDisabled || undefined}
-                className={
-                  playbackDisabled ? PLAY_BUTTON_DISABLED : PLAY_BUTTON
-                }
-                onClick={
-                  playbackDisabled
-                    ? undefined
-                    : () => {
-                        if (!playing) {
-                          tickPlayback();
-                        }
-                        setPlaying((prev) => !prev);
-                      }
-                }
-              >
-                {playing ? (
-                  <PauseIcon
-                    className="h-[var(--ts-play-icon)] w-[var(--ts-play-icon)]"
-                    aria-hidden
-                  />
-                ) : (
-                  <PlayIcon
-                    className="h-[var(--ts-play-icon)] w-[var(--ts-play-icon)] translate-x-px"
-                    aria-hidden
-                  />
-                )}
-              </button>
-            </ControlTip>
+            {playbackDisabled ? (
+              <ControlTip label={playDisabledReason}>{playButton}</ControlTip>
+            ) : (
+              playButton
+            )}
             <DropdownMenu.Root>
               <ControlTip label={t("Playback speed")}>
                 <DropdownMenu.Trigger asChild>
@@ -549,8 +634,8 @@ export default function TimeSlider() {
               <DropdownMenu.Portal>
                 <DropdownMenu.Content
                   side="top"
-                  align="start"
-                  sideOffset={10}
+                  align="center"
+                  sideOffset={20}
                   className="z-50 min-w-[5.5rem] rounded-md bg-cool-gray-800 p-1 shadow-xl ring-1 ring-white/15"
                 >
                   {PLAY_RATES.map((rate) => (
@@ -590,8 +675,8 @@ export default function TimeSlider() {
                 <DropdownMenu.Portal>
                   <DropdownMenu.Content
                     side="top"
-                    align="start"
-                    sideOffset={10}
+                    align="center"
+                    sideOffset={20}
                     className="z-50 min-w-[7rem] rounded-md bg-cool-gray-800 p-1 shadow-xl ring-1 ring-white/15"
                   >
                     {availableResolutions.map((item) => (
@@ -612,39 +697,53 @@ export default function TimeSlider() {
                 </DropdownMenu.Portal>
               </DropdownMenu.Root>
             )}
-            <ControlTip label={singleModeTooltip(resolution, t)}>
-              <button
-                type="button"
-                aria-label={t("Single")}
-                aria-pressed={!windowMode}
-                className={`${CLUSTER_BUTTON} w-[var(--ts-btn-w)] ${
-                  !windowMode
-                    ? "bg-sky-400/25 text-sky-100 hover:bg-sky-400/25 hover:text-sky-100"
-                    : ""
+            <div
+              role="group"
+              aria-label={t("Time mode")}
+              className="relative flex h-[var(--ts-btn-h)] shrink-0 items-center rounded-md bg-black/35 p-0.5"
+            >
+              <span
+                aria-hidden
+                className={`pointer-events-none absolute inset-y-0.5 left-0.5 w-[var(--ts-btn-w)] rounded-[5px] bg-white/15 shadow-sm ring-1 ring-inset ring-white/10 transition-transform duration-200 ease-out ${
+                  windowMode ? "translate-x-full" : ""
                 }`}
-                onClick={() => applyMode("instant")}
-              >
-                <SingleModeGlyph />
-              </button>
-            </ControlTip>
-            <ControlTip label={rangeModeTooltip(resolution, t)}>
-              <button
-                type="button"
-                aria-label={t("Range")}
-                aria-pressed={windowMode}
-                className={`${CLUSTER_BUTTON} w-[var(--ts-btn-w)] ${
-                  windowMode
-                    ? "bg-sky-400/25 text-sky-100 hover:bg-sky-400/25 hover:text-sky-100"
-                    : ""
-                }`}
-                onClick={() => applyMode("window")}
-              >
-                <RangeModeGlyph />
-              </button>
-            </ControlTip>
-            <ControlTip label={displayedClockTooltip(resolution, windowMode, t)}>
+              />
+              <ControlTip label={singleModeTooltip(resolution, t)}>
+                <button
+                  type="button"
+                  aria-label={t("Single")}
+                  aria-pressed={!windowMode}
+                  className={`${MODE_SWITCH_BUTTON} ${
+                    !windowMode
+                      ? "text-sky-100"
+                      : "text-white/40 hover:text-white/70"
+                  }`}
+                  onClick={() => applyMode("instant")}
+                >
+                  <SingleModeGlyph />
+                </button>
+              </ControlTip>
+              <ControlTip label={rangeModeTooltip(resolution, t)}>
+                <button
+                  type="button"
+                  aria-label={t("Range")}
+                  aria-pressed={windowMode}
+                  className={`${MODE_SWITCH_BUTTON} ${
+                    windowMode
+                      ? "text-sky-100"
+                      : "text-white/40 hover:text-white/70"
+                  }`}
+                  onClick={() => applyMode("window")}
+                >
+                  <RangeModeGlyph />
+                </button>
+              </ControlTip>
+            </div>
+            <ControlTip
+              label={displayedClockTooltip(resolution, windowMode, t)}
+            >
               <div
-                className="flex h-[var(--ts-btn-h)] w-max shrink-0 items-center whitespace-nowrap rounded-md bg-black/20 px-[var(--ts-watch-px)] text-center font-mono text-[length:var(--ts-watch-text)] font-medium leading-none tracking-wide text-lime-200 shadow-inner ring-1 ring-inset ring-black/40"
+                className="timeslider-watch flex h-[var(--ts-btn-h)] w-max shrink-0 items-center overflow-hidden whitespace-nowrap rounded-md px-[var(--ts-watch-px)] text-center font-mono text-[length:var(--ts-watch-text)] font-medium leading-none tracking-wide text-lime-200"
                 aria-label={displayedClockTooltip(resolution, windowMode, t)}
                 aria-live="polite"
               >
@@ -669,6 +768,7 @@ export default function TimeSlider() {
               const handle = handleForClientX(event.clientX);
               draggingRef.current = handle;
               dragPointerIdRef.current = event.pointerId;
+              setDragging(true);
               setPlaying(false);
               event.currentTarget.setPointerCapture(event.pointerId);
               seekFromClientX(event.clientX, handle);
@@ -692,9 +792,14 @@ export default function TimeSlider() {
               dragPointerIdRef.current = null;
             }}
           >
+            <TrackAxis ticks={axisTicks} />
             {windowMode && (
               <span
-                className="pointer-events-none absolute inset-y-0 bg-sky-300/10"
+                className={`pointer-events-none absolute inset-y-0 bg-sky-300/10 ${
+                  animateRange
+                    ? "transition-[left,width] duration-200 ease-out"
+                    : ""
+                }`}
                 style={{
                   left: `${rangeStartPct}%`,
                   width: `${rangeWidth}%`,
@@ -702,21 +807,21 @@ export default function TimeSlider() {
               />
             )}
             <div
-              className={`pointer-events-none relative h-[var(--ts-rail-h)] w-full overflow-hidden rounded-full bg-white/15 ${
+              className={`timeslider-rail pointer-events-none relative h-[var(--ts-rail-h)] w-full overflow-hidden rounded-full ${
                 queryStepCountsLoading ? "animate-pulse" : ""
               }`}
               aria-busy={queryStepCountsLoading || undefined}
             >
               {queryStepCountsLoading && marks.length === 0 ? (
-                <span className="absolute inset-0 bg-gray-400/30" />
+                <span className="timeslider-coverage-loading absolute inset-0" />
               ) : (
                 marks.map((mark) => (
                   <span
                     key={mark.id}
                     className={`absolute inset-y-0 ${
                       queryStepCountsLoading
-                        ? "bg-gray-400/40"
-                        : "bg-sky-400/45"
+                        ? "timeslider-coverage-loading"
+                        : "timeslider-coverage"
                     }`}
                     style={{
                       left: `${mark.left}%`,
@@ -727,7 +832,11 @@ export default function TimeSlider() {
               )}
               {windowMode && (
                 <span
-                  className="absolute inset-y-0 bg-sky-200/55"
+                  className={`absolute inset-y-0 bg-sky-200/55 ${
+                    animateRange
+                      ? "transition-[left,width] duration-200 ease-out"
+                      : ""
+                  }`}
                   style={{
                     left: `${rangeStartPct}%`,
                     width: `${rangeWidth}%`,
@@ -746,16 +855,22 @@ export default function TimeSlider() {
                   pct={rangeStartPct}
                   side="start"
                   label={t("Range start")}
+                  animate={animateRange}
                 />
                 <RangeHandle
                   pct={rangeEndPct}
                   side="end"
                   label={t("Range end")}
+                  animate={animateRange}
                 />
               </>
             ) : (
               <div
-                className="pointer-events-none absolute top-1/2 h-[var(--ts-thumb)] w-[var(--ts-thumb)] -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-slate-50 bg-sky-400 shadow"
+                className={`pointer-events-none absolute top-1/2 h-[var(--ts-thumb)] w-[var(--ts-thumb)] -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-slate-50 bg-sky-400 shadow ${
+                  animateThumb
+                    ? "transition-[left] duration-100 ease-in-ease-out"
+                    : ""
+                }`}
                 style={{ left: `${instantThumbPct}%` }}
               />
             )}

@@ -12,6 +12,7 @@ import {
   instantClockForStep,
   lastIncludedStep,
   latestClock,
+  layoutTimeSliderAxisTicks,
   layoutTimeSliderCoverageMarks,
   layoutTimeSliderSteps,
   nearestTimeSliderStepIndex,
@@ -273,6 +274,62 @@ describe("steps and clocks", () => {
     expect(
       layoutTimeSliderCoverageMarks(layouts, [yearSource("gmw-2020", 2020)], "year")
     ).toEqual([{ id: "gmw-2020", left: 90, width: 10, kind: "coverage" }]);
+  });
+
+  it("labels each year at the same midpoint the thumb uses", () => {
+    const layouts = layoutTimeSliderSteps(
+      {
+        kind: "interval",
+        start: "2018",
+        end: "2021",
+        precision: "year",
+      },
+      "year"
+    );
+    const ticks = layoutTimeSliderAxisTicks(layouts, "year", 400);
+    expect(ticks.map((tick) => tick.label)).toEqual(["2018", "2019", "2020"]);
+    expect(ticks.map((tick) => tick.pct)).toEqual(
+      layouts.map((layout) => layout.midPct)
+    );
+  });
+
+  it("snaps d3 ticks onto ordinal step midpoints", () => {
+    const layouts = layoutTimeSliderSteps(
+      {
+        kind: "interval",
+        start: "2011",
+        end: "2021",
+        precision: "year",
+      },
+      "year"
+    );
+    const ticks = layoutTimeSliderAxisTicks(layouts, "year", 400);
+    const stops = new Set(layouts.map((layout) => layout.midPct));
+    for (const tick of ticks) {
+      expect(stops.has(tick.pct)).toBe(true);
+    }
+    const labels = ticks.map((tick) => tick.label);
+    expect(labels[0]).toBe("2011");
+    expect(labels[labels.length - 1]).not.toBe("2021");
+    expect(labels.length).toBeGreaterThan(2);
+    expect(labels.length).toBeLessThan(layouts.length);
+  });
+
+  it("formats year-spaced ticks as years when the domain starts mid-year", () => {
+    const layouts = layoutTimeSliderSteps(
+      {
+        kind: "interval",
+        start: "1999-09",
+        end: "2023-01",
+        precision: "month",
+      },
+      "month"
+    );
+    const ticks = layoutTimeSliderAxisTicks(layouts, "month", 640);
+    const labels = ticks.map((tick) => tick.label);
+    expect(labels.some((label) => /september/i.test(label))).toBe(false);
+    expect(labels[0]).toMatch(/^\d{4}$/);
+    expect(labels[labels.length - 1]).toMatch(/^\d{4}$/);
   });
 });
 

@@ -94,8 +94,17 @@ describe("TimeSlider coverage loading", () => {
   it("paints occupied steps on the track when settled", () => {
     const { container } = renderSlider(false);
     expect(container.querySelector("[aria-busy='true']")).toBeNull();
-    expect(container.querySelector(".bg-sky-400\\/45")).toBeTruthy();
-    expect(container.querySelector(".bg-gray-400\\/40")).toBeNull();
+    expect(container.querySelector(".timeslider-coverage")).toBeTruthy();
+    expect(container.querySelector(".timeslider-coverage-loading")).toBeNull();
+  });
+
+  it("draws track axis ticks and year labels", () => {
+    const { getByTestId } = renderSlider(false);
+    const axis = getByTestId("timeslider-axis");
+    expect(axis.querySelectorAll(".timeslider-axis-mark").length).toBeGreaterThan(
+      0
+    );
+    expect(axis.textContent).toMatch(/2018/);
   });
 
   it("greys and pulses the track while series counts are loading", () => {
@@ -103,8 +112,8 @@ describe("TimeSlider coverage loading", () => {
     const track = container.querySelector("[aria-busy='true']");
     expect(track).toBeTruthy();
     expect(track?.className).toMatch(/animate-pulse/);
-    expect(container.querySelector(".bg-gray-400\\/40")).toBeTruthy();
-    expect(container.querySelector(".bg-sky-400\\/45")).toBeNull();
+    expect(container.querySelector(".timeslider-coverage-loading")).toBeTruthy();
+    expect(container.querySelector(".timeslider-coverage")).toBeNull();
     expect(screen.getByText("Loading observation counts")).toBeInTheDocument();
   });
 
@@ -118,7 +127,7 @@ describe("TimeSlider coverage loading", () => {
     const track = container.querySelector("[aria-busy='true']");
     expect(track).toBeTruthy();
     expect(track?.className).toMatch(/animate-pulse/);
-    expect(container.querySelector(".bg-gray-400\\/40")).toBeTruthy();
+    expect(container.querySelector(".timeslider-coverage-loading")).toBeTruthy();
   });
 
   it("sits range handles on the first and last step edges", () => {
@@ -164,7 +173,7 @@ describe("TimeSlider coverage loading", () => {
     expect(getByTestId("timeslider-range-end")).toHaveStyle({
       left: "100%",
     });
-    expect(container.querySelector(".bg-sky-400\\/45")).toBeTruthy();
+    expect(container.querySelector(".timeslider-coverage")).toBeTruthy();
     expect(container.querySelector(".bg-sky-200\\/55")).toBeTruthy();
   });
 });

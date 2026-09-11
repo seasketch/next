@@ -14,6 +14,7 @@ import {
   temporalValueIntersects,
   unionTemporalCoverage,
 } from "@seasketch/geostats-types";
+import { scaleUtc } from "d3-scale";
 import {
   DataLayerDetailsFragment,
   DataSourceDetailsFragment,
@@ -318,6 +319,174 @@ export function layoutTimeSliderSteps(
     startPct: sliderPct((i / n) * 100),
     endPct: sliderPct(((i + 1) / n) * 100),
     midPct: sliderPct(((i + 0.5) / n) * 100),
+  }));
+}
+
+export type TimeSliderAxisTick = {
+  id: string;
+  pct: number;
+  label: string;
+};
+
+const AXIS_LABEL_MIN_GAP_PX = 52;
+const YEAR_MS = 365.25 * 24 * 60 * 60 * 1000;
+const MONTH_MS = 28 * 24 * 60 * 60 * 1000;
+
+function sliderDateToStep(
+  ms: number,
+  layouts: TimeSliderStepLayout[],
+  resolution: TemporalPrecision,
+  domainStart: number,
+  domainEnd: number
+): TimeSliderStepLayout | null {
+  if (ms >= domainEnd) return null;
+  if (ms <= domainStart) return layouts[0] ?? null;
+  for (const layout of layouts) {
+    const span = expandTemporalIso(layout.step, resolution);
+    if (span && ms >= span.start && ms < span.end) {
+      return layout;
+    }
+  }
+  return null;
+}
+
+function medianTickInterval(dates: Date[]): number {
+  if (dates.length < 2) return Infinity;
+  const gaps: number[] = [];
+  for (let i = 1; i < dates.length; i++) {
+    gaps.push(dates[i].getTime() - dates[i - 1].getTime());
+  }
+  gaps.sort((a, b) => a - b);
+  return gaps[Math.floor(gaps.length / 2)];
+}
+
+/**
+ * d3's default time tickFormat will emit a lone "September" when the first
+ * tick is not a year boundary. Label from the actual spacing instead.
+ */
+export function formatTimeSliderAxisLabel(
+  date: Date,
+  intervalMs: number,
+  resolution: TemporalPrecision
+): string {
+  if (resolution === "year" || intervalMs >= YEAR_MS * 0.8) {
+    return String(date.getUTCFullYear());
+  }
+  if (resolution === "month" || intervalMs >= MONTH_MS) {
+    if (date.getUTCMonth() === 0) {
+      return String(date.getUTCFullYear());
+    }
+    return date.toLocaleDateString(undefined, {
+      month: "short",
+      timeZone: "UTC",
+    });
+  }
+  if (date.getUTCMonth() === 0 && date.getUTCDate() === 1) {
+    return String(date.getUTCFullYear());
+  }
+  if (date.getUTCDate() === 1) {
+    return date.toLocaleDateString(undefined, {
+      month: "short",
+      timeZone: "UTC",
+    });
+  }
+  return date.toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
+  });
+}
+
+function cullAxisCandidates<T extends { pct: number }>(
+  ticks: T[],
+  widthPx: number,
+  minGap: number
+): T[] {
+  if (ticks.length <= 1 || widthPx <= 0) return ticks;
+  const sorted = [...ticks].sort((a, b) => a.pct - b.pct);
+  const first = sorted[0];
+  const last = sorted[sorted.length - 1];
+  const spanPx = ((last.pct - first.pct) / 100) * widthPx;
+  if (spanPx < minGap) return [first];
+  const kept = [first];
+  for (const tick of sorted.slice(1, -1)) {
+    const prev = kept[kept.length - 1];
+    const fromPrev = ((tick.pct - prev.pct) / 100) * widthPx;
+    const toLast = ((last.pct - tick.pct) / 100) * widthPx;
+    if (fromPrev >= minGap && toLast >= minGap) {
+      kept.push(tick);
+    }
+  }
+  kept.push(last);
+  return kept;
+}
+
+/**
+ * Axis marks for the ordinal track. d3-scale picks nice UTC intervals;
+ * each tick is then snapped onto the step midpoint — the same stop the
+ * instant thumb uses — not the band's left edge or the exclusive end.
+ */
+export function layoutTimeSliderAxisTicks(
+  layouts: TimeSliderStepLayout[],
+  resolution: TemporalPrecision,
+  widthPx: number
+): TimeSliderAxisTick[] {
+  if (layouts.length === 0) return [];
+  const first = expandTemporalIso(layouts[0].step, resolution);
+  const last = expandTemporalIso(
+    layouts[layouts.length - 1].step,
+    resolution
+  );
+  if (!first || !last || last.end <= first.start) return [];
+
+  const startDate = new Date(first.start);
+  const endDate = new Date(last.end);
+  const width = Math.max(0, widthPx);
+  const tickTarget =
+    width > 0 ? Math.max(2, Math.floor(width / AXIS_LABEL_MIN_GAP_PX)) : 4;
+  const scale = scaleUtc().domain([startDate, endDate]);
+
+  const candidates: Date[] = [];
+  if (layouts.length <= tickTarget) {
+    for (const layout of layouts) {
+      const span = expandTemporalIso(layout.step, resolution);
+      if (span) candidates.push(new Date(span.start));
+    }
+  } else {
+    candidates.push(...scale.ticks(tickTarget));
+    if (candidates.length === 0 || candidates[0].getTime() > first.start) {
+      candidates.unshift(startDate);
+    }
+  }
+
+  const placed: { pct: number; date: Date }[] = [];
+  const usedPct = new Set<string>();
+  for (const date of candidates) {
+    const step = sliderDateToStep(
+      date.getTime(),
+      layouts,
+      resolution,
+      first.start,
+      last.end
+    );
+    if (!step) continue;
+    const key = step.midPct.toFixed(3);
+    if (usedPct.has(key)) continue;
+    usedPct.add(key);
+    const span = expandTemporalIso(step.step, resolution);
+    placed.push({
+      pct: step.midPct,
+      date: span ? new Date(span.start) : date,
+    });
+  }
+
+  const culled = cullAxisCandidates(placed, width, AXIS_LABEL_MIN_GAP_PX);
+  const interval = medianTickInterval(culled.map((tick) => tick.date));
+  return culled.map((tick) => ({
+    // eslint-disable-next-line i18next/no-literal-string
+    id: `label-${tick.pct.toFixed(3)}`,
+    pct: tick.pct,
+    label: formatTimeSliderAxisLabel(tick.date, interval, resolution),
   }));
 }
 

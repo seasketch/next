@@ -6076,6 +6076,11 @@ select{
   bottom:0px
 }
 
+.inset-y-0\.5{
+  top:0.125rem;
+  bottom:0.125rem
+}
+
 .\!-bottom-2{
   bottom:-0.5rem !important
 }
@@ -8629,10 +8634,6 @@ select{
   width:var(--ts-play-icon)
 }
 
-.w-\[var\(--ts-play-w\)\]{
-  width:var(--ts-play-w)
-}
-
 .w-\[var\(--ts-thumb\)\]{
   width:var(--ts-thumb)
 }
@@ -8733,10 +8734,6 @@ select{
 
 .min-w-\[260px\]{
   min-width:260px
-}
-
-.min-w-\[2rem\]{
-  min-width:2rem
 }
 
 .min-w-\[354px\]{
@@ -9388,6 +9385,16 @@ select{
   transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))
 }
 
+.translate-x-full{
+  --tw-translate-x:100%;
+  transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))
+}
+
+.translate-x-px{
+  --tw-translate-x:1px;
+  transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))
+}
+
 .translate-y-0{
   --tw-translate-y:0px;
   transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))
@@ -9410,11 +9417,6 @@ select{
 
 .translate-y-px{
   --tw-translate-y:1px;
-  transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))
-}
-
-.translate-x-px{
-  --tw-translate-x:1px;
   transform:translate(var(--tw-translate-x), var(--tw-translate-y)) rotate(var(--tw-rotate)) skewX(var(--tw-skew-x)) skewY(var(--tw-skew-y)) scaleX(var(--tw-scale-x)) scaleY(var(--tw-scale-y))
 }
 
@@ -10409,6 +10411,10 @@ select{
   border-radius:3rem
 }
 
+.rounded-\[5px\]{
+  border-radius:5px
+}
+
 .rounded-full{
   border-radius:9999px
 }
@@ -11384,6 +11390,10 @@ select{
   background-color:rgb(0 0 0 / 0.3)
 }
 
+.bg-black\/35{
+  background-color:rgb(0 0 0 / 0.35)
+}
+
 .bg-black\/40{
   background-color:rgb(0 0 0 / 0.4)
 }
@@ -11629,14 +11639,6 @@ select{
 .bg-gray-400{
   --tw-bg-opacity:1;
   background-color:rgb(156 163 175 / var(--tw-bg-opacity, 1))
-}
-
-.bg-gray-400\/30{
-  background-color:rgb(156 163 175 / 0.3)
-}
-
-.bg-gray-400\/40{
-  background-color:rgb(156 163 175 / 0.4)
 }
 
 .bg-gray-50{
@@ -12015,10 +12017,6 @@ select{
   background-color:rgb(56 189 248 / 0.25)
 }
 
-.bg-sky-400\/45{
-  background-color:rgb(56 189 248 / 0.45)
-}
-
 .bg-sky-400\/70{
   background-color:rgb(56 189 248 / 0.7)
 }
@@ -12211,8 +12209,8 @@ select{
   background-color:rgb(255 255 255 / 0.95)
 }
 
-.bg-white\/\[0\.08\]{
-  background-color:rgb(255 255 255 / 0.08)
+.bg-white\/\[0\.06\]{
+  background-color:rgb(255 255 255 / 0.06)
 }
 
 .bg-yellow-100{
@@ -14489,6 +14487,10 @@ select{
   color:rgb(255 255 255 / 0.25)
 }
 
+.text-white\/40{
+  color:rgb(255 255 255 / 0.4)
+}
+
 .text-white\/75{
   color:rgb(255 255 255 / 0.75)
 }
@@ -15036,10 +15038,6 @@ select{
   --tw-ring-color:rgb(0 0 0 / 0.1)
 }
 
-.ring-black\/40{
-  --tw-ring-color:rgb(0 0 0 / 0.4)
-}
-
 .ring-black\/5{
   --tw-ring-color:rgb(0 0 0 / 0.05)
 }
@@ -15488,6 +15486,18 @@ select{
   transition-duration:150ms
 }
 
+.transition-\[left\2c width\]{
+  transition-property:left,width;
+  transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration:150ms
+}
+
+.transition-\[left\]{
+  transition-property:left;
+  transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration:150ms
+}
+
 .transition-\[width\]{
   transition-property:width;
   transition-timing-function:cubic-bezier(0.4, 0, 0.2, 1);
@@ -15848,7 +15858,7 @@ body .mapboxgl-canvas-container.mapboxgl-interactive {
   --ts-glyph: 1rem;
   --ts-watch-px: 0.75rem;
   --ts-watch-text: 13px;
-  --ts-track-h: 2.5rem;
+  --ts-track-h: 2.75rem;
   --ts-rail-h: 0.375rem;
   --ts-thumb: 0.875rem;
   --ts-handle-h: 1.75rem;
@@ -15872,7 +15882,7 @@ body .mapboxgl-canvas-container.mapboxgl-interactive {
     --ts-play-icon: 1.625rem;
     --ts-btn-h: 1.875rem;
     --ts-watch-text: 14px;
-    --ts-track-h: 2.75rem;
+    --ts-track-h: 3rem;
     --ts-rail-h: 0.4375rem;
     --ts-thumb: 0.9375rem;
   }
@@ -15894,12 +15904,70 @@ body .mapboxgl-canvas-container.mapboxgl-interactive {
     --ts-glyph: 1.25rem;
     --ts-watch-px: 1rem;
     --ts-watch-text: 15px;
-    --ts-track-h: 3rem;
+    --ts-track-h: 3.25rem;
     --ts-rail-h: 0.5rem;
     --ts-thumb: 1rem;
     --ts-handle-h: 2rem;
     --ts-handle-w: 0.75rem;
   }
+}
+
+.timeslider-rail {
+  background: rgb(148 163 184 / 0.38);
+}
+
+.timeslider-rail::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.28),
+    inset 0 -1px 2px rgba(255, 255, 255, 0.14);
+}
+
+.timeslider-coverage {
+  background: rgb(56 189 248 / 0.78);
+}
+
+.timeslider-coverage-loading {
+  background: rgb(156 163 175 / 0.38);
+}
+
+.timeslider-axis-mark {
+  display: block;
+  width: 1px;
+  height: 4px;
+  margin-top: 5px;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.timeslider-axis-label {
+  position: absolute;
+  top: 11px;
+  left: 0;
+  transform: translateX(-50%);
+  font-size: 10px;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: rgba(255, 255, 255, 0.48);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.timeslider-watch {
+  background-color: rgba(0, 0, 0, 0.125);
+  background-image: radial-gradient(
+    circle,
+    rgba(10, 15, 53, 0.7) 0.4px,
+    transparent 0.5px
+  );
+  background-size: 3px 3px;
+  background-position: 0.5px 0.5px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.4),
+    inset 0 -8px 12px 1px rgba(134, 132, 0, 0.1),
+    inset 0 -3px 5px rgba(178, 178, 0, 0.1);
 }
 
 .survey .mapboxgl-ctrl-top-left {
@@ -16495,10 +16563,6 @@ input[type="checkbox"][indeterminate="true"]:checked {
   background-color:rgb(56 189 248 / var(--tw-bg-opacity, 1))
 }
 
-.hover\:bg-sky-400\/25:hover{
-  background-color:rgb(56 189 248 / 0.25)
-}
-
 .hover\:bg-sky-50:hover{
   --tw-bg-opacity:1;
   background-color:rgb(240 249 255 / var(--tw-bg-opacity, 1))
@@ -16768,9 +16832,9 @@ input[type="checkbox"][indeterminate="true"]:checked {
   color:rgb(127 29 29 / var(--tw-text-opacity, 1))
 }
 
-.hover\:text-sky-100:hover{
+.hover\:text-sky-200:hover{
   --tw-text-opacity:1;
-  color:rgb(224 242 254 / var(--tw-text-opacity, 1))
+  color:rgb(186 230 253 / var(--tw-text-opacity, 1))
 }
 
 .hover\:text-sky-800:hover{
@@ -16801,6 +16865,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .hover\:text-white:hover{
   --tw-text-opacity:1;
   color:rgb(255 255 255 / var(--tw-text-opacity, 1))
+}
+
+.hover\:text-white\/70:hover{
+  color:rgb(255 255 255 / 0.7)
 }
 
 .hover\:underline:hover{
