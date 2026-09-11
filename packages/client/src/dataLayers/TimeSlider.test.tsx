@@ -111,7 +111,6 @@ describe("TimeSlider coverage loading", () => {
     const { container } = renderSlider(true);
     const track = container.querySelector("[aria-busy='true']");
     expect(track).toBeTruthy();
-    expect(track?.className).toMatch(/animate-pulse/);
     expect(container.querySelector(".timeslider-coverage-loading")).toBeTruthy();
     expect(container.querySelector(".timeslider-coverage")).toBeNull();
     expect(screen.getByText("Loading observation counts")).toBeInTheDocument();
@@ -126,7 +125,6 @@ describe("TimeSlider coverage loading", () => {
     });
     const track = container.querySelector("[aria-busy='true']");
     expect(track).toBeTruthy();
-    expect(track?.className).toMatch(/animate-pulse/);
     expect(container.querySelector(".timeslider-coverage-loading")).toBeTruthy();
   });
 

@@ -807,22 +807,16 @@ export default function TimeSlider() {
               />
             )}
             <div
-              className={`timeslider-rail pointer-events-none relative h-[var(--ts-rail-h)] w-full overflow-hidden rounded-full ${
-                queryStepCountsLoading ? "animate-pulse" : ""
-              }`}
+              className="timeslider-rail pointer-events-none relative h-[var(--ts-rail-h)] w-full overflow-hidden rounded-full"
               aria-busy={queryStepCountsLoading || undefined}
             >
-              {queryStepCountsLoading && marks.length === 0 ? (
+              {queryStepCountsLoading ? (
                 <span className="timeslider-coverage-loading absolute inset-0" />
               ) : (
                 marks.map((mark) => (
                   <span
                     key={mark.id}
-                    className={`absolute inset-y-0 ${
-                      queryStepCountsLoading
-                        ? "timeslider-coverage-loading"
-                        : "timeslider-coverage"
-                    }`}
+                    className="timeslider-coverage absolute inset-y-0"
                     style={{
                       left: `${mark.left}%`,
                       width: `${Math.min(mark.width, 100 - mark.left)}%`,
