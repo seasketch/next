@@ -5,6 +5,10 @@ import {
 } from "../../../generated/graphql";
 import ProgressBar from "../../../components/ProgressBar";
 import Spinner from "../../../components/Spinner";
+import {
+  formatOrganismLookupProgress,
+  organismJobProgressMessage,
+} from "./dataTableOrganismForm";
 
 export default function DataTableUploadJobProgress({
   job,
@@ -24,13 +28,31 @@ export default function DataTableUploadJobProgress({
   const showBar =
     active || job.state === ProjectBackgroundJobState.Complete;
 
+  const organismLabel = organismJobProgressMessage(job.progressMessage);
   const progressLabel = failed
     ? job.errorMessage || t("Upload failed")
-    : job.progressMessage === "uploading"
-      ? t("Uploading file…")
-      : job.progressMessage === "dropping unmatched sites"
-        ? t("Removing sites not found in this layer…")
-        : job.progressMessage || t("Processing…");
+    : organismLabel?.kind === "lookup"
+      ? formatOrganismLookupProgress(
+          organismLabel.phase,
+          organismLabel.done,
+          organismLabel.total,
+          t
+        )
+      : organismLabel?.kind === "key"
+        ? organismLabel.key === "reading-table"
+          ? t("Reading table…")
+          : organismLabel.key === "reading-class"
+            ? t("Reading class table…")
+            : organismLabel.key === "resolving"
+              ? t("Looking up taxa…")
+              : organismLabel.key === "writing"
+                ? t("Writing catalog…")
+                : job.progressMessage || t("Processing…")
+        : job.progressMessage === "uploading"
+          ? t("Uploading file…")
+          : job.progressMessage === "dropping unmatched sites"
+            ? t("Removing sites not found in this layer…")
+            : job.progressMessage || t("Processing…");
 
   if (failed) {
     return (

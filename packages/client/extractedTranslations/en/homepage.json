@@ -1,0 +1,12 @@
+{
+  "Count": "Count",
+  "Loading…": "Loading…",
+  "Max": "Max",
+  "Mean": "Mean",
+  "Median": "Median",
+  "Min": "Min",
+  "No data": "No data",
+  "Sum": "Sum",
+  "{{op}} of {{column}}": "{{op}} of {{column}}",
+  "{{title}}. {{range}}": "{{title}}. {{range}}"
+}

@@ -3,7 +3,7 @@
 Cloudflare Worker for serving SeaSketch overlay data from the `ssn-tiles` R2
 bucket.
 
-The Worker has four responsibilities:
+The Worker has five responsibilities:
 
 1. PMTiles-backed TileJSON, ZXY tiles, and browser previews.
 2. Streaming whole-object downloads and efficient byte-range reads for
@@ -11,11 +11,17 @@ The Worker has four responsibilities:
 3. FlatGeobuf property extraction through the legacy-compatible `/properties`
    API.
 4. Overlay data-table aggregations (`…/dataTables/{uploadId}/query`) via
-   hyparquet, sharing the parent layer's published-UUID ACL.
+   hyparquet, sharing the parent layer's published-UUID ACL, plus
+   `GET /orgQuery` organism search over `organism-search.json`.
+5. An allowlisted WoRMS taxonomy proxy (`/taxonomy/worms/…`) used by
+   data-table organism enrichment. Responses are cached for **one hour**
+   via the Cache API. This is not an open proxy. The browser loads iNaturalist
+   taxon photos directly from `api.inaturalist.org`.
 
 The default entrypoint is an uncached authorization and host-routing gateway.
-It invokes isolated `TilesBackend`, `ObjectBackend`, `PropertiesBackend`, and
-`DataTablesBackend` entrypoints after credentials have been removed.
+It invokes isolated `TilesBackend`, `ObjectBackend`, `PropertiesBackend`,
+`DataTablesBackend`, and `TaxonomyBackend` entrypoints after credentials have
+been removed.
 
 ## Routes
 
@@ -60,13 +66,15 @@ Overlay monitoring tables are stored under the parent layer UUID:
 projects/{slug}/public/{uuid}/dataTables/{uploadId}/data.parquet
 projects/{slug}/public/{uuid}/dataTables/{uploadId}/column-stats.json
 GET /projects/{slug}/public/{uuid}/dataTables/{uploadId}/query
+GET /orgQuery?tables={prefix},{prefix}&q=
 ```
 
 Static parquet and `column-stats.json` are served by `ObjectBackend` (typically
 on `uploads.seasketch.org`). The `/query` path is handled by
-`DataTablesBackend` (hyparquet plan + execute). Paths classify as `published`
-for the parent `{uuid}`, so map-access tokens and ACL docs apply the same way
-as for tiles.
+`DataTablesBackend` (hyparquet plan + execute). `GET /orgQuery` loads each
+table's MiniSearch `organism-search.json` (not the catalog). Paths classify as
+`published` for the parent `{uuid}`, so map-access tokens and ACL docs apply
+the same way as for tiles. Unauthorized table refs are skipped.
 
 #### Query API
 
@@ -186,6 +194,71 @@ Implementation: `src/dataTables/params.ts`.
 | `rows` | Present for raw-row mode (no aggregation) |
 
 Responses include `ETag`, `Cache-Control`, and `Vary: Accept`.
+
+### Organism search (`/orgQuery`)
+
+```text
+GET /orgQuery?tables={prefix},{prefix}&q=sheephead
+```
+
+`tables` are R2 prefixes
+(`projects/{slug}/public/{uuid}/dataTables/{uploadId}`). Full `/query` URLs
+are accepted and normalized. Each prefix is authorized independently.
+The worker caches deserialized MiniSearch indexes in the isolate by
+prefix + ETag (at most 6 concurrent R2 reads). Empty `q` returns the
+full stored catalog (common-name order) so the map selector can browse.
+Default `limit` is 2000 (max 5000).
+
+```json
+{
+  "q": "sheephead",
+  "tablesScanned": 1,
+  "hits": [
+    {
+      "table": "projects/ca/public/{uuid}/dataTables/{uploadId}",
+      "column": "classcode",
+      "value": "SPUL",
+      "scientificName": "Bodianus pulcher",
+      "commonName": "California Sheephead",
+      "description": null,
+      "inatTaxonId": 1439813,
+      "wormsAphiaId": 1702292,
+      "score": 12.4,
+      "matchedFields": ["common_name"]
+    }
+  ]
+}
+```
+
+The browser still loads iNaturalist photos directly. Do not add an iNat
+proxy on this worker.
+
+### Taxonomy proxy
+
+Allowlisted WoRMS cache used by organism enrichment. Not an open proxy.
+Cached **one hour** (`Cache API` + `Cache-Control: max-age=3600`).
+
+Requires the same **overlay-engine** JWT other Lambdas already send to this
+host (`Authorization: Bearer …`). Map-access tokens are rejected. Auth runs
+on the uncached gateway; credentials are stripped before `TaxonomyBackend`
+so they never enter the cache key.
+
+Only these paths:
+
+```text
+GET  /taxonomy/worms/AphiaRecordByAphiaID/{id}
+GET  /taxonomy/worms/AphiaClassificationByAphiaID/{id}
+GET  /taxonomy/worms/AphiaVernacularsByAphiaID/{id}
+POST /taxonomy/worms/AphiaRecordsByMatchNames
+```
+
+The browser calls `https://api.inaturalist.org/v1/taxa/{ids}` directly
+(CORS `*`). Do not proxy iNaturalist through this worker: Cloudflare
+egress IPs are shared and iNaturalist 429s them.
+
+The data-tables handler sets `TAXONOMY_PROXY_URL=https://uploads.seasketch.org/taxonomy`
+and rewrites WoRMS URLs onto this prefix. Unset the env var locally to call
+the APIs directly.
 
 **Example (thematic map join)**
 

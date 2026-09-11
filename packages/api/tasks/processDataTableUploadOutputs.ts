@@ -5,15 +5,16 @@ export default async function processDataTableUploadOutputs(
     jobId: string;
     data: {
       uploadId: string;
-      name: string;
-      joinColumn: string;
-      overlayJoinColumn: string;
-      rowCount: number;
-      parquetRemote: string;
-      columnStatsRemote: string;
+      name?: string;
+      joinColumn?: string;
+      overlayJoinColumn?: string;
+      rowCount?: number;
+      parquetRemote?: string;
+      columnStatsRemote?: string;
       sourceParquetRemote?: string;
       temporal?: unknown;
       nodataValues?: unknown;
+      organism?: unknown;
     };
   },
   helpers: Helpers,
@@ -22,6 +23,13 @@ export default async function processDataTableUploadOutputs(
   helpers.logger.info(`Completing data table upload: ${jobId}`);
   await helpers.withPgClient(async (client) => {
     try {
+      if (data?.organism && !data.parquetRemote) {
+        await client.query(
+          `select complete_overlay_data_table_organism_reprocess($1, $2::jsonb)`,
+          [jobId, JSON.stringify(data.organism)],
+        );
+        return;
+      }
       if (!data?.parquetRemote || !data?.columnStatsRemote) {
         await client.query(`select fail_overlay_data_table_upload($1, $2)`, [
           jobId,

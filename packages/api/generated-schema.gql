@@ -1104,6 +1104,7 @@ enum ChangeLogFieldGroup {
   DATA_TABLE_CREATED
   DATA_TABLE_DELETED
   DATA_TABLE_NODATA
+  DATA_TABLE_ORGANISM
   DATA_TABLE_RENAMED
   DATA_TABLE_REPLACED
   DATA_TABLE_ROLLBACK
@@ -2259,6 +2260,46 @@ type CreateOptionalBasemapLayerPayload {
 
   """The `OptionalBasemapLayer` that was created by this mutation."""
   optionalBasemapLayer: OptionalBasemapLayer
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
+"""All input for the `createOverlayDataTableOrganismReprocess` mutation."""
+input CreateOverlayDataTableOrganismReprocessInput {
+  classCsvContentType: String
+  classCsvFilename: String
+
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  organismConfig: JSON
+  tableId: Int
+}
+
+"""The output of our `createOverlayDataTableOrganismReprocess` mutation."""
+type CreateOverlayDataTableOrganismReprocessPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  overlayDataTableUpload: OverlayDataTableUpload
+
+  """An edge for our `OverlayDataTableUpload`. May be used by Relay 1."""
+  overlayDataTableUploadEdge(
+    """The method to use when ordering `OverlayDataTableUpload`."""
+    orderBy: [OverlayDataTableUploadsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): OverlayDataTableUploadsEdge
+
+  """
+  Reads a single `ProjectBackgroundJob` that is related to this `OverlayDataTableUpload`.
+  """
+  projectBackgroundJob: ProjectBackgroundJob
 
   """
   Our root query field type. Allows us to run any query from our mutation payload.
@@ -9445,6 +9486,19 @@ type Mutation {
   ): CreateOptionalBasemapLayerPayload
 
   """
+  Admin-only. Starts a draft organism-enrichment job. Optional class CSV is
+  uploaded to the returned presigned URL, then submitOverlayDataTableUpload.
+  Does not rewrite data.parquet. Queue wait matches other data-table jobs (15
+  minutes). Running timeout is 15 minutes for WoRMS per-id details on large class tables.
+  """
+  createOverlayDataTableOrganismReprocess(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateOverlayDataTableOrganismReprocessInput!
+  ): CreateOverlayDataTableOrganismReprocessPayload
+
+  """
   Admin-only. Starts a draft reprocess job that applies nodata sentinels and/or
   derives _when_* columns from the source (pre-nodata) parquet. Metadata is
   written only when the job succeeds.
@@ -11183,6 +11237,14 @@ type Mutation {
   ): UpdateOverlayDataTableNodataPayload
 
   """
+  Admin mutation. Sets (or clears, when null) the OrganismInfo document
+  for an overlay data table. authoredBy is forced to "admin". Does not
+  write catalog or search-index sidecars; use the enrichment reprocess
+  job for that.
+  """
+  updateOverlayDataTableOrganism(organism: OrganismInfo, overlayDataTableId: Int!): OverlayDataTable!
+
+  """
   Admin mutation. Sets (or clears, when null) the TemporalInfo document
   for an overlay data table. authoredBy is forced to "admin".
   """
@@ -11872,6 +11934,13 @@ enum OptionalBasemapLayersOrderBy {
   PRIMARY_KEY_DESC
 }
 
+"""
+A complete OrganismInfo document for an overlay data table: identity column,
+value kind, and class-table role mapping. Validated against
+@seasketch/geostats-types isOrganismInfo.
+"""
+scalar OrganismInfo
+
 type OutstandingSurveyInvites {
   projectId: Int!
   surveyId: Int!
@@ -11912,6 +11981,14 @@ type OverlayDataTable implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+
+  """
+  Organism identity metadata for this data table. Null when the table
+  has not been enriched.
+  """
+  organism: OrganismInfo
+  organismCatalogUrl: String
+  organismPreviewUrl: String
   overlayJoinColumn: String!
   parquetRemote: String!
   parquetUrl: String
@@ -12029,6 +12106,11 @@ type OverlayDataTableUpload implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+
+  """
+  Ephemeral DataTableOrganismConfig for an enrichment job. Not copied onto overlay_data_tables until the job succeeds.
+  """
+  organismConfig: JSON
   overlayGeostats: JSON!
   overlayJoinColumn: String
   presignedUploadUrl: String

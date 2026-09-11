@@ -20,13 +20,14 @@ export interface DataTablesHandlerRequest {
 
 export interface DataTablesHandlerSuccess {
   uploadId: string;
-  name: string;
-  joinColumn: string;
-  overlayJoinColumn: string;
-  rowCount: number;
-  parquetRemote: string;
-  columnStatsRemote: string;
+  name?: string;
+  joinColumn?: string;
+  overlayJoinColumn?: string;
+  rowCount?: number;
+  parquetRemote?: string;
+  columnStatsRemote?: string;
   temporal?: unknown;
+  organism?: unknown;
 }
 
 export interface DataTablesHandlerResponse {

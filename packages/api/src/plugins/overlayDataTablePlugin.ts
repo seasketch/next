@@ -32,6 +32,12 @@ function remoteToQueryUrl(remote: string | null | undefined): string | null {
   return `${UPLOADS_PUBLIC_BASE_URL}/${tablePath}/query`;
 }
 
+function remoteToOrgQueryUrl(remote: string | null | undefined): string | null {
+  const tablePath = tablePathFromParquetRemote(remote);
+  if (!tablePath) return null;
+  return `${UPLOADS_PUBLIC_BASE_URL}/orgQuery?tables=${encodeURIComponent(tablePath)}`;
+}
+
 function remoteToTemporalPreviewUrl(
   remote: string | null | undefined
 ): string | null {
@@ -40,13 +46,25 @@ function remoteToTemporalPreviewUrl(
   return `${UPLOADS_PUBLIC_BASE_URL}/${tablePath}/temporal-preview`;
 }
 
+function remoteToSiblingUrl(
+  remote: string | null | undefined,
+  filename: string
+): string | null {
+  const tablePath = tablePathFromParquetRemote(remote);
+  if (!tablePath) return null;
+  return `${UPLOADS_PUBLIC_BASE_URL}/${tablePath}/${filename}`;
+}
+
 const OverlayDataTablePlugin = makeExtendSchemaPlugin(() => ({
   typeDefs: gql`
     extend type OverlayDataTable {
       parquetUrl: String @requires(columns: ["parquet_remote"])
       columnStatsUrl: String @requires(columns: ["column_stats_remote"])
       queryUrl: String @requires(columns: ["parquet_remote"])
+      orgQueryUrl: String @requires(columns: ["parquet_remote"])
       temporalPreviewUrl: String @requires(columns: ["parquet_remote"])
+      organismCatalogUrl: String @requires(columns: ["parquet_remote"])
+      organismPreviewUrl: String @requires(columns: ["parquet_remote"])
     }
 
     extend type OverlayDataTableUpload {
@@ -59,8 +77,13 @@ const OverlayDataTablePlugin = makeExtendSchemaPlugin(() => ({
       parquetUrl: (table) => remoteToPublicUrl(table.parquetRemote),
       columnStatsUrl: (table) => remoteToPublicUrl(table.columnStatsRemote),
       queryUrl: (table) => remoteToQueryUrl(table.parquetRemote),
+      orgQueryUrl: (table) => remoteToOrgQueryUrl(table.parquetRemote),
       temporalPreviewUrl: (table) =>
         remoteToTemporalPreviewUrl(table.parquetRemote),
+      organismCatalogUrl: (table) =>
+        remoteToSiblingUrl(table.parquetRemote, "organism-catalog.parquet"),
+      organismPreviewUrl: (table) =>
+        remoteToSiblingUrl(table.parquetRemote, "organism-preview.json"),
     },
     OverlayDataTableUpload: {
       presignedUploadUrl: async (upload) => {

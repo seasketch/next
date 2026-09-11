@@ -876,8 +876,9 @@ export type DataTableFeatureSeriesPoint = {
 };
 
 /**
- * Values for one join key across every series step. Missing groups stay
- * `null` so a sparkline can show gaps instead of interpolating through them.
+ * Values for one join key across every series step (the table timescale).
+ * Missing groups stay `null` so a sparkline can show gaps instead of
+ * interpolating through them, without shrinking the x-axis to this site.
  */
 export function featureSeriesFromParsed(
   series: ParsedDataTableQuerySeries,
@@ -892,23 +893,6 @@ export function featureSeriesFromParsed(
       value: typeof value === "number" && Number.isFinite(value) ? value : null,
     };
   });
-}
-
-/** Drop leading/trailing empty steps so a sparkline hugs the observed range. */
-export function trimFeatureSeries(
-  points: DataTableFeatureSeriesPoint[]
-): DataTableFeatureSeriesPoint[] {
-  let start = 0;
-  let end = points.length - 1;
-  while (start < points.length && points[start].value === null) {
-    start += 1;
-  }
-  while (end >= start && points[end].value === null) {
-    end -= 1;
-  }
-  return start === 0 && end === points.length - 1
-    ? points
-    : points.slice(start, end + 1);
 }
 
 /** A chart is useful only when the site has at least two observed steps. */

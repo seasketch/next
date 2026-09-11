@@ -14,7 +14,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SuggestedRasterPresentation = exports.normalizeNodataValues = exports.nodataValueMatches = exports.isDataTableNodataValue = exports.isDataTableNodataConfig = exports.isTemporalInfo = exports.expandTemporalValue = exports.createLayerYearTemporalInfo = void 0;
+exports.SuggestedRasterPresentation = exports.suggestOrganismColumnRoles = exports.organismIsClassified = exports.organismClassificationCounts = exports.includeLowConfidenceMatchesEnabled = exports.isDataTableOrganismConfig = exports.isOrganismInfo = exports.normalizeNodataValues = exports.nodataValueMatches = exports.isDataTableNodataValue = exports.isDataTableNodataConfig = exports.isTemporalInfo = exports.expandTemporalValue = exports.createLayerYearTemporalInfo = void 0;
 exports.isNumericGeostatsAttribute = isNumericGeostatsAttribute;
 exports.isLegacyGeostatsLayer = isLegacyGeostatsLayer;
 exports.isLegacyGeostatsAttribute = isLegacyGeostatsAttribute;
@@ -31,6 +31,14 @@ Object.defineProperty(exports, "isDataTableNodataConfig", { enumerable: true, ge
 Object.defineProperty(exports, "isDataTableNodataValue", { enumerable: true, get: function () { return nodata_1.isDataTableNodataValue; } });
 Object.defineProperty(exports, "nodataValueMatches", { enumerable: true, get: function () { return nodata_1.nodataValueMatches; } });
 Object.defineProperty(exports, "normalizeNodataValues", { enumerable: true, get: function () { return nodata_1.normalizeNodataValues; } });
+__exportStar(require("./organism"), exports);
+var organism_1 = require("./organism");
+Object.defineProperty(exports, "isOrganismInfo", { enumerable: true, get: function () { return organism_1.isOrganismInfo; } });
+Object.defineProperty(exports, "isDataTableOrganismConfig", { enumerable: true, get: function () { return organism_1.isDataTableOrganismConfig; } });
+Object.defineProperty(exports, "includeLowConfidenceMatchesEnabled", { enumerable: true, get: function () { return organism_1.includeLowConfidenceMatchesEnabled; } });
+Object.defineProperty(exports, "organismClassificationCounts", { enumerable: true, get: function () { return organism_1.organismClassificationCounts; } });
+Object.defineProperty(exports, "organismIsClassified", { enumerable: true, get: function () { return organism_1.organismIsClassified; } });
+Object.defineProperty(exports, "suggestOrganismColumnRoles", { enumerable: true, get: function () { return organism_1.suggestOrganismColumnRoles; } });
 function isNumericGeostatsAttribute(attr) {
     return attr.type === "number";
 }

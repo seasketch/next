@@ -12,7 +12,6 @@ import {
   featureSeriesFromParsed,
   downsampleFeatureSeries,
   shouldShowDataTableSeriesChart,
-  trimFeatureSeries,
   temporalSourceFilterColumns,
 } from "./dataTableQueryApi";
 
@@ -279,24 +278,6 @@ describe("parseDataTableQuerySeries", () => {
     expect(sampled[sampled.length - 1]).toEqual({ step: "2019", value: 19 });
     expect(sampled.some((point) => point.step === "2010")).toBe(true);
     expect(sampled.length).toBeLessThanOrEqual(7);
-  });
-
-  it("trims leading and trailing empty steps", () => {
-    expect(
-      trimFeatureSeries([
-        { step: "2008", value: null },
-        { step: "2009", value: null },
-        { step: "2010", value: 2 },
-        { step: "2011", value: null },
-        { step: "2012", value: 1 },
-        { step: "2013", value: null },
-      ])
-    ).toEqual([
-      { step: "2010", value: 2 },
-      { step: "2011", value: null },
-      { step: "2012", value: 1 },
-    ]);
-    expect(trimFeatureSeries([{ step: "2010", value: null }])).toEqual([]);
   });
 });
 

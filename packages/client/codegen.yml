@@ -16,6 +16,7 @@ generates:
       withMutationFn: true
       scalars:
         TemporalInfo: import("@seasketch/geostats-types").TemporalInfo
+        OrganismInfo: import("@seasketch/geostats-types").OrganismInfo
   src/generated/queries.ts:
     plugins:
       - typescript
@@ -31,3 +32,4 @@ generates:
       pureMagicComment: true
       scalars:
         TemporalInfo: import("@seasketch/geostats-types").TemporalInfo
+        OrganismInfo: import("@seasketch/geostats-types").OrganismInfo

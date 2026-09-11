@@ -183,6 +183,7 @@ const dataTablesHandler = new DataTablesHandlerLambdaStack(
     vpc: db.vpc,
     db: db.instance,
     bucket: dataUploads.uploadsBucket,
+    overlayEngineAccessTokenSecret: secrets.overlayEngineAccessTokenSecret,
   }
 );
 

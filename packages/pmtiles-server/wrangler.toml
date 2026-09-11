@@ -42,6 +42,12 @@ type = "worker"
 [exports.DataTablesBackend.cache]
 enabled = true
 
+# Allowlisted WoRMS proxy for organism enrichment. Cache API keys POST bodies.
+[exports.TaxonomyBackend]
+type = "worker"
+[exports.TaxonomyBackend.cache]
+enabled = true
+
 [vars]
 # Rollout knobs. Defaults are lax for cutover.
 AUTH_ACL_ENABLED = "false"

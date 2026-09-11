@@ -31,6 +31,10 @@ import { withHostedAuthParams } from "../../../dataLayers/tilesAuth";
 import useCurrentProjectMetadata from "../../../useCurrentProjectMetadata";
 import { dataTableMutationRefetchQueries } from "../../changelogs/dataTableChangeLogRefetch";
 import {
+  useClearReprocessWhenJobSettles,
+  useTrackOverlayDataTableJob,
+} from "./useDataTableReprocessJob";
+import {
   addNodataValue,
   formatNodataValue,
   nodataValuesFromUnknown,
@@ -222,6 +226,13 @@ export default function DataTableNodataEditor({
   const [previewFromStats, setPreviewFromStats] = useState(false);
   const [saving, setSaving] = useState(false);
   const [reprocessing, setReprocessing] = useState(false);
+  const trackOverlayJob = useTrackOverlayDataTableJob();
+  useClearReprocessWhenJobSettles({
+    job,
+    reprocessing,
+    saving,
+    setReprocessing,
+  });
 
   const changeLogRefetchQueries = useMemo(
     () => dataTableMutationRefetchQueries(tableOfContentsItemId),
@@ -344,7 +355,11 @@ export default function DataTableNodataEditor({
     (job.state === ProjectBackgroundJobState.Queued ||
       job.state === ProjectBackgroundJobState.Running);
   const jobFailed = job?.state === ProjectBackgroundJobState.Failed;
-  const showJobOverlay = Boolean(reprocessing || jobRunning || jobFailed);
+  const showJobOverlay = Boolean(
+    jobFailed ||
+      jobRunning ||
+      (reprocessing && job?.state !== ProjectBackgroundJobState.Complete)
+  );
   const impacted = (preview?.columns || []).filter(
     (column) => column.matchCount > 0 && !column.excluded
   );
@@ -368,12 +383,16 @@ export default function DataTableNodataEditor({
     try {
       setReprocessing(true);
       try {
-        await createReprocess({
+        const result = await createReprocess({
           variables: {
             tableId: table.id,
             nodataConfig: { values } as DataTableNodataConfig,
           },
         });
+        trackOverlayJob(
+          tableOfContentsItemId,
+          result.data?.createOverlayDataTableReprocess?.projectBackgroundJob
+        );
         onJobStarted();
       } catch {
         setReprocessing(false);

@@ -8,6 +8,7 @@ import DataTableNumericFilter, {
   defaultNumericFilters,
 } from "./DataTableNumericFilter";
 import DataTableStringFilter from "./DataTableStringFilter";
+import OrganismSelector from "./OrganismSelector";
 
 function filtersForColumn(filters: DataTableFilter[], column: string) {
   return filters.filter((filter) => filter.column === column);
@@ -194,7 +195,8 @@ function stringValuesForColumn(column: GeostatsAttribute): Set<string> | null {
  */
 export function sanitizeDataTableFilters(
   filters: DataTableFilter[] | undefined,
-  columns: GeostatsAttribute[]
+  columns: GeostatsAttribute[],
+  options?: { unrestrictedColumns?: string[] }
 ): DataTableFilter[] {
   if (!filters?.length) {
     return [];
@@ -208,7 +210,10 @@ export function sanitizeDataTableFilters(
     if (!column) {
       continue;
     }
-    const allowed = stringValuesForColumn(column);
+    const unrestricted = new Set(options?.unrestrictedColumns || []);
+    const allowed = unrestricted.has(filter.column)
+      ? null
+      : stringValuesForColumn(column);
     if (allowed) {
       if (filter.op === "eq" && filter.value != null) {
         if (!allowed.has(filter.value)) {
@@ -264,11 +269,17 @@ function FilterValueEditor({
   filters,
   onChange,
   queryLoading = false,
+  organismColumn,
+  orgQueryUrl,
+  accessToken,
 }: {
   column: GeostatsAttribute;
   filters: DataTableFilter[];
   onChange: (filters: DataTableFilter[]) => void;
   queryLoading?: boolean;
+  organismColumn?: string | null;
+  orgQueryUrl?: string | null;
+  accessToken?: string | null;
 }) {
   if (column.type === "number") {
     return (
@@ -298,6 +309,17 @@ function FilterValueEditor({
       />
     );
   }
+  if (organismColumn && column.attribute === organismColumn && orgQueryUrl) {
+    return (
+      <OrganismSelector
+        column={column}
+        filters={filters}
+        orgQueryUrl={orgQueryUrl}
+        accessToken={accessToken}
+        onChange={onChange}
+      />
+    );
+  }
   return (
     <DataTableStringFilter
       column={column}
@@ -315,6 +337,9 @@ export default function DataTableFilterControls({
   hiddenColumns = [],
   columnLabels = {},
   queryLoading = false,
+  organismColumn,
+  orgQueryUrl,
+  accessToken,
   onChange,
   trailingAction,
 }: {
@@ -329,6 +354,10 @@ export default function DataTableFilterControls({
   columnLabels?: Record<string, string>;
   /** True while the map query for the current filters is in flight. */
   queryLoading?: boolean;
+  /** When set, this column uses the Organism Selector instead of a string list. */
+  organismColumn?: string | null;
+  orgQueryUrl?: string | null;
+  accessToken?: string | null;
   onChange: (filters: DataTableFilter[]) => void;
   /** Rendered opposite the Add filter button (e.g. a clear-table action). */
   trailingAction?: ReactNode;
@@ -432,6 +461,9 @@ export default function DataTableFilterControls({
                   column={column}
                   filters={columnFilters}
                   queryLoading={queryLoading}
+                  organismColumn={organismColumn}
+                  orgQueryUrl={orgQueryUrl}
+                  accessToken={accessToken}
                   onChange={(nextFilters) =>
                     onChange(
                       replaceColumnFilters(filters, columnName, nextFilters)
@@ -483,6 +515,9 @@ export default function DataTableFilterControls({
                   column={column}
                   filters={columnFilters}
                   queryLoading={queryLoading}
+                  organismColumn={organismColumn}
+                  orgQueryUrl={orgQueryUrl}
+                  accessToken={accessToken}
                   onChange={(nextFilters) =>
                     onChange(
                       replaceColumnFilters(filters, columnName, nextFilters)

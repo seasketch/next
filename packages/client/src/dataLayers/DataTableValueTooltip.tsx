@@ -9,7 +9,6 @@ import {
   DataTableFeatureSeriesPoint,
   downsampleFeatureSeries,
   shouldShowDataTableSeriesChart,
-  trimFeatureSeries,
 } from "./dataTableQueryApi";
 import { DATA_TABLE_ACTIVE_COLOR } from "./dataTableMapStyle";
 import { formatLegendNumber } from "./legends/DataTableLegendBubble";
@@ -254,7 +253,7 @@ export function dataTableSparklineLayout(
   lastStep?: string;
 } {
   const sampled = downsampleFeatureSeries(
-    trimFeatureSeries(points),
+    points,
     SPARKLINE_MAX_POINTS,
     currentSteps
   );
@@ -344,11 +343,6 @@ export function dataTableSparklineLayout(
     }))
   );
 
-  const firstObserved = sampled.find((point) => point.value !== null);
-  const lastObserved = [...sampled]
-    .reverse()
-    .find((point) => point.value !== null);
-
   const xTicks = pickSparklineXTicks(
     sampled.map((point) => point.step),
     plot
@@ -363,8 +357,8 @@ export function dataTableSparklineLayout(
     window,
     yTicks,
     xTicks,
-    firstStep: firstObserved?.step,
-    lastStep: lastObserved?.step,
+    firstStep: sampled[0]?.step,
+    lastStep: sampled[sampled.length - 1]?.step,
   };
 }
 

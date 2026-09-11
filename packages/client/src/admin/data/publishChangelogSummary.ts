@@ -7,6 +7,7 @@ import {
 import { summary } from "../changelogs/fieldGroups/FieldGroupListItemBase";
 import { tocItemIdFromMeta } from "../changelogs/fieldGroups/dataTableSummary";
 import { DATA_TABLE_TEMPORAL_FIELD_GROUP } from "../changelogs/fieldGroups/dataTableTemporalChange";
+import { DATA_TABLE_ORGANISM_FIELD_GROUP } from "../changelogs/fieldGroups/dataTableOrganismChange";
 
 export const TOC_ENTITY_TYPE = "table_of_contents_items";
 export const DATA_TABLE_ENTITY_TYPE = "overlay_data_table";
@@ -65,6 +66,7 @@ const FIELD_GROUP_TO_BADGE: Partial<
   [ChangeLogFieldGroup.DataTableRollback]: "dataTables",
   [ChangeLogFieldGroup.DataTableVisualizationSettingsUpdated]: "dataTables",
   [DATA_TABLE_TEMPORAL_FIELD_GROUP as ChangeLogFieldGroup]: "dataTables",
+  [DATA_TABLE_ORGANISM_FIELD_GROUP as ChangeLogFieldGroup]: "dataTables",
   [ChangeLogFieldGroup.FolderType]: "folderBehavior",
   [ChangeLogFieldGroup.ResolvableLayerCommentsCreated]: "comments",
   [ChangeLogFieldGroup.ResolvableLayerCommentsResponded]: "comments",

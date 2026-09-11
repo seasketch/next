@@ -446,7 +446,7 @@ describe("overlay_data_tables", () => {
               row_count, created_by, parquet_remote, column_stats_remote,
               visualization_columns, visualization_ops, required_filter_columns,
               hidden_filter_columns, filter_column_labels,
-              temporal
+              temporal, organism
             ) values (
               ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId},
               'r2://bucket/projects/test/public/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/dataTables/u1/data.parquet',
@@ -455,7 +455,14 @@ describe("overlay_data_tables", () => {
               ${sql.array(['year'], 'text')},
               ${sql.array(['region'], 'text')},
               ${sql.json({ year: 'Year' })},
-              ${sql.json(temporal)}
+              ${sql.json(temporal)},
+              ${sql.json({
+                version: 1,
+                column: "classcode",
+                valueKind: "code",
+                roles: { classcode: "code" },
+                authoredBy: "admin",
+              })}
             )`);
             // Soft-deleted draft history must not be published.
             await conn.any(sql`
@@ -486,7 +493,7 @@ describe("overlay_data_tables", () => {
         const published = await conn.many(sql`
           select odt.name, toc.is_draft, odt.visualization_columns, odt.visualization_ops,
             odt.required_filter_columns, odt.hidden_filter_columns, odt.filter_column_labels,
-            odt.parquet_remote, odt.stable_id, odt.temporal
+            odt.parquet_remote, odt.stable_id, odt.temporal, odt.organism
           from overlay_data_tables odt
           inner join table_of_contents_items toc on toc.id = odt.table_of_contents_item_id
           where odt.project_id = ${projectId} and toc.is_draft = false
@@ -502,6 +509,13 @@ describe("overlay_data_tables", () => {
         expect(published[0].filter_column_labels).toEqual({ year: "Year" });
         expect(published[0].stable_id).toBe(draftStableId);
         expect(published[0].temporal).toEqual(temporal);
+        expect(published[0].organism).toEqual({
+          version: 1,
+          column: "classcode",
+          valueKind: "code",
+          roles: { classcode: "code" },
+          authoredBy: "admin",
+        });
 
         const draftStillThere = await conn.oneFirst(sql`
           select count(*) from overlay_data_tables odt
@@ -1026,6 +1040,233 @@ describe("overlay_data_tables", () => {
           )`);
 
         expect(bookmark.data_table_states).toEqual(dataTableStates);
+      },
+    );
+  });
+
+  test("in-place organism save records data_table:organism changelog", async () => {
+    await projectTransaction(
+      pool,
+      "public",
+      async (conn, projectId, adminId) => {
+        await createSession(conn, adminId, true, false, projectId);
+        const { tocId } = await createDraftLayer(conn, projectId, adminId);
+        const previous = {
+          version: 1,
+          column: "classcode",
+          valueKind: "code",
+          roles: { classcode: "code" },
+          authoredBy: "admin",
+        };
+        const next = {
+          ...previous,
+          roles: { classcode: "code", common_name: "commonName" },
+        };
+
+        let tableId = 0;
+        await asPostgres(
+          conn,
+          async () => {
+            tableId = Number(
+              await conn.oneFirst(sql`
+                insert into overlay_data_tables (
+                  table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
+                  row_count, created_by, version, parquet_remote, column_stats_remote,
+                  organism
+                ) values (
+                  ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId}, 1,
+                  'r2://bucket/a.parquet', 'r2://bucket/a.json',
+                  ${sql.json(previous)}
+                ) returning id`),
+            );
+          },
+          { userId: adminId, projectId },
+        );
+
+        await conn.any(sql`
+          select update_overlay_data_table_organism(
+            ${tableId},
+            ${sql.json(next)}
+          )`);
+
+        const stored = await conn.oneFirst(
+          sql`select organism from overlay_data_tables where id = ${tableId}`,
+        );
+        expect(stored).toEqual(next);
+
+        const changelog = await conn.one(sql`
+          select field_group, editor_id, from_summary, to_summary, meta
+          from change_logs
+          where entity_type = 'overlay_data_table'
+            and entity_id = ${tableId}
+            and field_group = 'data_table:organism'
+          order by last_at desc
+          limit 1`);
+        expect(changelog.editor_id).toBe(adminId);
+        expect(changelog.meta).toEqual(
+          expect.objectContaining({
+            table_of_contents_item_id: tocId,
+            reprocessed: false,
+          }),
+        );
+        expect(changelog.from_summary).toEqual(
+          expect.objectContaining({ organism: previous }),
+        );
+        expect(changelog.to_summary).toEqual(
+          expect.objectContaining({ organism: next }),
+        );
+      },
+    );
+  });
+
+  test("admin can start an organism reprocess without writing organism yet", async () => {
+    await projectTransaction(
+      pool,
+      "public",
+      async (conn, projectId, adminId) => {
+        await createSession(conn, adminId, true, false, projectId);
+        const { tocId, sourceId } = await createDraftLayer(
+          conn,
+          projectId,
+          adminId,
+        );
+        await conn.any(sql`
+          update table_of_contents_items
+          set enable_data_tables = true, data_table_join_column = 'id'
+          where id = ${tocId}`);
+
+        const config = {
+          column: "classcode",
+          valueKind: "code",
+          roles: { classcode: "code" },
+        };
+
+        let tableId: number;
+        await asPostgres(
+          conn,
+          async () => {
+            await conn.any(sql`
+              update data_sources
+              set geostats = '{"layers":[{"attributes":[]}]}'::jsonb
+              where id = ${sourceId}`);
+            tableId = Number(
+              await conn.oneFirst(sql`
+                insert into overlay_data_tables (
+                  table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
+                  row_count, created_by, version, parquet_remote, column_stats_remote
+                ) values (
+                  ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId}, 1,
+                  'r2://bucket/old.parquet', 'r2://bucket/old.json'
+                ) returning id`),
+            );
+          },
+          { userId: adminId, projectId },
+        );
+
+        const upload = await conn.one(sql`
+          select * from create_overlay_data_table_organism_reprocess(
+            ${tableId},
+            ${sql.json(config)}
+          )`);
+
+        expect(upload.reprocess_of_overlay_data_table_id).toBe(tableId);
+        expect(upload.replace_overlay_data_table_id).toBeNull();
+        expect(upload.organism_config).toEqual(config);
+
+        const after = await conn.oneFirst(
+          sql`select organism from overlay_data_tables where id = ${tableId}`,
+        );
+        expect(after).toBeNull();
+      },
+    );
+  });
+
+  test("organism reprocess complete updates the existing table", async () => {
+    await projectTransaction(
+      pool,
+      "public",
+      async (conn, projectId, adminId) => {
+        await createSession(conn, adminId, true, false, projectId);
+        const { tocId, sourceId } = await createDraftLayer(
+          conn,
+          projectId,
+          adminId,
+        );
+        await conn.any(sql`
+          update table_of_contents_items
+          set enable_data_tables = true, data_table_join_column = 'id'
+          where id = ${tocId}`);
+
+        const config = {
+          column: "classcode",
+          valueKind: "code",
+          roles: { classcode: "code" },
+        };
+        const organism = {
+          version: 1,
+          ...config,
+          authoredBy: "admin",
+        };
+
+        let tableId: number;
+        await asPostgres(
+          conn,
+          async () => {
+            await conn.any(sql`
+              update data_sources
+              set geostats = '{"layers":[{"attributes":[]}]}'::jsonb
+              where id = ${sourceId}`);
+            tableId = Number(
+              await conn.oneFirst(sql`
+                insert into overlay_data_tables (
+                  table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
+                  row_count, created_by, version, parquet_remote, column_stats_remote
+                ) values (
+                  ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId}, 1,
+                  'r2://bucket/old.parquet', 'r2://bucket/old.json'
+                ) returning id`),
+            );
+          },
+          { userId: adminId, projectId },
+        );
+
+        const upload = await conn.one(sql`
+          select * from create_overlay_data_table_organism_reprocess(
+            ${tableId},
+            ${sql.json(config)}
+          )`);
+
+        await asPostgres(
+          conn,
+          async () => {
+            await conn.any(sql`
+              select complete_overlay_data_table_organism_reprocess(
+                ${upload.project_background_job_id},
+                ${sql.json(organism)}
+              )`);
+          },
+          { userId: adminId, projectId },
+        );
+
+        const row = await conn.one(sql`
+          select id, version, organism, deleted_at
+          from overlay_data_tables
+          where id = ${tableId}`);
+        expect(row.version).toBe(1);
+        expect(row.deleted_at).toBeNull();
+        expect(row.organism).toEqual(organism);
+
+        const changelog = await conn.one(sql`
+          select field_group, meta
+          from change_logs
+          where entity_type = 'overlay_data_table'
+            and entity_id = ${tableId}
+            and field_group = 'data_table:organism'
+          order by last_at desc
+          limit 1`);
+        expect(changelog.meta).toEqual(
+          expect.objectContaining({ reprocessed: true }),
+        );
       },
     );
   });

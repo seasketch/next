@@ -70,9 +70,21 @@ export default async function processDataTableUpload(
   const { jobId } = payload;
   helpers.logger.info(`Handling data table upload: ${jobId}`);
   await helpers.withPgClient(async (client) => {
-    await client.query(
-      `update project_background_jobs set progress_message = 'processing', state = 'running', started_at = now(), timeout_at = timezone('utc', now()) + interval '60 seconds' where id = $1`,
+    const timeoutQ = await client.query(
+      `select odtu.organism_config is not null as is_organism
+       from overlay_data_table_uploads odtu
+       where odtu.project_background_job_id = $1
+       limit 1`,
       [jobId],
+    );
+    // Organism enrichment batches Wikidata SPARQL and iNat id fetches.
+    // Leave 15 minutes for WoRMS per-id details on large class tables.
+    const timeoutInterval = timeoutQ.rows[0]?.is_organism
+      ? "15 minutes"
+      : "60 seconds";
+    await client.query(
+      `update project_background_jobs set progress_message = 'processing', state = 'running', started_at = now(), timeout_at = timezone('utc', now()) + $2::interval where id = $1`,
+      [jobId, timeoutInterval],
     );
     const q = await client.query(
       `select

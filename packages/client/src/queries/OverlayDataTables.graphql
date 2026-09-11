@@ -18,6 +18,7 @@ fragment ClientOverlayDataTable on OverlayDataTable {
   hiddenFilterColumns
   filterColumnLabels
   temporal
+  organism
 }
 
 fragment OverlayDataTableDetails on OverlayDataTable {
@@ -44,7 +45,10 @@ fragment OverlayDataTableDetails on OverlayDataTable {
   hiddenFilterColumns
   filterColumnLabels
   temporal
+  organism
   nodataValues
+  organismCatalogUrl
+  organismPreviewUrl
 }
 
 query OverlayDataTableVisualizationMetadata($id: Int!) {
@@ -204,6 +208,42 @@ mutation UpdateOverlayDataTableNodata($tableId: Int!, $nodataValues: JSON!) {
   ) {
     overlayDataTable {
       ...OverlayDataTableDetails
+    }
+  }
+}
+
+mutation UpdateOverlayDataTableOrganism(
+  $overlayDataTableId: Int!
+  $organism: OrganismInfo
+) {
+  updateOverlayDataTableOrganism(
+    overlayDataTableId: $overlayDataTableId
+    organism: $organism
+  ) {
+    id
+    organism
+  }
+}
+
+mutation CreateOverlayDataTableOrganismReprocess(
+  $tableId: Int!
+  $organismConfig: JSON!
+  $classCsvFilename: String
+  $classCsvContentType: String
+) {
+  createOverlayDataTableOrganismReprocess(
+    input: {
+      tableId: $tableId
+      organismConfig: $organismConfig
+      classCsvFilename: $classCsvFilename
+      classCsvContentType: $classCsvContentType
+    }
+  ) {
+    overlayDataTableUpload {
+      ...OverlayDataTableUploadDetails
+    }
+    projectBackgroundJob {
+      ...JobDetails
     }
   }
 }

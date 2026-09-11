@@ -17,6 +17,7 @@ import {
   previewNodataValues,
 } from "./dataTables/nodataPreview";
 import { queryUiHtml } from "./dataTables/ui/html";
+import { handleOrgQuery, isOrgQueryPath } from "./dataTables/orgQuery";
 
 /** Browser cache lifetime for query JSON responses. */
 const BROWSER_MAX_AGE = 86400;
@@ -55,6 +56,9 @@ export async function handleDataTableQuery(
   }
 
   const url = new URL(request.url);
+  if (isOrgQueryPath(url.pathname)) {
+    return handleOrgQuery(request, env);
+  }
   const pathname = url.pathname;
   const isTemporalPreview = pathname.endsWith("/temporal-preview");
   const isNodataPreview = pathname.endsWith("/nodata-preview");

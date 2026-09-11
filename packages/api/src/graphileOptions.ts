@@ -55,6 +55,7 @@ import OverlayDataTablePlugin from "./plugins/overlayDataTablePlugin";
 import PublishTilesAclPlugin from "./plugins/publishTilesAclPlugin";
 import HostedTileUuidsRequiringAuthPlugin from "./plugins/hostedTileUuidsRequiringAuthPlugin";
 import TemporalPlugin from "./plugins/temporalPlugin";
+import OrganismPlugin from "./plugins/organismPlugin";
 
 const pluginHook = makePluginHook([{ ...PgPubsub, ...SentryPlugin }]);
 
@@ -118,6 +119,7 @@ export default function graphileOptions(): PostGraphileOptions {
       GeographyPlugin,
       // Must precede ReportsPlugin, which references the TemporalInfo scalar.
       TemporalPlugin,
+      OrganismPlugin,
       ReportsPlugin,
       FeatureFlagsPlugin,
       UserActivityPlugin,

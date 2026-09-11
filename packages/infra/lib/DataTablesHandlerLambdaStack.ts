@@ -8,6 +8,7 @@ import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as rds from "aws-cdk-lib/aws-rds";
 import * as s3 from "aws-cdk-lib/aws-s3";
+import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import { Platform } from "aws-cdk-lib/aws-ecr-assets";
 import * as path from "path";
 import { Construct } from "constructs";
@@ -21,6 +22,7 @@ export class DataTablesHandlerLambdaStack extends cdk.Stack {
       vpc: ec2.Vpc;
       db: rds.DatabaseInstance;
       bucket: s3.Bucket;
+      overlayEngineAccessTokenSecret: secretsmanager.ISecret;
     },
   ) {
     super(scope, id, props);
@@ -52,6 +54,11 @@ export class DataTablesHandlerLambdaStack extends cdk.Stack {
         R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID!,
         R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY!,
         R2_TILES_BUCKET: process.env.R2_TILES_BUCKET!,
+        // Allowlisted iNat/WoRMS proxy on pmtiles-server. Deploy the worker
+        // route before relying on this; unset locally to hit APIs directly.
+        TAXONOMY_PROXY_URL: "https://uploads.seasketch.org/taxonomy",
+        OVERLAY_ENGINE_ACCESS_TOKEN_SECRET_ARN:
+          props.overlayEngineAccessTokenSecret.secretArn,
         PGHOST: props.db.instanceEndpoint.hostname,
         // Match SpatialUploadHandler: needs write access to project_background_jobs
         // and execute on fail_overlay_data_table_upload (graphile cannot).
@@ -63,6 +70,7 @@ export class DataTablesHandlerLambdaStack extends cdk.Stack {
     });
 
     props.bucket.grantRead(fn);
+    props.overlayEngineAccessTokenSecret.grantRead(fn);
     fn.addToRolePolicy(
       new iam.PolicyStatement({
         actions: ["rds-db:connect"],

@@ -31,6 +31,10 @@ import useCurrentProjectMetadata from "../../../useCurrentProjectMetadata";
 import LayerEditorTabs from "../TableOfContentsItemEditor/LayerEditorTabs";
 import { dataTableMutationRefetchQueries } from "../../changelogs/dataTableChangeLogRefetch";
 import {
+  useClearReprocessWhenJobSettles,
+  useTrackOverlayDataTableJob,
+} from "./useDataTableReprocessJob";
+import {
   DATE_FORMATS,
   DataTableTemporalFormState,
   DataTableTemporalMode,
@@ -362,6 +366,13 @@ export default function DataTableTemporalEditor({
   const [previewLoading, setPreviewLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [reprocessing, setReprocessing] = useState(false);
+  const trackOverlayJob = useTrackOverlayDataTableJob();
+  useClearReprocessWhenJobSettles({
+    job,
+    reprocessing,
+    saving,
+    setReprocessing,
+  });
   const [removeRequired, setRemoveRequired] = useState(false);
   const [columnHint, setColumnHint] = useState<{
     column: string;
@@ -500,7 +511,11 @@ export default function DataTableTemporalEditor({
     (job.state === ProjectBackgroundJobState.Queued ||
       job.state === ProjectBackgroundJobState.Running);
   const jobFailed = job?.state === ProjectBackgroundJobState.Failed;
-  const showJobOverlay = Boolean(reprocessing || jobRunning || jobFailed);
+  const showJobOverlay = Boolean(
+    jobFailed ||
+      jobRunning ||
+      (reprocessing && job?.state !== ProjectBackgroundJobState.Complete)
+  );
 
   const tabs: Array<{ id: DataTableTemporalMode; name: string }> = [
     { id: "none", name: t("None") },
@@ -593,12 +608,16 @@ export default function DataTableTemporalEditor({
       }
       setReprocessing(true);
       try {
-        await createReprocess({
+        const result = await createReprocess({
           variables: {
             tableId: table.id,
             temporalConfig: nextConfig as DataTableTemporalConfig,
           },
         });
+        trackOverlayJob(
+          tableOfContentsItemId,
+          result.data?.createOverlayDataTableReprocess?.projectBackgroundJob
+        );
         onJobStarted();
       } catch {
         setReprocessing(false);

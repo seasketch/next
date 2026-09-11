@@ -52,6 +52,16 @@ export async function putObject(
   console.log(`putObject ${filepath} (${bytes(fileSizeBytes)}) to ${remote}`);
 }
 
+/** Sibling object next to data.parquet (catalog, search index, preview). */
+export function siblingRemote(
+  parquetRemote: string | null | undefined,
+  filename: string
+): string | null {
+  if (!parquetRemote || typeof parquetRemote !== "string") return null;
+  if (!parquetRemote.endsWith("/data.parquet")) return null;
+  return `${parquetRemote.slice(0, -"/data.parquet".length)}/${filename}`;
+}
+
 /** Download an existing hosted parquet (or other object) from R2. */
 export async function getR2Object(
   remote: string,
@@ -68,6 +78,25 @@ export async function getR2Object(
   );
   const body = response.Body as Readable;
   await pipeline(body, createWriteStream(filepath));
+}
+
+/** Like getR2Object, but returns false when the key is missing. */
+export async function tryGetR2Object(
+  remote: string,
+  filepath: string,
+): Promise<boolean> {
+  try {
+    await getR2Object(remote, filepath);
+    return true;
+  } catch (error) {
+    const name = (error as { name?: string }).name;
+    const status = (error as { $metadata?: { httpStatusCode?: number } })
+      .$metadata?.httpStatusCode;
+    if (name === "NoSuchKey" || name === "NotFound" || status === 404) {
+      return false;
+    }
+    throw error;
+  }
 }
 
 /** Download the user's raw upload from the S3 staging bucket. */
