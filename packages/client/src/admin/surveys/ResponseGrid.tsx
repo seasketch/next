@@ -37,7 +37,7 @@ import EditableResponseCell, {
   CellEditorContext,
   EditorsList,
 } from "./EditableResponseCell";
-import { areEqual, FixedSizeList } from "react-window";
+import { FixedSizeList } from "react-window";
 import AutoSizer from "react-virtualized-auto-sizer";
 import Badge from "../../components/Badge";
 import { useAuth0 } from "@auth0/auth0-react";
@@ -773,16 +773,11 @@ export default function ResponseGrid(props: Props) {
           </ResponseGridCellBlur>
         </div>
       );
-    },
-    (prev, next) => {
-      return (
-        false &&
-        prev.isSelected === next.isSelected &&
-        areEqual(prev.cell.getCellProps(), next.cell.getCellProps())
-      );
     }
   );
 
+  // selectedRowIds must be a dep: FixedSizeList is a PureComponent and
+  // otherwise will not re-render row checkboxes when selection changes.
   const RenderRow = React.useCallback(
     function RenderRow({ index, style }) {
       const row = rows[index];
@@ -817,7 +812,7 @@ export default function ResponseGrid(props: Props) {
         </div>
       );
     },
-    [prepareRow, rows, responseAccessIsLimited]
+    [prepareRow, rows, responseAccessIsLimited, selectedRowIds]
   );
 
   if (!data) {
@@ -991,6 +986,7 @@ export default function ResponseGrid(props: Props) {
                         itemSize={ITEM_SIZE}
                         width={totalColumnsWidth}
                         itemKey={getItemKey}
+                        itemData={selectedRowIds}
                       >
                         {RenderRow}
                       </FixedSizeList>
