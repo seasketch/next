@@ -136,7 +136,7 @@
     "blurhash": "^2.0.5",
     "bytes": "^3.1.0",
     "cache-polyfill": "^1.0.1",
-    "caniuse-lite": "^1.0.30001346",
+    "caniuse-lite": "1.0.30001695",
     "cheap-ruler": "^3.0.2",
     "clsx": "^2.1.1",
     "codemirror": "^5.58.1",
@@ -297,8 +297,9 @@
     "cypress:run": "cypress run",
     "generate-api-helpers": "node bin/buildApiHelpers.js && cp src/formElements/ExportUtils.d.ts ../api/src/",
     "env:dev": "op inject -i .env.template > .env",
-    "css:build": "npx tailwindcss -i ./src/tailwind.css -o ./src/index.css",
-    "css:watch": "npx tailwindcss -i ./src/tailwind.css -o ./src/index.css --watch"
+    "css:build": "node bin/buildCss.js",
+    "css:watch": "node bin/buildCss.js --watch",
+    "css:check": "node bin/buildCss.js && git diff --exit-code -- src/index.css || (echo 'src/index.css is stale. Run npm run css:build and commit the result.' && exit 1)"
   },
   "eslintConfig": {
     "extends": "react-app"
@@ -338,7 +339,7 @@
     "@types/pg": "^8.6.1",
     "@typescript-eslint/eslint-plugin": "^6.0",
     "@typescript-eslint/parser": "^6.0",
-    "autoprefixer": "^10.4.20",
+    "autoprefixer": "10.4.20",
     "babel-eslint": "^10.1.0",
     "chokidar-cli": "^2.1.0",
     "esbuild": "^0.14.20",
