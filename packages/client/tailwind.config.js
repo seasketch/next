@@ -9,6 +9,10 @@ module.exports = {
     "src/**/*.tsx",
     "public/**/*.html",
     "src/**/*.css",
+    // Output of css:build/css:watch. Scanning it re-extracts utilities from
+    // the previous machine's generate, so watch mode reorders classes and
+    // keeps stale ones alive. That is the home-vs-work index.css drift.
+    "!src/index.css",
   ],
   theme: {
     extend: {

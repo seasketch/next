@@ -105,6 +105,22 @@ jobs:
           npx graphql-codegen --config codegen.yml
           git diff --exit-code ./src/generated/graphql.ts
 
+  generated-css:
+    name: Check generated Tailwind CSS
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: ".nvmrc"
+          cache: npm
+          cache-dependency-path: "**/package-lock.json"
+      - name: Install dependencies
+        run: npx lerna@6.6.2 bootstrap --ci --scope=client --include-dependencies
+      - name: Verify src/index.css matches css:build
+        working-directory: ./packages/client
+        run: npm run css:check
+
   test-client:
     name: Test React Client
     runs-on: ubuntu-latest
