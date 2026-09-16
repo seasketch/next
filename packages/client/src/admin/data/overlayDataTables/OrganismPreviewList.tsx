@@ -1,19 +1,13 @@
 import { OrganismCatalogRow, OrganismResolveConfidence } from "@seasketch/geostats-types";
-import {
-  ChevronDownIcon,
-  ChevronUpIcon,
-  ExclamationCircleIcon,
-  PhotographIcon,
-} from "@heroicons/react/outline";
-import React, { useEffect, useMemo, useState } from "react";
+import { ChevronDownIcon, ChevronUpIcon } from "@heroicons/react/outline";
+import React, { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
+import INaturalistPhotoCredit from "../../../components/INaturalistThumbnail/INaturalistPhotoCredit";
+import INaturalistThumbnail from "../../../components/INaturalistThumbnail/INaturalistThumbnail";
 import Spinner from "../../../components/Spinner";
 import {
-  InaturalistTaxonPhotoStatus,
   compactInaturalistAttribution,
-  inaturalistAttributionParts,
-  inaturalistTaxonPhotoStatus,
-  useInaturalistTaxonPhotos,
+  useInaturalistTaxonPhoto,
 } from "../../../dataLayers/inaturalistTaxonPhotos";
 import {
   OrganismPreviewConfidenceFilter,
@@ -66,148 +60,15 @@ function OrganismDescription({ text }: { text: string }) {
   );
 }
 
-function ThumbnailSkeleton() {
-  const { t } = useTranslation("admin:data");
-  return (
-    <div
-      className="relative flex h-full w-full items-center justify-center overflow-hidden"
-      aria-busy="true"
-      aria-label={t("Loading photo")}
-    >
-      <div className="absolute inset-0 animate-pulse bg-gradient-to-br from-gray-700/90 via-gray-800 to-gray-700/70" />
-      <PhotographIcon className="relative h-7 w-7 text-gray-500" aria-hidden />
-    </div>
-  );
-}
-
-function ThumbnailEmpty() {
-  const { t } = useTranslation("admin:data");
-  return (
-    <div className="flex h-full w-full flex-col items-center justify-center text-gray-500">
-      <PhotographIcon className="h-7 w-7" aria-hidden />
-      <span className="sr-only">{t("No photo")}</span>
-    </div>
-  );
-}
-
-function ThumbnailError({ message }: { message: string }) {
-  return (
-    <div className="flex h-full w-full flex-col items-center justify-center gap-1 px-2 text-center">
-      <ExclamationCircleIcon
-        className="h-6 w-6 text-amber-400/80"
-        aria-hidden
-      />
-      <span className="text-[10px] leading-snug text-gray-400">{message}</span>
-    </div>
-  );
-}
-
-function ThumbnailFrame({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="relative w-32 min-h-[5.5rem] shrink-0 self-stretch overflow-hidden rounded-md bg-gray-800 ring-1 ring-white/10">
-      {children}
-    </div>
-  );
-}
-
-function OrganismThumbnail({
-  photoStatus,
-}: {
-  photoStatus: InaturalistTaxonPhotoStatus;
-}) {
-  const { t } = useTranslation("admin:data");
-  const photoUrl =
-    photoStatus.status === "ready" ? photoStatus.photo.squareUrl : undefined;
-  const [imagePhase, setImagePhase] = useState<"loading" | "ready" | "error">(
-    "loading"
-  );
-
-  useEffect(() => {
-    setImagePhase("loading");
-  }, [photoUrl]);
-
-  if (photoStatus.status === "error" || (photoUrl && imagePhase === "error")) {
-    return (
-      <ThumbnailFrame>
-        <ThumbnailError message={t("Couldn't load photo")} />
-      </ThumbnailFrame>
-    );
-  }
-  if (photoStatus.status === "empty") {
-    return (
-      <ThumbnailFrame>
-        <ThumbnailEmpty />
-      </ThumbnailFrame>
-    );
-  }
-  if (photoStatus.status === "loading" || !photoUrl) {
-    return (
-      <ThumbnailFrame>
-        <ThumbnailSkeleton />
-      </ThumbnailFrame>
-    );
-  }
-
-  return (
-    <ThumbnailFrame>
-      {imagePhase === "loading" ? <ThumbnailSkeleton /> : null}
-      <img
-        src={photoUrl}
-        alt=""
-        aria-hidden
-        className={`pointer-events-none absolute left-1/2 top-1/2 h-[180%] w-[180%] max-w-none -translate-x-1/2 -translate-y-1/2 object-cover blur-xl brightness-110 ${
-          imagePhase === "ready" ? "" : "invisible"
-        }`}
-      />
-      <img
-        src={photoUrl}
-        alt=""
-        onLoad={() => setImagePhase("ready")}
-        onError={() => setImagePhase("error")}
-        className={`relative z-10 h-full w-full object-contain ${
-          imagePhase === "ready" ? "" : "invisible"
-        }`}
-      />
-    </ThumbnailFrame>
-  );
-}
-
-function OrganismPhotoCredit({
-  attribution,
-  licenseCode,
-}: {
-  attribution: string;
-  licenseCode?: string;
-}) {
-  const parts = inaturalistAttributionParts(attribution, licenseCode);
-  return (
-    <p className="mt-1 text-[10px] leading-snug text-gray-500">
-      {parts.text}
-      {parts.licenseUrl && parts.licenseLabel ? (
-        <>
-          {" "}
-          <a
-            href={parts.licenseUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="text-sky-300/80 hover:text-sky-200"
-          >
-            {parts.licenseLabel}
-          </a>
-        </>
-      ) : null}
-    </p>
-  );
-}
-
 function OrganismPreviewRow({
   row,
-  photoStatus,
+  listEl,
 }: {
   row: OrganismCatalogRow;
-  photoStatus: InaturalistTaxonPhotoStatus;
+  listEl: HTMLDivElement | null;
 }) {
   const { t } = useTranslation("admin:data");
+  const photoStatus = useInaturalistTaxonPhoto(row.inat_taxon_id, false);
   const confidenceLabel =
     row.confidence === "high"
       ? t("Resolved")
@@ -227,7 +88,13 @@ function OrganismPreviewRow({
       data-inat-taxon-id={row.inat_taxon_id || undefined}
       className="flex items-stretch gap-3 border-t border-white/5 px-3 py-2.5"
     >
-      <OrganismThumbnail photoStatus={photoStatus} />
+      <INaturalistThumbnail
+        sourceId={row.inat_taxon_id}
+        size="lg"
+        tone="dark"
+        showAttribution
+        root={listEl}
+      />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
           {/* eslint-disable-next-line i18next/no-literal-string -- observation value */}
@@ -286,9 +153,11 @@ function OrganismPreviewRow({
           ) : null}
         </div>
         {attribution && readyPhoto ? (
-          <OrganismPhotoCredit
+          <INaturalistPhotoCredit
             attribution={attribution}
             licenseCode={readyPhoto.licenseCode}
+            photoId={readyPhoto.photoId}
+            className="mt-1 text-sky-300/80"
           />
         ) : null}
         {row.description ? <OrganismDescription text={row.description} /> : null}
@@ -301,10 +170,12 @@ export default function OrganismPreviewList({
   rows,
   loading,
   error,
+  emptyLabel,
 }: {
   rows: OrganismCatalogRow[];
   loading?: boolean;
   error?: string | null;
+  emptyLabel?: string;
 }) {
   const { t } = useTranslation("admin:data");
   const [query, setQuery] = useState("");
@@ -315,11 +186,7 @@ export default function OrganismPreviewList({
     () => filterOrganismPreviewRows(rows, query, confidence),
     [rows, query, confidence]
   );
-  const photoIds = useMemo(
-    () => rows.map((row) => row.inat_taxon_id),
-    [rows]
-  );
-  const photoLookup = useInaturalistTaxonPhotos(photoIds);
+  const [listEl, setListEl] = useState<HTMLDivElement | null>(null);
 
   const filters: Array<{
     id: OrganismPreviewConfidenceFilter;
@@ -364,7 +231,7 @@ export default function OrganismPreviewList({
   if (rows.length === 0) {
     return (
       <p className="py-8 text-center text-sm italic text-gray-400">
-        {t("No catalog rows yet. Enrich this table to build one.")}
+        {emptyLabel || t("Choose an identity column to preview values.")}
       </p>
     );
   }
@@ -408,7 +275,10 @@ export default function OrganismPreviewList({
           total: rows.length,
         })}
       </p>
-      <div className="mt-2 min-h-0 flex-1 overflow-auto rounded-md border border-white/10 bg-black/20">
+      <div
+        ref={setListEl}
+        className="mt-2 min-h-0 flex-1 overflow-auto rounded-md border border-white/10 bg-black/20"
+      >
         {filtered.length === 0 ? (
           <p className="px-3 py-6 text-center text-sm italic text-gray-500">
             {t("No values match this filter.")}
@@ -418,10 +288,7 @@ export default function OrganismPreviewList({
             <OrganismPreviewRow
               key={item.value}
               row={item}
-              photoStatus={inaturalistTaxonPhotoStatus(
-                item.inat_taxon_id,
-                photoLookup
-              )}
+              listEl={listEl}
             />
           ))
         )}

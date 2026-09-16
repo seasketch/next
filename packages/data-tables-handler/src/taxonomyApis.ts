@@ -10,7 +10,8 @@ export const ORGANISM_USER_AGENT =
   "SeaSketch-organism-enrichment/1.0 (https://www.seasketch.org)";
 
 export const WORMS_MATCH_NAME_BATCH = 50;
-export const WORMS_MIN_INTERVAL_MS = 200;
+/** Polite floor between WoRMS calls. 429s already back off. */
+export const WORMS_MIN_INTERVAL_MS = 50;
 
 export type TaxonomyFetch = (
   url: string,
@@ -192,12 +193,7 @@ export async function fetchWormsMatchNames(
     const json = await fetchJson(
       clients,
       "worms",
-      `${WORMS_REST_URL}/AphiaRecordsByMatchNames`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: params.toString(),
-      }
+      `${WORMS_REST_URL}/AphiaRecordsByMatchNames?${params.toString()}`
     );
     const groups = Array.isArray(json) ? json : batch.map(() => []);
     for (let g = 0; g < batch.length; g++) {
@@ -352,8 +348,9 @@ export async function resolveOrganismTaxa(
     uniqueAphiaIds: uniqueAphiaIds.length,
     uniqueScientificNames: uniqueMatchNames.length,
     wormsEtaSec: Math.round(
-      uniqueAphiaIds.length * 0.2 +
-        Math.ceil(uniqueMatchNames.length / WORMS_MATCH_NAME_BATCH) * 0.2
+      (uniqueAphiaIds.length +
+        Math.ceil(uniqueMatchNames.length / WORMS_MATCH_NAME_BATCH)) *
+        (WORMS_MIN_INTERVAL_MS / 1000)
     ),
   });
 
@@ -424,7 +421,9 @@ export async function resolveOrganismTaxa(
   const vernacularsById = new Map<number, string[]>();
   logTaxonomy("worms details plan", {
     acceptedAphiaIds: acceptedIds.length,
-    wormsDetailsEtaSec: Math.round(acceptedIds.length * 2 * 0.2),
+    wormsDetailsEtaSec: Math.round(
+      acceptedIds.length * 2 * (WORMS_MIN_INTERVAL_MS / 1000)
+    ),
   });
   for (let i = 0; i < acceptedIds.length; i++) {
     const id = acceptedIds[i];
@@ -471,9 +470,12 @@ export async function resolveOrganismTaxa(
 
   const wikiNames: string[] = [];
   for (let i = 0; i < results.length; i++) {
-    if (results[i].scientificName) wikiNames.push(results[i].scientificName!);
-    if (inputs[i].scientificName) wikiNames.push(inputs[i].scientificName);
-    if (inputs[i].commonName) wikiNames.push(inputs[i].commonName);
+    const resultName = results[i].scientificName;
+    const inputName = inputs[i].scientificName;
+    const inputCommon = inputs[i].commonName;
+    if (resultName) wikiNames.push(resultName);
+    if (inputName) wikiNames.push(inputName);
+    if (inputCommon) wikiNames.push(inputCommon);
   }
 
   logTaxonomy("wikidata plan", {

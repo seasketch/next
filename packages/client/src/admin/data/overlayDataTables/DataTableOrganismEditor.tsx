@@ -3,13 +3,15 @@ import { ExclamationCircleIcon, XIcon } from "@heroicons/react/outline";
 import {
   DataTableOrganismConfig,
   ORGANISM_COLUMN_ROLES,
+  ORGANISM_VALUE_KINDS,
   OrganismCatalogRow,
   OrganismColumnRole,
+  OrganismRoles,
   isOrganismInfo,
+  isOrganismValueKind,
   rolesForColumn,
 } from "@seasketch/geostats-types";
-import { AnimatePresence, motion } from "framer-motion";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import { useGlobalErrorHandler } from "../../../components/GlobalErrorHandler";
 import Spinner from "../../../components/Spinner";
@@ -18,10 +20,12 @@ import {
   JobDetailsFragment,
   OverlayDataTableDetailsFragment,
   ProjectBackgroundJobState,
+  useCancelUploadMutation,
   useCreateOverlayDataTableOrganismReprocessMutation,
   useSubmitOverlayDataTableUploadMutation,
   useUpdateOverlayDataTableOrganismMutation,
 } from "../../../generated/graphql";
+import { buildDataTableQuerySearchParams } from "../../../dataLayers/dataTableQueryApi";
 import { withHostedAuthParams } from "../../../dataLayers/tilesAuth";
 import {
   columnStatsUrlForTable,
@@ -29,7 +33,6 @@ import {
 } from "../../../dataLayers/useDataTableColumnStats";
 import useCurrentProjectMetadata from "../../../useCurrentProjectMetadata";
 import { dataTableMutationRefetchQueries } from "../../changelogs/dataTableChangeLogRefetch";
-import LayerEditorTabs from "../TableOfContentsItemEditor/LayerEditorTabs";
 import AttributeSelect from "../styleEditor/AttributeSelect";
 import OrganismPreviewList from "./OrganismPreviewList";
 import {
@@ -37,19 +40,20 @@ import {
   useTrackOverlayDataTableJob,
 } from "./useDataTableReprocessJob";
 import {
-  ORGANISM_EDITOR_STEPS,
   OrganismEditorFormState,
-  OrganismEditorStep,
   classTableJoinColumnName,
   configFromForm,
+  distinctValuesFromColumnStats,
   formStateFromOrganism,
-  histogramDistinctCount,
-  isOrganismPreviewPayload,
-  observationAttributes,
   formatOrganismLookupProgress,
+  isOrganismPreviewPayload,
+  joinOrganismCatalogRows,
+  observationAttributes,
+  organismFormIsDirty,
   organismJobProgressMessage,
-  readCsvHeaders,
-  rolesForEnrichment,
+  parseDistinctOrganismGroups,
+  readCsvRecords,
+  rolesForSourceAndJoinTables,
   sampleValuesForColumn,
   suggestValueKindForColumn,
   toggleOrganismRole,
@@ -60,12 +64,7 @@ type DataTableJob = Pick<
   "id" | "state" | "progress" | "progressMessage" | "errorMessage"
 >;
 
-type EditorView = "catalog" | "configure";
-
-function roleLabel(
-  role: OrganismColumnRole,
-  t: (key: string) => string
-) {
+function roleLabel(role: OrganismColumnRole, t: (key: string) => string) {
   switch (role) {
     case "code":
       return t("Code");
@@ -86,6 +85,92 @@ function roleLabel(
   }
 }
 
+function ColumnRolesDetails({
+  title,
+  columns,
+  roles,
+  open,
+  onOpenChange,
+  badgeForColumn,
+  onToggleRole,
+}: {
+  title: string;
+  columns: string[];
+  roles: OrganismRoles;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  badgeForColumn: (column: string) => string | null;
+  onToggleRole: (column: string, role: OrganismColumnRole) => void;
+}) {
+  const { t } = useTranslation("admin:data");
+  if (columns.length === 0) return null;
+  return (
+    <details
+      open={open}
+      className="min-h-0 rounded-md border border-white/10 bg-black/20"
+    >
+      <summary
+        className="cursor-pointer px-3 py-2 text-sm text-gray-200"
+        onClick={(event) => {
+          event.preventDefault();
+          onOpenChange(!open);
+        }}
+      >
+        {title}
+      </summary>
+      <div className="max-h-[22vh] overflow-y-auto px-2 pb-2">
+        <table className="w-full text-left text-xs">
+          <thead className="sticky top-0 z-10 bg-gray-800 text-gray-300">
+            <tr>
+              <th className="px-2 py-1 font-medium">{t("Column")}</th>
+              <th className="px-2 py-1 font-medium">{t("Roles")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {columns.map((column) => {
+              const assigned = rolesForColumn(roles, column);
+              const badge = badgeForColumn(column);
+              return (
+                <tr key={column} className="border-t border-white/5">
+                  <td className="px-2 py-1 align-top font-mono text-green-300">
+                    {column}
+                    {badge ? (
+                      <span className="ml-1 font-sans text-[10px] uppercase tracking-wide text-sky-300">
+                        {badge}
+                      </span>
+                    ) : null}
+                  </td>
+                  <td className="px-2 py-1">
+                    <div className="flex flex-wrap gap-1">
+                      {ORGANISM_COLUMN_ROLES.map((role) => {
+                        const on = assigned.includes(role);
+                        return (
+                          <button
+                            key={role}
+                            type="button"
+                            onClick={() => onToggleRole(column, role)}
+                            className={`rounded-full px-2 py-0.5 ${
+                              on
+                                ? "bg-sky-500/30 text-sky-100 ring-1 ring-sky-400/40"
+                                : "bg-white/5 text-gray-400 hover:bg-white/10"
+                            }`}
+                          >
+                            {roleLabel(role, t)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  );
+}
+
 function valueKindLabel(
   kind: OrganismEditorFormState["valueKind"],
   t: (key: string) => string
@@ -102,28 +187,15 @@ function valueKindLabel(
   }
 }
 
-function stepLabel(step: OrganismEditorStep, t: (key: string) => string) {
-  switch (step) {
-    case "identity":
-      return t("Identity");
-    case "classTable":
-      return t("Class table");
-    case "roles":
-      return t("Roles");
-    default:
-      return t("Enrich");
-  }
-}
-
 function reprocessProgressLabel(
   job: DataTableJob | undefined,
   t: (key: string, vars?: Record<string, string | number>) => string
 ) {
   if (!job) {
-    return t("Starting enrichment…");
+    return t("Starting lookup…");
   }
   if (job.state === ProjectBackgroundJobState.Failed) {
-    return job.errorMessage || t("Enrichment failed");
+    return job.errorMessage || t("Lookup failed");
   }
   if (job.progressMessage === "uploading") {
     return t("Uploading class table…");
@@ -151,74 +223,34 @@ function reprocessProgressLabel(
         break;
     }
   }
-  return job.progressMessage || t("Enriching organisms…");
+  return job.progressMessage || t("Looking up taxa…");
 }
 
-function OrganismReprocessOverlay({ job }: { job?: DataTableJob }) {
-  const { t } = useTranslation("admin:data");
-  const failed = job?.state === ProjectBackgroundJobState.Failed;
-  const progress = job?.progress ?? 0;
-  const label = reprocessProgressLabel(job, t);
-  const percent = Math.round(progress * 100);
+/** Headless UI Dialog treats focus leaving the panel as dismiss. Radix
+ * Select portals outside the panel and unmounts before that check runs. */
+function useDialogNestedPickerGuard() {
+  const blockedRef = useRef(false);
+  const timerRef = useRef(0);
 
-  return (
-    <motion.div
-      key="organism-reprocess-overlay"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-      transition={{ duration: 0.28 }}
-      className="absolute inset-0 z-10 flex flex-col items-center justify-center overflow-hidden bg-gray-950/70 px-6 backdrop-blur-[3px]"
-      role="status"
-      aria-live="polite"
-      aria-busy={!failed}
-    >
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.35, ease: "easeOut" }}
-        className="relative w-full max-w-sm text-center"
-      >
-        {failed ? (
-          <ExclamationCircleIcon
-            className="mx-auto h-8 w-8 text-red-300"
-            aria-hidden
-          />
-        ) : (
-          <Spinner large color="white" className="opacity-80" />
-        )}
-        <p
-          className={`mt-3 text-sm font-medium ${
-            failed ? "text-red-100" : "text-gray-100"
-          }`}
-        >
-          {failed ? t("Enrichment failed") : t("Enriching organisms…")}
-        </p>
-        <p
-          className={`mt-1 max-h-24 overflow-y-auto text-xs ${
-            failed
-              ? "whitespace-pre-wrap break-words font-mono text-red-200/90"
-              : "text-gray-300"
-          }`}
-        >
-          {label}
-        </p>
-        {!failed ? (
-          <div className="mt-4">
-            <div className="h-1.5 overflow-hidden rounded-full bg-white/10">
-              <div
-                className="h-full rounded-full bg-sky-400 transition-[width] duration-500 ease-out"
-                style={{ width: `${percent}%` }}
-              />
-            </div>
-            <p className="mt-2 text-xs tabular-nums text-sky-200/80">
-              {t("{{percent}}%", { percent })}
-            </p>
-          </div>
-        ) : null}
-      </motion.div>
-    </motion.div>
-  );
+  useEffect(() => {
+    return () => window.clearTimeout(timerRef.current);
+  }, []);
+
+  const setNestedPickerOpen = useCallback((open: boolean) => {
+    window.clearTimeout(timerRef.current);
+    if (open) {
+      blockedRef.current = true;
+      return;
+    }
+    blockedRef.current = true;
+    timerRef.current = window.setTimeout(() => {
+      blockedRef.current = false;
+    }, 200);
+  }, []);
+
+  const shouldBlockDismiss = useCallback(() => blockedRef.current, []);
+
+  return { setNestedPickerOpen, shouldBlockDismiss };
 }
 
 async function putClassCsv(url: string, file: File) {
@@ -253,26 +285,35 @@ export default function DataTableOrganismEditor({
   const onError = useGlobalErrorHandler();
   const { data: projectMeta } = useCurrentProjectMetadata();
   const mapAccessToken = projectMeta?.project?.mapAccessToken;
+  const projectId = projectMeta?.project?.id;
   const { columnStats, loading: statsLoading } = useDataTableColumnStats(
     columnStatsUrlForTable(table),
     mapAccessToken
   );
 
   const existing = isOrganismInfo(table.organism) ? table.organism : null;
-  const [view, setView] = useState<EditorView>(existing ? "catalog" : "configure");
-  const [step, setStep] = useState<OrganismEditorStep>("identity");
   const [form, setForm] = useState<OrganismEditorFormState>(() =>
     formStateFromOrganism(table.organism)
   );
   const [classFile, setClassFile] = useState<File | null>(null);
   const [classHeaders, setClassHeaders] = useState<string[]>([]);
+  const [classRows, setClassRows] = useState<Array<Record<string, string>>>([]);
   const [classFileError, setClassFileError] = useState<string | null>(null);
-  const [previewRows, setPreviewRows] = useState<OrganismCatalogRow[]>([]);
-  const [previewError, setPreviewError] = useState<string | null>(null);
-  const [previewLoading, setPreviewLoading] = useState(false);
+  const [savedRows, setSavedRows] = useState<OrganismCatalogRow[]>([]);
+  const [savedError, setSavedError] = useState<string | null>(null);
+  const [savedLoading, setSavedLoading] = useState(false);
+  const [distinctValues, setDistinctValues] = useState<
+    Array<{ value: string; occurrenceCount: number }>
+  >([]);
+  const [distinctError, setDistinctError] = useState<string | null>(null);
+  const [distinctLoading, setDistinctLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [reprocessing, setReprocessing] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [confirmClear, setConfirmClear] = useState(false);
+  const [openRolesList, setOpenRolesList] = useState<
+    "source" | "join" | null
+  >("source");
   const [previewEpoch, setPreviewEpoch] = useState(0);
   const trackOverlayJob = useTrackOverlayDataTableJob();
   useClearReprocessWhenJobSettles({
@@ -280,7 +321,14 @@ export default function DataTableOrganismEditor({
     reprocessing,
     saving,
     setReprocessing,
-    onSettled: () => setPreviewEpoch((value) => value + 1),
+    onSettled: () => {
+      setPreviewEpoch((value) => value + 1);
+      if (job?.state === ProjectBackgroundJobState.Complete) {
+        setClassFile(null);
+        setClassHeaders([]);
+        setClassRows([]);
+      }
+    },
   });
 
   const changeLogRefetchQueries = useMemo(
@@ -299,31 +347,33 @@ export default function DataTableOrganismEditor({
     onError,
     refetchQueries: changeLogRefetchQueries,
   });
+  const [cancelJob] = useCancelUploadMutation({ onError });
+  const { setNestedPickerOpen, shouldBlockDismiss } =
+    useDialogNestedPickerGuard();
 
   const attributes = useMemo(
     () => observationAttributes(columnStats),
     [columnStats]
   );
-  const roleColumns = classHeaders.length > 0 ? classHeaders : attributes.map(
-    (attr) => attr.attribute
+  const observationColumns = useMemo(
+    () => attributes.map((attr) => attr.attribute),
+    [attributes]
   );
-  const joinColumn = classTableJoinColumnName(
-    form.column,
-    form.roles,
-    roleColumns
-  );
-  const distinctHint = histogramDistinctCount(columnStats, form.column);
+  const joinColumn =
+    form.classJoinColumn && classHeaders.includes(form.classJoinColumn)
+      ? form.classJoinColumn
+      : "";
   const samples = sampleValuesForColumn(columnStats, form.column);
-  const config = configFromForm(form);
+  const config = configFromForm(form, { classHeaders });
+  const dirty = organismFormIsDirty(form, existing, Boolean(classFile));
 
   const jobRunning =
     job &&
     (job.state === ProjectBackgroundJobState.Queued ||
       job.state === ProjectBackgroundJobState.Running);
   const jobFailed = job?.state === ProjectBackgroundJobState.Failed;
-  const showJobOverlay = Boolean(
-    jobFailed ||
-      jobRunning ||
+  const lookupBusy = Boolean(
+    jobRunning ||
       (reprocessing && job?.state !== ProjectBackgroundJobState.Complete)
   );
 
@@ -332,28 +382,134 @@ export default function DataTableOrganismEditor({
     setForm(formStateFromOrganism(table.organism));
     setClassFile(null);
     setClassHeaders([]);
+    setClassRows([]);
     setClassFileError(null);
-    setStep("identity");
-    setView(isOrganismInfo(table.organism) ? "catalog" : "configure");
     setConfirmClear(false);
+    setOpenRolesList("source");
+    if (!isOrganismInfo(table.organism)) {
+      setSavedRows([]);
+      setSavedError(null);
+      setSavedLoading(false);
+    }
   }, [open, table.organism]);
 
   useEffect(() => {
     if (!open) {
       setReprocessing(false);
+      setCancelling(false);
     }
   }, [open]);
 
   useEffect(() => {
-    if (!open || view !== "catalog" || !table.organismPreviewUrl) {
-      if (!table.organismPreviewUrl) {
-        setPreviewRows([]);
+    const previewUrl = table.organismPreviewUrl;
+    if (!open || !existing || !previewUrl) {
+      if (!existing || !previewUrl) {
+        setSavedRows([]);
+        setSavedError(null);
+        setSavedLoading(false);
       }
       return;
     }
+    if (dirty && !lookupBusy) {
+      return;
+    }
     let cancelled = false;
-    setPreviewLoading(true);
-    const authorized = withHostedAuthParams(table.organismPreviewUrl, {
+    const load = (showSpinner: boolean) => {
+      if (showSpinner) setSavedLoading(true);
+      const authorized = withHostedAuthParams(previewUrl, {
+        accessToken: mapAccessToken,
+      });
+      return fetch(authorized, {
+        cache: "no-store",
+        headers: { accept: "application/json" },
+      })
+        .then(async (response) => {
+          if (!response.ok) {
+            throw new Error(
+              (await response.text()) ||
+                t("Could not load the organism catalog.")
+            );
+          }
+          return response.json();
+        })
+        .then((payload: unknown) => {
+          if (cancelled) return;
+          if (!isOrganismPreviewPayload(payload)) {
+            throw new Error(t("Organism catalog preview is not valid JSON."));
+          }
+          setSavedRows(payload.rows);
+          setSavedError(null);
+        })
+        .catch((error: Error) => {
+          if (!cancelled && showSpinner) {
+            setSavedRows([]);
+            setSavedError(error.message);
+          }
+        })
+        .finally(() => {
+          if (!cancelled && showSpinner) setSavedLoading(false);
+        });
+    };
+    void load(!lookupBusy);
+    if (!lookupBusy) {
+      return () => {
+        cancelled = true;
+      };
+    }
+    const timer = window.setInterval(() => {
+      void load(false);
+    }, 3000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [
+    open,
+    dirty,
+    lookupBusy,
+    existing,
+    table.organismPreviewUrl,
+    mapAccessToken,
+    t,
+    previewEpoch,
+  ]);
+
+  useEffect(() => {
+    if (!open || !form.column) {
+      setDistinctValues([]);
+      setDistinctError(null);
+      setDistinctLoading(false);
+      return;
+    }
+    const fromStats = distinctValuesFromColumnStats(columnStats, form.column);
+    if (fromStats) {
+      setDistinctValues(fromStats);
+      setDistinctError(null);
+      setDistinctLoading(false);
+      return;
+    }
+    if (statsLoading) {
+      setDistinctLoading(true);
+      return;
+    }
+    if (!table.queryUrl) {
+      setDistinctValues([]);
+      setDistinctError(t("This table has no query URL."));
+      setDistinctLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setDistinctLoading(true);
+    const params = buildDataTableQuerySearchParams({
+      groupBy: form.column,
+      op: "count",
+    });
+    params.set("f", "json");
+    const url = new URL(table.queryUrl, window.location.origin);
+    params.forEach((value, key) => {
+      url.searchParams.set(key, value);
+    });
+    const authorized = withHostedAuthParams(url.toString(), {
       accessToken: mapAccessToken,
     });
     fetch(authorized, {
@@ -363,32 +519,38 @@ export default function DataTableOrganismEditor({
       .then(async (response) => {
         if (!response.ok) {
           throw new Error(
-            (await response.text()) || t("Could not load the organism catalog.")
+            (await response.text()) ||
+              t("Could not load distinct values for this column.")
           );
         }
         return response.json();
       })
       .then((payload: unknown) => {
         if (cancelled) return;
-        if (!isOrganismPreviewPayload(payload)) {
-          throw new Error(t("Organism catalog preview is not valid JSON."));
-        }
-        setPreviewRows(payload.rows);
-        setPreviewError(null);
+        setDistinctValues(parseDistinctOrganismGroups(payload, form.column));
+        setDistinctError(null);
       })
       .catch((error: Error) => {
         if (!cancelled) {
-          setPreviewRows([]);
-          setPreviewError(error.message);
+          setDistinctValues([]);
+          setDistinctError(error.message);
         }
       })
       .finally(() => {
-        if (!cancelled) setPreviewLoading(false);
+        if (!cancelled) setDistinctLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [open, view, table.organismPreviewUrl, mapAccessToken, t, previewEpoch]);
+  }, [
+    open,
+    form.column,
+    columnStats,
+    statsLoading,
+    table.queryUrl,
+    mapAccessToken,
+    t,
+  ]);
 
   const applyClassFile = useCallback(
     async (file: File | null) => {
@@ -396,18 +558,52 @@ export default function DataTableOrganismEditor({
       setClassFileError(null);
       if (!file) {
         setClassHeaders([]);
+        setClassRows([]);
+        setOpenRolesList("source");
+        setForm((prev) => ({
+          ...prev,
+          classJoinColumn: "",
+          roles: rolesForSourceAndJoinTables(
+            observationColumns,
+            [],
+            prev.column,
+            prev.valueKind,
+            prev.roles
+          ),
+        }));
         return;
       }
       try {
-        const headers = await readCsvHeaders(file);
-        if (headers.length === 0) {
+        const parsed = await readCsvRecords(file);
+        if (parsed.headers.length === 0) {
           setClassHeaders([]);
+          setClassRows([]);
           setClassFileError(t("Could not read column names from that CSV."));
           return;
         }
-        setClassHeaders(headers);
+        setClassHeaders(parsed.headers);
+        setClassRows(parsed.rows);
+        setOpenRolesList("join");
+        setForm((prev) => {
+          const roles = rolesForSourceAndJoinTables(
+            observationColumns,
+            parsed.headers,
+            prev.column,
+            prev.valueKind,
+            prev.roles
+          );
+          const classJoinColumn = parsed.headers.includes(prev.classJoinColumn)
+            ? prev.classJoinColumn
+            : classTableJoinColumnName(
+                prev.column,
+                roles,
+                parsed.headers
+              ) || "";
+          return { ...prev, roles, classJoinColumn };
+        });
       } catch (error) {
         setClassHeaders([]);
+        setClassRows([]);
         setClassFileError(
           error instanceof Error
             ? error.message
@@ -415,27 +611,11 @@ export default function DataTableOrganismEditor({
         );
       }
     },
-    [t]
+    [observationColumns, t]
   );
 
-  const goToStep = (next: OrganismEditorStep) => {
-    if (next === "roles") {
-      setForm((prev) => ({
-        ...prev,
-        roles: rolesForEnrichment(
-          classHeaders.length > 0
-            ? classHeaders
-            : attributes.map((attr) => attr.attribute),
-          prev.column,
-          prev.valueKind,
-          prev.roles
-        ),
-      }));
-    }
-    setStep(next);
-  };
-
-  const startEnrichment = async () => {
+  const startLookup = async () => {
+    setOpenRolesList(null);
     if (!config || saving || jobRunning) return;
     setSaving(true);
     setReprocessing(true);
@@ -445,9 +625,7 @@ export default function DataTableOrganismEditor({
           tableId: table.id,
           organismConfig: config as DataTableOrganismConfig,
           classCsvFilename: classFile ? classFile.name : null,
-          classCsvContentType: classFile
-            ? classFile.type || "text/csv"
-            : null,
+          classCsvContentType: classFile ? classFile.type || "text/csv" : null,
         },
       });
       const payload = result.data?.createOverlayDataTableOrganismReprocess;
@@ -470,6 +648,20 @@ export default function DataTableOrganismEditor({
     }
   };
 
+  const cancelLookup = async () => {
+    if (!projectId || !job?.id || cancelling) return;
+    setCancelling(true);
+    try {
+      await cancelJob({
+        variables: { projectId, jobId: job.id },
+      });
+      setReprocessing(false);
+      onJobStarted();
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   const clearOrganism = async () => {
     await updateOrganism({
       variables: { overlayDataTableId: table.id, organism: null },
@@ -478,453 +670,376 @@ export default function DataTableOrganismEditor({
     onClose();
   };
 
-  const classifiedLabel =
-    existing &&
-    existing.classifiedCount != null &&
-    existing.valueCount != null
-      ? t("{{classified}}/{{total}} classified", {
-          classified: existing.classifiedCount,
-          total: existing.valueCount,
-        })
-      : null;
+  const joinRows = useMemo(() => {
+    if (!config || distinctValues.length === 0) return [];
+    return joinOrganismCatalogRows({
+      values: distinctValues,
+      classRows,
+      config,
+    });
+  }, [config, distinctValues, classRows]);
 
-  const canAdvanceIdentity = Boolean(form.column);
-  const stepIndex = ORGANISM_EDITOR_STEPS.indexOf(step);
+  const useSaved =
+    Boolean(existing) && savedRows.length > 0 && (!dirty || lookupBusy);
+  const previewRows = useSaved ? savedRows : joinRows;
+  const previewLoading =
+    (!useSaved && distinctLoading) || (useSaved && savedLoading && !lookupBusy);
+  const previewError = useSaved ? savedError || distinctError : distinctError;
 
   return (
     <Dialog
       open={open}
       onClose={() => {
-        if (!saving) onClose();
+        if (saving || shouldBlockDismiss()) return;
+        onClose();
       }}
       className="relative z-50"
     >
       <div className="fixed inset-0 bg-black/50" aria-hidden="true" />
       <div className="fixed inset-0 flex items-center justify-center p-4">
         <Dialog.Panel
-          className="flex max-h-[90vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-white/10 bg-gray-700 text-gray-100 shadow-2xl [color-scheme:dark]"
+          className="flex h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl border border-white/10 bg-gray-700 text-gray-100 shadow-2xl [color-scheme:dark]"
           style={{ colorScheme: "dark" }}
         >
-          <div className="border-b border-gray-600">
-            <div className="flex items-center gap-2 px-3 pt-3 pb-2">
-              <Dialog.Title className="min-w-0 flex-1 truncate font-medium text-indigo-100">
+          <div className="flex items-start gap-2 border-b border-gray-600 px-5 py-3">
+            <div className="min-w-0 flex-1">
+              <Dialog.Title className="font-medium text-indigo-100">
                 <Trans ns="admin:data">Organism identity</Trans>
               </Dialog.Title>
-              <button
-                type="button"
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/5 bg-black/20 text-gray-200 hover:bg-gray-600 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300"
-                onClick={onClose}
-                aria-label={t("Close")}
-              >
-                <XIcon className="h-5 w-5" aria-hidden />
-              </button>
+              <p className="mt-1.5 text-sm leading-5 text-gray-300">
+                <Trans ns="admin:data">
+                  If this table represents observations of marine species, you
+                  can identify column(s) that represent these subjects to
+                  display rich inputs for filtering records by species name,
+                  common name, or searching by higher-order taxonomy (e.g.
+                  Sebastes). Taxonomic information will be supplemented with
+                  data from{" "}
+                  <a
+                    href="https://www.marinespecies.org/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sky-300 hover:text-sky-200"
+                  >
+                    WoRMS
+                  </a>
+                  , and photos will be dynamically displayed from{" "}
+                  <a
+                    href="https://www.inaturalist.org/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-sky-300 hover:text-sky-200"
+                  >
+                    iNaturalist
+                  </a>
+                  .
+                </Trans>
+              </p>
             </div>
-            {existing ? (
-              <div
-                className={
-                  showJobOverlay
-                    ? "pointer-events-none opacity-40 transition-opacity duration-300"
-                    : undefined
-                }
-              >
-                <LayerEditorTabs
-                  tabs={[
-                    { id: "catalog", name: t("Catalog"), current: view === "catalog" },
-                    {
-                      id: "configure",
-                      name: t("Configure"),
-                      current: view === "configure",
-                    },
-                  ]}
-                  onSelect={(id) => {
-                    if (!showJobOverlay) {
-                      setView(id as EditorView);
-                    }
+            <button
+              type="button"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/5 bg-black/20 text-gray-200 hover:bg-gray-600 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300"
+              onClick={onClose}
+              aria-label={t("Close")}
+            >
+              <XIcon className="h-5 w-5" aria-hidden />
+            </button>
+          </div>
+
+          <div
+            className={`min-h-0 shrink-0 space-y-3 overflow-y-auto border-b border-gray-600 px-5 py-3 ${
+              lookupBusy ? "pointer-events-none opacity-60" : ""
+            }`}
+          >
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_13.5rem]">
+              <label className="block min-w-0 space-y-1">
+                <span className="text-sm text-gray-200">
+                  {t("Identity column")}
+                </span>
+                {statsLoading ? (
+                  <div className="flex items-center gap-2 text-sm text-gray-400">
+                    <Spinner mini />
+                    {t("Loading columns…")}
+                  </div>
+                ) : (
+                  <AttributeSelect
+                    id="organism-identity-column"
+                    attributes={attributes}
+                    modal={false}
+                    preventCloseAutoFocus={false}
+                    onOpenChange={setNestedPickerOpen}
+                    value={form.column || undefined}
+                    onChange={(column) => {
+                      const valueKind = suggestValueKindForColumn(column);
+                      setForm((prev) => ({
+                        ...prev,
+                        column,
+                        valueKind,
+                        roles: rolesForSourceAndJoinTables(
+                          observationColumns,
+                          classHeaders,
+                          column,
+                          valueKind,
+                          prev.roles
+                        ),
+                      }));
+                    }}
+                    placeholder={t("Select a column")}
+                    fullWidth
+                    triggerClassName="border !border-white/10 bg-gray-900/40 px-2.5 text-left text-green-300 hover:!border-white/20 disabled:cursor-not-allowed disabled:opacity-40 [&>span:first-child]:min-w-0 [&>span:first-child]:flex-1 [&>span:first-child]:truncate"
+                    contentStyle={{ zIndex: 80 }}
+                    contentMaxWidth={340}
+                  />
+                )}
+                {samples.length > 0 ? (
+                  <p className="truncate text-xs text-gray-400">
+                    {t("Examples: {{values}}", {
+                      values: samples.join(", "),
+                    })}
+                  </p>
+                ) : null}
+              </label>
+              <label className="block min-w-0 space-y-1">
+                <span className="text-sm text-gray-200">
+                  {t("Treat as")}
+                </span>
+                <select
+                  value={form.valueKind}
+                  onChange={(event) => {
+                    const valueKind = event.target.value;
+                    if (!isOrganismValueKind(valueKind)) return;
+                    setForm((prev) => ({
+                      ...prev,
+                      valueKind,
+                      roles: rolesForSourceAndJoinTables(
+                        observationColumns,
+                        classHeaders,
+                        prev.column,
+                        valueKind,
+                        prev.roles
+                      ),
+                    }));
                   }}
+                  className="h-[2.375rem] w-full rounded-md border border-white/10 bg-gray-900/40 px-2.5 text-sm text-green-300 outline-none hover:border-white/20 focus:ring-2 focus:ring-blue-600"
+                >
+                  {ORGANISM_VALUE_KINDS.map((kind) => (
+                    <option key={kind} value={kind}>
+                      {valueKindLabel(kind, t)}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <label
+                className="inline-flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-white/20 bg-black/20 px-3 py-1.5 text-sm hover:border-white/40"
+                onDragOver={(event) => event.preventDefault()}
+                onDrop={(event) => {
+                  event.preventDefault();
+                  const file = event.dataTransfer.files[0];
+                  if (file) void applyClassFile(file);
+                }}
+              >
+                <span className="text-gray-200">
+                  {classFile ? classFile.name : t("Optional class / taxon CSV")}
+                </span>
+                {classHeaders.length > 0 ? (
+                  <span className="text-xs text-gray-400">
+                    {t("{{count}} columns", { count: classHeaders.length })}
+                  </span>
+                ) : null}
+                <input
+                  type="file"
+                  accept=".csv,text/csv"
+                  className="sr-only"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0] || null;
+                    void applyClassFile(file);
+                  }}
+                />
+              </label>
+              {classFile ? (
+                <button
+                  type="button"
+                  className="text-xs text-sky-300 hover:text-sky-200"
+                  onClick={() => void applyClassFile(null)}
+                >
+                  {t("Remove class table")}
+                </button>
+              ) : existing ? (
+                <p className="text-xs text-amber-100/80">
+                  {t("Previous class table was not kept.")}
+                </p>
+              ) : null}
+              <div className="ml-auto flex items-center gap-2">
+                <span className="text-xs text-gray-300">
+                  {t("Include low-confidence matches")}
+                </span>
+                <Switch
+                  isToggled={form.includeLowConfidenceMatches}
+                  onClick={(value) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      includeLowConfidenceMatches: value,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+            {classFileError ? (
+              <p className="text-sm text-red-200">{classFileError}</p>
+            ) : null}
+            {classFile ? (
+              <label className="block min-w-0 space-y-1">
+                <span className="text-sm text-gray-200">
+                  {t("Class table join column")}
+                </span>
+                <select
+                  value={form.classJoinColumn}
+                  onChange={(event) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      classJoinColumn: event.target.value,
+                    }))
+                  }
+                  className="h-[2.375rem] w-full rounded-md border border-white/10 bg-gray-900/40 px-2.5 text-sm text-green-300 outline-none hover:border-white/20 focus:ring-2 focus:ring-blue-600"
+                >
+                  <option value="">
+                    {t("Select the column that matches {{column}}", {
+                      column: form.column || t("the identity column"),
+                    })}
+                  </option>
+                  {classHeaders.map((header) => (
+                    <option key={header} value={header}>
+                      {header}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-400">
+                  {t(
+                    "Required. Identity-column values are matched to this class-table column."
+                  )}
+                </p>
+              </label>
+            ) : (
+              <p className="text-xs text-gray-400">
+                <Trans ns="admin:data">
+                  Leave the class table empty if this column already has useful
+                  names. Lookup uses WoRMS and Wikidata — not iNaturalist.
+                </Trans>
+              </p>
+            )}
+
+            {form.column ? (
+              <div className="space-y-2">
+                <ColumnRolesDetails
+                  title={t("Source table column roles")}
+                  columns={observationColumns}
+                  roles={form.roles}
+                  open={openRolesList === "source"}
+                  onOpenChange={(nextOpen) =>
+                    setOpenRolesList(nextOpen ? "source" : null)
+                  }
+                  badgeForColumn={(column) =>
+                    column === form.column ? t("identity") : null
+                  }
+                  onToggleRole={(column, role) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      roles: toggleOrganismRole(prev.roles, column, role),
+                    }))
+                  }
+                />
+                <ColumnRolesDetails
+                  title={t("Join table column roles")}
+                  columns={classHeaders}
+                  roles={form.roles}
+                  open={openRolesList === "join"}
+                  onOpenChange={(nextOpen) =>
+                    setOpenRolesList(nextOpen ? "join" : null)
+                  }
+                  badgeForColumn={(column) =>
+                    column === joinColumn ? t("join") : null
+                  }
+                  onToggleRole={(column, role) =>
+                    setForm((prev) => ({
+                      ...prev,
+                      roles: toggleOrganismRole(prev.roles, column, role),
+                    }))
+                  }
                 />
               </div>
             ) : null}
           </div>
 
-          <div className="relative flex min-h-0 flex-1 flex-col">
+          {lookupBusy || jobFailed ? (
             <div
-              className={`flex min-h-0 flex-1 flex-col overflow-x-hidden px-5 py-4 ${
-                view === "catalog" ? "overflow-hidden" : "overflow-y-auto"
-              }`}
+              className="flex shrink-0 items-center gap-3 border-b border-white/10 bg-black/30 px-5 py-2.5"
+              role="status"
+              aria-live="polite"
             >
-              {view === "catalog" ? (
-                <div className="flex min-h-0 flex-1 flex-col">
-                  {existing ? (
-                    <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-gray-300">
-                      {/* eslint-disable-next-line i18next/no-literal-string -- column identifier */}
-                      <code className="font-mono text-green-300">{existing.column}</code>
-                      <span>{valueKindLabel(existing.valueKind, t)}</span>
-                      {classifiedLabel ? (
-                        <span className="rounded-full bg-white/10 px-2 py-0.5 text-xs text-gray-100">
-                          {classifiedLabel}
-                        </span>
-                      ) : null}
-                    </div>
-                  ) : (
-                    <p className="mb-3 text-sm text-gray-400">
-                      {t(
-                        "This table has no organism identity yet. Configure a column to enrich it."
-                      )}
-                    </p>
-                  )}
-                  <OrganismPreviewList
-                    rows={previewRows}
-                    loading={previewLoading}
-                    error={previewError}
-                  />
-                </div>
+              {jobFailed ? (
+                <ExclamationCircleIcon
+                  className="h-5 w-5 shrink-0 text-red-300"
+                  aria-hidden
+                />
               ) : (
-                <div className="space-y-5">
-                  <ol className="flex flex-wrap gap-1">
-                    {ORGANISM_EDITOR_STEPS.map((item, index) => {
-                      const current = item === step;
-                      const reachable = index <= stepIndex || canAdvanceIdentity;
-                      return (
-                        <li key={item}>
-                          <button
-                            type="button"
-                            disabled={!reachable || showJobOverlay}
-                            onClick={() => goToStep(item)}
-                            className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                              current
-                                ? "bg-white/15 text-white"
-                                : "text-gray-400 hover:bg-white/5 hover:text-gray-200 disabled:opacity-40"
-                            }`}
-                          >
-                            {t("{{n}}. {{label}}", {
-                              n: index + 1,
-                              label: stepLabel(item, t),
-                            })}
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ol>
-
-                  {step === "identity" ? (
-                    <section className="space-y-4">
-                      <p className="text-sm text-gray-300">
-                        <Trans ns="admin:data">
-                          Choose the observation column that identifies each
-                          organism or category. Filter values stay the raw
-                          strings in this column — including substrate and
-                          lumps.
-                        </Trans>
-                      </p>
-                      <label className="block min-w-0 space-y-1">
-                        <span className="text-sm text-gray-200">
-                          {t("Identity column")}
-                        </span>
-                        {statsLoading ? (
-                          <div className="flex items-center gap-2 text-sm text-gray-400">
-                            <Spinner mini />
-                            {t("Loading columns…")}
-                          </div>
-                        ) : (
-                          <AttributeSelect
-                            id="organism-identity-column"
-                            attributes={attributes}
-                            value={form.column || undefined}
-                            onChange={(column) => {
-                              setForm((prev) => ({
-                                ...prev,
-                                column,
-                                valueKind: suggestValueKindForColumn(column),
-                              }));
-                            }}
-                            placeholder={t("Select a column")}
-                            fullWidth
-                            triggerClassName="border !border-white/10 bg-gray-900/40 px-2.5 text-left text-green-300 hover:!border-white/20 disabled:cursor-not-allowed disabled:opacity-40 [&>span:first-child]:min-w-0 [&>span:first-child]:flex-1 [&>span:first-child]:truncate"
-                            contentStyle={{ zIndex: 80 }}
-                            contentMaxWidth={340}
-                          />
-                        )}
-                      </label>
-                      <div>
-                        <p className="mb-1.5 text-sm text-gray-200">
-                          {t("Values look like")}
-                        </p>
-                        <LayerEditorTabs
-                          tabs={(
-                            [
-                              "code",
-                              "scientificName",
-                              "commonName",
-                              "mixed",
-                            ] as const
-                          ).map((kind) => ({
-                            id: kind,
-                            name: valueKindLabel(kind, t),
-                            current: form.valueKind === kind,
-                          }))}
-                          onSelect={(id) =>
-                            setForm((prev) => ({
-                              ...prev,
-                              valueKind: id as OrganismEditorFormState["valueKind"],
-                            }))
-                          }
-                        />
-                      </div>
-                      {samples.length > 0 ? (
-                        <p className="text-xs text-gray-400">
-                          {distinctHint > 0
-                            ? t(
-                                "Examples: {{values}}. About {{n}} distinct values.",
-                                {
-                                  values: samples.join(", "),
-                                  n: distinctHint.toLocaleString(),
-                                }
-                              )
-                            : t("Examples: {{values}}", {
-                                values: samples.join(", "),
-                              })}
-                        </p>
-                      ) : null}
-                    </section>
-                  ) : null}
-
-                  {step === "classTable" ? (
-                    <section className="space-y-3">
-                      <p className="text-sm text-gray-300">
-                        <Trans ns="admin:data">
-                          Optional. A class or species CSV is used for this run
-                          only — scientific names, AphiaIDs, and notes. It is
-                          not stored. Leave this empty if the identity column
-                          already has useful names.
-                        </Trans>
-                      </p>
-                      {existing ? (
-                        <p className="rounded-md border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
-                          {t(
-                            "The previous class table was not kept. Upload it again if this run needs it."
-                          )}
-                        </p>
-                      ) : null}
-                      <label
-                        className="flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-white/20 bg-black/20 px-4 py-8 text-center hover:border-white/40"
-                        onDragOver={(event) => event.preventDefault()}
-                        onDrop={(event) => {
-                          event.preventDefault();
-                          const file = event.dataTransfer.files[0];
-                          if (file) void applyClassFile(file);
-                        }}
-                      >
-                        <span className="text-sm text-gray-200">
-                          {classFile
-                            ? classFile.name
-                            : t("Drop a CSV here, or browse")}
-                        </span>
-                        <span className="mt-1 text-xs text-gray-400">
-                          {classHeaders.length > 0
-                            ? t("{{count}} columns", {
-                                count: classHeaders.length,
-                              })
-                            : t(".csv class / taxon table")}
-                        </span>
-                        <input
-                          type="file"
-                          accept=".csv,text/csv"
-                          className="sr-only"
-                          onChange={(event) => {
-                            const file = event.target.files?.[0] || null;
-                            void applyClassFile(file);
-                          }}
-                        />
-                      </label>
-                      {classFileError ? (
-                        <p className="text-sm text-red-200">{classFileError}</p>
-                      ) : null}
-                      {classFile ? (
-                        <button
-                          type="button"
-                          className="text-xs text-sky-300 hover:text-sky-200"
-                          onClick={() => void applyClassFile(null)}
-                        >
-                          {t("Remove class table")}
-                        </button>
-                      ) : null}
-                    </section>
-                  ) : null}
-
-                  {step === "roles" ? (
-                    <section className="space-y-3">
-                      <p className="text-sm text-gray-300">
-                        {classFile
-                          ? t(
-                              "Confirm what each class-table column means. Heuristics are a starting point."
-                            )
-                          : t(
-                              "Confirm roles on this observation table. Heuristics are a starting point."
-                            )}
-                      </p>
-                      {classFile && !joinColumn ? (
-                        <p className="rounded-md border border-amber-400/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-100">
-                          {t(
-                            "No join column yet. Assign a code, scientific name, or common name role — or include a column named like the identity column."
-                          )}
-                        </p>
-                      ) : classFile && joinColumn ? (
-                        <p className="text-xs text-gray-400">
-                          {t("Joining class rows on {{column}}", {
-                            column: joinColumn,
-                          })}
-                        </p>
-                      ) : null}
-                      <div className="overflow-hidden rounded-md border border-white/10">
-                        <table className="w-full text-left text-xs">
-                          <thead className="bg-gray-800 text-gray-300">
-                            <tr>
-                              <th className="px-2 py-1.5 font-medium">
-                                {t("Column")}
-                              </th>
-                              <th className="px-2 py-1.5 font-medium">
-                                {t("Roles")}
-                              </th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {roleColumns.map((column) => {
-                              const assigned = rolesForColumn(
-                                form.roles,
-                                column
-                              );
-                              return (
-                                <tr
-                                  key={column}
-                                  className="border-t border-white/5"
-                                >
-                                  <td className="px-2 py-1.5 align-top font-mono text-green-300">
-                                    {column}
-                                    {column === form.column ? (
-                                      <span className="ml-1 font-sans text-[10px] uppercase tracking-wide text-sky-300">
-                                        {t("identity")}
-                                      </span>
-                                    ) : null}
-                                  </td>
-                                  <td className="px-2 py-1.5">
-                                    <div className="flex flex-wrap gap-1">
-                                      {ORGANISM_COLUMN_ROLES.map((role) => {
-                                        const on = assigned.includes(role);
-                                        return (
-                                          <button
-                                            key={role}
-                                            type="button"
-                                            onClick={() =>
-                                              setForm((prev) => ({
-                                                ...prev,
-                                                roles: toggleOrganismRole(
-                                                  prev.roles,
-                                                  column,
-                                                  role
-                                                ),
-                                              }))
-                                            }
-                                            className={`rounded-full px-2 py-0.5 ${
-                                              on
-                                                ? "bg-sky-500/30 text-sky-100 ring-1 ring-sky-400/40"
-                                                : "bg-white/5 text-gray-400 hover:bg-white/10"
-                                            }`}
-                                          >
-                                            {roleLabel(role, t)}
-                                          </button>
-                                        );
-                                      })}
-                                    </div>
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </section>
-                  ) : null}
-
-                  {step === "review" ? (
-                    <section className="space-y-4">
-                      <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
-                        <div className="rounded-md bg-black/20 px-3 py-2">
-                          <dt className="text-xs text-gray-400">
-                            {t("Identity column")}
-                          </dt>
-                          {/* eslint-disable-next-line i18next/no-literal-string -- column identifier */}
-                          <dd className="font-mono text-green-300">
-                            {form.column}
-                          </dd>
-                        </div>
-                        <div className="rounded-md bg-black/20 px-3 py-2">
-                          <dt className="text-xs text-gray-400">
-                            {t("Values look like")}
-                          </dt>
-                          <dd>{valueKindLabel(form.valueKind, t)}</dd>
-                        </div>
-                        <div className="rounded-md bg-black/20 px-3 py-2">
-                          <dt className="text-xs text-gray-400">
-                            {t("Class table")}
-                          </dt>
-                          <dd>
-                            {classFile
-                              ? classFile.name
-                              : t("None — enrich from this table")}
-                          </dd>
-                        </div>
-                        <div className="rounded-md bg-black/20 px-3 py-2">
-                          <dt className="text-xs text-gray-400">
-                            {t("Distinct values")}
-                          </dt>
-                          <dd>
-                            {distinctHint > 0
-                              ? t("About {{n}}", {
-                                  n: distinctHint.toLocaleString(),
-                                })
-                              : t("Unknown until enrichment")}
-                          </dd>
-                        </div>
-                      </dl>
-                      <div className="flex items-start justify-between gap-4 rounded-md border border-white/10 bg-black/20 px-3 py-3">
-                        <div>
-                          <p className="text-sm text-gray-100">
-                            {t("Include low-confidence common-name matches")}
-                          </p>
-                          <p className="mt-1 text-xs text-gray-400">
-                            {t(
-                              "Off by default. Guesses still appear in the catalog with a confidence badge. Turn this on to treat them as classified and put those iNaturalist ids on the search index."
-                            )}
-                          </p>
-                        </div>
-                        <Switch
-                          isToggled={form.includeLowConfidenceMatches}
-                          onClick={(value) =>
-                            setForm((prev) => ({
-                              ...prev,
-                              includeLowConfidenceMatches: value,
-                            }))
-                          }
-                        />
-                      </div>
-                      <p className="text-xs text-gray-400">
-                        {t(
-                          "The first run can take several minutes while names are resolved. The observation table is not rewritten."
-                        )}
-                      </p>
-                    </section>
-                  ) : null}
-                </div>
+                <Spinner color="white" className="shrink-0" />
               )}
+              <div className="min-w-0 flex-1">
+                <p
+                  className={`text-sm ${
+                    jobFailed ? "text-red-100" : "text-gray-100"
+                  }`}
+                >
+                  {jobFailed
+                    ? t("Lookup failed")
+                    : reprocessProgressLabel(job, t)}
+                </p>
+                {jobFailed ? (
+                  <p className="truncate text-xs text-red-200/90">
+                    {reprocessProgressLabel(job, t)}
+                  </p>
+                ) : (
+                  <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/10">
+                    <div
+                      className="h-full rounded-full bg-sky-400 transition-[width] duration-500"
+                      style={{
+                        width: `${Math.round((job?.progress ?? 0) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+              {lookupBusy ? (
+                <button
+                  type="button"
+                  className="shrink-0 text-sm text-sky-300 hover:text-sky-200 disabled:opacity-40"
+                  disabled={cancelling || !projectId}
+                  onClick={() => void cancelLookup()}
+                >
+                  {t("Cancel")}
+                </button>
+              ) : null}
             </div>
-            <AnimatePresence>
-              {showJobOverlay ? <OrganismReprocessOverlay job={job} /> : null}
-            </AnimatePresence>
+          ) : null}
+
+          <div className="flex min-h-0 flex-1 flex-col px-5 py-3">
+            <OrganismPreviewList
+              rows={previewRows}
+              loading={previewLoading}
+              error={previewError}
+              emptyLabel={
+                form.column
+                  ? t("No values in this column yet.")
+                  : t("Choose an identity column to preview values.")
+              }
+            />
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-2 border-t border-gray-600 px-5 py-3">
             <div>
-              {view === "catalog" && existing ? (
+              {existing ? (
                 confirmClear ? (
                   <div className="flex flex-wrap items-center gap-2 text-sm">
                     <span className="text-gray-300">
@@ -943,14 +1058,14 @@ export default function DataTableOrganismEditor({
                       className="text-gray-400 hover:text-gray-200"
                       onClick={() => setConfirmClear(false)}
                     >
-                      {t("Cancel")}
+                      {t("Keep")}
                     </button>
                   </div>
                 ) : (
                   <button
                     type="button"
                     className="text-sm text-red-300 hover:text-red-200 disabled:opacity-40"
-                    disabled={showJobOverlay}
+                    disabled={lookupBusy}
                     onClick={() => setConfirmClear(true)}
                   >
                     {t("Clear organism identity")}
@@ -959,69 +1074,28 @@ export default function DataTableOrganismEditor({
               ) : null}
             </div>
             <div className="flex flex-wrap justify-end gap-2">
-              {view === "catalog" ? (
-                <>
-                  <button
-                    type="button"
-                    className="rounded-md px-3 py-1.5 text-sm text-gray-200 hover:bg-white/10"
-                    onClick={onClose}
-                  >
-                    {t("Close")}
-                  </button>
-                  <button
-                    type="button"
-                    className="rounded-md bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-500 disabled:opacity-50"
-                    disabled={showJobOverlay}
-                    onClick={() => setView("configure")}
-                  >
-                    {t("Re-enrich")}
-                  </button>
-                </>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    className="rounded-md px-3 py-1.5 text-sm text-gray-200 hover:bg-white/10"
-                    onClick={onClose}
-                    disabled={saving}
-                  >
-                    {t("Cancel")}
-                  </button>
-                  {step !== "identity" ? (
-                    <button
-                      type="button"
-                      className="rounded-md px-3 py-1.5 text-sm text-gray-200 hover:bg-white/10"
-                      disabled={showJobOverlay}
-                      onClick={() =>
-                        goToStep(ORGANISM_EDITOR_STEPS[stepIndex - 1])
-                      }
-                    >
-                      {t("Back")}
-                    </button>
-                  ) : null}
-                  {step !== "review" ? (
-                    <button
-                      type="button"
-                      className="rounded-md bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
-                      disabled={!canAdvanceIdentity || showJobOverlay}
-                      onClick={() =>
-                        goToStep(ORGANISM_EDITOR_STEPS[stepIndex + 1])
-                      }
-                    >
-                      {t("Next")}
-                    </button>
-                  ) : (
-                    <button
-                      type="button"
-                      className="rounded-md bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
-                      disabled={!config || showJobOverlay || saving}
-                      onClick={() => void startEnrichment()}
-                    >
-                      {existing ? t("Re-enrich") : t("Enrich")}
-                    </button>
-                  )}
-                </>
-              )}
+              <button
+                type="button"
+                className="rounded-md px-3 py-1.5 text-sm text-gray-200 hover:bg-white/10"
+                onClick={onClose}
+                disabled={saving}
+              >
+                {t("Close")}
+              </button>
+              <button
+                type="button"
+                className="rounded-md bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
+                disabled={
+                  !config ||
+                  lookupBusy ||
+                  saving ||
+                  !form.column ||
+                  (classHeaders.length > 0 && !joinColumn)
+                }
+                onClick={() => void startLookup()}
+              >
+                {t("Classify taxa")}
+              </button>
             </div>
           </div>
         </Dialog.Panel>

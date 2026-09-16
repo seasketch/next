@@ -11,6 +11,7 @@ import {
 import { all, run, withDuckDb } from "./duckDb";
 import {
   enrichOrganismValues,
+  joinOrganismCatalogRows,
   previewPayloadFromCatalog,
   serializeOrganismSearchIndex,
   type ClassTableRow,
@@ -150,11 +151,43 @@ export async function runOrganismEnrichment(options: {
   if (options.classCsvPath) {
     await options.updateProgress("running", "reading class table", 0.2);
     classRows = await readClassTableRows(options.classCsvPath);
+    const headers = classRows[0] ? Object.keys(classRows[0]) : [];
+    if (
+      !options.config.classJoinColumn ||
+      !headers.includes(options.config.classJoinColumn)
+    ) {
+      throw new Error(
+        "classJoinColumn is required and must match a class-table column"
+      );
+    }
     // eslint-disable-next-line no-console
     console.log(
       `[data-tables-handler] class table: ${classRows.length} rows`
     );
   }
+  const catalogPath = path.join(options.tmpDir, ORGANISM_SIDECAR_FILES.catalog);
+  const indexPath = path.join(options.tmpDir, ORGANISM_SIDECAR_FILES.searchIndex);
+  const previewPath = path.join(options.tmpDir, ORGANISM_SIDECAR_FILES.preview);
+  const tableRemote = options.parquetRemote;
+  const catalogRemote = siblingRemote(tableRemote, ORGANISM_SIDECAR_FILES.catalog);
+  const indexRemote = siblingRemote(tableRemote, ORGANISM_SIDECAR_FILES.searchIndex);
+  const previewRemote = siblingRemote(tableRemote, ORGANISM_SIDECAR_FILES.preview);
+  if (!catalogRemote || !indexRemote || !previewRemote) {
+    throw new Error("Could not derive organism sidecar remotes from parquet_remote");
+  }
+
+  const draftRows = joinOrganismCatalogRows({
+    values,
+    classRows,
+    config: options.config,
+  });
+  writeFileSync(
+    previewPath,
+    JSON.stringify(previewPayloadFromCatalog(draftRows, options.config))
+  );
+  await putObject(previewPath, previewRemote, JSON_CONTENT_TYPE);
+  await options.updateProgress("running", "resolving taxa", 0.28);
+
   const proxyBase = process.env.TAXONOMY_PROXY_URL;
   const accessToken = proxyBase
     ? await getOverlayEngineAccessToken()
@@ -167,7 +200,6 @@ export async function runOrganismEnrichment(options: {
     ),
     waitWorms: createRateLimiter(WORMS_MIN_INTERVAL_MS),
   };
-  await options.updateProgress("running", "resolving taxa", 0.3);
   const rows = await enrichOrganismValues({
     values,
     classRows,
@@ -188,9 +220,6 @@ export async function runOrganismEnrichment(options: {
     },
   });
 
-  const catalogPath = path.join(options.tmpDir, ORGANISM_SIDECAR_FILES.catalog);
-  const indexPath = path.join(options.tmpDir, ORGANISM_SIDECAR_FILES.searchIndex);
-  const previewPath = path.join(options.tmpDir, ORGANISM_SIDECAR_FILES.preview);
   await options.updateProgress("running", "writing catalog", 0.85);
   await writeOrganismCatalogParquet(rows, catalogPath);
   const includeLow = includeLowConfidenceMatchesEnabled(options.config);
@@ -202,14 +231,6 @@ export async function runOrganismEnrichment(options: {
     previewPath,
     JSON.stringify(previewPayloadFromCatalog(rows, options.config))
   );
-
-  const tableRemote = options.parquetRemote;
-  const catalogRemote = siblingRemote(tableRemote, ORGANISM_SIDECAR_FILES.catalog);
-  const indexRemote = siblingRemote(tableRemote, ORGANISM_SIDECAR_FILES.searchIndex);
-  const previewRemote = siblingRemote(tableRemote, ORGANISM_SIDECAR_FILES.preview);
-  if (!catalogRemote || !indexRemote || !previewRemote) {
-    throw new Error("Could not derive organism sidecar remotes from parquet_remote");
-  }
   await putObject(catalogPath, catalogRemote, PARQUET_CONTENT_TYPE);
   await putObject(indexPath, indexRemote, JSON_CONTENT_TYPE);
   await putObject(previewPath, previewRemote, JSON_CONTENT_TYPE);

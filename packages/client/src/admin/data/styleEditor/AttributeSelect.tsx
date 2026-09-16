@@ -40,6 +40,9 @@ export default function AttributeSelect({
   contentClassName,
   contentStyle,
   contentMaxWidth = 280,
+  modal = true,
+  preventCloseAutoFocus = true,
+  onOpenChange,
   attributeAvailability,
   onUnavailableAttributeActivate,
 }: {
@@ -57,6 +60,9 @@ export default function AttributeSelect({
   contentClassName?: string;
   contentStyle?: CSSProperties;
   contentMaxWidth?: number;
+  modal?: boolean;
+  preventCloseAutoFocus?: boolean;
+  onOpenChange?: (open: boolean) => void;
   attributeAvailability?: (attr: GeostatsAttribute) => AttributeAvailability;
   onUnavailableAttributeActivate?: (attr: GeostatsAttribute) => void;
 }) {
@@ -110,6 +116,8 @@ export default function AttributeSelect({
       value={rootValue}
       onValueChange={handleChange}
       disabled={disabled}
+      modal={modal}
+      onOpenChange={onOpenChange}
     >
       <Select.Trigger id={id} className={triggerClass}>
         <Select.Value placeholder={placeholder} />
@@ -120,7 +128,9 @@ export default function AttributeSelect({
       <Select.Portal>
         <Select.Content
           position="popper"
-          onCloseAutoFocus={(event) => event.preventDefault()}
+          onCloseAutoFocus={(event) => {
+            if (preventCloseAutoFocus) event.preventDefault();
+          }}
           style={{
             stroke: "#555",
             ...contentStyle,

@@ -97,7 +97,11 @@ export function isOrgQueryResponse(value: unknown): value is OrgQueryResponse {
 export function orgQueryUrlForTable(table: {
   orgQueryUrl?: string | null;
   queryUrl?: string | null;
+  organism?: unknown;
 }): string | null {
+  if (table.organism !== undefined && !isOrganismInfo(table.organism)) {
+    return null;
+  }
   if (typeof table.orgQueryUrl === "string" && table.orgQueryUrl) {
     return table.orgQueryUrl;
   }
@@ -125,6 +129,53 @@ export function buildOrgQueryUrl(
   return url.toString();
 }
 
+const hitsByValue = new Map<string, OrgQueryHit>();
+const catalogCache = new Map<string, OrgQueryHit[]>();
+const catalogInflight = new Map<string, Promise<OrgQueryHit[]>>();
+
+function catalogCacheKey(
+  orgQueryUrl: string,
+  accessToken?: string | null
+): string {
+  return `${orgQueryUrl}\0${accessToken || ""}`;
+}
+
+export function rememberOrgQueryHits(hits: OrgQueryHit[]) {
+  for (const hit of hits) {
+    hitsByValue.set(hit.value, hit);
+  }
+}
+
+export function orgQueryHitFromValue(value: string): OrgQueryHit {
+  return (
+    hitsByValue.get(value) || {
+      table: "",
+      column: "",
+      value,
+      scientificName: null,
+      commonName: null,
+      description: null,
+      inatTaxonId: null,
+      wormsAphiaId: null,
+      score: 0,
+      matchedFields: [],
+    }
+  );
+}
+
+export function peekOrganismCatalog(
+  orgQueryUrl: string,
+  accessToken?: string | null
+): OrgQueryHit[] | null {
+  return catalogCache.get(catalogCacheKey(orgQueryUrl, accessToken)) ?? null;
+}
+
+export function clearOrganismCatalogCache() {
+  hitsByValue.clear();
+  catalogCache.clear();
+  catalogInflight.clear();
+}
+
 export async function fetchOrgQuery(
   orgQueryUrl: string,
   q: string,
@@ -146,7 +197,42 @@ export async function fetchOrgQuery(
   if (!isOrgQueryResponse(json)) {
     throw new Error("orgQuery returned an unexpected payload");
   }
+  rememberOrgQueryHits(json.hits);
   return json;
+}
+
+/** Empty-q catalog. Cached for the session so the filter can open instantly. */
+export async function fetchOrganismCatalog(
+  orgQueryUrl: string,
+  options?: {
+    accessToken?: string | null;
+    limit?: number;
+    signal?: AbortSignal;
+  }
+): Promise<OrgQueryHit[]> {
+  const key = catalogCacheKey(orgQueryUrl, options?.accessToken);
+  const cached = catalogCache.get(key);
+  if (cached) {
+    return cached;
+  }
+  const inflight = catalogInflight.get(key);
+  if (inflight) {
+    return inflight;
+  }
+  const request = fetchOrgQuery(orgQueryUrl, "", {
+    accessToken: options?.accessToken,
+    limit: options?.limit ?? ORG_QUERY_DEFAULT_LIMIT,
+    signal: options?.signal,
+  })
+    .then((response) => {
+      catalogCache.set(key, response.hits);
+      return response.hits;
+    })
+    .finally(() => {
+      catalogInflight.delete(key);
+    });
+  catalogInflight.set(key, request);
+  return request;
 }
 
 export function orgQueryHitLabel(hit: OrgQueryHit): string {

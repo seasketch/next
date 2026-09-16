@@ -1,17 +1,27 @@
 import { afterEach, describe, expect, it, jest } from "@jest/globals";
 import {
   INATURALIST_TAXA_MAX_IDS,
+  INATURALIST_TAXA_MIN_INTERVAL_MS,
   INATURALIST_TAXA_ORIGIN,
   INATURALIST_TAXA_PATH,
+  INATURALIST_TAXA_SETTLE_MS,
   clearInaturalistTaxonPhotoCache,
   fetchInaturalistTaxonPhotos,
   compactInaturalistAttribution,
+  creativeCommonsIconKeys,
   inaturalistAttributionParts,
   inaturalistLicenseUrl,
+  inaturalistPhotoPageUrl,
   inaturalistTaxaFromUnknown,
+  inaturalistTaxaShowUrl,
   inaturalistTaxaUrl,
   inaturalistTaxonPhotoStatus,
   pickInaturalistTaxonPhoto,
+  prefetchInaturalistTaxonPhotos,
+  primeInaturalistTaxonPhotoCache,
+  prioritizeInaturalistTaxonPhoto,
+  registerInaturalistTaxonPhoto,
+  unregisterInaturalistTaxonPhoto,
   uniquePositiveInts,
   uniqueSortedPositiveInts,
 } from "./inaturalistTaxonPhotos";
@@ -20,6 +30,16 @@ afterEach(() => {
   clearInaturalistTaxonPhotoCache();
   jest.restoreAllMocks();
 });
+
+function idsFromTaxaRequest(input: RequestInfo | URL): number[] {
+  const url = new URL(String(input));
+  const fromQuery = url.searchParams.get("id");
+  if (fromQuery) {
+    return fromQuery.split(",").map(Number);
+  }
+  const path = url.pathname.split("/").pop() || "";
+  return path.split(",").map(Number).filter((id) => Number.isFinite(id) && id > 0);
+}
 
 describe("uniquePositiveInts", () => {
   it("rejects null, undefined, and non-arrays", () => {
@@ -36,9 +56,15 @@ describe("uniquePositiveInts", () => {
 });
 
 describe("inaturalistTaxaUrl", () => {
-  it("sorts ids onto the public iNaturalist taxa route", () => {
+  it("sorts ids onto the taxa search route, not the show route", () => {
     expect(inaturalistTaxaUrl([3, 1, 1])).toBe(
-      `${INATURALIST_TAXA_ORIGIN}${INATURALIST_TAXA_PATH}/1,3`
+      `${INATURALIST_TAXA_ORIGIN}${INATURALIST_TAXA_PATH}?id=1%2C3&per_page=${INATURALIST_TAXA_MAX_IDS}`
+    );
+  });
+
+  it("builds the show route for licensed-photo fallback", () => {
+    expect(inaturalistTaxaShowUrl([108547, 1])).toBe(
+      `${INATURALIST_TAXA_ORIGIN}${INATURALIST_TAXA_PATH}/1,108547`
     );
   });
 });
@@ -82,8 +108,11 @@ describe("inaturalistTaxaFromUnknown", () => {
     ).toEqual({
       taxonId: 64481,
       squareUrl: "https://example.com/ok/medium.jpg",
-      attribution: "(c) Thomas Menut, some rights reserved (CC BY-NC)",
+      smallUrl: "https://example.com/ok/medium.jpg",
+      mediumUrl: "https://example.com/ok/medium.jpg",
+      attribution: "Thomas Menut",
       licenseCode: "cc-by-nc",
+      photoId: null,
     });
   });
 
@@ -115,8 +144,11 @@ describe("inaturalistTaxaFromUnknown", () => {
           {
             taxonId: 64481,
             squareUrl: "https://example.com/ok/medium.jpg",
-            attribution: "(c) someone",
+            smallUrl: "https://example.com/ok/medium.jpg",
+            mediumUrl: "https://example.com/ok/medium.jpg",
+            attribution: "someone",
             licenseCode: "cc-by-nc",
+            photoId: null,
           },
         ],
       ]),
@@ -129,14 +161,17 @@ describe("inaturalistTaxaFromUnknown", () => {
       compactInaturalistAttribution(
         "(c) Sara Thiebaud, some rights reserved (CC BY-NC), uploaded by Sara Thiebaud"
       )
-    ).toBe("(c) Sara Thiebaud, some rights reserved (CC BY-NC)");
+    ).toBe("Sara Thiebaud");
     expect(
       compactInaturalistAttribution(
         "(c) Ken-ichi Ueda, some rights reserved (CC BY-NC), uploaded by someone else"
       )
-    ).toBe(
-      "(c) Ken-ichi Ueda, some rights reserved (CC BY-NC), uploaded by someone else"
-    );
+    ).toBe("Ken-ichi Ueda, uploaded by someone else");
+    expect(
+      compactInaturalistAttribution(
+        "(c) Jennifer Lentz, Ph.D., some rights reserved (CC BY-NC), uploaded by Jennifer Lentz, Ph.D."
+      )
+    ).toBe("Jennifer Lentz, Ph.D.");
     expect(compactInaturalistAttribution(null)).toBe("");
   });
 
@@ -151,15 +186,57 @@ describe("inaturalistTaxaFromUnknown", () => {
       "https://creativecommons.org/publicdomain/zero/1.0/"
     );
     expect(inaturalistLicenseUrl("all-rights-reserved")).toBeNull();
+    expect(creativeCommonsIconKeys("cc-by-nc")).toEqual(["cc", "by", "nc"]);
+    expect(creativeCommonsIconKeys("cc0")).toEqual(["cc", "zero"]);
+    expect(creativeCommonsIconKeys("pd")).toEqual(["pdm"]);
+    expect(creativeCommonsIconKeys("all-rights-reserved")).toEqual([]);
     expect(
       inaturalistAttributionParts(
         "(c) Sara Thiebaud, some rights reserved (CC BY-NC)",
         "cc-by-nc"
       )
     ).toEqual({
-      text: "(c) Sara Thiebaud, some rights reserved",
-      licenseLabel: "(CC BY-NC)",
+      text: "Sara Thiebaud",
+      photographerUrl: null,
+      licenseLabel: "CC BY-NC",
       licenseUrl: "https://creativecommons.org/licenses/by-nc/4.0/",
+      rightsKind: "copyrighted",
+    });
+    expect(
+      inaturalistAttributionParts(
+        "(c) Jacob, no rights reserved (CC0)",
+        "cc0"
+      )
+    ).toEqual({
+      text: "Jacob",
+      photographerUrl: null,
+      licenseLabel: "CC0",
+      licenseUrl: "https://creativecommons.org/publicdomain/zero/1.0/",
+      rightsKind: "cc0",
+    });
+    expect(
+      inaturalistAttributionParts(
+        "Chad King (SIMoN / MBNMS), no known copyright restrictions (public domain)",
+        "pd"
+      )
+    ).toEqual({
+      text: "Chad King (SIMoN / MBNMS)",
+      photographerUrl: null,
+      licenseLabel: "Public Domain Mark",
+      licenseUrl: "https://creativecommons.org/publicdomain/mark/1.0/",
+      rightsKind: "public-domain",
+    });
+    expect(inaturalistPhotoPageUrl(56166638)).toBe(
+      "https://www.inaturalist.org/photos/56166638"
+    );
+    expect(
+      inaturalistAttributionParts("© Stefanie", "cc-by-nc", 56166638)
+    ).toEqual({
+      text: "Stefanie",
+      photographerUrl: "https://www.inaturalist.org/photos/56166638",
+      licenseLabel: "CC BY-NC",
+      licenseUrl: "https://creativecommons.org/licenses/by-nc/4.0/",
+      rightsKind: "copyrighted",
     });
   });
 });
@@ -167,8 +244,7 @@ describe("inaturalistTaxaFromUnknown", () => {
 describe("fetchInaturalistTaxonPhotos", () => {
   it("asks iNaturalist for sorted 30-id batches and memoizes by taxon id", async () => {
     const fetchMock = jest.fn(async (input: RequestInfo | URL) => {
-      const path = String(input).split("/").pop()!;
-      const ids = path.split(",").map(Number);
+      const ids = idsFromTaxaRequest(input);
       return {
         ok: true,
         json: async () => ({
@@ -196,6 +272,54 @@ describe("fetchInaturalistTaxonPhotos", () => {
 
     await fetchInaturalistTaxonPhotos([1, 2]);
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  it("falls back to the show route when search default_photo is unlicensed", async () => {
+    const fetchMock = jest.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      const isShow = !url.includes("?id=");
+      return {
+        ok: true,
+        json: async () =>
+          isShow
+            ? {
+                results: [
+                  {
+                    id: 108547,
+                    default_photo: { license_code: null },
+                    taxon_photos: [
+                      {
+                        photo: {
+                          license_code: "cc-by-nc",
+                          square_url: "https://example.com/kelp-sq.jpg",
+                          medium_url: "https://example.com/kelp.jpg",
+                          attribution: "(c) Kai, some rights reserved (CC BY-NC)",
+                        },
+                      },
+                    ],
+                  },
+                ],
+              }
+            : {
+                results: [
+                  {
+                    id: 108547,
+                    default_photo: {
+                      license_code: null,
+                      square_url: "https://example.com/arr.jpg",
+                    },
+                  },
+                ],
+              },
+      } as Response;
+    });
+    global.fetch = fetchMock as typeof fetch;
+
+    const photos = await fetchInaturalistTaxonPhotos([108547]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(String(fetchMock.mock.calls[0][0])).toContain("?id=");
+    expect(String(fetchMock.mock.calls[1][0])).toMatch(/\/108547$/);
+    expect(photos.get(108547)?.mediumUrl).toBe("https://example.com/kelp.jpg");
   });
 
   it("does not return ids without a licensed photo", async () => {
@@ -248,8 +372,11 @@ describe("inaturalistTaxonPhotoStatus", () => {
   const photo = {
     taxonId: 64481,
     squareUrl: "https://example.com/ok.jpg",
+    smallUrl: "https://example.com/ok.jpg",
+    mediumUrl: "https://example.com/ok.jpg",
     attribution: "(c) someone",
     licenseCode: "cc-by-nc",
+    photoId: 12,
   };
 
   it("is empty without a taxon id and loading until resolved", () => {
@@ -292,5 +419,308 @@ describe("inaturalistTaxonPhotoStatus", () => {
         failed: new Set([64481]),
       })
     ).toEqual({ status: "error" });
+  });
+});
+
+function mockTaxaFetch() {
+  const fetchMock = jest.fn(async (input: RequestInfo | URL) => {
+    const ids = idsFromTaxaRequest(input);
+    return {
+      ok: true,
+      status: 200,
+      headers: { get: () => null },
+      json: async () => ({
+        results: ids.map((id) => ({
+          id,
+          default_photo: {
+            license_code: "cc-by",
+            square_url: `https://example.com/${id}-sq.jpg`,
+            medium_url: `https://example.com/${id}.jpg`,
+            attribution: "someone",
+          },
+        })),
+      }),
+    } as unknown as Response;
+  });
+  global.fetch = fetchMock as typeof fetch;
+  return fetchMock;
+}
+
+function requestedIds(
+  fetchMock: ReturnType<typeof mockTaxaFetch>,
+  call: number
+): number[] {
+  return idsFromTaxaRequest(fetchMock.mock.calls[call][0]);
+}
+
+async function flush() {
+  await new Promise((resolve) => setImmediate(resolve));
+}
+
+async function advance(ms: number) {
+  jest.advanceTimersByTime(ms);
+  await flush();
+}
+
+describe("registerInaturalistTaxonPhoto scheduler", () => {
+  beforeEach(() => {
+    jest.useFakeTimers();
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it("holds 12 ids until settle, then one request", async () => {
+    const fetchMock = mockTaxaFetch();
+    for (let id = 1; id <= 12; id++) {
+      registerInaturalistTaxonPhoto(id);
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(0);
+    await advance(INATURALIST_TAXA_SETTLE_MS);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(requestedIds(fetchMock, 0)).toEqual(
+      Array.from({ length: 12 }, (_, i) => i + 1)
+    );
+  });
+
+  it("resets settle when more ids register, then fetches the combined set", async () => {
+    const fetchMock = mockTaxaFetch();
+    for (let id = 1; id <= 5; id++) {
+      registerInaturalistTaxonPhoto(id);
+    }
+    await advance(INATURALIST_TAXA_SETTLE_MS / 2);
+    expect(fetchMock).toHaveBeenCalledTimes(0);
+    for (let id = 6; id <= 8; id++) {
+      registerInaturalistTaxonPhoto(id);
+    }
+    await advance(INATURALIST_TAXA_SETTLE_MS / 2);
+    expect(fetchMock).toHaveBeenCalledTimes(0);
+    await advance(INATURALIST_TAXA_SETTLE_MS / 2);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(requestedIds(fetchMock, 0)).toEqual(
+      Array.from({ length: 8 }, (_, i) => i + 1)
+    );
+  });
+
+  it("flushes immediately at 30 ids without waiting to settle", async () => {
+    const fetchMock = mockTaxaFetch();
+    for (let id = 1; id <= INATURALIST_TAXA_MAX_IDS; id++) {
+      registerInaturalistTaxonPhoto(id);
+    }
+    await Promise.resolve();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(requestedIds(fetchMock, 0)).toHaveLength(INATURALIST_TAXA_MAX_IDS);
+  });
+
+  it("sends leftover ids only after the min-interval gap", async () => {
+    const fetchMock = mockTaxaFetch();
+    for (let id = 1; id <= INATURALIST_TAXA_MAX_IDS + 10; id++) {
+      registerInaturalistTaxonPhoto(id);
+    }
+    await flush();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(requestedIds(fetchMock, 0)).toHaveLength(INATURALIST_TAXA_MAX_IDS);
+    await advance(INATURALIST_TAXA_MIN_INTERVAL_MS - 1);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    await advance(1);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(requestedIds(fetchMock, 1)).toEqual(
+      Array.from({ length: 10 }, (_, i) => INATURALIST_TAXA_MAX_IDS + 1 + i)
+    );
+  });
+
+  it("does not refetch cached ids on re-register", async () => {
+    const fetchMock = mockTaxaFetch();
+    registerInaturalistTaxonPhoto(7);
+    await advance(INATURALIST_TAXA_SETTLE_MS);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    unregisterInaturalistTaxonPhoto(7);
+    registerInaturalistTaxonPhoto(7);
+    await advance(INATURALIST_TAXA_SETTLE_MS);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(inaturalistTaxonPhotoStatus(7)).toEqual({
+      status: "ready",
+      photo: expect.objectContaining({ taxonId: 7 }),
+    });
+  });
+
+  it("continues remaining ids after a 429", async () => {
+    let calls = 0;
+    const fetchMock = jest.fn(async (input: RequestInfo | URL) => {
+      calls += 1;
+      if (calls === 1) {
+        return {
+          ok: false,
+          status: 429,
+          headers: { get: () => "1" },
+          json: async () => ({}),
+        } as unknown as Response;
+      }
+      const ids = idsFromTaxaRequest(input);
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: () => null },
+        json: async () => ({
+          results: ids.map((id) => ({
+            id,
+            default_photo: {
+              license_code: "cc-by",
+              medium_url: `https://example.com/${id}.jpg`,
+              attribution: "someone",
+            },
+          })),
+        }),
+      } as unknown as Response;
+    });
+    global.fetch = fetchMock as typeof fetch;
+
+    for (let id = 1; id <= INATURALIST_TAXA_MAX_IDS + 2; id++) {
+      registerInaturalistTaxonPhoto(id);
+    }
+    await flush();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(inaturalistTaxonPhotoStatus(1)).toEqual({ status: "error" });
+    await advance(1000);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(requestedIds(fetchMock, 1)).toEqual([
+      INATURALIST_TAXA_MAX_IDS + 1,
+      INATURALIST_TAXA_MAX_IDS + 2,
+    ]);
+  });
+
+  it("treats a licensed miss as empty, not error", async () => {
+    global.fetch = jest.fn(async () => {
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: () => null },
+        json: async () => ({
+          results: [{ id: 9, default_photo: { license_code: null } }],
+        }),
+      } as unknown as Response;
+    }) as typeof fetch;
+    registerInaturalistTaxonPhoto(9);
+    await advance(INATURALIST_TAXA_SETTLE_MS);
+    expect(inaturalistTaxonPhotoStatus(9)).toEqual({ status: "empty" });
+  });
+
+  it("marks a failed HTTP batch as error and still drains later ids", async () => {
+    let calls = 0;
+    const fetchMock = jest.fn(async (input: RequestInfo | URL) => {
+      calls += 1;
+      if (calls === 1) {
+        return {
+          ok: false,
+          status: 500,
+          headers: { get: () => null },
+          json: async () => ({}),
+        } as unknown as Response;
+      }
+      const ids = idsFromTaxaRequest(input);
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: () => null },
+        json: async () => ({
+          results: ids.map((id) => ({
+            id,
+            default_photo: {
+              license_code: "cc-by",
+              medium_url: `https://example.com/${id}.jpg`,
+            },
+          })),
+        }),
+      } as unknown as Response;
+    });
+    global.fetch = fetchMock as typeof fetch;
+    for (let id = 1; id <= INATURALIST_TAXA_MAX_IDS + 1; id++) {
+      registerInaturalistTaxonPhoto(id);
+    }
+    await flush();
+    expect(inaturalistTaxonPhotoStatus(1)).toEqual({ status: "error" });
+    await advance(INATURALIST_TAXA_MIN_INTERVAL_MS);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(inaturalistTaxonPhotoStatus(INATURALIST_TAXA_MAX_IDS + 1).status).toBe(
+      "ready"
+    );
+  });
+
+  it("puts visible ids first and pads the batch with prefetch", async () => {
+    const fetchMock = mockTaxaFetch();
+    for (let id = 1; id <= 8; id++) {
+      registerInaturalistTaxonPhoto(id, "visible");
+    }
+    for (let id = 9; id <= 33; id++) {
+      registerInaturalistTaxonPhoto(id, "prefetch");
+    }
+    await flush();
+    expect(fetchMock).toHaveBeenCalledTimes(0);
+    await advance(INATURALIST_TAXA_SETTLE_MS);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(requestedIds(fetchMock, 0)).toEqual(
+      Array.from({ length: INATURALIST_TAXA_MAX_IDS }, (_, i) => i + 1)
+    );
+    await advance(INATURALIST_TAXA_MIN_INTERVAL_MS);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(requestedIds(fetchMock, 1)).toEqual([31, 32, 33]);
+  });
+
+  it("fills and then continues downward from a mid-list visible range", async () => {
+    const fetchMock = mockTaxaFetch();
+    prefetchInaturalistTaxonPhotos(
+      Array.from({ length: 70 }, (_, i) => i + 1)
+    );
+    for (let id = 20; id <= 25; id++) {
+      prioritizeInaturalistTaxonPhoto(id, "visible");
+    }
+    await flush();
+    expect(fetchMock).toHaveBeenCalledTimes(0);
+    await advance(INATURALIST_TAXA_SETTLE_MS);
+    expect(requestedIds(fetchMock, 0)).toEqual(
+      Array.from({ length: INATURALIST_TAXA_MAX_IDS }, (_, i) => i + 20)
+    );
+    await advance(INATURALIST_TAXA_MIN_INTERVAL_MS);
+    expect(requestedIds(fetchMock, 1)).toEqual([
+      ...Array.from({ length: 9 }, (_, i) => i + 1),
+      ...Array.from({ length: 21 }, (_, i) => i + 50),
+    ]);
+  });
+
+  it("holds a prefetch-only overflow until settle, then drains at the min interval", async () => {
+    const fetchMock = mockTaxaFetch();
+    for (let id = 1; id <= INATURALIST_TAXA_MAX_IDS + 10; id++) {
+      registerInaturalistTaxonPhoto(id, "prefetch");
+    }
+    await flush();
+    expect(fetchMock).toHaveBeenCalledTimes(0);
+    await advance(INATURALIST_TAXA_SETTLE_MS);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(requestedIds(fetchMock, 0)).toHaveLength(INATURALIST_TAXA_MAX_IDS);
+    await advance(INATURALIST_TAXA_MIN_INTERVAL_MS);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(requestedIds(fetchMock, 1)).toEqual(
+      Array.from({ length: 10 }, (_, i) => INATURALIST_TAXA_MAX_IDS + 1 + i)
+    );
+  });
+
+  it("primes licensed autocomplete payloads without fetching", () => {
+    const fetchMock = mockTaxaFetch();
+    primeInaturalistTaxonPhotoCache({
+      results: [
+        {
+          id: 44,
+          default_photo: {
+            license_code: "cc-by",
+            square_url: "https://example.com/44.jpg",
+            attribution: "x",
+          },
+        },
+      ],
+    });
+    registerInaturalistTaxonPhoto(44);
+    expect(fetchMock).toHaveBeenCalledTimes(0);
+    expect(inaturalistTaxonPhotoStatus(44).status).toBe("ready");
   });
 });

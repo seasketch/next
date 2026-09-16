@@ -92,15 +92,21 @@ export default async function handleDataTableUpload(
     if (skipLoggingProgress || !pgClient) return;
     logDebug("updateProgress", { taskId, state, progressMessage, progress });
     if (progress !== undefined) {
-      await pgClient.query(
+      const result = await pgClient.query(
         `update project_background_jobs set state = $1, progress = least($2::numeric, 1.0::numeric), progress_message = $3 where id = $4`,
         [state, progress, progressMessage, taskId],
       );
+      if (state === "running" && result.rowCount === 0) {
+        throw new Error("Job cancelled");
+      }
     } else {
-      await pgClient.query(
+      const result = await pgClient.query(
         `update project_background_jobs set state = $1, progress_message = $2 where id = $3`,
         [state, progressMessage, taskId],
       );
+      if (state === "running" && result.rowCount === 0) {
+        throw new Error("Job cancelled");
+      }
     }
   };
 

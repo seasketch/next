@@ -1,11 +1,15 @@
-import { describe, expect, it } from "@jest/globals";
+import { afterEach, describe, expect, it, jest } from "@jest/globals";
 import {
   buildOrgQueryUrl,
+  clearOrganismCatalogCache,
+  fetchOrganismCatalog,
   isOrgQueryHit,
   isOrgQueryResponse,
+  orgQueryHitFromValue,
   orgQueryHitMatchedAncestor,
   orgQueryUrlForTable,
   organismColumnFromTable,
+  peekOrganismCatalog,
 } from "./orgQueryApi";
 
 const hit = {
@@ -63,6 +67,17 @@ describe("orgQueryUrlForTable", () => {
       "https://uploads.seasketch.org/orgQuery?tables=projects%2Fca%2Fpublic%2F11111111-1111-1111-1111-111111111111%2FdataTables%2Fu1"
     );
   });
+
+  it("returns null when organism identity has been cleared", () => {
+    expect(
+      orgQueryUrlForTable({
+        organism: null,
+        orgQueryUrl: "https://uploads.seasketch.org/orgQuery?tables=a",
+        queryUrl:
+          "https://uploads.seasketch.org/projects/ca/public/11111111-1111-1111-1111-111111111111/dataTables/u1/query",
+      })
+    ).toBeNull();
+  });
 });
 
 describe("buildOrgQueryUrl", () => {
@@ -105,6 +120,39 @@ describe("organismColumnFromTable", () => {
         },
       })
     ).toBe("classcode");
+  });
+});
+
+describe("fetchOrganismCatalog", () => {
+  afterEach(() => {
+    clearOrganismCatalogCache();
+    jest.restoreAllMocks();
+  });
+
+  it("fetches the empty-q catalog once and reuses it", async () => {
+    const fetchMock = jest.fn(async () => {
+      return {
+        ok: true,
+        json: async () => ({
+          q: "",
+          tablesScanned: 1,
+          hits: [hit],
+        }),
+      } as Response;
+    });
+    global.fetch = fetchMock as typeof fetch;
+
+    const url = "https://uploads.seasketch.org/orgQuery?tables=a";
+    const first = await fetchOrganismCatalog(url);
+    const second = await fetchOrganismCatalog(url);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(first).toEqual([hit]);
+    expect(second).toBe(first);
+    expect(peekOrganismCatalog(url)).toEqual([hit]);
+    expect(orgQueryHitFromValue("SPUL").commonName).toBe(
+      "California Sheephead"
+    );
+    expect(orgQueryHitFromValue("UNKNOWN").commonName).toBeNull();
   });
 });
 

@@ -120,6 +120,11 @@ test("isOrganismInfo accepts optional counts and the low-confidence switch", () 
     isOrganismInfo({ ...validInfo, classifiedCount: -1 }),
     false
   );
+  assert.equal(
+    isOrganismInfo({ ...validInfo, classJoinColumn: "classcode" }),
+    true
+  );
+  assert.equal(isOrganismInfo({ ...validInfo, classJoinColumn: "" }), false);
 });
 
 test("isOrganismCatalogRow accepts a valid row and rejects junk ids", () => {
@@ -221,6 +226,7 @@ test("organismInfoFromConfig and lump helpers", () => {
       column: "classcode",
       valueKind: "code",
       roles: { classcode: "code" },
+      classJoinColumn: "Species_Code",
     }),
     {
       version: 1,
@@ -228,6 +234,7 @@ test("organismInfoFromConfig and lump helpers", () => {
       valueKind: "code",
       roles: { classcode: "code" },
       authoredBy: "admin",
+      classJoinColumn: "Species_Code",
       includeLowConfidenceMatches: false,
     }
   );

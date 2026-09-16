@@ -24,6 +24,11 @@ export type OrganismInfo = {
     column: string;
     valueKind: OrganismValueKind;
     roles: OrganismRoles;
+    /**
+     * Class-table (taxon CSV) column whose values match `column`. Required
+     * for the last run that included a class table.
+     */
+    classJoinColumn?: string;
     authoredBy?: OrganismAuthoredBy;
     /**
      * When true, low-confidence common-name iNaturalist matches are treated as
@@ -44,6 +49,8 @@ export type DataTableOrganismConfig = {
     column: string;
     valueKind: OrganismValueKind;
     roles: OrganismRoles;
+    /** Class-table column to join to `column`. Required when a CSV is supplied. */
+    classJoinColumn?: string;
     includeLowConfidenceMatches?: boolean;
 };
 export type OrganismResolveConfidence = "high" | "low" | "unresolved";

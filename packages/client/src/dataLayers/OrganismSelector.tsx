@@ -2,8 +2,6 @@ import {
   KeyboardEvent,
   MutableRefObject,
   Ref,
-  RefObject,
-  useCallback,
   useEffect,
   useMemo,
   useRef,
@@ -31,28 +29,27 @@ import {
   ORG_QUERY_DEFAULT_LIMIT,
   OrgQueryHit,
   fetchOrgQuery,
-  orgQueryHitLabel,
+  fetchOrganismCatalog,
+  orgQueryHitFromValue,
   orgQueryHitMatchedAncestor,
+  peekOrganismCatalog,
 } from "./orgQueryApi";
+import INaturalistPhotoCredit from "../components/INaturalistThumbnail/INaturalistPhotoCredit";
+import INaturalistThumbnail from "../components/INaturalistThumbnail/INaturalistThumbnail";
+import Spinner from "../components/Spinner";
 import {
   compactInaturalistAttribution,
   inaturalistAttributionParts,
-  inaturalistTaxonPhotoStatus,
-  useInaturalistTaxonPhotos,
+  prefetchInaturalistTaxonPhotos,
+  prioritizeInaturalistTaxonPhoto,
+  unregisterInaturalistTaxonPhoto,
+  useInaturalistTaxonPhoto,
 } from "./inaturalistTaxonPhotos";
 
 const DESCRIPTION_TEASER_CHARS = 90;
 const SEARCH_DEBOUNCE_MS = 250;
 
 type StringFilterMode = "value" | "isNull" | "notNull";
-
-const hitCache = new Map<string, OrgQueryHit>();
-
-function cacheHits(hits: OrgQueryHit[]) {
-  for (const hit of hits) {
-    hitCache.set(hit.value, hit);
-  }
-}
 
 function OrganismDescription({ text }: { text: string }) {
   const { t } = useTranslation("homepage");
@@ -90,83 +87,182 @@ function OrganismDescription({ text }: { text: string }) {
   );
 }
 
-function OrganismPhotoCredit({
-  attribution,
-  licenseCode,
+function organismPhotoCreditLabel(
+  attribution: string,
+  licenseCode?: string,
+  photoId?: number | null
+): string {
+  const parts = inaturalistAttributionParts(attribution, licenseCode, photoId);
+  return [parts.text, parts.licenseLabel].filter(Boolean).join(" ");
+}
+
+function OrganismDetails({
+  hit,
+  thumbnailRoot,
+  compact = false,
 }: {
-  attribution: string;
-  licenseCode?: string;
+  hit: OrgQueryHit;
+  thumbnailRoot?: Element | null;
+  compact?: boolean;
 }) {
-  const parts = inaturalistAttributionParts(attribution, licenseCode);
-  if (!parts.text && !parts.licenseLabel) {
-    return null;
-  }
+  const photoStatus = useInaturalistTaxonPhoto(hit.inatTaxonId, false);
+  const commonName = hit.commonName;
+  const scientificName = hit.scientificName;
+  const primary = commonName || scientificName || hit.value;
+  const showScientific = Boolean(
+    scientificName && scientificName !== primary
+  );
+  const showValue = Boolean(
+    hit.value && hit.value !== primary && hit.value !== scientificName
+  );
+  const photoCredit =
+    photoStatus.status === "ready"
+      ? compactInaturalistAttribution(photoStatus.photo.attribution)
+      : "";
+  const creditLabel = photoCredit
+    ? organismPhotoCreditLabel(
+        photoCredit,
+        photoStatus.status === "ready"
+          ? photoStatus.photo.licenseCode
+          : undefined,
+        photoStatus.status === "ready" ? photoStatus.photo.photoId : undefined
+      )
+    : "";
+
   return (
-    <p className="mt-1 text-[10px] leading-snug text-gray-500">
-      {parts.text}
-      {parts.licenseUrl && parts.licenseLabel ? (
-        <>
-          {" "}
-          <a
-            href={parts.licenseUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="text-primary-600 hover:text-primary-700"
-            onClick={(event) => event.stopPropagation()}
-          >
-            {parts.licenseLabel}
-          </a>
-        </>
-      ) : null}
-    </p>
+    <span
+      className={clsx(
+        "min-w-0 flex-1 flex",
+        compact ? "items-center gap-2" : "items-start gap-2.5"
+      )}
+    >
+      <span
+        title={compact && creditLabel ? creditLabel : undefined}
+        className="flex-none"
+      >
+        <INaturalistThumbnail
+          sourceId={hit.inatTaxonId}
+          size={compact ? "sm" : "md"}
+          root={thumbnailRoot}
+        />
+      </span>
+      <span className="min-w-0 flex-1">
+        <span
+          className={clsx(
+            "block font-medium text-gray-800",
+            compact ? "text-sm truncate leading-5" : "text-sm leading-snug"
+          )}
+        >
+          {primary}
+        </span>
+        {compact ? (
+          showScientific || showValue ? (
+            <span className="mt-0.5 block truncate text-[11px] leading-snug text-gray-500">
+              {showScientific ? (
+                <span className="italic">{scientificName}</span>
+              ) : null}
+              {showScientific && showValue ? " · " : null}
+              {showValue ? (
+                <span className="font-mono">{hit.value}</span>
+              ) : null}
+            </span>
+          ) : null
+        ) : (
+          <>
+            {showScientific ? (
+              <span className="mt-0.5 block text-xs italic leading-snug text-gray-600">
+                {scientificName}
+              </span>
+            ) : null}
+            {showValue ? (
+              <span className="mt-0.5 block font-mono text-[11px] leading-snug text-gray-500">
+                {hit.value}
+              </span>
+            ) : null}
+            {photoCredit ? (
+              <INaturalistPhotoCredit
+                attribution={photoCredit}
+                licenseCode={
+                  photoStatus.status === "ready"
+                    ? photoStatus.photo.licenseCode
+                    : undefined
+                }
+                photoId={
+                  photoStatus.status === "ready"
+                    ? photoStatus.photo.photoId
+                    : undefined
+                }
+                className="mt-1 text-gray-500"
+              />
+            ) : null}
+            {hit.description ? (
+              <OrganismDescription text={hit.description} />
+            ) : null}
+          </>
+        )}
+      </span>
+    </span>
   );
 }
 
-function OrganismThumb({
-  status,
+function OrganismSelectionSummary({
+  hits,
+  allSelected,
 }: {
-  status: ReturnType<typeof inaturalistTaxonPhotoStatus> | null;
+  hits: OrgQueryHit[];
+  allSelected: boolean;
 }) {
-  if (!status) {
-    return <span className="h-20 w-20 flex-none rounded bg-gray-100" />;
-  }
-  if (status.status === "ready") {
-    return (
-      <img
-        src={status.photo.squareUrl}
-        alt=""
-        className="h-20 w-20 flex-none rounded object-cover bg-gray-100"
-      />
-    );
-  }
-  if (status.status === "loading") {
-    return (
-      <span className="h-20 w-20 flex-none rounded bg-gray-100 animate-pulse" />
-    );
-  }
-  return <span className="h-20 w-20 flex-none rounded bg-gray-100" />;
-}
+  const { t } = useTranslation("homepage");
+  const preview = hits.filter((hit) => hit.inatTaxonId).slice(0, 4);
+  const count = hits.length;
+  const showBadge = count > preview.length || (allSelected && count > 4);
+  const label = allSelected
+    ? t("All selected")
+    : t("{{count}} selected", { count });
 
-function hitFromValue(value: string): OrgQueryHit {
   return (
-    hitCache.get(value) || {
-      table: "",
-      column: "",
-      value,
-      scientificName: null,
-      commonName: null,
-      description: null,
-      inatTaxonId: null,
-      wormsAphiaId: null,
-      score: 0,
-      matchedFields: [],
-    }
+    <span className="flex min-w-0 items-center" title={label}>
+      <span
+        className={clsx(
+          "flex flex-none items-center",
+          preview.length > 2 || showBadge ? "-space-x-5" : "gap-1"
+        )}
+      >
+        {preview.map((hit, index) => (
+          <span
+            key={hit.value}
+            className="relative"
+            style={{ zIndex: preview.length - index }}
+          >
+            <INaturalistThumbnail
+              sourceId={hit.inatTaxonId}
+              size="sm"
+              className="ring-2 ring-white"
+            />
+          </span>
+        ))}
+        {showBadge ? (
+          <span
+            className="relative z-20 flex h-10 min-w-[2.75rem] flex-col items-center justify-center rounded-md bg-gray-100 px-1.5 text-gray-800 ring-2 ring-white"
+            aria-label={label}
+          >
+            <span className="text-sm font-semibold leading-none tabular-nums">
+              {allSelected ? t("All") : count}
+            </span>
+            <span className="mt-0.5 text-[9px] font-medium leading-none text-gray-500">
+              {t("selected")}
+            </span>
+          </span>
+        ) : null}
+      </span>
+    </span>
   );
 }
 
 /**
- * Browse + search organism filter. Empty orgQuery returns the full catalog;
- * typing ranks hits. Thumbnails load for rows in the scroll viewport only.
+ * Browse + search organism filter. The catalog and taxon thumbs load on
+ * mount so the trigger can show common names and the list is warm before
+ * it opens.
  */
 export default function OrganismSelector({
   column,
@@ -189,18 +285,20 @@ export default function OrganismSelector({
   const [multi, setMulti] = useState(parsed.multi);
   const [mode, setMode] = useState<StringFilterMode>(parsed.mode);
   const [selected, setSelected] = useState<string[]>(parsed.selected);
-  const [hits, setHits] = useState<OrgQueryHit[]>([]);
-  const [catalogCount, setCatalogCount] = useState<number | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [catalogHits, setCatalogHits] = useState<OrgQueryHit[]>(
+    () => peekOrganismCatalog(orgQueryUrl, accessToken) || []
+  );
+  const [searchHits, setSearchHits] = useState<OrgQueryHit[] | null>(null);
+  const [catalogLoading, setCatalogLoading] = useState(
+    () => peekOrganismCatalog(orgQueryUrl, accessToken) == null
+  );
+  const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [visibleTaxonIds, setVisibleTaxonIds] = useState<number[]>([]);
   const searchRef = useRef<HTMLInputElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
+  const [listEl, setListEl] = useState<HTMLDivElement | null>(null);
   const selectedOptionRef = useRef<HTMLDivElement>(null);
   const pendingTypeRef = useRef("");
   const didScrollRef = useRef(false);
-  const visibleTaxonSetRef = useRef(new Set<number>());
-  const visibleFlushRef = useRef(0);
 
   useEffect(() => {
     if (!open) {
@@ -209,15 +307,9 @@ export default function OrganismSelector({
       setSelected(parsed.selected);
       setQuery("");
       setDebouncedQuery("");
-      setHits([]);
-      setCatalogCount(null);
+      setSearchHits(null);
+      setSearching(false);
       setError(null);
-      setVisibleTaxonIds([]);
-      visibleTaxonSetRef.current.clear();
-      if (visibleFlushRef.current) {
-        window.cancelAnimationFrame(visibleFlushRef.current);
-        visibleFlushRef.current = 0;
-      }
       pendingTypeRef.current = "";
       didScrollRef.current = false;
     }
@@ -237,27 +329,84 @@ export default function OrganismSelector({
   }, [open, query]);
 
   useEffect(() => {
+    let cancelled = false;
+    const cached = peekOrganismCatalog(orgQueryUrl, accessToken);
+    if (cached) {
+      setCatalogHits(cached);
+      setCatalogLoading(false);
+    } else {
+      setCatalogLoading(true);
+    }
+    fetchOrganismCatalog(orgQueryUrl, {
+      accessToken,
+      limit: ORG_QUERY_DEFAULT_LIMIT,
+    })
+      .then((nextHits) => {
+        if (cancelled) return;
+        setCatalogHits(nextHits);
+        setCatalogLoading(false);
+        setError(null);
+      })
+      .catch((err: Error) => {
+        if (cancelled || err.name === "AbortError") return;
+        setError(t("Couldn't load organisms"));
+        setCatalogLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [accessToken, orgQueryUrl, t]);
+
+  useEffect(() => {
+    const ids: number[] = [];
+    const seen = new Set<number>();
+    for (const hit of catalogHits) {
+      const id = hit.inatTaxonId;
+      if (id == null || id <= 0 || seen.has(id)) continue;
+      seen.add(id);
+      ids.push(id);
+    }
+    if (ids.length === 0) return;
+    prefetchInaturalistTaxonPhotos(ids);
+    return () => {
+      for (const id of ids) {
+        unregisterInaturalistTaxonPhoto(id);
+      }
+    };
+  }, [catalogHits]);
+
+  useEffect(() => {
+    for (const hit of catalogHits) {
+      const id = hit.inatTaxonId;
+      if (id == null || id <= 0 || !selected.includes(hit.value)) continue;
+      prioritizeInaturalistTaxonPhoto(id, "visible");
+    }
+  }, [catalogHits, selected]);
+
+  useEffect(() => {
     if (!open) return;
+    const trimmed = debouncedQuery.trim();
+    if (!trimmed) {
+      setSearchHits(null);
+      setSearching(false);
+      return;
+    }
     const controller = new AbortController();
-    setLoading(true);
+    setSearching(true);
     setError(null);
-    fetchOrgQuery(orgQueryUrl, debouncedQuery, {
+    fetchOrgQuery(orgQueryUrl, trimmed, {
       accessToken,
       limit: ORG_QUERY_DEFAULT_LIMIT,
       signal: controller.signal,
     })
       .then((response) => {
-        cacheHits(response.hits);
-        setHits(response.hits);
-        if (!debouncedQuery) {
-          setCatalogCount(response.hits.length);
-        }
-        setLoading(false);
+        setSearchHits(response.hits);
+        setSearching(false);
       })
       .catch((err: Error) => {
         if (err.name === "AbortError") return;
         setError(t("Couldn't load search results"));
-        setLoading(false);
+        setSearching(false);
       });
     return () => controller.abort();
   }, [accessToken, debouncedQuery, open, orgQueryUrl, t]);
@@ -274,40 +423,41 @@ export default function OrganismSelector({
     return () => window.cancelAnimationFrame(frame);
   }, [open]);
 
-  const onVisibleTaxon = useCallback((id: number, visible: boolean) => {
-    const seen = visibleTaxonSetRef.current;
-    const had = seen.has(id);
-    if (visible === had) {
-      return;
-    }
-    if (visible) {
-      seen.add(id);
-    } else {
-      seen.delete(id);
-    }
-    if (visibleFlushRef.current) {
-      return;
-    }
-    visibleFlushRef.current = window.requestAnimationFrame(() => {
-      visibleFlushRef.current = 0;
-      setVisibleTaxonIds([...visibleTaxonSetRef.current]);
-    });
-  }, []);
-
-  const photos = useInaturalistTaxonPhotos(visibleTaxonIds);
+  const hits = searchHits ?? catalogHits;
+  const catalogCount = catalogHits.length || null;
+  const catalogValues = useMemo(
+    () => catalogHits.map((hit) => hit.value),
+    [catalogHits]
+  );
+  const effectiveSelected =
+    mode === "notNull" && catalogValues.length > 0
+      ? catalogValues
+      : selected;
+  const allCatalogSelected =
+    mode === "notNull" ||
+    (mode === "value" &&
+      catalogValues.length > 0 &&
+      effectiveSelected.length >= catalogValues.length &&
+      catalogValues.every((value) => effectiveSelected.includes(value)));
+  const selectedHits = allCatalogSelected
+    ? catalogHits
+    : effectiveSelected.map(orgQueryHitFromValue);
+  const trimmedQuery = query.trim();
+  const searchPending =
+    Boolean(trimmedQuery) && (trimmedQuery !== debouncedQuery || searching);
 
   const scrollTargetValue = useMemo(() => {
-    if (mode !== "value" || selected.length === 0) {
+    if (mode === "isNull" || effectiveSelected.length === 0) {
       return undefined;
     }
-    return hits.find((hit) => selected.includes(hit.value))?.value;
-  }, [hits, mode, selected]);
+    return hits.find((hit) => effectiveSelected.includes(hit.value))?.value;
+  }, [effectiveSelected, hits, mode]);
 
   useEffect(() => {
-    if (!open || loading || debouncedQuery || didScrollRef.current) {
+    if (!open || catalogLoading || searchPending || didScrollRef.current) {
       return;
     }
-    const list = listRef.current;
+    const list = listEl;
     const item = selectedOptionRef.current;
     if (!list || !item) {
       return;
@@ -319,7 +469,7 @@ export default function OrganismSelector({
     list.scrollTop =
       itemOffset - list.clientHeight / 2 + item.clientHeight / 2;
     didScrollRef.current = true;
-  }, [debouncedQuery, hits, loading, open]);
+  }, [catalogLoading, hits, listEl, open, searchPending]);
 
   const ancestorHits = useMemo(
     () => hits.filter(orgQueryHitMatchedAncestor),
@@ -336,62 +486,67 @@ export default function OrganismSelector({
     );
   };
 
-  const selectedHits = selected.map(hitFromValue);
-  const displayLabel = (() => {
-    if (mode === "isNull") return t("Is blank");
-    if (mode === "notNull") return t("Has a value");
-    if (selected.length === 0) return t("Search organisms");
-    if (selected.length === 1) {
-      return orgQueryHitLabel(selectedHits[0]);
+  const commitSelection = (nextSelected: string[], nextMulti: boolean) => {
+    if (
+      catalogValues.length > 0 &&
+      nextSelected.length >= catalogValues.length &&
+      catalogValues.every((value) => nextSelected.includes(value))
+    ) {
+      setMulti(nextMulti);
+      setMode("notNull");
+      setSelected(catalogValues);
+      commit("notNull", [], nextMulti);
+      return;
     }
-    // eslint-disable-next-line i18next/no-literal-string
-    return `${selected.length} ${t("selected")}`;
-  })();
+    setMulti(nextMulti);
+    setMode("value");
+    setSelected(nextSelected);
+    commit("value", nextSelected, nextMulti);
+  };
 
   const selectSingle = (value: string) => {
-    setMode("value");
-    setSelected([value]);
-    commit("value", [value], false);
+    commitSelection([value], false);
     setOpen(false);
   };
 
   const toggleMultiValue = (value: string) => {
-    let nextSelected = selected.includes(value)
-      ? selected.filter((entry) => entry !== value)
-      : [...selected, value];
-    if (nextSelected.length === 0 && selected[0]) {
-      nextSelected = [selected[0]];
-    }
-    setMode("value");
-    setSelected(nextSelected);
-    commit("value", nextSelected, true);
+    const nextSelected = effectiveSelected.includes(value)
+      ? effectiveSelected.filter((entry) => entry !== value)
+      : [...effectiveSelected, value];
+    commitSelection(nextSelected, true);
   };
 
   const onMultiToggle = (enabled: boolean) => {
-    setMulti(enabled);
     if (!enabled) {
-      const nextSelected = selected.slice(0, 1);
-      setSelected(nextSelected);
-      if (mode === "value") {
-        commit("value", nextSelected, false);
-      }
+      const nextSelected = effectiveSelected.slice(0, 1);
+      commitSelection(nextSelected, false);
       return;
     }
-    if (mode === "value") {
-      commit("value", selected, true);
+    if (mode === "notNull") {
+      setMulti(true);
+      return;
     }
+    commitSelection(effectiveSelected, true);
   };
 
   const selectVisible = (action: "all" | "none") => {
-    const values = hits.map((hit) => hit.value);
-    const nextSelected = applyVisibleMultiSelection(selected, values, action);
-    if (nextSelected.length === 0 && selected[0]) {
+    if (action === "none") {
+      commitSelection([], true);
       return;
     }
-    setMulti(true);
-    setMode("value");
-    setSelected(nextSelected);
-    commit("value", nextSelected, true);
+    const browsingCatalog = !debouncedQuery.trim() && searchHits == null;
+    if (browsingCatalog && catalogValues.length > 0) {
+      commitSelection(catalogValues, true);
+      return;
+    }
+    commitSelection(
+      applyVisibleMultiSelection(
+        effectiveSelected,
+        hits.map((hit) => hit.value),
+        action
+      ),
+      true
+    );
   };
 
   const selectAncestorMatches = () => {
@@ -417,18 +572,37 @@ export default function OrganismSelector({
           type="button"
           onKeyDown={onTriggerKeyDown}
           className={clsx(
-            "min-w-0 max-w-[58%] inline-flex items-center gap-1 rounded-md border border-gray-300 bg-white px-1.5 py-0.5 text-left text-xs text-gray-700",
+            "w-full min-w-0 flex items-center gap-2 rounded-md border border-gray-300 bg-white px-2 py-1.5 text-left",
             "hover:bg-gray-50 focus:outline-none focus:ring-0 focus:border-gray-300",
             "focus-visible:ring-1 focus-visible:ring-primary-500 focus-visible:border-primary-500"
           )}
         >
-          <span className="truncate flex-1 font-medium">{displayLabel}</span>
-          <CaretDownIcon className="w-3 h-3 flex-none text-gray-400" />
+          <span className="min-w-0 flex-1">
+            {mode === "isNull" ? (
+              <span className="block text-sm font-medium text-gray-600">
+                {t("Is blank")}
+              </span>
+            ) : allCatalogSelected ? (
+              <OrganismSelectionSummary hits={catalogHits} allSelected />
+            ) : selectedHits.length === 0 ? (
+              <span className="block text-sm font-medium text-gray-500">
+                {t("No selection")}
+              </span>
+            ) : selectedHits.length === 1 ? (
+              <OrganismDetails hit={selectedHits[0]} compact />
+            ) : (
+              <OrganismSelectionSummary
+                hits={selectedHits}
+                allSelected={false}
+              />
+            )}
+          </span>
+          <CaretDownIcon className="w-4 h-4 flex-none text-gray-400" />
         </button>
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
-          align="end"
+          align="start"
           sideOffset={6}
           collisionPadding={8}
           className="z-[100] w-[26rem] rounded-md border border-black/10 bg-white shadow-lg overflow-hidden data-[state=open]:data-[side=bottom]:animate-slideUpAndFade data-[state=open]:data-[side=top]:animate-slideDownAndFade"
@@ -457,27 +631,55 @@ export default function OrganismSelector({
                       })
                     : t("Search scientific or common names...")
                 }
-                className="w-full rounded border border-gray-200 bg-gray-50 pl-7 pr-2 py-1 text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-0 focus:border-gray-300 focus-visible:ring-1 focus-visible:ring-primary-500 focus-visible:border-primary-500"
+                className={clsx(
+                  "w-full rounded border border-gray-200 bg-gray-50 pl-7 py-1 text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-0 focus:border-gray-300 focus-visible:ring-1 focus-visible:ring-primary-500 focus-visible:border-primary-500",
+                  searchPending ? "pr-7" : "pr-2"
+                )}
+                aria-busy={searchPending}
               />
+              {searchPending ? (
+                <Spinner
+                  mini
+                  className="absolute right-2 top-1/2 -translate-y-1/2 opacity-80"
+                />
+              ) : null}
             </div>
           </div>
 
-          {mode !== "value" && (
+          {mode === "isNull" && (
             <div className="px-2.5 py-1.5 text-[11px] text-gray-500 border-b border-black/5 bg-amber-50/70">
-              {mode === "isNull"
-                ? t("Filtering to blank values. Pick a value to switch.")
-                : t("Filtering to any non-blank value. Pick a value to switch.")}
+              {t("Filtering to blank values. Pick a value to switch.")}
             </div>
           )}
+
+          {searchPending ? (
+            <div className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] text-gray-500 border-b border-black/5 bg-gray-50">
+              <Spinner mini className="opacity-80" />
+              <span>
+                {t("Searching for {{query}}…", { query: trimmedQuery })}
+              </span>
+            </div>
+          ) : null}
 
           {error && (
             <p className="px-3 py-2 text-xs text-red-600">{error}</p>
           )}
 
-          <div ref={listRef} className="max-h-96 overflow-y-auto py-1">
-            {loading && hits.length === 0 ? (
+          <div
+            ref={setListEl}
+            className={clsx(
+              "max-h-96 overflow-y-auto py-1",
+              searchPending && hits.length > 0 && "opacity-60"
+            )}
+            aria-busy={searchPending || catalogLoading}
+          >
+            {catalogLoading && hits.length === 0 ? (
               <p className="px-3 py-2 text-xs text-gray-400 italic">
-                {debouncedQuery ? t("Searching…") : t("Loading organisms…")}
+                {t("Loading organisms…")}
+              </p>
+            ) : searchPending && hits.length === 0 ? (
+              <p className="px-3 py-2 text-xs text-gray-400 italic">
+                {t("Searching…")}
               </p>
             ) : hits.length === 0 ? (
               <p className="px-3 py-2 text-xs text-gray-400 italic">
@@ -486,21 +688,19 @@ export default function OrganismSelector({
             ) : (
               hits.map((hit) => {
                 const isSelected =
-                  mode === "value" && selected.includes(hit.value);
+                  mode !== "isNull" && effectiveSelected.includes(hit.value);
                 return (
                   <OrganismHitRow
                     key={hit.value}
                     hit={hit}
                     isSelected={isSelected}
                     multi={multi}
-                    photos={photos}
-                    listRef={listRef}
+                    listEl={listEl}
                     rowRef={
                       hit.value === scrollTargetValue
                         ? selectedOptionRef
                         : undefined
                     }
-                    onVisibleTaxon={onVisibleTaxon}
                     onClick={() => {
                       if (multi) {
                         toggleMultiValue(hit.value);
@@ -525,8 +725,8 @@ export default function OrganismSelector({
               </button>
             )}
             <DataTableFilterMultiSelectRow
-              multi={multi}
-              selected={mode === "value" ? selected : []}
+              multi={multi || allCatalogSelected}
+              selected={mode === "isNull" ? [] : effectiveSelected}
               visibleValues={hits.map((hit) => hit.value)}
               onMultiToggle={onMultiToggle}
               onSelectAll={() => selectVisible("all")}
@@ -552,59 +752,20 @@ function OrganismHitRow({
   hit,
   isSelected,
   multi,
-  photos,
-  listRef,
+  listEl,
   rowRef,
-  onVisibleTaxon,
   onClick,
 }: {
   hit: OrgQueryHit;
   isSelected: boolean;
   multi: boolean;
-  photos: ReturnType<typeof useInaturalistTaxonPhotos>;
-  listRef: RefObject<HTMLDivElement>;
+  listEl: HTMLDivElement | null;
   rowRef?: Ref<HTMLDivElement>;
-  onVisibleTaxon: (id: number, visible: boolean) => void;
   onClick: () => void;
 }) {
-  const observeRef = useRef<HTMLDivElement>(null);
-  const commonName = hit.commonName;
-  const scientificName = hit.scientificName;
-  const primary = commonName || scientificName || hit.value;
-  const showScientific = Boolean(
-    scientificName && scientificName !== primary
-  );
-  const showValue = Boolean(
-    hit.value && hit.value !== primary && hit.value !== scientificName
-  );
-  const photoStatus = inaturalistTaxonPhotoStatus(hit.inatTaxonId, photos);
-  const photoCredit =
-    photoStatus.status === "ready"
-      ? compactInaturalistAttribution(photoStatus.photo.attribution)
-      : "";
-
-  useEffect(() => {
-    const node = observeRef.current;
-    const root = listRef.current;
-    const taxonId = hit.inatTaxonId;
-    if (!node || taxonId == null) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        onVisibleTaxon(taxonId, entry.isIntersecting);
-      },
-      { root: root ?? undefined, rootMargin: "160px 0px", threshold: 0 }
-    );
-    observer.observe(node);
-    return () => {
-      observer.disconnect();
-      onVisibleTaxon(taxonId, false);
-    };
-  }, [hit.inatTaxonId, listRef, onVisibleTaxon]);
-
   return (
     <div
       ref={(node) => {
-        (observeRef as MutableRefObject<HTMLDivElement | null>).current = node;
         assignRef(rowRef, node);
       }}
       role="option"
@@ -636,33 +797,7 @@ function OrganismHitRow({
       >
         {isSelected && <CheckIcon className="w-3 h-3" />}
       </span>
-      <OrganismThumb status={photoStatus} />
-      <span className="min-w-0 flex-1">
-        <span className="block text-sm font-medium leading-snug text-gray-800">
-          {primary}
-        </span>
-        {showScientific ? (
-          <span className="mt-0.5 block text-xs italic leading-snug text-gray-600">
-            {scientificName}
-          </span>
-        ) : null}
-        {showValue ? (
-          <span className="mt-0.5 block font-mono text-[11px] leading-snug text-gray-500">
-            {hit.value}
-          </span>
-        ) : null}
-        {photoCredit ? (
-          <OrganismPhotoCredit
-            attribution={photoCredit}
-            licenseCode={
-              photoStatus.status === "ready"
-                ? photoStatus.photo.licenseCode
-                : undefined
-            }
-          />
-        ) : null}
-        {hit.description ? <OrganismDescription text={hit.description} /> : null}
-      </span>
+      <OrganismDetails hit={hit} thumbnailRoot={listEl} />
     </div>
   );
 }

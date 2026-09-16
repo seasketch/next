@@ -144,6 +144,8 @@ function isOrganismInfo(value) {
     }
     if (!isOptionalBoolean(value.includeLowConfidenceMatches))
         return false;
+    if (!isOptionalNonEmptyString(value.classJoinColumn))
+        return false;
     if (!isOptionalNonNegativeInt(value.valueCount))
         return false;
     if (!isOptionalNonNegativeInt(value.classifiedCount))
@@ -152,6 +154,9 @@ function isOrganismInfo(value) {
 }
 function isOptionalBoolean(value) {
     return value === undefined || typeof value === "boolean";
+}
+function isOptionalNonEmptyString(value) {
+    return value === undefined || isNonEmptyString(value);
 }
 function isOptionalNonNegativeInt(value) {
     return (value === undefined ||
@@ -168,6 +173,8 @@ function isDataTableOrganismConfig(value) {
     if (!isOrganismValueKind(value.valueKind))
         return false;
     if (!isOptionalBoolean(value.includeLowConfidenceMatches))
+        return false;
+    if (!isOptionalNonEmptyString(value.classJoinColumn))
         return false;
     return isOrganismRoles(value.roles);
 }
@@ -346,7 +353,9 @@ function catalogRowToSearchDocument(row, column, includeLowConfidenceMatches = f
     };
 }
 function organismInfoFromConfig(config, authoredBy = "admin", counts) {
-    return Object.assign({ version: 1, column: config.column, valueKind: config.valueKind, roles: config.roles, authoredBy, includeLowConfidenceMatches: includeLowConfidenceMatchesEnabled(config) }, (counts
+    return Object.assign(Object.assign(Object.assign({ version: 1, column: config.column, valueKind: config.valueKind, roles: config.roles, authoredBy }, (config.classJoinColumn
+        ? { classJoinColumn: config.classJoinColumn }
+        : {})), { includeLowConfidenceMatches: includeLowConfidenceMatchesEnabled(config) }), (counts
         ? {
             valueCount: counts.valueCount,
             classifiedCount: counts.classifiedCount,

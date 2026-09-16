@@ -53,19 +53,13 @@ export function classTableJoinColumn(
   config: DataTableOrganismConfig,
   classHeaders: string[]
 ): string | null {
-  const codes = columnsWithRole(config.roles, "code").filter((name) =>
-    classHeaders.includes(name)
-  );
-  if (codes[0]) return codes[0];
-  if (classHeaders.includes(config.column)) return config.column;
-  const scientific = columnsWithRole(config.roles, "scientificName").filter(
-    (name) => classHeaders.includes(name)
-  );
-  if (scientific[0]) return scientific[0];
-  const common = columnsWithRole(config.roles, "commonName").filter((name) =>
-    classHeaders.includes(name)
-  );
-  return common[0] || null;
+  if (
+    typeof config.classJoinColumn === "string" &&
+    classHeaders.includes(config.classJoinColumn)
+  ) {
+    return config.classJoinColumn;
+  }
+  return null;
 }
 
 function firstRoleText(
@@ -107,12 +101,15 @@ export function resolveInputFromValue(
   config: DataTableOrganismConfig,
   classRow?: ClassTableRow
 ): ResolveOrganismInput {
+  const genusFromRole = firstRoleText(classRow, config, "genus");
+  const species = firstRoleText(classRow, config, "species");
+  const scientificFromParts =
+    genusFromRole && species ? `${genusFromRole} ${species}` : null;
   const scientific =
     firstRoleText(classRow, config, "scientificName") ||
+    scientificFromParts ||
     (config.valueKind === "scientificName" ? value : null);
-  const genus =
-    firstRoleText(classRow, config, "genus") || genusFromOrganismName(scientific);
-  const species = firstRoleText(classRow, config, "species");
+  const genus = genusFromRole || genusFromOrganismName(scientific);
   const commonName =
     firstRoleText(classRow, config, "commonName") ||
     (config.valueKind === "commonName" ? value : null);
@@ -133,6 +130,46 @@ export function resolveInputFromValue(
     wormsAphiaId,
     extraNames: allRoleTexts(classRow, config, "commonName"),
   };
+}
+
+/** Class-table / identity join only. Used for admin draft preview. */
+export function joinOrganismCatalogRows(options: {
+  values: DistinctOrganismValue[];
+  classRows?: ClassTableRow[];
+  config: DataTableOrganismConfig;
+}): OrganismCatalogRow[] {
+  if (!isDataTableOrganismConfig(options.config)) {
+    throw new Error("Invalid organism_config");
+  }
+  const classRows = options.classRows || [];
+  const headers = classRows[0] ? Object.keys(classRows[0]) : [];
+  const joinColumn = classTableJoinColumn(options.config, headers);
+  return options.values.map((item) => {
+    const classRow = classRowForValue(item.value, classRows, joinColumn);
+    const input = resolveInputFromValue(item.value, options.config, classRow);
+    const description =
+      allRoleTexts(classRow, options.config, "description").join(" ") || null;
+    const row: OrganismCatalogRow = {
+      value: item.value,
+      scientific_name: input.scientificName,
+      common_name: input.commonName,
+      common_names: uniqueStrings([
+        input.commonName,
+        ...(input.extraNames || []),
+      ]),
+      genus: input.genus,
+      family: null,
+      ancestor_names: [],
+      description,
+      inat_taxon_id: null,
+      worms_aphia_id: input.wormsAphiaId,
+      search_text: "",
+      occurrence_count: item.occurrenceCount,
+      confidence: "unresolved",
+    };
+    row.search_text = buildOrganismSearchText(row);
+    return row;
+  });
 }
 
 export async function enrichOrganismValues(options: {

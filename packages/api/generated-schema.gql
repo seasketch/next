@@ -11238,9 +11238,10 @@ type Mutation {
 
   """
   Admin mutation. Sets (or clears, when null) the OrganismInfo document
-  for an overlay data table. authoredBy is forced to "admin". Does not
-  write catalog or search-index sidecars; use the enrichment reprocess
-  job for that.
+  for an overlay data table. authoredBy is forced to "admin". Clearing
+  also deletes organism catalog, search-index, and preview sidecars.
+  Setting a document does not write those files; use the enrichment
+  reprocess job for that.
   """
   updateOverlayDataTableOrganism(organism: OrganismInfo, overlayDataTableId: Int!): OverlayDataTable!
 
@@ -11989,6 +11990,7 @@ type OverlayDataTable implements Node {
   organism: OrganismInfo
   organismCatalogUrl: String
   organismPreviewUrl: String
+  orgQueryUrl: String
   overlayJoinColumn: String!
   parquetRemote: String!
   parquetUrl: String

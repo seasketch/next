@@ -138,11 +138,12 @@ describe("resolveOrganismTaxa", () => {
       }
     );
 
-    const matchPosts = urls.filter((u) => u.includes("AphiaRecordsByMatchNames"));
+    const matchNames = urls.filter((u) => u.includes("AphiaRecordsByMatchNames"));
     const wikiPosts = urls.filter((u) => u.includes("query.wikidata.org"));
     const inatSearches = urls.filter((u) => u.includes("/v1/taxa?"));
     const inatIds = urls.filter((u) => /\/v1\/taxa\/\d/.test(u));
-    assert.equal(matchPosts.length, 1);
+    assert.equal(matchNames.length, 1);
+    assert.match(matchNames[0], /scientificnames/);
     assert.ok(wikiPosts.length >= 1);
     assert.equal(inatSearches.length, 0);
     assert.equal(inatIds.length, 0);

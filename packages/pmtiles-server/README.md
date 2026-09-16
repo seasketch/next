@@ -14,7 +14,7 @@ The Worker has five responsibilities:
    hyparquet, sharing the parent layer's published-UUID ACL, plus
    `GET /orgQuery` organism search over `organism-search.json`.
 5. An allowlisted WoRMS taxonomy proxy (`/taxonomy/worms/…`) used by
-   data-table organism enrichment. Responses are cached for **one hour**
+   data-table organism enrichment. Responses are cached for **48 hours**
    via the Cache API. This is not an open proxy. The browser loads iNaturalist
    taxon photos directly from `api.inaturalist.org`.
 
@@ -236,7 +236,7 @@ proxy on this worker.
 ### Taxonomy proxy
 
 Allowlisted WoRMS cache used by organism enrichment. Not an open proxy.
-Cached **one hour** (`Cache API` + `Cache-Control: max-age=3600`).
+Cached **48 hours** (`Cache API` + `Cache-Control: max-age=172800`).
 
 Requires the same **overlay-engine** JWT other Lambdas already send to this
 host (`Authorization: Bearer …`). Map-access tokens are rejected. Auth runs
@@ -249,7 +249,7 @@ Only these paths:
 GET  /taxonomy/worms/AphiaRecordByAphiaID/{id}
 GET  /taxonomy/worms/AphiaClassificationByAphiaID/{id}
 GET  /taxonomy/worms/AphiaVernacularsByAphiaID/{id}
-POST /taxonomy/worms/AphiaRecordsByMatchNames
+GET  /taxonomy/worms/AphiaRecordsByMatchNames?scientificnames[]=…
 ```
 
 The browser calls `https://api.inaturalist.org/v1/taxa/{ids}` directly

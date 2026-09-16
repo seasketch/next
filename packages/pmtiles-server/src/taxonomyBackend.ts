@@ -1,6 +1,6 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 
-export const TAXONOMY_CACHE_TTL_SECONDS = 3600;
+export const TAXONOMY_CACHE_TTL_SECONDS = 48 * 60 * 60;
 export const WORMS_REST_URL = "https://www.marinespecies.org/rest";
 export const ORGANISM_USER_AGENT =
   "SeaSketch-organism-enrichment/1.0 (https://www.seasketch.org)";
@@ -24,7 +24,8 @@ export type TaxonomyUpstream = {
  */
 export function taxonomyUpstream(
   pathname: string,
-  method: string
+  method: string,
+  search = ""
 ): TaxonomyUpstream | null {
   if (pathname.match(WORMS_RECORD)) {
     if (method !== "GET") return null;
@@ -54,10 +55,10 @@ export function taxonomyUpstream(
     };
   }
   if (pathname.match(WORMS_MATCH_NAMES)) {
-    if (method !== "POST") return null;
+    if (method !== "GET") return null;
     return {
-      url: `${WORMS_REST_URL}/AphiaRecordsByMatchNames`,
-      method: "POST",
+      url: `${WORMS_REST_URL}/AphiaRecordsByMatchNames${search}`,
+      method: "GET",
       provider: "worms",
     };
   }
@@ -92,12 +93,12 @@ export async function handleTaxonomyRequest(
   }
 
   const url = new URL(request.url);
-  const upstream = taxonomyUpstream(url.pathname, request.method);
+  const upstream = taxonomyUpstream(url.pathname, request.method, url.search);
   if (!upstream) {
     return new Response(
       JSON.stringify({
         error:
-          "Not found. Allowlisted taxonomy proxy: /taxonomy/worms/{AphiaRecord|AphiaClassification|AphiaVernaculars}ByAphiaID/{id} or POST AphiaRecordsByMatchNames",
+          "Not found. Allowlisted taxonomy proxy: /taxonomy/worms/{AphiaRecord|AphiaClassification|AphiaVernaculars}ByAphiaID/{id} or GET AphiaRecordsByMatchNames",
       }),
       {
         status: 404,

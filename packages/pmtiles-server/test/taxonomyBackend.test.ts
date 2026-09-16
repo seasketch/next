@@ -14,9 +14,17 @@ describe("taxonomyUpstream", () => {
       "https://www.marinespecies.org/rest/AphiaRecordByAphiaID/1702292"
     );
     expect(
+      taxonomyUpstream(
+        "/taxonomy/worms/AphiaRecordsByMatchNames",
+        "GET",
+        "?scientificnames%5B%5D=Bodianus%20pulcher"
+      )?.url
+    ).toBe(
+      "https://www.marinespecies.org/rest/AphiaRecordsByMatchNames?scientificnames%5B%5D=Bodianus%20pulcher"
+    );
+    expect(
       taxonomyUpstream("/taxonomy/worms/AphiaRecordsByMatchNames", "POST")
-        ?.method
-    ).toBe("POST");
+    ).toBeNull();
     expect(taxonomyUpstream("/taxonomy/inat/v1/taxa", "GET")).toBeNull();
     expect(taxonomyUpstream("/taxonomy/inat/thumbs", "GET")).toBeNull();
     expect(
@@ -27,7 +35,7 @@ describe("taxonomyUpstream", () => {
 });
 
 describe("handleTaxonomyRequest", () => {
-  it("caches a successful GET for one hour", async () => {
+  it("caches a successful GET for 48 hours", async () => {
     let fetches = 0;
     const store = new Map<string, Response>();
     const cache = {
@@ -57,7 +65,7 @@ describe("handleTaxonomyRequest", () => {
     expect(first.headers.get("Cache-Control")).toBe(
       `public, max-age=${TAXONOMY_CACHE_TTL_SECONDS}`
     );
-    expect(TAXONOMY_CACHE_TTL_SECONDS).toBe(3600);
+    expect(TAXONOMY_CACHE_TTL_SECONDS).toBe(48 * 60 * 60);
 
     const second = await handleTaxonomyRequest(req.clone(), {
       fetch: fetchImpl,

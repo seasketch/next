@@ -8533,9 +8533,10 @@ export type Mutation = {
   updateOverlayDataTableNodata?: Maybe<UpdateOverlayDataTableNodataPayload>;
   /**
    * Admin mutation. Sets (or clears, when null) the OrganismInfo document
-   * for an overlay data table. authoredBy is forced to "admin". Does not
-   * write catalog or search-index sidecars; use the enrichment reprocess
-   * job for that.
+   * for an overlay data table. authoredBy is forced to "admin". Clearing
+   * also deletes organism catalog, search-index, and preview sidecars.
+   * Setting a document does not write those files; use the enrichment
+   * reprocess job for that.
    */
   updateOverlayDataTableOrganism: OverlayDataTable;
   /**
@@ -10858,6 +10859,7 @@ export type OverlayDataTable = Node & {
   organism?: Maybe<Scalars['OrganismInfo']>;
   organismCatalogUrl?: Maybe<Scalars['String']>;
   organismPreviewUrl?: Maybe<Scalars['String']>;
+  orgQueryUrl?: Maybe<Scalars['String']>;
   overlayJoinColumn: Scalars['String'];
   parquetRemote: Scalars['String'];
   parquetUrl?: Maybe<Scalars['String']>;
@@ -24284,7 +24286,7 @@ export type UpdateOverlayDataTableOrganismMutation = (
   { __typename?: 'Mutation' }
   & { updateOverlayDataTableOrganism: (
     { __typename?: 'OverlayDataTable' }
-    & Pick<OverlayDataTable, 'id' | 'organism'>
+    & Pick<OverlayDataTable, 'id' | 'organism' | 'organismCatalogUrl' | 'organismPreviewUrl' | 'orgQueryUrl'>
   ) }
 );
 
@@ -33154,6 +33156,9 @@ export const UpdateOverlayDataTableOrganismDocument = /*#__PURE__*/ gql`
   ) {
     id
     organism
+    organismCatalogUrl
+    organismPreviewUrl
+    orgQueryUrl
   }
 }
     `;

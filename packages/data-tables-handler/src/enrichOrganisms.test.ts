@@ -5,6 +5,7 @@ import { ORGANISM_SEARCH_INDEX_OPTIONS } from "@seasketch/geostats-types";
 import {
   classTableJoinColumn,
   enrichOrganismValues,
+  joinOrganismCatalogRows,
   previewPayloadFromCatalog,
   resolveInputFromValue,
   serializeOrganismSearchIndex,
@@ -14,6 +15,7 @@ import type { TaxonomyClients } from "./taxonomyApis";
 const config = {
   column: "classcode",
   valueKind: "code" as const,
+  classJoinColumn: "classcode",
   roles: {
     classcode: "code" as const,
     Scientific_Name: "scientificName" as const,
@@ -83,17 +85,24 @@ function mockClients(): TaxonomyClients {
 }
 
 describe("classTableJoinColumn", () => {
-  it("prefers the code role, then the identity column name", () => {
+  it("uses only the explicit classJoinColumn", () => {
     assert.equal(
       classTableJoinColumn(config, ["classcode", "Scientific_Name"]),
       "classcode"
     );
     assert.equal(
       classTableJoinColumn(
-        { column: "Common_Name", valueKind: "commonName", roles: {} },
-        ["Common_Name", "Scientific_Name"]
+        { ...config, classJoinColumn: "orig_classcode" },
+        ["classcode", "orig_classcode"]
       ),
-      "Common_Name"
+      "orig_classcode"
+    );
+    assert.equal(
+      classTableJoinColumn(
+        { column: "classcode", valueKind: "code", roles: { classcode: "code" } },
+        ["classcode"]
+      ),
+      null
     );
   });
 });
@@ -110,6 +119,50 @@ describe("resolveInputFromValue", () => {
     assert.equal(input.scientificName, "Bodianus pulcher");
     assert.equal(input.wormsAphiaId, 1702292);
     assert.equal(input.commonName, "California Sheephead");
+  });
+
+  it("builds a scientific name from genus and species when no AphiaID is given", () => {
+    const input = resolveInputFromValue(
+      "AARG",
+      {
+        column: "classcode",
+        valueKind: "code",
+        classJoinColumn: "classcode",
+        roles: { Genus: "genus", Species: "species" },
+      },
+      { classcode: "AARG", Genus: "Amphistichus", Species: "argenteus" }
+    );
+    assert.equal(input.scientificName, "Amphistichus argenteus");
+    assert.equal(input.genus, "Amphistichus");
+    assert.equal(input.species, "argenteus");
+    assert.equal(input.wormsAphiaId, null);
+  });
+});
+
+describe("joinOrganismCatalogRows", () => {
+  it("fills class-table names without calling APIs", () => {
+    const rows = joinOrganismCatalogRows({
+      values: [
+        { value: "SPUL", occurrenceCount: 12 },
+        { value: "boulder", occurrenceCount: 4 },
+      ],
+      classRows: [
+        {
+          classcode: "SPUL",
+          Scientific_Name: "Bodianus pulcher",
+          Common_Name: "California Sheephead",
+          taxanomic_id: 1702292,
+          species_definition: "Size cutoff 10 cm",
+        },
+        { classcode: "boulder", species_definition: "Substrate" },
+      ],
+      config,
+    });
+    assert.equal(rows[0].scientific_name, "Bodianus pulcher");
+    assert.equal(rows[0].worms_aphia_id, 1702292);
+    assert.equal(rows[0].inat_taxon_id, null);
+    assert.equal(rows[0].confidence, "unresolved");
+    assert.equal(rows[1].description, "Substrate");
   });
 });
 

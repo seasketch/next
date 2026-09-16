@@ -55,6 +55,11 @@ export type OrganismInfo = {
   column: string;
   valueKind: OrganismValueKind;
   roles: OrganismRoles;
+  /**
+   * Class-table (taxon CSV) column whose values match `column`. Required
+   * for the last run that included a class table.
+   */
+  classJoinColumn?: string;
   authoredBy?: OrganismAuthoredBy;
   /**
    * When true, low-confidence common-name iNaturalist matches are treated as
@@ -76,6 +81,8 @@ export type DataTableOrganismConfig = {
   column: string;
   valueKind: OrganismValueKind;
   roles: OrganismRoles;
+  /** Class-table column to join to `column`. Required when a CSV is supplied. */
+  classJoinColumn?: string;
   includeLowConfidenceMatches?: boolean;
 };
 
@@ -228,6 +235,7 @@ export function isOrganismInfo(value: unknown): value is OrganismInfo {
     return false;
   }
   if (!isOptionalBoolean(value.includeLowConfidenceMatches)) return false;
+  if (!isOptionalNonEmptyString(value.classJoinColumn)) return false;
   if (!isOptionalNonNegativeInt(value.valueCount)) return false;
   if (!isOptionalNonNegativeInt(value.classifiedCount)) return false;
   return true;
@@ -235,6 +243,10 @@ export function isOrganismInfo(value: unknown): value is OrganismInfo {
 
 function isOptionalBoolean(value: unknown): boolean {
   return value === undefined || typeof value === "boolean";
+}
+
+function isOptionalNonEmptyString(value: unknown): boolean {
+  return value === undefined || isNonEmptyString(value);
 }
 
 function isOptionalNonNegativeInt(value: unknown): boolean {
@@ -257,6 +269,7 @@ export function isDataTableOrganismConfig(
   if (!isNonEmptyString(value.column)) return false;
   if (!isOrganismValueKind(value.valueKind)) return false;
   if (!isOptionalBoolean(value.includeLowConfidenceMatches)) return false;
+  if (!isOptionalNonEmptyString(value.classJoinColumn)) return false;
   return isOrganismRoles(value.roles);
 }
 
@@ -492,6 +505,9 @@ export function organismInfoFromConfig(
     valueKind: config.valueKind,
     roles: config.roles,
     authoredBy,
+    ...(config.classJoinColumn
+      ? { classJoinColumn: config.classJoinColumn }
+      : {}),
     includeLowConfidenceMatches: includeLowConfidenceMatchesEnabled(config),
     ...(counts
       ? {

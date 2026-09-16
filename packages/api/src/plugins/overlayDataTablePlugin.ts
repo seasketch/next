@@ -1,5 +1,6 @@
 import { makeExtendSchemaPlugin, gql } from "graphile-utils";
 import { S3 } from "aws-sdk";
+import { isOrganismInfo } from "@seasketch/geostats-types";
 
 export const DATA_TABLE_UPLOAD_PRESIGNED_URL_TTL = 60 * 120;
 
@@ -55,16 +56,28 @@ function remoteToSiblingUrl(
   return `${UPLOADS_PUBLIC_BASE_URL}/${tablePath}/${filename}`;
 }
 
+function tableHasOrganism(table: { organism?: unknown }): boolean {
+  const value = table.organism;
+  if (typeof value === "string") {
+    try {
+      return isOrganismInfo(JSON.parse(value));
+    } catch {
+      return false;
+    }
+  }
+  return isOrganismInfo(value);
+}
+
 const OverlayDataTablePlugin = makeExtendSchemaPlugin(() => ({
   typeDefs: gql`
     extend type OverlayDataTable {
       parquetUrl: String @requires(columns: ["parquet_remote"])
       columnStatsUrl: String @requires(columns: ["column_stats_remote"])
       queryUrl: String @requires(columns: ["parquet_remote"])
-      orgQueryUrl: String @requires(columns: ["parquet_remote"])
+      orgQueryUrl: String @requires(columns: ["parquet_remote", "organism"])
       temporalPreviewUrl: String @requires(columns: ["parquet_remote"])
-      organismCatalogUrl: String @requires(columns: ["parquet_remote"])
-      organismPreviewUrl: String @requires(columns: ["parquet_remote"])
+      organismCatalogUrl: String @requires(columns: ["parquet_remote", "organism"])
+      organismPreviewUrl: String @requires(columns: ["parquet_remote", "organism"])
     }
 
     extend type OverlayDataTableUpload {
@@ -77,13 +90,20 @@ const OverlayDataTablePlugin = makeExtendSchemaPlugin(() => ({
       parquetUrl: (table) => remoteToPublicUrl(table.parquetRemote),
       columnStatsUrl: (table) => remoteToPublicUrl(table.columnStatsRemote),
       queryUrl: (table) => remoteToQueryUrl(table.parquetRemote),
-      orgQueryUrl: (table) => remoteToOrgQueryUrl(table.parquetRemote),
+      orgQueryUrl: (table) =>
+        tableHasOrganism(table)
+          ? remoteToOrgQueryUrl(table.parquetRemote)
+          : null,
       temporalPreviewUrl: (table) =>
         remoteToTemporalPreviewUrl(table.parquetRemote),
       organismCatalogUrl: (table) =>
-        remoteToSiblingUrl(table.parquetRemote, "organism-catalog.parquet"),
+        tableHasOrganism(table)
+          ? remoteToSiblingUrl(table.parquetRemote, "organism-catalog.parquet")
+          : null,
       organismPreviewUrl: (table) =>
-        remoteToSiblingUrl(table.parquetRemote, "organism-preview.json"),
+        tableHasOrganism(table)
+          ? remoteToSiblingUrl(table.parquetRemote, "organism-preview.json")
+          : null,
     },
     OverlayDataTableUpload: {
       presignedUploadUrl: async (upload) => {

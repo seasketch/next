@@ -31,6 +31,7 @@ import { OfflineStateDetector } from "./offline/OfflineStateContext";
 import { onError } from "@apollo/client/link/error";
 import { DialogProvider } from "./components/useDialog";
 import { ToastProvider } from "./components/Toast";
+import INaturalistThumbnailProvider from "./components/INaturalistThumbnail/INaturalistThumbnailProvider";
 
 const history = createBrowserHistory();
 
@@ -312,7 +313,9 @@ ReactDOM.render(
             <ApolloProviderWithToken>
               <DialogProvider>
                 <ToastProvider>
-                  <App />
+                  <INaturalistThumbnailProvider>
+                    <App />
+                  </INaturalistThumbnailProvider>
                 </ToastProvider>
               </DialogProvider>
             </ApolloProviderWithToken>

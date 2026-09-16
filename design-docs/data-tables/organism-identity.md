@@ -1,8 +1,10 @@
 # Organism identity for Data Tables
 
-Data Tables are the way SeaSketch attaches monitoring observations — usually species density or size, sometimes water quality or visitor counts — to a sites/features layer. Thematic maps (bubble charts) already join aggregated parquet rows onto those features and follow the timeslider. What they cannot do yet is treat a `classcode`, `Common_Name`, or `scientificname` column as **organisms**.
+Data Tables are the way SeaSketch attaches monitoring observations — usually species density or size, sometimes water quality or visitor counts — to a sites/features layer. Thematic maps (bubble charts) already join aggregated parquet rows onto those features and follow the timeslider. Organism identity is how a `classcode`, `Common_Name`, or `scientificname` column becomes a searchable catalog instead of a raw string filter.
 
 This document is the architecture for identifying those columns, optionally enriching them from a class/species table, resolving taxa against public APIs, and searching the result from an Organism Selector and (later) the overlay search bar.
+
+Enrichment calls **WoRMS** (via the worker `/taxonomy` proxy) and **Wikidata SPARQL** (directly). It does **not** call iNaturalist. The catalog stores an `inat_taxon_id` minted from Wikidata P3151; the browser loads licensed photos from that id at display time.
 
 Related: [Temporal Data](../temporal-data/temporal-data.md) · [pmtiles-server Data Tables](../../packages/pmtiles-server/README.md)
 
@@ -61,7 +63,7 @@ In-scope datasets from the California MPA Monitoring brief, and how organism ide
 
   `taxanomic_source` is WoRMS; `taxanomic_id` is an AphiaID (`272286` for Northern Anchovy). `species_definition` is a description field to map as **description**.
 
-- Older `Fish Species.csv` adds a `Rockfish` boolean — useful extra search text, not required if WoRMS/iNat ancestry is resolved.
+- Older `Fish Species.csv` adds a `Rockfish` boolean — useful extra search text, not required if WoRMS ancestry is resolved.
 - Enrichment can run on `Common_Name` alone. Attaching the species table is better (AphiaIDs + definitions).
 
 ### Intertidal — MARINe / PISCO
@@ -88,38 +90,46 @@ RCCA, Bull Kelp (NorCal), HAB phytoplankton, CalCOFI, deep-water ROV. HAB names 
 
 ---
 
-## Taxonomy APIs (researched 2026-09-11)
+## Taxonomy APIs (researched 2026-09-11; enrichment path as of 2026-09)
 
-Two providers. Neither is the search backend for the selector or overlay search.
+Three providers. None of them is the search backend for the selector or overlay search.
 
-### iNaturalist — vernaculars and photos
-
-- Docs: [API recommended practices](https://www.inaturalist.org/pages/api+recommended+practices), [taxa API](https://api.inaturalist.org/v1/docs/#!/Taxa).
-- **Id → taxon (and photo) is supported.** `GET /v1/taxa/{id}` accepts comma-separated ids, **maximum 30**. Response includes `name`, `preferred_common_name`, `rank`, `ancestor_ids`, `ancestors[]` (name + common name per rank), and `default_photo` (`square_url`, `medium_url`, `license_code`, `attribution`).
-- Confirmed for California Sheephead: `GET /v1/taxa/1439813` → `Bodianus pulcher`, preferred common name “California Sheephead”, `default_photo` on `inaturalist-open-data.s3.amazonaws.com`, `license_code: cc-by-nc`. Wikipedia summary still mentions the `Semicossyphus` synonym. iNat’s `preferred_place_id` can bias vernaculars toward a region (California is place **14**); **do not set it on enrichment or runtime queries.** This pipeline is global. If a later revision wants regional common names, pass a place derived from the project’s geography — never a hardcoded CA id.
-- **Name search is the wrong tool, even during enrichment.** `GET /v1/taxa?q=` is one name per request at ~1 rps and 429s well before a KFM-sized class table finishes. Do not use it to mint ids.
-- **Ids come from Wikidata, then the iNat id batch.** After WoRMS, SPARQL `query.wikidata.org` in batches of ≤50: P850 (AphiaID) and P225 / English `rdfs:label` / P1843 (names) → P3151 (iNat taxon id). Then `GET /v1/taxa/{ids}` (≤30). If a hit is inactive, follow `current_synonymous_taxon_ids` (Wikidata still has `Semicossyphus pulcher` → 53699; iNat points that at `Bodianus pulcher` 1439813).
-- **Rate limits (official, iNat):** keep about **1 request/second**, ~60/min preferred, hard-ish throttle **100/min**, **~10,000 requests/day**. The enrichment job should only hit iNat’s id endpoint. Wikidata is a separate SPARQL quota (User-Agent required; serial batches of 50).
-- 700 distinct codes, **batched by 30**, is ~24 iNat id requests ≈ half a minute at 1 rps — acceptable **once**, not on every wizard keystroke. Cache every request by `(provider, endpoint, params)`.
-- Photos are **user-owned**. Default upload license is CC BY-NC. `license_code: null` + `static.inaturalist.org` means all rights reserved — do not display those. Always show `attribution`. SeaSketch display in the app is a reasonable CC BY-NC use; do not republish photos into our own CDN.
-- There is no reliable public “AphiaID → iNat id” field on the taxa payload (`taxon_schemes_count` is not a crosswalk). After WoRMS gives an accepted scientific name, search iNat by that name.
-
-### WoRMS — marine nomenclature
+### WoRMS — marine nomenclature (enrichment)
 
 - REST: `https://www.marinespecies.org/rest/`.
 - **No photo API.** Classification, accepted name, synonyms, vernaculars, external ids only.
-- Useful calls: `AphiaRecordsByName/{name}`, `AphiaRecordsByMatchNames` (up to **50** scientific names), `AphiaRecordByAphiaID/{id}`, `AphiaClassificationByAphiaID/{id}`, `AphiaVernacularsByAphiaID/{id}`.
+- Calls the handler actually makes: `AphiaRecordByAphiaID/{id}`, `AphiaRecordsByMatchNames` (up to **50** scientific names), `AphiaClassificationByAphiaID/{id}`, `AphiaVernacularsByAphiaID/{id}`.
 - Confirmed: `AphiaRecordsByName/Bodianus pulcher` → AphiaID `1702292`, accepted, family Labridae. Classification walks Biota → Labridae → _Bodianus_ → \*Bodianus pulcher`.
-- No published hard rate limit. Community clients batch ~50 and retry politely. Still cache.
+- No published hard rate limit. The handler spaces WoRMS calls (~50 ms floor) and retries politely. Responses go through `/taxonomy` on `pmtiles-server` (48 hour Cache API).
 - CCFRP and MARINe already ship AphiaIDs. Prefer those over name match.
 
-### How the two are used
+### Wikidata — iNaturalist taxon id (enrichment)
 
-| Job                                                                         | Provider                                |
-| --------------------------------------------------------------------------- | --------------------------------------- |
-| Accept / correct a scientific name; classification; AphiaID                 | WoRMS                                   |
-| Preferred English common name; ancestor common names (“Rockfishes”); photos | iNaturalist                             |
-| Search-as-you-type in the map                                               | **Neither** — `orgQuery` on the search index |
+- SPARQL at `query.wikidata.org`, **directly from the handler** (not the `/taxonomy` proxy). User-Agent required. Batches of ≤50.
+- After WoRMS, look up P3151 (iNaturalist taxon id) by P850 (AphiaID), then by scientific / common names via P225, English `rdfs:label`, and P1843.
+- AphiaID or scientific-name hits are **high** confidence. A common-name-only hit is **low** confidence. Ambiguous names (two different iNat ids) are dropped.
+- This is how `inat_taxon_id` gets onto the catalog. Wikidata may still have a synonym id (e.g. `Semicossyphus pulcher` → 53699 while iNat’s current taxon is `Bodianus pulcher` 1439813). Enrichment **stores the Wikidata id as-is**. It does not call iNat to follow `current_synonymous_taxon_ids`.
+
+### iNaturalist — licensed photos (runtime only)
+
+- Docs: [API recommended practices](https://www.inaturalist.org/pages/api+recommended+practices), [taxa API](https://api.inaturalist.org/v1/docs/#!/Taxa).
+- **The enrichment job never calls iNaturalist.** Not the id endpoint, not `?q=`. Tests in `data-tables-handler` assert zero iNat URLs.
+- **Id → photo is a browser concern.** `GET /v1/taxa/{id}` accepts comma-separated ids, **maximum 30**. The client hits `api.inaturalist.org` directly (CORS `*`). Do **not** proxy iNat through the worker: Cloudflare egress IPs are shared and iNaturalist 429s them.
+- Confirmed for California Sheephead: `GET /v1/taxa/1439813` → `Bodianus pulcher`, preferred common name “California Sheephead”, licensed `default_photo` on `inaturalist-open-data.s3.amazonaws.com`, `license_code: cc-by-nc`.
+- **Name search is the wrong tool** for minting ids or for the selector. `GET /v1/taxa?q=` is one name per request, 429s on a KFM-sized table, and is globally ranked (see [Why the client must not search iNaturalist live](#why-the-client-must-not-search-inaturalist-live)).
+- iNat’s `preferred_place_id` can bias vernaculars toward a region (California is place **14**). **Do not set it** on runtime photo queries. This pipeline is global. If a later revision wants regional common names, pass a place derived from the project’s geography — never a hardcoded CA id.
+- **Rate limits (official, iNat):** about **1 request/second**, ~60/min preferred, hard-ish throttle **100/min**, **~10,000 requests/day**. These apply to the **client photo scheduler**, not the enrichment job. Visible ids first, batches of ≤30, settle-then-flush, memoize by taxon id for the session. Never refetch a cached id. Never fetch on each keystroke before `orgQuery` returns.
+- Photos are **user-owned**. Default upload license is CC BY-NC. `license_code: null` (often `static.inaturalist.org`) means all rights reserved — **do not display those**. Prefer a licensed `default_photo`; otherwise the first licensed `taxon_photos` entry. Show photographer name plus official Creative Commons marks (deed links, not iNat). Do not republish photos into our own CDN.
+- There is no reliable public “AphiaID → iNat id” field on the taxa payload (`taxon_schemes_count` is not a crosswalk). That is why enrichment uses Wikidata instead of searching iNat by name.
+
+### How the three are used
+
+| Job | Provider |
+| --- | --- |
+| Accept / correct a scientific name; classification; AphiaID; vernaculars; ancestor names | WoRMS |
+| Mint `inat_taxon_id` (P3151) | Wikidata |
+| Licensed photos (and live taxon payload) from a stored id | iNaturalist, in the browser |
+| Search-as-you-type in the map | **None of the above** — `orgQuery` on the search index |
 
 If a value has no scientific name and no AphiaID (substrate, “Red algae”, some lumps), skip APIs. Catalog it from the class table / raw value only.
 
@@ -131,19 +141,19 @@ If a value has no scientific name and no AphiaID (substrate, “Red algae”, so
 Admin enrichment                         Runtime (map)
 ─────────────────                        ─────────────
 observation parquet                      Organism Selector
-        │                                Overlay search
+        │                                Overlay search (later)
 optional class CSV                              │
         │                                       ▼
- column-role wizard ──► API cache      GET /orgQuery?tables=…&q=
-        │              (iNat, WoRMS)            │
-        ▼                                       ▼
-  catalog + search index               hits (value, names, ids)
-  (R2; worker reads the index)                  │
-        │                          ┌────────────┼────────────┐
- OrganismInfo jsonb                ▼            ▼            ▼
- (tiny; Postgres)           visible thumbs   q.col=in.(…)  activate
-                            GET /v1/taxa/ids   (existing    layer +
-                            (batched)          /query)      table
+ column-role wizard ──► WoRMS cache     GET /orgQuery?tables=…&q=
+        │              (/taxonomy)              │
+        │              Wikidata SPARQL          ▼
+        ▼              (direct)        hits (value, names, ids)
+  catalog + search index                        │
+  (R2; worker reads the index)     ┌────────────┼────────────┐
+        │                          ▼            ▼            ▼
+ OrganismInfo jsonb         visible thumbs   q.col=in.(…)  activate
+ (tiny; Postgres)           GET /v1/taxa/ids   (existing    layer +
+                            (browser only)     /query)      table
 ```
 
 **Postgres stays thin.** One small `OrganismInfo` document on `overlay_data_tables`, same idea as `temporal`. No organism FTS. No search-document table. Do not extend `search_overlays`.
@@ -182,14 +192,16 @@ type OrganismInfo = {
   /**
    * Roles assigned during the last enrichment run.
    * Keys are class-table column names when a CSV was used, or observation
-   * column names when enriching from the table itself.
+   * column names when enriching from the table itself (genus, species, …).
    */
   roles: { [columnName: string]: OrganismColumnRole | OrganismColumnRole[] };
+  /** Class-table column joined to `column`. Required when a taxon CSV was used. */
+  classJoinColumn?: string;
   authoredBy?: "ingest" | "admin" | "heuristic";
   /**
-   * When true, low-confidence common-name iNaturalist matches are treated as
-   * classified and their taxon ids go on the search index. Preview always
-   * shows the guess and its confidence. Default false.
+   * When true, low-confidence common-name Wikidata matches (P1843 → P3151)
+   * are treated as classified and their iNat taxon ids go on the search
+   * index. Preview always shows the guess and its confidence. Default false.
    */
   includeLowConfidenceMatches?: boolean;
   /** Distinct values in `column` at last enrichment. */
@@ -203,7 +215,7 @@ Description text is always stored and searchable. The client decides how much to
 
 `valueCount` / `classifiedCount` are shown in the admin UI so a copied catalog after a CSV replace is easier to notice (a jump in unclassified codes). Observation-file replace still **copies** organism sidecars.
 
-Heuristics (column name contains `classcode`, `scientific`, `common`, `genus`, `aphia`, `definition`, `description`, …) may **pre-fill** `roles`. The admin must confirm. Do not silently guess.
+Heuristics (column name contains `classcode`, `scientific`, `common`, `genus`, `aphia`, `definition`, `description`, …) may **pre-fill** `roles`. The admin must confirm. Without a class CSV, roles apply to observation columns (e.g. genus, species next to a code). With a CSV, roles apply to the CSV only; the identity column is the join key.
 
 ### Catalog sidecar (R2, next to the table)
 
@@ -222,9 +234,9 @@ One row per **distinct** value of `OrganismInfo.column` (complete set — not th
 | -------------------- | --------------------------------------------------------------------------------------------------- |
 | `value`              | Exact observation-column string. This is what `/query` filters on.                                  |
 | `scientific_name`    | Accepted / display binomial if known                                                                |
-| `common_name`        | Best common name (class table, then iNat preferred)                                                 |
-| `common_names`       | Extra vernaculars (class table + WoRMS + iNat), searchable                                          |
-| `genus`, `family`, … | From class table and/or WoRMS / iNat ancestors                                                      |
+| `common_name`        | Best common name (class table, then WoRMS vernaculars)                                              |
+| `common_names`       | Extra vernaculars (class table + WoRMS), searchable                                                 |
+| `genus`, `family`, … | From class table and/or WoRMS classification                                                        |
 | `ancestor_names`     | Flattened “Rockfishes Sebastes Scorpaenidae Labridae Wrasses …” for local hierarchical search       |
 | `description`        | Concatenation of columns mapped to `description`                                                    |
 | `inat_taxon_id`      | Integer or null                                                                                     |
@@ -235,21 +247,22 @@ One row per **distinct** value of `OrganismInfo.column` (complete set — not th
 
 **Do not store thumbnail URLs.** Store ids only.
 
-Unresolved values (no API hit) still get a row. `search_text` is at least the raw `value` plus any class-table names. Low-confidence iNaturalist guesses stay on the preview row (id + confidence) even when `includeLowConfidenceMatches` is false; the switch only controls whether that id is **used** (search index + classified count).
+Unresolved values (no API hit) still get a row. `search_text` is at least the raw `value` plus any class-table names. Low-confidence Wikidata guesses stay on the preview row (id + confidence) even when `includeLowConfidenceMatches` is false; the switch only controls whether that id is **used** (search index + classified count).
 
 ### API response cache (enrichment only)
 
-Do **not** persist taxonomy responses on R2. The enrichment handler calls an allowlisted proxy on `pmtiles-server`:
+Do **not** persist taxonomy responses on R2. The enrichment handler rewrites WoRMS URLs onto an allowlisted proxy on `pmtiles-server` (`TAXONOMY_PROXY_URL`). Only these paths exist — there is no `/taxonomy/inat/…`:
 
 ```text
-GET  /taxonomy/inat/v1/taxa/{id},{id}
 GET  /taxonomy/worms/AphiaRecordByAphiaID/{id}
-POST /taxonomy/worms/AphiaRecordsByMatchNames
+GET  /taxonomy/worms/AphiaClassificationByAphiaID/{id}
+GET  /taxonomy/worms/AphiaVernacularsByAphiaID/{id}
+GET /taxonomy/worms/AphiaRecordsByMatchNames?scientificnames[]=…
 ```
 
-Wikidata SPARQL (`https://query.wikidata.org/sparql`) is called **directly** from the handler — not through this proxy — so it does not share iNat’s rate limit.
+Wikidata SPARQL (`https://query.wikidata.org/sparql`) is called **directly** from the handler — not through this proxy.
 
-`TaxonomyBackend` caches with the Workers **Cache API** for **one hour**. This is not an open proxy (path allowlist only). The uncached gateway requires the same **overlay-engine** JWT overlay-worker already uses (`Authorization: Bearer`); map-access tokens are rejected. A 700-value run is a handful of Wikidata POSTs plus ~24 iNat id batches. Running timeout stays 15 minutes (Lambda cap).
+`TaxonomyBackend` caches with the Workers **Cache API** for **48 hours**. This is not an open proxy (path allowlist only). The uncached gateway requires the same **overlay-engine** JWT overlay-worker already uses (`Authorization: Bearer`); map-access tokens are rejected. A 700-value run is WoRMS id / match-name / classification / vernacular calls plus a handful of Wikidata SPARQL POSTs. No iNat requests. Running timeout stays 15 minutes (Lambda cap).
 
 ---
 
@@ -258,8 +271,8 @@ Wikidata SPARQL (`https://query.wikidata.org/sparql`) is called **directly** fro
 Temporal-style reprocess. Does not rewrite `data.parquet`.
 
 1. Admin picks `OrganismInfo.column`. Suggest likely names; require confirmation.
-2. Optionally upload a class-table CSV for this run. Admin assigns `roles` (code, scientific, genus, species, common, WoRMS id, **description**). Multiple columns may be `description` or `commonName`.
-3. Distinct values of `column` are listed. If a class table is present, left-join on the `code` role (or on the identity column if the class table uses the same strings as the observation column — CCFRP `Common_Name`).
+2. Optionally upload a class-table CSV for this run. Admin picks the required `classJoinColumn` and assigns `roles` (scientific, genus, species, common, WoRMS id, **description**) on the CSV when present, or on observation columns when the table itself carries those fields. Multiple columns may be `description` or `commonName`.
+3. Distinct values of `column` are listed. If a class table is present, the admin **must** pick `classJoinColumn`. Identity values left-join to that CSV column only — roles do not pick the join.
 4. Resolve each value (see below). Preview **every** row: names, ancestors, description, whether ids resolved. Fetch preview thumbnails the same way the client will (by iNat id, visible page only).
 5. v1: **no per-value override UI.** Walking the CA datasets will show what editing is actually needed.
 6. Write/replace the catalog sidecar, the search index, and `OrganismInfo`.
@@ -270,14 +283,14 @@ Works with or without a class table.
 
 1. If a `wormsAphiaId` role is populated → `AphiaRecordByAphiaID` (cached). Use `valid_name` if the record is unaccepted.
 2. Else if a scientific name or genus+species can be built → WoRMS `AphiaRecordsByMatchNames` in batches of ≤50.
-3. Wikidata SPARQL (≤50 per request): AphiaID via P850, then scientific / common names via P225, English `rdfs:label`, and P1843 → P3151 iNat taxon id. AphiaID or scientific-name hits are **high** confidence. A common-name-only hit is **low** confidence. Ambiguous names (two different iNat ids) are dropped.
-4. `GET /v1/taxa/{ids}` (≤30) for ancestors + preferred common name. If `is_active` is false, follow `current_synonymous_taxon_ids` and fetch those ids too. Never call iNat `?q=` during enrichment.
+3. For each accepted AphiaID → `AphiaClassificationByAphiaID` and `AphiaVernacularsByAphiaID`. Those fill `ancestor_names`, extra `common_names`, genus, and family.
+4. Wikidata SPARQL (≤50 per request): AphiaID via P850, then scientific / common names via P225, English `rdfs:label`, and P1843 → P3151 iNat taxon id. AphiaID or scientific-name hits are **high** confidence. A common-name-only hit is **low** confidence. Ambiguous names (two different iNat ids) are dropped. Store the id; do not call iNat to verify it or follow synonyms.
 5. Lumps (`Laminaria spp.`, `Sebastes spp.`, `PHYSPP`) → resolve to genus when possible. Ancestor search still works.
 6. No scientific or common signal (`boulder`, `SAND`, some UPC categories) → no API calls. Catalog from class-table labels + description only.
 
-Queue + backoff. **Batch** WoRMS `AphiaRecordsByMatchNames` (≤50), Wikidata SPARQL (≤50), and iNat `GET /v1/taxa/{ids}` (≤30). De-duplicate names and AphiaIDs within a run. Do not fire parallel request storms. Do not assume the Worker cache.
+Queue + backoff. **Batch** WoRMS `AphiaRecordsByMatchNames` (≤50) and Wikidata SPARQL (≤50). De-duplicate names and AphiaIDs within a run. Do not fire parallel request storms. Do not assume the Worker cache.
 
-Copy WoRMS/iNat **names and ancestor names** into the sidecar. That is what makes “rockfish” and “sheephead” work without a live API. Do not copy photo URLs.
+Copy WoRMS **names and ancestor names** into the sidecar, plus the Wikidata iNat id. That is what makes “rockfish” and “sheephead” work without a live API. Do not copy photo URLs.
 
 ---
 
@@ -351,7 +364,9 @@ The worker loads each table’s **search index** (not the catalog), runs the que
       "commonName": "California Sheephead",
       "description": null,
       "inatTaxonId": 1439813,
-      "wormsAphiaId": 1702292
+      "wormsAphiaId": 1702292,
+      "score": 12.4,
+      "matchedFields": ["common_name"]
     }
   ]
 }
@@ -369,17 +384,17 @@ Overlay **title** search stays `search_overlays` FTS. Organism hits are **merged
 
 ## Runtime photos
 
-Allowed, with a tight budget.
+Allowed, with a tight budget. Implemented in `inaturalistTaxonPhotos.ts` (shared by the selector and the admin catalog).
 
 1. `orgQuery` returns. The UI has a visible slice (on the order of 10–20 rows), not 20 tables × 700 values.
-2. Collect unique `inatTaxonId`s in that slice that are not already in the session memo.
-3. `GET https://api.inaturalist.org/v1/taxa/{id,id,…}` (≤30 ids). Memoize by id for the session (memory; optional `sessionStorage`).
-4. If `default_photo.license_code` is missing, skip the image. Otherwise show `square_url` and `attribution`.
+2. Visible rows register their `inatTaxonId`s with a session scheduler. Cached ids never refetch. Invisible / prefetch ids wait behind the visible batch.
+3. The scheduler holds until ~30 ids or a short settle window, then `GET https://api.inaturalist.org/v1/taxa/{id,id,…}` (≤30). Prefer a licensed `default_photo`; if the search payload has none, fall back to the taxa show route and the first licensed `taxon_photos` entry.
+4. Skip photos with no `license_code` (all rights reserved). Credit is photographer name plus official CC marks (CC0 / Public Domain Mark when those apply). Name may link to the iNat photo page. Do not link license icons to iNaturalist.
 5. **Never** fetch on each keystroke before results return. **Do not** prefetch photos for every overlay-search hit across 20 tables. Overlay search can omit thumbs; the selector shows them for the visible page after results.
 
 A single user opening the KFM selector and scrolling slowly stays well under 10k/day. A client that requested 20 ids per keystroke across a project would not.
 
-Admin preview uses the same helper.
+Empty `q` on `orgQuery` returns the full stored catalog (common-name order, default `limit` 2000) so the selector can browse without a second request.
 
 ---
 
@@ -387,7 +402,7 @@ Admin preview uses the same helper.
 
 ### Admin
 
-Column picker → optional class CSV → role mapping (heuristics as defaults) → preview of every value → commit catalog, search index, and `OrganismInfo`. Same job family as temporal / nodata reprocess (`create_overlay_data_table_reprocess` or a sibling).
+One screen: compact config (identity column, treat-as dropdown, optional class CSV, role chips) over a live catalog table. Column roles are two collapsible lists: source-table columns, and join-table (CSV) columns when a taxon file is attached. Changing config joins locally and previews every distinct value immediately — names and AphiaIDs from the class table, no taxonomy APIs. **Look up taxa** runs `create_overlay_data_table_organism_reprocess`. The job writes a draft `organism-preview.json` after the join, then replaces it when WoRMS/Wikidata finish. The table stays visible; progress and cancel sit in a banner. The class CSV is discarded after the job. **Clear organism identity** nulls `OrganismInfo` and deletes the catalog, search-index, and preview sidecars. GraphQL `organismPreviewUrl` / `organismCatalogUrl` / `orgQueryUrl` are null whenever `organism` is null, so the editor does not keep showing a leftover catalog.
 
 When `OrganismInfo` is present, `DataTableFilterControls` routes that column to the Organism Selector instead of `DataTableStringFilter`. Other filters are unchanged. Admin `required_filter_columns` / `filter_column_labels` still apply (label might be “Species” instead of `classcode`).
 
@@ -405,7 +420,7 @@ Existing `useOverlaySearchState` + `search_overlays` for layer titles. In parall
 
 | Dataset                                   | Identity column            | Class table                                             | Enrichment                             | Selector                   | Overlay `orgQuery` |
 | ----------------------------------------- | -------------------------- | ------------------------------------------------------- | -------------------------------------- | -------------------------- | ------------------ |
-| KFM Fish / Swath / Size                   | `classcode`                | taxon_table (names + notes)                             | Join on code; WoRMS/iNat from binomial | Yes; all codes             | Yes                |
+| KFM Fish / Swath / Size                   | `classcode`                | taxon_table (names + notes)                             | Join on code; WoRMS + Wikidata from binomial | Yes; all codes             | Yes                |
 | KFM UPC                                   | `classcode`                | same; includes substrate                                | Same; no API for `boulder`             | Yes, including `boulder`   | Yes                |
 | CCFRP Effort / Length                     | `Common_Name`              | optional species_table (AphiaID + `species_definition`) | Works with or without CSV              | Yes                        | Yes                |
 | EMPA BRUVs / seines / crabs / algae / veg | `scientificname` (typical) | usually none                                            | Single-column                          | Yes                        | Yes                |
@@ -422,11 +437,11 @@ A California project overlay search may pass ~20 enriched table prefixes in one 
 
 ## Implementation phases
 
-Sequential. Each phase is a functional boundary. Later phases must not be started until the previous one is demoable in the environment it needs (local is enough until a service deploy is called out).
+Phases 1–5 are shipped (types, enrichment job, admin wizard, `orgQuery`, Organism Selector). Phase 6 (overlay listing search) is not. The sequence below is the original plan; technical claims match the code.
 
 Shared lock-in from phase 2 onward: MiniSearch **version + `fields` / `storeFields` / tokenize options** must be identical in `data-tables-handler` (writer) and `pmtiles-server` (reader). Put that contract in one small shared module both packages import. Changing boosts or tokenization requires re-enrichment.
 
-`/query` and map aggregations stay untouched until phase 5, and then only as callers of the existing filter API (`q.{column}=` / `in.(…)`).
+`/query` and map aggregations stay untouched except as callers of the existing filter API (`q.{column}=` / `in.(…)`).
 
 ### Phase 1 — Types, column, GraphQL field
 
@@ -443,7 +458,7 @@ Shared lock-in from phase 2 onward: MiniSearch **version + `fields` / `storeFiel
 - Distinct values of the identity column from the current parquet (complete set, not the 500-value histogram).
 - Optional ephemeral class CSV (presigned upload, discarded after the job).
 - Role heuristics as defaults only.
-- WoRMS → Wikidata (P850/P225 → P3151) → iNat id batches. No `preferred_place_id`. No iNat `?q=`. Taxonomy HTTP for iNat/WoRMS goes through `/taxonomy` on `pmtiles-server` (1 hour Cache API). Wikidata SPARQL is direct from the handler.
+- WoRMS (ids, match-names ≤50, classification, vernaculars) → Wikidata (P850 / P225 / P1843 → P3151). **No iNaturalist HTTP.** No `preferred_place_id`. No iNat `?q=`. WoRMS goes through `/taxonomy` on `pmtiles-server` (48 hour Cache API, worms paths only). Wikidata SPARQL is direct from the handler.
 - `includeLowConfidenceMatches` on the job config. Preview always includes confidence.
 - Write `organism-catalog.parquet` and `organism-search.json` next to the table.
 - Persist `OrganismInfo` on success (`complete_overlay_data_table_upload` or a dedicated complete).
@@ -451,7 +466,7 @@ Shared lock-in from phase 2 onward: MiniSearch **version + `fields` / `storeFiel
 
 **Deploy order.**
 
-1. **`pmtiles-server`** — `/taxonomy` proxy (1 hour Cache API). Deploy this before production enrichment that sets `TAXONOMY_PROXY_URL`.
+1. **`pmtiles-server`** — `/taxonomy` proxy (48 hour Cache API). Deploy this before production enrichment that sets `TAXONOMY_PROXY_URL`.
 2. **`data-tables-handler`** — production Lambda/service that understands the new job. Deploy this **before** the API starts enqueueing those jobs.
 3. **API** — mutation + complete path that writes `organism`.
 
@@ -459,13 +474,9 @@ Shared lock-in from phase 2 onward: MiniSearch **version + `fields` / `storeFiel
 
 ### Phase 3 — Admin enrichment UI  ← **demo stop**
 
-**What.** Client-only wizard on the Data Tables editor (same neighborhood as `DataTableTemporalEditor` / nodata): pick identity column → optional class CSV → confirm roles → run the phase-2 job → show **every** preview row (names, ancestors, description, resolved/unresolved). Visible-page iNat thumbs via taxon id (same helper the map will use later). Local text filter over the preview list is fine for the demo; do not call `orgQuery`. v1: no per-value overrides.
+**What.** Client wizard on the Data Tables editor (same neighborhood as `DataTableTemporalEditor` / nodata): pick identity column → optional class CSV → confirm roles → run the phase-2 job → show **every** preview row (names, ancestors, description, resolved/unresolved). Visible-page iNat thumbs via the stored taxon id (same helper the map uses). Local text filter over the preview list; do not call `orgQuery` for admin preview. v1: no per-value overrides.
 
-Map, legend filters, and overlay search are **unchanged**. `DataTableFilterControls` still uses `DataTableStringFilter` even when `organism` is set.
-
-**Deploy.** Client (and API only if the mutation shipped in phase 2). **Do not redeploy `pmtiles-server`.**
-
-**Done when.** An admin can enrich a real CA table, inspect the full catalog in the wizard (including `boulder` / lumps / unresolved), and see `OrganismInfo` on the table — and a published map still filters that column with the generic string control. **Stop here and demo. Do not start map filtering.**
+**Original demo gate (passed).** Enrich a real CA table, inspect the full catalog (including `boulder` / lumps / unresolved), persist `OrganismInfo` — map filtering still used the generic string control until phase 5.
 
 ---
 

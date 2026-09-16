@@ -9,7 +9,9 @@ import {
   OrganismResolveConfidence,
   OrganismRoles,
   OrganismValueKind,
+  buildOrganismSearchText,
   columnsWithRole,
+  genusFromOrganismName,
   includeLowConfidenceMatchesEnabled,
   isOrganismCatalogRow,
   isOrganismInfo,
@@ -18,25 +20,14 @@ import {
   rolesForColumn,
   suggestOrganismColumnRoles,
   suggestOrganismIdentityColumn,
+  uniqueStrings,
 } from "@seasketch/geostats-types";
-
-export type OrganismEditorStep =
-  | "identity"
-  | "classTable"
-  | "roles"
-  | "review";
-
-export const ORGANISM_EDITOR_STEPS: OrganismEditorStep[] = [
-  "identity",
-  "classTable",
-  "roles",
-  "review",
-];
 
 export type OrganismEditorFormState = {
   column: string;
   valueKind: OrganismValueKind;
   roles: OrganismRoles;
+  classJoinColumn: string;
   includeLowConfidenceMatches: boolean;
 };
 
@@ -57,6 +48,7 @@ export function emptyOrganismForm(): OrganismEditorFormState {
     column: "",
     valueKind: "code",
     roles: {},
+    classJoinColumn: "",
     includeLowConfidenceMatches: false,
   };
 }
@@ -71,12 +63,17 @@ export function formStateFromOrganism(
     column: organism.column,
     valueKind: organism.valueKind,
     roles: { ...organism.roles },
+    classJoinColumn:
+      typeof organism.classJoinColumn === "string"
+        ? organism.classJoinColumn
+        : "",
     includeLowConfidenceMatches: includeLowConfidenceMatchesEnabled(organism),
   };
 }
 
 export function configFromForm(
-  form: OrganismEditorFormState
+  form: OrganismEditorFormState,
+  options?: { classHeaders?: string[] }
 ): DataTableOrganismConfig | null {
   if (!form.column.trim() || !isOrganismValueKind(form.valueKind)) {
     return null;
@@ -84,11 +81,23 @@ export function configFromForm(
   if (!isOrganismRoles(form.roles)) {
     return null;
   }
+  const classHeaders = Array.isArray(options?.classHeaders)
+    ? options.classHeaders
+    : [];
+  const classJoinColumn = form.classJoinColumn.trim();
+  if (classHeaders.length > 0) {
+    if (!classJoinColumn || classHeaders.indexOf(classJoinColumn) === -1) {
+      return null;
+    }
+  }
   const config: DataTableOrganismConfig = {
     column: form.column.trim(),
     valueKind: form.valueKind,
     roles: form.roles,
   };
+  if (classHeaders.length > 0) {
+    config.classJoinColumn = classJoinColumn;
+  }
   if (form.includeLowConfidenceMatches) {
     config.includeLowConfidenceMatches = true;
   }
@@ -127,6 +136,19 @@ export function rolesForEnrichment(
     roles[identityColumn] = valueKind;
   }
   return roles;
+}
+
+export function rolesForSourceAndJoinTables(
+  sourceColumns: unknown,
+  joinColumns: unknown,
+  identityColumn: string,
+  valueKind: OrganismValueKind,
+  existing?: OrganismRoles
+): OrganismRoles {
+  return {
+    ...rolesForEnrichment(sourceColumns, identityColumn, valueKind, existing),
+    ...rolesForEnrichment(joinColumns, identityColumn, valueKind, existing),
+  };
 }
 
 export function toggleOrganismRole(
@@ -201,39 +223,271 @@ export function isOrganismPreviewPayload(
   return value.rows.every(isOrganismCatalogRow);
 }
 
-export function parseCsvHeaderLine(text: unknown): string[] {
-  if (typeof text !== "string") return [];
-  const first = text.replace(/^\uFEFF/, "").split(/\r?\n/, 1)[0] || "";
-  if (!first.trim()) return [];
-  const delimiter = first.includes("\t") && !first.includes(",") ? "\t" : ",";
+export function parseCsvLine(line: string, delimiter: string): string[] {
   const out: string[] = [];
   let current = "";
   let inQuotes = false;
-  for (let i = 0; i < first.length; i++) {
-    const ch = first[i];
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
     if (ch === '"') {
-      if (inQuotes && first[i + 1] === '"') {
+      if (inQuotes && line[i + 1] === '"') {
         current += '"';
         i += 1;
       } else {
         inQuotes = !inQuotes;
       }
     } else if (ch === delimiter && !inQuotes) {
-      const trimmed = current.trim();
-      if (trimmed) out.push(trimmed);
+      out.push(current.trim());
       current = "";
     } else {
       current += ch;
     }
   }
-  const last = current.trim();
-  if (last) out.push(last);
+  out.push(current.trim());
   return out;
 }
 
+export function parseCsvHeaderLine(text: unknown): string[] {
+  if (typeof text !== "string") return [];
+  const first = text.replace(/^\uFEFF/, "").split(/\r?\n/, 1)[0] || "";
+  if (!first.trim()) return [];
+  const delimiter = first.includes("\t") && !first.includes(",") ? "\t" : ",";
+  return parseCsvLine(first, delimiter).filter((name) => name.length > 0);
+}
+
+export function parseCsvRecords(text: unknown): {
+  headers: string[];
+  rows: Array<Record<string, string>>;
+} {
+  if (typeof text !== "string") return { headers: [], rows: [] };
+  const lines = text
+    .replace(/^\uFEFF/, "")
+    .split(/\r?\n/)
+    .filter((line) => line.trim().length > 0);
+  if (lines.length === 0) return { headers: [], rows: [] };
+  const delimiter = lines[0].includes("\t") && !lines[0].includes(",") ? "\t" : ",";
+  const headers = parseCsvLine(lines[0], delimiter).filter(
+    (name) => name.length > 0
+  );
+  if (headers.length === 0) return { headers: [], rows: [] };
+  const rows: Array<Record<string, string>> = [];
+  for (const line of lines.slice(1)) {
+    const cells = parseCsvLine(line, delimiter);
+    const row: Record<string, string> = {};
+    for (let i = 0; i < headers.length; i++) {
+      row[headers[i]] = cells[i] || "";
+    }
+    rows.push(row);
+  }
+  return { headers, rows };
+}
+
 export async function readCsvHeaders(file: File): Promise<string[]> {
-  const text = await file.slice(0, 64 * 1024).text();
-  return parseCsvHeaderLine(text);
+  const parsed = parseCsvRecords(await file.slice(0, 64 * 1024).text());
+  return parsed.headers;
+}
+
+export async function readCsvRecords(file: File): Promise<{
+  headers: string[];
+  rows: Array<Record<string, string>>;
+}> {
+  return parseCsvRecords(await file.text());
+}
+
+function cellText(value: unknown): string | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length === 0 ? null : trimmed;
+  }
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
+  return String(value);
+}
+
+function cellInt(value: unknown): number | null {
+  if (typeof value === "number" && Number.isInteger(value) && value > 0) {
+    return value;
+  }
+  const text = cellText(value);
+  if (!text || !/^\d+$/.test(text)) return null;
+  const n = parseInt(text, 10);
+  return n > 0 ? n : null;
+}
+
+function firstRoleText(
+  row: Record<string, unknown> | undefined,
+  config: DataTableOrganismConfig,
+  role: OrganismColumnRole
+): string | null {
+  if (!row) return null;
+  for (const column of columnsWithRole(config.roles, role)) {
+    const text = cellText(row[column]);
+    if (text) return text;
+  }
+  return null;
+}
+
+function allRoleTexts(
+  row: Record<string, unknown> | undefined,
+  config: DataTableOrganismConfig,
+  role: OrganismColumnRole
+): string[] {
+  if (!row) return [];
+  return uniqueStrings(
+    columnsWithRole(config.roles, role).map((column) => cellText(row[column]))
+  );
+}
+
+function classRowForValue(
+  value: string,
+  classRows: Array<Record<string, unknown>>,
+  joinColumn: string | null
+): Record<string, unknown> | undefined {
+  if (!joinColumn) return undefined;
+  const needle = value.trim().toLowerCase();
+  return classRows.find(
+    (row) => cellText(row[joinColumn])?.toLowerCase() === needle
+  );
+}
+
+/** Class-table / identity-column join only. Does not call taxonomy APIs. */
+export function joinOrganismCatalogRows(options: {
+  values: Array<{ value: string; occurrenceCount: number }>;
+  classRows?: Array<Record<string, unknown>>;
+  config: DataTableOrganismConfig;
+}): OrganismCatalogRow[] {
+  const classRows = options.classRows || [];
+  const headers = classRows[0] ? Object.keys(classRows[0]) : [];
+  const joinColumn =
+    typeof options.config.classJoinColumn === "string" &&
+    headers.includes(options.config.classJoinColumn)
+      ? options.config.classJoinColumn
+      : null;
+  return options.values.map((item) => {
+    const classRow = classRowForValue(item.value, classRows, joinColumn);
+    const scientificFromRole = firstRoleText(
+      classRow,
+      options.config,
+      "scientificName"
+    );
+    const genusFromRole = firstRoleText(classRow, options.config, "genus");
+    const species = firstRoleText(classRow, options.config, "species");
+    const scientific =
+      scientificFromRole ||
+      (genusFromRole && species ? `${genusFromRole} ${species}` : null) ||
+      (options.config.valueKind === "scientificName" ? item.value : null);
+    const genus = genusFromRole || genusFromOrganismName(scientific);
+    const commonName =
+      firstRoleText(classRow, options.config, "commonName") ||
+      (options.config.valueKind === "commonName" ? item.value : null);
+    let wormsAphiaId: number | null = null;
+    if (classRow) {
+      for (const column of columnsWithRole(
+        options.config.roles,
+        "wormsAphiaId"
+      )) {
+        const id = cellInt(classRow[column]);
+        if (id) {
+          wormsAphiaId = id;
+          break;
+        }
+      }
+    }
+    const description =
+      allRoleTexts(classRow, options.config, "description").join(" ") || null;
+    const commonNames = uniqueStrings([
+      commonName,
+      ...allRoleTexts(classRow, options.config, "commonName"),
+    ]);
+    const row: OrganismCatalogRow = {
+      value: item.value,
+      scientific_name: scientific,
+      common_name: commonName,
+      common_names: commonNames,
+      genus,
+      family: null,
+      ancestor_names: [],
+      description,
+      inat_taxon_id: null,
+      worms_aphia_id: wormsAphiaId,
+      search_text: "",
+      occurrence_count: item.occurrenceCount,
+      confidence: "unresolved",
+    };
+    row.search_text = buildOrganismSearchText(row);
+    return row;
+  });
+}
+
+export function organismFormIsDirty(
+  form: OrganismEditorFormState,
+  existing: OrganismInfo | null,
+  classFilePresent: boolean
+): boolean {
+  if (classFilePresent) return true;
+  if (!existing) return Boolean(form.column);
+  if (existing.column !== form.column) return true;
+  if (existing.valueKind !== form.valueKind) return true;
+  if ((existing.classJoinColumn || "") !== form.classJoinColumn) return true;
+  if (
+    includeLowConfidenceMatchesEnabled(existing) !==
+    form.includeLowConfidenceMatches
+  ) {
+    return true;
+  }
+  return JSON.stringify(existing.roles) !== JSON.stringify(form.roles);
+}
+
+export function distinctValuesFromColumnStats(
+  columnStats: DataTablesColumnStats | undefined,
+  column: string
+): Array<{ value: string; occurrenceCount: number }> | null {
+  if (!columnStats || !column) return null;
+  const attr = columnStats.columns.find((item) => item.attribute === column);
+  if (!attr?.values) return null;
+  const entries = Object.entries(attr.values)
+    .map(([value, count]) => ({
+      value,
+      occurrenceCount:
+        typeof count === "number" && Number.isFinite(count) ? count : 0,
+    }))
+    .filter((item) => item.value.trim().length > 0)
+    .sort((a, b) => a.value.localeCompare(b.value, undefined, { numeric: true }));
+  if (
+    typeof attr.countDistinct === "number" &&
+    Number.isFinite(attr.countDistinct) &&
+    attr.countDistinct > entries.length
+  ) {
+    return null;
+  }
+  return entries;
+}
+
+export function parseDistinctOrganismGroups(
+  payload: unknown,
+  column: string
+): Array<{ value: string; occurrenceCount: number }> {
+  if (!isRecord(payload) || !Array.isArray(payload.groups) || !column) {
+    return [];
+  }
+  const out: Array<{ value: string; occurrenceCount: number }> = [];
+  for (const group of payload.groups) {
+    if (!isRecord(group)) continue;
+    const raw = group[column];
+    if (raw === null || raw === undefined) continue;
+    const value = String(raw).trim();
+    if (!value) continue;
+    const count =
+      typeof group.count === "number" && Number.isFinite(group.count)
+        ? group.count
+        : 0;
+    out.push({ value, occurrenceCount: count });
+  }
+  return out.sort((a, b) =>
+    a.value.localeCompare(b.value, undefined, { numeric: true })
+  );
 }
 
 export function organismPreviewSearchText(row: OrganismCatalogRow): string {
