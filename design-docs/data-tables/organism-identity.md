@@ -98,7 +98,7 @@ Three providers. None of them is the search backend for the selector or overlay 
 
 - REST: `https://www.marinespecies.org/rest/`.
 - **No photo API.** Classification, accepted name, synonyms, vernaculars, external ids only.
-- The handler queries `worms/v1/{taxa,ids,names}.parquet` first (AphiaID, exact/synonym name, classification, vernaculars). REST is only used on a miss: `AphiaRecordByAphiaID/{id}`, `AphiaRecordsByMatchNames` (up to **50** scientific names), then `AphiaClassificationByAphiaID/{id}` and `AphiaVernacularsByAphiaID/{id}` for those REST hits.
+- The handler queries `worms/v1/{taxa,ids,names}.parquet` first (AphiaID, exact/synonym name, classification, vernaculars). REST is only used on a miss: `AphiaRecordByAphiaID/{id}`, `AphiaRecordsByMatchNames` (up to **50** scientific names). After REST, retry the accepted AphiaID against the snapshot. True misses call `AphiaVernacularsByAphiaID/{id}` only (204 = none). Do not call `AphiaClassificationByAphiaID`.
 - Confirmed: `AphiaRecordsByName/Bodianus pulcher` → AphiaID `1702292`, accepted, family Labridae. Classification walks Biota → Labridae → _Bodianus_ → \*Bodianus pulcher`.
 - No published hard rate limit. The handler spaces WoRMS calls (~50 ms floor) and retries politely. Responses go through `/taxonomy` on `pmtiles-server` (48 hour Cache API).
 - CCFRP and MARINe already ship AphiaIDs. Prefer those over name match.
@@ -116,13 +116,12 @@ https://tiles.seasketch.org/worms/v1/…   # no map token
 
 - SPARQL at `query.wikidata.org`, **directly from the handler** (not the `/taxonomy` proxy). User-Agent required. Batches of ≤50.
 - After WoRMS, look up P3151 (iNaturalist taxon id) by P850 (AphiaID), then by scientific / common names via P225, English `rdfs:label`, and P1843.
-- AphiaID or scientific-name hits are **high** confidence. A common-name-only hit is **low** confidence. Ambiguous names (two different iNat ids) are dropped.
-- This is how `inat_taxon_id` gets onto the catalog. Wikidata may still have a synonym id (e.g. `Semicossyphus pulcher` → 53699 while iNat’s current taxon is `Bodianus pulcher` 1439813). Enrichment **stores the Wikidata id as-is**. It does not call iNat to follow `current_synonymous_taxon_ids`.
+- AphiaID or scientific-name hits are **high** confidence. A common-name-only hit is **low** confidence. A unique P3151 is stored as-is, including an inactive synonym (e.g. `Semicossyphus pulcher` → 53699). When one AphiaID or name has **two** P3151s (Rock Scallop: 54526 + inactive 187594), the handler calls iNat `GET /v1/taxa/{id,id}` (≤30, no `?q=`) and keeps the single `is_active` taxon. Still drop if zero or two-plus are active. Do not follow `current_synonymous_taxon_ids`.
 
 ### iNaturalist — licensed photos (runtime only)
 
 - Docs: [API recommended practices](https://www.inaturalist.org/pages/api+recommended+practices), [taxa API](https://api.inaturalist.org/v1/docs/#!/Taxa).
-- **The enrichment job never calls iNaturalist.** Not the id endpoint, not `?q=`. Tests in `data-tables-handler` assert zero iNat URLs.
+- **The enrichment job does not search iNaturalist.** No `?q=`. Unique Wikidata P3151s are not verified. The only iNat HTTP is a conflict-only taxa show (`GET /v1/taxa/{id,id}`) to read `is_active`. Tests assert zero `?q=` URLs on unique-hit runs.
 - **Id → photo is a browser concern.** `GET /v1/taxa/{id}` accepts comma-separated ids, **maximum 30**. The client hits `api.inaturalist.org` directly (CORS `*`). Do **not** proxy iNat through the worker: Cloudflare egress IPs are shared and iNaturalist 429s them.
 - Confirmed for California Sheephead: `GET /v1/taxa/1439813` → `Bodianus pulcher`, preferred common name “California Sheephead”, licensed `default_photo` on `inaturalist-open-data.s3.amazonaws.com`, `license_code: cc-by-nc`.
 - **Name search is the wrong tool** for minting ids or for the selector. `GET /v1/taxa?q=` is one name per request, 429s on a KFM-sized table, and is globally ranked (see [Why the client must not search iNaturalist live](#why-the-client-must-not-search-inaturalist-live)).
@@ -136,7 +135,7 @@ https://tiles.seasketch.org/worms/v1/…   # no map token
 | Job | Provider |
 | --- | --- |
 | Accept / correct a scientific name; classification; AphiaID; vernaculars; ancestor names | WoRMS |
-| Mint `inat_taxon_id` (P3151) | Wikidata |
+| Mint `inat_taxon_id` (P3151) | Wikidata; iNat taxa show only to break a P3151 clash |
 | Licensed photos (and live taxon payload) from a stored id | iNaturalist, in the browser |
 | Search-as-you-type in the map | **None of the above** — `orgQuery` on the search index |
 
@@ -294,8 +293,8 @@ Works with or without a class table.
 
 1. If a `wormsAphiaId` role is populated → parquet `ids` + `taxa`. REST `AphiaRecordByAphiaID` only on miss. Use the accepted name if the record is unaccepted.
 2. Else if a scientific name or genus+species can be built → parquet `names` + `taxa`. REST `AphiaRecordsByMatchNames` (≤50) only on miss.
-3. Snapshot hits already include `ancestor_names`, vernaculars, genus, and family. REST-resolved AphiaIDs still call `AphiaClassificationByAphiaID` and `AphiaVernacularsByAphiaID`.
-4. Wikidata SPARQL (≤50 per request): AphiaID via P850, then scientific / common names via P225, English `rdfs:label`, and P1843 → P3151 iNat taxon id. AphiaID or scientific-name hits are **high** confidence. A common-name-only hit is **low** confidence. Ambiguous names (two different iNat ids) are dropped. Store the id; do not call iNat to verify it or follow synonyms.
+3. Snapshot hits already include `ancestor_names`, vernaculars, genus, and family. After REST match-names / record, look the accepted AphiaID up in the snapshot before any more HTTP. True misses take `AphiaVernacularsByAphiaID` only (204 = none). Do not call `AphiaClassificationByAphiaID` — the record already has kingdom…genus.
+4. Wikidata SPARQL (≤50 per request): AphiaID via P850, then scientific / common names via P225, English `rdfs:label`, and P1843 → P3151 iNat taxon id. AphiaID or scientific-name hits are **high** confidence. A common-name-only hit is **low** confidence. Unique P3151s are stored as-is. Two P3151s for one key → iNat taxa show, keep the single active id. Do not follow synonyms.
 5. Lumps (`Laminaria spp.`, `Sebastes spp.`, `PHYSPP`) → resolve to genus when possible. Ancestor search still works.
 6. No scientific or common signal (`boulder`, `SAND`, some UPC categories) → no API calls. Catalog from class-table labels + description only.
 
@@ -469,7 +468,7 @@ Shared lock-in from phase 2 onward: MiniSearch **version + `fields` / `storeFiel
 - Distinct values of the identity column from the current parquet (complete set, not the 500-value histogram).
 - Optional ephemeral class CSV (presigned upload, discarded after the job).
 - Role heuristics as defaults only.
-- WoRMS parquet snapshot first, then REST (ids, match-names ≤50, classification, vernaculars) on miss → Wikidata (P850 / P225 / P1843 → P3151). **No iNaturalist HTTP.** No `preferred_place_id`. No iNat `?q=`. REST goes through `/taxonomy` on `pmtiles-server` (48 hour Cache API, worms paths only). Wikidata SPARQL is direct from the handler.
+- WoRMS parquet snapshot first, then REST (ids, match-names ≤50, vernaculars on true miss) → Wikidata (P850 / P225 / P1843 → P3151). Unique P3151s are not verified on iNat. A P3151 clash uses `GET /v1/taxa/{id,id}` for `is_active` only. No `preferred_place_id`. No iNat `?q=`. REST goes through `/taxonomy` on `pmtiles-server` (48 hour Cache API, worms paths only). Wikidata SPARQL is direct from the handler.
 - `includeLowConfidenceMatches` on the job config. Preview always includes confidence.
 - Write `organism-catalog.parquet` and `organism-search.json` next to the table.
 - Persist `OrganismInfo` on success (`complete_overlay_data_table_upload` or a dedicated complete).

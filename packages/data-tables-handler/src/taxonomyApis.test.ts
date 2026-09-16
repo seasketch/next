@@ -4,7 +4,9 @@ import { mkdtempSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import {
+  ancestorsFromWormsRecord,
   createTaxonomyFetch,
+  fetchWormsVernaculars,
   pickWormsAccepted,
   resolveOrganismTaxa,
   rewriteTaxonomyUrl,
@@ -51,6 +53,37 @@ describe("createTaxonomyFetch", () => {
     );
     await fetchTaxonomy("https://api.inaturalist.org/v1/taxa?q=x");
     assert.equal(authorization, "Bearer engine-jwt");
+  });
+});
+
+describe("ancestorsFromWormsRecord / fetchWormsVernaculars", () => {
+  it("reads rank fields from an AphiaRecord", () => {
+    assert.deepEqual(
+      ancestorsFromWormsRecord({
+        kingdom: "Animalia",
+        phylum: "Mollusca",
+        family: "Pectinidae",
+        genus: "Crassadoma",
+        scientificname: "Crassadoma gigantea",
+      }),
+      ["Animalia", "Mollusca", "Pectinidae", "Crassadoma", "Crassadoma gigantea"]
+    );
+  });
+
+  it("treats WoRMS 204 as no vernaculars", async () => {
+    const names = await fetchWormsVernaculars(
+      {
+        fetch: async () => ({
+          ok: true,
+          status: 204,
+          json: async () => {
+            throw new Error("Unexpected end of JSON input");
+          },
+        }),
+      },
+      1313053
+    );
+    assert.deepEqual(names, []);
   });
 });
 
@@ -253,10 +286,12 @@ describe("resolveOrganismTaxa", () => {
   it("falls back to WoRMS REST when the snapshot misses", async () => {
     const outDir = mkdtempSync(join(tmpdir(), "worms-resolve-miss-"));
     await buildWormsParquet(WORMS_DWCA, outDir);
+    const urls: string[] = [];
     let matchNames = 0;
     const clients: TaxonomyClients = {
       wormsParquetDir: outDir,
       fetch: async (url) => {
+        urls.push(url);
         if (url.includes("AphiaRecordsByMatchNames")) {
           matchNames += 1;
           return {
@@ -275,11 +310,10 @@ describe("resolveOrganismTaxa", () => {
             ],
           };
         }
-        if (
-          url.includes("AphiaClassificationByAphiaID") ||
-          url.includes("AphiaVernacularsByAphiaID")
-        ) {
-          return { ok: true, status: 200, json: async () => [] };
+        if (url.includes("AphiaVernacularsByAphiaID")) {
+          return { ok: true, status: 204, json: async () => {
+            throw new Error("Unexpected end of JSON input");
+          } };
         }
         if (url.includes("query.wikidata.org")) {
           return {
@@ -298,6 +332,135 @@ describe("resolveOrganismTaxa", () => {
     assert.equal(row.wormsAphiaId, 999);
     assert.equal(row.scientificName, "Madeup species");
     assert.equal(row.confidence, "high");
+    assert.ok(row.ancestorNames.includes("Madeupidae"));
+    assert.equal(
+      urls.filter((url) => url.includes("AphiaClassificationByAphiaID")).length,
+      0
+    );
+    assert.equal(
+      urls.filter((url) => url.includes("AphiaVernacularsByAphiaID")).length,
+      1
+    );
+  });
+
+  it("skips vernaculars REST when Taxamatch lands on a snapshot AphiaID", async () => {
+    const outDir = mkdtempSync(join(tmpdir(), "worms-resolve-refill-"));
+    await buildWormsParquet(WORMS_DWCA, outDir);
+    const urls: string[] = [];
+    const clients: TaxonomyClients = {
+      wormsParquetDir: outDir,
+      fetch: async (url) => {
+        urls.push(url);
+        if (url.includes("AphiaRecordsByMatchNames")) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => [
+              [
+                {
+                  status: "accepted",
+                  AphiaID: 1702292,
+                  scientificname: "Bodianus pulcher",
+                  genus: "Bodianus",
+                  family: "Labridae",
+                },
+              ],
+            ],
+          };
+        }
+        if (url.includes("query.wikidata.org")) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ results: { bindings: [] } }),
+          };
+        }
+        if (url.includes("marinespecies.org") || url.includes("/taxonomy/worms/")) {
+          throw new Error(`unexpected WoRMS REST ${url}`);
+        }
+        return { ok: true, status: 200, json: async () => ({}) };
+      },
+    };
+    const [row] = await resolveOrganismTaxa(clients, [
+      { value: "SPUL", scientificName: "Madeup pulcher" },
+    ]);
+    assert.equal(row.wormsAphiaId, 1702292);
+    assert.ok(row.ancestorNames.includes("Labridae"));
+    assert.equal(
+      urls.filter((url) => url.includes("AphiaClassificationByAphiaID")).length,
+      0
+    );
+    assert.equal(
+      urls.filter((url) => url.includes("AphiaVernacularsByAphiaID")).length,
+      0
+    );
+  });
+
+  it("keeps the active iNat id when Wikidata returns two P3151s", async () => {
+    const urls: string[] = [];
+    const clients: TaxonomyClients = {
+      fetch: async (url) => {
+        urls.push(url);
+        if (url.includes("AphiaRecordByAphiaID")) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              status: "accepted",
+              AphiaID: 240774,
+              scientificname: "Crassadoma gigantea",
+            }),
+          };
+        }
+        if (
+          url.includes("AphiaClassificationByAphiaID") ||
+          url.includes("AphiaVernacularsByAphiaID")
+        ) {
+          return { ok: true, status: 200, json: async () => [] };
+        }
+        if (url.includes("query.wikidata.org")) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              results: {
+                bindings: [
+                  { aphia: { value: "240774" }, inat: { value: "187594" } },
+                  { aphia: { value: "240774" }, inat: { value: "54526" } },
+                ],
+              },
+            }),
+          };
+        }
+        if (url.includes("api.inaturalist.org/v1/taxa/")) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              results: [
+                { id: 187594, is_active: false },
+                { id: 54526, is_active: true },
+              ],
+            }),
+          };
+        }
+        return { ok: true, status: 200, json: async () => ({}) };
+      },
+    };
+    const [row] = await resolveOrganismTaxa(clients, [
+      {
+        value: "CRAGIGG",
+        scientificName: "Crassadoma gigantea",
+        wormsAphiaId: 240774,
+      },
+    ]);
+    assert.equal(row.inatTaxonId, 54526);
+    assert.equal(row.confidence, "high");
+    assert.equal(urls.filter((url) => url.includes("/v1/taxa?")).length, 0);
+    assert.equal(
+      urls.filter((url) => url.includes("api.inaturalist.org/v1/taxa/")).length,
+      1
+    );
   });
 
   it("marks a unique common-name Wikidata hit as low confidence", async () => {

@@ -163,7 +163,13 @@ async function fetchJson(
       `${provider} ${response.status} ${ms}ms ${shortTaxonomyUrl(url)}${retry}`
     );
     if (response.ok) {
-      return response.json();
+      // WoRMS uses 204 (empty body) for “no vernaculars”, not a redirect.
+      if (response.status === 204) return null;
+      try {
+        return await response.json();
+      } catch {
+        return null;
+      }
     }
     lastError = new Error(`${provider} ${response.status} for ${url}`);
     if (response.status !== 429 && response.status < 500) {
@@ -289,6 +295,29 @@ export function wormsQueryName(input: ResolveOrganismInput): string | null {
   return null;
 }
 
+const WORMS_RECORD_RANKS = [
+  "kingdom",
+  "phylum",
+  "class",
+  "order",
+  "family",
+  "genus",
+] as const;
+
+export function ancestorsFromWormsRecord(
+  worms: Record<string, unknown>
+): string[] {
+  const names: string[] = [];
+  for (const field of WORMS_RECORD_RANKS) {
+    const value = worms[field];
+    if (typeof value === "string" && value.trim()) names.push(value.trim());
+  }
+  if (typeof worms.scientificname === "string" && worms.scientificname.trim()) {
+    names.push(worms.scientificname.trim());
+  }
+  return uniqueStrings(names);
+}
+
 function applyWormsRecord(
   target: ResolvedTaxon,
   worms: Record<string, unknown>
@@ -302,6 +331,10 @@ function applyWormsRecord(
   target.scientificName = acceptedName || target.scientificName;
   if (typeof worms.genus === "string") target.genus = worms.genus;
   if (typeof worms.family === "string") target.family = worms.family;
+  target.ancestorNames = uniqueStrings([
+    ...target.ancestorNames,
+    ...ancestorsFromWormsRecord(worms),
+  ]);
 }
 
 function applyWormsTaxonRow(target: ResolvedTaxon, taxon: WormsTaxonRow): void {
@@ -327,8 +360,13 @@ function applyWormsTaxonRow(target: ResolvedTaxon, taxon: WormsTaxonRow): void {
 
 /**
  * Resolve many values from the WoRMS parquet snapshot first, then batched
- * REST match-names (≤50) on miss, then Wikidata SPARQL (AphiaID/name →
- * iNat P3151). Does not call iNaturalist; thumbs load later from the catalog id.
+ * REST match-names (≤50) on miss. REST records already carry rank fields,
+ * so we do not call AphiaClassificationByAphiaID. Vernaculars REST runs
+ * only for accepted IDs still missing from the snapshot (204 = none).
+ * Then Wikidata SPARQL (AphiaID/name → iNat P3151). Unique P3151s are
+ * stored as-is. A clash calls iNat taxa show (`/v1/taxa/{id,id}`, not
+ * `?q=`) and keeps the single active taxon. Thumbs load later from the
+ * catalog id.
  */
 export type TaxonomyResolveProgress = {
   phase: "worms-ids" | "worms-names" | "worms-details" | "wikidata";
@@ -512,27 +550,48 @@ export async function resolveOrganismTaxa(
       acceptedIds.push(row.wormsAphiaId);
     }
   }
+
+  // Taxamatch / synonym REST can land on an AphiaID the snapshot already has.
+  if (clients.wormsParquetDir) {
+    const pending = acceptedIds.filter((id) => !parquetFilledIds.has(id));
+    if (pending.length > 0) {
+      try {
+        const byId = await withDuckDb(async (conn) =>
+          lookupWormsTaxaByAphiaIds(
+            conn,
+            clients.wormsParquetDir as string,
+            pending
+          )
+        );
+        for (const row of results) {
+          if (!row.wormsAphiaId || parquetFilledIds.has(row.wormsAphiaId)) {
+            continue;
+          }
+          const taxon = byId.get(row.wormsAphiaId);
+          if (!taxon) continue;
+          applyWormsTaxonRow(row, taxon);
+          parquetFilledIds.add(row.wormsAphiaId);
+        }
+      } catch (error) {
+        logTaxonomy("parquet refill failed", {
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+  }
+
   const restDetailIds = acceptedIds.filter((id) => !parquetFilledIds.has(id));
 
-  const classificationById = new Map<number, string[]>();
   const vernacularsById = new Map<number, string[]>();
   logTaxonomy("worms details plan", {
     acceptedAphiaIds: acceptedIds.length,
     restDetailIds: restDetailIds.length,
     wormsDetailsEtaSec: Math.round(
-      restDetailIds.length * 2 * (WORMS_MIN_INTERVAL_MS / 1000)
+      restDetailIds.length * (WORMS_MIN_INTERVAL_MS / 1000)
     ),
   });
   for (let i = 0; i < restDetailIds.length; i++) {
     const id = restDetailIds[i];
-    try {
-      classificationById.set(id, await fetchWormsClassification(clients, id));
-    } catch (error) {
-      logTaxonomy(`worms classification ${id} failed`, {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      classificationById.set(id, []);
-    }
     try {
       vernacularsById.set(id, await fetchWormsVernaculars(clients, id));
     } catch (error) {
@@ -553,10 +612,6 @@ export async function resolveOrganismTaxa(
 
   for (const row of results) {
     if (!row.wormsAphiaId) continue;
-    row.ancestorNames = uniqueStrings([
-      ...row.ancestorNames,
-      ...(classificationById.get(row.wormsAphiaId) || []),
-    ]);
     row.commonNames = uniqueStrings([
       ...row.commonNames,
       ...(vernacularsById.get(row.wormsAphiaId) || []),

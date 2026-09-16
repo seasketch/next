@@ -348,11 +348,11 @@ const ROLE_HEURISTICS: Array<{
   },
   { role: "scientificName", pattern: /(scientific[_\s]?name|scientificname|binomial)/i },
   { role: "commonName", pattern: /(common[_\s]?name|commonname|vernacular)/i },
-  { role: "description", pattern: /(definition|description)/i },
-  // Taxon-table notes can be useful; observation-table notes usually are not.
+  // Class/taxon table copy only. Observation columns named description,
+  // definition, or notes are almost never taxon text.
   {
     role: "description",
-    pattern: /(notes|comment)/i,
+    pattern: /(definition|description|notes|comment)/i,
     tables: ["join"],
   },
   { role: "genus", pattern: /^genus$/i },

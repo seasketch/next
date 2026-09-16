@@ -168,14 +168,25 @@ test("suggestOrganismColumnRoles pre-fills CA class-table headers", () => {
   assert.equal(roles.site, undefined);
 });
 
-test("suggestOrganismColumnRoles does not treat source notes or generic taxon ids as roles", () => {
+test("suggestOrganismColumnRoles does not treat source notes, descriptions, or generic taxon ids as roles", () => {
   const roles = suggestOrganismColumnRoles(
-    ["classcode", "notes", "comment", "taxonomic_id", "taxon_id", "worms_id"],
+    [
+      "classcode",
+      "notes",
+      "comment",
+      "description",
+      "species_definition",
+      "taxonomic_id",
+      "taxon_id",
+      "worms_id",
+    ],
     { table: "source" }
   );
   assert.equal(roles.classcode, "code");
   assert.equal(roles.notes, undefined);
   assert.equal(roles.comment, undefined);
+  assert.equal(roles.description, undefined);
+  assert.equal(roles.species_definition, undefined);
   assert.equal(roles.taxonomic_id, undefined);
   assert.equal(roles.taxon_id, undefined);
   assert.equal(roles.worms_id, "wormsAphiaId");
