@@ -95,7 +95,7 @@ export declare const ORGANISM_SEARCH_BOOSTS: {
  */
 export declare const ORGANISM_SEARCH_INDEX_OPTIONS: {
     fields: ("genus" | "description" | "value" | "common_name" | "scientific_name" | "common_names" | "ancestor_names")[];
-    storeFields: ("column" | "genus" | "description" | "value" | "common_name" | "scientific_name" | "common_names" | "ancestor_names" | "inat_taxon_id" | "worms_aphia_id")[];
+    storeFields: ("genus" | "description" | "value" | "common_name" | "scientific_name" | "common_names" | "ancestor_names" | "inat_taxon_id" | "worms_aphia_id" | "column")[];
     idField: string;
     searchOptions: {
         boost: {

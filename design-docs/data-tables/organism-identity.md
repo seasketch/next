@@ -98,10 +98,19 @@ Three providers. None of them is the search backend for the selector or overlay 
 
 - REST: `https://www.marinespecies.org/rest/`.
 - **No photo API.** Classification, accepted name, synonyms, vernaculars, external ids only.
-- Calls the handler actually makes: `AphiaRecordByAphiaID/{id}`, `AphiaRecordsByMatchNames` (up to **50** scientific names), `AphiaClassificationByAphiaID/{id}`, `AphiaVernacularsByAphiaID/{id}`.
+- Calls the handler **currently** makes: `AphiaRecordByAphiaID/{id}`, `AphiaRecordsByMatchNames` (up to **50** scientific names), `AphiaClassificationByAphiaID/{id}`, `AphiaVernacularsByAphiaID/{id}`. Those per-id detail calls are the slow part of a large class table.
 - Confirmed: `AphiaRecordsByName/Bodianus pulcher` → AphiaID `1702292`, accepted, family Labridae. Classification walks Biota → Labridae → _Bodianus_ → \*Bodianus pulcher`.
 - No published hard rate limit. The handler spaces WoRMS calls (~50 ms floor) and retries politely. Responses go through `/taxonomy` on `pmtiles-server` (48 hour Cache API).
 - CCFRP and MARINe already ship AphiaIDs. Prefer those over name match.
+
+**Local snapshot (ready, not wired).** A ChecklistBank / WoRMS Darwin Core Archive is normalized to three public parquet files on `ssn-tiles` so enrichment can skip most REST. Paths, schema, regenerate command, and DuckDB helpers: [`packages/data-tables-handler/README.md`](../../packages/data-tables-handler/README.md) and `src/wormsParquet.ts`.
+
+```text
+r2://ssn-tiles/worms/v1/{taxa,ids,names}.parquet
+https://tiles.seasketch.org/worms/v1/…   # no map token
+```
+
+`ids` follows synonym AphiaIDs; `names` follows `Semicossyphus pulcher` → accepted *Bodianus pulcher* + vernaculars + ancestors. Intended next step: query this snapshot first, REST only on miss (Taxamatch typos, AlgaeBase / non-marine gaps). Do not put these objects under `taxonomy/` or `dataLibrary/`. Bump `WORMS_PARQUET_VERSION` when regenerating (tiles cache is immutable). Cite WoRMS (doi:10.14284/170).
 
 ### Wikidata — iNaturalist taxon id (enrichment)
 
@@ -263,6 +272,8 @@ GET /taxonomy/worms/AphiaRecordsByMatchNames?scientificnames[]=…
 Wikidata SPARQL (`https://query.wikidata.org/sparql`) is called **directly** from the handler — not through this proxy.
 
 `TaxonomyBackend` caches with the Workers **Cache API** for **48 hours**. This is not an open proxy (path allowlist only). The uncached gateway requires the same **overlay-engine** JWT overlay-worker already uses (`Authorization: Bearer`); map-access tokens are rejected. A 700-value run is WoRMS id / match-name / classification / vernacular calls plus a handful of Wikidata SPARQL POSTs. No iNat requests. Running timeout stays 15 minutes (Lambda cap).
+
+The public `worms/v1/*.parquet` snapshot on `ssn-tiles` is **not** this cache. It is a rebuilt DwC extract for local DuckDB lookups (see [WoRMS](#worms--marine-nomenclature-enrichment)). Prefer `r2://` from the handler; HTTP is for inspection.
 
 ---
 

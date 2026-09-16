@@ -5,6 +5,7 @@ import {
 } from "@seasketch/geostats-types";
 import { fetchWikidataInatCrosswalk } from "./wikidataCrosswalk";
 
+/** Live WoRMS REST. A public parquet snapshot (not wired here yet) is documented in README.md and wormsParquet.ts. */
 export const WORMS_REST_URL = "https://www.marinespecies.org/rest";
 export const ORGANISM_USER_AGENT =
   "SeaSketch-organism-enrichment/1.0 (https://www.seasketch.org)";

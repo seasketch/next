@@ -5,6 +5,7 @@ packages/client/dist/*
 **/.tsbuildinfo
 NOTES.md
 **/.env
+packages/data-tables-handler/tmp/
 .cert/
 lerna-debug.log
 *.lerna_backup

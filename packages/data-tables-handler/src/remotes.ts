@@ -4,20 +4,35 @@ import {
   S3Client,
   PutObjectCommand,
   GetObjectCommand,
+  DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import { Upload } from "@aws-sdk/lib-storage";
 import bytes from "bytes";
 import { Readable } from "stream";
 
-const s3Client = new S3Client({ region: process.env.AWS_REGION! });
-const r2Client = new S3Client({
-  region: "auto",
-  endpoint: process.env.R2_ENDPOINT!,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-  },
-});
+let s3Client: S3Client | undefined;
+let r2Client: S3Client | undefined;
+
+function getS3Client() {
+  if (!s3Client) {
+    s3Client = new S3Client({ region: process.env.AWS_REGION! });
+  }
+  return s3Client;
+}
+
+function getR2Client() {
+  if (!r2Client) {
+    r2Client = new S3Client({
+      region: "auto",
+      endpoint: process.env.R2_ENDPOINT!,
+      credentials: {
+        accessKeyId: process.env.R2_ACCESS_KEY_ID!,
+        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+      },
+    });
+  }
+  return r2Client;
+}
 
 export async function putObject(
   filepath: string,
@@ -28,7 +43,7 @@ export async function putObject(
     throw new Error(`Invalid remote ${remote}`);
   }
   const parts = remote.replace(/\w+:\/\//, "").split("/");
-  const client = /r2:/.test(remote) ? r2Client : s3Client;
+  const client = /r2:/.test(remote) ? getR2Client() : getS3Client();
   const Bucket = parts[0];
   const Key = parts.slice(1).join("/");
   const fileSizeBytes = statSync(filepath).size;
@@ -62,6 +77,16 @@ export function siblingRemote(
   return `${parquetRemote.slice(0, -"/data.parquet".length)}/${filename}`;
 }
 
+export async function deleteR2Object(remote: string): Promise<void> {
+  if (!/^r2:\/\//.test(remote)) {
+    throw new Error(`Expected r2:// remote, got ${remote}`);
+  }
+  const parts = remote.replace(/^r2:\/\//, "").split("/");
+  const Bucket = parts[0];
+  const Key = parts.slice(1).join("/");
+  await getR2Client().send(new DeleteObjectCommand({ Bucket, Key }));
+}
+
 /** Download an existing hosted parquet (or other object) from R2. */
 export async function getR2Object(
   remote: string,
@@ -73,7 +98,7 @@ export async function getR2Object(
   const parts = remote.replace(/^r2:\/\//, "").split("/");
   const Bucket = parts[0];
   const Key = parts.slice(1).join("/");
-  const response = await r2Client.send(
+  const response = await getR2Client().send(
     new GetObjectCommand({ Bucket, Key }),
   );
   const body = response.Body as Readable;
@@ -105,7 +130,7 @@ export async function getStagingObject(
   objectKey: string,
 ): Promise<void> {
   const bucket = process.env.BUCKET!;
-  const response = await s3Client.send(
+  const response = await getS3Client().send(
     new GetObjectCommand({ Bucket: bucket, Key: objectKey }),
   );
   const body = response.Body as Readable;
