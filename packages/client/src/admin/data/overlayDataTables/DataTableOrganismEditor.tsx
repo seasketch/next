@@ -766,7 +766,6 @@ export default function DataTableOrganismEditor({
                   <AttributeSelect
                     id="organism-identity-column"
                     attributes={attributes}
-                    modal={false}
                     preventCloseAutoFocus={false}
                     onOpenChange={setNestedPickerOpen}
                     value={form.column || undefined}
