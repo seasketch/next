@@ -27,6 +27,24 @@ export type DistinctOrganismValue = {
 
 export type ClassTableRow = Record<string, unknown>;
 
+const EMPTY_TAXON_PART =
+  /^(na|n\/a|null|none|unknown|undetermined|spp\.?|sp\.?|-)$/i;
+
+function cellFromRow(
+  row: ClassTableRow | undefined,
+  column: string
+): unknown {
+  if (!row) return undefined;
+  if (Object.prototype.hasOwnProperty.call(row, column)) {
+    return row[column];
+  }
+  const needle = column.toLowerCase();
+  for (const key of Object.keys(row)) {
+    if (key.toLowerCase() === needle) return row[key];
+  }
+  return undefined;
+}
+
 function cellText(value: unknown): string | null {
   if (value === null || value === undefined) return null;
   if (typeof value === "string") {
@@ -37,6 +55,11 @@ function cellText(value: unknown): string | null {
     return String(value);
   }
   return String(value);
+}
+
+function taxonPart(value: string | null): string | null {
+  if (!value || EMPTY_TAXON_PART.test(value)) return null;
+  return value;
 }
 
 function cellInt(value: unknown): number | null {
@@ -53,13 +76,11 @@ export function classTableJoinColumn(
   config: DataTableOrganismConfig,
   classHeaders: string[]
 ): string | null {
-  if (
-    typeof config.classJoinColumn === "string" &&
-    classHeaders.includes(config.classJoinColumn)
-  ) {
-    return config.classJoinColumn;
-  }
-  return null;
+  if (typeof config.classJoinColumn !== "string") return null;
+  const needle = config.classJoinColumn.toLowerCase();
+  return (
+    classHeaders.find((header) => header.toLowerCase() === needle) || null
+  );
 }
 
 function firstRoleText(
@@ -69,7 +90,19 @@ function firstRoleText(
 ): string | null {
   if (!row) return null;
   for (const column of columnsWithRole(config.roles, role)) {
-    const text = cellText(row[column]);
+    const text = cellText(cellFromRow(row, column));
+    if (text) return text;
+  }
+  return null;
+}
+
+function firstRoleTextFromRows(
+  config: DataTableOrganismConfig,
+  role: Parameters<typeof columnsWithRole>[1],
+  ...rows: Array<ClassTableRow | undefined>
+): string | null {
+  for (const row of rows) {
+    const text = firstRoleText(row, config, role);
     if (text) return text;
   }
   return null;
@@ -82,7 +115,19 @@ function allRoleTexts(
 ): string[] {
   if (!row) return [];
   return uniqueStrings(
-    columnsWithRole(config.roles, role).map((column) => cellText(row[column]))
+    columnsWithRole(config.roles, role).map((column) =>
+      cellText(cellFromRow(row, column))
+    )
+  );
+}
+
+function allRoleTextsFromRows(
+  config: DataTableOrganismConfig,
+  role: Parameters<typeof columnsWithRole>[1],
+  ...rows: Array<ClassTableRow | undefined>
+): string[] {
+  return uniqueStrings(
+    rows.flatMap((row) => allRoleTexts(row, config, role))
   );
 }
 
@@ -93,31 +138,43 @@ export function classRowForValue(
 ): ClassTableRow | undefined {
   if (!joinColumn) return undefined;
   const needle = value.trim().toLowerCase();
-  return classRows.find((row) => cellText(row[joinColumn])?.toLowerCase() === needle);
+  return classRows.find(
+    (row) => cellText(cellFromRow(row, joinColumn))?.toLowerCase() === needle
+  );
 }
 
 export function resolveInputFromValue(
   value: string,
   config: DataTableOrganismConfig,
-  classRow?: ClassTableRow
+  classRow?: ClassTableRow,
+  sourceRow?: ClassTableRow
 ): ResolveOrganismInput {
-  const genusFromRole = firstRoleText(classRow, config, "genus");
-  const species = firstRoleText(classRow, config, "species");
-  const scientificFromParts =
-    genusFromRole && species ? `${genusFromRole} ${species}` : null;
+  const genusFromRole = taxonPart(
+    firstRoleTextFromRows(config, "genus", classRow, sourceRow)
+  );
+  const species = taxonPart(
+    firstRoleTextFromRows(config, "species", classRow, sourceRow)
+  );
+  const scientificFromParts = genusFromRole
+    ? species
+      ? `${genusFromRole} ${species}`
+      : genusFromRole
+    : null;
   const scientific =
-    firstRoleText(classRow, config, "scientificName") ||
+    firstRoleTextFromRows(config, "scientificName", classRow, sourceRow) ||
     scientificFromParts ||
     (config.valueKind === "scientificName" ? value : null);
   const genus = genusFromRole || genusFromOrganismName(scientific);
   const commonName =
-    firstRoleText(classRow, config, "commonName") ||
+    firstRoleTextFromRows(config, "commonName", classRow, sourceRow) ||
     (config.valueKind === "commonName" ? value : null);
   const wormsAphiaId = (() => {
-    if (!classRow) return null;
-    for (const column of columnsWithRole(config.roles, "wormsAphiaId")) {
-      const id = cellInt(classRow[column]);
-      if (id) return id;
+    for (const row of [classRow, sourceRow]) {
+      if (!row) continue;
+      for (const column of columnsWithRole(config.roles, "wormsAphiaId")) {
+        const id = cellInt(cellFromRow(row, column));
+        if (id) return id;
+      }
     }
     return null;
   })();
@@ -128,7 +185,7 @@ export function resolveInputFromValue(
     species,
     commonName,
     wormsAphiaId,
-    extraNames: allRoleTexts(classRow, config, "commonName"),
+    extraNames: allRoleTextsFromRows(config, "commonName", classRow, sourceRow),
   };
 }
 
@@ -136,6 +193,7 @@ export function resolveInputFromValue(
 export function joinOrganismCatalogRows(options: {
   values: DistinctOrganismValue[];
   classRows?: ClassTableRow[];
+  sourceRows?: Map<string, ClassTableRow>;
   config: DataTableOrganismConfig;
 }): OrganismCatalogRow[] {
   if (!isDataTableOrganismConfig(options.config)) {
@@ -146,9 +204,20 @@ export function joinOrganismCatalogRows(options: {
   const joinColumn = classTableJoinColumn(options.config, headers);
   return options.values.map((item) => {
     const classRow = classRowForValue(item.value, classRows, joinColumn);
-    const input = resolveInputFromValue(item.value, options.config, classRow);
+    const sourceRow = options.sourceRows?.get(item.value);
+    const input = resolveInputFromValue(
+      item.value,
+      options.config,
+      classRow,
+      sourceRow
+    );
     const description =
-      allRoleTexts(classRow, options.config, "description").join(" ") || null;
+      allRoleTextsFromRows(
+        options.config,
+        "description",
+        classRow,
+        sourceRow
+      ).join(" ") || null;
     const row: OrganismCatalogRow = {
       value: item.value,
       scientific_name: input.scientificName,
@@ -175,6 +244,7 @@ export function joinOrganismCatalogRows(options: {
 export async function enrichOrganismValues(options: {
   values: DistinctOrganismValue[];
   classRows?: ClassTableRow[];
+  sourceRows?: Map<string, ClassTableRow>;
   config: DataTableOrganismConfig;
   clients: TaxonomyClients;
   onProgress?: (update: TaxonomyResolveProgress) => Promise<void> | void;
@@ -195,9 +265,20 @@ export async function enrichOrganismValues(options: {
   for (let i = 0; i < options.values.length; i++) {
     const item = options.values[i];
     const classRow = classRowForValue(item.value, classRows, joinColumn);
-    const input = resolveInputFromValue(item.value, options.config, classRow);
+    const sourceRow = options.sourceRows?.get(item.value);
+    const input = resolveInputFromValue(
+      item.value,
+      options.config,
+      classRow,
+      sourceRow
+    );
     descriptions[i] =
-      allRoleTexts(classRow, options.config, "description").join(" ") || null;
+      allRoleTextsFromRows(
+        options.config,
+        "description",
+        classRow,
+        sourceRow
+      ).join(" ") || null;
     const hasTaxonSignal = Boolean(
       input.wormsAphiaId ||
         input.scientificName ||
@@ -225,7 +306,13 @@ export async function enrichOrganismValues(options: {
   // eslint-disable-next-line no-console
   console.log(
     `[data-tables-handler] organism resolve ${inputs.length}/${options.values.length} values` +
-      (joinColumn ? ` (class join ${joinColumn})` : " (no class join)")
+      (joinColumn ? ` (class join ${joinColumn})` : " (no class join)"),
+    {
+      withAphiaId: inputs.filter((input) => input.wormsAphiaId).length,
+      withScientificName: inputs.filter((input) => input.scientificName).length,
+      withGenusSpecies: inputs.filter((input) => input.genus && input.species)
+        .length,
+    }
   );
 
   if (inputs.length > 0) {

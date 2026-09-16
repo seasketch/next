@@ -215,6 +215,8 @@ function reprocessProgressLabel(
         return t("Reading table…");
       case "reading-class":
         return t("Reading class table…");
+      case "worms-snapshot":
+        return t("Loading WoRMS snapshot…");
       case "resolving":
         return t("Looking up taxa…");
       case "writing":

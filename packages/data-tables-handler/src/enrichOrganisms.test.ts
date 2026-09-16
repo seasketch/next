@@ -1,5 +1,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { mkdtempSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
 import MiniSearch from "minisearch";
 import { ORGANISM_SEARCH_INDEX_OPTIONS } from "@seasketch/geostats-types";
 import {
@@ -11,6 +14,9 @@ import {
   serializeOrganismSearchIndex,
 } from "./enrichOrganisms";
 import type { TaxonomyClients } from "./taxonomyApis";
+import { buildWormsParquet } from "./wormsParquet";
+
+const WORMS_DWCA = join(__dirname, "..", "testdata", "worms-dwca");
 
 const config = {
   column: "classcode",
@@ -137,6 +143,35 @@ describe("resolveInputFromValue", () => {
     assert.equal(input.species, "argenteus");
     assert.equal(input.wormsAphiaId, null);
   });
+
+  it("reads genus and species case-insensitively and skips spp placeholders", () => {
+    const input = resolveInputFromValue(
+      "SEBSPP",
+      {
+        column: "classcode",
+        valueKind: "code",
+        roles: { genus: "genus", species: "species" },
+      },
+      { Genus: "Sebastes", Species: "spp." }
+    );
+    assert.equal(input.scientificName, "Sebastes");
+    assert.equal(input.genus, "Sebastes");
+    assert.equal(input.species, null);
+  });
+
+  it("fills genus and species from a source-table row when the join row is empty", () => {
+    const input = resolveInputFromValue(
+      "AARG",
+      {
+        column: "classcode",
+        valueKind: "code",
+        roles: { Genus: "genus", Species: "species" },
+      },
+      undefined,
+      { Genus: "Amphistichus", Species: "argenteus" }
+    );
+    assert.equal(input.scientificName, "Amphistichus argenteus");
+  });
 });
 
 describe("joinOrganismCatalogRows", () => {
@@ -209,6 +244,71 @@ describe("enrichOrganismValues", () => {
     assert.equal(boulder.confidence, "unresolved");
     assert.equal(boulder.inat_taxon_id, null);
     assert.ok(fetches > 0);
+  });
+
+  it("resolves genus and species from the parquet snapshot without a WoRMS ID", async () => {
+    const outDir = mkdtempSync(join(tmpdir(), "worms-enrich-name-"));
+    await buildWormsParquet(WORMS_DWCA, outDir);
+    const urls: string[] = [];
+    const rows = await enrichOrganismValues({
+      values: [{ value: "SPUL", occurrenceCount: 12 }],
+      classRows: [
+        {
+          classcode: "SPUL",
+          Genus: "Bodianus",
+          Species: "pulcher",
+          Common_Name: "California Sheephead",
+        },
+      ],
+      config: {
+        column: "classcode",
+        valueKind: "code",
+        classJoinColumn: "classcode",
+        roles: {
+          Genus: "genus",
+          Species: "species",
+          Common_Name: "commonName",
+        },
+      },
+      clients: {
+        wormsParquetDir: outDir,
+        fetch: async (url) => {
+          urls.push(url);
+          if (
+            url.includes("marinespecies.org") ||
+            url.includes("/taxonomy/worms/")
+          ) {
+            throw new Error(`unexpected WoRMS REST ${url}`);
+          }
+          if (url.includes("query.wikidata.org")) {
+            return {
+              ok: true,
+              status: 200,
+              json: async () => ({
+                results: {
+                  bindings: [
+                    { aphia: { value: "1702292" }, inat: { value: "1439813" } },
+                  ],
+                },
+              }),
+            };
+          }
+          return { ok: true, status: 200, json: async () => ({}) };
+        },
+      },
+    });
+    assert.equal(rows[0].scientific_name, "Bodianus pulcher");
+    assert.equal(rows[0].worms_aphia_id, 1702292);
+    assert.equal(rows[0].family, "Labridae");
+    assert.equal(rows[0].inat_taxon_id, 1439813);
+    assert.equal(rows[0].confidence, "high");
+    assert.equal(
+      urls.filter(
+        (url) =>
+          url.includes("marinespecies.org") || url.includes("/taxonomy/worms/")
+      ).length,
+      0
+    );
   });
 
   it("keeps low-confidence guesses on preview rows but counts them only when the switch is on", async () => {

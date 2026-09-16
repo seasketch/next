@@ -8,11 +8,11 @@
  *   r2://ssn-tiles/worms/v1/{taxa,ids,names}.parquet
  *   https://tiles.seasketch.org/worms/v1/…
  *
- * Not yet used by `resolveOrganismTaxa` — switch that path to
- * `lookupWormsTaxaByAphiaIds` / `lookupWormsTaxaByNames` (REST on miss).
+ * `resolveOrganismTaxa` queries these files first, then WoRMS REST on miss.
  * Full notes: ./README.md and design-docs/data-tables/organism-identity.md
  */
-import { mkdirSync } from "fs";
+import { existsSync, mkdirSync, writeFileSync } from "fs";
+import { tmpdir } from "os";
 import { basename, join } from "path";
 import { all, run, type DuckDBConnection, withDuckDb } from "./duckDb";
 import { getR2Object } from "./remotes";
@@ -85,6 +85,30 @@ export type WormsParquetPaths = {
   manifest: string;
 };
 
+export function wormsParquetCacheDir(): string {
+  return (
+    process.env.WORMS_PARQUET_DIR ||
+    join(tmpdir(), `worms-parquet-${WORMS_PARQUET_VERSION}`)
+  );
+}
+
+export function wormsParquetIsPresent(dir: string): boolean {
+  const paths = wormsParquetPaths(dir);
+  return (
+    fileLooksPresent(paths.taxa) &&
+    fileLooksPresent(paths.ids) &&
+    fileLooksPresent(paths.names)
+  );
+}
+
+function fileLooksPresent(path: string): boolean {
+  try {
+    return existsSync(path);
+  } catch {
+    return false;
+  }
+}
+
 /** Fetch the public snapshot from ssn-tiles (handler credentials; no map token). */
 export async function downloadWormsParquet(outDir: string): Promise<WormsParquetPaths> {
   mkdirSync(outDir, { recursive: true });
@@ -92,8 +116,68 @@ export async function downloadWormsParquet(outDir: string): Promise<WormsParquet
   await getR2Object(WORMS_TAXA_R2_REMOTE, paths.taxa);
   await getR2Object(WORMS_IDS_R2_REMOTE, paths.ids);
   await getR2Object(WORMS_NAMES_R2_REMOTE, paths.names);
-  await getR2Object(WORMS_MANIFEST_R2_REMOTE, paths.manifest);
+  try {
+    await getR2Object(WORMS_MANIFEST_R2_REMOTE, paths.manifest);
+  } catch {
+    // Lookups only need the three parquet files.
+  }
   return paths;
+}
+
+/** Public HTTP copy on tiles.seasketch.org (no map token). Used if R2 fails. */
+export async function downloadWormsParquetFromHttp(
+  outDir: string
+): Promise<WormsParquetPaths> {
+  mkdirSync(outDir, { recursive: true });
+  const paths = wormsParquetPaths(outDir);
+  const required: Array<[string, string]> = [
+    [WORMS_TAXA_FILENAME, paths.taxa],
+    [WORMS_IDS_FILENAME, paths.ids],
+    [WORMS_NAMES_FILENAME, paths.names],
+  ];
+  for (const [filename, dest] of required) {
+    const url = `${WORMS_PARQUET_PUBLIC_BASE}/${filename}`;
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error(`worms parquet HTTP ${response.status} ${url}`);
+    }
+    writeFileSync(dest, Buffer.from(await response.arrayBuffer()));
+  }
+  return paths;
+}
+
+/**
+ * Reuse a local/warm `/tmp` copy, else download from R2, else public HTTP.
+ * Returns null when the snapshot cannot be loaded (caller uses REST).
+ */
+export async function ensureWormsParquet(
+  outDir?: string
+): Promise<WormsParquetPaths | null> {
+  const dir = outDir || wormsParquetCacheDir();
+  if (wormsParquetIsPresent(dir)) {
+    return wormsParquetPaths(dir);
+  }
+  try {
+    return await downloadWormsParquet(dir);
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.log(
+      `[data-tables-handler] worms parquet R2 download failed: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+  }
+  try {
+    return await downloadWormsParquetFromHttp(dir);
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.log(
+      `[data-tables-handler] worms parquet HTTP download failed: ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    );
+    return null;
+  }
 }
 
 export function wormsParquetPaths(dir: string): WormsParquetPaths {

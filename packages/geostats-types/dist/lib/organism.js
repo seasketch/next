@@ -230,10 +230,21 @@ function isOrganismCatalogRow(value) {
     return isOrganismResolveConfidence(value.confidence);
 }
 const ROLE_HEURISTICS = [
-    { role: "wormsAphiaId", pattern: /(aphia|worms|taxanomic_id|taxonomic_id)/i },
+    // Only names that actually say WoRMS or Aphia. taxonomic_id / taxon_id
+    // can be any identifier scheme.
+    {
+        role: "wormsAphiaId",
+        pattern: /(aphiaid|aphia[_ ]?id|^aphia$|^worms$|worms[_ -]?(id|aphia))/i,
+    },
     { role: "scientificName", pattern: /(scientific[_\s]?name|scientificname|binomial)/i },
     { role: "commonName", pattern: /(common[_\s]?name|commonname|vernacular)/i },
-    { role: "description", pattern: /(definition|description|notes|comment)/i },
+    { role: "description", pattern: /(definition|description)/i },
+    // Taxon-table notes can be useful; observation-table notes usually are not.
+    {
+        role: "description",
+        pattern: /(notes|comment)/i,
+        tables: ["join"],
+    },
     { role: "genus", pattern: /^genus$/i },
     { role: "species", pattern: /^species$/i },
     { role: "code", pattern: /(classcode|species[_\s]?code|^code$)/i },
@@ -247,15 +258,19 @@ const IDENTITY_COLUMN_HEURISTICS = [
  * Suggest roles from column names. Admin UI must confirm; do not persist
  * without confirmation.
  */
-function suggestOrganismColumnRoles(columnNames) {
+function suggestOrganismColumnRoles(columnNames, options) {
     if (!Array.isArray(columnNames))
         return {};
+    const table = options === null || options === void 0 ? void 0 : options.table;
     const roles = {};
     for (const raw of columnNames) {
         if (!isNonEmptyString(raw))
             continue;
         const matched = [];
         for (const heuristic of ROLE_HEURISTICS) {
+            if (table && heuristic.tables && heuristic.tables.indexOf(table) === -1) {
+                continue;
+            }
             if (heuristic.pattern.test(raw)) {
                 matched.push(heuristic.role);
             }

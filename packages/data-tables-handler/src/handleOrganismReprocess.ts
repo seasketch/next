@@ -27,6 +27,7 @@ import {
   createTaxonomyFetch,
   type TaxonomyClients,
 } from "./taxonomyApis";
+import { ensureWormsParquet } from "./wormsParquet";
 import { getOverlayEngineAccessToken } from "./overlayEngineAccessToken";
 import { inferCsvColumnPlans, buildTypedSelectSql, CSV_NULL_STRINGS_BASE, nullstrOption } from "./inferCsvColumnPlans";
 import { normalizeCsvEncodingIfNeeded } from "./normalizeCsvEncoding";
@@ -36,6 +37,60 @@ const PARQUET_CONTENT_TYPE = "application/vnd.apache.parquet";
 
 function escapePath(filePath: string): string {
   return filePath.replace(/'/g, "''");
+}
+
+/** Sibling columns on the observation parquet, keyed by identity value. */
+export async function readOrganismSourceRows(
+  parquetPath: string,
+  identityColumn: string,
+  columns: string[]
+): Promise<Map<string, ClassTableRow>> {
+  const wanted = Array.from(
+    new Set(columns.filter((name) => name && name !== identityColumn))
+  );
+  if (wanted.length === 0) return new Map();
+  return withDuckDb(async (conn) => {
+    const described = await all<{ column_name: string }>(
+      conn,
+      `SELECT column_name FROM (DESCRIBE SELECT * FROM read_parquet('${escapePath(parquetPath)}'))`
+    );
+    const actual = described.map((row) => String(row.column_name));
+    const idCol = actual.find(
+      (name) => name.toLowerCase() === identityColumn.toLowerCase()
+    );
+    if (!idCol) return new Map();
+    const selected: string[] = [];
+    for (const want of wanted) {
+      const hit = actual.find((name) => name.toLowerCase() === want.toLowerCase());
+      if (hit && hit !== idCol && selected.indexOf(hit) === -1) {
+        selected.push(hit);
+      }
+    }
+    if (selected.length === 0) return new Map();
+    const projections = selected
+      .map((name) => {
+        const quoted = `"${name.replace(/"/g, '""')}"`;
+        return `any_value(${quoted}) AS ${quoted}`;
+      })
+      .join(", ");
+    const idQuoted = `"${idCol.replace(/"/g, '""')}"`;
+    const rows = await all<ClassTableRow & { __organism_value: string }>(
+      conn,
+      `SELECT CAST(${idQuoted} AS VARCHAR) AS __organism_value, ${projections}
+       FROM read_parquet('${escapePath(parquetPath)}')
+       WHERE ${idQuoted} IS NOT NULL AND TRIM(CAST(${idQuoted} AS VARCHAR)) <> ''
+       GROUP BY 1`
+    );
+    const out = new Map<string, ClassTableRow>();
+    for (const row of rows) {
+      const value = String(row.__organism_value || "").trim();
+      if (!value) continue;
+      const rest: ClassTableRow = { ...row };
+      delete rest.__organism_value;
+      out.set(value, rest);
+    }
+    return out;
+  });
 }
 
 export async function readDistinctOrganismValues(
@@ -152,10 +207,12 @@ export async function runOrganismEnrichment(options: {
     await options.updateProgress("running", "reading class table", 0.2);
     classRows = await readClassTableRows(options.classCsvPath);
     const headers = classRows[0] ? Object.keys(classRows[0]) : [];
-    if (
-      !options.config.classJoinColumn ||
-      !headers.includes(options.config.classJoinColumn)
-    ) {
+    const joinHeader = headers.find(
+      (header) =>
+        header.toLowerCase() ===
+        (options.config.classJoinColumn || "").toLowerCase()
+    );
+    if (!options.config.classJoinColumn || !joinHeader) {
       throw new Error(
         "classJoinColumn is required and must match a class-table column"
       );
@@ -176,9 +233,15 @@ export async function runOrganismEnrichment(options: {
     throw new Error("Could not derive organism sidecar remotes from parquet_remote");
   }
 
+  const sourceRows = await readOrganismSourceRows(
+    options.parquetPath,
+    options.config.column,
+    Object.keys(options.config.roles)
+  );
   const draftRows = joinOrganismCatalogRows({
     values,
     classRows,
+    sourceRows,
     config: options.config,
   });
   writeFileSync(
@@ -186,6 +249,19 @@ export async function runOrganismEnrichment(options: {
     JSON.stringify(previewPayloadFromCatalog(draftRows, options.config))
   );
   await putObject(previewPath, previewRemote, JSON_CONTENT_TYPE);
+  await options.updateProgress("running", "loading worms snapshot", 0.26);
+  const wormsSnapshot = await ensureWormsParquet();
+  if (wormsSnapshot) {
+    // eslint-disable-next-line no-console
+    console.log(
+      `[data-tables-handler] using WoRMS parquet snapshot ${wormsSnapshot.dir}`
+    );
+  } else {
+    // eslint-disable-next-line no-console
+    console.log(
+      "[data-tables-handler] WoRMS parquet snapshot unavailable; using REST"
+    );
+  }
   await options.updateProgress("running", "resolving taxa", 0.28);
 
   const proxyBase = process.env.TAXONOMY_PROXY_URL;
@@ -199,10 +275,12 @@ export async function runOrganismEnrichment(options: {
       accessToken
     ),
     waitWorms: createRateLimiter(WORMS_MIN_INTERVAL_MS),
+    wormsParquetDir: wormsSnapshot?.dir || null,
   };
   const rows = await enrichOrganismValues({
     values,
     classRows,
+    sourceRows,
     config: options.config,
     clients,
     onProgress: async (update) => {

@@ -115,12 +115,15 @@ export function rolesForEnrichment(
   columnNames: unknown,
   identityColumn: string,
   valueKind: OrganismValueKind,
-  existing?: OrganismRoles
+  existing?: OrganismRoles,
+  table?: "source" | "join"
 ): OrganismRoles {
   const names = Array.isArray(columnNames)
     ? columnNames.filter((name): name is string => typeof name === "string")
     : [];
-  const roles: OrganismRoles = { ...suggestOrganismColumnRoles(names) };
+  const roles: OrganismRoles = {
+    ...suggestOrganismColumnRoles(names, table ? { table } : undefined),
+  };
   if (existing) {
     for (const key of Object.keys(existing)) {
       if (names.indexOf(key) !== -1) {
@@ -146,8 +149,20 @@ export function rolesForSourceAndJoinTables(
   existing?: OrganismRoles
 ): OrganismRoles {
   return {
-    ...rolesForEnrichment(sourceColumns, identityColumn, valueKind, existing),
-    ...rolesForEnrichment(joinColumns, identityColumn, valueKind, existing),
+    ...rolesForEnrichment(
+      sourceColumns,
+      identityColumn,
+      valueKind,
+      existing,
+      "source"
+    ),
+    ...rolesForEnrichment(
+      joinColumns,
+      identityColumn,
+      valueKind,
+      existing,
+      "join"
+    ),
   };
 }
 
@@ -294,6 +309,24 @@ export async function readCsvRecords(file: File): Promise<{
   return parseCsvRecords(await file.text());
 }
 
+const EMPTY_TAXON_PART =
+  /^(na|n\/a|null|none|unknown|undetermined|spp\.?|sp\.?|-)$/i;
+
+function cellFromRow(
+  row: Record<string, unknown> | undefined,
+  column: string
+): unknown {
+  if (!row) return undefined;
+  if (Object.prototype.hasOwnProperty.call(row, column)) {
+    return row[column];
+  }
+  const needle = column.toLowerCase();
+  for (const key of Object.keys(row)) {
+    if (key.toLowerCase() === needle) return row[key];
+  }
+  return undefined;
+}
+
 function cellText(value: unknown): string | null {
   if (value === null || value === undefined) return null;
   if (typeof value === "string") {
@@ -304,6 +337,11 @@ function cellText(value: unknown): string | null {
     return String(value);
   }
   return String(value);
+}
+
+function taxonPart(value: string | null): string | null {
+  if (!value || EMPTY_TAXON_PART.test(value)) return null;
+  return value;
 }
 
 function cellInt(value: unknown): number | null {
@@ -323,7 +361,7 @@ function firstRoleText(
 ): string | null {
   if (!row) return null;
   for (const column of columnsWithRole(config.roles, role)) {
-    const text = cellText(row[column]);
+    const text = cellText(cellFromRow(row, column));
     if (text) return text;
   }
   return null;
@@ -336,7 +374,9 @@ function allRoleTexts(
 ): string[] {
   if (!row) return [];
   return uniqueStrings(
-    columnsWithRole(config.roles, role).map((column) => cellText(row[column]))
+    columnsWithRole(config.roles, role).map((column) =>
+      cellText(cellFromRow(row, column))
+    )
   );
 }
 
@@ -348,7 +388,7 @@ function classRowForValue(
   if (!joinColumn) return undefined;
   const needle = value.trim().toLowerCase();
   return classRows.find(
-    (row) => cellText(row[joinColumn])?.toLowerCase() === needle
+    (row) => cellText(cellFromRow(row, joinColumn))?.toLowerCase() === needle
   );
 }
 
@@ -361,9 +401,11 @@ export function joinOrganismCatalogRows(options: {
   const classRows = options.classRows || [];
   const headers = classRows[0] ? Object.keys(classRows[0]) : [];
   const joinColumn =
-    typeof options.config.classJoinColumn === "string" &&
-    headers.includes(options.config.classJoinColumn)
-      ? options.config.classJoinColumn
+    typeof options.config.classJoinColumn === "string"
+      ? headers.find(
+          (header) =>
+            header.toLowerCase() === options.config.classJoinColumn!.toLowerCase()
+        ) || null
       : null;
   return options.values.map((item) => {
     const classRow = classRowForValue(item.value, classRows, joinColumn);
@@ -372,11 +414,19 @@ export function joinOrganismCatalogRows(options: {
       options.config,
       "scientificName"
     );
-    const genusFromRole = firstRoleText(classRow, options.config, "genus");
-    const species = firstRoleText(classRow, options.config, "species");
+    const genusFromRole = taxonPart(
+      firstRoleText(classRow, options.config, "genus")
+    );
+    const species = taxonPart(
+      firstRoleText(classRow, options.config, "species")
+    );
     const scientific =
       scientificFromRole ||
-      (genusFromRole && species ? `${genusFromRole} ${species}` : null) ||
+      (genusFromRole
+        ? species
+          ? `${genusFromRole} ${species}`
+          : genusFromRole
+        : null) ||
       (options.config.valueKind === "scientificName" ? item.value : null);
     const genus = genusFromRole || genusFromOrganismName(scientific);
     const commonName =
@@ -388,7 +438,7 @@ export function joinOrganismCatalogRows(options: {
         options.config.roles,
         "wormsAphiaId"
       )) {
-        const id = cellInt(classRow[column]);
+        const id = cellInt(cellFromRow(classRow, column));
         if (id) {
           wormsAphiaId = id;
           break;
@@ -602,6 +652,9 @@ export function organismJobProgressMessage(
   }
   if (message === "reading class table") {
     return { kind: "key", key: "reading-class" };
+  }
+  if (message === "loading worms snapshot") {
+    return { kind: "key", key: "worms-snapshot" };
   }
   if (message === "resolving taxa") {
     return { kind: "key", key: "resolving" };

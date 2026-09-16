@@ -5,14 +5,12 @@ stats, and runs organism / temporal / nodata reprocess jobs.
 
 ## WoRMS local snapshot (for organism enrichment)
 
-Enrichment today still calls the WoRMS REST API through
-`/taxonomy/worms/…` (`src/taxonomyApis.ts`). A public parquet snapshot of
+`resolveOrganismTaxa` queries a public parquet snapshot of
 [ChecklistBank dataset 2011](https://www.checklistbank.org/dataset/2011)
-(World Register of Marine Species, COL package `col-clb-2011`) already
-lives on `ssn-tiles` so the handler can resolve AphiaIDs, accepted names,
-classification, and vernaculars **without per-taxon HTTP**.
-`resolveOrganismTaxa` has not been switched over yet — use
-`src/wormsParquet.ts` when you do.
+(World Register of Marine Species, COL package `col-clb-2011`) first,
+then falls back to the WoRMS REST API (`/taxonomy/worms/…`) only for
+misses (Taxamatch typos, AlgaeBase / non-marine gaps). Wikidata SPARQL
+is unchanged.
 
 ### Where the files are
 
@@ -84,6 +82,7 @@ npm run worms:build -- /path/to/extracted-dwca --upload
 `scripts/buildWormsParquet.ts`. Fixture tests: `src/wormsParquet.test.ts`
 (`testdata/worms-dwca/`).
 
-When switching enrichment over, cache the three parquet files in `/tmp`
-for the life of the Lambda invocation (or warmer), query with DuckDB, and
-only call `/taxonomy/worms/…` when the snapshot misses.
+`ensureWormsParquet()` caches the three files in `/tmp/worms-parquet-v1`
+(or `WORMS_PARQUET_DIR`) for the Lambda/dev process, prefers `r2://`,
+and falls back to the public HTTP URLs if R2 is unavailable. REST is
+used only when the snapshot is missing or a given id/name is not in it.

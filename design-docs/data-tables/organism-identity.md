@@ -98,19 +98,19 @@ Three providers. None of them is the search backend for the selector or overlay 
 
 - REST: `https://www.marinespecies.org/rest/`.
 - **No photo API.** Classification, accepted name, synonyms, vernaculars, external ids only.
-- Calls the handler **currently** makes: `AphiaRecordByAphiaID/{id}`, `AphiaRecordsByMatchNames` (up to **50** scientific names), `AphiaClassificationByAphiaID/{id}`, `AphiaVernacularsByAphiaID/{id}`. Those per-id detail calls are the slow part of a large class table.
+- The handler queries `worms/v1/{taxa,ids,names}.parquet` first (AphiaID, exact/synonym name, classification, vernaculars). REST is only used on a miss: `AphiaRecordByAphiaID/{id}`, `AphiaRecordsByMatchNames` (up to **50** scientific names), then `AphiaClassificationByAphiaID/{id}` and `AphiaVernacularsByAphiaID/{id}` for those REST hits.
 - Confirmed: `AphiaRecordsByName/Bodianus pulcher` → AphiaID `1702292`, accepted, family Labridae. Classification walks Biota → Labridae → _Bodianus_ → \*Bodianus pulcher`.
 - No published hard rate limit. The handler spaces WoRMS calls (~50 ms floor) and retries politely. Responses go through `/taxonomy` on `pmtiles-server` (48 hour Cache API).
 - CCFRP and MARINe already ship AphiaIDs. Prefer those over name match.
 
-**Local snapshot (ready, not wired).** [ChecklistBank dataset 2011](https://www.checklistbank.org/dataset/2011) (WoRMS / COL `col-clb-2011`) is normalized to three public parquet files on `ssn-tiles` so enrichment can skip most REST. Paths, schema, regenerate command, and DuckDB helpers: [`packages/data-tables-handler/README.md`](../../packages/data-tables-handler/README.md) and `src/wormsParquet.ts`.
+**Local snapshot.** [ChecklistBank dataset 2011](https://www.checklistbank.org/dataset/2011) (WoRMS / COL `col-clb-2011`) is normalized to three public parquet files on `ssn-tiles`. Enrichment queries this first; REST is the miss fallback (Taxamatch typos, AlgaeBase / non-marine gaps). Paths, schema, regenerate command, and DuckDB helpers: [`packages/data-tables-handler/README.md`](../../packages/data-tables-handler/README.md) and `src/wormsParquet.ts`.
 
 ```text
 r2://ssn-tiles/worms/v1/{taxa,ids,names}.parquet
 https://tiles.seasketch.org/worms/v1/…   # no map token
 ```
 
-`ids` follows synonym AphiaIDs; `names` follows `Semicossyphus pulcher` → accepted *Bodianus pulcher* + vernaculars + ancestors. Intended next step: query this snapshot first, REST only on miss (Taxamatch typos, AlgaeBase / non-marine gaps). Do not put these objects under `taxonomy/` or `dataLibrary/`. Bump `WORMS_PARQUET_VERSION` when regenerating (tiles cache is immutable). Cite ChecklistBank dataset 2011 ([10.48580/d4fd](https://doi.org/10.48580/d4fd)) and WoRMS ([doi:10.14284/170](https://doi.org/10.14284/170)).
+`ids` follows synonym AphiaIDs; `names` follows `Semicossyphus pulcher` → accepted *Bodianus pulcher* + vernaculars + ancestors. Do not put these objects under `taxonomy/` or `dataLibrary/`. Bump `WORMS_PARQUET_VERSION` when regenerating (tiles cache is immutable). Cite ChecklistBank dataset 2011 ([10.48580/d4fd](https://doi.org/10.48580/d4fd)) and WoRMS ([doi:10.14284/170](https://doi.org/10.14284/170)).
 
 ### Wikidata — iNaturalist taxon id (enrichment)
 
@@ -271,7 +271,7 @@ GET /taxonomy/worms/AphiaRecordsByMatchNames?scientificnames[]=…
 
 Wikidata SPARQL (`https://query.wikidata.org/sparql`) is called **directly** from the handler — not through this proxy.
 
-`TaxonomyBackend` caches with the Workers **Cache API** for **48 hours**. This is not an open proxy (path allowlist only). The uncached gateway requires the same **overlay-engine** JWT overlay-worker already uses (`Authorization: Bearer`); map-access tokens are rejected. A 700-value run is WoRMS id / match-name / classification / vernacular calls plus a handful of Wikidata SPARQL POSTs. No iNat requests. Running timeout stays 15 minutes (Lambda cap).
+`TaxonomyBackend` caches with the Workers **Cache API** for **48 hours**. This is not an open proxy (path allowlist only). The uncached gateway requires the same **overlay-engine** JWT overlay-worker already uses (`Authorization: Bearer`); map-access tokens are rejected. A 700-value run is mostly DuckDB against the `worms/v1` parquet snapshot, plus REST only for misses and a handful of Wikidata SPARQL POSTs. No iNat requests. Running timeout stays 15 minutes (Lambda cap).
 
 The public `worms/v1/*.parquet` snapshot on `ssn-tiles` is **not** this cache. It is a rebuilt DwC extract for local DuckDB lookups (see [WoRMS](#worms--marine-nomenclature-enrichment)). Prefer `r2://` from the handler; HTTP is for inspection.
 
@@ -292,9 +292,9 @@ Works with or without a class table.
 
 ### Resolution order (per distinct value)
 
-1. If a `wormsAphiaId` role is populated → `AphiaRecordByAphiaID` (cached). Use `valid_name` if the record is unaccepted.
-2. Else if a scientific name or genus+species can be built → WoRMS `AphiaRecordsByMatchNames` in batches of ≤50.
-3. For each accepted AphiaID → `AphiaClassificationByAphiaID` and `AphiaVernacularsByAphiaID`. Those fill `ancestor_names`, extra `common_names`, genus, and family.
+1. If a `wormsAphiaId` role is populated → parquet `ids` + `taxa`. REST `AphiaRecordByAphiaID` only on miss. Use the accepted name if the record is unaccepted.
+2. Else if a scientific name or genus+species can be built → parquet `names` + `taxa`. REST `AphiaRecordsByMatchNames` (≤50) only on miss.
+3. Snapshot hits already include `ancestor_names`, vernaculars, genus, and family. REST-resolved AphiaIDs still call `AphiaClassificationByAphiaID` and `AphiaVernacularsByAphiaID`.
 4. Wikidata SPARQL (≤50 per request): AphiaID via P850, then scientific / common names via P225, English `rdfs:label`, and P1843 → P3151 iNat taxon id. AphiaID or scientific-name hits are **high** confidence. A common-name-only hit is **low** confidence. Ambiguous names (two different iNat ids) are dropped. Store the id; do not call iNat to verify it or follow synonyms.
 5. Lumps (`Laminaria spp.`, `Sebastes spp.`, `PHYSPP`) → resolve to genus when possible. Ancestor search still works.
 6. No scientific or common signal (`boulder`, `SAND`, some UPC categories) → no API calls. Catalog from class-table labels + description only.
@@ -469,7 +469,7 @@ Shared lock-in from phase 2 onward: MiniSearch **version + `fields` / `storeFiel
 - Distinct values of the identity column from the current parquet (complete set, not the 500-value histogram).
 - Optional ephemeral class CSV (presigned upload, discarded after the job).
 - Role heuristics as defaults only.
-- WoRMS (ids, match-names ≤50, classification, vernaculars) → Wikidata (P850 / P225 / P1843 → P3151). **No iNaturalist HTTP.** No `preferred_place_id`. No iNat `?q=`. WoRMS goes through `/taxonomy` on `pmtiles-server` (48 hour Cache API, worms paths only). Wikidata SPARQL is direct from the handler.
+- WoRMS parquet snapshot first, then REST (ids, match-names ≤50, classification, vernaculars) on miss → Wikidata (P850 / P225 / P1843 → P3151). **No iNaturalist HTTP.** No `preferred_place_id`. No iNat `?q=`. REST goes through `/taxonomy` on `pmtiles-server` (48 hour Cache API, worms paths only). Wikidata SPARQL is direct from the handler.
 - `includeLowConfidenceMatches` on the job config. Preview always includes confidence.
 - Write `organism-catalog.parquet` and `organism-search.json` next to the table.
 - Persist `OrganismInfo` on success (`complete_overlay_data_table_upload` or a dedicated complete).

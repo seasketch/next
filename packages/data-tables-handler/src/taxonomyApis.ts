@@ -3,9 +3,16 @@ import {
   isLumpedOrganismValue,
   uniqueStrings,
 } from "@seasketch/geostats-types";
+import { withDuckDb } from "./duckDb";
 import { fetchWikidataInatCrosswalk } from "./wikidataCrosswalk";
+import {
+  lookupWormsTaxaByAphiaIds,
+  lookupWormsTaxaByNames,
+  normalizeWormsNameKey,
+  type WormsTaxonRow,
+} from "./wormsParquet";
 
-/** Live WoRMS REST. A public parquet snapshot (not wired here yet) is documented in README.md and wormsParquet.ts. */
+/** Live WoRMS REST. Used only when the public parquet snapshot misses. */
 export const WORMS_REST_URL = "https://www.marinespecies.org/rest";
 export const ORGANISM_USER_AGENT =
   "SeaSketch-organism-enrichment/1.0 (https://www.seasketch.org)";
@@ -65,6 +72,8 @@ export function createRateLimiter(minIntervalMs: number) {
 export type TaxonomyClients = {
   fetch: TaxonomyFetch;
   waitWorms?: () => Promise<void>;
+  /** Local WoRMS snapshot dir (`taxa/ids/names.parquet`). REST on miss. */
+  wormsParquetDir?: string | null;
 };
 
 /**
@@ -295,10 +304,31 @@ function applyWormsRecord(
   if (typeof worms.family === "string") target.family = worms.family;
 }
 
+function applyWormsTaxonRow(target: ResolvedTaxon, taxon: WormsTaxonRow): void {
+  target.wormsAphiaId = taxon.accepted_aphia_id || taxon.aphia_id;
+  if (taxon.scientific_name) target.scientificName = taxon.scientific_name;
+  if (taxon.genus) target.genus = taxon.genus;
+  if (taxon.family) target.family = taxon.family;
+  target.ancestorNames = uniqueStrings([
+    ...target.ancestorNames,
+    ...taxon.ancestor_names,
+  ]);
+  target.commonNames = uniqueStrings([
+    ...target.commonNames,
+    ...taxon.vernaculars,
+  ]);
+  if (!target.commonName && taxon.common_name) {
+    target.commonName = taxon.common_name;
+  }
+  if (target.scientificName) {
+    target.confidence = "high";
+  }
+}
+
 /**
- * Resolve many values with batched WoRMS match-names (≤50) and Wikidata
- * SPARQL (AphiaID/name → iNat P3151). Does not call iNaturalist; thumbs load
- * later from the catalog id.
+ * Resolve many values from the WoRMS parquet snapshot first, then batched
+ * REST match-names (≤50) on miss, then Wikidata SPARQL (AphiaID/name →
+ * iNat P3151). Does not call iNaturalist; thumbs load later from the catalog id.
  */
 export type TaxonomyResolveProgress = {
   phase: "worms-ids" | "worms-names" | "worms-details" | "wikidata";
@@ -344,20 +374,82 @@ export async function resolveOrganismTaxa(
     uniqueMatchNames.push(name);
   }
 
+  const parquetFilledIds = new Set<number>();
+  let restAphiaIds = uniqueAphiaIds.slice();
+  let restMatchNames = uniqueMatchNames.slice();
+
+  if (clients.wormsParquetDir) {
+    try {
+      const parquet = await withDuckDb(async (conn) => {
+        const byId = await lookupWormsTaxaByAphiaIds(
+          conn,
+          clients.wormsParquetDir as string,
+          uniqueAphiaIds
+        );
+        const byName = await lookupWormsTaxaByNames(
+          conn,
+          clients.wormsParquetDir as string,
+          uniqueMatchNames
+        );
+        return { byId, byName };
+      });
+      for (let i = 0; i < results.length; i++) {
+        const id = results[i].wormsAphiaId;
+        const fromId = id ? parquet.byId.get(id) : undefined;
+        if (fromId) {
+          applyWormsTaxonRow(results[i], fromId);
+          if (results[i].wormsAphiaId) {
+            parquetFilledIds.add(results[i].wormsAphiaId);
+          }
+          continue;
+        }
+        const name = wormsNameByIndex[i];
+        const fromName = name
+          ? parquet.byName.get(normalizeWormsNameKey(name))
+          : undefined;
+        if (fromName) {
+          applyWormsTaxonRow(results[i], fromName);
+          if (results[i].wormsAphiaId) {
+            parquetFilledIds.add(results[i].wormsAphiaId);
+          }
+        }
+      }
+      restAphiaIds = uniqueAphiaIds.filter((id) => !parquet.byId.has(id));
+      restMatchNames = uniqueMatchNames.filter(
+        (name) => !parquet.byName.has(normalizeWormsNameKey(name))
+      );
+      logTaxonomy("parquet", {
+        hitsById: parquet.byId.size,
+        hitsByName: parquet.byName.size,
+        missIds: restAphiaIds.length,
+        missNames: restMatchNames.length,
+      });
+    } catch (error) {
+      logTaxonomy("parquet lookup failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   logTaxonomy("plan", {
     inputs: inputs.length,
     uniqueAphiaIds: uniqueAphiaIds.length,
     uniqueScientificNames: uniqueMatchNames.length,
+    restAphiaIds: restAphiaIds.length,
+    restScientificNames: restMatchNames.length,
     wormsEtaSec: Math.round(
-      (uniqueAphiaIds.length +
-        Math.ceil(uniqueMatchNames.length / WORMS_MATCH_NAME_BATCH)) *
+      (restAphiaIds.length +
+        Math.ceil(restMatchNames.length / WORMS_MATCH_NAME_BATCH)) *
         (WORMS_MIN_INTERVAL_MS / 1000)
     ),
   });
 
   const wormsById = new Map<number, Record<string, unknown>>();
-  for (let i = 0; i < uniqueAphiaIds.length; i++) {
-    const id = uniqueAphiaIds[i];
+  if (restAphiaIds.length === 0) {
+    await report({ phase: "worms-ids", done: 1, total: 1 });
+  }
+  for (let i = 0; i < restAphiaIds.length; i++) {
+    const id = restAphiaIds[i];
     try {
       const record = await fetchWormsRecordByAphiaId(clients, id);
       if (record) wormsById.set(id, record);
@@ -369,29 +461,29 @@ export async function resolveOrganismTaxa(
     await report({
       phase: "worms-ids",
       done: i + 1,
-      total: uniqueAphiaIds.length,
+      total: restAphiaIds.length,
     });
   }
 
   const wormsByName = new Map<string, Record<string, unknown>>();
   try {
     const groups: Array<Record<string, unknown>[]> = [];
-    for (let i = 0; i < uniqueMatchNames.length; i += WORMS_MATCH_NAME_BATCH) {
-      const batch = uniqueMatchNames.slice(i, i + WORMS_MATCH_NAME_BATCH);
+    for (let i = 0; i < restMatchNames.length; i += WORMS_MATCH_NAME_BATCH) {
+      const batch = restMatchNames.slice(i, i + WORMS_MATCH_NAME_BATCH);
       const batchGroups = await fetchWormsMatchNames(clients, batch);
       groups.push(...batchGroups);
       await report({
         phase: "worms-names",
-        done: Math.min(i + batch.length, uniqueMatchNames.length),
-        total: Math.max(uniqueMatchNames.length, 1),
+        done: Math.min(i + batch.length, restMatchNames.length),
+        total: Math.max(restMatchNames.length, 1),
       });
     }
-    if (uniqueMatchNames.length === 0) {
+    if (restMatchNames.length === 0) {
       await report({ phase: "worms-names", done: 1, total: 1 });
     }
-    for (let i = 0; i < uniqueMatchNames.length; i++) {
+    for (let i = 0; i < restMatchNames.length; i++) {
       const picked = pickWormsAccepted(groups[i] || []);
-      if (picked) wormsByName.set(uniqueMatchNames[i].toLowerCase(), picked);
+      if (picked) wormsByName.set(restMatchNames[i].toLowerCase(), picked);
     }
   } catch (error) {
     logTaxonomy("worms match-names failed", {
@@ -400,6 +492,9 @@ export async function resolveOrganismTaxa(
   }
 
   for (let i = 0; i < results.length; i++) {
+    if (results[i].wormsAphiaId && parquetFilledIds.has(results[i].wormsAphiaId)) {
+      continue;
+    }
     const byId = results[i].wormsAphiaId
       ? wormsById.get(results[i].wormsAphiaId!)
       : undefined;
@@ -417,17 +512,19 @@ export async function resolveOrganismTaxa(
       acceptedIds.push(row.wormsAphiaId);
     }
   }
+  const restDetailIds = acceptedIds.filter((id) => !parquetFilledIds.has(id));
 
   const classificationById = new Map<number, string[]>();
   const vernacularsById = new Map<number, string[]>();
   logTaxonomy("worms details plan", {
     acceptedAphiaIds: acceptedIds.length,
+    restDetailIds: restDetailIds.length,
     wormsDetailsEtaSec: Math.round(
-      acceptedIds.length * 2 * (WORMS_MIN_INTERVAL_MS / 1000)
+      restDetailIds.length * 2 * (WORMS_MIN_INTERVAL_MS / 1000)
     ),
   });
-  for (let i = 0; i < acceptedIds.length; i++) {
-    const id = acceptedIds[i];
+  for (let i = 0; i < restDetailIds.length; i++) {
+    const id = restDetailIds[i];
     try {
       classificationById.set(id, await fetchWormsClassification(clients, id));
     } catch (error) {
@@ -447,10 +544,10 @@ export async function resolveOrganismTaxa(
     await report({
       phase: "worms-details",
       done: i + 1,
-      total: Math.max(acceptedIds.length, 1),
+      total: Math.max(restDetailIds.length, 1),
     });
   }
-  if (acceptedIds.length === 0) {
+  if (restDetailIds.length === 0) {
     await report({ phase: "worms-details", done: 1, total: 1 });
   }
 

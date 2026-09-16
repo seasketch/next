@@ -43,11 +43,13 @@ export default function DataTableUploadJobProgress({
           ? t("Reading table…")
           : organismLabel.key === "reading-class"
             ? t("Reading class table…")
-            : organismLabel.key === "resolving"
-              ? t("Looking up taxa…")
-              : organismLabel.key === "writing"
-                ? t("Writing catalog…")
-                : job.progressMessage || t("Processing…")
+            : organismLabel.key === "worms-snapshot"
+              ? t("Loading WoRMS snapshot…")
+              : organismLabel.key === "resolving"
+                ? t("Looking up taxa…")
+                : organismLabel.key === "writing"
+                  ? t("Writing catalog…")
+                  : job.progressMessage || t("Processing…")
         : job.progressMessage === "uploading"
           ? t("Uploading file…")
           : job.progressMessage === "dropping unmatched sites"

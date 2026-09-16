@@ -141,24 +141,44 @@ test("isOrganismCatalogRow accepts a valid row and rejects junk ids", () => {
 });
 
 test("suggestOrganismColumnRoles pre-fills CA class-table headers", () => {
-  const roles = suggestOrganismColumnRoles([
-    "classcode",
-    "Scientific_Name",
-    "Common_Name",
-    "Genus",
-    "Species",
-    "taxanomic_id",
-    "species_definition",
-    "site",
-  ]);
+  const roles = suggestOrganismColumnRoles(
+    [
+      "classcode",
+      "Scientific_Name",
+      "Common_Name",
+      "Genus",
+      "Species",
+      "taxanomic_id",
+      "aphia_id",
+      "species_definition",
+      "notes",
+      "site",
+    ],
+    { table: "join" }
+  );
   assert.equal(roles.classcode, "code");
   assert.equal(roles.Scientific_Name, "scientificName");
   assert.equal(roles.Common_Name, "commonName");
   assert.equal(roles.Genus, "genus");
   assert.equal(roles.Species, "species");
-  assert.equal(roles.taxanomic_id, "wormsAphiaId");
+  assert.equal(roles.taxanomic_id, undefined);
+  assert.equal(roles.aphia_id, "wormsAphiaId");
   assert.equal(roles.species_definition, "description");
+  assert.equal(roles.notes, "description");
   assert.equal(roles.site, undefined);
+});
+
+test("suggestOrganismColumnRoles does not treat source notes or generic taxon ids as roles", () => {
+  const roles = suggestOrganismColumnRoles(
+    ["classcode", "notes", "comment", "taxonomic_id", "taxon_id", "worms_id"],
+    { table: "source" }
+  );
+  assert.equal(roles.classcode, "code");
+  assert.equal(roles.notes, undefined);
+  assert.equal(roles.comment, undefined);
+  assert.equal(roles.taxonomic_id, undefined);
+  assert.equal(roles.taxon_id, undefined);
+  assert.equal(roles.worms_id, "wormsAphiaId");
 });
 
 test("suggestOrganismIdentityColumn prefers classcode then scientific then common", () => {

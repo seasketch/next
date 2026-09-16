@@ -140,9 +140,23 @@ describe("suggestValueKindForColumn / rolesForEnrichment", () => {
       ["classcode", "notes"],
       "classcode",
       "code",
-      { notes: "description" }
+      { notes: "description" },
+      "source"
     );
     expect(roles.notes).toBe("description");
+  });
+
+  it("does not suggest source notes or generic taxon ids", () => {
+    const roles = rolesForSourceAndJoinTables(
+      ["classcode", "notes", "taxonomic_id"],
+      ["Genus", "Species", "notes", "taxonomic_id", "aphia_id"],
+      "classcode",
+      "code"
+    );
+    expect(roles.notes).toBe("description");
+    expect(roles.taxonomic_id).toBeUndefined();
+    expect(roles.aphia_id).toBe("wormsAphiaId");
+    expect(roles.Genus).toBe("genus");
   });
 
   it("maps observation-table columns when there is no class CSV", () => {
@@ -155,6 +169,18 @@ describe("suggestValueKindForColumn / rolesForEnrichment", () => {
     expect(roles.genus).toBe("genus");
     expect(roles.species).toBe("species");
     expect(roles.count).toBeUndefined();
+  });
+
+  it("does not treat source-table notes as a description", () => {
+    const roles = rolesForEnrichment(
+      ["classcode", "notes", "taxonomic_id"],
+      "classcode",
+      "code",
+      undefined,
+      "source"
+    );
+    expect(roles.notes).toBeUndefined();
+    expect(roles.taxonomic_id).toBeUndefined();
   });
 
   it("keeps source and join roles together", () => {

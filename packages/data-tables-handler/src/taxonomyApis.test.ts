@@ -1,5 +1,8 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { mkdtempSync } from "fs";
+import { tmpdir } from "os";
+import { join } from "path";
 import {
   createTaxonomyFetch,
   pickWormsAccepted,
@@ -7,6 +10,9 @@ import {
   rewriteTaxonomyUrl,
   type TaxonomyClients,
 } from "./taxonomyApis";
+import { buildWormsParquet } from "./wormsParquet";
+
+const WORMS_DWCA = join(__dirname, "..", "testdata", "worms-dwca");
 
 describe("rewriteTaxonomyUrl", () => {
   it("rewrites WoRMS URLs onto the worker proxy and leaves iNat alone", () => {
@@ -188,6 +194,110 @@ describe("resolveOrganismTaxa", () => {
       urls.filter((u) => u.includes("api.inaturalist.org") || u.includes("/v1/taxa")).length,
       0
     );
+  });
+
+  it("uses the parquet snapshot and skips WoRMS REST on a hit", async () => {
+    const outDir = mkdtempSync(join(tmpdir(), "worms-resolve-"));
+    await buildWormsParquet(WORMS_DWCA, outDir);
+    const urls: string[] = [];
+    const clients: TaxonomyClients = {
+      wormsParquetDir: outDir,
+      fetch: async (url) => {
+        urls.push(url);
+        if (
+          url.includes("marinespecies.org") ||
+          url.includes("/taxonomy/worms/")
+        ) {
+          throw new Error(`unexpected WoRMS REST ${url}`);
+        }
+        if (url.includes("query.wikidata.org")) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              results: {
+                bindings: [
+                  { aphia: { value: "1702292" }, inat: { value: "1439813" } },
+                ],
+              },
+            }),
+          };
+        }
+        return { ok: true, status: 200, json: async () => ({}) };
+      },
+    };
+    const rows = await resolveOrganismTaxa(clients, [
+      { value: "SPUL", scientificName: "Semicossyphus pulcher" },
+      { value: "ID", wormsAphiaId: 282753 },
+    ]);
+    assert.equal(rows[0].wormsAphiaId, 1702292);
+    assert.equal(rows[0].scientificName, "Bodianus pulcher");
+    assert.equal(rows[0].family, "Labridae");
+    assert.ok(rows[0].ancestorNames.includes("Labridae"));
+    assert.ok(
+      rows[0].commonNames.includes("Sheephead") ||
+        rows[0].commonName === "California Sheephead"
+    );
+    assert.equal(rows[0].inatTaxonId, 1439813);
+    assert.equal(rows[1].wormsAphiaId, 1702292);
+    assert.equal(rows[1].scientificName, "Bodianus pulcher");
+    assert.equal(
+      urls.filter(
+        (url) =>
+          url.includes("marinespecies.org") || url.includes("/taxonomy/worms/")
+      ).length,
+      0
+    );
+  });
+
+  it("falls back to WoRMS REST when the snapshot misses", async () => {
+    const outDir = mkdtempSync(join(tmpdir(), "worms-resolve-miss-"));
+    await buildWormsParquet(WORMS_DWCA, outDir);
+    let matchNames = 0;
+    const clients: TaxonomyClients = {
+      wormsParquetDir: outDir,
+      fetch: async (url) => {
+        if (url.includes("AphiaRecordsByMatchNames")) {
+          matchNames += 1;
+          return {
+            ok: true,
+            status: 200,
+            json: async () => [
+              [
+                {
+                  status: "accepted",
+                  AphiaID: 999,
+                  scientificname: "Madeup species",
+                  genus: "Madeup",
+                  family: "Madeupidae",
+                },
+              ],
+            ],
+          };
+        }
+        if (
+          url.includes("AphiaClassificationByAphiaID") ||
+          url.includes("AphiaVernacularsByAphiaID")
+        ) {
+          return { ok: true, status: 200, json: async () => [] };
+        }
+        if (url.includes("query.wikidata.org")) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ results: { bindings: [] } }),
+          };
+        }
+        return { ok: true, status: 200, json: async () => ({}) };
+      },
+    };
+    const [row] = await resolveOrganismTaxa(clients, [
+      { value: "X", scientificName: "Madeup species" },
+    ]);
+    assert.equal(matchNames, 1);
+    assert.equal(row.wormsAphiaId, 999);
+    assert.equal(row.scientificName, "Madeup species");
+    assert.equal(row.confidence, "high");
   });
 
   it("marks a unique common-name Wikidata hit as low confidence", async () => {

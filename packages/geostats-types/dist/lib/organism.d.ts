@@ -95,7 +95,7 @@ export declare const ORGANISM_SEARCH_BOOSTS: {
  */
 export declare const ORGANISM_SEARCH_INDEX_OPTIONS: {
     fields: ("genus" | "description" | "value" | "common_name" | "scientific_name" | "common_names" | "ancestor_names")[];
-    storeFields: ("genus" | "description" | "value" | "common_name" | "scientific_name" | "common_names" | "ancestor_names" | "inat_taxon_id" | "worms_aphia_id" | "column")[];
+    storeFields: ("column" | "genus" | "description" | "value" | "common_name" | "scientific_name" | "common_names" | "ancestor_names" | "inat_taxon_id" | "worms_aphia_id")[];
     idField: string;
     searchOptions: {
         boost: {
@@ -128,11 +128,15 @@ export declare function includeLowConfidenceMatchesEnabled(value: {
 export declare function isDataTableOrganismConfig(value: unknown): value is DataTableOrganismConfig;
 export declare function isOrganismResolveConfidence(value: unknown): value is OrganismResolveConfidence;
 export declare function isOrganismCatalogRow(value: unknown): value is OrganismCatalogRow;
+export type SuggestOrganismRolesOptions = {
+    /** Observation columns vs optional class/taxon CSV. Defaults to both. */
+    table?: "source" | "join";
+};
 /**
  * Suggest roles from column names. Admin UI must confirm; do not persist
  * without confirmation.
  */
-export declare function suggestOrganismColumnRoles(columnNames: unknown): OrganismRoles;
+export declare function suggestOrganismColumnRoles(columnNames: unknown, options?: SuggestOrganismRolesOptions): OrganismRoles;
 export declare function suggestOrganismIdentityColumn(columnNames: unknown): {
     column: string;
     valueKind: OrganismValueKind;

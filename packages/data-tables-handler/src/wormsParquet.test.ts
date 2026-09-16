@@ -11,6 +11,7 @@ import {
   normalizeWormsNameKey,
   parseAphiaIdFromLsid,
   stripWormsAuthorship,
+  wormsParquetIsPresent,
 } from "./wormsParquet";
 
 const DWCA = join(__dirname, "..", "testdata", "worms-dwca");
@@ -66,5 +67,8 @@ describe("buildWormsParquet", () => {
       assert.equal(byName.get("bodianus pulcher")?.aphia_id, 1702292);
       assert.equal(byName.get("semicossyphus pulcher")?.aphia_id, 1702292);
     });
+
+    assert.equal(wormsParquetIsPresent(outDir), true);
+    assert.equal(wormsParquetIsPresent(join(outDir, "missing")), false);
   });
 });

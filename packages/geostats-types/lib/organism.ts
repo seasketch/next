@@ -335,15 +335,35 @@ export function isOrganismCatalogRow(
   return isOrganismResolveConfidence(value.confidence);
 }
 
-const ROLE_HEURISTICS: Array<{ role: OrganismColumnRole; pattern: RegExp }> = [
-  { role: "wormsAphiaId", pattern: /(aphia|worms|taxanomic_id|taxonomic_id)/i },
+const ROLE_HEURISTICS: Array<{
+  role: OrganismColumnRole;
+  pattern: RegExp;
+  tables?: Array<"source" | "join">;
+}> = [
+  // Only names that actually say WoRMS or Aphia. taxonomic_id / taxon_id
+  // can be any identifier scheme.
+  {
+    role: "wormsAphiaId",
+    pattern: /(aphiaid|aphia[_ ]?id|^aphia$|^worms$|worms[_ -]?(id|aphia))/i,
+  },
   { role: "scientificName", pattern: /(scientific[_\s]?name|scientificname|binomial)/i },
   { role: "commonName", pattern: /(common[_\s]?name|commonname|vernacular)/i },
-  { role: "description", pattern: /(definition|description|notes|comment)/i },
+  { role: "description", pattern: /(definition|description)/i },
+  // Taxon-table notes can be useful; observation-table notes usually are not.
+  {
+    role: "description",
+    pattern: /(notes|comment)/i,
+    tables: ["join"],
+  },
   { role: "genus", pattern: /^genus$/i },
   { role: "species", pattern: /^species$/i },
   { role: "code", pattern: /(classcode|species[_\s]?code|^code$)/i },
 ];
+
+export type SuggestOrganismRolesOptions = {
+  /** Observation columns vs optional class/taxon CSV. Defaults to both. */
+  table?: "source" | "join";
+};
 
 const IDENTITY_COLUMN_HEURISTICS: Array<{
   kind: OrganismValueKind;
@@ -359,14 +379,19 @@ const IDENTITY_COLUMN_HEURISTICS: Array<{
  * without confirmation.
  */
 export function suggestOrganismColumnRoles(
-  columnNames: unknown
+  columnNames: unknown,
+  options?: SuggestOrganismRolesOptions
 ): OrganismRoles {
   if (!Array.isArray(columnNames)) return {};
+  const table = options?.table;
   const roles: OrganismRoles = {};
   for (const raw of columnNames) {
     if (!isNonEmptyString(raw)) continue;
     const matched: OrganismColumnRole[] = [];
     for (const heuristic of ROLE_HEURISTICS) {
+      if (table && heuristic.tables && heuristic.tables.indexOf(table) === -1) {
+        continue;
+      }
       if (heuristic.pattern.test(raw)) {
         matched.push(heuristic.role);
       }
