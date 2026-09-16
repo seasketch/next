@@ -103,14 +103,14 @@ Three providers. None of them is the search backend for the selector or overlay 
 - No published hard rate limit. The handler spaces WoRMS calls (~50 ms floor) and retries politely. Responses go through `/taxonomy` on `pmtiles-server` (48 hour Cache API).
 - CCFRP and MARINe already ship AphiaIDs. Prefer those over name match.
 
-**Local snapshot (ready, not wired).** A ChecklistBank / WoRMS Darwin Core Archive is normalized to three public parquet files on `ssn-tiles` so enrichment can skip most REST. Paths, schema, regenerate command, and DuckDB helpers: [`packages/data-tables-handler/README.md`](../../packages/data-tables-handler/README.md) and `src/wormsParquet.ts`.
+**Local snapshot (ready, not wired).** [ChecklistBank dataset 2011](https://www.checklistbank.org/dataset/2011) (WoRMS / COL `col-clb-2011`) is normalized to three public parquet files on `ssn-tiles` so enrichment can skip most REST. Paths, schema, regenerate command, and DuckDB helpers: [`packages/data-tables-handler/README.md`](../../packages/data-tables-handler/README.md) and `src/wormsParquet.ts`.
 
 ```text
 r2://ssn-tiles/worms/v1/{taxa,ids,names}.parquet
 https://tiles.seasketch.org/worms/v1/…   # no map token
 ```
 
-`ids` follows synonym AphiaIDs; `names` follows `Semicossyphus pulcher` → accepted *Bodianus pulcher* + vernaculars + ancestors. Intended next step: query this snapshot first, REST only on miss (Taxamatch typos, AlgaeBase / non-marine gaps). Do not put these objects under `taxonomy/` or `dataLibrary/`. Bump `WORMS_PARQUET_VERSION` when regenerating (tiles cache is immutable). Cite WoRMS (doi:10.14284/170).
+`ids` follows synonym AphiaIDs; `names` follows `Semicossyphus pulcher` → accepted *Bodianus pulcher* + vernaculars + ancestors. Intended next step: query this snapshot first, REST only on miss (Taxamatch typos, AlgaeBase / non-marine gaps). Do not put these objects under `taxonomy/` or `dataLibrary/`. Bump `WORMS_PARQUET_VERSION` when regenerating (tiles cache is immutable). Cite ChecklistBank dataset 2011 ([10.48580/d4fd](https://doi.org/10.48580/d4fd)) and WoRMS ([doi:10.14284/170](https://doi.org/10.14284/170)).
 
 ### Wikidata — iNaturalist taxon id (enrichment)
 

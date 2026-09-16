@@ -1,5 +1,7 @@
 /**
- * Public WoRMS Darwin Core snapshot for organism enrichment.
+ * Public WoRMS snapshot for organism enrichment, built from ChecklistBank
+ * dataset 2011 (https://www.checklistbank.org/dataset/2011, COL
+ * package col-clb-2011).
  *
  * Built by `scripts/buildWormsParquet.ts` (`npm run worms:build`). Stored on
  * ssn-tiles as public fixtures (no map token):
@@ -36,8 +38,11 @@ export const WORMS_IDS_R2_REMOTE = `r2://${WORMS_PARQUET_R2_BUCKET}/${WORMS_PARQ
 export const WORMS_NAMES_R2_REMOTE = `r2://${WORMS_PARQUET_R2_BUCKET}/${WORMS_PARQUET_R2_PREFIX}/${WORMS_NAMES_FILENAME}`;
 export const WORMS_MANIFEST_R2_REMOTE = `r2://${WORMS_PARQUET_R2_BUCKET}/${WORMS_PARQUET_R2_PREFIX}/${WORMS_MANIFEST_FILENAME}`;
 
+export const WORMS_CHECKLISTBANK_URL =
+  "https://www.checklistbank.org/dataset/2011";
+
 export const WORMS_CITATION =
-  "WoRMS Editorial Board (2026). World Register of Marine Species. Available from https://www.marinespecies.org at VLIZ. doi:10.14284/170";
+  "WoRMS Editorial Board (2026). World Register of Marine Species. ChecklistBank dataset 2011 (https://www.checklistbank.org/dataset/2011, doi:10.48580/d4fd). Available from https://www.marinespecies.org at VLIZ. doi:10.14284/170";
 
 const APHIA_LSID = /taxname:(\d+)/;
 

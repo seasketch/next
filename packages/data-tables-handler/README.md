@@ -62,11 +62,16 @@ non-marine taxa — keep REST as a miss fallback.
 
 ### Regenerating
 
-Source is a WoRMS / ChecklistBank Darwin Core Archive (extracted folder
-with `Taxon.tsv`, `VernacularName.tsv`, `SpeciesProfile.tsv`). Official
-bulk dumps: [WoRMS download request](https://www.marinespecies.org/usersrequest.php)
-(cite WoRMS; doi:10.14284/170). Taxlist DwC-A from a search export works
-the same.
+**Source:** [ChecklistBank dataset 2011](https://www.checklistbank.org/dataset/2011)
+— WoRMS as published by Catalogue of Life / ChecklistBank (`packageId`
+`col-clb-2011`, this build’s EML `pubDate` 2026-09-01). Download the
+Darwin Core Archive from that page, extract it, and point the script at
+the folder (`Taxon.tsv`, `VernacularName.tsv`, `SpeciesProfile.tsv`).
+
+Cite both ChecklistBank/COL ([10.48580/d4fd](https://doi.org/10.48580/d4fd))
+and WoRMS ([doi:10.14284/170](https://doi.org/10.14284/170)). License on
+the DwC-A is CC BY 4.0. The live register remains
+[marinespecies.org](https://www.marinespecies.org).
 
 ```bash
 cd packages/data-tables-handler

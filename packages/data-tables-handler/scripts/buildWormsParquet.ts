@@ -4,9 +4,10 @@
  *   npx tsx scripts/buildWormsParquet.ts /path/to/dwca
  *   npx tsx scripts/buildWormsParquet.ts /path/to/dwca --upload
  *
- * Expects an extracted Darwin Core Archive with Taxon.tsv,
- * VernacularName.tsv, and SpeciesProfile.tsv (ChecklistBank / WoRMS taxlist
- * DwC-A). Writes taxa / ids / names parquet plus manifest.json, then
+ * Expects an extracted Darwin Core Archive from ChecklistBank dataset 2011
+ * (https://www.checklistbank.org/dataset/2011) with Taxon.tsv,
+ * VernacularName.tsv, and SpeciesProfile.tsv. Writes taxa / ids / names
+ * parquet plus manifest.json, then
  * optionally uploads them to the public ssn-tiles prefix worms/v1/
  * (no map-access token). Do not use /taxonomy/ (JWT proxy) or /dataLibrary/
  * (PMTiles TileJSON).
