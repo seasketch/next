@@ -1,4 +1,7 @@
 import { DuckDBConnection, DuckDBInstance } from "@duckdb/node-api";
+import { mkdtempSync, rmSync } from "fs";
+import { tmpdir } from "os";
+import * as path from "path";
 
 export type { DuckDBConnection };
 
@@ -20,12 +23,16 @@ export async function all<T extends Record<string, unknown>>(
 export async function withDuckDb<T>(
   fn: (conn: DuckDBConnection) => Promise<T>,
 ): Promise<T> {
-  const instance = await DuckDBInstance.create(":memory:");
+  const spillDir = mkdtempSync(path.join(tmpdir(), "duckdb-spill-"));
+  const instance = await DuckDBInstance.create(":memory:", {
+    temp_directory: spillDir,
+  });
   const conn = await instance.connect();
   try {
     return await fn(conn);
   } finally {
     conn.closeSync();
     instance.closeSync();
+    rmSync(spillDir, { recursive: true, force: true });
   }
 }

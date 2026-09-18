@@ -43,7 +43,11 @@ export class DataTablesHandlerLambdaStack extends cdk.Stack {
       logGroup: new logs.LogGroup(this, "DataTablesHandlerLogs", {
         retention: logs.RetentionDays.ONE_MONTH,
       }),
-      memorySize: 2048,
+      // 1GB+ CSVs need room for the source file plus parquet copies, and
+      // DuckDB may spill intermediates to /tmp.
+      ephemeralStorageSize: cdk.Size.gibibytes(8),
+      memorySize: 8192,
+      retryAttempts: 0,
       environment: {
         NODE_ENV: "production",
         BUCKET: props.bucket.bucketName,
