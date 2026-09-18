@@ -7,6 +7,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   CheckIcon,
   CogIcon,
+  DownloadIcon,
   PlusIcon,
   TrashIcon,
   UploadIcon,
@@ -50,6 +51,7 @@ import {
 import useCurrentProjectMetadata from "../../../useCurrentProjectMetadata";
 import useDialog from "../../../components/useDialog";
 import Modal from "../../../components/Modal";
+import { withHostedDownloadAuth } from "../../../dataLayers/tilesAuth";
 
 type RelatedDataTablesProps = {
   item: FullAdminOverlayFragment;
@@ -74,6 +76,28 @@ function normalizedFilterLabels(labels: Record<string, string>) {
     }
   }
   return next;
+}
+
+function parquetDownloadFilename(name: string, version: number): string {
+  const safe = name.replace(/[/\\?%*:|"<>]/g, "-").trim() || "data";
+  // eslint-disable-next-line i18next/no-literal-string -- download filename
+  return `${safe}_v${version}.parquet`;
+}
+
+function parquetDownloadHref(
+  parquetUrl: string,
+  filename: string,
+  accessToken?: string | null
+): string {
+  let withDownload = parquetUrl;
+  try {
+    const url = new URL(parquetUrl);
+    url.searchParams.set("download", filename);
+    withDownload = url.toString();
+  } catch {
+    // keep the GraphQL url if it is not absolute
+  }
+  return withHostedDownloadAuth(withDownload, accessToken) || withDownload;
 }
 
 function DataTableDroppedSitesNotice({
@@ -539,6 +563,15 @@ function DataTableSettingsModal({
   ) => void | Promise<void>;
 }) {
   const { t } = useTranslation("admin:data");
+  const { data: projectMeta } = useCurrentProjectMetadata();
+  const parquetFilename = parquetDownloadFilename(table.name, table.version);
+  const parquetHref = table.parquetUrl
+    ? parquetDownloadHref(
+        table.parquetUrl,
+        parquetFilename,
+        projectMeta?.project?.mapAccessToken
+      )
+    : null;
   const [draftName, setDraftName] = useState(table.name);
   const [draftDescription, setDraftDescription] = useState(
     table.description || ""
@@ -746,11 +779,25 @@ function DataTableSettingsModal({
               {t("Table data")}
             </h3>
             <p className="text-sm text-gray-500">
-              {t("Upload a new version or remove this table from the layer.")}
+              {t(
+                "Download the processed parquet, upload a new version, or remove this table from the layer."
+              )}
             </p>
           </div>
           <DataTableDroppedSitesFromUrl table={table} />
           <div className="flex flex-wrap gap-2">
+            {parquetHref ? (
+              <a
+                href={parquetHref}
+                download={parquetFilename}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+              >
+                <DownloadIcon className="h-4 w-4 text-gray-500" aria-hidden />
+                {t("Download Parquet")}
+              </a>
+            ) : null}
             <button
               type="button"
               className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
@@ -819,6 +866,14 @@ function DataTableRow({
   const [nodataOpen, setNodataOpen] = useState(false);
   const sameJoinColumn = table.joinColumn === table.overlayJoinColumn;
   const { data: projectMeta } = useCurrentProjectMetadata();
+  const parquetFilename = parquetDownloadFilename(table.name, table.version);
+  const parquetHref = table.parquetUrl
+    ? parquetDownloadHref(
+        table.parquetUrl,
+        parquetFilename,
+        projectMeta?.project?.mapAccessToken
+      )
+    : null;
   const { columnStats } = useDataTableColumnStats(
     columnStatsUrlForTable(table),
     projectMeta?.project?.mapAccessToken
@@ -872,6 +927,19 @@ function DataTableRow({
                 >
                   {t("No Data Values")}
                 </DropdownMenu.Item>
+                {parquetHref ? (
+                  <DropdownMenu.Item asChild>
+                    <a
+                      href={parquetHref}
+                      download={parquetFilename}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex cursor-pointer select-none items-center rounded px-2 py-1.5 text-gray-700 outline-none data-[highlighted]:bg-gray-100"
+                    >
+                      {t("Download Parquet")}
+                    </a>
+                  </DropdownMenu.Item>
+                ) : null}
               </DropdownMenu.Content>
             </DropdownMenu.Portal>
           </DropdownMenu.Root>
