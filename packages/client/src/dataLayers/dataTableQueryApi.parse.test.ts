@@ -253,12 +253,12 @@ describe("parseDataTableQuerySeries", () => {
     );
     expect(parsed).not.toBeNull();
     expect(featureSeriesFromParsed(parsed!, "A")).toEqual([
-      { step: "2018", value: 10 },
-      { step: "2019", value: 4 },
+      { step: "2018", value: 10, count: 2 },
+      { step: "2019", value: 4, count: 2 },
     ]);
     expect(featureSeriesFromParsed(parsed!, "B")).toEqual([
-      { step: "2018", value: 0 },
-      { step: "2019", value: null },
+      { step: "2018", value: 0, count: 1 },
+      { step: "2019", value: null, count: null },
     ]);
     expect(shouldShowDataTableSeriesChart(featureSeriesFromParsed(parsed!, "A"))).toBe(
       true
