@@ -1,5 +1,5 @@
-import * as path from "path";
 import { renameSync, unlinkSync } from "fs";
+import * as path from "path";
 import {
   DataTablesColumnStats,
   GeostatsAttribute,
@@ -37,7 +37,7 @@ export async function processCsvWithDuckDb(
   parquetPath: string,
   options: DataTableUploadProcessingOptions,
 ): Promise<{ rowCount: number; headers: string[] }> {
-  const { path: duckDbCsvPath, normalized } = normalizeCsvEncodingIfNeeded(
+  const { path: duckDbCsvPath, normalized } = await normalizeCsvEncodingIfNeeded(
     csvPath,
     path.join(path.dirname(csvPath), "input.utf8.csv"),
   );
@@ -45,6 +45,11 @@ export async function processCsvWithDuckDb(
     console.log(
       `[data-tables-handler] normalized csv encoding to utf-8: ${duckDbCsvPath}`,
     );
+    try {
+      unlinkSync(csvPath);
+    } catch {
+      // original may already have been replaced; DuckDB only needs the utf-8 copy
+    }
   }
   const delimiter = options.delimiter || ",";
   const hasHeader = options.hasHeaderRow !== false;
