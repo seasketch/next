@@ -111,9 +111,9 @@ const OrganismPlugin = makeExtendSchemaPlugin((build) => {
         """
         Admin mutation. Sets (or clears, when null) the OrganismInfo document
         for an overlay data table. authoredBy is forced to "admin". Clearing
-        also deletes organism catalog, search-index, and preview sidecars.
-        Setting a document does not write those files; use the enrichment
-        reprocess job for that.
+        also deletes organism catalog, search-index, and preview sidecars when
+        no active table still references them. Setting a document does not
+        write those files; use the enrichment reprocess job for that.
         """
         updateOverlayDataTableOrganism(
           overlayDataTableId: Int!
@@ -161,9 +161,21 @@ const OrganismPlugin = makeExtendSchemaPlugin((build) => {
           }
           if (doc === null) {
             try {
-              await deleteOrganismSidecars(
-                tableResult.rows[0]?.parquet_remote
+              const parquetRemote = tableResult.rows[0]?.parquet_remote;
+              const sharedResult = await pgClient.query(
+                `select exists (
+                   select 1
+                   from overlay_data_tables
+                   where id <> $1
+                     and deleted_at is null
+                     and organism is not null
+                     and parquet_remote = $2
+                 ) as is_shared`,
+                [overlayDataTableId, parquetRemote]
               );
+              if (!sharedResult.rows[0]?.is_shared) {
+                await deleteOrganismSidecars(parquetRemote);
+              }
             } catch (error) {
               console.warn(
                 "Failed to delete organism sidecars after clear",

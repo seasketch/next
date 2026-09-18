@@ -11,7 +11,7 @@ interface FileStat {
 }
 
 /** Avoid a repeated R2 head() within a warm isolate. Table paths are
- * versioned, so etag/byteLength never change for a given key. */
+ * versioned per uploadId, so etag/byteLength never change for a given key. */
 const statCache = new Map<string, FileStat>();
 
 async function getFileStat(

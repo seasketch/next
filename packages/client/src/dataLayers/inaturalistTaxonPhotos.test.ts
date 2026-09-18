@@ -322,6 +322,58 @@ describe("fetchInaturalistTaxonPhotos", () => {
     expect(photos.get(108547)?.mediumUrl).toBe("https://example.com/kelp.jpg");
   });
 
+  it("follows an inactive taxon to the accepted synonym when show has no licensed photo", async () => {
+    const fetchMock = jest.fn(async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes("?id=53699") || url.endsWith("/53699")) {
+        return {
+          ok: true,
+          json: async () => ({
+            results: url.includes("?id=")
+              ? []
+              : [
+                  {
+                    id: 53699,
+                    is_active: false,
+                    current_synonymous_taxon_ids: [1439813],
+                    default_photo: { license_code: null },
+                  },
+                ],
+          }),
+        } as Response;
+      }
+      if (url.includes("1439813")) {
+        return {
+          ok: true,
+          json: async () => ({
+            results: [
+              {
+                id: 1439813,
+                is_active: true,
+                default_photo: {
+                  license_code: "cc-by-nc",
+                  square_url: "https://example.com/sheephead-sq.jpg",
+                  medium_url: "https://example.com/sheephead.jpg",
+                  attribution: "(c) someone, some rights reserved (CC BY-NC)",
+                },
+              },
+            ],
+          }),
+        } as Response;
+      }
+      return { ok: true, json: async () => ({ results: [] }) } as Response;
+    });
+    global.fetch = fetchMock as typeof fetch;
+
+    const photos = await fetchInaturalistTaxonPhotos([53699]);
+    expect(photos.get(53699)?.mediumUrl).toBe(
+      "https://example.com/sheephead.jpg"
+    );
+    expect(String(fetchMock.mock.calls[0][0])).toContain("?id=53699");
+    expect(String(fetchMock.mock.calls[1][0])).toMatch(/\/53699$/);
+    expect(String(fetchMock.mock.calls[2][0])).toContain("1439813");
+  });
+
   it("does not return ids without a licensed photo", async () => {
     global.fetch = jest.fn(async () => {
       return {

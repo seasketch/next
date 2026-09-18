@@ -10,18 +10,19 @@ The Worker has five responsibilities:
    FlatGeobuf, cloud-optimized GeoTIFF, PMTiles, and arbitrary object types.
 3. FlatGeobuf property extraction through the legacy-compatible `/properties`
    API.
-4. Overlay data-table aggregations (`…/dataTables/{uploadId}/query`) via
-   hyparquet, sharing the parent layer's published-UUID ACL, plus
-   `GET /orgQuery` organism search over `organism-search.json`.
+4. Overlay data-table aggregations (`…/dataTables/{uploadId}/query`) and
+   `GET /orgQuery` organism search. The gateway authorizes these, then
+   invokes the internal `overlay-data-tables` Worker over a service binding
+   so hyparquet CPU cannot stall tile isolates.
 5. An allowlisted WoRMS taxonomy proxy (`/taxonomy/worms/…`) used by
    data-table organism enrichment. Responses are cached for **48 hours**
    via the Cache API. This is not an open proxy. The browser loads iNaturalist
    taxon photos directly from `api.inaturalist.org`.
 
 The default entrypoint is an uncached authorization and host-routing gateway.
-It invokes isolated `TilesBackend`, `ObjectBackend`, `PropertiesBackend`,
-`DataTablesBackend`, and `TaxonomyBackend` entrypoints after credentials have
-been removed.
+It invokes `TilesBackend`, `ObjectBackend`, `PropertiesBackend`, and
+`TaxonomyBackend` entrypoints, plus the `DATA_TABLES` service binding, after
+credentials have been removed.
 
 ## Routes
 
@@ -70,9 +71,10 @@ GET /orgQuery?tables={prefix},{prefix}&q=
 ```
 
 Static parquet and `column-stats.json` are served by `ObjectBackend` (typically
-on `uploads.seasketch.org`). The `/query` path is handled by
-`DataTablesBackend` (hyparquet plan + execute). `GET /orgQuery` loads each
-table's MiniSearch `organism-search.json` (not the catalog). Paths classify as
+on `uploads.seasketch.org`). The `/query` path and `GET /orgQuery` are
+authorized here, then executed on `overlay-data-tables` (hyparquet / MiniSearch)
+so a 20s aggregation cannot occupy a tile isolate. That Worker has no public
+route (`workers_dev = false`) and a 30s CPU limit. Paths classify as
 `published` for the parent `{uuid}`, so map-access tokens and ACL docs apply
 the same way as for tiles. Unauthorized table refs are skipped.
 
@@ -106,6 +108,7 @@ column pickers.
 | `orderBy` | No | Sort key with optional direction: `mean:desc`, `site` (asc). Valid keys are **groupBy columns** and **aggregation names** from `op`. |
 | `limit` | No | Max groups or raw rows. `1`–`100000`. Aggregated queries default to no limit; raw-row queries default to `10000`. |
 | `offset` | No | Skip first N groups/rows after sorting (default `0`). |
+| `includeWhen` | No | Raw-row mode only (`includeWhen=1`). Includes the derived `_when_start` / `_when_end` columns (UTC epoch seconds) in row output instead of stripping them. Rejected (`400`) when combined with `op`. |
 
 **Query modes**
 
@@ -113,8 +116,29 @@ column pickers.
    `groups` array. Each object has the group key column(s) plus one property
    per aggregation (`mean`, `count`, etc.).
 2. **Raw rows** — omit `groupBy` and `op`. Returns a `rows` array of matching
-   parquet records (all columns, subject to filters). Useful for inspection,
-   not typical map joins.
+   parquet records (all columns, subject to filters). Raw-row queries may
+   `orderBy` any column, including the derived `_when_start`. This mode backs
+   the client's "Show rows in calculation" QA/QC modal.
+
+**Raw-row / aggregate consistency (QA/QC invariant)**
+
+A raw-row query and an aggregated query with identical `q.*` and `when.*`
+parameters MUST select exactly the same set of rows. The SeaSketch client's
+"Show rows in calculation" modal displays raw rows as *the* ground truth for
+every map statistic, so any divergence between the two modes means that QA/QC
+tool is lying about how monitoring data was aggregated.
+
+Both modes share `planQuery` (row-group pruning), `compileFilters`, and
+`matchIndexesInSpan` (`matchesFilter` + `rowMatchesWhen`) — keep them shared.
+Raw-row requests bypass Workers Caching (they 503 on a cache-fill well before
+the 30s CPU budget). When changing filter semantics, temporal (`when`)
+handling, or null behavior in `src/dataTables/engine/plan.ts` or `execute.ts`,
+run
+`test/dataTables/rawAggConsistency.test.ts`, which cross-checks aggregate
+results against independent recomputation from raw-row output. The client-side
+coupling point is `deriveDataTableCalculationRowsQuery` in
+`packages/client/src/dataLayers/dataTableQueryApi.ts`, which derives the
+raw-row request from the exact settings object used for the map's stats query.
 
 **Aggregation semantics**
 
@@ -393,7 +417,8 @@ production ACL-protected layers.
 
 The default gateway is never fronted by Workers Caching, so authorization runs
 on every protected request. Tiles and property query responses use cached named
-entrypoints after auth.
+entrypoints after auth. Data-table `/query` responses are cached on
+`overlay-data-tables` after the gateway strips credentials.
 
 `ObjectBackend` is not fronted by Workers Caching because a cache miss can
 strip `Range` and request the complete object. The gateway therefore calls
@@ -416,6 +441,9 @@ npm run typecheck
 npm run dev
 ```
 
+`npm run dev` starts the gateway and `overlay-data-tables` together
+(`wrangler dev -c wrangler.toml -c wrangler.data-tables.toml`).
+
 Copy `.dev.vars.example` to `.dev.vars` and provide required values. Do not
 commit secrets.
 
@@ -425,8 +453,12 @@ Deploy under the new Worker name first; this leaves the current production
 worker available:
 
 ```sh
-npx wrangler deploy
+npm run deploy
 ```
+
+This deploys `overlay-data-tables` first, then `overlay-data-server`. The query
+Worker must exist before the gateway's `DATA_TABLES` service binding will
+validate.
 
 Run `npm run smoke -- https://overlay-data-server.<account>.workers.dev`
 before changing DNS. The smoke script accepts optional `SMOKE_PROJECT_KEY`,

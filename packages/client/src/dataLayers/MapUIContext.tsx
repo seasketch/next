@@ -24,7 +24,10 @@ import { BasemapContext } from "./BasemapContext";
 import { MapClockHiddenTocIdsContext } from "./MapTemporalStateContext";
 import type { BasemapContextState } from "./BasemapContext";
 import LayerInteractivityManager from "./LayerInteractivityManager";
-import type { InteractivityUIUpdate } from "./LayerInteractivityManager";
+import type {
+  DataTablesPopupFooterTarget,
+  InteractivityUIUpdate,
+} from "./LayerInteractivityManager";
 import CoordinatesControl from "./CoordinatesControl";
 import { useMapPreferences } from "./useMapPreferences";
 import type {
@@ -128,9 +131,7 @@ interface InteractivityUIState {
   sidebarPopupContent: string | undefined;
   sidebarPopupTitle: string | undefined;
   sidebarPopupTocStableId: string | undefined;
-  dataTablesPopupTarget:
-    | { element: HTMLElement; tocStableId: string }
-    | undefined;
+  dataTablesPopupTarget: DataTablesPopupFooterTarget | undefined;
 }
 
 const initialInteractivityUIState: InteractivityUIState = {

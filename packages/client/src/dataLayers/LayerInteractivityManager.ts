@@ -45,6 +45,7 @@ import {
   extractRasterLegendLabels,
   rasterInteractionLabel,
 } from "./rasterLegendLabel";
+import { decodeDataTableRawValue } from "./dataTableMapStyle";
 
 const PopupNumberFormatter = Intl.NumberFormat(undefined, {
   maximumFractionDigits: 2,
@@ -81,6 +82,12 @@ export type InteractivityUIUpdate = Partial<{
 export type DataTablesPopupFooterTarget = {
   element: HTMLElement;
   tocStableId: string;
+  /**
+   * Properties of the clicked vector feature, so data-table UI (e.g. the
+   * "Show rows in calculation" modal) can preselect the site the user
+   * clicked via the table's overlay join column.
+   */
+  featureProperties?: { [name: string]: any };
 };
 
 /** Active data-table proportional-symbol layer for value tooltips. */
@@ -483,7 +490,8 @@ export default class LayerInteractivityManager extends EventEmitter {
    */
   private popupContentWithDataTablesFooter(
     html: string,
-    tocStableId?: string
+    tocStableId?: string,
+    feature?: MapboxGeoJSONFeature
   ): {
     element: HTMLElement;
     footerTarget?: DataTablesPopupFooterTarget;
@@ -497,7 +505,14 @@ export default class LayerInteractivityManager extends EventEmitter {
       const footer = document.createElement("div");
       footer.className = "seasketch-data-tables-popup-footer";
       container.appendChild(footer);
-      return { element: container, footerTarget: { element: footer, tocStableId } };
+      return {
+        element: container,
+        footerTarget: {
+          element: footer,
+          tocStableId,
+          featureProperties: feature?.properties || undefined,
+        },
+      };
     }
     return { element: container };
   }
@@ -747,7 +762,8 @@ export default class LayerInteractivityManager extends EventEmitter {
           const { element, footerTarget } =
             this.popupContentWithDataTablesFooter(
               content,
-              this.tocIdForFeature(top)
+              this.tocIdForFeature(top),
+              top
             );
           this.setActivePopup(
             new Popup({ closeOnClick: true, closeButton: true })
@@ -817,7 +833,8 @@ export default class LayerInteractivityManager extends EventEmitter {
         );
         const { element, footerTarget } = this.popupContentWithDataTablesFooter(
           allPropsContent,
-          this.tocIdForFeature(top)
+          this.tocIdForFeature(top),
+          top
         );
         this.setActivePopup(
           new Popup({ closeOnClick: true, closeButton: true })
@@ -1311,6 +1328,7 @@ export default class LayerInteractivityManager extends EventEmitter {
       rawValue?: number | null;
       loading?: boolean;
       scaledValue?: number | null;
+      valueClass?: string;
     };
     const position = {
       x: e.originalEvent.x,
@@ -1336,18 +1354,23 @@ export default class LayerInteractivityManager extends EventEmitter {
         dataTable: { ...meta, status: "loading" },
       };
     }
-    if (!("rawValue" in state) && !("scaledValue" in state)) {
+    if (
+      !("rawValue" in state) &&
+      !("scaledValue" in state) &&
+      !("valueClass" in state)
+    ) {
       // Feature-state not applied yet (style still settling).
       return undefined;
     }
-    if (state.rawValue === null || state.rawValue === undefined) {
+    const rawValue = decodeDataTableRawValue(state);
+    if (rawValue === null || rawValue === undefined) {
       return {
         ...position,
         messages: ["No data"],
         dataTable: { ...meta, status: "empty" },
       };
     }
-    const formatted = PopupNumberFormatter.format(state.rawValue);
+    const formatted = PopupNumberFormatter.format(rawValue);
     return {
       ...position,
       messages: [`${columnLabel}: ${formatted}`],

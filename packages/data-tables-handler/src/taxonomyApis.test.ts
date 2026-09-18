@@ -10,6 +10,8 @@ import {
   pickWormsAccepted,
   resolveOrganismTaxa,
   rewriteTaxonomyUrl,
+  sanitizeWormsQueryName,
+  wormsQueryName,
   type TaxonomyClients,
 } from "./taxonomyApis";
 import { buildWormsParquet } from "./wormsParquet";
@@ -87,6 +89,31 @@ describe("ancestorsFromWormsRecord / fetchWormsVernaculars", () => {
   });
 });
 
+describe("sanitizeWormsQueryName", () => {
+  it("strips life-stage tags and collapses lumped species lists to genus", () => {
+    assert.equal(
+      sanitizeWormsQueryName("Cephaloscyllium ventriosum EGG"),
+      "Cephaloscyllium ventriosum"
+    );
+    assert.equal(
+      sanitizeWormsQueryName("Sebastes chrysomelas/carnatus young of year"),
+      "Sebastes"
+    );
+    assert.equal(
+      sanitizeWormsQueryName("Sebastes atrovirens,carnatus,chrysomelas,caurinus"),
+      "Sebastes"
+    );
+    assert.equal(sanitizeWormsQueryName("Atherinopsidae"), "Atherinopsidae");
+    assert.equal(
+      wormsQueryName({
+        value: "SWELLEG",
+        scientificName: "Heterodontus francisci EGG",
+      }),
+      "Heterodontus francisci"
+    );
+  });
+});
+
 describe("pickWormsAccepted", () => {
   it("prefers an accepted record over an unaccepted synonym", () => {
     const picked = pickWormsAccepted([
@@ -98,7 +125,7 @@ describe("pickWormsAccepted", () => {
 });
 
 describe("resolveOrganismTaxa", () => {
-  it("batches WoRMS name matches and Wikidata ids without calling iNaturalist", async () => {
+  it("batches WoRMS name matches and Wikidata ids without calling iNaturalist search", async () => {
     const urls: string[] = [];
     const clients: TaxonomyClients = {
       fetch: async (url, init) => {
@@ -160,6 +187,16 @@ describe("resolveOrganismTaxa", () => {
             json: async () => ({ results: { bindings } }),
           };
         }
+        if (/\/v1\/taxa\/\d/.test(url)) {
+          const ids = url.split("/taxa/")[1].split(",").map((id) => parseInt(id, 10));
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              results: ids.map((id) => ({ id, is_active: true })),
+            }),
+          };
+        }
         return { ok: true, status: 200, json: async () => ({}) };
       },
     };
@@ -185,7 +222,7 @@ describe("resolveOrganismTaxa", () => {
     assert.match(matchNames[0], /scientificnames/);
     assert.ok(wikiPosts.length >= 1);
     assert.equal(inatSearches.length, 0);
-    assert.equal(inatIds.length, 0);
+    assert.ok(inatIds.length >= 1);
     assert.equal(rows[0].inatTaxonId, 10);
     assert.equal(rows[1].inatTaxonId, 10);
     assert.equal(rows[2].inatTaxonId, 20);
@@ -194,7 +231,7 @@ describe("resolveOrganismTaxa", () => {
     assert.equal(phases.includes("inat-ids"), false);
   });
 
-  it("stores the Wikidata iNat id even when it is an inactive synonym", async () => {
+  it("follows an inactive Wikidata iNat id to the live synonym", async () => {
     const urls: string[] = [];
     const clients: TaxonomyClients = {
       fetch: async (url) => {
@@ -215,18 +252,31 @@ describe("resolveOrganismTaxa", () => {
             }),
           };
         }
+        if (/\/v1\/taxa\/\d/.test(url)) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              results: [
+                {
+                  id: 53699,
+                  is_active: false,
+                  current_synonymous_taxon_ids: [1439813],
+                },
+              ],
+            }),
+          };
+        }
         return { ok: true, status: 200, json: async () => ({}) };
       },
     };
     const [row] = await resolveOrganismTaxa(clients, [
       { value: "SPUL", scientificName: "Bodianus pulcher" },
     ]);
-    assert.equal(row.inatTaxonId, 53699);
+    assert.equal(row.inatTaxonId, 1439813);
     assert.equal(row.scientificName, "Bodianus pulcher");
-    assert.equal(
-      urls.filter((u) => u.includes("api.inaturalist.org") || u.includes("/v1/taxa")).length,
-      0
-    );
+    assert.equal(urls.filter((u) => u.includes("/v1/taxa?")).length, 0);
+    assert.ok(urls.some((u) => /\/v1\/taxa\/53699$/.test(u)));
   });
 
   it("uses the parquet snapshot and skips WoRMS REST on a hit", async () => {
@@ -281,6 +331,74 @@ describe("resolveOrganismTaxa", () => {
       ).length,
       0
     );
+  });
+
+  it("finds sheephead on stale Wikidata keys and stores the live iNat id", async () => {
+    const outDir = mkdtempSync(join(tmpdir(), "worms-sheephead-"));
+    await buildWormsParquet(WORMS_DWCA, outDir);
+    const clients: TaxonomyClients = {
+      wormsParquetDir: outDir,
+      fetch: async (url, init) => {
+        if (
+          url.includes("marinespecies.org") ||
+          url.includes("/taxonomy/worms/")
+        ) {
+          throw new Error(`unexpected WoRMS REST ${url}`);
+        }
+        if (url.includes("query.wikidata.org")) {
+          const body = decodeURIComponent(String(init?.body || ""));
+          const bindings: Array<Record<string, { value: string }>> = [];
+          if (body.includes("282753")) {
+            bindings.push({ aphia: { value: "282753" }, inat: { value: "53699" } });
+          }
+          if (body.includes("Semicossyphus")) {
+            bindings.push({
+              query: { value: "Semicossyphus pulcher" },
+              inat: { value: "53699" },
+            });
+          }
+          if (body.includes("California Sheephead")) {
+            bindings.push({
+              query: { value: "California Sheephead" },
+              inat: { value: "53699" },
+            });
+          }
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ results: { bindings } }),
+          };
+        }
+        if (/\/v1\/taxa\/\d/.test(url)) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              results: [
+                {
+                  id: 53699,
+                  is_active: false,
+                  current_synonymous_taxon_ids: [1439813],
+                },
+              ],
+            }),
+          };
+        }
+        return { ok: true, status: 200, json: async () => ({}) };
+      },
+    };
+    const [fromName, fromOldAphia] = await resolveOrganismTaxa(clients, [
+      {
+        value: "SPUL",
+        scientificName: "Bodianus pulcher",
+        commonName: "California Sheephead",
+      },
+      { value: "ID", wormsAphiaId: 282753 },
+    ]);
+    assert.equal(fromName.wormsAphiaId, 1702292);
+    assert.equal(fromName.inatTaxonId, 1439813);
+    assert.equal(fromOldAphia.wormsAphiaId, 1702292);
+    assert.equal(fromOldAphia.inatTaxonId, 1439813);
   });
 
   it("falls back to WoRMS REST when the snapshot misses", async () => {
@@ -461,6 +579,111 @@ describe("resolveOrganismTaxa", () => {
       urls.filter((url) => url.includes("api.inaturalist.org/v1/taxa/")).length,
       1
     );
+  });
+
+  it("sends sanitized names to Taxamatch instead of survey lumps", async () => {
+    const urls: string[] = [];
+    const clients: TaxonomyClients = {
+      fetch: async (url) => {
+        urls.push(url);
+        if (url.includes("AphiaRecordsByMatchNames")) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => [
+              [
+                {
+                  status: "accepted",
+                  AphiaID: 277105,
+                  scientificname: "Cephaloscyllium ventriosum",
+                },
+              ],
+              [
+                {
+                  status: "accepted",
+                  AphiaID: 126175,
+                  scientificname: "Sebastes",
+                  genus: "Sebastes",
+                },
+              ],
+            ],
+          };
+        }
+        if (url.includes("AphiaVernacularsByAphiaID")) {
+          return { ok: true, status: 204, json: async () => null };
+        }
+        if (url.includes("query.wikidata.org")) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ results: { bindings: [] } }),
+          };
+        }
+        return { ok: true, status: 200, json: async () => ({}) };
+      },
+    };
+    await resolveOrganismTaxa(clients, [
+      { value: "SWELLEG", scientificName: "Cephaloscyllium ventriosum EGG" },
+      {
+        value: "SEBSPP",
+        scientificName: "Sebastes atrovirens,carnatus,chrysomelas",
+      },
+    ]);
+    const match = urls.find((url) => url.includes("AphiaRecordsByMatchNames"));
+    assert.ok(match);
+    assert.match(match as string, /Cephaloscyllium\+ventriosum/);
+    assert.doesNotMatch(match as string, /EGG/);
+    assert.match(match as string, /Sebastes/);
+    assert.doesNotMatch(match as string, /atrovirens/);
+  });
+
+  it("retries Taxamatch names individually after a batch 500", async () => {
+    const urls: string[] = [];
+    const clients: TaxonomyClients = {
+      fetch: async (url) => {
+        urls.push(url);
+        if (url.includes("AphiaRecordsByMatchNames")) {
+          const names = [...new URL(url).searchParams.values()];
+          if (names.length > 1) {
+            return { ok: false, status: 500, json: async () => null };
+          }
+          return {
+            ok: true,
+            status: 200,
+            json: async () => [
+              [
+                {
+                  status: "accepted",
+                  AphiaID: 1,
+                  scientificname: names[0],
+                },
+              ],
+            ],
+          };
+        }
+        if (url.includes("AphiaVernacularsByAphiaID")) {
+          return { ok: true, status: 204, json: async () => null };
+        }
+        if (url.includes("query.wikidata.org")) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ results: { bindings: [] } }),
+          };
+        }
+        return { ok: true, status: 200, json: async () => ({}) };
+      },
+    };
+    const rows = await resolveOrganismTaxa(clients, [
+      { value: "A", scientificName: "Atherinopsidae" },
+      { value: "B", scientificName: "Embiotocidae" },
+    ]);
+    const matchNames = urls.filter((url) =>
+      url.includes("AphiaRecordsByMatchNames")
+    );
+    assert.ok(matchNames.length >= 3);
+    assert.equal(rows[0].wormsAphiaId, 1);
+    assert.equal(rows[1].wormsAphiaId, 1);
   });
 
   it("marks a unique common-name Wikidata hit as low confidence", async () => {

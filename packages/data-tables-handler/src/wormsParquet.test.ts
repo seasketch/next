@@ -35,6 +35,14 @@ describe("normalizeWormsNameKey", () => {
       "bodianus pulcher"
     );
     assert.equal(stripWormsAuthorship("Gadus morhua Linnaeus, 1758"), "Gadus morhua");
+    assert.equal(
+      normalizeWormsNameKey("Atherinopsidae Fitzinger, 1873"),
+      "atherinopsidae"
+    );
+    assert.equal(
+      normalizeWormsNameKey("atherinopsidae fitzinger, 1873"),
+      "atherinopsidae"
+    );
   });
 });
 

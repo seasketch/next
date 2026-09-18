@@ -1,4 +1,4 @@
-import { AsyncBuffer, FileMetaData, parquetReadObjects } from "hyparquet";
+import { AsyncBuffer, FileMetaData } from "hyparquet";
 import { parquetReadColumn } from "hyparquet/src/read.js";
 import {
   Aggregation,
@@ -19,8 +19,27 @@ import {
   ColumnKind,
   CompiledFilter,
   QueryPlan,
+  decodeSpans,
   normalizeValue,
 } from "./plan";
+
+/**
+ * CONSISTENCY INVARIANT (QA/QC "show rows in calculation")
+ * --------------------------------------------------------
+ * A raw-row query (no `op`) and an aggregated query with identical `q.*` and
+ * `when.*` parameters MUST select exactly the same set of rows. The client's
+ * "Show rows in calculation" QA/QC modal relies on this to display the rows
+ * behind every map statistic; if the two paths ever diverge, that tool lies
+ * to scientists about how their monitoring data was aggregated.
+ *
+ * Both paths already share `planQuery` (row-group pruning), `compileFilters`
+ * (value coercion), `matchIndexesInSpan` (which calls `matchesFilter` and
+ * `rowMatchesWhen`). When editing filtering, temporal (`when`) handling, or
+ * null semantics here or in plan.ts, keep both paths on those shared
+ * functions and run `test/dataTables/rawAggConsistency.test.ts`, which
+ * cross-checks aggregate results against independent recomputation from
+ * raw-row output.
+ */
 
 /**
  * Decoded column arrays for a warm isolate. Parquet decode is CPU-heavy;
@@ -105,24 +124,6 @@ export function rowMatchesWhen(
   return start < when.endSec && end > when.startSec;
 }
 
-function makePredicate(
-  filters: CompiledFilter[],
-  when: TemporalWhenFilter | null
-): (row: Row) => boolean {
-  return (row: Row) => {
-    if (
-      when &&
-      !rowMatchesWhen(row[WHEN_START_COLUMN], row[WHEN_END_COLUMN], when)
-    ) {
-      return false;
-    }
-    for (const filter of filters) {
-      if (!matchesFilter(row[filter.column], filter)) return false;
-    }
-    return true;
-  };
-}
-
 /** Converts values to JSON-serializable output (BigInt, Date handling). */
 function jsonValue(value: unknown): unknown {
   if (typeof value === "bigint") {
@@ -140,10 +141,10 @@ function jsonValue(value: unknown): unknown {
   return value;
 }
 
-function jsonRow(row: Row): Record<string, unknown> {
+function jsonRow(row: Row, includeWhen = false): Record<string, unknown> {
   const out: Record<string, unknown> = {};
   for (const key of Object.keys(row)) {
-    if (isHiddenWhenColumn(key)) continue;
+    if (!includeWhen && isHiddenWhenColumn(key)) continue;
     out[key] = jsonValue(row[key]);
   }
   return out;
@@ -160,7 +161,17 @@ interface GroupAccumulator {
   values?: number[];
 }
 
-function compareValues(a: unknown, b: unknown): number {
+/** Raw parquet values (BigInt, Date, UTF8 bytes) → comparable primitives. */
+function comparableValue(value: unknown): unknown {
+  if (typeof value === "bigint") return Number(value);
+  if (value instanceof Date) return value.getTime();
+  if (value instanceof Uint8Array) return new TextDecoder().decode(value);
+  return value;
+}
+
+function compareValues(rawA: unknown, rawB: unknown): number {
+  const a = comparableValue(rawA);
+  const b = comparableValue(rawB);
   if (a === null || a === undefined) return b === null || b === undefined ? 0 : 1;
   if (b === null || b === undefined) return -1;
   if (typeof a === "number" && typeof b === "number") return a - b;
@@ -174,6 +185,112 @@ function median(values: number[]): number | null {
   return sorted.length % 2 === 1
     ? sorted[mid]
     : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+type Span = { rowStart: number; rowEnd: number };
+type ReadColumn = (name: string, span: Span) => Promise<unknown[]>;
+
+function createReadColumn(
+  file: AsyncBuffer,
+  metadata: FileMetaData,
+  cacheKey?: string
+): ReadColumn {
+  return async (name, span) => {
+    const key = cacheKey
+      ? `${cacheKey}#${name}#${span.rowStart}-${span.rowEnd}`
+      : null;
+    if (key) {
+      const cached = decodedColumns.get(key);
+      if (cached) return cached;
+    }
+    const data = (await parquetReadColumn({
+      file,
+      metadata,
+      columns: [name],
+      rowStart: span.rowStart,
+      rowEnd: span.rowEnd,
+    })) as unknown[];
+    if (key) {
+      decodedColumns.set(key, data, estimateDecodedBytes(data));
+    }
+    return data;
+  };
+}
+
+/**
+ * Shared row selection for aggregate and raw paths. Equality filters run
+ * first so a miss skips `_when_*` / remaining columns. Both callers then
+ * decide which extra columns to decode.
+ */
+async function matchIndexesInSpan(
+  span: Span,
+  plan: QueryPlan,
+  readColumn: ReadColumn
+): Promise<{ matched: number[]; loaded: Map<string, unknown[]> }> {
+  const spanRows = span.rowEnd - span.rowStart;
+  const loaded = new Map<string, unknown[]>();
+  const equalityFilters = plan.filters.filter(
+    (filter) => filter.op === "eq" || filter.op === "in"
+  );
+  const otherFilters = plan.filters.filter(
+    (filter) => filter.op !== "eq" && filter.op !== "in"
+  );
+
+  let matched: number[] = [];
+  if (equalityFilters.length > 0) {
+    await Promise.all(
+      [...new Set(equalityFilters.map((filter) => filter.column))].map(
+        async (name) => {
+          loaded.set(name, await readColumn(name, span));
+        }
+      )
+    );
+    for (let i = 0; i < spanRows; i++) {
+      if (
+        equalityFilters.every((filter) =>
+          matchesFilter(loaded.get(filter.column)![i], filter)
+        )
+      ) {
+        matched.push(i);
+      }
+    }
+  } else {
+    for (let i = 0; i < spanRows; i++) matched.push(i);
+  }
+  if (matched.length === 0) {
+    return { matched, loaded };
+  }
+
+  const remainingNames = new Set(otherFilters.map((filter) => filter.column));
+  if (plan.when) {
+    remainingNames.add(WHEN_START_COLUMN);
+    remainingNames.add(WHEN_END_COLUMN);
+  }
+  await Promise.all(
+    [...remainingNames]
+      .filter((name) => !loaded.has(name))
+      .map(async (name) => {
+        loaded.set(name, await readColumn(name, span));
+      })
+  );
+
+  if (otherFilters.length > 0) {
+    matched = matched.filter((i) =>
+      otherFilters.every((filter) =>
+        matchesFilter(loaded.get(filter.column)![i], filter)
+      )
+    );
+  }
+  if (plan.when) {
+    const startCol = loaded.get(WHEN_START_COLUMN);
+    const endCol = loaded.get(WHEN_END_COLUMN);
+    if (startCol && endCol) {
+      matched = matched.filter((i) =>
+        rowMatchesWhen(startCol[i], endCol[i], plan.when!)
+      );
+    }
+  }
+  return { matched, loaded };
 }
 
 function sortAndPage<T extends Record<string, unknown>>(
@@ -207,10 +324,10 @@ export async function executeQuery(options: {
   cacheKey?: string;
 }): Promise<QueryResult> {
   const { file, metadata, query, plan, cacheKey } = options;
-  const predicate = makePredicate(plan.filters, plan.when);
+  const readColumn = createReadColumn(file, metadata, cacheKey);
 
   if (query.ops.length === 0) {
-    return await executeRawQuery(options, predicate);
+    return await executeRawQuery(options, readColumn);
   }
 
   const aggColumn = query.column;
@@ -224,78 +341,24 @@ export async function executeQuery(options: {
   let rowsScanned = 0;
   let rowsMatched = 0;
 
-  // Columnar execution: evaluate filters against just the filter columns to
-  // produce matched row indices, then read the remaining columns only for
-  // spans with matches. Avoids materializing an object per scanned row.
-  const readColumn = async (
-    name: string,
-    span: { rowStart: number; rowEnd: number }
-  ): Promise<unknown[]> => {
-    const key = cacheKey
-      ? `${cacheKey}#${name}#${span.rowStart}-${span.rowEnd}`
-      : null;
-    if (key) {
-      const cached = decodedColumns.get(key);
-      if (cached) return cached;
-    }
-    const data = (await parquetReadColumn({
-      file,
-      metadata,
-      columns: [name],
-      rowStart: span.rowStart,
-      rowEnd: span.rowEnd,
-    })) as unknown[];
-    if (key) {
-      decodedColumns.set(key, data, estimateDecodedBytes(data));
-    }
-    return data;
-  };
-
-  for (const span of plan.spans) {
+  for (const span of decodeSpans(plan.spans)) {
     const spanRows = span.rowEnd - span.rowStart;
     rowsScanned += spanRows;
 
-    const filterColumns = new Map<string, unknown[]>();
-    const filterNames = new Set(plan.filters.map((f) => f.column));
-    if (plan.when) {
-      filterNames.add(WHEN_START_COLUMN);
-      filterNames.add(WHEN_END_COLUMN);
-    }
-    await Promise.all(
-      [...filterNames].map(async (name) => {
-        filterColumns.set(name, await readColumn(name, span));
-      })
+    const { matched, loaded } = await matchIndexesInSpan(
+      span,
+      plan,
+      readColumn
     );
-
-    const startCol = plan.when
-      ? filterColumns.get(WHEN_START_COLUMN)
-      : undefined;
-    const endCol = plan.when ? filterColumns.get(WHEN_END_COLUMN) : undefined;
-    const matched: number[] = [];
-    for (let i = 0; i < spanRows; i++) {
-      let ok = true;
-      if (
-        plan.when &&
-        !rowMatchesWhen(startCol![i], endCol![i], plan.when)
-      ) {
-        ok = false;
-      }
-      if (ok) {
-        for (const filter of plan.filters) {
-          if (!matchesFilter(filterColumns.get(filter.column)![i], filter)) {
-            ok = false;
-            break;
-          }
-        }
-      }
-      if (ok) matched.push(i);
-    }
     rowsMatched += matched.length;
     if (matched.length === 0) continue;
 
+    const startCol = plan.when ? loaded.get(WHEN_START_COLUMN) : undefined;
+    const endCol = plan.when ? loaded.get(WHEN_END_COLUMN) : undefined;
+
     const otherColumns = new Set<string>(query.groupBy);
     if (aggColumn) otherColumns.add(aggColumn);
-    const columnData = new Map<string, unknown[]>(filterColumns);
+    const columnData = new Map<string, unknown[]>(loaded);
     await Promise.all(
       [...otherColumns]
         .filter((name) => !columnData.has(name))
@@ -479,6 +542,13 @@ function aggregateValue(
   }
 }
 
+/**
+ * Raw-row output. Shares `matchIndexesInSpan` with the aggregate path — see
+ * the CONSISTENCY INVARIANT at the top of this module — then decodes the
+ * remaining columns only for spans that actually matched. The previous
+ * `parquetReadObjects` path decoded every column of every surviving row
+ * group, which is what 503'd the QA/QC modal on a cold isolate.
+ */
 async function executeRawQuery(
   options: {
     file: AsyncBuffer;
@@ -486,10 +556,10 @@ async function executeRawQuery(
     query: ParsedQuery;
     plan: QueryPlan;
   },
-  predicate: (row: Row) => boolean
+  readColumn: ReadColumn
 ): Promise<QueryResult> {
-  const { file, metadata, query, plan } = options;
-  const matched: Record<string, unknown>[] = [];
+  const { query, plan } = options;
+  const matchedRows: Row[] = [];
   let rowsScanned = 0;
   let rowsMatched = 0;
   // Without an orderBy we can stop reading as soon as the page is filled.
@@ -497,32 +567,55 @@ async function executeRawQuery(
     ? Infinity
     : query.offset + (query.limit ?? Infinity);
 
-  for (const span of plan.spans) {
-    const rows = (await parquetReadObjects({
-      file,
-      metadata,
-      columns: plan.neededColumns,
-      rowStart: span.rowStart,
-      rowEnd: span.rowEnd,
-    })) as Row[];
-    rowsScanned += rows.length;
-    for (const row of rows) {
-      if (!predicate(row)) continue;
-      rowsMatched++;
-      if (matched.length < target) {
-        matched.push(jsonRow(row));
+  const outputNames = [...plan.columns.keys()].filter((name) => {
+    if (!isHiddenWhenColumn(name)) return true;
+    if (query.includeWhen) return true;
+    return query.orderBy?.key === name;
+  });
+
+  for (const span of decodeSpans(plan.spans)) {
+    rowsScanned += span.rowEnd - span.rowStart;
+    const { matched, loaded } = await matchIndexesInSpan(
+      span,
+      plan,
+      readColumn
+    );
+    rowsMatched += matched.length;
+    if (matched.length === 0) continue;
+
+    await Promise.all(
+      outputNames
+        .filter((name) => !loaded.has(name))
+        .map(async (name) => {
+          loaded.set(name, await readColumn(name, span));
+        })
+    );
+
+    for (const i of matched) {
+      if (matchedRows.length < target) {
+        const row: Row = {};
+        for (const name of outputNames) {
+          row[name] = loaded.get(name)![i];
+        }
+        matchedRows.push(row);
       }
     }
-    if (matched.length >= target) break;
+    if (matchedRows.length >= target) break;
   }
 
+  // Sort before stripping hidden _when_* columns so orderBy=_when_start
+  // orders rows by the same derived temporal mapping the engine buckets by.
   const columnNames = new Set(plan.columns.keys());
   const paged = sortAndPage(
-    matched,
+    matchedRows,
     query.orderBy,
     query.offset,
     query.limit,
     (key) => columnNames.has(key)
   );
-  return { rows: paged, rowsScanned, rowsMatched };
+  return {
+    rows: paged.map((row) => jsonRow(row, query.includeWhen)),
+    rowsScanned,
+    rowsMatched,
+  };
 }

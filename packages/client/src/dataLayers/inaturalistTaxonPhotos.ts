@@ -448,6 +448,27 @@ export function inaturalistTaxaFromUnknown(
 
 const TAXA_ACCEPT = { accept: "application/json" };
 
+function synonymFollowTargets(
+  payload: unknown,
+  empty: number[]
+): Array<{ requested: number; synonym: number }> {
+  const emptySet = new Set(empty);
+  const pairs: Array<{ requested: number; synonym: number }> = [];
+  if (!isRecord(payload) || !Array.isArray(payload.results)) {
+    return pairs;
+  }
+  for (const item of payload.results) {
+    if (!isRecord(item)) continue;
+    const id = coercePositiveInt(item.id);
+    if (id == null || !emptySet.has(id)) continue;
+    const synonym = uniquePositiveInts(item.current_synonymous_taxon_ids)[0];
+    if (synonym && synonym !== id) {
+      pairs.push({ requested: id, synonym });
+    }
+  }
+  return pairs;
+}
+
 async function mergeShowFallback(
   photos: Map<number, InaturalistTaxonPhoto>,
   empty: number[]
@@ -461,14 +482,53 @@ async function mergeShowFallback(
   if (!response.ok) {
     return { photos, empty };
   }
-  const fallback = inaturalistTaxaFromUnknown(await response.json(), empty);
+  const payload = await response.json();
+  const fallback = inaturalistTaxaFromUnknown(payload, empty);
   const next = new Map(photos);
   for (const [id, photo] of fallback.photos) {
     next.set(id, photo);
   }
+  let stillEmpty = empty.filter((id) => !next.has(id));
+  const follows = synonymFollowTargets(payload, stillEmpty);
+  const synonymIds = uniquePositiveInts(follows.map((pair) => pair.synonym));
+  if (synonymIds.length > 0) {
+    const synonymResponse = await fetch(inaturalistTaxaUrl(synonymIds), {
+      headers: TAXA_ACCEPT,
+    });
+    if (synonymResponse.ok) {
+      const synonymFirst = inaturalistTaxaFromUnknown(
+        await synonymResponse.json(),
+        synonymIds
+      );
+      let synonymPhotos = synonymFirst.photos;
+      if (synonymFirst.empty.length > 0) {
+        const synonymShow = await fetch(
+          inaturalistTaxaShowUrl(synonymFirst.empty),
+          { headers: TAXA_ACCEPT }
+        );
+        if (synonymShow.ok) {
+          const synonymFallback = inaturalistTaxaFromUnknown(
+            await synonymShow.json(),
+            synonymFirst.empty
+          );
+          synonymPhotos = new Map(synonymPhotos);
+          for (const [id, photo] of synonymFallback.photos) {
+            synonymPhotos.set(id, photo);
+          }
+        }
+      }
+      for (const { requested, synonym } of follows) {
+        const photo = synonymPhotos.get(synonym);
+        if (photo) {
+          next.set(requested, { ...photo, taxonId: requested });
+        }
+      }
+      stillEmpty = stillEmpty.filter((id) => !next.has(id));
+    }
+  }
   return {
     photos: next,
-    empty: empty.filter((id) => !next.has(id)),
+    empty: stillEmpty,
   };
 }
 

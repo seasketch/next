@@ -1,0 +1,18 @@
+---
+description: Data Tables query engine raw-row / aggregate QA/QC consistency invariant
+globs: packages/pmtiles-server/src/dataTables/**,packages/pmtiles-server/test/dataTables/**,packages/client/src/dataLayers/dataTable*,packages/client/src/dataLayers/DataTable*
+alwaysApply: false
+---
+
+# Data Tables Query Engine — QA/QC Consistency Invariant
+
+The Data Tables engine (`packages/pmtiles-server/src/dataTables/`) serves two query modes from the same `/query` endpoint: aggregated stats (drives map visualizations) and raw rows (drives the "Show rows in calculation" QA/QC modal that scientists use to audit those stats).
+
+**A raw-row query and an aggregated query with identical `q.*` and `when.*` parameters MUST select exactly the same set of rows.** If the two modes diverge, the QA/QC tool lies to scientists about how their monitoring data was aggregated. That is never acceptable.
+
+When editing filtering, temporal (`when`) handling, or null semantics in `engine/plan.ts` or `engine/execute.ts`:
+
+- Keep both modes funneling through the shared functions: `planQuery`, `compileFilters`, `matchesFilter`, and `rowMatchesWhen`. Do not fork filter logic per mode for performance without proving equivalence.
+- Run `packages/pmtiles-server/test/dataTables/rawAggConsistency.test.ts`, which cross-checks aggregate results against independent recomputation from raw-row output. Extend it when adding new filter operators, aggregations, or temporal behavior.
+
+On the client, the single coupling point is `deriveDataTableCalculationRowsQuery` in `packages/client/src/dataLayers/dataTableQueryApi.ts`. The QA/QC modal must always derive its raw-row request from the exact `DataTableQuerySettings` object used for the live map stats query (via `DataTableQueryManager.fetchCalculationRows`) — never construct raw-row query parameters independently.

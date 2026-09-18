@@ -1,4 +1,5 @@
-import { AsyncBuffer, FileMetaData, parquetReadObjects } from "hyparquet";
+import { AsyncBuffer, FileMetaData } from "hyparquet";
+import { parquetReadColumn } from "hyparquet/src/read.js";
 import {
   DataTableNodataConfig,
   DataTableNodataValue,
@@ -7,7 +8,12 @@ import {
   normalizeNodataValues,
 } from "../../../geostats-types/lib/nodata";
 import { WHEN_END_COLUMN, WHEN_START_COLUMN } from "../../../geostats-types/lib/temporal";
-import { ColumnKind, columnsFromMetadata } from "./engine/plan";
+import {
+  ColumnKind,
+  columnsFromMetadata,
+  decodeSpans,
+  rowGroupReadSpans,
+} from "./engine/plan";
 import { QueryError } from "./params";
 
 export type NodataPreviewNumeric = {
@@ -70,9 +76,38 @@ function toNumber(value: unknown): number | null {
   return null;
 }
 
-function mean(values: number[]): number | null {
-  if (values.length === 0) return null;
-  return values.reduce((sum, value) => sum + value, 0) / values.length;
+type RunningNumbers = {
+  count: number;
+  sum: number;
+  min: number;
+  max: number;
+};
+
+function addNumber(stats: RunningNumbers, value: number): void {
+  if (stats.count === 0) {
+    stats.min = value;
+    stats.max = value;
+  } else {
+    if (value < stats.min) stats.min = value;
+    if (value > stats.max) stats.max = value;
+  }
+  stats.count += 1;
+  stats.sum += value;
+}
+
+function numericSummary(stats: RunningNumbers): {
+  mean: number | null;
+  min: number | null;
+  max: number | null;
+} {
+  if (stats.count === 0) {
+    return { mean: null, min: null, max: null };
+  }
+  return {
+    mean: stats.sum / stats.count,
+    min: stats.min,
+    max: stats.max,
+  };
 }
 
 export async function previewNodataValues(options: {
@@ -85,13 +120,6 @@ export async function previewNodataValues(options: {
   const schema = columnsFromMetadata(options.metadata);
   const joinColumn = options.joinColumn || null;
   const columns = [...schema.values()].filter((column) => !DERIVED.has(column.name));
-  const names = columns.map((column) => column.name);
-  const rows = (await parquetReadObjects({
-    file: options.file,
-    metadata: options.metadata,
-    columns: names,
-  })) as Record<string, unknown>[];
-
   const stats = new Map<
     string,
     {
@@ -99,8 +127,8 @@ export async function previewNodataValues(options: {
       excluded: boolean;
       nonNullCount: number;
       matchCount: number;
-      currentNumbers: number[];
-      previewNumbers: number[];
+      currentNumbers: RunningNumbers;
+      previewNumbers: RunningNumbers;
     }
   >();
   for (const column of columns) {
@@ -109,50 +137,49 @@ export async function previewNodataValues(options: {
       excluded: column.name === joinColumn,
       nonNullCount: 0,
       matchCount: 0,
-      currentNumbers: [],
-      previewNumbers: [],
+      currentNumbers: { count: 0, sum: 0, min: 0, max: 0 },
+      previewNumbers: { count: 0, sum: 0, min: 0, max: 0 },
     });
   }
 
-  for (const row of rows) {
+  for (const span of decodeSpans(rowGroupReadSpans(options.metadata))) {
     for (const column of columns) {
-      const cell = row[column.name];
+      const cells = (await parquetReadColumn({
+        file: options.file,
+        metadata: options.metadata,
+        columns: [column.name],
+        rowStart: span.rowStart,
+        rowEnd: span.rowEnd,
+      })) as unknown[];
       const entry = stats.get(column.name);
-      if (!entry || cell === null || cell === undefined) continue;
-      entry.nonNullCount += 1;
-      const matched = nodataValueMatches(cell, values);
-      if (matched) entry.matchCount += 1;
-      const n = toNumber(cell);
-      if (n !== null) {
-        entry.currentNumbers.push(n);
-        if (!matched) entry.previewNumbers.push(n);
+      if (!entry) continue;
+      for (const cell of cells) {
+        if (cell === null || cell === undefined) continue;
+        entry.nonNullCount += 1;
+        const matched = nodataValueMatches(cell, values);
+        if (matched) entry.matchCount += 1;
+        const n = toNumber(cell);
+        if (n !== null) {
+          addNumber(entry.currentNumbers, n);
+          if (!matched) addNumber(entry.previewNumbers, n);
+        }
       }
     }
   }
 
   const resultColumns: NodataPreviewColumn[] = columns.map((column) => {
     const entry = stats.get(column.name)!;
+    const current = numericSummary(entry.currentNumbers);
+    const preview = numericSummary(entry.previewNumbers);
     const numeric =
       column.kind === "number"
         ? {
-            currentMean: mean(entry.currentNumbers),
-            previewMean: mean(entry.previewNumbers),
-            currentMin:
-              entry.currentNumbers.length > 0
-                ? Math.min(...entry.currentNumbers)
-                : null,
-            previewMin:
-              entry.previewNumbers.length > 0
-                ? Math.min(...entry.previewNumbers)
-                : null,
-            currentMax:
-              entry.currentNumbers.length > 0
-                ? Math.max(...entry.currentNumbers)
-                : null,
-            previewMax:
-              entry.previewNumbers.length > 0
-                ? Math.max(...entry.previewNumbers)
-                : null,
+            currentMean: current.mean,
+            previewMean: preview.mean,
+            currentMin: current.min,
+            previewMin: preview.min,
+            currentMax: current.max,
+            previewMax: preview.max,
           }
         : null;
     return {

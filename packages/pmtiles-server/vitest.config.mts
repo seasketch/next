@@ -9,6 +9,7 @@ const NODE_TESTS = [
   "test/dataTables/params.test.ts",
   "test/dataTables/blockReader.test.ts",
   "test/dataTables/temporalPreview.test.ts",
+  "test/dataTables/rawAggConsistency.test.ts",
 ];
 
 export default defineConfig({
@@ -23,6 +24,25 @@ export default defineConfig({
         plugins: [
           cloudflareTest({
             wrangler: { configPath: "./wrangler.toml" },
+            miniflare: {
+              // The real overlay-data-tables Worker is a separate isolate in
+              // production. Tests stub the service binding so routing/auth
+              // stay in this pool without bundling hyparquet into SELF.
+              serviceBindings: {
+                DATA_TABLES: (request: Request) => {
+                  const url = new URL(request.url);
+                  return new Response(
+                    JSON.stringify({
+                      stub: "overlay-data-tables",
+                      pathname: url.pathname,
+                      search: url.search,
+                      authorization: request.headers.get("Authorization"),
+                    }),
+                    { headers: { "Content-Type": "application/json" } }
+                  );
+                },
+              },
+            },
           }),
         ],
       },

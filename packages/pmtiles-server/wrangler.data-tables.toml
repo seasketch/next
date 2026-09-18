@@ -1,0 +1,28 @@
+name = "overlay-data-tables"
+main = "src/dataTablesWorker.ts"
+compatibility_date = "2026-07-14"
+compatibility_flags = ["nodejs_compat"]
+
+# Internal only. The gateway authorizes, then calls this Worker over a
+# service binding. No custom domain and no workers.dev URL.
+workers_dev = false
+preview_urls = false
+
+# Hyparquet aggregations are CPU-heavy (multi-million-row IN filters).
+# Paid Workers default is 30s; isolate is separate from overlay-data-server.
+[limits]
+cpu_ms = 30_000
+
+# Deterministic per path+query. Credentials are stripped by the gateway.
+# Raw-row queries (no `op`) bypass this cache from the gateway — a cache-fill
+# 503s the client well before the 30s CPU budget, then the retry hits.
+[cache]
+enabled = true
+
+[observability]
+enabled = true
+
+[[r2_buckets]]
+binding = 'TILES_BUCKET'
+bucket_name = 'ssn-tiles'
+preview_bucket_name = 'ssn-tiles'

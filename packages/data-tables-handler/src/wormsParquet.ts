@@ -215,7 +215,8 @@ export function normalizeWormsNameKey(value: string): string {
 export function stripWormsAuthorship(value: string): string {
   return value
     .replace(/\s+\([^)]*\)\s*$/g, "")
-    .replace(/\s+[A-ZÀ-ÖØ-Þ][^\s,]*[,\s]+\d{3,4}\s*$/g, "")
+    // Families in the snapshot keep "Fitzinger, 1873"; keys are lowercased.
+    .replace(/\s+[A-Za-zÀ-ÖØ-öø-ÿ][^\s,]*[,\s]+\d{3,4}\s*$/g, "")
     .trim();
 }
 
@@ -393,6 +394,14 @@ export async function buildWormsParquet(
       SELECT accepted_aphia_id, lower(trim(regexp_replace(scientific_name_raw, '\\s+\\([^)]*\\)\\s*$', ''))) AS name_key
       FROM taxon
       WHERE scientific_name_raw IS NOT NULL AND trim(scientific_name_raw) <> ''
+      UNION
+      SELECT accepted_aphia_id, lower(trim(regexp_replace(
+        regexp_replace(coalesce(scientific_name, scientific_name_raw), '\\s+\\([^)]*\\)\\s*$', ''),
+        '\\s+[A-Za-zÀ-ÖØ-öø-ÿ][^\\s,]*[,\\s]+\\d{3,4}\\s*$',
+        ''
+      ))) AS name_key
+      FROM taxon
+      WHERE coalesce(scientific_name, scientific_name_raw) IS NOT NULL
       `
     );
 
@@ -543,17 +552,35 @@ export async function lookupWormsTaxaByNames(
   if (keys.length === 0) return out;
   const paths = wormsParquetPaths(parquetDir);
   const literals = keys.map((key) => `'${key.replace(/'/g, "''")}'`).join(",");
+  const likeClauses = keys
+    .map((key) => `n.name_key LIKE '${key.replace(/'/g, "''")} %'`)
+    .join(" OR ");
   const rows = await all<Record<string, unknown> & { name_key: string }>(
     conn,
     `
     SELECT n.name_key, t.*
     FROM read_parquet('${escapePath(paths.names)}') n
     JOIN read_parquet('${escapePath(paths.taxa)}') t ON t.aphia_id = n.accepted_aphia_id
-    WHERE n.name_key IN (${literals})
+    WHERE n.name_key IN (${literals}) OR ${likeClauses}
     `
   );
+  const requested = new Set(keys);
+  const exact = new Map<string, WormsTaxonRow>();
+  const stripped = new Map<string, WormsTaxonRow>();
   for (const row of rows) {
-    out.set(String(row.name_key), rowFromQuery(row));
+    const nameKey = String(row.name_key);
+    const taxon = rowFromQuery(row);
+    if (requested.has(nameKey)) {
+      exact.set(nameKey, taxon);
+    }
+    const strippedKey = normalizeWormsNameKey(nameKey);
+    if (requested.has(strippedKey) && !stripped.has(strippedKey)) {
+      stripped.set(strippedKey, taxon);
+    }
+  }
+  for (const key of keys) {
+    const hit = exact.get(key) || stripped.get(key);
+    if (hit) out.set(key, hit);
   }
   return out;
 }

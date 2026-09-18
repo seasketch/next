@@ -8053,8 +8053,8 @@ export type Mutation = {
   /**
    * Admin-only. Starts a draft organism-enrichment job. Optional class CSV is
    * uploaded to the returned presigned URL, then submitOverlayDataTableUpload.
-   * Does not rewrite data.parquet. Queue wait matches other data-table jobs (15
-   * minutes). Running timeout is 15 minutes for WoRMS per-id details on large class tables.
+   * Writes a clustered copy of data.parquet and organism sidecars under a new
+   * upload prefix. Queue wait and running timeout are 15 minutes.
    */
   createOverlayDataTableOrganismReprocess?: Maybe<CreateOverlayDataTableOrganismReprocessPayload>;
   /**
@@ -8536,9 +8536,9 @@ export type Mutation = {
   /**
    * Admin mutation. Sets (or clears, when null) the OrganismInfo document
    * for an overlay data table. authoredBy is forced to "admin". Clearing
-   * also deletes organism catalog, search-index, and preview sidecars.
-   * Setting a document does not write those files; use the enrichment
-   * reprocess job for that.
+   * also deletes organism catalog, search-index, and preview sidecars when
+   * no active table still references them. Setting a document does not
+   * write those files; use the enrichment reprocess job for that.
    */
   updateOverlayDataTableOrganism: OverlayDataTable;
   /**

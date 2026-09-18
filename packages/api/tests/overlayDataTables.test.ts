@@ -41,6 +41,23 @@ async function asPostgres(
   }
 }
 
+async function expectQueryFailure(
+  conn: any,
+  query: any,
+  expectedMessage: string,
+) {
+  await conn.any(sql`SAVEPOINT expected_query_failure`);
+  let caught: Error | undefined;
+  try {
+    await conn.any(query);
+  } catch (error) {
+    caught = error as Error;
+  }
+  await conn.any(sql`ROLLBACK TO SAVEPOINT expected_query_failure`);
+  await conn.any(sql`RELEASE SAVEPOINT expected_query_failure`);
+  expect(caught?.message).toContain(expectedMessage);
+}
+
 async function createDraftLayer(
   conn: any,
   projectId: number,
@@ -544,6 +561,109 @@ describe("overlay_data_tables", () => {
         expect(republished).toHaveLength(1);
         expect(republished[0].name).toBe("fish-v2");
         expect(republished[0].visualization_ops).toEqual(["mean"]);
+      },
+    );
+  });
+
+  test("duplicating a layer copies active data tables and organism metadata", async () => {
+    await projectTransaction(
+      pool,
+      "public",
+      async (conn, projectId, adminId) => {
+        await createSession(conn, adminId, true, false, projectId);
+        const { tocId } = await createDraftLayer(conn, projectId, adminId);
+        const organism = {
+          version: 1,
+          column: "classcode",
+          valueKind: "code",
+          roles: { classcode: "code" },
+          authoredBy: "admin",
+        };
+
+        let copiedTocId = 0;
+        let sourceTableId = 0;
+        await asPostgres(
+          conn,
+          async () => {
+            await conn.any(sql`
+              update table_of_contents_items
+              set enable_data_tables = true, data_table_join_column = 'id'
+              where id = ${tocId}`);
+            sourceTableId = Number(
+              await conn.oneFirst(sql`
+                insert into overlay_data_tables (
+                  table_of_contents_item_id, project_id, name, join_column,
+                  overlay_join_column, row_count, created_by, parquet_remote,
+                  column_stats_remote, temporal, organism, description
+                ) values (
+                  ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId},
+                  'r2://bucket/shared/data.parquet',
+                  'r2://bucket/shared/column-stats.json',
+                  ${sql.json({ version: 1 })},
+                  ${sql.json(organism)},
+                  'Fish observations'
+                ) returning id`),
+            );
+            copiedTocId = Number(
+              await conn.oneFirst(sql`
+                select copy_table_of_contents_item_recursive(
+                  ${tocId},
+                  false,
+                  true,
+                  ${projectId},
+                  ''::ltree,
+                  null
+                )`),
+            );
+          },
+          { userId: adminId, projectId },
+        );
+
+        const copiedToc = await conn.one(sql`
+          select enable_data_tables, data_table_join_column
+          from table_of_contents_items
+          where id = ${copiedTocId}`);
+        expect(copiedToc.enable_data_tables).toBe(true);
+        expect(copiedToc.data_table_join_column).toBe("id");
+
+        const sourceTable = await conn.one(sql`
+          select stable_id from overlay_data_tables where id = ${sourceTableId}`);
+        const copiedTable = await conn.one(sql`
+          select name, organism, parquet_remote, column_stats_remote, description,
+                 stable_id, deleted_at
+          from overlay_data_tables
+          where table_of_contents_item_id = ${copiedTocId}`);
+        expect(copiedTable).toEqual(
+          expect.objectContaining({
+            name: "fish",
+            organism,
+            parquet_remote: "r2://bucket/shared/data.parquet",
+            column_stats_remote: "r2://bucket/shared/column-stats.json",
+            description: "Fish observations",
+            deleted_at: null,
+          }),
+        );
+        expect(copiedTable.stable_id).not.toBe(sourceTable.stable_id);
+
+        await asPostgres(
+          conn,
+          async () => {
+            await conn.any(sql`
+              update overlay_data_tables set organism = null
+              where id = ${sourceTableId}`);
+          },
+          { userId: adminId, projectId },
+        );
+        const sharedAfterSourceClear = await conn.oneFirst(sql`
+          select exists (
+            select 1
+            from overlay_data_tables
+            where id <> ${sourceTableId}
+              and deleted_at is null
+              and organism is not null
+              and parquet_remote = 'r2://bucket/shared/data.parquet'
+          )`);
+        expect(sharedAfterSourceClear).toBe(true);
       },
     );
   });
@@ -1166,12 +1286,42 @@ describe("overlay_data_tables", () => {
         const upload = await conn.one(sql`
           select * from create_overlay_data_table_organism_reprocess(
             ${tableId},
-            ${sql.json(config)}
+            ${sql.json(config)},
+            'classes.csv',
+            'text/csv'
           )`);
 
         expect(upload.reprocess_of_overlay_data_table_id).toBe(tableId);
-        expect(upload.replace_overlay_data_table_id).toBeNull();
+        expect(upload.replace_overlay_data_table_id).toBe(tableId);
         expect(upload.organism_config).toEqual(config);
+
+        await expectQueryFailure(
+          conn,
+          sql`select create_overlay_data_table_reprocess(
+            ${tableId},
+            ${sql.json({
+              sourceColumns: {
+                kind: "instant",
+                column: "year",
+                format: "year",
+              },
+            })},
+            null
+          )`,
+          "already an active upload or reprocess",
+        );
+
+        await conn.one(sql`
+          select * from submit_overlay_data_table_upload(
+            ${upload.project_background_job_id}
+          )`);
+        const runningTimeoutSeconds = Number(
+          await conn.oneFirst(sql`
+            select extract(epoch from (timeout_at - started_at))
+            from project_background_jobs
+            where id = ${upload.project_background_job_id}`),
+        );
+        expect(runningTimeoutSeconds).toBeGreaterThanOrEqual(899);
 
         const after = await conn.oneFirst(
           sql`select organism from overlay_data_tables where id = ${tableId}`,
@@ -1236,28 +1386,75 @@ describe("overlay_data_tables", () => {
             ${sql.json(config)}
           )`);
 
+        await conn.any(sql`SAVEPOINT inactive_organism_source`);
+        await conn.any(sql`select soft_delete_overlay_data_table(${tableId})`);
+        await asPostgres(
+          conn,
+          async () => {
+            await expectQueryFailure(
+              conn,
+              sql`select complete_overlay_data_table_organism_reprocess(
+                ${upload.project_background_job_id},
+                ${sql.json(organism)},
+                ${"r2://bucket/new/data.parquet"},
+                ${"r2://bucket/new/column-stats.json"},
+                null
+              )`,
+              "Source data table is no longer active",
+            );
+          },
+          { userId: adminId, projectId },
+        );
+        await conn.any(sql`ROLLBACK TO SAVEPOINT inactive_organism_source`);
+        await conn.any(sql`RELEASE SAVEPOINT inactive_organism_source`);
+
+        await asPostgres(
+          conn,
+          async () => {
+            await expectQueryFailure(
+              conn,
+              sql`select complete_overlay_data_table_organism_reprocess(
+                ${upload.project_background_job_id},
+                ${sql.json(organism)},
+                '',
+                ${"r2://bucket/new/column-stats.json"},
+                null
+              )`,
+              "missing parquet remotes",
+            );
+          },
+          { userId: adminId, projectId },
+        );
+
         await asPostgres(
           conn,
           async () => {
             await conn.any(sql`
               select complete_overlay_data_table_organism_reprocess(
                 ${upload.project_background_job_id},
-                ${sql.json(organism)}
+                ${sql.json(organism)},
+                ${"r2://bucket/new/data.parquet"},
+                ${"r2://bucket/new/column-stats.json"},
+                ${"r2://bucket/new/source.parquet"}
               )`);
           },
           { userId: adminId, projectId },
         );
 
         const row = await conn.one(sql`
-          select id, version, organism, deleted_at
+          select id, version, organism, deleted_at, parquet_remote, column_stats_remote,
+                 source_parquet_remote
           from overlay_data_tables
           where id = ${tableId}`);
         expect(row.version).toBe(1);
         expect(row.deleted_at).toBeNull();
         expect(row.organism).toEqual(organism);
+        expect(row.parquet_remote).toBe("r2://bucket/new/data.parquet");
+        expect(row.column_stats_remote).toBe("r2://bucket/new/column-stats.json");
+        expect(row.source_parquet_remote).toBe("r2://bucket/new/source.parquet");
 
         const changelog = await conn.one(sql`
-          select field_group, meta
+          select field_group, from_summary, to_summary, meta
           from change_logs
           where entity_type = 'overlay_data_table'
             and entity_id = ${tableId}
@@ -1266,6 +1463,22 @@ describe("overlay_data_tables", () => {
           limit 1`);
         expect(changelog.meta).toEqual(
           expect.objectContaining({ reprocessed: true }),
+        );
+        expect(changelog.from_summary).toEqual(
+          expect.objectContaining({
+            parquet_url: "https://uploads.seasketch.org/old.parquet",
+            column_stats_url: "https://uploads.seasketch.org/old.json",
+            source_parquet_url: null,
+          }),
+        );
+        expect(changelog.to_summary).toEqual(
+          expect.objectContaining({
+            parquet_url: "https://uploads.seasketch.org/new/data.parquet",
+            column_stats_url:
+              "https://uploads.seasketch.org/new/column-stats.json",
+            source_parquet_url:
+              "https://uploads.seasketch.org/new/source.parquet",
+          }),
         );
       },
     );

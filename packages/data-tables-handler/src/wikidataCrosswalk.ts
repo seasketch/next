@@ -4,6 +4,8 @@
  * (taxon name) can resolve hundreds of ids in a few SPARQL requests.
  * When one key has two P3151s, ask iNat `/v1/taxa/{id,id}` for `is_active`
  * and keep the single live taxon (Rock Scallop: 54526 over 187594).
+ * A lone inactive P3151 follows `current_synonymous_taxon_ids`
+ * (California Sheephead: 53699 → 1439813).
  */
 
 export const WIKIDATA_SPARQL_URL = "https://query.wikidata.org/sparql";
@@ -33,7 +35,15 @@ export function buildWikidataAphiaQuery(aphiaIds: number[]): string {
 }
 
 export function buildWikidataNameQuery(names: string[]): string {
-  const values = names.map((name) => `"${escapeSparqlString(name)}"`).join(" ");
+  // P1843 vernaculars are language-tagged (`"California Sheephead"@en`).
+  // A plain VALUES literal does not match. Include @en copies so both
+  // P225 (untyped) and P1843 hit with indexed equality — no FILTER scan.
+  const values = names
+    .flatMap((name) => {
+      const escaped = escapeSparqlString(name);
+      return [`"${escaped}"`, `"${escaped}"@en`];
+    })
+    .join(" ");
   // Only indexed properties bound to VALUES. Do not BIND() a language-tagged
   // rdfs:label inside a UNION — WDQS can treat ?label as unbound and return
   // every P3151 row (Node then dies creating a >512MB string).
@@ -107,8 +117,9 @@ export function addInatCandidate(
 }
 
 /**
- * One candidate: keep it (even if inactive). Several: keep the only
- * `is_active` id. Zero or two-plus live taxa: drop.
+ * One candidate: keep it. Several: keep the only `is_active` id.
+ * Zero or two-plus live taxa: drop. Inactive singles are remapped
+ * later via `current_synonymous_taxon_ids`.
  */
 export function pickActiveInatId(
   ids: Iterable<number>,
@@ -127,8 +138,28 @@ export function pickActiveInatId(
   return active.length === 1 ? active[0] : null;
 }
 
-export function parseInatTaxonActivity(json: unknown): Map<number, boolean> {
-  const out = new Map<number, boolean>();
+export type InatTaxonShowInfo = {
+  isActive: boolean;
+  synonymIds: number[];
+};
+
+function positiveIntIds(value: unknown): number[] {
+  if (!Array.isArray(value)) return [];
+  const out: number[] = [];
+  const seen = new Set<number>();
+  for (const raw of value) {
+    if (typeof raw !== "number" || !Number.isInteger(raw) || raw <= 0) {
+      continue;
+    }
+    if (seen.has(raw)) continue;
+    seen.add(raw);
+    out.push(raw);
+  }
+  return out;
+}
+
+export function parseInatTaxonShow(json: unknown): Map<number, InatTaxonShowInfo> {
+  const out = new Map<number, InatTaxonShowInfo>();
   if (!isRecord(json) || !Array.isArray(json.results)) return out;
   for (const row of json.results) {
     if (!isRecord(row)) continue;
@@ -136,20 +167,34 @@ export function parseInatTaxonActivity(json: unknown): Map<number, boolean> {
       continue;
     }
     if (typeof row.is_active !== "boolean") continue;
-    out.set(row.id, row.is_active);
+    out.set(row.id, {
+      isActive: row.is_active,
+      synonymIds: positiveIntIds(row.current_synonymous_taxon_ids),
+    });
   }
   return out;
 }
 
-function conflictInatIds(maps: Array<Map<string, Set<number>>>): number[] {
-  const ids = new Set<number>();
-  for (const map of maps) {
-    for (const set of map.values()) {
-      if (set.size < 2) continue;
-      for (const id of set) ids.add(id);
-    }
+export function parseInatTaxonActivity(json: unknown): Map<number, boolean> {
+  const out = new Map<number, boolean>();
+  for (const [id, info] of parseInatTaxonShow(json)) {
+    out.set(id, info.isActive);
   }
-  return Array.from(ids);
+  return out;
+}
+
+/** Prefer a live iNat id. A lone inactive P3151 follows its accepted synonym. */
+export function followInactiveInatId(
+  id: number,
+  show: Map<number, InatTaxonShowInfo>
+): number {
+  const info = show.get(id);
+  if (!info || info.isActive) return id;
+  for (const synonym of info.synonymIds) {
+    const next = show.get(synonym);
+    if (next?.isActive) return synonym;
+  }
+  return info.synonymIds[0] || id;
 }
 
 function finalizeCandidateMap(
@@ -164,11 +209,11 @@ function finalizeCandidateMap(
   return out;
 }
 
-async function fetchInatTaxonActivity(
+async function fetchInatTaxonShow(
   fetchFn: WikidataFetch,
   ids: number[]
-): Promise<Map<number, boolean>> {
-  const activity = new Map<number, boolean>();
+): Promise<Map<number, InatTaxonShowInfo>> {
+  const show = new Map<number, InatTaxonShowInfo>();
   const unique = Array.from(
     new Set(ids.filter((id) => Number.isInteger(id) && id > 0))
   );
@@ -195,8 +240,8 @@ async function fetchInatTaxonActivity(
         );
         continue;
       }
-      const parsed = parseInatTaxonActivity(await response.json());
-      for (const [id, active] of parsed) activity.set(id, active);
+      const parsed = parseInatTaxonShow(await response.json());
+      for (const [id, info] of parsed) show.set(id, info);
     } catch (error) {
       // eslint-disable-next-line no-console
       console.log(
@@ -206,7 +251,7 @@ async function fetchInatTaxonActivity(
       );
     }
   }
-  return activity;
+  return show;
 }
 
 async function runSparql(
@@ -317,18 +362,27 @@ export async function fetchWikidataInatCrosswalk(
     await report();
   }
 
-  const conflictIds = conflictInatIds([byAphiaKey, byNameCandidates]);
-  const activity =
-    conflictIds.length > 0
-      ? await fetchInatTaxonActivity(fetchFn, conflictIds)
-      : new Map<number, boolean>();
+  const candidateIds = new Set<number>();
+  for (const ids of [...byAphiaKey.values(), ...byNameCandidates.values()]) {
+    for (const id of ids) candidateIds.add(id);
+  }
+  const show =
+    candidateIds.size > 0
+      ? await fetchInatTaxonShow(fetchFn, Array.from(candidateIds))
+      : new Map<number, InatTaxonShowInfo>();
+  const activity = new Map<number, boolean>();
+  for (const [id, info] of show) activity.set(id, info.isActive);
 
   const byAphiaPicked = finalizeCandidateMap(byAphiaKey, activity);
-  const byName = finalizeCandidateMap(byNameCandidates, activity);
+  const byNamePicked = finalizeCandidateMap(byNameCandidates, activity);
   const byAphiaId = new Map<number, number>();
   for (const [key, inat] of byAphiaPicked) {
     const aphia = parseInt(key, 10);
-    if (aphia > 0) byAphiaId.set(aphia, inat);
+    if (aphia > 0) byAphiaId.set(aphia, followInactiveInatId(inat, show));
+  }
+  const byName = new Map<string, number>();
+  for (const [key, inat] of byNamePicked) {
+    byName.set(key, followInactiveInatId(inat, show));
   }
   return { byAphiaId, byName };
 }

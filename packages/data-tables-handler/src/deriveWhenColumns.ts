@@ -14,6 +14,11 @@ import {
   WHEN_START_COLUMN,
 } from "@seasketch/geostats-types";
 import { all, run, withDuckDb } from "./duckDb";
+import {
+  ClusterColumnHints,
+  clusterColumns,
+  copyObservationsParquetSql,
+} from "./clusterParquet";
 
 function escapePath(path: string): string {
   return path.replace(/'/g, "''");
@@ -140,7 +145,8 @@ export type DeriveWhenResult = {
 
 export async function deriveWhenColumnsOnParquet(
   parquetPath: string,
-  config: DataTableTemporalConfig
+  config: DataTableTemporalConfig,
+  clusterHints?: Omit<ClusterColumnHints, "columns" | "temporalColumns">
 ): Promise<DeriveWhenResult> {
   if (!isDataTableTemporalConfig(config)) {
     throw new Error("Invalid DataTableTemporalConfig");
@@ -259,9 +265,22 @@ export async function deriveWhenColumnsOnParquet(
       })),
     };
 
+    const schema = await all<{ column_name: string }>(
+      conn,
+      `SELECT column_name FROM information_schema.columns WHERE table_name = 'observations'`,
+    );
     await run(
       conn,
-      `COPY observations TO '${escapePath(parquetPath)}' (FORMAT PARQUET)`,
+      copyObservationsParquetSql(
+        parquetPath,
+        clusterColumns({
+          columns: schema.map((row) => row.column_name),
+          joinColumn: clusterHints?.joinColumn,
+          organismColumn: clusterHints?.organismColumn,
+          requiredFilterColumns: clusterHints?.requiredFilterColumns,
+          temporalColumns: sourceColumnNames(config.sourceColumns),
+        }),
+      ),
     );
 
     const defaultView =

@@ -251,6 +251,9 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
           createPortal(
             <DataTablesPopupFooter
               tocStableId={uiState.dataTablesPopupTarget.tocStableId}
+              featureProperties={
+                uiState.dataTablesPopupTarget.featureProperties
+              }
             />,
             uiState.dataTablesPopupTarget.element
           )}

@@ -9,6 +9,7 @@ import {
   lookupWormsTaxaByAphiaIds,
   lookupWormsTaxaByNames,
   normalizeWormsNameKey,
+  stripWormsAuthorship,
   type WormsTaxonRow,
 } from "./wormsParquet";
 
@@ -20,10 +21,17 @@ export const ORGANISM_USER_AGENT =
 export const WORMS_MATCH_NAME_BATCH = 50;
 /** Polite floor between WoRMS calls. 429s already back off. */
 export const WORMS_MIN_INTERVAL_MS = 50;
+/** Taxamatch can 500/hang on lumped survey names; fail the attempt instead. */
+export const WORMS_FETCH_TIMEOUT_MS = 20_000;
 
 export type TaxonomyFetch = (
   url: string,
-  init?: { method?: string; headers?: Record<string, string>; body?: string }
+  init?: {
+    method?: string;
+    headers?: Record<string, string>;
+    body?: string;
+    signal?: AbortSignal;
+  }
 ) => Promise<{ ok: boolean; status: number; json: () => Promise<unknown> }>;
 
 export type ResolvedTaxon = {
@@ -103,6 +111,7 @@ export function createTaxonomyFetch(
       method: init?.method,
       headers,
       body: init?.body,
+      signal: init?.signal,
     });
     return {
       ok: response.ok,
@@ -142,41 +151,58 @@ async function fetchJson(
   clients: TaxonomyClients,
   provider: "worms",
   url: string,
-  init?: { method?: string; headers?: Record<string, string>; body?: string }
+  init?: { method?: string; headers?: Record<string, string>; body?: string },
+  maxAttempts = 4
 ): Promise<unknown> {
   await (clients.waitWorms || (async () => undefined))();
   let lastError: Error | null = null;
-  for (let attempt = 0; attempt < 4; attempt++) {
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const started = Date.now();
-    const response = await clients.fetch(url, {
-      method: init?.method,
-      headers: {
-        Accept: "application/json",
-        "User-Agent": ORGANISM_USER_AGENT,
-        ...(init?.headers || {}),
-      },
-      body: init?.body,
-    });
-    const ms = Date.now() - started;
     const retry = attempt > 0 ? ` retry=${attempt}` : "";
-    logTaxonomy(
-      `${provider} ${response.status} ${ms}ms ${shortTaxonomyUrl(url)}${retry}`
-    );
-    if (response.ok) {
-      // WoRMS uses 204 (empty body) for “no vernaculars”, not a redirect.
-      if (response.status === 204) return null;
-      try {
-        return await response.json();
-      } catch {
-        return null;
+    try {
+      const response = await clients.fetch(url, {
+        method: init?.method,
+        headers: {
+          Accept: "application/json",
+          "User-Agent": ORGANISM_USER_AGENT,
+          ...(init?.headers || {}),
+        },
+        body: init?.body,
+        signal: AbortSignal.timeout(WORMS_FETCH_TIMEOUT_MS),
+      });
+      const ms = Date.now() - started;
+      logTaxonomy(
+        `${provider} ${response.status} ${ms}ms ${shortTaxonomyUrl(url)}${retry}`
+      );
+      if (response.ok) {
+        // WoRMS uses 204 (empty body) for “no vernaculars”, not a redirect.
+        if (response.status === 204) return null;
+        try {
+          return await response.json();
+        } catch {
+          return null;
+        }
       }
+      lastError = new Error(`${provider} ${response.status} for ${url}`);
+      if (response.status !== 429 && response.status < 500) {
+        throw lastError;
+      }
+    } catch (error) {
+      if (error instanceof Error && lastError === error) {
+        throw error;
+      }
+      lastError =
+        error instanceof Error ? error : new Error(String(error));
+      const ms = Date.now() - started;
+      logTaxonomy(
+        `${provider} ${lastError.message} ${ms}ms ${shortTaxonomyUrl(url)}${retry}`
+      );
     }
-    lastError = new Error(`${provider} ${response.status} for ${url}`);
-    if (response.status !== 429 && response.status < 500) {
-      throw lastError;
-    }
+    if (attempt >= maxAttempts - 1) break;
     const backoff = 1000 * 2 ** attempt;
-    logTaxonomy(`${provider} backing off ${backoff}ms after ${response.status}`);
+    logTaxonomy(
+      `${provider} backing off ${backoff}ms after ${lastError?.message || "error"}`
+    );
     await sleep(backoff);
   }
   throw lastError || new Error(`${provider} failed for ${url}`);
@@ -194,6 +220,28 @@ export async function fetchWormsRecordByAphiaId(
   return isRecord(json) ? json : null;
 }
 
+async function fetchWormsMatchNameBatch(
+  clients: TaxonomyClients,
+  batch: string[]
+): Promise<Array<Record<string, unknown>[]>> {
+  const params = new URLSearchParams();
+  for (const name of batch) {
+    params.append("scientificnames[]", name);
+  }
+  const json = await fetchJson(
+    clients,
+    "worms",
+    `${WORMS_REST_URL}/AphiaRecordsByMatchNames?${params.toString()}`,
+    undefined,
+    batch.length > 1 ? 1 : 4
+  );
+  const groups = Array.isArray(json) ? json : batch.map(() => []);
+  return batch.map((_, g) => {
+    const group = groups[g];
+    return Array.isArray(group) ? group.filter(isRecord) : [];
+  });
+}
+
 export async function fetchWormsMatchNames(
   clients: TaxonomyClients,
   names: string[]
@@ -202,19 +250,33 @@ export async function fetchWormsMatchNames(
   const out: Array<Record<string, unknown>[]> = [];
   for (let i = 0; i < names.length; i += WORMS_MATCH_NAME_BATCH) {
     const batch = names.slice(i, i + WORMS_MATCH_NAME_BATCH);
-    const params = new URLSearchParams();
-    for (const name of batch) {
-      params.append("scientificnames[]", name);
-    }
-    const json = await fetchJson(
-      clients,
-      "worms",
-      `${WORMS_REST_URL}/AphiaRecordsByMatchNames?${params.toString()}`
-    );
-    const groups = Array.isArray(json) ? json : batch.map(() => []);
-    for (let g = 0; g < batch.length; g++) {
-      const group = groups[g];
-      out.push(Array.isArray(group) ? group.filter(isRecord) : []);
+    try {
+      out.push(...(await fetchWormsMatchNameBatch(clients, batch)));
+    } catch (error) {
+      if (batch.length === 1) {
+        logTaxonomy("worms match-names name failed", {
+          name: batch[0],
+          error: error instanceof Error ? error.message : String(error),
+        });
+        out.push([]);
+        continue;
+      }
+      logTaxonomy("worms match-names batch failed; retrying names", {
+        batchSize: batch.length,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      for (const name of batch) {
+        try {
+          out.push(...(await fetchWormsMatchNameBatch(clients, [name])));
+        } catch (nameError) {
+          logTaxonomy("worms match-names name failed", {
+            name,
+            error:
+              nameError instanceof Error ? nameError.message : String(nameError),
+          });
+          out.push([]);
+        }
+      }
     }
   }
   return out;
@@ -286,13 +348,29 @@ function stubFromInput(input: ResolveOrganismInput): ResolvedTaxon {
   };
 }
 
-export function wormsQueryName(input: ResolveOrganismInput): string | null {
-  if (input.scientificName) return input.scientificName;
-  if (input.genus && input.species) return `${input.genus} ${input.species}`;
-  if (isLumpedOrganismValue(input.value)) {
-    return genusFromOrganismName(input.value);
+const WORMS_LIFE_STAGE_SUFFIX =
+  /\s+(eggs?|yoy|young[-\s]of[-\s]year|larvae|larva|juveniles?|adults?|recruits?)$/i;
+
+/** Strip survey life-stage tags and lumped species lists before Taxamatch. */
+export function sanitizeWormsQueryName(name: string): string | null {
+  let cleaned = name.trim().replace(/\s+/g, " ");
+  if (!cleaned) return null;
+  cleaned = cleaned.replace(WORMS_LIFE_STAGE_SUFFIX, "").trim();
+  if (/[,/]/.test(cleaned)) {
+    return genusFromOrganismName(cleaned);
   }
-  return null;
+  cleaned = stripWormsAuthorship(cleaned).replace(/\s+/g, " ").trim();
+  return cleaned || null;
+}
+
+export function wormsQueryName(input: ResolveOrganismInput): string | null {
+  const raw =
+    input.scientificName ||
+    (input.genus && input.species ? `${input.genus} ${input.species}` : null) ||
+    (isLumpedOrganismValue(input.value)
+      ? genusFromOrganismName(input.value)
+      : null);
+  return raw ? sanitizeWormsQueryName(raw) : null;
 }
 
 const WORMS_RECORD_RANKS = [
@@ -339,7 +417,10 @@ function applyWormsRecord(
 
 function applyWormsTaxonRow(target: ResolvedTaxon, taxon: WormsTaxonRow): void {
   target.wormsAphiaId = taxon.accepted_aphia_id || taxon.aphia_id;
-  if (taxon.scientific_name) target.scientificName = taxon.scientific_name;
+  if (taxon.scientific_name) {
+    target.scientificName =
+      stripWormsAuthorship(taxon.scientific_name) || taxon.scientific_name;
+  }
   if (taxon.genus) target.genus = taxon.genus;
   if (taxon.family) target.family = taxon.family;
   target.ancestorNames = uniqueStrings([
@@ -363,10 +444,12 @@ function applyWormsTaxonRow(target: ResolvedTaxon, taxon: WormsTaxonRow): void {
  * REST match-names (≤50) on miss. REST records already carry rank fields,
  * so we do not call AphiaClassificationByAphiaID. Vernaculars REST runs
  * only for accepted IDs still missing from the snapshot (204 = none).
- * Then Wikidata SPARQL (AphiaID/name → iNat P3151). Unique P3151s are
- * stored as-is. A clash calls iNat taxa show (`/v1/taxa/{id,id}`, not
- * `?q=`) and keeps the single active taxon. Thumbs load later from the
- * catalog id.
+ * Then Wikidata SPARQL (AphiaID/name → iNat P3151). Query both the
+ * accepted Aphia/name and the original synonym keys — Wikidata often
+ * still has the unaccepted Aphia (P850) and P225. iNat taxa show
+ * (`/v1/taxa/{id}`, not `?q=`) keeps the single active taxon and
+ * follows `current_synonymous_taxon_ids` when Wikidata still points at
+ * an inactive id. Thumbs load later from the catalog id.
  */
 export type TaxonomyResolveProgress = {
   phase: "worms-ids" | "worms-names" | "worms-details" | "wikidata";
@@ -508,6 +591,11 @@ export async function resolveOrganismTaxa(
     const groups: Array<Record<string, unknown>[]> = [];
     for (let i = 0; i < restMatchNames.length; i += WORMS_MATCH_NAME_BATCH) {
       const batch = restMatchNames.slice(i, i + WORMS_MATCH_NAME_BATCH);
+      await report({
+        phase: "worms-names",
+        done: Math.min(i + 1, restMatchNames.length),
+        total: Math.max(restMatchNames.length, 1),
+      });
       const batchGroups = await fetchWormsMatchNames(clients, batch);
       groups.push(...batchGroups);
       await report({
@@ -621,18 +709,34 @@ export async function resolveOrganismTaxa(
     }
   }
 
+  const wikiAphiaIds: number[] = [];
+  const seenWikiAphia = new Set<number>();
+  const addWikiAphia = (id: number | null | undefined) => {
+    if (!id || id <= 0 || seenWikiAphia.has(id)) return;
+    seenWikiAphia.add(id);
+    wikiAphiaIds.push(id);
+  };
+  for (const row of results) addWikiAphia(row.wormsAphiaId);
+  for (const input of inputs) addWikiAphia(input.wormsAphiaId);
+
   const wikiNames: string[] = [];
   for (let i = 0; i < results.length; i++) {
-    const resultName = results[i].scientificName;
-    const inputName = inputs[i].scientificName;
-    const inputCommon = inputs[i].commonName;
-    if (resultName) wikiNames.push(resultName);
-    if (inputName) wikiNames.push(inputName);
-    if (inputCommon) wikiNames.push(inputCommon);
+    const row = results[i];
+    const input = inputs[i];
+    for (const name of [
+      row.scientificName,
+      input.scientificName,
+      input.commonName,
+      row.commonName,
+      ...(input.extraNames || []),
+      ...row.commonNames,
+    ]) {
+      if (name) wikiNames.push(name);
+    }
   }
 
   logTaxonomy("wikidata plan", {
-    aphiaIds: acceptedIds.length,
+    aphiaIds: wikiAphiaIds.length,
     names: wikiNames.length,
   });
 
@@ -640,7 +744,7 @@ export async function resolveOrganismTaxa(
   let wikiByName = new Map<string, number>();
   try {
     const crosswalk = await fetchWikidataInatCrosswalk(clients.fetch, {
-      aphiaIds: acceptedIds,
+      aphiaIds: wikiAphiaIds,
       names: wikiNames,
       onProgress: async (done, total) => {
         await report({ phase: "wikidata", done, total });
@@ -664,8 +768,12 @@ export async function resolveOrganismTaxa(
     const row = results[i];
     let inatId: number | null = null;
     let confidence: "high" | "low" = "low";
+    const inputAphia = inputs[i].wormsAphiaId;
     if (row.wormsAphiaId && wikiByAphia.has(row.wormsAphiaId)) {
       inatId = wikiByAphia.get(row.wormsAphiaId)!;
+      confidence = "high";
+    } else if (inputAphia && wikiByAphia.has(inputAphia)) {
+      inatId = wikiByAphia.get(inputAphia)!;
       confidence = "high";
     } else {
       const scientific = row.scientificName || inputs[i].scientificName;

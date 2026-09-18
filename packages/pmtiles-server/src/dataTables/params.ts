@@ -85,6 +85,13 @@ export interface ParsedQuery {
    * `when.end` and at least one aggregation.
    */
   whenStep: WhenStepPrecision | null;
+  /**
+   * Raw-row queries only (`includeWhen=1`): include the derived
+   * `_when_start` / `_when_end` columns (UTC epoch seconds) in row output
+   * instead of stripping them. Lets QA/QC clients show exactly which
+   * temporal interval the engine assigned to each row.
+   */
+  includeWhen: boolean;
 }
 
 /** Upper bound for `limit` and `offset`; keeps responses and sort buffers
@@ -296,6 +303,7 @@ export function parseQueryParams(searchParams: URLSearchParams): ParsedQuery {
 
   const when = parseWhenParams(searchParams);
   const whenStep = parseWhenStepParam(searchParams, when, ops, groupBy);
+  const includeWhen = parseIncludeWhenParam(searchParams, ops);
 
   return {
     format,
@@ -308,6 +316,7 @@ export function parseQueryParams(searchParams: URLSearchParams): ParsedQuery {
     filters,
     when,
     whenStep,
+    includeWhen,
   };
 }
 
@@ -395,6 +404,26 @@ function parseWhenStepParam(
     );
   }
   return step as WhenStepPrecision;
+}
+
+function parseIncludeWhenParam(
+  searchParams: URLSearchParams,
+  ops: Aggregation[]
+): boolean {
+  const raw = searchParams.get("includeWhen");
+  if (raw === null || raw.trim() === "") return false;
+  const value = raw.trim();
+  if (value !== "1" && value !== "true") {
+    throw new QueryError(
+      `Invalid includeWhen "${raw}". Use includeWhen=1 to include the derived _when_* columns in raw row output.`
+    );
+  }
+  if (ops.length > 0) {
+    throw new QueryError(
+      `includeWhen is only supported for raw row queries (omit the "op" parameter).`
+    );
+  }
+  return true;
 }
 
 /**

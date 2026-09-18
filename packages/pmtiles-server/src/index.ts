@@ -1,6 +1,5 @@
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { corsPreflightResponse } from "./auth/cors";
-import { DataTablesBackend } from "./dataTablesBackend";
 import { handleClassifiedRequest } from "./gateway";
 import { handleObjectRequest, ObjectBackend } from "./objectBackend";
 import { PropertiesBackend } from "./propertiesBackend";
@@ -14,15 +13,13 @@ import { TilesBackend } from "./tilesBackend";
 import { TaxonomyBackend } from "./taxonomyBackend";
 import { authorizeTaxonomyProxy } from "./auth/taxonomyAuth";
 import {
-  handleOrgQuery,
   isOrgQueryPath,
   parseOrgQueryParams,
-} from "./dataTables/orgQuery";
+} from "./dataTables/orgQueryParams";
 import { QueryError } from "./dataTables/params";
 import { authorizeResource } from "./auth/resourceAuth";
 
 export {
-  DataTablesBackend,
   ObjectBackend,
   PropertiesBackend,
   TaxonomyBackend,
@@ -31,9 +28,9 @@ export {
 
 /**
  * Default entrypoint: authorize (using `?ns=` / `?access_token=`), then route
- * to TilesBackend, ObjectBackend, PropertiesBackend, DataTablesBackend,
- * or TaxonomyBackend. `/orgQuery` authorizes each table prefix. `/taxonomy`
- * routes require the overlay-engine JWT.
+ * to TilesBackend, ObjectBackend, PropertiesBackend, overlay-data-tables
+ * (service binding), or TaxonomyBackend. `/orgQuery` authorizes each table
+ * prefix. `/taxonomy` routes require the overlay-engine JWT.
  */
 export default class extends WorkerEntrypoint<Env> {
   async fetch(request: Request): Promise<Response> {
@@ -179,9 +176,8 @@ export default class extends WorkerEntrypoint<Env> {
     forwardUrl.searchParams.delete("ns");
     const headers = new Headers(request.headers);
     headers.delete("Authorization");
-    return handleOrgQuery(
-      new Request(forwardUrl.toString(), { method: "GET", headers }),
-      this.env
+    return this.dataTables().fetch(
+      new Request(forwardUrl.toString(), { method: "GET", headers })
     );
   }
 
@@ -229,14 +225,17 @@ export default class extends WorkerEntrypoint<Env> {
       request,
       this.env,
       {
-        fetch: (req, options) =>
-          this.ctx.exports.DataTablesBackend.fetch(req, options),
+        fetch: (req, options) => this.dataTables().fetch(req, options),
       },
       resource,
       {
         ns: aclNamespaceFromRequest(request),
         enforce: resourceAclEnabled(this.env, resource),
         includeQueryInCacheKey: true,
+        // Aggregations (`op=`) are cacheable and cheap to reuse. Raw-row
+        // QA queries have no `op`, are unique per site, and are the ones
+        // that 503 on a Workers Caching fill well before the 30s CPU budget.
+        bypassWorkersCache: !url.searchParams.get("op"),
         waitUntil: (p) => this.ctx.waitUntil(p),
       },
     );
@@ -280,6 +279,14 @@ export default class extends WorkerEntrypoint<Env> {
       statusText: response.statusText,
       headers,
     });
+  }
+
+  private dataTables(): NonNullable<Env["DATA_TABLES"]> {
+    const backend = this.env.DATA_TABLES;
+    if (!backend) {
+      throw new Error("DATA_TABLES service binding is not configured");
+    }
+    return backend;
   }
 }
 

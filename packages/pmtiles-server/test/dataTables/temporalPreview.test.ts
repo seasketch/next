@@ -79,6 +79,61 @@ describe("previewTemporalMapping", () => {
     expect(result.nativeResolution).toBe("year");
   });
 
+  it("builds the histogram from column-stats value counts", async () => {
+    const result = await previewTemporalMapping({
+      file,
+      metadata,
+      config: {
+        sourceColumns: { kind: "instant", column: "year", format: "year" },
+        defaultViewResolution: "year",
+      },
+      columnStats: {
+        rowCount: 1000,
+        columns: [
+          {
+            attribute: "year",
+            count: 980,
+            countDistinct: 2,
+            values: { "1999": 400, "2001": 580 },
+          },
+        ],
+      },
+    });
+    expect(result.totalRows).toBe(1000);
+    expect(result.parseableCount).toBe(980);
+    expect(result.unparseableCount).toBe(20);
+    expect(result.coverage?.start).toBe("1999");
+    expect(result.coverage?.end).toBe("2002");
+    expect(result.availability?.bins).toEqual([
+      { start: "1999", count: 400 },
+      { start: "2001", count: 580 },
+    ]);
+  });
+
+  it("ignores a truncated column-stats histogram", async () => {
+    const result = await previewTemporalMapping({
+      file,
+      metadata,
+      config: {
+        sourceColumns: { kind: "instant", column: "year", format: "year" },
+        defaultViewResolution: "year",
+      },
+      columnStats: {
+        rowCount: 1000,
+        columns: [
+          {
+            attribute: "year",
+            count: 1000,
+            countDistinct: 80,
+            values: { "1999": 400 },
+          },
+        ],
+      },
+    });
+    expect(result.parseableCount).not.toBe(400);
+    expect(result.totalRows).toBe(353253);
+  });
+
   it("rejects unknown source columns", async () => {
     await expect(
       previewTemporalMapping({

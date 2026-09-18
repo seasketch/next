@@ -23,10 +23,25 @@ export default async function processDataTableUploadOutputs(
   helpers.logger.info(`Completing data table upload: ${jobId}`);
   await helpers.withPgClient(async (client) => {
     try {
-      if (data?.organism && !data.parquetRemote) {
+      if (data?.organism) {
+        if (!data.parquetRemote || !data.columnStatsRemote) {
+          // Rolling-deploy compatibility with the pre-clustering handler,
+          // which writes sidecars beside the table's existing parquet.
+          await client.query(
+            `select complete_overlay_data_table_organism_reprocess($1, $2::jsonb)`,
+            [jobId, JSON.stringify(data.organism)],
+          );
+          return;
+        }
         await client.query(
-          `select complete_overlay_data_table_organism_reprocess($1, $2::jsonb)`,
-          [jobId, JSON.stringify(data.organism)],
+          `select complete_overlay_data_table_organism_reprocess($1, $2::jsonb, $3, $4, $5)`,
+          [
+            jobId,
+            JSON.stringify(data.organism),
+            data.parquetRemote,
+            data.columnStatsRemote,
+            data.sourceParquetRemote ?? null,
+          ],
         );
         return;
       }

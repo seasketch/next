@@ -549,6 +549,22 @@ export default function OrganismSelector({
     );
   };
 
+  const isSearchActive =
+    Boolean(debouncedQuery.trim()) && searchHits != null && !searchPending;
+  const showSelectAllResults = isSearchActive && hits.length > 1;
+  const allResultsSelected =
+    showSelectAllResults &&
+    hits.every((hit) => effectiveSelected.includes(hit.value));
+  const showSelectAncestors =
+    ancestorHits.length > 1 &&
+    (!showSelectAllResults || ancestorHits.length < hits.length);
+
+  const selectAllResults = () => {
+    const values = hits.map((hit) => hit.value);
+    if (values.length === 0) return;
+    commitSelection(values, true);
+  };
+
   const selectAncestorMatches = () => {
     const values = ancestorHits.map((hit) => hit.value);
     if (values.length === 0) return;
@@ -715,7 +731,17 @@ export default function OrganismSelector({
           </div>
 
           <div className="border-t border-black/5 px-2 py-1.5 space-y-1.5 bg-gray-50/80">
-            {ancestorHits.length > 1 && (
+            {showSelectAllResults ? (
+              <button
+                type="button"
+                onClick={selectAllResults}
+                disabled={allResultsSelected}
+                className="w-full rounded px-1.5 py-1 text-[11px] border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:cursor-default disabled:text-gray-400"
+              >
+                {t("Select all {{count}} results", { count: hits.length })}
+              </button>
+            ) : null}
+            {showSelectAncestors ? (
               <button
                 type="button"
                 onClick={selectAncestorMatches}
@@ -723,7 +749,7 @@ export default function OrganismSelector({
               >
                 {t("Select all matching in this table")}
               </button>
-            )}
+            ) : null}
             <DataTableFilterMultiSelectRow
               multi={multi || allCatalogSelected}
               selected={mode === "isNull" ? [] : effectiveSelected}

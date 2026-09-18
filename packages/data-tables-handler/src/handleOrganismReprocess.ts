@@ -9,6 +9,7 @@ import {
   type DataTableOrganismConfig,
 } from "@seasketch/geostats-types";
 import { all, run, withDuckDb } from "./duckDb";
+import { rewriteParquetClustered } from "./clusterParquet";
 import {
   enrichOrganismValues,
   joinOrganismCatalogRows,
@@ -117,7 +118,7 @@ export async function readDistinctOrganismValues(
 export async function readClassTableRows(
   csvPath: string
 ): Promise<ClassTableRow[]> {
-  const { path: duckDbCsvPath } = normalizeCsvEncodingIfNeeded(
+  const { path: duckDbCsvPath } = await normalizeCsvEncodingIfNeeded(
     csvPath,
     path.join(path.dirname(csvPath), "class.utf8.csv")
   );
@@ -179,6 +180,8 @@ export async function runOrganismEnrichment(options: {
   sourceUuid: string;
   uploadId: string;
   tmpDir: string;
+  joinColumn?: string | null;
+  requiredFilterColumns?: string[] | null;
   updateProgress: (
     state: "running",
     message: string,
@@ -312,6 +315,17 @@ export async function runOrganismEnrichment(options: {
   await putObject(catalogPath, catalogRemote, PARQUET_CONTENT_TYPE);
   await putObject(indexPath, indexRemote, JSON_CONTENT_TYPE);
   await putObject(previewPath, previewRemote, JSON_CONTENT_TYPE);
+
+  await options.updateProgress("running", "clustering table", 0.92);
+  const cluster = await rewriteParquetClustered(options.parquetPath, {
+    organismColumn: options.config.column,
+    joinColumn: options.joinColumn,
+    requiredFilterColumns: options.requiredFilterColumns,
+  });
+  // eslint-disable-next-line no-console
+  console.log(
+    `[data-tables-handler] clustered data.parquet by ${cluster.join(", ") || "(none)"}`
+  );
 
   return {
     organism: organismInfoFromConfig(

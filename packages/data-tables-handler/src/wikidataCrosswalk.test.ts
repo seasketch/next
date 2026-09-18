@@ -6,8 +6,10 @@ import {
   buildWikidataNameQuery,
   escapeSparqlString,
   fetchWikidataInatCrosswalk,
+  followInactiveInatId,
   INATURALIST_TAXA_URL,
   parseInatTaxonActivity,
+  parseInatTaxonShow,
   parseWikidataInatBindings,
   pickActiveInatId,
   WIKIDATA_SPARQL_URL,
@@ -32,6 +34,7 @@ describe("escapeSparqlString / query builders", () => {
     assert.doesNotMatch(query, /rdfs:label/);
     assert.match(query, /wdt:P225/);
     assert.match(query, /wdt:P1843/);
+    assert.match(query, /"Bodianus pulcher"@en/);
   });
 });
 
@@ -94,6 +97,22 @@ describe("pickActiveInatId / parseInatTaxonActivity", () => {
     assert.equal(pickActiveInatId([], new Map()), null);
   });
 
+  it("follows an inactive iNat id to its accepted synonym", () => {
+    const show = parseInatTaxonShow({
+      results: [
+        {
+          id: 53699,
+          is_active: false,
+          current_synonymous_taxon_ids: [1439813],
+        },
+        { id: 1439813, is_active: true },
+      ],
+    });
+    assert.equal(followInactiveInatId(53699, show), 1439813);
+    assert.equal(followInactiveInatId(1439813, show), 1439813);
+    assert.equal(followInactiveInatId(53699, new Map()), 53699);
+  });
+
   it("reads is_active and rejects junk", () => {
     assert.equal(parseInatTaxonActivity(null).size, 0);
     assert.equal(parseInatTaxonActivity(undefined).size, 0);
@@ -121,13 +140,28 @@ describe("pickActiveInatId / parseInatTaxonActivity", () => {
 });
 
 describe("fetchWikidataInatCrosswalk", () => {
-  it("batches AphiaIDs and names and keeps unique hits", async () => {
+  it("batches AphiaIDs and names and follows an inactive P3151", async () => {
     const urls: string[] = [];
     const bodies: string[] = [];
     const { byAphiaId, byName } = await fetchWikidataInatCrosswalk(
       async (url, init) => {
         urls.push(url);
         bodies.push(init?.body || "");
+        if (url.startsWith(INATURALIST_TAXA_URL)) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              results: [
+                {
+                  id: 53699,
+                  is_active: false,
+                  current_synonymous_taxon_ids: [1439813],
+                },
+              ],
+            }),
+          };
+        }
         return {
           ok: true,
           status: 200,
@@ -143,13 +177,13 @@ describe("fetchWikidataInatCrosswalk", () => {
       },
       { aphiaIds: [1702292], names: ["Bodianus pulcher", "Bodianus pulcher"] }
     );
-    assert.equal(urls.length, 3);
-    assert.ok(urls.every((url) => url === WIKIDATA_SPARQL_URL));
+    assert.equal(urls.filter((url) => url === WIKIDATA_SPARQL_URL).length, 3);
     assert.match(bodies[0], /1702292/);
     assert.match(bodies[1], /Bodianus/);
     assert.match(decodeURIComponent(bodies[2]), /@en/);
-    assert.equal(byAphiaId.get(1702292), 53699);
-    assert.equal(byName.get("bodianus pulcher"), 53699);
+    assert.equal(byAphiaId.get(1702292), 1439813);
+    assert.equal(byName.get("bodianus pulcher"), 1439813);
+    assert.match(urls[3], /\/taxa\/53699$/);
   });
 
   it("keeps Aphia hits when a later name batch fails", async () => {
@@ -217,11 +251,20 @@ describe("fetchWikidataInatCrosswalk", () => {
     assert.equal(urls.filter((url) => url.includes("/v1/taxa?")).length, 0);
   });
 
-  it("does not call iNaturalist when every key has one id", async () => {
+  it("checks a unique P3151 on iNat show so inactive synonyms can be followed", async () => {
     const urls: string[] = [];
-    await fetchWikidataInatCrosswalk(
+    const { byAphiaId } = await fetchWikidataInatCrosswalk(
       async (url) => {
         urls.push(url);
+        if (url.startsWith(INATURALIST_TAXA_URL)) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              results: [{ id: 54526, is_active: true }],
+            }),
+          };
+        }
         return {
           ok: true,
           status: 200,
@@ -234,6 +277,8 @@ describe("fetchWikidataInatCrosswalk", () => {
       },
       { aphiaIds: [240774], names: [] }
     );
-    assert.equal(urls.filter((url) => url.includes("api.inaturalist.org")).length, 0);
+    assert.equal(byAphiaId.get(240774), 54526);
+    assert.equal(urls.filter((url) => url.includes("api.inaturalist.org")).length, 1);
+    assert.equal(urls.filter((url) => url.includes("/v1/taxa?")).length, 0);
   });
 });
