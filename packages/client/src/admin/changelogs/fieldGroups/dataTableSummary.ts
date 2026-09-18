@@ -9,6 +9,12 @@ import {
   isNodataReprocess,
   nodataValuesLabel,
 } from "./dataTableNodataChange";
+import {
+  DATA_TABLE_ORGANISM_FIELD_GROUP,
+  isOrganismReprocess,
+  organismColumnLabel,
+  organismFromSummary,
+} from "./dataTableOrganismChange";
 
 export function tocItemIdFromMeta(meta: unknown): number | undefined {
   if (!meta || typeof meta !== "object" || Array.isArray(meta)) {
@@ -190,6 +196,38 @@ export function dataTableEventDescription(
           fromCoverage: fromSnap.coverageLabel,
           toCoverage: toSnap.coverageLabel,
         }
+      );
+    }
+    case DATA_TABLE_ORGANISM_FIELD_GROUP: {
+      const name =
+        tableNameFromSummary(to) || tableNameFromSummary(from) || fallback;
+      const none = t("None");
+      const fromLabel = organismColumnLabel(from, none);
+      const toLabel = organismColumnLabel(to, none);
+      const counts = organismFromSummary(to);
+      const classified = counts?.classifiedCount;
+      const total = counts?.valueCount;
+      if (isOrganismReprocess(meta)) {
+        if (classified != null && total != null) {
+          return t(
+            "Enriched {{name}} organisms ({{fromColumn}} → {{toColumn}}, {{classified}}/{{total}} classified)",
+            {
+              name,
+              fromColumn: fromLabel,
+              toColumn: toLabel,
+              classified,
+              total,
+            }
+          );
+        }
+        return t(
+          "Enriched {{name}} organisms ({{fromColumn}} → {{toColumn}})",
+          { name, fromColumn: fromLabel, toColumn: toLabel }
+        );
+      }
+      return t(
+        "Updated {{name}} organism identity ({{fromColumn}} → {{toColumn}})",
+        { name, fromColumn: fromLabel, toColumn: toLabel }
       );
     }
     case DATA_TABLE_NODATA_FIELD_GROUP: {

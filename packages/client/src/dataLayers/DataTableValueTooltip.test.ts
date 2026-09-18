@@ -89,6 +89,25 @@ describe("dataTableSparklineLayout", () => {
     expect(layout.yTicks.some((tick) => tick.label === "0")).toBe(true);
     expect(layout.yTicks.length).toBeGreaterThanOrEqual(3);
   });
+
+  it("keeps the table timescale when a site is only observed in the middle", () => {
+    const points = Array.from({ length: 26 }, (_, index) => {
+      const year = 1999 + index;
+      const observed = year >= 2003 && year <= 2012;
+      return {
+        step: String(year),
+        value: observed ? 5 + (year % 3) : null,
+      };
+    });
+    const layout = dataTableSparklineLayout(points, ["2019"]);
+    expect(layout.firstStep).toBe("1999");
+    expect(layout.lastStep).toBe("2024");
+    expect(layout.xTicks[0].label).toBe("1999");
+    expect(layout.xTicks[layout.xTicks.length - 1].label).toBe("2024");
+    expect(layout.observedDots[0].x).toBeGreaterThan(layout.plot.x + 1);
+    expect(layout.window).not.toBeNull();
+    expect(layout.currentDots).toHaveLength(0);
+  });
 });
 
 describe("thinOverlappingXTicks", () => {

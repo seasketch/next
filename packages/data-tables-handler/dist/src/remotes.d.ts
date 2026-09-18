@@ -1,4 +1,10 @@
 export declare function putObject(filepath: string, remote: string, contentType?: string): Promise<void>;
+/** Sibling object next to data.parquet (catalog, search index, preview). */
+export declare function siblingRemote(parquetRemote: string | null | undefined, filename: string): string | null;
+/** Download an existing hosted parquet (or other object) from R2. */
+export declare function getR2Object(remote: string, filepath: string): Promise<void>;
+/** Like getR2Object, but returns false when the key is missing. */
+export declare function tryGetR2Object(remote: string, filepath: string): Promise<boolean>;
 /** Download the user's raw upload from the S3 staging bucket. */
 export declare function getStagingObject(filepath: string, objectKey: string): Promise<void>;
 /**

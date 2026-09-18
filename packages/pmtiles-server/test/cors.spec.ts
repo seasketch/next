@@ -11,6 +11,9 @@ describe("gateway CORS", () => {
     "https://app.seasketch.org",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://[::1]:3000",
+    "http://192.168.1.20:3000",
+    "http://10.0.0.8:5173",
   ])("allows %s", (origin) => {
     expect(isAllowedOrigin(origin)).toBe(true);
   });

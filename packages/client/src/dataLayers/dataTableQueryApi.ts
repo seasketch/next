@@ -2,6 +2,7 @@
 
 import {
   expandTemporalClock,
+  expandTemporalIso,
   expandTemporalValue,
   isTemporalInfo,
   isTemporalPrecision,
@@ -212,6 +213,17 @@ export interface DataTableQuerySettings {
    * `series` summary stats (global scale, per-step row counts).
    */
   whenStep?: TemporalPrecision | null;
+  /** Sort key (column, aggregate name, or `_when_start` for raw rows). */
+  orderBy?: { key: string; direction: "asc" | "desc" };
+  /** Max groups/rows returned (server caps at 100,000). */
+  limit?: number;
+  offset?: number;
+  /**
+   * Raw-row queries only: include the derived `_when_start` / `_when_end`
+   * columns (UTC epoch seconds) in row output so QA/QC UIs can show exactly
+   * which temporal interval the engine assigned to each row.
+   */
+  includeWhen?: boolean;
 }
 
 /**
@@ -560,8 +572,216 @@ export function buildDataTableQuerySearchParams(
   if (settings.whenStep) {
     params.set("when.step", settings.whenStep);
   }
+  if (settings.orderBy) {
+    params.set(
+      "orderBy",
+      `${settings.orderBy.key}:${settings.orderBy.direction}`
+    );
+  }
+  if (settings.limit !== undefined) {
+    params.set("limit", String(settings.limit));
+  }
+  if (settings.offset !== undefined) {
+    params.set("offset", String(settings.offset));
+  }
+  if (settings.includeWhen) {
+    params.set("includeWhen", "1");
+  }
 
   return params;
+}
+
+/** Derived temporal columns written at ingest. Mirrors
+ * `packages/pmtiles-server/src/dataTables/params.ts`. */
+export const WHEN_START_COLUMN = "_when_start";
+export const WHEN_END_COLUMN = "_when_end";
+
+/** Page size for the QA/QC "rows in calculation" modal. */
+export const DATA_TABLE_CALCULATION_ROWS_LIMIT = 5000;
+
+/** Engine step keys encode their precision by length (`2018`, `2018-06`, …). */
+export function precisionForStep(step: string): TemporalPrecision {
+  if (step.length >= 13) return "hour";
+  if (step.length >= 10) return "day";
+  if (step.length >= 7) return "month";
+  return "year";
+}
+
+/** Half-open epoch-second interval covered by an engine step key. */
+export function stepIntervalSeconds(
+  step: string
+): { startSec: number; endSec: number } | null {
+  const expanded = expandTemporalIso(step, precisionForStep(step));
+  if (!expanded) {
+    return null;
+  }
+  return { startSec: expanded.start / 1000, endSec: expanded.end / 1000 };
+}
+
+/**
+ * The engine's row↔step assignment rule, mirrored for client-side step
+ * filtering in the QA/QC rows modal.
+ *
+ * CONSISTENCY: pmtiles-server's `stepsOverlappingInterval` assigns a row to
+ * every step whose calendar interval (expanded with the same
+ * `expandTemporalIso` from @seasketch/geostats-types used here) overlaps the
+ * row's `_when_*` interval, half-open. Rows returned by the raw query already
+ * passed the map-clock window filter, so testing overlap against the
+ * unclamped `_when_*` values selects exactly the rows the engine folded into
+ * a step's statistic. If the engine's assignment rule ever changes, this must
+ * change with it.
+ */
+export function rowWhenOverlapsStep(
+  row: { [column: string]: unknown },
+  step: string
+): boolean {
+  const interval = stepIntervalSeconds(step);
+  if (!interval) {
+    return false;
+  }
+  const start = row[WHEN_START_COLUMN];
+  const end = row[WHEN_END_COLUMN];
+  return (
+    typeof start === "number" &&
+    typeof end === "number" &&
+    start < interval.endSec &&
+    end > interval.startSec
+  );
+}
+
+/**
+ * Columns hidden by default in the QA/QC rows modal: any column whose value
+ * is identical on every fetched row, except columns central to auditing the
+ * calculation (active filters, temporal source columns, the organism
+ * identifier, and the measure column). Users can override via the modal's
+ * hidden-columns dropdown.
+ */
+export function defaultHiddenCalculationColumns(
+  columns: string[],
+  rows: { [column: string]: unknown }[],
+  keep: {
+    filterColumns: string[];
+    temporalSourceColumns: string[];
+    organismColumn?: string | null;
+    measureColumn?: string | null;
+  }
+): Set<string> {
+  const hidden = new Set<string>();
+  if (rows.length === 0) {
+    return hidden;
+  }
+  const keepSet = new Set<string>(
+    [
+      ...keep.filterColumns,
+      ...keep.temporalSourceColumns,
+      keep.organismColumn,
+      keep.measureColumn,
+    ].filter((name): name is string => Boolean(name))
+  );
+  for (const name of columns) {
+    if (keepSet.has(name)) {
+      continue;
+    }
+    const first = rows[0][name] ?? null;
+    let constant = true;
+    for (const row of rows) {
+      if (!Object.is(row[name] ?? null, first)) {
+        constant = false;
+        break;
+      }
+    }
+    if (constant) {
+      hidden.add(name);
+    }
+  }
+  return hidden;
+}
+
+
+/**
+ * Derive the raw-row ("Show rows in calculation") query from the *exact*
+ * aggregated query used to paint the map.
+ *
+ * CONSISTENCY INVARIANT — the QA/QC rows modal must never lie
+ * -----------------------------------------------------------
+ * The rows modal promises scientists "these are the rows behind the
+ * statistic on the map". That promise only holds when the raw-row request
+ * carries the same `q.*` filters and `when.*` window as the stats request,
+ * because the query engine guarantees (and tests, in
+ * `packages/pmtiles-server/test/dataTables/rawAggConsistency.test.ts`) that
+ * raw and aggregated queries with identical filter/when parameters select
+ * identical row sets.
+ *
+ * Therefore:
+ * - `statsQuery` MUST be the settings object actually used for the map
+ *   query — i.e. the output of `DataTableQueryManager.queryWithClock`, not a
+ *   reconstruction. Callers should go through
+ *   `DataTableQueryManager.fetchCalculationRows`.
+ * - This function must never add, drop, or rewrite filters other than
+ *   narrowing to one join-column value, and must never touch `when`.
+ * - If you add a new dimension to stats queries (e.g. a new filter type or
+ *   temporal parameter), it must flow through here untouched. See the unit
+ *   tests in `dataTableCalculationRows.test.ts`.
+ */
+export function deriveDataTableCalculationRowsQuery(
+  statsQuery: DataTableQuerySettings,
+  joinColumn: string,
+  featureId: string
+): DataTableQuerySettings {
+  const temporal = Boolean(statsQuery.when);
+  return {
+    // Identical filters, narrowed to the requested site/join value.
+    filters: [
+      ...(statsQuery.filters ?? []),
+      { column: joinColumn, op: "eq", value: String(featureId) },
+    ],
+    // Identical temporal window. `whenStep` is intentionally dropped: it only
+    // controls aggregate binning and is invalid on raw-row queries; the same
+    // window's rows feed every step bin.
+    when: statsQuery.when,
+    // Raw mode: no op / column / groupBy.
+    orderBy: temporal
+      ? { key: WHEN_START_COLUMN, direction: "asc" }
+      : undefined,
+    includeWhen: temporal || undefined,
+    limit: DATA_TABLE_CALCULATION_ROWS_LIMIT,
+  };
+}
+
+/** One raw row from a `/query` response (all columns, untyped). */
+export type DataTableCalculationRow = { [column: string]: unknown };
+
+/** Result of a "rows in calculation" fetch. */
+export interface DataTableCalculationRowsResult {
+  rows: DataTableCalculationRow[];
+  /** Total matching rows (may exceed `rows.length` when the page is full). */
+  rowsMatched: number;
+  totalRows: number;
+  /** The raw-row query sent; mirrors the stats query's filters/when. */
+  query: DataTableQuerySettings;
+}
+
+export function parseDataTableCalculationRowsBody(
+  body: unknown,
+  query: DataTableQuerySettings
+): DataTableCalculationRowsResult {
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    throw new Error("Unexpected rows response from data table query");
+  }
+  const record = body as { [key: string]: unknown };
+  if (!Array.isArray(record.rows)) {
+    throw new Error("Unexpected rows response from data table query");
+  }
+  return {
+    rows: record.rows.filter(
+      (row): row is DataTableCalculationRow =>
+        Boolean(row) && typeof row === "object" && !Array.isArray(row)
+    ),
+    rowsMatched:
+      typeof record.rowsMatched === "number" ? record.rowsMatched : 0,
+    totalRows: typeof record.totalRows === "number" ? record.totalRows : 0,
+    query,
+  };
 }
 
 /** Structured `/query` failure. Server `QueryError` is `{ error, code?, ... }`. */
@@ -873,11 +1093,17 @@ export function combineSeriesSteps(
 export type DataTableFeatureSeriesPoint = {
   step: string;
   value: number | null;
+  /**
+   * Engine `count` aggregate for this feature at this step — the number of
+   * values folded into `value` (n). Null when the step has no rows.
+   */
+  count?: number | null;
 };
 
 /**
- * Values for one join key across every series step. Missing groups stay
- * `null` so a sparkline can show gaps instead of interpolating through them.
+ * Values for one join key across every series step (the table timescale).
+ * Missing groups stay `null` so a sparkline can show gaps instead of
+ * interpolating through them, without shrinking the x-axis to this site.
  */
 export function featureSeriesFromParsed(
   series: ParsedDataTableQuerySeries,
@@ -887,28 +1113,13 @@ export function featureSeriesFromParsed(
   const steps = series.steps.length > 0 ? series.steps : Object.keys(series.byStep);
   return steps.map((step) => {
     const value = series.byStep[step]?.values[id];
+    const count = series.featureCountsByStep[step]?.[id];
     return {
       step,
       value: typeof value === "number" && Number.isFinite(value) ? value : null,
+      count: typeof count === "number" && Number.isFinite(count) ? count : null,
     };
   });
-}
-
-/** Drop leading/trailing empty steps so a sparkline hugs the observed range. */
-export function trimFeatureSeries(
-  points: DataTableFeatureSeriesPoint[]
-): DataTableFeatureSeriesPoint[] {
-  let start = 0;
-  let end = points.length - 1;
-  while (start < points.length && points[start].value === null) {
-    start += 1;
-  }
-  while (end >= start && points[end].value === null) {
-    end -= 1;
-  }
-  return start === 0 && end === points.length - 1
-    ? points
-    : points.slice(start, end + 1);
 }
 
 /** A chart is useful only when the site has at least two observed steps. */

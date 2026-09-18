@@ -176,4 +176,51 @@ describe("host-aware router", () => {
     expect(allowed.status).toBe(200);
     expect(await allowed.text()).toBe("subdivided-ok");
   });
+
+  it("bypasses Workers Caching for raw-row data-table queries", async () => {
+    const table =
+      `projects/router-test/public/${uuid}/dataTables/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa`;
+    const response = await SELF.fetch(
+      `https://uploads.seasketch.org/${table}/query?q.site=eq.PINOS&access_token=secret&ns=dev-test`,
+      { headers: { Authorization: "Bearer secret" } },
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      stub: "overlay-data-tables",
+      pathname: `/${table}/query`,
+      search: "?q.site=eq.PINOS",
+      authorization: "bypass-workers-cache",
+    });
+  });
+
+  it("forwards data-table queries to the DATA_TABLES service after stripping credentials", async () => {
+    const table =
+      `projects/router-test/public/${uuid}/dataTables/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa`;
+    const response = await SELF.fetch(
+      `https://uploads.seasketch.org/${table}/query?groupBy=site&op=count&access_token=secret&ns=dev-test`,
+      { headers: { Authorization: "Bearer secret" } },
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      stub: "overlay-data-tables",
+      pathname: `/${table}/query`,
+      search: "?groupBy=site&op=count",
+      authorization: null,
+    });
+  });
+
+  it("authorizes orgQuery tables then forwards to the DATA_TABLES service", async () => {
+    const table =
+      `projects/router-test/public/${uuid}/dataTables/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa`;
+    const response = await SELF.fetch(
+      `https://uploads.seasketch.org/orgQuery?tables=${table}&q=rockfish&access_token=secret`,
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      stub: "overlay-data-tables",
+      pathname: "/orgQuery",
+      search: `?tables=${encodeURIComponent(table)}&q=rockfish`,
+      authorization: null,
+    });
+  });
 });

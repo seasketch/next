@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from "react";
 import useDebounce from "../../useDebounce";
+import INaturalistThumbnail from "../../components/INaturalistThumbnail/INaturalistThumbnail";
 import Spinner from "../../components/Spinner";
 import { XIcon } from "@heroicons/react/outline";
 import { Trans, useTranslation } from "react-i18next";
+import { primeInaturalistTaxonPhotoCache } from "../../dataLayers/inaturalistTaxonPhotos";
 
 interface TaxonResult {
   id: number;
@@ -49,6 +51,7 @@ export default function INaturalistTaxonAutocomplete({
         )}&per_page=50`
       );
       const data = await response.json();
+      primeInaturalistTaxonPhotoCache(data);
       const taxa: TaxonResult[] = (data.results || []).map((item: any) => ({
         id: item.id,
         name: item.name || "",
@@ -122,13 +125,11 @@ export default function INaturalistTaxonAutocomplete({
               onClick={() => handleSelect(taxon)}
               className="w-full text-left px-4 py-2 hover:bg-gray-100 flex items-start space-x-3"
             >
-              {taxon.default_photo?.square_url && (
-                <img
-                  src={taxon.default_photo.square_url}
-                  alt=""
-                  className="w-10 h-10 rounded object-cover flex-shrink-0"
-                />
-              )}
+              <INaturalistThumbnail
+                sourceId={taxon.id}
+                size="sm"
+                className="flex-shrink-0"
+              />
               <div className="flex-1 min-w-0">
                 <div className="font-medium text-gray-900">
                   {taxon.preferred_common_name || taxon.name}
@@ -150,13 +151,11 @@ export default function INaturalistTaxonAutocomplete({
               key={taxon.id}
               className="inline-flex items-center space-x-2 bg-blue-50 border border-blue-200 rounded px-2 py-1"
             >
-              {taxon.default_photo?.square_url && (
-                <img
-                  src={taxon.default_photo.square_url}
-                  alt=""
-                  className="w-6 h-6 rounded object-cover"
-                />
-              )}
+              <INaturalistThumbnail
+                sourceId={taxon.id}
+                size="sm"
+                className="!h-6 !w-6"
+              />
               <span className="text-sm font-medium text-gray-900">
                 {taxon.preferred_common_name || taxon.name}
               </span>

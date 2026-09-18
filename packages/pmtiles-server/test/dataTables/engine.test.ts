@@ -130,9 +130,12 @@ describe("row group pruning", () => {
     expect(plan.rowGroupsScanned).toBe(2);
   });
 
-  it("merges contiguous surviving row groups into one read span", async () => {
+  it("keeps one read span per surviving row group", async () => {
     const { plan } = await run("op=count&q.year=lte.2003");
-    expect(plan.spans).toEqual([{ rowStart: 0, rowEnd: 245760 }]);
+    expect(plan.spans).toEqual([
+      { rowStart: 0, rowEnd: 122880 },
+      { rowStart: 122880, rowEnd: 245760 },
+    ]);
   });
 });
 
@@ -210,6 +213,16 @@ describe("raw row output", () => {
     expect(result.rows![0].count).toBe(13450); // max count in the table
     const counts = result.rows!.map((r: any) => r.count);
     expect([...counts].sort((a, b) => b - a)).toEqual(counts);
+  });
+
+  it("returns every source column, not just the filter columns", async () => {
+    const { result } = await run("q.site=eq.PINOS&limit=1");
+    const row = result.rows![0];
+    expect(row.site).toBe("PINOS");
+    expect(row).toHaveProperty("count");
+    expect(row).toHaveProperty("classcode");
+    expect(row).toHaveProperty("year");
+    expect(Object.keys(row).length).toBeGreaterThan(8);
   });
 
   it("serializes values as JSON-safe types (no BigInt)", async () => {

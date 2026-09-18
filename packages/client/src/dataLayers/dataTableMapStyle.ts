@@ -28,11 +28,116 @@ export function buildDataTableValueExpression(
 }
 
 /**
- * Sentinel written to `scaledValue` feature-state for a true zero value.
- * Positive values scale 0–1 against scaleMin/scaleMax, so the smallest
- * positive value also lands on 0 — zero needs its own marker.
+ * Sentinel written to `scaledValue` / `rawValue` feature-state for a true
+ * zero. Mapbox `setFeatureState` / tile paint updates drop `0` (and `false`),
+ * so a real zero must never be stored as the number 0.
  */
 export const DATA_TABLE_ZERO_SENTINEL = -1;
+
+/**
+ * Lower bound for scaled positives. The smallest positive value would
+ * otherwise scale to 0 and get stuck on the previous feature-state.
+ */
+export const DATA_TABLE_SCALED_MIN_POSITIVE = 0.001;
+
+export const DATA_TABLE_VALUE_CLASS_PROPERTY = "valueClass";
+export const DATA_TABLE_VALUE_CLASS_DATA = "data";
+export const DATA_TABLE_VALUE_CLASS_ZERO = "zero";
+export const DATA_TABLE_VALUE_CLASS_EMPTY = "empty";
+
+export type DataTableValueClass =
+  | typeof DATA_TABLE_VALUE_CLASS_DATA
+  | typeof DATA_TABLE_VALUE_CLASS_ZERO
+  | typeof DATA_TABLE_VALUE_CLASS_EMPTY;
+
+/**
+ * Scale a table value for circle paint. True zeros use
+ * {@link DATA_TABLE_ZERO_SENTINEL}; positives stay in
+ * ({@link DATA_TABLE_SCALED_MIN_POSITIVE}, 1] so Mapbox never sees 0.
+ */
+export function scaleDataTableValue(
+  value: number,
+  scaleMin: number,
+  scaleMax: number
+): number {
+  if (value === 0) {
+    return DATA_TABLE_ZERO_SENTINEL;
+  }
+  if (value < 0) {
+    return DATA_TABLE_SCALED_MIN_POSITIVE;
+  }
+  const range = scaleMax - scaleMin;
+  if (range === 0) {
+    return 1;
+  }
+  const scaled = (value - scaleMin) / range;
+  return Math.min(Math.max(scaled, DATA_TABLE_SCALED_MIN_POSITIVE), 1);
+}
+
+/** Feature-state payload for one join site. Never includes numeric 0. */
+export function buildDataTablePaintFeatureState(
+  value: number | null,
+  scaleMin: number,
+  scaleMax: number
+): {
+  scaledValue: number | null;
+  rawValue: number | null;
+  valueClass: DataTableValueClass;
+} {
+  if (value === null) {
+    return {
+      scaledValue: null,
+      rawValue: null,
+      valueClass: DATA_TABLE_VALUE_CLASS_EMPTY,
+    };
+  }
+  if (value === 0) {
+    return {
+      scaledValue: DATA_TABLE_ZERO_SENTINEL,
+      rawValue: DATA_TABLE_ZERO_SENTINEL,
+      valueClass: DATA_TABLE_VALUE_CLASS_ZERO,
+    };
+  }
+  return {
+    scaledValue: scaleDataTableValue(value, scaleMin, scaleMax),
+    rawValue: value,
+    valueClass: DATA_TABLE_VALUE_CLASS_DATA,
+  };
+}
+
+/** Inverse of {@link buildDataTablePaintFeatureState} for tooltips. */
+export function decodeDataTableRawValue(state: {
+  rawValue?: number | null;
+  scaledValue?: number | null;
+  valueClass?: string;
+}): number | null | undefined {
+  if (
+    state.valueClass === DATA_TABLE_VALUE_CLASS_ZERO ||
+    state.rawValue === DATA_TABLE_ZERO_SENTINEL ||
+    state.scaledValue === DATA_TABLE_ZERO_SENTINEL
+  ) {
+    return 0;
+  }
+  if (state.valueClass === DATA_TABLE_VALUE_CLASS_EMPTY) {
+    return null;
+  }
+  if (state.rawValue === null) {
+    return null;
+  }
+  return state.rawValue;
+}
+
+export function dataTableIsZeroExpression(): Expression {
+  return [
+    "any",
+    [
+      "==",
+      ["feature-state", DATA_TABLE_VALUE_CLASS_PROPERTY],
+      DATA_TABLE_VALUE_CLASS_ZERO,
+    ],
+    ["==", ["feature-state", "scaledValue"], DATA_TABLE_ZERO_SENTINEL],
+  ] as Expression;
+}
 
 export const DATA_TABLE_ACTIVE_COLOR = "#2563eb";
 /** Slightly darker fill/stroke while a bubble's tooltip is showing. */
@@ -128,7 +233,8 @@ function radiusForStop(
   scaleMax: number,
   minRadius: number,
   maxRadius: number,
-  hideWhenMissing: boolean
+  hideWhenMissing: boolean,
+  isZero: Expression
 ): Expression {
   // Keep zoom-stop radii in the same ratio as the full-size legend constants.
   const noDataRadius =
@@ -145,16 +251,11 @@ function radiusForStop(
     ["typeof", valueExpression],
     "number",
   ] as Expression;
-  // True zeros carry the sentinel; the smallest positive value scales to 0,
-  // so a plain `== 0` check would misclassify it.
-  const isZero = [
-    "==",
-    valueExpression,
-    DATA_TABLE_ZERO_SENTINEL,
-  ] as Expression;
   const isPositive = [">=", valueExpression, 0] as Expression;
   // Guard missing/zero before interpolate so Mapbox never runs `>` /
-  // interpolate on null.
+  // interpolate on null. The final fallback must stay non-zero: a painted
+  // radius of 0 is dropped by the feature-state vertex update (same as
+  // writing 0 to setFeatureState), so the previous circle would stick.
   const sized = [
     "case",
     isMissing,
@@ -169,7 +270,7 @@ function radiusForStop(
       minRadius,
       maxRadius
     ),
-    0,
+    hideWhenMissing ? 0 : noDataRadius,
   ] as Expression;
   if (!hideWhenMissing) {
     return sized;
@@ -197,6 +298,7 @@ export function buildDataTableCircleRadiusExpression({
   scaleMax,
   zoomDependent,
   hideWhenMissing,
+  isZero,
 }: {
   valueExpression: Expression;
   scaleMin: number;
@@ -205,7 +307,12 @@ export function buildDataTableCircleRadiusExpression({
   zoomDependent: boolean;
   /** When true, features without a known state value get radius 0. */
   hideWhenMissing: boolean;
+  /** Override for true zeros; defaults to the scaledValue sentinel. */
+  isZero?: Expression;
 }): Expression {
+  const zeroExpression =
+    isZero ||
+    (["==", valueExpression, DATA_TABLE_ZERO_SENTINEL] as Expression);
   if (!zoomDependent) {
     return radiusForStop(
       valueExpression,
@@ -213,7 +320,8 @@ export function buildDataTableCircleRadiusExpression({
       scaleMax,
       DATA_TABLE_VALUE_MIN_RADIUS,
       DATA_TABLE_VALUE_MAX_RADIUS,
-      hideWhenMissing
+      hideWhenMissing,
+      zeroExpression
     );
   }
 
@@ -227,7 +335,8 @@ export function buildDataTableCircleRadiusExpression({
         scaleMax,
         stop.min,
         stop.max,
-        hideWhenMissing
+        hideWhenMissing,
+        zeroExpression
       )
     );
   }

@@ -8,6 +8,7 @@ import DataTableNumericFilter, {
   defaultNumericFilters,
 } from "./DataTableNumericFilter";
 import DataTableStringFilter from "./DataTableStringFilter";
+import OrganismSelector from "./OrganismSelector";
 
 function filtersForColumn(filters: DataTableFilter[], column: string) {
   return filters.filter((filter) => filter.column === column);
@@ -194,7 +195,8 @@ function stringValuesForColumn(column: GeostatsAttribute): Set<string> | null {
  */
 export function sanitizeDataTableFilters(
   filters: DataTableFilter[] | undefined,
-  columns: GeostatsAttribute[]
+  columns: GeostatsAttribute[],
+  options?: { unrestrictedColumns?: string[] }
 ): DataTableFilter[] {
   if (!filters?.length) {
     return [];
@@ -208,7 +210,10 @@ export function sanitizeDataTableFilters(
     if (!column) {
       continue;
     }
-    const allowed = stringValuesForColumn(column);
+    const unrestricted = new Set(options?.unrestrictedColumns || []);
+    const allowed = unrestricted.has(filter.column)
+      ? null
+      : stringValuesForColumn(column);
     if (allowed) {
       if (filter.op === "eq" && filter.value != null) {
         if (!allowed.has(filter.value)) {
@@ -264,11 +269,17 @@ function FilterValueEditor({
   filters,
   onChange,
   queryLoading = false,
+  organismColumn,
+  orgQueryUrl,
+  accessToken,
 }: {
   column: GeostatsAttribute;
   filters: DataTableFilter[];
   onChange: (filters: DataTableFilter[]) => void;
   queryLoading?: boolean;
+  organismColumn?: string | null;
+  orgQueryUrl?: string | null;
+  accessToken?: string | null;
 }) {
   if (column.type === "number") {
     return (
@@ -298,6 +309,17 @@ function FilterValueEditor({
       />
     );
   }
+  if (organismColumn && column.attribute === organismColumn && orgQueryUrl) {
+    return (
+      <OrganismSelector
+        column={column}
+        filters={filters}
+        orgQueryUrl={orgQueryUrl}
+        accessToken={accessToken}
+        onChange={onChange}
+      />
+    );
+  }
   return (
     <DataTableStringFilter
       column={column}
@@ -315,6 +337,9 @@ export default function DataTableFilterControls({
   hiddenColumns = [],
   columnLabels = {},
   queryLoading = false,
+  organismColumn,
+  orgQueryUrl,
+  accessToken,
   onChange,
   trailingAction,
 }: {
@@ -329,6 +354,10 @@ export default function DataTableFilterControls({
   columnLabels?: Record<string, string>;
   /** True while the map query for the current filters is in flight. */
   queryLoading?: boolean;
+  /** When set, this column uses the Organism Selector instead of a string list. */
+  organismColumn?: string | null;
+  orgQueryUrl?: string | null;
+  accessToken?: string | null;
   onChange: (filters: DataTableFilter[]) => void;
   /** Rendered opposite the Add filter button (e.g. a clear-table action). */
   trailingAction?: ReactNode;
@@ -407,20 +436,66 @@ export default function DataTableFilterControls({
         const column = columnsByName.get(columnName)!;
         const columnFilters = filtersForColumn(filters, columnName);
         const isRequired = requiredColumnSet.has(columnName);
+        const isOrganismColumn =
+          Boolean(organismColumn) &&
+          column.attribute === organismColumn &&
+          Boolean(orgQueryUrl);
         const compact =
-          isStringLikeColumn(column) ||
-          column.type === "boolean" ||
-          column.type === "number";
+          !isOrganismColumn &&
+          (isStringLikeColumn(column) ||
+            column.type === "boolean" ||
+            column.type === "number");
+        const editor = (
+          <FilterValueEditor
+            column={column}
+            filters={columnFilters}
+            queryLoading={queryLoading}
+            organismColumn={organismColumn}
+            orgQueryUrl={orgQueryUrl}
+            accessToken={accessToken}
+            onChange={(nextFilters) =>
+              onChange(replaceColumnFilters(filters, columnName, nextFilters))
+            }
+          />
+        );
         return (
           <div
             key={columnName}
             className={
-              compact
+              isOrganismColumn
+                ? "min-w-0"
+                : compact
                 ? "flex items-center gap-2 min-w-0"
                 : "rounded border border-gray-200 bg-gray-50 px-2 py-2 space-y-1.5"
             }
           >
-            {compact ? (
+            {isOrganismColumn ? (
+              <div className="min-w-0">
+                <div
+                  title={column.attribute}
+                  className="px-0.5 pb-1 text-left text-xs font-medium text-gray-700 truncate"
+                >
+                  {dataTableFilterLabel(column.attribute, columnLabels)}
+                </div>
+                <div className="relative min-w-0">
+                  {editor}
+                  {!isRequired && (
+                    <button
+                      type="button"
+                      aria-label={t("Remove filter")}
+                      className="absolute top-2 right-8 text-gray-400 hover:text-red-600"
+                      onClick={() =>
+                        onChange(
+                          filters.filter((filter) => filter.column !== columnName)
+                        )
+                      }
+                    >
+                      <Cross2Icon className="w-3 h-3" />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : compact ? (
               <>
                 <span
                   title={column.attribute}
@@ -428,16 +503,7 @@ export default function DataTableFilterControls({
                 >
                   {dataTableFilterLabel(column.attribute, columnLabels)}
                 </span>
-                <FilterValueEditor
-                  column={column}
-                  filters={columnFilters}
-                  queryLoading={queryLoading}
-                  onChange={(nextFilters) =>
-                    onChange(
-                      replaceColumnFilters(filters, columnName, nextFilters)
-                    )
-                  }
-                />
+                {editor}
                 {!isRequired && (
                   <button
                     type="button"
@@ -479,16 +545,7 @@ export default function DataTableFilterControls({
                     </button>
                   )}
                 </div>
-                <FilterValueEditor
-                  column={column}
-                  filters={columnFilters}
-                  queryLoading={queryLoading}
-                  onChange={(nextFilters) =>
-                    onChange(
-                      replaceColumnFilters(filters, columnName, nextFilters)
-                    )
-                  }
-                />
+                {editor}
               </>
             )}
           </div>

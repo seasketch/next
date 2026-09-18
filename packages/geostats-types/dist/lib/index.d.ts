@@ -3,6 +3,8 @@ export * from "./temporal";
 export { createLayerYearTemporalInfo, expandTemporalValue, isTemporalInfo, } from "./temporal";
 export * from "./nodata";
 export { isDataTableNodataConfig, isDataTableNodataValue, nodataValueMatches, normalizeNodataValues, } from "./nodata";
+export * from "./organism";
+export { isOrganismInfo, isDataTableOrganismConfig, includeLowConfidenceMatchesEnabled, organismClassificationCounts, organismIsClassified, suggestOrganismColumnRoles, } from "./organism";
 /**
  * Attribute type as translated to a javacsript type
  */

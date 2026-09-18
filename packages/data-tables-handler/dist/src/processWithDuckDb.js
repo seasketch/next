@@ -166,6 +166,10 @@ async function computeColumnStatsFromParquet(parquetPath, tableName, joinInfo) {
         const schema = await (0, duckDb_1.all)(conn, `SELECT column_name, data_type FROM information_schema.columns WHERE table_name = 'observations' ORDER BY ordinal_position`);
         const columns = [];
         for (const col of schema) {
+            if (col.column_name === "_when_start" ||
+                col.column_name === "_when_end") {
+                continue;
+            }
             const colName = col.column_name.replace(/"/g, '""');
             const type = (0, validateJoinColumn_1.inferGeostatsType)(col.data_type);
             const counts = await (0, duckDb_1.all)(conn, `SELECT COUNT("${colName}")::INTEGER as count, COUNT(DISTINCT "${colName}")::INTEGER as count_distinct FROM observations`);

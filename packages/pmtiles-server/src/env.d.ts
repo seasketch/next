@@ -1,5 +1,12 @@
 /** Secrets and optional bindings not listed as wrangler [vars]. */
 interface Env {
+  /** overlay-data-tables Worker. Present on overlay-data-server only. */
+  DATA_TABLES?: {
+    fetch(
+      request: Request,
+      options?: { cf?: { cacheKey?: string } },
+    ): Promise<Response>;
+  };
   MAPBOX_ACCESS_TOKEN?: string;
   TILES_BUCKET: R2Bucket;
   PUBLIC_HOSTNAME?: string;

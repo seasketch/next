@@ -1,3 +1,4 @@
+import { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { scaleLinear, scaleUtc } from "d3-scale";
 import { parseTemporalIso } from "@seasketch/geostats-types";
@@ -9,7 +10,6 @@ import {
   DataTableFeatureSeriesPoint,
   downsampleFeatureSeries,
   shouldShowDataTableSeriesChart,
-  trimFeatureSeries,
 } from "./dataTableQueryApi";
 import { DATA_TABLE_ACTIVE_COLOR } from "./dataTableMapStyle";
 import { formatLegendNumber } from "./legends/DataTableLegendBubble";
@@ -23,12 +23,22 @@ const Y_TICK_MIN_GAP = 14;
 const X_TICK_MIN_GAP = 8;
 const X_LABEL_CHAR_WIDTH = 5.4;
 
-function plotRect() {
+export type SparklineLayoutOptions = {
+  width?: number;
+  height?: number;
+  maxPoints?: number;
+  margins?: Partial<typeof PLOT>;
+};
+
+function plotRect(options?: SparklineLayoutOptions) {
+  const width = options?.width ?? SPARKLINE_WIDTH;
+  const height = options?.height ?? SPARKLINE_HEIGHT;
+  const margins = { ...PLOT, ...options?.margins };
   return {
-    x: PLOT.left,
-    y: PLOT.top,
-    width: SPARKLINE_WIDTH - PLOT.left - PLOT.right,
-    height: SPARKLINE_HEIGHT - PLOT.top - PLOT.bottom,
+    x: margins.left,
+    y: margins.top,
+    width: width - margins.left - margins.right,
+    height: height - margins.top - margins.bottom,
   };
 }
 
@@ -127,7 +137,7 @@ function stepTimestamp(step: string): number | null {
   );
 }
 
-function formatStepTick(step: string): string {
+export function formatStepTick(step: string): string {
   const parts = parseTemporalIso(step);
   if (!parts) {
     return step;
@@ -234,10 +244,9 @@ function polylinePath(points: { x: number; y: number }[]): string {
     .join(" ");
 }
 
-export function dataTableSparklineLayout(
-  points: DataTableFeatureSeriesPoint[],
-  currentSteps: string[] = []
-): {
+export type SparklineLayout = {
+  width: number;
+  height: number;
   plot: { x: number; y: number; width: number; height: number };
   segments: string[];
   gapSegments: string[];
@@ -250,15 +259,33 @@ export function dataTableSparklineLayout(
     label: string;
     anchor: "start" | "middle" | "end";
   }[];
+  /**
+   * Every sampled point with its x position (and y when observed), in step
+   * order. Lets interactive charts (the QA/QC rows modal) hit-test clicks
+   * back to engine step keys.
+   */
+  samples: {
+    step: string;
+    x: number;
+    y: number | null;
+    value: number | null;
+    count: number | null;
+  }[];
   firstStep?: string;
   lastStep?: string;
-} {
+};
+
+export function dataTableSparklineLayout(
+  points: DataTableFeatureSeriesPoint[],
+  currentSteps: string[] = [],
+  options?: SparklineLayoutOptions
+): SparklineLayout {
   const sampled = downsampleFeatureSeries(
-    trimFeatureSeries(points),
-    SPARKLINE_MAX_POINTS,
+    points,
+    options?.maxPoints ?? SPARKLINE_MAX_POINTS,
     currentSteps
   );
-  const plot = plotRect();
+  const plot = plotRect(options);
   const numeric = sampled
     .map((point) => point.value)
     .filter((value): value is number => value !== null);
@@ -344,17 +371,22 @@ export function dataTableSparklineLayout(
     }))
   );
 
-  const firstObserved = sampled.find((point) => point.value !== null);
-  const lastObserved = [...sampled]
-    .reverse()
-    .find((point) => point.value !== null);
-
   const xTicks = pickSparklineXTicks(
     sampled.map((point) => point.step),
     plot
   );
 
+  const samples = sampled.map((point, index) => ({
+    step: point.step,
+    x: xAt(index, sampled.length, plot),
+    y: point.value === null ? null : yAt(point.value),
+    value: point.value,
+    count: point.count ?? null,
+  }));
+
   return {
+    width: options?.width ?? SPARKLINE_WIDTH,
+    height: options?.height ?? SPARKLINE_HEIGHT,
     plot,
     segments,
     gapSegments,
@@ -363,8 +395,9 @@ export function dataTableSparklineLayout(
     window,
     yTicks,
     xTicks,
-    firstStep: firstObserved?.step,
-    lastStep: lastObserved?.step,
+    samples,
+    firstStep: sampled[0]?.step,
+    lastStep: sampled[sampled.length - 1]?.step,
   };
 }
 
@@ -528,120 +561,151 @@ export default function DataTableValueTooltip({
       </div>
       {layout && showChart ? (
         <div className="mt-3 pt-2.5 border-t border-gray-100">
-          <svg
-            width={SPARKLINE_WIDTH}
-            height={SPARKLINE_HEIGHT}
-            viewBox={`0 0 ${SPARKLINE_WIDTH} ${SPARKLINE_HEIGHT}`}
+          <DataTableSparklineSvg
+            layout={layout}
             className="block w-full h-auto"
-            aria-hidden="true"
-          >
-            <rect
-              x={layout.plot.x}
-              y={layout.plot.y}
-              width={layout.plot.width}
-              height={layout.plot.height}
-              fill="#f9fafb"
-              stroke="#e5e7eb"
-              strokeWidth={1}
-              rx={2}
-            />
-            {layout.yTicks.map((tick, index) => {
-              const onEdge =
-                tick.y <= layout.plot.y + 1 ||
-                tick.y >= layout.plot.y + layout.plot.height - 1;
-              return (
-                <g key={`ytick-${index}`}>
-                  {onEdge ? null : (
-                    <line
-                      x1={layout.plot.x}
-                      x2={layout.plot.x + layout.plot.width}
-                      y1={tick.y}
-                      y2={tick.y}
-                      stroke="#e5e7eb"
-                      strokeWidth={1}
-                    />
-                  )}
-                  <text
-                    x={layout.plot.x - 4}
-                    y={tick.y + 3}
-                    textAnchor="end"
-                    className="fill-gray-400"
-                    fontSize={9}
-                  >
-                    {tick.label}
-                  </text>
-                </g>
-              );
-            })}
-            {layout.window ? (
-              <rect
-                x={layout.window.x}
-                y={layout.plot.y}
-                width={layout.window.width}
-                height={layout.plot.height}
-                fill={DATA_TABLE_ACTIVE_COLOR}
-                opacity={0.1}
-              />
-            ) : null}
-            {layout.gapSegments.map((d, index) => (
-              <path
-                key={`gap-${index}`}
-                d={d}
-                fill="none"
-                stroke={DATA_TABLE_ACTIVE_COLOR}
-                strokeWidth={1.25}
-                strokeDasharray="2.5 2.5"
-                strokeLinejoin="round"
-                strokeLinecap="round"
-                opacity={0.7}
-              />
-            ))}
-            {layout.segments.map((d, index) => (
-              <path
-                key={`line-${index}`}
-                d={d}
-                fill="none"
-                stroke={DATA_TABLE_ACTIVE_COLOR}
-                strokeWidth={1.75}
-                strokeLinejoin="round"
-                strokeLinecap="round"
-              />
-            ))}
-            {layout.observedDots.map((dot, index) => (
-              <circle
-                key={`obs-${index}`}
-                cx={dot.x}
-                cy={dot.y}
-                r={1.75}
-                fill={DATA_TABLE_ACTIVE_COLOR}
-              />
-            ))}
-            {layout.currentDots.map((dot, index) => (
-              <circle
-                key={`current-${index}`}
-                cx={dot.x}
-                cy={dot.y}
-                r={3.25}
-                fill={DATA_TABLE_ACTIVE_COLOR}
-                stroke="#fff"
-                strokeWidth={1}
-              />
-            ))}
-            {layout.xTicks.map((tick, index) => (
-              <text
-                key={`xtick-${index}`}
-                x={tick.x}
-                y={SPARKLINE_HEIGHT - 3}
-                textAnchor={tick.anchor}
-                className="fill-gray-400"
-                fontSize={9}
-              >
-                {tick.label}
-              </text>
-            ))}
-          </svg>
+          />
         </div>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Shared SVG renderer for engine-computed per-site series. Used by both this
+ * hover tooltip and the QA/QC "Rows in calculation" modal so the two charts
+ * are visually identical. `underlay` renders beneath the line (selection
+ * bands), `children` on top (hit targets, markers).
+ */
+export function DataTableSparklineSvg({
+  layout,
+  className,
+  fontSize = 9,
+  dotRadius = 1.75,
+  underlay,
+  children,
+}: {
+  layout: SparklineLayout;
+  className?: string;
+  fontSize?: number;
+  dotRadius?: number;
+  underlay?: ReactNode;
+  children?: ReactNode;
+}) {
+  return (
+    <svg
+      width={layout.width}
+      height={layout.height}
+      viewBox={`0 0 ${layout.width} ${layout.height}`}
+      className={className}
+      aria-hidden={children ? undefined : true}
+    >
+      <rect
+        x={layout.plot.x}
+        y={layout.plot.y}
+        width={layout.plot.width}
+        height={layout.plot.height}
+        fill="#f9fafb"
+        stroke="#e5e7eb"
+        strokeWidth={1}
+        rx={2}
+      />
+      {layout.yTicks.map((tick, index) => {
+        const onEdge =
+          tick.y <= layout.plot.y + 1 ||
+          tick.y >= layout.plot.y + layout.plot.height - 1;
+        return (
+          <g key={`ytick-${index}`}>
+            {onEdge ? null : (
+              <line
+                x1={layout.plot.x}
+                x2={layout.plot.x + layout.plot.width}
+                y1={tick.y}
+                y2={tick.y}
+                stroke="#e5e7eb"
+                strokeWidth={1}
+              />
+            )}
+            <text
+              x={layout.plot.x - 4}
+              y={tick.y + 3}
+              textAnchor="end"
+              className="fill-gray-400"
+              fontSize={fontSize}
+            >
+              {tick.label}
+            </text>
+          </g>
+        );
+      })}
+      {underlay}
+      {layout.window ? (
+        <rect
+          x={layout.window.x}
+          y={layout.plot.y}
+          width={layout.window.width}
+          height={layout.plot.height}
+          fill={DATA_TABLE_ACTIVE_COLOR}
+          opacity={0.1}
+        />
+      ) : null}
+      {layout.gapSegments.map((d, index) => (
+        <path
+          key={`gap-${index}`}
+          d={d}
+          fill="none"
+          stroke={DATA_TABLE_ACTIVE_COLOR}
+          strokeWidth={1.25}
+          strokeDasharray="2.5 2.5"
+          strokeLinejoin="round"
+          strokeLinecap="round"
+          opacity={0.7}
+        />
+      ))}
+      {layout.segments.map((d, index) => (
+        <path
+          key={`line-${index}`}
+          d={d}
+          fill="none"
+          stroke={DATA_TABLE_ACTIVE_COLOR}
+          strokeWidth={1.75}
+          strokeLinejoin="round"
+          strokeLinecap="round"
+        />
+      ))}
+      {layout.observedDots.map((dot, index) => (
+        <circle
+          key={`obs-${index}`}
+          cx={dot.x}
+          cy={dot.y}
+          r={dotRadius}
+          fill={DATA_TABLE_ACTIVE_COLOR}
+        />
+      ))}
+      {layout.currentDots.map((dot, index) => (
+        <circle
+          key={`current-${index}`}
+          cx={dot.x}
+          cy={dot.y}
+          r={dotRadius + 1.5}
+          fill={DATA_TABLE_ACTIVE_COLOR}
+          stroke="#fff"
+          strokeWidth={1}
+        />
+      ))}
+      {layout.xTicks.map((tick, index) => (
+        <text
+          key={`xtick-${index}`}
+          x={tick.x}
+          y={layout.height - 3}
+          textAnchor={tick.anchor}
+          className="fill-gray-400"
+          fontSize={fontSize}
+        >
+          {tick.label}
+        </text>
+      ))}
+      {children}
+    </svg>
   );
 }

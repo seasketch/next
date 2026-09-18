@@ -23,7 +23,7 @@ import clsx from "clsx";
 
 type StringFilterMode = "value" | "isNull" | "notNull";
 
-function parseStringFilterState(filters: DataTableFilter[]) {
+export function parseStringFilterState(filters: DataTableFilter[]) {
   if (filters.some((filter) => filter.op === "isNull")) {
     return {
       mode: "isNull" as StringFilterMode,
@@ -61,7 +61,7 @@ function parseStringFilterState(filters: DataTableFilter[]) {
   };
 }
 
-function emitStringFilters(
+export function emitStringFilters(
   column: string,
   mode: StringFilterMode,
   selected: string[],

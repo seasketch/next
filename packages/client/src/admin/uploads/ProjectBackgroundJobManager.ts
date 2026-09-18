@@ -457,6 +457,12 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
     }
   }
 
+  trackOverlayDataTableJob(tocItemId: number, job: JobDetailsFragment) {
+    this.addJobToQueryCache(job);
+    this.addJobToTableOfContentsItemCache(tocItemId, job);
+    this.activeJobs.add(job.id);
+  }
+
   addJobToTableOfContentsItemCache(
     tocItemId: number,
     job: JobDetailsFragment,
@@ -483,6 +489,7 @@ export default class ProjectBackgroundJobManager extends EventEmitter<{
                   tableOfContentsItemId
                   filename
                   replaceOverlayDataTableId
+                  reprocessOfOverlayDataTableId
                 }
               }
             }

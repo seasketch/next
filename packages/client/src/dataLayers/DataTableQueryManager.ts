@@ -9,15 +9,18 @@ import {
   buildDataTableQuerySearchParams,
   combineSeriesSteps,
   DataTableAggregation,
+  DataTableCalculationRowsResult,
   DataTableFeatureSeriesPoint,
   dataTableQueryClockParams,
   dataTableQueryFailureFromResponse,
   DataTableQuerySettings,
+  deriveDataTableCalculationRowsQuery,
   featureSeriesFromParsed,
   isParsedDataTableQuerySeries,
   omitFiltersForColumns,
   ParsedDataTableQuerySeries,
   ParsedDataTableQueryValues,
+  parseDataTableCalculationRowsBody,
   parseDataTableQueryGroups,
   parseDataTableQuerySeries,
   temporalSourceFilterColumns,
@@ -26,7 +29,7 @@ import { formatWindowClockRange, stepKeysForClock } from "./mapTemporal";
 import { fetchDataTableColumnStats } from "./useDataTableColumnStats";
 import { ClientOverlayDataTableFragment } from "../generated/graphql";
 import { shouldSendTilesAclNamespace, tilesAclNamespace } from "./tilesAuth";
-import { DATA_TABLE_ZERO_SENTINEL } from "./dataTableMapStyle";
+import { buildDataTablePaintFeatureState } from "./dataTableMapStyle";
 
 /** Catalog row + admin-resolved query, derived on demand from LayerState.dataTable. */
 export type ResolvedDataTableVisualizationSettings = {
@@ -195,6 +198,88 @@ export class DataTableQueryManager {
       points,
       currentSteps: this.currentSeriesStepKeys(settings, series),
     };
+  }
+
+  /**
+   * Currently displayed map value for one join key, from the same cached
+   * result that painted the map (series slice for instant clocks, range
+   * aggregate for window clocks). `undefined` = result not fetched yet;
+   * `null` = fetched but this feature has no value.
+   */
+  getFeatureCurrentValue(
+    settings: ResolvedDataTableVisualizationSettings,
+    featureId: string
+  ): number | null | undefined {
+    if (!settings.table.queryUrl) {
+      return undefined;
+    }
+    const query = this.queryWithClock(settings);
+    const cached = this.resultCache.get(
+      this.getQueryKey(settings.table.queryUrl, query)
+    );
+    if (!cached) {
+      return undefined;
+    }
+    const parsed = isParsedDataTableQuerySeries(cached)
+      ? this.sliceSeries(settings, cached)
+      : cached;
+    const id = String(featureId);
+    return id in parsed.values ? parsed.values[id] : null;
+  }
+
+  /**
+   * Fetch the raw rows behind the statistics currently shown on the map for
+   * one join key (site) — the "Show rows in calculation" QA/QC modal.
+   *
+   * COUPLING GUARANTEE: this builds the raw-row request from the *same*
+   * clock-resolved query object used by {@link applyFeatureState} to paint
+   * the map ({@link queryWithClock}), via
+   * {@link deriveDataTableCalculationRowsQuery}, which forwards `q.*`
+   * filters and the `when.*` window verbatim. The engine guarantees raw and
+   * aggregated queries with identical filter/when parameters select the
+   * same rows (tested in
+   * packages/pmtiles-server/test/dataTables/rawAggConsistency.test.ts).
+   * Never construct a rows request from UI state directly — always go
+   * through this method so the modal cannot drift from the map.
+   */
+  async fetchCalculationRows(
+    settings: ResolvedDataTableVisualizationSettings,
+    featureId: string,
+    tokenRequired: boolean = false,
+    signal?: AbortSignal
+  ): Promise<DataTableCalculationRowsResult> {
+    if (!settings.table.queryUrl) {
+      throw new Error("Query URL is required to fetch calculation rows");
+    }
+    const statsQuery = this.queryWithClock(settings);
+    const rowsQuery = deriveDataTableCalculationRowsQuery(
+      statsQuery,
+      settings.table.joinColumn,
+      featureId
+    );
+    const url = new URL(settings.table.queryUrl);
+    const params = buildDataTableQuerySearchParams(rowsQuery);
+    params.set("f", "json");
+    if (tokenRequired) {
+      if (!this.mapAccessToken) {
+        throw new Error("Map access token is not set");
+      }
+      params.set("access_token", this.mapAccessToken);
+    }
+    if (shouldSendTilesAclNamespace()) {
+      params.set("ns", tilesAclNamespace());
+    }
+    url.search = params.toString();
+    // 503 on the first raw-row request is common: Workers Caching times
+    // out the cache-fill (or a cold isolate exceeds a shorter budget) well
+    // before the 30s CPU limit, then the isolate stays warm / the entry
+    // lands in cache. One retry almost always succeeds.
+    const response = await fetchDataTableCalculationRows(url.toString(), signal);
+    if (!response.ok) {
+      const failure = await dataTableQueryFailureFromResponse(response);
+      throw new Error(failure.message);
+    }
+    return parseDataTableCalculationRowsBody(await response.json(), rowsQuery);
   }
 
   /**
@@ -497,13 +582,13 @@ export class DataTableQueryManager {
         return;
       }
       for (const id of ids) {
-        map.setFeatureState(
+        map.removeFeatureState(
           {
             source: sourceId,
             sourceLayer: sourceLayerId,
             id,
           },
-          { loading: false }
+          "loading"
         );
       }
     } catch {
@@ -657,20 +742,6 @@ export class DataTableQueryManager {
     if (!map || !isCurrent() || !map.getSource(sourceId)) {
       return;
     }
-    const range = scaleMax - scaleMin;
-    const scaleValue = (value: number) => {
-      if (value === 0) {
-        return DATA_TABLE_ZERO_SENTINEL;
-      }
-      if (value < 0) {
-        return 0;
-      }
-      if (range === 0) {
-        return 1;
-      }
-      return Math.min(Math.max((value - scaleMin) / range, 0), 1);
-    };
-
     const featureIds = await this.getFeatureIds(settings, tokenRequired);
     if (!isCurrent() || !map.getSource(sourceId)) {
       return;
@@ -678,18 +749,17 @@ export class DataTableQueryManager {
 
     for (const id of featureIds) {
       const value = id in parsed.values ? parsed.values[id] : null;
+      const target = {
+        source: sourceId,
+        sourceLayer: sourceLayerId,
+        id,
+      };
       map.setFeatureState(
-        {
-          source: sourceId,
-          sourceLayer: sourceLayerId,
-          id,
-        },
-        {
-          loading: false,
-          scaledValue: value !== null ? scaleValue(value) : null,
-          rawValue: value,
-        }
+        target,
+        buildDataTablePaintFeatureState(value, scaleMin, scaleMax)
       );
+      // `false` is dropped the same way `0` is; remove the flag instead.
+      map.removeFeatureState(target, "loading");
     }
 
     this.appliedQueryKeys.set(sourceId, paintKey);
@@ -1017,6 +1087,22 @@ export class DataTableQueryManager {
     const featureIds = Object.keys(column.values);
     return featureIds;
   }
+}
+
+async function fetchDataTableCalculationRows(
+  url: string,
+  signal?: AbortSignal
+): Promise<Response> {
+  const headers = { accept: "application/json" };
+  const first = await fetch(url, { headers, signal });
+  if (first.status !== 503 && first.status !== 502) {
+    return first;
+  }
+  await first.arrayBuffer().catch(() => undefined);
+  if (signal?.aborted) {
+    return first;
+  }
+  return fetch(url, { headers, signal });
 }
 
 /** Row-mapped tables are the only ones whose paint depends on the map clock. */

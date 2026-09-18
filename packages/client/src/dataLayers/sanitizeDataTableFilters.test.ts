@@ -44,6 +44,16 @@ describe("sanitizeDataTableFilters", () => {
     ).toEqual([{ column: "classcode", op: "in", values: ["APOPAR"] }]);
   });
 
+  it("keeps organism values that are missing from the histogram", () => {
+    expect(
+      sanitizeDataTableFilters(
+        [{ column: "classcode", op: "eq", value: "SPUL" }],
+        [upcClasscode],
+        { unrestrictedColumns: ["classcode"] }
+      )
+    ).toEqual([{ column: "classcode", op: "eq", value: "SPUL" }]);
+  });
+
   it("drops filters for columns this table does not have", () => {
     expect(
       sanitizeDataTableFilters(

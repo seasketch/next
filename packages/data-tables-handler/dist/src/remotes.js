@@ -4,6 +4,9 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.putObject = putObject;
+exports.siblingRemote = siblingRemote;
+exports.getR2Object = getR2Object;
+exports.tryGetR2Object = tryGetR2Object;
 exports.getStagingObject = getStagingObject;
 exports.buildR2Remote = buildR2Remote;
 const fs_1 = require("fs");
@@ -46,6 +49,42 @@ async function putObject(filepath, remote, contentType) {
         }));
     }
     console.log(`putObject ${filepath} (${(0, bytes_1.default)(fileSizeBytes)}) to ${remote}`);
+}
+/** Sibling object next to data.parquet (catalog, search index, preview). */
+function siblingRemote(parquetRemote, filename) {
+    if (!parquetRemote || typeof parquetRemote !== "string")
+        return null;
+    if (!parquetRemote.endsWith("/data.parquet"))
+        return null;
+    return `${parquetRemote.slice(0, -"/data.parquet".length)}/${filename}`;
+}
+/** Download an existing hosted parquet (or other object) from R2. */
+async function getR2Object(remote, filepath) {
+    if (!/^r2:\/\//.test(remote)) {
+        throw new Error(`Expected r2:// remote, got ${remote}`);
+    }
+    const parts = remote.replace(/^r2:\/\//, "").split("/");
+    const Bucket = parts[0];
+    const Key = parts.slice(1).join("/");
+    const response = await r2Client.send(new client_s3_1.GetObjectCommand({ Bucket, Key }));
+    const body = response.Body;
+    await (0, promises_1.pipeline)(body, (0, fs_1.createWriteStream)(filepath));
+}
+/** Like getR2Object, but returns false when the key is missing. */
+async function tryGetR2Object(remote, filepath) {
+    try {
+        await getR2Object(remote, filepath);
+        return true;
+    }
+    catch (error) {
+        const name = error.name;
+        const status = error
+            .$metadata?.httpStatusCode;
+        if (name === "NoSuchKey" || name === "NotFound" || status === 404) {
+            return false;
+        }
+        throw error;
+    }
 }
 /** Download the user's raw upload from the S3 staging bucket. */
 async function getStagingObject(filepath, objectKey) {

@@ -260,7 +260,8 @@ CREATE TYPE public.change_log_field_group AS ENUM (
     'data_table:visualization_settings_updated',
     'layer:temporal',
     'data_table:temporal',
-    'data_table:nodata'
+    'data_table:nodata',
+    'data_table:organism'
 );
 
 
@@ -5903,6 +5904,7 @@ CREATE TABLE public.overlay_data_tables (
     nodata_values jsonb DEFAULT '[]'::jsonb NOT NULL,
     source_parquet_remote text,
     description text,
+    organism jsonb,
     CONSTRAINT overlay_data_tables_description_length CHECK (((description IS NULL) OR (char_length(description) <= 200))),
     CONSTRAINT overlay_data_tables_version_positive CHECK ((version > 0))
 );
@@ -5986,6 +5988,178 @@ COMMENT ON COLUMN public.overlay_data_tables.description IS 'Optional short desc
 
 
 --
+-- Name: COLUMN overlay_data_tables.organism; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.overlay_data_tables.organism IS '@omit';
+
+
+--
+-- Name: complete_overlay_data_table_organism_reprocess(uuid, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.complete_overlay_data_table_organism_reprocess(job_id uuid, p_organism jsonb) RETURNS public.overlay_data_tables
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_row overlay_data_tables;
+begin
+  select odt.* into v_row
+  from overlay_data_table_uploads upload
+  inner join overlay_data_tables odt
+    on odt.id = upload.reprocess_of_overlay_data_table_id
+  where upload.project_background_job_id =
+    complete_overlay_data_table_organism_reprocess.job_id
+    and odt.deleted_at is null;
+  if v_row is null then
+    raise exception 'Source data table is no longer active';
+  end if;
+
+  return public.complete_overlay_data_table_organism_reprocess(
+    job_id,
+    p_organism,
+    v_row.parquet_remote,
+    v_row.column_stats_remote,
+    v_row.source_parquet_remote
+  );
+end;
+$$;
+
+
+--
+-- Name: FUNCTION complete_overlay_data_table_organism_reprocess(job_id uuid, p_organism jsonb); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.complete_overlay_data_table_organism_reprocess(job_id uuid, p_organism jsonb) IS '@omit';
+
+
+--
+-- Name: complete_overlay_data_table_organism_reprocess(uuid, jsonb, text, text, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.complete_overlay_data_table_organism_reprocess(job_id uuid, p_organism jsonb, p_parquet_remote text, p_column_stats_remote text, p_source_parquet_remote text DEFAULT NULL::text) RETURNS public.overlay_data_tables
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  upload overlay_data_table_uploads;
+  job project_background_jobs;
+  v_row overlay_data_tables;
+  v_old overlay_data_tables;
+  editor_id int;
+begin
+  select * into upload
+  from overlay_data_table_uploads
+  where project_background_job_id = job_id;
+  if upload is null then
+    raise exception 'Upload not found for job';
+  end if;
+
+  select * into job from project_background_jobs where id = job_id;
+  if job.state not in ('queued', 'running') then
+    raise exception 'Job is no longer active (state: %)', job.state;
+  end if;
+
+  if upload.reprocess_of_overlay_data_table_id is null then
+    raise exception 'Organism reprocess is missing reprocess_of_overlay_data_table_id';
+  end if;
+  if upload.organism_config is null then
+    raise exception 'Organism reprocess is missing organism_config';
+  end if;
+  if p_organism is null or jsonb_typeof(p_organism) <> 'object' then
+    raise exception 'Organism reprocess returned invalid organism metadata';
+  end if;
+  if nullif(btrim(p_parquet_remote), '') is null
+     or nullif(btrim(p_column_stats_remote), '') is null then
+    raise exception 'Organism reprocess is missing parquet remotes';
+  end if;
+  if p_source_parquet_remote is not null
+     and nullif(btrim(p_source_parquet_remote), '') is null then
+    raise exception 'Organism reprocess returned an invalid source parquet remote';
+  end if;
+
+  select * into v_old
+  from overlay_data_tables
+  where id = upload.reprocess_of_overlay_data_table_id
+    and deleted_at is null
+  for update;
+  if v_old is null then
+    raise exception 'Source data table is no longer active';
+  end if;
+
+  update overlay_data_tables
+    set organism = p_organism,
+        parquet_remote = p_parquet_remote,
+        column_stats_remote = p_column_stats_remote,
+        source_parquet_remote = coalesce(
+          p_source_parquet_remote,
+          v_old.source_parquet_remote
+        ),
+        updated_at = now()
+    where id = v_old.id
+      and deleted_at is null
+    returning * into v_row;
+  if not found or v_row.id is null then
+    raise exception 'Source data table is no longer active';
+  end if;
+
+  editor_id := coalesce(job.user_id, nullif(current_setting('session.user_id', true), '')::int);
+  if editor_id is not null and (
+    v_old.organism is distinct from v_row.organism
+    or v_old.parquet_remote is distinct from v_row.parquet_remote
+    or v_old.column_stats_remote is distinct from v_row.column_stats_remote
+    or v_old.source_parquet_remote is distinct from v_row.source_parquet_remote
+  ) then
+    perform record_changelog(
+      v_row.project_id,
+      editor_id,
+      'overlay_data_table',
+      v_row.id,
+      'data_table:organism'::change_log_field_group,
+      jsonb_build_object(
+        'name', v_old.name,
+        'version', v_old.version,
+        'id', v_old.id,
+        'organism', v_old.organism,
+        'parquet_url', overlay_data_table_parquet_public_url(v_old.parquet_remote),
+        'column_stats_url', overlay_data_table_parquet_public_url(v_old.column_stats_remote),
+        'source_parquet_url', overlay_data_table_parquet_public_url(v_old.source_parquet_remote)
+      ),
+      jsonb_build_object(
+        'name', v_row.name,
+        'version', v_row.version,
+        'id', v_row.id,
+        'organism', v_row.organism,
+        'parquet_url', overlay_data_table_parquet_public_url(v_row.parquet_remote),
+        'column_stats_url', overlay_data_table_parquet_public_url(v_row.column_stats_remote),
+        'source_parquet_url', overlay_data_table_parquet_public_url(v_row.source_parquet_remote)
+      ),
+      null, null,
+      jsonb_build_object(
+        'table_of_contents_item_id', v_row.table_of_contents_item_id,
+        'reprocessed', true
+      )
+    );
+  end if;
+
+  update project_background_jobs
+  set state = 'complete', progress = 1, progress_message = 'complete', error_message = null
+  where id = job_id;
+
+  return v_row;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION complete_overlay_data_table_organism_reprocess(job_id uuid, p_organism jsonb, p_parquet_remote text, p_column_stats_remote text, p_source_parquet_remote text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.complete_overlay_data_table_organism_reprocess(job_id uuid, p_organism jsonb, p_parquet_remote text, p_column_stats_remote text, p_source_parquet_remote text) IS '@omit';
+
+
+--
 -- Name: complete_overlay_data_table_upload(uuid, text, text, text, integer, text, text, jsonb, jsonb, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -6051,6 +6225,7 @@ begin
     filter_column_labels,
     stable_id,
     temporal,
+    organism,
     nodata_values,
     source_parquet_remote,
     description
@@ -6072,6 +6247,7 @@ begin
     coalesce(old_row.filter_column_labels, '{}'::jsonb),
     coalesce(old_row.stable_id, uuid_generate_v4()),
     p_temporal,
+    old_row.organism,
     next_nodata,
     coalesce(p_source_parquet_remote, old_row.source_parquet_remote, p_parquet_remote),
     old_row.description
@@ -7629,29 +7805,110 @@ CREATE FUNCTION public.copy_table_of_contents_item(item_id integer, copy_data_so
 
 CREATE FUNCTION public.copy_table_of_contents_item_recursive(item_id integer, copy_data_source boolean, append_copy_to_name boolean, project_id integer, lpath public.ltree, parent_stable_id text) RETURNS integer
     LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
     AS $$
-    declare 
-      copy_id int;
-      child record;
-      new_stable_id text;
-      old_stable_id text;
-    begin
-      select stable_id into old_stable_id from table_of_contents_items where id = item_id;
-      copy_id := copy_table_of_contents_item(item_id, copy_data_source, append_copy_to_name, project_id, lpath, parent_stable_id);
-      select stable_id into new_stable_id from table_of_contents_items where id = copy_id; 
-      for child in select * from table_of_contents_items where table_of_contents_items.parent_stable_id = old_stable_id and is_draft = true loop
-        perform copy_table_of_contents_item_recursive(
-          child.id, 
-          copy_data_source, 
-          false, 
-          project_id, 
-          lpath || new_stable_id, 
-          new_stable_id
-        );
-      end loop;
-      return copy_id;
-    end;
-  $$;
+declare
+  copy_id int;
+  child record;
+  new_stable_id text;
+  old_stable_id text;
+begin
+  select stable_id into old_stable_id
+  from table_of_contents_items
+  where id = item_id;
+
+  copy_id := copy_table_of_contents_item(
+    item_id,
+    copy_data_source,
+    append_copy_to_name,
+    project_id,
+    lpath,
+    parent_stable_id
+  );
+
+  -- copy_table_of_contents_item predates data tables and omits these TOC flags.
+  update table_of_contents_items copied
+  set enable_data_tables = source.enable_data_tables,
+      data_table_join_column = source.data_table_join_column
+  from table_of_contents_items source
+  where copied.id = copy_id
+    and source.id = item_id;
+
+  -- Duplicate active tables onto the copied draft layer. Artifact remotes are
+  -- shared until a table is replaced or reprocessed, so sidecar deletion must
+  -- remain reference-aware.
+  insert into overlay_data_tables (
+    table_of_contents_item_id,
+    project_id,
+    name,
+    join_column,
+    overlay_join_column,
+    row_count,
+    created_by,
+    version,
+    parquet_remote,
+    column_stats_remote,
+    visualization_columns,
+    visualization_ops,
+    required_filter_columns,
+    hidden_filter_columns,
+    filter_column_labels,
+    temporal,
+    organism,
+    nodata_values,
+    source_parquet_remote,
+    description
+  )
+  select
+    copy_id,
+    copy_table_of_contents_item_recursive.project_id,
+    odt.name,
+    odt.join_column,
+    odt.overlay_join_column,
+    odt.row_count,
+    coalesce(
+      nullif(current_setting('session.user_id', true), '')::integer,
+      odt.created_by
+    ),
+    odt.version,
+    odt.parquet_remote,
+    odt.column_stats_remote,
+    odt.visualization_columns,
+    odt.visualization_ops,
+    odt.required_filter_columns,
+    odt.hidden_filter_columns,
+    odt.filter_column_labels,
+    odt.temporal,
+    odt.organism,
+    odt.nodata_values,
+    odt.source_parquet_remote,
+    odt.description
+  from overlay_data_tables odt
+  where odt.table_of_contents_item_id = item_id
+    and odt.deleted_at is null;
+
+  select stable_id into new_stable_id
+  from table_of_contents_items
+  where id = copy_id;
+
+  for child in
+    select *
+    from table_of_contents_items
+    where table_of_contents_items.parent_stable_id = old_stable_id
+      and is_draft = true
+  loop
+    perform copy_table_of_contents_item_recursive(
+      child.id,
+      copy_data_source,
+      false,
+      project_id,
+      lpath || new_stable_id,
+      new_stable_id
+    );
+  end loop;
+  return copy_id;
+end;
+$$;
 
 
 --
@@ -8584,7 +8841,8 @@ CREATE TABLE public.overlay_data_table_uploads (
     updated_at timestamp with time zone DEFAULT now(),
     temporal_config jsonb,
     reprocess_of_overlay_data_table_id integer,
-    nodata_config jsonb
+    nodata_config jsonb,
+    organism_config jsonb
 );
 
 
@@ -8614,6 +8872,168 @@ COMMENT ON COLUMN public.overlay_data_table_uploads.reprocess_of_overlay_data_ta
 --
 
 COMMENT ON COLUMN public.overlay_data_table_uploads.nodata_config IS 'Ephemeral DataTableNodataConfig for a reprocess (or CSV replace) job. Not copied onto overlay_data_tables until the job completes successfully.';
+
+
+--
+-- Name: COLUMN overlay_data_table_uploads.organism_config; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.overlay_data_table_uploads.organism_config IS 'Ephemeral DataTableOrganismConfig for an enrichment job. Not copied onto overlay_data_tables until the job succeeds.';
+
+
+--
+-- Name: create_overlay_data_table_organism_reprocess(integer, jsonb, text, text); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.create_overlay_data_table_organism_reprocess(table_id integer, organism_config jsonb, class_csv_filename text DEFAULT NULL::text, class_csv_content_type text DEFAULT NULL::text) RETURNS public.overlay_data_table_uploads
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  upload overlay_data_table_uploads;
+  job project_background_jobs;
+  tbl overlay_data_tables;
+  pid int;
+  geostats jsonb;
+  join_col text;
+  enabled boolean;
+  has_class_csv boolean;
+  filename text;
+  content_type text;
+begin
+  select *
+    into tbl
+  from overlay_data_tables
+  where id = table_id
+    and deleted_at is null;
+  if tbl is null then
+    raise exception 'Data table not found or not active';
+  end if;
+
+  select project_id, enable_data_tables, data_table_join_column
+    into pid, enabled, join_col
+  from table_of_contents_items
+  where id = tbl.table_of_contents_item_id
+    and is_draft = true
+    and is_folder = false;
+  if pid is null then
+    raise exception 'Can only enrich data tables on draft layers';
+  end if;
+  if not session_is_admin(pid) then
+    raise exception 'permission denied';
+  end if;
+  if not coalesce(enabled, false) then
+    raise exception 'Data tables are not enabled for this layer';
+  end if;
+
+  if organism_config is null or jsonb_typeof(organism_config) <> 'object' then
+    raise exception 'organism_config must be an object';
+  end if;
+  if coalesce(organism_config->>'column', '') = '' then
+    raise exception 'organism_config.column is required';
+  end if;
+
+  select ds.geostats into geostats
+  from table_of_contents_items toc
+  inner join data_layers dl on dl.id = toc.data_layer_id
+  inner join data_sources ds on ds.id = dl.data_source_id
+  where toc.id = tbl.table_of_contents_item_id;
+  if geostats is null then
+    raise exception 'Overlay layer has no geostats';
+  end if;
+
+  if exists (
+    select 1
+    from overlay_data_table_uploads odtu
+    inner join project_background_jobs pbj on pbj.id = odtu.project_background_job_id
+    where (
+      odtu.replace_overlay_data_table_id = tbl.id
+      or odtu.reprocess_of_overlay_data_table_id = tbl.id
+    )
+      and pbj.state in ('queued', 'running')
+  ) then
+    raise exception 'There is already an active upload or reprocess for this data table';
+  end if;
+
+  has_class_csv := nullif(btrim(coalesce(class_csv_filename, '')), '') is not null;
+  if has_class_csv then
+    filename := class_csv_filename;
+    content_type := coalesce(nullif(btrim(class_csv_content_type), ''), 'text/csv');
+  else
+    filename := 'organism-reprocess-' || tbl.stable_id::text || '.parquet';
+    content_type := 'application/vnd.apache.parquet';
+  end if;
+
+  insert into project_background_jobs (
+    project_id,
+    title,
+    user_id,
+    type,
+    timeout_at
+  ) values (
+    pid,
+    'Enrich data table organisms ' || tbl.name,
+    nullif(current_setting('session.user_id', true), '')::integer,
+    'data_table_upload',
+    timezone('utc', now()) + interval '15 minutes'
+  ) returning * into job;
+
+  insert into overlay_data_table_uploads (
+    project_background_job_id,
+    table_of_contents_item_id,
+    filename,
+    content_type,
+    processing_options,
+    overlay_geostats,
+    overlay_join_column,
+    replace_overlay_data_table_id,
+    reprocess_of_overlay_data_table_id,
+    organism_config
+  ) values (
+    job.id,
+    tbl.table_of_contents_item_id,
+    filename,
+    content_type,
+    jsonb_build_object(
+      'joinColumn', tbl.join_column,
+      'overlayJoinColumn', tbl.overlay_join_column,
+      'name', tbl.name
+    ),
+    geostats,
+    coalesce(join_col, tbl.overlay_join_column),
+    tbl.id,
+    tbl.id,
+    organism_config
+  ) returning * into upload;
+
+  if has_class_csv then
+    return upload;
+  end if;
+
+  update project_background_jobs
+  set
+    state = 'running',
+    progress_message = 'queued',
+    started_at = now(),
+    timeout_at = timezone('utc', now()) + interval '15 minutes'
+  where id = job.id;
+
+  perform graphile_worker.add_job(
+    'processDataTableUpload',
+    json_build_object('jobId', job.id),
+    max_attempts := 1
+  );
+
+  return upload;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION create_overlay_data_table_organism_reprocess(table_id integer, organism_config jsonb, class_csv_filename text, class_csv_content_type text); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.create_overlay_data_table_organism_reprocess(table_id integer, organism_config jsonb, class_csv_filename text, class_csv_content_type text) IS 'Admin-only. Starts a draft organism-enrichment job. Optional class CSV is uploaded to the returned presigned URL, then submitOverlayDataTableUpload. Writes a clustered copy of data.parquet and organism sidecars under a new upload prefix. Queue wait and running timeout are 15 minutes.';
 
 
 --
@@ -18442,6 +18862,7 @@ begin
     hidden_filter_columns,
     filter_column_labels,
     temporal,
+    organism,
     nodata_values,
     source_parquet_remote,
     stable_id,
@@ -18464,6 +18885,7 @@ begin
     odt.hidden_filter_columns,
     odt.filter_column_labels,
     odt.temporal,
+    odt.organism,
     odt.nodata_values,
     odt.source_parquet_remote,
     odt.stable_id,
@@ -22887,10 +23309,13 @@ $$;
 
 CREATE FUNCTION public.submit_overlay_data_table_upload(job_id uuid) RETURNS public.project_background_jobs
     LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
     AS $$
 declare
   job project_background_jobs;
+  upload overlay_data_table_uploads;
   pid int;
+  running_timeout interval;
 begin
   select project_id into pid
   from project_background_jobs
@@ -22898,19 +23323,32 @@ begin
   if not session_is_admin(pid) then
     raise exception 'permission denied';
   end if;
-  if not exists (
-    select 1 from overlay_data_table_uploads where project_background_job_id = job_id
-  ) then
+
+  select * into upload
+  from overlay_data_table_uploads
+  where project_background_job_id = submit_overlay_data_table_upload.job_id;
+  if upload is null then
     raise exception 'Data table upload not found for job';
   end if;
+
+  running_timeout := case
+    when upload.organism_config is not null then interval '15 minutes'
+    else interval '60 seconds'
+  end;
+
   update project_background_jobs
   set
     state = 'running',
     progress_message = 'uploaded',
     started_at = now(),
-    timeout_at = timezone('utc', now()) + interval '60 seconds'
-  where id = job_id
+    timeout_at = timezone('utc', now()) + running_timeout
+  where id = submit_overlay_data_table_upload.job_id
+    and state = 'queued'
   returning * into job;
+  if job is null then
+    raise exception 'Job is no longer queued';
+  end if;
+
   perform graphile_worker.add_job(
     'processDataTableUpload',
     json_build_object('jobId', job.id),
@@ -26093,6 +26531,79 @@ $$;
 --
 
 COMMENT ON FUNCTION public.update_overlay_data_table_nodata(table_id integer, nodata_values jsonb) IS 'Admin-only. Updates stored no-data sentinels without rewriting parquet. Used when clearing custom values.';
+
+
+--
+-- Name: update_overlay_data_table_organism(integer, jsonb); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.update_overlay_data_table_organism(p_overlay_data_table_id integer, p_organism jsonb) RETURNS public.overlay_data_tables
+    LANGUAGE plpgsql SECURITY DEFINER
+    SET search_path TO 'public', 'pg_temp'
+    AS $$
+declare
+  v_row public.overlay_data_tables;
+  v_old jsonb;
+  v_editor int;
+begin
+  select * into v_row from overlay_data_tables where id = p_overlay_data_table_id;
+  if v_row.id is null then
+    raise exception 'Overlay data table not found';
+  end if;
+  if not session_is_admin(v_row.project_id) then
+    raise exception 'Permission denied. Must be a project admin';
+  end if;
+  if not overlay_data_table_linked_toc_is_draft(
+    v_row.table_of_contents_item_id,
+    v_row.project_id
+  ) then
+    raise exception 'Can only update organism identity on draft data tables';
+  end if;
+  v_old := v_row.organism;
+  if v_old is not distinct from p_organism then
+    return v_row;
+  end if;
+  update overlay_data_tables
+    set organism = p_organism, updated_at = now()
+    where id = p_overlay_data_table_id
+    returning * into v_row;
+  v_editor := nullif(current_setting('session.user_id', true), '')::int;
+  if v_editor is not null then
+    perform record_changelog(
+      v_row.project_id,
+      v_editor,
+      'overlay_data_table',
+      v_row.id,
+      'data_table:organism'::change_log_field_group,
+      jsonb_build_object(
+        'name', v_row.name,
+        'version', v_row.version,
+        'id', v_row.id,
+        'organism', v_old
+      ),
+      jsonb_build_object(
+        'name', v_row.name,
+        'version', v_row.version,
+        'id', v_row.id,
+        'organism', v_row.organism
+      ),
+      null, null,
+      jsonb_build_object(
+        'table_of_contents_item_id', v_row.table_of_contents_item_id,
+        'reprocessed', false
+      )
+    );
+  end if;
+  return v_row;
+end;
+$$;
+
+
+--
+-- Name: FUNCTION update_overlay_data_table_organism(p_overlay_data_table_id integer, p_organism jsonb); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.update_overlay_data_table_organism(p_overlay_data_table_id integer, p_organism jsonb) IS '@omit';
 
 
 --
@@ -36693,6 +37204,20 @@ GRANT SELECT ON TABLE public.overlay_data_tables TO seasketch_user;
 
 
 --
+-- Name: FUNCTION complete_overlay_data_table_organism_reprocess(job_id uuid, p_organism jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.complete_overlay_data_table_organism_reprocess(job_id uuid, p_organism jsonb) FROM PUBLIC;
+
+
+--
+-- Name: FUNCTION complete_overlay_data_table_organism_reprocess(job_id uuid, p_organism jsonb, p_parquet_remote text, p_column_stats_remote text, p_source_parquet_remote text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.complete_overlay_data_table_organism_reprocess(job_id uuid, p_organism jsonb, p_parquet_remote text, p_column_stats_remote text, p_source_parquet_remote text) FROM PUBLIC;
+
+
+--
 -- Name: FUNCTION complete_overlay_data_table_upload(job_id uuid, p_name text, p_join_column text, p_overlay_join_column text, p_row_count integer, p_parquet_remote text, p_column_stats_remote text, p_temporal jsonb, p_nodata_values jsonb, p_source_parquet_remote text); Type: ACL; Schema: public; Owner: -
 --
 
@@ -37307,6 +37832,14 @@ GRANT ALL ON FUNCTION public.create_metadata_xml_output(data_source_id integer, 
 --
 
 GRANT SELECT ON TABLE public.overlay_data_table_uploads TO seasketch_user;
+
+
+--
+-- Name: FUNCTION create_overlay_data_table_organism_reprocess(table_id integer, organism_config jsonb, class_csv_filename text, class_csv_content_type text); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.create_overlay_data_table_organism_reprocess(table_id integer, organism_config jsonb, class_csv_filename text, class_csv_content_type text) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.create_overlay_data_table_organism_reprocess(table_id integer, organism_config jsonb, class_csv_filename text, class_csv_content_type text) TO seasketch_user;
 
 
 --
@@ -46434,6 +46967,14 @@ GRANT ALL ON FUNCTION public.update_overlay_data_table_details(table_id integer,
 
 REVOKE ALL ON FUNCTION public.update_overlay_data_table_nodata(table_id integer, nodata_values jsonb) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.update_overlay_data_table_nodata(table_id integer, nodata_values jsonb) TO seasketch_user;
+
+
+--
+-- Name: FUNCTION update_overlay_data_table_organism(p_overlay_data_table_id integer, p_organism jsonb); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.update_overlay_data_table_organism(p_overlay_data_table_id integer, p_organism jsonb) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.update_overlay_data_table_organism(p_overlay_data_table_id integer, p_organism jsonb) TO seasketch_user;
 
 
 --

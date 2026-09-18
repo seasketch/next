@@ -37,6 +37,8 @@ import DataTableUploadJobProgress from "./DataTableUploadJobProgress";
 import DataTableUploadModal from "./DataTableUploadModal";
 import DataTableTemporalEditor from "./DataTableTemporalEditor";
 import DataTableNodataEditor from "./DataTableNodataEditor";
+import DataTableOrganismEditor from "./DataTableOrganismEditor";
+import { organismInfoOrNull } from "./dataTableOrganismForm";
 import {
   allowedDataTableVisualizationColumns,
   DATA_TABLE_AGGREGATIONS,
@@ -185,11 +187,23 @@ function isActiveDataTableJob(job: DataTableJob) {
   );
 }
 
+function jobMatchesTable(tableId: number, job: DataTableJob) {
+  return (
+    job.overlayDataTableUpload?.replaceOverlayDataTableId === tableId ||
+    job.overlayDataTableUpload?.reprocessOfOverlayDataTableId === tableId
+  );
+}
+
 function getJobForTable(tableId: number, jobs: DataTableJob[]) {
-  return jobs.find(
-    (job) =>
-      isActiveDataTableJob(job) &&
-      job.overlayDataTableUpload?.replaceOverlayDataTableId === tableId
+  const matches = jobs.filter((job) => jobMatchesTable(tableId, job));
+  return (
+    matches.find(
+      (job) =>
+        job.state === ProjectBackgroundJobState.Queued ||
+        job.state === ProjectBackgroundJobState.Running
+    ) ||
+    matches.find((job) => job.state === ProjectBackgroundJobState.Failed) ||
+    matches.find((job) => job.state === ProjectBackgroundJobState.Complete)
   );
 }
 
@@ -864,6 +878,7 @@ function DataTableRow({
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [temporalOpen, setTemporalOpen] = useState(false);
   const [nodataOpen, setNodataOpen] = useState(false);
+  const [organismOpen, setOrganismOpen] = useState(false);
   const sameJoinColumn = table.joinColumn === table.overlayJoinColumn;
   const { data: projectMeta } = useCurrentProjectMetadata();
   const parquetFilename = parquetDownloadFilename(table.name, table.version);
@@ -878,6 +893,8 @@ function DataTableRow({
     columnStatsUrlForTable(table),
     projectMeta?.project?.mapAccessToken
   );
+  const organism = organismInfoOrNull(table.organism);
+  const activeJob = job && isActiveDataTableJob(job) ? job : undefined;
 
   return (
     <li className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
@@ -890,7 +907,7 @@ function DataTableRow({
             {t("v{{version}}", { version: table.version })}
           </span>
         </div>
-        {!job && (
+        {!activeJob && (
           <DropdownMenu.Root modal={false}>
             <DropdownMenu.Trigger asChild>
               <button
@@ -927,6 +944,12 @@ function DataTableRow({
                 >
                   {t("No Data Values")}
                 </DropdownMenu.Item>
+                <DropdownMenu.Item
+                  className="flex cursor-pointer select-none items-center rounded px-2 py-1.5 text-gray-700 outline-none data-[highlighted]:bg-gray-100"
+                  onSelect={() => setOrganismOpen(true)}
+                >
+                  {t("Organism identity")}
+                </DropdownMenu.Item>
                 {parquetHref ? (
                   <DropdownMenu.Item asChild>
                     <a
@@ -945,13 +968,13 @@ function DataTableRow({
           </DropdownMenu.Root>
         )}
       </div>
-      {job ? (
+      {activeJob ? (
         <div className="mt-2">
           <DataTableUploadJobProgress
-            job={job}
+            job={activeJob}
             onDismiss={
-              job.state === ProjectBackgroundJobState.Failed
-                ? () => onDismissJob(job.id)
+              activeJob.state === ProjectBackgroundJobState.Failed
+                ? () => onDismissJob(activeJob.id)
                 : undefined
             }
           />
@@ -977,7 +1000,20 @@ function DataTableRow({
           )}
         </p>
       )}
-      {!job ? (
+      {!activeJob && organism ? (
+        <p className="mt-1 text-xs text-gray-500">
+          {organism.classifiedCount != null && organism.valueCount != null
+            ? t("Organisms: {{classified}}/{{total}} classified via {{column}}", {
+                classified: organism.classifiedCount,
+                total: organism.valueCount,
+                column: organism.column,
+              })
+            : t("Organisms: {{column}}", {
+                column: organism.column,
+              })}
+        </p>
+      ) : null}
+      {!activeJob ? (
         <>
           <DataTableDroppedSitesNotice columnStats={columnStats} />
           <DataTableTemporalReplaceNotice columnStats={columnStats} />
@@ -1010,6 +1046,16 @@ function DataTableRow({
           job={job}
           open={nodataOpen}
           onClose={() => setNodataOpen(false)}
+          onJobStarted={onRefresh}
+        />
+      ) : null}
+      {organismOpen ? (
+        <DataTableOrganismEditor
+          table={table}
+          tableOfContentsItemId={tableOfContentsItemId}
+          job={job}
+          open={organismOpen}
+          onClose={() => setOrganismOpen(false)}
           onJobStarted={onRefresh}
         />
       ) : null}
@@ -1200,7 +1246,9 @@ export default function RelatedDataTables({ item }: RelatedDataTablesProps) {
   const pendingNewUploadJobs = useMemo(
     () =>
       activeDataTableJobs.filter(
-        (job) => !job.overlayDataTableUpload?.replaceOverlayDataTableId
+        (job) =>
+          !job.overlayDataTableUpload?.replaceOverlayDataTableId &&
+          !job.overlayDataTableUpload?.reprocessOfOverlayDataTableId
       ),
     [activeDataTableJobs]
   );

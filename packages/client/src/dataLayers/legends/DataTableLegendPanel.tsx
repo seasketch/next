@@ -7,6 +7,7 @@ import {
   useOverlayDataTableVisualizationMetadataForLayerQuery,
 } from "../../generated/graphql";
 import { MapManagerContext, MapOverlayContext } from "../MapContextManager";
+import { organismColumnFromTable, orgQueryUrlForTable } from "../orgQueryApi";
 import {
   allowedDataTableVisualizationColumns,
   DataTableAggregation,
@@ -212,9 +213,12 @@ export default function DataTableLegendPanel({
     if (columnStatsState.loading) {
       return;
     }
+    const organismColumn =
+      organismColumnFromTable(table as { organism?: unknown }) || undefined;
     const latestFilters = sanitizeDataTableFilters(
       latest.filters,
-      columnStats.columns
+      columnStats.columns,
+      organismColumn ? { unrestrictedColumns: [organismColumn] } : undefined
     );
     const required = requiredFilterColumns.filter(
       (column) => omittedFilterColumns.indexOf(column) === -1
@@ -256,12 +260,16 @@ export default function DataTableLegendPanel({
     userChoice.op,
     effectiveColumn,
     op,
+    table,
   ]);
 
   const activeFilters = useMemo(() => {
+    const organismColumn =
+      organismColumnFromTable(table as { organism?: unknown }) || undefined;
     const base = sanitizeDataTableFilters(
       userChoice.filters,
-      columnStats?.columns || []
+      columnStats?.columns || [],
+      organismColumn ? { unrestrictedColumns: [organismColumn] } : undefined
     ).filter((filter) => validFilterColumns.has(filter.column));
     if (!columnStats?.columns?.length || requiredFilterColumns.length === 0) {
       return base;
@@ -279,6 +287,7 @@ export default function DataTableLegendPanel({
     userChoice.filters,
     validFilterColumns,
     visualizedColumns,
+    table,
   ]);
 
   if (!table || !tableMetadata) {
@@ -371,6 +380,11 @@ export default function DataTableLegendPanel({
           hiddenColumns={omittedFilterColumns}
           columnLabels={filterColumnLabels}
           queryLoading={loading && !error}
+          organismColumn={organismColumnFromTable(
+            table as { organism?: unknown }
+          )}
+          orgQueryUrl={orgQueryUrlForTable(table)}
+          accessToken={mapAccessToken}
           trailingAction={clearTableButton}
           onChange={(filters) => {
             const latest = manager?.getLayerDataTable?.(layerId);

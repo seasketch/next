@@ -42,6 +42,12 @@ export async function handleClassifiedRequest(
     enforce: boolean;
     backendPath?: string;
     includeQueryInCacheKey?: boolean;
+    /**
+     * Skip Workers Caching on the backend fetch. Used for raw-row `/query`
+     * (no `op`): those responses are large, unique per site, and slow enough
+     * that a cache-fill 503s the client while the isolate keeps working.
+     */
+    bypassWorkersCache?: boolean;
     waitUntil?: (promise: Promise<unknown>) => void;
   },
 ): Promise<Response> {
@@ -86,6 +92,7 @@ export async function handleClassifiedRequest(
     options.backendPath ?? `/${resource.key}`,
     auth.decision,
     options.includeQueryInCacheKey,
+    options.bypassWorkersCache,
   );
 }
 
@@ -95,6 +102,7 @@ async function forwardToBackend(
   backendPath: string,
   decision: AuthDecision,
   includeQueryInCacheKey = false,
+  bypassWorkersCache = false,
 ): Promise<Response> {
   const forwardUrl = new URL(request.url);
   forwardUrl.pathname = backendPath;
@@ -103,6 +111,12 @@ async function forwardToBackend(
 
   const forwardHeaders = new Headers(request.headers);
   forwardHeaders.delete("Authorization");
+  // Workers Caching automatically bypasses requests that carry Authorization
+  // (see developers.cloudflare.com/workers/cache). Credentials were already
+  // stripped; this sentinel is only a cache-bypass signal for raw-row queries.
+  if (bypassWorkersCache) {
+    forwardHeaders.set("Authorization", "bypass-workers-cache");
+  }
 
   const forwardReq = new Request(forwardUrl.toString(), {
     method: request.method,

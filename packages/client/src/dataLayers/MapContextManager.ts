@@ -85,7 +85,6 @@ import {
   DATA_TABLE_PAINT_TRANSITION,
   DATA_TABLE_VALUE_PROPERTY,
   DATA_TABLE_ZERO_FILL_OPACITY,
-  DATA_TABLE_ZERO_SENTINEL,
   DATA_TABLE_ZERO_STROKE_WIDTH,
   DATA_TABLE_NO_DATA_COLOR,
   DATA_TABLE_HOVER_FILL_OPACITY,
@@ -95,6 +94,7 @@ import {
   buildDataTableCircleStrokeColorExpression,
   buildDataTableValueExpression,
   dataTableHoveredExpression,
+  dataTableIsZeroExpression,
 } from "./dataTableMapStyle";
 import {
   columnStatsUrlForTable,
@@ -827,6 +827,68 @@ class MapContextManager extends EventEmitter {
   }
 
   /**
+   * Public access to the resolved data-table visualization for a layer —
+   * the same settings object driving map paint. Used by the QA/QC
+   * "Show rows in calculation" modal so its display of op/column/filters
+   * cannot drift from what the map actually queried.
+   */
+  getDataTableCalculationSettings(
+    tocStableId: string
+  ): ResolvedDataTableVisualizationSettings | undefined {
+    return this.resolveDataTableVisualizationSettings(tocStableId);
+  }
+
+  /**
+   * Engine-computed per-step series for one join key (site), from the same
+   * cached query result that paints the map / hover sparkline.
+   */
+  getDataTableFeatureSeries(tocStableId: string, featureId: string) {
+    const settings = this.resolveDataTableVisualizationSettings(tocStableId);
+    if (!settings) {
+      return null;
+    }
+    return this.dataTableQueryManager.getFeatureSeries(settings, featureId);
+  }
+
+  /** Currently displayed map value for one join key (see DataTableQueryManager). */
+  getDataTableFeatureCurrentValue(tocStableId: string, featureId: string) {
+    const settings = this.resolveDataTableVisualizationSettings(tocStableId);
+    if (!settings) {
+      return undefined;
+    }
+    return this.dataTableQueryManager.getFeatureCurrentValue(
+      settings,
+      featureId
+    );
+  }
+
+  /**
+   * Raw rows behind the map statistic for one join key, using the exact
+   * clock/filter parameters of the active visualization. See
+   * DataTableQueryManager.fetchCalculationRows for the coupling guarantee.
+   */
+  async fetchDataTableCalculationRows(
+    tocStableId: string,
+    featureId: string,
+    signal?: AbortSignal
+  ) {
+    const settings = this.resolveDataTableVisualizationSettings(tocStableId);
+    if (!settings?.table.queryUrl) {
+      throw new Error("No active data table visualization for this layer");
+    }
+    const uuid = extractTilesUuidFromUrl(settings.table.queryUrl);
+    const requiresToken = uuid
+      ? this.hostedUuidNeedsMapAccessToken(uuid)
+      : false;
+    return this.dataTableQueryManager.fetchCalculationRows(
+      settings,
+      featureId,
+      requiresToken,
+      signal
+    );
+  }
+
+  /**
    * Resolve LayerState.dataTable against the TOC catalog + admin constraints.
    * Returns undefined when intent is missing, the catalog isn't ready, or the
    * stableId no longer exists. Does not mutate LayerState.
@@ -1033,11 +1095,7 @@ class MapContextManager extends EventEmitter {
       "number",
     ] as Expression;
     // Safe to compare numerically: case chains check isNoData before isZero.
-    const isZero = [
-      "==",
-      valueExpression,
-      DATA_TABLE_ZERO_SENTINEL,
-    ] as Expression;
+    const isZero = dataTableIsZeroExpression();
     const isLoading = [
       "boolean",
       ["feature-state", "loading"],
@@ -1096,6 +1154,7 @@ class MapContextManager extends EventEmitter {
           scaleMax: 1,
           zoomDependent: true,
           hideWhenMissing: false,
+          isZero,
         }),
       },
     };
@@ -1161,6 +1220,7 @@ class MapContextManager extends EventEmitter {
       scaleMax,
       zoomDependent: !legendOnly,
       hideWhenMissing: !legendOnly,
+      isZero,
     });
     const activeFillColor = loading
       ? DATA_TABLE_LOADING_COLOR
@@ -4833,7 +4893,11 @@ export interface MapUIStateContextState {
   /** TOC stableId of the layer shown in the sidebar popup, for the Data Tables footer */
   sidebarPopupTocStableId?: string;
   /** Mount point + layer for the Data Tables CTA portaled into the open map popup */
-  dataTablesPopupTarget?: { element: HTMLElement; tocStableId: string };
+  dataTablesPopupTarget?: {
+    element: HTMLElement;
+    tocStableId: string;
+    featureProperties?: { [name: string]: any };
+  };
   displayedMapBookmark?: {
     id: string;
     errors: {

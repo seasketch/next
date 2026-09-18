@@ -36,10 +36,10 @@ type = "worker"
 [exports.PropertiesBackend.cache]
 enabled = true
 
-# Data-table /query aggregations are deterministic per path+query string.
-[exports.DataTablesBackend]
+# Allowlisted WoRMS proxy for organism enrichment. Cache API keys POST bodies.
+[exports.TaxonomyBackend]
 type = "worker"
-[exports.DataTablesBackend.cache]
+[exports.TaxonomyBackend.cache]
 enabled = true
 
 [vars]
@@ -52,8 +52,14 @@ AUTH_MISSING_ACL_PUBLIC = "true"
 AUTH_DENY_SLACK_ENABLED = "true"
 
 # Large property scans can be CPU intensive. Paid Workers permit up to 300s.
+# Data-table hyparquet work runs in overlay-data-tables (30s CPU).
 [limits]
 cpu_ms = 10_000
+
+# After auth, /query and /orgQuery run on a separate isolate.
+[[services]]
+binding = "DATA_TABLES"
+service = "overlay-data-tables"
 
 [[r2_buckets]]
 binding = 'TILES_BUCKET'

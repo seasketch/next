@@ -5,6 +5,11 @@ import {
 } from "@seasketch/geostats-types";
 import { WHEN_END_COLUMN, WHEN_START_COLUMN } from "@seasketch/geostats-types";
 import { all, run, withDuckDb } from "./duckDb";
+import {
+  ClusterColumnHints,
+  clusterColumns,
+  copyObservationsParquetSql,
+} from "./clusterParquet";
 
 function escapePath(path: string): string {
   return path.replace(/'/g, "''");
@@ -77,6 +82,7 @@ export async function applyNodataValuesOnParquet(
   parquetPath: string,
   values: DataTableNodataValue[],
   excludeColumns: string[] = [],
+  clusterHints?: Omit<ClusterColumnHints, "columns">,
 ): Promise<ApplyNodataResult> {
   const sentinels = normalizeNodataValues(values);
   return withDuckDb(async (conn) => {
@@ -109,7 +115,16 @@ export async function applyNodataValuesOnParquet(
     );
     await run(
       conn,
-      `COPY observations TO '${escaped}' (FORMAT PARQUET)`,
+      copyObservationsParquetSql(
+        parquetPath,
+        clusterColumns({
+          columns: columns.map((column) => column.column_name),
+          joinColumn: clusterHints?.joinColumn,
+          organismColumn: clusterHints?.organismColumn,
+          requiredFilterColumns: clusterHints?.requiredFilterColumns,
+          temporalColumns: clusterHints?.temporalColumns,
+        }),
+      ),
     );
     return {
       rowCount: counts[0]?.total ?? 0,

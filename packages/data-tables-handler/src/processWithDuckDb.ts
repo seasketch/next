@@ -14,6 +14,11 @@ import {
   nullstrOption,
 } from "./inferCsvColumnPlans";
 import { all, run, withDuckDb } from "./duckDb";
+import {
+  clusterColumns,
+  copyObservationsParquetSql,
+  quoteIdent,
+} from "./clusterParquet";
 
 function escapePath(path: string): string {
   return path.replace(/'/g, "''");
@@ -99,7 +104,13 @@ export async function processCsvWithDuckDb(
 
     await run(
       conn,
-      `COPY observations TO '${escapePath(parquetPath)}' (FORMAT PARQUET)`,
+      copyObservationsParquetSql(
+        parquetPath,
+        clusterColumns({
+          columns: headers,
+          joinColumn: options.joinColumn,
+        }),
+      ),
     );
 
     return { rowCount, headers };
@@ -195,12 +206,22 @@ export async function filterParquetByJoinValues(
       );
       const beforeCount = beforeRows[0]?.count ?? 0;
 
+      const schema = await all<{ column_name: string }>(
+        conn,
+        `SELECT column_name FROM (DESCRIBE SELECT * FROM read_parquet('${escapePath(parquetPath)}'))`,
+      );
+      const cluster = clusterColumns({
+        columns: schema.map((row) => row.column_name),
+        joinColumn,
+      });
+      const order = cluster.map(quoteIdent).join(", ");
+      const orderSql = order ? ` ORDER BY ${order}` : "";
       await run(
         conn,
         `COPY (
           SELECT * FROM read_parquet('${escapePath(parquetPath)}')
-          WHERE CAST("${col}" AS VARCHAR) IN (${inList})
-        ) TO '${escapePath(filteredPath)}' (FORMAT PARQUET)`,
+          WHERE CAST("${col}" AS VARCHAR) IN (${inList})${orderSql}
+        ) TO '${escapePath(filteredPath)}' (FORMAT PARQUET, ROW_GROUP_SIZE 122880)`,
       );
 
       const afterRows = await all<{ count: number }>(

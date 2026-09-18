@@ -34,6 +34,42 @@ export interface ReadSpan {
   rowEnd: number;
 }
 
+/** One span per row group. Preview/query paths must not merge these. */
+export function rowGroupReadSpans(metadata: FileMetaData): ReadSpan[] {
+  const spans: ReadSpan[] = [];
+  let rowStart = 0;
+  for (const rowGroup of metadata.row_groups) {
+    const numRows = Number(rowGroup.num_rows);
+    if (numRows > 0) {
+      spans.push({ rowStart, rowEnd: rowStart + numRows });
+    }
+    rowStart += numRows;
+  }
+  return spans;
+}
+
+/**
+ * Max rows decoded in one hyparquet read. Matches a typical DuckDB row
+ * group. Caps peak JS heap when a writer emits a huge group.
+ */
+export const MAX_DECODE_ROWS = 128 * 1024;
+
+/** Split each span into chunks of at most MAX_DECODE_ROWS. */
+export function* decodeSpans(spans: ReadSpan[]): Generator<ReadSpan> {
+  for (const span of spans) {
+    for (
+      let start = span.rowStart;
+      start < span.rowEnd;
+      start += MAX_DECODE_ROWS
+    ) {
+      yield {
+        rowStart: start,
+        rowEnd: Math.min(start + MAX_DECODE_ROWS, span.rowEnd),
+      };
+    }
+  }
+}
+
 export interface QueryPlan {
   columns: Map<string, ColumnInfo>;
   filters: CompiledFilter[];
@@ -417,6 +453,10 @@ export async function planQuery(
     );
   }
 
+  // One span per surviving row group. Merging contiguous groups into a
+  // single 11M-row read materializes whole string columns in JS and OOMs
+  // the Worker. Zero-filled taxa tables cannot prune (every code appears
+  // in every group), so this bound matters for the common species filter.
   const spans: ReadSpan[] = [];
   let rowStart = 0;
   let scanned = 0;
@@ -424,13 +464,7 @@ export async function planQuery(
     const numRows = Number(rowGroup.num_rows);
     if (mayMatch[i]) {
       scanned++;
-      const last = spans[spans.length - 1];
-      if (last && last.rowEnd === rowStart) {
-        // merge contiguous row groups into a single read
-        last.rowEnd = rowStart + numRows;
-      } else {
-        spans.push({ rowStart, rowEnd: rowStart + numRows });
-      }
+      spans.push({ rowStart, rowEnd: rowStart + numRows });
     }
     rowStart += numRows;
   });

@@ -1,10 +1,11 @@
 import { useContext, useMemo, useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
-import { ChevronDownIcon } from "@radix-ui/react-icons";
+import { ChevronDownIcon, MagnifyingGlassIcon } from "@radix-ui/react-icons";
 import { Trans, useTranslation } from "react-i18next";
 import clsx from "clsx";
 import DataTableIcon from "../components/icons/DataTableIcon";
 import ActivatedDataTablePanel from "./ActivatedDataTablePanel";
+import DataTableCalculationRowsModal from "./DataTableCalculationRowsModal";
 import { MapOverlayContext } from "./MapContextManager";
 import { MapUIStateContext } from "./MapUIContext";
 import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
@@ -21,11 +22,14 @@ import useCurrentProjectMetadata from "../useCurrentProjectMetadata";
 export default function DataTablesPopupFooter({
   tocStableId,
   variant = "popup",
+  featureProperties,
 }: {
   /** Table of contents stableId of the layer the popup describes */
   tocStableId: string;
   /** "popup" renders a full-bleed footer band for mapboxgl popups */
   variant?: "popup" | "sidebar";
+  /** Properties of the clicked feature, to preselect the site in QA/QC UI */
+  featureProperties?: { [name: string]: any };
 }) {
   const { t } = useTranslation("homepage");
   const { tableOfContentsItems, layerStatesByTocStaticId } =
@@ -36,6 +40,7 @@ export default function DataTablesPopupFooter({
     projectMeta?.project?.featureFlags?.dataTables
   );
   const [open, setOpen] = useState(false);
+  const [showCalculationRows, setShowCalculationRows] = useState(false);
 
   const item = useMemo(
     () => (tableOfContentsItems || []).find((i) => i.stableId === tocStableId),
@@ -52,6 +57,17 @@ export default function DataTablesPopupFooter({
     layerStatesByTocStaticId[tocStableId]?.dataTable?.stableId;
   const activeTable = tables.find((table) => table.stableId === activeStableId);
   const name = activeTable?.name;
+  // Join value of the clicked feature (site), via the overlay's join
+  // property. Used to preselect the site in the rows-in-calculation modal.
+  const joinProperty =
+    activeTable?.overlayJoinColumn || activeTable?.joinColumn;
+  const clickedSite =
+    joinProperty &&
+    featureProperties &&
+    featureProperties[joinProperty] !== undefined &&
+    featureProperties[joinProperty] !== null
+      ? String(featureProperties[joinProperty])
+      : undefined;
 
   return (
     <div
@@ -117,6 +133,23 @@ export default function DataTablesPopupFooter({
           />
         </Popover.Portal>
       </Popover.Root>
+      {activeTable && (
+        <button
+          type="button"
+          onClick={() => setShowCalculationRows(true)}
+          className="mt-2 inline-flex items-center gap-1.5 text-xs text-primary-600 underline decoration-primary-600/30 underline-offset-2 transition-colors hover:text-primary-700 hover:decoration-primary-700/60"
+        >
+          <MagnifyingGlassIcon className="h-3.5 w-3.5 flex-none" />
+          {t("Show rows in calculation")}
+        </button>
+      )}
+      {showCalculationRows && activeTable && (
+        <DataTableCalculationRowsModal
+          tocStableId={tocStableId}
+          initialSite={clickedSite}
+          onRequestClose={() => setShowCalculationRows(false)}
+        />
+      )}
     </div>
   );
 }

@@ -11,12 +11,15 @@ import {
 import {
   parseTemporalPreviewConfig,
   previewTemporalMapping,
+  TemporalPreviewColumnStats,
 } from "./dataTables/temporalPreview";
 import {
   parseNodataPreviewConfig,
   previewNodataValues,
 } from "./dataTables/nodataPreview";
 import { queryUiHtml } from "./dataTables/ui/html";
+import { handleOrgQuery } from "./dataTables/orgQuery";
+import { isOrgQueryPath } from "./dataTables/orgQueryParams";
 
 /** Browser cache lifetime for query JSON responses. */
 const BROWSER_MAX_AGE = 86400;
@@ -55,6 +58,9 @@ export async function handleDataTableQuery(
   }
 
   const url = new URL(request.url);
+  if (isOrgQueryPath(url.pathname)) {
+    return handleOrgQuery(request, env);
+  }
   const pathname = url.pathname;
   const isTemporalPreview = pathname.endsWith("/temporal-preview");
   const isNodataPreview = pathname.endsWith("/nodata-preview");
@@ -161,13 +167,18 @@ export async function handleDataTableQuery(
     timer.mark("serialize");
 
     const etag = await makeETag(source.etag, canonicalQuery);
+    const isRaw = query.ops.length === 0;
     const headers = {
       "Content-Type": "application/json; charset=utf-8",
       ETag: etag,
       "Server-Timing": timer.header(),
       "Access-Control-Allow-Origin": "*",
       "Timing-Allow-Origin": "*",
-      "Cache-Control": `public, max-age=${BROWSER_MAX_AGE}, s-maxage=${EDGE_MAX_AGE}, immutable`,
+      // Raw-row payloads are large and unique per site; caching them is
+      // what produces the "first request 503, retry works" pattern.
+      "Cache-Control": isRaw
+        ? "private, no-store"
+        : `public, max-age=${BROWSER_MAX_AGE}, s-maxage=${EDGE_MAX_AGE}, immutable`,
     };
     if (request.headers.get("if-none-match") === etag) {
       return new Response(null, { status: 304, headers });
@@ -175,6 +186,21 @@ export async function handleDataTableQuery(
     return new Response(JSON.stringify(body), { headers });
   } catch (error) {
     return errorResponse(error);
+  }
+}
+
+async function loadColumnStatsJson(
+  env: Env,
+  tablePath: string
+): Promise<TemporalPreviewColumnStats | undefined> {
+  try {
+    const object = await env.TILES_BUCKET.get(`${tablePath}/column-stats.json`);
+    if (!object) return undefined;
+    const parsed = (await object.json()) as TemporalPreviewColumnStats;
+    if (!parsed || typeof parsed !== "object") return undefined;
+    return parsed;
+  } catch {
+    return undefined;
   }
 }
 
@@ -279,10 +305,13 @@ async function handleTemporalPreview(
     }
     const metadata = await getParquetMetadata(source);
     timer.mark("metadata");
+    const columnStats = await loadColumnStatsJson(env, tablePath);
+    timer.mark("columnStats");
     const result = await previewTemporalMapping({
       file: source.buffer,
       metadata,
       config,
+      columnStats,
     });
     timer.mark("preview");
     const body = {

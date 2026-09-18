@@ -14,6 +14,7 @@ export default function DataTableFilterMultiSelectRow({
   onMultiToggle,
   onSelectAll,
   onSelectNone,
+  showSelectNone = true,
 }: {
   multi: boolean;
   selected: string[];
@@ -21,6 +22,8 @@ export default function DataTableFilterMultiSelectRow({
   onMultiToggle: (enabled: boolean) => void;
   onSelectAll: () => void;
   onSelectNone: () => void;
+  /** Hide when an empty selection is not a valid filter. */
+  showSelectNone?: boolean;
 }) {
   const { t } = useTranslation("homepage");
   const { allSelected, noneSelected } = visibleSelectionStatus(
@@ -50,16 +53,20 @@ export default function DataTableFilterMultiSelectRow({
         >
           {t("All")}
         </button>
-        <span className="mx-1.5 h-3 w-px bg-gray-300" aria-hidden />
-        <button
-          type="button"
-          disabled={noVisible || noneSelected}
-          aria-label={t("Select none")}
-          onClick={onSelectNone}
-          className="text-xs font-medium text-primary-600 hover:text-primary-700 disabled:cursor-default disabled:text-gray-300"
-        >
-          {t("None")}
-        </button>
+        {showSelectNone ? (
+          <>
+            <span className="mx-1.5 h-3 w-px bg-gray-300" aria-hidden />
+            <button
+              type="button"
+              disabled={noVisible || noneSelected}
+              aria-label={t("Select none")}
+              onClick={onSelectNone}
+              className="text-xs font-medium text-primary-600 hover:text-primary-700 disabled:cursor-default disabled:text-gray-300"
+            >
+              {t("None")}
+            </button>
+          </>
+        ) : null}
       </div>
     </div>
   );
