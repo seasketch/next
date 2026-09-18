@@ -7489,6 +7489,10 @@ select{
   height:calc(100dvh - 3rem)
 }
 
+.h-\[min\(80vh\2c calc\(100vh-14rem\)\)\]{
+  height:min(80vh,calc(100vh - 14rem))
+}
+
 .h-\[min\(88vh\2c calc\(100vh-4rem\)\)\]{
   height:min(88vh,calc(100vh - 4rem))
 }
@@ -7547,10 +7551,6 @@ select{
 
 .h-screen{
   height:100vh
-}
-
-.h-\[min\(80vh\2c calc\(100vh-14rem\)\)\]{
-  height:min(80vh,calc(100vh - 14rem))
 }
 
 .max-h-128{
@@ -10630,6 +10630,10 @@ select{
   background-color:rgb(107 114 128 / var(--tw-bg-opacity, 1))
 }
 
+.bg-gray-500\/75{
+  background-color:rgb(107 114 128 / 0.75)
+}
+
 .bg-gray-600{
   --tw-bg-opacity:1;
   background-color:rgb(75 85 99 / var(--tw-bg-opacity, 1))
@@ -10783,6 +10787,10 @@ select{
 
 .bg-primary-500\/30{
   background-color:rgb(46 115 182 / 0.3)
+}
+
+.bg-primary-500\/5{
+  background-color:rgb(46 115 182 / 0.05)
 }
 
 .bg-primary-600{
@@ -11121,14 +11129,6 @@ select{
 .bg-yellow-600{
   --tw-bg-opacity:1;
   background-color:rgb(217 119 6 / var(--tw-bg-opacity, 1))
-}
-
-.bg-gray-500\/75{
-  background-color:rgb(107 114 128 / 0.75)
-}
-
-.bg-primary-500\/5{
-  background-color:rgb(46 115 182 / 0.05)
 }
 
 .bg-opacity-10{
@@ -11615,12 +11615,12 @@ select{
   fill:#0f172a
 }
 
-.fill-white{
-  fill:#fff
-}
-
 .fill-transparent{
   fill:transparent
+}
+
+.fill-white{
+  fill:#fff
 }
 
 .object-contain{
@@ -15861,14 +15861,14 @@ input[type="checkbox"][indeterminate="true"]:checked {
   color:rgb(209 213 219 / var(--tw-text-opacity, 1))
 }
 
-.disabled\:text-gray-500:disabled{
-  --tw-text-opacity:1;
-  color:rgb(107 114 128 / var(--tw-text-opacity, 1))
-}
-
 .disabled\:text-gray-400:disabled{
   --tw-text-opacity:1;
   color:rgb(156 163 175 / var(--tw-text-opacity, 1))
+}
+
+.disabled\:text-gray-500:disabled{
+  --tw-text-opacity:1;
+  color:rgb(107 114 128 / var(--tw-text-opacity, 1))
 }
 
 .disabled\:opacity-20:disabled{
