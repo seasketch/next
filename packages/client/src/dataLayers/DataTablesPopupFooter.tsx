@@ -84,9 +84,7 @@ export default function DataTablesPopupFooter({
     >
       <p className="mb-2 text-xs leading-snug text-gray-700">
         {activeTable ? (
-          <Trans ns="homepage">
-            Now visualizing <strong>{{ name }}</strong>
-          </Trans>
+          t("Now visualizing")
         ) : count === 1 ? (
           <Trans ns="homepage">
             This layer includes a data table that can be visualized on the map.
@@ -102,13 +100,16 @@ export default function DataTablesPopupFooter({
         <Popover.Trigger asChild>
           <button
             type="button"
+            aria-label={
+              activeTable ? t("Change Data Table") : undefined
+            }
             className="w-full inline-flex items-center justify-between gap-3 rounded border border-gray-300 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-100 hover:border-gray-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-gray-400 focus-visible:ring-offset-1"
           >
             <span className="inline-flex min-w-0 items-center gap-2">
               <DataTableIcon className="w-[19px] h-[14px] flex-none text-gray-500" />
               <span className="truncate">
                 {activeTable
-                  ? t("Change Data Table")
+                  ? name
                   : count === 1
                   ? t("Visualize Table")
                   : t("Visualize Tables")}
