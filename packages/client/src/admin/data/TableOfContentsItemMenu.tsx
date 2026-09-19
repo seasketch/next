@@ -38,6 +38,7 @@ export const TableOfContentsItemMenu = React.forwardRef<
     top?: boolean;
     bottom?: boolean;
     onExpand?: (node: TreeItem, isExpanded: boolean) => void;
+    onRequestPublish?: (item: TocMenuItemType) => void;
   }
 >(
   (
@@ -49,6 +50,7 @@ export const TableOfContentsItemMenu = React.forwardRef<
       items,
       editable,
       onExpand,
+      onRequestPublish,
       ...props
     },
     forwardedRef
@@ -245,6 +247,7 @@ export const TableOfContentsItemMenu = React.forwardRef<
                     type={type}
                     items={items}
                     onExpand={onExpand}
+                    onRequestPublish={onRequestPublish}
                   />
                 </>
               )}

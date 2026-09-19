@@ -25,10 +25,12 @@ export default function TableOfContentsItemAdminMenuItems({
   type,
   items,
   onExpand,
+  onRequestPublish,
 }: {
   type: typeof DropdownMenu | typeof ContextMenu | typeof MenuBar;
   items: TocMenuItemType[];
   onExpand?: (node: TreeItem, isExpanded: boolean) => void;
+  onRequestPublish?: (item: TocMenuItemType) => void;
 }) {
   const MenuType = type;
   const { t } = useTranslation("admin:data");
@@ -150,6 +152,18 @@ export default function TableOfContentsItemAdminMenuItems({
           </MenuType.Item>
         </>
       )}
+      {onRequestPublish && (
+        <MenuType.Item
+          className={MenuBarItemClasses}
+          onSelect={() => onRequestPublish(item)}
+        >
+          {item.isFolder ? (
+            <Trans ns="admin:data">Publish this folder...</Trans>
+          ) : (
+            <Trans ns="admin:data">Publish this layer...</Trans>
+          )}
+        </MenuType.Item>
+      )}
       <MenuType.Item
         className={MenuBarItemClasses}
         onSelect={async () => {
@@ -190,8 +204,8 @@ export default function TableOfContentsItemAdminMenuItems({
                         id: cache.identify(projectMetadataQuery.data.project),
                         fields: {
                           draftTableOfContentsItems(
-                            existingRefs = [],
-                            { readField }
+                            existingRefs: readonly any[] = [],
+                            { readField }: any
                           ) {
                             return existingRefs.filter(
                               (ref: any) => item.id !== readField("id", ref)
@@ -200,7 +214,7 @@ export default function TableOfContentsItemAdminMenuItems({
                           draftTableOfContentsHasChanges() {
                             return true;
                           },
-                        },
+                        } as any,
                       });
                     }
                   },

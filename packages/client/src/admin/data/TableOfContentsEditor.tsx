@@ -50,7 +50,10 @@ import React from "react";
 import { ZIndexEditableList } from "./ZIndexEditableList";
 import { LayerEditingContext } from "./LayerEditingContext";
 import FullScreenLoadingSpinner from "./FullScreenLoadingSpinner";
-import { TableOfContentsItemMenu } from "./TableOfContentsItemMenu";
+import {
+  TableOfContentsItemMenu,
+  TocMenuItemType,
+} from "./TableOfContentsItemMenu";
 import * as ContextMenu from "@radix-ui/react-context-menu";
 import useOverlaySearchState from "../../dataLayers/useOverlaySearchState";
 import useOverlayTaxonSearch from "../../dataLayers/useOverlayTaxonSearch";
@@ -79,6 +82,7 @@ import withScrolling, {
 } from "@nosferatu500/react-dnd-scrollzone";
 import { useApolloClient } from "@apollo/client";
 import { parseTocItemIdFromSearch } from "./layerAdminDeepLink";
+import MockPublishTableOfContentsItemModal from "./MockPublishTableOfContentsItemModal";
 
 const ScrollingComponent = withScrolling("div");
 
@@ -150,6 +154,7 @@ export default function TableOfContentsEditor() {
     useUpdateTableOfContentsItemChildrenMutation();
   const [folderId, setFolderId] = useState<number>();
   const [publishOpen, setPublishOpen] = useState(false);
+  const [mockPublishItem, setMockPublishItem] = useState<TocMenuItemType>();
   const [arcgisCartOpen, setArcgisCartOpen] = useState(false);
   useDraftStatusSubscription({
     variables: {
@@ -518,6 +523,21 @@ export default function TableOfContentsEditor() {
           }}
         />
       )}
+      {mockPublishItem && (
+        <MockPublishTableOfContentsItemModal
+          item={mockPublishItem}
+          onRequestClose={() => setMockPublishItem(undefined)}
+          onConfirm={() => {
+            const item = mockPublishItem;
+            setMockPublishItem(undefined);
+            layerEditingContext.setOpenEditor({
+              id: item.id,
+              isFolder: item.isFolder,
+              title: item.title,
+            });
+          }}
+        />
+      )}
       {tocQuery.data?.projectBySlug?.id && (
         <Header
           sharedLayersCount={
@@ -637,6 +657,7 @@ export default function TableOfContentsEditor() {
                         items={[item]}
                         type={ContextMenu}
                         onExpand={onExpand}
+                        onRequestPublish={setMockPublishItem}
                         editable
                         transform={{
                           x: clickEvent.clientX,

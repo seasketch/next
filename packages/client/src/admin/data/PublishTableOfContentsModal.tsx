@@ -32,6 +32,9 @@ import {
 import { ChangeLogFieldGroup } from "../../generated/graphql";
 import LayerMetadataRevisionModal from "./LayerMetadataRevisionModal";
 import LayerCartographyRevisionModal from "./LayerCartographyRevisionModal";
+import MockPausedLayersNotice, {
+  MOCK_SELECTIVE_PUBLISHING,
+} from "./MockPausedLayersNotice";
 
 export default function PublishTableOfContentsModal(props: {
   onRequestClose: () => void;
@@ -193,6 +196,10 @@ export default function PublishTableOfContentsModal(props: {
           loading: publishState.loading,
           variant: "primary",
           onClick: async () => {
+            if (MOCK_SELECTIVE_PUBLISHING) {
+              props.onRequestClose();
+              return;
+            }
             await publish({
               variables: {
                 projectId: projectId!,
@@ -292,11 +299,16 @@ export default function PublishTableOfContentsModal(props: {
                 <Spinner />
               </div>
             ) : (
-              <PublishSummarizedChangesPanel
-                changeLogs={changeLogs}
-                draftItems={draftTableOfContentsItems}
-                tableOfContentsLastPublished={tableOfContentsLastPublished}
-              />
+              <>
+                <PublishSummarizedChangesPanel
+                  changeLogs={changeLogs}
+                  draftItems={draftTableOfContentsItems}
+                  tableOfContentsLastPublished={tableOfContentsLastPublished}
+                />
+                <MockPausedLayersNotice
+                  draftItems={draftTableOfContentsItems}
+                />
+              </>
             )}
           </div>
         </Tabs.Content>
