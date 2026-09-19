@@ -519,9 +519,8 @@ export async function resolveOrganismTaxa(
         const fromId = id ? parquet.byId.get(id) : undefined;
         if (fromId) {
           applyWormsTaxonRow(results[i], fromId);
-          if (results[i].wormsAphiaId) {
-            parquetFilledIds.add(results[i].wormsAphiaId);
-          }
+          const filledId = results[i].wormsAphiaId;
+          if (filledId) parquetFilledIds.add(filledId);
           continue;
         }
         const name = wormsNameByIndex[i];
@@ -530,9 +529,8 @@ export async function resolveOrganismTaxa(
           : undefined;
         if (fromName) {
           applyWormsTaxonRow(results[i], fromName);
-          if (results[i].wormsAphiaId) {
-            parquetFilledIds.add(results[i].wormsAphiaId);
-          }
+          const filledId = results[i].wormsAphiaId;
+          if (filledId) parquetFilledIds.add(filledId);
         }
       }
       restAphiaIds = uniqueAphiaIds.filter((id) => !parquet.byId.has(id));
@@ -618,7 +616,8 @@ export async function resolveOrganismTaxa(
   }
 
   for (let i = 0; i < results.length; i++) {
-    if (results[i].wormsAphiaId && parquetFilledIds.has(results[i].wormsAphiaId)) {
+    const alreadyFilled = results[i].wormsAphiaId;
+    if (alreadyFilled && parquetFilledIds.has(alreadyFilled)) {
       continue;
     }
     const byId = results[i].wormsAphiaId

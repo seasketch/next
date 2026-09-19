@@ -55,8 +55,6 @@ export function clusterColumns(hints: ClusterColumnHints): string[] {
   return out.slice(0, 4);
 }
 
-import { all, run, withDuckDb } from "./duckDb";
-
 /** COPY observations, optionally clustered so filters can prune row groups. */
 export function copyObservationsParquetSql(
   parquetPath: string,

@@ -220,18 +220,18 @@ export function joinOrganismCatalogRows(options: {
       ).join(" ") || null;
     const row: OrganismCatalogRow = {
       value: item.value,
-      scientific_name: input.scientificName,
-      common_name: input.commonName,
+      scientific_name: input.scientificName ?? null,
+      common_name: input.commonName ?? null,
       common_names: uniqueStrings([
         input.commonName,
         ...(input.extraNames || []),
       ]),
-      genus: input.genus,
+      genus: input.genus ?? null,
       family: null,
       ancestor_names: [],
       description,
       inat_taxon_id: null,
-      worms_aphia_id: input.wormsAphiaId,
+      worms_aphia_id: input.wormsAphiaId ?? null,
       search_text: "",
       occurrence_count: item.occurrenceCount,
       confidence: "unresolved",
