@@ -16,6 +16,7 @@ import {
   LAYER_SETTINGS_CHANGE_LOG_EXPANDED_FIRST,
   LAYER_SETTINGS_CHANGE_LOG_PAGE_SIZE,
 } from "./layerSettingsChangeLogRefetch";
+import MockLayerPublishedHistoryEvent from "./MockLayerPublishedHistoryEvent";
 
 function findScrollParent(from: HTMLElement | null): HTMLElement | null {
   if (!from) return null;
@@ -87,6 +88,9 @@ export default function LayerSettingsChangeLogList({
   const changeLogs = showAllHistory
     ? fetchedLogs
     : fetchedLogs.slice(0, LAYER_SETTINGS_CHANGE_LOG_PAGE_SIZE);
+  const syntheticPublishProfile = fetchedLogs.find(
+    (changeLog) => changeLog.editorProfile
+  )?.editorProfile;
   const rawCreatedAt = toc?.dataLayer?.dataSource?.createdAt;
   const authorProfile = toc?.dataLayer?.dataSource?.authorProfile ?? undefined;
   const dataLibraryTemplateId = toc?.dataLayer?.dataSource?.dataLibraryTemplateId;
@@ -117,7 +121,7 @@ export default function LayerSettingsChangeLogList({
   const showCreationAnchor =
     Boolean(createdAt) && hasFullHistory && !uploadDocumentsCreation;
 
-  const itemCount = changeLogs.length + (showCreationAnchor ? 1 : 0);
+  const itemCount = changeLogs.length + (showCreationAnchor ? 1 : 0) + 1;
 
   const canShowMore =
     !showAllHistory &&
@@ -142,6 +146,10 @@ export default function LayerSettingsChangeLogList({
         <Trans ns="admin:data">History</Trans>
       </h3>
       <ul className="mt-4">
+        <MockLayerPublishedHistoryEvent
+          profile={syntheticPublishProfile ?? authorProfile}
+          last={changeLogs.length === 0 && !showCreationAnchor}
+        />
         {changeLogs.map((changeLog, index) => (
           <ChangeLogListItem
             key={changeLog.id}

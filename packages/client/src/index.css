@@ -14871,6 +14871,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
   background-color:rgb(253 230 138 / var(--tw-bg-opacity, 1))
 }
 
+.hover\:bg-amber-100:hover{
+  --tw-bg-opacity:1;
+  background-color:rgb(254 243 199 / var(--tw-bg-opacity, 1))
+}
+
 .hover\:bg-opacity-10:hover{
   --tw-bg-opacity:0.1
 }
@@ -15123,6 +15128,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .hover\:text-white\/70:hover{
   color:rgb(255 255 255 / 0.7)
+}
+
+.hover\:text-amber-800:hover{
+  --tw-text-opacity:1;
+  color:rgb(146 64 14 / var(--tw-text-opacity, 1))
 }
 
 .hover\:underline:hover{
@@ -15683,6 +15693,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .focus-visible\:ring-white\/50:focus-visible{
   --tw-ring-color:rgb(255 255 255 / 0.5)
+}
+
+.focus-visible\:ring-amber-500:focus-visible{
+  --tw-ring-opacity:1;
+  --tw-ring-color:rgb(245 158 11 / var(--tw-ring-opacity, 1))
 }
 
 .focus-visible\:ring-offset-1:focus-visible{
