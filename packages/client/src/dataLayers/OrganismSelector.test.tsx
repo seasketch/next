@@ -23,9 +23,12 @@ const classcodeColumn: GeostatsAttribute = {
   },
 };
 
-function hit(partial: Partial<OrgQueryHit> & Pick<OrgQueryHit, "value">): OrgQueryHit {
+function hit(
+  partial: Partial<OrgQueryHit> & Pick<OrgQueryHit, "value">
+): OrgQueryHit {
   return {
-    table: "projects/ca/public/11111111-1111-1111-1111-111111111111/dataTables/u1",
+    table:
+      "projects/ca/public/11111111-1111-1111-1111-111111111111/dataTables/u1",
     column: "classcode",
     scientificName: null,
     commonName: partial.value,
@@ -125,5 +128,69 @@ describe("OrganismSelector select all results", () => {
     expect(
       screen.queryByRole("button", { name: "Select all {{count}} results" })
     ).toBeNull();
+  });
+});
+
+describe("OrganismSelector placement", () => {
+  const originalGetBoundingClientRect =
+    HTMLElement.prototype.getBoundingClientRect;
+
+  afterEach(() => {
+    clearOrganismCatalogCache();
+    HTMLElement.prototype.getBoundingClientRect = originalGetBoundingClientRect;
+    jest.restoreAllMocks();
+  });
+
+  it("opens on the side that stays inside the viewport, centered on the trigger", async () => {
+    mockOrgQueryFetch({});
+    await fetchOrganismCatalog(ORG_QUERY_URL);
+    document.documentElement.style.fontSize = "16px";
+    Object.defineProperty(window, "innerWidth", {
+      configurable: true,
+      value: 1440,
+    });
+    Object.defineProperty(window, "innerHeight", {
+      configurable: true,
+      value: 800,
+    });
+    HTMLElement.prototype.getBoundingClientRect = function () {
+      if (this instanceof HTMLButtonElement) {
+        return {
+          top: 400,
+          left: 1100,
+          right: 1400,
+          bottom: 448,
+          width: 300,
+          height: 48,
+          x: 1100,
+          y: 400,
+          toJSON() {
+            return {};
+          },
+        } as DOMRect;
+      }
+      return {
+        top: 0,
+        left: 0,
+        right: 416,
+        bottom: 480,
+        width: 416,
+        height: 480,
+        x: 0,
+        y: 0,
+        toJSON() {
+          return {};
+        },
+      } as DOMRect;
+    };
+
+    renderSelector([]);
+    fireEvent.click(screen.getByRole("button", { name: /No selection/i }));
+
+    const panel = document.querySelector("[data-side]");
+    expect(panel).not.toBeNull();
+    expect(panel?.getAttribute("data-side")).toBe("left");
+    expect((panel as HTMLElement).style.left).toBe("678px");
+    expect((panel as HTMLElement).style.top).toBe("184px");
   });
 });

@@ -2,11 +2,14 @@ import {
   KeyboardEvent,
   MutableRefObject,
   Ref,
+  useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import {
   CaretDownIcon,
@@ -15,7 +18,14 @@ import {
   ChevronUpIcon,
   MagnifyingGlassIcon,
 } from "@radix-ui/react-icons";
-import * as Popover from "@radix-ui/react-popover";
+import {
+  autoUpdate,
+  useClick,
+  useDismiss,
+  useFloating,
+  useInteractions,
+  useRole,
+} from "@floating-ui/react";
 import clsx from "clsx";
 import { GeostatsAttribute } from "@seasketch/geostats-types";
 import { DataTableFilter } from "./dataTableQueryApi";
@@ -45,6 +55,12 @@ import {
   unregisterInaturalistTaxonPhoto,
   useInaturalistTaxonPhoto,
 } from "./inaturalistTaxonPhotos";
+import {
+  ORGANISM_SELECTOR_WIDTH_REM,
+  OrganismSelectorPlacement,
+  ViewportRect,
+  placeOrganismSelectorPanel,
+} from "./organismSelectorPlacement";
 
 const DESCRIPTION_TEASER_CHARS = 90;
 const SEARCH_DEBOUNCE_MS = 250;
@@ -109,9 +125,7 @@ function OrganismDetails({
   const commonName = hit.commonName;
   const scientificName = hit.scientificName;
   const primary = commonName || scientificName || hit.value;
-  const showScientific = Boolean(
-    scientificName && scientificName !== primary
-  );
+  const showScientific = Boolean(scientificName && scientificName !== primary);
   const showValue = Boolean(
     hit.value && hit.value !== primary && hit.value !== scientificName
   );
@@ -259,6 +273,69 @@ function OrganismSelectionSummary({
   );
 }
 
+function viewportRect(rect: DOMRect): ViewportRect {
+  return {
+    top: rect.top,
+    left: rect.left,
+    right: rect.right,
+    bottom: rect.bottom,
+    width: rect.width,
+    height: rect.height,
+  };
+}
+
+function placementsMatch(
+  prev: OrganismSelectorPlacement | null,
+  next: OrganismSelectorPlacement
+) {
+  return (
+    prev != null &&
+    prev.side === next.side &&
+    prev.top === next.top &&
+    prev.left === next.left &&
+    prev.width === next.width &&
+    prev.height === next.height &&
+    prev.maxWidth === next.maxWidth &&
+    prev.maxHeight === next.maxHeight
+  );
+}
+
+/**
+ * Measure the panel after its width is capped to the chosen side, then
+ * center that height on the trigger.
+ */
+function measureOrganismSelectorPlacement(
+  trigger: Element,
+  panel: HTMLElement
+): OrganismSelectorPlacement {
+  const rootFontSize =
+    Number.parseFloat(
+      window.getComputedStyle(document.documentElement).fontSize
+    ) || 16;
+  const desiredWidth = ORGANISM_SELECTOR_WIDTH_REM * rootFontSize;
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const triggerBox = viewportRect(trigger.getBoundingClientRect());
+  const frame = placeOrganismSelectorPanel({
+    trigger: triggerBox,
+    panelWidth: desiredWidth,
+    panelHeight: 0,
+    viewportWidth,
+    viewportHeight,
+  });
+  panel.style.width = frame.width + "px";
+  panel.style.maxWidth = frame.maxWidth + "px";
+  panel.style.maxHeight = frame.maxHeight + "px";
+  const measuredHeight = panel.getBoundingClientRect().height;
+  return placeOrganismSelectorPanel({
+    trigger: triggerBox,
+    panelWidth: desiredWidth,
+    panelHeight: measuredHeight,
+    viewportWidth,
+    viewportHeight,
+  });
+}
+
 /**
  * Browse + search organism filter. The catalog and taxon thumbs load on
  * mount so the trigger can show common names and the list is warm before
@@ -295,10 +372,40 @@ export default function OrganismSelector({
   const [searching, setSearching] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
+  const [placement, setPlacement] = useState<OrganismSelectorPlacement | null>(
+    null
+  );
   const [listEl, setListEl] = useState<HTMLDivElement | null>(null);
   const selectedOptionRef = useRef<HTMLDivElement>(null);
   const pendingTypeRef = useRef("");
   const didScrollRef = useRef(false);
+  const { refs, context } = useFloating({
+    open,
+    onOpenChange: (next) => {
+      setOpen(next);
+      if (!next && refs.domReference.current instanceof HTMLElement) {
+        refs.domReference.current.focus({ preventScroll: true });
+      }
+    },
+    strategy: "fixed",
+  });
+  const setPanelOpen = useCallback(
+    (next: boolean) => {
+      setOpen(next);
+      if (!next && refs.domReference.current instanceof HTMLElement) {
+        refs.domReference.current.focus({ preventScroll: true });
+      }
+    },
+    [refs]
+  );
+  const click = useClick(context);
+  const dismiss = useDismiss(context);
+  const role = useRole(context, { role: "dialog" });
+  const { getReferenceProps, getFloatingProps } = useInteractions([
+    click,
+    dismiss,
+    role,
+  ]);
 
   useEffect(() => {
     if (!open) {
@@ -430,9 +537,7 @@ export default function OrganismSelector({
     [catalogHits]
   );
   const effectiveSelected =
-    mode === "notNull" && catalogValues.length > 0
-      ? catalogValues
-      : selected;
+    mode === "notNull" && catalogValues.length > 0 ? catalogValues : selected;
   const allCatalogSelected =
     mode === "notNull" ||
     (mode === "value" &&
@@ -466,8 +571,7 @@ export default function OrganismSelector({
       item.getBoundingClientRect().top -
       list.getBoundingClientRect().top +
       list.scrollTop;
-    list.scrollTop =
-      itemOffset - list.clientHeight / 2 + item.clientHeight / 2;
+    list.scrollTop = itemOffset - list.clientHeight / 2 + item.clientHeight / 2;
     didScrollRef.current = true;
   }, [catalogLoading, hits, listEl, open, searchPending]);
 
@@ -506,8 +610,26 @@ export default function OrganismSelector({
 
   const selectSingle = (value: string) => {
     commitSelection([value], false);
-    setOpen(false);
+    setPanelOpen(false);
   };
+
+  useLayoutEffect(() => {
+    if (!open) {
+      setPlacement(null);
+      return;
+    }
+    const trigger = refs.domReference.current;
+    const panel = refs.floating.current;
+    if (!trigger || !panel) {
+      return;
+    }
+    const update = () => {
+      const next = measureOrganismSelectorPlacement(trigger, panel);
+      setPlacement((prev) => (placementsMatch(prev, next) ? prev : next));
+    };
+    update();
+    return autoUpdate(trigger, panel, update);
+  }, [open, refs]);
 
   const toggleMultiValue = (value: string) => {
     const nextSelected = effectiveSelected.includes(value)
@@ -575,193 +697,206 @@ export default function OrganismSelector({
   };
 
   const onTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
-    if (event.key.length === 1 && !event.metaKey && !event.ctrlKey && !event.altKey) {
+    if (
+      event.key.length === 1 &&
+      !event.metaKey &&
+      !event.ctrlKey &&
+      !event.altKey
+    ) {
       pendingTypeRef.current = event.key;
-      setOpen(true);
+      setPanelOpen(true);
     }
   };
 
   return (
-    <Popover.Root open={open} onOpenChange={setOpen}>
-      <Popover.Trigger asChild>
-        <button
-          type="button"
-          onKeyDown={onTriggerKeyDown}
-          className={clsx(
-            "w-full min-w-0 flex items-center gap-2 rounded-md border border-gray-300 bg-white px-2 py-1.5 text-left",
-            "hover:bg-gray-50 focus:outline-none focus:ring-0 focus:border-gray-300",
-            "focus-visible:ring-1 focus-visible:ring-primary-500 focus-visible:border-primary-500"
+    <>
+      <button
+        type="button"
+        className={clsx(
+          "w-full min-w-0 flex items-center gap-2 rounded-md border border-gray-300 bg-white px-2 py-1.5 text-left",
+          "hover:bg-gray-50 focus:outline-none focus:ring-0 focus:border-gray-300",
+          "focus-visible:ring-1 focus-visible:ring-primary-500 focus-visible:border-primary-500"
+        )}
+        {...getReferenceProps({ onKeyDown: onTriggerKeyDown })}
+        ref={refs.setReference}
+      >
+        <span className="min-w-0 flex-1">
+          {mode === "isNull" ? (
+            <span className="block text-sm font-medium text-gray-600">
+              {t("Is blank")}
+            </span>
+          ) : allCatalogSelected ? (
+            <OrganismSelectionSummary hits={catalogHits} allSelected />
+          ) : selectedHits.length === 0 ? (
+            <span className="block text-sm font-medium text-gray-500">
+              {t("No selection")}
+            </span>
+          ) : selectedHits.length === 1 ? (
+            <OrganismDetails hit={selectedHits[0]} compact />
+          ) : (
+            <OrganismSelectionSummary hits={selectedHits} allSelected={false} />
           )}
-        >
-          <span className="min-w-0 flex-1">
-            {mode === "isNull" ? (
-              <span className="block text-sm font-medium text-gray-600">
-                {t("Is blank")}
-              </span>
-            ) : allCatalogSelected ? (
-              <OrganismSelectionSummary hits={catalogHits} allSelected />
-            ) : selectedHits.length === 0 ? (
-              <span className="block text-sm font-medium text-gray-500">
-                {t("No selection")}
-              </span>
-            ) : selectedHits.length === 1 ? (
-              <OrganismDetails hit={selectedHits[0]} compact />
-            ) : (
-              <OrganismSelectionSummary
-                hits={selectedHits}
-                allSelected={false}
-              />
-            )}
-          </span>
-          <CaretDownIcon className="w-4 h-4 flex-none text-gray-400" />
-        </button>
-      </Popover.Trigger>
-      <Popover.Portal>
-        <Popover.Content
-          align="start"
-          sideOffset={6}
-          collisionPadding={8}
-          className="z-[100] w-[26rem] rounded-md border border-black/10 bg-white shadow-lg overflow-hidden data-[state=open]:data-[side=bottom]:animate-slideUpAndFade data-[state=open]:data-[side=top]:animate-slideDownAndFade"
-          onOpenAutoFocus={(event) => {
-            event.preventDefault();
-            searchRef.current?.focus();
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") {
-              setOpen(false);
-            }
-          }}
-        >
-          <div className="border-b border-black/5 px-2 py-1.5">
-            <div className="relative">
-              <MagnifyingGlassIcon className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
-              <input
-                ref={searchRef}
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder={
-                  catalogCount != null
-                    ? t("Search {{count}} organisms...", {
-                        count: catalogCount,
-                      })
-                    : t("Search scientific or common names...")
-                }
-                className={clsx(
-                  "w-full rounded border border-gray-200 bg-gray-50 pl-7 py-1 text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-0 focus:border-gray-300 focus-visible:ring-1 focus-visible:ring-primary-500 focus-visible:border-primary-500",
-                  searchPending ? "pr-7" : "pr-2"
-                )}
-                aria-busy={searchPending}
-              />
-              {searchPending ? (
-                <Spinner
-                  mini
-                  className="absolute right-2 top-1/2 -translate-y-1/2 opacity-80"
-                />
-              ) : null}
-            </div>
-          </div>
-
-          {mode === "isNull" && (
-            <div className="px-2.5 py-1.5 text-[11px] text-gray-500 border-b border-black/5 bg-amber-50/70">
-              {t("Filtering to blank values. Pick a value to switch.")}
-            </div>
-          )}
-
-          {searchPending ? (
-            <div className="flex items-center gap-1.5 px-2.5 py-1 text-[11px] text-gray-500 border-b border-black/5 bg-gray-50">
-              <Spinner mini className="opacity-80" />
-              <span>
-                {t("Searching for {{query}}…", { query: trimmedQuery })}
-              </span>
-            </div>
-          ) : null}
-
-          {error && (
-            <p className="px-3 py-2 text-xs text-red-600">{error}</p>
-          )}
-
-          <div
-            ref={setListEl}
-            className={clsx(
-              "max-h-96 overflow-y-auto py-1",
-              searchPending && hits.length > 0 && "opacity-60"
-            )}
-            aria-busy={searchPending || catalogLoading}
-          >
-            {catalogLoading && hits.length === 0 ? (
-              <p className="px-3 py-2 text-xs text-gray-400 italic">
-                {t("Loading organisms…")}
-              </p>
-            ) : searchPending && hits.length === 0 ? (
-              <p className="px-3 py-2 text-xs text-gray-400 italic">
-                {t("Searching…")}
-              </p>
-            ) : hits.length === 0 ? (
-              <p className="px-3 py-2 text-xs text-gray-400 italic">
-                {t("No matching values")}
-              </p>
-            ) : (
-              hits.map((hit) => {
-                const isSelected =
-                  mode !== "isNull" && effectiveSelected.includes(hit.value);
-                return (
-                  <OrganismHitRow
-                    key={hit.value}
-                    hit={hit}
-                    isSelected={isSelected}
-                    multi={multi}
-                    listEl={listEl}
-                    rowRef={
-                      hit.value === scrollTargetValue
-                        ? selectedOptionRef
-                        : undefined
+        </span>
+        <CaretDownIcon className="w-4 h-4 flex-none text-gray-400" />
+      </button>
+      {open
+        ? createPortal(
+            <div
+              ref={refs.setFloating}
+              data-side={placement?.side}
+              className="z-[100] flex w-[26rem] flex-col overflow-hidden rounded-md border border-black/10 bg-white shadow-lg"
+              {...getFloatingProps({
+                onKeyDown: (event: KeyboardEvent<HTMLDivElement>) => {
+                  if (event.key === "Escape") {
+                    setPanelOpen(false);
+                  }
+                },
+              })}
+              style={{
+                position: "fixed",
+                top: placement?.top ?? 0,
+                left: placement?.left ?? 0,
+                width: placement?.width,
+                maxWidth: placement?.maxWidth,
+                maxHeight: placement?.maxHeight,
+                visibility: placement ? "visible" : "hidden",
+              }}
+            >
+              <div className="flex-none border-b border-black/5 px-2 py-1.5">
+                <div className="relative">
+                  <MagnifyingGlassIcon className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-400" />
+                  <input
+                    ref={searchRef}
+                    type="text"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder={
+                      catalogCount != null
+                        ? t("Search {{count}} organisms...", {
+                            count: catalogCount,
+                          })
+                        : t("Search scientific or common names...")
                     }
-                    onClick={() => {
-                      if (multi) {
-                        toggleMultiValue(hit.value);
-                      } else {
-                        selectSingle(hit.value);
-                      }
-                    }}
+                    className={clsx(
+                      "w-full rounded border border-gray-200 bg-gray-50 pl-7 py-1 text-xs text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-0 focus:border-gray-300 focus-visible:ring-1 focus-visible:ring-primary-500 focus-visible:border-primary-500",
+                      searchPending ? "pr-7" : "pr-2"
+                    )}
+                    aria-busy={searchPending}
                   />
-                );
-              })
-            )}
-          </div>
+                  {searchPending ? (
+                    <Spinner
+                      mini
+                      className="absolute right-2 top-1/2 -translate-y-1/2 opacity-80"
+                    />
+                  ) : null}
+                </div>
+              </div>
 
-          <div className="border-t border-black/5 px-2 py-1.5 space-y-1.5 bg-gray-50/80">
-            {showSelectAllResults ? (
-              <button
-                type="button"
-                onClick={selectAllResults}
-                disabled={allResultsSelected}
-                className="w-full rounded px-1.5 py-1 text-[11px] border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:cursor-default disabled:text-gray-400"
+              {mode === "isNull" && (
+                <div className="flex-none px-2.5 py-1.5 text-[11px] text-gray-500 border-b border-black/5 bg-amber-50/70">
+                  {t("Filtering to blank values. Pick a value to switch.")}
+                </div>
+              )}
+
+              {searchPending ? (
+                <div className="flex flex-none items-center gap-1.5 px-2.5 py-1 text-[11px] text-gray-500 border-b border-black/5 bg-gray-50">
+                  <Spinner mini className="opacity-80" />
+                  <span>
+                    {t("Searching for {{query}}…", { query: trimmedQuery })}
+                  </span>
+                </div>
+              ) : null}
+
+              {error && (
+                <p className="flex-none px-3 py-2 text-xs text-red-600">
+                  {error}
+                </p>
+              )}
+
+              <div
+                ref={setListEl}
+                className={clsx(
+                  "min-h-0 max-h-96 shrink overflow-y-auto py-1",
+                  searchPending && hits.length > 0 && "opacity-60"
+                )}
+                aria-busy={searchPending || catalogLoading}
               >
-                {t("Select all {{count}} results", { count: hits.length })}
-              </button>
-            ) : null}
-            {showSelectAncestors ? (
-              <button
-                type="button"
-                onClick={selectAncestorMatches}
-                className="w-full rounded px-1.5 py-1 text-[11px] border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
-              >
-                {t("Select all matching in this table")}
-              </button>
-            ) : null}
-            <DataTableFilterMultiSelectRow
-              multi={multi || allCatalogSelected}
-              selected={mode === "isNull" ? [] : effectiveSelected}
-              visibleValues={hits.map((hit) => hit.value)}
-              onMultiToggle={onMultiToggle}
-              onSelectAll={() => selectVisible("all")}
-              onSelectNone={() => selectVisible("none")}
-            />
-          </div>
-        </Popover.Content>
-      </Popover.Portal>
-    </Popover.Root>
+                {catalogLoading && hits.length === 0 ? (
+                  <p className="px-3 py-2 text-xs text-gray-400 italic">
+                    {t("Loading organisms…")}
+                  </p>
+                ) : searchPending && hits.length === 0 ? (
+                  <p className="px-3 py-2 text-xs text-gray-400 italic">
+                    {t("Searching…")}
+                  </p>
+                ) : hits.length === 0 ? (
+                  <p className="px-3 py-2 text-xs text-gray-400 italic">
+                    {t("No matching values")}
+                  </p>
+                ) : (
+                  hits.map((hit) => {
+                    const isSelected =
+                      mode !== "isNull" &&
+                      effectiveSelected.includes(hit.value);
+                    return (
+                      <OrganismHitRow
+                        key={hit.value}
+                        hit={hit}
+                        isSelected={isSelected}
+                        multi={multi}
+                        listEl={listEl}
+                        rowRef={
+                          hit.value === scrollTargetValue
+                            ? selectedOptionRef
+                            : undefined
+                        }
+                        onClick={() => {
+                          if (multi) {
+                            toggleMultiValue(hit.value);
+                          } else {
+                            selectSingle(hit.value);
+                          }
+                        }}
+                      />
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="flex-none border-t border-black/5 px-2 py-1.5 space-y-1.5 bg-gray-50/80">
+                {showSelectAllResults ? (
+                  <button
+                    type="button"
+                    onClick={selectAllResults}
+                    disabled={allResultsSelected}
+                    className="w-full rounded px-1.5 py-1 text-[11px] border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:cursor-default disabled:text-gray-400"
+                  >
+                    {t("Select all {{count}} results", { count: hits.length })}
+                  </button>
+                ) : null}
+                {showSelectAncestors ? (
+                  <button
+                    type="button"
+                    onClick={selectAncestorMatches}
+                    className="w-full rounded px-1.5 py-1 text-[11px] border border-gray-200 bg-white text-gray-700 hover:bg-gray-50"
+                  >
+                    {t("Select all matching in this table")}
+                  </button>
+                ) : null}
+                <DataTableFilterMultiSelectRow
+                  multi={multi || allCatalogSelected}
+                  selected={mode === "isNull" ? [] : effectiveSelected}
+                  visibleValues={hits.map((hit) => hit.value)}
+                  onMultiToggle={onMultiToggle}
+                  onSelectAll={() => selectVisible("all")}
+                  onSelectNone={() => selectVisible("none")}
+                />
+              </div>
+            </div>,
+            document.body
+          )
+        : null}
+    </>
   );
 }
 
