@@ -10210,6 +10210,10 @@ select{
   border-color:rgb(63 63 70 / var(--tw-border-opacity, 1))
 }
 
+.border-white\/25{
+  border-color:rgb(255 255 255 / 0.25)
+}
+
 .border-b-black\/10{
   border-bottom-color:rgb(0 0 0 / 0.1)
 }
@@ -14876,6 +14880,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
   background-color:rgb(254 243 199 / var(--tw-bg-opacity, 1))
 }
 
+.hover\:bg-black\/10:hover{
+  background-color:rgb(0 0 0 / 0.1)
+}
+
 .hover\:bg-opacity-10:hover{
   --tw-bg-opacity:0.1
 }
@@ -15700,6 +15708,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
   --tw-ring-color:rgb(245 158 11 / var(--tw-ring-opacity, 1))
 }
 
+.focus-visible\:ring-white\/70:focus-visible{
+  --tw-ring-color:rgb(255 255 255 / 0.7)
+}
+
 .focus-visible\:ring-offset-1:focus-visible{
   --tw-ring-offset-width:1px
 }
@@ -15884,6 +15896,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .disabled\:text-gray-500:disabled{
   --tw-text-opacity:1;
   color:rgb(107 114 128 / var(--tw-text-opacity, 1))
+}
+
+.disabled\:text-slate-400:disabled{
+  --tw-text-opacity:1;
+  color:rgb(148 163 184 / var(--tw-text-opacity, 1))
 }
 
 .disabled\:opacity-20:disabled{
@@ -16081,6 +16098,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .data-\[state\=open\]\:bg-gray-50[data-state="open"]{
   --tw-bg-opacity:1;
   background-color:rgb(249 250 251 / var(--tw-bg-opacity, 1))
+}
+
+.data-\[highlighted\]\:bg-slate-100[data-highlighted]{
+  --tw-bg-opacity:1;
+  background-color:rgb(241 245 249 / var(--tw-bg-opacity, 1))
 }
 
 .data-\[highlighted\]\:text-blue-900[data-highlighted]{

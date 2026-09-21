@@ -48,7 +48,7 @@ export default function OverlaySearchInput({
         id="search"
         placeholder={t("search layers")}
         style={{ height: 26 }}
-        className="text-sm rounded bg-gray-50 outline-none border-gray-300 pr-12"
+        className="min-w-0 w-full text-sm rounded bg-gray-50 outline-none border-gray-300 pr-12"
       />
       <div className="w-10 h-6 -ml-12 relative flex items-center">
         <div
