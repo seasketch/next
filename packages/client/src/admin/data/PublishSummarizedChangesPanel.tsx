@@ -337,7 +337,7 @@ function ZOrderSummarizedRow({
   );
 }
 
-function SummaryMetaRow({
+export function SummaryMetaRow({
   editors,
   primaryEditor,
   changeCount,
