@@ -4,14 +4,7 @@ import { useTranslation } from "react-i18next";
 import { createPortal } from "react-dom";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { AnimatePresence, motion } from "framer-motion";
-import {
-  CheckIcon,
-  CogIcon,
-  DownloadIcon,
-  PlusIcon,
-  TrashIcon,
-  UploadIcon,
-} from "@heroicons/react/outline";
+import { CheckIcon, CogIcon, PlusIcon } from "@heroicons/react/outline";
 import {
   FullAdminOverlayFragment,
   OverlayDataTableDetailsFragment,
@@ -554,8 +547,6 @@ function DataTableSettingsModal({
   table,
   onClose,
   onUpdateDetails,
-  onDelete,
-  onReplace,
   onSetVisualizationSettings,
 }: {
   table: OverlayDataTableDetailsFragment;
@@ -565,8 +556,6 @@ function DataTableSettingsModal({
     name: string,
     description: string | null
   ) => void | Promise<void>;
-  onDelete: (id: number) => void;
-  onReplace: (id: number) => void;
   onSetVisualizationSettings: (
     id: number,
     visualizationColumns: string[],
@@ -577,15 +566,6 @@ function DataTableSettingsModal({
   ) => void | Promise<void>;
 }) {
   const { t } = useTranslation("admin:data");
-  const { data: projectMeta } = useCurrentProjectMetadata();
-  const parquetFilename = parquetDownloadFilename(table.name, table.version);
-  const parquetHref = table.parquetUrl
-    ? parquetDownloadHref(
-        table.parquetUrl,
-        parquetFilename,
-        projectMeta?.project?.mapAccessToken
-      )
-    : null;
   const [draftName, setDraftName] = useState(table.name);
   const [draftDescription, setDraftDescription] = useState(
     table.description || ""
@@ -786,56 +766,6 @@ function DataTableSettingsModal({
             onFilterLabelsChange={setDraftFilterLabels}
           />
         </section>
-
-        <section className="space-y-3">
-          <div className="space-y-1">
-            <h3 className="text-sm font-semibold text-gray-900">
-              {t("Table data")}
-            </h3>
-            <p className="text-sm text-gray-500">
-              {t(
-                "Download the processed parquet, upload a new version, or remove this table from the layer."
-              )}
-            </p>
-          </div>
-          <DataTableDroppedSitesFromUrl table={table} />
-          <div className="flex flex-wrap gap-2">
-            {parquetHref ? (
-              <a
-                href={parquetHref}
-                download={parquetFilename}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
-              >
-                <DownloadIcon className="h-4 w-4 text-gray-500" aria-hidden />
-                {t("Download Parquet")}
-              </a>
-            ) : null}
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
-              onClick={() => {
-                onClose();
-                onReplace(table.id);
-              }}
-            >
-              <UploadIcon className="h-4 w-4 text-gray-500" aria-hidden />
-              {t("Upload new version")}
-            </button>
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
-              onClick={() => {
-                onClose();
-                onDelete(table.id);
-              }}
-            >
-              <TrashIcon className="h-4 w-4" aria-hidden />
-              {t("Delete table")}
-            </button>
-          </div>
-        </section>
       </div>
     </Modal>,
     document.body
@@ -950,6 +880,7 @@ function DataTableRow({
                 >
                   {t("Organism identity")}
                 </DropdownMenu.Item>
+                <DropdownMenu.Separator className="my-1 h-px bg-gray-200" />
                 {parquetHref ? (
                   <DropdownMenu.Item asChild>
                     <a
@@ -963,6 +894,18 @@ function DataTableRow({
                     </a>
                   </DropdownMenu.Item>
                 ) : null}
+                <DropdownMenu.Item
+                  className="flex cursor-pointer select-none items-center rounded px-2 py-1.5 text-gray-700 outline-none data-[highlighted]:bg-gray-100"
+                  onSelect={() => onReplace(table.id)}
+                >
+                  {t("Upload new version")}
+                </DropdownMenu.Item>
+                <DropdownMenu.Item
+                  className="flex cursor-pointer select-none items-center rounded px-2 py-1.5 text-red-600 outline-none data-[highlighted]:bg-red-50"
+                  onSelect={() => onDelete(table.id)}
+                >
+                  {t("Delete table")}
+                </DropdownMenu.Item>
               </DropdownMenu.Content>
             </DropdownMenu.Portal>
           </DropdownMenu.Root>
@@ -1024,8 +967,6 @@ function DataTableRow({
           table={table}
           onClose={() => setSettingsOpen(false)}
           onUpdateDetails={onUpdateDetails}
-          onDelete={onDelete}
-          onReplace={onReplace}
           onSetVisualizationSettings={onSetVisualizationSettings}
         />
       ) : null}
@@ -1060,24 +1001,6 @@ function DataTableRow({
         />
       ) : null}
     </li>
-  );
-}
-
-function DataTableDroppedSitesFromUrl({
-  table,
-}: {
-  table: OverlayDataTableDetailsFragment;
-}) {
-  const { data: projectMeta } = useCurrentProjectMetadata();
-  const { columnStats } = useDataTableColumnStats(
-    columnStatsUrlForTable(table),
-    projectMeta?.project?.mapAccessToken
-  );
-  return (
-    <>
-      <DataTableDroppedSitesNotice columnStats={columnStats} />
-      <DataTableTemporalReplaceNotice columnStats={columnStats} />
-    </>
   );
 }
 
