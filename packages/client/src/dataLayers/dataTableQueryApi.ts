@@ -650,6 +650,94 @@ export function rowWhenOverlapsStep(
 }
 
 /**
+ * Same overlap rule as {@link rowWhenOverlapsStep}, true when the row
+ * overlaps any of `steps`. Step intervals are expanded once and reused, so
+ * auditing a multi-year map clock does not re-parse every step per row.
+ *
+ * Contiguous clock steps tile one window. A row between two non-adjacent
+ * steps does not match — the union of the outer bounds would wrongly include
+ * that gap.
+ */
+export function filterRowsOverlappingSteps<
+  T extends { [column: string]: unknown }
+>(rows: T[], steps: string[]): T[] {
+  const intervals: { startSec: number; endSec: number }[] = [];
+  for (const step of steps) {
+    const interval = stepIntervalSeconds(step);
+    if (interval) {
+      intervals.push(interval);
+    }
+  }
+  if (intervals.length === 0) {
+    return [];
+  }
+  return rows.filter((row) => {
+    const start = row[WHEN_START_COLUMN];
+    const end = row[WHEN_END_COLUMN];
+    if (typeof start !== "number" || typeof end !== "number") {
+      return false;
+    }
+    for (const interval of intervals) {
+      if (start < interval.endSec && end > interval.startSec) {
+        return true;
+      }
+    }
+    return false;
+  });
+}
+
+/**
+ * What the QA/QC rows modal is auditing.
+ *
+ * - a step key: one timeslider bin
+ * - `"window"`: every step in the current map clock (a date range)
+ * - `"all"`: every row the raw query returned
+ */
+export type CalculationRowsSelection = string | "window" | "all";
+
+/**
+ * Resolve the rows-modal time selection.
+ *
+ * A map clock that covers more than one step stays on that whole window.
+ * Collapsing it to the latest step would show a different statistic than
+ * the one painted on the map. An instant clock selects that one step, or
+ * the latest observed step when the site has no data there. An explicit
+ * choice (a chart click, the range, or "All steps") is kept when it still
+ * applies to this site.
+ */
+export function resolveCalculationRowsSelection(
+  chosen: CalculationRowsSelection | undefined,
+  observedSteps: string[],
+  currentSteps: string[]
+): CalculationRowsSelection | undefined {
+  if (chosen === "all") {
+    return "all";
+  }
+  if (chosen === "window" && currentSteps.length > 1) {
+    return "window";
+  }
+  if (
+    chosen &&
+    chosen !== "window" &&
+    observedSteps.indexOf(chosen) !== -1
+  ) {
+    return chosen;
+  }
+  if (currentSteps.length > 1) {
+    return "window";
+  }
+  if (observedSteps.length === 0) {
+    return undefined;
+  }
+  for (const step of currentSteps) {
+    if (observedSteps.indexOf(step) !== -1) {
+      return step;
+    }
+  }
+  return observedSteps[observedSteps.length - 1];
+}
+
+/**
  * Columns hidden by default in the QA/QC rows modal: any column whose value
  * is identical on every fetched row, except columns central to auditing the
  * calculation (active filters, temporal source columns, the organism

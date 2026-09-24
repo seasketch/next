@@ -5,13 +5,19 @@ import {
   DataTableQuerySettings,
   defaultHiddenCalculationColumns,
   deriveDataTableCalculationRowsQuery,
+  filterRowsOverlappingSteps,
   parseDataTableCalculationRowsBody,
   precisionForStep,
+  resolveCalculationRowsSelection,
   rowWhenOverlapsStep,
   stepIntervalSeconds,
   WHEN_END_COLUMN,
   WHEN_START_COLUMN,
 } from "./dataTableQueryApi";
+import {
+  calculationRowsExportFilename,
+  calculationRowsToCsv,
+} from "./dataTableCalculationRowsExport";
 
 /**
  * Guards the coupling between map statistics queries and the QA/QC
@@ -222,6 +228,126 @@ describe("client-side step filtering (rowWhenOverlapsStep)", () => {
         "2018"
       )
     ).toBe(false);
+  });
+});
+
+describe("filterRowsOverlappingSteps", () => {
+  const sec = (iso: string) => Date.parse(iso) / 1000;
+  const row = (start: string, end: string) => ({
+    [WHEN_START_COLUMN]: sec(start),
+    [WHEN_END_COLUMN]: sec(end),
+  });
+
+  it("keeps rows that overlap any step in a date range and skips gaps", () => {
+    const rows = [
+      row("2023-06-01", "2023-06-02"),
+      row("2024-01-15", "2024-01-16"),
+      row("2019-05-01", "2019-05-02"),
+    ];
+    expect(filterRowsOverlappingSteps(rows, ["2023", "2024"])).toEqual([
+      rows[0],
+      rows[1],
+    ]);
+    // 2019 sits between 2018 and 2020; the outer bounds must not swallow it.
+    expect(
+      filterRowsOverlappingSteps(
+        [row("2019-03-01", "2019-03-02")],
+        ["2018", "2020"]
+      )
+    ).toEqual([]);
+  });
+
+  it("returns nothing when no step expands", () => {
+    expect(
+      filterRowsOverlappingSteps([row("2018-01-01", "2018-02-01")], ["nope"])
+    ).toEqual([]);
+  });
+});
+
+describe("resolveCalculationRowsSelection", () => {
+  const observed = ["2018", "2023", "2024"];
+
+  it("keeps a date-range clock on the whole window", () => {
+    expect(
+      resolveCalculationRowsSelection(undefined, observed, ["2023", "2024"])
+    ).toBe("window");
+    // A range is the audit target even before per-step series points arrive,
+    // so the modal cannot snap to the latest year once they do.
+    expect(
+      resolveCalculationRowsSelection(undefined, [], ["2023", "2024"])
+    ).toBe("window");
+  });
+
+  it("keeps an explicit step, range, or all-steps choice", () => {
+    expect(
+      resolveCalculationRowsSelection("2018", observed, ["2023", "2024"])
+    ).toBe("2018");
+    expect(
+      resolveCalculationRowsSelection("window", observed, ["2023", "2024"])
+    ).toBe("window");
+    expect(
+      resolveCalculationRowsSelection("all", observed, ["2023", "2024"])
+    ).toBe("all");
+  });
+
+  it("drops a step the site did not observe and returns to the clock", () => {
+    expect(
+      resolveCalculationRowsSelection("2010", observed, ["2023", "2024"])
+    ).toBe("window");
+    expect(
+      resolveCalculationRowsSelection("2010", observed, ["2024"])
+    ).toBe("2024");
+  });
+
+  it("selects the instant clock step, or the latest observed step", () => {
+    expect(
+      resolveCalculationRowsSelection(undefined, observed, ["2023"])
+    ).toBe("2023");
+    expect(
+      resolveCalculationRowsSelection(undefined, observed, ["1999"])
+    ).toBe("2024");
+    expect(resolveCalculationRowsSelection(undefined, [], [])).toBeUndefined();
+  });
+});
+
+describe("calculationRowsToCsv", () => {
+  it("writes visible columns, blanks nulls, and keeps zeros", () => {
+    const csv = calculationRowsToCsv(
+      [
+        { id: "survey_year", label: "survey year" },
+        { id: "count", label: "count" },
+        { id: "sex", label: "sex" },
+      ],
+      [
+        { survey_year: 2024, count: 0, sex: null },
+        { survey_year: 2023, count: 2, sex: "FEMALE" },
+      ]
+    );
+    expect(csv).toBe(
+      ["survey year,count,sex", "2024,0,", "2023,2,FEMALE"].join("\n")
+    );
+  });
+
+  it("quotes commas and disambiguates duplicate labels", () => {
+    const csv = calculationRowsToCsv(
+      [
+        { id: "a", label: "note" },
+        { id: "b", label: "note" },
+      ],
+      [{ a: "north, west", b: "reef" }]
+    );
+    expect(csv).toBe(["note,note (b)", '"north, west",reef'].join("\n"));
+  });
+
+  it("builds a safe download filename", () => {
+    expect(
+      calculationRowsExportFilename([
+        "Fish transects",
+        "SOL_SCORPION_W",
+        "2023 – 2024",
+      ])
+    ).toBe("Fish-transects-SOL_SCORPION_W-2023-–-2024.csv");
+    expect(calculationRowsExportFilename(["", "  "])).toBe("rows.csv");
   });
 });
 

@@ -3,7 +3,11 @@ import { createPortal } from "react-dom";
 import { Trans, useTranslation } from "react-i18next";
 import clsx from "clsx";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
-import { CheckIcon, ChevronDownIcon } from "@radix-ui/react-icons";
+import {
+  CheckIcon,
+  ChevronDownIcon,
+  DownloadIcon,
+} from "@radix-ui/react-icons";
 import Button from "../components/Button";
 import Spinner from "../components/Spinner";
 import { MapManagerContext } from "./MapContextManager";
@@ -12,6 +16,7 @@ import {
   useDataTableColumnStats,
 } from "./useDataTableColumnStats";
 import {
+  CalculationRowsSelection,
   DataTableAggregation,
   DataTableCalculationRowsResult,
   DataTableFeatureSeriesPoint,
@@ -19,12 +24,18 @@ import {
   dataTableFilterLabel,
   dataTableInFilterValues,
   defaultHiddenCalculationColumns,
+  filterRowsOverlappingSteps,
   isInternalWhenColumn,
   parseFilterColumnLabels,
-  rowWhenOverlapsStep,
+  resolveCalculationRowsSelection,
   temporalSourceFilterColumns,
   WHEN_START_COLUMN,
 } from "./dataTableQueryApi";
+import {
+  calculationRowsExportFilename,
+  calculationRowsToCsv,
+  downloadCalculationRowsCsv,
+} from "./dataTableCalculationRowsExport";
 import { organismColumnFromTable } from "./orgQueryApi";
 import {
   DataTableSparklineSvg,
@@ -46,9 +57,12 @@ import { formatLegendNumber } from "./legends/DataTableLegendBubble";
  * the map (see `DataTableQueryManager.fetchCalculationRows`). The statistics
  * in the header come from the engine's own aggregate responses — this
  * component never recomputes statistics client-side. The one piece of
- * client-side logic that mirrors the engine is `rowWhenOverlapsStep`
- * (dataTableQueryApi.ts), the engine's row↔step assignment rule, which
- * shares `expandTemporalIso` with the engine. Keep them in lockstep.
+ * client-side logic that mirrors the engine is `rowWhenOverlapsStep` /
+ * `filterRowsOverlappingSteps` (dataTableQueryApi.ts), the engine's
+ * row↔step assignment rule, which shares `expandTemporalIso` with the
+ * engine. Keep them in lockstep. A map clock that spans multiple steps
+ * audits that whole window — the same range aggregate painted on the map —
+ * instead of collapsing to the latest year.
  */
 
 type CalculationRow = { [column: string]: unknown };
@@ -207,10 +221,14 @@ export default function DataTableCalculationRowsModal({
     result?: DataTableCalculationRowsResult;
   }>({ loading: true });
   const [filterText, setFilterText] = useState("");
-  /** A single engine step key, "all", or undefined (= pick a default). */
-  const [selectedStep, setSelectedStep] = useState<string | "all" | undefined>(
-    undefined
-  );
+  /**
+   * Explicit audit target. Undefined means "the map clock": a date range
+   * stays the whole window, and an instant clock picks that one step.
+   * See {@link resolveCalculationRowsSelection}.
+   */
+  const [chosenStep, setChosenStep] = useState<
+    CalculationRowsSelection | undefined
+  >(undefined);
   const [sortState, setSortState] = useState<{
     id: string;
     desc: boolean;
@@ -305,39 +323,51 @@ export default function DataTableCalculationRowsModal({
       ? manager.getDataTableFeatureCurrentValue(tocStableId, site)
       : undefined;
 
-  // Default to a single step: the map's current clock step when it has data
-  // for this site, otherwise the most recent observed step. When switching
-  // sites, keep the selection if the new site observed that step.
-  useEffect(() => {
-    if (observedSteps.length === 0) {
-      return;
-    }
-    if (
-      selectedStep !== undefined &&
-      (selectedStep === "all" ||
-        observedSteps.some((point) => point.step === selectedStep))
-    ) {
-      return;
-    }
-    const current = [...currentSteps]
-      .reverse()
-      .find((step) => observedSteps.some((point) => point.step === step));
-    setSelectedStep(current || observedSteps[observedSteps.length - 1].step);
-  }, [observedSteps, currentSteps, selectedStep]);
+  // Derived, not stored in an effect: writing the default after the series
+  // arrives used to collapse a date range onto its most recent year once the
+  // rows request settled.
+  const selection = useMemo(
+    () =>
+      resolveCalculationRowsSelection(
+        chosenStep,
+        observedSteps.map((point) => point.step),
+        currentSteps
+      ),
+    [chosenStep, observedSteps, currentSteps]
+  );
 
   const hasSeries = observedSteps.length > 0;
   const activeStep =
-    hasWhen && selectedStep && selectedStep !== "all" ? selectedStep : null;
+    hasWhen && selection && selection !== "all" && selection !== "window"
+      ? selection
+      : null;
   const activeStepPoint = activeStep
     ? observedSteps.find((point) => point.step === activeStep)
     : undefined;
+  const auditingWindow = selection === "window" && currentSteps.length > 1;
+  const filterSteps = useMemo(() => {
+    if (!hasWhen) {
+      return null;
+    }
+    if (activeStep) {
+      return [activeStep];
+    }
+    if (auditingWindow) {
+      return currentSteps;
+    }
+    return null;
+  }, [hasWhen, activeStep, auditingWindow, currentSteps]);
 
   const stepFilteredRows = useMemo(() => {
-    if (!activeStep) {
+    if (!filterSteps) {
       return rows;
     }
-    return rows.filter((row) => rowWhenOverlapsStep(row, activeStep));
-  }, [rows, activeStep]);
+    return filterRowsOverlappingSteps(rows, filterSteps);
+  }, [rows, filterSteps]);
+  const highlightSteps = useMemo(
+    () => (auditingWindow ? currentSteps : activeStep ? [activeStep] : []),
+    [auditingWindow, currentSteps, activeStep]
+  );
 
   const temporalColumns = useMemo(
     () => temporalSourceFilterColumns(table?.temporal),
@@ -451,7 +481,7 @@ export default function DataTableCalculationRowsModal({
 
   useEffect(() => {
     setShowAllRows(false);
-  }, [site, selectedStep, filterText]);
+  }, [site, selection, filterText]);
 
   // Bespoke modal shell (not components/Modal): headlessui's Dialog treats
   // Radix portals (the hidden-columns dropdown) as outside clicks and closes
@@ -509,12 +539,17 @@ export default function DataTableCalculationRowsModal({
   const truncated = Boolean(result && result.rowsMatched > result.rows.length);
 
   // The headline value being audited: the engine's statistic for the
-  // selected step, or the value currently painted on the map.
+  // selected step, or the value currently painted on the map. A date range
+  // uses that painted value — per-step bins are not recombined here, because
+  // a row can fall in more than one step.
+  const rangeLabel = formatDataTableTooltipRange(currentSteps);
   const headlineValue: number | null | undefined = activeStep
     ? activeStepPoint?.value
     : currentValue;
   const headlineContext = activeStep
     ? formatStepTick(activeStep)
+    : auditingWindow
+    ? rangeLabel
     : hasSeries
     ? formatDataTableTooltipRange(
         seriesPoints.map((point) => point.step)
@@ -524,8 +559,9 @@ export default function DataTableCalculationRowsModal({
   if (!settings || !table) {
     return null;
   }
-  // Trans interpolation shorthand ({{step}} below).
+  // Trans interpolation shorthand ({{step}} / {{range}} below).
   const step = activeStep ? formatStepTick(activeStep) : "";
+  const range = rangeLabel || "";
   const tableName = table.name;
   const joinLabel = joinColumn
     ? dataTableFilterLabel(joinColumn, columnLabels)
@@ -619,28 +655,34 @@ export default function DataTableCalculationRowsModal({
               <div className="min-w-0 flex-1">
                 <AuditSparkline
                   points={seriesPoints}
-                  selectedStep={selectedStep}
-                  onSelect={setSelectedStep}
+                  highlightSteps={highlightSteps}
+                  onSelect={setChosenStep}
                   statTitle={statTitle}
                 />
                 <div className="mt-1 flex items-center justify-between gap-3">
                   <span className="text-[11px] text-gray-400">
                     {t("Click the chart to audit a different time step.")}
                   </span>
-                  <button
-                    type="button"
-                    className={clsx(
-                      "flex-none rounded-full border px-2.5 py-0.5 text-xs",
-                      selectedStep === "all"
-                        ? "border-primary-400 bg-primary-500/10 font-medium text-primary-800"
-                        : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
-                    )}
-                    onClick={() =>
-                      setSelectedStep(selectedStep === "all" ? undefined : "all")
-                    }
-                  >
-                    {t("All steps")}
-                  </button>
+                  <span className="flex flex-none items-center gap-1.5">
+                    {rangeLabel ? (
+                      <button
+                        type="button"
+                        className={stepPillClass(selection === "window")}
+                        onClick={() => setChosenStep("window")}
+                      >
+                        {rangeLabel}
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      className={stepPillClass(selection === "all")}
+                      onClick={() =>
+                        setChosenStep(selection === "all" ? undefined : "all")
+                      }
+                    >
+                      {t("All steps")}
+                    </button>
+                  </span>
                 </div>
               </div>
             )}
@@ -652,6 +694,10 @@ export default function DataTableCalculationRowsModal({
           <div className="min-w-0 text-sm text-gray-800">
             {rowsState.loading ? (
               t("Loading rows…")
+            ) : auditingWindow ? (
+              <Trans ns="homepage">
+                Rows in <strong>{{ range }}</strong>
+              </Trans>
             ) : activeStep ? (
               <Trans ns="homepage">
                 Rows at <strong>{{ step }}</strong>
@@ -669,7 +715,10 @@ export default function DataTableCalculationRowsModal({
                   : t("({{total}})", { total: displayRows.length })}
               </span>
             ) : null}
-            {activeStep && !rowsState.loading && result ? (
+            {(activeStep || auditingWindow) &&
+            !rowsState.loading &&
+            result &&
+            stepFilteredRows.length !== rows.length ? (
               <span className="ml-2 text-xs text-gray-400">
                 {t("{{total}} rows across all steps", { total: rows.length })}
               </span>
@@ -684,6 +733,34 @@ export default function DataTableCalculationRowsModal({
             ) : null}
           </div>
           <div className="flex flex-none items-center gap-2">
+            <button
+              type="button"
+              className="flex flex-none items-center gap-1.5 rounded border border-gray-300 bg-white px-2.5 py-1 text-sm text-gray-700 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+              disabled={rowsState.loading || displayRows.length === 0}
+              title={t("Download these rows as CSV")}
+              onClick={() => {
+                const columns = columnIds.map((id) => ({
+                  id,
+                  label: dataTableFilterLabel(id, columnLabels),
+                }));
+                const context = auditingWindow
+                  ? range
+                  : activeStep
+                  ? step
+                  : t("All steps");
+                downloadCalculationRowsCsv(
+                  calculationRowsExportFilename([
+                    table.name,
+                    site || "",
+                    context,
+                  ]),
+                  calculationRowsToCsv(columns, displayRows)
+                );
+              }}
+            >
+              <DownloadIcon className="h-3.5 w-3.5 text-gray-500" />
+              {t("Export CSV")}
+            </button>
             <DropdownMenu.Root>
               <DropdownMenu.Trigger asChild>
                 <button
@@ -758,6 +835,8 @@ export default function DataTableCalculationRowsModal({
             <div className="flex h-full items-center justify-center px-6 text-sm text-gray-500">
               {activeStep
                 ? t("No rows overlap the selected time step for this site.")
+                : auditingWindow
+                ? t("No rows overlap the selected time range for this site.")
                 : t("No rows match the active filters for this site.")}
             </div>
           ) : (
@@ -865,31 +944,36 @@ export default function DataTableCalculationRowsModal({
  * `DataTableSparklineSvg` renderer so it looks identical to the map hover
  * tooltip's chart.
  */
+function stepPillClass(active: boolean) {
+  return clsx(
+    "flex-none rounded-full border px-2.5 py-0.5 text-xs",
+    active
+      ? "border-primary-400 bg-primary-500/10 font-medium text-primary-800"
+      : "border-gray-300 bg-white text-gray-600 hover:bg-gray-50"
+  );
+}
+
 function AuditSparkline({
   points,
-  selectedStep,
+  highlightSteps,
   onSelect,
   statTitle,
 }: {
   points: DataTableFeatureSeriesPoint[];
-  selectedStep: string | "all" | undefined;
+  highlightSteps: string[];
   onSelect: (step: string) => void;
   statTitle: string;
 }) {
   const { t } = useTranslation("homepage");
   const layout = useMemo(
     () =>
-      dataTableSparklineLayout(
-        points,
-        selectedStep && selectedStep !== "all" ? [selectedStep] : [],
-        {
-          width: CHART_WIDTH,
-          height: CHART_HEIGHT,
-          maxPoints: CHART_MAX_POINTS,
-          margins: { left: 36, bottom: 20 },
-        }
-      ),
-    [points, selectedStep]
+      dataTableSparklineLayout(points, highlightSteps, {
+        width: CHART_WIDTH,
+        height: CHART_HEIGHT,
+        maxPoints: CHART_MAX_POINTS,
+        margins: { left: 36, bottom: 20 },
+      }),
+    [points, highlightSteps]
   );
   const sliceWidth =
     layout.samples.length > 1
