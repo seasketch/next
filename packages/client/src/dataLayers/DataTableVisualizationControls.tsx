@@ -282,7 +282,7 @@ export default function DataTableVisualizationControls({
         <span>{t("Showing")}</span>
         {showOpSelect ? (
           <InlineSelect
-            ariaLabel={t("Aggregation")}
+            ariaLabel={t("Calculation")}
             value={resolved.op}
             options={opOptions}
             onChange={(value) => {
@@ -307,7 +307,7 @@ export default function DataTableVisualizationControls({
             <span className="text-gray-400">{t("of")}</span>
             {showColumnSelect ? (
               <InlineSelect
-                ariaLabel={t("Visualize column")}
+                ariaLabel={t("Value column")}
                 value={effectiveColumn || ""}
                 options={columnOptions}
                 onChange={(value) => {

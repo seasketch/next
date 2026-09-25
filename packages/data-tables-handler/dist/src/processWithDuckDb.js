@@ -28,12 +28,13 @@ exports.readJoinValues = readJoinValues;
 exports.countParquetJoinMatches = countParquetJoinMatches;
 exports.filterParquetByJoinValues = filterParquetByJoinValues;
 exports.computeColumnStatsFromParquet = computeColumnStatsFromParquet;
-const path = __importStar(require("path"));
 const fs_1 = require("fs");
+const path = __importStar(require("path"));
 const validateJoinColumn_1 = require("./validateJoinColumn");
 const normalizeCsvEncoding_1 = require("./normalizeCsvEncoding");
 const inferCsvColumnPlans_1 = require("./inferCsvColumnPlans");
 const duckDb_1 = require("./duckDb");
+const clusterParquet_1 = require("./clusterParquet");
 function escapePath(path) {
     return path.replace(/'/g, "''");
 }
@@ -50,9 +51,15 @@ function delimiterOption(delimiter) {
     }
 }
 async function processCsvWithDuckDb(csvPath, parquetPath, options) {
-    const { path: duckDbCsvPath, normalized } = (0, normalizeCsvEncoding_1.normalizeCsvEncodingIfNeeded)(csvPath, path.join(path.dirname(csvPath), "input.utf8.csv"));
+    const { path: duckDbCsvPath, normalized } = await (0, normalizeCsvEncoding_1.normalizeCsvEncodingIfNeeded)(csvPath, path.join(path.dirname(csvPath), "input.utf8.csv"));
     if (normalized) {
         console.log(`[data-tables-handler] normalized csv encoding to utf-8: ${duckDbCsvPath}`);
+        try {
+            (0, fs_1.unlinkSync)(csvPath);
+        }
+        catch {
+            // original may already have been replaced; DuckDB only needs the utf-8 copy
+        }
     }
     const delimiter = options.delimiter || ",";
     const hasHeader = options.hasHeaderRow !== false;
@@ -77,7 +84,11 @@ async function processCsvWithDuckDb(csvPath, parquetPath, options) {
         const rowCount = countRows[0]?.count ?? 0;
         const columns = await (0, duckDb_1.all)(conn, `SELECT column_name FROM information_schema.columns WHERE table_name = 'observations' ORDER BY ordinal_position`);
         const headers = columns.map((c) => c.column_name);
-        await (0, duckDb_1.run)(conn, `COPY observations TO '${escapePath(parquetPath)}' (FORMAT PARQUET)`);
+        const clusterHints = {
+            columns: headers,
+            joinColumn: options.joinColumn,
+        };
+        await (0, duckDb_1.run)(conn, (0, clusterParquet_1.copyObservationsParquetSql)(parquetPath, (0, clusterParquet_1.clusterColumns)(clusterHints), (0, clusterParquet_1.bloomColumnsFor)(clusterHints)));
         return { rowCount, headers };
     });
 }
@@ -133,10 +144,17 @@ async function filterParquetByJoinValues(parquetPath, joinColumn, keepValues) {
         return await (0, duckDb_1.withDuckDb)(async (conn) => {
             const beforeRows = await (0, duckDb_1.all)(conn, `SELECT COUNT(*)::INTEGER as count FROM read_parquet('${escapePath(parquetPath)}')`);
             const beforeCount = beforeRows[0]?.count ?? 0;
+            const schema = await (0, duckDb_1.all)(conn, `SELECT column_name FROM (DESCRIBE SELECT * FROM read_parquet('${escapePath(parquetPath)}'))`);
+            const cluster = (0, clusterParquet_1.clusterColumns)({
+                columns: schema.map((row) => row.column_name),
+                joinColumn,
+            });
+            const order = cluster.map(clusterParquet_1.quoteIdent).join(", ");
+            const orderSql = order ? ` ORDER BY ${order}` : "";
             await (0, duckDb_1.run)(conn, `COPY (
           SELECT * FROM read_parquet('${escapePath(parquetPath)}')
-          WHERE CAST("${col}" AS VARCHAR) IN (${inList})
-        ) TO '${escapePath(filteredPath)}' (FORMAT PARQUET)`);
+          WHERE CAST("${col}" AS VARCHAR) IN (${inList})${orderSql}
+        ) TO '${escapePath(filteredPath)}' (FORMAT PARQUET, ROW_GROUP_SIZE 122880)`);
             const afterRows = await (0, duckDb_1.all)(conn, `SELECT COUNT(*)::INTEGER as count FROM read_parquet('${escapePath(filteredPath)}')`);
             const afterCount = afterRows[0]?.count ?? 0;
             (0, fs_1.renameSync)(filteredPath, parquetPath);

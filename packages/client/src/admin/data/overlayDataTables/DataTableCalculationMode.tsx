@@ -82,28 +82,26 @@ export default function DataTableCalculationMode({
     <div className="space-y-4">
       <div className="space-y-1">
         <p className="text-sm font-medium text-gray-900">
-          {t("Calculation mode")}
+          {t("How to turn rows into a map value")}
         </p>
         <p className="text-xs text-gray-500">
-          {t(
-            "Simple averages each matching row. Multiple replicates first combines rows that belong to the same sample, then calculates across those samples."
-          )}
+          {t("Pick the one that matches how your table is laid out.")}
         </p>
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
         <ModeCard
           selected={mode === "simple"}
-          title={t("Simple")}
+          title={t("Each row is already a summary.")}
           body={t(
-            "Best for datasets where there is one observation for a given subject and time step. For example, a list of taxa with a single record of #/m² for any given year."
+            "Every row that matches the filters counts as one sample. The map calculation runs straight across those rows: a mean is the mean of the rows for that site in the time shown. Choose this when each row is already a per-site value, such as a density per site per survey. If your rows are individual observations inside a transect or quadrat, choose the other option, or they will be averaged as if each were its own survey."
           )}
           onClick={() => onModeChange("simple")}
         />
         <ModeCard
           selected={mode === "replicates"}
-          title={t("Multiple replicates")}
+          title={t("Rows are observations inside replicates.")}
           body={t(
-            "Choose if you have multiple quadrats or transects performed at the same time at any given site, or if you have multiple observations of a subject that need to be combined (for example the same taxon recorded by sex or size class)."
+            "Rows record individual observations, such as one fish of a given size, inside a transect, quadrat, camera drop, or similar unit. SeaSketch first combines the rows in each replicate, then calculates across replicates."
           )}
           onClick={() => onModeChange("replicates")}
         />
@@ -112,15 +110,15 @@ export default function DataTableCalculationMode({
         <div className="space-y-5 rounded-md border border-gray-200 p-3">
           <div className="space-y-2">
             <p className="text-sm font-medium text-gray-900">
-              {t("Replicate identifiers")}
+              {t("What makes a replicate")}
             </p>
             <p className="text-xs text-gray-500">
               {t(
-                "A replicate is one sampling unit. Time step and the join column are always part of it. Check the other columns that distinguish one unit from another."
+                "A replicate is one survey of one site: for example one transect swim, one quadrat, one camera drop. Rows that share the survey date, the site, and the columns you check here belong to the same replicate."
               )}
             </p>
             <div className="flex flex-wrap gap-2">
-              <LockedChip label={t("Time step")} />
+              <LockedChip label={t("Survey date")} />
               <LockedChip label={joinColumn} />
             </div>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -163,10 +161,11 @@ export default function DataTableCalculationMode({
             <p className="text-xs text-gray-600">
               {identifiers.length === 0
                 ? t(
-                    "No extra columns are selected, so the map still averages rows. Add the columns that identify a transect, quadrat, or similar unit."
+                    "A replicate is one survey date at one {{join}}.",
+                    { join: joinColumn }
                   )
                 : t(
-                    "A replicate is one combination of time step, {{join}}, and {{ids}}. Rows that differ only by {{collapsed}} are combined inside that unit.",
+                    "A replicate is one survey date, one {{join}}, and one combination of {{ids}}. Rows that differ only in {{collapsed}} are part of the same replicate.",
                     {
                       join: joinColumn,
                       ids: identifiers.join(", "),
@@ -176,14 +175,19 @@ export default function DataTableCalculationMode({
                     }
                   )}
             </p>
+            <p className="text-xs text-gray-500">
+              {t(
+                "If a site is surveyed more than once in the period shown on the timeslider, each survey is its own replicate."
+              )}
+            </p>
           </div>
           <div className="space-y-2">
             <p className="text-sm font-medium text-gray-900">
-              {t("Replicate label")}
+              {t("Call a replicate a…")}
             </p>
             <p className="text-xs text-gray-500">
               {t(
-                "This word appears in the legend, for example “mean of count per transect”."
+                "This word appears in the map legend, as in “mean of count per transect”."
               )}
             </p>
             <select
@@ -212,11 +216,11 @@ export default function DataTableCalculationMode({
           <div className="space-y-3">
             <div className="space-y-1">
               <p className="text-sm font-medium text-gray-900">
-                {t("Per data column")}
+                {t("How each value column is calculated")}
               </p>
               <p className="text-xs text-gray-500">
                 {t(
-                  "Rows that share a replicate are combined first. The map then calculates across those replicate values. The legend uses the across-replicate operation."
+                  "First inside a replicate, then across replicates."
                 )}
               </p>
             </div>
@@ -237,7 +241,7 @@ export default function DataTableCalculationMode({
                     <p className="font-mono text-xs text-gray-900">{column}</p>
                     <fieldset className="space-y-1">
                       <legend className="text-xs font-medium text-gray-700">
-                        {t("Within a replicate")}
+                        {t("Inside each replicate")}
                       </legend>
                       <div className="flex flex-wrap gap-2">
                         {WITHIN_REPLICATE_OPS.map((op) => (
@@ -259,7 +263,7 @@ export default function DataTableCalculationMode({
                     </fieldset>
                     <fieldset className="space-y-1">
                       <legend className="text-xs font-medium text-gray-700">
-                        {t("Across replicates")}
+                        {t("Across replicates, map users may choose")}
                       </legend>
                       <p className="text-[11px] text-gray-500">
                         {t(

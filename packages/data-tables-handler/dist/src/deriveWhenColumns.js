@@ -6,6 +6,7 @@ exports.missingSourceColumns = missingSourceColumns;
 exports.configFromStoredTemporal = configFromStoredTemporal;
 const geostats_types_1 = require("@seasketch/geostats-types");
 const duckDb_1 = require("./duckDb");
+const clusterParquet_1 = require("./clusterParquet");
 function escapePath(path) {
     return path.replace(/'/g, "''");
 }
@@ -111,7 +112,7 @@ function histogramUnit(resolution) {
             return "day";
     }
 }
-async function deriveWhenColumnsOnParquet(parquetPath, config) {
+async function deriveWhenColumnsOnParquet(parquetPath, config, clusterHints) {
     if (!(0, geostats_types_1.isDataTableTemporalConfig)(config)) {
         throw new Error("Invalid DataTableTemporalConfig");
     }
@@ -198,7 +199,17 @@ async function deriveWhenColumnsOnParquet(parquetPath, config) {
                 count: row.count,
             })),
         };
-        await (0, duckDb_1.run)(conn, `COPY observations TO '${escapePath(parquetPath)}' (FORMAT PARQUET)`);
+        const schema = await (0, duckDb_1.all)(conn, `SELECT column_name FROM information_schema.columns WHERE table_name = 'observations'`);
+        const hints = {
+            columns: schema.map((row) => row.column_name),
+            joinColumn: clusterHints?.joinColumn,
+            organismColumn: clusterHints?.organismColumn,
+            subjectColumn: clusterHints?.subjectColumn,
+            requiredFilterColumns: clusterHints?.requiredFilterColumns,
+            temporalColumns: (0, geostats_types_1.sourceColumnNames)(config.sourceColumns),
+            replicateColumns: clusterHints?.replicateColumns,
+        };
+        await (0, duckDb_1.run)(conn, (0, clusterParquet_1.copyObservationsParquetSql)(parquetPath, (0, clusterParquet_1.clusterColumns)(hints), (0, clusterParquet_1.bloomColumnsFor)(hints)));
         const defaultView = config.defaultViewResolution || nativeResolution;
         const temporal = {
             version: 1,

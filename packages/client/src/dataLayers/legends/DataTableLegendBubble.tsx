@@ -28,8 +28,17 @@ export function formatLegendNumber(value: number) {
       useGrouping: false,
     });
   }
-  return value.toLocaleString(undefined, {
+  const twoPlaces = value.toLocaleString(undefined, {
     maximumFractionDigits: 2,
+    useGrouping: false,
+  });
+  if (Math.abs(Math.round(value * 100)) > 0) {
+    return twoPlaces;
+  }
+  // A small nonzero mean such as 1 fish over 12 transects must not read as 0.
+  // Show two significant digits instead.
+  return value.toLocaleString(undefined, {
+    maximumSignificantDigits: 2,
     useGrouping: false,
   });
 }

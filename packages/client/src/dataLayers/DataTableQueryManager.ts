@@ -9,17 +9,20 @@ import {
   buildDataTableQuerySearchParams,
   combineSeriesSteps,
   DataTableAggregation,
+  DataTableCalculationAudit,
   DataTableCalculationRowsResult,
   DataTableFeatureSeriesPoint,
   dataTableQueryClockParams,
   dataTableQueryFailureFromResponse,
   DataTableQuerySettings,
+  deriveDataTableCalculationAuditQuery,
   deriveDataTableCalculationRowsQuery,
   featureSeriesFromParsed,
   isParsedDataTableQuerySeries,
   omitFiltersForColumns,
   ParsedDataTableQuerySeries,
   ParsedDataTableQueryValues,
+  parseDataTableCalculationAuditBody,
   parseDataTableCalculationRowsBody,
   parseDataTableQueryGroups,
   parseDataTableQuerySeries,
@@ -246,7 +249,8 @@ export class DataTableQueryManager {
     settings: ResolvedDataTableVisualizationSettings,
     featureId: string,
     tokenRequired: boolean = false,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    whenOverride?: { start: number; end: number } | null
   ): Promise<DataTableCalculationRowsResult> {
     if (!settings.table.queryUrl) {
       throw new Error("Query URL is required to fetch calculation rows");
@@ -255,7 +259,8 @@ export class DataTableQueryManager {
     const rowsQuery = deriveDataTableCalculationRowsQuery(
       statsQuery,
       settings.table.joinColumn,
-      featureId
+      featureId,
+      whenOverride
     );
     const url = new URL(settings.table.queryUrl);
     const params = buildDataTableQuerySearchParams(rowsQuery);
@@ -280,6 +285,51 @@ export class DataTableQueryManager {
       throw new Error(failure.message);
     }
     return parseDataTableCalculationRowsBody(await response.json(), rowsQuery);
+  }
+
+  /**
+   * The engine's account of one feature's number: the same aggregate the
+   * map ran, narrowed to this site and window, with `explain=1` so every
+   * replicate comes back with its status and value. The modal renders this
+   * rather than recomputing anything from rows, so zero-filled and left-out
+   * replicates appear even though no row of theirs is fetched.
+   */
+  async fetchCalculationAudit(
+    settings: ResolvedDataTableVisualizationSettings,
+    featureId: string,
+    tokenRequired: boolean = false,
+    signal?: AbortSignal,
+    whenOverride?: { start: number; end: number } | null
+  ): Promise<DataTableCalculationAudit> {
+    if (!settings.table.queryUrl) {
+      throw new Error("Query URL is required to audit a calculation");
+    }
+    const statsQuery = this.queryWithClock(settings);
+    const auditQuery = deriveDataTableCalculationAuditQuery(
+      statsQuery,
+      settings.table.joinColumn,
+      featureId,
+      whenOverride
+    );
+    const url = new URL(settings.table.queryUrl);
+    const params = buildDataTableQuerySearchParams(auditQuery);
+    params.set("f", "json");
+    if (tokenRequired) {
+      if (!this.mapAccessToken) {
+        throw new Error("Map access token is not set");
+      }
+      params.set("access_token", this.mapAccessToken);
+    }
+    if (shouldSendTilesAclNamespace()) {
+      params.set("ns", tilesAclNamespace());
+    }
+    url.search = params.toString();
+    const response = await fetchDataTableCalculationRows(url.toString(), signal);
+    if (!response.ok) {
+      const failure = await dataTableQueryFailureFromResponse(response);
+      throw new Error(failure.message);
+    }
+    return parseDataTableCalculationAuditBody(await response.json(), auditQuery);
   }
 
   /**

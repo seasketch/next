@@ -6,10 +6,12 @@ import {
 import { withDuckDb } from "./duckDb";
 import { fetchWikidataInatCrosswalk } from "./wikidataCrosswalk";
 import {
+  lookupWormsSynonymKeys,
   lookupWormsTaxaByAphiaIds,
   lookupWormsTaxaByNames,
   normalizeWormsNameKey,
   stripWormsAuthorship,
+  type WormsSynonymKeys,
   type WormsTaxonRow,
 } from "./wormsParquet";
 
@@ -334,6 +336,21 @@ export type ResolveOrganismInput = {
   extraNames?: string[];
 };
 
+/** One shared iNat id, or null when the keys disagree or all miss. */
+export function singleMappedInatId<K>(
+  keys: K[],
+  byKey: Map<K, number>
+): number | null {
+  let found: number | null = null;
+  for (const key of keys) {
+    const id = byKey.get(key);
+    if (!id) continue;
+    if (found !== null && found !== id) return null;
+    found = id;
+  }
+  return found;
+}
+
 function stubFromInput(input: ResolveOrganismInput): ResolvedTaxon {
   return {
     scientificName: input.scientificName || null,
@@ -444,9 +461,11 @@ function applyWormsTaxonRow(target: ResolvedTaxon, taxon: WormsTaxonRow): void {
  * REST match-names (≤50) on miss. REST records already carry rank fields,
  * so we do not call AphiaClassificationByAphiaID. Vernaculars REST runs
  * only for accepted IDs still missing from the snapshot (204 = none).
- * Then Wikidata SPARQL (AphiaID/name → iNat P3151). Query both the
- * accepted Aphia/name and the original synonym keys — Wikidata often
- * still has the unaccepted Aphia (P850) and P225. iNat taxa show
+ * Then Wikidata SPARQL (AphiaID/name → iNat P3151). Query the accepted
+ * Aphia/name, the class-table's own keys, and superseded AphiaIDs plus
+ * bare synonym binomials from the snapshot. Wikidata often still has the
+ * unaccepted Aphia (P850) and P225 after WoRMS accepts a new combination.
+ * iNat taxa show
  * (`/v1/taxa/{id}`, not `?q=`) keeps the single active taxon and
  * follows `current_synonymous_taxon_ids` when Wikidata still points at
  * an inactive id. Thumbs load later from the catalog id.
@@ -708,6 +727,23 @@ export async function resolveOrganismTaxa(
     }
   }
 
+  let synonymsByAccepted = new Map<number, WormsSynonymKeys>();
+  if (clients.wormsParquetDir && acceptedIds.length > 0) {
+    try {
+      synonymsByAccepted = await withDuckDb((conn) =>
+        lookupWormsSynonymKeys(
+          conn,
+          clients.wormsParquetDir as string,
+          acceptedIds
+        )
+      );
+    } catch (error) {
+      logTaxonomy("parquet synonyms failed", {
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+  }
+
   const wikiAphiaIds: number[] = [];
   const seenWikiAphia = new Set<number>();
   const addWikiAphia = (id: number | null | undefined) => {
@@ -715,13 +751,22 @@ export async function resolveOrganismTaxa(
     seenWikiAphia.add(id);
     wikiAphiaIds.push(id);
   };
-  for (const row of results) addWikiAphia(row.wormsAphiaId);
+  for (const row of results) {
+    addWikiAphia(row.wormsAphiaId);
+    const synonyms = row.wormsAphiaId
+      ? synonymsByAccepted.get(row.wormsAphiaId)
+      : undefined;
+    for (const id of synonyms?.aphiaIds || []) addWikiAphia(id);
+  }
   for (const input of inputs) addWikiAphia(input.wormsAphiaId);
 
   const wikiNames: string[] = [];
   for (let i = 0; i < results.length; i++) {
     const row = results[i];
     const input = inputs[i];
+    const synonyms = row.wormsAphiaId
+      ? synonymsByAccepted.get(row.wormsAphiaId)
+      : undefined;
     for (const name of [
       row.scientificName,
       input.scientificName,
@@ -729,6 +774,7 @@ export async function resolveOrganismTaxa(
       row.commonName,
       ...(input.extraNames || []),
       ...row.commonNames,
+      ...(synonyms?.scientificNames || []),
     ]) {
       if (name) wikiNames.push(name);
     }
@@ -768,23 +814,51 @@ export async function resolveOrganismTaxa(
     let inatId: number | null = null;
     let confidence: "high" | "low" = "low";
     const inputAphia = inputs[i].wormsAphiaId;
+    const scientific = row.scientificName || inputs[i].scientificName;
+    const synonyms = row.wormsAphiaId
+      ? synonymsByAccepted.get(row.wormsAphiaId)
+      : undefined;
     if (row.wormsAphiaId && wikiByAphia.has(row.wormsAphiaId)) {
       inatId = wikiByAphia.get(row.wormsAphiaId)!;
       confidence = "high";
-    } else if (inputAphia && wikiByAphia.has(inputAphia)) {
+    }
+    if (inatId === null) {
+      const fromSynonymAphia = singleMappedInatId(
+        synonyms?.aphiaIds || [],
+        wikiByAphia
+      );
+      if (fromSynonymAphia) {
+        inatId = fromSynonymAphia;
+        confidence = "high";
+      }
+    }
+    if (inatId === null && inputAphia && wikiByAphia.has(inputAphia)) {
       inatId = wikiByAphia.get(inputAphia)!;
       confidence = "high";
-    } else {
-      const scientific = row.scientificName || inputs[i].scientificName;
-      if (scientific && wikiByName.has(scientific.toLowerCase())) {
-        inatId = wikiByName.get(scientific.toLowerCase())!;
+    }
+    if (
+      inatId === null &&
+      scientific &&
+      wikiByName.has(scientific.toLowerCase())
+    ) {
+      inatId = wikiByName.get(scientific.toLowerCase())!;
+      confidence = "high";
+    }
+    if (inatId === null) {
+      const fromSynonymName = singleMappedInatId(
+        (synonyms?.scientificNames || []).map((name) => name.toLowerCase()),
+        wikiByName
+      );
+      if (fromSynonymName) {
+        inatId = fromSynonymName;
         confidence = "high";
-      } else {
-        const common = inputs[i].commonName;
-        if (common && wikiByName.has(common.toLowerCase())) {
-          inatId = wikiByName.get(common.toLowerCase())!;
-          confidence = row.wormsAphiaId || scientific ? "high" : "low";
-        }
+      }
+    }
+    if (inatId === null) {
+      const common = inputs[i].commonName;
+      if (common && wikiByName.has(common.toLowerCase())) {
+        inatId = wikiByName.get(common.toLowerCase())!;
+        confidence = row.wormsAphiaId || scientific ? "high" : "low";
       }
     }
     if (inatId) {

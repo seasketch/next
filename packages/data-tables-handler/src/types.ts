@@ -5,6 +5,14 @@ export interface DataTableUploadProcessingOptions {
   overlayJoinColumn?: string;
   forceNotNull?: string[];
   name?: string;
+  /** Reindex only: rewrite parquet clustering, do not change values. */
+  clusterOnly?: boolean;
+  replicateColumns?: string[];
+  subjectColumn?: string | null;
+  /** Coverage-file upload. The staged object is coverage JSON, not a CSV. */
+  kind?: "coverage";
+  detailColumns?: string[];
+  visualizationColumns?: string[];
 }
 
 export interface DataTablesHandlerRequest {
@@ -29,6 +37,7 @@ export interface DataTablesHandlerSuccess {
   sourceParquetRemote?: string;
   temporal?: unknown;
   organism?: unknown;
+  coverageRemote?: string;
 }
 
 export interface DataTablesHandlerResponse {

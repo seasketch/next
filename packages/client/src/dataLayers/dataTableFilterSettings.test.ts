@@ -1,17 +1,19 @@
 import { describe, expect, it } from "@jest/globals";
 import {
   allowedDataTableVisualizationColumns,
+  buildDataTableQuerySearchParams,
   configuredDataTableVisualizationColumns,
   dataTableFilterLabel,
   effectiveDataTableVisualizationColumn,
   hiddenDataTableFilterColumns,
   isAlwaysHiddenFilterColumn,
   isFilterColumnLabels,
+  parseExcludedValues,
   parseFilterColumnLabels,
+  partitionDataTableFilters,
   requiredDataTableFilterColumns,
   replicateQueryFields,
   resolveDataTableVisualizationSettings,
-  buildDataTableQuerySearchParams,
 } from "./dataTableQueryApi";
 
 describe("isFilterColumnLabels", () => {
@@ -237,5 +239,39 @@ describe("replicate calculation mode", () => {
         "replicateBy"
       )
     ).toBe(false);
+  });
+});
+
+describe("partitionDataTableFilters", () => {
+  it("sends subject and detail filters as v.* and prepends rows to ignore", () => {
+    const split = partitionDataTableFilters(
+      [
+        { column: "classcode", op: "eq", value: "SPUL" },
+        { column: "sex", op: "eq", value: "MALE" },
+        { column: "campus", op: "eq", value: "UCSB" },
+      ],
+      {
+        calculationMode: "replicates",
+        subjectColumn: "classcode",
+        observationDetailColumns: ["sex"],
+        effortMarkerValues: ["NO_ORG"],
+        coverageMode: "coverage_file",
+        excludedValues: { visitor_code: ["PeopleAll"] },
+      }
+    );
+    const params = buildDataTableQuerySearchParams({
+      op: "mean",
+      column: "count",
+      replicateBy: ["zone"],
+      within: "sum",
+      ...split,
+    });
+    expect(params.get("v.classcode")).toBe("SPUL");
+    expect(params.get("v.sex")).toBe("MALE");
+    expect(params.get("q.campus")).toBe("UCSB");
+    expect(params.get("q.visitor_code")).toBe("not.in.(PeopleAll)");
+    expect(params.get("effortMarkers")).toBe("NO_ORG");
+    expect(params.get("coverageMode")).toBe("coverage_file");
+    expect(parseExcludedValues(null)).toEqual({});
   });
 });

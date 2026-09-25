@@ -3,19 +3,30 @@
  * Batch AphiaID / scientific-name → iNaturalist taxon id via Wikidata.
  * iNat has no name-batch API; Wikidata P850 (WoRMS) + P3151 (iNat) + P225
  * (taxon name) can resolve hundreds of ids in a few SPARQL requests.
+ * When one key has two P3151s, ask iNat `/v1/taxa/{id,id}` for `is_active`
+ * and keep the single live taxon (Rock Scallop: 54526 over 187594).
+ * A lone inactive P3151 follows `current_synonymous_taxon_ids`
+ * (California Sheephead: 53699 → 1439813).
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.WIKIDATA_USER_AGENT = exports.WIKIDATA_CROSSWALK_BATCH = exports.WIKIDATA_SPARQL_URL = void 0;
+exports.INATURALIST_TAXA_BATCH = exports.INATURALIST_TAXA_URL = exports.WIKIDATA_USER_AGENT = exports.WIKIDATA_CROSSWALK_BATCH = exports.WIKIDATA_SPARQL_URL = void 0;
 exports.escapeSparqlString = escapeSparqlString;
 exports.buildWikidataAphiaQuery = buildWikidataAphiaQuery;
 exports.buildWikidataNameQuery = buildWikidataNameQuery;
 exports.buildWikidataLabelQuery = buildWikidataLabelQuery;
 exports.parseWikidataInatBindings = parseWikidataInatBindings;
-exports.assignUniqueInatId = assignUniqueInatId;
+exports.addInatCandidate = addInatCandidate;
+exports.pickActiveInatId = pickActiveInatId;
+exports.parseInatTaxonShow = parseInatTaxonShow;
+exports.parseInatTaxonActivity = parseInatTaxonActivity;
+exports.followInactiveInatId = followInactiveInatId;
 exports.fetchWikidataInatCrosswalk = fetchWikidataInatCrosswalk;
 exports.WIKIDATA_SPARQL_URL = "https://query.wikidata.org/sparql";
 exports.WIKIDATA_CROSSWALK_BATCH = 50;
 exports.WIKIDATA_USER_AGENT = "SeaSketch-organism-enrichment/1.0 (https://www.seasketch.org)";
+exports.INATURALIST_TAXA_URL = "https://api.inaturalist.org/v1/taxa";
+exports.INATURALIST_TAXA_BATCH = 30;
+const INATURALIST_MIN_INTERVAL_MS = 1000;
 function escapeSparqlString(value) {
     return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
@@ -28,7 +39,15 @@ function buildWikidataAphiaQuery(aphiaIds) {
 }`;
 }
 function buildWikidataNameQuery(names) {
-    const values = names.map((name) => `"${escapeSparqlString(name)}"`).join(" ");
+    // P1843 vernaculars are language-tagged (`"California Sheephead"@en`).
+    // A plain VALUES literal does not match. Include @en copies so both
+    // P225 (untyped) and P1843 hit with indexed equality — no FILTER scan.
+    const values = names
+        .flatMap((name) => {
+        const escaped = escapeSparqlString(name);
+        return [`"${escaped}"`, `"${escaped}"@en`];
+    })
+        .join(" ");
     // Only indexed properties bound to VALUES. Do not BIND() a language-tagged
     // rdfs:label inside a UNION — WDQS can treat ?label as unbound and return
     // every P3151 row (Node then dies creating a >512MB string).
@@ -83,24 +102,130 @@ function parseWikidataInatBindings(json) {
     }
     return out;
 }
-/** Keep a key only when every hit agrees on the same iNat id. */
-function assignUniqueInatId(map, key, inat) {
-    const existing = map.get(key);
-    if (existing === undefined) {
-        map.set(key, inat);
-        return;
+function addInatCandidate(map, key, inat) {
+    let ids = map.get(key);
+    if (!ids) {
+        ids = new Set();
+        map.set(key, ids);
     }
-    if (existing !== inat) {
-        map.delete(key);
-        map.set(key, -1);
-    }
+    ids.add(inat);
 }
-function finalizeUniqueMap(map) {
-    for (const [key, value] of map) {
-        if (value < 0)
-            map.delete(key);
+/**
+ * One candidate: keep it. Several: keep the only `is_active` id.
+ * Zero or two-plus live taxa: drop. Inactive singles are remapped
+ * later via `current_synonymous_taxon_ids`.
+ */
+function pickActiveInatId(ids, activity) {
+    const unique = [];
+    const seen = new Set();
+    for (const id of ids) {
+        if (!Number.isInteger(id) || id <= 0 || seen.has(id))
+            continue;
+        seen.add(id);
+        unique.push(id);
     }
-    return map;
+    if (unique.length === 0)
+        return null;
+    if (unique.length === 1)
+        return unique[0];
+    const active = unique.filter((id) => activity.get(id) === true);
+    return active.length === 1 ? active[0] : null;
+}
+function positiveIntIds(value) {
+    if (!Array.isArray(value))
+        return [];
+    const out = [];
+    const seen = new Set();
+    for (const raw of value) {
+        if (typeof raw !== "number" || !Number.isInteger(raw) || raw <= 0) {
+            continue;
+        }
+        if (seen.has(raw))
+            continue;
+        seen.add(raw);
+        out.push(raw);
+    }
+    return out;
+}
+function parseInatTaxonShow(json) {
+    const out = new Map();
+    if (!isRecord(json) || !Array.isArray(json.results))
+        return out;
+    for (const row of json.results) {
+        if (!isRecord(row))
+            continue;
+        if (typeof row.id !== "number" || !Number.isInteger(row.id) || row.id <= 0) {
+            continue;
+        }
+        if (typeof row.is_active !== "boolean")
+            continue;
+        out.set(row.id, {
+            isActive: row.is_active,
+            synonymIds: positiveIntIds(row.current_synonymous_taxon_ids),
+        });
+    }
+    return out;
+}
+function parseInatTaxonActivity(json) {
+    const out = new Map();
+    for (const [id, info] of parseInatTaxonShow(json)) {
+        out.set(id, info.isActive);
+    }
+    return out;
+}
+/** Prefer a live iNat id. A lone inactive P3151 follows its accepted synonym. */
+function followInactiveInatId(id, show) {
+    const info = show.get(id);
+    if (!info || info.isActive)
+        return id;
+    for (const synonym of info.synonymIds) {
+        const next = show.get(synonym);
+        if (next?.isActive)
+            return synonym;
+    }
+    return info.synonymIds[0] || id;
+}
+function finalizeCandidateMap(candidates, activity) {
+    const out = new Map();
+    for (const [key, ids] of candidates) {
+        const picked = pickActiveInatId(ids, activity);
+        if (picked != null)
+            out.set(key, picked);
+    }
+    return out;
+}
+async function fetchInatTaxonShow(fetchFn, ids) {
+    const show = new Map();
+    const unique = Array.from(new Set(ids.filter((id) => Number.isInteger(id) && id > 0)));
+    for (let i = 0; i < unique.length; i += exports.INATURALIST_TAXA_BATCH) {
+        if (i > 0) {
+            await new Promise((resolve) => setTimeout(resolve, INATURALIST_MIN_INTERVAL_MS));
+        }
+        const batch = unique.slice(i, i + exports.INATURALIST_TAXA_BATCH);
+        const url = `${exports.INATURALIST_TAXA_URL}/${batch.join(",")}`;
+        try {
+            const response = await fetchFn(url, {
+                method: "GET",
+                headers: {
+                    Accept: "application/json",
+                    "User-Agent": exports.WIKIDATA_USER_AGENT,
+                },
+            });
+            if (!response.ok) {
+                // eslint-disable-next-line no-console
+                console.log(`[data-tables-handler] taxonomy inat activity ${response.status}`);
+                continue;
+            }
+            const parsed = parseInatTaxonShow(await response.json());
+            for (const [id, info] of parsed)
+                show.set(id, info);
+        }
+        catch (error) {
+            // eslint-disable-next-line no-console
+            console.log(`[data-tables-handler] taxonomy inat activity failed ${error instanceof Error ? error.message : String(error)}`);
+        }
+    }
+    return show;
 }
 async function runSparql(fetchFn, query) {
     let lastError = null;
@@ -165,15 +290,15 @@ async function fetchWikidataInatCrosswalk(fetchFn, options) {
         await runBatch(buildWikidataAphiaQuery(batch), (json) => {
             for (const row of parseWikidataInatBindings(json)) {
                 if (row.aphia)
-                    assignUniqueInatId(byAphiaKey, row.aphia, row.inat);
+                    addInatCandidate(byAphiaKey, row.aphia, row.inat);
             }
         });
     }
-    const byName = new Map();
+    const byNameCandidates = new Map();
     const applyNameHits = (json) => {
         for (const row of parseWikidataInatBindings(json)) {
             if (row.query) {
-                assignUniqueInatId(byName, row.query.toLowerCase(), row.inat);
+                addInatCandidate(byNameCandidates, row.query.toLowerCase(), row.inat);
             }
         }
     };
@@ -186,13 +311,28 @@ async function fetchWikidataInatCrosswalk(fetchFn, options) {
         done = 1;
         await report();
     }
-    finalizeUniqueMap(byAphiaKey);
-    finalizeUniqueMap(byName);
+    const candidateIds = new Set();
+    for (const ids of [...byAphiaKey.values(), ...byNameCandidates.values()]) {
+        for (const id of ids)
+            candidateIds.add(id);
+    }
+    const show = candidateIds.size > 0
+        ? await fetchInatTaxonShow(fetchFn, Array.from(candidateIds))
+        : new Map();
+    const activity = new Map();
+    for (const [id, info] of show)
+        activity.set(id, info.isActive);
+    const byAphiaPicked = finalizeCandidateMap(byAphiaKey, activity);
+    const byNamePicked = finalizeCandidateMap(byNameCandidates, activity);
     const byAphiaId = new Map();
-    for (const [key, inat] of byAphiaKey) {
+    for (const [key, inat] of byAphiaPicked) {
         const aphia = parseInt(key, 10);
         if (aphia > 0)
-            byAphiaId.set(aphia, inat);
+            byAphiaId.set(aphia, followInactiveInatId(inat, show));
+    }
+    const byName = new Map();
+    for (const [key, inat] of byNamePicked) {
+        byName.set(key, followInactiveInatId(inat, show));
     }
     return { byAphiaId, byName };
 }

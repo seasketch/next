@@ -27,6 +27,29 @@ describe("clusterColumns", () => {
     );
   });
 
+  it("places replicate columns immediately after survey time", () => {
+    assert.deepEqual(
+      clusterColumns({
+        columns: [
+          "site",
+          "classcode",
+          "campus",
+          "zone",
+          "transect",
+          "year",
+          "_when_start",
+          "_when_end",
+        ],
+        joinColumn: "site",
+        organismColumn: "classcode",
+        requiredFilterColumns: ["campus"],
+        temporalColumns: ["year"],
+        replicateColumns: ["zone", "transect"],
+      }),
+      ["classcode", "campus", "_when_start", "zone", "transect", "year"]
+    );
+  });
+
   it("does not infer a filter column from its name", () => {
     assert.deepEqual(
       clusterColumns({

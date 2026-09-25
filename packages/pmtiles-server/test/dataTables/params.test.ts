@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   canonicalQueryString,
+  nocacheRequested,
   parseInList,
   parseQueryParams,
   QueryError,
@@ -121,6 +122,15 @@ describe("parseQueryParams", () => {
     expect(() => parse("when.start=1514764800")).toThrow(QueryError);
     expect(() => parse("when.start=foo&when.end=1")).toThrow(QueryError);
     expect(() => parse("when.start=10&when.end=10")).toThrow(QueryError);
+  });
+});
+
+describe("nocacheRequested", () => {
+  it("is true only for nocache=true or nocache=1", () => {
+    expect(nocacheRequested(new URLSearchParams("nocache=true"))).toBe(true);
+    expect(nocacheRequested(new URLSearchParams("nocache=1"))).toBe(true);
+    expect(nocacheRequested(new URLSearchParams("nocache=false"))).toBe(false);
+    expect(nocacheRequested(new URLSearchParams(""))).toBe(false);
   });
 });
 

@@ -12,6 +12,7 @@ const NODE_TESTS = [
   "test/dataTables/rawAggConsistency.test.ts",
   "test/dataTables/replicateMode.test.ts",
   "test/dataTables/monitoringUseCases.test.ts",
+  "test/dataTables/sparseTables.test.ts",
 ];
 
 export default defineConfig({

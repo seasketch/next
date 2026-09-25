@@ -102,15 +102,13 @@ export async function processCsvWithDuckDb(
     );
     const headers = columns.map((c) => c.column_name);
 
+    const clusterHints = {
+      columns: headers,
+      joinColumn: options.joinColumn,
+    };
     await run(
       conn,
-      copyObservationsParquetSql(
-        parquetPath,
-        clusterColumns({
-          columns: headers,
-          joinColumn: options.joinColumn,
-        }),
-      ),
+      copyObservationsParquetSql(parquetPath, clusterColumns(clusterHints)),
     );
 
     return { rowCount, headers };

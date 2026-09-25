@@ -670,7 +670,7 @@ export default function DataTableTemporalEditor({
             <div className="border-b border-gray-600">
               <div className="flex items-center gap-2 px-3 pt-3 pb-2">
                 <Dialog.Title className="min-w-0 flex-1 truncate font-medium text-indigo-100">
-                  <Trans ns="admin:data">Temporal coverage</Trans>
+                  <Trans ns="admin:data">Time settings</Trans>
                 </Dialog.Title>
                 <button
                   type="button"

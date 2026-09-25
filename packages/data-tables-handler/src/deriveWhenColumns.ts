@@ -269,18 +269,18 @@ export async function deriveWhenColumnsOnParquet(
       conn,
       `SELECT column_name FROM information_schema.columns WHERE table_name = 'observations'`,
     );
+    const hints: ClusterColumnHints = {
+      columns: schema.map((row) => row.column_name),
+      joinColumn: clusterHints?.joinColumn,
+      organismColumn: clusterHints?.organismColumn,
+      subjectColumn: clusterHints?.subjectColumn,
+      requiredFilterColumns: clusterHints?.requiredFilterColumns,
+      temporalColumns: sourceColumnNames(config.sourceColumns),
+      replicateColumns: clusterHints?.replicateColumns,
+    };
     await run(
       conn,
-      copyObservationsParquetSql(
-        parquetPath,
-        clusterColumns({
-          columns: schema.map((row) => row.column_name),
-          joinColumn: clusterHints?.joinColumn,
-          organismColumn: clusterHints?.organismColumn,
-          requiredFilterColumns: clusterHints?.requiredFilterColumns,
-          temporalColumns: sourceColumnNames(config.sourceColumns),
-        }),
-      ),
+      copyObservationsParquetSql(parquetPath, clusterColumns(hints)),
     );
 
     const defaultView =

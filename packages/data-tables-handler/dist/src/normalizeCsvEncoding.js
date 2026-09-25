@@ -23,30 +23,72 @@ var __importStar = (this && this.__importStar) || function (mod) {
     return result;
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.detectCsvEncoding = detectCsvEncoding;
 exports.normalizeCsvEncodingIfNeeded = normalizeCsvEncodingIfNeeded;
 const fs_1 = require("fs");
 const path = __importStar(require("path"));
-function isValidUtf8(buffer) {
+const stream_1 = require("stream");
+const promises_1 = require("stream/promises");
+/** Scan / convert in 1MB chunks so we never build a JS string of the whole file. */
+const SCAN_CHUNK_BYTES = 1024 * 1024;
+/**
+ * DuckDB's CSV reader requires valid UTF-8. Legacy Excel/R exports are often
+ * Windows-1252 (a Latin-1 superset). DuckDB's built-in `encoding='latin-1'`
+ * rejects bytes 0x80–0x9F, so non-UTF-8 files are rewritten as UTF-8 using
+ * Windows-1252. Conversion is streamed; Node cannot stringify a 1GB+ buffer.
+ */
+function detectCsvEncoding(csvPath) {
+    return isValidUtf8File(csvPath) ? "utf-8" : "windows-1252";
+}
+async function normalizeCsvEncodingIfNeeded(csvPath, normalizedPath) {
+    if (detectCsvEncoding(csvPath) === "utf-8") {
+        return { path: csvPath, normalized: false };
+    }
+    const out = normalizedPath ||
+        path.join(path.dirname(csvPath), `${path.basename(csvPath, path.extname(csvPath))}.utf8${path.extname(csvPath) || ".csv"}`);
+    await writeWindows1252AsUtf8(csvPath, out);
+    return { path: out, normalized: true };
+}
+function isValidUtf8File(csvPath) {
+    const decoder = new TextDecoder("utf-8", { fatal: true });
+    const fd = (0, fs_1.openSync)(csvPath, "r");
+    const buffer = Buffer.alloc(SCAN_CHUNK_BYTES);
     try {
-        new TextDecoder("utf-8", { fatal: true }).decode(buffer);
+        let bytesRead = 0;
+        while ((bytesRead = (0, fs_1.readSync)(fd, buffer, 0, SCAN_CHUNK_BYTES, null)) > 0) {
+            decoder.decode(buffer.subarray(0, bytesRead), { stream: true });
+        }
+        decoder.decode();
         return true;
     }
     catch {
         return false;
     }
-}
-/**
- * DuckDB's CSV reader requires valid UTF-8. Many legacy exports (Excel, R, etc.)
- * are Latin-1 / Windows-1252. Reinterpret single-byte encodings as Latin-1 and
- * write UTF-8 so every byte 0x00–0xFF round-trips without parse failures.
- */
-function normalizeCsvEncodingIfNeeded(csvPath, normalizedPath) {
-    const buffer = (0, fs_1.readFileSync)(csvPath);
-    if (isValidUtf8(buffer)) {
-        return { path: csvPath, normalized: false };
+    finally {
+        (0, fs_1.closeSync)(fd);
     }
-    const out = normalizedPath ||
-        path.join(path.dirname(csvPath), `${path.basename(csvPath, path.extname(csvPath))}.utf8${path.extname(csvPath) || ".csv"}`);
-    (0, fs_1.writeFileSync)(out, buffer.toString("latin1"), "utf8");
-    return { path: out, normalized: true };
+}
+function writeWindows1252AsUtf8(src, dest) {
+    const decoder = new TextDecoder("windows-1252");
+    const transform = new stream_1.Transform({
+        transform(chunk, _enc, cb) {
+            try {
+                const text = decoder.decode(chunk, { stream: true });
+                cb(null, Buffer.from(text, "utf8"));
+            }
+            catch (err) {
+                cb(err);
+            }
+        },
+        flush(cb) {
+            try {
+                const tail = decoder.decode();
+                cb(null, tail ? Buffer.from(tail, "utf8") : undefined);
+            }
+            catch (err) {
+                cb(err);
+            }
+        },
+    });
+    return (0, promises_1.pipeline)((0, fs_1.createReadStream)(src), transform, (0, fs_1.createWriteStream)(dest));
 }

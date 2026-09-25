@@ -2018,6 +2018,41 @@ export type CreateOptionalBasemapLayerPayload = {
   query?: Maybe<Query>;
 };
 
+/** All input for the `createOverlayDataTableCoverageUpload` mutation. */
+export type CreateOverlayDataTableCoverageUploadInput = {
+  /**
+   * An arbitrary string value with no semantic meaning. Will be included in the
+   * payload verbatim. May be used to track mutations by the client.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  contentType?: Maybe<Scalars['String']>;
+  filename?: Maybe<Scalars['String']>;
+  tableId?: Maybe<Scalars['Int']>;
+};
+
+/** The output of our `createOverlayDataTableCoverageUpload` mutation. */
+export type CreateOverlayDataTableCoverageUploadPayload = {
+  __typename?: 'CreateOverlayDataTableCoverageUploadPayload';
+  /**
+   * The exact same `clientMutationId` that was provided in the mutation input,
+   * unchanged and unused. May be used by a client to track mutations.
+   */
+  clientMutationId?: Maybe<Scalars['String']>;
+  overlayDataTableUpload?: Maybe<OverlayDataTableUpload>;
+  /** An edge for our `OverlayDataTableUpload`. May be used by Relay 1. */
+  overlayDataTableUploadEdge?: Maybe<OverlayDataTableUploadsEdge>;
+  /** Reads a single `ProjectBackgroundJob` that is related to this `OverlayDataTableUpload`. */
+  projectBackgroundJob?: Maybe<ProjectBackgroundJob>;
+  /** Our root query field type. Allows us to run any query from our mutation payload. */
+  query?: Maybe<Query>;
+};
+
+
+/** The output of our `createOverlayDataTableCoverageUpload` mutation. */
+export type CreateOverlayDataTableCoverageUploadPayloadOverlayDataTableUploadEdgeArgs = {
+  orderBy?: Maybe<Array<OverlayDataTableUploadsOrderBy>>;
+};
+
 /** All input for the `createOverlayDataTableOrganismReprocess` mutation. */
 export type CreateOverlayDataTableOrganismReprocessInput = {
   classCsvContentType?: Maybe<Scalars['String']>;
@@ -2061,6 +2096,7 @@ export type CreateOverlayDataTableReprocessInput = {
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
+  clusterOnly?: Maybe<Scalars['Boolean']>;
   nodataConfig?: Maybe<Scalars['JSON']>;
   tableId?: Maybe<Scalars['Int']>;
   temporalConfig?: Maybe<Scalars['JSON']>;
@@ -8049,17 +8085,18 @@ export type Mutation = {
   /** Creates a single `OptionalBasemapLayer`. */
   createOptionalBasemapLayer?: Maybe<CreateOptionalBasemapLayerPayload>;
   /**
+   * Admin-only. Starts a coverage-file upload. The client PUTs the JSON to the
+   * presigned URL, then calls submitOverlayDataTableUpload.
+   */
+  createOverlayDataTableCoverageUpload?: Maybe<CreateOverlayDataTableCoverageUploadPayload>;
+  /**
    * Admin-only. Starts a draft organism-enrichment job. Optional class CSV is
    * uploaded to the returned presigned URL, then submitOverlayDataTableUpload.
    * Writes a clustered copy of data.parquet and organism sidecars under a new
    * upload prefix. Queue wait and running timeout are 15 minutes.
    */
   createOverlayDataTableOrganismReprocess?: Maybe<CreateOverlayDataTableOrganismReprocessPayload>;
-  /**
-   * Admin-only. Starts a draft reprocess job that applies nodata sentinels and/or
-   * derives _when_* columns from the source (pre-nodata) parquet. Metadata is
-   * written only when the job succeeds.
-   */
+  /** Admin-only. Reprocess nodata and/or temporal columns, or reindex parquet clustering when cluster_only is true. */
   createOverlayDataTableReprocess?: Maybe<CreateOverlayDataTableReprocessPayload>;
   createOverlayDataTableUpload?: Maybe<CreateOverlayDataTableUploadPayload>;
   createPost: Post;
@@ -8915,6 +8952,12 @@ export type MutationCreateOfflineTileSettingArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateOptionalBasemapLayerArgs = {
   input: CreateOptionalBasemapLayerInput;
+};
+
+
+/** The root mutation type which contains root level fields which mutate data. */
+export type MutationCreateOverlayDataTableCoverageUploadArgs = {
+  input: CreateOverlayDataTableCoverageUploadInput;
 };
 
 
@@ -10834,30 +10877,64 @@ export type OutstandingSurveyInvites = {
 
 export type OverlayDataTable = Node & {
   __typename?: 'OverlayDataTable';
-  /** JSON object of data column to an array of sum|mean|min|max. Missing columns default to ["mean"]. */
+  /**
+   * Across replicates. Code name: across_replicate_operations. JSON object of
+   * value column to an array of sum|mean|min|max. Missing columns default to ["mean"].
+   */
   acrossReplicateOperations: Scalars['JSON'];
-  /** Columns that, with the time step and join column, identify one replicate. */
+  /**
+   * Replicate columns. Code name: additional_replicate_identifiers. With the
+   * survey time and the join column, these identify one replicate.
+   */
   additionalReplicateIdentifiers: Array<Maybe<Scalars['String']>>;
-  /** simple averages matching rows. replicates collapses rows inside a sampling unit, then calculates across those units. */
+  /**
+   * How to turn rows into a map value. simple: each row is already a summary.
+   * replicates: rows are observations inside replicates.
+   */
   calculationMode: Scalars['String'];
   columnStatsRemote: Scalars['String'];
   columnStatsUrl?: Maybe<Scalars['String']>;
+  /**
+   * When a subject is missing from a replicate. Code name: coverage_mode.
+   * all_surveyed: it was surveyed and none were seen. rows_only: nothing can be
+   * assumed. coverage_file: it depends on when and where.
+   */
+  coverageMode: Scalars['String'];
+  /** Coverage file. Code name: coverage_remote. R2 key of coverage.json beside data.parquet. */
+  coverageRemote?: Maybe<Scalars['String']>;
   createdAt?: Maybe<Scalars['Datetime']>;
   createdBy: Scalars['Int'];
   deletedAt?: Maybe<Scalars['Datetime']>;
   /** Optional short description shown in the data table picker. Displayed on at most two lines. */
   description?: Maybe<Scalars['String']>;
+  /**
+   * Nothing seen rows. Code name: effort_marker_values. Values in the subject or a
+   * detail column that mean the replicate was surveyed and nothing was seen.
+   */
+  effortMarkerValues: Array<Maybe<Scalars['String']>>;
+  /**
+   * Rows to ignore. Code name: excluded_values. JSON object of column name to
+   * values whose rows are left out of replicates, observations, and effort.
+   */
+  excludedValues: Scalars['JSON'];
   /** Custom display labels for filter columns, keyed by original column name. Empty or missing keys use the column name. */
   filterColumnLabels?: Maybe<Scalars['JSON']>;
   /** Filter columns omitted from the end-user Add filter list. Required filters cannot be hidden. */
   hiddenFilterColumns?: Maybe<Array<Maybe<Scalars['String']>>>;
   id: Scalars['Int'];
+  /** Join column. Code name: join_column. Values match feature IDs. */
   joinColumn: Scalars['String'];
   name: Scalars['String'];
   /** Sentinel values rewritten to SQL NULL in parquet. Empty cells are always no-data. @omit create,update */
   nodataValues: Scalars['JSON'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  /**
+   * Detail columns. Code name: observation_detail_columns. Columns that describe
+   * one observation rather than the replicate. Filtering them narrows what is
+   * counted and does not remove replicates.
+   */
+  observationDetailColumns: Array<Maybe<Scalars['String']>>;
   /**
    * Organism identity metadata for this data table. Null when the table
    * has not been enriched.
@@ -10874,8 +10951,9 @@ export type OverlayDataTable = Node & {
   projectId: Scalars['Int'];
   queryUrl?: Maybe<Scalars['String']>;
   replacedById?: Maybe<Scalars['Int']>;
-  /** Preset key for the replicate unit shown in the legend. custom uses replicate_label_custom. */
+  /** Replicate word shown in the legend. Code name: replicate_label. custom uses replicate_label_custom. */
   replicateLabel: Scalars['String'];
+  /** Custom replicate word. Code name: replicate_label_custom. */
   replicateLabelCustom?: Maybe<Scalars['String']>;
   /**
    * Columns that must appear as filters when this table is displayed on the map.
@@ -10890,6 +10968,11 @@ export type OverlayDataTable = Node & {
    * publish. Draft and published copies share the same UUID.
    */
   stableId: Scalars['UUID'];
+  /**
+   * Subject column. Code name: subject_column. Names what each row is an
+   * observation of. organism.column must equal this when organism enrichment is set.
+   */
+  subjectColumn?: Maybe<Scalars['String']>;
   tableOfContentsItemId: Scalars['Int'];
   /**
    * Temporal metadata for this data table: coverage, resolution, row
@@ -10899,11 +10982,14 @@ export type OverlayDataTable = Node & {
   temporalPreviewUrl?: Maybe<Scalars['String']>;
   updatedAt?: Maybe<Scalars['Datetime']>;
   version: Scalars['Int'];
-  /** Columns that may/should be used for creating thematic maps. For example `count` or `density` */
+  /** Value columns. Code name: visualization_columns. Empty means any numeric column. */
   visualizationColumns?: Maybe<Array<Maybe<Scalars['String']>>>;
-  /** Operations that may/should be used for creating thematic maps. For example `mean` or `max` */
+  /** Calculations. Code name: visualization_ops. Used when each row is already a summary. */
   visualizationOps?: Maybe<Array<Maybe<Scalars['String']>>>;
-  /** JSON object of data column to sum|mean|min|max. Missing columns default to sum. */
+  /**
+   * Within a replicate. Code name: within_replicate_operations. JSON object of
+   * value column to sum|mean|min|max. Missing columns default to sum.
+   */
   withinReplicateOperations: Scalars['JSON'];
 };
 
@@ -15341,11 +15427,16 @@ export type SetOverlayDataTableVisualizationSettingsInput = {
    * payload verbatim. May be used to track mutations by the client.
    */
   clientMutationId?: Maybe<Scalars['String']>;
+  coverageMode?: Maybe<Scalars['String']>;
+  effortMarkerValues?: Maybe<Array<Maybe<Scalars['String']>>>;
+  excludedValues?: Maybe<Scalars['JSON']>;
   filterColumnLabels?: Maybe<Scalars['JSON']>;
   hiddenFilterColumns?: Maybe<Array<Maybe<Scalars['String']>>>;
+  observationDetailColumns?: Maybe<Array<Maybe<Scalars['String']>>>;
   replicateLabel?: Maybe<Scalars['String']>;
   replicateLabelCustom?: Maybe<Scalars['String']>;
   requiredFilterColumns?: Maybe<Array<Maybe<Scalars['String']>>>;
+  subjectColumn?: Maybe<Scalars['String']>;
   tableId?: Maybe<Scalars['Int']>;
   visualizationColumns?: Maybe<Array<Maybe<Scalars['String']>>>;
   visualizationOps?: Maybe<Array<Maybe<Scalars['String']>>>;
@@ -24092,12 +24183,12 @@ export type GetTilePackageQuery = (
 
 export type ClientOverlayDataTableFragment = (
   { __typename?: 'OverlayDataTable' }
-  & Pick<OverlayDataTable, 'id' | 'stableId' | 'name' | 'description' | 'version' | 'rowCount' | 'joinColumn' | 'overlayJoinColumn' | 'queryUrl' | 'columnStatsUrl' | 'visualizationColumns' | 'visualizationOps' | 'calculationMode' | 'additionalReplicateIdentifiers' | 'replicateLabel' | 'replicateLabelCustom' | 'withinReplicateOperations' | 'acrossReplicateOperations' | 'requiredFilterColumns' | 'hiddenFilterColumns' | 'filterColumnLabels' | 'temporal' | 'organism'>
+  & Pick<OverlayDataTable, 'id' | 'stableId' | 'name' | 'description' | 'version' | 'rowCount' | 'joinColumn' | 'overlayJoinColumn' | 'queryUrl' | 'columnStatsUrl' | 'visualizationColumns' | 'visualizationOps' | 'calculationMode' | 'additionalReplicateIdentifiers' | 'replicateLabel' | 'replicateLabelCustom' | 'withinReplicateOperations' | 'acrossReplicateOperations' | 'subjectColumn' | 'observationDetailColumns' | 'coverageMode' | 'effortMarkerValues' | 'excludedValues' | 'requiredFilterColumns' | 'hiddenFilterColumns' | 'filterColumnLabels' | 'temporal' | 'organism'>
 );
 
 export type OverlayDataTableDetailsFragment = (
   { __typename?: 'OverlayDataTable' }
-  & Pick<OverlayDataTable, 'id' | 'stableId' | 'name' | 'description' | 'version' | 'joinColumn' | 'overlayJoinColumn' | 'rowCount' | 'parquetRemote' | 'columnStatsRemote' | 'parquetUrl' | 'columnStatsUrl' | 'queryUrl' | 'deletedAt' | 'replacedById' | 'createdAt' | 'updatedAt' | 'visualizationColumns' | 'visualizationOps' | 'calculationMode' | 'additionalReplicateIdentifiers' | 'replicateLabel' | 'replicateLabelCustom' | 'withinReplicateOperations' | 'acrossReplicateOperations' | 'requiredFilterColumns' | 'hiddenFilterColumns' | 'filterColumnLabels' | 'temporal' | 'organism' | 'nodataValues' | 'organismCatalogUrl' | 'organismPreviewUrl'>
+  & Pick<OverlayDataTable, 'id' | 'stableId' | 'name' | 'description' | 'version' | 'joinColumn' | 'overlayJoinColumn' | 'rowCount' | 'parquetRemote' | 'columnStatsRemote' | 'parquetUrl' | 'columnStatsUrl' | 'queryUrl' | 'deletedAt' | 'replacedById' | 'createdAt' | 'updatedAt' | 'visualizationColumns' | 'visualizationOps' | 'calculationMode' | 'additionalReplicateIdentifiers' | 'replicateLabel' | 'replicateLabelCustom' | 'withinReplicateOperations' | 'acrossReplicateOperations' | 'subjectColumn' | 'observationDetailColumns' | 'coverageMode' | 'coverageRemote' | 'effortMarkerValues' | 'excludedValues' | 'requiredFilterColumns' | 'hiddenFilterColumns' | 'filterColumnLabels' | 'temporal' | 'organism' | 'nodataValues' | 'organismCatalogUrl' | 'organismPreviewUrl'>
 );
 
 export type OverlayDataTableVisualizationMetadataQueryVariables = Exact<{
@@ -24109,7 +24200,7 @@ export type OverlayDataTableVisualizationMetadataQuery = (
   { __typename?: 'Query' }
   & { overlayDataTable?: Maybe<(
     { __typename?: 'OverlayDataTable' }
-    & Pick<OverlayDataTable, 'id' | 'queryUrl' | 'columnStatsUrl' | 'visualizationColumns' | 'visualizationOps' | 'calculationMode' | 'additionalReplicateIdentifiers' | 'replicateLabel' | 'replicateLabelCustom' | 'withinReplicateOperations' | 'acrossReplicateOperations' | 'requiredFilterColumns' | 'hiddenFilterColumns' | 'filterColumnLabels'>
+    & Pick<OverlayDataTable, 'id' | 'queryUrl' | 'columnStatsUrl' | 'visualizationColumns' | 'visualizationOps' | 'calculationMode' | 'additionalReplicateIdentifiers' | 'replicateLabel' | 'replicateLabelCustom' | 'withinReplicateOperations' | 'acrossReplicateOperations' | 'subjectColumn' | 'observationDetailColumns' | 'coverageMode' | 'effortMarkerValues' | 'excludedValues' | 'requiredFilterColumns' | 'hiddenFilterColumns' | 'filterColumnLabels'>
   )> }
 );
 
@@ -24125,7 +24216,7 @@ export type OverlayDataTableVisualizationMetadataForLayerQuery = (
     & Pick<TableOfContentsItem, 'id'>
     & { overlayDataTables?: Maybe<Array<(
       { __typename?: 'OverlayDataTable' }
-      & Pick<OverlayDataTable, 'id' | 'queryUrl' | 'columnStatsUrl' | 'visualizationColumns' | 'visualizationOps' | 'calculationMode' | 'additionalReplicateIdentifiers' | 'replicateLabel' | 'replicateLabelCustom' | 'withinReplicateOperations' | 'acrossReplicateOperations' | 'requiredFilterColumns' | 'hiddenFilterColumns' | 'filterColumnLabels'>
+      & Pick<OverlayDataTable, 'id' | 'queryUrl' | 'columnStatsUrl' | 'visualizationColumns' | 'visualizationOps' | 'calculationMode' | 'additionalReplicateIdentifiers' | 'replicateLabel' | 'replicateLabelCustom' | 'withinReplicateOperations' | 'acrossReplicateOperations' | 'subjectColumn' | 'observationDetailColumns' | 'coverageMode' | 'effortMarkerValues' | 'excludedValues' | 'requiredFilterColumns' | 'hiddenFilterColumns' | 'filterColumnLabels'>
     )>> }
   )> }
 );
@@ -24254,6 +24345,11 @@ export type SetOverlayDataTableVisualizationSettingsMutationVariables = Exact<{
   replicateLabelCustom?: Maybe<Scalars['String']>;
   withinReplicateOperations?: Maybe<Scalars['JSON']>;
   acrossReplicateOperations?: Maybe<Scalars['JSON']>;
+  subjectColumn?: Maybe<Scalars['String']>;
+  observationDetailColumns?: Maybe<Array<Maybe<Scalars['String']>> | Maybe<Scalars['String']>>;
+  coverageMode?: Maybe<Scalars['String']>;
+  effortMarkerValues?: Maybe<Array<Maybe<Scalars['String']>> | Maybe<Scalars['String']>>;
+  excludedValues?: Maybe<Scalars['JSON']>;
 }>;
 
 
@@ -24339,6 +24435,7 @@ export type CreateOverlayDataTableReprocessMutationVariables = Exact<{
   tableId: Scalars['Int'];
   temporalConfig?: Maybe<Scalars['JSON']>;
   nodataConfig?: Maybe<Scalars['JSON']>;
+  clusterOnly?: Maybe<Scalars['Boolean']>;
 }>;
 
 
@@ -28707,6 +28804,11 @@ export const ClientOverlayDataTableFragmentDoc = /*#__PURE__*/ gql`
   replicateLabelCustom
   withinReplicateOperations
   acrossReplicateOperations
+  subjectColumn
+  observationDetailColumns
+  coverageMode
+  effortMarkerValues
+  excludedValues
   requiredFilterColumns
   hiddenFilterColumns
   filterColumnLabels
@@ -28990,6 +29092,12 @@ export const OverlayDataTableDetailsFragmentDoc = /*#__PURE__*/ gql`
   replicateLabelCustom
   withinReplicateOperations
   acrossReplicateOperations
+  subjectColumn
+  observationDetailColumns
+  coverageMode
+  coverageRemote
+  effortMarkerValues
+  excludedValues
   requiredFilterColumns
   hiddenFilterColumns
   filterColumnLabels
@@ -33067,6 +33175,11 @@ export const OverlayDataTableVisualizationMetadataDocument = /*#__PURE__*/ gql`
     replicateLabelCustom
     withinReplicateOperations
     acrossReplicateOperations
+    subjectColumn
+    observationDetailColumns
+    coverageMode
+    effortMarkerValues
+    excludedValues
     requiredFilterColumns
     hiddenFilterColumns
     filterColumnLabels
@@ -33089,6 +33202,11 @@ export const OverlayDataTableVisualizationMetadataForLayerDocument = /*#__PURE__
       replicateLabelCustom
       withinReplicateOperations
       acrossReplicateOperations
+      subjectColumn
+      observationDetailColumns
+      coverageMode
+      effortMarkerValues
+      excludedValues
       requiredFilterColumns
       hiddenFilterColumns
       filterColumnLabels
@@ -33163,9 +33281,9 @@ export const RollbackOverlayDataTableVersionDocument = /*#__PURE__*/ gql`
 }
     ${OverlayDataTableDetailsFragmentDoc}`;
 export const SetOverlayDataTableVisualizationSettingsDocument = /*#__PURE__*/ gql`
-    mutation SetOverlayDataTableVisualizationSettings($id: Int!, $visualizationColumns: [String]!, $visualizationOps: [String]!, $requiredFilterColumns: [String]!, $hiddenFilterColumns: [String]!, $filterColumnLabels: JSON!, $calculationMode: String, $additionalReplicateIdentifiers: [String], $replicateLabel: String, $replicateLabelCustom: String, $withinReplicateOperations: JSON, $acrossReplicateOperations: JSON) {
+    mutation SetOverlayDataTableVisualizationSettings($id: Int!, $visualizationColumns: [String]!, $visualizationOps: [String]!, $requiredFilterColumns: [String]!, $hiddenFilterColumns: [String]!, $filterColumnLabels: JSON!, $calculationMode: String, $additionalReplicateIdentifiers: [String], $replicateLabel: String, $replicateLabelCustom: String, $withinReplicateOperations: JSON, $acrossReplicateOperations: JSON, $subjectColumn: String, $observationDetailColumns: [String], $coverageMode: String, $effortMarkerValues: [String], $excludedValues: JSON) {
   setOverlayDataTableVisualizationSettings(
-    input: {tableId: $id, visualizationColumns: $visualizationColumns, visualizationOps: $visualizationOps, requiredFilterColumns: $requiredFilterColumns, hiddenFilterColumns: $hiddenFilterColumns, filterColumnLabels: $filterColumnLabels, calculationMode: $calculationMode, additionalReplicateIdentifiers: $additionalReplicateIdentifiers, replicateLabel: $replicateLabel, replicateLabelCustom: $replicateLabelCustom, withinReplicateOperations: $withinReplicateOperations, acrossReplicateOperations: $acrossReplicateOperations}
+    input: {tableId: $id, visualizationColumns: $visualizationColumns, visualizationOps: $visualizationOps, requiredFilterColumns: $requiredFilterColumns, hiddenFilterColumns: $hiddenFilterColumns, filterColumnLabels: $filterColumnLabels, calculationMode: $calculationMode, additionalReplicateIdentifiers: $additionalReplicateIdentifiers, replicateLabel: $replicateLabel, replicateLabelCustom: $replicateLabelCustom, withinReplicateOperations: $withinReplicateOperations, acrossReplicateOperations: $acrossReplicateOperations, subjectColumn: $subjectColumn, observationDetailColumns: $observationDetailColumns, coverageMode: $coverageMode, effortMarkerValues: $effortMarkerValues, excludedValues: $excludedValues}
   ) {
     overlayDataTable {
       ...OverlayDataTableDetails
@@ -33225,9 +33343,9 @@ export const CreateOverlayDataTableOrganismReprocessDocument = /*#__PURE__*/ gql
     ${OverlayDataTableUploadDetailsFragmentDoc}
 ${JobDetailsFragmentDoc}`;
 export const CreateOverlayDataTableReprocessDocument = /*#__PURE__*/ gql`
-    mutation CreateOverlayDataTableReprocess($tableId: Int!, $temporalConfig: JSON, $nodataConfig: JSON) {
+    mutation CreateOverlayDataTableReprocess($tableId: Int!, $temporalConfig: JSON, $nodataConfig: JSON, $clusterOnly: Boolean) {
   createOverlayDataTableReprocess(
-    input: {tableId: $tableId, temporalConfig: $temporalConfig, nodataConfig: $nodataConfig}
+    input: {tableId: $tableId, temporalConfig: $temporalConfig, nodataConfig: $nodataConfig, clusterOnly: $clusterOnly}
   ) {
     overlayDataTableUpload {
       ...OverlayDataTableUploadDetails

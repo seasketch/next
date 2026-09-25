@@ -5,6 +5,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.putObject = putObject;
 exports.siblingRemote = siblingRemote;
+exports.deleteR2Object = deleteR2Object;
 exports.getR2Object = getR2Object;
 exports.tryGetR2Object = tryGetR2Object;
 exports.getStagingObject = getStagingObject;
@@ -14,21 +15,33 @@ const promises_1 = require("stream/promises");
 const client_s3_1 = require("@aws-sdk/client-s3");
 const lib_storage_1 = require("@aws-sdk/lib-storage");
 const bytes_1 = __importDefault(require("bytes"));
-const s3Client = new client_s3_1.S3Client({ region: process.env.AWS_REGION });
-const r2Client = new client_s3_1.S3Client({
-    region: "auto",
-    endpoint: process.env.R2_ENDPOINT,
-    credentials: {
-        accessKeyId: process.env.R2_ACCESS_KEY_ID,
-        secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
-    },
-});
+let s3Client;
+let r2Client;
+function getS3Client() {
+    if (!s3Client) {
+        s3Client = new client_s3_1.S3Client({ region: process.env.AWS_REGION });
+    }
+    return s3Client;
+}
+function getR2Client() {
+    if (!r2Client) {
+        r2Client = new client_s3_1.S3Client({
+            region: "auto",
+            endpoint: process.env.R2_ENDPOINT,
+            credentials: {
+                accessKeyId: process.env.R2_ACCESS_KEY_ID,
+                secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+            },
+        });
+    }
+    return r2Client;
+}
 async function putObject(filepath, remote, contentType) {
     if (!/r2:/.test(remote) && !/s3:/.test(remote)) {
         throw new Error(`Invalid remote ${remote}`);
     }
     const parts = remote.replace(/\w+:\/\//, "").split("/");
-    const client = /r2:/.test(remote) ? r2Client : s3Client;
+    const client = /r2:/.test(remote) ? getR2Client() : getS3Client();
     const Bucket = parts[0];
     const Key = parts.slice(1).join("/");
     const fileSizeBytes = (0, fs_1.statSync)(filepath).size;
@@ -58,6 +71,15 @@ function siblingRemote(parquetRemote, filename) {
         return null;
     return `${parquetRemote.slice(0, -"/data.parquet".length)}/${filename}`;
 }
+async function deleteR2Object(remote) {
+    if (!/^r2:\/\//.test(remote)) {
+        throw new Error(`Expected r2:// remote, got ${remote}`);
+    }
+    const parts = remote.replace(/^r2:\/\//, "").split("/");
+    const Bucket = parts[0];
+    const Key = parts.slice(1).join("/");
+    await getR2Client().send(new client_s3_1.DeleteObjectCommand({ Bucket, Key }));
+}
 /** Download an existing hosted parquet (or other object) from R2. */
 async function getR2Object(remote, filepath) {
     if (!/^r2:\/\//.test(remote)) {
@@ -66,7 +88,7 @@ async function getR2Object(remote, filepath) {
     const parts = remote.replace(/^r2:\/\//, "").split("/");
     const Bucket = parts[0];
     const Key = parts.slice(1).join("/");
-    const response = await r2Client.send(new client_s3_1.GetObjectCommand({ Bucket, Key }));
+    const response = await getR2Client().send(new client_s3_1.GetObjectCommand({ Bucket, Key }));
     const body = response.Body;
     await (0, promises_1.pipeline)(body, (0, fs_1.createWriteStream)(filepath));
 }
@@ -89,7 +111,7 @@ async function tryGetR2Object(remote, filepath) {
 /** Download the user's raw upload from the S3 staging bucket. */
 async function getStagingObject(filepath, objectKey) {
     const bucket = process.env.BUCKET;
-    const response = await s3Client.send(new client_s3_1.GetObjectCommand({ Bucket: bucket, Key: objectKey }));
+    const response = await getS3Client().send(new client_s3_1.GetObjectCommand({ Bucket: bucket, Key: objectKey }));
     const body = response.Body;
     await (0, promises_1.pipeline)(body, (0, fs_1.createWriteStream)(filepath));
 }

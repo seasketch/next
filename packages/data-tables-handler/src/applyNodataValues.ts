@@ -113,18 +113,18 @@ export async function applyNodataValuesOnParquet(
       conn,
       `SELECT COUNT(*)::INTEGER as total FROM observations`,
     );
+    const hints: ClusterColumnHints = {
+      columns: columns.map((column) => column.column_name),
+      joinColumn: clusterHints?.joinColumn,
+      organismColumn: clusterHints?.organismColumn,
+      subjectColumn: clusterHints?.subjectColumn,
+      requiredFilterColumns: clusterHints?.requiredFilterColumns,
+      temporalColumns: clusterHints?.temporalColumns,
+      replicateColumns: clusterHints?.replicateColumns,
+    };
     await run(
       conn,
-      copyObservationsParquetSql(
-        parquetPath,
-        clusterColumns({
-          columns: columns.map((column) => column.column_name),
-          joinColumn: clusterHints?.joinColumn,
-          organismColumn: clusterHints?.organismColumn,
-          requiredFilterColumns: clusterHints?.requiredFilterColumns,
-          temporalColumns: clusterHints?.temporalColumns,
-        }),
-      ),
+      copyObservationsParquetSql(parquetPath, clusterColumns(hints)),
     );
     return {
       rowCount: counts[0]?.total ?? 0,

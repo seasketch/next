@@ -11,6 +11,7 @@ import {
   ProjectBackgroundJobState,
   ProjectBackgroundJobType,
   useGetLayerItemQuery,
+  useCreateOverlayDataTableReprocessMutation,
   useUpdateOverlayDataTableDetailsMutation,
   useSetOverlayDataTableVisualizationSettingsMutation,
   useSoftDeleteOverlayDataTableMutation,
@@ -32,16 +33,24 @@ import DataTableTemporalEditor from "./DataTableTemporalEditor";
 import DataTableNodataEditor from "./DataTableNodataEditor";
 import DataTableOrganismEditor from "./DataTableOrganismEditor";
 import { organismInfoOrNull } from "./dataTableOrganismForm";
+import { useTrackOverlayDataTableJob } from "./useDataTableReprocessJob";
 import {
   allowedDataTableVisualizationColumns,
   DATA_TABLE_AGGREGATIONS,
   DataTableAggregation,
   isAlwaysHiddenFilterColumn,
+  isInternalWhenColumn,
   parseAcrossReplicateOperations,
+  parseExcludedValues,
   parseFilterColumnLabels,
   parseWithinReplicateOperations,
+  temporalSourceFilterColumns,
   WithinReplicateOp,
 } from "../../../dataLayers/dataTableQueryApi";
+import DataTableSubjectSettings, {
+  CoverageModeChoice,
+  isTimeLikeColumnName,
+} from "./DataTableSubjectSettings";
 import DataTableCalculationMode, {
   CalculationModeChoice,
 } from "./DataTableCalculationMode";
@@ -207,6 +216,22 @@ function getJobForTable(tableId: number, jobs: DataTableJob[]) {
   );
 }
 
+function filterRoleLabel(
+  t: (key: string) => string,
+  column: string,
+  table: OverlayDataTableDetailsFragment,
+  dataColumns: string[],
+  subjectColumn: string,
+  detailColumns: string[]
+): string {
+  if (column === table.joinColumn) return t("Join column");
+  if (column.startsWith("_when_") || column === "survey_year") return t("Date");
+  if (dataColumns.includes(column)) return t("Map value");
+  if (subjectColumn && column === subjectColumn) return t("Chooses the subject");
+  if (detailColumns.includes(column)) return t("Narrows observations");
+  return t("Chooses replicates");
+}
+
 /**
  * Map visualization limits (`visualization_columns` / `visualization_ops`).
  * Empty lists mean end users may choose freely.
@@ -362,10 +387,12 @@ function MapDisplaySettings({
       <div className="space-y-3">
         <div className="space-y-1">
           <p className="text-sm font-medium text-gray-900">
-            {t("Data columns")}
+            {t("Value columns")}
           </p>
           <p className="text-xs text-gray-500">
-            {t("Choose which measurements users can map.")}
+            {t(
+              "Which numeric columns can be shown on the map, such as count or pct_cov."
+            )}
           </p>
         </div>
         {loading ? (
@@ -392,7 +419,7 @@ function MapDisplaySettings({
                   <CheckIcon className="h-4 w-4" />
                 ) : null}
               </span>
-              {t("All columns")}
+              {t("Any numeric column")}
             </button>
             {numericColumns.map((column: string) => (
               <button
@@ -491,7 +518,7 @@ function MapDisplaySettings({
           <p className="text-sm font-medium text-gray-900">{t("Filters")}</p>
           <p className="text-xs text-gray-500">
             {t(
-              "Required filters always appear and cannot be removed. Hidden filters are not offered to map users. Labels replace the original column name. Chosen data columns stay hidden from filters. Columns used for temporal coverage are omitted."
+              "Which columns map users can filter on. Filters that choose replicates remove sites with no matching replicate; those sites show no data. Filters on subjects and details keep every replicate and change what is counted inside it."
             )}
           </p>
         </div>
@@ -505,12 +532,14 @@ function MapDisplaySettings({
           </p>
         ) : (
           <div className="overflow-hidden rounded-md border border-gray-200">
-            <div className="max-h-80 overflow-y-auto">
-              <table className="min-w-full table-fixed text-left text-sm">
-                <thead className="sticky top-0 bg-gray-50 text-xs font-medium text-gray-500">
+            <table className="min-w-full table-fixed text-left text-sm">
+              <thead className="bg-gray-50 text-xs font-medium text-gray-500">
                   <tr>
-                    <th className="w-[32%] px-3 py-2">{t("Column")}</th>
-                    <th className="w-[18%] px-3 py-2 text-center">
+                    <th className="w-[22%] px-3 py-2">{t("Column")}</th>
+                    <th className="w-[22%] px-3 py-2">
+                      {t("What filtering does")}
+                    </th>
+                    <th className="w-[14%] px-3 py-2 text-center">
                       {t("Required")}
                     </th>
                     <th className="w-[18%] px-3 py-2 text-center">
@@ -542,6 +571,18 @@ function MapDisplaySettings({
                               {t("Used as a map value")}
                             </span>
                           ) : null}
+                        </td>
+                        <td className="px-3 py-2 text-xs text-gray-600">
+                          {filterRoleLabel(
+                            t,
+                            column,
+                            table,
+                            dataColumns,
+                            table.subjectColumn || "",
+                            (table.observationDetailColumns || []).filter(
+                              Boolean
+                            ) as string[]
+                          )}
                         </td>
                         <td className="px-3 py-2 text-center">
                           {isDataColumn ? (
@@ -585,7 +626,6 @@ function MapDisplaySettings({
                   })}
                 </tbody>
               </table>
-            </div>
           </div>
         )}
       </div>
@@ -620,10 +660,23 @@ function DataTableSettingsModal({
     replicateLabel: string,
     replicateLabelCustom: string | null,
     withinReplicateOperations: { [column: string]: WithinReplicateOp },
-    acrossReplicateOperations: { [column: string]: DataTableAggregation[] }
+    acrossReplicateOperations: { [column: string]: DataTableAggregation[] },
+    subjectColumn: string | null,
+    observationDetailColumns: string[],
+    coverageMode: CoverageModeChoice,
+    effortMarkerValues: string[],
+    excludedValues: { [column: string]: string[] }
   ) => void | Promise<void>;
 }) {
   const { t } = useTranslation("admin:data");
+  const { data: projectMeta } = useCurrentProjectMetadata();
+  const { columnStats } = useDataTableColumnStats(
+    columnStatsUrlForTable(table),
+    projectMeta?.project?.mapAccessToken
+  );
+  const statsColumns = (columnStats?.columns || [])
+    .map((column) => column.attribute)
+    .filter((name): name is string => Boolean(name));
   const [draftName, setDraftName] = useState(table.name);
   const [draftDescription, setDraftDescription] = useState(
     table.description || ""
@@ -662,6 +715,21 @@ function DataTableSettingsModal({
   const [draftAcross, setDraftAcross] = useState(() =>
     parseAcrossReplicateOperations(table.acrossReplicateOperations)
   );
+  const [draftSubject, setDraftSubject] = useState(table.subjectColumn || "");
+  const [draftDetails, setDraftDetails] = useState<string[]>(
+    (table.observationDetailColumns || []).filter(Boolean) as string[]
+  );
+  const [draftCoverage, setDraftCoverage] = useState<CoverageModeChoice>(
+    table.coverageMode === "rows_only" || table.coverageMode === "coverage_file"
+      ? table.coverageMode
+      : "all_surveyed"
+  );
+  const [draftMarkers, setDraftMarkers] = useState<string[]>(
+    (table.effortMarkerValues || []).filter(Boolean) as string[]
+  );
+  const [draftExcluded, setDraftExcluded] = useState(() =>
+    parseExcludedValues(table.excludedValues)
+  );
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -687,6 +755,17 @@ function DataTableSettingsModal({
     setDraftReplicateLabelCustom(table.replicateLabelCustom || "");
     setDraftWithin(parseWithinReplicateOperations(table.withinReplicateOperations));
     setDraftAcross(parseAcrossReplicateOperations(table.acrossReplicateOperations));
+    setDraftSubject(table.subjectColumn || "");
+    setDraftDetails(
+      (table.observationDetailColumns || []).filter(Boolean) as string[]
+    );
+    setDraftCoverage(
+      table.coverageMode === "rows_only" || table.coverageMode === "coverage_file"
+        ? table.coverageMode
+        : "all_surveyed"
+    );
+    setDraftMarkers((table.effortMarkerValues || []).filter(Boolean) as string[]);
+    setDraftExcluded(parseExcludedValues(table.excludedValues));
   }, [
     table.name,
     table.description,
@@ -701,7 +780,42 @@ function DataTableSettingsModal({
     table.replicateLabelCustom,
     table.withinReplicateOperations,
     table.acrossReplicateOperations,
+    table.subjectColumn,
+    table.observationDetailColumns,
+    table.coverageMode,
+    table.effortMarkerValues,
+    table.excludedValues,
   ]);
+
+  const blockedDetailColumns = useMemo(() => {
+    const names = [
+      table.joinColumn,
+      table.overlayJoinColumn,
+      draftSubject,
+      ...draftIdentifiers,
+      ...temporalSourceFilterColumns(table.temporal),
+    ].filter((column): column is string => Boolean(column));
+    return new Set(names);
+  }, [
+    draftIdentifiers,
+    draftSubject,
+    table.joinColumn,
+    table.overlayJoinColumn,
+    table.temporal,
+  ]);
+
+  useEffect(() => {
+    setDraftDetails((current) => {
+      const next = current.filter(
+        (column) =>
+          !blockedDetailColumns.has(column) &&
+          !isInternalWhenColumn(column) &&
+          !isTimeLikeColumnName(column) &&
+          !draftColumns.includes(column)
+      );
+      return next.length === current.length ? current : next;
+    });
+  }, [blockedDetailColumns, draftColumns]);
 
   const originalColumns = stringColumns(table.visualizationColumns);
   const originalOps = stringColumns(table.visualizationOps);
@@ -737,7 +851,18 @@ function DataTableSettingsModal({
     JSON.stringify(draftWithin) !==
       JSON.stringify(parseWithinReplicateOperations(table.withinReplicateOperations)) ||
     JSON.stringify(draftAcross) !==
-      JSON.stringify(parseAcrossReplicateOperations(table.acrossReplicateOperations));
+      JSON.stringify(parseAcrossReplicateOperations(table.acrossReplicateOperations)) ||
+    draftSubject !== (table.subjectColumn || "") ||
+    JSON.stringify(draftDetails) !==
+      JSON.stringify((table.observationDetailColumns || []).filter(Boolean)) ||
+    draftCoverage !==
+      (table.coverageMode === "rows_only" || table.coverageMode === "coverage_file"
+        ? table.coverageMode
+        : "all_surveyed") ||
+    JSON.stringify(draftMarkers) !==
+      JSON.stringify((table.effortMarkerValues || []).filter(Boolean)) ||
+    JSON.stringify(draftExcluded) !==
+      JSON.stringify(parseExcludedValues(table.excludedValues));
   const dirty = nameDirty || descriptionDirty || displayDirty;
 
   const saveChanges = async () => {
@@ -765,7 +890,12 @@ function DataTableSettingsModal({
           draftReplicateLabel,
           draftReplicateLabelCustom.trim() || null,
           draftWithin,
-          draftAcross
+          draftAcross,
+          draftSubject || null,
+          draftDetails,
+          draftCoverage,
+          draftMarkers,
+          draftExcluded
         );
       }
       onClose();
@@ -780,7 +910,7 @@ function DataTableSettingsModal({
     <Modal
       open
       onRequestClose={onClose}
-      title={t("Data table settings")}
+      title={t("Display settings")}
       scrollable
       autoWidth
       tipyTop
@@ -888,6 +1018,67 @@ function DataTableSettingsModal({
               setDraftAcross((current) => ({ ...current, [column]: ops }))
             }
           />
+          {draftMode === "replicates" ? (
+            <DataTableSubjectSettings
+              columns={
+                statsColumns.length > 0
+                  ? statsColumns
+                  : [draftSubject, ...draftDetails, ...draftIdentifiers].filter(
+                      (column): column is string => Boolean(column)
+                    )
+              }
+              subjectColumn={draftSubject}
+              onSubjectColumn={setDraftSubject}
+              subjectLockedReason={
+                table.coverageRemote
+                  ? t(
+                      "This column is used by the coverage file. Clear those before changing it."
+                    )
+                  : draftMarkers.length > 0
+                    ? t(
+                        "This column is used by “nothing seen” rows. Clear those before changing it."
+                      )
+                  : Object.keys(draftExcluded).includes(draftSubject) &&
+                      draftSubject
+                    ? t(
+                        "This column is used by rows to ignore. Clear those before changing it."
+                      )
+                    : null
+              }
+              hasOrganism={Boolean(table.organism)}
+              onOpenOrganisms={onClose}
+              detailColumns={draftDetails}
+              onDetailColumns={setDraftDetails}
+              coverageMode={draftCoverage}
+              onCoverageMode={setDraftCoverage}
+              effortMarkers={draftMarkers}
+              onEffortMarkers={setDraftMarkers}
+              excluded={draftExcluded}
+              onExcluded={setDraftExcluded}
+              replicateWord={draftReplicateLabel}
+              within="sum"
+              joinColumn={table.joinColumn}
+              unavailableColumns={[
+                table.joinColumn,
+                table.overlayJoinColumn || "",
+                ...draftIdentifiers,
+                ...temporalSourceFilterColumns(table.temporal),
+              ].filter((column): column is string => Boolean(column))}
+              valueColumns={draftColumns}
+            />
+          ) : null}
+          {draftMode === "replicates" &&
+          (JSON.stringify(draftIdentifiers) !==
+            JSON.stringify(
+              (table.additionalReplicateIdentifiers || []).filter(Boolean)
+            ) ||
+            draftSubject !== (table.subjectColumn || "")) ? (
+            <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+              {t(
+                "After saving, choose “Optimize for faster queries” from this table's menu. It rewrites the stored file around the new replicate and subject columns so species and time-range maps read less of it."
+              )}
+            </p>
+          ) : null}
         </section>
       </div>
     </Modal>,
@@ -930,7 +1121,12 @@ function DataTableRow({
     replicateLabel: string,
     replicateLabelCustom: string | null,
     withinReplicateOperations: { [column: string]: WithinReplicateOp },
-    acrossReplicateOperations: { [column: string]: DataTableAggregation[] }
+    acrossReplicateOperations: { [column: string]: DataTableAggregation[] },
+    subjectColumn: string | null,
+    observationDetailColumns: string[],
+    coverageMode: CoverageModeChoice,
+    effortMarkerValues: string[],
+    excludedValues: { [column: string]: string[] }
   ) => void | Promise<void>;
 }) {
   const { t } = useTranslation("admin:data");
@@ -954,6 +1150,30 @@ function DataTableRow({
   );
   const organism = organismInfoOrNull(table.organism);
   const activeJob = job && isActiveDataTableJob(job) ? job : undefined;
+  const { confirm } = useDialog();
+  const trackOverlayJob = useTrackOverlayDataTableJob();
+  const [createReprocess] = useCreateOverlayDataTableReprocessMutation();
+  const startReindex = async () => {
+    const ok = await confirm(t("Optimize this table for faster queries?"), {
+      description: t(
+        "SeaSketch rewrites the stored table so rows that share a subject, survey time, and replicate sit together, and adds lookups for the join and subject columns. Map queries that filter by species or time then read a fraction of the file. Nothing about the data or its settings changes. This takes a minute or two and the table stays available while it runs."
+      ),
+      primaryButtonText: t("Optimize"),
+    });
+    if (!ok) return;
+    try {
+      const result = await createReprocess({
+        variables: { tableId: table.id, clusterOnly: true },
+      });
+      trackOverlayJob(
+        tableOfContentsItemId,
+        result.data?.createOverlayDataTableReprocess?.projectBackgroundJob
+      );
+      onRefresh();
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   return (
     <li className="rounded-lg border border-gray-200 bg-white p-3 shadow-sm">
@@ -989,25 +1209,25 @@ function DataTableRow({
                   className="flex cursor-pointer select-none items-center rounded px-2 py-1.5 text-gray-700 outline-none data-[highlighted]:bg-gray-100"
                   onSelect={() => setSettingsOpen(true)}
                 >
-                  {t("Column Settings")}
+                  {t("Display settings")}
                 </DropdownMenu.Item>
                 <DropdownMenu.Item
                   className="flex cursor-pointer select-none items-center rounded px-2 py-1.5 text-gray-700 outline-none data-[highlighted]:bg-gray-100"
                   onSelect={() => setTemporalOpen(true)}
                 >
-                  {t("Temporal Coverage")}
+                  {t("Time settings")}
                 </DropdownMenu.Item>
                 <DropdownMenu.Item
                   className="flex cursor-pointer select-none items-center rounded px-2 py-1.5 text-gray-700 outline-none data-[highlighted]:bg-gray-100"
                   onSelect={() => setNodataOpen(true)}
                 >
-                  {t("No Data Values")}
+                  {t("No-data values")}
                 </DropdownMenu.Item>
                 <DropdownMenu.Item
                   className="flex cursor-pointer select-none items-center rounded px-2 py-1.5 text-gray-700 outline-none data-[highlighted]:bg-gray-100"
                   onSelect={() => setOrganismOpen(true)}
                 >
-                  {t("Organism identity")}
+                  {t("Subjects and organisms")}
                 </DropdownMenu.Item>
                 <DropdownMenu.Separator className="my-1 h-px bg-gray-200" />
                 {parquetHref ? (
@@ -1019,7 +1239,7 @@ function DataTableRow({
                       rel="noreferrer"
                       className="flex cursor-pointer select-none items-center rounded px-2 py-1.5 text-gray-700 outline-none data-[highlighted]:bg-gray-100"
                     >
-                      {t("Download Parquet")}
+                      {t("Download parquet")}
                     </a>
                   </DropdownMenu.Item>
                 ) : null}
@@ -1028,6 +1248,12 @@ function DataTableRow({
                   onSelect={() => onReplace(table.id)}
                 >
                   {t("Upload new version")}
+                </DropdownMenu.Item>
+                <DropdownMenu.Item
+                  className="flex cursor-pointer select-none items-center rounded px-2 py-1.5 text-gray-700 outline-none data-[highlighted]:bg-gray-100"
+                  onSelect={() => void startReindex()}
+                >
+                  {t("Optimize for faster queries")}
                 </DropdownMenu.Item>
                 <DropdownMenu.Item
                   className="flex cursor-pointer select-none items-center rounded px-2 py-1.5 text-red-600 outline-none data-[highlighted]:bg-red-50"
@@ -1272,7 +1498,12 @@ export default function RelatedDataTables({ item }: RelatedDataTablesProps) {
       replicateLabel: string,
       replicateLabelCustom: string | null,
       withinReplicateOperations: { [column: string]: WithinReplicateOp },
-      acrossReplicateOperations: { [column: string]: DataTableAggregation[] }
+      acrossReplicateOperations: { [column: string]: DataTableAggregation[] },
+      subjectColumn: string | null,
+      observationDetailColumns: string[],
+      coverageMode: CoverageModeChoice,
+      effortMarkerValues: string[],
+      excludedValues: { [column: string]: string[] }
     ) => {
       await setVisualizationSettingsMutation({
         variables: {
@@ -1288,6 +1519,11 @@ export default function RelatedDataTables({ item }: RelatedDataTablesProps) {
           replicateLabelCustom,
           withinReplicateOperations,
           acrossReplicateOperations,
+          subjectColumn,
+          observationDetailColumns,
+          coverageMode,
+          effortMarkerValues,
+          excludedValues,
         },
       });
     },
@@ -1426,7 +1662,7 @@ export default function RelatedDataTables({ item }: RelatedDataTablesProps) {
           </h3>
           <p className="mt-1 text-sm text-gray-500 max-w-prose">
             {t(
-              "Upload CSV tables linked to this layer by a shared ID column—for example species counts per site or survey results per polygon."
+              "Upload CSV tables linked to this layer by a join column—for example species counts per site or survey results per polygon."
             )}
           </p>
         </div>

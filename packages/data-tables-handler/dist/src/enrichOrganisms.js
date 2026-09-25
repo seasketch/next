@@ -14,6 +14,20 @@ exports.searchDocumentsFromCatalog = searchDocumentsFromCatalog;
 const geostats_types_1 = require("@seasketch/geostats-types");
 const minisearch_1 = __importDefault(require("minisearch"));
 const taxonomyApis_1 = require("./taxonomyApis");
+const EMPTY_TAXON_PART = /^(na|n\/a|null|none|unknown|undetermined|spp\.?|sp\.?|-)$/i;
+function cellFromRow(row, column) {
+    if (!row)
+        return undefined;
+    if (Object.prototype.hasOwnProperty.call(row, column)) {
+        return row[column];
+    }
+    const needle = column.toLowerCase();
+    for (const key of Object.keys(row)) {
+        if (key.toLowerCase() === needle)
+            return row[key];
+    }
+    return undefined;
+}
 function cellText(value) {
     if (value === null || value === undefined)
         return null;
@@ -26,6 +40,11 @@ function cellText(value) {
     }
     return String(value);
 }
+function taxonPart(value) {
+    if (!value || EMPTY_TAXON_PART.test(value))
+        return null;
+    return value;
+}
 function cellInt(value) {
     if (typeof value === "number" && Number.isInteger(value) && value > 0) {
         return value;
@@ -37,17 +56,24 @@ function cellInt(value) {
     return n > 0 ? n : null;
 }
 function classTableJoinColumn(config, classHeaders) {
-    if (typeof config.classJoinColumn === "string" &&
-        classHeaders.includes(config.classJoinColumn)) {
-        return config.classJoinColumn;
-    }
-    return null;
+    if (typeof config.classJoinColumn !== "string")
+        return null;
+    const needle = config.classJoinColumn.toLowerCase();
+    return (classHeaders.find((header) => header.toLowerCase() === needle) || null);
 }
 function firstRoleText(row, config, role) {
     if (!row)
         return null;
     for (const column of (0, geostats_types_1.columnsWithRole)(config.roles, role)) {
-        const text = cellText(row[column]);
+        const text = cellText(cellFromRow(row, column));
+        if (text)
+            return text;
+    }
+    return null;
+}
+function firstRoleTextFromRows(config, role, ...rows) {
+    for (const row of rows) {
+        const text = firstRoleText(row, config, role);
         if (text)
             return text;
     }
@@ -56,31 +82,40 @@ function firstRoleText(row, config, role) {
 function allRoleTexts(row, config, role) {
     if (!row)
         return [];
-    return (0, geostats_types_1.uniqueStrings)((0, geostats_types_1.columnsWithRole)(config.roles, role).map((column) => cellText(row[column])));
+    return (0, geostats_types_1.uniqueStrings)((0, geostats_types_1.columnsWithRole)(config.roles, role).map((column) => cellText(cellFromRow(row, column))));
+}
+function allRoleTextsFromRows(config, role, ...rows) {
+    return (0, geostats_types_1.uniqueStrings)(rows.flatMap((row) => allRoleTexts(row, config, role)));
 }
 function classRowForValue(value, classRows, joinColumn) {
     if (!joinColumn)
         return undefined;
     const needle = value.trim().toLowerCase();
-    return classRows.find((row) => cellText(row[joinColumn])?.toLowerCase() === needle);
+    return classRows.find((row) => cellText(cellFromRow(row, joinColumn))?.toLowerCase() === needle);
 }
-function resolveInputFromValue(value, config, classRow) {
-    const genusFromRole = firstRoleText(classRow, config, "genus");
-    const species = firstRoleText(classRow, config, "species");
-    const scientificFromParts = genusFromRole && species ? `${genusFromRole} ${species}` : null;
-    const scientific = firstRoleText(classRow, config, "scientificName") ||
+function resolveInputFromValue(value, config, classRow, sourceRow) {
+    const genusFromRole = taxonPart(firstRoleTextFromRows(config, "genus", classRow, sourceRow));
+    const species = taxonPart(firstRoleTextFromRows(config, "species", classRow, sourceRow));
+    const scientificFromParts = genusFromRole
+        ? species
+            ? `${genusFromRole} ${species}`
+            : genusFromRole
+        : null;
+    const scientific = firstRoleTextFromRows(config, "scientificName", classRow, sourceRow) ||
         scientificFromParts ||
         (config.valueKind === "scientificName" ? value : null);
     const genus = genusFromRole || (0, geostats_types_1.genusFromOrganismName)(scientific);
-    const commonName = firstRoleText(classRow, config, "commonName") ||
+    const commonName = firstRoleTextFromRows(config, "commonName", classRow, sourceRow) ||
         (config.valueKind === "commonName" ? value : null);
     const wormsAphiaId = (() => {
-        if (!classRow)
-            return null;
-        for (const column of (0, geostats_types_1.columnsWithRole)(config.roles, "wormsAphiaId")) {
-            const id = cellInt(classRow[column]);
-            if (id)
-                return id;
+        for (const row of [classRow, sourceRow]) {
+            if (!row)
+                continue;
+            for (const column of (0, geostats_types_1.columnsWithRole)(config.roles, "wormsAphiaId")) {
+                const id = cellInt(cellFromRow(row, column));
+                if (id)
+                    return id;
+            }
         }
         return null;
     })();
@@ -91,7 +126,7 @@ function resolveInputFromValue(value, config, classRow) {
         species,
         commonName,
         wormsAphiaId,
-        extraNames: allRoleTexts(classRow, config, "commonName"),
+        extraNames: allRoleTextsFromRows(config, "commonName", classRow, sourceRow),
     };
 }
 /** Class-table / identity join only. Used for admin draft preview. */
@@ -104,22 +139,23 @@ function joinOrganismCatalogRows(options) {
     const joinColumn = classTableJoinColumn(options.config, headers);
     return options.values.map((item) => {
         const classRow = classRowForValue(item.value, classRows, joinColumn);
-        const input = resolveInputFromValue(item.value, options.config, classRow);
-        const description = allRoleTexts(classRow, options.config, "description").join(" ") || null;
+        const sourceRow = options.sourceRows?.get(item.value);
+        const input = resolveInputFromValue(item.value, options.config, classRow, sourceRow);
+        const description = allRoleTextsFromRows(options.config, "description", classRow, sourceRow).join(" ") || null;
         const row = {
             value: item.value,
-            scientific_name: input.scientificName,
-            common_name: input.commonName,
+            scientific_name: input.scientificName ?? null,
+            common_name: input.commonName ?? null,
             common_names: (0, geostats_types_1.uniqueStrings)([
                 input.commonName,
                 ...(input.extraNames || []),
             ]),
-            genus: input.genus,
+            genus: input.genus ?? null,
             family: null,
             ancestor_names: [],
             description,
             inat_taxon_id: null,
-            worms_aphia_id: input.wormsAphiaId,
+            worms_aphia_id: input.wormsAphiaId ?? null,
             search_text: "",
             occurrence_count: item.occurrenceCount,
             confidence: "unresolved",
@@ -142,9 +178,10 @@ async function enrichOrganismValues(options) {
     for (let i = 0; i < options.values.length; i++) {
         const item = options.values[i];
         const classRow = classRowForValue(item.value, classRows, joinColumn);
-        const input = resolveInputFromValue(item.value, options.config, classRow);
+        const sourceRow = options.sourceRows?.get(item.value);
+        const input = resolveInputFromValue(item.value, options.config, classRow, sourceRow);
         descriptions[i] =
-            allRoleTexts(classRow, options.config, "description").join(" ") || null;
+            allRoleTextsFromRows(options.config, "description", classRow, sourceRow).join(" ") || null;
         const hasTaxonSignal = Boolean(input.wormsAphiaId ||
             input.scientificName ||
             (input.genus && input.species) ||
@@ -169,7 +206,12 @@ async function enrichOrganismValues(options) {
     }
     // eslint-disable-next-line no-console
     console.log(`[data-tables-handler] organism resolve ${inputs.length}/${options.values.length} values` +
-        (joinColumn ? ` (class join ${joinColumn})` : " (no class join)"));
+        (joinColumn ? ` (class join ${joinColumn})` : " (no class join)"), {
+        withAphiaId: inputs.filter((input) => input.wormsAphiaId).length,
+        withScientificName: inputs.filter((input) => input.scientificName).length,
+        withGenusSpecies: inputs.filter((input) => input.genus && input.species)
+            .length,
+    });
     if (inputs.length > 0) {
         const resolved = await (0, taxonomyApis_1.resolveOrganismTaxa)(options.clients, inputs, options.onProgress);
         for (let r = 0; r < resolved.length; r++) {

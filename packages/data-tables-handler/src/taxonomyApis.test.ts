@@ -10,6 +10,7 @@ import {
   pickWormsAccepted,
   resolveOrganismTaxa,
   rewriteTaxonomyUrl,
+  singleMappedInatId,
   sanitizeWormsQueryName,
   wormsQueryName,
   type TaxonomyClients,
@@ -17,6 +18,18 @@ import {
 import { buildWormsParquet } from "./wormsParquet";
 
 const WORMS_DWCA = join(__dirname, "..", "testdata", "worms-dwca");
+
+describe("singleMappedInatId", () => {
+  it("keeps one shared id and drops a disagreement", () => {
+    const byAphia = new Map<number, number>([
+      [240727, 1316645],
+      [999, 1],
+    ]);
+    assert.equal(singleMappedInatId([240728, 240727], byAphia), 1316645);
+    assert.equal(singleMappedInatId([240727, 999], byAphia), null);
+    assert.equal(singleMappedInatId([240728], byAphia), null);
+  });
+});
 
 describe("rewriteTaxonomyUrl", () => {
   it("rewrites WoRMS URLs onto the worker proxy and leaves iNat alone", () => {
@@ -399,6 +412,89 @@ describe("resolveOrganismTaxa", () => {
     assert.equal(fromName.inatTaxonId, 1439813);
     assert.equal(fromOldAphia.wormsAphiaId, 1702292);
     assert.equal(fromOldAphia.inatTaxonId, 1439813);
+  });
+
+  it("resolves an accepted name through Wikidata's superseded AphiaID", async () => {
+    const outDir = mkdtempSync(join(tmpdir(), "worms-synonym-aphia-"));
+    await buildWormsParquet(WORMS_DWCA, outDir);
+    const aphiaQueries: string[] = [];
+    const clients: TaxonomyClients = {
+      wormsParquetDir: outDir,
+      fetch: async (url, init) => {
+        if (
+          url.includes("marinespecies.org") ||
+          url.includes("/taxonomy/worms/")
+        ) {
+          throw new Error(`unexpected WoRMS REST ${url}`);
+        }
+        if (url.includes("query.wikidata.org")) {
+          const body = decodeURIComponent(String(init?.body || ""));
+          const bindings: Array<Record<string, { value: string }>> = [];
+          if (body.includes("?aphia")) {
+            aphiaQueries.push(body);
+            if (body.includes('"282753"') && !body.includes('"1702292"')) {
+              throw new Error("synonym AphiaID was not queried with the accepted id");
+            }
+            if (body.includes('"282753"')) {
+              bindings.push({
+                aphia: { value: "282753" },
+                inat: { value: "1439813" },
+              });
+            }
+          }
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ results: { bindings } }),
+          };
+        }
+        return { ok: true, status: 200, json: async () => ({}) };
+      },
+    };
+    const [row] = await resolveOrganismTaxa(clients, [
+      { value: "SPUL", scientificName: "Bodianus pulcher" },
+    ]);
+    assert.equal(row.wormsAphiaId, 1702292);
+    assert.equal(row.scientificName, "Bodianus pulcher");
+    assert.equal(row.inatTaxonId, 1439813);
+    assert.ok(aphiaQueries.some((body) => body.includes('"282753"')));
+  });
+
+  it("resolves an accepted name through Wikidata's superseded binomial", async () => {
+    const outDir = mkdtempSync(join(tmpdir(), "worms-synonym-name-"));
+    await buildWormsParquet(WORMS_DWCA, outDir);
+    const clients: TaxonomyClients = {
+      wormsParquetDir: outDir,
+      fetch: async (url, init) => {
+        if (
+          url.includes("marinespecies.org") ||
+          url.includes("/taxonomy/worms/")
+        ) {
+          throw new Error(`unexpected WoRMS REST ${url}`);
+        }
+        if (url.includes("query.wikidata.org")) {
+          const body = decodeURIComponent(String(init?.body || ""));
+          const bindings: Array<Record<string, { value: string }>> = [];
+          if (body.includes("Semicossyphus pulcher")) {
+            bindings.push({
+              query: { value: "Semicossyphus pulcher" },
+              inat: { value: "1439813" },
+            });
+          }
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({ results: { bindings } }),
+          };
+        }
+        return { ok: true, status: 200, json: async () => ({}) };
+      },
+    };
+    const [row] = await resolveOrganismTaxa(clients, [
+      { value: "SPUL", scientificName: "Bodianus pulcher" },
+    ]);
+    assert.equal(row.wormsAphiaId, 1702292);
+    assert.equal(row.inatTaxonId, 1439813);
   });
 
   it("falls back to WoRMS REST when the snapshot misses", async () => {

@@ -26,17 +26,38 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.default = handleDataTableUpload;
 const tmp_1 = require("tmp");
 const path = __importStar(require("path"));
+const clusterParquet_1 = require("./clusterParquet");
 const fs_1 = require("fs");
+const geostats_types_1 = require("@seasketch/geostats-types");
 const lambda_db_client_1 = require("./lambda-db-client");
 const remotes_1 = require("./remotes");
 const handleOrganismReprocess_1 = require("./handleOrganismReprocess");
 const deriveWhenColumns_1 = require("./deriveWhenColumns");
 const applyNodataValues_1 = require("./applyNodataValues");
-const geostats_types_1 = require("@seasketch/geostats-types");
 const validateJoinColumn_1 = require("./validateJoinColumn");
 const processWithDuckDb_1 = require("./processWithDuckDb");
 const PARQUET_CONTENT_TYPE = "application/vnd.apache.parquet";
 const JSON_CONTENT_TYPE = "application/json; charset=utf-8";
+function clusterHintsFromTable(row, joinColumn) {
+    const temporal = (0, deriveWhenColumns_1.configFromStoredTemporal)(row?.temporal);
+    return {
+        joinColumn,
+        organismColumn: (0, geostats_types_1.isOrganismInfo)(row?.organism)
+            ? row.organism.column
+            : undefined,
+        subjectColumn: row?.subject_column ||
+            ((0, geostats_types_1.isOrganismInfo)(row?.organism) ? row.organism.column : undefined),
+        requiredFilterColumns: Array.isArray(row?.required_filter_columns)
+            ? row.required_filter_columns
+            : undefined,
+        temporalColumns: temporal
+            ? (0, geostats_types_1.sourceColumnNames)(temporal.sourceColumns)
+            : undefined,
+        replicateColumns: Array.isArray(row?.additional_replicate_identifiers)
+            ? row.additional_replicate_identifiers
+            : undefined,
+    };
+}
 function defaultTableName(filename) {
     return filename.replace(/\.[^.]+$/, "");
 }
@@ -107,16 +128,92 @@ async function handleDataTableUpload(request) {
         const organismConfig = (0, geostats_types_1.isDataTableOrganismConfig)(upload.organism_config)
             ? upload.organism_config
             : null;
+        if (processingOptions.kind === "coverage") {
+            if (!upload.reprocess_of_overlay_data_table_id) {
+                throw new Error("Coverage upload is missing its data table");
+            }
+            const sourceQ = await pgClient.query(`select parquet_remote, column_stats_remote, subject_column,
+                observation_detail_columns, visualization_columns, join_column, temporal
+         from overlay_data_tables where id = $1`, [upload.reprocess_of_overlay_data_table_id]);
+            const source = sourceQ.rows[0];
+            if (!source?.parquet_remote) {
+                throw new Error("Source data table parquet is missing");
+            }
+            const subjectColumn = processingOptions.subjectColumn || source.subject_column;
+            if (!subjectColumn) {
+                throw new Error("Choose a subject column before uploading coverage");
+            }
+            await updateProgress("running", "validating coverage", 0.4);
+            await (0, remotes_1.getStagingObject)(path.join(tmpobj.name, "coverage.json"), objectKey);
+            const parsed = JSON.parse((0, fs_1.readFileSync)(path.join(tmpobj.name, "coverage.json"), "utf8"));
+            let surveyColumns = [];
+            if (source.column_stats_remote) {
+                const statsPathLocal = path.join(tmpobj.name, "column-stats.json");
+                if (await (0, remotes_1.tryGetR2Object)(source.column_stats_remote, statsPathLocal)) {
+                    const stats = JSON.parse((0, fs_1.readFileSync)(statsPathLocal, "utf8"));
+                    const details = new Set(source.observation_detail_columns || []);
+                    const values = new Set(source.visualization_columns || []);
+                    const numericWhenEmpty = (source.visualization_columns || []).length === 0;
+                    surveyColumns = (stats.columns || [])
+                        .map((column) => column.attribute)
+                        .filter((name) => {
+                        if (!name || name === subjectColumn)
+                            return false;
+                        if (name === source.join_column)
+                            return false;
+                        if (name.startsWith("_when_"))
+                            return false;
+                        if (details.has(name))
+                            return false;
+                        if (values.has(name))
+                            return false;
+                        if (numericWhenEmpty) {
+                            const column = (stats.columns || []).find((item) => item.attribute === name);
+                            if (column?.type === "number")
+                                return false;
+                        }
+                        return true;
+                    });
+                }
+            }
+            const validation = (0, geostats_types_1.validateDataTableCoverage)(parsed, {
+                subjectColumn,
+                surveyColumns,
+            });
+            if (validation.errors.length > 0) {
+                const message = validation.errors
+                    .map((issue) => issue.index < 0
+                    ? issue.message
+                    : `Record ${issue.index + 1}: ${issue.message}`)
+                    .join("\n");
+                throw new Error(message);
+            }
+            const parquetDir = String(source.parquet_remote).replace(/\/[^/]+$/, "");
+            const beside = `${parquetDir}/coverage.json`;
+            await (0, remotes_1.putObject)(path.join(tmpobj.name, "coverage.json"), beside, JSON_CONTENT_TYPE);
+            await pgClient.query(`select complete_overlay_data_table_coverage($1::uuid, $2::text)`, [taskId, beside]);
+            return {
+                success: {
+                    uploadId,
+                    coverageRemote: beside,
+                },
+            };
+        }
         if (organismConfig) {
             if (!upload.reprocess_of_overlay_data_table_id) {
                 throw new Error("Organism enrichment is missing reprocess_of_overlay_data_table_id");
             }
-            const sourceQ = await pgClient.query(`select parquet_remote from overlay_data_tables where id = $1`, [upload.reprocess_of_overlay_data_table_id]);
+            const sourceQ = await pgClient.query(`select parquet_remote, column_stats_remote, source_parquet_remote,
+                join_column, required_filter_columns
+         from overlay_data_tables where id = $1`, [upload.reprocess_of_overlay_data_table_id]);
             if (!sourceQ.rows[0]?.parquet_remote) {
                 throw new Error("Source data table parquet is missing");
             }
             await updateProgress("running", "downloading parquet", 0.1);
             await (0, remotes_1.getR2Object)(sourceQ.rows[0].parquet_remote, parquetPath);
+            const parquetTarget = (0, remotes_1.buildR2Remote)(slug, sourceUuid, uploadId, "data.parquet");
+            const statsTarget = (0, remotes_1.buildR2Remote)(slug, sourceUuid, uploadId, "column-stats.json");
+            const sourceTarget = (0, remotes_1.buildR2Remote)(slug, sourceUuid, uploadId, "source.parquet");
             let classCsvPath;
             const looksLikeCsv = /\.csv$/i.test(String(upload.filename || "")) ||
                 String(upload.content_type || "").includes("csv");
@@ -126,8 +223,12 @@ async function handleDataTableUpload(request) {
             }
             const { organism } = await (0, handleOrganismReprocess_1.runOrganismEnrichment)({
                 parquetPath,
-                parquetRemote: sourceQ.rows[0].parquet_remote,
+                parquetRemote: parquetTarget.remote,
                 config: organismConfig,
+                joinColumn: sourceQ.rows[0].join_column || joinColumn,
+                requiredFilterColumns: Array.isArray(sourceQ.rows[0].required_filter_columns)
+                    ? sourceQ.rows[0].required_filter_columns
+                    : undefined,
                 classCsvPath,
                 slug,
                 sourceUuid,
@@ -135,10 +236,31 @@ async function handleDataTableUpload(request) {
                 tmpDir: tmpobj.name,
                 updateProgress: (state, message, progress) => updateProgress(state, message, progress),
             });
-            const result = { uploadId, organism };
+            await updateProgress("running", "uploading", 0.94);
+            await (0, remotes_1.putObject)(parquetPath, parquetTarget.remote, PARQUET_CONTENT_TYPE);
+            const statsPathLocal = path.join(tmpobj.name, "column-stats.json");
+            if (!(await (0, remotes_1.tryGetR2Object)(sourceQ.rows[0].column_stats_remote, statsPathLocal))) {
+                throw new Error("Source data table column-stats.json is missing");
+            }
+            await (0, remotes_1.putObject)(statsPathLocal, statsTarget.remote, JSON_CONTENT_TYPE);
+            let sourceParquetRemote = sourceQ.rows[0].source_parquet_remote || null;
+            const sourceCopyPath = path.join(tmpobj.name, "source-copy.parquet");
+            if (sourceParquetRemote &&
+                (await (0, remotes_1.tryGetR2Object)(sourceParquetRemote, sourceCopyPath))) {
+                await (0, remotes_1.putObject)(sourceCopyPath, sourceTarget.remote, PARQUET_CONTENT_TYPE);
+                sourceParquetRemote = sourceTarget.remote;
+            }
+            const result = {
+                uploadId,
+                organism,
+                parquetRemote: parquetTarget.remote,
+                columnStatsRemote: statsTarget.remote,
+                sourceParquetRemote,
+            };
             logDebug("organism enrichment complete, enqueueing outputs job", {
                 taskId,
                 uploadId,
+                parquetRemote: result.parquetRemote,
                 classifiedCount: result.organism &&
                     typeof result.organism === "object" &&
                     "classifiedCount" in result.organism
@@ -150,10 +272,56 @@ async function handleDataTableUpload(request) {
         }
         if (isReprocess) {
             const sourceQ = await pgClient.query(`select name, join_column, overlay_join_column, parquet_remote,
-                source_parquet_remote, temporal, nodata_values
+                source_parquet_remote, temporal, nodata_values,
+                required_filter_columns, organism,
+                additional_replicate_identifiers, subject_column
          from overlay_data_tables where id = $1`, [upload.reprocess_of_overlay_data_table_id]);
             if (!sourceQ.rows[0]?.parquet_remote) {
                 throw new Error("Source data table parquet is missing");
+            }
+            if (processingOptions.clusterOnly) {
+                await updateProgress("running", "reindexing", 0.2);
+                await (0, remotes_1.getR2Object)(sourceQ.rows[0].parquet_remote, parquetPath);
+                const clusterHints = clusterHintsFromTable(sourceQ.rows[0], joinColumn);
+                await (0, clusterParquet_1.rewriteParquetClustered)(parquetPath, clusterHints);
+                const tableName = processingOptions.name ||
+                    sourceQ.rows[0].name ||
+                    defaultTableName(upload.filename);
+                const columnStats = await (0, processWithDuckDb_1.computeColumnStatsFromParquet)(parquetPath, tableName, {
+                    column: joinColumn,
+                    overlayAttribute: overlayJoinColumn,
+                    matchRate: 1,
+                    matchedRows: sourceQ.rows[0].row_count || 0,
+                    unmatchedRows: 0,
+                    unmatchedOverlayValues: 0,
+                });
+                (0, fs_1.writeFileSync)(statsPath, JSON.stringify(columnStats));
+                const parquetTarget = (0, remotes_1.buildR2Remote)(slug, sourceUuid, uploadId, "data.parquet");
+                const statsTarget = (0, remotes_1.buildR2Remote)(slug, sourceUuid, uploadId, "column-stats.json");
+                const sourceTarget = (0, remotes_1.buildR2Remote)(slug, sourceUuid, uploadId, "source.parquet");
+                await (0, remotes_1.putObject)(parquetPath, parquetTarget.remote, PARQUET_CONTENT_TYPE);
+                await (0, remotes_1.putObject)(statsPath, statsTarget.remote, JSON_CONTENT_TYPE);
+                if (sourceQ.rows[0].source_parquet_remote) {
+                    const sourceCopyPath = path.join(tmpobj.name, "source.parquet");
+                    if (await (0, remotes_1.tryGetR2Object)(sourceQ.rows[0].source_parquet_remote, sourceCopyPath)) {
+                        await (0, remotes_1.putObject)(sourceCopyPath, sourceTarget.remote, PARQUET_CONTENT_TYPE);
+                    }
+                }
+                await (0, handleOrganismReprocess_1.copyOrganismSidecars)(sourceQ.rows[0].parquet_remote, parquetTarget.remote);
+                const result = {
+                    uploadId,
+                    name: tableName,
+                    joinColumn,
+                    overlayJoinColumn,
+                    rowCount: columnStats.rowCount,
+                    parquetRemote: parquetTarget.remote,
+                    columnStatsRemote: statsTarget.remote,
+                    sourceParquetRemote: sourceQ.rows[0].source_parquet_remote || sourceTarget.remote,
+                    ...(sourceQ.rows[0].temporal ? { temporal: sourceQ.rows[0].temporal } : {}),
+                    nodataValues: (0, applyNodataValues_1.configFromStoredNodata)(sourceQ.rows[0].nodata_values)?.values ?? [],
+                };
+                await pgClient.query(`SELECT graphile_worker.add_job('processDataTableUploadOutputs', $1::json)`, [JSON.stringify({ jobId: taskId, data: result })]);
+                return { success: result };
             }
             const nextTemporal = temporalConfig || (0, deriveWhenColumns_1.configFromStoredTemporal)(sourceQ.rows[0].temporal);
             const nextNodata = jobNodata || (0, applyNodataValues_1.configFromStoredNodata)(sourceQ.rows[0].nodata_values);
@@ -167,9 +335,10 @@ async function handleDataTableUpload(request) {
             (0, fs_1.copyFileSync)(parquetPath, sourceParquetPath);
             let appliedNodata = nextNodata?.values ?? [];
             let rowCount = 0;
+            const clusterHints = clusterHintsFromTable(sourceQ.rows[0], joinColumn);
             if (nextNodata) {
                 await updateProgress("running", "applying no-data values", 0.25);
-                const nodataResult = await (0, applyNodataValues_1.applyNodataValuesOnParquet)(parquetPath, nextNodata.values, [joinColumn]);
+                const nodataResult = await (0, applyNodataValues_1.applyNodataValuesOnParquet)(parquetPath, nextNodata.values, [joinColumn], clusterHints);
                 appliedNodata = nodataResult.values;
                 rowCount = nodataResult.rowCount;
                 logDebug("nodata values applied", {
@@ -180,7 +349,7 @@ async function handleDataTableUpload(request) {
             let derivedTemporal = sourceQ.rows[0].temporal ?? undefined;
             if (nextTemporal) {
                 await updateProgress("running", "deriving temporal columns", 0.35);
-                const derived = await (0, deriveWhenColumns_1.deriveWhenColumnsOnParquet)(parquetPath, nextTemporal);
+                const derived = await (0, deriveWhenColumns_1.deriveWhenColumnsOnParquet)(parquetPath, nextTemporal, clusterHints);
                 derivedTemporal = derived.temporal;
                 rowCount = derived.rowCount;
                 logDebug("temporal columns derived", {
@@ -269,11 +438,14 @@ async function handleDataTableUpload(request) {
         const sourceParquetPath = path.join(tmpobj.name, "source.parquet");
         (0, fs_1.copyFileSync)(parquetPath, sourceParquetPath);
         if (upload.replace_overlay_data_table_id) {
-            const prevQ = await pgClient.query(`select temporal, nodata_values, parquet_remote from overlay_data_tables where id = $1`, [upload.replace_overlay_data_table_id]);
+            const prevQ = await pgClient.query(`select temporal, nodata_values, parquet_remote,
+                required_filter_columns, organism
+         from overlay_data_tables where id = $1`, [upload.replace_overlay_data_table_id]);
+            const replaceClusterHints = clusterHintsFromTable(prevQ.rows[0], joinColumn);
             const prevNodata = jobNodata || (0, applyNodataValues_1.configFromStoredNodata)(prevQ.rows[0]?.nodata_values);
             if (prevNodata && prevNodata.values.length > 0) {
                 await updateProgress("running", "applying no-data values", 0.5);
-                const nodataResult = await (0, applyNodataValues_1.applyNodataValuesOnParquet)(parquetPath, prevNodata.values, [joinColumn]);
+                const nodataResult = await (0, applyNodataValues_1.applyNodataValuesOnParquet)(parquetPath, prevNodata.values, [joinColumn], replaceClusterHints);
                 appliedNodata = nodataResult.values;
                 logDebug("csv replace applied nodata values", {
                     values: appliedNodata,
@@ -291,7 +463,7 @@ async function handleDataTableUpload(request) {
                 else {
                     try {
                         await updateProgress("running", "deriving temporal columns", 0.55);
-                        const derived = await (0, deriveWhenColumns_1.deriveWhenColumnsOnParquet)(parquetPath, prevConfig);
+                        const derived = await (0, deriveWhenColumns_1.deriveWhenColumnsOnParquet)(parquetPath, prevConfig, replaceClusterHints);
                         derivedTemporal = derived.temporal;
                         logDebug("csv replace re-derived temporal columns", {
                             parseableCount: derived.parseableCount,

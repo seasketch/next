@@ -4,10 +4,13 @@ import {
   DATA_TABLE_CALCULATION_ROWS_LIMIT,
   DataTableQuerySettings,
   defaultHiddenCalculationColumns,
+  deriveDataTableCalculationAuditQuery,
   deriveDataTableCalculationRowsQuery,
   filterRowsOverlappingSteps,
+  parseDataTableCalculationAuditBody,
   parseDataTableCalculationRowsBody,
   precisionForStep,
+  replicateIdentityKey,
   resolveCalculationRowsSelection,
   rowWhenOverlapsStep,
   stepIntervalSeconds,
@@ -69,6 +72,32 @@ describe("deriveDataTableCalculationRowsQuery", () => {
 
     // Narrowed to the requested site.
     expect(rowsParams.get("q.site")).toBe("SRI_CHICKASAW_W");
+    expect(rowsParams.get("v.classcode")).toBeNull();
+  });
+
+  it("sends subject and detail filters as row selection, not v.*", () => {
+    const rowsQuery = deriveDataTableCalculationRowsQuery(
+      {
+        ...statsQuery,
+        contributionFilters: [
+          { column: "classcode", op: "eq", value: "SPUL" },
+          { column: "sex", op: "eq", value: "MALE" },
+        ],
+        subjectColumn: "classcode",
+        detailColumns: ["sex"],
+      },
+      "site",
+      "SCI_GULL_ISLE_E"
+    );
+    const params = buildDataTableQuerySearchParams(rowsQuery);
+    expect(params.getAll("q.classcode")).toEqual([
+      "in.(SPUL,PYCHEL,\"a,b\")",
+      "SPUL",
+    ]);
+    expect(params.get("q.sex")).toBe("MALE");
+    expect(params.get("v.classcode")).toBeNull();
+    expect(params.get("v.sex")).toBeNull();
+    expect(rowsQuery.contributionFilters).toBeUndefined();
   });
 
   it("adds no filters beyond the join-column narrowing", () => {
@@ -105,6 +134,21 @@ describe("deriveDataTableCalculationRowsQuery", () => {
     expect(rowsQuery.limit).toBe(DATA_TABLE_CALCULATION_ROWS_LIMIT);
   });
 
+  it("narrows the raw query to the year being audited", () => {
+    const rowsQuery = deriveDataTableCalculationRowsQuery(
+      statsQuery,
+      "site",
+      "SCI_GULL_ISLE_E",
+      { start: 1704067200, end: 1735689600 }
+    );
+    expect(rowsQuery.when).toEqual({ start: 1704067200, end: 1735689600 });
+    expect(rowsQuery.filters).toEqual(
+      expect.arrayContaining([
+        { column: "site", op: "eq", value: "SCI_GULL_ISLE_E" },
+      ])
+    );
+  });
+
   it("omits temporal ordering for non-temporal queries", () => {
     const rowsQuery = deriveDataTableCalculationRowsQuery(
       { op: "mean", column: "count", filters: statsQuery.filters },
@@ -125,6 +169,81 @@ describe("deriveDataTableCalculationRowsQuery", () => {
     expect(rowsQuery.filters).toEqual([
       { column: "site_id", op: "eq", value: "42" },
     ]);
+  });
+});
+
+describe("deriveDataTableCalculationAuditQuery", () => {
+  it("asks the engine to explain one feature with the map's filters intact", () => {
+    const auditQuery = deriveDataTableCalculationAuditQuery(
+      {
+        ...statsQuery,
+        replicateBy: ["zone", "transect"],
+        within: "sum",
+        contributionFilters: [{ column: "classcode", op: "eq", value: "SPUL" }],
+        subjectColumn: "classcode",
+        coverageMode: "all_surveyed",
+      },
+      "site",
+      "SCI_PELICAN_W",
+      { start: 1704067200, end: 1735689600 }
+    );
+    const params = buildDataTableQuerySearchParams(auditQuery);
+    expect(params.get("explain")).toBe("1");
+    expect(params.get("joinColumn")).toBe("site");
+    expect(params.get("groupBy")).toBe("site");
+    expect(params.get("op")).toBe("mean,count");
+    expect(params.get("v.classcode")).toBe("SPUL");
+    expect(params.getAll("q.site")).toEqual(["SCI_PELICAN_W"]);
+    expect(params.get("when.step")).toBeNull();
+    expect(params.get("when.start")).toBe("1704067200");
+  });
+
+  it("does not request explain for a table where each row is a summary", () => {
+    const auditQuery = deriveDataTableCalculationAuditQuery(
+      { op: "mean", column: "count" },
+      "site",
+      "A"
+    );
+    expect(auditQuery.explain).toBeUndefined();
+    expect(auditQuery.op).toEqual(["mean", "count"]);
+  });
+});
+
+describe("parseDataTableCalculationAuditBody", () => {
+  it("keeps the site's group and well-formed replicates", () => {
+    const audit = parseDataTableCalculationAuditBody(
+      {
+        rowsMatched: 40,
+        groups: [{ site: "A", mean: 0.25, count: 8, replicatesZero: 6 }],
+        replicates: [
+          {
+            key: { site: "A", zone: "INNER", transect: 1 },
+            status: "zero",
+            reason: "noMatchingObservations",
+            coverageInterval: null,
+            scope: {},
+            value: 0,
+            rowCount: 5,
+            contributingRows: 0,
+          },
+          { key: {}, status: "bogus", value: 1, rowCount: 1, contributingRows: 1 },
+          null,
+        ],
+      },
+      { op: "mean" }
+    );
+    expect(audit.group).toMatchObject({ mean: 0.25, count: 8 });
+    expect(audit.replicates).toHaveLength(1);
+    expect(audit.rowsMatched).toBe(40);
+  });
+
+  it("builds identical identity keys from an engine key and a raw row", () => {
+    const columns = ["_when_start", "_when_end", "site", "zone", "transect"];
+    const engineKey = { _when_start: 1, _when_end: 2, site: "A", zone: "INNER", transect: 1 };
+    const row = { _when_start: 1, _when_end: 2, site: "A", zone: "INNER", transect: 1, count: 3 };
+    expect(replicateIdentityKey(engineKey, columns)).toBe(
+      replicateIdentityKey(row, columns)
+    );
   });
 });
 

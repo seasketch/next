@@ -82,7 +82,7 @@ export default function DataTableJoinColumnModal({
         <p className="text-sm text-gray-600">
           <Trans ns="admin:data">
             Data tables you upload will need to be joined to spatial features in
-            this layer using a common ID column (e.g. site_id). When you upload
+            this layer using a join column (e.g. site_id). When you upload
             new tables, distinct values in all columns will be compared to this
             column in order to determine how to join the two datasets.
           </Trans>

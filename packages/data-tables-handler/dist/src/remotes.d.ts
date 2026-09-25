@@ -1,6 +1,7 @@
 export declare function putObject(filepath: string, remote: string, contentType?: string): Promise<void>;
 /** Sibling object next to data.parquet (catalog, search index, preview). */
 export declare function siblingRemote(parquetRemote: string | null | undefined, filename: string): string | null;
+export declare function deleteR2Object(remote: string): Promise<void>;
 /** Download an existing hosted parquet (or other object) from R2. */
 export declare function getR2Object(remote: string, filepath: string): Promise<void>;
 /** Like getR2Object, but returns false when the key is missing. */

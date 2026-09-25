@@ -64,7 +64,7 @@ export default function EnableDataTables({
               <p className="mt-1 text-sm text-gray-600">
                 <Trans ns="admin:data">
                   Attach multidimensional data about features in this layer
-                  using a shared ID column. Great for monitoring data. For
+                  using a join column. Great for monitoring data. For
                   example, add annual species observations for survey sites.
                 </Trans>
               </p>

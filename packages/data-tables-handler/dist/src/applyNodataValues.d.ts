@@ -1,4 +1,5 @@
 import { type DataTableNodataValue } from "@seasketch/geostats-types";
+import { ClusterColumnHints } from "./clusterParquet";
 export declare function nodataMatchSql(quotedColumn: string, values: DataTableNodataValue[]): string | null;
 export declare function configFromStoredNodata(value: unknown): {
     values: DataTableNodataValue[];
@@ -10,4 +11,4 @@ export type ApplyNodataResult = {
     rowCount: number;
     values: DataTableNodataValue[];
 };
-export declare function applyNodataValuesOnParquet(parquetPath: string, values: DataTableNodataValue[], excludeColumns?: string[]): Promise<ApplyNodataResult>;
+export declare function applyNodataValuesOnParquet(parquetPath: string, values: DataTableNodataValue[], excludeColumns?: string[], clusterHints?: Omit<ClusterColumnHints, "columns">): Promise<ApplyNodataResult>;

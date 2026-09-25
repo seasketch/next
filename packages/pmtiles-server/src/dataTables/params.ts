@@ -9,6 +9,7 @@
  *   q.year=eq.2018                       equality (explicit)
  *   q.count=gte.5                        gt / gte / lt / lte / neq
  *   q.observer=in.(Chad Burt,Lyal B)     IN list ("quoted" items may contain commas)
+ *   q.code=not.in.(PeopleAll,DogsAll)    NOT IN list; empty cells are kept
  *   q.size=is.null / q.size=not.null     null tests
  *
  * Repeating the same q.<col> param ANDs the conditions together.
@@ -37,6 +38,7 @@ export type FilterOperator =
   | "lt"
   | "lte"
   | "in"
+  | "notIn"
   | "isNull"
   | "notNull";
 
@@ -70,19 +72,45 @@ export interface ParsedQuery {
   format: OutputFormat | null;
   groupBy: string[];
   /**
-   * Extra columns that, with `groupBy` and the time step, identify one
-   * replicate. Empty means the one-pass row aggregate.
+   * Replicate columns. Code name: replicateBy.
+   * With the row's survey time (`_when_start`, `_when_end`) and `groupBy`,
+   * these identify one replicate. Empty means each row is already a summary.
    */
   replicateBy: string[];
-  /** How multiple rows inside one replicate collapse. Required when `replicateBy` is set. */
+  /** Within a replicate. Code name: within. Required when `replicateBy` is set. */
   within: WithinAggregation | null;
   ops: Aggregation[];
-  /** Column to aggregate. Required for every op except count. */
+  /** Value column. Code name: column. Required for every op except count. */
   column: string | null;
   limit: number | null;
   offset: number;
   orderBy: { key: string; direction: "asc" | "desc" } | null;
+  /** Survey filters. Code name: q.*. Selecting these chooses which replicates exist. */
   filters: RawFilter[];
+  /**
+   * Subject and detail filters. Code name: v.* / contributionFilters.
+   * Applied after a replicate is registered. They narrow what is counted
+   * and never drop the replicate.
+   */
+  contributionFilters: RawFilter[];
+  /** Subject column. Rows whose value is an effort marker do not contribute. */
+  subjectColumn: string | null;
+  /** Detail columns. Effort markers in these columns also register without contributing. */
+  detailColumns: string[];
+  /** Nothing seen rows. Code name: effortMarkers. */
+  effortMarkers: string[];
+  /**
+   * When a subject is missing from a replicate.
+   * Null outside replicate mode. Defaults to all_surveyed when replicateBy is set.
+   */
+  coverageMode: "all_surveyed" | "rows_only" | "coverage_file" | null;
+  /** Join column. Required when `explain` is set, so the audit modal can name one feature. */
+  joinColumn: string | null;
+  /**
+   * When true, aggregate output includes one entry per replicate for a single
+   * join-column equality filter.
+   */
+  explain: boolean;
   /**
    * Optional map-clock filter. Applied as
    * `_when_start < endSec && _when_end > startSec` when those columns exist;
@@ -173,6 +201,20 @@ function parseFilterParam(column: string, raw: string): RawFilter {
   if (raw === "not.null") {
     return { column, op: "notNull" };
   }
+  if (raw.startsWith("not.in.")) {
+    if (!raw.startsWith("not.in.(") || !raw.endsWith(")")) {
+      throw new QueryError(
+        `Malformed not.in list for column "${column}". Use not.in.(a,b,"c,d").`
+      );
+    }
+    const values = parseInList(raw.slice(8, -1));
+    if (values.length === 0) {
+      throw new QueryError(
+        `Empty not.in.() list for column "${column}". Provide at least one value.`
+      );
+    }
+    return { column, op: "notIn", values };
+  }
   if (raw.startsWith("in.")) {
     if (!raw.startsWith("in.(") || !raw.endsWith(")")) {
       throw new QueryError(
@@ -201,6 +243,7 @@ function parseFilterParam(column: string, raw: string): RawFilter {
 
 export function parseQueryParams(searchParams: URLSearchParams): ParsedQuery {
   const filters: RawFilter[] = [];
+  const contributionFilters: RawFilter[] = [];
   for (const [key, value] of searchParams.entries()) {
     if (key.startsWith("q.")) {
       const column = key.slice(2);
@@ -208,6 +251,12 @@ export function parseQueryParams(searchParams: URLSearchParams): ParsedQuery {
         throw new QueryError(`Invalid filter parameter "${key}".`);
       }
       filters.push(parseFilterParam(column, value));
+    } else if (key.startsWith("v.")) {
+      const column = key.slice(2);
+      if (!column) {
+        throw new QueryError(`Invalid filter parameter "${key}".`);
+      }
+      contributionFilters.push(parseFilterParam(column, value));
     }
   }
 
@@ -279,6 +328,15 @@ export function parseQueryParams(searchParams: URLSearchParams): ParsedQuery {
       `groupBy requires at least one aggregation via the "op" parameter.`
     );
   }
+  if (
+    contributionFilters.length > 0 &&
+    ops.length > 0 &&
+    replicateBy.length === 0
+  ) {
+    throw new QueryError(
+      "v.* filters require replicateBy and within. Subject and detail filters are only applied inside replicates."
+    );
+  }
 
   let limit: number | null = null;
   const limitParam = searchParams.get("limit");
@@ -340,6 +398,57 @@ export function parseQueryParams(searchParams: URLSearchParams): ParsedQuery {
   const when = parseWhenParams(searchParams);
   const whenStep = parseWhenStepParam(searchParams, when, ops, groupBy);
   const includeWhen = parseIncludeWhenParam(searchParams, ops);
+  const subjectColumn = blankToNull(searchParams.get("subjectColumn"));
+  const detailColumns = splitCsv(searchParams.get("detailColumns"));
+  const effortMarkers = splitCsv(searchParams.get("effortMarkers"));
+  const joinColumn = blankToNull(searchParams.get("joinColumn"));
+  const coverageMode = parseCoverageMode(searchParams.get("coverageMode"));
+  const explain = searchParams.get("explain") === "1";
+
+  const resolvedCoverage =
+    replicateBy.length === 0 ? null : coverageMode ?? "all_surveyed";
+
+  if (explain) {
+    if (!joinColumn) {
+      throw new QueryError("explain=1 requires joinColumn.");
+    }
+    const joinEqualities = filters.filter(
+      (filter) => filter.column === joinColumn && filter.op === "eq"
+    );
+    const otherJoin = filters.filter(
+      (filter) => filter.column === joinColumn && filter.op !== "eq"
+    );
+    if (joinEqualities.length !== 1 || otherJoin.length > 0) {
+      throw new QueryError(
+        "explain=1 requires a single join-column equality filter."
+      );
+    }
+  }
+
+  if (effortMarkers.length > 0) {
+    const markerSet = new Set(effortMarkers);
+    const gated = new Set(
+      [subjectColumn, ...detailColumns].filter((name): name is string =>
+        Boolean(name)
+      )
+    );
+    for (const filter of contributionFilters) {
+      if (!gated.has(filter.column)) continue;
+      const values =
+        filter.op === "eq" && filter.value !== undefined
+          ? [filter.value]
+          : filter.op === "in"
+            ? filter.values || []
+            : [];
+      for (const value of values) {
+        if (markerSet.has(value)) {
+          throw new QueryError(
+            `"${value}" is a nothing-seen value and cannot be filtered.`
+          );
+        }
+      }
+    }
+  }
 
   return {
     format,
@@ -352,10 +461,47 @@ export function parseQueryParams(searchParams: URLSearchParams): ParsedQuery {
     offset,
     orderBy,
     filters,
+    contributionFilters,
+    subjectColumn,
+    detailColumns,
+    effortMarkers,
+    coverageMode: resolvedCoverage,
+    joinColumn,
+    explain,
     when,
     whenStep,
     includeWhen,
   };
+}
+
+function splitCsv(raw: string | null): string[] {
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+}
+
+function blankToNull(raw: string | null): string | null {
+  if (raw === null) return null;
+  const trimmed = raw.trim();
+  return trimmed.length > 0 ? trimmed : null;
+}
+
+function parseCoverageMode(
+  raw: string | null
+): "all_surveyed" | "rows_only" | "coverage_file" | null {
+  if (raw === null || raw.trim() === "") return null;
+  if (
+    raw === "all_surveyed" ||
+    raw === "rows_only" ||
+    raw === "coverage_file"
+  ) {
+    return raw;
+  }
+  throw new QueryError(
+    `Invalid coverageMode "${raw}". Use all_surveyed, rows_only, or coverage_file.`
+  );
 }
 
 const WHEN_START_COLUMN = "_when_start";
@@ -366,6 +512,24 @@ export function isHiddenWhenColumn(name: string): boolean {
 }
 
 export { WHEN_START_COLUMN, WHEN_END_COLUMN };
+
+/**
+ * `nocache=true` (or `1`) tells the query endpoint not to emit browser or CDN
+ * cache headers. The response is `Cache-Control: no-store` and
+ * `CDN-Cache-Control: no-store`, with no ETag.
+ */
+export function nocacheRequested(searchParams: URLSearchParams): boolean {
+  const raw = searchParams.get("nocache");
+  return raw === "true" || raw === "1";
+}
+
+/** Headers that keep a response out of the browser cache and the CDN. */
+export function nocacheResponseHeaders(): Record<string, string> {
+  return {
+    "Cache-Control": "no-store",
+    "CDN-Cache-Control": "no-store",
+  };
+}
 
 function parseEpochSeconds(raw: string, label: string): number {
   if (!/^-?\d+$/.test(raw.trim())) {

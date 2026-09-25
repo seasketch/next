@@ -2267,6 +2267,44 @@ type CreateOptionalBasemapLayerPayload {
   query: Query
 }
 
+"""All input for the `createOverlayDataTableCoverageUpload` mutation."""
+input CreateOverlayDataTableCoverageUploadInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  contentType: String
+  filename: String
+  tableId: Int
+}
+
+"""The output of our `createOverlayDataTableCoverageUpload` mutation."""
+type CreateOverlayDataTableCoverageUploadPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  overlayDataTableUpload: OverlayDataTableUpload
+
+  """An edge for our `OverlayDataTableUpload`. May be used by Relay 1."""
+  overlayDataTableUploadEdge(
+    """The method to use when ordering `OverlayDataTableUpload`."""
+    orderBy: [OverlayDataTableUploadsOrderBy!] = [PRIMARY_KEY_ASC]
+  ): OverlayDataTableUploadsEdge
+
+  """
+  Reads a single `ProjectBackgroundJob` that is related to this `OverlayDataTableUpload`.
+  """
+  projectBackgroundJob: ProjectBackgroundJob
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+}
+
 """All input for the `createOverlayDataTableOrganismReprocess` mutation."""
 input CreateOverlayDataTableOrganismReprocessInput {
   classCsvContentType: String
@@ -2314,6 +2352,7 @@ input CreateOverlayDataTableReprocessInput {
   payload verbatim. May be used to track mutations by the client.
   """
   clientMutationId: String
+  clusterOnly: Boolean
   nodataConfig: JSON
   tableId: Int
   temporalConfig: JSON
@@ -9486,6 +9525,17 @@ type Mutation {
   ): CreateOptionalBasemapLayerPayload
 
   """
+  Admin-only. Starts a coverage-file upload. The client PUTs the JSON to the
+  presigned URL, then calls submitOverlayDataTableUpload.
+  """
+  createOverlayDataTableCoverageUpload(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateOverlayDataTableCoverageUploadInput!
+  ): CreateOverlayDataTableCoverageUploadPayload
+
+  """
   Admin-only. Starts a draft organism-enrichment job. Optional class CSV is
   uploaded to the returned presigned URL, then submitOverlayDataTableUpload.
   Writes a clustered copy of data.parquet and organism sidecars under a new
@@ -9499,9 +9549,7 @@ type Mutation {
   ): CreateOverlayDataTableOrganismReprocessPayload
 
   """
-  Admin-only. Starts a draft reprocess job that applies nodata sentinels and/or
-  derives _when_* columns from the source (pre-nodata) parquet. Metadata is
-  written only when the job succeeds.
+  Admin-only. Reprocess nodata and/or temporal columns, or reindex parquet clustering when cluster_only is true.
   """
   createOverlayDataTableReprocess(
     """
@@ -11950,21 +11998,36 @@ type OutstandingSurveyInvites {
 
 type OverlayDataTable implements Node {
   """
-  JSON object of data column to an array of sum|mean|min|max. Missing columns default to ["mean"].
+  Across replicates. Code name: across_replicate_operations. JSON object of
+  value column to an array of sum|mean|min|max. Missing columns default to ["mean"].
   """
   acrossReplicateOperations: JSON!
 
   """
-  Columns that, with the time step and join column, identify one replicate.
+  Replicate columns. Code name: additional_replicate_identifiers. With the
+  survey time and the join column, these identify one replicate.
   """
   additionalReplicateIdentifiers: [String]!
 
   """
-  simple averages matching rows. replicates collapses rows inside a sampling unit, then calculates across those units.
+  How to turn rows into a map value. simple: each row is already a summary.
+  replicates: rows are observations inside replicates.
   """
   calculationMode: String!
   columnStatsRemote: String!
   columnStatsUrl: String
+
+  """
+  When a subject is missing from a replicate. Code name: coverage_mode.
+  all_surveyed: it was surveyed and none were seen. rows_only: nothing can be
+  assumed. coverage_file: it depends on when and where.
+  """
+  coverageMode: String!
+
+  """
+  Coverage file. Code name: coverage_remote. R2 key of coverage.json beside data.parquet.
+  """
+  coverageRemote: String
   createdAt: Datetime
   createdBy: Int!
   deletedAt: Datetime
@@ -11973,6 +12036,18 @@ type OverlayDataTable implements Node {
   Optional short description shown in the data table picker. Displayed on at most two lines.
   """
   description: String
+
+  """
+  Nothing seen rows. Code name: effort_marker_values. Values in the subject or a
+  detail column that mean the replicate was surveyed and nothing was seen.
+  """
+  effortMarkerValues: [String]!
+
+  """
+  Rows to ignore. Code name: excluded_values. JSON object of column name to
+  values whose rows are left out of replicates, observations, and effort.
+  """
+  excludedValues: JSON!
 
   """
   Custom display labels for filter columns, keyed by original column name. Empty or missing keys use the column name.
@@ -11984,6 +12059,8 @@ type OverlayDataTable implements Node {
   """
   hiddenFilterColumns: [String]
   id: Int!
+
+  """Join column. Code name: join_column. Values match feature IDs."""
   joinColumn: String!
   name: String!
 
@@ -11996,6 +12073,13 @@ type OverlayDataTable implements Node {
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
+
+  """
+  Detail columns. Code name: observation_detail_columns. Columns that describe
+  one observation rather than the replicate. Filtering them narrows what is
+  counted and does not remove replicates.
+  """
+  observationDetailColumns: [String]!
 
   """
   Organism identity metadata for this data table. Null when the table
@@ -12016,9 +12100,11 @@ type OverlayDataTable implements Node {
   replacedById: Int
 
   """
-  Preset key for the replicate unit shown in the legend. custom uses replicate_label_custom.
+  Replicate word shown in the legend. Code name: replicate_label. custom uses replicate_label_custom.
   """
   replicateLabel: String!
+
+  """Custom replicate word. Code name: replicate_label_custom."""
   replicateLabelCustom: String
 
   """
@@ -12038,6 +12124,12 @@ type OverlayDataTable implements Node {
   publish. Draft and published copies share the same UUID.
   """
   stableId: UUID!
+
+  """
+  Subject column. Code name: subject_column. Names what each row is an
+  observation of. organism.column must equal this when organism enrichment is set.
+  """
+  subjectColumn: String
   tableOfContentsItemId: Int!
 
   """
@@ -12050,17 +12142,18 @@ type OverlayDataTable implements Node {
   version: Int!
 
   """
-  Columns that may/should be used for creating thematic maps. For example `count` or `density`
+  Value columns. Code name: visualization_columns. Empty means any numeric column.
   """
   visualizationColumns: [String]
 
   """
-  Operations that may/should be used for creating thematic maps. For example `mean` or `max`
+  Calculations. Code name: visualization_ops. Used when each row is already a summary.
   """
   visualizationOps: [String]
 
   """
-  JSON object of data column to sum|mean|min|max. Missing columns default to sum.
+  Within a replicate. Code name: within_replicate_operations. JSON object of
+  value column to sum|mean|min|max. Missing columns default to sum.
   """
   withinReplicateOperations: JSON!
 }
@@ -16559,11 +16652,16 @@ input SetOverlayDataTableVisualizationSettingsInput {
   payload verbatim. May be used to track mutations by the client.
   """
   clientMutationId: String
+  coverageMode: String
+  effortMarkerValues: [String]
+  excludedValues: JSON
   filterColumnLabels: JSON
   hiddenFilterColumns: [String]
+  observationDetailColumns: [String]
   replicateLabel: String
   replicateLabelCustom: String
   requiredFilterColumns: [String]
+  subjectColumn: String
   tableId: Int
   visualizationColumns: [String]
   visualizationOps: [String]

@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://seasketch.org/schemas/data-table-coverage.json",
+  "title": "Data table survey coverage",
+  "description": "Periods during which a subject was surveyed, optionally limited to a scope such as a program or campus. Inside a listed period a missing observation is zero. Outside it the replicate was not surveyed.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["scope", "subject", "start"],
+    "properties": {
+      "scope": {
+        "type": "object",
+        "description": "Survey columns that limit where this period applies. An empty object applies to every replicate. Keys are column names; values are the column values.",
+        "additionalProperties": { "type": "string" }
+      },
+      "subject": {
+        "type": "object",
+        "description": "Exactly one key, the table's subject column, and the subject value that was surveyed.",
+        "minProperties": 1,
+        "maxProperties": 1,
+        "additionalProperties": { "type": "string" }
+      },
+      "start": {
+        "type": "string",
+        "format": "date",
+        "description": "First day the subject was surveyed, inclusive, as YYYY-MM-DD."
+      },
+      "end": {
+        "type": ["string", "null"],
+        "format": "date",
+        "description": "Last day the subject was surveyed, inclusive, as YYYY-MM-DD. Null when the period is still ongoing."
+      }
+    }
+  }
+}

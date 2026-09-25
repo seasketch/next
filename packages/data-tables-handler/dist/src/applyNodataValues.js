@@ -7,6 +7,7 @@ exports.applyNodataValuesOnParquet = applyNodataValuesOnParquet;
 const geostats_types_1 = require("@seasketch/geostats-types");
 const geostats_types_2 = require("@seasketch/geostats-types");
 const duckDb_1 = require("./duckDb");
+const clusterParquet_1 = require("./clusterParquet");
 function escapePath(path) {
     return path.replace(/'/g, "''");
 }
@@ -52,7 +53,7 @@ function parseNodataConfig(value) {
     const values = (0, geostats_types_1.normalizeNodataValues)(value);
     return values.length > 0 || Array.isArray(value) ? { values } : null;
 }
-async function applyNodataValuesOnParquet(parquetPath, values, excludeColumns = []) {
+async function applyNodataValuesOnParquet(parquetPath, values, excludeColumns = [], clusterHints) {
     const sentinels = (0, geostats_types_1.normalizeNodataValues)(values);
     return (0, duckDb_1.withDuckDb)(async (conn) => {
         const escaped = escapePath(parquetPath);
@@ -73,7 +74,16 @@ async function applyNodataValuesOnParquet(parquetPath, values, excludeColumns = 
        SELECT ${selectList.join(", ")}
        FROM read_parquet('${escaped}')`);
         const counts = await (0, duckDb_1.all)(conn, `SELECT COUNT(*)::INTEGER as total FROM observations`);
-        await (0, duckDb_1.run)(conn, `COPY observations TO '${escaped}' (FORMAT PARQUET)`);
+        const hints = {
+            columns: columns.map((column) => column.column_name),
+            joinColumn: clusterHints?.joinColumn,
+            organismColumn: clusterHints?.organismColumn,
+            subjectColumn: clusterHints?.subjectColumn,
+            requiredFilterColumns: clusterHints?.requiredFilterColumns,
+            temporalColumns: clusterHints?.temporalColumns,
+            replicateColumns: clusterHints?.replicateColumns,
+        };
+        await (0, duckDb_1.run)(conn, (0, clusterParquet_1.copyObservationsParquetSql)(parquetPath, (0, clusterParquet_1.clusterColumns)(hints), (0, clusterParquet_1.bloomColumnsFor)(hints)));
         return {
             rowCount: counts[0]?.total ?? 0,
             values: sentinels,

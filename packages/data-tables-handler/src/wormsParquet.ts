@@ -536,6 +536,89 @@ export async function lookupWormsTaxaByAphiaIds(
   return out;
 }
 
+const BARE_WORMS_NAME =
+  /^[a-zà-öø-ÿ][a-zà-öø-ÿ-]*(?: [a-zà-öø-ÿ][a-zà-öø-ÿ-]*){0,3}$/;
+
+/**
+ * Genus capitalized, epithets left lower. Authorship and other decorated
+ * keys return null — Wikidata P225 is the bare binomial.
+ */
+export function binomialFromWormsNameKey(nameKey: string): string | null {
+  const key = nameKey.trim().toLowerCase().replace(/\s+/g, " ");
+  if (!BARE_WORMS_NAME.test(key)) return null;
+  const [genus, ...rest] = key.split(" ");
+  return [`${genus.charAt(0).toUpperCase()}${genus.slice(1)}`, ...rest].join(
+    " "
+  );
+}
+
+export type WormsSynonymKeys = {
+  aphiaIds: number[];
+  scientificNames: string[];
+};
+
+/**
+ * Superseded AphiaIDs and bare synonym binomials that the snapshot folds
+ * into each accepted id. Wikidata often still stores those old keys.
+ */
+export async function lookupWormsSynonymKeys(
+  conn: DuckDBConnection,
+  parquetDir: string,
+  acceptedAphiaIds: number[]
+): Promise<Map<number, WormsSynonymKeys>> {
+  const ids = Array.from(
+    new Set(
+      acceptedAphiaIds.filter((id) => Number.isInteger(id) && id > 0)
+    )
+  );
+  const out = new Map<number, WormsSynonymKeys>();
+  if (ids.length === 0) return out;
+  const paths = wormsParquetPaths(parquetDir);
+  const idList = ids.join(",");
+  const aphiaRows = await all<{ aphia_id: number; accepted_aphia_id: number }>(
+    conn,
+    `SELECT aphia_id, accepted_aphia_id
+     FROM read_parquet('${escapePath(paths.ids)}')
+     WHERE accepted_aphia_id IN (${idList})
+       AND aphia_id <> accepted_aphia_id`
+  );
+  const nameRows = await all<{ name_key: string; accepted_aphia_id: number }>(
+    conn,
+    `SELECT name_key, accepted_aphia_id
+     FROM read_parquet('${escapePath(paths.names)}')
+     WHERE accepted_aphia_id IN (${idList})`
+  );
+  const aphiaByAccepted = new Map<number, number[]>();
+  for (const row of aphiaRows) {
+    const accepted = Number(row.accepted_aphia_id);
+    const synonym = Number(row.aphia_id);
+    if (!Number.isInteger(synonym) || synonym <= 0) continue;
+    const list = aphiaByAccepted.get(accepted) || [];
+    list.push(synonym);
+    aphiaByAccepted.set(accepted, list);
+  }
+  const namesByAccepted = new Map<number, string[]>();
+  for (const row of nameRows) {
+    const binomial = binomialFromWormsNameKey(String(row.name_key || ""));
+    if (!binomial) continue;
+    const accepted = Number(row.accepted_aphia_id);
+    const list = namesByAccepted.get(accepted) || [];
+    list.push(binomial);
+    namesByAccepted.set(accepted, list);
+  }
+  for (const accepted of ids) {
+    const aphiaIds = Array.from(new Set(aphiaByAccepted.get(accepted) || [])).sort(
+      (a, b) => a - b
+    );
+    const scientificNames = Array.from(
+      new Set(namesByAccepted.get(accepted) || [])
+    ).sort((a, b) => a.localeCompare(b));
+    if (aphiaIds.length === 0 && scientificNames.length === 0) continue;
+    out.set(accepted, { aphiaIds, scientificNames });
+  }
+  return out;
+}
+
 export async function lookupWormsTaxaByNames(
   conn: DuckDBConnection,
   parquetDir: string,

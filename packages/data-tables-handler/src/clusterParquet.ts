@@ -20,8 +20,12 @@ export type ClusterColumnHints = {
   columns: string[];
   joinColumn?: string | null;
   organismColumn?: string | null;
+  /** Subject column. Falls back to organismColumn. Bloom-filtered with the join column. */
+  subjectColumn?: string | null;
   requiredFilterColumns?: string[] | null;
   temporalColumns?: string[] | null;
+  /** Replicate columns, clustered immediately after `_when_start`. */
+  replicateColumns?: string[] | null;
 };
 
 export function quoteIdent(name: string): string {
@@ -41,21 +45,31 @@ export function clusterColumns(hints: ClusterColumnHints): string[] {
     out.push(name);
   };
 
-  add(hints.organismColumn);
+  add(hints.subjectColumn || hints.organismColumn);
   for (const name of hints.requiredFilterColumns || []) {
     add(name);
   }
   if (have.has(WHEN_START)) {
     add(WHEN_START);
+    for (const name of hints.replicateColumns || []) {
+      add(name);
+    }
   }
   for (const name of hints.temporalColumns || []) {
     add(name);
   }
   add(hints.joinColumn);
-  return out.slice(0, 4);
+  const replicateCount = (hints.replicateColumns || []).filter(
+    (name) => name && have.has(name) && name !== WHEN_END
+  ).length;
+  return out.slice(0, 4 + replicateCount);
 }
 
-/** COPY observations, optionally clustered so filters can prune row groups. */
+/**
+ * COPY observations, optionally clustered so filters can prune row groups.
+ * DuckDB writes bloom filters for dictionary-encoded columns on its own, so
+ * low-cardinality join and subject columns get them without an option.
+ */
 export function copyObservationsParquetSql(
   parquetPath: string,
   cluster: string[]
