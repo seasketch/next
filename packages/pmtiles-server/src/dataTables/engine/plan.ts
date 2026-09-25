@@ -32,6 +32,11 @@ export interface ReadSpan {
   rowStart: number;
   /** Global row index (exclusive) */
   rowEnd: number;
+  /**
+   * Column stats prove every row overlaps the query's `when` window, so the
+   * per-row clock test can be skipped.
+   */
+  whenSaturated?: boolean;
 }
 
 /** One span per row group. Preview/query paths must not merge these. */
@@ -65,6 +70,7 @@ export function* decodeSpans(spans: ReadSpan[]): Generator<ReadSpan> {
       yield {
         rowStart: start,
         rowEnd: Math.min(start + MAX_DECODE_ROWS, span.rowEnd),
+        whenSaturated: span.whenSaturated,
       };
     }
   }
@@ -72,7 +78,10 @@ export function* decodeSpans(spans: ReadSpan[]): Generator<ReadSpan> {
 
 export interface QueryPlan {
   columns: Map<string, ColumnInfo>;
+  /** Survey filters (`q.*`). These alone prune row groups. */
   filters: CompiledFilter[];
+  /** Subject and detail filters (`v.*`). Applied after a replicate is registered. */
+  contributionFilters: CompiledFilter[];
   /**
    * Clock filter, only set when `_when_*` columns exist. Null when the
    * request omitted when.* or the table has not been reprocessed yet.
@@ -221,6 +230,37 @@ export function compileFilters(
  * Normalizes a runtime or statistics value into something directly comparable
  * with compiled filter values (number | string | boolean), or null.
  */
+export function matchesCompiledFilter(
+  raw: unknown,
+  filter: CompiledFilter
+): boolean {
+  const value = normalizeValue(raw, filter.kind);
+  switch (filter.op) {
+    case "isNull":
+      return value === null;
+    case "notNull":
+      return value !== null;
+    case "eq":
+      return value !== null && value === filter.value;
+    case "neq":
+      return value !== null && value !== filter.value;
+    case "in":
+      return value !== null && filter.values!.includes(value);
+    case "notIn":
+      // Rows to ignore name specific values. A blank cell is not one of
+      // them, so it stays.
+      return value === null || !filter.values!.includes(value);
+    case "gt":
+      return value !== null && value > filter.value!;
+    case "gte":
+      return value !== null && value >= filter.value!;
+    case "lt":
+      return value !== null && value < filter.value!;
+    case "lte":
+      return value !== null && value <= filter.value!;
+  }
+}
+
 export function normalizeValue(
   value: unknown,
   kind: ColumnKind
@@ -341,7 +381,16 @@ function rowGroupMayMatch(
     case "lte":
       return min <= filter.value!;
     default:
-      // neq can only be pruned when min === max === value; rarely useful
+      // neq can only be pruned when min === max === value; rarely useful.
+      // notIn keeps blank cells, so a group is only skipped when it has no
+      // nulls and every value is the single excluded one.
+      if (filter.op === "notIn") {
+        return !(
+          nullCount === 0 &&
+          min === max &&
+          filter.values!.includes(min)
+        );
+      }
       return !(
         filter.op === "neq" &&
         min === max &&
@@ -365,6 +414,24 @@ export async function planQuery(
       throw unknownColumnError(name, columns);
     }
   }
+  if (query.ops.length > 0) {
+    for (const name of query.replicateBy) {
+      if (!columns.has(name)) {
+        throw unknownColumnError(name, columns);
+      }
+    }
+  }
+  if (
+    query.ops.length > 0 &&
+    (query.within === "sum" || query.within === "mean")
+  ) {
+    const column = query.column ? columns.get(query.column) : undefined;
+    if (!column || (column.kind !== "number" && column.kind !== "timestamp")) {
+      throw new QueryError(
+        `within=${query.within} requires a numeric column.`
+      );
+    }
+  }
   if (query.column !== null) {
     if (!columns.has(query.column)) {
       throw unknownColumnError(query.column, columns);
@@ -383,6 +450,10 @@ export async function planQuery(
   }
 
   const filters = compileFilters(query.filters, columns);
+  const contributionFilters = compileFilters(
+    query.contributionFilters,
+    columns
+  );
   if (
     query.whenStep &&
     (!columns.has(WHEN_START_COLUMN) || !columns.has(WHEN_END_COLUMN))
@@ -402,9 +473,14 @@ export async function planQuery(
   // Determine which columns need to be read
   let neededColumns: string[] | undefined;
   if (query.ops.length > 0) {
-    const needed = new Set<string>(query.groupBy);
+    const needed = new Set<string>([...query.groupBy, ...query.replicateBy]);
     if (query.column) needed.add(query.column);
     for (const f of filters) needed.add(f.column);
+    for (const f of contributionFilters) needed.add(f.column);
+    if (query.effortMarkers.length > 0) {
+      if (query.subjectColumn) needed.add(query.subjectColumn);
+      for (const name of query.detailColumns) needed.add(name);
+    }
     if (when) {
       needed.add(WHEN_START_COLUMN);
       needed.add(WHEN_END_COLUMN);
@@ -417,6 +493,32 @@ export async function planQuery(
 
   // Row group pruning, first via column chunk statistics (free -- already in
   // the footer), then via bloom filters for surviving row groups.
+  const pruned = await pruneRowGroups(metadata, filters, when, file);
+
+  return {
+    columns,
+    filters,
+    contributionFilters,
+    when,
+    neededColumns,
+    spans: pruned.spans,
+    rowGroupsTotal: metadata.row_groups.length,
+    rowGroupsScanned: pruned.scanned,
+    totalRows: Number(metadata.num_rows),
+  };
+}
+
+/**
+ * Row groups that may hold a row passing `filters` and `when`. Statistics
+ * first, then bloom filters for eq/in. One span per surviving group.
+ * Exported so the replicate value pass can prune on subject filters too.
+ */
+export async function pruneRowGroups(
+  metadata: FileMetaData,
+  filters: CompiledFilter[],
+  when: TemporalWhenFilter | null,
+  file?: AsyncBuffer
+): Promise<{ spans: ReadSpan[]; scanned: number }> {
   const statsPass = metadata.row_groups.map((rowGroup) => {
     const numRows = Number(rowGroup.num_rows);
     if (numRows === 0) return false;
@@ -464,21 +566,17 @@ export async function planQuery(
     const numRows = Number(rowGroup.num_rows);
     if (mayMatch[i]) {
       scanned++;
-      spans.push({ rowStart, rowEnd: rowStart + numRows });
+      spans.push({
+        rowStart,
+        rowEnd: rowStart + numRows,
+        whenSaturated: when
+          ? rowGroupFullyInsideWhen(rowGroup, when)
+          : undefined,
+      });
     }
     rowStart += numRows;
   });
-
-  return {
-    columns,
-    filters,
-    when,
-    neededColumns,
-    spans,
-    rowGroupsTotal: metadata.row_groups.length,
-    rowGroupsScanned: scanned,
-    totalRows: Number(metadata.num_rows),
-  };
+  return { spans, scanned };
 }
 
 function columnStats(
@@ -488,6 +586,25 @@ function columnStats(
   return rowGroup.columns.find(
     (c) => c.meta_data?.path_in_schema.join(".") === name
   )?.meta_data?.statistics;
+}
+
+/**
+ * True when every non-null row interval in the group overlaps `when`.
+ * Nulls are not covered by min/max, so any null keeps the per-row test.
+ */
+function rowGroupFullyInsideWhen(
+  rowGroup: FileMetaData["row_groups"][number],
+  when: TemporalWhenFilter
+): boolean {
+  const startStats = columnStats(rowGroup, WHEN_START_COLUMN);
+  const endStats = columnStats(rowGroup, WHEN_END_COLUMN);
+  if (!startStats || !endStats) return false;
+  if (Number(startStats.null_count ?? 0) > 0) return false;
+  if (Number(endStats.null_count ?? 0) > 0) return false;
+  const maxStart = normalizeValue(startStats.max_value, "number");
+  const minEnd = normalizeValue(endStats.min_value, "number");
+  if (typeof maxStart !== "number" || typeof minEnd !== "number") return false;
+  return maxStart < when.endSec && minEnd > when.startSec;
 }
 
 /**

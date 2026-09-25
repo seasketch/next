@@ -4,6 +4,7 @@ export { createLayerYearTemporalInfo, expandTemporalValue, isTemporalInfo, } fro
 export * from "./nodata";
 export { isDataTableNodataConfig, isDataTableNodataValue, nodataValueMatches, normalizeNodataValues, } from "./nodata";
 export * from "./organism";
+export * from "./dataTableCoverage";
 export { isOrganismInfo, isDataTableOrganismConfig, includeLowConfidenceMatchesEnabled, organismClassificationCounts, organismIsClassified, suggestOrganismColumnRoles, } from "./organism";
 /**
  * Attribute type as translated to a javacsript type

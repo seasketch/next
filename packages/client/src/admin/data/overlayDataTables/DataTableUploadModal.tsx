@@ -92,7 +92,7 @@ function DataTableCsvJoinColumnPicker({
               <DropdownMenu.Separator className="my-1 h-px bg-gray-200" />
               <p className="px-2 py-1.5 text-xs leading-snug text-gray-500">
                 {t(
-                  "No other columns in this file match the ID column chosen for this spatial layer.",
+                  "No other columns in this file match the join column chosen for this spatial layer.",
                   { overlayJoinColumn },
                 )}
               </p>
@@ -384,10 +384,8 @@ export default function DataTableUploadModal({
             <div className="text-sm text-gray-700 space-y-2">
               <p>
                 <Trans ns="admin:data">
-                  Attach a CSV of observations or measurements to this map
-                  layer. Rows are linked to overlay features using a shared ID
-                  column, then stored as an optimized table for reports and
-                  analysis.
+                  Attach a CSV of observations or measurements to this
+                  layer. Rows are matched to features by a join column, then stored as an optimized table.
                 </Trans>
               </p>
               <ul className="list-disc pl-5 space-y-1 text-gray-600">

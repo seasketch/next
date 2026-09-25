@@ -20,6 +20,13 @@ describe("formatLegendNumber", () => {
   it("renders a true zero as 0", () => {
     expect(formatLegendNumber(0)).toBe("0");
   });
+
+  it("never rounds a nonzero value to 0", () => {
+    expect(formatLegendNumber(1 / 12)).toBe("0.08");
+    expect(formatLegendNumber(0.004)).toBe("0.004");
+    expect(formatLegendNumber(0.00042)).toBe("0.00042");
+    expect(formatLegendNumber(-0.001)).toBe("-0.001");
+  });
 });
 
 describe("DataTableLegendBubble", () => {

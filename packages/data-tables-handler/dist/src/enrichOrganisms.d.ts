@@ -7,16 +7,18 @@ export type DistinctOrganismValue = {
 export type ClassTableRow = Record<string, unknown>;
 export declare function classTableJoinColumn(config: DataTableOrganismConfig, classHeaders: string[]): string | null;
 export declare function classRowForValue(value: string, classRows: ClassTableRow[], joinColumn: string | null): ClassTableRow | undefined;
-export declare function resolveInputFromValue(value: string, config: DataTableOrganismConfig, classRow?: ClassTableRow): ResolveOrganismInput;
+export declare function resolveInputFromValue(value: string, config: DataTableOrganismConfig, classRow?: ClassTableRow, sourceRow?: ClassTableRow): ResolveOrganismInput;
 /** Class-table / identity join only. Used for admin draft preview. */
 export declare function joinOrganismCatalogRows(options: {
     values: DistinctOrganismValue[];
     classRows?: ClassTableRow[];
+    sourceRows?: Map<string, ClassTableRow>;
     config: DataTableOrganismConfig;
 }): OrganismCatalogRow[];
 export declare function enrichOrganismValues(options: {
     values: DistinctOrganismValue[];
     classRows?: ClassTableRow[];
+    sourceRows?: Map<string, ClassTableRow>;
     config: DataTableOrganismConfig;
     clients: TaxonomyClients;
     onProgress?: (update: TaxonomyResolveProgress) => Promise<void> | void;

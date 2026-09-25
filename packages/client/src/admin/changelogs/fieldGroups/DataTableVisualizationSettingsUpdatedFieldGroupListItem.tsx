@@ -54,6 +54,7 @@ function SettingsDetails({
   allColumnsLabel,
   allCalculationsLabel,
   noneLabel,
+  modeLabel,
 }: {
   from: Summary;
   to: Summary;
@@ -65,6 +66,7 @@ function SettingsDetails({
   allColumnsLabel: string;
   allCalculationsLabel: string;
   noneLabel: string;
+  modeLabel: string;
 }) {
   const rows = [
     {
@@ -76,6 +78,11 @@ function SettingsDetails({
       label: calculationsLabel,
       before: formatColumnList(stringList(from.visualizationOps), allCalculationsLabel),
       after: formatColumnList(stringList(to.visualizationOps), allCalculationsLabel),
+    },
+    {
+      label: modeLabel,
+      before: valueText(from.calculationMode) || "simple",
+      after: valueText(to.calculationMode) || "simple",
     },
     {
       label: requiredFiltersLabel,
@@ -184,6 +191,7 @@ export default function DataTableVisualizationSettingsUpdatedFieldGroupListItem(
       allColumnsLabel={allColumnsLabel}
       allCalculationsLabel={allCalculationsLabel}
       noneLabel={noneLabel}
+      modeLabel={t("Calculation mode")}
     />
   );
 

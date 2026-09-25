@@ -32,6 +32,7 @@ Object.defineProperty(exports, "isDataTableNodataValue", { enumerable: true, get
 Object.defineProperty(exports, "nodataValueMatches", { enumerable: true, get: function () { return nodata_1.nodataValueMatches; } });
 Object.defineProperty(exports, "normalizeNodataValues", { enumerable: true, get: function () { return nodata_1.normalizeNodataValues; } });
 __exportStar(require("./organism"), exports);
+__exportStar(require("./dataTableCoverage"), exports);
 var organism_1 = require("./organism");
 Object.defineProperty(exports, "isOrganismInfo", { enumerable: true, get: function () { return organism_1.isOrganismInfo; } });
 Object.defineProperty(exports, "isDataTableOrganismConfig", { enumerable: true, get: function () { return organism_1.isDataTableOrganismConfig; } });

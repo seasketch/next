@@ -20,8 +20,19 @@ import {
   CompiledFilter,
   QueryPlan,
   decodeSpans,
+  matchesCompiledFilter,
   normalizeValue,
+  pruneRowGroups,
 } from "./plan";
+import type { CoverageIndex } from "@seasketch/geostats-types";
+import {
+  ExplainedReplicate,
+  addReplicateValue,
+  contributionExclusion,
+  finalizeReplicates,
+  isEffortMarkerValue,
+  type ReplicateBucket,
+} from "./replicates";
 
 /**
  * CONSISTENCY INVARIANT (QA/QC "show rows in calculation")
@@ -46,16 +57,75 @@ import {
  * caching by file version + column + row span lets filter sweeps (changing
  * species/year against the same columns) skip decode on repeat queries.
  * Identical queries should hit HTTP/Workers Cache instead and never reach here.
+ *
+ * String columns are interned before caching: monitoring tables repeat a few
+ * hundred distinct site, species, and observer values across hundreds of
+ * thousands of rows, so sharing one string instance per distinct value makes
+ * a whole table's working set fit in the budget instead of evicting itself.
  */
 const DECODED_COLUMN_BUDGET = 48 * 1024 * 1024;
 const decodedColumns = new ByteBudgetCache<unknown[]>(DECODED_COLUMN_BUDGET);
 
-function estimateDecodedBytes(data: unknown[]): number {
-  let bytes = 0;
-  for (const value of data) {
-    bytes += typeof value === "string" ? 16 + value.length * 2 : 16;
+/** Pointer per row plus the distinct strings; numbers as packed doubles. */
+function estimateDecodedBytes(data: unknown[], distinctChars: number): number {
+  return 8 * data.length + 16 * Math.max(1, distinctChars / 16) + 2 * distinctChars;
+}
+
+function internColumn(data: unknown[]): { data: unknown[]; distinctChars: number } {
+  let distinctChars = 0;
+  let sawString = false;
+  const seen = new Map<string, string>();
+  for (let i = 0; i < data.length; i++) {
+    const value = data[i];
+    if (typeof value === "string") {
+      sawString = true;
+      const shared = seen.get(value);
+      if (shared === undefined) {
+        seen.set(value, value);
+        distinctChars += value.length;
+      } else {
+        data[i] = shared;
+      }
+    } else if (value instanceof Uint8Array) {
+      const text = new TextDecoder().decode(value);
+      sawString = true;
+      const shared = seen.get(text);
+      if (shared === undefined) {
+        seen.set(text, text);
+        distinctChars += text.length;
+        data[i] = text;
+      } else {
+        data[i] = shared;
+      }
+    } else if (typeof value === "bigint") {
+      data[i] = Number(value);
+    }
   }
-  return bytes;
+  return { data, distinctChars: sawString ? distinctChars : 0 };
+}
+
+/**
+ * Registered replicates for one (file, survey filters, window, key columns).
+ * Independent of subject and detail filters, so a species sweep reuses it.
+ */
+type RosterEntry = {
+  whenStart: number | null;
+  whenEnd: number | null;
+  groupValues: unknown[];
+  replicateValues: unknown[];
+  scope: { [column: string]: string };
+  rowCount: number;
+};
+type ReplicateRoster = {
+  entries: Map<string, RosterEntry>;
+  rowsScanned: number;
+  rowsMatched: number;
+};
+const ROSTER_BUDGET = 24 * 1024 * 1024;
+const rosterCache = new ByteBudgetCache<ReplicateRoster>(ROSTER_BUDGET);
+
+export function resetEngineCaches() {
+  rosterCache.clear();
 }
 
 export interface QuerySeriesStepStat {
@@ -82,35 +152,16 @@ export interface QueryResult {
   groups?: Record<string, unknown>[];
   /** Present when `when.step` is active and `_when_*` columns exist. */
   series?: QuerySeries;
+  /** Present when `explain=1` and the query names one feature. */
+  replicates?: ExplainedReplicate[];
   rowsScanned: number;
   rowsMatched: number;
 }
-
 type Row = Record<string, unknown>;
 type Primitive = string | number | boolean | null;
 
 function matchesFilter(raw: unknown, filter: CompiledFilter): boolean {
-  const value = normalizeValue(raw, filter.kind);
-  switch (filter.op) {
-    case "isNull":
-      return value === null;
-    case "notNull":
-      return value !== null;
-    case "eq":
-      return value !== null && value === filter.value;
-    case "neq":
-      return value !== null && value !== filter.value;
-    case "in":
-      return value !== null && filter.values!.includes(value);
-    case "gt":
-      return value !== null && value > filter.value!;
-    case "gte":
-      return value !== null && value >= filter.value!;
-    case "lt":
-      return value !== null && value < filter.value!;
-    case "lte":
-      return value !== null && value <= filter.value!;
-  }
+  return matchesCompiledFilter(raw, filter);
 }
 
 export function rowMatchesWhen(
@@ -187,7 +238,7 @@ function median(values: number[]): number | null {
     : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
-type Span = { rowStart: number; rowEnd: number };
+type Span = { rowStart: number; rowEnd: number; whenSaturated?: boolean };
 type ReadColumn = (name: string, span: Span) => Promise<unknown[]>;
 
 function createReadColumn(
@@ -203,15 +254,16 @@ function createReadColumn(
       const cached = decodedColumns.get(key);
       if (cached) return cached;
     }
-    const data = (await parquetReadColumn({
+    const raw = (await parquetReadColumn({
       file,
       metadata,
       columns: [name],
       rowStart: span.rowStart,
       rowEnd: span.rowEnd,
     })) as unknown[];
+    const { data, distinctChars } = internColumn(raw);
     if (key) {
-      decodedColumns.set(key, data, estimateDecodedBytes(data));
+      decodedColumns.set(key, data, estimateDecodedBytes(data, distinctChars));
     }
     return data;
   };
@@ -226,7 +278,7 @@ async function matchIndexesInSpan(
   span: Span,
   plan: QueryPlan,
   readColumn: ReadColumn
-): Promise<{ matched: number[]; loaded: Map<string, unknown[]> }> {
+): Promise<{ matched: number[] | null; loaded: Map<string, unknown[]> }> {
   const spanRows = span.rowEnd - span.rowStart;
   const loaded = new Map<string, unknown[]>();
   const equalityFilters = plan.filters.filter(
@@ -235,8 +287,17 @@ async function matchIndexesInSpan(
   const otherFilters = plan.filters.filter(
     (filter) => filter.op !== "eq" && filter.op !== "in"
   );
+  const skipWhen = Boolean(span.whenSaturated);
 
-  let matched: number[] = [];
+  if (
+    equalityFilters.length === 0 &&
+    otherFilters.length === 0 &&
+    (skipWhen || !plan.when)
+  ) {
+    return { matched: null, loaded };
+  }
+
+  let matched: number[] | null = null;
   if (equalityFilters.length > 0) {
     await Promise.all(
       [...new Set(equalityFilters.map((filter) => filter.column))].map(
@@ -245,6 +306,7 @@ async function matchIndexesInSpan(
         }
       )
     );
+    matched = [];
     for (let i = 0; i < spanRows; i++) {
       if (
         equalityFilters.every((filter) =>
@@ -255,10 +317,11 @@ async function matchIndexesInSpan(
       }
     }
   } else {
-    for (let i = 0; i < spanRows; i++) matched.push(i);
+    matched = null;
   }
-  if (matched.length === 0) {
-    return { matched, loaded };
+  const matchedCount = matched ? matched.length : spanRows;
+  if (matchedCount === 0) {
+    return { matched: matched ?? [], loaded };
   }
 
   const remainingNames = new Set(otherFilters.map((filter) => filter.column));
@@ -275,22 +338,30 @@ async function matchIndexesInSpan(
   );
 
   if (otherFilters.length > 0) {
-    matched = matched.filter((i) =>
+    const indexes = matched ?? denseIndexes(spanRows);
+    matched = indexes.filter((i) =>
       otherFilters.every((filter) =>
         matchesFilter(loaded.get(filter.column)![i], filter)
       )
     );
   }
-  if (plan.when) {
+  if (plan.when && !skipWhen) {
     const startCol = loaded.get(WHEN_START_COLUMN);
     const endCol = loaded.get(WHEN_END_COLUMN);
     if (startCol && endCol) {
-      matched = matched.filter((i) =>
+      const indexes = matched ?? denseIndexes(spanRows);
+      matched = indexes.filter((i) =>
         rowMatchesWhen(startCol[i], endCol[i], plan.when!)
       );
     }
   }
   return { matched, loaded };
+}
+
+function denseIndexes(spanRows: number): number[] {
+  const indexes = new Array<number>(spanRows);
+  for (let i = 0; i < spanRows; i++) indexes[i] = i;
+  return indexes;
 }
 
 function sortAndPage<T extends Record<string, unknown>>(
@@ -322,12 +393,18 @@ export async function executeQuery(options: {
   /** Unique per file version (e.g. the object etag). Enables the decoded
    * column cache; omit for one-shot reads. */
   cacheKey?: string;
+  /** Survey coverage index. Required when coverageMode is coverage_file. */
+  coverage?: CoverageIndex | null;
 }): Promise<QueryResult> {
-  const { file, metadata, query, plan, cacheKey } = options;
+  const { file, metadata, query, plan, cacheKey, coverage } = options;
   const readColumn = createReadColumn(file, metadata, cacheKey);
 
   if (query.ops.length === 0) {
     return await executeRawQuery(options, readColumn);
+  }
+
+  if (query.replicateBy.length > 0 && query.within !== null) {
+    return await executeReplicateQuery(options, readColumn);
   }
 
   const aggColumn = query.column;
@@ -350,13 +427,13 @@ export async function executeQuery(options: {
       plan,
       readColumn
     );
-    rowsMatched += matched.length;
-    if (matched.length === 0) continue;
+    rowsMatched += matched ? matched.length : spanRows;
+    if (matched && matched.length === 0) continue;
 
     const startCol = plan.when ? loaded.get(WHEN_START_COLUMN) : undefined;
     const endCol = plan.when ? loaded.get(WHEN_END_COLUMN) : undefined;
 
-    const otherColumns = new Set<string>(query.groupBy);
+    const otherColumns = new Set<string>([...query.groupBy]);
     if (aggColumn) otherColumns.add(aggColumn);
     const columnData = new Map<string, unknown[]>(loaded);
     await Promise.all(
@@ -369,8 +446,10 @@ export async function executeQuery(options: {
 
     const groupByData = query.groupBy.map((col) => columnData.get(col)!);
     const aggData = aggColumn ? columnData.get(aggColumn)! : null;
+    const indexCount = matched ? matched.length : spanRows;
 
-    for (const i of matched) {
+    for (let k = 0; k < indexCount; k++) {
+      const i = matched ? matched[k] : k;
       const groupValues = groupByData.map((data) => jsonValue(data[i]));
       const stepKeys =
         whenStep && plan.when
@@ -390,7 +469,7 @@ export async function executeQuery(options: {
           : [null];
       for (const stepKey of stepKeys) {
         const keyValues =
-          stepKey === null ? groupValues : [stepKey, ...groupValues];
+          stepKey === null ? [...groupValues] : [stepKey, ...groupValues];
         const key = JSON.stringify(keyValues);
         let group = groups.get(key);
         if (!group) {
@@ -519,6 +598,357 @@ function buildQuerySeries(
   };
 }
 
+/**
+ * Replicate mode, two passes.
+ *
+ * Pass 1 (registration) decides which replicates exist: rows passing the
+ * survey filters and the clock window, keyed by survey time, feature, and
+ * replicate columns. It never depends on subject or detail filters, so the
+ * roster is cached per file version and reused across a species sweep.
+ *
+ * Pass 2 (values) adds the value column for rows that also pass the subject
+ * and detail filters. Their equality clauses are used to prune row groups,
+ * so a single-species query on a clustered or bloom-filtered file touches a
+ * fraction of the table. Rows in pass 2 are a subset of pass 1 by
+ * construction, so every value lands in a registered replicate.
+ */
+async function executeReplicateQuery(
+  options: {
+    file: AsyncBuffer;
+    metadata: FileMetaData;
+    query: ParsedQuery;
+    plan: QueryPlan;
+    cacheKey?: string;
+    coverage?: CoverageIndex | null;
+  },
+  readColumn: ReadColumn
+): Promise<QueryResult> {
+  const { file, metadata, query, plan, cacheKey, coverage } = options;
+  const within = query.within!;
+  const aggColumn = query.column;
+  const aggKind: ColumnKind | undefined = aggColumn
+    ? plan.columns.get(aggColumn)?.kind
+    : undefined;
+  const whenStep = query.whenStep && plan.when ? query.whenStep : null;
+  const hasWhenColumns =
+    plan.columns.has(WHEN_START_COLUMN) && plan.columns.has(WHEN_END_COLUMN);
+  const scopeColumns = coverage?.scopeColumns ?? [];
+
+  if (query.coverageMode === "coverage_file" && !coverage) {
+    throw new QueryError(
+      "coverageMode=coverage_file requires a coverage file.",
+      400
+    );
+  }
+
+  const keyColumns = [...query.groupBy, ...query.replicateBy];
+  const rosterKey = cacheKey
+    ? [
+        cacheKey,
+        keyColumns.join(","),
+        scopeColumns.join(","),
+        JSON.stringify(plan.filters),
+        plan.when ? `${plan.when.startSec}-${plan.when.endSec}` : "",
+      ].join("|")
+    : null;
+
+  let roster = rosterKey ? rosterCache.get(rosterKey) : undefined;
+  let rowsScanned = 0;
+  if (!roster) {
+    roster = await registerReplicates({
+      plan,
+      readColumn,
+      keyColumns,
+      groupByCount: query.groupBy.length,
+      scopeColumns,
+      hasWhenColumns,
+    });
+    rowsScanned += roster.rowsScanned;
+    if (roster.entries.size > MAX_LIMIT) {
+      throw new QueryError(
+        `replicateBy produced ${roster.entries.size} replicates (max ${MAX_LIMIT}). Add filters or fewer replicate columns.`
+      );
+    }
+    if (rosterKey) {
+      rosterCache.set(rosterKey, roster, estimateRosterBytes(roster));
+    }
+  }
+
+  const buckets = new Map<string, ReplicateBucket>();
+  for (const [key, entry] of roster.entries) {
+    buckets.set(key, {
+      whenStart: entry.whenStart,
+      whenEnd: entry.whenEnd,
+      groupValues: entry.groupValues,
+      replicateValues: entry.replicateValues,
+      scope: entry.scope,
+      rowCount: entry.rowCount,
+      valueCount: 0,
+      sum: 0,
+      min: null,
+      max: null,
+    });
+  }
+
+  // Value pass. Equality subject/detail filters join the survey filters so
+  // the planner can skip row groups; the rest are checked per row.
+  const equalityContribution = plan.contributionFilters.filter(
+    (filter) => filter.op === "eq" || filter.op === "in"
+  );
+  const perRowContribution = plan.contributionFilters.filter(
+    (filter) => filter.op !== "eq" && filter.op !== "in"
+  );
+  const valueFilters = [...plan.filters, ...equalityContribution];
+  const pruned =
+    equalityContribution.length > 0
+      ? await pruneRowGroups(metadata, valueFilters, plan.when, file)
+      : { spans: plan.spans, scanned: plan.rowGroupsScanned };
+  const valuePlan: QueryPlan = {
+    ...plan,
+    filters: valueFilters,
+    spans: pruned.spans,
+  };
+  const markers = new Set(query.effortMarkers);
+  const checkEffort = markers.size > 0;
+  const effortColumns = checkEffort
+    ? [query.subjectColumn, ...query.detailColumns].filter(
+        (name): name is string => Boolean(name) && plan.columns.has(name!)
+      )
+    : [];
+
+  if (aggColumn) {
+    for (const span of decodeSpans(valuePlan.spans)) {
+      const spanRows = span.rowEnd - span.rowStart;
+      rowsScanned += spanRows;
+      const { matched, loaded } = await matchIndexesInSpan(
+        span,
+        valuePlan,
+        readColumn
+      );
+      if (matched && matched.length === 0) continue;
+
+      const needed = new Set<string>([...keyColumns, aggColumn]);
+      for (const filter of perRowContribution) needed.add(filter.column);
+      for (const name of effortColumns) needed.add(name);
+      if (hasWhenColumns) {
+        needed.add(WHEN_START_COLUMN);
+        needed.add(WHEN_END_COLUMN);
+      }
+      const columnData = new Map<string, unknown[]>(loaded);
+      await Promise.all(
+        [...needed]
+          .filter((name) => !columnData.has(name))
+          .map(async (name) => {
+            columnData.set(name, await readColumn(name, span));
+          })
+      );
+      const keyData = keyColumns.map((name) => columnData.get(name)!);
+      const aggData = columnData.get(aggColumn)!;
+      const whenStartData = hasWhenColumns
+        ? columnData.get(WHEN_START_COLUMN)!
+        : null;
+      const whenEndData = hasWhenColumns
+        ? columnData.get(WHEN_END_COLUMN)!
+        : null;
+      const perRowData = perRowContribution.map(
+        (filter) => [filter, columnData.get(filter.column)!] as const
+      );
+      const effortData = effortColumns.map((name) => columnData.get(name)!);
+      const indexCount = matched ? matched.length : spanRows;
+      const parts: string[] = [];
+
+      for (let k = 0; k < indexCount; k++) {
+        const i = matched ? matched[k] : k;
+        let excluded = false;
+        for (const [filter, data] of perRowData) {
+          if (!matchesCompiledFilter(data[i], filter)) {
+            excluded = true;
+            break;
+          }
+        }
+        if (!excluded && checkEffort) {
+          for (const data of effortData) {
+            if (isEffortMarkerValue(data[i], markers)) {
+              excluded = true;
+              break;
+            }
+          }
+        }
+        if (excluded) continue;
+        const value = normalizeValue(aggData[i], aggKind || "string");
+        if (typeof value !== "number") continue;
+        const key = replicateRowKey(
+          parts,
+          whenStartData,
+          whenEndData,
+          keyData,
+          i
+        );
+        const bucket = buckets.get(key);
+        if (bucket) addReplicateValue(bucket, value);
+      }
+    }
+  }
+
+  const finalized = finalizeReplicates({
+    replicates: buckets,
+    within,
+    ops: query.ops,
+    hasColumn: aggColumn !== null,
+    groupBy: query.groupBy,
+    replicateBy: query.replicateBy,
+    coverageMode: query.coverageMode ?? "all_surveyed",
+    subjectColumn: query.subjectColumn,
+    contributionFilters: plan.contributionFilters,
+    coverage: coverage ?? null,
+    whenStep,
+    when: plan.when,
+    explain: query.explain,
+  });
+  const validKeys = (key: string) =>
+    key === "step" ||
+    query.groupBy.includes(key) ||
+    (query.ops as string[]).includes(key) ||
+    key === "replicatesSurveyed" ||
+    key === "replicatesZero" ||
+    key === "replicatesNoValue" ||
+    key === "replicatesNotSurveyed";
+  const paged = sortAndPage(
+    finalized.groups,
+    query.orderBy,
+    query.offset,
+    query.limit,
+    validKeys
+  );
+  const series =
+    whenStep && plan.when
+      ? buildQuerySeries(whenStep, plan.when, finalized.valuesByStep)
+      : undefined;
+  return {
+    groups: paged,
+    series,
+    replicates: finalized.replicates,
+    rowsScanned,
+    rowsMatched: roster.rowsMatched,
+  };
+}
+
+/** Survey time and key column values joined into one lookup key. */
+function replicateRowKey(
+  parts: string[],
+  whenStartData: unknown[] | null,
+  whenEndData: unknown[] | null,
+  keyData: unknown[][],
+  i: number
+): string {
+  parts.length = 0;
+  const start = whenStartData
+    ? normalizeValue(whenStartData[i], "number")
+    : null;
+  const end = whenEndData ? normalizeValue(whenEndData[i], "number") : null;
+  parts.push(
+    typeof start === "number" ? String(start) : "",
+    typeof end === "number" ? String(end) : ""
+  );
+  for (const data of keyData) {
+    const value = data[i];
+    parts.push(value == null ? "" : String(jsonValue(value)));
+  }
+  return parts.join("\0");
+}
+
+async function registerReplicates(options: {
+  plan: QueryPlan;
+  readColumn: ReadColumn;
+  keyColumns: string[];
+  groupByCount: number;
+  scopeColumns: string[];
+  hasWhenColumns: boolean;
+}): Promise<ReplicateRoster> {
+  const { plan, readColumn, keyColumns, groupByCount, scopeColumns, hasWhenColumns } =
+    options;
+  const entries = new Map<string, RosterEntry>();
+  let rowsScanned = 0;
+  let rowsMatched = 0;
+  const parts: string[] = [];
+
+  for (const span of decodeSpans(plan.spans)) {
+    const spanRows = span.rowEnd - span.rowStart;
+    rowsScanned += spanRows;
+    const { matched, loaded } = await matchIndexesInSpan(
+      span,
+      plan,
+      readColumn
+    );
+    rowsMatched += matched ? matched.length : spanRows;
+    if (matched && matched.length === 0) continue;
+
+    const needed = new Set<string>([...keyColumns, ...scopeColumns]);
+    if (hasWhenColumns) {
+      needed.add(WHEN_START_COLUMN);
+      needed.add(WHEN_END_COLUMN);
+    }
+    const columnData = new Map<string, unknown[]>(loaded);
+    await Promise.all(
+      [...needed]
+        .filter((name) => !columnData.has(name))
+        .map(async (name) => {
+          columnData.set(name, await readColumn(name, span));
+        })
+    );
+    const keyData = keyColumns.map((name) => columnData.get(name)!);
+    const scopeData = scopeColumns.map((name) => columnData.get(name)!);
+    const whenStartData = hasWhenColumns
+      ? columnData.get(WHEN_START_COLUMN)!
+      : null;
+    const whenEndData = hasWhenColumns
+      ? columnData.get(WHEN_END_COLUMN)!
+      : null;
+    const indexCount = matched ? matched.length : spanRows;
+
+    for (let k = 0; k < indexCount; k++) {
+      const i = matched ? matched[k] : k;
+      const key = replicateRowKey(parts, whenStartData, whenEndData, keyData, i);
+      let entry = entries.get(key);
+      if (!entry) {
+        const start = whenStartData
+          ? normalizeValue(whenStartData[i], "number")
+          : null;
+        const end = whenEndData
+          ? normalizeValue(whenEndData[i], "number")
+          : null;
+        const values = keyData.map((data) => jsonValue(data[i]));
+        const scope: { [column: string]: string } = {};
+        scopeColumns.forEach((name, index) => {
+          const value = normalizeValue(scopeData[index][i], "string");
+          if (value !== null && value !== undefined) scope[name] = String(value);
+        });
+        entry = {
+          whenStart: typeof start === "number" ? start : null,
+          whenEnd: typeof end === "number" ? end : null,
+          groupValues: values.slice(0, groupByCount),
+          replicateValues: values.slice(groupByCount),
+          scope,
+          rowCount: 0,
+        };
+        entries.set(key, entry);
+      }
+      entry.rowCount++;
+    }
+  }
+  return { entries, rowsScanned, rowsMatched };
+}
+
+function estimateRosterBytes(roster: ReplicateRoster): number {
+  let bytes = 64;
+  for (const [key, entry] of roster.entries) {
+    bytes += 2 * key.length + 96;
+    bytes += 16 * (entry.groupValues.length + entry.replicateValues.length);
+    bytes += 32 * Object.keys(entry.scope).length;
+  }
+  return bytes;
+}
+
 function aggregateValue(
   op: Aggregation,
   group: GroupAccumulator,
@@ -574,14 +1004,15 @@ async function executeRawQuery(
   });
 
   for (const span of decodeSpans(plan.spans)) {
-    rowsScanned += span.rowEnd - span.rowStart;
+    const spanRows = span.rowEnd - span.rowStart;
+    rowsScanned += spanRows;
     const { matched, loaded } = await matchIndexesInSpan(
       span,
       plan,
       readColumn
     );
-    rowsMatched += matched.length;
-    if (matched.length === 0) continue;
+    rowsMatched += matched ? matched.length : spanRows;
+    if (matched && matched.length === 0) continue;
 
     await Promise.all(
       outputNames
@@ -591,11 +1022,44 @@ async function executeRawQuery(
         })
     );
 
-    for (const i of matched) {
+    const indexCount = matched ? matched.length : spanRows;
+    for (let k = 0; k < indexCount; k++) {
+      const i = matched ? matched[k] : k;
       if (matchedRows.length < target) {
         const row: Row = {};
         for (const name of outputNames) {
           row[name] = loaded.get(name)![i];
+        }
+        if (
+          query.contributionFilters.length > 0 ||
+          query.effortMarkers.length > 0
+        ) {
+          const markers = new Set(query.effortMarkers);
+          const subjectFilters = plan.contributionFilters.filter(
+            (filter) => filter.column === query.subjectColumn
+          );
+          const detailFilters = plan.contributionFilters.filter(
+            (filter) => filter.column !== query.subjectColumn
+          );
+          const cells = new Map<string, unknown>();
+          for (const filter of plan.contributionFilters) {
+            cells.set(filter.column, row[filter.column]);
+          }
+          const effort =
+            (query.subjectColumn
+              ? isEffortMarkerValue(row[query.subjectColumn], markers)
+              : false) ||
+            query.detailColumns.some((name) =>
+              isEffortMarkerValue(row[name], markers)
+            );
+          const excludedBy = contributionExclusion({
+            effort,
+            subjectFilters,
+            detailFilters,
+            cells,
+          });
+          row._contributes = excludedBy === null;
+          row._excludedBy = excludedBy;
         }
         matchedRows.push(row);
       }

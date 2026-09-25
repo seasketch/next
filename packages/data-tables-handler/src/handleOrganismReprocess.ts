@@ -10,6 +10,9 @@ import {
 } from "@seasketch/geostats-types";
 import { all, run, withDuckDb } from "./duckDb";
 import { rewriteParquetClustered } from "./clusterParquet";
+
+/** Survey coverage sidecar, read by the query worker beside data.parquet. */
+export const COVERAGE_SIDECAR_FILE = "coverage.json";
 import {
   enrichOrganismValues,
   joinOrganismCatalogRows,
@@ -152,11 +155,37 @@ export async function writeOrganismCatalogParquet(
   });
 }
 
+/**
+ * Copies every sidecar that lives beside data.parquet: organism catalog,
+ * search index, preview, and the survey coverage file. Reprocessing writes
+ * to a new prefix, and the query worker looks for these next to the parquet
+ * it is reading, so a table would silently lose them otherwise.
+ */
 export async function copyOrganismSidecars(
   fromParquetRemote: string,
   toParquetRemote: string
 ): Promise<void> {
-  for (const filename of Object.values(ORGANISM_SIDECAR_FILES)) {
+  const filenames = [
+    ...Object.values(ORGANISM_SIDECAR_FILES),
+    COVERAGE_SIDECAR_FILE,
+  ];
+  await copySidecars(fromParquetRemote, toParquetRemote, filenames);
+}
+
+/** Organism enrichment regenerates its own sidecars; only coverage carries over. */
+export async function copyCoverageSidecar(
+  fromParquetRemote: string,
+  toParquetRemote: string
+): Promise<void> {
+  await copySidecars(fromParquetRemote, toParquetRemote, [COVERAGE_SIDECAR_FILE]);
+}
+
+async function copySidecars(
+  fromParquetRemote: string,
+  toParquetRemote: string,
+  filenames: string[]
+): Promise<void> {
+  for (const filename of filenames) {
     const from = siblingRemote(fromParquetRemote, filename);
     const to = siblingRemote(toParquetRemote, filename);
     if (!from || !to) continue;

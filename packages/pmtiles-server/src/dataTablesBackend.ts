@@ -5,6 +5,8 @@ import { executeQuery } from "./dataTables/engine/execute";
 import { planQuery } from "./dataTables/engine/plan";
 import {
   canonicalQueryString,
+  nocacheRequested,
+  nocacheResponseHeaders,
   parseQueryParams,
   QueryError,
 } from "./dataTables/params";
@@ -20,6 +22,10 @@ import {
 import { queryUiHtml } from "./dataTables/ui/html";
 import { handleOrgQuery } from "./dataTables/orgQuery";
 import { isOrgQueryPath } from "./dataTables/orgQueryParams";
+import {
+  loadCoverageFile,
+  r2CoverageBucket,
+} from "./dataTables/coverageCache";
 
 /** Browser cache lifetime for query JSON responses. */
 const BROWSER_MAX_AGE = 86400;
@@ -64,10 +70,11 @@ export async function handleDataTableQuery(
   const pathname = url.pathname;
   const isTemporalPreview = pathname.endsWith("/temporal-preview");
   const isNodataPreview = pathname.endsWith("/nodata-preview");
+  const isCoveragePreview = pathname.endsWith("/coverage-preview");
   const isQuery = pathname.endsWith("/query");
-  if (!isTemporalPreview && !isNodataPreview && !isQuery) {
+  if (!isTemporalPreview && !isNodataPreview && !isCoveragePreview && !isQuery) {
     return jsonError(
-      "Not found. Endpoints are {tablePath}/query, {tablePath}/temporal-preview, and {tablePath}/nodata-preview",
+      "Not found. Endpoints are {tablePath}/query, {tablePath}/temporal-preview, {tablePath}/nodata-preview, and {tablePath}/coverage-preview",
       404
     );
   }
@@ -75,6 +82,8 @@ export async function handleDataTableQuery(
     ? "/temporal-preview"
     : isNodataPreview
     ? "/nodata-preview"
+    : isCoveragePreview
+    ? "/coverage-preview"
     : "/query";
   const tablePath = pathname.replace(/^\/+/, "").slice(0, -suffix.length);
   if (!tablePath) {
@@ -86,6 +95,9 @@ export async function handleDataTableQuery(
   }
   if (isNodataPreview) {
     return handleNodataPreview(request, env, url, tablePath);
+  }
+  if (isCoveragePreview) {
+    return handleCoveragePreview(env, url, tablePath);
   }
 
   const requestStart = Date.now();
@@ -106,11 +118,13 @@ export async function handleDataTableQuery(
   // Workers cache key is path+query, so Accept-based negotiation would let a
   // cached HTML response be served to JSON clients and vice versa.
   if (query.format === "html") {
+    const nocache = nocacheRequested(url.searchParams);
     return new Response(queryUiHtml(tablePath), {
       headers: {
         "Content-Type": "text/html; charset=utf-8",
         "Access-Control-Allow-Origin": "*",
-        "Cache-Control": "public, max-age=300",
+        "Cache-Control": nocache ? "no-store" : "public, max-age=300",
+        ...(nocache ? { "CDN-Cache-Control": "no-store" } : {}),
       },
     });
   }
@@ -132,6 +146,26 @@ export async function handleDataTableQuery(
 
     const metadata = await getParquetMetadata(source);
     timer.mark("metadata");
+    let coverage = null;
+    if (query.coverageMode === "coverage_file") {
+      if (!query.subjectColumn) {
+        throw new QueryError(
+          "coverageMode=coverage_file requires subjectColumn."
+        );
+      }
+      const loaded = await loadCoverageFile(
+        r2CoverageBucket(env.TILES_BUCKET),
+        tablePath,
+        query.subjectColumn
+      );
+      if (!loaded) {
+        throw new QueryError(
+          `No coverage file at "${tablePath}/coverage.json".`,
+          404
+        );
+      }
+      coverage = loaded.index;
+    }
     const planned = Date.now();
     const plan = await planQuery(metadata, query, source.buffer);
     timer.mark("plan");
@@ -141,6 +175,7 @@ export async function handleDataTableQuery(
       query,
       plan,
       cacheKey: `${tablePath}@${source.etag}`,
+      coverage,
     });
     timer.mark("execute");
     const finished = Date.now();
@@ -163,24 +198,34 @@ export async function handleDataTableQuery(
         ? { groups: result.groups }
         : { rows: result.rows }),
       ...(result.series !== undefined ? { series: result.series } : {}),
+      ...(result.replicates !== undefined
+        ? { replicates: result.replicates }
+        : {}),
     };
     timer.mark("serialize");
 
     const etag = await makeETag(source.etag, canonicalQuery);
     const isRaw = query.ops.length === 0;
-    const headers = {
+    const nocache = nocacheRequested(url.searchParams);
+    const headers: Record<string, string> = {
       "Content-Type": "application/json; charset=utf-8",
-      ETag: etag,
       "Server-Timing": timer.header(),
       "Access-Control-Allow-Origin": "*",
       "Timing-Allow-Origin": "*",
       // Raw-row payloads are large and unique per site; caching them is
       // what produces the "first request 503, retry works" pattern.
-      "Cache-Control": isRaw
-        ? "private, no-store"
-        : `public, max-age=${BROWSER_MAX_AGE}, s-maxage=${EDGE_MAX_AGE}, immutable`,
+      // nocache=true also drops the aggregate response's browser and CDN
+      // cache headers so a debugger always sees a fresh body.
+      ...(nocache
+        ? nocacheResponseHeaders()
+        : {
+            ETag: etag,
+            "Cache-Control": isRaw
+              ? "private, no-store"
+              : `public, max-age=${BROWSER_MAX_AGE}, s-maxage=${EDGE_MAX_AGE}, immutable`,
+          }),
     };
-    if (request.headers.get("if-none-match") === etag) {
+    if (!nocache && request.headers.get("if-none-match") === etag) {
       return new Response(null, { status: 304, headers });
     }
     return new Response(JSON.stringify(body), { headers });
@@ -221,6 +266,87 @@ async function getParquetMetadata(source: {
   }
   metadataCache.set(source.etag, metadata);
   return metadata;
+}
+
+async function handleCoveragePreview(
+  env: Env,
+  url: URL,
+  tablePath: string
+): Promise<Response> {
+  const subjectColumn = url.searchParams.get("subjectColumn")?.trim() || "";
+  const subject = url.searchParams.get("subject")?.trim() || "";
+  if (!subjectColumn || !subject) {
+    return jsonError("subjectColumn and subject are required.", 400);
+  }
+  try {
+    const loaded = await loadCoverageFile(
+      r2CoverageBucket(env.TILES_BUCKET),
+      tablePath,
+      subjectColumn
+    );
+    if (!loaded) {
+      return jsonError(`No coverage file at "${tablePath}/coverage.json".`, 404);
+    }
+    const periods = loaded.records.filter(
+      (record) => record.subject[subjectColumn] === subject
+    );
+    const replicateBy = url.searchParams.get("replicateBy")?.trim() || "";
+    const column = url.searchParams.get("column")?.trim() || "";
+    let replicatesCovered = 0;
+    let replicatesNotSurveyed = 0;
+    let replicatesOutside = 0;
+    if (replicateBy && column) {
+      const params = new URLSearchParams();
+      params.set("op", "sum");
+      params.set("column", column);
+      params.set("replicateBy", replicateBy);
+      params.set("within", "sum");
+      params.set("coverageMode", "coverage_file");
+      params.set("subjectColumn", subjectColumn);
+      params.set(`v.${subjectColumn}`, subject);
+      const groupBy = url.searchParams.get("groupBy");
+      if (groupBy) params.set("groupBy", groupBy);
+      const query = parseQueryParams(params);
+      const source = await openR2File({
+        bucket: env.TILES_BUCKET,
+        key: `${tablePath}/data.parquet`,
+      });
+      if (source) {
+        const metadata = await getParquetMetadata(source);
+        const plan = await planQuery(metadata, query, source.buffer);
+        const result = await executeQuery({
+          file: source.buffer,
+          metadata,
+          query,
+          plan,
+          coverage: loaded.index,
+        });
+        for (const group of result.groups || []) {
+          replicatesCovered += Number(group.replicatesSurveyed) || 0;
+          replicatesNotSurveyed += Number(group.replicatesNotSurveyed) || 0;
+        }
+        replicatesOutside = replicatesNotSurveyed;
+      }
+    }
+    return new Response(
+      JSON.stringify({
+        subject,
+        subjectColumn,
+        periods,
+        replicatesCovered,
+        replicatesNotSurveyed,
+        replicatesOutside,
+      }),
+      {
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          "Access-Control-Allow-Origin": "*",
+        },
+      }
+    );
+  } catch (error) {
+    return errorResponse(error);
+  }
 }
 
 async function makeETag(objectEtag: string, canonicalQuery: string) {

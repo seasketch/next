@@ -14,6 +14,17 @@ fragment ClientOverlayDataTable on OverlayDataTable {
   columnStatsUrl
   visualizationColumns
   visualizationOps
+  calculationMode
+  additionalReplicateIdentifiers
+  replicateLabel
+  replicateLabelCustom
+  withinReplicateOperations
+  acrossReplicateOperations
+  subjectColumn
+  observationDetailColumns
+  coverageMode
+  effortMarkerValues
+  excludedValues
   requiredFilterColumns
   hiddenFilterColumns
   filterColumnLabels
@@ -41,6 +52,18 @@ fragment OverlayDataTableDetails on OverlayDataTable {
   updatedAt
   visualizationColumns
   visualizationOps
+  calculationMode
+  additionalReplicateIdentifiers
+  replicateLabel
+  replicateLabelCustom
+  withinReplicateOperations
+  acrossReplicateOperations
+  subjectColumn
+  observationDetailColumns
+  coverageMode
+  coverageRemote
+  effortMarkerValues
+  excludedValues
   requiredFilterColumns
   hiddenFilterColumns
   filterColumnLabels
@@ -58,6 +81,17 @@ query OverlayDataTableVisualizationMetadata($id: Int!) {
     columnStatsUrl
     visualizationColumns
     visualizationOps
+    calculationMode
+    additionalReplicateIdentifiers
+    replicateLabel
+    replicateLabelCustom
+    withinReplicateOperations
+    acrossReplicateOperations
+    subjectColumn
+    observationDetailColumns
+    coverageMode
+    effortMarkerValues
+    excludedValues
     requiredFilterColumns
     hiddenFilterColumns
     filterColumnLabels
@@ -73,6 +107,17 @@ query OverlayDataTableVisualizationMetadataForLayer($tocItemId: Int!) {
       columnStatsUrl
       visualizationColumns
       visualizationOps
+      calculationMode
+      additionalReplicateIdentifiers
+      replicateLabel
+      replicateLabelCustom
+      withinReplicateOperations
+      acrossReplicateOperations
+      subjectColumn
+      observationDetailColumns
+      coverageMode
+      effortMarkerValues
+      excludedValues
       requiredFilterColumns
       hiddenFilterColumns
       filterColumnLabels
@@ -172,6 +217,17 @@ mutation SetOverlayDataTableVisualizationSettings(
   $requiredFilterColumns: [String]!
   $hiddenFilterColumns: [String]!
   $filterColumnLabels: JSON!
+  $calculationMode: String
+  $additionalReplicateIdentifiers: [String]
+  $replicateLabel: String
+  $replicateLabelCustom: String
+  $withinReplicateOperations: JSON
+  $acrossReplicateOperations: JSON
+  $subjectColumn: String
+  $observationDetailColumns: [String]
+  $coverageMode: String
+  $effortMarkerValues: [String]
+  $excludedValues: JSON
 ) {
   setOverlayDataTableVisualizationSettings(
     input: {
@@ -181,6 +237,17 @@ mutation SetOverlayDataTableVisualizationSettings(
       requiredFilterColumns: $requiredFilterColumns
       hiddenFilterColumns: $hiddenFilterColumns
       filterColumnLabels: $filterColumnLabels
+      calculationMode: $calculationMode
+      additionalReplicateIdentifiers: $additionalReplicateIdentifiers
+      replicateLabel: $replicateLabel
+      replicateLabelCustom: $replicateLabelCustom
+      withinReplicateOperations: $withinReplicateOperations
+      acrossReplicateOperations: $acrossReplicateOperations
+      subjectColumn: $subjectColumn
+      observationDetailColumns: $observationDetailColumns
+      coverageMode: $coverageMode
+      effortMarkerValues: $effortMarkerValues
+      excludedValues: $excludedValues
     }
   ) {
     overlayDataTable {
@@ -255,12 +322,14 @@ mutation CreateOverlayDataTableReprocess(
   $tableId: Int!
   $temporalConfig: JSON
   $nodataConfig: JSON
+  $clusterOnly: Boolean
 ) {
   createOverlayDataTableReprocess(
     input: {
       tableId: $tableId
       temporalConfig: $temporalConfig
       nodataConfig: $nodataConfig
+      clusterOnly: $clusterOnly
     }
   ) {
     overlayDataTableUpload {

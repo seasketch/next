@@ -46,6 +46,11 @@ export class ByteBudgetCache<T = ArrayBuffer> {
   get totalBytes(): number {
     return this.bytes;
   }
+
+  clear(): void {
+    this.map.clear();
+    this.bytes = 0;
+  }
 }
 
 /** Groups sorted block indices into contiguous [first, last] runs. */

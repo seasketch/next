@@ -6,6 +6,8 @@ import { join } from "path";
 import { withDuckDb } from "./duckDb";
 import {
   buildWormsParquet,
+  binomialFromWormsNameKey,
+  lookupWormsSynonymKeys,
   lookupWormsTaxaByAphiaIds,
   lookupWormsTaxaByNames,
   normalizeWormsNameKey,
@@ -25,6 +27,23 @@ describe("parseAphiaIdFromLsid", () => {
     assert.equal(parseAphiaIdFromLsid("1702292"), 1702292);
     assert.equal(parseAphiaIdFromLsid(null), null);
     assert.equal(parseAphiaIdFromLsid("not-an-id"), null);
+  });
+});
+
+describe("binomialFromWormsNameKey", () => {
+  it("restores genus case and drops authorship keys", () => {
+    assert.equal(
+      binomialFromWormsNameKey("oxyjulis californica"),
+      "Oxyjulis californica"
+    );
+    assert.equal(
+      binomialFromWormsNameKey("oxyjulis californica (günther, 1861)"),
+      null
+    );
+    assert.equal(
+      binomialFromWormsNameKey("halichoeres californicus günther, 1861"),
+      null
+    );
   });
 });
 
@@ -74,6 +93,12 @@ describe("buildWormsParquet", () => {
       ]);
       assert.equal(byName.get("bodianus pulcher")?.aphia_id, 1702292);
       assert.equal(byName.get("semicossyphus pulcher")?.aphia_id, 1702292);
+
+      const synonyms = await lookupWormsSynonymKeys(conn, outDir, [1702292]);
+      assert.deepEqual(synonyms.get(1702292)?.aphiaIds, [282753]);
+      assert.ok(
+        synonyms.get(1702292)?.scientificNames.includes("Semicossyphus pulcher")
+      );
     });
 
     assert.equal(wormsParquetIsPresent(outDir), true);

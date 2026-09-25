@@ -55,6 +55,8 @@ import {
   hiddenDataTableFilterColumns,
   omitFiltersForColumns,
   parseFilterColumnLabels,
+  replicateQueryFields,
+  partitionDataTableFilters,
   resolveDataTableVisualizationSettings,
 } from "./dataTableQueryApi";
 import {
@@ -870,7 +872,8 @@ class MapContextManager extends EventEmitter {
   async fetchDataTableCalculationRows(
     tocStableId: string,
     featureId: string,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    whenOverride?: { start: number; end: number } | null
   ) {
     const settings = this.resolveDataTableVisualizationSettings(tocStableId);
     if (!settings?.table.queryUrl) {
@@ -884,7 +887,35 @@ class MapContextManager extends EventEmitter {
       settings,
       featureId,
       requiresToken,
-      signal
+      signal,
+      whenOverride
+    );
+  }
+
+  /**
+   * The engine's replicate-by-replicate account of one feature's number.
+   * See DataTableQueryManager.fetchCalculationAudit.
+   */
+  async fetchDataTableCalculationAudit(
+    tocStableId: string,
+    featureId: string,
+    signal?: AbortSignal,
+    whenOverride?: { start: number; end: number } | null
+  ) {
+    const settings = this.resolveDataTableVisualizationSettings(tocStableId);
+    if (!settings?.table.queryUrl) {
+      throw new Error("No active data table visualization for this layer");
+    }
+    const uuid = extractTilesUuidFromUrl(settings.table.queryUrl);
+    const requiresToken = uuid
+      ? this.hostedUuidNeedsMapAccessToken(uuid)
+      : false;
+    return this.dataTableQueryManager.fetchCalculationAudit(
+      settings,
+      featureId,
+      requiresToken,
+      signal,
+      whenOverride
     );
   }
 
@@ -913,18 +944,25 @@ class MapContextManager extends EventEmitter {
       op: dataTable.op,
       filters: dataTable.filters,
     });
+    const partitioned = partitionDataTableFilters(
+      omitFiltersForColumns(
+        resolved.filters,
+        [
+          ...hiddenDataTableFilterColumns(table),
+          table.joinColumn,
+        ].filter(Boolean)
+      ),
+      table,
+      table.joinColumn
+    );
     return {
       table,
       query: {
         column: resolved.column,
         op: resolved.op,
-        filters: omitFiltersForColumns(
-          resolved.filters,
-          [
-            ...hiddenDataTableFilterColumns(table),
-            table.joinColumn,
-          ].filter(Boolean)
-        ),
+        ...replicateQueryFields(table, resolved.column),
+        ...partitioned,
+        joinColumn: table.joinColumn,
       },
     };
   }

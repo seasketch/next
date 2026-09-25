@@ -706,7 +706,7 @@ export default function DataTableOrganismEditor({
           <div className="flex items-start gap-2 border-b border-gray-600 px-5 py-3">
             <div className="min-w-0 flex-1">
               <Dialog.Title className="font-medium text-indigo-100">
-                <Trans ns="admin:data">Organism identity</Trans>
+                <Trans ns="admin:data">Subjects and organisms</Trans>
               </Dialog.Title>
               <p className="mt-1.5 text-sm leading-5 text-gray-300">
                 <Trans ns="admin:data">
@@ -755,7 +755,7 @@ export default function DataTableOrganismEditor({
             <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_13.5rem]">
               <label className="block min-w-0 space-y-1">
                 <span className="text-sm text-gray-200">
-                  {t("Identity column")}
+                  {t("Subject column")}
                 </span>
                 {statsLoading ? (
                   <div className="flex items-center gap-2 text-sm text-gray-400">

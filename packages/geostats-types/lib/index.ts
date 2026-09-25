@@ -14,6 +14,7 @@ export {
   normalizeNodataValues,
 } from "./nodata";
 export * from "./organism";
+export * from "./dataTableCoverage";
 export {
   isOrganismInfo,
   isDataTableOrganismConfig,

@@ -1,14 +1,18 @@
 import { describe, expect, it } from "@jest/globals";
 import {
   allowedDataTableVisualizationColumns,
+  buildDataTableQuerySearchParams,
   configuredDataTableVisualizationColumns,
   dataTableFilterLabel,
   effectiveDataTableVisualizationColumn,
   hiddenDataTableFilterColumns,
   isAlwaysHiddenFilterColumn,
   isFilterColumnLabels,
+  parseExcludedValues,
   parseFilterColumnLabels,
+  partitionDataTableFilters,
   requiredDataTableFilterColumns,
+  replicateQueryFields,
   resolveDataTableVisualizationSettings,
 } from "./dataTableQueryApi";
 
@@ -182,5 +186,92 @@ describe("hiddenDataTableFilterColumns", () => {
       })
     ).toEqual(["region"]);
     expect(requiredDataTableFilterColumns({})).toEqual([]);
+  });
+});
+
+describe("replicate calculation mode", () => {
+  it("uses across-replicate ops and keeps a bookmarked op that is still allowed", () => {
+    const resolved = resolveDataTableVisualizationSettings(
+      {
+        calculationMode: "replicates",
+        visualizationColumns: ["count"],
+        acrossReplicateOperations: { count: ["sum", "mean"] },
+        additionalReplicateIdentifiers: ["zone", "transect"],
+        withinReplicateOperations: { count: "sum" },
+      },
+      { column: "count", op: "sum" }
+    );
+    expect(resolved.op).toBe("sum");
+    expect(resolved.column).toBe("count");
+  });
+
+  it("clamps a bookmarked op that replicates mode does not allow", () => {
+    expect(
+      resolveDataTableVisualizationSettings(
+        {
+          calculationMode: "replicates",
+          acrossReplicateOperations: { count: ["mean"] },
+        },
+        { column: "count", op: "median" }
+      ).op
+    ).toBe("mean");
+  });
+
+  it("sends replicateBy only when identifiers are configured", () => {
+    const fields = replicateQueryFields(
+      {
+        calculationMode: "replicates",
+        additionalReplicateIdentifiers: ["zone", "transect"],
+        withinReplicateOperations: { count: "sum" },
+      },
+      "count"
+    );
+    const params = buildDataTableQuerySearchParams({
+      groupBy: "site",
+      op: "mean",
+      column: "count",
+      ...fields,
+    });
+    expect(params.get("replicateBy")).toBe("zone,transect");
+    expect(params.get("within")).toBe("sum");
+    expect(
+      buildDataTableQuerySearchParams({ op: "mean", column: "count" }).has(
+        "replicateBy"
+      )
+    ).toBe(false);
+  });
+});
+
+describe("partitionDataTableFilters", () => {
+  it("sends subject and detail filters as v.* and prepends rows to ignore", () => {
+    const split = partitionDataTableFilters(
+      [
+        { column: "classcode", op: "eq", value: "SPUL" },
+        { column: "sex", op: "eq", value: "MALE" },
+        { column: "campus", op: "eq", value: "UCSB" },
+      ],
+      {
+        calculationMode: "replicates",
+        subjectColumn: "classcode",
+        observationDetailColumns: ["sex"],
+        effortMarkerValues: ["NO_ORG"],
+        coverageMode: "coverage_file",
+        excludedValues: { visitor_code: ["PeopleAll"] },
+      }
+    );
+    const params = buildDataTableQuerySearchParams({
+      op: "mean",
+      column: "count",
+      replicateBy: ["zone"],
+      within: "sum",
+      ...split,
+    });
+    expect(params.get("v.classcode")).toBe("SPUL");
+    expect(params.get("v.sex")).toBe("MALE");
+    expect(params.get("q.campus")).toBe("UCSB");
+    expect(params.get("q.visitor_code")).toBe("not.in.(PeopleAll)");
+    expect(params.get("effortMarkers")).toBe("NO_ORG");
+    expect(params.get("coverageMode")).toBe("coverage_file");
+    expect(parseExcludedValues(null)).toEqual({});
   });
 });

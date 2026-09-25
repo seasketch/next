@@ -1,12 +1,22 @@
 {
+  "Aggregation": "Aggregation",
+  "Column metadata is not available for this table.": "Column metadata is not available for this table.",
   "Count": "Count",
+  "Loading column metadata...": "Loading column metadata...",
+  "Loading values…": "Loading values…",
   "Loading…": "Loading…",
   "Max": "Max",
   "Mean": "Mean",
   "Median": "Median",
   "Min": "Min",
   "No data": "No data",
+  "No numeric columns available to visualize.": "No numeric columns available to visualize.",
+  "Showing": "Showing",
   "Sum": "Sum",
+  "Unable to load column metadata.": "Unable to load column metadata.",
+  "Visualize column": "Visualize column",
+  "of": "of",
+  "per {{unit}}": "per {{unit}}",
   "{{op}} of {{column}}": "{{op}} of {{column}}",
   "{{title}}. {{range}}": "{{title}}. {{range}}"
 }
