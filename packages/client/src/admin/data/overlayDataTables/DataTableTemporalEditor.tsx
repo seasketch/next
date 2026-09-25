@@ -590,6 +590,14 @@ export default function DataTableTemporalEditor({
             filterColumnLabels: parseFilterColumnLabels(
               table.filterColumnLabels
             ),
+            calculationMode: table.calculationMode,
+            additionalReplicateIdentifiers: (
+              table.additionalReplicateIdentifiers || []
+            ).filter((column): column is string => Boolean(column)),
+            replicateLabel: table.replicateLabel,
+            replicateLabelCustom: table.replicateLabelCustom,
+            withinReplicateOperations: table.withinReplicateOperations,
+            acrossReplicateOperations: table.acrossReplicateOperations,
           },
         });
       }

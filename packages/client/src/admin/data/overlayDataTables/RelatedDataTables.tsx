@@ -35,9 +35,16 @@ import { organismInfoOrNull } from "./dataTableOrganismForm";
 import {
   allowedDataTableVisualizationColumns,
   DATA_TABLE_AGGREGATIONS,
+  DataTableAggregation,
   isAlwaysHiddenFilterColumn,
+  parseAcrossReplicateOperations,
   parseFilterColumnLabels,
+  parseWithinReplicateOperations,
+  WithinReplicateOp,
 } from "../../../dataLayers/dataTableQueryApi";
+import DataTableCalculationMode, {
+  CalculationModeChoice,
+} from "./DataTableCalculationMode";
 import {
   columnStatsUrlForTable,
   numericColumnNames,
@@ -211,11 +218,23 @@ function MapDisplaySettings({
   selectedRequiredFilters,
   selectedHiddenFilters,
   filterLabels,
+  calculationMode,
+  identifiers,
+  replicateLabel,
+  replicateLabelCustom,
+  withinByColumn,
+  acrossByColumn,
   onColumnsChange,
   onOpsChange,
   onRequiredFiltersChange,
   onHiddenFiltersChange,
   onFilterLabelsChange,
+  onCalculationModeChange,
+  onIdentifiersChange,
+  onReplicateLabelChange,
+  onReplicateLabelCustomChange,
+  onWithinChange,
+  onAcrossChange,
 }: {
   table: OverlayDataTableDetailsFragment;
   selectedColumns: string[];
@@ -228,6 +247,18 @@ function MapDisplaySettings({
   onRequiredFiltersChange: (columns: string[]) => void;
   onHiddenFiltersChange: (columns: string[]) => void;
   onFilterLabelsChange: (labels: Record<string, string>) => void;
+  calculationMode: CalculationModeChoice;
+  identifiers: string[];
+  replicateLabel: string;
+  replicateLabelCustom: string;
+  withinByColumn: { [column: string]: WithinReplicateOp };
+  acrossByColumn: { [column: string]: DataTableAggregation[] };
+  onCalculationModeChange: (mode: CalculationModeChoice) => void;
+  onIdentifiersChange: (columns: string[]) => void;
+  onReplicateLabelChange: (label: string) => void;
+  onReplicateLabelCustomChange: (label: string) => void;
+  onWithinChange: (column: string, op: WithinReplicateOp) => void;
+  onAcrossChange: (column: string, ops: DataTableAggregation[]) => void;
 }) {
   const { t } = useTranslation("admin:data");
   const { data: projectMeta } = useCurrentProjectMetadata();
@@ -386,6 +417,26 @@ function MapDisplaySettings({
           </div>
         )}
       </div>
+      <DataTableCalculationMode
+        mode={calculationMode}
+        onModeChange={onCalculationModeChange}
+        joinColumn={table.joinColumn}
+        identifierChoices={filterableColumns.filter(
+          (column) => !numericColumns.includes(column) && column !== table.joinColumn
+        )}
+        identifiers={identifiers}
+        onIdentifiersChange={onIdentifiersChange}
+        label={replicateLabel}
+        customLabel={replicateLabelCustom}
+        onLabelChange={onReplicateLabelChange}
+        onCustomLabelChange={onReplicateLabelCustomChange}
+        dataColumns={dataColumns}
+        withinByColumn={withinByColumn}
+        acrossByColumn={acrossByColumn}
+        onWithinChange={onWithinChange}
+        onAcrossChange={onAcrossChange}
+      />
+      {calculationMode === "simple" ? (
       <div className="space-y-3">
         <div className="space-y-1">
           <p className="text-sm font-medium text-gray-900">
@@ -434,6 +485,7 @@ function MapDisplaySettings({
           ))}
         </div>
       </div>
+      ) : null}
       <div className="space-y-3">
         <div className="space-y-1">
           <p className="text-sm font-medium text-gray-900">{t("Filters")}</p>
@@ -562,7 +614,13 @@ function DataTableSettingsModal({
     visualizationOps: string[],
     requiredFilterColumns: string[],
     hiddenFilterColumns: string[],
-    filterColumnLabels: Record<string, string>
+    filterColumnLabels: Record<string, string>,
+    calculationMode: CalculationModeChoice,
+    additionalReplicateIdentifiers: string[],
+    replicateLabel: string,
+    replicateLabelCustom: string | null,
+    withinReplicateOperations: { [column: string]: WithinReplicateOp },
+    acrossReplicateOperations: { [column: string]: DataTableAggregation[] }
   ) => void | Promise<void>;
 }) {
   const { t } = useTranslation("admin:data");
@@ -586,6 +644,24 @@ function DataTableSettingsModal({
   const [draftFilterLabels, setDraftFilterLabels] = useState<
     Record<string, string>
   >(() => parseFilterColumnLabels(table.filterColumnLabels));
+  const [draftMode, setDraftMode] = useState<CalculationModeChoice>(
+    table.calculationMode === "replicates" ? "replicates" : "simple"
+  );
+  const [draftIdentifiers, setDraftIdentifiers] = useState<string[]>(
+    (table.additionalReplicateIdentifiers || []).filter(Boolean) as string[]
+  );
+  const [draftReplicateLabel, setDraftReplicateLabel] = useState(
+    table.replicateLabel || "replicate"
+  );
+  const [draftReplicateLabelCustom, setDraftReplicateLabelCustom] = useState(
+    table.replicateLabelCustom || ""
+  );
+  const [draftWithin, setDraftWithin] = useState(() =>
+    parseWithinReplicateOperations(table.withinReplicateOperations)
+  );
+  const [draftAcross, setDraftAcross] = useState(() =>
+    parseAcrossReplicateOperations(table.acrossReplicateOperations)
+  );
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -603,6 +679,14 @@ function DataTableSettingsModal({
       (table.hiddenFilterColumns || []).filter(Boolean) as string[]
     );
     setDraftFilterLabels(parseFilterColumnLabels(table.filterColumnLabels));
+    setDraftMode(table.calculationMode === "replicates" ? "replicates" : "simple");
+    setDraftIdentifiers(
+      (table.additionalReplicateIdentifiers || []).filter(Boolean) as string[]
+    );
+    setDraftReplicateLabel(table.replicateLabel || "replicate");
+    setDraftReplicateLabelCustom(table.replicateLabelCustom || "");
+    setDraftWithin(parseWithinReplicateOperations(table.withinReplicateOperations));
+    setDraftAcross(parseAcrossReplicateOperations(table.acrossReplicateOperations));
   }, [
     table.name,
     table.description,
@@ -611,6 +695,12 @@ function DataTableSettingsModal({
     table.requiredFilterColumns,
     table.hiddenFilterColumns,
     table.filterColumnLabels,
+    table.calculationMode,
+    table.additionalReplicateIdentifiers,
+    table.replicateLabel,
+    table.replicateLabelCustom,
+    table.withinReplicateOperations,
+    table.acrossReplicateOperations,
   ]);
 
   const originalColumns = stringColumns(table.visualizationColumns);
@@ -636,7 +726,18 @@ function DataTableSettingsModal({
       JSON.stringify(originalRequiredFilters) ||
     JSON.stringify(draftHiddenFilters) !==
       JSON.stringify(originalHiddenFilters) ||
-    labelsDirty;
+    labelsDirty ||
+    draftMode !== (table.calculationMode === "replicates" ? "replicates" : "simple") ||
+    JSON.stringify(draftIdentifiers) !==
+      JSON.stringify(
+        (table.additionalReplicateIdentifiers || []).filter(Boolean)
+      ) ||
+    draftReplicateLabel !== (table.replicateLabel || "replicate") ||
+    draftReplicateLabelCustom !== (table.replicateLabelCustom || "") ||
+    JSON.stringify(draftWithin) !==
+      JSON.stringify(parseWithinReplicateOperations(table.withinReplicateOperations)) ||
+    JSON.stringify(draftAcross) !==
+      JSON.stringify(parseAcrossReplicateOperations(table.acrossReplicateOperations));
   const dirty = nameDirty || descriptionDirty || displayDirty;
 
   const saveChanges = async () => {
@@ -658,7 +759,13 @@ function DataTableSettingsModal({
           draftOps,
           requiredForSave,
           draftHiddenFilters,
-          savedFilterLabels
+          savedFilterLabels,
+          draftMode,
+          draftIdentifiers,
+          draftReplicateLabel,
+          draftReplicateLabelCustom.trim() || null,
+          draftWithin,
+          draftAcross
         );
       }
       onClose();
@@ -764,6 +871,22 @@ function DataTableSettingsModal({
             onRequiredFiltersChange={setDraftRequiredFilters}
             onHiddenFiltersChange={setDraftHiddenFilters}
             onFilterLabelsChange={setDraftFilterLabels}
+            calculationMode={draftMode}
+            identifiers={draftIdentifiers}
+            replicateLabel={draftReplicateLabel}
+            replicateLabelCustom={draftReplicateLabelCustom}
+            withinByColumn={draftWithin}
+            acrossByColumn={draftAcross}
+            onCalculationModeChange={setDraftMode}
+            onIdentifiersChange={setDraftIdentifiers}
+            onReplicateLabelChange={setDraftReplicateLabel}
+            onReplicateLabelCustomChange={setDraftReplicateLabelCustom}
+            onWithinChange={(column, op) =>
+              setDraftWithin((current) => ({ ...current, [column]: op }))
+            }
+            onAcrossChange={(column, ops) =>
+              setDraftAcross((current) => ({ ...current, [column]: ops }))
+            }
           />
         </section>
       </div>
@@ -801,7 +924,13 @@ function DataTableRow({
     visualizationOps: string[],
     requiredFilterColumns: string[],
     hiddenFilterColumns: string[],
-    filterColumnLabels: Record<string, string>
+    filterColumnLabels: Record<string, string>,
+    calculationMode: CalculationModeChoice,
+    additionalReplicateIdentifiers: string[],
+    replicateLabel: string,
+    replicateLabelCustom: string | null,
+    withinReplicateOperations: { [column: string]: WithinReplicateOp },
+    acrossReplicateOperations: { [column: string]: DataTableAggregation[] }
   ) => void | Promise<void>;
 }) {
   const { t } = useTranslation("admin:data");
@@ -1137,7 +1266,13 @@ export default function RelatedDataTables({ item }: RelatedDataTablesProps) {
       visualizationOps: string[],
       requiredFilterColumns: string[],
       hiddenFilterColumns: string[],
-      filterColumnLabels: Record<string, string>
+      filterColumnLabels: Record<string, string>,
+      calculationMode: CalculationModeChoice,
+      additionalReplicateIdentifiers: string[],
+      replicateLabel: string,
+      replicateLabelCustom: string | null,
+      withinReplicateOperations: { [column: string]: WithinReplicateOp },
+      acrossReplicateOperations: { [column: string]: DataTableAggregation[] }
     ) => {
       await setVisualizationSettingsMutation({
         variables: {
@@ -1147,6 +1282,12 @@ export default function RelatedDataTables({ item }: RelatedDataTablesProps) {
           requiredFilterColumns,
           hiddenFilterColumns,
           filterColumnLabels,
+          calculationMode,
+          additionalReplicateIdentifiers,
+          replicateLabel,
+          replicateLabelCustom,
+          withinReplicateOperations,
+          acrossReplicateOperations,
         },
       });
     },

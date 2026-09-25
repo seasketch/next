@@ -84,6 +84,112 @@ export const DATA_TABLE_AGGREGATIONS: DataTableAggregation[] = [
   "median",
 ];
 
+/** Collapse applied to rows that share one replicate. */
+export const WITHIN_REPLICATE_OPS = ["sum", "mean", "min", "max"] as const;
+export type WithinReplicateOp = (typeof WITHIN_REPLICATE_OPS)[number];
+
+/** Map calculations offered in Multiple Replicates mode. */
+export const ACROSS_REPLICATE_OPS: DataTableAggregation[] = [
+  "mean",
+  "sum",
+  "min",
+  "max",
+];
+
+export const REPLICATE_LABEL_PRESETS = [
+  "replicate",
+  "transect",
+  "quadrat",
+  "station",
+  "camera",
+  "sample",
+] as const;
+export type ReplicateLabelPreset = (typeof REPLICATE_LABEL_PRESETS)[number];
+
+export type CalculationMode = "simple" | "replicates";
+
+export function isWithinReplicateOp(value: unknown): value is WithinReplicateOp {
+  return (
+    typeof value === "string" &&
+    (WITHIN_REPLICATE_OPS as readonly string[]).includes(value)
+  );
+}
+
+export function parseWithinReplicateOperations(
+  value: unknown
+): { [column: string]: WithinReplicateOp } {
+  if (value == null || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+  const out: { [column: string]: WithinReplicateOp } = {};
+  for (const [column, op] of Object.entries(value as { [key: string]: unknown })) {
+    if (column && isWithinReplicateOp(op)) {
+      out[column] = op;
+    }
+  }
+  return out;
+}
+
+export function parseAcrossReplicateOperations(
+  value: unknown
+): { [column: string]: DataTableAggregation[] } {
+  if (value == null || typeof value !== "object" || Array.isArray(value)) {
+    return {};
+  }
+  const out: { [column: string]: DataTableAggregation[] } = {};
+  for (const [column, ops] of Object.entries(value as { [key: string]: unknown })) {
+    if (!column || !Array.isArray(ops)) continue;
+    const allowed = ops.filter(
+      (op): op is DataTableAggregation =>
+        typeof op === "string" &&
+        (ACROSS_REPLICATE_OPS as string[]).includes(op)
+    );
+    if (allowed.length > 0) {
+      out[column] = allowed;
+    }
+  }
+  return out;
+}
+
+export function withinOpForColumn(
+  operations: { [column: string]: WithinReplicateOp },
+  column: string | undefined
+): WithinReplicateOp {
+  if (column && operations[column]) return operations[column];
+  return "sum";
+}
+
+/** Query fields that turn on two-stage aggregation. Empty when the table is in simple mode or no extra identifier is set. */
+export function replicateQueryFields(
+  constraints: DataTableVisualizationConstraints,
+  column: string | undefined
+): Pick<DataTableQuerySettings, "replicateBy" | "within"> {
+  if (constraints.calculationMode !== "replicates") {
+    return {};
+  }
+  const replicateBy = (constraints.additionalReplicateIdentifiers || []).filter(
+    (name): name is string => Boolean(name)
+  );
+  if (replicateBy.length === 0) {
+    return {};
+  }
+  return {
+    replicateBy,
+    within: withinOpForColumn(
+      parseWithinReplicateOperations(constraints.withinReplicateOperations),
+      column
+    ),
+  };
+}
+
+export function acrossOpsForColumn(
+  operations: { [column: string]: DataTableAggregation[] },
+  column: string | undefined
+): DataTableAggregation[] {
+  const ops = column ? operations[column] : undefined;
+  return ops && ops.length > 0 ? ops : ["mean"];
+}
+
 /**
  * Filter operator for structured settings. Matches `FilterOperator` in
  * `packages/pmtiles-server/src/dataTables/params.ts`.
@@ -204,6 +310,12 @@ export interface DataTableQuerySettings {
   column?: string;
   /** Group key column(s), e.g. the join column for a thematic map. */
   groupBy?: string | string[];
+  /**
+   * Extra replicate columns. When set with {@link within}, the engine sums
+   * (or otherwise collapses) rows inside each replicate before `op`.
+   */
+  replicateBy?: string[];
+  within?: WithinReplicateOp;
   filters?: DataTableFilter[];
   /** Half-open clock window in UTC epoch seconds (`when.start` / `when.end`). */
   when?: { start: number; end: number } | null;
@@ -303,6 +415,12 @@ export interface DataTableVisualizationConstraints {
   hiddenFilterColumns?: (string | null)[] | null;
   /** Custom labels keyed by original column name. Untrusted JSON at runtime. */
   filterColumnLabels?: unknown;
+  calculationMode?: string | null;
+  additionalReplicateIdentifiers?: (string | null)[] | null;
+  replicateLabel?: string | null;
+  replicateLabelCustom?: string | null;
+  withinReplicateOperations?: unknown;
+  acrossReplicateOperations?: unknown;
 }
 
 /** Metadata needed by the legend display settings UI before query/style work begins. */
@@ -349,18 +467,6 @@ export function resolveDataTableVisualizationSettings(
   constraints: DataTableVisualizationConstraints,
   userChoice: DataTableUserVisualizationChoice
 ): ResolvedDataTableVisualization {
-  const allowedOps = (constraints.visualizationOps?.filter(
-    (op): op is DataTableAggregation =>
-      Boolean(op) && (DATA_TABLE_AGGREGATIONS as string[]).includes(op!)
-  ) || []) as DataTableAggregation[];
-
-  const op =
-    allowedOps.length > 0
-      ? userChoice.op && allowedOps.includes(userChoice.op)
-        ? userChoice.op
-        : allowedOps[0]
-      : userChoice.op || "mean";
-
   const allowedColumns = (constraints.visualizationColumns?.filter(
     (column): column is string => Boolean(column)
   ) || []) as string[];
@@ -371,6 +477,24 @@ export function resolveDataTableVisualizationSettings(
         ? userChoice.column
         : allowedColumns[0]
       : userChoice.column;
+
+  const replicateMode = constraints.calculationMode === "replicates";
+  const allowedOps = replicateMode
+    ? acrossOpsForColumn(
+        parseAcrossReplicateOperations(constraints.acrossReplicateOperations),
+        column
+      )
+    : ((constraints.visualizationOps?.filter(
+        (op): op is DataTableAggregation =>
+          Boolean(op) && (DATA_TABLE_AGGREGATIONS as string[]).includes(op!)
+      ) || []) as DataTableAggregation[]);
+
+  const op =
+    allowedOps.length > 0
+      ? userChoice.op && allowedOps.includes(userChoice.op)
+        ? userChoice.op
+        : allowedOps[0]
+      : userChoice.op || "mean";
 
   const requiredFilterColumns = (constraints.requiredFilterColumns?.filter(
     (column): column is string => Boolean(column)
@@ -550,6 +674,11 @@ export function buildDataTableQuerySearchParams(
       ? settings.groupBy.join(",")
       : settings.groupBy;
     params.set("groupBy", groupBy);
+  }
+
+  if (settings.replicateBy && settings.replicateBy.length > 0 && settings.within) {
+    params.set("replicateBy", settings.replicateBy.join(","));
+    params.set("within", settings.within);
   }
 
   if (settings.op !== undefined) {

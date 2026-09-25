@@ -4,11 +4,13 @@ import * as Select from "@radix-ui/react-select";
 import { useTranslation } from "react-i18next";
 import { MapManagerContext, MapOverlayContext } from "./MapContextManager";
 import {
+  acrossOpsForColumn,
   allowedDataTableVisualizationColumns,
   DATA_TABLE_AGGREGATIONS,
   DataTableAggregation,
   DataTableVisualizationMetadata,
   dataTableFilterLabel,
+  parseAcrossReplicateOperations,
   parseFilterColumnLabels,
   effectiveDataTableVisualizationColumn,
   resolveDataTableVisualizationSettings,
@@ -19,6 +21,33 @@ import {
   numericColumnNames,
 } from "./useDataTableColumnStats";
 import clsx from "clsx";
+
+function replicateUnitLabel(
+  t: (key: string) => string,
+  metadata: DataTableVisualizationMetadata
+): string {
+  if (
+    metadata.replicateLabel === "custom" &&
+    metadata.replicateLabelCustom &&
+    metadata.replicateLabelCustom.trim()
+  ) {
+    return metadata.replicateLabelCustom.trim();
+  }
+  switch (metadata.replicateLabel) {
+    case "transect":
+      return t("transect");
+    case "quadrat":
+      return t("quadrat");
+    case "station":
+      return t("station");
+    case "camera":
+      return t("camera");
+    case "sample":
+      return t("sample");
+    default:
+      return t("replicate");
+  }
+}
 
 export function DataTableVisualizationLabel({
   op,
@@ -174,8 +203,7 @@ export default function DataTableVisualizationControls({
     () => allowedDataTableVisualizationColumns(metadata, numericColumnNames(columnStats)),
     [columnStats, metadata]
   );
-  const opChoices =
-    allowedOps.length > 0 ? allowedOps : DATA_TABLE_AGGREGATIONS;
+  const replicateMode = metadata.calculationMode === "replicates";
 
   const userChoice = useMemo(
     () => ({
@@ -192,6 +220,15 @@ export default function DataTableVisualizationControls({
     resolved,
     columnChoices
   );
+  const opChoices = replicateMode
+    ? acrossOpsForColumn(
+        parseAcrossReplicateOperations(metadata.acrossReplicateOperations),
+        effectiveColumn
+      )
+    : allowedOps.length > 0
+      ? allowedOps
+      : DATA_TABLE_AGGREGATIONS;
+  const unitLabel = replicateUnitLabel(t, metadata);
   const showColumn = resolved.op !== "count" || Boolean(effectiveColumn);
   const tableStableId = dataTable?.stableId;
 
@@ -296,6 +333,9 @@ export default function DataTableVisualizationControls({
             )}
           </>
         )}
+        {replicateMode ? (
+          <span>{t("per {{unit}}", { unit: unitLabel })}</span>
+        ) : null}
       </div>
       {allowedColumns.length === 0 && loading && (
         <p className="text-xs text-gray-400 italic">

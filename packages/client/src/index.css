@@ -8924,6 +8924,10 @@ select{
   resize:both
 }
 
+.scroll-mb-2{
+  scroll-margin-bottom:0.5rem
+}
+
 .list-\[lower-alpha\]{
   list-style-type:lower-alpha
 }
@@ -9195,6 +9199,10 @@ select{
 
 .gap-y-6{
   row-gap:1.5rem
+}
+
+.gap-x-0\.5{
+  column-gap:0.125rem
 }
 
 .-space-x-1\.5 > :not([hidden]) ~ :not([hidden]){
@@ -13069,6 +13077,10 @@ select{
   color:rgb(113 113 122 / var(--tw-text-opacity, 1))
 }
 
+.text-primary-700\/80{
+  color:rgb(31 41 98 / 0.8)
+}
+
 .text-opacity-80{
   --tw-text-opacity:0.8
 }
@@ -15934,6 +15946,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .disabled\:hover\:text-gray-300:hover:disabled{
   --tw-text-opacity:1;
   color:rgb(209 213 219 / var(--tw-text-opacity, 1))
+}
+
+.group:focus-within .group-focus-within\:block{
+  display:block
 }
 
 .group:hover .group-hover\:block{

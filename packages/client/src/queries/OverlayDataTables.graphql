@@ -14,6 +14,12 @@ fragment ClientOverlayDataTable on OverlayDataTable {
   columnStatsUrl
   visualizationColumns
   visualizationOps
+  calculationMode
+  additionalReplicateIdentifiers
+  replicateLabel
+  replicateLabelCustom
+  withinReplicateOperations
+  acrossReplicateOperations
   requiredFilterColumns
   hiddenFilterColumns
   filterColumnLabels
@@ -41,6 +47,12 @@ fragment OverlayDataTableDetails on OverlayDataTable {
   updatedAt
   visualizationColumns
   visualizationOps
+  calculationMode
+  additionalReplicateIdentifiers
+  replicateLabel
+  replicateLabelCustom
+  withinReplicateOperations
+  acrossReplicateOperations
   requiredFilterColumns
   hiddenFilterColumns
   filterColumnLabels
@@ -58,6 +70,12 @@ query OverlayDataTableVisualizationMetadata($id: Int!) {
     columnStatsUrl
     visualizationColumns
     visualizationOps
+    calculationMode
+    additionalReplicateIdentifiers
+    replicateLabel
+    replicateLabelCustom
+    withinReplicateOperations
+    acrossReplicateOperations
     requiredFilterColumns
     hiddenFilterColumns
     filterColumnLabels
@@ -73,6 +91,12 @@ query OverlayDataTableVisualizationMetadataForLayer($tocItemId: Int!) {
       columnStatsUrl
       visualizationColumns
       visualizationOps
+      calculationMode
+      additionalReplicateIdentifiers
+      replicateLabel
+      replicateLabelCustom
+      withinReplicateOperations
+      acrossReplicateOperations
       requiredFilterColumns
       hiddenFilterColumns
       filterColumnLabels
@@ -172,6 +196,12 @@ mutation SetOverlayDataTableVisualizationSettings(
   $requiredFilterColumns: [String]!
   $hiddenFilterColumns: [String]!
   $filterColumnLabels: JSON!
+  $calculationMode: String
+  $additionalReplicateIdentifiers: [String]
+  $replicateLabel: String
+  $replicateLabelCustom: String
+  $withinReplicateOperations: JSON
+  $acrossReplicateOperations: JSON
 ) {
   setOverlayDataTableVisualizationSettings(
     input: {
@@ -181,6 +211,12 @@ mutation SetOverlayDataTableVisualizationSettings(
       requiredFilterColumns: $requiredFilterColumns
       hiddenFilterColumns: $hiddenFilterColumns
       filterColumnLabels: $filterColumnLabels
+      calculationMode: $calculationMode
+      additionalReplicateIdentifiers: $additionalReplicateIdentifiers
+      replicateLabel: $replicateLabel
+      replicateLabelCustom: $replicateLabelCustom
+      withinReplicateOperations: $withinReplicateOperations
+      acrossReplicateOperations: $acrossReplicateOperations
     }
   ) {
     overlayDataTable {

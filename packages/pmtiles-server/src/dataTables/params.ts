@@ -26,6 +26,9 @@ export const AGGREGATIONS = [
 ] as const;
 export type Aggregation = (typeof AGGREGATIONS)[number];
 
+export const WITHIN_AGGREGATIONS = ["sum", "mean", "min", "max"] as const;
+export type WithinAggregation = (typeof WITHIN_AGGREGATIONS)[number];
+
 export type FilterOperator =
   | "eq"
   | "neq"
@@ -66,6 +69,13 @@ export interface ParsedQuery {
   /** null means "negotiate via the Accept header" */
   format: OutputFormat | null;
   groupBy: string[];
+  /**
+   * Extra columns that, with `groupBy` and the time step, identify one
+   * replicate. Empty means the one-pass row aggregate.
+   */
+  replicateBy: string[];
+  /** How multiple rows inside one replicate collapse. Required when `replicateBy` is set. */
+  within: WithinAggregation | null;
   ops: Aggregation[];
   /** Column to aggregate. Required for every op except count. */
   column: string | null;
@@ -215,6 +225,32 @@ export function parseQueryParams(searchParams: URLSearchParams): ParsedQuery {
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
 
+  const replicateBy = (searchParams.get("replicateBy") || "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+  const withinRaw = searchParams.get("within");
+  let within: WithinAggregation | null = null;
+  if (replicateBy.length > 0) {
+    if (withinRaw === null || withinRaw.trim() === "") {
+      throw new QueryError(
+        `replicateBy requires within (sum, mean, min, or max).`
+      );
+    }
+    if (!(WITHIN_AGGREGATIONS as readonly string[]).includes(withinRaw.trim())) {
+      throw new QueryError(
+        `Invalid within "${withinRaw}". Use ${WITHIN_AGGREGATIONS.join(", ")}.`
+      );
+    }
+    within = withinRaw.trim() as WithinAggregation;
+    const overlap = replicateBy.filter((name) => groupBy.includes(name));
+    if (overlap.length > 0) {
+      throw new QueryError(
+        `replicateBy cannot include groupBy column(s): ${overlap.join(", ")}.`
+      );
+    }
+  }
+
   const ops: Aggregation[] = [];
   const opParam = searchParams.get("op");
   if (opParam !== null) {
@@ -308,6 +344,8 @@ export function parseQueryParams(searchParams: URLSearchParams): ParsedQuery {
   return {
     format,
     groupBy,
+    replicateBy,
+    within,
     ops,
     column,
     limit,

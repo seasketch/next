@@ -2,6 +2,7 @@ import { AsyncBuffer, FileMetaData } from "hyparquet";
 import { parquetReadColumn } from "hyparquet/src/read.js";
 import {
   Aggregation,
+  WithinAggregation,
   isHiddenWhenColumn,
   MAX_LIMIT,
   ParsedQuery,
@@ -356,7 +357,10 @@ export async function executeQuery(options: {
     const startCol = plan.when ? loaded.get(WHEN_START_COLUMN) : undefined;
     const endCol = plan.when ? loaded.get(WHEN_END_COLUMN) : undefined;
 
-    const otherColumns = new Set<string>(query.groupBy);
+    const otherColumns = new Set<string>([
+      ...query.groupBy,
+      ...query.replicateBy,
+    ]);
     if (aggColumn) otherColumns.add(aggColumn);
     const columnData = new Map<string, unknown[]>(loaded);
     await Promise.all(
@@ -368,10 +372,12 @@ export async function executeQuery(options: {
     );
 
     const groupByData = query.groupBy.map((col) => columnData.get(col)!);
+    const replicateData = query.replicateBy.map((col) => columnData.get(col)!);
     const aggData = aggColumn ? columnData.get(aggColumn)! : null;
 
     for (const i of matched) {
       const groupValues = groupByData.map((data) => jsonValue(data[i]));
+      const replicateValues = replicateData.map((data) => jsonValue(data[i]));
       const stepKeys =
         whenStep && plan.when
           ? (() => {
@@ -390,7 +396,9 @@ export async function executeQuery(options: {
           : [null];
       for (const stepKey of stepKeys) {
         const keyValues =
-          stepKey === null ? groupValues : [stepKey, ...groupValues];
+          stepKey === null
+            ? [...groupValues, ...replicateValues]
+            : [stepKey, ...groupValues, ...replicateValues];
         const key = JSON.stringify(keyValues);
         let group = groups.get(key);
         if (!group) {
@@ -424,6 +432,24 @@ export async function executeQuery(options: {
           }
         }
       }
+    }
+  }
+
+  if (query.replicateBy.length > 0 && query.within) {
+    if (groups.size > MAX_LIMIT) {
+      throw new QueryError(
+        `replicateBy produced ${groups.size} replicates (max ${MAX_LIMIT}). Add filters or fewer replicate columns.`
+      );
+    }
+    const collapsed = collapseReplicateGroups(
+      groups,
+      query.replicateBy.length,
+      query.within,
+      needsMedian
+    );
+    groups.clear();
+    for (const [key, group] of collapsed) {
+      groups.set(key, group);
     }
   }
 
@@ -517,6 +543,65 @@ function buildQuerySeries(
       })
       .filter((stat) => stat.rows > 0),
   };
+}
+
+function reducedWithin(
+  op: WithinAggregation,
+  group: GroupAccumulator
+): number | null {
+  if (group.valueCount === 0) return null;
+  switch (op) {
+    case "sum":
+      return group.sum;
+    case "mean":
+      return group.sum / group.valueCount;
+    case "min":
+      return typeof group.min === "number" ? group.min : null;
+    case "max":
+      return typeof group.max === "number" ? group.max : null;
+  }
+}
+
+/**
+ * Fold per-replicate accumulators into one accumulator per output group.
+ * `count` on the result is the number of replicates, including zeros.
+ */
+function collapseReplicateGroups(
+  replicates: Map<string, GroupAccumulator>,
+  replicateColumnCount: number,
+  within: WithinAggregation,
+  needsMedian: boolean
+): Map<string, GroupAccumulator> {
+  const out = new Map<string, GroupAccumulator>();
+  for (const group of replicates.values()) {
+    const value = reducedWithin(within, group);
+    if (value === null) continue;
+    const keyValues = group.keyValues.slice(
+      0,
+      group.keyValues.length - replicateColumnCount
+    );
+    const key = JSON.stringify(keyValues);
+    let acc = out.get(key);
+    if (!acc) {
+      acc = {
+        keyValues,
+        rowCount: 0,
+        valueCount: 0,
+        sum: 0,
+        min: null,
+        max: null,
+        values: needsMedian ? [] : undefined,
+      };
+      out.set(key, acc);
+    }
+    acc.rowCount += group.rowCount;
+    acc.valueCount += 1;
+    acc.sum += value;
+    if (acc.values) acc.values.push(value);
+    if (acc.min === null || value < (acc.min as number)) acc.min = value;
+    if (acc.max === null || value > (acc.max as number)) acc.max = value;
+  }
+  return out;
 }
 
 function aggregateValue(

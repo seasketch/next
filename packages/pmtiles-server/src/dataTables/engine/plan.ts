@@ -365,6 +365,24 @@ export async function planQuery(
       throw unknownColumnError(name, columns);
     }
   }
+  if (query.ops.length > 0) {
+    for (const name of query.replicateBy) {
+      if (!columns.has(name)) {
+        throw unknownColumnError(name, columns);
+      }
+    }
+  }
+  if (
+    query.ops.length > 0 &&
+    (query.within === "sum" || query.within === "mean")
+  ) {
+    const column = query.column ? columns.get(query.column) : undefined;
+    if (!column || (column.kind !== "number" && column.kind !== "timestamp")) {
+      throw new QueryError(
+        `within=${query.within} requires a numeric column.`
+      );
+    }
+  }
   if (query.column !== null) {
     if (!columns.has(query.column)) {
       throw unknownColumnError(query.column, columns);
@@ -402,7 +420,7 @@ export async function planQuery(
   // Determine which columns need to be read
   let neededColumns: string[] | undefined;
   if (query.ops.length > 0) {
-    const needed = new Set<string>(query.groupBy);
+    const needed = new Set<string>([...query.groupBy, ...query.replicateBy]);
     if (query.column) needed.add(query.column);
     for (const f of filters) needed.add(f.column);
     if (when) {

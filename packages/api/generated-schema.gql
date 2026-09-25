@@ -11949,6 +11949,20 @@ type OutstandingSurveyInvites {
 }
 
 type OverlayDataTable implements Node {
+  """
+  JSON object of data column to an array of sum|mean|min|max. Missing columns default to ["mean"].
+  """
+  acrossReplicateOperations: JSON!
+
+  """
+  Columns that, with the time step and join column, identify one replicate.
+  """
+  additionalReplicateIdentifiers: [String]!
+
+  """
+  simple averages matching rows. replicates collapses rows inside a sampling unit, then calculates across those units.
+  """
+  calculationMode: String!
   columnStatsRemote: String!
   columnStatsUrl: String
   createdAt: Datetime
@@ -12002,6 +12016,12 @@ type OverlayDataTable implements Node {
   replacedById: Int
 
   """
+  Preset key for the replicate unit shown in the legend. custom uses replicate_label_custom.
+  """
+  replicateLabel: String!
+  replicateLabelCustom: String
+
+  """
   Columns that must appear as filters when this table is displayed on the map.
   End users can change the filter values but cannot remove these filters.
   """
@@ -12038,6 +12058,11 @@ type OverlayDataTable implements Node {
   Operations that may/should be used for creating thematic maps. For example `mean` or `max`
   """
   visualizationOps: [String]
+
+  """
+  JSON object of data column to sum|mean|min|max. Missing columns default to sum.
+  """
+  withinReplicateOperations: JSON!
 }
 
 """
@@ -16525,6 +16550,10 @@ type SetForumOrderPayload {
 
 """All input for the `setOverlayDataTableVisualizationSettings` mutation."""
 input SetOverlayDataTableVisualizationSettingsInput {
+  acrossReplicateOperations: JSON
+  additionalReplicateIdentifiers: [String]
+  calculationMode: String
+
   """
   An arbitrary string value with no semantic meaning. Will be included in the
   payload verbatim. May be used to track mutations by the client.
@@ -16532,10 +16561,13 @@ input SetOverlayDataTableVisualizationSettingsInput {
   clientMutationId: String
   filterColumnLabels: JSON
   hiddenFilterColumns: [String]
+  replicateLabel: String
+  replicateLabelCustom: String
   requiredFilterColumns: [String]
   tableId: Int
   visualizationColumns: [String]
   visualizationOps: [String]
+  withinReplicateOperations: JSON
 }
 
 """The output of our `setOverlayDataTableVisualizationSettings` mutation."""

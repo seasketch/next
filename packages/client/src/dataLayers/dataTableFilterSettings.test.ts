@@ -9,7 +9,9 @@ import {
   isFilterColumnLabels,
   parseFilterColumnLabels,
   requiredDataTableFilterColumns,
+  replicateQueryFields,
   resolveDataTableVisualizationSettings,
+  buildDataTableQuerySearchParams,
 } from "./dataTableQueryApi";
 
 describe("isFilterColumnLabels", () => {
@@ -182,5 +184,58 @@ describe("hiddenDataTableFilterColumns", () => {
       })
     ).toEqual(["region"]);
     expect(requiredDataTableFilterColumns({})).toEqual([]);
+  });
+});
+
+describe("replicate calculation mode", () => {
+  it("uses across-replicate ops and keeps a bookmarked op that is still allowed", () => {
+    const resolved = resolveDataTableVisualizationSettings(
+      {
+        calculationMode: "replicates",
+        visualizationColumns: ["count"],
+        acrossReplicateOperations: { count: ["sum", "mean"] },
+        additionalReplicateIdentifiers: ["zone", "transect"],
+        withinReplicateOperations: { count: "sum" },
+      },
+      { column: "count", op: "sum" }
+    );
+    expect(resolved.op).toBe("sum");
+    expect(resolved.column).toBe("count");
+  });
+
+  it("clamps a bookmarked op that replicates mode does not allow", () => {
+    expect(
+      resolveDataTableVisualizationSettings(
+        {
+          calculationMode: "replicates",
+          acrossReplicateOperations: { count: ["mean"] },
+        },
+        { column: "count", op: "median" }
+      ).op
+    ).toBe("mean");
+  });
+
+  it("sends replicateBy only when identifiers are configured", () => {
+    const fields = replicateQueryFields(
+      {
+        calculationMode: "replicates",
+        additionalReplicateIdentifiers: ["zone", "transect"],
+        withinReplicateOperations: { count: "sum" },
+      },
+      "count"
+    );
+    const params = buildDataTableQuerySearchParams({
+      groupBy: "site",
+      op: "mean",
+      column: "count",
+      ...fields,
+    });
+    expect(params.get("replicateBy")).toBe("zone,transect");
+    expect(params.get("within")).toBe("sum");
+    expect(
+      buildDataTableQuerySearchParams({ op: "mean", column: "count" }).has(
+        "replicateBy"
+      )
+    ).toBe(false);
   });
 });

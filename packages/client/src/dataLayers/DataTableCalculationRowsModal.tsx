@@ -1,4 +1,4 @@
-import { useContext, useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { Trans, useTranslation } from "react-i18next";
 import clsx from "clsx";
@@ -11,6 +11,11 @@ import {
 import Button from "../components/Button";
 import Spinner from "../components/Spinner";
 import { MapManagerContext } from "./MapContextManager";
+import {
+  parseWithinReplicateOperations,
+  withinOpForColumn,
+  WithinReplicateOp,
+} from "./dataTableQueryApi";
 import {
   columnStatsUrlForTable,
   useDataTableColumnStats,
@@ -46,6 +51,51 @@ import {
 } from "./DataTableValueTooltip";
 import { formatLegendNumber } from "./legends/DataTableLegendBubble";
 
+/** A, B, … Z, AA, AB, … so a long replicate list stays unambiguous. */
+const REPLICATE_SORT_ID = "__replicate";
+
+function replicateCode(index: number): string {
+  let n = index + 1;
+  let code = "";
+  while (n > 0) {
+    n -= 1;
+    code = String.fromCharCode(65 + (n % 26)) + code;
+    n = Math.floor(n / 26);
+  }
+  return code;
+}
+
+function reduceWithin(op: WithinReplicateOp, values: number[]): number {
+  if (op === "sum") return values.reduce((total, value) => total + value, 0);
+  if (op === "mean") {
+    return values.reduce((total, value) => total + value, 0) / values.length;
+  }
+  if (op === "min") return Math.min(...values);
+  return Math.max(...values);
+}
+
+function reduceAcross(op: DataTableAggregation, values: number[]): number | null {
+  if (values.length === 0) return null;
+  if (op === "count") return values.length;
+  if (op === "sum") return values.reduce((total, value) => total + value, 0);
+  if (op === "min") return Math.min(...values);
+  if (op === "max") return Math.max(...values);
+  if (op === "median") {
+    const sorted = [...values].sort((a, b) => a - b);
+    const mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 === 1
+      ? sorted[mid]
+      : (sorted[mid - 1] + sorted[mid]) / 2;
+  }
+  return values.reduce((total, value) => total + value, 0) / values.length;
+}
+
+function finiteMeasure(row: { [column: string]: unknown }, column: string): number | null {
+  const raw = row[column];
+  const value = typeof raw === "number" ? raw : Number(raw);
+  return Number.isFinite(value) ? value : null;
+}
+
 /**
  * QA/QC modal listing every row involved in calculating the statistics shown
  * on the map for one site (join-column value), with the currently active
@@ -67,8 +117,45 @@ import { formatLegendNumber } from "./legends/DataTableLegendBubble";
 
 type CalculationRow = { [column: string]: unknown };
 
-const DEFAULT_COLUMN_WIDTH = 150;
-const WIDE_COLUMN_WIDTH = 185;
+const HEADER_FONT = "600 12px Inter, ui-sans-serif, system-ui, sans-serif";
+const CELL_FONT = "400 12px Inter, ui-sans-serif, system-ui, sans-serif";
+/** `px-3` on the header and cells. */
+const COLUMN_PAD_X = 24;
+/** Room for the sort arrow drawn after the header label. */
+const SORT_MARK = 18;
+/** Long cell values can still ellipsize. Headers never do. */
+const MAX_CELL_COLUMN_WIDTH = 280;
+
+let measureCanvas: HTMLCanvasElement | null = null;
+
+function textWidth(text: string, font: string): number {
+  if (typeof document === "undefined") {
+    return text.length * 8;
+  }
+  if (!measureCanvas) {
+    measureCanvas = document.createElement("canvas");
+  }
+  const context = measureCanvas.getContext("2d");
+  if (!context) {
+    return text.length * 8;
+  }
+  context.font = font;
+  return context.measureText(text).width;
+}
+
+/** Column is at least as wide as its full header, and wider when the values need it. */
+function fitColumnWidth(label: string, samples: string[]): number {
+  const header =
+    Math.ceil(textWidth(label, HEADER_FONT)) + COLUMN_PAD_X + SORT_MARK + 4;
+  let data = 0;
+  for (const sample of samples) {
+    data = Math.max(
+      data,
+      Math.ceil(textWidth(sample, CELL_FONT)) + COLUMN_PAD_X
+    );
+  }
+  return Math.max(header, Math.min(data, MAX_CELL_COLUMN_WIDTH));
+}
 /**
  * Naive (non-virtualized) rendering keeps scrolling instant, but very large
  * result sets would create hundreds of thousands of cells. Cap the rendered
@@ -229,11 +316,16 @@ export default function DataTableCalculationRowsModal({
   const [chosenStep, setChosenStep] = useState<
     CalculationRowsSelection | undefined
   >(undefined);
-  const [sortState, setSortState] = useState<{
-    id: string;
-    desc: boolean;
-  } | null>(null);
+  /** Undefined keeps the mode default (replicate ascending, or unsorted). */
+  const [sortOverride, setSortOverride] = useState<
+    { id: string; desc: boolean } | null | undefined
+  >(undefined);
   const [showAllRows, setShowAllRows] = useState(false);
+  const [focusReplicate, setFocusReplicate] = useState<string | null>(null);
+  const [highlightedReplicate, setHighlightedReplicate] = useState<string | null>(
+    null
+  );
+  const rowsScrollRef = useRef<HTMLDivElement>(null);
 
   const joinColumn = table?.joinColumn;
   const sites = useMemo(() => {
@@ -442,10 +534,152 @@ export default function DataTableCalculationRowsModal({
 
   // Stop sorting by a column once it is hidden.
   useEffect(() => {
-    if (sortState && hiddenColumns.has(sortState.id)) {
-      setSortState(null);
+    if (
+      sortOverride &&
+      sortOverride.id !== REPLICATE_SORT_ID &&
+      hiddenColumns.has(sortOverride.id)
+    ) {
+      setSortOverride(null);
     }
-  }, [sortState, hiddenColumns]);
+  }, [sortOverride, hiddenColumns]);
+
+  const replicateRollup = useMemo(() => {
+    if (!table || table.calculationMode !== "replicates" || !settings?.query.column) {
+      return null;
+    }
+    const ids = (table.additionalReplicateIdentifiers || []).filter(
+      (name): name is string => Boolean(name)
+    );
+    if (ids.length === 0) return null;
+    const column = settings.query.column;
+    const within = withinOpForColumn(
+      parseWithinReplicateOperations(table.withinReplicateOperations),
+      column
+    );
+    const groups = new Map<string, number[]>();
+    for (const row of stepFilteredRows) {
+      const key = ids.map((id) => String(row[id] ?? "")).join("\u0000");
+      const raw = row[column];
+      const value = typeof raw === "number" ? raw : Number(raw);
+      if (!Number.isFinite(value)) continue;
+      const bucket = groups.get(key);
+      if (bucket) bucket.push(value);
+      else groups.set(key, [value]);
+    }
+    const reduced = [...groups.values()].map((values) =>
+      reduceWithin(within, values)
+    );
+    return { count: reduced.length, within };
+  }, [settings?.query.column, stepFilteredRows, table]);
+
+  const replicateAssignments = useMemo(() => {
+    if (!table || table.calculationMode !== "replicates") {
+      return null;
+    }
+    const extra = (table.additionalReplicateIdentifiers || []).filter(
+      (name): name is string => Boolean(name)
+    );
+    if (extra.length === 0 || stepFilteredRows.length === 0) {
+      return null;
+    }
+    const present = new Set(Object.keys(stepFilteredRows[0]));
+    const identity = [
+      ...temporalSourceFilterColumns(table.temporal),
+      table.joinColumn,
+      ...extra,
+    ].filter((name, index, all) => name && present.has(name) && all.indexOf(name) === index);
+    if (identity.length === 0) return null;
+    const keyFor = (row: { [column: string]: unknown }) =>
+      identity.map((name) => String(row[name] ?? "")).join("\u0000");
+    const unique = [...new Set(stepFilteredRows.map(keyFor))].sort((a, b) =>
+      a < b ? -1 : a > b ? 1 : 0
+    );
+    const codeByKey = new Map(
+      unique.map((key, index) => [key, replicateCode(index)])
+    );
+    const orderByKey = new Map(unique.map((key, index) => [key, index]));
+    const columnPhrase = identity
+      .map((name) => dataTableFilterLabel(name, columnLabels))
+      .join(", ");
+    const byRow = new Map<
+      { [column: string]: unknown },
+      { code: string; definition: string; order: number }
+    >();
+    for (const row of stepFilteredRows) {
+      byRow.set(row, {
+        code: codeByKey.get(keyFor(row)) || "A",
+        definition: columnPhrase,
+        order: orderByKey.get(keyFor(row)) ?? 0,
+      });
+    }
+    return byRow;
+  }, [columnLabels, stepFilteredRows, table]);
+
+  const sortState = useMemo(
+    () =>
+      sortOverride === undefined
+        ? replicateAssignments
+          ? { id: REPLICATE_SORT_ID, desc: false }
+          : null
+        : sortOverride?.id === REPLICATE_SORT_ID && !replicateAssignments
+          ? null
+          : sortOverride,
+    [replicateAssignments, sortOverride]
+  );
+
+  const calculationMath = useMemo(() => {
+    if (!measureColumn || !table) return null;
+    if (replicateAssignments) {
+      const within = withinOpForColumn(
+        parseWithinReplicateOperations(table.withinReplicateOperations),
+        measureColumn
+      );
+      const byCode = new Map<
+        string,
+        { code: string; order: number; values: number[] }
+      >();
+      for (const row of stepFilteredRows) {
+        const assignment = replicateAssignments.get(row);
+        if (!assignment) continue;
+        let group = byCode.get(assignment.code);
+        if (!group) {
+          group = { code: assignment.code, order: assignment.order, values: [] };
+          byCode.set(assignment.code, group);
+        }
+        const value = finiteMeasure(row, measureColumn);
+        if (value !== null) group.values.push(value);
+      }
+      const groups = [...byCode.values()]
+        .sort((a, b) => a.order - b.order)
+        .map((group) => ({
+          ...group,
+          reduced: group.values.length
+            ? reduceWithin(within, group.values)
+            : null,
+        }));
+      const reducedValues = groups
+        .map((group) => group.reduced)
+        .filter((value): value is number => value !== null);
+      return {
+        mode: "replicates" as const,
+        within,
+        groups,
+        result: reduceAcross(op, reducedValues),
+      };
+    }
+    const values: number[] = [];
+    for (const row of stepFilteredRows) {
+      const value = finiteMeasure(row, measureColumn);
+      if (value !== null) values.push(value);
+    }
+    const sum = values.reduce((total, value) => total + value, 0);
+    return {
+      mode: "simple" as const,
+      values,
+      sum,
+      result: reduceAcross(op, values),
+    };
+  }, [measureColumn, op, replicateAssignments, stepFilteredRows, table]);
 
   const displayRows = useMemo(() => {
     let out = stepFilteredRows;
@@ -466,6 +700,11 @@ export default function DataTableCalculationRowsModal({
       const key = sortState.id;
       const desc = sortState.desc;
       out = [...out].sort((a, b) => {
+        if (key === REPLICATE_SORT_ID) {
+          const ao = replicateAssignments?.get(a)?.order ?? 0;
+          const bo = replicateAssignments?.get(b)?.order ?? 0;
+          return desc ? bo - ao : ao - bo;
+        }
         const av = a[key];
         const bv = b[key];
         // Nulls last in both directions.
@@ -477,7 +716,7 @@ export default function DataTableCalculationRowsModal({
       });
     }
     return out;
-  }, [stepFilteredRows, filterText, sortState, columnIds]);
+  }, [stepFilteredRows, filterText, sortState, columnIds, replicateAssignments]);
 
   useEffect(() => {
     setShowAllRows(false);
@@ -504,21 +743,88 @@ export default function DataTableCalculationRowsModal({
     ? displayRows
     : displayRows.slice(0, MAX_RENDERED_ROWS);
 
+  useEffect(() => {
+    if (!focusReplicate) return;
+    const scroller = rowsScrollRef.current;
+    const code = CSS.escape(focusReplicate);
+    const total = scroller?.querySelector(`[data-replicate-total="${code}"]`);
+    const start = scroller?.querySelector(`[data-replicate-start="${code}"]`);
+    // The subtotal is rendered only after the group's last row. A long
+    // replicate can be cut off by the render cap, so expand before scrolling.
+    if (!total && sortState?.id === REPLICATE_SORT_ID && !showAllRows && start) {
+      setShowAllRows(true);
+      return;
+    }
+    const target = total || start;
+    if (!target) {
+      if (!showAllRows) setShowAllRows(true);
+      return;
+    }
+    setHighlightedReplicate(focusReplicate);
+    target.scrollIntoView({
+      block: total ? "end" : "center",
+      behavior: "smooth",
+    });
+    setFocusReplicate(null);
+  }, [focusReplicate, renderedRows, showAllRows, sortState?.id]);
+
+  useEffect(() => {
+    const scroller = rowsScrollRef.current;
+    if (!highlightedReplicate || !scroller) return;
+    let settled: number | null = null;
+    const arm = () => {
+      settled = scroller.scrollTop;
+    };
+    const onScroll = () => {
+      if (settled === null) return;
+      if (Math.abs(scroller.scrollTop - settled) > 56) {
+        setHighlightedReplicate(null);
+      }
+    };
+    scroller.addEventListener("scrollend", arm);
+    const fallback = window.setTimeout(arm, 800);
+    scroller.addEventListener("scroll", onScroll);
+    return () => {
+      window.clearTimeout(fallback);
+      scroller.removeEventListener("scrollend", arm);
+      scroller.removeEventListener("scroll", onScroll);
+    };
+  }, [highlightedReplicate]);
+
   const toggleSort = (id: string) => {
-    setSortState((prev) =>
-      prev?.id === id
-        ? prev.desc
-          ? null
-          : { id, desc: true }
-        : { id, desc: false }
-    );
+    setSortOverride((prev) => {
+      const current =
+        prev === undefined
+          ? replicateAssignments
+            ? { id: REPLICATE_SORT_ID, desc: false }
+            : null
+          : prev;
+      if (current?.id === id) {
+        return current.desc ? null : { id, desc: true };
+      }
+      return { id, desc: false };
+    });
   };
 
-  const columnWidth = (id: string) =>
-    id === measureColumn || filteredColumnSet.has(id)
-      ? WIDE_COLUMN_WIDTH
-      : DEFAULT_COLUMN_WIDTH;
-  const totalWidth = columnIds.reduce((sum, id) => sum + columnWidth(id), 0);
+  const columnWidths = useMemo(() => {
+    const sample = stepFilteredRows.slice(0, 120);
+    const widths = new Map<string, number>();
+    for (const id of columnIds) {
+      const texts = sample.map((row) => {
+        const raw = row[id];
+        return raw === null || raw === undefined || raw === ""
+          ? "null"
+          : String(raw);
+      });
+      widths.set(id, fitColumnWidth(dataTableFilterLabel(id, columnLabels), texts));
+    }
+    return widths;
+  }, [columnIds, columnLabels, stepFilteredRows]);
+  const columnWidth = (id: string) => columnWidths.get(id) ?? 96;
+  const replicateColumnWidth = fitColumnWidth(t("Replicate"), ["W"]);
+  const totalWidth =
+    columnIds.reduce((sum, id) => sum + columnWidth(id), 0) +
+    (replicateAssignments ? replicateColumnWidth : 0);
 
   const opTitleLabels: { [key in DataTableAggregation]: string } = {
     mean: t("Mean"),
@@ -575,6 +881,15 @@ export default function DataTableCalculationRowsModal({
       aria-modal="true"
       aria-label={t("Rows in calculation")}
     >
+      <style>
+        {/* eslint-disable-next-line i18next/no-literal-string */}
+        {`@keyframes replicate-flash {
+          0% { background-color: #fcd34d; }
+          40% { background-color: #fde68a; }
+          100% { background-color: #fffbeb; }
+        }
+        .replicate-flash { animation: replicate-flash 1.1s ease-out forwards; }`}
+      </style>
       <div className="fixed inset-0 bg-gray-500/75" aria-hidden="true" />
       <div
         className="fixed inset-0 flex items-start justify-center overflow-y-auto px-4 py-8"
@@ -715,6 +1030,17 @@ export default function DataTableCalculationRowsModal({
                   : t("({{total}})", { total: displayRows.length })}
               </span>
             ) : null}
+            {replicateRollup ? (
+              <span className="ml-2 text-gray-500">
+                {t("{{count}} {{unit}} totals ({{within}} within each)", {
+                  count: replicateRollup.count,
+                  unit: table?.replicateLabel === "custom" && table.replicateLabelCustom
+                    ? table.replicateLabelCustom
+                    : table?.replicateLabel || t("replicate"),
+                  within: replicateRollup.within,
+                })}
+              </span>
+            ) : null}
             {(activeStep || auditingWindow) &&
             !rowsState.loading &&
             result &&
@@ -739,10 +1065,21 @@ export default function DataTableCalculationRowsModal({
               disabled={rowsState.loading || displayRows.length === 0}
               title={t("Download these rows as CSV")}
               onClick={() => {
-                const columns = columnIds.map((id) => ({
-                  id,
-                  label: dataTableFilterLabel(id, columnLabels),
-                }));
+                const columns = [
+                  ...(replicateAssignments
+                    ? [{ id: "__replicate", label: t("Replicate") }]
+                    : []),
+                  ...columnIds.map((id) => ({
+                    id,
+                    label: dataTableFilterLabel(id, columnLabels),
+                  })),
+                ];
+                const exportRows = replicateAssignments
+                  ? displayRows.map((row) => ({
+                      ...row,
+                      __replicate: replicateAssignments.get(row)?.code ?? "",
+                    }))
+                  : displayRows;
                 const context = auditingWindow
                   ? range
                   : activeStep
@@ -754,7 +1091,7 @@ export default function DataTableCalculationRowsModal({
                     site || "",
                     context,
                   ]),
-                  calculationRowsToCsv(columns, displayRows)
+                  calculationRowsToCsv(columns, exportRows)
                 );
               }}
             >
@@ -822,7 +1159,7 @@ export default function DataTableCalculationRowsModal({
         </div>
 
         {/* Rows table */}
-        <div className="min-h-0 flex-1 overflow-auto">
+        <div ref={rowsScrollRef} className="min-h-0 flex-1 overflow-auto">
           {rowsState.loading ? (
             <div className="flex h-full items-center justify-center">
               <Spinner large />
@@ -842,6 +1179,22 @@ export default function DataTableCalculationRowsModal({
           ) : (
             <div style={{ width: totalWidth, minWidth: "100%" }}>
               <div className="sticky top-0 z-10 flex border-b bg-gray-100">
+                {replicateAssignments ? (
+                  <button
+                    type="button"
+                    onClick={() => toggleSort(REPLICATE_SORT_ID)}
+                    style={{ width: replicateColumnWidth }}
+                    className="flex-none cursor-pointer truncate px-3 py-1.5 text-left text-xs font-semibold text-gray-600 hover:bg-gray-200"
+                    title={t("Sort by this column")}
+                  >
+                    {t("Replicate")}
+                    {sortState?.id === REPLICATE_SORT_ID && (
+                      <span className="ml-1 text-gray-400" aria-hidden>
+                        {sortState.desc ? "\u2193" : "\u2191"}
+                      </span>
+                    )}
+                  </button>
+                ) : null}
                 {columnIds.map((id) => {
                   const sorted = sortState?.id === id;
                   return (
@@ -880,14 +1233,69 @@ export default function DataTableCalculationRowsModal({
                   );
                 })}
               </div>
-              {renderedRows.map((row, index) => (
+              {renderedRows.map((row, index) => {
+                const replicate = replicateAssignments?.get(row);
+                const nextRow = renderedRows[index + 1];
+                const nextCode = nextRow
+                  ? replicateAssignments?.get(nextRow)?.code
+                  : undefined;
+                const displayIndex = displayRows.indexOf(row);
+                const following = displayRows[displayIndex + 1];
+                const groupEnded =
+                  sortState?.id === REPLICATE_SORT_ID &&
+                  replicate &&
+                  replicate.code !== nextCode &&
+                  (!following ||
+                    replicateAssignments?.get(following)?.code !== replicate.code);
+                const groupMath =
+                  groupEnded && calculationMath?.mode === "replicates"
+                    ? calculationMath.groups.find(
+                        (group) => group.code === replicate.code
+                      )
+                    : undefined;
+                const previous = renderedRows[index - 1];
+                const groupStart =
+                  !!replicate &&
+                  replicateAssignments?.get(previous)?.code !== replicate.code;
+                return (
+                <div key={index}>
                 <div
-                  key={index}
+                  data-replicate-start={groupStart ? replicate.code : undefined}
                   className={clsx(
                     "flex border-b border-gray-100 text-xs",
-                    index % 2 === 1 && "bg-gray-50"
+                    highlightedReplicate &&
+                      replicate?.code === highlightedReplicate
+                      ? "replicate-flash"
+                      : index % 2 === 1 && "bg-gray-50"
                   )}
                 >
+                  {replicateAssignments?.get(row) ? (
+                    <div
+                      style={{ width: replicateColumnWidth }}
+                      className="flex-none px-3 py-1.5"
+                    >
+                      <span className="group relative">
+                        <span
+                          className="cursor-help border-b border-dotted border-gray-400 font-medium text-gray-800"
+                          tabIndex={0}
+                        >
+                          {replicateAssignments.get(row)!.code}
+                        </span>
+                        <span
+                          role="tooltip"
+                          className="pointer-events-none absolute left-0 top-full z-20 mt-1 hidden w-64 rounded bg-gray-900 px-2 py-1.5 text-left text-[11px] font-normal leading-snug text-white group-hover:block group-focus-within:block"
+                        >
+                          {t(
+                            "A replicate is every row that shares {{columns}}.",
+                            {
+                              columns:
+                                replicateAssignments.get(row)!.definition,
+                            }
+                          )}
+                        </span>
+                      </span>
+                    </div>
+                  ) : null}
                   {columnIds.map((id) => {
                     const isMeasure = id === measureColumn;
                     const cellValue = row[id];
@@ -910,7 +1318,44 @@ export default function DataTableCalculationRowsModal({
                     );
                   })}
                 </div>
-              ))}
+                {groupMath && groupMath.reduced !== null ? (
+                  <div
+                    data-replicate-total={groupMath.code}
+                    className={clsx(
+                      "flex scroll-mb-2 items-baseline gap-3 border-b border-primary-100 px-3 py-1.5 text-xs text-primary-900",
+                      highlightedReplicate === groupMath.code
+                        ? "replicate-flash"
+                        : "bg-primary-50"
+                    )}
+                  >
+                    <span
+                      className="flex-none font-semibold"
+                      style={{ width: replicateColumnWidth }}
+                    >
+                      {groupMath.code}
+                    </span>
+                    <span className="text-primary-800">
+                      {t("{{within}} of {{column}}", {
+                        within:
+                          calculationMath?.mode === "replicates"
+                            ? opTitleLabels[calculationMath.within]
+                            : "",
+                        column: measureLabel || measureColumn,
+                      })}
+                    </span>
+                    <span className="font-semibold tabular-nums">
+                      {formatLegendNumber(groupMath.reduced)}
+                    </span>
+                    <span className="min-w-0 truncate text-primary-700/80">
+                      {groupMath.values.length <= 8
+                        ? groupMath.values.map((value) => formatLegendNumber(value)).join(" + ")
+                        : t("{{count}} values", { count: groupMath.values.length })}
+                    </span>
+                  </div>
+                ) : null}
+                </div>
+                );
+              })}
               {!showAllRows && displayRows.length > MAX_RENDERED_ROWS && (
                 <div className="flex items-center justify-center border-b border-gray-100 py-3">
                   <button
@@ -928,6 +1373,15 @@ export default function DataTableCalculationRowsModal({
           )}
             </div>
           </div>
+          {calculationMath ? (
+            <CalculationMathStrip
+              math={calculationMath}
+              columnLabel={measureLabel || measureColumn || ""}
+              acrossLabel={opTitle}
+            op={op}
+            onFocusReplicate={setFocusReplicate}
+          />
+          ) : null}
           <div className="flex flex-none items-center justify-end border-t bg-gray-50 px-6 py-3">
             <Button label={t("Close")} onClick={onRequestClose} primary />
           </div>
@@ -935,6 +1389,176 @@ export default function DataTableCalculationRowsModal({
       </div>
     </div>,
     document.body
+  );
+}
+
+function ReplicateExpression({
+  op,
+  groups,
+  result,
+  onFocusReplicate,
+}: {
+  op: DataTableAggregation;
+  groups: { code: string; reduced: number | null }[];
+  result: number | null;
+  onFocusReplicate?: (code: string) => void;
+}) {
+  const { t } = useTranslation("homepage");
+  const terms = groups.map((group, index) => (
+    <span key={group.code}>
+      {index > 0 ? (
+        <span className="text-gray-400">
+          {op === "min" || op === "max" || op === "median" ? ", " : " + "}
+        </span>
+      ) : null}
+      <button
+        type="button"
+        className="cursor-pointer rounded px-0.5 text-primary-800 underline decoration-dotted decoration-primary-300 hover:bg-primary-50"
+        title={t("Replicate {{code}}", { code: group.code })}
+        onClick={() => onFocusReplicate?.(group.code)}
+      >
+        {group.reduced === null ? t("null") : formatLegendNumber(group.reduced)}
+      </button>
+    </span>
+  ));
+  const resultText = result === null ? t("null") : formatLegendNumber(result);
+  return (
+    <>
+      {op === "mean" ? (
+        // eslint-disable-next-line i18next/no-literal-string
+        <span>(</span>
+      ) : null}
+      {op === "min" ? (
+        <span>
+          {t("min")}
+          {/* eslint-disable-next-line i18next/no-literal-string */}
+          (
+        </span>
+      ) : null}
+      {op === "max" ? (
+        <span>
+          {t("max")}
+          {/* eslint-disable-next-line i18next/no-literal-string */}
+          (
+        </span>
+      ) : null}
+      {op === "median" ? (
+        <span>
+          {t("median")}
+          {/* eslint-disable-next-line i18next/no-literal-string */}
+          (
+        </span>
+      ) : null}
+      {terms}
+      {op === "mean" ? (
+        <span>
+          {/* eslint-disable-next-line i18next/no-literal-string */}
+          {") / "}
+          {groups.length}
+        </span>
+      ) : null}
+      {op === "min" || op === "max" || op === "median" ? (
+        // eslint-disable-next-line i18next/no-literal-string
+        <span>)</span>
+      ) : null}
+      {/* eslint-disable-next-line i18next/no-literal-string */}
+      <span className="mx-1 text-gray-400">=</span>
+      <span className="font-semibold text-gray-900">{resultText}</span>
+    </>
+  );
+}
+
+function CalculationMathStrip({
+  math,
+  columnLabel,
+  acrossLabel,
+  op,
+  onFocusReplicate,
+}: {
+  math:
+    | {
+        mode: "replicates";
+        within: WithinReplicateOp;
+        groups: {
+          code: string;
+          values: number[];
+          reduced: number | null;
+        }[];
+        result: number | null;
+      }
+    | {
+        mode: "simple";
+        values: number[];
+        sum: number;
+        result: number | null;
+      };
+  columnLabel: string;
+  acrossLabel: string;
+  op: DataTableAggregation;
+  onFocusReplicate?: (code: string) => void;
+}) {
+  const { t } = useTranslation("homepage");
+  const withinLabel: { [key in WithinReplicateOp]: string } = {
+    sum: t("Sum"),
+    mean: t("Mean"),
+    min: t("Min"),
+    max: t("Max"),
+  };
+  if (math.mode === "replicates") {
+    return (
+      <div className="flex-none border-b bg-gray-50 px-6 py-2.5">
+        <p className="text-[11px] text-gray-500">
+          {t(
+            "{{within}} {{column}} inside each replicate, then {{across}} those {{count}} replicate values.",
+            {
+              within: withinLabel[math.within],
+              column: columnLabel,
+              across: acrossLabel,
+              count: math.groups.length,
+            }
+          )}
+        </p>
+        <div className="mt-1.5 flex flex-wrap items-baseline gap-x-0.5 text-sm tabular-nums text-gray-800">
+          <ReplicateExpression
+            op={op}
+            groups={math.groups}
+            result={math.result}
+            onFocusReplicate={onFocusReplicate}
+          />
+        </div>
+      </div>
+    );
+  }
+  const preview = math.values.slice(0, 8).map((value) => formatLegendNumber(value));
+  const more = math.values.length - preview.length;
+  return (
+    <div className="flex-none border-b bg-gray-50 px-6 py-2.5">
+      <p className="text-[11px] text-gray-500">
+        {t("Each row is one observation. {{op}} of {{column}} uses every value below.", {
+          op: acrossLabel,
+          column: columnLabel,
+        })}
+      </p>
+      <p className="mt-1 text-sm tabular-nums text-gray-800">
+        {op === "mean" && math.values.length > 0
+          ? t("{{sum}} ÷ {{count}} = {{result}}", {
+              sum: formatLegendNumber(math.sum),
+              count: math.values.length,
+              result: math.result === null ? t("null") : formatLegendNumber(math.result),
+            })
+          : t("{{op}} of {{count}} values = {{result}}", {
+              op: acrossLabel,
+              count: math.values.length,
+              result: math.result === null ? t("null") : formatLegendNumber(math.result),
+            })}
+        {preview.length > 0 ? (
+          <span className="ml-2 text-xs text-gray-500">
+            {preview.join(", ")}
+            {more > 0 ? t(", +{{count}} more", { count: more }) : ""}
+          </span>
+        ) : null}
+      </p>
+    </div>
   );
 }
 

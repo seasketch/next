@@ -55,6 +55,7 @@ import {
   hiddenDataTableFilterColumns,
   omitFiltersForColumns,
   parseFilterColumnLabels,
+  replicateQueryFields,
   resolveDataTableVisualizationSettings,
 } from "./dataTableQueryApi";
 import {
@@ -918,6 +919,7 @@ class MapContextManager extends EventEmitter {
       query: {
         column: resolved.column,
         op: resolved.op,
+        ...replicateQueryFields(table, resolved.column),
         filters: omitFiltersForColumns(
           resolved.filters,
           [
