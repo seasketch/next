@@ -346,26 +346,54 @@ export default function OrganismSelector({
   filters,
   orgQueryUrl,
   accessToken,
+  hiddenValues,
   onChange,
 }: {
   column: GeostatsAttribute;
   filters: DataTableFilter[];
   orgQueryUrl: string;
   accessToken?: string | null;
+  /** Nothing-seen placeholders etc. that must never be offered or selected. */
+  hiddenValues?: string[];
   onChange: (filters: DataTableFilter[]) => void;
 }) {
   const { t } = useTranslation("homepage");
-  const parsed = useMemo(() => parseStringFilterState(filters), [filters]);
+  const hidden = useMemo(() => new Set(hiddenValues || []), [hiddenValues]);
+  const parsed = useMemo(() => {
+    const state = parseStringFilterState(filters);
+    return hidden.size === 0
+      ? state
+      : {
+          ...state,
+          selected: state.selected.filter((value) => !hidden.has(value)),
+        };
+  }, [filters, hidden]);
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const [multi, setMulti] = useState(parsed.multi);
   const [mode, setMode] = useState<StringFilterMode>(parsed.mode);
   const [selected, setSelected] = useState<string[]>(parsed.selected);
-  const [catalogHits, setCatalogHits] = useState<OrgQueryHit[]>(
+  const [rawCatalogHits, setCatalogHits] = useState<OrgQueryHit[]>(
     () => peekOrganismCatalog(orgQueryUrl, accessToken) || []
   );
-  const [searchHits, setSearchHits] = useState<OrgQueryHit[] | null>(null);
+  const [rawSearchHits, setSearchHits] = useState<OrgQueryHit[] | null>(
+    null
+  );
+  const catalogHits = useMemo(
+    () =>
+      hidden.size === 0
+        ? rawCatalogHits
+        : rawCatalogHits.filter((hit) => !hidden.has(hit.value)),
+    [hidden, rawCatalogHits]
+  );
+  const searchHits = useMemo(
+    () =>
+      hidden.size === 0 || !rawSearchHits
+        ? rawSearchHits
+        : rawSearchHits.filter((hit) => !hidden.has(hit.value)),
+    [hidden, rawSearchHits]
+  );
   const [catalogLoading, setCatalogLoading] = useState(
     () => peekOrganismCatalog(orgQueryUrl, accessToken) == null
   );

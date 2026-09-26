@@ -272,11 +272,13 @@ function FilterValueEditor({
   organismColumn,
   orgQueryUrl,
   accessToken,
+  hiddenValues,
 }: {
   column: GeostatsAttribute;
   filters: DataTableFilter[];
   onChange: (filters: DataTableFilter[]) => void;
   queryLoading?: boolean;
+  hiddenValues?: string[];
   organismColumn?: string | null;
   orgQueryUrl?: string | null;
   accessToken?: string | null;
@@ -316,6 +318,7 @@ function FilterValueEditor({
         filters={filters}
         orgQueryUrl={orgQueryUrl}
         accessToken={accessToken}
+        hiddenValues={hiddenValues}
         onChange={onChange}
       />
     );
@@ -340,12 +343,19 @@ export default function DataTableFilterControls({
   organismColumn,
   orgQueryUrl,
   accessToken,
+  hiddenValuesByColumn = {},
   onChange,
   trailingAction,
 }: {
   columns: GeostatsAttribute[];
   filters: DataTableFilter[];
   visualizedColumns: string[];
+  /**
+   * Values never offered as choices, keyed by column (nothing-seen
+   * placeholders in the subject column, rows to ignore). Column stats passed
+   * in should already omit them; this reaches pickers fed from elsewhere.
+   */
+  hiddenValuesByColumn?: { [column: string]: string[] };
   /** Admin-required filter columns; shown first and not removable. */
   requiredColumns?: string[];
   /** Columns hidden from the Add filter list (temporal sources, admin-hidden). */
@@ -453,6 +463,7 @@ export default function DataTableFilterControls({
             organismColumn={organismColumn}
             orgQueryUrl={orgQueryUrl}
             accessToken={accessToken}
+            hiddenValues={hiddenValuesByColumn[columnName]}
             onChange={(nextFilters) =>
               onChange(replaceColumnFilters(filters, columnName, nextFilters))
             }

@@ -28,6 +28,11 @@ import DataTableFilterControls, {
 } from "../DataTableFilterControls";
 import DataTableVisualizationControls from "../DataTableVisualizationControls";
 import {
+  hiddenFilterValuesByColumn,
+  omitHiddenFilterValues,
+  omitHiddenFilterValuesFromFilters,
+} from "../hiddenFilterValues";
+import {
   columnStatsUrlForTable,
   numericColumnNames,
   useDataTableColumnStats,
@@ -133,7 +138,20 @@ export default function DataTableLegendPanel({
     columnStatsUrl,
     mapAccessToken
   );
-  const columnStats = columnStatsState.columnStats;
+  const rawColumnStats = columnStatsState.columnStats;
+  const hiddenValues = useMemo(
+    () => (table ? hiddenFilterValuesByColumn(table) : {}),
+    [table]
+  );
+  // Nothing-seen placeholders and rows to ignore are never offered as
+  // filter choices, and default required filters must not land on them.
+  const columnStats = useMemo(() => {
+    if (!rawColumnStats?.columns) return rawColumnStats;
+    const columns = omitHiddenFilterValues(rawColumnStats.columns, hiddenValues);
+    return columns === rawColumnStats.columns
+      ? rawColumnStats
+      : { ...rawColumnStats, columns };
+  }, [hiddenValues, rawColumnStats]);
   const userChoice = useMemo(
     () => ({
       column: dataTable?.column,
@@ -227,10 +245,13 @@ export default function DataTableLegendPanel({
     }
     const organismColumn =
       organismColumnFromTable(table as { organism?: unknown }) || undefined;
-    const latestFilters = sanitizeDataTableFilters(
-      latest.filters,
-      columnStats.columns,
-      organismColumn ? { unrestrictedColumns: [organismColumn] } : undefined
+    const latestFilters = omitHiddenFilterValuesFromFilters(
+      sanitizeDataTableFilters(
+        latest.filters,
+        columnStats.columns,
+        organismColumn ? { unrestrictedColumns: [organismColumn] } : undefined
+      ),
+      hiddenValues
     );
     const required = requiredFilterColumns.filter(
       (column) => omittedFilterColumns.indexOf(column) === -1
@@ -267,6 +288,7 @@ export default function DataTableLegendPanel({
     columnStatsState.loading,
     requiredFilterColumns,
     omittedFilterColumns,
+    hiddenValues,
     visualizedColumns,
     userChoice.filters,
     userChoice.op,
@@ -278,10 +300,13 @@ export default function DataTableLegendPanel({
   const activeFilters = useMemo(() => {
     const organismColumn =
       organismColumnFromTable(table as { organism?: unknown }) || undefined;
-    const base = sanitizeDataTableFilters(
-      userChoice.filters,
-      columnStats?.columns || [],
-      organismColumn ? { unrestrictedColumns: [organismColumn] } : undefined
+    const base = omitHiddenFilterValuesFromFilters(
+      sanitizeDataTableFilters(
+        userChoice.filters,
+        columnStats?.columns || [],
+        organismColumn ? { unrestrictedColumns: [organismColumn] } : undefined
+      ),
+      hiddenValues
     ).filter((filter) => validFilterColumns.has(filter.column));
     if (!columnStats?.columns?.length || requiredFilterColumns.length === 0) {
       return base;
@@ -294,6 +319,7 @@ export default function DataTableLegendPanel({
     ).filter((filter) => validFilterColumns.has(filter.column));
   }, [
     columnStats?.columns,
+    hiddenValues,
     omittedFilterColumns,
     requiredFilterColumns,
     userChoice.filters,
@@ -397,6 +423,7 @@ export default function DataTableLegendPanel({
           )}
           orgQueryUrl={orgQueryUrlForTable(table)}
           accessToken={mapAccessToken}
+          hiddenValuesByColumn={hiddenValues}
           trailingAction={clearTableButton}
           onChange={(filters) => {
             const latest = manager?.getLayerDataTable?.(layerId);
