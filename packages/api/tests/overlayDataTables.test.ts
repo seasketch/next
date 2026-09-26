@@ -1192,11 +1192,11 @@ describe("overlay_data_tables", () => {
                 insert into overlay_data_tables (
                   table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
                   row_count, created_by, version, parquet_remote, column_stats_remote,
-                  organism
+                  subject_column, organism
                 ) values (
                   ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId}, 1,
                   'r2://bucket/a.parquet', 'r2://bucket/a.json',
-                  ${sql.json(previous)}
+                  'classcode', ${sql.json(previous)}
                 ) returning id`),
             );
           },

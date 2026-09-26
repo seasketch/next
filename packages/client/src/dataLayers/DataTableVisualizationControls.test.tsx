@@ -36,9 +36,9 @@ describe("DataTableVisualizationControls labels", () => {
         />
       </MapOverlayContext.Provider>
     );
-    expect(screen.getByLabelText("Visualize column")).toHaveTextContent("CPUE");
+    expect(screen.getByLabelText("Value column")).toHaveTextContent("CPUE");
     expect(
-      screen.queryByLabelText("Visualize column")?.textContent
+      screen.queryByLabelText("Value column")?.textContent
     ).not.toMatch(/CPUE_catch_per_angler_hour/);
   });
 

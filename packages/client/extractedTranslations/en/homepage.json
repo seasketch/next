@@ -1,5 +1,6 @@
 {
   "Aggregation": "Aggregation",
+  "Calculation": "Calculation",
   "Column metadata is not available for this table.": "Column metadata is not available for this table.",
   "Count": "Count",
   "Loading column metadata...": "Loading column metadata...",
@@ -14,6 +15,7 @@
   "Showing": "Showing",
   "Sum": "Sum",
   "Unable to load column metadata.": "Unable to load column metadata.",
+  "Value column": "Value column",
   "Visualize column": "Visualize column",
   "of": "of",
   "per {{unit}}": "per {{unit}}",

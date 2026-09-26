@@ -7481,12 +7481,12 @@ select{
   height:6%
 }
 
-.h-\[90vh\]{
-  height:90vh
+.h-\[88vh\]{
+  height:88vh
 }
 
-.h-\[92vh\]{
-  height:92vh
+.h-\[90vh\]{
+  height:90vh
 }
 
 .h-\[calc\(100dvh-3rem\)\]{
@@ -7551,14 +7551,6 @@ select{
 
 .h-screen{
   height:100vh
-}
-
-.h-\[min\(88vh\2c 52rem\)\]{
-  height:min(88vh,52rem)
-}
-
-.h-\[88vh\]{
-  height:88vh
 }
 
 .max-h-128{
@@ -7661,16 +7653,16 @@ select{
   max-height:calc(100dvh - 3rem)
 }
 
-.max-h-\[calc\(100vh-3rem\)\]{
-  max-height:calc(100vh - 3rem)
-}
-
 .max-h-\[min\(480px\2c 70vh\)\]{
   max-height:min(480px,70vh)
 }
 
 .max-h-\[min\(60vh\2c 18rem\)\]{
   max-height:min(60vh,18rem)
+}
+
+.max-h-\[min\(64rem\2c calc\(100vh-3rem\)\)\]{
+  max-height:min(64rem,calc(100vh - 3rem))
 }
 
 .max-h-\[min\(70vh\2c 30rem\)\]{
@@ -7707,10 +7699,6 @@ select{
 
 .max-h-screen{
   max-height:100vh
-}
-
-.max-h-\[min\(64rem\2c calc\(100vh-3rem\)\)\]{
-  max-height:min(64rem,calc(100vh - 3rem))
 }
 
 .min-h-0{
@@ -10658,6 +10646,10 @@ select{
   background-color:rgb(249 250 251 / 0.6)
 }
 
+.bg-gray-50\/70{
+  background-color:rgb(249 250 251 / 0.7)
+}
+
 .bg-gray-50\/80{
   background-color:rgb(249 250 251 / 0.8)
 }
@@ -11175,10 +11167,6 @@ select{
 .bg-yellow-600{
   --tw-bg-opacity:1;
   background-color:rgb(217 119 6 / var(--tw-bg-opacity, 1))
-}
-
-.bg-gray-50\/70{
-  background-color:rgb(249 250 251 / 0.7)
 }
 
 .bg-opacity-10{
@@ -13301,6 +13289,12 @@ select{
   box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)
 }
 
+.shadow-\[0_1px_0_0_rgba\(0\2c 0\2c 0\2c 0\.06\)\]{
+  --tw-shadow:0 1px 0 0 rgba(0,0,0,0.06);
+  --tw-shadow-colored:0 1px 0 0 var(--tw-shadow-color);
+  box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)
+}
+
 .shadow-\[0_1px_0_0_rgba\(15\2c 23\2c 42\2c 0\.06\)\]{
   --tw-shadow:0 1px 0 0 rgba(15,23,42,0.06);
   --tw-shadow-colored:0 1px 0 0 var(--tw-shadow-color);
@@ -13370,12 +13364,6 @@ select{
 .shadow-xl{
   --tw-shadow:0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
   --tw-shadow-colored:0 20px 25px -5px var(--tw-shadow-color), 0 8px 10px -6px var(--tw-shadow-color);
-  box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)
-}
-
-.shadow-\[0_1px_0_0_rgba\(0\2c 0\2c 0\2c 0\.06\)\]{
-  --tw-shadow:0 1px 0 0 rgba(0,0,0,0.06);
-  --tw-shadow-colored:0 1px 0 0 var(--tw-shadow-color);
   box-shadow:var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow)
 }
 
