@@ -11169,6 +11169,10 @@ select{
   background-color:rgb(217 119 6 / var(--tw-bg-opacity, 1))
 }
 
+.bg-primary-600\/5{
+  background-color:rgb(36 105 172 / 0.05)
+}
+
 .bg-opacity-10{
   --tw-bg-opacity:0.1
 }
@@ -15973,6 +15977,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .group:hover .group-hover\:block{
   display:block
+}
+
+.group:hover .group-hover\:hidden{
+  display:none
 }
 
 .group:hover .group-hover\:w-auto{

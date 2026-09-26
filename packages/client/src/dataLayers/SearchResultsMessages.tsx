@@ -9,9 +9,13 @@ export default function SearchResultsMessages({
   search,
   filteredTreeNodes,
   searchResults,
+  hasTaxonHits,
+  taxonSearchPending,
 }: {
   search?: string;
   filteredTreeNodes: TreeItem[];
+  hasTaxonHits?: boolean;
+  taxonSearchPending?: boolean;
   searchResults: QueryResult<
     SearchOverlaysQuery,
     Exact<{
@@ -41,7 +45,13 @@ export default function SearchResultsMessages({
         search.length > 1 &&
         filteredTreeNodes.length === 0 &&
         !searchResults.loading &&
-        !searchResults.error && (
+        !searchResults.error &&
+        !taxonSearchPending &&
+        (hasTaxonHits ? (
+          <div className="px-6 py-2 text-sm text-gray-400">
+            <Trans ns="homepage">No matching layers</Trans>
+          </div>
+        ) : (
           <div className="w-72 mx-auto flex justify-center items-center space-x-2 text-gray-400 py-12">
             {/* <SearchIcon className="w-8 h-8" /> */}
             <XIcon className="w-8 h-8" />
@@ -49,7 +59,7 @@ export default function SearchResultsMessages({
               <Trans ns="homepage">No matching overlays found</Trans>
             </div>
           </div>
-        )}
+        ))}
       {searchResults.error && (
         <div className="w-72 mx-auto text-red-500 py-12">
           <div className="flex items-center space-x-2">

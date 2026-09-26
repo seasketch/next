@@ -11,8 +11,10 @@ import { TableOfContentsItemMenu } from "../admin/data/TableOfContentsItemMenu";
 import * as ContextMenu from "@radix-ui/react-context-menu";
 import { ProjectAppSidebarToolbar } from "./ProjectAppSidebar";
 import useOverlaySearchState from "../dataLayers/useOverlaySearchState";
+import useOverlayTaxonSearch from "../dataLayers/useOverlayTaxonSearch";
 import SearchResultsMessages from "../dataLayers/SearchResultsMessages";
 import OverlaySearchInput from "../dataLayers/OverlaySearchInput";
+import OverlayTaxonSearchResults from "../dataLayers/OverlayTaxonSearchResults";
 import getSlug from "../getSlug";
 import { useMediaQuery } from "beautiful-react-hooks";
 
@@ -62,6 +64,13 @@ export default function OverlayLayers({
     setExpandedIds,
   });
 
+  const taxonSearch = useOverlayTaxonSearch({
+    items,
+    search,
+    accessToken: metadata.data?.project?.mapAccessToken,
+    enabled: Boolean(metadata.data?.project?.featureFlags?.dataTables),
+  });
+
   return (
     <div>
       <ProjectAppSidebarToolbar>
@@ -70,6 +79,9 @@ export default function OverlayLayers({
           search={search}
           onChange={setSearch}
           loading={searchResults.loading}
+          placeholder={
+            taxonSearch.enabled ? t("search layers or species") : undefined
+          }
         />
         <button
           disabled={!hasLocalState}
@@ -87,6 +99,8 @@ export default function OverlayLayers({
         filteredTreeNodes={filteredTreeNodes}
         search={search}
         searchResults={searchResults}
+        hasTaxonHits={taxonSearch.hits.length > 0}
+        taxonSearchPending={taxonSearch.loading}
       />
       <div className="mt-2 pl-6">
         <div
@@ -133,6 +147,13 @@ export default function OverlayLayers({
           />
         </div>
       </div>
+      <OverlayTaxonSearchResults
+        enabled={taxonSearch.enabled}
+        search={search}
+        hits={taxonSearch.hits}
+        loading={taxonSearch.loading}
+        error={taxonSearch.error}
+      />
     </div>
   );
 }

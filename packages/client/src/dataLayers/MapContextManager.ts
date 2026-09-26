@@ -68,9 +68,11 @@ import {
 } from "./dataTableLayerState";
 import {
   RememberedDataTableSettings,
+  lookupDataTableSettings,
   parseDataTableSettingsMemory,
   resolveLayerDataTableChange,
 } from "./dataTableSettingsMemory";
+import { mergeOrganismFilter } from "./overlayTaxonSearch";
 import { TemporalClock } from "@seasketch/geostats-types";
 import {
   DATA_TABLE_ACTIVE_COLOR,
@@ -539,6 +541,31 @@ class MapContextManager extends EventEmitter {
         switchedFromTable: Boolean(previousTableId),
       });
     }
+  }
+
+  /**
+   * Show a layer and activate one of its data tables filtered to a single
+   * organism value. Keeps that table's last measure column and aggregation.
+   */
+  activateDataTableForTaxon(
+    tocStableId: string,
+    tableStableId: string,
+    organismColumn: string,
+    value: string
+  ) {
+    const remembered = lookupDataTableSettings(
+      this.dataTableSettingsMemory,
+      tableStableId
+    );
+    const merged = mergeOrganismFilter(remembered, organismColumn, value);
+    this.showTocItems([tocStableId]);
+    this.setLayerDataTable(tocStableId, {
+      stableId: tableStableId,
+      column: merged.column,
+      op: merged.op,
+      filters: merged.filters,
+    });
+    this.showHiddenLayer(tocStableId);
   }
 
   /**

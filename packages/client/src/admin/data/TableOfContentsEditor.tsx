@@ -53,8 +53,11 @@ import FullScreenLoadingSpinner from "./FullScreenLoadingSpinner";
 import { TableOfContentsItemMenu } from "./TableOfContentsItemMenu";
 import * as ContextMenu from "@radix-ui/react-context-menu";
 import useOverlaySearchState from "../../dataLayers/useOverlaySearchState";
+import useOverlayTaxonSearch from "../../dataLayers/useOverlayTaxonSearch";
 import SearchResultsMessages from "../../dataLayers/SearchResultsMessages";
 import OverlaySearchInput from "../../dataLayers/OverlaySearchInput";
+import OverlayTaxonSearchResults from "../../dataLayers/OverlayTaxonSearchResults";
+import useCurrentProjectMetadata from "../../useCurrentProjectMetadata";
 import DataDownloadDefaultSettingModal from "./DataDownloadDefaultSettingModal";
 import getSlug from "../../getSlug";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
@@ -438,6 +441,17 @@ export default function TableOfContentsEditor() {
     setExpandedIds,
   });
 
+  const projectMetadata = useCurrentProjectMetadata();
+  const draftItems = tocQuery.data?.projectBySlug?.draftTableOfContentsItems;
+  const taxonSearch = useOverlayTaxonSearch({
+    items: draftItems || [],
+    search,
+    accessToken: projectMetadata.data?.project?.mapAccessToken,
+    enabled: Boolean(
+      projectMetadata.data?.project?.featureFlags?.dataTables
+    ),
+  });
+
   const client = useApolloClient();
 
   return (
@@ -488,6 +502,7 @@ export default function TableOfContentsEditor() {
           searchLoading={searching}
           search={search}
           onSearchChange={setSearch}
+          taxonSearchEnabled={taxonSearch.enabled}
           hasLocalState={hasLocalState}
           resetLocalState={resetLocalState}
           openArcGISCart={() => {
@@ -535,6 +550,8 @@ export default function TableOfContentsEditor() {
               filteredTreeNodes={filteredTreeNodes}
               search={search}
               searchResults={searchResults}
+              hasTaxonHits={taxonSearch.hits.length > 0}
+              taxonSearchPending={taxonSearch.loading}
             />
             {!searching &&
               !search?.length &&
@@ -611,6 +628,13 @@ export default function TableOfContentsEditor() {
                 }}
               />
             </div>
+            <OverlayTaxonSearchResults
+              enabled={taxonSearch.enabled}
+              search={search}
+              hits={taxonSearch.hits}
+              loading={taxonSearch.loading}
+              error={taxonSearch.error}
+            />
           </>
         </ScrollingComponent>
       </Route>
@@ -757,6 +781,7 @@ function Header({
   search,
   onSearchChange,
   searchLoading,
+  taxonSearchEnabled,
   sharedLayersCount,
   eligibleLayersCount: eligableLayersCount,
 }: {
@@ -774,11 +799,13 @@ function Header({
   onSearchChange?: (search: string) => void;
   search?: string;
   searchLoading?: boolean;
+  taxonSearchEnabled?: boolean;
   sharedLayersCount: number;
   eligibleLayersCount: number;
 }) {
   const uploadContext = useContext(ProjectBackgroundJobContext);
   const { t } = useTranslation("admin:data");
+  const { t: tHome } = useTranslation("homepage");
   const [dataHostingRetentionModalOpen, setDataHostingRetentionModalOpen] =
     useState(false);
   const [dataDownloadSettingOpen, setDataDownloadSettingOpen] = useState(false);
@@ -999,6 +1026,11 @@ function Header({
               search={search}
               onChange={onSearchChange}
               loading={searchLoading}
+              placeholder={
+                taxonSearchEnabled && selectedView === "tree"
+                  ? tHome("search layers or species")
+                  : undefined
+              }
             />
           </div>
         )}

@@ -92,6 +92,25 @@ export function isOrgQueryResponse(value: unknown): value is OrgQueryResponse {
 }
 
 /**
+ * Origin and R2 prefix for a data-table `/query` URL.
+ * Prefix is the path `orgQuery` accepts in `tables`.
+ */
+export function tableLocationFromQueryUrl(
+  queryUrl: string
+): { origin: string; prefix: string } | null {
+  try {
+    const parsed = new URL(queryUrl);
+    const prefix = parsed.pathname
+      .replace(/\/query\/?$/, "")
+      .replace(/^\//, "");
+    if (!prefix) return null;
+    return { origin: parsed.origin, prefix };
+  } catch {
+    return null;
+  }
+}
+
+/**
  * GraphQL `orgQueryUrl`, or a `/query` URL rewritten onto `/orgQuery`.
  */
 export function orgQueryUrlForTable(table: {
@@ -108,14 +127,9 @@ export function orgQueryUrlForTable(table: {
   if (typeof table.queryUrl !== "string" || !table.queryUrl) {
     return null;
   }
-  try {
-    const queryUrl = new URL(table.queryUrl);
-    const prefix = queryUrl.pathname.replace(/\/query\/?$/, "").replace(/^\//, "");
-    if (!prefix) return null;
-    return `${queryUrl.origin}/orgQuery?tables=${encodeURIComponent(prefix)}`;
-  } catch {
-    return null;
-  }
+  const location = tableLocationFromQueryUrl(table.queryUrl);
+  if (!location) return null;
+  return `${location.origin}/orgQuery?tables=${encodeURIComponent(location.prefix)}`;
 }
 
 export function buildOrgQueryUrl(

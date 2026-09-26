@@ -8,11 +8,13 @@ export default function OverlaySearchInput({
   onChange,
   loading,
   className,
+  placeholder,
 }: {
   search?: string;
   onChange?: (search: string) => void;
   loading?: boolean;
   className?: string;
+  placeholder?: string;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -46,7 +48,7 @@ export default function OverlaySearchInput({
         onChange={onChange ? (e) => onChange(e.target.value) : undefined}
         type="text"
         id="search"
-        placeholder={t("search layers")}
+        placeholder={placeholder || t("search layers")}
         style={{ height: 26 }}
         className="text-sm rounded bg-gray-50 outline-none border-gray-300 pr-12"
       />
