@@ -183,7 +183,10 @@ export function resolveEmptyReplicate(options: {
   reason: string | null;
   coverageInterval: { start: string; end: string | null } | null;
 } {
-  if (options.within !== "sum") {
+  // A surveyed replicate with nothing matching reads 0 for sum, max and min:
+  // the totals, largest and smallest counts of a species nobody saw. Only a
+  // mean has no answer, so only a mean leaves the replicate out.
+  if (options.within === "mean") {
     return {
       status: "noValue",
       value: null,

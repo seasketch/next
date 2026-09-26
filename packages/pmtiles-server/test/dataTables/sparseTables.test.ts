@@ -116,6 +116,19 @@ describe("sparse replicates", () => {
     expect(group!.count).toBe(1);
   });
 
+  it("counts an empty replicate as 0 for max and min", async () => {
+    for (const within of ["max", "min"]) {
+      const result = await run(
+        `op=mean,count&column=count&groupBy=site&replicateBy=zone,transect&within=${within}&subjectColumn=classcode&detailColumns=sex&q.site=GULL&v.classcode=SPUL&v.sex=MALE`
+      );
+      const group = result.groups!.find((row) => row.site === "GULL");
+      expect(group!.replicatesNoValue).toBe(0);
+      expect(group!.replicatesZero).toBe(1);
+      expect(group!.count).toBe(2);
+      expect(group!.mean).toBe(1.5);
+    }
+  });
+
   it("explain=1 lists counted and zero replicates for one feature", async () => {
     const result = await run(
       `${base}&v.classcode=SPUL&v.sex=MALE&joinColumn=site&explain=1`

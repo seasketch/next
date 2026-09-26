@@ -2281,7 +2281,7 @@ function CalculationMathStrip({
       (group) => group.status === "noValue" || group.status === "notSurveyed"
     );
     const zeroRule =
-      math.within !== "sum"
+      math.within === "mean"
         ? t(
             "A {{unit}} with no matching rows is left out, because there is no {{within}} of nothing.",
             { unit: replicateWord, within: withinLabel[math.within].toLowerCase() }

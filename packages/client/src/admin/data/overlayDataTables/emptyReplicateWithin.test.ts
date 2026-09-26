@@ -17,13 +17,19 @@ describe("emptyReplicateWithin", () => {
     ).toBe("sum");
   });
 
-  it("reports mixed when value columns disagree", () => {
+  it("reports mixed only when a mean sits beside a zero-filling operation", () => {
     expect(
       emptyReplicateWithin({
         valueColumns: ["count", "size"],
         withinByColumn: { count: "sum", size: "mean" },
       })
     ).toBe("mixed");
+    expect(
+      emptyReplicateWithin({
+        valueColumns: ["count", "max_n"],
+        withinByColumn: { count: "sum", max_n: "max" },
+      })
+    ).toBe("sum");
   });
 
   it("uses explicit operations when any numeric column may be mapped", () => {

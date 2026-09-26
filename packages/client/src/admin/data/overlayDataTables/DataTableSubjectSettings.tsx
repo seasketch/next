@@ -69,11 +69,11 @@ export default function DataTableSubjectSettings({
   const emptyOutcome = useMemo(() => {
     if (within === "mixed") {
       return t(
-        "Depends on the value column: counts as 0 where rows are summed inside a replicate, left out where they are averaged or the min or max is taken."
+        "Depends on the value column: counts as 0 where rows are summed or the max or min is taken inside a replicate, left out where they are averaged."
       );
     }
-    if (within !== "sum") {
-      return t("Left out. There is no {{op}} of nothing.", { op: within });
+    if (within === "mean") {
+      return t("Left out. There is no mean of nothing.");
     }
     if (coverageMode === "rows_only") {
       return t(

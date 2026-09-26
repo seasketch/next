@@ -5,9 +5,11 @@ import {
 
 /**
  * The inside-a-replicate operation that decides what an empty replicate
- * becomes. `sum` of nothing is 0; `mean`, `min` and `max` of nothing are
- * left out. When the configured value columns use different operations the
- * answer differs per column, reported as `"mixed"`.
+ * becomes. `sum`, `max` and `min` of nothing read 0 (the total, largest and
+ * smallest count of something nobody saw); a `mean` of nothing has no answer
+ * and the replicate is left out. When the configured value columns split
+ * between those two outcomes the answer differs per column, reported as
+ * `"mixed"`.
  *
  * With no configured value columns any numeric column may be mapped, so the
  * operations that have been set explicitly are what the admin can reason
@@ -21,10 +23,12 @@ export function emptyReplicateWithin(options: {
     options.valueColumns.length > 0
       ? options.valueColumns
       : Object.keys(options.withinByColumn);
-  const ops = new Set(
-    columns.map((column) => withinOpForColumn(options.withinByColumn, column))
+  const ops = columns.map((column) =>
+    withinOpForColumn(options.withinByColumn, column)
   );
-  if (ops.size === 0) return "sum";
-  if (ops.size === 1) return [...ops][0];
-  return "mixed";
+  if (ops.length === 0) return "sum";
+  const leftOut = ops.some((op) => op === "mean");
+  const zero = ops.some((op) => op !== "mean");
+  if (leftOut && zero) return "mixed";
+  return ops[0];
 }
