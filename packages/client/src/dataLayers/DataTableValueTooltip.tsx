@@ -553,11 +553,6 @@ export default function DataTableValueTooltip({
               : title}
           </div>
         </div>
-        {content.tableDescription ? (
-          <div className="mt-1.5 text-[11px] leading-4 text-gray-400 line-clamp-2">
-            {content.tableDescription}
-          </div>
-        ) : null}
       </div>
       {layout && showChart ? (
         <div className="mt-3 pt-2.5 border-t border-gray-100">

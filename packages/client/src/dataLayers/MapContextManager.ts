@@ -693,7 +693,6 @@ class MapContextManager extends EventEmitter {
     op: string;
     columnLabel: string;
     tableName?: string;
-    tableDescription?: string;
     layerTitle?: string;
     getSeries?: (featureId: string) => {
       points: DataTableFeatureSeriesPoint[];
@@ -709,7 +708,6 @@ class MapContextManager extends EventEmitter {
       op: string;
       columnLabel: string;
       tableName?: string;
-      tableDescription?: string;
       layerTitle?: string;
       getSeries?: (featureId: string) => {
         points: DataTableFeatureSeriesPoint[];
@@ -750,7 +748,6 @@ class MapContextManager extends EventEmitter {
         activation.table.filterColumnLabels
       );
       const column = activation.query.column;
-      const description = activation.table.description?.trim();
       out.push({
         glLayerId: idForLayer(layer, 0),
         sourceId: this.overlayStates.prefixedSourceId(layer.dataSourceId),
@@ -761,7 +758,6 @@ class MapContextManager extends EventEmitter {
           ? dataTableFilterLabel(column, columnLabels)
           : "",
         tableName: activation.table.name || undefined,
-        tableDescription: description || undefined,
         layerTitle: this.tocItems[tocStableId]?.label,
         getSeries: (featureId: string) =>
           this.dataTableQueryManager.getFeatureSeries(activation, featureId),
@@ -4879,7 +4875,6 @@ export type DataTableTooltipContent = {
   op: string;
   formattedValue?: string;
   tableName?: string;
-  tableDescription?: string;
   layerTitle?: string;
   siteLabel?: string;
   series?: DataTableFeatureSeriesPoint[];

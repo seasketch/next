@@ -100,7 +100,6 @@ export type DataTableInteractiveLayer = {
   op: string;
   columnLabel?: string;
   tableName?: string;
-  tableDescription?: string;
   layerTitle?: string;
   getSeries?: (featureId: string) => {
     points: DataTableTooltipContent["series"];
@@ -1340,7 +1339,6 @@ export default class LayerInteractivityManager extends EventEmitter {
       columnLabel,
       op: config.op,
       tableName: config.tableName,
-      tableDescription: config.tableDescription,
       layerTitle: config.layerTitle,
       siteLabel: String(feature.id),
       series: series?.points,
