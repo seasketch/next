@@ -55,6 +55,7 @@ import DataTableCalculationMode, {
   CalculationModeChoice,
 } from "./DataTableCalculationMode";
 import { replicateIdentifierChoices } from "./replicateIdentifierChoices";
+import { emptyReplicateWithin } from "./emptyReplicateWithin";
 import {
   columnStatsUrlForTable,
   numericColumnNames,
@@ -1060,7 +1061,10 @@ function DataTableSettingsModal({
               excluded={draftExcluded}
               onExcluded={setDraftExcluded}
               replicateWord={draftReplicateLabel}
-              within="sum"
+              within={emptyReplicateWithin({
+                valueColumns: draftColumns,
+                withinByColumn: draftWithin,
+              })}
               joinColumn={table.joinColumn}
               unavailableColumns={[
                 table.joinColumn,

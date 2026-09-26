@@ -56,7 +56,8 @@ export default function DataTableSubjectSettings({
   excluded: { [column: string]: string[] };
   onExcluded: (excluded: { [column: string]: string[] }) => void;
   replicateWord: string;
-  within: "sum" | "mean" | "min" | "max";
+  /** Inside-a-replicate operation for the value columns; "mixed" when they differ. */
+  within: "sum" | "mean" | "min" | "max" | "mixed";
   joinColumn: string;
   /** Replicate columns, time-settings columns, and join columns. Not details. */
   unavailableColumns?: string[];
@@ -66,6 +67,11 @@ export default function DataTableSubjectSettings({
   const { t } = useTranslation("admin:data");
   const [copied, setCopied] = useState<string | null>(null);
   const emptyOutcome = useMemo(() => {
+    if (within === "mixed") {
+      return t(
+        "Depends on the value column: counts as 0 where rows are summed inside a replicate, left out where they are averaged or the min or max is taken."
+      );
+    }
     if (within !== "sum") {
       return t("Left out. There is no {{op}} of nothing.", { op: within });
     }
