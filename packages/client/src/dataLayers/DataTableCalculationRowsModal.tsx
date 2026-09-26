@@ -760,6 +760,9 @@ export default function DataTableCalculationRowsModal({
 
   const calculationMath = useMemo<CalculationMath | null>(() => {
     if (!measureColumn || !table) return null;
+    // A replicate table has no simple-mode reading of its rows; until the
+    // engine audit arrives there is nothing truthful to show.
+    if (replicateRollup && !auditReplicates) return null;
     if (auditReplicates && replicateRollup) {
       const rowValuesByCode = new Map<string, number[]>();
       const rowsByCode = new Map<string, number>();
@@ -1296,7 +1299,7 @@ export default function DataTableCalculationRowsModal({
               )}
               {!rowsState.loading &&
               result &&
-              calculationMath?.mode !== "replicates" ? (
+              !replicateRollup ? (
                 <span className="ml-1.5 text-gray-400">
                   {filterText
                     ? t("({{shown}} of {{total}} rows)", {
