@@ -95,9 +95,9 @@ export interface ParsedQuery {
   contributionFilters: RawFilter[];
   /** Subject column. Rows whose value is an effort marker do not contribute. */
   subjectColumn: string | null;
-  /** Detail columns. Effort markers in these columns also register without contributing. */
+  /** Detail columns. Filters on them gate contribution without dropping replicates. */
   detailColumns: string[];
-  /** Nothing seen rows. Code name: effortMarkers. */
+  /** Nothing seen rows. Code name: effortMarkers. Matched against the subject column only. */
   effortMarkers: string[];
   /**
    * When a subject is missing from a replicate.
@@ -425,15 +425,10 @@ export function parseQueryParams(searchParams: URLSearchParams): ParsedQuery {
     }
   }
 
-  if (effortMarkers.length > 0) {
+  if (effortMarkers.length > 0 && subjectColumn) {
     const markerSet = new Set(effortMarkers);
-    const gated = new Set(
-      [subjectColumn, ...detailColumns].filter((name): name is string =>
-        Boolean(name)
-      )
-    );
     for (const filter of contributionFilters) {
-      if (!gated.has(filter.column)) continue;
+      if (filter.column !== subjectColumn) continue;
       const values =
         filter.op === "eq" && filter.value !== undefined
           ? [filter.value]

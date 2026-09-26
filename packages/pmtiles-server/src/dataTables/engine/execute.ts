@@ -710,8 +710,11 @@ async function executeReplicateQuery(
   };
   const markers = new Set(query.effortMarkers);
   const checkEffort = markers.size > 0;
+  // A nothing-seen value names a subject placeholder such as NO_ORG. The
+  // same word in a detail column ("Not recorded" as a shell type) describes
+  // a real observation, so only the subject column is checked.
   const effortColumns = checkEffort
-    ? [query.subjectColumn, ...query.detailColumns].filter(
+    ? [query.subjectColumn].filter(
         (name): name is string => Boolean(name) && plan.columns.has(name!)
       )
     : [];
@@ -1045,13 +1048,9 @@ async function executeRawQuery(
           for (const filter of plan.contributionFilters) {
             cells.set(filter.column, row[filter.column]);
           }
-          const effort =
-            (query.subjectColumn
-              ? isEffortMarkerValue(row[query.subjectColumn], markers)
-              : false) ||
-            query.detailColumns.some((name) =>
-              isEffortMarkerValue(row[name], markers)
-            );
+          const effort = query.subjectColumn
+            ? isEffortMarkerValue(row[query.subjectColumn], markers)
+            : false;
           const excludedBy = contributionExclusion({
             effort,
             subjectFilters,

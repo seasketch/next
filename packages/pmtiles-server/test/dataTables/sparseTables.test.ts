@@ -116,6 +116,25 @@ describe("sparse replicates", () => {
     expect(group!.count).toBe(1);
   });
 
+  it("matches nothing-seen values against the subject column only", async () => {
+    const plain = await run(`${base}&v.classcode=SPUL&effortMarkers=NO_ORG`);
+    const withDetailWord = await run(
+      `${base}&v.classcode=SPUL&effortMarkers=NO_ORG,FEMALE`
+    );
+    const a = plain.groups!.find((row) => row.site === "GULL")!;
+    const b = withDetailWord.groups!.find((row) => row.site === "GULL")!;
+    expect(b.mean).toBe(a.mean);
+    expect(b.replicatesZero).toBe(a.replicatesZero);
+    // A detail filter on that word is still an ordinary detail filter.
+    const females = await run(
+      `${base}&v.classcode=SPUL&v.sex=FEMALE&effortMarkers=NO_ORG,FEMALE`
+    );
+    expect(females.groups!.find((row) => row.site === "GULL")!.mean).toBeCloseTo(
+      (2 + 4) / 2,
+      6
+    );
+  });
+
   it("counts an empty replicate as 0 for max and min", async () => {
     for (const within of ["max", "min"]) {
       const result = await run(
