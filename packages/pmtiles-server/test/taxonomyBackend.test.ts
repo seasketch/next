@@ -25,6 +25,20 @@ describe("taxonomyUpstream", () => {
     expect(
       taxonomyUpstream("/taxonomy/worms/AphiaRecordsByMatchNames", "POST")
     ).toBeNull();
+    expect(
+      taxonomyUpstream(
+        "/taxonomy/worms/AphiaRecordsByVernacular/Brown%20Rockfish",
+        "GET"
+      )?.url
+    ).toBe(
+      "https://www.marinespecies.org/rest/AphiaRecordsByVernacular/Brown%20Rockfish?like=false&offset=1"
+    );
+    expect(
+      taxonomyUpstream("/taxonomy/worms/AphiaRecordsByVernacular/Brown%20Rockfish", "POST")
+    ).toBeNull();
+    expect(
+      taxonomyUpstream("/taxonomy/worms/AphiaRecordsByVernacular/a/b", "GET")
+    ).toBeNull();
     expect(taxonomyUpstream("/taxonomy/inat/v1/taxa", "GET")).toBeNull();
     expect(taxonomyUpstream("/taxonomy/inat/thumbs", "GET")).toBeNull();
     expect(

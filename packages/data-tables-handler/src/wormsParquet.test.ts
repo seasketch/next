@@ -10,6 +10,8 @@ import {
   lookupWormsSynonymKeys,
   lookupWormsTaxaByAphiaIds,
   lookupWormsTaxaByNames,
+  lookupWormsTaxaByVernaculars,
+  normalizeVernacularKey,
   normalizeWormsNameKey,
   parseAphiaIdFromLsid,
   stripWormsAuthorship,
@@ -47,6 +49,17 @@ describe("binomialFromWormsNameKey", () => {
   });
 });
 
+describe("normalizeVernacularKey", () => {
+  it("folds case, diacritics, and hyphens", () => {
+    assert.equal(normalizeVernacularKey("  Señorita "), "senorita");
+    assert.equal(
+      normalizeVernacularKey("Black-and-yellow Example"),
+      "black and yellow example"
+    );
+    assert.equal(normalizeVernacularKey("   "), null);
+  });
+});
+
 describe("normalizeWormsNameKey", () => {
   it("strips parenthetical authorship and downcases", () => {
     assert.equal(
@@ -69,8 +82,8 @@ describe("buildWormsParquet", () => {
   it("resolves accepted taxa, synonym ids, and vernaculars", async () => {
     const outDir = mkdtempSync(join(tmpdir(), "worms-parquet-"));
     const manifest = await buildWormsParquet(DWCA, outDir);
-    assert.equal(manifest.taxaRows, 2);
-    assert.equal(manifest.idRows, 3);
+    assert.equal(manifest.taxaRows, 4);
+    assert.equal(manifest.idRows, 5);
 
     await withDuckDb(async (conn) => {
       const byId = await lookupWormsTaxaByAphiaIds(conn, outDir, [
@@ -93,6 +106,31 @@ describe("buildWormsParquet", () => {
       ]);
       assert.equal(byName.get("bodianus pulcher")?.aphia_id, 1702292);
       assert.equal(byName.get("semicossyphus pulcher")?.aphia_id, 1702292);
+
+      const byVernacular = await lookupWormsTaxaByVernaculars(conn, outDir, [
+        "Sheephead",
+        "Senorita",
+        "Black and Yellow Example",
+        "Shared Name",
+        "Not a taxon",
+      ]);
+      assert.equal(byVernacular.get("sheephead")?.kind, "unique");
+      if (byVernacular.get("sheephead")?.kind === "unique") {
+        assert.equal(byVernacular.get("sheephead")?.taxon.aphia_id, 1702292);
+      }
+      assert.equal(byVernacular.get("senorita")?.kind, "unique");
+      if (byVernacular.get("senorita")?.kind === "unique") {
+        assert.equal(byVernacular.get("senorita")?.taxon.aphia_id, 9001);
+      }
+      assert.equal(byVernacular.get("black and yellow example")?.kind, "unique");
+      if (byVernacular.get("black and yellow example")?.kind === "unique") {
+        assert.equal(
+          byVernacular.get("black and yellow example")?.taxon.aphia_id,
+          9002
+        );
+      }
+      assert.equal(byVernacular.get("shared name")?.kind, "ambiguous");
+      assert.equal(byVernacular.has("not a taxon"), false);
 
       const synonyms = await lookupWormsSynonymKeys(conn, outDir, [1702292]);
       assert.deepEqual(synonyms.get(1702292)?.aphiaIds, [282753]);

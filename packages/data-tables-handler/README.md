@@ -50,11 +50,18 @@ over HTTP so a regenerate is visible immediately.
   `ancestor_names[]`, `vernaculars[]`, `common_name`,
   `is_marine` / `is_freshwater` / `is_terrestrial`.
 
-Helpers: `lookupWormsTaxaByAphiaIds`, `lookupWormsTaxaByNames`.
+Helpers: `lookupWormsTaxaByAphiaIds`, `lookupWormsTaxaByNames`,
+`lookupWormsTaxaByVernaculars`.
+
+Common names with no scientific name are matched against `vernaculars[]`.
+Case, diacritics, and hyphens are folded. A name is resolved only when every
+hit shares one accepted AphiaID. Two or more species stay unresolved, with
+no scientific name and no iNaturalist id. Wikidata is not asked to choose.
 
 This replaces REST `AphiaRecordByAphiaID`, `AphiaClassificationByAphiaID`,
 and `AphiaVernacularsByAphiaID`, plus exact/synonym name match. It does
-**not** replace Taxamatch typos (`AphiaRecordsByMatchNames`) or Wikidata
+**not** replace Taxamatch typos (`AphiaRecordsByMatchNames`), exact
+vernacular misses (`AphiaRecordsByVernacular?like=false`), or Wikidata
 (iNat `P3151`). Licensed dumps often omit AlgaeBase species and some
 non-marine taxa — keep REST as a miss fallback.
 

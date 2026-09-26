@@ -9,10 +9,15 @@ import {
   lookupWormsSynonymKeys,
   lookupWormsTaxaByAphiaIds,
   lookupWormsTaxaByNames,
+  lookupWormsTaxaByVernaculars,
+  normalizeVernacularKey,
   normalizeWormsNameKey,
   stripWormsAuthorship,
+  vernacularLookupLabel,
+  vernacularRestCandidates,
   type WormsSynonymKeys,
   type WormsTaxonRow,
+  type WormsVernacularHit,
 } from "./wormsParquet";
 
 /** Live WoRMS REST. Used only when the public parquet snapshot misses. */
@@ -296,6 +301,110 @@ export async function fetchWormsClassification(
   return uniqueStrings(flattenWormsClassification(json));
 }
 
+export type CommonNameVernacularQuery = {
+  label: string;
+  key: string;
+  restLabels: string[];
+};
+
+/**
+ * Common-name lookup used only when there is no AphiaID and no scientific
+ * name. Returns null so a class table binomial keeps the scientific path.
+ */
+export function commonNameVernacularQuery(
+  input: ResolveOrganismInput,
+  scientificQuery: string | null
+): CommonNameVernacularQuery | null {
+  if (input.wormsAphiaId || scientificQuery) return null;
+  const common = input.commonName?.trim();
+  if (!common) return null;
+  const label = vernacularLookupLabel(common);
+  const key = label ? normalizeVernacularKey(label) : null;
+  if (!label || !key) return null;
+  return { label, key, restLabels: vernacularRestCandidates(label) };
+}
+
+function acceptedAphiaFromRecord(record: Record<string, unknown>): number | null {
+  return asInt(record.valid_AphiaID) || asInt(record.AphiaID);
+}
+
+/** Exact vernacular records. like=false so "Sheephead" does not match "sheephead grunt". */
+export async function fetchWormsRecordsByVernacular(
+  clients: TaxonomyClients,
+  name: string
+): Promise<Record<string, unknown>[]> {
+  const encoded = encodeURIComponent(name);
+  const url = `${WORMS_REST_URL}/AphiaRecordsByVernacular/${encoded}?like=false&offset=1`;
+  try {
+    const json = await fetchJson(clients, "worms", url);
+    if (!Array.isArray(json)) return [];
+    return json.filter(isRecord);
+  } catch (error) {
+    logTaxonomy("worms vernacular name failed", {
+      name,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return [];
+  }
+}
+
+/**
+ * Snapshot misses only. Unions every spelling candidate, then keeps a species
+ * when those records share one accepted AphiaID.
+ */
+async function resolveCommonNamesByVernacularRest(
+  clients: TaxonomyClients,
+  results: ResolvedTaxon[],
+  vernacularByIndex: Array<CommonNameVernacularQuery | null>,
+  ambiguousVernacular: Set<number>
+): Promise<void> {
+  const labels: string[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < vernacularByIndex.length; i++) {
+    const query = vernacularByIndex[i];
+    if (!query || ambiguousVernacular.has(i) || results[i].wormsAphiaId) continue;
+    for (const label of query.restLabels) {
+      const key = label.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      labels.push(label);
+    }
+  }
+  if (labels.length === 0) return;
+
+  const recordsByLabel = new Map<string, Record<string, unknown>[]>();
+  for (const label of labels) {
+    recordsByLabel.set(
+      label.toLowerCase(),
+      await fetchWormsRecordsByVernacular(clients, label)
+    );
+  }
+
+  for (let i = 0; i < vernacularByIndex.length; i++) {
+    const query = vernacularByIndex[i];
+    if (!query || ambiguousVernacular.has(i) || results[i].wormsAphiaId) continue;
+    const records: Record<string, unknown>[] = [];
+    for (const label of query.restLabels) {
+      records.push(...(recordsByLabel.get(label.toLowerCase()) || []));
+    }
+    const ids: number[] = [];
+    for (const record of records) {
+      const id = acceptedAphiaFromRecord(record);
+      if (id && !ids.includes(id)) ids.push(id);
+    }
+    if (ids.length > 1) {
+      ambiguousVernacular.add(i);
+      continue;
+    }
+    if (ids.length !== 1) continue;
+    const matching = records.filter(
+      (record) => acceptedAphiaFromRecord(record) === ids[0]
+    );
+    const picked = pickWormsAccepted(matching);
+    if (picked) applyWormsRecord(results[i], picked);
+  }
+}
+
 export async function fetchWormsVernaculars(
   clients: TaxonomyClients,
   aphiaId: number
@@ -352,11 +461,14 @@ export function singleMappedInatId<K>(
 }
 
 function stubFromInput(input: ResolveOrganismInput): ResolvedTaxon {
+  // A common-name value is not a binomial. Don't invent a genus from "Kelp Bass".
+  const genusSource =
+    input.scientificName || (input.commonName ? null : input.value);
   return {
     scientificName: input.scientificName || null,
     commonName: input.commonName || null,
     commonNames: uniqueStrings([input.commonName, ...(input.extraNames || [])]),
-    genus: input.genus || genusFromOrganismName(input.scientificName || input.value),
+    genus: input.genus || genusFromOrganismName(genusSource),
     family: null,
     ancestorNames: [],
     inatTaxonId: null,
@@ -380,6 +492,11 @@ export function sanitizeWormsQueryName(name: string): string | null {
   return cleaned || null;
 }
 
+/**
+ * Scientific name for Taxamatch and names.parquet.
+ * Common names are not sent here. A slash-separated common name such as
+ * "Olive/Yellowtail Rockfish" must not be collapsed to a genus query.
+ */
 export function wormsQueryName(input: ResolveOrganismInput): string | null {
   const raw =
     input.scientificName ||
@@ -458,9 +575,13 @@ function applyWormsTaxonRow(target: ResolvedTaxon, taxon: WormsTaxonRow): void {
 
 /**
  * Resolve many values from the WoRMS parquet snapshot first, then batched
- * REST match-names (≤50) on miss. REST records already carry rank fields,
- * so we do not call AphiaClassificationByAphiaID. Vernaculars REST runs
- * only for accepted IDs still missing from the snapshot (204 = none).
+ * REST match-names (≤50) on miss. Common names with no scientific name are
+ * matched against snapshot vernaculars (hyphens and diacritics folded). A
+ * name that hits two accepted species stays unresolved: no scientific name,
+ * no AphiaID, and no iNaturalist id. REST AphiaRecordsByVernacular uses
+ * like=false and is only the miss fallback. REST records already carry rank
+ * fields, so we do not call AphiaClassificationByAphiaID. Vernaculars REST
+ * runs only for accepted IDs still missing from the snapshot (204 = none).
  * Then Wikidata SPARQL (AphiaID/name → iNat P3151). Query the accepted
  * Aphia/name, the class-table's own keys, and superseded AphiaIDs plus
  * bare synonym binomials from the snapshot. Wikidata often still has the
@@ -494,6 +615,10 @@ export async function resolveOrganismTaxa(
   const wormsNameByIndex: Array<string | null> = inputs.map((input, i) =>
     results[i].wormsAphiaId ? null : wormsQueryName(input)
   );
+  const vernacularByIndex = inputs.map((input, i) =>
+    commonNameVernacularQuery(input, wormsNameByIndex[i])
+  );
+  const ambiguousVernacular = new Set<number>();
 
   const uniqueAphiaIds: number[] = [];
   const seenAphia = new Set<number>();
@@ -517,6 +642,7 @@ export async function resolveOrganismTaxa(
   const parquetFilledIds = new Set<number>();
   let restAphiaIds = uniqueAphiaIds.slice();
   let restMatchNames = uniqueMatchNames.slice();
+  let vernacularHits = new Map<string, WormsVernacularHit>();
 
   if (clients.wormsParquetDir) {
     try {
@@ -531,8 +657,24 @@ export async function resolveOrganismTaxa(
           clients.wormsParquetDir as string,
           uniqueMatchNames
         );
-        return { byId, byName };
+        const vernacularKeys = vernacularByIndex
+          .map((query) => query?.key)
+          .filter((key): key is string => Boolean(key));
+        let byVernacular = new Map<string, WormsVernacularHit>();
+        try {
+          byVernacular = await lookupWormsTaxaByVernaculars(
+            conn,
+            clients.wormsParquetDir as string,
+            vernacularKeys
+          );
+        } catch (error) {
+          logTaxonomy("parquet vernacular lookup failed", {
+            error: error instanceof Error ? error.message : String(error),
+          });
+        }
+        return { byId, byName, byVernacular };
       });
+      vernacularHits = parquet.byVernacular;
       for (let i = 0; i < results.length; i++) {
         const id = results[i].wormsAphiaId;
         const fromId = id ? parquet.byId.get(id) : undefined;
@@ -552,6 +694,21 @@ export async function resolveOrganismTaxa(
           if (filledId) parquetFilledIds.add(filledId);
         }
       }
+      let vernacularUnique = 0;
+      for (let i = 0; i < results.length; i++) {
+        const query = vernacularByIndex[i];
+        if (!query || results[i].wormsAphiaId) continue;
+        const hit = vernacularHits.get(query.key);
+        if (!hit) continue;
+        if (hit.kind === "ambiguous") {
+          ambiguousVernacular.add(i);
+          continue;
+        }
+        applyWormsTaxonRow(results[i], hit.taxon);
+        const filledId = results[i].wormsAphiaId;
+        if (filledId) parquetFilledIds.add(filledId);
+        vernacularUnique += 1;
+      }
       restAphiaIds = uniqueAphiaIds.filter((id) => !parquet.byId.has(id));
       restMatchNames = uniqueMatchNames.filter(
         (name) => !parquet.byName.has(normalizeWormsNameKey(name))
@@ -559,6 +716,8 @@ export async function resolveOrganismTaxa(
       logTaxonomy("parquet", {
         hitsById: parquet.byId.size,
         hitsByName: parquet.byName.size,
+        vernacularUnique,
+        vernacularAmbiguous: ambiguousVernacular.size,
         missIds: restAphiaIds.length,
         missNames: restMatchNames.length,
       });
@@ -647,6 +806,13 @@ export async function resolveOrganismTaxa(
     const worms = byId || byName;
     if (worms) applyWormsRecord(results[i], worms);
   }
+
+  await resolveCommonNamesByVernacularRest(
+    clients,
+    results,
+    vernacularByIndex,
+    ambiguousVernacular
+  );
 
   const acceptedIds: number[] = [];
   const seenAccepted = new Set<number>();
@@ -762,6 +928,7 @@ export async function resolveOrganismTaxa(
 
   const wikiNames: string[] = [];
   for (let i = 0; i < results.length; i++) {
+    if (ambiguousVernacular.has(i)) continue;
     const row = results[i];
     const input = inputs[i];
     const synonyms = row.wormsAphiaId
@@ -854,7 +1021,7 @@ export async function resolveOrganismTaxa(
         confidence = "high";
       }
     }
-    if (inatId === null) {
+    if (inatId === null && !ambiguousVernacular.has(i)) {
       const common = inputs[i].commonName;
       if (common && wikiByName.has(common.toLowerCase())) {
         inatId = wikiByName.get(common.toLowerCase())!;

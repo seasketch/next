@@ -782,6 +782,129 @@ describe("resolveOrganismTaxa", () => {
     assert.equal(rows[1].wormsAphiaId, 1);
   });
 
+  it("resolves one exact vernacular and leaves two species unresolved", async () => {
+    const urls: string[] = [];
+    const clients: TaxonomyClients = {
+      fetch: async (url) => {
+        urls.push(url);
+        if (url.includes("AphiaRecordsByVernacular")) {
+          const decoded = decodeURIComponent(url);
+          if (decoded.includes("One Species")) {
+            return {
+              ok: true,
+              status: 200,
+              json: async () => [
+                {
+                  status: "accepted",
+                  AphiaID: 10,
+                  valid_AphiaID: 10,
+                  scientificname: "Genus species",
+                  valid_name: "Genus species",
+                  genus: "Genus",
+                  family: "Family",
+                },
+              ],
+            };
+          }
+          if (decoded.includes("Two Species")) {
+            return {
+              ok: true,
+              status: 200,
+              json: async () => [
+                {
+                  status: "accepted",
+                  AphiaID: 11,
+                  valid_AphiaID: 11,
+                  scientificname: "Genus alpha",
+                },
+                {
+                  status: "accepted",
+                  AphiaID: 12,
+                  valid_AphiaID: 12,
+                  scientificname: "Genus beta",
+                },
+              ],
+            };
+          }
+          return { ok: true, status: 200, json: async () => [] };
+        }
+        if (url.includes("query.wikidata.org")) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              results: {
+                bindings: [
+                  { query: { value: "Two Species" }, inat: { value: "99" } },
+                  { aphia: { value: "10" }, inat: { value: "55" } },
+                ],
+              },
+            }),
+          };
+        }
+        if (url.includes("/v1/taxa/")) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              results: [{ id: 55, is_active: true, name: "Genus species" }],
+            }),
+          };
+        }
+        return { ok: true, status: 200, json: async () => ({}) };
+      },
+    };
+    const rows = await resolveOrganismTaxa(clients, [
+      { value: "One Species", commonName: "One Species" },
+      { value: "Two Species", commonName: "Two Species" },
+    ]);
+    assert.equal(rows[0].wormsAphiaId, 10);
+    assert.equal(rows[0].scientificName, "Genus species");
+    assert.equal(rows[0].inatTaxonId, 55);
+    assert.equal(rows[0].confidence, "high");
+    assert.equal(rows[1].wormsAphiaId, null);
+    assert.equal(rows[1].scientificName, null);
+    assert.equal(rows[1].inatTaxonId, null);
+    assert.equal(rows[1].confidence, "unresolved");
+    assert.equal(rows[1].genus, null);
+    assert.ok(urls.some((url) => url.includes("like=false")));
+    assert.ok(!urls.some((url) => url.includes("AphiaRecordsByMatchNames")));
+  });
+
+  it("does not let a snapshot ambiguity fall through to Wikidata", async () => {
+    const outDir = mkdtempSync(join(tmpdir(), "worms-vernacular-"));
+    await buildWormsParquet(WORMS_DWCA, outDir);
+    const clients: TaxonomyClients = {
+      wormsParquetDir: outDir,
+      fetch: async (url) => {
+        if (url.includes("marinespecies.org") || url.includes("/taxonomy/worms/")) {
+          throw new Error(`unexpected WoRMS REST ${url}`);
+        }
+        if (url.includes("query.wikidata.org")) {
+          return {
+            ok: true,
+            status: 200,
+            json: async () => ({
+              results: {
+                bindings: [
+                  { query: { value: "Shared Name" }, inat: { value: "99" } },
+                ],
+              },
+            }),
+          };
+        }
+        return { ok: true, status: 200, json: async () => ({}) };
+      },
+    };
+    const [row] = await resolveOrganismTaxa(clients, [
+      { value: "Shared Name", commonName: "Shared Name" },
+    ]);
+    assert.equal(row.wormsAphiaId, null);
+    assert.equal(row.scientificName, null);
+    assert.equal(row.inatTaxonId, null);
+    assert.equal(row.confidence, "unresolved");
+  });
+
   it("marks a unique common-name Wikidata hit as low confidence", async () => {
     const clients: TaxonomyClients = {
       fetch: async (url) => {

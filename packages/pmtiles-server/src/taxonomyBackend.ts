@@ -11,6 +11,8 @@ const WORMS_CLASSIFICATION =
 const WORMS_VERNACULARS =
   /^\/taxonomy\/worms\/AphiaVernacularsByAphiaID\/([0-9]+)$/;
 const WORMS_MATCH_NAMES = /^\/taxonomy\/worms\/AphiaRecordsByMatchNames$/;
+const WORMS_BY_VERNACULAR =
+  /^\/taxonomy\/worms\/AphiaRecordsByVernacular\/([^/]+)$/;
 
 export type TaxonomyUpstream = {
   url: string;
@@ -62,6 +64,23 @@ export function taxonomyUpstream(
       provider: "worms",
     };
   }
+  const byVernacular = pathname.match(WORMS_BY_VERNACULAR);
+  if (byVernacular) {
+    if (method !== "GET") return null;
+    let name = byVernacular[1];
+    try {
+      name = decodeURIComponent(name);
+    } catch {
+      return null;
+    }
+    const trimmed = name.trim();
+    if (!trimmed || trimmed.length > 200) return null;
+    return {
+      url: `${WORMS_REST_URL}/AphiaRecordsByVernacular/${encodeURIComponent(trimmed)}?like=false&offset=1`,
+      method: "GET",
+      provider: "worms",
+    };
+  }
   return null;
 }
 
@@ -98,7 +117,7 @@ export async function handleTaxonomyRequest(
     return new Response(
       JSON.stringify({
         error:
-          "Not found. Allowlisted taxonomy proxy: /taxonomy/worms/{AphiaRecord|AphiaClassification|AphiaVernaculars}ByAphiaID/{id} or GET AphiaRecordsByMatchNames",
+          "Not found. Allowlisted taxonomy proxy: /taxonomy/worms/{AphiaRecord|AphiaClassification|AphiaVernaculars}ByAphiaID/{id}, GET AphiaRecordsByMatchNames, or GET AphiaRecordsByVernacular/{name}",
       }),
       {
         status: 404,

@@ -212,6 +212,47 @@ export function normalizeWormsNameKey(value: string): string {
   return stripWormsAuthorship(value).trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+/** Common-name label sent to WoRMS. Whitespace is collapsed; the words stay. */
+export function vernacularLookupLabel(value: string): string | null {
+  const cleaned = value.trim().replace(/\s+/g, " ");
+  return cleaned || null;
+}
+
+/**
+ * Fold a common name the same way the snapshot vernacular scan does:
+ * case, diacritics, and hyphens. "Señorita" and "Senorita" share a key.
+ * "Black-and-yellow Rockfish" and "Black and Yellow Rockfish" share a key.
+ */
+export function normalizeVernacularKey(value: string): string | null {
+  const label = vernacularLookupLabel(value);
+  if (!label) return null;
+  const folded = label
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "")
+    .replace(/-/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+  return folded || null;
+}
+
+/** Exact-ish REST spellings for one label. Substring search is never included. */
+export function vernacularRestCandidates(label: string): string[] {
+  const forms: string[] = [];
+  const add = (value: string) => {
+    const trimmed = value.trim().replace(/\s+/g, " ");
+    if (!trimmed) return;
+    if (forms.some((form) => form.toLowerCase() === trimmed.toLowerCase())) {
+      return;
+    }
+    forms.push(trimmed);
+  };
+  add(label);
+  add(label.replace(/ and /gi, "-and-"));
+  add(label.replace(/-/g, " "));
+  return forms;
+}
+
 export function stripWormsAuthorship(value: string): string {
   return value
     .replace(/\s+\([^)]*\)\s*$/g, "")
@@ -664,6 +705,85 @@ export async function lookupWormsTaxaByNames(
   for (const key of keys) {
     const hit = exact.get(key) || stripped.get(key);
     if (hit) out.set(key, hit);
+  }
+  return out;
+}
+
+export type WormsVernacularHit =
+  | { kind: "unique"; taxon: WormsTaxonRow }
+  | { kind: "ambiguous" };
+
+function sqlString(value: string): string {
+  return `'${value.replace(/'/g, "''")}'`;
+}
+
+/**
+ * Match common names against English and non-English vernaculars stored on
+ * accepted taxa. A key is unique only when every hit shares one accepted
+ * AphiaID. Two species is ambiguous: the caller must not pick one.
+ * Hyphens and diacritics are folded on both sides.
+ */
+export async function lookupWormsTaxaByVernaculars(
+  conn: DuckDBConnection,
+  parquetDir: string,
+  names: string[]
+): Promise<Map<string, WormsVernacularHit>> {
+  const keys = Array.from(
+    new Set(
+      names
+        .map((name) => normalizeVernacularKey(name))
+        .filter((name): name is string => Boolean(name))
+    )
+  );
+  const out = new Map<string, WormsVernacularHit>();
+  if (keys.length === 0) return out;
+  const paths = wormsParquetPaths(parquetDir);
+  const values = keys.map((key) => `(${sqlString(key)})`).join(",");
+  const rows = await all<{ name_key: string; aphia_id: number }>(
+    conn,
+    `
+    WITH wanted(name_key) AS (VALUES ${values}),
+    folded AS (
+      SELECT
+        t.aphia_id,
+        lower(trim(regexp_replace(
+          replace(strip_accents(u.vernacular), '-', ' '),
+          '\\s+',
+          ' ',
+          'g'
+        ))) AS name_key
+      FROM read_parquet('${escapePath(paths.taxa)}') t,
+        UNNEST(t.vernaculars) AS u(vernacular)
+      WHERE u.vernacular IS NOT NULL AND trim(u.vernacular) <> ''
+    )
+    SELECT DISTINCT f.name_key, f.aphia_id
+    FROM folded f
+    JOIN wanted w ON w.name_key = f.name_key
+    `
+  );
+  const idsByKey = new Map<string, number[]>();
+  for (const row of rows) {
+    const key = String(row.name_key || "");
+    const id = Number(row.aphia_id);
+    if (!key || !Number.isInteger(id) || id <= 0) continue;
+    const list = idsByKey.get(key) || [];
+    if (!list.includes(id)) list.push(id);
+    idsByKey.set(key, list);
+  }
+  const uniqueIds: number[] = [];
+  for (const [key, ids] of idsByKey) {
+    if (ids.length > 1) {
+      out.set(key, { kind: "ambiguous" });
+      continue;
+    }
+    uniqueIds.push(ids[0]);
+  }
+  if (uniqueIds.length === 0) return out;
+  const taxa = await lookupWormsTaxaByAphiaIds(conn, parquetDir, uniqueIds);
+  for (const [key, ids] of idsByKey) {
+    if (ids.length !== 1) continue;
+    const taxon = taxa.get(ids[0]);
+    if (taxon) out.set(key, { kind: "unique", taxon });
   }
   return out;
 }
