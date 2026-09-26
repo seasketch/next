@@ -54,6 +54,7 @@ import DataTableSubjectSettings, {
 import DataTableCalculationMode, {
   CalculationModeChoice,
 } from "./DataTableCalculationMode";
+import { replicateIdentifierChoices } from "./replicateIdentifierChoices";
 import {
   columnStatsUrlForTable,
   numericColumnNames,
@@ -448,9 +449,12 @@ function MapDisplaySettings({
         mode={calculationMode}
         onModeChange={onCalculationModeChange}
         joinColumn={table.joinColumn}
-        identifierChoices={filterableColumns.filter(
-          (column) => !numericColumns.includes(column) && column !== table.joinColumn
-        )}
+        identifierChoices={replicateIdentifierChoices({
+          columns: filterableColumns,
+          joinColumn: table.joinColumn,
+          valueColumns: selectedColumns,
+          identifiers,
+        })}
         identifiers={identifiers}
         onIdentifiersChange={onIdentifiersChange}
         label={replicateLabel}
