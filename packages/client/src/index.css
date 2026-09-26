@@ -10831,6 +10831,10 @@ select{
   background-color:rgb(36 105 172 / var(--tw-bg-opacity, 1))
 }
 
+.bg-primary-600\/5{
+  background-color:rgb(36 105 172 / 0.05)
+}
+
 .bg-primary-800{
   --tw-bg-opacity:1;
   background-color:rgb(58 73 101 / var(--tw-bg-opacity, 1))
@@ -11167,10 +11171,6 @@ select{
 .bg-yellow-600{
   --tw-bg-opacity:1;
   background-color:rgb(217 119 6 / var(--tw-bg-opacity, 1))
-}
-
-.bg-primary-600\/5{
-  background-color:rgb(36 105 172 / 0.05)
 }
 
 .bg-opacity-10{
