@@ -32,7 +32,7 @@ The client bakes public URLs in at build time, so a second install is a second c
 | [Secrets manifest](secrets-management.md) | Values are named profiles, so another production is a new profile, not a schema change. Hostnames and identifiers that are already variables are in the manifest: `CLIENT_DOMAIN`, `ISSUER`, `JWT_ISS`, `JWT_AUD`, the Auth0 domain and audience, `SES_EMAIL_SOURCE`, bucket names, queue URLs, `TILES_ACL_NAMESPACE` |
 | [Auth0 split](auth0.md) | The production issuer (`seasketch.auth0.com`) and audience identifier (`https://api.seasketch.org`) are values on the `seasketch.org` profile, not constants in code |
 | Fail-closed checks | They refuse "production identifiers of an install this process is not," read from profile data |
-| [Golden snapshot](integration-testing.md) | Its users are identified only by `sub`, so another install can restore it and log in with its own tenant |
+| [Golden snapshot](integration-testing.md) | Fixture owners are synthetic. Another install administers them through its own superuser claim, not by matching a snapshot `sub` |
 | Any new hostname, bucket, queue, or email address | It is a manifest variable, not a new literal |
 | A line already being edited that defaults `ISSUER` to `seasketch.org` | Drop the literal default and require the variable. Do not go looking for other instances |
 

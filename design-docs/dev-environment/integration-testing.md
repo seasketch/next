@@ -58,7 +58,18 @@ A new laptop, a CI job, and an agent each need a database that already has migra
 
 **Artifact.** A `pg_dump` custom-format snapshot of schema and data, including Graphile Migrate's bookkeeping, in a private R2 bucket with a small manifest (source migration, creation date, commit). `npm run setup` restores it into the existing PostGIS container, then Graphile Migrate applies only newer migrations. We do not publish a database image with data baked in. A dump fits R2, restores on both amd64 CI and arm64 laptops, and avoids a Compose volume silently hiding data baked into an image. Personal `db:backup` / `db:restore` dumps are unchanged and separate.
 
-**Never from production.** The snapshot is built from a curated non-production database. It contains the API's private signing keys (the `jwks` table), and a production dump would contain user data. It works with any Auth0 tenant, because its users are identified only by `sub`.
+**Never from production.** The snapshot is built from a curated non-production database. It contains the API's private signing keys (the `jwks` table), and a production dump would contain user data.
+
+**Who can open a fixture.** Membership rows store a `sub`. A login from any Auth0 tenant creates a new `users` row when that `sub` has not been seen, and that row is not an admin of the fixture projects. The snapshot therefore does not depend on a tenant, and it also does not grant a human login access to those projects.
+
+People and tests reach fixtures by different paths:
+
+- **Anonymous and any signed-in user** can open a public fixture such as `demo-public`. No shared account.
+- **Automated tests** sign in as seed users whose `sub` values are in the snapshot, through `E2E_TEST_MODE`. Those users exist in no Auth0 tenant. Tests do not use a shared password.
+- **Staff** who need to administer a fixture are marked superuser in the non-production tenant. Superuser is a claim, so it applies to whatever `sub` that person has. Their user row does not have to be in the snapshot.
+- **Anyone else** creates their own account by signing up on the non-production tenant. A superuser can add that account as an admin of a demo project on that machine. That membership stays in the local database and is gone after `setup --reset`. It is not written into the shared snapshot, because that would pin the snapshot to one person's `sub`.
+
+There is no shared developer password. Fixture owners in the snapshot are synthetic users (the existing `seasketch|root` pattern), not accounts a person logs into.
 
 **Fixtures and isolation.** Fixture projects (`demo-public`, plus a few added as journeys need them) are for people and read-only smoke. A journey that mutates creates its own uniquely slugged project and hard-deletes it afterward in SQL, because the GraphQL delete is soft and keeps the slug. Tests never write to `superuser` or `demo-*`. Isolation by project lets journeys run in parallel.
 
@@ -83,6 +94,8 @@ Journeys that open a map depend on a Mapbox development token. Their assertion i
 - Playwright; no further investment in Cypress.
 - Test-mode tokens are signed by the API's own keys under a test-only issuer.
 - One golden snapshot for laptops, CI, agents, and later staging, built from a curated non-production database.
+- *(September 2026)* `npm run snapshot:create` writes a local custom-format dump from a side database, not from a developer's `seasketch` database. The dump contains committed migrations, the graphile-worker schema, `demo-public` (public, owned by `seasketch|root`), seed users `e2e|member` and `e2e|admin` (`e2e|admin` is an admin of `demo-public`), and one generated signing key. `npm run setup` restores it when the target database has no migrations, then migrates forward. `npm run setup -- --reset` is the wipe. The file is gitignored.
+- *(October 2026)* The dump also contains the data-library templates on the `superuser` project: their table-of-contents items, layers, sources (including an archived previous source), upload outputs, ACLs, and analyst notes. Those rows are copied from the developer's database. Copies of those templates inside other projects are not copied, and neither are personal user accounts; `created_by` is rewritten to `data-library-template-updater`. `npm run snapshot:publish` uploads the dump to `golden-snapshot/current/` in the private file-uploads bucket (`R2_FILE_UPLOADS_BUCKET`) and keeps the previous object under `golden-snapshot/archive/`. `npm run setup` downloads it when the local copy is missing or older.
 - Project-per-journey isolation, hard-deleted in SQL.
 - The pull-request gate stays small on purpose. Breadth lives in unit tests and in `master` or nightly browser runs until phases 2 and 4 make pull-request minutes cheap.
 - The production probe starts in phase 2, when production artifacts first change.

@@ -54,7 +54,7 @@ One non-production tenant serves laptops and staging. Start with one SPA applica
 
 **Setup refuses production identifiers.** Outside a production deploy, `JWT_ISS`, `JWKS_URI`, the Auth0 domain, and the audience must not match the production profile's values. This check sits with the other fail-closed checks in [secrets](secrets-management.md).
 
-**User ids do not carry over.** `sub` is per tenant. A developer's existing local database has users created by production logins. After the cutover, a non-production login creates a new user row. Old rows can be ignored. The golden snapshot made after the cutover is taken from a database that has been used with the new tenant, so its fixture projects are reachable by non-production superusers.
+**User ids do not carry over.** `sub` is per tenant. A developer's existing local database has users created by production logins. After the cutover, a non-production login creates a new user row. Old rows can be ignored. Fixture projects in the golden snapshot are owned by synthetic users, not by a staff `sub`. A person administers them by being superuser in the non-production tenant, or by being added locally as a project admin. See [integration testing](integration-testing.md).
 
 **The preview workflow is unchanged.** `.github/workflows/preview-build.yml` builds a client against a shared API with the production tenant. It stays that way while that API is production. It is not a reason for development to use production keys, and it is not staging.
 
@@ -74,6 +74,7 @@ Staging, in phase 5, uses the same non-production tenant.
 - Automated tests hold no Auth0 secrets or user passwords.
 - Claim names stay `https://seasketch.org/…`. Issuer and audience change per install.
 - One non-production tenant for laptops, agents, and staging. A future production install on another domain would get its own production tenant ([second production install](second-install.md)).
+- *(September 2026)* No shared developer account. Each person signs up on the non-production tenant. Superuser is a claim on named staff accounts. Anyone else can be added as a demo-project admin on their own database; that membership is not part of the snapshot.
 
 ## Progress
 
@@ -88,7 +89,7 @@ Staging, in phase 5, uses the same non-production tenant.
 
 - _(Phase 1)_ Tenant name, region, and the non-production audience identifier.
 - _(Phase 1)_ Whether the existing rule can be exported as is, or has to be rewritten as an Action.
-- _(Phase 1)_ Which staff accounts are superuser in the non-production tenant before the first post-cutover snapshot.
+- _(Phase 1)_ Which named staff accounts are marked superuser in the non-production tenant. The snapshot does not wait on that list.
 
 ## Exit criteria
 

@@ -73,6 +73,8 @@ Phase 1 is allowed to be slow. Its job is to exist and to fail when the core app
    - Auth0 management: done, September 2026.
    - Lambda ARNs and queue URLs: done, September 2026. Unset targets already skipped or threw. The overlay-engine access token no longer reads the production secret when its ARN is unset outside production, and a screenshot job fails closed when its Lambda ARN is unset.
 2. Golden database snapshot and `npm run setup`, which waits for Postgres, restores, and migrates forward. ([integration testing](integration-testing.md), [environment setup](env-setup.md))
+   - Local create and restore: done, September 2026. `npm run snapshot:create` dumps a side database built from committed migrations, the graphile-worker schema, `demo-public`, two seed users, and a generated signing key. `npm run setup` restores that local file into an empty database and migrates forward. A database that already has migrations is left in place; `npm run setup -- --reset` replaces it. The dump is gitignored.
+   - R2 fetch and the data library: done, October 2026. The dump also contains the `superuser` data-library templates copied from a developer's database. `npm run snapshot:publish` uploads it to `golden-snapshot/current/` in the private file-uploads bucket. `npm run setup` fetches that object when the local copy is missing or older.
 3. `E2E_TEST_MODE` in the API. ([integration testing](integration-testing.md))
 4. `packages/e2e` with three `@smoke` journeys.
 5. A CI job that restores, builds, and runs `@smoke`, marked as a required status check on pull requests.
