@@ -1,6 +1,6 @@
 # Local services
 
-> [2026 campaign record](README.md). Archived when the campaign ends. A later refactor supersedes this folder instead of revising it.
+> Part of the [2026 campaign record](README.md). Status: design, started September 2026.
 
 [Index](README.md) · [Strategy](strategy.md)
 

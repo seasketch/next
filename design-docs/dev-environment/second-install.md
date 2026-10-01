@@ -1,6 +1,6 @@
 # A second production install
 
-> [2026 campaign record](README.md). Archived when the campaign ends. A later refactor supersedes this folder instead of revising it.
+> Part of the [2026 campaign record](README.md). Status: design, started September 2026.
 
 [Index](README.md) · [Strategy](strategy.md)
 
@@ -41,3 +41,18 @@ The client bakes public URLs in at build time, so a second install is a second c
 Hardcoded production hostnames are widespread: `uploads.seasketch.org`, `tiles.seasketch.org`, and `overlay.seasketch.org` in API plugins and tasks; the production API host `api.seasket.ch` in infra, email templates, and the deploy gate; `ISSUER || "seasketch.org"` defaults; host filters in visitor metrics; the public WoRMS parquet base URL. Parameterizing them is a later project. JSON schema `$id` values under `https://seasketch.org/schemas/…` are identifiers, not deployment URLs, and stay.
 
 CDK's single-account layout and the deploy workflow's structure stay as they are. Do not deepen that coupling while passing through: bucket names and domains introduced by this campaign come from configuration.
+
+## Decisions
+
+- This campaign does not deploy a second install.
+- When a choice would force a fork, prefer the same revision with a different configuration profile.
+- New hostnames, buckets, queues, and issuers introduced by this campaign are manifest variables.
+- Parameterizing the hardcoded hostnames already in the tree is a later project.
+
+## Open questions
+
+None. This file is a constraint on the other decisions, not a phase of work.
+
+## Exit criteria
+
+- **Throughout:** No pull request in this campaign deploys a second site, and none adds a new hardcoded production hostname, bucket, queue, or issuer.

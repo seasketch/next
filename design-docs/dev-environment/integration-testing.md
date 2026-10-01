@@ -1,6 +1,6 @@
 # Integration testing
 
-> [2026 campaign record](README.md). Archived when the campaign ends. A later refactor supersedes this folder instead of revising it.
+> Part of the [2026 campaign record](README.md). Status: design, started September 2026.
 
 [Index](README.md) · [Strategy](strategy.md)
 
@@ -14,14 +14,14 @@ SeaSketch has solid unit-test jobs and no browser gate. A browser suite serves t
 
 ## Starting point (2026)
 
-API Jest, client Jest, overlay-engine Vitest, schema drift, and generated CSS run on every push. Cypress specs under `packages/client/cypress` cover onboarding, project listing, survey creation, and a production smoke, and a `window.Cypress` branch in the client's token code reads a seeded Auth0 cache. None of it runs in CI. The API has test hooks behind `IS_CYPRESS_TEST_ENV`: invite email written to files, and a short-lived invite for one known address.
+API Jest, client Jest, overlay-engine Vitest, schema drift, and generated CSS run on every push. Cypress specs under `packages/client/cypress` describe onboarding, project listing, survey creation, and a production smoke, and a `window.Cypress` branch in the client's token code reads a seeded Auth0 cache. The specs are unmaintained and no longer runnable. The API still has test hooks behind `IS_CYPRESS_TEST_ENV`: invite email written to files, and a short-lived invite for one known address.
 
 ## Layers
 
 | Layer | Role | Runs |
 | --- | --- | --- |
 | Unit and API tests | Breadth. The access-control permission matrix lives here | Existing CI jobs, every push |
-| Browser journeys | A thin set of paths a person actually walks. Proves the stack boots and access gates behave | `@smoke` required on every pull request; broader tags on `master` or nightly until they are cheap enough for pull requests |
+| Browser journeys | The paths a person walks, growing from smoke to access, authoring, data, and reports. API tests keep the permission matrix | `@smoke` required on every pull request; broader tags on `master` or nightly until they are cheap enough for pull requests |
 | Production probes | Read-only availability of the live site | After every deploy from phase 2; on a schedule from phase 5 |
 
 For admin work, browser coverage means the gates: anonymous visitor, signed-in member, admin, invite acceptance, access request. Who may edit which setting stays in API tests. A suite that repeats a hundred API cases in a browser becomes too slow to gate pull requests, which is the deadlock the [strategy](strategy.md) exists to avoid.

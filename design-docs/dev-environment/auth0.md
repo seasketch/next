@@ -1,6 +1,6 @@
 # Auth0
 
-> [2026 campaign record](README.md). Archived when the campaign ends. A later refactor supersedes this folder instead of revising it.
+> Part of the [2026 campaign record](README.md). Status: design, started September 2026.
 
 [Index](README.md) · [Strategy](strategy.md)
 
@@ -20,7 +20,7 @@ The API does more than validate tokens. It calls the Auth0 Management API with `
 - Accepting a project invite marks an unverified user's email as verified (`invites/projectInvites.ts`).
 - Email verification links do the same (`emailVerification.ts`, and `verifyEmailMiddleware`).
 
-Those call sites once constructed their own Management clients, and `auth/auth0.ts` constructed one on import, so the API expected Auth0 configuration just to start. That import-time construction is gone (September 2026); see *Decisions*. Anyone with the development `.env` can still update production users until the non-production tenant lands.
+Those call sites construct their own Management clients, and `auth/auth0.ts` constructs one when the module is imported, so the API expects Auth0 configuration just to start. Anyone with the development `.env` can update production users.
 
 SeaSketch-specific claims come from an Auth0 rule or Action: `https://seasketch.org/canonical_email`, `https://seasketch.org/email_verified`, and `https://seasketch.org/superuser`. Superuser is a flag on the user in the tenant. `userAccountMiddleware` and `IsSuperuserPlugin` trust those claims after `authorizationMiddleware` has checked issuer, audience, and signature.
 
@@ -32,25 +32,25 @@ Sharing the tenant means:
 - A development token carries the production issuer and audience, so the production API accepts it.
 - Putting those keys into a cloud agent's secret store multiplies who holds a production management secret.
 
-A second *application* in the production tenant fixes none of this. The user directory, the Management API, and the superuser flag are tenant-wide.
+A second _application_ in the production tenant fixes none of this. The user directory, the Management API, and the superuser flag are tenant-wide.
 
 ## Design
 
 **Two tenants for this install.**
 
-| | Production | Non-production |
-| --- | --- | --- |
-| Used by | The deployed API and client | Laptops, cloud agents, staging |
-| Issuer | `seasketch.auth0.com` | A different Auth0 domain |
-| Audience | `https://api.seasketch.org` | A different identifier, so a copied token fails the production audience check on its own |
-| Management client | Production deploy only | Shared development secret, scoped to the non-production directory |
-| SPA callbacks | Production origins | `localhost` origins, plus staging when it exists |
+|                   | Production                  | Non-production                                                                           |
+| ----------------- | --------------------------- | ---------------------------------------------------------------------------------------- |
+| Used by           | The deployed API and client | Laptops, cloud agents, staging                                                           |
+| Issuer            | `seasketch.auth0.com`       | A different Auth0 domain                                                                 |
+| Audience          | `https://api.seasketch.org` | A different identifier, so a copied token fails the production audience check on its own |
+| Management client | Production deploy only      | Shared development secret, scoped to the non-production directory                        |
+| SPA callbacks     | Production origins          | `localhost` origins, plus staging when it exists                                         |
 
 One non-production tenant serves laptops and staging. Start with one SPA application and one API identifier in it.
 
 **Claims keep their names.** Recreate the rule or Action on the new tenant with the same `https://seasketch.org/…` claim names. The namespace is an identifier shared by every install, not the site's hostname. Issuer and audience are what differ. Staff who need superuser for development are marked superuser in the non-production tenant.
 
-**One Management API module.** Done for the real client (September 2026): `packages/api/src/auth/auth0.ts` exposes `getManagementClient()`, which creates the client on first use and returns `null` when Auth0 management env is unset. Invite acceptance, email verification, and `canonicalEmail` go through that module; helpers throw `Auth0 management not configured` when it is absent, and the API still starts. Still to do: in `E2E_TEST_MODE`, replace the module with a fake backed by the local database so invite acceptance and `canonicalEmail` work for test users who exist in no Auth0 tenant.
+**One Management API module.** The call sites above go through a single module that creates its client lazily. When Auth0 management is unconfigured, the features that need it report themselves unavailable and the API still starts. In `E2E_TEST_MODE`, the module is replaced by a fake backed by the local database, so invite acceptance and `canonicalEmail` work for test users who exist in no Auth0 tenant. The lazy client shipped in September 2026; the fake has not. See *Progress*.
 
 **Setup refuses production identifiers.** Outside a production deploy, `JWT_ISS`, `JWKS_URI`, the Auth0 domain, and the audience must not match the production profile's values. This check sits with the other fail-closed checks in [secrets](secrets-management.md).
 
@@ -70,27 +70,27 @@ Staging, in phase 5, uses the same non-production tenant.
 
 - A separate tenant, not a second application on `seasketch.auth0.com`.
 - Production management credentials appear only in the production deploy environment.
-- *(September 2026)* The API starts without Auth0 management configured. All Management API calls go through `packages/api/src/auth/auth0.ts` (`getManagementClient()`). Covered by `tests/auth0Management.test.ts`.
+- _(September 2026)_ The API starts without Auth0 management configured. All Management API calls go through `packages/api/src/auth/auth0.ts` (`getManagementClient()`). Covered by `tests/auth0Management.test.ts`.
 - Automated tests hold no Auth0 secrets or user passwords.
 - Claim names stay `https://seasketch.org/…`. Issuer and audience change per install.
 - One non-production tenant for laptops, agents, and staging. A future production install on another domain would get its own production tenant ([second production install](second-install.md)).
 
 ## Progress
 
-| Item | Status |
-| --- | --- |
+| Item                                               | Status               |
+| -------------------------------------------------- | -------------------- |
 | Lazy Management module; API boots with Auth0 unset | Done, September 2026 |
-| Database-backed Management fake in `E2E_TEST_MODE` | Not started |
-| Non-production Auth0 tenant and cutover | Not started |
-| Setup refuses production Auth0 identifiers | Not started |
+| Database-backed Management fake in `E2E_TEST_MODE` | Not started          |
+| Non-production Auth0 tenant and cutover            | Not started          |
+| Setup refuses production Auth0 identifiers         | Not started          |
 
 ## Open questions
 
-- *(Phase 1)* Tenant name, region, and the non-production audience identifier.
-- *(Phase 1)* Whether the existing rule can be exported as is, or has to be rewritten as an Action.
-- *(Phase 1)* Which staff accounts are superuser in the non-production tenant before the first post-cutover snapshot.
+- _(Phase 1)_ Tenant name, region, and the non-production audience identifier.
+- _(Phase 1)_ Whether the existing rule can be exported as is, or has to be rewritten as an Action.
+- _(Phase 1)_ Which staff accounts are superuser in the non-production tenant before the first post-cutover snapshot.
 
 ## Exit criteria
 
-- **Phase 1:** ~~The API starts with Auth0 management unset.~~ The smoke job holds no Auth0 secrets. The default profile for a new machine or agent is the non-production tenant. Setup refuses production Auth0 identifiers outside a production deploy.
+- **Phase 1:** The API starts with Auth0 management unset. *Done, September 2026.* The smoke job holds no Auth0 secrets. The default profile for a new machine or agent is the non-production tenant. Setup refuses production Auth0 identifiers outside a production deploy.
 - **Phase 5:** Staging login uses the non-production tenant. The production tenant is unchanged.

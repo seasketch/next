@@ -1,6 +1,6 @@
 # Strategy
 
-> [2026 campaign record](README.md). Archived when the campaign ends. A later refactor supersedes this folder instead of revising it.
+> Part of the [2026 campaign record](README.md). Status: design, started September 2026.
 
 [Index](README.md)
 
@@ -10,8 +10,8 @@ Four outcomes that only work together:
 
 - A clean machine — a developer laptop, a GitHub Actions runner, or a cloud agent VM — can install, load a useful database, and start SeaSketch from documented commands.
 - That default stack does not read credentials for, or write to, production systems.
-- A small browser suite runs on every pull request and blocks the merge when the core app is broken.
-- The monorepo layout and the client build can change without a week of "try it locally and see."
+- Browser tests cover the product's surface — access, authoring, data, and reports — and a failure blocks the merge. Every pull request runs the fast subset. The rest run on `master` or nightly until CI is fast enough to require them too. The production probe is a smaller read-only check of the live site.
+- Large refactors of the monorepo layout and the client build can be implemented, and those tests show whether they work before they merge.
 
 ## Starting point (2026)
 
@@ -21,7 +21,7 @@ Four outcomes that only work together:
 
 **Client.** Create React App 4 (`react-scripts` 4). The production build needs `--openssl-legacy-provider`. ESLint extends CRA's `react-app` config. The dev server, typecheck, and lint are what make the editor slow.
 
-**Tests.** CI runs API Jest, client Jest, overlay-engine Vitest, GraphQL schema drift, generated Tailwind CSS, and a client production build, on every push. Nothing exercises the app in a browser. Cypress specs exist under `packages/client/cypress` and the repo README describes end-to-end tests as part of merging, but they do not run.
+**Tests.** CI runs API Jest, client Jest, overlay-engine Vitest, GraphQL schema drift, generated Tailwind CSS, and a client production build, on every push. Nothing exercises the app in a browser. Cypress specs under `packages/client/cypress` are unmaintained and no longer runnable. The repo README still describes end-to-end tests as part of merging.
 
 **Runtime.** VS Code tasks fire on folder open and start Postgres, Redis, the API, the client, and some watchers. `db:start` returns before Postgres accepts connections, so the API races the database. Spatial uploads, data tables, tiles, and overlay workers are started by hand or, when configured, point at production. Secrets live in per-package `.env` files, and several of those values are production credentials, including an Auth0 Management API client that can update production users.
 
@@ -69,7 +69,9 @@ Phase 1 is allowed to be slow. Its job is to exist and to fail when the core app
 
 **Critical path**, in order:
 
-1. The API boots with integrations unset. Auth0 management, Lambda ARNs, and queue URLs that are missing make their features unavailable instead of failing startup or calling production. ([local services](local-services.md), [Auth0](auth0.md)) — *Auth0 management half done September 2026; Lambda ARNs and queue URLs still open.*
+1. The API boots with integrations unset. Auth0 management, Lambda ARNs, and queue URLs that are missing make their features unavailable instead of failing startup or calling production. ([local services](local-services.md), [Auth0](auth0.md))
+   - Auth0 management: done, September 2026.
+   - Lambda ARNs and queue URLs: open.
 2. Golden database snapshot and `npm run setup`, which waits for Postgres, restores, and migrates forward. ([integration testing](integration-testing.md), [environment setup](env-setup.md))
 3. `E2E_TEST_MODE` in the API. ([integration testing](integration-testing.md))
 4. `packages/e2e` with three `@smoke` journeys.
@@ -156,4 +158,6 @@ If a specific change needs more than that, pull the staging work forward for it.
 
 ## How topic files are organized
 
-Each topic file has the same sections: **Intent**, **Starting point (2026)**, the design itself, **Decisions**, **Open questions** (each tagged with the phase whose spike resolves it), and **Exit criteria** by phase. As open questions are resolved, they move into *Decisions* ([keeping this record](README.md#keeping-this-record)).
+Each topic file has the same sections: **Intent**, **Starting point (2026)**, the design itself, **Decisions**, **Open questions** (each tagged with the phase whose spike resolves it), and **Exit criteria** by phase.
+
+*Starting point* stays the baseline. It is not edited as work lands. *Decisions* are accepted choices; a choice that has shipped gets the month, and one without a month is still open. A met exit criterion is marked *Done, <month>* in place, not struck through. A *Progress* table is only for a decision that is partly shipped. Resolved open questions move into *Decisions* ([keeping this record](README.md#keeping-this-record)).
