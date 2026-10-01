@@ -97,6 +97,16 @@ restore_snapshot() {
   pg_restore_section --section=post-data
 }
 
+replace_signing_keys() {
+  # Older dumps carried a signing key that every restore shared. Anyone with
+  # the dump could sign invite or test tokens for this database.
+  echo "Generating a signing key for ${DB_NAME}..."
+  local insert_key
+  insert_key="$(cd "$API_DIR" && node "$SCRIPT_DIR/generate-jwks.js")"
+  printf 'BEGIN;\nDELETE FROM jwks;\n%s\nCOMMIT;\n' "$insert_key" \
+    | psql_exec -d "$DB_NAME" -f - >/dev/null
+}
+
 drop_database() {
   echo "Dropping database ${DB_NAME}."
   psql_exec -d postgres -c \
@@ -149,6 +159,7 @@ if ! restore_snapshot; then
   drop_database
   exit 1
 fi
+replace_signing_keys
 migrate_forward
 queue_gmaps_session
 

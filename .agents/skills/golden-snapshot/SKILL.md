@@ -18,7 +18,7 @@ The golden snapshot is the database base for dev machine installs, CI bootstrapp
 
 `npm run setup` restores `packages/api/snapshots/golden.dump`, then applies committed migrations newer than that dump. The dump is gitignored. `npm run snapshot:publish` uploads it to R2 at `golden-snapshot/current/`. Until that upload, dev machines, CI, and agents keep booting from the previous fixtures.
 
-The dump is built from committed migrations, the graphile-worker schema, a generated signing key, and three seed files:
+The dump is built from committed migrations, the graphile-worker schema, and three seed files:
 
 - `packages/api/snapshots/fixtures.sql` — `e2e|member`, `e2e|admin`, public project `demo-samoa`, default basemaps, Samoan (`sm`)
 - `packages/api/snapshots/data-library.sql` — hardcoded superuser templates: `SEAMOUNTS`, `DAYLIGHT_COASTLINE`, `MARINE_REGIONS_EEZ_LAND_JOINED`, `MARINE_REGIONS_TERRITORIAL_SEA`
@@ -43,7 +43,7 @@ Keep `SHARED_DATA_LIBRARY_TEMPLATE_IDS` in `packages/api/tasks/cleanupDeletedOve
 - The rest of the production data-library catalog, Coral Reef Watch, or historical output versions.
 - An iNaturalist layer. The data-library modal creates one when someone asks for it.
 - A Google Maps tile session. Sessions expire. `packages/api/scripts/setup.sh` queues `refreshGmapsApiSession` when none is valid.
-- A copied signing key. `snapshot-create.sh` generates one into the dump. Do not commit `golden.dump`.
+- A signing key (`jwks` rows). Every install restored from the dump would share it. `snapshot-create.sh` fails if the source has one and dumps `jwks` without data; `setup.sh` generates a key per database after restore. Do not commit `golden.dump`.
 
 ## When a rebuild is unnecessary
 

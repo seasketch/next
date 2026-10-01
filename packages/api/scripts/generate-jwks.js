@@ -1,7 +1,8 @@
 /**
  * Print SQL that inserts one signing key, matching createNewKeyset in src/auth/jwks.ts.
- * The golden snapshot needs a key so later test-mode tokens can be signed.
- * Run from packages/api so node-rsa resolves.
+ * setup runs this after a restore so each database has its own key instead
+ * of one shared through the golden snapshot. Run from packages/api so node-rsa
+ * resolves.
  */
 const crypto = require("crypto");
 const { promisify } = require("util");

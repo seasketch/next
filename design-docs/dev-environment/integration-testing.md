@@ -42,13 +42,13 @@ On failure, CI keeps the Playwright trace, screenshots, and the slug of any proj
 
 ## Test-mode auth
 
-Automated runs never log in through Auth0 and store no passwords. The API gains `E2E_TEST_MODE`, which works only when explicitly enabled, only with a shared secret, and never when `NODE_ENV` is `production`.
+Automated runs never log in through Auth0 and store no passwords. The API gains `E2E_TEST_MODE`, which works only when explicitly enabled, only with a shared secret of at least 32 characters, and only when `NODE_ENV` is `development` or `test`. It also refuses a process that holds a production identifier: an RDS database host, or `CLIENT_DOMAIN` set to `seasketch.org`.
 
-- **Tokens.** A test-mode login endpoint exchanges a known user and the shared secret for an access token. The API signs it with its own keys — the `jwks` table, `auth/jwks.ts`, and `/.well-known/jwks.json` that already sign invite tokens — under a test-only issuer. `authorizationMiddleware` accepts that issuer only in test mode. Production neither exposes the endpoint nor trusts the issuer, so a leaked test token is useless there.
+- **Tokens.** A test-mode login endpoint exchanges a known `e2e|` user and the shared secret for an access token. A token may carry the superuser claim, so superuser journeys run as a test user. Test mode never signs in any other `sub`, so it cannot impersonate a real account in a developer's database. The API signs it with its own keys — the `jwks` table, `auth/jwks.ts`, and `/.well-known/jwks.json` that already sign invite tokens — under a test-only issuer. `authorizationMiddleware` accepts that issuer only in test mode. Production neither exposes the endpoint nor trusts the issuer, so a leaked test token is useless there.
 - **Claims.** Test tokens carry the same `https://seasketch.org/…` claims the Auth0 Action adds, so superuser and email-verified code paths run unmodified.
 - **Management API.** Test mode replaces the single Auth0 Management module with a database-backed fake ([Auth0](auth0.md)). Invite acceptance and `canonicalEmail` work for test users who exist in no tenant.
 - **Client.** Playwright seeds the Auth0 SDK's localStorage cache so the production bundle runs unchanged. The existing `window.Cypress` branch is removed. If seeding the cache proves unreliable, the fallback is one explicit test-mode branch behind a build flag, recorded in *Decisions*, since that means CI tests a slightly different bundle.
-- **Email.** Invite and verification email is written to a workspace directory so a journey can follow the link. This generalizes and replaces `IS_CYPRESS_TEST_ENV`.
+- **Email.** Project invite, survey invite, and verification email is written to a workspace directory so a journey can follow the link. Nothing in test mode sends through SES. This generalizes and replaces `IS_CYPRESS_TEST_ENV`.
 
 Seed users with stable `sub` values live in the golden snapshot. A journey that needs a brand-new user goes through the invite path.
 
@@ -58,7 +58,9 @@ A new laptop, a CI job, and an agent each need a database that already has migra
 
 **Artifact.** A `pg_dump` custom-format snapshot of schema and data, including Graphile Migrate's bookkeeping, in a private R2 bucket with a small manifest (source migration, creation date, commit). `npm run setup` restores it into the existing PostGIS container, then Graphile Migrate applies only newer migrations. We do not publish a database image with data baked in. A dump fits R2, restores on both amd64 CI and arm64 laptops, and avoids a Compose volume silently hiding data baked into an image. Personal `db:backup` / `db:restore` dumps are unchanged and separate.
 
-**Never from production.** The snapshot is built from a curated non-production database. It contains the API's private signing keys (the `jwks` table), and a production dump would contain user data.
+**Never from production.** The snapshot is built from a curated non-production database. A production dump would contain user data.
+
+**No signing key.** The dump has no rows in `jwks`. `npm run setup` generates a key for each database it restores. A key inside a shared dump would let anyone holding the dump sign invite and test tokens for every install restored from it.
 
 **Who can open a fixture.** Membership rows store a `sub`. A login from any Auth0 tenant creates a new `users` row when that `sub` has not been seen, and that row is not an admin of the fixture projects. The snapshot therefore does not depend on a tenant, and it also does not grant a human login access to those projects.
 
@@ -94,6 +96,8 @@ Journeys that open a map depend on a Mapbox development token. Their assertion i
 - Playwright; no further investment in Cypress.
 - Test-mode tokens are signed by the API's own keys under a test-only issuer.
 - *(October 2026)* `E2E_TEST_MODE` is implemented on the API: `POST /e2e/token`, local verification of that issuer, a database-backed Management stand-in, and invite mail written to `e2e-emails/`. The Playwright client and the smoke CI job are still ahead.
+- *(October 2026)* Test mode signs in only `e2e|` subs, with or without the superuser claim. It runs only under `NODE_ENV` `development` or `test`, with a secret of at least 32 characters, and refuses an RDS database host or `CLIENT_DOMAIN` `seasketch.org`. The Auth0 issuer is not one of those signals yet, because laptops still use the production tenant; it joins the check at the tenant cutover ([Auth0](auth0.md)). Survey invites go to the test mailbox too.
+- *(October 2026)* The golden snapshot holds no signing key. `setup` deletes any key a restored dump brings and generates one for that database. The dumps archived on R2 before this change still contain the old shared key.
 - One golden snapshot for laptops, CI, agents, and later staging, built from a curated non-production database.
 - *(September 2026)* `npm run snapshot:create` writes a local custom-format dump from a side database, not from a developer's `seasketch` database. The dump contains committed migrations, the graphile-worker schema, `demo-public` (public, owned by `seasketch|root`), seed users `e2e|member` and `e2e|admin` (`e2e|admin` is an admin of `demo-public`), and one generated signing key. `npm run setup` restores it when the target database has no migrations, then migrates forward. `npm run setup -- --reset` is the wipe. The file is gitignored.
 - *(October 2026)* The public fixture is `demo-samoa`. It includes the default Light and Satellite basemaps. Its geographies are built the same way the create-project form builds them for Samoa (`MRGID_EEZ` 8445) with offshore and nearshore zones: Exclusive Economic Zone, Territorial Seas, and Offshore. Those layers are cloned from the public templates, filtered to Samoa, nested under Geography layers, and published, and the project region is the EEZ bounds rather than the global default. Samoan (`sm`) is enabled as an alternate language. Google Maps tile sessions are left out of the dump because they expire; `npm run setup` queues `refreshGmapsApiSession` when the database has none, since the worker crontab only requests one during the 01:00 hour.

@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import { DBClient } from "../dbClient";
 import { sign, verify } from "../auth/jwks";
-import { E2E_ISSUER, E2E_TOKEN_TTL_SECONDS } from "./testMode";
+import { E2E_ISSUER, E2E_TOKEN_TTL_SECONDS, isE2ESub } from "./testMode";
 
 const CANONICAL_EMAIL = "https://seasketch.org/canonical_email";
 const EMAIL_VERIFIED = "https://seasketch.org/email_verified";
@@ -13,15 +13,20 @@ export type E2ETokenOptions = {
 };
 
 /**
- * Sign an access token for a user who already exists in this database.
- * Returns null when `sub` is unknown. Claims match the Auth0 Action names so
- * the rest of the API does not grow a test-mode branch.
+ * Sign an access token for a test user who already exists in this database.
+ * Returns null when `sub` is unknown. Throws for a sub outside `e2e|`, so test
+ * mode cannot sign in as a real account copied into a developer database.
+ * Claims match the Auth0 Action names so the rest of the API does not grow a
+ * test-mode branch.
  */
 export async function issueE2EAccessToken(
   client: DBClient,
   sub: string,
   options: E2ETokenOptions = {}
 ): Promise<string | null> {
+  if (!isE2ESub(sub)) {
+    throw new Error("Test mode only signs in e2e| users");
+  }
   const audience = process.env.JWT_AUD;
   if (!audience) {
     throw new Error("JWT_AUD is not set");
@@ -69,6 +74,11 @@ export async function authenticateE2EToken(client: DBClient, token: string) {
   const audiences = Array.isArray(audience) ? audience : [audience];
   if (!process.env.JWT_AUD || !audiences.includes(process.env.JWT_AUD)) {
     throw Object.assign(new Error("invalid audience"), { code: "invalid_token" });
+  }
+  if (!isE2ESub(claims.sub)) {
+    throw Object.assign(new Error("test token sub must start with e2e|"), {
+      code: "invalid_token",
+    });
   }
   return claims;
 }

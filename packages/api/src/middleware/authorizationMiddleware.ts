@@ -2,11 +2,14 @@ import jwt from "express-jwt";
 import jwksRsa from "jwks-rsa";
 import { Request, Response, NextFunction } from "express";
 import pool from "../pool";
+import { DBClient } from "../dbClient";
 import {
   authenticateE2EToken,
   tokenIssuer,
 } from "../e2e/accessToken";
 import { E2E_ISSUER, isE2ETestModeEnabled } from "../e2e/testMode";
+
+type Middleware = (req: Request, res: Response, next: NextFunction) => void;
 
 function readBearerToken(req: Request): string | undefined {
   if ("normalizedConnectionParams" in req) {
@@ -39,29 +42,37 @@ const jwtCheck = jwt({
   getToken: (req) => readBearerToken(req as Request),
 });
 
-export default function authorizationMiddleware(
-  req: Request,
-  res: Response,
-  next: NextFunction
-) {
-  const token = readBearerToken(req);
-  if (
-    isE2ETestModeEnabled() &&
-    token &&
-    tokenIssuer(token) === E2E_ISSUER
-  ) {
-    authenticateE2EToken(pool, token)
-      .then((claims) => {
-        // express-jwt assigns the verified payload here.
-        // @ts-ignore
-        req.user = claims;
-        next();
-      })
-      .catch((error) => {
-        error.code = error.code || "invalid_token";
-        next(error);
-      });
-    return;
-  }
-  return jwtCheck(req, res, next);
+/**
+ * Tokens from the test issuer are verified locally only while test mode is
+ * enabled. Every other token, and every token when the mode is off, goes to
+ * `auth0Check`.
+ */
+export function createAuthorizationMiddleware(
+  client: DBClient,
+  auth0Check: Middleware
+): Middleware {
+  return function authorizationMiddleware(req, res, next) {
+    const token = readBearerToken(req);
+    if (
+      isE2ETestModeEnabled() &&
+      token &&
+      tokenIssuer(token) === E2E_ISSUER
+    ) {
+      authenticateE2EToken(client, token)
+        .then((claims) => {
+          // express-jwt assigns the verified payload here.
+          // @ts-ignore
+          req.user = claims;
+          next();
+        })
+        .catch((error) => {
+          error.code = error.code || "invalid_token";
+          next(error);
+        });
+      return;
+    }
+    return auth0Check(req, res, next);
+  };
 }
+
+export default createAuthorizationMiddleware(pool, jwtCheck);

@@ -1,7 +1,29 @@
-import { Request, Response } from "express";
+import express, { Request, Response } from "express";
 import { DBClient } from "../dbClient";
 import { issueE2EAccessToken } from "./accessToken";
-import { E2E_TOKEN_TTL_SECONDS, e2eSecretMatches } from "./testMode";
+import {
+  E2E_SUB_PREFIX,
+  E2E_TOKEN_TTL_SECONDS,
+  e2eSecretMatches,
+  isE2ESub,
+  isE2ETestModeEnabled,
+} from "./testMode";
+
+/** Adds POST /e2e/token only while test mode is enabled. Returns whether it did. */
+export function registerE2ETokenRoute(
+  app: Pick<express.Express, "post">,
+  client: DBClient
+): boolean {
+  if (!isE2ETestModeEnabled()) {
+    return false;
+  }
+  app.post(
+    "/e2e/token",
+    express.json({ limit: "32kb" }) as any,
+    e2eTokenRoute(client)
+  );
+  return true;
+}
 
 export function e2eTokenRoute(client: DBClient) {
   return async function e2eToken(req: Request, res: Response) {
@@ -12,6 +34,12 @@ export function e2eTokenRoute(client: DBClient) {
     const sub = req.body?.sub;
     if (typeof sub !== "string" || sub.length === 0) {
       res.status(400).json({ error: "sub is required" });
+      return;
+    }
+    if (!isE2ESub(sub)) {
+      res
+        .status(403)
+        .json({ error: `test mode only signs in ${E2E_SUB_PREFIX} users` });
       return;
     }
     const { superuser, emailVerified } = req.body ?? {};

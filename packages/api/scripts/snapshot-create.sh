@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Build a curated non-production database and write the local golden snapshot.
 # Data-library rows are hardcoded in snapshots/data-library.sql.
-# The dump contains a private signing key, so it is gitignored.
-# Pass --publish to upload it to R2.
+# The dump holds no signing key; npm run setup generates one per database.
+# It is gitignored. Pass --publish to upload it to R2.
 set -euo pipefail
 
 API_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -69,12 +69,6 @@ echo "Installing the graphile-worker schema..."
 echo "Inserting fixture projects and seed users..."
 psql_exec -d "$SOURCE_DB" -f - < "$API_DIR/snapshots/fixtures.sql"
 
-echo "Generating a signing key..."
-(
-  cd "$API_DIR"
-  node "$SCRIPT_DIR/snapshot-seed-jwks.js"
-) | psql_exec -d "$SOURCE_DB" -f -
-
 echo "Loading hardcoded data-library layers..."
 psql_exec -d "$SOURCE_DB" -f - < "$API_DIR/snapshots/data-library.sql"
 library_templates="$(psql_exec -d "$SOURCE_DB" -tAc \
@@ -125,6 +119,12 @@ if [[ "$demo" != "demo-samoa" ]]; then
   exit 1
 fi
 
+signing_keys="$(psql_exec -d "$SOURCE_DB" -tAc "SELECT count(*) FROM jwks")"
+if [[ "$signing_keys" != "0" ]]; then
+  echo "Snapshot source has ${signing_keys} signing key(s). Every restore would share them." >&2
+  exit 1
+fi
+
 mkdir -p "$API_DIR/snapshots"
 echo "Writing ${DUMP_PATH} at migration ${migration}..."
 docker exec "$CONTAINER_NAME" pg_dump \
@@ -132,6 +132,7 @@ docker exec "$CONTAINER_NAME" pg_dump \
   -d "$SOURCE_DB" \
   --format=custom \
   --no-owner \
+  --exclude-table-data=public.jwks \
   > "$DUMP_PATH"
 
 if [[ ! -s "$DUMP_PATH" ]]; then
@@ -168,7 +169,7 @@ const manifest = {
     .split(",")
     .map((name) => name.trim())
     .filter(Boolean),
-  note: "Golden snapshot. Contains a private signing key. Fetched from R2 by npm run setup."
+  note: "Golden snapshot. No signing key; npm run setup generates one. Fetched from R2 by npm run setup."
 };
 fs.writeFileSync(process.argv[1], JSON.stringify(manifest, null, 2) + "\n");
 ' "$MANIFEST_PATH"
