@@ -29,6 +29,7 @@ import * as cache from "./cache";
 import { verifyEmailWithToken } from "./emailVerification";
 import { getRealUserVisits, getVisitorMetrics } from "./visitorMetrics";
 import layerApi from "./layerApi";
+import { throwIfProductionMisconfigured } from "./env";
 
 const ISSUER = (process.env.ISSUER || "seasketch.org")
   .split(",")
@@ -334,6 +335,12 @@ app.post(
         .json({ error: "feature and sketchClassId are required" });
     }
     if (!process.env.FRAGMENT_WORKER_LAMBDA_ARN) {
+      if (process.env.NODE_ENV === "production") {
+        return res.status(500).json({
+          error:
+            "Sketch fragment cache warm is misconfigured: FRAGMENT_WORKER_LAMBDA_ARN is not set",
+        });
+      }
       return res.json({ success: true, skipped: true });
     }
     const client = await warmCachePool.connect();
@@ -823,6 +830,15 @@ app.use(
 
 // The error handler must be before any other error middleware and after all controllers
 app.use(Sentry.Handlers.errorHandler() as express.ErrorRequestHandler);
+
+// Production must consume overlay results. A missing queue would drop them
+// with no later request to fail, so refuse before serving traffic.
+throwIfProductionMisconfigured(
+  "Overlay report consumer",
+  process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL
+    ? []
+    : ["OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL"],
+);
 
 if (process.env.SSL_CRT_FILE && process.env.SSL_KEY_FILE) {
   https

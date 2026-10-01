@@ -64,6 +64,7 @@ Uploads, tile archives, and ACL documents live in object storage even for local 
 - Report calculation belongs to the data profile, with a per-environment SQS queue.
 - Workers that exist only as deployed Lambdas get a local entry point when a journey or feature task needs one, using the same dev-handler pattern.
 - Screenshot generation is stubbed or skipped in core and data profiles.
+- *(September 2026)* Outside production, an unset integration stays unavailable. In production, calling that functionality throws `MisconfiguredError` naming the missing variable. The overlay result queue is required before the production process listens, because nothing would fail later if it were missing. `SCREENSHOTTER_FUNCTION_ARN` unset throws before any Lambda invoke.
 
 ## Open questions
 

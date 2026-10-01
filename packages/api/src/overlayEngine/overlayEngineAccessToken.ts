@@ -2,8 +2,9 @@ import AWS from "aws-sdk";
 import { decode } from "jsonwebtoken";
 import { sign } from "../auth/jwks";
 import { DBClient } from "../dbClient";
+import { throwIfProductionMisconfigured } from "../env";
 
-/** Stable Secrets Manager name (also used when ARN env is unset). */
+/** Stable Secrets Manager name. The API requires the ARN and does not fall back to this. */
 export const OVERLAY_ENGINE_ACCESS_TOKEN_SECRET_NAME =
   "seasketch/overlay-engine/access-token";
 
@@ -20,14 +21,19 @@ export type OverlayEngineAccessTokenPayload = {
   kid: string;
 };
 
-/** Resolve secret id from env ARN or the stable name. */
+/**
+ * Resolve the Secrets Manager id from an explicit override or
+ * OVERLAY_ENGINE_ACCESS_TOKEN_SECRET_ARN. An unset ARN never falls back to the
+ * production secret name. Callers in production throw; other environments
+ * treat the feature as off.
+ */
 export function overlayEngineAccessTokenSecretId(
   override?: string | null,
-): string {
+): string | null {
   if (override && override.trim()) return override.trim();
   const arn = process.env.OVERLAY_ENGINE_ACCESS_TOKEN_SECRET_ARN;
   if (arn && arn.trim()) return arn.trim();
-  return OVERLAY_ENGINE_ACCESS_TOKEN_SECRET_NAME;
+  return null;
 }
 
 /**
@@ -151,6 +157,16 @@ export function bustOverlayEngineAccessTokenCache(): void {
  * callers should proceed without Authorization (local/dev).
  */
 export async function getOverlayEngineAccessToken(): Promise<string | null> {
+  const secretId = overlayEngineAccessTokenSecretId();
+  if (!secretId) {
+    readCache = null;
+    throwIfProductionMisconfigured("Overlay-engine access token", [
+      "OVERLAY_ENGINE_ACCESS_TOKEN_SECRET_ARN",
+    ]);
+    warnUnavailable("not configured");
+    return null;
+  }
+
   if (readCache && !isExpired(readCache) && !needsRefresh(readCache)) {
     return readCache.token;
   }
@@ -161,7 +177,7 @@ export async function getOverlayEngineAccessToken(): Promise<string | null> {
       try {
         response = await secretsManagerClient()
           .getSecretValue({
-            SecretId: overlayEngineAccessTokenSecretId(),
+            SecretId: secretId,
           })
           .promise();
       } catch (e) {

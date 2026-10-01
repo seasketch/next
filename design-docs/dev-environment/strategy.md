@@ -71,7 +71,7 @@ Phase 1 is allowed to be slow. Its job is to exist and to fail when the core app
 
 1. The API boots with integrations unset. Auth0 management, Lambda ARNs, and queue URLs that are missing make their features unavailable instead of failing startup or calling production. ([local services](local-services.md), [Auth0](auth0.md))
    - Auth0 management: done, September 2026.
-   - Lambda ARNs and queue URLs: open.
+   - Lambda ARNs and queue URLs: done, September 2026. Unset targets already skipped or threw. The overlay-engine access token no longer reads the production secret when its ARN is unset outside production, and a screenshot job fails closed when its Lambda ARN is unset.
 2. Golden database snapshot and `npm run setup`, which waits for Postgres, restores, and migrates forward. ([integration testing](integration-testing.md), [environment setup](env-setup.md))
 3. `E2E_TEST_MODE` in the API. ([integration testing](integration-testing.md))
 4. `packages/e2e` with three `@smoke` journeys.

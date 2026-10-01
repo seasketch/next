@@ -1,7 +1,8 @@
 import { ManagementClient } from "auth0";
+import { MisconfiguredError } from "../env";
 
 export const AUTH0_MANAGEMENT_NOT_CONFIGURED =
-  "Auth0 management not configured";
+  "Auth0 management is misconfigured";
 
 let managementClient: ManagementClient | null | undefined;
 
@@ -43,7 +44,10 @@ export function resetManagementClientForTests() {
 function requireManagementClient(): ManagementClient {
   const client = getManagementClient();
   if (!client) {
-    throw new Error(AUTH0_MANAGEMENT_NOT_CONFIGURED);
+    const missing = (
+      ["AUTH0_DOMAIN", "AUTH0_CLIENT_ID", "AUTH0_CLIENT_SECRET"] as const
+    ).filter((name) => !process.env[name]);
+    throw new MisconfiguredError("Auth0 management", [...missing]);
   }
   return client;
 }
