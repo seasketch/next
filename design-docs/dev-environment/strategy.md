@@ -78,6 +78,7 @@ Phase 1 is allowed to be slow. Its job is to exist and to fail when the core app
    - Default basemaps on the public fixture: done, October 2026. The fixture calls `add_default_basemaps`, the same function `create_project` uses.
    - `demo-samoa` follows create-project: done, October 2026. It has the Exclusive Economic Zone, Territorial Seas, and Offshore geographies for Samoa (`MRGID_EEZ` 8445), cloned into the project, nested under Geography layers, and published. The map extent is that EEZ, not the global default. Samoan is enabled as an alternate language.
 3. `E2E_TEST_MODE` in the API. ([integration testing](integration-testing.md))
+   - Done, October 2026. `POST /e2e/token` exchanges a known `sub` and `E2E_TEST_SECRET` for an access token signed with the API's own keys under `https://e2e.seasketch.test/`. The auth middleware trusts that issuer only while the mode is on, and startup refuses the mode when `NODE_ENV` is `production`. Management lookups and email verification use the local `users` table. Invite and verification email is written to `e2e-emails/` instead of SES.
 4. `packages/e2e` with three `@smoke` journeys.
 5. A CI job that restores, builds, and runs `@smoke`, marked as a required status check on pull requests.
 

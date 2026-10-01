@@ -1,5 +1,11 @@
 import { ManagementClient } from "auth0";
 import { MisconfiguredError } from "../env";
+import pool from "../pool";
+import { isE2ETestModeEnabled } from "../e2e/testMode";
+import {
+  lookupCanonicalEmails,
+  lookupSubsForEmails,
+} from "../e2e/directory";
 
 export const AUTH0_MANAGEMENT_NOT_CONFIGURED =
   "Auth0 management is misconfigured";
@@ -55,6 +61,9 @@ function requireManagementClient(): ManagementClient {
 export async function getCanonicalEmails(
   subs: string[]
 ): Promise<{ [sub: string]: string }> {
+  if (isE2ETestModeEnabled()) {
+    return lookupCanonicalEmails(pool, subs);
+  }
   const auth0 = requireManagementClient();
   const emails: { [sub: string]: string } = {};
   const users = await auth0.getUsers({
@@ -73,6 +82,9 @@ export async function getCanonicalEmails(
 export async function getSubsForEmails(
   emails: string[]
 ): Promise<{ [email: string]: string }> {
+  if (isE2ETestModeEnabled()) {
+    return lookupSubsForEmails(pool, emails);
+  }
   const auth0 = requireManagementClient();
   const subs: { [email: string]: string } = {};
   const users = await auth0.getUsers({
@@ -89,6 +101,11 @@ export async function getSubsForEmails(
 }
 
 export async function verifyEmail(sub: string) {
+  if (isE2ETestModeEnabled()) {
+    // There is no Auth0 user to update. The next test token carries
+    // email_verified, and invite acceptance records the cache flag itself.
+    return { user_id: sub, email_verified: true };
+  }
   const auth0 = requireManagementClient();
   return auth0.updateUser(
     {

@@ -11,6 +11,7 @@ lerna-debug.log
 *.lerna_backup
 packages/api/coverage
 packages/api/backups/db/
+packages/api/e2e-emails/
 packages/api/snapshots/*.dump
 packages/api/snapshots/*.manifest.json
 !packages/overlay-engine/dist/*

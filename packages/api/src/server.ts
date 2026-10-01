@@ -30,6 +30,10 @@ import { verifyEmailWithToken } from "./emailVerification";
 import { getRealUserVisits, getVisitorMetrics } from "./visitorMetrics";
 import layerApi from "./layerApi";
 import { throwIfProductionMisconfigured } from "./env";
+import { assertE2ETestModeConfiguration, isE2ETestModeEnabled } from "./e2e/testMode";
+import { e2eTokenRoute } from "./e2e/tokenRoute";
+
+assertE2ETestModeConfiguration();
 
 const ISSUER = (process.env.ISSUER || "seasketch.org")
   .split(",")
@@ -130,6 +134,14 @@ app.get("/unsubscribeFromTopic", (req, res) => {
       });
   }
 });
+
+if (isE2ETestModeEnabled()) {
+  app.post(
+    "/e2e/token",
+    express.json({ limit: "32kb" }) as any,
+    e2eTokenRoute(pool)
+  );
+}
 
 app.get("/.well-known/jwks.json", async (req, res) => {
   const keys = await getJWKS(pool);

@@ -50,7 +50,7 @@ One non-production tenant serves laptops and staging. Start with one SPA applica
 
 **Claims keep their names.** Recreate the rule or Action on the new tenant with the same `https://seasketch.org/…` claim names. The namespace is an identifier shared by every install, not the site's hostname. Issuer and audience are what differ. Staff who need superuser for development are marked superuser in the non-production tenant.
 
-**One Management API module.** The call sites above go through a single module that creates its client lazily. When Auth0 management is unconfigured, the features that need it report themselves unavailable and the API still starts. In `E2E_TEST_MODE`, the module is replaced by a fake backed by the local database, so invite acceptance and `canonicalEmail` work for test users who exist in no Auth0 tenant. The lazy client shipped in September 2026; the fake has not. See *Progress*.
+**One Management API module.** The call sites above go through a single module that creates its client lazily. When Auth0 management is unconfigured, the features that need it report themselves unavailable and the API still starts. In `E2E_TEST_MODE`, the module is replaced by a fake backed by the local database, so invite acceptance and `canonicalEmail` work for test users who exist in no Auth0 tenant. The lazy client shipped in September 2026. The database-backed fake shipped in October 2026. See *Progress*.
 
 **Setup refuses production identifiers.** Outside a production deploy, `JWT_ISS`, `JWKS_URI`, the Auth0 domain, and the audience must not match the production profile's values. This check sits with the other fail-closed checks in [secrets](secrets-management.md).
 
@@ -81,7 +81,7 @@ Staging, in phase 5, uses the same non-production tenant.
 | Item                                               | Status               |
 | -------------------------------------------------- | -------------------- |
 | Lazy Management module; API boots with Auth0 unset | Done, September 2026 |
-| Database-backed Management fake in `E2E_TEST_MODE` | Not started          |
+| Database-backed Management fake in `E2E_TEST_MODE` | Done, October 2026   |
 | Non-production Auth0 tenant and cutover            | Not started          |
 | Setup refuses production Auth0 identifiers         | Not started          |
 
