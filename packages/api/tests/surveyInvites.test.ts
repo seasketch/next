@@ -21,6 +21,7 @@ import {
   verifySurveyInvite,
 } from "../src/invites/surveyInvites";
 import auth0 from "auth0";
+import { resetManagementClientForTests } from "../src/auth/auth0";
 import { rotateKeys, verify } from "../src/auth/jwks";
 import ms from "ms";
 import MockDate from "mockdate";
@@ -44,6 +45,42 @@ auth0.ManagementClient.prototype.getUsers = jest.fn((val) => {
   } else {
     return [];
   }
+});
+
+// Lazy Auth0 client only constructs when credentials are present. Set them
+// for this file; restore afterward so a later file in the same Jest worker
+// does not inherit dummy Auth0 env or a cached client/null.
+const auth0EnvKeys = [
+  "AUTH0_DOMAIN",
+  "AUTH0_CLIENT_ID",
+  "AUTH0_CLIENT_SECRET",
+] as const;
+const originalAuth0Env: Partial<
+  Record<(typeof auth0EnvKeys)[number], string | undefined>
+> = {};
+
+beforeAll(() => {
+  for (const key of auth0EnvKeys) {
+    originalAuth0Env[key] = process.env[key];
+  }
+});
+
+beforeEach(() => {
+  process.env.AUTH0_DOMAIN = "example.auth0.com";
+  process.env.AUTH0_CLIENT_ID = "client-id";
+  process.env.AUTH0_CLIENT_SECRET = "client-secret";
+  resetManagementClientForTests();
+});
+
+afterEach(() => {
+  for (const key of auth0EnvKeys) {
+    if (originalAuth0Env[key] === undefined) {
+      delete process.env[key];
+    } else {
+      process.env[key] = originalAuth0Env[key];
+    }
+  }
+  resetManagementClientForTests();
 });
 
 jest.mock("aws-sdk/clients/ses", () => {

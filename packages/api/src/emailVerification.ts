@@ -1,6 +1,6 @@
 import { Pool, PoolClient } from "pg";
 import { sign, verify } from "./auth/jwks";
-import { ManagementClient } from "auth0";
+import { verifyEmail } from "./auth/auth0";
 import * as cache from "./cache";
 import sendEmail from "./invites/sendEmail";
 import htmlTemplate from "./invites/verifyEmailTemplate";
@@ -16,14 +16,7 @@ export async function verifyEmailWithToken(token: string, pool: Pool) {
   if (!claims || !claims.sub) {
     throw new Error("Invalid token");
   }
-  // Use auth0 management API to set email as verified
-  const auth0 = new ManagementClient({
-    domain: process.env.AUTH0_DOMAIN,
-    clientId: process.env.AUTH0_CLIENT_ID,
-    clientSecret: process.env.AUTH0_CLIENT_SECRET,
-    scope: "read:users update:users",
-  });
-  await auth0.updateUser({ id: claims.sub }, { email_verified: true });
+  await verifyEmail(claims.sub);
   // Set email as verified in redis cache so that existing tokens with stale
   // emailVerified claims can still be used
   await cache.set(`user:${claims.sub}:emailVerified`, "true");

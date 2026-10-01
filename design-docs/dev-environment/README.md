@@ -33,7 +33,7 @@ Start with the [strategy](strategy.md). It is the sequence. Each other file is o
 - **Order:** smoke tests on today's toolchain → npm workspaces → access and onboarding journeys → replace Create React App → breadth and staging. One axis changes at a time. ([strategy](strategy.md))
 - **Test runner:** Playwright in `packages/e2e`. Cypress scenarios are mined for behavior, then removed. ([integration testing](integration-testing.md))
 - **Test auth:** `E2E_TEST_MODE` mints tokens with the API's own signing keys under a test-only issuer. CI holds no Auth0 secrets. ([integration testing](integration-testing.md))
-- **Human auth:** a separate non-production Auth0 tenant with its own issuer and audience. ([Auth0](auth0.md))
+- **Human auth:** a separate non-production Auth0 tenant with its own issuer and audience. The API's Management client is already lazy and optional ([Auth0](auth0.md), September 2026).
 - **Database:** a curated `pg_dump` snapshot on R2, restored into the existing PostGIS container, then migrated forward. Never built from production. ([integration testing](integration-testing.md))
 - **Startup:** root npm scripts (`setup`, `dev`, `dev:data`, `logs`, `status`) over an existing process manager. VS Code tasks are not the contract. ([environment setup](env-setup.md))
 - **Production reach:** an unset integration makes the feature unavailable. Pointing at production is an explicit override, never in CI. ([local services](local-services.md))

@@ -25,7 +25,6 @@ import { getPgSettings, setTransactionSessionVariables } from "./poolAuth";
 import { makeDataLoaders } from "./dataLoaders";
 import slugify from "slugify";
 import { Pool } from "pg";
-import { ManagementClient } from "auth0";
 import * as cache from "./cache";
 import { verifyEmailWithToken } from "./emailVerification";
 import { getRealUserVisits, getVisitorMetrics } from "./visitorMetrics";

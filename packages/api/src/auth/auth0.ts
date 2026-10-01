@@ -1,15 +1,57 @@
 import { ManagementClient } from "auth0";
 
-const auth0 = new ManagementClient({
-  clientId: process.env.AUTH0_CLIENT_ID,
-  clientSecret: process.env.AUTH0_CLIENT_SECRET,
-  domain: process.env.AUTH0_DOMAIN!,
-  scope: "read:users update:users",
-});
+export const AUTH0_MANAGEMENT_NOT_CONFIGURED =
+  "Auth0 management not configured";
+
+let managementClient: ManagementClient | null | undefined;
+
+function auth0ManagementConfigured(): boolean {
+  return Boolean(
+    process.env.AUTH0_DOMAIN &&
+      process.env.AUTH0_CLIENT_ID &&
+      process.env.AUTH0_CLIENT_SECRET
+  );
+}
+
+/**
+ * Lazily creates the Auth0 Management API client. Returns null when
+ * AUTH0_DOMAIN, AUTH0_CLIENT_ID, or AUTH0_CLIENT_SECRET is unset so the API
+ * can start without Auth0 and features that need management fail closed.
+ */
+export function getManagementClient(): ManagementClient | null {
+  if (managementClient !== undefined) {
+    return managementClient;
+  }
+  if (!auth0ManagementConfigured()) {
+    managementClient = null;
+    return null;
+  }
+  managementClient = new ManagementClient({
+    clientId: process.env.AUTH0_CLIENT_ID,
+    clientSecret: process.env.AUTH0_CLIENT_SECRET,
+    domain: process.env.AUTH0_DOMAIN!,
+    scope: "read:users update:users",
+  });
+  return managementClient;
+}
+
+/** Exposed for unit tests so cached client state does not leak between cases. */
+export function resetManagementClientForTests() {
+  managementClient = undefined;
+}
+
+function requireManagementClient(): ManagementClient {
+  const client = getManagementClient();
+  if (!client) {
+    throw new Error(AUTH0_MANAGEMENT_NOT_CONFIGURED);
+  }
+  return client;
+}
 
 export async function getCanonicalEmails(
   subs: string[]
 ): Promise<{ [sub: string]: string }> {
+  const auth0 = requireManagementClient();
   const emails: { [sub: string]: string } = {};
   const users = await auth0.getUsers({
     fields: "email,user_id",
@@ -27,6 +69,7 @@ export async function getCanonicalEmails(
 export async function getSubsForEmails(
   emails: string[]
 ): Promise<{ [email: string]: string }> {
+  const auth0 = requireManagementClient();
   const subs: { [email: string]: string } = {};
   const users = await auth0.getUsers({
     fields: "email,user_id",
@@ -42,6 +85,7 @@ export async function getSubsForEmails(
 }
 
 export async function verifyEmail(sub: string) {
+  const auth0 = requireManagementClient();
   return auth0.updateUser(
     {
       id: sub,
@@ -51,5 +95,3 @@ export async function verifyEmail(sub: string) {
     }
   );
 }
-
-export const client = auth0;

@@ -69,7 +69,7 @@ Phase 1 is allowed to be slow. Its job is to exist and to fail when the core app
 
 **Critical path**, in order:
 
-1. The API boots with integrations unset. Auth0 management, Lambda ARNs, and queue URLs that are missing make their features unavailable instead of failing startup or calling production. ([local services](local-services.md), [Auth0](auth0.md))
+1. The API boots with integrations unset. Auth0 management, Lambda ARNs, and queue URLs that are missing make their features unavailable instead of failing startup or calling production. ([local services](local-services.md), [Auth0](auth0.md)) — *Auth0 management half done September 2026; Lambda ARNs and queue URLs still open.*
 2. Golden database snapshot and `npm run setup`, which waits for Postgres, restores, and migrates forward. ([integration testing](integration-testing.md), [environment setup](env-setup.md))
 3. `E2E_TEST_MODE` in the API. ([integration testing](integration-testing.md))
 4. `packages/e2e` with three `@smoke` journeys.

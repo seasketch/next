@@ -1,5 +1,5 @@
 import { makeExtendSchemaPlugin, gql } from "graphile-utils";
-import { getCanonicalEmails, client } from "../auth/auth0";
+import { getCanonicalEmails } from "../auth/auth0";
 import { sendEmailVerification } from "../emailVerification";
 
 const CanonicalEmailPlugin = makeExtendSchemaPlugin((build) => {
