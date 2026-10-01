@@ -17,8 +17,8 @@ on conflict (sub) do nothing;
 
 insert into projects (name, slug, creator_id, support_email, is_listed, access_control)
 values (
-  'Demo Public',
-  'demo-public',
+  'Demo Samoa',
+  'demo-samoa',
   (select id from users where sub = 'seasketch|root'),
   'admin@seasketch.org',
   true,
@@ -29,8 +29,23 @@ on conflict (slug) do nothing;
 insert into project_participants (user_id, project_id, is_admin, approved)
 select u.id, p.id, true, true
 from users u
-join projects p on p.slug = 'demo-public'
+join projects p on p.slug = 'demo-samoa'
 where u.sub = 'e2e|admin'
 on conflict on constraint project_participants_pkey do nothing;
 
 set session_replication_role = default;
+
+-- create_project calls add_default_basemaps. This insert does not, and a
+-- project with no basemap cannot open its map.
+select add_default_basemaps(p.id)
+from projects p
+where p.slug = 'demo-samoa'
+  and not exists (
+    select 1 from basemaps b where b.project_id = p.id
+  );
+
+-- The Supported Languages switch calls toggle_language_support. English is
+-- always available and is not stored in this array.
+set role seasketch_superuser;
+select toggle_language_support('demo-samoa', 'sm', true);
+reset role;

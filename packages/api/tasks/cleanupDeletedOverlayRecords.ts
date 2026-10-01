@@ -21,6 +21,38 @@ const REQUIRED_ENV_VARS = [
   "AWS_REGION",
 ];
 
+// These templates are hardcoded in snapshots/data-library.sql and point at
+// public production tiles. Outside production, deleting one must not delete
+// the shared object. Production still deletes its own unused outputs.
+const SHARED_DATA_LIBRARY_TEMPLATE_IDS = [
+  "DAYLIGHT_COASTLINE",
+  "MARINE_REGIONS_EEZ_LAND_JOINED",
+  "MARINE_REGIONS_TERRITORIAL_SEA",
+  "SEAMOUNTS",
+];
+
+async function sharedLibraryRemotes(client: PoolClient) {
+  if (process.env.NODE_ENV === "production") {
+    return new Set<string>();
+  }
+  const { rows } = await client.query<{ remote: string }>(
+    `
+    select outputs.remote
+    from data_upload_outputs outputs
+    join data_sources sources on sources.id = outputs.data_source_id
+    where sources.data_library_template_id = any($1::text[])
+    union
+    select deleted.remote
+    from deleted_data_upload_outputs deleted
+    join data_sources sources
+      on sources.id = (deleted.data_upload_output_data->>'data_source_id')::int
+    where sources.data_library_template_id = any($1::text[])
+    `,
+    [SHARED_DATA_LIBRARY_TEMPLATE_IDS]
+  );
+  return new Set(rows.map((row) => row.remote));
+}
+
 /**
  * Deletes data_layers and data_sources when they are no longer referred to by
  * an active table_of_contents_item. Also deletes related uploads.
@@ -46,6 +78,7 @@ export default async function cleanupDeletedOverlayRecords(
   }
 
   await helpers.withPgClient(async (client) => {
+    const sharedRemotes = await sharedLibraryRemotes(client);
     let results = await client.query(`
       delete from data_layers where not exists (
         select id from table_of_contents_items where table_of_contents_items.data_layer_id = data_layers.id
@@ -98,6 +131,12 @@ export default async function cleanupDeletedOverlayRecords(
         for (const layer of row.outputs.layers) {
           if ("outputs" in layer && Array.isArray(layer.outputs)) {
             for (const output of layer.outputs) {
+              if (sharedRemotes.has(output.remote)) {
+                helpers.logger.info(
+                  `Skipping deletion of shared data-library object ${output.remote}.`
+                );
+                continue;
+              }
               await deleteRemote(output.remote, client);
             }
           }
@@ -123,9 +162,11 @@ export default async function cleanupDeletedOverlayRecords(
           `select id from data_upload_outputs where remote = $1`,
           [record.remote]
         );
-        if (rowCount > 0) {
+        if (rowCount > 0 || sharedRemotes.has(record.remote)) {
           helpers.logger.info(
-            `Skipping deletion of ${record.remote} as it is still being used.`
+            rowCount > 0
+              ? `Skipping deletion of ${record.remote} as it is still being used.`
+              : `Skipping deletion of shared data-library object ${record.remote}.`
           );
           await client.query(
             `delete from deleted_data_upload_outputs where id = $1`,

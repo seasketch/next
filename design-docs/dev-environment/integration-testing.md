@@ -64,14 +64,14 @@ A new laptop, a CI job, and an agent each need a database that already has migra
 
 People and tests reach fixtures by different paths:
 
-- **Anonymous and any signed-in user** can open a public fixture such as `demo-public`. No shared account.
+- **Anonymous and any signed-in user** can open a public fixture such as `demo-samoa`. No shared account.
 - **Automated tests** sign in as seed users whose `sub` values are in the snapshot, through `E2E_TEST_MODE`. Those users exist in no Auth0 tenant. Tests do not use a shared password.
 - **Staff** who need to administer a fixture are marked superuser in the non-production tenant. Superuser is a claim, so it applies to whatever `sub` that person has. Their user row does not have to be in the snapshot.
 - **Anyone else** creates their own account by signing up on the non-production tenant. A superuser can add that account as an admin of a demo project on that machine. That membership stays in the local database and is gone after `setup --reset`. It is not written into the shared snapshot, because that would pin the snapshot to one person's `sub`.
 
 There is no shared developer password. Fixture owners in the snapshot are synthetic users (the existing `seasketch|root` pattern), not accounts a person logs into.
 
-**Fixtures and isolation.** Fixture projects (`demo-public`, plus a few added as journeys need them) are for people and read-only smoke. A journey that mutates creates its own uniquely slugged project and hard-deletes it afterward in SQL, because the GraphQL delete is soft and keeps the slug. Tests never write to `superuser` or `demo-*`. Isolation by project lets journeys run in parallel.
+**Fixtures and isolation.** Fixture projects (`demo-samoa`, plus a few added as journeys need them) are for people and read-only smoke. A journey that mutates creates its own uniquely slugged project and hard-deletes it afterward in SQL, because the GraphQL delete is soft and keeps the slug. Tests never write to `superuser` or `demo-*`. Isolation by project lets journeys run in parallel.
 
 **Refresh.** A maintainer rebuilds and pushes the snapshot after a batch of migrations, and the previous dump stays archived by date and migration. Pull-request jobs and agents may pull but never push. New shared fixture data is its own snapshot-refresh change, not a side effect of a feature pull request.
 
@@ -95,7 +95,8 @@ Journeys that open a map depend on a Mapbox development token. Their assertion i
 - Test-mode tokens are signed by the API's own keys under a test-only issuer.
 - One golden snapshot for laptops, CI, agents, and later staging, built from a curated non-production database.
 - *(September 2026)* `npm run snapshot:create` writes a local custom-format dump from a side database, not from a developer's `seasketch` database. The dump contains committed migrations, the graphile-worker schema, `demo-public` (public, owned by `seasketch|root`), seed users `e2e|member` and `e2e|admin` (`e2e|admin` is an admin of `demo-public`), and one generated signing key. `npm run setup` restores it when the target database has no migrations, then migrates forward. `npm run setup -- --reset` is the wipe. The file is gitignored.
-- *(October 2026)* The dump also contains the data-library templates on the `superuser` project: their table-of-contents items, layers, sources (including an archived previous source), upload outputs, ACLs, and analyst notes. Those rows are copied from the developer's database. Copies of those templates inside other projects are not copied, and neither are personal user accounts; `created_by` is rewritten to `data-library-template-updater`. `npm run snapshot:publish` uploads the dump to `golden-snapshot/current/` in the private file-uploads bucket (`R2_FILE_UPLOADS_BUCKET`) and keeps the previous object under `golden-snapshot/archive/`. `npm run setup` downloads it when the local copy is missing or older.
+- *(October 2026)* The public fixture is `demo-samoa`. It includes the default Light and Satellite basemaps. Its geographies are built the same way the create-project form builds them for Samoa (`MRGID_EEZ` 8445) with offshore and nearshore zones: Exclusive Economic Zone, Territorial Seas, and Offshore. Those layers are cloned from the public templates, filtered to Samoa, nested under Geography layers, and published, and the project region is the EEZ bounds rather than the global default. Samoan (`sm`) is enabled as an alternate language. Google Maps tile sessions are left out of the dump because they expire; `npm run setup` queues `refreshGmapsApiSession` when the database has none, since the worker crontab only requests one during the 01:00 hour.
+- *(October 2026)* The dump seeds the `superuser` data library from `packages/api/snapshots/data-library.sql`: a hardcoded Seamounts template, and the coastline, EEZ, and territorial-sea templates that `demo-samoa` clones. Each layer keeps a public tile URL, attribution, and cartography. Seamounts also keeps its citation and click popup. The file does not include the rest of the production catalog or `data_upload_outputs`. `cleanupDeletedOverlayRecords` skips object deletion for `SEAMOUNTS`, `DAYLIGHT_COASTLINE`, `MARINE_REGIONS_EEZ_LAND_JOINED`, and `MARINE_REGIONS_TERRITORIAL_SEA` when `NODE_ENV` is not `production`. `npm run snapshot:publish` uploads the dump to `golden-snapshot/current/` in the private file-uploads bucket (`R2_FILE_UPLOADS_BUCKET`) and keeps the previous object under `golden-snapshot/archive/`. `npm run setup` downloads it when the local copy is missing or older.
 - Project-per-journey isolation, hard-deleted in SQL.
 - The pull-request gate stays small on purpose. Breadth lives in unit tests and in `master` or nightly browser runs until phases 2 and 4 make pull-request minutes cheap.
 - The production probe starts in phase 2, when production artifacts first change.
@@ -107,7 +108,7 @@ Journeys that open a map depend on a Mapbox development token. Their assertion i
 
 ## Exit criteria
 
-- **Phase 1:** A failing smoke run blocks the merge. A new clone runs `setup`, starts the core profile, and opens `demo-public`. A failed run leaves a trace and the slug of any project it created.
+- **Phase 1:** A failing smoke run blocks the merge. A new clone runs `setup`, starts the core profile, and opens `demo-samoa`. A failed run leaves a trace and the slug of any project it created.
 - **Phase 2:** Every production deploy is followed by a passing `@production` probe.
 - **Phase 3:** Access journeys are required on pull requests. Cypress is gone. Multi-level admin work has API coverage for the permission matrix and browser coverage for the gates.
 - **Phase 4:** The same journeys pass on the new client build.

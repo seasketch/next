@@ -120,10 +120,27 @@ if ! database_exists; then
   psql_exec -d postgres -c "CREATE DATABASE ${DB_NAME} OWNER graphile_migrate;"
 fi
 
+queue_gmaps_session() {
+  # Tile sessions expire and are not stored in the snapshot. The worker
+  # crontab only requests one during the 01:00 hour, so a fresh database
+  # would leave the geography map waiting until then.
+  local valid
+  valid="$(psql_exec -d "$DB_NAME" -tAc \
+    "SELECT count(*) FROM google_maps_tile_api_sessions WHERE map_type = 'satellite' AND expires_at > now()")"
+  if [[ "$valid" != "0" ]]; then
+    return
+  fi
+  echo "Queueing a Google Maps tile session..."
+  psql_exec -d "$DB_NAME" -c \
+    "SELECT graphile_worker.add_job('refreshGmapsApiSession', payload := '{}'::json, job_key := 'refresh-gmaps-api-session');" \
+    >/dev/null
+}
+
 if [[ "$reset" -eq 0 ]] && has_migrations; then
   echo "Database ${DB_NAME} already has migrations. Leaving it in place."
   echo "Run npm run setup -- --reset to replace it with the golden snapshot."
   migrate_forward
+  queue_gmaps_session
   exit 0
 fi
 
@@ -133,5 +150,14 @@ if ! restore_snapshot; then
   exit 1
 fi
 migrate_forward
+queue_gmaps_session
+
+# User ids are cached in Redis with no expiry. A restored database issues new
+# ids, and create_project then inserts a creator_id that no longer exists.
+echo "Clearing cached Auth0 user ids..."
+docker compose -f "$API_DIR/docker-compose.yml" exec -T redis \
+  redis-cli -a ucsb --no-auth-warning EVAL \
+  "local keys = redis.call('KEYS', 'userid-by-sub:*'); for _, key in ipairs(keys) do redis.call('DEL', key) end; return #keys" \
+  0 >/dev/null
 
 echo "Database ${DB_NAME} is ready."

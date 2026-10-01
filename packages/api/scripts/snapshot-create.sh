@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build a curated non-production database and write the local golden snapshot.
-# Reads data-library templates from the developer's database and does not modify it.
+# Data-library rows are hardcoded in snapshots/data-library.sql.
 # The dump contains a private signing key, so it is gitignored.
 # Pass --publish to upload it to R2.
 set -euo pipefail
@@ -12,7 +12,6 @@ SOURCE_DB="seasketch_snapshot_src"
 DUMP_PATH="$API_DIR/snapshots/golden.dump"
 MANIFEST_PATH="$API_DIR/snapshots/golden.manifest.json"
 SOURCE_URL="postgres://postgres:password@localhost:54321/${SOURCE_DB}"
-LIBRARY_DB="${SNAPSHOT_LIBRARY_DB:-seasketch}"
 publish=0
 
 for arg in "$@"; do
@@ -76,8 +75,41 @@ echo "Generating a signing key..."
   node "$SCRIPT_DIR/snapshot-seed-jwks.js"
 ) | psql_exec -d "$SOURCE_DB" -f -
 
-SNAPSHOT_SOURCE_DB="$SOURCE_DB" SNAPSHOT_LIBRARY_DB="$LIBRARY_DB" \
-  bash "$SCRIPT_DIR/copy-data-library.sh"
+echo "Loading hardcoded data-library layers..."
+psql_exec -d "$SOURCE_DB" -f - < "$API_DIR/snapshots/data-library.sql"
+library_templates="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT coalesce(string_agg(data_library_template_id, ',' ORDER BY data_library_template_id), '') FROM table_of_contents_items t JOIN projects p ON p.id = t.project_id WHERE p.slug = 'superuser' AND t.data_library_template_id IS NOT NULL")"
+if [[ "$library_templates" != "DAYLIGHT_COASTLINE,MARINE_REGIONS_EEZ_LAND_JOINED,MARINE_REGIONS_TERRITORIAL_SEA,SEAMOUNTS" ]]; then
+  echo "Unexpected data-library templates: ${library_templates}" >&2
+  exit 1
+fi
+
+echo "Adding demo-samoa geographies the same way create-project does..."
+psql_exec -d "$SOURCE_DB" -f - < "$API_DIR/snapshots/geographies.sql"
+clipping_layers="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT count(*) FROM geography_clipping_layers cl JOIN project_geography g ON g.id = cl.project_geography_id JOIN projects p ON p.id = g.project_id WHERE p.slug = 'demo-samoa'")"
+if [[ "$clipping_layers" != "6" ]]; then
+  echo "demo-samoa should have 6 clipping layers, found ${clipping_layers}." >&2
+  exit 1
+fi
+published_layers="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT count(*) FROM table_of_contents_items t JOIN projects p ON p.id = t.project_id WHERE p.slug = 'demo-samoa' AND t.is_draft = false AND t.is_folder = false")"
+if [[ "$published_layers" != "3" ]]; then
+  echo "demo-samoa should have 3 published overlay layers, found ${published_layers}." >&2
+  exit 1
+fi
+region_xmin="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT round(ST_XMin(region)::numeric, 1) FROM projects WHERE slug = 'demo-samoa'")"
+if [[ "$region_xmin" != "-174.5" ]]; then
+  echo "demo-samoa region should be the Samoa EEZ, found xmin ${region_xmin}." >&2
+  exit 1
+fi
+samoan="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT 'sm' = any(supported_languages) FROM projects WHERE slug = 'demo-samoa'")"
+if [[ "$samoan" != "t" ]]; then
+  echo "demo-samoa should have Samoan (sm) enabled." >&2
+  exit 1
+fi
 
 migration="$(psql_exec -d "$SOURCE_DB" -tAc \
   "SELECT filename FROM graphile_migrate.migrations ORDER BY filename DESC LIMIT 1")"
@@ -87,9 +119,9 @@ if [[ -z "$migration" ]]; then
 fi
 
 demo="$(psql_exec -d "$SOURCE_DB" -tAc \
-  "SELECT slug FROM projects WHERE slug = 'demo-public'")"
-if [[ "$demo" != "demo-public" ]]; then
-  echo "Snapshot source is missing demo-public." >&2
+  "SELECT slug FROM projects WHERE slug = 'demo-samoa'")"
+if [[ "$demo" != "demo-samoa" ]]; then
+  echo "Snapshot source is missing demo-samoa." >&2
   exit 1
 fi
 
