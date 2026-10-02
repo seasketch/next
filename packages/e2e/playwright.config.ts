@@ -51,7 +51,9 @@ export default defineConfig({
       timeout: 120_000,
     },
     {
-      command: "BROWSER=none npm start",
+      // react-scripts 4 refuses to start when the hoisted babel-loader is not
+      // exactly 8.1.0. The client test and build jobs skip the same check.
+      command: "SKIP_PREFLIGHT_CHECK=true BROWSER=none npm start",
       cwd: clientDir,
       url: "http://127.0.0.1:3000",
       reuseExistingServer: !ci,
