@@ -6,7 +6,7 @@ import { asPg } from "./helpers";
 import {
   assertE2ETestModeConfiguration,
   E2E_ISSUER,
-  e2eSecretMatches,
+  e2ePassphraseMatches,
   isE2ESub,
   isE2ETestModeEnabled,
 } from "../src/e2e/testMode";
@@ -41,14 +41,14 @@ const mockSendBulkTemplatedEmail = sesInstance.sendBulkTemplatedEmail;
 
 const pool = createPool("test");
 
-const SECRET = "test-secret-that-is-at-least-32-characters";
+const PASSPHRASE = "test-passphrase-that-is-at-least-32-characters";
 const AUDIENCE = "https://api.seasketch.test";
 const MAILBOX = path.join(process.cwd(), "e2e-emails");
 
 const ENV_KEYS = [
   "NODE_ENV",
   "E2E_TEST_MODE",
-  "E2E_TEST_SECRET",
+  "E2E_TEST_PASSPHRASE",
   "JWT_AUD",
   "SES_EMAIL_SOURCE",
   "CLIENT_DOMAIN",
@@ -61,7 +61,7 @@ const ENV_KEYS = [
 function enableTestMode() {
   process.env.NODE_ENV = "test";
   process.env.E2E_TEST_MODE = "true";
-  process.env.E2E_TEST_SECRET = SECRET;
+  process.env.E2E_TEST_PASSPHRASE = PASSPHRASE;
   process.env.JWT_AUD = AUDIENCE;
   process.env.CLIENT_DOMAIN = "localhost:3080";
   process.env.DATABASE_URL = "postgres://graphile:x@localhost:54321/seasketch";
@@ -147,7 +147,7 @@ describe("E2E_TEST_MODE", () => {
       expect(() => assertE2ETestModeConfiguration()).not.toThrow();
     });
 
-    test("turns on in development and test with a long secret", () => {
+    test("turns on in development and test with a long passphrase", () => {
       enableTestMode();
       expect(isE2ETestModeEnabled()).toBe(true);
       expect(() => assertE2ETestModeConfiguration()).not.toThrow();
@@ -168,16 +168,18 @@ describe("E2E_TEST_MODE", () => {
       }
       expect(() => assertE2ETestModeConfiguration()).toThrow(message);
       expect(isE2ETestModeEnabled()).toBe(false);
-      expect(e2eSecretMatches(SECRET)).toBe(false);
+      expect(e2ePassphraseMatches(PASSPHRASE)).toBe(false);
     });
 
-    test("refuses a missing or short secret", () => {
+    test("refuses a missing or short passphrase", () => {
       enableTestMode();
-      delete process.env.E2E_TEST_SECRET;
-      expect(() => assertE2ETestModeConfiguration()).toThrow(/E2E_TEST_SECRET/);
+      delete process.env.E2E_TEST_PASSPHRASE;
+      expect(() => assertE2ETestModeConfiguration()).toThrow(
+        /E2E_TEST_PASSPHRASE/
+      );
       expect(isE2ETestModeEnabled()).toBe(false);
 
-      process.env.E2E_TEST_SECRET = "short";
+      process.env.E2E_TEST_PASSPHRASE = "short";
       expect(() => assertE2ETestModeConfiguration()).toThrow(/32 characters/);
       expect(isE2ETestModeEnabled()).toBe(false);
     });
@@ -328,22 +330,28 @@ describe("E2E_TEST_MODE", () => {
       });
     });
 
-    test("the token route checks the secret and the sub", async () => {
+    test("the token route checks the passphrase and the sub", async () => {
       enableTestMode();
       await withUsers(async (client) => {
         const route = e2eTokenRoute(client);
 
-        const wrongSecret = fakeResponse();
-        await route({ body: { secret: "nope", sub } } as any, wrongSecret);
-        expect(wrongSecret.statusCode).toBe(401);
+        const wrongPassphrase = fakeResponse();
+        await route(
+          { body: { passphrase: "nope", sub } } as any,
+          wrongPassphrase
+        );
+        expect(wrongPassphrase.statusCode).toBe(401);
 
         const realUser = fakeResponse();
-        await route({ body: { secret: SECRET, sub: realSub } } as any, realUser);
+        await route(
+          { body: { passphrase: PASSPHRASE, sub: realSub } } as any,
+          realUser
+        );
         expect(realUser.statusCode).toBe(403);
 
         const superuser = fakeResponse();
         await route(
-          { body: { secret: SECRET, sub, superuser: true } } as any,
+          { body: { passphrase: PASSPHRASE, sub, superuser: true } } as any,
           superuser
         );
         expect(superuser.statusCode).toBe(200);

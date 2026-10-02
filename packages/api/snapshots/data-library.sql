@@ -1,9 +1,13 @@
--- Hardcoded data-library seed for the golden snapshot.
--- Seamounts is one static template, copied from the production reference
--- (public tile URL, cartography, citation, and click popup). The three
--- geography templates are the ones create-project and demo-samoa clone.
--- These rows point at public URLs and do not insert data_upload_outputs, so
--- the snapshot does not store production object keys.
+-- Hardcoded data-library seed for the golden snapshot, copied from the
+-- production templates: public tile URL, cartography, attribution, and the
+-- data_upload_outputs that overlay analysis, geography clipping, and
+-- downloads read. Seamounts also keeps its citation and click popup. The
+-- geography templates are the ones the create-project form offers.
+--
+-- Output remotes are production object keys. Outside production,
+-- cleanupDeletedOverlayRecords never deletes objects owned by the superuser
+-- project, so a developer deleting one of these layers cannot remove the
+-- production file.
 --
 -- Inserts run as the snapshot superuser so row-level security does not apply.
 
@@ -53,7 +57,12 @@ begin
   </div>
 </dl>
 $popup$,
-          '{"type":"doc","content":[{"type":"heading","attrs":{"level":1},"content":[{"text":"Seamounts","type":"text"}]},{"type":"paragraph","content":[{"text":"Data Citation: Yesson, Chris; Clark, Malcolm R; Taylor, M; Rogers, A D (2011): Lists of seamounts and knolls in different formats. PANGAEA, ","type":"text"},{"text":"https://doi.org/10.1594/PANGAEA.757564","type":"text","marks":[{"type":"link","attrs":{"href":"https://doi.org/10.1594/PANGAEA.757564","title":""}}]},{"text":". Supplement to Yesson, C et al. (2011): The global distribution of seamounts based on 30-second bathymetry data. Deep Sea Research Part I, 58(4), 442-453, ","type":"text"},{"text":"https://doi.org/10.1016/j.dsr.2011.02.004","type":"text","marks":[{"type":"link","attrs":{"href":"https://doi.org/10.1016/j.dsr.2011.02.004","title":""}}]}]}]}'::jsonb
+          '{"type":"doc","content":[{"type":"heading","attrs":{"level":1},"content":[{"text":"Seamounts","type":"text"}]},{"type":"paragraph","content":[{"text":"Data Citation: Yesson, Chris; Clark, Malcolm R; Taylor, M; Rogers, A D (2011): Lists of seamounts and knolls in different formats. PANGAEA, ","type":"text"},{"text":"https://doi.org/10.1594/PANGAEA.757564","type":"text","marks":[{"type":"link","attrs":{"href":"https://doi.org/10.1594/PANGAEA.757564","title":""}}]},{"text":". Supplement to Yesson, C et al. (2011): The global distribution of seamounts based on 30-second bathymetry data. Deep Sea Research Part I, 58(4), 442-453, ","type":"text"},{"text":"https://doi.org/10.1016/j.dsr.2011.02.004","type":"text","marks":[{"type":"link","attrs":{"href":"https://doi.org/10.1016/j.dsr.2011.02.004","title":""}}]}]}]}'::jsonb,
+          '[
+            {"type": "ZippedShapefile", "url": "https://uploads.seasketch.org/projects/superuser/public/ff106202-7ae5-48d8-83f6-2b424fe0bccb.zip", "remote": "r2://ssn-tiles/projects/superuser/public/ff106202-7ae5-48d8-83f6-2b424fe0bccb.zip", "filename": "ff106202-7ae5-48d8-83f6-2b424fe0bccb.zip", "original_filename": null, "size": 1295017, "is_original": true, "is_custom_upload": false},
+            {"type": "FlatGeobuf", "url": "https://uploads.seasketch.org/projects/superuser/public/ff106202-7ae5-48d8-83f6-2b424fe0bccb.fgb", "remote": "r2://ssn-tiles/projects/superuser/public/ff106202-7ae5-48d8-83f6-2b424fe0bccb.fgb", "filename": "ff106202-7ae5-48d8-83f6-2b424fe0bccb.fgb", "original_filename": null, "size": 6245736, "is_original": false, "is_custom_upload": false},
+            {"type": "PMTiles", "url": "https://tiles.seasketch.org/projects/superuser/public/ff106202-7ae5-48d8-83f6-2b424fe0bccb.pmtiles", "remote": "r2://ssn-tiles/projects/superuser/public/ff106202-7ae5-48d8-83f6-2b424fe0bccb.pmtiles", "filename": "ff106202-7ae5-48d8-83f6-2b424fe0bccb.pmtiles", "original_filename": null, "size": 3463798, "is_original": false, "is_custom_upload": false}
+          ]'::jsonb
         ),
         (
           'DAYLIGHT_COASTLINE',
@@ -65,7 +74,11 @@ $popup$,
           '[{"type": "fill", "paint": {"fill-color": "rgba(0, 0, 0, 0.24)", "fill-opacity": 0.75}}, {"type": "line", "paint": {"line-color": "rgb(77, 77, 77)", "line-width": 1, "line-opacity": 1}, "layout": {"line-cap": "round", "line-join": "round", "visibility": "visible"}, "metadata": {"s:color-auto": false}}]'::jsonb,
           'NONE'::public.interactivity_type,
           null::text,
-          '{"type":"doc","content":[{"type":"paragraph","content":[{"text":"OpenStreetMap coastline from the Daylight Map Distribution.","type":"text"}]}]}'::jsonb
+          '{"type":"doc","content":[{"type":"paragraph","content":[{"text":"OpenStreetMap coastline from the Daylight Map Distribution.","type":"text"}]}]}'::jsonb,
+          '[
+            {"type": "FlatGeobuf", "url": "https://uploads.seasketch.org/projects/superuser/public/9d779244-96a8-4010-8b7d-a89ef9bb78ac.fgb", "remote": "r2://ssn-tiles/projects/superuser/public/9d779244-96a8-4010-8b7d-a89ef9bb78ac.fgb", "filename": "9d779244-96a8-4010-8b7d-a89ef9bb78ac.fgb", "original_filename": "land.fgb", "size": 1350071072, "is_original": true, "is_custom_upload": false},
+            {"type": "PMTiles", "url": "https://tiles.seasketch.org/projects/superuser/public/9d779244-96a8-4010-8b7d-a89ef9bb78ac.pmtiles", "remote": "r2://ssn-tiles/projects/superuser/public/9d779244-96a8-4010-8b7d-a89ef9bb78ac.pmtiles", "filename": "9d779244-96a8-4010-8b7d-a89ef9bb78ac.pmtiles", "original_filename": "land.fgb", "size": 265478256, "is_original": false, "is_custom_upload": false}
+          ]'::jsonb
         ),
         (
           'MARINE_REGIONS_EEZ_LAND_JOINED',
@@ -77,7 +90,12 @@ $popup$,
           '[{"type": "fill", "paint": {"fill-color": "rgb(102, 131, 255)", "fill-opacity": 0.15}}, {"type": "line", "paint": {"line-color": "rgba(255, 255, 255, 0.61)", "line-width": 1, "line-opacity": 0.3}, "layout": {"line-cap": "round", "line-join": "round", "visibility": "visible"}, "metadata": {"s:color-auto": false}}]'::jsonb,
           'NONE'::public.interactivity_type,
           null::text,
-          '{"type":"doc","content":[{"type":"paragraph","content":[{"text":"Exclusive economic zones joined to land, from Marine Regions.","type":"text"}]}]}'::jsonb
+          '{"type":"doc","content":[{"type":"paragraph","content":[{"text":"Exclusive economic zones joined to land, from Marine Regions.","type":"text"}]}]}'::jsonb,
+          '[
+            {"type": "ZippedShapefile", "url": "https://uploads.seasketch.org/projects/superuser/public/1c3fb604-9c42-4b9d-ab72-14de0d66c783.zip", "remote": "r2://ssn-tiles/projects/superuser/public/1c3fb604-9c42-4b9d-ab72-14de0d66c783.zip", "filename": "1c3fb604-9c42-4b9d-ab72-14de0d66c783.zip", "original_filename": "EEZ_land_union_v3_202003.zip", "size": 19932478, "is_original": true, "is_custom_upload": false},
+            {"type": "FlatGeobuf", "url": "https://uploads.seasketch.org/projects/superuser/public/1c3fb604-9c42-4b9d-ab72-14de0d66c783.fgb", "remote": "r2://ssn-tiles/projects/superuser/public/1c3fb604-9c42-4b9d-ab72-14de0d66c783.fgb", "filename": "1c3fb604-9c42-4b9d-ab72-14de0d66c783.fgb", "original_filename": "EEZ_land_union_v3_202003.zip", "size": 26024000, "is_original": false, "is_custom_upload": false},
+            {"type": "PMTiles", "url": "https://tiles.seasketch.org/projects/superuser/public/1c3fb604-9c42-4b9d-ab72-14de0d66c783.pmtiles", "remote": "r2://ssn-tiles/projects/superuser/public/1c3fb604-9c42-4b9d-ab72-14de0d66c783.pmtiles", "filename": "1c3fb604-9c42-4b9d-ab72-14de0d66c783.pmtiles", "original_filename": "EEZ_land_union_v3_202003.zip", "size": 8562753, "is_original": false, "is_custom_upload": false}
+          ]'::jsonb
         ),
         (
           'MARINE_REGIONS_TERRITORIAL_SEA',
@@ -89,7 +107,27 @@ $popup$,
           '[{"type": "fill", "paint": {"fill-color": "rgba(250, 0, 255, 0.13)", "fill-opacity": 0.5}}, {"type": "line", "paint": {"line-color": "rgba(255, 122, 211, 0.86)", "line-width": 1, "line-opacity": 1}, "layout": {"line-cap": "round", "line-join": "round", "visibility": "visible"}, "metadata": {"s:color-auto": false}}]'::jsonb,
           'ALL_PROPERTIES_POPUP'::public.interactivity_type,
           null::text,
-          '{"type":"doc","content":[{"type":"paragraph","content":[{"text":"Territorial seas joined to land, from Marine Regions.","type":"text"}]}]}'::jsonb
+          '{"type":"doc","content":[{"type":"paragraph","content":[{"text":"Territorial seas joined to land, from Marine Regions.","type":"text"}]}]}'::jsonb,
+          '[
+            {"type": "FlatGeobuf", "url": "https://uploads.seasketch.org/projects/superuser/public/a0028d3a-172b-41ae-be73-276e0a614d59.fgb", "remote": "r2://ssn-tiles/projects/superuser/public/a0028d3a-172b-41ae-be73-276e0a614d59.fgb", "filename": "a0028d3a-172b-41ae-be73-276e0a614d59.fgb", "original_filename": "12nm-terr-land-joined-v2.fgb", "size": 44065920, "is_original": true, "is_custom_upload": false},
+            {"type": "PMTiles", "url": "https://tiles.seasketch.org/projects/superuser/public/a0028d3a-172b-41ae-be73-276e0a614d59.pmtiles", "remote": "r2://ssn-tiles/projects/superuser/public/a0028d3a-172b-41ae-be73-276e0a614d59.pmtiles", "filename": "a0028d3a-172b-41ae-be73-276e0a614d59.pmtiles", "original_filename": "12nm-terr-land-joined-v2.fgb", "size": 14485980, "is_original": false, "is_custom_upload": false}
+          ]'::jsonb
+        ),
+        (
+          'MARINE_REGIONS_HIGH_SEAS',
+          'High Seas',
+          'highSeas1',
+          'https://tiles.seasketch.org/superuser/public/faba9918-aa55-4ad5-bf72-a99712c3bc74',
+          'World_High_Seas_v2_20241010',
+          '<a href="https://www.marineregions.org/">marineregions.org</a>',
+          '[{"type": "fill", "paint": {"fill-color": "rgba(255, 244, 102, 0.23)", "fill-opacity": 0.5}}, {"type": "line", "paint": {"line-color": "rgba(255, 240, 25, 0.22)", "line-width": 1, "line-opacity": 1}, "layout": {"line-cap": "round", "line-join": "round", "visibility": "visible"}, "metadata": {"s:color-auto": false}}]'::jsonb,
+          'NONE'::public.interactivity_type,
+          null::text,
+          '{"type":"doc","content":[{"type":"paragraph","content":[{"text":"Areas beyond national jurisdiction, from Marine Regions.","type":"text"}]}]}'::jsonb,
+          '[
+            {"type": "FlatGeobuf", "url": "https://uploads.seasketch.org/projects/superuser/public/5a04c2f7-a6c9-453a-a866-28bde4f44061.fgb", "remote": "r2://ssn-tiles/projects/superuser/public/5a04c2f7-a6c9-453a-a866-28bde4f44061.fgb", "filename": "5a04c2f7-a6c9-453a-a866-28bde4f44061.fgb", "original_filename": "high-seas (1).fgb", "size": 8416960, "is_original": true, "is_custom_upload": false},
+            {"type": "PMTiles", "url": "https://tiles.seasketch.org/superuser/public/faba9918-aa55-4ad5-bf72-a99712c3bc74", "remote": "r2://ssn-tiles/superuser/public/faba9918-aa55-4ad5-bf72-a99712c3bc74.pmtiles", "filename": "faba9918-aa55-4ad5-bf72-a99712c3bc74", "original_filename": null, "size": 1188972, "is_original": false, "is_custom_upload": true}
+          ]'::jsonb
         )
     ) as v(
       template_id,
@@ -101,7 +139,8 @@ $popup$,
       styles,
       interactivity,
       popup,
-      metadata
+      metadata,
+      outputs
     )
   loop
     if exists (
@@ -132,6 +171,40 @@ $popup$,
       array[-180, -90, 180, 90]::numeric[]
     )
     returning id into source_id;
+
+    insert into data_upload_outputs (
+      data_source_id,
+      project_id,
+      type,
+      url,
+      remote,
+      filename,
+      original_filename,
+      size,
+      is_original,
+      is_custom_upload
+    )
+    select
+      source_id,
+      pid,
+      o.type::public.data_upload_output_type,
+      o.url,
+      o.remote,
+      o.filename,
+      o.original_filename,
+      o.size,
+      o.is_original,
+      o.is_custom_upload
+    from jsonb_to_recordset(spec.outputs) as o(
+      type text,
+      url text,
+      remote text,
+      filename text,
+      original_filename text,
+      size bigint,
+      is_original boolean,
+      is_custom_upload boolean
+    );
 
     insert into data_layers (
       project_id,

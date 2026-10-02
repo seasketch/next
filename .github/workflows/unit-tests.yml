@@ -199,3 +199,74 @@ jobs:
           REACT_APP_GRAPHQL_ENDPOINT: https://example.com/graphql
           REACT_APP_BUILD: ${{ steps.short_sha.outputs.sha }}
         run: NODE_OPTIONS=--openssl-legacy-provider CI=false npm run build
+
+  e2e-smoke:
+    name: Smoke tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      DATABASE_URL: postgres://graphile:password@localhost:54321/seasketch
+      ADMIN_DATABASE_URL: postgres://postgres:password@localhost:54321/seasketch
+      # Matches the password in packages/api/docker-compose.yml.
+      REDIS_PASSWORD: ucsb
+      JWT_AUD: ${{ secrets.REACT_APP_AUTH0_AUDIENCE }}
+      JWT_ISS: https://${{ secrets.AUTH0_DOMAIN }}/
+      JWKS_URI: https://${{ secrets.AUTH0_DOMAIN }}/.well-known/jwks.json
+      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+      R2_FILE_UPLOADS_BUCKET: ${{ secrets.R2_FILE_UPLOADS_BUCKET }}
+      REACT_APP_AUTH0_CLIENT_ID: ${{ secrets.REACT_APP_AUTH0_CLIENT_ID }}
+      REACT_APP_AUTH0_DOMAIN: ${{ secrets.REACT_APP_AUTH0_DOMAIN }}
+      REACT_APP_AUTH0_SCOPE: ${{ secrets.REACT_APP_AUTH0_SCOPE }}
+      REACT_APP_AUTH0_AUDIENCE: ${{ secrets.REACT_APP_AUTH0_AUDIENCE }}
+      REACT_APP_MAPBOX_ACCESS_TOKEN: ${{ secrets.REACT_APP_MAPBOX_ACCESS_TOKEN }}
+      REACT_APP_GRAPHQL_ENDPOINT: http://localhost:3857/graphql
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: ".nvmrc"
+          cache: npm
+          cache-dependency-path: "**/package-lock.json"
+      - name: Install dependencies
+        run: |
+          npx lerna@6.6.2 bootstrap --ci --scope='@seasketch/api' --scope=client --include-dependencies
+          npm ci --prefix packages/e2e
+      - name: Install Playwright browser
+        working-directory: ./packages/e2e
+        run: npx playwright install --with-deps chromium
+      - name: Build API
+        working-directory: ./packages/api
+        run: npm run build
+      - name: Restore golden snapshot
+        run: npm run setup
+      - name: Run smoke tests
+        id: smoke
+        run: npm run e2e
+      - name: Smoke test report
+        uses: dorny/test-reporter@v3
+        if: ${{ !cancelled() && steps.smoke.outcome != 'skipped' }}
+        with:
+          name: Smoke Test Output
+          path: packages/e2e/junit.xml
+          reporter: java-junit
+          fail-on-error: false
+      - name: Playwright report
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() && steps.smoke.outcome != 'skipped' }}
+        with:
+          name: playwright-report
+          if-no-files-found: warn
+          path: |
+            packages/e2e/playwright-report/
+            packages/e2e/test-results/
+          retention-days: 14
+      - name: Playwright report location
+        if: ${{ !cancelled() && steps.smoke.outcome != 'skipped' }}
+        run: |
+          {
+            echo "### Playwright report"
+            echo "The **playwright-report** artifact on this run has the HTML report, and screenshots, video, and traces for any failure."
+            echo "Download it and open the report with \`npx playwright show-report playwright-report\`."
+          } >> "$GITHUB_STEP_SUMMARY"

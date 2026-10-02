@@ -8,7 +8,7 @@ export const E2E_TOKEN_TTL_SECONDS = 12 * 60 * 60;
 /** Test mode signs in only users whose sub has this prefix. */
 export const E2E_SUB_PREFIX = "e2e|";
 
-export const E2E_SECRET_MIN_LENGTH = 32;
+export const E2E_PASSPHRASE_MIN_LENGTH = 32;
 
 const ALLOWED_NODE_ENVS = ["development", "test"];
 
@@ -54,12 +54,12 @@ export function e2eTestModeRefusals(): string[] {
       `NODE_ENV must be development or test, not ${nodeEnv || "unset"}`
     );
   }
-  const secret = process.env.E2E_TEST_SECRET;
-  if (!secret) {
-    refusals.push("E2E_TEST_SECRET is not set");
-  } else if (secret.length < E2E_SECRET_MIN_LENGTH) {
+  const passphrase = process.env.E2E_TEST_PASSPHRASE;
+  if (!passphrase) {
+    refusals.push("E2E_TEST_PASSPHRASE is not set");
+  } else if (passphrase.length < E2E_PASSPHRASE_MIN_LENGTH) {
     refusals.push(
-      `E2E_TEST_SECRET must be at least ${E2E_SECRET_MIN_LENGTH} characters`
+      `E2E_TEST_PASSPHRASE must be at least ${E2E_PASSPHRASE_MIN_LENGTH} characters`
     );
   }
   const clientDomain = (process.env.CLIENT_DOMAIN || "").toLowerCase();
@@ -100,8 +100,8 @@ export function isE2ESub(sub: unknown): sub is string {
   );
 }
 
-export function e2eSecretMatches(provided: unknown): boolean {
-  const expected = process.env.E2E_TEST_SECRET;
+export function e2ePassphraseMatches(provided: unknown): boolean {
+  const expected = process.env.E2E_TEST_PASSPHRASE;
   if (!isE2ETestModeEnabled() || typeof provided !== "string" || !expected) {
     return false;
   }

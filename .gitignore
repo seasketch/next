@@ -12,6 +12,10 @@ lerna-debug.log
 packages/api/coverage
 packages/api/backups/db/
 packages/api/e2e-emails/
+packages/e2e/test-results/
+packages/e2e/playwright-report/
+packages/e2e/junit.xml
+packages/e2e/blob-report/
 packages/api/snapshots/*.dump
 packages/api/snapshots/*.manifest.json
 !packages/overlay-engine/dist/*

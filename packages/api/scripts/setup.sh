@@ -78,9 +78,9 @@ restore_snapshot() {
   # Extensions in the dump are created in public, and pg_dump does not emit
   # CREATE SCHEMA public. Drop only the schemas the dump itself creates.
   psql_exec -d "$DB_NAME" -c "DROP SCHEMA IF EXISTS app_private CASCADE; DROP SCHEMA IF EXISTS graphile_migrate CASCADE; DROP SCHEMA IF EXISTS graphile_worker CASCADE;"
-  # Data is loaded with triggers off. Several triggers call functions whose
-  # search_path is unset, which fails mid-COPY. db-fresh-setup repairs that
-  # for later writes and grants connect to the app roles.
+  # Grants connect to the app roles. Generated columns are evaluated while
+  # the data section loads, and the functions they call get their search_path
+  # from migration 000446, which has to already be in the dump.
   pg_restore_section() {
     docker exec -i "$CONTAINER_NAME" pg_restore \
       -U postgres \
@@ -146,6 +146,45 @@ queue_gmaps_session() {
     >/dev/null
 }
 
+queue_geography_size_metrics() {
+  # createProjectWithGeographies pre-warms each new geography's size metric.
+  # The snapshot holds no jobs, so a restored database queues them here. The
+  # dependency must match startGeographySizeMetricCalculations in
+  # src/plugins/reportsPlugin.ts, or reports will not find these metrics.
+  local hash
+  hash="$(cd "$API_DIR" && node -e '
+    const { hashMetricDependency } = require("overlay-engine");
+    console.log(hashMetricDependency({ type: "total_area", subjectType: "geographies" }, {}));
+  ')"
+  local queued
+  queued="$(psql_exec -d "$DB_NAME" -v hash="$hash" -tA <<'SQL'
+WITH g AS (
+  SELECT id, project_id
+  FROM project_geography pg
+  WHERE NOT EXISTS (
+    SELECT 1 FROM spatial_metrics sm
+    WHERE sm.subject_geography_id = pg.id
+      AND sm.type = 'total_area'
+      AND sm.dependency_hash = :'hash'
+  )
+)
+SELECT count(*)
+FROM resolve_spatial_metrics_batch(
+  (SELECT array_agg(null::text ORDER BY id) FROM g),
+  (SELECT array_agg(id ORDER BY id) FROM g),
+  (SELECT array_agg('total_area'::text ORDER BY id) FROM g),
+  (SELECT array_agg(null::text ORDER BY id) FROM g),
+  (SELECT array_agg('{}'::jsonb ORDER BY id) FROM g),
+  (SELECT array_agg(null::text ORDER BY id) FROM g),
+  (SELECT array_agg(project_id ORDER BY id) FROM g),
+  (SELECT array_agg(:'hash'::text ORDER BY id) FROM g)
+)
+WHERE EXISTS (SELECT 1 FROM g);
+SQL
+)"
+  echo "Queued size metrics for ${queued} geograph(ies)."
+}
+
 if [[ "$reset" -eq 0 ]] && has_migrations; then
   echo "Database ${DB_NAME} already has migrations. Leaving it in place."
   echo "Run npm run setup -- --reset to replace it with the golden snapshot."
@@ -162,6 +201,7 @@ fi
 replace_signing_keys
 migrate_forward
 queue_gmaps_session
+queue_geography_size_metrics
 
 # User ids are cached in Redis with no expiry. A restored database issues new
 # ids, and create_project then inserts a creator_id that no longer exists.

@@ -28,9 +28,9 @@ Every variable has exactly one class. The class decides where a value may appear
 
 | Class | Examples | Laptop / cloud agent | CI | Production |
 | --- | --- | --- | --- | --- |
-| Public config | Ports, local GraphQL URL, log level | Committed defaults | Committed defaults | Deploy config |
-| Shared development secret | Non-production Auth0 application and management client, Mapbox development token, snapshot **read** key | 1Password, or the agent platform's secret store | Only in jobs that need it. Smoke CI needs none of the Auth0 values | Absent |
-| CI secret | `E2E_TEST_MODE` shared secret | Optional, for running journeys locally | GitHub environment for CI | Absent. The API refuses test mode in production |
+| Public config | Ports, local GraphQL URL, log level, the committed `E2E_TEST_PASSPHRASE` | Committed defaults | Committed defaults | Deploy config |
+| Shared development secret | Non-production Auth0 application and management client, Mapbox development token, snapshot **read** key | 1Password, or the agent platform's secret store | Only in jobs that need it. Smoke CI needs the Mapbox token, the snapshot read key, and the public Auth0 client id, domain, audience, and scope. It does not get the management client secret | Absent |
+| CI secret | A job-only credential that is not in the repo | Absent | GitHub environment for CI | Absent |
 | Production secret | Production Auth0 client secret, production R2 write keys, production Lambda ARNs, SES credentials | Absent | Absent, except in the deploy workflow | GitHub production environments and CDK |
 | Per-environment name | Bucket names, `TILES_ACL_NAMESPACE`, SQS queue URLs, `CLIENT_DOMAIN`, database URL | A development value, never production's | An isolated value | The production value |
 
@@ -81,6 +81,6 @@ Production deploy keeps working throughout. The manifest grows by describing var
 
 ## Exit criteria
 
-- **Phase 1:** A clean VM obtains core configuration without a shell profile. CI has the snapshot and test-mode secrets and nothing else it does not use. Setup refuses a production tile ACL namespace and production Auth0 identifiers.
+- **Phase 1:** A clean VM obtains core configuration without a shell profile. CI has the snapshot credentials it needs and nothing else it does not use. The test-mode passphrase is committed, not a CI secret. Setup refuses a production tile ACL namespace and production Auth0 identifiers.
 - **Before phase 3:** Every API and client variable is in the manifest with a class. The non-production profile cannot write to production storage or consume production queues. [ENV.md](../../ENV.md) describes the manifest instead of a per-package checklist.
 - **Phase 4:** Client build-time variable names change once, from the manifest, with the new bundler.

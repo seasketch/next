@@ -93,22 +93,6 @@ Those functions already say so in comments (`TODO: this will have to be modified
 
 **Never** add a trigger (or similar side-channel) to backfill, copy, or “sync” the new column onto published/copied rows. The publish process commonly copies thousands of layers and running side-effects for each will bog down the mutations.
 
-## Golden snapshot
-
-The golden snapshot is a copy of the SeaSketch database used as a base for dev machine installs, CI bootstrapping, integration tests, and agent driven development. It sets up important data fixtures not included in db migrations such as references to key public data layers (EEZs, osm-land, data-library tilesets), initial default basemaps, and geography settings. It also includes example projects such as `demo-samoa` that can be used to interactively test the app. These may be reused in smoke tests.
-
-`npm run setup` restores `packages/api/snapshots/golden.dump`, which is gitignored. Dev machines and CI download the copy published to R2, and that dump is the base those installs, tests, and agents boot from. A change to the seed SQL has to be rebuilt and published, or those environments keep the old fixtures and example projects.
-
-Load `.agents/skills/golden-snapshot/SKILL.md` when a change would leave those fixtures or example projects stale:
-
-- `packages/api/snapshots/fixtures.sql`, `data-library.sql`, or `geographies.sql`
-- How create-project builds geographies, basemaps, or languages
-- Inserts the seed runs into `projects`, `table_of_contents_items`, `data_layers`, `data_sources`, `interactivity_settings`, `project_geography`, or `geography_clipping_layers`
-- `SHARED_DATA_LIBRARY_TEMPLATE_IDS` in `packages/api/tasks/cleanupDeletedOverlayRecords.ts`, which protects the public tilesets those layers reference
-- The geography template ids the client requires (`DAYLIGHT_COASTLINE`, `MARINE_REGIONS_EEZ_LAND_JOINED`, `MARINE_REGIONS_TERRITORIAL_SEA`)
-
-A committed migration that leaves those fixtures alone does not need a new snapshot. `npm run setup` applies newer committed migrations after restore. `current.sql` is not part of the snapshot.
-
 ## React Client -- verifying your work
 
 - Whenever making changes to the client, verify that your work will compile.
@@ -118,3 +102,15 @@ A committed migration that leaves those fixtures alone does not need a new snaps
 ## Report Widgets
 
 When implementing Report Widgets (and spatial analysis features generally), refer to packages/client/reports/widgets/README.md file for details on the architecture, user interface, and implementation conventions.
+
+## Golden snapshot
+
+The golden snapshot is the database dev machines, CI, integration tests, and agents boot from.
+
+`npm run setup` restores `packages/api/snapshots/golden.dump`, which is gitignored. Dev machines and CI download the copy published to R2, and that dump is the base those installs, tests, and agents boot from. A change to the seed SQL has to be rebuilt and published, or those environments keep the old fixtures and example projects.
+
+The snapshot is built from a combination of the database migrations, fixture data, and a creation script. Details on what data/schema is appropriate for each bucket is in [packages/api/snapshots/README.md](packages/api/snapshots/README.md).
+
+Load `.agents/skills/golden-snapshot/SKILL.md` when a change would leave those fixtures or example projects stale.
+
+A committed migration alone does not necessarily need a new snapshot. In fact, snapshots should be regenerated rarely (e.g. after a dozen migrations or so, unless fixture data needs changing). `npm run setup` applies newer committed migrations after restore. `current.sql` is not part of the snapshot.

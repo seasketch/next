@@ -73,8 +73,20 @@ echo "Loading hardcoded data-library layers..."
 psql_exec -d "$SOURCE_DB" -f - < "$API_DIR/snapshots/data-library.sql"
 library_templates="$(psql_exec -d "$SOURCE_DB" -tAc \
   "SELECT coalesce(string_agg(data_library_template_id, ',' ORDER BY data_library_template_id), '') FROM table_of_contents_items t JOIN projects p ON p.id = t.project_id WHERE p.slug = 'superuser' AND t.data_library_template_id IS NOT NULL")"
-if [[ "$library_templates" != "DAYLIGHT_COASTLINE,MARINE_REGIONS_EEZ_LAND_JOINED,MARINE_REGIONS_TERRITORIAL_SEA,SEAMOUNTS" ]]; then
-  echo "Unexpected data-library templates: ${library_templates}" >&2
+expected_templates="$(cd "$API_DIR" && node -e '
+  const { SNAPSHOT_DATA_LIBRARY_TEMPLATE_IDS } = require("./src/DataLibrary/snapshotTemplateIds");
+  console.log([...SNAPSHOT_DATA_LIBRARY_TEMPLATE_IDS].sort().join(","));
+')"
+if [[ "$library_templates" != "$expected_templates" ]]; then
+  echo "data-library.sql inserted templates ${library_templates}, but src/DataLibrary/snapshotTemplateIds.js lists ${expected_templates}." >&2
+  exit 1
+fi
+# Overlay analysis, geography clipping, and downloads read the FlatGeobuf
+# output, not the tile URL.
+missing_fgb="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT coalesce(string_agg(s.data_library_template_id, ','), '') FROM data_sources s WHERE s.data_library_template_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM data_upload_outputs o WHERE o.data_source_id = s.id AND o.type = 'FlatGeobuf')")"
+if [[ -n "$missing_fgb" ]]; then
+  echo "Data-library templates without a FlatGeobuf output: ${missing_fgb}." >&2
   exit 1
 fi
 
@@ -84,6 +96,12 @@ clipping_layers="$(psql_exec -d "$SOURCE_DB" -tAc \
   "SELECT count(*) FROM geography_clipping_layers cl JOIN project_geography g ON g.id = cl.project_geography_id JOIN projects p ON p.id = g.project_id WHERE p.slug = 'demo-samoa'")"
 if [[ "$clipping_layers" != "6" ]]; then
   echo "demo-samoa should have 6 clipping layers, found ${clipping_layers}." >&2
+  exit 1
+fi
+unresolved_clipping="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT count(*) FROM project_geography g JOIN projects p ON p.id = g.project_id, LATERAL clipping_layers_for_geography(g.id) cl WHERE p.slug = 'demo-samoa' AND cl.object_key IS NULL")"
+if [[ "$unresolved_clipping" != "0" ]]; then
+  echo "${unresolved_clipping} demo-samoa clipping layer(s) have no FlatGeobuf object key. Geography size metrics would fail." >&2
   exit 1
 fi
 published_layers="$(psql_exec -d "$SOURCE_DB" -tAc \
@@ -116,6 +134,60 @@ demo="$(psql_exec -d "$SOURCE_DB" -tAc \
   "SELECT slug FROM projects WHERE slug = 'demo-samoa'")"
 if [[ "$demo" != "demo-samoa" ]]; then
   echo "Snapshot source is missing demo-samoa." >&2
+  exit 1
+fi
+
+shared_profile="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT pp.share_profile FROM project_participants pp JOIN users u ON u.id = pp.user_id JOIN projects p ON p.id = pp.project_id WHERE u.sub = 'e2e|admin' AND p.slug = 'demo-samoa' AND pp.is_admin")"
+if [[ "$shared_profile" != "t" ]]; then
+  echo "e2e|admin should be an admin of demo-samoa with share_profile set." >&2
+  exit 1
+fi
+
+demo_access="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT is_listed::text || ',' || access_control::text FROM projects WHERE slug = 'demo-samoa'")"
+if [[ "$demo_access" != "true,public" ]]; then
+  echo "demo-samoa should be listed and public, found ${demo_access}." >&2
+  exit 1
+fi
+
+default_reports="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT count(*) FROM reports r JOIN projects p ON p.id = r.project_id WHERE p.slug = 'demo-samoa'")"
+if [[ "$default_reports" == "0" ]]; then
+  echo "demo-samoa has no default report. It should be created by create_project." >&2
+  exit 1
+fi
+
+# Jobs belong to the database that runs them. setup.sh queues what a fresh
+# install needs after restore.
+queued_jobs="$(psql_exec -d "$SOURCE_DB" -tAc "SELECT count(*) FROM graphile_worker.jobs")"
+if [[ "$queued_jobs" != "0" ]]; then
+  echo "Snapshot source has ${queued_jobs} graphile-worker job(s)." >&2
+  psql_exec -d "$SOURCE_DB" -tAc "SELECT task_identifier, count(*) FROM graphile_worker.jobs GROUP BY 1" >&2
+  exit 1
+fi
+
+group_forum="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT count(*) FROM users u JOIN project_participants pp ON pp.user_id = u.id AND pp.is_admin = false AND pp.approved JOIN projects p ON p.id = pp.project_id AND p.slug = 'e2e-private' AND p.is_listed = false AND p.access_control = 'invite_only' JOIN project_group_members pgm ON pgm.user_id = u.id JOIN project_groups g ON g.id = pgm.group_id AND g.project_id = p.id JOIN access_control_list_groups ag ON ag.group_id = g.id JOIN access_control_lists acl ON acl.id = ag.access_control_list_id AND acl.type = 'group' JOIN forums f ON f.id = acl.forum_id_read AND f.project_id = p.id WHERE u.sub = 'e2e|member'")"
+if [[ "$group_forum" != "1" ]]; then
+  echo "e2e|member should belong to one group-limited forum on e2e-private, and not be an admin of it." >&2
+  exit 1
+fi
+
+# pg_restore loads rows with an empty search_path. These generated-column
+# functions resolve their own names only when 000446 has set search_path.
+# CREATE OR REPLACE drops it, so a later migration that replaces one fails here.
+missing_search_path="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT count(*) FROM pg_proc p WHERE p.oid IN (
+     'public.changelog_row_net_zero_changes(public.change_log_field_group,jsonb,jsonb,jsonb,jsonb)'::regprocedure,
+     'public.create_bbox(public.geometry)'::regprocedure,
+     'public.create_bbox(public.geometry,integer)'::regprocedure,
+     'public.generate_export_id(integer,text,jsonb)'::regprocedure,
+     'public.generate_label(integer,jsonb)'::regprocedure,
+     'public.toc_to_tsvector(text,text,jsonb,jsonb)'::regprocedure
+   ) AND NOT (coalesce(p.proconfig, '{}') @> ARRAY['search_path=public, pg_catalog'])")"
+if [[ "$missing_search_path" != "0" ]]; then
+  echo "${missing_search_path} generated-column function(s) are missing search_path. Restoring the dump would fail mid-COPY." >&2
   exit 1
 fi
 

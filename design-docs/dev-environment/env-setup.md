@@ -80,6 +80,7 @@ Phase 1 does not stand up staging. It proves the hard part — a clean VM can ru
 - Postgres and Redis stay in the existing `packages/api/docker-compose.yml` and PostGIS image. Fixture data arrives through snapshot restore, not a custom database image.
 - *(September 2026)* `npm run setup` starts Postgres and Redis, waits until the `graphile` role exists, and restores `packages/api/snapshots/golden.dump` into an empty database. A database that already has migrations is left in place and only migrated forward. `--reset` drops it first.
 - *(October 2026)* Before that restore, `setup` fetches `golden-snapshot/current/` from the private file-uploads bucket when the local dump is missing or older. `npm run snapshot:publish` is what uploads it.
+- *(October 2026)* The smoke job uses the client dev server. The production bundle stays the open question above.
 - Readiness is a TCP or HTTP check, not a sleep.
 - VS Code tasks shrink to one that runs `npm run dev`, or disappear.
 - Cloud-agent usability is a phase 1 exit criterion. The repo `README.md` describes these commands when phase 1 lands.
@@ -87,7 +88,7 @@ Phase 1 does not stand up staging. It proves the hard part — a clean VM can ru
 ## Open questions
 
 - *(Phase 1)* Which process manager.
-- *(Phase 1)* Whether the CRA production build is reliable enough to be the smoke target from day one.
+- *(Phase 1)* Whether the CRA production build replaces the dev server as the smoke target. The first job uses the dev server.
 - *(Phase 1)* How `status` is implemented. Wrap the process manager's own status command; do not build a dashboard.
 
 ## Exit criteria

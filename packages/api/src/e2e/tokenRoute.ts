@@ -4,7 +4,7 @@ import { issueE2EAccessToken } from "./accessToken";
 import {
   E2E_SUB_PREFIX,
   E2E_TOKEN_TTL_SECONDS,
-  e2eSecretMatches,
+  e2ePassphraseMatches,
   isE2ESub,
   isE2ETestModeEnabled,
 } from "./testMode";
@@ -27,7 +27,7 @@ export function registerE2ETokenRoute(
 
 export function e2eTokenRoute(client: DBClient) {
   return async function e2eToken(req: Request, res: Response) {
-    if (!e2eSecretMatches(req.body?.secret)) {
+    if (!e2ePassphraseMatches(req.body?.passphrase)) {
       res.status(401).json({ error: "unauthorized" });
       return;
     }
