@@ -76,7 +76,7 @@ Production deploy keeps working throughout. The manifest grows by describing var
 ## Open questions
 
 - *(Phase 1)* Manifest format (YAML or a typed module) and location.
-- *(Phase 1)* Whether CI and laptops share one read-only snapshot key or use two. October 2026: fetch and publish both use the existing file-uploads R2 key, because that token cannot create a bucket. The object is private under `golden-snapshot/` in `R2_FILE_UPLOADS_BUCKET`. A separate read-only key is still open.
+- *(Phase 1)* Whether CI and laptops share one read-only snapshot key or use two. October 2026: neither. The dump is public at `https://uploads.seasketch.org/golden-snapshot/current/`. Publish still uses the R2 token, writing to `R2_TILES_BUCKET`.
 - *(Phase 1)* How the production-value check identifies values on day one: an explicit list of known production identifiers, or a comparison against the production profile.
 
 ## Exit criteria

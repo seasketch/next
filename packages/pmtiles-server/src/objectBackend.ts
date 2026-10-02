@@ -4,6 +4,13 @@ import { normalizeObjectKey } from "./resource";
 import { RequestTiming, withTiming } from "./timing";
 
 const IMMUTABLE = "public, immutable, max-age=31536000";
+// golden-snapshot/current/ is overwritten in place. A year-long immutable
+// cache would keep serving the previous dump.
+const MUTABLE = "no-cache";
+
+function cacheControlFor(key: string): string {
+  return key.startsWith("golden-snapshot/") ? MUTABLE : IMMUTABLE;
+}
 
 function safeFilename(value: string): string {
   return value.replace(/[\r\n"]/g, "_");
@@ -44,7 +51,7 @@ export async function handleObjectRequest(
     const baseHeaders = new Headers({
       "Access-Control-Allow-Origin": "*",
       "Accept-Ranges": "bytes",
-      "Cache-Control": IMMUTABLE,
+      "Cache-Control": cacheControlFor(key),
       "Timing-Allow-Origin": "*",
     });
     const download = url.searchParams.get("download");
@@ -58,6 +65,7 @@ export async function handleObjectRequest(
         });
       }
       object.writeHttpMetadata(baseHeaders);
+      baseHeaders.set("Cache-Control", cacheControlFor(key));
       baseHeaders.set("etag", object.httpEtag);
       baseHeaders.set("Content-Length", String(object.size));
       if (download) {
@@ -106,6 +114,7 @@ export async function handleObjectRequest(
       });
     }
     object.writeHttpMetadata(baseHeaders);
+    baseHeaders.set("Cache-Control", cacheControlFor(key));
     baseHeaders.set("etag", object.httpEtag);
     baseHeaders.set("Content-Length", String(object.size));
     if (download) {

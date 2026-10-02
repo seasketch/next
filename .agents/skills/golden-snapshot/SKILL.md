@@ -16,7 +16,7 @@ description: >
 
 The golden snapshot is the database base for dev machine installs, CI bootstrapping, integration tests, and agent-driven development. Migration vs. fixture rules: [packages/api/snapshots/README.md](../../../packages/api/snapshots/README.md). Migrations do not create its fixtures. Those are references to public data layers (EEZs, OSM land, data-library tilesets), default basemaps, geography settings, and example projects such as `demo-samoa`, which are there for interactive testing and may be reused in smoke tests.
 
-`npm run setup` restores `packages/api/snapshots/golden.dump`, then applies committed migrations newer than that dump. The dump is gitignored. `npm run snapshot:publish` uploads it to R2 at `golden-snapshot/current/`. Until that upload, dev machines, CI, and agents keep booting from the previous fixtures.
+`npm run setup` restores `packages/api/snapshots/golden.dump`, then applies committed migrations newer than that dump. The dump is gitignored. `npm run snapshot:publish` uploads it to `golden-snapshot/current/` in the tiles bucket, and setup downloads that object from `https://uploads.seasketch.org` with no credentials. Until that upload, dev machines, CI, and agents keep booting from the previous fixtures.
 
 The dump is built from committed migrations, the graphile-worker schema, and three seed files:
 
@@ -62,7 +62,7 @@ npm run snapshot:create
 npm run snapshot:publish
 ```
 
-`snapshot:publish` reads R2 credentials from `packages/api/.env` and archives the previous object under `golden-snapshot/archive/`.
+`snapshot:publish` reads R2 credentials from `packages/api/.env`, writes to `R2_TILES_BUCKET` (what `uploads.seasketch.org` serves), and archives the previous object under `golden-snapshot/archive/`. Fetching does not use those credentials.
 
 `npm run setup -- --reset` replaces the local `seasketch` database and drops connections to it. Run that only when this machine should move onto the new dump. Setup also deletes Redis keys `userid-by-sub:*`. Those keys have no expiry, and a restored database issues new user ids.
 

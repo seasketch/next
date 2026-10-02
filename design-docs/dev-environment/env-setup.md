@@ -79,7 +79,7 @@ Phase 1 does not stand up staging. It proves the hard part — a clean VM can ru
 - Root npm scripts are the interface. Package scripts remain how a package builds and watches itself. Which configuration they load is a named profile from the [secrets manifest](secrets-management.md).
 - Postgres and Redis stay in the existing `packages/api/docker-compose.yml` and PostGIS image. Fixture data arrives through snapshot restore, not a custom database image.
 - *(September 2026)* `npm run setup` starts Postgres and Redis, waits until the `graphile` role exists, and restores `packages/api/snapshots/golden.dump` into an empty database. A database that already has migrations is left in place and only migrated forward. `--reset` drops it first.
-- *(October 2026)* Before that restore, `setup` fetches `golden-snapshot/current/` from the private file-uploads bucket when the local dump is missing or older. `npm run snapshot:publish` is what uploads it.
+- *(October 2026)* Before that restore, `setup` downloads `golden-snapshot/current/` from `https://uploads.seasketch.org` when the local dump is missing or older. No credentials. `npm run snapshot:publish` uploads it to the tiles bucket that host serves.
 - *(October 2026)* The smoke job uses the client dev server. The production bundle stays the open question above.
 - Readiness is a TCP or HTTP check, not a sleep.
 - VS Code tasks shrink to one that runs `npm run dev`, or disappear.

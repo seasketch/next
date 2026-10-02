@@ -241,7 +241,7 @@ const manifest = {
     .split(",")
     .map((name) => name.trim())
     .filter(Boolean),
-  note: "Golden snapshot. No signing key; npm run setup generates one. Fetched from R2 by npm run setup."
+  note: "Golden snapshot. No signing key; npm run setup generates one. Downloaded from uploads.seasketch.org by npm run setup."
 };
 fs.writeFileSync(process.argv[1], JSON.stringify(manifest, null, 2) + "\n");
 ' "$MANIFEST_PATH"
