@@ -161,6 +161,10 @@ async function createBookmarkScreenshot(
 
     bookmarkData.spriteImages = spriteRows[0].sprite_images;
 
+    if (!process.env.SCREENSHOTTER_FUNCTION_ARN) {
+      throw new Error("SCREENSHOTTER_FUNCTION_ARN is not configured");
+    }
+
     // Fire off request to lambda
     const lambdaPayload = {
       width,

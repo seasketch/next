@@ -1,6 +1,7 @@
 import { Response } from "express";
 import { IncomingRequest } from "./IncomingRequest";
 import { verifyEmail } from "../auth/auth0";
+import { MisconfiguredError } from "../env";
 
 export default function verifyEmailMiddleware(
   req: IncomingRequest,
@@ -28,6 +29,13 @@ export default function verifyEmailMiddleware(
             next();
           })
           .catch((e) => {
+            if (
+              process.env.NODE_ENV === "production" &&
+              e instanceof MisconfiguredError
+            ) {
+              next(e);
+              return;
+            }
             // do nothing, since we can always try again later
             next();
           });

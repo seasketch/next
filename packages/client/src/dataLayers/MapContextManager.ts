@@ -1639,6 +1639,9 @@ class MapContextManager extends EventEmitter {
     this.map.on("styleimagemissing", this.onStyleImageMissing);
     this.map.on("load", (e) => {
       this.mapIsLoaded = true;
+      // The style is installed and the first frame has rendered. Smoke tests
+      // wait for this before touching anything else on the map.
+      this.map?.getContainer().setAttribute("data-map-loaded", "true");
       this.setState((prev) => ({ ...prev }));
       this._setManagerState?.((prev) => ({ ...prev }));
     });

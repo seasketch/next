@@ -1,7 +1,8 @@
 import SES from "aws-sdk/clients/ses";
-import {writeFileSync} from "fs";
+import fs from "fs";
+import { isE2ETestModeEnabled } from "../e2e/testMode";
+import { writeE2EEmail } from "../e2e/mailbox";
 const ses = new SES();
-const fs = require ('fs');
 
 /**
  * Simplified wrapper for sending email via SES. Crucially, it's easier to mock
@@ -18,18 +19,25 @@ export default async function sendEmail(
   htmlEmail: string,
   textEmail: string
 ) {
+  if (isE2ETestModeEnabled()) {
+    writeE2EEmail(destination, subject, htmlEmail, textEmail);
+    return { MessageId: "e2e-test-mode" };
+  }
   if (!process.env.SES_EMAIL_SOURCE) {
     throw new Error(`SES_EMAIL_SOURCE environment variable not set`);
   }
   if (process.env.IS_CYPRESS_TEST_ENV === "true") {
-    //@ts-ignore
-    fs.writeFileSync('./invite-emails-cypress/email', `Destination: ${destination}\n`, {encoding:'utf8',flag:'w'}), (err) => {
-      if (err) {
-        console.log(`Error: ${err}`)
-      }
-    };
-    fs.appendFileSync('./invite-emails-cypress/email', `Email text: ${textEmail}`);
-  } 
+    fs.writeFileSync(
+      "./invite-emails-cypress/email",
+      `Destination: ${destination}\n`,
+      { encoding: "utf8", flag: "w" }
+    );
+    fs.appendFileSync(
+      "./invite-emails-cypress/email",
+      `Email text: ${textEmail}`
+    );
+    return { MessageId: "cypress-test-env" };
+  }
   return ses
     .sendEmail({
       Destination: {

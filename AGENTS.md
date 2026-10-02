@@ -102,3 +102,15 @@ Those functions already say so in comments (`TODO: this will have to be modified
 ## Report Widgets
 
 When implementing Report Widgets (and spatial analysis features generally), refer to packages/client/reports/widgets/README.md file for details on the architecture, user interface, and implementation conventions.
+
+## Golden snapshot
+
+The golden snapshot is the database dev machines, CI, integration tests, and agents boot from.
+
+`npm run setup` restores `packages/api/snapshots/golden.dump`, which is gitignored. Dev machines and CI download the copy published to R2, and that dump is the base those installs, tests, and agents boot from. A change to the seed SQL has to be rebuilt and published, or those environments keep the old fixtures and example projects.
+
+The snapshot is built from a combination of the database migrations, fixture data, and a creation script. Details on what data/schema is appropriate for each bucket is in [packages/api/snapshots/README.md](packages/api/snapshots/README.md).
+
+Load `.agents/skills/golden-snapshot/SKILL.md` when a change would leave those fixtures or example projects stale.
+
+A committed migration alone does not necessarily need a new snapshot. In fact, snapshots should be regenerated rarely (e.g. after a dozen migrations or so, unless fixture data needs changing). `npm run setup` applies newer committed migrations after restore. `current.sql` is not part of the snapshot.

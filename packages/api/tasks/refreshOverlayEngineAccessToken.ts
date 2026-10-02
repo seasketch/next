@@ -4,6 +4,7 @@ import {
   overlayEngineAccessTokenSecretId,
   publishOverlayEngineAccessToken,
 } from "../src/overlayEngine/overlayEngineAccessToken";
+import { throwIfProductionMisconfigured } from "../src/env";
 
 /**
  * Mint a 14-day overlay-engine JWT and publish it to Secrets Manager for
@@ -24,9 +25,19 @@ export default async function refreshOverlayEngineAccessToken(
     return;
   }
 
+  const secretId = overlayEngineAccessTokenSecretId();
+  if (!secretId) {
+    throwIfProductionMisconfigured("Overlay-engine access token refresh", [
+      "OVERLAY_ENGINE_ACCESS_TOKEN_SECRET_ARN",
+    ]);
+    helpers.logger.warn(
+      "refreshOverlayEngineAccessToken: no-op (overlay-engine access token secret is not configured)",
+    );
+    return;
+  }
+
   await helpers.withPgClient(async (client) => {
     const minted = await mintOverlayEngineAccessToken(client);
-    const secretId = overlayEngineAccessTokenSecretId();
     await publishOverlayEngineAccessToken(secretId, minted);
     helpers.logger.info(
       `Published overlay-engine access token kid=${minted.kid} exp=${minted.exp} secret=${secretId}`,

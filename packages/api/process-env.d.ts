@@ -2,6 +2,10 @@ declare namespace NodeJS {
   interface ProcessEnv {
     //types of envs
     NODE_ENV: "development" | "production" | "test" | "staging";
+    /** "true" enables test-mode login. Refused when NODE_ENV is production. */
+    E2E_TEST_MODE?: string;
+    /** Shared passphrase for POST /e2e/token. Required when E2E_TEST_MODE is true. Committed for local smoke runs; not a credential. */
+    E2E_TEST_PASSPHRASE?: string;
     AUTH0_DOMAIN: string;
     AUTH0_CLIENT_ID: string;
     JWT_AUD: string;

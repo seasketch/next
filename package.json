@@ -1,7 +1,14 @@
 {
   "name": "root",
   "private": true,
-  "scripts": {},
+  "scripts": {
+    "setup": "bash packages/api/scripts/setup.sh",
+    "snapshot:create": "bash packages/api/scripts/snapshot-create.sh",
+    "snapshot:publish": "node packages/api/scripts/snapshot-r2.js push",
+    "e2e": "npm test --prefix packages/e2e",
+    "e2e:headed": "npm run test:headed --prefix packages/e2e",
+    "e2e:ui": "npm run test:ui --prefix packages/e2e"
+  },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250607.0",
     "@types/jest": "^29.5.14",

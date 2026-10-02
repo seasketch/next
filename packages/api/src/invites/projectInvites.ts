@@ -1,8 +1,6 @@
 import { sign, verify } from "../auth/jwks";
 import ms from "ms";
-// TODO: replace auth0 dependency with plain http requests to the management api
-// The library is incredibly bulky, adding 2.5MB to lambda sizes
-import { ManagementClient } from "auth0";
+import { verifyEmail } from "../auth/auth0";
 import { DBClient } from "../dbClient";
 import { default as mustache } from "mustache";
 import sendEmail from "./sendEmail";
@@ -280,10 +278,9 @@ export async function confirmProjectInvite(
     )
   ).rows[0];
 
-  const auth0 = await getManagementClient();
   if (!emailVerified) {
     try {
-      await auth0.updateUser({ id: sub as string }, { email_verified: true });
+      await verifyEmail(sub as string);
     } catch (e) {
       console.error(e);
       throw e;
@@ -298,19 +295,6 @@ export async function confirmProjectInvite(
     ...claims,
     wasUsed: true,
   };
-}
-
-let managementClient: ManagementClient;
-async function getManagementClient(): Promise<ManagementClient> {
-  if (!managementClient) {
-    managementClient = new ManagementClient({
-      clientId: process.env.AUTH0_CLIENT_ID,
-      clientSecret: process.env.AUTH0_CLIENT_SECRET,
-      domain: process.env.AUTH0_DOMAIN!,
-      scope: "update:users",
-    });
-  }
-  return managementClient;
 }
 
 function swap(kv: { [key: string]: string }) {

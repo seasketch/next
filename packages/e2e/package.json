@@ -1,0 +1,15 @@
+{
+  "name": "@seasketch/e2e",
+  "private": true,
+  "description": "Playwright smoke journeys against a local SeaSketch API and client.",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:ui": "playwright test --ui"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.55.0",
+    "@types/pg": "^8.15.5",
+    "pg": "^8.16.3"
+  }
+}

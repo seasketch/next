@@ -14,8 +14,39 @@ const SES_EMAIL_SOURCE =
 import SES from "aws-sdk/clients/ses";
 import { DBClient } from "../dbClient";
 import { getCanonicalEmails } from "../auth/auth0";
+import { isE2ETestModeEnabled } from "../e2e/testMode";
+import { writeE2EEmail } from "../e2e/mailbox";
 
 const ses = new SES();
+
+/**
+ * SES bulk templated send. In E2E_TEST_MODE each destination is written to the
+ * test mailbox instead, so survey-invite journeys never reach SES.
+ */
+export async function sendBulkTemplatedInviteEmail(
+  params: SES.SendBulkTemplatedEmailRequest
+): Promise<SES.SendBulkTemplatedEmailResponse> {
+  if (!isE2ETestModeEnabled()) {
+    return ses.sendBulkTemplatedEmail(params).promise();
+  }
+  return {
+    Status: params.Destinations.map((destination, index) => {
+      const tags = (destination.ReplacementTags || []).reduce(
+        (all, tag) => ({ ...all, [tag.Name]: tag.Value }),
+        {} as { [name: string]: string }
+      );
+      const values = Object.keys(tags).map((name) => tags[name]);
+      writeE2EEmail(
+        destination.Destination.ToAddresses?.[0] || "",
+        params.Template,
+        "",
+        values.join("\n"),
+        { template: params.Template, replacementTags: tags }
+      );
+      return { Status: "Success", MessageId: `e2e-test-mode-${index}` };
+    }),
+  };
+}
 
 export type SurveyInviteTokenClaims = {
   surveyId: number;
@@ -196,29 +227,27 @@ export async function sendQueuedSurveyInvites(client: DBClient, limit = 50) {
 
   // send out emails in bulk
   try {
-    const response = await ses
-      .sendBulkTemplatedEmail({
-        Source: SES_EMAIL_SOURCE,
-        Template: SURVEY_INVITE_SES_TEMPLATE,
-        Destinations: surveyInvites.map((invite) => ({
-          Destination: {
-            ToAddresses: [invite.email!],
+    const response = await sendBulkTemplatedInviteEmail({
+      Source: SES_EMAIL_SOURCE,
+      Template: SURVEY_INVITE_SES_TEMPLATE,
+      Destinations: surveyInvites.map((invite) => ({
+        Destination: {
+          ToAddresses: [invite.email!],
+        },
+        ReplacementTags: [
+          {
+            Name: "inviteLink",
+            Value: `${HOST}/auth/surveyInvite?token=${
+              tokens[invite.inviteId].token
+            }`,
           },
-          ReplacementTags: [
-            {
-              Name: "inviteLink",
-              Value: `${HOST}/auth/surveyInvite?token=${
-                tokens[invite.inviteId].token
-              }`,
-            },
-            {
-              Name: "surveyName",
-              Value: surveyName,
-            },
-          ],
-        })),
-      })
-      .promise();
+          {
+            Name: "surveyName",
+            Value: surveyName,
+          },
+        ],
+      })),
+    });
     if (response.Status.length !== inviteEmailResults.rows.length) {
       throw new Error(
         "Number of status messages from SES doesn't match number of invite emails generated."
@@ -371,29 +400,27 @@ export async function sendSurveyInviteReminder(
     );
     const emailId = result.rows[0].id;
     try {
-      const response = await ses
-        .sendBulkTemplatedEmail({
-          Source: SES_EMAIL_SOURCE,
-          Template: SURVEY_INVITE_REMINDER_SES_TEMPLATE,
-          Destinations: [
-            {
-              Destination: {
-                ToAddresses: [invite.email],
-              },
-              ReplacementTags: [
-                {
-                  Name: "inviteLink",
-                  Value: `${HOST}/auth/surveyInvite?token=${tokenInfo.token}`,
-                },
-                {
-                  Name: "surveyName",
-                  Value: invite.surveyName,
-                },
-              ],
+      const response = await sendBulkTemplatedInviteEmail({
+        Source: SES_EMAIL_SOURCE,
+        Template: SURVEY_INVITE_REMINDER_SES_TEMPLATE,
+        Destinations: [
+          {
+            Destination: {
+              ToAddresses: [invite.email],
             },
-          ],
-        })
-        .promise();
+            ReplacementTags: [
+              {
+                Name: "inviteLink",
+                Value: `${HOST}/auth/surveyInvite?token=${tokenInfo.token}`,
+              },
+              {
+                Name: "surveyName",
+                Value: invite.surveyName,
+              },
+            ],
+          },
+        ],
+      });
       const status = response.Status[0];
       if (status.Status === "Success" && status.MessageId) {
         await client.query(

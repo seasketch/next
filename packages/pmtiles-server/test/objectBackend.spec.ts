@@ -31,6 +31,24 @@ describe("raw object backend", () => {
     expect(head.headers.get("Content-Length")).toBe("10");
   });
 
+  it("does not mark golden-snapshot objects immutable", async () => {
+    const snapshotKey = "golden-snapshot/current/manifest.json";
+    await env.TILES_BUCKET.put(snapshotKey, bytes, {
+      httpMetadata: {
+        contentType: "application/json",
+        cacheControl: "public, immutable, max-age=31536000",
+      },
+    });
+    const head = await handleObjectRequest(
+      new Request(`https://uploads.seasketch.org/${snapshotKey}`, {
+        method: "HEAD",
+      }),
+      { TILES_BUCKET: env.TILES_BUCKET } as Env,
+    );
+    expect(head.status).toBe(200);
+    expect(head.headers.get("Cache-Control")).toBe("no-cache");
+  });
+
   it("supports closed, open, and suffix byte ranges", async () => {
     const cases = [
       ["bytes=2-5", "2345", "bytes 2-5/10"],
