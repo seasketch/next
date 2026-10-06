@@ -30,6 +30,7 @@ import {
   MetricDependency,
   OUS_DEMOGRAPHICS_DEFAULT_GROUP_BY,
 } from "overlay-engine";
+import { metricDependenciesForWidgetAttrs } from "../utils/widgetMetricDependencies";
 import {
   NodeSelection,
   SelectionRange,
@@ -728,7 +729,7 @@ export function ReportWidgetNodeViewRouter(props: any) {
   const lang = languageContext?.lang?.code;
   const node = props.node as Node;
   const cardId = props.cardId;
-  const { type, componentSettings, metrics: dependencies } = node.attrs || {};
+  const { type, componentSettings } = node.attrs || {};
   const alternateLanguageSettings = node.attrs?.alternateLanguageSettings;
   if (!type) {
     throw new Error("ReportWidget node type not specified");
@@ -736,6 +737,14 @@ export function ReportWidgetNodeViewRouter(props: any) {
   if (!componentSettings) {
     throw new Error("ReportWidget component settings not specified");
   }
+
+  // Saved attrs.metrics omit dependencies the report query injects (OUS
+  // geography totals on cards that never set totalScope). Resolve the same
+  // list the server schedules, or the widget waits on a metric it filtered out.
+  const dependencies = useMemo(
+    () => metricDependenciesForWidgetAttrs(node.type.name, node.attrs),
+    [node]
+  );
 
   // Use stable hook that only triggers re-renders when this widget's data changes
   const { metrics, loading, errors, sources, geographies, sketchClass } =

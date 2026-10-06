@@ -9832,6 +9832,11 @@ select{
   border-color:rgb(253 230 138 / 0.8)
 }
 
+.border-amber-300{
+  --tw-border-opacity:1;
+  border-color:rgb(252 211 77 / var(--tw-border-opacity, 1))
+}
+
 .border-amber-400\/40{
   border-color:rgb(251 191 36 / 0.4)
 }

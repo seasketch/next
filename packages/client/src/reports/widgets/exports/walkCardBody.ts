@@ -1,5 +1,6 @@
 import type { MetricDependency } from "overlay-engine";
 import type { ProsemirrorJsonNode } from "./types";
+import { metricDependenciesForWidgetAttrs } from "../../utils/widgetMetricDependencies";
 
 export type MetricWidgetNodeInfo = {
   nodeType: "metric" | "blockMetric";
@@ -10,15 +11,11 @@ export type MetricWidgetNodeInfo = {
   walkIndex: number;
 };
 
-function asMetricDeps(raw: unknown): MetricDependency[] {
-  if (!Array.isArray(raw)) return [];
-  return raw.filter(
-    (d) => d && typeof d === "object" && typeof (d as MetricDependency).type === "string",
-  ) as MetricDependency[];
-}
-
 /**
  * Depth-first walk of card body JSON; yields metric/blockMetric widget nodes.
+ *
+ * Dependencies include metrics the saved JSON never stored but the report
+ * query still calculates, so exports see the same rows as the widget.
  */
 export function* walkMetricWidgetNodes(
   root: ProsemirrorJsonNode | null | undefined,
@@ -35,7 +32,7 @@ export function* walkMetricWidgetNodes(
         yield {
           nodeType: t,
           widgetType,
-          dependencies: asMetricDeps(attrs.metrics),
+          dependencies: metricDependenciesForWidgetAttrs(t, attrs),
           componentSettings:
             (attrs.componentSettings as Record<string, unknown>) || {},
           walkIndex,

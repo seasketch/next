@@ -14,6 +14,7 @@ import {
   useReportMetricProgressFieldsLazyQuery,
 } from "../generated/graphql";
 import { subjectIsFragment } from "overlay-engine";
+import { listUnresolvedMetricDependencies } from "./utils/widgetMetricDependencies";
 import ReportTaskLineItem from "./components/ReportTaskLineItem";
 import CircularProgressIndicator from "./components/CircularProgressIndicator";
 import * as Tooltip from "@radix-ui/react-tooltip";
@@ -570,6 +571,47 @@ export default function ReportMetricsProgressDetails({
     progressFieldsByMetricId,
   ]);
 
+  const fragmentMetricsWillNeverExist =
+    !subjectReportContext.loading &&
+    subjectReportContext.data?.isCollection === true &&
+    (subjectReportContext.data.relatedFragments?.length ?? 0) === 0;
+
+  const unresolvedDependencies = useMemo(() => {
+    if (
+      context.loading ||
+      context.dependenciesAwaitingRefresh ||
+      subjectReportContext.loading
+    ) {
+      return [];
+    }
+    const overlaySourceUrls: { [stableId: string]: string } = {};
+    for (const source of [
+      ...context.sources,
+      ...draftReportContext.draftOverlaySources,
+    ]) {
+      if (source.stableId && source.sourceUrl) {
+        overlaySourceUrls[source.stableId] = source.sourceUrl;
+      }
+    }
+    return listUnresolvedMetricDependencies({
+      body: config?.body,
+      metricDependencyHashes: allMetrics.map((metric) => metric.dependencyHash),
+      overlaySourceUrls,
+      resolutionFailuresByHash: context.dependencyResolutionFailuresByHash,
+      skipFragmentSubjects: fragmentMetricsWillNeverExist,
+    });
+  }, [
+    allMetrics,
+    config?.body,
+    context.dependenciesAwaitingRefresh,
+    context.dependencyResolutionFailuresByHash,
+    context.loading,
+    context.sources,
+    draftReportContext.draftOverlaySources,
+    fragmentMetricsWillNeverExist,
+    subjectReportContext.loading,
+  ]);
+
   const handleReprocessSource = useCallback(
     async (jobKey: string, repairInvalid: boolean) => {
       const metricIds = allMetrics
@@ -718,6 +760,38 @@ export default function ReportMetricsProgressDetails({
   return (
     <Tooltip.Provider>
       <div className="space-y-2 bg-white">
+        {unresolvedDependencies.length > 0 && (
+          <div className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+            <div className="font-semibold">
+              {t("Calculations missing from this list")}
+            </div>
+            <p className="mt-1 text-amber-900">
+              {t(
+                "Every metric below can be finished while a widget is still waiting. These were requested by the card and have no calculation row."
+              )}
+            </p>
+            <ul className="mt-2 space-y-1">
+              {unresolvedDependencies.map((dependency) => (
+                <li key={dependency.dependencyHash}>
+                  <span className="font-medium">
+                    {[
+                      dependency.type,
+                      dependency.subjectType,
+                      dependency.stableId,
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                  {dependency.message ? (
+                    <span className="block text-amber-900">
+                      {dependency.message}
+                    </span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {state.relatedOverlaySources.length > 0 && (
           <div>
             <h3 className="text-sm font-medium">

@@ -398,6 +398,27 @@ export const OusDemographicsTable: ReportWidget<
     );
   }
 
+  // Fragment metrics can be finished while this table still has no
+  // geography-subject metric in its own list. Keep showing dots only while
+  // calculations are actually in flight. A finished card with no matching
+  // geography total is a broken widget, not a job still running.
+  if (
+    !loading &&
+    totalScope === "geography" &&
+    clippingGeography &&
+    allFragmentMetrics.length > 0 &&
+    !geographyMetric
+  ) {
+    return (
+      <div className="mt-3 border border-black/10 rounded bg-gray-50 px-3 py-2 text-gray-600 text-sm">
+        <Trans ns="reports">
+          The clipping-geography total for this table is missing from the
+          completed calculations.
+        </Trans>
+      </div>
+    );
+  }
+
   if (ready && rows.length === 0) {
     return (
       <div className="mt-3 border border-black/10 rounded bg-gray-50 px-3 py-2 text-gray-600 text-sm">
