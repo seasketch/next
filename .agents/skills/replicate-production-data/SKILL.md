@@ -20,7 +20,15 @@ Use the signed-in browser tab on `seasketch.org`. `fetch('https://api.seasket.ch
 
 Report cards are ProseMirror documents on `report { tabs { cards { body componentSettings } } }`. Metric widgets are `blockMetric` nodes. Collect every `stableId` on `attrs.metrics`, and the ids embedded in `componentSettings` (`rowLinkedStableIds`, `customRowLabels`, and similar maps). Keys often look like `<stableId>-*`.
 
-For each id, load the table-of-contents item as an admin (`tableOfContentsItemByStableId`, or `draftTableOfContentsItems` when the published list does not contain it). Take the `downloadOptions` entry with `isOriginal: true`. That is the GeoTIFF, GeoJSON, or zipped shapefile the upload UI accepts. Skip PMTiles, FlatGeobuf derivatives, and `ReportingCOG` / `ReportingFlatgeobufV1`. The upload pipeline rebuilds those.
+Collect stable ids only from `metrics[].stableId` and from `componentSettings.stableId` (layer toggles store the id there, with an empty `metrics` array). Do not regex the whole document for 9-character tokens. Prose and setting names (`customRowLabels`, `rowsPerPage`) match that pattern and are not layers.
+
+For each id, load the table-of-contents item as an admin (`tableOfContentsItemByStableId`, or page through `draftTableOfContentsItems` / `tableOfContentsItems` when that lookup returns null). Take the `downloadOptions` entry with `isOriginal: true`. Skip PMTiles and `ReportingCOG` / `ReportingFlatgeobufV1`. The upload pipeline rebuilds those.
+
+`isOriginal` is often a GeoTIFF or GeoJSON, and sometimes already a FlatGeobuf (`.fgb`) or NetCDF (`.nc`). Upload a FlatGeobuf original as `.fgb` with `Content-Type: application/octet-stream`. `size` on `downloadOptions` is a string. A file a few dozen bytes off that number can still be a valid FlatGeobuf (`fgb` magic); an HTML body is not.
+
+If the local handler rejects a NetCDF original (`No layers found in NetCDF file`), download the `GEO_TIFF` option instead and confirm the bytes start with `II*` or `MM`. That GeoTIFF is often the same object key with a `.tif` extension. Do not upload PMTiles as a stand-in.
+
+`tableOfContentsItemByStableId` can return null for a draft-only layer, and it can return null because the layer was deleted while the card still names it. Search both TOC lists before treating the id as gone. A missing id is not something to replace with a different local layer unless that layer has `geostats`. `ReportOverlaySource.geostats` is non-null, so one TOC row with null `geostats` makes every widget on the report fail with `Cannot return null for non-nullable field ReportOverlaySource.geostats`. If the production file is gone, leave the id unset or drop that metric so the rest of the card can render.
 
 Download with curl. The URL 403s unless it includes the `download` query string returned by `downloadOptions`. Python `urllib` is also rejected; curl is not.
 
@@ -36,7 +44,9 @@ If `tableOfContentsItemByStableId` returns null, the layer is draft-only or no l
 
 The data-layer dropzone calls `createDataUpload`, PUTs the bytes to `presignedUploadUrl`, then calls `submitDataUpload`. Do that. Browser file inputs are not a reliable way to hand the files over. The signed-in page cannot read an arbitrary local directory, so serve the downloads from localhost with `Access-Control-Allow-Origin: *` and `fetch` them from the page.
 
-Local GraphQL is `http://localhost:3857/graphql` (see `packages/client/.env`). Cookies are not enough. Read the Auth0 access token already in the page's `localStorage` (`@@auth0spajs@@…`) and send:
+Keep the file server as the foreground process. A server started with `&` in a shell that then exits is killed with the shell.
+
+Local GraphQL is `http://localhost:3857/graphql` (see `packages/client/.env`). Cookies are not enough. Read the Auth0 access token already in the page's `localStorage`. The first `@@auth0spajs@@` key is often the user profile and has no `body.access_token`. Use the entry whose `body.access_token` is set, and send:
 
 - `authorization: Bearer <token>`
 - `x-ss-slug: <local project slug>`
@@ -63,7 +73,9 @@ mutation submitDataUpload($jobId: UUID!) {
 }
 ```
 
-`enableAiDataAnalyst: false` skips the analyst prompt and starts processing. Wait until each `projectBackgroundJobs` row is `COMPLETE`. A new upload creates a **draft** item with a **new** 9-character stable id. It does not keep the production id.
+`enableAiDataAnalyst: false` skips the analyst prompt and starts processing. Wait until each `projectBackgroundJobs` row is `COMPLETE`. Read the new id from `dataUploadTask(id) { tableOfContentsItemStableIds }` on that task. A new upload creates a **draft** item with a **new** 9-character stable id. It does not keep the production id. Name the uploaded file `<productionStableId>__….ext` so a failed job can be matched back to the manifest before that field is filled.
+
+A `.geojson.json` download should be uploaded as `.geojson`. The handler uses the filename extension, and `path.extname` of `name.geojson.json` is `.json`.
 
 `replaceTableOfContentsItemId` is only for replacing a source that is already on the draft item you want to keep. Replacing a published row does not create the draft row a draft report reads.
 
@@ -90,7 +102,13 @@ mutation preprocessSource($slug: String!, $sourceId: Int!) {
 }
 ```
 
-`sourceId` is `dataLayer.dataSourceId`. The mutation does nothing when a reporting output already exists. Wait until those `sourceProcessingJobs` are `COMPLETE` before expecting metric values. The admin preview also needs one of the current user's sketches. A sketch that does not overlap the uploaded features shows zeros in the within-plan column and still shows dataset totals.
+`sourceId` is `dataLayer.dataSourceId`. The mutation does nothing when a reporting output already exists. Wait until `sourceProcessingJobByDataSourceId` is `COMPLETE` (`state`, `progressPercentage`, `errorMessage` — the type has no `id` field), then reload the report. The client keeps a `No source processing job id for overlay source` error from the request it made before the job existed.
+
+`addReportTab` and `addReportCard` recreate the tab and card structure. `cardPosition` is the index on that tab. `reorderReportTabCards` and `reorderReportTabs` take the full id list in the desired order. The card title is the `reportTitle` inside `body`, not a separate argument. Skip cards that are already on the local report or you will insert duplicates.
+
+`updateReportCard` writes every field you omit. Pass the current `componentSettings` and `alternateLanguageSettings` along with `body`. Omitting `alternateLanguageSettings` sets that not-null column to null and the mutation fails.
+
+The admin preview also needs one of the current user's sketches. A sketch that does not overlap the uploaded features shows zeros in the within-plan column and still shows dataset totals.
 
 ## What this writes
 
