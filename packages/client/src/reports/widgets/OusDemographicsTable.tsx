@@ -6,10 +6,12 @@ import {
   OusDemographicsMetric,
   OusDemographicsMetricValue,
   subjectIsFragment,
+  subjectIsGeography,
   summarizeOusDemographicsValue,
   combineMetricsForFragments,
   OUS_DEMOGRAPHICS_DEFAULT_GROUP_BY,
   OUS_DEMOGRAPHICS_ROLLUP_KEY,
+  MetricSubjectFragment,
 } from "overlay-engine";
 import {
   ReportWidget,
@@ -27,6 +29,7 @@ import { useOverlaySources } from "../hooks/useOverlaySources";
 import {
   CompatibleSpatialMetricDetailsFragment,
   OverlaySourceDetailsFragment,
+  SketchGeometryType,
   SpatialMetricState,
 } from "../../generated/graphql";
 import { PaginationFooter, PaginationSetting } from "./Pagination";
@@ -44,10 +47,20 @@ import {
   ClassRowSketchContribution,
 } from "./collection/sketchContributions";
 import { ReportUIStateContext } from "../context/ReportUIStateContext";
-import { MetricSubjectFragment } from "overlay-engine";
+import { usePrimaryGeography } from "../hooks/usePrimaryGeography";
+import type { SketchClassPrimaryGeoFields } from "../hooks/usePrimaryGeography";
+import { useBaseReportContext } from "../context/BaseReportContext";
+import { useSubjectReportContext } from "../context/SubjectReportContext";
 import { TFunction } from "i18next";
+import {
+  buildOusDemographicsFigures,
+  OusDemographicsTotalMode,
+  OusDemographicsTotalScope,
+  ousFragmentBelongsToGeography,
+  resolveOusDemographicsTotalScope,
+} from "./ousDemographicsRows";
 
-export type OusDemographicsTotalMode = "representedInSector" | "participants";
+export type { OusDemographicsTotalMode, OusDemographicsTotalScope };
 
 export type OusDemographicsTableSettings = {
   /** Heading for the group column (sector / gear type / village). */
@@ -72,6 +85,17 @@ export type OusDemographicsTableSettings = {
    *   displayed with a "+" suffix and the percent column is hidden.
    */
   totalMode?: OusDemographicsTotalMode;
+  /**
+   * Population counted in the Total column.
+   *
+   * Omitted: the clipping geography when this sketch class has one, otherwise
+   * the entire survey. An explicit value is kept as authored, including a
+   * custom `totalLabel`.
+   *
+   * - `dataset`: everyone in the survey layer.
+   * - `geography`: respondents whose shapes overlap the clipping geography.
+   */
+  totalScope?: OusDemographicsTotalScope;
   showPercentColumn?: boolean;
   /** Overall rollup row. Off by default. */
   showTotalRow?: boolean;
@@ -91,11 +115,17 @@ type OusDemographicsRow = {
  * methods share the same labels; participants mode simply hides the
  * percent column.
  */
-function defaultOusHeadingLabels(t: TFunction) {
+function defaultOusHeadingLabels(
+  t: TFunction,
+  totalScope: OusDemographicsTotalScope
+) {
   return {
     groupLabel: t("Group"),
     withinLabel: t("People Using Ocean Within Plan"),
-    totalLabel: t("Total People Represented In Survey"),
+    totalLabel:
+      totalScope === "geography"
+        ? t("Total People Represented In Geography")
+        : t("Total People Represented In Survey"),
     percentLabel: t("% People Using Ocean Within Plan"),
     rollupLabel: t("Total"),
   };
@@ -181,10 +211,19 @@ export const OusDemographicsTable: ReportWidget<
   sources,
   loading,
   sketchClass,
+  geographies,
   dependencies,
 }) => {
   const { t } = useTranslation("reports");
   const totalMode = componentSettings.totalMode || "representedInSector";
+  const { clippingGeography, primaryClippingGeographies } = usePrimaryGeography(
+    sketchClass,
+    geographies
+  );
+  const totalScope = resolveOusDemographicsTotalScope(
+    componentSettings.totalScope,
+    primaryClippingGeographies.filter(Boolean).length > 0
+  );
   const sortBy = componentSettings.sortBy || "name";
   const rowsPerPage = componentSettings.rowsPerPage ?? 15;
   // In participants mode within-plan values are lower bounds ("+"), so a
@@ -195,7 +234,7 @@ export const OusDemographicsTable: ReportWidget<
   const showTotalRow = componentSettings.showTotalRow ?? false;
   const plusSuffix = totalMode === "participants";
 
-  const defaults = defaultOusHeadingLabels(t);
+  const defaults = defaultOusHeadingLabels(t, totalScope);
   const groupLabel = componentSettings.groupLabel || defaults.groupLabel;
   const withinLabel = componentSettings.withinLabel || defaults.withinLabel;
   const totalLabel = componentSettings.totalLabel || defaults.totalLabel;
@@ -213,17 +252,42 @@ export const OusDemographicsTable: ReportWidget<
     [sources, dependency]
   );
 
-  const fragmentMetrics = useMemo(
+  const allFragmentMetrics = useMemo(
     () => completedOusFragmentMetrics(metrics, source),
     [metrics, source]
   );
+  const fragmentMetrics = useMemo(() => {
+    if (totalScope !== "geography" || !clippingGeography) {
+      return allFragmentMetrics;
+    }
+    return allFragmentMetrics.filter((metric) =>
+      ousFragmentBelongsToGeography(metric.subject, clippingGeography.id)
+    );
+  }, [allFragmentMetrics, totalScope, clippingGeography]);
+
+  const geographyMetric = useMemo(() => {
+    if (totalScope !== "geography" || !clippingGeography) {
+      return undefined;
+    }
+    return metrics.find(
+      (m) =>
+        m.type === "ous_demographics" &&
+        m.state === SpatialMetricState.Complete &&
+        subjectIsGeography(m.subject) &&
+        m.subject.id === clippingGeography.id &&
+        (!source?.sourceUrl || m.sourceUrl === source.sourceUrl)
+    );
+  }, [metrics, totalScope, clippingGeography, source]);
 
   const { combinedValue, ready } = useMemo(() => {
-    if (loading || fragmentMetrics.length === 0) {
+    if (loading || allFragmentMetrics.length === 0) {
+      return { combinedValue: undefined, ready: false };
+    }
+    if (totalScope === "geography" && !geographyMetric) {
       return { combinedValue: undefined, ready: false };
     }
     return { combinedValue: combineOusMetrics(fragmentMetrics), ready: true };
-  }, [loading, fragmentMetrics]);
+  }, [loading, allFragmentMetrics, fragmentMetrics, totalScope, geographyMetric]);
 
   const { rows, rollupRow } = useMemo(() => {
     if (!ready || !combinedValue) {
@@ -232,34 +296,45 @@ export const OusDemographicsTable: ReportWidget<
         rollupRow: undefined as OusDemographicsRow | undefined,
       };
     }
-    const summaries = summarizeOusDemographicsValue(combinedValue);
-    const totals = combinedValue.totals || {};
-    let rows: OusDemographicsRow[] = Object.keys(totals)
-      .filter((key) => key !== OUS_DEMOGRAPHICS_ROLLUP_KEY)
-      .map((key) => ({
-        key,
-        label: key,
-        within: summaries[key]?.representedInSector ?? 0,
-        total: totals[key]?.[totalMode] ?? 0,
-      }));
+    const figures = buildOusDemographicsFigures({
+      fragmentValue: combinedValue,
+      geographyValue: geographyMetric?.value as
+        | OusDemographicsMetricValue
+        | undefined,
+      totalScope,
+      totalMode,
+    });
+    let rows: OusDemographicsRow[] = figures.groups.map((figure) => ({
+      key: figure.key,
+      label: figure.key,
+      within: figure.within,
+      total: figure.total,
+    }));
     if (sortBy === "name") {
       rows = rows.sort((a, b) => a.label.localeCompare(b.label));
     } else {
       rows = rows.sort((a, b) => b.within - a.within);
     }
-    const rollupTotals = totals[OUS_DEMOGRAPHICS_ROLLUP_KEY];
     const rollupRow: OusDemographicsRow | undefined =
-      showTotalRow && rollupTotals
+      showTotalRow && figures.rollup
         ? {
             key: OUS_DEMOGRAPHICS_ROLLUP_KEY,
             label: rollupLabel,
-            within:
-              summaries[OUS_DEMOGRAPHICS_ROLLUP_KEY]?.representedInSector ?? 0,
-            total: rollupTotals[totalMode] ?? 0,
+            within: figures.rollup.within,
+            total: figures.rollup.total,
           }
         : undefined;
     return { rows, rollupRow };
-  }, [ready, combinedValue, totalMode, sortBy, rollupLabel, showTotalRow]);
+  }, [
+    ready,
+    combinedValue,
+    geographyMetric,
+    totalScope,
+    totalMode,
+    sortBy,
+    rollupLabel,
+    showTotalRow,
+  ]);
 
   const {
     isCollection,
@@ -312,10 +387,27 @@ export const OusDemographicsTable: ReportWidget<
     pageBounds,
   } = usePagination(rows, rowsPerPage);
 
+  if (totalScope === "geography" && !clippingGeography && !loading) {
+    return (
+      <div className="mt-3 border border-black/10 rounded bg-gray-50 px-3 py-2 text-gray-600 text-sm">
+        <Trans ns="reports">
+          This table counts people inside the clipping geography, but this
+          sketch class has no clipping geography.
+        </Trans>
+      </div>
+    );
+  }
+
   if (ready && rows.length === 0) {
     return (
       <div className="mt-3 border border-black/10 rounded bg-gray-50 px-3 py-2 text-gray-600 text-sm">
-        <Trans ns="reports">No survey responses found.</Trans>
+        {totalScope === "geography" ? (
+          <Trans ns="reports">
+            No survey responses overlap the clipping geography.
+          </Trans>
+        ) : (
+          <Trans ns="reports">No survey responses found.</Trans>
+        )}
       </div>
     );
   }
@@ -594,9 +686,8 @@ function OusDemographicsHelpPopover() {
           <p>
             <Trans ns="admin:reports">
               <b>Who is within the plan.</b> A response counts if any of its
-              sector polygons overlap the sketch. Geographies are not used.
-              Every group in the dataset is listed, including those with no
-              overlap (shown as zero).
+              sector polygons overlap the sketch. This column does not change
+              when the Total is limited to a geography.
             </Trans>
           </p>
           <p>
@@ -613,11 +704,21 @@ function OusDemographicsHelpPopover() {
             <Trans ns="admin:reports">
               <b>Total column.</b> The within-plan column always uses
               overlapping <code>represented_in_sector</code> counts.
-              "Sector-specific polygons" uses that same count for the whole
-              survey, so a percent is meaningful. "Entire group response" uses{" "}
-              <code>participants</code> instead — better for village-style
+              "Sector-specific polygons" uses that same count for the chosen
+              population, so a percent is meaningful. "Entire group response"
+              uses <code>participants</code> instead — better for village-style
               groupings. Within-plan values are then a lower bound (shown with
               +) and the percent column is hidden.
+            </Trans>
+          </p>
+          <p>
+            <Trans ns="admin:reports">
+              <b>From.</b> The clipping geography is the default. It counts
+              responses whose shapes overlap the geography that clipped this
+              sketch, and lists only those groups. "Entire survey" counts every
+              response in the dataset. A sketch class with no clipping
+              geography keeps the entire-survey total unless From is set to
+              the geography.
             </Trans>
           </p>
         </div>
@@ -627,7 +728,12 @@ function OusDemographicsHelpPopover() {
 }
 
 export const OusDemographicsTableTooltipControls: ReportWidgetTooltipControls =
-  ({ node, onUpdate, onUpdateDependencyParameters }) => {
+  ({
+    node,
+    onUpdate,
+    onUpdateDependencyParameters,
+    onUpdateAllDependencies,
+  }) => {
     const { t } = useTranslation("admin:reports");
     const dependencies = node.attrs?.metrics as MetricDependency[] | undefined;
 
@@ -639,6 +745,28 @@ export const OusDemographicsTableTooltipControls: ReportWidgetTooltipControls =
     const totalMode = settings.totalMode || "representedInSector";
     const sortBy = settings.sortBy || "name";
     const rowsPerPage = settings.rowsPerPage ?? 15;
+
+    const { geographies } = useBaseReportContext();
+    const subjectReportContext = useSubjectReportContext();
+    const tooltipSketchClass = subjectReportContext.data?.sketch?.sketchClass;
+    const sketchClassForPrimaryGeography: SketchClassPrimaryGeoFields =
+      tooltipSketchClass ?? {
+        geometryType: SketchGeometryType.Polygon,
+        clippingGeographies: [],
+        validChildren: [],
+        project: { sketchClasses: [] },
+      };
+    const { clippingGeography, primaryClippingGeographies } =
+      usePrimaryGeography(sketchClassForPrimaryGeography, geographies);
+    // Until the sketch class loads, treat the card as clipped so the control
+    // shows the default (the clipping geography) instead of flashing the
+    // entire-survey choice.
+    const totalScope = resolveOusDemographicsTotalScope(
+      settings.totalScope,
+      tooltipSketchClass
+        ? primaryClippingGeographies.filter(Boolean).length > 0
+        : true
+    );
 
     const { filteredSources: sources } = useOverlaySources(dependencies || []);
     const source = sources[0] || null;
@@ -669,7 +797,10 @@ export const OusDemographicsTableTooltipControls: ReportWidgetTooltipControls =
       });
     };
 
-    const headingDefaults = useMemo(() => defaultOusHeadingLabels(t), [t]);
+    const headingDefaults = useMemo(
+      () => defaultOusHeadingLabels(t, totalScope),
+      [t, totalScope]
+    );
     const headingLabelKeys = useMemo(
       () => [
         "groupLabel",
@@ -696,7 +827,7 @@ export const OusDemographicsTableTooltipControls: ReportWidgetTooltipControls =
         value: "representedInSector",
         label: t("Sector-specific polygons"),
         description: t(
-          "Uses the same sector-polygon counts as the within-plan column, totaled across the whole survey. Counts are exact, and a percent can be shown."
+          "Uses the same sector-polygon counts as the within-plan column, summed over the population chosen in From. Counts are exact, and a percent can be shown."
         ),
       },
       {
@@ -707,6 +838,43 @@ export const OusDemographicsTableTooltipControls: ReportWidgetTooltipControls =
         ),
       },
     ];
+
+    const totalScopeOptions = [
+      { value: "dataset", label: t("Entire survey") },
+      {
+        value: "geography",
+        label: clippingGeography?.name || t("Clipping geography"),
+      },
+    ];
+
+    const setTotalScope = (scope: OusDemographicsTotalScope) => {
+      handleUpdate({ totalScope: scope });
+      onUpdateAllDependencies((deps) => {
+        const withoutGeography = deps.filter(
+          (d) =>
+            !(d.type === "ous_demographics" && d.subjectType === "geographies")
+        );
+        if (scope === "dataset") {
+          return withoutGeography;
+        }
+        const fragment = withoutGeography.find(
+          (d) =>
+            d.type === "ous_demographics" && d.subjectType === "fragments"
+        );
+        if (!fragment?.stableId) {
+          return deps;
+        }
+        return [
+          ...withoutGeography,
+          {
+            type: "ous_demographics" as const,
+            subjectType: "geographies" as const,
+            stableId: fragment.stableId,
+            parameters: { ...(fragment.parameters || {}) },
+          },
+        ];
+      });
+    };
 
     const sortOptions = [
       { value: "within", label: t("People within plan") },
@@ -751,6 +919,19 @@ export const OusDemographicsTableTooltipControls: ReportWidgetTooltipControls =
                 sector counts (<code>represented_in_sector</code>), or the full{" "}
                 <code>participants</code> count from each group response.
               </Trans>
+            </div>
+          }
+        />
+        <LabeledDropdown
+          label={t("From")}
+          value={totalScope}
+          options={totalScopeOptions}
+          onChange={(val) => setTotalScope(val as OusDemographicsTotalScope)}
+          title={
+            <div className="max-w-[260px] text-xs font-normal normal-case text-gray-500 leading-snug">
+              {t(
+                "Where the Total column counts people. The clipping geography is the default and counts responses whose shapes overlap that geography. Entire survey uses every response in the dataset."
+              )}
             </div>
           }
         />

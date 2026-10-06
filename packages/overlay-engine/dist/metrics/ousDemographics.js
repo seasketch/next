@@ -142,7 +142,8 @@ class OusDemographicsAggregator {
 exports.OusDemographicsAggregator = OusDemographicsAggregator;
 /**
  * Calculates the `ous_demographics` metric for a subject polygon against an
- * Ocean Use Survey FlatGeobuf source.
+ * Ocean Use Survey FlatGeobuf source. The subject is a sketch fragment or a
+ * materialized geography.
  *
  * Every feature in the source is scanned exactly once (dataset-wide totals
  * require a full pass regardless of the subject, and survey layers are

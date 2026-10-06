@@ -580,17 +580,23 @@ export default async function handler(payload: OverlayWorkerPayload) {
         if (!payload.sourceUrl) {
           throw new Error("sourceUrl is required for ous_demographics");
         }
-        if (!subjectIsFragment(payload.subject)) {
-          // Dataset-level totals are embedded in each fragment metric, so
-          // geography subjects are never needed for this metric type.
-          throw new Error(
-            "ous_demographics metrics only support fragment subjects",
+        // Fragment subjects are the sketch. Geography subjects are the
+        // clipping geography, materialized so difference layers (land, etc.)
+        // are excluded before the boolean overlap test.
+        let { intersectionFeature, differenceSources } =
+          await subjectsForAnalysis(
+            payload.subject as MetricSubjectFragment | MetricSubjectGeography,
+            helpers,
+          );
+        if (subjectIsGeography(payload.subject)) {
+          helpers.log(
+            "Building geography geometry for ous_demographics (intersection minus differences)",
+          );
+          intersectionFeature = await buildCompleteGeographyMultiPolygon(
+            intersectionFeature,
+            differenceSources,
           );
         }
-        const { intersectionFeature } = await subjectsForAnalysis(
-          payload.subject as MetricSubjectFragment,
-          helpers,
-        );
         const source = await sourceCache.get<Feature<MultiPolygon | Polygon>>(
           payload.sourceUrl,
           {
