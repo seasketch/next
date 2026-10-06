@@ -103,6 +103,12 @@ Those functions already say so in comments (`TODO: this will have to be modified
 
 When implementing Report Widgets (and spatial analysis features generally), refer to packages/client/reports/widgets/README.md file for details on the architecture, user interface, and implementation conventions.
 
+## Copying production project data locally
+
+To reproduce a production project's layers or report cards in a local project, download the original source files and send them through the local upload pipeline. Do not insert `table_of_contents_items`, `data_sources`, or `data_upload_outputs` rows.
+
+Load `.agents/skills/replicate-production-data/SKILL.md` when copying production layers, report cards, or other project data onto a local project for testing.
+
 ## Golden snapshot
 
 The golden snapshot is the database dev machines, CI, integration tests, and agents boot from.

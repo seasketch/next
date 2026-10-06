@@ -114,6 +114,85 @@ describe("extractMetricDependenciesFromReportConfiguration", () => {
     expect(deps[0].stableId).toBe("hidden-tab");
   });
 
+  test("requests clipping-geography demographics unless the card chose the entire survey", () => {
+    const card = (
+      componentSettings: Record<string, unknown>,
+      metrics: Record<string, unknown>[]
+    ) =>
+      ({
+        id: 1,
+        tabs: [
+          {
+            id: 1,
+            position: 0,
+            title: "t",
+            cards: [
+              {
+                id: 1,
+                type: "TextBlock",
+                body: {
+                  type: "doc",
+                  content: [
+                    {
+                      type: "blockMetric",
+                      attrs: {
+                        type: "OusDemographicsTable",
+                        componentSettings,
+                        metrics,
+                      },
+                    },
+                  ],
+                },
+                alternateLanguageSettings: {},
+                componentSettings: {},
+                position: 0,
+                reportingLayers: [],
+              },
+            ],
+            alternateLanguageSettings: {},
+          },
+        ],
+      }) as unknown as ReportConfiguration;
+
+    const fragment = {
+      type: "ous_demographics",
+      subjectType: "fragments",
+      stableId: "survey",
+      parameters: { groupBy: "sector" },
+    };
+
+    const unset = extractMetricDependenciesFromReportConfiguration(
+      card({}, [fragment])
+    );
+    expect(unset).toEqual([
+      fragment,
+      {
+        type: "ous_demographics",
+        subjectType: "geographies",
+        stableId: "survey",
+        parameters: { groupBy: "sector" },
+      },
+    ]);
+
+    const dataset = extractMetricDependenciesFromReportConfiguration(
+      card({ totalScope: "dataset" }, [fragment])
+    );
+    expect(dataset).toEqual([fragment]);
+
+    const alreadyRequested = extractMetricDependenciesFromReportConfiguration(
+      card({}, [
+        fragment,
+        {
+          type: "ous_demographics",
+          subjectType: "geographies",
+          stableId: "survey",
+          parameters: { groupBy: "sector" },
+        },
+      ])
+    );
+    expect(alreadyRequested).toHaveLength(2);
+  });
+
   test("fingerprint changes when card body changes", () => {
     const a = {
       id: 1,

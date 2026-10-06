@@ -1614,9 +1614,10 @@ export type OusDemographicsGroupRespondents = {
 /**
  * Dataset-wide totals for one group, computed from every feature in the
  * source (not just those intersecting the subject). Identical on every
- * fragment metric calculated for the same source + groupBy, and used by
- * report widgets as the "Total People Represented In Survey" column and
- * percentage denominators — geographies play no role in this metric.
+ * metric calculated for the same source + groupBy, including geography
+ * subjects. Report widgets use this for the "entire survey" Total column.
+ * People overlapping a geography are `groups` on that geography metric,
+ * not this field.
  */
 export type OusDemographicsGroupTotals = {
   /** Sum of clamped `representedInSector` over all respondents in the group. */
@@ -1645,8 +1646,12 @@ export type OusDemographicsMetricValue = {
 /**
  * Ocean Use Survey demographics metric. Answers "how many people does this
  * plan affect, per sector / gear type / village?" for survey datasets that
- * carry {@link OUS_DEMOGRAPHICS_REQUIRED_COLUMNS}. Calculated for fragment
- * subjects only.
+ * carry {@link OUS_DEMOGRAPHICS_REQUIRED_COLUMNS}.
+ *
+ * Fragment subjects count people whose shapes overlap the sketch (`groups`)
+ * and embed dataset-wide totals. Geography subjects use the same calculation
+ * against the geography polygon; their `groups` are people overlapping that
+ * geography, which widgets can use as an alternate Total column.
  */
 export type OusDemographicsMetric = OverlayMetricBase & {
   type: "ous_demographics";
@@ -2904,6 +2909,51 @@ type ProsemirrorNode = {
   content?: ProsemirrorNode[];
 };
 
+/**
+ * Cards that never set `totalScope` count the clipping geography. That needs
+ * a geography-subject metric beside the fragment metric. Explicit
+ * `totalScope: "dataset"` is left unchanged, and a geography dependency that
+ * is already stored is not duplicated.
+ */
+function ousDemographicsDependenciesForNode(
+  node: ProsemirrorNode,
+  metrics: MetricDependency[],
+): MetricDependency[] {
+  if (
+    node.type !== "blockMetric" ||
+    node.attrs?.type !== "OusDemographicsTable" ||
+    node.attrs?.componentSettings?.totalScope === "dataset"
+  ) {
+    return metrics;
+  }
+  const extras: MetricDependency[] = [];
+  for (const dep of metrics) {
+    if (
+      dep.type !== "ous_demographics" ||
+      dep.subjectType !== "fragments" ||
+      !dep.stableId
+    ) {
+      continue;
+    }
+    const groupBy = dep.parameters?.groupBy;
+    const alreadyRequested = (candidate: MetricDependency) =>
+      candidate.type === "ous_demographics" &&
+      candidate.subjectType === "geographies" &&
+      candidate.stableId === dep.stableId &&
+      candidate.parameters?.groupBy === groupBy;
+    if (metrics.some(alreadyRequested) || extras.some(alreadyRequested)) {
+      continue;
+    }
+    extras.push({
+      type: "ous_demographics",
+      subjectType: "geographies",
+      stableId: dep.stableId,
+      parameters: { ...(dep.parameters || {}) },
+    });
+  }
+  return extras.length > 0 ? [...metrics, ...extras] : metrics;
+}
+
 export function extractMetricDependenciesFromReportBody(
   node: ProsemirrorNode,
   dependencies: MetricDependency[] = [],
@@ -2923,7 +2973,12 @@ export function extractMetricDependenciesFromReportBody(
       if (typeof metrics[0] !== "object") {
         throw new Error("Invalid metric");
       }
-      dependencies.push(...metrics);
+      dependencies.push(
+        ...ousDemographicsDependenciesForNode(
+          node,
+          metrics as MetricDependency[],
+        ),
+      );
     }
   }
   if (Array.isArray(node.content)) {

@@ -2514,6 +2514,14 @@ export function buildReportCommandGroups({
                     groupBy: OUS_DEMOGRAPHICS_DEFAULT_GROUP_BY,
                   },
                 },
+                {
+                  type: "ous_demographics",
+                  subjectType: "geographies",
+                  stableId,
+                  parameters: {
+                    groupBy: OUS_DEMOGRAPHICS_DEFAULT_GROUP_BY,
+                  },
+                },
               ],
             });
           },

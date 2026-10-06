@@ -1817,6 +1817,42 @@ function combineGroupedValues(values, combineFn) {
     }
     return result;
 }
+/**
+ * Cards that never set `totalScope` count the clipping geography. That needs
+ * a geography-subject metric beside the fragment metric. Explicit
+ * `totalScope: "dataset"` is left unchanged, and a geography dependency that
+ * is already stored is not duplicated.
+ */
+function ousDemographicsDependenciesForNode(node, metrics) {
+    if (node.type !== "blockMetric" ||
+        node.attrs?.type !== "OusDemographicsTable" ||
+        node.attrs?.componentSettings?.totalScope === "dataset") {
+        return metrics;
+    }
+    const extras = [];
+    for (const dep of metrics) {
+        if (dep.type !== "ous_demographics" ||
+            dep.subjectType !== "fragments" ||
+            !dep.stableId) {
+            continue;
+        }
+        const groupBy = dep.parameters?.groupBy;
+        const alreadyRequested = (candidate) => candidate.type === "ous_demographics" &&
+            candidate.subjectType === "geographies" &&
+            candidate.stableId === dep.stableId &&
+            candidate.parameters?.groupBy === groupBy;
+        if (metrics.some(alreadyRequested) || extras.some(alreadyRequested)) {
+            continue;
+        }
+        extras.push({
+            type: "ous_demographics",
+            subjectType: "geographies",
+            stableId: dep.stableId,
+            parameters: { ...(dep.parameters || {}) },
+        });
+    }
+    return extras.length > 0 ? [...metrics, ...extras] : metrics;
+}
 function extractMetricDependenciesFromReportBody(node, dependencies = []) {
     if (typeof node !== "object" || node === null || !node.type) {
         throw new Error("Invalid node");
@@ -1831,7 +1867,7 @@ function extractMetricDependenciesFromReportBody(node, dependencies = []) {
             if (typeof metrics[0] !== "object") {
                 throw new Error("Invalid metric");
             }
-            dependencies.push(...metrics);
+            dependencies.push(...ousDemographicsDependenciesForNode(node, metrics));
         }
     }
     if (Array.isArray(node.content)) {
