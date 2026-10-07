@@ -21,6 +21,22 @@ const LAYER_DEST = "distance-path-dest";
 const PATH_COLOR = "#2563eb";
 const ORIGIN_COLOR = "#0f172a";
 const DEST_COLOR = "#dc2626";
+/** Light outline so the sketch stays visible on dark satellite imagery. */
+const SATELLITE_SKETCH_COLOR = "#ffffff";
+
+export type DistancePathBasemap = "light" | "streets" | "satellite";
+
+const BASEMAP_STYLES: Record<DistancePathBasemap, string> = {
+  light: "mapbox://styles/mapbox/light-v11",
+  streets: "mapbox://styles/mapbox/streets-v12",
+  satellite: "mapbox://styles/mapbox/satellite-streets-v12",
+};
+
+export function isDistancePathBasemap(
+  value: unknown
+): value is DistancePathBasemap {
+  return value === "light" || value === "streets" || value === "satellite";
+}
 
 function unwrapRing(coords: number[][]): number[][] {
   if (coords.length === 0) return coords;
@@ -94,12 +110,14 @@ export function DistancePathMap({
   emptyMessage,
   caption,
   sketchGeojsonUrl,
+  basemap = "streets",
 }: {
   paths: Feature<LineString>[];
   emptyMessage: string;
   caption?: string;
   /** Existing `/sketches/:id.geojson.json` URL. Mapbox fetches it; not stored on the metric. */
   sketchGeojsonUrl?: string | null;
+  basemap?: DistancePathBasemap;
 }) {
   const { t } = useTranslation("reports");
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -117,7 +135,7 @@ export function DistancePathMap({
 
     const map = new mapboxgl.Map({
       container: el,
-      style: "mapbox://styles/mapbox/light-v11",
+      style: BASEMAP_STYLES[basemap],
       attributionControl: false,
       cooperativeGestures: true,
       dragRotate: false,
@@ -139,6 +157,8 @@ export function DistancePathMap({
 
     const onLoad = () => {
       if (sketchGeojsonUrl) {
+        const sketchColor =
+          basemap === "satellite" ? SATELLITE_SKETCH_COLOR : ORIGIN_COLOR;
         map.addSource(SKETCH_SOURCE_ID, {
           type: "geojson",
           data: sketchGeojsonUrl,
@@ -155,8 +175,8 @@ export function DistancePathMap({
             false,
           ],
           paint: {
-            "fill-color": ORIGIN_COLOR,
-            "fill-opacity": 0.15,
+            "fill-color": sketchColor,
+            "fill-opacity": basemap === "satellite" ? 0.18 : 0.15,
           },
         });
         map.addLayer({
@@ -164,9 +184,9 @@ export function DistancePathMap({
           type: "line",
           source: SKETCH_SOURCE_ID,
           paint: {
-            "line-color": ORIGIN_COLOR,
-            "line-width": 1.5,
-            "line-opacity": 0.85,
+            "line-color": sketchColor,
+            "line-width": basemap === "satellite" ? 2 : 1.5,
+            "line-opacity": basemap === "satellite" ? 0.95 : 0.85,
           },
         });
       }
@@ -239,7 +259,7 @@ export function DistancePathMap({
     };
     // collection is applied in a separate effect after load
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [Boolean(bounds), Boolean(TOKEN), sketchGeojsonUrl]);
+  }, [Boolean(bounds), Boolean(TOKEN), sketchGeojsonUrl, basemap]);
 
   useEffect(() => {
     const map = mapRef.current;

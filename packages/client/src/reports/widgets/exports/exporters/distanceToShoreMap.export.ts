@@ -43,7 +43,10 @@ export const exportDistanceToShoreMap: WidgetExporter = (input) => {
       {
         ...baseRow("collection", subject.sketchId, subject.sketchName),
         meters,
-        unit: (componentSettings.unit as string | undefined) ?? "kilometer",
+        unit:
+          componentSettings.unit === "none"
+            ? "none"
+            : (componentSettings.unit as string | undefined) ?? "kilometer",
       },
     ],
     extras: path

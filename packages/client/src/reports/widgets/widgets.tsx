@@ -1377,7 +1377,7 @@ export function buildReportCommandGroups({
       id: "distance-to-shore-map",
       label: "Distance to Shore Map",
       description: "Map of the shortest path between the sketch and the shoreline.",
-      screenshotSrc: "/slashCommands/distance-to-shore.png",
+      screenshotSrc: "/slashCommands/distance-to-shore-map.png",
       run: (state, dispatch, view) => {
         return insertBlockMetric(view, state.selection.ranges[0], {
           type: "DistanceToShoreMap",
@@ -1390,6 +1390,7 @@ export function buildReportCommandGroups({
           componentSettings: {
             unit: "kilometer",
             unitDisplay: "short",
+            basemap: "streets",
           },
         });
       },

@@ -17,13 +17,20 @@ import {
 import { useNumberFormatters } from "../hooks/useNumberFormatters";
 import { LengthUnit } from "../utils/units";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
-import { DistancePathMap } from "./DistancePathMap";
+import {
+  DistancePathBasemap,
+  DistancePathMap,
+  isDistancePathBasemap,
+} from "./DistancePathMap";
+import { LabeledDropdown } from "./LabeledDropdown";
 import { UnitSelector } from "./UnitSelector";
 import { ReportWidget } from "./widgets";
 
 type DistanceToShoreMapSettings = {
-  unit?: LengthUnit;
+  /** `"none"` hides the distance caption. Omitted defaults to kilometers. */
+  unit?: LengthUnit | "none";
   unitDisplay?: "long" | "short";
+  basemap?: DistancePathBasemap;
 };
 
 function isPathFeature(value: unknown): value is Feature<LineString> {
@@ -65,7 +72,13 @@ export const DistanceToShoreMap: ReportWidget<DistanceToShoreMapSettings> = ({
   const { t } = useTranslation("reports");
   const { data: subject } = useSubjectReportContext();
   const { data: projectMeta } = useCurrentProjectMetadata();
-  const unit = (componentSettings?.unit ?? "kilometer") as LengthUnit;
+  const hideDistance = componentSettings?.unit === "none";
+  const unit = (
+    hideDistance ? "kilometer" : componentSettings?.unit ?? "kilometer"
+  ) as LengthUnit;
+  const basemap = isDistancePathBasemap(componentSettings?.basemap)
+    ? componentSettings.basemap
+    : "streets";
   const formatters = useNumberFormatters({
     unit,
     unitDisplay: componentSettings?.unitDisplay,
@@ -116,6 +129,7 @@ export const DistanceToShoreMap: ReportWidget<DistanceToShoreMapSettings> = ({
         paths={[]}
         emptyMessage={t("Sketch is on land or touching the shoreline.")}
         sketchGeojsonUrl={sketchGeojsonUrl}
+        basemap={basemap}
       />
     );
   }
@@ -130,6 +144,7 @@ export const DistanceToShoreMap: ReportWidget<DistanceToShoreMapSettings> = ({
         paths={[]}
         emptyMessage={t("No shoreline path to display.")}
         sketchGeojsonUrl={sketchGeojsonUrl}
+        basemap={basemap}
       />
     );
   }
@@ -138,8 +153,11 @@ export const DistanceToShoreMap: ReportWidget<DistanceToShoreMapSettings> = ({
     <DistancePathMap
       paths={[path]}
       emptyMessage={t("No shoreline path to display.")}
-      caption={formatters.distance(meters / 1000)}
+      caption={
+        hideDistance ? undefined : formatters.distance(meters / 1000)
+      }
       sketchGeojsonUrl={sketchGeojsonUrl}
+      basemap={basemap}
     />
   );
 };
@@ -150,23 +168,51 @@ export const DistanceToShoreMapTooltipControls: ReportWidgetTooltipControls = ({
 }) => {
   const { t } = useTranslation("admin:reports");
   const componentSettings = node.attrs?.componentSettings || {};
-  const unit = (componentSettings?.unit || "kilometer") as LengthUnit;
+  const storedUnit = componentSettings?.unit;
+  const unit =
+    storedUnit === "none" ? undefined : ((storedUnit || "kilometer") as LengthUnit);
   const unitDisplay = componentSettings?.unitDisplay || "short";
+  const basemap = isDistancePathBasemap(componentSettings?.basemap)
+    ? componentSettings.basemap
+    : "streets";
 
   return (
-    <>
+    <div className="flex items-center gap-3">
       <UnitSelector
         unitType="distance"
+        allowNone
         value={unit}
         unitDisplay={unitDisplay}
-        onChange={(value: LengthUnit) =>
+        onChange={(value) =>
           onUpdate({
-            componentSettings: { ...componentSettings, unit: value },
+            componentSettings: {
+              ...componentSettings,
+              unit: value ?? "none",
+            },
           })
         }
         onUnitDisplayChange={(display) =>
           onUpdate({
             componentSettings: { ...componentSettings, unitDisplay: display },
+          })
+        }
+      />
+      <LabeledDropdown
+        label={t("Basemap")}
+        value={basemap}
+        ariaLabel={t("Basemap")}
+        title={t("Basemap")}
+        options={[
+          { value: "light", label: t("Light") },
+          { value: "streets", label: t("Streets") },
+          { value: "satellite", label: t("Satellite") },
+        ]}
+        onChange={(value) =>
+          onUpdate({
+            componentSettings: {
+              ...componentSettings,
+              basemap: value,
+            },
           })
         }
       />
@@ -180,6 +226,6 @@ export const DistanceToShoreMapTooltipControls: ReportWidgetTooltipControls = ({
           </span>
         </div>
       </TooltipMorePopover>
-    </>
+    </div>
   );
 };
