@@ -16,19 +16,21 @@ The local API, its worker, and `packages/spatial-uploads-handler` (`npm run dev`
 
 ## Find the files on production
 
-Use the signed-in browser tab on `seasketch.org`. `fetch('https://api.seasket.ch/graphql', { credentials: 'include' })` sends that session. Local GraphQL is a different host and a different auth scheme; do not reuse one for the other.
+Use the signed-in browser tab on `seasketch.org`. The app sends an Auth0 bearer token; a cookie-only `fetch` can be a different user. `sessionIsAdmin` is then false and `draftTableOfContentsItems` is empty even while the admin UI is open. Read the `@@auth0spajs@@` `localStorage` entry whose `body.access_token` is set (skip the profile entry) and send `authorization: Bearer <token>` plus `x-ss-slug`. Do not print the token. Local GraphQL is a different host and a different token; do not reuse one for the other.
 
-Report cards are ProseMirror documents on `report { tabs { cards { body componentSettings } } }`. Metric widgets are `blockMetric` nodes. Collect every `stableId` on `attrs.metrics`, and the ids embedded in `componentSettings` (`rowLinkedStableIds`, `customRowLabels`, and similar maps). Keys often look like `<stableId>-*`.
+Report cards are ProseMirror documents on `report { tabs { cards { body componentSettings } } }`. Metric widgets are `blockMetric` nodes. Collect every `stableId` on `attrs.metrics`, and the ids embedded in `componentSettings`: `componentSettings.stableId` (layer toggles, which have an empty `metrics` array), each `columnSettings` entry's `stableId`, and `rowLinkedStableIds`. Keys and strings often look like `<stableId>-*`.
 
-Collect stable ids only from `metrics[].stableId` and from `componentSettings.stableId` (layer toggles store the id there, with an empty `metrics` array). Do not regex the whole document for 9-character tokens. Prose and setting names (`customRowLabels`, `rowsPerPage`) match that pattern and are not layers.
+Do not regex the whole document for 9-character tokens. Prose and setting names (`customRowLabels`, `rowsPerPage`) match that pattern and are not layers. A published report can still name layers that the current draft table of contents no longer has, and it can have more files that are still downloadable. Copy the published card JSON when that is the report people use.
 
 For each id, load the table-of-contents item as an admin (`tableOfContentsItemByStableId`, or page through `draftTableOfContentsItems` / `tableOfContentsItems` when that lookup returns null). Take the `downloadOptions` entry with `isOriginal: true`. Skip PMTiles and `ReportingCOG` / `ReportingFlatgeobufV1`. The upload pipeline rebuilds those.
 
-`isOriginal` is often a GeoTIFF or GeoJSON, and sometimes already a FlatGeobuf (`.fgb`) or NetCDF (`.nc`). Upload a FlatGeobuf original as `.fgb` with `Content-Type: application/octet-stream`. `size` on `downloadOptions` is a string. A file a few dozen bytes off that number can still be a valid FlatGeobuf (`fgb` magic); an HTML body is not.
+`isOriginal` is often a GeoTIFF, GeoJSON, or zipped shapefile, and sometimes already a FlatGeobuf (`.fgb`) or NetCDF (`.nc`). Upload a FlatGeobuf original as `.fgb` with `Content-Type: application/octet-stream`, and a zipped shapefile as `.zip` with `Content-Type: application/zip`. `size` on `downloadOptions` is a string. A file that is a few dozen bytes off that number, or several megabytes off on a large FlatGeobuf, can still be valid (`fgb` magic). An HTML body is not.
 
 If the local handler rejects a NetCDF original (`No layers found in NetCDF file`), download the `GEO_TIFF` option instead and confirm the bytes start with `II*` or `MM`. That GeoTIFF is often the same object key with a `.tif` extension. Do not upload PMTiles as a stand-in.
 
-`tableOfContentsItemByStableId` can return null for a draft-only layer, and it can return null because the layer was deleted while the card still names it. Search both TOC lists before treating the id as gone. A missing id is not something to replace with a different local layer unless that layer has `geostats`. `ReportOverlaySource.geostats` is non-null, so one TOC row with null `geostats` makes every widget on the report fail with `Cannot return null for non-nullable field ReportOverlaySource.geostats`. If the production file is gone, leave the id unset or drop that metric so the rest of the card can render.
+`tableOfContentsItemByStableId` can return null for a draft-only layer when the request is not an admin. Page `draftTableOfContentsItems` with the bearer token before treating an id as gone. A published report often names layers that exist only on the draft table of contents. Download and upload those files, then rewrite the ids. Do not delete metrics, toggles, column settings, or row links to hide a layer you have not found yet.
+
+A missing id is not something to replace with a different local layer unless that layer has `geostats`. `ReportOverlaySource.geostats` is non-null, so one TOC row with null `geostats` makes every widget on the report fail with `Cannot return null for non-nullable field ReportOverlaySource.geostats`. If the id is absent from both the published and draft table of contents on an admin request, the file is gone. Say so. Leaving the stable id in the card makes the widget show `No draft map layer...`. Keep widgets that do not name a layer, such as sketch attributes, total area, and distance to shore.
 
 Download with curl. The URL 403s unless it includes the `download` query string returned by `downloadOptions`. Python `urllib` is also rejected; curl is not.
 
@@ -73,6 +75,8 @@ mutation submitDataUpload($jobId: UUID!) {
 }
 ```
 
+`id` is `dataUploadTask.projectBackgroundJobId`, not `dataUploadTask.id`. Those are different uuids. Passing the task id returns a null `projectBackgroundJob` and leaves the job queued.
+
 `enableAiDataAnalyst: false` skips the analyst prompt and starts processing. Wait until each `projectBackgroundJobs` row is `COMPLETE`. Read the new id from `dataUploadTask(id) { tableOfContentsItemStableIds }` on that task. A new upload creates a **draft** item with a **new** 9-character stable id. It does not keep the production id. Name the uploaded file `<productionStableId>__….ext` so a failed job can be matched back to the manifest before that field is filled.
 
 A `.geojson.json` download should be uploaded as `.geojson`. The handler uses the filename extension, and `path.extname` of `name.geojson.json` is `.json`.
@@ -102,7 +106,9 @@ mutation preprocessSource($slug: String!, $sourceId: Int!) {
 }
 ```
 
-`sourceId` is `dataLayer.dataSourceId`. The mutation does nothing when a reporting output already exists. Wait until `sourceProcessingJobByDataSourceId` is `COMPLETE` (`state`, `progressPercentage`, `errorMessage` — the type has no `id` field), then reload the report. The client keeps a `No source processing job id for overlay source` error from the request it made before the job existed.
+`sourceId` is `dataLayer.dataSourceId`. The mutation does nothing when a reporting output already exists. Time series charts also need the production `dataSource.temporal` document. Copy it with `updateDataSourceTemporal(dataSourceId, temporal)` or the chart reports that the layer has no temporal coverage. Wait until `sourceProcessingJobByDataSourceId` is `COMPLETE` (`state`, `progressPercentage`, `errorMessage` — the type has no `id` field), then reload the report. The client keeps a `No source processing job id for overlay source` error from the request it made before the job existed.
+
+Add the cards to the draft report (`reports.version = 0`). A published row stores that draft's id in `draft_id` and has `version > 0`. `setPrimaryReportForSketchClass` rejects anything other than version 0.
 
 `addReportTab` and `addReportCard` recreate the tab and card structure. `cardPosition` is the index on that tab. `reorderReportTabCards` and `reorderReportTabs` take the full id list in the desired order. The card title is the `reportTitle` inside `body`, not a separate argument. Skip cards that are already on the local report or you will insert duplicates.
 
