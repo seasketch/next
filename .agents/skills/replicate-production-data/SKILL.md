@@ -77,7 +77,7 @@ mutation submitDataUpload($jobId: UUID!) {
 
 `id` is `dataUploadTask.projectBackgroundJobId`, not `dataUploadTask.id`. Those are different uuids. Passing the task id returns a null `projectBackgroundJob` and leaves the job queued.
 
-`enableAiDataAnalyst: false` skips the analyst prompt and starts processing. Wait until each `projectBackgroundJobs` row is `COMPLETE`. Read the new id from `dataUploadTask(id) { tableOfContentsItemStableIds }` on that task. A new upload creates a **draft** item with a **new** 9-character stable id. It does not keep the production id. Name the uploaded file `<productionStableId>__….ext` so a failed job can be matched back to the manifest before that field is filled.
+`enableAiDataAnalyst: false` skips the analyst prompt and starts processing. Submit at most 5 uploads at a time and wait until those `projectBackgroundJobs` rows are `COMPLETE` before submitting the next 5. A larger burst keeps the local handler busy and leaves the rest sitting on `uploaded`. Read the new id from `dataUploadTask(id) { tableOfContentsItemStableIds }` on that task. A new upload creates a **draft** item with a **new** 9-character stable id. It does not keep the production id. Name the uploaded file `<productionStableId>__….ext` so a failed job can be matched back to the manifest before that field is filled.
 
 A `.geojson.json` download should be uploaded as `.geojson`. The handler uses the filename extension, and `path.extname` of `name.geojson.json` is `.json`.
 
