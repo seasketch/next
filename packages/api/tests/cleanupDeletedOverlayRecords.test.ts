@@ -1,7 +1,10 @@
 /// <reference types="jest" />
 import { PoolClient } from "pg";
 import { createPgPool } from "./pool";
-import { sharedLibraryRemotes } from "../tasks/cleanupDeletedOverlayRecords";
+import {
+  isInvalidRemoteError,
+  sharedLibraryRemotes,
+} from "../tasks/cleanupDeletedOverlayRecords";
 
 const pool = createPgPool("test");
 
@@ -51,6 +54,90 @@ async function otherProjectId(client: PoolClient) {
   );
   return rows[0].id;
 }
+
+describe("isInvalidRemoteError", () => {
+  test("discards a remote storage rejected as an illegal bucket or missing object", () => {
+    expect(
+      isInvalidRemoteError({
+        code: "InvalidBucketName",
+        statusCode: 400,
+        retryable: false,
+        message: "The specified bucket name is not valid.",
+      })
+    ).toBe(true);
+    expect(
+      isInvalidRemoteError({ code: "NoSuchBucket", statusCode: 404 })
+    ).toBe(true);
+    expect(isInvalidRemoteError({ code: "NoSuchKey", statusCode: 404 })).toBe(
+      true
+    );
+    expect(isInvalidRemoteError({ code: "InvalidURI", statusCode: 400 })).toBe(
+      true
+    );
+    expect(
+      isInvalidRemoteError({ code: "KeyTooLongError", statusCode: 400 })
+    ).toBe(true);
+  });
+
+  test("keeps the record when storage or the network may recover", () => {
+    expect(
+      isInvalidRemoteError({
+        code: "InternalError",
+        statusCode: 500,
+        retryable: true,
+      })
+    ).toBe(false);
+    expect(
+      isInvalidRemoteError({
+        code: "ServiceUnavailable",
+        statusCode: 503,
+        retryable: true,
+      })
+    ).toBe(false);
+    expect(
+      isInvalidRemoteError({ code: "SlowDown", statusCode: 503, retryable: true })
+    ).toBe(false);
+    expect(
+      isInvalidRemoteError({ code: "NetworkingError", retryable: true })
+    ).toBe(false);
+    expect(
+      isInvalidRemoteError({
+        code: "RequestTimeout",
+        statusCode: 400,
+        retryable: true,
+      })
+    ).toBe(false);
+    expect(isInvalidRemoteError({ statusCode: 502, retryable: true })).toBe(
+      false
+    );
+  });
+
+  test("keeps the record for auth and other unrecognized failures", () => {
+    expect(
+      isInvalidRemoteError({
+        code: "AccessDenied",
+        statusCode: 403,
+        retryable: false,
+      })
+    ).toBe(false);
+    expect(
+      isInvalidRemoteError({
+        code: "SignatureDoesNotMatch",
+        statusCode: 403,
+        retryable: false,
+      })
+    ).toBe(false);
+    expect(
+      isInvalidRemoteError({
+        code: "InvalidAccessKeyId",
+        statusCode: 403,
+        retryable: false,
+      })
+    ).toBe(false);
+    expect(isInvalidRemoteError(new Error("socket hang up"))).toBe(false);
+    expect(isInvalidRemoteError(null)).toBe(false);
+  });
+});
 
 describe("sharedLibraryRemotes outside production", () => {
   test("keeps superuser outputs, including after their data source is deleted", async () => {

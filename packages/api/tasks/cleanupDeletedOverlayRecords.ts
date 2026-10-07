@@ -22,6 +22,41 @@ const REQUIRED_ENV_VARS = [
   "AWS_REGION",
 ];
 
+// Storage rejected the locator itself. Retrying the same remote cannot succeed.
+// Outages, throttling, and auth failures are absent here so the job can fail
+// and try those again.
+const INVALID_REMOTE_ERROR_CODES = new Set([
+  "InvalidBucketName",
+  "InvalidURI",
+  "KeyTooLongError",
+  "NoSuchBucket",
+  "NoSuchKey",
+]);
+
+export function isInvalidRemoteError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const err = error as {
+    code?: unknown;
+    name?: unknown;
+    statusCode?: unknown;
+    retryable?: unknown;
+  };
+  if (err.retryable === true) return false;
+  if (
+    typeof err.statusCode === "number" &&
+    (err.statusCode >= 500 || err.statusCode === 429)
+  ) {
+    return false;
+  }
+  const code =
+    typeof err.code === "string"
+      ? err.code
+      : typeof err.name === "string"
+        ? err.name
+        : undefined;
+  return code !== undefined && INVALID_REMOTE_ERROR_CODES.has(code);
+}
+
 // Outside production, the snapshot's library outputs are production objects,
 // and a developer's R2 credentials can delete them. Anything owned by the
 // superuser project is kept, matched on the output row itself so the guard
@@ -144,7 +179,14 @@ export default async function cleanupDeletedOverlayRecords(
                 );
                 continue;
               }
-              await deleteRemote(output.remote, client);
+              try {
+                await deleteRemote(output.remote, client);
+              } catch (error) {
+                if (!isInvalidRemoteError(error)) throw error;
+                helpers.logger.warn(
+                  `Skipping upload-task output; storage rejected the remote (${storageErrorCode(error)}).`
+                );
+              }
             }
           }
         }
@@ -180,8 +222,15 @@ export default async function cleanupDeletedOverlayRecords(
             [record.id]
           );
         } else {
-          await deleteRemote(record.remote, client);
-          helpers.logger.info(`Deleted ${record.remote}.`);
+          try {
+            await deleteRemote(record.remote, client);
+            helpers.logger.info(`Deleted ${record.remote}.`);
+          } catch (error) {
+            if (!isInvalidRemoteError(error)) throw error;
+            helpers.logger.warn(
+              `Discarding deleted output ${record.id}; storage rejected the remote (${storageErrorCode(error)}).`
+            );
+          }
           await client.query(
             `delete from deleted_data_upload_outputs where id = $1`,
             [record.id]
@@ -213,4 +262,12 @@ async function deleteRemote(remote: string, pool: PoolClient) {
       Key,
     })
     .promise();
+}
+
+function storageErrorCode(error: unknown) {
+  if (!error || typeof error !== "object") return "unknown";
+  const err = error as { code?: unknown; name?: unknown };
+  if (typeof err.code === "string") return err.code;
+  if (typeof err.name === "string") return err.name;
+  return "unknown";
 }
