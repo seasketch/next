@@ -3,6 +3,7 @@
 -- data_upload_outputs that overlay analysis, geography clipping, and
 -- downloads read. Seamounts also keeps its citation and click popup. The
 -- geography templates are the ones the create-project form offers.
+-- World Port Index is the World Ports library item (template id WORLD_PORTS).
 --
 -- Output remotes are production object keys. Outside production,
 -- cleanupDeletedOverlayRecords never deletes objects owned by the superuser
@@ -127,6 +128,23 @@ $popup$,
           '[
             {"type": "FlatGeobuf", "url": "https://uploads.seasketch.org/projects/superuser/public/5a04c2f7-a6c9-453a-a866-28bde4f44061.fgb", "remote": "r2://ssn-tiles/projects/superuser/public/5a04c2f7-a6c9-453a-a866-28bde4f44061.fgb", "filename": "5a04c2f7-a6c9-453a-a866-28bde4f44061.fgb", "original_filename": "high-seas (1).fgb", "size": 8416960, "is_original": true, "is_custom_upload": false},
             {"type": "PMTiles", "url": "https://tiles.seasketch.org/superuser/public/faba9918-aa55-4ad5-bf72-a99712c3bc74", "remote": "r2://ssn-tiles/superuser/public/faba9918-aa55-4ad5-bf72-a99712c3bc74.pmtiles", "filename": "faba9918-aa55-4ad5-bf72-a99712c3bc74", "original_filename": null, "size": 1188972, "is_original": false, "is_custom_upload": true}
+          ]'::jsonb
+        ),
+        (
+          'WORLD_PORTS',
+          'World Port Index',
+          '1TNhNALAq',
+          'https://tiles.seasketch.org/projects/superuser/public/39e4dc3d-894c-4e88-bfb4-beaa5277b676',
+          'WPI_Shapefile',
+          '<a href="https://msi.nga.mil/Publications/WPI">National Geospatial-Intelligence Agency</a>',
+          '[{"type": "circle", "paint": {"circle-color": ["match", ["get", "HARBORSIZE"], "L", "#e41a1c", "M", "#377eb8", "S", "#4daf4a", "V", "#984ea3", "transparent"], "circle-radius": 4, "circle-opacity": 0.95, "circle-stroke-color": ["match", ["get", "HARBORSIZE"], "L", "rgb(205, 23, 25)", "M", "rgb(47, 108, 158)", "S", "rgb(64, 147, 62)", "V", "rgb(131, 67, 141)", "transparent"], "circle-stroke-width": 1, "circle-stroke-opacity": 1}, "metadata": {"s:type": "Categorized Points", "s:palette": "schemeSet1", "s:reverse-palette": false}}, {"type": "symbol", "paint": {"text-color": "#000000", "text-halo-color": "rgba(255, 255, 255, 0.9)", "text-halo-width": 1.3}, "layout": {"text-size": 13, "text-field": ["get", "PORT_NAME"], "visibility": "visible", "text-anchor": "left", "text-offset": [0.5, 0.5], "symbol-placement": "point"}, "maxzoom": 24, "minzoom": 10}]'::jsonb,
+          'ALL_PROPERTIES_POPUP'::public.interactivity_type,
+          null::text,
+          '{"type":"doc","content":[{"type":"paragraph","content":[{"text":"The World Port Index (Pub 150) is an on-line database of world-wide maritime port information which serves as a general reference and navigational planning tool for mariners. The WPI provides the general geographic location with over 100 key characteristics and services of thousands of ports around the globe. The principal sources of information in the WPI are the Sailing Directions and charts published by the National Geospatial-Intelligence Agency (NGA), but where information from those sources is lacking or incomplete, other authoritative sources, both domestic and foreign, are used. The WPI in no way replaces the charts and related publications which cover in detail the ports that are summarized herein. For detailed operational planning, reference should always be made to the latest charts and publications.","type":"text"}]},{"type":"paragraph"},{"type":"paragraph","content":[{"text":"https://msi.nga.mil/Publications/WPI","type":"text","marks":[{"type":"link","attrs":{"href":"https://msi.nga.mil/Publications/WPI","title":"World Port Index"}}]}]}]}'::jsonb,
+          '[
+            {"type": "ZippedShapefile", "url": "https://uploads.seasketch.org/projects/superuser/public/39e4dc3d-894c-4e88-bfb4-beaa5277b676.zip", "remote": "r2://ssn-tiles/projects/superuser/public/39e4dc3d-894c-4e88-bfb4-beaa5277b676.zip", "filename": "39e4dc3d-894c-4e88-bfb4-beaa5277b676.zip", "original_filename": "WPI_Shapefile.zip", "size": 1151082, "is_original": true, "is_custom_upload": false},
+            {"type": "FlatGeobuf", "url": "https://uploads.seasketch.org/projects/superuser/public/39e4dc3d-894c-4e88-bfb4-beaa5277b676.fgb", "remote": "r2://ssn-tiles/projects/superuser/public/39e4dc3d-894c-4e88-bfb4-beaa5277b676.fgb", "filename": "39e4dc3d-894c-4e88-bfb4-beaa5277b676.fgb", "original_filename": "WPI_Shapefile.zip", "size": 2158992, "is_original": false, "is_custom_upload": false},
+            {"type": "PMTiles", "url": "https://tiles.seasketch.org/projects/superuser/public/39e4dc3d-894c-4e88-bfb4-beaa5277b676.pmtiles", "remote": "r2://ssn-tiles/projects/superuser/public/39e4dc3d-894c-4e88-bfb4-beaa5277b676.pmtiles", "filename": "39e4dc3d-894c-4e88-bfb4-beaa5277b676.pmtiles", "original_filename": "WPI_Shapefile.zip", "size": 493305, "is_original": false, "is_custom_upload": false}
           ]'::jsonb
         )
     ) as v(
