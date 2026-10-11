@@ -171,6 +171,8 @@ module.exports = {
       "<rootDir>/../overlay-engine/node_modules/polyclip-ts/dist/cjs/index.cjs",
     "^splaytree-ts$":
       "<rootDir>/../overlay-engine/node_modules/splaytree-ts/dist/cjs/index.cjs",
+    // Jest 26 ignores package exports.
+    "^@seasketch/h3-land/client$": "<rootDir>/../h3-land/dist/client.js",
   },
 
   // The regexp pattern or array of patterns that Jest uses to detect test files
