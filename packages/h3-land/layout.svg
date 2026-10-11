@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 200" role="img" aria-labelledby="t">
+<title id="t">An H3LD file: header, planes, records</title>
+<rect width="880" height="200" fill="#ffffff"/>
+<text x="860" y="22" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" fill="#64748b" text-anchor="end">not to scale</text>
+<rect x="20" y="34" width="130" height="56" fill="#334155"/>
+<text x="85.0" y="68" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#ffffff" text-anchor="middle">Header</text>
+<rect x="150" y="34" width="260" height="56" fill="#4f46e5"/>
+<text x="280.0" y="68" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#ffffff" text-anchor="middle">Planes</text>
+<rect x="410" y="34" width="450" height="56" fill="#0d9488"/>
+<text x="635.0" y="68" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="17" font-weight="700" fill="#ffffff" text-anchor="middle">Records</text>
+<line x1="447.5" y1="34" x2="447.5" y2="90" stroke="#ffffff" stroke-opacity="0.45"/>
+<line x1="485.0" y1="34" x2="485.0" y2="90" stroke="#ffffff" stroke-opacity="0.45"/>
+<line x1="522.5" y1="34" x2="522.5" y2="90" stroke="#ffffff" stroke-opacity="0.45"/>
+<line x1="560.0" y1="34" x2="560.0" y2="90" stroke="#ffffff" stroke-opacity="0.45"/>
+<line x1="597.5" y1="34" x2="597.5" y2="90" stroke="#ffffff" stroke-opacity="0.45"/>
+<line x1="635.0" y1="34" x2="635.0" y2="90" stroke="#ffffff" stroke-opacity="0.45"/>
+<line x1="672.5" y1="34" x2="672.5" y2="90" stroke="#ffffff" stroke-opacity="0.45"/>
+<line x1="710.0" y1="34" x2="710.0" y2="90" stroke="#ffffff" stroke-opacity="0.45"/>
+<line x1="747.5" y1="34" x2="747.5" y2="90" stroke="#ffffff" stroke-opacity="0.45"/>
+<line x1="785.0" y1="34" x2="785.0" y2="90" stroke="#ffffff" stroke-opacity="0.45"/>
+<line x1="822.5" y1="34" x2="822.5" y2="90" stroke="#ffffff" stroke-opacity="0.45"/>
+<rect x="20" y="34" width="840" height="56" fill="none" stroke="#0f172a" stroke-width="1.5"/>
+<text x="20" y="118" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#0f172a" text-anchor="start">28 bytes</text>
+<text x="20" y="140" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#64748b" text-anchor="start">Resolutions and the</text>
+<text x="20" y="158" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#64748b" text-anchor="start">offset of the records.</text>
+<text x="150" y="118" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#0f172a" text-anchor="start">84 KB, downloaded once</text>
+<text x="150" y="140" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#64748b" text-anchor="start">The state of every H3 cell</text>
+<text x="150" y="158" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#64748b" text-anchor="start">at resolutions 0 through 4.</text>
+<text x="410" y="118" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="600" fill="#0f172a" text-anchor="start">stride bytes each, fetched on demand</text>
+<text x="410" y="140" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#64748b" text-anchor="start">One per mixed resolution-4 cell.</text>
+<text x="410" y="158" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#64748b" text-anchor="start">Resolution 8: 601 bytes. Resolution 9: 4,202.</text>
+<text x="410" y="186" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#64748b" text-anchor="start">The planes are the same. The header says the stride.</text>
+</svg>

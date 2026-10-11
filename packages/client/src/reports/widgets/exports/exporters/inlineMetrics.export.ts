@@ -12,6 +12,7 @@ import {
   type ColumnValuesMetric,
   type CountMetric,
   type DistanceToShoreMetric,
+  type DistanceToFeaturesOverWaterMetric,
   type Metric,
   type MetricSubjectFragment,
   type OverlayAreaMetric,
@@ -136,6 +137,9 @@ function humanPresentationLabel(presentation: string): string {
     // eslint-disable-next-line i18next/no-literal-string
     case "distance_to_shore":
       return "Distance to shore";
+    // eslint-disable-next-line i18next/no-literal-string
+    case "distance_to_features_over_water":
+      return "Distance to point";
     // eslint-disable-next-line i18next/no-literal-string
     case "overlay_area":
       return "Overlay area";
@@ -291,6 +295,13 @@ function extractInlineRawValue(
           "distance_to_shore",
         ) as DistanceToShoreMetric;
         return combined.value.meters;
+      }
+      case "distance_to_features_over_water": {
+        const combined = combineMetricsForFragments(
+          metrics as Pick<Metric, "type" | "value">[],
+          "distance_to_features_over_water",
+        ) as DistanceToFeaturesOverWaterMetric;
+        return combined.value.features[0]?.meters ?? null;
       }
       case "overlay_area": {
         const overlayMetrics = metrics.filter(

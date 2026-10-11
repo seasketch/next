@@ -1615,6 +1615,14 @@ function combineMetricsForFragments(metrics, expectedMetricType) {
                             meters: 0,
                         },
                     };
+                case "distance_to_features_over_water":
+                    return {
+                        type: "distance_to_features_over_water",
+                        value: {
+                            features: [],
+                            exceededLimit: false,
+                        },
+                    };
                 case "presence":
                     return {
                         type: "presence",
@@ -1717,6 +1725,31 @@ function combineMetricsForFragments(metrics, expectedMetricType) {
                         uniqueIdIndex: mergedIndexes,
                     };
                 }),
+            };
+        }
+        case "distance_to_features_over_water": {
+            const values = metrics
+                .map((m) => m.value)
+                .filter((v) => v != null && Array.isArray(v.features));
+            const cap = Math.max(1, ...values.map((value) => value.features.length));
+            const byId = new Map();
+            for (const value of values) {
+                for (const hit of value.features) {
+                    const previous = byId.get(hit.__id);
+                    if (!previous || hit.meters < previous.meters) {
+                        byId.set(hit.__id, hit);
+                    }
+                }
+            }
+            const features = Array.from(byId.values())
+                .sort((a, b) => a.meters - b.meters)
+                .slice(0, cap);
+            return {
+                type: "distance_to_features_over_water",
+                value: {
+                    features,
+                    exceededLimit: byId.size > cap || values.some((value) => value.exceededLimit),
+                },
             };
         }
         case "distance_to_shore": {

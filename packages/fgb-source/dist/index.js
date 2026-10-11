@@ -2306,12 +2306,20 @@ var FlatGeobufSource = class {
    * which will generate the necessary metadata and spatial index.
    */
   constructor(urlOrFetchRangeFn, header, index, featureDataOffset, maxCacheSize = DEFAULT_CACHE_SIZE, overfetchBytes, pageSize) {
+    /** Range reads that have not resolved yet, so concurrent queries share one request. */
+    this.inflightRanges = /* @__PURE__ */ new Map();
     if (typeof urlOrFetchRangeFn === "string") {
       this.url = urlOrFetchRangeFn;
-      this.fetchRangeFn = this.defaultFetchRange;
+      this.rawFetch = (range) => this.defaultFetchRange(range);
     } else {
-      this.fetchRangeFn = urlOrFetchRangeFn;
+      this.rawFetch = urlOrFetchRangeFn;
     }
+    const cacheBytes = parseByteSize(maxCacheSize) ?? DEFAULT_CACHE_SIZE;
+    this.rangeCache = new lruCache.LRUCache({
+      maxSize: Math.max(1, cacheBytes),
+      sizeCalculation: (value) => value.byteLength
+    });
+    this.fetchRangeFn = (range) => this.cachedFetch(range);
     this.header = header;
     this.index = index;
     this.featureDataOffset = featureDataOffset;
@@ -2343,6 +2351,33 @@ var FlatGeobufSource = class {
       }
     });
     return response.arrayBuffer();
+  }
+  /**
+   * Feature-page reads are keyed by the exact range. A second query that
+   * needs the same page, including one still in flight, does not hit the network.
+   * A buffer larger than the cache is returned and not stored.
+   */
+  cachedFetch(range) {
+    const key = `${range[0]}-${range[1] ?? ""}`;
+    const cached = this.rangeCache.get(key);
+    if (cached) return Promise.resolve(cached);
+    const pending = this.inflightRanges.get(key);
+    if (pending) return pending;
+    const request = this.rawFetch(range).then(
+      (buffer) => {
+        this.inflightRanges.delete(key);
+        if (buffer.byteLength <= this.rangeCache.maxSize) {
+          this.rangeCache.set(key, buffer);
+        }
+        return buffer;
+      },
+      (error) => {
+        this.inflightRanges.delete(key);
+        throw error;
+      }
+    );
+    this.inflightRanges.set(key, request);
+    return request;
   }
   /**
    * Prefetch and cache all pages needed for features intersecting the envelope.
@@ -2820,11 +2855,13 @@ var SourceCache = class {
    * ```
    */
   async get(key, options) {
-    const cached = this.cache.get(key);
+    const pageSize = options?.pageSize;
+    const cacheKey = pageSize === void 0 || pageSize === null ? key : `${key}@@page=${typeof pageSize === "number" ? pageSize : pageSize}`;
+    const cached = this.cache.get(cacheKey);
     if (cached) {
       return cached;
     }
-    const inFlightRequest = this.inFlightRequests.get(key);
+    const inFlightRequest = this.inFlightRequests.get(cacheKey);
     if (inFlightRequest) {
       return inFlightRequest;
     }
@@ -2834,14 +2871,14 @@ var SourceCache = class {
       maxCacheSize: options?.maxCacheSize || this.defaultOptions?.maxCacheSize || this.sizeLimitBytes / 4
     };
     const request = createSource(key, mergedOptions).then((source) => {
-      this.cache.set(key, source);
+      this.cache.set(cacheKey, source);
       return source;
     }).catch((e2) => {
       console.log("caught error in source cache get", key);
-      this.inFlightRequests.delete(key);
+      this.inFlightRequests.delete(cacheKey);
       throw e2;
     });
-    this.inFlightRequests.set(key, request);
+    this.inFlightRequests.set(cacheKey, request);
     return request;
   }
 };

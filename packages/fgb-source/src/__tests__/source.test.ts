@@ -81,6 +81,41 @@ describe("Initialization", async () => {
     expect(features.length).toBeGreaterThan(0);
   });
 
+  it("reuses a feature page instead of fetching it again", async () => {
+    let fetchCount = 0;
+    const customFetchRangeFn = (
+      key: string,
+      range: [number, number | null]
+    ) => {
+      fetchCount++;
+      return fetch(TEST_URL, {
+        headers: { Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}` },
+      }).then((response) => response.arrayBuffer());
+    };
+    const customSource = await createSource(TEST_URL, {
+      fetchRangeFn: customFetchRangeFn,
+      initialHeaderRequestLength: "5MB",
+    });
+    const bbox = {
+      minX: -124.5,
+      minY: 32.5,
+      maxX: -114.1,
+      maxY: 42.0,
+    };
+    const first: Feature[] = [];
+    for await (const feature of customSource.getFeaturesAsync(bbox)) {
+      first.push(feature);
+    }
+    const afterFirst = fetchCount;
+    const second: Feature[] = [];
+    for await (const feature of customSource.getFeaturesAsync(bbox)) {
+      second.push(feature);
+    }
+    expect(first.length).toBeGreaterThan(0);
+    expect(second.length).toBe(first.length);
+    expect(fetchCount).toBe(afterFirst);
+  });
+
   it("should accept mixed number and string byte sizes", async () => {
     let fetchCount = 0;
     const customFetchRangeFn = (

@@ -27,6 +27,7 @@ import getSlug from "../../getSlug";
 import { AnyLayer } from "mapbox-gl";
 import { EditorView } from "prosemirror-view";
 import {
+  DEFAULT_WATER_PATH_DISTANCE_KM,
   MetricDependency,
   OUS_DEMOGRAPHICS_DEFAULT_GROUP_BY,
 } from "overlay-engine";
@@ -46,6 +47,10 @@ import {
   DistanceToShoreMap,
   DistanceToShoreMapTooltipControls,
 } from "./DistanceToShoreMap";
+import {
+  DistanceToPointMap,
+  DistanceToPointMapTooltipControls,
+} from "./DistanceToPointMap";
 import {
   SketchAttributesTable,
   SketchAttributesTableTooltipControls,
@@ -477,6 +482,7 @@ const memoizedWidgets: Record<string, WidgetComponent> = {
   InlineMetric: memoWidget(InlineMetric, "InlineMetric"),
   GeographySizeTable: memoWidget(GeographySizeTable, "GeographySizeTable"),
   DistanceToShoreMap: memoWidget(DistanceToShoreMap, "DistanceToShoreMap"),
+  DistanceToPointMap: memoWidget(DistanceToPointMap, "DistanceToPointMap"),
   SketchAttributesTable: memoWidget(
     SketchAttributesTable,
     "SketchAttributesTable"
@@ -645,6 +651,10 @@ function labelColumnForGeostatsLayer(
         score += 2;
       }
 
+      if (/^(port[_ ]?name|name|title|label)$/i.test(attr.attribute)) {
+        score += 4;
+      }
+
       // Penalize attributes that match exclusion patterns
       const shouldExclude = excludePatterns.some((pattern) =>
         pattern.test(attr.attribute)
@@ -686,6 +696,8 @@ export function ReportWidgetTooltipControlsRouter(
       return <GeographySizeTableTooltipControls {...props} />;
     case "DistanceToShoreMap":
       return <DistanceToShoreMapTooltipControls {...props} />;
+    case "DistanceToPointMap":
+      return <DistanceToPointMapTooltipControls {...props} />;
     case "SketchAttributesTable":
       return <SketchAttributesTableTooltipControls {...props} />;
     case "MpaGuideLevelOfProtection":
@@ -858,6 +870,9 @@ export function ReportWidgetNodeViewRouter(props: any) {
     case "DistanceToShoreMap":
       widget = <memoizedWidgets.DistanceToShoreMap {...widgetProps} />;
       break;
+    case "DistanceToPointMap":
+      widget = <memoizedWidgets.DistanceToPointMap {...widgetProps} />;
+      break;
     case "SketchAttributesTable":
       widget = <memoizedWidgets.SketchAttributesTable {...widgetProps} />;
       break;
@@ -987,6 +1002,15 @@ export type BuildReportCommandGroupsArgs = {
   onPrepareTimeSeriesLayers?: (args: {
     unprocessed: Array<{ title: string; sourceId: number }>;
     insert: () => void;
+  }) => void;
+  /**
+   * Distance to Port: the World Ports library layer is already in the
+   * project, or the editor should confirm and copy it, then call `insert`
+   * with the new layer's stable id.
+   */
+  onEnsureDataLibraryLayer?: (args: {
+    templateId: string;
+    insert: (stableId: string) => void;
   }) => void;
   projectSlug?: string;
   childSketchClassGeometryTypes?: SketchGeometryType[];
@@ -1261,6 +1285,49 @@ export function OverlayProcessingStatus({
  * @param sketchClassGeometryType - The geometry type of the sketch class
  * @returns The command groups
  */
+const WORLD_PORTS_TEMPLATE_ID = "WORLD_PORTS";
+
+function insertDistanceToPoint(
+  view: EditorView,
+  stableId: string,
+  block: boolean,
+  labelColumn?: string
+) {
+  const range = view.state.selection.ranges[0];
+  if (!range) return false;
+  const metric = {
+    type: "distance_to_features_over_water" as const,
+    subjectType: "fragments" as const,
+    stableId,
+    parameters: {
+      maxResults: 3,
+      maxDistanceKm: DEFAULT_WATER_PATH_DISTANCE_KM,
+      ...(labelColumn ? { includedColumns: [labelColumn] } : {}),
+    },
+  };
+  if (block) {
+    return insertBlockMetric(view, range, {
+      type: "DistanceToPointMap",
+      metrics: [metric],
+      componentSettings: {
+        unit: "kilometer",
+        unitDisplay: "short",
+        basemap: "streets",
+        display: "both",
+        ...(labelColumn ? { labelColumn } : {}),
+      },
+    });
+  }
+  return insertInlineMetric(view, range, {
+    type: "InlineMetric",
+    metrics: [metric],
+    componentSettings: {
+      presentation: "distance_to_features_over_water",
+      ...(labelColumn ? { labelColumn } : {}),
+    },
+  });
+}
+
 export function buildReportCommandGroups({
   sources,
   draftTableOfContentsItems,
@@ -1272,6 +1339,7 @@ export function buildReportCommandGroups({
   overlayAugmenter,
   onProcessLayer,
   onPrepareTimeSeriesLayers,
+  onEnsureDataLibraryLayer,
   projectSlug,
   isSuperuser,
 }: BuildReportCommandGroupsArgs = {}): CommandPaletteGroup[] {
@@ -1364,6 +1432,28 @@ export function buildReportCommandGroups({
         });
       },
     });
+    inlineSketchMetricsGroup.items.push({
+      id: "inline-distance-to-port",
+      label: "Distance to Port",
+      description:
+        "Water-route distance from the sketch to the nearest World Ports harbor.",
+      run: (_state, _dispatch, view) => {
+        const existing = draftTableOfContentsItems?.find(
+          (item) =>
+            item.copiedFromDataLibraryTemplateId === WORLD_PORTS_TEMPLATE_ID
+        );
+        if (existing?.stableId) {
+          insertDistanceToPoint(view, existing.stableId, false, "PORT_NAME");
+          return;
+        }
+        onEnsureDataLibraryLayer?.({
+          templateId: WORLD_PORTS_TEMPLATE_ID,
+          insert: (stableId) => {
+            insertDistanceToPoint(view, stableId, false, "PORT_NAME");
+          },
+        });
+      },
+    });
   }
   commandGroups.push(inlineSketchMetricsGroup);
 
@@ -1391,6 +1481,28 @@ export function buildReportCommandGroups({
             unit: "kilometer",
             unitDisplay: "short",
             basemap: "streets",
+          },
+        });
+      },
+    });
+    sketchBlockWidgetsGroup.items.push({
+      id: "distance-to-port-map",
+      label: "Distance to Port Map",
+      description:
+        "Map of the water route from the sketch to the nearest World Ports harbor.",
+      run: (_state, _dispatch, view) => {
+        const existing = draftTableOfContentsItems?.find(
+          (item) =>
+            item.copiedFromDataLibraryTemplateId === WORLD_PORTS_TEMPLATE_ID
+        );
+        if (existing?.stableId) {
+          insertDistanceToPoint(view, existing.stableId, true, "PORT_NAME");
+          return;
+        }
+        onEnsureDataLibraryLayer?.({
+          templateId: WORLD_PORTS_TEMPLATE_ID,
+          insert: (stableId) => {
+            insertDistanceToPoint(view, stableId, true, "PORT_NAME");
           },
         });
       },
@@ -2212,6 +2324,33 @@ export function buildReportCommandGroups({
                 },
               });
             }
+          }
+          if (
+            stableId &&
+            (source.vectorGeometryType === "Point" ||
+              source.vectorGeometryType === "MultiPoint")
+          ) {
+            const pointLabel = bestLabelColumn || undefined;
+            inlineGroup.items.push({
+              // eslint-disable-next-line i18next/no-literal-string
+              id: `overlay-layer-${tocId}-distance-to-point`,
+              label: "Distance to Point",
+              description:
+                "Water-route distance from the sketch to the nearest point on this layer.",
+              run: (_state, _dispatch, view) => {
+                insertDistanceToPoint(view, stableId, false, pointLabel);
+              },
+            });
+            blockGroup.items.push({
+              // eslint-disable-next-line i18next/no-literal-string
+              id: `overlay-layer-${tocId}-distance-to-point-map`,
+              label: "Distance to Point Map",
+              description:
+                "Map of the water route from the sketch to the nearest point on this layer.",
+              run: (_state, _dispatch, view) => {
+                insertDistanceToPoint(view, stableId, true, pointLabel);
+              },
+            });
           }
           switch (source.vectorGeometryType) {
             case "Polygon":

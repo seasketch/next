@@ -1411,6 +1411,12 @@ div[attachments="forumAttachments"] {
   gap: 2px;
 }
 
+.report-tabs-track-overlay {
+  background: rgba(229, 231, 235, 0.72);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
 .report-tabs-tab {
   -webkit-appearance: none;
           appearance: none;
@@ -7555,6 +7561,10 @@ select{
 
 .h-screen{
   height:100vh
+}
+
+.h-\[16\.8rem\]{
+  height:16.8rem
 }
 
 .max-h-128{
@@ -18274,6 +18284,27 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .\[\&\>\:not\(\.temporal-preview\)\]\:duration-300>:not(.temporal-preview){
   transition-duration:300ms
+}
+
+.\[\&\>div\>div\]\:h-full>div>div{
+  height:100%
+}
+
+.\[\&\>div\>div\]\:rounded-none>div>div{
+  border-radius:0px
+}
+
+.\[\&\>div\>div\]\:border-0>div>div{
+  border-width:0px
+}
+
+.\[\&\>div\]\:my-0>div{
+  margin-top:0px;
+  margin-bottom:0px
+}
+
+.\[\&\>div\]\:h-full>div{
+  height:100%
 }
 
 .\[\&\>span\:first-child\]\:min-w-0>span:first-child{

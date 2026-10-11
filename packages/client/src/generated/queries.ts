@@ -7930,6 +7930,11 @@ export type MetricParameters = {
   includedColumns?: Maybe<Array<Scalars['String']>>;
   maxDistanceKm?: Maybe<Scalars['Float']>;
   maxResults?: Maybe<Scalars['Int']>;
+  /**
+   * Ocean-bitmap cell size for distance-to-features. low, medium, or high.
+   * Omitted means high.
+   */
+  resolution?: Maybe<Scalars['String']>;
   sourceHasOverlappingFeatures?: Maybe<Scalars['Boolean']>;
   /**
    * Deprecated: use includedColumns. Never written by current report widgets;
@@ -26629,7 +26634,7 @@ export type CompatibleSpatialMetricDetailsFragment = (
     & GeographySubjectDetailsFragment
   )>, parameters: (
     { __typename?: 'MetricParameters' }
-    & Pick<MetricParameters, 'groupBy' | 'includedColumns' | 'valueColumn' | 'bufferDistanceKm' | 'maxResults' | 'maxDistanceKm' | 'sourceHasOverlappingFeatures'>
+    & Pick<MetricParameters, 'groupBy' | 'includedColumns' | 'valueColumn' | 'bufferDistanceKm' | 'maxResults' | 'maxDistanceKm' | 'resolution' | 'sourceHasOverlappingFeatures'>
   ) }
 );
 
@@ -30235,6 +30240,7 @@ export const CompatibleSpatialMetricDetailsFragmentDoc = /*#__PURE__*/ gql`
     bufferDistanceKm
     maxResults
     maxDistanceKm
+    resolution
     sourceHasOverlappingFeatures
   }
   sourceProcessingJobDependency

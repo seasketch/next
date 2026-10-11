@@ -1,0 +1,123 @@
+{
+  "source": "ocean-bitmap",
+  "cellSizeDegrees": 0.005,
+  "maxResults": 6,
+  "maxKm": 200,
+  "goalPool": 24,
+  "tolerance": 0.1,
+  "cases": {
+    "port-test": [
+      { "port": "SAVUSAVU BAY", "km": 82.78 },
+      { "port": "MALAI", "km": 154.04 },
+      { "port": "LEVUKA", "km": 160.81 }
+    ],
+    "west-of-dateline": [
+      { "port": "SAVUSAVU BAY", "km": 42.53 },
+      { "port": "LEVUKA", "km": 66.59 },
+      { "port": "SUVA HARBOR", "km": 151.32 }
+    ],
+    "east-of-dateline": [
+      { "port": "SAVUSAVU BAY", "km": 109.89 },
+      { "port": "MALAI", "km": 153.6 },
+      { "port": "LEVUKA", "km": 184.33 }
+    ],
+    "straddle-antimeridian": [
+      { "port": "SAVUSAVU BAY", "km": 80.1 },
+      { "port": "LEVUKA", "km": 132.97 },
+      { "port": "MALAI", "km": 184.99 }
+    ],
+    "natewa-bay": [
+      { "port": "SAVUSAVU BAY", "km": 138.04 },
+      { "port": "MALAI", "km": 145.16 }
+    ],
+    "wallis": [
+      { "port": "MATA-UTU", "km": 24.69 }
+    ],
+    "gull-island": [
+      { "port": "PRISONERS", "km": 44.52 },
+      { "port": "ELLWOOD", "km": 57.37 },
+      { "port": "SANTA BARBARA", "km": 63.38 },
+      { "port": "PORT HUENEME", "km": 64.51 },
+      { "port": "GAVIOTA", "km": 67.18 },
+      { "port": "VENTURA", "km": 67.97 }
+    ],
+    "golden-gate": [
+      { "port": "SAUSALITO", "km": 12.42 },
+      { "port": "SAN FRANCISCO", "km": 12.75 },
+      { "port": "YERBABUENA ISLAND", "km": 21.37 },
+      { "port": "OAKLAND", "km": 21.69 },
+      { "port": "POINT RICHMOND", "km": 23.99 },
+      { "port": "BERKELEY", "km": 25.73 }
+    ],
+    "cape-cod-bay": [
+      { "port": "PLYMOUTH", "km": 28.56 },
+      { "port": "PROVINCETOWN", "km": 32.12 },
+      { "port": "SCITUATE", "km": 45.32 },
+      { "port": "QUINCY", "km": 79.22 },
+      { "port": "BOSTON", "km": 80.24 },
+      { "port": "LYNN", "km": 80.41 }
+    ],
+    "bogue-banks": [
+      { "port": "MOREHEAD CITY", "km": 26.53 },
+      { "port": "BEAUFORT", "km": 27.61 },
+      { "port": "SWANSBORO", "km": 39.09 },
+      { "port": "WRIGHTSVILLE", "km": 108.21 },
+      { "port": "WILMINGTON", "km": 111.48 },
+      { "port": "BAYBORO", "km": 134.47 }
+    ],
+    "hood-canal": [
+      { "port": "HOODSPORT", "km": 19.6 },
+      { "port": "PORT GAMBLE", "km": 51.23 },
+      { "port": "PORT TOWNSEND", "km": 79.77 },
+      { "port": "EDWARDS POINT", "km": 80.48 },
+      { "port": "POINT WELLS", "km": 82.14 },
+      { "port": "GLEN COVE", "km": 83.05 }
+    ],
+    "tofino": [
+      { "port": "CLAYOQUOT", "km": 17.49 },
+      { "port": "AHOUSAT", "km": 17.96 },
+      { "port": "UCLUELET", "km": 63.25 },
+      { "port": "GOLD RIVER", "km": 103.06 },
+      { "port": "TAHSIS", "km": 136.15 },
+      { "port": "PORT ALBERNI", "km": 140.1 }
+    ],
+    "bosphorus": [
+      { "port": "ISTINYE", "km": 26.9 },
+      { "port": "DEFTERDAR BURNU", "km": 33.76 },
+      { "port": "ISTANBUL", "km": 42.08 },
+      { "port": "HAYDARPASA", "km": 42.32 },
+      { "port": "AMBARLI", "km": 67.17 },
+      { "port": "GEBZE", "km": 96.55 }
+    ],
+    "sydney-heads": [
+      { "port": "SYDNEY", "km": 18.03 },
+      { "port": "BOTANY BAY", "km": 22.46 },
+      { "port": "PORT KEMBLA", "km": 81.82 },
+      { "port": "NEWCASTLE", "km": 109.47 },
+      { "port": "JERVIS BAY", "km": 149.89 }
+    ],
+    "beagle-channel": [
+      { "port": "USHUAIA", "km": 24.39 },
+      { "port": "PUERTO WILLIAMS", "km": 24.77 }
+    ],
+    "mississippi-delta": [
+      { "port": "LOOP TERMINAL", "km": 71.83 },
+      { "port": "GRAND ISLE", "km": 97.02 },
+      { "port": "PORT SULPHUR", "km": 114.12 },
+      { "port": "SOUTHWEST PASS", "km": 148.05 },
+      { "port": "GULFPORT", "km": 164.09 },
+      { "port": "BILOXI", "km": 170.56 }
+    ],
+    "aleutian-dateline": [
+      { "port": "CONSTANTINE HARBOR", "km": 85.64 }
+    ],
+    "monterey-coast": [
+      { "port": "MONTEREY", "km": 17.87 },
+      { "port": "MOSS LANDING", "km": 34.55 },
+      { "port": "SANTA CRUZ", "km": 46.37 },
+      { "port": "DAVENPORT", "km": 55.86 },
+      { "port": "PRINCETOWN", "km": 116.93 },
+      { "port": "SAUSALITO", "km": 161.12 }
+    ]
+  }
+}

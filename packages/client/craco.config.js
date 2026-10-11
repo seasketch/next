@@ -45,6 +45,12 @@ module.exports = {
         ),
         // Shim for esm-env to work with Webpack 4 (no package exports conditions)
         "esm-env": path.resolve(__dirname, "src/shims/esm-env.ts"),
+        // The ocean-bitmap search runs in the overlay worker. The browser
+        // only needs the numeric limits exported beside it.
+        [path.resolve(
+          __dirname,
+          "../overlay-engine/dist/h3/waterPathNearest.js"
+        )]: path.resolve(__dirname, "src/shims/waterPathNearest.ts"),
       };
 
       // Ensure .mjs is resolvable

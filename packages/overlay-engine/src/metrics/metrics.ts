@@ -65,6 +65,7 @@ export type MetricType =
   | "column_values"
   | "raster_stats"
   | "distance_to_shore"
+  | "distance_to_features_over_water"
   | "raster_overlay_area"
   | "ous_demographics";
 
@@ -992,6 +993,26 @@ export type DistanceToShoreMetric = OverlayMetricBase & {
   };
 };
 
+export type DistanceToFeatureHit = {
+  __id: number;
+  meters: number;
+  properties: Record<string, unknown>;
+  geojsonLine: Feature<LineString>;
+};
+
+/**
+ * Water-path distance from a sketch to point features on an overlay layer.
+ * `features` is nearest-first. `exceededLimit` is true when the radius or
+ * `maxResults` dropped additional hits.
+ */
+export type DistanceToFeaturesOverWaterMetric = OverlayMetricBase & {
+  type: "distance_to_features_over_water";
+  value: {
+    features: DistanceToFeatureHit[];
+    exceededLimit: boolean;
+  };
+};
+
 /**
  * Per-class area totals in km² for {@link RasterOverlayAreaMetric}.
  * - `"*"` = all valid pixels in the subject (nodata already excluded by geoblaze).
@@ -1781,6 +1802,7 @@ export type Metric =
   | ColumnValuesMetric
   | RasterStats
   | DistanceToShoreMetric
+  | DistanceToFeaturesOverWaterMetric
   | RasterOverlayAreaMetric
   | OusDemographicsMetric;
 
@@ -1793,6 +1815,7 @@ export type MetricTypeMap = {
   column_values: ColumnValuesMetric;
   raster_stats: RasterStats;
   distance_to_shore: DistanceToShoreMetric;
+  distance_to_features_over_water: DistanceToFeaturesOverWaterMetric;
   raster_overlay_area: RasterOverlayAreaMetric;
   ous_demographics: OusDemographicsMetric;
 };
@@ -2449,6 +2472,11 @@ export type MetricDependencyParameters = {
   maxResults?: number;
   maxDistanceKm?: number;
   /**
+   * Ocean-bitmap cell size for `distance_to_features_over_water`.
+   * `low` is 0.02°, `medium` is 0.01°, `high` is 0.005°. Omitted means high.
+   */
+  resolution?: "low" | "medium" | "high";
+  /**
    * If all polygon features in a source are orthogonal (e.g. habitat
    * classification), the overlay-engine can use optimizations to speed up
    * clipping dramatically. However, if the source has overlapping features,
@@ -2630,6 +2658,14 @@ export function combineMetricsForFragments<T extends Metric>(
               meters: 0,
             },
           };
+        case "distance_to_features_over_water":
+          return {
+            type: "distance_to_features_over_water",
+            value: {
+              features: [],
+              exceededLimit: false,
+            },
+          };
         case "presence":
           return {
             type: "presence",
@@ -2754,6 +2790,37 @@ export function combineMetricsForFragments<T extends Metric>(
         }),
       };
     }
+    case "distance_to_features_over_water": {
+      const values = metrics
+        .map(
+          (m) => m.value as DistanceToFeaturesOverWaterMetric["value"] | null,
+        )
+        .filter(
+          (v): v is DistanceToFeaturesOverWaterMetric["value"] =>
+            v != null && Array.isArray(v.features),
+        );
+      const cap = Math.max(1, ...values.map((value) => value.features.length));
+      const byId = new Map<number, DistanceToFeatureHit>();
+      for (const value of values) {
+        for (const hit of value.features) {
+          const previous = byId.get(hit.__id);
+          if (!previous || hit.meters < previous.meters) {
+            byId.set(hit.__id, hit);
+          }
+        }
+      }
+      const features = Array.from(byId.values())
+        .sort((a, b) => a.meters - b.meters)
+        .slice(0, cap);
+      return {
+        type: "distance_to_features_over_water",
+        value: {
+          features,
+          exceededLimit:
+            byId.size > cap || values.some((value) => value.exceededLimit),
+        },
+      };
+    }
     case "distance_to_shore": {
       const values = metrics
         .map((m) => m.value as DistanceToShoreMetric["value"] | null)
@@ -2833,9 +2900,7 @@ export function combineMetricsForFragments<T extends Metric>(
       };
     }
     case "ous_demographics": {
-      const values = metrics.map(
-        (m) => m.value as OusDemographicsMetricValue,
-      );
+      const values = metrics.map((m) => m.value as OusDemographicsMetricValue);
       return {
         type: "ous_demographics",
         value: combineOusDemographicsMetrics(values),

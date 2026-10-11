@@ -4,6 +4,7 @@ import {
   ColumnValuesMetric,
   CountMetric,
   DistanceToShoreMetric,
+  DistanceToFeaturesOverWaterMetric,
   Metric,
   MetricDependency,
   OverlayAreaMetric,
@@ -29,6 +30,7 @@ import {
   TooltipPopoverContent,
 } from "../../editor/TooltipMenu";
 import { LabeledDropdown } from "./LabeledDropdown";
+import { DistanceToPointSearchFields } from "./DistanceToPointSearchFields";
 import { UnitSelector } from "./UnitSelector";
 import {
   applyBufferSettingsToParameters,
@@ -333,6 +335,7 @@ export type InlineMetricComponentSettings = {
     | "total_area"
     | "percent_area"
     | "distance_to_shore"
+    | "distance_to_features_over_water"
     | "overlay_area"
     | "geography_overlay_area"
     | "count"
@@ -350,6 +353,8 @@ export type InlineMetricComponentSettings = {
   pluralizedCountLabels?: PluralizedMessagesByLang;
   pluralizedDistinctValueLabels?: PluralizedMessagesByLang;
   column?: string;
+  /** Point-feature property used as the place name, e.g. PORT_NAME. */
+  labelColumn?: string;
   /** For geography_overlay_area: geography id to report on. undefined/"auto" = primary clipping geography. */
   geographyId?: number | "auto";
 };
@@ -366,6 +371,7 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
   sketchClass,
   lang,
 }) => {
+  const { t } = useTranslation("reports");
   const { clippingGeography } = usePrimaryGeography(sketchClass, geographies);
   const subjectReportContext = useSubjectReportContext();
   const emptyCollectionWithoutFragments =
@@ -445,6 +451,8 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
         case "percent_area":
           return formatters.percent(0);
         case "distance_to_shore":
+          return formatters.distance(0);
+        case "distance_to_features_over_water":
           return formatters.distance(0);
         case "overlay_area":
           return formatters.area(0);
@@ -554,6 +562,31 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
           throw new Error("Distance to shore not found in metrics.");
         }
         return formatters.distance(combined.value.meters / 1000);
+      }
+      case "distance_to_features_over_water": {
+        const combined = combineMetricsForFragments(
+          metrics as Pick<Metric, "type" | "value">[],
+          "distance_to_features_over_water"
+        ) as DistanceToFeaturesOverWaterMetric;
+        const nearest = combined.value.features[0];
+        if (!nearest || !Number.isFinite(nearest.meters)) {
+          return t("No feature within range");
+        }
+        const distanceText = formatters.distance(nearest.meters / 1000);
+        const labelColumn = componentSettings?.labelColumn;
+        const rawLabel = labelColumn
+          ? nearest.properties?.[labelColumn]
+          : undefined;
+        const name =
+          typeof rawLabel === "string" && rawLabel.trim()
+            ? rawLabel.trim()
+            : null;
+        return name
+          ? t("{{distance}} from {{name}}", {
+              distance: distanceText,
+              name,
+            })
+          : distanceText;
       }
       case "overlay_area": {
         const overlayMetrics = metrics.filter(
@@ -912,6 +945,8 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
     distinctCustomMessages,
     distinctDefaultMessages,
     componentSettings?.column,
+    componentSettings?.labelColumn,
+    t,
     clippingGeography,
     componentSettings?.geographyId,
     lang,
@@ -1606,7 +1641,8 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
           }
         />
       )}
-      {presentation === "distance_to_shore" && (
+      {(presentation === "distance_to_shore" ||
+        presentation === "distance_to_features_over_water") && (
         <UnitSelector
           unitType="distance"
           value={unit as LengthUnit}
@@ -1621,6 +1657,12 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
               componentSettings: { ...componentSettings, unitDisplay: display },
             })
           }
+        />
+      )}
+      {presentation === "distance_to_features_over_water" && (
+        <DistanceToPointSearchFields
+          metrics={(node.attrs?.metrics || []) as MetricDependency[]}
+          onUpdateDependencyParameters={onUpdateDependencyParameters}
         />
       )}
       {presentation !== "count" && (
@@ -1927,6 +1969,8 @@ function formatPresentationLabel(presentation: string) {
       return "Percent Area";
     case "distance_to_shore":
       return "Distance to Shore";
+    case "distance_to_features_over_water":
+      return "Distance to Point";
     case "overlay_area":
       return "Overlay Area";
     case "geography_overlay_area":

@@ -1,0 +1,36 @@
+#routes button {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 4px 6px;
+  text-align: left;
+  border: 0;
+  border-radius: 6px;
+  background: #f1f5f9;
+  cursor: pointer;
+}
+#routes button.selected {
+  background: #ede9fe;
+}
+#routes button .expect {
+  float: right;
+  font-weight: 700;
+}
+#routes button .expect.ok { color: #15803d; }
+#routes button .expect.bad { color: #9f1239; }
+#candidates {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  max-height: 180px;
+  overflow: auto;
+}
+#candidates li {
+  padding: 2px 0;
+  border-top: 1px solid #e5e7eb;
+  color: #475569;
+}
+#candidates li.chosen {
+  font-weight: 650;
+  color: #1c2430;
+}

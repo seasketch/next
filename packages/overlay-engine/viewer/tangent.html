@@ -1,0 +1,997 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tangent router</title>
+    <link
+      href="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.css"
+      rel="stylesheet"
+    />
+    <link href="/frame.css" rel="stylesheet" />
+    <style>
+      html,
+      body,
+      #map {
+        margin: 0;
+        height: 100%;
+        background: #d5dde6;
+      }
+      #panel {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        z-index: 1;
+        width: 340px;
+        max-height: calc(100% - 24px);
+        overflow: auto;
+        padding: 12px 14px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.94);
+        color: #1c2430;
+        font: 13px/1.45 ui-sans-serif, system-ui, sans-serif;
+        box-shadow: 0 8px 28px rgba(20, 30, 40, 0.18);
+      }
+      #panel h1 {
+        margin: 0 0 6px;
+        font-size: 15px;
+        font-weight: 650;
+      }
+      nav {
+        margin: 0 0 8px;
+        font-size: 12px;
+      }
+      nav a {
+        color: #1d4ed8;
+      }
+      #panel p {
+        margin: 6px 0;
+      }
+      #panel label {
+        display: block;
+        margin: 8px 0 0;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+      }
+      .row label {
+        flex: 1;
+      }
+      #panel select,
+      #panel input[type="number"],
+      #panel button {
+        font: inherit;
+      }
+      #panel select,
+      #panel input[type="number"] {
+        width: 100%;
+        box-sizing: border-box;
+        margin-top: 3px;
+      }
+      .buttons {
+        display: flex;
+        gap: 6px;
+        margin-top: 10px;
+      }
+      .buttons button {
+        flex: 1;
+        padding: 6px 8px;
+        border: 0;
+        border-radius: 7px;
+        color: white;
+        cursor: pointer;
+      }
+      #run {
+        background: #1d4ed8;
+      }
+      #benchmark {
+        background: #0f766e;
+      }
+      .buttons button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      .swatch {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        margin-right: 6px;
+        border-radius: 2px;
+        vertical-align: -1px;
+      }
+      .legend {
+        margin-top: 8px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2px 8px;
+      }
+      #status,
+      #readout,
+      #routes {
+        margin: 8px 0 0;
+        white-space: pre-line;
+      }
+      #routes button {
+        display: block;
+        width: 100%;
+        margin-top: 4px;
+        padding: 4px 6px;
+        text-align: left;
+        border: 0;
+        border-radius: 6px;
+        background: #f1f5f9;
+        cursor: pointer;
+      }
+      #routes button.selected {
+        background: #ede9fe;
+      }
+      #readout {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+      }
+      #error {
+        margin: 8px 0 0;
+        color: #9f1239;
+      }
+      #player {
+        margin-top: 10px;
+        padding-top: 8px;
+        border-top: 1px solid #e5e7eb;
+      }
+      #player[hidden] {
+        display: none;
+      }
+      .transport {
+        display: flex;
+        gap: 4px;
+        align-items: center;
+      }
+      .transport button {
+        padding: 4px 8px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        background: #f8fafc;
+        cursor: pointer;
+      }
+      .transport button#play {
+        flex: 1;
+        background: #eef2ff;
+      }
+      .transport input[type="number"] {
+        width: 64px;
+        margin: 0;
+      }
+      #slider {
+        width: 100%;
+        margin: 8px 0 0;
+      }
+      #bench-table table {
+        width: 100%;
+        margin-top: 6px;
+        border-collapse: collapse;
+        font-size: 11px;
+      }
+      #bench-table th,
+      #bench-table td {
+        padding: 2px 4px;
+        border-top: 1px solid #e5e7eb;
+        text-align: right;
+        white-space: nowrap;
+      }
+      #bench-table th {
+        font-weight: 600;
+        color: #475569;
+      }
+      #bench-table p {
+        color: #64748b;
+        font-size: 12px;
+      }
+      kbd {
+        padding: 0 4px;
+        border: 1px solid #cbd5e1;
+        border-radius: 4px;
+        font: 11px ui-monospace, monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div id="panel">
+      <nav>
+        <a href="/">Occupancy router</a> · <a href="/astar">Client A*</a> ·
+        <strong>Tangent router</strong> · <a href="/raster">Ocean bitmap</a>
+      </nav>
+      <h1>Tangent route to the nearest ports</h1>
+      <p>
+        Builds offshore hulls around land in the corridor, connects them with
+        tangents, then walks that visibility graph. A port on land is moved to
+        the nearest water before the search; the ring is that target and the
+        dashed line is the shift from the catalog point. Play the walk for one
+        result at a time. The red line is the graph path so far; it hides on
+        the last frame.
+      </p>
+      <label>
+        Sketch
+        <select id="sketch"></select>
+      </label>
+      <div class="row">
+        <label>
+          Results
+          <input id="max-results" type="number" min="1" max="12" value="3" />
+        </label>
+        <label>
+          Limit km
+          <input id="max-km" type="number" min="1" max="350" value="350" />
+        </label>
+        <label>
+          Bench runs
+          <input id="runs" type="number" min="1" max="9" value="3" />
+        </label>
+      </div>
+      <label class="inline" style="display: inline-flex; align-items: center; gap: 6px; margin-top: 8px">
+        <input id="show-tangents" type="checkbox" checked />
+        Show tangent edges
+      </label>
+      <div class="buttons">
+        <button id="run" type="button">Search</button>
+        <button id="benchmark" type="button">Benchmark</button>
+      </div>
+      <div id="status"></div>
+      <div id="routes"></div>
+      <ul id="candidates"></ul>
+      <div id="player" hidden>
+        <div class="transport">
+          <button id="step-back" type="button">←</button>
+          <button id="play" type="button">Play</button>
+          <button id="step-forward" type="button">→</button>
+          <input id="speed" type="number" min="1" max="500" value="12" title="steps per frame" />
+        </div>
+        <input id="slider" type="range" min="0" value="0" />
+        <div id="readout"></div>
+      </div>
+      <div class="legend">
+        <div><span class="swatch" style="background: #f59e0b"></span>Offshore hull</div>
+        <div><span class="swatch" style="background: #94a3b8"></span>Tangent</div>
+        <div><span class="swatch" style="background: #2563eb"></span>Expanded</div>
+        <div><span class="swatch" style="background: #dc2626"></span>Current</div>
+        <div><span class="swatch" style="background: #7c3aed"></span>Result</div>
+        <div><span class="swatch" style="background: #334155"></span>Port</div>
+        <div><span class="swatch" style="background: #fff; border: 2px solid #7c3aed"></span>Search target</div>
+        <div><span class="swatch" style="background: repeating-linear-gradient(90deg, #7c3aed 0 4px, transparent 4px 7px)"></span>Moved from port</div>
+      </div>
+      <p><kbd>←</kbd> <kbd>→</kbd> step · shift jumps 10 · <kbd>space</kbd> plays</p>
+      <div id="error"></div>
+      <div id="bench-table"></div>
+    </div>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.js"></script>
+    <script src="/frame.js"></script>
+    <script>
+      const PORTS_TILES =
+        "https://tiles.seasketch.org/projects/superuser/public/39e4dc3d-894c-4e88-bfb4-beaa5277b676/{z}/{x}/{y}.mvt";
+      const RANK_COLOR = ["#7c3aed", "#db2777", "#0891b2", "#64748b"];
+      const empty = { type: "FeatureCollection", features: [] };
+
+      mapboxgl.accessToken =
+        new URLSearchParams(location.search).get("token") ||
+        localStorage.getItem("mapboxToken") ||
+        "";
+      const map = new mapboxgl.Map({
+        container: "map",
+        style: "mapbox://styles/mapbox/light-v11",
+        center: [-119.83, 33.95],
+        zoom: 9,
+      });
+      map.addControl(new mapboxgl.NavigationControl(), "top-right");
+
+      const ui = {
+        sketch: document.querySelector("#sketch"),
+        maxResults: document.querySelector("#max-results"),
+        maxKm: document.querySelector("#max-km"),
+        runs: document.querySelector("#runs"),
+        showTangents: document.querySelector("#show-tangents"),
+        run: document.querySelector("#run"),
+        benchmark: document.querySelector("#benchmark"),
+        status: document.querySelector("#status"),
+        routes: document.querySelector("#routes"),
+        candidates: document.querySelector("#candidates"),
+        player: document.querySelector("#player"),
+        play: document.querySelector("#play"),
+        stepBack: document.querySelector("#step-back"),
+        stepForward: document.querySelector("#step-forward"),
+        speed: document.querySelector("#speed"),
+        slider: document.querySelector("#slider"),
+        readout: document.querySelector("#readout"),
+        error: document.querySelector("#error"),
+        bench: document.querySelector("#bench-table"),
+      };
+
+      const sketches = new Map();
+      let payload = null;
+      let selected = 0;
+      let cursor = 0;
+      let playing = false;
+      let painted = [];
+      let busy = false;
+
+      function km(meters) {
+        return (meters / 1000).toFixed(1) + " km";
+      }
+
+      function metersBetween(a, b) {
+        const dx = (a[0] - b[0]) * 111320 * Math.cos((((a[1] + b[1]) / 2) * Math.PI) / 180);
+        const dy = (a[1] - b[1]) * 111320;
+        return Math.hypot(dx, dy);
+      }
+
+      function targetShift(route) {
+        if (!route.catalog || !route.goal) return 0;
+        return metersBetween(route.catalog, route.goal);
+      }
+
+      function walkCoords(geometry, visit) {
+        if (!geometry) return;
+        if (geometry.type === "Point") visit(geometry.coordinates);
+        else if (geometry.type === "LineString" || geometry.type === "MultiPoint") {
+          geometry.coordinates.forEach(visit);
+        } else if (geometry.type === "Polygon" || geometry.type === "MultiLineString") {
+          geometry.coordinates.forEach((ring) => ring.forEach(visit));
+        } else if (geometry.type === "MultiPolygon") {
+          geometry.coordinates.forEach((poly) => poly.forEach((ring) => ring.forEach(visit)));
+        }
+      }
+
+      function flyTo(feature) {
+        let minX = Infinity;
+        let minY = Infinity;
+        let maxX = -Infinity;
+        let maxY = -Infinity;
+        walkCoords(feature.geometry, (position) => {
+          minX = Math.min(minX, position[0]);
+          minY = Math.min(minY, position[1]);
+          maxX = Math.max(maxX, position[0]);
+          maxY = Math.max(maxY, position[1]);
+        });
+        if (!Number.isFinite(minX)) return;
+        map.fitBounds(
+          [
+            [minX, minY],
+            [maxX, maxY],
+          ],
+          { padding: { left: 380, top: 40, right: 40, bottom: 40 }, maxZoom: 12, duration: 600 }
+        );
+      }
+
+      function source(id) {
+        return map.getSource(id);
+      }
+
+      function selectedTrace() {
+        return payload && payload.traces ? payload.traces[selected] : null;
+      }
+
+      function selectedRoute() {
+        return payload && payload.routes ? payload.routes[selected] : null;
+      }
+
+      function frameCount() {
+        const trace = selectedTrace();
+        const route = selectedRoute();
+        if (trace && trace.steps.length > 0) return trace.steps.length;
+        if (route) return route.coordinates.length;
+        return 0;
+      }
+
+      function chain(trace, nodeId) {
+        const line = [];
+        const guard = new Set();
+        let cursorId = nodeId;
+        while (cursorId >= 0 && !guard.has(cursorId)) {
+          guard.add(cursorId);
+          const node = trace.nodes[cursorId];
+          if (!node) break;
+          line.push(node);
+          const from = trace.prev[cursorId];
+          if (from === -2) {
+            const depart = trace.depart[cursorId];
+            if (depart) line.push(depart);
+            break;
+          }
+          if (from == null || from < 0) break;
+          cursorId = from;
+        }
+        line.reverse();
+        return line;
+      }
+
+      function resetNodes() {
+        for (const id of painted) {
+          map.setFeatureState({ source: "nodes", id }, { phase: 0 });
+        }
+        painted = [];
+      }
+
+      function render() {
+        const trace = selectedTrace();
+        const route = selectedRoute();
+        const length = frameCount();
+        const atEnd = length === 0 || cursor >= length;
+        let current = [];
+        if (trace && trace.steps.length > 0 && cursor > 0 && cursor < length) {
+          current = chain(trace, trace.steps[cursor - 1]);
+        } else if (route && (!trace || trace.steps.length === 0) && cursor > 0 && cursor < length) {
+          current = route.coordinates.slice(0, cursor);
+        }
+        source("current").setData(
+          current.length >= 2
+            ? {
+                type: "Feature",
+                properties: {},
+                geometry: { type: "LineString", coordinates: current },
+              }
+            : empty
+        );
+        const features = (payload ? payload.routes : []).map((item, index) => ({
+          type: "Feature",
+          properties: {
+            rank: item.rank,
+            port: item.port,
+            meters: item.meters,
+            color: RANK_COLOR[Math.min(index, RANK_COLOR.length - 1)],
+            show: index !== selected || atEnd,
+          },
+          geometry: { type: "LineString", coordinates: item.coordinates },
+        }));
+        source("routes").setData({ type: "FeatureCollection", features });
+        ui.slider.max = String(length);
+        ui.slider.value = String(Math.min(cursor, length));
+        const nodeId = trace && cursor > 0 ? trace.steps[cursor - 1] : null;
+        const lines = [];
+        if (trace) {
+          lines.push(
+            `step ${cursor} / ${length} · nodes ${trace.nodes.length} · hulls ${trace.hulls.length} · tangents ${trace.edges.length}${trace.edgesTruncated ? "+" : ""}`
+          );
+          if (nodeId != null && cursor < length) lines.push(`current node ${nodeId}`);
+          else if (atEnd) lines.push("route");
+        } else if (route) {
+          lines.push(`step ${cursor} / ${length}`);
+        }
+        ui.readout.textContent = lines.join("\n");
+      }
+
+      function paintTo(target) {
+        const trace = selectedTrace();
+        if (!trace || trace.steps.length === 0) {
+          cursor = target;
+          render();
+          return;
+        }
+        if (target < cursor) resetNodes();
+        const from = target < cursor ? 0 : cursor;
+        for (let i = from; i < target; i++) {
+          const id = trace.steps[i];
+          const phase = i === target - 1 && target < trace.steps.length ? 2 : 1;
+          map.setFeatureState({ source: "nodes", id }, { phase });
+          if (!painted.includes(id)) painted.push(id);
+        }
+        if (target > 0 && target < trace.steps.length) {
+          const previous = trace.steps[target - 1];
+          map.setFeatureState({ source: "nodes", id: previous }, { phase: 2 });
+        }
+        if (from > 0 && target > from) {
+          const prior = trace.steps[from - 1];
+          if (prior != null) map.setFeatureState({ source: "nodes", id: prior }, { phase: 1 });
+        }
+        cursor = target;
+        render();
+      }
+
+      function stop() {
+        playing = false;
+        ui.play.textContent = "Play";
+      }
+
+      function tick() {
+        if (!playing) return;
+        const length = frameCount();
+        const speed = Math.max(1, Number(ui.speed.value) || 1);
+        paintTo(Math.min(length, cursor + speed));
+        if (cursor >= length) {
+          stop();
+          return;
+        }
+        requestAnimationFrame(tick);
+      }
+
+      function loadTrace() {
+        const trace = selectedTrace();
+        resetNodes();
+        cursor = 0;
+        if (!trace) {
+          source("hulls").setData(empty);
+          source("tangents").setData(empty);
+          source("nodes").setData(empty);
+          render();
+          return;
+        }
+        source("hulls").setData({
+          type: "FeatureCollection",
+          features: trace.hulls
+            .filter((ring) => ring.length >= 4)
+            .map((ring) => ({
+              type: "Feature",
+              properties: {},
+              geometry: { type: "Polygon", coordinates: [ring] },
+            })),
+        });
+        source("tangents").setData({
+          type: "FeatureCollection",
+          features: trace.edges
+            .map(([a, b]) => {
+              const pa = trace.nodes[a];
+              const pb = trace.nodes[b];
+              if (!pa || !pb) return null;
+              return {
+                type: "Feature",
+                properties: {},
+                geometry: { type: "LineString", coordinates: [pa, pb] },
+              };
+            })
+            .filter(Boolean),
+        });
+        source("nodes").setData({
+          type: "FeatureCollection",
+          features: trace.nodes.map((position, index) => ({
+            type: "Feature",
+            id: index,
+            properties: {},
+            geometry: { type: "Point", coordinates: position },
+          })),
+        });
+        render();
+      }
+
+      function showRoutes() {
+        ui.routes.replaceChildren();
+        ui.candidates.replaceChildren();
+        if (!payload) return;
+        const matched = new Set();
+        payload.routes.forEach((route, index) => {
+          matched.add(route.port);
+          const button = WaterPath.matchButton(route.rank, route.port || "port", route.meters);
+          button.className = index === selected ? "selected" : "";
+          button.addEventListener("click", () => {
+            stop();
+            selected = index;
+            showRoutes();
+            loadTrace();
+            ui.player.hidden = false;
+          });
+          ui.routes.appendChild(button);
+        });
+        WaterPath.markRouteList(ui.routes, ui.sketch.value);
+        for (const candidate of payload.candidates || []) {
+          if (matched.has(candidate.port)) continue;
+          const detail =
+            candidate.geodesicMeters != null
+              ? `straight ${km(candidate.geodesicMeters)} · no water route`
+              : "considered";
+          ui.candidates.appendChild(WaterPath.consideredItem(candidate.port, detail));
+        }
+        drawTargets();
+      }
+
+      function drawTargets() {
+        if (!map.getSource("targets")) return;
+        const features = [];
+        const matched = new Set();
+        for (const [index, route] of (payload ? payload.routes : []).entries()) {
+          if (!route.goal) continue;
+          matched.add(route.port);
+          const color = WaterPath.rankColor(route.rank);
+          const shift = Math.round(targetShift(route));
+          features.push({
+            type: "Feature",
+            properties: {
+              kind: "goal",
+              port: route.port,
+              label: WaterPath.matchLabel(route.port || "port", route.meters, true),
+              rank: route.rank,
+              color,
+              selected: index === selected,
+              shift,
+              offset: WaterPath.labelOffset(route.rank - 1),
+            },
+            geometry: { type: "Point", coordinates: route.goal },
+          });
+          if (route.catalog && shift > 20) {
+            features.push({
+              type: "Feature",
+              properties: { kind: "link", color, selected: index === selected },
+              geometry: { type: "LineString", coordinates: [route.catalog, route.goal] },
+            });
+            features.push({
+              type: "Feature",
+              properties: { kind: "catalog", port: route.port, color, shift },
+              geometry: { type: "Point", coordinates: route.catalog },
+            });
+          }
+        }
+        for (const candidate of (payload && payload.candidates) || []) {
+          if (matched.has(candidate.port) || !candidate.position) continue;
+          features.push({
+            type: "Feature",
+            properties: {
+              kind: "considered",
+              port: candidate.port,
+              label: candidate.port,
+              color: WaterPath.CONSIDERED_COLOR,
+              selected: false,
+              offset: WaterPath.labelOffset(features.length),
+            },
+            geometry: { type: "Point", coordinates: candidate.position },
+          });
+        }
+        source("targets").setData({ type: "FeatureCollection", features });
+      }
+
+      function applyPayload(body) {
+        payload = body;
+        selected = 0;
+        const names = body.routes.map((route) => route.port).filter(Boolean);
+        ui.status.textContent = `${body.ms} ms · ${body.routes.length} route${body.routes.length === 1 ? "" : "s"}${names.length ? " · " + names.join(", ") : ""}`;
+        showRoutes();
+        const feature = sketches.get(ui.sketch.value);
+        source("sketch").setData(
+          feature ? { type: "FeatureCollection", features: [feature] } : empty
+        );
+        loadTrace();
+        ui.player.hidden = body.routes.length === 0;
+        const bounds = [];
+        const nearby = [];
+        if (feature) walkCoords(feature.geometry, (position) => bounds.push(position));
+        const matched = new Set(body.routes.map((route) => route.port));
+        for (const route of body.routes) {
+          for (const position of route.coordinates) bounds.push(position);
+          if (route.goal) bounds.push(route.goal);
+          if (route.catalog) bounds.push(route.catalog);
+        }
+        for (const candidate of body.candidates || []) {
+          if (candidate.position && !matched.has(candidate.port)) nearby.push(candidate.position);
+        }
+        if (bounds.length > 0) WaterPath.fitSolution(map, bounds, nearby);
+      }
+
+      async function postTangent(trace) {
+        const response = await fetch("/api/tangent", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            sketch: ui.sketch.value,
+            maxResults: Math.max(1, Number(ui.maxResults.value) || 3),
+            maxDistanceKm: Math.max(1, Number(ui.maxKm.value) || 350),
+            trace,
+          }),
+        });
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.error || "request failed");
+        return body;
+      }
+
+      function setBusy(next) {
+        busy = next;
+        ui.run.disabled = next;
+        ui.benchmark.disabled = next;
+        ui.sketch.disabled = next;
+      }
+
+      ui.run.addEventListener("click", async () => {
+        stop();
+        ui.error.textContent = "";
+        setBusy(true);
+        ui.status.textContent = "routing…";
+        try {
+          applyPayload(await postTangent(true));
+        } catch (error) {
+          ui.error.textContent = error instanceof Error ? error.message : String(error);
+          ui.status.textContent = "";
+        } finally {
+          setBusy(false);
+        }
+      });
+
+      ui.benchmark.addEventListener("click", async () => {
+        stop();
+        ui.error.textContent = "";
+        setBusy(true);
+        const runs = Math.max(1, Number(ui.runs.value) || 1);
+        const rows = [];
+        try {
+          for (let i = 0; i < runs; i++) {
+            ui.status.textContent = `benchmark ${i + 1} / ${runs}`;
+            const body = await postTangent(false);
+            rows.push(body);
+            if (i === runs - 1) applyPayload({ ...body, traces: payload ? payload.traces : null });
+          }
+          const times = rows.map((row) => row.ms).sort((a, b) => a - b);
+          const median = times[Math.floor(times.length / 2)];
+          const head = `<table><thead><tr><th>run</th><th>ms</th><th>routes</th><th>port</th></tr></thead><tbody>`;
+          const body = rows
+            .map((row, index) => {
+              const port = row.routes.map((route) => route.port).join(", ");
+              return `<tr><td>${index + 1}</td><td>${row.ms}</td><td>${row.routes.length}</td><td>${port}</td></tr>`;
+            })
+            .join("");
+          const foot =
+            rows.length > 1
+              ? `<tr><td>median</td><td>${median}</td><td></td><td></td></tr>`
+              : "";
+          ui.bench.innerHTML = `${head}${body}${foot}</tbody></table><p>Each run is a fresh search. The land index stays open; timing is server time and excludes the graph trace.</p>`;
+        } catch (error) {
+          ui.error.textContent = error instanceof Error ? error.message : String(error);
+        } finally {
+          setBusy(false);
+        }
+      });
+
+      ui.play.addEventListener("click", () => {
+        if (playing) {
+          stop();
+          return;
+        }
+        if (cursor >= frameCount()) paintTo(0);
+        playing = true;
+        ui.play.textContent = "Pause";
+        requestAnimationFrame(tick);
+      });
+      ui.stepBack.addEventListener("click", () => {
+        stop();
+        paintTo(Math.max(0, cursor - 1));
+      });
+      ui.stepForward.addEventListener("click", () => {
+        stop();
+        paintTo(Math.min(frameCount(), cursor + 1));
+      });
+      ui.slider.addEventListener("input", () => {
+        stop();
+        paintTo(Number(ui.slider.value));
+      });
+      ui.showTangents.addEventListener("change", () => {
+        if (!map.getLayer("tangents")) return;
+        map.setLayoutProperty(
+          "tangents",
+          "visibility",
+          ui.showTangents.checked ? "visible" : "none"
+        );
+      });
+      ui.sketch.addEventListener("change", () => {
+        stop();
+        payload = null;
+        ui.routes.replaceChildren();
+        ui.player.hidden = true;
+        ui.status.textContent = ui.sketch.value;
+        const feature = sketches.get(ui.sketch.value);
+        if (map.getSource("sketch")) {
+          source("sketch").setData(
+            feature ? { type: "FeatureCollection", features: [feature] } : empty
+          );
+          source("hulls").setData(empty);
+          source("tangents").setData(empty);
+          source("nodes").setData(empty);
+          source("routes").setData(empty);
+          source("current").setData(empty);
+          if (map.getSource("targets")) source("targets").setData(empty);
+        }
+        if (feature) flyTo(feature);
+      });
+
+      window.addEventListener("keydown", (event) => {
+        if (event.target instanceof HTMLInputElement || event.target instanceof HTMLSelectElement) {
+          return;
+        }
+        if (ui.player.hidden) return;
+        if (event.key === " ") {
+          event.preventDefault();
+          ui.play.click();
+        } else if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+          event.preventDefault();
+          stop();
+          const jump = event.shiftKey ? 10 : 1;
+          const delta = event.key === "ArrowRight" ? jump : -jump;
+          paintTo(Math.max(0, Math.min(frameCount(), cursor + delta)));
+        }
+      });
+
+      map.on("load", async () => {
+        WaterPath.paintBasemap(map);
+        for (const id of ["sketch", "hulls", "tangents", "nodes", "routes", "current", "targets"]) {
+          map.addSource(id, { type: "geojson", data: empty });
+        }
+        map.addLayer({
+          id: "sketch",
+          type: "fill",
+          source: "sketch",
+          paint: { "fill-color": "#1e293b", "fill-opacity": 0.14 },
+        });
+        map.addLayer({
+          id: "sketch-line",
+          type: "line",
+          source: "sketch",
+          paint: { "line-color": "#0f172a", "line-width": 2, "line-dasharray": [1.4, 1] },
+        });
+        map.addLayer({
+          id: "hulls",
+          type: "fill",
+          source: "hulls",
+          paint: { "fill-color": "#e0b15a", "fill-opacity": 0.12 },
+        });
+        map.addLayer({
+          id: "hulls-line",
+          type: "line",
+          source: "hulls",
+          paint: { "line-color": "#b0893e", "line-width": 0.6, "line-opacity": 0.22 },
+        });
+        map.addLayer({
+          id: "tangents",
+          type: "line",
+          source: "tangents",
+          paint: { "line-color": "#94a3b8", "line-width": 0.4, "line-opacity": 0.16 },
+        });
+        map.addLayer({
+          id: "routes-casing",
+          type: "line",
+          source: "routes",
+          filter: ["==", ["get", "show"], true],
+          paint: { "line-color": "#f8fafc", "line-width": 9, "line-opacity": 0.95 },
+        });
+        map.addLayer({
+          id: "routes",
+          type: "line",
+          source: "routes",
+          filter: ["==", ["get", "show"], true],
+          paint: {
+            "line-color": ["get", "color"],
+            "line-width": 5,
+            "line-opacity": 1,
+          },
+        });
+        map.addLayer({
+          id: "current",
+          type: "line",
+          source: "current",
+          paint: { "line-color": "#dc2626", "line-width": 3 },
+        });
+        map.addLayer({
+          id: "nodes",
+          type: "circle",
+          source: "nodes",
+          paint: {
+            "circle-radius": ["case", ["==", ["feature-state", "phase"], 2], 6, 3.5],
+            "circle-color": [
+              "case",
+              ["==", ["feature-state", "phase"], 2],
+              "#dc2626",
+              "#2563eb",
+            ],
+            "circle-opacity": [
+              "case",
+              ["==", ["feature-state", "phase"], 1],
+              0.85,
+              ["==", ["feature-state", "phase"], 2],
+              1,
+              0,
+            ],
+            "circle-stroke-width": 1,
+            "circle-stroke-color": "#fff",
+          },
+        });
+        map.addLayer({
+          id: "targets-link",
+          type: "line",
+          source: "targets",
+          filter: ["==", ["get", "kind"], "link"],
+          paint: {
+            "line-color": ["get", "color"],
+            "line-width": 1.5,
+            "line-dasharray": [1.2, 1.2],
+          },
+        });
+        map.addLayer({
+          id: "targets-catalog",
+          type: "circle",
+          source: "targets",
+          filter: ["==", ["get", "kind"], "catalog"],
+          paint: {
+            "circle-radius": 5,
+            "circle-color": "#fff",
+            "circle-stroke-width": 2,
+            "circle-stroke-color": ["get", "color"],
+          },
+        });
+        map.addLayer({
+          id: "targets-goal",
+          type: "circle",
+          source: "targets",
+          filter: ["in", ["get", "kind"], ["literal", ["goal", "considered"]]],
+          paint: {
+            "circle-radius": ["case", ["get", "selected"], 8, ["==", ["get", "kind"], "goal"], 7, 5],
+            "circle-color": ["get", "color"],
+            "circle-stroke-width": 2,
+            "circle-stroke-color": "#fff",
+          },
+        });
+        map.addLayer({
+          id: "targets-label",
+          type: "symbol",
+          source: "targets",
+          filter: ["in", ["get", "kind"], ["literal", ["goal", "considered"]]],
+          layout: {
+            "text-field": ["get", "label"],
+            "text-size": ["case", ["==", ["get", "kind"], "goal"], 13, 11],
+            "text-anchor": "left",
+            "text-offset": ["coalesce", ["get", "offset"], ["literal", [0.85, 0]]],
+            "text-allow-overlap": true,
+          },
+          paint: { "text-color": "#1c2430", "text-halo-color": "#f8fafc", "text-halo-width": 1.6 },
+        });
+        WaterPath.addReferencePorts(map);
+        for (const id of ["routes-casing", "routes", "current", "targets-goal", "targets-label"]) {
+          if (map.getLayer(id)) map.moveLayer(id);
+        }
+        map.on("click", "nodes", (event) => {
+          const feature = event.features && event.features[0];
+          if (!feature || feature.id == null) return;
+          const trace = selectedTrace();
+          const step = trace ? trace.steps.indexOf(feature.id) : -1;
+          new mapboxgl.Popup()
+            .setLngLat(event.lngLat)
+            .setHTML(
+              `node ${feature.id}${step >= 0 ? `<br>expanded at step ${step + 1}` : "<br>not expanded"}`
+            )
+            .addTo(map);
+        });
+        map.on("click", "targets-goal", (event) => {
+          const feature = event.features && event.features[0];
+          if (!feature) return;
+          const shift = Number(feature.properties.shift) || 0;
+          const where =
+            shift > 20
+              ? `${(shift / 1000).toFixed(1)} km from the catalog port`
+              : "on the catalog port";
+          new mapboxgl.Popup()
+            .setLngLat(event.lngLat)
+            .setHTML(`<strong>${feature.properties.port} target</strong><br>${where}`)
+            .addTo(map);
+        });
+        map.on("mouseenter", "targets-goal", () => {
+          map.getCanvas().style.cursor = "pointer";
+        });
+        map.on("mouseleave", "targets-goal", () => {
+          map.getCanvas().style.cursor = "";
+        });
+        map.on("click", "routes", (event) => {
+          const feature = event.features && event.features[0];
+          if (!feature) return;
+          const rank = feature.properties.rank;
+          stop();
+          selected = Math.max(0, rank - 1);
+          showRoutes();
+          loadTrace();
+        });
+
+        const listed = await fetch("/api/sketches").then((response) => response.json());
+        for (const item of listed) {
+          sketches.set(item.id, item.feature);
+          const option = document.createElement("option");
+          option.value = item.id;
+          option.textContent = item.id;
+          ui.sketch.appendChild(option);
+        }
+        ui.sketch.value = "gull-island";
+        const feature = sketches.get("gull-island");
+        source("sketch").setData({ type: "FeatureCollection", features: [feature] });
+        flyTo(feature);
+      });
+    </script>
+  </body>
+</html>

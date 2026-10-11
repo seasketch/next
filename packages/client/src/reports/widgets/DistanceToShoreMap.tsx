@@ -83,6 +83,13 @@ export const DistanceToShoreMap: ReportWidget<DistanceToShoreMapSettings> = ({
     unit,
     unitDisplay: componentSettings?.unitDisplay,
   });
+  // Line labels are drawn only when the text is shorter than the route on
+  // screen. The short unit fits at the framed zoom; the caption keeps the
+  // chosen display.
+  const lineFormatters = useNumberFormatters({
+    unit,
+    unitDisplay: "short",
+  });
   const sketchGeojsonUrl = useMemo(
     () =>
       sketchReportingGeojsonUrl(
@@ -152,6 +159,9 @@ export const DistanceToShoreMap: ReportWidget<DistanceToShoreMapSettings> = ({
   return (
     <DistancePathMap
       paths={[path]}
+      distances={
+        hideDistance ? undefined : [lineFormatters.distance(meters / 1000)]
+      }
       emptyMessage={t("No shoreline path to display.")}
       caption={
         hideDistance ? undefined : formatters.distance(meters / 1000)

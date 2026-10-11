@@ -1512,6 +1512,8 @@ function metricTypeLabel(type: string, t: (key: string) => string) {
       return t("Raster area captured");
     case "distance_to_shore":
       return t("Distance to shore");
+    case "distance_to_features_over_water":
+      return t("Distance to point");
     case "total_area":
       return t("Total area");
     default:
