@@ -8,8 +8,8 @@ import { FlatGeobufSource } from "fgb-source";
 export declare const MAX_DISTANCE_TO_FEATURES_KM = 400;
 /** Default number of nearest features when the caller does not set one. */
 export declare const DEFAULT_WATER_PATH_MAX_RESULTS = 3;
-/** Default search radius: 200 statute miles, stored in kilometres. */
-export declare const DEFAULT_WATER_PATH_DISTANCE_KM: number;
+/** Default search radius, in kilometres. */
+export declare const DEFAULT_WATER_PATH_DISTANCE_KM = 300;
 export declare const MAX_WATER_PATH_RESULTS = 25;
 export type WaterPathFeatureHit = {
     __id: number;

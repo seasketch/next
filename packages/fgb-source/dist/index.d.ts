@@ -215,8 +215,8 @@ type CreateSourceOptions = {
      */
     overfetchBytes?: ByteSize;
     /**
-     * Page size used to group features into range requests. Defaults to 1MB.
-     * Accepts a number of bytes or a string like "1MB".
+     * Page size to use for internal page-cached range fetching. Defaults to 5MB.
+     * Accepts a number of bytes or a string like "5MB".
      */
     pageSize?: ByteSize;
 };
@@ -241,12 +241,6 @@ declare class FlatGeobufSource<T = Feature> {
     private url?;
     /** Custom method provided to createSource used to fetch fgb byte ranges */
     private fetchRangeFn;
-    /** Fetch before the page cache. Header reads do not go through this. */
-    private rawFetch;
-    /** Feature pages keyed by the exact byte range that was requested. */
-    private rangeCache;
-    /** Range reads that have not resolved yet, so concurrent queries share one request. */
-    private inflightRanges;
     /** fgb header metadata */
     header: HeaderMeta;
     /** Spatial index for bounding box queries */
@@ -263,12 +257,6 @@ declare class FlatGeobufSource<T = Feature> {
      */
     constructor(urlOrFetchRangeFn: string | FetchRangeFn, header: HeaderMeta, index: RTreeIndex, featureDataOffset: number, maxCacheSize?: ByteSize, overfetchBytes?: ByteSize, pageSize?: ByteSize);
     private defaultFetchRange;
-    /**
-     * Feature-page reads are keyed by the exact range. A second query that
-     * needs the same page, including one still in flight, does not hit the network.
-     * A buffer larger than the cache is returned and not stored.
-     */
-    private cachedFetch;
     /**
      * Prefetch and cache all pages needed for features intersecting the envelope.
      * This uses getFeaturesAsync with warmCache:true under the hood to trigger

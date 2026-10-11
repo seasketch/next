@@ -30,8 +30,8 @@ const WATER_PATH_FINE_RESOLUTION = 8;
 exports.MAX_DISTANCE_TO_FEATURES_KM = 400;
 /** Default number of nearest features when the caller does not set one. */
 exports.DEFAULT_WATER_PATH_MAX_RESULTS = 3;
-/** Default search radius: 200 statute miles, stored in kilometres. */
-exports.DEFAULT_WATER_PATH_DISTANCE_KM = 200 * 1.609344;
+/** Default search radius, in kilometres. */
+exports.DEFAULT_WATER_PATH_DISTANCE_KM = 300;
 exports.MAX_WATER_PATH_RESULTS = 25;
 /**
  * Extra rough hits kept before the shoreline pull. Ports are sparse, so

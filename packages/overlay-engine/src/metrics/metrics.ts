@@ -1,4 +1,4 @@
-import { Feature, LineString, Polygon } from "geojson";
+import { Feature, LineString, MultiLineString, Polygon } from "geojson";
 import turfArea from "@turf/area";
 import {
   min,
@@ -989,7 +989,8 @@ export type DistanceToShoreMetric = OverlayMetricBase & {
   value: {
     meters: number;
     geojsonLine: Feature<LineString>;
-    // rings: string[][];
+    /** Shoreline inside the subject when it meets land. */
+    shorelineIntersection?: Feature<LineString | MultiLineString> | null;
   };
 };
 

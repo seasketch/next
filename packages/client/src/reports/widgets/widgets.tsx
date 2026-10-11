@@ -1291,10 +1291,16 @@ function insertDistanceToPoint(
   view: EditorView,
   stableId: string,
   block: boolean,
-  labelColumn?: string
+  labelColumn: string | undefined,
+  at: { from: number; to: number }
 ) {
-  const range = view.state.selection.ranges[0];
-  if (!range) return false;
+  const size = view.state.doc.content.size;
+  const from = Math.max(0, Math.min(at.from, size));
+  const to = Math.max(from, Math.min(at.to, size));
+  const range = new SelectionRange(
+    view.state.doc.resolve(from),
+    view.state.doc.resolve(to)
+  );
   const metric = {
     type: "distance_to_features_over_water" as const,
     subjectType: "fragments" as const,
@@ -1437,19 +1443,29 @@ export function buildReportCommandGroups({
       label: "Distance to Port",
       description:
         "Water-route distance from the sketch to the nearest World Ports harbor.",
-      run: (_state, _dispatch, view) => {
+      screenshotSrc: "/slashCommands/distance-to-port.png",
+      run: (state, _dispatch, view) => {
+        const at = state.selection.ranges[0];
+        if (!at) return;
+        const position = { from: at.$from.pos, to: at.$to.pos };
         const existing = draftTableOfContentsItems?.find(
           (item) =>
             item.copiedFromDataLibraryTemplateId === WORLD_PORTS_TEMPLATE_ID
         );
         if (existing?.stableId) {
-          insertDistanceToPoint(view, existing.stableId, false, "PORT_NAME");
+          insertDistanceToPoint(
+            view,
+            existing.stableId,
+            false,
+            "PORT_NAME",
+            position
+          );
           return;
         }
         onEnsureDataLibraryLayer?.({
           templateId: WORLD_PORTS_TEMPLATE_ID,
           insert: (stableId) => {
-            insertDistanceToPoint(view, stableId, false, "PORT_NAME");
+            insertDistanceToPoint(view, stableId, false, "PORT_NAME", position);
           },
         });
       },
@@ -1490,19 +1506,29 @@ export function buildReportCommandGroups({
       label: "Distance to Port Map",
       description:
         "Map of the water route from the sketch to the nearest World Ports harbor.",
-      run: (_state, _dispatch, view) => {
+      screenshotSrc: "/slashCommands/distance-to-port-map.png",
+      run: (state, _dispatch, view) => {
+        const at = state.selection.ranges[0];
+        if (!at) return;
+        const position = { from: at.$from.pos, to: at.$to.pos };
         const existing = draftTableOfContentsItems?.find(
           (item) =>
             item.copiedFromDataLibraryTemplateId === WORLD_PORTS_TEMPLATE_ID
         );
         if (existing?.stableId) {
-          insertDistanceToPoint(view, existing.stableId, true, "PORT_NAME");
+          insertDistanceToPoint(
+            view,
+            existing.stableId,
+            true,
+            "PORT_NAME",
+            position
+          );
           return;
         }
         onEnsureDataLibraryLayer?.({
           templateId: WORLD_PORTS_TEMPLATE_ID,
           insert: (stableId) => {
-            insertDistanceToPoint(view, stableId, true, "PORT_NAME");
+            insertDistanceToPoint(view, stableId, true, "PORT_NAME", position);
           },
         });
       },
@@ -2337,8 +2363,14 @@ export function buildReportCommandGroups({
               label: "Distance to Point",
               description:
                 "Water-route distance from the sketch to the nearest point on this layer.",
-              run: (_state, _dispatch, view) => {
-                insertDistanceToPoint(view, stableId, false, pointLabel);
+              screenshotSrc: "/slashCommands/distance-to-port.png",
+              run: (state, _dispatch, view) => {
+                const at = state.selection.ranges[0];
+                if (!at) return;
+                insertDistanceToPoint(view, stableId, false, pointLabel, {
+                  from: at.$from.pos,
+                  to: at.$to.pos,
+                });
               },
             });
             blockGroup.items.push({
@@ -2347,8 +2379,14 @@ export function buildReportCommandGroups({
               label: "Distance to Point Map",
               description:
                 "Map of the water route from the sketch to the nearest point on this layer.",
-              run: (_state, _dispatch, view) => {
-                insertDistanceToPoint(view, stableId, true, pointLabel);
+              screenshotSrc: "/slashCommands/distance-to-port-map.png",
+              run: (state, _dispatch, view) => {
+                const at = state.selection.ranges[0];
+                if (!at) return;
+                insertDistanceToPoint(view, stableId, true, pointLabel, {
+                  from: at.$from.pos,
+                  to: at.$to.pos,
+                });
               },
             });
           }

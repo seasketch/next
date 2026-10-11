@@ -7,8 +7,8 @@ const bitmapSearch_1 = require("./bitmapSearch");
 const bboxUtils_1 = require("../utils/bboxUtils");
 exports.MAX_DISTANCE_TO_FEATURES_KM = 400;
 exports.DEFAULT_WATER_PATH_MAX_RESULTS = 3;
-/** Default search radius: 200 statute miles, stored in kilometres. */
-exports.DEFAULT_WATER_PATH_DISTANCE_KM = 200 * 1.609344;
+/** Default search radius, in kilometres. */
+exports.DEFAULT_WATER_PATH_DISTANCE_KM = 300;
 exports.MAX_WATER_PATH_RESULTS = 25;
 const openings = new Map();
 function landArchive(url) {

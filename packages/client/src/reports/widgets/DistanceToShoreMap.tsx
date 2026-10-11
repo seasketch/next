@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Feature, LineString } from "geojson";
+import { shorelineLines } from "./isShorelineFeature";
 import {
   combineMetricsForFragments,
   DistanceToShoreMetric,
@@ -83,13 +84,6 @@ export const DistanceToShoreMap: ReportWidget<DistanceToShoreMapSettings> = ({
     unit,
     unitDisplay: componentSettings?.unitDisplay,
   });
-  // Line labels are drawn only when the text is shorter than the route on
-  // screen. The short unit fits at the framed zoom; the caption keeps the
-  // chosen display.
-  const lineFormatters = useNumberFormatters({
-    unit,
-    unitDisplay: "short",
-  });
   const sketchGeojsonUrl = useMemo(
     () =>
       sketchReportingGeojsonUrl(
@@ -131,10 +125,24 @@ export const DistanceToShoreMap: ReportWidget<DistanceToShoreMapSettings> = ({
   const path = combined?.value?.geojsonLine;
 
   if (meters === 0) {
+    const shoreMessage = t("Sketch is on land or touching the shoreline.");
+    const shoreLines = shorelineLines(combined?.value?.shorelineIntersection);
+    if (shoreLines.length > 0) {
+      return (
+        <DistancePathMap
+          paths={shoreLines}
+          endpoints={false}
+          emptyMessage={shoreMessage}
+          caption={shoreMessage}
+          sketchGeojsonUrl={sketchGeojsonUrl}
+          basemap={basemap}
+        />
+      );
+    }
     return (
       <DistancePathMap
         paths={[]}
-        emptyMessage={t("Sketch is on land or touching the shoreline.")}
+        emptyMessage={shoreMessage}
         sketchGeojsonUrl={sketchGeojsonUrl}
         basemap={basemap}
       />
@@ -159,13 +167,10 @@ export const DistanceToShoreMap: ReportWidget<DistanceToShoreMapSettings> = ({
   return (
     <DistancePathMap
       paths={[path]}
-      distances={
-        hideDistance ? undefined : [lineFormatters.distance(meters / 1000)]
+      labels={
+        hideDistance ? undefined : [formatters.distance(meters / 1000)]
       }
       emptyMessage={t("No shoreline path to display.")}
-      caption={
-        hideDistance ? undefined : formatters.distance(meters / 1000)
-      }
       sketchGeojsonUrl={sketchGeojsonUrl}
       basemap={basemap}
     />

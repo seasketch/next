@@ -639,7 +639,7 @@ export default async function handler(payload: OverlayWorkerPayload) {
         const source = await sourceCache.get<Feature<Polygon>>(
           payload.sourceUrl,
           {
-            pageSize: "5MB",
+            pageSize: "1MB",
           },
         );
         const minimumDistanceMeters =

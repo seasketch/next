@@ -1,4 +1,4 @@
-import { Feature, LineString, Polygon } from "geojson";
+import { Feature, LineString, MultiLineString, Polygon } from "geojson";
 import { guaranteeHelpers, OverlayWorkerHelpers } from "./utils/helpers";
 import { FlatGeobufSource } from "fgb-source";
 import { searchGeodesicNearestLand } from "./h3/geodesicNearest";
@@ -6,13 +6,15 @@ import { searchGeodesicNearestLand } from "./h3/geodesicNearest";
 export type DistanceToShoreResult = {
   meters: number;
   geojsonLine: Feature<LineString> | null;
+  /** Shoreline inside the subject when it meets land. */
+  shorelineIntersection?: Feature<LineString | MultiLineString> | null;
 };
 
 /**
  * Distance from a sketch in the ocean to the nearest shoreline.
  *
  * Cases:
- *   1. On land or touching land → 0
+ *   1. On land or touching land → 0, plus the shoreline inside the subject
  *   2. Within `minimumDistanceMeters` of shore → 0
  *   3. Otherwise geodesic distance from the closest point on the subject
  *      to the closest shoreline point

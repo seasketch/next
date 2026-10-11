@@ -1,4 +1,4 @@
-import { Feature, LineString } from "geojson";
+import { Feature, LineString, MultiLineString } from "geojson";
 export type MetricType = "total_area" | "overlay_area" | "count" | "presence" | "presence_table" | "column_values" | "raster_stats" | "distance_to_shore" | "distance_to_features_over_water" | "raster_overlay_area" | "ous_demographics";
 /**
  * Max distinct class keys allowed when `groupBy: "value"` for
@@ -454,6 +454,8 @@ export type DistanceToShoreMetric = OverlayMetricBase & {
     value: {
         meters: number;
         geojsonLine: Feature<LineString>;
+        /** Shoreline inside the subject when it meets land. */
+        shorelineIntersection?: Feature<LineString | MultiLineString> | null;
     };
 };
 export type DistanceToFeatureHit = {

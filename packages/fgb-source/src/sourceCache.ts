@@ -167,22 +167,14 @@ export class SourceCache {
     key: string,
     options?: CreateSourceOptions
   ): Promise<FlatGeobufSource<T>> {
-    // Page size changes which bytes a query downloads, so two openings of the
-    // same file at different page sizes do not share one source.
-    const pageSize = options?.pageSize;
-    const cacheKey =
-      pageSize === undefined || pageSize === null
-        ? key
-        : `${key}@@page=${typeof pageSize === "number" ? pageSize : pageSize}`;
-
     // Check cache first
-    const cached = this.cache.get(cacheKey);
+    const cached = this.cache.get(key);
     if (cached) {
       return cached;
     }
 
     // Check for in-flight request
-    const inFlightRequest = this.inFlightRequests.get(cacheKey);
+    const inFlightRequest = this.inFlightRequests.get(key);
     if (inFlightRequest) {
       return inFlightRequest as Promise<FlatGeobufSource<T>>;
     }
@@ -200,15 +192,15 @@ export class SourceCache {
     // Create new request
     const request = createSource<T>(key, mergedOptions)
       .then((source) => {
-        this.cache.set(cacheKey, source);
+        this.cache.set(key, source);
         return source;
       })
       .catch((e) => {
         console.log("caught error in source cache get", key);
-        this.inFlightRequests.delete(cacheKey);
+        this.inFlightRequests.delete(key);
         throw e;
       });
-    this.inFlightRequests.set(cacheKey, request);
+    this.inFlightRequests.set(key, request);
     return request;
   }
 }

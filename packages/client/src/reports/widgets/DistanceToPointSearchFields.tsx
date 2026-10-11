@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   DEFAULT_WATER_PATH_DISTANCE_KM,
@@ -33,7 +33,13 @@ export function DistanceToPointSearchFields({
   const parameters = metrics[0]?.parameters;
   const storedResults =
     parameters?.maxResults ?? DEFAULT_WATER_PATH_MAX_RESULTS;
-  const storedKm = parameters?.maxDistanceKm ?? DEFAULT_WATER_PATH_DISTANCE_KM;
+  // Widgets created before the radius was 300 km stored 200 statute miles.
+  const legacyDefaultKm = 200 * 1.609344;
+  const storedKm =
+    parameters?.maxDistanceKm == null ||
+    Math.abs(parameters.maxDistanceKm - legacyDefaultKm) < 1e-3
+      ? DEFAULT_WATER_PATH_DISTANCE_KM
+      : parameters.maxDistanceKm;
   const storedResolution =
     parameters?.resolution === "low" || parameters?.resolution === "medium"
       ? parameters.resolution
@@ -48,6 +54,27 @@ export function DistanceToPointSearchFields({
   useEffect(() => {
     setKmText(String(storedKm));
   }, [storedKm]);
+
+  const migratedLegacyKm = useRef(false);
+  useEffect(() => {
+    if (migratedLegacyKm.current) return;
+    if (
+      parameters?.maxDistanceKm == null ||
+      Math.abs(parameters.maxDistanceKm - legacyDefaultKm) >= 1e-3
+    ) {
+      return;
+    }
+    migratedLegacyKm.current = true;
+    onUpdateDependencyParameters((dependency) => {
+      if (dependency.type !== "distance_to_features_over_water") {
+        return { ...dependency.parameters };
+      }
+      return {
+        ...dependency.parameters,
+        maxDistanceKm: DEFAULT_WATER_PATH_DISTANCE_KM,
+      };
+    });
+  }, [legacyDefaultKm, onUpdateDependencyParameters, parameters?.maxDistanceKm]);
 
   const commit = (patch: {
     maxResults?: number;

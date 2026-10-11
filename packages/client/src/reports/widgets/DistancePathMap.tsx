@@ -23,8 +23,11 @@ const LAYER_ORIGIN = "distance-path-origin";
 const LAYER_DEST = "distance-path-dest";
 const LAYER_LABEL = "distance-path-label";
 const LAYER_DISTANCE = "distance-path-distance";
+const LAYER_SHORELINE_HALO = "distance-path-shoreline-halo";
+const LAYER_SHORELINE = "distance-path-shoreline";
 
 const PATH_COLOR = "#2563eb";
+const SHORELINE_COLOR = "#f97316";
 const ORIGIN_COLOR = "#0f172a";
 const DEST_COLOR = "#dc2626";
 /** Light outline so the sketch stays visible on dark satellite imagery. */
@@ -73,7 +76,8 @@ const PATH_LINE_COLOR: Expression = [
 function pathCollection(
   paths: Feature<LineString>[],
   labels?: Array<string | null>,
-  distances?: Array<string | null>
+  distances?: Array<string | null>,
+  endpoints = true
 ): FeatureCollection<LineString | Point> {
   const features: Feature<LineString | Point>[] = [];
   let rank = 0;
@@ -86,10 +90,11 @@ function pathCollection(
     const label = name && distance ? `${name}\n${distance}` : name;
     features.push({
       type: "Feature",
-      properties: { kind: "path", rank, distance },
+      properties: { kind: endpoints ? "path" : "shoreline", rank, distance },
       geometry: { type: "LineString", coordinates: coords },
     });
     rank += 1;
+    if (!endpoints) continue;
     features.push({
       type: "Feature",
       properties: { kind: "origin" },
@@ -169,9 +174,10 @@ function boundsSignature(bounds: LngLatBounds | null): string | null {
 function usePathCollection(
   paths: Feature<LineString>[],
   labels?: Array<string | null>,
-  distances?: Array<string | null>
+  distances?: Array<string | null>,
+  endpoints = true
 ) {
-  const key = pathSignature(paths, labels, distances);
+  const key = `${endpoints ? "1" : "0"}:${pathSignature(paths, labels, distances)}`;
   const cache = useRef<{
     key: string;
     collection: FeatureCollection<LineString | Point>;
@@ -179,7 +185,7 @@ function usePathCollection(
   if (!cache.current || cache.current.key !== key) {
     cache.current = {
       key,
-      collection: pathCollection(paths, labels, distances),
+      collection: pathCollection(paths, labels, distances, endpoints),
     };
   }
   return cache.current.collection;
@@ -234,6 +240,7 @@ export function DistancePathMap({
   basemap = "streets",
   fitPaddingTop = FIT_PADDING,
   heightClass = "h-56",
+  endpoints = true,
 }: {
   paths: Feature<LineString>[];
   /** Name drawn at each path's destination, in the same order as `paths`. */
@@ -252,13 +259,15 @@ export function DistancePathMap({
   fitPaddingTop?: number;
   /** Tailwind height for the map canvas. Defaults to `h-56`. */
   heightClass?: string;
+  /** Draw origin and destination dots. Off for a shoreline intersection. */
+  endpoints?: boolean;
 }) {
   const { t } = useTranslation("reports");
   const containerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<MapboxMap | null>(null);
   const { printing } = useContext(ReportUIStateContext);
 
-  const collection = usePathCollection(paths, labels, distances);
+  const collection = usePathCollection(paths, labels, distances, endpoints);
   const bounds = useMemo(() => boundsForCollection(collection), [collection]);
   const boundsKey = boundsSignature(bounds);
   const collectionRef = useRef(collection);
@@ -428,6 +437,35 @@ export function DistancePathMap({
           "text-color": "#111827",
           "text-halo-color": "#ffffff",
           "text-halo-width": 1.4,
+        },
+      });
+      map.addLayer({
+        id: LAYER_SHORELINE_HALO,
+        type: "line",
+        source: SOURCE_ID,
+        filter: ["==", ["get", "kind"], "shoreline"],
+        paint: {
+          "line-color": "#ffffff",
+          "line-width": 9,
+          "line-opacity": 1,
+        },
+        layout: {
+          "line-cap": "round",
+          "line-join": "round",
+        },
+      });
+      map.addLayer({
+        id: LAYER_SHORELINE,
+        type: "line",
+        source: SOURCE_ID,
+        filter: ["==", ["get", "kind"], "shoreline"],
+        paint: {
+          "line-color": SHORELINE_COLOR,
+          "line-width": 5,
+        },
+        layout: {
+          "line-cap": "round",
+          "line-join": "round",
         },
       });
       map.resize();

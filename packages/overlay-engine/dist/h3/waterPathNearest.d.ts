@@ -5,8 +5,8 @@ export type { WaterPathCandidate, WaterPathFeatureHit, WaterPathNearestResult, }
 import type { WaterPathNearestResult } from "./waterPathNearestH3";
 export declare const MAX_DISTANCE_TO_FEATURES_KM = 400;
 export declare const DEFAULT_WATER_PATH_MAX_RESULTS = 3;
-/** Default search radius: 200 statute miles, stored in kilometres. */
-export declare const DEFAULT_WATER_PATH_DISTANCE_KM: number;
+/** Default search radius, in kilometres. */
+export declare const DEFAULT_WATER_PATH_DISTANCE_KM = 300;
 export declare const MAX_WATER_PATH_RESULTS = 25;
 /**
  * Water-path distance from a sketch to the nearest point features.

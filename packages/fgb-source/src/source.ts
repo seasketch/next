@@ -33,7 +33,6 @@ import {
   VALIDATE_FEATURE_DATA,
 } from "./constants";
 import bytes from "bytes";
-import { LRUCache } from "lru-cache";
 
 /**
  * Represents a byte size that can be specified as either a number of bytes
@@ -105,8 +104,8 @@ export type CreateSourceOptions = {
    */
   overfetchBytes?: ByteSize;
   /**
-   * Page size used to group features into range requests. Defaults to 1MB.
-   * Accepts a number of bytes or a string like "1MB".
+   * Page size to use for internal page-cached range fetching. Defaults to 5MB.
+   * Accepts a number of bytes or a string like "5MB".
    */
   pageSize?: ByteSize;
 };
@@ -143,12 +142,6 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
   private url?: string;
   /** Custom method provided to createSource used to fetch fgb byte ranges */
   private fetchRangeFn: FetchRangeFn;
-  /** Fetch before the page cache. Header reads do not go through this. */
-  private rawFetch!: FetchRangeFn;
-  /** Feature pages keyed by the exact byte range that was requested. */
-  private rangeCache!: LRUCache<string, ArrayBuffer>;
-  /** Range reads that have not resolved yet, so concurrent queries share one request. */
-  private inflightRanges = new Map<string, Promise<ArrayBuffer>>();
   /** fgb header metadata */
   header: HeaderMeta;
   /** Spatial index for bounding box queries */
@@ -176,16 +169,10 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
   ) {
     if (typeof urlOrFetchRangeFn === "string") {
       this.url = urlOrFetchRangeFn;
-      this.rawFetch = (range) => this.defaultFetchRange(range);
+      this.fetchRangeFn = this.defaultFetchRange;
     } else {
-      this.rawFetch = urlOrFetchRangeFn;
+      this.fetchRangeFn = urlOrFetchRangeFn;
     }
-    const cacheBytes = parseByteSize(maxCacheSize) ?? DEFAULT_CACHE_SIZE;
-    this.rangeCache = new LRUCache({
-      maxSize: Math.max(1, cacheBytes),
-      sizeCalculation: (value) => value.byteLength,
-    });
-    this.fetchRangeFn = (range) => this.cachedFetch(range);
 
     this.header = header;
     this.index = index;
@@ -230,34 +217,6 @@ export class FlatGeobufSource<T = GeoJSONFeature> {
       },
     });
     return response.arrayBuffer();
-  }
-
-  /**
-   * Feature-page reads are keyed by the exact range. A second query that
-   * needs the same page, including one still in flight, does not hit the network.
-   * A buffer larger than the cache is returned and not stored.
-   */
-  private cachedFetch(range: [number, number | null]): Promise<ArrayBuffer> {
-    const key = `${range[0]}-${range[1] ?? ""}`;
-    const cached = this.rangeCache.get(key);
-    if (cached) return Promise.resolve(cached);
-    const pending = this.inflightRanges.get(key);
-    if (pending) return pending;
-    const request = this.rawFetch(range).then(
-      (buffer) => {
-        this.inflightRanges.delete(key);
-        if (buffer.byteLength <= this.rangeCache.maxSize) {
-          this.rangeCache.set(key, buffer);
-        }
-        return buffer;
-      },
-      (error) => {
-        this.inflightRanges.delete(key);
-        throw error;
-      }
-    );
-    this.inflightRanges.set(key, request);
-    return request;
   }
 
   /**

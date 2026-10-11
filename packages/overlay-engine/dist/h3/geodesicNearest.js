@@ -15,6 +15,7 @@ const landOccupancy_1 = require("./landOccupancy");
 const adaptiveGrid_1 = require("./adaptiveGrid");
 const minHeap_1 = require("./minHeap");
 const nearestShorelinePath_1 = require("./nearestShorelinePath");
+const shorelineIntersection_1 = require("./shorelineIntersection");
 function envelopeAroundPoint(point, bufferMeters) {
     const [lng, lat] = point.coordinates;
     const delta = (0, constants_1.metersToDegrees)(bufferMeters);
@@ -47,6 +48,7 @@ async function exactDistanceInCell(feature, cell, land, seenOffsets, minimumDist
     let bestMeters = Infinity;
     let bestOrigin = null;
     let bestShoreline = null;
+    const touching = [];
     for (const part of split) {
         const env = (0, bboxUtils_1.bboxToEnvelope)(part);
         const queryPlan = land.createPlan(env);
@@ -61,8 +63,11 @@ async function exactDistanceInCell(feature, cell, land, seenOffsets, minimumDist
                 seenOffsets.add(offset);
             }
             if ((0, boolean_intersects_1.default)(feature, landFeature)) {
-                return { meters: 0, origin: null, shoreline: null };
+                touching.push(landFeature);
+                continue;
             }
+            if (touching.length > 0)
+                continue;
             const path = (0, nearestShorelinePath_1.nearestPointsBetweenGeometryAndPolygon)(feature.geometry, landFeature);
             if (path.meters < bestMeters) {
                 bestMeters = path.meters;
@@ -73,12 +78,26 @@ async function exactDistanceInCell(feature, cell, land, seenOffsets, minimumDist
                         meters: 0,
                         origin: bestOrigin,
                         shoreline: bestShoreline,
+                        shorelineIntersection: null,
                     };
                 }
             }
         }
     }
-    return { meters: bestMeters, origin: bestOrigin, shoreline: bestShoreline };
+    if (touching.length > 0) {
+        return {
+            meters: 0,
+            origin: null,
+            shoreline: null,
+            shorelineIntersection: (0, shorelineIntersection_1.shorelineInsideSubject)(feature, touching),
+        };
+    }
+    return {
+        meters: bestMeters,
+        origin: bestOrigin,
+        shoreline: bestShoreline,
+        shorelineIntersection: null,
+    };
 }
 async function searchWithAdaptiveH3(feature, land, originSamples, minimumDistanceMeters) {
     const originCells = (0, coverGeometry_1.cellsCoveringGeometry)(feature.geometry, constants_1.COARSE_H3_RESOLUTION);
@@ -130,6 +149,13 @@ async function searchWithAdaptiveH3(feature, land, originSamples, minimumDistanc
             continue;
         }
         const exact = await exactDistanceInCell(feature, cell, land, seenOffsets, minimumDistanceMeters);
+        if (exact.meters === 0 && exact.shorelineIntersection) {
+            return {
+                meters: 0,
+                geojsonLine: null,
+                shorelineIntersection: exact.shorelineIntersection,
+            };
+        }
         if (exact.meters < bestMeters) {
             bestMeters = exact.meters;
             bestOrigin = exact.origin;
@@ -173,6 +199,7 @@ async function searchImmediateBbox(feature, land, minimumDistanceMeters) {
     let bestMeters = Infinity;
     let bestOrigin = null;
     let bestShoreline = null;
+    const touching = [];
     for await (const landFeature of land.getFeaturesAsync(envelopes.length === 1 ? envelopes[0] : envelopes, { queryPlan })) {
         const offset = landFeature.properties &&
             landFeature.properties.__offset;
@@ -182,8 +209,11 @@ async function searchImmediateBbox(feature, land, minimumDistanceMeters) {
             seenOffsets.add(offset);
         }
         if ((0, boolean_intersects_1.default)(feature, landFeature)) {
-            return { meters: 0, geojsonLine: null };
+            touching.push(landFeature);
+            continue;
         }
+        if (touching.length > 0)
+            continue;
         const path = (0, nearestShorelinePath_1.nearestPointsBetweenGeometryAndPolygon)(feature.geometry, landFeature);
         if (path.meters < bestMeters) {
             bestMeters = path.meters;
@@ -196,6 +226,13 @@ async function searchImmediateBbox(feature, land, minimumDistanceMeters) {
                 };
             }
         }
+    }
+    if (touching.length > 0) {
+        return {
+            meters: 0,
+            geojsonLine: null,
+            shorelineIntersection: (0, shorelineIntersection_1.shorelineInsideSubject)(feature, touching),
+        };
     }
     if (bestMeters < Infinity && bestOrigin && bestShoreline) {
         return {

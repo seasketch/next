@@ -1,4 +1,12 @@
-import { Feature, Geometry, LineString, Point, Polygon, Position } from "geojson";
+import {
+  Feature,
+  Geometry,
+  LineString,
+  MultiLineString,
+  Point,
+  Polygon,
+  Position,
+} from "geojson";
 import { FlatGeobufSource } from "fgb-source";
 import booleanIntersects from "@turf/boolean-intersects";
 import bbox from "@turf/bbox";
@@ -28,10 +36,13 @@ import {
 } from "./adaptiveGrid";
 import { MinHeap } from "./minHeap";
 import { nearestPointsBetweenGeometryAndPolygon } from "./nearestShorelinePath";
+import { shorelineInsideSubject } from "./shorelineIntersection";
 
 export type GeodesicNearestLandResult = {
   meters: number;
   geojsonLine: Feature<LineString> | null;
+  /** Shoreline lying in the subject. Set when the subject meets land. */
+  shorelineIntersection?: Feature<LineString | MultiLineString> | null;
 };
 
 function envelopeAroundPoint(point: Point, bufferMeters: number) {
@@ -75,6 +86,7 @@ async function exactDistanceInCell(
   meters: number;
   origin: Position | null;
   shoreline: Position | null;
+  shorelineIntersection: Feature<LineString | MultiLineString> | null;
 }> {
   const cellBBox = bboxForCell(cell);
   const cleaned = cleanBBox(cellBBox);
@@ -85,6 +97,7 @@ async function exactDistanceInCell(
   let bestMeters = Infinity;
   let bestOrigin: Position | null = null;
   let bestShoreline: Position | null = null;
+  const touching: Feature[] = [];
 
   for (const part of split) {
     const env = bboxToEnvelope(part);
@@ -100,8 +113,10 @@ async function exactDistanceInCell(
         seenOffsets.add(offset);
       }
       if (booleanIntersects(feature as any, landFeature as any)) {
-        return { meters: 0, origin: null, shoreline: null };
+        touching.push(landFeature as Feature);
+        continue;
       }
+      if (touching.length > 0) continue;
       const path = nearestPointsBetweenGeometryAndPolygon(
         feature.geometry as Geometry,
         landFeature as any
@@ -115,13 +130,28 @@ async function exactDistanceInCell(
             meters: 0,
             origin: bestOrigin,
             shoreline: bestShoreline,
+            shorelineIntersection: null,
           };
         }
       }
     }
   }
 
-  return { meters: bestMeters, origin: bestOrigin, shoreline: bestShoreline };
+  if (touching.length > 0) {
+    return {
+      meters: 0,
+      origin: null,
+      shoreline: null,
+      shorelineIntersection: shorelineInsideSubject(feature, touching),
+    };
+  }
+
+  return {
+    meters: bestMeters,
+    origin: bestOrigin,
+    shoreline: bestShoreline,
+    shorelineIntersection: null,
+  };
 }
 
 async function searchWithAdaptiveH3(
@@ -195,6 +225,13 @@ async function searchWithAdaptiveH3(
       seenOffsets,
       minimumDistanceMeters
     );
+    if (exact.meters === 0 && exact.shorelineIntersection) {
+      return {
+        meters: 0,
+        geojsonLine: null,
+        shorelineIntersection: exact.shorelineIntersection,
+      };
+    }
     if (exact.meters < bestMeters) {
       bestMeters = exact.meters;
       bestOrigin = exact.origin;
@@ -257,6 +294,7 @@ async function searchImmediateBbox(
   let bestMeters = Infinity;
   let bestOrigin: Position | null = null;
   let bestShoreline: Position | null = null;
+  const touching: Feature[] = [];
 
   for await (const landFeature of land.getFeaturesAsync(
     envelopes.length === 1 ? (envelopes[0] as any) : (envelopes as any),
@@ -270,8 +308,10 @@ async function searchImmediateBbox(
       seenOffsets.add(offset);
     }
     if (booleanIntersects(feature as any, landFeature as any)) {
-      return { meters: 0, geojsonLine: null };
+      touching.push(landFeature as Feature);
+      continue;
     }
+    if (touching.length > 0) continue;
     const path = nearestPointsBetweenGeometryAndPolygon(
       feature.geometry as Geometry,
       landFeature as any
@@ -287,6 +327,14 @@ async function searchImmediateBbox(
         };
       }
     }
+  }
+
+  if (touching.length > 0) {
+    return {
+      meters: 0,
+      geojsonLine: null,
+      shorelineIntersection: shorelineInsideSubject(feature, touching),
+    };
   }
 
   if (bestMeters < Infinity && bestOrigin && bestShoreline) {
