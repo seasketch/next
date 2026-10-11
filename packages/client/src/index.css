@@ -7443,6 +7443,10 @@ select{
   height:14px
 }
 
+.h-\[16\.8rem\]{
+  height:16.8rem
+}
+
 .h-\[16px\]{
   height:16px
 }
@@ -7561,10 +7565,6 @@ select{
 
 .h-screen{
   height:100vh
-}
-
-.h-\[16\.8rem\]{
-  height:16.8rem
 }
 
 .max-h-128{

@@ -200,6 +200,9 @@ module.exports = {
       moduleNameMapper: {
         "mapbox-gl/dist/style-spec/index.es.js":
           "mapbox-gl/dist/style-spec/index.cjs",
+        // react-scripts 4's Jest resolver ignores package exports.
+        "^@seasketch/h3-land/client$":
+          "<rootDir>/../h3-land/dist/client.js",
         // Ensure Jest uses CJS build of polyclip-ts (align with Webpack alias)
         "^polyclip-ts$":
           "<rootDir>/../overlay-engine/node_modules/polyclip-ts/dist/cjs/index.cjs",

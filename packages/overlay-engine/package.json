@@ -67,7 +67,7 @@
     "@types/rbush": "^4.0.0",
     "@types/robust-segment-intersect": "^1.0.2",
     "esbuild": "^0.25.11",
-    "@seasketch/h3-land": "file:../h3-land",
+    "@seasketch/h3-land": "0.0.1",
     "fgb-source": "^1.0.0",
     "flatbush": "3",
     "geoblaze": "^2.8.0",
