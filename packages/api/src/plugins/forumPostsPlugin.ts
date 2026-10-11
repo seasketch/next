@@ -3,6 +3,32 @@ import { DOMSerializer, Fragment, Node } from "prosemirror-model";
 import { forums } from "../prosemirror/config";
 import { JSDOM } from "jsdom";
 
+/** Keep in sync with topics.titlechk and client topicTitle.ts. */
+const TOPIC_TITLE_MAX_LENGTH = 80;
+
+function topicTitleCharLength(title: string): number {
+  return Array.from(title).length;
+}
+
+/**
+ * Reject titles the database would refuse, with a message end users can read.
+ * `char_length` counts Unicode code points, same as Array.from.
+ */
+function assertTopicTitle(title: unknown): asserts title is string {
+  if (typeof title !== "string") {
+    throw new Error("Enter a topic title.");
+  }
+  const length = topicTitleCharLength(title);
+  if (length > TOPIC_TITLE_MAX_LENGTH) {
+    throw new Error(
+      `Titles must be ${TOPIC_TITLE_MAX_LENGTH} characters or fewer. This title is ${length} characters.`
+    );
+  }
+  if (title.trim().length === 0) {
+    throw new Error("Enter a topic title.");
+  }
+}
+
 const ForumPostsPlugin = makeExtendSchemaPlugin((build) => {
   const { pgSql: sql } = build;
   return {
@@ -36,8 +62,9 @@ const ForumPostsPlugin = makeExtendSchemaPlugin((build) => {
         },
         createTopic: async (_query, args, context, resolveInfo) => {
           const { pgClient } = context;
+          assertTopicTitle(args.title);
           if (!args.message) {
-            throw new Error("message not present");
+            throw new Error("Write a message before posting.");
           }
           const html = messageToHTML(args.message);
           const r = await pgClient.query(

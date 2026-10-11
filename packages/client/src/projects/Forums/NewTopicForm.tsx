@@ -4,6 +4,7 @@ import { useHistory } from "react-router-dom";
 import ProfilePhoto from "../../admin/users/ProfilePhoto";
 import Button from "../../components/Button";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
+import useDialog from "../../components/useDialog";
 import {
   AuthorProfileFragment,
   ForumsDocument,
@@ -16,7 +17,14 @@ import useLocalStorage from "../../useLocalStorage";
 import UserProfileModal from "../UserProfileModal";
 import PostContentEditor from "./PostContentEditor";
 import ReactNodeViewPortalsProvider from "./ReactNodeView/PortalProvider";
+import TopicTitleInput from "./TopicTitleInput";
 import { nameForProfile } from "./TopicListItem";
+import {
+  forumMessageIsEmpty,
+  isMissingTopicTitleError,
+  isTopicTitleConstraintError,
+  topicTitleProblem,
+} from "./topicTitle";
 
 const accessibleSketchIds: number[] = [];
 export default function NewTopicForm({
@@ -27,16 +35,21 @@ export default function NewTopicForm({
   forumId: number;
 }) {
   const { t } = useTranslation("forums");
-  const [title, setTitle, clearTitle] = useLocalStorage(
+  const [storedTitle, setTitle, clearTitle] = useLocalStorage(
     `post-title-${getSlug()}`,
     ""
   );
-  const [content, setContent, clearContent] = useLocalStorage(
+  const title = typeof storedTitle === "string" ? storedTitle : "";
+  const [content, setContent, clearContent] = useLocalStorage<unknown>(
     `post-content-${getSlug()}`,
     undefined
   );
   const [modalOpen, setModalOpen] = useState(false);
+  const [hasBookmarkErrors, setHasBookmarkErrors] = useState(false);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
+  const [serverRejectedTitle, setServerRejectedTitle] = useState(false);
   const history = useHistory();
+  const dialog = useDialog();
   const onCancel = useCallback(() => {
     clearTitle();
     clearContent();
@@ -54,7 +67,17 @@ export default function NewTopicForm({
       content,
       title,
     },
-    onError,
+    onError: (error) => {
+      if (isTopicTitleConstraintError(error)) {
+        setServerRejectedTitle(true);
+        return;
+      }
+      if (isMissingTopicTitleError(error)) {
+        setAttemptedSubmit(true);
+        return;
+      }
+      onError(error);
+    },
     refetchQueries: [ForumsDocument],
     onCompleted: (data) => {
       clearTitle();
@@ -99,6 +122,51 @@ export default function NewTopicForm({
     },
   });
 
+  const onContentChange = useCallback(
+    (next: unknown, errors: boolean) => {
+      setContent(next);
+      setHasBookmarkErrors(errors);
+    },
+    [setContent]
+  );
+
+  const titleTooLong =
+    topicTitleProblem(title) === "tooLong" || serverRejectedTitle;
+  const bodyMissing = attemptedSubmit && forumMessageIsEmpty(content);
+
+  const onPost = useCallback(async () => {
+    setAttemptedSubmit(true);
+    if (topicTitleProblem(title) || serverRejectedTitle) {
+      return;
+    }
+    if (forumMessageIsEmpty(content)) {
+      return;
+    }
+    if (hasBookmarkErrors) {
+      const proceed = await dialog.confirm(t("Map Bookmark Errors"), {
+        description: t(
+          "Your bookmarks refer to Sketches that are no longer posted. You should re-create these bookmarks before posting."
+        ),
+        primaryButtonText: t("Post anyways"),
+      });
+      if (!proceed) {
+        return;
+      }
+    }
+    await createTopic().catch(() => {
+      // Unexpected failures are shown by onError. Title-length failures stay
+      // next to the title field.
+    });
+  }, [
+    title,
+    serverRejectedTitle,
+    content,
+    hasBookmarkErrors,
+    dialog,
+    t,
+    createTopic,
+  ]);
+
   return (
     <div className="overflow-auto">
       <div
@@ -106,27 +174,29 @@ export default function NewTopicForm({
           mutationState.loading ? "opacity-70" : ""
         }`}
       >
-        <div className="flex border-b p-1 pt-2 px-2 pb-1.5 items-center">
+        <div className="flex border-b p-1 pt-2 px-2 pb-1.5 items-start">
           <button
             onClick={openProfileModal}
             className="ml-0.5 w-12 h-12 flex items-center"
           >
             <ProfilePhoto {...profile} canonicalEmail="" />
           </button>
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <button
               onClick={openProfileModal}
               className="text-sm pl-3 hover:text-gray-600"
             >
               {nameForProfile(profile)}
             </button>
-            <input
+            <TopicTitleInput
               autoFocus={!content}
-              className="-mt-0.5 pb-1 pt-0 pl-3 border-none outline-none focus:outline-none active:outline-none focus:border-none focus:ring-0 w-full font-semibold text-lg"
-              type="text"
-              value={title}
-              placeholder={t("New Topic Title...")}
-              onChange={(e) => setTitle(e.target.value)}
+              title={title}
+              showRequired={attemptedSubmit}
+              serverRejected={serverRejectedTitle}
+              onChange={(value) => {
+                setServerRejectedTitle(false);
+                setTitle(value);
+              }}
             />
           </div>
         </div>
@@ -136,21 +206,24 @@ export default function NewTopicForm({
             disabled={mutationState.loading}
             autofocus={Boolean(title && title.length)}
             initialContent={content}
-            onChange={setContent}
+            onChange={onContentChange}
             accessibleSketchIds={accessibleSketchIds}
           />
         </ReactNodeViewPortalsProvider>
       </div>
+      {bodyMissing && (
+        <p role="alert" className="px-4 pt-3 text-sm text-red-600">
+          {t("Write a message before posting.")}
+        </p>
+      )}
       <div className="flex justify-end items-center p-2 py-3 space-x-2">
         <Button label={t("Cancel")} onClick={onCancel} />
         <Button
           loading={mutationState.loading}
-          disabled={mutationState.loading}
+          disabled={mutationState.loading || titleTooLong}
           label={t("Post New Topic")}
           primary
-          onClick={async () => {
-            await createTopic();
-          }}
+          onClick={onPost}
         />
       </div>
       {modalOpen && (
