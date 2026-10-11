@@ -34,7 +34,12 @@ psql_exec() {
 }
 
 database_exists() {
-  [[ "$(psql_exec -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '${DB_NAME}'")" == "1" ]]
+  local found
+  if ! found="$(psql_exec -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = '${DB_NAME}'")"; then
+    echo "Could not query postgres while checking for ${DB_NAME}." >&2
+    exit 1
+  fi
+  [[ "$found" == "1" ]]
 }
 
 has_migrations() {

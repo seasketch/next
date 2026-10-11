@@ -8,8 +8,8 @@ import nearestPointOnLine from "@turf/nearest-point-on-line";
 import {
   DEFAULT_WATER_PATH_DISTANCE_KM,
   DEFAULT_WATER_PATH_MAX_RESULTS,
-  searchWaterPathByHierarchy,
 } from "../../src/h3/waterPathNearest";
+import { searchWaterPathByHierarchy } from "../../src/h3/waterPathHierarchy";
 import {
   bboxToEnvelope,
   splitBBoxAntimeridian,
