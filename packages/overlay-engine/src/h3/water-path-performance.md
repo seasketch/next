@@ -11,8 +11,12 @@ These numbers are the product default: 200 miles (321.9 km) and the closest 3 po
 
 ## What changed
 
-1. **Feature pages are cached on the FlatGeobuf source**, keyed by the exact byte range, with in-flight reads shared. A buffer larger than the cache is not stored. The header and index reads that open a file stay outside that cache. `SourceCache` now keeps separate sources when the same URL is opened at different page sizes, so a 1 MB water-path land source and a 5 MB distance-to-shore land source do not overwrite each other.
-2. **The water-path worker opens land and ports at 1 MB pages** with a 256 MB page cache. Distance-to-shore and the other metrics still request 5 MB pages. The unit tests open the same way.
+The tables below were measured while a feature-page cache lived inside `fgb-source`. That cache was removed. Range caching belongs in the caller's `fetchRangeFn`. The overlay worker already does this. `SourceCache` keeps one source per URL again. Distance-to-shore and the water-path metric both open the land file at 1 MB pages, so they share that source. The unit tests use `fgb-source`'s default page size, which is also 1 MB.
+
+What the October measurements actually changed:
+
+1. **Feature pages were cached on the FlatGeobuf source**, keyed by the exact byte range, with in-flight reads shared. A buffer larger than the cache was not stored. Header and index reads stayed outside that cache. `SourceCache` kept a separate source when the same URL was opened at a different page size. None of that remains in `fgb-source`.
+2. **The water-path worker opened land and ports at 1 MB pages** with a 256 MB page cache on the source. At the time of these tables, distance-to-shore still requested 5 MB pages. It now requests 1 MB as well.
 3. **`hits` does less work per segment.** Shore edges sit in 2 km cells instead of 8 km, and a stamp array replaces the per-call set. Land containment uses the same grid. Graph links, which join offshore hull vertices, skip the interior point-in-polygon samples; a crossing there has to meet a shore edge. Departure links skip those samples too. The finished route is still sampled. A long segment walks the cells it crosses instead of every cell in its bounding box. Short edges still scan the box.
 
 ## What is slow now
@@ -23,11 +27,11 @@ The hex router no longer re-downloads the same page for every res-6 cell. A Fiji
 
 Opening the land index is still once per source: 44.0 MB, 2.2 s of wall time, 0.5 s of CPU. The ports index is inside that same open (four requests total). Later sketches on those source objects do not pay it again.
 
-## How a read works now
+## How a read worked in these measurements
 
 `createSource` requests `[0, 32KB]`, then, because the land index does not fit, requests `[0, index end]` again. Those two responses are the 43.8 MB above.
 
-A feature query groups R-tree hits into 1 MB pages. `getFeaturesAsync` asks the source for each page. The first request downloads it and stores the bytes. A later query, including one that is still in flight, reuses that buffer. Three page reads run at a time.
+A feature query groups R-tree hits into 1 MB pages. `getFeaturesAsync` asks the source for each page. During these measurements the first request downloaded the page and stored the bytes, and a later query reused that buffer. That store was the `fgb-source` cache that has since been removed. Three page reads ran at a time.
 
 `estimatedBytes.requested` on the query plan is still not a usable size. `bytesForPage` overwrites a known range end with `start + 1200` whenever the range already has an end. The numbers below are the HTTP bodies.
 
@@ -52,7 +56,7 @@ Wallis has one port inside 200 miles. The other sketches return three. The route
 
 ## Hex-grid router, same limit, same pages
 
-The hex search still runs a bbox query per res-6 parent. Parsed features were already cached per cell. Pages are now cached too, so a Fiji sketch downloads 7.3 MB once instead of about 1.6 GB. Later Fiji sketches on the same source download nothing.
+The hex search still runs a bbox query per res-6 parent. Parsed features were already cached per cell. For these runs, pages were cached on the source too, so a Fiji sketch downloaded 7.3 MB once instead of about 1.6 GB. Later Fiji sketches on the same source downloaded nothing. That page cache is no longer in `fgb-source`.
 
 | Sketch | Matches | Wall | CPU | Downloaded | Requests | Expansions | Land-segment tests |
 |---|---:|---:|---:|---:|---:|---:|---:|

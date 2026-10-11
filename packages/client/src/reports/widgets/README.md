@@ -21,6 +21,16 @@ In short, Report Widgets have the following qualities and requirements:
 
 For an example of how this all comes together, see the implementation of `src/reports/widgets/GeographySizeTable.tsx`.
 
+## Distance widgets
+
+Distance to Shore and Distance to Port are metric widgets. The calculations live in `overlay-engine` (see that package's README).
+
+- The inline forms are `InlineMetric` presentations `distance_to_shore` and `distance_to_features_over_water`.
+- The maps are `DistanceToShoreMap` and `DistanceToPointMap`. Both draw through `DistancePathMap`.
+- Distance to Port and Distance to Port Map are presets of the generic distance-to-point widgets. They reference the World Ports data-library layer (`WORLD_PORTS`). If that layer is not in the project, the editor confirms adding it, then inserts the widget at the cursor position captured before the dialog opened.
+- An offshore shore map labels the shore point with the distance. A sketch on land draws `shorelineIntersection` as a 3px line and keeps the on-land message. A stored metric from before that field existed has the message only, until it is recalculated.
+- Matches, max km, and resolution are `DistanceToPointSearchFields`. A new widget uses `DEFAULT_WATER_PATH_DISTANCE_KM` (300). A widget that still has the old 200-mile default is rewritten to 300 when those controls open.
+
 ## Admin Tooltip Controls Interface
 
 Widgets are primarily configured using a tooltip menu. It is important to maintain consistency among these administrative tools as the number of widgets grows.
