@@ -131,16 +131,22 @@ describe("ocean bitmap routes", () => {
           resolution: "high",
           includedColumns: ["PORT_NAME", "COUNTRY"],
         });
-        expect(result.features.map((hit) => hit.properties.PORT_NAME)).toEqual(
-          hits.map((hit) => hit.port),
-        );
-        result.features.forEach((hit, index) => {
+        const names = result.features.map((hit) => hit.properties.PORT_NAME);
+        expect(new Set(names)).toEqual(new Set(hits.map((hit) => hit.port)));
+        // Nearest first. Two ports inside the distance tolerance can swap
+        // order between runs, so the expected list is matched by name.
+        const expectedKm = new Map(hits.map((hit) => [hit.port, hit.km]));
+        let previousKm = -Infinity;
+        for (const hit of result.features) {
           const km = hit.meters / 1000;
-          const want = hits[index]!.km;
-          expect(Math.abs(km - want)).toBeLessThanOrEqual(
-            Math.abs(want) * expected.tolerance + 1e-6,
+          expect(km).toBeGreaterThanOrEqual(previousKm - 1e-6);
+          previousKm = km;
+          const want = expectedKm.get(String(hit.properties.PORT_NAME));
+          expect(want).toBeDefined();
+          expect(Math.abs(km - want!)).toBeLessThanOrEqual(
+            Math.abs(want!) * expected.tolerance + 1e-6,
           );
-        });
+        }
         await Promise.all(
           result.features.map(async (hit) => {
             const line = hit.geojsonLine as Feature<LineString>;
