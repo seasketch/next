@@ -23,6 +23,7 @@ import {
   isDistancePathBasemap,
 } from "./DistancePathMap";
 import { PromotedDistanceMap } from "./PromotedDistanceMap";
+import { shorelineOverlapColor } from "./distancePathStyle";
 import { LabeledDropdown } from "./LabeledDropdown";
 import { UnitSelector } from "./UnitSelector";
 import { ReportWidget } from "./widgets";
@@ -32,6 +33,8 @@ type DistanceToShoreMapSettings = {
   unit?: LengthUnit | "none";
   unitDisplay?: "long" | "short";
   basemap?: DistancePathBasemap;
+  /** Stroke color when the sketch overlaps the shoreline. Defaults to orange. */
+  overlapColor?: string;
 };
 
 function lineSpan(line: Feature<LineString>): number {
@@ -91,6 +94,7 @@ export const DistanceToShoreMap: ReportWidget<DistanceToShoreMapSettings> = ({
   const basemap = isDistancePathBasemap(componentSettings?.basemap)
     ? componentSettings.basemap
     : "streets";
+  const overlapColor = shorelineOverlapColor(componentSettings?.overlapColor);
   const formatters = useNumberFormatters({
     unit,
     unitDisplay: componentSettings?.unitDisplay,
@@ -136,7 +140,7 @@ export const DistanceToShoreMap: ReportWidget<DistanceToShoreMapSettings> = ({
   const path = combined?.value?.geojsonLine;
 
   if (meters === 0) {
-    const shoreMessage = t("Sketch is on land or touching the shoreline.");
+    const shoreMessage = t("Touches shoreline");
     const shoreLines = shorelineLines(combined?.value?.shorelineIntersection);
     if (shoreLines.length > 0) {
       const labeled = shoreLines.reduce(
@@ -154,6 +158,7 @@ export const DistanceToShoreMap: ReportWidget<DistanceToShoreMapSettings> = ({
           emptyMessage={shoreMessage}
           sketchGeojsonUrl={sketchGeojsonUrl}
           basemap={basemap}
+          shorelineColor={overlapColor}
           sketchId={subject?.sketch?.id ?? 0}
         />
       );
@@ -164,6 +169,7 @@ export const DistanceToShoreMap: ReportWidget<DistanceToShoreMapSettings> = ({
         emptyMessage={shoreMessage}
         sketchGeojsonUrl={sketchGeojsonUrl}
         basemap={basemap}
+        shorelineColor={overlapColor}
         sketchId={subject?.sketch?.id ?? 0}
       />
     );
@@ -180,6 +186,7 @@ export const DistanceToShoreMap: ReportWidget<DistanceToShoreMapSettings> = ({
         emptyMessage={t("No shoreline path to display.")}
         sketchGeojsonUrl={sketchGeojsonUrl}
         basemap={basemap}
+        shorelineColor={overlapColor}
         sketchId={subject?.sketch?.id ?? 0}
       />
     );
@@ -194,6 +201,7 @@ export const DistanceToShoreMap: ReportWidget<DistanceToShoreMapSettings> = ({
       emptyMessage={t("No shoreline path to display.")}
       sketchGeojsonUrl={sketchGeojsonUrl}
       basemap={basemap}
+      shorelineColor={overlapColor}
       sketchId={subject?.sketch?.id ?? 0}
     />
   );
@@ -234,6 +242,25 @@ export const DistanceToShoreMapTooltipControls: ReportWidgetTooltipControls = ({
           })
         }
       />
+      <label className="flex items-center gap-2 text-sm text-gray-800">
+        <span className="font-light text-gray-400 whitespace-nowrap">
+          {t("Overlap color")}
+        </span>
+        <input
+          type="color"
+          aria-label={t("Overlap color")}
+          value={shorelineOverlapColor(componentSettings?.overlapColor)}
+          className="h-6 w-8 cursor-pointer rounded border border-gray-200 bg-white p-0.5"
+          onChange={(event) =>
+            onUpdate({
+              componentSettings: {
+                ...componentSettings,
+                overlapColor: event.target.value,
+              },
+            })
+          }
+        />
+      </label>
       <LabeledDropdown
         label={t("Basemap")}
         value={basemap}

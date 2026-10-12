@@ -15,10 +15,38 @@ type DistanceToPointSearchFieldsProps = {
   onUpdateDependencyParameters: (
     updateFn: (dependency: MetricDependency) => MetricDependencyParameters
   ) => void;
+  /** Inline metrics always search for the single nearest point. */
+  showMaxMatches?: boolean;
 };
 
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
+}
+
+type WaterPathResolution = "low" | "medium" | "high";
+
+function storedResolution(
+  parameters: MetricDependencyParameters | undefined
+): WaterPathResolution {
+  return parameters?.resolution === "low" || parameters?.resolution === "medium"
+    ? parameters.resolution
+    : "high";
+}
+
+function commitWaterPathParameters(
+  onUpdateDependencyParameters: DistanceToPointSearchFieldsProps["onUpdateDependencyParameters"],
+  patch: {
+    maxResults?: number;
+    maxDistanceKm?: number;
+    resolution?: WaterPathResolution;
+  }
+) {
+  onUpdateDependencyParameters((dependency) => {
+    if (dependency.type !== "distance_to_features_over_water") {
+      return { ...dependency.parameters };
+    }
+    return { ...dependency.parameters, ...patch };
+  });
 }
 
 /**
@@ -28,6 +56,7 @@ function clamp(value: number, min: number, max: number): number {
 export function DistanceToPointSearchFields({
   metrics,
   onUpdateDependencyParameters,
+  showMaxMatches = true,
 }: DistanceToPointSearchFieldsProps) {
   const { t } = useTranslation("admin:reports");
   const parameters = metrics[0]?.parameters;
@@ -40,10 +69,6 @@ export function DistanceToPointSearchFields({
     Math.abs(parameters.maxDistanceKm - legacyDefaultKm) < 1e-3
       ? DEFAULT_WATER_PATH_DISTANCE_KM
       : parameters.maxDistanceKm;
-  const storedResolution =
-    parameters?.resolution === "low" || parameters?.resolution === "medium"
-      ? parameters.resolution
-      : "high";
   const [resultsText, setResultsText] = useState(String(storedResults));
   const [kmText, setKmText] = useState(String(storedKm));
 
@@ -54,6 +79,15 @@ export function DistanceToPointSearchFields({
   useEffect(() => {
     setKmText(String(storedKm));
   }, [storedKm]);
+
+  const pinnedSingleResult = useRef(false);
+  useEffect(() => {
+    if (showMaxMatches || pinnedSingleResult.current || storedResults === 1) {
+      return;
+    }
+    pinnedSingleResult.current = true;
+    commitWaterPathParameters(onUpdateDependencyParameters, { maxResults: 1 });
+  }, [onUpdateDependencyParameters, showMaxMatches, storedResults]);
 
   const migratedLegacyKm = useRef(false);
   useEffect(() => {
@@ -79,21 +113,16 @@ export function DistanceToPointSearchFields({
   const commit = (patch: {
     maxResults?: number;
     maxDistanceKm?: number;
-    resolution?: "low" | "medium" | "high";
   }) => {
-    onUpdateDependencyParameters((dependency) => {
-      if (dependency.type !== "distance_to_features_over_water") {
-        return { ...dependency.parameters };
-      }
-      return { ...dependency.parameters, ...patch };
-    });
+    commitWaterPathParameters(onUpdateDependencyParameters, patch);
   };
 
   return (
     <div className="flex items-center gap-3">
+      {showMaxMatches ? (
       <label className="flex items-center gap-2 text-sm text-gray-800">
         <span className="font-light text-gray-400 whitespace-nowrap">
-          {t("Matches")}
+          {t("Max matches")}
         </span>
         <input
           type="number"
@@ -101,7 +130,7 @@ export function DistanceToPointSearchFields({
           max={MAX_WATER_PATH_RESULTS}
           step={1}
           value={resultsText}
-          aria-label={t("Matches")}
+          aria-label={t("Max matches")}
           className="w-14 rounded border border-gray-200 px-1.5 py-0.5 text-sm"
           onChange={(event) => setResultsText(event.target.value)}
           onBlur={() => {
@@ -121,6 +150,7 @@ export function DistanceToPointSearchFields({
           }}
         />
       </label>
+      ) : null}
       <label className="flex items-center gap-2 text-sm text-gray-800">
         <span className="font-light text-gray-400 whitespace-nowrap">
           {t("Max km")}
@@ -151,23 +181,38 @@ export function DistanceToPointSearchFields({
           }}
         />
       </label>
-      <LabeledDropdown
-        label={t("Resolution")}
-        value={storedResolution}
-        ariaLabel={t("Resolution")}
-        options={[
-          { value: "low", label: t("Low") },
-          { value: "medium", label: t("Medium") },
-          { value: "high", label: t("High") },
-        ]}
-        onChange={(value) => {
-          const next =
-            value === "low" || value === "medium" || value === "high"
-              ? value
-              : "high";
-          if (next !== storedResolution) commit({ resolution: next });
-        }}
-      />
     </div>
+  );
+}
+
+/** Coarser routes recalculate the overlay, so this stays out of the main row. */
+export function DistanceToPointResolutionField({
+  metrics,
+  onUpdateDependencyParameters,
+}: DistanceToPointSearchFieldsProps) {
+  const { t } = useTranslation("admin:reports");
+  const resolution = storedResolution(metrics[0]?.parameters);
+  return (
+    <LabeledDropdown
+      label={t("Search resolution")}
+      value={resolution}
+      ariaLabel={t("Search resolution")}
+      options={[
+        { value: "low", label: t("Low") },
+        { value: "medium", label: t("Medium") },
+        { value: "high", label: t("High") },
+      ]}
+      onChange={(value) => {
+        const next =
+          value === "low" || value === "medium" || value === "high"
+            ? value
+            : "high";
+        if (next !== resolution) {
+          commitWaterPathParameters(onUpdateDependencyParameters, {
+            resolution: next,
+          });
+        }
+      }}
+    />
   );
 }

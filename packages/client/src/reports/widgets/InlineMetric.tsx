@@ -30,7 +30,10 @@ import {
   TooltipPopoverContent,
 } from "../../editor/TooltipMenu";
 import { LabeledDropdown } from "./LabeledDropdown";
-import { DistanceToPointSearchFields } from "./DistanceToPointSearchFields";
+import {
+  DistanceToPointResolutionField,
+  DistanceToPointSearchFields,
+} from "./DistanceToPointSearchFields";
 import { UnitSelector } from "./UnitSelector";
 import {
   applyBufferSettingsToParameters,
@@ -353,8 +356,8 @@ export type InlineMetricComponentSettings = {
   pluralizedCountLabels?: PluralizedMessagesByLang;
   pluralizedDistinctValueLabels?: PluralizedMessagesByLang;
   column?: string;
-  /** Point-feature property used as the place name, e.g. PORT_NAME. */
-  labelColumn?: string;
+  /** Point-feature property used as the place name, e.g. PORT_NAME. Null shows the distance only. */
+  labelColumn?: string | null;
   /** For geography_overlay_area: geography id to report on. undefined/"auto" = primary clipping geography. */
   geographyId?: number | "auto";
 };
@@ -1340,6 +1343,17 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
 
   const { filteredSources: sources } = useOverlaySources(dependencies);
   const relatedOverlay = useRelatedOverlay(dependencies);
+  const pointLabelColumnOptions = useMemo(() => {
+    if (presentation !== "distance_to_features_over_water") return [];
+    const layer = (sources?.[0]?.geostats as { layers?: unknown[] } | null)
+      ?.layers?.[0];
+    if (!isGeostatsLayer(layer) || !layer.attributes) return [];
+    return layer.attributes
+      .map((attr) => attr.attribute)
+      .filter((name) => name.length > 0)
+      .sort()
+      .map((name) => ({ value: name, label: name }));
+  }, [presentation, sources]);
 
   const bufferSettings = useMemo(
     () => getBufferSettingsFromDependencies(dependencies),
@@ -1663,6 +1677,7 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
         <DistanceToPointSearchFields
           metrics={(node.attrs?.metrics || []) as MetricDependency[]}
           onUpdateDependencyParameters={onUpdateDependencyParameters}
+          showMaxMatches={false}
         />
       )}
       {presentation !== "count" && (
@@ -1885,6 +1900,42 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
           </span>
         </div>
 
+        {presentation === "distance_to_features_over_water" && (
+          <>
+            <DistanceToPointResolutionField
+              metrics={dependencies}
+              onUpdateDependencyParameters={onUpdateDependencyParameters}
+            />
+            <LabeledDropdown
+              label={t("label column")}
+              value={componentSettings?.labelColumn || "none"}
+              ariaLabel={t("label column")}
+              truncateValue={false}
+              options={[
+                { value: "none", label: t("None") },
+                ...pointLabelColumnOptions,
+              ]}
+              onChange={(value) => {
+                onUpdate({
+                  componentSettings: {
+                    ...componentSettings,
+                    labelColumn: value === "none" ? null : value,
+                  },
+                });
+                if (value === "none") return;
+                onUpdateDependencyParameters((dependency) => {
+                  if (dependency.type !== "distance_to_features_over_water") {
+                    return { ...dependency.parameters };
+                  }
+                  return {
+                    ...dependency.parameters,
+                    includedColumns: [value],
+                  };
+                });
+              }}
+            />
+          </>
+        )}
         {relatedOverlay && (
           <>
             <div className="flex">

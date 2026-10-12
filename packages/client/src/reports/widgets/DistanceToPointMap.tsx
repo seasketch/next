@@ -26,7 +26,10 @@ import {
   isDistancePathBasemap,
 } from "./DistancePathMap";
 import { PromotedDistanceMap } from "./PromotedDistanceMap";
-import { DistanceToPointSearchFields } from "./DistanceToPointSearchFields";
+import {
+  DistanceToPointResolutionField,
+  DistanceToPointSearchFields,
+} from "./DistanceToPointSearchFields";
 import { LabeledDropdown } from "./LabeledDropdown";
 import { UnitSelector } from "./UnitSelector";
 import { ReportWidget } from "./widgets";
@@ -362,24 +365,6 @@ export const DistanceToPointMapTooltipControls: ReportWidgetTooltipControls = ({
         metrics={metrics}
         onUpdateDependencyParameters={onUpdateDependencyParameters}
       />
-      <LabeledDropdown
-        label={t("Show")}
-        value={display}
-        ariaLabel={t("Show")}
-        options={[
-          { value: "both", label: t("Map and table") },
-          { value: "map", label: t("Route map") },
-          { value: "table", label: t("Table") },
-        ]}
-        onChange={(value) =>
-          onUpdate({
-            componentSettings: {
-              ...componentSettings,
-              display: distanceDisplay(value),
-            },
-          })
-        }
-      />
       {labelColumnOptions.length > 0 ? (
         <LabeledDropdown
           label={t("label column")}
@@ -455,6 +440,29 @@ export const DistanceToPointMapTooltipControls: ReportWidgetTooltipControls = ({
             {t("Distance to Point Map")}
           </span>
         </div>
+        <DistanceToPointResolutionField
+          metrics={metrics}
+          onUpdateDependencyParameters={onUpdateDependencyParameters}
+        />
+        <LabeledDropdown
+          label={t("Show")}
+          value={display}
+          ariaLabel={t("Show")}
+          truncateValue={false}
+          options={[
+            { value: "both", label: t("Map and table") },
+            { value: "map", label: t("Route map") },
+            { value: "table", label: t("Table") },
+          ]}
+          onChange={(value) =>
+            onUpdate({
+              componentSettings: {
+                ...componentSettings,
+                display: distanceDisplay(value),
+              },
+            })
+          }
+        />
       </TooltipMorePopover>
     </div>
   );

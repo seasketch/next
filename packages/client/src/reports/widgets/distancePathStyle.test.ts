@@ -51,7 +51,27 @@ describe("distancePathReportStyle", () => {
       (layer) => layer.id === "distance-path-shoreline"
     );
     expect(shoreline && "paint" in shoreline && shoreline.paint).toMatchObject({
+      "line-color": "#f97316",
       "line-width": 5,
+    });
+  });
+
+  it("uses a custom overlap color on the shoreline stroke and label", () => {
+    const style = distancePathReportStyle({
+      collection: line,
+      shorelineColor: "#112233",
+    });
+    const stroke = style.layers.find(
+      (layer) => layer.id === "distance-path-shoreline"
+    );
+    const label = style.layers.find(
+      (layer) => layer.id === "distance-path-shoreline-label"
+    );
+    expect(stroke && "paint" in stroke && stroke.paint).toMatchObject({
+      "line-color": "#112233",
+    });
+    expect(label && "paint" in label && label.paint).toMatchObject({
+      "text-color": "#112233",
     });
   });
 });

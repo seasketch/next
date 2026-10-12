@@ -28,6 +28,7 @@ import { AnyLayer } from "mapbox-gl";
 import { EditorView } from "prosemirror-view";
 import {
   DEFAULT_WATER_PATH_DISTANCE_KM,
+  DEFAULT_WATER_PATH_MAX_RESULTS,
   MetricDependency,
   OUS_DEMOGRAPHICS_DEFAULT_GROUP_BY,
 } from "overlay-engine";
@@ -1307,7 +1308,7 @@ function insertDistanceToPoint(
     subjectType: "fragments" as const,
     stableId,
     parameters: {
-      maxResults: 3,
+      maxResults: block ? DEFAULT_WATER_PATH_MAX_RESULTS : 1,
       maxDistanceKm: DEFAULT_WATER_PATH_DISTANCE_KM,
       ...(labelColumn ? { includedColumns: [labelColumn] } : {}),
     },

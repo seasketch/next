@@ -8,7 +8,7 @@ export const DISTANCE_PATH_SOURCE_ID = "distance-path";
 export const DISTANCE_PATH_SKETCH_SOURCE_ID = "distance-path-sketch";
 
 const PATH_COLOR = "#2563eb";
-const SHORELINE_COLOR = "#f97316";
+export const DEFAULT_SHORELINE_OVERLAP_COLOR = "#f97316";
 const ORIGIN_COLOR = "#0f172a";
 const DEST_COLOR = "#dc2626";
 const SATELLITE_SKETCH_COLOR = "#ffffff";
@@ -29,11 +29,19 @@ const PATH_LINE_COLOR: Expression = [
  * The same sources and layers the small report map draws, so the project map
  * can show them through `useReportStyleToggle`.
  */
+export function shorelineOverlapColor(value: unknown): string {
+  return typeof value === "string" && /^#[0-9a-fA-F]{6}$/.test(value)
+    ? value
+    : DEFAULT_SHORELINE_OVERLAP_COLOR;
+}
+
 export function distancePathReportStyle(args: {
   collection: FeatureCollection<LineString | Point>;
   sketchGeojsonUrl?: string | null;
   basemap?: DistancePathBasemap;
+  shorelineColor?: string;
 }): ReportMapStyle {
+  const shorelineColor = shorelineOverlapColor(args.shorelineColor);
   const basemap = args.basemap ?? "streets";
   const sketchColor =
     basemap === "satellite" ? SATELLITE_SKETCH_COLOR : ORIGIN_COLOR;
@@ -194,7 +202,7 @@ export function distancePathReportStyle(args: {
       source: DISTANCE_PATH_SOURCE_ID,
       filter: ["==", ["get", "kind"], "shoreline"],
       paint: {
-        "line-color": SHORELINE_COLOR,
+        "line-color": shorelineColor,
         "line-width": 5,
       },
       layout: {
@@ -218,7 +226,7 @@ export function distancePathReportStyle(args: {
         "text-optional": false,
       },
       paint: {
-        "text-color": "#9a3412",
+        "text-color": shorelineColor,
         "text-halo-color": "#ffffff",
         "text-halo-width": 2,
       },

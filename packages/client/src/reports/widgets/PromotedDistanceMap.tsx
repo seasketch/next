@@ -13,7 +13,10 @@ import {
   FIT_PADDING,
   usePathCollection,
 } from "./DistancePathMap";
-import { distancePathReportStyle } from "./distancePathStyle";
+import {
+  DEFAULT_SHORELINE_OVERLAP_COLOR,
+  distancePathReportStyle,
+} from "./distancePathStyle";
 
 function fitPair(
   bounds: ReturnType<typeof boundsForCollection>
@@ -87,6 +90,7 @@ export function PromotedDistanceMap({
   caption,
   sketchGeojsonUrl,
   basemap = "streets",
+  shorelineColor = DEFAULT_SHORELINE_OVERLAP_COLOR,
   fitPaddingTop = FIT_PADDING,
   heightClass = "h-56",
   endpoints = true,
@@ -100,6 +104,7 @@ export function PromotedDistanceMap({
   caption?: string;
   sketchGeojsonUrl?: string | null;
   basemap?: DistancePathBasemap;
+  shorelineColor?: string;
   fitPaddingTop?: number;
   heightClass?: string;
   endpoints?: boolean;
@@ -123,8 +128,9 @@ export function PromotedDistanceMap({
             collection,
             sketchGeojsonUrl,
             basemap,
+            shorelineColor,
           }),
-    [adminMode, bounds, collection, sketchGeojsonUrl, basemap]
+    [adminMode, bounds, collection, sketchGeojsonUrl, basemap, shorelineColor]
   );
   const { visible, setVisible, canPromote } = useReportStyleToggle(
     card.cardId,
@@ -156,6 +162,7 @@ export function PromotedDistanceMap({
       caption={caption}
       sketchGeojsonUrl={sketchGeojsonUrl}
       basemap={basemap}
+      shorelineColor={shorelineColor}
       fitPaddingTop={fitPaddingTop}
       heightClass={heightClass}
       endpoints={endpoints}

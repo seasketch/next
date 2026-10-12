@@ -5,8 +5,10 @@ import { useTranslation } from "react-i18next";
 import { ReportUIStateContext } from "../context/ReportUIStateContext";
 import { shiftLongitudesToShortArc } from "./distancePathBounds";
 import {
+  DEFAULT_SHORELINE_OVERLAP_COLOR,
   DISTANCE_PATH_SOURCE_ID,
   distancePathReportStyle,
+  shorelineOverlapColor,
 } from "./distancePathStyle";
 
 const TOKEN = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN;
@@ -228,6 +230,7 @@ export function DistancePathMap({
   caption,
   sketchGeojsonUrl,
   basemap = "streets",
+  shorelineColor = DEFAULT_SHORELINE_OVERLAP_COLOR,
   fitPaddingTop = FIT_PADDING,
   fitPaddingBottom = FIT_PADDING,
   heightClass = "h-56",
@@ -245,6 +248,8 @@ export function DistancePathMap({
   /** Existing `/sketches/:id.geojson.json` URL. Mapbox fetches it; not stored on the metric. */
   sketchGeojsonUrl?: string | null;
   basemap?: DistancePathBasemap;
+  /** Stroke and label color for a shoreline overlap. Defaults to orange. */
+  shorelineColor?: string;
   /**
    * Top inset for the initial fit. Larger when a control overlays the map,
    * so routes are placed in the visible area below it.
@@ -278,6 +283,8 @@ export function DistancePathMap({
   const fitPaddingBottomRef = useRef(fitPaddingBottom);
   fitPaddingTopRef.current = fitPaddingTop;
   fitPaddingBottomRef.current = fitPaddingBottom;
+  const shorelineColorRef = useRef(shorelineOverlapColor(shorelineColor));
+  shorelineColorRef.current = shorelineOverlapColor(shorelineColor);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -319,6 +326,7 @@ export function DistancePathMap({
         collection: collectionRef.current,
         sketchGeojsonUrl,
         basemap,
+        shorelineColor: shorelineColorRef.current,
       });
       for (const [id, source] of Object.entries(style.sources)) {
         map.addSource(id, source);
@@ -351,6 +359,22 @@ export function DistancePathMap({
     // collection is applied in a separate effect after load
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [Boolean(bounds), Boolean(TOKEN), sketchGeojsonUrl, basemap]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+    const color = shorelineOverlapColor(shorelineColor);
+    if (map.getLayer("distance-path-shoreline")) {
+      map.setPaintProperty("distance-path-shoreline", "line-color", color);
+    }
+    if (map.getLayer("distance-path-shoreline-label")) {
+      map.setPaintProperty(
+        "distance-path-shoreline-label",
+        "text-color",
+        color
+      );
+    }
+  }, [shorelineColor]);
 
   useEffect(() => {
     const map = mapRef.current;
