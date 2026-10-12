@@ -23,9 +23,9 @@ import { LengthUnit } from "../utils/units";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
 import {
   DistancePathBasemap,
-  DistancePathMap,
   isDistancePathBasemap,
 } from "./DistancePathMap";
+import { PromotedDistanceMap } from "./PromotedDistanceMap";
 import { DistanceToPointSearchFields } from "./DistanceToPointSearchFields";
 import { LabeledDropdown } from "./LabeledDropdown";
 import { UnitSelector } from "./UnitSelector";
@@ -242,37 +242,36 @@ export const DistanceToPointMap: ReportWidget<DistanceToPointMapSettings> = ({
           : undefined
       }
     >
-      {showMap ? tabs : null}
-      {showMap ? (
-        <div
-          className={
-            display === "both"
-              ? showToggle
-                ? "h-full min-h-0 [&>div]:my-0 [&>div]:h-full [&>div>div]:h-full [&>div>div]:rounded-none [&>div>div]:border-0"
-                : "[&>div]:my-0 [&>div>div]:rounded-none [&>div>div]:border-0"
-              : undefined
+      {tabs}
+      <div
+        className={
+          showMap && display === "both"
+            ? showToggle
+              ? "h-full min-h-0 [&>div]:my-0 [&>div]:h-full [&_[data-distance-map]]:h-full [&_[data-distance-map]]:rounded-none [&_[data-distance-map]]:border-0"
+              : "[&>div]:my-0 [&_[data-distance-map]]:rounded-none [&_[data-distance-map]]:border-0"
+            : undefined
+        }
+      >
+        <PromotedDistanceMap
+          collapsed={!showMap}
+          paths={rows.map((row) => row.feature.geojsonLine)}
+          labels={rows.map((row) => row.label)}
+          distances={
+            hideDistance
+              ? undefined
+              : rows.map((row) =>
+                  lineFormatters.distance(row.feature.meters / 1000)
+                )
           }
-        >
-          <DistancePathMap
-            paths={rows.map((row) => row.feature.geojsonLine)}
-            labels={rows.map((row) => row.label)}
-            distances={
-              hideDistance
-                ? undefined
-                : rows.map((row) =>
-                    lineFormatters.distance(row.feature.meters / 1000)
-                  )
-            }
-            emptyMessage={t("No water route to a point feature.")}
-            caption={display === "map" ? caption || undefined : undefined}
-            sketchGeojsonUrl={sketchGeojsonUrl}
-            basemap={basemap}
-            fitPaddingTop={mapFitPaddingTop}
-            heightClass={showToggle ? "h-full" : routeMapHeight}
-          />
-        </div>
-      ) : null}
-      {showMap ? null : tabs}
+          emptyMessage={t("No water route to a point feature.")}
+          caption={display === "map" ? caption || undefined : undefined}
+          sketchGeojsonUrl={sketchGeojsonUrl}
+          basemap={basemap}
+          fitPaddingTop={mapFitPaddingTop}
+          heightClass={showToggle ? "h-full" : routeMapHeight}
+          sketchId={subject?.sketch?.id ?? 0}
+        />
+      </div>
       {showTable ? (
         <div
           className={

@@ -20,9 +20,9 @@ import { LengthUnit } from "../utils/units";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
 import {
   DistancePathBasemap,
-  DistancePathMap,
   isDistancePathBasemap,
 } from "./DistancePathMap";
+import { PromotedDistanceMap } from "./PromotedDistanceMap";
 import { LabeledDropdown } from "./LabeledDropdown";
 import { UnitSelector } from "./UnitSelector";
 import { ReportWidget } from "./widgets";
@@ -33,6 +33,17 @@ type DistanceToShoreMapSettings = {
   unitDisplay?: "long" | "short";
   basemap?: DistancePathBasemap;
 };
+
+function lineSpan(line: Feature<LineString>): number {
+  const coords = line.geometry.coordinates;
+  let span = 0;
+  for (let i = 1; i < coords.length; i++) {
+    const dx = coords[i]![0] - coords[i - 1]![0];
+    const dy = coords[i]![1] - coords[i - 1]![1];
+    span += Math.hypot(dx, dy);
+  }
+  return span;
+}
 
 function isPathFeature(value: unknown): value is Feature<LineString> {
   if (!value || typeof value !== "object") return false;
@@ -128,23 +139,32 @@ export const DistanceToShoreMap: ReportWidget<DistanceToShoreMapSettings> = ({
     const shoreMessage = t("Sketch is on land or touching the shoreline.");
     const shoreLines = shorelineLines(combined?.value?.shorelineIntersection);
     if (shoreLines.length > 0) {
+      const labeled = shoreLines.reduce(
+        (best, line, index) =>
+          lineSpan(line) > lineSpan(shoreLines[best]!) ? index : best,
+        0
+      );
       return (
-        <DistancePathMap
+        <PromotedDistanceMap
           paths={shoreLines}
+          labels={shoreLines.map((_, index) =>
+            index === labeled ? shoreMessage : null
+          )}
           endpoints={false}
           emptyMessage={shoreMessage}
-          caption={shoreMessage}
           sketchGeojsonUrl={sketchGeojsonUrl}
           basemap={basemap}
+          sketchId={subject?.sketch?.id ?? 0}
         />
       );
     }
     return (
-      <DistancePathMap
+      <PromotedDistanceMap
         paths={[]}
         emptyMessage={shoreMessage}
         sketchGeojsonUrl={sketchGeojsonUrl}
         basemap={basemap}
+        sketchId={subject?.sketch?.id ?? 0}
       />
     );
   }
@@ -155,17 +175,18 @@ export const DistanceToShoreMap: ReportWidget<DistanceToShoreMapSettings> = ({
     !isPathFeature(path)
   ) {
     return (
-      <DistancePathMap
+      <PromotedDistanceMap
         paths={[]}
         emptyMessage={t("No shoreline path to display.")}
         sketchGeojsonUrl={sketchGeojsonUrl}
         basemap={basemap}
+        sketchId={subject?.sketch?.id ?? 0}
       />
     );
   }
 
   return (
-    <DistancePathMap
+    <PromotedDistanceMap
       paths={[path]}
       labels={
         hideDistance ? undefined : [formatters.distance(meters / 1000)]
@@ -173,6 +194,7 @@ export const DistanceToShoreMap: ReportWidget<DistanceToShoreMapSettings> = ({
       emptyMessage={t("No shoreline path to display.")}
       sketchGeojsonUrl={sketchGeojsonUrl}
       basemap={basemap}
+      sketchId={subject?.sketch?.id ?? 0}
     />
   );
 };

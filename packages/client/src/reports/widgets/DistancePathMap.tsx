@@ -1,37 +1,20 @@
-import { useContext, useEffect, useMemo, useRef } from "react";
+import { ReactNode, useContext, useEffect, useMemo, useRef } from "react";
 import { Feature, FeatureCollection, LineString, Point } from "geojson";
-import mapboxgl, {
-  Expression,
-  LngLatBounds,
-  Map as MapboxMap,
-} from "mapbox-gl";
+import mapboxgl, { LngLatBounds, Map as MapboxMap } from "mapbox-gl";
 import { useTranslation } from "react-i18next";
 import { ReportUIStateContext } from "../context/ReportUIStateContext";
+import { shiftLongitudesToShortArc } from "./distancePathBounds";
+import {
+  DISTANCE_PATH_SOURCE_ID,
+  distancePathReportStyle,
+} from "./distancePathStyle";
 
 const TOKEN = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN;
 if (TOKEN) {
   mapboxgl.accessToken = TOKEN;
 }
 
-const SOURCE_ID = "distance-path";
-const SKETCH_SOURCE_ID = "distance-path-sketch";
-const LAYER_SKETCH_FILL = "distance-path-sketch-fill";
-const LAYER_SKETCH_LINE = "distance-path-sketch-line";
-const LAYER_CASING = "distance-path-casing";
-const LAYER_LINE = "distance-path";
-const LAYER_ORIGIN = "distance-path-origin";
-const LAYER_DEST = "distance-path-dest";
-const LAYER_LABEL = "distance-path-label";
-const LAYER_DISTANCE = "distance-path-distance";
-const LAYER_SHORELINE_HALO = "distance-path-shoreline-halo";
-const LAYER_SHORELINE = "distance-path-shoreline";
-
-const PATH_COLOR = "#2563eb";
-const SHORELINE_COLOR = "#f97316";
-const ORIGIN_COLOR = "#0f172a";
-const DEST_COLOR = "#dc2626";
-/** Light outline so the sketch stays visible on dark satellite imagery. */
-const SATELLITE_SKETCH_COLOR = "#ffffff";
+const SOURCE_ID = DISTANCE_PATH_SOURCE_ID;
 
 export type DistancePathBasemap = "light" | "streets" | "satellite";
 
@@ -60,19 +43,6 @@ function unwrapRing(coords: number[][]): number[][] {
   return out;
 }
 
-/** Same ramp as the route stroke, so a distance label reads as part of its line. */
-const PATH_LINE_COLOR: Expression = [
-  "match",
-  ["get", "rank"],
-  1,
-  "#7c3aed",
-  2,
-  "#0f766e",
-  3,
-  "#b45309",
-  PATH_COLOR,
-];
-
 function pathCollection(
   paths: Feature<LineString>[],
   labels?: Array<string | null>,
@@ -94,7 +64,19 @@ function pathCollection(
       geometry: { type: "LineString", coordinates: coords },
     });
     rank += 1;
-    if (!endpoints) continue;
+    if (!endpoints) {
+      if (name) {
+        features.push({
+          type: "Feature",
+          properties: { kind: "shoreline-label", label: name },
+          geometry: {
+            type: "Point",
+            coordinates: coords[Math.floor((coords.length - 1) / 2)]!,
+          },
+        });
+      }
+      continue;
+    }
     features.push({
       type: "Feature",
       properties: { kind: "origin" },
@@ -109,33 +91,41 @@ function pathCollection(
   return { type: "FeatureCollection", features };
 }
 
-function boundsForCollection(
+export function boundsForCollection(
   collection: FeatureCollection<LineString | Point>
 ): LngLatBounds | null {
-  const bounds = new LngLatBounds();
-  let any = false;
+  const points: Array<[number, number]> = [];
   for (const f of collection.features) {
     if (f.geometry.type === "Point") {
-      bounds.extend(f.geometry.coordinates as [number, number]);
-      any = true;
+      const c = f.geometry.coordinates;
+      points.push([c[0]!, c[1]!]);
     } else {
       for (const c of f.geometry.coordinates) {
-        bounds.extend(c as [number, number]);
-        any = true;
+        points.push([c[0]!, c[1]!]);
       }
     }
   }
-  return any ? bounds : null;
+  if (points.length === 0) return null;
+  const bounds = new LngLatBounds();
+  for (const point of shiftLongitudesToShortArc(points)) {
+    bounds.extend(point);
+  }
+  return bounds;
 }
 
-const FIT_PADDING = 40;
+export const FIT_PADDING = 40;
 
-function fitMap(map: MapboxMap, bounds: LngLatBounds, paddingTop = FIT_PADDING) {
+function fitMap(
+  map: MapboxMap,
+  bounds: LngLatBounds,
+  paddingTop = FIT_PADDING,
+  paddingBottom = FIT_PADDING
+) {
   map.resize();
   map.fitBounds(bounds, {
     padding: {
       top: paddingTop,
-      bottom: FIT_PADDING,
+      bottom: paddingBottom,
       left: FIT_PADDING,
       right: FIT_PADDING,
     },
@@ -171,7 +161,7 @@ function boundsSignature(bounds: LngLatBounds | null): string | null {
   return `${sw.lng},${sw.lat},${ne.lng},${ne.lat}`;
 }
 
-function usePathCollection(
+export function usePathCollection(
   paths: Feature<LineString>[],
   labels?: Array<string | null>,
   distances?: Array<string | null>,
@@ -239,8 +229,11 @@ export function DistancePathMap({
   sketchGeojsonUrl,
   basemap = "streets",
   fitPaddingTop = FIT_PADDING,
+  fitPaddingBottom = FIT_PADDING,
   heightClass = "h-56",
   endpoints = true,
+  interactive = true,
+  overlay = null,
 }: {
   paths: Feature<LineString>[];
   /** Name drawn at each path's destination, in the same order as `paths`. */
@@ -257,10 +250,16 @@ export function DistancePathMap({
    * so routes are placed in the visible area below it.
    */
   fitPaddingTop?: number;
+  /** Bottom inset. Larger when a control overlays the bottom of the map. */
+  fitPaddingBottom?: number;
   /** Tailwind height for the map canvas. Defaults to `h-56`. */
   heightClass?: string;
   /** Draw origin and destination dots. Off for a shoreline intersection. */
   endpoints?: boolean;
+  /** False while the same layers are showing on the project map. */
+  interactive?: boolean;
+  /** Control drawn over the map canvas, above the inactive treatment. */
+  overlay?: ReactNode;
 }) {
   const { t } = useTranslation("reports");
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -270,12 +269,15 @@ export function DistancePathMap({
   const collection = usePathCollection(paths, labels, distances, endpoints);
   const bounds = useMemo(() => boundsForCollection(collection), [collection]);
   const boundsKey = boundsSignature(bounds);
+  const hasBounds = Boolean(bounds);
   const collectionRef = useRef(collection);
   const boundsRef = useRef(bounds);
   collectionRef.current = collection;
   boundsRef.current = bounds;
   const fitPaddingTopRef = useRef(fitPaddingTop);
+  const fitPaddingBottomRef = useRef(fitPaddingBottom);
   fitPaddingTopRef.current = fitPaddingTop;
+  fitPaddingBottomRef.current = fitPaddingBottom;
 
   useEffect(() => {
     const el = containerRef.current;
@@ -302,172 +304,28 @@ export function DistancePathMap({
     const fitIfSized = () => {
       const nextBounds = boundsRef.current;
       if (el.clientWidth > 0 && nextBounds) {
-        fitMap(map, nextBounds, fitPaddingTopRef.current);
+        fitMap(
+          map,
+          nextBounds,
+          fitPaddingTopRef.current,
+          fitPaddingBottomRef.current
+        );
         fittedToSize = true;
       }
     };
 
     const onLoad = () => {
-      if (sketchGeojsonUrl) {
-        const sketchColor =
-          basemap === "satellite" ? SATELLITE_SKETCH_COLOR : ORIGIN_COLOR;
-        map.addSource(SKETCH_SOURCE_ID, {
-          type: "geojson",
-          data: sketchGeojsonUrl,
-        });
-        map.addLayer({
-          id: LAYER_SKETCH_FILL,
-          type: "fill",
-          source: SKETCH_SOURCE_ID,
-          filter: [
-            "match",
-            ["geometry-type"],
-            ["Polygon", "MultiPolygon"],
-            true,
-            false,
-          ],
-          paint: {
-            "fill-color": sketchColor,
-            "fill-opacity": basemap === "satellite" ? 0.18 : 0.15,
-          },
-        });
-        map.addLayer({
-          id: LAYER_SKETCH_LINE,
-          type: "line",
-          source: SKETCH_SOURCE_ID,
-          paint: {
-            "line-color": sketchColor,
-            "line-width": basemap === "satellite" ? 2 : 1.5,
-            "line-opacity": basemap === "satellite" ? 0.95 : 0.85,
-          },
-        });
+      const style = distancePathReportStyle({
+        collection: collectionRef.current,
+        sketchGeojsonUrl,
+        basemap,
+      });
+      for (const [id, source] of Object.entries(style.sources)) {
+        map.addSource(id, source);
       }
-      map.addSource(SOURCE_ID, {
-        type: "geojson",
-        data: collectionRef.current,
-      });
-      map.addLayer({
-        id: LAYER_CASING,
-        type: "line",
-        source: SOURCE_ID,
-        filter: ["==", ["get", "kind"], "path"],
-        paint: {
-          "line-color": "#ffffff",
-          "line-width": 6,
-          "line-opacity": 0.95,
-        },
-      });
-      map.addLayer({
-        id: LAYER_LINE,
-        type: "line",
-        source: SOURCE_ID,
-        filter: ["==", ["get", "kind"], "path"],
-        paint: {
-          "line-color": PATH_LINE_COLOR,
-          "line-width": 3,
-        },
-      });
-      map.addLayer({
-        id: LAYER_DISTANCE,
-        type: "symbol",
-        source: SOURCE_ID,
-        filter: [
-          "all",
-          ["==", ["get", "kind"], "path"],
-          ["!=", ["get", "distance"], ""],
-        ],
-        layout: {
-          "symbol-placement": "line",
-          "symbol-spacing": 220,
-          "text-field": ["get", "distance"],
-          "text-size": 11,
-          "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
-          "text-rotation-alignment": "map",
-          "text-pitch-alignment": "viewport",
-          // "text-keep-upright": true,
-          "text-max-angle": 45,
-          "text-padding": 2,
-          "text-optional": true,
-          "symbol-sort-key": ["get", "rank"],
-        },
-        paint: {
-          "text-color": PATH_LINE_COLOR,
-          "text-halo-color": "#ffffff",
-          "text-halo-width": 1.6,
-        },
-      });
-      map.addLayer({
-        id: LAYER_ORIGIN,
-        type: "circle",
-        source: SOURCE_ID,
-        filter: ["==", ["get", "kind"], "origin"],
-        paint: {
-          "circle-radius": 5,
-          "circle-color": ORIGIN_COLOR,
-          "circle-stroke-width": 2,
-          "circle-stroke-color": "#ffffff",
-        },
-      });
-      map.addLayer({
-        id: LAYER_DEST,
-        type: "circle",
-        source: SOURCE_ID,
-        filter: ["==", ["get", "kind"], "destination"],
-        paint: {
-          "circle-radius": 5,
-          "circle-color": DEST_COLOR,
-          "circle-stroke-width": 2,
-          "circle-stroke-color": "#ffffff",
-        },
-      });
-      map.addLayer({
-        id: LAYER_LABEL,
-        type: "symbol",
-        source: SOURCE_ID,
-        filter: ["==", ["get", "kind"], "destination"],
-        layout: {
-          "text-field": ["get", "label"],
-          "text-size": 11,
-          "text-offset": [0, 0.85],
-          "text-anchor": "top",
-          "text-font": ["DIN Offc Pro Medium", "Arial Unicode MS Bold"],
-          "text-optional": true,
-        },
-        paint: {
-          "text-color": "#111827",
-          "text-halo-color": "#ffffff",
-          "text-halo-width": 1.4,
-        },
-      });
-      map.addLayer({
-        id: LAYER_SHORELINE_HALO,
-        type: "line",
-        source: SOURCE_ID,
-        filter: ["==", ["get", "kind"], "shoreline"],
-        paint: {
-          "line-color": "#ffffff",
-          "line-width": 9,
-          "line-opacity": 1,
-        },
-        layout: {
-          "line-cap": "round",
-          "line-join": "round",
-        },
-      });
-      map.addLayer({
-        id: LAYER_SHORELINE,
-        type: "line",
-        source: SOURCE_ID,
-        filter: ["==", ["get", "kind"], "shoreline"],
-        paint: {
-          "line-color": SHORELINE_COLOR,
-          "line-width": 5,
-        },
-        layout: {
-          "line-cap": "round",
-          "line-join": "round",
-        },
-      });
+      for (const layer of style.layers) {
+        map.addLayer(layer);
+      }
       map.resize();
       fitIfSized();
     };
@@ -512,8 +370,30 @@ export function DistancePathMap({
     const nextBounds = boundsRef.current;
     if (!map || !nextBounds) return;
     map.resize();
-    fitMap(map, nextBounds, fitPaddingTopRef.current);
-  }, [printing, boundsKey, fitPaddingTop]);
+    fitMap(
+      map,
+      nextBounds,
+      fitPaddingTopRef.current,
+      fitPaddingBottomRef.current
+    );
+  }, [printing, boundsKey, fitPaddingTop, fitPaddingBottom]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    const controls = [
+      map.scrollZoom,
+      map.boxZoom,
+      map.dragPan,
+      map.doubleClickZoom,
+      map.keyboard,
+    ];
+    if (interactive) {
+      controls.forEach((control) => control.enable());
+    } else {
+      controls.forEach((control) => control.disable());
+    }
+  }, [interactive, hasBounds]);
 
   if (!TOKEN) {
     return (
@@ -533,10 +413,16 @@ export function DistancePathMap({
 
   return (
     <div className="my-2">
-      <div
-        ref={containerRef}
-        className={`${heightClass} w-full overflow-hidden rounded border border-gray-200 [&_.mapboxgl-ctrl-logo]:hidden`}
-      />
+      <div className={`relative ${heightClass}`}>
+        <div
+          ref={containerRef}
+          data-distance-map=""
+          className={`h-full w-full overflow-hidden rounded border border-gray-200 [&_.mapboxgl-ctrl-logo]:hidden${
+            interactive ? "" : " pointer-events-none grayscale opacity-60"
+          }`}
+        />
+        {overlay}
+      </div>
       {caption ? (
         <div className="mt-1.5 whitespace-pre-line text-center text-sm text-gray-700">
           {caption}

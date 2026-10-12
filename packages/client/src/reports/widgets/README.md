@@ -28,8 +28,9 @@ Distance to Shore and Distance to Port are metric widgets. The calculations live
 - The inline forms are `InlineMetric` presentations `distance_to_shore` and `distance_to_features_over_water`.
 - The maps are `DistanceToShoreMap` and `DistanceToPointMap`. Both draw through `DistancePathMap`.
 - Distance to Port and Distance to Port Map are presets of the generic distance-to-point widgets. They reference the World Ports data-library layer (`WORLD_PORTS`). If that layer is not in the project, the editor confirms adding it, then inserts the widget at the cursor position captured before the dialog opened.
-- An offshore shore map labels the shore point with the distance. A sketch on land draws `shorelineIntersection` as a 3px line and keeps the on-land message. A stored metric from before that field existed has the message only, until it is recalculated.
+- An offshore shore map labels the shore point with the distance. A sketch on land draws `shorelineIntersection` and labels that line with the on-land message. A stored metric from before that field existed has the message only, until it is recalculated.
 - Matches, max km, and resolution are `DistanceToPointSearchFields`. A new widget uses `DEFAULT_WATER_PATH_DISTANCE_KM` (300). A widget that still has the old 200-mile default is rewritten to 300 when those controls open.
+- On a sketch report, the lower-left of either map has an icon (arrow and globe). Hovering it expands to **Show on main map**, which puts the same route or shoreline layers on the project map through `useReportStyleToggle`. The small map stays up, greyed out, and stops panning. While that is on, the control stays expanded as **Remove from main map**, with an X in place of the arrow and globe. The report editor has no project map, so the control is absent there. Opening a second one replaces the first. Closing the report removes the layers.
 
 ## Admin Tooltip Controls Interface
 
