@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 540" role="img" aria-labelledby="t2">
+<title id="t2">Looking up one cell: plane, record number, slot</title>
+<rect width="880" height="540" fill="#ffffff"/>
+<circle cx="34" cy="35" r="13" fill="#0f172a"/>
+<text x="34" y="40" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">1</text>
+<text x="58" y="40" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#0f172a" text-anchor="start">Look up the cell's resolution-4 ancestor in the plane you already hold.</text>
+<rect x="58" y="72" width="26" height="26" rx="3" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="88" y="72" width="26" height="26" rx="3" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="118" y="72" width="26" height="26" rx="3" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="148" y="72" width="26" height="26" rx="3" fill="#fde68a" stroke="#d97706" stroke-width="1"/>
+<rect x="178" y="72" width="26" height="26" rx="3" fill="#bbf7d0" stroke="#16a34a" stroke-width="1"/>
+<rect x="208" y="72" width="26" height="26" rx="3" fill="#bbf7d0" stroke="#16a34a" stroke-width="1"/>
+<rect x="238" y="72" width="26" height="26" rx="3" fill="#bbf7d0" stroke="#16a34a" stroke-width="1"/>
+<rect x="268" y="72" width="26" height="26" rx="3" fill="#fde68a" stroke="#d97706" stroke-width="1"/>
+<rect x="298" y="72" width="26" height="26" rx="3" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="328" y="72" width="26" height="26" rx="3" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="358" y="72" width="26" height="26" rx="3" fill="#fde68a" stroke="#d97706" stroke-width="1"/>
+<rect x="388" y="72" width="26" height="26" rx="3" fill="#fde68a" stroke="#0f172a" stroke-width="2.5"/>
+<rect x="418" y="72" width="26" height="26" rx="3" fill="#bbf7d0" stroke="#16a34a" stroke-width="1"/>
+<rect x="448" y="72" width="26" height="26" rx="3" fill="#bbf7d0" stroke="#16a34a" stroke-width="1"/>
+<rect x="478" y="72" width="26" height="26" rx="3" fill="#fde68a" stroke="#d97706" stroke-width="1"/>
+<rect x="508" y="72" width="26" height="26" rx="3" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="538" y="72" width="26" height="26" rx="3" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="568" y="72" width="26" height="26" rx="3" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="598" y="72" width="26" height="26" rx="3" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="628" y="72" width="26" height="26" rx="3" fill="#bbf7d0" stroke="#16a34a" stroke-width="1"/>
+<rect x="658" y="72" width="26" height="26" rx="3" fill="#bbf7d0" stroke="#16a34a" stroke-width="1"/>
+<rect x="688" y="72" width="26" height="26" rx="3" fill="#fde68a" stroke="#d97706" stroke-width="1"/>
+<rect x="718" y="72" width="26" height="26" rx="3" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="748" y="72" width="26" height="26" rx="3" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<line x1="401.0" y1="102" x2="401.0" y2="120" stroke="#0f172a" stroke-width="1.5"/>
+<text x="401.0" y="136" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="normal" fill="#0f172a" text-anchor="middle">cellToParent(cell, 4)</text>
+<text x="58" y="162" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="normal" fill="#64748b" text-anchor="start">Water or land: that is the answer for every cell inside it. No request needed.</text>
+<circle cx="34" cy="203" r="13" fill="#0f172a"/>
+<text x="34" y="208" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">2</text>
+<text x="58" y="208" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#0f172a" text-anchor="start">Mixed: count the mixed cells before it. That count is the record number.</text>
+<rect x="58" y="240" width="26" height="26" rx="3" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="88" y="240" width="26" height="26" rx="3" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="118" y="240" width="26" height="26" rx="3" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="148" y="240" width="26" height="26" rx="3" fill="#fde68a" stroke="#d97706" stroke-width="1"/>
+<text x="161.0" y="258" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#92400e" text-anchor="middle">0</text>
+<rect x="178" y="240" width="26" height="26" rx="3" fill="#bbf7d0" stroke="#16a34a" stroke-width="1"/>
+<rect x="208" y="240" width="26" height="26" rx="3" fill="#bbf7d0" stroke="#16a34a" stroke-width="1"/>
+<rect x="238" y="240" width="26" height="26" rx="3" fill="#bbf7d0" stroke="#16a34a" stroke-width="1"/>
+<rect x="268" y="240" width="26" height="26" rx="3" fill="#fde68a" stroke="#d97706" stroke-width="1"/>
+<text x="281.0" y="258" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#92400e" text-anchor="middle">1</text>
+<rect x="298" y="240" width="26" height="26" rx="3" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="328" y="240" width="26" height="26" rx="3" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="358" y="240" width="26" height="26" rx="3" fill="#fde68a" stroke="#d97706" stroke-width="1"/>
+<text x="371.0" y="258" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#92400e" text-anchor="middle">2</text>
+<rect x="388" y="240" width="26" height="26" rx="3" fill="#fde68a" stroke="#0f172a" stroke-width="2.5"/>
+<text x="401.0" y="258" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#0f172a" text-anchor="middle">3</text>
+<rect x="418" y="240" width="26" height="26" rx="3" fill="#bbf7d0" stroke="#16a34a" stroke-width="1"/>
+<rect x="448" y="240" width="26" height="26" rx="3" fill="#bbf7d0" stroke="#16a34a" stroke-width="1"/>
+<rect x="478" y="240" width="26" height="26" rx="3" fill="#fde68a" stroke="#d97706" stroke-width="1"/>
+<text x="491.0" y="258" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#92400e" text-anchor="middle">4</text>
+<rect x="508" y="240" width="26" height="26" rx="3" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="538" y="240" width="26" height="26" rx="3" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="568" y="240" width="26" height="26" rx="3" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="598" y="240" width="26" height="26" rx="3" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="628" y="240" width="26" height="26" rx="3" fill="#bbf7d0" stroke="#16a34a" stroke-width="1"/>
+<rect x="658" y="240" width="26" height="26" rx="3" fill="#bbf7d0" stroke="#16a34a" stroke-width="1"/>
+<rect x="688" y="240" width="26" height="26" rx="3" fill="#fde68a" stroke="#d97706" stroke-width="1"/>
+<text x="701.0" y="258" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="700" fill="#92400e" text-anchor="middle">5</text>
+<rect x="718" y="240" width="26" height="26" rx="3" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="748" y="240" width="26" height="26" rx="3" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="58" y="302" width="92" height="30" rx="3" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+<text x="104.0" y="322" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#64748b" text-anchor="middle">record 0</text>
+<rect x="158" y="302" width="92" height="30" rx="3" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+<text x="204.0" y="322" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#64748b" text-anchor="middle">record 1</text>
+<rect x="258" y="302" width="92" height="30" rx="3" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+<text x="304.0" y="322" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#64748b" text-anchor="middle">record 2</text>
+<rect x="358" y="302" width="92" height="30" rx="3" fill="#ccfbf1" stroke="#0f172a" stroke-width="2.5"/>
+<text x="404.0" y="322" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="600" fill="#0f172a" text-anchor="middle">record 3</text>
+<rect x="458" y="302" width="92" height="30" rx="3" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+<text x="504.0" y="322" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#64748b" text-anchor="middle">record 4</text>
+<rect x="558" y="302" width="92" height="30" rx="3" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+<text x="604.0" y="322" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#64748b" text-anchor="middle">record 5</text>
+<rect x="658" y="302" width="92" height="30" rx="3" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+<text x="704.0" y="322" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#64748b" text-anchor="middle">record 6</text>
+<rect x="758" y="302" width="92" height="30" rx="3" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1"/>
+<text x="804.0" y="322" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#64748b" text-anchor="middle">record 7</text>
+<text x="862" y="322" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="normal" fill="#64748b" text-anchor="start">...</text>
+<path d="M401.0 268 V296" stroke="#0f172a" stroke-width="1.5" fill="none" stroke-dasharray="4 3"/>
+<text x="58" y="356" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="normal" fill="#64748b" text-anchor="start">Three mixed cells come before it, so this is record 3. Its bytes start at recordsStart + 3 x stride.</text>
+<circle cx="34" cy="403" r="13" fill="#0f172a"/>
+<text x="34" y="408" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="14" font-weight="700" fill="#ffffff" text-anchor="middle">3</text>
+<text x="58" y="408" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="16" font-weight="600" fill="#0f172a" text-anchor="start">Read the cell's two bits from that record.</text>
+<rect x="58" y="440" width="20" height="20" rx="2" fill="#bbf7d0" stroke="#16a34a" stroke-width="1"/>
+<rect x="82" y="440" width="20" height="20" rx="2" fill="#bbf7d0" stroke="#16a34a" stroke-width="1"/>
+<rect x="106" y="440" width="20" height="20" rx="2" fill="#bbf7d0" stroke="#16a34a" stroke-width="1"/>
+<rect x="130" y="440" width="20" height="20" rx="2" fill="#bbf7d0" stroke="#16a34a" stroke-width="1"/>
+<rect x="154" y="440" width="20" height="20" rx="2" fill="#fde68a" stroke="#d97706" stroke-width="1"/>
+<rect x="178" y="440" width="20" height="20" rx="2" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="202" y="440" width="20" height="20" rx="2" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="226" y="440" width="20" height="20" rx="2" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="250" y="440" width="20" height="20" rx="2" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="274" y="440" width="20" height="20" rx="2" fill="#fde68a" stroke="#0f172a" stroke-width="2.5"/>
+<rect x="298" y="440" width="20" height="20" rx="2" fill="#bbf7d0" stroke="#16a34a" stroke-width="1"/>
+<rect x="322" y="440" width="20" height="20" rx="2" fill="#bbf7d0" stroke="#16a34a" stroke-width="1"/>
+<rect x="346" y="440" width="20" height="20" rx="2" fill="#bbf7d0" stroke="#16a34a" stroke-width="1"/>
+<rect x="370" y="440" width="20" height="20" rx="2" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="394" y="440" width="20" height="20" rx="2" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="418" y="440" width="20" height="20" rx="2" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="442" y="440" width="20" height="20" rx="2" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="466" y="440" width="20" height="20" rx="2" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="490" y="440" width="20" height="20" rx="2" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="514" y="440" width="20" height="20" rx="2" fill="#fde68a" stroke="#d97706" stroke-width="1"/>
+<rect x="538" y="440" width="20" height="20" rx="2" fill="#bbf7d0" stroke="#16a34a" stroke-width="1"/>
+<rect x="562" y="440" width="20" height="20" rx="2" fill="#bbf7d0" stroke="#16a34a" stroke-width="1"/>
+<rect x="586" y="440" width="20" height="20" rx="2" fill="#bbf7d0" stroke="#16a34a" stroke-width="1"/>
+<rect x="610" y="440" width="20" height="20" rx="2" fill="#bbf7d0" stroke="#16a34a" stroke-width="1"/>
+<rect x="634" y="440" width="20" height="20" rx="2" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="658" y="440" width="20" height="20" rx="2" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="682" y="440" width="20" height="20" rx="2" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="706" y="440" width="20" height="20" rx="2" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<rect x="730" y="440" width="20" height="20" rx="2" fill="#dbeafe" stroke="#3b82f6" stroke-width="1"/>
+<text x="758" y="455" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#64748b" text-anchor="start">...</text>
+<line x1="284.0" y1="464" x2="284.0" y2="480" stroke="#0f172a" stroke-width="1.5"/>
+<text x="284.0" y="496" font-family="ui-monospace, SFMono-Regular, Menlo, Consolas, monospace" font-size="13" font-weight="normal" fill="#0f172a" text-anchor="middle">slot = cellToChildPos(cell, 4)</text>
+<rect x="58" y="510" width="14" height="14" rx="2" fill="#dbeafe" stroke="#3b82f6"/>
+<text x="78" y="522" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#0f172a" text-anchor="start">0  water</text>
+<rect x="168" y="510" width="14" height="14" rx="2" fill="#fde68a" stroke="#d97706"/>
+<text x="188" y="522" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#0f172a" text-anchor="start">1  mixed</text>
+<rect x="278" y="510" width="14" height="14" rx="2" fill="#bbf7d0" stroke="#16a34a"/>
+<text x="298" y="522" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#0f172a" text-anchor="start">2  land</text>
+<text x="860" y="522" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" font-size="13" font-weight="normal" fill="#64748b" text-anchor="end">Each cell is two bits, four cells per byte.</text>
+</svg>

@@ -90,6 +90,18 @@ if [[ -n "$missing_fgb" ]]; then
   exit 1
 fi
 
+echo "Loading data-library geostats..."
+(
+  cd "$API_DIR"
+  SOURCE_URL="$SOURCE_URL" node scripts/load-snapshot-geostats.js
+)
+missing_geostats="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT coalesce(string_agg(data_library_template_id, ',' ORDER BY data_library_template_id), '') FROM data_sources WHERE data_library_template_id IS NOT NULL AND (geostats IS NULL OR vector_geometry_type IS NULL OR feature_count IS NULL)")"
+if [[ -n "$missing_geostats" ]]; then
+  echo "Data-library templates without geostats: ${missing_geostats}." >&2
+  exit 1
+fi
+
 echo "Adding demo-samoa geographies the same way create-project does..."
 psql_exec -d "$SOURCE_DB" -f - < "$API_DIR/snapshots/geographies.sql"
 clipping_layers="$(psql_exec -d "$SOURCE_DB" -tAc \
@@ -155,6 +167,13 @@ default_reports="$(psql_exec -d "$SOURCE_DB" -tAc \
   "SELECT count(*) FROM reports r JOIN projects p ON p.id = r.project_id WHERE p.slug = 'demo-samoa'")"
 if [[ "$default_reports" == "0" ]]; then
   echo "demo-samoa has no default report. It should be created by create_project." >&2
+  exit 1
+fi
+
+mpa="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT sc.geometry_type || ',' || sc.is_geography_clipping_enabled::text || ',' || g.name || ',' || scr.is_primary::text FROM sketch_classes sc JOIN projects p ON p.id = sc.project_id AND p.slug = 'demo-samoa' JOIN sketch_class_geographies sg ON sg.sketch_class_id = sc.id JOIN project_geography g ON g.id = sg.geography_id JOIN sketch_class_reports scr ON scr.sketch_class_id = sc.id AND scr.is_primary WHERE sc.name = 'Marine Protected Area' AND sc.is_template = false AND sc.form_element_id IS NULL")"
+if [[ "$mpa" != "POLYGON,true,Exclusive Economic Zone,true" ]]; then
+  echo "demo-samoa should have a Marine Protected Area sketch class clipped to the Exclusive Economic Zone, found ${mpa}." >&2
   exit 1
 fi
 

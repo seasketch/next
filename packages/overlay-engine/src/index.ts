@@ -65,6 +65,8 @@ export {
   SourceType,
   UniqueIdIndex,
   DistanceToShoreMetric,
+  DistanceToFeaturesOverWaterMetric,
+  DistanceToFeatureHit,
   RasterBandStats,
   combineRasterBandStats,
   combineMetricsForFragments,
@@ -112,6 +114,17 @@ export { initializeGeographySources } from "./geographies/geographies";
 export { calculateRasterStats } from "./rasterStats";
 export { calculateRasterOverlayArea } from "./rasterOverlayArea";
 export { calculateDistanceToShore } from "./calculateDistanceToShore";
+export {
+  calculateDistanceToFeaturesOverWater,
+} from "./calculateDistanceToFeaturesOverWater";
+export {
+  searchWaterPathNearest,
+  MAX_DISTANCE_TO_FEATURES_KM,
+  MAX_WATER_PATH_RESULTS,
+  DEFAULT_WATER_PATH_MAX_RESULTS,
+  DEFAULT_WATER_PATH_DISTANCE_KM,
+} from "./h3/waterPathNearest";
+export type { WaterPathResolution } from "./h3/bitmapSearch";
 export {
   calculateOusDemographics,
   OusDemographicsAggregator,

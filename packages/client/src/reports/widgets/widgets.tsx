@@ -27,6 +27,8 @@ import getSlug from "../../getSlug";
 import { AnyLayer } from "mapbox-gl";
 import { EditorView } from "prosemirror-view";
 import {
+  DEFAULT_WATER_PATH_DISTANCE_KM,
+  DEFAULT_WATER_PATH_MAX_RESULTS,
   MetricDependency,
   OUS_DEMOGRAPHICS_DEFAULT_GROUP_BY,
 } from "overlay-engine";
@@ -42,6 +44,14 @@ import {
   GeographySizeTable,
   GeographySizeTableTooltipControls,
 } from "./GeographySizeTable";
+import {
+  DistanceToShoreMap,
+  DistanceToShoreMapTooltipControls,
+} from "./DistanceToShoreMap";
+import {
+  DistanceToPointMap,
+  DistanceToPointMapTooltipControls,
+} from "./DistanceToPointMap";
 import {
   SketchAttributesTable,
   SketchAttributesTableTooltipControls,
@@ -472,6 +482,8 @@ const WidgetErrorBlock: FC<{
 const memoizedWidgets: Record<string, WidgetComponent> = {
   InlineMetric: memoWidget(InlineMetric, "InlineMetric"),
   GeographySizeTable: memoWidget(GeographySizeTable, "GeographySizeTable"),
+  DistanceToShoreMap: memoWidget(DistanceToShoreMap, "DistanceToShoreMap"),
+  DistanceToPointMap: memoWidget(DistanceToPointMap, "DistanceToPointMap"),
   SketchAttributesTable: memoWidget(
     SketchAttributesTable,
     "SketchAttributesTable"
@@ -640,6 +652,10 @@ function labelColumnForGeostatsLayer(
         score += 2;
       }
 
+      if (/^(port[_ ]?name|name|title|label)$/i.test(attr.attribute)) {
+        score += 4;
+      }
+
       // Penalize attributes that match exclusion patterns
       const shouldExclude = excludePatterns.some((pattern) =>
         pattern.test(attr.attribute)
@@ -679,6 +695,10 @@ export function ReportWidgetTooltipControlsRouter(
       return <InlineMetricTooltipControls {...props} />;
     case "GeographySizeTable":
       return <GeographySizeTableTooltipControls {...props} />;
+    case "DistanceToShoreMap":
+      return <DistanceToShoreMapTooltipControls {...props} />;
+    case "DistanceToPointMap":
+      return <DistanceToPointMapTooltipControls {...props} />;
     case "SketchAttributesTable":
       return <SketchAttributesTableTooltipControls {...props} />;
     case "MpaGuideLevelOfProtection":
@@ -848,6 +868,12 @@ export function ReportWidgetNodeViewRouter(props: any) {
     case "GeographySizeTable":
       widget = <memoizedWidgets.GeographySizeTable {...widgetProps} />;
       break;
+    case "DistanceToShoreMap":
+      widget = <memoizedWidgets.DistanceToShoreMap {...widgetProps} />;
+      break;
+    case "DistanceToPointMap":
+      widget = <memoizedWidgets.DistanceToPointMap {...widgetProps} />;
+      break;
     case "SketchAttributesTable":
       widget = <memoizedWidgets.SketchAttributesTable {...widgetProps} />;
       break;
@@ -977,6 +1003,16 @@ export type BuildReportCommandGroupsArgs = {
   onPrepareTimeSeriesLayers?: (args: {
     unprocessed: Array<{ title: string; sourceId: number }>;
     insert: () => void;
+  }) => void;
+  /**
+   * Distance to Port: confirm and copy the World Ports library layer, or
+   * prepare a copy that is already in the project. `insert` runs only after
+   * preprocessing has been queued.
+   */
+  onEnsureDataLibraryLayer?: (args: {
+    templateId: string;
+    existing?: { stableId: string; sourceId: number };
+    insert: (stableId: string) => void;
   }) => void;
   projectSlug?: string;
   childSketchClassGeometryTypes?: SketchGeometryType[];
@@ -1251,6 +1287,55 @@ export function OverlayProcessingStatus({
  * @param sketchClassGeometryType - The geometry type of the sketch class
  * @returns The command groups
  */
+const WORLD_PORTS_TEMPLATE_ID = "WORLD_PORTS";
+
+function insertDistanceToPoint(
+  view: EditorView,
+  stableId: string,
+  block: boolean,
+  labelColumn: string | undefined,
+  at: { from: number; to: number }
+) {
+  const size = view.state.doc.content.size;
+  const from = Math.max(0, Math.min(at.from, size));
+  const to = Math.max(from, Math.min(at.to, size));
+  const range = new SelectionRange(
+    view.state.doc.resolve(from),
+    view.state.doc.resolve(to)
+  );
+  const metric = {
+    type: "distance_to_features_over_water" as const,
+    subjectType: "fragments" as const,
+    stableId,
+    parameters: {
+      maxResults: block ? DEFAULT_WATER_PATH_MAX_RESULTS : 1,
+      maxDistanceKm: DEFAULT_WATER_PATH_DISTANCE_KM,
+      ...(labelColumn ? { includedColumns: [labelColumn] } : {}),
+    },
+  };
+  if (block) {
+    return insertBlockMetric(view, range, {
+      type: "DistanceToPointMap",
+      metrics: [metric],
+      componentSettings: {
+        unit: "kilometer",
+        unitDisplay: "short",
+        basemap: "streets",
+        display: "both",
+        ...(labelColumn ? { labelColumn } : {}),
+      },
+    });
+  }
+  return insertInlineMetric(view, range, {
+    type: "InlineMetric",
+    metrics: [metric],
+    componentSettings: {
+      presentation: "distance_to_features_over_water",
+      ...(labelColumn ? { labelColumn } : {}),
+    },
+  });
+}
+
 export function buildReportCommandGroups({
   sources,
   draftTableOfContentsItems,
@@ -1262,6 +1347,7 @@ export function buildReportCommandGroups({
   overlayAugmenter,
   onProcessLayer,
   onPrepareTimeSeriesLayers,
+  onEnsureDataLibraryLayer,
   projectSlug,
   isSuperuser,
 }: BuildReportCommandGroupsArgs = {}): CommandPaletteGroup[] {
@@ -1272,6 +1358,43 @@ export function buildReportCommandGroups({
     (sketchClassGeometryType === SketchGeometryType.Collection &&
       childSketchClassGeometryTypes &&
       childSketchClassGeometryTypes.includes(SketchGeometryType.Polygon));
+
+  const runDistanceToPort = (
+    view: EditorView,
+    at: { from: number; to: number },
+    block: boolean
+  ) => {
+    const insert = (stableId: string) => {
+      insertDistanceToPoint(view, stableId, block, "PORT_NAME", at);
+    };
+    const existing = draftTableOfContentsItems?.find(
+      (item) =>
+        item.copiedFromDataLibraryTemplateId === WORLD_PORTS_TEMPLATE_ID
+    );
+    if (existing?.stableId) {
+      const prepared = sources?.some(
+        (source) =>
+          source.stableId === existing.stableId && source.sourceProcessingJob
+      );
+      if (prepared) {
+        insert(existing.stableId);
+        return;
+      }
+      const sourceId = existing.dataLayer?.dataSource?.id;
+      if (sourceId != null) {
+        onEnsureDataLibraryLayer?.({
+          templateId: WORLD_PORTS_TEMPLATE_ID,
+          existing: { stableId: existing.stableId, sourceId },
+          insert,
+        });
+        return;
+      }
+    }
+    onEnsureDataLibraryLayer?.({
+      templateId: WORLD_PORTS_TEMPLATE_ID,
+      insert,
+    });
+  };
 
   const inlineSketchMetricsGroup: CommandPaletteGroup = {
     id: "inline-sketch-metrics",
@@ -1354,6 +1477,18 @@ export function buildReportCommandGroups({
         });
       },
     });
+    inlineSketchMetricsGroup.items.push({
+      id: "inline-distance-to-port",
+      label: "Distance to Port",
+      description:
+        "Water-route distance from the sketch to the nearest World Ports harbor.",
+      screenshotSrc: "/slashCommands/distance-to-port.png",
+      run: (state, _dispatch, view) => {
+        const at = state.selection.ranges[0];
+        if (!at) return;
+        runDistanceToPort(view, { from: at.$from.pos, to: at.$to.pos }, false);
+      },
+    });
   }
   commandGroups.push(inlineSketchMetricsGroup);
 
@@ -1363,6 +1498,40 @@ export function buildReportCommandGroups({
     items: [],
   };
   if (showPolygonOptions) {
+    sketchBlockWidgetsGroup.items.push({
+      id: "distance-to-shore-map",
+      label: "Distance to Shore Map",
+      description: "Map of the shortest path between the sketch and the shoreline.",
+      screenshotSrc: "/slashCommands/distance-to-shore-map.png",
+      run: (state, dispatch, view) => {
+        return insertBlockMetric(view, state.selection.ranges[0], {
+          type: "DistanceToShoreMap",
+          metrics: [
+            {
+              type: "distance_to_shore",
+              subjectType: "fragments",
+            },
+          ],
+          componentSettings: {
+            unit: "kilometer",
+            unitDisplay: "short",
+            basemap: "streets",
+          },
+        });
+      },
+    });
+    sketchBlockWidgetsGroup.items.push({
+      id: "distance-to-port-map",
+      label: "Distance to Port Map",
+      description:
+        "Map of the water route from the sketch to the nearest World Ports harbor.",
+      screenshotSrc: "/slashCommands/distance-to-port-map.png",
+      run: (state, _dispatch, view) => {
+        const at = state.selection.ranges[0];
+        if (!at) return;
+        runDistanceToPort(view, { from: at.$from.pos, to: at.$to.pos }, true);
+      },
+    });
     sketchBlockWidgetsGroup.items.push({
       id: "sketch-attributes-table",
       label: "Sketch Attributes Table",
@@ -2180,6 +2349,45 @@ export function buildReportCommandGroups({
                 },
               });
             }
+          }
+          if (
+            stableId &&
+            (source.vectorGeometryType === "Point" ||
+              source.vectorGeometryType === "MultiPoint")
+          ) {
+            const pointLabel = bestLabelColumn || undefined;
+            inlineGroup.items.push({
+              // eslint-disable-next-line i18next/no-literal-string
+              id: `overlay-layer-${tocId}-distance-to-point`,
+              label: "Distance to Point",
+              description:
+                "Water-route distance from the sketch to the nearest point on this layer.",
+              screenshotSrc: "/slashCommands/distance-to-port.png",
+              run: (state, _dispatch, view) => {
+                const at = state.selection.ranges[0];
+                if (!at) return;
+                insertDistanceToPoint(view, stableId, false, pointLabel, {
+                  from: at.$from.pos,
+                  to: at.$to.pos,
+                });
+              },
+            });
+            blockGroup.items.push({
+              // eslint-disable-next-line i18next/no-literal-string
+              id: `overlay-layer-${tocId}-distance-to-point-map`,
+              label: "Distance to Point Map",
+              description:
+                "Map of the water route from the sketch to the nearest point on this layer.",
+              screenshotSrc: "/slashCommands/distance-to-port-map.png",
+              run: (state, _dispatch, view) => {
+                const at = state.selection.ranges[0];
+                if (!at) return;
+                insertDistanceToPoint(view, stableId, true, pointLabel, {
+                  from: at.$from.pos,
+                  to: at.$to.pos,
+                });
+              },
+            });
           }
           switch (source.vectorGeometryType) {
             case "Polygon":

@@ -1,0 +1,13 @@
+{
+  "type": "Feature",
+  "properties": {
+    "name": "Shore line origin edge"
+  },
+  "geometry": {
+    "type": "LineString",
+    "coordinates": [
+      [178.8, -16.4],
+      [178.9, -16.4]
+    ]
+  }
+}

@@ -9143,6 +9143,12 @@ type MetricParameters {
   includedColumns: [String!]
   maxDistanceKm: Float
   maxResults: Int
+
+  """
+  Ocean-bitmap cell size for distance-to-features. low, medium, or high.
+  Omitted means high.
+  """
+  resolution: String
   sourceHasOverlappingFeatures: Boolean
 
   """

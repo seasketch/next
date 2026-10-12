@@ -15,6 +15,8 @@ type LabeledDropdownProps = {
   getDisplayLabel?: (selected?: TooltipDropdownOption) => ReactNode;
   /** Extra class names for the dropdown panel (e.g. a taller max-height). */
   contentClassName?: string;
+  /** Compact toolbar rows cap the value. Wider menus should show the full label. */
+  truncateValue?: boolean;
 };
 
 /**
@@ -31,6 +33,7 @@ export function LabeledDropdown({
   ariaLabel,
   getDisplayLabel,
   contentClassName,
+  truncateValue,
 }: LabeledDropdownProps) {
   return (
     <div className="flex items-center gap-2 text-sm text-gray-800">
@@ -45,6 +48,7 @@ export function LabeledDropdown({
         onChange={onChange}
         ariaLabel={ariaLabel}
         getDisplayLabel={getDisplayLabel}
+        truncateValue={truncateValue}
         contentProps={
           contentClassName ? { className: contentClassName } : undefined
         }

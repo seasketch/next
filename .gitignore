@@ -6,6 +6,12 @@ packages/client/dist/*
 NOTES.md
 **/.env
 packages/data-tables-handler/tmp/
+packages/h3-land/data/
+packages/overlay-engine/viewer/serve.js
+packages/overlay-engine/viewer/serve.js.map
+packages/overlay-engine/viewer/.tmp-*
+packages/overlay-engine/__tests__/water-path/output/
+packages/overlay-engine/__tests__/water-path/output-hierarchy/
 .cert/
 lerna-debug.log
 *.lerna_backup

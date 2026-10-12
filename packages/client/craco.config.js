@@ -45,6 +45,12 @@ module.exports = {
         ),
         // Shim for esm-env to work with Webpack 4 (no package exports conditions)
         "esm-env": path.resolve(__dirname, "src/shims/esm-env.ts"),
+        // The ocean-bitmap search runs in the overlay worker. The browser
+        // only needs the numeric limits exported beside it.
+        [path.resolve(
+          __dirname,
+          "../overlay-engine/dist/h3/waterPathNearest.js"
+        )]: path.resolve(__dirname, "src/shims/waterPathNearest.ts"),
       };
 
       // Ensure .mjs is resolvable
@@ -194,6 +200,9 @@ module.exports = {
       moduleNameMapper: {
         "mapbox-gl/dist/style-spec/index.es.js":
           "mapbox-gl/dist/style-spec/index.cjs",
+        // react-scripts 4's Jest resolver ignores package exports.
+        "^@seasketch/h3-land/client$":
+          "<rootDir>/../h3-land/dist/client.js",
         // Ensure Jest uses CJS build of polyclip-ts (align with Webpack alias)
         "^polyclip-ts$":
           "<rootDir>/../overlay-engine/node_modules/polyclip-ts/dist/cjs/index.cjs",

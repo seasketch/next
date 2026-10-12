@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>H3 land occupancy</title>
+    <link
+      href="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.css"
+      rel="stylesheet"
+    />
+    <style>
+      html,
+      body,
+      #map {
+        margin: 0;
+        height: 100%;
+        background: #d5dde6;
+      }
+      #panel {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        z-index: 1;
+        max-width: 320px;
+        padding: 12px 14px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.92);
+        color: #1c2430;
+        font: 13px/1.45 ui-sans-serif, system-ui, sans-serif;
+        box-shadow: 0 8px 28px rgba(20, 30, 40, 0.18);
+      }
+      #panel h1 {
+        margin: 0 0 6px;
+        font-size: 15px;
+        font-weight: 650;
+      }
+      #status {
+        margin: 8px 0 0;
+        white-space: pre-line;
+      }
+      #error {
+        margin: 8px 0 0;
+        color: #9f1239;
+      }
+      .swatch {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        margin-right: 6px;
+        border-radius: 2px;
+        vertical-align: -1px;
+      }
+      .legend {
+        margin: 8px 0 0;
+      }
+      #panel label {
+        display: block;
+        margin: 4px 0 8px;
+      }
+      #panel select {
+        margin-left: 6px;
+        font: inherit;
+      }
+      .legend div {
+        margin-top: 2px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div id="panel">
+      <h1>H3 land occupancy</h1>
+      <label>
+        Archive
+        <select id="archive-select">
+          <option value="https://tiles.seasketch.org/h3-land/v1/land-res9.h3ld">resolution 9</option>
+          <option value="https://tiles.seasketch.org/h3-land/v1/land-res8.h3ld">resolution 8</option>
+        </select>
+      </label>
+      <div class="legend">
+        <div><span class="swatch" style="background: #2563eb"></span>Water</div>
+        <div><span class="swatch" style="background: #d97706"></span>Mixed</div>
+        <div><span class="swatch" style="background: #16a34a"></span>Land</div>
+      </div>
+      <p id="status">Loading the coarse planes…</p>
+      <p id="error"></p>
+    </div>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.js"></script>
+    <script src="https://unpkg.com/h3-js@4.5.0/dist/h3-js.umd.js"></script>
+    <script>
+      // Same layout as packages/h3-land/src/format.ts. States are 2 bits:
+      // 0 water, 1 mixed, 2 land. Four cells per byte, low bits first.
+      const COARSE = 4;
+      const HEADER_BYTES = 28;
+      let FINE = 8;
+      const params = new URLSearchParams(location.search);
+      const ARCHIVE_URL =
+        params.get("url") ||
+        "https://tiles.seasketch.org/h3-land/v1/land-res9.h3ld";
+      const archiveSelect = document.getElementById("archive-select");
+      if (![...archiveSelect.options].some((option) => option.value === ARCHIVE_URL)) {
+        const custom = document.createElement("option");
+        custom.value = ARCHIVE_URL;
+        custom.textContent = ARCHIVE_URL.split("/").pop();
+        archiveSelect.appendChild(custom);
+      }
+      archiveSelect.value = ARCHIVE_URL;
+      archiveSelect.addEventListener("change", () => {
+        const next = new URLSearchParams(location.search);
+        next.set("url", archiveSelect.value);
+        location.search = next.toString();
+      });
+      const MAPBOX_TOKEN =
+        params.get("token") || localStorage.getItem("mapboxToken") || "";
+
+      const statusEl = document.getElementById("status");
+      const errorEl = document.getElementById("error");
+      const NAMES = ["water", "mixed", "land"];
+
+      function fail(error) {
+        errorEl.textContent = error instanceof Error ? error.message : String(error);
+      }
+
+      function packedBytes(count) {
+        return Math.ceil((count * 2) / 8);
+      }
+
+      function getState(bytes, index) {
+        return (bytes[index >> 2] >> ((index & 3) << 1)) & 3;
+      }
+
+      function buildRanks() {
+        const pentagonBases = new Set(h3.getPentagons(0).map(h3.getBaseCellNumber));
+        const prefix = [];
+        for (let res = 0; res <= COARSE; res++) {
+          const starts = new Uint32Array(123);
+          for (let base = 0; base < 122; base++) {
+            const count =
+              res === 0
+                ? 1
+                : pentagonBases.has(base)
+                  ? 1 + (5 * (7 ** res - 1)) / 6
+                  : 7 ** res;
+            starts[base + 1] = starts[base] + count;
+          }
+          prefix.push(starts);
+        }
+        return prefix;
+      }
+
+      const prefix = buildRanks();
+
+      function cellRank(cell, res) {
+        const base = h3.getBaseCellNumber(cell);
+        const pos = res === 0 ? 0 : h3.cellToChildPos(cell, 0);
+        return prefix[res][base] + pos;
+      }
+
+      function expectedHeaderBytes() {
+        let size = HEADER_BYTES;
+        for (let res = 0; res <= COARSE; res++) {
+          size += 4 + packedBytes(h3.getNumCells(res));
+        }
+        return size;
+      }
+
+      const stats = {
+        headerBytes: 0,
+        rangeRequests: 0,
+        rangeBytes: 0,
+        cachedRecords: 0,
+      };
+
+      async function range(url, start, end) {
+        stats.rangeRequests++;
+        const response = await fetch(url, {
+          headers: { Range: `bytes=${start}-${end}` },
+        });
+        if (!response.ok && response.status !== 206) {
+          throw new Error(`range ${start}-${end} returned ${response.status}`);
+        }
+        const body = new Uint8Array(await response.arrayBuffer());
+        stats.rangeBytes += body.byteLength;
+        if (response.status === 206) return body;
+        if (body.byteLength >= end + 1) return body.subarray(start, end + 1);
+        throw new Error("server ignored the range and returned a short body");
+      }
+
+      function fold(record, cell) {
+        const resolution = h3.getResolution(cell);
+        const parent = h3.cellToParent(cell, COARSE);
+        if (h3.isPentagon(parent) || h3.isPentagon(cell)) {
+          let allLand = true;
+          let allWater = true;
+          for (const child of h3.cellToChildren(cell, FINE)) {
+            const state = getState(record, h3.cellToChildPos(child, COARSE));
+            if (state !== 2) allLand = false;
+            if (state !== 0) allWater = false;
+            if (!allLand && !allWater) return 1;
+          }
+          if (allWater) return 0;
+          return allLand ? 2 : 1;
+        }
+        const span = 7 ** (FINE - resolution);
+        const start = h3.cellToChildPos(cell, COARSE) * span;
+        let allLand = true;
+        let allWater = true;
+        for (let i = 0; i < span; i++) {
+          const state = getState(record, start + i);
+          if (state !== 2) allLand = false;
+          if (state !== 0) allWater = false;
+          if (!allLand && !allWater) return 1;
+        }
+        if (allWater) return 0;
+        return allLand ? 2 : 1;
+      }
+
+      class Archive {
+        constructor(url, bytes) {
+          this.url = url;
+          this.bytes = bytes;
+          this.cache = new Map();
+          const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+          const magic = new TextDecoder().decode(bytes.subarray(0, 4));
+          if (magic !== "H3LD" || bytes[4] !== 1) {
+            throw new Error("this is not an H3 land archive");
+          }
+          this.recordsStart = view.getUint32(24, true);
+          this.mixedCount = view.getUint32(20, true);
+          this.stride = view.getUint32(16, true);
+          this.fineResolution = bytes[5];
+          FINE = this.fineResolution;
+          if (bytes[6] !== COARSE || this.fineResolution <= COARSE) {
+            throw new Error("unexpected archive resolution");
+          }
+          if (this.recordsStart !== bytes.byteLength) {
+            throw new Error("coarse planes were not the requested prefix");
+          }
+          this.planes = [];
+          let cursor = HEADER_BYTES;
+          for (let res = 0; res <= COARSE; res++) {
+            const count = view.getUint32(cursor, true);
+            const size = packedBytes(count);
+            this.planes.push(bytes.subarray(cursor + 4, cursor + 4 + size));
+            cursor += 4 + size;
+          }
+          const coarse = this.planes[COARSE];
+          this.recordIndex = new Int32Array(h3.getNumCells(COARSE));
+          this.recordIndex.fill(-1);
+          let next = 0;
+          for (let rank = 0; rank < this.recordIndex.length; rank++) {
+            if (getState(coarse, rank) === 1) this.recordIndex[rank] = next++;
+          }
+          if (next !== this.mixedCount) {
+            throw new Error(`archive has ${this.mixedCount} records, plane has ${next}`);
+          }
+        }
+
+        coarseState(cell) {
+          const resolution = h3.getResolution(cell);
+          return getState(this.planes[resolution], cellRank(cell, resolution));
+        }
+
+        async ensure(parents) {
+          const missing = [];
+          for (const parent of parents) {
+            if (this.coarseState(parent) !== 1 || this.cache.has(parent)) continue;
+            const index = this.recordIndex[cellRank(parent, COARSE)];
+            missing.push({
+              parent,
+              start: this.recordsStart + index * this.stride,
+            });
+          }
+          if (missing.length === 0) return;
+          missing.sort((a, b) => a.start - b.start);
+          const groups = [];
+          for (const item of missing) {
+            const end = item.start + this.stride - 1;
+            const last = groups[groups.length - 1];
+            if (last && item.start - last.end <= 8192) {
+              last.end = end;
+              last.items.push(item);
+            } else {
+              groups.push({ start: item.start, end, items: [item] });
+            }
+          }
+          await Promise.all(groups.map((group) => this.fetchGroup(group)));
+        }
+
+        async fetchGroup(group) {
+          const body = await range(this.url, group.start, group.end);
+          for (const item of group.items) {
+            const local = item.start - group.start;
+            this.cache.set(item.parent, body.subarray(local, local + this.stride));
+            stats.cachedRecords = this.cache.size;
+          }
+        }
+
+        async state(cell) {
+          const resolution = h3.getResolution(cell);
+          if (resolution <= COARSE) return this.coarseState(cell);
+          const parent = h3.cellToParent(cell, COARSE);
+          const parentState = this.coarseState(parent);
+          if (parentState !== 1) return parentState;
+          await this.ensure([parent]);
+          const record = this.cache.get(parent);
+          if (resolution === this.fineResolution) {
+            return getState(record, h3.cellToChildPos(cell, COARSE));
+          }
+          return fold(record, cell);
+        }
+      }
+
+      // H3 treats an edge longer than 180° as the short arc, so a viewport
+      // wider than that is filled backwards. Keep each query under 90°.
+      function longitudeSlices(west, east) {
+        const span = 90;
+        if (east - west <= span) return [[west, east]];
+        const slices = [];
+        for (let cursor = west; cursor < east - 1e-6; cursor += span) {
+          const end = Math.min(cursor + span, east);
+          slices.push([cursor, Math.min(end + 1e-4, east)]);
+        }
+        return slices;
+      }
+
+      function longitudeParts(bounds) {
+        let west = bounds.getWest();
+        let east = bounds.getEast();
+        if (east - west >= 360) return [[-180, 180]];
+        const parts = [];
+        while (west < -180) {
+          west += 360;
+          east += 360;
+        }
+        while (east > 180) {
+          parts.push([west, 180]);
+          west = -180;
+          east -= 360;
+        }
+        if (east > west) parts.push([west, east]);
+        return parts;
+      }
+
+      function cellsInView(map, resolution) {
+        const bounds = map.getBounds();
+        const edgeM = h3.getHexagonEdgeLengthAvg(resolution, "m");
+        const latPad = Math.min(20, (edgeM * 1.3) / 111320);
+        const south = Math.max(bounds.getSouth() - latPad, -90);
+        const north = Math.min(bounds.getNorth() + latPad, 90);
+        const found = new Set();
+        for (const [west, east] of longitudeParts(bounds)) {
+          const span = east - west;
+          const midLat = (south + north) / 2;
+          const lngPad =
+            span >= 360
+              ? 0
+              : Math.min(40, latPad / Math.max(Math.cos((midLat * Math.PI) / 180), 0.25));
+          let queryWest = west - lngPad;
+          let queryEast = east + lngPad;
+          if (queryEast - queryWest >= 360) {
+            queryWest = -180;
+            queryEast = 180;
+          }
+          for (const [sliceWest, sliceEast] of longitudeSlices(queryWest, queryEast)) {
+            const ring = [
+              [sliceWest, south],
+              [sliceEast, south],
+              [sliceEast, north],
+              [sliceWest, north],
+              [sliceWest, south],
+            ];
+            for (const cell of h3.polygonToCells(ring, resolution, true)) found.add(cell);
+          }
+        }
+        return [...found];
+      }
+
+      function chooseResolution(map) {
+        const zoom = map.getZoom();
+        const lat = map.getCenter().lat;
+        const metersPerPixel =
+          (156543.03392 * Math.cos((lat * Math.PI) / 180)) / 2 ** zoom;
+        const widthMeters = metersPerPixel * map.getContainer().clientWidth;
+        let resolution = 0;
+        for (let res = 0; res <= FINE; res++) {
+          const across = widthMeters / (h3.getHexagonEdgeLengthAvg(res, "m") * 1.7);
+          if (across > 48) break;
+          resolution = res;
+        }
+        return Math.min(FINE, resolution + 2);
+      }
+
+      // Trace the boundary along its short edges. A cell that contains a pole
+      // winds a full turn; close that ring across the pole so the cap does not
+      // fill the rest of the world. Longitudes may fall outside [-180, 180],
+      // which is how Mapbox draws a cell across the antimeridian.
+      function boundaryRing(cell) {
+        const raw = h3.cellToBoundary(cell, true);
+        const centerLat = h3.cellToLatLng(cell)[0];
+        const ring = [[raw[0][0], raw[0][1]]];
+        for (let i = 1; i < raw.length; i++) {
+          let lng = raw[i][0];
+          const prev = ring[ring.length - 1][0];
+          while (lng - prev > 180) lng -= 360;
+          while (prev - lng > 180) lng += 360;
+          ring.push([lng, raw[i][1]]);
+        }
+        let closeLng = ring[0][0];
+        const prev = ring[ring.length - 1][0];
+        while (closeLng - prev > 180) closeLng -= 360;
+        while (prev - closeLng > 180) closeLng += 360;
+        if (Math.abs(closeLng - ring[0][0]) > 180) {
+          const pole = centerLat >= 0 ? 89.999999 : -89.999999;
+          ring.push([closeLng, raw[0][1]]);
+          ring.push([closeLng, pole]);
+          ring.push([ring[0][0], pole]);
+        }
+        ring.push(ring[0]);
+        return ring;
+      }
+
+      function polygonFeature(cell, state) {
+        return {
+          type: "Feature",
+          properties: { state, cell, name: NAMES[state] },
+          geometry: { type: "Polygon", coordinates: [boundaryRing(cell)] },
+        };
+      }
+
+      mapboxgl.accessToken = MAPBOX_TOKEN;
+      const map = new mapboxgl.Map({
+        container: "map",
+        style: "mapbox://styles/mapbox/light-v11",
+        center: [-122.4, 37.8],
+        zoom: 3,
+      });
+      map.addControl(new mapboxgl.NavigationControl(), "top-right");
+
+      let archive = null;
+      let generation = 0;
+
+      function describe(resolution, counts) {
+        const kb = (stats.rangeBytes / 1024).toFixed(0);
+        return [
+          `Resolution ${resolution}`,
+          `${counts.total.toLocaleString()} cells in view · ${counts.water.toLocaleString()} water · ${counts.mixed.toLocaleString()} mixed · ${counts.land.toLocaleString()} land`,
+          `${stats.rangeRequests} range requests · ${kb} KB · ${stats.cachedRecords.toLocaleString()} records cached`,
+        ].join("\n");
+      }
+
+      async function render() {
+        if (!archive) return;
+        const gen = ++generation;
+        let resolution = chooseResolution(map);
+        let cells = [];
+        try {
+          while (resolution >= 0) {
+            cells = cellsInView(map, resolution);
+            if (cells.length <= 120000 || resolution === 0) break;
+            resolution--;
+          }
+        } catch (error) {
+          fail(error);
+          return;
+        }
+        const parents = new Set();
+        if (resolution > COARSE) {
+          for (const cell of cells) parents.add(h3.cellToParent(cell, COARSE));
+        }
+        try {
+          await archive.ensure([...parents]);
+        } catch (error) {
+          fail(error);
+          return;
+        }
+        if (gen !== generation) return;
+        const features = [];
+        const counts = { total: cells.length, water: 0, mixed: 0, land: 0 };
+        for (const cell of cells) {
+          const state = await archive.state(cell);
+          if (gen !== generation) return;
+          if (state === 0) counts.water++;
+          else if (state === 1) counts.mixed++;
+          else counts.land++;
+          features.push(polygonFeature(cell, state));
+        }
+        map.getSource("h3").setData({ type: "FeatureCollection", features });
+        statusEl.textContent = describe(resolution, counts);
+        errorEl.textContent = "";
+      }
+
+      map.on("load", async () => {
+        map.addSource("h3", {
+          type: "geojson",
+          data: { type: "FeatureCollection", features: [] },
+        });
+        map.addLayer({
+          id: "h3-fill",
+          type: "fill",
+          source: "h3",
+          paint: {
+            "fill-color": [
+              "match",
+              ["get", "state"],
+              0,
+              "#2563eb",
+              1,
+              "#d97706",
+              2,
+              "#16a34a",
+              "#94a3b8",
+            ],
+            "fill-opacity": ["match", ["get", "state"], 0, 0.16, 1, 0.5, 2, 0.34, 0.2],
+          },
+        });
+        map.addLayer({
+          id: "h3-line",
+          type: "line",
+          source: "h3",
+          paint: {
+            "line-color": "#0f172a",
+            "line-width": 0.7,
+            "line-opacity": 0.28,
+          },
+        });
+        map.on("click", "h3-fill", (event) => {
+          const feature = event.features && event.features[0];
+          if (!feature) return;
+          const props = feature.properties;
+          new mapboxgl.Popup()
+            .setLngLat(event.lngLat)
+            .setHTML(
+              `<strong>${props.name}</strong><br>resolution ${h3.getResolution(props.cell)}<br><code>${props.cell}</code>`
+            )
+            .addTo(map);
+        });
+        map.on("mouseenter", "h3-fill", () => {
+          map.getCanvas().style.cursor = "pointer";
+        });
+        map.on("mouseleave", "h3-fill", () => {
+          map.getCanvas().style.cursor = "";
+        });
+        try {
+          const headerBytes = expectedHeaderBytes();
+          const prefixBytes = await range(ARCHIVE_URL, 0, headerBytes - 1);
+          stats.headerBytes = prefixBytes.byteLength;
+          archive = new Archive(ARCHIVE_URL, prefixBytes);
+          await render();
+        } catch (error) {
+          fail(error);
+          statusEl.textContent = "Could not read the archive.";
+        }
+      });
+
+      map.on("moveend", () => {
+        render().catch(fail);
+      });
+    </script>
+  </body>
+</html>

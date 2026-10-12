@@ -491,6 +491,12 @@ div[attachments="forumAttachments"] {
   gap: 2px;
 }
 
+.report-tabs-track-overlay {
+  background: rgba(229, 231, 235, 0.72);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
 .report-tabs-tab {
   appearance: none;
   border: none;

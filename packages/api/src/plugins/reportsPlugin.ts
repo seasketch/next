@@ -258,6 +258,11 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
         bufferDistanceKm: Float
         maxResults: Int
         maxDistanceKm: Float
+        """
+        Ocean-bitmap cell size for distance-to-features. low, medium, or high.
+        Omitted means high.
+        """
+        resolution: String
         sourceHasOverlappingFeatures: Boolean
         vrm: String
       }
@@ -363,7 +368,7 @@ const ReportsPlugin = makeExtendSchemaPlugin((build) => {
       }
 
       input NodeDependency {
-        # e.g. "total_area", "presence", "presence_table", "column_values", "raster_stats", "raster_overlay_area", "distance_to_shore", "ous_demographics"
+        # e.g. "total_area", "presence", "presence_table", "column_values", "raster_stats", "raster_overlay_area", "distance_to_shore", "distance_to_features_over_water", "ous_demographics"
         type: String!
         # "fragments" or "geographies"
         subjectType: String!

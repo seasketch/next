@@ -1,0 +1,421 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ocean bitmap A*</title>
+    <link
+      href="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.css"
+      rel="stylesheet"
+    />
+    <link href="/frame.css" rel="stylesheet" />
+    <style>
+      html,
+      body,
+      #map {
+        margin: 0;
+        height: 100%;
+        background: #d5dde6;
+      }
+      #panel {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        z-index: 1;
+        width: 360px;
+        max-height: calc(100% - 24px);
+        overflow: auto;
+        padding: 12px 14px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.94);
+        color: #1c2430;
+        font:
+          13px/1.45 ui-sans-serif,
+          system-ui,
+          sans-serif;
+        box-shadow: 0 8px 28px rgba(20, 30, 40, 0.18);
+      }
+      #panel h1 {
+        margin: 0 0 6px;
+        font-size: 15px;
+        font-weight: 650;
+      }
+      nav {
+        margin: 0 0 8px;
+        font-size: 12px;
+      }
+      nav a {
+        color: #1d4ed8;
+      }
+      #panel p {
+        margin: 6px 0;
+      }
+      #panel label {
+        display: block;
+        margin: 8px 0 0;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+      }
+      .row label {
+        flex: 1;
+      }
+      #panel select,
+      #panel input[type="number"],
+      #panel button {
+        font: inherit;
+      }
+      #panel select,
+      #panel input[type="number"] {
+        width: 100%;
+        box-sizing: border-box;
+        margin-top: 3px;
+      }
+      #archive-note {
+        color: #64748b;
+        font-size: 12px;
+      }
+      .buttons {
+        display: flex;
+        gap: 6px;
+        margin-top: 10px;
+      }
+      .buttons button {
+        flex: 1;
+        padding: 6px 8px;
+        border: 0;
+        border-radius: 7px;
+        color: white;
+        cursor: pointer;
+      }
+      #run {
+        background: #1d4ed8;
+      }
+      #benchmark {
+        background: #0f766e;
+      }
+      #cancel {
+        background: #9f1239;
+        flex: 0 0 auto;
+      }
+      #fit-exit {
+        background: #334155;
+      }
+      .buttons button:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+      #debug {
+        margin-top: 10px;
+        padding-top: 8px;
+        border-top: 1px solid #e5e7eb;
+      }
+      #debug h2 {
+        margin: 0 0 6px;
+        font-size: 13px;
+        font-weight: 650;
+      }
+      #debug .toggles {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2px 8px;
+      }
+      #debug label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin: 0;
+        font-size: 12px;
+      }
+      #debug select {
+        width: 100%;
+        box-sizing: border-box;
+        margin: 4px 0 6px;
+      }
+      #debug-note {
+        margin: 4px 0 0;
+        color: #64748b;
+        font-size: 11px;
+        white-space: pre-line;
+      }
+      .swatch {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        margin-right: 6px;
+        border-radius: 2px;
+        vertical-align: -1px;
+      }
+      .legend {
+        margin-top: 8px;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2px 8px;
+      }
+      #status,
+      #readout,
+      #routes {
+        margin: 8px 0 0;
+        white-space: pre-line;
+      }
+      #routes button {
+        display: block;
+        width: 100%;
+        margin-top: 4px;
+        padding: 4px 6px;
+        text-align: left;
+        border: 0;
+        border-radius: 6px;
+        background: #eef2ff;
+        cursor: pointer;
+      }
+      #readout {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        font-size: 12px;
+      }
+      #error {
+        margin: 8px 0 0;
+        color: #9f1239;
+      }
+      #player {
+        margin-top: 10px;
+        padding-top: 8px;
+        border-top: 1px solid #e5e7eb;
+      }
+      #player[hidden] {
+        display: none;
+      }
+      .transport {
+        display: flex;
+        gap: 4px;
+        align-items: center;
+      }
+      .transport button {
+        padding: 4px 8px;
+        border: 1px solid #cbd5e1;
+        border-radius: 6px;
+        background: #f8fafc;
+        cursor: pointer;
+      }
+      .transport button#play {
+        flex: 1;
+        background: #eef2ff;
+      }
+      .transport select {
+        width: auto !important;
+        margin: 0 !important;
+      }
+      #slider {
+        width: 100%;
+        margin: 8px 0 0;
+      }
+      #bench-table table {
+        width: 100%;
+        margin-top: 6px;
+        border-collapse: collapse;
+        font-size: 11px;
+      }
+      #bench-table th,
+      #bench-table td {
+        padding: 2px 4px;
+        border-top: 1px solid #e5e7eb;
+        text-align: right;
+        white-space: nowrap;
+      }
+      #bench-table th {
+        font-weight: 600;
+        color: #475569;
+      }
+      #bench-table p {
+        color: #64748b;
+        font-size: 12px;
+      }
+      kbd {
+        padding: 0 4px;
+        border: 1px solid #cbd5e1;
+        border-radius: 4px;
+        font:
+          11px ui-monospace,
+          monospace;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div id="panel">
+      <nav>
+        <a href="/">Occupancy</a> · <a href="/astar">H3 A*</a> ·
+        <a href="/tangent">Tangent</a> ·
+        <strong>Ocean bitmap</strong>
+      </nav>
+      <h1>Ocean bitmap A*</h1>
+      <p>
+        The same stages as
+        <a href="https://github.com/arcnautical/maritime-routing"
+          >maritime-routing</a
+        >: a regular lon/lat grid, land blocked, eight-direction A* with a
+        great-circle heuristic, then a string pull that straightens any span
+        whose corridor is all water. A sketch leaves from the boundary cell with
+        the shortest water path, not from its center. Cells are read from the
+        land archive as the search reaches them, so a fine grid does not have to
+        load the whole window. On the last frame the red grid path hides; gray
+        is the raw centerline and color is the string-pulled route.
+      </p>
+      <div class="row">
+        <label>
+          Cell size
+          <select id="degrees">
+            <option value="0.1">0.10° (~11 km)</option>
+            <option value="0.05">0.05° (~5.5 km)</option>
+            <option value="0.02">0.02° (~2.2 km)</option>
+            <option value="0.01" selected>0.01° (~1.1 km)</option>
+            <option value="0.005">0.005° (~550 m)</option>
+            <option value="0.0025">0.0025° (~280 m)</option>
+          </select>
+          <span id="archive-note"></span>
+        </label>
+        <label>
+          Corridor cells
+          <input id="margin" type="number" min="0" max="3" step="1" value="1" />
+        </label>
+      </div>
+      <label>
+        Start
+        <select id="sketch"></select>
+      </label>
+      <label style="display: flex; align-items: center; gap: 6px">
+        <input id="pick-start" type="checkbox" /> Click the map to set a start
+        point
+      </label>
+      <div class="row">
+        <label
+          >Results
+          <input id="max-results" type="number" min="1" max="12" value="3"
+        /></label>
+        <label
+          >Limit km
+          <input id="max-km" type="number" min="1" step="10" value="350"
+        /></label>
+      </div>
+      <div class="row">
+        <label
+          >Max expansions
+          <input
+            id="max-expansions"
+            type="number"
+            min="1"
+            step="10000"
+            value="250000"
+        /></label>
+        <label
+          >Goal pool <input id="max-goals" type="number" min="1" value="24"
+        /></label>
+      </div>
+      <div class="buttons">
+        <button id="run" type="button">Search &amp; animate</button>
+        <button id="benchmark" type="button">Benchmark</button>
+        <button id="cancel" type="button" disabled>Stop</button>
+        <button id="fit-exit" type="button">Fit exit</button>
+      </div>
+      <label style="display: flex; align-items: center; gap: 6px">
+        Benchmark runs
+        <input
+          id="benchmark-runs"
+          type="number"
+          min="1"
+          max="20"
+          value="3"
+          style="width: 64px"
+        />
+      </label>
+      <div class="legend">
+        <div>
+          <span class="swatch" style="background: #facc15"></span>Frontier
+        </div>
+        <div>
+          <span class="swatch" style="background: #ef4444"></span>Current
+        </div>
+        <div><span class="swatch" style="background: #1d6a9a"></span>Water</div>
+        <div><span class="swatch" style="background: #2f9e44"></span>Land</div>
+        <div><span class="swatch" style="background: #e3941a"></span>Mixed</div>
+        <div>
+          <span class="swatch" style="background: #8aa0b4"></span>Inland water
+        </div>
+        <div>
+          <span
+            class="swatch"
+            style="background: #fff; border: 1.5px solid #1e293b"
+          ></span
+          >Expanded
+        </div>
+        <div>
+          <span class="swatch" style="background: #7c3aed"></span>Simplified
+        </div>
+        <div>
+          <span class="swatch" style="background: #64748b"></span>Raw centerline
+        </div>
+        <div>
+          <span class="swatch" style="background: #111827"></span>Port target
+        </div>
+      </div>
+      <div id="debug">
+        <h2>Exit debug</h2>
+        <select id="debug-port"></select>
+        <div class="toggles">
+          <label
+            ><input id="dbg-polys" type="checkbox" checked /> Land
+            polygons</label
+          >
+          <label><input id="dbg-tiles" type="checkbox" /> Fetch tiles</label>
+          <label
+            ><input id="dbg-raster" type="checkbox" checked /> Fine
+            raster</label
+          >
+          <label
+            ><input id="dbg-chain" type="checkbox" checked /> Raw walk</label
+          >
+          <label><input id="dbg-probes" type="checkbox" /> Bitmap probes</label>
+          <label
+            ><input id="dbg-visited" type="checkbox" /> Visited cells</label
+          >
+        </div>
+        <p id="debug-note">
+          After a search, pick a port.
+          <code>setBounds(west,south,east,north)</code> is on
+          <code>window</code>.
+        </p>
+      </div>
+      <p id="status">Choose a start and search.</p>
+      <div id="routes"></div>
+      <ul id="candidates"></ul>
+      <div id="player" hidden>
+        <div class="transport">
+          <button id="to-start" type="button">⏮</button>
+          <button id="back" type="button">◀</button>
+          <button id="play" type="button">Play</button>
+          <button id="forward" type="button">▶</button>
+          <button id="to-end" type="button">⏭</button>
+          <select id="speed">
+            <option value="1">1×</option>
+            <option value="3">3×</option>
+            <option value="10" selected>10×</option>
+            <option value="30">30×</option>
+            <option value="100">100×</option>
+            <option value="300">300×</option>
+          </select>
+        </div>
+        <input id="slider" type="range" min="0" max="0" value="0" step="1" />
+        <div id="readout"></div>
+        <p style="color: #64748b; font-size: 12px">
+          <kbd>←</kbd> <kbd>→</kbd> step, <kbd>shift</kbd> for 10,
+          <kbd>space</kbd> plays. Click a cell for g, h, and f.
+        </p>
+      </div>
+      <div id="bench-table"></div>
+      <p id="error"></p>
+    </div>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.js"></script>
+    <script src="/raster.js"></script>
+  </body>
+</html>

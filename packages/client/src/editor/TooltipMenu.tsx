@@ -1634,6 +1634,7 @@ export function TooltipDropdown({
   titleDescription,
   contentProps,
   getDisplayLabel,
+  truncateValue = true,
 }: {
   value: string;
   options: TooltipDropdownOption[];
@@ -1645,6 +1646,8 @@ export function TooltipDropdown({
   titleDescription?: ReactNode;
   contentProps?: React.HTMLAttributes<HTMLDivElement>;
   getDisplayLabel?: (selected?: TooltipDropdownOption) => ReactNode;
+  /** Compact toolbar rows cap the value. Wider menus should show the full label. */
+  truncateValue?: boolean;
 }) {
   const selected = options.find((o) => o.value === value);
   const displayLabel = getDisplayLabel
@@ -1663,7 +1666,11 @@ export function TooltipDropdown({
           {selected?.icon && (
             <span className={ICON_CONTAINER_CLASSES}>{selected.icon}</span>
           )}
-          <span className="max-w-[78px] truncate flex items-center">
+          <span
+            className={`flex items-center ${
+              truncateValue ? "max-w-[78px] truncate" : "whitespace-nowrap"
+            }`}
+          >
             {displayLabel}
           </span>
           <span className={ICON_CONTAINER_CLASSES}>

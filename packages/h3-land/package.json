@@ -1,0 +1,48 @@
+{
+  "name": "@seasketch/h3-land",
+  "version": "0.0.1",
+  "private": true,
+  "description": "H3 land-occupancy archives and the client that reads them",
+  "author": "Chad Burt <chad@underbluewaters.net>",
+  "license": "BSD-3-Clause",
+  "type": "commonjs",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
+    }
+  },
+  "typesVersions": {
+    "*": {
+      "client": ["./dist/client.d.ts"]
+    }
+  },
+  "bin": {
+    "h3-land": "dist/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "test": "vitest run",
+    "cli": "tsc && node dist/cli.js",
+    "viewer": "python3 -m http.server 8765"
+  },
+  "engines": {
+    "node": ">=22.13"
+  },
+  "dependencies": {
+    "@types/geojson": "^7946.0.16",
+    "flatgeobuf": "^3.37.1",
+    "h3-js": "^4.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.16.0",
+    "typescript": "^5.8.3",
+    "vitest": "^1.6.1"
+  }
+}

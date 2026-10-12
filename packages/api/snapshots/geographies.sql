@@ -2,7 +2,9 @@
 -- createProjectWithGeographies takes for one EEZ with offshore and nearshore
 -- zones turned on: clone the public templates into the project, filter them
 -- to Samoa, nest the drafts under "Geography layers", publish that list, and
--- store the EEZ bounds as the project region.
+-- store the EEZ bounds as the project region. Then it creates the Marine
+-- Protected Area sketch class the same way the template chooser does, so the
+-- class clips to the Exclusive Economic Zone and uses the default report.
 --
 -- Samoa's Marine Regions id is MRGID_EEZ 8445. The region envelope is the
 -- overlay bbox for that EEZ feature. Snapshot creation does not call the
@@ -164,3 +166,36 @@ end
 $$;
 
 reset role;
+
+-- Same call as the sketch-class template chooser. The template id is read
+-- first, then the session becomes e2e|admin, who is an admin of demo-samoa.
+do $$
+declare
+  pid int;
+  template_id int;
+begin
+  select id into pid from projects where slug = 'demo-samoa';
+  select id into template_id
+  from sketch_classes
+  where is_template and name = 'Marine Protected Area';
+  if template_id is null then
+    raise exception 'Marine Protected Area template is missing';
+  end if;
+  if exists (
+    select 1
+    from sketch_classes sc
+    where sc.project_id = pid
+      and sc.name = 'Marine Protected Area'
+      and sc.is_template = false
+      and sc.form_element_id is null
+  ) then
+    return;
+  end if;
+
+  perform set_config('session.user_id', (select id::text from users where sub = 'e2e|admin'), true);
+  perform set_config('session.canonical_email', 'admin@example.test', true);
+  perform set_config('session.email_verified', 'true', true);
+  perform set_config('role', 'seasketch_user', true);
+  perform create_sketch_class_from_template(pid, template_id);
+end
+$$;

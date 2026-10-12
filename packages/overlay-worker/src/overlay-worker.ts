@@ -1,6 +1,7 @@
 import {
   calculateArea,
   calculateDistanceToShore,
+  calculateDistanceToFeaturesOverWater,
   calculateFragmentOverlap,
   calculateGeographyOverlap,
   calculateOusDemographics,
@@ -123,6 +124,8 @@ async function fetchUploadsRange(
   }
   return response.body.arrayBuffer();
 }
+
+const LAND_FLATGEOBUF_URL = "https://uploads.seasketch.org/land-big-2.fgb";
 
 const sourceCache = new SourceCache("1GB", {
   fetchRangeFn: (url, range) => {
@@ -623,27 +626,39 @@ export default async function handler(payload: OverlayWorkerPayload) {
         return;
       }
       case "distance_to_shore": {
-        console.log("distance_to_shore", payload);
         if (!payload.sourceUrl) {
           throw new Error("sourceUrl is required for distance_to_shore");
         }
         if (subjectIsGeography(payload.subject)) {
           throw new Error("distance_to_shore for geographies not implemented.");
         }
-        const { intersectionFeature, differenceSources } =
-          await subjectsForAnalysis(
-            payload.subject as MetricSubjectFragment | MetricSubjectGeography,
-            helpers,
-          );
+        const { intersectionFeature } = await subjectsForAnalysis(
+          payload.subject as MetricSubjectFragment | MetricSubjectGeography,
+          helpers,
+        );
         const source = await sourceCache.get<Feature<Polygon>>(
           payload.sourceUrl,
           {
-            pageSize: "5MB",
+            pageSize: "1MB",
           },
         );
+        const minimumDistanceMeters =
+          typeof (payload as { minimumDistanceMeters?: unknown })
+            .minimumDistanceMeters === "number"
+            ? (payload as { minimumDistanceMeters: number })
+                .minimumDistanceMeters
+            : typeof (payload as { miminumDistanceMeters?: unknown })
+                  .miminumDistanceMeters === "number"
+              ? (payload as { miminumDistanceMeters: number })
+                  .miminumDistanceMeters
+              : undefined;
         const result = await calculateDistanceToShore(
           intersectionFeature,
           source,
+          {
+            helpers,
+            minimumDistanceMeters,
+          },
         );
         await flushMessages();
         await sendResultMessage(
@@ -651,6 +666,55 @@ export default async function handler(payload: OverlayWorkerPayload) {
           result,
           payload.queueUrl,
           Date.now() - startTime,
+        );
+        return;
+      }
+      case "distance_to_features_over_water": {
+        if (!payload.sourceUrl) {
+          throw new Error(
+            "sourceUrl is required for distance_to_features_over_water"
+          );
+        }
+        if (subjectIsGeography(payload.subject)) {
+          throw new Error(
+            "distance_to_features_over_water for geographies not implemented."
+          );
+        }
+        const { intersectionFeature } = await subjectsForAnalysis(
+          payload.subject as MetricSubjectFragment | MetricSubjectGeography,
+          helpers
+        );
+        const points = await sourceCache.get<Feature>(payload.sourceUrl, {
+          pageSize: "1MB",
+          maxCacheSize: "256MB",
+        });
+        const land = await sourceCache.get<Feature>(LAND_FLATGEOBUF_URL, {
+          pageSize: "1MB",
+          maxCacheSize: "256MB",
+        });
+        const resolution =
+          payload.resolution === "low" ||
+          payload.resolution === "medium" ||
+          payload.resolution === "high"
+            ? payload.resolution
+            : undefined;
+        const result = await calculateDistanceToFeaturesOverWater(
+          intersectionFeature,
+          points,
+          land,
+          {
+            maxResults: payload.maxResults,
+            maxDistanceKm: payload.maxDistanceKm,
+            includedColumns: payload.includedColumns,
+            resolution,
+          }
+        );
+        await flushMessages();
+        await sendResultMessage(
+          payload.jobKey,
+          result,
+          payload.queueUrl,
+          Date.now() - startTime
         );
         return;
       }

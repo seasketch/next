@@ -45,6 +45,7 @@ function metricParametersFromDependency(
     bufferDistanceKm: p?.bufferDistanceKm ?? null,
     maxResults: p?.maxResults ?? null,
     maxDistanceKm: p?.maxDistanceKm ?? null,
+    resolution: p?.resolution ?? null,
     sourceHasOverlappingFeatures: p?.sourceHasOverlappingFeatures ?? null,
   };
 }

@@ -1000,7 +1000,8 @@ CREATE TYPE public.spatial_metric_type AS ENUM (
     'distance_to_shore',
     'raster_stats',
     'raster_overlay_area',
-    'ous_demographics'
+    'ous_demographics',
+    'distance_to_features_over_water'
 );
 
 

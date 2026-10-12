@@ -629,6 +629,25 @@ describe("combineMetricsForFragments", () => {
       expect(result.value.meters).toBe(1000);
       expect(result.value.geojsonLine).toBe(line1); // Returns first
     });
+
+    it("ignores metrics whose value is still null", () => {
+      const metrics: Pick<Metric, "type" | "value">[] = [
+        {
+          type: "distance_to_shore",
+          value: null as any,
+        },
+        {
+          type: "distance_to_shore",
+          value: {
+            meters: 2500,
+            geojsonLine: makeLineString(),
+          },
+        },
+      ];
+
+      const result = combineMetricsForFragments(metrics);
+      expect(result.value.meters).toBe(2500);
+    });
   });
 
   describe("presence", () => {

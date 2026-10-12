@@ -67,7 +67,9 @@ export function combinePresenceTableMetrics(
   }
 
   try {
-    const combined = combineMetricsForFragments(validMetrics) as PresenceTableMetric;
+    const combined = combineMetricsForFragments(
+      validMetrics
+    ) as PresenceTableMetric;
     return {
       values: combined.value.values,
       exceededLimit: combined.value.exceededLimit,

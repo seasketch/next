@@ -47,6 +47,7 @@ import {
   ProjectReportingLayersDocument,
   useProjectReportingLayersQuery,
   usePreprocessSourceMutation,
+  useCopyDataLibraryTemplateMutation,
   BaseDraftReportContextDocument,
   useUpdateReportCardBodyMutation,
   useDraftReportDependenciesQuery,
@@ -65,6 +66,7 @@ import { useHistory } from "react-router-dom";
 import { ProsemirrorBodyJSON } from "../cards/cards";
 import { useGlobalErrorHandler } from "../../components/GlobalErrorHandler";
 import Button from "../../components/Button";
+import Modal from "../../components/Modal";
 import {
   extractMetricDependenciesFromReportBody,
   hashMetricDependency,
@@ -251,6 +253,7 @@ function ReportCardBodyEditorInner({
 
   const history = useHistory();
   const { t } = useTranslation("sketching");
+  const { t: tAdmin } = useTranslation("admin:reports");
 
   const [additionalDependencies, setAdditionalDependencies] = useState<
     MetricDependency[]
@@ -499,6 +502,108 @@ function ReportCardBodyEditorInner({
     [preprocessSourceMutation]
   );
 
+  const [pendingLibraryLayer, setPendingLibraryLayer] = useState<{
+    templateId: string;
+    existing?: { stableId: string; sourceId: number };
+    insert: (stableId: string) => void;
+  } | null>(null);
+  const [libraryLayerError, setLibraryLayerError] = useState<string | null>(
+    null
+  );
+  const [libraryLayerBusy, setLibraryLayerBusy] = useState(false);
+  const [copyLibraryTemplate] = useCopyDataLibraryTemplateMutation();
+
+  const prepareLibraryLayer = useCallback(
+    async (args: {
+      templateId: string;
+      existing?: { stableId: string; sourceId: number };
+      insert: (stableId: string) => void;
+    }) => {
+      setLibraryLayerError(null);
+      setLibraryLayerBusy(true);
+      try {
+        let stableId = args.existing?.stableId;
+        let sourceId = args.existing?.sourceId;
+        if (stableId == null || sourceId == null) {
+          const result = await copyLibraryTemplate({
+            variables: {
+              slug: getSlug(),
+              templateId: args.templateId,
+            },
+          });
+          const item =
+            result.data?.copyDataLibraryTemplateItem?.tableOfContentsItem;
+          stableId = item?.stableId ?? undefined;
+          sourceId = item?.dataLayer?.dataSourceId ?? undefined;
+          if (stableId == null || sourceId == null) {
+            setLibraryLayerError(tAdmin("Unable to add the layer"));
+            return;
+          }
+          const copied = { stableId, sourceId };
+          setPendingLibraryLayer((prev) =>
+            prev ? { ...prev, existing: copied } : prev
+          );
+        }
+        await preprocessSourceMutation({
+          variables: {
+            slug: getSlug(),
+            sourceId,
+          },
+          refetchQueries: [
+            {
+              query: ProjectReportingLayersDocument,
+              variables: { slug: getSlug() },
+            },
+          ],
+          awaitRefetchQueries: true,
+        });
+        args.insert(stableId);
+        setPendingLibraryLayer(null);
+      } catch (err) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : tAdmin("Unable to add the layer");
+        if (pendingLibraryLayer) {
+          setLibraryLayerError(message);
+        } else {
+          onError(err instanceof Error ? err : new Error(message));
+        }
+      } finally {
+        setLibraryLayerBusy(false);
+      }
+    },
+    [
+      copyLibraryTemplate,
+      onError,
+      pendingLibraryLayer,
+      preprocessSourceMutation,
+      tAdmin,
+    ]
+  );
+
+  const handleEnsureDataLibraryLayer = useCallback(
+    (args: {
+      templateId: string;
+      existing?: { stableId: string; sourceId: number };
+      insert: (stableId: string) => void;
+    }) => {
+      if (libraryLayerBusy) return;
+      setLibraryLayerError(null);
+      if (args.existing) {
+        void prepareLibraryLayer(args);
+        return;
+      }
+      setPendingLibraryLayer(args);
+    },
+    [libraryLayerBusy, prepareLibraryLayer]
+  );
+
+  const confirmAddLibraryLayer = useCallback(async () => {
+    if (!pendingLibraryLayer || libraryLayerBusy) return;
+    await prepareLibraryLayer(pendingLibraryLayer);
+  }, [libraryLayerBusy, pendingLibraryLayer, prepareLibraryLayer]);
+
   const handlePrepareTimeSeriesLayers = useCallback(
     async (args: {
       unprocessed: Array<{ title: string; sourceId: number }>;
@@ -623,6 +728,7 @@ function ReportCardBodyEditorInner({
         ),
         onProcessLayer: handleOverlaySelection,
         onPrepareTimeSeriesLayers: handlePrepareTimeSeriesLayers,
+        onEnsureDataLibraryLayer: handleEnsureDataLibraryLayer,
         isSuperuser: Boolean(isSuperuser),
       }),
     [
@@ -633,6 +739,7 @@ function ReportCardBodyEditorInner({
       reportingLayersQuery.data?.projectBySlug?.draftTableOfContentsItems,
       handleOverlaySelection,
       handlePrepareTimeSeriesLayers,
+      handleEnsureDataLibraryLayer,
       sketchClass?.project?.sketchClasses,
       sketchClass?.validChildren,
       isSuperuser,
@@ -845,6 +952,40 @@ function ReportCardBodyEditorInner({
         imageUploadFile={uploadFile}
       />
       {commandPalette}
+      {pendingLibraryLayer && (
+        <Modal
+          title={tAdmin("Add World Ports")}
+          onRequestClose={() => {
+            if (libraryLayerBusy) return;
+            setPendingLibraryLayer(null);
+          }}
+          footer={[
+            {
+              label: tAdmin("Cancel"),
+              variant: "secondary",
+              disabled: libraryLayerBusy,
+              onClick: () => setPendingLibraryLayer(null),
+            },
+            {
+              label: tAdmin("Add layer"),
+              variant: "primary",
+              loading: libraryLayerBusy,
+              onClick: () => {
+                void confirmAddLibraryLayer();
+              },
+            },
+          ]}
+        >
+          <p>
+            {tAdmin(
+              "Distance to Port uses the World Ports layer from the data library. Add it to this project?"
+            )}
+          </p>
+          {libraryLayerError && (
+            <p className="mt-2 text-sm text-red-600">{libraryLayerError}</p>
+          )}
+        </Modal>
+      )}
       {timeSeriesPrep && (
         <TimeSeriesProcessingModal
           open

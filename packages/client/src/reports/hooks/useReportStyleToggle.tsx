@@ -2,12 +2,22 @@ import type { AnySourceData, AnyLayer } from "mapbox-gl";
 import { useContext, useRef, useCallback, useState, useEffect } from "react";
 import { MapManagerContext } from "../../dataLayers/MapContextManager";
 import type { ReportMapStyle } from "../reportUtils";
+import { claimReportStyle, releaseReportStyle } from "./reportStyleClaims";
+
+export type ReportStyleFitBounds = [[number, number], [number, number]];
+
+/** Quick ease onto the route once the promoted layers are on the map. */
+const PROMOTED_FIT_DURATION_MS = 450;
 
 export function useReportStyleToggle(
   cardId: number,
   selectedSketchId: number,
   styleId: string,
-  style: ReportMapStyle | null | undefined
+  style: ReportMapStyle | null | undefined,
+  options?: {
+    /** Fit the project map to this extent while the style is showing. */
+    fitBounds?: ReportStyleFitBounds | null;
+  }
 ) {
   const { manager } = useContext(MapManagerContext);
 
@@ -32,11 +42,11 @@ export function useReportStyleToggle(
       const perCard = cardMapStylesRef.current[cardId];
       const existing = perCard?.[styleId];
       if (existing) {
-        for (const sourceId of existing.sources) {
-          manager.removeSource(sourceId);
-        }
         for (const layerId of existing.layers) {
           manager.removeLayer(layerId);
+        }
+        for (const sourceId of existing.sources) {
+          manager.removeSource(sourceId);
         }
         if (perCard) {
           delete perCard[styleId];
@@ -96,6 +106,16 @@ export function useReportStyleToggle(
   );
 
   const [visible, setVisible] = useState(false);
+  const hideRef = useRef<() => void>(() => {});
+  hideRef.current = () => setVisible(false);
+  const fitBoundsRef = useRef(options?.fitBounds);
+  fitBoundsRef.current = options?.fitBounds;
+  const fitBounds = options?.fitBounds;
+  const boundsKey = fitBounds
+    ? `${fitBounds[0][0]},${fitBounds[0][1]},${fitBounds[1][0]},${fitBounds[1][1]}`
+    : "";
+  // eslint-disable-next-line i18next/no-literal-string
+  const claimKey = `${selectedSketchId}:${cardId}:${styleId}`;
 
   const toggle = useCallback(() => {
     setVisible((prev) => !prev);
@@ -108,22 +128,66 @@ export function useReportStyleToggle(
   }, [style, visible]);
 
   useEffect(() => {
-    if (!style || !visible) {
+    if (!manager || !style || !visible) {
       setCardMapStyle(cardId, styleId, null);
-    } else {
-      setCardMapStyle(cardId, styleId, style);
+      releaseReportStyle(claimKey);
+      return;
     }
-  }, [visible, style, cardId, styleId, setCardMapStyle]);
-
-  useEffect(() => {
+    claimReportStyle(claimKey, () => hideRef.current());
+    setCardMapStyle(cardId, styleId, style);
     return () => {
       setCardMapStyle(cardId, styleId, null);
+      releaseReportStyle(claimKey);
     };
-  }, [cardId, styleId, setCardMapStyle]);
+  }, [visible, style, cardId, styleId, setCardMapStyle, manager, claimKey]);
+
+  useEffect(() => {
+    const bounds = fitBoundsRef.current;
+    const map = manager?.map;
+    if (!visible || !bounds || !map) return;
+    let cancelled = false;
+    let fitted = false;
+    // eslint-disable-next-line i18next/no-literal-string
+    const layerPrefix = `report-style-${selectedSketchId}-${cardId}-${styleId}-layer-`;
+    const apply = () => {
+      if (cancelled || fitted) return;
+      // setStyle keeps the camera from the moment it runs, so a fit started
+      // before this style lands is thrown away. These layers appear in that
+      // rebuilt style. styledata fires then, before idle waits for tiles.
+      const layers = map.getStyle()?.layers;
+      if (!layers?.some((layer) => layer.id.startsWith(layerPrefix))) return;
+      const width = map.getContainer().clientWidth;
+      const height = map.getContainer().clientHeight;
+      if (width < 200 || height < 160) return;
+      fitted = true;
+      map.off("styledata", apply);
+      map.off("idle", apply);
+      // The open report sits on the top-right. Leave room so the route is not
+      // covered by that panel, without asking for more padding than the map has.
+      const right = Math.min(540, Math.max(48, width - 160));
+      const top = Math.min(72, Math.max(24, height - 120));
+      map.fitBounds(bounds, {
+        padding: { top, right, bottom: 48, left: 48 },
+        maxZoom: 12,
+        duration: PROMOTED_FIT_DURATION_MS,
+        linear: true,
+      });
+    };
+    map.on("styledata", apply);
+    map.on("idle", apply);
+    apply();
+    return () => {
+      cancelled = true;
+      map.off("styledata", apply);
+      map.off("idle", apply);
+    };
+  }, [visible, boundsKey, manager, selectedSketchId, cardId, styleId]);
 
   return {
     visible,
     toggle,
     setVisible,
+    /** False when this view has no project map (the report editor). */
+    canPromote: Boolean(manager),
   };
 }

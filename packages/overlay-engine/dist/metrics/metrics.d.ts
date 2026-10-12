@@ -1,5 +1,5 @@
-import { Feature, LineString } from "geojson";
-export type MetricType = "total_area" | "overlay_area" | "count" | "presence" | "presence_table" | "column_values" | "raster_stats" | "distance_to_shore" | "raster_overlay_area" | "ous_demographics";
+import { Feature, LineString, MultiLineString } from "geojson";
+export type MetricType = "total_area" | "overlay_area" | "count" | "presence" | "presence_table" | "column_values" | "raster_stats" | "distance_to_shore" | "distance_to_features_over_water" | "raster_overlay_area" | "ous_demographics";
 /**
  * Max distinct class keys allowed when `groupBy: "value"` for
  * {@link RasterOverlayAreaMetric}. Exceeding this throws at calculation time —
@@ -454,6 +454,26 @@ export type DistanceToShoreMetric = OverlayMetricBase & {
     value: {
         meters: number;
         geojsonLine: Feature<LineString>;
+        /** Shoreline inside the subject when it meets land. */
+        shorelineIntersection?: Feature<LineString | MultiLineString> | null;
+    };
+};
+export type DistanceToFeatureHit = {
+    __id: number;
+    meters: number;
+    properties: Record<string, unknown>;
+    geojsonLine: Feature<LineString>;
+};
+/**
+ * Water-path distance from a sketch to point features on an overlay layer.
+ * `features` is nearest-first. `exceededLimit` is true when the radius or
+ * `maxResults` dropped additional hits.
+ */
+export type DistanceToFeaturesOverWaterMetric = OverlayMetricBase & {
+    type: "distance_to_features_over_water";
+    value: {
+        features: DistanceToFeatureHit[];
+        exceededLimit: boolean;
     };
 };
 /**
@@ -735,7 +755,7 @@ export declare function summarizeOusDemographicsValue(value: OusDemographicsMetr
  * identical across fragments; the first non-empty totals object wins.
  */
 export declare function combineOusDemographicsMetrics(values: OusDemographicsMetricValue[]): OusDemographicsMetricValue;
-export type Metric = TotalAreaMetric | OverlayAreaMetric | CountMetric | PresenceMetric | PresenceTableMetric | ColumnValuesMetric | RasterStats | DistanceToShoreMetric | RasterOverlayAreaMetric | OusDemographicsMetric;
+export type Metric = TotalAreaMetric | OverlayAreaMetric | CountMetric | PresenceMetric | PresenceTableMetric | ColumnValuesMetric | RasterStats | DistanceToShoreMetric | DistanceToFeaturesOverWaterMetric | RasterOverlayAreaMetric | OusDemographicsMetric;
 export type MetricTypeMap = {
     total_area: TotalAreaMetric;
     overlay_area: OverlayAreaMetric;
@@ -745,6 +765,7 @@ export type MetricTypeMap = {
     column_values: ColumnValuesMetric;
     raster_stats: RasterStats;
     distance_to_shore: DistanceToShoreMetric;
+    distance_to_features_over_water: DistanceToFeaturesOverWaterMetric;
     raster_overlay_area: RasterOverlayAreaMetric;
     ous_demographics: OusDemographicsMetric;
 };
@@ -850,6 +871,11 @@ export type MetricDependencyParameters = {
      */
     maxResults?: number;
     maxDistanceKm?: number;
+    /**
+     * Ocean-bitmap cell size for `distance_to_features_over_water`.
+     * `low` is 0.02°, `medium` is 0.01°, `high` is 0.005°. Omitted means high.
+     */
+    resolution?: "low" | "medium" | "high";
     /**
      * If all polygon features in a source are orthogonal (e.g. habitat
      * classification), the overlay-engine can use optimizations to speed up

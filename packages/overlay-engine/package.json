@@ -24,7 +24,8 @@
     "test:watch": "vitest watch",
     "build": "tsc && npm run build:worker",
     "build:worker": "node -e \"require('esbuild').buildSync({ entryPoints: ['src/workers/clipBatch.ts'], bundle: true, platform: 'node', format: 'cjs', target: 'node20', outfile: 'dist/workers/clipBatch.standalone.js' })\"",
-    "watch": "tsc --watch"
+    "watch": "tsc --watch",
+    "water-path-viewer": "node -e \"require('esbuild').buildSync({entryPoints:['viewer/serve.ts'],bundle:true,platform:'node',format:'cjs',packages:'external',outfile:'viewer/serve.js',sourcemap:true})\" && node viewer/serve.js"
   },
   "bugs": {
     "url": "https://github.com/seasketch/next/issues"
@@ -66,6 +67,7 @@
     "@types/rbush": "^4.0.0",
     "@types/robust-segment-intersect": "^1.0.2",
     "esbuild": "^0.25.11",
+    "@seasketch/h3-land": "0.0.1",
     "fgb-source": "^1.0.0",
     "flatbush": "3",
     "geoblaze": "^2.8.0",

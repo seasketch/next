@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "react-i18next";
 import { ExclamationCircleIcon } from "@heroicons/react/outline";
@@ -90,6 +90,20 @@ export default function SpatialUploadOverlay({
   );
   const singleDroppedFile =
     droppedFileInfos.length === 1 ? droppedFileInfos[0] : null;
+  const blocking = phase === "error";
+
+  useEffect(() => {
+    if (!open || !blocking) {
+      return;
+    }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        onDismiss();
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, blocking, onDismiss]);
 
   if (!open) {
     return null;
@@ -100,26 +114,45 @@ export default function SpatialUploadOverlay({
       {open && (
         <motion.div
           className="fixed top-0 left-0 w-full h-full z-50 flex items-center justify-center pointer-events-none"
-          style={{
-            background:
-              "radial-gradient(circle at center, rgba(6, 95, 70, 0.28) 0%, rgba(7, 27, 56, 0.55) 70%)",
-            backdropFilter: "blur(6px)",
-          }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
         >
+          {/* backdrop-filter must not wrap the dialog. On that element it
+              swallows clicks, including descendants with pointer-events: auto,
+              so Dismiss never fires. */}
+          <div
+            className={`absolute inset-0 ${
+              blocking ? "pointer-events-auto" : "pointer-events-none"
+            }`}
+            style={{
+              background:
+                "radial-gradient(circle at center, rgba(6, 95, 70, 0.28) 0%, rgba(7, 27, 56, 0.55) 70%)",
+              backdropFilter: "blur(6px)",
+            }}
+            onClick={blocking ? onDismiss : undefined}
+          />
           <motion.div
-            layout
-            className="rounded-2xl shadow-xl pointer-events-none max-w-lg w-full mx-6 overflow-hidden"
+            layout={!blocking}
+            role={blocking ? "dialog" : undefined}
+            aria-modal={blocking ? true : undefined}
+            className={`relative z-10 rounded-2xl shadow-xl max-w-lg w-full mx-6 ${
+              blocking
+                ? "pointer-events-auto"
+                : "pointer-events-none overflow-hidden"
+            }`}
             style={{
               background:
                 "linear-gradient(180deg, rgba(255,255,255,0.96) 0%, rgba(250,252,255,0.97) 100%)",
               border: "1px solid rgba(255,255,255,0.4)",
+              // Layout/scale transforms plus overflow:hidden leave the button's
+              // hit target off the visible control, so clicks never register.
+              ...(blocking ? { transform: "none" } : {}),
             }}
-            initial={{ scale: 0.95, y: 10 }}
-            animate={{ scale: 1, y: 0 }}
+            initial={blocking ? false : { scale: 0.95, y: 10 }}
+            animate={blocking ? undefined : { scale: 1, y: 0 }}
+            transformTemplate={blocking ? () => "none" : undefined}
             exit={{ scale: 0.98, y: 6 }}
             transition={{
               type: "spring",
@@ -237,8 +270,7 @@ export default function SpatialUploadOverlay({
               <AnimatePresence>
                 {phase === "error" && (
                   <motion.div
-                    layout
-                    className="mt-5 mx-auto max-w-xl pointer-events-auto"
+                    className="mt-5 mx-auto max-w-xl"
                     initial={{ opacity: 0, y: 6 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -4 }}

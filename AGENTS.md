@@ -1,4 +1,4 @@
-# SeaSketch Next – Copilot Context Guide
+# SeaSketch Next – Agents Context Guide
 
 ## 🧱 Project Architecture
 
@@ -118,5 +118,11 @@ The golden snapshot is the database dev machines, CI, integration tests, and age
 The snapshot is built from a combination of the database migrations, fixture data, and a creation script. Details on what data/schema is appropriate for each bucket is in [packages/api/snapshots/README.md](packages/api/snapshots/README.md).
 
 Load `.agents/skills/golden-snapshot/SKILL.md` when a change would leave those fixtures or example projects stale.
+
+## Data library templates
+
+Data Library cards, the geography wizard, the Coral Reef Watch job, and the distance-to-port commands find a layer by `data_library_template_id`, not by stable id. Production and the golden snapshot use different stable ids for the same string.
+
+Load `.agents/skills/data-library/SKILL.md` when assigning a template id, adding a Data Library layer, or pointing `WORLD_PORTS` or another template id at a different superuser layer. The procedure is in [packages/api/src/DataLibrary/README.md](packages/api/src/DataLibrary/README.md).
 
 A committed migration alone does not necessarily need a new snapshot. In fact, snapshots should be regenerated rarely (e.g. after a dozen migrations or so, unless fixture data needs changing). `npm run setup` applies newer committed migrations after restore. `current.sql` is not part of the snapshot.

@@ -204,6 +204,27 @@ export default function DataLibraryModal({
           </DataLibraryEntry>
 
           <DataLibraryEntry
+            title={t("World Ports")}
+            href="https://msi.nga.mil/Publications/WPI"
+          >
+            <DataLibraryEntryDescription>
+              <p>
+                {t(
+                  "Worldwide maritime ports and their characteristics, from the National Geospatial-Intelligence Agency World Port Index."
+                )}
+              </p>
+            </DataLibraryEntryDescription>
+            <DataLibraryEntryImage
+              alt={t("World Ports thumbnail")}
+              src="/data-library/world-ports.png"
+            />
+            <DataLibraryActionButton
+              templateId="WORLD_PORTS"
+              onRequestClose={onRequestClose}
+            />
+          </DataLibraryEntry>
+
+          <DataLibraryEntry
             title={t("Pristine Seas")}
             href="https://doi.org/10.1038/s41586-021-03371-z"
           >

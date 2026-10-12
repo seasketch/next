@@ -1,0 +1,888 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Water path</title>
+    <link
+      href="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.css"
+      rel="stylesheet"
+    />
+    <link href="/frame.css" rel="stylesheet" />
+    <style>
+      html,
+      body,
+      #map {
+        margin: 0;
+        height: 100%;
+        background: #d5dde6;
+      }
+      #panel {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        z-index: 1;
+        width: 320px;
+        max-height: calc(100% - 24px);
+        overflow: auto;
+        padding: 12px 14px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.94);
+        color: #1c2430;
+        font: 13px/1.45 ui-sans-serif, system-ui, sans-serif;
+        box-shadow: 0 8px 28px rgba(20, 30, 40, 0.18);
+      }
+      #panel h1 {
+        margin: 0 0 6px;
+        font-size: 15px;
+        font-weight: 650;
+      }
+      #panel p {
+        margin: 6px 0;
+      }
+      #panel label {
+        display: block;
+        margin: 8px 0 0;
+      }
+      #panel select,
+      #panel button {
+        font: inherit;
+      }
+      #panel select {
+        width: 100%;
+        margin-top: 3px;
+      }
+      #panel select#view-resolution {
+        width: auto;
+        margin: 0 0 0 6px;
+      }
+      #view-note {
+        color: #64748b;
+      }
+      #run {
+        margin-top: 10px;
+        width: 100%;
+        padding: 6px 10px;
+        border: 0;
+        border-radius: 7px;
+        background: #1d4ed8;
+        color: white;
+        cursor: pointer;
+      }
+      #run:disabled {
+        opacity: 0.6;
+        cursor: progress;
+      }
+      .swatch {
+        display: inline-block;
+        width: 10px;
+        height: 10px;
+        margin-right: 6px;
+        border-radius: 2px;
+        vertical-align: -1px;
+      }
+      .legend div,
+      .check {
+        margin-top: 3px;
+      }
+      #status,
+      #routes {
+        margin: 8px 0 0;
+        white-space: pre-line;
+      }
+      #error {
+        margin: 8px 0 0;
+        color: #9f1239;
+      }
+      #routes button {
+        display: block;
+        width: 100%;
+        margin-top: 4px;
+        padding: 4px 6px;
+        text-align: left;
+        border: 0;
+        border-radius: 6px;
+        background: #eef2ff;
+        cursor: pointer;
+      }
+      #candidates {
+        margin: 8px 0 0;
+        padding: 0;
+        list-style: none;
+        max-height: 180px;
+        overflow: auto;
+      }
+      #candidates li {
+        padding: 2px 0;
+        border-top: 1px solid #e5e7eb;
+      }
+      .chosen {
+        font-weight: 650;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="map"></div>
+    <div id="panel">
+      <nav style="margin: 0 0 8px; font-size: 12px"><strong>Occupancy router</strong> · <a href="/astar" style="color: #1d4ed8">Client A*</a> · <a href="/tangent" style="color: #1d4ed8">Tangent router</a> · <a href="/raster" style="color: #1d4ed8">Ocean bitmap</a></nav>
+      <h1>Water path</h1>
+      <p>
+        Routes from the occupancy search, the cells that search read, and the
+        World Ports tiles.
+      </p>
+      <label>
+        Archive
+        <select id="archive">
+          <option value="9">resolution 9</option>
+          <option value="8">resolution 8</option>
+        </select>
+      </label>
+      <label>
+        Sketch
+        <select id="sketch"></select>
+      </label>
+      <button id="run" type="button">Route</button>
+      <div class="legend">
+        <div><span class="swatch" style="background: #1d6a9a"></span>Water</div>
+        <div><span class="swatch" style="background: #e3941a"></span>Mixed</div>
+        <div><span class="swatch" style="background: #2f9e44"></span>Land</div>
+        <div><span class="swatch" style="background: #7c3aed"></span>Route</div>
+        <label class="check">
+          <input id="view-cells" type="checkbox" />
+          Cells in view
+          <select id="view-resolution"></select>
+          <span id="view-note"></span>
+        </label>
+        <label class="check"><input id="search-cells" type="checkbox" checked /> Cells the search read</label>
+      </div>
+      <p id="status">Choose a sketch and route it.</p>
+      <div id="routes"></div>
+      <ul id="candidates"></ul>
+      <p id="error"></p>
+    </div>
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.6.0/mapbox-gl.js"></script>
+    <script src="https://unpkg.com/h3-js@4.5.0/dist/h3-js.umd.js"></script>
+    <script src="/frame.js"></script>
+    <script>
+      const COARSE = 4;
+      const HEADER_BYTES = 28;
+      const PORTS_TILES =
+        "https://tiles.seasketch.org/projects/superuser/public/39e4dc3d-894c-4e88-bfb4-beaa5277b676/{z}/{x}/{y}.mvt";
+      const ARCHIVES = {
+        8: "https://tiles.seasketch.org/h3-land/v1/land-res8.h3ld",
+        9: "https://tiles.seasketch.org/h3-land/v1/land-res9.h3ld",
+      };
+      const MAPBOX_TOKEN =
+        new URLSearchParams(location.search).get("token") ||
+        localStorage.getItem("mapboxToken") ||
+        "";
+      let FINE = 9;
+      const statusEl = document.getElementById("status");
+      const errorEl = document.getElementById("error");
+      const routesEl = document.getElementById("routes");
+      const candidatesEl = document.getElementById("candidates");
+      const archiveSelect = document.getElementById("archive");
+      const sketchSelect = document.getElementById("sketch");
+      const runButton = document.getElementById("run");
+      const viewCells = document.getElementById("view-cells");
+      const viewResolution = document.getElementById("view-resolution");
+      const viewNote = document.getElementById("view-note");
+      const searchCells = document.getElementById("search-cells");
+
+      function fail(error) {
+        errorEl.textContent = error instanceof Error ? error.message : String(error);
+      }
+
+      function packedBytes(count) {
+        return Math.ceil((count * 2) / 8);
+      }
+      function getState(bytes, index) {
+        return (bytes[index >> 2] >> ((index & 3) << 1)) & 3;
+      }
+      function buildRanks() {
+        const pentagonBases = new Set(h3.getPentagons(0).map(h3.getBaseCellNumber));
+        const prefix = [];
+        for (let res = 0; res <= COARSE; res++) {
+          const starts = new Uint32Array(123);
+          for (let base = 0; base < 122; base++) {
+            const count =
+              res === 0
+                ? 1
+                : pentagonBases.has(base)
+                  ? 1 + (5 * (7 ** res - 1)) / 6
+                  : 7 ** res;
+            starts[base + 1] = starts[base] + count;
+          }
+          prefix.push(starts);
+        }
+        return prefix;
+      }
+      const prefix = buildRanks();
+      function cellRank(cell, res) {
+        const base = h3.getBaseCellNumber(cell);
+        const pos = res === 0 ? 0 : h3.cellToChildPos(cell, 0);
+        return prefix[res][base] + pos;
+      }
+      function expectedHeaderBytes() {
+        let size = HEADER_BYTES;
+        for (let res = 0; res <= COARSE; res++) size += 4 + packedBytes(h3.getNumCells(res));
+        return size;
+      }
+      const stats = { rangeRequests: 0, rangeBytes: 0, cachedRecords: 0 };
+      async function range(url, start, end) {
+        stats.rangeRequests++;
+        const response = await fetch(url, { headers: { Range: `bytes=${start}-${end}` } });
+        if (!response.ok && response.status !== 206) {
+          throw new Error(`range ${start}-${end} returned ${response.status}`);
+        }
+        const body = new Uint8Array(await response.arrayBuffer());
+        stats.rangeBytes += body.byteLength;
+        if (response.status === 206) return body;
+        if (body.byteLength >= end + 1) return body.subarray(start, end + 1);
+        throw new Error("server ignored the range and returned a short body");
+      }
+      function fold(record, cell) {
+        const parent = h3.cellToParent(cell, COARSE);
+        if (h3.isPentagon(parent) || h3.isPentagon(cell)) {
+          let allLand = true;
+          let allWater = true;
+          for (const child of h3.cellToChildren(cell, FINE)) {
+            const state = getState(record, h3.cellToChildPos(child, COARSE));
+            if (state !== 2) allLand = false;
+            if (state !== 0) allWater = false;
+            if (!allLand && !allWater) return 1;
+          }
+          if (allWater) return 0;
+          return allLand ? 2 : 1;
+        }
+        const span = 7 ** (FINE - h3.getResolution(cell));
+        const start = h3.cellToChildPos(cell, COARSE) * span;
+        let allLand = true;
+        let allWater = true;
+        for (let i = 0; i < span; i++) {
+          const state = getState(record, start + i);
+          if (state !== 2) allLand = false;
+          if (state !== 0) allWater = false;
+          if (!allLand && !allWater) return 1;
+        }
+        if (allWater) return 0;
+        return allLand ? 2 : 1;
+      }
+      class Archive {
+        constructor(url, bytes) {
+          this.url = url;
+          this.cache = new Map();
+          const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+          if (new TextDecoder().decode(bytes.subarray(0, 4)) !== "H3LD" || bytes[4] !== 1) {
+            throw new Error("this is not an H3 land archive");
+          }
+          this.recordsStart = view.getUint32(24, true);
+          this.mixedCount = view.getUint32(20, true);
+          this.stride = view.getUint32(16, true);
+          this.fineResolution = bytes[5];
+          FINE = this.fineResolution;
+          this.planes = [];
+          let cursor = HEADER_BYTES;
+          for (let res = 0; res <= COARSE; res++) {
+            const count = view.getUint32(cursor, true);
+            const size = packedBytes(count);
+            this.planes.push(bytes.subarray(cursor + 4, cursor + 4 + size));
+            cursor += 4 + size;
+          }
+          this.recordIndex = new Int32Array(h3.getNumCells(COARSE));
+          this.recordIndex.fill(-1);
+          let next = 0;
+          for (let rank = 0; rank < this.recordIndex.length; rank++) {
+            if (getState(this.planes[COARSE], rank) === 1) this.recordIndex[rank] = next++;
+          }
+        }
+        coarseState(cell) {
+          const resolution = h3.getResolution(cell);
+          return getState(this.planes[resolution], cellRank(cell, resolution));
+        }
+        async ensure(parents) {
+          const missing = [];
+          for (const parent of parents) {
+            if (this.coarseState(parent) !== 1 || this.cache.has(parent)) continue;
+            missing.push({
+              parent,
+              start: this.recordsStart + this.recordIndex[cellRank(parent, COARSE)] * this.stride,
+            });
+          }
+          if (missing.length === 0) return;
+          missing.sort((a, b) => a.start - b.start);
+          const groups = [];
+          for (const item of missing) {
+            const end = item.start + this.stride - 1;
+            const last = groups[groups.length - 1];
+            if (last && item.start - last.end <= 8192) {
+              last.end = end;
+              last.items.push(item);
+            } else groups.push({ start: item.start, end, items: [item] });
+          }
+          await Promise.all(
+            groups.map(async (group) => {
+              const body = await range(this.url, group.start, group.end);
+              for (const item of group.items) {
+                const local = item.start - group.start;
+                this.cache.set(item.parent, body.subarray(local, local + this.stride));
+                stats.cachedRecords = this.cache.size;
+              }
+            })
+          );
+        }
+        async state(cell) {
+          const resolution = h3.getResolution(cell);
+          if (resolution <= COARSE) return this.coarseState(cell);
+          const parent = h3.cellToParent(cell, COARSE);
+          const parentState = this.coarseState(parent);
+          if (parentState !== 1) return parentState;
+          await this.ensure([parent]);
+          const record = this.cache.get(parent);
+          if (resolution === this.fineResolution) {
+            return getState(record, h3.cellToChildPos(cell, COARSE));
+          }
+          return fold(record, cell);
+        }
+      }
+      function longitudeSlices(west, east) {
+        const span = 90;
+        if (east - west <= span) return [[west, east]];
+        const slices = [];
+        for (let cursor = west; cursor < east - 1e-6; cursor += span) {
+          const end = Math.min(cursor + span, east);
+          slices.push([cursor, Math.min(end + 1e-4, east)]);
+        }
+        return slices;
+      }
+      function longitudeParts(bounds) {
+        let west = bounds.getWest();
+        let east = bounds.getEast();
+        if (east - west >= 360) return [[-180, 180]];
+        const parts = [];
+        while (west < -180) {
+          west += 360;
+          east += 360;
+        }
+        while (east > 180) {
+          parts.push([west, 180]);
+          west = -180;
+          east -= 360;
+        }
+        if (east > west) parts.push([west, east]);
+        return parts;
+      }
+      function cellsInView(map, resolution) {
+        const bounds = map.getBounds();
+        const edgeM = h3.getHexagonEdgeLengthAvg(resolution, "m");
+        const latPad = Math.min(20, (edgeM * 1.3) / 111320);
+        const south = Math.max(bounds.getSouth() - latPad, -90);
+        const north = Math.min(bounds.getNorth() + latPad, 90);
+        const found = new Set();
+        for (const [west, east] of longitudeParts(bounds)) {
+          const span = east - west;
+          const midLat = (south + north) / 2;
+          const lngPad =
+            span >= 360
+              ? 0
+              : Math.min(40, latPad / Math.max(Math.cos((midLat * Math.PI) / 180), 0.25));
+          let queryWest = west - lngPad;
+          let queryEast = east + lngPad;
+          if (queryEast - queryWest >= 360) {
+            queryWest = -180;
+            queryEast = 180;
+          }
+          for (const [sliceWest, sliceEast] of longitudeSlices(queryWest, queryEast)) {
+            const ring = [
+              [sliceWest, south],
+              [sliceEast, south],
+              [sliceEast, north],
+              [sliceWest, north],
+              [sliceWest, south],
+            ];
+            for (const cell of h3.polygonToCells(ring, resolution, true)) found.add(cell);
+          }
+        }
+        return [...found];
+      }
+      function chooseResolution(map) {
+        const zoom = map.getZoom();
+        const lat = map.getCenter().lat;
+        const metersPerPixel = (156543.03392 * Math.cos((lat * Math.PI) / 180)) / 2 ** zoom;
+        const widthMeters = metersPerPixel * map.getContainer().clientWidth;
+        let resolution = 0;
+        for (let res = 0; res <= FINE; res++) {
+          const across = widthMeters / (h3.getHexagonEdgeLengthAvg(res, "m") * 1.7);
+          if (across > 48) break;
+          resolution = res;
+        }
+        return Math.min(FINE, resolution + 2);
+      }
+      function fillViewResolutions() {
+        const current = viewResolution.value || "auto";
+        viewResolution.replaceChildren();
+        const auto = document.createElement("option");
+        auto.value = "auto";
+        auto.textContent = "auto";
+        viewResolution.appendChild(auto);
+        for (let res = 0; res <= FINE; res++) {
+          const option = document.createElement("option");
+          option.value = String(res);
+          option.textContent = String(res);
+          viewResolution.appendChild(option);
+        }
+        viewResolution.value = [...viewResolution.options].some((option) => option.value === current)
+          ? current
+          : "auto";
+      }
+      function boundaryRing(cell) {
+        const raw = h3.cellToBoundary(cell, true);
+        const centerLat = h3.cellToLatLng(cell)[0];
+        const ring = [[raw[0][0], raw[0][1]]];
+        for (let i = 1; i < raw.length; i++) {
+          let lng = raw[i][0];
+          const prev = ring[ring.length - 1][0];
+          while (lng - prev > 180) lng -= 360;
+          while (prev - lng > 180) lng += 360;
+          ring.push([lng, raw[i][1]]);
+        }
+        let closeLng = ring[0][0];
+        const prev = ring[ring.length - 1][0];
+        while (closeLng - prev > 180) closeLng -= 360;
+        while (prev - closeLng > 180) closeLng += 360;
+        if (Math.abs(closeLng - ring[0][0]) > 180) {
+          const pole = centerLat >= 0 ? 89.999999 : -89.999999;
+          ring.push([closeLng, raw[0][1]]);
+          ring.push([closeLng, pole]);
+          ring.push([ring[0][0], pole]);
+        }
+        ring.push(ring[0]);
+        return ring;
+      }
+
+      mapboxgl.accessToken = MAPBOX_TOKEN;
+      const map = new mapboxgl.Map({
+        container: "map",
+        style: "mapbox://styles/mapbox/light-v11",
+        center: [-76.78, 34.62],
+        zoom: 9,
+      });
+      map.addControl(new mapboxgl.NavigationControl(), "top-right");
+
+      let archive = null;
+      let generation = 0;
+      const empty = { type: "FeatureCollection", features: [] };
+
+      async function renderView() {
+        const source = map.getSource("h3");
+        if (!archive || !viewCells.checked || !source) {
+          if (source) source.setData(empty);
+          viewNote.textContent = "";
+          return;
+        }
+        const gen = ++generation;
+        const resolution =
+          viewResolution.value === "auto"
+            ? chooseResolution(map)
+            : Math.min(FINE, Math.max(0, Number(viewResolution.value)));
+        const cells = cellsInView(map, resolution);
+        viewNote.textContent = `r${resolution}`;
+        const parents = new Set();
+        if (resolution > COARSE) {
+          for (const cell of cells) parents.add(h3.cellToParent(cell, COARSE));
+        }
+        await archive.ensure([...parents]);
+        if (gen !== generation) return;
+        const features = [];
+        for (const cell of cells) {
+          const state = await archive.state(cell);
+          if (gen !== generation) return;
+          features.push({
+            type: "Feature",
+            properties: { state, cell, resolution },
+            geometry: { type: "Polygon", coordinates: [boundaryRing(cell)] },
+          });
+        }
+        if (gen !== generation) return;
+        source.setData({ type: "FeatureCollection", features });
+      }
+
+      async function openArchive(which) {
+        const url = ARCHIVES[which];
+        const prefixBytes = await range(url, 0, expectedHeaderBytes() - 1);
+        archive = new Archive(url, prefixBytes);
+        fillViewResolutions();
+        await renderView();
+      }
+
+      const sketchById = new Map();
+
+      function coordinatesOf(geometry) {
+        if (!geometry) return [];
+        if (geometry.type === "Polygon") return geometry.coordinates.flat();
+        if (geometry.type === "MultiPolygon") return geometry.coordinates.flat(2);
+        if (geometry.type === "LineString") return geometry.coordinates;
+        return [];
+      }
+
+      function renderSketches(selectedId) {
+        const source = map.getSource("sketch");
+        if (!source) return;
+        source.setData({
+          type: "FeatureCollection",
+          features: [...sketchById.entries()].map(([id, feature]) => ({
+            type: "Feature",
+            properties: { ...(feature.properties || {}), id, selected: id === selectedId },
+            geometry: feature.geometry,
+          })),
+        });
+      }
+
+      function flyToSketch(id) {
+        const feature = sketchById.get(id);
+        if (!feature) return;
+        const coords = coordinatesOf(feature.geometry);
+        if (coords.length === 0) return;
+        const lngs = coords.map((coord) => coord[0]);
+        const lats = coords.map((coord) => coord[1]);
+        let west = Math.min(...lngs);
+        let east = Math.max(...lngs);
+        const south = Math.min(...lats);
+        const north = Math.max(...lats);
+        if (east - west > 180) {
+          const shifted = lngs.map((lng) => (lng < 0 ? lng + 360 : lng));
+          west = Math.min(...shifted);
+          east = Math.max(...shifted);
+        }
+        map.fitBounds(
+          [
+            [west, south],
+            [east, north],
+          ],
+          { padding: 120, maxZoom: 12, duration: 1400 }
+        );
+      }
+
+      function km(meters) {
+        return (meters / 1000).toFixed(1) + " km";
+      }
+
+      function showResult(body) {
+        const features = body.geojson.features;
+        map.getSource("trace").setData({
+          type: "FeatureCollection",
+          features: searchCells.checked
+            ? features.filter((feature) => feature.properties.layer === "cell")
+            : [],
+        });
+        renderSketches(sketchSelect.value);
+        map.getSource("routes").setData({
+          type: "FeatureCollection",
+          features: features.filter((feature) => feature.properties.layer === "route"),
+        });
+        const sketch = features.find((feature) => feature.properties.layer === "sketch");
+        const ring = sketch.geometry.coordinates[0];
+        const routeLines = features.filter((feature) => feature.properties.layer === "route");
+        const positions = ring.slice();
+        for (const line of routeLines) positions.push(...line.geometry.coordinates);
+        const matched = new Set(body.routes.map((route) => route.port));
+        const matchFeatures = [];
+        for (const route of body.routes) {
+          const line = routeLines.find((feature) => feature.properties.rank === route.rank);
+          const end = line && line.geometry.coordinates[line.geometry.coordinates.length - 1];
+          if (!end) continue;
+          positions.push(end);
+          matchFeatures.push({
+            type: "Feature",
+            properties: {
+              reached: true,
+              color: WaterPath.rankColor(route.rank),
+              label: WaterPath.matchLabel(route.port, route.meters, true),
+              offset: WaterPath.labelOffset(route.rank - 1),
+            },
+            geometry: { type: "Point", coordinates: end },
+          });
+        }
+        const nearby = [];
+        for (const candidate of body.candidates) {
+          if (matched.has(candidate.port) || !candidate.position) continue;
+          nearby.push(candidate.position);
+          matchFeatures.push({
+            type: "Feature",
+            properties: {
+              reached: false,
+              color: WaterPath.CONSIDERED_COLOR,
+              label: candidate.port,
+              offset: WaterPath.labelOffset(matchFeatures.length),
+            },
+            geometry: { type: "Point", coordinates: candidate.position },
+          });
+        }
+        map.getSource("matches").setData({ type: "FeatureCollection", features: matchFeatures });
+        WaterPath.fitSolution(map, positions, nearby);
+        const kb = (body.bytes / 1024).toFixed(0);
+        statusEl.textContent = [
+          `Fine resolution ${body.fine}`,
+          `${body.routes.length} route${body.routes.length === 1 ? "" : "s"} · ${body.expansions.toLocaleString()} expansions · ${body.ms.toLocaleString()} ms`,
+          `${body.counts.water.toLocaleString()} water · ${body.counts.mixed.toLocaleString()} mixed · ${body.counts.land.toLocaleString()} land cells read`,
+          `${body.requests} archive requests · ${kb} KB`,
+        ].join("\n");
+        routesEl.replaceChildren();
+        for (const route of body.routes) {
+          routesEl.appendChild(WaterPath.matchButton(route.rank, route.port, route.meters));
+        }
+        WaterPath.markRouteList(routesEl, sketchSelect.value);
+        candidatesEl.replaceChildren();
+        for (const candidate of body.candidates) {
+          const item = document.createElement("li");
+          item.className = candidate.meters != null ? "chosen" : "";
+          const water =
+            candidate.meters != null
+              ? km(candidate.meters)
+              : body.routes.length >= 3
+                ? "not closest"
+                : "no route";
+          item.textContent = `${candidate.port} · straight ${km(candidate.geodesicMeters)} · ${water}`;
+          candidatesEl.appendChild(item);
+        }
+        errorEl.textContent = "";
+      }
+
+      map.on("load", async () => {
+        WaterPath.paintBasemap(map);
+        map.addSource("h3", { type: "geojson", data: empty });
+        map.addSource("trace", { type: "geojson", data: empty });
+        map.addSource("sketch", { type: "geojson", data: empty });
+        map.addSource("routes", { type: "geojson", data: empty });
+        map.addSource("matches", { type: "geojson", data: empty });
+        map.addLayer({
+          id: "h3-fill",
+          type: "fill",
+          source: "h3",
+          paint: {
+            "fill-color": ["match", ["get", "state"], 0, "#1d6a9a", 1, "#e3941a", 2, "#2f9e44", "#8aa0b4"],
+            "fill-opacity": ["match", ["get", "state"], 0, 0.4, 1, 0.62, 2, 0.55, 0.35],
+          },
+        });
+        map.addLayer({
+          id: "h3-line",
+          type: "line",
+          source: "h3",
+          paint: {
+            "line-color": ["match", ["get", "state"], 0, "#0c4a6e", 1, "#9a3412", 2, "#166534", "#475569"],
+            "line-width": 0.9,
+            "line-opacity": 0.75,
+          },
+        });
+        map.addLayer({
+          id: "trace-fill",
+          type: "fill",
+          source: "trace",
+          paint: {
+            "fill-color": [
+              "match",
+              ["get", "state"],
+              "water",
+              "#1d6a9a",
+              "mixed",
+              "#e3941a",
+              "land",
+              "#2f9e44",
+              "#8aa0b4",
+            ],
+            "fill-opacity": ["match", ["get", "state"], "water", 0.4, "mixed", 0.62, "land", 0.55, 0.35],
+          },
+        });
+        map.addLayer({
+          id: "trace-line",
+          type: "line",
+          source: "trace",
+          paint: {
+            "line-color": ["match", ["get", "state"], "water", "#0c4a6e", "mixed", "#9a3412", "land", "#166534", "#475569"],
+            "line-width": 0.9,
+            "line-opacity": 0.75,
+          },
+        });
+        map.addLayer({
+          id: "sketch-fill",
+          type: "fill",
+          source: "sketch",
+          filter: ["==", ["get", "selected"], true],
+          paint: { "fill-color": "#1e293b", "fill-opacity": 0.14 },
+        });
+        map.addLayer({
+          id: "sketch-line",
+          type: "line",
+          source: "sketch",
+          paint: {
+            "line-color": "#0f172a",
+            "line-width": ["case", ["==", ["get", "selected"], true], 2, 1],
+            "line-opacity": ["case", ["==", ["get", "selected"], true], 1, 0.4],
+            "line-dasharray": [1.4, 1],
+          },
+        });
+        map.addLayer({
+          id: "route-casing",
+          type: "line",
+          source: "routes",
+          paint: { "line-color": "#f8fafc", "line-width": 9, "line-opacity": 0.95 },
+        });
+        map.addLayer({
+          id: "route-line",
+          type: "line",
+          source: "routes",
+          paint: {
+            "line-color": ["match", ["get", "rank"], 1, "#7c3aed", 2, "#db2777", 3, "#0891b2", "#64748b"],
+            "line-width": 5,
+          },
+        });
+        WaterPath.addReferencePorts(map);
+        map.addLayer({
+          id: "match-point",
+          type: "circle",
+          source: "matches",
+          paint: {
+            "circle-radius": ["case", ["get", "reached"], 7, 5],
+            "circle-color": ["get", "color"],
+            "circle-stroke-width": 2,
+            "circle-stroke-color": "#fff",
+          },
+        });
+        map.addLayer({
+          id: "match-label",
+          type: "symbol",
+          source: "matches",
+          layout: {
+            "text-field": ["get", "label"],
+            "text-size": ["case", ["get", "reached"], 13, 11],
+            "text-anchor": "left",
+            "text-offset": ["coalesce", ["get", "offset"], ["literal", [0.85, 0]]],
+            "text-allow-overlap": true,
+          },
+          paint: { "text-color": "#1c2430", "text-halo-color": "#f8fafc", "text-halo-width": 1.6 },
+        });
+        map.on("click", "ports", (event) => {
+          const feature = event.features && event.features[0];
+          if (!feature) return;
+          const props = feature.properties;
+          new mapboxgl.Popup()
+            .setLngLat(event.lngLat)
+            .setHTML(
+              `<strong>${props.PORT_NAME}</strong><br>${props.COUNTRY || ""}<br>harbor ${props.HARBORSIZE || ""}`
+            )
+            .addTo(map);
+        });
+        map.on("click", "route-line", (event) => {
+          const feature = event.features && event.features[0];
+          if (!feature) return;
+          const props = feature.properties;
+          new mapboxgl.Popup()
+            .setLngLat(event.lngLat)
+            .setHTML(`<strong>${props.port}</strong><br>${(props.meters / 1000).toFixed(1)} km`)
+            .addTo(map);
+        });
+        map.on("click", "trace-fill", (event) => {
+          const feature = event.features && event.features[0];
+          if (!feature) return;
+          const props = feature.properties;
+          new mapboxgl.Popup()
+            .setLngLat(event.lngLat)
+            .setHTML(
+              `<strong>${props.state}</strong><br>resolution ${props.resolution}<br><code>${props.cell}</code>`
+            )
+            .addTo(map);
+        });
+        for (const layer of ["ports", "route-line", "trace-fill"]) {
+          map.on("mouseenter", layer, () => {
+            map.getCanvas().style.cursor = "pointer";
+          });
+          map.on("mouseleave", layer, () => {
+            map.getCanvas().style.cursor = "";
+          });
+        }
+        const listed = await fetch("/api/sketches").then((response) => response.json());
+        for (const item of listed) sketchById.set(item.id, item.feature);
+        for (const id of sketchById.keys()) {
+          const option = document.createElement("option");
+          option.value = id;
+          option.textContent = id;
+          sketchSelect.appendChild(option);
+        }
+        sketchSelect.value = "bogue-banks";
+        renderSketches(sketchSelect.value);
+        flyToSketch(sketchSelect.value);
+        try {
+          await openArchive(archiveSelect.value);
+        } catch (error) {
+          fail(error);
+        }
+      });
+
+      map.on("moveend", () => {
+        renderView().catch(fail);
+      });
+      fillViewResolutions();
+      viewCells.addEventListener("change", () => {
+        renderView().catch(fail);
+      });
+      viewResolution.addEventListener("change", () => {
+        if (!viewCells.checked) viewCells.checked = true;
+        renderView().catch(fail);
+      });
+      searchCells.addEventListener("change", () => {
+        if (!lastBody) return;
+        const features = lastBody.geojson.features.filter(
+          (feature) => feature.properties.layer === "cell"
+        );
+        map.getSource("trace").setData({
+          type: "FeatureCollection",
+          features: searchCells.checked ? features : [],
+        });
+      });
+      archiveSelect.addEventListener("change", () => {
+        openArchive(archiveSelect.value).catch(fail);
+      });
+      sketchSelect.addEventListener("change", () => {
+        lastBody = null;
+        routesEl.replaceChildren();
+        candidatesEl.replaceChildren();
+        const trace = map.getSource("trace");
+        const routes = map.getSource("routes");
+        if (trace) trace.setData(empty);
+        if (routes) routes.setData(empty);
+        const matches = map.getSource("matches");
+        if (matches) matches.setData(empty);
+        renderSketches(sketchSelect.value);
+        flyToSketch(sketchSelect.value);
+        statusEl.textContent = sketchSelect.value;
+        errorEl.textContent = "";
+      });
+
+      let lastBody = null;
+      runButton.addEventListener("click", async () => {
+        runButton.disabled = true;
+        errorEl.textContent = "";
+        statusEl.textContent = "Routing…";
+        try {
+          const response = await fetch("/api/route", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              sketch: sketchSelect.value,
+              archive: archiveSelect.value,
+            }),
+          });
+          const body = await response.json();
+          if (!response.ok) throw new Error(body.error || response.statusText);
+          lastBody = body;
+          showResult(body);
+        } catch (error) {
+          fail(error);
+          statusEl.textContent = "The search failed.";
+        } finally {
+          runButton.disabled = false;
+        }
+      });
+    </script>
+  </body>
+</html>
