@@ -1,11 +1,22 @@
 import { ManagementClient } from "auth0";
 import { MisconfiguredError } from "../env";
-import pool from "../pool";
 import { isE2ETestModeEnabled } from "../e2e/testMode";
 import {
   lookupCanonicalEmails,
   lookupSubsForEmails,
 } from "../e2e/directory";
+import { DBClient } from "../dbClient";
+
+/**
+ * The pool connects as soon as it is imported. Schema generation imports this
+ * module through the canonical-email plugin, and graphile-migrate replaces
+ * DATABASE_URL with a placeholder while `db:commit` runs. Load the pool only
+ * when test mode actually needs it.
+ */
+async function e2eDirectoryPool(): Promise<DBClient> {
+  const { default: pool } = await import("../pool");
+  return pool;
+}
 
 export const AUTH0_MANAGEMENT_NOT_CONFIGURED =
   "Auth0 management is misconfigured";
@@ -62,7 +73,7 @@ export async function getCanonicalEmails(
   subs: string[]
 ): Promise<{ [sub: string]: string }> {
   if (isE2ETestModeEnabled()) {
-    return lookupCanonicalEmails(pool, subs);
+    return lookupCanonicalEmails(await e2eDirectoryPool(), subs);
   }
   const auth0 = requireManagementClient();
   const emails: { [sub: string]: string } = {};
@@ -83,7 +94,7 @@ export async function getSubsForEmails(
   emails: string[]
 ): Promise<{ [email: string]: string }> {
   if (isE2ETestModeEnabled()) {
-    return lookupSubsForEmails(pool, emails);
+    return lookupSubsForEmails(await e2eDirectoryPool(), emails);
   }
   const auth0 = requireManagementClient();
   const subs: { [email: string]: string } = {};
