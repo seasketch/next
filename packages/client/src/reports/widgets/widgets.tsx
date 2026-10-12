@@ -1004,12 +1004,13 @@ export type BuildReportCommandGroupsArgs = {
     insert: () => void;
   }) => void;
   /**
-   * Distance to Port: the World Ports library layer is already in the
-   * project, or the editor should confirm and copy it, then call `insert`
-   * with the new layer's stable id.
+   * Distance to Port: confirm and copy the World Ports library layer, or
+   * prepare a copy that is already in the project. `insert` runs only after
+   * preprocessing has been queued.
    */
   onEnsureDataLibraryLayer?: (args: {
     templateId: string;
+    existing?: { stableId: string; sourceId: number };
     insert: (stableId: string) => void;
   }) => void;
   projectSlug?: string;
@@ -1357,6 +1358,43 @@ export function buildReportCommandGroups({
       childSketchClassGeometryTypes &&
       childSketchClassGeometryTypes.includes(SketchGeometryType.Polygon));
 
+  const runDistanceToPort = (
+    view: EditorView,
+    at: { from: number; to: number },
+    block: boolean
+  ) => {
+    const insert = (stableId: string) => {
+      insertDistanceToPoint(view, stableId, block, "PORT_NAME", at);
+    };
+    const existing = draftTableOfContentsItems?.find(
+      (item) =>
+        item.copiedFromDataLibraryTemplateId === WORLD_PORTS_TEMPLATE_ID
+    );
+    if (existing?.stableId) {
+      const prepared = sources?.some(
+        (source) =>
+          source.stableId === existing.stableId && source.sourceProcessingJob
+      );
+      if (prepared) {
+        insert(existing.stableId);
+        return;
+      }
+      const sourceId = existing.dataLayer?.dataSource?.id;
+      if (sourceId != null) {
+        onEnsureDataLibraryLayer?.({
+          templateId: WORLD_PORTS_TEMPLATE_ID,
+          existing: { stableId: existing.stableId, sourceId },
+          insert,
+        });
+        return;
+      }
+    }
+    onEnsureDataLibraryLayer?.({
+      templateId: WORLD_PORTS_TEMPLATE_ID,
+      insert,
+    });
+  };
+
   const inlineSketchMetricsGroup: CommandPaletteGroup = {
     id: "inline-sketch-metrics",
     label:
@@ -1447,27 +1485,7 @@ export function buildReportCommandGroups({
       run: (state, _dispatch, view) => {
         const at = state.selection.ranges[0];
         if (!at) return;
-        const position = { from: at.$from.pos, to: at.$to.pos };
-        const existing = draftTableOfContentsItems?.find(
-          (item) =>
-            item.copiedFromDataLibraryTemplateId === WORLD_PORTS_TEMPLATE_ID
-        );
-        if (existing?.stableId) {
-          insertDistanceToPoint(
-            view,
-            existing.stableId,
-            false,
-            "PORT_NAME",
-            position
-          );
-          return;
-        }
-        onEnsureDataLibraryLayer?.({
-          templateId: WORLD_PORTS_TEMPLATE_ID,
-          insert: (stableId) => {
-            insertDistanceToPoint(view, stableId, false, "PORT_NAME", position);
-          },
-        });
+        runDistanceToPort(view, { from: at.$from.pos, to: at.$to.pos }, false);
       },
     });
   }
@@ -1510,27 +1528,7 @@ export function buildReportCommandGroups({
       run: (state, _dispatch, view) => {
         const at = state.selection.ranges[0];
         if (!at) return;
-        const position = { from: at.$from.pos, to: at.$to.pos };
-        const existing = draftTableOfContentsItems?.find(
-          (item) =>
-            item.copiedFromDataLibraryTemplateId === WORLD_PORTS_TEMPLATE_ID
-        );
-        if (existing?.stableId) {
-          insertDistanceToPoint(
-            view,
-            existing.stableId,
-            true,
-            "PORT_NAME",
-            position
-          );
-          return;
-        }
-        onEnsureDataLibraryLayer?.({
-          templateId: WORLD_PORTS_TEMPLATE_ID,
-          insert: (stableId) => {
-            insertDistanceToPoint(view, stableId, true, "PORT_NAME", position);
-          },
-        });
+        runDistanceToPort(view, { from: at.$from.pos, to: at.$to.pos }, true);
       },
     });
     sketchBlockWidgetsGroup.items.push({

@@ -504,54 +504,105 @@ function ReportCardBodyEditorInner({
 
   const [pendingLibraryLayer, setPendingLibraryLayer] = useState<{
     templateId: string;
+    existing?: { stableId: string; sourceId: number };
     insert: (stableId: string) => void;
   } | null>(null);
   const [libraryLayerError, setLibraryLayerError] = useState<string | null>(
     null
   );
-  const [copyLibraryTemplate, copyLibraryTemplateState] =
-    useCopyDataLibraryTemplateMutation();
+  const [libraryLayerBusy, setLibraryLayerBusy] = useState(false);
+  const [copyLibraryTemplate] = useCopyDataLibraryTemplateMutation();
+
+  const prepareLibraryLayer = useCallback(
+    async (args: {
+      templateId: string;
+      existing?: { stableId: string; sourceId: number };
+      insert: (stableId: string) => void;
+    }) => {
+      setLibraryLayerError(null);
+      setLibraryLayerBusy(true);
+      try {
+        let stableId = args.existing?.stableId;
+        let sourceId = args.existing?.sourceId;
+        if (stableId == null || sourceId == null) {
+          const result = await copyLibraryTemplate({
+            variables: {
+              slug: getSlug(),
+              templateId: args.templateId,
+            },
+          });
+          const item =
+            result.data?.copyDataLibraryTemplateItem?.tableOfContentsItem;
+          stableId = item?.stableId ?? undefined;
+          sourceId = item?.dataLayer?.dataSourceId ?? undefined;
+          if (stableId == null || sourceId == null) {
+            setLibraryLayerError(tAdmin("Unable to add the layer"));
+            return;
+          }
+          const copied = { stableId, sourceId };
+          setPendingLibraryLayer((prev) =>
+            prev ? { ...prev, existing: copied } : prev
+          );
+        }
+        await preprocessSourceMutation({
+          variables: {
+            slug: getSlug(),
+            sourceId,
+          },
+          refetchQueries: [
+            {
+              query: ProjectReportingLayersDocument,
+              variables: { slug: getSlug() },
+            },
+          ],
+          awaitRefetchQueries: true,
+        });
+        args.insert(stableId);
+        setPendingLibraryLayer(null);
+      } catch (err) {
+        const message =
+          err instanceof Error
+            ? err.message
+            : tAdmin("Unable to add the layer");
+        if (pendingLibraryLayer) {
+          setLibraryLayerError(message);
+        } else {
+          onError(err instanceof Error ? err : new Error(message));
+        }
+      } finally {
+        setLibraryLayerBusy(false);
+      }
+    },
+    [
+      copyLibraryTemplate,
+      onError,
+      pendingLibraryLayer,
+      preprocessSourceMutation,
+      tAdmin,
+    ]
+  );
 
   const handleEnsureDataLibraryLayer = useCallback(
-    (args: { templateId: string; insert: (stableId: string) => void }) => {
+    (args: {
+      templateId: string;
+      existing?: { stableId: string; sourceId: number };
+      insert: (stableId: string) => void;
+    }) => {
+      if (libraryLayerBusy) return;
       setLibraryLayerError(null);
+      if (args.existing) {
+        void prepareLibraryLayer(args);
+        return;
+      }
       setPendingLibraryLayer(args);
     },
-    []
+    [libraryLayerBusy, prepareLibraryLayer]
   );
 
   const confirmAddLibraryLayer = useCallback(async () => {
-    if (!pendingLibraryLayer) return;
-    setLibraryLayerError(null);
-    try {
-      const result = await copyLibraryTemplate({
-        variables: {
-          slug: getSlug(),
-          templateId: pendingLibraryLayer.templateId,
-        },
-        refetchQueries: [
-          {
-            query: ProjectReportingLayersDocument,
-            variables: { slug: getSlug() },
-          },
-        ],
-        awaitRefetchQueries: true,
-      });
-      const stableId =
-        result.data?.copyDataLibraryTemplateItem?.tableOfContentsItem
-          ?.stableId;
-      if (!stableId) {
-        setLibraryLayerError(tAdmin("Unable to add the layer"));
-        return;
-      }
-      pendingLibraryLayer.insert(stableId);
-      setPendingLibraryLayer(null);
-    } catch (err) {
-      setLibraryLayerError(
-        err instanceof Error ? err.message : tAdmin("Unable to add the layer")
-      );
-    }
-  }, [copyLibraryTemplate, pendingLibraryLayer, tAdmin]);
+    if (!pendingLibraryLayer || libraryLayerBusy) return;
+    await prepareLibraryLayer(pendingLibraryLayer);
+  }, [libraryLayerBusy, pendingLibraryLayer, prepareLibraryLayer]);
 
   const handlePrepareTimeSeriesLayers = useCallback(
     async (args: {
@@ -905,20 +956,20 @@ function ReportCardBodyEditorInner({
         <Modal
           title={tAdmin("Add World Ports")}
           onRequestClose={() => {
-            if (copyLibraryTemplateState.loading) return;
+            if (libraryLayerBusy) return;
             setPendingLibraryLayer(null);
           }}
           footer={[
             {
               label: tAdmin("Cancel"),
               variant: "secondary",
-              disabled: copyLibraryTemplateState.loading,
+              disabled: libraryLayerBusy,
               onClick: () => setPendingLibraryLayer(null),
             },
             {
               label: tAdmin("Add layer"),
               variant: "primary",
-              loading: copyLibraryTemplateState.loading,
+              loading: libraryLayerBusy,
               onClick: () => {
                 void confirmAddLibraryLayer();
               },
