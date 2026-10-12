@@ -143,10 +143,9 @@ export function PromotedDistanceMap({
     />
   ) : null;
 
-  if (collapsed) {
-    if (!promoted || !toggle) return null;
-    return <div className="flex px-1 py-2 print:hidden">{toggle}</div>;
-  }
+  // Table view keeps this mounted so the project-map layers stay up, without
+  // the remove control. That control lives on the map.
+  if (collapsed) return null;
 
   return (
     <DistancePathMap

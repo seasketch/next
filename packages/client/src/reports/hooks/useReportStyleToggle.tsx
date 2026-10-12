@@ -6,6 +6,9 @@ import { claimReportStyle, releaseReportStyle } from "./reportStyleClaims";
 
 export type ReportStyleFitBounds = [[number, number], [number, number]];
 
+/** Quick ease onto the route once the promoted layers are on the map. */
+const PROMOTED_FIT_DURATION_MS = 450;
+
 export function useReportStyleToggle(
   cardId: number,
   selectedSketchId: number,
@@ -144,12 +147,21 @@ export function useReportStyleToggle(
     if (!visible || !bounds || !map) return;
     let cancelled = false;
     let fitted = false;
+    // eslint-disable-next-line i18next/no-literal-string
+    const layerPrefix = `report-style-${selectedSketchId}-${cardId}-${styleId}-layer-`;
     const apply = () => {
       if (cancelled || fitted) return;
+      // setStyle keeps the camera from the moment it runs, so a fit started
+      // before this style lands is thrown away. These layers appear in that
+      // rebuilt style. styledata fires then, before idle waits for tiles.
+      const layers = map.getStyle()?.layers;
+      if (!layers?.some((layer) => layer.id.startsWith(layerPrefix))) return;
       const width = map.getContainer().clientWidth;
       const height = map.getContainer().clientHeight;
       if (width < 200 || height < 160) return;
       fitted = true;
+      map.off("styledata", apply);
+      map.off("idle", apply);
       // The open report sits on the top-right. Leave room so the route is not
       // covered by that panel, without asking for more padding than the map has.
       const right = Math.min(540, Math.max(48, width - 160));
@@ -157,20 +169,19 @@ export function useReportStyleToggle(
       map.fitBounds(bounds, {
         padding: { top, right, bottom: 48, left: 48 },
         maxZoom: 12,
-        duration: 0,
+        duration: PROMOTED_FIT_DURATION_MS,
+        linear: true,
       });
     };
-    // addSource/addLayer rebuild the map style asynchronously. A fit that runs
-    // before that rebuild is discarded, because setStyle keeps the camera from
-    // the moment it is called. Wait until the map is idle again.
-    map.once("idle", apply);
-    const fallback = window.setTimeout(apply, 700);
+    map.on("styledata", apply);
+    map.on("idle", apply);
+    apply();
     return () => {
       cancelled = true;
-      window.clearTimeout(fallback);
+      map.off("styledata", apply);
       map.off("idle", apply);
     };
-  }, [visible, boundsKey, manager]);
+  }, [visible, boundsKey, manager, selectedSketchId, cardId, styleId]);
 
   return {
     visible,
