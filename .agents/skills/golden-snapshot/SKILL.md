@@ -22,7 +22,7 @@ The dump is built from committed migrations, the graphile-worker schema, and thr
 
 - `packages/api/snapshots/fixtures.sql` — accounts and projects that installs and smoke tests open. A participant has to be in the state the UI requires, not merely present in the table.
 - `packages/api/snapshots/data-library.sql` — the small set of public templates the other seed files clone, each with its production `data_upload_outputs`. Overlay analysis, geography clipping, and downloads read those rows (the FlatGeobuf output in particular), not the tile URL, so a template without them looks fine on the map and fails everywhere else. It is not the production catalog. Each template's `geostats` document is `packages/api/snapshots/geostats/<TEMPLATE_ID>.json`; `snapshot-create.sh` loads those onto the template data source. Report overlay queries require that document.
-- `packages/api/snapshots/geographies.sql` — builds the example project's geographies the same way create-project does, from those templates.
+- `packages/api/snapshots/geographies.sql` — builds the example project's geographies the same way create-project does, from those templates. After those geographies exist it calls `create_sketch_class_from_template` for Marine Protected Area, the class the template chooser adds, clipped to the Exclusive Economic Zone and attached to the default report.
 
 `packages/api/scripts/snapshot-create.sh` rebuilds a side database from that seed and refuses to write the dump when the result would break an install or a smoke test. The checks live in the script. Add one there when a new seed fact matters. Do not copy the list into this skill.
 

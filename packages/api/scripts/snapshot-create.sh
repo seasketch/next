@@ -170,6 +170,13 @@ if [[ "$default_reports" == "0" ]]; then
   exit 1
 fi
 
+mpa="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT sc.geometry_type || ',' || sc.is_geography_clipping_enabled::text || ',' || g.name || ',' || scr.is_primary::text FROM sketch_classes sc JOIN projects p ON p.id = sc.project_id AND p.slug = 'demo-samoa' JOIN sketch_class_geographies sg ON sg.sketch_class_id = sc.id JOIN project_geography g ON g.id = sg.geography_id JOIN sketch_class_reports scr ON scr.sketch_class_id = sc.id AND scr.is_primary WHERE sc.name = 'Marine Protected Area' AND sc.is_template = false AND sc.form_element_id IS NULL")"
+if [[ "$mpa" != "POLYGON,true,Exclusive Economic Zone,true" ]]; then
+  echo "demo-samoa should have a Marine Protected Area sketch class clipped to the Exclusive Economic Zone, found ${mpa}." >&2
+  exit 1
+fi
+
 # Jobs belong to the database that runs them. setup.sh queues what a fresh
 # install needs after restore.
 queued_jobs="$(psql_exec -d "$SOURCE_DB" -tAc "SELECT count(*) FROM graphile_worker.jobs")"
