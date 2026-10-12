@@ -13,7 +13,7 @@ Rule: a row goes in a migration if every database, including production, must ha
 
 - Example projects, synthetic users, memberships, example content.
 - Use the app's SQL functions (`create_project`, `copy_data_library_template_item`, …). Direct inserts only where no function exists, with a check in `scripts/snapshot-create.sh`.
-- Data-library templates (`src/DataLibrary/snapshotTemplateIds.js`) and their `data_upload_outputs`: copied from production onto `superuser` only. The remotes are production object keys; `cleanupDeletedOverlayRecords` protects `superuser` outputs outside production and nothing else.
+- Data-library templates (`src/DataLibrary/snapshotTemplateIds.js`) and their `data_upload_outputs`: copied from production onto `superuser` only. The remotes are production object keys; `cleanupDeletedOverlayRecords` protects `superuser` outputs outside production and nothing else. Geostats for those templates are `snapshots/geostats/<TEMPLATE_ID>.json`, loaded onto the template data source during `snapshot:create`.
 
 ## Neither
 

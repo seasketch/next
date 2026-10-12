@@ -4,6 +4,10 @@
 -- downloads read. Seamounts also keeps its citation and click popup. The
 -- geography templates are the ones the create-project form offers.
 -- World Port Index is the World Ports library item (template id WORLD_PORTS).
+-- Geostats live in snapshots/geostats/<TEMPLATE_ID>.json and are loaded by
+-- scripts/load-snapshot-geostats.js. World Ports uses the World Port Index
+-- shapefile document; the other files are the production superuser sources.
+-- Geometry type, feature count, and column details are generated from them.
 --
 -- Output remotes are production object keys. Outside production,
 -- cleanupDeletedOverlayRecords never deletes objects owned by the superuser

@@ -90,6 +90,18 @@ if [[ -n "$missing_fgb" ]]; then
   exit 1
 fi
 
+echo "Loading data-library geostats..."
+(
+  cd "$API_DIR"
+  SOURCE_URL="$SOURCE_URL" node scripts/load-snapshot-geostats.js
+)
+missing_geostats="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT coalesce(string_agg(data_library_template_id, ',' ORDER BY data_library_template_id), '') FROM data_sources WHERE data_library_template_id IS NOT NULL AND (geostats IS NULL OR vector_geometry_type IS NULL OR feature_count IS NULL)")"
+if [[ -n "$missing_geostats" ]]; then
+  echo "Data-library templates without geostats: ${missing_geostats}." >&2
+  exit 1
+fi
+
 echo "Adding demo-samoa geographies the same way create-project does..."
 psql_exec -d "$SOURCE_DB" -f - < "$API_DIR/snapshots/geographies.sql"
 clipping_layers="$(psql_exec -d "$SOURCE_DB" -tAc \
