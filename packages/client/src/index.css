@@ -7567,6 +7567,14 @@ select{
   height:100vh
 }
 
+.h-\[19rem\]{
+  height:19rem
+}
+
+.h-\[16rem\]{
+  height:16rem
+}
+
 .max-h-128{
   max-height:32rem
 }
@@ -8303,6 +8311,10 @@ select{
 
 .min-w-full{
   min-width:100%
+}
+
+.min-w-1\.5{
+  min-width:0.375rem
 }
 
 .\!max-w-128{
@@ -10266,6 +10278,10 @@ select{
   border-color:rgb(63 63 70 / var(--tw-border-opacity, 1))
 }
 
+.border-blue-300\/70{
+  border-color:rgb(147 197 253 / 0.7)
+}
+
 .border-b-black\/10{
   border-bottom-color:rgb(0 0 0 / 0.1)
 }
@@ -10426,6 +10442,10 @@ select{
 
 .bg-black\/10{
   background-color:rgb(0 0 0 / 0.1)
+}
+
+.bg-black\/15{
+  background-color:rgb(0 0 0 / 0.15)
 }
 
 .bg-black\/20{
@@ -13800,6 +13820,12 @@ select{
   backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)
 }
 
+.backdrop-blur-\[12px\]{
+  --tw-backdrop-blur:blur(12px);
+  -webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
+  backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia)
+}
+
 .backdrop-blur-\[3px\]{
   --tw-backdrop-blur:blur(3px);
   -webkit-backdrop-filter:var(--tw-backdrop-blur) var(--tw-backdrop-brightness) var(--tw-backdrop-contrast) var(--tw-backdrop-grayscale) var(--tw-backdrop-hue-rotate) var(--tw-backdrop-invert) var(--tw-backdrop-opacity) var(--tw-backdrop-saturate) var(--tw-backdrop-sepia);
@@ -14968,6 +14994,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .hover\:bg-yellow-200:hover{
   --tw-bg-opacity:1;
   background-color:rgb(253 230 138 / var(--tw-bg-opacity, 1))
+}
+
+.hover\:bg-white\/90:hover{
+  background-color:rgb(255 255 255 / 0.9)
 }
 
 .hover\:bg-opacity-10:hover{

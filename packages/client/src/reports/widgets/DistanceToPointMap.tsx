@@ -1,10 +1,6 @@
-import { useContext, useMemo, useState } from "react";
-import { Feature, LineString } from "geojson";
+import { Fragment, useContext, useMemo, useState } from "react";
 import { isGeostatsLayer } from "@seasketch/geostats-types";
 import {
-  combineMetricsForFragments,
-  DistanceToFeaturesOverWaterMetric,
-  Metric,
   MetricDependency,
   subjectIsFragment,
 } from "overlay-engine";
@@ -17,12 +13,18 @@ import {
   ReportWidgetTooltipControls,
   TooltipMorePopover,
 } from "../../editor/TooltipMenu";
+import { TooltipBooleanConfigurationOption } from "./reportWidgetShared";
+import {
+  distanceExtremes,
+  distanceSketchGroups,
+} from "./distanceToPointGroups";
 import { useNumberFormatters } from "../hooks/useNumberFormatters";
 import { useOverlaySources } from "../hooks/useOverlaySources";
 import { LengthUnit } from "../utils/units";
 import { MetricLoadingDots } from "../components/MetricLoadingDots";
 import {
   DistancePathBasemap,
+  FIT_PADDING,
   isDistancePathBasemap,
 } from "./DistancePathMap";
 import { PromotedDistanceMap } from "./PromotedDistanceMap";
@@ -45,21 +47,12 @@ type DistanceToPointMapSettings = {
   labelColumn?: string;
   /** Omitted defaults to map and table. */
   display?: DistanceToPointDisplay;
+  /** Min and max distances in a small pill on the map. Off when omitted. */
+  showDistanceRange?: boolean;
 };
 
 function distanceDisplay(value: unknown): DistanceToPointDisplay {
   return value === "map" || value === "table" ? value : "both";
-}
-
-function isPathFeature(value: unknown): value is Feature<LineString> {
-  if (!value || typeof value !== "object") return false;
-  const geom = (value as Feature).geometry;
-  return (
-    geom != null &&
-    geom.type === "LineString" &&
-    Array.isArray(geom.coordinates) &&
-    geom.coordinates.length >= 2
-  );
 }
 
 function sketchReportingGeojsonUrl(
@@ -132,25 +125,26 @@ export const DistanceToPointMap: ReportWidget<DistanceToPointMapSettings> = ({
     [subject?.sketch?.id, projectMeta?.project?.sketchGeometryToken]
   );
 
-  const combined = useMemo(() => {
-    if (loading) {
-      return null;
-    }
+  const isCollection = Boolean(subject?.isCollection);
+  const childSketches = subject?.childSketches;
+  const groups = useMemo(() => {
+    if (loading) return [];
     const fragmentMetrics = metrics.filter(
       (m) =>
         m.type === "distance_to_features_over_water" &&
         subjectIsFragment(m.subject) &&
         m.state === SpatialMetricState.Complete &&
         m.value != null
-    ) as Pick<Metric, "type" | "value">[];
-    if (fragmentMetrics.length === 0) {
-      return null;
-    }
-    return combineMetricsForFragments(
-      fragmentMetrics,
-      "distance_to_features_over_water"
-    ) as DistanceToFeaturesOverWaterMetric;
-  }, [metrics, loading]);
+    );
+    return distanceSketchGroups({
+      metrics: fragmentMetrics,
+      isCollection,
+      childSketches: (childSketches ?? []).map((sketch) => ({
+        id: sketch.id,
+        name: sketch.name,
+      })),
+    });
+  }, [metrics, loading, isCollection, childSketches]);
 
   if (loading) {
     return (
@@ -160,18 +154,19 @@ export const DistanceToPointMap: ReportWidget<DistanceToPointMapSettings> = ({
     );
   }
 
-  const ranked = (combined?.value?.features ?? []).filter(
-    (feature) =>
-      Number.isFinite(feature.meters) && isPathFeature(feature.geojsonLine)
-  );
-  const rows = ranked.map((feature) => {
-    const distanceText = formatters.distance(feature.meters / 1000);
-    const label = featureLabel(
-      feature.properties,
-      componentSettings?.labelColumn
-    );
-    return { feature, distanceText, label };
-  });
+  const groupsWithLabels = groups.map((group) => ({
+    ...group,
+    routes: group.routes.map((route) => ({
+      ...route,
+      distanceText: formatters.distance(route.feature.meters / 1000),
+      label: featureLabel(
+        route.feature.properties,
+        componentSettings?.labelColumn
+      ),
+    })),
+  }));
+  const rows = groupsWithLabels.flatMap((group) => group.routes);
+  const extremes = hideDistance ? null : distanceExtremes(groups);
   const caption = hideDistance
     ? undefined
     : rows
@@ -192,11 +187,24 @@ export const DistanceToPointMap: ReportWidget<DistanceToPointMapSettings> = ({
     (display === "both" && (printing || tab === "table"));
 
   const showToggle = display === "both" && !printing;
-  // h-56 is 14rem. This map is 20% taller, and the table view uses the same box.
-  const routeMapHeight = "h-[16.8rem]";
-  // Pill sits 12px from the top and is about 36px tall. Fit the routes below
-  // that, keeping the same 40px inset the other edges use.
-  const mapFitPaddingTop = showToggle ? 12 + 36 + 40 : undefined;
+  const rangeOn =
+    componentSettings?.showDistanceRange === true &&
+    !hideDistance &&
+    extremes != null;
+  const showRange = rangeOn && showMap;
+  const rangeDistance = (kind: "min" | "max") =>
+    extremes
+      ? formatters.distance(extremes[kind].feature.meters / 1000)
+      : "";
+  // With min/max on, grow the shared map/table box by the footer row so that
+  // inset does not shrink the routes. The table tab keeps the same box.
+  const routeMapHeight =
+    rangeOn && display !== "table" ? "h-[19rem]" : "h-[16.8rem]";
+  // Tab pill sits 12px from the top and is about 36px tall. The min/max pill
+  // matches the other footer controls: 8px inset, 28px tall. Keep 40px of
+  // route clearance past each control.
+  const mapFitPaddingTop = showToggle ? 12 + 36 + FIT_PADDING : undefined;
+  const mapFitPaddingBottom = showRange ? 8 + 28 + FIT_PADDING : undefined;
 
   const tabs = showToggle ? (
     <div
@@ -271,7 +279,27 @@ export const DistanceToPointMap: ReportWidget<DistanceToPointMapSettings> = ({
           sketchGeojsonUrl={sketchGeojsonUrl}
           basemap={basemap}
           fitPaddingTop={mapFitPaddingTop}
+          fitPaddingBottom={mapFitPaddingBottom}
           heightClass={showToggle ? "h-full" : routeMapHeight}
+          overlay={
+            showRange ? (
+              <div className="pointer-events-none flex h-7 shrink-0 items-center gap-1.5 rounded-full border border-black/10 bg-white/80 px-2.5 text-[11px] leading-none shadow-sm backdrop-blur-[12px]">
+                <span className="font-semibold uppercase tracking-wide text-gray-500">
+                  {t("Min")}
+                </span>
+                <span className="font-semibold tabular-nums text-gray-900">
+                  {rangeDistance("min")}
+                </span>
+                <span className="mx-0.5 h-3 w-px bg-black/15" aria-hidden />
+                <span className="font-semibold uppercase tracking-wide text-gray-500">
+                  {t("Max")}
+                </span>
+                <span className="font-semibold tabular-nums text-gray-900">
+                  {rangeDistance("max")}
+                </span>
+              </div>
+            ) : null
+          }
           sketchId={subject?.sketch?.id ?? 0}
         />
       </div>
@@ -308,18 +336,41 @@ export const DistanceToPointMap: ReportWidget<DistanceToPointMapSettings> = ({
                   </td>
                 </tr>
               ) : (
-                rows.map((row) => (
-                  <tr
-                    key={row.feature.__id}
-                    className="border-b border-gray-100 last:border-b-0"
+                groupsWithLabels.map((group) => (
+                  <Fragment
+                    key={group.sketchId ?? "subject"}
                   >
-                    <td className="py-1.5 pr-3">{row.label ?? ""}</td>
-                    {hideDistance ? null : (
-                      <td className="py-1.5 text-right tabular-nums">
-                        {row.distanceText}
-                      </td>
-                    )}
-                  </tr>
+                    {isCollection ? (
+                      <tr className="border-b border-gray-100 bg-gray-50">
+                        <td
+                          className="py-1.5 pr-3 font-medium text-gray-900"
+                          colSpan={hideDistance ? 1 : 2}
+                        >
+                          {group.sketchName ||
+                            t("Sketch #{{id}}", { id: group.sketchId })}
+                        </td>
+                      </tr>
+                    ) : null}
+                    {group.routes.map((row) => (
+                      <tr
+                        key={`${group.sketchId ?? "subject"}-${row.feature.__id}`}
+                        className="border-b border-gray-100 last:border-b-0"
+                      >
+                        <td
+                          className={
+                            isCollection ? "py-1.5 pr-3 pl-3" : "py-1.5 pr-3"
+                          }
+                        >
+                          {row.label ?? ""}
+                        </td>
+                        {hideDistance ? null : (
+                          <td className="py-1.5 text-right tabular-nums">
+                            {row.distanceText}
+                          </td>
+                        )}
+                      </tr>
+                    ))}
+                  </Fragment>
                 ))
               )}
             </tbody>
@@ -459,6 +510,19 @@ export const DistanceToPointMapTooltipControls: ReportWidgetTooltipControls = ({
               componentSettings: {
                 ...componentSettings,
                 display: distanceDisplay(value),
+              },
+            })
+          }
+        />
+        <TooltipBooleanConfigurationOption
+          label={t("Min and max distances")}
+          checked={componentSettings?.showDistanceRange === true}
+          checkboxFirst
+          onChange={(next) =>
+            onUpdate({
+              componentSettings: {
+                ...componentSettings,
+                showDistanceRange: next ? true : undefined,
               },
             })
           }

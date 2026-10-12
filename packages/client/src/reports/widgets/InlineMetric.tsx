@@ -4,6 +4,7 @@ import {
   ColumnValuesMetric,
   CountMetric,
   DistanceToShoreMetric,
+  DEFAULT_WATER_PATH_DISTANCE_KM,
   DistanceToFeaturesOverWaterMetric,
   Metric,
   MetricDependency,
@@ -573,7 +574,19 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
         ) as DistanceToFeaturesOverWaterMetric;
         const nearest = combined.value.features[0];
         if (!nearest || !Number.isFinite(nearest.meters)) {
-          return t("No feature within range");
+          const dependency = dependencies.find(
+            (item) => item.type === "distance_to_features_over_water"
+          );
+          const rawLimit = dependency?.parameters?.maxDistanceKm;
+          const limitKm =
+            typeof rawLimit === "number" &&
+            Number.isFinite(rawLimit) &&
+            rawLimit > 0
+              ? rawLimit
+              : DEFAULT_WATER_PATH_DISTANCE_KM;
+          return t("beyond {{distance}}", {
+            distance: formatters.distance(limitKm),
+          });
         }
         const distanceText = formatters.distance(nearest.meters / 1000);
         const labelColumn = componentSettings?.labelColumn;
@@ -931,7 +944,7 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
         errors.push(`Unsupported presentation: ${presentation}`);
     }
   }, [
-    dependencies.length,
+    dependencies,
     loading,
     emptyCollectionWithoutFragments,
     metrics,

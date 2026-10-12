@@ -45,28 +45,88 @@ function unwrapRing(coords: number[][]): number[][] {
   return out;
 }
 
-function pathCollection(
+/**
+ * Place name, plus each distance on its own line when one or two routes end
+ * there. More than two routes leave the name alone; those distances stay on
+ * the lines.
+ */
+export function destinationLocationLabel(
+  name: string,
+  distances: string[]
+): string {
+  if (!name) return "";
+  const lines = distances.map((distance) => distance.trim()).filter(Boolean);
+  if (lines.length === 0 || lines.length > 2) return name;
+  lines.sort((a, b) => distanceMagnitude(a) - distanceMagnitude(b));
+  // eslint-disable-next-line i18next/no-literal-string
+  return [name, ...lines].join("\n");
+}
+
+function distanceMagnitude(distance: string): number {
+  const match = distance.replace(/,/g, "").match(/[\d.]+/);
+  const value = match ? Number(match[0]) : Number.NaN;
+  return Number.isFinite(value) ? value : Number.POSITIVE_INFINITY;
+}
+
+export function pathCollection(
   paths: Feature<LineString>[],
   labels?: Array<string | null>,
   distances?: Array<string | null>,
-  endpoints = true
+  endpoints: boolean | boolean[] = true
 ): FeatureCollection<LineString | Point> {
-  const features: Feature<LineString | Point>[] = [];
-  let rank = 0;
-  for (const path of paths) {
-    const coords = unwrapRing(path.geometry.coordinates);
+  const drawn: {
+    coords: number[][];
+    name: string;
+    distance: string;
+    endpoints: boolean;
+  }[] = [];
+  for (let index = 0; index < paths.length; index++) {
+    const coords = unwrapRing(paths[index]!.geometry.coordinates);
     if (coords.length < 2) continue;
-    const name = labels?.[rank]?.trim() ?? "";
-    const distance = distances?.[rank]?.trim() ?? "";
-    // eslint-disable-next-line i18next/no-literal-string
-    const label = name && distance ? `${name}\n${distance}` : name;
+    drawn.push({
+      coords,
+      name: labels?.[index]?.trim() ?? "",
+      distance: distances?.[index]?.trim() ?? "",
+      endpoints: Array.isArray(endpoints)
+        ? endpoints[index] !== false
+        : endpoints,
+    });
+  }
+  const distancesByLocation = new Map<string, string[]>();
+  for (const entry of drawn) {
+    if (!entry.name || !entry.distance) continue;
+    const list = distancesByLocation.get(entry.name) ?? [];
+    list.push(entry.distance);
+    distancesByLocation.set(entry.name, list);
+  }
+  const labeledLocations = new Set<string>();
+
+  const features: Feature<LineString | Point>[] = [];
+  for (let i = 0; i < drawn.length; i++) {
+    const entry = drawn[i]!;
+    const { coords, name, distance } = entry;
+    // Place names are shared across routes, so one label carries their
+    // distances. A label with no route distance, such as a shore distance,
+    // stays on every line.
+    const sharedPlace = distancesByLocation.has(name);
+    let label = "";
+    if (name && (!sharedPlace || !labeledLocations.has(name))) {
+      label = destinationLocationLabel(
+        name,
+        distancesByLocation.get(name) ?? []
+      );
+      if (sharedPlace) labeledLocations.add(name);
+    }
     features.push({
       type: "Feature",
-      properties: { kind: endpoints ? "path" : "shoreline", rank, distance },
+      properties: {
+        kind: entry.endpoints ? "path" : "shoreline",
+        rank: i,
+        distance,
+      },
       geometry: { type: "LineString", coordinates: coords },
     });
-    rank += 1;
-    if (!endpoints) {
+    if (!entry.endpoints) {
       if (name) {
         features.push({
           type: "Feature",
@@ -167,9 +227,14 @@ export function usePathCollection(
   paths: Feature<LineString>[],
   labels?: Array<string | null>,
   distances?: Array<string | null>,
-  endpoints = true
+  endpoints: boolean | boolean[] = true
 ) {
-  const key = `${endpoints ? "1" : "0"}:${pathSignature(paths, labels, distances)}`;
+  const endpointKey = Array.isArray(endpoints)
+    ? endpoints.map((value) => (value ? "1" : "0")).join("")
+    : endpoints
+    ? "1"
+    : "0";
+  const key = `${endpointKey}:${pathSignature(paths, labels, distances)}`;
   const cache = useRef<{
     key: string;
     collection: FeatureCollection<LineString | Point>;
@@ -259,8 +324,8 @@ export function DistancePathMap({
   fitPaddingBottom?: number;
   /** Tailwind height for the map canvas. Defaults to `h-56`. */
   heightClass?: string;
-  /** Draw origin and destination dots. Off for a shoreline intersection. */
-  endpoints?: boolean;
+  /** Draw origin and destination dots. Off for a shoreline intersection. An array sets this per path, in the same order as `paths`. */
+  endpoints?: boolean | boolean[];
   /** False while the same layers are showing on the project map. */
   interactive?: boolean;
   /** Control drawn over the map canvas, above the inactive treatment. */
