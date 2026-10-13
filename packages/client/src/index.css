@@ -8594,6 +8594,10 @@ select{
   max-width:20rem
 }
 
+.max-w-0{
+  max-width:0px
+}
+
 .flex-1{
   flex:1 1 0%
 }
@@ -10285,6 +10289,10 @@ select{
 
 .border-blue-300\/70{
   border-color:rgb(147 197 253 / 0.7)
+}
+
+.border-gray-200\/80{
+  border-color:rgb(229 231 235 / 0.8)
 }
 
 .border-b-black\/10{
@@ -14604,6 +14612,10 @@ input[type="checkbox"][indeterminate="true"]:checked {
 
 .last\:border-none:last-child{
   border-style:none
+}
+
+.last\:pl-4:last-child{
+  padding-left:1rem
 }
 
 .focus-within\:z-10:focus-within{

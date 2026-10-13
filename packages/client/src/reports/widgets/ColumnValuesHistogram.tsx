@@ -7,6 +7,7 @@ import {
   NumberColumnValueStats,
   combineMetricsForFragments,
   isNumberColumnValueStats,
+  MetricSubjectFragment,
   subjectIsFragment,
 } from "overlay-engine";
 import { Expression } from "mapbox-gl";
@@ -46,6 +47,9 @@ import {
   LengthUnit,
 } from "../utils/units";
 import { FormLanguageContext } from "../../formElements/FormElement";
+import HistogramSketchBreakdown from "./collection/HistogramSketchBreakdown";
+import { useCollectionSketchExpand } from "./collection/useCollectionSketchExpand";
+import { ReportUIStateContext } from "../context/ReportUIStateContext";
 
 type ColumnValuesHistogramSettings = {
   colorCoded?: boolean;
@@ -227,11 +231,87 @@ function getColumnColorSource(
   return null;
 }
 
+export function columnValueStatsBySketch({
+  metrics,
+  column,
+  childSketchIds,
+  sketchNameById,
+  sketchLabel,
+}: {
+  metrics: ReadonlyArray<{
+    type?: string | null;
+    value?: unknown;
+    subject?: unknown;
+  }>;
+  column: string;
+  childSketchIds: number[];
+  sketchNameById: Map<number, string>;
+  sketchLabel: (id: number) => string;
+}): Array<{
+  sketchId: number;
+  sketchName: string;
+  stats: NumberColumnValueStats;
+}> {
+  const fragmentMetrics = metrics.filter(
+    (metric) =>
+      subjectIsFragment(metric.subject) &&
+      metric.type === "column_values" &&
+      metric.value
+  );
+  if (!fragmentMetrics.length) return [];
+
+  const sketchIds =
+    childSketchIds.length > 0
+      ? childSketchIds
+      : Array.from(
+          new Set(
+            fragmentMetrics.flatMap(
+              (metric) => (metric.subject as MetricSubjectFragment).sketches
+            )
+          )
+        );
+
+  const rows: Array<{
+    sketchId: number;
+    sketchName: string;
+    stats: NumberColumnValueStats;
+  }> = [];
+  for (const sketchId of sketchIds) {
+    const bucket = fragmentMetrics.filter((metric) =>
+      (metric.subject as MetricSubjectFragment).sketches.includes(sketchId)
+    );
+    if (!bucket.length) continue;
+    const combined = combineMetricsForFragments(
+      bucket as Pick<Metric, "type" | "value">[]
+    ) as ColumnValuesMetric;
+    const value = combined.value["*"]?.[column];
+    if (!value || !isNumberColumnValueStats(value) || value.count === 0) {
+      continue;
+    }
+    rows.push({
+      sketchId,
+      sketchName: sketchNameById.get(sketchId) ?? sketchLabel(sketchId),
+      stats: value,
+    });
+  }
+  return rows;
+}
+
 export const ColumnValuesHistogram: ReportWidget<
   ColumnValuesHistogramSettings
-> = ({ metrics, componentSettings, sources, loading, dependencies }) => {
+> = ({
+  metrics,
+  componentSettings,
+  sources,
+  loading,
+  dependencies,
+  sketchClass,
+}) => {
   const { t } = useTranslation("reports");
   const langContext = useContext(FormLanguageContext);
+  const { printing } = useContext(ReportUIStateContext);
+  const { isCollection, sketchNameById, childSketchIds } =
+    useCollectionSketchExpand(sketchClass, { forceAllExpanded: printing });
   const source = sources?.[0];
   const column = componentSettings?.column;
   const colorCoded = componentSettings?.colorCoded !== false;
@@ -509,16 +589,38 @@ export const ColumnValuesHistogram: ReportWidget<
 
   const meanColor = "#888";
 
-  const formatStatValue = (stat: ColumnValuesHistogramStatKey) => {
-    if (!columnStats) return "—";
-    const value = columnStats[stat as keyof NumberColumnValueStats];
-    if (value === undefined || value === null || Number.isNaN(value)) {
+  const sketchRows = useMemo(() => {
+    if (!isCollection || !column || loading) return [];
+    return columnValueStatsBySketch({
+      metrics,
+      column,
+      childSketchIds,
+      sketchNameById,
+      sketchLabel: (id) => t("Sketch #{{id}}", { id }),
+    });
+  }, [
+    isCollection,
+    column,
+    loading,
+    metrics,
+    childSketchIds,
+    sketchNameById,
+    t,
+  ]);
+
+  const formatStatValue = (
+    stat: ColumnValuesHistogramStatKey,
+    stats: NumberColumnValueStats | null = columnStats
+  ) => {
+    if (!stats) return "—";
+    const value = stats[stat as keyof NumberColumnValueStats];
+    if (typeof value !== "number" || Number.isNaN(value)) {
       return "—";
     }
     if (stat === "count" || stat === "countDistinct") {
-      return countFormatter.format(value as number);
+      return countFormatter.format(value);
     }
-    return formatValueWithUnit(value as number, statFormatter);
+    return formatValueWithUnit(value, statFormatter);
   };
 
   if (loading) {
@@ -747,8 +849,8 @@ export const ColumnValuesHistogram: ReportWidget<
             </div>
           )}
           {statsToShow.length > 0 && (
-            <div className="mt-4 rounded-md border border-gray-200  px-3 py-2 bg-gray-50">
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-gray-700">
+            <div className="mt-4 rounded-md border border-gray-200 bg-gray-50">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 px-3 py-2 text-xs text-gray-700">
                 {statsToShow.map((stat) => (
                   <div key={stat} className="flex justify-between gap-2">
                     <span className="uppercase tracking-wide text-gray-500 inline-flex items-center gap-1">
@@ -770,6 +872,27 @@ export const ColumnValuesHistogram: ReportWidget<
                   </div>
                 ))}
               </div>
+              {isCollection && (
+                <HistogramSketchBreakdown
+                  forceExpanded={printing}
+                  showLabel={t("Show by sketch")}
+                  sketchHeader={t("Sketch")}
+                  columns={statsToShow.map((stat) => ({
+                    key: stat,
+                    label: statLabels(t, componentSettings)[stat],
+                  }))}
+                  rows={sketchRows.map((row) => ({
+                    sketchId: row.sketchId,
+                    sketchName: row.sketchName,
+                    values: Object.fromEntries(
+                      statsToShow.map((stat) => [
+                        stat,
+                        formatStatValue(stat, row.stats),
+                      ])
+                    ),
+                  }))}
+                />
+              )}
             </div>
           )}
         </div>

@@ -4,6 +4,8 @@ import {
   combineMetricsForFragments,
   Metric,
   MetricDependency,
+  MetricSubjectFragment,
+  RasterBandStats,
   RasterStats,
   subjectIsFragment,
 } from "overlay-engine";
@@ -35,6 +37,9 @@ import {
   LengthUnit,
 } from "../utils/units";
 import { FormLanguageContext } from "../../formElements/FormElement";
+import HistogramSketchBreakdown from "./collection/HistogramSketchBreakdown";
+import { useCollectionSketchExpand } from "./collection/useCollectionSketchExpand";
+import { ReportUIStateContext } from "../context/ReportUIStateContext";
 
 type RasterValuesHistogramSettings = {
   colorCoded?: boolean;
@@ -188,11 +193,84 @@ function getRasterColorExpression(
   return null;
 }
 
+function isRasterStatsValue(
+  value: unknown
+): value is { bands: RasterBandStats[] } {
+  if (!value || typeof value !== "object") return false;
+  return "bands" in value && Array.isArray((value as { bands: unknown }).bands);
+}
+
+export function rasterBandStatsBySketch({
+  metrics,
+  childSketchIds,
+  sketchNameById,
+  sketchLabel,
+}: {
+  metrics: ReadonlyArray<{
+    type?: string | null;
+    value?: unknown;
+    subject?: unknown;
+  }>;
+  childSketchIds: number[];
+  sketchNameById: Map<number, string>;
+  sketchLabel: (id: number) => string;
+}): Array<{
+  sketchId: number;
+  sketchName: string;
+  stats: RasterBandStats;
+}> {
+  const fragmentMetrics = metrics.filter(
+    (metric) =>
+      subjectIsFragment(metric.subject) &&
+      metric.type === "raster_stats" &&
+      isRasterStatsValue(metric.value) &&
+      metric.value.bands[0]
+  );
+  if (!fragmentMetrics.length) return [];
+
+  const sketchIds =
+    childSketchIds.length > 0
+      ? childSketchIds
+      : Array.from(
+          new Set(
+            fragmentMetrics.flatMap(
+              (metric) => (metric.subject as MetricSubjectFragment).sketches
+            )
+          )
+        );
+
+  const rows: Array<{
+    sketchId: number;
+    sketchName: string;
+    stats: RasterBandStats;
+  }> = [];
+  for (const sketchId of sketchIds) {
+    const bucket = fragmentMetrics.filter((metric) =>
+      (metric.subject as MetricSubjectFragment).sketches.includes(sketchId)
+    );
+    if (!bucket.length) continue;
+    const combined = combineMetricsForFragments(
+      bucket as Pick<Metric, "type" | "value">[]
+    ) as RasterStats;
+    const band = combined.value.bands[0];
+    if (!band || (band.count === 0 && band.invalid === 0)) continue;
+    rows.push({
+      sketchId,
+      sketchName: sketchNameById.get(sketchId) ?? sketchLabel(sketchId),
+      stats: band,
+    });
+  }
+  return rows;
+}
+
 export const RasterValuesHistogram: ReportWidget<
   RasterValuesHistogramSettings
-> = ({ metrics, componentSettings, sources, loading }) => {
+> = ({ metrics, componentSettings, sources, loading, sketchClass }) => {
   const { t } = useTranslation("reports");
   const langContext = useContext(FormLanguageContext);
+  const { printing } = useContext(ReportUIStateContext);
+  const { isCollection, sketchNameById, childSketchIds } =
+    useCollectionSketchExpand(sketchClass, { forceAllExpanded: printing });
   const source = sources?.[0];
   const rasterInfo = useMemo(() => getRasterInfo(source), [source]);
   const colorCoded = componentSettings?.colorCoded !== false;
@@ -389,9 +467,22 @@ export const RasterValuesHistogram: ReportWidget<
 
   const meanColor = "#888";
 
-  const formatStatValue = (stat: RasterHistogramStatKey) => {
-    if (!bandStats) return "—";
-    const value = bandStats[stat];
+  const sketchRows = useMemo(() => {
+    if (!isCollection || loading) return [];
+    return rasterBandStatsBySketch({
+      metrics,
+      childSketchIds,
+      sketchNameById,
+      sketchLabel: (id) => t("Sketch #{{id}}", { id }),
+    });
+  }, [isCollection, loading, metrics, childSketchIds, sketchNameById, t]);
+
+  const formatStatValue = (
+    stat: RasterHistogramStatKey,
+    stats: RasterBandStats | null = bandStats
+  ) => {
+    if (!stats) return "—";
+    const value = stats[stat];
     if (value === undefined || value === null || Number.isNaN(value)) {
       return "—";
     }
@@ -602,8 +693,8 @@ export const RasterValuesHistogram: ReportWidget<
             </div>
           )}
           {statsToShow.length > 0 && (
-            <div className="mt-4 rounded-md border border-gray-200  px-3 py-2 bg-gray-50">
-              <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-gray-700">
+            <div className="mt-4 rounded-md border border-gray-200 bg-gray-50">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 px-3 py-2 text-xs text-gray-700">
                 {statsToShow.map((stat) => (
                   <div key={stat} className="flex justify-between gap-2">
                     <span className="uppercase tracking-wide text-gray-500 inline-flex items-center gap-1">
@@ -625,6 +716,27 @@ export const RasterValuesHistogram: ReportWidget<
                   </div>
                 ))}
               </div>
+              {isCollection && (
+                <HistogramSketchBreakdown
+                  forceExpanded={printing}
+                  showLabel={t("Show by sketch")}
+                  sketchHeader={t("Sketch")}
+                  columns={statsToShow.map((stat) => ({
+                    key: stat,
+                    label: statLabels(t, componentSettings)[stat],
+                  }))}
+                  rows={sketchRows.map((row) => ({
+                    sketchId: row.sketchId,
+                    sketchName: row.sketchName,
+                    values: Object.fromEntries(
+                      statsToShow.map((stat) => [
+                        stat,
+                        formatStatValue(stat, row.stats),
+                      ])
+                    ),
+                  }))}
+                />
+              )}
             </div>
           )}
         </div>
