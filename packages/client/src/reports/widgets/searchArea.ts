@@ -74,13 +74,16 @@ export function simplifiedRingLength(
 
 function pushBufferedPolygon(
   out: Feature<Polygon>[],
-  coordinates: Position[][],
+  coordinates: Polygon["coordinates"],
   radiusKm: number,
   tolerance: number
 ) {
   const outer = coordinates[0];
   if (!outer) return;
-  pushRing(out, bufferRing(simplifyClosedRing(outer, tolerance), radiusKm));
+  pushRing(
+    out,
+    bufferRing(simplifyClosedRing(uniqueLine(outer), tolerance), radiusKm)
+  );
 }
 
 function pushRing(out: Feature<Polygon>[], ring: Position[] | null) {
@@ -125,7 +128,7 @@ function simplifyClosedRing(ring: Position[], tolerance: number): Position[] {
   return closeRing(kept);
 }
 
-function simplifyLine(line: Position[], tolerance: number): Position[] {
+function simplifyLine(line: readonly unknown[], tolerance: number): Position[] {
   const open = uniqueLine(line);
   if (open.length < 3 || tolerance <= 0) return open;
   const kept = douglasPeucker(open, tolerance);
@@ -140,7 +143,7 @@ function uniqueOpenRing(ring: Position[]): Position[] {
   return uniqueLine(open);
 }
 
-function uniqueLine(line: Position[]): Position[] {
+function uniqueLine(line: readonly unknown[]): Position[] {
   const out: Position[] = [];
   for (const position of line) {
     const point = asPosition(position);
