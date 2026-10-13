@@ -8,8 +8,17 @@ import {
 } from "geojson";
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import simplify from "@turf/simplify";
+import truncate from "@turf/truncate";
 
 const ON_SEGMENT = 1e-9;
+/** Detail kept for a short overlap, in degrees. About 17 m. */
+const SHORT_COAST_TOLERANCE = 0.00015;
+/**
+ * Past this many vertices the shore is a cloud of clipped land edges.
+ * Simplify cannot shorten a two-point edge, so long results are rounded
+ * to 0.01° (about 1 km) for the map.
+ */
+const COARSE_VERTEX_LIMIT = 400;
 
 function ringsOf(geometry: Polygon | MultiPolygon): Position[][] {
   if (geometry.type === "Polygon") return geometry.coordinates;
@@ -92,8 +101,9 @@ function insideSubject(
 
 /**
  * Shoreline of `landFeatures` that lies inside or on `subject`.
- * The result is simplified so a coastal overlap is a short line, not the
- * full land ring.
+ * A short overlap keeps fine detail. A long one is thousands of separate
+ * land edges; those are rounded to about a kilometer so the highlight
+ * stays drawable and under the queue size limit.
  */
 export function shorelineInsideSubject(
   subject: Feature,
@@ -167,9 +177,104 @@ export function shorelineInsideSubject(
     properties: {},
     geometry,
   };
-  return simplify(feature, {
-    tolerance: 0.00015,
-    highQuality: true,
+  return coastlineForDisplay(feature);
+}
+
+function vertexCount(geometry: LineString | MultiLineString): number {
+  if (geometry.type === "LineString") return geometry.coordinates.length;
+  return geometry.coordinates.reduce((sum, line) => sum + line.length, 0);
+}
+
+function lineParts(geometry: LineString | MultiLineString): Position[][] {
+  return geometry.type === "LineString"
+    ? [geometry.coordinates]
+    : geometry.coordinates;
+}
+
+function withoutDuplicateEdges(lines: Position[][]): Position[][] {
+  const seen = new Set<string>();
+  const kept: Position[][] = [];
+  for (const line of lines) {
+    const cleaned: Position[] = [];
+    for (const point of line) {
+      const previous = cleaned[cleaned.length - 1];
+      if (previous && previous[0] === point[0] && previous[1] === point[1]) {
+        continue;
+      }
+      cleaned.push(point);
+    }
+    if (cleaned.length < 2) continue;
+    if (cleaned.length === 2) {
+      const start = cleaned[0]!;
+      const end = cleaned[1]!;
+      const forward = start[0] < end[0] || (start[0] === end[0] && start[1] <= end[1]);
+      const key = forward
+        ? `${start[0]},${start[1]},${end[0]},${end[1]}`
+        : `${end[0]},${end[1]},${start[0]},${start[1]}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+    }
+    kept.push(cleaned);
+  }
+  return kept;
+}
+
+function featureFromLines(
+  lines: Position[][]
+): Feature<LineString | MultiLineString> | null {
+  if (lines.length === 0) return null;
+  if (lines.length === 1) {
+    return {
+      type: "Feature",
+      properties: {},
+      geometry: { type: "LineString", coordinates: lines[0]! },
+    };
+  }
+  return {
+    type: "Feature",
+    properties: {},
+    geometry: { type: "MultiLineString", coordinates: lines },
+  };
+}
+
+function coastlineForDisplay(
+  feature: Feature<LineString | MultiLineString>
+): Feature<LineString | MultiLineString> | null {
+  if (vertexCount(feature.geometry) <= COARSE_VERTEX_LIMIT) {
+    return featureFromLines(
+      withoutDuplicateEdges(
+        lineParts(
+          simplify(feature, {
+            tolerance: SHORT_COAST_TOLERANCE,
+            highQuality: true,
+            mutate: false,
+          }).geometry
+        )
+      )
+    );
+  }
+  const truncated = truncate(feature, {
+    precision: 2,
+    coordinates: 2,
     mutate: false,
   });
+  const stripped = featureFromLines(
+    withoutDuplicateEdges(lineParts(truncated.geometry))
+  );
+  if (!stripped) return null;
+  try {
+    return featureFromLines(
+      withoutDuplicateEdges(
+        lineParts(
+          simplify(stripped, {
+            tolerance: 0.01,
+            highQuality: false,
+            mutate: false,
+          }).geometry
+        )
+      )
+    );
+  } catch {
+    return stripped;
+  }
 }
