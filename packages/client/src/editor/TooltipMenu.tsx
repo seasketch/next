@@ -1635,6 +1635,7 @@ export function TooltipDropdown({
   contentProps,
   getDisplayLabel,
   truncateValue = true,
+  modal = true,
 }: {
   value: string;
   options: TooltipDropdownOption[];
@@ -1648,6 +1649,12 @@ export function TooltipDropdown({
   getDisplayLabel?: (selected?: TooltipDropdownOption) => ReactNode;
   /** Compact toolbar rows cap the value. Wider menus should show the full label. */
   truncateValue?: boolean;
+  /**
+   * Modal menus ignore pointer events outside the menu, so a second click on
+   * the trigger falls through and can dismiss a parent popover. Pass false
+   * when this menu sits inside one.
+   */
+  modal?: boolean;
 }) {
   const selected = options.find((o) => o.value === value);
   const displayLabel = getDisplayLabel
@@ -1656,7 +1663,7 @@ export function TooltipDropdown({
   const { className: contentClassName, ...restContentProps } =
     contentProps ?? {};
   return (
-    <DropdownMenu.Root onOpenChange={onOpenChange}>
+    <DropdownMenu.Root modal={modal} onOpenChange={onOpenChange}>
       <DropdownMenu.Trigger asChild>
         <button
           className="flex-1 h-6 bg-transparent text-gray-900 text-sm px-1 border-none rounded inline-flex items-center gap-1.5 hover:bg-gray-100 active:bg-gray-100 focus:bg-gray-100 data-[state=open]:bg-gray-100 focus:outline-none justify-end"
@@ -1798,6 +1805,13 @@ export function TooltipInfoIcon({
   );
 }
 
+function isTooltipDropdownTarget(target: EventTarget | null) {
+  return (
+    target instanceof Element &&
+    Boolean(target.closest("[data-tooltip-dropdown]"))
+  );
+}
+
 export function TooltipPopoverContent({
   children,
   side = "top",
@@ -1825,6 +1839,12 @@ export function TooltipPopoverContent({
         avoidCollisions
         onOpenAutoFocus={(e) => e.preventDefault()}
         onCloseAutoFocus={(e) => e.preventDefault()}
+        onPointerDownOutside={(event) => {
+          if (isTooltipDropdownTarget(event.target)) event.preventDefault();
+        }}
+        onFocusOutside={(event) => {
+          if (isTooltipDropdownTarget(event.target)) event.preventDefault();
+        }}
         className={`bg-white text-gray-900 border border-black/20 rounded-lg shadow-lg ${
           noPadding ? "" : "px-2 py-2"
         } z-[49]`}

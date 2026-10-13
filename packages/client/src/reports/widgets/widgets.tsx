@@ -872,7 +872,9 @@ export function ReportWidgetNodeViewRouter(props: any) {
       widget = <memoizedWidgets.DistanceToShoreMap {...widgetProps} />;
       break;
     case "DistanceToPointMap":
-      widget = <memoizedWidgets.DistanceToPointMap {...widgetProps} />;
+      widget = (
+        <memoizedWidgets.DistanceToPointMap {...widgetProps} cardId={cardId} />
+      );
       break;
     case "SketchAttributesTable":
       widget = <memoizedWidgets.SketchAttributesTable {...widgetProps} />;

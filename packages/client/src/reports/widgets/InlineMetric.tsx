@@ -33,7 +33,8 @@ import {
 import { LabeledDropdown } from "./LabeledDropdown";
 import {
   DistanceToPointResolutionField,
-  DistanceToPointSearchFields,
+  DistanceToPointSearchInputs,
+  useDistanceToPointSearchDraft,
 } from "./DistanceToPointSearchFields";
 import { UnitSelector } from "./UnitSelector";
 import {
@@ -1353,6 +1354,12 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
     () => (node.attrs?.metrics || []) as MetricDependency[],
     [node.attrs?.metrics]
   );
+  const waterPathSearch = useDistanceToPointSearchDraft({
+    metrics: dependencies,
+    onUpdateDependencyParameters,
+    showMaxMatches: false,
+    active: presentation === "distance_to_features_over_water",
+  });
 
   const { filteredSources: sources } = useOverlaySources(dependencies);
   const relatedOverlay = useRelatedOverlay(dependencies);
@@ -1686,13 +1693,6 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
           }
         />
       )}
-      {presentation === "distance_to_features_over_water" && (
-        <DistanceToPointSearchFields
-          metrics={(node.attrs?.metrics || []) as MetricDependency[]}
-          onUpdateDependencyParameters={onUpdateDependencyParameters}
-          showMaxMatches={false}
-        />
-      )}
       {presentation !== "count" && (
         <NumberRoundingControl
           value={componentSettings?.minimumFractionDigits}
@@ -1915,6 +1915,7 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
 
         {presentation === "distance_to_features_over_water" && (
           <>
+            <DistanceToPointSearchInputs {...waterPathSearch} />
             <DistanceToPointResolutionField
               metrics={dependencies}
               onUpdateDependencyParameters={onUpdateDependencyParameters}
@@ -1924,6 +1925,7 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
               value={componentSettings?.labelColumn || "none"}
               ariaLabel={t("label column")}
               truncateValue={false}
+              modal={false}
               options={[
                 { value: "none", label: t("None") },
                 ...pointLabelColumnOptions,
