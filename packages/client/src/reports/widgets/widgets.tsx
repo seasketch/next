@@ -157,10 +157,7 @@ import {
   getMetricErrorInfo,
   MetricSuggestedFixes,
 } from "../components/MetricSuggestedFixes";
-import {
-  MetricProperties,
-  ReportWidgetProps,
-} from "./reportWidgetShared";
+import { MetricProperties, ReportWidgetProps } from "./reportWidgetShared";
 export {
   TableHeadingsEditor,
   TooltipBooleanConfigurationOption,
@@ -1370,8 +1367,7 @@ export function buildReportCommandGroups({
       insertDistanceToPoint(view, stableId, block, "PORT_NAME", at);
     };
     const existing = draftTableOfContentsItems?.find(
-      (item) =>
-        item.copiedFromDataLibraryTemplateId === WORLD_PORTS_TEMPLATE_ID
+      (item) => item.copiedFromDataLibraryTemplateId === WORLD_PORTS_TEMPLATE_ID
     );
     if (existing?.stableId) {
       const prepared = sources?.some(
@@ -1483,7 +1479,7 @@ export function buildReportCommandGroups({
       id: "inline-distance-to-port",
       label: "Distance to Port",
       description:
-        "Water-route distance from the sketch to the nearest World Ports harbor.",
+        "Water-route distance from the sketch to the nearest port(s) in the World Ports Index.",
       screenshotSrc: "/slashCommands/distance-to-port.png",
       run: (state, _dispatch, view) => {
         const at = state.selection.ranges[0];
@@ -1503,7 +1499,8 @@ export function buildReportCommandGroups({
     sketchBlockWidgetsGroup.items.push({
       id: "distance-to-shore-map",
       label: "Distance to Shore Map",
-      description: "Map of the shortest path between the sketch and the shoreline.",
+      description:
+        "Map of the shortest path between the sketch and the shoreline.",
       screenshotSrc: "/slashCommands/distance-to-shore-map.png",
       run: (state, dispatch, view) => {
         return insertBlockMetric(view, state.selection.ranges[0], {
@@ -1526,7 +1523,7 @@ export function buildReportCommandGroups({
       id: "distance-to-port-map",
       label: "Distance to Port Map",
       description:
-        "Map of the water route from the sketch to the nearest World Ports harbor.",
+        "Map of the water route from the sketch to the nearest port(s) in the World Ports Index.",
       screenshotSrc: "/slashCommands/distance-to-port-map.png",
       run: (state, _dispatch, view) => {
         const at = state.selection.ranges[0];
@@ -2364,7 +2361,7 @@ export function buildReportCommandGroups({
               id: `overlay-layer-${tocId}-distance-to-point`,
               label: "Distance to Point",
               description:
-                "Water-route distance from the sketch to the nearest point on this layer.",
+                "Water-route distance from the sketch to the nearest point(s) in this layer.",
               screenshotSrc: "/slashCommands/distance-to-port.png",
               run: (state, _dispatch, view) => {
                 const at = state.selection.ranges[0];
@@ -2380,7 +2377,7 @@ export function buildReportCommandGroups({
               id: `overlay-layer-${tocId}-distance-to-point-map`,
               label: "Distance to Point Map",
               description:
-                "Map of the water route from the sketch to the nearest point on this layer.",
+                "Map of the water route from the sketch to the nearest point(s) in this layer.",
               screenshotSrc: "/slashCommands/distance-to-port-map.png",
               run: (state, _dispatch, view) => {
                 const at = state.selection.ranges[0];
@@ -2830,4 +2827,3 @@ export function insertBlockMetric(
 ): boolean {
   return _insertMetric(view, range, properties, false);
 }
-
