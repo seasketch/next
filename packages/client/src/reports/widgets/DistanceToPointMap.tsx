@@ -519,7 +519,7 @@ export const DistanceToPointMap: ReportWidget<DistanceToPointMapSettings> = ({
                     className="pt-2 text-xs font-normal text-gray-500"
                   >
                     {t(
-                      "Edit fuel use and price assumptions in the next tab. The cost is one-way."
+                      "Listed fuel costs are one-way. Edit fuel use and price assumptions in the next tab."
                     )}
                   </td>
                 </tr>

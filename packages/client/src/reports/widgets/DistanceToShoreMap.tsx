@@ -202,7 +202,7 @@ export const DistanceToShoreMap: ReportWidget<DistanceToShoreMapSettings> = ({
           className="report-tabs-tab focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
           onClick={() => setTab("map")}
         >
-          {t("Route map")}
+          {t("Map")}
         </button>
         <button
           type="button"

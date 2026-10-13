@@ -90,7 +90,7 @@ export function FuelCostPanel({
       <p className="mb-3 text-xs leading-snug text-gray-500">
         <Trans ns="reports">
           These assumptions can be used to estimate fuel costs based on
-          particular vessel attributes and current fuel costs, if provided.
+          particular vessel attributes and current prices, if provided.
         </Trans>
       </p>
       <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
