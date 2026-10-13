@@ -152,9 +152,9 @@ async function landNear(land: FlatGeobufSource<Feature>, coords: Position[]): Pr
 }
 
 describe("hierarchical water path", () => {
-  // The suite shares the runner with the other overlay tests, so this one
-  // case can sit past three minutes when the machine is busy.
-  vi.setConfig({ testTimeout: 300_000, hookTimeout: 300_000 });
+  // The suite shares the runner with the other overlay tests. A quiet run
+  // finishes in about three minutes; a busy runner has gone past five.
+  vi.setConfig({ testTimeout: 600_000, hookTimeout: 600_000 });
   let ports: FlatGeobufSource<Feature>;
   let land: FlatGeobufSource<Feature>;
   const subjects: Feature[] = [];

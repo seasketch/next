@@ -51,14 +51,16 @@ function commitWaterPathParameters(
 
 /**
  * How many nearest points to return, and how far to search. Both are metric
- * parameters, so changing them recalculates the overlay.
+ * parameters, so changing them recalculates the overlay. Call this from the
+ * tooltip controls so the legacy-radius rewrite and the single-match pin run
+ * while the tooltip is open, even though the inputs live in More.
  */
-export function DistanceToPointSearchFields({
+export function useDistanceToPointSearchDraft({
   metrics,
   onUpdateDependencyParameters,
   showMaxMatches = true,
-}: DistanceToPointSearchFieldsProps) {
-  const { t } = useTranslation("admin:reports");
+  active = true,
+}: DistanceToPointSearchFieldsProps & { active?: boolean }) {
   const parameters = metrics[0]?.parameters;
   const storedResults =
     parameters?.maxResults ?? DEFAULT_WATER_PATH_MAX_RESULTS;
@@ -82,16 +84,21 @@ export function DistanceToPointSearchFields({
 
   const pinnedSingleResult = useRef(false);
   useEffect(() => {
-    if (showMaxMatches || pinnedSingleResult.current || storedResults === 1) {
+    if (
+      !active ||
+      showMaxMatches ||
+      pinnedSingleResult.current ||
+      storedResults === 1
+    ) {
       return;
     }
     pinnedSingleResult.current = true;
     commitWaterPathParameters(onUpdateDependencyParameters, { maxResults: 1 });
-  }, [onUpdateDependencyParameters, showMaxMatches, storedResults]);
+  }, [active, onUpdateDependencyParameters, showMaxMatches, storedResults]);
 
   const migratedLegacyKm = useRef(false);
   useEffect(() => {
-    if (migratedLegacyKm.current) return;
+    if (!active || migratedLegacyKm.current) return;
     if (
       parameters?.maxDistanceKm == null ||
       Math.abs(parameters.maxDistanceKm - legacyDefaultKm) >= 1e-3
@@ -108,7 +115,12 @@ export function DistanceToPointSearchFields({
         maxDistanceKm: DEFAULT_WATER_PATH_DISTANCE_KM,
       };
     });
-  }, [legacyDefaultKm, onUpdateDependencyParameters, parameters?.maxDistanceKm]);
+  }, [
+    active,
+    legacyDefaultKm,
+    onUpdateDependencyParameters,
+    parameters?.maxDistanceKm,
+  ]);
 
   const commit = (patch: {
     maxResults?: number;
@@ -117,41 +129,67 @@ export function DistanceToPointSearchFields({
     commitWaterPathParameters(onUpdateDependencyParameters, patch);
   };
 
+  return {
+    showMaxMatches,
+    resultsText,
+    setResultsText,
+    kmText,
+    setKmText,
+    storedResults,
+    storedKm,
+    commit,
+  };
+}
+
+export function DistanceToPointSearchInputs({
+  showMaxMatches,
+  resultsText,
+  setResultsText,
+  kmText,
+  setKmText,
+  storedResults,
+  storedKm,
+  commit,
+}: ReturnType<typeof useDistanceToPointSearchDraft>) {
+  const { t } = useTranslation("admin:reports");
+  const numberRowClass = "flex items-center text-sm text-gray-800";
+  const numberInputClass =
+    "ml-auto h-6 w-16 rounded border border-gray-200 px-1.5 text-right text-sm tabular-nums";
   return (
-    <div className="flex items-center gap-3">
+    <div className="space-y-2">
       {showMaxMatches ? (
-      <label className="flex items-center gap-2 text-sm text-gray-800">
-        <span className="font-light text-gray-400 whitespace-nowrap">
-          {t("Max matches")}
-        </span>
-        <input
-          type="number"
-          min={1}
-          max={MAX_WATER_PATH_RESULTS}
-          step={1}
-          value={resultsText}
-          aria-label={t("Max matches")}
-          className="w-14 rounded border border-gray-200 px-1.5 py-0.5 text-sm"
-          onChange={(event) => setResultsText(event.target.value)}
-          onBlur={() => {
-            const parsed = Number.parseInt(resultsText, 10);
-            if (!Number.isFinite(parsed)) {
-              setResultsText(String(storedResults));
-              return;
-            }
-            const next = clamp(parsed, 1, MAX_WATER_PATH_RESULTS);
-            setResultsText(String(next));
-            if (next !== storedResults) commit({ maxResults: next });
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Enter") {
-              (event.target as HTMLInputElement).blur();
-            }
-          }}
-        />
-      </label>
+        <label className={numberRowClass}>
+          <span className="font-light text-gray-400 whitespace-nowrap">
+            {t("Max matches")}
+          </span>
+          <input
+            type="number"
+            min={1}
+            max={MAX_WATER_PATH_RESULTS}
+            step={1}
+            value={resultsText}
+            aria-label={t("Max matches")}
+            className={numberInputClass}
+            onChange={(event) => setResultsText(event.target.value)}
+            onBlur={() => {
+              const parsed = Number.parseInt(resultsText, 10);
+              if (!Number.isFinite(parsed)) {
+                setResultsText(String(storedResults));
+                return;
+              }
+              const next = clamp(parsed, 1, MAX_WATER_PATH_RESULTS);
+              setResultsText(String(next));
+              if (next !== storedResults) commit({ maxResults: next });
+            }}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                (event.target as HTMLInputElement).blur();
+              }
+            }}
+          />
+        </label>
       ) : null}
-      <label className="flex items-center gap-2 text-sm text-gray-800">
+      <label className={numberRowClass}>
         <span className="font-light text-gray-400 whitespace-nowrap">
           {t("Max km")}
         </span>
@@ -162,7 +200,7 @@ export function DistanceToPointSearchFields({
           step={1}
           value={kmText}
           aria-label={t("Max km")}
-          className="w-16 rounded border border-gray-200 px-1.5 py-0.5 text-sm"
+          className={numberInputClass}
           onChange={(event) => setKmText(event.target.value)}
           onBlur={() => {
             const parsed = Number.parseFloat(kmText);
@@ -197,6 +235,7 @@ export function DistanceToPointResolutionField({
       label={t("Search resolution")}
       value={resolution}
       ariaLabel={t("Search resolution")}
+      modal={false}
       options={[
         { value: "low", label: t("Low") },
         { value: "medium", label: t("Medium") },

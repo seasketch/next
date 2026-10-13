@@ -1,4 +1,4 @@
-import { useContext, useMemo, useRef } from "react";
+import { ReactNode, useContext, useMemo, useRef } from "react";
 import { Feature, LineString } from "geojson";
 import { ArrowLeftIcon, Cross2Icon, GlobeIcon } from "@radix-ui/react-icons";
 import { useTranslation } from "react-i18next";
@@ -46,10 +46,10 @@ function MainMapToggle({
       type="button"
       aria-pressed={promoted}
       onClick={onClick}
-      className={`group flex h-7 max-w-full items-center rounded-full border bg-white text-[13px] font-medium text-gray-800 shadow-sm hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+      className={`group flex h-7 max-w-full items-center rounded-full border pl-1.5 pr-1.5 text-[13px] font-medium text-gray-800 shadow-sm backdrop-blur-[12px] focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
         promoted
-          ? "border-blue-200 bg-blue-50 pl-1.5 pr-2.5"
-          : "border-gray-200 pl-1.5 pr-1 group-hover:pr-2.5 group-focus-visible:pr-2.5"
+          ? "border-blue-300/70 bg-blue-50/80"
+          : "border-black/10 bg-white/80 hover:bg-white/90"
       }`}
     >
       <span className="flex shrink-0 items-center" aria-hidden>
@@ -70,7 +70,7 @@ function MainMapToggle({
         }`}
       >
         <span className="overflow-hidden">
-          <span className="block whitespace-nowrap pl-1.5">{label}</span>
+          <span className="block whitespace-nowrap pl-1.5 pr-2.5">{label}</span>
         </span>
       </span>
     </button>
@@ -92,9 +92,11 @@ export function PromotedDistanceMap({
   basemap = "streets",
   shorelineColor = DEFAULT_SHORELINE_OVERLAP_COLOR,
   fitPaddingTop = FIT_PADDING,
+  fitPaddingBottom,
   heightClass = "h-56",
   endpoints = true,
   sketchId,
+  overlay = null,
 }: {
   collapsed?: boolean;
   paths: Feature<LineString>[];
@@ -106,9 +108,16 @@ export function PromotedDistanceMap({
   basemap?: DistancePathBasemap;
   shorelineColor?: string;
   fitPaddingTop?: number;
+  fitPaddingBottom?: number;
   heightClass?: string;
-  endpoints?: boolean;
+  /** Draw origin and destination dots. Off for a shoreline intersection. An array sets this per path. */
+  endpoints?: boolean | boolean[];
   sketchId: number;
+  /**
+   * Sits on the bottom control row, between the promote control and the map
+   * attribution. It shifts right while the promote label is open.
+   */
+  overlay?: ReactNode;
 }) {
   const { adminMode, printing } = useContext(ReportUIStateContext);
   const { manager } = useContext(MapManagerContext);
@@ -164,13 +173,25 @@ export function PromotedDistanceMap({
       basemap={basemap}
       shorelineColor={shorelineColor}
       fitPaddingTop={fitPaddingTop}
+      fitPaddingBottom={fitPaddingBottom}
       heightClass={heightClass}
       endpoints={endpoints}
       interactive={!promoted}
       overlay={
-        toggle ? (
-          <div className="absolute bottom-2 left-2 z-10 print:hidden">
-            {toggle}
+        toggle || overlay ? (
+          <div className="pointer-events-none absolute bottom-2 left-2 right-12 z-10 flex items-center">
+            {toggle ? (
+              <div className="pointer-events-auto shrink-0 print:hidden">
+                {toggle}
+              </div>
+            ) : null}
+            {overlay ? (
+              <>
+                <div className="min-w-1.5 flex-1" />
+                {overlay}
+                <div className="min-w-1.5 flex-1" />
+              </>
+            ) : null}
           </div>
         ) : null
       }

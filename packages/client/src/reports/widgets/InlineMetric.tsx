@@ -4,6 +4,7 @@ import {
   ColumnValuesMetric,
   CountMetric,
   DistanceToShoreMetric,
+  DEFAULT_WATER_PATH_DISTANCE_KM,
   DistanceToFeaturesOverWaterMetric,
   Metric,
   MetricDependency,
@@ -32,7 +33,8 @@ import {
 import { LabeledDropdown } from "./LabeledDropdown";
 import {
   DistanceToPointResolutionField,
-  DistanceToPointSearchFields,
+  DistanceToPointSearchInputs,
+  useDistanceToPointSearchDraft,
 } from "./DistanceToPointSearchFields";
 import { UnitSelector } from "./UnitSelector";
 import {
@@ -573,7 +575,19 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
         ) as DistanceToFeaturesOverWaterMetric;
         const nearest = combined.value.features[0];
         if (!nearest || !Number.isFinite(nearest.meters)) {
-          return t("No feature within range");
+          const dependency = dependencies.find(
+            (item) => item.type === "distance_to_features_over_water"
+          );
+          const rawLimit = dependency?.parameters?.maxDistanceKm;
+          const limitKm =
+            typeof rawLimit === "number" &&
+            Number.isFinite(rawLimit) &&
+            rawLimit > 0
+              ? rawLimit
+              : DEFAULT_WATER_PATH_DISTANCE_KM;
+          return t("beyond {{distance}}", {
+            distance: formatters.distance(limitKm),
+          });
         }
         const distanceText = formatters.distance(nearest.meters / 1000);
         const labelColumn = componentSettings?.labelColumn;
@@ -931,7 +945,7 @@ const _InlineMetric: ReportWidget<InlineMetricComponentSettings> = ({
         errors.push(`Unsupported presentation: ${presentation}`);
     }
   }, [
-    dependencies.length,
+    dependencies,
     loading,
     emptyCollectionWithoutFragments,
     metrics,
@@ -1340,6 +1354,12 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
     () => (node.attrs?.metrics || []) as MetricDependency[],
     [node.attrs?.metrics]
   );
+  const waterPathSearch = useDistanceToPointSearchDraft({
+    metrics: dependencies,
+    onUpdateDependencyParameters,
+    showMaxMatches: false,
+    active: presentation === "distance_to_features_over_water",
+  });
 
   const { filteredSources: sources } = useOverlaySources(dependencies);
   const relatedOverlay = useRelatedOverlay(dependencies);
@@ -1673,13 +1693,6 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
           }
         />
       )}
-      {presentation === "distance_to_features_over_water" && (
-        <DistanceToPointSearchFields
-          metrics={(node.attrs?.metrics || []) as MetricDependency[]}
-          onUpdateDependencyParameters={onUpdateDependencyParameters}
-          showMaxMatches={false}
-        />
-      )}
       {presentation !== "count" && (
         <NumberRoundingControl
           value={componentSettings?.minimumFractionDigits}
@@ -1902,6 +1915,7 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
 
         {presentation === "distance_to_features_over_water" && (
           <>
+            <DistanceToPointSearchInputs {...waterPathSearch} />
             <DistanceToPointResolutionField
               metrics={dependencies}
               onUpdateDependencyParameters={onUpdateDependencyParameters}
@@ -1911,6 +1925,7 @@ export const InlineMetricTooltipControls: ReportWidgetTooltipControls = ({
               value={componentSettings?.labelColumn || "none"}
               ariaLabel={t("label column")}
               truncateValue={false}
+              modal={false}
               options={[
                 { value: "none", label: t("None") },
                 ...pointLabelColumnOptions,

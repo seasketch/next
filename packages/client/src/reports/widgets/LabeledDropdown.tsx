@@ -17,6 +17,8 @@ type LabeledDropdownProps = {
   contentClassName?: string;
   /** Compact toolbar rows cap the value. Wider menus should show the full label. */
   truncateValue?: boolean;
+  /** False when this menu is nested in a popover, so closing it leaves the popover open. */
+  modal?: boolean;
 };
 
 /**
@@ -34,6 +36,7 @@ export function LabeledDropdown({
   getDisplayLabel,
   contentClassName,
   truncateValue,
+  modal,
 }: LabeledDropdownProps) {
   return (
     <div className="flex items-center gap-2 text-sm text-gray-800">
@@ -49,6 +52,7 @@ export function LabeledDropdown({
         ariaLabel={ariaLabel}
         getDisplayLabel={getDisplayLabel}
         truncateValue={truncateValue}
+        modal={modal}
         contentProps={
           contentClassName ? { className: contentClassName } : undefined
         }

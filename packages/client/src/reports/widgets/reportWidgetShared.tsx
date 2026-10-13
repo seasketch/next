@@ -62,18 +62,21 @@ export function TooltipBooleanConfigurationOption({
   checked,
   onChange,
   checkboxFirst = false,
+  disabled = false,
 }: {
   label: string;
   checked: boolean;
   onChange: (next: boolean) => void;
   /** When true, checkbox is shown before the label (better for stacked column toggles). */
   checkboxFirst?: boolean;
+  disabled?: boolean;
 }) {
   const input = (
     <input
       type="checkbox"
-      className="h-4 w-4 shrink-0 rounded border-gray-300 text-gray-600 focus:ring-slate-500"
+      className="h-4 w-4 shrink-0 rounded border-gray-300 text-gray-600 focus:ring-slate-500 disabled:opacity-40"
       checked={checked}
+      disabled={disabled}
       onChange={(e) => onChange(e.target.checked)}
     />
   );
@@ -92,7 +95,7 @@ export function TooltipBooleanConfigurationOption({
     <label
       className={`flex items-center gap-2 text-sm text-gray-800 ${
         checkboxFirst ? "" : "w-full justify-between"
-      }`}
+      } ${disabled ? "opacity-60" : ""}`}
     >
       {checkboxFirst ? (
         <>
