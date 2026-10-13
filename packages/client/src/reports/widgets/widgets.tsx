@@ -1563,7 +1563,8 @@ export function buildReportCommandGroups({
         },
       });
     }
-    if (geographies && geographies.length > 1) {
+    // A single geography still needs this table so a collection can list each sketch's size.
+    if (geographies && geographies.length > 0) {
       sketchBlockWidgetsGroup.items.push({
         id: "geography-size-table",
         label: "Geography Size Table",

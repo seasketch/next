@@ -1,6 +1,9 @@
 import { describe, expect, test } from "@jest/globals";
 import { createLayerYearTemporalInfo } from "@seasketch/geostats-types";
-import { OverlaySourceListDetailsFragment } from "../../generated/graphql";
+import {
+  OverlaySourceListDetailsFragment,
+  SketchGeometryType,
+} from "../../generated/graphql";
 import {
   CommandPaletteGroup,
   CommandPaletteItem,
@@ -192,5 +195,35 @@ describe("buildReportCommandGroups Geography Proportion Captured", () => {
         11
       )
     ).toContain("Geography Proportion Captured");
+  });
+});
+
+describe("buildReportCommandGroups Geography Size Table", () => {
+  const polygon = { sketchClassGeometryType: SketchGeometryType.Polygon };
+  const eez = { id: 1, name: "EEZ", stableIds: ["eez"] };
+
+  function sizeTableOffered(
+    geographies: { id: number; name: string; stableIds: string[] }[]
+  ) {
+    const groups = buildReportCommandGroups({
+      ...polygon,
+      geographies,
+    });
+    const block = groups.find((group) => group.id === "sketch-block-widgets");
+    return block?.items.some((item) => item.id === "geography-size-table");
+  }
+
+  test("offers Geography Size Table when the project has one geography", () => {
+    expect(sizeTableOffered([eez])).toBe(true);
+  });
+
+  test("offers Geography Size Table when the project has several geographies", () => {
+    expect(
+      sizeTableOffered([eez, { id: 2, name: "Territorial Sea", stableIds: [] }])
+    ).toBe(true);
+  });
+
+  test("hides Geography Size Table when the project has no geographies", () => {
+    expect(sizeTableOffered([])).toBe(false);
   });
 });
