@@ -1,5 +1,5 @@
 import { ReactNode, useContext, useEffect, useMemo, useRef } from "react";
-import { Feature, FeatureCollection, LineString, Point } from "geojson";
+import { Feature, FeatureCollection, LineString, Point, Polygon } from "geojson";
 import mapboxgl, { LngLatBounds, Map as MapboxMap } from "mapbox-gl";
 import { useTranslation } from "react-i18next";
 import { ReportUIStateContext } from "../context/ReportUIStateContext";
@@ -17,6 +17,70 @@ if (TOKEN) {
 }
 
 const SOURCE_ID = DISTANCE_PATH_SOURCE_ID;
+const SEARCH_AREA_SOURCE_ID = "distance-search-area";
+const EMPTY_SEARCH_AREA: FeatureCollection<Polygon> = {
+  type: "FeatureCollection",
+  features: [],
+};
+
+/** Buffer outline under the sketch. Cleared when the search found routes. */
+function syncSearchArea(
+  map: MapboxMap,
+  area: FeatureCollection<Polygon> | null
+) {
+  const data = area && area.features.length > 0 ? area : EMPTY_SEARCH_AREA;
+  const existing = map.getSource(SEARCH_AREA_SOURCE_ID);
+  if (existing && existing.type === "geojson") {
+    existing.setData(data);
+    return;
+  }
+  if (data.features.length === 0) return;
+  const before = map.getLayer("distance-path-sketch-fill")
+    ? "distance-path-sketch-fill"
+    : map.getLayer("distance-path-casing")
+      ? "distance-path-casing"
+      : undefined;
+  map.addSource(SEARCH_AREA_SOURCE_ID, { type: "geojson", data });
+  map.addLayer(
+    {
+      id: "distance-search-area-fill",
+      type: "fill",
+      source: SEARCH_AREA_SOURCE_ID,
+      paint: {
+        "fill-color": "#2563eb",
+        "fill-opacity": 0.14,
+      },
+    },
+    before
+  );
+  map.addLayer(
+    {
+      id: "distance-search-area-casing",
+      type: "line",
+      source: SEARCH_AREA_SOURCE_ID,
+      paint: {
+        "line-color": "#ffffff",
+        "line-width": 3,
+        "line-opacity": 0.9,
+      },
+    },
+    before
+  );
+  map.addLayer(
+    {
+      id: "distance-search-area-line",
+      type: "line",
+      source: SEARCH_AREA_SOURCE_ID,
+      paint: {
+        "line-color": "#2563eb",
+        "line-width": 1.5,
+        "line-opacity": 0.85,
+        "line-dasharray": [2, 1.5],
+      },
+    },
+    before
+  );
+}
 
 export type DistancePathBasemap = "light" | "streets" | "satellite";
 
@@ -302,6 +366,8 @@ export function DistancePathMap({
   endpoints = true,
   interactive = true,
   overlay = null,
+  searchFrame = null,
+  searchArea = null,
 }: {
   paths: Feature<LineString>[];
   /** Name drawn at each path's destination, in the same order as `paths`. */
@@ -330,6 +396,13 @@ export function DistancePathMap({
   interactive?: boolean;
   /** Control drawn over the map canvas, above the inactive treatment. */
   overlay?: ReactNode;
+  /**
+   * Southwest and northeast corners used when there are no routes, so the map
+   * can still frame the sketch. The empty message is drawn over that map.
+   */
+  searchFrame?: [[number, number], [number, number]] | null;
+  /** Simplified sketch buffered by the search limit. Drawn under the sketch. */
+  searchArea?: FeatureCollection<Polygon> | null;
 }) {
   const { t } = useTranslation("reports");
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -337,7 +410,19 @@ export function DistancePathMap({
   const { printing } = useContext(ReportUIStateContext);
 
   const collection = usePathCollection(paths, labels, distances, endpoints);
-  const bounds = useMemo(() => boundsForCollection(collection), [collection]);
+  const pathBounds = useMemo(
+    () => boundsForCollection(collection),
+    [collection]
+  );
+  const frameBounds = useMemo(() => {
+    if (!searchFrame) return null;
+    const next = new LngLatBounds();
+    next.extend(searchFrame[0]);
+    next.extend(searchFrame[1]);
+    return next.isEmpty() ? null : next;
+  }, [searchFrame]);
+  const bounds = pathBounds ?? frameBounds;
+  const showEmptyNote = pathBounds == null && frameBounds != null;
   const boundsKey = boundsSignature(bounds);
   const hasBounds = Boolean(bounds);
   const collectionRef = useRef(collection);
@@ -350,6 +435,8 @@ export function DistancePathMap({
   fitPaddingBottomRef.current = fitPaddingBottom;
   const shorelineColorRef = useRef(shorelineOverlapColor(shorelineColor));
   shorelineColorRef.current = shorelineOverlapColor(shorelineColor);
+  const searchAreaRef = useRef(searchArea);
+  searchAreaRef.current = searchArea;
 
   useEffect(() => {
     const el = containerRef.current;
@@ -399,6 +486,7 @@ export function DistancePathMap({
       for (const layer of style.layers) {
         map.addLayer(layer);
       }
+      syncSearchArea(map, searchAreaRef.current);
       map.resize();
       fitIfSized();
     };
@@ -440,6 +528,12 @@ export function DistancePathMap({
       );
     }
   }, [shorelineColor]);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+    syncSearchArea(map, searchArea);
+  }, [searchArea, hasBounds]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -510,6 +604,13 @@ export function DistancePathMap({
             interactive ? "" : " pointer-events-none grayscale opacity-60"
           }`}
         />
+        {showEmptyNote ? (
+          <div className="pointer-events-none absolute inset-x-4 top-1/2 z-10 flex -translate-y-1/2 justify-center">
+            <p className="max-w-sm rounded-2xl border border-black/10 bg-white/80 px-3 py-2 text-center text-sm leading-snug text-gray-800 shadow-sm backdrop-blur-[12px]">
+              {emptyMessage}
+            </p>
+          </div>
+        ) : null}
         {overlay}
       </div>
       {caption ? (

@@ -1,4 +1,8 @@
-import { shiftLongitudesToShortArc } from "./distancePathBounds";
+import {
+  boundsExpandedByKm,
+  positionsInGeojson,
+  shiftLongitudesToShortArc,
+} from "./distancePathBounds";
 
 function span(points: Array<[number, number]>): number {
   const lngs = points.map((point) => point[0]);
@@ -63,5 +67,79 @@ describe("shiftLongitudesToShortArc", () => {
   it("returns an empty list and a single point unchanged in latitude", () => {
     expect(shiftLongitudesToShortArc([])).toEqual([]);
     expect(shiftLongitudesToShortArc([[183, -16]])).toEqual([[-177, -16]]);
+  });
+});
+
+describe("positionsInGeojson", () => {
+  it("ignores null, undefined, and non-geometry values", () => {
+    expect(positionsInGeojson(null)).toEqual([]);
+    expect(positionsInGeojson(undefined)).toEqual([]);
+    expect(positionsInGeojson("sketch")).toEqual([]);
+    expect(positionsInGeojson(4)).toEqual([]);
+  });
+
+  it("reads a feature collection and skips a feature bbox", () => {
+    expect(
+      positionsInGeojson({
+        type: "FeatureCollection",
+        features: [
+          {
+            type: "Feature",
+            bbox: [0, 0, 9, 9],
+            geometry: { type: "Point", coordinates: [5, 6] },
+          },
+          {
+            type: "Feature",
+            geometry: {
+              type: "Polygon",
+              coordinates: [
+                [
+                  [1, 2],
+                  [3, 4],
+                  [1, 2],
+                ],
+              ],
+            },
+          },
+        ],
+      })
+    ).toEqual([
+      [5, 6],
+      [1, 2],
+      [3, 4],
+      [1, 2],
+    ]);
+  });
+});
+
+describe("boundsExpandedByKm", () => {
+  it("grows a point by about one degree of latitude per 110.574 km", () => {
+    const corners = boundsExpandedByKm([[0, 0]], 110.574);
+    expect(corners).not.toBeNull();
+    expect(corners![0][1]).toBeCloseTo(-1);
+    expect(corners![1][1]).toBeCloseTo(1);
+    expect(corners![1][0] - corners![0][0]).toBeCloseTo(
+      (110.574 / 111.32) * 2
+    );
+  });
+
+  it("keeps a dateline sketch on the short arc", () => {
+    const corners = boundsExpandedByKm(
+      [
+        [179, -16],
+        [-179, -16],
+      ],
+      11
+    );
+    expect(corners).not.toBeNull();
+    const width = corners![1][0] - corners![0][0];
+    expect(width).toBeGreaterThan(2);
+    expect(width).toBeLessThan(10);
+  });
+
+  it("returns null without positions or with a negative radius", () => {
+    expect(boundsExpandedByKm([], 10)).toBeNull();
+    expect(boundsExpandedByKm([[0, 0]], -1)).toBeNull();
+    expect(boundsExpandedByKm([[Number.NaN, 0]], 10)).toBeNull();
   });
 });

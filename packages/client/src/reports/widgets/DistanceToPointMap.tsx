@@ -32,6 +32,10 @@ import {
 } from "./DistancePathMap";
 import { PromotedDistanceMap } from "./PromotedDistanceMap";
 import {
+  useSketchSearchFrame,
+  waterPathSearchLimitKm,
+} from "./sketchSearchFrame";
+import {
   DistanceToPointResolutionField,
   DistanceToPointSearchInputs,
   useDistanceToPointSearchDraft,
@@ -115,6 +119,7 @@ function featureLabel(
 
 export const DistanceToPointMap: ReportWidget<DistanceToPointMapSettings> = ({
   metrics,
+  dependencies,
   componentSettings,
   loading,
   cardId,
@@ -168,6 +173,13 @@ export const DistanceToPointMap: ReportWidget<DistanceToPointMapSettings> = ({
       })),
     });
   }, [metrics, loading, isCollection, childSketches]);
+  const searchLimitKm = waterPathSearchLimitKm(dependencies);
+  const noRoutes = !groups.some((group) => group.routes.length > 0);
+  const searched = useSketchSearchFrame(
+    sketchGeojsonUrl,
+    searchLimitKm,
+    !loading && noRoutes
+  );
 
   const travelCost = readTravelCost(componentSettings?.travelCost);
   const fuelOn =
@@ -228,6 +240,11 @@ export const DistanceToPointMap: ReportWidget<DistanceToPointMapSettings> = ({
       price: storedPrice,
     });
   };
+
+  const noMatchMessage = t(
+    "No matches found within {{distance}} search limit.",
+    { distance: lineFormatters.distance(searchLimitKm) }
+  );
 
   if (loading) {
     return (
@@ -401,7 +418,9 @@ export const DistanceToPointMap: ReportWidget<DistanceToPointMapSettings> = ({
                   lineFormatters.distance(row.feature.meters / 1000)
                 )
           }
-          emptyMessage={t("No water route to a point feature.")}
+          emptyMessage={noMatchMessage}
+          searchFrame={noRoutes ? searched?.frame ?? null : null}
+          searchArea={noRoutes ? searched?.area ?? null : null}
           caption={display === "map" ? caption || undefined : undefined}
           sketchGeojsonUrl={sketchGeojsonUrl}
           basemap={basemap}
@@ -464,7 +483,7 @@ export const DistanceToPointMap: ReportWidget<DistanceToPointMapSettings> = ({
               {rows.length === 0 ? (
                 <tr>
                   <td className="py-2 text-gray-600" colSpan={tableColumns}>
-                    {t("No water route to a point feature.")}
+                    {noMatchMessage}
                   </td>
                 </tr>
               ) : (
@@ -546,6 +565,7 @@ export const DistanceToPointMap: ReportWidget<DistanceToPointMapSettings> = ({
             }
             onRestoreDefaults={restoreFuelDefaults}
             showHeading={printing}
+            emptyMessage={noMatchMessage}
           />
         </div>
       ) : null}

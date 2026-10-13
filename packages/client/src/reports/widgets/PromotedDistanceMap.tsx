@@ -1,5 +1,5 @@
 import { ReactNode, useContext, useMemo, useRef } from "react";
-import { Feature, LineString } from "geojson";
+import { Feature, FeatureCollection, LineString, Polygon } from "geojson";
 import { ArrowLeftIcon, Cross2Icon, GlobeIcon } from "@radix-ui/react-icons";
 import { useTranslation } from "react-i18next";
 import { MapManagerContext } from "../../dataLayers/MapContextManager";
@@ -97,6 +97,8 @@ export function PromotedDistanceMap({
   endpoints = true,
   sketchId,
   overlay = null,
+  searchFrame = null,
+  searchArea = null,
 }: {
   collapsed?: boolean;
   paths: Feature<LineString>[];
@@ -118,6 +120,10 @@ export function PromotedDistanceMap({
    * attribution. It shifts right while the promote label is open.
    */
   overlay?: ReactNode;
+  /** Passed through when there are no routes, so the map can frame the sketch. */
+  searchFrame?: [[number, number], [number, number]] | null;
+  /** Simplified sketch buffered by the search limit. Drawn under the sketch. */
+  searchArea?: FeatureCollection<Polygon> | null;
 }) {
   const { adminMode, printing } = useContext(ReportUIStateContext);
   const { manager } = useContext(MapManagerContext);
@@ -177,6 +183,8 @@ export function PromotedDistanceMap({
       heightClass={heightClass}
       endpoints={endpoints}
       interactive={!promoted}
+      searchFrame={searchFrame}
+      searchArea={searchArea}
       overlay={
         toggle || overlay ? (
           <div className="pointer-events-none absolute bottom-2 left-2 right-12 z-10 flex items-center">

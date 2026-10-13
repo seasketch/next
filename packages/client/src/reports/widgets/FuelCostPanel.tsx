@@ -44,6 +44,7 @@ export function FuelCostPanel({
   showRestore,
   onRestoreDefaults,
   showHeading,
+  emptyMessage,
 }: {
   settings: TravelCostSettings;
   groups: FuelCostGroup[];
@@ -54,6 +55,8 @@ export function FuelCostPanel({
   showRestore: boolean;
   onRestoreDefaults: () => void;
   showHeading: boolean;
+  /** Shown when none of the routes exist, including the search limit. */
+  emptyMessage: string;
 }) {
   const { t, i18n } = useTranslation("reports");
   const efficiencyLabel = efficiencyUnitLabel(settings);
@@ -165,7 +168,7 @@ export function FuelCostPanel({
       ) : (
         <p className="mt-3 text-sm text-gray-600">
           {groups.every((group) => group.routes.length === 0) ? (
-            <Trans ns="reports">No water route to a point feature.</Trans>
+            emptyMessage
           ) : currencyMissing ? (
             <Trans ns="reports">
               A currency code is needed before costs can be shown.
