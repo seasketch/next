@@ -163,7 +163,9 @@ describe("ocean bitmap routes", () => {
           }),
         );
       },
-      180_000,
+      // Concurrent with the rest of the overlay suite. A quiet run finishes
+      // the file in about 100s; one route has exceeded three minutes.
+      360_000,
     );
   }
 });
