@@ -1,7 +1,27 @@
-# Shrink CDK Docker asset context for spatial-uploads-handler (context = packages/)
+# Context root for SpatialUploadsHandler and DataTablesHandler
+# (packages/infra/lib/*LambdaStack.ts passes packages/ to fromImageAsset).
+# CDK copies this tree into cdk.out before Docker runs. Keep only the
+# directories those Dockerfiles COPY. Everything else is skipped, including
+# local data that is not in git.
+
+*
+
+!spatial-uploads-handler/
+!spatial-uploads-handler/**
+!geostats-types/
+!geostats-types/**
+!metadata-parser/
+!metadata-parser/**
+!ai-data-analyst/
+!ai-data-analyst/**
+!data-tables-handler/
+!data-tables-handler/**
+
 **/node_modules
 **/.git
-**/cdk.out
 **/dist
 **/.tsbuildinfo
 **/coverage
+**/__tests__
+**/*.test.ts
+data-tables-handler/tmp
