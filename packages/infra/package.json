@@ -16,6 +16,11 @@
     "synth-dev": "./synth-dev.sh"
   },
   "devDependencies": {
+    "@aws-sdk/client-cloudwatch": "^3.1151.0",
+    "@aws-sdk/client-ecr": "^3.1151.0",
+    "@aws-sdk/client-ecs": "^3.1151.0",
+    "@aws-sdk/client-lambda": "^3.1151.0",
+    "@aws-sdk/client-ssm": "^3.1151.0",
     "@types/jest": "^29.5.12",
     "@types/node": "10.17.27",
     "@types/pg": "^8.10.9",
@@ -25,8 +30,8 @@
   },
   "dependencies": {
     "aws-cdk-lib": "^2.212.0",
-    "constructs": "^10.3.0",
     "aws-sdk": "^2.868.0",
+    "constructs": "^10.3.0",
     "dotenv": "^8.2.0",
     "pg": "^8.11.3",
     "pg-connection-string": "^2.9.1",

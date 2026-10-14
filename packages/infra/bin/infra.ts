@@ -22,6 +22,7 @@ import { OverlayWorkerLambdaStack } from "../lib/OverlayWorkerLambdaStack";
 import { SubdivideWorkerLambdaStack } from "../lib/SubdivideWorkerLambdaStack";
 import { FragmentWorkerLambdaStack } from "../lib/FragmentWorkerLambdaStack";
 import { GeostatsPiiClassifierLambdaStack } from "../lib/GeostatsPiiClassifierLambdaStack";
+import { EcrImageRetentionStack } from "../lib/EcrImageRetentionStack";
 let env = require("./env.production");
 
 const DOMAIN_NAME = "seasketch.org";
@@ -250,6 +251,8 @@ new GraphQLStack(app, "SeaSketchGraphQLServer", {
 });
 
 uploadHandler.fn.grantInvoke;
+
+new EcrImageRetentionStack(app, "SeaSketchEcrImageRetention", { env });
 
 // TODO: Fix to use ISSUER var?
 new MailerLambdaStack(app, "SeaSketchMailers", {
