@@ -34,7 +34,7 @@
     a component-level translate function. Trans tags are better for string content mixed with html tags. For quoted strings that don't need to be translated, use a special comment to disable the rule for that line (// eslint-disable-next-line i18next/no-literal-string)
   - Don't ever modify json files in packages/client/src/lang/ -- Those are automatically generated!
 - **Typescript features**
-  - Our graphql codegen process uses an older babel system to parse code and extract gql strings. Don't use `import type` syntax anywhere in the client, or in code that is imported by it or there will be trouble. Check the `Dev: client codegen` terminal task for errors caused by usage of this syntax.
+  - Our graphql codegen process uses an older babel system to parse code and extract gql strings. Don't use `import type` syntax anywhere in the client, or in code that is imported by it or there will be trouble. Check `npm run logs -- client-codegen`, or the `Dev: stack` terminal, for errors caused by usage of this syntax.
 - **Type guards and untrusted JSON**
   - Fields typed as GraphQL `JSON` (for example `geostats`) are untrusted at runtime. Narrow them with type guards; do not assume the declared TS shape is present.
   - Type guards (`isX` / `value is Foo`) should take `unknown` (not `any`, and not only the success-case union). Handle `null` and `undefined` before reading properties.
@@ -96,7 +96,7 @@ Those functions already say so in comments (`TODO: this will have to be modified
 ## React Client -- verifying your work
 
 - Whenever making changes to the client, verify that your work will compile.
-- Identify the **Dev: client** terminal session in the IDE. If available, that will show any compiler or linter errors when the live-reload cycle runs. This will usually yield any errors faster than running the linter directly.
+- Identify the **Dev: client log** terminal session in the IDE. If available, that will show any compiler or linter errors when the live-reload cycle runs. This will usually yield any errors faster than running the linter directly.
 - Without IDE terminals, read `npm run logs -- client` and `npm run logs -- api`, or `.logs/<service>.log`. `npm run status` shows which services are listening.
 - Alternatively, run `npm run lint` from `packages/client` to ensure there are no linter errors that will break the build.
 

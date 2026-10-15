@@ -6,9 +6,9 @@ The SeaSketch Next client application is built using [create-react-app](https://
 
 ## Installing
 
-The app runs from the repo root, with the API. See the root [README](../../README.md): `npm run bootstrap`, environment files from [ENV.md](../../ENV.md), `npm run setup`, then `npm run dev`. In Cursor or VS Code, Terminal > Run Task > `Dev: core` opens one full-width terminal per service. Client output is the `Dev: client` terminal, or `npm run logs -- client`.
+The app runs from the repo root, with the API. See the root [README](../../README.md): `npm run bootstrap`, environment files from [ENV.md](../../ENV.md), `npm run setup`, then `npm run dev`. In Cursor or VS Code, Terminal > Run Task > `Dev: core` runs the stack in one terminal and follows the client in another. Client output is the `Dev: client log` terminal, or `npm run logs -- client`.
 
-`npm start` in this package is the dev server on its own. Root `npm run dev` and the `Dev: client` task are how it runs with the API.
+`npm start` in this package is the dev server on its own. Root `npm run dev` is how it runs with the API.
 
 ## SSL
 
@@ -58,7 +58,7 @@ In the project directory, you can run:
 ### `npm start`
 
 Runs this package's dev server.<br />
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser. With the API, use root `npm run dev` or the `Dev: client` task instead. Client output is that pane, or `npm run logs -- client`.
+Open [http://localhost:3000](http://localhost:3000) to view it in the browser. With the API, use root `npm run dev` instead. Client output is `npm run logs -- client`, or the `Dev: client log` terminal that `Dev: core` opens.
 
 The page will reload if you make edits.<br />
 You will also see any lint errors in the console.

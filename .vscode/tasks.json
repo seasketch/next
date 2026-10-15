@@ -2,133 +2,77 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "label": "Dev: database",
+      "label": "Dev: stack",
       "type": "shell",
-      "command": "npm run dev:db",
-      "problemMatcher": [],
-      "presentation": {
-        "panel": "dedicated",
-        "reveal": "always"
-      }
-    },
-    {
-      "label": "Dev: api",
-      "type": "shell",
-      "command": "npm run dev -- --only api",
+      "command": "npm run dev",
       "isBackground": true,
-      "problemMatcher": [],
+      "problemMatcher": {
+        "owner": "seasketch",
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "Container",
+          "endsPattern": "Healthy"
+        }
+      },
       "presentation": {
         "panel": "dedicated",
         "reveal": "always"
       }
     },
     {
-      "label": "Dev: api tsc",
+      "label": "Dev: client log",
       "type": "shell",
-      "command": "npm run dev -- --only api-tsc",
+      "command": "npm run logs -- client",
       "isBackground": true,
-      "problemMatcher": ["$tsc-watch"],
+      "problemMatcher": {
+        "owner": "seasketch",
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".",
+          "endsPattern": "."
+        }
+      },
       "presentation": {
         "panel": "dedicated",
         "reveal": "always"
       }
     },
     {
-      "label": "Dev: api migrate",
+      "label": "Dev: db watch log",
       "type": "shell",
-      "command": "npm run dev -- --only api-migrate",
+      "command": "npm run logs -- db-watch",
       "isBackground": true,
-      "problemMatcher": [],
+      "problemMatcher": {
+        "owner": "seasketch",
+        "pattern": {
+          "regexp": "^$"
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".",
+          "endsPattern": "."
+        }
+      },
       "presentation": {
         "panel": "dedicated",
         "reveal": "always"
       }
     },
     {
-      "label": "Dev: client",
-      "type": "shell",
-      "command": "npm run dev -- --only client",
-      "isBackground": true,
-      "problemMatcher": [],
-      "presentation": {
-        "panel": "dedicated",
-        "reveal": "always"
-      }
-    },
-    {
-      "label": "Dev: client codegen",
-      "type": "shell",
-      "command": "npm run dev -- --only client-codegen",
-      "isBackground": true,
-      "problemMatcher": [],
-      "presentation": {
-        "panel": "dedicated",
-        "reveal": "always"
-      }
-    },
-    {
-      "label": "Dev: client css",
-      "type": "shell",
-      "command": "npm run dev -- --only client-css",
-      "isBackground": true,
-      "problemMatcher": [],
-      "presentation": {
-        "panel": "dedicated",
-        "reveal": "always"
-      }
-    },
-    {
-      "label": "Dev: data tables",
-      "type": "shell",
-      "command": "npm run dev -- --only data-tables",
-      "isBackground": true,
-      "problemMatcher": [],
-      "presentation": {
-        "panel": "dedicated",
-        "reveal": "always"
-      }
-    },
-    {
-      "label": "Dev: spatial uploads",
-      "type": "shell",
-      "command": "npm run dev -- --only spatial-uploads",
-      "isBackground": true,
-      "problemMatcher": [],
-      "presentation": {
-        "panel": "dedicated",
-        "reveal": "always"
-      }
-    },
-    {
-      "label": "Dev: subdivision",
-      "type": "shell",
-      "command": "npm run dev -- --only subdivision",
-      "isBackground": true,
-      "problemMatcher": [],
-      "presentation": {
-        "panel": "dedicated",
-        "reveal": "always"
-      }
-    },
-    {
-      "label": "Dev: processes",
-      "dependsOn": [
-        "Dev: api",
-        "Dev: api tsc",
-        "Dev: api migrate",
-        "Dev: client",
-        "Dev: client codegen",
-        "Dev: client css",
-        "Dev: data tables",
-        "Dev: spatial uploads",
-        "Dev: subdivision"
-      ],
+      "label": "Dev: logs",
+      "dependsOn": ["Dev: client log", "Dev: db watch log"],
       "problemMatcher": []
     },
     {
       "label": "Dev: core",
       "dependsOrder": "sequence",
-      "dependsOn": ["Dev: database", "Dev: processes"],
+      "dependsOn": ["Dev: stack", "Dev: logs"],
       "problemMatcher": []
     }
   ]

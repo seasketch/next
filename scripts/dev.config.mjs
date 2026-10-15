@@ -25,7 +25,7 @@ export const services = [
     profiles: ["core"],
   },
   {
-    name: "api-migrate",
+    name: "db-watch",
     cwd: "packages/api",
     command: "npm run db:watch",
     profiles: ["core"],

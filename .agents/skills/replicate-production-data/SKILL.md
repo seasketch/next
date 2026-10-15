@@ -12,7 +12,7 @@ description: >
 
 Copy the files, then let the local app process them. A draft report only resolves overlay sources from draft table-of-contents rows (`is_draft = true`). Rows inserted by hand, or published rows that merely point at production tile URLs, are invisible to that report and have no source-processing job. Metrics then fail with `No source processing job id for overlay source`.
 
-The local API and its worker must already be running: root `npm run dev`, or the `Dev: core` task. The signed-in client is the `Dev: client` terminal. Spatial uploads is the `Dev: spatial uploads` terminal (`SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER`). If the API is not up, read `npm run logs -- api`.
+The local API and its worker must already be running: root `npm run dev`, or the `Dev: core` task. The signed-in client is the `Dev: client log` terminal. Spatial uploads is in that same stack (`SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER`); its output is `npm run logs -- spatial-uploads`. If the API is not up, read `npm run logs -- api`.
 
 ## Find the files on production
 
