@@ -5,6 +5,7 @@
 set -euo pipefail
 
 API_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$API_DIR/../.." && pwd)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONTAINER_NAME="${SEASKETCH_DB_CONTAINER:-seasketch_db}"
 DB_NAME="${SEASKETCH_DB_NAME:-seasketch}"
@@ -123,8 +124,7 @@ drop_database() {
 pull_snapshot
 
 echo "Starting Postgres and Redis..."
-docker compose -f "$API_DIR/docker-compose.yml" up -d
-bash "$SCRIPT_DIR/wait-for-postgres.sh"
+docker compose -f "$ROOT_DIR/compose.yaml" up -d --wait
 
 if [[ "$reset" -eq 1 ]]; then
   drop_database
@@ -211,7 +211,7 @@ queue_geography_size_metrics
 # User ids are cached in Redis with no expiry. A restored database issues new
 # ids, and create_project then inserts a creator_id that no longer exists.
 echo "Clearing cached Auth0 user ids..."
-docker compose -f "$API_DIR/docker-compose.yml" exec -T redis \
+docker compose -f "$ROOT_DIR/compose.yaml" exec -T redis \
   redis-cli -a ucsb --no-auth-warning EVAL \
   "local keys = redis.call('KEYS', 'userid-by-sub:*'); for _, key in ipairs(keys) do redis.call('DEL', key) end; return #keys" \
   0 >/dev/null

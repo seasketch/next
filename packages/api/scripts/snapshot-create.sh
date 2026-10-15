@@ -6,6 +6,7 @@
 set -euo pipefail
 
 API_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$API_DIR/../.." && pwd)"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONTAINER_NAME="${SEASKETCH_DB_CONTAINER:-seasketch_db}"
 SOURCE_DB="seasketch_snapshot_src"
@@ -32,8 +33,7 @@ psql_exec() {
 }
 
 echo "Starting Postgres and Redis..."
-docker compose -f "$API_DIR/docker-compose.yml" up -d
-bash "$SCRIPT_DIR/wait-for-postgres.sh"
+docker compose -f "$ROOT_DIR/compose.yaml" up -d --wait
 
 echo "Recreating ${SOURCE_DB}. The seasketch database is not touched."
 psql_exec -d postgres -c \
