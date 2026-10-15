@@ -296,7 +296,6 @@
     "cypress": "cypress open",
     "cypress:run": "cypress run",
     "generate-api-helpers": "node bin/buildApiHelpers.js && cp src/formElements/ExportUtils.d.ts ../api/src/",
-    "env:dev": "op inject -i .env.template > .env",
     "css:build": "node bin/buildCss.js",
     "css:watch": "node bin/buildCss.js --watch",
     "css:check": "node bin/buildCss.js && git diff --exit-code -- src/index.css || (echo 'src/index.css is stale. Run npm run css:build and commit the result.' && exit 1)"

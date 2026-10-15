@@ -40,7 +40,7 @@ npm run dev
 
 In Cursor or VS Code, Terminal > Run Task > `Dev: core` runs that same command in one terminal, and opens two more that follow `npm run logs -- client` and `npm run logs -- db-watch`. CI runs `npm run dev -- --ci`, which skips the watchers and runs the API from its build.
 
-Follow [ENV.md](ENV.md) for the variables.
+Follow [ENV.md](ENV.md) for the variables. Human login needs an Auth0 tenant you control; [AUTH0.md](AUTH0.md) is the setup.
 
 ## Deployments
 

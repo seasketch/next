@@ -30,6 +30,8 @@ if [[ ! "$DB_NAME" =~ ^[a-z][a-z0-9_]*$ ]]; then
   exit 1
 fi
 
+node "$API_DIR/envProfile.js"
+
 psql_exec() {
   docker exec -i "$CONTAINER_NAME" psql -U postgres -v ON_ERROR_STOP=1 "$@"
 }

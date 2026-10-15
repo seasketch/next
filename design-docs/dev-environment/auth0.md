@@ -46,7 +46,7 @@ A second _application_ in the production tenant fixes none of this. The user dir
 | Management client | Production deploy only      | Shared development secret, scoped to the non-production directory                        |
 | SPA callbacks     | Production origins          | `localhost` origins, plus staging when it exists                                         |
 
-One non-production tenant serves laptops and staging. Start with one SPA application and one API identifier in it.
+One non-production tenant serves laptops and staging. Start with one SPA application and one API identifier in it. Creating that tenant, or a tenant for an install outside this one, is [AUTH0.md](../../AUTH0.md).
 
 **Claims keep their names.** Recreate the rule or Action on the new tenant with the same `https://seasketch.org/…` claim names. The namespace is an identifier shared by every install, not the site's hostname. Issuer and audience are what differ. Staff who need superuser for development are marked superuser in the non-production tenant.
 

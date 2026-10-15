@@ -31,9 +31,11 @@ import { getRealUserVisits, getVisitorMetrics } from "./visitorMetrics";
 import layerApi from "./layerApi";
 import { throwIfProductionMisconfigured } from "./env";
 import { assertE2ETestModeConfiguration } from "./e2e/testMode";
+import { assertNonProductionProfile } from "./envProfile";
 import { registerE2ETokenRoute } from "./e2e/tokenRoute";
 
 assertE2ETestModeConfiguration();
+assertNonProductionProfile();
 
 const ISSUER = (process.env.ISSUER || "seasketch.org")
   .split(",")

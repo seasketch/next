@@ -21,7 +21,7 @@ Start with the [strategy](strategy.md). It is the sequence. Each other file is o
 | --------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
 | [Strategy](strategy.md)                             | The five phases, their gates, and how the packaging / testing deadlock is broken                                                 |
 | [Environment setup](env-setup.md)                   | One setup and startup command for laptops, CI, cloud agents, and staging                                                         |
-| [Secrets and configuration](secrets-management.md)  | One manifest of variables, a class for each, and named profiles. The injectors we already use stay (1Password, GitHub, CDK)       |
+| [Secrets and configuration](secrets-management.md)  | One manifest of variables, a class for each, and named profiles. Laptops keep a short hand-managed `.env`. CI uses GitHub, production uses GitHub and CDK |
 | [Auth0](auth0.md)                                   | A non-production Auth0 tenant, and an API that does not need Auth0 to boot                                                       |
 | [Local services](local-services.md)                 | Which SeaSketch backends run locally, in which profile, and the rule that an unset integration never falls through to production |
 | [Integration testing](integration-testing.md)       | Playwright journeys, test-mode auth, the golden database snapshot, and production probes                                         |
@@ -39,7 +39,7 @@ Accepted decisions. They describe what this campaign will build, not what is run
 - **Database:** a curated `pg_dump` snapshot on R2, restored into the existing PostGIS container, then migrated forward. Never built from production. ([integration testing](integration-testing.md))
 - **Startup:** root npm scripts (`setup`, `dev`, `logs`, `status`) over Docker Compose for containers and `concurrently` for host processes, with one service list and a `--profile` flag. Nothing starts on folder open; VS Code tasks are not the contract. ([environment setup](env-setup.md))
 - **Production reach:** an unset integration makes the feature unavailable. Pointing at production is an explicit override, never in CI. ([local services](local-services.md))
-- **Secrets:** one committed manifest, named profiles, and existing injectors (1Password, GitHub environments, CDK). No new secrets product. ([secrets](secrets-management.md))
+- **Secrets:** one committed manifest and named profiles. Laptops keep a short hand-managed `.env` (October 2026). CI uses GitHub environments. Production uses GitHub and CDK. No new secrets product. ([secrets](secrets-management.md))
 - **Packaging:** npm workspaces with one lockfile. No Nx, Turborepo, or new Lerna. ([monorepo and build](monorepo-and-build-upgrade.md))
 - **Client build:** Vite is the candidate replacement for Create React App, accepted only when the existing journeys pass on it. ([monorepo and build](monorepo-and-build-upgrade.md))
 
