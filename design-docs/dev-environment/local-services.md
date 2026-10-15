@@ -75,6 +75,6 @@ Uploads, tile archives, and ACL documents live in object storage even for local 
 
 ## Exit criteria
 
-- **Phase 1:** The core profile starts with no production Lambda ARNs, queue URLs, or Auth0 management credentials, and the features that need them report themselves unavailable.
+- **Phase 1:** The core profile starts with no production Lambda ARNs, queue URLs, or Auth0 management credentials, and the features that need them report themselves unavailable. *Done, September 2026.*
 - **Phase 3:** The data profile runs uploads, data-table processing, tile serving, and report calculation locally against development storage and queues. A developer changes those packages and sees the result without `cdk deploy`. CI data-path journeys use this profile.
 - **Throughout:** The production override for each integration is documented for a person debugging production, and absent from CI.

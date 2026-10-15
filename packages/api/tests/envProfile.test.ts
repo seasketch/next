@@ -54,7 +54,7 @@ describe("env manifest", () => {
     expect(loadManifest(enforced)).toBe(enforced);
   });
 
-  test("the committed manifest enforces the tile namespace and records Auth0", () => {
+  test("the committed manifest enforces the tile namespace and the production Auth0 issuer", () => {
     const manifest = readManifest();
     const forbidden = manifest.profiles["seasketch.org"].forbidden;
     const tiles = forbidden.find(
@@ -66,8 +66,11 @@ describe("env manifest", () => {
     expect(tiles).toMatchObject({ equals: "prod", enforce: true });
     expect(issuer).toMatchObject({
       equals: "https://seasketch.auth0.com/",
-      enforce: false,
+      enforce: true,
     });
+    expect(forbidden.every((entry: { enforce: boolean }) => entry.enforce)).toBe(
+      true,
+    );
   });
 
   test("refuses an enforced production value and ignores one that is not enforced yet", () => {
@@ -130,12 +133,12 @@ describe("env manifest", () => {
       );
     });
 
-    test("allows the production Auth0 issuer while enforcement is off", () => {
+    test("refuses the production Auth0 issuer outside production", () => {
       process.env.NODE_ENV = "development";
       process.env.TILES_ACL_NAMESPACE = "dev-ada";
       delete process.env.REACT_APP_TILES_ACL_NAMESPACE;
       process.env.JWT_ISS = "https://seasketch.auth0.com/";
-      expect(() => assertNonProductionProfile()).not.toThrow();
+      expect(() => assertNonProductionProfile()).toThrow(/JWT_ISS/);
     });
   });
 });

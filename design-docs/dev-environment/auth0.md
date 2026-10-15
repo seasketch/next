@@ -75,6 +75,7 @@ Staging, in phase 5, uses the same non-production tenant.
 - Claim names stay `https://seasketch.org/…`. Issuer and audience change per install.
 - One non-production tenant for laptops, agents, and staging. A future production install on another domain would get its own production tenant ([second production install](second-install.md)).
 - *(September 2026)* No shared developer account. Each person signs up on the non-production tenant. Superuser is a claim on named staff accounts. Anyone else can be added as a demo-project admin on their own database; that membership is not part of the snapshot.
+- *(October 2026)* The development tenant is `seasketch-dev` (`seasketch-dev.us.auth0.com`), audience `https://api.nonprod.seasketch.org`. The production rule stays disabled. A post-login Action sets the claims. Templates carry the public identifiers. The management secret stays out of git and out of CI.
 
 ## Progress
 
@@ -82,16 +83,14 @@ Staging, in phase 5, uses the same non-production tenant.
 | -------------------------------------------------- | -------------------- |
 | Lazy Management module; API boots with Auth0 unset | Done, September 2026 |
 | Database-backed Management fake in `E2E_TEST_MODE` | Done, October 2026   |
-| Non-production Auth0 tenant and cutover            | Not started          |
-| Setup refuses production Auth0 identifiers         | Not started          |
+| Non-production Auth0 tenant and cutover            | Done, October 2026   |
+| Setup refuses production Auth0 identifiers         | Done, October 2026   |
 
 ## Open questions
 
-- _(Phase 1)_ Tenant name, region, and the non-production audience identifier.
-- _(Phase 1)_ Whether the existing rule can be exported as is, or has to be rewritten as an Action.
-- _(Phase 1)_ Which named staff accounts are marked superuser in the non-production tenant. The snapshot does not wait on that list.
+None for phase 1.
 
 ## Exit criteria
 
-- **Phase 1:** The API starts with Auth0 management unset. *Done, September 2026.* The smoke job holds no Auth0 secrets. The default profile for a new machine or agent is the non-production tenant. Setup refuses production Auth0 identifiers outside a production deploy.
+- **Phase 1:** The API starts with Auth0 management unset. *Done, September 2026.* The smoke job holds no Auth0 secrets. The default profile for a new machine or agent is the non-production tenant. Setup refuses production Auth0 identifiers outside a production deploy. *Done, October 2026.* The tenant is `seasketch-dev` in the US, domain `seasketch-dev.us.auth0.com`, audience `https://api.nonprod.seasketch.org`. The post-login Action `add-claims` sets the three `https://seasketch.org/…` claims on the access token and the ID token. Superuser is the role `seasketch_superuser`, assigned after a person signs up. The snapshot does not include those accounts.
 - **Phase 5:** Staging login uses the non-production tenant. The production tenant is unchanged.

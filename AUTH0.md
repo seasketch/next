@@ -1,6 +1,8 @@
 # Auth0 tenant setup
 
-SeaSketch uses Auth0 for user account authentication. For a local install, you'll need to setup a development tenant in order to authenticate users, since you can't use the production keys.
+SeaSketch uses Auth0 for user account authentication. The committed `.env` templates already point at the SeaSketch development tenant, `seasketch-dev.us.auth0.com`, with audience `https://api.nonprod.seasketch.org`. Copy them (`ENV.md`). Login from `http://localhost:3000` works with those public values. `AUTH0_CLIENT_SECRET` is the one Auth0 value a teammate has to give you, and the API starts without it.
+
+An install that is not this one creates its own tenant. Do not point it at `seasketch.auth0.com` or `https://api.seasketch.org`. Setup refuses those. Follow the steps below and replace the template values.
 
 Automated tests do not use Auth0. `E2E_TEST_MODE` mints its own tokens. You need this setup for a person to log in from the running client.
 
@@ -145,7 +147,7 @@ The API reads the claims from the access token. The client reads the same claims
 
 ## 8. Fill in the env files
 
-Copy the templates if you have not already (`ENV.md`), then set:
+For the SeaSketch development tenant, the templates already hold these public values. Copy them and add `AUTH0_CLIENT_SECRET` if you need the Management API. For a tenant you created above, set:
 
 `packages/api/.env`
 

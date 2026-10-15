@@ -82,7 +82,7 @@ Phase 1 does not stand up staging. It proves the hard part — a clean VM can ru
 - Postgres and Redis stay on the existing PostGIS image under Docker Compose. Fixture data arrives through snapshot restore, not a custom database image. *(October 2026)* The Compose file is `compose.yaml` at the repo root. Containerized Lambdas join it as profiles.
 - *(September 2026)* `npm run setup` starts Postgres and Redis, waits until the `graphile` role exists, and restores `packages/api/snapshots/golden.dump` into an empty database. A database that already has migrations is left in place and only migrated forward. `--reset` drops it first.
 - *(October 2026)* Before that restore, `setup` downloads `golden-snapshot/current/` from `https://uploads.seasketch.org` when the local dump is missing or older. No credentials. `npm run snapshot:publish` uploads it to the tiles bucket that host serves.
-- *(October 2026)* The smoke job uses the client dev server. The production bundle stays the open question above.
+- *(October 2026)* The smoke job uses the client dev server. Switching that job to the production bundle waits until phase 4.
 - *(October 2026)* Readiness is a TCP or HTTP check, not a sleep. For containers it is a Compose `healthcheck` and `up -d --wait`; for host processes in `--ci` mode it is `wait-on` against the dependency's URL.
 - *(October 2026)* Containers run under Docker Compose; host Node processes run under `concurrently` from one root script that holds the service list. No process-compose, PM2, overmind, or devcontainer. Chosen over Compose-for-everything because the edit loop's file watching stays native on the host, and over the dedicated supervisors because `concurrently` plus the editor's tasks already cover the contract with tools Node developers recognize. This keeps a later move to Turborepo open.
 - *(October 2026)* `npm run dev` is a foreground process with no daemon and no state outside the repo. It exits non-zero when any process in the profile dies.
@@ -94,11 +94,11 @@ Phase 1 does not stand up staging. It proves the hard part — a clean VM can ru
 
 ## Open questions
 
-- *(Phase 1)* Whether the CRA production build replaces the dev server as the smoke target. The first job uses the dev server.
+- *(Phase 4)* Whether smoke switches from the client dev server to the production bundle before Create React App is replaced. Phase 1 uses the dev server.
 
 ## Exit criteria
 
-- **Phase 1:** On a clean machine, `bootstrap`, `setup`, then `dev` reaches a fixture project in the browser. Postgres is ready before the API starts. Logs are filterable by service. CI runs the same `setup` before Playwright. A cloud agent follows the README without anyone exporting variables by hand.
+- **Phase 1:** On a clean machine, `bootstrap`, `setup`, then `dev` reaches a fixture project in the browser. Postgres is ready before the API starts. Logs are filterable by service. CI runs the same `setup` before Playwright. A cloud agent follows the README without anyone exporting variables by hand. *Done, October 2026.*
 - **Phase 2:** `bootstrap` is plain `npm install` at the root.
 - **Phase 3:** `npm run dev -- --profile data` starts the [data profile](local-services.md) with no port collisions.
 - **Phase 5:** A hosted staging environment runs this contract with its own database and secret profile.

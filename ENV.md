@@ -13,9 +13,9 @@ cp packages/api/.env.template packages/api/.env
 cp packages/client/.env.template packages/client/.env
 ```
 
-Set `TILES_ACL_NAMESPACE` and `REACT_APP_TILES_ACL_NAMESPACE` to the same name, never `prod`. Copy `MAPBOX_ACCESS_TOKEN` and `REACT_APP_MAPBOX_ACCESS_TOKEN` from a teammate, or use your own Mapbox token. Auth0 is not in the repository. Create a tenant and fill in both `.env` files by following [AUTH0.md](AUTH0.md). The issuer, JWKS URL, and audience already written in `packages/api/.env.template` are the seasketch.org production tenant; replace them with yours. Leave every other blank unset. That feature stays unavailable.
+The templates point at the SeaSketch development Auth0 tenant. Copy `MAPBOX_ACCESS_TOKEN`, `REACT_APP_MAPBOX_ACCESS_TOKEN`, and `AUTH0_CLIENT_SECRET` from a teammate, or leave them blank. The API starts without them. The tile namespace defaults to `local`; change both `TILES_ACL_NAMESPACE` and `REACT_APP_TILES_ACL_NAMESPACE` together if you share the tiles bucket, and never set them to `prod`. Another install replaces the Auth0 values by following [AUTH0.md](AUTH0.md). Leave every other blank unset. That feature stays unavailable.
 
-`npm run setup` and a non-production API refuse `TILES_ACL_NAMESPACE=prod`. The values they compare against are the `seasketch.org` profile in [packages/api/env-manifest.json](packages/api/env-manifest.json). Production Auth0 identifiers are listed there and are not refused yet.
+`npm run setup` and a non-production API refuse the seasketch.org production tile namespace and the production Auth0 issuer, JWKS URL, domain, and audience. The values they compare against are the `seasketch.org` profile in [packages/api/env-manifest.json](packages/api/env-manifest.json).
 
 ## Adding new configuration vars
 

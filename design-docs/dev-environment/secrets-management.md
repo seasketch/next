@@ -72,16 +72,17 @@ Production deploy keeps working throughout. The manifest grows by describing var
 - `.env` remains the development delivery format. Only how it is produced and what it may contain change.
 - *(October 2026)* Laptops keep a short hand-managed `.env`. The team has not used 1Password, and this campaign does not adopt it, AWS Secrets Manager, or another store for local setup. Templates hold committed public defaults. The few shared development secrets are copied in by hand. CI uses GitHub. Cloud agents use the platform environment.
 - *(October 2026)* The manifest is JSON at `packages/api/env-manifest.json`. `npm run setup` and non-production API startup read it with Node. No YAML parser and no TypeScript module, because `setup` runs before the API build and the API project only compiles `packages/api`. Production startup skips the file.
-- *(October 2026)* The production-value check compares the environment to the `seasketch.org` profile in that file. `TILES_ACL_NAMESPACE=prod` is enforced. The production Auth0 issuer, JWKS URL, domain, and audience are recorded with enforcement off until the templates point at the non-production tenant.
+- *(October 2026)* The production-value check compares the environment to the `seasketch.org` profile in that file. It refuses `TILES_ACL_NAMESPACE=prod` and the production Auth0 issuer, JWKS URL, domain, and audience. The templates point at `seasketch-dev.us.auth0.com`.
+- *(October 2026)* CI and laptops do not share a snapshot key. The dump is public at `https://uploads.seasketch.org/golden-snapshot/current/`. Publish still uses the R2 token, writing to `R2_TILES_BUCKET`.
 - `REACT_APP_*` names stay until the client build replacement (phase 4). The manifest records them as build-time client config, so they can be renamed in one pass.
 - Human login uses a non-production Auth0 tenant. Automated tests receive no Auth0 credentials. ([Auth0](auth0.md), [integration testing](integration-testing.md))
 
 ## Open questions
 
-- *(Phase 1)* Whether CI and laptops share one read-only snapshot key or use two. October 2026: neither. The dump is public at `https://uploads.seasketch.org/golden-snapshot/current/`. Publish still uses the R2 token, writing to `R2_TILES_BUCKET`.
+None for phase 1. Every API and client variable still needs a class before phase 3.
 
 ## Exit criteria
 
-- **Phase 1:** A clean VM obtains core configuration without a shell profile. CI has the snapshot credentials it needs and nothing else it does not use. The test-mode passphrase is committed, not a CI secret. Setup refuses a production tile ACL namespace and production Auth0 identifiers.
+- **Phase 1:** A clean VM obtains core configuration without a shell profile. CI has the snapshot credentials it needs and nothing else it does not use. The test-mode passphrase is committed, not a CI secret. Setup refuses a production tile ACL namespace and production Auth0 identifiers. *Done, October 2026.* The templates are that configuration. The snapshot download is public. The smoke job and the schema-drift job do not receive Auth0 credentials.
 - **Before phase 3:** Every API and client variable is in the manifest with a class. The non-production profile cannot write to production storage or consume production queues. [ENV.md](../../ENV.md) describes the manifest instead of a per-package checklist.
 - **Phase 4:** Client build-time variable names change once, from the manifest, with the new bundler.

@@ -5,8 +5,8 @@
  * production deploy. API startup calls assertNonProductionProfile and skips
  * the file when NODE_ENV is production.
  *
- * Forbidden entries with enforce:false are recorded for the Auth0 cutover and
- * do not refuse today's laptops.
+ * Forbidden entries with enforce:false are recorded and do not refuse startup.
+ * The seasketch.org profile enforces its tile namespace and Auth0 identifiers.
  */
 const fs = require("fs");
 const path = require("path");

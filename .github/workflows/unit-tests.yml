@@ -85,9 +85,6 @@ jobs:
           TEST_DB: postgres://postgres:password@localhost:54321/
           DATABASE_URL: postgres://postgres:password@localhost:54321/seasketch
           ADMIN_DATABASE_URL: postgres://postgres:password@localhost:54321/seasketch
-          AUTH0_CLIENT_ID: ${{ secrets.AUTH0_CLIENT_ID }}
-          AUTH0_CLIENT_SECRET: ${{ secrets.AUTH0_CLIENT_SECRET }}
-          AUTH0_DOMAIN: ${{ secrets.AUTH0_DOMAIN }}
           GM_DBURL: postgres://postgres:password@localhost:54321/seasketch_shadow
           MAPBOX_ACCESS_TOKEN: ${{ secrets.MAPBOX_ACCESS_TOKEN }}
         run: |
@@ -191,14 +188,12 @@ jobs:
         working-directory: ./packages/client
         env:
           SKIP_PREFLIGHT_CHECK: true
-          REACT_APP_AUTH0_CLIENT_ID: ${{ secrets.REACT_APP_AUTH0_CLIENT_ID }}
-          REACT_APP_AUTH0_DOMAIN: ${{ secrets.REACT_APP_AUTH0_DOMAIN }}
-          REACT_APP_AUTH0_SCOPE: ${{ secrets.REACT_APP_AUTH0_SCOPE }}
-          REACT_APP_AUTH0_AUDIENCE: ${{ secrets.REACT_APP_AUTH0_AUDIENCE }}
           REACT_APP_MAPBOX_ACCESS_TOKEN: abc123
           REACT_APP_GRAPHQL_ENDPOINT: https://example.com/graphql
           REACT_APP_BUILD: ${{ steps.short_sha.outputs.sha }}
-        run: NODE_OPTIONS=--openssl-legacy-provider CI=false npm run build
+        run: |
+          cp .env.template .env
+          NODE_OPTIONS=--openssl-legacy-provider CI=false npm run build
 
   e2e-smoke:
     name: Smoke tests
@@ -209,17 +204,6 @@ jobs:
       ADMIN_DATABASE_URL: postgres://postgres:password@localhost:54321/seasketch
       # Matches the password in compose.yaml.
       REDIS_PASSWORD: ucsb
-      JWT_AUD: ${{ secrets.REACT_APP_AUTH0_AUDIENCE }}
-      JWT_ISS: https://${{ secrets.AUTH0_DOMAIN }}/
-      JWKS_URI: https://${{ secrets.AUTH0_DOMAIN }}/.well-known/jwks.json
-      R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-      R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-      R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
-      R2_FILE_UPLOADS_BUCKET: ${{ secrets.R2_FILE_UPLOADS_BUCKET }}
-      REACT_APP_AUTH0_CLIENT_ID: ${{ secrets.REACT_APP_AUTH0_CLIENT_ID }}
-      REACT_APP_AUTH0_DOMAIN: ${{ secrets.REACT_APP_AUTH0_DOMAIN }}
-      REACT_APP_AUTH0_SCOPE: ${{ secrets.REACT_APP_AUTH0_SCOPE }}
-      REACT_APP_AUTH0_AUDIENCE: ${{ secrets.REACT_APP_AUTH0_AUDIENCE }}
       REACT_APP_MAPBOX_ACCESS_TOKEN: ${{ secrets.REACT_APP_MAPBOX_ACCESS_TOKEN }}
       REACT_APP_GRAPHQL_ENDPOINT: http://localhost:3857/graphql
     steps:
@@ -237,6 +221,10 @@ jobs:
       - name: Build API
         working-directory: ./packages/api
         run: npm run build
+      - name: Write the default env
+        run: |
+          cp packages/api/.env.template packages/api/.env
+          cp packages/client/.env.template packages/client/.env
       - name: Restore golden snapshot
         run: npm run setup
       - name: Run smoke tests

@@ -57,9 +57,9 @@ Phase 1 is allowed to be slow. Its job is to exist and to fail when the core app
 
 | Phase | Changes | Holds still | Gate to leave the phase |
 | --- | --- | --- | --- |
-| 1. Smoke | Golden snapshot, root `setup` / `dev`, `E2E_TEST_MODE`, three `@smoke` journeys, required CI check | Lerna, CRA, deploy | PR smoke is required and green; a clean VM boots the core profile |
+| 1. Smoke | Golden snapshot, root `setup` / `dev`, `E2E_TEST_MODE`, three `@smoke` journeys, a CI job on push | Lerna, CRA, deploy | Smoke runs on push and is green; a clean VM boots the core profile |
 | 2. Workspaces | Node Active LTS everywhere; npm workspaces; production build paths moved onto the workspace; post-deploy production probe | CRA, product behavior | Smoke green on workspaces; a no-product-change deploy succeeds and passes the probe |
-| 3. Journeys | Access and onboarding journeys; data profile (uploads, data tables, tiles, overlay/reports); Cypress removed | Bundler, workspace layout | Access journeys required; data-path packages testable without a deploy |
+| 3. Journeys | Access and onboarding journeys; data profile (uploads, data tables, tiles, overlay/reports); Cypress removed | Bundler, workspace layout | Access journeys run on push; data-path packages testable without a deploy |
 | 4. Client build | Replace CRA (Vite candidate); client tests and lint off CRA | Journey assertions, workspace layout | Same journeys green on the new dev server and production build |
 | 5. Breadth | Authoring, data, and report journeys; scheduled probes; hosted staging; agent recipe | Decisions from 1–4 | Features ship with journeys; staging runs the same contract |
 
@@ -84,11 +84,11 @@ Phase 1 is allowed to be slow. Its job is to exist and to fail when the core app
 5. A CI job that restores, builds, and runs `@smoke` with the other test jobs.
    - Done, October 2026. The Smoke tests job in `.github/workflows/unit-tests.yml` runs on push. It restores the golden snapshot, builds the API, and runs `npm run e2e` against the client dev server. It is not part of the deploy workflow. The run's Smoke Test Output check lists the journeys. The `playwright-report` artifact has the HTML report, and screenshots, video, and traces when a journey fails.
 
-**Alongside, not blocking the gate:** the non-production Auth0 tenant ([Auth0](auth0.md)) and the first slice of the secrets manifest and its fail-closed check ([secrets](secrets-management.md)). They are phase 1 exit criteria because a cloud agent should not be handed secrets until they exist, but the smoke job does not wait for them. Process supervision shipped October 2026 ([environment setup](env-setup.md)): Compose for containers, `concurrently` for host processes.
+**Alongside, not blocking the gate:** the non-production Auth0 tenant ([Auth0](auth0.md)) and the first slice of the secrets manifest and its fail-closed check ([secrets](secrets-management.md)). They are phase 1 exit criteria because a cloud agent should not be handed secrets until they exist, but the smoke job does not wait for them. Both shipped October 2026. Process supervision shipped October 2026 ([environment setup](env-setup.md)): Compose for containers, `concurrently` for host processes.
 
 **Holds still.** Lerna, Create React App, the deploy workflow, and every service outside the core profile.
 
-**Exit.** A pull request cannot merge with failing smoke. The smoke job holds no Auth0 secrets. A clean VM — including a cloud agent — runs `setup` and `dev` without VS Code or a shell profile, using only non-production credentials. A person can open a fixture project by logging into the non-production tenant.
+**Exit.** Smoke runs on push with the other tests and reports each journey. It is not a required status check. The smoke job holds no Auth0 secrets. A clean VM — including a cloud agent — runs `setup` and `dev` without VS Code or a shell profile, using only non-production credentials. A person can open a fixture project by logging into the non-production tenant. *Done, October 2026.* The smoke job copies the templates, which point at `seasketch-dev`, and receives no Auth0 credentials. Login uses that tenant.
 
 ### Phase 2 — Node LTS and workspace packaging
 
@@ -112,7 +112,7 @@ If this phase slips, new journeys do not pile onto the pull-request job. They ru
 
 **Holds still.** The client bundler and the workspace layout.
 
-**Exit.** Access, invite, and project-entry journeys are required on pull requests. The permission matrix lives in API tests; browser tests cover what each kind of person can see. A change to spatial uploads, data tables, or report calculation can be tried without deploying a Lambda.
+**Exit.** Access, invite, and project-entry journeys run on push with the other tests. The permission matrix lives in API tests; browser tests cover what each kind of person can see. A change to spatial uploads, data tables, or report calculation can be tried without deploying a Lambda.
 
 This is the gate to have in place before large multi-level admin changes merge.
 
@@ -147,7 +147,7 @@ If a specific change needs more than that, pull the staging work forward for it.
 ## Rules
 
 - A pull request changes one axis. Node, workspaces, and the client bundler never share a pull request. A journey and a large refactor share one only when the journey is the characterization test for that refactor.
-- The smoke check exists before phase 2 and stays required. It is not skipped to make a migration look green.
+- *(October 2026)* Smoke runs on every push, with a report and a trace when it fails. It is not a branch-protection rule, and neither are later journeys. Failing smoke is something a reviewer looks at. It is not skipped to make a migration look green.
 - A journey depends only on services the root start command runs for its profile. A journey that needs a production Lambda is not a local test.
 - The default configuration never points at production. A production override is explicit, per integration ([local services](local-services.md)), and absent from CI.
 - Agents are normal consumers of the contract. Commands are non-interactive, logs are attributable to a service, and failure paths are written down. Agents may restore the golden snapshot; they may not publish one unless the task is a snapshot refresh.
