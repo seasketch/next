@@ -34,7 +34,7 @@ export function makeFetchRangeFn(
     } else {
       cacheMisses++;
       // console.log("cache miss", cacheKey);
-      return pool
+      const request = pool
         .request({
           path: url.replace("https://uploads.seasketch.org", ""),
           method: "GET",
@@ -61,7 +61,12 @@ export function makeFetchRangeFn(
               range[1] ? range[1] : ""
             }: ${e.message}`
           );
+        })
+        .finally(() => {
+          inFlightRequests.delete(cacheKey);
         });
+      inFlightRequests.set(cacheKey, request);
+      return request;
     }
   };
 

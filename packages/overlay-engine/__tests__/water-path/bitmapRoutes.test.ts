@@ -2,6 +2,7 @@ import { Feature, LineString, Position } from "geojson";
 import { readFileSync } from "fs";
 import { join } from "path";
 import { createSource, FlatGeobufSource } from "fgb-source";
+import { makeFetchRangeFn } from "../../scripts/optimizedFetchRangeFn";
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import distance from "@turf/distance";
 import { searchWaterPathNearest } from "../../src/h3/waterPathNearest";
@@ -114,7 +115,15 @@ describe("ocean bitmap routes", () => {
   let land: FlatGeobufSource<Feature>;
 
   beforeAll(async () => {
-    const sourceOptions = { pageSize: "1MB" as const, maxCacheSize: "256MB" as const };
+    const { fetchRangeFn } = makeFetchRangeFn(
+      "https://uploads.seasketch.org",
+      1000 * 1024 * 256,
+    );
+    const sourceOptions = {
+      pageSize: "1MB" as const,
+      maxCacheSize: "256MB" as const,
+      fetchRangeFn,
+    };
     ports = await createSource(portsUrl, sourceOptions);
     land = await createSource(landUrl, sourceOptions);
   }, 120_000);
