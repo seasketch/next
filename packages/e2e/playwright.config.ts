@@ -86,6 +86,10 @@ export default defineConfig({
     reuseExistingServer: !ci,
     // Covers the subdivision image build plus the client dev server.
     timeout: ci ? 900_000 : 180_000,
+    // Show both streams. The default hides stdout, so a supervisor that logs
+    // there exits in CI with no reason attached.
+    stdout: "pipe",
+    stderr: "pipe",
     env: webServerEnv(),
   },
 });
