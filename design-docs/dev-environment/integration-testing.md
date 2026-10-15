@@ -106,6 +106,7 @@ Journeys that use the map depend on a Mapbox development token. The anonymous sm
 - Project-per-journey isolation, hard-deleted in SQL.
 - The pull-request gate stays small on purpose. Breadth lives in unit tests and in `master` or nightly browser runs until phases 2 and 4 make pull-request minutes cheap.
 - The production probe starts in phase 2, when production artifacts first change.
+- Local startup does not enable test mode. `npm run dev` and the other root start commands leave `E2E_TEST_MODE` unset, so a development machine uses Auth0 login and the API's ordinary mail path. Playwright passes `E2E_TEST_MODE` and `E2E_TEST_PASSPHRASE` from `packages/e2e/e2e.env` in the `webServer` environment when it starts `npm run dev -- --ci`. An API that is already running without those variables is not a test-mode API; `/e2e/token` stays unregistered.
 
 ## Open questions
 

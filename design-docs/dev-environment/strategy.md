@@ -84,7 +84,7 @@ Phase 1 is allowed to be slow. Its job is to exist and to fail when the core app
 5. A CI job that restores, builds, and runs `@smoke` with the other test jobs.
    - Done, October 2026. The Smoke tests job in `.github/workflows/unit-tests.yml` runs on push. It restores the golden snapshot, builds the API, and runs `npm run e2e` against the client dev server. It is not part of the deploy workflow. The run's Smoke Test Output check lists the journeys. The `playwright-report` artifact has the HTML report, and screenshots, video, and traces when a journey fails.
 
-**Alongside, not blocking the gate:** the non-production Auth0 tenant ([Auth0](auth0.md)), the first slice of the secrets manifest and its fail-closed check ([secrets](secrets-management.md)), and the process manager behind `npm run dev` ([environment setup](env-setup.md)). They are phase 1 exit criteria because a cloud agent should not be handed secrets until they exist, but the smoke job does not wait for them.
+**Alongside, not blocking the gate:** the non-production Auth0 tenant ([Auth0](auth0.md)) and the first slice of the secrets manifest and its fail-closed check ([secrets](secrets-management.md)). They are phase 1 exit criteria because a cloud agent should not be handed secrets until they exist, but the smoke job does not wait for them. Process supervision shipped October 2026 ([environment setup](env-setup.md)): Compose for containers, `concurrently` for host processes.
 
 **Holds still.** Lerna, Create React App, the deploy workflow, and every service outside the core profile.
 
@@ -151,7 +151,7 @@ If a specific change needs more than that, pull the staging work forward for it.
 - A journey depends only on services the root start command runs for its profile. A journey that needs a production Lambda is not a local test.
 - The default configuration never points at production. A production override is explicit, per integration ([local services](local-services.md)), and absent from CI.
 - Agents are normal consumers of the contract. Commands are non-interactive, logs are attributable to a service, and failure paths are written down. Agents may restore the golden snapshot; they may not publish one unless the task is a snapshot refresh.
-- Choices left open — the process manager, the exact Vite setup — are settled by a short spike at the start of the phase that needs them, against the criteria in the topic file, and then recorded there.
+- Choices left open — the exact Vite setup — are settled by a short spike at the start of the phase that needs them, against the criteria in the topic file, and then recorded there. The process supervisor was settled in October 2026 ([environment setup](env-setup.md)).
 - When a choice would force a fork to run a second production SeaSketch, prefer "same revision, different configuration" ([second production install](second-install.md)).
 
 ## What this campaign leaves alone

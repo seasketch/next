@@ -5,5 +5,6 @@ cd packages/api
 npm run build
 
 echo "Build complete! You can now run:"
-echo "  npm run build:watch  # for watch mode"
-echo "  npm start            # to start the server" 
+echo "  npm run build:watch  # for watch mode, from packages/api"
+echo "  npm start            # to start this package's server"
+echo "  npm run dev          # the running stack, from the repo root" 

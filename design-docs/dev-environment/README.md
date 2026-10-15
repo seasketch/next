@@ -37,7 +37,7 @@ Accepted decisions. They describe what this campaign will build, not what is run
 - **Test auth:** `E2E_TEST_MODE` mints tokens with the API's own signing keys under a test-only issuer. CI holds no Auth0 secrets. ([integration testing](integration-testing.md))
 - **Human auth:** a separate non-production Auth0 tenant with its own issuer and audience. The API's Management client is already lazy and optional ([Auth0](auth0.md), September 2026).
 - **Database:** a curated `pg_dump` snapshot on R2, restored into the existing PostGIS container, then migrated forward. Never built from production. ([integration testing](integration-testing.md))
-- **Startup:** root npm scripts (`setup`, `dev`, `dev:data`, `logs`, `status`) over an existing process manager. VS Code tasks are not the contract. ([environment setup](env-setup.md))
+- **Startup:** root npm scripts (`setup`, `dev`, `logs`, `status`) over Docker Compose for containers and `concurrently` for host processes, with one service list and a `--profile` flag. Nothing starts on folder open; VS Code tasks are not the contract. ([environment setup](env-setup.md))
 - **Production reach:** an unset integration makes the feature unavailable. Pointing at production is an explicit override, never in CI. ([local services](local-services.md))
 - **Secrets:** one committed manifest, named profiles, and existing injectors (1Password, GitHub environments, CDK). No new secrets product. ([secrets](secrets-management.md))
 - **Packaging:** npm workspaces with one lockfile. No Nx, Turborepo, or new Lerna. ([monorepo and build](monorepo-and-build-upgrade.md))

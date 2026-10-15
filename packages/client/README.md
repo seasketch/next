@@ -6,13 +6,9 @@ The SeaSketch Next client application is built using [create-react-app](https://
 
 ## Installing
 
-```sh
-git clone https://github.com/seasketch/next.git
-cd next/packages/client
-npm install
-cp .env.template .env
-npm start
-```
+The app runs from the repo root, with the API. See the root [README](../../README.md): `npm run bootstrap`, environment files from [ENV.md](../../ENV.md), `npm run setup`, then `npm run dev`. In Cursor or VS Code, Terminal > Run Task > `Dev: core` opens one full-width terminal per service. Client output is the `Dev: client` terminal, or `npm run logs -- client`.
+
+`npm start` in this package is the dev server on its own. Root `npm run dev` and the `Dev: client` task are how it runs with the API.
 
 ## SSL
 
@@ -61,8 +57,8 @@ In the project directory, you can run:
 
 ### `npm start`
 
-Runs the app in the development mode.<br />
-Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
+Runs this package's dev server.<br />
+Open [http://localhost:3000](http://localhost:3000) to view it in the browser. With the API, use root `npm run dev` or the `Dev: client` task instead. Client output is that pane, or `npm run logs -- client`.
 
 The page will reload if you make edits.<br />
 You will also see any lint errors in the console.

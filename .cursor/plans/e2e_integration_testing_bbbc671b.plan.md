@@ -25,6 +25,8 @@ The phase numbers below predate the strategy. Map them as follows: sketch phases
 
 Where this sketch conflicts with the record, the record wins. Known conflicts: test-mode tokens are signed by the API's own JWKS keys under a test-only issuer, and Auth0 Management calls are faked in test mode; the snapshot is never built from a production dump; the production probe starts in strategy Phase 2, not Phase 5.
 
+Startup, logs, and editor tasks are specified in [env-setup.md](../../design-docs/dev-environment/env-setup.md). The bullets below that say to document `db:start` plus `db:bootstrap`, and to add a VS Code task after `db:start`, are superseded. Do not revive folder-open tasks.
+
 ## Locked decisions
 
 - **Runner:** Playwright in a new `packages/e2e` package (Cypress kept only as scenario inventory until Phase 2 backlog is extracted, then removed/archived).
