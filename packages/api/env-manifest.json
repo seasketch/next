@@ -1,0 +1,219 @@
+{
+  "variables": [
+    {
+      "name": "DATABASE_URL",
+      "class": "public-config",
+      "packages": ["api"],
+      "requiredBy": ["core"],
+      "description": "Local Postgres URL for the API. The template default matches compose.yaml."
+    },
+    {
+      "name": "ADMIN_DATABASE_URL",
+      "class": "public-config",
+      "packages": ["api"],
+      "requiredBy": ["core"],
+      "description": "Local Postgres URL for migrations. The template default matches compose.yaml."
+    },
+    {
+      "name": "REDIS_PASSWORD",
+      "class": "public-config",
+      "packages": ["api"],
+      "requiredBy": ["core"],
+      "description": "Local Redis password. The template default is ucsb, the same value compose.yaml uses."
+    },
+    {
+      "name": "GRAPHILE_WORKER_CONCURRENCY",
+      "class": "public-config",
+      "packages": ["api"],
+      "requiredBy": ["core"],
+      "description": "How many graphile-worker jobs the API runs at once."
+    },
+    {
+      "name": "DATA_TABLES_LAMBDA_DEV_HANDLER",
+      "class": "public-config",
+      "packages": ["api"],
+      "requiredBy": ["core"],
+      "description": "Local data-tables handler URL. npm run dev listens on port 3006."
+    },
+    {
+      "name": "CLIENT_DOMAIN",
+      "class": "public-config",
+      "packages": ["api"],
+      "requiredBy": ["core"],
+      "description": "Host of the client this API links to. The template default is localhost:3000."
+    },
+    {
+      "name": "REACT_APP_GRAPHQL_ENDPOINT",
+      "class": "public-config",
+      "packages": ["client"],
+      "requiredBy": ["core"],
+      "description": "GraphQL URL baked into the client. The template default is the local API."
+    },
+    {
+      "name": "REACT_APP_AUTH0_SCOPE",
+      "class": "public-config",
+      "packages": ["client"],
+      "requiredBy": ["core"],
+      "description": "Auth0 scopes requested by the client."
+    },
+    {
+      "name": "SKIP_PREFLIGHT_CHECK",
+      "class": "public-config",
+      "packages": ["client"],
+      "requiredBy": ["core"],
+      "description": "Skips the Create React App dependency preflight check."
+    },
+    {
+      "name": "TILES_ACL_NAMESPACE",
+      "class": "per-environment-name",
+      "packages": ["api"],
+      "requiredBy": ["core"],
+      "description": "ACL namespace for overlay tile docs on the shared R2 bucket. Required outside production. Never prod."
+    },
+    {
+      "name": "REACT_APP_TILES_ACL_NAMESPACE",
+      "class": "per-environment-name",
+      "packages": ["client"],
+      "requiredBy": ["core"],
+      "description": "ACL namespace the client sends when requesting hosted tiles. Never prod."
+    },
+    {
+      "name": "MAPBOX_ACCESS_TOKEN",
+      "class": "shared-development-secret",
+      "packages": ["api"],
+      "requiredBy": [],
+      "description": "Shared Mapbox token. Copy it into .env by hand. The API starts without it."
+    },
+    {
+      "name": "REACT_APP_MAPBOX_ACCESS_TOKEN",
+      "class": "shared-development-secret",
+      "packages": ["client"],
+      "requiredBy": [],
+      "description": "Shared Mapbox token for the map. Copy it into .env by hand. The client starts without it."
+    },
+    {
+      "name": "E2E_TEST_MODE",
+      "class": "public-config",
+      "packages": ["api"],
+      "requiredBy": [],
+      "description": "Turns on test-mode login. The smoke suite sets it from packages/e2e/e2e.env. setup and dev leave it unset."
+    },
+    {
+      "name": "E2E_TEST_PASSPHRASE",
+      "class": "public-config",
+      "packages": ["api"],
+      "requiredBy": [],
+      "description": "Passphrase for test-mode tokens. Committed in packages/e2e/e2e.env. Not a development default."
+    },
+    {
+      "name": "JWKS_URI",
+      "class": "public-config",
+      "packages": ["api"],
+      "requiredBy": [],
+      "description": "Auth0 JWKS URL. The template default is the seasketch-dev tenant. The smoke suite does not call Auth0."
+    },
+    {
+      "name": "JWT_AUD",
+      "class": "public-config",
+      "packages": ["api"],
+      "requiredBy": [],
+      "description": "Auth0 audience the API accepts. The template default is the seasketch-dev API identifier."
+    },
+    {
+      "name": "JWT_ISS",
+      "class": "public-config",
+      "packages": ["api"],
+      "requiredBy": [],
+      "description": "Auth0 issuer the API accepts. The template default is the seasketch-dev tenant."
+    },
+    {
+      "name": "AUTH0_DOMAIN",
+      "class": "public-config",
+      "packages": ["api"],
+      "requiredBy": [],
+      "description": "Auth0 domain for human login. The template default is seasketch-dev.us.auth0.com."
+    },
+    {
+      "name": "AUTH0_CLIENT_ID",
+      "class": "public-config",
+      "packages": ["api"],
+      "requiredBy": [],
+      "description": "Auth0 Management application client id. Public. The template default is the seasketch-dev management application. The secret is separate."
+    },
+    {
+      "name": "AUTH0_CLIENT_SECRET",
+      "class": "shared-development-secret",
+      "packages": ["api"],
+      "requiredBy": [],
+      "description": "Auth0 Management client secret for the development tenant. Copy it into .env by hand. The smoke suite does not get one."
+    },
+    {
+      "name": "REACT_APP_AUTH0_CLIENT_ID",
+      "class": "public-config",
+      "packages": ["client"],
+      "requiredBy": [],
+      "description": "Auth0 SPA client id baked into the client. The template default is the seasketch-dev single-page application."
+    },
+    {
+      "name": "REACT_APP_AUTH0_DOMAIN",
+      "class": "public-config",
+      "packages": ["client"],
+      "requiredBy": [],
+      "description": "Auth0 domain baked into the client. The template default is seasketch-dev.us.auth0.com."
+    },
+    {
+      "name": "REACT_APP_AUTH0_AUDIENCE",
+      "class": "public-config",
+      "packages": ["client"],
+      "requiredBy": [],
+      "description": "Auth0 audience baked into the client. The template default matches JWT_AUD."
+    }
+  ],
+  "profiles": {
+    "seasketch.org": {
+      "description": "Production identifiers for the seasketch.org install. Outside production, an enforced value refuses startup.",
+      "forbidden": [
+        {
+          "name": "TILES_ACL_NAMESPACE",
+          "equals": "prod",
+          "enforce": true
+        },
+        {
+          "name": "REACT_APP_TILES_ACL_NAMESPACE",
+          "equals": "prod",
+          "enforce": true
+        },
+        {
+          "name": "JWT_ISS",
+          "equals": "https://seasketch.auth0.com/",
+          "enforce": true
+        },
+        {
+          "name": "JWKS_URI",
+          "equals": "https://seasketch.auth0.com/.well-known/jwks.json",
+          "enforce": true
+        },
+        {
+          "name": "JWT_AUD",
+          "equals": "https://api.seasketch.org",
+          "enforce": true
+        },
+        {
+          "name": "AUTH0_DOMAIN",
+          "equals": "seasketch.auth0.com",
+          "enforce": true
+        },
+        {
+          "name": "REACT_APP_AUTH0_DOMAIN",
+          "equals": "seasketch.auth0.com",
+          "enforce": true
+        },
+        {
+          "name": "REACT_APP_AUTH0_AUDIENCE",
+          "equals": "https://api.seasketch.org",
+          "enforce": true
+        }
+      ]
+    }
+  }
+}

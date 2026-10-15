@@ -41,11 +41,11 @@ Report calculation is in the data profile, not optional, because report widgets 
 
 ## Profiles
 
-The start command takes a profile. These names are the contract; flags follow whichever process manager [environment setup](env-setup.md) picks.
+The start command takes a profile: `npm run dev -- --profile <name>`. A profile is a set of Compose `profiles` plus a set of host services in the service list ([environment setup](env-setup.md)).
 
 - **core** — Postgres, Redis, API, client, and the watchers a person needs. The default for `npm run dev`, CI smoke, and any agent not working on the data path.
 - **data** — core, plus the data-tables handler, the spatial-uploads container, `pmtiles-server` under `wrangler dev`, and the overlay worker dev server. The API receives local handler URLs, a development queue, and development buckets. Never Lambda ARNs.
-- **optional add-ons** — started one at a time when a task needs them: fragment worker, subdivision worker, screenshotter, PII classifier, AI analyst. Each documents its local command and the variable that points the API at it. Until someone starts one, its feature reports itself unavailable.
+- **optional add-ons** — started one at a time when a task needs them: fragment worker, screenshotter, PII classifier, AI analyst. Each documents its local command and the variable that points the API at it. Until someone starts one, its feature reports itself unavailable. The data-tables handler, spatial-uploads handler, and subdivision worker are part of `npm run dev`: each restarts when its code changes. `--ci` starts them once, without watching, and the client waits until their ports are open. The smoke tests do not call them yet.
 
 In every non-production profile, email is written to a directory in the workspace, generalizing today's Cypress file sink. No default profile sends SES mail.
 
@@ -75,6 +75,6 @@ Uploads, tile archives, and ACL documents live in object storage even for local 
 
 ## Exit criteria
 
-- **Phase 1:** The core profile starts with no production Lambda ARNs, queue URLs, or Auth0 management credentials, and the features that need them report themselves unavailable.
+- **Phase 1:** The core profile starts with no production Lambda ARNs, queue URLs, or Auth0 management credentials, and the features that need them report themselves unavailable. *Done, September 2026.*
 - **Phase 3:** The data profile runs uploads, data-table processing, tile serving, and report calculation locally against development storage and queues. A developer changes those packages and sees the result without `cdk deploy`. CI data-path journeys use this profile.
 - **Throughout:** The production override for each integration is documented for a person debugging production, and absent from CI.

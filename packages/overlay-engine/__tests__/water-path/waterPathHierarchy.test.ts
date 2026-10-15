@@ -2,6 +2,7 @@ import fs from "fs";
 import path from "path";
 import { Feature, LineString, Polygon, Position } from "geojson";
 import { createSource, FlatGeobufSource } from "fgb-source";
+import { makeFetchRangeFn } from "../../scripts/optimizedFetchRangeFn";
 import booleanPointInPolygon from "@turf/boolean-point-in-polygon";
 import distance from "@turf/distance";
 import nearestPointOnLine from "@turf/nearest-point-on-line";
@@ -161,7 +162,15 @@ describe("hierarchical water path", () => {
   const routes: Feature[] = [];
 
   beforeAll(async () => {
-    const sourceOptions = { pageSize: "1MB", maxCacheSize: "256MB" };
+    const { fetchRangeFn } = makeFetchRangeFn(
+      "https://uploads.seasketch.org",
+      1000 * 1024 * 256,
+    );
+    const sourceOptions = {
+      pageSize: "1MB",
+      maxCacheSize: "256MB",
+      fetchRangeFn,
+    };
     ports = await createSource(portsUrl, sourceOptions);
     land = await createSource(landUrl, sourceOptions);
   });

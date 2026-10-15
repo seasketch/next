@@ -2,7 +2,12 @@
   "name": "root",
   "private": true,
   "scripts": {
+    "bootstrap": "npm ci && npx lerna bootstrap --ci --scope=@seasketch/api --scope=client --scope=spatial-uploads-handler --include-dependencies && npm ci --prefix packages/data-tables-handler && npm ci --prefix packages/e2e",
     "setup": "bash packages/api/scripts/setup.sh",
+    "dev": "node scripts/dev.mjs",
+    "dev:db": "docker compose up -d --wait",
+    "logs": "node scripts/logs.mjs",
+    "status": "node scripts/status.mjs",
     "snapshot:create": "bash packages/api/scripts/snapshot-create.sh",
     "snapshot:publish": "node packages/api/scripts/snapshot-r2.js push",
     "e2e": "npm test --prefix packages/e2e",
@@ -15,6 +20,7 @@
     "@typescript-eslint/eslint-plugin": "^4.17.0",
     "@typescript-eslint/parser": "^4.17.0",
     "@vitest/coverage-v8": "^3.2.2",
+    "concurrently": "9.2.5",
     "cypress-localstorage-commands": "^1.6.1",
     "cypress-log-to-output": "^1.1.2",
     "eslint": "^7.21.0",
@@ -23,7 +29,9 @@
     "eslint-plugin-jsx-a11y": "^6.4.1",
     "eslint-plugin-react": "^7.22.0",
     "eslint-plugin-react-hooks": "^4.2.0",
-    "lerna": "^6.6.2"
+    "lerna": "^6.6.2",
+    "rotating-file-stream": "3.2.10",
+    "wait-on": "9.5.1"
   },
   "graphql-inspector": {
     "branch": "master",

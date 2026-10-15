@@ -1,8 +1,8 @@
+import fs from "fs";
 import path from "path";
 import { defineConfig, devices } from "@playwright/test";
 
-const apiDir = path.resolve(__dirname, "../api");
-const clientDir = path.resolve(__dirname, "../client");
+const repoRoot = path.resolve(__dirname, "../..");
 
 /**
  * Headless is the default (`npm run e2e`).
@@ -10,11 +10,47 @@ const clientDir = path.resolve(__dirname, "../client");
  * `--ui` opens Playwright's interactive runner: pick a test, watch it, and
  * step back through actions, the DOM, console, and network.
  *
- * Locally, an API or client that is already listening is reused. The API must
- * have been started with packages/e2e/e2e.env, or /e2e/token will 404. CI
- * always starts both.
+ * webServer runs `npm run dev -- --ci`, which does not enable test mode.
+ * E2E_TEST_MODE and the passphrase come from e2e.env, passed here.
+ * Locally, a server that is already listening is reused. That API must
+ * already be in test mode, or /e2e/token will 404. A normal `npm run dev`
+ * is not a test-mode API. CI always starts the stack.
  */
 const ci = !!process.env.CI;
+
+function parseDotenv(file: string): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const line of fs.readFileSync(file, "utf8").split("\n")) {
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) {
+      continue;
+    }
+    const eq = trimmed.indexOf("=");
+    if (eq === -1) {
+      continue;
+    }
+    const key = trimmed.slice(0, eq).trim();
+    let value = trimmed.slice(eq + 1).trim();
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1);
+    }
+    env[key] = value;
+  }
+  return env;
+}
+
+function webServerEnv(): { [key: string]: string } {
+  const env: { [key: string]: string } = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (value !== undefined) {
+      env[key] = value;
+    }
+  }
+  return { ...env, ...parseDotenv(path.resolve(__dirname, "e2e.env")) };
+}
 
 export default defineConfig({
   testDir: "./tests",
@@ -42,22 +78,14 @@ export default defineConfig({
       use: { ...devices["Desktop Chrome"] },
     },
   ],
-  webServer: [
-    {
-      command: "set -a && . ../e2e/e2e.env && set +a && npm run dev",
-      cwd: apiDir,
-      url: "http://127.0.0.1:3857/graphiql",
-      reuseExistingServer: !ci,
-      timeout: 120_000,
-    },
-    {
-      // react-scripts 4 refuses to start when the hoisted babel-loader is not
-      // exactly 8.1.0. The client test and build jobs skip the same check.
-      command: "SKIP_PREFLIGHT_CHECK=true BROWSER=none npm start",
-      cwd: clientDir,
-      url: "http://127.0.0.1:3000",
-      reuseExistingServer: !ci,
-      timeout: ci ? 360_000 : 180_000,
-    },
-  ],
+  webServer: {
+    command: `npm run dev -- --ci --profile ${process.env.E2E_PROFILE || "core"}`,
+    cwd: repoRoot,
+    // In --ci the client starts last, after the API and the worker ports answer.
+    url: "http://127.0.0.1:3000",
+    reuseExistingServer: !ci,
+    // Covers the subdivision image build plus the client dev server.
+    timeout: ci ? 900_000 : 180_000,
+    env: webServerEnv(),
+  },
 });

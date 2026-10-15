@@ -1,4 +1,5 @@
 **/node_modules
+.logs/
 **/.DS_Store
 packages/api/dist/*
 packages/client/dist/*

@@ -58,20 +58,20 @@ const clientEnv = readClientEnvironment();
 function required(name: string, value: string | undefined): string {
   if (!value || value.startsWith("op://")) {
     throw new Error(
-      process.env.CI
-        ? `${name} is missing from the environment. CI starts the client with these variables; there is no packages/client/.env.`
-        : `${name} is missing. The smoke suite reads it from packages/client/.env, which is what the running client was started with.`
+      `${name} is missing. The smoke suite reads packages/client/.env, and a value already in the environment overrides that file.`
     );
   }
   return value;
 }
 
 /**
- * Locally the client is already running from packages/client/.env. In CI the
- * workflow starts it, and Create React App uses the process environment
- * instead of that file.
+ * Create React App keeps a variable already in the process environment and
+ * fills the rest from packages/client/.env. CI copies the template into that
+ * file and only overrides Mapbox and the GraphQL endpoint.
  */
-const auth0Source = process.env.CI ? process.env : clientEnv;
+function clientConfig(name: string): string | undefined {
+  return process.env[name] || clientEnv[name];
+}
 
 /** Scope the Auth0 SPA SDK actually caches. It always adds openid, and offline_access when refresh tokens are on. */
 export function auth0CacheScope(configuredScope: string): string {
@@ -91,14 +91,14 @@ export const databaseURL =
 export const auth0 = {
   clientId: required(
     "REACT_APP_AUTH0_CLIENT_ID",
-    auth0Source.REACT_APP_AUTH0_CLIENT_ID
+    clientConfig("REACT_APP_AUTH0_CLIENT_ID")
   ),
   audience: required(
     "REACT_APP_AUTH0_AUDIENCE",
-    auth0Source.REACT_APP_AUTH0_AUDIENCE
+    clientConfig("REACT_APP_AUTH0_AUDIENCE")
   ),
   scope: auth0CacheScope(
-    required("REACT_APP_AUTH0_SCOPE", auth0Source.REACT_APP_AUTH0_SCOPE)
+    required("REACT_APP_AUTH0_SCOPE", clientConfig("REACT_APP_AUTH0_SCOPE"))
   ),
 };
 

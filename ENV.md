@@ -6,18 +6,16 @@ These secrets are managed using environment variables. On production, these env 
 
 ## Setting Env Vars in Development
 
-The api and client modules each use [dotenv](https://github.com/motdotla/dotenv) to load environment variables from a `.env` file at startup. `.env` can't be checked into source control with all our secrets but `.env.template` is a starting point. Just `cp .env.template .env` and fill in the required details for both the api and client packages.
-
-#### Using 1password to populate `.env` files
-
-Instead of manually filling in values, if you have access to the team's 1Password vault it can be used to copy `.env.template` to `.env` with up-to-date
-values. To do so, install the [1password cli](https://developer.1password.com/docs/cli/get-started/) and then run the following:
+The api and client modules each use [dotenv](https://github.com/motdotla/dotenv) to load environment variables from a `.env` file at startup. `.env` is gitignored. `.env.template` holds the public defaults. Copy it and fill in the blanks:
 
 ```
-npm run env:dev
+cp packages/api/.env.template packages/api/.env
+cp packages/client/.env.template packages/client/.env
 ```
 
-Contact [Chad](mailto:chad@underbluewaters.net) to request access to our 1password vault.
+The templates point at the SeaSketch development Auth0 tenant. Copy `MAPBOX_ACCESS_TOKEN`, `REACT_APP_MAPBOX_ACCESS_TOKEN`, and `AUTH0_CLIENT_SECRET` from a teammate, or leave them blank. The API starts without them. The tile namespace defaults to `local`; change both `TILES_ACL_NAMESPACE` and `REACT_APP_TILES_ACL_NAMESPACE` together if you share the tiles bucket, and never set them to `prod`. Another install replaces the Auth0 values by following [AUTH0.md](AUTH0.md). Leave every other blank unset. That feature stays unavailable.
+
+`npm run setup` and a non-production API refuse the seasketch.org production tile namespace and the production Auth0 issuer, JWKS URL, domain, and audience. The values they compare against are the `seasketch.org` profile in [packages/api/env-manifest.json](packages/api/env-manifest.json).
 
 ## Adding new configuration vars
 
@@ -25,7 +23,7 @@ If you have configuration that needs to be added to SeaSketch in order to suppor
 
 - [] Add the new var with a jsdoc describing what it does to [process-env.d.ts](https://github.com/seasketch/next/blob/master/packages/api/process-env.d.ts) for the api or [react-app-env.d.ts](https://github.com/seasketch/next/blob/master/packages/client/react-app-env.d.ts) for the client.
 - [] Add the env var to the `env.template` of the respective package so that other developers know that value needs to be set.
-- [] Add a default value to the SeaSketch dev 1password value so that it can be easily populated on other dev machines and reference that item in `.env.template`.
+- [] If the variable is part of local setup, add it to [packages/api/env-manifest.json](packages/api/env-manifest.json) with its class. Put a public default in `.env.template`. Leave a shared secret blank for someone to copy by hand.
 - [] Add an appropriate value to GitHub Actions Secrets in the production environment
 - [] Make sure the appropriate deployment GitHub Actions workflow references the secret and loads it into the environment
 - [] If setting an env var for the api package, the [GraphQL Server CDK Stack](https://github.com/seasketch/next/blob/master/packages/infra/lib/GraphQLStack.ts#L113) needs to be updated to inject that variable into the server. It may also be appropriate to add validation code to the top of that stack to assert that the new variable is set to a valid value.

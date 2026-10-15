@@ -24,11 +24,23 @@ Lambda microservice for updating project and survey invite status based on SNS n
 
 #### Development Environment Setup
 
-There are a lot of build scripts and dev servers needed to run the entire stack. If you have Docker installed and use VSCode a lot of this setup can be started for you by simply opening the root of the project in your editor. Run the VSCode command "Manage Automatic Tasks in Folder" and choose allow to run the necessary build tasks and development servers.
+Prerequisites: Node from `.nvmrc`, and a Compose-compatible runtime (Docker Desktop, OrbStack, Colima, or Podman with its compose plugin). Nothing starts when you open the folder.
 
-<img src="https://user-images.githubusercontent.com/511063/93515779-ff207700-f8dd-11ea-8ceb-e9e663161e4f.png" width="300">
+From the repo root:
 
-Follow [this guide](https://github.com/seasketch/next/blob/master/ENV.md) in order to setup appropriate environment variables for development.
+```sh
+npm run bootstrap
+npm run setup
+npm run dev
+```
+
+`npm run dev` starts Postgres and Redis, then the API, the client, the watchers, and the data-tables, spatial-uploads, and subdivision workers, in the foreground. Those workers recompile and restart when their code changes. Ctrl-C stops the host processes. It does not enable `E2E_TEST_MODE`; a normal development API uses Auth0 login. The smoke suite turns test mode on itself, and it starts the same three workers. The tests do not call them yet. If one of them fails to listen, the job fails.
+
+`npm run logs` follows every service. `npm run logs -- api` follows one. Files are `.logs/<service>.log`, rotated at 20 MB. `npm run status` prints which services are listening. `npm run setup -- --reset` replaces the local database with the golden snapshot.
+
+In Cursor or VS Code, Terminal > Run Task > `Dev: core` runs that same command in one terminal, and opens two more that follow `npm run logs -- client` and `npm run logs -- db-watch`. CI runs `npm run dev -- --ci`, which skips the watchers and runs the API from its build.
+
+Follow [ENV.md](ENV.md) for the variables. Human login needs an Auth0 tenant you control; [AUTH0.md](AUTH0.md) is the setup.
 
 ## Deployments
 
