@@ -59,6 +59,9 @@ export const services = [
     // tsx watch recompiles and restarts the dev server. CI starts it once, without watch.
     command: "npm run dev",
     ciCommand: "npx --yes tsx@4.19.3 server.ts",
+    // Both handlers npx-install the same tsx build at startup. One shared
+    // cache extracts that folder twice and the loser exits ENOENT.
+    env: { npm_config_cache: "/tmp/seasketch-npx-data-tables" },
     ready: "http-get://127.0.0.1:3006",
     profiles: ["core"],
   },
@@ -67,6 +70,8 @@ export const services = [
     cwd: "packages/spatial-uploads-handler",
     command: "npm run dev",
     ciCommand: "npx --yes tsx@4.19.3 server.ts",
+    // Separate npx cache from data-tables. See that entry.
+    env: { npm_config_cache: "/tmp/seasketch-npx-spatial-uploads" },
     ready: "http-get://127.0.0.1:3005",
     profiles: ["core"],
   },
