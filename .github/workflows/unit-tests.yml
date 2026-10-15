@@ -207,7 +207,7 @@ jobs:
     env:
       DATABASE_URL: postgres://graphile:password@localhost:54321/seasketch
       ADMIN_DATABASE_URL: postgres://postgres:password@localhost:54321/seasketch
-      # Matches the password in packages/api/docker-compose.yml.
+      # Matches the password in compose.yaml.
       REDIS_PASSWORD: ucsb
       JWT_AUD: ${{ secrets.REACT_APP_AUTH0_AUDIENCE }}
       JWT_ISS: https://${{ secrets.AUTH0_DOMAIN }}/
@@ -230,9 +230,7 @@ jobs:
           cache: npm
           cache-dependency-path: "**/package-lock.json"
       - name: Install dependencies
-        run: |
-          npx lerna@6.6.2 bootstrap --ci --scope='@seasketch/api' --scope=client --include-dependencies
-          npm ci --prefix packages/e2e
+        run: npm run bootstrap
       - name: Install Playwright browser
         working-directory: ./packages/e2e
         run: npx playwright install --with-deps chromium
@@ -261,6 +259,7 @@ jobs:
           path: |
             packages/e2e/playwright-report/
             packages/e2e/test-results/
+            .logs/
           retention-days: 14
       - name: Playwright report location
         if: ${{ !cancelled() && steps.smoke.outcome != 'skipped' }}

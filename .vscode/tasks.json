@@ -2,81 +2,134 @@
   "version": "2.0.0",
   "tasks": [
     {
-      "type": "npm",
-      "runOptions": {
-        "runOn": "folderOpen"
-      },
-      "script": "graphql:codegen",
-      "path": "packages/client/",
+      "label": "Dev: database",
+      "type": "shell",
+      "command": "npm run dev:db",
       "problemMatcher": [],
-      "label": "GraphQL: codegen",
-      "group": "build",
-      "detail": "Generates hooks from src/queries/*.graphql"
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      }
     },
     {
-      "type": "npm",
-      "runOptions": {
-        "runOn": "folderOpen"
-      },
-      "script": "start",
-      "path": "packages/client/",
+      "label": "Dev: api",
+      "type": "shell",
+      "command": "npm run dev -- --only api",
+      "isBackground": true,
       "problemMatcher": [],
-      "label": "Client devserver",
-      "detail": "react-scripts start"
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      }
     },
     {
-      "type": "typescript",
-      "runOptions": {
-        "runOn": "folderOpen"
-      },
-      "tsconfig": "packages/api/tsconfig.json",
-      "option": "watch",
+      "label": "Dev: api tsc",
+      "type": "shell",
+      "command": "npm run dev -- --only api-tsc",
+      "isBackground": true,
       "problemMatcher": ["$tsc-watch"],
-      "group": "build",
-      "label": "TypeScript: watch server code"
-    },
-    {
-      "type": "npm",
-      "script": "db:watch",
-      "path": "packages/api/",
-      "group": "build",
-      "problemMatcher": [],
-      "label": "Watch database changes (current.sql)",
-      "detail": "dotenv graphile-migrate watch",
-      "runOptions": {
-        "runOn": "folderOpen"
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
       }
     },
     {
-      "type": "npm",
-      "script": "watch",
-      "path": "packages/api/",
+      "label": "Dev: api migrate",
+      "type": "shell",
+      "command": "npm run dev -- --only api-migrate",
+      "isBackground": true,
       "problemMatcher": [],
-      "label": "GraphQL server: watch mode",
-      "detail": "nodemon",
-      "runOptions": {
-        "runOn": "folderOpen"
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
       }
     },
     {
-      "type": "npm",
-      "script": "db:start",
-      "path": "packages/api/",
-      "runOptions": {
-        "runOn": "folderOpen"
-      },
+      "label": "Dev: client",
+      "type": "shell",
+      "command": "npm run dev -- --only client",
+      "isBackground": true,
       "problemMatcher": [],
-      "label": "Start Database & Redis"
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      }
     },
     {
-      "type": "npm",
-      "script": "css:watch",
-      "path": "packages/client/",
-      "runOptions": {
-        "runOn": "folderOpen"
-      },
+      "label": "Dev: client codegen",
+      "type": "shell",
+      "command": "npm run dev -- --only client-codegen",
+      "isBackground": true,
       "problemMatcher": [],
-      "label": "npm: css:watch - packages/client"
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Dev: client css",
+      "type": "shell",
+      "command": "npm run dev -- --only client-css",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Dev: data tables",
+      "type": "shell",
+      "command": "npm run dev -- --only data-tables",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Dev: spatial uploads",
+      "type": "shell",
+      "command": "npm run dev -- --only spatial-uploads",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Dev: subdivision",
+      "type": "shell",
+      "command": "npm run dev -- --only subdivision",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Dev: processes",
+      "dependsOn": [
+        "Dev: api",
+        "Dev: api tsc",
+        "Dev: api migrate",
+        "Dev: client",
+        "Dev: client codegen",
+        "Dev: client css",
+        "Dev: data tables",
+        "Dev: spatial uploads",
+        "Dev: subdivision"
+      ],
+      "problemMatcher": []
+    },
+    {
+      "label": "Dev: core",
+      "dependsOrder": "sequence",
+      "dependsOn": ["Dev: database", "Dev: processes"],
+      "problemMatcher": []
     }
   ]
 }

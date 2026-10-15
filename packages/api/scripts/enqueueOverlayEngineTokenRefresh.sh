@@ -38,7 +38,7 @@ Cannot reach Postgres.
     # then, after pg.sh has set DB env:
     cd /usr/src/app/next/packages/api && npm run overlay-engine:token
 
-  Local: start the DB (npm run db:start) so docker container seasketch_db is up.
+  Local: start the DB (npm run dev:db from the repo root) so docker container seasketch_db is up.
 EOF
   exit 1
 fi

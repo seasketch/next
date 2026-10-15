@@ -1,0 +1,97 @@
+// The only list of host processes `npm run dev` starts.
+// VS Code tasks and Playwright call this script; they do not repeat the list.
+//
+// name: log prefix, `.logs/<name>.log`, and the `--only` argument
+// command: dev-mode command (watchers on)
+// ciCommand: `--ci` command. Omit the service from `--ci` when undefined.
+// dependsOn / ready: host ordering in `--ci` only. Dev mode starts everything at once.
+// profiles: `core` is the default. `data` includes core plus its own entries.
+
+export const services = [
+  {
+    name: "api",
+    cwd: "packages/api",
+    command: "npm run watch",
+    ciCommand: "npm start",
+    // npm start has no NODE_ENV. Test mode, when Playwright sets it, requires development or test.
+    env: { NODE_ENV: "development" },
+    ready: "http-get://127.0.0.1:3857/graphiql",
+    profiles: ["core"],
+  },
+  {
+    name: "api-tsc",
+    cwd: "packages/api",
+    command: "npm run build:watch",
+    profiles: ["core"],
+  },
+  {
+    name: "api-migrate",
+    cwd: "packages/api",
+    command: "npm run db:watch",
+    profiles: ["core"],
+  },
+  {
+    name: "client",
+    cwd: "packages/client",
+    command: "npm start",
+    ciCommand: "npm start",
+    env: { BROWSER: "none", SKIP_PREFLIGHT_CHECK: "true" },
+    ready: "http-get://127.0.0.1:3000",
+    // In --ci the client is what Playwright waits on, so this list is the start gate.
+    dependsOn: ["api", "data-tables", "spatial-uploads", "subdivision"],
+    profiles: ["core"],
+  },
+  {
+    name: "client-codegen",
+    cwd: "packages/client",
+    command: "npm run graphql:codegen",
+    profiles: ["core"],
+  },
+  {
+    name: "client-css",
+    cwd: "packages/client",
+    command: "npm run css:watch",
+    profiles: ["core"],
+  },
+  {
+    name: "data-tables",
+    cwd: "packages/data-tables-handler",
+    // tsx watch recompiles and restarts the dev server. CI starts it once, without watch.
+    command: "npm run dev",
+    ciCommand: "npx --yes tsx@4.19.3 server.ts",
+    ready: "http-get://127.0.0.1:3006",
+    profiles: ["core"],
+  },
+  {
+    name: "spatial-uploads",
+    cwd: "packages/spatial-uploads-handler",
+    command: "npm run dev",
+    ciCommand: "npx --yes tsx@4.19.3 server.ts",
+    ready: "http-get://127.0.0.1:3005",
+    profiles: ["core"],
+  },
+  {
+    name: "subdivision",
+    cwd: ".",
+    // Dev rebuilds into the running container. CI builds once and waits until the port is open.
+    command:
+      "docker compose --profile workers up -d --wait subdivision && docker compose --profile workers watch --no-up subdivision",
+    ciCommand: "docker compose --profile workers up -d --wait subdivision",
+    ready: "tcp:127.0.0.1:9000",
+    profiles: ["core"],
+  },
+];
+
+export const profileNames = ["core", "data"];
+
+export function servicesInProfile(profile) {
+  return services.filter((service) => {
+    if (profile === "core") {
+      return service.profiles.includes("core");
+    }
+    if (profile === "data") {
+      return service.profiles.some((name) => name === "core" || name === "data");
+    }
+    return false;
+  });
+}

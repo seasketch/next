@@ -33,7 +33,7 @@ Cannot reach Postgres.
     cd packages/infra && npm run shell
     cd /usr/src/app/next/packages/api && npm run tiles-acl:backfill
 
-  Local: start the DB (npm run db:start) so docker container seasketch_db is up.
+  Local: start the DB (npm run dev:db from the repo root) so docker container seasketch_db is up.
 EOF
   exit 1
 fi
