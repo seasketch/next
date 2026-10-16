@@ -6,6 +6,9 @@ export function makeFetchRangeFn(
   maxCacheSizeBytes: number = 1000 * 1024 * 128
 ) {
   const pool = new Pool(rootUrl, {
+    // Queue extra range reads instead of opening a socket for each one.
+    // An unbounded pool gets reset by CloudFront when many tests fetch at once.
+    connections: 8,
     // 10 second timeout for body
     bodyTimeout: 10 * 1000,
   });
