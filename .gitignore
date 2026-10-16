@@ -25,5 +25,9 @@ packages/e2e/junit.xml
 packages/e2e/blob-report/
 packages/api/snapshots/*.dump
 packages/api/snapshots/*.manifest.json
+# Third-party agent skills installed on this machine. Repo skills in
+# .agents/skills/ stay tracked.
+.agents/skills/playwright-best-practices/
+skills-lock.json
 !packages/overlay-engine/dist/*
 !packages/fgb-source/dist/*
