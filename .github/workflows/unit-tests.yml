@@ -29,7 +29,7 @@ jobs:
           cache: npm
           cache-dependency-path: "**/package-lock.json"
       - name: Install dependencies
-        run: npx lerna@6.6.2 bootstrap --ci --scope='@seasketch/api' --include-dependencies
+        run: bash scripts/ci-bootstrap.sh --scope=@seasketch/api --include-dependencies
       - name: Build API
         working-directory: ./packages/api
         run: npm run build
@@ -75,7 +75,7 @@ jobs:
           cache: npm
           cache-dependency-path: "**/package-lock.json"
       - name: Install dependencies
-        run: npx lerna@6.6.2 bootstrap --ci --scope='@seasketch/api' --scope=client --include-dependencies
+        run: bash scripts/ci-bootstrap.sh --scope=@seasketch/api --scope=client --include-dependencies
       - name: Build API
         working-directory: ./packages/api
         run: npm run build
@@ -113,7 +113,7 @@ jobs:
           cache: npm
           cache-dependency-path: "**/package-lock.json"
       - name: Install dependencies
-        run: npx lerna@6.6.2 bootstrap --ci --scope=client --include-dependencies
+        run: bash scripts/ci-bootstrap.sh --scope=client --include-dependencies
       - name: Verify src/index.css matches css:build
         working-directory: ./packages/client
         run: npm run css:check
@@ -129,7 +129,7 @@ jobs:
           cache: npm
           cache-dependency-path: "**/package-lock.json"
       - name: Install dependencies
-        run: npx lerna@6.6.2 bootstrap --ci --scope=client --include-dependencies
+        run: bash scripts/ci-bootstrap.sh --scope=client --include-dependencies
       - name: Test client
         working-directory: ./packages/client
         env:
@@ -157,7 +157,7 @@ jobs:
           cache: npm
           cache-dependency-path: "**/package-lock.json"
       - name: Install dependencies
-        run: npx lerna@6.6.2 bootstrap --ci --scope=overlay-engine --include-dependencies
+        run: bash scripts/ci-bootstrap.sh --scope=overlay-engine --include-dependencies
       - name: Run tests
         working-directory: ./packages/overlay-engine
         run: npx vitest run --reporter=default --reporter=junit --outputFile=junit.xml
@@ -183,7 +183,7 @@ jobs:
       - id: short_sha
         run: echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
       - name: Install dependencies
-        run: npx lerna@6.6.2 bootstrap --ci --scope=client --include-dependencies
+        run: bash scripts/ci-bootstrap.sh --scope=client --include-dependencies
       - name: Build client
         working-directory: ./packages/client
         env:
@@ -214,7 +214,10 @@ jobs:
           cache: npm
           cache-dependency-path: "**/package-lock.json"
       - name: Install dependencies
-        run: npm run bootstrap
+        run: |
+          bash scripts/ci-bootstrap.sh --scope=@seasketch/api --scope=client --scope=spatial-uploads-handler --include-dependencies
+          npm ci --prefix packages/data-tables-handler
+          npm ci --prefix packages/e2e
       - name: Install Playwright browser
         working-directory: ./packages/e2e
         run: npx playwright install --with-deps chromium
