@@ -3,8 +3,10 @@
 // Containers: docker compose up -d --wait. Host processes: concurrently.
 // Does not set E2E_TEST_MODE or E2E_TEST_PASSPHRASE. Playwright passes those.
 import { spawn } from "node:child_process";
+import { writeSync } from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
+import { Writable } from "node:stream";
 import { fileURLToPath } from "node:url";
 import concurrently from "concurrently";
 import { createStream } from "rotating-file-stream";
@@ -111,6 +113,24 @@ function startCompose(profile) {
   });
 }
 
+// Playwright's webServer shows stderr immediately and hides stdout unless asked.
+// process.exit() also drops buffered pipe writes, which is how CI lost the
+// reason a --ci process quit. Write the supervisor log with writeSync.
+function report(message) {
+  writeSync(2, message.endsWith("\n") ? message : `${message}\n`);
+}
+
+const stderrSync = new Writable({
+  write(chunk, _encoding, callback) {
+    try {
+      writeSync(2, chunk);
+      callback();
+    } catch (error) {
+      callback(error instanceof Error ? error : new Error(String(error)));
+    }
+  },
+});
+
 function logStream(name) {
   return createStream(
     (time, index) => {
@@ -162,14 +182,19 @@ if (only) {
     await mkdir(logsDir, { recursive: true });
     await startCompose(profile);
   } catch (error) {
-    console.error(error instanceof Error ? error.message : error);
+    report(error instanceof Error ? error.message : String(error));
     process.exit(1);
+  }
+
+  for (const service of selected) {
+    report(`[${service.name}] ${service.command}`);
   }
 
   const { result, commands } = concurrently(selected, {
     prefix: "name",
     prefixColors: "auto",
     killOthersOn: ["failure"],
+    outputStream: stderrSync,
   });
 
   const streams = commands.map((command) => {
@@ -190,5 +215,6 @@ if (only) {
     exitCode = 1;
   }
   await Promise.all(streams.map((stream) => new Promise((resolve) => stream.end(resolve))));
+  report(`supervisor exiting ${exitCode}`);
   process.exit(exitCode);
 }
