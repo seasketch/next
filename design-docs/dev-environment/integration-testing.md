@@ -75,6 +75,8 @@ There is no shared developer password. Fixture owners in the snapshot are synthe
 
 **Fixtures and isolation.** Fixture projects (`demo-samoa`, plus a few added as journeys need them) are for people and read-only smoke. A journey that mutates creates its own uniquely slugged project and hard-deletes it afterward in SQL, because the GraphQL delete is soft and keeps the slug. Tests never write to `superuser` or `demo-*`. Isolation by project lets journeys run in parallel.
 
+**Database.** `npm run e2e` restores the golden snapshot into `seasketch_e2e` on every run, then starts its own API and client. It does not attach to a dev server already listening, and it does not write to the `seasketch` database a person is using. CI uses that same command.
+
 **Refresh.** A maintainer rebuilds and pushes the snapshot after a batch of migrations, and the previous dump stays archived by date and migration. Pull-request jobs and agents may pull but never push. New shared fixture data is its own snapshot-refresh change, not a side effect of a feature pull request.
 
 ## What runs when

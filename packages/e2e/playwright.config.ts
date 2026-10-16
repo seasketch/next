@@ -10,11 +10,11 @@ const repoRoot = path.resolve(__dirname, "../..");
  * `--ui` opens Playwright's interactive runner: pick a test, watch it, and
  * step back through actions, the DOM, console, and network.
  *
- * webServer runs `npm run dev -- --ci`, which does not enable test mode.
+ * webServer runs `npm run dev -- --ci --profile e2e`. That profile is the API
+ * and client on ports 13857 and 13000, with DATABASE_URL pointed at
+ * seasketch_e2e. `npm run e2e` restores that database first. The dev server
+ * on port 3000 is never reused.
  * E2E_TEST_MODE and the passphrase come from e2e.env, passed here.
- * Locally, a server that is already listening is reused. That API must
- * already be in test mode, or /e2e/token will 404. A normal `npm run dev`
- * is not a test-mode API. CI always starts the stack.
  */
 const ci = !!process.env.CI;
 
@@ -67,7 +67,7 @@ export default defineConfig({
       ]
     : [["list"], ["html", { open: "never" }]],
   use: {
-    baseURL: process.env.E2E_CLIENT_URL || "http://localhost:3000",
+    baseURL: process.env.E2E_CLIENT_URL || "http://localhost:13000",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
     video: ci ? "retain-on-failure" : "off",
@@ -79,11 +79,11 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: `npm run dev -- --ci --profile ${process.env.E2E_PROFILE || "core"}`,
+    command: `npm run dev -- --ci --profile ${process.env.E2E_PROFILE || "e2e"}`,
     cwd: repoRoot,
-    // In --ci the client starts last, after the API and the worker ports answer.
-    url: "http://127.0.0.1:3000",
-    reuseExistingServer: !ci,
+    // The e2e client starts after the e2e API answers on 13857.
+    url: "http://127.0.0.1:13000",
+    reuseExistingServer: false,
     // Covers the subdivision image build plus the client dev server.
     timeout: ci ? 900_000 : 180_000,
     // Show both streams. The default hides stdout, so a supervisor that logs

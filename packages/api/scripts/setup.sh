@@ -99,10 +99,16 @@ restore_snapshot() {
       "$@" \
       < "$DUMP_PATH"
   }
-  pg_restore_section --section=pre-data
-  SEASKETCH_DB_NAME="$DB_NAME" SEASKETCH_DB_CONTAINER="$CONTAINER_NAME" bash "$SCRIPT_DIR/db-fresh-setup.sh"
-  pg_restore_section --section=data --disable-triggers
-  pg_restore_section --section=post-data
+  pg_restore_section --section=pre-data || return 1
+  SEASKETCH_DB_NAME="$DB_NAME" SEASKETCH_DB_CONTAINER="$CONTAINER_NAME" bash "$SCRIPT_DIR/db-fresh-setup.sh" || return 1
+  # pg_restore loads rows with an empty search_path. This function calls itself
+  # by an unqualified name, and the published dump was built before it had its
+  # own search_path. Set it before the posts COPY evaluates the generated column.
+  psql_exec -d "$DB_NAME" -c \
+    "ALTER FUNCTION public.collect_attachment_ids_from_prosemirror_body(jsonb, text) SET search_path = public, pg_catalog;" \
+    || return 1
+  pg_restore_section --section=data --disable-triggers || return 1
+  pg_restore_section --section=post-data || return 1
 }
 
 replace_signing_keys() {
@@ -214,7 +220,7 @@ queue_geography_size_metrics
 # ids, and create_project then inserts a creator_id that no longer exists.
 echo "Clearing cached Auth0 user ids..."
 docker compose -f "$ROOT_DIR/compose.yaml" exec -T redis \
-  redis-cli -a ucsb --no-auth-warning EVAL \
+  redis-cli -n "${SEASKETCH_REDIS_DB:-0}" -a ucsb --no-auth-warning EVAL \
   "local keys = redis.call('KEYS', 'userid-by-sub:*'); for _, key in ipairs(keys) do redis.call('DEL', key) end; return #keys" \
   0 >/dev/null
 

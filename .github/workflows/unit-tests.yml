@@ -200,12 +200,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      DATABASE_URL: postgres://graphile:password@localhost:54321/seasketch
-      ADMIN_DATABASE_URL: postgres://postgres:password@localhost:54321/seasketch
+      DATABASE_URL: postgres://graphile:password@localhost:54321/seasketch_e2e
+      ADMIN_DATABASE_URL: postgres://postgres:password@localhost:54321/seasketch_e2e
       # Matches the password in compose.yaml.
       REDIS_PASSWORD: ucsb
+      REDIS_DB: "1"
       REACT_APP_MAPBOX_ACCESS_TOKEN: ${{ secrets.REACT_APP_MAPBOX_ACCESS_TOKEN }}
-      REACT_APP_GRAPHQL_ENDPOINT: http://localhost:3857/graphql
+      REACT_APP_GRAPHQL_ENDPOINT: http://localhost:13857/graphql
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -228,8 +229,6 @@ jobs:
         run: |
           cp packages/api/.env.template packages/api/.env
           cp packages/client/.env.template packages/client/.env
-      - name: Restore golden snapshot
-        run: npm run setup
       - name: Run smoke tests
         id: smoke
         run: npm run e2e

@@ -10,10 +10,10 @@ import { Writable } from "node:stream";
 import { fileURLToPath } from "node:url";
 import concurrently from "concurrently";
 import { createStream } from "rotating-file-stream";
-import { profileNames, services, servicesInProfile } from "./dev.config.mjs";
+import { profileNames, readyUrl, services, servicesInProfile } from "./dev.config.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const logsDir = path.join(root, ".logs");
+let logsDir = path.join(root, ".logs");
 const waitOnBin = path.join(root, "node_modules", ".bin", "wait-on");
 
 function usage() {
@@ -60,25 +60,42 @@ function serviceByName(name) {
   return services.find((service) => service.name === name);
 }
 
-function commandFor(service, ci) {
+function envFor(service, profile) {
+  return {
+    ...process.env,
+    ...service.env,
+    ...(profile === "e2e" && service.e2eEnv ? service.e2eEnv : {}),
+  };
+}
+
+function commandFor(service, ci, profile) {
   const command = ci ? service.ciCommand : service.command;
   if (!command || !ci || !service.dependsOn?.length) {
     return command;
   }
-  const urls = service.dependsOn.map((name) => {
+  const selected = new Set(servicesInProfile(profile).map((item) => item.name));
+  const urls = [];
+  for (const name of service.dependsOn) {
+    if (!selected.has(name)) {
+      continue;
+    }
     const dependency = serviceByName(name);
-    if (!dependency?.ready) {
+    const ready = dependency ? readyUrl(dependency, profile) : undefined;
+    if (!ready) {
       throw new Error(`${service.name} depends on ${name}, which has no ready URL`);
     }
-    return dependency.ready;
-  });
+    urls.push(ready);
+  }
+  if (urls.length === 0) {
+    return command;
+  }
   return `"${waitOnBin}" ${urls.join(" ")} && ${command}`;
 }
 
 function runOne(service) {
   const child = spawn(service.command, {
     cwd: path.join(root, service.cwd),
-    env: { ...process.env, ...service.env },
+    env: envFor(service, profile),
     stdio: "inherit",
     shell: true,
   });
@@ -144,6 +161,9 @@ function logStream(name) {
 }
 
 const { profile, ci, only } = parseArgs(process.argv.slice(2));
+if (profile === "e2e") {
+  logsDir = path.join(root, ".logs", "e2e");
+}
 
 if (only) {
   const service = serviceByName(only);
@@ -158,7 +178,7 @@ if (only) {
   runOne(service);
 } else {
   const selected = servicesInProfile(profile).flatMap((service) => {
-    const command = commandFor(service, ci);
+    const command = commandFor(service, ci, profile);
     if (!command) {
       return [];
     }
@@ -167,7 +187,7 @@ if (only) {
         command,
         name: service.name,
         cwd: path.join(root, service.cwd),
-        env: { ...process.env, ...service.env },
+        env: envFor(service, profile),
       },
     ];
   });

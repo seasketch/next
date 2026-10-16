@@ -1,14 +1,11 @@
 import { makeWrapResolversPlugin } from "postgraphile";
 import { RateLimiterRedis } from "rate-limiter-flexible";
 import redis, { RedisClient } from "redis";
+import { redisClientOptions } from "../redisClient";
 
 let limiter: RateLimiterRedis;
 if (process.env.NODE_ENV !== "test") {
-  const redisClient = redis.createClient({
-    connect_timeout: 5000,
-    host: process.env.REDIS_HOST || "127.0.0.1",
-    password: process.env.REDIS_PASSWORD,
-  });
+  const redisClient = redis.createClient(redisClientOptions());
 
   // It is recommended to process Redis errors and setup some reconnection strategy
   redisClient.on("error", (err) => {});

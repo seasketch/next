@@ -6,6 +6,17 @@
 // ciCommand: `--ci` command. Omit the service from `--ci` when undefined.
 // dependsOn / ready: host ordering in `--ci` only. Dev mode starts everything at once.
 // profiles: `core` is the default. `data` includes core plus its own entries.
+// `e2e` is the API and client only, on their own ports and database.
+
+export const e2eStack = {
+  database: "seasketch_e2e",
+  apiPort: 13857,
+  clientPort: 13000,
+  redisDb: 1,
+  databaseUrl(user) {
+    return `postgres://${user}:password@localhost:54321/${this.database}`;
+  },
+};
 
 export const services = [
   {
@@ -15,6 +26,15 @@ export const services = [
     ciCommand: "npm start",
     // npm start has no NODE_ENV. Test mode, when Playwright sets it, requires development or test.
     env: { NODE_ENV: "development" },
+    e2eEnv: {
+      PORT: String(e2eStack.apiPort),
+      DATABASE_URL: e2eStack.databaseUrl("graphile"),
+      ADMIN_DATABASE_URL: e2eStack.databaseUrl("postgres"),
+      CLIENT_DOMAIN: `localhost:${e2eStack.clientPort}`,
+      REDIS_DB: String(e2eStack.redisDb),
+      // Do not call the dev machine's data-tables handler.
+      DATA_TABLES_LAMBDA_DEV_HANDLER: "http://127.0.0.1:1",
+    },
     ready: "http-get://127.0.0.1:3857/graphiql",
     profiles: ["core"],
   },
@@ -36,6 +56,10 @@ export const services = [
     command: "npm start",
     ciCommand: "npm start",
     env: { BROWSER: "none", SKIP_PREFLIGHT_CHECK: "true" },
+    e2eEnv: {
+      PORT: String(e2eStack.clientPort),
+      REACT_APP_GRAPHQL_ENDPOINT: `http://localhost:${e2eStack.apiPort}/graphql`,
+    },
     ready: "http-get://127.0.0.1:3000",
     // In --ci the client is what Playwright waits on, so this list is the start gate.
     dependsOn: ["api", "data-tables", "spatial-uploads", "subdivision"],
@@ -87,10 +111,23 @@ export const services = [
   },
 ];
 
-export const profileNames = ["core", "data"];
+export const profileNames = ["core", "data", "e2e"];
+
+export function readyUrl(service, profile) {
+  if (profile === "e2e" && service.name === "api") {
+    return `http-get://127.0.0.1:${e2eStack.apiPort}/graphiql`;
+  }
+  if (profile === "e2e" && service.name === "client") {
+    return `http-get://127.0.0.1:${e2eStack.clientPort}`;
+  }
+  return service.ready;
+}
 
 export function servicesInProfile(profile) {
   return services.filter((service) => {
+    if (profile === "e2e") {
+      return service.name === "api" || service.name === "client";
+    }
     if (profile === "core") {
       return service.profiles.includes("core");
     }
