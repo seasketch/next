@@ -20,9 +20,11 @@ import ReactNodeViewPortalsProvider from "./ReactNodeView/PortalProvider";
 import TopicTitleInput from "./TopicTitleInput";
 import { nameForProfile } from "./TopicListItem";
 import {
+  TOPIC_TITLE_MAX_LENGTH,
   forumMessageIsEmpty,
   isMissingTopicTitleError,
   isTopicTitleConstraintError,
+  topicTitleCharLength,
   topicTitleProblem,
 } from "./topicTitle";
 
@@ -130,10 +132,27 @@ export default function NewTopicForm({
     [setContent]
   );
 
-  const titleTooLong =
-    topicTitleProblem(title) === "tooLong" || serverRejectedTitle;
+  const titleProblem = topicTitleProblem(title);
+  const titleTooLong = titleProblem === "tooLong" || serverRejectedTitle;
+  const titleMissing = attemptedSubmit && titleProblem === "required";
   const bodyMissing = attemptedSubmit && forumMessageIsEmpty(content);
   const profileName = nameForProfile(profile);
+  let titleMessage: string | null = null;
+  if (titleProblem === "tooLong") {
+    titleMessage = t(
+      "Titles must be {{max}} characters or fewer. This title is {{count}} characters.",
+      {
+        max: TOPIC_TITLE_MAX_LENGTH,
+        count: topicTitleCharLength(title),
+      }
+    );
+  } else if (serverRejectedTitle) {
+    titleMessage = t("Titles must be {{max}} characters or fewer.", {
+      max: TOPIC_TITLE_MAX_LENGTH,
+    });
+  } else if (titleMissing) {
+    titleMessage = t("Enter a title.");
+  }
 
   const onPost = useCallback(async () => {
     setAttemptedSubmit(true);
@@ -155,8 +174,8 @@ export default function NewTopicForm({
       }
     }
     await createTopic().catch(() => {
-      // Unexpected failures are shown by onError. Title-length failures stay
-      // next to the title field.
+      // Unexpected failures are shown by onError. Title failures stay in the
+      // message under the editor, so the title row does not change height.
     });
   }, [
     title,
@@ -194,8 +213,7 @@ export default function NewTopicForm({
             <TopicTitleInput
               autoFocus={!content}
               title={title}
-              showRequired={attemptedSubmit}
-              serverRejected={serverRejectedTitle}
+              invalid={Boolean(titleMessage)}
               onChange={(value) => {
                 setServerRejectedTitle(false);
                 setTitle(value);
@@ -214,10 +232,23 @@ export default function NewTopicForm({
           />
         </ReactNodeViewPortalsProvider>
       </div>
-      {bodyMissing && (
-        <p role="alert" className="px-4 pt-3 text-sm text-red-600">
-          {t("Write a message before posting.")}
-        </p>
+      {(titleMessage || bodyMissing) && (
+        <div className="space-y-1 px-4 pt-3">
+          {titleMessage && (
+            <p
+              id="new-topic-title-feedback"
+              role="alert"
+              className="text-sm text-red-600"
+            >
+              {titleMessage}
+            </p>
+          )}
+          {bodyMissing && (
+            <p role="alert" className="text-sm text-red-600">
+              {t("Write a message before posting.")}
+            </p>
+          )}
+        </div>
       )}
       <div className="flex justify-end items-center p-2 py-3 space-x-2">
         <Button label={t("Cancel")} onClick={onCancel} />

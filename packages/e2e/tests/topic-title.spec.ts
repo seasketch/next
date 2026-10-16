@@ -13,17 +13,15 @@ test.describe("new forum topic title", () => {
 
     const title = page.getByRole("textbox", { name: "Topic title" });
     await expect(title).toBeVisible();
-    await expect(page.getByTitle("0 of 80 characters")).toHaveText("0/80");
     await expect(page.getByRole("alert")).toHaveCount(0);
+    await expect(page.getByText(/\/80/)).toHaveCount(0);
 
     await title.fill("Coastal update");
-    await expect(page.getByTitle("14 of 80 characters")).toHaveText("14/80");
     await expect(page.getByRole("alert")).toHaveCount(0);
     await expect(visibleButton(page, "Post New Topic")).toBeEnabled();
 
     const emojiLimit = "👍".repeat(80);
     await title.fill(emojiLimit);
-    await expect(page.getByTitle("80 of 80 characters")).toHaveText("80/80");
     await expect(page.getByRole("alert")).toHaveCount(0);
     await expect(visibleButton(page, "Post New Topic")).toBeEnabled();
 
@@ -31,7 +29,7 @@ test.describe("new forum topic title", () => {
     await expect(page.getByRole("alert")).toHaveText(
       "Titles must be 80 characters or fewer. This title is 81 characters."
     );
-    await expect(page.getByTitle("81 of 80 characters")).toHaveText("81/80");
+    await expect(page.getByText(/\/80/)).toHaveCount(0);
     await expect(visibleButton(page, "Post New Topic")).toBeDisabled();
 
     await title.fill("");
