@@ -133,6 +133,7 @@ export default function NewTopicForm({
   const titleTooLong =
     topicTitleProblem(title) === "tooLong" || serverRejectedTitle;
   const bodyMissing = attemptedSubmit && forumMessageIsEmpty(content);
+  const profileName = nameForProfile(profile);
 
   const onPost = useCallback(async () => {
     setAttemptedSubmit(true);
@@ -174,29 +175,33 @@ export default function NewTopicForm({
           mutationState.loading ? "opacity-70" : ""
         }`}
       >
-        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center border-b p-1 pt-2 px-2 pb-1.5">
+        <div className="flex items-center border-b p-1 pt-2 px-2 pb-1.5">
           <button
             onClick={openProfileModal}
-            className="row-start-1 row-span-2 ml-0.5 flex h-12 w-12 items-center self-center"
+            className="ml-0.5 flex h-12 w-12 flex-none items-center"
           >
             <ProfilePhoto {...profile} canonicalEmail="" />
           </button>
-          <button
-            onClick={openProfileModal}
-            className="col-start-2 pl-3 text-left text-sm hover:text-gray-600"
-          >
-            {nameForProfile(profile)}
-          </button>
-          <TopicTitleInput
-            autoFocus={!content}
-            title={title}
-            showRequired={attemptedSubmit}
-            serverRejected={serverRejectedTitle}
-            onChange={(value) => {
-              setServerRejectedTitle(false);
-              setTitle(value);
-            }}
-          />
+          <div className="min-w-0 flex-1">
+            {profileName && (
+              <button
+                onClick={openProfileModal}
+                className="block pl-3 text-left text-sm hover:text-gray-600"
+              >
+                {profileName}
+              </button>
+            )}
+            <TopicTitleInput
+              autoFocus={!content}
+              title={title}
+              showRequired={attemptedSubmit}
+              serverRejected={serverRejectedTitle}
+              onChange={(value) => {
+                setServerRejectedTitle(false);
+                setTitle(value);
+              }}
+            />
+          </div>
         </div>
         <ReactNodeViewPortalsProvider>
           <PostContentEditor

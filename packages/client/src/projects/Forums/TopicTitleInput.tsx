@@ -48,8 +48,8 @@ export default function TopicTitleInput({
   }
 
   return (
-    <div className="contents">
-      <div className="col-start-2 flex min-w-0 items-center">
+    <div>
+      <div className="flex min-w-0 items-center">
         <input
           id="new-topic-title"
           autoFocus={autoFocus}
@@ -87,7 +87,7 @@ export default function TopicTitleInput({
         <p
           id="new-topic-title-feedback"
           role="alert"
-          className="col-start-2 pl-3 pr-2 pb-1 text-sm text-red-600"
+          className="pl-3 pr-2 pb-1 text-sm text-red-600"
         >
           {message}
         </p>
