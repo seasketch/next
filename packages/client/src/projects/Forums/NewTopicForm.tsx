@@ -174,31 +174,29 @@ export default function NewTopicForm({
           mutationState.loading ? "opacity-70" : ""
         }`}
       >
-        <div className="flex border-b p-1 pt-2 px-2 pb-1.5 items-start">
+        <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center border-b p-1 pt-2 px-2 pb-1.5">
           <button
             onClick={openProfileModal}
-            className="ml-0.5 w-12 h-12 flex items-center"
+            className="row-start-1 row-span-2 ml-0.5 flex h-12 w-12 items-center self-center"
           >
             <ProfilePhoto {...profile} canonicalEmail="" />
           </button>
-          <div className="flex-1 min-w-0">
-            <button
-              onClick={openProfileModal}
-              className="text-sm pl-3 hover:text-gray-600"
-            >
-              {nameForProfile(profile)}
-            </button>
-            <TopicTitleInput
-              autoFocus={!content}
-              title={title}
-              showRequired={attemptedSubmit}
-              serverRejected={serverRejectedTitle}
-              onChange={(value) => {
-                setServerRejectedTitle(false);
-                setTitle(value);
-              }}
-            />
-          </div>
+          <button
+            onClick={openProfileModal}
+            className="col-start-2 pl-3 text-left text-sm hover:text-gray-600"
+          >
+            {nameForProfile(profile)}
+          </button>
+          <TopicTitleInput
+            autoFocus={!content}
+            title={title}
+            showRequired={attemptedSubmit}
+            serverRejected={serverRejectedTitle}
+            onChange={(value) => {
+              setServerRejectedTitle(false);
+              setTitle(value);
+            }}
+          />
         </div>
         <ReactNodeViewPortalsProvider>
           <PostContentEditor

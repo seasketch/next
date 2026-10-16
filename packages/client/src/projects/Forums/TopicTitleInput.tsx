@@ -48,41 +48,30 @@ export default function TopicTitleInput({
   }
 
   return (
-    <div>
-      <input
-        id="new-topic-title"
-        autoFocus={autoFocus}
-        className={`-mt-0.5 pb-1 pt-0 pl-3 border-none outline-none focus:outline-none active:outline-none focus:border-none focus:ring-0 w-full font-semibold text-lg ${
-          invalid ? "text-red-800" : ""
-        }`}
-        type="text"
-        value={title}
-        placeholder={t("New Topic Title...")}
-        aria-label={t("Topic title")}
-        aria-invalid={invalid}
-        aria-describedby={
-          message
-            ? "new-topic-title-feedback new-topic-title-count"
-            : "new-topic-title-count"
-        }
-        autoComplete="off"
-        onChange={(e) => onChange(e.target.value)}
-      />
-      <div className="flex items-start justify-between gap-3 pl-3 pr-2 pb-1">
-        <div className="min-w-0 flex-1">
-          {message && (
-            <p
-              id="new-topic-title-feedback"
-              role="alert"
-              className="text-sm text-red-600"
-            >
-              {message}
-            </p>
-          )}
-        </div>
+    <div className="contents">
+      <div className="col-start-2 flex min-w-0 items-center">
+        <input
+          id="new-topic-title"
+          autoFocus={autoFocus}
+          className={`-mt-0.5 min-w-0 flex-1 pb-1 pt-0 pl-3 border-none outline-none focus:outline-none active:outline-none focus:border-none focus:ring-0 font-semibold text-lg ${
+            invalid ? "text-red-800" : ""
+          }`}
+          type="text"
+          value={title}
+          placeholder={t("New Topic Title...")}
+          aria-label={t("Topic title")}
+          aria-invalid={invalid}
+          aria-describedby={
+            message
+              ? "new-topic-title-feedback new-topic-title-count"
+              : "new-topic-title-count"
+          }
+          autoComplete="off"
+          onChange={(e) => onChange(e.target.value)}
+        />
         <span
           id="new-topic-title-count"
-          className={`shrink-0 text-xs tabular-nums ${
+          className={`shrink-0 pr-1 text-xs tabular-nums ${
             tooLong ? "font-medium text-red-600" : "text-gray-400"
           }`}
           aria-label={countLabel}
@@ -94,6 +83,15 @@ export default function TopicTitleInput({
           })}
         </span>
       </div>
+      {message && (
+        <p
+          id="new-topic-title-feedback"
+          role="alert"
+          className="col-start-2 pl-3 pr-2 pb-1 text-sm text-red-600"
+        >
+          {message}
+        </p>
+      )}
     </div>
   );
 }
