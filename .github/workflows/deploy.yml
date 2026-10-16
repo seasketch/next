@@ -301,3 +301,29 @@ jobs:
           environment: production
           release: ${{ needs.detect_changes.outputs.build_label }}
           sourcemaps: packages/client/build/static/js/
+  production_probe:
+    name: Production probe
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    # After a deploy that succeeded, including an API-only deploy.
+    # A failed probe fails this workflow. It does not roll anything back.
+    # The worker posts to #ssn-notifications and emails support when the probe fails.
+    if: |
+      always() &&
+      needs.api_ready_gate.result != 'failure' &&
+      needs.deploy_client.result != 'failure' &&
+      needs.deploy_server.result != 'failure' &&
+      needs.run_migrations.result != 'failure' &&
+      (needs.deploy_client.result == 'success' || needs.deploy_server.result == 'success' || needs.run_migrations.result == 'success')
+    needs:
+      - api_ready_gate
+      - deploy_client
+      - deploy_server
+      - run_migrations
+    steps:
+      - name: Probe the live site
+        run: |
+          code=$(curl -sS -m 540 -o /tmp/probe.json -w "%{http_code}" -X POST \
+            https://production-probe.underbluewaters.workers.dev/run)
+          cat /tmp/probe.json
+          test "$code" = "200"

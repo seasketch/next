@@ -1,0 +1,18 @@
+{
+  "name": "@seasketch/production-probe",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "probe": "node src/cli.js",
+    "test": "node --test src/probe.test.js",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "@cloudflare/puppeteer": "^1.0.4",
+    "aws4fetch": "^1.0.20"
+  },
+  "devDependencies": {
+    "wrangler": "^4.46.0"
+  }
+}

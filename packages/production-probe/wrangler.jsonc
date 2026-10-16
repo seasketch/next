@@ -1,0 +1,39 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "production-probe",
+  "main": "src/worker.js",
+  "compatibility_date": "2026-10-16",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "browser": {
+    "binding": "BROWSER"
+  },
+  // Every 30 minutes. The public endpoint and this cron share a limit of 20 runs per hour.
+  "triggers": {
+    "crons": ["*/30 * * * *"]
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "PROBE_LIMIT",
+        "class_name": "ProbeRateLimit"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["ProbeRateLimit"]
+    }
+  ],
+  "vars": {
+    "SITE_ORIGIN": "https://www.seasketch.org",
+    "GRAPHQL_URL": "https://api.seasket.ch/graphql",
+    "SLACK_CHANNEL": "ssn-notifications",
+    "NOTIFY_ENABLED": "true"
+  }
+}

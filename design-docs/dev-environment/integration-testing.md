@@ -83,7 +83,7 @@ There is no shared developer password. Fixture owners in the snapshot are synthe
 
 **Phase 1** (Lerna and CRA unchanged): snapshot create, pull, and restore; `setup`; `E2E_TEST_MODE`; three `@smoke` journeys; a CI job that restores, migrates forward, builds the API, and runs `@smoke` with the other test jobs. Core profile only. The job is not a deploy gate.
 
-**Phase 2:** `@production` probe — homepage, the public fixture's production equivalent, API health — run by the deploy workflow after each deploy. Read-only, no test mode, no project creation. The existing Cypress production-monitoring spec is its starting inventory.
+**Phase 2:** `@production` probe — homepage, `www.seasketch.org/fiji`, the Blue Azores survey page (`/blueazores/surveys/23/0`), and public GraphQL for the project list, Fiji, and that survey. Read-only, no test mode, no project creation. The deploy workflow runs it after a successful production deploy and fails the workflow if it fails, without rolling back. The same check runs every 30 minutes from the `production-probe` Worker. Each check waits up to 60 seconds, and a failure is run once more before it posts to `#ssn-notifications` and emails `support@seasketch.org`.
 
 **Phase 3:** access and onboarding journeys ported from the Cypress onboarding specs — public project, admins-only project, invite-only project, invite acceptance, access request — tagged `@access` and run on push with the other tests. Cypress, its dependencies, and the `cypress` ESLint plugin are removed, and the repo README stops describing tests that do not run. Data-profile journeys only where an upload or tile is truly the point.
 
@@ -108,6 +108,7 @@ Journeys that use the map depend on a Mapbox development token. The anonymous sm
 - Project-per-journey isolation, hard-deleted in SQL.
 - *(October 2026)* Smoke and later journeys run on push. They are not required status checks. The push suite stays small on purpose. Breadth lives in unit tests and in `master` or nightly browser runs until phases 2 and 4 make those minutes cheap.
 - The production probe starts in phase 2, when production artifacts first change.
+- *(October 2026)* The probe is `packages/production-probe`. HTTP and GraphQL checks cover the homepage, Fiji, the Blue Azores survey page, the project list, and survey 23. The same run then opens those screens in one Browser Run session: Sign In on the homepage, the Fiji map's load event, and the survey's Welcome / Begin screen. The map check waits for the canvas, not for tiles. An hourly check was not enough, so the Worker cron runs every 30 minutes. Each check is allowed 60 seconds. A failure is run once more, after a short pause, before anyone is notified. Public runs and the cron share a limit of 20 per hour. A confirmed failure posts to `#ssn-notifications` and emails `support@seasketch.org` through SES. The deploy workflow calls the same Worker and fails the run if the probe fails. It does not roll back.
 - Local startup does not enable test mode. `npm run dev` and the other root start commands leave `E2E_TEST_MODE` unset, so a development machine uses Auth0 login and the API's ordinary mail path. Playwright passes `E2E_TEST_MODE` and `E2E_TEST_PASSPHRASE` from `packages/e2e/e2e.env` in the `webServer` environment when it starts `npm run dev -- --ci`. An API that is already running without those variables is not a test-mode API; `/e2e/token` stays unregistered.
 
 ## Open questions
@@ -120,4 +121,4 @@ Journeys that use the map depend on a Mapbox development token. The anonymous sm
 - **Phase 2:** Every production deploy is followed by a passing `@production` probe.
 - **Phase 3:** Access journeys run on push with the other tests. Cypress is gone. Multi-level admin work has API coverage for the permission matrix and browser coverage for the gates.
 - **Phase 4:** The same journeys pass on the new client build.
-- **Phase 5:** The probe runs on a schedule. The agent recipe is linked from `AGENTS.md`. A journey added in a pull request is reviewable from CI artifacts.
+- **Phase 5:** The schedule shipped with the probe in October 2026 and now runs every 30 minutes. The agent recipe is linked from `AGENTS.md`. A journey added in a pull request is reviewable from CI artifacts.
