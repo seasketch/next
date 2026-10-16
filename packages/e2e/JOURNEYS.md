@@ -24,6 +24,7 @@ Geography layers, their metadata, the Marine Protected Area sketch class, the de
 - They choose Join Project and land on the join page, which explains how their profile will be used and shows the profile form. Full Name is empty. Submitting in that state stays on the page, marks Full Name as Required, and does not join the project.
 - They enter a full name and submit again. They return to the same thread as a participant and see the reply form.
 - They type a reply, submit it, and see that reply in the thread.
+- `e2e|admin` opens Public Forum and chooses Post a topic. A normal title and a title of eighty emoji can be posted. Eighty-one characters, including eighty-one emoji, show “Titles must be 80 characters or fewer” under the editor and disable Post New Topic. The title row itself does not grow. Posting with no title asks for one. A title with no message asks for a message. A title and message within the limits create the topic.
 
 ## Overlay Layers
 
