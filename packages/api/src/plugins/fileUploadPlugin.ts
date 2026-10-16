@@ -9,6 +9,7 @@ import {
   PutObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getDirectCreatorUploadUrl } from "../cloudflareImages";
+import { redisClientOptions } from "../redisClient";
 import bytes from "bytes";
 
 const {
@@ -243,11 +244,7 @@ const FileUploadPlugin = makeExtendSchemaPlugin((build) => {
 
 let limiter: RateLimiterRedis;
 if (process.env.NODE_ENV !== "test") {
-  const redisClient = redis.createClient({
-    connect_timeout: 5000,
-    host: process.env.REDIS_HOST || "127.0.0.1",
-    password: process.env.REDIS_PASSWORD,
-  });
+  const redisClient = redis.createClient(redisClientOptions());
 
   // It is recommended to process Redis errors and setup some reconnection strategy
   redisClient.on("error", (err) => {});

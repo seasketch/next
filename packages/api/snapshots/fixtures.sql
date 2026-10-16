@@ -2,7 +2,9 @@
 -- never against a developer's existing database.
 --
 -- e2e|member and e2e|admin exist in no Auth0 tenant; automated tests sign in as
--- them later through E2E_TEST_MODE. Journeys must not write to demo-* or superuser.
+-- them later through E2E_TEST_MODE. e2e|member is not a participant of
+-- demo-samoa. The forum journey joins that project in the browser, then
+-- leaves its reply in place. The next run restores a fresh snapshot.
 --
 -- Replica role skips the user-insert trigger that would queue a verification
 -- email. These accounts are not people, and the snapshot should not contain jobs.
@@ -15,6 +17,16 @@ insert into users (sub, canonical_email) values
 on conflict (sub) do nothing;
 
 set session_replication_role = default;
+
+-- The replica insert above skips auto_create_profile. Join Project updates this
+-- row, and an update with no row matches nothing.
+insert into user_profiles (user_id)
+select u.id
+from users u
+where u.sub in ('e2e|member', 'e2e|admin')
+  and not exists (
+    select 1 from user_profiles up where up.user_id = u.id
+  );
 
 -- Fixture projects are created by e2e|admin through create_project, the same
 -- function the new-project form calls, so they get the creator's admin
@@ -110,3 +122,40 @@ where p.slug = 'e2e-private'
     select 1 from access_control_list_groups ag
     where ag.access_control_list_id = acl.id and ag.group_id = g.id
   );
+
+-- create_forum_acl makes a new forum public to read and to post. The topic
+-- is what an anonymous visitor opens. e2e|member joins before they can reply.
+insert into forums (project_id, name)
+select p.id, 'Public Forum'
+from projects p
+where p.slug = 'demo-samoa'
+  and not exists (
+    select 1 from forums f where f.project_id = p.id and f.name = 'Public Forum'
+  );
+
+insert into topics (title, forum_id, author_id)
+select 'Welcome to the project', f.id, u.id
+from forums f
+join projects p on p.id = f.project_id
+join users u on u.sub = 'e2e|admin'
+where p.slug = 'demo-samoa'
+  and f.name = 'Public Forum'
+  and not exists (
+    select 1 from topics t
+    where t.forum_id = f.id and t.title = 'Welcome to the project'
+  );
+
+insert into posts (topic_id, author_id, message_contents, html)
+select
+  t.id,
+  u.id,
+  '{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"This forum is open for anyone who has joined the project."}]}]}'::jsonb,
+  '<p>This forum is open for anyone who has joined the project.</p>'
+from topics t
+join forums f on f.id = t.forum_id
+join projects p on p.id = f.project_id
+join users u on u.sub = 'e2e|admin'
+where p.slug = 'demo-samoa'
+  and f.name = 'Public Forum'
+  and t.title = 'Welcome to the project'
+  and not exists (select 1 from posts po where po.topic_id = t.id);

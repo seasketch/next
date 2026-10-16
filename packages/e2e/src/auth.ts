@@ -38,7 +38,7 @@ export async function issueToken(
     });
   } catch (error) {
     throw new Error(
-      `Could not reach ${apiURL}/e2e/token. Start Postgres, then from packages/api run: set -a; source ../e2e/e2e.env; set +a; npm run dev`
+      `Could not reach ${apiURL}/e2e/token. Run npm run e2e from the repo root.`
     );
   }
   if (response.status() === 404) {

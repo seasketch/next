@@ -5611,6 +5611,7 @@ COMMENT ON FUNCTION public.clipping_layers_for_sketch_class(pid integer, scid in
 
 CREATE FUNCTION public.collect_attachment_ids_from_prosemirror_body(body jsonb, type text) RETURNS text[]
     LANGUAGE plpgsql IMMUTABLE
+    SET search_path TO 'public', 'pg_catalog'
     AS $$
     declare
       output text[];

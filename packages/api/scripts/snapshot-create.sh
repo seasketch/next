@@ -177,6 +177,27 @@ if [[ "$mpa" != "POLYGON,true,Exclusive Economic Zone,true" ]]; then
   exit 1
 fi
 
+public_forum="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT count(*) FROM forums f JOIN projects p ON p.id = f.project_id AND p.slug = 'demo-samoa' AND f.name = 'Public Forum' JOIN access_control_lists read_acl ON read_acl.forum_id_read = f.id AND read_acl.type = 'public' JOIN access_control_lists write_acl ON write_acl.forum_id_write = f.id AND write_acl.type = 'public' JOIN topics t ON t.forum_id = f.id AND t.title = 'Welcome to the project' JOIN posts po ON po.topic_id = t.id JOIN users author ON author.id = po.author_id AND author.sub = 'e2e|admin'")"
+if [[ "$public_forum" != "1" ]]; then
+  echo "demo-samoa should have one public forum, Welcome to the project, posted by e2e|admin. Found ${public_forum}." >&2
+  exit 1
+fi
+
+e2e_profiles="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT count(*) FROM user_profiles up JOIN users u ON u.id = up.user_id WHERE u.sub IN ('e2e|member', 'e2e|admin') AND up.fullname IS NULL")"
+if [[ "$e2e_profiles" != "2" ]]; then
+  echo "e2e|member and e2e|admin should each have an empty profile. Found ${e2e_profiles}." >&2
+  exit 1
+fi
+
+member_on_demo="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT count(*) FROM project_participants pp JOIN users u ON u.id = pp.user_id AND u.sub = 'e2e|member' JOIN projects p ON p.id = pp.project_id AND p.slug = 'demo-samoa'")"
+if [[ "$member_on_demo" != "0" ]]; then
+  echo "e2e|member should not be a participant of demo-samoa. The forum journey joins in the browser." >&2
+  exit 1
+fi
+
 # Jobs belong to the database that runs them. setup.sh queues what a fresh
 # install needs after restore.
 queued_jobs="$(psql_exec -d "$SOURCE_DB" -tAc "SELECT count(*) FROM graphile_worker.jobs")"
@@ -194,8 +215,10 @@ if [[ "$group_forum" != "1" ]]; then
 fi
 
 # pg_restore loads rows with an empty search_path. These generated-column
-# functions resolve their own names only when 000446 has set search_path.
-# CREATE OR REPLACE drops it, so a later migration that replaces one fails here.
+# functions resolve their own names only when they have search_path set.
+# 000446 covers the older ones. collect_attachment_ids_from_prosemirror_body
+# is set in current.sql. CREATE OR REPLACE drops the setting, so a later
+# migration that replaces one fails here.
 missing_search_path="$(psql_exec -d "$SOURCE_DB" -tAc \
   "SELECT count(*) FROM pg_proc p WHERE p.oid IN (
      'public.changelog_row_net_zero_changes(public.change_log_field_group,jsonb,jsonb,jsonb,jsonb)'::regprocedure,
@@ -203,7 +226,8 @@ missing_search_path="$(psql_exec -d "$SOURCE_DB" -tAc \
      'public.create_bbox(public.geometry,integer)'::regprocedure,
      'public.generate_export_id(integer,text,jsonb)'::regprocedure,
      'public.generate_label(integer,jsonb)'::regprocedure,
-     'public.toc_to_tsvector(text,text,jsonb,jsonb)'::regprocedure
+     'public.toc_to_tsvector(text,text,jsonb,jsonb)'::regprocedure,
+     'public.collect_attachment_ids_from_prosemirror_body(jsonb,text)'::regprocedure
    ) AND NOT (coalesce(p.proconfig, '{}') @> ARRAY['search_path=public, pg_catalog'])")"
 if [[ "$missing_search_path" != "0" ]]; then
   echo "${missing_search_path} generated-column function(s) are missing search_path. Restoring the dump would fail mid-COPY." >&2

@@ -82,11 +82,11 @@ export function auth0CacheScope(configuredScope: string): string {
 
 export const e2ePassphrase =
   process.env.E2E_TEST_PASSPHRASE || e2eEnv.E2E_TEST_PASSPHRASE;
-export const apiURL = process.env.E2E_API_URL || "http://localhost:3857";
-export const clientURL = process.env.E2E_CLIENT_URL || "http://localhost:3000";
+export const apiURL = process.env.E2E_API_URL || "http://localhost:13857";
+export const clientURL = process.env.E2E_CLIENT_URL || "http://localhost:13000";
 export const databaseURL =
   process.env.ADMIN_DATABASE_URL ||
-  "postgres://postgres:password@localhost:54321/seasketch";
+  "postgres://postgres:password@localhost:54321/seasketch_e2e";
 
 export const auth0 = {
   clientId: required(

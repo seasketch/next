@@ -35,14 +35,15 @@ From a clean checkout, with Docker running and secrets injected ([secrets](secre
 | `npm run setup` | Idempotent. Start Postgres and Redis, wait until Postgres accepts connections, pull the golden snapshot if the local copy is missing or older, restore it into an empty database, and apply migrations newer than the snapshot |
 | `npm run dev` | Start the **core** profile in the foreground: Postgres and Redis through Compose, then the API and client plus the watchers a person editing code needs (API TypeScript, Graphile Migrate, GraphQL codegen, Tailwind), and the data-tables, spatial-uploads, and subdivision workers. Restart a process when its code changes. Exit non-zero if any process in the profile dies |
 | `npm run dev -- --profile data` | Core plus the [data profile](local-services.md) |
-| `npm run dev -- --ci` | The same profile without watchers. The API runs from `dist`, so build first. The data-tables and spatial-uploads servers start once, and subdivision is built and started once. The client starts last, after those ports are open. This is what Playwright starts |
+| `npm run dev -- --ci` | The same profile without watchers. The API runs from `dist`, so build first. The data-tables and spatial-uploads servers start once, and subdivision is built and started once. The client starts last, after those ports are open |
+| `npm run e2e` | Restore the golden snapshot into `seasketch_e2e` (`setup --reset` for that database only), build the API, and run Playwright. The suite starts `--profile e2e`: API on port 13857 and client on port 13000, Redis logical database 1. It does not attach to `npm run dev` and does not write to the `seasketch` database |
 | `npm run dev -- --only <service>` | One service, raw output, no Compose and no log file. What each editor pane runs |
 | `npm run logs [-- <service>]` | Follow `.logs/<service>.log`, or every service |
 | `npm run status` | One line per service that has a readiness URL, then `docker compose ps` |
 
 `setup` never drops a database that already exists. A clean slate is a separate, explicit command (`npm run setup -- --reset`), because people and agents both need one and both need to avoid wiping a database they meant to keep.
 
-CI and cloud agents run `bootstrap` and `setup`, then start the same processes headlessly: Playwright's `webServer` runs `npm run dev -- --ci`, and an agent runs `dev` in a background shell and reads `.logs/`. They do not use VS Code tasks. Staging runs the same commands with a staging secret profile and its own database.
+CI and cloud agents run `bootstrap`, then `npm run e2e`, which restores `seasketch_e2e` and starts that profile headlessly. An agent runs `dev` in a background shell and reads `.logs/`. They do not use VS Code tasks. Staging runs the same commands with a staging secret profile and its own database.
 
 ## Process supervision
 
@@ -66,7 +67,7 @@ Every local service has a fixed port, assigned in `compose.yaml` or the service 
 
 ## Watchers and CI
 
-`npm run dev` includes watchers because a person is editing. CI does not need Graphile Migrate watch, Tailwind watch, or codegen watch. Existing CI jobs already fail on schema drift, stale generated hooks, and stale CSS. `--ci` is the same profile with those watchers left out, so a service added to a profile is picked up by CI without a workflow change. Playwright's `webServer` runs it as one command and waits on the client URL, which in `--ci` mode is started only after the API and the data-tables, spatial-uploads, and subdivision ports answer. A later data-profile job selects its services with `E2E_PROFILE`.
+`npm run dev` includes watchers because a person is editing. CI does not need Graphile Migrate watch, Tailwind watch, or codegen watch. Existing CI jobs already fail on schema drift, stale generated hooks, and stale CSS. `--ci` is the same profile with those watchers left out, so a service added to a profile is picked up by CI without a workflow change. Playwright's `webServer` runs `npm run dev -- --ci --profile e2e` and waits on the client at port 13000, which starts after the e2e API answers on port 13857. `npm run e2e` restores `seasketch_e2e` before that. A later data-profile job selects its services with `E2E_PROFILE`.
 
 Smoke runs against the built API and the client **production build**, so it exercises the bundle that will be deployed. Local `dev` keeps the dev server. If the CRA production build proves too brittle to be the phase 1 gate, CI may temporarily use the dev server; that exception is recorded in *Decisions* and removed by phase 4.
 
