@@ -46,6 +46,7 @@ import {
   rasterInteractionLabel,
 } from "./rasterLegendLabel";
 import { decodeDataTableRawValue } from "./dataTableMapStyle";
+import { formatLegendNumber } from "./legends/DataTableLegendBubble";
 
 const PopupNumberFormatter = Intl.NumberFormat(undefined, {
   maximumFractionDigits: 2,
@@ -1368,7 +1369,9 @@ export default class LayerInteractivityManager extends EventEmitter {
         dataTable: { ...meta, status: "empty" },
       };
     }
-    const formatted = PopupNumberFormatter.format(rawValue);
+    // Same formatter as the legend and "rows in calculation" modal so a
+    // small nonzero mean such as 0.00019 is not rounded to "0".
+    const formatted = formatLegendNumber(rawValue);
     return {
       ...position,
       messages: [`${columnLabel}: ${formatted}`],

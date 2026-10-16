@@ -17,7 +17,7 @@ import { formatLegendNumber } from "./legends/DataTableLegendBubble";
 const SPARKLINE_WIDTH = 232;
 const SPARKLINE_HEIGHT = 82;
 const SPARKLINE_MAX_POINTS = 120;
-const PLOT = { top: 8, right: 8, bottom: 18, left: 28 };
+const PLOT = { top: 8, right: 8, bottom: 18, left: 42 };
 const Y_TICK_TARGET = 3;
 const Y_TICK_MIN_GAP = 14;
 const X_TICK_MIN_GAP = 8;
