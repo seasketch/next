@@ -114,6 +114,13 @@ Load `.agents/skills/replicate-production-data/SKILL.md` when copying production
 
 From the repo root: `npm run bootstrap`, then `npm run setup`, then `npm run dev`. That starts Postgres, Redis, the API, the client, the watchers, and the data-tables, spatial-uploads, and subdivision workers. Do not start the old folder-open tasks. Do not set `E2E_TEST_MODE` unless the task is the e2e suite; `npm run dev` leaves it unset. Logs are `npm run logs -- <service>` or `.logs/<service>.log`. `npm run status` shows what is listening.
 
+## Cursor Cloud specific instructions
+
+- Node from `.nvmrc` (23) is at `/usr/local/bin`. Prepend `/usr/local/bin` to `PATH` before `node` or `npm`. The image also exposes Node 22 earlier on `PATH`.
+- Docker is nested. The daemon uses the `fuse-overlayfs` storage driver and legacy iptables, and it is not running until startup. Start it with `sudo service docker start` and confirm with `docker info`. If the socket rejects the user, `sudo chmod 666 /var/run/docker.sock`.
+- Startup runs `npm run setup` and then `npm run dev`. Postgres is `localhost:54321` (user `postgres`, password `password`, database `seasketch`). Redis is `localhost:6379` with password `ucsb`. The API is `http://127.0.0.1:3857/graphiql`. The client is `http://127.0.0.1:3000`.
+- Install copies `packages/api/.env.template` and `packages/client/.env.template` when those `.env` files are missing. Leave Mapbox and Auth0 secrets blank unless they are provided. Without `REACT_APP_MAPBOX_ACCESS_TOKEN`, Demo Samoa and its forums still open, and the basemap request fails in the service worker (`SyntaxError` / `networkFirst`). Do not point tile or Auth0 settings at production.
+
 ## Golden snapshot
 
 The golden snapshot is the database dev machines, CI, integration tests, and agents boot from.
