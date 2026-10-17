@@ -11,6 +11,7 @@ import * as logs from "aws-cdk-lib/aws-logs";
 import * as rds from "aws-cdk-lib/aws-rds";
 import * as path from "path";
 import { Construct } from "constructs";
+import { NODEJS_24_X } from "./nodeRuntime";
 
 export class DataHostDbUpdaterStack extends cdk.Stack {
   lambdaFunctionNameExport: "DataHostDbUpdaterLambda";
@@ -28,7 +29,7 @@ export class DataHostDbUpdaterStack extends cdk.Stack {
         path.join(__dirname, "../lambdas/dataHostDbUpdater")
       ),
       handler: "index.handler",
-      runtime: lambda.Runtime.NODEJS_14_X,
+      runtime: NODEJS_24_X,
       vpc: props.vpc,
       // should be more than ample
       timeout: cdk.Duration.seconds(30),

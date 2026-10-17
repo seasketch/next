@@ -6,7 +6,7 @@ import { Client } from "pg";
  * event of an error, that connection will be thrown out and subsequent calls
  * will create a new connection.
  *
- * In order for the AWS.RDS signer to operate from lambda you will need to grant
+ * In order for the RDS signer to operate from lambda you will need to grant
  * connect privileges using an IAM role. See:
  * https://github.com/seasketch/next/blob/master/packages/infra/lib/DataHostDbUpdaterStack.ts#L43
  *

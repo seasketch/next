@@ -18,6 +18,7 @@ import commonAllowedOrigins from "./commonAllowedOrigins";
 import { CustomResource } from "aws-cdk-lib";
 import * as cr from "aws-cdk-lib/custom-resources";
 import * as path from "path";
+import { NODEJS_24_X } from "./nodeRuntime";
 import { HostingStackResourceProperties } from "../lambdas/dataHostDbUpdater/index";
 import { Construct } from "constructs";
 
@@ -97,7 +98,7 @@ export class DataHostingStack extends cdk.Stack {
         path.join(__dirname, "../lambdas/dataHostingStackHook")
       ),
       handler: "index.handler",
-      runtime: lambda.Runtime.NODEJS_14_X,
+      runtime: NODEJS_24_X,
       // should be more than ample
       timeout: cdk.Duration.seconds(30),
       logGroup: new logs.LogGroup(this, "DataHostingStackLogs", {

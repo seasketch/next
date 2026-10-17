@@ -90,6 +90,7 @@ Workers, Lambda containers, and CDK's esbuild keep their build tools. "Consisten
 ## Decisions
 
 - Node LTS, workspaces, and the client bundler are three pull requests with separate deploys, in that order.
+- *(October 2026)* Node 24. It is the Active LTS that Lambda runs in production; Node 26 is still a Lambda public preview. No native dependency forced an older Node. Subdivision and the PII classifier stay on their Python images. Lambdas that imported `aws-sdk` from the Node 14 runtime now call SDK v3, which Node 24 includes. The phase 2a exit stays open until this runtime is deployed and the production probe passes.
 - npm workspaces. No Nx, Turborepo, or new Lerna. Task caching may be reconsidered after phase 4 if CI is still slow.
 - Internal dependencies are version ranges npm resolves to the local workspace, not `workspace:` or `file:`.
 - Production build paths move in phase 2b.
@@ -98,7 +99,6 @@ Workers, Lambda containers, and CDK's esbuild keep their build tools. "Consisten
 
 ## Open questions
 
-- *(Phase 2a)* Which Active LTS, and whether any native dependency forces an exception.
 - *(Phase 2b)* Whether a full root `npm ci` is fast enough for every job, or some jobs filter by workspace.
 - *(Phase 2b)* For each Docker Lambda, whether to build it from the workspace or keep it self-contained outside it.
 - *(Phase 2b)* What happens to each committed `dist/` tree.

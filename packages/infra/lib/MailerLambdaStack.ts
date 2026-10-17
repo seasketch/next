@@ -6,7 +6,6 @@
 import * as cdk from "aws-cdk-lib";
 import * as ec2 from "aws-cdk-lib/aws-ec2";
 import * as iam from "aws-cdk-lib/aws-iam";
-import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as rds from "aws-cdk-lib/aws-rds";
 import * as sns from "aws-cdk-lib/aws-sns";
@@ -14,6 +13,7 @@ import * as path from "path";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { SnsEventSource } from "aws-cdk-lib/aws-lambda-event-sources";
 import { Construct } from "constructs";
+import { NODEJS_24_X } from "./nodeRuntime";
 
 export class MailerLambdaStack extends cdk.Stack {
   constructor(
@@ -35,14 +35,15 @@ export class MailerLambdaStack extends cdk.Stack {
         functionName: "ProjectInviteStatusHandler",
         bundling: {
           minify: false,
-          externalModules: ["pg-native", "aws-sdk"],
-          target: "es2020",
+          externalModules: ["pg-native", "@aws-sdk/*"],
+          target: "node24",
+          esbuildVersion: "0.25.11",
           sourceMap: true,
           keepNames: true,
         },
         entry: path.join(__dirname, "../../email-status-handler/index.ts"),
         handler: "updateProjectInviteStatusHandler",
-        runtime: lambda.Runtime.NODEJS_14_X,
+        runtime: NODEJS_24_X,
         vpc: props.vpc,
         timeout: cdk.Duration.seconds(5),
         logGroup: new logs.LogGroup(this, "MailerLambdaLogs", {

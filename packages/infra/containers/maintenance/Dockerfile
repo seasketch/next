@@ -1,4 +1,4 @@
-FROM node:22-alpine
+FROM node:24-alpine
 ENV NODE_PATH=/usr/local/lib/node_modules
 RUN apk --no-cache add bash ca-certificates postgresql-client git openssh-client wget curl aws-cli redis \
   && update-ca-certificates
