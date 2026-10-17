@@ -10,6 +10,7 @@ import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import * as path from "path";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { Construct } from "constructs";
+import { NODEJS_24_X } from "./nodeRuntime";
 
 export class FragmentWorkerLambdaStack extends cdk.Stack {
   public readonly fn: NodejsFunction;
@@ -32,17 +33,17 @@ export class FragmentWorkerLambdaStack extends cdk.Stack {
       ),
       bundling: {
         minify: false,
-        target: "node22",
+        target: "node24",
         sourceMap: true,
         keepNames: true,
         platform: "node",
-        esbuildVersion: "0.21.5",
+        esbuildVersion: "0.25.11",
         externalModules: ["undici"],
         nodeModules: ["undici", "@aws-sdk/client-secrets-manager"],
       },
       entry: path.join(__dirname, "../../fragment-worker/src/index.ts"),
       handler: "lambdaHandler",
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: NODEJS_24_X,
       timeout: cdk.Duration.minutes(2),
       logGroup: new logs.LogGroup(this, "FragmentWorkerLogs", {
         retention: logs.RetentionDays.ONE_DAY,

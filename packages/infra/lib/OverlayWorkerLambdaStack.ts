@@ -11,6 +11,7 @@ import * as secretsmanager from "aws-cdk-lib/aws-secretsmanager";
 import * as path from "path";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
 import { Construct } from "constructs";
+import { NODEJS_24_X } from "./nodeRuntime";
 
 export class OverlayWorkerLambdaStack extends cdk.Stack {
   public readonly fn: NodejsFunction;
@@ -35,11 +36,11 @@ export class OverlayWorkerLambdaStack extends cdk.Stack {
       ),
       bundling: {
         minify: false,
-        target: "node22",
+        target: "node24",
         sourceMap: true,
         keepNames: true,
         platform: "node",
-        esbuildVersion: "0.21.5",
+        esbuildVersion: "0.25.11",
         externalModules: ["undici"],
         nodeModules: ["undici", "@aws-sdk/client-sqs", "@aws-sdk/client-secrets-manager"],
         commandHooks: {
@@ -61,7 +62,7 @@ export class OverlayWorkerLambdaStack extends cdk.Stack {
       },
       entry: path.join(__dirname, "../../overlay-worker/src/index.ts"),
       handler: "lambdaHandler",
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: NODEJS_24_X,
       timeout: cdk.Duration.minutes(15),
       logGroup: new logs.LogGroup(this, "OverlayWorkerLogs", {
         retention: logs.RetentionDays.ONE_MONTH,
