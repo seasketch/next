@@ -1,4 +1,4 @@
-FROM amazon/aws-lambda-nodejs:20 AS builder
+FROM amazon/aws-lambda-nodejs:24 AS builder
 WORKDIR /usr/app
 # geostats-types has no typescript dep; match spatial-uploads-handler
 RUN npm install -g typescript@5.5
@@ -23,7 +23,7 @@ COPY data-tables-handler/src ./src
 RUN rm -f src/*.test.ts
 RUN npm run build
 
-FROM amazon/aws-lambda-nodejs:20
+FROM amazon/aws-lambda-nodejs:24
 WORKDIR ${LAMBDA_TASK_ROOT}
 COPY --from=builder /usr/app/dist/* ./
 COPY --from=builder /usr/app/dist/src ./src

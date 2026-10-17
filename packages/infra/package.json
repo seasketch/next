@@ -16,11 +16,13 @@
     "synth-dev": "./synth-dev.sh"
   },
   "devDependencies": {
+    "@aws-sdk/client-cloudformation": "^3.1152.0",
     "@aws-sdk/client-cloudwatch": "^3.1151.0",
     "@aws-sdk/client-ecr": "^3.1151.0",
     "@aws-sdk/client-ecs": "^3.1151.0",
     "@aws-sdk/client-lambda": "^3.1151.0",
     "@aws-sdk/client-ssm": "^3.1151.0",
+    "@aws-sdk/rds-signer": "^3.1152.0",
     "@types/jest": "^29.5.12",
     "@types/node": "10.17.27",
     "@types/pg": "^8.10.9",

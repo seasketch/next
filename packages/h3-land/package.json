@@ -33,7 +33,7 @@
     "viewer": "python3 -m http.server 8765"
   },
   "engines": {
-    "node": ">=22.13"
+    "node": "24.x"
   },
   "dependencies": {
     "@types/geojson": "^7946.0.16",
