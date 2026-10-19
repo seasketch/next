@@ -72,12 +72,17 @@ export interface ParsedQuery {
   format: OutputFormat | null;
   groupBy: string[];
   /**
-   * Replicate columns. Code name: replicateBy.
-   * With the row's survey time (`_when_start`, `_when_end`) and `groupBy`,
-   * these identify one replicate. Empty means each row is already a summary.
+   * Extra replicate columns. Code name: replicateBy.
+   * A replicate is the row's survey time (`_when_start`, `_when_end`), the
+   * `groupBy` values, and these columns. Empty while `within` is set means
+   * the replicate is one survey at one groupBy value, usually the site.
+   * Empty without `within` means each row is already a summary.
    */
   replicateBy: string[];
-  /** Within a replicate. Code name: within. Required when `replicateBy` is set. */
+  /**
+   * Within a replicate. Code name: within.
+   * Its presence turns on replicate mode. Required when `replicateBy` is set.
+   */
   within: WithinAggregation | null;
   ops: Aggregation[];
   /** Value column. Code name: column. Required for every op except count. */
@@ -101,7 +106,7 @@ export interface ParsedQuery {
   effortMarkers: string[];
   /**
    * When a subject is missing from a replicate.
-   * Null outside replicate mode. Defaults to all_surveyed when replicateBy is set.
+   * Null outside replicate mode. Defaults to all_surveyed when within is set.
    */
   coverageMode: "all_surveyed" | "rows_only" | "coverage_file" | null;
   /** Join column. Required when `explain` is set, so the audit modal can name one feature. */
@@ -279,19 +284,20 @@ export function parseQueryParams(searchParams: URLSearchParams): ParsedQuery {
     .map((s) => s.trim())
     .filter((s) => s.length > 0);
   const withinRaw = searchParams.get("within");
+  const withinText = withinRaw?.trim() ?? "";
   let within: WithinAggregation | null = null;
-  if (replicateBy.length > 0) {
-    if (withinRaw === null || withinRaw.trim() === "") {
+  if (replicateBy.length > 0 || withinText !== "") {
+    if (withinText === "") {
       throw new QueryError(
         `replicateBy requires within (sum, mean, min, or max).`
       );
     }
-    if (!(WITHIN_AGGREGATIONS as readonly string[]).includes(withinRaw.trim())) {
+    if (!(WITHIN_AGGREGATIONS as readonly string[]).includes(withinText)) {
       throw new QueryError(
         `Invalid within "${withinRaw}". Use ${WITHIN_AGGREGATIONS.join(", ")}.`
       );
     }
-    within = withinRaw.trim() as WithinAggregation;
+    within = withinText as WithinAggregation;
     const overlap = replicateBy.filter((name) => groupBy.includes(name));
     if (overlap.length > 0) {
       throw new QueryError(
@@ -328,13 +334,9 @@ export function parseQueryParams(searchParams: URLSearchParams): ParsedQuery {
       `groupBy requires at least one aggregation via the "op" parameter.`
     );
   }
-  if (
-    contributionFilters.length > 0 &&
-    ops.length > 0 &&
-    replicateBy.length === 0
-  ) {
+  if (contributionFilters.length > 0 && ops.length > 0 && within === null) {
     throw new QueryError(
-      "v.* filters require replicateBy and within. Subject and detail filters are only applied inside replicates."
+      "v.* filters require within. Subject and detail filters are only applied inside replicates."
     );
   }
 
@@ -406,7 +408,7 @@ export function parseQueryParams(searchParams: URLSearchParams): ParsedQuery {
   const explain = searchParams.get("explain") === "1";
 
   const resolvedCoverage =
-    replicateBy.length === 0 ? null : coverageMode ?? "all_surveyed";
+    within === null ? null : coverageMode ?? "all_surveyed";
 
   if (explain) {
     if (!joinColumn) {

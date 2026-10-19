@@ -403,7 +403,7 @@ export async function executeQuery(options: {
     return await executeRawQuery(options, readColumn);
   }
 
-  if (query.replicateBy.length > 0 && query.within !== null) {
+  if (query.within !== null) {
     return await executeReplicateQuery(options, readColumn);
   }
 

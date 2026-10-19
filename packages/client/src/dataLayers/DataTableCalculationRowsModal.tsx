@@ -673,8 +673,9 @@ export default function DataTableCalculationRowsModal({
     const extra = (table.additionalReplicateIdentifiers || []).filter(
       (name): name is string => Boolean(name)
     );
-    if (extra.length === 0) return null;
-    return [WHEN_START_COLUMN, WHEN_END_COLUMN, table.joinColumn, ...extra];
+    const columns = [WHEN_START_COLUMN, WHEN_END_COLUMN];
+    if (table.joinColumn) columns.push(table.joinColumn);
+    return [...columns, ...extra];
   }, [table]);
 
   const audit = auditState.audit;

@@ -72,6 +72,31 @@ describe("replicate mode", () => {
     ).toThrow(QueryError);
   });
 
+  it("accepts a subject filter when the replicate is only the site and survey time", () => {
+    const query = parseQueryParams(
+      new URLSearchParams(
+        "op=mean&column=count&groupBy=site&within=sum&v.classcode=SPUL"
+      )
+    );
+    expect(query.replicateBy).toEqual([]);
+    expect(query.within).toBe("sum");
+    expect(query.contributionFilters).toHaveLength(1);
+    expect(query.coverageMode).toBe("all_surveyed");
+  });
+
+  it("collapses one survey at one site into a single replicate", async () => {
+    const result = await run(
+      fishFile,
+      fishMeta,
+      `op=mean,sum,count&column=count&groupBy=site&within=sum&${GULL_2024}`
+    );
+    expect(result.groups).toHaveLength(1);
+    const group = result.groups![0];
+    expect(group.count).toBe(1);
+    expect(group.sum).toBe(133);
+    expect(group.mean).toBe(133);
+  });
+
   it("rejects an unknown replicate column", async () => {
     await expect(
       run(

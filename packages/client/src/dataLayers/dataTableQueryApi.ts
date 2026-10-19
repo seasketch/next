@@ -159,7 +159,11 @@ export function withinOpForColumn(
   return "sum";
 }
 
-/** Query fields that turn on two-stage aggregation. Empty when the table is in simple mode or no extra identifier is set. */
+/**
+ * Query fields that turn on two-stage aggregation.
+ * `replicateBy` lists only extra identifier columns. With none, the replicate
+ * is still one survey time at one site, and `within` is what turns that on.
+ */
 export function replicateQueryFields(
   constraints: DataTableVisualizationConstraints,
   column: string | undefined
@@ -170,9 +174,6 @@ export function replicateQueryFields(
   const replicateBy = (constraints.additionalReplicateIdentifiers || []).filter(
     (name): name is string => Boolean(name)
   );
-  if (replicateBy.length === 0) {
-    return {};
-  }
   return {
     replicateBy,
     within: withinOpForColumn(
@@ -310,8 +311,9 @@ export interface DataTableQuerySettings {
   /** Group key column(s), e.g. the join column for a thematic map. */
   groupBy?: string | string[];
   /**
-   * Replicate columns. When set with {@link within}, rows are combined
-   * inside each replicate before `op`.
+   * Extra replicate columns. With {@link within}, rows are combined inside
+   * each replicate before `op`. An empty list still means replicate mode:
+   * one survey time at one groupBy value.
    */
   replicateBy?: string[];
   /** Within a replicate. */
@@ -824,8 +826,10 @@ export function buildDataTableQuerySearchParams(
     params.set("groupBy", groupBy);
   }
 
-  if (settings.replicateBy && settings.replicateBy.length > 0 && settings.within) {
-    params.set("replicateBy", settings.replicateBy.join(","));
+  if (settings.within) {
+    if (settings.replicateBy && settings.replicateBy.length > 0) {
+      params.set("replicateBy", settings.replicateBy.join(","));
+    }
     params.set("within", settings.within);
   }
 
@@ -1266,9 +1270,7 @@ export function deriveDataTableCalculationAuditQuery(
     : statsQuery.op || "mean";
   const ops: DataTableAggregation[] = [primary];
   if (primary !== "count") ops.push("count");
-  const replicateMode = Boolean(
-    statsQuery.replicateBy && statsQuery.replicateBy.length > 0 && statsQuery.within
-  );
+  const replicateMode = Boolean(statsQuery.within);
   return {
     op: ops,
     column: statsQuery.column,

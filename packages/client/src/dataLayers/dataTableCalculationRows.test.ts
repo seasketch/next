@@ -198,6 +198,24 @@ describe("deriveDataTableCalculationAuditQuery", () => {
     expect(params.get("when.start")).toBe("1704067200");
   });
 
+  it("explains site-and-time replicates when no extra identifier is set", () => {
+    const auditQuery = deriveDataTableCalculationAuditQuery(
+      {
+        ...statsQuery,
+        replicateBy: [],
+        within: "sum",
+        contributionFilters: [{ column: "size", op: "gte", value: "2" }],
+      },
+      "siteID",
+      "Campus Point_SMCA_Reference"
+    );
+    const params = buildDataTableQuerySearchParams(auditQuery);
+    expect(params.get("explain")).toBe("1");
+    expect(params.has("replicateBy")).toBe(false);
+    expect(params.get("within")).toBe("sum");
+    expect(params.get("v.size")).toBe("gte.2");
+  });
+
   it("does not request explain for a table where each row is a summary", () => {
     const auditQuery = deriveDataTableCalculationAuditQuery(
       { op: "mean", column: "count" },

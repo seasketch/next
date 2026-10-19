@@ -240,6 +240,36 @@ describe("replicate calculation mode", () => {
       )
     ).toBe(false);
   });
+
+  it("still aggregates per survey at a site when no extra identifier is set", () => {
+    const fields = replicateQueryFields(
+      {
+        calculationMode: "replicates",
+        additionalReplicateIdentifiers: [],
+        withinReplicateOperations: { count: "sum" },
+        subjectColumn: "classcode",
+        observationDetailColumns: ["size"],
+      },
+      "count"
+    );
+    const params = buildDataTableQuerySearchParams({
+      groupBy: "siteID",
+      op: "mean",
+      column: "count",
+      ...fields,
+      ...partitionDataTableFilters(
+        [{ column: "size", op: "gte", value: "2" }],
+        {
+          calculationMode: "replicates",
+          subjectColumn: "classcode",
+          observationDetailColumns: ["size"],
+        }
+      ),
+    });
+    expect(params.has("replicateBy")).toBe(false);
+    expect(params.get("within")).toBe("sum");
+    expect(params.get("v.size")).toBe("gte.2");
+  });
 });
 
 describe("partitionDataTableFilters", () => {
