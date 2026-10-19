@@ -5,7 +5,7 @@
     "node": "24.x"
   },
   "scripts": {
-    "bootstrap": "npm ci && npx lerna bootstrap --ci --scope=@seasketch/api --scope=client --scope=spatial-uploads-handler --include-dependencies && npm ci --prefix packages/data-tables-handler && npm ci --prefix packages/e2e",
+    "bootstrap": "npm ci && node scripts/lerna-bootstrap.mjs --ci --scope=@seasketch/api --scope=client --scope=spatial-uploads-handler --include-dependencies && npm ci --prefix packages/data-tables-handler && npm ci --prefix packages/e2e",
     "setup": "bash packages/api/scripts/setup.sh",
     "dev": "node scripts/dev.mjs",
     "dev:db": "docker compose up -d --wait",

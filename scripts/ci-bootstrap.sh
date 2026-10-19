@@ -6,7 +6,7 @@
 # that only helps a lockfile install. --force-local keeps npm ci and links
 # sibling packages instead of fetching them.
 #
-# Local `npm run bootstrap` is unchanged.
+# Local `npm run bootstrap` uses the same lerna wrapper.
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -19,5 +19,5 @@ export npm_config_update_notifier=false
 echo "root npm ci"
 npm ci
 echo "lerna bootstrap $*"
-npx --no-install lerna bootstrap --ci --force-local "$@"
+node scripts/lerna-bootstrap.mjs --ci --force-local "$@"
 echo "bootstrap done"
