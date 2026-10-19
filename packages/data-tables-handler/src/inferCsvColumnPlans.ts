@@ -147,6 +147,14 @@ export async function inferCsvColumnPlans(
   return plans;
 }
 
+/**
+ * Leading and trailing whitespace only. ASCII whitespace and Unicode space
+ * separators count. Spaces between words stay.
+ */
+function trimEdgeWhitespaceExpr(quotedColumn: string): string {
+  return `regexp_replace(${quotedColumn}, '^[\\s\\p{Z}\\x85]+|[\\s\\p{Z}\\x85]+$', '', 'g')`;
+}
+
 export function buildTypedSelectSql(plans: CsvColumnPlan[]): string {
   return plans
     .map((plan) => {
@@ -157,10 +165,11 @@ export function buildTypedSelectSql(plans: CsvColumnPlan[]): string {
           : quoted;
         return `TRY_CAST(${valueExpr} AS ${plan.duckDbType}) AS ${quoted}`;
       }
+      const trimmed = `NULLIF(${trimEdgeWhitespaceExpr(quoted)}, '')`;
       if (plan.nullifyNa) {
-        return `NULLIF(${quoted}, 'NA') AS ${quoted}`;
+        return `NULLIF(${trimmed}, 'NA') AS ${quoted}`;
       }
-      return `${quoted}`;
+      return `${trimmed} AS ${quoted}`;
     })
     .join(", ");
 }

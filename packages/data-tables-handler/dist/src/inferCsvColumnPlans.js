@@ -86,6 +86,13 @@ async function inferCsvColumnPlans(conn, csvPath, readCsvOptionsSuffix) {
     await (0, duckDb_1.run)(conn, "DROP TABLE IF EXISTS _csv_probe_na_null");
     return plans;
 }
+/**
+ * Leading and trailing whitespace only. ASCII whitespace and Unicode space
+ * separators count. Spaces between words stay.
+ */
+function trimEdgeWhitespaceExpr(quotedColumn) {
+    return `regexp_replace(${quotedColumn}, '^[\\s\\p{Z}\\x85]+|[\\s\\p{Z}\\x85]+$', '', 'g')`;
+}
 function buildTypedSelectSql(plans) {
     return plans
         .map((plan) => {
@@ -96,10 +103,11 @@ function buildTypedSelectSql(plans) {
                 : quoted;
             return `TRY_CAST(${valueExpr} AS ${plan.duckDbType}) AS ${quoted}`;
         }
+        const trimmed = `NULLIF(${trimEdgeWhitespaceExpr(quoted)}, '')`;
         if (plan.nullifyNa) {
-            return `NULLIF(${quoted}, 'NA') AS ${quoted}`;
+            return `NULLIF(${trimmed}, 'NA') AS ${quoted}`;
         }
-        return `${quoted}`;
+        return `${trimmed} AS ${quoted}`;
     })
         .join(", ");
 }
