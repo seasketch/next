@@ -2,6 +2,12 @@
  * DataHostingStacks enable direct GeoJSON data hosting from SeaSketch.
  * Stacks are created in different regions to support different geographies
  * with data close to their users.
+ *
+ * Frozen. SeaSketch no longer uploads to these stacks. Do not deploy them,
+ * do not destroy them, and do not change their runtime. Each stack's S3
+ * bucket and CloudFront distribution must keep serving the URL already
+ * stored in data_sources_buckets. Legacy objects are still loaded from
+ * those URLs.
  */
 import * as cdk from "aws-cdk-lib";
 import * as ec2 from "aws-cdk-lib/aws-ec2";

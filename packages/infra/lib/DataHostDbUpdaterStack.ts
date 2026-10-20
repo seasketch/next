@@ -1,7 +1,11 @@
 /**
- * DataHostingStacks enable direct GeoJSON data hosting from SeaSketch.
- * Stacks are created in different regions to support different geographies
- * with data close to their users.
+ * Writes data_sources_buckets rows when a DataHostingStack is created or
+ * updated. The regional stacks invoke this function from their custom
+ * resource.
+ *
+ * Frozen, together with SeaSketchData-*. Do not deploy this stack, do not
+ * destroy it, and do not change its runtime. A deploy rewrites the hosting
+ * rows those CloudFront URLs depend on.
  */
 import * as cdk from "aws-cdk-lib";
 import * as ec2 from "aws-cdk-lib/aws-ec2";

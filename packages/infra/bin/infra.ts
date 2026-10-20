@@ -91,6 +91,10 @@ const dataUploads = new DataUploadsStack(app, "SeaSketchDataUploadsStack", {
   region: "us-west-2",
 });
 
+// Frozen. SeaSketch no longer uploads to SeaSketchDataHostDbUpdater or the
+// SeaSketchData-* stacks below. Do not deploy them, do not destroy them, and
+// do not change their runtime. Their S3 buckets and CloudFront distributions
+// must keep serving the URLs already stored in data_sources_buckets.
 const dataHostDbUpdater = new DataHostDbUpdaterStack(
   app,
   "SeaSketchDataHostDbUpdater",
@@ -101,8 +105,8 @@ const dataHostDbUpdater = new DataHostDbUpdaterStack(
   }
 );
 
-// Setup regional hosts for user-uploaded GeoJSON. These should be registered
-// with the database after creation
+// Same freeze as SeaSketchDataHostDbUpdater. These regional stacks are kept
+// so existing data_sources_buckets URLs continue to resolve.
 const hostConfigs: {
   region: string;
   slug: string;
