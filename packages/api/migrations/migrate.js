@@ -1,9 +1,12 @@
-const AWS = require("aws-sdk");
+const {
+  GetSecretValueCommand,
+  SecretsManagerClient,
+} = require("@aws-sdk/client-secrets-manager");
+const { Signer } = require("@aws-sdk/rds-signer");
 const { Client } = require("pg");
 const graphile = require("graphile-migrate");
 const fs = require("fs");
 const path = require("path");
-const signer = new AWS.RDS.Signer();
 const { workerUtils } = require("graphile-worker");
 
 exports.handler = (event) => {
@@ -35,24 +38,21 @@ async function initializeDb(event) {
   if (!region) {
     throw new Error("'region' not defined in ResourceProperties");
   }
-  const client = new AWS.SecretsManager({
-    region,
-  });
+  const client = new SecretsManagerClient({ region });
   const secretName = event.ResourceProperties["secret"];
   if (!secretName) {
     throw new Error("'secret' not defined in ResourceProperties");
   }
-  const secretValue = await client
-    .getSecretValue({ SecretId: secretName })
-    .promise();
+  const secretValue = await client.send(
+    new GetSecretValueCommand({ SecretId: secretName })
+  );
   // Decrypts secret using the associated KMS CMK.
   // Depending on whether the secret is a string or binary, one of these fields will be populated.
   let secret;
   if (secretValue.SecretString) {
     secret = JSON.parse(secretValue.SecretString);
   } else {
-    let buff = new Buffer(secretValue.SecretBinary, "base64");
-    secret = JSON.parse(buff.toString("ascii"));
+    secret = JSON.parse(Buffer.from(secretValue.SecretBinary).toString("utf8"));
   }
   const dbClient = new Client({
     database: secret.dbname,
@@ -107,21 +107,11 @@ async function initializeDb(event) {
 }
 
 async function getToken(secret, region) {
-  return new Promise((resolve, reject) => {
-    signer.getAuthToken(
-      {
-        region,
-        hostname: secret.host,
-        port: parseInt(secret.port),
-        username: "admin",
-      },
-      function (err, token) {
-        if (err) {
-          reject(err);
-        } else {
-          resolve(token);
-        }
-      }
-    );
+  const signer = new Signer({
+    region,
+    hostname: secret.host,
+    port: parseInt(secret.port),
+    username: "admin",
   });
+  return signer.getAuthToken();
 }

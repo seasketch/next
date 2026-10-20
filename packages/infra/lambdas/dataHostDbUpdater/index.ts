@@ -3,7 +3,7 @@
  * Makes sure records exist in the SeaSketch database so that a hosting region
  * can be specified by users.
  */
-import * as AWS from "aws-sdk";
+import { Signer } from "@aws-sdk/rds-signer";
 import { Client } from "pg";
 const fs = require("fs");
 
@@ -21,7 +21,6 @@ declare namespace AWSCDKAsyncCustomResource {
 }
 
 const pem = fs.readFileSync("./rds-ca-2019-root.pem").toString();
-const signer = new AWS.RDS.Signer();
 
 export interface HostingStackResourceProperties {
   region: string;
@@ -55,40 +54,26 @@ export async function handler(event: AWSCDKAsyncCustomResource.OnEventRequest) {
   }
 }
 
-async function getClient(host: HostingStackResourceProperties) {
-  return new Promise<Client>((resolve, reject) => {
-    signer.getAuthToken(
-      {
-        // uses the IAM role access keys to create an authentication token
-        region: db.region,
-        hostname: db.host,
-        port: parseInt(db.port.toString()),
-        username: db.user,
-      },
-      async function (err, token) {
-        if (err) {
-          reject(new Error(`could not get auth token: ${err}`));
-        } else {
-          const dbClient = new Client({
-            database: db.database,
-            host: db.host,
-            port: parseInt(db.port.toString()),
-            password: token,
-            user: db.user,
-            ssl: {
-              ca: pem,
-            },
-          });
-          try {
-            await dbClient.connect();
-            resolve(dbClient);
-          } catch (e) {
-            reject(e);
-          }
-        }
-      }
-    );
+async function getClient(_host: HostingStackResourceProperties) {
+  const signer = new Signer({
+    region: db.region as string,
+    hostname: db.host as string,
+    port: parseInt(db.port.toString()),
+    username: db.user as string,
   });
+  const token = await signer.getAuthToken();
+  const dbClient = new Client({
+    database: db.database,
+    host: db.host,
+    port: parseInt(db.port.toString()),
+    password: token,
+    user: db.user,
+    ssl: {
+      ca: pem,
+    },
+  });
+  await dbClient.connect();
+  return dbClient;
 }
 
 export async function upsertDataSourcesBucket(

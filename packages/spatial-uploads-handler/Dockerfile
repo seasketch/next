@@ -1,4 +1,4 @@
-FROM amazon/aws-lambda-nodejs:20 as builder
+FROM amazon/aws-lambda-nodejs:24 as builder
 WORKDIR /usr/app
 RUN dnf install -y tar unzip
 RUN curl https://rclone.org/install.sh | bash
@@ -53,7 +53,7 @@ RUN npm run build
 
 # Heavily inspired by
 # https://github.com/lambgeo/docker-lambda/blob/master/dockerfiles/Dockerfile
-FROM amazon/aws-lambda-nodejs:20 as gdal
+FROM amazon/aws-lambda-nodejs:24 as gdal
 RUN dnf update -y
 RUN dnf install -y git autoconf libtool flex bison cmake make \
       tar gzip gcc gcc-c++ libpng-devel nasm \
@@ -259,7 +259,7 @@ RUN curl -O https://www.rarlab.com/rar/unrarsrc-6.0.7.tar.gz && \
   make -f makefile && \
   cp unrar /usr/local/bin/
 
-FROM amazon/aws-lambda-nodejs:20
+FROM amazon/aws-lambda-nodejs:24
 WORKDIR ${LAMBDA_TASK_ROOT}
 # Bring C libs from lambgeo/lambda-gdal image
 COPY --from=gdal /usr/lib/ /usr/lib/

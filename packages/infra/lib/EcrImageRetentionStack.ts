@@ -14,6 +14,7 @@ import * as targets from "aws-cdk-lib/aws-events-targets";
 import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import { NodejsFunction } from "aws-cdk-lib/aws-lambda-nodejs";
+import { NODEJS_24_X } from "./nodeRuntime";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as sns from "aws-cdk-lib/aws-sns";
 import * as cr from "aws-cdk-lib/custom-resources";
@@ -90,7 +91,7 @@ export class EcrImageRetentionStack extends cdk.Stack {
       handler: "handler",
       projectRoot: path.join(__dirname, ".."),
       depsLockFilePath: path.join(__dirname, "../package-lock.json"),
-      runtime: lambda.Runtime.NODEJS_22_X,
+      runtime: NODEJS_24_X,
       architecture: lambda.Architecture.ARM_64,
       timeout: cdk.Duration.minutes(5),
       memorySize: 256,
@@ -103,7 +104,7 @@ export class EcrImageRetentionStack extends cdk.Stack {
       },
       bundling: {
         minify: false,
-        target: "node22",
+        target: "node24",
         sourceMap: true,
         externalModules: ["@aws-sdk/*"],
       },

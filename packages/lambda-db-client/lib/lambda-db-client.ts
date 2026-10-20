@@ -1,4 +1,4 @@
-import { RDS } from "aws-sdk";
+import { Signer } from "@aws-sdk/rds-signer";
 import { Client } from "pg";
 
 /**
@@ -8,7 +8,7 @@ import { Client } from "pg";
  * event of an error, that connection will be thrown out and subsequent calls
  * will create a new connection.
  *
- * In order for the AWS.RDS signer to operate from lambda you will need to grant
+ * In order for the RDS signer to operate from lambda you will need to grant
  * connect privileges using an IAM role. See:
  * https://github.com/seasketch/next/blob/master/packages/infra/lib/DataHostDbUpdaterStack.ts#L43
  *
@@ -54,41 +54,28 @@ export async function getClient() {
         }
       });
     } else {
-      dbClient = new Promise<Client>((resolve, reject) => {
-        signer.getAuthToken(
-          {
-            // uses the IAM role access keys to create an authentication token
-            region: db.region,
-            hostname: db.host,
-            port: parseInt(db.port.toString()),
-            username: db.user,
+      const signer = new Signer({
+        region: db.region as string,
+        hostname: db.host as string,
+        port: parseInt(db.port.toString()),
+        username: db.user as string,
+      });
+      dbClient = signer.getAuthToken().then(async (token) => {
+        const client = new Client({
+          database: db.database,
+          host: db.host,
+          port: parseInt(db.port.toString()),
+          password: token,
+          user: db.user,
+          ssl: {
+            ca: pem,
           },
-          async function (err, token) {
-            if (err) {
-              reject(new Error(`could not get auth token: ${err}`));
-            } else {
-              const client = new Client({
-                database: db.database,
-                host: db.host,
-                port: parseInt(db.port.toString()),
-                password: token,
-                user: db.user,
-                ssl: {
-                  ca: pem,
-                },
-              });
-              try {
-                await client.connect();
-                client.on("error", () => {
-                  dbClient = null;
-                });
-                resolve(client);
-              } catch (e) {
-                reject(e);
-              }
-            }
-          }
-        );
+        });
+        await client.connect();
+        client.on("error", () => {
+          dbClient = null;
+        });
+        return client;
       });
     }
   }
@@ -119,8 +106,6 @@ cbI1NAbUgVDqp+DRdfvZkgYKryjTWd/0+1fS8X1bBZVWzl7eirNVnHbSH2ZDpNuY
 0SBd8dj5F6ld3t58ydZbrTHze7JJOd8ijySAp4/kiu9UfZWuTPABzDa/DSdz9Dk/
 zPW4CXXvhLmE02TA9/HeCw3KEHIwicNuEfw=
 -----END CERTIFICATE-----`;
-
-const signer = new RDS.Signer();
 
 for (const param of ["PGREGION", "PGHOST", "PGPORT", "PGUSER", "PGDATABASE"]) {
   if (!process.env[param]) {
