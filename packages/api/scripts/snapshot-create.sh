@@ -184,6 +184,15 @@ if [[ "$public_forum" != "1" ]]; then
   exit 1
 fi
 
+# New surveys copy the welcome page. Without a background color, the survey
+# has no image and Customize Appearance throws.
+survey_theme="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT count(*) FROM form_elements fe JOIN forms f ON f.id = fe.form_id WHERE f.template_name = 'Basic Template' AND f.template_type = 'SURVEYS' AND fe.type_id = 'WelcomeMessage' AND fe.background_color = 'rgb(29, 72, 84)' AND fe.background_image IS NOT NULL AND fe.secondary_color IS NOT NULL AND fe.background_palette IS NOT NULL AND fe.unsplash_author_name = 'Matt Hardy'")"
+if [[ "$survey_theme" != "1" ]]; then
+  echo "The survey Basic Template welcome page should carry the production appearance. Found ${survey_theme}." >&2
+  exit 1
+fi
+
 e2e_profiles="$(psql_exec -d "$SOURCE_DB" -tAc \
   "SELECT count(*) FROM user_profiles up JOIN users u ON u.id = up.user_id WHERE u.sub IN ('e2e|member', 'e2e|admin') AND up.fullname IS NULL")"
 if [[ "$e2e_profiles" != "2" ]]; then

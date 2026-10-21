@@ -34,6 +34,7 @@ Update the seed in the same change, then rebuild and publish, when:
 - The client starts requiring a different geography template id or data-source shape. `GeographyAdmin` waits until coastline, EEZ, and territorial-sea sources have URLs.
 - A column, check, or trigger on a table the seed inserts into rejects the current inserts. Those tables include `projects`, `table_of_contents_items`, `data_layers`, `data_sources`, `interactivity_settings`, `project_geography`, and `geography_clipping_layers`.
 - A hardcoded library layer is added or its public URL, `source_layer`, cartography, or template id changes. The seeded catalog is Seamounts and World Ports, plus the geography templates create-project offers. Do not add the rest of the production catalog.
+- The survey Basic Template welcome page needs a background image and colors. Migration `000097` creates that template with those columns empty, and production fills them in the superuser survey editor. Copy the columns in `fixtures.sql`. Do not put them in a migration.
 
 The template ids `data-library.sql` inserts are listed once, in `packages/api/src/DataLibrary/snapshotTemplateIds.js`. `snapshot-create.sh` fails when the seed inserts a different set. `cleanupDeletedOverlayRecords` reads the same list: outside production it skips R2 deletes for outputs whose source still carries one of those ids. Production still deletes its own unused objects.
 
