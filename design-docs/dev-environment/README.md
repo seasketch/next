@@ -32,7 +32,7 @@ Start with the [strategy](strategy.md). It is the sequence. Each other file is o
 
 Accepted decisions. They describe what this campaign will build, not what is running today. A decision that has shipped is marked with the month. Anything without a month is accepted and still open.
 
-- **Order:** smoke tests on today's toolchain → npm workspaces → access and onboarding journeys → replace Create React App → breadth and staging. One axis changes at a time. ([strategy](strategy.md))
+- **Order:** smoke tests on today's toolchain → npm workspaces → access and onboarding journeys → replace Create React App → breadth and staging. One axis changes at a time. ([strategy](strategy.md)) *(October 2026)* Dependency consolidation within majors and TypeScript project references are part of the workspaces step and its pull request. Phase 3 also writes the bundler-risk journeys phase 4 is judged by. A combined workspaces-and-bundler pull request was considered and rejected ([monorepo and build](monorepo-and-build-upgrade.md)).
 - **Test runner:** Playwright in `packages/e2e` (October 2026). Cypress scenarios are mined for behavior, then removed. ([integration testing](integration-testing.md))
 - **Test auth:** `E2E_TEST_MODE` mints tokens with the API's own signing keys under a test-only issuer (October 2026). CI holds no Auth0 secrets. ([integration testing](integration-testing.md))
 - **Human auth:** a separate non-production Auth0 tenant with its own issuer and audience (October 2026). The API's Management client is already lazy and optional ([Auth0](auth0.md), September 2026).
@@ -40,8 +40,8 @@ Accepted decisions. They describe what this campaign will build, not what is run
 - **Startup:** root npm scripts (`setup`, `dev`, `logs`, `status`) over Docker Compose for containers and `concurrently` for host processes, with one service list and a `--profile` flag (October 2026). Nothing starts on folder open; VS Code tasks are not the contract. ([environment setup](env-setup.md))
 - **Production reach:** an unset integration makes the feature unavailable (September 2026). Pointing at production is an explicit override, never in CI. ([local services](local-services.md))
 - **Secrets:** one committed manifest and named profiles. Laptops keep a short hand-managed `.env` (October 2026). CI uses GitHub environments. Production uses GitHub and CDK. No new secrets product. ([secrets](secrets-management.md))
-- **Packaging:** npm workspaces with one lockfile (October 2026). No Nx, Turborepo, or new Lerna. ([monorepo and build](monorepo-and-build-upgrade.md))
-- **Client build:** Vite is the candidate replacement for Create React App, accepted only when the existing journeys pass on it. ([monorepo and build](monorepo-and-build-upgrade.md))
+- **Packaging:** npm workspaces with one lockfile (October 2026). No Nx, Turborepo, or new Lerna. One version of each shared library and one range per tool, moving within majors; pins that exist only for Create React App are a named temporary list. ([monorepo and build](monorepo-and-build-upgrade.md))
+- **Client build:** Vite is the candidate replacement for Create React App, accepted only when the existing journeys, including the bundler-risk set, pass on it. That pull request deletes the temporary pins. ([monorepo and build](monorepo-and-build-upgrade.md))
 
 ## Keeping this record
 

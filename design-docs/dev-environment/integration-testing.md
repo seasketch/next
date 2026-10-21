@@ -36,7 +36,7 @@ Journeys are tagged. `@smoke` is about three tests in phase 1:
 2. A signed-in member opens a private project they can access through a group ACL.
 3. A project admin opens their project and navigates to the admin page.
 
-`@access` arrives in phase 3; `@authoring`, `@data`, and `@reports` in phase 5. `@production` is the read-only probe and never runs against the local stack.
+`@access` arrives in phase 3; `@authoring`, `@data`, and `@reports` in phase 5. *(October 2026)* Phase 3 also carries a small `@bundler` set — one journey each for the surfaces a client build replacement breaks at runtime — tagged by its area as well, so phase 5 grows those tags rather than restarting them. `@production` is the read-only probe and never runs against the local stack.
 
 On failure, CI keeps the Playwright trace, screenshots, and the slug of any project the test created. With the slug, a person restores the snapshot locally and opens the same project with a normal non-production login.
 
@@ -87,7 +87,20 @@ There is no shared developer password. Fixture owners in the snapshot are synthe
 
 **Phase 3:** access and onboarding journeys ported from the Cypress onboarding specs — public project, admins-only project, invite-only project, invite acceptance, access request — tagged `@access` and run on push with the other tests. Cypress, its dependencies, and the `cypress` ESLint plugin are removed, and the repo README stops describing tests that do not run. Data-profile journeys only where an upload or tile is truly the point.
 
-**Phase 4:** no new journeys. The existing ones are the acceptance test for the new client build.
+*(October 2026)* Phase 3 also writes the `@bundler` set, the acceptance test phase 4 runs against the new client build. Each journey exercises something webpack 4 handles today that a replacement handles differently, and each needs the local data profile from [local services](local-services.md):
+
+- Spatial upload end to end: pick a file, the client's web worker inspects it, the presigned upload completes, the layer appears in the table of contents and renders. Covers workers, WASM (`sql.js`, GDAL in the browser if used), and the upload path.
+- Data-table import: a CSV upload is processed by the local data-tables handler and its columns appear in the editor.
+- Report card: a sketch is drawn and a report tab renders an overlay result from the local overlay worker. Covers the report widgets, ProseMirror node views, and the worker queue.
+- Rich-text editors: the about page, a forum post, and layer metadata are edited and saved. Covers ProseMirror and its plugins, which have several nested copies today.
+- GL style editor: a layer's style is opened, edited with autocomplete, and saved. Covers CodeMirror and `@lezer`.
+- Map bookmark: a bookmark is created and its screenshot is produced. Covers the map screenshotter path and Mapbox GL.
+- Service worker: offline survey behavior, if it is still a supported feature; otherwise the decision to drop it is recorded here and the Workbox plugin goes with CRA.
+- Environment variables: one journey asserts a value that reaches the client through `REACT_APP_*` today, so the rename in phase 4 is checked by a test and not by reading the bundle.
+
+They pass on Create React App before phase 4 begins. When a phase 4 spike on a throwaway branch finds a surface this list misses, the journey is added here, on CRA, first.
+
+**Phase 4:** no new journeys. The existing ones, including `@bundler`, are the acceptance test for the new client build.
 
 **Phase 5:** authoring (survey, sketch, project admin), then data and reports, each behind its tag. The production probe also runs on a schedule; a production outage never fails an unrelated pull request. A short agent recipe — when to write an API test versus a journey, tags, teardown, screenshots — is linked from the repo `AGENTS.md`.
 
@@ -119,6 +132,6 @@ Journeys that use the map depend on a Mapbox development token. The anonymous sm
 
 - **Phase 1:** A push runs the smoke job with the other tests. A new clone runs `setup`, starts the core profile, and opens `demo-samoa`. A failed run leaves a trace and the slug of any project it created. *Done, October 2026.*
 - **Phase 2:** Every production deploy is followed by a passing `@production` probe.
-- **Phase 3:** Access journeys run on push with the other tests. Cypress is gone. Multi-level admin work has API coverage for the permission matrix and browser coverage for the gates.
-- **Phase 4:** The same journeys pass on the new client build.
+- **Phase 3:** Access journeys run on push with the other tests. Cypress is gone. Multi-level admin work has API coverage for the permission matrix and browser coverage for the gates. The `@bundler` set is green on Create React App.
+- **Phase 4:** The same journeys, including `@bundler`, pass on the new client build.
 - **Phase 5:** The schedule shipped with the probe in October 2026 and now runs every 30 minutes. The agent recipe is linked from `AGENTS.md`. A journey added in a pull request is reviewable from CI artifacts.

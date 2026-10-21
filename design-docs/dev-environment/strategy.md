@@ -58,9 +58,9 @@ Phase 1 is allowed to be slow. Its job is to exist and to fail when the core app
 | Phase | Changes | Holds still | Gate to leave the phase |
 | --- | --- | --- | --- |
 | 1. Smoke | Golden snapshot, root `setup` / `dev`, `E2E_TEST_MODE`, three `@smoke` journeys, a CI job on push | Lerna, CRA, deploy | Smoke runs on push and is green; a clean VM boots the core profile |
-| 2. Workspaces | Node Active LTS everywhere; npm workspaces; production build paths moved onto the workspace; post-deploy production probe | CRA, product behavior | Smoke green on workspaces; a no-product-change deploy succeeds and passes the probe |
-| 3. Journeys | Access and onboarding journeys; data profile (uploads, data tables, tiles, overlay/reports); Cypress removed | Bundler, workspace layout | Access journeys run on push; data-path packages testable without a deploy |
-| 4. Client build | Replace CRA (Vite candidate); client tests and lint off CRA | Journey assertions, workspace layout | Same journeys green on the new dev server and production build |
+| 2. Workspaces | Node Active LTS everywhere; npm workspaces; production build paths moved onto the workspace; dependency consolidation within majors; TypeScript project references; post-deploy production probe | CRA, product behavior | Smoke green on workspaces; the consolidation checkpoints hold; a no-product-change deploy succeeds and passes the probe |
+| 3. Journeys | Access and onboarding journeys; data profile (uploads, data tables, tiles, overlay/reports); the bundler-risk journeys phase 4 will need; Cypress removed | Bundler, workspace layout | Access journeys run on push; data-path packages testable without a deploy; bundler-risk journeys green on CRA |
+| 4. Client build | Replace CRA (Vite candidate); client tests and lint off CRA; the carried CRA pins deleted | Journey assertions, workspace layout | Same journeys green on the new dev server and production build |
 | 5. Breadth | Authoring, data, and report journeys; scheduled probes; hosted staging; agent recipe | Decisions from 1–4 | Features ship with journeys; staging runs the same contract |
 
 ## Phase details
@@ -98,11 +98,15 @@ Two separate changes, each its own pull request and its own production deploy.
 
 **Workspaces.** npm workspaces, one root lockfile, one TypeScript for application packages, root scripts, and a policy for checked-in build output. The production build paths move with it: the deploy workflow's install steps, the GraphQL image's Lerna scope list, and the CDK Lambdas that bundle against per-package lockfiles. ([monorepo and build](monorepo-and-build-upgrade.md)) *Done, October 2026.* The production probe still runs on the first deploy of this change.
 
+**Dependency consolidation.** *(October 2026)* The first workspace install exposed what the separate lockfiles had hidden: three copies of `graphql`, three of React, five `vitest` ranges, eight `@types/node` majors, duplicated ProseMirror and Apollo. Pinning them back made CI pass; it did not consolidate anything. The same pull request continues to one version of each shared library and one range per tool, moving within major versions only, and regenerates the GraphQL schema, the client's generated types, and the Tailwind output where a printer or version changed them. TypeScript project references land here too, so `tsc -b` of one package builds only its dependencies and CI builds the target it tests. Pins that exist only because Create React App cannot load a current package are kept and listed as temporary. The steps, the carried-pins table, and the completion checkpoints are in [monorepo and build](monorepo-and-build-upgrade.md).
+
+A single pull request for workspaces and the bundler was considered and rejected; the reasons are recorded there. In short: it would deploy three changes to production at once with only the probe as a safety net, make a failing journey unattributable, and hold the lockfile open against `master` through the phase 3 work.
+
 **Production probe.** This is the first phase that changes production artifacts, and staging does not exist yet. So the read-only `@production` probe (homepage, a public project, API health) lands here and runs after every deploy. ([integration testing](integration-testing.md))
 
-**Holds still.** Create React App, product behavior, and the shape of the deploy workflow and CDK stacks. Only their install and bundling inputs change. Editor relief that needs no new bundler — TypeScript project references, ESLint caching — may land here.
+**Holds still.** Create React App, product behavior, and the shape of the deploy workflow and CDK stacks. Only their install and bundling inputs change. Dependency versions may move within their majors, and committed generated artifacts may be regenerated, with the diff explained. Editor relief that needs no new bundler — TypeScript project references, ESLint caching — lands here.
 
-**Exit.** Smoke is green on the workspace layout and its install step is materially shorter. A deploy with no product change succeeds through the normal workflow and passes the probe. Day-to-day `npm install` at the root replaces per-package bootstraps.
+**Exit.** Smoke is green on the workspace layout, and its install time is recorded against the Lerna baseline. The consolidation checkpoints in [monorepo and build](monorepo-and-build-upgrade.md) hold. A deploy with no product change succeeds through the normal workflow and passes the probe. Day-to-day `npm install` at the root replaces per-package bootstraps.
 
 If this phase slips, new journeys do not pile onto the pull-request job. They run locally or nightly until install and build time can absorb them.
 
@@ -110,19 +114,21 @@ If this phase slips, new journeys do not pile onto the pull-request job. They ru
 
 **Changes.** Browser coverage for access and onboarding; the data profile (spatial uploads, data-table processing, tiles, and the overlay worker behind reports) running locally; development buckets and queues so those services do not write production. Cypress is removed once its scenarios are ported. ([integration testing](integration-testing.md), [local services](local-services.md))
 
+*(October 2026)* This phase also writes the journeys phase 4 will use as its acceptance test, chosen for what a bundler swap breaks at runtime rather than for user coverage alone: a spatial upload end to end (web worker, WASM, presigned upload), a data-table import, a report card rendering overlay results, the ProseMirror editors, the GL style editor, a map bookmark with its screenshot, and the service worker if offline use is still supported. They pass on Create React App before the bundler changes. The Vite spike may begin on a throwaway branch during this phase so its findings shape which journeys matter most; it does not merge here.
+
 **Holds still.** The client bundler and the workspace layout.
 
-**Exit.** Access, invite, and project-entry journeys run on push with the other tests. The permission matrix lives in API tests; browser tests cover what each kind of person can see. A change to spatial uploads, data tables, or report calculation can be tried without deploying a Lambda.
+**Exit.** Access, invite, and project-entry journeys run on push with the other tests. The permission matrix lives in API tests; browser tests cover what each kind of person can see. A change to spatial uploads, data tables, or report calculation can be tried without deploying a Lambda. The bundler-risk journeys are green on Create React App.
 
-This is the gate to have in place before large multi-level admin changes merge.
+This is the gate to have in place before large multi-level admin changes merge, and before phase 4 begins.
 
 ### Phase 4 — Client build replacement
 
-**Changes.** Replace Create React App; Vite is the candidate. Client unit tests and ESLint move off CRA's configuration. The same smoke and phase 3 journeys run against the new dev server and the new production build. ([monorepo and build](monorepo-and-build-upgrade.md))
+**Changes.** Replace Create React App; Vite is the candidate. Client unit tests and ESLint move off CRA's configuration. The same smoke and phase 3 journeys run against the new dev server and the new production build. *(October 2026)* The pull request deletes the pins phase 2 carried for webpack 4 and Jest 26, and moves the client's own dependencies to current releases within their majors as those pins come off. ([monorepo and build](monorepo-and-build-upgrade.md))
 
 **Holds still.** Journey assertions and the workspace layout. A pull request in this phase does not restructure packages.
 
-**Exit.** Smoke and access journeys are green on the new build. The client preview workflow has published the new build to a real host before the first production deploy. `--openssl-legacy-provider` is gone. The client dev server and the CI client build are materially faster.
+**Exit.** Smoke, access, and bundler-risk journeys are green on the new build. The client preview workflow has published the new build to a real host before the first production deploy. `--openssl-legacy-provider` is gone, and the carried-pins table is empty. The client dev server and the CI client build are materially faster.
 
 ### Phase 5 — Breadth and staging
 
@@ -146,7 +152,7 @@ If a specific change needs more than that, pull the staging work forward for it.
 
 ## Rules
 
-- A pull request changes one axis. Node, workspaces, and the client bundler never share a pull request. A journey and a large refactor share one only when the journey is the characterization test for that refactor.
+- A pull request changes one axis. Node, workspaces, and the client bundler never share a pull request. A journey and a large refactor share one only when the journey is the characterization test for that refactor. *(October 2026)* Dependency versions within a major, regenerated artifacts, and TypeScript project references are part of the workspaces axis, not a fourth one; they ride with it.
 - *(October 2026)* Smoke runs on every push, with a report and a trace when it fails. It is not a branch-protection rule, and neither are later journeys. Failing smoke is something a reviewer looks at. It is not skipped to make a migration look green.
 - A journey depends only on services the root start command runs for its profile. A journey that needs a production Lambda is not a local test.
 - The default configuration never points at production. A production override is explicit, per integration ([local services](local-services.md)), and absent from CI.
