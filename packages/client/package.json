@@ -136,7 +136,6 @@
     "blurhash": "^2.0.5",
     "bytes": "^3.1.0",
     "cache-polyfill": "^1.0.1",
-    "caniuse-lite": "1.0.30001695",
     "cheap-ruler": "^3.0.2",
     "clsx": "^2.1.1",
     "codemirror": "^5.58.1",
