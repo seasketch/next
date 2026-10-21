@@ -90,8 +90,11 @@ export const WHEN_END_COLUMN = "_when_end";
 
 /**
  * How a single date/time cell is parsed. `iso` is reduced-precision ISO 8601
- * (same as TemporalIso). `mdy` / `dmy` are slash dates (`8/31/2024`,
- * `31/08/2024`). `year` is a 4-digit calendar year (number or string).
+ * (same as TemporalIso). `mdy` / `dmy` are slash dates with a 4-digit year
+ * (`8/31/2024`, `31/08/2024`) or a 2-digit year (`9/17/11`, `17/09/96`).
+ * Two-digit years use the POSIX window (00–68 → 2000–2068, 69–99 → 1969–1999),
+ * matching DuckDB `strptime` `%y`. `year` is a 4-digit calendar year (number
+ * or string).
  */
 export type TemporalDateFormat = "iso" | "mdy" | "dmy" | "year";
 
@@ -877,7 +880,16 @@ function parseIntInRange(
   return n >= min && n <= max ? n : null;
 }
 
-const SLASH_DATE_RE = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+/** 4-digit year, or exactly 2 digits. 3-digit years stay unparsed. */
+const SLASH_DATE_RE = /^(\d{1,2})\/(\d{1,2})\/(\d{4}|\d{2})$/;
+
+/**
+ * POSIX / DuckDB `%y`: 00–68 → 2000–2068, 69–99 → 1969–1999.
+ * Spreadsheet short dates (Reef Check `9/17/11`) use this shape.
+ */
+function expandTwoDigitYear(year: number): number {
+  return year <= 68 ? 2000 + year : 1900 + year;
+}
 
 function parseSlashDate(
   value: unknown,
@@ -889,7 +901,8 @@ function parseSlashDate(
   if (!m) return null;
   const a = parseInt(m[1], 10);
   const b = parseInt(m[2], 10);
-  const year = parseInt(m[3], 10);
+  const year =
+    m[3].length === 2 ? expandTwoDigitYear(parseInt(m[3], 10)) : parseInt(m[3], 10);
   const month = format === "mdy" ? a : b;
   const day = format === "mdy" ? b : a;
   if (month < 1 || month > 12 || day < 1 || day > 31) return null;

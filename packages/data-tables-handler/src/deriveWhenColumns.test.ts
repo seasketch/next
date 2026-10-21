@@ -36,6 +36,8 @@ describe("whenSelectSql", () => {
       format: "mdy",
     });
     assert.match(mdy.start, /%m\/%d\/%Y/);
+    assert.match(mdy.start, /%m\/%d\/%y/);
+    assert.match(mdy.start, /\[0-9\]\{2\}/);
   });
 
   it("uses ISO text precision for interval width, not string length", () => {
@@ -128,6 +130,52 @@ describe("deriveWhenColumnsOnParquet", () => {
     assert.equal(components.parseableCount, 3);
     assert.equal(components.temporal.defaultViewResolution, "year");
     assert.equal(components.temporal.availability?.type, "histogram");
+  });
+
+  it("parses two-digit slash years on the same window as the TS parser", async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "dt-when-yy-"));
+    const csvPath = writeCsv(
+      dir,
+      "reef.csv",
+      [
+        "Date",
+        "9/17/11",
+        "9/17/96",
+        "6/15/2018",
+        "9/17/011",
+        "not-a-date",
+      ].join("\n"),
+    );
+    const parquetPath = path.join(dir, "data.parquet");
+    await processCsvWithDuckDb(csvPath, parquetPath, { hasHeaderRow: true });
+    const source = {
+      kind: "instant" as const,
+      column: "Date",
+      format: "mdy" as const,
+    };
+    const derived = await deriveWhenColumnsOnParquet(parquetPath, {
+      sourceColumns: source,
+    });
+    assert.equal(derived.parseableCount, 3);
+    assert.equal(derived.unparseableCount, 2);
+    assert.equal(derived.temporal.coverage.start, "1996-09-17");
+    assert.equal(derived.temporal.coverage.end, "2018-06-16");
+
+    const rows = await withDuckDb((conn) =>
+      all<{ Date: string; start: number | null }>(
+        conn,
+        `SELECT "Date" as Date, "${WHEN_START_COLUMN}" as start FROM read_parquet('${parquetPath.replace(/'/g, "''")}')`,
+      ),
+    );
+    assert.equal(rows.length, 5);
+    for (const row of rows) {
+      const ts = deriveWhenIntervalFromRow({ Date: row.Date }, source);
+      if (!ts) {
+        assert.equal(row.start, null);
+      } else {
+        assert.equal(Number(row.start), ts.startSec);
+      }
+    }
   });
 
   it("parses CCFRP-style MDY dates and sparse intertidal years", async () => {

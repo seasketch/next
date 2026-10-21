@@ -70,8 +70,11 @@ export declare const WHEN_START_COLUMN = "_when_start";
 export declare const WHEN_END_COLUMN = "_when_end";
 /**
  * How a single date/time cell is parsed. `iso` is reduced-precision ISO 8601
- * (same as TemporalIso). `mdy` / `dmy` are slash dates (`8/31/2024`,
- * `31/08/2024`). `year` is a 4-digit calendar year (number or string).
+ * (same as TemporalIso). `mdy` / `dmy` are slash dates with a 4-digit year
+ * (`8/31/2024`, `31/08/2024`) or a 2-digit year (`9/17/11`, `17/09/96`).
+ * Two-digit years use the POSIX window (00–68 → 2000–2068, 69–99 → 1969–1999),
+ * matching DuckDB `strptime` `%y`. `year` is a 4-digit calendar year (number
+ * or string).
  */
 export type TemporalDateFormat = "iso" | "mdy" | "dmy" | "year";
 /**

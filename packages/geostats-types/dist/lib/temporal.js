@@ -635,7 +635,15 @@ function parseIntInRange(value, min, max) {
     const n = parseInt(text, 10);
     return n >= min && n <= max ? n : null;
 }
-const SLASH_DATE_RE = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/;
+/** 4-digit year, or exactly 2 digits. 3-digit years stay unparsed. */
+const SLASH_DATE_RE = /^(\d{1,2})\/(\d{1,2})\/(\d{4}|\d{2})$/;
+/**
+ * POSIX / DuckDB `%y`: 00–68 → 2000–2068, 69–99 → 1969–1999.
+ * Spreadsheet short dates (Reef Check `9/17/11`) use this shape.
+ */
+function expandTwoDigitYear(year) {
+    return year <= 68 ? 2000 + year : 1900 + year;
+}
 function parseSlashDate(value, format) {
     const text = cellToText(value);
     if (!text)
@@ -645,7 +653,7 @@ function parseSlashDate(value, format) {
         return null;
     const a = parseInt(m[1], 10);
     const b = parseInt(m[2], 10);
-    const year = parseInt(m[3], 10);
+    const year = m[3].length === 2 ? expandTwoDigitYear(parseInt(m[3], 10)) : parseInt(m[3], 10);
     const month = format === "mdy" ? a : b;
     const day = format === "mdy" ? b : a;
     if (month < 1 || month > 12 || day < 1 || day > 31)

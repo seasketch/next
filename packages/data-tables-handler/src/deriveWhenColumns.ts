@@ -44,8 +44,16 @@ function instantExprs(
     };
   }
   if (format === "mdy" || format === "dmy") {
-    const fmt = format === "mdy" ? "%m/%d/%Y" : "%d/%m/%Y";
-    const ts = `try_strptime(trim(CAST(${col} AS VARCHAR)), '${fmt}')`;
+    const fmt4 = format === "mdy" ? "%m/%d/%Y" : "%d/%m/%Y";
+    const fmt2 = format === "mdy" ? "%m/%d/%y" : "%d/%m/%y";
+    const s = `trim(CAST(${col} AS VARCHAR))`;
+    // %Y alone parses "9/17/11" as year 0011. Gate on year width so a
+    // 2-digit year uses %y (POSIX window, same as parseSlashDate) and a
+    // 4-digit year uses %Y. 1- and 3-digit years stay null.
+    const ts = `CASE
+      WHEN regexp_matches(${s}, '^[0-9]{1,2}/[0-9]{1,2}/[0-9]{4}$') THEN try_strptime(${s}, '${fmt4}')
+      WHEN regexp_matches(${s}, '^[0-9]{1,2}/[0-9]{1,2}/[0-9]{2}$') THEN try_strptime(${s}, '${fmt2}')
+    END`;
     return {
       start: `epoch(${ts})`,
       end: `epoch(${ts} + INTERVAL 1 DAY)`,
