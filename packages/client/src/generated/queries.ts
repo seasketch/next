@@ -32,18 +32,9 @@ export type Scalars = {
   GeoJSON: any;
   /** The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf). */
   JSON: any;
-  /**
-   * A complete OrganismInfo document for an overlay data table: identity column,
-   * value kind, and class-table role mapping. Validated against
-   * @seasketch/geostats-types isOrganismInfo.
-   */
+  /** A complete OrganismInfo document for an overlay data table: identity column, value kind, and class-table role mapping. Validated against @seasketch/geostats-types isOrganismInfo. */
   OrganismInfo: import("@seasketch/geostats-types").OrganismInfo;
-  /**
-   * A complete TemporalInfo document for a data source or data table: coverage,
-   * resolution, how time is mapped (layer, feature, band, row, or remote), and
-   * availability. Applies to vector, raster, and remote layers as well as Data
-   * Tables. Validated against @seasketch/geostats-types isTemporalInfo.
-   */
+  /** A complete TemporalInfo document for a data source or data table: coverage, resolution, how time is mapped (layer, feature, band, row, or remote), and availability. Applies to vector, raster, and remote layers as well as Data Tables. Validated against @seasketch/geostats-types isTemporalInfo. */
   TemporalInfo: import("@seasketch/geostats-types").TemporalInfo;
   /** A universally unique identifier as defined by [RFC 4122](https://tools.ietf.org/html/rfc4122). */
   UUID: any;
@@ -112,12 +103,12 @@ export type AclPatch = {
 };
 
 export enum ActivityStatsPeriod {
+  AllTime = 'ALL_TIME',
   '1Year' = '_1_YEAR',
-  '24Hrs' = '_24HRS',
-  '30Days' = '_30_DAYS',
   '6Months' = '_6_MONTHS',
   '7Days' = '_7_DAYS',
-  AllTime = 'ALL_TIME'
+  '24Hrs' = '_24HRS',
+  '30Days' = '_30_DAYS'
 }
 
 /** All input for the `addGroupToAcl` mutation. */
@@ -507,11 +498,7 @@ export type ArchiveResponsesPayload = {
   surveyResponses?: Maybe<Array<SurveyResponse>>;
 };
 
-/**
- * Admins can upload new version of data sources, and these are tracked from this
- * table. This is used to track changes to data sources over time with a version
- * number and optional changelog.
- */
+/** Admins can upload new version of data sources, and these are tracked from this table. This is used to track changes to data sources over time with a version number and optional changelog. */
 export type ArchivedDataSource = Node & {
   __typename?: 'ArchivedDataSource';
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
@@ -523,11 +510,7 @@ export type ArchivedDataSource = Node & {
   dataSource?: Maybe<DataSource>;
   dataSourceId: Scalars['Int'];
   dynamicMetadata: Scalars['Boolean'];
-  /**
-   * Mapbox GL style from the associated data layer at the time of upload of the
-   * new version. This is tracked in case the data source is significantly changed
-   * such that rolling back to a previous version also requires style changes
-   */
+  /** Mapbox GL style from the associated data layer at the time of upload of the new version. This is tracked in case the data source is significantly changed such that rolling back to a previous version also requires style changes */
   mapboxGlStyle?: Maybe<Scalars['JSON']>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
@@ -544,11 +527,7 @@ export type ArchivedDataSource = Node & {
 };
 
 
-/**
- * Admins can upload new version of data sources, and these are tracked from this
- * table. This is used to track changes to data sources over time with a version
- * number and optional changelog.
- */
+/** Admins can upload new version of data sources, and these are tracked from this table. This is used to track changes to data sources over time with a version number and optional changelog. */
 export type ArchivedDataSourceSpritesArgs = {
   first?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
@@ -598,10 +577,7 @@ export type Basemap = Node & {
   __typename?: 'Basemap';
   /** Reads a single `Acl` that is related to this `Basemap`. */
   acl?: Maybe<Acl>;
-  /**
-   * Optional attribution to show at the bottom of the map. Will be overriden by
-   * the attribution specified in the gl-style in the case of MAPBOX types.
-   */
+  /** Optional attribution to show at the bottom of the map. Will be overriden by the attribution specified in the gl-style in the case of MAPBOX types. */
   attribution?: Maybe<Scalars['String']>;
   description?: Maybe<Scalars['String']>;
   id: Scalars['Int'];
@@ -609,11 +585,7 @@ export type Basemap = Node & {
   interactivitySettings?: Maybe<InteractivitySetting>;
   interactivitySettingsId: Scalars['Int'];
   isArcgisTiledMapservice: Scalars['Boolean'];
-  /**
-   * Used to indicate whether the basemap is included in the public basemap
-   * listing. Useful for hiding an option temporarily, or adding a basemap to the
-   * project which will only be used in surveys.
-   */
+  /** Used to indicate whether the basemap is included in the public basemap listing. Useful for hiding an option temporarily, or adding a basemap to the project which will only be used in surveys. */
   isDisabled: Scalars['Boolean'];
   /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
   labelsLayerId?: Maybe<Scalars['String']>;
@@ -632,11 +604,7 @@ export type Basemap = Node & {
   optionalBasemapLayers: Array<OptionalBasemapLayer>;
   /** Reads a single `Project` that is related to this `Basemap`. */
   project?: Maybe<Project>;
-  /**
-   * If not set, the basemap will be considered a "Shared Basemap" that can be
-   * added to any project. Otherwise it is private to the given proejct. Only
-   * superusers can create Shared Basemaps.
-   */
+  /** If not set, the basemap will be considered a "Shared Basemap" that can be added to any project. Otherwise it is private to the given proejct. Only superusers can create Shared Basemaps. */
   projectId?: Maybe<Scalars['Int']>;
   /** Reads and enables pagination through a set of `ProjectsSharedBasemap`. */
   projectsSharedBasemapsConnection: ProjectsSharedBasemapsConnection;
@@ -648,10 +616,7 @@ export type Basemap = Node & {
   /** If set to false, terrain will always be on. Otherwise the user will be given a toggle switch. */
   terrainOptional: Scalars['Boolean'];
   terrainTileSize: Scalars['Int'];
-  /**
-   * Terrain data source url. Leave blank to disable 3d terrain. See [mapbox gl style terrain
-   * documentation](https://docs.mapbox.com/mapbox-gl-js/style-spec/terrain/).
-   */
+  /** Terrain data source url. Leave blank to disable 3d terrain. See [mapbox gl style terrain documentation](https://docs.mapbox.com/mapbox-gl-js/style-spec/terrain/). */
   terrainUrl?: Maybe<Scalars['String']>;
   terrainVisibilityDefault: Scalars['Boolean'];
   /** Square thumbnail will be used to identify the basemap */
@@ -660,11 +625,7 @@ export type Basemap = Node & {
   tileSize: Scalars['Int'];
   translatedProps: Scalars['JSON'];
   type: BasemapType;
-  /**
-   * For MAPBOX types, this can be a mapbox://-style url or a link to a custom
-   * mapbox gl style. For RASTER_URL_TEMPLATE, it should be a url template
-   * conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)
-   */
+  /** For MAPBOX types, this can be a mapbox://-style url or a link to a custom mapbox gl style. For RASTER_URL_TEMPLATE, it should be a url template conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources) */
   url: Scalars['String'];
   useDefaultOfflineTileSettings: Scalars['Boolean'];
 };
@@ -725,30 +686,19 @@ export type BasemapCondition = {
 
 /** An input for mutations affecting `Basemap` */
 export type BasemapInput = {
-  /**
-   * Optional attribution to show at the bottom of the map. Will be overriden by
-   * the attribution specified in the gl-style in the case of MAPBOX types.
-   */
+  /** Optional attribution to show at the bottom of the map. Will be overriden by the attribution specified in the gl-style in the case of MAPBOX types. */
   attribution?: Maybe<Scalars['String']>;
   description?: Maybe<Scalars['String']>;
   id?: Maybe<Scalars['Int']>;
   isArcgisTiledMapservice?: Maybe<Scalars['Boolean']>;
-  /**
-   * Used to indicate whether the basemap is included in the public basemap
-   * listing. Useful for hiding an option temporarily, or adding a basemap to the
-   * project which will only be used in surveys.
-   */
+  /** Used to indicate whether the basemap is included in the public basemap listing. Useful for hiding an option temporarily, or adding a basemap to the project which will only be used in surveys. */
   isDisabled?: Maybe<Scalars['Boolean']>;
   /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
   labelsLayerId?: Maybe<Scalars['String']>;
   maxzoom?: Maybe<Scalars['Int']>;
   /** Label shown in the basemap picker interface */
   name: Scalars['String'];
-  /**
-   * If not set, the basemap will be considered a "Shared Basemap" that can be
-   * added to any project. Otherwise it is private to the given proejct. Only
-   * superusers can create Shared Basemaps.
-   */
+  /** If not set, the basemap will be considered a "Shared Basemap" that can be added to any project. Otherwise it is private to the given proejct. Only superusers can create Shared Basemaps. */
   projectId?: Maybe<Scalars['Int']>;
   surveysOnly?: Maybe<Scalars['Boolean']>;
   terrainExaggeration?: Maybe<Scalars['BigFloat']>;
@@ -756,10 +706,7 @@ export type BasemapInput = {
   /** If set to false, terrain will always be on. Otherwise the user will be given a toggle switch. */
   terrainOptional?: Maybe<Scalars['Boolean']>;
   terrainTileSize?: Maybe<Scalars['Int']>;
-  /**
-   * Terrain data source url. Leave blank to disable 3d terrain. See [mapbox gl style terrain
-   * documentation](https://docs.mapbox.com/mapbox-gl-js/style-spec/terrain/).
-   */
+  /** Terrain data source url. Leave blank to disable 3d terrain. See [mapbox gl style terrain documentation](https://docs.mapbox.com/mapbox-gl-js/style-spec/terrain/). */
   terrainUrl?: Maybe<Scalars['String']>;
   terrainVisibilityDefault?: Maybe<Scalars['Boolean']>;
   /** Square thumbnail will be used to identify the basemap */
@@ -768,42 +715,27 @@ export type BasemapInput = {
   tileSize?: Maybe<Scalars['Int']>;
   translatedProps?: Maybe<Scalars['JSON']>;
   type: BasemapType;
-  /**
-   * For MAPBOX types, this can be a mapbox://-style url or a link to a custom
-   * mapbox gl style. For RASTER_URL_TEMPLATE, it should be a url template
-   * conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)
-   */
+  /** For MAPBOX types, this can be a mapbox://-style url or a link to a custom mapbox gl style. For RASTER_URL_TEMPLATE, it should be a url template conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources) */
   url: Scalars['String'];
   useDefaultOfflineTileSettings?: Maybe<Scalars['Boolean']>;
 };
 
 /** Represents an update to a `Basemap`. Fields that are set will be updated. */
 export type BasemapPatch = {
-  /**
-   * Optional attribution to show at the bottom of the map. Will be overriden by
-   * the attribution specified in the gl-style in the case of MAPBOX types.
-   */
+  /** Optional attribution to show at the bottom of the map. Will be overriden by the attribution specified in the gl-style in the case of MAPBOX types. */
   attribution?: Maybe<Scalars['String']>;
   description?: Maybe<Scalars['String']>;
   id?: Maybe<Scalars['Int']>;
   interactivitySettingsId?: Maybe<Scalars['Int']>;
   isArcgisTiledMapservice?: Maybe<Scalars['Boolean']>;
-  /**
-   * Used to indicate whether the basemap is included in the public basemap
-   * listing. Useful for hiding an option temporarily, or adding a basemap to the
-   * project which will only be used in surveys.
-   */
+  /** Used to indicate whether the basemap is included in the public basemap listing. Useful for hiding an option temporarily, or adding a basemap to the project which will only be used in surveys. */
   isDisabled?: Maybe<Scalars['Boolean']>;
   /** Identify the labels layer lowest in the stack so that overlay layers may be placed underneath. */
   labelsLayerId?: Maybe<Scalars['String']>;
   maxzoom?: Maybe<Scalars['Int']>;
   /** Label shown in the basemap picker interface */
   name?: Maybe<Scalars['String']>;
-  /**
-   * If not set, the basemap will be considered a "Shared Basemap" that can be
-   * added to any project. Otherwise it is private to the given proejct. Only
-   * superusers can create Shared Basemaps.
-   */
+  /** If not set, the basemap will be considered a "Shared Basemap" that can be added to any project. Otherwise it is private to the given proejct. Only superusers can create Shared Basemaps. */
   projectId?: Maybe<Scalars['Int']>;
   surveysOnly?: Maybe<Scalars['Boolean']>;
   terrainExaggeration?: Maybe<Scalars['BigFloat']>;
@@ -811,10 +743,7 @@ export type BasemapPatch = {
   /** If set to false, terrain will always be on. Otherwise the user will be given a toggle switch. */
   terrainOptional?: Maybe<Scalars['Boolean']>;
   terrainTileSize?: Maybe<Scalars['Int']>;
-  /**
-   * Terrain data source url. Leave blank to disable 3d terrain. See [mapbox gl style terrain
-   * documentation](https://docs.mapbox.com/mapbox-gl-js/style-spec/terrain/).
-   */
+  /** Terrain data source url. Leave blank to disable 3d terrain. See [mapbox gl style terrain documentation](https://docs.mapbox.com/mapbox-gl-js/style-spec/terrain/). */
   terrainUrl?: Maybe<Scalars['String']>;
   terrainVisibilityDefault?: Maybe<Scalars['Boolean']>;
   /** Square thumbnail will be used to identify the basemap */
@@ -823,11 +752,7 @@ export type BasemapPatch = {
   tileSize?: Maybe<Scalars['Int']>;
   translatedProps?: Maybe<Scalars['JSON']>;
   type?: Maybe<BasemapType>;
-  /**
-   * For MAPBOX types, this can be a mapbox://-style url or a link to a custom
-   * mapbox gl style. For RASTER_URL_TEMPLATE, it should be a url template
-   * conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)
-   */
+  /** For MAPBOX types, this can be a mapbox://-style url or a link to a custom mapbox gl style. For RASTER_URL_TEMPLATE, it should be a url template conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources) */
   url?: Maybe<Scalars['String']>;
   useDefaultOfflineTileSettings?: Maybe<Scalars['Boolean']>;
 };
@@ -981,6 +906,8 @@ export enum ChangeLogFieldGroup {
   FolderDeleted = 'FOLDER_DELETED',
   FolderTitle = 'FOLDER_TITLE',
   FolderType = 'FOLDER_TYPE',
+  LayersPublished = 'LAYERS_PUBLISHED',
+  LayersZOrderChange = 'LAYERS_Z_ORDER_CHANGE',
   LayerAcl = 'LAYER_ACL',
   LayerAttribution = 'LAYER_ATTRIBUTION',
   LayerCartography = 'LAYER_CARTOGRAPHY',
@@ -992,8 +919,6 @@ export enum ChangeLogFieldGroup {
   LayerTemporal = 'LAYER_TEMPORAL',
   LayerTitle = 'LAYER_TITLE',
   LayerUploaded = 'LAYER_UPLOADED',
-  LayersPublished = 'LAYERS_PUBLISHED',
-  LayersZOrderChange = 'LAYERS_Z_ORDER_CHANGE',
   ResolvableLayerCommentsCreated = 'RESOLVABLE_LAYER_COMMENTS_CREATED',
   ResolvableLayerCommentsReopened = 'RESOLVABLE_LAYER_COMMENTS_REOPENED',
   ResolvableLayerCommentsResolved = 'RESOLVABLE_LAYER_COMMENTS_RESOLVED',
@@ -1127,11 +1052,7 @@ export type CompatibleSpatialMetric = {
   durationSeconds?: Maybe<Scalars['Float']>;
   errorMessage?: Maybe<Scalars['String']>;
   eta?: Maybe<Scalars['Datetime']>;
-  /**
-   * When present with a null subject, index into
-   * ReportOverlayDependencies.fragmentSubjectCatalog /
-   * DraftReportDependenciesResults.fragmentSubjectCatalog.
-   */
+  /** When present with a null subject, index into ReportOverlayDependencies.fragmentSubjectCatalog / DraftReportDependenciesResults.fragmentSubjectCatalog. */
   f?: Maybe<Scalars['Int']>;
   /** When present with a null subject, geography id (project_geography.id). */
   g?: Maybe<Scalars['Int']>;
@@ -2798,18 +2719,12 @@ export type DataLayer = Node & {
   /** Reads a single `InteractivitySetting` that is related to this `DataLayer`. */
   interactivitySettings?: Maybe<InteractivitySetting>;
   interactivitySettingsId: Scalars['Int'];
-  /**
-   * JSON array of MapBox GL Style layers. Layers should not specify an id or
-   * sourceId. These will be automatically generated at runtime.
-   */
+  /** JSON array of MapBox GL Style layers. Layers should not specify an id or sourceId. These will be automatically generated at runtime. */
   mapboxGlStyles?: Maybe<Scalars['JSON']>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
   projectId: Scalars['Int'];
-  /**
-   * Determines z-ordering of layer in relation to layers in the basemap. For this
-   * functionality to work, layers must be identified in the basemap configuration.
-   */
+  /** Determines z-ordering of layer in relation to layers in the basemap. For this functionality to work, layers must be identified in the basemap configuration. */
   renderUnder: RenderUnderType;
   /** For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to. */
   sourceLayer?: Maybe<Scalars['String']>;
@@ -2818,11 +2733,7 @@ export type DataLayer = Node & {
   sprites?: Maybe<Array<Sprite>>;
   /** @deprecated Use TableOfContentsItem.geoprocessingReferenceId instead */
   staticId?: Maybe<Scalars['String']>;
-  /**
-   * For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
-   * is blank and this layer merely controls the display of a single sublayer when
-   * making image requests.
-   */
+  /** For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles is blank and this layer merely controls the display of a single sublayer when making image requests. */
   sublayer?: Maybe<Scalars['String']>;
   sublayerType?: Maybe<SublayerType>;
   /** Reads a single `TableOfContentsItem` that is related to this `DataLayer`. */
@@ -2833,11 +2744,7 @@ export type DataLayer = Node & {
    */
   tableOfContentsItemsConnection: TableOfContentsItemsConnection;
   totalQuotaUsed?: Maybe<Scalars['BigInt']>;
-  /**
-   * Returns the ogc geometry type of the layer if it is a vector layer, otherwise
-   * returns null. E.g. "Point", "LineString", "Polygon", "MultiPoint",
-   * "MultiLineString", "MultiPolygon".
-   */
+  /** Returns the ogc geometry type of the layer if it is a vector layer, otherwise returns null. E.g. "Point", "LineString", "Polygon", "MultiPoint", "MultiLineString", "MultiPolygon". */
   vectorGeometryType?: Maybe<Scalars['String']>;
   vectorObjectKey?: Maybe<Scalars['String']>;
   version?: Maybe<Scalars['Int']>;
@@ -2929,26 +2836,16 @@ export type DataLayerCondition = {
 export type DataLayerInput = {
   dataSourceId: Scalars['Int'];
   id?: Maybe<Scalars['Int']>;
-  /**
-   * JSON array of MapBox GL Style layers. Layers should not specify an id or
-   * sourceId. These will be automatically generated at runtime.
-   */
+  /** JSON array of MapBox GL Style layers. Layers should not specify an id or sourceId. These will be automatically generated at runtime. */
   mapboxGlStyles?: Maybe<Scalars['JSON']>;
   projectId: Scalars['Int'];
-  /**
-   * Determines z-ordering of layer in relation to layers in the basemap. For this
-   * functionality to work, layers must be identified in the basemap configuration.
-   */
+  /** Determines z-ordering of layer in relation to layers in the basemap. For this functionality to work, layers must be identified in the basemap configuration. */
   renderUnder?: Maybe<RenderUnderType>;
   /** For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to. */
   sourceLayer?: Maybe<Scalars['String']>;
   spriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
   staticId?: Maybe<Scalars['String']>;
-  /**
-   * For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
-   * is blank and this layer merely controls the display of a single sublayer when
-   * making image requests.
-   */
+  /** For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles is blank and this layer merely controls the display of a single sublayer when making image requests. */
   sublayer?: Maybe<Scalars['String']>;
   sublayerType?: Maybe<SublayerType>;
   zIndex?: Maybe<Scalars['Int']>;
@@ -2959,26 +2856,16 @@ export type DataLayerPatch = {
   dataSourceId?: Maybe<Scalars['Int']>;
   id?: Maybe<Scalars['Int']>;
   interactivitySettingsId?: Maybe<Scalars['Int']>;
-  /**
-   * JSON array of MapBox GL Style layers. Layers should not specify an id or
-   * sourceId. These will be automatically generated at runtime.
-   */
+  /** JSON array of MapBox GL Style layers. Layers should not specify an id or sourceId. These will be automatically generated at runtime. */
   mapboxGlStyles?: Maybe<Scalars['JSON']>;
   projectId?: Maybe<Scalars['Int']>;
-  /**
-   * Determines z-ordering of layer in relation to layers in the basemap. For this
-   * functionality to work, layers must be identified in the basemap configuration.
-   */
+  /** Determines z-ordering of layer in relation to layers in the basemap. For this functionality to work, layers must be identified in the basemap configuration. */
   renderUnder?: Maybe<RenderUnderType>;
   /** For vector tile sources (VECTOR), references the layer inside the vector tiles that this layer applies to. */
   sourceLayer?: Maybe<Scalars['String']>;
   spriteIds?: Maybe<Array<Maybe<Scalars['Int']>>>;
   staticId?: Maybe<Scalars['String']>;
-  /**
-   * For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
-   * is blank and this layer merely controls the display of a single sublayer when
-   * making image requests.
-   */
+  /** For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles is blank and this layer merely controls the display of a single sublayer when making image requests. */
   sublayer?: Maybe<Scalars['String']>;
   sublayerType?: Maybe<SublayerType>;
   zIndex?: Maybe<Scalars['Int']>;
@@ -3044,21 +2931,11 @@ export type DataSource = Node & {
   /** Contains an attribution to be displayed when the map is shown to a user. */
   attribution?: Maybe<Scalars['String']>;
   authorProfile?: Maybe<Profile>;
-  /**
-   * An array containing the longitude and latitude of the southwest and northeast
-   * corners of the source bounding box in the following order: `[sw.lng, sw.lat,
-   * ne.lng, ne.lat]`. When this property is included in a source, no tiles outside
-   * of the given bounds are requested by Mapbox GL. This property can also be used
-   * as metadata for non-tiled sources.
-   */
+  /** An array containing the longitude and latitude of the southwest and northeast corners of the source bounding box in the following order: `[sw.lng, sw.lat, ne.lng, ne.lat]`. When this property is included in a source, no tiles outside of the given bounds are requested by Mapbox GL. This property can also be used as metadata for non-tiled sources. */
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   /** SEASKETCH_VECTOR sources only. S3 bucket where data are stored. Populated from Project.data_sources_bucket on creation. */
   bucketId?: Maybe<Scalars['String']>;
-  /**
-   * GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no
-   * buffer. A value of 512 produces a buffer as wide as the tile itself. Larger
-   * values produce fewer rendering artifacts near tile edges and slower performance.
-   */
+  /** GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no buffer. A value of 512 produces a buffer as wide as the tile itself. Larger values produce fewer rendering artifacts near tile edges and slower performance. */
   buffer?: Maybe<Scalars['Int']>;
   /** SEASKETCH_VECTOR sources only. Approximate size of the geojson source */
   byteLength?: Maybe<Scalars['Int']>;
@@ -3066,28 +2943,19 @@ export type DataSource = Node & {
   /**
    * GeoJSON only.
    *
-   * If the data is a collection of point features, setting this to true clusters
-   * the points by radius into groups. Cluster groups become new Point features in
-   * the source with additional properties:
+   * If the data is a collection of point features, setting this to true clusters the points by radius into groups. Cluster groups become new Point features in the source with additional properties:
    *
    *   * cluster Is true if the point is a cluster
-   *   * cluster_id A unqiue id for the cluster to be used in conjunction with the
-   * [cluster inspection methods](https://docs.mapbox.com/mapbox-gl-js/api/#geojsonsource#getclusterexpansionzoom)
+   *   * cluster_id A unqiue id for the cluster to be used in conjunction with the [cluster inspection methods](https://docs.mapbox.com/mapbox-gl-js/api/#geojsonsource#getclusterexpansionzoom)
    *   * point_count Number of original points grouped into this cluster
    *   * point_count_abbreviated An abbreviated point count
    */
   cluster?: Maybe<Scalars['Boolean']>;
-  /**
-   * GeoJSON only. Max zoom on which to cluster points if clustering is enabled.
-   * Defaults to one zoom less than maxzoom (so that last zoom features are not clustered).
-   */
+  /** GeoJSON only. Max zoom on which to cluster points if clustering is enabled. Defaults to one zoom less than maxzoom (so that last zoom features are not clustered). */
   clusterMaxZoom?: Maybe<Scalars['Int']>;
   /** See [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-clusterProperties). */
   clusterProperties?: Maybe<Scalars['JSON']>;
-  /**
-   * GeoJSON only. Radius of each cluster if clustering is enabled. A value of 512
-   * indicates a radius equal to the width of a tile.
-   */
+  /** GeoJSON only. Radius of each cluster if clustering is enabled. A value of 512 indicates a radius equal to the width of a tile. */
   clusterRadius?: Maybe<Scalars['Int']>;
   columnDetails?: Maybe<Scalars['JSON']>;
   /** Image sources only. Corners of image specified in longitude, latitude pairs. */
@@ -3100,45 +2968,24 @@ export type DataSource = Node & {
   dataLibraryTemplateId?: Maybe<Scalars['String']>;
   /** Raster-DEM only. The encoding used by this source. Mapbox Terrain RGB is used by default */
   encoding?: Maybe<RasterDemEncoding>;
-  /**
-   * SEASKETCH_VECTOR sources only. When enabled, uploads will be placed in a
-   * different class of storage that requires a temporary security credential to
-   * access. Set during creation and cannot be changed.
-   */
+  /** SEASKETCH_VECTOR sources only. When enabled, uploads will be placed in a different class of storage that requires a temporary security credential to access. Set during creation and cannot be changed. */
   enhancedSecurity?: Maybe<Scalars['Boolean']>;
   featureCount?: Maybe<Scalars['Int']>;
-  /**
-   * GeoJSON only. Whether to generate ids for the geojson features. When enabled,
-   * the feature.id property will be auto assigned based on its index in the
-   * features array, over-writing any previous values.
-   */
+  /** GeoJSON only. Whether to generate ids for the geojson features. When enabled, the feature.id property will be auto assigned based on its index in the features array, over-writing any previous values. */
   generateId?: Maybe<Scalars['Boolean']>;
-  /**
-   * mapbox-geostats summary information for vector sources. Useful for
-   * cartographic tools and authoring popups. SEASKETCH_VECTOR sources only.
-   */
+  /** mapbox-geostats summary information for vector sources. Useful for cartographic tools and authoring popups. SEASKETCH_VECTOR sources only. */
   geostats?: Maybe<Scalars['JSON']>;
   hostingQuotaUsed?: Maybe<Scalars['BigInt']>;
   /** Should be used as sourceId in stylesheets. */
   id: Scalars['Int'];
-  /**
-   * For SeaSketchVector sources, identifies whether the original source comes from
-   * a direct upload or a service location like ArcGIS server
-   */
+  /** For SeaSketchVector sources, identifies whether the original source comes from a direct upload or a service location like ArcGIS server */
   importType?: Maybe<DataSourceImportTypes>;
   isArchived?: Maybe<Scalars['Boolean']>;
   isConvertibleLegacySource?: Maybe<Scalars['Boolean']>;
   isSingleBandRaster?: Maybe<Scalars['Boolean']>;
-  /**
-   * GeoJSON only. Whether to calculate line distance metrics. This is required for
-   * line layers that specify line-gradient values.
-   */
+  /** GeoJSON only. Whether to calculate line distance metrics. This is required for line layers that specify line-gradient values. */
   lineMetrics?: Maybe<Scalars['Boolean']>;
-  /**
-   * For Vector, Raster, GeoJSON and Raster DEM sources. Maximum zoom level for
-   * which tiles are available, as in the TileJSON spec. Data from tiles at the
-   * maxzoom are used when displaying the map at higher zoom levels.
-   */
+  /** For Vector, Raster, GeoJSON and Raster DEM sources. Maximum zoom level for which tiles are available, as in the TileJSON spec. Data from tiles at the maxzoom are used when displaying the map at higher zoom levels. */
   maxzoom?: Maybe<Scalars['Int']>;
   /** For Vector, Raster, and Raster DEM sources. Minimum zoom level for which tiles are available, as in the TileJSON spec. */
   minzoom?: Maybe<Scalars['Int']>;
@@ -3146,34 +2993,20 @@ export type DataSource = Node & {
   nodeId: Scalars['ID'];
   /** Size of the normalized file. SEASKETCH_VECTOR sources only. */
   normalizedSourceBytes?: Maybe<Scalars['BigInt']>;
-  /**
-   * Sources are converted to flatgeobuf (vector, 4326) or geotif (raster) and
-   * store indefinitely so they may be processed into tilesets and to support the
-   * download function. SEASKETCH_VECTOR sources only.
-   */
+  /** Sources are converted to flatgeobuf (vector, 4326) or geotif (raster) and store indefinitely so they may be processed into tilesets and to support the download function. SEASKETCH_VECTOR sources only. */
   normalizedSourceObjectKey?: Maybe<Scalars['String']>;
   /** SEASKETCH_VECTOR sources only. S3 object key where data are stored */
   objectKey?: Maybe<Scalars['UUID']>;
-  /**
-   * For SeaSketchVector sources, identifies location of original service that
-   * hosted the data, if any. This can be used to update a layer with an updated
-   * copy of the data source if necessary.
-   */
+  /** For SeaSketchVector sources, identifies location of original service that hosted the data, if any. This can be used to update a layer with an updated copy of the data source if necessary. */
   originalSourceUrl?: Maybe<Scalars['String']>;
   /** Reads and enables pagination through a set of `DataUploadOutput`. */
   outputs?: Maybe<Array<DataUploadOutput>>;
   /** Use to upload source data to s3. Must be an admin. */
   presignedUploadUrl?: Maybe<Scalars['String']>;
   projectId: Scalars['Int'];
-  /**
-   * GeoJSON only. A property to use as a feature id (for feature state). Either a
-   * property name, or an object of the form `{<sourceLayer>: <propertyName>}.`
-   */
+  /** GeoJSON only. A property to use as a feature id (for feature state). Either a property name, or an object of the form `{<sourceLayer>: <propertyName>}.` */
   promoteId?: Maybe<Scalars['Boolean']>;
-  /**
-   * ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR only. Key-Value object with
-   * querystring parameters that will be added to requests.
-   */
+  /** ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR only. Key-Value object with querystring parameters that will be added to requests. */
   queryParameters?: Maybe<Scalars['JSON']>;
   /** Reads and enables pagination through a set of `QuotaDetail`. */
   quotaUsed?: Maybe<Array<QuotaDetail>>;
@@ -3183,10 +3016,7 @@ export type DataSource = Node & {
   rasterScale?: Maybe<Scalars['Float']>;
   /** Reads and enables pagination through a set of `TableOfContentsItem`. */
   relatedTableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
-  /**
-   * For MapBox Vector and Raster sources. Influences the y direction of the tile
-   * coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.
-   */
+  /** For MapBox Vector and Raster sources. Influences the y direction of the tile coordinates. The global-mercator (aka Spherical Mercator) profile is assumed. */
   scheme?: Maybe<TileScheme>;
   /** Reads a single `SourceProcessingJob` that is related to this `DataSource`. */
   sourceProcessingJob?: Maybe<SourceProcessingJob>;
@@ -3203,26 +3033,22 @@ export type DataSource = Node & {
    * raster, and remote layers. Null when the source has none.
    */
   temporal?: Maybe<Scalars['TemporalInfo']>;
-  /** For tiled sources, a list of endpoints that can be used to retrieve tiles. */
-  tiles?: Maybe<Array<Maybe<Scalars['String']>>>;
   /** The minimum visual size to display tiles for this layer. Only configurable for raster layers. */
   tileSize?: Maybe<Scalars['Int']>;
+  /** For tiled sources, a list of endpoints that can be used to retrieve tiles. */
+  tiles?: Maybe<Array<Maybe<Scalars['String']>>>;
   /** GeoJSON only. Douglas-Peucker simplification tolerance (higher means simpler geometries and faster performance). */
   tolerance?: Maybe<Scalars['BigFloat']>;
   translatedProps: Scalars['JSON'];
   /** MapBox GL source type or custom seasketch type. */
   type: DataSourceTypes;
+  /** UUID of the upload processing job associated with a SEASKETCH_VECTOR source. */
+  uploadTaskId?: Maybe<Scalars['UUID']>;
   uploadedBy?: Maybe<Scalars['String']>;
   uploadedSourceFilename?: Maybe<Scalars['String']>;
   /** If uploaded using a multi-layer file format (gdb), includes the layer ID. SEASKETCH_VECTOR sources only. */
   uploadedSourceLayername?: Maybe<Scalars['String']>;
-  /** UUID of the upload processing job associated with a SEASKETCH_VECTOR source. */
-  uploadTaskId?: Maybe<Scalars['UUID']>;
-  /**
-   * A URL to a TileJSON resource for tiled sources. For GeoJSON or
-   * SEASKETCH_VECTOR sources, use this to fill in the data property of the source.
-   * Also used by ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR
-   */
+  /** A URL to a TileJSON resource for tiled sources. For GeoJSON or SEASKETCH_VECTOR sources, use this to fill in the data property of the source. Also used by ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR */
   url?: Maybe<Scalars['String']>;
   /** Video sources only. URLs to video content in order of preferred format. */
   urls?: Maybe<Array<Maybe<Scalars['String']>>>;
@@ -3352,21 +3178,11 @@ export type DataSourceInput = {
   arcgisFetchStrategy?: Maybe<ArcgisFeatureLayerFetchStrategy>;
   /** Contains an attribution to be displayed when the map is shown to a user. */
   attribution?: Maybe<Scalars['String']>;
-  /**
-   * An array containing the longitude and latitude of the southwest and northeast
-   * corners of the source bounding box in the following order: `[sw.lng, sw.lat,
-   * ne.lng, ne.lat]`. When this property is included in a source, no tiles outside
-   * of the given bounds are requested by Mapbox GL. This property can also be used
-   * as metadata for non-tiled sources.
-   */
+  /** An array containing the longitude and latitude of the southwest and northeast corners of the source bounding box in the following order: `[sw.lng, sw.lat, ne.lng, ne.lat]`. When this property is included in a source, no tiles outside of the given bounds are requested by Mapbox GL. This property can also be used as metadata for non-tiled sources. */
   bounds?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   /** SEASKETCH_VECTOR sources only. S3 bucket where data are stored. Populated from Project.data_sources_bucket on creation. */
   bucketId?: Maybe<Scalars['String']>;
-  /**
-   * GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no
-   * buffer. A value of 512 produces a buffer as wide as the tile itself. Larger
-   * values produce fewer rendering artifacts near tile edges and slower performance.
-   */
+  /** GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no buffer. A value of 512 produces a buffer as wide as the tile itself. Larger values produce fewer rendering artifacts near tile edges and slower performance. */
   buffer?: Maybe<Scalars['Int']>;
   /** SEASKETCH_VECTOR sources only. Approximate size of the geojson source */
   byteLength?: Maybe<Scalars['Int']>;
@@ -3374,28 +3190,19 @@ export type DataSourceInput = {
   /**
    * GeoJSON only.
    *
-   * If the data is a collection of point features, setting this to true clusters
-   * the points by radius into groups. Cluster groups become new Point features in
-   * the source with additional properties:
+   * If the data is a collection of point features, setting this to true clusters the points by radius into groups. Cluster groups become new Point features in the source with additional properties:
    *
    *   * cluster Is true if the point is a cluster
-   *   * cluster_id A unqiue id for the cluster to be used in conjunction with the
-   * [cluster inspection methods](https://docs.mapbox.com/mapbox-gl-js/api/#geojsonsource#getclusterexpansionzoom)
+   *   * cluster_id A unqiue id for the cluster to be used in conjunction with the [cluster inspection methods](https://docs.mapbox.com/mapbox-gl-js/api/#geojsonsource#getclusterexpansionzoom)
    *   * point_count Number of original points grouped into this cluster
    *   * point_count_abbreviated An abbreviated point count
    */
   cluster?: Maybe<Scalars['Boolean']>;
-  /**
-   * GeoJSON only. Max zoom on which to cluster points if clustering is enabled.
-   * Defaults to one zoom less than maxzoom (so that last zoom features are not clustered).
-   */
+  /** GeoJSON only. Max zoom on which to cluster points if clustering is enabled. Defaults to one zoom less than maxzoom (so that last zoom features are not clustered). */
   clusterMaxZoom?: Maybe<Scalars['Int']>;
   /** See [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-clusterProperties). */
   clusterProperties?: Maybe<Scalars['JSON']>;
-  /**
-   * GeoJSON only. Radius of each cluster if clustering is enabled. A value of 512
-   * indicates a radius equal to the width of a tile.
-   */
+  /** GeoJSON only. Radius of each cluster if clustering is enabled. A value of 512 indicates a radius equal to the width of a tile. */
   clusterRadius?: Maybe<Scalars['Int']>;
   columnDetails?: Maybe<Scalars['JSON']>;
   /** Image sources only. Corners of image specified in longitude, latitude pairs. */
@@ -3406,102 +3213,60 @@ export type DataSourceInput = {
   dataLibraryTemplateId?: Maybe<Scalars['String']>;
   /** Raster-DEM only. The encoding used by this source. Mapbox Terrain RGB is used by default */
   encoding?: Maybe<RasterDemEncoding>;
-  /**
-   * SEASKETCH_VECTOR sources only. When enabled, uploads will be placed in a
-   * different class of storage that requires a temporary security credential to
-   * access. Set during creation and cannot be changed.
-   */
+  /** SEASKETCH_VECTOR sources only. When enabled, uploads will be placed in a different class of storage that requires a temporary security credential to access. Set during creation and cannot be changed. */
   enhancedSecurity?: Maybe<Scalars['Boolean']>;
   featureCount?: Maybe<Scalars['Int']>;
-  /**
-   * GeoJSON only. Whether to generate ids for the geojson features. When enabled,
-   * the feature.id property will be auto assigned based on its index in the
-   * features array, over-writing any previous values.
-   */
+  /** GeoJSON only. Whether to generate ids for the geojson features. When enabled, the feature.id property will be auto assigned based on its index in the features array, over-writing any previous values. */
   generateId?: Maybe<Scalars['Boolean']>;
-  /**
-   * mapbox-geostats summary information for vector sources. Useful for
-   * cartographic tools and authoring popups. SEASKETCH_VECTOR sources only.
-   */
+  /** mapbox-geostats summary information for vector sources. Useful for cartographic tools and authoring popups. SEASKETCH_VECTOR sources only. */
   geostats?: Maybe<Scalars['JSON']>;
   /** Should be used as sourceId in stylesheets. */
   id?: Maybe<Scalars['Int']>;
-  /**
-   * For SeaSketchVector sources, identifies whether the original source comes from
-   * a direct upload or a service location like ArcGIS server
-   */
+  /** For SeaSketchVector sources, identifies whether the original source comes from a direct upload or a service location like ArcGIS server */
   importType?: Maybe<DataSourceImportTypes>;
   isSingleBandRaster?: Maybe<Scalars['Boolean']>;
-  /**
-   * GeoJSON only. Whether to calculate line distance metrics. This is required for
-   * line layers that specify line-gradient values.
-   */
+  /** GeoJSON only. Whether to calculate line distance metrics. This is required for line layers that specify line-gradient values. */
   lineMetrics?: Maybe<Scalars['Boolean']>;
-  /**
-   * For Vector, Raster, GeoJSON and Raster DEM sources. Maximum zoom level for
-   * which tiles are available, as in the TileJSON spec. Data from tiles at the
-   * maxzoom are used when displaying the map at higher zoom levels.
-   */
+  /** For Vector, Raster, GeoJSON and Raster DEM sources. Maximum zoom level for which tiles are available, as in the TileJSON spec. Data from tiles at the maxzoom are used when displaying the map at higher zoom levels. */
   maxzoom?: Maybe<Scalars['Int']>;
   /** For Vector, Raster, and Raster DEM sources. Minimum zoom level for which tiles are available, as in the TileJSON spec. */
   minzoom?: Maybe<Scalars['Int']>;
   /** Size of the normalized file. SEASKETCH_VECTOR sources only. */
   normalizedSourceBytes?: Maybe<Scalars['BigInt']>;
-  /**
-   * Sources are converted to flatgeobuf (vector, 4326) or geotif (raster) and
-   * store indefinitely so they may be processed into tilesets and to support the
-   * download function. SEASKETCH_VECTOR sources only.
-   */
+  /** Sources are converted to flatgeobuf (vector, 4326) or geotif (raster) and store indefinitely so they may be processed into tilesets and to support the download function. SEASKETCH_VECTOR sources only. */
   normalizedSourceObjectKey?: Maybe<Scalars['String']>;
   /** SEASKETCH_VECTOR sources only. S3 object key where data are stored */
   objectKey?: Maybe<Scalars['UUID']>;
-  /**
-   * For SeaSketchVector sources, identifies location of original service that
-   * hosted the data, if any. This can be used to update a layer with an updated
-   * copy of the data source if necessary.
-   */
+  /** For SeaSketchVector sources, identifies location of original service that hosted the data, if any. This can be used to update a layer with an updated copy of the data source if necessary. */
   originalSourceUrl?: Maybe<Scalars['String']>;
   projectId: Scalars['Int'];
-  /**
-   * GeoJSON only. A property to use as a feature id (for feature state). Either a
-   * property name, or an object of the form `{<sourceLayer>: <propertyName>}.`
-   */
+  /** GeoJSON only. A property to use as a feature id (for feature state). Either a property name, or an object of the form `{<sourceLayer>: <propertyName>}.` */
   promoteId?: Maybe<Scalars['Boolean']>;
-  /**
-   * ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR only. Key-Value object with
-   * querystring parameters that will be added to requests.
-   */
+  /** ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR only. Key-Value object with querystring parameters that will be added to requests. */
   queryParameters?: Maybe<Scalars['JSON']>;
   rasterBandCount?: Maybe<Scalars['Int']>;
   rasterOffset?: Maybe<Scalars['Float']>;
   rasterRepresentativeColors?: Maybe<Scalars['JSON']>;
   rasterScale?: Maybe<Scalars['Float']>;
-  /**
-   * For MapBox Vector and Raster sources. Influences the y direction of the tile
-   * coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.
-   */
+  /** For MapBox Vector and Raster sources. Influences the y direction of the tile coordinates. The global-mercator (aka Spherical Mercator) profile is assumed. */
   scheme?: Maybe<TileScheme>;
   /** ArcGIS map service setting. If enabled, client can reorder layers and apply layer-specific opacity settings. */
   supportsDynamicLayers?: Maybe<Scalars['Boolean']>;
-  /** For tiled sources, a list of endpoints that can be used to retrieve tiles. */
-  tiles?: Maybe<Array<Maybe<Scalars['String']>>>;
   /** The minimum visual size to display tiles for this layer. Only configurable for raster layers. */
   tileSize?: Maybe<Scalars['Int']>;
+  /** For tiled sources, a list of endpoints that can be used to retrieve tiles. */
+  tiles?: Maybe<Array<Maybe<Scalars['String']>>>;
   /** GeoJSON only. Douglas-Peucker simplification tolerance (higher means simpler geometries and faster performance). */
   tolerance?: Maybe<Scalars['BigFloat']>;
   translatedProps?: Maybe<Scalars['JSON']>;
   /** MapBox GL source type or custom seasketch type. */
   type: DataSourceTypes;
+  /** UUID of the upload processing job associated with a SEASKETCH_VECTOR source. */
+  uploadTaskId?: Maybe<Scalars['UUID']>;
   uploadedSourceFilename?: Maybe<Scalars['String']>;
   /** If uploaded using a multi-layer file format (gdb), includes the layer ID. SEASKETCH_VECTOR sources only. */
   uploadedSourceLayername?: Maybe<Scalars['String']>;
-  /** UUID of the upload processing job associated with a SEASKETCH_VECTOR source. */
-  uploadTaskId?: Maybe<Scalars['UUID']>;
-  /**
-   * A URL to a TileJSON resource for tiled sources. For GeoJSON or
-   * SEASKETCH_VECTOR sources, use this to fill in the data property of the source.
-   * Also used by ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR
-   */
+  /** A URL to a TileJSON resource for tiled sources. For GeoJSON or SEASKETCH_VECTOR sources, use this to fill in the data property of the source. Also used by ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR */
   url?: Maybe<Scalars['String']>;
   /** Video sources only. URLs to video content in order of preferred format. */
   urls?: Maybe<Array<Maybe<Scalars['String']>>>;
@@ -3516,90 +3281,53 @@ export type DataSourcePatch = {
   arcgisFetchStrategy?: Maybe<ArcgisFeatureLayerFetchStrategy>;
   /** Contains an attribution to be displayed when the map is shown to a user. */
   attribution?: Maybe<Scalars['String']>;
-  /**
-   * GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no
-   * buffer. A value of 512 produces a buffer as wide as the tile itself. Larger
-   * values produce fewer rendering artifacts near tile edges and slower performance.
-   */
+  /** GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no buffer. A value of 512 produces a buffer as wide as the tile itself. Larger values produce fewer rendering artifacts near tile edges and slower performance. */
   buffer?: Maybe<Scalars['Int']>;
   /**
    * GeoJSON only.
    *
-   * If the data is a collection of point features, setting this to true clusters
-   * the points by radius into groups. Cluster groups become new Point features in
-   * the source with additional properties:
+   * If the data is a collection of point features, setting this to true clusters the points by radius into groups. Cluster groups become new Point features in the source with additional properties:
    *
    *   * cluster Is true if the point is a cluster
-   *   * cluster_id A unqiue id for the cluster to be used in conjunction with the
-   * [cluster inspection methods](https://docs.mapbox.com/mapbox-gl-js/api/#geojsonsource#getclusterexpansionzoom)
+   *   * cluster_id A unqiue id for the cluster to be used in conjunction with the [cluster inspection methods](https://docs.mapbox.com/mapbox-gl-js/api/#geojsonsource#getclusterexpansionzoom)
    *   * point_count Number of original points grouped into this cluster
    *   * point_count_abbreviated An abbreviated point count
    */
   cluster?: Maybe<Scalars['Boolean']>;
-  /**
-   * GeoJSON only. Max zoom on which to cluster points if clustering is enabled.
-   * Defaults to one zoom less than maxzoom (so that last zoom features are not clustered).
-   */
+  /** GeoJSON only. Max zoom on which to cluster points if clustering is enabled. Defaults to one zoom less than maxzoom (so that last zoom features are not clustered). */
   clusterMaxZoom?: Maybe<Scalars['Int']>;
   /** See [MapBox GL Style docs](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#geojson-clusterProperties). */
   clusterProperties?: Maybe<Scalars['JSON']>;
-  /**
-   * GeoJSON only. Radius of each cluster if clustering is enabled. A value of 512
-   * indicates a radius equal to the width of a tile.
-   */
+  /** GeoJSON only. Radius of each cluster if clustering is enabled. A value of 512 indicates a radius equal to the width of a tile. */
   clusterRadius?: Maybe<Scalars['Int']>;
   /** Image sources only. Corners of image specified in longitude, latitude pairs. */
   coordinates?: Maybe<Array<Maybe<Scalars['BigFloat']>>>;
   /** Raster-DEM only. The encoding used by this source. Mapbox Terrain RGB is used by default */
   encoding?: Maybe<RasterDemEncoding>;
-  /**
-   * GeoJSON only. Whether to generate ids for the geojson features. When enabled,
-   * the feature.id property will be auto assigned based on its index in the
-   * features array, over-writing any previous values.
-   */
+  /** GeoJSON only. Whether to generate ids for the geojson features. When enabled, the feature.id property will be auto assigned based on its index in the features array, over-writing any previous values. */
   generateId?: Maybe<Scalars['Boolean']>;
-  /**
-   * GeoJSON only. Whether to calculate line distance metrics. This is required for
-   * line layers that specify line-gradient values.
-   */
+  /** GeoJSON only. Whether to calculate line distance metrics. This is required for line layers that specify line-gradient values. */
   lineMetrics?: Maybe<Scalars['Boolean']>;
-  /**
-   * For Vector, Raster, GeoJSON and Raster DEM sources. Maximum zoom level for
-   * which tiles are available, as in the TileJSON spec. Data from tiles at the
-   * maxzoom are used when displaying the map at higher zoom levels.
-   */
+  /** For Vector, Raster, GeoJSON and Raster DEM sources. Maximum zoom level for which tiles are available, as in the TileJSON spec. Data from tiles at the maxzoom are used when displaying the map at higher zoom levels. */
   maxzoom?: Maybe<Scalars['Int']>;
   /** For Vector, Raster, and Raster DEM sources. Minimum zoom level for which tiles are available, as in the TileJSON spec. */
   minzoom?: Maybe<Scalars['Int']>;
-  /**
-   * GeoJSON only. A property to use as a feature id (for feature state). Either a
-   * property name, or an object of the form `{<sourceLayer>: <propertyName>}.`
-   */
+  /** GeoJSON only. A property to use as a feature id (for feature state). Either a property name, or an object of the form `{<sourceLayer>: <propertyName>}.` */
   promoteId?: Maybe<Scalars['Boolean']>;
-  /**
-   * ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR only. Key-Value object with
-   * querystring parameters that will be added to requests.
-   */
+  /** ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR only. Key-Value object with querystring parameters that will be added to requests. */
   queryParameters?: Maybe<Scalars['JSON']>;
-  /**
-   * For MapBox Vector and Raster sources. Influences the y direction of the tile
-   * coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.
-   */
+  /** For MapBox Vector and Raster sources. Influences the y direction of the tile coordinates. The global-mercator (aka Spherical Mercator) profile is assumed. */
   scheme?: Maybe<TileScheme>;
   /** ArcGIS map service setting. If enabled, client can reorder layers and apply layer-specific opacity settings. */
   supportsDynamicLayers?: Maybe<Scalars['Boolean']>;
-  /** For tiled sources, a list of endpoints that can be used to retrieve tiles. */
-  tiles?: Maybe<Array<Maybe<Scalars['String']>>>;
   /** The minimum visual size to display tiles for this layer. Only configurable for raster layers. */
   tileSize?: Maybe<Scalars['Int']>;
+  /** For tiled sources, a list of endpoints that can be used to retrieve tiles. */
+  tiles?: Maybe<Array<Maybe<Scalars['String']>>>;
   /** GeoJSON only. Douglas-Peucker simplification tolerance (higher means simpler geometries and faster performance). */
   tolerance?: Maybe<Scalars['BigFloat']>;
   translatedProps?: Maybe<Scalars['JSON']>;
-  /**
-   * A URL to a TileJSON resource for tiled sources. For GeoJSON or
-   * SEASKETCH_VECTOR sources, use this to fill in the data property of the source.
-   * Also used by ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR
-   */
+  /** A URL to a TileJSON resource for tiled sources. For GeoJSON or SEASKETCH_VECTOR sources, use this to fill in the data property of the source. Also used by ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR */
   url?: Maybe<Scalars['String']>;
   /** Video sources only. URLs to video content in order of preferred format. */
   urls?: Maybe<Array<Maybe<Scalars['String']>>>;
@@ -3788,11 +3516,7 @@ export type DataUploadTask = Node & {
   outputs?: Maybe<Scalars['JSON']>;
   /** Use to upload source data to s3. Must be an admin. */
   presignedUploadUrl?: Maybe<Scalars['String']>;
-  /**
-   * Format-specific processing instructions supplied by the client at upload time
-   * (e.g. column mapping and CRS for delimited text uploads). Consumed by the
-   * spatial-uploads-handler.
-   */
+  /** Format-specific processing instructions supplied by the client at upload time (e.g. column mapping and CRS for delimited text uploads). Consumed by the spatial-uploads-handler. */
   processingOptions?: Maybe<Scalars['JSON']>;
   /** Reads a single `ProjectBackgroundJob` that is related to this `DataUploadTask`. */
   projectBackgroundJob?: Maybe<ProjectBackgroundJob>;
@@ -5729,8 +5453,8 @@ export type FileUpload = Node & {
    * rel="download nofollow" so that it is not indexed by search engines.
    */
   downloadUrl: Scalars['String'];
-  filename: Scalars['String'];
   fileSizeBytes: Scalars['BigInt'];
+  filename: Scalars['String'];
   id: Scalars['UUID'];
   isSpatial: Scalars['Boolean'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
@@ -5922,22 +5646,12 @@ export type FormElement = Node & {
   backgroundImage?: Maybe<Scalars['String']>;
   backgroundPalette?: Maybe<Array<Maybe<Scalars['String']>>>;
   backgroundWidth?: Maybe<Scalars['Int']>;
-  /**
-   * [prosemirror](https://prosemirror.net/) document representing a rich-text
-   * question or informational content. Level 1 headers can be assumed to be the
-   * question for input-type fields, though formatting is up to the project
-   * administrators. Clients should provide a template that encourages this
-   * convention when building forms.
-   */
+  /** [prosemirror](https://prosemirror.net/) document representing a rich-text question or informational content. Level 1 headers can be assumed to be the question for input-type fields, though formatting is up to the project administrators. Clients should provide a template that encourages this convention when building forms. */
   body: Scalars['JSON'];
   /** Type-specific configuration. For example, a Choice field might have a list of valid choices. */
   componentSettings: Scalars['JSON'];
   createdAt: Scalars['Datetime'];
-  /**
-   * Column name used in csv export, property name in reporting tools. Keep stable
-   * to avoid breaking reports. If null, this value will be dynamically generated
-   * from the first several characters of the text in FormElement.body.
-   */
+  /** Column name used in csv export, property name in reporting tools. Keep stable to avoid breaking reports. If null, this value will be dynamically generated from the first several characters of the text in FormElement.body. */
   exportId?: Maybe<Scalars['String']>;
   /** Form this field belongs to. */
   formId: Scalars['Int'];
@@ -5947,11 +5661,7 @@ export type FormElement = Node & {
   isInput?: Maybe<Scalars['Boolean']>;
   /** Users must provide input for these fields before submission. */
   isRequired: Scalars['Boolean'];
-  /**
-   * Used only in surveys. If set, the survey will advance to the page of the
-   * specified form element. If null, the survey will simply advance to the next
-   * question in the list by `position`.
-   */
+  /** Used only in surveys. If set, the survey will advance to the page of the specified form element. If null, the survey will simply advance to the next question in the list by `position`. */
   jumpToId?: Maybe<Scalars['Int']>;
   /** Layout of image in relation to form_element content. */
   layout?: Maybe<FormElementLayout>;
@@ -5985,20 +5695,11 @@ export type FormElement = Node & {
   sketchClass?: Maybe<SketchClass>;
   /** Reads a single `SketchClass` that is related to this `FormElement`. */
   sketchClassFk?: Maybe<SketchClass>;
-  /**
-   * Used for special elements like SpatialAccessPriorityInput to create a sort of
-   * sub-form that the parent element controls the rendering of. Will not appear in
-   * the form unless the client implementation utilizes something like
-   * FormElement.shouldDisplaySubordinateElement to control visibility.
-   */
+  /** Used for special elements like SpatialAccessPriorityInput to create a sort of sub-form that the parent element controls the rendering of. Will not appear in the form unless the client implementation utilizes something like FormElement.shouldDisplaySubordinateElement to control visibility. */
   subordinateTo?: Maybe<Scalars['Int']>;
   /** Reads and enables pagination through a set of `SurveyConsentDocument`. */
   surveyConsentDocumentsConnection: SurveyConsentDocumentsConnection;
-  /**
-   * Indicates whether the form element should be displayed with dark or light text
-   * variants to match the background color. Admin interface should automatically
-   * set this value based on `background_color`, though admins may wish to manually override.
-   */
+  /** Indicates whether the form element should be displayed with dark or light text variants to match the background color. Admin interface should automatically set this value based on `background_color`, though admins may wish to manually override. */
   textVariant: FormElementTextVariant;
   type?: Maybe<FormElementType>;
   typeId: Scalars['String'];
@@ -6034,22 +5735,12 @@ export type FormElementInput = {
   backgroundHeight?: Maybe<Scalars['Int']>;
   backgroundPalette?: Maybe<Array<Maybe<Scalars['String']>>>;
   backgroundWidth?: Maybe<Scalars['Int']>;
-  /**
-   * [prosemirror](https://prosemirror.net/) document representing a rich-text
-   * question or informational content. Level 1 headers can be assumed to be the
-   * question for input-type fields, though formatting is up to the project
-   * administrators. Clients should provide a template that encourages this
-   * convention when building forms.
-   */
+  /** [prosemirror](https://prosemirror.net/) document representing a rich-text question or informational content. Level 1 headers can be assumed to be the question for input-type fields, though formatting is up to the project administrators. Clients should provide a template that encourages this convention when building forms. */
   body: Scalars['JSON'];
   /** Type-specific configuration. For example, a Choice field might have a list of valid choices. */
   componentSettings?: Maybe<Scalars['JSON']>;
   createdAt?: Maybe<Scalars['Datetime']>;
-  /**
-   * Column name used in csv export, property name in reporting tools. Keep stable
-   * to avoid breaking reports. If null, this value will be dynamically generated
-   * from the first several characters of the text in FormElement.body.
-   */
+  /** Column name used in csv export, property name in reporting tools. Keep stable to avoid breaking reports. If null, this value will be dynamically generated from the first several characters of the text in FormElement.body. */
   exportId?: Maybe<Scalars['String']>;
   /** Form this field belongs to. */
   formId: Scalars['Int'];
@@ -6058,11 +5749,7 @@ export type FormElementInput = {
   id?: Maybe<Scalars['Int']>;
   /** Users must provide input for these fields before submission. */
   isRequired?: Maybe<Scalars['Boolean']>;
-  /**
-   * Used only in surveys. If set, the survey will advance to the page of the
-   * specified form element. If null, the survey will simply advance to the next
-   * question in the list by `position`.
-   */
+  /** Used only in surveys. If set, the survey will advance to the page of the specified form element. If null, the survey will simply advance to the next question in the list by `position`. */
   jumpToId?: Maybe<Scalars['Int']>;
   /** Layout of image in relation to form_element content. */
   layout?: Maybe<FormElementLayout>;
@@ -6090,18 +5777,9 @@ export type FormElementInput = {
   position?: Maybe<Scalars['Int']>;
   /** Color used to style navigation controls */
   secondaryColor?: Maybe<Scalars['String']>;
-  /**
-   * Used for special elements like SpatialAccessPriorityInput to create a sort of
-   * sub-form that the parent element controls the rendering of. Will not appear in
-   * the form unless the client implementation utilizes something like
-   * FormElement.shouldDisplaySubordinateElement to control visibility.
-   */
+  /** Used for special elements like SpatialAccessPriorityInput to create a sort of sub-form that the parent element controls the rendering of. Will not appear in the form unless the client implementation utilizes something like FormElement.shouldDisplaySubordinateElement to control visibility. */
   subordinateTo?: Maybe<Scalars['Int']>;
-  /**
-   * Indicates whether the form element should be displayed with dark or light text
-   * variants to match the background color. Admin interface should automatically
-   * set this value based on `background_color`, though admins may wish to manually override.
-   */
+  /** Indicates whether the form element should be displayed with dark or light text variants to match the background color. Admin interface should automatically set this value based on `background_color`, though admins may wish to manually override. */
   textVariant?: Maybe<FormElementTextVariant>;
   typeId: Scalars['String'];
 };
@@ -6126,22 +5804,12 @@ export type FormElementPatch = {
   backgroundHeight?: Maybe<Scalars['Int']>;
   backgroundPalette?: Maybe<Array<Maybe<Scalars['String']>>>;
   backgroundWidth?: Maybe<Scalars['Int']>;
-  /**
-   * [prosemirror](https://prosemirror.net/) document representing a rich-text
-   * question or informational content. Level 1 headers can be assumed to be the
-   * question for input-type fields, though formatting is up to the project
-   * administrators. Clients should provide a template that encourages this
-   * convention when building forms.
-   */
+  /** [prosemirror](https://prosemirror.net/) document representing a rich-text question or informational content. Level 1 headers can be assumed to be the question for input-type fields, though formatting is up to the project administrators. Clients should provide a template that encourages this convention when building forms. */
   body?: Maybe<Scalars['JSON']>;
   /** Type-specific configuration. For example, a Choice field might have a list of valid choices. */
   componentSettings?: Maybe<Scalars['JSON']>;
   createdAt?: Maybe<Scalars['Datetime']>;
-  /**
-   * Column name used in csv export, property name in reporting tools. Keep stable
-   * to avoid breaking reports. If null, this value will be dynamically generated
-   * from the first several characters of the text in FormElement.body.
-   */
+  /** Column name used in csv export, property name in reporting tools. Keep stable to avoid breaking reports. If null, this value will be dynamically generated from the first several characters of the text in FormElement.body. */
   exportId?: Maybe<Scalars['String']>;
   /** Form this field belongs to. */
   formId?: Maybe<Scalars['Int']>;
@@ -6150,11 +5818,7 @@ export type FormElementPatch = {
   id?: Maybe<Scalars['Int']>;
   /** Users must provide input for these fields before submission. */
   isRequired?: Maybe<Scalars['Boolean']>;
-  /**
-   * Used only in surveys. If set, the survey will advance to the page of the
-   * specified form element. If null, the survey will simply advance to the next
-   * question in the list by `position`.
-   */
+  /** Used only in surveys. If set, the survey will advance to the page of the specified form element. If null, the survey will simply advance to the next question in the list by `position`. */
   jumpToId?: Maybe<Scalars['Int']>;
   /** Layout of image in relation to form_element content. */
   layout?: Maybe<FormElementLayout>;
@@ -6182,18 +5846,9 @@ export type FormElementPatch = {
   position?: Maybe<Scalars['Int']>;
   /** Color used to style navigation controls */
   secondaryColor?: Maybe<Scalars['String']>;
-  /**
-   * Used for special elements like SpatialAccessPriorityInput to create a sort of
-   * sub-form that the parent element controls the rendering of. Will not appear in
-   * the form unless the client implementation utilizes something like
-   * FormElement.shouldDisplaySubordinateElement to control visibility.
-   */
+  /** Used for special elements like SpatialAccessPriorityInput to create a sort of sub-form that the parent element controls the rendering of. Will not appear in the form unless the client implementation utilizes something like FormElement.shouldDisplaySubordinateElement to control visibility. */
   subordinateTo?: Maybe<Scalars['Int']>;
-  /**
-   * Indicates whether the form element should be displayed with dark or light text
-   * variants to match the background color. Admin interface should automatically
-   * set this value based on `background_color`, though admins may wish to manually override.
-   */
+  /** Indicates whether the form element should be displayed with dark or light text variants to match the background color. Admin interface should automatically set this value based on `background_color`, though admins may wish to manually override. */
   textVariant?: Maybe<FormElementTextVariant>;
   typeId?: Maybe<Scalars['String']>;
 };
@@ -6213,30 +5868,17 @@ export type FormElementType = Node & {
   geostatsArrayOf?: Maybe<ExtendedGeostatsType>;
   geostatsType?: Maybe<ExtendedGeostatsType>;
   isHidden: Scalars['Boolean'];
-  /**
-   * Whether the element is an input that collects information from users or
-   * contains presentational content like a Welcome Message component.
-   */
+  /** Whether the element is an input that collects information from users or contains presentational content like a Welcome Message component. */
   isInput: Scalars['Boolean'];
   isRequiredForSketchClasses: Scalars['Boolean'];
   isRequiredForSurveys: Scalars['Boolean'];
   /** These elements can only be added to a form once. */
   isSingleUseOnly: Scalars['Boolean'];
-  /**
-   * Indicates if the element type is a spatial data input. Components that
-   * implement these types are expected to render their own map (in contrast with
-   * elements that simply have their layout set to MAP_SIDEBAR_RIGHT|LEFT, which
-   * expect the SurveyApp component to render a map for them.
-   */
+  /** Indicates if the element type is a spatial data input. Components that implement these types are expected to render their own map (in contrast with elements that simply have their layout set to MAP_SIDEBAR_RIGHT|LEFT, which expect the SurveyApp component to render a map for them. */
   isSpatial: Scalars['Boolean'];
   /** If true, the element type should only be added to forms related to a survey. */
   isSurveysOnly: Scalars['Boolean'];
-  /**
-   * Control form element deployment with feature-flags. If this flag is enabled,
-   * the form element should only appear as an option for addition to superuser
-   * roles. Once added to a form however, it is visible to all users. No
-   * access-control is enforced other than hiding the option in the client.
-   */
+  /** Control form element deployment with feature-flags. If this flag is enabled, the form element should only appear as an option for addition to superuser roles. Once added to a form however, it is visible to all users. No access-control is enforced other than hiding the option in the client. */
   label: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
@@ -6489,10 +6131,7 @@ export enum FormsOrderBy {
  */
 export type Forum = Node & {
   __typename?: 'Forum';
-  /**
-   * Archived forums will only be accessible by project administrators from the
-   * admin dashboard. This is an alternative to deleting a forum.
-   */
+  /** Archived forums will only be accessible by project administrators from the admin dashboard. This is an alternative to deleting a forum. */
   archived?: Maybe<Scalars['Boolean']>;
   canPost?: Maybe<Scalars['Boolean']>;
   /** Optional description of the forum to be displayed to project users. */
@@ -6503,10 +6142,7 @@ export type Forum = Node & {
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
-  /**
-   * Sets position of this forum in the listing. Forums should be listed by
-   * position in ascending order. Set using `setForumOrder()`
-   */
+  /** Sets position of this forum in the listing. Forums should be listed by position in ascending order. Set using `setForumOrder()` */
   position?: Maybe<Scalars['Int']>;
   postCount?: Maybe<Scalars['Int']>;
   /** Reads a single `Project` that is related to this `Forum`. */
@@ -6558,20 +6194,14 @@ export type ForumCondition = {
 
 /** An input for mutations affecting `Forum` */
 export type ForumInput = {
-  /**
-   * Archived forums will only be accessible by project administrators from the
-   * admin dashboard. This is an alternative to deleting a forum.
-   */
+  /** Archived forums will only be accessible by project administrators from the admin dashboard. This is an alternative to deleting a forum. */
   archived?: Maybe<Scalars['Boolean']>;
   /** Optional description of the forum to be displayed to project users. */
   description?: Maybe<Scalars['String']>;
   id?: Maybe<Scalars['Int']>;
   /** Title displayed for the forum. */
   name: Scalars['String'];
-  /**
-   * Sets position of this forum in the listing. Forums should be listed by
-   * position in ascending order. Set using `setForumOrder()`
-   */
+  /** Sets position of this forum in the listing. Forums should be listed by position in ascending order. Set using `setForumOrder()` */
   position?: Maybe<Scalars['Int']>;
   projectId: Scalars['Int'];
   translatedProps?: Maybe<Scalars['JSON']>;
@@ -6579,19 +6209,13 @@ export type ForumInput = {
 
 /** Represents an update to a `Forum`. Fields that are set will be updated. */
 export type ForumPatch = {
-  /**
-   * Archived forums will only be accessible by project administrators from the
-   * admin dashboard. This is an alternative to deleting a forum.
-   */
+  /** Archived forums will only be accessible by project administrators from the admin dashboard. This is an alternative to deleting a forum. */
   archived?: Maybe<Scalars['Boolean']>;
   /** Optional description of the forum to be displayed to project users. */
   description?: Maybe<Scalars['String']>;
   /** Title displayed for the forum. */
   name?: Maybe<Scalars['String']>;
-  /**
-   * Sets position of this forum in the listing. Forums should be listed by
-   * position in ascending order. Set using `setForumOrder()`
-   */
+  /** Sets position of this forum in the listing. Forums should be listed by position in ascending order. Set using `setForumOrder()` */
   position?: Maybe<Scalars['Int']>;
   translatedProps?: Maybe<Scalars['JSON']>;
 };
@@ -7418,8 +7042,7 @@ export type IntervalInput = {
  * and eventually sent out by a backend emailing process. Survey invites are
  * automatically created whenever a survey is published.
  *
- * [More details on the mailing process can be found on the
- * wiki](https://github.com/seasketch/next/wiki/User-and-Survey-Invite-Management).
+ * [More details on the mailing process can be found on the wiki](https://github.com/seasketch/next/wiki/User-and-Survey-Invite-Management).
  */
 export type InviteEmail = Node & {
   __typename?: 'InviteEmail';
@@ -7487,10 +7110,7 @@ export type InviteStat = {
   status?: Maybe<InviteStatus>;
 };
 
-/**
- * Invite status is derived from feedback notifications coming from the AWS SES
- * email service and token expiration date. See the inviteEmails relation for more details.
- */
+/** Invite status is derived from feedback notifications coming from the AWS SES email service and token expiration date. See the inviteEmails relation for more details. */
 export enum InviteStatus {
   Bounced = 'BOUNCED',
   Complaint = 'COMPLAINT',
@@ -8040,16 +7660,11 @@ export type Mutation = {
    * invite. Outstanding (or confirmed) invites can be accessed via the
    * `currentProject.invite` query.
    *
-   * More details on how to handle invites can be found [on the
-   * wiki](https://github.com/seasketch/next/wiki/User-Ingress#project-invites).
+   * More details on how to handle invites can be found [on the wiki](https://github.com/seasketch/next/wiki/User-Ingress#project-invites).
    */
   confirmProjectInviteWithVerifiedEmail?: Maybe<ConfirmProjectInviteWithVerifiedEmailPayload>;
   convertEsriFeatureLayerToSeasketchHosted?: Maybe<ConvertEsriFeatureLayerToSeasketchHostedPayload>;
-  /**
-   * Copies appearance settings like layout and background_image from one form
-   * element to another. Useful when initializing custom appearance on an element
-   * from the defaults set by a previous question.
-   */
+  /** Copies appearance settings like layout and background_image from one form element to another. Useful when initializing custom appearance on an element from the defaults set by a previous question. */
   copyAppearance?: Maybe<CopyAppearancePayload>;
   copyDataLibraryTemplateItem?: Maybe<CopyDataLibraryTemplateItemPayload>;
   copySketchTocItem?: Maybe<CopySketchTocItemResults>;
@@ -8089,27 +7704,15 @@ export type Mutation = {
   createOfflineTileSetting?: Maybe<CreateOfflineTileSettingPayload>;
   /** Creates a single `OptionalBasemapLayer`. */
   createOptionalBasemapLayer?: Maybe<CreateOptionalBasemapLayerPayload>;
-  /**
-   * Admin-only. Starts a coverage-file upload. The client PUTs the JSON to the
-   * presigned URL, then calls submitOverlayDataTableUpload.
-   */
+  /** Admin-only. Starts a coverage-file upload. The client PUTs the JSON to the presigned URL, then calls submitOverlayDataTableUpload. */
   createOverlayDataTableCoverageUpload?: Maybe<CreateOverlayDataTableCoverageUploadPayload>;
-  /**
-   * Admin-only. Starts a draft organism-enrichment job. Optional class CSV is
-   * uploaded to the returned presigned URL, then submitOverlayDataTableUpload.
-   * Writes a clustered copy of data.parquet and organism sidecars under a new
-   * upload prefix. Queue wait and running timeout are 15 minutes.
-   */
+  /** Admin-only. Starts a draft organism-enrichment job. Optional class CSV is uploaded to the returned presigned URL, then submitOverlayDataTableUpload. Writes a clustered copy of data.parquet and organism sidecars under a new upload prefix. Queue wait and running timeout are 15 minutes. */
   createOverlayDataTableOrganismReprocess?: Maybe<CreateOverlayDataTableOrganismReprocessPayload>;
   /** Admin-only. Reprocess nodata and/or temporal columns, or reindex parquet clustering when cluster_only is true. */
   createOverlayDataTableReprocess?: Maybe<CreateOverlayDataTableReprocessPayload>;
   createOverlayDataTableUpload?: Maybe<CreateOverlayDataTableUploadPayload>;
   createPost: Post;
-  /**
-   * Users with verified emails can create new projects by choosing a unique name
-   * and url slug. This project will be unlisted with admin_only access and the
-   * user will be automatically added to the list of admins.
-   */
+  /** Users with verified emails can create new projects by choosing a unique name and url slug. This project will be unlisted with admin_only access and the user will be automatically added to the list of admins. */
   createProject?: Maybe<CreateProjectPayload>;
   /** Creates a single `ProjectInviteGroup`. */
   createProjectInviteGroup?: Maybe<CreateProjectInviteGroupPayload>;
@@ -8125,14 +7728,14 @@ export type Mutation = {
    * More details on project invite management [can be found in the wiki](https://github.com/seasketch/next/wiki/User-and-Survey-Invite-Management).
    */
   createProjectInvites?: Maybe<CreateProjectInvitesPayload>;
-  /** Creates a single `ProjectsSharedBasemap`. */
-  createProjectsSharedBasemap?: Maybe<CreateProjectsSharedBasemapPayload>;
   /**
    * Create a new project and optionally create initial geographies for it.
    * Geography clipping layers must reference template IDs because project
    * layers have not yet been created.
    */
   createProjectWithGeographies?: Maybe<CreateProjectPayload>;
+  /** Creates a single `ProjectsSharedBasemap`. */
+  createProjectsSharedBasemap?: Maybe<CreateProjectsSharedBasemapPayload>;
   createRemoteGeojsonSource?: Maybe<CreateRemoteGeojsonSourcePayload>;
   createRemoteMvtSource?: Maybe<CreateRemoteMvtSourcePayload>;
   /** Creates a single `Report`. */
@@ -8231,10 +7834,7 @@ export type Mutation = {
   deletePost?: Maybe<DeletePostPayload>;
   /** Deletes a single `Post` using its globally unique id. */
   deletePostByNodeId?: Maybe<DeletePostPayload>;
-  /**
-   * Marks project as deleted. Will remain in database but not accessible to
-   * anyone. Function can only be accessed by project administrators.
-   */
+  /** Marks project as deleted. Will remain in database but not accessible to anyone. Function can only be accessed by project administrators. */
   deleteProject?: Maybe<DeleteProjectPayload>;
   /** Deletes a single `ProjectInvite` using a unique key. */
   deleteProjectInvite?: Maybe<DeleteProjectInvitePayload>;
@@ -8292,11 +7892,7 @@ export type Mutation = {
   deleteSurveyResponse?: Maybe<DeleteSurveyResponsePayload>;
   /** Deletes a single `SurveyResponse` using its globally unique id. */
   deleteSurveyResponseByNodeId?: Maybe<DeleteSurveyResponsePayload>;
-  /**
-   * Deletes an item from the draft table of contents, as well as all child items
-   * if it is a folder. This action will also delete all related layers and sources
-   * (if no other layers reference the source).
-   */
+  /** Deletes an item from the draft table of contents, as well as all child items if it is a folder. This action will also delete all related layers and sources (if no other layers reference the source). */
   deleteTableOfContentsBranch?: Maybe<DeleteTableOfContentsBranchPayload>;
   /** Deletes a single `Topic` using a unique key. */
   deleteTopic?: Maybe<DeleteTopicPayload>;
@@ -8372,10 +7968,7 @@ export type Mutation = {
   moveCardToTab?: Maybe<MoveCardToTabPayload>;
   preprocessSource?: Maybe<PreprocessSourcePayload>;
   publishReport?: Maybe<PublishReportPayload>;
-  /**
-   * Copies draft TOC to published; sets project flags. Records change_logs
-   * (layers:published) with draft layer_count when session.user_id is set.
-   */
+  /** Copies draft TOC to published; sets project flags. Records change_logs (layers:published) with draft layer_count when session.user_id is set. */
   publishTableOfContents?: Maybe<PublishTableOfContentsPayload>;
   recalculateSpatialMetrics?: Maybe<RecalculateSpatialMetricsPayload>;
   /** Remove a group from a given access control list. Must be an administrator. */
@@ -8421,10 +8014,7 @@ export type Mutation = {
    */
   sendSurveyInviteReminder?: Maybe<Scalars['Int']>;
   setDataUploadTaskChangelog?: Maybe<SetDataUploadTaskChangelogPayload>;
-  /**
-   * Sets the enable_download flag for all overlays in a project. Note this is only
-   * applied to draft items, so will require a publish to impact project users.
-   */
+  /** Sets the enable_download flag for all overlays in a project. Note this is only applied to draft items, so will require a publish to impact project users. */
   setEnableDownloadForAllOverlays?: Maybe<SetEnableDownloadForAllOverlaysPayload>;
   setFormElementBackground: FormElement;
   /**
@@ -8435,33 +8025,19 @@ export type Mutation = {
    */
   setFormElementOrder?: Maybe<SetFormElementOrderPayload>;
   setFormLogicRuleOrder?: Maybe<SetFormLogicRuleOrderPayload>;
-  /**
-   * Set the order in which discussion forums will be displayed. Provide a list of
-   * forum IDs in the correct order. Missing ids will be added to the end of the list.
-   */
+  /** Set the order in which discussion forums will be displayed. Provide a list of forum IDs in the correct order. Missing ids will be added to the end of the list. */
   setForumOrder?: Maybe<SetForumOrderPayload>;
   setOverlayDataTableVisualizationSettings?: Maybe<SetOverlayDataTableVisualizationSettingsPayload>;
-  /**
-   * Admins can use this function to hide the contents of a message. Message will
-   * still appear in the client with the missing content, and should link to the
-   * Community Guidelines for why the post may have been hidden. If admins want all
-   * evidence of the post removed they must delete it.
-   */
+  /** Admins can use this function to hide the contents of a message. Message will still appear in the client with the missing content, and should link to the Community Guidelines for why the post may have been hidden. If admins want all evidence of the post removed they must delete it. */
   setPostHiddenByModerator?: Maybe<SetPostHiddenByModeratorPayload>;
   setPrimaryReportForSketchClass?: Maybe<SetPrimaryReportForSketchClassPayload>;
   setProjectRegionBounds?: Maybe<SetProjectRegionBoundsPayload>;
-  /**
-   * Lock a topic so that it can no longer be responded to. Past discussion will
-   * still be visible. This mutation is only available to project admins.
-   */
+  /** Lock a topic so that it can no longer be responded to. Past discussion will still be visible. This mutation is only available to project admins. */
   setTopicLocked?: Maybe<SetTopicLockedPayload>;
   /** Admins can use this mutation to place topics at the top of the forum listing. */
   setTopicSticky?: Maybe<SetTopicStickyPayload>;
   setTranslatedProp: SetTranslatedPropResult;
-  /**
-   * Sets the list of groups that the given user belongs to. Will clear all other
-   * group memberships in the project. Available only to admins.
-   */
+  /** Sets the list of groups that the given user belongs to. Will clear all other group memberships in the project. Available only to admins. */
   setUserGroups?: Maybe<SetUserGroupsPayload>;
   /** Superusers only. Promote a sprite to be globally available. */
   shareSprite?: Maybe<ShareSpritePayload>;
@@ -8470,10 +8046,7 @@ export type Mutation = {
   softDeleteSprite?: Maybe<SoftDeleteSpritePayload>;
   submitDataUpload?: Maybe<SubmitDataUploadPayload>;
   submitOverlayDataTableUpload?: Maybe<SubmitOverlayDataTableUploadPayload>;
-  /**
-   * Toggle admin access for the given project and user. User must have already
-   * joined the project and shared their user profile.
-   */
+  /** Toggle admin access for the given project and user. User must have already joined the project and shared their user profile. */
   toggleAdminAccess?: Maybe<ToggleAdminAccessPayload>;
   /** Ban a user from posting in the discussion forum */
   toggleForumPostingBan?: Maybe<ToggleForumPostingBanPayload>;
@@ -8683,11 +8256,7 @@ export type Mutation = {
   updateTopic?: Maybe<UpdateTopicPayload>;
   /** Updates a single `Topic` using its globally unique id and a patch. */
   updateTopicByNodeId?: Maybe<UpdateTopicPayload>;
-  /**
-   * Batch reassigns z_index for one project. Records change_logs
-   * (layers:z-order-change) on projects when session.user_id is set; to_summary
-   * includes reordered_count.
-   */
+  /** Batch reassigns z_index for one project. Records change_logs (layers:z-order-change) on projects when session.user_id is set; to_summary includes reordered_count. */
   updateZIndexes?: Maybe<UpdateZIndexesPayload>;
   /** Use to upload pdf documents for use with the Consent FormElement */
   uploadConsentDocument: FormElement;
@@ -8869,8 +8438,8 @@ export type MutationCreateDataUploadArgs = {
 /** The root mutation type which contains root level fields which mutate data. */
 export type MutationCreateFileUploadArgs = {
   contentType: Scalars['String'];
-  filename: Scalars['String'];
   fileSizeBytes: Scalars['Int'];
+  filename: Scalars['String'];
   projectId: Scalars['Int'];
   usage: FileUploadUsageInput;
 };
@@ -9010,14 +8579,14 @@ export type MutationCreateProjectInvitesArgs = {
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationCreateProjectsSharedBasemapArgs = {
-  input: CreateProjectsSharedBasemapInput;
+export type MutationCreateProjectWithGeographiesArgs = {
+  input: CreateProjectWithGeographiesInput;
 };
 
 
 /** The root mutation type which contains root level fields which mutate data. */
-export type MutationCreateProjectWithGeographiesArgs = {
-  input: CreateProjectWithGeographiesInput;
+export type MutationCreateProjectsSharedBasemapArgs = {
+  input: CreateProjectsSharedBasemapInput;
 };
 
 
@@ -10781,12 +10350,7 @@ export type OptionalBasemapLayer = Node & {
   basemapId: Scalars['Int'];
   defaultVisibility: Scalars['Boolean'];
   description?: Maybe<Scalars['String']>;
-  /**
-   * Specify RADIO or SELECT if this option should be presented as a group of
-   * options. Useful for mutually exclusive views like different years for the same
-   * dataset, or a heatmap display of density for multiple species where a single
-   * species must be chosen from a list. If left null, the option will be treated as standalone.
-   */
+  /** Specify RADIO or SELECT if this option should be presented as a group of options. Useful for mutually exclusive views like different years for the same dataset, or a heatmap display of density for multiple species where a single species must be chosen from a list. If left null, the option will be treated as standalone. */
   groupType: OptionalBasemapLayersGroupType;
   id: Scalars['Int'];
   /** IDs for layers in the gl style that will be toggled by this option. */
@@ -10816,12 +10380,7 @@ export type OptionalBasemapLayerInput = {
   basemapId: Scalars['Int'];
   defaultVisibility?: Maybe<Scalars['Boolean']>;
   description?: Maybe<Scalars['String']>;
-  /**
-   * Specify RADIO or SELECT if this option should be presented as a group of
-   * options. Useful for mutually exclusive views like different years for the same
-   * dataset, or a heatmap display of density for multiple species where a single
-   * species must be chosen from a list. If left null, the option will be treated as standalone.
-   */
+  /** Specify RADIO or SELECT if this option should be presented as a group of options. Useful for mutually exclusive views like different years for the same dataset, or a heatmap display of density for multiple species where a single species must be chosen from a list. If left null, the option will be treated as standalone. */
   groupType?: Maybe<OptionalBasemapLayersGroupType>;
   id?: Maybe<Scalars['Int']>;
   /** IDs for layers in the gl style that will be toggled by this option. */
@@ -10838,12 +10397,7 @@ export type OptionalBasemapLayerPatch = {
   basemapId?: Maybe<Scalars['Int']>;
   defaultVisibility?: Maybe<Scalars['Boolean']>;
   description?: Maybe<Scalars['String']>;
-  /**
-   * Specify RADIO or SELECT if this option should be presented as a group of
-   * options. Useful for mutually exclusive views like different years for the same
-   * dataset, or a heatmap display of density for multiple species where a single
-   * species must be chosen from a list. If left null, the option will be treated as standalone.
-   */
+  /** Specify RADIO or SELECT if this option should be presented as a group of options. Useful for mutually exclusive views like different years for the same dataset, or a heatmap display of density for multiple species where a single species must be chosen from a list. If left null, the option will be treated as standalone. */
   groupType?: Maybe<OptionalBasemapLayersGroupType>;
   id?: Maybe<Scalars['Int']>;
   /** IDs for layers in the gl style that will be toggled by this option. */
@@ -10882,28 +10436,15 @@ export type OutstandingSurveyInvites = {
 
 export type OverlayDataTable = Node & {
   __typename?: 'OverlayDataTable';
-  /**
-   * Across replicates. Code name: across_replicate_operations. JSON object of
-   * value column to an array of sum|mean|min|max. Missing columns default to ["mean"].
-   */
+  /** Across replicates. Code name: across_replicate_operations. JSON object of value column to an array of sum|mean|min|max. Missing columns default to ["mean"]. */
   acrossReplicateOperations: Scalars['JSON'];
-  /**
-   * Replicate columns. Code name: additional_replicate_identifiers. With the
-   * survey time and the join column, these identify one replicate.
-   */
+  /** Replicate columns. Code name: additional_replicate_identifiers. With the survey time and the join column, these identify one replicate. */
   additionalReplicateIdentifiers: Array<Maybe<Scalars['String']>>;
-  /**
-   * How to turn rows into a map value. simple: each row is already a summary.
-   * replicates: rows are observations inside replicates.
-   */
+  /** How to turn rows into a map value. simple: each row is already a summary. replicates: rows are observations inside replicates. */
   calculationMode: Scalars['String'];
   columnStatsRemote: Scalars['String'];
   columnStatsUrl?: Maybe<Scalars['String']>;
-  /**
-   * When a subject is missing from a replicate. Code name: coverage_mode.
-   * all_surveyed: it was surveyed and none were seen. rows_only: nothing can be
-   * assumed. coverage_file: it depends on when and where.
-   */
+  /** When a subject is missing from a replicate. Code name: coverage_mode. all_surveyed: it was surveyed and none were seen. rows_only: nothing can be assumed. coverage_file: it depends on when and where. */
   coverageMode: Scalars['String'];
   /** Coverage file. Code name: coverage_remote. R2 key of coverage.json beside data.parquet. */
   coverageRemote?: Maybe<Scalars['String']>;
@@ -10912,15 +10453,9 @@ export type OverlayDataTable = Node & {
   deletedAt?: Maybe<Scalars['Datetime']>;
   /** Optional short description shown in the data table picker. Displayed on at most two lines. */
   description?: Maybe<Scalars['String']>;
-  /**
-   * Nothing seen rows. Code name: effort_marker_values. Values in the subject or a
-   * detail column that mean the replicate was surveyed and nothing was seen.
-   */
+  /** Nothing seen rows. Code name: effort_marker_values. Values in the subject or a detail column that mean the replicate was surveyed and nothing was seen. */
   effortMarkerValues: Array<Maybe<Scalars['String']>>;
-  /**
-   * Rows to ignore. Code name: excluded_values. JSON object of column name to
-   * values whose rows are left out of replicates, observations, and effort.
-   */
+  /** Rows to ignore. Code name: excluded_values. JSON object of column name to values whose rows are left out of replicates, observations, and effort. */
   excludedValues: Scalars['JSON'];
   /** Custom display labels for filter columns, keyed by original column name. Empty or missing keys use the column name. */
   filterColumnLabels?: Maybe<Scalars['JSON']>;
@@ -10934,12 +10469,9 @@ export type OverlayDataTable = Node & {
   nodataValues: Scalars['JSON'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
-  /**
-   * Detail columns. Code name: observation_detail_columns. Columns that describe
-   * one observation rather than the replicate. Filtering them narrows what is
-   * counted and does not remove replicates.
-   */
+  /** Detail columns. Code name: observation_detail_columns. Columns that describe one observation rather than the replicate. Filtering them narrows what is counted and does not remove replicates. */
   observationDetailColumns: Array<Maybe<Scalars['String']>>;
+  orgQueryUrl?: Maybe<Scalars['String']>;
   /**
    * Organism identity metadata for this data table. Null when the table
    * has not been enriched.
@@ -10947,7 +10479,6 @@ export type OverlayDataTable = Node & {
   organism?: Maybe<Scalars['OrganismInfo']>;
   organismCatalogUrl?: Maybe<Scalars['String']>;
   organismPreviewUrl?: Maybe<Scalars['String']>;
-  orgQueryUrl?: Maybe<Scalars['String']>;
   overlayJoinColumn: Scalars['String'];
   parquetRemote: Scalars['String'];
   parquetUrl?: Maybe<Scalars['String']>;
@@ -10960,23 +10491,14 @@ export type OverlayDataTable = Node & {
   replicateLabel: Scalars['String'];
   /** Custom replicate word. Code name: replicate_label_custom. */
   replicateLabelCustom?: Maybe<Scalars['String']>;
-  /**
-   * Columns that must appear as filters when this table is displayed on the map.
-   * End users can change the filter values but cannot remove these filters.
-   */
+  /** Columns that must appear as filters when this table is displayed on the map. End users can change the filter values but cannot remove these filters. */
   requiredFilterColumns?: Maybe<Array<Maybe<Scalars['String']>>>;
   rowCount: Scalars['Int'];
   /** Immutable pre-nodata parquet used as the reprocess source so sentinels can be added or removed. @omit */
   sourceParquetRemote?: Maybe<Scalars['String']>;
-  /**
-   * Stable logical identity for a data table across version replace and TOC
-   * publish. Draft and published copies share the same UUID.
-   */
+  /** Stable logical identity for a data table across version replace and TOC publish. Draft and published copies share the same UUID. */
   stableId: Scalars['UUID'];
-  /**
-   * Subject column. Code name: subject_column. Names what each row is an
-   * observation of. organism.column must equal this when organism enrichment is set.
-   */
+  /** Subject column. Code name: subject_column. Names what each row is an observation of. organism.column must equal this when organism enrichment is set. */
   subjectColumn?: Maybe<Scalars['String']>;
   tableOfContentsItemId: Scalars['Int'];
   /**
@@ -10991,10 +10513,7 @@ export type OverlayDataTable = Node & {
   visualizationColumns?: Maybe<Array<Maybe<Scalars['String']>>>;
   /** Calculations. Code name: visualization_ops. Used when each row is already a summary. */
   visualizationOps?: Maybe<Array<Maybe<Scalars['String']>>>;
-  /**
-   * Within a replicate. Code name: within_replicate_operations. JSON object of
-   * value column to sum|mean|min|max. Missing columns default to sum.
-   */
+  /** Within a replicate. Code name: within_replicate_operations. JSON object of value column to sum|mean|min|max. Missing columns default to sum. */
   withinReplicateOperations: Scalars['JSON'];
 };
 
@@ -11016,10 +10535,7 @@ export type OverlayDataTableUpload = Node & {
   errorDetails?: Maybe<Scalars['JSON']>;
   filename: Scalars['String'];
   id: Scalars['UUID'];
-  /**
-   * Ephemeral DataTableNodataConfig for a reprocess (or CSV replace) job. Not
-   * copied onto overlay_data_tables until the job completes successfully.
-   */
+  /** Ephemeral DataTableNodataConfig for a reprocess (or CSV replace) job. Not copied onto overlay_data_tables until the job completes successfully. */
   nodataConfig?: Maybe<Scalars['JSON']>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
@@ -11036,10 +10552,7 @@ export type OverlayDataTableUpload = Node & {
   /** When set, the processor reads the current parquet for this table instead of a newly uploaded CSV. */
   reprocessOfOverlayDataTableId?: Maybe<Scalars['Int']>;
   tableOfContentsItemId: Scalars['Int'];
-  /**
-   * Ephemeral DataTableTemporalConfig for a reprocess (or CSV replace) job. Not
-   * copied onto overlay_data_tables until the job completes successfully.
-   */
+  /** Ephemeral DataTableTemporalConfig for a reprocess (or CSV replace) job. Not copied onto overlay_data_tables until the job completes successfully. */
   temporalConfig?: Maybe<Scalars['JSON']>;
   updatedAt?: Maybe<Scalars['Datetime']>;
 };
@@ -11158,11 +10671,7 @@ export type Post = Node & {
   fileUploads?: Maybe<Array<FileUpload>>;
   /** Reads and enables pagination through a set of `FileUpload`. */
   fileUploadsConnection: FileUploadsConnection;
-  /**
-   * If set, the post has been hidden by a project admin. Contents of the post will
-   * not be available to the client. Admins should update this field using
-   * `setPostHiddenByModerator()`.
-   */
+  /** If set, the post has been hidden by a project admin. Contents of the post will not be available to the client. Admins should update this field using `setPostHiddenByModerator()`. */
   hiddenByModerator: Scalars['Boolean'];
   html: Scalars['String'];
   id: Scalars['Int'];
@@ -11429,11 +10938,7 @@ export type Project = Node & {
    */
   draftTableOfContentsItems?: Maybe<Array<TableOfContentsItem>>;
   eligableDownloadableLayersCount?: Maybe<Scalars['Int']>;
-  /**
-   * When true, overlay layers will be available for download by end-users if they
-   * have access to the layer and the data source supports it. This can be
-   * controlled on a per-layer basis.
-   */
+  /** When true, overlay layers will be available for download by end-users if they have access to the layer and the data source supports it. This can be controlled on a per-layer basis. */
   enableDownloadByDefault: Scalars['Boolean'];
   estimateDeletedDataForRetentionChange?: Maybe<RetentionChangeEstimate>;
   featureFlags?: Maybe<FeatureFlags>;
@@ -11457,45 +10962,28 @@ export type Project = Node & {
   id: Scalars['Int'];
   importedArcgisServices?: Maybe<Array<Maybe<Scalars['String']>>>;
   /**
-   * Returns the project invitation for the current user session, if any. Will not
-   * appear until the invite has been sent. The system determines the relevant
-   * invite using the `canonical_email` claim in the user access token.
+   * Returns the project invitation for the current user session, if any. Will not appear until the invite has been sent. The system determines the relevant invite using the `canonical_email` claim in the user access token.
    *
-   * If the invite status is unconfirmed the client should accept it using the
-   * `confirmProjectInviteWithVerifiedEmail()` mutation. Details on how to work
-   * with user ingress and project invites [can be found on the
-   * wiki](https://github.com/seasketch/next/wiki/User-Ingress).
+   * If the invite status is unconfirmed the client should accept it using the `confirmProjectInviteWithVerifiedEmail()` mutation. Details on how to work with user ingress and project invites [can be found on the wiki](https://github.com/seasketch/next/wiki/User-Ingress).
    */
   invite?: Maybe<ProjectInvite>;
-  /**
-   * Breakdown of number of invites per status. Used to display counts in overview
-   * listing of users, groups, and invites in the user administration dashboard.
-   */
+  /** Breakdown of number of invites per status. Used to display counts in overview listing of users, groups, and invites in the user administration dashboard. */
   inviteCounts?: Maybe<Array<InviteStat>>;
   inviteEmailSubject: Scalars['String'];
   /** List project invites by status */
   invitesConnection: ProjectInvitesConnection;
-  /**
-   * Returns true if the given user is an administrator of the project. Informaiton
-   * is only available administrators of the project and will otherwise always return false.
-   */
+  /** Returns true if the given user is an administrator of the project. Informaiton is only available administrators of the project and will otherwise always return false. */
   isAdmin?: Maybe<Scalars['Boolean']>;
   /** Featured projects may be given prominent placement on the homepage. This property can only be modified by superusers. */
   isFeatured: Scalars['Boolean'];
-  /**
-   * Project admins can decide whether their project will be displayed on the
-   * public project listing via Query.projectsConnection.
-   */
+  /** Project admins can decide whether their project will be displayed on the public project listing via Query.projectsConnection. */
   isListed: Scalars['Boolean'];
   isOfflineEnabled?: Maybe<Scalars['Boolean']>;
   /** Reads and enables pagination through a set of `Post`. */
   latestPostsConnection: PostsConnection;
   /** If a logoUrl is provided, it will link to this url in a new window if provided. */
   logoLink?: Maybe<Scalars['String']>;
-  /**
-   * URL referencing an image that will be used to represent the project. Will be
-   * displayed at 48x48 pixels and must be a public url.
-   */
+  /** URL referencing an image that will be used to represent the project. Will be displayed at 48x48 pixels and must be a public url. */
   logoUrl?: Maybe<Scalars['String']>;
   /**
    * Short-lived (90m) JWT for authorized overlay tile requests on
@@ -11503,10 +10991,10 @@ export type Project = Node & {
    * Claims include role (admin|user) and project group ids.
    */
   mapAccessToken?: Maybe<Scalars['String']>;
-  mapboxPublicKey?: Maybe<Scalars['String']>;
-  mapboxSecretKey?: Maybe<Scalars['String']>;
   /** Reads and enables pagination through a set of `ProjectMapDataRequest`. */
   mapDataRequests?: Maybe<Array<ProjectMapDataRequest>>;
+  mapboxPublicKey?: Maybe<Scalars['String']>;
+  mapboxSecretKey?: Maybe<Scalars['String']>;
   /** Reads and enables pagination through a set of `TableOfContentsItem`. */
   mostUsedLayers?: Maybe<Array<TableOfContentsItem>>;
   /** List of all folders created by this user. */
@@ -11541,42 +11029,27 @@ export type Project = Node & {
   projectBackgroundJobs: Array<ProjectBackgroundJob>;
   region: GeometryPolygon;
   reportingLayers: Array<ReportOverlaySource>;
-  /**
-   * Whether the current user has any discussion forum posts in this project. Use
-   * this to determine whether `project.communityGuidelines` should be shown to the
-   * user before their first post.
-   */
+  /** Whether the current user has any discussion forum posts in this project. Use this to determine whether `project.communityGuidelines` should be shown to the user before their first post. */
   sessionHasPosts?: Maybe<Scalars['Boolean']>;
   /**
-   * Indicates whether current session should have special access or group
-   * privileges. These grants will not be active if the user does not have a
-   * verified email address.
+   * Indicates whether current session should have special access or group privileges. These grants will not be active if the user does not have a verified email address.
    *
-   * Clients should check for situations where a user access token has a false
-   * `email_verified` cliam paired with privileged access. If that is the case they
-   * should prompt users to confirm their email address.
+   * Clients should check for situations where a user access token has a false `email_verified` cliam paired with privileged access. If that is the case they should prompt users to confirm their email address.
    */
   sessionHasPrivilegedAccess?: Maybe<Scalars['Boolean']>;
-  /**
-   * Returns true if the user has admin privileges on this project. Will return
-   * true even if the session email is not verified, but permissions will not work until it is.
-   */
+  /** Returns true if the user has admin privileges on this project. Will return true even if the session email is not verified, but permissions will not work until it is. */
   sessionIsAdmin?: Maybe<Scalars['Boolean']>;
   /**
    * Invites (and related tokens) for surveys which this user has not yet responded
-   * to. Details on how to handle survey invites [can be found on the
-   * wiki](https://github.com/seasketch/next/wiki/User-Ingress#survey-invites).
+   * to. Details on how to handle survey invites [can be found on the wiki](https://github.com/seasketch/next/wiki/User-Ingress#survey-invites).
    */
   sessionOutstandingSurveyInvites?: Maybe<Array<SurveyTokenInfo>>;
   sessionParticipationStatus?: Maybe<ParticipationStatus>;
   showLegendByDefault?: Maybe<Scalars['Boolean']>;
   showScalebarByDefault?: Maybe<Scalars['Boolean']>;
+  sketchClassMissingFragmentCounts?: Maybe<Array<SketchClassFragmentStatus>>;
   /** Reads and enables pagination through a set of `SketchClass`. */
   sketchClasses: Array<SketchClass>;
-  sketchClassMissingFragmentCounts?: Maybe<Array<SketchClassFragmentStatus>>;
-  /** True when fragment generation jobs are queued or running for this project. */
-  sketchesFragmentGenerationInProgress?: Maybe<Scalars['Boolean']>;
-  sketchesMissingFragments?: Maybe<Scalars['Int']>;
   sketchFragmentJobDetails?: Maybe<Array<SketchFragmentJobDetail>>;
   /**
    * This token can be used to access this user's sketches from the geojson endpoint.
@@ -11585,6 +11058,9 @@ export type Project = Node & {
    * project. Must be refreshed occasionally.
    */
   sketchGeometryToken?: Maybe<Scalars['String']>;
+  /** True when fragment generation jobs are queued or running for this project. */
+  sketchesFragmentGenerationInProgress?: Maybe<Scalars['Boolean']>;
+  sketchesMissingFragments?: Maybe<Scalars['Int']>;
   /** Short identifier for the project used in the url. This property cannot be changed after project creation. */
   slug: Scalars['String'];
   /** Reads and enables pagination through a set of `SourceProcessingJob`. */
@@ -11593,8 +11069,8 @@ export type Project = Node & {
   sourceProcessingJobsConnection: SourceProcessingJobsConnection;
   /** Reads and enables pagination through a set of `Sprite`. */
   sprites?: Maybe<Array<Sprite>>;
-  supportedLanguages: Array<Maybe<Scalars['String']>>;
   supportEmail: Scalars['String'];
+  supportedLanguages: Array<Maybe<Scalars['String']>>;
   /** Reads and enables pagination through a set of `Basemap`. */
   surveyBasemaps?: Maybe<Array<Basemap>>;
   /** Reads and enables pagination through a set of `Survey`. */
@@ -12302,9 +11778,7 @@ export type ProjectDraftTableOfContentsStatusPayload = {
  * mutation to create one or more invitations and then use graphile generated
  * mutations to update and delete them.
  *
- * Details on [handling user ingress with invitation
- * tokens](https://github.com/seasketch/next/wiki/User-Ingress#project-invites) and [the mailer subsystem](https://github.com/seasketch/next/wiki/User-and-Survey-Invite-Management)
- * can be found on the wiki.
+ * Details on [handling user ingress with invitation tokens](https://github.com/seasketch/next/wiki/User-Ingress#project-invites) and [the mailer subsystem](https://github.com/seasketch/next/wiki/User-and-Survey-Invite-Management) can be found on the wiki.
  */
 export type ProjectInvite = Node & {
   __typename?: 'ProjectInvite';
@@ -12343,9 +11817,7 @@ export type ProjectInvite = Node & {
  * mutation to create one or more invitations and then use graphile generated
  * mutations to update and delete them.
  *
- * Details on [handling user ingress with invitation
- * tokens](https://github.com/seasketch/next/wiki/User-Ingress#project-invites) and [the mailer subsystem](https://github.com/seasketch/next/wiki/User-and-Survey-Invite-Management)
- * can be found on the wiki.
+ * Details on [handling user ingress with invitation tokens](https://github.com/seasketch/next/wiki/User-Ingress#project-invites) and [the mailer subsystem](https://github.com/seasketch/next/wiki/User-and-Survey-Invite-Management) can be found on the wiki.
  */
 export type ProjectInviteGroupsArgs = {
   first?: Maybe<Scalars['Int']>;
@@ -12362,9 +11834,7 @@ export type ProjectInviteGroupsArgs = {
  * mutation to create one or more invitations and then use graphile generated
  * mutations to update and delete them.
  *
- * Details on [handling user ingress with invitation
- * tokens](https://github.com/seasketch/next/wiki/User-Ingress#project-invites) and [the mailer subsystem](https://github.com/seasketch/next/wiki/User-and-Survey-Invite-Management)
- * can be found on the wiki.
+ * Details on [handling user ingress with invitation tokens](https://github.com/seasketch/next/wiki/User-Ingress#project-invites) and [the mailer subsystem](https://github.com/seasketch/next/wiki/User-and-Survey-Invite-Management) can be found on the wiki.
  */
 export type ProjectInviteInviteEmailsArgs = {
   condition?: Maybe<InviteEmailCondition>;
@@ -12383,9 +11853,7 @@ export type ProjectInviteInviteEmailsArgs = {
  * mutation to create one or more invitations and then use graphile generated
  * mutations to update and delete them.
  *
- * Details on [handling user ingress with invitation
- * tokens](https://github.com/seasketch/next/wiki/User-Ingress#project-invites) and [the mailer subsystem](https://github.com/seasketch/next/wiki/User-and-Survey-Invite-Management)
- * can be found on the wiki.
+ * Details on [handling user ingress with invitation tokens](https://github.com/seasketch/next/wiki/User-Ingress#project-invites) and [the mailer subsystem](https://github.com/seasketch/next/wiki/User-and-Survey-Invite-Management) can be found on the wiki.
  */
 export type ProjectInviteProjectInviteGroupsByInviteIdConnectionArgs = {
   after?: Maybe<Scalars['Cursor']>;
@@ -12536,11 +12004,7 @@ export type ProjectPatch = {
   dataSourcesBucketId?: Maybe<Scalars['String']>;
   /** Should be a short length in order to fit in the project header. */
   description?: Maybe<Scalars['String']>;
-  /**
-   * When true, overlay layers will be available for download by end-users if they
-   * have access to the layer and the data source supports it. This can be
-   * controlled on a per-layer basis.
-   */
+  /** When true, overlay layers will be available for download by end-users if they have access to the layer and the data source supports it. This can be controlled on a per-layer basis. */
   enableDownloadByDefault?: Maybe<Scalars['Boolean']>;
   hideForums?: Maybe<Scalars['Boolean']>;
   hideOverlays?: Maybe<Scalars['Boolean']>;
@@ -12548,17 +12012,11 @@ export type ProjectPatch = {
   inviteEmailSubject?: Maybe<Scalars['String']>;
   /** Featured projects may be given prominent placement on the homepage. This property can only be modified by superusers. */
   isFeatured?: Maybe<Scalars['Boolean']>;
-  /**
-   * Project admins can decide whether their project will be displayed on the
-   * public project listing via Query.projectsConnection.
-   */
+  /** Project admins can decide whether their project will be displayed on the public project listing via Query.projectsConnection. */
   isListed?: Maybe<Scalars['Boolean']>;
   /** If a logoUrl is provided, it will link to this url in a new window if provided. */
   logoLink?: Maybe<Scalars['String']>;
-  /**
-   * URL referencing an image that will be used to represent the project. Will be
-   * displayed at 48x48 pixels and must be a public url.
-   */
+  /** URL referencing an image that will be used to represent the project. Will be displayed at 48x48 pixels and must be a public url. */
   logoUrl?: Maybe<Scalars['Upload']>;
   mapboxPublicKey?: Maybe<Scalars['String']>;
   name?: Maybe<Scalars['String']>;
@@ -12787,9 +12245,7 @@ export type Query = Node & {
   basemapsConnection?: Maybe<BasemapsConnection>;
   bookmarkById?: Maybe<MapBookmark>;
   /**
-   * GraphQL server software build identifier. During a deployment, if changes are
-   * not detected in software modules some may be skipped. So, client and server
-   * version could differ.
+   * GraphQL server software build identifier. During a deployment, if changes are not detected in software modules some may be skipped. So, client and server version could differ.
    *
    * We return "dev" if build cannot be determined from deployment environment.
    */
@@ -12937,14 +12393,14 @@ export type Query = Node & {
   overlayDataTableByNodeId?: Maybe<OverlayDataTable>;
   overlayDataTableLinkedTocIsDraft?: Maybe<Scalars['Boolean']>;
   overlayDataTableParquetPublicUrl?: Maybe<Scalars['String']>;
-  /** Reads and enables pagination through a set of `OverlayDataTable`. */
-  overlayDataTablesConnection?: Maybe<OverlayDataTablesConnection>;
   overlayDataTableUpload?: Maybe<OverlayDataTableUpload>;
   /** Reads a single `OverlayDataTableUpload` using its globally unique `ID`. */
   overlayDataTableUploadByNodeId?: Maybe<OverlayDataTableUpload>;
   overlayDataTableUploadByProjectBackgroundJobId?: Maybe<OverlayDataTableUpload>;
   /** Reads and enables pagination through a set of `OverlayDataTableUpload`. */
   overlayDataTableUploadsConnection?: Maybe<OverlayDataTableUploadsConnection>;
+  /** Reads and enables pagination through a set of `OverlayDataTable`. */
+  overlayDataTablesConnection?: Maybe<OverlayDataTablesConnection>;
   post?: Maybe<Post>;
   /** Reads a single `Post` using its globally unique `ID`. */
   postByNodeId?: Maybe<Post>;
@@ -12999,13 +12455,13 @@ export type Query = Node & {
   sketchClassByFormElementId?: Maybe<SketchClass>;
   /** Reads a single `SketchClass` using its globally unique `ID`. */
   sketchClassByNodeId?: Maybe<SketchClass>;
-  /** True when fragment generation jobs are queued or running for this project. Call from GeographyPlugin. */
-  sketchesFragmentGenerationInProgress?: Maybe<Scalars['Boolean']>;
   sketchFolder?: Maybe<SketchFolder>;
   /** Reads a single `SketchFolder` using its globally unique `ID`. */
   sketchFolderByNodeId?: Maybe<SketchFolder>;
   /** Reads and enables pagination through a set of `SketchFolder`. */
   sketchFoldersConnection?: Maybe<SketchFoldersConnection>;
+  /** True when fragment generation jobs are queued or running for this project. Call from GeographyPlugin. */
+  sketchesFragmentGenerationInProgress?: Maybe<Scalars['Boolean']>;
   sourceProcessingJob?: Maybe<SourceProcessingJob>;
   sourceProcessingJobByDataSourceId?: Maybe<SourceProcessingJob>;
   /** Reads a single `SourceProcessingJob` using its globally unique `ID`. */
@@ -13855,18 +13311,6 @@ export type QueryOverlayDataTableParquetPublicUrlArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
-export type QueryOverlayDataTablesConnectionArgs = {
-  after?: Maybe<Scalars['Cursor']>;
-  before?: Maybe<Scalars['Cursor']>;
-  condition?: Maybe<OverlayDataTableCondition>;
-  first?: Maybe<Scalars['Int']>;
-  last?: Maybe<Scalars['Int']>;
-  offset?: Maybe<Scalars['Int']>;
-  orderBy?: Maybe<Array<OverlayDataTablesOrderBy>>;
-};
-
-
-/** The root query type which gives access points into the data universe. */
 export type QueryOverlayDataTableUploadArgs = {
   id: Scalars['UUID'];
 };
@@ -13893,6 +13337,18 @@ export type QueryOverlayDataTableUploadsConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<OverlayDataTableUploadsOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QueryOverlayDataTablesConnectionArgs = {
+  after?: Maybe<Scalars['Cursor']>;
+  before?: Maybe<Scalars['Cursor']>;
+  condition?: Maybe<OverlayDataTableCondition>;
+  first?: Maybe<Scalars['Int']>;
+  last?: Maybe<Scalars['Int']>;
+  offset?: Maybe<Scalars['Int']>;
+  orderBy?: Maybe<Array<OverlayDataTablesOrderBy>>;
 };
 
 
@@ -14134,12 +13590,6 @@ export type QuerySketchClassByNodeIdArgs = {
 
 
 /** The root query type which gives access points into the data universe. */
-export type QuerySketchesFragmentGenerationInProgressArgs = {
-  pProjectId?: Maybe<Scalars['Int']>;
-};
-
-
-/** The root query type which gives access points into the data universe. */
 export type QuerySketchFolderArgs = {
   id: Scalars['Int'];
 };
@@ -14160,6 +13610,12 @@ export type QuerySketchFoldersConnectionArgs = {
   last?: Maybe<Scalars['Int']>;
   offset?: Maybe<Scalars['Int']>;
   orderBy?: Maybe<Array<SketchFoldersOrderBy>>;
+};
+
+
+/** The root query type which gives access points into the data universe. */
+export type QuerySketchesFragmentGenerationInProgressArgs = {
+  pProjectId?: Maybe<Scalars['Int']>;
 };
 
 
@@ -15697,12 +15153,7 @@ export type ShareSpritePayload = {
 export type Sketch = Node & {
   __typename?: 'Sketch';
   bbox?: Maybe<Array<Maybe<Scalars['Float']>>>;
-  /**
-   * If the sketch is a collection, includes an array of properties for all
-   * sketches that belong to it. These objects will match the `properties` member
-   * of the GeoJSON Feature representation of each sketch. This can be passed to
-   * report clients in the initialization message.
-   */
+  /** If the sketch is a collection, includes an array of properties for all sketches that belong to it. These objects will match the `properties` member of the GeoJSON Feature representation of each sketch. This can be passed to report clients in the initialization message. */
   childProperties?: Maybe<Scalars['JSON']>;
   /** Reads and enables pagination through a set of `Sketch`. */
   children?: Maybe<Array<Sketch>>;
@@ -15712,10 +15163,7 @@ export type Sketch = Node & {
   collectionId?: Maybe<Scalars['Int']>;
   /** Reads a single `Sketch` that is related to this `Sketch`. */
   copiedFrom?: Maybe<Sketch>;
-  /**
-   * If this Sketch started as a copy of another it is tracked here. Eventually
-   * SeaSketch may have a means of visualizing how plans are iterated on over time.
-   */
+  /** If this Sketch started as a copy of another it is tracked here. Eventually SeaSketch may have a means of visualizing how plans are iterated on over time. */
   copyOf?: Maybe<Scalars['Int']>;
   createdAt: Scalars['Datetime'];
   filterMvtUrl?: Maybe<Scalars['String']>;
@@ -15726,18 +15174,10 @@ export type Sketch = Node & {
   /** Reads a single `FormElement` that is related to this `Sketch`. */
   formElement?: Maybe<FormElement>;
   formElementId?: Maybe<Scalars['Int']>;
-  /**
-   * Use this to get a copy of the sketch with properties populated exactly as they
-   * would in the geojson or mvt endpoint. Useful for seeding a client-side cache.
-   */
+  /** Use this to get a copy of the sketch with properties populated exactly as they would in the geojson or mvt endpoint. Useful for seeding a client-side cache. */
   geojsonFeature?: Maybe<Scalars['JSON']>;
   geojsonProperties?: Maybe<Scalars['JSON']>;
-  /**
-   * The geometry of the Sketch **after** it has been preprocessed. This is the
-   * geometry that is used for reporting. Preprocessed geometries may be extremely
-   * large and complex, so it may be necessary to access them through a vector tile
-   * service or some other optimization.
-   */
+  /** The geometry of the Sketch **after** it has been preprocessed. This is the geometry that is used for reporting. Preprocessed geometries may be extremely large and complex, so it may be necessary to access them through a vector tile service or some other optimization. */
   geom?: Maybe<GeometryGeometry>;
   id: Scalars['Int'];
   isCollection?: Maybe<Scalars['Boolean']>;
@@ -15768,10 +15208,7 @@ export type Sketch = Node & {
   /** Reads a single `User` that is related to this `Sketch`. */
   user?: Maybe<User>;
   userAttributes?: Maybe<Scalars['JSON']>;
-  /**
-   * Spatial feature the user directly digitized, without preprocessing. This is
-   * the feature that should be used if the Sketch is later edited.
-   */
+  /** Spatial feature the user directly digitized, without preprocessing. This is the feature that should be used if the Sketch is later edited. */
   userGeom?: Maybe<GeometryGeometry>;
   /** Owner of the sketch. */
   userId?: Maybe<Scalars['Int']>;
@@ -15847,11 +15284,7 @@ export type SketchClass = Node & {
    * multiple features.
    */
   allowMulti: Scalars['Boolean'];
-  /**
-   * Whether the current user session is allowed to digitize sketches of this type.
-   * Digitizing is controlled by admins via access control lists, and archived
-   * sketch classes can only be digitized by admins.
-   */
+  /** Whether the current user session is allowed to digitize sketches of this type. Digitizing is controlled by admins via access control lists, and archived sketch classes can only be digitized by admins. */
   canDigitize?: Maybe<Scalars['Boolean']>;
   clippingGeographies: Array<Maybe<Geography>>;
   draftReport?: Maybe<Report>;
@@ -15870,18 +15303,10 @@ export type SketchClass = Node & {
   geoprocessingClientName?: Maybe<Scalars['String']>;
   /** Endpoint for the client javascript bundle. */
   geoprocessingClientUrl?: Maybe<Scalars['String']>;
-  /**
-   * Root endpoint of a
-   * [@seasketch/geoprocessing](https://github.com/seasketch/geoprocessing) project
-   * that should be used for reporting.
-   */
+  /** Root endpoint of a [@seasketch/geoprocessing](https://github.com/seasketch/geoprocessing) project that should be used for reporting. */
   geoprocessingProjectUrl?: Maybe<Scalars['String']>;
   id: Scalars['Int'];
-  /**
-   * If set to true, (non-admin) users should not be able to digitize new features
-   * using this sketch class, but they should still be able to access the sketch
-   * class in order to render existing sketches of this type.
-   */
+  /** If set to true, (non-admin) users should not be able to digitize new features using this sketch class, but they should still be able to access the sketch class in order to render existing sketches of this type. */
   isArchived: Scalars['Boolean'];
   isGeographyClippingEnabled: Scalars['Boolean'];
   isTemplate: Scalars['Boolean'];
@@ -15985,17 +15410,9 @@ export type SketchClassPatch = {
   geoprocessingClientName?: Maybe<Scalars['String']>;
   /** Endpoint for the client javascript bundle. */
   geoprocessingClientUrl?: Maybe<Scalars['String']>;
-  /**
-   * Root endpoint of a
-   * [@seasketch/geoprocessing](https://github.com/seasketch/geoprocessing) project
-   * that should be used for reporting.
-   */
+  /** Root endpoint of a [@seasketch/geoprocessing](https://github.com/seasketch/geoprocessing) project that should be used for reporting. */
   geoprocessingProjectUrl?: Maybe<Scalars['String']>;
-  /**
-   * If set to true, (non-admin) users should not be able to digitize new features
-   * using this sketch class, but they should still be able to access the sketch
-   * class in order to render existing sketches of this type.
-   */
+  /** If set to true, (non-admin) users should not be able to digitize new features using this sketch class, but they should still be able to access the sketch class in order to render existing sketches of this type. */
   isArchived?: Maybe<Scalars['Boolean']>;
   isGeographyClippingEnabled?: Maybe<Scalars['Boolean']>;
   /** Label chosen by project admins that is shown to users. */
@@ -16283,19 +15700,13 @@ export enum SpatialMetricState {
   Queued = 'QUEUED'
 }
 
-/**
- * Image sprites for use in Mapbox GL Styles. The database holds metadata about the
- * sprite, the actual images are in cloud storage referenced by the URL parameter.
- */
+/** Image sprites for use in Mapbox GL Styles. The database holds metadata about the sprite, the actual images are in cloud storage referenced by the URL parameter.  */
 export type Sprite = Node & {
   __typename?: 'Sprite';
   category?: Maybe<Scalars['String']>;
   deleted?: Maybe<Scalars['Boolean']>;
   id: Scalars['Int'];
-  /**
-   * Hash of lowest-dpi image in the set (pixelRatio=1). Useful for de-duplicating
-   * symbols that have been imported multiple times
-   */
+  /** Hash of lowest-dpi image in the set (pixelRatio=1). Useful for de-duplicating symbols that have been imported multiple times */
   md5: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
@@ -16308,10 +15719,7 @@ export type Sprite = Node & {
 };
 
 
-/**
- * Image sprites for use in Mapbox GL Styles. The database holds metadata about the
- * sprite, the actual images are in cloud storage referenced by the URL parameter.
- */
+/** Image sprites for use in Mapbox GL Styles. The database holds metadata about the sprite, the actual images are in cloud storage referenced by the URL parameter.  */
 export type SpriteSpriteImagesArgs = {
   condition?: Maybe<SpriteImageCondition>;
   first?: Maybe<Scalars['Int']>;
@@ -16323,11 +15731,7 @@ export type SpriteImage = {
   __typename?: 'SpriteImage';
   /** Must be <= 1024 */
   height: Scalars['Int'];
-  /**
-   * Device pixel ratio a copy of this image supports. 2x would be for "retina"
-   * devices. Multiple records may point to the same sprite id, but each must have
-   * a unique combination of id, pixel_ratio, and data_layer_id.
-   */
+  /** Device pixel ratio a copy of this image supports. 2x would be for "retina" devices. Multiple records may point to the same sprite id, but each must have a unique combination of id, pixel_ratio, and data_layer_id. */
   pixelRatio: Scalars['Int'];
   /** Reads a single `Sprite` that is related to this `SpriteImage`. */
   sprite?: Maybe<Sprite>;
@@ -16486,10 +15890,7 @@ export type Survey = Node & {
   isSpatial?: Maybe<Scalars['Boolean']>;
   isTemplate?: Maybe<Scalars['Boolean']>;
   limitResponseAccessToListedUsers: Array<Maybe<Scalars['String']>>;
-  /**
-   * If set, there can only be one response with matching contact information. The
-   * app will also discourage multiple submissions from the same browser session.
-   */
+  /** If set, there can only be one response with matching contact information. The app will also discourage multiple submissions from the same browser session. */
   limitToSingleResponse: Scalars['Boolean'];
   name: Scalars['String'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
@@ -16646,10 +16047,7 @@ export type SurveyInvite = Node & {
   inviteEmails: Array<InviteEmail>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
-  /**
-   * Indicates the status of the invite, e.g. whether an invite email has been
-   * sent, status of those emails, and whether a response has been submitted.
-   */
+  /** Indicates the status of the invite, e.g. whether an invite email has been sent, status of those emails, and whether a response has been submitted. */
   status?: Maybe<InviteStatus>;
   /** Reads a single `Survey` that is related to this `SurveyInvite`. */
   survey?: Maybe<Survey>;
@@ -16774,10 +16172,7 @@ export type SurveyPatch = {
    */
   isDisabled?: Maybe<Scalars['Boolean']>;
   limitResponseAccessToListedUsers?: Maybe<Array<Maybe<Scalars['String']>>>;
-  /**
-   * If set, there can only be one response with matching contact information. The
-   * app will also discourage multiple submissions from the same browser session.
-   */
+  /** If set, there can only be one response with matching contact information. The app will also discourage multiple submissions from the same browser session. */
   limitToSingleResponse?: Maybe<Scalars['Boolean']>;
   name?: Maybe<Scalars['String']>;
   projectId?: Maybe<Scalars['Int']>;
@@ -16795,11 +16190,7 @@ export type SurveyResponse = Node & {
   __typename?: 'SurveyResponse';
   accountEmail?: Maybe<Scalars['String']>;
   archived: Scalars['Boolean'];
-  /**
-   * Should be set by the client on submission and tracked by cookies or
-   * localStorage. Surveys that permit only a single entry enable users to bypass
-   * the limit for legitimate purposes, like entering responses on a shared computer.
-   */
+  /** Should be set by the client on submission and tracked by cookies or localStorage. Surveys that permit only a single entry enable users to bypass the limit for legitimate purposes, like entering responses on a shared computer. */
   bypassedDuplicateSubmissionControl: Scalars['Boolean'];
   createdAt: Scalars['Datetime'];
   /** JSON representation of responses, keyed by the form field export_id */
@@ -16809,45 +16200,26 @@ export type SurveyResponse = Node & {
   isDraft: Scalars['Boolean'];
   /** Duplicate entries are detected by matching contact-information field values. */
   isDuplicateEntry: Scalars['Boolean'];
-  /**
-   * Detected by comparing ip hashes from previous entries. IP hashes are not tied
-   * to particular responses, so only the second and subsequent entries are flagged.
-   */
+  /** Detected by comparing ip hashes from previous entries. IP hashes are not tied to particular responses, so only the second and subsequent entries are flagged. */
   isDuplicateIp: Scalars['Boolean'];
   /** If true, a logged-in user entered information on behalf of another person, so userId is not as relevant. */
   isFacilitated: Scalars['Boolean'];
   isPractice: Scalars['Boolean'];
-  /**
-   * Unusual or missing user-agent headers on submissions are flagged. May indicate
-   * scripting but does not necessarily imply malicious intent.
-   */
+  /** Unusual or missing user-agent headers on submissions are flagged. May indicate scripting but does not necessarily imply malicious intent. */
   isUnrecognizedUserAgent: Scalars['Boolean'];
   lastUpdatedByEmail?: Maybe<Scalars['String']>;
   lastUpdatedById?: Maybe<Scalars['Int']>;
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
-  /**
-   * Should be used by clients to uniquely identify responses that are collected
-   * offline. Survey facilitators can download their responses to disk as json so
-   * that they may be recovered/submitted in the case of the client machine being
-   * damaged or stolen. Tracking an offline uuid ensures that these responses are
-   * not somehow submitted in duplicate.
-   */
+  /** Should be used by clients to uniquely identify responses that are collected offline. Survey facilitators can download their responses to disk as json so that they may be recovered/submitted in the case of the client machine being damaged or stolen. Tracking an offline uuid ensures that these responses are not somehow submitted in duplicate. */
   offlineId?: Maybe<Scalars['UUID']>;
-  /**
-   * Checked on SUBMISSION, so adding or changing a survey geofence after responses
-   * have been submitted will not update values. GPS coordinates and IP addresses
-   * are not stored for privacy purposes.
-   */
+  /** Checked on SUBMISSION, so adding or changing a survey geofence after responses have been submitted will not update values. GPS coordinates and IP addresses are not stored for privacy purposes. */
   outsideGeofence: Scalars['Boolean'];
   /** Reads a single `Survey` that is related to this `SurveyResponse`. */
   survey?: Maybe<Survey>;
   surveyId: Scalars['Int'];
   updatedAt?: Maybe<Scalars['Datetime']>;
-  /**
-   * User account that submitted the survey. Note that if isFacilitated is set, the
-   * account may not be who is represented by the response content.
-   */
+  /** User account that submitted the survey. Note that if isFacilitated is set, the account may not be who is represented by the response content. */
   userId?: Maybe<Scalars['Int']>;
 };
 
@@ -16998,18 +16370,11 @@ export type TableOfContentsItem = Node & {
   hideChildren: Scalars['Boolean'];
   hostedSourceLastUpdated?: Maybe<Scalars['Datetime']>;
   id: Scalars['Int'];
-  /**
-   * If set, folders with this property cannot be toggled in order to activate all
-   * their children. Toggles can only be used to toggle children off
-   */
+  /** If set, folders with this property cannot be toggled in order to activate all their children. Toggles can only be used to toggle children off */
   isClickOffOnly: Scalars['Boolean'];
   isCustomGlSource?: Maybe<Scalars['Boolean']>;
   isDownloadableSourceType?: Maybe<Scalars['Boolean']>;
-  /**
-   * Identifies whether this item is part of the draft table of contents edited by
-   * admin or the static public version. This property cannot be changed. Rather,
-   * use the `publishTableOfContents()` mutation
-   */
+  /** Identifies whether this item is part of the draft table of contents edited by admin or the static public version. This property cannot be changed. Rather, use the `publishTableOfContents()` mutation */
   isDraft: Scalars['Boolean'];
   /** If not a folder, the item is a layer-type and must have a data_layer_id */
   isFolder: Scalars['Boolean'];
@@ -17312,10 +16677,7 @@ export type TableOfContentsItemInput = {
   dataLayerId?: Maybe<Scalars['Int']>;
   enableDownload?: Maybe<Scalars['Boolean']>;
   hideChildren?: Maybe<Scalars['Boolean']>;
-  /**
-   * If set, folders with this property cannot be toggled in order to activate all
-   * their children. Toggles can only be used to toggle children off
-   */
+  /** If set, folders with this property cannot be toggled in order to activate all their children. Toggles can only be used to toggle children off */
   isClickOffOnly?: Maybe<Scalars['Boolean']>;
   /** If not a folder, the item is a layer-type and must have a data_layer_id */
   isFolder?: Maybe<Scalars['Boolean']>;
@@ -17358,10 +16720,7 @@ export type TableOfContentsItemPatch = {
   /** When true, the ESRI REST URL is omitted from the public metadata page. Defaults to false so ArcGIS service URLs are shown. */
   hideArcGisRestLink?: Maybe<Scalars['Boolean']>;
   hideChildren?: Maybe<Scalars['Boolean']>;
-  /**
-   * If set, folders with this property cannot be toggled in order to activate all
-   * their children. Toggles can only be used to toggle children off
-   */
+  /** If set, folders with this property cannot be toggled in order to activate all their children. Toggles can only be used to toggle children off */
   isClickOffOnly?: Maybe<Scalars['Boolean']>;
   /** DraftJS compatible representation of text content to display when a user requests layer metadata. Not valid for Folders */
   metadata?: Maybe<Scalars['JSON']>;
@@ -19773,16 +19132,9 @@ export type User = Node & {
   apiKeysByCreatedByConnection: ApiKeysConnection;
   approvedBy?: Maybe<User>;
   approvedOrDeniedOn?: Maybe<Scalars['Datetime']>;
-  /**
-   * Whether the user has been banned from the forums. Use `disableForumPosting()`
-   * and `enableForumPosting()` mutations to modify this state. Accessible only to admins.
-   */
+  /** Whether the user has been banned from the forums. Use `disableForumPosting()` and `enableForumPosting()` mutations to modify this state. Accessible only to admins. */
   bannedFromForums?: Maybe<Scalars['Boolean']>;
-  /**
-   * Only visible to admins of projects a user has joined. Can be used for
-   * identification purposes since users will not gain any access control
-   * privileges until this email has been confirmed.
-   */
+  /** Only visible to admins of projects a user has joined. Can be used for identification purposes since users will not gain any access control privileges until this email has been confirmed. */
   canonicalEmail?: Maybe<Scalars['String']>;
   deniedBy?: Maybe<User>;
   /** Reads a single `EmailNotificationPreference` that is related to this `User`. */
@@ -19954,10 +19306,10 @@ export type UserParticipationStatusArgs = {
 };
 
 export enum UserActivityPeriod {
-  D180 = 'D180',
-  D30 = 'D30',
   D7 = 'D7',
+  D30 = 'D30',
   D90 = 'D90',
+  D180 = 'D180',
   H24 = 'H24'
 }
 
