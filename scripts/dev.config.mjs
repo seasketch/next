@@ -6,12 +6,22 @@
 // ciCommand: `--ci` command. Omit the service from `--ci` when undefined.
 // dependsOn / ready: host ordering in `--ci` only. Dev mode starts everything at once.
 // profiles: `core` is the default. `data` includes core plus its own entries.
-// `e2e` is the API and client only, on their own ports and database.
+// `e2e` is the API, client, and bookmark screenshotter, on their own ports and database.
+
+// Local `wrangler dev` for the bookmark screenshot worker. Chrome runs on this
+// machine. The API is pointed here only when this process is started.
+// The e2e profile uses its own port so it can run beside `npm run dev`.
+export const screenshotterDev = {
+  port: 8791,
+  token: "local-dev-screenshotter",
+  url: "http://127.0.0.1:8791",
+};
 
 export const e2eStack = {
   database: "seasketch_e2e",
   apiPort: 13857,
   clientPort: 13000,
+  screenshotterPort: 8792,
   redisDb: 1,
   databaseUrl(user) {
     return `postgres://${user}:password@localhost:54321/${this.database}`;
@@ -59,10 +69,16 @@ export const services = [
     e2eEnv: {
       PORT: String(e2eStack.clientPort),
       REACT_APP_GRAPHQL_ENDPOINT: `http://localhost:${e2eStack.apiPort}/graphql`,
+      // react-scripts exits when stdin closes unless CI is true. Playwright
+      // does not keep that stdin open. GitHub Actions already sets CI.
+      CI: "true",
+      // Test mode stores the capture on the API. This is the prefix the forum
+      // image URLs are built from.
+      REACT_APP_CLOUDFLARE_IMAGES_ENDPOINT: `http://127.0.0.1:${e2eStack.apiPort}/e2e/bookmark-images/`,
     },
     ready: "http-get://127.0.0.1:3000",
     // In --ci the client is what Playwright waits on, so this list is the start gate.
-    dependsOn: ["api", "data-tables", "spatial-uploads", "subdivision"],
+    dependsOn: ["api", "data-tables", "spatial-uploads", "subdivision", "screenshotter"],
     profiles: ["core"],
   },
   {
@@ -109,6 +125,21 @@ export const services = [
     ready: "tcp:127.0.0.1:9000",
     profiles: ["core"],
   },
+  {
+    name: "screenshotter",
+    cwd: "packages/map-screenshotter",
+    command: "npm run dev",
+    ciCommand: "npm run dev",
+    env: {
+      SCREENSHOTTER_DEV_PORT: String(screenshotterDev.port),
+      SCREENSHOTTER_DEV_TOKEN: screenshotterDev.token,
+    },
+    e2eEnv: {
+      SCREENSHOTTER_DEV_PORT: String(e2eStack.screenshotterPort),
+    },
+    ready: `http-get://127.0.0.1:${screenshotterDev.port}/health`,
+    profiles: ["core"],
+  },
 ];
 
 export const profileNames = ["core", "data", "e2e"];
@@ -120,13 +151,20 @@ export function readyUrl(service, profile) {
   if (profile === "e2e" && service.name === "client") {
     return `http-get://127.0.0.1:${e2eStack.clientPort}`;
   }
+  if (profile === "e2e" && service.name === "screenshotter") {
+    return `http-get://127.0.0.1:${e2eStack.screenshotterPort}/health`;
+  }
   return service.ready;
 }
 
 export function servicesInProfile(profile) {
   return services.filter((service) => {
     if (profile === "e2e") {
-      return service.name === "api" || service.name === "client";
+      return (
+        service.name === "api" ||
+        service.name === "client" ||
+        service.name === "screenshotter"
+      );
     }
     if (profile === "core") {
       return service.profiles.includes("core");

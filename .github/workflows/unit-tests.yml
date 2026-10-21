@@ -216,7 +216,7 @@ jobs:
           cache-dependency-path: "**/package-lock.json"
       - name: Install dependencies
         run: |
-          bash scripts/ci-bootstrap.sh --scope=@seasketch/api --scope=client --scope=spatial-uploads-handler --include-dependencies
+          bash scripts/ci-bootstrap.sh --scope=@seasketch/api --scope=client --scope=spatial-uploads-handler --scope=map-screenshotter --include-dependencies
           npm ci --prefix packages/data-tables-handler
           npm ci --prefix packages/e2e
       - name: Install Playwright browser

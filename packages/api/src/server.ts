@@ -32,6 +32,7 @@ import layerApi from "./layerApi";
 import { throwIfProductionMisconfigured } from "./env";
 import { assertE2ETestModeConfiguration } from "./e2e/testMode";
 import { assertNonProductionProfile } from "./envProfile";
+import { registerE2EBookmarkImageRoute } from "./e2e/bookmarkImages";
 import { registerE2ETokenRoute } from "./e2e/tokenRoute";
 
 assertE2ETestModeConfiguration();
@@ -138,6 +139,7 @@ app.get("/unsubscribeFromTopic", (req, res) => {
 });
 
 registerE2ETokenRoute(app, pool);
+registerE2EBookmarkImageRoute(app);
 
 app.get("/.well-known/jwks.json", async (req, res) => {
   const keys = await getJWKS(pool);

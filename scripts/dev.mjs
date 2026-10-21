@@ -3,6 +3,7 @@
 // Containers: docker compose up -d --wait. Host processes: concurrently.
 // Does not set E2E_TEST_MODE or E2E_TEST_PASSPHRASE. Playwright passes those.
 import { spawn } from "node:child_process";
+import net from "node:net";
 import { writeSync } from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
@@ -10,7 +11,14 @@ import { Writable } from "node:stream";
 import { fileURLToPath } from "node:url";
 import concurrently from "concurrently";
 import { createStream } from "rotating-file-stream";
-import { profileNames, readyUrl, services, servicesInProfile } from "./dev.config.mjs";
+import {
+  e2eStack,
+  profileNames,
+  readyUrl,
+  screenshotterDev,
+  services,
+  servicesInProfile,
+} from "./dev.config.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let logsDir = path.join(root, ".logs");
@@ -60,12 +68,23 @@ function serviceByName(name) {
   return services.find((service) => service.name === name);
 }
 
-function envFor(service, profile) {
-  return {
+function envFor(service, profile, localScreenshotter) {
+  const env = {
     ...process.env,
     ...service.env,
     ...(profile === "e2e" && service.e2eEnv ? service.e2eEnv : {}),
   };
+  if (localScreenshotter && service.name === "api") {
+    env.SCREENSHOTTER_URL =
+      profile === "e2e"
+        ? `http://127.0.0.1:${e2eStack.screenshotterPort}`
+        : screenshotterDev.url;
+    env.SCREENSHOTTER_TOKEN = screenshotterDev.token;
+    if (!env.MAPBOX_ACCESS_TOKEN && process.env.REACT_APP_MAPBOX_ACCESS_TOKEN) {
+      env.MAPBOX_ACCESS_TOKEN = process.env.REACT_APP_MAPBOX_ACCESS_TOKEN;
+    }
+  }
+  return env;
 }
 
 function commandFor(service, ci, profile) {
@@ -95,7 +114,7 @@ function commandFor(service, ci, profile) {
 function runOne(service) {
   const child = spawn(service.command, {
     cwd: path.join(root, service.cwd),
-    env: envFor(service, profile),
+    env: envFor(service, profile, false),
     stdio: "inherit",
     shell: true,
   });
@@ -111,7 +130,24 @@ function runOne(service) {
   });
 }
 
-function startCompose(profile) {
+function portOpen(port) {
+  return new Promise((resolve) => {
+    const socket = net.connect({ port, host: "127.0.0.1" });
+    const done = (open) => {
+      socket.removeAllListeners();
+      socket.destroy();
+      resolve(open);
+    };
+    socket.once("connect", () => done(true));
+    socket.once("error", () => done(false));
+  });
+}
+
+async function startCompose(profile) {
+  if ((await portOpen(54321)) && (await portOpen(6379))) {
+    report("Postgres and Redis are already listening. Leaving those containers in place.");
+    return;
+  }
   const args = ["compose"];
   if (profile === "data") {
     args.push("--profile", "data");
@@ -182,15 +218,15 @@ if (only) {
     if (!command) {
       return [];
     }
-    return [
-      {
-        command,
-        name: service.name,
-        cwd: path.join(root, service.cwd),
-        env: envFor(service, profile),
-      },
-    ];
+    return [{ service, command }];
   });
+  const localScreenshotter = selected.some((item) => item.service.name === "screenshotter");
+  const processes = selected.map((item) => ({
+    command: item.command,
+    name: item.service.name,
+    cwd: path.join(root, item.service.cwd),
+    env: envFor(item.service, profile, localScreenshotter),
+  }));
 
   if (selected.length === 0) {
     console.error(`Profile ${profile} has no ${ci ? "--ci " : ""}services to start`);
@@ -206,11 +242,11 @@ if (only) {
     process.exit(1);
   }
 
-  for (const service of selected) {
+  for (const service of processes) {
     report(`[${service.name}] ${service.command}`);
   }
 
-  const { result, commands } = concurrently(selected, {
+  const { result, commands } = concurrently(processes, {
     prefix: "name",
     prefixColors: "auto",
     killOthersOn: ["failure"],

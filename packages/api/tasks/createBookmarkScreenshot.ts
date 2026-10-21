@@ -1,24 +1,41 @@
 import { Helpers } from "graphile-worker";
-import { ScreenshotOptions } from "puppeteer";
 import { sign } from "../src/auth/jwks";
+import {
+  captureBookmarkScreenshot,
+  ScreenshotClip,
+} from "../src/screenshotterClient";
 import { withTimeout } from "../src/withTimeout";
 import * as Sentry from "@sentry/node";
-import AWS from "aws-sdk";
-
-const lambda = new AWS.Lambda({
-  region: process.env.AWS_REGION || "us-west-2",
-  httpOptions: {
-    timeout: 120000,
-  },
-});
 
 const ISSUER = (process.env.ISSUER || "seasketch.org")
   .split(",")
   .map((issuer) => issuer.trim());
 
+type CaptureSpan = {
+  finish: () => void;
+  startChild: (context: { op: string }) => CaptureSpan;
+};
+
+/** Sentry is optional. A capture must still run when no SDK is configured. */
+function startCaptureTransaction(): CaptureSpan {
+  const transaction = Sentry.startTransaction({
+    name: "createBookmarkScreenshot",
+  });
+  if (transaction) {
+    return transaction as unknown as CaptureSpan;
+  }
+  const noop: CaptureSpan = {
+    finish() {},
+    startChild() {
+      return noop;
+    },
+  };
+  return noop;
+}
+
 /**
- * Run the screenshotter lambda function and store the reference to the
- * screenshot in the database.
+ * Capture a map bookmark with the screenshotter Worker and store the
+ * Cloudflare Images id.
  *
  * @param payload {id: number } bookmark id
  * @param helpers Graphile worker helpers
@@ -27,9 +44,7 @@ async function createBookmarkScreenshot(
   payload: { id: string },
   helpers: Helpers
 ) {
-  const transaction = Sentry.startTransaction({
-    name: "createBookmarkScreenshot",
-  });
+  const transaction = startCaptureTransaction();
 
   await helpers.withPgClient(async (client) => {
     let span = transaction.startChild({ op: "query bookmark" });
@@ -112,13 +127,7 @@ async function createBookmarkScreenshot(
       process.env.MAPBOX_ACCESS_TOKEN
     }&auth=${token}&mapAccess=${encodeURIComponent(mapAccessToken)}`;
 
-    Sentry.setExtra("url", url);
-    Sentry.setExtra(
-      "debugUrl",
-      url + `&bookmarkUrl=https://api.seasket.ch/bookmarks/${bookmark.id}`
-    );
-
-    let clip: undefined | ScreenshotOptions["clip"] = undefined;
+    let clip: ScreenshotClip | undefined;
 
     span.finish();
 
@@ -161,55 +170,26 @@ async function createBookmarkScreenshot(
 
     bookmarkData.spriteImages = spriteRows[0].sprite_images;
 
-    if (!process.env.SCREENSHOTTER_FUNCTION_ARN) {
-      throw new Error("SCREENSHOTTER_FUNCTION_ARN is not configured");
-    }
-
-    // Fire off request to lambda
-    const lambdaPayload = {
+    span = transaction.startChild({ op: "capture screenshot" });
+    const image = await captureBookmarkScreenshot({
       width,
       height,
       clip,
       url,
       bookmarkData,
-    };
-    span = transaction.startChild({ op: "invoke lambda" });
-
-    const res = await lambda
-      .invoke({
-        FunctionName: process.env.SCREENSHOTTER_FUNCTION_ARN,
-        Payload: JSON.stringify(lambdaPayload),
-      })
-      .promise();
-    if (!res.Payload) {
-      console.error(`map screenshot task invocation error`, res);
-      throw new Error("Map screenshot lambda function invocation error");
-    }
+    });
     span.finish();
 
-    // Parse response from lambda
-    let lambdaResponseData: any;
-    if (typeof res.Payload === "string") {
-      lambdaResponseData = JSON.parse(res.Payload);
-    } else {
-      lambdaResponseData = res.Payload;
-    }
-
-    if (!lambdaResponseData.body) {
-      throw new Error("Lambda response body is empty");
-    }
-    const body = JSON.parse(lambdaResponseData.body);
-
     span = transaction.startChild({ op: "update image id in db" });
-    // Update bookmark with image id
     await client.query(`update map_bookmarks set image_id = $2 where id = $1`, [
       bookmark.id,
-      body.id,
+      image.id,
     ]);
     span.finish();
     transaction.finish();
   });
 }
 
-// Export with timeout
-export default withTimeout(60000, createBookmarkScreenshot);
+// The browser snapshot gives up after 60s. This also covers signing tokens
+// and uploading the PNG to Cloudflare Images.
+export default withTimeout(90000, createBookmarkScreenshot);
