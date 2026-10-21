@@ -8920,6 +8920,10 @@ select{
   cursor:auto
 }
 
+.cursor-col-resize{
+  cursor:col-resize
+}
+
 .cursor-default{
   cursor:default
 }
@@ -15709,6 +15713,11 @@ input[type="checkbox"][indeterminate="true"]:checked {
 .focus-visible\:bg-gray-600:focus-visible{
   --tw-bg-opacity:1;
   background-color:rgb(75 85 99 / var(--tw-bg-opacity, 1))
+}
+
+.focus-visible\:bg-primary-400:focus-visible{
+  --tw-bg-opacity:1;
+  background-color:rgb(61 153 210 / var(--tw-bg-opacity, 1))
 }
 
 .focus-visible\:px-1:focus-visible{
