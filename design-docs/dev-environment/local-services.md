@@ -33,7 +33,8 @@ VS Code tasks start Postgres, Redis, the API (with its in-process Graphile worke
 | Spatial uploads | `packages/spatial-uploads-handler` | Docker Lambda runtime via `SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER`, or production via `SPATIAL_UPLOADS_LAMBDA_ARN` | Data |
 | Tiles, downloads, data-table queries | `packages/pmtiles-server` | Production hosts. `wrangler dev` exists but is not started | Data |
 | Overlay worker (report metrics) | `packages/overlay-worker` | Local dev server via `OVERLAY_WORKER_DEV_HANDLER`, but it still reports results through an SQS queue the API consumes; or production via `OVERLAY_WORKER_LAMBDA_ARN` | Data |
-| Fragment, subdivision, screenshotter, PII classifier | Matching packages | Deployed Lambdas via `*_ARN`. The screenshotter README describes tunneling a dev client to a deployed Lambda | Optional |
+| Fragment, PII classifier | Matching packages | Deployed Lambdas via `*_ARN` | Optional |
+| Bookmark screenshots | `packages/map-screenshotter` | `wrangler dev` in the core profile (port 8791) and the e2e profile (port 8792). Local Chrome. The API is pointed at it while that process is running | Core, e2e |
 | Email | API `sendEmail` | SES, with a file sink behind `IS_CYPRESS_TEST_ENV` | File sink in every non-production profile |
 | AI data analyst | `packages/ai-data-analyst` | Cloudflare AI Gateway token | Optional |
 
@@ -45,7 +46,7 @@ The start command takes a profile: `npm run dev -- --profile <name>`. A profile 
 
 - **core** — Postgres, Redis, API, client, and the watchers a person needs. The default for `npm run dev`, CI smoke, and any agent not working on the data path.
 - **data** — core, plus the data-tables handler, the spatial-uploads container, `pmtiles-server` under `wrangler dev`, and the overlay worker dev server. The API receives local handler URLs, a development queue, and development buckets. Never Lambda ARNs.
-- **optional add-ons** — started one at a time when a task needs them: fragment worker, screenshotter, PII classifier, AI analyst. Each documents its local command and the variable that points the API at it. Until someone starts one, its feature reports itself unavailable. The data-tables handler, spatial-uploads handler, and subdivision worker are part of `npm run dev`: each restarts when its code changes. `--ci` starts them once, without watching, and the client waits until their ports are open. The smoke tests do not call them yet.
+- **optional add-ons** — started one at a time when a task needs them: fragment worker, PII classifier, AI analyst. Each documents its local command and the variable that points the API at it. Until someone starts one, its feature reports itself unavailable. The data-tables handler, spatial-uploads handler, subdivision worker, and bookmark screenshotter are part of `npm run dev`. `--ci` starts the handlers, subdivision, and the screenshotter once, without watching. The e2e profile starts the screenshotter so the forum bookmark journey can capture a map.
 
 In every non-production profile, email is written to a directory in the workspace, generalizing today's Cypress file sink. No default profile sends SES mail.
 
@@ -63,8 +64,8 @@ Uploads, tile archives, and ACL documents live in object storage even for local 
 - The API uses one pattern per integration: `*_DEV_HANDLER` is a local URL, `*_ARN` or a queue URL is a deployed target, and neither set means the feature is off. Phase 1 applies it to everything the core profile touches. Phase 3 wires the data profile.
 - Report calculation belongs to the data profile, with a per-environment SQS queue.
 - Workers that exist only as deployed Lambdas get a local entry point when a journey or feature task needs one, using the same dev-handler pattern.
-- Screenshot generation is stubbed or skipped in core and data profiles.
-- *(September 2026)* Outside production, an unset integration stays unavailable. In production, calling that functionality throws `MisconfiguredError` naming the missing variable. The overlay result queue is required before the production process listens, because nothing would fail later if it were missing. `SCREENSHOTTER_FUNCTION_ARN` unset throws before any Lambda invoke.
+- Bookmark screenshots run through local `wrangler dev` in the core profile and in the e2e profile. An API started outside `npm run dev` uses `SCREENSHOTTER_URL` when it is set. Test mode keeps the captured PNG on the API and the e2e client loads it from there, so the journey can view the large image without writing to Cloudflare Images.
+- *(September 2026)* Outside production, an unset integration stays unavailable. In production, calling that functionality throws `MisconfiguredError` naming the missing variable. The overlay result queue is required before the production process listens, because nothing would fail later if it were missing. `SCREENSHOTTER_URL` or `SCREENSHOTTER_TOKEN` unset throws before any capture request.
 
 ## Open questions
 

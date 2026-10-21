@@ -1,2 +1,5 @@
 .serverless
 serverless-state.json
+.wrangler
+.dev.vars
+node_modules

@@ -55,7 +55,8 @@ export class GraphQLStack extends cdk.Stack {
       UNSPLASH_KEY,
       SENTRY_DSN,
       MAPBOX_ACCESS_TOKEN,
-      SCREENSHOTTER_FUNCTION_ARN,
+      SCREENSHOTTER_URL,
+      SCREENSHOTTER_TOKEN,
     } = process.env;
     if (!AUTH0_CLIENT_ID || !AUTH0_CLIENT_SECRET) {
       throw new Error(
@@ -76,8 +77,10 @@ export class GraphQLStack extends cdk.Stack {
         "You must specify a COMMIT env var so that the graphql container can be built with the appropriate version of the source code."
       );
     }
-    if (!SCREENSHOTTER_FUNCTION_ARN) {
-      throw new Error("You must specify a SCREENSHOTTER_FUNCTION_ARN env var.");
+    if (!SCREENSHOTTER_URL || !SCREENSHOTTER_TOKEN) {
+      throw new Error(
+        "You must specify SCREENSHOTTER_URL and SCREENSHOTTER_TOKEN env vars."
+      );
     }
     if (
       !process.env.R2_ENDPOINT ||
@@ -173,7 +176,8 @@ export class GraphQLStack extends cdk.Stack {
               process.env.CLOUDFLARE_IMAGES_ACCOUNT_HASH,
             ISSUER: process.env.ISSUER || HOST,
             API_ROOT: HOST,
-            SCREENSHOTTER_FUNCTION_ARN,
+            SCREENSHOTTER_URL,
+            SCREENSHOTTER_TOKEN,
             CLOUDFLARE_ACCOUNT_TAG: process.env.CLOUDFLARE_ACCOUNT_TAG,
             CLOUDFLARE_SITE_TAG: process.env.CLOUDFLARE_SITE_TAG,
             CLOUDFLARE_GRAPHQL_TOKEN: process.env.CLOUDFLARE_GRAPHQL_TOKEN,
@@ -256,14 +260,6 @@ export class GraphQLStack extends cdk.Stack {
         ],
       })
     );
-    service.taskDefinition.taskRole.addToPrincipalPolicy(
-      new PolicyStatement({
-        actions: ["lambda:InvokeFunction"],
-        effect: iam.Effect.ALLOW,
-        resources: [SCREENSHOTTER_FUNCTION_ARN],
-      })
-    );
-
     service.taskDefinition.taskRole.addToPrincipalPolicy(
       new PolicyStatement({
         actions: ["lambda:InvokeFunction"],

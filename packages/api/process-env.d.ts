@@ -50,8 +50,10 @@ declare namespace NodeJS {
     ISSUER?: string;
     /* Used for generating email verification links */
     API_ROOT: string;
-    /* Lambda used for taking screenshots of map bookmakrs */
-    SCREENSHOTTER_FUNCTION_ARN: string;
+    /** map-screenshotter Worker URL. Unset outside production leaves capture unavailable. */
+    SCREENSHOTTER_URL?: string;
+    /** Bearer token for the map-screenshotter Worker. */
+    SCREENSHOTTER_TOKEN?: string;
     /* For discussion forum and survey file uploads */
     R2_FILE_UPLOADS_BUCKET: string;
     CLOUDFLARE_ACCOUNT_TAG: string;

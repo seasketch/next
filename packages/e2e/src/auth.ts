@@ -37,8 +37,9 @@ export async function issueToken(
       },
     });
   } catch (error) {
+    const reason = error instanceof Error ? error.message : String(error);
     throw new Error(
-      `Could not reach ${apiURL}/e2e/token. Run npm run e2e from the repo root.`
+      `Could not reach ${apiURL}/e2e/token (${reason}). Run npm run e2e from the repo root.`
     );
   }
   if (response.status() === 404) {

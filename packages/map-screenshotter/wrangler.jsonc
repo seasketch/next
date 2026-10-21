@@ -1,0 +1,20 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "map-screenshotter",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-20",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": true,
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  // Default Chromium. Mapbox GL needs WebGL. Kitesurf does not render WebGL,
+  // so this binding must stay on Browser Run's Chromium browser.
+  "browser": {
+    "binding": "BROWSER"
+  },
+  "limits": {
+    "cpu_ms": 120000
+  }
+}
