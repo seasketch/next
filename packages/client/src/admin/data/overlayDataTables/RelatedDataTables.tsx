@@ -74,8 +74,6 @@ type DataTableJob = NonNullable<
   FullAdminOverlayFragment["projectBackgroundJobs"]
 >[number];
 
-const DROPPED_SITES_SHOWN = 15;
-
 function stringColumns(values?: (string | null)[] | null): string[] {
   return (values || []).filter((value): value is string => Boolean(value));
 }
@@ -125,32 +123,26 @@ function DataTableDroppedSitesNotice({
     return null;
   }
 
-  const shown = droppedJoinValues.slice(0, DROPPED_SITES_SHOWN);
-  const extra = droppedJoinValues.length - shown.length;
-  const sites =
-    extra > 0
-      ? t("{{sites}}, and {{count}} more", {
-          sites: shown.join(", "),
-          count: extra,
-        })
-      : shown.join(", ");
   const rowCount = droppedRowCount ?? 0;
 
   return (
-    <p className="mt-2 text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5">
-      {rowCount > 0
-        ? t(
-            "{{rowCount}} rows were removed because these sites are not in this layer: {{sites}}",
-            {
-              rowCount: rowCount.toLocaleString(),
-              sites,
-            }
-          )
-        : t(
-            "These sites are not in this layer and were removed: {{sites}}",
-            { sites }
-          )}
-    </p>
+    <div className="mt-2 text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5">
+      <p>
+        {rowCount > 0
+          ? t(
+              "{{rowCount}} rows were removed because these join values are not in this layer.",
+              {
+                rowCount: rowCount.toLocaleString(),
+              }
+            )
+          : t("These join values are not in this layer and were removed.")}
+      </p>
+      <ul className="mt-1 max-h-28 list-disc overflow-y-auto pl-4">
+        {droppedJoinValues.map((value) => (
+          <li key={value}>{value}</li>
+        ))}
+      </ul>
+    </div>
   );
 }
 

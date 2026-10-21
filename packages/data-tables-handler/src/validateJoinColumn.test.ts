@@ -101,20 +101,20 @@ describe("validateJoinColumnChoice", () => {
 });
 
 describe("assertUnmatchedRecordFractionAllowed", () => {
-  it("allows dropping fewer than 25% of rows", () => {
+  it("allows dropping fewer than 10% of rows", () => {
     assert.doesNotThrow(() =>
-      assertUnmatchedRecordFractionAllowed(24, 100, ["MISSING_SITE"]),
+      assertUnmatchedRecordFractionAllowed(9, 100, ["MISSING_SITE"]),
     );
   });
 
-  it("fails when 25% or more of rows cannot join", () => {
+  it("fails when 10% or more of rows cannot join", () => {
     assert.throws(
       () =>
-        assertUnmatchedRecordFractionAllowed(25, 100, [
+        assertUnmatchedRecordFractionAllowed(10, 100, [
           "MISSING_SITE",
           "OTHER_SITE",
         ]),
-      /25% of rows \(25 of 100\).*Missing sites: MISSING_SITE, OTHER_SITE/,
+      /10% of rows \(10 of 100\).*Missing sites: MISSING_SITE, OTHER_SITE/,
     );
   });
 

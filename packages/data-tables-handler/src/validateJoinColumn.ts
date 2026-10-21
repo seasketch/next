@@ -26,8 +26,12 @@ export function findOverlayAttribute(
   return attr;
 }
 
-/** Fail the upload when this fraction (or more) of table rows cannot join. */
-export const MAX_UNMATCHED_RECORD_FRACTION = 0.25;
+/**
+ * Fail the upload when this fraction (or more) of table rows cannot join.
+ * Kept in sync with MAX_UNMATCHED_JOIN_RECORD_FRACTION in the client
+ * detectJoinColumn module.
+ */
+export const MAX_UNMATCHED_RECORD_FRACTION = 0.1;
 
 export type JoinColumnValidation = {
   overlayAttr: GeostatsAttribute;

@@ -7604,6 +7604,10 @@ select{
   max-height:6rem
 }
 
+.max-h-28{
+  max-height:7rem
+}
+
 .max-h-32{
   max-height:8rem
 }
