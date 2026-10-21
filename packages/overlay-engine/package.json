@@ -31,10 +31,9 @@
     "url": "https://github.com/seasketch/next/issues"
   },
   "devDependencies": {
-    "esbuild": "^0.21.5",
     "gdal-async": "^3.11.3",
     "typescript": "5.8.3",
-    "vitest": "^1.6.1"
+    "vitest": "^3.2.4"
   },
   "dependencies": {
     "@turf/along": "^7.4.0",
@@ -66,7 +65,7 @@
     "@types/node": "^24.19.2",
     "@types/rbush": "^4.0.0",
     "@types/robust-segment-intersect": "^1.0.2",
-    "esbuild": "^0.25.11",
+    "esbuild": "^0.28.2",
     "@seasketch/h3-land": "0.0.1",
     "fgb-source": "^1.0.0",
     "flatbush": "3",

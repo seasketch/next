@@ -20,7 +20,7 @@
   "scripts": {
     "build": "tsc",
     "watch": "tsc --watch",
-    "test": "vitest"
+    "test": "vitest run --passWithNoTests"
   },
   "bugs": {
     "url": "https://github.com/seasketch/next/issues"
@@ -31,6 +31,6 @@
     "xml2js": "^0.6.2"
   },
   "devDependencies": {
-    "vitest": "^2.0.5"
+    "vitest": "^3.2.4"
   }
 }

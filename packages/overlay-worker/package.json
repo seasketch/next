@@ -28,7 +28,7 @@
     "url": "https://github.com/seasketch/next/issues"
   },
   "dependencies": {
-    "@aws-sdk/client-sqs": "^3.873.0",
+    "@aws-sdk/client-sqs": "^3.1151.0",
     "@turf/along": "^7.4.0",
     "@turf/area": "^7.4.0",
     "@turf/bbox": "^7.4.0",
@@ -40,7 +40,7 @@
     "@types/lodash.debounce": "^4.0.9",
     "cli-progress": "^3.12.0",
     "dotenv": "^17.2.1",
-    "esbuild": "^0.25.11",
+    "esbuild": "^0.28.2",
     "fgb-source": "^1.0.0",
     "geobuf": "^3.0.2",
     "lodash.debounce": "^4.0.8",
@@ -52,7 +52,7 @@
     "point-in-polygon-hao": "^1.2.4",
     "polyclip-ts": "^0.16.8",
     "undici": "^7.16.0",
-    "@aws-sdk/client-secrets-manager": "^3.873.0"
+    "@aws-sdk/client-secrets-manager": "^3.1151.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.119",

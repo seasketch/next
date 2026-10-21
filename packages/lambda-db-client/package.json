@@ -36,7 +36,7 @@
     "typescript": "5.8.3"
   },
   "dependencies": {
-    "@aws-sdk/rds-signer": "^3.1152.0",
+    "@aws-sdk/rds-signer": "^3.1151.0",
     "pg": "^8.23.1"
   }
 }

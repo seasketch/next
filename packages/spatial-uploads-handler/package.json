@@ -20,13 +20,13 @@
   },
   "scripts": {
     "start": "docker run -p 9000:8080 --env-file .env spatial-uploads-handler:latest",
-    "dev": "npx --yes tsx@4.19.3 watch server.ts",
+    "dev": "tsx watch server.ts",
     "build": "tsc -b",
     "watch": "tsc -b --watch",
     "build:container": "docker build -f Dockerfile ../.. -t spatial-uploads-handler:latest",
     "test": "jest",
     "deploy:pre": "npm run build",
-    "geostats": "npx --yes tsx@4.19.3 bin/geostats.ts"
+    "geostats": "tsx bin/geostats.ts"
   },
   "jest": {
     "testPathIgnorePatterns": [
@@ -37,7 +37,7 @@
     "url": "https://github.com/seasketch/next/issues"
   },
   "dependencies": {
-    "@aws-sdk/lib-storage": "^3.758.0",
+    "@aws-sdk/lib-storage": "^3.1151.0",
     "@babel/preset-env": "^7.24.5",
     "@babel/preset-typescript": "^7.24.1",
     "@mapbox/mbtiles": "^0.12.1",
@@ -65,9 +65,8 @@
     "xml2js": "^0.6.2"
   },
   "devDependencies": {
-    "@aws-sdk/client-s3": "^3.360.0",
-    "@aws-sdk/s3-request-presigner": "^3.360.0",
-    "@aws-sdk/util-endpoints": "^3.192.0",
+    "@aws-sdk/client-s3": "^3.1151.0",
+    "@aws-sdk/s3-request-presigner": "^3.1151.0",
     "aws-sdk": "^2.1234.0",
     "dotenv": "^16.0.3",
     "esno": "^0.16.3",
