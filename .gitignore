@@ -1,8 +1,8 @@
 **/node_modules
 .logs/
 **/.DS_Store
-packages/api/dist/*
-packages/client/dist/*
+# Compiler output. Reviewed generated source stays tracked.
+**/dist/
 **/.tsbuildinfo
 NOTES.md
 **/.env
@@ -14,8 +14,6 @@ packages/overlay-engine/viewer/.tmp-*
 packages/overlay-engine/__tests__/water-path/output/
 packages/overlay-engine/__tests__/water-path/output-hierarchy/
 .cert/
-lerna-debug.log
-*.lerna_backup
 packages/api/coverage
 packages/api/backups/db/
 packages/api/e2e-emails/
@@ -29,5 +27,3 @@ packages/api/snapshots/*.manifest.json
 # .agents/skills/ stay tracked.
 .agents/skills/playwright-best-practices/
 skills-lock.json
-!packages/overlay-engine/dist/*
-!packages/fgb-source/dist/*

@@ -35,9 +35,9 @@ export class DataTablesHandlerLambdaStack extends cdk.Stack {
       vpc: props.vpc,
       architecture: lambda.Architecture.X86_64,
       code: lambda.DockerImageCode.fromImageAsset(
-        path.join(__dirname, "../.."),
+        path.join(__dirname, "../../.."),
         {
-          file: "data-tables-handler/Dockerfile",
+          file: "packages/data-tables-handler/Dockerfile",
           platform: Platform.LINUX_AMD64,
         },
       ),

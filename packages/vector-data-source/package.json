@@ -22,7 +22,7 @@
     "url": "git+https://github.com/seasketch/next.git"
   },
   "scripts": {
-    "test": "echo \"Error: run tests from root\" && exit 1",
+    "test": "node -e \"console.log('no unit tests in this package')\"",
     "build": "tsc && esbuild --bundle --platform=node --format=cjs lib/index.ts > dist/bundled.js && cp ./dist/index.d.ts ./dist/bundled.d.ts"
   },
   "bugs": {
@@ -45,6 +45,6 @@
   },
   "devDependencies": {
     "esbuild": "^0.14.48",
-    "typescript": "~5.5.3"
+    "typescript": "5.8.3"
   }
 }

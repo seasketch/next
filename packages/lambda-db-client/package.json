@@ -24,7 +24,7 @@
     "url": "git+https://github.com/seasketch/next.git"
   },
   "scripts": {
-    "test": "echo \"Error: run tests from root\" && exit 1",
+    "test": "node -e \"console.log('no unit tests in this package')\"",
     "build": "tsc",
     "watch": "tsc -w"
   },
@@ -33,7 +33,7 @@
   },
   "devDependencies": {
     "@types/pg": "^8.6.0",
-    "typescript": "^5.5.3"
+    "typescript": "5.8.3"
   },
   "dependencies": {
     "@aws-sdk/rds-signer": "^3.1152.0",

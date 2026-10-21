@@ -1,3 +1,4 @@
+# Python image. Outside the npm workspace: this Lambda is not a Node package.
 # Pin amd64 so CDK/docker builds on Apple Silicon produce an image Lambda’s
 # default (x86_64) runtime can run. Without this, arm64 images often fail with
 # Runtime.InvalidEntrypoint.

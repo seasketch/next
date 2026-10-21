@@ -23,7 +23,7 @@
     "dev": "npx --yes tsx@4.19.3 watch server.ts",
     "build": "tsc -b",
     "watch": "tsc -b --watch",
-    "build:container": "docker build -f Dockerfile .. -t spatial-uploads-handler:latest",
+    "build:container": "docker build -f Dockerfile ../.. -t spatial-uploads-handler:latest",
     "test": "jest",
     "deploy:pre": "npm run build",
     "geostats": "npx --yes tsx@4.19.3 bin/geostats.ts"
@@ -61,7 +61,7 @@
     "sanitize-filename": "^1.6.3",
     "simple-statistics": "^7.8.3",
     "tmp": "^0.2.1",
-    "typescript": "5.5.3",
+    "typescript": "5.8.3",
     "xml2js": "^0.6.2"
   },
   "devDependencies": {

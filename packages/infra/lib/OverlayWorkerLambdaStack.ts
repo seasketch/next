@@ -30,9 +30,11 @@ export class OverlayWorkerLambdaStack extends cdk.Stack {
     this.fn = new NodejsFunction(this, "OverlayWorker", {
       functionName: "OverlayWorker",
       projectRoot: path.join(__dirname, "../../overlay-worker"),
+      // Pruned lockfile: CDK runs npm ci against a synthetic package.json of
+      // nodeModules, which a workspace lockfile does not satisfy.
       depsLockFilePath: path.join(
         __dirname,
-        "../../overlay-worker/package-lock.json",
+        "../../overlay-worker/bundle-package-lock.json",
       ),
       bundling: {
         minify: false,

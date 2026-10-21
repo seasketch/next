@@ -17,9 +17,10 @@ function readBearerToken(req: Request): string | undefined {
     // @ts-ignore
     return req.normalizedConnectionParams["authorization"]?.split("Bearer ")[1];
   }
+  const queryToken = req.query["token"];
   return (
-    // @ts-ignore
-    req.query["token"] || req.header("authorization")?.split("Bearer ")[1]
+    (typeof queryToken === "string" ? queryToken : undefined) ||
+    req.header("authorization")?.split("Bearer ")[1]
   );
 }
 

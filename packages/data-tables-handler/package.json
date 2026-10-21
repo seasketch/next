@@ -1,7 +1,7 @@
 {
   "name": "data-tables-handler",
   "version": "1.0.0",
-  "description": "Processes overlay-related CSV data table uploads to Parquet + column stats on R2. Uses @duckdb/node-api (not legacy duckdb). Omitted from lerna.json so CI/deploy bootstrap stays scoped; install deps in this package or via Docker.",
+  "description": "Processes overlay-related CSV data table uploads to Parquet + column stats on R2. Uses @duckdb/node-api (not legacy duckdb). Installed with the root npm workspace. The Docker image builds this package from that workspace.",
   "license": "BSD-3-Clause",
   "main": "dist/handler.js",
   "scripts": {
@@ -11,7 +11,7 @@
     "worms:build": "npx --yes tsx@4.19.3 scripts/buildWormsParquet.ts",
     "predev": "node -e \"const fs=require('fs');const path=require('path');const src=path.resolve('..','geostats-types');const dest=path.resolve('node_modules','@seasketch','geostats-types');if(!fs.existsSync(src)||!fs.existsSync(path.dirname(path.dirname(dest))))process.exit(0);let linked=false;try{linked=fs.lstatSync(dest).isSymbolicLink()&&fs.realpathSync(dest)===src;}catch(e){}if(linked)process.exit(0);fs.rmSync(dest,{recursive:true,force:true});fs.mkdirSync(path.dirname(dest),{recursive:true});fs.symlinkSync(src,dest,'dir');console.log('Linked workspace @seasketch/geostats-types');\"",
     "dev": "npx --yes tsx@4.19.3 watch server.ts",
-    "build:container": "docker build -f Dockerfile .. -t data-tables-handler:latest"
+    "build:container": "docker build -f Dockerfile ../.. -t data-tables-handler:latest"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.758.0",
@@ -23,7 +23,7 @@
     "minisearch": "^7.2.0",
     "pg": "^8.8.0",
     "tmp": "^0.2.1",
-    "typescript": "5.5.3"
+    "typescript": "5.8.3"
   },
   "devDependencies": {
     "@types/bytes": "^3.1.1",

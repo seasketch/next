@@ -230,6 +230,7 @@ export async function sendQueuedSurveyInvites(client: DBClient, limit = 50) {
     const response = await sendBulkTemplatedInviteEmail({
       Source: SES_EMAIL_SOURCE,
       Template: SURVEY_INVITE_SES_TEMPLATE,
+      DefaultTemplateData: "{}",
       Destinations: surveyInvites.map((invite) => ({
         Destination: {
           ToAddresses: [invite.email!],
@@ -403,6 +404,7 @@ export async function sendSurveyInviteReminder(
       const response = await sendBulkTemplatedInviteEmail({
         Source: SES_EMAIL_SOURCE,
         Template: SURVEY_INVITE_REMINDER_SES_TEMPLATE,
+        DefaultTemplateData: "{}",
         Destinations: [
           {
             Destination: {

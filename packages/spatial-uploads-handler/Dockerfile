@@ -12,43 +12,20 @@ RUN make install
 WORKDIR /usr/app
 RUN curl -L https://github.com/protomaps/go-pmtiles/releases/download/v1.8.0/go-pmtiles_1.8.0_Linux_x86_64.tar.gz > ./pmtiles.tar.gz
 RUN tar -zxvf ./pmtiles.tar.gz
-RUN npm install -g typescript@5.5
-RUN dnf install -y jq
-# Build context is the monorepo packages/ directory (see UploadHandlerLambdaStack).
-COPY spatial-uploads-handler/tsconfig.json ./
-COPY spatial-uploads-handler/package.json ./package.json.original
-RUN jq 'del(.scripts.postinstall) | del(.scripts.install) | del(.dependencies["@seasketch/geostats-types"]) | del(.dependencies["@seasketch/metadata-parser"]) | del(.dependencies["ai-data-analyst"])' package.json.original > package.json
-
-# Build workspace deps so `tsc -b` project references resolve (same as vendoring prebuilt node_modules/@seasketch).
-WORKDIR /usr/geostats-types
-COPY geostats-types/package.json geostats-types/package-lock.json ./
-RUN npm ci
-COPY geostats-types/ ./
-RUN npm run build
-
-WORKDIR /usr/metadata-parser
-COPY metadata-parser/package.json metadata-parser/package-lock.json ./
-RUN mkdir -p node_modules/@seasketch && cp -r /usr/geostats-types node_modules/@seasketch/geostats-types
-# npm install (not ci): lockfile omits file-linked @seasketch/geostats-types present in node_modules
-RUN npm install
-COPY metadata-parser/ ./
-RUN npm run build
-
-WORKDIR /usr/ai-data-analyst
-COPY ai-data-analyst/package.json ai-data-analyst/package-lock.json ./
-RUN npm ci
-COPY ai-data-analyst/ ./
-RUN npm run build
-
+# Build context is the repo root (see UploadHandlerLambdaStack).
+# Only these workspaces are copied. npm ci refuses a lockfile whose other
+# workspaces are absent, and npm ci --workspace still installs every
+# workspace. npm install keeps the locked versions for the packages present.
+# typescript is a dependency of this package; --omit=dev skips gdal-async
+# and sharp, which the image does not run.
 WORKDIR /usr/app
-RUN npm install
-RUN mkdir -p ./node_modules/@seasketch \
-  && cp -r /usr/geostats-types ./node_modules/@seasketch/geostats-types \
-  && cp -r /usr/metadata-parser ./node_modules/@seasketch/metadata-parser \
-  && cp -r /usr/ai-data-analyst ./node_modules/ai-data-analyst
-COPY spatial-uploads-handler/handler.ts ./
-COPY spatial-uploads-handler/src ./src
-RUN npm run build
+COPY package.json package-lock.json .npmrc ./
+COPY packages/spatial-uploads-handler ./packages/spatial-uploads-handler
+COPY packages/geostats-types ./packages/geostats-types
+COPY packages/metadata-parser ./packages/metadata-parser
+COPY packages/ai-data-analyst ./packages/ai-data-analyst
+RUN npm install --no-audit --no-fund --omit=dev \
+ && npm run build --workspace=spatial-uploads-handler
 
 
 # Heavily inspired by
@@ -276,8 +253,8 @@ ENV \
   PATH=/usr/bin:$PATH
 
 COPY --from=builder /usr/local/bin/tippecanoe /usr/local/bin/tippecanoe
-COPY --from=builder /usr/app/dist/* ./
-COPY --from=builder /usr/app/dist/src ./src
+COPY --from=builder /usr/app/packages/spatial-uploads-handler/dist/* ./
+COPY --from=builder /usr/app/packages/spatial-uploads-handler/dist/src ./src
 COPY --from=builder /usr/app/node_modules ./node_modules
 COPY --from=builder /usr/bin/rclone /bin/rclone
 COPY --from=builder /usr/bin/unzip /bin/unzip

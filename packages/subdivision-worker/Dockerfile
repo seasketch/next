@@ -1,3 +1,4 @@
+# Python image. Outside the npm workspace: this Lambda is not a Node package.
 FROM --platform=linux/amd64 public.ecr.aws/lambda/python:3.11
 
 ENV PYTHONDONTWRITEBYTECODE=1 \

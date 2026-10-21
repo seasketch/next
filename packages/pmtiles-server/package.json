@@ -6,7 +6,7 @@
     "@types/geojson": "^7946.0.16",
     "@types/node": "^26.1.1",
     "hyparquet-writer": "^0.16.9",
-    "typescript": "^7.0.2",
+    "typescript": "5.8.3",
     "vitest": "^4.1.10",
     "wrangler": "^4.112.0"
   },
@@ -23,7 +23,7 @@
     "smoke": "node scripts/smoke.mjs"
   },
   "dependencies": {
-    "@seasketch/geostats-types": "file:../geostats-types",
+    "@seasketch/geostats-types": "^1.0.0",
     "flatbuffers": "^25.9.23",
     "flatgeobuf": "^4.4.0",
     "hyparquet": "^1.26.2",

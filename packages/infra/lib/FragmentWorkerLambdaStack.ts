@@ -27,9 +27,11 @@ export class FragmentWorkerLambdaStack extends cdk.Stack {
     this.fn = new NodejsFunction(this, "FragmentWorker", {
       functionName: "FragmentWorker",
       projectRoot: path.join(__dirname, "../../fragment-worker"),
+      // Pruned lockfile: CDK runs npm ci against a synthetic package.json of
+      // nodeModules, which a workspace lockfile does not satisfy.
       depsLockFilePath: path.join(
         __dirname,
-        "../../fragment-worker/package-lock.json",
+        "../../fragment-worker/bundle-package-lock.json",
       ),
       bundling: {
         minify: false,

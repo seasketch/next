@@ -27,11 +27,10 @@ jobs:
         with:
           node-version-file: ".nvmrc"
           cache: npm
-          cache-dependency-path: "**/package-lock.json"
+          cache-dependency-path: package-lock.json
       - name: Install dependencies
-        run: bash scripts/ci-bootstrap.sh --scope=@seasketch/api --include-dependencies
+        run: npm ci --no-audit --no-fund
       - name: Build API
-        working-directory: ./packages/api
         run: npm run build
       - name: Init docker db
         working-directory: ./packages/api
@@ -73,11 +72,10 @@ jobs:
         with:
           node-version-file: ".nvmrc"
           cache: npm
-          cache-dependency-path: "**/package-lock.json"
+          cache-dependency-path: package-lock.json
       - name: Install dependencies
-        run: bash scripts/ci-bootstrap.sh --scope=@seasketch/api --scope=client --include-dependencies
+        run: npm ci --no-audit --no-fund
       - name: Build API
-        working-directory: ./packages/api
         run: npm run build
       - name: Initialize database
         working-directory: ./packages/api
@@ -111,9 +109,9 @@ jobs:
         with:
           node-version-file: ".nvmrc"
           cache: npm
-          cache-dependency-path: "**/package-lock.json"
+          cache-dependency-path: package-lock.json
       - name: Install dependencies
-        run: bash scripts/ci-bootstrap.sh --scope=client --include-dependencies
+        run: npm ci --no-audit --no-fund
       - name: Verify src/index.css matches css:build
         working-directory: ./packages/client
         run: npm run css:check
@@ -127,9 +125,11 @@ jobs:
         with:
           node-version-file: ".nvmrc"
           cache: npm
-          cache-dependency-path: "**/package-lock.json"
+          cache-dependency-path: package-lock.json
       - name: Install dependencies
-        run: bash scripts/ci-bootstrap.sh --scope=client --include-dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Build workspace libraries
+        run: npm run build:libs
       - name: Test client
         working-directory: ./packages/client
         env:
@@ -155,9 +155,11 @@ jobs:
         with:
           node-version-file: ".nvmrc"
           cache: npm
-          cache-dependency-path: "**/package-lock.json"
+          cache-dependency-path: package-lock.json
       - name: Install dependencies
-        run: bash scripts/ci-bootstrap.sh --scope=overlay-engine --include-dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Build workspace libraries
+        run: npm run build:libs
       - name: Run tests
         working-directory: ./packages/overlay-engine
         run: npx vitest run --reporter=default --reporter=junit --outputFile=junit.xml
@@ -179,11 +181,13 @@ jobs:
         with:
           node-version-file: ".nvmrc"
           cache: npm
-          cache-dependency-path: "**/package-lock.json"
+          cache-dependency-path: package-lock.json
       - id: short_sha
         run: echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
       - name: Install dependencies
-        run: bash scripts/ci-bootstrap.sh --scope=client --include-dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Build workspace libraries
+        run: npm run build:libs
       - name: Build client
         working-directory: ./packages/client
         env:
@@ -213,17 +217,13 @@ jobs:
         with:
           node-version-file: ".nvmrc"
           cache: npm
-          cache-dependency-path: "**/package-lock.json"
+          cache-dependency-path: package-lock.json
       - name: Install dependencies
-        run: |
-          bash scripts/ci-bootstrap.sh --scope=@seasketch/api --scope=client --scope=spatial-uploads-handler --scope=map-screenshotter --include-dependencies
-          npm ci --prefix packages/data-tables-handler
-          npm ci --prefix packages/e2e
+        run: npm ci --no-audit --no-fund
       - name: Install Playwright browser
         working-directory: ./packages/e2e
         run: npx playwright install --with-deps chromium
       - name: Build API
-        working-directory: ./packages/api
         run: npm run build
       - name: Write the default env
         run: |

@@ -31,7 +31,7 @@ From a clean checkout, with Docker running and secrets injected ([secrets](secre
 
 | Command | What it does |
 | --- | --- |
-| `npm run bootstrap` | Install dependencies. In phase 1 this wraps today's Lerna install. From phase 2 it is `npm install` at the root, and the script can go away |
+| `npm run bootstrap` | Install dependencies. `npm install` at the root |
 | `npm run setup` | Idempotent. Start Postgres and Redis, wait until Postgres accepts connections, pull the golden snapshot if the local copy is missing or older, restore it into an empty database, and apply migrations newer than the snapshot |
 | `npm run dev` | Start the **core** profile in the foreground: Postgres and Redis through Compose, then the API and client plus the watchers a person editing code needs (API TypeScript, Graphile Migrate, GraphQL codegen, Tailwind), and the data-tables, spatial-uploads, and subdivision workers. Restart a process when its code changes. Exit non-zero if any process in the profile dies |
 | `npm run dev -- --profile data` | Core plus the [data profile](local-services.md) |
@@ -100,6 +100,6 @@ Phase 1 does not stand up staging. It proves the hard part — a clean VM can ru
 ## Exit criteria
 
 - **Phase 1:** On a clean machine, `bootstrap`, `setup`, then `dev` reaches a fixture project in the browser. Postgres is ready before the API starts. Logs are filterable by service. CI runs the same `setup` before Playwright. A cloud agent follows the README without anyone exporting variables by hand. *Done, October 2026.*
-- **Phase 2:** `bootstrap` is plain `npm install` at the root.
+- **Phase 2:** `bootstrap` is plain `npm install` at the root. *Done, October 2026.*
 - **Phase 3:** `npm run dev -- --profile data` starts the [data profile](local-services.md) with no port collisions.
 - **Phase 5:** A hosted staging environment runs this contract with its own database and secret profile.

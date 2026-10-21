@@ -40,7 +40,7 @@ Accepted decisions. They describe what this campaign will build, not what is run
 - **Startup:** root npm scripts (`setup`, `dev`, `logs`, `status`) over Docker Compose for containers and `concurrently` for host processes, with one service list and a `--profile` flag (October 2026). Nothing starts on folder open; VS Code tasks are not the contract. ([environment setup](env-setup.md))
 - **Production reach:** an unset integration makes the feature unavailable (September 2026). Pointing at production is an explicit override, never in CI. ([local services](local-services.md))
 - **Secrets:** one committed manifest and named profiles. Laptops keep a short hand-managed `.env` (October 2026). CI uses GitHub environments. Production uses GitHub and CDK. No new secrets product. ([secrets](secrets-management.md))
-- **Packaging:** npm workspaces with one lockfile. No Nx, Turborepo, or new Lerna. ([monorepo and build](monorepo-and-build-upgrade.md))
+- **Packaging:** npm workspaces with one lockfile (October 2026). No Nx, Turborepo, or new Lerna. ([monorepo and build](monorepo-and-build-upgrade.md))
 - **Client build:** Vite is the candidate replacement for Create React App, accepted only when the existing journeys pass on it. ([monorepo and build](monorepo-and-build-upgrade.md))
 
 ## Keeping this record

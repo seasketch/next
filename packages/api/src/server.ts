@@ -38,6 +38,11 @@ import { registerE2ETokenRoute } from "./e2e/tokenRoute";
 assertE2ETestModeConfiguration();
 assertNonProductionProfile();
 
+/** Express types query values as strings or nested objects. These routes read strings. */
+function queryParam(value: unknown): string | undefined {
+  return typeof value === "string" ? value : undefined;
+}
+
 const ISSUER = (process.env.ISSUER || "seasketch.org")
   .split(",")
   .map((issuer) => issuer.trim());
@@ -122,7 +127,7 @@ app.get("/auth_config.json", (req, res) => {
 });
 
 app.get("/unsubscribeFromTopic", (req, res) => {
-  const token = req.query.token;
+  const token = queryParam(req.query.token);
   if (!token || token.length < 1) {
     res.status(400);
     res.send("Missing token");
@@ -196,7 +201,7 @@ app.use(verifyEmailMiddleware);
 app.use(
   graphqlUploadExpress({
     maxFiles: 2,
-    maxFileSize: bytes("5GB"),
+    maxFileSize: bytes("5GB") ?? undefined,
   }),
 );
 
@@ -395,7 +400,7 @@ app.post(
 
 app.use("/verify-email", async function (req, res, next) {
   // get token from query string
-  const token = req.query.verification;
+  const token = queryParam(req.query.verification);
   if (!token) {
     return res.status(400).json({ error: "token is required" });
   }
@@ -530,7 +535,7 @@ app.use(
     const client = await geoPool.connect();
     try {
       await client.query("BEGIN");
-      let token: string | undefined = req.query.reporting_access_token;
+      let token: string | undefined = queryParam(req.query.reporting_access_token);
       // fixes https://github.com/seasketch/next/issues/840
       if (token === "null" || token === "undefined" || token === "") {
         token = undefined;
@@ -620,7 +625,7 @@ app.use(
     const client = await bookmarksPool.connect();
     try {
       await client.query("BEGIN");
-      let token: string | undefined = req.query.token;
+      let token: string | undefined = queryParam(req.query.token);
       let claims:
         | {
             userId?: number;

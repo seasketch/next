@@ -1,0 +1,10 @@
+.git
+**/node_modules
+**/.logs
+**/.tsbuildinfo
+**/dist
+packages/client/build
+packages/e2e/test-results
+packages/e2e/playwright-report
+packages/api/snapshots
+packages/api/coverage

@@ -21,11 +21,11 @@
     "test": "npx --yes tsx@4.19.3 --test src/runbook.test.ts src/occupancy.test.ts src/analysisMosaic.test.ts"
   },
   "dependencies": {
-    "@seasketch/raster-array": "file:../raster-array",
+    "@seasketch/raster-array": "^0.1.0",
     "tsx": "4.19.3"
   },
   "devDependencies": {
     "@types/node": "^18.11.4",
-    "typescript": "5.5.3"
+    "typescript": "5.8.3"
   }
 }

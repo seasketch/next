@@ -67,9 +67,9 @@ export class UploadHandlerLambdaStack extends cdk.Stack {
       vpc: props.vpc,
       architecture: lambda.Architecture.X86_64,
       code: lambda.DockerImageCode.fromImageAsset(
-        path.join(__dirname, "../.."),
+        path.join(__dirname, "../../.."),
         {
-          file: "spatial-uploads-handler/Dockerfile",
+          file: "packages/spatial-uploads-handler/Dockerfile",
           platform: Platform.LINUX_AMD64,
         },
       ),

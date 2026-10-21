@@ -148,11 +148,13 @@ jobs:
         with:
           node-version-file: ".nvmrc"
           cache: npm
-          cache-dependency-path: "**/package-lock.json"
-      - name: Install CDK
-        run: npm install -g aws-cdk typescript@5.5.3
+          cache-dependency-path: package-lock.json
       - name: Install dependencies
-        run: npx lerna@6.6.2 bootstrap --scope=infra
+        run: npm ci --no-audit --no-fund
+      - name: Build workspace packages
+        run: npm run build
+      - name: Install CDK
+        run: npm install -g aws-cdk
       - name: Deploy server
         working-directory: ./packages/infra
         env:
@@ -261,9 +263,11 @@ jobs:
         with:
           node-version-file: ".nvmrc"
           cache: npm
-          cache-dependency-path: "**/package-lock.json"
+          cache-dependency-path: package-lock.json
       - name: Install dependencies
-        run: bash scripts/ci-bootstrap.sh --scope=client --include-dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Build workspace libraries
+        run: npm run build:libs
       - name: Build client
         working-directory: ./packages/client
         env:

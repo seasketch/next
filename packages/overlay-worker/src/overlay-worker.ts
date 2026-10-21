@@ -642,15 +642,17 @@ export default async function handler(payload: OverlayWorkerPayload) {
             pageSize: "1MB",
           },
         );
+        // These fields are optional on the distance-to-shore request and are
+        // not part of every metric payload in the union.
+        const distancePayload = payload as unknown as {
+          minimumDistanceMeters?: unknown;
+          miminumDistanceMeters?: unknown;
+        };
         const minimumDistanceMeters =
-          typeof (payload as { minimumDistanceMeters?: unknown })
-            .minimumDistanceMeters === "number"
-            ? (payload as { minimumDistanceMeters: number })
-                .minimumDistanceMeters
-            : typeof (payload as { miminumDistanceMeters?: unknown })
-                  .miminumDistanceMeters === "number"
-              ? (payload as { miminumDistanceMeters: number })
-                  .miminumDistanceMeters
+          typeof distancePayload.minimumDistanceMeters === "number"
+            ? distancePayload.minimumDistanceMeters
+            : typeof distancePayload.miminumDistanceMeters === "number"
+              ? distancePayload.miminumDistanceMeters
               : undefined;
         const result = await calculateDistanceToShore(
           intersectionFeature,
@@ -844,9 +846,11 @@ function polygonFromFragment(
   }
   // payload.subject.geobuf is a base64 encoded string
   const buffer = Buffer.from(subject.geobuf as string, "base64");
-  let feature = geobuf.decode(new Pbf(buffer)) as
-    | Feature<Polygon>
-    | FeatureCollection<Polygon>;
+  // This package depends on pbf 4. @types/geobuf resolves pbf 3 from the
+  // hoisted copy, and the two constructor types are not assignable.
+  let feature = geobuf.decode(
+    new Pbf(buffer) as unknown as Parameters<typeof geobuf.decode>[0]
+  ) as Feature<Polygon> | FeatureCollection<Polygon>;
   if (feature.type === "FeatureCollection") {
     feature = feature.features[0];
   }
