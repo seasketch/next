@@ -313,7 +313,7 @@ function FormElementListItem({
           snapshot?.isDragging && "shadow-lg"
         } mx-2 h-11 ${
           draggable && "shadow-md"
-        } bg-white w-50 border border-black border-opacity-20 rounded overflow-hidden ${
+        } bg-white border border-black border-opacity-20 rounded overflow-hidden ${
           selected && "ring-2 ring-blue-300"
         } ${creating ? "opacity-50" : ""}`}
       >
@@ -330,7 +330,7 @@ function FormElementListItem({
               sketchClass={element.sketchClass}
             />
           </div>
-          <div className="truncate flex-1 px-2 text-sm">
+          <div className="truncate min-w-0 flex-1 px-2 text-sm">
             {collectQuestion(element.body) || collectHeaders(element.body)}
           </div>
         </div>
