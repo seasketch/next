@@ -1592,8 +1592,18 @@ export function buildReportCommandGroups({
   commandGroups.push(sketchBlockWidgetsGroup);
 
   if (sources) {
+    // Item ids are used as React keys by the palette. Duplicates make React
+    // duplicate and drop rows, so only keep the first source per TOC item.
+    const seenTocIds = new Set<number>();
     const overlayItems: CommandPaletteItem[] = sources
-      .filter((source) => source.tableOfContentsItemId)
+      .filter((source) => {
+        const tocId = source.tableOfContentsItemId;
+        if (!tocId || seenTocIds.has(tocId)) {
+          return false;
+        }
+        seenTocIds.add(tocId);
+        return true;
+      })
       .map((source) => {
         const title =
           source.tableOfContentsItem?.title || "Layer Overlay Analysis";

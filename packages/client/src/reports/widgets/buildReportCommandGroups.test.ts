@@ -198,6 +198,23 @@ describe("buildReportCommandGroups Geography Proportion Captured", () => {
   });
 });
 
+describe("buildReportCommandGroups overlay layer list", () => {
+  test("lists each table of contents item once when sources repeat", () => {
+    const groups = buildReportCommandGroups({
+      sources: [
+        vectorSource("Polygon", 22, "suma"),
+        vectorSource("Polygon", 22, "suma"),
+        vectorSource("Point", 23, "seamounts"),
+      ],
+    });
+    const overlay = groups.find((g) => g.id === "layer-overlay-analysis");
+    expect(overlay?.items.map((i) => i.id)).toEqual([
+      "overlay-layer-22",
+      "overlay-layer-23",
+    ]);
+  });
+});
+
 describe("buildReportCommandGroups Geography Size Table", () => {
   const polygon = { sketchClassGeometryType: SketchGeometryType.Polygon };
   const eez = { id: 1, name: "EEZ", stableIds: ["eez"] };
