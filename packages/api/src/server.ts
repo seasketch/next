@@ -888,7 +888,7 @@ if (process.env.SSL_CRT_FILE && process.env.SSL_KEY_FILE) {
   if (process.env.OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL) {
     try {
       const { startOverlayEngineWorkerMessageConsumer } =
-        await import("./overlayEngine/messageQueueConsumer");
+        await import("./overlayEngine/messageQueueConsumer.js");
       startOverlayEngineWorkerMessageConsumer(loadersPool);
       console.log(
         "Overlay engine worker message consumer started successfully",

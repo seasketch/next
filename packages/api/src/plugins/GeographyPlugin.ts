@@ -851,7 +851,7 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
             try {
               if (process.env.NODE_ENV !== "test") {
                 const { writeProjectAclDocToR2 } =
-                  await import("../tilesAcl/writeProjectAclDoc");
+                  await import("../tilesAcl/writeProjectAclDoc.js");
                 await writeProjectAclDocToR2(pgClient, Number(project.id));
               }
             } catch (e: any) {

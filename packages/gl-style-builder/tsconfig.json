@@ -4,7 +4,8 @@
     "composite": true,
     "tsBuildInfoFile": "./.tsbuildinfo",
     "target": "es2016",
-    "module": "commonjs",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "rootDir": "./",
     "declaration": true,
     "declarationMap": true,
@@ -12,6 +13,7 @@
     "outDir": "./dist",
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
+    "types": ["node"],
     "strict": true,
     "skipLibCheck": true
   },

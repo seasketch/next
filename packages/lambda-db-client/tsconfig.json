@@ -3,8 +3,9 @@
     "incremental": true,
     "composite": true,
     "tsBuildInfoFile": "./.tsbuildinfo",
-    "target": "es5",
-    "module": "commonjs",
+    "target": "ES2020",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     // Emits next to the sources: package.json main is lib/lambda-db-client.js.
     "declaration": true,
     "declarationMap": true,
