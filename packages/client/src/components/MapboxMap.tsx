@@ -17,6 +17,10 @@ import { motion, AnimatePresence } from "framer-motion";
 import Spinner from "./Spinner";
 import { Trans } from "react-i18next";
 import { currentSidebarState } from "../projects/ProjectAppSidebar";
+import {
+  timeSliderLeadingInset,
+  useHomepageFlyoutState,
+} from "../projects/HomepageFlyoutContext";
 import MapBookmarkDetailsOverlay from "./MapBookmarkDetailsOverlay";
 import { CogIcon } from "@heroicons/react/outline";
 import { MeasurementToolsOverlay } from "../MeasureControl";
@@ -30,7 +34,7 @@ import * as Popover from "@radix-ui/react-popover";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import INaturalistProjectCallToAction from "../admin/data/INaturalistProjectCallToAction";
 import useDialog from "./useDialog";
-import { useGlobalErrorHandler } from "./GlobalErrorHandler";
+import { mapLoadFailureKind } from "../useMapboxStyle";
 
 export interface OverlayMapProps {
   onLoad?: (map: Map) => void;
@@ -62,19 +66,32 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
   const { manager, ready, styleError } = useContext(MapManagerContext);
   const temporalEnabled = useContext(MapTemporalEnabledContext);
   const [showSpinner, setShowSpinner] = useState(true);
+  const [mapLoadError, setMapLoadError] = useState<
+    "missing-token" | "unavailable" | null
+  >(null);
   const [showBookmarkOverlayId, setShowBookmarkOverlayId] = useState<
     string | null
   >(null);
   const [hiddenInatCtas, setHiddenInatCtas] = useState<Set<string>>(
     () => new Set()
   );
-  const onError = useGlobalErrorHandler();
   const { alert } = useDialog();
 
   const interactive =
     props.interactive === undefined ? true : props.interactive;
 
   const sidebar = currentSidebarState();
+  const flyout = useHomepageFlyoutState();
+  // The homepage flyout and the app sidebar are drawn over the map. Shift the
+  // message into the part of the pane that is still visible.
+  const mapLoadErrorInset = sidebar.open
+    ? sidebar.width
+    : timeSliderLeadingInset({
+        overlayOpen: false,
+        overlayWidth: 0,
+        flyoutOpen: flyout.open,
+        flyoutWidth: flyout.width,
+      });
   // const sidebar = {
   //   open: false,
   //   width: 0,
@@ -158,8 +175,14 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
             });
           }
         })
-        .catch((e) => {
-          if (e.message.includes("Failed to initialize WebGL")) {
+        .catch((e: unknown) => {
+          console.error(e);
+          if (cancelled) {
+            return;
+          }
+          setShowSpinner(false);
+          const failure = mapLoadFailureKind(e);
+          if (failure === "webgl") {
             alert("Failed to initialize WebGL", {
               description: (
                 // eslint-disable-next-line i18next/no-literal-string
@@ -179,7 +202,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
               ),
             });
           } else {
-            onError(e);
+            setMapLoadError(failure);
           }
         });
       return () => {
@@ -308,7 +331,27 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
             </div>
           )}
         </div>
-        {showSpinner && (
+        {mapLoadError && (
+          <div
+            className="absolute inset-0 z-10 flex items-center justify-center p-6"
+            style={
+              mapLoadErrorInset > 0
+                ? { paddingLeft: mapLoadErrorInset }
+                : undefined
+            }
+          >
+            <p className="max-w-sm rounded bg-white px-4 py-3 text-center text-sm text-gray-800 shadow">
+              {mapLoadError === "missing-token" ? (
+                <Trans ns="map">
+                  The map could not be loaded because the Mapbox access token is not configured.
+                </Trans>
+              ) : (
+                <Trans ns="map">The map could not be loaded.</Trans>
+              )}
+            </p>
+          </div>
+        )}
+        {showSpinner && !mapLoadError && (
           <Spinner className="absolute top-1/2 left-1/2 -ml-5 -mt-5" large />
         )}
         <div className="w-full absolute top-0 z-10 items-center justify-center">
@@ -464,7 +507,7 @@ export default React.memo(function MapboxMap(props: OverlayMapProps) {
             onRequestClose={() => setShowBookmarkOverlayId(null)}
           />
         )}
-        {styleError && (
+        {styleError && !mapLoadError && (
           <div className="flex w-full absolute top-1 place-content-center z-10 text-center">
             <div className=" bg-red-900 text-white p-1 text-sm">
               {

@@ -36,7 +36,13 @@ import {
   isHostedDataHost,
   withHostedAuthParams,
 } from "./tilesAuth";
-import { fetchGlStyle } from "../useMapboxStyle";
+import {
+  fetchGlStyle,
+  hasMapboxAccessToken,
+  MissingMapboxAccessTokenError,
+  shouldAttemptMapboxStyleFallback,
+  styleReferencesMapbox,
+} from "../useMapboxStyle";
 import LayerInteractivityManager from "./LayerInteractivityManager";
 import bytes from "bytes";
 import bbox from "@turf/bbox";
@@ -1595,6 +1601,9 @@ class MapContextManager extends EventEmitter {
       this.basemapState = basemapStateOverride;
     }
     const { style, sprites } = await this.getComputedStyle();
+    if (!hasMapboxAccessToken() && styleReferencesMapbox(style)) {
+      throw new MissingMapboxAccessTokenError();
+    }
     const styleHash = md5(JSON.stringify(style));
     this.setState((prev) => ({ ...prev, styleHash }));
 
@@ -2444,6 +2453,9 @@ class MapContextManager extends EventEmitter {
           prev.styleError ? { ...prev, styleError: undefined } : prev
         );
       } catch (e) {
+        if (!shouldAttemptMapboxStyleFallback(e)) {
+          throw e;
+        }
         // Set styleError on MapManagerState
         this._setManagerState?.((prev) => ({
           ...prev,
