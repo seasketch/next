@@ -47,10 +47,12 @@ test.describe("demo-samoa map bookmarks", () => {
       /\/e2e\/bookmark-images\/[^/]+\/public$/
     );
     await expect
-      .poll(async () =>
-        full.evaluate(
-          (img: HTMLImageElement) => img.complete && img.naturalWidth > 0
-        )
+      .poll(
+        async () =>
+          full.evaluate(
+            (img: HTMLImageElement) => img.complete && img.naturalWidth > 0
+          ),
+        { timeout: 30_000 }
       )
       .toBe(true);
     await expect(

@@ -267,8 +267,16 @@ if (only) {
   let exitCode = 0;
   try {
     await result;
-  } catch {
+  } catch (error) {
     exitCode = 1;
+    const events = Array.isArray(error) ? error : [error];
+    for (const event of events) {
+      if (event?.killed) {
+        continue;
+      }
+      const name = event?.command?.name ?? "process";
+      report(`[${name}] exited ${event?.exitCode}`);
+    }
   }
   await Promise.all(streams.map((stream) => new Promise((resolve) => stream.end(resolve))));
   report(`supervisor exiting ${exitCode}`);

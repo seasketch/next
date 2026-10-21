@@ -72,6 +72,9 @@ export const services = [
       // react-scripts exits when stdin closes unless CI is true. Playwright
       // does not keep that stdin open. GitHub Actions already sets CI.
       CI: "true",
+      // The lint warning dump is large enough to fill Playwright's stderr
+      // pipe and kill the stack. e2e does not need the dev overlay.
+      DISABLE_ESLINT_PLUGIN: "true",
       // Test mode stores the capture on the API. This is the prefix the forum
       // image URLs are built from.
       REACT_APP_CLOUDFLARE_IMAGES_ENDPOINT: `http://127.0.0.1:${e2eStack.apiPort}/e2e/bookmark-images/`,
