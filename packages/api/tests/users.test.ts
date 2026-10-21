@@ -76,7 +76,7 @@ describe("User lists", () => {
       await addParticipant(conn, unshared, projectId, false, false);
 
       await createSession(conn, participantIds[0], true, false, projectId);
-      expect(
+      await expect(
         conn.manyFirst(
           sql`SELECT projects_participants(projects.*) from projects where id = ${projectId}`
         )
@@ -383,7 +383,7 @@ describe("User account mutations", () => {
         sql`SELECT is_admin from project_participants where project_id = ${projectId} and user_id = ${newAdmin}`
       );
       expect(isAdmin).toBe(false);
-      expect(
+      await expect(
         conn.any(sql`select grant_admin_access(${projectId}, ${newAdmin})`)
       ).rejects.toThrow(/share/);
       await conn.any(sql`ROLLBACK`);
@@ -397,7 +397,7 @@ describe("User account mutations", () => {
       const unapproved = await createUser(conn);
       await addParticipant(conn, unapproved, projectId, false, true, false);
       await createSession(conn, adminId, true, false, projectId);
-      expect(
+      await expect(
         conn.any(sql`select approve_participant(${999}, ${unapproved})`)
       ).rejects.toThrow(/admin/);
       await conn.any(sql`ROLLBACK`);
@@ -411,7 +411,7 @@ describe("User account mutations", () => {
       const unapproved = await createUser(conn);
       await addParticipant(conn, unapproved, projectId, false, true, false);
       await createSession(conn, adminId, true, false, projectId);
-      expect(
+      await expect(
         conn.any(sql`select grant_admin_access(${999}, ${unapproved})`)
       ).rejects.toThrow(/admin/);
       await conn.any(sql`ROLLBACK`);
@@ -492,7 +492,7 @@ test("admins list accessible only to admins", async () => {
     );
     expect(admins.length).toBe(2);
     await createSession(conn, regularGuy, true, false, projectId);
-    expect(
+    await expect(
       conn.manyFirst(
         sql`select projects_admins(projects.*) from projects where id = ${projectId}`
       )

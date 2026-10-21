@@ -168,7 +168,7 @@ describe("Topic access control", () => {
           );
           await createSession(conn, userA, true, false, projectId);
 
-          expect(
+          await expect(
             conn.any(
               sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb, '<div />')`
             )
@@ -201,7 +201,7 @@ describe("Topic access control", () => {
           await createSession(conn, adminId, true, false, projectId);
           await conn.any(sql`update forums set archived = true`);
           await createSession(conn, userA, true, false, projectId);
-          expect(
+          await expect(
             conn.any(
               sql`select create_post('{"message": "foo"}'::jsonb, ${topicId}, '<div />')`
             )
@@ -243,7 +243,7 @@ describe("Topic access control", () => {
             sql`update access_control_lists set type = 'public' where forum_id_read = ${forumId}`
           );
           await createSession(conn, userA, true, false, projectId);
-          expect(
+          await expect(
             conn.any(
               sql`insert into topics (forum_id, title, author_id) values (${forumId}, 'foo', ${userA})`
             )
@@ -263,7 +263,7 @@ describe("Topic access control", () => {
             sql`update access_control_lists set type = 'admins_only' where forum_id_write = ${forumId}`
           );
           await createSession(conn, userA, true, false, projectId);
-          expect(
+          await expect(
             conn.any(
               sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb, '<div />')`
             )
@@ -363,7 +363,7 @@ describe("Topic access control", () => {
           sql`update posts set created_at = now() - interval '5.5 minutes'`
         );
         await createSession(conn, userA, true, false, projectId);
-        expect(
+        await expect(
           conn.any(
             sql`select update_post(${postId}, '{"message": "updated again"}'::jsonb)`
           )
@@ -484,7 +484,7 @@ describe("Moderation", () => {
           );
           expect(topic.locked).toBe(true);
           await createSession(conn, userA, true, false, projectId);
-          expect(
+          await expect(
             conn.one(sql`select * from set_topic_locked(${topicId}, false)`)
           ).rejects.toThrow(/admin/i);
         }
@@ -523,7 +523,7 @@ describe("Moderation", () => {
           );
           expect(post.author_id).toBe(adminId);
           await createSession(conn, userA, true, false, projectId);
-          expect(
+          await expect(
             conn.one(
               sql`select * from create_post('{}'::jsonb, ${topic.id}, '<div />')`
             )
@@ -552,7 +552,7 @@ describe("Moderation", () => {
             sql`select disable_forum_posting(${userA}, ${projectId})`
           );
           await createSession(conn, userA, true, false, projectId);
-          expect(
+          await expect(
             conn.one(
               sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb, '<div />')`
             )
@@ -605,7 +605,7 @@ describe("Moderation", () => {
             sql`update project_participants set share_profile = true returning *`
           );
           await createSession(conn, adminId, true, false, projectId);
-          expect(
+          await expect(
             conn.oneFirst(
               sql`select users_banned_from_forums(users.*) from users where id = ${userA}`
             )
@@ -613,7 +613,7 @@ describe("Moderation", () => {
           await conn.any(
             sql`select disable_forum_posting(${userA}, ${projectId})`
           );
-          expect(
+          await expect(
             conn.oneFirst(
               sql`select users_banned_from_forums(users.*) from users where id = ${userA}`
             )
@@ -680,7 +680,7 @@ describe("Community guidelines", () => {
         // @ts-ignore
         expect(g.content.message).toBe("foo");
         await createSession(conn);
-        expect(
+        await expect(
           conn.one(
             sql`select * from community_guidelines where project_id = ${projectId}`
           )
@@ -739,7 +739,7 @@ describe("Sticky threads", () => {
         );
         expect(topic.sticky).toBe(true);
         await createSession(conn, userA, true, false, projectId);
-        expect(
+        await expect(
           conn.one(sql`select * from set_topic_sticky(${topicId}, false)`)
         ).rejects.toThrow(/admin/i);
       }
@@ -878,7 +878,7 @@ describe("Author profiles", () => {
           sql`update project_participants set share_profile=false where user_id =${userA} and project_id = ${projectId}`
         );
         await createSession(conn, userA, true, false, projectId);
-        expect(
+        await expect(
           conn.any(
             sql`select create_topic(${forumId}, 'Topic A', '{"message": "foo"}'::jsonb, '<div />')`
           )

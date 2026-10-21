@@ -92,7 +92,7 @@ describe("Basemaps", () => {
             sql`insert into basemaps (name, type, url, thumbnail) values ('shared basemap a', 'MAPBOX', 'mapbox://my-map/id', 'https://thumbnail.org/1.png') returning id`
           );
           await createSession(conn, user1, true, false, projectId);
-          expect(
+          await expect(
             conn.one(
               sql`insert into projects_shared_basemaps (basemap_id, project_id) values (${sharedBasemapId}, ${projectId}) returning *`
             )

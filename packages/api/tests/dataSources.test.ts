@@ -36,7 +36,7 @@ describe("Data validation", () => {
             insert into data_sources (project_id, type, url) values (${projectId}, 'geojson', 'https://example.com/geojson.json') returning type
           `);
         expect(sourceType).toBe("geojson");
-        expect(
+        await expect(
           conn.one(
             sql`insert into data_sources (project_id, type, url, minzoom) values (${projectId}, 'geojson', 'https://example.com/geojson.json', 1) returning *`
           )
@@ -50,13 +50,13 @@ describe("Data validation", () => {
       "public",
       async (conn, projectId, adminId, [userA]) => {
         await conn.any(sql`SAVEPOINT before_create`);
-        expect(
+        await expect(
           conn.one(
             sql`insert into data_sources (project_id, type, url, maxzoom, coordinates) values (${projectId}, 'image', 'https://example.com/image.png', 1, '{{1,2}, {3,4}}') returning *`
           )
         ).rejects.toThrow(/maxzoom/i);
         await conn.any(sql`ROLLBACK to before_create`);
-        expect(
+        await expect(
           conn.one(
             sql`insert into data_sources (project_id, type, url, maxzoom, coordinates) values (${projectId}, 'video', 'https://example.com/image.webp', 1, '{{1,2}, {3,4}}') returning *`
           )
@@ -79,13 +79,13 @@ describe("Data validation", () => {
           const type = types[i];
           await conn.any(sql`SAVEPOINT ${raw(`point_${i}`)}`);
           if (type === "image") {
-            expect(
+            await expect(
               conn.one(
                 sql`insert into data_sources (project_id, type, coordinates) values (${projectId}, ${type}, '{1,2,3,4}') returning *`
               )
             ).rejects.toThrow(/url/i);
           } else {
-            expect(
+            await expect(
               conn.one(
                 sql`insert into data_sources (project_id, type) values (${projectId}, ${type}) returning *`
               )
@@ -117,7 +117,7 @@ describe("Data validation", () => {
             expect(scheme).toBe("tms");
           } else {
             await conn.any(sql`SAVEPOINT ${raw(`point_${i}`)}`);
-            expect(
+            await expect(
               conn.oneFirst(
                 sql`insert into data_sources (project_id, type, scheme, url) values (${projectId}, ${type}, 'tms', 'https://example.com/item.bin') returning scheme`
               )
@@ -153,7 +153,7 @@ describe("Data validation", () => {
             expect(id).toBeTruthy();
           } else {
             await conn.any(sql`SAVEPOINT ${raw(`point_${i}`)}`);
-            expect(
+            await expect(
               conn.oneFirst(
                 sql`insert into data_sources (project_id, type, url, tiles) values (${projectId}, ${type}, 'https://example.com/item.bin', ${sql.array(
                   ["https://a.com", "https://b.com"],
@@ -192,7 +192,7 @@ describe("Data validation", () => {
             expect(id).toBeTruthy();
           } else {
             await conn.any(sql`SAVEPOINT ${raw(`point_${i}`)}`);
-            expect(
+            await expect(
               conn.oneFirst(
                 sql`insert into data_sources (project_id, type, url, tile_size) values (${projectId}, ${type}, 'https://example.com/item.bin', 256) returning id`
               )
@@ -226,7 +226,7 @@ describe("Data validation", () => {
             expect(id).toBeTruthy();
           } else {
             await conn.any(sql`SAVEPOINT ${raw(`point_${i}`)}`);
-            expect(
+            await expect(
               conn.oneFirst(
                 sql`insert into data_sources (project_id, type, url, encoding) values (${projectId}, ${type}, 'https://example.com/item.bin', 'mapbox') returning id`
               )
@@ -273,7 +273,7 @@ describe("Data validation", () => {
           );
           expect(id).toBeTruthy();
           await conn.any(sql`SAVEPOINT ${raw(`point_${i}`)}`);
-          expect(
+          await expect(
             conn.oneFirst(
               sql`insert into data_sources (project_id, type, url, ${raw(
                 prop
@@ -292,7 +292,7 @@ describe("Data validation", () => {
       "public",
       async (conn, projectId, adminId, [userA]) => {
         await conn.any(sql`SAVEPOINT ${raw(`point_a`)}`);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`insert into data_sources (project_id, type, url, coordinates) values (${projectId}, 'geojson', 'https://example.com/item.bin', '{1,2,3,4}') returning id`
           )
@@ -329,7 +329,7 @@ describe("Data validation", () => {
           } else {
             await conn.any(sql`SAVEPOINT ${raw(`point_${i}`)}`);
             if (type === "image") {
-              expect(
+              await expect(
                 conn.oneFirst(
                   sql`insert into data_sources (project_id, type, urls, url, coordinates) values (${projectId}, ${type}, ${sql.array(
                     ["https://example.com/item.webp"],
@@ -338,7 +338,7 @@ describe("Data validation", () => {
                 )
               ).rejects.toThrow(/urls/i);
             } else {
-              expect(
+              await expect(
                 conn.oneFirst(
                   sql`insert into data_sources (project_id, type, urls, url) values (${projectId}, ${type}, ${sql.array(
                     ["https://example.com/item.webp"],
@@ -374,7 +374,7 @@ describe("Data validation", () => {
             expect(id).toBeTruthy();
           } else {
             await conn.any(sql`SAVEPOINT ${raw(`point_${i}`)}`);
-            expect(
+            await expect(
               conn.oneFirst(
                 sql`insert into data_sources (project_id, type, url, query_parameters) values (${projectId}, ${type}, 'https://example.com/item.webp', '{"foo": "bar"}'::jsonb) returning id`
               )
@@ -406,13 +406,13 @@ describe("Data validation", () => {
           } else {
             await conn.any(sql`SAVEPOINT ${raw(`point_${i}`)}`);
             if (type === "image") {
-              expect(
+              await expect(
                 conn.oneFirst(
                   sql`insert into data_sources (project_id, type, url, use_device_pixel_ratio, coordinates) values (${projectId}, ${type}, 'https://example.com/item.webp', true, '{1,2,3,4}') returning id`
                 )
               ).rejects.toThrow(/use_device_pixel_ratio/i);
             } else {
-              expect(
+              await expect(
                 conn.oneFirst(
                   sql`insert into data_sources (project_id, type, url, use_device_pixel_ratio) values (${projectId}, ${type}, 'https://example.com/item.webp', true) returning id`
                 )
@@ -446,7 +446,7 @@ describe("Data validation", () => {
             );
             expect(id).toBeTruthy();
             await conn.any(sql`SAVEPOINT ${raw(`point_${i}`)}`);
-            expect(
+            await expect(
               conn.oneFirst(
                 type === "seasketch-vector"
                   ? sql`insert into data_sources (project_id, type, url, byte_length) values (${projectId}, ${type}, 'https://example.com/item.webp', 12) returning id`
@@ -456,7 +456,7 @@ describe("Data validation", () => {
             await conn.any(sql`ROLLBACK to ${raw(`point_${i}`)}`);
           } else {
             await conn.any(sql`SAVEPOINT ${raw(`point_${i}`)}`);
-            expect(
+            await expect(
               conn.oneFirst(
                 sql`insert into data_sources (project_id, type, url, import_type) values (${projectId}, ${type}, 'https://example.com/item.webp', 'upload') returning id`
               )
@@ -497,7 +497,7 @@ describe("Data validation", () => {
             expect(id2).toBeTruthy();
           } else {
             await conn.any(sql`SAVEPOINT ${raw(`point_${i}`)}`);
-            expect(
+            await expect(
               conn.oneFirst(
                 sql`insert into data_sources (project_id, type, url, original_source_url) values (${projectId}, ${type}, 'https://example.com/item.webp', 'https://example.com/foo') returning id`
               )
@@ -537,7 +537,7 @@ describe("Data validation", () => {
             expect(id2).toBeTruthy();
           } else {
             await conn.any(sql`SAVEPOINT ${raw(`point_${i}`)}`);
-            expect(
+            await expect(
               conn.oneFirst(
                 sql`insert into data_sources (project_id, type, url, enhanced_security) values (${projectId}, ${type}, 'https://example.com/item.webp', false) returning id`
               )
@@ -580,7 +580,7 @@ describe("Data validation", () => {
           )}, 0) returning id
               `);
           expect(id).toBeTruthy();
-          expect(
+          await expect(
             conn.any(
               sql`update data_sources set bucket_id = 3 where id = ${id} returning id`
             )
@@ -598,7 +598,7 @@ describe("Data validation", () => {
                   insert into data_sources (project_id, type, import_type, enhanced_security, byte_length) values (${projectId}, 'seasketch-vector', 'upload', true, 0) returning id
                 `);
           expect(id).toBeTruthy();
-          expect(
+          await expect(
             conn.any(
               sql`update data_sources set enhanced_security = false where id = ${id}`
             )
@@ -616,7 +616,7 @@ describe("Data validation", () => {
                     insert into data_sources (project_id, type, import_type, original_source_url, byte_length) values (${projectId}, 'seasketch-vector', 'arcgis', 'https://example.com/arcgis/rest/services/bullshit/MapServer', 12) returning id
                   `);
           expect(id).toBeTruthy();
-          expect(
+          await expect(
             conn.any(
               sql`update data_sources set import_type = 'upload' where id = ${id}`
             )
@@ -668,7 +668,7 @@ describe("Access Control", () => {
           sql`select data_source_id from data_layers where id = ${publishedLayerId}`
         );
         expect(publishedSourceId).toBeTruthy();
-        expect(
+        await expect(
           conn.oneFirst(
             sql`update data_sources set attribution = 'me' where id = ${publishedSourceId} returning attribution`
           )
@@ -726,7 +726,7 @@ describe("Access Control", () => {
         );
         await clearSession(conn);
         await createSession(conn);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`select url from data_sources where id = ${publishedSourceId}`
           )
@@ -834,7 +834,7 @@ describe("Access Control", () => {
         );
         await clearSession(conn);
         await createSession(conn, outsideUser, true, false, projectId);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`select url from data_sources where id = ${publishedSourceId}`
           )

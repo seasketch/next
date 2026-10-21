@@ -25,7 +25,7 @@ describe("Access Control", () => {
       );
       expect(sketchClass.name).toBe("MPA");
       await createSession(conn, regularGuy, true, false, projectId);
-      expect(
+      await expect(
         conn.any(
           sql`insert into sketch_classes (mapbox_gl_style, project_id, name) values ('[]'::jsonb, ${projectId}, 'MPA-eyy!') returning *`
         )
@@ -127,7 +127,7 @@ test("Cannot change project_id", async () => {
       sql`insert into sketch_classes (mapbox_gl_style, project_id, name) values ('[]'::jsonb, ${projectId}, 'MPA') returning *`
     );
     expect(sketchClass.name).toBe("MPA");
-    expect(
+    await expect(
       conn.any(
         sql`update sketch_classes set project_id = ${projectBId} where id = ${sketchClass.id}`
       )
@@ -153,7 +153,7 @@ describe("Collections - valid children", () => {
         sql`select add_valid_child_sketch_class(${collectionId}, ${mpaId})`
       );
       await createSession(conn, regularJoe, true, false, projectId);
-      expect(
+      await expect(
         conn.any(
           sql`select add_valid_child_sketch_class(${collectionId}, ${mpaId})`
         )
@@ -176,7 +176,7 @@ describe("Collections - valid children", () => {
       await conn.any(
         sql`select add_valid_child_sketch_class(${collectionId}, ${mpaId})`
       );
-      expect(
+      await expect(
         conn.any(
           sql`select add_valid_child_sketch_class(${collectionId}, ${mpaId})`
         )
@@ -248,7 +248,7 @@ describe("Collections - valid children", () => {
       const mpaId = await conn.oneFirst(
         sql`insert into sketch_classes (mapbox_gl_style, project_id, name, geometry_type) values ('[]'::jsonb, ${projectId}, 'MPA', 'POLYGON') returning id`
       );
-      expect(
+      await expect(
         conn.any(
           sql`select add_valid_child_sketch_class(${mpaId}, ${collectionId})`
         )
@@ -269,7 +269,7 @@ describe("Collections - valid children", () => {
       const mpaId = await conn.oneFirst(
         sql`insert into sketch_classes (mapbox_gl_style, project_id, name, geometry_type) values ('[]'::jsonb, ${projectId}, 'MPA', 'POLYGON') returning id`
       );
-      expect(
+      await expect(
         conn.any(
           sql`select add_valid_child_sketch_class(${collectionId}, ${mpaId})`
         )
@@ -316,7 +316,7 @@ test("Cannot delete SketchClasses with more that 10 sketches", async () => {
         sql`insert into sketches (user_id, sketch_class_id, name) values (${adminId}, ${sketchClassId}, ${`sketch name ${count}`})`
       );
     }
-    expect(
+    await expect(
       conn.any(sql`delete from sketch_classes where id = ${sketchClassId}`)
     ).rejects.toThrow(/sketches/);
     await conn.any(sql`ROLLBACK`);
@@ -398,7 +398,7 @@ describe("Sketch Classes tied to FormElements", () => {
         );
         expect(sketchClass.allow_multi).toBe(false);
         expect(sketchClass.geometry_type).toBe("POLYGON");
-        expect(
+        await expect(
           conn.any(sql`delete from sketch_classes where id = ${sketchClass.id}`)
         ).rejects.toThrow(/form element/i);
       }
@@ -426,12 +426,12 @@ describe("Sketch Classes tied to FormElements", () => {
           is_template: boolean;
         }>(sql`select * from forms where sketch_class_id = ${sketchClass.id}`);
         await conn.any(sql`delete from form_elements where id = ${elementId}`);
-        expect(
+        await expect(
           conn.one(
             sql`select * from sketch_classes where id = ${sketchClass.id}`
           )
         ).rejects.toThrow(/not found/i);
-        expect(
+        await expect(
           conn.one(sql`select * from forms where id = ${form.id}`)
         ).rejects.toThrow(/not found/i);
       }
@@ -449,7 +449,7 @@ test("Don't allow geometry type to be changed for sketch classes that aren't a p
       sql`insert into sketch_classes (mapbox_gl_style, project_id, name, geometry_type) values ('[]'::jsonb, ${projectId}, 'MPA', 'POLYGON') returning *`
     );
     expect(sketchClass.name).toBe("MPA");
-    expect(
+    await expect(
       conn.any(
         sql`update sketch_classes set geometry_type = 'POINT' where id = ${sketchClass.id}`
       )

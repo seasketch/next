@@ -114,7 +114,7 @@ describe("Schema", () => {
           )
         ).toBeTruthy();
         await clearSession(conn);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`insert into survey_invites (survey_id) values (${surveyId}) returning id`
           )
@@ -132,7 +132,7 @@ describe("Schema", () => {
           sql`select id from make_survey('Survey', ${projectId}, null)`
         );
         await clearSession(conn);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`insert into survey_invites (survey_id, email, user_id) values (${surveyId}, 'joe@example.com', ${adminId}) returning id`
           )
@@ -172,7 +172,7 @@ describe("Schema", () => {
           sql`select id from make_survey('Survey', ${projectId}, null)`
         );
         await clearSession(conn);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`insert into survey_invites (survey_id, user_id, was_added_from_group) values (${surveyId}, ${adminId}, false) returning id`
           )
@@ -243,7 +243,7 @@ describe("Management operations", () => {
         const surveyId = await conn.oneFirst(
           sql`select id from make_survey('Survey', ${projectId}, null)`
         );
-        expect(
+        await expect(
           conn.oneFirst(
             sql`insert into survey_invites (survey_id, email, user_id) values (${surveyId}, 'joe@example.com', ${adminId}) returning id`
           )
@@ -269,7 +269,7 @@ describe("Management operations", () => {
         await conn.one(
           sql`update survey_invites set fullname = 'FooBob' where id = ${invites[0].id} returning fullname`
         );
-        expect(
+        await expect(
           conn.one(
             sql`update survey_invites set email = 'foo@example.com' where id = ${invites[0].id} returning email`
           )
@@ -900,7 +900,7 @@ describe("db.surveyInvites.sendQueuedSurveyInvites(limit)", () => {
           sql`select id, status, token, token_expires_at, message_id, to_address from invite_emails where survey_invite_id = ${invite.id}`
         );
         expect(email.status).toBe("SENT");
-        expect(
+        await expect(
           sendSurveyInviteReminder(asPg(conn), invite.id as number)
         ).rejects.toThrow(/resend/i);
       }
@@ -965,7 +965,7 @@ describe("db.surveyInvites.sendQueuedSurveyInvites(limit)", () => {
             (new Date().getTime() + 10000) / 1000
           }), token = ${exampleToken}, status = 'COMPLAINT'`
         );
-        expect(
+        await expect(
           sendSurveyInviteReminder(asPg(conn), invite.id as number)
         ).rejects.toThrow(/spam/i);
       }
@@ -1488,7 +1488,7 @@ describe("Invite tokens", () => {
           await conn.any(sql`update surveys set is_disabled = true`);
           // create anon session
           await createSession(conn);
-          expect(
+          await expect(
             verifySurveyInvite(
               asPg(conn),
               token,
@@ -1510,7 +1510,7 @@ describe("Invite tokens", () => {
           )) as string;
           await createSession(conn);
           MockDate.set(new Date().getTime() + ms("65 days"));
-          expect(
+          await expect(
             verifySurveyInvite(
               asPg(conn),
               token,
@@ -1537,7 +1537,7 @@ describe("Invite tokens", () => {
           await conn.any(sql`update survey_invites set was_used = ${true}`);
           // create anon session
           await createSession(conn);
-          expect(
+          await expect(
             verifySurveyInvite(
               asPg(conn),
               token,

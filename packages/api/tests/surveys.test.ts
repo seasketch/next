@@ -102,7 +102,7 @@ describe("Surveys", () => {
         const surveyId = await conn.oneFirst(
           sql`insert into surveys (name, project_id, access_type, is_disabled) values ('Survey A', ${projectId}, 'PUBLIC', ${true}) returning id`
         );
-        expect(
+        await expect(
           conn.any(
             sql`update surveys set is_disabled = ${false} where id = ${surveyId}`
           )
@@ -124,7 +124,7 @@ describe("Surveys", () => {
           userIds[0],
         ]);
         await createSession(conn, userIds[1], true, false, projectId);
-        expect(
+        await expect(
           conn.any(
             sql`insert into survey_invited_groups (survey_id, group_id) values (${surveyId}, ${groupId}) returning *`
           )
@@ -421,7 +421,7 @@ describe("Surveys", () => {
             );
           }
           await createSession(conn, adminId, true, false, projectId);
-          expect(
+          await expect(
             conn.any(sql`delete from surveys where id = ${surveyId}`)
           ).rejects.toThrow(/responses/i);
         }
@@ -472,7 +472,7 @@ describe("Surveys", () => {
             )}, false, false, false, false, null)`
           );
           await createSession(conn, userA, true, false, projectId);
-          expect(
+          await expect(
             conn.oneFirst(
               sql`select is_draft from make_response_draft(${responseA.id})`
             )
@@ -499,7 +499,7 @@ describe("Surveys", () => {
               {}
             )}, false, true, false, false, null)`
           );
-          expect(
+          await expect(
             conn.one(
               sql`update survey_responses set outside_geofence = true where id = ${response.id} returning *`
             )
@@ -577,7 +577,7 @@ describe("Surveys", () => {
             );
             expect(response).toBeTruthy();
             await createSession(conn, uninvitedUser, true, false, projectId);
-            expect(
+            await expect(
               conn.one(
                 sql`select * from create_survey_response(${surveyId}, ${sql.json(
                   {}
@@ -607,7 +607,7 @@ describe("Surveys", () => {
               )}, false, false ,false, false, null)`
             );
             expect(response).toBeTruthy();
-            expect(
+            await expect(
               conn.one(
                 sql`update survey_responses set data = ${sql.json({
                   foo: "bar",
@@ -637,7 +637,7 @@ describe("Surveys", () => {
               )}, false, false ,false, false, null)`
             );
             expect(response).toBeTruthy();
-            expect(
+            await expect(
               conn.one(
                 sql`update survey_responses set data = ${sql.json({
                   foo: "bar",
@@ -823,7 +823,7 @@ describe("Surveys", () => {
             );
             await createSession(conn, adminId, true, false, projectId);
             expect(responseB.is_duplicate_ip).toBe(true);
-            expect(
+            await expect(
               conn.one(
                 sql`update survey_responses set is_duplicate_ip = ${false} where id = ${
                   responseB.id
@@ -846,7 +846,7 @@ describe("Surveys", () => {
             );
             await createSession(conn, adminId, true, false, projectId);
             expect(responseA.bypassed_duplicate_submission_control).toBe(true);
-            expect(
+            await expect(
               conn.one(
                 sql`update survey_responses set bypassed_duplicate_submission_control = ${false} where id = ${
                   responseA.id
@@ -882,7 +882,7 @@ test("is_required_for_surveys questions cannot be removed", async () => {
       const welcomeElementId = await conn.oneFirst(
         sql`select id from form_elements where type_id = 'WelcomeMessage' and form_id = ${form.id}`
       );
-      expect(
+      await expect(
         conn.any(sql`delete from form_elements where id = ${welcomeElementId}`)
       ).rejects.toThrow(/Cannot delete/);
     }
@@ -1012,7 +1012,7 @@ describe("Handling of sketches", () => {
             "Shape"
           )}) returning id`
         );
-        expect(
+        await expect(
           conn.one(
             sql`select * from create_survey_response(${surveyId}, ${sql.json({
               [elementId]: {

@@ -32,11 +32,11 @@
     "url": "https://github.com/seasketch/next/issues"
   },
   "devDependencies": {
-    "@types/pg": "^8.6.0",
+    "@types/pg": "^8.23.1",
     "typescript": "5.8.3"
   },
   "dependencies": {
     "@aws-sdk/rds-signer": "^3.1152.0",
-    "pg": "^8.6.0"
+    "pg": "^8.23.1"
   }
 }

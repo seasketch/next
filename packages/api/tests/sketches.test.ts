@@ -57,7 +57,7 @@ describe("Access Control", () => {
           )
         ).toBeTruthy();
         await createSession(conn, regularJoe, true, false, projectId);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`insert into sketches (user_id, sketch_class_id, name) values (${regularJoe}, ${sketchClassId}, 'my sketch') returning id`
           )
@@ -94,7 +94,7 @@ describe("Access Control", () => {
           )
         ).toBeTruthy();
         await createSession(conn, regularJoe, true, false, projectId);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`insert into sketches (user_id, sketch_class_id, name) values (${regularJoe}, ${sketchClassId}, 'my sketch') returning id`
           )
@@ -118,7 +118,7 @@ describe("Access Control", () => {
       );
       expect(sketchId).toBeTruthy();
       await createSession(conn, regularJoe, true, false, projectId);
-      expect(
+      await expect(
         conn.any(
           sql`insert into sketches (user_id, sketch_class_id, name) values (${regularJoe}, ${sketchClassId}, 'my sketch') returning id`
         )
@@ -137,7 +137,7 @@ describe("Access Control", () => {
         sql`insert into sketch_classes (mapbox_gl_style, project_id, name, geometry_type) values ('[]'::jsonb, ${projectId}, 'Collection', 'COLLECTION') returning id`
       );
       await createSession(conn, regularJoe, true, false, projectId);
-      expect(
+      await expect(
         conn.oneFirst(
           sql`insert into sketches (user_id, sketch_class_id, name) values (${adminId}, ${sketchClassId}, 'my sketch') returning id`
         )
@@ -156,7 +156,7 @@ describe("Access Control", () => {
         sql`insert into sketch_classes (mapbox_gl_style, project_id, name, geometry_type) values ('[]'::jsonb, ${projectId}, 'Collection', 'COLLECTION') returning id`
       );
       await createSession(conn, userA, true, false, projectId);
-      expect(
+      await expect(
         conn.oneFirst(
           sql`insert into sketches (user_id, sketch_class_id, name) values (${userB}, ${sketchClassId}, 'my sketch') returning id`
         )
@@ -179,7 +179,7 @@ describe("Access Control", () => {
         sql`insert into sketches (user_id, sketch_class_id, name) values (${userA}, ${sketchClassId}, 'my sketch') returning id`
       );
       await createSession(conn, userB, true, false, projectId);
-      expect(
+      await expect(
         conn.oneFirst(
           sql`update sketches set name = 'my sketch (updated)' where id = ${sketchId}`
         )
@@ -209,7 +209,7 @@ describe("Access Control", () => {
       );
       expect(deleted).toBe(sketchAId);
       await createSession(conn, userB, true, false, projectId);
-      expect(
+      await expect(
         conn.oneFirst(sql`delete from sketches where id = ${sketchBId}`)
       ).rejects.toThrow();
       await conn.any(sql`ROLLBACK`);
@@ -371,7 +371,7 @@ const validateGeometryTypeCheck = async (
         sql`insert into sketches (user_id, sketch_class_id, name, user_geom, geom) values (${userIds[0]}, ${sketchClassId}, 'my shape', st_geomfromgeojson(${geom}), st_geomfromgeojson(${geom})) returning id`
       );
       expect(sketchId).toBeTruthy();
-      expect(
+      await expect(
         conn.oneFirst(
           sql`insert into sketches (user_id, sketch_class_id, name, user_geom, geom) values (${userIds[0]}, ${sketchClassId}, 'my shape 2', st_geomfromgeojson(${invalidGeom}), st_geomfromgeojson(${invalidGeom})) returning id`
         )
@@ -445,7 +445,7 @@ describe("Collections", () => {
         const collectionId = await conn.oneFirst(
           sql`insert into sketches (user_id, sketch_class_id, name) values (${userIds[0]}, ${collectionClassId}, 'my collection') returning id`
         );
-        expect(
+        await expect(
           conn.any(
             sql`insert into sketches (user_id, sketch_class_id, name, collection_id) values (${userIds[0]}, ${collectionClassId}, 'nested collection', ${collectionId}) returning id`
           )
@@ -479,7 +479,7 @@ describe("Collections", () => {
           sql`insert into sketches (user_id, sketch_class_id, name, user_geom, geom, collection_id) values (${userIds[0]}, ${polygonClassId}, 'my shape', st_geomfromgeojson(${polygon}), st_geomfromgeojson(${polygon}), ${collectionId}) returning id`
         );
         expect(polyId).toBeTruthy();
-        expect(
+        await expect(
           conn.oneFirst(
             sql`insert into sketches (user_id, sketch_class_id, name, user_geom, geom, collection_id) values (${userIds[0]}, ${invalidChildId}, 'my shape', st_geomfromgeojson(${polygon}), st_geomfromgeojson(${polygon}), ${collectionId}) returning id`
           )
@@ -590,7 +590,7 @@ describe("Folders", () => {
         const collectionId = await conn.oneFirst(
           sql`insert into sketches (user_id, sketch_class_id, name) values (${userIds[0]}, ${collectionClassId}, 'my collection') returning id`
         );
-        expect(
+        await expect(
           conn.one(
             sql`insert into sketches (user_id, sketch_class_id, name, user_geom, geom, folder_id, collection_id) values (${userIds[0]}, ${polygonClassId}, 'my shape', st_geomfromgeojson(${polygon}), st_geomfromgeojson(${polygon}), ${folderId}, ${collectionId}) returning *`
           )
@@ -609,7 +609,7 @@ describe("Folders", () => {
           sql`insert into sketch_folders (name, user_id, project_id) values ('Folder A', ${userIds[0]}, ${projectId}) returning id`
         );
         await createSession(conn, userIds[1], true, false, projectId);
-        expect(
+        await expect(
           conn.one(
             sql`insert into sketch_folders (name, user_id, project_id, folder_id) values ('Folder B', ${userIds[1]}, ${projectId}, ${folderA}) returning *`
           )
@@ -629,7 +629,7 @@ describe("Folders", () => {
           sql`insert into sketch_folders (name, user_id, project_id) values ('Folder A', ${userIds[0]}, ${projectId}) returning id`
         );
         await createSession(conn, userIds[1], true, false, projectId);
-        expect(
+        await expect(
           conn.one(
             sql`insert into sketch_folders (name, user_id, project_id, folder_id) values ('Folder B', ${userIds[0]}, ${projectB}, ${folderA}) returning *`
           )

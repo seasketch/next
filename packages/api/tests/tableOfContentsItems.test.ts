@@ -46,7 +46,7 @@ describe("Data validation", () => {
           sql`insert into table_of_contents_items(project_id, title, is_folder, data_layer_id, stable_id) values (${projectId}, 'item1', false, ${layerId}, ${id()}) returning id`
         );
         expect(itemId).toBeGreaterThan(0);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`insert into table_of_contents_items(project_id, title, is_folder, stable_id) values (${projectId}, 'item1', false, ${id()}) returning id`
           )
@@ -71,7 +71,7 @@ describe("Data validation", () => {
           sql`insert into table_of_contents_items(project_id, title, is_folder, data_layer_id, stable_id) values (${projectId}, 'item1', false, ${layerId}, ${stableId}) returning id`
         );
         expect(itemId).toBeGreaterThan(0);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`insert into table_of_contents_items(project_id, title, is_folder, data_layer_id, stable_id) values (${projectId}, 'item1', false, ${layerId}, ${stableId}) returning id`
           )
@@ -113,7 +113,7 @@ describe("Data validation", () => {
         //    A   B      item1
         //         \
         //          C
-        expect(
+        await expect(
           conn.any(
             sql`select update_table_of_contents_item_parent(${itemId}, ${folderA})`
           )
@@ -121,7 +121,7 @@ describe("Data validation", () => {
         //    A   B
         //   /     \
         // item1    C
-        expect(
+        await expect(
           conn.any(
             sql`select update_table_of_contents_item_parent(${itemId}, ${folderC})`
           )
@@ -168,7 +168,7 @@ describe("Data validation", () => {
         //    A   B      item1
         //         \
         //          C
-        expect(
+        await expect(
           conn.any(
             sql`select update_table_of_contents_item_parent(${itemId}, ${folderA})`
           )
@@ -176,7 +176,7 @@ describe("Data validation", () => {
         //    A   B
         //   /     \
         // item1    C
-        expect(
+        await expect(
           conn.any(
             sql`select update_table_of_contents_item_parent(${itemId}, ${folderC})`
           )
@@ -186,7 +186,7 @@ describe("Data validation", () => {
         //          C
         //           \
         //          item1
-        expect(
+        await expect(
           conn.any(
             sql`select update_table_of_contents_item_parent(${folderBId}, ${folderA})`
           )
@@ -199,12 +199,12 @@ describe("Data validation", () => {
         //      \
         //     item1
         await clearSession(conn);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`select path from table_of_contents_items where id = ${itemId}`
           )
         ).resolves.toBe(`${folderA}.${folderB}.${folderC}.${stableId}`);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`select path from table_of_contents_items where stable_id = ${folderC}`
           )
@@ -228,12 +228,12 @@ describe("Data validation", () => {
           sql`insert into table_of_contents_items(project_id, title, is_folder, stable_id) values (${projectId}, 'folderB', true, ${folderB}) returning id`
         );
         //    A[0]   B[1]
-        expect(
+        await expect(
           conn.oneFirst(
             sql`select sort_index from table_of_contents_items where id = ${folderAId}`
           )
         ).resolves.toBe(0);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`select sort_index from table_of_contents_items where id = ${folderBId}`
           )
@@ -256,12 +256,12 @@ describe("Data validation", () => {
           sql`insert into table_of_contents_items(project_id, title, is_folder, stable_id) values (${projectId}, 'folderB', true, ${folderB}) returning id`
         );
         //    A[0]   B[1]
-        expect(
+        await expect(
           conn.oneFirst(
             sql`select sort_index from table_of_contents_items where id = ${folderAId}`
           )
         ).resolves.toBe(0);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`select sort_index from table_of_contents_items where id = ${folderBId}`
           )
@@ -280,12 +280,12 @@ describe("Data validation", () => {
         //    A[0]   B[1]
         //           / \
         //         C[0] D[1]
-        expect(
+        await expect(
           conn.oneFirst(
             sql`select sort_index from table_of_contents_items where id = ${folderCId}`
           )
         ).resolves.toBe(0);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`select sort_index from table_of_contents_items where id = ${folderDId}`
           )
@@ -322,7 +322,7 @@ describe("Data validation", () => {
         //          C
         //           \
         //            D
-        expect(
+        await expect(
           conn.any(
             sql`select update_table_of_contents_item_children(${folderBId}, ${sql.array(
               [folderAId, folderCId],
@@ -335,17 +335,17 @@ describe("Data validation", () => {
         //  A   C
         //       \
         //        D
-        expect(
+        await expect(
           conn.oneFirst(
             sql`select sort_index from table_of_contents_items where stable_id = ${folderA}`
           )
         ).resolves.toBe(0);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`select sort_index from table_of_contents_items where stable_id = ${folderC}`
           )
         ).resolves.toBe(1);
-        expect(
+        await expect(
           conn.any(
             sql`select update_table_of_contents_item_children(${folderBId}, ${sql.array(
               [folderCId, folderAId],
@@ -358,12 +358,12 @@ describe("Data validation", () => {
         //  A   C
         //       \
         //        D
-        expect(
+        await expect(
           conn.oneFirst(
             sql`select sort_index from table_of_contents_items where stable_id = ${folderA}`
           )
         ).resolves.toBe(1);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`select sort_index from table_of_contents_items where stable_id = ${folderC}`
           )
@@ -374,13 +374,13 @@ describe("Data validation", () => {
         );
 
         await clearSession(conn);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`select path from table_of_contents_items where id = ${folderAId}`
           )
         ).resolves.toBe(`${folderB}.${folderA}`);
 
-        expect(
+        await expect(
           conn.oneFirst(
             sql`select path from table_of_contents_items where id = ${folderDId}`
           )
@@ -388,7 +388,7 @@ describe("Data validation", () => {
 
         await createSession(conn, adminId, true, false, projectId);
 
-        expect(
+        await expect(
           conn.any(
             sql`select update_table_of_contents_item_children(${folderBId}, ${sql.array(
               [folderAId],
@@ -400,7 +400,7 @@ describe("Data validation", () => {
         //   /    \
         //  A      D
 
-        expect(
+        await expect(
           conn.oneFirst(
             sql`select sort_index from table_of_contents_items where stable_id = ${folderA}`
           )
@@ -412,19 +412,19 @@ describe("Data validation", () => {
           sql`select sort_index from table_of_contents_items where stable_id = ${folderC}`
         );
         expect(folderBSortIndex).toBeLessThan(folderCSortIndex as number);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`select parent_stable_id from table_of_contents_items where stable_id = ${folderC}`
           )
         ).resolves.toBe(null);
         await clearSession(conn);
 
-        expect(
+        await expect(
           conn.oneFirst(
             sql`select path from table_of_contents_items where id = ${folderCId}`
           )
         ).resolves.toBe(`${folderC}`);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`select path from table_of_contents_items where id = ${folderDId}`
           )
@@ -448,12 +448,12 @@ describe("Data validation", () => {
           sql`insert into table_of_contents_items(project_id, title, is_folder, stable_id) values (${projectId}, 'folderB', true, ${folderB}) returning id`
         );
         //    A[0]   B[1]
-        expect(
+        await expect(
           conn.oneFirst(
             sql`select sort_index from table_of_contents_items where id = ${folderAId}`
           )
         ).resolves.toBe(0);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`select sort_index from table_of_contents_items where id = ${folderBId}`
           )
@@ -492,12 +492,12 @@ describe("Data validation", () => {
           sql`insert into table_of_contents_items(project_id, title, is_folder, stable_id) values (${projectId}, 'folderB', true, ${folderB}) returning id`
         );
         //    A[0]   B[1]
-        expect(
+        await expect(
           conn.oneFirst(
             sql`select sort_index from table_of_contents_items where id = ${folderAId}`
           )
         ).resolves.toBe(0);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`select sort_index from table_of_contents_items where id = ${folderBId}`
           )
@@ -541,7 +541,7 @@ describe("Data validation", () => {
         //         \
         //          C
         //
-        expect(
+        await expect(
           conn.oneFirst(
             sql`insert into table_of_contents_items(project_id, title, is_folder, parent_stable_id, stable_id) values (${projectId}, 'folderC', true, ${"foobar"}, ${id()}) returning stable_id`
           )
@@ -572,7 +572,7 @@ describe("Data validation", () => {
             )}) values (${projectId}, 'item1', true, ${id()}, true) returning id`
           );
           expect(folderId).toBeTruthy();
-          expect(
+          await expect(
             conn.oneFirst(
               sql`insert into table_of_contents_items(project_id, title, is_folder, stable_id, ${sql.identifier(
                 [folderProp]
@@ -613,7 +613,7 @@ describe("Data validation", () => {
           expect(tocId).toBeTruthy();
           await conn.any(sql`ROLLBACK to before_thing`);
         }
-        expect(
+        await expect(
           conn.oneFirst(
             sql`insert into table_of_contents_items(project_id, title, is_folder, stable_id, data_layer_id) values (${projectId}, 'item1', true, ${id()}, ${layerId}) returning id`
           )
@@ -638,12 +638,12 @@ describe("Data validation", () => {
         const publishedFolderAId = await conn.oneFirst(
           sql`select id from table_of_contents_items where stable_id=${stableId} and is_draft=false`
         );
-        expect(
+        await expect(
           conn.oneFirst(
             sql`update table_of_contents_items set show_radio_children = true where id = ${folderA} returning id`
           )
         ).resolves.toBeTruthy();
-        expect(
+        await expect(
           conn.any(
             sql`update table_of_contents_items set show_radio_children = true where id = ${publishedFolderAId}`
           )
@@ -946,13 +946,13 @@ describe("Access control", () => {
         const folderA = await conn.oneFirst(
           sql`insert into table_of_contents_items(project_id, title, is_folder, stable_id) values (${projectId}, 'folderA', true, ${stableId}) returning id`
         );
-        expect(
+        await expect(
           conn.oneFirst(
             sql`update table_of_contents_items set show_radio_children = true where id = ${folderA} returning id`
           )
         ).resolves.toBeTruthy();
         await createSession(conn, userA, true, false, projectId);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`update table_of_contents_items set show_radio_children = true where id = ${folderA} returning id`
           )
@@ -1042,13 +1042,13 @@ describe("Access control", () => {
         const publishedFolderAId = await conn.oneFirst(
           sql`select id from table_of_contents_items where stable_id=${stableId} and is_draft=false`
         );
-        expect(
+        await expect(
           conn.oneFirst(
             sql`select id from table_of_contents_items where id = ${folderA}`
           )
         ).resolves.toBe(folderA);
         await createSession(conn, userA, true, false, projectId);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`select id from table_of_contents_items where id = ${folderA}`
           )
@@ -1073,20 +1073,20 @@ describe("Access control", () => {
         const publishedFolderAId = await conn.oneFirst(
           sql`select id from table_of_contents_items where stable_id=${stableId} and is_draft=false`
         );
-        expect(
+        await expect(
           conn.oneFirst(
             sql`select id from table_of_contents_items where id = ${folderA}`
           )
         ).resolves.toBe(folderA);
         await createSession(conn, userA, true, false, projectId);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`select id from table_of_contents_items where id = ${publishedFolderAId}`
           )
         ).resolves.toBe(publishedFolderAId);
         await clearSession(conn);
         await createSession(conn);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`select id from table_of_contents_items where id = ${publishedFolderAId}`
           )

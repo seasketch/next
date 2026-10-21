@@ -62,7 +62,7 @@ describe("Forms", () => {
           const sketchClassId = await conn.oneFirst(
             sql`insert into sketch_classes (mapbox_gl_style, name, project_id) values ('[]'::jsonb, 'Sketch Class A', ${projectId}) returning id`
           );
-          expect(
+          await expect(
             conn.oneFirst(
               sql`insert into forms (sketch_class_id) values (${sketchClassId}) returning id`
             )
@@ -98,7 +98,7 @@ describe("Forms", () => {
             sql`insert into sketch_classes (mapbox_gl_style, name, project_id) values ('[]'::jsonb, 'Sketch Class A', ${projectId}) returning id`
           );
           await createSession(conn, userIds[0], true, false, projectId);
-          expect(
+          await expect(
             conn.one(
               sql`select * from initialize_blank_sketch_class_form(${sketchClassId})`
             )
@@ -125,7 +125,7 @@ describe("Forms", () => {
             sql`select * from initialize_blank_sketch_class_form(${sketchClassId})`
           );
           expect(form2.id).not.toBe(form.id);
-          expect(
+          await expect(
             conn.one(
               sql`select * from initialize_blank_sketch_class_form(${sketchClassId})`
             )
@@ -147,7 +147,7 @@ describe("Forms", () => {
             sql`select * from initialize_blank_sketch_class_form(${sketchClassId})`
           );
           await createSession(conn, userIds[0], true, false, projectId);
-          expect(
+          await expect(
             conn.oneFirst(
               sql`delete from forms where id = ${form.id} returning id`
             )
@@ -271,7 +271,7 @@ describe("Forms", () => {
           );
           expect(template.is_template).toBe(true);
           await createSession(conn, adminId, true, false, projectId);
-          expect(
+          await expect(
             conn.one(
               sql`select * from create_form_template_from_sketch_class(${sketchClassId}, 'Template B', 'SKETCHES')`
             )
@@ -397,7 +397,7 @@ describe("Form Fields", () => {
           // @ts-ignore
           expect(field.body.content[0].content[0].text).toBe("field a");
           await createSession(conn, userIds[0], true, false, projectId);
-          expect(
+          await expect(
             conn.one(
               sql`insert into form_elements (form_id, body, export_id, type_id) values (${form.id}, 'field b', 'field_b', 'ShortText') returning *`
             )
@@ -446,14 +446,14 @@ describe("Form Fields", () => {
             ).length
           ).toBe(0);
           await createSession(conn, userIds[0], true, false, projectId);
-          expect(
+          await expect(
             conn.one(
               sql`update form_elements set body = ${createBody(
                 "Field B"
               )} where id = ${fieldB.id} returning *`
             )
           ).rejects.toThrow();
-          expect(
+          await expect(
             conn.one(
               sql`delete from form_elements where id = ${fieldB.id} returning *`
             )
@@ -519,7 +519,7 @@ describe("Form Fields", () => {
         const form = await conn.one(
           sql`select * from initialize_blank_sketch_class_form(${sketchClassId})`
         );
-        expect(
+        await expect(
           conn.one(
             sql`insert into form_elements (body, type_id) values (${createBody(
               "field a"
@@ -686,7 +686,7 @@ describe("Form Fields", () => {
             }, ${createBody("field b")}, 'field_b', 'ShortText') returning *`
           );
           await createSession(conn, userIds[0], true, false, projectId);
-          expect(
+          await expect(
             conn.manyFirst(
               sql`select id from set_form_element_order(${sql.array(
                 [fieldB.id, fieldA.id],
@@ -722,7 +722,7 @@ test("check form_element_type.allowed_layouts", async () => {
         sql`insert into form_elements (form_id, type_id, body, layout) values (${formId}, 'ShortText', '{}'::jsonb, 'LEFT') returning id`
       );
       expect(elementId).toBeTruthy();
-      expect(
+      await expect(
         conn.oneFirst<number>(
           sql`insert into form_elements (form_id, type_id, body, layout) values (${formId}, 'SingleSpatialInput', '{}'::jsonb, 'LEFT') returning id`
         )

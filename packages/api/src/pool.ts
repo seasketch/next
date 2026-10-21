@@ -82,7 +82,7 @@ function createPool(options?: any, user?: string) {
     pool.connect((err, client) => {
       if (err) {
         throw err;
-      } else {
+      } else if (client) {
         client.query("SET statement_timeout TO 3000");
       }
     });

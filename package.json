@@ -74,9 +74,6 @@
     "@types/mapbox-gl": "3.1.0",
     "browserslist": "4.24.4",
     "caniuse-lite": "1.0.30001695",
-    "mapbox-gl": "3.4.0",
-    "slonik": {
-      "pg": "8.5.1"
-    }
+    "mapbox-gl": "3.4.0"
   }
 }
