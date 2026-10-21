@@ -1,6 +1,22 @@
 // For a detailed explanation regarding each configuration property, visit:
 // https://jestjs.io/docs/en/configuration.html
 
+const fs = require("fs");
+const path = require("path");
+
+// npm workspaces hoist these. A nested copy remains only if a package's
+// node_modules still has one.
+function cjsBuild(pkg) {
+  const nested = path.resolve(
+    __dirname,
+    `../overlay-engine/node_modules/${pkg}/dist/cjs/index.cjs`
+  );
+  if (fs.existsSync(nested)) {
+    return nested;
+  }
+  return path.resolve(__dirname, `../../node_modules/${pkg}/dist/cjs/index.cjs`);
+}
+
 module.exports = {
   // All imported modules in your tests should be mocked automatically
   // automock: false,
@@ -149,6 +165,8 @@ module.exports = {
 
   // The test environment that will be used for testing
   testEnvironment: "node",
+  // Jest 26 reads `node:` built-ins as file paths. AWS SDK v3 imports them.
+  resolver: "<rootDir>/tests/jestNodeResolver.js",
 
   // Options that will be passed to the testEnvironment
   // testEnvironmentOptions: {},
@@ -167,10 +185,8 @@ module.exports = {
   testPathIgnorePatterns: ["/node_modules/", "/dist/"],
   modulePathIgnorePatterns: ["dist"],
   moduleNameMapper: {
-    "^polyclip-ts$":
-      "<rootDir>/../overlay-engine/node_modules/polyclip-ts/dist/cjs/index.cjs",
-    "^splaytree-ts$":
-      "<rootDir>/../overlay-engine/node_modules/splaytree-ts/dist/cjs/index.cjs",
+    "^polyclip-ts$": cjsBuild("polyclip-ts"),
+    "^splaytree-ts$": cjsBuild("splaytree-ts"),
     // Jest 26 ignores package exports.
     "^@seasketch/h3-land/client$": "<rootDir>/../h3-land/dist/client.js",
   },

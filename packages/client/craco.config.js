@@ -1,7 +1,22 @@
 const WorkboxWebpackPlugin = require("workbox-webpack-plugin");
+const webpack = require("webpack");
 
 // craco.config.js
+const fs = require("fs");
 const path = require("path");
+
+// npm workspaces hoist these. A nested copy remains only if a package's
+// node_modules still has one.
+function cjsBuild(pkg) {
+  const nested = path.resolve(
+    __dirname,
+    `../overlay-engine/node_modules/${pkg}/dist/cjs/index.cjs`
+  );
+  if (fs.existsSync(nested)) {
+    return nested;
+  }
+  return path.resolve(__dirname, `../../node_modules/${pkg}/dist/cjs/index.cjs`);
+}
 module.exports = {
   webpack: {
     plugins: {
@@ -39,10 +54,7 @@ module.exports = {
       config.resolve = config.resolve || {};
       config.resolve.alias = {
         ...(config.resolve.alias || {}),
-        "polyclip-ts": path.resolve(
-          __dirname,
-          "../overlay-engine/node_modules/polyclip-ts/dist/cjs/index.cjs"
-        ),
+        "polyclip-ts": cjsBuild("polyclip-ts"),
         // Shim for esm-env to work with Webpack 4 (no package exports conditions)
         "esm-env": path.resolve(__dirname, "src/shims/esm-env.ts"),
         // The ocean-bitmap search runs in the overlay worker. The browser
@@ -65,6 +77,14 @@ module.exports = {
       if (!config.resolve.extensions.includes(".mjs")) {
         config.resolve.extensions.push(".mjs");
       }
+
+      // Webpack 4 does not understand the node: scheme. Current dependencies
+      // import built-ins that way; strip the prefix and use CRA's polyfills.
+      config.plugins.push(
+        new webpack.NormalModuleReplacementPlugin(/^node:/, (resource) => {
+          resource.request = resource.request.replace(/^node:/, "");
+        })
+      );
 
       // Extra rules
       config.module = config.module || { rules: [] };
@@ -204,11 +224,9 @@ module.exports = {
         "^@seasketch/h3-land/client$":
           "<rootDir>/../h3-land/dist/client.js",
         // Ensure Jest uses CJS build of polyclip-ts (align with Webpack alias)
-        "^polyclip-ts$":
-          "<rootDir>/../overlay-engine/node_modules/polyclip-ts/dist/cjs/index.cjs",
+        "^polyclip-ts$": cjsBuild("polyclip-ts"),
         // Ensure Jest uses CJS build of splaytree-ts
-        "^splaytree-ts$":
-          "<rootDir>/../overlay-engine/node_modules/splaytree-ts/dist/cjs/index.cjs",
+        "^splaytree-ts$": cjsBuild("splaytree-ts"),
         // Shim esm-env for Jest as well
         "^esm-env$": "<rootDir>/src/shims/esm-env.ts",
       },

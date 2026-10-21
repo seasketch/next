@@ -3693,6 +3693,9 @@ function consolidateNode(node: GroupByFilterNode) {
       });
       if (getProps.size === 1) {
         const propName = getProps.values().next().value;
+        if (propName === undefined) {
+          continue;
+        }
         const panel = subNode.children[0] as GLLegendSimpleSymbolPanel;
         const key = `${propName}%%${panel.items[0].symbol.type}`;
         if (!listPanels[key]) {

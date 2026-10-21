@@ -249,7 +249,9 @@ export class TabContainerView implements NodeView {
     return true;
   }
 
-  ignoreMutation(mutation: MutationRecord) {
+  ignoreMutation(
+    mutation: MutationRecord | { type: "selection"; target: Node }
+  ) {
     if (this.control.contains(mutation.target)) {
       return true;
     }

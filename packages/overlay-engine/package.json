@@ -74,6 +74,7 @@
     "geojson": "^0.5.0",
     "geojson-antimeridian-cut": "^0.1.0",
     "h3-js": "^4.3.0",
+    "lru-cache": "^11.2.2",
     "p-queue": "^9.0.0",
     "point-in-polygon-hao": "^1.2.4",
     "polyclip-ts": "^0.16.8",
