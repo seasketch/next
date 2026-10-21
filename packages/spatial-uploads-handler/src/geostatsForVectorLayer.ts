@@ -12,6 +12,7 @@ import {
   quantileBuckets,
   stdDevBuckets,
 } from "./stats";
+import { parseGeomType } from "./vectorGeometryType";
 
 const ATTRIBUTE_VALUES_LIMIT = 500;
 
@@ -297,53 +298,6 @@ export async function geostatsForVectorLayers(
     layers.push(layer);
   });
   return layers;
-}
-
-/**
- * Convert a GDAL geometry type to a GeoJSON geometry type
- * @param geomType
- * @returns
- */
-function parseGeomType(geomType: number): {
-  geometryType: GeostatsLayer["geometry"];
-  hasZ: boolean;
-} {
-  switch (geomType) {
-    case gdal.wkbPoint:
-    case gdal.wkbPoint25D:
-      return { geometryType: "Point", hasZ: geomType === gdal.wkbPoint25D };
-    case gdal.wkbMultiPoint:
-    case gdal.wkbMultiPoint25D:
-      return {
-        geometryType: "MultiPoint",
-        hasZ: geomType === gdal.wkbMultiPoint25D,
-      };
-    case gdal.wkbLineString:
-    case gdal.wkbLineString25D:
-      return {
-        geometryType: "LineString",
-        hasZ: geomType === gdal.wkbLineString25D,
-      };
-    case gdal.wkbMultiLineString:
-    case gdal.wkbMultiLineString25D:
-      return {
-        geometryType: "MultiLineString",
-        hasZ: geomType === gdal.wkbMultiLineString25D,
-      };
-    case gdal.wkbPolygon:
-    case gdal.wkbPolygon25D:
-      return { geometryType: "Polygon", hasZ: geomType === gdal.wkbPolygon25D };
-    case gdal.wkbMultiPolygon:
-    case gdal.wkbMultiPolygon25D:
-      return {
-        geometryType: "MultiPolygon",
-        hasZ: geomType === gdal.wkbMultiPolygon25D,
-      };
-    case gdal.wkbGeometryCollection:
-      return { geometryType: "GeometryCollection", hasZ: false };
-    default:
-      return { geometryType: "Unknown", hasZ: false };
-  }
 }
 
 function floatOrInteger(type: string) {
