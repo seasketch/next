@@ -36,6 +36,7 @@ import MapboxDraw from "@mapbox/mapbox-gl-draw";
 import DrawRectangle from "mapbox-gl-draw-rectangle-mode";
 import StaticMode from "@mapbox/mapbox-gl-draw-static-mode";
 import bbox from "@turf/bbox";
+import { Feature } from "geojson";
 import { useAuth0 } from "@auth0/auth0-react";
 import Button from "../components/Button";
 import { useTranslation, Trans } from "react-i18next";
@@ -920,7 +921,7 @@ function MapExtentSettings() {
 
   useEffect(() => {
     if (data && map && draw && draw.getAll().features.length === 0) {
-      const feature = {
+      const feature: Feature = {
         type: "Feature",
         id: 1,
         properties: {},

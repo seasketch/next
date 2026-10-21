@@ -26,6 +26,7 @@ import Switch from "../components/Switch";
 import Warning from "../components/Warning";
 import { GeoJSONSource } from "mapbox-gl";
 import bbox from "@turf/bbox";
+import { FeatureCollection } from "geojson";
 import { MapManagerContext } from "../dataLayers/MapContextManager";
 import { GeostatsLayer } from "@seasketch/geostats-types";
 
@@ -865,9 +866,9 @@ export async function evaluateMVTUrlTemplate(
   if (firstTile.join(",") !== "0,0,0") {
     // calculate rough feature bounds from bbox of all features in first tile
     const tile = new VectorTile(new Protobuf(firstTileResponseData));
-    const featureCollection = {
+    const featureCollection: FeatureCollection = {
       type: "FeatureCollection",
-      features: [] as any[],
+      features: [],
     };
     for (const layerId of Object.keys(tile.layers)) {
       for (let i = 0; i < tile.layers[layerId].length; i++) {
