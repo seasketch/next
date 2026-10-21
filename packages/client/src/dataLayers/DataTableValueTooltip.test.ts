@@ -90,6 +90,26 @@ describe("dataTableSparklineLayout", () => {
     expect(layout.yTicks.length).toBeGreaterThanOrEqual(3);
   });
 
+  it("does not collapse small nonzero y-ticks to 0", () => {
+    const layout = dataTableSparklineLayout(
+      [
+        { step: "2011", value: 0.00001 },
+        { step: "2015", value: 0.00001 },
+        { step: "2019", value: 0.00009 },
+        { step: "2020", value: 0.00019 },
+      ],
+      ["2020"]
+    );
+    const labels = layout.yTicks.map((tick) => tick.label);
+    expect(labels).toContain("0");
+    const nonzero = labels.filter((label) => label !== "0");
+    expect(nonzero.length).toBeGreaterThan(0);
+    for (const label of nonzero) {
+      expect(Number(label)).toBeGreaterThan(0);
+      expect(Number(label)).toBeLessThan(0.01);
+    }
+  });
+
   it("keeps the table timescale when a site is only observed in the middle", () => {
     const points = Array.from({ length: 26 }, (_, index) => {
       const year = 1999 + index;
