@@ -24,8 +24,8 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "build": "tsc",
-    "watch": "tsc -w"
+    "build": "tsc -b",
+    "watch": "tsc -b --watch"
   },
   "bugs": {
     "url": "https://github.com/seasketch/next/issues"

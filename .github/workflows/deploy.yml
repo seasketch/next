@@ -266,8 +266,8 @@ jobs:
           cache-dependency-path: package-lock.json
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
-      - name: Build workspace libraries
-        run: npm run build:libs
+      - name: Build the client's workspace libraries
+        run: npm run build:client-libs
       - name: Build client
         working-directory: ./packages/client
         env:

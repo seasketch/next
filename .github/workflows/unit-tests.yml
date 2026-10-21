@@ -31,7 +31,7 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
       - name: Build API
-        run: npm run build
+        run: npm run build:api
       - name: Init docker db
         working-directory: ./packages/api
         env:
@@ -76,7 +76,7 @@ jobs:
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
       - name: Build API
-        run: npm run build
+        run: npm run build:api
       - name: Initialize database
         working-directory: ./packages/api
         env:
@@ -128,8 +128,8 @@ jobs:
           cache-dependency-path: package-lock.json
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
-      - name: Build workspace libraries
-        run: npm run build:libs
+      - name: Build the client's workspace libraries
+        run: npm run build:client-libs
       - name: Test client
         working-directory: ./packages/client
         env:
@@ -158,8 +158,8 @@ jobs:
           cache-dependency-path: package-lock.json
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
-      - name: Build workspace libraries
-        run: npm run build:libs
+      - name: Build overlay-engine and its workspace dependencies
+        run: npm run build --workspace=fgb-source --silent && npm run build --workspace=overlay-engine --silent
       - name: Run tests
         working-directory: ./packages/overlay-engine
         run: npx vitest run --reporter=default --reporter=junit --outputFile=junit.xml
@@ -186,8 +186,8 @@ jobs:
         run: echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
       - name: Install dependencies
         run: npm ci --no-audit --no-fund
-      - name: Build workspace libraries
-        run: npm run build:libs
+      - name: Build the client's workspace libraries
+        run: npm run build:client-libs
       - name: Build client
         working-directory: ./packages/client
         env:

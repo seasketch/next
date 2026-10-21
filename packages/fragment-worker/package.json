@@ -15,8 +15,8 @@
     "url": "git+https://github.com/seasketch/next.git"
   },
   "scripts": {
-    "build": "tsc",
-    "watch": "tsc --watch",
+    "build": "tsc -b",
+    "watch": "tsc -b --watch",
     "test": "cd ../.. && npx vitest run packages/fragment-worker/__tests__"
   },
   "dependencies": {

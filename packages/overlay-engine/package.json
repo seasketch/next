@@ -22,9 +22,9 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest watch",
-    "build": "tsc && npm run build:worker",
+    "build": "tsc -b && npm run build:worker",
     "build:worker": "node -e \"require('esbuild').buildSync({ entryPoints: ['src/workers/clipBatch.ts'], bundle: true, platform: 'node', format: 'cjs', target: 'node24', outfile: 'dist/workers/clipBatch.standalone.js' })\"",
-    "watch": "tsc --watch",
+    "watch": "tsc -b --watch",
     "water-path-viewer": "node -e \"require('esbuild').buildSync({entryPoints:['viewer/serve.ts'],bundle:true,platform:'node',format:'cjs',packages:'external',outfile:'viewer/serve.js',sourcemap:true})\" && node viewer/serve.js"
   },
   "bugs": {

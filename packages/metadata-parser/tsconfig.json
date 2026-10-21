@@ -17,5 +17,6 @@
     "moduleResolution": "node"
   },
   "include": ["./src/**/*.ts"],
-  "exclude": ["node_modules", "**/*.test.ts", "**/*.spec.ts", "dist"]
+  "exclude": ["node_modules", "**/*.test.ts", "**/*.spec.ts", "dist"],
+  "references": [{ "path": "../geostats-types" }]
 }

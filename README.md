@@ -34,7 +34,7 @@ npm run setup
 npm run dev
 ```
 
-`npm run bootstrap` is `npm install` at the repo root. One lockfile covers the workspace. `npm run build:libs` compiles the shared packages whose entry points are build output. `npm run build` does that and then builds the API.
+`npm run bootstrap` is `npm install` at the repo root. One lockfile covers the workspace. `npm run build` is `tsc -b` over every workspace package plus the two bundling steps `tsc` cannot run (the `fgb-source` tsup bundle and the overlay-engine worker). `npm run build:api` builds the API and only the packages its tsconfig references; `npm run build:client-libs` builds the packages the client imports.
 
 `npm run dev` starts Postgres and Redis, then the API, the client, the watchers, and the data-tables, spatial-uploads, and subdivision workers, in the foreground. Those workers recompile and restart when their code changes. Ctrl-C stops the host processes. It does not enable `E2E_TEST_MODE`; a normal development API uses Auth0 login. The smoke suite turns test mode on itself, and it starts the same three workers. The tests do not call them yet. If one of them fails to listen, the job fails.
 

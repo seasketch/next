@@ -7,6 +7,7 @@
   "license": "BSD-3-Clause",
   "main": "dist/map-tile-cache-calculator.js",
   "module": "dist/map-tile-cache-calculator.js",
+  "types": "dist/map-tile-cache-calculator.d.ts",
   "directories": {
     "lib": "lib",
     "test": "__tests__"
@@ -23,7 +24,7 @@
   },
   "scripts": {
     "test": "node -e \"console.log('no unit tests in this package')\"",
-    "build": "tsc && esbuild --bundle --platform=node --format=cjs src/map-tile-cache-calculator.ts > dist/bundled.js && cp ./dist/map-tile-cache-calculator.d.ts ./dist/bundled.d.ts"
+    "build": "tsc -b"
   },
   "bugs": {
     "url": "https://github.com/seasketch/next/issues"
@@ -36,7 +37,6 @@
     "@types/mapbox__tilebelt": "^1.0.0"
   },
   "devDependencies": {
-    "esbuild": "^0.28.2",
     "typescript": "5.8.3"
   }
 }

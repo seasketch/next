@@ -22,7 +22,7 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest watch",
-    "build": "tsup",
+    "build": "tsc -b && tsup",
     "watch": "tsup --watch"
   },
   "bugs": {

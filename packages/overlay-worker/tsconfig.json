@@ -21,5 +21,5 @@
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts", "**/*.spec.ts", "lib"],
-  "references": [{ "path": "../overlay-engine" }]
+  "references": [{ "path": "../fgb-source" }, { "path": "../overlay-engine" }]
 }

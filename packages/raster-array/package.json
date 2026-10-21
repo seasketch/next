@@ -18,8 +18,8 @@
     "url": "git+https://github.com/seasketch/next.git"
   },
   "scripts": {
-    "build": "tsc",
-    "watch": "tsc --watch",
+    "build": "tsc -b",
+    "watch": "tsc -b --watch",
     "test": "vitest run",
     "test:watch": "vitest watch",
     "encode": "tsx src/cli.ts encode",

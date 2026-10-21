@@ -43,8 +43,7 @@ const databaseEnv = {
 };
 
 try {
-  await run("npm", ["run", "build:libs", "--silent"]);
-  await run("npm", ["run", "build", "--silent"], {}, path.join(root, "packages/api"));
+  await run("npm", ["run", "build", "--silent"]);
   await run("npm", ["run", "setup", "--", "--reset"], databaseEnv);
   const playwrightArgs = process.argv.slice(2);
   const npmArgs = ["test", "--workspace", "@seasketch/e2e"];

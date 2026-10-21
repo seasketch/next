@@ -20,8 +20,8 @@
   },
   "scripts": {
     "dev": "npx tsx watch server.ts",
-    "build": "tsc",
-    "watch": "tsc --watch",
+    "build": "tsc -b",
+    "watch": "tsc -b --watch",
     "test": "node ./__tests__/overlay-worker.test.js"
   },
   "bugs": {
