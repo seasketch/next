@@ -49,7 +49,7 @@ import bbox from "@turf/bbox";
 import ServiceWorkerWindow from "../offline/ServiceWorkerWindow";
 import { OfflineTileSettings } from "../offline/OfflineTileSettings";
 import md5 from "md5";
-import LRU from "lru-cache";
+import LRUCache from "mnemonist/lru-cache";
 import debounce from "lodash.debounce";
 import { currentSidebarState } from "../projects/ProjectAppSidebar";
 import { ApolloClient, NormalizedCacheObject } from "@apollo/client";
@@ -182,12 +182,10 @@ const STALE_CUSTOM_SOURCE_SIZE = 3;
 
 export const BASE_SERVER_ENDPOINT = `${graphqlURL.protocol}//${graphqlURL.host}`;
 
-const LocalSketchGeometryCache = new LRU<
+const LocalSketchGeometryCache = new LRUCache<
   number,
   { timestamp: string; feature: Feature<any> }
->({
-  max: 10,
-});
+>(10);
 
 /**
  * Multiple "digitizing" tools active at once would compete for the same cursor

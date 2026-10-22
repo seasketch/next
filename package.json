@@ -28,6 +28,8 @@
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20250607.0",
+    "@radix-ui/react-use-controllable-state": "1.2.2",
+    "@types/express": "4.17.25",
     "@types/jest": "^29.5.14",
     "@types/node": "^24.19.2",
     "@typescript-eslint/eslint-plugin": "^4.17.0",
@@ -40,9 +42,8 @@
     "eslint-plugin-jsx-a11y": "^6.4.1",
     "eslint-plugin-react": "^7.22.0",
     "eslint-plugin-react-hooks": "^4.2.0",
+    "lru-cache": "^11.2.4",
     "rotating-file-stream": "3.2.10",
-    "@radix-ui/react-use-controllable-state": "1.2.2",
-    "@types/express": "4.17.25",
     "tsx": "^4.19.3",
     "typescript": "5.8.3",
     "wait-on": "9.5.1"
