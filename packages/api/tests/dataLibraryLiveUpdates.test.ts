@@ -4,7 +4,6 @@ import {
   DatabaseTransactionConnectionType,
   SqlSqlTokenType,
 } from "slonik";
-import { SqlToken } from "slonik/dist/tokens";
 import { createPool } from "./pool";
 import { reportingLayersSql } from "../src/plugins/reportingLayersQuery";
 import {
@@ -581,8 +580,10 @@ describe("Live data library updates", () => {
       );
       await publish(conn, projectId, adminId);
 
+      // slonik's token constant lives under dist/, whose layout moved
+      // between 23.0 and 23.9; the public type is the string literal.
       const query: SqlSqlTokenType<any> = {
-        type: SqlToken,
+        type: "SLONIK_TOKEN_SQL",
         sql: reportingLayersSql(false),
         values: [projectId],
       };
