@@ -16,15 +16,15 @@ RUN tar -zxvf ./pmtiles.tar.gz
 # Only these workspaces are copied. npm ci refuses a lockfile whose other
 # workspaces are absent, and npm ci --workspace still installs every
 # workspace. npm install keeps the locked versions for the packages present.
-# typescript is a dependency of this package; --omit=dev skips gdal-async
-# and sharp, which the image does not run.
+# devDependencies stay: gdal-async and aws-sdk are imported by the handler
+# at runtime and their types are needed to compile.
 WORKDIR /usr/app
-COPY package.json package-lock.json .npmrc ./
+COPY package.json package-lock.json ./
 COPY packages/spatial-uploads-handler ./packages/spatial-uploads-handler
 COPY packages/geostats-types ./packages/geostats-types
 COPY packages/metadata-parser ./packages/metadata-parser
 COPY packages/ai-data-analyst ./packages/ai-data-analyst
-RUN npm install --no-audit --no-fund --omit=dev \
+RUN npm install --no-audit --no-fund \
  && npm run build --workspace=spatial-uploads-handler
 
 
@@ -253,17 +253,19 @@ ENV \
   PATH=/usr/bin:$PATH
 
 COPY --from=builder /usr/local/bin/tippecanoe /usr/local/bin/tippecanoe
-COPY --from=builder /usr/app/packages/spatial-uploads-handler/dist/* ./
-COPY --from=builder /usr/app/packages/spatial-uploads-handler/dist/src ./src
+# Keep the workspace layout: node_modules/@seasketch/* and ai-data-analyst
+# are symlinks into packages/, and any package-local node_modules must stay
+# next to the code that resolves them.
 COPY --from=builder /usr/app/node_modules ./node_modules
+COPY --from=builder /usr/app/packages ./packages
 COPY --from=builder /usr/bin/rclone /bin/rclone
 COPY --from=builder /usr/bin/unzip /bin/unzip
 COPY --from=builder /usr/app/pmtiles /bin/pmtiles
-COPY spatial-uploads-handler/.rclone.conf /var/task/rclone.conf
+COPY packages/spatial-uploads-handler/.rclone.conf /var/task/rclone.conf
 COPY --from=gdal /usr/local/bin/unrar /usr/bin/unrar
 # RUN dnf install -y openssl python-pip python3
 # LD_LIBRARY_PATH flag is necessary to avoid ssl errors
 RUN dnf install -y openssl python-pip python3 swig python-devel
 RUN LD_LIBRARY_PATH="" pip install cython numpy==1.25
 RUN LD_LIBRARY_PATH="" pip3 install --no-cache-dir --upgrade rasterio fiona
-CMD ["handler.processUpload"]
+CMD ["packages/spatial-uploads-handler/dist/handler.processUpload"]

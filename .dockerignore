@@ -1,10 +1,20 @@
+# Context root for SpatialUploadsHandler and DataTablesHandler
+# (packages/infra/lib/*LambdaStack.ts passes the repo root to fromImageAsset).
+# Those Dockerfiles COPY only the workspaces they build, so this list keeps
+# the staged context small and keeps local-only files out of the images.
 .git
 **/node_modules
 **/.logs
 **/.tsbuildinfo
 **/dist
+**/coverage
+**/__tests__
+**/*.test.ts
+**/.env
+**/.env.*
+**/.wrangler
 packages/client/build
+packages/data-tables-handler/tmp
 packages/e2e/test-results
 packages/e2e/playwright-report
 packages/api/snapshots
-packages/api/coverage
