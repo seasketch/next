@@ -1,7 +1,7 @@
 import { Signer } from "aws-sdk/clients/rds";
 import { Pool } from "pg";
 
-require("dotenv").config();
+require("dotenv").config({ quiet: true });
 
 const signer = new Signer();
 

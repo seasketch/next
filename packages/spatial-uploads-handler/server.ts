@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 import { createServer } from "http";
 import * as dotenv from "dotenv";
-dotenv.config();
+dotenv.config({ quiet: true });
 
 const PORT = process.env.PORT || 3005;
 

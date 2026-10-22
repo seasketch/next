@@ -5,7 +5,7 @@ import handler, {
   validatePayload,
   OverlayWorkerResponse,
 } from "./src/overlay-worker";
-dotenv.config();
+dotenv.config({ quiet: true });
 
 const PORT = process.env.PORT || 3006;
 
