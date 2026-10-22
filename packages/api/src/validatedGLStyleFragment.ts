@@ -18,7 +18,11 @@ export function validateGLStyleFragment(
         "source-layer": "mock",
         id: index.toString(),
       })),
-      sources: { 1: { type: "vector" }, 2: { type: "raster" } },
+      // style-spec 14 requires url or tiles on every source.
+      sources: {
+        1: { type: "vector", tiles: [""] },
+        2: { type: "raster", tiles: [""] },
+      },
     });
     if (errors.length) {
       return errors;
