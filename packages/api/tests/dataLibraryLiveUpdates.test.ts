@@ -1,6 +1,12 @@
 /// <reference types="jest" />
-import { sql, DatabaseTransactionConnectionType } from "slonik";
+import {
+  sql,
+  DatabaseTransactionConnectionType,
+  SqlSqlTokenType,
+} from "slonik";
+import { SqlToken } from "slonik/dist/tokens";
 import { createPool } from "./pool";
+import { reportingLayersSql } from "../src/plugins/reportingLayersQuery";
 import {
   clearSession,
   createProject,
@@ -561,6 +567,29 @@ describe("Live data library updates", () => {
         ).rejects.toThrow(/Cannot alter table of contents items/);
         await conn.any(sql`rollback to before_immutable_check`);
       });
+    });
+  });
+
+  test("reportingLayers lists a published library copy once, as its draft item", async () => {
+    await projectTransaction(pool, "public", async (conn, projectId, adminId) => {
+      const template = await createTemplate(conn, adminId);
+      const copy = await createLibraryCopy(conn, projectId, template);
+      await asPostgres(conn, () =>
+        conn.any(
+          sql`insert into source_processing_jobs (data_source_id, project_id, state) values (${template.sourceId}, ${template.templateProjectId}, 'complete')`
+        )
+      );
+      await publish(conn, projectId, adminId);
+
+      const query: SqlSqlTokenType<any> = {
+        type: SqlToken,
+        sql: reportingLayersSql(false),
+        values: [projectId],
+      };
+      const rows = await asPostgres(conn, () => conn.any(query));
+      expect(
+        rows.map((r) => [r.table_of_contents_item_id, r.stable_id])
+      ).toEqual([[copy.itemId, copy.stableId]]);
     });
   });
 

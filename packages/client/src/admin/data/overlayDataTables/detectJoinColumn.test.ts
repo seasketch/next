@@ -2,7 +2,9 @@ import { describe, expect, it } from "@jest/globals";
 import {
   detectJoinColumnCandidates,
   isOverlayIdAttribute,
+  MAX_LISTED_UNMATCHED_JOIN_VALUES,
   pickJoinColumn,
+  unmatchedJoinFractionBlocksUpload,
 } from "./detectJoinColumn";
 import { GeostatsLayer } from "@seasketch/geostats-types";
 
@@ -79,11 +81,13 @@ describe("detectJoinColumn", () => {
       numericIdLayer,
       "id",
     );
-    expect(candidates).toEqual([
+    expect(candidates).toMatchObject([
       {
         csvColumn: "site_id",
         overlayAttribute: "id",
         score: 2,
+        unmatchedValues: [],
+        unmatchedRowCount: 0,
       },
     ]);
   });
@@ -145,16 +149,17 @@ describe("detectJoinColumn", () => {
       kelpSiteLayer,
       "site",
     );
-    expect(candidates).toEqual([
+    expect(candidates).toMatchObject([
       {
         csvColumn: "site",
         overlayAttribute: "site",
         score: 2,
+        unmatchedValues: [],
       },
     ]);
   });
 
-  it("rejects csv columns with values missing from the overlay id set", () => {
+  it("keeps a join column when some values are missing from the overlay", () => {
     const candidates = detectJoinColumnCandidates(
       ["site", "site_name_old"],
       [
@@ -165,7 +170,172 @@ describe("detectJoinColumn", () => {
       kelpSiteLayer,
       "site",
     );
-    expect(candidates).toEqual([]);
+    expect(candidates).toMatchObject([
+      {
+        csvColumn: "site",
+        overlayAttribute: "site",
+        score: 2,
+        unmatchedValues: ["MYSTERY_SITE"],
+        unmatchedRowCount: 1,
+        totalRowCount: 3,
+      },
+    ]);
+    expect(unmatchedJoinFractionBlocksUpload(candidates[0])).toBe(true);
+  });
+
+  it("allows unmatched join values under 10% of rows and blocks at 10%", () => {
+    const layer: GeostatsLayer = {
+      layer: "sites",
+      count: 1,
+      geometry: "Point",
+      hasZ: false,
+      attributeCount: 1,
+      attributes: [
+        {
+          attribute: "site",
+          type: "string",
+          count: 1,
+          countDistinct: 1,
+          values: { A: 1 },
+        },
+      ],
+    };
+    const under = detectJoinColumnCandidates(
+      ["site"],
+      [...Array.from({ length: 10 }, () => ["A"]), ["MISSING"]],
+      layer,
+      "site",
+    );
+    expect(under[0].unmatchedValues).toEqual(["MISSING"]);
+    expect(under[0].unmatchedRowCount).toBe(1);
+    expect(under[0].totalRowCount).toBe(11);
+    expect(unmatchedJoinFractionBlocksUpload(under[0])).toBe(false);
+
+    const atThreshold = detectJoinColumnCandidates(
+      ["site"],
+      [...Array.from({ length: 9 }, () => ["A"]), ["MISSING"]],
+      layer,
+      "site",
+    );
+    expect(atThreshold[0].unmatchedRowCount).toBe(1);
+    expect(atThreshold[0].totalRowCount).toBe(10);
+    expect(unmatchedJoinFractionBlocksUpload(atThreshold[0])).toBe(true);
+  });
+
+  it("counts blank join cells toward the unmatched row share", () => {
+    const layer: GeostatsLayer = {
+      layer: "sites",
+      count: 1,
+      geometry: "Point",
+      hasZ: false,
+      attributeCount: 1,
+      attributes: [
+        {
+          attribute: "site",
+          type: "string",
+          count: 1,
+          countDistinct: 1,
+          values: { A: 1 },
+        },
+      ],
+    };
+    const candidates = detectJoinColumnCandidates(
+      ["site"],
+      [["A"], ["A"], ["A"], ["A"], ["A"], ["A"], ["A"], ["A"], [""], ["MISSING"]],
+      layer,
+      "site",
+    );
+    expect(candidates[0].blankRowCount).toBe(1);
+    expect(candidates[0].unmatchedValues).toEqual(["MISSING"]);
+    expect(candidates[0].unmatchedRowCount).toBe(2);
+    expect(unmatchedJoinFractionBlocksUpload(candidates[0])).toBe(true);
+  });
+
+  it("does not treat values outside a truncated histogram as missing", () => {
+    const layer: GeostatsLayer = {
+      layer: "sites",
+      count: 800,
+      geometry: "Point",
+      hasZ: false,
+      attributeCount: 1,
+      attributes: [
+        {
+          attribute: "site",
+          type: "string",
+          count: 800,
+          countDistinct: 800,
+          values: { A: 1 },
+        },
+      ],
+    };
+    const candidates = detectJoinColumnCandidates(
+      ["site"],
+      [["A"], ["NOT_IN_HISTOGRAM"]],
+      layer,
+      "site",
+    );
+    expect(candidates[0].histogramComplete).toBe(false);
+    expect(candidates[0].unmatchedValues).toEqual([]);
+    expect(unmatchedJoinFractionBlocksUpload(candidates[0])).toBe(false);
+  });
+
+  it("does not treat repeated missing keys as a truncated list", () => {
+    const layer: GeostatsLayer = {
+      layer: "sites",
+      count: 1,
+      geometry: "Point",
+      hasZ: false,
+      attributeCount: 1,
+      attributes: [
+        {
+          attribute: "site",
+          type: "string",
+          count: 1,
+          countDistinct: 1,
+          values: { A: 1 },
+        },
+      ],
+    };
+    const candidates = detectJoinColumnCandidates(
+      ["site"],
+      [["A"], ["MISSING"], ["MISSING"]],
+      layer,
+      "site",
+    );
+    expect(candidates[0].unmatchedValues).toEqual(["MISSING"]);
+    expect(candidates[0].unmatchedValuesTruncated).toBe(false);
+    expect(candidates[0].unmatchedRowCount).toBe(2);
+  });
+
+  it("caps the listed missing keys", () => {
+    const layer: GeostatsLayer = {
+      layer: "sites",
+      count: 1,
+      geometry: "Point",
+      hasZ: false,
+      attributeCount: 1,
+      attributes: [
+        {
+          attribute: "site",
+          type: "string",
+          count: 1,
+          countDistinct: 1,
+          values: { A: 1 },
+        },
+      ],
+    };
+    const rows = [["A"]];
+    for (let i = 0; i < MAX_LISTED_UNMATCHED_JOIN_VALUES + 2; i++) {
+      rows.push([`MISSING_${i}`]);
+    }
+    const candidates = detectJoinColumnCandidates(["site"], rows, layer, "site");
+    expect(candidates[0].unmatchedValues).toHaveLength(
+      MAX_LISTED_UNMATCHED_JOIN_VALUES,
+    );
+    expect(candidates[0].unmatchedValuesTruncated).toBe(true);
+    expect(candidates[0].unmatchedRowCount).toBe(
+      MAX_LISTED_UNMATCHED_JOIN_VALUES + 2,
+    );
   });
 
   it("auto-picks when only one strong candidate", () => {

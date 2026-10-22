@@ -16,11 +16,15 @@ import Modal from "../../../components/Modal";
 import Spinner from "../../../components/Spinner";
 import Warning from "../../../components/Warning";
 import {
-  detectJoinColumnCandidates,
+  finishJoinColumnScan,
   JoinColumnCandidate,
+  JoinColumnScan,
+  MAX_UNMATCHED_JOIN_RECORD_FRACTION,
   pickJoinColumn,
+  pushJoinColumnScanRow,
+  startJoinColumnScan,
+  unmatchedJoinFractionBlocksUpload,
 } from "./detectJoinColumn";
-import { DELIMITED_SAMPLE_BYTES } from "../../uploads/delimitedSpatial/detectDelimitedGeometry";
 import { DataTableUploadProcessingOptions } from "./types";
 import ProjectBackgroundJobManager from "../../uploads/ProjectBackgroundJobManager";
 import { useRegisterDropTarget } from "../../uploads/DataAdminDropTargetContext";
@@ -101,6 +105,69 @@ function DataTableCsvJoinColumnPicker({
         </DropdownMenu.Content>
       </DropdownMenu.Portal>
     </DropdownMenu.Root>
+  );
+}
+
+function JoinMismatchNotice({
+  candidate,
+}: {
+  candidate: JoinColumnCandidate;
+}) {
+  const { t } = useTranslation("admin:data");
+  const blocks = unmatchedJoinFractionBlocksUpload(candidate);
+  const percent = (
+    (candidate.unmatchedRowCount / candidate.totalRowCount) *
+    100
+  ).toFixed(1);
+  const threshold = Math.round(MAX_UNMATCHED_JOIN_RECORD_FRACTION * 100);
+  const message = blocks
+    ? t(
+        "{{unmatchedRowCount}} of {{totalRowCount}} rows ({{percent}}%) use join values that are not on this layer. Unmatched rows must stay under {{threshold}}%.",
+        {
+          unmatchedRowCount: candidate.unmatchedRowCount.toLocaleString(),
+          totalRowCount: candidate.totalRowCount.toLocaleString(),
+          percent,
+          threshold,
+        },
+      )
+    : t(
+        "{{unmatchedRowCount}} of {{totalRowCount}} rows ({{percent}}%) use join values that are not on this layer. Those rows will be omitted. This is allowed when unmatched rows stay under {{threshold}}%.",
+        {
+          unmatchedRowCount: candidate.unmatchedRowCount.toLocaleString(),
+          totalRowCount: candidate.totalRowCount.toLocaleString(),
+          percent,
+          threshold,
+        },
+      );
+
+  return (
+    <div
+      className={`border-l-4 p-4 text-sm leading-5 ${
+        blocks
+          ? "border-red-400 bg-red-50 text-red-700"
+          : "border-yellow-400 bg-yellow-50 text-yellow-800"
+      }`}
+    >
+      <p>{message}</p>
+      {candidate.blankRowCount > 0 ? (
+        <p className="mt-2">
+          {t("{{blankRowCount}} of those rows have a blank join value.", {
+            blankRowCount: candidate.blankRowCount.toLocaleString(),
+          })}
+        </p>
+      ) : null}
+      <p className="mt-3 font-medium">
+        {t("Join values in this file that are not on the layer")}
+      </p>
+      <ul className="mt-1 max-h-32 list-disc overflow-y-auto pl-5">
+        {candidate.unmatchedValues.map((value) => (
+          <li key={value}>{value}</li>
+        ))}
+        {candidate.unmatchedValuesTruncated ? (
+          <li>{t("and others")}</li>
+        ) : null}
+      </ul>
+    </div>
   );
 }
 
@@ -210,30 +277,81 @@ export default function DataTableUploadModal({
       setOverlayJoinColumn("");
       setCandidates([]);
       try {
-        const chunk = selected.slice(0, DELIMITED_SAMPLE_BYTES);
-        const text = await chunk.text();
+        const overlayAttr = geostatsLayer?.attributes?.find(
+          (attr) => attr.attribute === canonicalOverlayJoinColumn,
+        );
+        const parsed = await new Promise<{
+          headers: string[];
+          previewRows: string[][];
+          delimiter: string;
+          scan: JoinColumnScan | null;
+        }>((resolve, reject) => {
+          let headers: string[] | null = null;
+          const previewRows: string[][] = [];
+          let scan: JoinColumnScan | null = null;
+          let delimiter = ",";
+          let failed = false;
+          Papa.parse<string[]>(selected, {
+            header: false,
+            skipEmptyLines: true,
+            worker: false,
+            step: (results) => {
+              if (failed) {
+                return;
+              }
+              delimiter = results.meta?.delimiter || delimiter;
+              const row = results.data;
+              if (!Array.isArray(row) || row.length === 0) {
+                return;
+              }
+              const cells = row.map((cell) => String(cell ?? ""));
+              if (!headers) {
+                headers = cells.map((cell) => cell.trim());
+                if (overlayAttr) {
+                  scan = startJoinColumnScan(headers.length, overlayAttr);
+                }
+                return;
+              }
+              if (previewRows.length < 5) {
+                previewRows.push(cells);
+              }
+              if (scan) {
+                pushJoinColumnScanRow(scan, cells);
+              }
+            },
+            complete: () => {
+              if (failed) {
+                return;
+              }
+              resolve({
+                headers: headers ?? [],
+                previewRows,
+                delimiter,
+                scan,
+              });
+            },
+            error: (error: { message?: string }) => {
+              failed = true;
+              reject(new Error(error?.message || "Could not parse CSV file"));
+            },
+          });
+        });
         if (!isCurrent()) {
           return;
         }
-        const parsed = Papa.parse<string[]>(text, {
-          header: false,
-          skipEmptyLines: true,
-        });
-        const rows = (parsed.data as string[][]).filter((r) => r.length > 0);
-        if (rows.length < 2) {
+        if (parsed.headers.length === 0 || parsed.previewRows.length === 0) {
           setError(t("Could not parse CSV file"));
           return;
         }
-        setDetectedDelimiter(parsed.meta?.delimiter || ",");
-        const headers = rows[0].map((h) => h.trim());
-        const dataRows = rows.slice(1, 6);
-        setPreview({ headers, rows: dataRows });
-        const detected = detectJoinColumnCandidates(
-          headers,
-          rows.slice(1),
-          geostatsLayer,
-          canonicalOverlayJoinColumn,
-        );
+        setDetectedDelimiter(parsed.delimiter);
+        setPreview({ headers: parsed.headers, rows: parsed.previewRows });
+        const detected = parsed.scan
+          ? finishJoinColumnScan(
+              parsed.scan,
+              parsed.headers,
+              canonicalOverlayJoinColumn,
+            )
+          : [];
         setCandidates(detected);
         const picked = pickJoinColumn(detected);
         if (!picked) {
@@ -244,6 +362,10 @@ export default function DataTableUploadModal({
         }
         setJoinColumn(picked.joinColumn);
         setOverlayJoinColumn(canonicalOverlayJoinColumn);
+      } catch {
+        if (isCurrent()) {
+          setError(t("Could not parse CSV file"));
+        }
       } finally {
         if (isCurrent()) {
           setAnalyzing(false);
@@ -306,8 +428,28 @@ export default function DataTableUploadModal({
     fileInputRef.current?.click();
   }, []);
 
+  const unmatchedThresholdPercent = Math.round(
+    MAX_UNMATCHED_JOIN_RECORD_FRACTION * 100,
+  );
+  const selectedCandidate =
+    candidates.find((candidate) => candidate.csvColumn === joinColumn) ?? null;
+  const joinBlocked = selectedCandidate
+    ? unmatchedJoinFractionBlocksUpload(selectedCandidate)
+    : false;
+  const showJoinMismatch =
+    !analyzing &&
+    selectedCandidate !== null &&
+    (selectedCandidate.unmatchedValues.length > 0 ||
+      selectedCandidate.unmatchedValuesTruncated);
+
   const onSubmit = async () => {
-    if (!file || !joinColumn || !overlayJoinColumn || !uploadOverlayDataTable) {
+    if (
+      !file ||
+      !joinColumn ||
+      !overlayJoinColumn ||
+      !uploadOverlayDataTable ||
+      joinBlocked
+    ) {
       return;
     }
     setStartingUpload(true);
@@ -363,6 +505,7 @@ export default function DataTableUploadModal({
             analyzing ||
             !file ||
             !joinColumn ||
+            joinBlocked ||
             !uploadOverlayDataTable,
           loading: startingUpload,
         },
@@ -396,7 +539,9 @@ export default function DataTableUploadModal({
                 </li>
                 <li>
                   <Trans ns="admin:data">
-                    One column must match an attribute on this layer
+                    One column must match an attribute on this layer. Unmatched
+                    values are allowed when they are under{" "}
+                    {{ unmatchedThresholdPercent }}% of rows.
                   </Trans>
                 </li>
                 <li>
@@ -532,6 +677,10 @@ export default function DataTableUploadModal({
           </div>
         )}
         </LocalFileDropzone>
+
+        {showJoinMismatch && selectedCandidate ? (
+          <JoinMismatchNotice candidate={selectedCandidate} />
+        ) : null}
 
         {error ? <Warning>{error}</Warning> : null}
       </div>

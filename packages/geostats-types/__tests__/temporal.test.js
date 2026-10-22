@@ -860,6 +860,70 @@ test("deriveWhenIntervalFromRow handles year, components, and slash dates", () =
   );
   assert.equal(estuary.startIso, "2023-08-31");
 
+  // Spreadsheet short dates (Reef Check): POSIX window, same as DuckDB %y.
+  const reefCheck = deriveWhenIntervalFromRow(
+    { Date: "9/17/11" },
+    { kind: "instant", column: "Date", format: "mdy" }
+  );
+  assert.equal(reefCheck.startIso, "2011-09-17");
+  assert.equal(reefCheck.endIso, "2011-09-18");
+  assert.equal(
+    deriveWhenIntervalFromRow(
+      { Date: "09/17/96" },
+      { kind: "instant", column: "Date", format: "mdy" }
+    ).startIso,
+    "1996-09-17"
+  );
+  assert.equal(
+    deriveWhenIntervalFromRow(
+      { Date: "1/1/00" },
+      { kind: "instant", column: "Date", format: "mdy" }
+    ).startIso,
+    "2000-01-01"
+  );
+  assert.equal(
+    deriveWhenIntervalFromRow(
+      { Date: "1/1/68" },
+      { kind: "instant", column: "Date", format: "mdy" }
+    ).startIso,
+    "2068-01-01"
+  );
+  assert.equal(
+    deriveWhenIntervalFromRow(
+      { Date: "1/1/69" },
+      { kind: "instant", column: "Date", format: "mdy" }
+    ).startIso,
+    "1969-01-01"
+  );
+  assert.equal(
+    deriveWhenIntervalFromRow(
+      { Date: "17/9/11" },
+      { kind: "instant", column: "Date", format: "dmy" }
+    ).startIso,
+    "2011-09-17"
+  );
+  assert.equal(
+    deriveWhenIntervalFromRow(
+      { Date: "2/29/12" },
+      { kind: "instant", column: "Date", format: "mdy" }
+    ).startIso,
+    "2012-02-29"
+  );
+  assert.equal(
+    deriveWhenIntervalFromRow(
+      { Date: "2/29/11" },
+      { kind: "instant", column: "Date", format: "mdy" }
+    ),
+    null
+  );
+  assert.equal(
+    deriveWhenIntervalFromRow(
+      { Date: "9/17/011" },
+      { kind: "instant", column: "Date", format: "mdy" }
+    ),
+    null
+  );
+
   assert.equal(
     deriveWhenIntervalFromRow(
       { Date: "not-a-date" },

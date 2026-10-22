@@ -27,6 +27,7 @@ import {
 } from "./aiUploadNotes";
 import { convertDelimitedToGeoJSON } from "./formats/delimited";
 import type { DelimitedUploadProcessingOptions } from "./spatialUploadsHandlerTypes";
+import { ogrInfoHasMeasuredGeometry } from "./vectorGeometryType";
 
 const DELIMITED_EXTENSIONS = new Set([".csv", ".tsv", ".txt"]);
 
@@ -396,6 +397,16 @@ export async function processVectorUpload(options: {
     isCorrectProjection = true;
   }
 
+  // Z-only layers use GDAL's 2.5D geometry codes and are classified as
+  // Point, Polygon, and so on. M and ZM layers use the ISO *M / *ZM codes.
+  // A WGS84 FlatGeobuf would otherwise skip conversion, leaving that measure
+  // dimension in the archived file. Measured values are not used for
+  // cartography, so rewrite those layers to XY. The same rule applies to
+  // every base type (points, lines, and polygons).
+  const hasMeasuredGeometry = ogrInfoHasMeasuredGeometry(ogrInfo);
+  const needsFormatConversion =
+    !isCorrectProjection || type !== "FlatGeobuf" || hasMeasuredGeometry;
+
   // Save original file to the list of outputs, with its determined type
   const originalOutput = {
     type,
@@ -405,13 +416,13 @@ export async function processVectorUpload(options: {
     size: statSync(originalFilePath).size,
     url: `${process.env.UPLOADS_BASE_URL}/${baseKey}/${jobId}${ext}`,
     isOriginal: true,
-    isNormalizedOutput: isCorrectProjection && type === "FlatGeobuf",
+    isNormalizedOutput: !needsFormatConversion,
   };
   outputs.push(originalOutput);
 
   let normalizedVectorPath = workingFilePath;
   let normalizedVectorFileSize = statSync(workingFilePath).size;
-  if (!isCorrectProjection || type !== "FlatGeobuf") {
+  if (needsFormatConversion) {
     // Convert vector to a normalized FlatGeobuf file for long-term archiving
     // and for tiling.
     normalizedVectorPath = pathJoin(workingDirectory, jobId + ".fgb");
@@ -425,6 +436,7 @@ export async function processVectorUpload(options: {
           "EPSG:4326",
           "-nlt",
           "PROMOTE_TO_MULTI",
+          ...(hasMeasuredGeometry ? ["-dim", "XY"] : []),
           "-oo",
           "FLATTEN_NESTED_ATTRIBUTES=yes",
           "-splitlistfields",

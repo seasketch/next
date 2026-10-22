@@ -12,7 +12,10 @@ import {
   DataSourceTypes,
   FullAdminSourceFragment,
 } from "../../generated/graphql";
-import { fetchGlStyle } from "../../useMapboxStyle";
+import {
+  fetchGlStyle,
+  shouldAttemptMapboxStyleFallback,
+} from "../../useMapboxStyle";
 import { idForLayer } from "../../dataLayers/MapContextManager";
 
 export async function loadBaseStyleForBasemap(
@@ -65,7 +68,10 @@ export async function loadBaseStyleForBasemap(
   }
   try {
     return await fetchGlStyle(url);
-  } catch {
+  } catch (error) {
+    if (!shouldAttemptMapboxStyleFallback(error)) {
+      throw error;
+    }
     return await fetchGlStyle(
       // eslint-disable-next-line i18next/no-literal-string -- Mapbox style URL fallback
       "mapbox://styles/underbluewaters/cklb5eho20sb817qhmzltsrpf"

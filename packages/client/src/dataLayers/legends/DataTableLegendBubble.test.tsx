@@ -26,6 +26,9 @@ describe("formatLegendNumber", () => {
     expect(formatLegendNumber(0.004)).toBe("0.004");
     expect(formatLegendNumber(0.00042)).toBe("0.00042");
     expect(formatLegendNumber(-0.001)).toBe("-0.001");
+    // Hover tooltip regression (#1021): fish mean density 0.00019 was "0"
+    // when formatted with maximumFractionDigits: 2.
+    expect(formatLegendNumber(0.00019)).toBe("0.00019");
   });
 });
 

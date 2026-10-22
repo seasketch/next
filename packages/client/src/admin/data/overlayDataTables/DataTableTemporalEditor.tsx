@@ -124,9 +124,9 @@ function formatLabel(
 ) {
   switch (format) {
     case "mdy":
-      return t("MM/DD/YYYY");
+      return t("MM/DD/YYYY (or MM/DD/YY)");
     case "dmy":
-      return t("DD/MM/YYYY");
+      return t("DD/MM/YYYY (or DD/MM/YY)");
     case "iso":
       return t("ISO date (e.g. {{example}})", {
         example: "YYYY-MM-DD or YYYY-MM-DDTHH:MM:SSZ",
@@ -402,8 +402,7 @@ export default function DataTableTemporalEditor({
     () =>
       (columnStats?.columns || [])
         .filter(
-          (column) =>
-            column.attribute && !column.attribute.startsWith("_when_")
+          (column) => column.attribute && !column.attribute.startsWith("_when_")
         )
         .slice()
         .sort((a, b) =>
@@ -503,9 +502,7 @@ export default function DataTableTemporalEditor({
 
   const existing = isTemporalInfo(table.temporal) ? table.temporal : null;
   const allUnparseable =
-    Boolean(preview) &&
-    preview!.totalRows > 0 &&
-    preview!.parseableCount === 0;
+    Boolean(preview) && preview!.totalRows > 0 && preview!.parseableCount === 0;
   const jobRunning =
     job &&
     (job.state === ProjectBackgroundJobState.Queued ||
@@ -751,15 +748,12 @@ export default function DataTableTemporalEditor({
                               )?.name || columnHint.suggestedMode,
                           }
                         )
-                      : t(
-                          "{{column}} cannot be used with {{tab}}.",
-                          {
-                            column: columnHint.column,
-                            tab:
-                              tabs.find((tab) => tab.id === form.mode)?.name ||
-                              form.mode,
-                          }
-                        )}
+                      : t("{{column}} cannot be used with {{tab}}.", {
+                          column: columnHint.column,
+                          tab:
+                            tabs.find((tab) => tab.id === form.mode)?.name ||
+                            form.mode,
+                        })}
                   </p>
                   {columnHint.suggestedMode &&
                   columnHint.suggestedMode !== form.mode ? (
@@ -1071,118 +1065,118 @@ export default function DataTableTemporalEditor({
                             : ""
                         }`}
                       >
-                      {statsLoading || previewLoading ? (
-                        <p className="m-auto px-4 text-center text-sm italic text-gray-400">
-                          {t("Reading table dates…")}
-                        </p>
-                      ) : previewError ? (
-                        <p className="m-auto px-4 text-center text-sm text-red-300">
-                          {previewError}
-                        </p>
-                      ) : preview ? (
-                        <div className="flex min-h-0 min-w-0 flex-1 flex-col p-2">
-                          <div className="min-h-[2.75rem] shrink-0 text-sm text-gray-300">
-                            <p>
-                              {t(
-                                "{{parseable}} of {{total}} rows parsed. Coverage {{start}} – {{end}}.",
-                                {
-                                  parseable:
-                                    preview.parseableCount.toLocaleString(),
-                                  total: preview.totalRows.toLocaleString(),
-                                  start:
-                                    preview.coverage?.start || t("unknown"),
-                                  end: preview.coverage?.end || t("present"),
-                                }
-                              )}
-                            </p>
-                            {preview.unparseableCount > 0 && (
-                              <p className="text-amber-200">
+                        {statsLoading || previewLoading ? (
+                          <p className="m-auto px-4 text-center text-sm italic text-gray-400">
+                            {t("Reading table dates…")}
+                          </p>
+                        ) : previewError ? (
+                          <p className="m-auto px-4 text-center text-sm text-red-300">
+                            {previewError}
+                          </p>
+                        ) : preview ? (
+                          <div className="flex min-h-0 min-w-0 flex-1 flex-col p-2">
+                            <div className="min-h-[2.75rem] shrink-0 text-sm text-gray-300">
+                              <p>
                                 {t(
-                                  "{{unparseable}} rows could not be parsed and will be stored without a date.",
+                                  "{{parseable}} of {{total}} rows parsed. Coverage {{start}} – {{end}}.",
                                   {
-                                    unparseable:
-                                      preview.unparseableCount.toLocaleString(),
+                                    parseable:
+                                      preview.parseableCount.toLocaleString(),
+                                    total: preview.totalRows.toLocaleString(),
+                                    start:
+                                      preview.coverage?.start || t("unknown"),
+                                    end: preview.coverage?.end || t("present"),
                                   }
                                 )}
                               </p>
-                            )}
-                            {allUnparseable && (
-                              <p className="text-red-300">
-                                {t(
-                                  "No rows parsed. Choose a different column or format before reprocessing."
-                                )}
-                              </p>
-                            )}
-                          </div>
-                          <div
-                            className="mt-2 flex h-10 w-full min-w-0 shrink-0 items-end gap-px overflow-hidden rounded bg-black/30 px-1 py-1"
-                            aria-hidden
-                          >
-                            {maxBin > 0
-                              ? bins.map((bin) => (
-                                  <span
-                                    key={bin.start}
-                                    className="min-w-0 flex-1 bg-sky-400/70"
-                                    style={{
-                                      height: `${Math.max(
-                                        8,
-                                        (bin.count / maxBin) * 100
-                                      )}%`,
-                                    }}
-                                  />
-                                ))
-                              : null}
-                          </div>
-                          <div className="mt-2 min-h-0 flex-1 overflow-auto rounded border border-white/10">
-                            <table className="w-full text-left text-xs">
-                              <thead className="sticky top-0 bg-gray-800 text-gray-300">
-                                <tr>
-                                  <th className="px-2 py-1 font-medium">
-                                    {t("Value")}
-                                  </th>
-                                  <th className="px-2 py-1 font-medium">
-                                    {parsedHeader}
-                                  </th>
-                                </tr>
-                              </thead>
-                              <tbody>
-                                {preview.samples.length === 0 ? (
+                              {preview.unparseableCount > 0 && (
+                                <p className="text-amber-200">
+                                  {t(
+                                    "{{unparseable}} rows could not be parsed and will be stored without a date.",
+                                    {
+                                      unparseable:
+                                        preview.unparseableCount.toLocaleString(),
+                                    }
+                                  )}
+                                </p>
+                              )}
+                              {allUnparseable && (
+                                <p className="text-red-300">
+                                  {t(
+                                    "No rows parsed. Choose a different column or format before reprocessing."
+                                  )}
+                                </p>
+                              )}
+                            </div>
+                            <div
+                              className="mt-2 flex h-10 w-full min-w-0 shrink-0 items-end gap-px overflow-hidden rounded bg-black/30 px-1 py-1"
+                              aria-hidden
+                            >
+                              {maxBin > 0
+                                ? bins.map((bin) => (
+                                    <span
+                                      key={bin.start}
+                                      className="min-w-0 flex-1 bg-sky-400/70"
+                                      style={{
+                                        height: `${Math.max(
+                                          8,
+                                          (bin.count / maxBin) * 100
+                                        )}%`,
+                                      }}
+                                    />
+                                  ))
+                                : null}
+                            </div>
+                            <div className="mt-2 min-h-0 flex-1 overflow-auto rounded border border-white/10">
+                              <table className="w-full text-left text-xs">
+                                <thead className="sticky top-0 bg-gray-800 text-gray-300">
                                   <tr>
-                                    <td
-                                      colSpan={2}
-                                      className="px-2 py-3 text-center italic text-gray-500"
-                                    >
-                                      {t("No sample rows")}
-                                    </td>
+                                    <th className="px-2 py-1 font-medium">
+                                      {t("Value")}
+                                    </th>
+                                    <th className="px-2 py-1 font-medium">
+                                      {parsedHeader}
+                                    </th>
                                   </tr>
-                                ) : (
-                                  preview.samples.map((sample, index) => (
-                                    <tr
-                                      key={index}
-                                      className="border-t border-white/5"
-                                    >
-                                      <td className="px-2 py-1 font-mono text-gray-200">
-                                        {Object.values(sample.raw)
-                                          .map((value) => String(value ?? ""))
-                                          .join(" · ")}
-                                      </td>
-                                      <td className="px-2 py-1">
-                                        {sample.parsed
-                                          ? sample.parsed.startIso
-                                          : t("Could not parse")}
+                                </thead>
+                                <tbody>
+                                  {preview.samples.length === 0 ? (
+                                    <tr>
+                                      <td
+                                        colSpan={2}
+                                        className="px-2 py-3 text-center italic text-gray-500"
+                                      >
+                                        {t("No sample rows")}
                                       </td>
                                     </tr>
-                                  ))
-                                )}
-                              </tbody>
-                            </table>
+                                  ) : (
+                                    preview.samples.map((sample, index) => (
+                                      <tr
+                                        key={index}
+                                        className="border-t border-white/5"
+                                      >
+                                        <td className="px-2 py-1 font-mono text-gray-200">
+                                          {Object.values(sample.raw)
+                                            .map((value) => String(value ?? ""))
+                                            .join(" · ")}
+                                        </td>
+                                        <td className="px-2 py-1">
+                                          {sample.parsed
+                                            ? sample.parsed.startIso
+                                            : t("Could not parse")}
+                                        </td>
+                                      </tr>
+                                    ))
+                                  )}
+                                </tbody>
+                              </table>
+                            </div>
                           </div>
-                        </div>
-                      ) : (
-                        <p className="m-auto px-4 text-center text-sm italic text-gray-400">
-                          {t("Choose columns to preview parsed dates.")}
-                        </p>
-                      )}
+                        ) : (
+                          <p className="m-auto px-4 text-center text-sm italic text-gray-400">
+                            {t("Choose columns to preview parsed dates.")}
+                          </p>
+                        )}
                       </div>
                       <AnimatePresence>
                         {showJobOverlay ? (
@@ -1209,8 +1203,7 @@ export default function DataTableTemporalEditor({
                 className="rounded-md bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-500 disabled:cursor-not-allowed disabled:opacity-50"
                 disabled={
                   showJobOverlay ||
-                  (form.mode !== "none" &&
-                    (!config || allUnparseable))
+                  (form.mode !== "none" && (!config || allUnparseable))
                 }
               >
                 {form.mode === "none" ||

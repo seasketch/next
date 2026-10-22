@@ -159,3 +159,37 @@ where p.slug = 'demo-samoa'
   and f.name = 'Public Forum'
   and t.title = 'Welcome to the project'
   and not exists (select 1 from posts po where po.topic_id = t.id);
+
+-- The survey Basic Template is created by a migration with no appearance.
+-- Production sets the welcome page in the superuser survey editor, and new
+-- surveys copy those columns. A migration must not write them: production
+-- already has its own copy. This is the production welcome page
+-- (survey 13, form element 23). Later pages stay unstyled and inherit it.
+update form_elements fe
+set
+  background_color = 'rgb(29, 72, 84)',
+  secondary_color = 'rgb(211, 217, 219)',
+  background_image = 'https://images.unsplash.com/photo-1518837695005-2083093ee35b?ixid=MnwyNjEyMzN8MHwxfHNlYXJjaHwzfHxPQ2VhbnxlbnwwfHx8fDE2Mzk1OTE4NDA&ixlib=rb-1.2.1',
+  background_palette = array[
+    'rgb(29, 72, 84)',
+    'rgb(211, 217, 219)',
+    'rgb(62, 105, 120)',
+    'rgb(95, 134, 151)',
+    'rgb(146, 172, 184)',
+    'rgb(132, 156, 172)',
+    'rgb(74, 116, 116)',
+    'rgb(52, 112, 140)',
+    'rgb(142, 164, 161)',
+    'rgb(52, 124, 148)'
+  ]::text[],
+  background_width = 6000,
+  background_height = 4000,
+  layout = 'TOP',
+  text_variant = 'DYNAMIC',
+  unsplash_author_name = 'Matt Hardy',
+  unsplash_author_url = 'https://unsplash.com/@matthardy'
+from forms f
+where fe.form_id = f.id
+  and f.template_name = 'Basic Template'
+  and f.template_type = 'SURVEYS'
+  and fe.type_id = 'WelcomeMessage';

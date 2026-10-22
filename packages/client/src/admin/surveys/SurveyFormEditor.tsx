@@ -50,6 +50,7 @@ import a11yPlugin from "colord/plugins/a11y";
 import ImagePreloader from "../../surveys/ImagePreloader";
 import { Auth0User } from "../../auth/Auth0User";
 import SortableFormElementList from "./SortableFormElementList";
+import SurveyEditorSidebar from "./SurveyEditorSidebar";
 import AddFormElementButton from "./AddFormElementButton";
 import {
   getPreviouslyStyledElement,
@@ -406,10 +407,10 @@ export default function SurveyFormEditor({
           // primary
         />
       </nav>
-      <div className="flex-1 flex" style={{ maxHeight: "calc(100vh - 56px)" }}>
-        {/* Left Sidebar */}
-        <div className="bg-white w-56 shadow z-10">
-          <div className="flex-1 overflow-y-auto flex flex-col min-h-full max-h-full">
+      <div className="flex min-h-0 flex-1" style={{ maxHeight: "calc(100vh - 56px)" }}>
+        <SurveyEditorSidebar
+          sidebar={
+            <>
             <nav className="px-2 mt-2">
               <div className="space-y-1">
                 <Link
@@ -478,11 +479,11 @@ export default function SurveyFormEditor({
                 onReorder={onReorderFormElements}
               />
             </nav>
-          </div>
-        </div>
-        {/* Content */}
+            </>
+          }
+          canvas={
         <div
-          className="flex-1 h-full overflow-y-auto"
+          className="h-full overflow-y-auto"
           style={{
             background:
               route !== "logic"
@@ -649,8 +650,10 @@ export default function SurveyFormEditor({
                 </SurveyAppLayout>
               </SurveyContext.Provider>
             </FormLanguageContext.Provider>
-          )}
+            )}
         </div>
+          }
+        />
         {/* Right Sidebar */}
         <div
           className={`bg-white ${

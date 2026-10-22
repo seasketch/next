@@ -524,18 +524,18 @@ export default function CartographyRevisionSplitMap({
     };
   }, [variant, edgePaddingPx]);
 
-  if (styleError) {
-    return (
-      <div className="flex h-full min-h-[320px] items-center justify-center rounded border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-        {styleError}
-      </div>
-    );
-  }
-
   if (!TOKEN) {
     return (
       <div className="flex h-full min-h-[320px] items-center justify-center rounded border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
         {t("Map preview requires a Mapbox access token to be configured.")}
+      </div>
+    );
+  }
+
+  if (styleError) {
+    return (
+      <div className="flex h-full min-h-[320px] items-center justify-center rounded border border-red-200 bg-red-50 p-4 text-sm text-red-800">
+        {styleError}
       </div>
     );
   }
