@@ -56,12 +56,12 @@ input AclPatch {
 }
 
 enum ActivityStatsPeriod {
+  ALL_TIME
   _1_YEAR
-  _24HRS
-  _30_DAYS
   _6_MONTHS
   _7_DAYS
-  ALL_TIME
+  _24HRS
+  _30_DAYS
 }
 
 """All input for the `addGroupToAcl` mutation."""
@@ -472,10 +472,34 @@ enum ArcgisSourceType {
   ARCGIS_VECTOR
 }
 
+"""All input for the `archiveResponses` mutation."""
+input ArchiveResponsesInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  ids: [Int]
+  makeArchived: Boolean
+}
+
+"""The output of our `archiveResponses` mutation."""
+type ArchiveResponsesPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+  surveyResponses: [SurveyResponse!]
+}
+
 """
-Admins can upload new version of data sources, and these are tracked from this
-table. This is used to track changes to data sources over time with a version
-number and optional changelog.
+Admins can upload new version of data sources, and these are tracked from this table. This is used to track changes to data sources over time with a version number and optional changelog.
 """
 type ArchivedDataSource implements Node {
   bounds: [BigFloat]
@@ -495,9 +519,7 @@ type ArchivedDataSource implements Node {
   dynamicMetadata: Boolean!
 
   """
-  Mapbox GL style from the associated data layer at the time of upload of the
-  new version. This is tracked in case the data source is significantly changed
-  such that rolling back to a previous version also requires style changes
+  Mapbox GL style from the associated data layer at the time of upload of the new version. This is tracked in case the data source is significantly changed such that rolling back to a previous version also requires style changes
   """
   mapboxGlStyle: JSON
 
@@ -574,39 +596,12 @@ enum ArchivedDataSourcesOrderBy {
   PRIMARY_KEY_DESC
 }
 
-"""All input for the `archiveResponses` mutation."""
-input ArchiveResponsesInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  ids: [Int]
-  makeArchived: Boolean
-}
-
-"""The output of our `archiveResponses` mutation."""
-type ArchiveResponsesPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-  surveyResponses: [SurveyResponse!]
-}
-
 type Basemap implements Node {
   """Reads a single `Acl` that is related to this `Basemap`."""
   acl: Acl
 
   """
-  Optional attribution to show at the bottom of the map. Will be overriden by
-  the attribution specified in the gl-style in the case of MAPBOX types.
+  Optional attribution to show at the bottom of the map. Will be overriden by the attribution specified in the gl-style in the case of MAPBOX types.
   """
   attribution: String
   description: String
@@ -620,9 +615,7 @@ type Basemap implements Node {
   isArcgisTiledMapservice: Boolean!
 
   """
-  Used to indicate whether the basemap is included in the public basemap
-  listing. Useful for hiding an option temporarily, or adding a basemap to the
-  project which will only be used in surveys.
+  Used to indicate whether the basemap is included in the public basemap listing. Useful for hiding an option temporarily, or adding a basemap to the project which will only be used in surveys.
   
   """
   isDisabled: Boolean!
@@ -711,9 +704,7 @@ type Basemap implements Node {
   project: Project
 
   """
-  If not set, the basemap will be considered a "Shared Basemap" that can be
-  added to any project. Otherwise it is private to the given proejct. Only
-  superusers can create Shared Basemaps.
+  If not set, the basemap will be considered a "Shared Basemap" that can be added to any project. Otherwise it is private to the given proejct. Only superusers can create Shared Basemaps.
   """
   projectId: Int
 
@@ -765,8 +756,7 @@ type Basemap implements Node {
   terrainTileSize: Int!
 
   """
-  Terrain data source url. Leave blank to disable 3d terrain. See [mapbox gl style terrain
-  documentation](https://docs.mapbox.com/mapbox-gl-js/style-spec/terrain/).
+  Terrain data source url. Leave blank to disable 3d terrain. See [mapbox gl style terrain documentation](https://docs.mapbox.com/mapbox-gl-js/style-spec/terrain/).
   """
   terrainUrl: String
   terrainVisibilityDefault: Boolean!
@@ -782,9 +772,7 @@ type Basemap implements Node {
   type: BasemapType!
 
   """
-  For MAPBOX types, this can be a mapbox://-style url or a link to a custom
-  mapbox gl style. For RASTER_URL_TEMPLATE, it should be a url template
-  conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)
+  For MAPBOX types, this can be a mapbox://-style url or a link to a custom mapbox gl style. For RASTER_URL_TEMPLATE, it should be a url template conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)
   """
   url: String!
   useDefaultOfflineTileSettings: Boolean!
@@ -807,8 +795,7 @@ input BasemapCondition {
 """An input for mutations affecting `Basemap`"""
 input BasemapInput {
   """
-  Optional attribution to show at the bottom of the map. Will be overriden by
-  the attribution specified in the gl-style in the case of MAPBOX types.
+  Optional attribution to show at the bottom of the map. Will be overriden by the attribution specified in the gl-style in the case of MAPBOX types.
   """
   attribution: String
   description: String
@@ -816,9 +803,7 @@ input BasemapInput {
   isArcgisTiledMapservice: Boolean
 
   """
-  Used to indicate whether the basemap is included in the public basemap
-  listing. Useful for hiding an option temporarily, or adding a basemap to the
-  project which will only be used in surveys.
+  Used to indicate whether the basemap is included in the public basemap listing. Useful for hiding an option temporarily, or adding a basemap to the project which will only be used in surveys.
   
   """
   isDisabled: Boolean
@@ -833,9 +818,7 @@ input BasemapInput {
   name: String!
 
   """
-  If not set, the basemap will be considered a "Shared Basemap" that can be
-  added to any project. Otherwise it is private to the given proejct. Only
-  superusers can create Shared Basemaps.
+  If not set, the basemap will be considered a "Shared Basemap" that can be added to any project. Otherwise it is private to the given proejct. Only superusers can create Shared Basemaps.
   """
   projectId: Int
   surveysOnly: Boolean
@@ -849,8 +832,7 @@ input BasemapInput {
   terrainTileSize: Int
 
   """
-  Terrain data source url. Leave blank to disable 3d terrain. See [mapbox gl style terrain
-  documentation](https://docs.mapbox.com/mapbox-gl-js/style-spec/terrain/).
+  Terrain data source url. Leave blank to disable 3d terrain. See [mapbox gl style terrain documentation](https://docs.mapbox.com/mapbox-gl-js/style-spec/terrain/).
   """
   terrainUrl: String
   terrainVisibilityDefault: Boolean
@@ -866,9 +848,7 @@ input BasemapInput {
   type: BasemapType!
 
   """
-  For MAPBOX types, this can be a mapbox://-style url or a link to a custom
-  mapbox gl style. For RASTER_URL_TEMPLATE, it should be a url template
-  conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)
+  For MAPBOX types, this can be a mapbox://-style url or a link to a custom mapbox gl style. For RASTER_URL_TEMPLATE, it should be a url template conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)
   """
   url: String!
   useDefaultOfflineTileSettings: Boolean
@@ -879,8 +859,7 @@ Represents an update to a `Basemap`. Fields that are set will be updated.
 """
 input BasemapPatch {
   """
-  Optional attribution to show at the bottom of the map. Will be overriden by
-  the attribution specified in the gl-style in the case of MAPBOX types.
+  Optional attribution to show at the bottom of the map. Will be overriden by the attribution specified in the gl-style in the case of MAPBOX types.
   """
   attribution: String
   description: String
@@ -889,9 +868,7 @@ input BasemapPatch {
   isArcgisTiledMapservice: Boolean
 
   """
-  Used to indicate whether the basemap is included in the public basemap
-  listing. Useful for hiding an option temporarily, or adding a basemap to the
-  project which will only be used in surveys.
+  Used to indicate whether the basemap is included in the public basemap listing. Useful for hiding an option temporarily, or adding a basemap to the project which will only be used in surveys.
   
   """
   isDisabled: Boolean
@@ -906,9 +883,7 @@ input BasemapPatch {
   name: String
 
   """
-  If not set, the basemap will be considered a "Shared Basemap" that can be
-  added to any project. Otherwise it is private to the given proejct. Only
-  superusers can create Shared Basemaps.
+  If not set, the basemap will be considered a "Shared Basemap" that can be added to any project. Otherwise it is private to the given proejct. Only superusers can create Shared Basemaps.
   """
   projectId: Int
   surveysOnly: Boolean
@@ -922,8 +897,7 @@ input BasemapPatch {
   terrainTileSize: Int
 
   """
-  Terrain data source url. Leave blank to disable 3d terrain. See [mapbox gl style terrain
-  documentation](https://docs.mapbox.com/mapbox-gl-js/style-spec/terrain/).
+  Terrain data source url. Leave blank to disable 3d terrain. See [mapbox gl style terrain documentation](https://docs.mapbox.com/mapbox-gl-js/style-spec/terrain/).
   """
   terrainUrl: String
   terrainVisibilityDefault: Boolean
@@ -939,12 +913,18 @@ input BasemapPatch {
   type: BasemapType
 
   """
-  For MAPBOX types, this can be a mapbox://-style url or a link to a custom
-  mapbox gl style. For RASTER_URL_TEMPLATE, it should be a url template
-  conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)
+  For MAPBOX types, this can be a mapbox://-style url or a link to a custom mapbox gl style. For RASTER_URL_TEMPLATE, it should be a url template conforming to the [raster source documetation](https://docs.mapbox.com/mapbox-gl-js/style-spec/sources/#tiled-sources)
   """
   url: String
   useDefaultOfflineTileSettings: Boolean
+}
+
+"""
+SeaSketch supports multiple different basemap types. All must eventually be compiled down to a mapbox gl style.
+"""
+enum BasemapType {
+  MAPBOX
+  RASTER_URL_TEMPLATE
 }
 
 """A connection to a list of `Basemap` values."""
@@ -984,14 +964,6 @@ enum BasemapsOrderBy {
   PRIMARY_KEY_DESC
   PROJECT_ID_ASC
   PROJECT_ID_DESC
-}
-
-"""
-SeaSketch supports multiple different basemap types. All must eventually be compiled down to a mapbox gl style.
-"""
-enum BasemapType {
-  MAPBOX
-  RASTER_URL_TEMPLATE
 }
 
 """
@@ -1115,6 +1087,8 @@ enum ChangeLogFieldGroup {
   FOLDER_DELETED
   FOLDER_TITLE
   FOLDER_TYPE
+  LAYERS_PUBLISHED
+  LAYERS_Z_ORDER_CHANGE
   LAYER_ACL
   LAYER_ATTRIBUTION
   LAYER_CARTOGRAPHY
@@ -1126,12 +1100,15 @@ enum ChangeLogFieldGroup {
   LAYER_TEMPORAL
   LAYER_TITLE
   LAYER_UPLOADED
-  LAYERS_PUBLISHED
-  LAYERS_Z_ORDER_CHANGE
   RESOLVABLE_LAYER_COMMENTS_CREATED
   RESOLVABLE_LAYER_COMMENTS_REOPENED
   RESOLVABLE_LAYER_COMMENTS_RESOLVED
   RESOLVABLE_LAYER_COMMENTS_RESPONDED
+}
+
+enum ChangeLogStatus {
+  CLOSED
+  OPEN
 }
 
 """A connection to a list of `ChangeLog` values."""
@@ -1169,11 +1146,6 @@ enum ChangeLogsOrderBy {
   PRIMARY_KEY_DESC
   PROJECT_ID_ASC
   PROJECT_ID_DESC
-}
-
-enum ChangeLogStatus {
-  CLOSED
-  OPEN
 }
 
 """All input for the `clearFormElementStyle` mutation."""
@@ -1286,9 +1258,7 @@ type CompatibleSpatialMetric {
   eta: Datetime
 
   """
-  When present with a null subject, index into
-  ReportOverlayDependencies.fragmentSubjectCatalog /
-  DraftReportDependenciesResults.fragmentSubjectCatalog.
+  When present with a null subject, index into ReportOverlayDependencies.fragmentSubjectCatalog / DraftReportDependenciesResults.fragmentSubjectCatalog.
   """
   f: Int
 
@@ -2564,6 +2534,19 @@ type CreateProjectPayload {
   query: Query
 }
 
+input CreateProjectWithGeographiesInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+
+  """Optional geographies to create immediately for the project."""
+  geographies: [CreateProjectGeographyInput!]
+  name: String!
+  slug: String!
+}
+
 """All input for the create `ProjectsSharedBasemap` mutation."""
 input CreateProjectsSharedBasemapInput {
   """
@@ -2602,19 +2585,6 @@ type CreateProjectsSharedBasemapPayload {
   Our root query field type. Allows us to run any query from our mutation payload.
   """
   query: Query
-}
-
-input CreateProjectWithGeographiesInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-
-  """Optional geographies to create immediately for the project."""
-  geographies: [CreateProjectGeographyInput!]
-  name: String!
-  slug: String!
 }
 
 """All input for the `createRemoteGeojsonSource` mutation."""
@@ -3162,8 +3132,7 @@ type DataLayer implements Node {
   interactivitySettingsId: Int!
 
   """
-  JSON array of MapBox GL Style layers. Layers should not specify an id or
-  sourceId. These will be automatically generated at runtime.
+  JSON array of MapBox GL Style layers. Layers should not specify an id or sourceId. These will be automatically generated at runtime.
   
   """
   mapboxGlStyles: JSON
@@ -3175,8 +3144,7 @@ type DataLayer implements Node {
   projectId: Int!
 
   """
-  Determines z-ordering of layer in relation to layers in the basemap. For this
-  functionality to work, layers must be identified in the basemap configuration.
+  Determines z-ordering of layer in relation to layers in the basemap. For this functionality to work, layers must be identified in the basemap configuration.
   """
   renderUnder: RenderUnderType!
 
@@ -3197,9 +3165,7 @@ type DataLayer implements Node {
   staticId: String @deprecated(reason: "Use TableOfContentsItem.geoprocessingReferenceId instead")
 
   """
-  For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
-  is blank and this layer merely controls the display of a single sublayer when
-  making image requests.
+  For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles is blank and this layer merely controls the display of a single sublayer when making image requests.
   """
   sublayer: String
   sublayerType: SublayerType
@@ -3240,9 +3206,7 @@ type DataLayer implements Node {
   totalQuotaUsed: BigInt
 
   """
-  Returns the ogc geometry type of the layer if it is a vector layer, otherwise
-  returns null. E.g. "Point", "LineString", "Polygon", "MultiPoint",
-  "MultiLineString", "MultiPolygon".
+  Returns the ogc geometry type of the layer if it is a vector layer, otherwise returns null. E.g. "Point", "LineString", "Polygon", "MultiPoint", "MultiLineString", "MultiPolygon".
   """
   vectorGeometryType: String
   vectorObjectKey: String
@@ -3274,16 +3238,14 @@ input DataLayerInput {
   id: Int
 
   """
-  JSON array of MapBox GL Style layers. Layers should not specify an id or
-  sourceId. These will be automatically generated at runtime.
+  JSON array of MapBox GL Style layers. Layers should not specify an id or sourceId. These will be automatically generated at runtime.
   
   """
   mapboxGlStyles: JSON
   projectId: Int!
 
   """
-  Determines z-ordering of layer in relation to layers in the basemap. For this
-  functionality to work, layers must be identified in the basemap configuration.
+  Determines z-ordering of layer in relation to layers in the basemap. For this functionality to work, layers must be identified in the basemap configuration.
   """
   renderUnder: RenderUnderType
 
@@ -3295,9 +3257,7 @@ input DataLayerInput {
   staticId: String
 
   """
-  For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
-  is blank and this layer merely controls the display of a single sublayer when
-  making image requests.
+  For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles is blank and this layer merely controls the display of a single sublayer when making image requests.
   """
   sublayer: String
   sublayerType: SublayerType
@@ -3313,16 +3273,14 @@ input DataLayerPatch {
   interactivitySettingsId: Int
 
   """
-  JSON array of MapBox GL Style layers. Layers should not specify an id or
-  sourceId. These will be automatically generated at runtime.
+  JSON array of MapBox GL Style layers. Layers should not specify an id or sourceId. These will be automatically generated at runtime.
   
   """
   mapboxGlStyles: JSON
   projectId: Int
 
   """
-  Determines z-ordering of layer in relation to layers in the basemap. For this
-  functionality to work, layers must be identified in the basemap configuration.
+  Determines z-ordering of layer in relation to layers in the basemap. For this functionality to work, layers must be identified in the basemap configuration.
   """
   renderUnder: RenderUnderType
 
@@ -3334,9 +3292,7 @@ input DataLayerPatch {
   staticId: String
 
   """
-  For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles
-  is blank and this layer merely controls the display of a single sublayer when
-  making image requests.
+  For ARCGIS_MAPSERVER and eventually WMS sources. In this case mapbox_gl_styles is blank and this layer merely controls the display of a single sublayer when making image requests.
   """
   sublayer: String
   sublayerType: SublayerType
@@ -3453,11 +3409,7 @@ type DataSource implements Node {
   authorProfile: Profile
 
   """
-  An array containing the longitude and latitude of the southwest and northeast
-  corners of the source bounding box in the following order: `[sw.lng, sw.lat,
-  ne.lng, ne.lat]`. When this property is included in a source, no tiles outside
-  of the given bounds are requested by Mapbox GL. This property can also be used
-  as metadata for non-tiled sources.
+  An array containing the longitude and latitude of the southwest and northeast corners of the source bounding box in the following order: `[sw.lng, sw.lat, ne.lng, ne.lat]`. When this property is included in a source, no tiles outside of the given bounds are requested by Mapbox GL. This property can also be used as metadata for non-tiled sources.
   """
   bounds: [BigFloat]
 
@@ -3467,9 +3419,7 @@ type DataSource implements Node {
   bucketId: String
 
   """
-  GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no
-  buffer. A value of 512 produces a buffer as wide as the tile itself. Larger
-  values produce fewer rendering artifacts near tile edges and slower performance.
+  GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no buffer. A value of 512 produces a buffer as wide as the tile itself. Larger values produce fewer rendering artifacts near tile edges and slower performance.
   """
   buffer: Int
 
@@ -3480,13 +3430,10 @@ type DataSource implements Node {
   """
   GeoJSON only.
   
-  If the data is a collection of point features, setting this to true clusters
-  the points by radius into groups. Cluster groups become new Point features in
-  the source with additional properties:
+  If the data is a collection of point features, setting this to true clusters the points by radius into groups. Cluster groups become new Point features in the source with additional properties:
   
     * cluster Is true if the point is a cluster
-    * cluster_id A unqiue id for the cluster to be used in conjunction with the
-  [cluster inspection methods](https://docs.mapbox.com/mapbox-gl-js/api/#geojsonsource#getclusterexpansionzoom)
+    * cluster_id A unqiue id for the cluster to be used in conjunction with the [cluster inspection methods](https://docs.mapbox.com/mapbox-gl-js/api/#geojsonsource#getclusterexpansionzoom)
     * point_count Number of original points grouped into this cluster
     * point_count_abbreviated An abbreviated point count
   
@@ -3494,8 +3441,7 @@ type DataSource implements Node {
   cluster: Boolean
 
   """
-  GeoJSON only. Max zoom on which to cluster points if clustering is enabled.
-  Defaults to one zoom less than maxzoom (so that last zoom features are not clustered).
+  GeoJSON only. Max zoom on which to cluster points if clustering is enabled. Defaults to one zoom less than maxzoom (so that last zoom features are not clustered).
   """
   clusterMaxZoom: Int
 
@@ -3505,8 +3451,7 @@ type DataSource implements Node {
   clusterProperties: JSON
 
   """
-  GeoJSON only. Radius of each cluster if clustering is enabled. A value of 512
-  indicates a radius equal to the width of a tile.
+  GeoJSON only. Radius of each cluster if clustering is enabled. A value of 512 indicates a radius equal to the width of a tile.
   """
   clusterRadius: Int
   columnDetails: JSON
@@ -3555,23 +3500,18 @@ type DataSource implements Node {
   encoding: RasterDemEncoding
 
   """
-  SEASKETCH_VECTOR sources only. When enabled, uploads will be placed in a
-  different class of storage that requires a temporary security credential to
-  access. Set during creation and cannot be changed.
+  SEASKETCH_VECTOR sources only. When enabled, uploads will be placed in a different class of storage that requires a temporary security credential to access. Set during creation and cannot be changed.
   """
   enhancedSecurity: Boolean
   featureCount: Int
 
   """
-  GeoJSON only. Whether to generate ids for the geojson features. When enabled,
-  the feature.id property will be auto assigned based on its index in the
-  features array, over-writing any previous values.
+  GeoJSON only. Whether to generate ids for the geojson features. When enabled, the feature.id property will be auto assigned based on its index in the features array, over-writing any previous values.
   """
   generateId: Boolean
 
   """
-  mapbox-geostats summary information for vector sources. Useful for
-  cartographic tools and authoring popups. SEASKETCH_VECTOR sources only.
+  mapbox-geostats summary information for vector sources. Useful for cartographic tools and authoring popups. SEASKETCH_VECTOR sources only.
   """
   geostats: JSON
   hostingQuotaUsed: BigInt
@@ -3580,8 +3520,7 @@ type DataSource implements Node {
   id: Int!
 
   """
-  For SeaSketchVector sources, identifies whether the original source comes from
-  a direct upload or a service location like ArcGIS server
+  For SeaSketchVector sources, identifies whether the original source comes from a direct upload or a service location like ArcGIS server
   """
   importType: DataSourceImportTypes
   isArchived: Boolean
@@ -3589,15 +3528,12 @@ type DataSource implements Node {
   isSingleBandRaster: Boolean
 
   """
-  GeoJSON only. Whether to calculate line distance metrics. This is required for
-  line layers that specify line-gradient values.
+  GeoJSON only. Whether to calculate line distance metrics. This is required for line layers that specify line-gradient values.
   """
   lineMetrics: Boolean
 
   """
-  For Vector, Raster, GeoJSON and Raster DEM sources. Maximum zoom level for
-  which tiles are available, as in the TileJSON spec. Data from tiles at the
-  maxzoom are used when displaying the map at higher zoom levels.
+  For Vector, Raster, GeoJSON and Raster DEM sources. Maximum zoom level for which tiles are available, as in the TileJSON spec. Data from tiles at the maxzoom are used when displaying the map at higher zoom levels.
   """
   maxzoom: Int
 
@@ -3615,9 +3551,7 @@ type DataSource implements Node {
   normalizedSourceBytes: BigInt
 
   """
-  Sources are converted to flatgeobuf (vector, 4326) or geotif (raster) and
-  store indefinitely so they may be processed into tilesets and to support the
-  download function. SEASKETCH_VECTOR sources only.
+  Sources are converted to flatgeobuf (vector, 4326) or geotif (raster) and store indefinitely so they may be processed into tilesets and to support the download function. SEASKETCH_VECTOR sources only.
   """
   normalizedSourceObjectKey: String
 
@@ -3625,9 +3559,7 @@ type DataSource implements Node {
   objectKey: UUID
 
   """
-  For SeaSketchVector sources, identifies location of original service that
-  hosted the data, if any. This can be used to update a layer with an updated
-  copy of the data source if necessary.
+  For SeaSketchVector sources, identifies location of original service that hosted the data, if any. This can be used to update a layer with an updated copy of the data source if necessary.
   """
   originalSourceUrl: String
 
@@ -3645,14 +3577,12 @@ type DataSource implements Node {
   projectId: Int!
 
   """
-  GeoJSON only. A property to use as a feature id (for feature state). Either a
-  property name, or an object of the form `{<sourceLayer>: <propertyName>}.`
+  GeoJSON only. A property to use as a feature id (for feature state). Either a property name, or an object of the form `{<sourceLayer>: <propertyName>}.`
   """
   promoteId: Boolean
 
   """
-  ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR only. Key-Value object with
-  querystring parameters that will be added to requests.
+  ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR only. Key-Value object with querystring parameters that will be added to requests.
   """
   queryParameters: JSON
 
@@ -3679,8 +3609,7 @@ type DataSource implements Node {
   ): [TableOfContentsItem!]
 
   """
-  For MapBox Vector and Raster sources. Influences the y direction of the tile
-  coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.
+  For MapBox Vector and Raster sources. Influences the y direction of the tile coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.
   """
   scheme: TileScheme
 
@@ -3731,14 +3660,14 @@ type DataSource implements Node {
   temporal: TemporalInfo
 
   """
-  For tiled sources, a list of endpoints that can be used to retrieve tiles.
-  """
-  tiles: [String]
-
-  """
   The minimum visual size to display tiles for this layer. Only configurable for raster layers.
   """
   tileSize: Int
+
+  """
+  For tiled sources, a list of endpoints that can be used to retrieve tiles.
+  """
+  tiles: [String]
 
   """
   GeoJSON only. Douglas-Peucker simplification tolerance (higher means simpler geometries and faster performance).
@@ -3748,6 +3677,11 @@ type DataSource implements Node {
 
   """MapBox GL source type or custom seasketch type."""
   type: DataSourceTypes!
+
+  """
+  UUID of the upload processing job associated with a SEASKETCH_VECTOR source.
+  """
+  uploadTaskId: UUID
   uploadedBy: String
   uploadedSourceFilename: String
 
@@ -3757,14 +3691,7 @@ type DataSource implements Node {
   uploadedSourceLayername: String
 
   """
-  UUID of the upload processing job associated with a SEASKETCH_VECTOR source.
-  """
-  uploadTaskId: UUID
-
-  """
-  A URL to a TileJSON resource for tiled sources. For GeoJSON or
-  SEASKETCH_VECTOR sources, use this to fill in the data property of the source.
-  Also used by ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR
+  A URL to a TileJSON resource for tiled sources. For GeoJSON or SEASKETCH_VECTOR sources, use this to fill in the data property of the source. Also used by ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR
   """
   url: String
 
@@ -3801,11 +3728,7 @@ input DataSourceInput {
   attribution: String
 
   """
-  An array containing the longitude and latitude of the southwest and northeast
-  corners of the source bounding box in the following order: `[sw.lng, sw.lat,
-  ne.lng, ne.lat]`. When this property is included in a source, no tiles outside
-  of the given bounds are requested by Mapbox GL. This property can also be used
-  as metadata for non-tiled sources.
+  An array containing the longitude and latitude of the southwest and northeast corners of the source bounding box in the following order: `[sw.lng, sw.lat, ne.lng, ne.lat]`. When this property is included in a source, no tiles outside of the given bounds are requested by Mapbox GL. This property can also be used as metadata for non-tiled sources.
   """
   bounds: [BigFloat]
 
@@ -3815,9 +3738,7 @@ input DataSourceInput {
   bucketId: String
 
   """
-  GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no
-  buffer. A value of 512 produces a buffer as wide as the tile itself. Larger
-  values produce fewer rendering artifacts near tile edges and slower performance.
+  GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no buffer. A value of 512 produces a buffer as wide as the tile itself. Larger values produce fewer rendering artifacts near tile edges and slower performance.
   """
   buffer: Int
 
@@ -3828,13 +3749,10 @@ input DataSourceInput {
   """
   GeoJSON only.
   
-  If the data is a collection of point features, setting this to true clusters
-  the points by radius into groups. Cluster groups become new Point features in
-  the source with additional properties:
+  If the data is a collection of point features, setting this to true clusters the points by radius into groups. Cluster groups become new Point features in the source with additional properties:
   
     * cluster Is true if the point is a cluster
-    * cluster_id A unqiue id for the cluster to be used in conjunction with the
-  [cluster inspection methods](https://docs.mapbox.com/mapbox-gl-js/api/#geojsonsource#getclusterexpansionzoom)
+    * cluster_id A unqiue id for the cluster to be used in conjunction with the [cluster inspection methods](https://docs.mapbox.com/mapbox-gl-js/api/#geojsonsource#getclusterexpansionzoom)
     * point_count Number of original points grouped into this cluster
     * point_count_abbreviated An abbreviated point count
   
@@ -3842,8 +3760,7 @@ input DataSourceInput {
   cluster: Boolean
 
   """
-  GeoJSON only. Max zoom on which to cluster points if clustering is enabled.
-  Defaults to one zoom less than maxzoom (so that last zoom features are not clustered).
+  GeoJSON only. Max zoom on which to cluster points if clustering is enabled. Defaults to one zoom less than maxzoom (so that last zoom features are not clustered).
   """
   clusterMaxZoom: Int
 
@@ -3853,8 +3770,7 @@ input DataSourceInput {
   clusterProperties: JSON
 
   """
-  GeoJSON only. Radius of each cluster if clustering is enabled. A value of 512
-  indicates a radius equal to the width of a tile.
+  GeoJSON only. Radius of each cluster if clustering is enabled. A value of 512 indicates a radius equal to the width of a tile.
   """
   clusterRadius: Int
   columnDetails: JSON
@@ -3874,23 +3790,18 @@ input DataSourceInput {
   encoding: RasterDemEncoding
 
   """
-  SEASKETCH_VECTOR sources only. When enabled, uploads will be placed in a
-  different class of storage that requires a temporary security credential to
-  access. Set during creation and cannot be changed.
+  SEASKETCH_VECTOR sources only. When enabled, uploads will be placed in a different class of storage that requires a temporary security credential to access. Set during creation and cannot be changed.
   """
   enhancedSecurity: Boolean
   featureCount: Int
 
   """
-  GeoJSON only. Whether to generate ids for the geojson features. When enabled,
-  the feature.id property will be auto assigned based on its index in the
-  features array, over-writing any previous values.
+  GeoJSON only. Whether to generate ids for the geojson features. When enabled, the feature.id property will be auto assigned based on its index in the features array, over-writing any previous values.
   """
   generateId: Boolean
 
   """
-  mapbox-geostats summary information for vector sources. Useful for
-  cartographic tools and authoring popups. SEASKETCH_VECTOR sources only.
+  mapbox-geostats summary information for vector sources. Useful for cartographic tools and authoring popups. SEASKETCH_VECTOR sources only.
   """
   geostats: JSON
 
@@ -3898,22 +3809,18 @@ input DataSourceInput {
   id: Int
 
   """
-  For SeaSketchVector sources, identifies whether the original source comes from
-  a direct upload or a service location like ArcGIS server
+  For SeaSketchVector sources, identifies whether the original source comes from a direct upload or a service location like ArcGIS server
   """
   importType: DataSourceImportTypes
   isSingleBandRaster: Boolean
 
   """
-  GeoJSON only. Whether to calculate line distance metrics. This is required for
-  line layers that specify line-gradient values.
+  GeoJSON only. Whether to calculate line distance metrics. This is required for line layers that specify line-gradient values.
   """
   lineMetrics: Boolean
 
   """
-  For Vector, Raster, GeoJSON and Raster DEM sources. Maximum zoom level for
-  which tiles are available, as in the TileJSON spec. Data from tiles at the
-  maxzoom are used when displaying the map at higher zoom levels.
+  For Vector, Raster, GeoJSON and Raster DEM sources. Maximum zoom level for which tiles are available, as in the TileJSON spec. Data from tiles at the maxzoom are used when displaying the map at higher zoom levels.
   """
   maxzoom: Int
 
@@ -3926,9 +3833,7 @@ input DataSourceInput {
   normalizedSourceBytes: BigInt
 
   """
-  Sources are converted to flatgeobuf (vector, 4326) or geotif (raster) and
-  store indefinitely so they may be processed into tilesets and to support the
-  download function. SEASKETCH_VECTOR sources only.
+  Sources are converted to flatgeobuf (vector, 4326) or geotif (raster) and store indefinitely so they may be processed into tilesets and to support the download function. SEASKETCH_VECTOR sources only.
   """
   normalizedSourceObjectKey: String
 
@@ -3936,22 +3841,18 @@ input DataSourceInput {
   objectKey: UUID
 
   """
-  For SeaSketchVector sources, identifies location of original service that
-  hosted the data, if any. This can be used to update a layer with an updated
-  copy of the data source if necessary.
+  For SeaSketchVector sources, identifies location of original service that hosted the data, if any. This can be used to update a layer with an updated copy of the data source if necessary.
   """
   originalSourceUrl: String
   projectId: Int!
 
   """
-  GeoJSON only. A property to use as a feature id (for feature state). Either a
-  property name, or an object of the form `{<sourceLayer>: <propertyName>}.`
+  GeoJSON only. A property to use as a feature id (for feature state). Either a property name, or an object of the form `{<sourceLayer>: <propertyName>}.`
   """
   promoteId: Boolean
 
   """
-  ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR only. Key-Value object with
-  querystring parameters that will be added to requests.
+  ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR only. Key-Value object with querystring parameters that will be added to requests.
   """
   queryParameters: JSON
   rasterBandCount: Int
@@ -3960,8 +3861,7 @@ input DataSourceInput {
   rasterScale: Float
 
   """
-  For MapBox Vector and Raster sources. Influences the y direction of the tile
-  coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.
+  For MapBox Vector and Raster sources. Influences the y direction of the tile coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.
   """
   scheme: TileScheme
 
@@ -3971,14 +3871,14 @@ input DataSourceInput {
   supportsDynamicLayers: Boolean
 
   """
-  For tiled sources, a list of endpoints that can be used to retrieve tiles.
-  """
-  tiles: [String]
-
-  """
   The minimum visual size to display tiles for this layer. Only configurable for raster layers.
   """
   tileSize: Int
+
+  """
+  For tiled sources, a list of endpoints that can be used to retrieve tiles.
+  """
+  tiles: [String]
 
   """
   GeoJSON only. Douglas-Peucker simplification tolerance (higher means simpler geometries and faster performance).
@@ -3988,6 +3888,11 @@ input DataSourceInput {
 
   """MapBox GL source type or custom seasketch type."""
   type: DataSourceTypes!
+
+  """
+  UUID of the upload processing job associated with a SEASKETCH_VECTOR source.
+  """
+  uploadTaskId: UUID
   uploadedSourceFilename: String
 
   """
@@ -3996,14 +3901,7 @@ input DataSourceInput {
   uploadedSourceLayername: String
 
   """
-  UUID of the upload processing job associated with a SEASKETCH_VECTOR source.
-  """
-  uploadTaskId: UUID
-
-  """
-  A URL to a TileJSON resource for tiled sources. For GeoJSON or
-  SEASKETCH_VECTOR sources, use this to fill in the data property of the source.
-  Also used by ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR
+  A URL to a TileJSON resource for tiled sources. For GeoJSON or SEASKETCH_VECTOR sources, use this to fill in the data property of the source. Also used by ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR
   """
   url: String
 
@@ -4032,22 +3930,17 @@ input DataSourcePatch {
   attribution: String
 
   """
-  GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no
-  buffer. A value of 512 produces a buffer as wide as the tile itself. Larger
-  values produce fewer rendering artifacts near tile edges and slower performance.
+  GeoJSON only. Size of the tile buffer on each side. A value of 0 produces no buffer. A value of 512 produces a buffer as wide as the tile itself. Larger values produce fewer rendering artifacts near tile edges and slower performance.
   """
   buffer: Int
 
   """
   GeoJSON only.
   
-  If the data is a collection of point features, setting this to true clusters
-  the points by radius into groups. Cluster groups become new Point features in
-  the source with additional properties:
+  If the data is a collection of point features, setting this to true clusters the points by radius into groups. Cluster groups become new Point features in the source with additional properties:
   
     * cluster Is true if the point is a cluster
-    * cluster_id A unqiue id for the cluster to be used in conjunction with the
-  [cluster inspection methods](https://docs.mapbox.com/mapbox-gl-js/api/#geojsonsource#getclusterexpansionzoom)
+    * cluster_id A unqiue id for the cluster to be used in conjunction with the [cluster inspection methods](https://docs.mapbox.com/mapbox-gl-js/api/#geojsonsource#getclusterexpansionzoom)
     * point_count Number of original points grouped into this cluster
     * point_count_abbreviated An abbreviated point count
   
@@ -4055,8 +3948,7 @@ input DataSourcePatch {
   cluster: Boolean
 
   """
-  GeoJSON only. Max zoom on which to cluster points if clustering is enabled.
-  Defaults to one zoom less than maxzoom (so that last zoom features are not clustered).
+  GeoJSON only. Max zoom on which to cluster points if clustering is enabled. Defaults to one zoom less than maxzoom (so that last zoom features are not clustered).
   """
   clusterMaxZoom: Int
 
@@ -4066,8 +3958,7 @@ input DataSourcePatch {
   clusterProperties: JSON
 
   """
-  GeoJSON only. Radius of each cluster if clustering is enabled. A value of 512
-  indicates a radius equal to the width of a tile.
+  GeoJSON only. Radius of each cluster if clustering is enabled. A value of 512 indicates a radius equal to the width of a tile.
   """
   clusterRadius: Int
 
@@ -4082,22 +3973,17 @@ input DataSourcePatch {
   encoding: RasterDemEncoding
 
   """
-  GeoJSON only. Whether to generate ids for the geojson features. When enabled,
-  the feature.id property will be auto assigned based on its index in the
-  features array, over-writing any previous values.
+  GeoJSON only. Whether to generate ids for the geojson features. When enabled, the feature.id property will be auto assigned based on its index in the features array, over-writing any previous values.
   """
   generateId: Boolean
 
   """
-  GeoJSON only. Whether to calculate line distance metrics. This is required for
-  line layers that specify line-gradient values.
+  GeoJSON only. Whether to calculate line distance metrics. This is required for line layers that specify line-gradient values.
   """
   lineMetrics: Boolean
 
   """
-  For Vector, Raster, GeoJSON and Raster DEM sources. Maximum zoom level for
-  which tiles are available, as in the TileJSON spec. Data from tiles at the
-  maxzoom are used when displaying the map at higher zoom levels.
+  For Vector, Raster, GeoJSON and Raster DEM sources. Maximum zoom level for which tiles are available, as in the TileJSON spec. Data from tiles at the maxzoom are used when displaying the map at higher zoom levels.
   """
   maxzoom: Int
 
@@ -4107,20 +3993,17 @@ input DataSourcePatch {
   minzoom: Int
 
   """
-  GeoJSON only. A property to use as a feature id (for feature state). Either a
-  property name, or an object of the form `{<sourceLayer>: <propertyName>}.`
+  GeoJSON only. A property to use as a feature id (for feature state). Either a property name, or an object of the form `{<sourceLayer>: <propertyName>}.`
   """
   promoteId: Boolean
 
   """
-  ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR only. Key-Value object with
-  querystring parameters that will be added to requests.
+  ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR only. Key-Value object with querystring parameters that will be added to requests.
   """
   queryParameters: JSON
 
   """
-  For MapBox Vector and Raster sources. Influences the y direction of the tile
-  coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.
+  For MapBox Vector and Raster sources. Influences the y direction of the tile coordinates. The global-mercator (aka Spherical Mercator) profile is assumed.
   """
   scheme: TileScheme
 
@@ -4130,14 +4013,14 @@ input DataSourcePatch {
   supportsDynamicLayers: Boolean
 
   """
-  For tiled sources, a list of endpoints that can be used to retrieve tiles.
-  """
-  tiles: [String]
-
-  """
   The minimum visual size to display tiles for this layer. Only configurable for raster layers.
   """
   tileSize: Int
+
+  """
+  For tiled sources, a list of endpoints that can be used to retrieve tiles.
+  """
+  tiles: [String]
 
   """
   GeoJSON only. Douglas-Peucker simplification tolerance (higher means simpler geometries and faster performance).
@@ -4146,9 +4029,7 @@ input DataSourcePatch {
   translatedProps: JSON
 
   """
-  A URL to a TileJSON resource for tiled sources. For GeoJSON or
-  SEASKETCH_VECTOR sources, use this to fill in the data property of the source.
-  Also used by ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR
+  A URL to a TileJSON resource for tiled sources. For GeoJSON or SEASKETCH_VECTOR sources, use this to fill in the data property of the source. Also used by ARCGIS_DYNAMIC_MAPSERVER and ARCGIS_VECTOR
   """
   url: String
 
@@ -4161,6 +4042,59 @@ input DataSourcePatch {
   ARCGIS_DYNAMIC_MAPSERVER only. When using a high-dpi screen, request higher resolution images.
   """
   useDevicePixelRatio: Boolean
+}
+
+enum DataSourceTypes {
+  """Loads dynamic images for the entire viewport from arcgis server"""
+  ARCGIS_DYNAMIC_MAPSERVER
+
+  """
+  Only valid when used as a table of contents item data_source_type value.
+  """
+  ARCGIS_DYNAMIC_MAPSERVER_RASTER_SUBLAYER
+
+  """
+  Only valid when used as a table of contents item data_source_type value.
+  """
+  ARCGIS_DYNAMIC_MAPSERVER_VECTOR_SUBLAYER
+
+  """Tiled ArcGIS Map Service"""
+  ARCGIS_RASTER_TILES
+
+  """Loads vector data from arcgis server for rendering as a geojson source"""
+  ARCGIS_VECTOR
+
+  """MapBox GL Style "geojson" source"""
+  GEOJSON
+
+  """MapBox GL Style "image" source"""
+  IMAGE
+
+  """
+  Data source is iNaturalist data, available via their map services api. Refer to query_parameters for request parameters.
+  """
+  INATURALIST
+
+  """MapBox GL Style "raster" source"""
+  RASTER
+
+  """MapBox GL Style "raster" source"""
+  RASTER_DEM
+
+  """SeaSketch-hosted vector tiles"""
+  SEASKETCH_MVT
+
+  """Raster data hosting on SeaSketch CDN"""
+  SEASKETCH_RASTER
+
+  """GeoJSON hosted on SeaSketch CDN"""
+  SEASKETCH_VECTOR
+
+  """MapBox GL Style "vector" source"""
+  VECTOR
+
+  """MapBox GL Style "video" source"""
+  VIDEO
 }
 
 type DataSourcesBucket implements Node {
@@ -4276,59 +4210,6 @@ enum DataSourcesOrderBy {
   PROJECT_ID_DESC
 }
 
-enum DataSourceTypes {
-  """Loads dynamic images for the entire viewport from arcgis server"""
-  ARCGIS_DYNAMIC_MAPSERVER
-
-  """
-  Only valid when used as a table of contents item data_source_type value.
-  """
-  ARCGIS_DYNAMIC_MAPSERVER_RASTER_SUBLAYER
-
-  """
-  Only valid when used as a table of contents item data_source_type value.
-  """
-  ARCGIS_DYNAMIC_MAPSERVER_VECTOR_SUBLAYER
-
-  """Tiled ArcGIS Map Service"""
-  ARCGIS_RASTER_TILES
-
-  """Loads vector data from arcgis server for rendering as a geojson source"""
-  ARCGIS_VECTOR
-
-  """MapBox GL Style "geojson" source"""
-  GEOJSON
-
-  """MapBox GL Style "image" source"""
-  IMAGE
-
-  """
-  Data source is iNaturalist data, available via their map services api. Refer to query_parameters for request parameters.
-  """
-  INATURALIST
-
-  """MapBox GL Style "raster" source"""
-  RASTER
-
-  """MapBox GL Style "raster" source"""
-  RASTER_DEM
-
-  """SeaSketch-hosted vector tiles"""
-  SEASKETCH_MVT
-
-  """Raster data hosting on SeaSketch CDN"""
-  SEASKETCH_RASTER
-
-  """GeoJSON hosted on SeaSketch CDN"""
-  SEASKETCH_VECTOR
-
-  """MapBox GL Style "vector" source"""
-  VECTOR
-
-  """MapBox GL Style "video" source"""
-  VIDEO
-}
-
 type DataUploadOutput implements Node {
   containsOverlappingFeatures: Boolean
   createdAt: Datetime!
@@ -4409,9 +4290,7 @@ type DataUploadTask implements Node {
   presignedUploadUrl: String
 
   """
-  Format-specific processing instructions supplied by the client at upload time
-  (e.g. column mapping and CRS for delimited text uploads). Consumed by the
-  spatial-uploads-handler.
+  Format-specific processing instructions supplied by the client at upload time (e.g. column mapping and CRS for delimited text uploads). Consumed by the spatial-uploads-handler.
   """
   processingOptions: JSON
 
@@ -5866,40 +5745,6 @@ input DeleteSurveyInviteByNodeIdInput {
   nodeId: ID!
 }
 
-"""
-All input for the `deleteSurveyInvitedGroupBySurveyIdAndGroupId` mutation.
-"""
-input DeleteSurveyInvitedGroupBySurveyIdAndGroupIdInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  groupId: Int!
-  surveyId: Int!
-}
-
-"""The output of our delete `SurveyInvitedGroup` mutation."""
-type DeleteSurveyInvitedGroupPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-  deletedSurveyInvitedGroupNodeId: ID
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-
-  """Reads a single `Survey` that is related to this `SurveyInvitedGroup`."""
-  survey: Survey
-
-  """The `SurveyInvitedGroup` that was deleted by this mutation."""
-  surveyInvitedGroup: SurveyInvitedGroup
-}
-
 """All input for the `deleteSurveyInvite` mutation."""
 input DeleteSurveyInviteInput {
   """
@@ -5935,6 +5780,40 @@ type DeleteSurveyInvitePayload {
     """The method to use when ordering `SurveyInvite`."""
     orderBy: [SurveyInvitesOrderBy!] = [PRIMARY_KEY_ASC]
   ): SurveyInvitesEdge
+}
+
+"""
+All input for the `deleteSurveyInvitedGroupBySurveyIdAndGroupId` mutation.
+"""
+input DeleteSurveyInvitedGroupBySurveyIdAndGroupIdInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  groupId: Int!
+  surveyId: Int!
+}
+
+"""The output of our delete `SurveyInvitedGroup` mutation."""
+type DeleteSurveyInvitedGroupPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  deletedSurveyInvitedGroupNodeId: ID
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
+
+  """Reads a single `Survey` that is related to this `SurveyInvitedGroup`."""
+  survey: Survey
+
+  """The `SurveyInvitedGroup` that was deleted by this mutation."""
+  surveyInvitedGroup: SurveyInvitedGroup
 }
 
 """The output of our delete `Survey` mutation."""
@@ -6603,8 +6482,8 @@ type FileUpload implements Node {
   rel="download nofollow" so that it is not indexed by search engines.
   """
   downloadUrl: String!
-  filename: String!
   fileSizeBytes: BigInt!
+  filename: String!
   id: UUID!
   isSpatial: Boolean!
 
@@ -6635,6 +6514,18 @@ input FileUploadCondition {
 
   """Checks for equality with the object’s `postId` field."""
   postId: Int
+}
+
+enum FileUploadUsage {
+  ABOUT_PAGE
+  FORUM_ATTACHMENT
+  SURVEY_RESPONSE
+}
+
+enum FileUploadUsageInput {
+  about_page
+  forum_attachment
+  survey_response
 }
 
 """A connection to a list of `FileUpload` values."""
@@ -6672,18 +6563,6 @@ enum FileUploadsOrderBy {
   POST_ID_DESC
   PRIMARY_KEY_ASC
   PRIMARY_KEY_DESC
-}
-
-enum FileUploadUsage {
-  ABOUT_PAGE
-  FORUM_ATTACHMENT
-  SURVEY_RESPONSE
-}
-
-enum FileUploadUsageInput {
-  about_page
-  forum_attachment
-  survey_response
 }
 
 type FolderBreadcrumb {
@@ -6809,11 +6688,7 @@ type FormElement implements Node {
   backgroundWidth: Int
 
   """
-  [prosemirror](https://prosemirror.net/) document representing a rich-text
-  question or informational content. Level 1 headers can be assumed to be the
-  question for input-type fields, though formatting is up to the project
-  administrators. Clients should provide a template that encourages this
-  convention when building forms.
+  [prosemirror](https://prosemirror.net/) document representing a rich-text question or informational content. Level 1 headers can be assumed to be the question for input-type fields, though formatting is up to the project administrators. Clients should provide a template that encourages this convention when building forms.
   
   """
   body: JSON!
@@ -6825,9 +6700,7 @@ type FormElement implements Node {
   createdAt: Datetime!
 
   """
-  Column name used in csv export, property name in reporting tools. Keep stable
-  to avoid breaking reports. If null, this value will be dynamically generated
-  from the first several characters of the text in FormElement.body.
+  Column name used in csv export, property name in reporting tools. Keep stable to avoid breaking reports. If null, this value will be dynamically generated from the first several characters of the text in FormElement.body.
   
   """
   exportId: String
@@ -6843,9 +6716,7 @@ type FormElement implements Node {
   isRequired: Boolean!
 
   """
-  Used only in surveys. If set, the survey will advance to the page of the
-  specified form element. If null, the survey will simply advance to the next
-  question in the list by `position`.
+  Used only in surveys. If set, the survey will advance to the page of the specified form element. If null, the survey will simply advance to the next question in the list by `position`.
   
   """
   jumpToId: Int
@@ -6906,10 +6777,7 @@ type FormElement implements Node {
   sketchClassFk: SketchClass
 
   """
-  Used for special elements like SpatialAccessPriorityInput to create a sort of
-  sub-form that the parent element controls the rendering of. Will not appear in
-  the form unless the client implementation utilizes something like
-  FormElement.shouldDisplaySubordinateElement to control visibility.
+  Used for special elements like SpatialAccessPriorityInput to create a sort of sub-form that the parent element controls the rendering of. Will not appear in the form unless the client implementation utilizes something like FormElement.shouldDisplaySubordinateElement to control visibility.
   
   """
   subordinateTo: Int
@@ -6944,9 +6812,7 @@ type FormElement implements Node {
   ): SurveyConsentDocumentsConnection!
 
   """
-  Indicates whether the form element should be displayed with dark or light text
-  variants to match the background color. Admin interface should automatically
-  set this value based on `background_color`, though admins may wish to manually override.
+  Indicates whether the form element should be displayed with dark or light text variants to match the background color. Admin interface should automatically set this value based on `background_color`, though admins may wish to manually override.
   
   """
   textVariant: FormElementTextVariant!
@@ -6970,11 +6836,7 @@ input FormElementInput {
   backgroundWidth: Int
 
   """
-  [prosemirror](https://prosemirror.net/) document representing a rich-text
-  question or informational content. Level 1 headers can be assumed to be the
-  question for input-type fields, though formatting is up to the project
-  administrators. Clients should provide a template that encourages this
-  convention when building forms.
+  [prosemirror](https://prosemirror.net/) document representing a rich-text question or informational content. Level 1 headers can be assumed to be the question for input-type fields, though formatting is up to the project administrators. Clients should provide a template that encourages this convention when building forms.
   
   """
   body: JSON!
@@ -6986,9 +6848,7 @@ input FormElementInput {
   createdAt: Datetime
 
   """
-  Column name used in csv export, property name in reporting tools. Keep stable
-  to avoid breaking reports. If null, this value will be dynamically generated
-  from the first several characters of the text in FormElement.body.
+  Column name used in csv export, property name in reporting tools. Keep stable to avoid breaking reports. If null, this value will be dynamically generated from the first several characters of the text in FormElement.body.
   
   """
   exportId: String
@@ -7003,9 +6863,7 @@ input FormElementInput {
   isRequired: Boolean
 
   """
-  Used only in surveys. If set, the survey will advance to the page of the
-  specified form element. If null, the survey will simply advance to the next
-  question in the list by `position`.
+  Used only in surveys. If set, the survey will advance to the page of the specified form element. If null, the survey will simply advance to the next question in the list by `position`.
   
   """
   jumpToId: Int
@@ -7052,18 +6910,13 @@ input FormElementInput {
   secondaryColor: String
 
   """
-  Used for special elements like SpatialAccessPriorityInput to create a sort of
-  sub-form that the parent element controls the rendering of. Will not appear in
-  the form unless the client implementation utilizes something like
-  FormElement.shouldDisplaySubordinateElement to control visibility.
+  Used for special elements like SpatialAccessPriorityInput to create a sort of sub-form that the parent element controls the rendering of. Will not appear in the form unless the client implementation utilizes something like FormElement.shouldDisplaySubordinateElement to control visibility.
   
   """
   subordinateTo: Int
 
   """
-  Indicates whether the form element should be displayed with dark or light text
-  variants to match the background color. Admin interface should automatically
-  set this value based on `background_color`, though admins may wish to manually override.
+  Indicates whether the form element should be displayed with dark or light text variants to match the background color. Admin interface should automatically set this value based on `background_color`, though admins may wish to manually override.
   
   """
   textVariant: FormElementTextVariant
@@ -7098,11 +6951,7 @@ input FormElementPatch {
   backgroundWidth: Int
 
   """
-  [prosemirror](https://prosemirror.net/) document representing a rich-text
-  question or informational content. Level 1 headers can be assumed to be the
-  question for input-type fields, though formatting is up to the project
-  administrators. Clients should provide a template that encourages this
-  convention when building forms.
+  [prosemirror](https://prosemirror.net/) document representing a rich-text question or informational content. Level 1 headers can be assumed to be the question for input-type fields, though formatting is up to the project administrators. Clients should provide a template that encourages this convention when building forms.
   
   """
   body: JSON
@@ -7114,9 +6963,7 @@ input FormElementPatch {
   createdAt: Datetime
 
   """
-  Column name used in csv export, property name in reporting tools. Keep stable
-  to avoid breaking reports. If null, this value will be dynamically generated
-  from the first several characters of the text in FormElement.body.
+  Column name used in csv export, property name in reporting tools. Keep stable to avoid breaking reports. If null, this value will be dynamically generated from the first several characters of the text in FormElement.body.
   
   """
   exportId: String
@@ -7131,9 +6978,7 @@ input FormElementPatch {
   isRequired: Boolean
 
   """
-  Used only in surveys. If set, the survey will advance to the page of the
-  specified form element. If null, the survey will simply advance to the next
-  question in the list by `position`.
+  Used only in surveys. If set, the survey will advance to the page of the specified form element. If null, the survey will simply advance to the next question in the list by `position`.
   
   """
   jumpToId: Int
@@ -7180,44 +7025,17 @@ input FormElementPatch {
   secondaryColor: String
 
   """
-  Used for special elements like SpatialAccessPriorityInput to create a sort of
-  sub-form that the parent element controls the rendering of. Will not appear in
-  the form unless the client implementation utilizes something like
-  FormElement.shouldDisplaySubordinateElement to control visibility.
+  Used for special elements like SpatialAccessPriorityInput to create a sort of sub-form that the parent element controls the rendering of. Will not appear in the form unless the client implementation utilizes something like FormElement.shouldDisplaySubordinateElement to control visibility.
   
   """
   subordinateTo: Int
 
   """
-  Indicates whether the form element should be displayed with dark or light text
-  variants to match the background color. Admin interface should automatically
-  set this value based on `background_color`, though admins may wish to manually override.
+  Indicates whether the form element should be displayed with dark or light text variants to match the background color. Admin interface should automatically set this value based on `background_color`, though admins may wish to manually override.
   
   """
   textVariant: FormElementTextVariant
   typeId: String
-}
-
-"""A `FormElement` edge in the connection."""
-type FormElementsEdge {
-  """A cursor for use in pagination."""
-  cursor: Cursor
-
-  """The `FormElement` at the end of the edge."""
-  node: FormElement!
-}
-
-"""Methods to use when ordering `FormElement`."""
-enum FormElementsOrderBy {
-  FORM_ID_ASC
-  FORM_ID_DESC
-  ID_ASC
-  ID_DESC
-  MAP_BASEMAPS_ASC
-  MAP_BASEMAPS_DESC
-  NATURAL
-  PRIMARY_KEY_ASC
-  PRIMARY_KEY_DESC
 }
 
 enum FormElementTextVariant {
@@ -7239,8 +7057,7 @@ type FormElementType implements Node {
   isHidden: Boolean!
 
   """
-  Whether the element is an input that collects information from users or
-  contains presentational content like a Welcome Message component.
+  Whether the element is an input that collects information from users or contains presentational content like a Welcome Message component.
   """
   isInput: Boolean!
   isRequiredForSketchClasses: Boolean!
@@ -7250,10 +7067,7 @@ type FormElementType implements Node {
   isSingleUseOnly: Boolean!
 
   """
-  Indicates if the element type is a spatial data input. Components that
-  implement these types are expected to render their own map (in contrast with
-  elements that simply have their layout set to MAP_SIDEBAR_RIGHT|LEFT, which
-  expect the SurveyApp component to render a map for them.
+  Indicates if the element type is a spatial data input. Components that implement these types are expected to render their own map (in contrast with elements that simply have their layout set to MAP_SIDEBAR_RIGHT|LEFT, which expect the SurveyApp component to render a map for them.
   """
   isSpatial: Boolean!
 
@@ -7263,10 +7077,7 @@ type FormElementType implements Node {
   isSurveysOnly: Boolean!
 
   """
-  Control form element deployment with feature-flags. If this flag is enabled,
-  the form element should only appear as an option for addition to superuser
-  roles. Once added to a form however, it is visible to all users. No
-  access-control is enforced other than hiding the option in the client.
+  Control form element deployment with feature-flags. If this flag is enabled, the form element should only appear as an option for addition to superuser roles. Once added to a form however, it is visible to all users. No access-control is enforced other than hiding the option in the client.
   """
   label: String!
 
@@ -7296,6 +7107,28 @@ enum FormElementTypesOrderBy {
   COMPONENT_NAME_DESC
   LABEL_ASC
   LABEL_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+}
+
+"""A `FormElement` edge in the connection."""
+type FormElementsEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `FormElement` at the end of the edge."""
+  node: FormElement!
+}
+
+"""Methods to use when ordering `FormElement`."""
+enum FormElementsOrderBy {
+  FORM_ID_ASC
+  FORM_ID_DESC
+  ID_ASC
+  ID_DESC
+  MAP_BASEMAPS_ASC
+  MAP_BASEMAPS_DESC
   NATURAL
   PRIMARY_KEY_ASC
   PRIMARY_KEY_DESC
@@ -7464,6 +7297,13 @@ input FormPatch {
   templateType: FormTemplateType
 }
 
+"""Indicates which features should use the form as a template"""
+enum FormTemplateType {
+  SKETCHES
+  SURVEYS
+  SURVEYS_AND_SKETCHES
+}
+
 """A connection to a list of `Form` values."""
 type FormsConnection {
   """
@@ -7505,13 +7345,6 @@ enum FormsOrderBy {
   SURVEY_ID_DESC
 }
 
-"""Indicates which features should use the form as a template"""
-enum FormTemplateType {
-  SKETCHES
-  SURVEYS
-  SURVEYS_AND_SKETCHES
-}
-
 """
 Discussion forums are the highest level organizing unit of the discussion forums
 for a project. Each forum can have many topics (threads), which then contain
@@ -7520,8 +7353,7 @@ posts. Only project administrators can create and configure forums.
 """
 type Forum implements Node {
   """
-  Archived forums will only be accessible by project administrators from the
-  admin dashboard. This is an alternative to deleting a forum.
+  Archived forums will only be accessible by project administrators from the admin dashboard. This is an alternative to deleting a forum.
   """
   archived: Boolean
   canPost: Boolean
@@ -7540,8 +7372,7 @@ type Forum implements Node {
   nodeId: ID!
 
   """
-  Sets position of this forum in the listing. Forums should be listed by
-  position in ascending order. Set using `setForumOrder()`
+  Sets position of this forum in the listing. Forums should be listed by position in ascending order. Set using `setForumOrder()`
   """
   position: Int
   postCount: Int
@@ -7609,8 +7440,7 @@ input ForumCondition {
 """An input for mutations affecting `Forum`"""
 input ForumInput {
   """
-  Archived forums will only be accessible by project administrators from the
-  admin dashboard. This is an alternative to deleting a forum.
+  Archived forums will only be accessible by project administrators from the admin dashboard. This is an alternative to deleting a forum.
   """
   archived: Boolean
 
@@ -7622,8 +7452,7 @@ input ForumInput {
   name: String!
 
   """
-  Sets position of this forum in the listing. Forums should be listed by
-  position in ascending order. Set using `setForumOrder()`
+  Sets position of this forum in the listing. Forums should be listed by position in ascending order. Set using `setForumOrder()`
   """
   position: Int
   projectId: Int!
@@ -7635,8 +7464,7 @@ Represents an update to a `Forum`. Fields that are set will be updated.
 """
 input ForumPatch {
   """
-  Archived forums will only be accessible by project administrators from the
-  admin dashboard. This is an alternative to deleting a forum.
+  Archived forums will only be accessible by project administrators from the admin dashboard. This is an alternative to deleting a forum.
   """
   archived: Boolean
 
@@ -7647,8 +7475,7 @@ input ForumPatch {
   name: String
 
   """
-  Sets position of this forum in the listing. Forums should be listed by
-  position in ascending order. Set using `setForumOrder()`
+  Sets position of this forum in the listing. Forums should be listed by position in ascending order. Set using `setForumOrder()`
   """
   position: Int
   translatedProps: JSON
@@ -7722,6 +7549,11 @@ type GenerateOfflineTilePackagePayload {
   """
   query: Query
 }
+
+"""
+The `GeoJSON` scalar type represents GeoJSON values as specified by[RFC 7946](https://tools.ietf.org/html/rfc7946).
+"""
+scalar GeoJSON
 
 """Methods to use when ordering `Geography`."""
 enum GeographiesOrderBy {
@@ -7970,11 +7802,6 @@ type GeographySubject {
 type GeographyUpdatedPayload {
   geography: Geography!
 }
-
-"""
-The `GeoJSON` scalar type represents GeoJSON values as specified by[RFC 7946](https://tools.ietf.org/html/rfc7946).
-"""
-scalar GeoJSON
 
 """All geometry XY types implement this interface"""
 interface GeometryGeometry {
@@ -8577,8 +8404,7 @@ Project invite emails are sent by direct admin action, going into a QUEUED state
 and eventually sent out by a backend emailing process. Survey invites are 
 automatically created whenever a survey is published.
 
-[More details on the mailing process can be found on the
-wiki](https://github.com/seasketch/next/wiki/User-and-Survey-Invite-Management).
+[More details on the mailing process can be found on the wiki](https://github.com/seasketch/next/wiki/User-and-Survey-Invite-Management).
 
 """
 type InviteEmail implements Node {
@@ -8660,8 +8486,7 @@ type InviteStat {
 }
 
 """
-Invite status is derived from feedback notifications coming from the AWS SES
-email service and token expiration date. See the inviteEmails relation for more details.
+Invite status is derived from feedback notifications coming from the AWS SES email service and token expiration date. See the inviteEmails relation for more details.
 """
 enum InviteStatus {
   BOUNCED
@@ -8731,6 +8556,11 @@ type IsReportingTypePayload {
   query: Query
 }
 
+"""
+The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
+"""
+scalar JSON
+
 """All input for the `joinProject` mutation."""
 input JoinProjectInput {
   """
@@ -8754,11 +8584,6 @@ type JoinProjectPayload {
   """
   query: Query
 }
-
-"""
-The `JSON` scalar type represents JSON values as specified by [ECMA-404](http://www.ecma-international.org/publications/files/ECMA-ST/ECMA-404.pdf).
-"""
-scalar JSON
 
 type LabelCount {
   count: Int!
@@ -9344,8 +9169,7 @@ type Mutation {
   invite. Outstanding (or confirmed) invites can be accessed via the 
   `currentProject.invite` query.
   
-  More details on how to handle invites can be found [on the
-  wiki](https://github.com/seasketch/next/wiki/User-Ingress#project-invites).
+  More details on how to handle invites can be found [on the wiki](https://github.com/seasketch/next/wiki/User-Ingress#project-invites).
   
   """
   confirmProjectInviteWithVerifiedEmail(
@@ -9362,9 +9186,7 @@ type Mutation {
   ): ConvertEsriFeatureLayerToSeasketchHostedPayload
 
   """
-  Copies appearance settings like layout and background_image from one form
-  element to another. Useful when initializing custom appearance on an element
-  from the defaults set by a previous question.
+  Copies appearance settings like layout and background_image from one form element to another. Useful when initializing custom appearance on an element from the defaults set by a previous question.
   """
   copyAppearance(
     """
@@ -9424,7 +9246,7 @@ type Mutation {
     """
     input: CreateDataUploadInput!
   ): CreateDataUploadPayload
-  createFileUpload(contentType: String!, filename: String!, fileSizeBytes: Int!, projectId: Int!, usage: FileUploadUsageInput!): UploaderResponse!
+  createFileUpload(contentType: String!, fileSizeBytes: Int!, filename: String!, projectId: Int!, usage: FileUploadUsageInput!): UploaderResponse!
 
   """Creates a single `FormElement`."""
   createFormElement(
@@ -9531,8 +9353,7 @@ type Mutation {
   ): CreateOptionalBasemapLayerPayload
 
   """
-  Admin-only. Starts a coverage-file upload. The client PUTs the JSON to the
-  presigned URL, then calls submitOverlayDataTableUpload.
+  Admin-only. Starts a coverage-file upload. The client PUTs the JSON to the presigned URL, then calls submitOverlayDataTableUpload.
   """
   createOverlayDataTableCoverageUpload(
     """
@@ -9542,10 +9363,7 @@ type Mutation {
   ): CreateOverlayDataTableCoverageUploadPayload
 
   """
-  Admin-only. Starts a draft organism-enrichment job. Optional class CSV is
-  uploaded to the returned presigned URL, then submitOverlayDataTableUpload.
-  Writes a clustered copy of data.parquet and organism sidecars under a new
-  upload prefix. Queue wait and running timeout are 15 minutes.
+  Admin-only. Starts a draft organism-enrichment job. Optional class CSV is uploaded to the returned presigned URL, then submitOverlayDataTableUpload. Writes a clustered copy of data.parquet and organism sidecars under a new upload prefix. Queue wait and running timeout are 15 minutes.
   """
   createOverlayDataTableOrganismReprocess(
     """
@@ -9572,9 +9390,7 @@ type Mutation {
   createPost(message: JSON!, topicId: Int!): Post!
 
   """
-  Users with verified emails can create new projects by choosing a unique name
-  and url slug. This project will be unlisted with admin_only access and the
-  user will be automatically added to the list of admins.
+  Users with verified emails can create new projects by choosing a unique name and url slug. This project will be unlisted with admin_only access and the user will be automatically added to the list of admins.
   """
   createProject(
     """
@@ -9610,14 +9426,6 @@ type Mutation {
     input: CreateProjectInvitesInput!
   ): CreateProjectInvitesPayload
 
-  """Creates a single `ProjectsSharedBasemap`."""
-  createProjectsSharedBasemap(
-    """
-    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
-    """
-    input: CreateProjectsSharedBasemapInput!
-  ): CreateProjectsSharedBasemapPayload
-
   """
   Create a new project and optionally create initial geographies for it.
   Geography clipping layers must reference template IDs because project
@@ -9629,6 +9437,14 @@ type Mutation {
     """
     input: CreateProjectWithGeographiesInput!
   ): CreateProjectPayload
+
+  """Creates a single `ProjectsSharedBasemap`."""
+  createProjectsSharedBasemap(
+    """
+    The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
+    """
+    input: CreateProjectsSharedBasemapInput!
+  ): CreateProjectsSharedBasemapPayload
   createRemoteGeojsonSource(
     """
     The exclusive input argument for this mutation. An object type, make sure to see documentation for this object’s fields.
@@ -10033,8 +9849,7 @@ type Mutation {
   ): DeletePostPayload
 
   """
-  Marks project as deleted. Will remain in database but not accessible to
-  anyone. Function can only be accessed by project administrators.
+  Marks project as deleted. Will remain in database but not accessible to anyone. Function can only be accessed by project administrators.
   """
   deleteProject(
     """
@@ -10249,9 +10064,7 @@ type Mutation {
   ): DeleteSurveyResponsePayload
 
   """
-  Deletes an item from the draft table of contents, as well as all child items
-  if it is a folder. This action will also delete all related layers and sources
-  (if no other layers reference the source).
+  Deletes an item from the draft table of contents, as well as all child items if it is a folder. This action will also delete all related layers and sources (if no other layers reference the source).
   """
   deleteTableOfContentsBranch(
     """
@@ -10518,8 +10331,7 @@ type Mutation {
   ): PublishReportPayload
 
   """
-  Copies draft TOC to published; sets project flags. Records change_logs
-  (layers:published) with draft layer_count when session.user_id is set.
+  Copies draft TOC to published; sets project flags. Records change_logs (layers:published) with draft layer_count when session.user_id is set.
   """
   publishTableOfContents(
     """
@@ -10707,8 +10519,7 @@ type Mutation {
   ): SetDataUploadTaskChangelogPayload
 
   """
-  Sets the enable_download flag for all overlays in a project. Note this is only
-  applied to draft items, so will require a publish to impact project users.
+  Sets the enable_download flag for all overlays in a project. Note this is only applied to draft items, so will require a publish to impact project users.
   """
   setEnableDownloadForAllOverlays(
     """
@@ -10739,8 +10550,7 @@ type Mutation {
   ): SetFormLogicRuleOrderPayload
 
   """
-  Set the order in which discussion forums will be displayed. Provide a list of
-  forum IDs in the correct order. Missing ids will be added to the end of the list.
+  Set the order in which discussion forums will be displayed. Provide a list of forum IDs in the correct order. Missing ids will be added to the end of the list.
   
   """
   setForumOrder(
@@ -10757,10 +10567,7 @@ type Mutation {
   ): SetOverlayDataTableVisualizationSettingsPayload
 
   """
-  Admins can use this function to hide the contents of a message. Message will
-  still appear in the client with the missing content, and should link to the
-  Community Guidelines for why the post may have been hidden. If admins want all
-  evidence of the post removed they must delete it.
+  Admins can use this function to hide the contents of a message. Message will still appear in the client with the missing content, and should link to the Community Guidelines for why the post may have been hidden. If admins want all evidence of the post removed they must delete it.
   
   """
   setPostHiddenByModerator(
@@ -10783,8 +10590,7 @@ type Mutation {
   ): SetProjectRegionBoundsPayload
 
   """
-  Lock a topic so that it can no longer be responded to. Past discussion will
-  still be visible. This mutation is only available to project admins.
+  Lock a topic so that it can no longer be responded to. Past discussion will still be visible. This mutation is only available to project admins.
   """
   setTopicLocked(
     """
@@ -10806,8 +10612,7 @@ type Mutation {
   setTranslatedProp(id: Int!, propName: String!, translations: [TranslatedPropInput!]!, typeName: String!): setTranslatedPropResult!
 
   """
-  Sets the list of groups that the given user belongs to. Will clear all other
-  group memberships in the project. Available only to admins.
+  Sets the list of groups that the given user belongs to. Will clear all other group memberships in the project. Available only to admins.
   
   """
   setUserGroups(
@@ -10854,8 +10659,7 @@ type Mutation {
   ): SubmitOverlayDataTableUploadPayload
 
   """
-  Toggle admin access for the given project and user. User must have already
-  joined the project and shared their user profile.
+  Toggle admin access for the given project and user. User must have already joined the project and shared their user profile.
   """
   toggleAdminAccess(
     """
@@ -11638,9 +11442,7 @@ type Mutation {
   ): UpdateTopicPayload
 
   """
-  Batch reassigns z_index for one project. Records change_logs
-  (layers:z-order-change) on projects when session.user_id is set; to_summary
-  includes reordered_count.
+  Batch reassigns z_index for one project. Records change_logs (layers:z-order-change) on projects when session.user_id is set; to_summary includes reordered_count.
   """
   updateZIndexes(
     """
@@ -11746,6 +11548,20 @@ input OfflineTilePackageCondition {
   projectId: Int
 }
 
+enum OfflineTilePackageSourceType {
+  RASTER
+  RASTER_DEM
+  VECTOR
+}
+
+enum OfflineTilePackageStatus {
+  COMPLETE
+  FAILED
+  GENERATING
+  QUEUED
+  UPLOADING
+}
+
 """A connection to a list of `OfflineTilePackage` values."""
 type OfflineTilePackagesConnection {
   """
@@ -11783,20 +11599,6 @@ enum OfflineTilePackagesOrderBy {
   PRIMARY_KEY_DESC
   PROJECT_ID_ASC
   PROJECT_ID_DESC
-}
-
-enum OfflineTilePackageSourceType {
-  RASTER
-  RASTER_DEM
-  VECTOR
-}
-
-enum OfflineTilePackageStatus {
-  COMPLETE
-  FAILED
-  GENERATING
-  QUEUED
-  UPLOADING
 }
 
 type OfflineTileSetting implements Node {
@@ -11882,10 +11684,7 @@ type OptionalBasemapLayer implements Node {
   description: String
 
   """
-  Specify RADIO or SELECT if this option should be presented as a group of
-  options. Useful for mutually exclusive views like different years for the same
-  dataset, or a heatmap display of density for multiple species where a single
-  species must be chosen from a list. If left null, the option will be treated as standalone.
+  Specify RADIO or SELECT if this option should be presented as a group of options. Useful for mutually exclusive views like different years for the same dataset, or a heatmap display of density for multiple species where a single species must be chosen from a list. If left null, the option will be treated as standalone.
   """
   groupType: OptionalBasemapLayersGroupType!
   id: Int!
@@ -11925,10 +11724,7 @@ input OptionalBasemapLayerInput {
   description: String
 
   """
-  Specify RADIO or SELECT if this option should be presented as a group of
-  options. Useful for mutually exclusive views like different years for the same
-  dataset, or a heatmap display of density for multiple species where a single
-  species must be chosen from a list. If left null, the option will be treated as standalone.
+  Specify RADIO or SELECT if this option should be presented as a group of options. Useful for mutually exclusive views like different years for the same dataset, or a heatmap display of density for multiple species where a single species must be chosen from a list. If left null, the option will be treated as standalone.
   """
   groupType: OptionalBasemapLayersGroupType
   id: Int
@@ -11953,10 +11749,7 @@ input OptionalBasemapLayerPatch {
   description: String
 
   """
-  Specify RADIO or SELECT if this option should be presented as a group of
-  options. Useful for mutually exclusive views like different years for the same
-  dataset, or a heatmap display of density for multiple species where a single
-  species must be chosen from a list. If left null, the option will be treated as standalone.
+  Specify RADIO or SELECT if this option should be presented as a group of options. Useful for mutually exclusive views like different years for the same dataset, or a heatmap display of density for multiple species where a single species must be chosen from a list. If left null, the option will be treated as standalone.
   """
   groupType: OptionalBasemapLayersGroupType
   id: Int
@@ -11990,9 +11783,7 @@ enum OptionalBasemapLayersOrderBy {
 }
 
 """
-A complete OrganismInfo document for an overlay data table: identity column,
-value kind, and class-table role mapping. Validated against
-@seasketch/geostats-types isOrganismInfo.
+A complete OrganismInfo document for an overlay data table: identity column, value kind, and class-table role mapping. Validated against @seasketch/geostats-types isOrganismInfo.
 """
 scalar OrganismInfo
 
@@ -12004,29 +11795,24 @@ type OutstandingSurveyInvites {
 
 type OverlayDataTable implements Node {
   """
-  Across replicates. Code name: across_replicate_operations. JSON object of
-  value column to an array of sum|mean|min|max. Missing columns default to ["mean"].
+  Across replicates. Code name: across_replicate_operations. JSON object of value column to an array of sum|mean|min|max. Missing columns default to ["mean"].
   """
   acrossReplicateOperations: JSON!
 
   """
-  Replicate columns. Code name: additional_replicate_identifiers. With the
-  survey time and the join column, these identify one replicate.
+  Replicate columns. Code name: additional_replicate_identifiers. With the survey time and the join column, these identify one replicate.
   """
   additionalReplicateIdentifiers: [String]!
 
   """
-  How to turn rows into a map value. simple: each row is already a summary.
-  replicates: rows are observations inside replicates.
+  How to turn rows into a map value. simple: each row is already a summary. replicates: rows are observations inside replicates.
   """
   calculationMode: String!
   columnStatsRemote: String!
   columnStatsUrl: String
 
   """
-  When a subject is missing from a replicate. Code name: coverage_mode.
-  all_surveyed: it was surveyed and none were seen. rows_only: nothing can be
-  assumed. coverage_file: it depends on when and where.
+  When a subject is missing from a replicate. Code name: coverage_mode. all_surveyed: it was surveyed and none were seen. rows_only: nothing can be assumed. coverage_file: it depends on when and where.
   """
   coverageMode: String!
 
@@ -12044,14 +11830,12 @@ type OverlayDataTable implements Node {
   description: String
 
   """
-  Nothing seen rows. Code name: effort_marker_values. Values in the subject or a
-  detail column that mean the replicate was surveyed and nothing was seen.
+  Nothing seen rows. Code name: effort_marker_values. Values in the subject or a detail column that mean the replicate was surveyed and nothing was seen.
   """
   effortMarkerValues: [String]!
 
   """
-  Rows to ignore. Code name: excluded_values. JSON object of column name to
-  values whose rows are left out of replicates, observations, and effort.
+  Rows to ignore. Code name: excluded_values. JSON object of column name to values whose rows are left out of replicates, observations, and effort.
   """
   excludedValues: JSON!
 
@@ -12081,11 +11865,10 @@ type OverlayDataTable implements Node {
   nodeId: ID!
 
   """
-  Detail columns. Code name: observation_detail_columns. Columns that describe
-  one observation rather than the replicate. Filtering them narrows what is
-  counted and does not remove replicates.
+  Detail columns. Code name: observation_detail_columns. Columns that describe one observation rather than the replicate. Filtering them narrows what is counted and does not remove replicates.
   """
   observationDetailColumns: [String]!
+  orgQueryUrl: String
 
   """
   Organism identity metadata for this data table. Null when the table
@@ -12094,7 +11877,6 @@ type OverlayDataTable implements Node {
   organism: OrganismInfo
   organismCatalogUrl: String
   organismPreviewUrl: String
-  orgQueryUrl: String
   overlayJoinColumn: String!
   parquetRemote: String!
   parquetUrl: String
@@ -12114,8 +11896,7 @@ type OverlayDataTable implements Node {
   replicateLabelCustom: String
 
   """
-  Columns that must appear as filters when this table is displayed on the map.
-  End users can change the filter values but cannot remove these filters.
+  Columns that must appear as filters when this table is displayed on the map. End users can change the filter values but cannot remove these filters.
   """
   requiredFilterColumns: [String]
   rowCount: Int!
@@ -12126,14 +11907,12 @@ type OverlayDataTable implements Node {
   sourceParquetRemote: String
 
   """
-  Stable logical identity for a data table across version replace and TOC
-  publish. Draft and published copies share the same UUID.
+  Stable logical identity for a data table across version replace and TOC publish. Draft and published copies share the same UUID.
   """
   stableId: UUID!
 
   """
-  Subject column. Code name: subject_column. Names what each row is an
-  observation of. organism.column must equal this when organism enrichment is set.
+  Subject column. Code name: subject_column. Names what each row is an observation of. organism.column must equal this when organism enrichment is set.
   """
   subjectColumn: String
   tableOfContentsItemId: Int!
@@ -12158,8 +11937,7 @@ type OverlayDataTable implements Node {
   visualizationOps: [String]
 
   """
-  Within a replicate. Code name: within_replicate_operations. JSON object of
-  value column to sum|mean|min|max. Missing columns default to sum.
+  Within a replicate. Code name: within_replicate_operations. JSON object of value column to sum|mean|min|max. Missing columns default to sum.
   """
   withinReplicateOperations: JSON!
 }
@@ -12176,45 +11954,6 @@ input OverlayDataTableCondition {
   projectId: Int
 }
 
-"""A connection to a list of `OverlayDataTable` values."""
-type OverlayDataTablesConnection {
-  """
-  A list of edges which contains the `OverlayDataTable` and cursor to aid in pagination.
-  """
-  edges: [OverlayDataTablesEdge!]!
-
-  """A list of `OverlayDataTable` objects."""
-  nodes: [OverlayDataTable!]!
-
-  """Information to aid in pagination."""
-  pageInfo: PageInfo!
-
-  """
-  The count of *all* `OverlayDataTable` you could get from the connection.
-  """
-  totalCount: Int!
-}
-
-"""A `OverlayDataTable` edge in the connection."""
-type OverlayDataTablesEdge {
-  """A cursor for use in pagination."""
-  cursor: Cursor
-
-  """The `OverlayDataTable` at the end of the edge."""
-  node: OverlayDataTable!
-}
-
-"""Methods to use when ordering `OverlayDataTable`."""
-enum OverlayDataTablesOrderBy {
-  ID_ASC
-  ID_DESC
-  NATURAL
-  PRIMARY_KEY_ASC
-  PRIMARY_KEY_DESC
-  PROJECT_ID_ASC
-  PROJECT_ID_DESC
-}
-
 type OverlayDataTableUpload implements Node {
   contentType: String!
   createdAt: Datetime
@@ -12223,8 +11962,7 @@ type OverlayDataTableUpload implements Node {
   id: UUID!
 
   """
-  Ephemeral DataTableNodataConfig for a reprocess (or CSV replace) job. Not
-  copied onto overlay_data_tables until the job completes successfully.
+  Ephemeral DataTableNodataConfig for a reprocess (or CSV replace) job. Not copied onto overlay_data_tables until the job completes successfully.
   """
   nodataConfig: JSON
 
@@ -12256,8 +11994,7 @@ type OverlayDataTableUpload implements Node {
   tableOfContentsItemId: Int!
 
   """
-  Ephemeral DataTableTemporalConfig for a reprocess (or CSV replace) job. Not
-  copied onto overlay_data_tables until the job completes successfully.
+  Ephemeral DataTableTemporalConfig for a reprocess (or CSV replace) job. Not copied onto overlay_data_tables until the job completes successfully.
   """
   temporalConfig: JSON
   updatedAt: Datetime
@@ -12312,6 +12049,45 @@ enum OverlayDataTableUploadsOrderBy {
   PRIMARY_KEY_DESC
   PROJECT_BACKGROUND_JOB_ID_ASC
   PROJECT_BACKGROUND_JOB_ID_DESC
+}
+
+"""A connection to a list of `OverlayDataTable` values."""
+type OverlayDataTablesConnection {
+  """
+  A list of edges which contains the `OverlayDataTable` and cursor to aid in pagination.
+  """
+  edges: [OverlayDataTablesEdge!]!
+
+  """A list of `OverlayDataTable` objects."""
+  nodes: [OverlayDataTable!]!
+
+  """Information to aid in pagination."""
+  pageInfo: PageInfo!
+
+  """
+  The count of *all* `OverlayDataTable` you could get from the connection.
+  """
+  totalCount: Int!
+}
+
+"""A `OverlayDataTable` edge in the connection."""
+type OverlayDataTablesEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `OverlayDataTable` at the end of the edge."""
+  node: OverlayDataTable!
+}
+
+"""Methods to use when ordering `OverlayDataTable`."""
+enum OverlayDataTablesOrderBy {
+  ID_ASC
+  ID_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+  PROJECT_ID_ASC
+  PROJECT_ID_DESC
 }
 
 """Information about pagination in a connection."""
@@ -12392,9 +12168,7 @@ type Post implements Node {
   ): FileUploadsConnection!
 
   """
-  If set, the post has been hidden by a project admin. Contents of the post will
-  not be available to the client. Admins should update this field using
-  `setPostHiddenByModerator()`.
+  If set, the post has been hidden by a project admin. Contents of the post will not be available to the client. Admins should update this field using `setPostHiddenByModerator()`.
   """
   hiddenByModerator: Boolean!
   html: String!
@@ -12849,9 +12623,7 @@ type Project implements Node {
   eligableDownloadableLayersCount: Int
 
   """
-  When true, overlay layers will be available for download by end-users if they
-  have access to the layer and the data source supports it. This can be
-  controlled on a per-layer basis.
+  When true, overlay layers will be available for download by end-users if they have access to the layer and the data source supports it. This can be controlled on a per-layer basis.
   """
   enableDownloadByDefault: Boolean!
   estimateDeletedDataForRetentionChange(newRetentionPeriod: IntervalInput): RetentionChangeEstimate
@@ -12918,21 +12690,15 @@ type Project implements Node {
   importedArcgisServices: [String]
 
   """
-  Returns the project invitation for the current user session, if any. Will not
-  appear until the invite has been sent. The system determines the relevant
-  invite using the `canonical_email` claim in the user access token.
+  Returns the project invitation for the current user session, if any. Will not appear until the invite has been sent. The system determines the relevant invite using the `canonical_email` claim in the user access token.
   
-  If the invite status is unconfirmed the client should accept it using the
-  `confirmProjectInviteWithVerifiedEmail()` mutation. Details on how to work
-  with user ingress and project invites [can be found on the
-  wiki](https://github.com/seasketch/next/wiki/User-Ingress).
+  If the invite status is unconfirmed the client should accept it using the `confirmProjectInviteWithVerifiedEmail()` mutation. Details on how to work with user ingress and project invites [can be found on the wiki](https://github.com/seasketch/next/wiki/User-Ingress).
   
   """
   invite: ProjectInvite
 
   """
-  Breakdown of number of invites per status. Used to display counts in overview
-  listing of users, groups, and invites in the user administration dashboard.
+  Breakdown of number of invites per status. Used to display counts in overview listing of users, groups, and invites in the user administration dashboard.
   
   """
   inviteCounts(
@@ -12969,8 +12735,7 @@ type Project implements Node {
   ): ProjectInvitesConnection!
 
   """
-  Returns true if the given user is an administrator of the project. Informaiton
-  is only available administrators of the project and will otherwise always return false.
+  Returns true if the given user is an administrator of the project. Informaiton is only available administrators of the project and will otherwise always return false.
   
   """
   isAdmin(userId: Int): Boolean
@@ -12981,8 +12746,7 @@ type Project implements Node {
   isFeatured: Boolean!
 
   """
-  Project admins can decide whether their project will be displayed on the
-  public project listing via Query.projectsConnection.
+  Project admins can decide whether their project will be displayed on the public project listing via Query.projectsConnection.
   """
   isListed: Boolean!
   isOfflineEnabled: Boolean
@@ -13014,8 +12778,7 @@ type Project implements Node {
   logoLink: String
 
   """
-  URL referencing an image that will be used to represent the project. Will be
-  displayed at 48x48 pixels and must be a public url.
+  URL referencing an image that will be used to represent the project. Will be displayed at 48x48 pixels and must be a public url.
   """
   logoUrl: String
 
@@ -13025,8 +12788,6 @@ type Project implements Node {
   Claims include role (admin|user) and project group ids.
   """
   mapAccessToken: String
-  mapboxPublicKey: String
-  mapboxSecretKey: String
 
   """Reads and enables pagination through a set of `ProjectMapDataRequest`."""
   mapDataRequests(
@@ -13037,6 +12798,8 @@ type Project implements Node {
     offset: Int
     period: ActivityStatsPeriod
   ): [ProjectMapDataRequest!]
+  mapboxPublicKey: String
+  mapboxSecretKey: String
 
   """Reads and enables pagination through a set of `TableOfContentsItem`."""
   mostUsedLayers(
@@ -13210,34 +12973,26 @@ type Project implements Node {
   reportingLayers: [ReportOverlaySource!]!
 
   """
-  Whether the current user has any discussion forum posts in this project. Use
-  this to determine whether `project.communityGuidelines` should be shown to the
-  user before their first post.
+  Whether the current user has any discussion forum posts in this project. Use this to determine whether `project.communityGuidelines` should be shown to the user before their first post.
   """
   sessionHasPosts: Boolean
 
   """
-  Indicates whether current session should have special access or group
-  privileges. These grants will not be active if the user does not have a
-  verified email address.
+  Indicates whether current session should have special access or group privileges. These grants will not be active if the user does not have a verified email address.
   
-  Clients should check for situations where a user access token has a false
-  `email_verified` cliam paired with privileged access. If that is the case they
-  should prompt users to confirm their email address.
+  Clients should check for situations where a user access token has a false `email_verified` cliam paired with privileged access. If that is the case they should prompt users to confirm their email address.
   
   """
   sessionHasPrivilegedAccess: Boolean
 
   """
-  Returns true if the user has admin privileges on this project. Will return
-  true even if the session email is not verified, but permissions will not work until it is.
+  Returns true if the user has admin privileges on this project. Will return true even if the session email is not verified, but permissions will not work until it is.
   """
   sessionIsAdmin: Boolean
 
   """
   Invites (and related tokens) for surveys which this user has not yet responded
-  to. Details on how to handle survey invites [can be found on the
-  wiki](https://github.com/seasketch/next/wiki/User-Ingress#survey-invites).
+  to. Details on how to handle survey invites [can be found on the wiki](https://github.com/seasketch/next/wiki/User-Ingress#survey-invites).
   
   """
   sessionOutstandingSurveyInvites(
@@ -13250,6 +13005,7 @@ type Project implements Node {
   sessionParticipationStatus: ParticipationStatus
   showLegendByDefault: Boolean
   showScalebarByDefault: Boolean
+  sketchClassMissingFragmentCounts: [SketchClassFragmentStatus!]
 
   """Reads and enables pagination through a set of `SketchClass`."""
   sketchClasses(
@@ -13267,13 +13023,6 @@ type Project implements Node {
     """The method to use when ordering `SketchClass`."""
     orderBy: [SketchClassesOrderBy!]
   ): [SketchClass!]!
-  sketchClassMissingFragmentCounts: [SketchClassFragmentStatus!]
-
-  """
-  True when fragment generation jobs are queued or running for this project.
-  """
-  sketchesFragmentGenerationInProgress: Boolean
-  sketchesMissingFragments: Int
   sketchFragmentJobDetails: [SketchFragmentJobDetail!]
 
   """
@@ -13283,6 +13032,12 @@ type Project implements Node {
   project. Must be refreshed occasionally.
   """
   sketchGeometryToken: String
+
+  """
+  True when fragment generation jobs are queued or running for this project.
+  """
+  sketchesFragmentGenerationInProgress: Boolean
+  sketchesMissingFragments: Int
 
   """
   Short identifier for the project used in the url. This property cannot be changed after project creation.
@@ -13335,8 +13090,8 @@ type Project implements Node {
     """Skip the first `n` values."""
     offset: Int
   ): [Sprite!]
-  supportedLanguages: [String]!
   supportEmail: String!
+  supportedLanguages: [String]!
 
   """Reads and enables pagination through a set of `Basemap`."""
   surveyBasemaps(
@@ -13583,17 +13338,6 @@ input ProjectBackgroundJobCondition {
   projectId: Int
 }
 
-"""Methods to use when ordering `ProjectBackgroundJob`."""
-enum ProjectBackgroundJobsOrderBy {
-  ID_ASC
-  ID_DESC
-  NATURAL
-  PRIMARY_KEY_ASC
-  PRIMARY_KEY_DESC
-  PROJECT_ID_ASC
-  PROJECT_ID_DESC
-}
-
 enum ProjectBackgroundJobState {
   COMPLETE
   FAILED
@@ -13615,6 +13359,17 @@ enum ProjectBackgroundJobType {
   DATA_TABLE_UPLOAD
   DATA_UPLOAD
   REPLACEMENT_UPLOAD
+}
+
+"""Methods to use when ordering `ProjectBackgroundJob`."""
+enum ProjectBackgroundJobsOrderBy {
+  ID_ASC
+  ID_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+  PROJECT_ID_ASC
+  PROJECT_ID_DESC
 }
 
 """
@@ -13655,9 +13410,7 @@ Use the `createProjectInvites()`
 mutation to create one or more invitations and then use graphile generated 
 mutations to update and delete them.
 
-Details on [handling user ingress with invitation
-tokens](https://github.com/seasketch/next/wiki/User-Ingress#project-invites) and [the mailer subsystem](https://github.com/seasketch/next/wiki/User-and-Survey-Invite-Management)
-can be found on the wiki.
+Details on [handling user ingress with invitation tokens](https://github.com/seasketch/next/wiki/User-Ingress#project-invites) and [the mailer subsystem](https://github.com/seasketch/next/wiki/User-and-Survey-Invite-Management) can be found on the wiki.
 
 """
 type ProjectInvite implements Node {
@@ -13826,6 +13579,31 @@ input ProjectInviteOptionInput {
   fullname: String
 }
 
+type ProjectInviteStateSubscriptionPayload {
+  invite: ProjectInvite
+}
+
+type ProjectInviteTokenClaims {
+  admin: Boolean!
+  email: String!
+  fullname: String
+  inviteId: Int!
+  projectId: Int!
+  projectName: String!
+  projectSlug: String!
+  wasUsed: Boolean!
+}
+
+type ProjectInviteTokenVerificationResults {
+  claims: ProjectInviteTokenClaims
+  error: String
+
+  """
+  Indicates whether there is an existing account that matches the email address on the invite
+  """
+  existingAccount: Boolean
+}
+
 """A connection to a list of `ProjectInvite` values."""
 type ProjectInvitesConnection {
   """
@@ -13850,31 +13628,6 @@ type ProjectInvitesEdge {
 
   """The `ProjectInvite` at the end of the edge."""
   node: ProjectInvite!
-}
-
-type ProjectInviteStateSubscriptionPayload {
-  invite: ProjectInvite
-}
-
-type ProjectInviteTokenClaims {
-  admin: Boolean!
-  email: String!
-  fullname: String
-  inviteId: Int!
-  projectId: Int!
-  projectName: String!
-  projectSlug: String!
-  wasUsed: Boolean!
-}
-
-type ProjectInviteTokenVerificationResults {
-  claims: ProjectInviteTokenClaims
-  error: String
-
-  """
-  Indicates whether there is an existing account that matches the email address on the invite
-  """
-  existingAccount: Boolean
 }
 
 type ProjectMapDataRequest implements Node {
@@ -13911,9 +13664,7 @@ input ProjectPatch {
   description: String
 
   """
-  When true, overlay layers will be available for download by end-users if they
-  have access to the layer and the data source supports it. This can be
-  controlled on a per-layer basis.
+  When true, overlay layers will be available for download by end-users if they have access to the layer and the data source supports it. This can be controlled on a per-layer basis.
   """
   enableDownloadByDefault: Boolean
   hideForums: Boolean
@@ -13927,8 +13678,7 @@ input ProjectPatch {
   isFeatured: Boolean
 
   """
-  Project admins can decide whether their project will be displayed on the
-  public project listing via Query.projectsConnection.
+  Project admins can decide whether their project will be displayed on the public project listing via Query.projectsConnection.
   """
   isListed: Boolean
 
@@ -13938,8 +13688,7 @@ input ProjectPatch {
   logoLink: String
 
   """
-  URL referencing an image that will be used to represent the project. Will be
-  displayed at 48x48 pixels and must be a public url.
+  URL referencing an image that will be used to represent the project. Will be displayed at 48x48 pixels and must be a public url.
   """
   logoUrl: Upload
   mapboxPublicKey: String
@@ -13948,6 +13697,28 @@ input ProjectPatch {
   showLegendByDefault: Boolean
   showScalebarByDefault: Boolean
   translatedProps: JSON
+}
+
+type ProjectVisitorMetric implements Node {
+  interval: Interval!
+  month: Int!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+
+  """
+  Reads a single `Project` that is related to this `ProjectVisitorMetric`.
+  """
+  project: Project
+  projectId: Int!
+  timestamp: Datetime!
+  topBrowsers: JSON!
+  topCountries: JSON!
+  topDeviceTypes: JSON!
+  topOperatingSystems: JSON!
+  topReferrers: JSON!
 }
 
 """A connection to a list of `Project` values."""
@@ -14060,28 +13831,6 @@ enum ProjectsSharedBasemapsOrderBy {
   BASEMAP_ID_ASC
   BASEMAP_ID_DESC
   NATURAL
-}
-
-type ProjectVisitorMetric implements Node {
-  interval: Interval!
-  month: Int!
-
-  """
-  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
-  """
-  nodeId: ID!
-
-  """
-  Reads a single `Project` that is related to this `ProjectVisitorMetric`.
-  """
-  project: Project
-  projectId: Int!
-  timestamp: Datetime!
-  topBrowsers: JSON!
-  topCountries: JSON!
-  topDeviceTypes: JSON!
-  topOperatingSystems: JSON!
-  topReferrers: JSON!
 }
 
 type PublicProjectDetail {
@@ -14331,9 +14080,7 @@ type Query implements Node {
   bookmarkById(id: UUID): MapBookmark
 
   """
-  GraphQL server software build identifier. During a deployment, if changes are
-  not detected in software modules some may be skipped. So, client and server
-  version could differ.
+  GraphQL server software build identifier. During a deployment, if changes are not detected in software modules some may be skipped. So, client and server version could differ.
   
   We return "dev" if build cannot be determined from deployment environment.
   """
@@ -14899,35 +14646,6 @@ type Query implements Node {
   ): OverlayDataTable
   overlayDataTableLinkedTocIsDraft(pid: Int, tocItemId: Int): Boolean
   overlayDataTableParquetPublicUrl(pRemote: String): String
-
-  """Reads and enables pagination through a set of `OverlayDataTable`."""
-  overlayDataTablesConnection(
-    """Read all values in the set after (below) this cursor."""
-    after: Cursor
-
-    """Read all values in the set before (above) this cursor."""
-    before: Cursor
-
-    """
-    A condition to be used in determining which values should be returned by the collection.
-    """
-    condition: OverlayDataTableCondition
-
-    """Only read the first `n` values of the set."""
-    first: Int
-
-    """Only read the last `n` values of the set."""
-    last: Int
-
-    """
-    Skip the first `n` values from our `after` cursor, an alternative to cursor
-    based pagination. May not be used with `last`.
-    """
-    offset: Int
-
-    """The method to use when ordering `OverlayDataTable`."""
-    orderBy: [OverlayDataTablesOrderBy!] = [PRIMARY_KEY_ASC]
-  ): OverlayDataTablesConnection
   overlayDataTableUpload(id: UUID!): OverlayDataTableUpload
 
   """
@@ -14971,6 +14689,35 @@ type Query implements Node {
     """The method to use when ordering `OverlayDataTableUpload`."""
     orderBy: [OverlayDataTableUploadsOrderBy!] = [PRIMARY_KEY_ASC]
   ): OverlayDataTableUploadsConnection
+
+  """Reads and enables pagination through a set of `OverlayDataTable`."""
+  overlayDataTablesConnection(
+    """Read all values in the set after (below) this cursor."""
+    after: Cursor
+
+    """Read all values in the set before (above) this cursor."""
+    before: Cursor
+
+    """
+    A condition to be used in determining which values should be returned by the collection.
+    """
+    condition: OverlayDataTableCondition
+
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Only read the last `n` values of the set."""
+    last: Int
+
+    """
+    Skip the first `n` values from our `after` cursor, an alternative to cursor
+    based pagination. May not be used with `last`.
+    """
+    offset: Int
+
+    """The method to use when ordering `OverlayDataTable`."""
+    orderBy: [OverlayDataTablesOrderBy!] = [PRIMARY_KEY_ASC]
+  ): OverlayDataTablesConnection
   post(id: Int!): Post
 
   """Reads a single `Post` using its globally unique `ID`."""
@@ -15241,11 +14988,6 @@ type Query implements Node {
     """
     nodeId: ID!
   ): SketchClass
-
-  """
-  True when fragment generation jobs are queued or running for this project. Call from GeographyPlugin.
-  """
-  sketchesFragmentGenerationInProgress(pProjectId: Int): Boolean
   sketchFolder(id: Int!): SketchFolder
 
   """Reads a single `SketchFolder` using its globally unique `ID`."""
@@ -15284,6 +15026,11 @@ type Query implements Node {
     """The method to use when ordering `SketchFolder`."""
     orderBy: [SketchFoldersOrderBy!] = [PRIMARY_KEY_ASC]
   ): SketchFoldersConnection
+
+  """
+  True when fragment generation jobs are queued or running for this project. Call from GeographyPlugin.
+  """
+  sketchesFragmentGenerationInProgress(pProjectId: Int): Boolean
   sourceProcessingJob(jobKey: String!): SourceProcessingJob
   sourceProcessingJobByDataSourceId(dataSourceId: Int!): SourceProcessingJob
 
@@ -15786,15 +15533,15 @@ type RenameReportTabPayload {
   reportTab: ReportTab
 }
 
-type RenderedAboutPageContent {
-  html: String
-  lang: String
-}
-
 enum RenderUnderType {
   LABELS
   LAND
   NONE
+}
+
+type RenderedAboutPageContent {
+  html: String
+  lang: String
 }
 
 """All input for the `reopenResolvableLayerComment` mutation."""
@@ -16072,6 +15819,32 @@ input ReportPatch {
   version: Int
 }
 
+type ReportTab implements Node {
+  alternateLanguageSettings: JSON!
+
+  """Reads and enables pagination through a set of `ReportCard`."""
+  cards(
+    """Only read the first `n` values of the set."""
+    first: Int
+
+    """Skip the first `n` values."""
+    offset: Int
+  ): [ReportCard!]
+  id: Int!
+
+  """
+  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
+  """
+  nodeId: ID!
+  position: Int!
+
+  """Reads a single `Report` that is related to this `ReportTab`."""
+  report: Report
+  reportId: Int!
+  title: String!
+  updatedAt: Datetime!
+}
+
 """A connection to a list of `Report` values."""
 type ReportsConnection {
   """
@@ -16107,32 +15880,6 @@ enum ReportsOrderBy {
   PRIMARY_KEY_DESC
   SKETCH_CLASS_ID_ASC
   SKETCH_CLASS_ID_DESC
-}
-
-type ReportTab implements Node {
-  alternateLanguageSettings: JSON!
-
-  """Reads and enables pagination through a set of `ReportCard`."""
-  cards(
-    """Only read the first `n` values of the set."""
-    first: Int
-
-    """Skip the first `n` values."""
-    offset: Int
-  ): [ReportCard!]
-  id: Int!
-
-  """
-  A globally unique identifier. Can be used in various places throughout the system to identify this single value.
-  """
-  nodeId: ID!
-  position: Int!
-
-  """Reads a single `Report` that is related to this `ReportTab`."""
-  report: Report
-  reportId: Int!
-  title: String!
-  updatedAt: Datetime!
 }
 
 """All input for the `reprocessAllLegacyDataSources` mutation."""
@@ -16869,12 +16616,6 @@ type SetTopicStickyPayload {
   ): TopicsEdge
 }
 
-type setTranslatedPropResult {
-  id: Int!
-  translatedProps: JSON!
-  typeName: String!
-}
-
 """All input for the `setUserGroups` mutation."""
 input SetUserGroupsInput {
   """
@@ -16944,10 +16685,7 @@ type Sketch implements Node {
   bbox: [Float]
 
   """
-  If the sketch is a collection, includes an array of properties for all
-  sketches that belong to it. These objects will match the `properties` member
-  of the GeoJSON Feature representation of each sketch. This can be passed to
-  report clients in the initialization message.
+  If the sketch is a collection, includes an array of properties for all sketches that belong to it. These objects will match the `properties` member of the GeoJSON Feature representation of each sketch. This can be passed to report clients in the initialization message.
   """
   childProperties: JSON
 
@@ -16972,8 +16710,7 @@ type Sketch implements Node {
   copiedFrom: Sketch
 
   """
-  If this Sketch started as a copy of another it is tracked here. Eventually
-  SeaSketch may have a means of visualizing how plans are iterated on over time.
+  If this Sketch started as a copy of another it is tracked here. Eventually SeaSketch may have a means of visualizing how plans are iterated on over time.
   """
   copyOf: Int
   createdAt: Datetime!
@@ -16992,17 +16729,13 @@ type Sketch implements Node {
   formElementId: Int
 
   """
-  Use this to get a copy of the sketch with properties populated exactly as they
-  would in the geojson or mvt endpoint. Useful for seeding a client-side cache.
+  Use this to get a copy of the sketch with properties populated exactly as they would in the geojson or mvt endpoint. Useful for seeding a client-side cache.
   """
   geojsonFeature: JSON
   geojsonProperties: JSON
 
   """
-  The geometry of the Sketch **after** it has been preprocessed. This is the
-  geometry that is used for reporting. Preprocessed geometries may be extremely
-  large and complex, so it may be necessary to access them through a vector tile
-  service or some other optimization.
+  The geometry of the Sketch **after** it has been preprocessed. This is the geometry that is used for reporting. Preprocessed geometries may be extremely large and complex, so it may be necessary to access them through a vector tile service or some other optimization.
   """
   geom: GeometryGeometry
   id: Int!
@@ -17057,8 +16790,7 @@ type Sketch implements Node {
   userAttributes: JSON
 
   """
-  Spatial feature the user directly digitized, without preprocessing. This is
-  the feature that should be used if the Sketch is later edited.
+  Spatial feature the user directly digitized, without preprocessing. This is the feature that should be used if the Sketch is later edited.
   """
   userGeom: GeometryGeometry
 
@@ -17094,9 +16826,7 @@ type SketchClass implements Node {
   allowMulti: Boolean!
 
   """
-  Whether the current user session is allowed to digitize sketches of this type.
-  Digitizing is controlled by admins via access control lists, and archived
-  sketch classes can only be digitized by admins.
+  Whether the current user session is allowed to digitize sketches of this type. Digitizing is controlled by admins via access control lists, and archived sketch classes can only be digitized by admins.
   """
   canDigitize: Boolean
   clippingGeographies: [Geography]!
@@ -17136,18 +16866,14 @@ type SketchClass implements Node {
   geoprocessingClientUrl: String
 
   """
-  Root endpoint of a
-  [@seasketch/geoprocessing](https://github.com/seasketch/geoprocessing) project
-  that should be used for reporting.
+  Root endpoint of a [@seasketch/geoprocessing](https://github.com/seasketch/geoprocessing) project that should be used for reporting.
   
   """
   geoprocessingProjectUrl: String
   id: Int!
 
   """
-  If set to true, (non-admin) users should not be able to digitize new features
-  using this sketch class, but they should still be able to access the sketch
-  class in order to render existing sketches of this type.
+  If set to true, (non-admin) users should not be able to digitize new features using this sketch class, but they should still be able to access the sketch class in order to render existing sketches of this type.
   
   """
   isArchived: Boolean!
@@ -17250,28 +16976,6 @@ input SketchClassCondition {
   projectId: Int
 }
 
-"""A `SketchClass` edge in the connection."""
-type SketchClassesEdge {
-  """A cursor for use in pagination."""
-  cursor: Cursor
-
-  """The `SketchClass` at the end of the edge."""
-  node: SketchClass!
-}
-
-"""Methods to use when ordering `SketchClass`."""
-enum SketchClassesOrderBy {
-  FORM_ELEMENT_ID_ASC
-  FORM_ELEMENT_ID_DESC
-  ID_ASC
-  ID_DESC
-  NATURAL
-  PRIMARY_KEY_ASC
-  PRIMARY_KEY_DESC
-  PROJECT_ID_ASC
-  PROJECT_ID_DESC
-}
-
 type SketchClassFragmentStatus {
   missingCount: Int!
   sketchClassId: Int!
@@ -17317,17 +17021,13 @@ input SketchClassPatch {
   geoprocessingClientUrl: String
 
   """
-  Root endpoint of a
-  [@seasketch/geoprocessing](https://github.com/seasketch/geoprocessing) project
-  that should be used for reporting.
+  Root endpoint of a [@seasketch/geoprocessing](https://github.com/seasketch/geoprocessing) project that should be used for reporting.
   
   """
   geoprocessingProjectUrl: String
 
   """
-  If set to true, (non-admin) users should not be able to digitize new features
-  using this sketch class, but they should still be able to access the sketch
-  class in order to render existing sketches of this type.
+  If set to true, (non-admin) users should not be able to digitize new features using this sketch class, but they should still be able to access the sketch class in order to render existing sketches of this type.
   
   """
   isArchived: Boolean
@@ -17342,11 +17042,26 @@ input SketchClassPatch {
   translatedProps: JSON
 }
 
-"""The return type of our `relatedFragmentsConnection` query."""
-type SketchesRelatedFragmentsRecord {
-  geographies: [Int]
-  hash: String
-  sketches: [Int]
+"""A `SketchClass` edge in the connection."""
+type SketchClassesEdge {
+  """A cursor for use in pagination."""
+  cursor: Cursor
+
+  """The `SketchClass` at the end of the edge."""
+  node: SketchClass!
+}
+
+"""Methods to use when ordering `SketchClass`."""
+enum SketchClassesOrderBy {
+  FORM_ELEMENT_ID_ASC
+  FORM_ELEMENT_ID_DESC
+  ID_ASC
+  ID_DESC
+  NATURAL
+  PRIMARY_KEY_ASC
+  PRIMARY_KEY_DESC
+  PROJECT_ID_ASC
+  PROJECT_ID_DESC
 }
 
 type SketchFolder implements Node {
@@ -17459,6 +17174,13 @@ enum SketchGeometryType {
   LINESTRING
   POINT
   POLYGON
+}
+
+"""The return type of our `relatedFragmentsConnection` query."""
+type SketchesRelatedFragmentsRecord {
+  geographies: [Int]
+  hash: String
+  sketches: [Int]
 }
 
 """All input for the `softDeleteOverlayDataTable` mutation."""
@@ -17630,8 +17352,7 @@ enum SpatialMetricState {
 }
 
 """
-Image sprites for use in Mapbox GL Styles. The database holds metadata about the
-sprite, the actual images are in cloud storage referenced by the URL parameter. 
+Image sprites for use in Mapbox GL Styles. The database holds metadata about the sprite, the actual images are in cloud storage referenced by the URL parameter. 
 
 """
 type Sprite implements Node {
@@ -17640,8 +17361,7 @@ type Sprite implements Node {
   id: Int!
 
   """
-  Hash of lowest-dpi image in the set (pixelRatio=1). Useful for de-duplicating
-  symbols that have been imported multiple times
+  Hash of lowest-dpi image in the set (pixelRatio=1). Useful for de-duplicating symbols that have been imported multiple times
   """
   md5: String!
 
@@ -17681,9 +17401,7 @@ type SpriteImage {
   height: Int!
 
   """
-  Device pixel ratio a copy of this image supports. 2x would be for "retina"
-  devices. Multiple records may point to the same sprite id, but each must have
-  a unique combination of id, pixel_ratio, and data_layer_id.
+  Device pixel ratio a copy of this image supports. 2x would be for "retina" devices. Multiple records may point to the same sprite id, but each must have a unique combination of id, pixel_ratio, and data_layer_id.
   """
   pixelRatio: Int!
 
@@ -17885,8 +17603,7 @@ type Survey implements Node {
   limitResponseAccessToListedUsers: [String]!
 
   """
-  If set, there can only be one response with matching contact information. The
-  app will also discourage multiple submissions from the same browser session.
+  If set, there can only be one response with matching contact information. The app will also discourage multiple submissions from the same browser session.
   """
   limitToSingleResponse: Boolean!
   name: String!
@@ -18091,8 +17808,7 @@ type SurveyInvite implements Node {
   nodeId: ID!
 
   """
-  Indicates the status of the invite, e.g. whether an invite email has been
-  sent, status of those emails, and whether a response has been submitted.
+  Indicates the status of the invite, e.g. whether an invite email has been sent, status of those emails, and whether a response has been submitted.
   """
   status: InviteStatus
 
@@ -18116,6 +17832,32 @@ input SurveyInviteCondition {
 
   """Checks for equality with the object’s `surveyId` field."""
   surveyId: Int
+}
+
+input SurveyInviteOptionsInput {
+  email: Email
+  fullname: String
+}
+
+"""
+Represents an update to a `SurveyInvite`. Fields that are set will be updated.
+"""
+input SurveyInvitePatch {
+  fullname: String
+}
+
+type SurveyInviteTokenClaims {
+  email: String
+  fullname: String
+  inviteId: Int!
+  projectId: Int!
+  surveyId: Int!
+  wasUsed: Boolean!
+}
+
+type SurveyInviteTokenVerificationResults {
+  claims: SurveyInviteTokenClaims
+  error: String
 }
 
 type SurveyInvitedGroup {
@@ -18153,18 +17895,6 @@ enum SurveyInvitedGroupsOrderBy {
   SURVEY_ID_DESC
 }
 
-input SurveyInviteOptionsInput {
-  email: Email
-  fullname: String
-}
-
-"""
-Represents an update to a `SurveyInvite`. Fields that are set will be updated.
-"""
-input SurveyInvitePatch {
-  fullname: String
-}
-
 """A `SurveyInvite` edge in the connection."""
 type SurveyInvitesEdge {
   """A cursor for use in pagination."""
@@ -18185,20 +17915,6 @@ enum SurveyInvitesOrderBy {
   PRIMARY_KEY_DESC
   SURVEY_ID_ASC
   SURVEY_ID_DESC
-}
-
-type SurveyInviteTokenClaims {
-  email: String
-  fullname: String
-  inviteId: Int!
-  projectId: Int!
-  surveyId: Int!
-  wasUsed: Boolean!
-}
-
-type SurveyInviteTokenVerificationResults {
-  claims: SurveyInviteTokenClaims
-  error: String
 }
 
 """
@@ -18226,8 +17942,7 @@ input SurveyPatch {
   limitResponseAccessToListedUsers: [String]
 
   """
-  If set, there can only be one response with matching contact information. The
-  app will also discourage multiple submissions from the same browser session.
+  If set, there can only be one response with matching contact information. The app will also discourage multiple submissions from the same browser session.
   """
   limitToSingleResponse: Boolean
   name: String
@@ -18249,9 +17964,7 @@ type SurveyResponse implements Node {
   archived: Boolean!
 
   """
-  Should be set by the client on submission and tracked by cookies or
-  localStorage. Surveys that permit only a single entry enable users to bypass
-  the limit for legitimate purposes, like entering responses on a shared computer.
+  Should be set by the client on submission and tracked by cookies or localStorage. Surveys that permit only a single entry enable users to bypass the limit for legitimate purposes, like entering responses on a shared computer.
   
   """
   bypassedDuplicateSubmissionControl: Boolean!
@@ -18273,8 +17986,7 @@ type SurveyResponse implements Node {
   isDuplicateEntry: Boolean!
 
   """
-  Detected by comparing ip hashes from previous entries. IP hashes are not tied
-  to particular responses, so only the second and subsequent entries are flagged.
+  Detected by comparing ip hashes from previous entries. IP hashes are not tied to particular responses, so only the second and subsequent entries are flagged.
   
   """
   isDuplicateIp: Boolean!
@@ -18286,8 +17998,7 @@ type SurveyResponse implements Node {
   isPractice: Boolean!
 
   """
-  Unusual or missing user-agent headers on submissions are flagged. May indicate
-  scripting but does not necessarily imply malicious intent.
+  Unusual or missing user-agent headers on submissions are flagged. May indicate scripting but does not necessarily imply malicious intent.
   
   """
   isUnrecognizedUserAgent: Boolean!
@@ -18300,18 +18011,12 @@ type SurveyResponse implements Node {
   nodeId: ID!
 
   """
-  Should be used by clients to uniquely identify responses that are collected
-  offline. Survey facilitators can download their responses to disk as json so
-  that they may be recovered/submitted in the case of the client machine being
-  damaged or stolen. Tracking an offline uuid ensures that these responses are
-  not somehow submitted in duplicate.
+  Should be used by clients to uniquely identify responses that are collected offline. Survey facilitators can download their responses to disk as json so that they may be recovered/submitted in the case of the client machine being damaged or stolen. Tracking an offline uuid ensures that these responses are not somehow submitted in duplicate.
   """
   offlineId: UUID
 
   """
-  Checked on SUBMISSION, so adding or changing a survey geofence after responses
-  have been submitted will not update values. GPS coordinates and IP addresses
-  are not stored for privacy purposes.
+  Checked on SUBMISSION, so adding or changing a survey geofence after responses have been submitted will not update values. GPS coordinates and IP addresses are not stored for privacy purposes.
   
   """
   outsideGeofence: Boolean!
@@ -18322,8 +18027,7 @@ type SurveyResponse implements Node {
   updatedAt: Datetime
 
   """
-  User account that submitted the survey. Note that if isFacilitated is set, the
-  account may not be who is represented by the response content.
+  User account that submitted the survey. Note that if isFacilitated is set, the account may not be who is represented by the response content.
   """
   userId: Int
 }
@@ -18399,6 +18103,12 @@ enum SurveyResponsesOrderBy {
   USER_ID_DESC
 }
 
+type SurveyTokenInfo {
+  projectId: Int
+  surveyId: Int
+  token: String
+}
+
 """Methods to use when ordering `Survey`."""
 enum SurveysOrderBy {
   ID_ASC
@@ -18408,12 +18118,6 @@ enum SurveysOrderBy {
   PRIMARY_KEY_DESC
   PROJECT_ID_ASC
   PROJECT_ID_DESC
-}
-
-type SurveyTokenInfo {
-  projectId: Int
-  surveyId: Int
-  token: String
 }
 
 """
@@ -18542,17 +18246,14 @@ type TableOfContentsItem implements Node {
   id: Int!
 
   """
-  If set, folders with this property cannot be toggled in order to activate all
-  their children. Toggles can only be used to toggle children off
+  If set, folders with this property cannot be toggled in order to activate all their children. Toggles can only be used to toggle children off
   """
   isClickOffOnly: Boolean!
   isCustomGlSource: Boolean
   isDownloadableSourceType: Boolean
 
   """
-  Identifies whether this item is part of the draft table of contents edited by
-  admin or the static public version. This property cannot be changed. Rather,
-  use the `publishTableOfContents()` mutation
+  Identifies whether this item is part of the draft table of contents edited by admin or the static public version. This property cannot be changed. Rather, use the `publishTableOfContents()` mutation
   """
   isDraft: Boolean!
 
@@ -18754,8 +18455,7 @@ input TableOfContentsItemInput {
   hideChildren: Boolean
 
   """
-  If set, folders with this property cannot be toggled in order to activate all
-  their children. Toggles can only be used to toggle children off
+  If set, folders with this property cannot be toggled in order to activate all their children. Toggles can only be used to toggle children off
   """
   isClickOffOnly: Boolean
 
@@ -18831,8 +18531,7 @@ input TableOfContentsItemPatch {
   hideChildren: Boolean
 
   """
-  If set, folders with this property cannot be toggled in order to activate all
-  their children. Toggles can only be used to toggle children off
+  If set, folders with this property cannot be toggled in order to activate all their children. Toggles can only be used to toggle children off
   """
   isClickOffOnly: Boolean
 
@@ -18929,10 +18628,7 @@ enum TableOfContentsItemsOrderBy {
 }
 
 """
-A complete TemporalInfo document for a data source or data table: coverage,
-resolution, how time is mapped (layer, feature, band, row, or remote), and
-availability. Applies to vector, raster, and remote layers as well as Data
-Tables. Validated against @seasketch/geostats-types isTemporalInfo.
+A complete TemporalInfo document for a data source or data table: coverage, resolution, how time is mapped (layer, feature, band, row, or remote), and availability. Applies to vector, raster, and remote layers as well as Data Tables. Validated against @seasketch/geostats-types isTemporalInfo.
 """
 scalar TemporalInfo
 
@@ -19237,6 +18933,11 @@ input TranslatedPropInput {
   languageCode: String!
   value: String
 }
+
+"""
+A universally unique identifier as defined by [RFC 4122](https://tools.ietf.org/html/rfc4122).
+"""
+scalar UUID
 
 type UnsplashLinks {
   html: String!
@@ -21376,32 +21077,6 @@ input UpdateSurveyInviteByNodeIdInput {
   patch: SurveyInvitePatch!
 }
 
-"""All input for the `updateSurveyInvitedGroups` mutation."""
-input UpdateSurveyInvitedGroupsInput {
-  """
-  An arbitrary string value with no semantic meaning. Will be included in the
-  payload verbatim. May be used to track mutations by the client.
-  """
-  clientMutationId: String
-  groupIds: [Int]
-  surveyId: Int
-}
-
-"""The output of our `updateSurveyInvitedGroups` mutation."""
-type UpdateSurveyInvitedGroupsPayload {
-  """
-  The exact same `clientMutationId` that was provided in the mutation input,
-  unchanged and unused. May be used by a client to track mutations.
-  """
-  clientMutationId: String
-  groups: [Group!]
-
-  """
-  Our root query field type. Allows us to run any query from our mutation payload.
-  """
-  query: Query
-}
-
 """All input for the `updateSurveyInvite` mutation."""
 input UpdateSurveyInviteInput {
   """
@@ -21441,6 +21116,32 @@ type UpdateSurveyInvitePayload {
     """The method to use when ordering `SurveyInvite`."""
     orderBy: [SurveyInvitesOrderBy!] = [PRIMARY_KEY_ASC]
   ): SurveyInvitesEdge
+}
+
+"""All input for the `updateSurveyInvitedGroups` mutation."""
+input UpdateSurveyInvitedGroupsInput {
+  """
+  An arbitrary string value with no semantic meaning. Will be included in the
+  payload verbatim. May be used to track mutations by the client.
+  """
+  clientMutationId: String
+  groupIds: [Int]
+  surveyId: Int
+}
+
+"""The output of our `updateSurveyInvitedGroups` mutation."""
+type UpdateSurveyInvitedGroupsPayload {
+  """
+  The exact same `clientMutationId` that was provided in the mutation input,
+  unchanged and unused. May be used by a client to track mutations.
+  """
+  clientMutationId: String
+  groups: [Group!]
+
+  """
+  Our root query field type. Allows us to run any query from our mutation payload.
+  """
+  query: Query
 }
 
 """The output of our update `Survey` mutation."""
@@ -21774,15 +21475,12 @@ type User implements Node {
   approvedOrDeniedOn(projectId: Int): Datetime
 
   """
-  Whether the user has been banned from the forums. Use `disableForumPosting()`
-  and `enableForumPosting()` mutations to modify this state. Accessible only to admins.
+  Whether the user has been banned from the forums. Use `disableForumPosting()` and `enableForumPosting()` mutations to modify this state. Accessible only to admins.
   """
   bannedFromForums: Boolean
 
   """
-  Only visible to admins of projects a user has joined. Can be used for
-  identification purposes since users will not gain any access control
-  privileges until this email has been confirmed.
+  Only visible to admins of projects a user has joined. Can be used for identification purposes since users will not gain any access control privileges until this email has been confirmed.
   
   """
   canonicalEmail: String
@@ -21866,10 +21564,10 @@ type User implements Node {
 }
 
 enum UserActivityPeriod {
-  D180
-  D30
   D7
+  D30
   D90
+  D180
   H24
 }
 
@@ -21928,11 +21626,6 @@ enum UsersOrderBy {
   PRIMARY_KEY_ASC
   PRIMARY_KEY_DESC
 }
-
-"""
-A universally unique identifier as defined by [RFC 4122](https://tools.ietf.org/html/rfc4122).
-"""
-scalar UUID
 
 enum ValueSteps {
   CONTINUOUS
@@ -22044,4 +21737,10 @@ enum WorkerJobStatus {
   FINISHED
   QUEUED
   STARTED
+}
+
+type setTranslatedPropResult {
+  id: Int!
+  translatedProps: JSON!
+  typeName: String!
 }

@@ -5,6 +5,9 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { e2eStack } from "./dev.config.mjs";
+import { assertPlaywrightChromium } from "./ensure-playwright-browser.cjs";
+
+assertPlaywrightChromium();
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -43,10 +46,10 @@ const databaseEnv = {
 };
 
 try {
-  await run("npm", ["run", "build", "--silent"], {}, path.join(root, "packages/api"));
+  await run("npm", ["run", "build", "--silent"]);
   await run("npm", ["run", "setup", "--", "--reset"], databaseEnv);
   const playwrightArgs = process.argv.slice(2);
-  const npmArgs = ["test", "--prefix", "packages/e2e"];
+  const npmArgs = ["test", "--workspace", "@seasketch/e2e"];
   if (playwrightArgs.length > 0) {
     npmArgs.push("--", ...playwrightArgs);
   }

@@ -14,7 +14,7 @@ import {
 } from "../utils/helpers";
 import { Feature, GeoJsonProperties, MultiPolygon, Polygon } from "geojson";
 import { evaluateCql2JSONQuery } from "../cql2";
-import { bbox } from "@turf/bbox";
+import bbox from "@turf/bbox";
 import { bboxToEnvelope, splitBBoxAntimeridian } from "../utils/bboxUtils";
 import * as clipping from "polyclip-ts";
 import calcArea from "@turf/area";

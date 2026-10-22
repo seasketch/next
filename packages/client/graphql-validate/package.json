@@ -1,7 +1,7 @@
 {
   "name": "seasketch-client-graphql-validate",
   "private": true,
-  "description": "Isolated deps for live GraphQL schema validation in CI deploy gate",
+  "description": "Outside the npm workspace on purpose. The deploy gate installs only graphql@15.3.0 here, so validation cannot resolve the client dependency tree.",
   "dependencies": {
     "graphql": "15.3.0"
   }

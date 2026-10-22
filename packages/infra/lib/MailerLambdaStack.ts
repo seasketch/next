@@ -33,6 +33,8 @@ export class MailerLambdaStack extends cdk.Stack {
       "ProjectInviteStatusHandler",
       {
         functionName: "ProjectInviteStatusHandler",
+        projectRoot: path.join(__dirname, "../../.."),
+        depsLockFilePath: path.join(__dirname, "../../../package-lock.json"),
         bundling: {
           minify: false,
           externalModules: ["pg-native", "@aws-sdk/*"],

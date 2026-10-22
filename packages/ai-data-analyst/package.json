@@ -19,8 +19,8 @@
   "scripts": {
     "test": "vitest run",
     "test:watch": "vitest",
-    "build": "tsc",
-    "watch": "tsc -w"
+    "build": "tsc -b",
+    "watch": "tsc -b --watch"
   },
   "bugs": {
     "url": "https://github.com/seasketch/next/issues"
@@ -31,7 +31,7 @@
     "openai": "^6.33.0"
   },
   "devDependencies": {
-    "@types/node": "^22.10.0",
+    "@types/node": "^24.19.2",
     "vitest": "^3.2.4"
   }
 }

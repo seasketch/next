@@ -4,7 +4,7 @@ import * as polygonClipping from "polygon-clipping";
 import area from "@turf/area";
 import { union, intersection } from "../utils/polygonClipping";
 import { SourceCache } from "fgb-source";
-import { simplify } from "@turf/simplify";
+import simplify from "@turf/simplify";
 import { ContainerIndex } from "../utils/containerIndex";
 import { ClippingLayerOption, initializeGeographySources } from "./geographies";
 import flatten from "@turf/flatten";

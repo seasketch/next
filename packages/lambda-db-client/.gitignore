@@ -1,0 +1,4 @@
+# tsc output; package.json main points here. Built by `npm run build`.
+lib/*.js
+lib/*.d.ts
+lib/*.d.ts.map

@@ -123,41 +123,31 @@ function ApolloProviderWithToken(props: any) {
         scope: process.env.REACT_APP_AUTH0_SCOPE,
       },
     };
-    if ("Cypress" in window) {
-      token = window.localStorage.getItem(
-        // eslint-disable-next-line i18next/no-literal-string
-        `@@auth0spajs@@::${process.env.REACT_APP_AUTH0_CLIENT_ID!}::${
-          process.env.REACT_APP_AUTH0_AUDIENCE
-        }::${process.env.REACT_APP_AUTH0_SCOPE!}`
-      );
-      console.warn("using token from cypress", { token });
-    } else {
-      try {
-        token = await getAccessTokenSilently(opts);
-      } catch (e) {
-        if (e.error === "consent_required") {
-          token = await getAccessTokenWithPopup(opts);
-        } else if (
-          e.error === "invalid_grant" ||
-          e.error === "missing_refresh_token" ||
-          e.error === "login_required"
-        ) {
-          // The session can no longer be renewed (e.g. the refresh token
-          // expired or was revoked while the user was away). Clear the stale
-          // cached session so the UI reflects a coherent signed-out state,
-          // rather than showing a cached user that can't actually
-          // authenticate. openUrl: false performs a local-only logout without
-          // redirecting the browser.
-          console.warn(
-            // eslint-disable-next-line i18next/no-literal-string
-            `Auth0 session can no longer be renewed (${e.error}). Signing out.`
-          );
-          token = null;
-          logout({ openUrl: false });
-        } else {
-          console.error(e.error);
-          token = null;
-        }
+    try {
+      token = await getAccessTokenSilently(opts);
+    } catch (e) {
+      if (e.error === "consent_required") {
+        token = await getAccessTokenWithPopup(opts);
+      } else if (
+        e.error === "invalid_grant" ||
+        e.error === "missing_refresh_token" ||
+        e.error === "login_required"
+      ) {
+        // The session can no longer be renewed (e.g. the refresh token
+        // expired or was revoked while the user was away). Clear the stale
+        // cached session so the UI reflects a coherent signed-out state,
+        // rather than showing a cached user that can't actually
+        // authenticate. openUrl: false performs a local-only logout without
+        // redirecting the browser.
+        console.warn(
+          // eslint-disable-next-line i18next/no-literal-string
+          `Auth0 session can no longer be renewed (${e.error}). Signing out.`
+        );
+        token = null;
+        logout({ openUrl: false });
+      } else {
+        console.error(e.error);
+        token = null;
       }
     }
     return token;

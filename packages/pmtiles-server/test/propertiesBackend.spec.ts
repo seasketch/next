@@ -1,5 +1,5 @@
 import { env } from "cloudflare:workers";
-import { serialize } from "flatgeobuf/lib/mjs/geojson";
+import { serialize } from "flatgeobuf/geojson";
 import { beforeAll, describe, expect, it } from "vitest";
 import { handlePropertiesRequest } from "../src/propertiesBackend";
 import { propertiesFixture } from "./fixtures/properties";

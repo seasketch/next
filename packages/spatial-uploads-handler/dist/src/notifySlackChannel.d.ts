@@ -1,2 +1,0 @@
-export declare function notifySlackChannel(filename: string, presignedDownloadUrl: string, logs: string, bucket: string, objectKey: string, user: string, error: string): Promise<void>;
-//# sourceMappingURL=notifySlackChannel.d.ts.map

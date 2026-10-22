@@ -68,7 +68,7 @@ describe("Group lists", () => {
       const projectId = await createProject(conn, adminId);
       const projectBId = await createProject(conn, adminB);
       await createSession(conn, adminB, true, false, projectId);
-      expect(
+      await expect(
         conn.any(
           sql`insert into project_groups (project_id, name) values (${projectId}, 'Group A')`
         )
@@ -85,7 +85,7 @@ describe("Group lists", () => {
       await conn.any(
         sql`insert into project_groups (project_id, name) values (${projectId}, 'Group A')`
       );
-      expect(
+      await expect(
         conn.any(
           sql`delete from project_groups where project_id = ${projectId}`
         )

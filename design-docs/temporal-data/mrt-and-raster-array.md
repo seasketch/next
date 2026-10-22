@@ -521,7 +521,7 @@ Notes from the first isolated slice (raster-array packer, pmtiles-server MRT, `p
 
 ### Package name
 
-The Data Library job is `packages/data-library-gmw` (`@seasketch/data-library-gmw`), not `gmw-products`. It is listed in root `lerna.json`. The CLI does not call Graphile / `replace_data_source` and does not print production SQL.
+The Data Library job is `packages/data-library-gmw` (`@seasketch/data-library-gmw`), not `gmw-products`. It is an npm workspace package. The CLI does not call Graphile / `replace_data_source` and does not print production SQL.
 
 ### Native JS PMTiles writer
 

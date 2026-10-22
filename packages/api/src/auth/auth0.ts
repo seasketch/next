@@ -14,7 +14,9 @@ import { DBClient } from "../dbClient";
  * when test mode actually needs it.
  */
 async function e2eDirectoryPool(): Promise<DBClient> {
-  const { default: pool } = await import("../pool");
+  // require, not import(): under module nodenext a dynamic import of this
+  // CommonJS module resolves `default` to module.exports, not to the pool.
+  const { default: pool } = require("../pool") as typeof import("../pool");
   return pool;
 }
 

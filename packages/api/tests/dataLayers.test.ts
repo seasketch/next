@@ -38,7 +38,7 @@ describe("Data validation", () => {
           sql`insert into data_layers (project_id, data_source_id, sublayer) values (${projectId}, ${validSourceId}, '3') returning id`
         );
         expect(layerId).toBeGreaterThan(0);
-        expect(
+        await expect(
           conn.any(
             sql`insert into data_layers (project_id, data_source_id, sublayer) values (${projectId}, ${invalidSourceId}, '3') returning id`
           )
@@ -63,7 +63,7 @@ describe("Data validation", () => {
           )}) returning id`
         );
         expect(layerId).toBeGreaterThan(0);
-        expect(
+        await expect(
           conn.any(
             sql`insert into data_layers (project_id, data_source_id, source_layer, mapbox_gl_styles) values (${projectId}, ${invalidSourceId}, 'threeve', ${sql.json(
               { foo: "bar" }
@@ -90,28 +90,28 @@ describe("Data validation", () => {
         const invalidSourceId = await conn.oneFirst(
           sql`insert into data_sources (project_id, type, url) values (${projectId}, 'arcgis-dynamic-mapserver', 'https://example.com/data.json') returning id`
         );
-        expect(
+        await expect(
           conn.oneFirst(
             sql`insert into data_layers (project_id, data_source_id, source_layer, mapbox_gl_styles) values (${projectId}, ${validSourceId}, 'threeve', ${sql.json(
               { foo: "bar" }
             )}) returning id`
           )
         ).resolves.toBeGreaterThan(0);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`insert into data_layers (project_id, data_source_id, mapbox_gl_styles) values (${projectId}, ${validSourceId2}, ${sql.json(
               { foo: "bar" }
             )}) returning id`
           )
         ).resolves.toBeGreaterThan(0);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`insert into data_layers (project_id, data_source_id, mapbox_gl_styles) values (${projectId}, ${validSourceId3}, ${sql.json(
               { foo: "bar" }
             )}) returning id`
           )
         ).resolves.toBeGreaterThan(0);
-        expect(
+        await expect(
           conn.any(
             sql`insert into data_layers (project_id, data_source_id, mapbox_gl_styles) values (${projectId}, ${invalidSourceId}, ${sql.json(
               { foo: "bar" }
@@ -169,7 +169,7 @@ describe("Access control", () => {
           sql`select data_layer_id from table_of_contents_items where is_draft = false and stable_id = 'abc123'`
         );
         expect(publishedLayerId).toBeTruthy();
-        expect(
+        await expect(
           conn.oneFirst(
             sql`update data_layers set sublayer = '200' where id = ${publishedLayerId} returning sublayer`
           )

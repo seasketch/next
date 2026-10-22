@@ -7,7 +7,7 @@ import {
 } from "geojson";
 import Flatbush from "flatbush";
 import Pbf from "pbf";
-import geobuf from "geobuf";
+import * as geobuf from "geobuf";
 import LRUCache from "mnemonist/lru-cache";
 import RBush from "rbush";
 import bbox from "@turf/bbox";

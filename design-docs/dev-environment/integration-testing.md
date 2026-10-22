@@ -36,7 +36,7 @@ Journeys are tagged. `@smoke` is about three tests in phase 1:
 2. A signed-in member opens a private project they can access through a group ACL.
 3. A project admin opens their project and navigates to the admin page.
 
-`@access` arrives in phase 3; `@authoring`, `@data`, and `@reports` in phase 5. `@production` is the read-only probe and never runs against the local stack.
+`@access` arrives in phase 3; `@authoring`, `@data`, and `@reports` in phase 5. *(October 2026)* Phase 3 also carries a small `@bundler` set — one journey each for the surfaces a client build replacement breaks at runtime — tagged by its area as well, so phase 5 grows those tags rather than restarting them. `@production` is the read-only probe and never runs against the local stack.
 
 On failure, CI keeps the Playwright trace, screenshots, and the slug of any project the test created. With the slug, a person restores the snapshot locally and opens the same project with a normal non-production login.
 
@@ -75,7 +75,7 @@ There is no shared developer password. Fixture owners in the snapshot are synthe
 
 **Fixtures and isolation.** Fixture projects (`demo-samoa`, plus a few added as journeys need them) are for people and read-only smoke. A journey that mutates creates its own uniquely slugged project and hard-deletes it afterward in SQL, because the GraphQL delete is soft and keeps the slug. Tests never write to `superuser` or `demo-*`. Isolation by project lets journeys run in parallel.
 
-**Database.** `npm run e2e` restores the golden snapshot into `seasketch_e2e` on every run, then starts its own API and client. It does not attach to a dev server already listening, and it does not write to the `seasketch` database a person is using. CI uses that same command.
+**Database.** `npm run e2e` restores the golden snapshot into `seasketch_e2e` on every run, then starts its own API and client. It does not attach to a dev server already listening, and it does not write to the `seasketch` database a person is using. CI uses that same command. Chromium is a separate download from `npm install`. Once per machine, and again after a Playwright upgrade, run `npm exec --workspace @seasketch/e2e -- playwright install chromium`. The Smoke tests job runs `npx playwright install --with-deps chromium` first.
 
 **Refresh.** A maintainer rebuilds and pushes the snapshot after a batch of migrations, and the previous dump stays archived by date and migration. Pull-request jobs and agents may pull but never push. New shared fixture data is its own snapshot-refresh change, not a side effect of a feature pull request.
 
@@ -87,7 +87,20 @@ There is no shared developer password. Fixture owners in the snapshot are synthe
 
 **Phase 3:** access and onboarding journeys ported from the Cypress onboarding specs — public project, admins-only project, invite-only project, invite acceptance, access request — tagged `@access` and run on push with the other tests. Cypress, its dependencies, and the `cypress` ESLint plugin are removed, and the repo README stops describing tests that do not run. Data-profile journeys only where an upload or tile is truly the point.
 
-**Phase 4:** no new journeys. The existing ones are the acceptance test for the new client build.
+*(October 2026)* Phase 3 also writes the `@bundler` set, the acceptance test phase 4 runs against the new client build. Each journey exercises something webpack 4 handles today that a replacement handles differently, and each needs the local data profile from [local services](local-services.md):
+
+- Spatial upload end to end: pick a file, the client's web worker inspects it, the presigned upload completes, the layer appears in the table of contents and renders. Covers workers, WASM (`sql.js`, GDAL in the browser if used), and the upload path.
+- Data-table import: a CSV upload is processed by the local data-tables handler and its columns appear in the editor.
+- Report card: a sketch is drawn and a report tab renders an overlay result from the local overlay worker. Covers the report widgets, ProseMirror node views, and the worker queue.
+- Rich-text editors: the about page, a forum post, and layer metadata are edited and saved. Covers ProseMirror and its plugins, which have several nested copies today.
+- GL style editor: a layer's style is opened, edited with autocomplete, and saved. Covers CodeMirror and `@lezer`.
+- Map bookmark: a bookmark is created and its screenshot is produced. Covers the map screenshotter path and Mapbox GL.
+- Service worker: offline survey behavior, if it is still a supported feature; otherwise the decision to drop it is recorded here and the Workbox plugin goes with CRA.
+- Environment variables: one journey asserts a value that reaches the client through `REACT_APP_*` today, so the rename in phase 4 is checked by a test and not by reading the bundle.
+
+They pass on Create React App before phase 4 begins. When a phase 4 spike on a throwaway branch finds a surface this list misses, the journey is added here, on CRA, first.
+
+**Phase 4:** no new journeys. The existing ones, including `@bundler`, are the acceptance test for the new client build.
 
 **Phase 5:** authoring (survey, sketch, project admin), then data and reports, each behind its tag. The production probe also runs on a schedule; a production outage never fails an unrelated pull request. A short agent recipe — when to write an API test versus a journey, tags, teardown, screenshots — is linked from the repo `AGENTS.md`.
 
@@ -95,7 +108,7 @@ Journeys that use the map depend on a Mapbox development token. The anonymous sm
 
 ## Decisions
 
-- Playwright; no further investment in Cypress.
+- Playwright; no further investment in Cypress. *(October 2026)* The Cypress runner, its dependencies, the `window.Cypress` client branch, and the API's `IS_CYPRESS_TEST_ENV` hooks are removed. The specs under `packages/client/cypress/integration` and the commands they call are kept, unrunnable, as the description of the onboarding and smoke journeys still to port; a spec is deleted when its Playwright journey lands.
 - Test-mode tokens are signed by the API's own keys under a test-only issuer.
 - *(October 2026)* `E2E_TEST_MODE` is implemented on the API: `POST /e2e/token`, local verification of that issuer, a database-backed Management stand-in, and invite mail written to `e2e-emails/`.
 - *(October 2026)* The three `@smoke` journeys run from `packages/e2e` against the local client and an API in test mode. An anonymous visitor opens `demo-samoa` and waits for its map to load: the basemap response is a Mapbox GL style and the map has fired its load event. Other journeys wait for that only when a step uses the map. `e2e|member` opens `e2e-private`, an unlisted invite-only project. They are an approved participant and not an admin. A forum limited to their group is visible, and an admins-only forum in the same project is not. `e2e|admin` opens `demo-samoa` and follows Project Admin Dashboard to the admin page. That seed user is a project admin with `share_profile` set, which is the state `create_project` and a finished join leave, and the state the admin UI requires. Sign-in seeds the Auth0 SPA cache above. `npm run e2e` is headless, `npm run e2e:headed` shows the browser, and `npm run e2e:ui` is the interactive runner. The same suite runs on push in the unit-tests workflow, against the client dev server. The Smoke Test Output check lists the journeys. The `playwright-report` artifact is the HTML report, with screenshots, video, and traces when a journey fails. The `window.Cypress` branch remains until a later cleanup.
@@ -119,6 +132,6 @@ Journeys that use the map depend on a Mapbox development token. The anonymous sm
 
 - **Phase 1:** A push runs the smoke job with the other tests. A new clone runs `setup`, starts the core profile, and opens `demo-samoa`. A failed run leaves a trace and the slug of any project it created. *Done, October 2026.*
 - **Phase 2:** Every production deploy is followed by a passing `@production` probe.
-- **Phase 3:** Access journeys run on push with the other tests. Cypress is gone. Multi-level admin work has API coverage for the permission matrix and browser coverage for the gates.
-- **Phase 4:** The same journeys pass on the new client build.
+- **Phase 3:** Access journeys run on push with the other tests. Cypress is gone. Multi-level admin work has API coverage for the permission matrix and browser coverage for the gates. The `@bundler` set is green on Create React App.
+- **Phase 4:** The same journeys, including `@bundler`, pass on the new client build.
 - **Phase 5:** The schedule shipped with the probe in October 2026 and now runs every 30 minutes. The agent recipe is linked from `AGENTS.md`. A journey added in a pull request is reviewable from CI artifacts.

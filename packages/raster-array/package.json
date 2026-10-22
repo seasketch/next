@@ -18,20 +18,20 @@
     "url": "git+https://github.com/seasketch/next.git"
   },
   "scripts": {
-    "build": "tsc",
-    "watch": "tsc --watch",
+    "build": "tsc -b",
+    "watch": "tsc -b --watch",
     "test": "vitest run",
     "test:watch": "vitest watch",
-    "encode": "npx --yes tsx@4.19.3 src/cli.ts encode",
-    "inspect": "npx --yes tsx@4.19.3 src/cli.ts inspect",
-    "pack": "npx --yes tsx@4.19.3 src/cli.ts pack"
+    "encode": "tsx src/cli.ts encode",
+    "inspect": "tsx src/cli.ts inspect",
+    "pack": "tsx src/cli.ts pack"
   },
   "bugs": {
     "url": "https://github.com/seasketch/next/issues"
   },
   "devDependencies": {
-    "@types/node": "^18.11.4",
-    "typescript": "5.5.3",
-    "vitest": "^1.6.1"
+    "@types/node": "^24.19.2",
+    "typescript": "5.8.3",
+    "vitest": "^3.2.4"
   }
 }

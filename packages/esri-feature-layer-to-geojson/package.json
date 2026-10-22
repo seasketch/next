@@ -8,13 +8,13 @@
     "start": "wrangler dev"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20240129.0",
-    "typescript": "^5.5.3",
-    "wrangler": "^3.0.0"
+    "@cloudflare/workers-types": "^4.20250607.0",
+    "typescript": "5.8.3",
+    "wrangler": "^4.112.0"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.515.0",
-    "@aws-sdk/lib-storage": "^3.515.0",
+    "@aws-sdk/client-s3": "^3.1151.0",
+    "@aws-sdk/lib-storage": "^3.1151.0",
     "@types/geojson": "^7946.0.14"
   }
 }

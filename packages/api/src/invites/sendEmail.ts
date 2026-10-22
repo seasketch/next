@@ -1,5 +1,4 @@
 import SES from "aws-sdk/clients/ses";
-import fs from "fs";
 import { isE2ETestModeEnabled } from "../e2e/testMode";
 import { writeE2EEmail } from "../e2e/mailbox";
 const ses = new SES();
@@ -25,18 +24,6 @@ export default async function sendEmail(
   }
   if (!process.env.SES_EMAIL_SOURCE) {
     throw new Error(`SES_EMAIL_SOURCE environment variable not set`);
-  }
-  if (process.env.IS_CYPRESS_TEST_ENV === "true") {
-    fs.writeFileSync(
-      "./invite-emails-cypress/email",
-      `Destination: ${destination}\n`,
-      { encoding: "utf8", flag: "w" }
-    );
-    fs.appendFileSync(
-      "./invite-emails-cypress/email",
-      `Email text: ${textEmail}`
-    );
-    return { MessageId: "cypress-test-env" };
   }
   return ses
     .sendEmail({

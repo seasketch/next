@@ -59,7 +59,7 @@ describe("form_logic_rules", () => {
       const formElementId = await conn.oneFirst<number>(
         sql`insert into form_elements (type_id, form_id, body) values (${FormElementType}, ${formId}, '{}'::jsonb) returning id`
       );
-      expect(
+      await expect(
         conn.any(
           sql`insert into form_logic_rules(form_element_id, command) values (${formElementId}, 'JUMP') returning *`
         )
@@ -71,7 +71,7 @@ describe("form_logic_rules", () => {
       const formElementId = await conn.oneFirst<number>(
         sql`insert into form_elements (type_id, form_id, body) values (${FormElementType}, ${formId}, '{}'::jsonb) returning id`
       );
-      expect(
+      await expect(
         conn.any(
           sql`insert into form_logic_rules(form_element_id, command, jump_to_id) values (${formElementId}, 'SHOW', 1) returning *`
         )
@@ -194,7 +194,7 @@ describe("form_logic_rules", () => {
         );
         expect(rule2.position).toBeGreaterThan(rule1.position as number);
         await createSession(conn, userIds[0]);
-        expect(
+        await expect(
           conn.many(
             sql`select * from set_form_logic_rule_order(${sql.array(
               [rule3.id, rule1.id, rule2.id],
@@ -271,7 +271,7 @@ describe("form_logic_conditions", () => {
       const rule = await conn.one(
         sql`insert into form_logic_rules(form_element_id, command, jump_to_id) values (${formElementId}, 'JUMP', ${formElement2Id}) returning *`
       );
-      expect(
+      await expect(
         conn.any(
           sql`insert into form_logic_conditions (rule_id, subject_id, operator) values (${rule.id}, ${formElementId}, 'is blank') returning *`
         )

@@ -260,7 +260,7 @@ export async function verifyOnlyAuthorsCanEditRecords(
       // verify that user2 can't update user1's
       await createSession(conn, user1, true, false, projectId);
       await conn.any(sql`SAVEPOINT before_update`);
-      expect(
+      await expect(
         conn.oneFirst(
           sql`update ${table} set ${col} = ${
             record[attr] + " (updated)"
@@ -276,7 +276,7 @@ export async function verifyOnlyAuthorsCanEditRecords(
       ).toBeTruthy();
       // verify user1 can't delete user2's
       await conn.any(sql`SAVEPOINT before_delete`);
-      expect(
+      await expect(
         conn.oneFirst(
           sql`delete from ${table} where id = ${item2} returning id`
         )
@@ -284,7 +284,7 @@ export async function verifyOnlyAuthorsCanEditRecords(
       await conn.any(sql`ROLLBACK to before_delete`);
       // verify an admin or superuser can't delete user2's
       await createSession(conn, adminId, true, true, projectId);
-      expect(
+      await expect(
         conn.oneFirst(
           sql`delete from ${table} where id = ${item2} returning id`
         )
@@ -491,7 +491,7 @@ export async function verifyCRUDOpsLimitedToAdmins(
       const createSql = await options.create(conn, projectId, adminId, userIds);
       await createSession(conn, userB, true, false, projectBId);
       await conn.any(sql`SAVEPOINT before_create`);
-      expect(conn.one(createSql)).rejects.toThrow();
+      await expect(conn.one(createSql)).rejects.toThrow();
       await conn.any(sql`ROLLBACK to before_create`);
       await createSession(conn, adminId, true, false, projectId);
       const record = await conn.one(createSql);
@@ -500,7 +500,7 @@ export async function verifyCRUDOpsLimitedToAdmins(
         const updateSql = await options.update(record.id as number);
         await createSession(conn, userB, true, false, projectBId);
         await conn.any(sql`SAVEPOINT before_update`);
-        expect(conn.one(updateSql)).rejects.toThrow();
+        await expect(conn.one(updateSql)).rejects.toThrow();
         await conn.any(sql`ROLLBACK to before_update`);
         await createSession(conn, adminId, true, false, projectId);
         const updated = await conn.one(updateSql);
@@ -509,7 +509,7 @@ export async function verifyCRUDOpsLimitedToAdmins(
       const deleteSql = await options.delete(record.id as number);
       await conn.any(sql`SAVEPOINT before_delete`);
       await createSession(conn, userB, true, false, projectBId);
-      expect(conn.one(deleteSql)).rejects.toThrow();
+      await expect(conn.one(deleteSql)).rejects.toThrow();
       await conn.any(sql`ROLLBACK to before_delete`);
       await createSession(conn, adminId, true, false, projectId);
       await conn.any(deleteSql);

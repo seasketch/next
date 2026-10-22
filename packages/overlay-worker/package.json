@@ -20,42 +20,42 @@
   },
   "scripts": {
     "dev": "npx tsx watch server.ts",
-    "build": "tsc",
-    "watch": "tsc --watch",
+    "build": "tsc -b",
+    "watch": "tsc -b --watch",
     "test": "node ./__tests__/overlay-worker.test.js"
   },
   "bugs": {
     "url": "https://github.com/seasketch/next/issues"
   },
   "dependencies": {
-    "@aws-sdk/client-sqs": "^3.873.0",
-    "@turf/along": "^7.3.0",
-    "@turf/area": "^7.2.0",
-    "@turf/bbox": "^7.2.0",
-    "@turf/boolean-valid": "^7.2.0",
-    "@turf/buffer": "^7.3.0",
-    "@turf/simplify": "^7.2.0",
-    "@types/geobuf": "^3.0.4",
+    "@aws-sdk/client-secrets-manager": "^3.1151.0",
+    "@aws-sdk/client-sqs": "^3.1151.0",
+    "@turf/along": "^7.4.0",
+    "@turf/area": "^7.4.0",
+    "@turf/bbox": "^7.4.0",
+    "@turf/boolean-valid": "^7.4.0",
+    "@turf/buffer": "^7.4.0",
+    "@turf/simplify": "^7.4.0",
+    "@types/geobuf": "^4.0.0",
     "@types/geojson": "^7946.0.16",
     "@types/lodash.debounce": "^4.0.9",
     "cli-progress": "^3.12.0",
     "dotenv": "^17.2.1",
-    "esbuild": "^0.25.11",
+    "esbuild": "^0.28.2",
     "fgb-source": "^1.0.0",
-    "geobuf": "^3.0.2",
+    "geobuf": "^4.0.0",
     "lodash.debounce": "^4.0.8",
     "lru-cache": "^11.2.2",
     "overlay-engine": "^1.0.0",
-    "proj4": "^2.7.0",
-    "transform-coordinates": "^1.0.0",
     "pbf": "^4.0.1",
     "point-in-polygon-hao": "^1.2.4",
     "polyclip-ts": "^0.16.8",
-    "undici": "^7.16.0",
-    "@aws-sdk/client-secrets-manager": "^3.873.0"
+    "proj4": "^2.7.0",
+    "transform-coordinates": "^1.0.0",
+    "undici": "^7.16.0"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.119",
-    "typescript": "^5.5.2"
+    "typescript": "5.8.3"
   }
 }

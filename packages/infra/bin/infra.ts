@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import "source-map-support/register";
-require("dotenv").config();
+require("dotenv").config({ quiet: true });
 import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 import { DatabaseStack } from "../lib/DatabaseStack";

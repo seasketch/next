@@ -1,8 +1,8 @@
 import { ByteBuffer } from "flatbuffers";
 import { Feature as FgbFeature } from "flatgeobuf";
-import { fromFeature } from "flatgeobuf/lib/mjs/geojson/feature";
-import { parseProperties } from "flatgeobuf/lib/mjs/generic/feature";
-import { fromByteBuffer } from "flatgeobuf/lib/mjs/header-meta";
+import { fromFeature } from "flatgeobuf/lib/mjs/geojson/feature.js";
+import { parseProperties } from "flatgeobuf/lib/mjs/generic/feature.js";
+import { fromByteBuffer } from "flatgeobuf/lib/mjs/header-meta.js";
 import type { Feature, Geometry } from "geojson";
 import { fetchPropertiesRange } from "./fetch";
 

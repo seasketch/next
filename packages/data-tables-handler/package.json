@@ -1,35 +1,34 @@
 {
   "name": "data-tables-handler",
   "version": "1.0.0",
-  "description": "Processes overlay-related CSV data table uploads to Parquet + column stats on R2. Uses @duckdb/node-api (not legacy duckdb). Omitted from lerna.json so CI/deploy bootstrap stays scoped; install deps in this package or via Docker.",
+  "description": "Processes overlay-related CSV data table uploads to Parquet + column stats on R2. Uses @duckdb/node-api (not legacy duckdb). Installed with the root npm workspace. The Docker image builds this package from that workspace.",
   "license": "BSD-3-Clause",
   "main": "dist/handler.js",
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
-    "test": "npx --yes tsx@4.19.3 --test src/validateJoinColumn.test.ts src/deriveWhenColumns.test.ts src/applyNodataValues.test.ts src/normalizeCsvEncoding.test.ts src/inferCsvColumnPlans.test.ts src/enrichOrganisms.test.ts src/taxonomyApis.test.ts src/wikidataCrosswalk.test.ts src/remotes.test.ts src/wormsParquet.test.ts src/clusterParquet.test.ts",
-    "worms:build": "npx --yes tsx@4.19.3 scripts/buildWormsParquet.ts",
-    "predev": "node -e \"const fs=require('fs');const path=require('path');const src=path.resolve('..','geostats-types');const dest=path.resolve('node_modules','@seasketch','geostats-types');if(!fs.existsSync(src)||!fs.existsSync(path.dirname(path.dirname(dest))))process.exit(0);let linked=false;try{linked=fs.lstatSync(dest).isSymbolicLink()&&fs.realpathSync(dest)===src;}catch(e){}if(linked)process.exit(0);fs.rmSync(dest,{recursive:true,force:true});fs.mkdirSync(path.dirname(dest),{recursive:true});fs.symlinkSync(src,dest,'dir');console.log('Linked workspace @seasketch/geostats-types');\"",
-    "dev": "npx --yes tsx@4.19.3 watch server.ts",
-    "build:container": "docker build -f Dockerfile .. -t data-tables-handler:latest"
+    "test": "tsx --test src/validateJoinColumn.test.ts src/deriveWhenColumns.test.ts src/applyNodataValues.test.ts src/normalizeCsvEncoding.test.ts src/inferCsvColumnPlans.test.ts src/enrichOrganisms.test.ts src/taxonomyApis.test.ts src/wikidataCrosswalk.test.ts src/remotes.test.ts src/wormsParquet.test.ts src/clusterParquet.test.ts",
+    "worms:build": "tsx scripts/buildWormsParquet.ts",
+    "dev": "tsx watch server.ts",
+    "build:container": "docker build -f Dockerfile ../.. -t data-tables-handler:latest"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.758.0",
-    "@aws-sdk/lib-storage": "^3.758.0",
+    "@aws-sdk/client-s3": "^3.1151.0",
+    "@aws-sdk/lib-storage": "^3.1151.0",
     "@duckdb/node-api": "^1.4.4-r.3",
     "@seasketch/geostats-types": "^1.0.0",
     "aws-sdk": "^2.1234.0",
     "bytes": "^3.1.2",
     "minisearch": "^7.2.0",
-    "pg": "^8.8.0",
+    "pg": "^8.23.1",
     "tmp": "^0.2.1",
-    "typescript": "5.5.3"
+    "typescript": "5.8.3"
   },
   "devDependencies": {
     "@types/bytes": "^3.1.1",
-    "@types/node": "^18.11.4",
-    "@types/pg": "^8.6.5",
+    "@types/node": "^24.19.2",
+    "@types/pg": "^8.23.1",
     "@types/tmp": "^0.2.3",
-    "dotenv": "^16.0.3"
+    "dotenv": "^17.2.1"
   }
 }

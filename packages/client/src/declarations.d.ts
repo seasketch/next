@@ -51,7 +51,6 @@ declare module "geojson-antimeridian-cut" {
   export = splitGeojson;
 }
 
-declare module "d3-treemap";
 
 /** CJS entry used because CRA/webpack 4 does not resolve react-to-print v3 "exports". */
 declare module "react-to-print/dist/react-to-print.js" {

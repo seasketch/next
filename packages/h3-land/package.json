@@ -27,9 +27,9 @@
     "h3-land": "dist/cli.js"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc -b",
     "test": "vitest run",
-    "cli": "tsc && node dist/cli.js",
+    "cli": "tsc -b && node dist/cli.js",
     "viewer": "python3 -m http.server 8765"
   },
   "engines": {
@@ -41,8 +41,8 @@
     "h3-js": "^4.3.0"
   },
   "devDependencies": {
-    "@types/node": "^22.16.0",
-    "typescript": "^5.8.3",
-    "vitest": "^1.6.1"
+    "@types/node": "^24.19.2",
+    "typescript": "5.8.3",
+    "vitest": "^3.2.4"
   }
 }

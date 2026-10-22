@@ -190,7 +190,7 @@ describe("Access control", () => {
         const { id: userId, email } = await insertUser(conn);
         await beginUserSession(conn, userId, email, false);
         const slug = uniqueSlug();
-        expect(
+        await expect(
           conn.oneFirst(sql`select id from create_project(${slug}, ${slug})`)
         ).rejects.toThrow(/email/i);
         await conn.any(sql`ROLLBACK;`);
@@ -200,7 +200,7 @@ describe("Access control", () => {
       await pool.transaction(async (conn) => {
         await conn.any(sql`SET ROLE seasketch_user`);
         const slug = uniqueSlug();
-        expect(
+        await expect(
           conn.oneFirst(sql`select id from create_project(${slug}, ${slug})`)
         ).rejects.toThrow();
         await conn.any(sql`ROLLBACK;`);
@@ -265,7 +265,7 @@ describe("Access control", () => {
           sql`update projects set is_listed = true where id = ${pid2} returning is_listed`
         );
         expect(isListed2).toBe(true);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`update projects set is_listed = true where id = ${pid} returning is_listed`
           )
@@ -283,7 +283,7 @@ describe("Access control", () => {
           sql`select id from create_project(${slug}, ${slug})`
         );
         await conn.any(sql`SET ROLE anon`);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`update projects set is_listed = true where id = ${pid} returning is_listed`
           )
@@ -304,7 +304,7 @@ describe("Access control", () => {
         await conn.any(
           sql`select set_config('session.user_id', ${userB.id}, true)`
         );
-        expect(
+        await expect(
           conn.oneFirst(
             sql`update projects set is_listed = true where id = ${pid} returning is_listed`
           )
@@ -318,7 +318,7 @@ describe("Access control", () => {
         const { id: userId, email } = await insertUser(conn);
         const pid = await insertProject(conn, userId, email);
         await conn.any(sql`SET ROLE seasketch_superuser`);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`update projects set slug = ${uniqueSlug()} where id = ${pid} returning slug`
           )
@@ -335,7 +335,7 @@ describe("Access control", () => {
         const pid2 = await conn.oneFirst(
           sql`select id from create_project(${slug}, ${slug})`
         );
-        expect(
+        await expect(
           conn.oneFirst(
             sql`update projects set slug = ${uniqueSlug()} where id = ${pid2} returning slug`
           )
@@ -352,7 +352,7 @@ describe("Access control", () => {
         const pid = await conn.oneFirst(
           sql`select id from create_project(${slug}, ${slug})`
         );
-        expect(
+        await expect(
           conn.oneFirst(
             sql`update projects set is_featured = true where id = ${pid}`
           )
@@ -421,7 +421,7 @@ describe("Access control", () => {
         const { id: userId, email } = await insertUser(conn);
         const pid = await insertProject(conn, userId, email);
         await conn.any(sql`SET ROLE seasketch_superuser`);
-        expect(
+        await expect(
           conn.oneFirst(
             sql`update projects set is_deleted = true and deleted_at = now() where id = ${pid}`
           )
@@ -474,7 +474,7 @@ describe("Access control", () => {
         await conn.oneFirst<number>(
           sql`select id from create_project(${slugB}, ${slugB})`
         );
-        expect(
+        await expect(
           conn.oneFirst(sql`select delete_project(${pid})`)
         ).rejects.toThrow();
         await conn.any(sql`ROLLBACK;`);

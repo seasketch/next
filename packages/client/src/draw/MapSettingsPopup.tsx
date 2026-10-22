@@ -399,6 +399,7 @@ export function ZoomToFeature(
       Icon={Icon}
       disabled={props.disabled || !props.feature}
       onClick={() =>
+        props.feature &&
         props.map.fitBounds(bbox(props.feature) as LngLatBoundsLike, {
           animate: true,
           padding: props.isSmall ? 50 : 100,

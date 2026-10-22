@@ -105,7 +105,7 @@ test("Cannot use invalid urls for pictures", async () => {
   await pool.transaction(async (conn) => {
     const userId = await createUser(conn);
     await createSession(conn, userId);
-    expect(
+    await expect(
       conn.any(
         sql`update user_profiles set picture = 'my-pic' where user_id = ${userId}`
       )
@@ -118,7 +118,7 @@ test("Cannot use invalid emails", async () => {
   await pool.transaction(async (conn) => {
     const userId = await createUser(conn);
     await createSession(conn, userId);
-    expect(
+    await expect(
       conn.any(
         sql`update user_profiles set email = 'not-email' where user_id = ${userId}`
       )

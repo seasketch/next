@@ -29,7 +29,7 @@ test("Notification preference select and update operations are limited to the us
     );
     expect(updatedFreq).toBe("DAILY");
     await createSession(conn, user2Id, true, false);
-    expect(
+    await expect(
       conn.oneFirst(
         sql`select frequency from email_notification_preferences where user_id = ${userId}`
       )

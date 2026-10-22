@@ -1,7 +1,7 @@
 {
   "name": "dataHostingStackHook",
   "version": "1.0.0",
-  "description": "",
+  "description": "Outside the npm workspace on purpose. CDK zips this directory, and its node_modules have to be inside the zip. A workspace install would hoist those dependencies to the repo root.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

@@ -49,7 +49,7 @@ describe("Admins can edit access control lists", () => {
       expect(aclType).toBe("public");
       const rando = await createUser(conn);
       await createSession(conn, rando, true, false, projectId);
-      expect(
+      await expect(
         conn.oneFirst(
           sql`update access_control_lists set type = 'admins_only' where forum_id_read = ${forumId} returning id`
         )

@@ -119,10 +119,11 @@ const FileUploadPlugin = makeExtendSchemaPlugin((build) => {
             "image/webp",
             "image/svg+xml",
           ];
+          const maxCloudflareBytes = bytes("10mb") ?? 0;
           const isCloudflareImagesSupported =
             cloudflareImagesSupported.includes(contentType) &&
-            fileSizeBytes < bytes("10mb");
-          if (usage === "about_page" && fileSizeBytes >= bytes("10mb")) {
+            fileSizeBytes < maxCloudflareBytes;
+          if (usage === "about_page" && fileSizeBytes >= maxCloudflareBytes) {
             throw new Error("File size must be less than 10MB");
           } else if (isCloudflareImagesSupported) {
             const img = await getDirectCreatorUploadUrl();

@@ -7,7 +7,7 @@
 	},
 	"dependencies": {
 		"@hono/zod-validator": "^0.7.0",
-		"@turf/area": "^7.2.0",
+		"@turf/area": "^7.4.0",
 		"fgb-source": "^1.0.0",
 		"geojson": "^0.5.0",
 		"hono": "^4.7.11",
@@ -16,6 +16,6 @@
 		"zod-geojson": "^0.0.3"
 	},
 	"devDependencies": {
-		"wrangler": "^4.19.1"
+		"wrangler": "^4.112.0"
 	}
 }

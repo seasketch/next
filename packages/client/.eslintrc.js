@@ -5,7 +5,7 @@ module.exports = {
     es2021: true,
     node: true,
   },
-  extends: ["react-app", "plugin:cypress/recommended"],
+  extends: ["react-app"],
   parser: "@typescript-eslint/parser",
   parserOptions: {
     ecmaFeatures: {
@@ -59,7 +59,7 @@ module.exports = {
   },
   overrides: [
     {
-      files: ["*.spec.js", "*.spec.ts", "cypress/**/*.js"],
+      files: ["*.spec.js", "*.spec.ts"],
       rules: {
         "i18next/no-literal-string": "off",
       },

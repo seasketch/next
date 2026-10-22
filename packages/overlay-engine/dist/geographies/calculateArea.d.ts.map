@@ -1,1 +1,0 @@
-{"version":3,"file":"calculateArea.d.ts","sourceRoot":"","sources":["../../src/geographies/calculateArea.ts"],"names":[],"mappings":"AAKA,OAAO,EAAE,WAAW,EAAE,MAAM,YAAY,CAAC;AAGzC,OAAO,EAAE,mBAAmB,EAA8B,MAAM,eAAe,CAAC;AAIhF,OAAO,EACL,oBAAoB,EAGrB,MAAM,kBAAkB,CAAC;AAqB1B,wBAAsB,aAAa,CACjC,SAAS,EAAE,mBAAmB,EAAE,EAChC,WAAW,EAAE,WAAW,EACxB,aAAa,CAAC,EAAE,oBAAoB,mBA8IrC"}

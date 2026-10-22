@@ -126,7 +126,7 @@ export default async function cleanupDeletedOverlayRecords(
         select id from table_of_contents_items where table_of_contents_items.data_layer_id = data_layers.id
       ) returning id;    
     `);
-    if (results.rowCount > 0) {
+    if ((results.rowCount ?? 0) > 0) {
       helpers.logger.info(`Deleted ${results.rows.length} unused data_layers`);
     }
 
@@ -137,7 +137,7 @@ export default async function cleanupDeletedOverlayRecords(
         select data_source_id from archived_data_sources where data_source_id = data_sources.id
       );
     `);
-    if (results.rowCount > 0) {
+    if ((results.rowCount ?? 0) > 0) {
       helpers.logger.info(`Deleted ${results.rows.length} unused data_sources`);
     }
 
@@ -158,7 +158,7 @@ export default async function cleanupDeletedOverlayRecords(
         job.state = 'complete'
     `);
 
-    if (results.rowCount > 0) {
+    if ((results.rowCount ?? 0) > 0) {
       helpers.logger.info(
         `Deleting outputs related to ${results.rowCount} deleted records`
       );
@@ -200,7 +200,7 @@ export default async function cleanupDeletedOverlayRecords(
       `select id, remote from deleted_data_upload_outputs order by deleted_at asc limit 20`
     );
 
-    if (data.rowCount > 0) {
+    if ((data.rowCount ?? 0) > 0) {
       helpers.logger.info(
         `Deleting ${data.rowCount} uploaded data ouputs that are no longer being used.`
       );
@@ -211,9 +211,10 @@ export default async function cleanupDeletedOverlayRecords(
           `select id from data_upload_outputs where remote = $1`,
           [record.remote]
         );
-        if (rowCount > 0 || sharedRemotes.has(record.remote)) {
+        const stillUsed = (rowCount ?? 0) > 0;
+        if (stillUsed || sharedRemotes.has(record.remote)) {
           helpers.logger.info(
-            rowCount > 0
+            stillUsed
               ? `Skipping deletion of ${record.remote} as it is still being used.`
               : `Skipping deletion of shared data-library object ${record.remote}.`
           );
@@ -248,7 +249,7 @@ async function deleteRemote(remote: string, pool: PoolClient) {
     `select 1 from data_upload_outputs where remote = $1`,
     [remote]
   );
-  if (rowCount > 0) {
+  if ((rowCount ?? 0) > 0) {
     console.error(`Remote ${remote} is still being used.`);
     return;
   }

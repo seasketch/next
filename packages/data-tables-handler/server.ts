@@ -1,7 +1,7 @@
 #!/usr/bin/env tsx
 import { createServer } from "http";
 import * as dotenv from "dotenv";
-dotenv.config();
+dotenv.config({ quiet: true });
 
 const PORT = process.env.PORT || 3006;
 
@@ -14,7 +14,7 @@ const server = createServer(function (req, res) {
     req.on("end", async () => {
       try {
         const data = JSON.parse(body);
-        const { processDataTableUpload } = await import("./handler");
+        const { processDataTableUpload } = await import("./handler.js");
         const outputs = await processDataTableUpload(data);
         res.setHeader("Content-Type", "application/json");
         res.end(JSON.stringify(outputs));

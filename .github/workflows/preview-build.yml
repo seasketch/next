@@ -14,9 +14,11 @@ jobs:
         with:
           node-version-file: ".nvmrc"
           cache: npm
-          cache-dependency-path: "**/package-lock.json"
+          cache-dependency-path: package-lock.json
       - name: Install dependencies
-        run: bash scripts/ci-bootstrap.sh --scope=client --include-dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Build the client's workspace libraries
+        run: npm run build:client-libs
       - name: Build client
         working-directory: ./packages/client
         env:

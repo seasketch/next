@@ -16,10 +16,15 @@ RUN apt-get update \
 USER seasketch
 
 WORKDIR /home/seasketch
-RUN npm install lerna@6
 ARG commit
-RUN git clone https://github.com/seasketch/next.git /home/seasketch/src && cd /home/seasketch/src && git checkout $commit
+RUN git clone https://github.com/seasketch/next.git /home/seasketch/src && cd /home/seasketch/src && git checkout "$commit"
+WORKDIR /home/seasketch/src
+# npm ci --workspace still installs every workspace. Keep the packages the
+# API build compiles (its tsconfig references), then npm install from the
+# root lockfile. Dev dependencies of those packages supply tsup and esbuild.
+RUN node -e 'const fs=require("fs"); const keep=new Set(["api","geostats-types","fgb-source","h3-land","ai-data-analyst","metadata-parser","gl-style-builder","vector-data-source","map-tile-cache-calculator","mapbox-gl-esri-sources","overlay-engine","overlay-worker","spatial-uploads-handler"]); for (const name of fs.readdirSync("packages")) { if (!keep.has(name)) fs.rmSync("packages/"+name,{recursive:true,force:true}); }' \
+ && npm install --no-audit --no-fund \
+ && npm run build:api
 WORKDIR /home/seasketch/src/packages/api
-RUN npx lerna@6.6.2 bootstrap --scope=@seasketch/api --scope=@seasketch/map-tile-cache-calculator --scope=@seasketch/vector-data-source --scope=@seasketch/mapbox-gl-esri-sources --scope=spatial-uploads-handler --scope=@seasketch/geostats-types --scope=@seasketch/metadata-parser --scope=fgb-source --scope=overlay-engine --scope=@seasketch/h3-land --scope=overlay-worker --scope=ai-data-analyst --scope=gl-style-builder && npm run build
 EXPOSE 3857
 CMD ["npm", "run", "start"]

@@ -85,7 +85,7 @@ describe("Management operations", () => {
       "public",
       async (conn, projectId, adminId, [userA, userB]) => {
         await createSession(conn, adminId, true, false);
-        expect(
+        await expect(
           conn.any(
             sql`insert into project_invites (project_id, fullname, email) values (${projectId}, 'Jo Blow', 'joe@example.com')`
           )
@@ -108,7 +108,7 @@ describe("Management operations", () => {
           sql`update project_invites set fullname = 'Jo', email = 'blow@example.com', make_admin = true where id = ${inviteId} returning email`
         );
         expect(email).toBe("blow@example.com");
-        expect(
+        await expect(
           conn.any(
             sql`update project_invites set was_used = true where id = ${inviteId}`
           )
@@ -237,7 +237,7 @@ describe("Management operations", () => {
             ])`
         );
         await createSession(conn, userA, true, false, projectId);
-        expect(conn.one(sql`select * from project_invites`)).rejects.toThrow();
+        await expect(conn.one(sql`select * from project_invites`)).rejects.toThrow();
       }
     );
   });
@@ -337,7 +337,7 @@ describe("Sending invites", () => {
                 ])`
         );
         await createSession(conn, userA, true, false);
-        expect(
+        await expect(
           conn.any(
             sql`select send_project_invites(${sql.array(
               [invites[0].id],
@@ -367,7 +367,7 @@ describe("Sending invites", () => {
                 ])`
         );
         await createSession(conn, userA, true, false);
-        expect(
+        await expect(
           conn.any(sql`select send_all_project_invites(${projectId})`)
         ).rejects.toThrow(/admin/i);
       }
@@ -394,11 +394,11 @@ describe("Sending invites", () => {
           )})`
         );
         await conn.any(sql`savepoint update_invite_emails`);
-        expect(
+        await expect(
           conn.any(sql`update invite_emails set status = 'SENT'`)
         ).rejects.toThrow(/permission/);
         await conn.any(sql`rollback`);
-        expect(
+        await expect(
           conn.any(
             sql`delete from invite_emails where project_invite_id = ${invites[0].id} returning *`
           )
@@ -436,7 +436,7 @@ describe("Sending invites", () => {
         expect(emails.length).toBe(1);
         expect(emails[0].status).toBe("QUEUED");
         await createSession(conn, userA, true, false, projectId);
-        expect(
+        await expect(
           conn.many(sql`select status, created_at from invite_emails`)
         ).rejects.toThrow(/not found/);
       }
@@ -960,7 +960,7 @@ describe("Accepting Invites", () => {
           await createSession(conn, undefined, false, false, projectId);
           let parts = token.split(".");
           token = [token[0], token[1], token[2].slice(0, -1)].join(".");
-          expect(
+          await expect(
             verifyProjectInvite(
               asPg(conn),
               token,
@@ -1032,7 +1032,7 @@ describe("Accepting Invites", () => {
           await createSession(conn, undefined, false, false, projectId);
           let parts = token.split(".");
           token = [token[0], token[1], token[2].slice(0, -1)].join(".");
-          expect(
+          await expect(
             confirmProjectInvite(
               asPg(conn),
               token,
@@ -1357,7 +1357,7 @@ describe("Accepting Invites", () => {
           );
           await sendProjectInviteEmail(inviteEmailId, asPg(conn));
           await createSession(conn, userA, false, false, projectId);
-          expect(
+          await expect(
             conn.oneFirst(
               sql`select * from confirm_project_invite_with_verified_email(${projectId})`
             )
@@ -1383,7 +1383,7 @@ describe("Accepting Invites", () => {
                             ])`
           );
           await createSession(conn, userA, true, false, projectId);
-          expect(
+          await expect(
             conn.oneFirst(
               sql`select * from confirm_project_invite_with_verified_email(${projectId})`
             )
@@ -1454,7 +1454,7 @@ describe("Accepting Invites", () => {
           );
           expect(claims.admin).toBe(false);
           await createSession(conn, userB, false, false, projectId);
-          expect(
+          await expect(
             confirmProjectInvite(
               asPg(conn),
               token,
@@ -1631,7 +1631,7 @@ describe("db.projectInvites.sendQueuedProjectInvites(limit)", () => {
         const inviteEmailId = await conn.oneFirst<number>(
           sql`select id from invite_emails where project_invite_id = ${invite.id}`
         );
-        expect(
+        await expect(
           sendProjectInviteEmail(inviteEmailId, asPg(conn))
         ).rejects.toThrow(/permission/);
       }

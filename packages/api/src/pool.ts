@@ -1,7 +1,7 @@
 import { Signer } from "aws-sdk/clients/rds";
 import { Pool } from "pg";
 
-require("dotenv").config();
+require("dotenv").config({ quiet: true });
 
 const signer = new Signer();
 
@@ -82,7 +82,7 @@ function createPool(options?: any, user?: string) {
     pool.connect((err, client) => {
       if (err) {
         throw err;
-      } else {
+      } else if (client) {
         client.query("SET statement_timeout TO 3000");
       }
     });

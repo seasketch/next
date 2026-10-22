@@ -642,15 +642,17 @@ export default async function handler(payload: OverlayWorkerPayload) {
             pageSize: "1MB",
           },
         );
+        // These fields are optional on the distance-to-shore request and are
+        // not part of every metric payload in the union.
+        const distancePayload = payload as unknown as {
+          minimumDistanceMeters?: unknown;
+          miminumDistanceMeters?: unknown;
+        };
         const minimumDistanceMeters =
-          typeof (payload as { minimumDistanceMeters?: unknown })
-            .minimumDistanceMeters === "number"
-            ? (payload as { minimumDistanceMeters: number })
-                .minimumDistanceMeters
-            : typeof (payload as { miminumDistanceMeters?: unknown })
-                  .miminumDistanceMeters === "number"
-              ? (payload as { miminumDistanceMeters: number })
-                  .miminumDistanceMeters
+          typeof distancePayload.minimumDistanceMeters === "number"
+            ? distancePayload.minimumDistanceMeters
+            : typeof distancePayload.miminumDistanceMeters === "number"
+              ? distancePayload.miminumDistanceMeters
               : undefined;
         const result = await calculateDistanceToShore(
           intersectionFeature,
