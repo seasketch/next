@@ -40,6 +40,12 @@ npm run dev
 
 `npm run logs` follows every service. `npm run logs -- api` follows one. Files are `.logs/<service>.log`, rotated at 20 MB. `npm run status` prints which services are listening. `npm run setup -- --reset` replaces the local database with the golden snapshot.
 
+`npm run e2e` runs the Playwright suite in `packages/e2e`. It restores the golden snapshot into `seasketch_e2e` and starts its own API and client, separate from `npm run dev`. Chromium is a separate download from `npm install`. Once per machine, and again after a Playwright upgrade:
+
+```sh
+npm exec --workspace @seasketch/e2e -- playwright install chromium
+```
+
 In Cursor or VS Code, Terminal > Run Task > `Dev: core` runs that same command in one terminal, and opens two more that follow `npm run logs -- client` and `npm run logs -- db-watch`. CI runs `npm run dev -- --ci`, which skips the watchers and runs the API from its build.
 
 Follow [ENV.md](ENV.md) for the variables. Human login needs an Auth0 tenant you control; [AUTH0.md](AUTH0.md) is the setup.

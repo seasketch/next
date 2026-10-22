@@ -5,6 +5,9 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { e2eStack } from "./dev.config.mjs";
+import { assertPlaywrightChromium } from "./ensure-playwright-browser.mjs";
+
+assertPlaywrightChromium();
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 

@@ -36,14 +36,14 @@ From a clean checkout, with Docker running and secrets injected ([secrets](secre
 | `npm run dev` | Start the **core** profile in the foreground: Postgres and Redis through Compose, then the API and client plus the watchers a person editing code needs (API TypeScript, Graphile Migrate, GraphQL codegen, Tailwind), and the data-tables, spatial-uploads, and subdivision workers. Restart a process when its code changes. Exit non-zero if any process in the profile dies |
 | `npm run dev -- --profile data` | Core plus the [data profile](local-services.md) |
 | `npm run dev -- --ci` | The same profile without watchers. The API runs from `dist`, so build first. The data-tables and spatial-uploads servers start once, and subdivision is built and started once. The client starts last, after those ports are open |
-| `npm run e2e` | Restore the golden snapshot into `seasketch_e2e` (`setup --reset` for that database only), build the API, and run Playwright. The suite starts `--profile e2e`: API on port 13857 and client on port 13000, Redis logical database 1. It does not attach to `npm run dev` and does not write to the `seasketch` database |
+| `npm run e2e` | Restore the golden snapshot into `seasketch_e2e` (`setup --reset` for that database only), build the API, and run Playwright. The suite starts `--profile e2e`: API on port 13857 and client on port 13000, Redis logical database 1. It does not attach to `npm run dev` and does not write to the `seasketch` database. Chromium is a separate download from `npm install`. Once per machine, and again after a Playwright upgrade: `npm exec --workspace @seasketch/e2e -- playwright install chromium`. The Smoke tests job runs `npx playwright install --with-deps chromium` before this command |
 | `npm run dev -- --only <service>` | One service, raw output, no Compose and no log file. What each editor pane runs |
 | `npm run logs [-- <service>]` | Follow `.logs/<service>.log`, or every service |
 | `npm run status` | One line per service that has a readiness URL, then `docker compose ps` |
 
 `setup` never drops a database that already exists. A clean slate is a separate, explicit command (`npm run setup -- --reset`), because people and agents both need one and both need to avoid wiping a database they meant to keep.
 
-CI and cloud agents run `bootstrap`, then `npm run e2e`, which restores `seasketch_e2e` and starts that profile headlessly. An agent runs `dev` in a background shell and reads `.logs/`. They do not use VS Code tasks. Staging runs the same commands with a staging secret profile and its own database.
+CI and cloud agents run `bootstrap`, install Playwright's Chromium, then `npm run e2e`, which restores `seasketch_e2e` and starts that profile headlessly. An agent runs `dev` in a background shell and reads `.logs/`. They do not use VS Code tasks. Staging runs the same commands with a staging secret profile and its own database.
 
 ## Process supervision
 
