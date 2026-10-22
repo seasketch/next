@@ -138,6 +138,7 @@
     "colord": "^2.9.0",
     "colorthief": "2.2.0",
     "comlink-loader": "^2.0.0",
+    "d3": "^7.9.0",
     "d3-array": "2",
     "d3-axis": "^3.0.0",
     "d3-hierarchy": "^3.1.2",
