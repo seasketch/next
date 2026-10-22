@@ -1,6 +1,6 @@
 # Used by infra/lib/DatabaseStack to initialize a fresh
 # RDS instance.
-FROM amazon/aws-lambda-nodejs:24
+FROM public.ecr.aws/lambda/nodejs:24
 WORKDIR /var/task
 RUN npm init -y
 RUN npm install graphile-migrate pg @aws-sdk/client-secrets-manager @aws-sdk/rds-signer graphile-worker
