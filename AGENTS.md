@@ -2,7 +2,7 @@
 
 ## 🧱 Project Architecture
 
-- **Monorepo Structure**: Managed with Lerna, containing multiple packages:
+- **Monorepo Structure**: Managed with npm workspaces (one root `package-lock.json`; libraries build with TypeScript project references via `tsc -b`), containing multiple packages:
   - `packages/api`: GraphQL API server using PostGraphile.
   - `packages/client`: React SPA built with Create React App.
   - `packages/infra`: AWS CDK app defining production infrastructure.
