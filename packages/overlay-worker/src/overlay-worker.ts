@@ -846,11 +846,9 @@ function polygonFromFragment(
   }
   // payload.subject.geobuf is a base64 encoded string
   const buffer = Buffer.from(subject.geobuf as string, "base64");
-  // This package depends on pbf 4. @types/geobuf resolves pbf 3 from the
-  // hoisted copy, and the two constructor types are not assignable.
-  let feature = geobuf.decode(
-    new Pbf(buffer) as unknown as Parameters<typeof geobuf.decode>[0]
-  ) as Feature<Polygon> | FeatureCollection<Polygon>;
+  let feature = geobuf.decode(new Pbf(buffer)) as
+    | Feature<Polygon>
+    | FeatureCollection<Polygon>;
   if (feature.type === "FeatureCollection") {
     feature = feature.features[0];
   }

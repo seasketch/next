@@ -17,6 +17,19 @@ function cjsBuild(pkg) {
   }
   return path.resolve(__dirname, `../../node_modules/${pkg}/dist/cjs/index.cjs`);
 }
+
+// pbf 4, geobuf 4 and rbush 4 are ESM-only at their entry points, which
+// react-scripts 4's Jest cannot load from node_modules. Each ships a UMD
+// build; prefer the copy the importing workspace (vector-data-source or
+// overlay-engine) resolves, then the root.
+function umdBuild(pkg, file) {
+  const candidates = [
+    path.resolve(__dirname, `../vector-data-source/node_modules/${pkg}/${file}`),
+    path.resolve(__dirname, `../overlay-engine/node_modules/${pkg}/${file}`),
+    path.resolve(__dirname, `../../node_modules/${pkg}/${file}`),
+  ];
+  return candidates.find((candidate) => fs.existsSync(candidate)) || pkg;
+}
 module.exports = {
   webpack: {
     plugins: {
@@ -227,6 +240,10 @@ module.exports = {
         "^polyclip-ts$": cjsBuild("polyclip-ts"),
         // Ensure Jest uses CJS build of splaytree-ts
         "^splaytree-ts$": cjsBuild("splaytree-ts"),
+        // ESM-only majors reached through @seasketch/vector-data-source
+        "^pbf$": umdBuild("pbf", "dist/pbf.js"),
+        "^geobuf$": umdBuild("geobuf", "dist/geobuf.js"),
+        "^rbush$": umdBuild("rbush", "rbush.js"),
         // Shim esm-env for Jest as well
         "^esm-env$": "<rootDir>/src/shims/esm-env.ts",
       },

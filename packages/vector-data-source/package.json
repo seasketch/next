@@ -23,7 +23,7 @@
     "url": "git+https://github.com/seasketch/next.git"
   },
   "scripts": {
-    "test": "node -e \"console.log('no unit tests in this package')\"",
+    "test": "vitest run",
     "build": "tsc -b"
   },
   "bugs": {
@@ -32,19 +32,18 @@
   "dependencies": {
     "@turf/bbox": "^7.4.0",
     "@turf/helpers": "^7.4.0",
-    "@types/flatbush": "^3.3.0",
-    "@types/geobuf": "^3.0.1",
+    "@types/geobuf": "^4.0.0",
     "@types/geojson": "^7946.0.8",
-    "@types/pbf": "^3.0.2",
-    "@types/rbush": "^3.0.0",
+    "@types/rbush": "^4.0.0",
     "flatbush": "^4.0.0",
-    "geobuf": "^3.0.2",
+    "geobuf": "^4.0.0",
     "mnemonist": "^0.39.2",
-    "pbf": "^3.2.1",
-    "rbush": "^3.0.1",
+    "pbf": "^4.0.1",
+    "rbush": "^4.0.1",
     "union-subdivided-polygons": "^0.9.1"
   },
   "devDependencies": {
-    "typescript": "5.8.3"
+    "typescript": "5.8.3",
+    "vitest": "^3.2.4"
   }
 }
