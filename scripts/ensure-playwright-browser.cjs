@@ -1,10 +1,7 @@
 // Fail before build, database reset, or the dev server if this Playwright
 // version's Chromium is not on disk. `npm install` does not download it.
 // Headless runs use the headless shell; headed and UI runs use the full browser.
-import { createRequire } from "node:module";
-import fs from "node:fs";
-
-const require = createRequire(import.meta.url);
+const fs = require("node:fs");
 
 const INSTALL_COMMAND =
   "npm exec --workspace @seasketch/e2e -- playwright install chromium";
@@ -36,7 +33,7 @@ function playwrightRegistry() {
   return registry;
 }
 
-export function missingPlaywrightBrowsers() {
+function missingPlaywrightBrowsers() {
   const registry = playwrightRegistry();
   const missing = [];
   for (const [name, title] of BROWSERS) {
@@ -49,7 +46,7 @@ export function missingPlaywrightBrowsers() {
   return missing;
 }
 
-export function assertPlaywrightChromium() {
+function assertPlaywrightChromium() {
   const missing = missingPlaywrightBrowsers();
   if (missing.length === 0) {
     return;
@@ -75,3 +72,5 @@ export function assertPlaywrightChromium() {
   console.error(lines.join("\n"));
   process.exit(1);
 }
+
+module.exports = { missingPlaywrightBrowsers, assertPlaywrightChromium };

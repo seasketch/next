@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { defineConfig, devices } from "@playwright/test";
-import { assertPlaywrightChromium } from "../../scripts/ensure-playwright-browser.mjs";
+import { assertPlaywrightChromium } from "../../scripts/ensure-playwright-browser.cjs";
 
 // Direct `playwright test` starts the dev server before a test can fail on a
 // missing browser. Stop here, while loading this file.

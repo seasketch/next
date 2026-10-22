@@ -5,7 +5,7 @@ import { spawn } from "node:child_process";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { e2eStack } from "./dev.config.mjs";
-import { assertPlaywrightChromium } from "./ensure-playwright-browser.mjs";
+import { assertPlaywrightChromium } from "./ensure-playwright-browser.cjs";
 
 assertPlaywrightChromium();
 
