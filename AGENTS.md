@@ -112,7 +112,7 @@ Load `.agents/skills/replicate-production-data/SKILL.md` when copying production
 
 ## Running locally
 
-From the repo root: `npm run bootstrap`, then `npm run setup`, then `npm run dev`. That starts Postgres, Redis, the API, the client, the watchers, and the data-tables, spatial-uploads, and subdivision workers. Do not start the old folder-open tasks. Do not set `E2E_TEST_MODE` unless the task is the e2e suite; `npm run dev` leaves it unset. Logs are `npm run logs -- <service>` or `.logs/<service>.log`. `npm run status` shows what is listening.
+From the repo root: `npm run bootstrap`, then `npm run build`, then `npm run setup`, then `npm run dev`. That starts Postgres, Redis, the API, the client, the watchers, and the data-tables, spatial-uploads, and subdivision workers. Do not start the old folder-open tasks. Do not set `E2E_TEST_MODE` unless the task is the e2e suite; `npm run dev` leaves it unset. Logs are `npm run logs -- <service>` or `.logs/<service>.log`. `npm run status` shows what is listening.
 
 `npm run e2e` runs the Playwright suite against its own API, client, and database (`seasketch_e2e`). Chromium is a separate download from `npm install`. Before the first run, and again after a Playwright upgrade: `npm exec --workspace @seasketch/e2e -- playwright install chromium`.
 

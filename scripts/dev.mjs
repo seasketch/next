@@ -4,7 +4,7 @@
 // Does not set E2E_TEST_MODE or E2E_TEST_PASSPHRASE. Playwright passes those.
 import { spawn } from "node:child_process";
 import net from "node:net";
-import { writeSync } from "node:fs";
+import { existsSync, readFileSync, writeSync } from "node:fs";
 import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { Writable } from "node:stream";
@@ -196,9 +196,43 @@ function logStream(name) {
   );
 }
 
+// Workspace packages load from their gitignored dist/ output, so after a
+// fresh `npm ci` the API and client cannot start until `npm run build` runs.
+// Only the packages the root tsconfig references are checked; that is what
+// `npm run build` builds.
+function unbuiltPackages() {
+  const solution = readFileSync(path.join(root, "tsconfig.json"), "utf8");
+  const dirs = [...solution.matchAll(/"path":\s*"([^"]+)"/g)].map((m) => m[1]);
+  const missing = [];
+  for (const dir of dirs) {
+    const manifestPath = path.join(root, dir, "package.json");
+    if (!existsSync(manifestPath)) {
+      continue;
+    }
+    const { name, main } = JSON.parse(readFileSync(manifestPath, "utf8"));
+    if (
+      typeof main === "string" &&
+      main.replace(/^\.\//, "").startsWith("dist/") &&
+      !existsSync(path.join(root, dir, main))
+    ) {
+      missing.push(name || dir);
+    }
+  }
+  return missing;
+}
+
 const { profile, ci, only } = parseArgs(process.argv.slice(2));
 if (profile === "e2e") {
   logsDir = path.join(root, ".logs", "e2e");
+}
+
+const unbuilt = unbuiltPackages();
+if (unbuilt.length > 0) {
+  report(
+    `These workspace packages have not been built: ${unbuilt.join(", ")}.\n` +
+      "Run `npm run build` from the repo root (needed after a fresh install), then `npm run dev` again."
+  );
+  process.exit(1);
 }
 
 if (only) {

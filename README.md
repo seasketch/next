@@ -30,13 +30,14 @@ From the repo root:
 
 ```sh
 npm run bootstrap
+npm run build
 npm run setup
 npm run dev
 ```
 
 `npm run bootstrap` is `npm install` at the repo root. One lockfile covers the workspace. `npm run build` is `tsc -b` over every workspace package plus the two bundling steps `tsc` cannot run (the `fgb-source` tsup bundle and the overlay-engine worker). `npm run build:api` builds the API and only the packages its tsconfig references; `npm run build:client-libs` builds the packages the client imports.
 
-`npm run dev` starts Postgres and Redis, then the API, the client, the watchers, and the data-tables, spatial-uploads, and subdivision workers, in the foreground. Those workers recompile and restart when their code changes. Ctrl-C stops the host processes. It does not enable `E2E_TEST_MODE`; a normal development API uses Auth0 login. The smoke suite turns test mode on itself, and it starts the same three workers. The tests do not call them yet. If one of them fails to listen, the job fails.
+Workspace packages load from their gitignored `dist/` output, so a fresh install needs `npm run build` before `npm run dev`. `npm run dev` checks for that output and exits with that instruction if a package has not been built. It starts Postgres and Redis, then the API, the client, the watchers, and the data-tables, spatial-uploads, and subdivision workers, in the foreground. Those workers recompile and restart when their code changes. Ctrl-C stops the host processes. It does not enable `E2E_TEST_MODE`; a normal development API uses Auth0 login. The smoke suite turns test mode on itself, and it starts the same three workers. The tests do not call them yet. If one of them fails to listen, the job fails.
 
 `npm run logs` follows every service. `npm run logs -- api` follows one. Files are `.logs/<service>.log`, rotated at 20 MB. `npm run status` prints which services are listening. `npm run setup -- --reset` replaces the local database with the golden snapshot.
 
