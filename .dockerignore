@@ -4,6 +4,10 @@
 # the staged context small and keeps local-only files out of the images.
 .git
 **/node_modules
+# CDK writes the cloud assembly here, inside the repo-root Docker context.
+# Leaving it out of the ignore list makes each synth hash the previous staged
+# copy of the repo, including that copy's own cdk.out.
+**/cdk.out
 **/.logs
 **/.tsbuildinfo
 **/dist

@@ -79,7 +79,12 @@ export class MaintenanceStack extends cdk.Stack {
         memoryLimitMiB: 512,
       }
     );
-    taskDefinition.addContainer("Default", {
+    // Construct id must not be "Default": current CDK treats both "Default"
+    // and "Resource" as the default child and refuses to synthesize.
+    // containerName stays "Default" so `ecs execute-command --container Default`
+    // in the deploy workflow still matches the running task.
+    taskDefinition.addContainer("Maintenance", {
+      containerName: "Default",
       image: ecs.ContainerImage.fromRegistry(asset.imageUri),
       memoryLimitMiB: 512,
       linuxParameters: new ecs.LinuxParameters(this, "LinuxParams", {
