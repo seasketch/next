@@ -1,8 +1,11 @@
 /* eslint-disable i18next/no-literal-string */
 import { describe, expect, it, jest } from "@jest/globals";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { GeostatsAttribute } from "@seasketch/geostats-types";
-import DataTableNumericFilter from "./DataTableNumericFilter";
+import DataTableNumericFilter, {
+  INPUT_COMMIT_DEBOUNCE_MS,
+  isReadyRangeDraft,
+} from "./DataTableNumericFilter";
 import { DataTableFilter } from "./dataTableQueryApi";
 
 class ResizeObserverMock {
@@ -29,10 +32,28 @@ const depthColumn: GeostatsAttribute = {
   },
 };
 
-function rangeFilters(min: string, max: string): DataTableFilter[] {
+const countColumn: GeostatsAttribute = {
+  attribute: "count",
+  type: "number",
+  count: 100,
+  min: 2,
+  max: 33,
+  values: {
+    "2": 1,
+    "10": 1,
+    "15": 1,
+    "33": 1,
+  },
+};
+
+function rangeFilters(
+  min: string,
+  max: string,
+  column = "depth"
+): DataTableFilter[] {
   return [
-    { column: "depth", op: "gte", value: min },
-    { column: "depth", op: "lte", value: max },
+    { column, op: "gte", value: min },
+    { column, op: "lte", value: max },
   ];
 }
 
@@ -67,6 +88,7 @@ describe("DataTableNumericFilter range consistency", () => {
     fireEvent.change(screen.getByLabelText("Min"), {
       target: { value: "12" },
     });
+    fireEvent.blur(screen.getByLabelText("Min"));
 
     expect(onChange).toHaveBeenCalled();
     const emitted = onChange.mock.calls[onChange.mock.calls.length - 1][0];
@@ -115,5 +137,141 @@ describe("DataTableNumericFilter range consistency", () => {
     expect(
       screen.getByRole("button", { name: /9\.7\s+–\s+25\.7/ })
     ).toHaveAttribute("aria-busy", "true");
+  });
+});
+
+describe("isReadyRangeDraft", () => {
+  it("rejects nullish and non-numeric values", () => {
+    expect(isReadyRangeDraft(Number.NaN, 10, "min", 2, 33)).toBe(false);
+    expect(isReadyRangeDraft(Number.POSITIVE_INFINITY, 10, "min", 2, 33)).toBe(
+      false
+    );
+  });
+
+  it("rejects values outside the column bounds", () => {
+    expect(isReadyRangeDraft(1, 33, "min", 2, 33)).toBe(false);
+    expect(isReadyRangeDraft(40, 2, "max", 2, 33)).toBe(false);
+  });
+
+  it("rejects an inverted range against the other bound", () => {
+    expect(isReadyRangeDraft(20, 10, "min", 2, 33)).toBe(false);
+    expect(isReadyRangeDraft(5, 10, "max", 2, 33)).toBe(false);
+  });
+
+  it("accepts an in-range bound, including when the other side is empty", () => {
+    expect(isReadyRangeDraft(10, 33, "min", 2, 33)).toBe(true);
+    expect(isReadyRangeDraft(10, null, "min", 2, 33)).toBe(true);
+    expect(isReadyRangeDraft(10, 2, "max", 2, 33)).toBe(true);
+  });
+});
+
+describe("DataTableNumericFilter exact input drafts", () => {
+  function renderCountFilter(
+    filters: DataTableFilter[] = rangeFilters("2", "33", "count")
+  ) {
+    const onChange = jest.fn<(filters: DataTableFilter[]) => void>();
+    const view = render(
+      <DataTableNumericFilter
+        column={countColumn}
+        filters={filters}
+        onChange={onChange}
+      />
+    );
+    fireEvent.click(screen.getByRole("button", { name: /–/ }));
+    return { onChange, ...view };
+  }
+
+  it("keeps a below-min prefix in the field and does not emit", () => {
+    const { onChange } = renderCountFilter();
+    const minInput = screen.getByLabelText("Min");
+
+    fireEvent.change(minInput, { target: { value: "1" } });
+
+    expect(minInput).toHaveValue(1);
+    expect(onChange).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole("button", { name: /2\s+–\s+33/ })
+    ).toBeInTheDocument();
+  });
+
+  it("lets the user type 10 when the column min is 2", () => {
+    jest.useFakeTimers();
+    try {
+      const { onChange } = renderCountFilter();
+      const minInput = screen.getByLabelText("Min");
+
+      fireEvent.change(minInput, { target: { value: "1" } });
+      expect(minInput).toHaveValue(1);
+      expect(onChange).not.toHaveBeenCalled();
+
+      fireEvent.change(minInput, { target: { value: "10" } });
+      expect(minInput).toHaveValue(10);
+      expect(onChange).not.toHaveBeenCalled();
+
+      act(() => {
+        jest.advanceTimersByTime(INPUT_COMMIT_DEBOUNCE_MS);
+      });
+
+      expect(onChange).toHaveBeenCalledTimes(1);
+      expect(onChange.mock.calls[0][0]).toEqual(
+        rangeFilters("10", "33", "count")
+      );
+      expect(minInput).toHaveValue(10);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it("clamps a below-min draft on blur", () => {
+    const { onChange } = renderCountFilter(rangeFilters("5", "33", "count"));
+    const minInput = screen.getByLabelText("Min");
+
+    fireEvent.change(minInput, { target: { value: "1" } });
+    fireEvent.blur(minInput);
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange.mock.calls[0][0]).toEqual(rangeFilters("2", "33", "count"));
+    expect(minInput).toHaveValue(2);
+  });
+
+  it("clamps a below-min draft on Enter", () => {
+    const { onChange } = renderCountFilter(rangeFilters("5", "33", "count"));
+    const minInput = screen.getByLabelText("Min");
+
+    fireEvent.change(minInput, { target: { value: "1" } });
+    fireEvent.keyDown(minInput, { key: "Enter" });
+
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange.mock.calls[0][0]).toEqual(rangeFilters("2", "33", "count"));
+    expect(minInput).toHaveValue(2);
+  });
+
+  it("does not emit while the field is cleared, then commits empty on blur", () => {
+    const { onChange } = renderCountFilter();
+    const minInput = screen.getByLabelText("Min");
+
+    fireEvent.change(minInput, { target: { value: "" } });
+    expect(onChange).not.toHaveBeenCalled();
+    expect(minInput).toHaveValue(null);
+
+    fireEvent.blur(minInput);
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(onChange.mock.calls[0][0]).toEqual([
+      { column: "count", op: "lte", value: "33" },
+    ]);
+  });
+
+  it("commits an in-progress in-range draft when the popover closes", () => {
+    const { onChange } = renderCountFilter();
+    const trigger = screen.getByRole("button", { name: /–/ });
+    const minInput = screen.getByLabelText("Min");
+
+    fireEvent.change(minInput, { target: { value: "1" } });
+    fireEvent.change(minInput, { target: { value: "10" } });
+    fireEvent.click(trigger);
+
+    expect(onChange).toHaveBeenCalled();
+    const last = onChange.mock.calls[onChange.mock.calls.length - 1][0];
+    expect(last).toEqual(rangeFilters("10", "33", "count"));
   });
 });
