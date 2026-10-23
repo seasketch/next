@@ -237,14 +237,63 @@ function serializeBound(value: number, preferInteger: boolean) {
   return String(rounded);
 }
 
+/** Publish slider motion after thumbs settle, without waiting for pointer-up. */
+const SLIDER_COMMIT_DEBOUNCE_MS = 100;
+
+/**
+ * After typing stops on an already-valid in-range draft, publish the filter.
+ * Longer than the slider so intermediate prefixes (1 → 10) do not query.
+ */
+export const INPUT_COMMIT_DEBOUNCE_MS = 300;
+
+/**
+ * True when a typed draft is already a usable range bound: finite, inside
+ * the column extent, and not inverted against the other bound. Incomplete
+ * prefixes ("1" when min is 2) and empty strings stay out so we do not
+ * rewrite the field or fire a query mid-keystroke.
+ */
+export function isReadyRangeDraft(
+  parsed: number,
+  otherBound: number | null,
+  side: "min" | "max",
+  boundMin: number,
+  boundMax: number
+) {
+  if (!Number.isFinite(parsed)) {
+    return false;
+  }
+  if (parsed < boundMin || parsed > boundMax) {
+    return false;
+  }
+  if (otherBound === null || !Number.isFinite(otherBound)) {
+    return true;
+  }
+  return side === "min" ? parsed <= otherBound : parsed >= otherBound;
+}
+
+function parseOptionalBound(raw: string | null, committed: string) {
+  if (raw === null) {
+    return committed;
+  }
+  if (raw === "") {
+    return "";
+  }
+  return Number.isFinite(Number(raw)) ? raw : committed;
+}
+
+function optionalBoundNumber(raw: string, fallback: number) {
+  if (raw === "") {
+    return null;
+  }
+  const num = Number(raw);
+  return Number.isFinite(num) ? num : fallback;
+}
+
 function numericStateKey(
   state: ReturnType<typeof parseNumericFilterState>
 ): string {
   return JSON.stringify(state);
 }
-
-/** Publish slider motion after thumbs settle, without waiting for pointer-up. */
-const SLIDER_COMMIT_DEBOUNCE_MS = 100;
 
 /**
  * Compact single-line numeric filter for the data-table legend.
@@ -280,6 +329,8 @@ export default function DataTableNumericFilter({
   const [min, setMin] = useState(parsed.min);
   const [max, setMax] = useState(parsed.max);
   const [draftRange, setDraftRange] = useState<[number, number] | null>(null);
+  const [minDraft, setMinDraft] = useState<string | null>(null);
+  const [maxDraft, setMaxDraft] = useState<string | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const selectedOptionRef = useRef<HTMLButtonElement>(null);
@@ -287,13 +338,24 @@ export default function DataTableNumericFilter({
   const draftRangeRef = useRef<[number, number] | null>(null);
   const selectedRef = useRef(selected);
   const multiRef = useRef(multi);
+  const minRef = useRef(min);
+  const maxRef = useRef(max);
+  const minDraftRef = useRef<string | null>(null);
+  const maxDraftRef = useRef<string | null>(null);
   const pendingEmitKeyRef = useRef<string | null>(null);
   const dragCommitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null
+  );
+  const inputCommitTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null
   );
   draftRangeRef.current = draftRange;
   selectedRef.current = selected;
   multiRef.current = multi;
+  minRef.current = min;
+  maxRef.current = max;
+  minDraftRef.current = minDraft;
+  maxDraftRef.current = maxDraft;
 
   const allValues = useMemo(
     () =>
@@ -362,7 +424,7 @@ export default function DataTableNumericFilter({
   const sliderValue = draftRange || committedRange;
 
   useEffect(() => {
-    if (draftRange) {
+    if (draftRange || minDraft !== null || maxDraft !== null) {
       return;
     }
     const incoming = numericStateKey(parsed);
@@ -380,7 +442,7 @@ export default function DataTableNumericFilter({
     setSelected(parsed.selected);
     setMin(parsed.min);
     setMax(parsed.max);
-  }, [draftRange, parsed]);
+  }, [draftRange, maxDraft, minDraft, parsed]);
 
   useEffect(() => {
     if (!open) {
@@ -393,6 +455,9 @@ export default function DataTableNumericFilter({
     return () => {
       if (dragCommitTimerRef.current != null) {
         clearTimeout(dragCommitTimerRef.current);
+      }
+      if (inputCommitTimerRef.current != null) {
+        clearTimeout(inputCommitTimerRef.current);
       }
     };
   }, []);
@@ -550,6 +615,8 @@ export default function DataTableNumericFilter({
         : [];
     setMode("values");
     setSelected(nextSelected);
+    setMinDraft(null);
+    setMaxDraft(null);
     commit("values", nextSelected, multi, min, max);
   };
 
@@ -569,6 +636,8 @@ export default function DataTableNumericFilter({
     setMin(nextMin);
     setMax(nextMax);
     setDraftRange(null);
+    setMinDraft(null);
+    setMaxDraft(null);
     commit("range", selected, multi, nextMin, nextMax);
   };
 
@@ -576,6 +645,8 @@ export default function DataTableNumericFilter({
     setMode(nextMode);
     setSelected([]);
     setDraftRange(null);
+    setMinDraft(null);
+    setMaxDraft(null);
     commit(nextMode, [], multi, min, max);
     setOpen(false);
   };
@@ -607,13 +678,11 @@ export default function DataTableNumericFilter({
     commit("values", nextSelected, true, min, max);
   };
 
-  const onRangeChange = (nextMin: string, nextMax: string) => {
-    clearDragCommitTimer();
-    setMode("range");
-    setMin(nextMin);
-    setMax(nextMax);
-    setDraftRange(null);
-    commit("range", selected, multi, nextMin, nextMax);
+  const clearInputCommitTimer = () => {
+    if (inputCommitTimerRef.current != null) {
+      clearTimeout(inputCommitTimerRef.current);
+      inputCommitTimerRef.current = null;
+    }
   };
 
   const onSliderDrag = (values: number[]) => {
@@ -628,6 +697,9 @@ export default function DataTableNumericFilter({
     );
     setMode("range");
     setDraftRange([lo, hi]);
+    setMinDraft(null);
+    setMaxDraft(null);
+    clearInputCommitTimer();
     clearDragCommitTimer();
     dragCommitTimerRef.current = setTimeout(() => {
       dragCommitTimerRef.current = null;
@@ -653,48 +725,164 @@ export default function DataTableNumericFilter({
     applyRangeNumbers(lo, hi, true);
   };
 
-  const onExactMinChange = (raw: string) => {
-    if (bounds.min === undefined || bounds.max === undefined) {
-      onRangeChange(raw, max);
+  /**
+   * Clamp drafts and publish. When `rewrite` is true (blur / Enter / close),
+   * clear the focused strings so the fields snap to the canonical values.
+   * While typing we keep the raw draft and never overwrite it.
+   */
+  const applyCommittedExactValues = (
+    minRaw: string | null,
+    maxRaw: string | null,
+    rewrite: boolean
+  ) => {
+    clearInputCommitTimer();
+    clearDragCommitTimer();
+    let nextMin = parseOptionalBound(minRaw, minRef.current);
+    let nextMax = parseOptionalBound(maxRaw, maxRef.current);
+    if (
+      bounds.min !== undefined &&
+      bounds.max !== undefined &&
+      nextMin !== "" &&
+      nextMax !== "" &&
+      Number.isFinite(Number(nextMin)) &&
+      Number.isFinite(Number(nextMax))
+    ) {
+      const [lo, hi] = clampRange(
+        Number(nextMin),
+        Number(nextMax),
+        bounds.min,
+        bounds.max
+      );
+      nextMin = serializeBound(lo, bounds.preferInteger);
+      nextMax = serializeBound(hi, bounds.preferInteger);
+    } else if (bounds.min !== undefined && bounds.max !== undefined) {
+      if (nextMin !== "" && Number.isFinite(Number(nextMin))) {
+        nextMin = serializeBound(
+          Math.min(Math.max(Number(nextMin), bounds.min), bounds.max),
+          bounds.preferInteger
+        );
+      }
+      if (nextMax !== "" && Number.isFinite(Number(nextMax))) {
+        nextMax = serializeBound(
+          Math.min(Math.max(Number(nextMax), bounds.min), bounds.max),
+          bounds.preferInteger
+        );
+      }
+    }
+    if (rewrite) {
+      setMinDraft(null);
+      setMaxDraft(null);
+    }
+    setDraftRange(null);
+    setMode("range");
+    if (nextMin === minRef.current && nextMax === maxRef.current) {
+      setMin(nextMin);
+      setMax(nextMax);
       return;
     }
-    if (raw === "") {
-      onRangeChange("", max);
-      return;
-    }
-    const parsedMin = Number(raw);
-    if (!Number.isFinite(parsedMin)) {
-      setMin(raw);
-      return;
-    }
-    const currentMax = parseFiniteNumber(max, bounds.max);
-    const [lo, hi] = clampRange(parsedMin, currentMax, bounds.min, bounds.max);
-    onRangeChange(
-      serializeBound(lo, bounds.preferInteger),
-      serializeBound(hi, bounds.preferInteger)
-    );
+    setMin(nextMin);
+    setMax(nextMax);
+    commit("range", selectedRef.current, multiRef.current, nextMin, nextMax);
   };
 
-  const onExactMaxChange = (raw: string) => {
+  const finalizeExactInputs = () => {
+    if (minDraftRef.current === null && maxDraftRef.current === null) {
+      return false;
+    }
+    applyCommittedExactValues(minDraftRef.current, maxDraftRef.current, true);
+    return true;
+  };
+
+  const onExactBoundChange = (side: "min" | "max", raw: string) => {
+    if (side === "min") {
+      setMinDraft(raw);
+    } else {
+      setMaxDraft(raw);
+    }
+    setMode("range");
+    clearInputCommitTimer();
+    clearDragCommitTimer();
+
     if (bounds.min === undefined || bounds.max === undefined) {
-      onRangeChange(min, raw);
+      inputCommitTimerRef.current = setTimeout(() => {
+        inputCommitTimerRef.current = null;
+        applyCommittedExactValues(
+          side === "min" ? raw : minDraftRef.current,
+          side === "max" ? raw : maxDraftRef.current,
+          false
+        );
+      }, INPUT_COMMIT_DEBOUNCE_MS);
       return;
     }
-    if (raw === "") {
-      onRangeChange(min, "");
+
+    if (raw === "" || !Number.isFinite(Number(raw))) {
+      setDraftRange(null);
       return;
     }
-    const parsedMax = Number(raw);
-    if (!Number.isFinite(parsedMax)) {
-      setMax(raw);
-      return;
-    }
-    const currentMin = parseFiniteNumber(min, bounds.min);
-    const [lo, hi] = clampRange(currentMin, parsedMax, bounds.min, bounds.max);
-    onRangeChange(
-      serializeBound(lo, bounds.preferInteger),
-      serializeBound(hi, bounds.preferInteger)
+
+    const parsed = Number(raw);
+    const otherRaw = parseOptionalBound(
+      side === "min" ? maxDraftRef.current : minDraftRef.current,
+      side === "min" ? maxRef.current : minRef.current
     );
+    const otherBound = optionalBoundNumber(
+      otherRaw,
+      side === "min" ? bounds.max : bounds.min
+    );
+    if (
+      !isReadyRangeDraft(parsed, otherBound, side, bounds.min, bounds.max)
+    ) {
+      setDraftRange(null);
+      return;
+    }
+
+    const sliderOther =
+      otherBound !== null && Number.isFinite(otherBound)
+        ? otherBound
+        : side === "min"
+        ? bounds.max
+        : bounds.min;
+    setDraftRange(
+      side === "min" ? [parsed, sliderOther] : [sliderOther, parsed]
+    );
+    inputCommitTimerRef.current = setTimeout(() => {
+      inputCommitTimerRef.current = null;
+      applyCommittedExactValues(
+        side === "min" ? raw : minDraftRef.current,
+        side === "max" ? raw : maxDraftRef.current,
+        false
+      );
+    }, INPUT_COMMIT_DEBOUNCE_MS);
+  };
+
+  const onExactBoundFocus = (side: "min" | "max") => {
+    if (mode !== "range") {
+      setMode("range");
+    }
+    const displayed =
+      side === "min"
+        ? minDraft !== null
+          ? minDraft
+          : draftRange
+          ? serializeBound(draftRange[0], bounds.preferInteger)
+          : min
+        : maxDraft !== null
+        ? maxDraft
+        : draftRange
+        ? serializeBound(draftRange[1], bounds.preferInteger)
+        : max;
+    if (side === "min") {
+      setMinDraft(displayed);
+    } else {
+      setMaxDraft(displayed);
+    }
+  };
+
+  const onExactBoundKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      finalizeExactInputs();
+    }
   };
 
   const onTriggerKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
@@ -717,7 +905,9 @@ export default function DataTableNumericFilter({
       open={open}
       onOpenChange={(nextOpen) => {
         if (!nextOpen) {
-          flushPendingRange();
+          if (!finalizeExactInputs()) {
+            flushPendingRange();
+          }
         }
         setOpen(nextOpen);
       }}
@@ -849,7 +1039,9 @@ export default function DataTableNumericFilter({
                       <input
                         type="number"
                         value={
-                          draftRange
+                          minDraft !== null
+                            ? minDraft
+                            : draftRange
                             ? serializeBound(
                                 draftRange[0],
                                 bounds.preferInteger
@@ -859,12 +1051,12 @@ export default function DataTableNumericFilter({
                         min={bounds.min}
                         max={bounds.max}
                         step={bounds.step}
-                        onChange={(e) => onExactMinChange(e.target.value)}
-                        onFocus={() => {
-                          if (mode !== "range") {
-                            setMode("range");
-                          }
-                        }}
+                        onChange={(e) =>
+                          onExactBoundChange("min", e.target.value)
+                        }
+                        onFocus={() => onExactBoundFocus("min")}
+                        onBlur={() => finalizeExactInputs()}
+                        onKeyDown={onExactBoundKeyDown}
                         className="w-full rounded border border-gray-300 bg-white px-1.5 py-1 text-xs tabular-nums text-gray-800 focus:outline-none focus:ring-0 focus:border-gray-300 focus-visible:ring-1 focus-visible:ring-primary-500 focus-visible:border-primary-500"
                       />
                     </label>
@@ -875,7 +1067,9 @@ export default function DataTableNumericFilter({
                       <input
                         type="number"
                         value={
-                          draftRange
+                          maxDraft !== null
+                            ? maxDraft
+                            : draftRange
                             ? serializeBound(
                                 draftRange[1],
                                 bounds.preferInteger
@@ -885,12 +1079,12 @@ export default function DataTableNumericFilter({
                         min={bounds.min}
                         max={bounds.max}
                         step={bounds.step}
-                        onChange={(e) => onExactMaxChange(e.target.value)}
-                        onFocus={() => {
-                          if (mode !== "range") {
-                            setMode("range");
-                          }
-                        }}
+                        onChange={(e) =>
+                          onExactBoundChange("max", e.target.value)
+                        }
+                        onFocus={() => onExactBoundFocus("max")}
+                        onBlur={() => finalizeExactInputs()}
+                        onKeyDown={onExactBoundKeyDown}
                         className="w-full rounded border border-gray-300 bg-white px-1.5 py-1 text-xs tabular-nums text-gray-800 focus:outline-none focus:ring-0 focus:border-gray-300 focus-visible:ring-1 focus-visible:ring-primary-500 focus-visible:border-primary-500"
                       />
                     </label>
