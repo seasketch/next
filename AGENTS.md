@@ -116,6 +116,15 @@ From the repo root: `npm run bootstrap`, then `npm run build`, then `npm run set
 
 `npm run e2e` runs the Playwright suite against its own API, client, and database (`seasketch_e2e`). Chromium is a separate download from `npm install`. Before the first run, and again after a Playwright upgrade: `npm exec --workspace @seasketch/e2e -- playwright install chromium`.
 
+## Cursor Cloud specific instructions
+
+- Node must be 24 (`.nvmrc`). A Cloud Agent image may put Node 22 at `/exec-daemon/node`, which wins on the default `PATH`. Install Node 24 and prepend `/usr/local/lib/nodejs` (the directory that contains the `node` binary) in `~/.bashrc` and `/etc/profile.d/seasketch-node.sh`. `npm run dev` has to run under that Node.
+- There is no systemd in this VM (`PID 1` is `tini`). Start `dockerd` directly. Nested containers need `/etc/docker/daemon.json` with storage driver `fuse-overlayfs`, `native.cgroupdriver=cgroupfs`, and `"containerd-snapshotter": false`. `systemctl start docker` does not work. If the socket is root-only in the current session, `chmod 666 /var/run/docker.sock` after `dockerd` is up.
+- `npm run setup` and `npm run dev` both require that daemon. Postgres is `localhost:54321` (user `postgres`, password `password`, database `seasketch`). Redis is `localhost:6379` with password `ucsb`.
+- When `packages/api/.env` or `packages/client/.env` is missing, copy the matching `.env.template`. No secret is required to boot. `MAPBOX_ACCESS_TOKEN` and `REACT_APP_MAPBOX_ACCESS_TOKEN` are optional; without them the project map shows "The map could not be loaded because the Mapbox access token is not configured." `AUTH0_CLIENT_SECRET` is optional. Do not set `E2E_TEST_MODE` for a normal `npm run dev`.
+- Core ports: API `3857` (`/graphiql`), client `3000`, data-tables `3006`, spatial-uploads `3005`, subdivision `9000`, screenshotter `8791`. Readiness is `npm run status`. Logs are `npm run logs -- <service>` or `.logs/<service>.log`.
+- `npm run setup` queues a Google Maps tile-session job and geography size metrics. Those jobs log missing `GOOGLE_MAPS_2D_TILE_API_KEY` or `R2_ENDPOINT` until those variables are set. The API still serves the golden snapshot. An anonymous GraphQL `projectsConnection` includes the public project `demo-samoa`. The marketing page at `/projects` also lists case studies that are not database projects.
+
 ## Golden snapshot
 
 The golden snapshot is the database dev machines, CI, integration tests, and agents boot from.
