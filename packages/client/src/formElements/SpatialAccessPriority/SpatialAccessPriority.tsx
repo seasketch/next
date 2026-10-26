@@ -98,6 +98,7 @@ import {
   polygonSizeViolation,
   shouldAdvanceFromDrawingIntro,
 } from "../maxPolygonSize";
+import { usePolygonTooLargePaint } from "../usePolygonTooLargePaint";
 
 export enum STAGES {
   CHOOSE_SECTORS,
@@ -499,27 +500,33 @@ function SpatialAccessPriorityInner(
 
   const featureForSizeCheck =
     draftFeature || geometryEditingState?.feature || selection || null;
-  const polygonTooLarge = polygonSizeViolation(
-    featureForSizeCheck,
-    maxPolygonSizeSqKm
-  );
+  const saveBlocked = polygonSaveViolation({
+    geometryType: props.sketchClass?.geometryType,
+    maxPolygonSizeSqKm: props.componentSettings.maxPolygonSizeSqKm,
+    feature: featureForSizeCheck,
+    isNew: geometryEditingState?.isNew === true,
+    geometryEdited: draftFeature != null,
+  });
+
+  usePolygonTooLargePaint({
+    map: manager?.map,
+    maxSqKm: maxPolygonSizeSqKm,
+    featureId: featureForSizeCheck?.id,
+    tooLarge: saveBlocked != null,
+    readSelectedFeature: actions.readSelectedFeature,
+    onDraftFeature: setDraftFeature,
+    setPolygonTooLarge: actions.setPolygonTooLarge,
+  });
 
   function blockIfPolygonTooLarge() {
-    const violation = polygonSaveViolation({
-      geometryType: props.sketchClass?.geometryType,
-      maxPolygonSizeSqKm: props.componentSettings.maxPolygonSizeSqKm,
-      feature: featureForSizeCheck,
-      isNew: geometryEditingState?.isNew === true,
-      geometryEdited: draftFeature != null,
-    });
-    if (!violation) {
+    if (!saveBlocked) {
       return false;
     }
     alert(
       t("This shape is {{area}} km². The maximum size is {{max}} km².", {
         ns: "surveys",
-        area: formatSqKm(violation.areaSqKm),
-        max: formatSqKm(violation.maxSqKm),
+        area: formatSqKm(saveBlocked.areaSqKm),
+        max: formatSqKm(saveBlocked.maxSqKm),
       })
     );
     return true;
@@ -1056,13 +1063,21 @@ function SpatialAccessPriorityInner(
                     }
                   }}
                 />
-                {polygonTooLarge && (
-                  <p className="text-sm text-red-700">
-                    <PolygonTooLargeNotice
-                      areaSqKm={polygonTooLarge.areaSqKm}
-                      maxSqKm={polygonTooLarge.maxSqKm}
-                    />
-                  </p>
+                {saveBlocked && (
+                  <div className="text-sm text-red-700 space-y-1">
+                    <p>
+                      <PolygonTooLargeNotice
+                        areaSqKm={saveBlocked.areaSqKm}
+                        maxSqKm={saveBlocked.maxSqKm}
+                      />
+                    </p>
+                    <p>
+                      <Trans ns="surveys">
+                        Drag the points inward until the shape is small enough.
+                        You can also delete it and draw a smaller one.
+                      </Trans>
+                    </p>
+                  </div>
                 )}
                 <div className="space-x-2 rtl:space-x-reverse flex items-center">
                   {geometryEditingState?.isNew && (
@@ -1189,13 +1204,13 @@ function SpatialAccessPriorityInner(
               {props.stage !== STAGES.MOBILE_EDIT_PROPERTIES && (
                 <DigitizingTools
                   selfIntersects={selfIntersects}
-                  notice={
-                    polygonTooLarge ? (
-                      <PolygonTooLargeNotice
-                        areaSqKm={polygonTooLarge.areaSqKm}
-                        maxSqKm={polygonTooLarge.maxSqKm}
-                      />
-                    ) : undefined
+                  sizeWarning={
+                    saveBlocked
+                      ? {
+                          areaSqKm: saveBlocked.areaSqKm,
+                          maxSqKm: saveBlocked.maxSqKm,
+                        }
+                      : undefined
                   }
                   multiFeature={true}
                   state={digitizingState}
@@ -1353,7 +1368,7 @@ function SpatialAccessPriorityInner(
               )}
               {miniMapStyle && manager?.map && (
                 <DigitizingMiniMap
-                  topologyErrors={selfIntersects}
+                  topologyErrors={selfIntersects || saveBlocked != null}
                   style={miniMapStyle}
                   dragTarget={dragTarget}
                   onLoad={(map) => setMiniMap(map)}

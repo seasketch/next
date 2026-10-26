@@ -14,6 +14,8 @@ import useMobileDeviceDetector from "../surveys/useMobileDeviceDetector";
 import { DigitizingState } from "../draw/useMapboxGLDraw";
 import MapSettingsPopup from "../draw/MapSettingsPopup";
 import BowtieInstructions from "../draw/BowtieInstructions";
+import PolygonTooLargeInstructions from "./PolygonTooLargeInstructions";
+import { formatSqKm } from "./maxPolygonSize";
 import { FormElementLayoutContext } from "../surveys/SurveyAppLayout";
 import Spinner from "../components/Spinner";
 import { XCircleIcon } from "@heroicons/react/solid";
@@ -45,8 +47,11 @@ interface DigitizingInstructionsProps {
   /** Displayed if DigitizingState is CREATE, CAN_COMPLETE, or STARTED */
   createStateButtons?: ReactNode;
   selfIntersects?: boolean;
-  /** Shown in place of drawing instructions, for example an over-size polygon. */
-  notice?: ReactNode;
+  /**
+   * Polygon is over the survey area limit. Hides Done and explains how to
+   * shrink the shape, the same way a self-intersection blocks finishing.
+   */
+  sizeWarning?: { areaSqKm: number; maxSqKm: number };
   /** Sketching as opposed to survey response */
   isSketchingWorkflow?: boolean;
   preprocessingError?: string;
@@ -67,7 +72,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
   multiFeature,
   unfinishedStateButtons,
   selfIntersects,
-  notice,
+  sizeWarning,
   noSelectionStateButtons,
   createStateButtons,
   isSketchingWorkflow,
@@ -81,6 +86,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
   const [toolsOpen, setToolsOpen] = useState(false);
   const actionsButtonAnchor = useRef<HTMLButtonElement>(null);
   const [showInvalidShapeModal, setShowInvalidShapeModal] = useState(false);
+  const [showSizeWarningModal, setShowSizeWarningModal] = useState(false);
   const [showProfilingModal, setShowProfilingModal] = useState<
     false | SpanJSONOutput
   >(false);
@@ -115,6 +121,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
         )}
       {(state === DigitizingState.EDITING ||
         (selfIntersects && state !== DigitizingState.CAN_COMPLETE) ||
+        (sizeWarning && state === DigitizingState.UNFINISHED) ||
         preprocessingError) && (
         <Button
           label={<TrashIcon className="w-5 h-5" />}
@@ -125,7 +132,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
           }
         />
       )}
-      {state === DigitizingState.EDITING && !selfIntersects && (
+      {state === DigitizingState.EDITING && !selfIntersects && !sizeWarning && (
         <Button
           onClick={() => {
             if (selfIntersects) {
@@ -180,7 +187,28 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
             }
           />
         )}
-      {state === DigitizingState.UNFINISHED && unfinishedStateButtons}
+      {sizeWarning &&
+        !selfIntersects &&
+        (state === DigitizingState.UNFINISHED ||
+          state === DigitizingState.EDITING) && (
+          <Button
+            onClick={() => {
+              setShowSizeWarningModal(true);
+            }}
+            label={t("Shape Too Large")}
+            className={`pointer-events-auto whitespace-nowrap ${
+              bottomToolbar && "flex-2 content-center max-w-1/2"
+            }`}
+            buttonClassName={
+              bottomToolbar
+                ? "py-3 text-base flex-1 text-center items-center justify-center border-red-800 bg-red-50 text-red-900 hover:text-red-700"
+                : "border-red-800 bg-red-50 text-red-900 hover:text-red-700"
+            }
+          />
+        )}
+      {state === DigitizingState.UNFINISHED &&
+        !sizeWarning &&
+        unfinishedStateButtons}
       {state === DigitizingState.NO_SELECTION && noSelectionStateButtons}
       {(state === DigitizingState.CREATE ||
         state === DigitizingState.CAN_COMPLETE ||
@@ -212,6 +240,14 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
               : undefined
           }
         />
+        {sizeWarning && (
+          <PolygonTooLargeInstructions
+            open={showSizeWarningModal}
+            areaSqKm={sizeWarning.areaSqKm}
+            maxSqKm={sizeWarning.maxSqKm}
+            onRequestClose={() => setShowSizeWarningModal(false)}
+          />
+        )}
         <MapSettingsPopup
           open={toolsOpen}
           onRequestClose={() => setToolsOpen(false)}
@@ -228,7 +264,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
             style={{ maxWidth: "90%" }}
             exit={{ scale: 0.7, opacity: 0 }}
             className={`rounded-md p-1 px-2 mx-auto text-gray-800 bg-gray-200 shadow-lg flex space-x-2 rtl:space-x-reverse items-center bottom-16 tall:mb-2 absolute z-10 pointer-events-none ${
-              notice && !selfIntersects ? "ring-2 ring-red-500" : ""
+              sizeWarning && !selfIntersects ? "ring-2 ring-red-500" : ""
             }`}
           >
             <p className="text-sm select-none">
@@ -239,7 +275,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
                 multiFeature={multiFeature || false}
                 selfIntersects={selfIntersects || false}
                 preprocessingError={preprocessingError}
-                notice={notice}
+                sizeWarning={sizeWarning}
               />
             </p>
           </motion.div>
@@ -261,6 +297,14 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
               : undefined
           }
         />
+        {sizeWarning && (
+          <PolygonTooLargeInstructions
+            open={showSizeWarningModal}
+            areaSqKm={sizeWarning.areaSqKm}
+            maxSqKm={sizeWarning.maxSqKm}
+            onRequestClose={() => setShowSizeWarningModal(false)}
+          />
+        )}
 
         {geometryType !== SketchGeometryType.Collection &&
           geometryType !== SketchGeometryType.FilteredPlanningUnits && (
@@ -274,7 +318,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
               // exit={{ scale: 0 }}
               className={clsx(
                 `rounded-md p-2 pl-4 my-4 mx-auto text-gray-800 bg-gray-200 shadow-lg flex space-x-2 rtl:space-x-reverse items-center transition-all bottom-16 absolute z-10 pointer-events-none`,
-                notice && !selfIntersects && "ring-2 ring-red-500",
+                sizeWarning && !selfIntersects && "ring-2 ring-red-500",
                 className
               )}
             >
@@ -307,7 +351,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
                     multiFeature={multiFeature || false}
                     selfIntersects={selfIntersects || false}
                     preprocessingError={preprocessingError}
-                    notice={notice}
+                    sizeWarning={sizeWarning}
                   />
                 )}
               </p>
@@ -344,7 +388,7 @@ export function DigitizingInstructions({
   geometryType,
   selfIntersects,
   preprocessingError,
-  notice,
+  sizeWarning,
 }: {
   state: DigitizingState;
   isMobile: boolean;
@@ -352,13 +396,21 @@ export function DigitizingInstructions({
   geometryType: SketchGeometryType;
   selfIntersects: boolean;
   preprocessingError?: string;
-  notice?: ReactNode;
+  sizeWarning?: { areaSqKm: number; maxSqKm: number };
 }) {
   if (selfIntersects) {
     return <Trans ns="surveys">Invalid shape</Trans>;
   }
-  if (notice) {
-    return <span className="text-red-800">{notice}</span>;
+  if (sizeWarning) {
+    const area = formatSqKm(sizeWarning.areaSqKm);
+    const max = formatSqKm(sizeWarning.maxSqKm);
+    return (
+      <span className="text-red-800">
+        <Trans ns="surveys">
+          Too large ({{ area }} / {{ max }} km²). Drag points inward.
+        </Trans>
+      </span>
+    );
   }
 
   if (state === DigitizingState.PREPROCESSING) {
