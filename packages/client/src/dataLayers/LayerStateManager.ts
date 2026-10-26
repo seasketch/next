@@ -28,18 +28,30 @@ const LOADING_NOTIFY_DEBOUNCE_MS = 100;
  * the rejection in a "Could not load image because of ..." error and emits it on
  * the map. The browser-specific underlying messages are:
  *   - Chrome:  "The source image could not be decoded"
- *   - Firefox: "An attempt was made to use an object that is not, or is no
- *     longer usable" (an `InvalidStateError` thrown for empty blobs)
+ *   - Firefox before 153: "An attempt was made to use an object that is not,
+ *     or is no longer usable" (an `InvalidStateError` for empty blobs)
+ *   - Firefox 153+: "The image could not be decoded" (bug 2003863 replaced the
+ *     generic InvalidStateError text on the blob decode path). mapbox-gl wraps
+ *     that as "Could not load image because of The image could not be decoded.
+ *     Please make sure to use a supported image type..."
  *
- * In both cases the layer still renders correctly from the tiles that do have
+ * In each case the layer still renders correctly from the tiles that do have
  * data, so surfacing an error indicator is a false positive. We ignore these so
- * the layer list doesn't show a spurious error (see seasketch/next#953).
+ * the layer list doesn't show a spurious error (see seasketch/next#953 and
+ * #1040).
  */
 function isEmptyRasterTileDecodeError(message: string | undefined): boolean {
   if (!message) return false;
   return (
-    /source image could not be decoded/i.test(message) ||
-    // Firefox InvalidStateError raised by createImageBitmap() on empty tiles
+    // mapbox-gl appends this sentence to every image-decode failure. The
+    // inner browser text changes between versions (Firefox 153, bug 2003863);
+    // this suffix does not.
+    /supported image type such as PNG or JPEG/i.test(message) ||
+    // Bare browser messages, if a future mapbox stops appending the suffix.
+    // Chrome: "The source image could not be decoded"
+    // Firefox 153+: "The image could not be decoded"
+    /image could not be decoded/i.test(message) ||
+    // Firefox < 153 InvalidStateError from createImageBitmap() on empty tiles
     /attempt was made to use an object/i.test(message)
   );
 }
