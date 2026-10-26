@@ -33,14 +33,29 @@ function managerWithRasterSource() {
   return { map, manager };
 }
 
-describe("LayerStateManager source errors", () => {
-  it("records a raster decode error instead of matching its message", () => {
+const FIREFOX_153_MESSAGE =
+  "Could not load image because of The image could not be decoded. Please make sure to use a supported image type such as PNG or JPEG. Note that SVGs are not supported.";
+
+const CHROME_MESSAGE =
+  "Could not load image because of The source image could not be decoded. Please make sure to use a supported image type such as PNG or JPEG. Note that SVGs are not supported.";
+
+const FIREFOX_LEGACY_MESSAGE =
+  "Could not load image because of An attempt was made to use an object that is not, or is no longer usable. Please make sure to use a supported image type such as PNG or JPEG. Note that SVGs are not supported.";
+
+describe("LayerStateManager empty raster tile decode errors", () => {
+  it("ignores cached-204 decode messages from Chrome and Firefox", () => {
     const { map, manager } = managerWithRasterSource();
-    const error = new Error(
-      "Could not load image because of The image could not be decoded. Please make sure to use a supported image type such as PNG or JPEG. Note that SVGs are not supported."
-    );
-    map.emit("error", { sourceId: "overlays-42", error });
-    expect(manager.getRaw("toc-1")?.error).toBe(error);
+    for (const message of [
+      FIREFOX_153_MESSAGE,
+      CHROME_MESSAGE,
+      FIREFOX_LEGACY_MESSAGE,
+    ]) {
+      map.emit("error", {
+        sourceId: "overlays-42",
+        error: new Error(message),
+      });
+      expect(manager.getRaw("toc-1")?.error).toBeUndefined();
+    }
     manager.destroy();
   });
 

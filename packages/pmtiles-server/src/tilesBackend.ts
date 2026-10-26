@@ -79,8 +79,10 @@ const RASTER_IMAGE_EXTENSIONS = new Set([
  * Raster misses are 404. GL JS treats 204 as a successful empty body and
  * decodes it with createImageBitmap, which rejects and shows a false layer
  * error (#953, #1040). 404 is the missing-tile status GL JS already ignores,
- * and the parent tile still covers the gap. MRT is included because a 204
- * body is parsed and throws "File is not a valid MRT."
+ * and the parent tile still covers the gap. 204s already cached in the
+ * browser or CDN are ignored client-side in LayerStateManager; that message
+ * list does not need to grow, because new misses are 404. MRT is included
+ * because a 204 body is parsed and throws "File is not a valid MRT."
  */
 export function missingTileStatus(tileType: TileType, ext?: string): 204 | 404 {
   if (ext && RASTER_IMAGE_EXTENSIONS.has(ext)) return 404;

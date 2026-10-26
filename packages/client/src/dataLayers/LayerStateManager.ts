@@ -17,6 +17,34 @@ export const LOADING_STATE_MIN_DURATION_MS = 700;
 const LOADING_NOTIFY_DEBOUNCE_MS = 100;
 
 /**
+ * Empty raster tiles used to be HTTP 204. mapbox-gl decodes that empty body
+ * with `createImageBitmap`, the promise rejects, and the map error is a false
+ * red X on a layer that still draws from its parent tile (#953, #1040).
+ *
+ * pmtiles-server now returns 404 for raster misses. mapbox-gl already ignores
+ * that status, so a tile fetched after the deploy never produces this error.
+ * 204 responses already stored in the browser cache or the CDN still do, until
+ * those immutable entries expire. The patterns below cover the browsers that
+ * cached those 204s:
+ *   - Chrome: "The source image could not be decoded"
+ *   - Firefox before 153: "An attempt was made to use an object that is not,
+ *     or is no longer usable"
+ *   - Firefox 153+: "The image could not be decoded" (bug 2003863)
+ *
+ * This list is closed. A later browser wording only shows up for a cached 204,
+ * and those caches expire. Do not add another pattern.
+ */
+function isEmptyRasterTileDecodeError(message: string | undefined): boolean {
+  if (!message) return false;
+  return (
+    /source image could not be decoded/i.test(message) ||
+    /the image could not be decoded/i.test(message) ||
+    // Firefox < 153 InvalidStateError from createImageBitmap() on an empty blob
+    /attempt was made to use an object/i.test(message)
+  );
+}
+
+/**
  * Compare two LayerState-like objects for equality. Every enumerable property
  * is compared with strict equality (`===`), which means `error` (an Error
  * object) and any other reference types are compared by identity — not by
@@ -256,6 +284,7 @@ export class LayerStateManager<TState extends LayerState> extends EventEmitter {
     const sourceId: string | undefined = event.sourceId;
     if (!sourceId) return;
     if (!sourceId.startsWith(this.namespace + "-")) return;
+    if (isEmptyRasterTileDecodeError(event.error?.message)) return;
 
     if (this.hasRelevanceToSource(sourceId)) {
       for (const key of this.keysForSource(sourceId)) {
