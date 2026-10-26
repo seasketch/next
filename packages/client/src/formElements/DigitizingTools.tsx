@@ -45,6 +45,8 @@ interface DigitizingInstructionsProps {
   /** Displayed if DigitizingState is CREATE, CAN_COMPLETE, or STARTED */
   createStateButtons?: ReactNode;
   selfIntersects?: boolean;
+  /** Shown in place of drawing instructions, for example an over-size polygon. */
+  notice?: ReactNode;
   /** Sketching as opposed to survey response */
   isSketchingWorkflow?: boolean;
   preprocessingError?: string;
@@ -65,6 +67,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
   multiFeature,
   unfinishedStateButtons,
   selfIntersects,
+  notice,
   noSelectionStateButtons,
   createStateButtons,
   isSketchingWorkflow,
@@ -224,7 +227,9 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
             }}
             style={{ maxWidth: "90%" }}
             exit={{ scale: 0.7, opacity: 0 }}
-            className={`rounded-md p-1 px-2 mx-auto text-gray-800 bg-gray-200 shadow-lg flex space-x-2 rtl:space-x-reverse items-center bottom-16 tall:mb-2 absolute z-10 pointer-events-none`}
+            className={`rounded-md p-1 px-2 mx-auto text-gray-800 bg-gray-200 shadow-lg flex space-x-2 rtl:space-x-reverse items-center bottom-16 tall:mb-2 absolute z-10 pointer-events-none ${
+              notice && !selfIntersects ? "ring-2 ring-red-500" : ""
+            }`}
           >
             <p className="text-sm select-none">
               <DigitizingInstructions
@@ -234,6 +239,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
                 multiFeature={multiFeature || false}
                 selfIntersects={selfIntersects || false}
                 preprocessingError={preprocessingError}
+                notice={notice}
               />
             </p>
           </motion.div>
@@ -268,6 +274,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
               // exit={{ scale: 0 }}
               className={clsx(
                 `rounded-md p-2 pl-4 my-4 mx-auto text-gray-800 bg-gray-200 shadow-lg flex space-x-2 rtl:space-x-reverse items-center transition-all bottom-16 absolute z-10 pointer-events-none`,
+                notice && !selfIntersects && "ring-2 ring-red-500",
                 className
               )}
             >
@@ -300,6 +307,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
                     multiFeature={multiFeature || false}
                     selfIntersects={selfIntersects || false}
                     preprocessingError={preprocessingError}
+                    notice={notice}
                   />
                 )}
               </p>
@@ -336,6 +344,7 @@ export function DigitizingInstructions({
   geometryType,
   selfIntersects,
   preprocessingError,
+  notice,
 }: {
   state: DigitizingState;
   isMobile: boolean;
@@ -343,9 +352,13 @@ export function DigitizingInstructions({
   geometryType: SketchGeometryType;
   selfIntersects: boolean;
   preprocessingError?: string;
+  notice?: ReactNode;
 }) {
   if (selfIntersects) {
     return <Trans ns="surveys">Invalid shape</Trans>;
+  }
+  if (notice) {
+    return <span className="text-red-800">{notice}</span>;
   }
 
   if (state === DigitizingState.PREPROCESSING) {
