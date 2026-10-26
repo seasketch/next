@@ -1,0 +1,585 @@
+{
+  "welcome": {
+    "body": {
+      "type": "doc",
+      "content": [
+        {
+          "type": "heading",
+          "attrs": {
+            "level": 1
+          },
+          "content": [
+            {
+              "text": "Single-sector survey example",
+              "type": "text"
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": [
+            {
+              "text": "This Demo Palawan survey is sample data for testing a spatial question that has one sector. The first visit opens the map so you can draw an area. Returning to the question shows the sector list and how many areas were drawn. It is not a live planning survey.",
+              "type": "text"
+            }
+          ]
+        }
+      ]
+    },
+    "componentSettings": {
+      "beginButtonText": "Begin"
+    }
+  },
+  "spatial": {
+    "exportId": "select_areas_to_identify",
+    "isRequired": true,
+    "body": {
+      "type": "doc",
+      "content": [
+        {
+          "type": "question",
+          "content": [
+            {
+              "text": "Select Areas to Identify",
+              "type": "text"
+            }
+          ]
+        }
+      ]
+    },
+    "componentSettings": {
+      "beginBody": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "heading",
+            "attrs": {
+              "level": 1
+            },
+            "content": [
+              {
+                "text": "Where should coral recovery activities occur?",
+                "type": "text"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "text": "Use the map to indicate the most important areas for coral recovery activities. You can draw multiple areas.",
+                "type": "text"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "text": "Click on the inset map on the top right to see additional data layers and reference the legend below.",
+                "type": "text"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": []
+          }
+        ]
+      },
+      "sectorOptions": [
+        {
+          "label": "Coral Recovery Priority Areas",
+          "value": "coral",
+          "description": ""
+        }
+      ],
+      "listShapesBody": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "text": "Add as many shapes as necessary to represent valued areas, then adjust their relative priority below.",
+                "type": "text"
+              }
+            ]
+          },
+          {
+            "type": "paragraph",
+            "content": [
+              {
+                "text": "These scores will be summed among all survey responses to create a heatmap of valued areas.",
+                "type": "text"
+              }
+            ]
+          }
+        ]
+      },
+      "startingBounds": [
+        115.72850203618498,
+        7.163430084953305,
+        121.36608618505284,
+        11.649742031156578
+      ]
+    }
+  },
+  "sketchElements": [
+    {
+      "typeId": "MultipleChoice",
+      "exportId": "justification",
+      "isRequired": true,
+      "body": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "question",
+            "content": [
+              {
+                "text": "Why is the selected area important for coral recovery activities?",
+                "type": "text"
+              }
+            ]
+          }
+        ]
+      },
+      "componentSettings": {
+        "options": [
+          {
+            "label": "Climate and/or anthropogenic refugia",
+            "value": "climate",
+            "description": ""
+          },
+          {
+            "label": "Pollution or watershed management focus area",
+            "value": "pollution",
+            "description": ""
+          },
+          {
+            "label": "ESA / IUCN-listed coral species presence",
+            "value": "esa",
+            "description": ""
+          },
+          {
+            "label": "Fisheries / food security dependence",
+            "value": "fisheries",
+            "description": ""
+          },
+          {
+            "label": "Cultural/economic/tourism significance",
+            "value": "cultural",
+            "description": ""
+          },
+          {
+            "label": "Biodiversity hotspot and/or ecologically significant area",
+            "value": "biodiversity",
+            "description": ""
+          },
+          {
+            "label": "Ecosystem and/or reef connectivity importance",
+            "value": "ecosystem",
+            "description": ""
+          },
+          {
+            "label": "Marine Protected Area or restoration site",
+            "value": "mpa",
+            "description": ""
+          },
+          {
+            "label": "Other (describe)",
+            "value": "other",
+            "description": ""
+          }
+        ],
+        "multipleSelect": true
+      }
+    },
+    {
+      "typeId": "ShortText",
+      "exportId": "justification_other",
+      "isRequired": true,
+      "body": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "question",
+            "content": [
+              {
+                "text": "Describe other reason(s)",
+                "type": "text"
+              }
+            ]
+          }
+        ]
+      },
+      "componentSettings": {}
+    },
+    {
+      "typeId": "Statement",
+      "exportId": "definitionsclimate_andor_anthrop",
+      "isRequired": false,
+      "body": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "heading",
+            "attrs": {
+              "level": 3
+            },
+            "content": [
+              {
+                "text": "Definitions",
+                "type": "text"
+              }
+            ]
+          },
+          {
+            "type": "bullet_list",
+            "content": [
+              {
+                "type": "list_item",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "text": "Climate and/or anthropogenic refugia: Remote areas far from human influence, areas with environmental conditions naturally conducive to coral recovery",
+                        "type": "text"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "text": "ESA / IUCN-listed coral species presence: ESA/IUCN corals are present",
+                        "type": "text"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "text": "Fisheries / food security dependence: Important fisheries habitat",
+                        "type": "text"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "text": "Ecosystem and/or reef connectivity importance: Important role for ocean currents, larval dispersal, and animal migrations in linking coral reefs with each other and with adjacent habitats like mangroves and seagrasses",
+                        "type": "text"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "componentSettings": {}
+    },
+    {
+      "typeId": "MultipleChoice",
+      "exportId": "activity",
+      "isRequired": true,
+      "body": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "question",
+            "content": [
+              {
+                "text": "What coral recovery actions should take place here?",
+                "type": "text"
+              }
+            ]
+          }
+        ]
+      },
+      "componentSettings": {
+        "options": [
+          {
+            "label": "Environmental intervention",
+            "value": "enviro",
+            "description": ""
+          },
+          {
+            "label": "Biological/ecological intervention",
+            "value": "biological",
+            "description": ""
+          },
+          {
+            "label": "Research",
+            "value": "research",
+            "description": ""
+          },
+          {
+            "label": "Fisheries management",
+            "value": "fisheries",
+            "description": ""
+          },
+          {
+            "label": "Land-based pollution prevention, assessment, and minimization",
+            "value": "landbased \"Management",
+            "description": "monitoring, evaluation of coral collection and trade\",management"
+          },
+          {
+            "label": "Monitoring, assessment, and surveys",
+            "value": "monitoring",
+            "description": ""
+          },
+          {
+            "label": "Outreach, education, and capacity-building",
+            "value": "outreach",
+            "description": ""
+          },
+          {
+            "label": "Other (describe)",
+            "value": "other",
+            "description": ""
+          }
+        ],
+        "multipleSelect": true
+      }
+    },
+    {
+      "typeId": "ShortText",
+      "exportId": "activity_other",
+      "isRequired": true,
+      "body": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "question",
+            "content": [
+              {
+                "text": "Describe other action(s)",
+                "type": "text"
+              }
+            ]
+          }
+        ]
+      },
+      "componentSettings": {}
+    },
+    {
+      "typeId": "Statement",
+      "exportId": "definitionsenvironmental_interve",
+      "isRequired": false,
+      "body": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "heading",
+            "attrs": {
+              "level": 1
+            }
+          },
+          {
+            "type": "heading",
+            "attrs": {
+              "level": 3
+            },
+            "content": [
+              {
+                "text": "Definitions",
+                "type": "text"
+              }
+            ]
+          },
+          {
+            "type": "bullet_list",
+            "content": [
+              {
+                "type": "list_item",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "text": "Environmental intervention: Environmental intervention to reduce exposure to thermal stress, solar radiation, and/or ocean acidification",
+                        "type": "text"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "text": "Biological/ecological intervention: Biological/ecological intervention to mitigate threats, reduce sensitivity and increase resilience to threats (e.g. coral disease mitigation/assessment, coral propagation and outplanting, invasive species/predator control)",
+                        "type": "text"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "text": "Research: Research to increase understanding of coral taxonomy, biology, ecology, and threat responses",
+                        "type": "text"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "text": "Fisheries management: (e.g. assessment and minimization of impacts of unsustainable fishing)",
+                        "type": "text"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "text": "Monitoring, assessment, and surveys: Monitoring, assessment, and surveys to increase knowledge of coral status and trends",
+                        "type": "text"
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "list_item",
+                "content": [
+                  {
+                    "type": "paragraph",
+                    "content": [
+                      {
+                        "text": "Outreach, education, and capacity-building: Outreach, education, and capacity-building to empower human action",
+                        "type": "text"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "componentSettings": {}
+    },
+    {
+      "typeId": "SAPRange",
+      "exportId": "priority",
+      "isRequired": true,
+      "body": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "question",
+            "attrs": {},
+            "content": [
+              {
+                "text": "How important is this area?",
+                "type": "text"
+              }
+            ]
+          }
+        ]
+      },
+      "componentSettings": {
+        "lowText": "Low",
+        "highText": "High",
+        "averageText": "Average"
+      }
+    },
+    {
+      "typeId": "FeatureName",
+      "exportId": "area_name",
+      "isRequired": true,
+      "body": {
+        "type": "doc",
+        "content": [
+          {
+            "type": "question",
+            "attrs": {},
+            "content": [
+              {
+                "text": "Area Name",
+                "type": "text"
+              }
+            ]
+          }
+        ]
+      },
+      "componentSettings": {
+        "generatedNamePrefix": "Area"
+      }
+    }
+  ],
+  "sketchStyle": [
+    {
+      "type": "fill",
+      "paint": {
+        "fill-color": "#f28e2c",
+        "fill-opacity": 0.6
+      },
+      "layout": {}
+    },
+    {
+      "type": "line",
+      "paint": {
+        "line-color": "#f28e2c",
+        "line-width": 2
+      },
+      "layout": {}
+    }
+  ],
+  "logicRules": [
+    {
+      "targetExportId": "justification_other",
+      "subjectExportId": "justification",
+      "operator": "CONTAINS",
+      "value": "other"
+    },
+    {
+      "targetExportId": "activity_other",
+      "subjectExportId": "activity",
+      "operator": "CONTAINS",
+      "value": "other"
+    }
+  ]
+}

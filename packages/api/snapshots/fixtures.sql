@@ -41,15 +41,17 @@ select create_project(v.name, v.slug)
 from (values
   ('Demo Samoa', 'demo-samoa'),
   ('E2E Private', 'e2e-private'),
-  ('Maldives Demo', 'demo-maldives')
+  ('Maldives Demo', 'demo-maldives'),
+  ('Demo Palawan', 'demo-palawan')
 ) as v(name, slug)
 where not exists (select 1 from projects p where p.slug = v.slug);
 
 -- create_project starts every project unlisted and admin-only.
 -- demo-maldives is the public ocean-use survey example.
+-- demo-palawan is the single-sector coral survey example.
 update projects
 set is_listed = true, access_control = 'public'
-where slug in ('demo-samoa', 'demo-maldives');
+where slug in ('demo-samoa', 'demo-maldives', 'demo-palawan');
 
 update projects
 set access_control = 'invite_only'

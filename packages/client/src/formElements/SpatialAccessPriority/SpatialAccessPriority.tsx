@@ -450,6 +450,37 @@ function SpatialAccessPriorityInner(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.value?.sectors, props.componentSettings.sectorOptions]);
 
+  // One sector skips the picker on the first visit. Record that sector before
+  // the shape is saved so coming back lands on the sector list.
+  useEffect(() => {
+    const only = singleSectorOption(props.componentSettings);
+    if (!only) {
+      return;
+    }
+    if (props.value?.sectors?.length) {
+      return;
+    }
+    if (
+      props.stage !== STAGES.DRAWING_INTRO &&
+      props.stage !== STAGES.MOBILE_DRAW_FIRST_SHAPE
+    ) {
+      return;
+    }
+    setSector(only);
+    onChange({
+      sectors: [only.value || only.label],
+      collection:
+        (props.value?.collection as FC | undefined) ||
+        (EMPTY_FEATURE_COLLECTION as FC),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    props.stage,
+    props.componentSettings.sectorOptions,
+    props.value?.sectors,
+    props.value?.collection,
+  ]);
+
   /**
    * Update minimap style when basemap changes
    */
@@ -502,17 +533,29 @@ function SpatialAccessPriorityInner(
       }
       if (geometryEditingState?.isNew === true) {
         const feature = { ...geometryEditingState.feature! };
+        const sectorId = sector.value || sector.label;
         feature.properties = {
           ...localStateToFeatureProperties(state),
-          sector: sector.value || sector.label,
+          sector: sectorId,
         };
+        const only = singleSectorOption(props.componentSettings);
+        const sectors = props.value?.sectors?.length
+          ? props.value.sectors
+          : only
+            ? [only.value || only.label]
+            : undefined;
+        const collection = (props.value?.collection ||
+          (only ? EMPTY_FEATURE_COLLECTION : undefined)) as FC | undefined;
+        if (!sectors || !collection) {
+          throw new Error("No sectors selected");
+        }
 
         onChange({
-          sectors: props.value!.sectors,
+          sectors,
           collection: {
-            ...props.value!.collection,
+            ...collection,
             features: [
-              ...props.value!.collection.features,
+              ...collection.features,
               feature as Feature<Polygon, SectorFeatureProps>,
             ],
           },
@@ -917,7 +960,11 @@ function SpatialAccessPriorityInner(
                       <span className="space-x-1 rtl:space-x-reverse flex">
                         <CheckIcon className="w-5 h-5" />
                         <span>
-                          <Trans ns="surveys">Finish Sector</Trans>
+                          {singleSectorOption(props.componentSettings) ? (
+                            <Trans ns="surveys">Finish</Trans>
+                          ) : (
+                            <Trans ns="surveys">Finish Sector</Trans>
+                          )}
                         </span>
                       </span>
                     }
@@ -1467,12 +1514,23 @@ SpatialAccessPriority.hideNav = (componentSettings, isMobile, stage) => {
   }
 };
 
+function singleSectorOption(
+  componentSettings: SpatialAccessPriorityProps
+): FormElementOption | null {
+  const options = componentSettings.sectorOptions || [];
+  return options.length === 1 ? options[0] : null;
+}
+
 SpatialAccessPriority.getInitialStage = (value, componentSettings) => {
   if (value?.sectors?.length > 0) {
     return STAGES.SECTOR_NAVIGATION;
-  } else {
-    return STAGES.CHOOSE_SECTORS;
   }
+  // The first visit with one sector starts drawing. A later visit already has
+  // that sector stored, so it takes the branch above and shows the list.
+  if (singleSectorOption(componentSettings)) {
+    return STAGES.DRAWING_INTRO;
+  }
+  return STAGES.CHOOSE_SECTORS;
 };
 
 function ChildVisibilitySettings({

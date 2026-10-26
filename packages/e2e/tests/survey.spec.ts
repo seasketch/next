@@ -16,18 +16,19 @@ async function withDb<T>(run: (client: Client) => Promise<T>): Promise<T> {
   }
 }
 
-async function surveyPath(): Promise<string> {
+async function surveyPath(slug: string, name: string): Promise<string> {
   return withDb(async (client) => {
     const result = await client.query(
       `select s.id
        from surveys s
        join projects p on p.id = s.project_id
-       where p.slug = 'demo-maldives' and s.name = 'Maldives Ocean Use Survey'`
+       where p.slug = $1 and s.name = $2`,
+      [slug, name]
     );
     if (result.rowCount !== 1) {
-      throw new Error("Maldives Ocean Use Survey is missing from demo-maldives");
+      throw new Error(`${name} is missing from ${slug}`);
     }
-    return `/demo-maldives/surveys/${result.rows[0].id}`;
+    return `/${slug}/surveys/${result.rows[0].id}`;
   });
 }
 
@@ -147,7 +148,7 @@ test.describe("Maldives ocean use survey", () => {
 
   test("an anonymous visitor can complete the ocean-use survey", async ({ page }) => {
     test.setTimeout(300_000);
-    await page.goto(await surveyPath());
+    await page.goto(await surveyPath("demo-maldives", "Maldives Ocean Use Survey"));
     await expect(page.getByRole("progressbar")).toHaveCount(0);
     await expect(page.getByText("Welcome Ocean Users!")).toBeVisible();
 
@@ -187,6 +188,7 @@ test.describe("Maldives ocean use survey", () => {
     await page.getByTitle("Kudafari", { exact: true }).click();
 
     await expect(page.getByText("What sectors do you represent?")).toBeVisible();
+    await expect(page.getByText("Click on the map to start a polygon")).toHaveCount(0);
     const sectorNext = page.getByRole("button", { name: /^Next$/ });
     await expect(sectorNext).toBeDisabled();
     await page.getByTitle("Fisheries - Commercial, Tuna", { exact: true }).click();
@@ -258,6 +260,8 @@ test.describe("Maldives ocean use survey", () => {
     await expect(page.getByRole("button", { name: /^Save$/ })).toHaveCount(0);
     await expect(page.locator(".SAPRangeMini")).toHaveValue("15");
 
+    await expect(page.getByRole("button", { name: "Finish Sector", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Finish", exact: true })).toHaveCount(0);
     await clickButton(page, "Finish Sector");
     await expect(page.getByRole("heading", { name: "Your sectors" })).toBeVisible();
     await clickButton(page, "Next sector");
@@ -299,6 +303,8 @@ test.describe("Maldives ocean use survey", () => {
 
     await expect(page.getByText("Sea cucumber fishing area.")).toBeVisible();
     await expect(page.getByText("Reef fishing area.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Finish Sector", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Finish", exact: true })).toHaveCount(0);
     await clickButton(page, "Finish Sector");
     await expect(page.getByRole("heading", { name: "Your sectors" })).toBeVisible();
     await page.getByTitle("Next Question").click();
@@ -412,5 +418,65 @@ test.describe("Maldives ocean use survey", () => {
 
     await clickButton(page, "Submit Another Response");
     await expect(page.getByText("Welcome Ocean Users!")).toBeVisible();
+  });
+});
+
+test.describe("Palawan coral survey", () => {
+  test.use({ viewport: { width: 1440, height: 900 } });
+
+  test("a single sector starts on the map and comes back to the sector list", async ({
+    page,
+  }) => {
+    test.setTimeout(180_000);
+    await page.goto(await surveyPath("demo-palawan", "Coral Restoration Survey"));
+    await expect(page.getByRole("progressbar")).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", {
+        name: "Single-sector survey example",
+      })
+    ).toBeVisible();
+
+    await page.locator('[name="Begin Survey"]').click();
+    await expect(
+      page.getByRole("heading", { name: "Where should coral recovery activities occur?" })
+    ).toBeVisible();
+    await expect(page.getByText("Select Areas to Identify")).toHaveCount(0);
+    await expect(page.locator(".mapboxgl-map[data-map-loaded='true']")).toBeVisible({
+      timeout: 30_000,
+    });
+    await expect(page.getByText("Click on the map to start a polygon")).toBeVisible();
+
+    await drawRing(page, square);
+    await expect(page.getByRole("heading", { name: "Area Name" })).toBeVisible();
+    await page.locator('[name="FeatureName"]').fill("Tubbataha recovery area.");
+    await page.getByTitle("Climate and/or anthropogenic refugia", { exact: true }).click();
+    await page.getByTitle("Research", { exact: true }).click();
+    const importance = page.getByRole("heading", { name: "How important is this area?" });
+    await importance.scrollIntoViewIfNeeded();
+    await page.locator("input[type=range]").fill("40");
+    await clickButton(page, /^Save$/);
+
+    await expect(page.getByText("Tubbataha recovery area.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Finish", exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Finish Sector", exact: true })).toHaveCount(0);
+    await clickButton(page, "Finish");
+
+    await expect(page.getByRole("heading", { name: "Your sectors" })).toBeVisible();
+    await expect(page.getByText("Coral Recovery Priority Areas")).toBeVisible();
+    await expect(page.getByText(/1 area/)).toBeVisible();
+    await expect(page.getByText("Click on the map to start a polygon")).toHaveCount(0);
+
+    await page.goBack();
+    await expect(
+      page.getByRole("heading", {
+        name: "Single-sector survey example",
+      })
+    ).toBeVisible();
+    await page.goForward();
+
+    await expect(page.getByRole("heading", { name: "Your sectors" })).toBeVisible();
+    await expect(page.getByText(/1 area/)).toBeVisible();
+    await expect(page.getByText("Select Areas to Identify")).toHaveCount(0);
+    await expect(page.getByText("Click on the map to start a polygon")).toHaveCount(0);
   });
 });

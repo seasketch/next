@@ -190,6 +190,43 @@ if [[ "$maldives_basemaps" != "Light,Satellite" ]]; then
   exit 1
 fi
 
+palawan_access="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT is_listed::text || ',' || access_control::text FROM projects WHERE slug = 'demo-palawan'")"
+if [[ "$palawan_access" != "true,public" ]]; then
+  echo "demo-palawan should be listed and public, found ${palawan_access}." >&2
+  exit 1
+fi
+palawan_basemaps="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT string_agg(b.name, ',' ORDER BY b.id) FROM basemaps b JOIN projects p ON p.id = b.project_id WHERE p.slug = 'demo-palawan'")"
+if [[ "$palawan_basemaps" != "Light,Satellite" ]]; then
+  echo "demo-palawan basemaps should be Light and Satellite, found ${palawan_basemaps}." >&2
+  exit 1
+fi
+
+echo "Seeding the Palawan coral survey..."
+(
+  cd "$API_DIR"
+  SOURCE_URL="$SOURCE_URL" node scripts/seed-palawan-survey.js
+)
+palawan_survey="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT count(*) FROM surveys s JOIN projects p ON p.id = s.project_id WHERE p.slug = 'demo-palawan' AND s.name = 'Coral Restoration Survey' AND s.is_disabled = false AND s.access_type = 'PUBLIC'")"
+if [[ "$palawan_survey" != "1" ]]; then
+  echo "demo-palawan should have one public Coral Restoration Survey. Found ${palawan_survey}." >&2
+  exit 1
+fi
+palawan_sector="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT (jsonb_array_length(fe.component_settings->'sectorOptions') = 1 AND fe.component_settings->'sectorOptions'->0->>'value' = 'coral' AND fe.component_settings->'sectorOptions'->0->>'label' = 'Coral Recovery Priority Areas')::text FROM form_elements fe JOIN forms f ON f.id = fe.form_id JOIN surveys s ON s.id = f.survey_id JOIN projects p ON p.id = s.project_id WHERE p.slug = 'demo-palawan' AND fe.type_id = 'SpatialAccessPriorityInput'")"
+if [[ "$palawan_sector" != "true" ]]; then
+  echo "Palawan spatial question should have one Coral Recovery Priority Areas sector. Found ${palawan_sector}." >&2
+  exit 1
+fi
+palawan_shapes="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT string_agg(child.type_id, ',' ORDER BY child.position) FROM form_elements sap JOIN forms survey_form ON survey_form.id = sap.form_id JOIN surveys s ON s.id = survey_form.survey_id JOIN projects p ON p.id = s.project_id JOIN sketch_classes sc ON sc.form_element_id = sap.id JOIN forms sketch_form ON sketch_form.sketch_class_id = sc.id JOIN form_elements child ON child.form_id = sketch_form.id WHERE p.slug = 'demo-palawan' AND sap.type_id = 'SpatialAccessPriorityInput'")"
+if [[ "$palawan_shapes" != "MultipleChoice,ShortText,Statement,MultipleChoice,ShortText,Statement,SAPRange,FeatureName" ]]; then
+  echo "Palawan shape questions are unexpected: ${palawan_shapes}." >&2
+  exit 1
+fi
+
 migration="$(psql_exec -d "$SOURCE_DB" -tAc \
   "SELECT filename FROM graphile_migrate.migrations ORDER BY filename DESC LIMIT 1")"
 if [[ -z "$migration" ]]; then

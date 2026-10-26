@@ -5,7 +5,7 @@ description: >
   installs, CI, integration tests, and agent-driven development, and it holds
   fixtures migrations do not create: public data layers (EEZs, OSM land,
   data-library tilesets), default basemaps, geography settings, and example
-  projects such as demo-samoa and demo-maldives. Use when editing packages/api/snapshots
+  projects such as demo-samoa, demo-maldives, and demo-palawan. Use when editing packages/api/snapshots
   (fixtures.sql, data-library.sql, geographies.sql), create-project geographies,
   basemaps, supported languages, data-library template ids, or
   cleanupDeletedOverlayRecords shared template ids. Also use when a migration
@@ -14,7 +14,7 @@ description: >
 
 # Golden snapshot
 
-The golden snapshot is the database base for dev machine installs, CI bootstrapping, integration tests, and agent-driven development. Migration vs. fixture rules: [packages/api/snapshots/README.md](../../../packages/api/snapshots/README.md). Migrations do not create its fixtures. Those are references to public data layers (EEZs, OSM land, data-library tilesets), default basemaps, geography settings, and example projects such as `demo-samoa` and `demo-maldives`, which are there for interactive testing and may be reused in smoke tests. `demo-maldives` carries the Maldives Ocean Use Survey.
+The golden snapshot is the database base for dev machine installs, CI bootstrapping, integration tests, and agent-driven development. Migration vs. fixture rules: [packages/api/snapshots/README.md](../../../packages/api/snapshots/README.md). Migrations do not create its fixtures. Those are references to public data layers (EEZs, OSM land, data-library tilesets), default basemaps, geography settings, and example projects such as `demo-samoa`, `demo-maldives`, and `demo-palawan`, which are there for interactive testing and may be reused in smoke tests. `demo-maldives` carries the Maldives Ocean Use Survey. `demo-palawan` carries the single-sector Coral Restoration Survey.
 
 `npm run setup` restores `packages/api/snapshots/golden.dump`, then applies committed migrations newer than that dump. The dump is gitignored. `npm run snapshot:publish` uploads it to `golden-snapshot/current/` in the tiles bucket, and setup downloads that object from `https://uploads.seasketch.org` with no credentials. Until that upload, dev machines, CI, and agents keep booting from the previous fixtures.
 
