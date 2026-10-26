@@ -63,6 +63,38 @@ function contentTypeForTileType(tileType: TileType, ext?: string) {
   }
 }
 
+const RASTER_IMAGE_EXTENSIONS = new Set([
+  "png",
+  "jpg",
+  "jpeg",
+  "webp",
+  "avif",
+  "mrt",
+]);
+
+/**
+ * Status for a tile the archive does not contain.
+ *
+ * Vector misses stay 204. An empty protobuf is a valid empty tile.
+ * Raster misses are 404. GL JS treats 204 as a successful empty body and
+ * decodes it with createImageBitmap, which rejects and shows a false layer
+ * error (#953, #1040). 404 is the missing-tile status GL JS already ignores,
+ * and the parent tile still covers the gap. MRT is included because a 204
+ * body is parsed and throws "File is not a valid MRT."
+ */
+export function missingTileStatus(tileType: TileType, ext?: string): 204 | 404 {
+  if (ext && RASTER_IMAGE_EXTENSIONS.has(ext)) return 404;
+  if (
+    tileType === TileType.Png ||
+    tileType === TileType.Jpeg ||
+    tileType === TileType.Webp ||
+    tileType === TileType.Avif
+  ) {
+    return 404;
+  }
+  return 204;
+}
+
 function isMrtTileJson(json: TileJSON, metadata: Record<string, unknown>): boolean {
   return (
     json.format === "mrt" ||
@@ -189,13 +221,12 @@ async function handle(
       }
       const tile = await timing.measure("tile", () => pmtiles.getZxy(z, x, y));
       if (!tile) {
-        // Vector/image empty tiles are 204. MRT must be 404: GL JS parses a
-        // 204 body as a tile and throws "File is not a valid MRT."
-        // Keep the default immutable cache — a miss in this archive is
-        // permanent (same content-addressed assumption as 200s). Do not
-        // synthesize an all-nodata MRT: GL JS would Range-probe, parse,
-        // and upload a transparent texture for every ocean tile.
-        if (ext === "mrt") {
+        // Keep the immutable cache. A miss in this archive is permanent
+        // (same content-addressed assumption as a 200). Do not synthesize
+        // an all-nodata raster: GL JS would upload a texture for every
+        // ocean tile.
+        const status = missingTileStatus(header.tileType, ext);
+        if (status === 404) {
           return respond(
             new Response("Tile not found", { status: 404, headers })
           );

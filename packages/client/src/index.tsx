@@ -32,10 +32,6 @@ import { onError } from "@apollo/client/link/error";
 import { DialogProvider } from "./components/useDialog";
 import { ToastProvider } from "./components/Toast";
 import INaturalistThumbnailProvider from "./components/INaturalistThumbnail/INaturalistThumbnailProvider";
-import { installEmptyRasterTileResponseGuard } from "./dataLayers/emptyRasterTileResponse";
-
-// Before any map is created. See emptyRasterTileResponse.ts.
-installEmptyRasterTileResponseGuard();
 
 const history = createBrowserHistory();
 
