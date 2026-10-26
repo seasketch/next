@@ -61,4 +61,4 @@ Geography layers, their metadata, the Marine Protected Area sketch class, the de
 
 # Left for later
 
-Zoom to bounds waits until a later set of layers has bounds that match the project region. End-user Sketching Tools wait as well. Surveys, sketch save, report calculation, uploads, and downloads stay out of this set. They need more fixture data, or a service the core profile does not run. The access gates are `tests/access.spec.ts`. Authoring, data, and reports stay with Phase 5.
+Zoom to bounds waits until a later set of layers has bounds that match the project region. End-user Sketching Tools wait as well. Report calculation, uploads, and downloads stay out of this set. They need more fixture data, or a service the core profile does not run. The access gates are `tests/access.spec.ts`. The Maldives ocean-use respondent journey is `tests/survey.spec.ts`, against the survey seeded on `demo-maldives`. Authoring, data, and reports stay with Phase 5.

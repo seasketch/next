@@ -135,6 +135,61 @@ if [[ "$samoan" != "t" ]]; then
   exit 1
 fi
 
+maldives_clipping="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT count(*) FROM geography_clipping_layers cl JOIN project_geography g ON g.id = cl.project_geography_id JOIN projects p ON p.id = g.project_id WHERE p.slug = 'demo-maldives'")"
+if [[ "$maldives_clipping" != "2" ]]; then
+  echo "demo-maldives should have 2 clipping layers, found ${maldives_clipping}." >&2
+  exit 1
+fi
+maldives_unresolved="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT count(*) FROM project_geography g JOIN projects p ON p.id = g.project_id, LATERAL clipping_layers_for_geography(g.id) cl WHERE p.slug = 'demo-maldives' AND cl.object_key IS NULL")"
+if [[ "$maldives_unresolved" != "0" ]]; then
+  echo "${maldives_unresolved} demo-maldives clipping layer(s) have no FlatGeobuf object key." >&2
+  exit 1
+fi
+maldives_layers="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT count(*) FROM table_of_contents_items t JOIN projects p ON p.id = t.project_id WHERE p.slug = 'demo-maldives' AND t.is_draft = false AND t.is_folder = false")"
+if [[ "$maldives_layers" != "2" ]]; then
+  echo "demo-maldives should have 2 published overlay layers, found ${maldives_layers}." >&2
+  exit 1
+fi
+maldives_xmin="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT round(ST_XMin(region)::numeric, 1) FROM projects WHERE slug = 'demo-maldives'")"
+if [[ "$maldives_xmin" != "69.2" ]]; then
+  echo "demo-maldives region should be the Maldives EEZ, found xmin ${maldives_xmin}." >&2
+  exit 1
+fi
+maldives_access="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT is_listed::text || ',' || access_control::text FROM projects WHERE slug = 'demo-maldives'")"
+if [[ "$maldives_access" != "true,public" ]]; then
+  echo "demo-maldives should be listed and public, found ${maldives_access}." >&2
+  exit 1
+fi
+
+echo "Seeding the Maldives ocean-use survey..."
+(
+  cd "$API_DIR"
+  SOURCE_URL="$SOURCE_URL" node scripts/seed-maldives-survey.js
+)
+maldives_survey="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT count(*) FROM surveys s JOIN projects p ON p.id = s.project_id WHERE p.slug = 'demo-maldives' AND s.name = 'Maldives Ocean Use Survey' AND s.is_disabled = false AND s.access_type = 'PUBLIC'")"
+if [[ "$maldives_survey" != "1" ]]; then
+  echo "demo-maldives should have one public Maldives Ocean Use Survey. Found ${maldives_survey}." >&2
+  exit 1
+fi
+maldives_n_jump="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT count(*) FROM form_logic_rules r JOIN form_logic_conditions c ON c.rule_id = r.id JOIN form_elements subject ON subject.id = c.subject_id JOIN form_elements target ON target.id = r.jump_to_id JOIN forms f ON f.id = subject.form_id JOIN surveys s ON s.id = f.survey_id JOIN projects p ON p.id = s.project_id WHERE p.slug = 'demo-maldives' AND s.name = 'Maldives Ocean Use Survey' AND c.value = '\"N\"'::jsonb AND target.body->'content'->0->'content'->0->>'text' ILIKE '%island of N atoll%'")"
+if [[ "$maldives_n_jump" != "1" ]]; then
+  echo "The Maldives atoll question should jump N to the N island question. Found ${maldives_n_jump}." >&2
+  exit 1
+fi
+maldives_basemaps="$(psql_exec -d "$SOURCE_DB" -tAc \
+  "SELECT string_agg(b.name, ',' ORDER BY b.id) FROM basemaps b JOIN projects p ON p.id = b.project_id WHERE p.slug = 'demo-maldives'")"
+if [[ "$maldives_basemaps" != "Light,Satellite" ]]; then
+  echo "demo-maldives basemaps should be Light and Satellite, found ${maldives_basemaps}." >&2
+  exit 1
+fi
+
 migration="$(psql_exec -d "$SOURCE_DB" -tAc \
   "SELECT filename FROM graphile_migrate.migrations ORDER BY filename DESC LIMIT 1")"
 if [[ -z "$migration" ]]; then

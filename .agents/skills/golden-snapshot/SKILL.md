@@ -5,7 +5,7 @@ description: >
   installs, CI, integration tests, and agent-driven development, and it holds
   fixtures migrations do not create: public data layers (EEZs, OSM land,
   data-library tilesets), default basemaps, geography settings, and example
-  projects such as demo-samoa. Use when editing packages/api/snapshots
+  projects such as demo-samoa and demo-maldives. Use when editing packages/api/snapshots
   (fixtures.sql, data-library.sql, geographies.sql), create-project geographies,
   basemaps, supported languages, data-library template ids, or
   cleanupDeletedOverlayRecords shared template ids. Also use when a migration
@@ -14,13 +14,13 @@ description: >
 
 # Golden snapshot
 
-The golden snapshot is the database base for dev machine installs, CI bootstrapping, integration tests, and agent-driven development. Migration vs. fixture rules: [packages/api/snapshots/README.md](../../../packages/api/snapshots/README.md). Migrations do not create its fixtures. Those are references to public data layers (EEZs, OSM land, data-library tilesets), default basemaps, geography settings, and example projects such as `demo-samoa`, which are there for interactive testing and may be reused in smoke tests.
+The golden snapshot is the database base for dev machine installs, CI bootstrapping, integration tests, and agent-driven development. Migration vs. fixture rules: [packages/api/snapshots/README.md](../../../packages/api/snapshots/README.md). Migrations do not create its fixtures. Those are references to public data layers (EEZs, OSM land, data-library tilesets), default basemaps, geography settings, and example projects such as `demo-samoa` and `demo-maldives`, which are there for interactive testing and may be reused in smoke tests. `demo-maldives` carries the Maldives Ocean Use Survey.
 
 `npm run setup` restores `packages/api/snapshots/golden.dump`, then applies committed migrations newer than that dump. The dump is gitignored. `npm run snapshot:publish` uploads it to `golden-snapshot/current/` in the tiles bucket, and setup downloads that object from `https://uploads.seasketch.org` with no credentials. Until that upload, dev machines, CI, and agents keep booting from the previous fixtures.
 
 The dump is built from committed migrations, the graphile-worker schema, and three seed files:
 
-- `packages/api/snapshots/fixtures.sql` — accounts and projects that installs and smoke tests open. A participant has to be in the state the UI requires, not merely present in the table.
+- `packages/api/snapshots/fixtures.sql` — accounts and projects that installs and smoke tests open. A participant has to be in the state the UI requires, not merely present in the table. `scripts/seed-maldives-survey.js` then builds the ocean-use survey on `demo-maldives` from `snapshots/maldives-ocean-use`.
 - `packages/api/snapshots/data-library.sql` — the small set of public templates the other seed files clone, each with its production `data_upload_outputs`. Overlay analysis, geography clipping, and downloads read those rows (the FlatGeobuf output in particular), not the tile URL, so a template without them looks fine on the map and fails everywhere else. It is not the production catalog. Each template's `geostats` document is `packages/api/snapshots/geostats/<TEMPLATE_ID>.json`; `snapshot-create.sh` loads those onto the template data source. Report overlay queries require that document.
 - `packages/api/snapshots/geographies.sql` — builds the example project's geographies the same way create-project does, from those templates. After those geographies exist it calls `create_sketch_class_from_template` for Marine Protected Area, the class the template chooser adds, clipped to the Exclusive Economic Zone and attached to the default report.
 

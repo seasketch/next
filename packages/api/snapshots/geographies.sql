@@ -6,6 +6,10 @@
 -- Protected Area sketch class the same way the template chooser does, so the
 -- class clips to the Exclusive Economic Zone and uses the default report.
 --
+-- demo-maldives gets only the Exclusive Economic Zone (MRGID_EEZ 8345) with
+-- land subtracted, which is the geography on that example project. It does
+-- not add territorial seas, offshore, or a sketch class.
+--
 -- Samoa's Marine Regions id is MRGID_EEZ 8445. The region envelope is the
 -- overlay bbox for that EEZ feature. Snapshot creation does not call the
 -- overlay service, so the envelope is recorded here.
@@ -161,6 +165,115 @@ begin
     -15.878383591829206,
     -170.54265693017294,
     -10.960825304544073
+  );
+end
+$$;
+
+-- Maldives EEZ only. The envelope is the overlay bbox for MRGID_EEZ 8345.
+do $$
+declare
+  pid int;
+  spec record;
+  toc public.table_of_contents_items;
+  eez_layer int;
+  land_layer int;
+  geo_id int;
+  maldives_filter jsonb := '["==", ["get", "MRGID_EEZ"], 8345]'::jsonb;
+  maldives_cql jsonb := '{"op": "=", "args": [{"property": "MRGID_EEZ"}, 8345]}'::jsonb;
+begin
+  select id into pid from projects where slug = 'demo-maldives';
+  if pid is null then
+    raise exception 'demo-maldives is missing';
+  end if;
+
+  for spec in
+    select *
+    from (
+      values
+        ('MARINE_REGIONS_EEZ_LAND_JOINED', 'Exclusive Economic Zone', maldives_filter),
+        ('DAYLIGHT_COASTLINE', 'Land', null::jsonb)
+    ) as v(template_id, title, style_filter)
+  loop
+    if exists (
+      select 1
+      from table_of_contents_items t
+      where t.project_id = pid
+        and t.is_draft
+        and t.copied_from_data_library_template_id = spec.template_id
+    ) then
+      continue;
+    end if;
+
+    toc := copy_data_library_template_item(spec.template_id, 'demo-maldives');
+
+    update data_layers
+    set mapbox_gl_styles = (
+      select jsonb_agg(
+        case
+          when spec.style_filter is null then
+            elem || jsonb_build_object(
+              'metadata',
+              coalesce(elem->'metadata', '{}'::jsonb) || '{"label":" "}'::jsonb
+            )
+          else
+            elem || jsonb_build_object(
+              'filter', spec.style_filter,
+              'metadata',
+              coalesce(elem->'metadata', '{}'::jsonb) || '{"label":" "}'::jsonb
+            )
+        end
+        order by ord
+      )
+      from jsonb_array_elements(mapbox_gl_styles) with ordinality as styles(elem, ord)
+    )
+    where id = toc.data_layer_id;
+
+    update table_of_contents_items
+    set title = spec.title
+    where id = toc.id;
+  end loop;
+
+  select t.data_layer_id into eez_layer
+  from table_of_contents_items t
+  where t.project_id = pid
+    and t.is_draft
+    and t.copied_from_data_library_template_id = 'MARINE_REGIONS_EEZ_LAND_JOINED';
+
+  select t.data_layer_id into land_layer
+  from table_of_contents_items t
+  where t.project_id = pid
+    and t.is_draft
+    and t.copied_from_data_library_template_id = 'DAYLIGHT_COASTLINE';
+
+  if eez_layer is null or land_layer is null then
+    raise exception 'demo-maldives is missing a cloned geography layer';
+  end if;
+
+  if not exists (
+    select 1 from project_geography g
+    where g.project_id = pid and g.name = 'Exclusive Economic Zone'
+  ) then
+    insert into project_geography (project_id, name, client_template)
+    values (pid, 'Exclusive Economic Zone', 'eez')
+    returning id into geo_id;
+
+    insert into geography_clipping_layers (
+      project_geography_id, data_layer_id, operation_type, cql2_query, template_id
+    ) values
+      (geo_id, eez_layer, 'intersect', maldives_cql, 'MARINE_REGIONS_EEZ_LAND_JOINED'),
+      (geo_id, land_layer, 'difference', null, 'DAYLIGHT_COASTLINE');
+  end if;
+
+  perform nest_new_project_geography_draft_toc_under_folder(pid);
+  perform publish_table_of_contents(pid);
+
+  -- Overlay bbox for MRGID_EEZ 8345, October 2026.
+  perform set_project_region_bounds(
+    pid,
+    69.20593029617163,
+    -3.3116387729301096,
+    77.10595306499391,
+    8.093888889070456
   );
 end
 $$;

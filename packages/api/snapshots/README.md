@@ -11,7 +11,7 @@ Rule: a row goes in a migration if every database, including production, must ha
 
 ## Fixtures (`snapshots/*.sql`)
 
-- Example projects, synthetic users, memberships, example content.
+- Example projects, synthetic users, memberships, example content. `demo-maldives` includes the Maldives Ocean Use Survey. `scripts/seed-maldives-survey.js` builds that form from `snapshots/maldives-ocean-use` while `snapshot:create` runs.
 - Use the app's SQL functions (`create_project`, `copy_data_library_template_item`, …). Direct inserts only where no function exists, with a check in `scripts/snapshot-create.sh`.
 - Data-library templates (`src/DataLibrary/snapshotTemplateIds.js`) and their `data_upload_outputs`: copied from production onto `superuser` only. The remotes are production object keys; `cleanupDeletedOverlayRecords` protects `superuser` outputs outside production and nothing else. Geostats for those templates are `snapshots/geostats/<TEMPLATE_ID>.json`, loaded onto the template data source during `snapshot:create`.
 - Survey Basic Template appearance. The template row is created by a migration with an empty welcome page. Production sets the background in the superuser survey editor, and `fixtures.sql` copies those columns into the snapshot. A migration must not write them.
