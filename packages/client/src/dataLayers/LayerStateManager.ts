@@ -17,46 +17,6 @@ export const LOADING_STATE_MIN_DURATION_MS = 700;
 const LOADING_NOTIFY_DEBOUNCE_MS = 100;
 
 /**
- * Detects harmless raster-tile decode failures that mapbox-gl surfaces as map
- * `error` events.
- *
- * Raster overlays are served as PNG tiles, and sparse rasters frequently return
- * empty (0-byte) tile bodies for no-data areas. mapbox-gl decodes tiles with
- * `createImageBitmap`, and unlike its `HTMLImageElement` fallback, that code
- * path does NOT substitute a transparent PNG for empty data — it calls
- * `createImageBitmap()` on a zero-byte blob, which rejects. mapbox-gl then wraps
- * the rejection in a "Could not load image because of ..." error and emits it on
- * the map. The browser-specific underlying messages are:
- *   - Chrome:  "The source image could not be decoded"
- *   - Firefox before 153: "An attempt was made to use an object that is not,
- *     or is no longer usable" (an `InvalidStateError` for empty blobs)
- *   - Firefox 153+: "The image could not be decoded" (bug 2003863 replaced the
- *     generic InvalidStateError text on the blob decode path). mapbox-gl wraps
- *     that as "Could not load image because of The image could not be decoded.
- *     Please make sure to use a supported image type..."
- *
- * In each case the layer still renders correctly from the tiles that do have
- * data, so surfacing an error indicator is a false positive. We ignore these so
- * the layer list doesn't show a spurious error (see seasketch/next#953 and
- * #1040).
- */
-function isEmptyRasterTileDecodeError(message: string | undefined): boolean {
-  if (!message) return false;
-  return (
-    // mapbox-gl appends this sentence to every image-decode failure. The
-    // inner browser text changes between versions (Firefox 153, bug 2003863);
-    // this suffix does not.
-    /supported image type such as PNG or JPEG/i.test(message) ||
-    // Bare browser messages, if a future mapbox stops appending the suffix.
-    // Chrome: "The source image could not be decoded"
-    // Firefox 153+: "The image could not be decoded"
-    /image could not be decoded/i.test(message) ||
-    // Firefox < 153 InvalidStateError from createImageBitmap() on empty tiles
-    /attempt was made to use an object/i.test(message)
-  );
-}
-
-/**
  * Compare two LayerState-like objects for equality. Every enumerable property
  * is compared with strict equality (`===`), which means `error` (an Error
  * object) and any other reference types are compared by identity — not by
@@ -296,7 +256,6 @@ export class LayerStateManager<TState extends LayerState> extends EventEmitter {
     const sourceId: string | undefined = event.sourceId;
     if (!sourceId) return;
     if (!sourceId.startsWith(this.namespace + "-")) return;
-    if (isEmptyRasterTileDecodeError(event.error?.message)) return;
 
     if (this.hasRelevanceToSource(sourceId)) {
       for (const key of this.keysForSource(sourceId)) {
