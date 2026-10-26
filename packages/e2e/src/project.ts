@@ -1,11 +1,10 @@
 import { expect, type APIRequestContext, type Page, type Response } from "@playwright/test";
 import { installSession, issueToken } from "./auth";
-import { personas } from "./config";
 
 export async function signIn(
   page: Page,
   request: APIRequestContext,
-  persona: (typeof personas)[keyof typeof personas]
+  persona: { sub: string; superuser: boolean }
 ) {
   const issued = await issueToken(request, persona);
   await installSession(page.context(), issued);

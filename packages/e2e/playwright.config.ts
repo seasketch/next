@@ -91,8 +91,9 @@ export default defineConfig({
     reuseExistingServer: false,
     // Covers the subdivision image build plus the client dev server.
     timeout: ci ? 900_000 : 180_000,
-    // Show both streams. The default hides stdout, so a supervisor that logs
-    // there exits in CI with no reason attached.
+    // The e2e profile writes each service to .logs/e2e and prints that path.
+    // Pipe stays on so that path, and the tail of a service that exits, still
+    // reach this run. The service streams themselves are not copied here.
     stdout: "pipe",
     stderr: "pipe",
     env: webServerEnv(),

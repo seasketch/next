@@ -103,8 +103,16 @@ export const auth0 = {
 };
 
 export const personas = {
-  member: { sub: "e2e|member", superuser: false },
-  admin: { sub: "e2e|admin", superuser: false },
+  member: {
+    sub: "e2e|member",
+    superuser: false,
+    email: "member@example.test",
+  },
+  admin: {
+    sub: "e2e|admin",
+    superuser: false,
+    email: "admin@example.test",
+  },
 } as const;
 
 export type Persona = (typeof personas)[keyof typeof personas];

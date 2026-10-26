@@ -184,6 +184,14 @@ const stderrSync = new Writable({
   },
 });
 
+// The e2e profile still records each service under .logs/e2e. Playwright would
+// otherwise prefix every line into the test run, which hides the journey list.
+const discardOutput = new Writable({
+  write(_chunk, _encoding, callback) {
+    callback();
+  },
+});
+
 function logStream(name) {
   return createStream(
     (time, index) => {
@@ -276,15 +284,19 @@ if (only) {
     process.exit(1);
   }
 
-  for (const service of processes) {
-    report(`[${service.name}] ${service.command}`);
+  if (profile === "e2e") {
+    report(`Service logs: ${logsDir}`);
+  } else {
+    for (const service of processes) {
+      report(`[${service.name}] ${service.command}`);
+    }
   }
 
   const { result, commands } = concurrently(processes, {
     prefix: "name",
     prefixColors: "auto",
     killOthersOn: ["failure"],
-    outputStream: stderrSync,
+    outputStream: profile === "e2e" ? discardOutput : stderrSync,
   });
 
   const streams = commands.map((command) => {
@@ -298,6 +310,7 @@ if (only) {
     return stream;
   });
 
+  const failed = [];
   let exitCode = 0;
   try {
     await result;
@@ -309,10 +322,23 @@ if (only) {
         continue;
       }
       const name = event?.command?.name ?? "process";
+      failed.push(name);
       report(`[${name}] exited ${event?.exitCode}`);
     }
   }
   await Promise.all(streams.map((stream) => new Promise((resolve) => stream.end(resolve))));
+  if (profile === "e2e") {
+    for (const name of failed) {
+      const file = path.join(logsDir, `${name}.log`);
+      if (!existsSync(file)) {
+        continue;
+      }
+      const tail = readFileSync(file, "utf8").trimEnd().split("\n").slice(-40).join("\n");
+      if (tail) {
+        report(`[${name}] log tail:\n${tail}`);
+      }
+    }
+  }
   report(`supervisor exiting ${exitCode}`);
   process.exit(exitCode);
 }

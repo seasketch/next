@@ -1,5 +1,5 @@
 import { APIRequestContext, BrowserContext } from "@playwright/test";
-import { auth0, e2ePassphrase, Persona, apiURL, clientURL } from "./config";
+import { auth0, e2ePassphrase, apiURL, clientURL } from "./config";
 
 const CANONICAL_EMAIL = "https://seasketch.org/canonical_email";
 const EMAIL_VERIFIED = "https://seasketch.org/email_verified";
@@ -24,7 +24,7 @@ export type IssuedToken = {
  */
 export async function issueToken(
   request: APIRequestContext,
-  persona: Persona
+  persona: { sub: string; superuser: boolean }
 ): Promise<IssuedToken> {
   let response;
   try {
