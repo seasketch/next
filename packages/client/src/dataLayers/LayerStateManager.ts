@@ -17,29 +17,29 @@ export const LOADING_STATE_MIN_DURATION_MS = 700;
 const LOADING_NOTIFY_DEBOUNCE_MS = 100;
 
 /**
- * Detects harmless raster-tile decode failures that mapbox-gl surfaces as map
- * `error` events.
+ * Empty raster tiles used to be HTTP 204. mapbox-gl decodes that empty body
+ * with `createImageBitmap`, the promise rejects, and the map error is a false
+ * red X on a layer that still draws from its parent tile (#953, #1040).
  *
- * Raster overlays are served as PNG tiles, and sparse rasters frequently return
- * empty (0-byte) tile bodies for no-data areas. mapbox-gl decodes tiles with
- * `createImageBitmap`, and unlike its `HTMLImageElement` fallback, that code
- * path does NOT substitute a transparent PNG for empty data — it calls
- * `createImageBitmap()` on a zero-byte blob, which rejects. mapbox-gl then wraps
- * the rejection in a "Could not load image because of ..." error and emits it on
- * the map. The browser-specific underlying messages are:
- *   - Chrome:  "The source image could not be decoded"
- *   - Firefox: "An attempt was made to use an object that is not, or is no
- *     longer usable" (an `InvalidStateError` thrown for empty blobs)
+ * pmtiles-server now returns 404 for raster misses. mapbox-gl already ignores
+ * that status, so a tile fetched after the deploy never produces this error.
+ * 204 responses already stored in the browser cache or the CDN still do, until
+ * those immutable entries expire. The patterns below cover the browsers that
+ * cached those 204s:
+ *   - Chrome: "The source image could not be decoded"
+ *   - Firefox before 153: "An attempt was made to use an object that is not,
+ *     or is no longer usable"
+ *   - Firefox 153+: "The image could not be decoded" (bug 2003863)
  *
- * In both cases the layer still renders correctly from the tiles that do have
- * data, so surfacing an error indicator is a false positive. We ignore these so
- * the layer list doesn't show a spurious error (see seasketch/next#953).
+ * This list is closed. A later browser wording only shows up for a cached 204,
+ * and those caches expire. Do not add another pattern.
  */
 function isEmptyRasterTileDecodeError(message: string | undefined): boolean {
   if (!message) return false;
   return (
     /source image could not be decoded/i.test(message) ||
-    // Firefox InvalidStateError raised by createImageBitmap() on empty tiles
+    /the image could not be decoded/i.test(message) ||
+    // Firefox < 153 InvalidStateError from createImageBitmap() on an empty blob
     /attempt was made to use an object/i.test(message)
   );
 }
