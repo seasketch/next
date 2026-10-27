@@ -262,8 +262,8 @@ describe("polygon size copy", () => {
     expect(formatPolygonSizeLimit(1 / 0.386102, "en", "mile")).toBe("1 mi²");
     expect(formatPolygonSizeLimit(1 / 247.105381, "en", "acre")).toBe("1 ac");
     expect(polygonAreaUnitLabel("kilometer", "en")).toBe("km²");
-    expect(polygonAreaUnitLabel("hectare", "en")).toBe("hectares");
-    expect(polygonAreaUnitLabel("acre", "en")).toBe("acres");
+    expect(polygonAreaUnitLabel("hectare", "en")).toBe("ha");
+    expect(polygonAreaUnitLabel("acre", "en")).toBe("ac");
     expect(polygonAreaUnitLabel("mile", "en")).toBe("mi²");
   });
 

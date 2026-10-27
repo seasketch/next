@@ -201,22 +201,25 @@ export function formatPolygonSizeLimit(
   return formatted;
 }
 
-/** Short label for the admin unit menu. km and mi stay squared, like report cards. */
+/**
+ * Short label for the admin unit menu, matching report-card abbreviations.
+ * km and mi stay squared. A native select shows this both closed and open,
+ * so the closed control stays narrow.
+ */
 export function polygonAreaUnitLabel(
   unit: PolygonAreaUnit,
   locale?: string
 ): string {
-  const squared = unit === "kilometer" || unit === "mile";
   const formatted = numberFormat(locale, {
     style: "unit",
     unit,
-    unitDisplay: squared ? "short" : "long",
+    unitDisplay: "short",
   }).formatToParts(10);
   const label = formatted.find((part) => part.type === "unit")?.value;
   if (!label) {
     return unit;
   }
-  if (squared) {
+  if (unit === "kilometer" || unit === "mile") {
     // eslint-disable-next-line i18next/no-literal-string
     return `${label}²`;
   }
