@@ -1,5 +1,5 @@
 /* eslint-disable i18next/no-literal-string */
-import { fireEvent, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { SketchGeometryType } from "../generated/graphql";
 import DigitizingTools from "./DigitizingTools";
 import { DigitizingState } from "../draw/useMapboxGLDraw";
@@ -27,7 +27,7 @@ function renderTools(
   );
 }
 
-test("blocks finishing an over-size polygon and explains how to shrink it", () => {
+test("blocks finishing an over-size polygon", () => {
   renderTools({ areaSqKm: 12.4, maxSqKm: 1 });
 
   expect(
@@ -36,13 +36,8 @@ test("blocks finishing an over-size polygon and explains how to shrink it", () =
   expect(screen.getByText("+1,140%")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Done" })).not.toBeInTheDocument();
   expect(
-    screen.getByRole("button", { name: "Shape Too Large" })
-  ).toBeInTheDocument();
-
-  fireEvent.click(screen.getByRole("button", { name: "Shape Too Large" }));
-  expect(
-    screen.getByText(/Drag the points inward until the red highlight goes away/)
-  ).toBeInTheDocument();
+    screen.queryByRole("button", { name: "Shape Too Large" })
+  ).not.toBeInTheDocument();
 });
 
 test("shows Done when the polygon is within the size limit", () => {

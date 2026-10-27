@@ -14,7 +14,6 @@ import useMobileDeviceDetector from "../surveys/useMobileDeviceDetector";
 import { DigitizingState } from "../draw/useMapboxGLDraw";
 import MapSettingsPopup from "../draw/MapSettingsPopup";
 import BowtieInstructions from "../draw/BowtieInstructions";
-import PolygonTooLargeInstructions from "./PolygonTooLargeInstructions";
 import { PolygonTooLargeNotice } from "./MaxPolygonSizeSetting";
 import { FormElementLayoutContext } from "../surveys/SurveyAppLayout";
 import Spinner from "../components/Spinner";
@@ -86,7 +85,6 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
   const [toolsOpen, setToolsOpen] = useState(false);
   const actionsButtonAnchor = useRef<HTMLButtonElement>(null);
   const [showInvalidShapeModal, setShowInvalidShapeModal] = useState(false);
-  const [showSizeWarningModal, setShowSizeWarningModal] = useState(false);
   const [showProfilingModal, setShowProfilingModal] = useState<
     false | SpanJSONOutput
   >(false);
@@ -187,25 +185,6 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
             }
           />
         )}
-      {sizeWarning &&
-        !selfIntersects &&
-        (state === DigitizingState.UNFINISHED ||
-          state === DigitizingState.EDITING) && (
-          <Button
-            onClick={() => {
-              setShowSizeWarningModal(true);
-            }}
-            label={t("Shape Too Large")}
-            className={`pointer-events-auto whitespace-nowrap ${
-              bottomToolbar && "flex-2 content-center max-w-1/2"
-            }`}
-            buttonClassName={
-              bottomToolbar
-                ? "py-3 text-base flex-1 text-center items-center justify-center border-red-800 bg-red-50 text-red-900 hover:text-red-700"
-                : "border-red-800 bg-red-50 text-red-900 hover:text-red-700"
-            }
-          />
-        )}
       {state === DigitizingState.UNFINISHED &&
         !sizeWarning &&
         unfinishedStateButtons}
@@ -240,14 +219,6 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
               : undefined
           }
         />
-        {sizeWarning && (
-          <PolygonTooLargeInstructions
-            open={showSizeWarningModal}
-            areaSqKm={sizeWarning.areaSqKm}
-            maxSqKm={sizeWarning.maxSqKm}
-            onRequestClose={() => setShowSizeWarningModal(false)}
-          />
-        )}
         <MapSettingsPopup
           open={toolsOpen}
           onRequestClose={() => setToolsOpen(false)}
@@ -295,14 +266,6 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
               : undefined
           }
         />
-        {sizeWarning && (
-          <PolygonTooLargeInstructions
-            open={showSizeWarningModal}
-            areaSqKm={sizeWarning.areaSqKm}
-            maxSqKm={sizeWarning.maxSqKm}
-            onRequestClose={() => setShowSizeWarningModal(false)}
-          />
-        )}
 
         {geometryType !== SketchGeometryType.Collection &&
           geometryType !== SketchGeometryType.FilteredPlanningUnits && (
