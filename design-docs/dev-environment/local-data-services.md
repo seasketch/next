@@ -20,8 +20,7 @@ The first half of this document is the architecture and the plan. The second hal
 
 ## Goals and constraints
 
-- **Local by default.** `npm run dev` starts the data path. A developer who wants the lighter stack runs `npm run dev -- --profile core`.
-- **Production as an explicit option.** A developer can still point an individual service at its production counterpart, for example to debug the deployed upload handler. Each such override is a dedicated environment variable that the CI configuration rejects.
+- **Local by default, with two controls.** There are two separate controls and they do different jobs. The *profile* (`npm run dev -- --profile <name>`) decides which processes `npm run dev` starts: the default profile starts the whole data path, and `--profile core` starts only Postgres, Redis, the API, the client, and the watchers. *Environment variables* decide which target the API uses for each integration. The two interact through one rule: for each data service, if its production variable (for example `SPATIAL_UPLOADS_LAMBDA_ARN`) is set in `.env`, the API uses production and `npm run dev` does not start the local service; otherwise `npm run dev` starts the local service and tells the API where it is. So an empty `.env` with the default profile is fully local; a `.env` with one ARN in it is local except for that one service; and `--profile core` makes the data features unavailable unless `.env` points them at production. Every production variable is rejected by the CI configuration check.
 - **Fidelity.** Where a local component can be the production artifact, it is: the same container image, the same Worker code, the same SDK calls. Substitutes are used only where production cannot run on a laptop, and each one is listed with its differences.
 - **Persistence.** Locally uploaded data survives restarts of `npm run dev` and of the machine. It is deleted by `npm run setup -- --reset`, which also restores the golden database snapshot, and it does not exist on a fresh CI checkout.
 - **Mixed data.** The golden snapshot's fixture layers live on production storage, and a developer may have rows written during an earlier production-pointed session. Those rows must keep working after the machine switches to local storage, and a single project or geography may combine production-hosted and locally hosted layers.
@@ -70,7 +69,7 @@ Postgres, Redis, the API, the client, and the map screenshotter run as they do t
 
 ### Serving
 
-`pmtiles-server`, the Worker that serves tiles, TileJSON, downloads, and data-table queries from R2, runs locally under `wrangler dev`. Its behavior depends on the request hostname, and local URLs differ by port rather than by host, so it runs as two sessions: one playing the tiles host on 8787 and one playing the uploads host on 8788. The sketch-preprocessing Worker runs the same way on 8789. Detail in [Serving](#serving-in-detail).
+`pmtiles-server`, the Worker that serves tiles, TileJSON, downloads, and data-table queries from R2, runs locally under `wrangler dev`. In production it is one Worker deployment behind two hostnames, and the only thing the hostname changes is whether a tile archive key is answered with the raw file (uploads host) or with TileJSON and tiles (tiles host). Locally there is only `localhost`, so the same Worker code runs as two `wrangler dev` sessions, sharing one persistence directory, with one told it is the uploads host. It is one Worker and one set of data; the second session exists only because a session listens on one port. The sketch-preprocessing Worker runs the same way on 8789. Detail, including the alternatives to a second session, in [Serving](#serving-in-detail).
 
 ### Compute
 
@@ -168,6 +167,28 @@ The S3 SDK will not sign a request without some access key, so the local templat
 
 The gateway is permanent local infrastructure, bounded by the operation list above, with a contract test that runs each writer's real SDK calls against it.
 
+### Why a gateway, and the alternatives
+
+The gateway exists because of one fact: Lambdas, the API, and the subdivision worker are not Workers, and the only way for a non-Worker to write to R2 is R2's S3-compatible API. Locally, Miniflare offers R2 only to Workers. Something has to translate, and there are three places to put that something.
+
+**Keep the S3 protocol and add the local gateway** (the plan as written). Production is unchanged: writers use the S3 SDKs, which already handle streaming, retries, and multipart uploads for files of any size, in both Node and Python. The gateway is local-only code, bounded to nine operations, with a contract test. Its cost is that it is local-only code, and that it does not verify signatures.
+
+**Update the consumers to stop using the S3 protocol.** This is not available. Outside a Worker there is no other R2 API. The only non-S3 option for a Node process is Miniflare's own programmatic API, which would be a local-only code path inside production writers, would not work from a container, and does not exist for Python.
+
+**A SeaSketch write service: a Worker with the R2 binding, used in production and locally.** The API and the Lambdas would send objects to this Worker over HTTP, authenticated with the JWT the API already mints for the overlay engine, and the Worker would write them through its binding. Browser uploads would go to a Worker route instead of a presigned S3 URL. Locally the same Worker runs under `wrangler dev`, so there is no gateway and no local-only code at all.
+
+| | S3 protocol plus local gateway | Write service Worker |
+| --- | --- | --- |
+| Local and production code paths | Different endpoint, same SDK calls; the gateway is local-only | Identical |
+| Production change | None beyond phase 0 | A new component in the write path of every upload and every processor output |
+| Large objects | SDK multipart handles any size | Workers cap the request body at 100 MB to 500 MB depending on plan. Multi-gigabyte archives and GeoTIFFs need a chunked upload protocol over the Worker, built and maintained by us, with clients in Node and Python |
+| Credentials | R2 keys on each Lambda and the API, scoped by Cloudflare's token permissions | No R2 keys outside the Worker; the Worker can enforce per-project key prefixes and log writes |
+| Browser uploads | Presigned PUT to R2, 5 GB per object, progress in the browser as today | A Worker route; the same body limit applies, so large files need the chunked protocol in the browser too |
+| Operational risk | A failed upload is a Lambda or SDK error, visible in existing logs | A new service whose availability gates all writes |
+| Effort | The gateway and its test | The Worker, the chunked protocol, three client libraries, migration of every writer, and the gateway's job is still done by the Worker's local instance |
+
+The deciding factor is the request-body limit. SeaSketch's outputs routinely exceed it, so a write service cannot be a simple proxy; it has to reimplement multipart transfer that the S3 SDKs already provide. The centralized-authorization benefit is real but can be had another way: a small Worker that issues short-lived presigned S3 URLs or scoped tokens to Lambdas on request, which keeps R2 keys out of Lambdas without touching the transfer path. That is orthogonal to local emulation and can be added later without changing this plan. The recommendation is the S3 protocol with the local gateway; if a write service is built later for authorization reasons, its local instance would replace the gateway naturally.
+
 ### Known differences from S3 and R2
 
 | Difference | Effect | Position |
@@ -189,7 +210,13 @@ The golden snapshot carries no objects. Its fixture layers point at production s
 
 ### `pmtiles-server`
 
-The Worker routes by hostname: requests to `uploads.seasketch.org` get the raw object with range support, and requests to `tiles.seasketch.org` get TileJSON, tiles, previews, and data-table queries. Local URLs differ by port, not by host, so the hostname comparison becomes `url.host === (env.UPLOADS_HOST ?? "uploads.seasketch.org")`, and the Worker runs twice: on 8787 as the tiles host, with the `overlay-data-tables` service binding, and on 8788 as the uploads host with `UPLOADS_HOST=localhost:8788`. Both read local R2 through the normal `TILES_BUCKET` binding and both listen on all interfaces so that containers can reach them. `JWKS_URL` points at the local API. `AUTH_ACL_ENABLED` defaults to `false`, matching the deployed configuration; turning it on locally is a flag.
+In production, `uploads.seasketch.org` and `tiles.seasketch.org` are two routes to one Worker deployment. Almost every request is handled identically on either host: data-table queries, `/properties`, FlatGeobuf and GeoTIFF downloads, ACL enforcement. The one difference is a single comparison in `index.ts`: when the hostname is the uploads host and the key is a tile-presentation key (a published PMTiles archive), the Worker returns the raw archive bytes so it can be downloaded; on the tiles host that same key is answered with TileJSON and tiles.
+
+Locally there is only `localhost`, so that comparison needs another way to tell the two roles apart. The comparison becomes `url.host === (env.UPLOADS_HOST ?? "uploads.seasketch.org")`, and the Worker runs as two `wrangler dev` sessions against the same persistence directory: on 8787 as the tiles host, with the `overlay-data-tables` service binding, and on 8788 with `UPLOADS_HOST=localhost:8788`. The two sessions are the same code and the same data. Both listen on all interfaces so that containers can reach them. `JWKS_URL` points at the local API. `AUTH_ACL_ENABLED` defaults to `false`, matching the deployed configuration; turning it on locally is a flag.
+
+Two ways to get by with one session were considered. Using two loopback hostnames such as `tiles.localhost` and `uploads.localhost` works in browsers, which resolve `*.localhost` to loopback on their own, but Node processes and containers depend on the operating system's resolver, which does not do that on macOS, so the overlay worker fetching a download URL would fail there without editing `/etc/hosts`. Running a tiny forwarding proxy on 8788 in front of a single session on 8787 works, because the Worker derives its URL from the `Host` header, but it is more code than a second session and one more thing to explain. A second session costs memory and startup time and no code. If either cost becomes a problem, the proxy is the fallback.
+
+One consequence to note: a container that fetches a published archive through `host.docker.internal:8788` presents a host that is not `localhost:8788`, so `UPLOADS_HOST` should accept a comma-separated list. Today no container downloads a published archive, so this is a note rather than a requirement.
 
 A `pmtiles-server` deployment is bound to one bucket by design, and an installation deploys one per bucket it serves.
 
@@ -315,7 +342,7 @@ To be moved into *Decisions* with the month when accepted; anything implementati
 - A process may write, delete, or inspect only buckets named in its own environment. Every other remote is read-only by URL. Nothing about storage authorization lives in the database or in request payloads. Bucket names are unique across every store a database can refer to.
 - Raw uploads move from the `DataUploads` S3 bucket to an R2 bucket, reached by presigned PUT through R2's S3 API, deployed and verified on production before anything else in this plan. No Worker in the upload path.
 - Spatial uploads, subdivision, overlay analysis, and fragment creation stay on Lambda with SQS. Cloudflare is used for storage and serving.
-- Local object storage is Miniflare's R2, shared across `wrangler dev` sessions through one persistence directory under `.data/`, with local bucket names. Writers reach it through a local-only S3 gateway Worker. There is no S3-compatible storage container and no R2 shim in production Workers.
+- Local object storage is Miniflare's R2, shared across `wrangler dev` sessions through one persistence directory under `.data/`, with local bucket names. Writers reach it through a local-only S3 gateway Worker. There is no S3-compatible storage container and no R2 shim in production Workers. A production write-service Worker was considered and set aside because of the Workers request-body limit; see [Why a gateway](#why-a-gateway-and-the-alternatives).
 - The spatial-uploads handler's default local form is the production container under the Lambda emulator, built from a prebuilt runtime image that production also uses. Host mode is an opt-in.
 - `pmtiles-server` runs as two sessions covering the tiles and uploads hosts.
 - The results queue is ElasticMQ locally. AWS credentials leave the default profile.
