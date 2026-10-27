@@ -265,7 +265,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
             exit={{ scale: 0.7, opacity: 0 }}
             className="rounded-md p-1 px-2 mx-auto text-gray-800 bg-gray-200 shadow-lg flex space-x-2 rtl:space-x-reverse items-center bottom-16 tall:mb-2 absolute z-10 pointer-events-none"
           >
-            <p className="text-sm select-none">
+            <p className="text-sm select-none flex items-center">
               <DigitizingInstructions
                 state={state}
                 geometryType={geometryType}
@@ -319,7 +319,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
                 className
               )}
             >
-              <p className="text-sm select-none">
+              <p className="text-sm select-none flex items-center min-w-0">
                 {isSketchingWorkflow &&
                 state === DigitizingState.NO_SELECTION ? (
                   <span className="flex space-x-2">
@@ -401,13 +401,11 @@ export function DigitizingInstructions({
   if (sizeWarning) {
     return (
       <span className="flex items-center">
-        <XCircleIcon className="w-6 h-6 text-red-600 mr-2" />
-        <span className="block">
-          <PolygonTooLargeNotice
-            areaSqKm={sizeWarning.areaSqKm}
-            maxSqKm={sizeWarning.maxSqKm}
-          />
-        </span>
+        <XCircleIcon className="w-5 h-5 flex-shrink-0 text-red-600 mr-2" />
+        <PolygonTooLargeNotice
+          areaSqKm={sizeWarning.areaSqKm}
+          maxSqKm={sizeWarning.maxSqKm}
+        />
       </span>
     );
   }

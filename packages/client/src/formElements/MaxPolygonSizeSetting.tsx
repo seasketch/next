@@ -122,14 +122,16 @@ export function PolygonTooLargeNotice(props: {
     lang.lang?.code
   );
   return (
-    <span className="inline-flex items-center flex-wrap">
-      <Trans ns="surveys">
-        This shape is over the size limit of {{ limit }}.
-      </Trans>
+    <span className="inline-flex items-center align-middle flex-wrap gap-2">
+      <span className="leading-5">
+        <Trans ns="surveys">
+          This shape is over the size limit of {{ limit }}.
+        </Trans>
+      </span>
       {over && (
         <Badge
           variant="error"
-          className="ml-2 tabular-nums whitespace-nowrap"
+          className="leading-none tabular-nums whitespace-nowrap"
         >
           {over}
         </Badge>

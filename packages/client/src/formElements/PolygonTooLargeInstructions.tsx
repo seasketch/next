@@ -34,9 +34,11 @@ export default function PolygonTooLargeInstructions({
         },
       ]}
     >
-      <div className="w-96 max-w-full">
-        <p className="p-5">
-          <PolygonTooLargeNotice areaSqKm={areaSqKm} maxSqKm={maxSqKm} />{" "}
+      <div className="w-96 max-w-full p-5">
+        <p className="flex items-center flex-wrap gap-2">
+          <PolygonTooLargeNotice areaSqKm={areaSqKm} maxSqKm={maxSqKm} />
+        </p>
+        <p className="mt-3">
           <Trans ns="surveys">
             Your shape stays red while it is over the limit. Drag the points
             inward until the red highlight goes away and you can continue. If
