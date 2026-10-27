@@ -47,10 +47,11 @@ test("saves a size in the chosen unit and clears it", () => {
   fireEvent.change(input, { target: { value: "12.5" } });
   expect(onChange).toHaveBeenLastCalledWith(0.125, "hectare");
 
-  fireEvent.click(screen.getByRole("button", { name: "Clear" }));
+  fireEvent.change(screen.getByLabelText("Unit"), { target: { value: "" } });
   expect(onChange).toHaveBeenLastCalledWith(null, null);
   expect(screen.getByLabelText("Unit")).toHaveValue("");
   expect(screen.getByLabelText("Max size (optional)")).toBeDisabled();
+  expect(screen.queryByRole("button", { name: "Clear" })).not.toBeInTheDocument();
 });
 
 test("shows a saved square-kilometer limit and converts when the unit changes", () => {

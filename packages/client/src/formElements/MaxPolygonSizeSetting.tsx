@@ -1,4 +1,4 @@
-import { XIcon } from "@heroicons/react/outline";
+import { ChevronDownIcon } from "@heroicons/react/outline";
 import { useContext, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import Badge from "../components/Badge";
@@ -102,6 +102,13 @@ export default function MaxPolygonSizeSetting(props: {
   }
 
   const enabled = unit !== "";
+  const noneLabel = t("None");
+  const unitLabels = POLYGON_AREA_UNITS.map((option) =>
+    polygonAreaUnitLabel(option, i18n.language)
+  );
+  const widestLabel = [noneLabel, ...unitLabels].reduce((widest, label) =>
+    label.length > widest.length ? label : widest
+  );
 
   return (
     <div>
@@ -112,73 +119,72 @@ export default function MaxPolygonSizeSetting(props: {
         {t("Max size (optional)")}
       </label>
       <div className="flex rounded-md shadow-sm">
-        <div className="relative min-w-0 flex-1">
-          <input
-            type="number"
-            min={0}
-            step="any"
-            id="maxPolygonSize"
-            name="maxPolygonSize"
-            disabled={!enabled}
-            className={`min-w-0 block w-full appearance-none cursor-text border-gray-300 rounded-l-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5 pr-8 ${
-              enabled ? "bg-white text-black" : "bg-gray-100 text-gray-500"
-            }`}
-            value={text}
-            onFocus={() => setFocused(true)}
-            onBlur={() => {
-              setFocused(false);
-              commit(text, unit);
-            }}
-            onChange={(e) => {
-              const raw = e.target.value;
-              setText(raw);
-              if (!unit) {
-                return;
-              }
-              if (raw.trim() === "") {
-                props.onChange(null, null);
-                return;
-              }
-              // Keep intermediate values like "0." local until they are a
-              // complete positive number. Blur commits or clears them.
-              if (
-                raw.endsWith(".") ||
-                /^0\.?$/.test(raw) ||
-                /\.0+$/.test(raw)
-              ) {
-                return;
-              }
-              const parsed = Number(raw);
-              if (Number.isFinite(parsed) && parsed > 0) {
-                props.onChange(areaToSqKm(parsed, unit), unit);
-              }
-            }}
-          />
-          {text.trim() !== "" && (
-            <button
-              type="button"
-              aria-label={t("Clear")}
-              className="absolute inset-y-0 right-0 pr-2 flex items-center text-gray-400"
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={clear}
-            >
-              <XIcon className="w-4 h-4" />
-            </button>
-          )}
+        <input
+          type="number"
+          min={0}
+          step="any"
+          id="maxPolygonSize"
+          name="maxPolygonSize"
+          disabled={!enabled}
+          className={`min-w-0 flex-1 block w-full appearance-none cursor-text border-gray-300 rounded-l-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5 ${
+            enabled ? "bg-white text-black" : "bg-gray-100 text-gray-500"
+          }`}
+          value={text}
+          onFocus={() => setFocused(true)}
+          onBlur={() => {
+            setFocused(false);
+            commit(text, unit);
+          }}
+          onChange={(e) => {
+            const raw = e.target.value;
+            setText(raw);
+            if (!unit) {
+              return;
+            }
+            if (raw.trim() === "") {
+              props.onChange(null, null);
+              return;
+            }
+            // Keep intermediate values like "0." local until they are a
+            // complete positive number. Blur commits or clears them.
+            if (raw.endsWith(".") || /^0\.?$/.test(raw) || /\.0+$/.test(raw)) {
+              return;
+            }
+            const parsed = Number(raw);
+            if (Number.isFinite(parsed) && parsed > 0) {
+              props.onChange(areaToSqKm(parsed, unit), unit);
+            }
+          }}
+        />
+        <div className="relative flex-shrink-0">
+          {/* Width follows the longest option, with only enough padding for a small chevron. */}
+          <span
+            className="invisible block whitespace-nowrap pl-2 pr-5 sm:text-sm sm:leading-5"
+            aria-hidden="true"
+          >
+            {widestLabel}
+          </span>
+          <select
+            aria-label={t("Unit")}
+            className="absolute inset-0 w-full min-w-0 appearance-none border border-l-0 border-gray-300 bg-gray-50 text-gray-700 rounded-r-md cursor-pointer sm:text-sm sm:leading-5 pl-2 pr-5"
+            style={{ backgroundImage: "none" }}
+            value={unit}
+            onChange={(event) => changeUnit(event.target.value)}
+          >
+            <option value="">{noneLabel}</option>
+            {POLYGON_AREA_UNITS.map((option, index) => (
+              <option key={option} value={option}>
+                {unitLabels[index]}
+              </option>
+            ))}
+          </select>
+          <span
+            className="pointer-events-none absolute inset-y-0 right-0 pr-1 flex items-center"
+            aria-hidden="true"
+          >
+            <ChevronDownIcon className="w-3 h-3 text-gray-500" />
+          </span>
         </div>
-        <select
-          aria-label={t("Unit")}
-          className="border border-l-0 border-gray-300 bg-gray-50 text-gray-700 rounded-r-md cursor-pointer sm:text-sm"
-          value={unit}
-          onChange={(event) => changeUnit(event.target.value)}
-        >
-          <option value="">{t("None")}</option>
-          {POLYGON_AREA_UNITS.map((option) => (
-            <option key={option} value={option}>
-              {polygonAreaUnitLabel(option, i18n.language)}
-            </option>
-          ))}
-        </select>
       </div>
     </div>
   );
@@ -239,3 +245,4 @@ export function PolygonTooLargeNotice(props: {
     </span>
   );
 }
+
