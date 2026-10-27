@@ -37,7 +37,7 @@ The first half of this document is the architecture and the plan. The second hal
 Browser ─► client :3000 ─► API :3857 (GraphQL, job worker, SQS consumer)
 
 API calls out to:
-  presigned PUT, ACL docs, deletes ─► S3 gateway :8333   (Worker)
+  presigned PUT, ACL docs, deletes ─► local R2 S3 API :8333 (wrangler)
   invoke ──────────────────────────► spatial-uploads :9001 (container)
   invoke ──────────────────────────► subdivision :9000   (container)
   POST ────────────────────────────► data-tables :3006   (host process)
@@ -53,7 +53,7 @@ Browser map and downloads read from:
 
 Local R2 under Miniflare, in .data/wrangler/
   buckets:    ssn-tiles-local, ssn-uploads-local
-  written by: S3 gateway (for the API and the processors)
+  written by: its S3 API on :8333 (the API and the processors)
   read by:    pmtiles-server x2, sketch-preprocessing-worker (R2 bindings)
 ```
 
@@ -65,7 +65,7 @@ Postgres, Redis, the API, the client, and the map screenshotter run as they do t
 
 **The storage model** is simple and is already mostly in place. Every database row that refers to a stored object carries a complete URL and a bucket-qualified remote such as `r2://ssn-tiles/projects/x/public/y.pmtiles`. Code reads the stored URL rather than rebuilding it from a key and a hostname. A process may write to, delete from, or inspect only the buckets named in its own environment, which is set by CDK for a Lambda, by `wrangler` bindings for a Worker, and by `.env` or Compose locally. Any other remote is treated as read-only. There is no registry table and nothing about storage authorization is stored in the database or passed in requests. This is what lets a production row and a local row sit side by side, and it is also what a second production installation would need. Detail in [Storage model](#storage-model-in-detail).
 
-**Locally**, the object store is Miniflare's R2, which is what `wrangler dev` provides to Workers. Several `wrangler dev` sessions share one persistence directory in the repository, so they all see the same two buckets, and the production Workers read them through their normal bindings unmodified. Because Miniflare does not expose an S3 endpoint, writers reach it through a small local-only Worker that accepts the S3 operations SeaSketch uses and performs them on the R2 binding. Detail in [Local object storage](#local-object-storage-in-detail).
+**Locally**, the object store is Miniflare's R2, which is what `wrangler dev` provides to Workers. Several `wrangler dev` sessions share one persistence directory in the repository, so they all see the same two buckets, and the production Workers read them through their normal bindings unmodified. Since July 2026 `wrangler dev` can also serve a local R2 bucket over an S3-compatible API with real SigV4 verification, so the API, the Lambdas' containers, and the subdivision worker write to it with the same SDK calls they use against R2 in production, and no SeaSketch code stands in between. The one adjustment is a client setting that turns off the AWS SDK's trailing checksums, which R2 accepts either way. Detail in [Local object storage](#local-object-storage-in-detail).
 
 ### Serving
 
@@ -106,7 +106,7 @@ Two changes, each its own pull request and deploy, each verified on production b
 
 **Goal.** On a clean machine with only a Mapbox token: `setup`, `dev`, sign in, upload a shapefile, GeoJSON, GeoTIFF, or FlatGeobuf, and see it on the map next to the project's production-hosted fixture layers, with tiles and downloads served from local storage. Delete it and the objects are cleaned up. Restart and it is still there. `setup --reset` and it is gone.
 
-**Work.** The local S3 gateway Worker and a contract test that runs each writer's real SDK calls against it. The `.data/` persistence directory and its handling in `setup --reset`. New entries in `compose.yaml` and `scripts/dev.config.mjs`. The Dockerfile split and prebuilt runtime image for the upload processor, and its Compose service with file watching. The two-session `pmtiles-server` start and its hostname variable. The storage client factory honoring a local endpoint. The subdivision processor pointed at local storage, which needs the queue, so ElasticMQ lands at the end of this phase with only the subdivision producer and the API consumer on it. Environment templates, the secrets manifest, and `README.md` instructions.
+**Work.** A config-only `wrangler` project that serves the two local buckets over the S3 API, and a contract test that runs each writer's real SDK calls against it. The `.data/` persistence directory and its handling in `setup --reset`. New entries in `compose.yaml` and `scripts/dev.config.mjs`. The Dockerfile split and prebuilt runtime image for the upload processor, and its Compose service with file watching. The two-session `pmtiles-server` start and its hostname variable. The storage client factory honoring a local endpoint. The subdivision processor pointed at local storage, which needs the queue, so ElasticMQ lands at the end of this phase with only the subdivision producer and the API consumer on it. Environment templates, the secrets manifest, and `README.md` instructions.
 
 **Exit.** A fresh clone reaches a rendered local upload with an empty `.env`, in a project that also shows the fixture production layers. The spatial upload journey runs in CI without cloud credentials. `npm run status` shows every data service. A developer who sets `SPATIAL_UPLOADS_LAMBDA_ARN` and production storage credentials gets the deployed handler and nothing else changes.
 
@@ -141,7 +141,7 @@ Two changes, each its own pull request and deploy, each verified on production b
 
 **A process acts only on buckets it owns.** A process's environment names the buckets it may write (`R2_TILES_BUCKET`, `SPATIAL_UPLOADS_BUCKET`), the endpoint (`R2_ENDPOINT`), and the credentials (`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`). A remote whose bucket is in that set is written, deleted, or inspected with the process's own client. A remote whose bucket is not in that set is foreign: readable by its URL, otherwise skipped with a log line. Today, a cleanup task running on a laptop with a stale `.env` would delete the production object; under this rule it cannot, because `ssn-tiles` is not a bucket the laptop owns. For this to work, bucket names have to be unique across every store a database can refer to, which is why the local buckets are `ssn-tiles-local` and `ssn-uploads-local`.
 
-**One storage client factory per runtime.** The API constructs S3 clients in eleven places, some with `{ region }` and some with `{ endpoint: R2_ENDPOINT }`. They collapse onto one factory that sets endpoint, path-style addressing when an endpoint is present, and credentials from the environment. The upload processor's `remotes.ts` and the subdivision worker's boto3 client make the same change. After phase 0a there is one kind of client on the data path.
+**One storage client factory per runtime.** The API constructs S3 clients in eleven places, some with `{ region }` and some with `{ endpoint: R2_ENDPOINT }`. They collapse onto one factory that sets endpoint, path-style addressing when an endpoint is present, credentials from the environment, and `requestChecksumCalculation: "WHEN_REQUIRED"` (see [What was verified](#what-was-verified) for why it matters locally). The upload processor's `remotes.ts` and the subdivision worker's boto3 client make the same change. After phase 0a there is one kind of client on the data path.
 
 ### Why not a registry table
 
@@ -155,65 +155,71 @@ Its own CDK deploy, its own `wrangler.toml` bindings, its own `.env`: its own bu
 
 ### Miniflare's R2 as the system of record
 
-Miniflare is the simulator `wrangler dev` runs Workers in. It provides local R2 buckets backed by files under a persistence directory. Cloudflare documents that several `wrangler dev` sessions can share one directory by passing the same `--persist-to` path, and that is how every Worker in the data profile is started: the two `pmtiles-server` sessions, the sketch-preprocessing Worker, and the S3 gateway all use `<repo>/.data/wrangler/`. They all see the same two buckets. The Workers that read R2 in production read local R2 through the same bindings, with no code change.
+Miniflare is the simulator `wrangler dev` runs Workers in. It provides local R2 buckets backed by files under a persistence directory. Cloudflare documents that several `wrangler dev` sessions can share one directory by passing the same `--persist-to` path, and that is how every Worker in the data profile is started: the two `pmtiles-server` sessions, the sketch-preprocessing Worker, and the storage session described next all use `<repo>/.data/wrangler/`. They all see the same two buckets. The Workers that read R2 in production read local R2 through the same bindings, with no code change.
 
 Local bucket names are `ssn-tiles-local` and `ssn-uploads-local`, set through each Worker's `preview_bucket_name` or an `[env.local]` block, whichever `wrangler dev` honors in local mode. The key layout under the bucket is production's, so `pmtiles-server`'s key classification, the cleanup tasks, and the ACL document paths run unmodified.
 
-### The S3 gateway Worker
+### The local S3 API
 
-Miniflare exposes R2 only to Workers; it has no S3 endpoint. Every SeaSketch writer uses the S3 protocol, and in production that is also how it reaches R2. The local counterpart is a small Worker in a new package, `packages/local-s3-gateway`, run under `wrangler dev` on port 8333 with one binding per local bucket. It accepts path-style S3 requests and performs them on the binding: `PutObject`, `GetObject` with range requests, `HeadObject`, `DeleteObject`, `DeleteObjects`, the four multipart-upload operations, and CORS preflight. Everything else returns `501 Not Implemented`. It checks that a presigned URL has not expired and that the request's `Content-Type` matches what was signed, which is the mistake presigning actually makes; it does not verify signatures. Writers are configured with an endpoint and bucket names only, so no writer code knows the gateway exists.
+Every SeaSketch writer outside a Worker uses the S3 protocol, and in production that is also how it reaches R2. Until mid-2026 Miniflare exposed R2 only to Workers, which would have meant writing and owning an S3-to-binding translation layer. That is no longer necessary. `wrangler` 4.115.0 (Miniflare 4.20260722.1, July 2026) added a local S3-compatible API for R2 buckets: an `r2_buckets` entry configured with `local_dev.experimental_s3_credentials` is served at `/cdn-cgi/local/r2/s3/<bucket_name>/` on the session's port, with AWS Signature Version 4 verified on both `Authorization` headers and presigned URLs. It implements `GetObject`, `HeadObject`, `PutObject`, `CopyObject`, `DeleteObject`, `DeleteObjects`, `ListObjects`, `ListObjectsV2`, `HeadBucket`, `ListBuckets`, and the five multipart operations, and it mirrors R2's own status codes, error documents, and unsupported-header screening. CORS preflight is answered permissively. The version of `wrangler` already installed in this repository (4.151.3) has it.
 
-The S3 SDK will not sign a request without some access key, so the local templates set `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` to fixed placeholder values. They are not a credential. The gateway is reachable only from the developer's machine and its containers.
+The plan uses it through a small config-only project, `packages/local-r2`: a `wrangler.jsonc` naming the two local buckets with their credentials, a Worker whose `fetch` returns 404, and a `dev` script that runs `wrangler dev --port 8333 --persist-to ../../.data/wrangler`. Writers get `R2_ENDPOINT=http://localhost:8333/cdn-cgi/local/r2/s3` and path-style addressing, which the client factory already uses for R2. The credentials in the config are fixed local strings; the same strings go in the local `.env` as `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY`. They authorize nothing outside the developer's machine, and because signatures are really verified, a broken presign fails locally the way it fails in production.
 
-The gateway is permanent local infrastructure, bounded by the operation list above, with a contract test that runs each writer's real SDK calls against it.
+This is not a shim SeaSketch owns. It is upstream Cloudflare code, tested against R2's real responses, under the `experimental` label. The label means the configuration key could be renamed in a future `wrangler` release, as it already was once (`experimental_local_s3_credentials` became `local_dev.experimental_s3_credentials`). That is a one-line change in one file when it happens, and the `wrangler` version is pinned in `package.json`.
 
-### Why a gateway, and the alternatives
+### What was verified
 
-The gateway exists because of one fact: Lambdas, the API, and the subdivision worker are not Workers, and the only way for a non-Worker to write to R2 is R2's S3-compatible API. Locally, Miniflare offers R2 only to Workers. Something has to translate, and there are three places to put that something.
+The claims above were checked by running the writers' real calls against it, on the installed `wrangler`, with a 20 MB and a 600 MB file:
 
-**Keep the S3 protocol and add the local gateway** (the plan as written). Production is unchanged: writers use the S3 SDKs, which already handle streaming, retries, and multipart uploads for files of any size, in both Node and Python. The gateway is local-only code, bounded to nine operations, with a contract test. Its cost is that it is local-only code, and that it does not verify signatures.
+- `@aws-sdk/client-s3` 3.1155 `PutObject` with a file stream, `HeadObject`, `GetObject`, `GetObject` with a `Range`, `DeleteObject`, and `@aws-sdk/lib-storage` `Upload` of 600 MB in 50 MB parts, the calls in `remotes.ts`. All round-tripped byte-for-byte; the multipart ETag has the usual `-12` part suffix.
+- A presigned `PutObject` URL from `@aws-sdk/s3-request-presigner` and from `aws-sdk` v2's `getSignedUrlPromise`, used by a plain `fetch` the way the browser uses it, and the CORS preflight the browser sends first.
+- `aws-sdk` v2 `putObject` with a buffer and with a stream plus `ContentLength`, `headObject`, `deleteObject`, and `deleteObjects`, the calls the API and its cleanup tasks make.
+- `boto3` 1.34.140 `upload_file` with a progress callback, the call in the subdivision worker. The 600 MB file went as 75 parts with 2,400 progress callbacks.
+- A second `wrangler dev` session with a plain binding on the same persistence directory read both objects back through the binding, which is what `pmtiles-server` will do.
+- The `workerd` process stayed under 95 MB of resident memory through the 600 MB uploads, so bodies stream to disk rather than through memory, and nothing capped the request size.
+
+One call failed at the SDK's default settings: `PutObject` with a stream body from `@aws-sdk/client-s3`. Since version 3.729 the SDK sends a CRC32 checksum as a trailer on streamed uploads, which turns the body into `Content-Encoding: aws-chunked` with no `Content-Length`. Miniflare passes the body to the binding without unframing it, and the binding refuses a stream of unknown length. Multipart parts are buffers, so `lib-storage` is unaffected, and `aws-sdk` v2 and the pinned `boto3` never use trailers. The fix is `requestChecksumCalculation: "WHEN_REQUIRED"` on the SDK v3 client, after which the same call sends `Content-Length` and an unsigned payload and succeeds. Cloudflare recommended that setting for R2 when the SDK changed its defaults in early 2025, before R2 accepted the new encoding; R2 now accepts both, so it is safe in production and belongs in the shared client factory for every environment rather than as a local branch. The trailer was an SDK default, not a SeaSketch choice, and R2 computes its own ETag regardless. An upstream issue asking Miniflare to unframe `aws-chunked` bodies is worth filing, and if it lands the setting can stay or go.
+
+### Why the S3 protocol, and the alternatives
+
+The reason to keep the S3 protocol at all is one fact: Lambdas, the API, and the subdivision worker are not Workers, and the only way for a non-Worker to write to R2 is R2's S3-compatible API. Given that, there were three ways to serve the local side.
+
+**Keep the S3 protocol and use Miniflare's S3 API** (the plan as written). Production is unchanged: writers use the S3 SDKs, which already handle streaming, retries, and multipart uploads for files of any size, in Node and Python. Locally the endpoint is upstream code, with a contract test in this repository that runs each writer's real calls against it so that a `wrangler` upgrade cannot break the data path silently. Before July 2026 this option meant writing the translation layer ourselves, which was the plan's earlier form.
 
 **Update the consumers to stop using the S3 protocol.** This is not available. Outside a Worker there is no other R2 API. The only non-S3 option for a Node process is Miniflare's own programmatic API, which would be a local-only code path inside production writers, would not work from a container, and does not exist for Python.
 
-**A SeaSketch write service: a Worker with the R2 binding, used in production and locally.** The API and the Lambdas would send objects to this Worker over HTTP, authenticated with the JWT the API already mints for the overlay engine, and the Worker would write them through its binding. Browser uploads would go to a Worker route instead of a presigned S3 URL. Locally the same Worker runs under `wrangler dev`, so there is no gateway and no local-only code at all.
+**A SeaSketch write service: a Worker with the R2 binding, used in production and locally.** The API and the Lambdas would send objects to this Worker over HTTP, authenticated with the JWT the API already mints for the overlay engine, and the Worker would write them through its binding. Browser uploads would go to a Worker route instead of a presigned S3 URL. Locally the same Worker runs under `wrangler dev`.
 
-| | S3 protocol plus local gateway | Write service Worker |
+| | S3 protocol plus Miniflare's S3 API | Write service Worker |
 | --- | --- | --- |
-| Local and production code paths | Different endpoint, same SDK calls; the gateway is local-only | Identical |
-| Production change | None beyond phase 0 | A new component in the write path of every upload and every processor output |
+| Local and production code paths | Different endpoint, same SDK calls; nothing local-only in SeaSketch | Identical |
+| Production change | None beyond phase 0 and one client setting | A new component in the write path of every upload and every processor output |
 | Large objects | SDK multipart handles any size | Workers cap the request body at 100 MB to 500 MB depending on plan. Multi-gigabyte archives and GeoTIFFs need a chunked upload protocol over the Worker, built and maintained by us, with clients in Node and Python |
 | Credentials | R2 keys on each Lambda and the API, scoped by Cloudflare's token permissions | No R2 keys outside the Worker; the Worker can enforce per-project key prefixes and log writes |
 | Browser uploads | Presigned PUT to R2, 5 GB per object, progress in the browser as today | A Worker route; the same body limit applies, so large files need the chunked protocol in the browser too |
 | Operational risk | A failed upload is a Lambda or SDK error, visible in existing logs | A new service whose availability gates all writes |
-| Effort | The gateway and its test | The Worker, the chunked protocol, three client libraries, migration of every writer, and the gateway's job is still done by the Worker's local instance |
+| Effort | A config file and a contract test | The Worker, the chunked protocol, three client libraries, migration of every writer |
 
-The deciding factor is the request-body limit. SeaSketch's outputs routinely exceed it, so a write service cannot be a simple proxy; it has to reimplement multipart transfer that the S3 SDKs already provide. The centralized-authorization benefit is real but can be had another way: a small Worker that issues short-lived presigned S3 URLs or scoped tokens to Lambdas on request, which keeps R2 keys out of Lambdas without touching the transfer path. That is orthogonal to local emulation and can be added later without changing this plan. The recommendation is the S3 protocol with the local gateway; if a write service is built later for authorization reasons, its local instance would replace the gateway naturally.
+The deciding factor is the request-body limit. SeaSketch's outputs routinely exceed it, so a write service cannot be a simple proxy; it has to reimplement multipart transfer that the S3 SDKs already provide. The centralized-authorization benefit is real but can be had another way: a small Worker that issues short-lived presigned S3 URLs or scoped tokens to Lambdas on request, which keeps R2 keys out of Lambdas without touching the transfer path. That is orthogonal to local emulation and can be added later without changing this plan.
 
-### Large objects through the gateway
+### Large objects locally
 
-The gateway is itself a Worker, so the obvious question is why the body limit that rules out a write service does not also rule out the gateway. The answer is where the limit lives. The 100 MB to 500 MB cap is enforced by Cloudflare's edge, in front of a deployed Worker, before a request reaches the runtime. `wrangler dev` runs the same runtime on the laptop with nothing in front of it; the SDK connects to it directly. There is no edge, so there is no cap. The limits that do apply locally are R2's own per-call limits, which Miniflare enforces the same way production does: about 5 GB for a single `PutObject`, a 5 MiB minimum part size, and 10,000 parts per multipart upload. Those are the limits the writers already live within in production, so nothing is hidden locally that would surface on deploy.
+The local S3 API is served by a Worker runtime, so it is fair to ask why the body limit that rules out a write service does not also apply here. The answer is where the limit lives. The 100 MB to 500 MB cap is enforced by Cloudflare's edge, in front of a deployed Worker, before a request reaches the runtime. `wrangler dev` runs the same runtime on the laptop with nothing in front of it; the SDK connects to it directly. There is no edge, so there is no cap, and the 600 MB uploads above confirm it. The limits that do apply locally are R2's own per-call limits, which Miniflare enforces the same way production does: about 5 GB for a single `PutObject`, a 5 MiB minimum part size, and 10,000 parts per multipart upload. Those are the limits the writers already live within in production, so nothing is hidden locally that would surface on deploy.
 
-Keeping that true is a matter of how the gateway is written, and three rules cover it.
+Miniflare streams object bodies to disk as they arrive and computes the MD5 for the ETag in passing, which is why its memory stayed flat in the test. The one case where it buffers is a request whose `x-amz-content-sha256` header is a literal hash, which it reads fully to verify. The SDKs only send a literal hash for in-memory bodies, so the buffering is bounded by what the writer already held in memory: a style document, a multipart part. Streamed bodies arrive as `UNSIGNED-PAYLOAD` and are not buffered.
 
-**Stream every object body.** `PutObject` passes `request.body` straight into the binding's `put()`, and `UploadPart` passes it into `uploadPart()`. The gateway never calls `arrayBuffer()` or `text()` on an object body; the only bodies it reads whole are the small XML documents in `CompleteMultipartUpload` and `DeleteObjects`. `put()` with a stream needs a known length, and every S3 upload carries one, either as `Content-Length` or, for the framing described next, as `x-amz-decoded-content-length`. Miniflare's R2 writes each blob to disk as it arrives and computes the MD5 for the ETag in passing, so the gateway's memory stays flat whatever the object size.
-
-**Unframe `aws-chunked` uploads.** The S3 SDK version pinned in this repository, and boto3 from 1.36 on, default to sending a CRC32 checksum as a trailer on `PutObject` and `UploadPart`, which means the body arrives as `Content-Encoding: aws-chunked`: hex chunk-size lines between the data, and the checksum after it. Production R2 accepts that framing, which is why the handlers work against it today without setting `requestChecksumCalculation` to `WHEN_REQUIRED`. The gateway has to do the same: strip the chunk framing and the trailer in a `TransformStream`, hand the decoded bytes to `put()`, and use `x-amz-decoded-content-length` as the object length. It is a small amount of code and the single most likely place for the gateway to be subtly wrong, so the contract test uploads through each SDK at its real default settings, not with checksums turned off. The alternative, turning checksums off in the shared client factory, would be a production change made for a local convenience, and it is not taken. Presigned PUTs from the browser are plain bodies and need no unframing.
-
-**Read the same way.** A raw upload crosses the gateway twice: once from the browser to disk, and once when the spatial-uploads container fetches it with `GetObject` and streams it to its own disk. `GetObject` returns the R2 body stream directly, with range requests honored, so the second crossing is as flat as the first. The cost of the two crossings is throughput, not correctness; on a laptop it is bounded by local disk, and the phase 1 spike measures it.
-
-If the spike shows the runtime buffering bodies or imposing a limit after all, the gateway does not need to be a Worker. Miniflare's programmatic API gives a Node process the same R2 binding over the same persistence directory, and a Node HTTP server has no edge in front of it either. The gateway's code would move hosts; its contract and the writers would not change.
+A raw upload crosses the local API twice: once from the browser to disk, and once when the spatial-uploads container fetches it with `GetObject` and streams it to its own disk. `GetObject` returns the R2 body stream directly, with range requests honored, so the second crossing is as flat as the first. The cost of the two crossings is throughput, not correctness. The measured rate was about 80 MB/s for the SDK v3 multipart upload and 43 MB/s for `boto3`, on a shared virtual machine; a laptop with a local SSD should do better, and the phase 1 spike records the number.
 
 ### Known differences from S3 and R2
 
 | Difference | Effect | Position |
 | --- | --- | --- |
-| No signature verification | A broken presign succeeds locally and fails in production. | Accepted for the default profile. The expiry and content-type checks cover the common mistake. Verifying signatures against the placeholder keys is an open question. |
 | No lifecycle rules | The 7-day expiry on staged uploads is not emulated. | A cost control, not behavior under test. |
-| Synthesized ETags and `x-amz-*` headers | The gateway builds them from R2 object metadata. | No caller inspects them beyond the SDK's multipart bookkeeping. Covered by the contract test. |
-| Throughput | A multi-gigabyte upload streams through the Worker runtime twice, once on write and once when the processor reads it. No size cap applies locally; see [Large objects through the gateway](#large-objects-through-the-gateway). | Unmeasured. A spike item. |
-| `aws-chunked` request bodies | The Node and Python SDKs send trailing checksums by default. The gateway unframes them. | Covered by the contract test at each SDK's default settings. |
+| Experimental configuration key | `local_dev.experimental_s3_credentials` may be renamed by a future `wrangler` release. | One line in `packages/local-r2/wrangler.jsonc`; `wrangler` is pinned. The contract test catches it. |
+| Throughput | A multi-gigabyte upload streams through the Worker runtime twice, once on write and once when the processor reads it. No size cap applies locally; see [Large objects locally](#large-objects-locally). | About 80 MB/s measured on a shared VM for a 600 MB multipart upload. The spike records a laptop number. |
+| `aws-chunked` request bodies | Miniflare does not unframe the trailing-checksum encoding the AWS SDK v3 sends by default on streamed `PutObject`. | The shared client factory sets `requestChecksumCalculation: "WHEN_REQUIRED"`, which R2 accepts. Covered by the contract test. |
 | Several Worker processes on one persistence directory | Cloudflare recommends it. Lock contention under concurrent writes is possible. | A spike item. The fallback is a single multi-config `wrangler dev` session, which guarantees one Miniflare instance but exposes only one Worker over HTTP. |
-| No `ListObjectsV2` | Not implemented. | No current writer lists objects. |
+| Presigned URL path | Presigned URLs point at `localhost:8333/cdn-cgi/local/r2/s3/<bucket>/<key>` rather than at a bucket host. | Nothing parses presigned URLs; the browser only follows them. |
 
 ### Persistence and reset
 
@@ -265,7 +271,7 @@ The host dev server (`tsx watch server.ts`) moves from port 3006, which collides
 
 ### Data tables
 
-Already a host process on 3006 configured by its own `.env`. Locally its endpoint is the gateway and its bucket is `ssn-tiles-local`. The parquet it writes is served by the tiles-host `pmtiles-server` through the `overlay-data-tables` binding, which is the production path. `TAXONOMY_PROXY_URL` is a third-party dependency and stays external.
+Already a host process on 3006 configured by its own `.env`. Locally its endpoint is the local S3 API and its bucket is `ssn-tiles-local`. The parquet it writes is served by the tiles-host `pmtiles-server` through the `overlay-data-tables` binding, which is the production path. `TAXONOMY_PROXY_URL` is a third-party dependency and stays external.
 
 ### Fragment creation
 
@@ -293,8 +299,8 @@ Messages are lost if the container restarts. That is acceptable: the queue carri
 
 | Integration | Local default | Production override (never in CI) | Manifest class |
 | --- | --- | --- | --- |
-| Storage | `R2_ENDPOINT=http://localhost:8333`, `R2_TILES_BUCKET=ssn-tiles-local`, `SPATIAL_UPLOADS_BUCKET=ssn-uploads-local`, `UPLOADS_BASE_URL=http://localhost:8788`, `TILES_BASE_URL=http://localhost:8787`, placeholder `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` | The production endpoint, bucket names, origins, and real keys | public-config / production-secret |
-| Workers under `wrangler dev` | Gateway on 8333; `pmtiles-server` on 8787 and 8788 with `UPLOADS_HOST`; sketch preprocessing on 8789; all with `--persist-to .data/wrangler` | Not applicable; production Workers are deployments | public-config |
+| Storage | `R2_ENDPOINT=http://localhost:8333/cdn-cgi/local/r2/s3`, `R2_TILES_BUCKET=ssn-tiles-local`, `SPATIAL_UPLOADS_BUCKET=ssn-uploads-local`, `UPLOADS_BASE_URL=http://localhost:8788`, `TILES_BASE_URL=http://localhost:8787`, the fixed local `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` from `packages/local-r2/wrangler.jsonc` | The production endpoint, bucket names, origins, and real keys | public-config / production-secret |
+| Workers under `wrangler dev` | `local-r2` on 8333; `pmtiles-server` on 8787 and 8788 with `UPLOADS_HOST`; sketch preprocessing on 8789; all with `--persist-to .data/wrangler` | Not applicable; production Workers are deployments | public-config |
 | Spatial uploads | `SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER=http://localhost:9001/2015-03-31/functions/function/invocations` | `SPATIAL_UPLOADS_LAMBDA_ARN` | public-config / production-secret |
 | Subdivision | `SUBDIVISION_WORKER_DEV_HANDLER=http://localhost:9000/2015-03-31/functions/function/invocations` | `SUBDIVISION_WORKER_LAMBDA_ARN` | public-config / production-secret |
 | Data tables | `DATA_TABLES_LAMBDA_DEV_HANDLER=http://localhost:3006` (exists today) | `DATA_TABLES_HANDLER_LAMBDA_ARN` | public-config / production-secret |
@@ -310,7 +316,7 @@ Mixing is allowed and well-defined. Setting `SPATIAL_UPLOADS_LAMBDA_ARN` sends u
 ## Startup in detail
 
 - `compose.yaml` gains `elasticmq` and `spatial-uploads` in a `data` profile (the existing `workers` profile folds into it), each with a healthcheck and `extra_hosts`. There is no storage container.
-- `scripts/dev.config.mjs` gains `s3-gateway`, `pmtiles-tiles`, `pmtiles-uploads`, `sketch-preprocessing`, `fragment-worker`, `spatial-uploads-tsc` (the host `tsc -b --watch` that feeds the container), and the moved `overlay-worker`, each with a readiness probe and dependencies: the API waits for the gateway and the queue; the Workers wait for the API so they can fetch its JWKS. Host-mode `spatial-uploads` stays as an opt-in entry.
+- `scripts/dev.config.mjs` gains `local-r2`, `pmtiles-tiles`, `pmtiles-uploads`, `sketch-preprocessing`, `fragment-worker`, `spatial-uploads-tsc` (the host `tsc -b --watch` that feeds the container), and the moved `overlay-worker`, each with a readiness probe and dependencies: the API waits for `local-r2` and the queue; the Workers wait for the API so they can fetch its JWKS. Host-mode `spatial-uploads` stays as an opt-in entry.
 - `npm run dev` runs the core and data profiles. `--profile core` is the opt-out. `--ci` starts the data services once, without watchers. The e2e profile starts the data services on offset ports with `--persist-to .data/wrangler-e2e` and its own queue, so a Playwright run can execute an upload journey beside a developer's own stack.
 - `npm run status` lists the new ports and `npm run logs -- <service>` works for every entry.
 - The `Dev: stack` VS Code task already runs `npm run dev` and inherits the new default. A `Dev: core only` task is added for the opt-out.
@@ -321,7 +327,7 @@ Mixing is allowed and well-defined. Setting `SPATIAL_UPLOADS_LAMBDA_ARN` sends u
 | Difference from production in the default local profile | Why it is acceptable |
 | --- | --- |
 | Miniflare's R2 instead of R2 | The Workers that read R2 run the same code against the same binding API. |
-| Writers reach R2 through the local S3 gateway instead of R2's own S3 endpoint | Same SDK calls, same protocol subset, same client factory. Only the endpoint differs. Signatures are not verified. |
+| Writers reach Miniflare's local S3 API instead of R2's own S3 endpoint | Same SDK calls, same client factory, signatures verified. Only the endpoint differs. The endpoint is Cloudflare's code, written to mirror R2's responses. |
 | HTTP and `localhost` ports instead of hostnames | Transport only. The hostname-dependent behavior in `pmtiles-server` is exercised through `UPLOADS_HOST`. |
 | Lambda emulator instead of Lambda | Same image, same event, same handler entry point. The emulator does not enforce the 15-minute timeout or the memory limit; Compose's `mem_limit` can approximate the latter. The API awaits the local call rather than firing an asynchronous invoke, which is already how the dev-handler path behaves. |
 | ElasticMQ instead of SQS | Same SDK calls. Messages are lost on restart; job state of record is Postgres. |
@@ -357,7 +363,8 @@ To be moved into *Decisions* with the month when accepted; anything implementati
 - A process may write, delete, or inspect only buckets named in its own environment. Every other remote is read-only by URL. Nothing about storage authorization lives in the database or in request payloads. Bucket names are unique across every store a database can refer to.
 - Raw uploads move from the `DataUploads` S3 bucket to an R2 bucket, reached by presigned PUT through R2's S3 API, deployed and verified on production before anything else in this plan. No Worker in the upload path.
 - Spatial uploads, subdivision, overlay analysis, and fragment creation stay on Lambda with SQS. Cloudflare is used for storage and serving.
-- Local object storage is Miniflare's R2, shared across `wrangler dev` sessions through one persistence directory under `.data/`, with local bucket names. Writers reach it through a local-only S3 gateway Worker. There is no S3-compatible storage container and no R2 shim in production Workers. A production write-service Worker was considered and set aside because of the Workers request-body limit; see [Why a gateway](#why-a-gateway-and-the-alternatives).
+- Local object storage is Miniflare's R2, shared across `wrangler dev` sessions through one persistence directory under `.data/`, with local bucket names. Writers reach it through `wrangler dev`'s built-in S3-compatible API, served from a config-only `packages/local-r2` project. SeaSketch owns no S3 translation code. There is no S3-compatible storage container and no R2 shim in production Workers. A production write-service Worker was considered and set aside because of the Workers request-body limit; see [Why the S3 protocol](#why-the-s3-protocol-and-the-alternatives).
+- The shared S3 client factory sets `requestChecksumCalculation: "WHEN_REQUIRED"` in every environment. R2 accepts it; Miniflare's S3 API requires it for streamed `PutObject`.
 - The spatial-uploads handler's default local form is the production container under the Lambda emulator, built from a prebuilt runtime image that production also uses. Host mode is an opt-in.
 - `pmtiles-server` runs as two sessions covering the tiles and uploads hosts.
 - The results queue is ElasticMQ locally. AWS credentials leave the default profile.
@@ -371,10 +378,10 @@ To be moved into *Decisions* with the month when accepted; anything implementati
 
 - *(Phase 0b)* Whether the subdivision worker's result message needs a compatibility window during the deploy, since a worker invoked before the API deploy may omit the URL the new `JobStatusUpdater` requires. Deploy the worker first, or accept both shapes for one release.
 - *(Phase 0a)* The R2 bucket name. `ssn-uploads` is used above; it should not be confused with `uploads.seasketch.org`, which serves `ssn-tiles`.
-- *(Phase 1)* A spike on Miniflare: several `wrangler dev` sessions on one persistence directory under concurrent gateway writes and `pmtiles-server` reads, and gateway throughput for a multi-gigabyte multipart upload. Pass criteria: the exact SDK calls the handlers make succeed at their default checksum settings, the API's presigned PUT works as the browser sends it, a 3 GB raw upload by presigned PUT and a multipart output above 500 MB both complete with the gateway process's memory flat, and no SQLite lock errors appear across ten consecutive uploads.
+- *(Phase 1)* The remainder of the Miniflare spike. Already shown on a shared VM: each writer's real SDK calls succeed against the local S3 API, a presigned PUT works as the browser sends it, a 600 MB multipart upload completes with `workerd` memory flat, and a second session reads what the first wrote. Still to show, on a laptop: a 3 GB raw upload by presigned PUT, concurrent writes and `pmtiles-server` reads with no SQLite lock errors across ten consecutive uploads, and the throughput number.
 - *(Phase 1)* Whether `preview_bucket_name` or an `[env.local]` block is the right way to give the Workers local bucket names under `wrangler dev` without touching their production configuration.
 - *(Phase 1)* Whether the prebuilt runtime image is pinned by digest in the Dockerfile or tracked as `latest`.
-- *(Phase 1)* Whether the gateway should verify signatures against the placeholder keys.
+- *(Phase 1)* Whether to file the `aws-chunked` unframing request against Miniflare, and whether to keep `WHEN_REQUIRED` if it lands.
 - *(Phase 2)* Whether a local mode with tile access control enabled is built in this phase or deferred until the multi-level admin journeys need it.
 - *(Phase 2)* Whether the overlay, fragment, and data-table processors should also get container forms under the Lambda emulator for closer parity. The default position is that host Node processes are sufficient until a discrepancy is observed.
 
@@ -388,7 +395,7 @@ To be moved into *Decisions* with the month when accepted; anything implementati
 ## Glossary
 
 - **R2** is Cloudflare's object store. A Worker reaches it through a binding; anything else reaches it through its S3-compatible API.
-- **Miniflare** is the simulator `wrangler dev` runs Workers in. It provides local R2 buckets backed by files, reachable only through bindings.
+- **Miniflare** is the simulator `wrangler dev` runs Workers in. It provides local R2 buckets backed by files, reachable through bindings and, since July 2026, through an S3-compatible API when a bucket is configured with local credentials.
 - **Lambda emulator** is the AWS Lambda Runtime Interface Emulator, a small server inside AWS's Lambda base images that accepts an invocation over HTTP (`POST /2015-03-31/functions/function/invocations`) and delivers it to the handler as Lambda would.
 - **GitHub Container Registry** (`ghcr.io`) is an image registry attached to the GitHub organization that GitHub Actions can push to with its default token.
 - **ElasticMQ** is an SQS-compatible queue server that runs as one container with no credentials.
