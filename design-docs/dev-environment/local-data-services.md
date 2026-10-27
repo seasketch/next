@@ -35,23 +35,27 @@ The first half of this document is the architecture and the plan. The second hal
 ### The picture
 
 ```
-Browser ── client :3000 ─┬─ API :3857 (GraphQL, job worker, SQS consumer)
-                         │     │
-                         │     ├─ presigned PUT, ACL docs, deletes ─► S3 gateway Worker :8333 ─────────┐
-                         │     ├─ invoke ─► spatial-uploads :9001 (container, Lambda emulator) ────────┤
-                         │     ├─ invoke ─► subdivision     :9000 (container, Lambda emulator) ────────┤
-                         │     ├─ POST   ─► data-tables     :3006 (host process) ──────────────────────┤
-                         │     ├─ POST   ─► overlay worker  :3007 (host process)                        │
-                         │     ├─ POST   ─► fragment worker :3008 (host process)                        │
-                         │     └─ receive ◄─ ElasticMQ :9324 (container, SQS emulator)                  │
-                         │                                                                              ▼
-                         │                                          local R2 under Miniflare (.data/wrangler/)
-                         │                                          buckets: ssn-tiles-local, ssn-uploads-local
-                         │                                                                              ▲
-                         ├─ tiles, TileJSON, parquet ─► pmtiles-server :8787 (wrangler dev, tiles host) ┤
-                         ├─ FlatGeobuf, downloads ────► pmtiles-server :8788 (wrangler dev, uploads host)┤
-                         ├─ clip, warm-cache ─────────► sketch-preprocessing-worker :8789 (wrangler dev) ┘
-                         └─ public reference data ───► uploads.seasketch.org, tiles.seasketch.org (unchanged)
+Browser ─► client :3000 ─► API :3857 (GraphQL, job worker, SQS consumer)
+
+API calls out to:
+  presigned PUT, ACL docs, deletes ─► S3 gateway :8333   (Worker)
+  invoke ──────────────────────────► spatial-uploads :9001 (container)
+  invoke ──────────────────────────► subdivision :9000   (container)
+  POST ────────────────────────────► data-tables :3006   (host process)
+  POST ────────────────────────────► overlay worker :3007 (host process)
+  POST ────────────────────────────► fragment worker :3008 (host process)
+  receive ◄────────────────────────  ElasticMQ :9324     (container)
+
+Browser map and downloads read from:
+  tiles, TileJSON, parquet ─► pmtiles-server :8787 (tiles host)
+  FlatGeobuf, downloads ────► pmtiles-server :8788 (uploads host)
+  clip, warm-cache ─────────► sketch-preprocessing-worker :8789
+  public reference data ────► uploads.seasketch.org, tiles.seasketch.org
+
+Local R2 under Miniflare, in .data/wrangler/
+  buckets:    ssn-tiles-local, ssn-uploads-local
+  written by: S3 gateway (for the API and the processors)
+  read by:    pmtiles-server x2, sketch-preprocessing-worker (R2 bindings)
 ```
 
 Postgres, Redis, the API, the client, and the map screenshotter run as they do today. Ports are defaults and each is configurable.
