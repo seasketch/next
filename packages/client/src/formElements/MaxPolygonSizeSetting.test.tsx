@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { SketchGeometryType } from "../generated/graphql";
 import MaxPolygonSizeSetting from "./MaxPolygonSizeSetting";
 
-test("hides the size limit unless the geometry type is polygon", () => {
+test("starts disabled until a unit is chosen", () => {
   const onChange = jest.fn();
   const { rerender } = render(
     <MaxPolygonSizeSetting
@@ -12,33 +12,24 @@ test("hides the size limit unless the geometry type is polygon", () => {
       onChange={onChange}
     />
   );
-  expect(screen.queryByPlaceholderText("No limit")).not.toBeInTheDocument();
+  expect(screen.queryByLabelText("Max size (optional)")).not.toBeInTheDocument();
 
   rerender(
     <MaxPolygonSizeSetting
       geometryType={SketchGeometryType.Polygon}
-      value={4}
+      value={null}
+      unit={null}
       onChange={onChange}
     />
   );
-  expect(screen.getByPlaceholderText("No limit")).toHaveValue(4);
+  const input = screen.getByLabelText("Max size (optional)");
+  expect(input).toBeDisabled();
+  expect(input).toHaveValue(null);
+  expect(screen.getByLabelText("Unit")).toHaveValue("");
+  expect(screen.queryByRole("button", { name: "Clear" })).not.toBeInTheDocument();
 });
 
-test("nests a full-width size field under polygon geometry", () => {
-  render(
-    <MaxPolygonSizeSetting
-      nested
-      geometryType={SketchGeometryType.Polygon}
-      value={8000}
-      onChange={jest.fn()}
-    />
-  );
-  expect(screen.getByLabelText("Maximum size")).toHaveValue(8000);
-  expect(screen.getByText("Leave blank for no limit.")).toBeInTheDocument();
-  expect(screen.queryByText("Maximum polygon size")).not.toBeInTheDocument();
-});
-
-test("saves a positive area and clears a blank field", () => {
+test("saves a size in the chosen unit and clears it", () => {
   const onChange = jest.fn();
   render(
     <MaxPolygonSizeSetting
@@ -47,14 +38,35 @@ test("saves a positive area and clears a blank field", () => {
       onChange={onChange}
     />
   );
-  const input = screen.getByPlaceholderText("No limit");
+  fireEvent.change(screen.getByLabelText("Unit"), {
+    target: { value: "hectare" },
+  });
+  const input = screen.getByLabelText("Max size (optional)");
+  expect(input).toBeEnabled();
+
   fireEvent.change(input, { target: { value: "12.5" } });
-  expect(onChange).toHaveBeenLastCalledWith(12.5);
+  expect(onChange).toHaveBeenLastCalledWith(0.125, "hectare");
 
-  fireEvent.change(input, { target: { value: "" } });
-  expect(onChange).toHaveBeenLastCalledWith(null);
+  fireEvent.click(screen.getByRole("button", { name: "Clear" }));
+  expect(onChange).toHaveBeenLastCalledWith(null, null);
+  expect(screen.getByLabelText("Unit")).toHaveValue("");
+  expect(screen.getByLabelText("Max size (optional)")).toBeDisabled();
+});
 
-  fireEvent.change(input, { target: { value: "0" } });
-  fireEvent.blur(input);
-  expect(onChange).toHaveBeenLastCalledWith(null);
+test("shows a saved square-kilometer limit and converts when the unit changes", () => {
+  const onChange = jest.fn();
+  render(
+    <MaxPolygonSizeSetting
+      geometryType={SketchGeometryType.Polygon}
+      value={1}
+      unit="kilometer"
+      onChange={onChange}
+    />
+  );
+  expect(screen.getByLabelText("Max size (optional)")).toHaveValue(1);
+  fireEvent.change(screen.getByLabelText("Unit"), {
+    target: { value: "hectare" },
+  });
+  expect(onChange).toHaveBeenLastCalledWith(1, "hectare");
+  expect(screen.getByLabelText("Max size (optional)")).toHaveValue(100);
 });

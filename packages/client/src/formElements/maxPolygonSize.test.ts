@@ -3,6 +3,7 @@ import {
   effectiveMaxPolygonSizeSqKm,
   formatPolygonOverage,
   formatPolygonSizeLimit,
+  polygonAreaUnitLabel,
   parseMaxPolygonSizeSqKm,
   polygonAreaSqKm,
   polygonSaveViolation,
@@ -257,6 +258,13 @@ describe("polygon size copy", () => {
     expect(formatPolygonSizeLimit(162273, "en")).toBe("162,273 km²");
     expect(formatPolygonSizeLimit(1, "en")).toBe("1 km²");
     expect(formatPolygonSizeLimit(Number.NaN, "en")).toBe("");
+    expect(formatPolygonSizeLimit(80, "en", "hectare")).toBe("8,000 ha");
+    expect(formatPolygonSizeLimit(1 / 0.386102, "en", "mile")).toBe("1 mi²");
+    expect(formatPolygonSizeLimit(1 / 247.105381, "en", "acre")).toBe("1 ac");
+    expect(polygonAreaUnitLabel("kilometer", "en")).toBe("km²");
+    expect(polygonAreaUnitLabel("hectare", "en")).toBe("hectares");
+    expect(polygonAreaUnitLabel("acre", "en")).toBe("acres");
+    expect(polygonAreaUnitLabel("mile", "en")).toBe("mi²");
   });
 
   it("keeps a fraction only when the quantity is not whole", () => {

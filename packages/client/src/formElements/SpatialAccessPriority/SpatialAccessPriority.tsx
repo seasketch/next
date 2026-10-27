@@ -148,8 +148,12 @@ export type SpatialAccessPriorityProps = {
   subordinateVisibilitySettings?: {
     [elementId: number]: string[];
   };
-  /** Maximum polygon area in square kilometers. Blank means no limit. */
+  /**
+   * Maximum polygon area in square kilometers. Null or omitted means no limit.
+   * `maxPolygonSizeUnit` is the unit the author entered and respondents see.
+   */
   maxPolygonSizeSqKm?: number | null;
+  maxPolygonSizeUnit?: "kilometer" | "hectare" | "acre" | "mile" | null;
 };
 type SectorFeatureProps = { sector: string; [key: string]: any };
 type FC = FeatureCollection<Polygon, SectorFeatureProps>;
@@ -529,7 +533,11 @@ function SpatialAccessPriorityInner(
     alert(
       `${t("This shape is over the size limit of {{ limit }}.", {
         ns: "surveys",
-        limit: formatPolygonSizeLimit(saveBlocked.maxSqKm, locale),
+        limit: formatPolygonSizeLimit(
+          saveBlocked.maxSqKm,
+          locale,
+          props.componentSettings.maxPolygonSizeUnit
+        ),
       })} ${formatPolygonOverage(saveBlocked.areaSqKm, saveBlocked.maxSqKm, locale)}`
     );
     return true;
@@ -1069,6 +1077,7 @@ function SpatialAccessPriorityInner(
                     <PolygonTooLargeNotice
                       areaSqKm={saveBlocked.areaSqKm}
                       maxSqKm={saveBlocked.maxSqKm}
+                      unit={props.componentSettings.maxPolygonSizeUnit}
                     />
                   </Warning>
                 )}
@@ -1202,6 +1211,7 @@ function SpatialAccessPriorityInner(
                       ? {
                           areaSqKm: saveBlocked.areaSqKm,
                           maxSqKm: saveBlocked.maxSqKm,
+                          unit: props.componentSettings.maxPolygonSizeUnit,
                         }
                       : undefined
                   }
@@ -1521,10 +1531,13 @@ function Admin(props: {
             <MaxPolygonSizeSetting
               geometryType={props.geometryType}
               value={props.componentSettings.maxPolygonSizeSqKm}
-              onChange={updateComponentSetting(
-                "maxPolygonSizeSqKm",
-                props.componentSettings
-              )}
+              unit={props.componentSettings.maxPolygonSizeUnit}
+              onChange={(sqKm, unit) =>
+                updateComponentSetting("maxPolygonSizeSqKm", {
+                  ...props.componentSettings,
+                  maxPolygonSizeUnit: unit,
+                })(sqKm)
+              }
             />
             <BoundsInput
               value={props.bounds}

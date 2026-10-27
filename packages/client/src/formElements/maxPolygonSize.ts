@@ -4,6 +4,54 @@ import { SketchGeometryType } from "../generated/graphql";
 
 const SQ_METERS_PER_SQ_KM = 1_000_000;
 
+/**
+ * Same area units as report widgets (`AreaUnit` in reports/utils/units).
+ * Square kilometers stay the stored comparison value. The unit only changes
+ * how authors enter the limit and how respondents see it.
+ */
+export const POLYGON_AREA_UNITS = [
+  "kilometer",
+  "hectare",
+  "acre",
+  "mile",
+] as const;
+export type PolygonAreaUnit = (typeof POLYGON_AREA_UNITS)[number];
+
+/** Square kilometers in one of the display unit. Matches report-card conversion. */
+const SQ_KM_PER_UNIT: { [unit in PolygonAreaUnit]: number } = {
+  kilometer: 1,
+  hectare: 0.01,
+  acre: 1 / 247.105381,
+  mile: 1 / 0.386102,
+};
+
+export function isPolygonAreaUnit(value: unknown): value is PolygonAreaUnit {
+  return (
+    value === "kilometer" ||
+    value === "hectare" ||
+    value === "acre" ||
+    value === "mile"
+  );
+}
+
+export function areaToSqKm(value: number, unit: PolygonAreaUnit): number {
+  return value * SQ_KM_PER_UNIT[unit];
+}
+
+export function sqKmToArea(sqKm: number, unit: PolygonAreaUnit): number {
+  return sqKm / SQ_KM_PER_UNIT[unit];
+}
+
+/** Drop binary dust so a typed limit round-trips through square kilometers. */
+export function roundArea(value: number): number {
+  if (!Number.isFinite(value) || value === 0) {
+    return value;
+  }
+  const magnitude = Math.floor(Math.log10(Math.abs(value)));
+  const factor = 10 ** (8 - 1 - magnitude);
+  return Math.round(value * factor) / factor;
+}
+
 export type PolygonSizeViolation = {
   areaSqKm: number;
   maxSqKm: number;
@@ -131,20 +179,48 @@ function fractionDigits(value: number): number {
  */
 export function formatPolygonSizeLimit(
   sqKm: number,
-  locale?: string
+  locale?: string,
+  unit?: PolygonAreaUnit | null
 ): string {
+  const resolved = unit && isPolygonAreaUnit(unit) ? unit : "kilometer";
   if (!Number.isFinite(sqKm)) {
     return "";
   }
+  const quantity = sqKmToArea(sqKm, resolved);
   const formatted = numberFormat(locale, {
     style: "unit",
-    unit: "kilometer",
+    unit: resolved,
     unitDisplay: "short",
     minimumFractionDigits: 0,
-    maximumFractionDigits: fractionDigits(sqKm),
-  }).format(sqKm);
-  // eslint-disable-next-line i18next/no-literal-string
-  return `${formatted}²`;
+    maximumFractionDigits: fractionDigits(quantity),
+  }).format(quantity);
+  if (resolved === "kilometer" || resolved === "mile") {
+    // eslint-disable-next-line i18next/no-literal-string
+    return `${formatted}²`;
+  }
+  return formatted;
+}
+
+/** Short label for the admin unit menu. km and mi stay squared, like report cards. */
+export function polygonAreaUnitLabel(
+  unit: PolygonAreaUnit,
+  locale?: string
+): string {
+  const squared = unit === "kilometer" || unit === "mile";
+  const formatted = numberFormat(locale, {
+    style: "unit",
+    unit,
+    unitDisplay: squared ? "short" : "long",
+  }).formatToParts(10);
+  const label = formatted.find((part) => part.type === "unit")?.value;
+  if (!label) {
+    return unit;
+  }
+  if (squared) {
+    // eslint-disable-next-line i18next/no-literal-string
+    return `${label}²`;
+  }
+  return label;
 }
 
 /**

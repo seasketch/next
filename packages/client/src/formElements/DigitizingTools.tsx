@@ -50,7 +50,11 @@ interface DigitizingInstructionsProps {
    * Polygon is over the survey area limit. Hides Done and explains how to
    * shrink the shape, the same way a self-intersection blocks finishing.
    */
-  sizeWarning?: { areaSqKm: number; maxSqKm: number };
+  sizeWarning?: {
+    areaSqKm: number;
+    maxSqKm: number;
+    unit?: "kilometer" | "hectare" | "acre" | "mile" | null;
+  };
   /** Sketching as opposed to survey response */
   isSketchingWorkflow?: boolean;
   preprocessingError?: string;
@@ -356,7 +360,11 @@ export function DigitizingInstructions({
   geometryType: SketchGeometryType;
   selfIntersects: boolean;
   preprocessingError?: string;
-  sizeWarning?: { areaSqKm: number; maxSqKm: number };
+  sizeWarning?: {
+    areaSqKm: number;
+    maxSqKm: number;
+    unit?: "kilometer" | "hectare" | "acre" | "mile" | null;
+  };
 }) {
   if (selfIntersects) {
     return <Trans ns="surveys">Invalid shape</Trans>;
@@ -368,6 +376,7 @@ export function DigitizingInstructions({
         <PolygonTooLargeNotice
           areaSqKm={sizeWarning.areaSqKm}
           maxSqKm={sizeWarning.maxSqKm}
+          unit={sizeWarning.unit}
         />
       </span>
     );

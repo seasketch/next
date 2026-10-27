@@ -1,144 +1,221 @@
+import { XIcon } from "@heroicons/react/outline";
 import { useContext, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import Badge from "../components/Badge";
 import { SketchGeometryType } from "../generated/graphql";
 import { FormLanguageContext } from "./FormElement";
 import {
+  POLYGON_AREA_UNITS,
+  PolygonAreaUnit,
+  areaToSqKm,
   formatPolygonOverage,
   formatPolygonSizeLimit,
+  isPolygonAreaUnit,
+  parseMaxPolygonSizeSqKm,
+  polygonAreaUnitLabel,
+  roundArea,
+  sqKmToArea,
 } from "./maxPolygonSize";
 
 /**
  * Optional maximum polygon area for a spatial survey question.
- * Stored on component settings as square kilometers. Blank means no limit.
- *
- * `nested` places the field inside the selected Polygon geometry card.
- * Otherwise it is a section, matching Starting Bounds.
+ * Nothing is stored until an author picks a unit and enters a size.
+ * The number is kept as square kilometers; `unit` is how it is shown.
  */
 export default function MaxPolygonSizeSetting(props: {
   geometryType?: SketchGeometryType | null;
   value?: number | null;
-  onChange: (value: number | null) => void;
-  nested?: boolean;
+  unit?: PolygonAreaUnit | null;
+  onChange: (value: number | null, unit: PolygonAreaUnit | null) => void;
 }) {
-  const { t } = useTranslation("admin:surveys");
-  const [text, setText] = useState(() => displayValue(props.value));
+  const { t, i18n } = useTranslation("admin:surveys");
+  const [unit, setUnit] = useState<PolygonAreaUnit | "">(() =>
+    initialUnit(props.unit, props.value)
+  );
+  const [text, setText] = useState(() =>
+    displayValue(props.value, initialUnit(props.unit, props.value))
+  );
   const [focused, setFocused] = useState(false);
 
   useEffect(() => {
     if (focused) {
       return;
     }
-    setText(displayValue(props.value));
-  }, [props.value, focused]);
+    const nextUnit = initialUnit(props.unit, props.value);
+    setUnit(nextUnit);
+    setText(displayValue(props.value, nextUnit));
+  }, [props.value, props.unit, focused]);
 
   if (props.geometryType !== SketchGeometryType.Polygon) {
     return null;
   }
 
-  function commit(raw: string) {
+  function commit(raw: string, nextUnit: PolygonAreaUnit | "") {
+    if (!nextUnit) {
+      props.onChange(null, null);
+      setText("");
+      return;
+    }
     const trimmed = raw.trim();
     if (trimmed === "") {
-      props.onChange(null);
+      props.onChange(null, null);
       setText("");
+      setUnit("");
       return;
     }
     const parsed = Number(trimmed);
     if (Number.isFinite(parsed) && parsed > 0) {
-      props.onChange(parsed);
+      props.onChange(areaToSqKm(parsed, nextUnit), nextUnit);
       setText(String(parsed));
     } else {
-      props.onChange(null);
+      props.onChange(null, null);
       setText("");
+      setUnit("");
     }
   }
 
-  const field = (
-    <div className="flex rounded-md shadow-sm">
-      <input
-        type="number"
-        min={0}
-        step="any"
-        id="maxPolygonSizeSqKm"
-        name="maxPolygonSizeSqKm"
-        placeholder={t("No limit")}
-        className="min-w-0 flex-1 block w-full bg-white cursor-text border-gray-300 rounded-l-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5 text-black"
-        value={text}
-        onFocus={() => setFocused(true)}
-        onBlur={() => {
-          setFocused(false);
-          commit(text);
-        }}
-        onChange={(e) => {
-          const raw = e.target.value;
-          setText(raw);
-          if (raw.trim() === "") {
-            props.onChange(null);
-            return;
-          }
-          // Keep intermediate values like "0." local until they are a
-          // complete positive number. Blur commits or clears them.
-          if (raw.endsWith(".") || /^0\.?$/.test(raw) || /\.0+$/.test(raw)) {
-            return;
-          }
-          const parsed = Number(raw);
-          if (Number.isFinite(parsed) && parsed > 0) {
-            props.onChange(parsed);
-          }
-        }}
-      />
-      <span className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">
-        <Trans ns="admin:surveys">km²</Trans>
-      </span>
-    </div>
-  );
-
-  if (props.nested) {
-    return (
-      <div>
-        <label
-          htmlFor="maxPolygonSizeSqKm"
-          className="block text-sm font-medium leading-5 text-gray-800"
-        >
-          {t("Maximum size")}
-        </label>
-        <p className="text-sm text-gray-500 mt-1 mb-2">
-          <Trans ns="admin:surveys">Leave blank for no limit.</Trans>
-        </p>
-        {field}
-      </div>
-    );
+  function clear() {
+    setText("");
+    setUnit("");
+    setFocused(false);
+    props.onChange(null, null);
   }
+
+  function changeUnit(nextRaw: string) {
+    if (!isPolygonAreaUnit(nextRaw)) {
+      clear();
+      return;
+    }
+    const saved = parseMaxPolygonSizeSqKm(props.value);
+    if (saved !== undefined && unit && unit !== nextRaw) {
+      const shown = roundArea(sqKmToArea(saved, nextRaw));
+      setUnit(nextRaw);
+      setText(String(shown));
+      props.onChange(saved, nextRaw);
+      return;
+    }
+    setUnit(nextRaw);
+    const parsed = Number(text);
+    if (text.trim() !== "" && Number.isFinite(parsed) && parsed > 0) {
+      props.onChange(areaToSqKm(parsed, nextRaw), nextRaw);
+    }
+  }
+
+  const enabled = unit !== "";
 
   return (
     <div>
-      <h4 className="block text-sm font-medium leading-5 text-gray-800">
-        <label htmlFor="maxPolygonSizeSqKm">{t("Maximum polygon size")}</label>
-      </h4>
-      <p className="text-sm text-gray-500 mb-2 mt-1">
-        <Trans ns="admin:surveys">
-          Respondents cannot save a polygon larger than this area. Leave blank
-          for no limit.
-        </Trans>
-      </p>
-      {field}
+      <label
+        htmlFor="maxPolygonSize"
+        className="block text-sm font-medium leading-5 text-gray-800 mb-2"
+      >
+        {t("Max size (optional)")}
+      </label>
+      <div className="flex rounded-md shadow-sm">
+        <div className="relative min-w-0 flex-1">
+          <input
+            type="number"
+            min={0}
+            step="any"
+            id="maxPolygonSize"
+            name="maxPolygonSize"
+            disabled={!enabled}
+            className={`min-w-0 block w-full appearance-none cursor-text border-gray-300 rounded-l-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5 pr-8 ${
+              enabled ? "bg-white text-black" : "bg-gray-100 text-gray-500"
+            }`}
+            value={text}
+            onFocus={() => setFocused(true)}
+            onBlur={() => {
+              setFocused(false);
+              commit(text, unit);
+            }}
+            onChange={(e) => {
+              const raw = e.target.value;
+              setText(raw);
+              if (!unit) {
+                return;
+              }
+              if (raw.trim() === "") {
+                props.onChange(null, null);
+                return;
+              }
+              // Keep intermediate values like "0." local until they are a
+              // complete positive number. Blur commits or clears them.
+              if (
+                raw.endsWith(".") ||
+                /^0\.?$/.test(raw) ||
+                /\.0+$/.test(raw)
+              ) {
+                return;
+              }
+              const parsed = Number(raw);
+              if (Number.isFinite(parsed) && parsed > 0) {
+                props.onChange(areaToSqKm(parsed, unit), unit);
+              }
+            }}
+          />
+          {text.trim() !== "" && (
+            <button
+              type="button"
+              aria-label={t("Clear")}
+              className="absolute inset-y-0 right-0 pr-2 flex items-center text-gray-400"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={clear}
+            >
+              <XIcon className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+        <select
+          aria-label={t("Unit")}
+          className="border border-l-0 border-gray-300 bg-gray-50 text-gray-700 rounded-r-md cursor-pointer sm:text-sm"
+          value={unit}
+          onChange={(event) => changeUnit(event.target.value)}
+        >
+          <option value="">{t("None")}</option>
+          {POLYGON_AREA_UNITS.map((option) => (
+            <option key={option} value={option}>
+              {polygonAreaUnitLabel(option, i18n.language)}
+            </option>
+          ))}
+        </select>
+      </div>
     </div>
   );
 }
 
-function displayValue(value: number | null | undefined) {
-  if (value == null || !(value > 0)) {
+function initialUnit(
+  unit: PolygonAreaUnit | null | undefined,
+  sqKm: number | null | undefined
+): PolygonAreaUnit | "" {
+  if (isPolygonAreaUnit(unit)) {
+    return unit;
+  }
+  if (parseMaxPolygonSizeSqKm(sqKm) !== undefined) {
+    return "kilometer";
+  }
+  return "";
+}
+
+function displayValue(
+  sqKm: number | null | undefined,
+  unit: PolygonAreaUnit | ""
+) {
+  const saved = parseMaxPolygonSizeSqKm(sqKm);
+  if (saved === undefined || !unit) {
     return "";
   }
-  return String(value);
+  return String(roundArea(sqKmToArea(saved, unit)));
 }
 
 export function PolygonTooLargeNotice(props: {
   areaSqKm: number;
   maxSqKm: number;
+  unit?: PolygonAreaUnit | null;
 }) {
   const lang = useContext(FormLanguageContext);
-  const limit = formatPolygonSizeLimit(props.maxSqKm, lang.lang?.code);
+  const unit = isPolygonAreaUnit(props.unit) ? props.unit : "kilometer";
+  const limit = formatPolygonSizeLimit(props.maxSqKm, lang.lang?.code, unit);
   const over = formatPolygonOverage(
     props.areaSqKm,
     props.maxSqKm,
