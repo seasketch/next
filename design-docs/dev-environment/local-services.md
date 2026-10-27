@@ -8,7 +8,7 @@
 
 Daily development, CI journeys, and cloud agents run SeaSketch's own backends on the same machine as the app. A change to uploads, tiles, data tables, or report calculation can be tried without deploying anything. Pointing at a deployed service stays possible for debugging that service, and it is never the default.
 
-[Environment setup](env-setup.md) starts whatever this document puts in a profile. [Integration testing](integration-testing.md) writes journeys only against profiles the start command actually runs.
+[Environment setup](env-setup.md) starts whatever this document puts in a profile. [Integration testing](integration-testing.md) writes journeys only against profiles the start command actually runs. [Local data services](local-data-services.md) is the proposed architecture for the data profile this document describes; where it is more specific, it is the record for the data path.
 
 ## Rules
 
