@@ -1,10 +1,9 @@
 import { Trans, useTranslation } from "react-i18next";
 import Modal from "../components/Modal";
-import { formatSqKm } from "./maxPolygonSize";
+import { PolygonTooLargeNotice } from "./MaxPolygonSizeSetting";
 
 /**
- * Same dialog shell as the self-intersection instructions. The area numbers
- * are the message, the way a clipping error shows its own text.
+ * Same dialog shell as the self-intersection instructions.
  */
 export default function PolygonTooLargeInstructions({
   open,
@@ -21,8 +20,6 @@ export default function PolygonTooLargeInstructions({
   if (!open) {
     return null;
   }
-  const area = formatSqKm(areaSqKm);
-  const max = formatSqKm(maxSqKm);
   return (
     <Modal
       zeroPadding
@@ -39,8 +36,8 @@ export default function PolygonTooLargeInstructions({
     >
       <div className="w-96 max-w-full">
         <p className="p-5">
+          <PolygonTooLargeNotice areaSqKm={areaSqKm} maxSqKm={maxSqKm} />{" "}
           <Trans ns="surveys">
-            This polygon is {{ area }} km². The maximum size is {{ max }} km².
             Your shape stays red while it is over the limit. Drag the points
             inward until the red highlight goes away and you can continue. If
             you continue to have trouble, delete the shape and draw a smaller

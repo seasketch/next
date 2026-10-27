@@ -63,6 +63,7 @@ import {
   FormElementComponent,
   FormElementEditorPortal,
   FormElementProps,
+  FormLanguageContext,
   SurveyMapPortal,
 } from "./FormElement";
 import fromMarkdown, { questionBodyFromMarkdown } from "./fromMarkdown";
@@ -79,7 +80,8 @@ import MaxPolygonSizeSetting, {
 } from "./MaxPolygonSizeSetting";
 import {
   effectiveMaxPolygonSizeSqKm,
-  formatSqKm,
+  formatPolygonOverage,
+  formatPolygonSizeLimit,
   polygonSaveViolation,
   polygonSizeViolation,
   shouldAdvanceFromDrawingIntro,
@@ -159,6 +161,7 @@ function MultiSpatialInputInner(
   }
 ) {
   const { t } = useTranslation("admin:surveys");
+  const lang = useContext(FormLanguageContext);
   const context = useContext(FormElementLayoutContext);
   const { manager } = useContext(MapManagerContext);
   const { basemaps } = useContext(BasemapContext);
@@ -440,12 +443,12 @@ function MultiSpatialInputInner(
     if (!saveBlocked) {
       return false;
     }
+    const locale = lang.lang?.code;
     alert(
-      t("This shape is {{area}} km². The maximum size is {{max}} km².", {
+      `${t("This shape is over the size limit of {{ limit }}.", {
         ns: "surveys",
-        area: formatSqKm(saveBlocked.areaSqKm),
-        max: formatSqKm(saveBlocked.maxSqKm),
-      })
+        limit: formatPolygonSizeLimit(saveBlocked.maxSqKm, locale),
+      })} ${formatPolygonOverage(saveBlocked.areaSqKm, saveBlocked.maxSqKm, locale)}`
     );
     return true;
   }

@@ -1,7 +1,8 @@
 import { SketchGeometryType } from "../generated/graphql";
 import {
   effectiveMaxPolygonSizeSqKm,
-  formatSqKm,
+  formatPolygonOverage,
+  formatPolygonSizeLimit,
   parseMaxPolygonSizeSqKm,
   polygonAreaSqKm,
   polygonSaveViolation,
@@ -250,12 +251,37 @@ describe("shouldAdvanceFromDrawingIntro", () => {
   });
 });
 
-describe("formatSqKm", () => {
-  it("uses fewer decimals for larger areas", () => {
-    expect(formatSqKm(128.4)).toBe("128");
-    expect(formatSqKm(12.44)).toBe("12.4");
-    expect(formatSqKm(1.236)).toBe("1.24");
-    expect(formatSqKm(0.1234)).toBe("0.123");
-    expect(formatSqKm(Number.NaN)).toBe("");
+describe("polygon size copy", () => {
+  it("formats the limit with a short unit and grouping", () => {
+    expect(formatPolygonSizeLimit(8000, "en")).toBe("8,000 km²");
+    expect(formatPolygonSizeLimit(162273, "en")).toBe("162,273 km²");
+    expect(formatPolygonSizeLimit(1, "en")).toBe("1 km²");
+    expect(formatPolygonSizeLimit(Number.NaN, "en")).toBe("");
+  });
+
+  it("keeps a fraction only when the quantity is not whole", () => {
+    expect(formatPolygonSizeLimit(12.4, "en")).toBe("12.4 km²");
+    expect(formatPolygonSizeLimit(12.44, "en")).toBe("12.4 km²");
+    expect(formatPolygonSizeLimit(1.236, "en")).toBe("1.24 km²");
+    expect(formatPolygonSizeLimit(0.1234, "en")).toBe("0.123 km²");
+    expect(formatPolygonSizeLimit(8000.5, "en")).toBe("8,000.5 km²");
+  });
+
+  it("shows how far over the limit the shape is", () => {
+    expect(formatPolygonOverage(33, 10, "en")).toBe("+230%");
+    expect(formatPolygonOverage(12.4, 1, "en")).toBe("+1,140%");
+    expect(formatPolygonOverage(162273, 8000, "en")).toBe("+1,928%");
+    expect(formatPolygonOverage(10.24, 10, "en")).toBe("+2.4%");
+    expect(formatPolygonOverage(10.04, 10, "en")).toBe("+0.4%");
+    expect(formatPolygonOverage(10.5, 10, "en")).toBe("+5%");
+    expect(formatPolygonOverage(8000.4, 8000, "en")).toBe("+<0.1%");
+    expect(formatPolygonOverage(10, 10, "en")).toBe("");
+  });
+
+  it("follows the survey locale", () => {
+    expect(formatPolygonSizeLimit(8000, "pt-br")).toBe("8.000 km²");
+    expect(formatPolygonOverage(33, 10, "es").replace(/\s/g, "")).toBe(
+      "+230%"
+    );
   });
 });

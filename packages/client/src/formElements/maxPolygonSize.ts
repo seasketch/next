@@ -90,14 +90,106 @@ export function polygonSizeViolation(
   return { areaSqKm, maxSqKm: limit };
 }
 
-export function formatSqKm(sqKm: number): string {
+function numberFormat(
+  locale: string | undefined,
+  options: Intl.NumberFormatOptions
+): Intl.NumberFormat {
+  try {
+    return new Intl.NumberFormat(locale, options);
+  } catch {
+    return new Intl.NumberFormat(undefined, options);
+  }
+}
+
+/**
+ * Fraction digits for a standalone quantity. Whole numbers stay whole.
+ * A real fraction is kept (one digit from 10 up, two from 1, three below),
+ * and float noise within 0.05 does not count. Same idea as the report-card
+ * area formatter, which also drops trailing zeros and uses a short unit.
+ */
+function fractionDigits(value: number): number {
+  if (!Number.isFinite(value)) {
+    return 0;
+  }
+  const abs = Math.abs(value);
+  if (Math.abs(abs - Math.round(abs)) < 0.05) {
+    return 0;
+  }
+  if (abs >= 10) {
+    return 1;
+  }
+  if (abs >= 1) {
+    return 2;
+  }
+  return 3;
+}
+
+/**
+ * Square kilometers with grouping and a short unit, e.g. "8,000 km²".
+ * Locale comes from the survey language. The square mark is appended the
+ * same way report cards do for kilometer and mile.
+ */
+export function formatPolygonSizeLimit(
+  sqKm: number,
+  locale?: string
+): string {
   if (!Number.isFinite(sqKm)) {
     return "";
   }
-  const abs = Math.abs(sqKm);
-  const digits = abs >= 100 ? 0 : abs >= 10 ? 1 : abs >= 1 ? 2 : 3;
-  const factor = 10 ** digits;
-  return (Math.round(sqKm * factor) / factor).toString();
+  const formatted = numberFormat(locale, {
+    style: "unit",
+    unit: "kilometer",
+    unitDisplay: "short",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: fractionDigits(sqKm),
+  }).format(sqKm);
+  // eslint-disable-next-line i18next/no-literal-string
+  return `${formatted}²`;
+}
+
+/**
+ * How far the polygon is over the limit, as a signed percent: "+230%".
+ * Percents of 100 or more, and values that are already whole, stay whole.
+ * A fractional overage keeps one decimal ("+2.4%", "+0.4%"). Anything under
+ * a tenth of a percent stays visible as "+<0.1%" so it does not round to 0.
+ */
+export function formatPolygonOverage(
+  areaSqKm: number,
+  maxSqKm: number,
+  locale?: string
+): string {
+  if (
+    !Number.isFinite(areaSqKm) ||
+    !Number.isFinite(maxSqKm) ||
+    !(maxSqKm > 0) ||
+    !(areaSqKm > maxSqKm)
+  ) {
+    return "";
+  }
+  const ratio = (areaSqKm - maxSqKm) / maxSqKm;
+  const percent = ratio * 100;
+  if (percent < 0.1) {
+    const tiny = numberFormat(locale, {
+      style: "percent",
+      signDisplay: "exceptZero",
+      minimumFractionDigits: 1,
+      maximumFractionDigits: 1,
+    }).format(0.001);
+    if (tiny.startsWith("+")) {
+      // eslint-disable-next-line i18next/no-literal-string
+      return `+<${tiny.slice(1)}`;
+    }
+    // eslint-disable-next-line i18next/no-literal-string
+    return `<${tiny}`;
+  }
+  const digits =
+    percent >= 100 || Math.abs(percent - Math.round(percent)) < 0.05 ? 0 : 1;
+  return numberFormat(locale, {
+    style: "percent",
+    signDisplay: "exceptZero",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: digits,
+  }).format(ratio);
 }
 
 /**

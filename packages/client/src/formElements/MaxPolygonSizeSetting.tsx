@@ -1,8 +1,13 @@
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
+import Badge from "../components/Badge";
 import InputBlock from "../components/InputBlock";
 import { SketchGeometryType } from "../generated/graphql";
-import { formatSqKm } from "./maxPolygonSize";
+import { FormLanguageContext } from "./FormElement";
+import {
+  formatPolygonOverage,
+  formatPolygonSizeLimit,
+} from "./maxPolygonSize";
 
 /**
  * Optional maximum polygon area for a spatial survey question.
@@ -109,11 +114,26 @@ export function PolygonTooLargeNotice(props: {
   areaSqKm: number;
   maxSqKm: number;
 }) {
-  const area = formatSqKm(props.areaSqKm);
-  const max = formatSqKm(props.maxSqKm);
+  const lang = useContext(FormLanguageContext);
+  const limit = formatPolygonSizeLimit(props.maxSqKm, lang.lang?.code);
+  const over = formatPolygonOverage(
+    props.areaSqKm,
+    props.maxSqKm,
+    lang.lang?.code
+  );
   return (
-    <Trans ns="surveys">
-      This shape is {{ area }} km². The maximum size is {{ max }} km².
-    </Trans>
+    <span className="inline-flex items-center flex-wrap">
+      <Trans ns="surveys">
+        This shape is over the size limit of {{ limit }}.
+      </Trans>
+      {over && (
+        <Badge
+          variant="error"
+          className="ml-2 tabular-nums whitespace-nowrap"
+        >
+          {over}
+        </Badge>
+      )}
+    </span>
   );
 }

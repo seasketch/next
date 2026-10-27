@@ -94,7 +94,8 @@ import MaxPolygonSizeSetting, {
 } from "../MaxPolygonSizeSetting";
 import {
   effectiveMaxPolygonSizeSqKm,
-  formatSqKm,
+  formatPolygonOverage,
+  formatPolygonSizeLimit,
   polygonSaveViolation,
   polygonSizeViolation,
   shouldAdvanceFromDrawingIntro,
@@ -191,6 +192,7 @@ function SpatialAccessPriorityInner(
   }
 ) {
   const { t } = useTranslation("admin:surveys");
+  const langContext = useContext(FormLanguageContext);
   const context = useContext(FormElementLayoutContext);
   const { manager } = useContext(MapManagerContext);
   const { basemaps } = useContext(BasemapContext);
@@ -523,12 +525,12 @@ function SpatialAccessPriorityInner(
     if (!saveBlocked) {
       return false;
     }
+    const locale = langContext.lang?.code;
     alert(
-      t("This shape is {{area}} km². The maximum size is {{max}} km².", {
+      `${t("This shape is over the size limit of {{ limit }}.", {
         ns: "surveys",
-        area: formatSqKm(saveBlocked.areaSqKm),
-        max: formatSqKm(saveBlocked.maxSqKm),
-      })
+        limit: formatPolygonSizeLimit(saveBlocked.maxSqKm, locale),
+      })} ${formatPolygonOverage(saveBlocked.areaSqKm, saveBlocked.maxSqKm, locale)}`
     );
     return true;
   }
@@ -704,8 +706,6 @@ function SpatialAccessPriorityInner(
       <ShowCoordinates />
     </>
   );
-
-  const langContext = useContext(FormLanguageContext);
 
   return (
     <MapUIProvider preferencesKey={`${props.slug}-spatial-access-priority`}>
