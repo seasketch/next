@@ -22,3 +22,11 @@ packages/data-tables-handler/tmp
 packages/e2e/test-results
 packages/e2e/playwright-report
 packages/api/snapshots
+# Local data caches. Git ignores them, but CDK still stages the repo root
+# into cdk.out before Docker runs, and these Dockerfiles never COPY them.
+packages/data-library-crw/work
+packages/data-library-crw/**/*.nc
+packages/data-library-crw/**/*.tif
+packages/data-library-crw/**/*.vrt
+packages/data-library-crw/**/*.pmtiles
+packages/h3-land/data
