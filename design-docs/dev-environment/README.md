@@ -24,6 +24,7 @@ Start with the [strategy](strategy.md). It is the sequence. Each other file is o
 | [Secrets and configuration](secrets-management.md)  | One manifest of variables, a class for each, and named profiles. Laptops keep a short hand-managed `.env`. CI uses GitHub, production uses GitHub and CDK |
 | [Auth0](auth0.md)                                   | A non-production Auth0 tenant, and an API that does not need Auth0 to boot                                                       |
 | [Local services](local-services.md)                 | Which SeaSketch backends run locally, in which profile, and the rule that an unset integration never falls through to production |
+| [Service inventory](service-inventory.md)           | What development and e2e call today, and which of those already have a local stand-in. An inventory of the present, not a decision |
 | [Integration testing](integration-testing.md)       | Playwright journeys, test-mode auth, the golden database snapshot, and production probes                                         |
 | [Monorepo and build](monorepo-and-build-upgrade.md) | npm workspaces, one Node and TypeScript, production build paths, and replacing Create React App                                  |
 | [Second production install](second-install.md)      | Out of scope to build. Choices should leave one possible later, as the same revision with a different profile                    |
