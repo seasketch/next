@@ -1,3 +1,4 @@
+import crypto from "crypto";
 import { Client } from "pg";
 import { databaseURL } from "./config";
 
@@ -36,6 +37,46 @@ export async function hardDeleteProject(slug: string) {
   } catch (error) {
     await client.query("ROLLBACK");
     throw error;
+  } finally {
+    await client.end();
+  }
+}
+
+/**
+ * The same invite, signed again so `exp` is already past. Verification still
+ * uses the key that issued the original token, and returns "jwt expired".
+ */
+export async function expireInviteToken(token: string): Promise<string> {
+  const [headerPart, payloadPart] = token.split(".");
+  if (!headerPart || !payloadPart) {
+    throw new Error("Invite token is not a JWT");
+  }
+  const header = JSON.parse(Buffer.from(headerPart, "base64url").toString("utf8")) as {
+    kid?: unknown;
+  };
+  if (typeof header.kid !== "string") {
+    throw new Error("Invite token has no kid");
+  }
+  const claims = JSON.parse(Buffer.from(payloadPart, "base64url").toString("utf8")) as Record<
+    string,
+    unknown
+  >;
+  claims.exp = Math.floor(Date.now() / 1000) - 120;
+
+  const client = new Client({ connectionString: databaseURL });
+  await client.connect();
+  try {
+    const result = await client.query(`select private_pem from jwks where kid = $1`, [
+      header.kid,
+    ]);
+    const pem = result.rows[0]?.private_pem;
+    if (typeof pem !== "string") {
+      throw new Error(`No signing key for invite kid ${header.kid}`);
+    }
+    const payload = Buffer.from(JSON.stringify(claims)).toString("base64url");
+    const data = `${headerPart}.${payload}`;
+    const signature = crypto.createSign("RSA-SHA256").update(data).sign(pem, "base64url");
+    return `${data}.${signature}`;
   } finally {
     await client.end();
   }

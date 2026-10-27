@@ -31,6 +31,15 @@ export async function waitForInvitePath(
   );
 }
 
+/** Token query param on a path from `waitForInvitePath`. */
+export function inviteToken(invitePath: string): string {
+  const token = new URL(invitePath, "http://localhost").searchParams.get("token");
+  if (!token) {
+    throw new Error(`Invite path has no token: ${invitePath}`);
+  }
+  return token;
+}
+
 function readInvitePath(
   destination: string,
   projectName: string,

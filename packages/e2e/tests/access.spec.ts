@@ -10,10 +10,11 @@ import {
   clearMemberProfile,
   createE2EUser,
   deleteE2EUser,
+  expireInviteToken,
   hardDeleteProject,
   projectInviteStatus,
 } from "../src/db";
-import { waitForInvitePath } from "../src/mailbox";
+import { inviteToken, waitForInvitePath } from "../src/mailbox";
 import { isMapboxGlStyle, openMap, signIn, visibleNavLink, waitForMapboxStyle } from "../src/project";
 
 const created: string[] = [];
@@ -338,5 +339,87 @@ test.describe("access @access", () => {
     await expect(page).toHaveURL(new RegExp(`/${project.slug}/admin`));
 
     expect(await projectInviteStatus(project.slug)).toBe("CONFIRMED");
+  });
+
+  test("a signed-in account can accept an invite sent to a different email", async ({
+    page,
+    request,
+  }) => {
+    test.setTimeout(120_000);
+    const name = "Access Second Account";
+    const project = await createAccessProject(request, {
+      name,
+      slug: slug("other"),
+      accessControl: "INVITE_ONLY",
+      isListed: false,
+    });
+    created.push(project.slug);
+
+    const stamp = Date.now().toString(36);
+    const otherSub = `e2e|other-${stamp}`;
+    const otherEmail = `other-${stamp}@example.test`;
+    createdUsers.push(otherSub);
+    await createE2EUser(otherSub, otherEmail);
+
+    const sentAt = Date.now();
+    await inviteMember(request, project.id, personas.member.email, "E2E Member");
+    const invitePath = await waitForInvitePath(personas.member.email, name, sentAt);
+
+    // Logout and sign in would leave for Auth0. Accept as the current account
+    // is the choice this suite can finish.
+    await signIn(page, request, { sub: otherSub, superuser: false });
+    await page.goto(invitePath);
+    await expect(page).toHaveURL(/\/auth\/projectInvite\?token=/);
+    await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
+    await expect(
+      page.getByText(`This invitation was originally sent to ${personas.member.email}`)
+    ).toBeVisible();
+    await expect(
+      page.getByText("An account with this email address already exists.")
+    ).toBeVisible();
+    await expect(
+      page.getByRole("button", {
+        name: `Logout and sign in as ${personas.member.email}`,
+      })
+    ).toBeVisible();
+    const acceptAs = page.getByRole("button", { name: `Accept as ${otherEmail}` });
+    await expect(acceptAs).toBeVisible();
+    expect(await projectInviteStatus(project.slug)).not.toBe("CONFIRMED");
+
+    await acceptAs.click();
+    await expect(page).toHaveURL(new RegExp(`/${project.slug}/join`));
+    await expect(page.getByRole("heading", { name: "Join this Project" })).toBeVisible();
+    await page.getByRole("button", { name: "Skip for now" }).click();
+    await openMap(page, `/${project.slug}/app`);
+    await expect(page.getByRole("heading", { name: "Private Project" })).toHaveCount(0);
+
+    expect(await projectInviteStatus(project.slug)).toBe("CONFIRMED");
+  });
+
+  test("an expired invite tells the visitor and stays unconfirmed", async ({ page, request }) => {
+    test.setTimeout(90_000);
+    const name = "Access Expired Invite";
+    const project = await createAccessProject(request, {
+      name,
+      slug: slug("expired"),
+      accessControl: "INVITE_ONLY",
+      isListed: false,
+    });
+    created.push(project.slug);
+
+    const sentAt = Date.now();
+    await inviteMember(request, project.id, personas.member.email, "E2E Member");
+    const invitePath = await waitForInvitePath(personas.member.email, name, sentAt);
+    const expired = await expireInviteToken(inviteToken(invitePath));
+
+    await page.goto(`/auth/projectInvite?token=${encodeURIComponent(expired)}`);
+    await expect(page.getByRole("heading", { name, exact: true })).toBeVisible();
+    await expect(
+      page.getByText("Your invitation to this project has expired.")
+    ).toBeVisible();
+    await expect(page.getByRole("button", { name: "Sign In", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("button", { name: "Join Project", exact: true })).toHaveCount(0);
+
+    expect(await projectInviteStatus(project.slug)).not.toBe("CONFIRMED");
   });
 });
