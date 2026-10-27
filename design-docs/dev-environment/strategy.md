@@ -114,6 +114,8 @@ If this phase slips, new journeys do not pile onto the pull-request job. They ru
 
 **Changes.** Browser coverage for access and onboarding; the data profile (spatial uploads, data-table processing, tiles, and the overlay worker behind reports) running locally; development buckets and queues so those services do not write production. Cypress is removed once its scenarios are ported. ([integration testing](integration-testing.md), [local services](local-services.md))
 
+*(October 2026)* The data profile has a prerequisite that ships to production before any local work: raw uploads move from S3 to R2, and the storage model makes rows self-contained so production-hosted and locally hosted layers coexist in one database. Both are deployed and verified first, each as its own pull request and deploy with the production probe; the local stand-ins follow in two steps, uploads and tile serving first, then reporting and sketch processing. The design and its exit criteria are in [local data services](local-data-services.md).
+
 *(October 2026)* This phase also writes the journeys phase 4 will use as its acceptance test, chosen for what a bundler swap breaks at runtime rather than for user coverage alone: a spatial upload end to end (web worker, WASM, presigned upload), a data-table import, a report card rendering overlay results, the ProseMirror editors, the GL style editor, a map bookmark with its screenshot, and the service worker if offline use is still supported. They pass on Create React App before the bundler changes. The Vite spike may begin on a throwaway branch during this phase so its findings shape which journeys matter most; it does not merge here.
 
 **Holds still.** The client bundler and the workspace layout.

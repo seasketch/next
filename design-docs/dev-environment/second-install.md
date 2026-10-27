@@ -38,7 +38,7 @@ The client bakes public URLs in at build time, so a second install is a second c
 
 ## Known debt, left alone
 
-Hardcoded production hostnames are widespread: `uploads.seasketch.org`, `tiles.seasketch.org`, and `overlay.seasketch.org` in API plugins and tasks; the production API host `api.seasket.ch` in infra, email templates, and the deploy gate; `ISSUER || "seasketch.org"` defaults; host filters in visitor metrics; the public WoRMS parquet base URL. Parameterizing them is a later project. JSON schema `$id` values under `https://seasketch.org/schemas/…` are identifiers, not deployment URLs, and stay.
+Hardcoded production hostnames are widespread: the production API host `api.seasket.ch` in infra, email templates, and the deploy gate; `ISSUER || "seasketch.org"` defaults; host filters in visitor metrics; the public WoRMS parquet base URL. Parameterizing them is a later project. *(October 2026)* `uploads.seasketch.org` and `tiles.seasketch.org` in the data-path API plugins, tasks, and workers are no longer in this list: the storage model in [local data services](local-data-services.md) removes them, because code reads the URL stored on each row and a process writes only the buckets its own environment names. Hostnames outside the data path, such as `overlay.seasketch.org` and the public reference-data URLs the overlay engine reads, stay as debt. JSON schema `$id` values under `https://seasketch.org/schemas/…` are identifiers, not deployment URLs, and stay.
 
 CDK's single-account layout and the deploy workflow's structure stay as they are. Do not deepen that coupling while passing through: bucket names and domains introduced by this campaign come from configuration.
 

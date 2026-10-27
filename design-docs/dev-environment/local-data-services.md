@@ -1,6 +1,6 @@
 # Local data services
 
-> Part of the [2026 campaign record](README.md). Status: proposed architecture, October 2026. Awaiting review. An implementation plan follows acceptance.
+> Part of the [2026 campaign record](README.md). Status: accepted October 2026; implementation in progress. The working implementation sketch is [`.cursor/plans/local_data_services.plan.md`](../../.cursor/plans/local_data_services.plan.md); this file is the record and wins where they disagree.
 
 [Index](README.md) · [Strategy](strategy.md) · [Local services](local-services.md) · [Service inventory](service-inventory.md) · [Second install](second-install.md)
 
@@ -355,9 +355,9 @@ Mixing is allowed and well-defined. Setting `SPATIAL_UPLOADS_LAMBDA_ARN` sends u
 - `npm run dev` runs Compose for containers and `concurrently` for host processes, with profiles, readiness probes, logs, and status, and already injects one local service URL into the API.
 - `npm run setup -- --reset` restores the golden snapshot. There is no object store to reset.
 
-## Proposed decisions
+## Decisions
 
-To be moved into *Decisions* with the month when accepted; anything implementation overturns is corrected in place.
+Accepted October 2026. None has shipped yet; a decision gets a second month when it does, and anything implementation overturns is corrected in place.
 
 - Rows that reference objects are self-contained: a complete `url` and a bucket-qualified `remote`, with `overlay_data_tables.parquet_url` added to complete the set. There is no registry table. Code reads stored URLs and never reconstructs them. Hostnames written into data-path code are removed, which narrows the "hostnames are later debt" stance in [second install](second-install.md) to the hostnames this plan does not touch.
 - A process may write, delete, or inspect only buckets named in its own environment. Every other remote is read-only by URL. Nothing about storage authorization lives in the database or in request payloads. Bucket names are unique across every store a database can refer to.
@@ -403,4 +403,6 @@ To be moved into *Decisions* with the month when accepted; anything implementati
 
 ## Effect on the other topic files
 
-On acceptance: [local services](local-services.md) resolves its phase 3 open questions (an emulator over per-developer AWS queues; local R2 under Miniflare over fixture archives; a prebuilt runtime image for CI build time) and its phase 5 question (fragment and subdivision get local entry points here), and its *Profiles* section records that the data profile is the `npm run dev` default. [Second install](second-install.md) replaces the data-path items in its known-debt paragraph with a pointer to the storage model. [Strategy](strategy.md) phase 3 gains the phase 0 production groundwork as a prerequisite. [Service inventory](service-inventory.md) is updated row by row as each stand-in ships. [Secrets](secrets-management.md) gains the new manifest entries. The repo `README.md` and the package READMEs receive the operating instructions; this file does not.
+Applied on acceptance, October 2026: [local services](local-services.md) moved its phase 3 open questions (an emulator over per-developer AWS queues; local R2 under Miniflare over fixture archives; a prebuilt runtime image for CI build time) and its phase 5 question (fragment and subdivision get local entry points here) into its decisions, and its *Profiles* section records that the data profile becomes the `npm run dev` default. [Second install](second-install.md) points the data-path items in its known-debt paragraph at the storage model. [Strategy](strategy.md) phase 3 names the phase 0 production groundwork as a prerequisite.
+
+Still to apply as work lands: [Service inventory](service-inventory.md) is updated row by row as each stand-in ships. [Secrets](secrets-management.md) gains the new manifest entries with phase 1. The repo `README.md` and the package READMEs receive the operating instructions; this file does not.

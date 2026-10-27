@@ -8,7 +8,7 @@
 
 Daily development, CI journeys, and cloud agents run SeaSketch's own backends on the same machine as the app. A change to uploads, tiles, data tables, or report calculation can be tried without deploying anything. Pointing at a deployed service stays possible for debugging that service, and it is never the default.
 
-[Environment setup](env-setup.md) starts whatever this document puts in a profile. [Integration testing](integration-testing.md) writes journeys only against profiles the start command actually runs. [Local data services](local-data-services.md) is the proposed architecture for the data profile this document describes; where it is more specific, it is the record for the data path.
+[Environment setup](env-setup.md) starts whatever this document puts in a profile. [Integration testing](integration-testing.md) writes journeys only against profiles the start command actually runs. [Local data services](local-data-services.md) is the accepted architecture (October 2026) for the data profile this document describes; where it is more specific, it is the record for the data path.
 
 ## Rules
 
@@ -44,8 +44,8 @@ Report calculation is in the data profile, not optional, because report widgets 
 
 The start command takes a profile: `npm run dev -- --profile <name>`. A profile is a set of Compose `profiles` plus a set of host services in the service list ([environment setup](env-setup.md)).
 
-- **core** — Postgres, Redis, API, client, and the watchers a person needs. The default for `npm run dev`, CI smoke, and any agent not working on the data path.
-- **data** — core, plus the data-tables handler, the spatial-uploads container, `pmtiles-server` under `wrangler dev`, and the overlay worker dev server. The API receives local handler URLs, a development queue, and development buckets. Never Lambda ARNs.
+- **core** — Postgres, Redis, API, client, and the watchers a person needs. The default for CI smoke and any agent not working on the data path. *(October 2026)* Once [local data services](local-data-services.md) phase 1 lands, `npm run dev` defaults to the data profile and `--profile core` is the opt-out; until then core remains the default.
+- **data** — core, plus the data-tables handler, the spatial-uploads container, `pmtiles-server` under `wrangler dev`, and the overlay worker dev server. The API receives local handler URLs, a development queue, and development buckets. Never Lambda ARNs. The components and their ports are in [local data services](local-data-services.md).
 - **optional add-ons** — started one at a time when a task needs them: fragment worker, PII classifier, AI analyst. Each documents its local command and the variable that points the API at it. Until someone starts one, its feature reports itself unavailable. The data-tables handler, spatial-uploads handler, subdivision worker, and bookmark screenshotter are part of `npm run dev`. `--ci` starts the handlers, subdivision, and the screenshotter once, without watching. The e2e profile starts the screenshotter so the forum bookmark journey can capture a map.
 
 In every non-production profile, email is written to a directory in the workspace, generalizing today's Cypress file sink. No default profile sends SES mail.
@@ -56,7 +56,7 @@ Uploads, tile archives, and ACL documents live in object storage even for local 
 
 **Transitional.** `TILES_ACL_NAMESPACE` already isolates non-production ACL documents on the shared tiles bucket, and the API refuses to run outside production without it or with `prod`. That guard stays in force for as long as a development process can see a bucket production also uses.
 
-**Before phase 3.** Once CI jobs and agents run the data profile, there are too many writers for a namespace convention. Mutable storage moves to development buckets (or prefixes whose credentials cannot write production's). The golden snapshot's private bucket follows the same pattern.
+**Before phase 3.** Once CI jobs and agents run the data profile, there are too many writers for a namespace convention. Mutable storage moves to development buckets (or prefixes whose credentials cannot write production's). The golden snapshot's private bucket follows the same pattern. *(October 2026)* The design is the storage model in [local data services](local-data-services.md): local buckets with their own names under Miniflare, and a process that writes only the buckets its environment names.
 
 ## Decisions
 
@@ -66,13 +66,15 @@ Uploads, tile archives, and ACL documents live in object storage even for local 
 - Workers that exist only as deployed Lambdas get a local entry point when a journey or feature task needs one, using the same dev-handler pattern.
 - Bookmark screenshots run through local `wrangler dev` in the core profile and in the e2e profile. An API started outside `npm run dev` uses `SCREENSHOTTER_URL` when it is set. Test mode keeps the captured PNG on the API and the e2e client loads it from there, so the journey can view the large image without writing to Cloudflare Images.
 - *(September 2026)* Outside production, an unset integration stays unavailable. In production, calling that functionality throws `MisconfiguredError` naming the missing variable. The overlay result queue is required before the production process listens, because nothing would fail later if it were missing. `SCREENSHOTTER_URL` or `SCREENSHOTTER_TOKEN` unset throws before any capture request.
+- *(October 2026)* The data profile's results queue is ElasticMQ, not a per-developer AWS queue, so that AWS credentials leave the default profile. ([local data services](local-data-services.md))
+- *(October 2026)* `pmtiles-server` in the data profile serves from local R2 under Miniflare, not from fixture archives, so the Worker runs its production code against the same binding API. Fixtures keep their production URLs.
+- *(October 2026)* The spatial-uploads image splits into a prebuilt runtime stage published to the GitHub Container Registry and an application stage that builds in seconds, which is what makes the container usable in pull-request CI.
+- *(October 2026)* Fragment creation and subdivision get local entry points in the data profile rather than waiting for phase 5: `FRAGMENT_WORKER_DEV_HANDLER` with a new `server.ts`, and `SUBDIVISION_WORKER_DEV_HANDLER` against the existing container.
 
 ## Open questions
 
-- *(Phase 3)* Whether the data profile's SQS queue is a per-developer AWS queue (the pattern `OverlayWorkerLambdaStack` already supports) or a local SQS emulator such as ElasticMQ, which would remove AWS credentials from the data profile.
-- *(Phase 3)* Whether `pmtiles-server` in the data profile serves from a development R2 bucket through Miniflare, or from local fixture archives.
-- *(Phase 3)* Whether the spatial-uploads image build is too slow for pull-request CI. If so, data-profile journeys run nightly or on demand first.
-- *(Phase 5)* Which optional workers need a local entry point. Fragment and subdivision are the likely first, if sketch-processing journeys arrive.
+- *(Phase 3)* None remaining here. The data path's open questions are tracked in [local data services](local-data-services.md).
+- *(Phase 5)* Whether the PII classifier and the AI data analyst need local entry points. Fragment and subdivision were resolved in October 2026 (see Decisions).
 
 ## Exit criteria
 
