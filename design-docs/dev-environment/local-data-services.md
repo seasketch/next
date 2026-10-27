@@ -189,6 +189,20 @@ The gateway exists because of one fact: Lambdas, the API, and the subdivision wo
 
 The deciding factor is the request-body limit. SeaSketch's outputs routinely exceed it, so a write service cannot be a simple proxy; it has to reimplement multipart transfer that the S3 SDKs already provide. The centralized-authorization benefit is real but can be had another way: a small Worker that issues short-lived presigned S3 URLs or scoped tokens to Lambdas on request, which keeps R2 keys out of Lambdas without touching the transfer path. That is orthogonal to local emulation and can be added later without changing this plan. The recommendation is the S3 protocol with the local gateway; if a write service is built later for authorization reasons, its local instance would replace the gateway naturally.
 
+### Large objects through the gateway
+
+The gateway is itself a Worker, so the obvious question is why the body limit that rules out a write service does not also rule out the gateway. The answer is where the limit lives. The 100 MB to 500 MB cap is enforced by Cloudflare's edge, in front of a deployed Worker, before a request reaches the runtime. `wrangler dev` runs the same runtime on the laptop with nothing in front of it; the SDK connects to it directly. There is no edge, so there is no cap. The limits that do apply locally are R2's own per-call limits, which Miniflare enforces the same way production does: about 5 GB for a single `PutObject`, a 5 MiB minimum part size, and 10,000 parts per multipart upload. Those are the limits the writers already live within in production, so nothing is hidden locally that would surface on deploy.
+
+Keeping that true is a matter of how the gateway is written, and three rules cover it.
+
+**Stream every object body.** `PutObject` passes `request.body` straight into the binding's `put()`, and `UploadPart` passes it into `uploadPart()`. The gateway never calls `arrayBuffer()` or `text()` on an object body; the only bodies it reads whole are the small XML documents in `CompleteMultipartUpload` and `DeleteObjects`. `put()` with a stream needs a known length, and every S3 upload carries one, either as `Content-Length` or, for the framing described next, as `x-amz-decoded-content-length`. Miniflare's R2 writes each blob to disk as it arrives and computes the MD5 for the ETag in passing, so the gateway's memory stays flat whatever the object size.
+
+**Unframe `aws-chunked` uploads.** The S3 SDK version pinned in this repository, and boto3 from 1.36 on, default to sending a CRC32 checksum as a trailer on `PutObject` and `UploadPart`, which means the body arrives as `Content-Encoding: aws-chunked`: hex chunk-size lines between the data, and the checksum after it. Production R2 accepts that framing, which is why the handlers work against it today without setting `requestChecksumCalculation` to `WHEN_REQUIRED`. The gateway has to do the same: strip the chunk framing and the trailer in a `TransformStream`, hand the decoded bytes to `put()`, and use `x-amz-decoded-content-length` as the object length. It is a small amount of code and the single most likely place for the gateway to be subtly wrong, so the contract test uploads through each SDK at its real default settings, not with checksums turned off. The alternative, turning checksums off in the shared client factory, would be a production change made for a local convenience, and it is not taken. Presigned PUTs from the browser are plain bodies and need no unframing.
+
+**Read the same way.** A raw upload crosses the gateway twice: once from the browser to disk, and once when the spatial-uploads container fetches it with `GetObject` and streams it to its own disk. `GetObject` returns the R2 body stream directly, with range requests honored, so the second crossing is as flat as the first. The cost of the two crossings is throughput, not correctness; on a laptop it is bounded by local disk, and the phase 1 spike measures it.
+
+If the spike shows the runtime buffering bodies or imposing a limit after all, the gateway does not need to be a Worker. Miniflare's programmatic API gives a Node process the same R2 binding over the same persistence directory, and a Node HTTP server has no edge in front of it either. The gateway's code would move hosts; its contract and the writers would not change.
+
 ### Known differences from S3 and R2
 
 | Difference | Effect | Position |
@@ -196,7 +210,8 @@ The deciding factor is the request-body limit. SeaSketch's outputs routinely exc
 | No signature verification | A broken presign succeeds locally and fails in production. | Accepted for the default profile. The expiry and content-type checks cover the common mistake. Verifying signatures against the placeholder keys is an open question. |
 | No lifecycle rules | The 7-day expiry on staged uploads is not emulated. | A cost control, not behavior under test. |
 | Synthesized ETags and `x-amz-*` headers | The gateway builds them from R2 object metadata. | No caller inspects them beyond the SDK's multipart bookkeeping. Covered by the contract test. |
-| Throughput | A multi-gigabyte upload streams through the Worker runtime twice, once on write and once when the processor reads it. | Unmeasured. A spike item. |
+| Throughput | A multi-gigabyte upload streams through the Worker runtime twice, once on write and once when the processor reads it. No size cap applies locally; see [Large objects through the gateway](#large-objects-through-the-gateway). | Unmeasured. A spike item. |
+| `aws-chunked` request bodies | The Node and Python SDKs send trailing checksums by default. The gateway unframes them. | Covered by the contract test at each SDK's default settings. |
 | Several Worker processes on one persistence directory | Cloudflare recommends it. Lock contention under concurrent writes is possible. | A spike item. The fallback is a single multi-config `wrangler dev` session, which guarantees one Miniflare instance but exposes only one Worker over HTTP. |
 | No `ListObjectsV2` | Not implemented. | No current writer lists objects. |
 
@@ -356,7 +371,7 @@ To be moved into *Decisions* with the month when accepted; anything implementati
 
 - *(Phase 0b)* Whether the subdivision worker's result message needs a compatibility window during the deploy, since a worker invoked before the API deploy may omit the URL the new `JobStatusUpdater` requires. Deploy the worker first, or accept both shapes for one release.
 - *(Phase 0a)* The R2 bucket name. `ssn-uploads` is used above; it should not be confused with `uploads.seasketch.org`, which serves `ssn-tiles`.
-- *(Phase 1)* A spike on Miniflare: several `wrangler dev` sessions on one persistence directory under concurrent gateway writes and `pmtiles-server` reads, and gateway throughput for a multi-gigabyte multipart upload. Pass criteria: the exact SDK calls the handlers make succeed, the API's presigned PUT works as the browser sends it, and no SQLite lock errors appear across ten consecutive uploads.
+- *(Phase 1)* A spike on Miniflare: several `wrangler dev` sessions on one persistence directory under concurrent gateway writes and `pmtiles-server` reads, and gateway throughput for a multi-gigabyte multipart upload. Pass criteria: the exact SDK calls the handlers make succeed at their default checksum settings, the API's presigned PUT works as the browser sends it, a 3 GB raw upload by presigned PUT and a multipart output above 500 MB both complete with the gateway process's memory flat, and no SQLite lock errors appear across ten consecutive uploads.
 - *(Phase 1)* Whether `preview_bucket_name` or an `[env.local]` block is the right way to give the Workers local bucket names under `wrangler dev` without touching their production configuration.
 - *(Phase 1)* Whether the prebuilt runtime image is pinned by digest in the Dockerfile or tracked as `latest`.
 - *(Phase 1)* Whether the gateway should verify signatures against the placeholder keys.
