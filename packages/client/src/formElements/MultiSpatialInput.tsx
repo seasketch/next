@@ -1281,16 +1281,21 @@ function Admin(props: {
                   })
                 }
                 simpleFeatures
+                optionDetails={{
+                  [SketchGeometryType.Polygon]: (
+                    <MaxPolygonSizeSetting
+                      nested
+                      geometryType={props.sketchClass.geometryType}
+                      value={props.componentSettings.maxPolygonSizeSqKm}
+                      onChange={updateComponentSetting(
+                        "maxPolygonSizeSqKm",
+                        props.componentSettings
+                      )}
+                    />
+                  ),
+                }}
               />
             </div>
-            <MaxPolygonSizeSetting
-              geometryType={props.sketchClass.geometryType}
-              value={props.componentSettings.maxPolygonSizeSqKm}
-              onChange={updateComponentSetting(
-                "maxPolygonSizeSqKm",
-                props.componentSettings
-              )}
-            />
             <BoundsInput
               value={props.bounds}
               map={props.map}

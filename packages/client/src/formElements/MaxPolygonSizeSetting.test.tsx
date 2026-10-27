@@ -24,6 +24,20 @@ test("hides the size limit unless the geometry type is polygon", () => {
   expect(screen.getByPlaceholderText("No limit")).toHaveValue(4);
 });
 
+test("nests a full-width size field under polygon geometry", () => {
+  render(
+    <MaxPolygonSizeSetting
+      nested
+      geometryType={SketchGeometryType.Polygon}
+      value={8000}
+      onChange={jest.fn()}
+    />
+  );
+  expect(screen.getByLabelText("Maximum size")).toHaveValue(8000);
+  expect(screen.getByText("Leave blank for no limit.")).toBeInTheDocument();
+  expect(screen.queryByText("Maximum polygon size")).not.toBeInTheDocument();
+});
+
 test("saves a positive area and clears a blank field", () => {
   const onChange = jest.fn();
   render(

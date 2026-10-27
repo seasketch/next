@@ -1,7 +1,6 @@
 import { useContext, useEffect, useState } from "react";
 import { Trans, useTranslation } from "react-i18next";
 import Badge from "../components/Badge";
-import InputBlock from "../components/InputBlock";
 import { SketchGeometryType } from "../generated/graphql";
 import { FormLanguageContext } from "./FormElement";
 import {
@@ -12,11 +11,15 @@ import {
 /**
  * Optional maximum polygon area for a spatial survey question.
  * Stored on component settings as square kilometers. Blank means no limit.
+ *
+ * `nested` places the field inside the selected Polygon geometry card.
+ * Otherwise it is a section, matching Starting Bounds.
  */
 export default function MaxPolygonSizeSetting(props: {
   geometryType?: SketchGeometryType | null;
   value?: number | null;
   onChange: (value: number | null) => void;
+  nested?: boolean;
 }) {
   const { t } = useTranslation("admin:surveys");
   const [text, setText] = useState(() => displayValue(props.value));
@@ -50,56 +53,76 @@ export default function MaxPolygonSizeSetting(props: {
     }
   }
 
+  const field = (
+    <div className="flex rounded-md shadow-sm">
+      <input
+        type="number"
+        min={0}
+        step="any"
+        id="maxPolygonSizeSqKm"
+        name="maxPolygonSizeSqKm"
+        placeholder={t("No limit")}
+        className="min-w-0 flex-1 block w-full bg-white cursor-text border-gray-300 rounded-l-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5 text-black"
+        value={text}
+        onFocus={() => setFocused(true)}
+        onBlur={() => {
+          setFocused(false);
+          commit(text);
+        }}
+        onChange={(e) => {
+          const raw = e.target.value;
+          setText(raw);
+          if (raw.trim() === "") {
+            props.onChange(null);
+            return;
+          }
+          // Keep intermediate values like "0." local until they are a
+          // complete positive number. Blur commits or clears them.
+          if (raw.endsWith(".") || /^0\.?$/.test(raw) || /\.0+$/.test(raw)) {
+            return;
+          }
+          const parsed = Number(raw);
+          if (Number.isFinite(parsed) && parsed > 0) {
+            props.onChange(parsed);
+          }
+        }}
+      />
+      <span className="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-500 sm:text-sm">
+        <Trans ns="admin:surveys">km²</Trans>
+      </span>
+    </div>
+  );
+
+  if (props.nested) {
+    return (
+      <div>
+        <label
+          htmlFor="maxPolygonSizeSqKm"
+          className="block text-sm font-medium leading-5 text-gray-800"
+        >
+          {t("Maximum size")}
+        </label>
+        <p className="text-sm text-gray-500 mt-1 mb-2">
+          <Trans ns="admin:surveys">Leave blank for no limit.</Trans>
+        </p>
+        {field}
+      </div>
+    );
+  }
+
   return (
-    <InputBlock
-      labelType="small"
-      flexDirection="column"
-      title={t("Maximum polygon size")}
-      description={
+    <div>
+      <h4 className="block text-sm font-medium leading-5 text-gray-800">
+        <label htmlFor="maxPolygonSizeSqKm">{t("Maximum polygon size")}</label>
+      </h4>
+      <p className="text-sm text-gray-500 mb-2 mt-1">
         <Trans ns="admin:surveys">
-          Optional. Respondents cannot save a polygon larger than this area.
-          Leave blank for no limit.
+          Respondents cannot save a polygon larger than this area. Leave blank
+          for no limit.
         </Trans>
-      }
-      input={
-        <div className="flex items-center gap-2 w-full">
-          <input
-            type="number"
-            min={0}
-            step="any"
-            name="maxPolygonSizeSqKm"
-            placeholder={t("No limit")}
-            className="w-28 block border-gray-300 rounded-md focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 sm:text-sm sm:leading-5 text-black"
-            value={text}
-            onFocus={() => setFocused(true)}
-            onBlur={() => {
-              setFocused(false);
-              commit(text);
-            }}
-            onChange={(e) => {
-              const raw = e.target.value;
-              setText(raw);
-              if (raw.trim() === "") {
-                props.onChange(null);
-                return;
-              }
-              // Keep intermediate values like "0." local until they are a
-              // complete positive number. Blur commits or clears them.
-              if (raw.endsWith(".") || /^0\.?$/.test(raw) || /\.0+$/.test(raw)) {
-                return;
-              }
-              const parsed = Number(raw);
-              if (Number.isFinite(parsed) && parsed > 0) {
-                props.onChange(parsed);
-              }
-            }}
-          />
-          <span className="text-sm text-gray-600">
-            <Trans ns="admin:surveys">km²</Trans>
-          </span>
-        </div>
-      }
-    />
+      </p>
+      {field}
+    </div>
   );
 }
 
