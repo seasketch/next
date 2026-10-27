@@ -7,7 +7,7 @@ export type {
 } from "./src/spatialUploadsHandlerTypes";
 
 export const processUpload = async (event: SpatialUploadsHandlerRequest) => {
-  const s3LogPath = `s3://${process.env.BUCKET}/${event.taskId}.log.txt`;
+  const logRemote = `r2://${process.env.BUCKET}/${event.taskId}.log.txt`;
   try {
     const outputs = await handleUpload(
       event.taskId,
@@ -20,12 +20,12 @@ export const processUpload = async (event: SpatialUploadsHandlerRequest) => {
     );
     return {
       ...outputs,
-      log: s3LogPath,
+      log: logRemote,
     };
   } catch (e) {
     return {
       error: (e as Error).message,
-      log: s3LogPath,
+      log: logRemote,
     };
   }
 };

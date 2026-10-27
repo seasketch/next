@@ -3,7 +3,7 @@ name: Local data services
 overview: "Implementation sketch. Source of truth is design-docs/dev-environment/local-data-services.md; that file wins if they disagree. Refresh this sketch as steps land."
 todos:
   - id: phase-0a-uploads-r2
-    content: "Phase 0a: raw uploads S3 -> R2 (ssn-uploads), presign via R2 client, handlers read from R2, CDK env, deploy, verify checklist"
+    content: "Phase 0a: raw uploads S3 -> R2 (ssn-spatial-uploads-tmp, 24h expiry). Code and bucket are in place and tested locally. Production cutover is a later hard switch."
     status: pending
   - id: phase-0b-storage-model
     content: "Phase 0b: one S3 client factory per runtime, parquet_url, URLs not keys to workers, owned-bucket rule, hostnames out of data-path code, deploy, verify"
@@ -35,10 +35,10 @@ Working notes for implementing [local data services](../../design-docs/dev-envir
 
 ## Order and pull-request boundaries
 
-Each numbered item below is one pull request. Phase 0 items each deploy to production and are verified before the next begins. Phase 1 and 2 items change no production behavior except where noted.
+Each numbered item below is one pull request. Phase 0 is implemented and tested from a laptop against the real `ssn-spatial-uploads-tmp` bucket before production is switched. Deploy is manual, so merging does not cut over. The production switch is one hard cut of bucket name and client after both phase 0 pull requests are ready, then the verification checklist. Phase 1 and 2 items change no production behavior except where noted.
 
-1. Phase 0a: raw uploads to R2. Deploy. Verify.
-2. Phase 0b: the storage model. Deploy. Verify.
+1. Phase 0a: raw uploads to R2. Test locally against `ssn-spatial-uploads-tmp`.
+2. Phase 0b: the storage model. Test locally. Then deploy phase 0 and verify.
 3. Phase 1: `packages/local-r2`, the `.data/` directory, and the contract test.
 4. Phase 1: `pmtiles-server` under `wrangler dev` as two sessions.
 5. Phase 1: the spatial-uploads container (Dockerfile split, registry image, Compose service).
@@ -77,16 +77,15 @@ Run `npx wrangler dev --port 8333 --persist-to /tmp/s3test/.data` and point an S
 
 ## Phase 0a: raw uploads move from S3 to R2
 
-**Cloudflare.** Create the `ssn-uploads` bucket. Add a lifecycle rule that deletes objects after 7 days (`wrangler r2 bucket lifecycle add`). Add a CORS rule allowing `PUT` with the `Content-Type` header and exposing `ETag` from the production client origins; the current S3 rule is in `packages/infra/lib/DataUploadsStack.ts` and is the template. Create or reuse an R2 API token scoped to `ssn-uploads` and `ssn-tiles`.
+**Cloudflare.** Create the `ssn-spatial-uploads-tmp` bucket in Western North America, next to the `us-west-2` Lambdas. Add a lifecycle rule that deletes objects after 24 hours and aborts incomplete multipart uploads after 24 hours (`wrangler r2 bucket lifecycle add`). Copy the S3 CORS rule from `packages/infra/lib/DataUploadsStack.ts`: origins `*`, methods `HEAD`, `GET`, and `PUT`, all headers. `localhost:3000` still uploads to this bucket until phase 1. The existing account-wide R2 token already covers the new bucket.
 
-**API.** The presign sites that target the S3 bucket today:
+**API.** The presign sites that target the staging bucket today:
 
 - `packages/api/src/plugins/dataUploadTaskPlugin.ts` (`getSignedUrlPromise("putObject")` with `S3_REGION` and `SPATIAL_UPLOADS_BUCKET`)
-- `packages/api/src/plugins/replacePMTilesPlugin.ts`
-- `packages/api/src/plugins/dataSourcePlugin.ts`
+- `packages/api/src/plugins/replacePMTilesPlugin.ts` (its staging presign only; its R2 client for `ssn-tiles` stays)
 - `packages/api/src/plugins/overlayDataTablePlugin.ts`
 
-Each switches to an R2 client (`endpoint: R2_ENDPOINT`, `signatureVersion: "v4"`, `s3ForcePathStyle: true` for aws-sdk v2) and keeps `SPATIAL_UPLOADS_BUCKET` as the bucket name, now set to `ssn-uploads`. Tasks that read or write the staged bucket follow: `packages/api/tasks/processDataUpload.ts`, `tasks/updateCRWTemplate.ts`, `tasks/reprocessLegacyDataSource.ts`. Doing the client factory (phase 0b) first and using it here is reasonable if it keeps this pull request small; otherwise construct the R2 client the way `writeProjectAclDoc.ts` does.
+`dataSourcePlugin.ts` presigns against `data_sources_buckets` and stays on S3. Each staging presign switches to an R2 client (`endpoint: R2_ENDPOINT`, `signatureVersion: "v4"`, `s3ForcePathStyle: true` for aws-sdk v2), constructed the way `writeProjectAclDoc.ts` does. The shared client factory waits for phase 0b. `SPATIAL_UPLOADS_BUCKET` stays the bucket-name variable, now set to `ssn-spatial-uploads-tmp`. `reprocessLegacyDataSource.ts` writes the staged object and follows. `processDataUpload.ts` and `updateCRWTemplate.ts` construct an S3 client they never call; drop those. The handler reads `s3://$BUCKET/$objectKey` from its environment, so the cutover is that environment change and nothing stored on the row.
 
 **Handlers.** `packages/spatial-uploads-handler/src/handleUpload.ts` (around lines 303 and 340) builds an S3 client to read the staged upload; it uses the R2 client from `remotes.ts` instead. `packages/data-tables-handler/src/remotes.ts` and `handleDataTableUpload.ts` read `BUCKET` from S3; same change. Both Lambdas need `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, and the new bucket name in their environment.
 
@@ -95,6 +94,8 @@ Each switches to an R2 client (`endpoint: R2_ENDPOINT`, `signatureVersion: "v4"`
 **Client.** No change. `packages/client/src/admin/uploads/ProjectBackgroundJobManager.ts` PUTs to whatever URL it is given and reports `onUploadProgress`.
 
 **Verify on production.** The checklist is in the record under *Phase 0 verification*: shapefile, GeoJSON, GeoTIFF, FlatGeobuf, data table; a file over 1 GB with the progress bar; a cancelled upload; a PMTiles replacement; handler logs showing the staged read from R2; the lifecycle rule present; the probe's new `presignedUploadUrl` check. Rollback is the previous bucket name and client.
+
+**Landed locally, 2026-10-27.** The bucket exists in WNAM. Lifecycle expires objects and aborts incomplete multipart uploads after 1 day (the API's unit for 24 hours). CORS matches the S3 rule. Laptop `.env` files point at the bucket. A presigned PUT, a `localhost:3000` CORS preflight, and the upload handler's `getObject` round-tripped. Production stays on S3 until the deploy workflow runs. The anonymous production probe still has no admin session, so its `presignedUploadUrl` check is not added yet.
 
 ## Phase 0b: the storage model
 
@@ -118,10 +119,10 @@ Each switches to an R2 client (`endpoint: R2_ENDPOINT`, `signatureVersion: "v4"`
 
 ### `packages/local-r2` and `.data/`
 
-- `packages/local-r2/wrangler.jsonc`: two `r2_buckets` entries, `ssn-tiles-local` and `ssn-uploads-local`, each with `local_dev.experimental_s3_credentials` set to the fixed local strings. `src/index.ts` returns 404. `package.json` script `dev`: `wrangler dev --port 8333 --ip 0.0.0.0 --persist-to ../../.data/wrangler`. Pin `wrangler` to the workspace version.
+- `packages/local-r2/wrangler.jsonc`: two `r2_buckets` entries, `ssn-tiles-local` and `ssn-spatial-uploads-tmp-local`, each with `local_dev.experimental_s3_credentials` set to the fixed local strings. `src/index.ts` returns 404. `package.json` script `dev`: `wrangler dev --port 8333 --ip 0.0.0.0 --persist-to ../../.data/wrangler`. Pin `wrangler` to the workspace version.
 - `.gitignore` gains `.data/`. `packages/api/scripts/setup.sh` (`npm run setup`) deletes `.data/wrangler` and `.data/wrangler-e2e` under `--reset`, in the same step that drops the database.
 - Contract test under `packages/local-r2/test/`: the spike's calls, run by `vitest` against a `wrangler dev` it starts itself (`unstable_dev` or a child process). It uses the real `@aws-sdk/client-s3`, `@aws-sdk/lib-storage`, and `aws-sdk` v2 from the workspace, at the client factory's settings. It is the tripwire for a `wrangler` upgrade renaming the experimental key.
-- Local `.env` values: `R2_ENDPOINT=http://localhost:8333/cdn-cgi/local/r2/s3`, `R2_TILES_BUCKET=ssn-tiles-local`, `SPATIAL_UPLOADS_BUCKET=ssn-uploads-local`, `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` as in the config, `UPLOADS_BASE_URL=http://localhost:8788`, `TILES_BASE_URL=http://localhost:8787`, `TILES_ACL_NAMESPACE=local`.
+- Local `.env` values: `R2_ENDPOINT=http://localhost:8333/cdn-cgi/local/r2/s3`, `R2_TILES_BUCKET=ssn-tiles-local`, `SPATIAL_UPLOADS_BUCKET=ssn-spatial-uploads-tmp-local`, `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` as in the config, `UPLOADS_BASE_URL=http://localhost:8788`, `TILES_BASE_URL=http://localhost:8787`, `TILES_ACL_NAMESPACE=local`.
 
 ### `pmtiles-server`
 
@@ -165,7 +166,6 @@ Each switches to an R2 client (`endpoint: R2_ENDPOINT`, `signatureVersion: "v4"`
 
 ## Open items carried from the record
 
-- 0a: the R2 bucket name (`ssn-uploads` is the working name).
 - 0b: subdivision message compatibility during deploy.
 - 1: the laptop portion of the spike; `[env.local]` versus `preview_bucket_name`; runtime image pinned by digest or tag; whether to file the `aws-chunked` issue against Miniflare.
 - 2: a local mode with tile access control on; containerizing the Node processors.

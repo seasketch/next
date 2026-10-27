@@ -34,8 +34,6 @@ export class GraphQLStack extends cdk.Stack {
       redisHost: string;
       emailSource: string;
       clientDomain: string;
-      spatialUploadsBucket: Bucket;
-      normalizedOutputsBucket: Bucket;
       spatialUploadsHandlerArn: string;
       overlayWorkerArn: string;
       uploadHandler: lambda.DockerImageFunction;
@@ -81,6 +79,10 @@ export class GraphQLStack extends cdk.Stack {
       throw new Error(
         "You must specify SCREENSHOTTER_URL and SCREENSHOTTER_TOKEN env vars."
       );
+    }
+    const spatialUploadsBucket = process.env.SPATIAL_UPLOADS_BUCKET;
+    if (!spatialUploadsBucket) {
+      throw new Error(`SPATIAL_UPLOADS_BUCKET must be set in environment`);
     }
     if (
       !process.env.R2_ENDPOINT ||
@@ -162,7 +164,7 @@ export class GraphQLStack extends cdk.Stack {
             SENTRY_DSN,
             MAPBOX_ACCESS_TOKEN,
             CLIENT_DOMAIN: props.clientDomain,
-            SPATIAL_UPLOADS_BUCKET: props.spatialUploadsBucket.bucketName,
+            SPATIAL_UPLOADS_BUCKET: spatialUploadsBucket,
             SPATIAL_UPLOADS_LAMBDA_ARN: props.spatialUploadsHandlerArn,
             OVERLAY_WORKER_LAMBDA_ARN: props.overlayWorkerArn,
             R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID,
@@ -287,10 +289,6 @@ export class GraphQLStack extends cdk.Stack {
 
     props.uploadsBucket.grantReadWrite(service.taskDefinition.taskRole);
     props.tilePackagesBucket.grantReadWrite(service.taskDefinition.taskRole);
-    props.spatialUploadsBucket.grantReadWrite(service.taskDefinition.taskRole);
-    props.normalizedOutputsBucket.grantReadWrite(
-      service.taskDefinition.taskRole
-    );
     props.uploadHandler.grantInvoke(service.taskDefinition.taskRole);
     props.dataTablesHandler.grantInvoke(service.taskDefinition.taskRole);
     props.overlayEngineAccessTokenSecret.grantWrite(

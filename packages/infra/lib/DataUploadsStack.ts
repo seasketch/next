@@ -9,7 +9,6 @@ import { Construct } from "constructs";
 
 export class DataUploadsStack extends cdk.Stack {
   uploadsBucket: s3.Bucket;
-  normalizedUploadsBucket: s3.Bucket;
   constructor(
     scope: Construct,
     id: string,
@@ -18,6 +17,11 @@ export class DataUploadsStack extends cdk.Stack {
     }
   ) {
     super(scope, id, props);
+    // Staging uploads now go to the R2 bucket ssn-spatial-uploads-tmp.
+    // This S3 bucket stays until its lifecycle rule drains objects uploaded
+    // before that cutover. DataUploadsNormalized was unused and is gone;
+    // its removal policy was RETAIN, so the empty bucket is left in the
+    // account when this stack next deploys.
     const uploadsBucket = new s3.Bucket(this, "DataUploads", {
       publicReadAccess: false,
       removalPolicy: cdk.RemovalPolicy.DESTROY,
@@ -30,7 +34,6 @@ export class DataUploadsStack extends cdk.Stack {
           maxAge: 31536000,
         } as s3.CorsRule,
       ],
-      //  Will lose the ability to debug upload failures after 1 week
       lifecycleRules: [
         {
           abortIncompleteMultipartUploadAfter: cdk.Duration.days(2),
@@ -38,12 +41,6 @@ export class DataUploadsStack extends cdk.Stack {
         },
       ],
     });
-    const normalizedDataBucket = new s3.Bucket(this, "DataUploadsNormalized", {
-      publicReadAccess: false,
-      removalPolicy: cdk.RemovalPolicy.RETAIN,
-      autoDeleteObjects: false,
-    });
     this.uploadsBucket = uploadsBucket;
-    this.normalizedUploadsBucket = normalizedDataBucket;
   }
 }

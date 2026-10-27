@@ -13,15 +13,15 @@ const { R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ENDPOINT } = process.env;
 const r2 = new S3.default({
   region: "auto",
   endpoint: R2_ENDPOINT,
+  signatureVersion: "v4",
+  s3ForcePathStyle: true,
   credentials: {
     accessKeyId: R2_ACCESS_KEY_ID,
     secretAccessKey: R2_SECRET_ACCESS_KEY,
   },
 });
 
-const region = process.env.S3_REGION;
 const bucket = process.env.SPATIAL_UPLOADS_BUCKET;
-const s3 = new S3.default({ region });
 
 const ReplacePMTilesPlugin = makeExtendSchemaPlugin((build) => {
   const { pgSql: sql } = build;
@@ -55,7 +55,7 @@ const ReplacePMTilesPlugin = makeExtendSchemaPlugin((build) => {
         ) => {
           const { filename, bytes } = args;
           const key = `uploads/${uuid()}/${filename}`;
-          const url = await s3.getSignedUrlPromise("putObject", {
+          const url = await r2.getSignedUrlPromise("putObject", {
             Bucket: bucket,
             Key: key,
             Expires: 60 * 60 * 4,
@@ -105,7 +105,7 @@ const ReplacePMTilesPlugin = makeExtendSchemaPlugin((build) => {
             },
             async getBytes(offset: number, length: number) {
               try {
-                const resp = await s3
+                const resp = await r2
                   .getObject({
                     Bucket: bucket,
                     Key: pmtilesKey,
@@ -113,7 +113,7 @@ const ReplacePMTilesPlugin = makeExtendSchemaPlugin((build) => {
                   })
                   .promise();
                 if (!resp.Body) {
-                  throw new Error("Failed to get bytes from S3");
+                  throw new Error("Failed to get bytes from the staging bucket");
                 }
                 return {
                   data: (resp.Body as Buffer).buffer,
@@ -121,7 +121,7 @@ const ReplacePMTilesPlugin = makeExtendSchemaPlugin((build) => {
                 };
               } catch (error) {
                 console.error(error);
-                throw new Error("Failed to get bytes from S3");
+                throw new Error("Failed to get bytes from the staging bucket");
               }
             },
           });
@@ -154,9 +154,8 @@ const ReplacePMTilesPlugin = makeExtendSchemaPlugin((build) => {
             layerName = metadata.vector_layers[0].id;
           }
 
-          // Get size of object in s3
           const bytes = (
-            await s3
+            await r2
               .headObject({
                 Bucket: bucket,
                 Key: pmtilesKey,
@@ -164,9 +163,8 @@ const ReplacePMTilesPlugin = makeExtendSchemaPlugin((build) => {
               .promise()
           ).ContentLength!;
 
-          // assuming you get this far, copy the file from s3 to r2
-          // create a readable stream from the s3 object
-          const s3Stream = s3
+          // Copy the staged upload into the tiles bucket.
+          const stagingStream = r2
             .getObject({
               Bucket: bucket,
               Key: pmtilesKey,
@@ -189,7 +187,7 @@ const ReplacePMTilesPlugin = makeExtendSchemaPlugin((build) => {
             })
             .promise();
           console.log("Uploading to R2", r2Key);
-          s3Stream.pipe(pass).on("error", (error: Error) => {
+          stagingStream.pipe(pass).on("error", (error: Error) => {
             throw error;
           });
           await promise;

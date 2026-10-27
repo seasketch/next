@@ -52,7 +52,7 @@ Browser map and downloads read from:
   public reference data ────► uploads.seasketch.org, tiles.seasketch.org
 
 Local R2 under Miniflare, in .data/wrangler/
-  buckets:    ssn-tiles-local, ssn-uploads-local
+  buckets:    ssn-tiles-local, ssn-spatial-uploads-tmp-local
   written by: its S3 API on :8333 (the API and the processors)
   read by:    pmtiles-server x2, sketch-preprocessing-worker (R2 bindings)
 ```
@@ -94,9 +94,9 @@ Subdivision and overlay analysis report progress and results to the API through 
 
 ### Phase 0: production groundwork
 
-Two changes, each its own pull request and deploy, each verified on production before the next begins. Neither mentions local development; both are improvements in their own right.
+Two changes, each its own pull request. Both are implemented and exercised from a laptop against the real staging bucket before either is deployed. Production deploy is manual, and the cutover is a hard switch of bucket name and client once phase 0 is ready. Neither change mentions local development; both are improvements in their own right.
 
-**0a. Raw uploads move from S3 to R2.** A new R2 bucket, `ssn-uploads`, replaces the `DataUploads` S3 bucket. The API presigns upload URLs against R2 instead of S3; the upload processor and the data-tables handler read the staged file from R2 instead of S3; a 7-day lifecycle rule replaces the S3 expiration. Browser upload progress is unaffected because it is measured by the browser during the PUT, not by the server. After this change there is one storage backend on the data path. Verification is a checklist of real uploads on production, described in [Phase 0 verification](#phase-0-verification).
+**0a. Raw uploads move from S3 to R2.** A new R2 bucket, `ssn-spatial-uploads-tmp`, replaces the `DataUploads` S3 bucket. The API presigns upload URLs against R2 instead of S3; the upload processor and the data-tables handler read the staged file from R2 instead of S3. A lifecycle rule deletes objects after 24 hours and aborts incomplete multipart uploads after 24 hours. The existing account-wide R2 token is reused. Browser upload progress is unaffected because it is measured by the browser during the PUT, not by the server. After this change there is one storage backend on the data path. Verification is a checklist of real uploads on production, described in [Phase 0 verification](#phase-0-verification).
 
 **0b. The storage model.** One additive column (`overlay_data_tables.parquet_url`, backfilled) and a set of code changes: read stored URLs instead of rebuilding them; pass URLs rather than bare object keys to the workers; act on a remote only when its bucket is one the process owns; remove the production hostnames that are written into API and worker code. The GraphQL schema does not change. Verification is the full upload, geography, sketch, and report flows on production plus the production probe.
 
@@ -139,7 +139,7 @@ Two changes, each its own pull request and deploy, each verified on production b
 
 **Write-side origins come from two variables.** The upload processor already reads `UPLOADS_BASE_URL` and `TILES_BASE_URL` to build the URLs it records. The API and the subdivision worker adopt the same two names, replacing `R2_PUBLIC_BASE_URL` and the hostnames written into code. Origins are copied into each row at write time, as they always have been for `data_upload_outputs.url`, so a later hostname change affects only new rows.
 
-**A process acts only on buckets it owns.** A process's environment names the buckets it may write (`R2_TILES_BUCKET`, `SPATIAL_UPLOADS_BUCKET`), the endpoint (`R2_ENDPOINT`), and the credentials (`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`). A remote whose bucket is in that set is written, deleted, or inspected with the process's own client. A remote whose bucket is not in that set is foreign: readable by its URL, otherwise skipped with a log line. Today, a cleanup task running on a laptop with a stale `.env` would delete the production object; under this rule it cannot, because `ssn-tiles` is not a bucket the laptop owns. For this to work, bucket names have to be unique across every store a database can refer to, which is why the local buckets are `ssn-tiles-local` and `ssn-uploads-local`.
+**A process acts only on buckets it owns.** A process's environment names the buckets it may write (`R2_TILES_BUCKET`, `SPATIAL_UPLOADS_BUCKET`), the endpoint (`R2_ENDPOINT`), and the credentials (`R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`). A remote whose bucket is in that set is written, deleted, or inspected with the process's own client. A remote whose bucket is not in that set is foreign: readable by its URL, otherwise skipped with a log line. Today, a cleanup task running on a laptop with a stale `.env` would delete the production object; under this rule it cannot, because `ssn-tiles` is not a bucket the laptop owns. For this to work, bucket names have to be unique across every store a database can refer to, which is why the local buckets are `ssn-tiles-local` and `ssn-spatial-uploads-tmp-local`.
 
 **One storage client factory per runtime.** The API constructs S3 clients in eleven places, some with `{ region }` and some with `{ endpoint: R2_ENDPOINT }`. They collapse onto one factory that sets endpoint, path-style addressing when an endpoint is present, credentials from the environment, and `requestChecksumCalculation: "WHEN_REQUIRED"` (see [What was verified](#what-was-verified) for why it matters locally). The upload processor's `remotes.ts` and the subdivision worker's boto3 client make the same change. After phase 0a there is one kind of client on the data path.
 
@@ -157,7 +157,7 @@ Its own CDK deploy, its own `wrangler.toml` bindings, its own `.env`: its own bu
 
 Miniflare is the simulator `wrangler dev` runs Workers in. It provides local R2 buckets backed by files under a persistence directory. Cloudflare documents that several `wrangler dev` sessions can share one directory by passing the same `--persist-to` path, and that is how every Worker in the data profile is started: the two `pmtiles-server` sessions, the sketch-preprocessing Worker, and the storage session described next all use `<repo>/.data/wrangler/`. They all see the same two buckets. The Workers that read R2 in production read local R2 through the same bindings, with no code change.
 
-Local bucket names are `ssn-tiles-local` and `ssn-uploads-local`, set through each Worker's `preview_bucket_name` or an `[env.local]` block, whichever `wrangler dev` honors in local mode. The key layout under the bucket is production's, so `pmtiles-server`'s key classification, the cleanup tasks, and the ACL document paths run unmodified.
+Local bucket names are `ssn-tiles-local` and `ssn-spatial-uploads-tmp-local`, set through each Worker's `preview_bucket_name` or an `[env.local]` block, whichever `wrangler dev` honors in local mode. The key layout under the bucket is production's, so `pmtiles-server`'s key classification, the cleanup tasks, and the ACL document paths run unmodified.
 
 ### The local S3 API
 
@@ -214,7 +214,7 @@ A raw upload crosses the local API twice: once from the browser to disk, and onc
 
 | Difference | Effect | Position |
 | --- | --- | --- |
-| No lifecycle rules | The 7-day expiry on staged uploads is not emulated. | A cost control, not behavior under test. |
+| No lifecycle rules | The 24-hour expiry on staged uploads is not emulated. | A cost control, not behavior under test. |
 | Experimental configuration key | `local_dev.experimental_s3_credentials` may be renamed by a future `wrangler` release. | One line in `packages/local-r2/wrangler.jsonc`; `wrangler` is pinned. The contract test catches it. |
 | Throughput | A multi-gigabyte upload streams through the Worker runtime twice, once on write and once when the processor reads it. No size cap applies locally; see [Large objects locally](#large-objects-locally). | About 80 MB/s measured on a shared VM for a 600 MB multipart upload. The spike records a laptop number. |
 | `aws-chunked` request bodies | Miniflare does not unframe the trailing-checksum encoding the AWS SDK v3 sends by default on streamed `PutObject`. | The shared client factory sets `requestChecksumCalculation: "WHEN_REQUIRED"`, which R2 accepts. Covered by the contract test. |
@@ -299,7 +299,7 @@ Messages are lost if the container restarts. That is acceptable: the queue carri
 
 | Integration | Local default | Production override (never in CI) | Manifest class |
 | --- | --- | --- | --- |
-| Storage | `R2_ENDPOINT=http://localhost:8333/cdn-cgi/local/r2/s3`, `R2_TILES_BUCKET=ssn-tiles-local`, `SPATIAL_UPLOADS_BUCKET=ssn-uploads-local`, `UPLOADS_BASE_URL=http://localhost:8788`, `TILES_BASE_URL=http://localhost:8787`, the fixed local `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` from `packages/local-r2/wrangler.jsonc` | The production endpoint, bucket names, origins, and real keys | public-config / production-secret |
+| Storage | `R2_ENDPOINT=http://localhost:8333/cdn-cgi/local/r2/s3`, `R2_TILES_BUCKET=ssn-tiles-local`, `SPATIAL_UPLOADS_BUCKET=ssn-spatial-uploads-tmp-local`, `UPLOADS_BASE_URL=http://localhost:8788`, `TILES_BASE_URL=http://localhost:8787`, the fixed local `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` from `packages/local-r2/wrangler.jsonc` | The production endpoint, bucket names, origins, and real keys | public-config / production-secret |
 | Workers under `wrangler dev` | `local-r2` on 8333; `pmtiles-server` on 8787 and 8788 with `UPLOADS_HOST`; sketch preprocessing on 8789; all with `--persist-to .data/wrangler` | Not applicable; production Workers are deployments | public-config |
 | Spatial uploads | `SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER=http://localhost:9001/2015-03-31/functions/function/invocations` | `SPATIAL_UPLOADS_LAMBDA_ARN` | public-config / production-secret |
 | Subdivision | `SUBDIVISION_WORKER_DEV_HANDLER=http://localhost:9000/2015-03-31/functions/function/invocations` | `SUBDIVISION_WORKER_LAMBDA_ARN` | public-config / production-secret |
@@ -337,7 +337,7 @@ Mixing is allowed and well-defined. Setting `SPATIAL_UPLOADS_LAMBDA_ARN` sends u
 
 ## Phase 0 verification
 
-**0a.** On production, after deploy: upload a shapefile, a GeoJSON, a GeoTIFF, a FlatGeobuf, and a data table; upload a file larger than 1 GB and watch the progress bar; cancel an upload partway through; replace a PMTiles archive; confirm from handler logs that the staged file was read from R2; confirm the lifecycle rule exists on the bucket. The production probe gains a read-only check that `presignedUploadUrl` returns an R2 host. Rollback is the previous bucket name and client in the environment. The S3 bucket stays, empty, until its expiration has drained it, and is removed by a later infrastructure change. `DataUploadsNormalized`, which appears only in infrastructure configuration and not in handler code, is confirmed unused and removed.
+**0a.** On production, after deploy: upload a shapefile, a GeoJSON, a GeoTIFF, a FlatGeobuf, and a data table; upload a file larger than 1 GB and watch the progress bar; cancel an upload partway through; replace a PMTiles archive; confirm from handler logs that the staged file was read from R2; confirm the lifecycle rule deletes objects and aborts incomplete multipart uploads after 24 hours. The production probe gains a read-only check that `presignedUploadUrl` returns an R2 host. Rollback is the previous bucket name and client in the environment. The cutover is a hard switch: the processor looks only in the bucket its environment names, and an upload already sitting in S3 whose job has not finished will fail until it is uploaded again. The S3 bucket stays, empty, until its expiration has drained it, and is removed by a later infrastructure change. `DataUploadsNormalized`, which appears only in infrastructure configuration and not in handler code, is confirmed unused and removed.
 
 **0b.** On production, after deploy: the full upload, data-table, geography, sketch, and report flows; a layer deletion with its cleanup confirmed in R2; the production probe green; a query confirming every `overlay_data_tables.parquet_url` resolves. Rollback is the previous API image; the added column is inert to it.
 
@@ -361,7 +361,7 @@ Accepted October 2026. None has shipped yet; a decision gets a second month when
 
 - Rows that reference objects are self-contained: a complete `url` and a bucket-qualified `remote`, with `overlay_data_tables.parquet_url` added to complete the set. There is no registry table. Code reads stored URLs and never reconstructs them. Hostnames written into data-path code are removed, which narrows the "hostnames are later debt" stance in [second install](second-install.md) to the hostnames this plan does not touch.
 - A process may write, delete, or inspect only buckets named in its own environment. Every other remote is read-only by URL. Nothing about storage authorization lives in the database or in request payloads. Bucket names are unique across every store a database can refer to.
-- Raw uploads move from the `DataUploads` S3 bucket to an R2 bucket, reached by presigned PUT through R2's S3 API, deployed and verified on production before anything else in this plan. No Worker in the upload path.
+- Raw uploads move from the `DataUploads` S3 bucket to the R2 bucket `ssn-spatial-uploads-tmp`, reached by presigned PUT through R2's S3 API. The existing account-wide R2 token is reused. Objects and incomplete multipart uploads expire after 24 hours. Phase 0 is implemented and tested locally against that bucket before the production environment is switched. The switch is a hard cut of bucket name and client, with no dual-read of the old S3 bucket. No Worker in the upload path. The local counterpart, used from phase 1, is `ssn-spatial-uploads-tmp-local`.
 - Spatial uploads, subdivision, overlay analysis, and fragment creation stay on Lambda with SQS. Cloudflare is used for storage and serving.
 - Local object storage is Miniflare's R2, shared across `wrangler dev` sessions through one persistence directory under `.data/`, with local bucket names. Writers reach it through `wrangler dev`'s built-in S3-compatible API, served from a config-only `packages/local-r2` project. SeaSketch owns no S3 translation code. There is no S3-compatible storage container and no R2 shim in production Workers. A production write-service Worker was considered and set aside because of the Workers request-body limit; see [Why the S3 protocol](#why-the-s3-protocol-and-the-alternatives).
 - The shared S3 client factory sets `requestChecksumCalculation: "WHEN_REQUIRED"` in every environment. R2 accepts it; Miniflare's S3 API requires it for streamed `PutObject`.
@@ -377,7 +377,6 @@ Accepted October 2026. None has shipped yet; a decision gets a second month when
 ## Open questions
 
 - *(Phase 0b)* Whether the subdivision worker's result message needs a compatibility window during the deploy, since a worker invoked before the API deploy may omit the URL the new `JobStatusUpdater` requires. Deploy the worker first, or accept both shapes for one release.
-- *(Phase 0a)* The R2 bucket name. `ssn-uploads` is used above; it should not be confused with `uploads.seasketch.org`, which serves `ssn-tiles`.
 - *(Phase 1)* The remainder of the Miniflare spike. Already shown on a shared VM: each writer's real SDK calls succeed against the local S3 API, a presigned PUT works as the browser sends it, a 600 MB multipart upload completes with `workerd` memory flat, and a second session reads what the first wrote. Still to show, on a laptop: a 3 GB raw upload by presigned PUT, concurrent writes and `pmtiles-server` reads with no SQLite lock errors across ten consecutive uploads, and the throughput number.
 - *(Phase 1)* Whether `preview_bucket_name` or an `[env.local]` block is the right way to give the Workers local bucket names under `wrangler dev` without touching their production configuration.
 - *(Phase 1)* Whether the prebuilt runtime image is pinned by digest in the Dockerfile or tracked as `latest`.

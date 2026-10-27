@@ -14,7 +14,7 @@ const server = createServer(function (req, res) {
     req.on("end", async () => {
       const data = JSON.parse(body);
       import("./src/handleUpload").then(async (handleUpload) => {
-        const s3LogPath = `s3://${process.env.BUCKET}/${data.taskId}.log.txt`;
+        const logRemote = `r2://${process.env.BUCKET}/${data.taskId}.log.txt`;
         try {
           const outputs = await handleUpload.default(
             data.taskId,
@@ -38,7 +38,7 @@ const server = createServer(function (req, res) {
           res.end(
             JSON.stringify({
               ...outputs,
-              log: s3LogPath,
+              log: logRemote,
             }),
           );
         } catch (e) {
@@ -46,7 +46,7 @@ const server = createServer(function (req, res) {
           res.end(
             JSON.stringify({
               error: (e as Error).message,
-              log: s3LogPath,
+              log: logRemote,
             }),
           );
         }
