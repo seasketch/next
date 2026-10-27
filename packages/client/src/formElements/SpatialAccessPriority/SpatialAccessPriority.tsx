@@ -54,6 +54,7 @@ import {
   FormElementDetailsFragment,
   FormElementFullDetailsFragment,
   FormElementLayout,
+  SketchGeometryType,
 } from "../../generated/graphql";
 import { FormElementLayoutContext } from "../../surveys/SurveyAppLayout";
 import SurveyButton from "../../surveys/SurveyButton";
@@ -77,6 +78,7 @@ import bbox from "@turf/bbox";
 import DigitizingMiniMap from "../DigitizingMiniMap";
 import { FormEditorHeader } from "../../admin/surveys/SurveyFormEditor";
 import InputBlock from "../../components/InputBlock";
+import Warning from "../../components/Warning";
 import Switch from "../../components/Switch";
 import { ChoiceAdminValueInput } from "../ComboBox";
 import useDebounce from "../../useDebounce";
@@ -87,6 +89,18 @@ import SketchForm from "../../projects/Sketches/SketchForm";
 import { updateFeatureInCollection } from "../MultiSpatialInput";
 import LanguageSelector from "../../surveys/LanguageSelector";
 import getSlug from "../../getSlug";
+import MaxPolygonSizeSetting, {
+  PolygonTooLargeNotice,
+} from "../MaxPolygonSizeSetting";
+import {
+  effectiveMaxPolygonSizeSqKm,
+  formatPolygonOverage,
+  formatPolygonSizeLimit,
+  polygonSaveViolation,
+  polygonSizeViolation,
+  shouldAdvanceFromDrawingIntro,
+} from "../maxPolygonSize";
+import { usePolygonTooLargePaint } from "../usePolygonTooLargePaint";
 
 export enum STAGES {
   CHOOSE_SECTORS,
@@ -134,6 +148,12 @@ export type SpatialAccessPriorityProps = {
   subordinateVisibilitySettings?: {
     [elementId: number]: string[];
   };
+  /**
+   * Maximum polygon area in square kilometers. Null or omitted means no limit.
+   * `maxPolygonSizeUnit` is the unit the author entered and respondents see.
+   */
+  maxPolygonSizeSqKm?: number | null;
+  maxPolygonSizeUnit?: "kilometer" | "hectare" | "acre" | "mile" | null;
 };
 type SectorFeatureProps = { sector: string; [key: string]: any };
 type FC = FeatureCollection<Polygon, SectorFeatureProps>;
@@ -176,6 +196,7 @@ function SpatialAccessPriorityInner(
   }
 ) {
   const { t } = useTranslation("admin:surveys");
+  const langContext = useContext(FormLanguageContext);
   const context = useContext(FormElementLayoutContext);
   const { manager } = useContext(MapManagerContext);
   const { basemaps } = useContext(BasemapContext);
@@ -209,6 +230,8 @@ function SpatialAccessPriorityInner(
     isNew: boolean;
     feature?: Feature<any>;
   } | null>(null);
+  /** Latest geometry from mapbox-gl-draw, including edits not yet saved. */
+  const [draftFeature, setDraftFeature] = useState<Feature<any> | null>(null);
   const [state, setState] = useState<SpatialAccessPriorityInputLocalState>({
     submissionAttempted: false,
   });
@@ -252,6 +275,10 @@ function SpatialAccessPriorityInner(
   }, [props.value?.collection, sector]);
 
   const { confirm } = useDialog();
+  const maxPolygonSizeSqKm = effectiveMaxPolygonSizeSqKm(
+    props.sketchClass?.geometryType,
+    props.componentSettings.maxPolygonSizeSqKm
+  );
 
   const {
     digitizingState,
@@ -269,8 +296,12 @@ function SpatialAccessPriorityInner(
     props.sketchClass!.geometryType,
     filteredFeatures,
     async (updatedFeature, hasKinks) => {
+      const tooLarge = Boolean(
+        polygonSizeViolation(updatedFeature, maxPolygonSizeSqKm)
+      );
       // Handle deletion of all vertexes
       if (updatedFeature?.geometry.coordinates.length === 0) {
+        setDraftFeature(null);
         if (
           await confirm(
             t("This will delete your entire shape. Are you sure?", {
@@ -288,6 +319,9 @@ function SpatialAccessPriorityInner(
           return;
         }
       } else {
+        if (updatedFeature) {
+          setDraftFeature(updatedFeature);
+        }
         if (!selection || geometryEditingState?.isNew) {
           if (hasKinks && digitizingState !== DigitizingState.UNFINISHED) {
             // Timeout is to prevent an infinite loop. I guess because digitizingState is set late?
@@ -299,7 +333,7 @@ function SpatialAccessPriorityInner(
             isNew: true,
             feature: updatedFeature || undefined,
           });
-        } else if (updatedFeature) {
+        } else if (updatedFeature && !tooLarge) {
           onChange({
             collection: updateFeatureInCollection(
               updatedFeature.id as string,
@@ -315,18 +349,18 @@ function SpatialAccessPriorityInner(
           (props.stage === STAGES.DRAWING_INTRO ||
             props.stage === STAGES.MOBILE_DRAW_FIRST_SHAPE) &&
           digitizingState !== DigitizingState.UNFINISHED &&
-          digitizingState !== DigitizingState.EDITING
+          digitizingState !== DigitizingState.EDITING &&
+          shouldAdvanceFromDrawingIntro({
+            isSmall: style.isSmall,
+            hasKinks,
+            tooLarge,
+          })
         ) {
-          if (style.isSmall) {
-            if (hasKinks) {
-              // Do nothing
-              // Require explicit action to proceed to the next stage now
-            } else {
-              props.onRequestStageChange(STAGES.MOBILE_EDIT_PROPERTIES);
-            }
-          } else {
-            props.onRequestStageChange(STAGES.SHAPE_EDITOR);
-          }
+          props.onRequestStageChange(
+            style.isSmall
+              ? STAGES.MOBILE_EDIT_PROPERTIES
+              : STAGES.SHAPE_EDITOR
+          );
         }
       }
     },
@@ -498,11 +532,56 @@ function SpatialAccessPriorityInner(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [manager, styleHash]);
 
+  useEffect(() => {
+    setDraftFeature(null);
+  }, [selection?.id]);
+
+  const featureForSizeCheck =
+    draftFeature || geometryEditingState?.feature || selection || null;
+  const saveBlocked = polygonSaveViolation({
+    geometryType: props.sketchClass?.geometryType,
+    maxPolygonSizeSqKm: props.componentSettings.maxPolygonSizeSqKm,
+    feature: featureForSizeCheck,
+    isNew: geometryEditingState?.isNew === true,
+    geometryEdited: draftFeature != null,
+  });
+
+  usePolygonTooLargePaint({
+    map: manager?.map,
+    maxSqKm: maxPolygonSizeSqKm,
+    featureId: featureForSizeCheck?.id,
+    tooLarge: saveBlocked != null,
+    readSelectedFeature: actions.readSelectedFeature,
+    onDraftFeature: setDraftFeature,
+    setPolygonTooLarge: actions.setPolygonTooLarge,
+  });
+
+  function blockIfPolygonTooLarge() {
+    if (!saveBlocked) {
+      return false;
+    }
+    const locale = langContext.lang?.code;
+    alert(
+      `${t("This shape is over the size limit of {{ limit }}.", {
+        ns: "surveys",
+        limit: formatPolygonSizeLimit(
+          saveBlocked.maxSqKm,
+          locale,
+          props.componentSettings.maxPolygonSizeUnit
+        ),
+      })} ${formatPolygonOverage(saveBlocked.areaSqKm, saveBlocked.maxSqKm, locale)}`
+    );
+    return true;
+  }
+
   function onClickSave() {
     if (selfIntersects) {
       return alert(
         t("Please fix problems with your shape first.", { ns: "surveys" })
       );
+    }
+    if (blockIfPolygonTooLarge()) {
+      return;
     }
     const errors = state.hasValidationErrors === true;
     if (errors) {
@@ -524,6 +603,15 @@ function SpatialAccessPriorityInner(
     } else {
       if (!sector) {
         throw new Error("Sector not set");
+      }
+      if (
+        geometryEditingState?.isNew === true &&
+        !style.isSmall &&
+        (props.stage === STAGES.DRAWING_INTRO ||
+          props.stage === STAGES.MOBILE_DRAW_FIRST_SHAPE)
+      ) {
+        props.onRequestStageChange(STAGES.SHAPE_EDITOR);
+        return;
       }
       if (geometryEditingState?.isNew !== true) {
         // if (style.isSmall) {
@@ -562,6 +650,7 @@ function SpatialAccessPriorityInner(
         });
         props.onRequestStageChange(STAGES.LIST_SHAPES);
         setGeometryEditingState(null);
+        setDraftFeature(null);
         setState({ submissionAttempted: false });
         actions.clearSelection();
         if (style.isSmall) {
@@ -576,18 +665,20 @@ function SpatialAccessPriorityInner(
       return alert(
         t("Please fix problems with your shape first.", { ns: "surveys" })
       );
-    } else {
-      props.onRequestStageChange(STAGES.MOBILE_EDIT_PROPERTIES);
-      setTimeout(() => {
-        if (manager?.map && selection) {
-          // manager.map.panTo()
-          manager.map.resize();
-          manager.map.fitBounds(bbox(selection) as LngLatBoundsLike, {
-            padding: 20,
-          });
-        }
-      }, 10);
     }
+    if (blockIfPolygonTooLarge()) {
+      return;
+    }
+    props.onRequestStageChange(STAGES.MOBILE_EDIT_PROPERTIES);
+    setTimeout(() => {
+      if (manager?.map && selection) {
+        // manager.map.panTo()
+        manager.map.resize();
+        manager.map.fitBounds(bbox(selection) as LngLatBoundsLike, {
+          padding: 20,
+        });
+      }
+    }, 10);
   }
 
   function removeFeatureFromValue(featureId: string | number) {
@@ -666,8 +757,6 @@ function SpatialAccessPriorityInner(
       <ShowCoordinates />
     </>
   );
-
-  const langContext = useContext(FormLanguageContext);
 
   return (
     <MapUIProvider preferencesKey={`${props.slug}-spatial-access-priority`}>
@@ -1030,6 +1119,15 @@ function SpatialAccessPriorityInner(
                     }
                   }}
                 />
+                {saveBlocked && (
+                  <Warning>
+                    <PolygonTooLargeNotice
+                      areaSqKm={saveBlocked.areaSqKm}
+                      maxSqKm={saveBlocked.maxSqKm}
+                      unit={props.componentSettings.maxPolygonSizeUnit}
+                    />
+                  </Warning>
+                )}
                 <div className="space-x-2 rtl:space-x-reverse flex items-center">
                   {geometryEditingState?.isNew && (
                     <SurveyButton
@@ -1155,11 +1253,25 @@ function SpatialAccessPriorityInner(
               {props.stage !== STAGES.MOBILE_EDIT_PROPERTIES && (
                 <DigitizingTools
                   selfIntersects={selfIntersects}
+                  sizeWarning={
+                    saveBlocked
+                      ? {
+                          areaSqKm: saveBlocked.areaSqKm,
+                          maxSqKm: saveBlocked.maxSqKm,
+                          unit: props.componentSettings.maxPolygonSizeUnit,
+                        }
+                      : undefined
+                  }
                   multiFeature={true}
                   state={digitizingState}
                   geometryType={props.sketchClass!.geometryType}
                   onRequestEdit={actions.edit}
-                  onRequestFinishEditing={actions.finishEditing}
+                  onRequestFinishEditing={() => {
+                    if (blockIfPolygonTooLarge()) {
+                      return;
+                    }
+                    actions.finishEditing();
+                  }}
                   createStateButtons={
                     style.isSmall && (
                       <Button
@@ -1306,7 +1418,7 @@ function SpatialAccessPriorityInner(
               )}
               {miniMapStyle && manager?.map && (
                 <DigitizingMiniMap
-                  topologyErrors={selfIntersects}
+                  topologyErrors={selfIntersects || saveBlocked != null}
                   style={miniMapStyle}
                   dragTarget={dragTarget}
                   onLoad={(map) => setMiniMap(map)}
@@ -1323,6 +1435,7 @@ function SpatialAccessPriorityInner(
           enableDraw={enable}
           componentSettings={props.componentSettings}
           id={props.id}
+          geometryType={props.sketchClass?.geometryType}
           alternateLanguageSettings={props.alternateLanguageSettings}
         />
       </>
@@ -1425,6 +1538,7 @@ function Admin(props: {
   alternateLanguageSettings: { [lang: string]: { [key: string]: any } };
   map?: Map;
   bounds: BBox;
+  geometryType?: SketchGeometryType;
   enableDraw: () => void;
   disableDraw: () => void;
 }) {
@@ -1459,6 +1573,17 @@ function Admin(props: {
                   question will be skipped and only a single set of shapes will
                   be collected.
                 </Trans>
+              }
+            />
+            <MaxPolygonSizeSetting
+              geometryType={props.geometryType}
+              value={props.componentSettings.maxPolygonSizeSqKm}
+              unit={props.componentSettings.maxPolygonSizeUnit}
+              onChange={(sqKm, unit) =>
+                updateComponentSetting("maxPolygonSizeSqKm", {
+                  ...props.componentSettings,
+                  maxPolygonSizeUnit: unit,
+                })(sqKm)
               }
             />
             <BoundsInput

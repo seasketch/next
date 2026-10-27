@@ -1,15 +1,22 @@
 import { PlusIcon } from "@heroicons/react/outline";
 import { LocationMarkerIcon } from "@heroicons/react/solid";
+import { ReactNode } from "react";
 import { SketchGeometryType } from "../generated/graphql";
 
 export default function SketchGeometryTypeSelector({
   value,
   onChange,
   simpleFeatures,
+  optionDetails,
 }: {
   value: SketchGeometryType;
   onChange?: (value: SketchGeometryType) => void;
   simpleFeatures?: boolean;
+  /**
+   * Extra controls for a geometry choice. Shown inside that choice when it
+   * is selected, so polygon-only settings stay with Polygon.
+   */
+  optionDetails?: Partial<Record<SketchGeometryType, ReactNode>>;
 }) {
   let options = [
     SketchGeometryType.Point,
@@ -33,48 +40,59 @@ export default function SketchGeometryTypeSelector({
       {options.map((option, i) => {
         const checked = value === option;
         const IconComponent = Icons[option] || (() => null);
+        const details = optionDetails?.[option];
+        const expanded = checked && details != null;
         return (
           <div
             className={`${i === 0 ? "rounded-tl-md rounded-tr-md" : ""} ${
               i === options.length - 1 ? "rounded-bl-md rounded-br-md" : ""
-            } relative border px-4 py-4 flex cursor-pointer focus:outline-none items-center ${
+            } relative border focus:outline-none ${
               checked
                 ? "bg-primary-500 bg-opacity-10 border-primary-500 border-opacity-50 z-10"
                 : "border-gray-200"
             }`}
             key={option}
-            onClick={() => {
-              if (onChange) {
-                onChange(option);
-              }
-            }}
           >
-            <input
-              className="block text-primary-500"
-              onChange={() => {
+            <div
+              className="px-4 py-4 flex cursor-pointer items-center"
+              onClick={() => {
                 if (onChange) {
                   onChange(option);
                 }
               }}
-              type="radio"
-              id={option}
-              name="geometryType"
-              value={option}
-              checked={checked}
-            />
-            <label
-              className={`block w-full flex-1 cursor-pointer px-4 ${
-                checked && "text-primary-600 font-semibold"
-              }`}
-              htmlFor={option.toString()}
             >
-              {labels[option]}
-            </label>
-            <IconComponent
-              className={`w-5 h-5 ${
-                checked ? "text-primary-500" : "text-gray-400"
-              }`}
-            />
+              <input
+                className="block text-primary-500"
+                onChange={() => {
+                  if (onChange) {
+                    onChange(option);
+                  }
+                }}
+                type="radio"
+                id={option}
+                name="geometryType"
+                value={option}
+                checked={checked}
+              />
+              <label
+                className={`block w-full flex-1 cursor-pointer px-4 ${
+                  checked && "text-primary-600 font-semibold"
+                }`}
+                htmlFor={option.toString()}
+              >
+                {labels[option]}
+              </label>
+              <IconComponent
+                className={`w-5 h-5 ${
+                  checked ? "text-primary-500" : "text-gray-400"
+                }`}
+              />
+            </div>
+            {expanded && (
+              <div className="border-t border-primary-500 border-opacity-30 px-4 py-3 cursor-auto">
+                {details}
+              </div>
+            )}
           </div>
         );
       })}

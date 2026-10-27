@@ -609,6 +609,35 @@ export default function useMapboxGLDraw(
         setState(DigitizingState.UNFINISHED);
       }
     },
+    /**
+     * Marks a polygon as over the survey size limit so draw styles render it
+     * red. Skips the update when the flag is already in the requested state.
+     */
+    setPolygonTooLarge: (featureId: string, tooLarge: boolean) => {
+      const draw = handlerState.current.draw;
+      if (!draw || !featureId) {
+        return;
+      }
+      const feature = draw.get(featureId);
+      if (!feature) {
+        return;
+      }
+      const current = feature.properties?.tooLarge;
+      if (tooLarge) {
+        if (current === "true") {
+          return;
+        }
+        draw.setFeatureProperty(featureId, "tooLarge", "true");
+      } else if (current === "true") {
+        draw.setFeatureProperty(featureId, "tooLarge", "false");
+      }
+    },
+    /** Geometry currently being dragged or edited, if draw has a selection. */
+    readSelectedFeature: () => {
+      const selected = handlerState.current.draw?.getSelected();
+      const feature = selected?.features?.[0];
+      return feature || null;
+    },
   };
 
   /**

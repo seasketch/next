@@ -14,6 +14,7 @@ import useMobileDeviceDetector from "../surveys/useMobileDeviceDetector";
 import { DigitizingState } from "../draw/useMapboxGLDraw";
 import MapSettingsPopup from "../draw/MapSettingsPopup";
 import BowtieInstructions from "../draw/BowtieInstructions";
+import { PolygonTooLargeNotice } from "./MaxPolygonSizeSetting";
 import { FormElementLayoutContext } from "../surveys/SurveyAppLayout";
 import Spinner from "../components/Spinner";
 import { XCircleIcon } from "@heroicons/react/solid";
@@ -45,6 +46,15 @@ interface DigitizingInstructionsProps {
   /** Displayed if DigitizingState is CREATE, CAN_COMPLETE, or STARTED */
   createStateButtons?: ReactNode;
   selfIntersects?: boolean;
+  /**
+   * Polygon is over the survey area limit. Hides Done and explains how to
+   * shrink the shape, the same way a self-intersection blocks finishing.
+   */
+  sizeWarning?: {
+    areaSqKm: number;
+    maxSqKm: number;
+    unit?: "kilometer" | "hectare" | "acre" | "mile" | null;
+  };
   /** Sketching as opposed to survey response */
   isSketchingWorkflow?: boolean;
   preprocessingError?: string;
@@ -65,6 +75,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
   multiFeature,
   unfinishedStateButtons,
   selfIntersects,
+  sizeWarning,
   noSelectionStateButtons,
   createStateButtons,
   isSketchingWorkflow,
@@ -112,6 +123,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
         )}
       {(state === DigitizingState.EDITING ||
         (selfIntersects && state !== DigitizingState.CAN_COMPLETE) ||
+        (sizeWarning && state === DigitizingState.UNFINISHED) ||
         preprocessingError) && (
         <Button
           label={<TrashIcon className="w-5 h-5" />}
@@ -122,7 +134,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
           }
         />
       )}
-      {state === DigitizingState.EDITING && !selfIntersects && (
+      {state === DigitizingState.EDITING && !selfIntersects && !sizeWarning && (
         <Button
           onClick={() => {
             if (selfIntersects) {
@@ -177,7 +189,9 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
             }
           />
         )}
-      {state === DigitizingState.UNFINISHED && unfinishedStateButtons}
+      {state === DigitizingState.UNFINISHED &&
+        !sizeWarning &&
+        unfinishedStateButtons}
       {state === DigitizingState.NO_SELECTION && noSelectionStateButtons}
       {(state === DigitizingState.CREATE ||
         state === DigitizingState.CAN_COMPLETE ||
@@ -224,9 +238,9 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
             }}
             style={{ maxWidth: "90%" }}
             exit={{ scale: 0.7, opacity: 0 }}
-            className={`rounded-md p-1 px-2 mx-auto text-gray-800 bg-gray-200 shadow-lg flex space-x-2 rtl:space-x-reverse items-center bottom-16 tall:mb-2 absolute z-10 pointer-events-none`}
+            className="rounded-md p-1 px-2 mx-auto text-gray-800 bg-gray-200 shadow-lg flex space-x-2 rtl:space-x-reverse items-center bottom-16 tall:mb-2 absolute z-10 pointer-events-none"
           >
-            <p className="text-sm select-none">
+            <p className="text-sm select-none flex items-center">
               <DigitizingInstructions
                 state={state}
                 geometryType={geometryType}
@@ -234,6 +248,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
                 multiFeature={multiFeature || false}
                 selfIntersects={selfIntersects || false}
                 preprocessingError={preprocessingError}
+                sizeWarning={sizeWarning}
               />
             </p>
           </motion.div>
@@ -271,7 +286,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
                 className
               )}
             >
-              <p className="text-sm select-none">
+              <p className="text-sm select-none flex items-center min-w-0">
                 {isSketchingWorkflow &&
                 state === DigitizingState.NO_SELECTION ? (
                   <span className="flex space-x-2">
@@ -300,6 +315,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
                     multiFeature={multiFeature || false}
                     selfIntersects={selfIntersects || false}
                     preprocessingError={preprocessingError}
+                    sizeWarning={sizeWarning}
                   />
                 )}
               </p>
@@ -336,6 +352,7 @@ export function DigitizingInstructions({
   geometryType,
   selfIntersects,
   preprocessingError,
+  sizeWarning,
 }: {
   state: DigitizingState;
   isMobile: boolean;
@@ -343,9 +360,26 @@ export function DigitizingInstructions({
   geometryType: SketchGeometryType;
   selfIntersects: boolean;
   preprocessingError?: string;
+  sizeWarning?: {
+    areaSqKm: number;
+    maxSqKm: number;
+    unit?: "kilometer" | "hectare" | "acre" | "mile" | null;
+  };
 }) {
   if (selfIntersects) {
     return <Trans ns="surveys">Invalid shape</Trans>;
+  }
+  if (sizeWarning) {
+    return (
+      <span className="flex items-center">
+        <XCircleIcon className="w-5 h-5 flex-shrink-0 text-red-600 mr-2" />
+        <PolygonTooLargeNotice
+          areaSqKm={sizeWarning.areaSqKm}
+          maxSqKm={sizeWarning.maxSqKm}
+          unit={sizeWarning.unit}
+        />
+      </span>
+    );
   }
 
   if (state === DigitizingState.PREPROCESSING) {
