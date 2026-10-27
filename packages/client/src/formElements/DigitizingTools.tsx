@@ -15,7 +15,7 @@ import { DigitizingState } from "../draw/useMapboxGLDraw";
 import MapSettingsPopup from "../draw/MapSettingsPopup";
 import BowtieInstructions from "../draw/BowtieInstructions";
 import PolygonTooLargeInstructions from "./PolygonTooLargeInstructions";
-import { formatSqKm } from "./maxPolygonSize";
+import { PolygonTooLargeNotice } from "./MaxPolygonSizeSetting";
 import { FormElementLayoutContext } from "../surveys/SurveyAppLayout";
 import Spinner from "../components/Spinner";
 import { XCircleIcon } from "@heroicons/react/solid";
@@ -263,9 +263,7 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
             }}
             style={{ maxWidth: "90%" }}
             exit={{ scale: 0.7, opacity: 0 }}
-            className={`rounded-md p-1 px-2 mx-auto text-gray-800 bg-gray-200 shadow-lg flex space-x-2 rtl:space-x-reverse items-center bottom-16 tall:mb-2 absolute z-10 pointer-events-none ${
-              sizeWarning && !selfIntersects ? "ring-2 ring-red-500" : ""
-            }`}
+            className="rounded-md p-1 px-2 mx-auto text-gray-800 bg-gray-200 shadow-lg flex space-x-2 rtl:space-x-reverse items-center bottom-16 tall:mb-2 absolute z-10 pointer-events-none"
           >
             <p className="text-sm select-none">
               <DigitizingInstructions
@@ -318,7 +316,6 @@ const DigitizingTools: FunctionComponent<DigitizingInstructionsProps> = ({
               // exit={{ scale: 0 }}
               className={clsx(
                 `rounded-md p-2 pl-4 my-4 mx-auto text-gray-800 bg-gray-200 shadow-lg flex space-x-2 rtl:space-x-reverse items-center transition-all bottom-16 absolute z-10 pointer-events-none`,
-                sizeWarning && !selfIntersects && "ring-2 ring-red-500",
                 className
               )}
             >
@@ -402,13 +399,15 @@ export function DigitizingInstructions({
     return <Trans ns="surveys">Invalid shape</Trans>;
   }
   if (sizeWarning) {
-    const area = formatSqKm(sizeWarning.areaSqKm);
-    const max = formatSqKm(sizeWarning.maxSqKm);
     return (
-      <span className="text-red-800">
-        <Trans ns="surveys">
-          Too large ({{ area }} / {{ max }} km²). Drag points inward.
-        </Trans>
+      <span className="flex items-center">
+        <XCircleIcon className="w-6 h-6 text-red-600 mr-2" />
+        <span className="block">
+          <PolygonTooLargeNotice
+            areaSqKm={sizeWarning.areaSqKm}
+            maxSqKm={sizeWarning.maxSqKm}
+          />
+        </span>
       </span>
     );
   }

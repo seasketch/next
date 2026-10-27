@@ -34,6 +34,7 @@ import useMapEssentials, {
   defaultStartingBounds,
 } from "../admin/surveys/useMapEssentials";
 import Button from "../components/Button";
+import Warning from "../components/Warning";
 import MapboxMap from "../components/MapboxMap";
 import SketchGeometryTypeSelector, {
   Icons,
@@ -887,20 +888,12 @@ function MultiSpatialInputInner(
                   }}
                 />
                 {saveBlocked && (
-                  <div className="text-sm text-red-700 space-y-1">
-                    <p>
-                      <PolygonTooLargeNotice
-                        areaSqKm={saveBlocked.areaSqKm}
-                        maxSqKm={saveBlocked.maxSqKm}
-                      />
-                    </p>
-                    <p>
-                      <Trans ns="surveys">
-                        Drag the points inward until the shape is small enough.
-                        You can also delete it and draw a smaller one.
-                      </Trans>
-                    </p>
-                  </div>
+                  <Warning>
+                    <PolygonTooLargeNotice
+                      areaSqKm={saveBlocked.areaSqKm}
+                      maxSqKm={saveBlocked.maxSqKm}
+                    />
+                  </Warning>
                 )}
                 <div className="space-x-2 rtl:space-x-reverse">
                   {geometryEditingState?.isNew && (

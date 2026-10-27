@@ -3,8 +3,8 @@ import Modal from "../components/Modal";
 import { formatSqKm } from "./maxPolygonSize";
 
 /**
- * Explains how to shrink a polygon that is over the survey size limit.
- * Mirrors the self-intersection instructions respondents already see.
+ * Same dialog shell as the self-intersection instructions. The area numbers
+ * are the message, the way a clipping error shows its own text.
  */
 export default function PolygonTooLargeInstructions({
   open,
@@ -25,7 +25,8 @@ export default function PolygonTooLargeInstructions({
   const max = formatSqKm(maxSqKm);
   return (
     <Modal
-      icon="alert"
+      zeroPadding
+      autoWidth
       title={t("Shape Too Large")}
       onRequestClose={onRequestClose}
       footer={[
@@ -36,38 +37,16 @@ export default function PolygonTooLargeInstructions({
         },
       ]}
     >
-      <div className="space-y-3 text-sm text-gray-800 max-w-md">
-        <p>
+      <div className="w-96 max-w-full">
+        <p className="p-5">
           <Trans ns="surveys">
-            This polygon is {{ area }} km². It must be {{ max }} km² or smaller
-            before you can continue.
+            This polygon is {{ area }} km². The maximum size is {{ max }} km².
+            Your shape stays red while it is over the limit. Drag the points
+            inward until the red highlight goes away and you can continue. If
+            you continue to have trouble, delete the shape and draw a smaller
+            one.
           </Trans>
         </p>
-        <ol className="list-decimal pl-5 space-y-2">
-          <li>
-            <Trans ns="surveys">
-              The shape stays red while it is over the limit. The minimap
-              outline turns red too.
-            </Trans>
-          </li>
-          <li>
-            <Trans ns="surveys">
-              Drag the corner points inward to shrink the shape. The size on
-              the map updates as you drag.
-            </Trans>
-          </li>
-          <li>
-            <Trans ns="surveys">
-              When the shape is small enough, the red highlight disappears and
-              Done becomes available.
-            </Trans>
-          </li>
-          <li>
-            <Trans ns="surveys">
-              You can also delete this shape and draw a smaller one.
-            </Trans>
-          </li>
-        </ol>
       </div>
     </Modal>
   );

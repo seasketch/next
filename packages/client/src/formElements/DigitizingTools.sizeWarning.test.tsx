@@ -30,7 +30,9 @@ function renderTools(
 test("blocks finishing an over-size polygon and explains how to shrink it", () => {
   renderTools({ areaSqKm: 12.4, maxSqKm: 1 });
 
-  expect(screen.getByText(/Too large \(12.4 \/ 1 km²\)/)).toBeInTheDocument();
+  expect(
+    screen.getByText(/This shape is 12.4 km². The maximum size is 1 km²/)
+  ).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Done" })).not.toBeInTheDocument();
   expect(
     screen.getByRole("button", { name: "Shape Too Large" })
@@ -38,10 +40,7 @@ test("blocks finishing an over-size polygon and explains how to shrink it", () =
 
   fireEvent.click(screen.getByRole("button", { name: "Shape Too Large" }));
   expect(
-    screen.getByText(/Drag the corner points inward to shrink the shape/)
-  ).toBeInTheDocument();
-  expect(
-    screen.getByText(/the red highlight disappears and Done becomes available/)
+    screen.getByText(/Drag the points inward until the red highlight goes away/)
   ).toBeInTheDocument();
 });
 

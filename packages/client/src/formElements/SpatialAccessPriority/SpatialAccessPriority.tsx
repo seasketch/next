@@ -78,6 +78,7 @@ import bbox from "@turf/bbox";
 import DigitizingMiniMap from "../DigitizingMiniMap";
 import { FormEditorHeader } from "../../admin/surveys/SurveyFormEditor";
 import InputBlock from "../../components/InputBlock";
+import Warning from "../../components/Warning";
 import Switch from "../../components/Switch";
 import { ChoiceAdminValueInput } from "../ComboBox";
 import useDebounce from "../../useDebounce";
@@ -1064,20 +1065,12 @@ function SpatialAccessPriorityInner(
                   }}
                 />
                 {saveBlocked && (
-                  <div className="text-sm text-red-700 space-y-1">
-                    <p>
-                      <PolygonTooLargeNotice
-                        areaSqKm={saveBlocked.areaSqKm}
-                        maxSqKm={saveBlocked.maxSqKm}
-                      />
-                    </p>
-                    <p>
-                      <Trans ns="surveys">
-                        Drag the points inward until the shape is small enough.
-                        You can also delete it and draw a smaller one.
-                      </Trans>
-                    </p>
-                  </div>
+                  <Warning>
+                    <PolygonTooLargeNotice
+                      areaSqKm={saveBlocked.areaSqKm}
+                      maxSqKm={saveBlocked.maxSqKm}
+                    />
+                  </Warning>
                 )}
                 <div className="space-x-2 rtl:space-x-reverse flex items-center">
                   {geometryEditingState?.isNew && (
