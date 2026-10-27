@@ -4,6 +4,23 @@ import { isOrganismInfo } from "@seasketch/geostats-types";
 
 export const DATA_TABLE_UPLOAD_PRESIGNED_URL_TTL = 60 * 120;
 
+function stagingClient(): S3 {
+  const { R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY } = process.env;
+  if (!R2_ENDPOINT || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {
+    throw new Error("R2_ENDPOINT / R2 credentials must be set to presign uploads");
+  }
+  return new S3({
+    region: "auto",
+    endpoint: R2_ENDPOINT,
+    signatureVersion: "v4",
+    s3ForcePathStyle: true,
+    credentials: {
+      accessKeyId: R2_ACCESS_KEY_ID,
+      secretAccessKey: R2_SECRET_ACCESS_KEY,
+    },
+  });
+}
+
 function remoteKey(remote: string): string {
   return remote.replace(/^r2:\/\//, "").split("/").slice(1).join("/");
 }
@@ -107,10 +124,8 @@ const OverlayDataTablePlugin = makeExtendSchemaPlugin(() => ({
     },
     OverlayDataTableUpload: {
       presignedUploadUrl: async (upload) => {
-        const region = process.env.S3_REGION;
         const bucket = process.env.SPATIAL_UPLOADS_BUCKET;
-        const s3 = new S3({ region });
-        return s3.getSignedUrlPromise("putObject", {
+        return stagingClient().getSignedUrlPromise("putObject", {
           Bucket: bucket,
           Key: `${upload.id}/${upload.filename}`,
           Expires: DATA_TABLE_UPLOAD_PRESIGNED_URL_TTL,

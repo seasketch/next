@@ -7,12 +7,10 @@ import {
   RasterInfo,
   SuggestedRasterPresentation,
 } from "@seasketch/geostats-types";
-import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
-const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
 import { processVectorUpload } from "./processVectorUpload";
 import { processRasterUpload } from "./processRasterUpload";
 import { notifySlackChannel } from "./notifySlackChannel";
-import { getObject, putObject } from "./remotes";
+import { getObject, presignStagedGet, putObject } from "./remotes";
 import { Logger } from "./logger";
 import { getLayerIdentifiers } from "./formats/netcdf";
 import type { AiDataAnalystNotes } from "ai-data-analyst";
@@ -119,7 +117,7 @@ export default async function handleUpload(
   const dist = path.join(tmpobj.name, "dist");
   await logger.exec(["mkdir", [dist]], "Failed to create directory", 0);
 
-  const s3LogPath = `s3://${process.env.BUCKET}/${jobId}.log.txt`;
+  const logRemote = `r2://${process.env.BUCKET}/${jobId}.log.txt`;
   let { name, ext, base } = path.parse(objectKey);
 
   name = sanitize(name);
@@ -139,7 +137,7 @@ export default async function handleUpload(
   }
   await getObject(
     workingFilePath,
-    `s3://${path.join(process.env.BUCKET!, objectKey)}`,
+    `r2://${process.env.BUCKET}/${objectKey}`,
     logger,
     2 / 30,
   );
@@ -243,7 +241,7 @@ export default async function handleUpload(
     // Write logs before returning response
     const logPath = path.join(tmpobj.name, "log.txt");
     writeFileSync(logPath, logger.output);
-    await putObject(logPath, s3LogPath, logger);
+    await putObject(logPath, logRemote, logger);
     const geostats = Array.isArray(stats) ? stats[0] : stats;
 
     const response: { layers: ProcessedUploadLayer[]; logfile: string } = {
@@ -266,7 +264,7 @@ export default async function handleUpload(
           ...(aiDataAnalystNotes ? { aiDataAnalystNotes } : {}),
         },
       ],
-      logfile: s3LogPath,
+      logfile: logRemote,
     };
     // Trigger the task to process the outputs
     await pgClient.query(
@@ -293,25 +291,10 @@ export default async function handleUpload(
       process.env.SLACK_CHANNEL &&
       process.env.NODE_ENV === "production"
     ) {
-      const command = new GetObjectCommand({
-        Bucket: process.env.BUCKET,
-        Key: objectKey,
-      });
-      const presignedDownloadUrl = await getSignedUrl(
-        process.env.DEBUGGING_AWS_ACCESS_KEY_ID &&
-          process.env.DEBUGGING_AWS_SECRET_ACCESS_KEY
-          ? new S3Client({
-              region: process.env.AWS_REGION!,
-              credentials: {
-                accessKeyId: process.env.DEBUGGING_AWS_ACCESS_KEY_ID,
-                secretAccessKey: process.env.DEBUGGING_AWS_SECRET_ACCESS_KEY,
-              },
-            })
-          : s3Client,
-        command,
-        {
-          expiresIn: 172800,
-        },
+      const presignedDownloadUrl = await presignStagedGet(
+        process.env.BUCKET!,
+        objectKey,
+        172800,
       );
 
       await notifySlackChannel(
@@ -328,7 +311,7 @@ export default async function handleUpload(
   } finally {
     const logPath = path.join(tmpobj.name, "log.txt");
     writeFileSync(logPath, logger.output);
-    await putObject(logPath, s3LogPath, logger);
+    await putObject(logPath, logRemote, logger);
     if (DEBUG) {
       console.log("Debugging enabled, not cleaning up tmp directory");
     } else {
@@ -336,5 +319,3 @@ export default async function handleUpload(
     }
   }
 }
-
-const s3Client = new S3Client({ region: process.env.AWS_REGION! });

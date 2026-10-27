@@ -25,6 +25,7 @@ function getR2Client() {
     r2Client = new S3Client({
       region: "auto",
       endpoint: process.env.R2_ENDPOINT!,
+      forcePathStyle: true,
       credentials: {
         accessKeyId: process.env.R2_ACCESS_KEY_ID!,
         secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
@@ -124,13 +125,13 @@ export async function tryGetR2Object(
   }
 }
 
-/** Download the user's raw upload from the S3 staging bucket. */
+/** Download the user's raw upload from the R2 staging bucket. */
 export async function getStagingObject(
   filepath: string,
   objectKey: string,
 ): Promise<void> {
   const bucket = process.env.BUCKET!;
-  const response = await getS3Client().send(
+  const response = await getR2Client().send(
     new GetObjectCommand({ Bucket: bucket, Key: objectKey }),
   );
   const body = response.Body as Readable;

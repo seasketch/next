@@ -16,7 +16,6 @@
  */
 import { parseKmlToGeoJson } from "../src/DataLibrary/crwVirtualStations";
 import { JobHelpers } from "graphile-worker";
-import { S3 } from "aws-sdk";
 import {
   getTemplateDetails,
   updateSourceWithGeoJSON,
@@ -24,10 +23,6 @@ import {
 } from "../src/DataLibrary/dataLibraryUtils";
 import axios from "axios";
 import { parse } from "node-html-parser";
-
-const region = process.env.S3_REGION;
-const bucket = process.env.SPATIAL_UPLOADS_BUCKET;
-const s3 = new S3({ region });
 
 const KML_URL =
   "https://coralreefwatch.noaa.gov/product/ge/CRW_5km_Product_Suite_v2.kml";

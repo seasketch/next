@@ -4,7 +4,7 @@ import S3 from "aws-sdk/clients/s3";
 /**
  * graphile-worker task that reprocesses a legacy data source through the
  * current upload pipeline. It downloads the original source file from its
- * CloudFront URL, uploads it to the spatial uploads S3 bucket, and then
+ * CloudFront URL, uploads it to the spatial uploads staging bucket, and then
  * hands off to the existing processDataUpload task (via add_job) which
  * invokes the spatial-uploads lambda and ultimately creates new
  * data_upload_outputs and geostats records.
@@ -80,14 +80,30 @@ export default async function reprocessLegacyDataSource(
       // the presigned URL system uses: {task.id}/{task.filename}. The
       // processDataUpload task reads this key via:
       //   select id || '/' || filename as object_key from data_upload_tasks
-      const s3 = new S3({ region: process.env.S3_REGION });
+      const { R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY } =
+        process.env;
+      if (!R2_ENDPOINT || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {
+        throw new Error(
+          "R2_ENDPOINT / R2 credentials must be set to stage uploads"
+        );
+      }
+      const staging = new S3({
+        region: "auto",
+        endpoint: R2_ENDPOINT,
+        signatureVersion: "v4",
+        s3ForcePathStyle: true,
+        credentials: {
+          accessKeyId: R2_ACCESS_KEY_ID,
+          secretAccessKey: R2_SECRET_ACCESS_KEY,
+        },
+      });
       const objectKey = `${task.id}/${task.filename}`;
 
       helpers.logger.info(
-        `Uploading to s3://${process.env.SPATIAL_UPLOADS_BUCKET}/${objectKey}`
+        `Uploading to r2://${process.env.SPATIAL_UPLOADS_BUCKET}/${objectKey}`
       );
 
-      await s3
+      await staging
         .putObject({
           Bucket: process.env.SPATIAL_UPLOADS_BUCKET!,
           Key: objectKey,

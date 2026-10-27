@@ -9,7 +9,6 @@ import * as iam from "aws-cdk-lib/aws-iam";
 import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as logs from "aws-cdk-lib/aws-logs";
 import * as rds from "aws-cdk-lib/aws-rds";
-import * as s3 from "aws-cdk-lib/aws-s3";
 import { Platform } from "aws-cdk-lib/aws-ecr-assets";
 import * as path from "path";
 import { Construct } from "constructs";
@@ -22,13 +21,14 @@ export class UploadHandlerLambdaStack extends cdk.Stack {
     props: cdk.StackProps & {
       vpc: ec2.Vpc;
       db: rds.DatabaseInstance;
-      bucket: s3.Bucket;
-      normalizedOutputsBucket: s3.Bucket;
       /** When provided, the upload handler will invoke this Lambda for PII classification. */
       piiClassifierFn?: lambda.IFunction;
     },
   ) {
     super(scope, id, props);
+    if (!process.env.SPATIAL_UPLOADS_BUCKET) {
+      throw new Error("SPATIAL_UPLOADS_BUCKET must be set in environment");
+    }
     if (!process.env.UPLOADS_BASE_URL) {
       throw new Error("UPLOADS_BASE_URL must be set in environment");
     }
@@ -84,8 +84,7 @@ export class UploadHandlerLambdaStack extends cdk.Stack {
         PGDATABASE: "seasketch",
         PGUSER: "admin",
         PGREGION: props.db.env.region,
-        BUCKET: props.bucket.bucketName,
-        NORMALIZED_OUTPUTS_BUCKET: props.normalizedOutputsBucket.bucketName,
+        BUCKET: process.env.SPATIAL_UPLOADS_BUCKET,
         R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID!,
         R2_ENDPOINT: process.env.R2_ENDPOINT!,
         R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY!,
@@ -134,10 +133,6 @@ export class UploadHandlerLambdaStack extends cdk.Stack {
         }),
       ],
     });
-    props.bucket.grantReadWrite(fn);
-    props.normalizedOutputsBucket.grantReadWrite(fn);
-    props.bucket.grantPutAcl(fn);
-    props.normalizedOutputsBucket.grantPutAcl(fn);
     if (props.piiClassifierFn) {
       props.piiClassifierFn.grantInvoke(fn);
     }

@@ -86,7 +86,8 @@ const tilePackages = new OfflineTilePackageBucketStack(
   }
 );
 
-const dataUploads = new DataUploadsStack(app, "SeaSketchDataUploadsStack", {
+// Kept so the S3 DataUploads bucket can drain. Staging writes go to R2.
+new DataUploadsStack(app, "SeaSketchDataUploadsStack", {
   env,
   region: "us-west-2",
 });
@@ -172,8 +173,6 @@ const uploadHandler = new UploadHandlerLambdaStack(
     env,
     vpc: db.vpc,
     db: db.instance,
-    bucket: dataUploads.uploadsBucket,
-    normalizedOutputsBucket: dataUploads.normalizedUploadsBucket,
     piiClassifierFn: piiClassifier.fn,
   }
 );
@@ -187,7 +186,6 @@ const dataTablesHandler = new DataTablesHandlerLambdaStack(
     env,
     vpc: db.vpc,
     db: db.instance,
-    bucket: dataUploads.uploadsBucket,
     overlayEngineAccessTokenSecret: secrets.overlayEngineAccessTokenSecret,
   }
 );
@@ -241,10 +239,8 @@ new GraphQLStack(app, "SeaSketchGraphQLServer", {
   emailSource: SES_EMAIL_SOURCE,
   tilePackagesBucket: tilePackages.bucket,
   clientDomain: HOST,
-  spatialUploadsBucket: dataUploads.uploadsBucket,
   spatialUploadsHandlerArn: uploadHandler.fn.functionArn,
   overlayWorkerArn: overlayWorker.fn.functionArn,
-  normalizedOutputsBucket: dataUploads.normalizedUploadsBucket,
   uploadHandler: uploadHandler.fn,
   dataTablesHandler: dataTablesHandler.fn,
   subdivisionWorkerLambdaArn: subdivideWorker.fn.functionArn,

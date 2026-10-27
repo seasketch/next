@@ -25,6 +25,7 @@ Start with the [strategy](strategy.md). It is the sequence. Each other file is o
 | [Auth0](auth0.md)                                   | A non-production Auth0 tenant, and an API that does not need Auth0 to boot                                                       |
 | [Local services](local-services.md)                 | Which SeaSketch backends run locally, in which profile, and the rule that an unset integration never falls through to production |
 | [Service inventory](service-inventory.md)           | What development and e2e call today, and which of those already have a local stand-in. An inventory of the present, not a decision |
+| [Local data services](local-data-services.md)       | Self-contained storage references and environment-authorized writers, so rows from any installation, bucket, or backend coexist; raw uploads on R2; then uploads, tile serving, overlay analysis, data prep, and sketch clipping running locally with no cloud accounts. Accepted October 2026 |
 | [Integration testing](integration-testing.md)       | Playwright journeys, test-mode auth, the golden database snapshot, and production probes                                         |
 | [Monorepo and build](monorepo-and-build-upgrade.md) | npm workspaces, one Node and TypeScript, production build paths, and replacing Create React App                                  |
 | [Second production install](second-install.md)      | Out of scope to build. Choices should leave one possible later, as the same revision with a different profile                    |
@@ -43,6 +44,7 @@ Accepted decisions. They describe what this campaign will build, not what is run
 - **Secrets:** one committed manifest and named profiles. Laptops keep a short hand-managed `.env` (October 2026). CI uses GitHub environments. Production uses GitHub and CDK. No new secrets product. ([secrets](secrets-management.md))
 - **Packaging:** npm workspaces with one lockfile (October 2026). No Nx, Turborepo, or new Lerna. One version of each shared library and one range per tool, moving within majors; pins that exist only for Create React App are a named temporary list. ([monorepo and build](monorepo-and-build-upgrade.md))
 - **Client build:** Vite is the candidate replacement for Create React App, accepted only when the existing journeys, including the bundler-risk set, pass on it. That pull request deletes the temporary pins. ([monorepo and build](monorepo-and-build-upgrade.md))
+- **Data path:** rows carry complete URLs and bucket-qualified remotes, a process writes only buckets its own environment names, and raw uploads move to R2, all deployed to production first. Then the data path runs locally by default: Miniflare's R2 behind `wrangler dev`'s S3 API, the production upload container under the Lambda emulator, `pmtiles-server` under `wrangler dev`, ElasticMQ for results. Heavy compute stays on Lambda. ([local data services](local-data-services.md))
 
 ## Keeping this record
 
@@ -52,4 +54,4 @@ This is a design record, not an operating manual. Instructions for running the r
 - **When the campaign is finished**, change every status line in this folder to _archived_, with the date, and stop editing. The rule for what happens after that stays here.
 - **If a later refactor replaces these decisions**, it gets its own folder. Add a _Superseded by_ link under the status line above. Do not rewrite these files.
 
-Working notes live outside this folder and are not part of the record. The [Playwright sketch](../../.cursor/plans/e2e_integration_testing_bbbc671b.plan.md) is one; it may go stale.
+Working notes live outside this folder and are not part of the record. The [Playwright sketch](../../.cursor/plans/e2e_integration_testing_bbbc671b.plan.md) and the [local data services sketch](../../.cursor/plans/local_data_services.plan.md) are two; they may go stale.

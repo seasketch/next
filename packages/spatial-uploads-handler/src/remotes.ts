@@ -6,6 +6,7 @@ import {
   GetObjectCommand,
   HeadObjectCommand,
 } from "@aws-sdk/client-s3";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { writeFileSync, createReadStream, createWriteStream } from "fs";
 import { ReadStream, statSync } from "node:fs";
 import { Readable } from "node:stream";
@@ -15,11 +16,24 @@ const s3Client = new S3Client({ region: process.env.AWS_REGION! });
 const r2Client = new S3Client({
   region: "auto",
   endpoint: process.env.R2_ENDPOINT!,
+  forcePathStyle: true,
   credentials: {
     accessKeyId: process.env.R2_ACCESS_KEY_ID!,
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
   },
 });
+
+export function presignStagedGet(
+  bucket: string,
+  key: string,
+  expiresIn: number
+): Promise<string> {
+  return getSignedUrl(
+    r2Client,
+    new GetObjectCommand({ Bucket: bucket, Key: key }),
+    { expiresIn }
+  );
+}
 
 export async function putObject(
   filepath: string,
@@ -61,18 +75,22 @@ export async function getObject(
   logger: Logger,
   finishedProgressValue: number
 ): Promise<string> {
-  const parts = remote.replace("s3://", "").split("/");
+  if (!/r2:/.test(remote) && !/s3:/.test(remote)) {
+    throw new Error(`Invalid remote ${remote}`);
+  }
+  const parts = remote.replace(/\w+:\/\//, "").split("/");
+  const client = /r2:/.test(remote) ? r2Client : s3Client;
   const Bucket = parts[0];
   const Key = parts.slice(1).join("/");
-  // get s3 object size using a head request before running GetObject
-  const headParams = {
-    Bucket,
-    Key,
-  };
-  const headResponse = await s3Client.send(new HeadObjectCommand(headParams));
+  const headResponse = await client.send(
+    new HeadObjectCommand({
+      Bucket,
+      Key,
+    })
+  );
   const fileSizeBytes = headResponse.ContentLength;
   logger.output += `getObject ${remote} to ${filepath}\n`;
-  const response = await s3Client.send(
+  const response = await client.send(
     new GetObjectCommand({
       Bucket,
       Key,
@@ -104,7 +122,7 @@ export async function getObject(
       }
     });
   } else {
-    throw new Error("Invalid response from s3");
+    throw new Error("Invalid response from storage");
   }
 }
 

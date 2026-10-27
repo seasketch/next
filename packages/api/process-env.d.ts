@@ -33,7 +33,6 @@ declare namespace NodeJS {
     /* Used when generating various links. Include protocol */
     CLIENT_DOMAIN: string;
     SPATIAL_UPLOADS_BUCKET: string;
-    NORMALIZED_SPATIAL_UPLOADS_BUCKET: string;
     SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER?: string;
     SPATIAL_UPLOADS_LAMBDA_ARN?: string;
     DATA_TABLES_LAMBDA_DEV_HANDLER?: string;

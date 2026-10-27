@@ -1,11 +1,9 @@
 import { Helpers } from "graphile-worker";
-import S3 from "aws-sdk/clients/s3";
 import {
   ProcessedUploadResponse,
   SpatialUploadsHandlerRequest,
 } from "spatial-uploads-handler";
 import AWS from "aws-sdk";
-const s3 = new S3();
 
 /**
  * graphile-worker task which fires off requests for spatial data upload
