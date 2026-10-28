@@ -3,14 +3,14 @@ name: Local data services
 overview: "Implementation sketch. Source of truth is design-docs/dev-environment/local-data-services.md; that file wins if they disagree. Refresh this sketch as steps land."
 todos:
   - id: phase-0a-uploads-r2
-    content: "Phase 0a: raw uploads S3 -> R2 (ssn-spatial-uploads-tmp, 24h expiry). Code and bucket are in place and tested locally. Production cutover is a later hard switch."
-    status: pending
+    content: "Phase 0a: raw uploads S3 -> R2 (ssn-spatial-uploads-tmp, 24h expiry). Merged and deployed."
+    status: completed
   - id: phase-0b-storage-model
-    content: "Phase 0b: one S3 client factory per runtime, parquet_url, URLs not keys to workers, owned-bucket rule, hostnames out of data-path code. Code is in the working tree. Production deploy and verification are still ahead."
-    status: pending
+    content: "Phase 0b: one S3 client factory per runtime, parquet_url, URLs not keys to workers, owned-bucket rule, hostnames out of data-path code. Merged and deployed."
+    status: completed
   - id: phase-1-local-r2
-    content: "Phase 1: packages/local-r2, .data/ persistence and reset, contract test"
-    status: pending
+    content: "Phase 1: packages/local-r2, .data/ persistence and reset, contract test. In review."
+    status: in_progress
   - id: phase-1-pmtiles
     content: "Phase 1: pmtiles-server UPLOADS_HOST and two wrangler dev sessions with local bucket names"
     status: pending
@@ -37,20 +37,20 @@ Working notes for implementing [local data services](../../design-docs/dev-envir
 
 Each numbered item below is one pull request. Phase 0 is implemented and tested from a laptop against the real `ssn-spatial-uploads-tmp` bucket before production is switched. Deploy is manual, so merging does not cut over. The production switch is one hard cut of bucket name and client after both phase 0 pull requests are ready, then the verification checklist. Phase 1 and 2 items change no production behavior except where noted.
 
-1. Phase 0a: raw uploads to R2. Test locally against `ssn-spatial-uploads-tmp`.
-2. Phase 0b: the storage model. Test locally. Then deploy phase 0 and verify.
-3. Phase 1: `packages/local-r2`, the `.data/` directory, and the contract test.
+1. Phase 0a: raw uploads to R2. Merged and deployed, October 2026.
+2. Phase 0b: the storage model. Merged and deployed, October 2026.
+3. Phase 1: `packages/local-r2`, the `.data/` directory, and the contract test. In review.
 4. Phase 1: `pmtiles-server` under `wrangler dev` as two sessions.
 5. Phase 1: the spatial-uploads container (Dockerfile split, registry image, Compose service).
 6. Phase 1: ElasticMQ and subdivision on local storage.
 7. Phase 1: startup wiring, templates, manifest, data profile as default, upload journey in CI.
 8. Phase 2: overlay worker, data tables, fragment worker, sketch preprocessing, journeys.
 
-Items 3 to 6 can be developed in parallel against a local branch of item 7's `dev.config.mjs` changes, but merge in that order so each is startable on `master` when it lands.
+Items 4 to 6 can be developed in parallel against a local branch of item 7's `dev.config.mjs` changes, but merge in that order so each is startable on `master` when it lands. Each of 4 to 6 adds its own `dev.config.mjs` entries in the `data` profile as it lands; item 7 is what flips the default and fills the templates, so a developer on `master` between items opts in with `--profile data` and the `.env` values from the `local-r2` launcher's output.
 
-## Before the first commit: repeat the spike on your laptop
+## The laptop portion of the spike
 
-The Miniflare S3 API was verified on a shared VM on 2026-10-27 (the output is in the agent's artifacts; the method is below). Repeat it locally once, because the remaining open items are laptop-specific: a 3 GB presigned PUT, concurrent writes and reads across sessions, and throughput on a local SSD.
+The Miniflare S3 API was verified on a shared VM on 2026-10-27, and `npm test --workspace local-r2` now repeats those calls against a session it starts itself. What remains is laptop-specific and worth doing once before item 7 declares the phase done: a 3 GB presigned PUT, concurrent writes and reads across sessions, and throughput on a local SSD. Start `npm run dev --workspace local-r2` and drive the SDK at `http://localhost:8333/cdn-cgi/local/r2/s3` with the launcher's printed credentials; the original spike configuration is kept below for reference.
 
 ```jsonc
 // /tmp/s3test/wrangler.jsonc
@@ -119,42 +119,59 @@ Run `npx wrangler dev --port 8333 --persist-to /tmp/s3test/.data` and point an S
 
 ## Phase 1
 
-### `packages/local-r2` and `.data/`
+Pointers below were re-checked against `master` after phase 0 landed (commits `567bab90`, `29ad7ee1`, `aeb7accb`, `aaec89e5`). What that changed for the plan:
 
-- `packages/local-r2/wrangler.jsonc`: two `r2_buckets` entries, `ssn-tiles-local` and `ssn-spatial-uploads-tmp-local`, each with `local_dev.experimental_s3_credentials` set to the fixed local strings. `src/index.ts` returns 404. `package.json` script `dev`: `wrangler dev --port 8333 --ip 0.0.0.0 --persist-to ../../.data/wrangler`. Pin `wrangler` to the workspace version.
-- `.gitignore` gains `.data/`. `packages/api/scripts/setup.sh` (`npm run setup`) deletes `.data/wrangler` and `.data/wrangler-e2e` under `--reset`, in the same step that drops the database.
-- Contract test under `packages/local-r2/test/`: the spike's calls, run by `vitest` against a `wrangler dev` it starts itself (`unstable_dev` or a child process). It uses the real `@aws-sdk/client-s3`, `@aws-sdk/lib-storage`, and `aws-sdk` v2 from the workspace, at the client factory's settings. It is the tripwire for a `wrangler` upgrade renaming the experimental key.
-- Local `.env` values: `R2_ENDPOINT=http://localhost:8333/cdn-cgi/local/r2/s3`, `R2_TILES_BUCKET=ssn-tiles-local`, `SPATIAL_UPLOADS_BUCKET=ssn-spatial-uploads-tmp-local`, `R2_ACCESS_KEY_ID` and `R2_SECRET_ACCESS_KEY` as in the config, `UPLOADS_BASE_URL=http://localhost:8788`, `TILES_BASE_URL=http://localhost:8787`, `TILES_ACL_NAMESPACE=local`.
+- `scripts/dev.config.mjs` already carries `data-tables` (3006), `spatial-uploads` (host mode, 3005), `subdivision` (Compose `--profile workers`, 9000), and `screenshotter` (8791) in the `core` profile, and `servicesInProfile("data")` returns core plus `data`. So the `data` profile is where new entries go until item 7 moves the data-path entries out of `core` and makes `data` the default.
+- The API's dev-handler path (`tasks/processDataUpload.ts` `runLambda`) POSTs the event JSON to `SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER` as-is and parses the JSON reply. The Lambda emulator's invoke URL takes exactly that, so pointing the variable at `http://localhost:9001/2015-03-31/functions/function/invocations` needs no API change. `beginFeatureLayerConversion.ts` uses the same variable.
+- `pmtiles-server` runs two Workers from two config files in one session (`wrangler dev -c wrangler.toml -c wrangler.data-tables.toml`), both binding `TILES_BUCKET` with `bucket_name = 'ssn-tiles'` and `preview_bucket_name = 'ssn-tiles'`. `PUBLIC_HOSTNAME` is a required secret used by `tilesBackend.ts` for TileJSON URLs; `.dev.vars.example` sets it to `localhost:8787`.
+- `packages/api/.env.template` has `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, and `R2_FILE_UPLOADS_BUCKET`, but not `R2_TILES_BUCKET`, `SPATIAL_UPLOADS_BUCKET`, `UPLOADS_BASE_URL`, or `TILES_BASE_URL`. `env-manifest.json` has only `DATA_TABLES_LAMBDA_DEV_HANDLER` and `TILES_ACL_NAMESPACE` from the data path.
+- `scripts/build-images.mjs` prebuilds the images CDK deploys and asserts its list matches the `DockerImageAsset` count in `packages/infra/lib`. The Dockerfile split in item 5 has to keep that inventory check passing.
+- The spike's two `wrangler dev` sessions are gone; the contract test in item 3 replaces them.
 
-### `pmtiles-server`
+### `packages/local-r2` and `.data/` (item 3, in review)
 
-- `src/index.ts` line ~82: `const uploadsHost = url.hostname === "uploads.seasketch.org"` becomes a comparison of `url.host` against `env.UPLOADS_HOST ?? "uploads.seasketch.org"`, accepting a comma-separated list.
-- Local bucket names without touching production config: an `[env.local]` block whose `r2_buckets` entry uses `bucket_name = "ssn-tiles-local"`, started with `wrangler dev --env local`. Confirm in the spike that local mode keys the persisted bucket by `bucket_name`; it did for `packages/local-r2`.
-- Two `dev.config.mjs` entries: `pmtiles-tiles` on 8787 with the `overlay-data-tables` service binding, `pmtiles-uploads` on 8788 with `UPLOADS_HOST=localhost:8788`, both `--persist-to .data/wrangler`, both `--ip 0.0.0.0`, `JWKS_URL` at the local API, `AUTH_ACL_ENABLED=false`.
+Landed on the branch, October 2026:
 
-### Spatial uploads container
+- `packages/local-r2/wrangler.jsonc`: `ssn-tiles-local` (`TILES_BUCKET`) and `ssn-spatial-uploads-tmp-local` (`SPATIAL_UPLOADS_BUCKET`), each with `local_dev.experimental_s3_credentials` = `local` / `local-r2-secret`. `config.mjs` parses that file so the launcher, the test, and `scripts/dev.config.mjs` read the port, credentials, and bucket names from one place. `src/index.js` answers `GET /health` (the readiness probe) and `GET /binding/<bucket>/<key>` (the contract test's read-through-binding check); everything else is 404. `bin/dev.mjs` runs `wrangler dev --ip 0.0.0.0 --port 8333 --persist-to <repo>/.data/wrangler`, overridable with `LOCAL_R2_PORT`, `LOCAL_R2_PERSIST_TO`, `LOCAL_R2_IP`, and prints the `.env` values. `wrangler` is pinned `^4.115.0`, the first release with the S3 API; the lockfile resolves it to the workspace's 4.151.3.
+- `.gitignore` has `.data/`. `setup.sh --reset` removes `.data/wrangler` for the `seasketch` database and `.data/wrangler-<suffix>` for `seasketch_<suffix>`, so the e2e reset does not touch a developer's objects. Verified: a `--reset` dropped the database and removed `.data/wrangler` while leaving `.data/wrangler-e2e`.
+- Contract test `test/s3-api.test.mjs` (`node --test`, no new dependency) starts its own `wrangler dev` on a free port with a temporary persistence directory: `HeadBucket` on both buckets and a 404 for an unknown one, a wrong-secret 403, SDK v3 streamed `PutObject` + `HeadObject` + ranged `GetObject`, the no-`WHEN_REQUIRED` failure as a tripwire, `lib-storage` multipart (12 MB, 5 MB parts), presigned PUT with CORS preflight and presigned GET, read-back through the R2 binding, `CopyObject` / `ListObjectsV2` / `DeleteObjects`, and aws-sdk v2 put/get/list/presign/delete. Runs in about two seconds; `npm test` at the root picks it up.
+- `scripts/dev.config.mjs`: `local-r2` entry in the `data` profile, `ready: http-get://127.0.0.1:8333/health`; `localR2Dev` exported for item 7's injection.
+- Also settled here: `wrangler dev` uses `preview_bucket_name` for the local bucket, so item 4 changes that value rather than adding `[env.local]`. Recorded in the record's open questions.
 
-- `packages/spatial-uploads-handler/Dockerfile` splits into a runtime stage (GDAL, PROJ, GEOS, HDF5, NetCDF, tippecanoe, go-pmtiles, rclone, unrar, fiona, rasterio) and an application stage that starts `FROM ghcr.io/seasketch/spatial-uploads-runtime:<tag>` and copies `dist/`.
-- A workflow builds and pushes the runtime stage when its Dockerfile section changes. Pin by digest or tag in the application stage (open question in the record; digest is safer, tag is easier).
-- The production Lambda image build in the deploy workflow starts from the same published runtime image.
-- `compose.yaml`: service `spatial-uploads` in the `data` profile, port 9001, `develop.watch` syncing `dist/` with restart, `extra_hosts: host.docker.internal:host-gateway`, environment from the local values plus `STORAGE_ORIGIN_MAP=http://localhost:8333=http://host.docker.internal:8333,http://localhost:8787=http://host.docker.internal:8787,http://localhost:8788=http://host.docker.internal:8788`, and the database URL on the host.
-- `remotes.ts` and the handler's HTTP fetches apply `STORAGE_ORIGIN_MAP` before connecting. In production the variable is empty.
-- `dev.config.mjs`: `spatial-uploads-tsc` runs `tsc -b --watch` for the package on the host; the existing host-mode server becomes an `--only spatial-uploads-host` opt-in.
-- The API's `SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER` default is `http://localhost:9001/2015-03-31/functions/function/invocations`, injected by `npm run dev` the way `SCREENSHOTTER_URL` is.
+Not in this item: `.env.template` and manifest entries (item 7), anything the API does with the values. Until item 7, a developer opts in with `--profile data` and copies the launcher's printed values into `packages/api/.env`, plus `UPLOADS_BASE_URL=http://localhost:8788` and `TILES_BASE_URL=http://localhost:8787` once item 4 serves them.
 
-### ElasticMQ and subdivision
+### `pmtiles-server` (item 4)
 
-- `compose.yaml`: `elasticmq` (`softwaremill/elasticmq-native`, 9324) with a committed `elasticmq.conf` defining `overlay-engine-results` and the e2e queue. The existing `workers` profile folds into `data`.
-- API: `OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL` local default `http://localhost:9324/000000000000/overlay-engine-results`; the consumer in `src/overlayEngine/messageQueueConsumer.ts` honors `SQS_ENDPOINT`. New `SUBDIVISION_WORKER_DEV_HANDLER` used by `packages/api/tasks/preprocessSource.ts` under the dev-handler rule, default `http://localhost:9000/2015-03-31/functions/function/invocations`.
-- `packages/subdivision-worker/lambda_handler.py`: `SQS_ENDPOINT` for the boto3 SQS client; fall back to `AWS_REGION` when the queue URL is not an AWS URL; `UPLOADS_BASE_URL` in place of `R2_PUBLIC_BASE_URL`; `STORAGE_ORIGIN_MAP`; report `publicUrl` from that variable.
+- `wrangler.toml` and `wrangler.data-tables.toml`: `preview_bucket_name = 'ssn-tiles-local'`. Production `bucket_name` is untouched.
+- `src/index.ts` line 82: `url.hostname === "uploads.seasketch.org"` becomes a check of `url.host` against `env.UPLOADS_HOST ?? "uploads.seasketch.org"`, split on commas. Add `UPLOADS_HOST?: string` to `src/env.d.ts`. Deployed Workers have no `UPLOADS_HOST`, so behavior is unchanged there.
+- `package.json` scripts: `dev:tiles` = `wrangler dev -c wrangler.toml -c wrangler.data-tables.toml --ip 0.0.0.0 --port 8787 --persist-to ../../.data/wrangler --var PUBLIC_HOSTNAME:localhost:8787 --no-show-interactive-dev-session`; `dev:uploads` = the same two configs on 8788 with `--var UPLOADS_HOST:localhost:8788 --var PUBLIC_HOSTNAME:localhost:8788`. Both sessions load both configs so the `DATA_TABLES` service binding resolves in each; `overlay-data-tables` is internal and cheap to run twice. `JWKS_URL` comes from `.dev.vars` (the example already points at `127.0.0.1:3857`) or a `--var`. Keep the existing `dev` script as an alias of `dev:tiles`.
+- `dev.config.mjs`: `pmtiles-tiles` (`ready: http-get://127.0.0.1:8787/health` or whatever the Worker answers 200 to; check `src/index.ts` for a health route and add one if there is none) and `pmtiles-uploads` on 8788, both `profiles: ["data"]`, both `dependsOn: ["api"]` for JWKS in `--ci`.
+- Verify: upload nothing yet; put a small PMTiles and a FlatGeobuf into `ssn-tiles-local` with the SDK, then fetch TileJSON from 8787 and the raw archive from 8788 for the same key, and a ranged FlatGeobuf read from either.
 
-### Startup, templates, manifest, journey
+### Spatial uploads container (item 5)
 
-- `scripts/dev.config.mjs`: `local-r2`, `pmtiles-tiles`, `pmtiles-uploads`, `spatial-uploads-tsc`, readiness probes (`GET /cdn-cgi/local/r2/s3/` for `local-r2` returns an S3 error document, which is enough), dependencies (API after `local-r2` and `elasticmq`; Workers after the API for JWKS). `npm run dev` runs core plus data; `--profile core` opts out; `--ci` starts the data services once without watchers; the e2e profile uses offset ports and `.data/wrangler-e2e`.
-- `.vscode/tasks.json`: `Dev: stack` unchanged; add `Dev: core only`.
-- `packages/api/env-manifest.json`: new variables with classes per the record's configuration table. The CI check rejects every production-override value.
-- Environment templates and `README.md` operating instructions.
-- `packages/e2e`: a spatial-upload journey that uploads a small FlatGeobuf through the UI and asserts a tile request to `localhost:8787` succeeds. Runs in the Smoke or a new data job without cloud credentials.
+- `packages/spatial-uploads-handler/Dockerfile`: the `gdal` stage and the tool installs (tippecanoe 2.64.0, go-pmtiles 1.8.0, rclone, unrar, fiona, rasterio) become a runtime image, `ghcr.io/seasketch/spatial-uploads-runtime`, built by a new workflow on changes to a `Dockerfile.runtime`. The application Dockerfile starts `FROM` that image, copies the workspace manifests and `dist/`, and installs production dependencies. Pin by digest in the application Dockerfile (the record's open question; digest is the safer default and the workflow can print the new digest in its summary).
+- `scripts/build-images.mjs`: the `spatial-uploads-handler` entry keeps building the application image; the inventory assertion is unchanged because the CDK asset count does not change. `packages/infra/lib/UploadHandlerLambdaStack.ts` keeps `DockerImageCode.fromImageAsset` with the same file.
+- `compose.yaml`: `spatial-uploads` service, `profiles: ["data"]`, built from the application Dockerfile with context `.`, `ports: 9001:8080`, healthcheck like `subdivision`'s, `develop.watch` with `sync+restart` from `packages/spatial-uploads-handler/dist` to the image's `dist/`, `extra_hosts: ["host.docker.internal:host-gateway"]`, and environment: `R2_ENDPOINT=http://localhost:8333/cdn-cgi/local/r2/s3`, the local credentials, `R2_TILES_BUCKET`, `SPATIAL_UPLOADS_BUCKET`, `BUCKET`/`TILES_REMOTE`/`RESOURCES_REMOTE` as the Lambda gets them (check `UploadHandlerLambdaStack.ts` for the full list), `UPLOADS_BASE_URL`, `TILES_BASE_URL`, `PGHOST=host.docker.internal` with the dev database credentials, and `STORAGE_ORIGIN_MAP=http://localhost:8333=http://host.docker.internal:8333,http://localhost:8787=http://host.docker.internal:8787,http://localhost:8788=http://host.docker.internal:8788`.
+- `src/remotes.ts`: build `r2Client` through a small `applyOriginMap(url)` so the container reaches `localhost:8333` as `host.docker.internal:8333`; apply the same map in any `fetch` of a storage URL in `handleUpload.ts`. Empty map is a no-op; production sets none.
+- `dev.config.mjs`: `spatial-uploads-tsc` (`npm run watch` in the package, host) and `spatial-uploads` becomes the Compose service with the same two-command pattern `subdivision` uses (`up -d --wait` then `watch --no-up`), `ready: tcp:127.0.0.1:9001`, `profiles: ["data"]`. The present host-mode entry is renamed `spatial-uploads-host` and kept as an opt-in with `ciCommand` removed.
+- Verify: `POST` the emulator URL with a recorded `SpatialUploadsHandlerRequest` whose staged object is in `ssn-spatial-uploads-tmp-local`; outputs land in `ssn-tiles-local` with `localhost:8787` / `8788` URLs.
+
+### ElasticMQ and subdivision (item 6)
+
+- `compose.yaml`: `elasticmq` (`softwaremill/elasticmq-native`, `9324:9324`), `profiles: ["data"]`, with a committed `packages/api/elasticmq.conf` (or `infra/local/elasticmq.conf`) defining `overlay-engine-results` and `overlay-engine-results-e2e`. Move `subdivision` from `profiles: ["workers"]` to `["data"]` and update the two `docker compose --profile workers` commands in `dev.config.mjs`.
+- API: `src/overlayEngine/messageQueueConsumer.ts` and wherever the SQS client is constructed take `SQS_ENDPOINT`; local default for `OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL` is `http://localhost:9324/000000000000/overlay-engine-results`. New `SUBDIVISION_WORKER_DEV_HANDLER` in `tasks/preprocessSource.ts`: when set, POST `payloadForLambda` to it and treat a non-2xx as the Lambda failure path; otherwise the existing ARN invoke. Default injected by `npm run dev`: `http://localhost:9000/2015-03-31/functions/function/invocations`.
+- `packages/subdivision-worker/lambda_handler.py`: `_get_sqs_client` honors `SQS_ENDPOINT` (`endpoint_url=`) and falls back to `AWS_REGION` when `_extract_region_from_sqs_url` returns `None`; `_create_r2_client` already sets path style; rename `R2_PUBLIC_BASE_URL` to `UPLOADS_BASE_URL` in the handler and in `packages/infra/lib/SubdivideWorkerLambdaStack.ts`; apply `STORAGE_ORIGIN_MAP` to the R2 endpoint and any HTTP fetch. Compose gives it `SQS_ENDPOINT=http://elasticmq:9324`, the local storage values, and the origin map.
+- Verify: run a subdivision through `preprocessSource` against a local FlatGeobuf; the API's consumer receives the progress and completion messages from ElasticMQ and the outputs are in `ssn-tiles-local`.
+
+### Startup, templates, manifest, journey (item 7)
+
+- `scripts/dev.mjs` + `dev.config.mjs`: default profile becomes `data`; `data-tables`, `spatial-uploads`, `spatial-uploads-tsc`, `subdivision`, `local-r2`, `pmtiles-tiles`, `pmtiles-uploads`, `elasticmq` carry `profiles: ["data"]`; `core` is API, watchers, client, screenshotter. `envFor` injects into the API, when the matching service is selected and the variable is not already set: `R2_ENDPOINT`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_TILES_BUCKET`, `SPATIAL_UPLOADS_BUCKET` (from `localR2Dev` / `packages/local-r2/config.mjs`), `UPLOADS_BASE_URL`, `TILES_BASE_URL`, `SPATIAL_UPLOADS_LAMBDA_DEV_HANDLER`, `SUBDIVISION_WORKER_DEV_HANDLER`, `OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL`, `SQS_ENDPOINT`. `startCompose` already passes `--profile data`. `client.dependsOn` in `--ci` gains the new services. `status.mjs` lists the default profile instead of `core`.
+- e2e profile: `LOCAL_R2_PERSIST_TO=.data/wrangler-e2e`, `LOCAL_R2_PORT` offset, offset `pmtiles-server` ports, and the e2e queue, through `e2eEnv` on each entry; `scripts/e2e.mjs` already runs `setup --reset` with `SEASKETCH_DB_NAME=seasketch_e2e`, which now clears `.data/wrangler-e2e`.
+- `.vscode/tasks.json`: `Dev: stack` unchanged; add `Dev: core only` running `npm run dev -- --profile core`.
+- `packages/api/.env.template`: the local storage block (values from the `local-r2` launcher output), `UPLOADS_BASE_URL`, `TILES_BASE_URL`, and commented production overrides. `env-manifest.json`: entries for each with classes per the record's configuration table, and `forbidden` rows for the production endpoint, bucket names, base URLs, and `SPATIAL_UPLOADS_LAMBDA_ARN` / `SUBDIVISION_WORKER_LAMBDA_ARN` / `OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL` on `amazonaws.com`.
+- `README.md` operating instructions and `design-docs/dev-environment/local-services.md` profile note.
+- `packages/e2e`: a spatial-upload journey that uploads a small FlatGeobuf through the UI and asserts the layer's tile request to `localhost:8787` returns 200. Runs in the smoke job without cloud credentials; the job gains the Docker image pull for the runtime image.
 - Mark the phase 1 exit criterion in the record when a clean machine passes it.
 
 ## Phase 2
@@ -169,5 +186,5 @@ Run `npx wrangler dev --port 8333 --persist-to /tmp/s3test/.data` and point an S
 ## Open items carried from the record
 
 - 0b: decided. Deploy order is in the record under *Phase 0b deploy order*. Workers and Lambdas first, then migrations, API, and client.
-- 1: the laptop portion of the spike; `[env.local]` versus `preview_bucket_name`; runtime image pinned by digest or tag; whether to file the `aws-chunked` issue against Miniflare.
+- 1: `preview_bucket_name` decided (item 3). Still open: the laptop portion of the spike (3 GB presigned PUT, ten consecutive uploads with concurrent reads, throughput); runtime image pinned by digest or tag; whether to file the `aws-chunked` issue against Miniflare.
 - 2: a local mode with tile access control on; containerizing the Node processors.
