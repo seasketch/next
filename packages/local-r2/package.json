@@ -1,0 +1,20 @@
+{
+  "name": "local-r2",
+  "version": "1.0.0",
+  "description": "Local stand-in for the SeaSketch R2 buckets. Config for wrangler's built-in local S3 API; no application code.",
+  "license": "BSD-3-Clause",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "node bin/dev.mjs",
+    "start": "node bin/dev.mjs",
+    "test": "node --test --test-timeout 180000 test/*.test.mjs"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-s3": "^3.1151.0",
+    "@aws-sdk/lib-storage": "^3.1151.0",
+    "@aws-sdk/s3-request-presigner": "^3.1151.0",
+    "aws-sdk": "^2.1234.0",
+    "wrangler": "^4.115.0"
+  }
+}
