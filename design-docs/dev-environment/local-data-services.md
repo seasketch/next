@@ -356,7 +356,7 @@ The production workflow already runs migrations, then the API, then the client, 
    - The API exposes `fgbUrl` and still exposes deprecated `objectKey` with the same remote as before. `JobStatusUpdater` requires `publicUrl`.
    - The client goes last. It queries `fgbUrl`, so the API must already be serving that field, and it sends that URL to sketch preprocessing, so that Worker must already accept a URL. Browsers that have not reloaded keep querying `objectKey`.
 
-`pmtiles-server` is unchanged in this phase.
+`pmtiles-server` is unchanged in this phase. The commands and checks are in the [phase 0b deploy runbook](local-data-services-phase-0b-deploy.md).
 
 ## Starting point (October 2026)
 
