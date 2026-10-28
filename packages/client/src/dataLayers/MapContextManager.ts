@@ -33,6 +33,7 @@ import {
 } from "../generated/graphql";
 import {
   extractTilesUuidFromUrl,
+  hostedStyleUrl,
   isHostedDataHost,
   withHostedAuthParams,
 } from "./tilesAuth";
@@ -1449,6 +1450,10 @@ class MapContextManager extends EventEmitter {
     if (changed && token) {
       this.scheduleDataTableFeatureStateSync();
     }
+    // Private source URLs include the token, so a new token is a new style.
+    if (changed) {
+      this.updateStyle();
+    }
   }
 
   setHostedTileUuidsRequiringAuth(uuids: string[] | null | undefined) {
@@ -1467,11 +1472,19 @@ class MapContextManager extends EventEmitter {
 
     this.hostedTileUuidsRequiringAuth = next;
 
-    // Mapbox may already have failed /v2 requests without a token; rebuild
-    // the style so transformRequest runs again for visible hosted sources.
+    // Private source URLs include the token, so membership changes the style.
     if (!unchanged) {
       this.updateStyle();
     }
+  }
+
+  /** Bare URL, plus access_token when this hosted source is private. */
+  private styleSourceUrl(url: string): string {
+    return hostedStyleUrl(
+      url,
+      this.mapAccessToken,
+      this.hostedTileUuidsRequiringAuth
+    );
   }
 
   /** Whether /v2 requests for this hosted UUID (tiles or GeoJSON) need mapAccessToken. */
@@ -2709,7 +2722,9 @@ class MapContextManager extends EventEmitter {
                     baseStyle.sources[overlaySourceKey] = {
                       type: "vector",
                       attribution: source.attribution || "",
-                      tiles: source.tiles as string[],
+                      tiles: (source.tiles as string[]).map((tile) =>
+                        this.styleSourceUrl(tile)
+                      ),
                       ...(promoteId ? { promoteId } : {}),
                       ...(source.bounds
                         ? { bounds: source.bounds.map((b) => parseFloat(b)) }
@@ -2737,7 +2752,7 @@ class MapContextManager extends EventEmitter {
                     }
                     baseStyle.sources[overlaySourceKey] = {
                       type: "vector",
-                      url,
+                      url: this.styleSourceUrl(url),
                       attribution: source.attribution || "",
                       ...(promoteId ? { promoteId } : {}),
                     };
@@ -2746,7 +2761,7 @@ class MapContextManager extends EventEmitter {
                   case DataSourceTypes.Geojson:
                     baseStyle.sources[overlaySourceKey] = {
                       type: "geojson",
-                      data: source.url!,
+                      data: this.styleSourceUrl(source.url!),
                       attribution: source.attribution || "",
                       ...(promoteId ? { promoteId } : {}),
                     };
@@ -2759,7 +2774,7 @@ class MapContextManager extends EventEmitter {
                       }
                       baseStyle.sources[overlaySourceKey] = {
                         type: "raster",
-                        url,
+                        url: this.styleSourceUrl(url),
                         attribution: source.attribution || "",
                       };
                     } else {

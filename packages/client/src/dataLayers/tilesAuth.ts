@@ -80,6 +80,30 @@ export function isHostedDataHost(hostname: string): boolean {
 const UUID_RE =
   /([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})/;
 
+/**
+ * Source URL as it belongs in the computed style.
+ *
+ * Private hosted sources include `access_token`, so a change to
+ * `hostedTileUuidsRequiringAuth` changes the style document and Mapbox
+ * reloads that source. Public and not-yet-classified URLs stay bare so
+ * their cache keys do not include a token. `null` means the auth list
+ * has not arrived yet.
+ */
+export function hostedStyleUrl(
+  url: string,
+  accessToken: string | null | undefined,
+  uuidsRequiringAuth: ReadonlySet<string> | null
+): string {
+  if (!accessToken || uuidsRequiringAuth == null) {
+    return url;
+  }
+  const uuid = extractTilesUuidFromUrl(url);
+  if (!uuid || !uuidsRequiringAuth.has(uuid)) {
+    return url;
+  }
+  return withHostedAuthParams(url, { accessToken });
+}
+
 export function extractTilesUuidFromUrl(url: string): string | null {
   try {
     const u = new URL(url);
