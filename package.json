@@ -15,6 +15,7 @@
     "build:api": "tsc -b packages/api && npm run build:bundles",
     "build:client-libs": "tsc -b packages/geostats-types packages/map-tile-cache-calculator packages/mapbox-gl-esri-sources packages/overlay-engine && npm run build:bundles",
     "build:bundles": "npm run build --workspace=fgb-source --silent && npm run build:worker --workspace=overlay-engine --silent",
+    "build:images": "node scripts/build-images.mjs",
     "test": "node scripts/test-workspaces.mjs",
     "dev:db": "docker compose up -d --wait",
     "logs": "node scripts/logs.mjs",

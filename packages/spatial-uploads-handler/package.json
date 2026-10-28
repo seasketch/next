@@ -23,7 +23,7 @@
     "dev": "tsx watch server.ts",
     "build": "tsc -b",
     "watch": "tsc -b --watch",
-    "build:container": "docker build -f Dockerfile ../.. -t spatial-uploads-handler:latest",
+    "build:container": "node ../../scripts/build-images.mjs spatial-uploads-handler",
     "test": "jest",
     "deploy:pre": "npm run build",
     "geostats": "tsx bin/geostats.ts"

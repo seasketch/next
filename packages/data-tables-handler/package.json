@@ -10,7 +10,7 @@
     "test": "tsx --test src/validateJoinColumn.test.ts src/deriveWhenColumns.test.ts src/applyNodataValues.test.ts src/normalizeCsvEncoding.test.ts src/inferCsvColumnPlans.test.ts src/enrichOrganisms.test.ts src/taxonomyApis.test.ts src/wikidataCrosswalk.test.ts src/remotes.test.ts src/wormsParquet.test.ts src/clusterParquet.test.ts",
     "worms:build": "tsx scripts/buildWormsParquet.ts",
     "dev": "tsx watch server.ts",
-    "build:container": "docker build -f Dockerfile ../.. -t data-tables-handler:latest"
+    "build:container": "node ../../scripts/build-images.mjs data-tables-handler"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1151.0",
