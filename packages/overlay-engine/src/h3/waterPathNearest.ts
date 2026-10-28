@@ -11,6 +11,7 @@ import {
   WATER_PATH_RESOLUTION_DEGREES,
   WaterPathResolution,
 } from "./bitmapSearch";
+import { optionalEnv } from "../optionalEnv";
 import {
   bboxToEnvelope,
   cleanBBox,
@@ -190,7 +191,7 @@ export async function searchWaterPathNearest(
 
   const archiveUrl =
     options?.archiveUrl ??
-    process.env.H3_LAND_URL ??
+    optionalEnv("H3_LAND_URL") ??
     archiveFor(sampleResolution(degrees));
   const occupancy = await landArchive(archiveUrl);
   const goalPool = Math.min(24, maxResults * 6);

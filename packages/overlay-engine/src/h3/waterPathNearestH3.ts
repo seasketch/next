@@ -23,6 +23,7 @@ import { densifiedPositionsFromGeometry } from "./coverGeometry";
 import { cellHasLand, LandOccupancyCache } from "./landOccupancy";
 import { sameResNeighbors } from "./adaptiveGrid";
 import { MinHeap } from "./minHeap";
+import { optionalEnv } from "../optionalEnv";
 import { straightenWaterPath } from "./straightenWaterPath";
 
 /**
@@ -601,7 +602,7 @@ export async function searchWaterPathNearestH3(
     }
   }
 
-  if (process.env.WATER_PATH_DEBUG) {
+  if (optionalEnv("WATER_PATH_DEBUG")) {
     console.log("water-path expansions", expansions);
   }
 

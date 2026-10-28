@@ -22,6 +22,7 @@ import {
   GuaranteedOverlayWorkerHelpers,
   guaranteeHelpers,
 } from "../utils/helpers";
+import { optionalEnv } from "../optionalEnv";
 
 export type ClippingOperation = "INTERSECT" | "DIFFERENCE";
 
@@ -42,7 +43,7 @@ export function setForcePolyclipTs(enabled: boolean): void {
 
 function preferPolyclipTs(): boolean {
   return (
-    forcePolyclipTs || process.env.OVERLAY_ENGINE_FORCE_POLYCLIP_TS === "1"
+    forcePolyclipTs || optionalEnv("OVERLAY_ENGINE_FORCE_POLYCLIP_TS") === "1"
   );
 }
 

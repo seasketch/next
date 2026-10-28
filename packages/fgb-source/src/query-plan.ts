@@ -190,7 +190,6 @@ export async function* executeQueryPlan(
       // Yield control to event loop after each feature to allow other promises to resolve
       // This ensures pending fetch promises can complete their cleanup without blocking
       if (i % 10 === 0) {
-        process.nextTick(() => {});
         await new Promise((resolve) => setTimeout(resolve, 0));
       }
     }

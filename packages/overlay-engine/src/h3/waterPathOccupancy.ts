@@ -18,6 +18,7 @@ import {
   cleanBBox,
   splitBBoxAntimeridian,
 } from "../utils/bboxUtils";
+import { optionalEnv } from "../optionalEnv";
 import { bboxForCell } from "./bboxForCell";
 import { MinHeap } from "./minHeap";
 import {
@@ -40,7 +41,8 @@ import {
 const COARSE = 4;
 const MID = 7;
 const OCCUPANCY_URL =
-  process.env.H3_LAND_URL ?? "https://tiles.seasketch.org/h3-land/v1/land-res9.h3ld";
+  optionalEnv("H3_LAND_URL") ??
+  "https://tiles.seasketch.org/h3-land/v1/land-res9.h3ld";
 
 const DEPARTURE_METERS = 800;
 const ARRIVAL_METERS = 800;
@@ -1533,7 +1535,7 @@ export async function searchWaterPathByOccupancy(
     accept(candidate.id, lineLength(pulled), candidate.properties, pulled);
   }
 
-  if (process.env.WATER_PATH_DEBUG) {
+  if (optionalEnv("WATER_PATH_DEBUG")) {
     const name = String(
       (feature.properties as { name?: unknown } | null)?.name ?? "occupancy"
     );
