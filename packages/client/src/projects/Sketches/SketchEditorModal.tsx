@@ -51,16 +51,14 @@ import { FilterInputServiceContextProvider } from "../../formElements/FilterInpu
 import FilteredPlanningUnitCountHeader from "./FilteredPlanningUnitCountHeader";
 
 function clippingLayerDataset(layer: {
-  objectKey?: string | null;
+  fgbUrl?: string | null;
   dataLayer?: { vectorObjectKey?: string | null } | null;
 }): string | null {
+  if (layer.fgbUrl) {
+    return layer.fgbUrl;
+  }
   if (layer.dataLayer?.vectorObjectKey) {
     return layer.dataLayer.vectorObjectKey;
-  }
-  if (layer.objectKey) {
-    return layer.objectKey
-      .replace(/^[^:]+:\/\/[^/]+\//, "")
-      .replace(/^\//, "");
   }
   return null;
 }

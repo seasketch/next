@@ -1,76 +1,57 @@
 import { makeExtendSchemaPlugin, gql } from "graphile-utils";
-import { S3 } from "aws-sdk";
 import { isOrganismInfo } from "@seasketch/geostats-types";
+import { storageClientV2 } from "../storage/client";
+import { replaceUrlFileName } from "../storage/urls";
 
 export const DATA_TABLE_UPLOAD_PRESIGNED_URL_TTL = 60 * 120;
 
-function stagingClient(): S3 {
-  const { R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY } = process.env;
-  if (!R2_ENDPOINT || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {
-    throw new Error("R2_ENDPOINT / R2 credentials must be set to presign uploads");
+function tableDirectory(parquetUrl: string | null | undefined): string | null {
+  if (!parquetUrl) return null;
+  let url: URL;
+  try {
+    url = new URL(parquetUrl);
+  } catch {
+    return null;
   }
-  return new S3({
-    region: "auto",
-    endpoint: R2_ENDPOINT,
-    signatureVersion: "v4",
-    s3ForcePathStyle: true,
-    credentials: {
-      accessKeyId: R2_ACCESS_KEY_ID,
-      secretAccessKey: R2_SECRET_ACCESS_KEY,
-    },
-  });
+  if (!url.pathname.endsWith("/data.parquet")) return null;
+  return url.pathname.slice(0, -"/data.parquet".length);
 }
 
-function remoteKey(remote: string): string {
-  return remote.replace(/^r2:\/\//, "").split("/").slice(1).join("/");
+function queryUrl(parquetUrl: string | null | undefined): string | null {
+  const directory = tableDirectory(parquetUrl);
+  if (!directory || !parquetUrl) return null;
+  const url = new URL(parquetUrl);
+  url.pathname = `${directory}/query`;
+  url.search = "";
+  return url.toString();
 }
 
-const UPLOADS_PUBLIC_BASE_URL = "https://uploads.seasketch.org";
-
-function remoteToPublicUrl(remote: string | null | undefined): string | null {
-  if (!remote) return null;
-  return `${UPLOADS_PUBLIC_BASE_URL}/${remoteKey(remote)}`;
+function orgQueryUrl(parquetUrl: string | null | undefined): string | null {
+  const directory = tableDirectory(parquetUrl);
+  if (!directory || !parquetUrl) return null;
+  const url = new URL(parquetUrl);
+  const tablePath = directory.replace(/^\//, "");
+  url.pathname = "/orgQuery";
+  url.search = "";
+  url.searchParams.set("tables", tablePath);
+  return url.toString();
 }
 
-function tablePathFromParquetRemote(
-  remote: string | null | undefined
-): string | null {
-  if (!remote) return null;
-  const key = remoteKey(remote);
-  const suffix = "/data.parquet";
-  if (!key.endsWith(suffix)) return null;
-  return key.slice(0, -suffix.length);
+function temporalPreviewUrl(parquetUrl: string | null | undefined): string | null {
+  const directory = tableDirectory(parquetUrl);
+  if (!directory || !parquetUrl) return null;
+  const url = new URL(parquetUrl);
+  url.pathname = `${directory}/temporal-preview`;
+  url.search = "";
+  return url.toString();
 }
 
-function remoteToQueryUrl(remote: string | null | undefined): string | null {
-  const tablePath = tablePathFromParquetRemote(remote);
-  if (!tablePath) return null;
-  // Served by pmtiles-server DataTablesBackend on the uploads host (same ACL
-  // as the parent layer's published UUID).
-  return `${UPLOADS_PUBLIC_BASE_URL}/${tablePath}/query`;
-}
-
-function remoteToOrgQueryUrl(remote: string | null | undefined): string | null {
-  const tablePath = tablePathFromParquetRemote(remote);
-  if (!tablePath) return null;
-  return `${UPLOADS_PUBLIC_BASE_URL}/orgQuery?tables=${encodeURIComponent(tablePath)}`;
-}
-
-function remoteToTemporalPreviewUrl(
-  remote: string | null | undefined
-): string | null {
-  const tablePath = tablePathFromParquetRemote(remote);
-  if (!tablePath) return null;
-  return `${UPLOADS_PUBLIC_BASE_URL}/${tablePath}/temporal-preview`;
-}
-
-function remoteToSiblingUrl(
-  remote: string | null | undefined,
+function siblingUrl(
+  parquetUrl: string | null | undefined,
   filename: string
 ): string | null {
-  const tablePath = tablePathFromParquetRemote(remote);
-  if (!tablePath) return null;
-  return `${UPLOADS_PUBLIC_BASE_URL}/${tablePath}/${filename}`;
+  if (!tableDirectory(parquetUrl) || !parquetUrl) return null;
+  return replaceUrlFileName(parquetUrl, filename);
 }
 
 function tableHasOrganism(table: { organism?: unknown }): boolean {
@@ -88,13 +69,13 @@ function tableHasOrganism(table: { organism?: unknown }): boolean {
 const OverlayDataTablePlugin = makeExtendSchemaPlugin(() => ({
   typeDefs: gql`
     extend type OverlayDataTable {
-      parquetUrl: String @requires(columns: ["parquet_remote"])
-      columnStatsUrl: String @requires(columns: ["column_stats_remote"])
-      queryUrl: String @requires(columns: ["parquet_remote"])
-      orgQueryUrl: String @requires(columns: ["parquet_remote", "organism"])
-      temporalPreviewUrl: String @requires(columns: ["parquet_remote"])
-      organismCatalogUrl: String @requires(columns: ["parquet_remote", "organism"])
-      organismPreviewUrl: String @requires(columns: ["parquet_remote", "organism"])
+      parquetUrl: String @requires(columns: ["parquet_url"])
+      columnStatsUrl: String @requires(columns: ["parquet_url"])
+      queryUrl: String @requires(columns: ["parquet_url"])
+      orgQueryUrl: String @requires(columns: ["parquet_url", "organism"])
+      temporalPreviewUrl: String @requires(columns: ["parquet_url"])
+      organismCatalogUrl: String @requires(columns: ["parquet_url", "organism"])
+      organismPreviewUrl: String @requires(columns: ["parquet_url", "organism"])
     }
 
     extend type OverlayDataTableUpload {
@@ -104,28 +85,28 @@ const OverlayDataTablePlugin = makeExtendSchemaPlugin(() => ({
   `,
   resolvers: {
     OverlayDataTable: {
-      parquetUrl: (table) => remoteToPublicUrl(table.parquetRemote),
-      columnStatsUrl: (table) => remoteToPublicUrl(table.columnStatsRemote),
-      queryUrl: (table) => remoteToQueryUrl(table.parquetRemote),
-      orgQueryUrl: (table) =>
-        tableHasOrganism(table)
-          ? remoteToOrgQueryUrl(table.parquetRemote)
+      parquetUrl: (table) => table.parquetUrl || null,
+      columnStatsUrl: (table) =>
+        table.parquetUrl
+          ? replaceUrlFileName(table.parquetUrl, "column-stats.json")
           : null,
-      temporalPreviewUrl: (table) =>
-        remoteToTemporalPreviewUrl(table.parquetRemote),
+      queryUrl: (table) => queryUrl(table.parquetUrl),
+      orgQueryUrl: (table) =>
+        tableHasOrganism(table) ? orgQueryUrl(table.parquetUrl) : null,
+      temporalPreviewUrl: (table) => temporalPreviewUrl(table.parquetUrl),
       organismCatalogUrl: (table) =>
         tableHasOrganism(table)
-          ? remoteToSiblingUrl(table.parquetRemote, "organism-catalog.parquet")
+          ? siblingUrl(table.parquetUrl, "organism-catalog.parquet")
           : null,
       organismPreviewUrl: (table) =>
         tableHasOrganism(table)
-          ? remoteToSiblingUrl(table.parquetRemote, "organism-preview.json")
+          ? siblingUrl(table.parquetUrl, "organism-preview.json")
           : null,
     },
     OverlayDataTableUpload: {
       presignedUploadUrl: async (upload) => {
         const bucket = process.env.SPATIAL_UPLOADS_BUCKET;
-        return stagingClient().getSignedUrlPromise("putObject", {
+        return storageClientV2().getSignedUrlPromise("putObject", {
           Bucket: bucket,
           Key: `${upload.id}/${upload.filename}`,
           Expires: DATA_TABLE_UPLOAD_PRESIGNED_URL_TTL,

@@ -177,8 +177,9 @@ module.exports = {
   // A list of paths to snapshot serializer modules Jest should use for snapshot testing
   // snapshotSerializers: [],
 
-  // The test environment that will be used for testing
-  testEnvironment: "node",
+  // The test environment that will be used for testing.
+  // Custom environment copies Node web globals into Jest 26's vm so undici can load.
+  testEnvironment: "<rootDir>/tests/jestNodeEnvironment.js",
   // Jest 26 reads `node:` built-ins as file paths. AWS SDK v3 imports them.
   resolver: "<rootDir>/tests/jestNodeResolver.js",
 

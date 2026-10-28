@@ -1,25 +1,17 @@
 import { postgraphile } from "postgraphile";
 import { makeExtendSchemaPlugin, gql } from "graphile-utils";
-import * as S3 from "aws-sdk/clients/s3";
 import { FileUpload } from "graphql-upload";
 import stream from "stream";
 import { v4 as uuid } from "uuid";
 import { createHash } from "crypto";
 import { DBClient } from "../dbClient";
 import { PMTiles, TileType } from "pmtiles";
+import { storageClientV2 } from "../storage/client";
+import { tilesBaseUrl } from "../storage/urls";
 
-const { R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ENDPOINT } = process.env;
-
-const r2 = new S3.default({
-  region: "auto",
-  endpoint: R2_ENDPOINT,
-  signatureVersion: "v4",
-  s3ForcePathStyle: true,
-  credentials: {
-    accessKeyId: R2_ACCESS_KEY_ID,
-    secretAccessKey: R2_SECRET_ACCESS_KEY,
-  },
-});
+function r2() {
+  return storageClientV2();
+}
 
 const bucket = process.env.SPATIAL_UPLOADS_BUCKET;
 
@@ -55,7 +47,7 @@ const ReplacePMTilesPlugin = makeExtendSchemaPlugin((build) => {
         ) => {
           const { filename, bytes } = args;
           const key = `uploads/${uuid()}/${filename}`;
-          const url = await r2.getSignedUrlPromise("putObject", {
+          const url = await r2().getSignedUrlPromise("putObject", {
             Bucket: bucket,
             Key: key,
             Expires: 60 * 60 * 4,
@@ -105,7 +97,7 @@ const ReplacePMTilesPlugin = makeExtendSchemaPlugin((build) => {
             },
             async getBytes(offset: number, length: number) {
               try {
-                const resp = await r2
+                const resp = await r2()
                   .getObject({
                     Bucket: bucket,
                     Key: pmtilesKey,
@@ -155,7 +147,7 @@ const ReplacePMTilesPlugin = makeExtendSchemaPlugin((build) => {
           }
 
           const bytes = (
-            await r2
+            await r2()
               .headObject({
                 Bucket: bucket,
                 Key: pmtilesKey,
@@ -164,7 +156,7 @@ const ReplacePMTilesPlugin = makeExtendSchemaPlugin((build) => {
           ).ContentLength!;
 
           // Copy the staged upload into the tiles bucket.
-          const stagingStream = r2
+          const stagingStream = r2()
             .getObject({
               Bucket: bucket,
               Key: pmtilesKey,
@@ -172,12 +164,9 @@ const ReplacePMTilesPlugin = makeExtendSchemaPlugin((build) => {
             .createReadStream();
           // Canonical overlay key (matches spatial-uploads-handler).
           const r2Key = `projects/${row.slug}/public/${uuid()}.pmtiles`;
-          const r2Url = `https://tiles.seasketch.org/${r2Key.replace(
-            ".pmtiles",
-            ""
-          )}`;
+          const r2Url = `${tilesBaseUrl()}/${r2Key.replace(".pmtiles", "")}`;
           const pass = new stream.PassThrough();
-          const promise = r2
+          const promise = r2()
             .upload({
               Bucket: process.env.R2_TILES_BUCKET!,
               Key: r2Key,

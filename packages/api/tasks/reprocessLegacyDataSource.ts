@@ -1,5 +1,5 @@
 import { Helpers } from "graphile-worker";
-import S3 from "aws-sdk/clients/s3";
+import { storageClientV2 } from "../src/storage/client";
 
 /**
  * graphile-worker task that reprocesses a legacy data source through the
@@ -80,23 +80,7 @@ export default async function reprocessLegacyDataSource(
       // the presigned URL system uses: {task.id}/{task.filename}. The
       // processDataUpload task reads this key via:
       //   select id || '/' || filename as object_key from data_upload_tasks
-      const { R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY } =
-        process.env;
-      if (!R2_ENDPOINT || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {
-        throw new Error(
-          "R2_ENDPOINT / R2 credentials must be set to stage uploads"
-        );
-      }
-      const staging = new S3({
-        region: "auto",
-        endpoint: R2_ENDPOINT,
-        signatureVersion: "v4",
-        s3ForcePathStyle: true,
-        credentials: {
-          accessKeyId: R2_ACCESS_KEY_ID,
-          secretAccessKey: R2_SECRET_ACCESS_KEY,
-        },
-      });
+      const staging = storageClientV2();
       const objectKey = `${task.id}/${task.filename}`;
 
       helpers.logger.info(

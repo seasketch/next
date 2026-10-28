@@ -98,7 +98,7 @@ Two changes, each its own pull request. Both are implemented and exercised from 
 
 **0a. Raw uploads move from S3 to R2.** A new R2 bucket, `ssn-spatial-uploads-tmp`, replaces the `DataUploads` S3 bucket. The API presigns upload URLs against R2 instead of S3; the upload processor and the data-tables handler read the staged file from R2 instead of S3. A lifecycle rule deletes objects after 24 hours and aborts incomplete multipart uploads after 24 hours. The existing account-wide R2 token is reused. Browser upload progress is unaffected because it is measured by the browser during the PUT, not by the server. After this change there is one storage backend on the data path. Verification is a checklist of real uploads on production, described in [Phase 0 verification](#phase-0-verification).
 
-**0b. The storage model.** One additive column (`overlay_data_tables.parquet_url`, backfilled) and a set of code changes: read stored URLs instead of rebuilding them; pass URLs rather than bare object keys to the workers; act on a remote only when its bucket is one the process owns; remove the production hostnames that are written into API and worker code. The GraphQL schema does not change. Verification is the full upload, geography, sketch, and report flows on production plus the production probe.
+**0b. The storage model.** One additive column (`overlay_data_tables.parquet_url`, backfilled) and a set of code changes: read stored URLs instead of rebuilding them; pass URLs rather than bare object keys to the workers; act on a remote only when its bucket is one the process owns; remove the production hostnames that are written into API and worker code. The schema adds `GeographyClippingLayer.fgbUrl` and keeps `objectKey`, deprecated, returning the same remote as before. Deploy order is in [Phase 0b deploy order](#phase-0b-deploy-order). Verification is the full upload, geography, sketch, and report flows on production plus the production probe.
 
 **Exit.** Both changes deployed and verified. No data-path code contains a storage hostname or rebuilds a URL from a key. Every process's storage configuration is the endpoint, bucket names, base URLs, and credentials in its own deployed environment.
 
@@ -133,7 +133,7 @@ Two changes, each its own pull request. Both are implemented and exercised from 
 
 **`overlay_data_tables` gains `parquet_url`.** This table has four remote columns (`parquet_remote`, `column_stats_remote`, `source_parquet_remote`, `coverage_remote`) and no URL. `overlayDataTablePlugin` currently builds the query, orgQuery, temporal-preview, and sibling URLs by putting `https://uploads.seasketch.org` in front of the key. After the change it derives them from the stored `parquet_url` by replacing the trailing path segment, so they stay on whichever origin the table was written to. The migration backfills the column from `parquet_remote` and the production uploads origin, and refuses to run if any row names a bucket other than `ssn-tiles`.
 
-**Code reads URLs instead of rebuilding them.** The SQL functions `clipping_layers_for_geography`, `clipping_layers_for_sketch_class`, and `clipping_layer_source` return the FlatGeobuf output's stored `url` instead of a bare key produced by `data_layers_vector_object_key`. `sketches.ts`, `calculateSpatialMetricsBatch`, and `GeographyPlugin` pass those URLs to the fragment, overlay, and sketch-preprocessing workers, and the workers accept them. The `source` field of `GeographySettings.clippingLayers` becomes a URL; the workers treat a value without a scheme as a legacy key on `https://uploads.seasketch.org` for one release and then drop that. `JobStatusUpdater` stores the URL the subdivision worker reports and loses its hostname fallback. `GeographyPlugin.getBoundsForClippingLayer` decides how to read a layer from the output's `type` instead of checking whether the URL contains `tiles.seasketch.org`.
+**Code reads URLs instead of rebuilding them.** The SQL functions `clipping_layers_for_geography`, `clipping_layers_for_sketch_class`, and `clipping_layer_source` return the FlatGeobuf output's stored `url` as `fgb_url` instead of a bare key produced by `data_layers_vector_object_key`. `GeographyClippingLayer.objectKey` stays, marked `@deprecated`, and still returns `data_upload_outputs.remote`. The previous client selects that field on every geography query and strips the scheme and host to get the clipping key, so removing it fails those queries for every open browser until the new client is deployed and the page is reloaded. `sketches.ts`, `calculateSpatialMetricsBatch`, and `GeographyPlugin` pass those URLs to the fragment, overlay, and sketch-preprocessing workers, and the workers accept them. The `source` field of `GeographySettings.clippingLayers` is a URL once the API is deployed. Sketch preprocessing still accepts a bare key on `https://uploads.seasketch.org`, because a stale browser sends the key it stripped from `objectKey`, and a layer with no FlatGeobuf URL still sends `vectorObjectKey`. The refreshed client sends `fgbUrl` unchanged. `JobStatusUpdater` stores the `publicUrl` the subdivision worker reports, and rejects a result that omits it. The subdivision Lambda is deployed first; it builds `publicUrl` from `UPLOADS_BASE_URL`. `GeographyPlugin.getBoundsForClippingLayer` decides how to read a layer from the output's `type` instead of checking whether the URL contains `tiles.seasketch.org`.
 
 **Workers fetch per origin.** The overlay worker, the fragment worker, and the API's `sketches.ts` each hold an undici connection pool bound to `https://uploads.seasketch.org`. They change to one pool per origin, opened on demand from the URL they are given.
 
@@ -263,7 +263,7 @@ The Worker runs under `wrangler dev` on 8789 against the shared persistence dire
 
 ### Subdivision
 
-The Compose service already exists. The API gains `SUBDIVISION_WORKER_DEV_HANDLER`, with the emulator's invoke URL as its local default, and `preprocessSource` uses it under the same rule as the other handlers. The worker's `R2_PUBLIC_BASE_URL` becomes `UPLOADS_BASE_URL`, set by CDK in production and by Compose locally. It reads the queue endpoint from `SQS_ENDPOINT` and applies the same `STORAGE_ORIGIN_MAP` as the upload container. It always reports each output's `url` and `remote`.
+The Compose service already exists. The API gains `SUBDIVISION_WORKER_DEV_HANDLER`, with the emulator's invoke URL as its local default, and `preprocessSource` uses it under the same rule as the other handlers. The worker's `R2_PUBLIC_BASE_URL` becomes `UPLOADS_BASE_URL`, set by CDK in production and by Compose locally. It reads the queue endpoint from `SQS_ENDPOINT` and applies the same `STORAGE_ORIGIN_MAP` as the upload container. It reports each output's `publicUrl`, built from `UPLOADS_BASE_URL`.
 
 ### Overlay analysis
 
@@ -341,6 +341,23 @@ Mixing is allowed and well-defined. Setting `SPATIAL_UPLOADS_LAMBDA_ARN` sends u
 
 **0b.** On production, after deploy: the full upload, data-table, geography, sketch, and report flows; a layer deletion with its cleanup confirmed in R2; the production probe green; a query confirming every `overlay_data_tables.parquet_url` resolves. Rollback is the previous API image; the added column is inert to it.
 
+### Phase 0b deploy order
+
+The production workflow already runs migrations, then the API, then the client, and it refuses to publish the client until the live schema accepts the client's operations. The workers and Lambdas are not in that workflow. Deploy them first. In-flight jobs may fail during the window; a few minutes of downtime is accepted. A browser that has not reloaded keeps working.
+
+1. **Workers and Lambdas, before the workflow.** Each of these accepts what production sends today and what the new API sends. Order among them does not matter.
+   - `SpatialUploadHandler` and `DataTablesHandler`. The owned-bucket check has to be in place before a cleanup or a handler write runs on the new API.
+   - `SeaSketchOverlayWorker` and `SeaSketchFragmentWorker`. The new API passes a URL as `source`. The workers in production today do not. The new workers still accept a bare key, so they keep working until the API deploy.
+   - `SeaSketchSubdivisionWorker`. This deploy sets `UPLOADS_BASE_URL` and drops `R2_PUBLIC_BASE_URL`. The handler builds `publicUrl` from `UPLOADS_BASE_URL`. The API stores that field and rejects a result without it. The Lambda in production already sends `publicUrl`, so an API deploy against it would also succeed; shipping the Lambda first is what renames the variable.
+   - The sketch-preprocessing Worker (`wrangler deploy` from `packages/sketch-preprocessing-worker`). The new client sends `fgbUrl` as the clipping dataset. The Worker in production treats that string as an object key. The new Worker accepts a URL, and it still accepts a bare key, which is what a stale browser sends (the key it stripped from `objectKey`) and what `vectorObjectKey` still is.
+
+2. **The production workflow.** Migrations, then the API, then the client.
+   - The migration adds `parquet_url` and makes the clipping functions return `fgb_url`. The new API reads those names, so the migration has to be applied first. The workflow already does this.
+   - The API exposes `fgbUrl` and still exposes deprecated `objectKey` with the same remote as before. `JobStatusUpdater` requires `publicUrl`.
+   - The client goes last. It queries `fgbUrl`, so the API must already be serving that field, and it sends that URL to sketch preprocessing, so that Worker must already accept a URL. Browsers that have not reloaded keep querying `objectKey`.
+
+`pmtiles-server` is unchanged in this phase.
+
 ## Starting point (October 2026)
 
 [Service inventory](service-inventory.md) is the full table. The facts that shaped this design:
@@ -376,7 +393,7 @@ Accepted October 2026. None has shipped yet; a decision gets a second month when
 
 ## Open questions
 
-- *(Phase 0b)* Whether the subdivision worker's result message needs a compatibility window during the deploy, since a worker invoked before the API deploy may omit the URL the new `JobStatusUpdater` requires. Deploy the worker first, or accept both shapes for one release.
+- *(Phase 0b, decided)* Deploy order is [Phase 0b deploy order](#phase-0b-deploy-order). Workers and Lambdas first, then the production workflow (migrations, API, client). `JobStatusUpdater` stores `publicUrl` and rejects a result without it. `objectKey` stays for a stale browser. In-flight jobs are not given a compatibility window.
 - *(Phase 1)* The remainder of the Miniflare spike. Already shown on a shared VM: each writer's real SDK calls succeed against the local S3 API, a presigned PUT works as the browser sends it, a 600 MB multipart upload completes with `workerd` memory flat, and a second session reads what the first wrote. Still to show, on a laptop: a 3 GB raw upload by presigned PUT, concurrent writes and `pmtiles-server` reads with no SQLite lock errors across ten consecutive uploads, and the throughput number.
 - *(Phase 1)* Whether `preview_bucket_name` or an `[env.local]` block is the right way to give the Workers local bucket names under `wrangler dev` without touching their production configuration.
 - *(Phase 1)* Whether the prebuilt runtime image is pinned by digest in the Dockerfile or tracked as `latest`.

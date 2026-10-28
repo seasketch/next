@@ -1,5 +1,6 @@
 import { Context } from "hono";
 import type { R2Bucket, R2ObjectBody } from "@cloudflare/workers-types";
+import { resolveStorageUrl } from "overlay-engine";
 
 // Track in-flight requests to prevent duplicates
 const inFlightRequests = new Map<string, Promise<ArrayBuffer>>();
@@ -15,10 +16,9 @@ async function fetchRangeFromBucket(
   ctx: Context,
   skipCache: boolean = false
 ): Promise<ArrayBuffer> {
-  const cacheKey =
-    "https://uploads.seasketch.org/" +
-    key +
-    `?bytes=${range[0]}-${range[1] ? range[1] : ""}`;
+  const target = resolveStorageUrl(key);
+  const objectKey = decodeURIComponent(target.pathname.replace(/^\//, ""));
+  const cacheKey = `${target.href}?bytes=${range[0]}-${range[1] ? range[1] : ""}`;
   const request = new Request(cacheKey);
 
   if (!skipCache) {
@@ -31,18 +31,26 @@ async function fetchRangeFromBucket(
   let body: Response | R2ObjectBody | null;
   if (ctx.env.DEV) {
     console.warn("dev mode,fetching via https");
-    const res = await fetch("https://uploads.seasketch.org/" + key, {
+    const res = await fetch(target.href, {
       headers: {
         Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
       },
     });
     body = res;
   } else {
-    body = await bucket.get(key, {
+    body = await bucket.get(objectKey, {
       range: new Headers({
         Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
       }),
     });
+    if (!body && /^[a-z][a-z0-9+.-]*:\/\//i.test(key)) {
+      const res = await fetch(target.href, {
+        headers: {
+          Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
+        },
+      });
+      body = res;
+    }
   }
 
   if (!body) {

@@ -1,5 +1,5 @@
-import S3 from "aws-sdk/clients/s3";
 import { Pool, PoolClient } from "pg";
+import { storageClientV2 } from "../storage/client";
 import {
   assertMayWriteTilesAclNamespace,
   resolveTilesAclNamespace,
@@ -22,19 +22,8 @@ export type ProjectAclDoc = {
 const HOSTED_TILES_PATH =
   /\/(?:projects\/)?([^/]+)\/public\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})(?:\.|$|\/)/i;
 
-function getR2(): S3 {
-  const { R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY, R2_ENDPOINT } = process.env;
-  if (!R2_ENDPOINT || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {
-    throw new Error("R2_ENDPOINT / R2 credentials must be set to write ACL docs");
-  }
-  return new S3({
-    region: "auto",
-    endpoint: R2_ENDPOINT,
-    credentials: {
-      accessKeyId: R2_ACCESS_KEY_ID,
-      secretAccessKey: R2_SECRET_ACCESS_KEY,
-    },
-  });
+function getR2() {
+  return storageClientV2();
 }
 
 export function extractHostedTilesPath(

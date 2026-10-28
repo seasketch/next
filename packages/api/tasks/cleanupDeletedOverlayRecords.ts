@@ -1,25 +1,14 @@
 import { Helpers } from "graphile-worker";
-import S3 from "aws-sdk/clients/s3";
 import { PoolClient } from "pg";
 import { SNAPSHOT_DATA_LIBRARY_TEMPLATE_IDS } from "../src/DataLibrary/snapshotTemplateIds";
-
-const s3 = new S3({
-  region: process.env.AWS_REGION!,
-});
-
-const r2 = new S3({
-  region: "auto",
-  endpoint: process.env.R2_ENDPOINT,
-  signatureVersion: "v4",
-  accessKeyId: process.env.R2_ACCESS_KEY_ID,
-  secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
-});
+import { ownsRemote, storageClientV2 } from "../src/storage/client";
 
 const REQUIRED_ENV_VARS = [
   "R2_ENDPOINT",
   "R2_ACCESS_KEY_ID",
   "R2_SECRET_ACCESS_KEY",
-  "AWS_REGION",
+  "R2_TILES_BUCKET",
+  "SPATIAL_UPLOADS_BUCKET",
 ];
 
 // Storage rejected the locator itself. Retrying the same remote cannot succeed.
@@ -224,8 +213,10 @@ export default async function cleanupDeletedOverlayRecords(
           );
         } else {
           try {
-            await deleteRemote(record.remote, client);
-            helpers.logger.info(`Deleted ${record.remote}.`);
+            const deleted = await deleteRemote(record.remote, client);
+            if (deleted) {
+              helpers.logger.info(`Deleted ${record.remote}.`);
+            }
           } catch (error) {
             if (!isInvalidRemoteError(error)) throw error;
             helpers.logger.warn(
@@ -242,7 +233,7 @@ export default async function cleanupDeletedOverlayRecords(
   });
 }
 
-async function deleteRemote(remote: string, pool: PoolClient) {
+async function deleteRemote(remote: string, pool: PoolClient): Promise<boolean> {
   // before deleting a remote, make damn sure it's no longer referenced by
   // anything
   const { rowCount } = await pool.query(
@@ -251,18 +242,22 @@ async function deleteRemote(remote: string, pool: PoolClient) {
   );
   if ((rowCount ?? 0) > 0) {
     console.error(`Remote ${remote} is still being used.`);
-    return;
+    return false;
   }
-  const client = /s3:/.test(remote) ? s3 : r2;
-  const parts = remote.split(/:\/*/)[1].split("/");
+  if (!ownsRemote(remote)) {
+    console.info(`Skipping foreign remote ${remote}.`);
+    return false;
+  }
+  const parts = remote.replace(/^(?:r2|s3):\/\//, "").split("/");
   const Bucket = parts[0];
   const Key = parts.slice(1).join("/");
-  return await client
+  await storageClientV2()
     .deleteObject({
       Bucket,
       Key,
     })
     .promise();
+  return true;
 }
 
 function storageErrorCode(error: unknown) {

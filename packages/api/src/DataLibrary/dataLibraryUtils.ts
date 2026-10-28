@@ -1,14 +1,12 @@
 import { PoolClient } from "pg";
-import { S3 } from "aws-sdk";
 import { v4 as uuid } from "uuid";
 import { JobHelpers } from "graphile-worker";
 import { runLambda } from "../../tasks/processDataUpload";
 import tmp from "tmp";
 import fs from "fs";
+import { storageClientV2 } from "../storage/client";
 
-const region = process.env.S3_REGION;
 const bucket = process.env.SPATIAL_UPLOADS_BUCKET;
-const s3 = new S3({ region });
 
 export async function createSourceReplacementJob(
   filename: string,
@@ -145,8 +143,8 @@ export async function updateSourceWithGeoJSON(
     client,
     metadata
   );
-  helpers.logger.info(`Uploading ${key} to S3`);
-  await s3
+  helpers.logger.info(`Uploading ${key} to ${bucket}`);
+  await storageClientV2()
     .putObject({
       Bucket: bucket,
       Key: key,
@@ -197,8 +195,8 @@ export async function updateSourceWithUrl(
     });
   });
   // upload the file to S3
-  helpers.logger.info(`Uploading ${key} to S3`);
-  await s3
+  helpers.logger.info(`Uploading ${key} to ${bucket}`);
+  await storageClientV2()
     .putObject({
       Bucket: bucket,
       Key: key,

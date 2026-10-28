@@ -374,10 +374,10 @@ app.post(
             geography = { id: l.geography_id, clippingLayers: [] };
             acc.push(geography);
           }
-          if (l.object_key) {
+          if (l.fgb_url) {
             geography.clippingLayers.push({
               op: l.operation_type.toUpperCase(),
-              source: l.object_key,
+              source: l.fgb_url,
               cql2Query: l.cql2_query,
             });
           }

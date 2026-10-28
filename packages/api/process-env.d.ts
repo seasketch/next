@@ -59,6 +59,10 @@ declare namespace NodeJS {
     CLOUDFLARE_SITE_TAG: string;
     PMTILES_SERVER_ZONE: string;
     R2_TILES_BUCKET: string;
+    /** Public origin copied onto new upload and data-table URLs. */
+    UPLOADS_BASE_URL?: string;
+    /** Public origin copied onto new tile-archive URLs. */
+    TILES_BASE_URL?: string;
     /**
      * ACL doc namespace for non-production. Production always uses "prod".
      * Must not be set to "prod" outside NODE_ENV=production.

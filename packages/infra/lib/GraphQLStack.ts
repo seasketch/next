@@ -84,6 +84,11 @@ export class GraphQLStack extends cdk.Stack {
     if (!spatialUploadsBucket) {
       throw new Error(`SPATIAL_UPLOADS_BUCKET must be set in environment`);
     }
+    if (!process.env.UPLOADS_BASE_URL || !process.env.TILES_BASE_URL) {
+      throw new Error(
+        `UPLOADS_BASE_URL and TILES_BASE_URL must be set in environment`
+      );
+    }
     if (
       !process.env.R2_ENDPOINT ||
       !process.env.R2_SECRET_ACCESS_KEY ||
@@ -172,6 +177,8 @@ export class GraphQLStack extends cdk.Stack {
             R2_ENDPOINT: process.env.R2_ENDPOINT,
             R2_FILE_UPLOADS_BUCKET: process.env.R2_FILE_UPLOADS_BUCKET,
             R2_TILES_BUCKET: process.env.R2_TILES_BUCKET,
+            UPLOADS_BASE_URL: process.env.UPLOADS_BASE_URL,
+            TILES_BASE_URL: process.env.TILES_BASE_URL,
             CLOUDFLARE_IMAGES_TOKEN: process.env.CLOUDFLARE_IMAGES_TOKEN,
             CLOUDFLARE_IMAGES_ACCOUNT: process.env.CLOUDFLARE_IMAGES_ACCOUNT,
             CLOUDFLARE_IMAGES_ACCOUNT_HASH:

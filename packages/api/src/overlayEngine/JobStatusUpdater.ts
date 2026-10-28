@@ -258,9 +258,7 @@ export class JobStatusUpdater {
           }
           if (jobQ.rows.length > 0) {
             const { data_source_id, project_id } = jobQ.rows[0];
-            const url =
-              result.object.publicUrl ||
-              `https://uploads.seasketch.org/${result.object.key}`;
+            const url = result.object.publicUrl;
             const remote = `r2://${result.object.bucket}/${result.object.key}`;
             const size = result.object.size || 0;
             const filename =

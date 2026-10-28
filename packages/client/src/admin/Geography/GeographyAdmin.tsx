@@ -504,13 +504,9 @@ export default function GeographyAdmin() {
       const clippingLayers = [];
       if (selectedGeography.clippingLayers) {
         for (const layer of selectedGeography.clippingLayers) {
-          const dataset =
-            layer.dataLayer?.vectorObjectKey ??
-            (layer.objectKey
-              ? layer.objectKey
-                  .replace(/^[^:]+:\/\/[^/]+\//, "")
-                  .replace(/^\//, "")
-              : null);
+          const dataset = layer.fgbUrl
+            ? layer.fgbUrl
+            : layer.dataLayer?.vectorObjectKey ?? null;
           if (!dataset) {
             continue;
           }

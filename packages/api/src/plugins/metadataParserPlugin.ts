@@ -1,15 +1,8 @@
 import { makeExtendSchemaPlugin, gql } from "graphile-utils";
 import { metadataToProseMirror } from "@seasketch/metadata-parser";
 import { v4 as uuid } from "uuid";
-import S3 from "aws-sdk/clients/s3";
-
-const r2 = new S3({
-  region: "auto",
-  endpoint: process.env.R2_ENDPOINT,
-  signatureVersion: "v4",
-  accessKeyId: process.env.R2_ACCESS_KEY_ID,
-  secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
-});
+import { storageClientV2 } from "../storage/client";
+import { uploadsBaseUrl } from "../storage/urls";
 
 const REQUIRED_ENV_VARS = [
   "R2_ENDPOINT",
@@ -69,7 +62,7 @@ const MetadataParserPlugin = makeExtendSchemaPlugin((build) => {
 
             const objectPath = `projects/${slug}/metadata-updates/${uuid()}.xml`;
             const remote = `r2://${process.env.R2_TILES_BUCKET}/${objectPath}`;
-            const url = `https://uploads.seasketch.org/${objectPath}`;
+            const url = `${uploadsBaseUrl()}/${objectPath}`;
             // get byte length of xmlMetadata
             const byteLength = Buffer.byteLength(args.xmlMetadata, "utf8");
             // create a record in the db
@@ -94,7 +87,7 @@ const MetadataParserPlugin = makeExtendSchemaPlugin((build) => {
               ContentType: "application/xml", // MIME type for XML files
             };
 
-            await r2.upload(uploadParams).promise();
+            await storageClientV2().upload(uploadParams).promise();
             const { rows } = await pgClient.query(
               `update public.table_of_contents_items set metadata = $1 where id = $2 returning data_layer_id`,
               [data.doc, args.id]

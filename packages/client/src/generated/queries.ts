@@ -6356,9 +6356,11 @@ export type GeographyClippingLayer = Node & {
   dataLayer?: Maybe<DataLayer>;
   dataLayerId: Scalars['Int'];
   dataSource?: Maybe<DataSource>;
+  fgbUrl?: Maybe<Scalars['String']>;
   id: Scalars['Int'];
   /** A globally unique identifier. Can be used in various places throughout the system to identify this single value. */
   nodeId: Scalars['ID'];
+  /** @deprecated Use fgbUrl instead */
   objectKey?: Maybe<Scalars['String']>;
   operationType: GeographyLayerOperation;
   /** Reads a single `Geography` that is related to this `GeographyClippingLayer`. */
@@ -22958,7 +22960,7 @@ export type GeographyDetailsFragment = (
   & Pick<Geography, 'id' | 'hash' | 'name' | 'translatedProps' | 'clientTemplate' | 'bounds'>
   & { clippingLayers?: Maybe<Array<(
     { __typename?: 'GeographyClippingLayer' }
-    & Pick<GeographyClippingLayer, 'id' | 'operationType' | 'templateId' | 'cql2Query' | 'objectKey'>
+    & Pick<GeographyClippingLayer, 'id' | 'operationType' | 'templateId' | 'cql2Query' | 'fgbUrl'>
     & { dataLayer?: Maybe<(
       { __typename?: 'DataLayer' }
       & ClippingLayerDetailsFragment
@@ -29105,7 +29107,7 @@ export const GeographyDetailsFragmentDoc = /*#__PURE__*/ gql`
     operationType
     templateId
     cql2Query
-    objectKey
+    fgbUrl
     dataLayer {
       ...ClippingLayerDetails
     }

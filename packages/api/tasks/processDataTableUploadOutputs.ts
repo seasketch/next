@@ -1,4 +1,13 @@
 import { Helpers } from "graphile-worker";
+import { PoolClient } from "pg";
+
+async function useUploadsOrigin(client: PoolClient) {
+  const base = process.env.UPLOADS_BASE_URL;
+  if (!base) return;
+  await client.query(`select set_config('seasketch.uploads_base_url', $1, true)`, [
+    base.replace(/\/$/, ""),
+  ]);
+}
 
 export default async function processDataTableUploadOutputs(
   payload: {
@@ -23,6 +32,7 @@ export default async function processDataTableUploadOutputs(
   helpers.logger.info(`Completing data table upload: ${jobId}`);
   await helpers.withPgClient(async (client) => {
     try {
+      await useUploadsOrigin(client);
       if (data?.organism) {
         if (!data.parquetRemote || !data.columnStatsRemote) {
           // Rolling-deploy compatibility with the pre-clustering handler,

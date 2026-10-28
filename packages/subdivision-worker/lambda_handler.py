@@ -7,6 +7,7 @@ from datetime import datetime, timezone
 import math
 
 import boto3
+from botocore.config import Config
 import requests
 import traceback
 import time
@@ -34,15 +35,15 @@ def _get_env(name: str, *, required: bool = False, default: Optional[str] = None
 
 
 def _create_r2_client():
-    print(f"Creating R2 client with endpoint {_get_env('R2_ENDPOINT', required=True)}")
-    print(f"Creating R2 client with access key {_get_env('R2_ACCESS_KEY_ID', required=True)}")
-    print(f"Creating R2 client with secret key {_get_env('R2_SECRET_ACCESS_KEY', required=True)}")
+    # boto3 1.34 does not accept request_checksum_calculation. The pinned
+    # client sends no checksum trailers. Set that option if boto3 moves past 1.36.
     return boto3.client(
         "s3",
         endpoint_url=_get_env("R2_ENDPOINT", required=True),
         aws_access_key_id=_get_env("R2_ACCESS_KEY_ID", required=True),
         aws_secret_access_key=_get_env("R2_SECRET_ACCESS_KEY", required=True),
         region_name=os.getenv("R2_REGION", "auto"),
+        config=Config(s3={"addressing_style": "path"}),
     )
 
 
@@ -342,16 +343,20 @@ def _upload_to_r2(local_path: str, object_key: str, progress_cb=None) -> Dict[st
     # fetch size for downstream consumers
     head = s3.head_object(Bucket=bucket, Key=object_key)
     size = int(head.get("ContentLength") or 0)
+    remote = f"r2://{bucket}/{object_key}"
+    public_base = os.getenv("UPLOADS_BASE_URL")
+    if not public_base:
+        raise RuntimeError("UPLOADS_BASE_URL must be set")
+    public_url = public_base.rstrip("/") + "/" + object_key
     result: Dict[str, Any] = {
         "bucket": bucket,
         "key": object_key,
-        "r2Path": f"r2://{bucket}/{object_key}",
+        "r2Path": remote,
+        "remote": remote,
         "size": size,
         "filename": os.path.basename(object_key),
+        "publicUrl": public_url,
     }
-    public_base = os.getenv("R2_PUBLIC_BASE_URL")
-    if public_base:
-        result["publicUrl"] = public_base.rstrip("/") + "/" + object_key
     return result
 
 

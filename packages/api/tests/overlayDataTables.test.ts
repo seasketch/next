@@ -233,11 +233,11 @@ describe("overlay_data_tables", () => {
               await conn.oneFirst(sql`
                 insert into overlay_data_tables (
                   table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
-                  row_count, created_by, version, parquet_remote, column_stats_remote,
+                  row_count, created_by, version, parquet_remote, parquet_url, column_stats_remote,
                   temporal
                 ) values (
                   ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId}, 1,
-                  'r2://bucket/old.parquet', 'r2://bucket/old.json',
+                  'r2://bucket/old.parquet', 'https://uploads.seasketch.org/old.parquet', 'r2://bucket/old.json',
                   ${sql.json({
                     version: 1,
                     granularity: "row",
@@ -316,10 +316,10 @@ describe("overlay_data_tables", () => {
               await conn.oneFirst(sql`
               insert into overlay_data_tables (
                 table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
-                row_count, created_by, version, parquet_remote, column_stats_remote
+                row_count, created_by, version, parquet_remote, parquet_url, column_stats_remote
               ) values (
                 ${tocId}, ${projectId}, 'wq', 'siteid', 'siteid', 10, ${adminId}, 1,
-                'r2://bucket/old.parquet', 'r2://bucket/old.json'
+                'r2://bucket/old.parquet', 'https://uploads.seasketch.org/old.parquet', 'r2://bucket/old.json'
               ) returning id`),
             );
           },
@@ -371,11 +371,11 @@ describe("overlay_data_tables", () => {
               await conn.oneFirst(sql`
               insert into overlay_data_tables (
                 table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
-                row_count, created_by, version, parquet_remote, column_stats_remote,
+                row_count, created_by, version, parquet_remote, parquet_url, column_stats_remote,
                 nodata_values
               ) values (
                 ${tocId}, ${projectId}, 'wq', 'siteid', 'siteid', 10, ${adminId}, 1,
-                'r2://bucket/old.parquet', 'r2://bucket/old.json',
+                'r2://bucket/old.parquet', 'https://uploads.seasketch.org/old.parquet', 'r2://bucket/old.json',
                 ${sql.json([-88])}
               ) returning id`),
             );
@@ -408,10 +408,10 @@ describe("overlay_data_tables", () => {
           conn.oneFirst(sql`
             insert into overlay_data_tables (
               table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
-              row_count, created_by, parquet_remote, column_stats_remote
+              row_count, created_by, parquet_remote, parquet_url, column_stats_remote
             ) values (
               ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${userA},
-              'r2://bucket/a.parquet', 'r2://bucket/a.json'
+              'r2://bucket/a.parquet', 'https://uploads.seasketch.org/a.parquet', 'r2://bucket/a.json'
             ) returning id`),
         ).rejects.toThrow();
       },
@@ -460,13 +460,13 @@ describe("overlay_data_tables", () => {
             await conn.any(sql`
             insert into overlay_data_tables (
               table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
-              row_count, created_by, parquet_remote, column_stats_remote,
+              row_count, created_by, parquet_remote, parquet_url, column_stats_remote,
               visualization_columns, visualization_ops, required_filter_columns,
               hidden_filter_columns, filter_column_labels,
               temporal, organism
             ) values (
               ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId},
-              'r2://bucket/projects/test/public/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/dataTables/u1/data.parquet',
+              'r2://bucket/projects/test/public/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/dataTables/u1/data.parquet', 'https://uploads.seasketch.org/projects/test/public/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/dataTables/u1/data.parquet',
               'r2://bucket/projects/test/public/aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee/dataTables/u1/column-stats.json',
               ${sql.array(['count'], 'text')}, ${sql.array(['sum'], 'text')},
               ${sql.array(['year'], 'text')},
@@ -485,10 +485,10 @@ describe("overlay_data_tables", () => {
             await conn.any(sql`
             insert into overlay_data_tables (
               table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
-              row_count, created_by, parquet_remote, column_stats_remote, deleted_at
+              row_count, created_by, parquet_remote, parquet_url, column_stats_remote, deleted_at
             ) values (
               ${tocId}, ${projectId}, 'old-fish', 'site_id', 'id', 1, ${adminId},
-              'r2://bucket/old.parquet', 'r2://bucket/old.json', now()
+              'r2://bucket/old.parquet', 'https://uploads.seasketch.org/old.parquet', 'r2://bucket/old.json', now()
             )`);
           },
           { userId: adminId, projectId },
@@ -593,11 +593,11 @@ describe("overlay_data_tables", () => {
               await conn.oneFirst(sql`
                 insert into overlay_data_tables (
                   table_of_contents_item_id, project_id, name, join_column,
-                  overlay_join_column, row_count, created_by, parquet_remote,
+                  overlay_join_column, row_count, created_by, parquet_remote, parquet_url,
                   column_stats_remote, temporal, organism, description
                 ) values (
                   ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId},
-                  'r2://bucket/shared/data.parquet',
+                  'r2://bucket/shared/data.parquet', 'https://uploads.seasketch.org/shared/data.parquet',
                   'r2://bucket/shared/column-stats.json',
                   ${sql.json({ version: 1 })},
                   ${sql.json(organism)},
@@ -687,10 +687,10 @@ describe("overlay_data_tables", () => {
               await conn.oneFirst(sql`
               insert into overlay_data_tables (
                 table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
-                row_count, created_by, parquet_remote, column_stats_remote
+                row_count, created_by, parquet_remote, parquet_url, column_stats_remote
               ) values (
                 ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId},
-                'r2://bucket/a.parquet', 'r2://bucket/a.json'
+                'r2://bucket/a.parquet', 'https://uploads.seasketch.org/a.parquet', 'r2://bucket/a.json'
               ) returning id`),
             );
           },
@@ -734,18 +734,18 @@ describe("overlay_data_tables", () => {
             await conn.any(sql`
             insert into overlay_data_tables (
               table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
-              row_count, created_by, parquet_remote, column_stats_remote
+              row_count, created_by, parquet_remote, parquet_url, column_stats_remote
             ) values (
               ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId},
-              'r2://bucket/a.parquet', 'r2://bucket/a.json'
+              'r2://bucket/a.parquet', 'https://uploads.seasketch.org/a.parquet', 'r2://bucket/a.json'
             )`);
             await conn.any(sql`
               insert into overlay_data_tables (
                 table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
-                row_count, created_by, parquet_remote, column_stats_remote
+                row_count, created_by, parquet_remote, parquet_url, column_stats_remote
               ) values (
                 ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 5, ${adminId},
-                'r2://bucket/b.parquet', 'r2://bucket/b.json'
+                'r2://bucket/b.parquet', 'https://uploads.seasketch.org/b.parquet', 'r2://bucket/b.json'
               )`);
           },
           { userId: adminId, projectId },
@@ -781,10 +781,10 @@ describe("overlay_data_tables", () => {
             oldId = Number(await conn.oneFirst(sql`
             insert into overlay_data_tables (
               table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
-              row_count, created_by, version, parquet_remote, column_stats_remote
+              row_count, created_by, version, parquet_remote, parquet_url, column_stats_remote
             ) values (
               ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId}, 1,
-              'r2://bucket/old.parquet', 'r2://bucket/old.json'
+              'r2://bucket/old.parquet', 'https://uploads.seasketch.org/old.parquet', 'r2://bucket/old.json'
             ) returning id`));
 
             await conn.any(sql`
@@ -841,10 +841,10 @@ describe("overlay_data_tables", () => {
             oldId = Number(await conn.oneFirst(sql`
             insert into overlay_data_tables (
               table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
-              row_count, created_by, version, parquet_remote, column_stats_remote
+              row_count, created_by, version, parquet_remote, parquet_url, column_stats_remote
             ) values (
               ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId}, 1,
-              'r2://bucket/old.parquet', 'r2://bucket/old.json'
+              'r2://bucket/old.parquet', 'https://uploads.seasketch.org/old.parquet', 'r2://bucket/old.json'
             ) returning id`));
 
             await conn.any(sql`
@@ -930,11 +930,11 @@ describe("overlay_data_tables", () => {
               await conn.oneFirst(sql`
                 insert into overlay_data_tables (
                   table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
-                  row_count, created_by, version, parquet_remote, column_stats_remote,
+                  row_count, created_by, version, parquet_remote, parquet_url, column_stats_remote,
                   temporal
                 ) values (
                   ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId}, 1,
-                  'r2://bucket/a.parquet', 'r2://bucket/a.json',
+                  'r2://bucket/a.parquet', 'https://uploads.seasketch.org/a.parquet', 'r2://bucket/a.json',
                   ${sql.json(previous)}
                 ) returning id`),
             );
@@ -1033,11 +1033,11 @@ describe("overlay_data_tables", () => {
             oldId = Number(await conn.oneFirst(sql`
             insert into overlay_data_tables (
               table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
-              row_count, created_by, version, parquet_remote, column_stats_remote,
+              row_count, created_by, version, parquet_remote, parquet_url, column_stats_remote,
               temporal
             ) values (
               ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId}, 1,
-              'r2://bucket/old.parquet', 'r2://bucket/old.json',
+              'r2://bucket/old.parquet', 'https://uploads.seasketch.org/old.parquet', 'r2://bucket/old.json',
               ${sql.json(previous)}
             ) returning id`));
 
@@ -1191,11 +1191,11 @@ describe("overlay_data_tables", () => {
               await conn.oneFirst(sql`
                 insert into overlay_data_tables (
                   table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
-                  row_count, created_by, version, parquet_remote, column_stats_remote,
+                  row_count, created_by, version, parquet_remote, parquet_url, column_stats_remote,
                   subject_column, organism
                 ) values (
                   ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId}, 1,
-                  'r2://bucket/a.parquet', 'r2://bucket/a.json',
+                  'r2://bucket/a.parquet', 'https://uploads.seasketch.org/a.parquet', 'r2://bucket/a.json',
                   'classcode', ${sql.json(previous)}
                 ) returning id`),
             );
@@ -1273,10 +1273,10 @@ describe("overlay_data_tables", () => {
               await conn.oneFirst(sql`
                 insert into overlay_data_tables (
                   table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
-                  row_count, created_by, version, parquet_remote, column_stats_remote
+                  row_count, created_by, version, parquet_remote, parquet_url, column_stats_remote
                 ) values (
                   ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId}, 1,
-                  'r2://bucket/old.parquet', 'r2://bucket/old.json'
+                  'r2://bucket/old.parquet', 'https://uploads.seasketch.org/old.parquet', 'r2://bucket/old.json'
                 ) returning id`),
             );
           },
@@ -1370,10 +1370,10 @@ describe("overlay_data_tables", () => {
               await conn.oneFirst(sql`
                 insert into overlay_data_tables (
                   table_of_contents_item_id, project_id, name, join_column, overlay_join_column,
-                  row_count, created_by, version, parquet_remote, column_stats_remote
+                  row_count, created_by, version, parquet_remote, parquet_url, column_stats_remote
                 ) values (
                   ${tocId}, ${projectId}, 'fish', 'site_id', 'id', 10, ${adminId}, 1,
-                  'r2://bucket/old.parquet', 'r2://bucket/old.json'
+                  'r2://bucket/old.parquet', 'https://uploads.seasketch.org/old.parquet', 'r2://bucket/old.json'
                 ) returning id`),
             );
           },

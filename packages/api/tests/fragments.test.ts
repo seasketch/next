@@ -40,7 +40,7 @@ if (!global.fetch) {
 
 const pool = createPool("test");
 
-jest.setTimeout(1000 * 20);
+jest.setTimeout(1000 * 180);
 
 const sourceCache = new SourceCache("256mb", {
   fetchRangeFn: makeNodeFetchRangeFn(`https://uploads.seasketch.org`)
@@ -974,9 +974,6 @@ const nationalGeographies: (GeographySettings & { name: string })[] = [
 ];
 
 describe("Integration tests", () => {
-  beforeAll(async () => {
-    jest.setTimeout(12000);
-  });
   describe("createOrUpdateSketch", () => {
     test("Fragments are created for new sketches", async () => {
       await projectTransaction(

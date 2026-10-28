@@ -10,14 +10,30 @@ import { Upload } from "@aws-sdk/lib-storage";
 import bytes from "bytes";
 import { Readable } from "stream";
 
-let s3Client: S3Client | undefined;
 let r2Client: S3Client | undefined;
 
-function getS3Client() {
-  if (!s3Client) {
-    s3Client = new S3Client({ region: process.env.AWS_REGION! });
+function ownedBucketNames(): string[] {
+  const names = [
+    process.env.R2_TILES_BUCKET,
+    process.env.SPATIAL_UPLOADS_BUCKET,
+    process.env.BUCKET,
+  ];
+  const tilesRemote = process.env.TILES_REMOTE;
+  if (tilesRemote && tilesRemote.startsWith("r2://")) {
+    names.push(tilesRemote.replace(/^r2:\/\//, "").split("/")[0]);
   }
-  return s3Client;
+  return names.filter((name): name is string => !!name);
+}
+
+export function ownsRemote(remote: string): boolean {
+  const match = /^(?:r2|s3):\/\/([^/]+)\//.exec(remote);
+  return match !== null && ownedBucketNames().includes(match[1]);
+}
+
+function assertOwned(remote: string) {
+  if (!ownsRemote(remote)) {
+    throw new Error(`Refusing to access foreign remote ${remote}`);
+  }
 }
 
 function getR2Client() {
@@ -26,6 +42,7 @@ function getR2Client() {
       region: "auto",
       endpoint: process.env.R2_ENDPOINT!,
       forcePathStyle: true,
+      requestChecksumCalculation: "WHEN_REQUIRED",
       credentials: {
         accessKeyId: process.env.R2_ACCESS_KEY_ID!,
         secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
@@ -43,8 +60,9 @@ export async function putObject(
   if (!/r2:/.test(remote) && !/s3:/.test(remote)) {
     throw new Error(`Invalid remote ${remote}`);
   }
+  assertOwned(remote);
   const parts = remote.replace(/\w+:\/\//, "").split("/");
-  const client = /r2:/.test(remote) ? getR2Client() : getS3Client();
+  const client = getR2Client();
   const Bucket = parts[0];
   const Key = parts.slice(1).join("/");
   const fileSizeBytes = statSync(filepath).size;
@@ -82,6 +100,7 @@ export async function deleteR2Object(remote: string): Promise<void> {
   if (!/^r2:\/\//.test(remote)) {
     throw new Error(`Expected r2:// remote, got ${remote}`);
   }
+  assertOwned(remote);
   const parts = remote.replace(/^r2:\/\//, "").split("/");
   const Bucket = parts[0];
   const Key = parts.slice(1).join("/");
@@ -96,6 +115,7 @@ export async function getR2Object(
   if (!/^r2:\/\//.test(remote)) {
     throw new Error(`Expected r2:// remote, got ${remote}`);
   }
+  assertOwned(remote);
   const parts = remote.replace(/^r2:\/\//, "").split("/");
   const Bucket = parts[0];
   const Key = parts.slice(1).join("/");

@@ -7647,13 +7647,14 @@ type GeographyClippingLayer implements Node {
   dataLayer: DataLayer
   dataLayerId: Int!
   dataSource: DataSource
+  fgbUrl: String
   id: Int!
 
   """
   A globally unique identifier. Can be used in various places throughout the system to identify this single value.
   """
   nodeId: ID!
-  objectKey: String
+  objectKey: String @deprecated(reason: "Use fgbUrl instead")
   operationType: GeographyLayerOperation!
 
   """

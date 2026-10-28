@@ -1,11 +1,11 @@
 import { makeExtendSchemaPlugin, gql } from "graphile-utils";
 import { GraphQLScalarType, valueFromASTUntyped } from "graphql";
-import { S3 } from "aws-sdk";
 import {
   isOrganismInfo,
   OrganismInfo,
   ORGANISM_SIDECAR_FILES,
 } from "@seasketch/geostats-types";
+import { ownsRemote, storageClientV2 } from "../storage/client";
 
 function parseStoredOrganism(value: unknown): unknown {
   if (typeof value !== "string") {
@@ -54,22 +54,18 @@ async function deleteOrganismSidecars(parquetRemote: unknown) {
   if (typeof parquetRemote !== "string" || !parquetRemote) {
     return;
   }
-  const endpoint = process.env.R2_ENDPOINT;
-  const accessKeyId = process.env.R2_ACCESS_KEY_ID;
-  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
-  if (!endpoint || !accessKeyId || !secretAccessKey) {
+  const { R2_ENDPOINT, R2_ACCESS_KEY_ID, R2_SECRET_ACCESS_KEY } = process.env;
+  if (!R2_ENDPOINT || !R2_ACCESS_KEY_ID || !R2_SECRET_ACCESS_KEY) {
     return;
   }
-  const r2 = new S3({
-    region: "auto",
-    endpoint,
-    signatureVersion: "v4",
-    accessKeyId,
-    secretAccessKey,
-  });
+  const r2 = storageClientV2();
   for (const filename of Object.values(ORGANISM_SIDECAR_FILES)) {
     const remote = siblingRemote(parquetRemote, filename);
     if (!remote || !remote.startsWith("r2://")) continue;
+    if (!ownsRemote(remote)) {
+      console.warn(`Skipping foreign organism sidecar ${remote}`);
+      continue;
+    }
     const parts = remote.replace(/^r2:\/\//, "").split("/");
     const Bucket = parts[0];
     const Key = parts.slice(1).join("/");

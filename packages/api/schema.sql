@@ -5523,14 +5523,18 @@ CREATE FUNCTION public.clear_form_element_style(form_element_id integer) RETURNS
 -- Name: clipping_layer_source(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.clipping_layer_source(clipping_layer_id integer) RETURNS TABLE(url text, object_key text)
+CREATE FUNCTION public.clipping_layer_source(clipping_layer_id integer) RETURNS TABLE(url text, fgb_url text)
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
   select
     data_sources.url as url,
-    geography_clipping_layers_object_key(geography_clipping_layers.*) as object_key
-  from
-    geography_clipping_layers
+    (
+      select duo.url
+      from data_upload_outputs duo
+      where duo.type = 'FlatGeobuf'
+        and duo.data_source_id = data_layers.data_source_id
+    ) as fgb_url
+  from geography_clipping_layers
   inner join data_layers on geography_clipping_layers.data_layer_id = data_layers.id
   inner join data_sources on data_layers.data_source_id = data_sources.id
   where geography_clipping_layers.id = clipping_layer_id;
@@ -5548,14 +5552,19 @@ COMMENT ON FUNCTION public.clipping_layer_source(clipping_layer_id integer) IS '
 -- Name: clipping_layers_for_geography(integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.clipping_layers_for_geography(gid integer) RETURNS TABLE(id integer, cql2_query jsonb, template_id text, object_key text, url text, operation_type public.geography_layer_operation)
+CREATE FUNCTION public.clipping_layers_for_geography(gid integer) RETURNS TABLE(id integer, cql2_query jsonb, template_id text, fgb_url text, url text, operation_type public.geography_layer_operation)
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
   select
     gcl.id,
     gcl.cql2_query,
     gcl.template_id,
-    data_layers_vector_object_key((select dl from data_layers dl where dl.id = gcl.data_layer_id)) as object_key,
+    (
+      select duo.url
+      from data_upload_outputs duo
+      where duo.type = 'FlatGeobuf'
+        and duo.data_source_id = data_layers.data_source_id
+    ) as fgb_url,
     data_sources.url as url,
     gcl.operation_type
   from geography_clipping_layers gcl
@@ -5576,26 +5585,32 @@ COMMENT ON FUNCTION public.clipping_layers_for_geography(gid integer) IS '@omit'
 -- Name: clipping_layers_for_sketch_class(integer, integer); Type: FUNCTION; Schema: public; Owner: -
 --
 
-CREATE FUNCTION public.clipping_layers_for_sketch_class(pid integer, scid integer) RETURNS TABLE(id integer, geography_id integer, object_key text, operation_type public.geography_layer_operation, cql2_query jsonb, template_id text, for_clipping boolean)
+CREATE FUNCTION public.clipping_layers_for_sketch_class(pid integer, scid integer) RETURNS TABLE(id integer, geography_id integer, fgb_url text, operation_type public.geography_layer_operation, cql2_query jsonb, template_id text, for_clipping boolean)
     LANGUAGE sql SECURITY DEFINER
     AS $$
-    select
-      gcl.id,
-      gcl.project_geography_id as geography_id,
-      data_layers_vector_object_key((select dl from data_layers dl where dl.id = gcl.data_layer_id)) as object_key,
-      gcl.operation_type,
-      gcl.cql2_query,
-      gcl.template_id,
-      exists(
-        select 1 
-        from sketch_class_geographies scg 
-        where scg.geography_id = gcl.project_geography_id 
+  select
+    gcl.id,
+    gcl.project_geography_id as geography_id,
+    (
+      select duo.url
+      from data_upload_outputs duo
+      where duo.type = 'FlatGeobuf'
+        and duo.data_source_id = data_layers.data_source_id
+    ) as fgb_url,
+    gcl.operation_type,
+    gcl.cql2_query,
+    gcl.template_id,
+    exists(
+      select 1
+      from sketch_class_geographies scg
+      where scg.geography_id = gcl.project_geography_id
         and scg.sketch_class_id = clipping_layers_for_sketch_class.scid
-      ) as for_clipping
-    from geography_clipping_layers gcl
-    join project_geography pg on gcl.project_geography_id = pg.id
-    where pg.project_id = clipping_layers_for_sketch_class.pid
-  $$;
+    ) as for_clipping
+  from geography_clipping_layers gcl
+  join data_layers on gcl.data_layer_id = data_layers.id
+  join project_geography pg on gcl.project_geography_id = pg.id
+  where pg.project_id = clipping_layers_for_sketch_class.pid;
+$$;
 
 
 --
@@ -5920,6 +5935,7 @@ CREATE TABLE public.overlay_data_tables (
     coverage_remote text,
     effort_marker_values text[] DEFAULT '{}'::text[] NOT NULL,
     excluded_values jsonb DEFAULT '{}'::jsonb NOT NULL,
+    parquet_url text NOT NULL,
     CONSTRAINT overlay_data_tables_calculation_mode_check CHECK ((calculation_mode = ANY (ARRAY['simple'::text, 'replicates'::text]))),
     CONSTRAINT overlay_data_tables_coverage_mode_check CHECK ((coverage_mode = ANY (ARRAY['all_surveyed'::text, 'rows_only'::text, 'coverage_file'::text]))),
     CONSTRAINT overlay_data_tables_description_length CHECK (((description IS NULL) OR (char_length(description) <= 200))),
@@ -6105,6 +6121,14 @@ COMMENT ON COLUMN public.overlay_data_tables.excluded_values IS 'Rows to ignore.
 
 
 --
+-- Name: COLUMN overlay_data_tables.parquet_url; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.overlay_data_tables.parquet_url IS '@omit
+Public URL of data.parquet, copied from the uploads origin when the row is written.';
+
+
+--
 -- Name: complete_overlay_data_table_coverage(uuid, text); Type: FUNCTION; Schema: public; Owner: -
 --
 
@@ -6247,6 +6271,7 @@ begin
   update overlay_data_tables
     set organism = p_organism,
         parquet_remote = p_parquet_remote,
+        parquet_url = overlay_data_table_parquet_public_url(p_parquet_remote),
         column_stats_remote = p_column_stats_remote,
         source_parquet_remote = coalesce(
           p_source_parquet_remote,
@@ -6373,6 +6398,7 @@ begin
     created_by,
     version,
     parquet_remote,
+    parquet_url,
     column_stats_remote,
     visualization_columns,
     visualization_ops,
@@ -6407,6 +6433,7 @@ begin
     coalesce(job.user_id, nullif(current_setting('session.user_id', true), '')::integer),
     new_version,
     p_parquet_remote,
+    overlay_data_table_parquet_public_url(p_parquet_remote),
     p_column_stats_remote,
     coalesce(old_row.visualization_columns, '{}'),
     coalesce(old_row.visualization_ops, '{mean}'),
@@ -8031,6 +8058,7 @@ begin
     created_by,
     version,
     parquet_remote,
+    parquet_url,
     column_stats_remote,
     visualization_columns,
     visualization_ops,
@@ -8068,6 +8096,7 @@ begin
     ),
     odt.version,
     odt.parquet_remote,
+    odt.parquet_url,
     odt.column_stats_remote,
     odt.visualization_columns,
     odt.visualization_ops,
@@ -13247,16 +13276,39 @@ $$;
 
 
 --
+-- Name: geography_clipping_layers_fgb_url(public.geography_clipping_layers); Type: FUNCTION; Schema: public; Owner: -
+--
+
+CREATE FUNCTION public.geography_clipping_layers_fgb_url(g public.geography_clipping_layers) RETURNS text
+    LANGUAGE sql STABLE SECURITY DEFINER
+    AS $$
+  select duo.url
+  from data_upload_outputs duo
+  where duo.type = 'FlatGeobuf'
+    and duo.data_source_id = (
+      select data_source_id from data_layers where id = g.data_layer_id
+    );
+$$;
+
+
+--
 -- Name: geography_clipping_layers_object_key(public.geography_clipping_layers); Type: FUNCTION; Schema: public; Owner: -
 --
 
 CREATE FUNCTION public.geography_clipping_layers_object_key(g public.geography_clipping_layers) RETURNS text
     LANGUAGE sql STABLE SECURITY DEFINER
     AS $$
-    select remote from data_upload_outputs where type = 'FlatGeobuf' and data_source_id = (
-      select data_source_id from data_layers where id = g.data_layer_id
-    );
-  $$;
+  select remote from data_upload_outputs where type = 'FlatGeobuf' and data_source_id = (
+    select data_source_id from data_layers where id = g.data_layer_id
+  );
+$$;
+
+
+--
+-- Name: FUNCTION geography_clipping_layers_object_key(g public.geography_clipping_layers); Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON FUNCTION public.geography_clipping_layers_object_key(g public.geography_clipping_layers) IS '@deprecated Use fgbUrl instead';
 
 
 --
@@ -19132,6 +19184,7 @@ begin
     created_by,
     version,
     parquet_remote,
+    parquet_url,
     column_stats_remote,
     visualization_columns,
     visualization_ops,
@@ -19167,6 +19220,7 @@ begin
     odt.created_by,
     odt.version,
     odt.parquet_remote,
+    odt.parquet_url,
     odt.column_stats_remote,
     odt.visualization_columns,
     odt.visualization_ops,
@@ -39701,6 +39755,14 @@ GRANT SELECT ON TABLE public.geography_clipping_layers TO anon;
 
 REVOKE ALL ON FUNCTION public.geography_clipping_layers_data_source(clipping_layer public.geography_clipping_layers) FROM PUBLIC;
 GRANT ALL ON FUNCTION public.geography_clipping_layers_data_source(clipping_layer public.geography_clipping_layers) TO anon;
+
+
+--
+-- Name: FUNCTION geography_clipping_layers_fgb_url(g public.geography_clipping_layers); Type: ACL; Schema: public; Owner: -
+--
+
+REVOKE ALL ON FUNCTION public.geography_clipping_layers_fgb_url(g public.geography_clipping_layers) FROM PUBLIC;
+GRANT ALL ON FUNCTION public.geography_clipping_layers_fgb_url(g public.geography_clipping_layers) TO anon;
 
 
 --

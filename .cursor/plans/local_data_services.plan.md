@@ -6,7 +6,7 @@ todos:
     content: "Phase 0a: raw uploads S3 -> R2 (ssn-spatial-uploads-tmp, 24h expiry). Code and bucket are in place and tested locally. Production cutover is a later hard switch."
     status: pending
   - id: phase-0b-storage-model
-    content: "Phase 0b: one S3 client factory per runtime, parquet_url, URLs not keys to workers, owned-bucket rule, hostnames out of data-path code, deploy, verify"
+    content: "Phase 0b: one S3 client factory per runtime, parquet_url, URLs not keys to workers, owned-bucket rule, hostnames out of data-path code. Code is in the working tree. Production deploy and verification are still ahead."
     status: pending
   - id: phase-1-local-r2
     content: "Phase 1: packages/local-r2, .data/ persistence and reset, contract test"
@@ -99,7 +99,7 @@ Run `npx wrangler dev --port 8333 --persist-to /tmp/s3test/.data` and point an S
 
 ## Phase 0b: the storage model
 
-**Migration** (`packages/api/migrations/current.sql`): add `overlay_data_tables.parquet_url text`, backfill as `'https://uploads.seasketch.org/' || key-part-of(parquet_remote)` after asserting every `parquet_remote` names `ssn-tiles`, then `NOT NULL`. Redefine `clipping_layers_for_geography`, `clipping_layers_for_sketch_class`, and `clipping_layer_source` to return the FlatGeobuf output's `url` instead of `data_layers_vector_object_key(...)`. Follow `AGENTS.md`: if any copied table gains a column, update `publish_table_of_contents` and `copy_table_of_contents_item`; `overlay_data_tables` is not one of them, so this migration should not need that.
+**Migration** (`packages/api/migrations/current.sql`): add `overlay_data_tables.parquet_url text`, backfill as `'https://uploads.seasketch.org/' || key-part-of(parquet_remote)` after asserting every `parquet_remote` names `ssn-tiles`, then `NOT NULL`. The column comment starts with `@omit` on its own line — PostGraphile stops reading smart tags once the description starts — so the GraphQL schema stays the same. Redefine `clipping_layers_for_geography`, `clipping_layers_for_sketch_class`, and `clipping_layer_source` to return the FlatGeobuf output's `url` as `fgb_url` instead of `data_layers_vector_object_key(...)`. The output column is renamed, so those functions are dropped and recreated. `geography_clipping_layers_object_key` stays and is marked `@deprecated`: it still returns `data_upload_outputs.remote`, which is what the previous client selects as `GeographyClippingLayer.objectKey`. `publish_table_of_contents` and `copy_table_of_contents_item_recursive` insert `overlay_data_tables` with explicit column lists, so those lists copy `parquet_url` too. `complete_overlay_data_table_upload` and the organism reprocess write it from `overlay_data_table_parquet_public_url`, which honors `seasketch.uploads_base_url` set from `UPLOADS_BASE_URL`.
 
 **One client factory per runtime.** New `packages/api/src/storage/` (or similar) exporting a v2 `S3` and a v3 `S3Client` built from `R2_ENDPOINT`, path style, env credentials, and `requestChecksumCalculation: "WHEN_REQUIRED"`. Replace the construction sites:
 
@@ -109,11 +109,13 @@ Run `npx wrangler dev --port 8333 --persist-to /tmp/s3test/.data` and point an S
 
 **Read URLs, do not rebuild them.** Files that hold `uploads.seasketch.org` or `tiles.seasketch.org` today and are on the data path: `src/overlayEngine/JobStatusUpdater.ts`, `src/plugins/GeographyPlugin.ts` (`getBoundsForClippingLayer` decides by output `type`), `src/plugins/metadataParserPlugin.ts`, `src/plugins/overlayDataTablePlugin.ts` (`remoteToPublicUrl`, `remoteToQueryUrl`, `remoteToOrgQueryUrl`, `remoteToTemporalPreviewUrl`, `remoteToSiblingUrl` derive from `parquet_url`), `src/plugins/replacePMTilesPlugin.ts`, `src/plugins/reportsPlugin.ts`, `src/sketches.ts`, `tasks/calculateSpatialMetricsBatch.ts`; `packages/overlay-worker/src/overlay-worker.ts`; `packages/fragment-worker/src/handler.ts`; `packages/sketch-preprocessing-worker/src/utils/fetch-utils.ts`; `packages/infra/lib/SubdivideWorkerLambdaStack.ts` (`R2_PUBLIC_BASE_URL` becomes `UPLOADS_BASE_URL`). `packages/pmtiles-server/src/index.ts` keeps its hostname comparison until phase 1 adds `UPLOADS_HOST`. Out of scope and left alone: `visitorMetrics.ts`, `userActivityPlugin`, the overlay-engine test fixtures and viewer, the client's homepage and test data.
 
-**URLs to workers.** `GeographySettings.clippingLayers[].source` becomes a URL. Workers accept a value with no scheme as a key on `https://uploads.seasketch.org` for one release. Per-origin undici pools in the overlay worker, the fragment worker, and `sketches.ts`.
+**URLs to workers.** `GeographySettings.clippingLayers[].source` is a URL from the API. Sketch preprocessing still accepts a bare key on `https://uploads.seasketch.org` for a stale client and for `vectorObjectKey`. Per-origin undici pools in the overlay worker, the fragment worker, and `sketches.ts`.
 
 **Owned-bucket rule.** A helper `ownsRemote(remote)` reads `R2_TILES_BUCKET` and `SPATIAL_UPLOADS_BUCKET`. `cleanupDeletedOverlayRecords.ts` and the layer-deletion cleanup skip and log foreign remotes instead of deleting.
 
-**Deploy order.** Subdivision worker before the API, or let `JobStatusUpdater` accept both message shapes for one release (open question in the record). Then verify: full upload, data-table, geography, sketch, and report flows; a deletion with its cleanup confirmed in R2; a query that every `parquet_url` resolves; the probe green.
+**Deploy order.** Recorded in `design-docs/dev-environment/local-data-services.md` under *Phase 0b deploy order*. Workers and Lambdas first (`SpatialUploadHandler`, `DataTablesHandler`, `SeaSketchOverlayWorker`, `SeaSketchFragmentWorker`, `SeaSketchSubdivisionWorker` with `UPLOADS_BASE_URL`, and the sketch-preprocessing Worker). Then the production workflow, which already runs migrations, the API, and the client in that order. The sketch-preprocessing Worker has to be live before the client, because the client sends `fgbUrl` and the Worker in production treats that string as an object key. `objectKey` stays so a browser that has not reloaded can still query and sketch. In-flight jobs are not given a compatibility window. Then verify: full upload, data-table, geography, sketch, and report flows; a deletion with its cleanup confirmed in R2; a query that every `parquet_url` resolves; the probe green.
+
+**Landed locally, 2026-10-27.** The migration, the shared clients, stored URLs, and the owned-bucket check are in the working tree. `dataSourcePlugin` and the public-upload, sprite, consent, offline-tile-package, and style clients stay as they are. `reportsPlugin` still names `land-big-2.fgb` on the public uploads host, which is reference data. Production is unchanged until this migrates and deploys. The boto3 pin is 1.34, which has no checksum-trailer setting; the subdivision client sets path-style addressing and will take `request_checksum_calculation` when that pin moves past 1.36.
 
 ## Phase 1
 
@@ -144,7 +146,7 @@ Run `npx wrangler dev --port 8333 --persist-to /tmp/s3test/.data` and point an S
 
 - `compose.yaml`: `elasticmq` (`softwaremill/elasticmq-native`, 9324) with a committed `elasticmq.conf` defining `overlay-engine-results` and the e2e queue. The existing `workers` profile folds into `data`.
 - API: `OVERLAY_ENGINE_WORKER_SQS_QUEUE_URL` local default `http://localhost:9324/000000000000/overlay-engine-results`; the consumer in `src/overlayEngine/messageQueueConsumer.ts` honors `SQS_ENDPOINT`. New `SUBDIVISION_WORKER_DEV_HANDLER` used by `packages/api/tasks/preprocessSource.ts` under the dev-handler rule, default `http://localhost:9000/2015-03-31/functions/function/invocations`.
-- `packages/subdivision-worker/lambda_handler.py`: `SQS_ENDPOINT` for the boto3 SQS client; fall back to `AWS_REGION` when the queue URL is not an AWS URL; `UPLOADS_BASE_URL` in place of `R2_PUBLIC_BASE_URL`; `STORAGE_ORIGIN_MAP`; always report `url` and `remote`.
+- `packages/subdivision-worker/lambda_handler.py`: `SQS_ENDPOINT` for the boto3 SQS client; fall back to `AWS_REGION` when the queue URL is not an AWS URL; `UPLOADS_BASE_URL` in place of `R2_PUBLIC_BASE_URL`; `STORAGE_ORIGIN_MAP`; report `publicUrl` from that variable.
 
 ### Startup, templates, manifest, journey
 
@@ -166,6 +168,6 @@ Run `npx wrangler dev --port 8333 --persist-to /tmp/s3test/.data` and point an S
 
 ## Open items carried from the record
 
-- 0b: subdivision message compatibility during deploy.
+- 0b: decided. Deploy order is in the record under *Phase 0b deploy order*. Workers and Lambdas first, then migrations, API, and client.
 - 1: the laptop portion of the spike; `[env.local]` versus `preview_bucket_name`; runtime image pinned by digest or tag; whether to file the `aws-chunked` issue against Miniflare.
 - 2: a local mode with tile access control on; containerizing the Node processors.

@@ -59,13 +59,20 @@ import {
   getOverlayEngineAccessToken,
   withAccessTokenQueryParam,
 } from "./overlayEngineAccessToken";
+import { resolveStorageUrl } from "overlay-engine";
 
 const SIMPLIFICATION_TOLERANCE = 0.000018;
 
-const pool = new Pool(`https://uploads.seasketch.org`, {
-  // 10 second timeout for body
-  bodyTimeout: 10 * 1000,
-});
+const pools = new Map<string, Pool>();
+
+function poolFor(origin: string): Pool {
+  let pool = pools.get(origin);
+  if (!pool) {
+    pool = new Pool(origin, { bodyTimeout: 10 * 1000 });
+    pools.set(origin, pool);
+  }
+  return pool;
+}
 
 const cache = new LRUCache<string, ArrayBuffer>({
   maxSize: 1000 * 1024 * 128, // 128 MB
@@ -94,8 +101,9 @@ async function fetchUploadsRange(
   retriedAuth = false,
 ): Promise<ArrayBuffer> {
   const token = await getOverlayEngineAccessToken();
-  const response = await pool.request({
-    path: url.replace("https://uploads.seasketch.org", ""),
+  const target = resolveStorageUrl(url);
+  const response = await poolFor(target.origin).request({
+    path: `${target.pathname}${target.search}`,
     method: "GET",
     headers: {
       Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,

@@ -3,7 +3,7 @@
 **/.DS_Store
 # Compiler output. Reviewed generated source stays tracked.
 **/dist/
-**/.tsbuildinfo
+**/*.tsbuildinfo
 NOTES.md
 **/.env
 packages/data-tables-handler/tmp/

@@ -1,66 +1,111 @@
 import { LRUCache } from "lru-cache";
+import { Pool } from "undici";
 
-export function makeNodeFetchRangeFn(
-  rootUrl: string,
+const originPools = new Map<string, Pool>();
+
+function poolFor(origin: string): Pool {
+  let pool = originPools.get(origin);
+  if (!pool) {
+    pool = new Pool(origin, {
+      // Queue extra range reads instead of opening a socket for each one.
+      connections: 8,
+      bodyTimeout: 10 * 1000,
+    });
+    originPools.set(origin, pool);
+  }
+  return pool;
+}
+
+function rangeEnd(range: [number, number | null]): string {
+  return range[1] != null ? String(range[1]) : "";
+}
+
+function requestUrlRange(
+  url: URL,
+  range: [number, number | null]
+): Promise<ArrayBuffer> {
+  return poolFor(url.origin)
+    .request({
+      path: `${url.pathname}${url.search}`,
+      method: "GET",
+      headers: {
+        Range: `bytes=${range[0]}-${rangeEnd(range)}`,
+      },
+    })
+    .then(async (response) => {
+      const buffer = await response.body.arrayBuffer();
+      if (response.statusCode >= 400) {
+        throw new Error(
+          `HTTP ${response.statusCode} fetching ${url.href} range=${range[0]}-${rangeEnd(range)}`
+        );
+      }
+      return buffer;
+    });
+}
+
+/**
+ * Cached byte-range fetch for a complete URL. One LRU and in-flight map per
+ * caller, so two caches do not share entries. Connection pools are per origin.
+ */
+export function makeUrlFetchRangeFn(
   maxCacheSizeBytes: number = 1000 * 1024 * 128
 ) {
   const cache = new LRUCache<string, ArrayBuffer>({
     maxSize: maxCacheSizeBytes,
-    sizeCalculation: (value, key) => {
-      return value.byteLength;
-    },
+    sizeCalculation: (value) => value.byteLength,
   });
-
   const inFlightRequests = new Map<string, Promise<ArrayBuffer>>();
+  const stats = {
+    cacheHits: 0,
+    cacheMisses: 0,
+    fetchRangeFn: (_target: string, _range: [number, number | null]) =>
+      Promise.resolve(new ArrayBuffer(0)),
+  };
 
-  let cacheHits = 0;
-  let cacheMisses = 0;
-
-  const fetchRangeFn = (objectKey: string, range: [number, number | null]) => {
-    const url = rootUrl + objectKey;
-    const cacheKey = `${url} range=${range[0]}-${range[1] ? range[1] : ""}`;
+  stats.fetchRangeFn = (target: string, range: [number, number | null]) => {
+    const url = new URL(target);
+    const cacheKey = `${url.href} range=${range[0]}-${rangeEnd(range)}`;
     const cached = cache.get(cacheKey);
     if (cached) {
-      cacheHits++;
+      stats.cacheHits++;
       return Promise.resolve(cached);
-    } else if (inFlightRequests.has(cacheKey)) {
-      cacheHits++;
-      return inFlightRequests.get(cacheKey) as Promise<ArrayBuffer>;
-    } else {
-      cacheMisses++;
-      // console.log("cache miss", cacheKey);
-      return fetch(url, {
-        method: "GET",
-        headers: {
-          Range: `bytes=${range[0]}-${range[1] ? range[1] : ""}`,
-        },
-      })
-        .then(async (response) => {
-          const buffer = await response.arrayBuffer();
-          // console.log("fetched", cacheKey, buffer.byteLength);
-          return buffer;
-        })
-        .then((buffer) => {
-          // console.timeEnd(cacheKey);
-          cache.set(cacheKey, buffer);
-          // console.log("response", response.headers.get("x-cache-status"));
-          return buffer;
-        })
-        .catch((e) => {
-          console.log("rethrowing error for", cacheKey);
-          // rethrow error with enhanced error message consisting of url, range, and original error message
-          throw new Error(
-            `${e.message}. ${url} range=${range[0]}-${
-              range[1] ? range[1] : ""
-            }: ${e.message}`
-          );
-        });
     }
+    const pending = inFlightRequests.get(cacheKey);
+    if (pending) {
+      stats.cacheHits++;
+      return pending;
+    }
+    stats.cacheMisses++;
+    const request = requestUrlRange(url, range)
+      .then((buffer) => {
+        cache.set(cacheKey, buffer);
+        return buffer;
+      })
+      .catch((e) => {
+        const message = e instanceof Error ? e.message : String(e);
+        console.log("rethrowing error for", cacheKey);
+        throw new Error(
+          `${message}. ${url.href} range=${range[0]}-${rangeEnd(range)}: ${message}`
+        );
+      })
+      .finally(() => {
+        inFlightRequests.delete(cacheKey);
+      });
+    inFlightRequests.set(cacheKey, request);
+    return request;
   };
 
-  return {
-    fetchRangeFn,
-    cacheHits,
-    cacheMisses,
-  };
+  return stats;
+}
+
+/** Same fetch as makeUrlFetchRangeFn, after joining a root URL and a bare key. */
+export function makeNodeFetchRangeFn(
+  rootUrl: string,
+  maxCacheSizeBytes: number = 1000 * 1024 * 128
+) {
+  const inner = makeUrlFetchRangeFn(maxCacheSizeBytes);
+  const fetchFullUrl = inner.fetchRangeFn;
+  inner.fetchRangeFn = (objectKey, range) =>
+    fetchFullUrl(rootUrl + objectKey, range);
+  return inner;
 }

@@ -20,6 +20,10 @@ export class SubdivideWorkerLambdaStack extends cdk.Stack {
   ) {
     super(scope, id, props);
 
+    if (!process.env.UPLOADS_BASE_URL) {
+      throw new Error("UPLOADS_BASE_URL must be set in environment");
+    }
+
     const fn = new lambda.DockerImageFunction(this, "SubdivisionWorker", {
       functionName: "SubdivisionWorker",
       code: lambda.DockerImageCode.fromImageAsset(
@@ -38,7 +42,7 @@ export class SubdivideWorkerLambdaStack extends cdk.Stack {
         R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY || "",
         R2_ENDPOINT: process.env.R2_ENDPOINT || "",
         R2_BUCKET: "ssn-tiles",
-        R2_PUBLIC_BASE_URL: "https://uploads.seasketch.org",
+        UPLOADS_BASE_URL: process.env.UPLOADS_BASE_URL,
         OVERLAY_ENGINE_ACCESS_TOKEN_SECRET_ARN:
           props.overlayEngineAccessTokenSecret.secretArn,
       },

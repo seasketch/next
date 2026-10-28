@@ -406,7 +406,7 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
           const { pgClient } = context;
           // get the data source url for this clipping layer
           const { rows: dataLayerRows } = await pgClient.query(
-            `SELECT url, object_key from clipping_layer_source($1)`,
+            `SELECT url, fgb_url from clipping_layer_source($1)`,
             //   data_sources.url as url,
             //   geography_clipping_layers_object_key(geography_clipping_layers.*) as object_key
             // FROM
@@ -423,11 +423,11 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
             return null;
           }
           const dataSourceUrl = dataLayerRows[0].url;
-          const objectKey = dataLayerRows[0].object_key;
+          const fgbUrl = dataLayerRows[0].fgb_url;
           const { cql2Query, templateId } = clippingLayer;
           return getBoundsForClippingLayerUrl(
             dataSourceUrl,
-            objectKey,
+            fgbUrl,
             cql2Query,
             clippingLayer.templateId,
           );
@@ -442,7 +442,7 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
           const { id: geographyId } = geography;
           const { rows: clippingLayerRows } = await pgClient.query(
             `
-            select id, cql2_query, template_id, object_key, url, operation_type from clipping_layers_for_geography($1);
+            select id, cql2_query, template_id, fgb_url, url, operation_type from clipping_layers_for_geography($1);
             `,
             // select
             //   geography_clipping_layers.id,
@@ -468,9 +468,9 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
                 cql2_query?: string;
                 template_id?: string;
                 url: string;
-                object_key: string;
+                fgb_url: string;
               }[]
-            ).map(async ({ cql2_query, template_id, url, object_key }) => {
+            ).map(async ({ cql2_query, template_id, url, fgb_url }) => {
               if (
                 template_id === "DAYLIGHT_COASTLINE" ||
                 template_id === "MARINE_REGIONS_HIGH_SEAS"
@@ -480,7 +480,7 @@ const GeographyPlugin = makeExtendSchemaPlugin((build) => {
               }
               const bbox = await getBoundsForClippingLayerUrl(
                 url,
-                object_key,
+                fgb_url,
                 cql2_query,
                 template_id,
               );
@@ -1455,25 +1455,28 @@ function combineBBoxes(bboxes: number[][]) {
   return [minX, minY, maxX, maxY];
 }
 
+function readsTileArchive(dataSourceUrl: string): boolean {
+  try {
+    const path = new URL(dataSourceUrl).pathname;
+    return !/\.(fgb|geojson|json|tif|tiff|zip|csv|parquet)$/i.test(path);
+  } catch {
+    return false;
+  }
+}
+
 async function getBoundsForClippingLayer(
   url: string,
-  object_key: string,
+  fgb_url: string,
   cql2_query?: any,
   template_id?: string,
   skipCache?: boolean,
 ) {
-  // get the data source url for this clipping layer
   if (template_id === "DAYLIGHT_COASTLINE") {
     return null;
   }
-  if (!/tiles.seasketch.org/.test(url)) {
-    throw new Error(
-      `Data source URL ${url} is not supported for clipping layers`,
-    );
-  }
 
   // Create a cache key based on all function arguments
-  const cacheKey = `clipping-layer-bounds:${url}:${object_key}:${JSON.stringify(
+  const cacheKey = `clipping-layer-bounds:${url}:${fgb_url}:${JSON.stringify(
     cql2_query,
   )}:${template_id}`;
 
@@ -1504,7 +1507,7 @@ async function getBoundsForClippingLayer(
       includeProperties: "_",
       bbox: "true",
       cql2JSONQuery: JSON.stringify(cql2_query),
-      dataset: url.replace("https://tiles.seasketch.org/", "") + ".fgb",
+      dataset: new URL(fgb_url).pathname.replace(/^\//, ""),
       v: "5",
     }).toString();
     const overlayUrl = `https://overlay.seasketch.org/properties?${queryString}`;
@@ -1542,7 +1545,7 @@ async function getBoundsForClippingLayer(
 
 async function getBoundsForClippingLayerUrl(
   url: string,
-  object_key: string,
+  fgb_url: string,
   cql2_query?: any,
   template_id?: string,
   skipCache?: boolean,
@@ -1551,10 +1554,10 @@ async function getBoundsForClippingLayerUrl(
   if (template_id && template_id === "DAYLIGHT_COASTLINE") {
     return null;
   }
-  if (/tiles.seasketch.org/.test(url)) {
+  if (readsTileArchive(url)) {
     return getBoundsForClippingLayer(
       url,
-      object_key,
+      fgb_url,
       cql2_query,
       template_id,
       skipCache,
@@ -1566,9 +1569,7 @@ async function getBoundsForClippingLayerUrl(
       maxX: number;
       maxY: number;
     } | null = null;
-    // This is a geojson layer, so we can't hit the tiles.seasketch.org endpoint, so we need to construct a url to the fgb file indicated by object_key
-    const fgbUrl = `https://uploads.seasketch.org/${object_key}`;
-    const source = await createSource(fgbUrl, {
+    const source = await createSource(fgb_url, {
       fetchRangeFn: async (_key, range) => {
         const fetchRange = async (retriedAuth: boolean): Promise<ArrayBuffer> => {
           const token = await getOverlayEngineAccessToken();
@@ -1578,7 +1579,7 @@ async function getBoundsForClippingLayerUrl(
           if (token) {
             headers.Authorization = `Bearer ${token}`;
           }
-          const response = await fetch(fgbUrl, { headers });
+          const response = await fetch(fgb_url, { headers });
           if (
             token &&
             (response.status === 401 || response.status === 403) &&
@@ -1589,7 +1590,7 @@ async function getBoundsForClippingLayerUrl(
           }
           if (!response.ok) {
             throw new Error(
-              `HTTP ${response.status} fetching ${fgbUrl} range=${range[0]}-${
+              `HTTP ${response.status} fetching ${fgb_url} range=${range[0]}-${
                 range[1] != null ? range[1] : ""
               }`,
             );
@@ -1612,7 +1613,7 @@ async function getBoundsForGeographyLayers(
   const bounds: number[][] = [];
   const { rows: clippingLayerRows } = await pgClient.query(
     `
-    select id, cql2_query, template_id, object_key, url, operation_type from clipping_layers_for_geography($1);
+    select id, cql2_query, template_id, fgb_url, url, operation_type from clipping_layers_for_geography($1);
     `,
     [geographyId],
   );
@@ -1623,9 +1624,9 @@ async function getBoundsForGeographyLayers(
         cql2_query?: string;
         template_id?: string;
         url: string;
-        object_key: string;
+        fgb_url: string;
       }[]
-    ).map(async ({ cql2_query, template_id, url, object_key }) => {
+    ).map(async ({ cql2_query, template_id, url, fgb_url }) => {
       if (
         template_id === "DAYLIGHT_COASTLINE" ||
         template_id === "MARINE_REGIONS_HIGH_SEAS"
@@ -1634,7 +1635,7 @@ async function getBoundsForGeographyLayers(
       }
       const bbox = await getBoundsForClippingLayerUrl(
         url,
-        object_key,
+        fgb_url,
         cql2_query,
         template_id,
       );

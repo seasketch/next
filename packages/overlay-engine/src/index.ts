@@ -1,4 +1,5 @@
 export { prepareSketch, PreparedSketch } from "./utils/prepareSketch";
+export { resolveStorageUrl } from "./storageUrl";
 export { unionAtAntimeridian } from "./utils/unionAtAntimeridian";
 export {
   clipToGeography,

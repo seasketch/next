@@ -12,7 +12,6 @@ import AWS from "aws-sdk";
 import Bottleneck from "bottleneck";
 import colors from "yoctocolors-cjs";
 import area from "@turf/area";
-
 const METRIC_CHUNK_SIZE =
   parseInt(process.env.SPATIAL_METRICS_BATCH_CHUNK_SIZE ?? "400", 10) || 400;
 
@@ -535,13 +534,13 @@ function parseClippingLayer(clippingLayer: {
   id: number;
   cql2_query: Cql2Query;
   template_id: string;
-  object_key: string;
+  fgb_url: string;
   url: string;
   operation_type: "intersect" | "difference";
 }): ClippingLayerOption {
   return {
     cql2Query: clippingLayer.cql2_query,
-    source: `https://uploads.seasketch.org/${clippingLayer.object_key}`,
+    source: clippingLayer.fgb_url,
     op:
       clippingLayer.operation_type === "intersect" ? "INTERSECT" : "DIFFERENCE",
   };

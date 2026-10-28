@@ -12,16 +12,44 @@ import { ReadStream, statSync } from "node:fs";
 import { Readable } from "node:stream";
 import { Upload } from "@aws-sdk/lib-storage";
 
-const s3Client = new S3Client({ region: process.env.AWS_REGION! });
 const r2Client = new S3Client({
   region: "auto",
   endpoint: process.env.R2_ENDPOINT!,
   forcePathStyle: true,
+  requestChecksumCalculation: "WHEN_REQUIRED",
   credentials: {
     accessKeyId: process.env.R2_ACCESS_KEY_ID!,
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
   },
 });
+
+function bucketFromRemote(remote: string | undefined): string | undefined {
+  if (!remote) return undefined;
+  const match = /^(?:r2|s3):\/\/([^/]+)/.exec(remote);
+  return match?.[1];
+}
+
+function ownedBucketNames(): string[] {
+  const names = [
+    process.env.R2_TILES_BUCKET,
+    process.env.SPATIAL_UPLOADS_BUCKET,
+    process.env.BUCKET,
+    bucketFromRemote(process.env.TILES_REMOTE),
+    bucketFromRemote(process.env.RESOURCES_REMOTE),
+  ];
+  return names.filter((name): name is string => !!name);
+}
+
+function ownsRemote(remote: string): boolean {
+  const match = /^(?:r2|s3):\/\/([^/]+)\//.exec(remote);
+  return match !== null && ownedBucketNames().includes(match[1]);
+}
+
+function assertOwned(remote: string) {
+  if (!ownsRemote(remote)) {
+    throw new Error(`Refusing to access foreign remote ${remote}`);
+  }
+}
 
 export function presignStagedGet(
   bucket: string,
@@ -44,8 +72,9 @@ export async function putObject(
   if (!/r2:/.test(remote) && !/s3:/.test(remote)) {
     throw new Error(`Invalid remote ${remote}`);
   }
+  assertOwned(remote);
   const parts = remote.replace(/\w+:\/\//, "").split("/");
-  const client = /r2:/.test(remote) ? r2Client : s3Client;
+  const client = r2Client;
   const Bucket = parts[0];
   const Key = parts.slice(1).join("/");
   const fileSizeBytes = statSync(filepath).size;
@@ -78,8 +107,9 @@ export async function getObject(
   if (!/r2:/.test(remote) && !/s3:/.test(remote)) {
     throw new Error(`Invalid remote ${remote}`);
   }
+  assertOwned(remote);
   const parts = remote.replace(/\w+:\/\//, "").split("/");
-  const client = /r2:/.test(remote) ? r2Client : s3Client;
+  const client = r2Client;
   const Bucket = parts[0];
   const Key = parts.slice(1).join("/");
   const headResponse = await client.send(

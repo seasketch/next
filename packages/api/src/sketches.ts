@@ -16,13 +16,12 @@ import {
 import { Pool, PoolClient } from "pg";
 import bbox from "@turf/bbox";
 import { PendingFragmentResult } from "overlay-engine/dist/fragments";
-import { makeNodeFetchRangeFn } from "./nodeFetchRangeFn";
 import { LambdaClient, InvokeCommand } from "@aws-sdk/client-lambda";
+import { makeUrlFetchRangeFn } from "./nodeFetchRangeFn";
 
-// Source cache used for local clipping in test mode
+// Source cache used for local clipping in test mode.
 const sourceCache = new SourceCache(process.env.SOURCE_CACHE_SIZE || "256MB", {
-  fetchRangeFn: makeNodeFetchRangeFn(`https://uploads.seasketch.org/`)
-    .fetchRangeFn,
+  fetchRangeFn: makeUrlFetchRangeFn().fetchRangeFn,
 });
 
 let lambdaClient: LambdaClient | null = null;
@@ -1023,14 +1022,14 @@ export async function ensureCollectionFragments(
         };
         acc.push(geography);
       }
-      if (l.object_key === null) {
+      if (l.fgb_url === null) {
         throw new Error(
-          `Clipping layer ${l.id} has no object key. There was likely a problem finding an appropriate data_upload_output`,
+          `Clipping layer ${l.id} has no FlatGeobuf URL. There was likely a problem finding an appropriate data_upload_output`,
         );
       }
       geography.clippingLayers.push({
         op: l.operation_type.toUpperCase(),
-        source: l.object_key,
+        source: l.fgb_url,
         cql2Query: l.cql2_query,
       });
       return acc;
@@ -1260,14 +1259,14 @@ async function generateFragmentsForSketchGeometry(params: {
         geography = { id: l.geography_id, clippingLayers: [] };
         acc.push(geography);
       }
-      if (l.object_key === null) {
+      if (l.fgb_url === null) {
         throw new Error(
-          `Clipping layer ${l.id} has no object key. There was likely a problem finding an appropriate data_upload_output`,
+          `Clipping layer ${l.id} has no FlatGeobuf URL. There was likely a problem finding an appropriate data_upload_output`,
         );
       }
       geography.clippingLayers.push({
         op: l.operation_type.toUpperCase(),
-        source: l.object_key,
+        source: l.fgb_url,
         cql2Query: l.cql2_query,
       });
       return acc;
