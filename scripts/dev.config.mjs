@@ -8,6 +8,15 @@
 // profiles: `core` is the default. `data` includes core plus its own entries.
 // `e2e` is the API, client, and bookmark screenshotter, on their own ports and database.
 
+import { defaultPort as localR2Port } from "../packages/local-r2/config.mjs";
+
+// Local object storage: wrangler dev serving the two local R2 buckets over
+// the S3 API. See design-docs/dev-environment/local-data-services.md.
+export const localR2Dev = {
+  port: localR2Port,
+  url: `http://127.0.0.1:${localR2Port}`,
+};
+
 // Local `wrangler dev` for the bookmark screenshot worker. Chrome runs on this
 // machine. The API is pointed here only when this process is started.
 // The e2e profile uses its own port so it can run beside `npm run dev`.
@@ -142,6 +151,15 @@ export const services = [
     },
     ready: `http-get://127.0.0.1:${screenshotterDev.port}/health`,
     profiles: ["core"],
+  },
+  {
+    name: "local-r2",
+    cwd: "packages/local-r2",
+    // Objects persist in .data/wrangler across restarts. `npm run setup -- --reset` clears them.
+    command: "npm run dev",
+    ciCommand: "npm run dev",
+    ready: `http-get://127.0.0.1:${localR2Dev.port}/health`,
+    profiles: ["data"],
   },
 ];
 
