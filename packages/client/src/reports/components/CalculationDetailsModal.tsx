@@ -215,50 +215,48 @@ export function CalculationDetailsModal({
   const cardTitle = collectReportCardTitle(config.body);
 
   return (
-    <>
-      <Modal
-        open
-        scrollable
-        onRequestClose={handleClose}
-        title={
-          <div>
-            <span className="text-gray-500 block text-base">{cardTitle}</span>
-            <span>{t("Data Sources and Calculations")}</span>
-          </div>
-        }
-        disableBackdropClick={recalcOpen}
-        footer={[
-          {
-            label: t("Close"),
-            onClick: handleClose,
-            variant: "secondary",
-          },
-          {
-            label: t("Recalculate"),
-            onClick: handleRecalculateClick,
-            disabled: loading || recalculateState.loading,
-            variant: "secondary",
-            loading: recalculateState.loading,
-          },
-          ...(failedMetrics.length > 0
-            ? [
-                {
-                  label: t("Retry failed calculations"),
-                  onClick: handleRetryFailed,
-                  disabled: retryState.loading,
-                  variant: "danger" as const,
-                  loading: retryState.loading,
-                },
-              ]
-            : []),
-        ]}
-      >
-        <ReportMetricsProgressDetails config={config} isAdmin={detailsAdmin} />
-      </Modal>
-
+    <Modal
+      open
+      scrollable
+      onRequestClose={handleClose}
+      title={
+        <div>
+          <span className="text-gray-500 block text-base">{cardTitle}</span>
+          <span>{t("Data Sources and Calculations")}</span>
+        </div>
+      }
+      disableBackdropClick={recalcOpen}
+      footer={[
+        {
+          label: t("Close"),
+          onClick: handleClose,
+          variant: "secondary",
+        },
+        {
+          label: t("Recalculate"),
+          onClick: handleRecalculateClick,
+          disabled: loading || recalculateState.loading,
+          variant: "secondary",
+          loading: recalculateState.loading,
+        },
+        ...(failedMetrics.length > 0
+          ? [
+              {
+                label: t("Retry failed calculations"),
+                onClick: handleRetryFailed,
+                disabled: retryState.loading,
+                variant: "danger" as const,
+                loading: retryState.loading,
+              },
+            ]
+          : []),
+      ]}
+    >
+      <ReportMetricsProgressDetails config={config} isAdmin={detailsAdmin} />
       {recalcOpen && (
         <Modal
           open
+          tipyTop
           onRequestClose={() => setRecalcOpen(false)}
           title={t("Recalculate results")}
           disableBackdropClick={false}
@@ -311,6 +309,6 @@ export function CalculationDetailsModal({
           </div>
         </Modal>
       )}
-    </>
+    </Modal>
   );
 }
