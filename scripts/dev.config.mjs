@@ -84,6 +84,10 @@ export const services = [
     e2eReady: `http-get://127.0.0.1:${e2eStack.apiPort}/graphiql`,
     // The API presigns against local storage and consumes the results queue.
     dependsOn: ["local-r2", "elasticmq"],
+    // The results-queue pollers start with the server. Until the ElasticMQ
+    // container listens, Docker resets every connection to its published
+    // port, so the API waits for the queue in every mode.
+    startAfter: ["elasticmq"],
     profiles: ["core"],
   },
   {
