@@ -24,6 +24,7 @@ import {
   assertAiDataAnalystEnvVarsPresent,
   classifyGeostatsPii,
   composeAiDataAnalystNotesFromPromises,
+  isPiiClassifierConfigured,
 } from "./aiUploadNotes";
 import { convertDelimitedToGeoJSON } from "./formats/delimited";
 import type { DelimitedUploadProcessingOptions } from "./spatialUploadsHandlerTypes";
@@ -473,7 +474,24 @@ export async function processVectorUpload(options: {
   // PII runs in parallel with GeoJSON/tiling/uploads; handleUpload awaits the same
   // promise after uploads. When AI is enabled, PII is chained before column intelligence.
   let piiOnlyPromise: Promise<void> | null = null;
-  if (enableAiDataAnalyst) {
+  if (!isPiiClassifierConfigured()) {
+    // No classifier deployed (local development, or a deployment without the
+    // stack). Column intelligence sends attribute values to an LLM, and the
+    // classifier is what screens them first, so it is skipped as well.
+    const skipped = enableAiDataAnalyst
+      ? "PII classification and column intelligence"
+      : "PII classification";
+    console.warn(
+      `GEOSTATS_PII_CLASSIFIER_ARN is not set; skipping ${skipped} for ${uploadFilename}.`,
+    );
+    if (enableAiDataAnalyst) {
+      columnP = Promise.resolve({
+        error: "GEOSTATS_PII_CLASSIFIER_ARN is not set",
+      });
+    } else {
+      piiOnlyPromise = Promise.resolve();
+    }
+  } else if (enableAiDataAnalyst) {
     // PII must reject the job on failure (do not wrap in asNeverReject). Only column
     // intelligence is best-effort; compose still runs after PII has updated stats[0].
     columnP = (async () => {

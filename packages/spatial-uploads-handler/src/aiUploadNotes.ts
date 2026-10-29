@@ -33,6 +33,16 @@ export function assertAiDataAnalystEnvVarsPresent(): void {
   }
 }
 
+/**
+ * Whether the PII classifier Lambda is wired up. The CDK stack only sets the
+ * ARN when the classifier is deployed, and local development has no Lambda,
+ * so uploads proceed without classification when it is absent. Layers are
+ * then stored without `piiRiskWasAssessed`, which the admin UI shows.
+ */
+export function isPiiClassifierConfigured(): boolean {
+  return Boolean(process.env.GEOSTATS_PII_CLASSIFIER_ARN);
+}
+
 let _lambdaClient: InstanceType<typeof AWS.Lambda> | null = null;
 function getLambdaClient() {
   if (!_lambdaClient) {
