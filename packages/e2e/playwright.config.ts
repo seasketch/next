@@ -89,8 +89,9 @@ export default defineConfig({
     // The e2e client starts after the e2e API answers on 13857.
     url: "http://127.0.0.1:13000",
     reuseExistingServer: false,
-    // Covers the subdivision image build plus the client dev server.
-    timeout: ci ? 900_000 : 180_000,
+    // Covers the handler image builds (subdivision, spatial-uploads) plus the
+    // client dev server.
+    timeout: ci ? 1_200_000 : 300_000,
     // The e2e profile writes each service to .logs/e2e and prints that path.
     // Pipe stays on so that path, and the tail of a service that exits, still
     // reach this run. The service streams themselves are not copied here.

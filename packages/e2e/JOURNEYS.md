@@ -53,6 +53,13 @@ Geography layers, their metadata, the Marine Protected Area sketch class, the de
 - Sketch Classes lists Marine Protected Area.
 - Reports lists Default report.
 
+## Data uploads
+
+`tests/uploads.spec.ts`, against the e2e stack's own data services: local R2 on 18333, the tiles host on 18787, the uploads host on 18788, and the spatial-uploads container. Each upload gets a unique filename so the new layer is the only tree item with that title in a reused database.
+
+- `e2e|admin` opens Data Layers, switches to Overlay Layers, and drops a small GeoJSON of three polygons near Samoa on the layer list. The first upload from an account asks about the AI Cartographer; the test declines. The job completes, its outputs are FlatGeobuf and GeoJSON, every URL is on the uploads host and every `remote` names `ssn-tiles-local`. The uploads host serves the GeoJSON and the original file, and the map fetches the layer from it.
+- The same admin uploads a generated GeoJSON of 120 polygons, large enough to be tiled. The outputs include PMTiles on the tiles host, the data source URL is the archive without its extension, the tiles host answers the TileJSON request with tile URLs pointing back at itself, and the map fetches a vector tile from it.
+
 # Homepage
 
 - An anonymous visitor opens `/` and sees the SeaSketch name, a Sign In control, and a link to Projects.
@@ -61,4 +68,4 @@ Geography layers, their metadata, the Marine Protected Area sketch class, the de
 
 # Left for later
 
-Zoom to bounds waits until a later set of layers has bounds that match the project region. End-user Sketching Tools wait as well. Report calculation, uploads, and downloads stay out of this set. They need more fixture data, or a service the core profile does not run. The access gates are `tests/access.spec.ts`. The Maldives ocean-use respondent journey is `tests/survey.spec.ts`, against the survey seeded on `demo-maldives`. It selects two sectors before drawing, finishes each with "Finish Sector", and moves between them with "Next sector". The Coral Restoration Survey on `demo-palawan` is the single-sector case in the same file: the first visit starts drawing without a sector picker, the feature list says "Finish", and coming back shows the sector list with the area count. Authoring, data, and reports stay with Phase 5.
+Zoom to bounds waits until a later set of layers has bounds that match the project region. End-user Sketching Tools wait as well. Report calculation and downloads stay out of this set. They need more fixture data, or a service the e2e profile does not run. The access gates are `tests/access.spec.ts`. The Maldives ocean-use respondent journey is `tests/survey.spec.ts`, against the survey seeded on `demo-maldives`. It selects two sectors before drawing, finishes each with "Finish Sector", and moves between them with "Next sector". The Coral Restoration Survey on `demo-palawan` is the single-sector case in the same file: the first visit starts drawing without a sector picker, the feature list says "Finish", and coming back shows the sector list with the area count. Authoring, data, and reports stay with Phase 5.
