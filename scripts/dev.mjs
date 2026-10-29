@@ -28,18 +28,24 @@ import {
   dataNotices,
   readApiDotenv,
   servicesStoppedForProduction,
+  withoutProductionValues,
 } from "./dev.data.mjs";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let logsDir = path.join(root, ".logs");
 const waitOnBin = path.join(root, "node_modules", ".bin", "wait-on");
+// Production variables --local-data drops from the API's environment.
+let ignoredProductionVariables = [];
 
 function usage() {
   console.error(
-    `Usage: npm run dev -- [--profile ${profileNames.join("|")}] [--ci] [--only <service>]`
+    `Usage: npm run dev -- [--profile ${profileNames.join("|")}] [--local-data] [--ci] [--only <service>]`
   );
   console.error(`Services: ${services.map((service) => service.name).join(", ")}`);
   console.error(`The default profile is ${defaultProfile}.`);
+  console.error(
+    "--local-data starts every data service and ignores the production values in packages/api/.env."
+  );
   process.exit(1);
 }
 
@@ -47,10 +53,13 @@ function parseArgs(argv) {
   let profile = defaultProfile;
   let ci = false;
   let only = null;
+  let localData = false;
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (arg === "--ci") {
       ci = true;
+    } else if (arg === "--local-data") {
+      localData = true;
     } else if (arg === "--profile") {
       profile = argv[++i];
       if (!profile || profile.startsWith("--")) {
@@ -72,7 +81,11 @@ function parseArgs(argv) {
     console.error(`Unknown profile: ${profile}`);
     usage();
   }
-  return { profile, ci, only };
+  if (localData && profile === "core") {
+    console.error("--local-data starts the data services; it does not combine with --profile core");
+    usage();
+  }
+  return { profile, ci, only, localData };
 }
 
 function serviceByName(name) {
@@ -87,14 +100,26 @@ function selectServices(profile, apiEnv) {
 }
 
 function envFor(service, profile, localScreenshotter, started, apiEnv) {
+  // Local data services the supervisor starts win over .env and the shell.
+  // Setting the production variable in .env is how to opt out per service,
+  // unless --local-data is on.
+  const injected = dataEnvFor(service.name, profile, started, apiEnv);
   const env = {
     ...process.env,
     ...service.env,
     ...(profile === "e2e" && service.e2eEnv ? service.e2eEnv : {}),
-    // Local data services the supervisor starts win over .env and the shell.
-    // Setting the production variable in .env is how to opt out per service.
-    ...dataEnvFor(service.name, profile, started, apiEnv),
+    ...injected,
   };
+  if (service.name === "api") {
+    // A production variable with no local replacement (a Lambda ARN) is
+    // handed over empty. dotenv keeps a variable that is already present,
+    // even when empty, so the API never reads the value from .env.
+    for (const name of ignoredProductionVariables) {
+      if (!(name in injected)) {
+        env[name] = "";
+      }
+    }
+  }
   if (localScreenshotter && service.name === "api") {
     env.SCREENSHOTTER_URL =
       profile === "e2e"
@@ -283,7 +308,7 @@ function unbuiltPackages() {
   return missing;
 }
 
-const { profile, ci, only } = parseArgs(process.argv.slice(2));
+const { profile, ci, only, localData } = parseArgs(process.argv.slice(2));
 if (profile === "e2e") {
   logsDir = path.join(root, ".logs", "e2e");
 }
@@ -297,7 +322,12 @@ if (unbuilt.length > 0) {
   process.exit(1);
 }
 
-const apiEnv = readApiDotenv();
+let apiEnv = readApiDotenv();
+if (localData) {
+  const forced = withoutProductionValues(apiEnv);
+  apiEnv = forced.env;
+  ignoredProductionVariables = forced.ignored;
+}
 const selectedServices = selectServices(profile, apiEnv);
 const started = new Set(selectedServices.map((service) => service.name));
 
@@ -348,6 +378,13 @@ if (only) {
     process.exit(1);
   }
 
+  if (localData) {
+    report(
+      ignoredProductionVariables.length > 0
+        ? `--local-data: ${ignoredProductionVariables.join(", ")} in packages/api/.env ignored; the local data services run instead.`
+        : "--local-data: packages/api/.env has no production values; nothing to ignore."
+    );
+  }
   for (const line of dataNotices(profile, started, apiEnv)) {
     report(line);
   }
