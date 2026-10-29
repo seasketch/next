@@ -126,6 +126,42 @@ function isSet(value) {
   return typeof value === "string" && value.trim() !== "";
 }
 
+function firstSet(...values) {
+  for (const value of values) {
+    if (isSet(value)) {
+      return value.trim();
+    }
+  }
+  return undefined;
+}
+
+function readPackageDotenv(pkg) {
+  const file = path.join(root, "packages", pkg, ".env");
+  if (!existsSync(file)) {
+    return {};
+  }
+  return dotenv.parse(readFileSync(file));
+}
+
+// Cloudflare AI Gateway credentials for the spatial-uploads container.
+// Host mode loads packages/spatial-uploads-handler/.env itself. The Lambda
+// emulator only receives what compose.yaml lists, and production sets these
+// on the function. Prefer the handler file so the container matches host mode.
+export function aiGatewayEnv() {
+  const handler = readPackageDotenv("spatial-uploads-handler");
+  const api = readPackageDotenv("api");
+  const token = firstSet(
+    handler.CF_AIG_TOKEN,
+    api.CF_AIG_TOKEN,
+    process.env.CF_AIG_TOKEN
+  );
+  const url = firstSet(handler.CF_AIG_URL, api.CF_AIG_URL, process.env.CF_AIG_URL);
+  return {
+    ...(token ? { CF_AIG_TOKEN: token } : {}),
+    ...(url ? { CF_AIG_URL: url } : {}),
+  };
+}
+
 // Integrations packages/api/.env points at production.
 export function productionIntegrations(apiEnv = readApiDotenv()) {
   return integrations.filter((integration) => {
@@ -256,7 +292,10 @@ export function dataEnvFor(serviceName, profile, started, apiEnv = readApiDotenv
       env.PORT = String(ports.spatialUploadsHost);
       break;
     }
-    case "spatial-uploads":
+    case "spatial-uploads": {
+      Object.assign(env, composeEnv(profile), aiGatewayEnv());
+      break;
+    }
     case "subdivision":
     case "elasticmq": {
       Object.assign(env, composeEnv(profile));
@@ -290,6 +329,14 @@ export function dataNotices(profile, started, apiEnv = readApiDotenv()) {
     lines.push(
       `${integration.productionVariable} is set in packages/api/.env: ${integration.id} uses production and ${integration.services.join(", ")} will not start.`
     );
+  }
+  if (started.has("spatial-uploads")) {
+    const gateway = aiGatewayEnv();
+    if (!gateway.CF_AIG_TOKEN || !gateway.CF_AIG_URL) {
+      lines.push(
+        "CF_AIG_TOKEN and CF_AIG_URL are unset. A profile with the AI data analyst enabled cannot finish an upload until both are in packages/spatial-uploads-handler/.env."
+      );
+    }
   }
   const injected = dataEnvFor("api", profile, started, apiEnv);
   for (const [name, value] of Object.entries(injected)) {

@@ -121,6 +121,13 @@ services:
       PGDATABASE: ${SEASKETCH_DB_NAME:-seasketch}
       PGREGION: us-west-2
       AWS_REGION: us-west-2
+      # Production Lambda gets these from CDK. Host mode loads them from the
+      # package .env; this container only sees what is passed in. `npm run dev`
+      # fills them from packages/spatial-uploads-handler/.env (then the API
+      # .env). Empty when neither file has them: uploads with the AI analyst
+      # off still succeed, and an enabled profile fails with a clear error.
+      CF_AIG_TOKEN: ${CF_AIG_TOKEN:-}
+      CF_AIG_URL: ${CF_AIG_URL:-}
     healthcheck:
       # Any HTTP answer means the emulator is up. Do not POST to the invoke
       # path here; that would run the handler with an empty event.
