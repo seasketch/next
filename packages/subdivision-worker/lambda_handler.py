@@ -55,8 +55,42 @@ def _get_sqs_client(region: Optional[str] = None):
         or "us-west-2"
     )
     if region_name not in _SQS_CLIENTS:
-        _SQS_CLIENTS[region_name] = boto3.client("sqs", region_name=region_name)
+        # The queue URL names the queue; SQS_ENDPOINT, when set, says where to
+        # send the request. Locally that is the ElasticMQ container.
+        endpoint_url = os.getenv("SQS_ENDPOINT") or None
+        _SQS_CLIENTS[region_name] = boto3.client(
+            "sqs", region_name=region_name, endpoint_url=endpoint_url
+        )
     return _SQS_CLIENTS[region_name]
+
+
+def _storage_origin_map() -> Dict[str, str]:
+    """Parse STORAGE_ORIGIN_MAP: comma-separated public=reachable origin pairs.
+
+    A container reaches the host's localhost as host.docker.internal, so URLs
+    written for the browser are rewritten before fetching. Empty in production.
+    """
+    mapping: Dict[str, str] = {}
+    raw = os.getenv("STORAGE_ORIGIN_MAP", "")
+    for pair in raw.split(","):
+        pair = pair.strip()
+        if not pair or "=" not in pair:
+            continue
+        public, reachable = pair.split("=", 1)
+        public = public.strip().rstrip("/")
+        reachable = reachable.strip().rstrip("/")
+        if public and reachable:
+            mapping[public.lower()] = reachable
+    return mapping
+
+
+def _reachable_url(url: str) -> str:
+    parsed = urlparse(url)
+    origin = f"{parsed.scheme}://{parsed.netloc}".lower()
+    reachable = _storage_origin_map().get(origin)
+    if not reachable:
+        return url
+    return reachable + url[len(origin):]
 
 
 def _extract_region_from_sqs_url(queue_url: str) -> Optional[str]:
@@ -277,11 +311,18 @@ class EtaEstimator:
 
 
 def _download_with_progress(url: str, dest_path: str, progress_cb):
-    """Stream download from uploads; attaches overlay-engine Bearer, retries once on 401/403."""
+    """Stream download from uploads; attaches overlay-engine Bearer, retries once on 401/403.
 
-    def _stream(auth_token: str):
-        headers = {"Authorization": f"Bearer {auth_token}"}
-        with requests.get(url, stream=True, timeout=60, headers=headers) as resp:
+    Without a token (no secret ARN, so a local pmtiles-server with access
+    control off) the request is sent with no Authorization header.
+    """
+    fetch_url = _reachable_url(url)
+    if fetch_url != url:
+        print(f"Fetching {url} as {fetch_url}")
+
+    def _stream(auth_token: Optional[str]):
+        headers = {"Authorization": f"Bearer {auth_token}"} if auth_token else {}
+        with requests.get(fetch_url, stream=True, timeout=60, headers=headers) as resp:
             if resp.status_code in (401, 403):
                 return resp.status_code
             resp.raise_for_status()
@@ -305,14 +346,14 @@ def _download_with_progress(url: str, dest_path: str, progress_cb):
 
     token = get_overlay_engine_access_token()
     status = _stream(token)
-    if status in (401, 403):
+    if status in (401, 403) and token is not None:
         bust_overlay_engine_access_token_cache()
         token = get_overlay_engine_access_token()
         status = _stream(token)
-        if status in (401, 403):
-            raise RuntimeError(
-                f"HTTP {status} (uploads authentication failed) downloading {url}"
-            )
+    if status in (401, 403):
+        raise RuntimeError(
+            f"HTTP {status} (uploads authentication failed) downloading {url}"
+        )
 
 
 def _upload_to_r2(local_path: str, object_key: str, progress_cb=None) -> Dict[str, Any]:
